@@ -1,0 +1,13 @@
+#include "DataCore.h"
+using namespace DataCore;
+
+NAMESPACE_UPP
+
+INITBLOCK {
+	DataCore::TimeVector::Register<DummyValue>();
+	DataCore::TimeVector::Register<DataBridge>();
+	DataCore::TimeVector::Register<DummyIndicator>();
+	DataCore::TimeVector::Register<MovingAverage>();
+}
+
+END_UPP_NAMESPACE

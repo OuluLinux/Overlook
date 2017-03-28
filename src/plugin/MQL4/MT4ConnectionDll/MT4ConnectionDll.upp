@@ -1,0 +1,17 @@
+description "MetaTrader 4 connection dll using u++\377";
+
+uses
+	Core;
+
+target
+	MT4ConnectionDll.dll;
+
+file
+	Common.h,
+	Common.cpp,
+	MT4ConnectionDll.h,
+	MT4ConnectionDll.cpp;
+
+mainconfig
+	"Normal" = "DLL MT SSE2";
+

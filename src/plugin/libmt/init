@@ -1,0 +1,4 @@
+#ifndef _plugin_libmt_icpp_init_stub
+#define _plugin_libmt_icpp_init_stub
+#include "Core/Rpc/init"
+#endif

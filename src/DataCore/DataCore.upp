@@ -1,0 +1,49 @@
+description "\377B0,0,128";
+
+uses
+	Core,
+	RefCtrl,
+	plugin/tidy;
+
+file
+	main.cpp,
+	DataCore.h,
+	DataCore.cpp,
+	DataCore.icpp,
+	Vector.h,
+	Vector.cpp,
+	Iterator.cpp,
+	SlotResolver.cpp,
+	Slot.h,
+	Slot.cpp,
+	EventManager.h,
+	EventManager.cpp,
+	Table.h,
+	Table.cpp,
+	"Custom Slots" readonly separator,
+	DummySlot.h,
+	DummySlot.cpp,
+	DataBridge.h,
+	DataBridge.cpp,
+	CostUtils.h,
+	CostUtils.cpp,
+	Indicators.h,
+	Indicators.cpp,
+	Periodicals.h,
+	Periodicals.cpp,
+	Filters.h,
+	Filters.cpp,
+	Features.h,
+	Features.cpp,
+	Descriptors.h,
+	Descriptors.cpp,
+	Patcher.h,
+	Patcher.cpp,
+	Neural.h,
+	Neural.cpp,
+	Weighter.h,
+	Weighter.cpp;
+
+mainconfig
+	"" = "DATACORE_ONLY MT";
+

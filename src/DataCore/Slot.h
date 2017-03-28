@@ -1,0 +1,160 @@
+#ifndef _DataCore_Slot_h_
+#define _DataCore_Slot_h_
+
+#include <Core/Core.h>
+
+namespace DataCore {
+using namespace Upp;
+
+class TimeVector;
+
+struct DataExc : public Exc {
+	DataExc();
+	DataExc(String msg);
+};
+#define ASSERTEXC(x) if (!(x)) throw DataExc(#x);
+#define ASSERTEXC_(x, msg) if (!(x)) throw DataExc(msg);
+
+// Helper macros for indicator short names
+#define SHORTNAME0(x) x
+#define SHORTNAME1(x, a1) x "(" + DblStr(a1) + ")"
+#define SHORTNAME2(x, a1, a2) x "(" + DblStr(a1) + "," + DblStr(a2) + ")"
+#define SHORTNAME3(x, a1, a2, a3) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + ")"
+#define SHORTNAME4(x, a1, a2, a3, a4) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + "," + DblStr(a4) + ")"
+#define SHORTNAME5(x, a1, a2, a3, a4, a5) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + "," + DblStr(a4) + "," + DblStr(a5) + ")"
+#define SHORTNAME6(x, a1, a2, a3, a4, a5, a6) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + "," + DblStr(a4) + "," + DblStr(a5) + "," + DblStr(a6) +  ")"
+#define SHORTNAME7(x, a1, a2, a3, a4, a5, a6, a7) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + "," + DblStr(a4) + "," + DblStr(a5) + "," + DblStr(a6) + "," + DblStr(a7) + ")"
+#define SHORTNAME8(x, a1, a2, a3, a4, a5, a6, a7, a8) x "(" + DblStr(a1) + "," + DblStr(a2) + "," + DblStr(a3) + "," + DblStr(a4) + "," + DblStr(a5) + "," + DblStr(a6) + "," + DblStr(a7) + "," + DblStr(a8) + ")"
+
+typedef Vector<byte> SlotData;
+typedef Ptr<TimeVector> TimeVectorPtr;
+
+struct SlotProcessAttributes {
+	int sym_id;								// id of symbol
+	int sym_count;							// count of symbol ids
+	int tf_id;								// timeframe-id from shorter to longer
+	int tf_count;							// count of timeframe ids
+	int processing_tf_count;				// count of timeframes currently being processed
+	int pos[16];							// time-position for all timeframes
+	int bars[16];							// count of time-positions for all timeframes
+	int periods[16];						// periods for all timeframes
+	int slot_bytes;							// reserved memory in bytes for current slot
+	byte* slot_vector;						// pointer to the sym/tf data
+	byte* data;								// pointer to the reserved memory
+	TimeVector* tv;							// pointer to the parent TimeVector
+	//TimeVector::Iterator* it;				// pointer to the calling iterator
+	void* it;								// (TimeVector::Iterator) pointer to the calling iterator
+	Vector<SlotData>::Iterator* slot_it;	// pointer to the iterator of current sym/tf
+	Vector< Vector<SlotData>::Iterator >::Iterator* tf_it;
+											// pointer to the iterator of all sym
+	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator* sym_it;
+											// pointer to the iterator of all data
+	
+	/*String ToString() const {
+		return Format("sym=%d sym_count=%d tf_id=%d tf_count=%d period=%d pos=%d slot_bytes=%d slot_vector=%X data=%X tv=%X it=%X slot_it=%X",
+			sym, sym_count, tf_id, tf_count, period, pos, slot_bytes,
+			(int64)slot_vector, (int64)data, (int64)tv, (int64)it, (int64)slot_it);
+	}*/
+	
+	int GetBars() const {return bars[tf_id];}
+	int GetCounted() const {return pos[tf_id];}
+	int GetPeriod() const {return periods[tf_id];}
+	
+};
+
+
+class Slot : public Pte<Slot> {
+	
+protected:
+	friend class TimeVector;
+	typedef Ptr<Slot> SlotPtr;
+	
+	void LoadCache(int sym_id, int tf_id, int pos);
+	
+	String path;
+	SlotPtr source;
+	TimeVector* vector;
+	
+	struct SlotValue : Moveable<SlotValue> {
+		int64 bytes, offset;
+		String name, description;
+		byte type;
+	};
+	Vector<SlotValue> values;
+	int reserved_bytes;
+	int slot_offset;
+	int data_type;
+	
+public:
+	Slot();
+	virtual ~Slot() {}
+	
+	enum {VALUE_MAINDOUBLE, TYPE_SEPARATEDOUBLE};
+	
+	SlotPtr FindLinkSlot(const String& path);
+	SlotPtr ResolvePath(const String& path);
+	void LinkPath(String dest, String src);
+	void AddValue(uint16 bytes, String name="", String description="");
+	
+	template <class T>
+	void AddValue(String name="", String description="") {AddValue(sizeof(T), name, description);}
+
+	int GetReservedBytes() {return reserved_bytes;}
+	int GetCount() {return values.GetCount();}
+	const SlotValue& operator[] (int i) const {return values[i];}
+	int GetOffset() const {return slot_offset;}
+	
+	template <class T>
+	T* GetValue(int i, const SlotProcessAttributes& attr) {
+		return (T*)(attr.slot_vector + slot_offset + values[i].offset);
+	}
+	template <class T>
+	T* GetValue(int i, int shift, const SlotProcessAttributes& attr) {
+		int newpos = attr.pos[attr.tf_id] - shift;
+		if (newpos < 0 || newpos >= attr.bars[attr.tf_id]) return 0;
+		Vector<SlotData>::Iterator it = *attr.slot_it;
+		it -= shift;
+		if (!it->GetCount()) LoadCache(attr.sym_id, attr.tf_id, newpos);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);
+	}
+	template <class T>
+	T* GetValue(int i, int tf_id, int shift, const SlotProcessAttributes& attr) {
+		int newpos = attr.pos[attr.tf_id] - shift;
+		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
+		Vector<SlotData>::Iterator it = *(*(attr.tf_it + tf_id) + newpos);
+		it -= shift;
+		if (!it->GetCount()) LoadCache(attr.sym_id, tf_id, newpos);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);
+	}
+	template <class T>
+	T* GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
+		int newpos = attr.pos[attr.tf_id] - shift;
+		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
+		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + newpos);
+		it -= shift;
+		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);
+	}
+	
+	void SetPath(String p) {path = p;}
+	void SetSource(SlotPtr sp) {source = sp;}
+	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
+	
+	virtual String GetKey() {return "slot";}
+	virtual String GetName() {return "name";}
+	virtual String GetShortName() {return "shortname";}
+	virtual void SetArguments(const VectorMap<String, Value>& args) {}
+	virtual void Init() {}
+	virtual void Start() {}
+	virtual bool Process(const SlotProcessAttributes& attr) {return 1;}
+	
+	
+};
+
+typedef Ptr<Slot> SlotPtr;
+
+
+
+}
+
+#endif

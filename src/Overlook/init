@@ -1,0 +1,9 @@
+#ifndef _InstanceEditor_icpp_init_stub
+#define _InstanceEditor_icpp_init_stub
+#include "CtrlLib/init"
+#include "CoreUtils/init"
+#include "CtrlUtils/init"
+#include "DataCtrl/init"
+#include "RefCore/init"
+#include "plugin/tidy/init"
+#endif

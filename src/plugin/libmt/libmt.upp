@@ -1,0 +1,9 @@
+description "Running a subset of mql commands in MetaTrader via tcp-socket.\3770,128,128";
+
+uses
+	Core/Rpc;
+
+file
+	libmt.h,
+	libmt.cpp;
+

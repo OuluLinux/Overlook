@@ -1,0 +1,23 @@
+description "\377B0,0,128";
+
+uses
+	DataCore,
+	RefCore;
+
+file
+	DataCtrl.h,
+	DataCtrl.cpp,
+	DataCtrl_.icpp,
+	Container.h,
+	Container.cpp,
+	EventCtrl.h,
+	EventCtrl.cpp,
+	FrontPage.h,
+	FrontPage.cpp,
+	GraphCtrl.h,
+	GraphCtrl.cpp,
+	GraphGroupCtrl.h,
+	GraphGroupCtrl.cpp,
+	TableCtrl.h,
+	TableCtrl.cpp;
+

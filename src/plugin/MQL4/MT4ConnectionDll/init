@@ -1,0 +1,4 @@
+#ifndef _MQL4_MT4ConnectionDll_icpp_init_stub
+#define _MQL4_MT4ConnectionDll_icpp_init_stub
+#include "Core/init"
+#endif

@@ -1,0 +1,19 @@
+description "Nonlinear AutoRegressive with eXogenous inputs neural network\377";
+
+file
+	COPYING,
+	NARX.h,
+	NARX.cpp,
+	Activation_functions.h,
+	Activation_functions.cpp,
+	EvaluationEngine.h,
+	EvaluationEngine.cpp,
+	FeedbackInfo.h,
+	FeedbackInfo.cpp,
+	InputUnit.h,
+	InputUnit.cpp,
+	OutputUnit.h,
+	OutputUnit.cpp,
+	Unit.h,
+	Unit.cpp;
+

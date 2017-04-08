@@ -128,7 +128,11 @@ bool TimeVector::Iterator::Process() {
 						ReleaseMemory(); // must be locked externally
 					}
 					
-					ASSERTEXC(slot_data.IsEmpty()); // might throw legal duplicate load, though...
+					if (!slot_data.IsEmpty()) {
+						tv->cache_lock.Leave();
+						throw DataExc("slot_data.IsEmpty()"); // might throw legal duplicate load, though...
+					}
+					
 					slot_data.SetCount(total_slot_bytes); // don't lose lock for this
 					file_pos = tv->GetPersistencyCursor(i, j, attr.pos[j]);
 					has_file_pos = true;

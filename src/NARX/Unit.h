@@ -1,6 +1,6 @@
 #pragma once
-class Unit
-{
+
+class Unit : Moveable<Unit> {
 private:
 	double deltah;
 
@@ -10,17 +10,17 @@ protected:
 	double (*activation_func_derv) (double arg);
 	int input_count;
 	double output;
-	Unit **input_area;
-	double *input_weights;
+	Vector<Unit*> input_area;
+	Vector<double> input_weights;
 
 	double bias;
 
-	double *old_weights;
+	Vector<double> old_weights;
 
 
-	virtual void compute_output();
+	virtual void ComputeOutput();
 
-	virtual double pre_output();
+	virtual double GetPreOutput();
 
 public:
 
@@ -32,24 +32,25 @@ public:
 
 	void set_activation_func ( double (*f) (double arg));
 	void set_activation_func_derv ( double (*f) (double arg));
-	/* returns the index of the added input unit */
-	int add_input_unit (Unit * unit);
 
-	virtual double get_output();
+	// returns the index of the added input unit
+	int AddInputUnit(Unit& unit);
 
-	virtual void adjust_weights();
+	virtual double GetOutput();
 
-	double *weights();
-	int inputcount();
+	virtual void AdjustWeights();
 
-	void copy(Unit *u);
-	void sum(Unit *u);
-	void divide(int len);
+	double* GetWeights();
+	int GetInputCount();
 
-	virtual double get_delta(Unit * u);
+	void Copy(Unit& u);
+	void Sum(Unit& u);
+	void Divide(int len);
 
-	virtual void compute_delta(double superior_layer_delta);
+	virtual double GetDelta(Unit& u);
 
-	virtual void fix_weights();
+	virtual void ComputeDelta(double superior_layer_delta);
+
+	virtual void FixWeights();
 };
 

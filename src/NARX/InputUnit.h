@@ -1,17 +1,18 @@
 #pragma once
 
-class InputUnit : public Unit
-{
+#include "Unit.h"
+
+class InputUnit : public Unit, Moveable<InputUnit> {
 private:
 	double input_value;
 public:
 	InputUnit(double input);
 	InputUnit();
-	~InputUnit(void);
+	~InputUnit();
 
-	virtual double get_output();
-	void set_input(double arg);
-	double get_input();
+	virtual double GetOutput();
+	void SetInput(double arg);
+	double GetInput();
 
 };
 

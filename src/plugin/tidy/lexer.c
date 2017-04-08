@@ -2864,7 +2864,7 @@ static void MapStr( ctmbstr str, uint code )
     }
 }
 
-void TY_(InitMap)(void)
+void TY_(InitMap)()
 {
     MapStr("\r\n\f", newline|white);
     MapStr(" \t", white);

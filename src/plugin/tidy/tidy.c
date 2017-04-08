@@ -28,7 +28,7 @@ static Bool samefile( ctmbstr filename1, ctmbstr filename2 )
 #endif
 }
 
-static void outOfMemory(void)
+static void outOfMemory()
 {
     fprintf(stderr,"Out of memory. Bailing out.");
     exit(1);

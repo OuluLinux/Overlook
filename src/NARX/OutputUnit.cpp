@@ -1,70 +1,54 @@
 #include "NARX.h"
 
-
-OutputUnit::OutputUnit(void):Unit()
-{
-
+OutputUnit::OutputUnit(): Unit() {
 	target = 0;
-
 }
 
 
-OutputUnit::~OutputUnit(void)
-{
+OutputUnit::~OutputUnit() {
 }
 
 
-void OutputUnit::setTarget(double target)
-{
-	this->target=target;
+void OutputUnit::SetTarget(double target) {
+	this->target = target;
 }
 
-double OutputUnit::error()
-{
-	return target - get_output();
+double OutputUnit::Error() {
+	return target - GetOutput();
 }
 
-void OutputUnit::adjust_weights()
-{
-	//deltao = activation_func_derv(pre_output()) * error();
-
-	for(int i = 0; i < input_count;i ++)
-	{
-		input_weights[i] += Unit::alfa * deltao * input_area[i]->get_output();
-		//
+void OutputUnit::AdjustWeights() {
+	//deltao = activation_func_derv(GetPreOutput()) * Error();
+	for (int i = 0; i < input_count; i ++) {
+		input_weights[i] += Unit::alfa * deltao * input_area[i]->GetOutput();
 	}
-	
 }
 
-void OutputUnit::compute_delta(double superior_layer_delta)
-{
-	deltao = activation_func_derv(pre_output()) * superior_layer_delta;
+void OutputUnit::ComputeDelta(double superior_layer_delta) {
+	deltao = activation_func_derv(GetPreOutput()) * superior_layer_delta;
 }
 
-void OutputUnit::compute_delta()
-{
-	deltao = activation_func_derv(pre_output()) * error();
+void OutputUnit::ComputeDelta() {
+	deltao = activation_func_derv(GetPreOutput()) * Error();
 }
 
-double OutputUnit::get_delta(Unit *u)
-{
+double OutputUnit::GetDelta(Unit& u) {
+	for (int i = 0; i < input_count; i++)
+		if (&u == input_area[i])
+			return deltao * old_weights[i];
 
-	for (int i = 0;i<input_count;i++)
-		if (u == input_area[i])
-	      return deltao * old_weights[i];
-
-	assert(false);
+	ASSERT(false);
 	return 0;
 }
-/*double OutputUnit::pre_output()
-{
+/*  double OutputUnit::GetPreOutput()
+    {
 	double preoutput = 0;
 	for (int i=0; i < input_count; i++)
-		preoutput += input_area[i]->get_output() * input_weights[i];
-	//if(activation_func == Activation_functions::aslog)
-	//FLOG(QString("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
-	 if (activation_func == Activation_functions::identity)
-		FLOG(QString("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+		preoutput += input_area[i]->GetOutput() * input_weights[i];
+	//if(activation_func == ActivationFunctions::AsLog)
+	//FLOG(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	 if (activation_func == ActivationFunctions::identity)
+		FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	preoutput += bias;
 	return preoutput;
-}*/
+    }*/

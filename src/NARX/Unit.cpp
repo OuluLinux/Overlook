@@ -1,142 +1,118 @@
 #include "NARX.h"
 
-
 double Unit::alfa = 0.2;
 
-Unit::Unit(void)
-{
-	input_area = new Unit * [MAX_INPUTS_PER_UNIT];
+Unit::Unit() {
+	input_area.SetCount(MAX_INPUTS_PER_UNIT);
 	input_count = 0;
-	input_weights = new double[MAX_INPUTS_PER_UNIT];
+	input_weights.SetCount(MAX_INPUTS_PER_UNIT);
+	for (int i = 0; i < MAX_INPUTS_PER_UNIT; i ++)
+		input_weights[i] = Randomf();
 
-	for(int i =0; i < MAX_INPUTS_PER_UNIT;i ++)
-		input_weights[i] = (double) (rand() % 100) / 100;
-
-	bias = (double) (rand() % 100) / 100;
-
-	old_weights = new double[MAX_INPUTS_PER_UNIT];
-	for(int i =0; i < MAX_INPUTS_PER_UNIT;i ++)
+	bias = Randomf();
+	
+	old_weights.SetCount(MAX_INPUTS_PER_UNIT);
+	for (int i = 0; i < MAX_INPUTS_PER_UNIT; i ++)
 		old_weights[i] = input_weights[i];
 
 	output = 0;
 }
 
 
-Unit::~Unit(void)
-{
-	delete [] input_area;
-	delete [] input_weights;
-	delete [] old_weights;
+Unit::~Unit() {
+	
 }
 
 
-void Unit::set_activation_func( double (*f) (double arg))
-{
+void Unit::set_activation_func( double (*f) (double arg)) {
 	activation_func = f;
 }
 
-void Unit::set_activation_func_derv( double (*f) (double arg))
-{
+void Unit::set_activation_func_derv( double (*f) (double arg)) {
 	activation_func_derv = f;
 }
 
-int Unit::add_input_unit (Unit *unit)
-{
+int Unit::AddInputUnit (Unit& unit) {
 	if (input_count >= MAX_INPUTS_PER_UNIT) return -1;
 
-	input_weights[input_count] = (double) (rand() % 100) / 100;
-	input_area[input_count] = unit;
-	
+	input_weights[input_count] = Randomf();
+	input_area[input_count] = &unit;
 	//printf("%f\n", input_weights[input_count]);
-	//FLOG(QString("input count=%1").arg(input_count).toStdString().c_str());
+	//FLOG(String("input count=%1").arg(input_count).toStdString().c_str());
 	return input_count++;
 }
 
-double Unit::pre_output()
-{
+double Unit::GetPreOutput() {
 	double preoutput = 0;
-	for (int i=0; i < input_count; i++)
-	{
-		//FLOG(QString("input:%1\n").arg(input_area[i]->get_output()).toStdString().c_str());
-		preoutput += input_area[i]->get_output() * input_weights[i];
+
+	for (int i = 0; i < input_count; i++) {
+		//FLOG(String("input:%1\n").arg(input_area[i]->GetOutput()).toStdString().c_str());
+		preoutput += input_area[i]->GetOutput() * input_weights[i];
 	}
-	//if(activation_func == Activation_functions::aslog)
-	//FLOG(QString("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
-	// if (activation_func == Activation_functions::identity)
-	//	FLOG(QString("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+
+	//if(activation_func == ActivationFunctions::AsLog)
+	//FLOG(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	// if (activation_func == ActivationFunctions::identity)
+	//	FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	preoutput += bias;
-	//FLOG(QString("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	//FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	return preoutput;
 }
 
-void Unit::compute_output()
-{
-	output = activation_func(pre_output());
+void Unit::ComputeOutput() {
+	output = activation_func(GetPreOutput());
 }
 
-double Unit::get_output()
-{
-	compute_output();
+double Unit::GetOutput() {
+	ComputeOutput();
 	return output;
 }
 
 
-void Unit::compute_delta(double superior_layer_delta)
-{
-		deltah =  activation_func_derv(pre_output()) * superior_layer_delta ; // * get_output();
+void Unit::ComputeDelta(double superior_layer_delta) {
+	deltah =  activation_func_derv(GetPreOutput()) * superior_layer_delta ; // * GetOutput();
 }
 
-void Unit::adjust_weights()
-{
-	
-	for(int i = 0; i < input_count;i ++)
-	{
-		input_weights[i] += Unit::alfa * deltah * input_area[i]->get_output();
-		//FLOG(QString("ok adjust=%1:%2\n").arg( pre_output()  ) .arg(activation_func_derv(pre_output())).toStdString().c_str());
+void Unit::AdjustWeights() {
+	for (int i = 0; i < input_count; i ++) {
+		input_weights[i] += Unit::alfa * deltah * input_area[i]->GetOutput();
+		//FLOG(String("ok adjust=%1:%2\n").arg( GetPreOutput()  ) .arg(activation_func_derv(GetPreOutput())).toStdString().c_str());
 	}
 }
 
-double *Unit::weights()
-{
+double* Unit::GetWeights() {
 	return input_weights;
 }
 
-int Unit::inputcount()
-{
+int Unit::GetInputCount() {
 	return input_count;
 }
 
-void Unit::copy(Unit *u)
-{
-	for(int i=0;i<input_count;i++)
-		input_weights[i] = u->input_weights[i];
+void Unit::Copy(Unit& u) {
+	for (int i = 0; i < input_count; i++)
+		input_weights[i] = u.input_weights[i];
 }
 
-void Unit::sum(Unit *u)
-{
-	for(int i=0;i<input_count;i++)
-		input_weights[i] += u->input_weights[i];
+void Unit::Sum(Unit& u) {
+	for (int i = 0; i < input_count; i++)
+		input_weights[i] += u.input_weights[i];
 }
 
-void Unit::divide(int len)
-{
-	for(int i=0;i<input_count;i++)
+void Unit::Divide(int len) {
+	for (int i = 0; i < input_count; i++)
 		input_weights[i] /= len;
 }
 
-double Unit::get_delta(Unit *u)
-{
+double Unit::GetDelta(Unit& u) {
+	for (int i = 0; i < input_count; i++)
+		if (&u == input_area[i])
+			return deltah * old_weights[i];
 
-	for (int i = 0;i<input_count;i++)
-		if (u == input_area[i])
-	      return deltah * old_weights[i];
-
-	assert(false);
+	ASSERT(false);
 	return 0;
 }
 
-void Unit::fix_weights()
-{
-	for(int i = 0; i < input_count;i ++)
+void Unit::FixWeights() {
+	for (int i = 0; i < input_count; i ++)
 		old_weights[i] = input_weights[i];
 }

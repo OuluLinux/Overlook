@@ -79,7 +79,7 @@ static StreamOut stdoutStreamOut =
     { 0, TY_(filesink_putByte) }
 };
 
-StreamOut* TY_(StdErrOutput)(void)
+StreamOut* TY_(StdErrOutput)()
 {
   if ( stderrStreamOut.sink.sinkData == 0 )
       stderrStreamOut.sink.sinkData = stderr;
@@ -87,7 +87,7 @@ StreamOut* TY_(StdErrOutput)(void)
 }
 
 #if 0
-StreamOut* TY_(StdOutOutput)(void)
+StreamOut* TY_(StdOutOutput)()
 {
   if ( stdoutStreamOut.sink.sinkData == 0 )
       stdoutStreamOut.sink.sinkData = stdout;

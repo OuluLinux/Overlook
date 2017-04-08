@@ -1,33 +1,24 @@
-#include "InputUnit.h"
+#include "NARX.h"
 
-
-InputUnit::InputUnit(double input)
-{
+InputUnit::InputUnit(double input) {
 	input_value = input;
 }
 
-InputUnit::InputUnit()
-{
-
+InputUnit::InputUnit() {
 }
 
 
-InputUnit::~InputUnit(void)
-{
-
+InputUnit::~InputUnit() {
 }
 
-double InputUnit::get_output()
-{
+double InputUnit::GetOutput() {
 	return input_value;
 }
 
-void InputUnit::set_input(double arg)
-{
+void InputUnit::SetInput(double arg) {
 	input_value = arg;
 }
 
-double InputUnit::get_input()
-{
+double InputUnit::GetInput() {
 	return input_value;
 }

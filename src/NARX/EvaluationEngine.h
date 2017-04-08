@@ -1,13 +1,13 @@
 #pragma once
-class EvaluationEngine
-{
+
+class EvaluationEngine : Moveable<EvaluationEngine> {
 protected:
 	int series_len;
 	int curlen;
 
-	double *series;
-	double *predicted;
-	
+	Vector<double> series;
+	Vector<double> predicted;
+
 
 
 	double Fd(double val);
@@ -15,10 +15,11 @@ protected:
 
 
 public:
-	EvaluationEngine(int slen);
-	~EvaluationEngine(void);
-
-	void insertvalue(double target, double pred);
+	EvaluationEngine();
+	~EvaluationEngine();
+	
+	void Init(int slen);
+	void Insert(double target, double pred);
 
 	double F3();
 	double F1();
@@ -31,6 +32,6 @@ public:
 
 	double DA();
 
-	void reset();
+	void Clear();
 };
 

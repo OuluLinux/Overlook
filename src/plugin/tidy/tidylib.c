@@ -120,7 +120,7 @@ TidyOption   tidyImplToOption( const TidyOptionImpl* option )
 ** 
 */
 
-TidyDoc TIDY_CALL       tidyCreate(void)
+TidyDoc TIDY_CALL       tidyCreate()
 {
   TidyDocImpl* impl = tidyDocCreate( &TY_(g_default_allocator) );
   return tidyImplToDoc( impl );
@@ -203,7 +203,7 @@ void* TIDY_CALL       tidyGetAppData( TidyDoc tdoc )
   return NULL;
 }
 
-ctmbstr TIDY_CALL     tidyReleaseDate(void)
+ctmbstr TIDY_CALL     tidyReleaseDate()
 {
     return TY_(ReleaseDate)();
 }

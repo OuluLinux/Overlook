@@ -318,7 +318,7 @@ int main(int argc, char **argv )
 ** @{
 */
 
-TIDY_EXPORT TidyDoc TIDY_CALL     tidyCreate(void);
+TIDY_EXPORT TidyDoc TIDY_CALL     tidyCreate();
 TIDY_EXPORT TidyDoc TIDY_CALL     tidyCreateWithAllocator( TidyAllocator *allocator );
 TIDY_EXPORT void TIDY_CALL        tidyRelease( TidyDoc tdoc );
 
@@ -331,7 +331,7 @@ TIDY_EXPORT void TIDY_CALL        tidySetAppData( TidyDoc tdoc, void* appData );
 TIDY_EXPORT void* TIDY_CALL       tidyGetAppData( TidyDoc tdoc );
 
 /** Get release date (version) for current library */
-TIDY_EXPORT ctmbstr TIDY_CALL     tidyReleaseDate(void);
+TIDY_EXPORT ctmbstr TIDY_CALL     tidyReleaseDate();
 
 /* Diagnostics and Repair
 */

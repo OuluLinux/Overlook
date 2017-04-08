@@ -20,12 +20,12 @@
 /* maximum number of characters per byte sequence */
 #define TC_OUTBUFSIZE 16
 
-Bool IconvInitInputTranscoder(void)
+Bool IconvInitInputTranscoder()
 {
     return no;
 }
 
-void IconvUninitInputTranscoder(void)
+void IconvUninitInputTranscoder()
 {
     return;
 }

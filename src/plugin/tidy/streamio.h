@@ -134,8 +134,8 @@ StreamOut* TY_(FileOutput)( TidyDocImpl *doc, FILE* fp, int encoding, uint newln
 StreamOut* TY_(BufferOutput)( TidyDocImpl *doc, TidyBuffer* buf, int encoding, uint newln );
 StreamOut* TY_(UserOutput)( TidyDocImpl *doc, TidyOutputSink* sink, int encoding, uint newln );
 
-StreamOut* TY_(StdErrOutput)(void);
-/* StreamOut* StdOutOutput(void); */
+StreamOut* TY_(StdErrOutput)();
+/* StreamOut* StdOutOutput(); */
 void       TY_(ReleaseStreamOut)( TidyDocImpl *doc, StreamOut* out );
 
 void TY_(WriteChar)( uint c, StreamOut* out );

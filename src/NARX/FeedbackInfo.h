@@ -1,15 +1,17 @@
 #pragma once
-class FeedbackInfo
-{
+
+class FeedbackInfo : Moveable<FeedbackInfo> {
 public:
-	double *Y;
-	double *X;
-	double *D;
+	Vector<double> Y;
+	Vector<double> X;
+	Vector<double> D;
 
 	int x, y, d;
 
 public:
-	FeedbackInfo(int x, int y, int d);
-	~FeedbackInfo(void);
+	FeedbackInfo();
+	~FeedbackInfo();
+	
+	void Init(int x, int y, int d);
 };
 

@@ -32,7 +32,7 @@
 
 #include "version.h"
 
-ctmbstr TY_(ReleaseDate)(void)
+ctmbstr TY_(ReleaseDate)()
 {
   return TY_(release_date);
 }

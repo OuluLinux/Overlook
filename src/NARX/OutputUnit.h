@@ -1,8 +1,8 @@
 #pragma once
+
 #include "Unit.h"
-class OutputUnit :
-	public Unit
-{
+
+class OutputUnit : public Unit, Moveable<OutputUnit> {
 protected:
 
 	double target;
@@ -10,21 +10,21 @@ protected:
 
 	double deltao;
 
-	//virtual double pre_output();
+	//virtual double GetPreOutput();
 
 public:
-	OutputUnit(void);
-	~OutputUnit(void);
+	OutputUnit();
+	~OutputUnit();
 
-	void setTarget(double target);
-	double error();
+	void SetTarget(double target);
+	double Error();
 
-	virtual void adjust_weights();
+	virtual void AdjustWeights();
 
-	virtual void compute_delta(double superior_layer_delta);
-	virtual void compute_delta();
+	virtual void ComputeDelta(double superior_layer_delta);
+	virtual void ComputeDelta();
 
-	virtual double get_delta(Unit * u);
+	virtual double GetDelta(Unit& u);
 
 
 };

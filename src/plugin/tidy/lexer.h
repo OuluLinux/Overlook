@@ -531,7 +531,7 @@ typedef enum
 
 Node* TY_(GetToken)( TidyDocImpl* doc, GetTokenMode mode );
 
-void TY_(InitMap)(void);
+void TY_(InitMap)();
 
 
 /* create a new attribute */

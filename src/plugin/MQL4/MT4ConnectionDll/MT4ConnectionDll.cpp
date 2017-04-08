@@ -3,7 +3,7 @@
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason,  LPVOID lpReserved)
 {
-	FileOut test("C:\\testestest");
+	FileOut Test("C:\\testestest");
 	test << "test";
 	test.Flush();
 	

@@ -1,0 +1,40 @@
+description "A custom drop-down console for Windows. Fills the need for guake and tools when coming back from linux, without slowness of cygwin and conemu. \377";
+
+uses
+	CtrlLib,
+	CodeEditor,
+	TabBar,
+	Esc,
+	RichEdit,
+	PdfDraw,
+	plugin/jpg;
+
+file
+	main.cpp,
+	CommandBridge.h,
+	CommandBridge.cpp,
+	CommandBridge.iml,
+	CommandBridge.key,
+	CommandBridge_.icpp,
+	CommandBridge.rc,
+	CommandBridge.t,
+	Images.h,
+	Console.h,
+	Console.cpp,
+	Word.h,
+	Word.cpp,
+	CommandPrompt.h,
+	CommandPrompt.cpp,
+	Connections readonly separator,
+	FtpServer.h,
+	FtpServer.cpp,
+	FtpClient.h,
+	FtpClient.cpp,
+	FtpClient.lay,
+	Ftp.h,
+	Ftp.cpp;
+
+mainconfig
+	"" = "GUI MT",
+	"" = "GUI MT NOGTK";
+

@@ -1,0 +1,23 @@
+LAYOUT(FtpBrowserLayout, 508, 347)
+	ITEM(FileList, list, HSizePosZ(2, 3).VSizePosZ(1, 2))
+END_LAYOUT
+
+LAYOUT(AccountLayout, 479, 153)
+	ITEM(Label, dv___0, SetLabel(t_("Username:")).SetAlign(ALIGN_RIGHT).LeftPosZ(3, 122).TopPosZ(25, 24))
+	ITEM(EditString, user, LeftPosZ(133, 328).TopPosZ(25, 24))
+	ITEM(Label, dv___2, SetLabel(t_("Password:")).SetAlign(ALIGN_RIGHT).LeftPosZ(3, 122).TopPosZ(61, 24))
+	ITEM(EditString, password, LeftPosZ(133, 328).TopPosZ(61, 24))
+END_LAYOUT
+
+LAYOUT(ServerLayout, 479, 153)
+	ITEM(Label, dv___0, SetLabel(t_("Server")).SetAlign(ALIGN_RIGHT).LeftPosZ(3, 122).TopPosZ(25, 24))
+	ITEM(EditString, host, LeftPosZ(133, 328).TopPosZ(25, 24))
+	ITEM(Option, active, SetLabel(t_("Enable Active Mode (Not Recommended)")).LeftPosZ(241, 220).TopPosZ(59, 16))
+	ITEM(Option, ftps, SetLabel(t_("Enable FTPS Mode (Using SSL)")).LeftPosZ(241, 220).TopPosZ(82, 16))
+	ITEM(Option, log, SetLabel(t_("Enable Logging")).LeftPosZ(241, 220).TopPosZ(106, 16))
+END_LAYOUT
+
+LAYOUT(InformationLayout, 400, 246)
+	ITEM(DocEdit, info, SetEditable(false).HSizePosZ(0, 0).VSizePosZ(1, 1))
+END_LAYOUT
+

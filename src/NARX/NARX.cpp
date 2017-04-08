@@ -222,7 +222,7 @@ void NARX::TrainEpoch(bool logging, int epo) {
 						else
 							exogenous[i * a1 + j].SetInput(0);
 
-						fi[t].X[i * a + j] = exogenous[i * a1 + j].GetInput();
+						fi[t].X[i * a1 + j] = exogenous[i * a1 + j].GetInput();
 					}
 			}
 
@@ -450,13 +450,11 @@ void NARX::Test(int epo) {
 				}
 			}
 		}
-
-		//exogenous[0]->SetInput(series[series_index]);
-
+		
 		if (feedback) {
 			for (int j = 0; j < N; j++) {
 				for (int i = 0; i < b; i++) {
-					if (series_index - data->train_len - j >= 0)
+					if (series_index - data->train_len - j - 1 >= 0)
 						feedbacks[j * b + i].SetInput(Y[j][series_index - data->train_len - j - 1]);
 					else
 						feedbacks[j * b + i].SetInput(0);
@@ -501,5 +499,59 @@ void NARX::Test(int epo) {
 			  ee[i].KS2(), ee[i].KS12(), ee[i].DA(),
 			  rw[i].F1(), rw[i].F2(), rw[i].F3(), rw[i].F4(),
 			  rw[i].KS1(), rw[i].KS2(), rw[i].KS12(), rw[i].DA()));
+	}
+}
+
+void NARX::Predict(int series_index, Vector<double>& out) {
+	out.SetCount(N);
+	
+	Vector<Vector<double> > Y;
+	Y.SetCount(N);
+	for (int i = 0; i < N; i++)
+		Y[i].SetCount(data->test_len, 0.0);
+	
+	if (targets) {
+		for (int j = 0; j < N; j++) {
+			for (int i = 1; i <= b; i++) {
+				if (series_index - i >= 0)
+					inputs[j * b + i - 1].SetInput(data->Nseries[j][ series_index - i ]);
+				else
+					inputs[j * b + i - 1].SetInput(0);
+			}
+		}
+	}
+	
+	#error todo feedback requires buffer from beginning
+	
+	//exogenous[0]->SetInput(series[series_index]);
+
+	if (feedback) {
+		for (int j = 0; j < N; j++) {
+			for (int i = 0; i < b; i++) {
+				if (series_index - data->train_len - j - 1 >= 0)
+					feedbacks[j * b + i].SetInput(Y[j][series_index - data->train_len - j - 1]);
+				else
+					feedbacks[j * b + i].SetInput(0);
+			}
+		}
+	}
+	
+
+	for (int i = 0; i < M; i++) {
+		if (data->used_exogenous[i]) {
+			for (int j = 0; j < a1; j++) {
+				if (series_index - j >= 0)
+					exogenous[j + i * a1].SetInput(data->Nexogenous_series[i][series_index - j]);
+				else
+					exogenous[j + i * a1].SetInput(0);
+			}
+
+			//_log(String("ok %1").arg(exogenous_series[i][series_index]));
+			//FWhenLog(String("ok exo=%1\n").arg(exogenous_series[i][series_index]).toStdString().c_str());
+		}
+	}
+
+	for (int i = 0; i < N; i++) {
+		out[i] = output_units[i].GetOutput();
 	}
 }

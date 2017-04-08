@@ -40,15 +40,16 @@ protected:
 	NarxData* data;
 
 	int H;
-	int a;
+	int a, a1;
 	int b;
 	int M;
 	int N;
 	int feedback, targets;
 	int hact;
+	int epoch;
 	ARCH arch;
 	
-	Vector<Vector<double> > Y;
+	//Vector<Vector<double> > Y;
 	Vector<Unit> hunits;
 	Vector<OutputUnit> output_units;
 	Vector<InputUnit> inputs;
@@ -66,18 +67,23 @@ public:
 	NARX();
 	~NARX();
 
+	void SetData(NarxData& data) {this->data = &data;}
 	void Init(ARCH arch, int H = 1, int hact = 2, int a = 0, int b = 0, int M = 0, int N = 1, int feedback = 0, int targets = 0);
 	void Start() {Thread::Start(THISBACK(Run));}
 	void Train(int epochs);
 	void Test(int epo);
-	ARCH GetArch();
+	void Predict(int series_index, Vector<double>& out);
 	void Copy(NARX& n);
 	void Sum(NARX& n);
 	void Divide(int len);
-
+	
+	ARCH GetArch();
+	int GetEpoch() {return epoch;}
+	
 public:
-	Callback TrainingEpochFinished;
-	Callback1<String> Log;
+	Callback WhenTrainingFinished;
+	Callback WhenTrainingEpochFinished;
+	Callback1<String> WhenLog;
 	
 };
 

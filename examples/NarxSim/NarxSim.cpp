@@ -11,12 +11,22 @@ NarxSim::NarxSim() {
 	narx_stage1_1 = 0;
 	normalize = 1;
 	arch = MLP;
+	M = 0;
 	old_M = 0;
+	N = 1;
+	series_generated = false;
+	
+	mynarx.SetData(*this);
+	mynarx.WhenLog = THISBACK(PostNarxLog);
+	mynarx.WhenTrainingFinished = THISBACK(TrainingFinished);
 	
 	Add(tabs.HSizePos().VSizePos(0,100));
 	Add(logctrl.HSizePos().BottomPos(0,70));
 	Add(prev.LeftPos(4,100).BottomPos(72, 26));
 	Add(next.RightPos(4,100).BottomPos(72, 26));
+	
+	logctrl.AddColumn();
+	logctrl.NoHeader();
 	
 	next.SetLabel("Next");
 	next <<= THISBACK(Next);
@@ -50,7 +60,6 @@ NarxSim::NarxSim() {
 	archtab.check_exogenous.Set(true);
 	archtab.spinbox_hidden_units.SetData(3);
 	
-	
 	params.spinbox_dregressor.SetData(0);
 	params.spinbox_xregressor.SetData(2);
 	params.learning_rate.SetData(0.2);
@@ -63,7 +72,10 @@ NarxSim::NarxSim() {
 	params.combo_ounits_act.Add("linear");
 	params.combo_ounits_act.SetIndex(0);
 	
-	predict.predict <<= THISBACK(Predict);
+	training.log.AddColumn("");
+	training.log.NoHeader();
+	
+	predict.x <<= THISBACK(Predict);
 	
 	tabs.Add(train, "Train source");
 	tabs.Add(train);
@@ -92,14 +104,21 @@ NarxSim::NarxSim() {
 
 
 void NarxSim::ProgressInc() {
-	//::ProgressInc();
+	PostCallback(THISBACK2(SetProgress, mynarx.GetEpoch(), epochs));
 }
 void NarxSim::Log(String s) {
-	/*extern String narx_log_str;
-	//LOG(narx_log_str);
-	train_result_log(narx_log_str);*/
+	logctrl.Add(s);
+	logctrl.SetCursor(logctrl.GetCount()-1);
 }
 
+void NarxSim::PostNarxLog(String s) {
+	PostCallback(THISBACK1(NarxLog, s));
+}
+
+void NarxSim::NarxLog(String s) {
+	training.log.Add(s);
+	training.log.SetCursor(training.log.GetCount()-1);
+}
 
 void NarxSim::MenuAbout() {
 	PromptOK(DeQtf("Artificial Intelligence Master Project\neng. Eugen Hristev 2012.\n"
@@ -109,7 +128,6 @@ void NarxSim::MenuAbout() {
 void NarxSim::StartTrain() {
 	NormalizeF();
 	mynarx.Start();
-	training.start.Disable();
 }
 
 void NarxSim::Next() {
@@ -169,18 +187,28 @@ void NarxSim::Next1() {
 		int predef = train.predefined.GetData();
 	
 		if (predef == 0) {
+			seriestab.table_series.AddColumn("X (input value - exogenous)");
 			seriestab.table_series.AddColumn("Y (input value - exogenous)");
-			seriestab.table_series.Set(0, 0, "Use in NARX");
 			seriestab.table_series.AddColumn("Z (input value - exogenous)");
-			seriestab.table_series.Set(0, 1, "Use in NARX");
+			seriestab.table_series.AddColumn("D (series value)");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("X");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("Y");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("Z");
 			M = 3;
 		}
 		else if (predef == 1) {
+			seriestab.table_series.AddColumn("X (input value - exogenous)");
 			seriestab.table_series.AddColumn("Y (input value - exogenous)");
+			seriestab.table_series.AddColumn("D (series value)");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("X");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("Y");
 			seriestab.table_series.Set(0, 0, "Use in NARX");
 			M = 2;
 		}
 		else {
+			seriestab.table_series.AddColumn("X (input value - exogenous)");
+			seriestab.table_series.AddColumn("D (series value)");
+			seriestab.use_split << use_options.Add().Set(true).SetLabel("X");
 			/*	 exogenous_series = new double*[1];
 				exogenous_series[0]=new double[series_len];
 				used_exogenous = new int[1];
@@ -197,10 +225,10 @@ void NarxSim::Next1() {
 	
 		int i;
 	
-		for (i = 1; i <= series_len; i++) {
+		for (i = 0; i < series_len; i++) {
 			//seriestab.table_series.insertRow(i );
 			seriestab.table_series.Set(i, 0, cur);
-			exogenous_series[0][i - 1] = cur;
+			exogenous_series[0][i] = cur;
 			
 			double val;
 	
@@ -234,26 +262,26 @@ void NarxSim::Next1() {
 			};
 	
 			if (predef == 0) {
-				if (i >= 4)
-					val = sin(cur + cury * series[0][ i - 2 ]) * curz  + tan(series [0][ i - 3 ] - series[0] [ i - 4 ]);
-				else if (i == 3)
-					val = sin(cur + cury * series[0][ i - 2 ]) * curz  + tan(series[0] [ i - 3 ]);
+				if (i >= 3)
+					val = sin(cur + cury * series[0][ i - 1 ]) * curz  + tan(series [0][ i - 2 ] - series[0] [ i - 3 ]);
 				else if (i == 2)
-					val = sin(cur + cury * series[0][ i - 2 ]) * curz  ;
+					val = sin(cur + cury * series[0][ i - 1 ]) * curz  + tan(series[0] [ i - 2 ]);
+				else if (i == 1)
+					val = sin(cur + cury * series[0][ i - 1 ]) * curz  ;
 				else
 					val = sin(cur + cury) * curz * curz ;
 	
-				exogenous_series[1][i - 1] = cury;
-				exogenous_series[2][i - 1] = curz;
+				exogenous_series[1][i] = cury;
+				exogenous_series[2][i] = curz;
 				M = 3;
 			}
 			else if (predef == 1) {
-				if (i >= 2)
-					val = sin(cur - prev2_cury) * log(prev_cury + 1) +  log(fabs(series[0][i - 2]) + 1) - cury * sin(cur - prev_cury) ;
+				if (i >= 1)
+					val = sin(cur - prev2_cury) * log(prev_cury + 1) +  log(fabs(series[0][i - 1]) + 1) - cury * sin(cur - prev_cury) ;
 				else
 					val = sin(cur - prev2_cury) * log(prev_cury +  1) - cury * sin(cur - prev_cury) ;
 	
-				exogenous_series[1][i - 1] = cury;
+				exogenous_series[1][i] = cury;
 				//exogenous_series[2][i - 1] = curz;
 				M = 2;
 			}
@@ -273,7 +301,7 @@ void NarxSim::Next1() {
 			else
 				seriestab.table_series.Set(i, 1, val);
 	
-			series [0][i - 1] = val;
+			series[0][i] = val;
 			prev2_cury = prev_cury;
 			prev_cury = cury;
 			cur += step;
@@ -289,8 +317,8 @@ void NarxSim::Next1() {
 			}
 		}
 	
-		PromptOK("The series has been generated.");
-		LOG("The series has been generated.");
+		//PromptOK("The series has been generated.");
+		Log("The series has been generated.");
 		normalize = train.normalize.Get();
 	}
 	
@@ -311,9 +339,10 @@ void NarxSim::Next2() {
 
 	if (!narx_stage1_1) {
 		for (int i = 0; i < M; i++) {
+			#error todo
 			//if (ui.table_series->item(0, i)->checkState() == Qt::Checked) {
 				used_exogenous[i] = 1;
-				LOG("Loaded exogenous variable.");
+				Log("Loaded exogenous variable.");
 			//}
 
 			//ui.table_series->item(0, i)->setFlags(ui.table_series->item(0, i)->flags() & ~Qt::ItemIsEnabled);
@@ -364,51 +393,51 @@ void NarxSim::Next4() {
 	if (!narx_stage1_5) {
 		Unit::alfa = params.learning_rate.GetData();
 		epochs = params.epochs.GetData();
-		LOG(Format("epochs:%1, lrate=%2, H=%3", epochs, Unit::alfa, archtab.spinbox_hidden_units.GetData()));
+		Log(Format("epochs:%d, lrate=%n, H=%d", epochs, Unit::alfa, (int)archtab.spinbox_hidden_units.GetData()));
 		
 		training.progress.Set(0,epochs);
 		
 		if (!archtab.check_del_targets.Get() && !archtab.check_del_outputs.Get() && archtab.check_exogenous.Get()
 			&& (int)params.spinbox_xregressor.GetData() == 0) {
-			LOG("Selected architecture: MLP");
+			Log("Selected architecture: MLP");
 			arch = MLP;
 		}
 		else if (archtab.check_del_targets.Get() && !archtab.check_del_outputs.Get() && !archtab.check_exogenous.Get()) {
-			LOG("Selected architecture: NAR-D");
+			Log("Selected architecture: NAR-D");
 			arch = NAR_D;
 		}
 		else if (!archtab.check_del_targets.Get() && !archtab.check_del_outputs.Get() && archtab.check_exogenous.Get()
 				 && (int)params.spinbox_xregressor.GetData() > 0) {
-			LOG("Selected architecture: TDNN-X");
+			Log("Selected architecture: TDNN-X");
 			arch = TDNN_X;
 		}
 		else if (archtab.check_del_targets.Get() && !archtab.check_del_outputs.Get() && archtab.check_exogenous.Get()
 				 && 1) {
-			LOG("Selected architecture: NARX-D");
+			Log("Selected architecture: NARX-D");
 			arch = NARX_D;
 		}
 		else if (!archtab.check_del_targets.Get() && archtab.check_del_outputs.Get() && archtab.check_exogenous.Get()
 				) {
-			LOG("Selected architecture: NARX-Y");
+			Log("Selected architecture: NARX-Y");
 			arch = NARX_Y;
 		}
 		else if (archtab.check_del_targets.Get() && archtab.check_del_outputs.Get() && archtab.check_exogenous.Get()
 				 && 1) {
-			LOG("Selected architecture: NARX-DY");
+			Log("Selected architecture: NARX-DY");
 			arch = NARX_DY;
 		}
 		else if (!archtab.check_del_targets.Get() && archtab.check_del_outputs.Get() && !archtab.check_exogenous.Get()
 				 && 1) {
-			LOG("Selected architecture: NAR-Y");
+			Log("Selected architecture: NAR-Y");
 			arch = NAR_Y;
 		}
 		else if (archtab.check_del_targets.Get() && archtab.check_del_outputs.Get() && !archtab.check_exogenous.Get()
 				 && 1) {
-			LOG("Selected architecture: NAR-DY");
+			Log("Selected architecture: NAR-DY");
 			arch = NAR_DY;
 		}
 		else {
-			LOG( "Selected no architecture: training will probably fail.");
+			Log( "Selected no architecture: training will probably fail.");
 			arch = UNKNWN;
 		}
 
@@ -429,8 +458,7 @@ void NarxSim::Next4() {
 	}
 
 	/* end of main NARX code */
-	mynarx.TrainingEpochFinished = THISBACK(ProgressInc);
-	mynarx.Log = THISBACK(Log);
+	mynarx.WhenTrainingEpochFinished = THISBACK(ProgressInc);
 	
 	if (tabs.GetCount() == 4) {
 		tabs.Add(training, "Training");
@@ -444,6 +472,10 @@ void NarxSim::Next4() {
 	params.combo_hunits_act.Disable();
 	params.combo_ounits_act.Disable();
 	
+	// Disable next button until training is finished
+	next.Disable();
+	StartTrain();
+	
 	tabs.Set(4);
 }
 
@@ -456,6 +488,10 @@ void NarxSim::Next5() {
 		tabs.Add(predict, "Predict");
 		tabs.Add(predict);
 	}
+	predict.x.MinMax(0, series_len-1);
+	predict.x.SetData(series_len-1);
+	
+	Predict();
 	
 	for(int i = 0; i < old_M; i++) {
 		
@@ -491,19 +527,19 @@ void NarxSim::Next5() {
 /*void NarxSim::BrowseAction() {
 	String fileName = QFileDialog::getOpenFileName(this,
 												   tr("Open series"), ".");
-	//LOG(fileName);
+	//Log(fileName);
 	FILE* series_file = fopen(fileName.toStdString().c_str(), "rt");
 
 	if (!series_file) {
 		QMessageBox::information( this, "Error", "Cannot load series." );
-		LOG("Error:Cannot load series.");
+		Log("Error:Cannot load series.");
 		return;
 	}
 
 	fscanf(series_file, "%d", &series_len);
 	fscanf(series_file, "%d", &M);
 	fscanf(series_file, "%d", &N);
-	LOG(String("Loading %1 values from file.\nLoading %2 target series").arg(series_len).arg(N));
+	Log(String("Loading %1 values from file.\nLoading %2 target series").arg(series_len).arg(N));
 	series = new double*[N];
 
 	for (int i = 0; i < N; i++)
@@ -566,7 +602,31 @@ void NarxSim::Next5() {
 }*/
 
 void NarxSim::Predict() {
-	//QInputDialog::getDouble ( this, "NARX", "Predicted value: %1.\nPlease input target if further prediction required:"		);
+	int pos = max(0, min(series_len-1, (int)predict.x.GetData()));
+	Vector<double> out;
+	
+	mynarx.Predict(pos, out);
+	
+	predict.vars.Reset();
+	predict.vars.AddColumn("Pos");
+	predict.vars.AddColumn("Real");
+	predict.vars.AddColumn("Predicted");
+	if (normalize) {
+		predict.vars.AddColumn("Real normalized");
+		predict.vars.AddColumn("Predicted normalized");
+	}
+	
+	for(int i = 0; i < out.GetCount(); i++) {
+		double normalized_out = out[i];
+		
+		if (normalize) {
+			// de-normalize value
+			double out = normalized_out * Nvariance[i] + N_E[i];
+			predict.vars.Add(i, series[i][pos], out, Nseries[i][pos], normalized_out);
+		} else {
+			predict.vars.Add(i, series[i][pos], normalized_out);
+		}
+	}
 }
 
 
@@ -585,8 +645,8 @@ void NarxSim::NormalizeF() {
 
 	N_E.SetCount(N, 0.0);
 	Nvariance.SetCount(N, 0.0);
-	N_exo_E.SetCount(N, 0.0);
-	N_exo_variance.SetCount(N, 0.0);
+	N_exo_E.SetCount(M, 0.0);
+	N_exo_variance.SetCount(M, 0.0);
 
 	for (int i = 0; i < N; i++) {
 		N_E[i] = 0;
@@ -599,112 +659,54 @@ void NarxSim::NormalizeF() {
 	}
 
 	for (int j = 0; j < M; j++) {
-		for (int i = 0; i < train_len; i++) N_exo_E[j] += exogenous_series[j][i];
-
+		for (int i = 0; i < train_len; i++)
+			N_exo_E[j] += exogenous_series[j][i];
 		N_exo_E[j] /= train_len;
 	}
 
 	for (int j = 0; j < N; j++) {
-		for (int i = 0; i < train_len; i++) N_E[j] += series[j][i];
-
+		for (int i = 0; i < train_len; i++)
+			N_E[j] += series[j][i];
 		N_E[j] /= train_len;
 	}
 
-	for (int j = 0; j < M; j++)
+	for (int j = 0; j < M; j++) {
 		if (used_exogenous[j]) {
-			for (int i = 0; i < train_len; i++) N_exo_variance[j] += pow(exogenous_series[j][i] - N_exo_E[j], 2);
-
+			for (int i = 0; i < train_len; i++)
+				N_exo_variance[j] += pow(exogenous_series[j][i] - N_exo_E[j], 2);
 			N_exo_variance[j] /= train_len;
-			LOG(Format("Normalized exogenous series %1, E=%2, variance = %3", j, N_exo_E[j], N_exo_variance[j]));
+			Log(Format("Normalized exogenous series %d, E=%n, variance = %n", j, N_exo_E[j], N_exo_variance[j]));
 		}
+	}
 
 	for (int j = 0; j < N; j++) {
-		for (int i = 0; i < train_len; i++) Nvariance[j] += pow(series[j][i] - N_E[j], 2);
-
+		for (int i = 0; i < train_len; i++)
+			Nvariance[j] += pow(series[j][i] - N_E[j], 2);
 		Nvariance[j] /= train_len;
-		LOG(Format("Normalized target series %1, E=%2, variance = %3", j, N_E[j], Nvariance[j]));
+		Log(Format("Normalized target series %d, E=%n, variance = %n", j, N_E[j], Nvariance[j]));
 	}
 
 	Nseries.SetCount(N);
-
 	for (int i = 0; i < N; i++)
 		Nseries[i].SetCount(series_len, 0.0);
 
 	Nexogenous_series.SetCount(M);
-
 	for (int i = 0; i < M; i++)
 		Nexogenous_series[i].SetCount(series_len, 0.0);
 
-	for (int j = 0; j < N; j++)
+	for (int j = 0; j < N; j++) {
 		for (int i = 0; i < series_len; i++) {
 			Nseries[j][i] = (series[j][i] - N_E[j]) / Nvariance[j];
-			//FLOG(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());
+			//FLog(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());
 		}
+	}
 
-	for (int j = 0; j < M; j++)
+	for (int j = 0; j < M; j++) {
 		for (int i = 0; i < series_len; i++) {
 			Nexogenous_series[j][i] = (exogenous_series[j][i] - N_exo_E[j]) / N_exo_variance[j];
-			//FLOG(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());
+			//FLog(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());
 		}
+	}
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-#include "narx2.h"
-#include "Unit.h"
-#include "InputUnit.h"
-#include "OutputUnit.h"
-#include "NARX.h"
-#include <QtGui/QMessageBox>
-#include <QtCore/qmath.h>
-#include <QFileDialog>
-#include <QInputDialog>
-#include "narx_util.h"
-
-extern double series_start, series_end;
-extern int series_len;
-extern int train_len, test_len;
-extern int series_func;
-extern int series_noise;
-extern int series_generated;
-extern double** series;
-extern double** exogenous_series;
-extern int* used_exogenous;
-extern int epochs;
-extern void ProgressInc();
-
-extern int M;
-
-int N;
-
-extern int normalize;
-
-
-
-extern NARX* mynarx;
-
-//initialize NARX:
-
-
-NarxSim::NARX2(QWidget* parent, Qt::WFlags flags)
-	: QMainWindow(parent, flags) {
-	ui.setupUi(this);
-	
-}
-
-NarxSim::~NARX2() {
-}
-
-#endif

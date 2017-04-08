@@ -38,7 +38,7 @@ int Unit::AddInputUnit (Unit& unit) {
 	input_weights[input_count] = Randomf();
 	input_area[input_count] = &unit;
 	//printf("%f\n", input_weights[input_count]);
-	//FLOG(String("input count=%1").arg(input_count).toStdString().c_str());
+	//FWhenLog(String("input count=%1").arg(input_count).toStdString().c_str());
 	return input_count++;
 }
 
@@ -46,16 +46,16 @@ double Unit::GetPreOutput() {
 	double preoutput = 0;
 
 	for (int i = 0; i < input_count; i++) {
-		//FLOG(String("input:%1\n").arg(input_area[i]->GetOutput()).toStdString().c_str());
+		//FWhenLog(String("input:%1\n").arg(input_area[i]->GetOutput()).toStdString().c_str());
 		preoutput += input_area[i]->GetOutput() * input_weights[i];
 	}
 
 	//if(activation_func == ActivationFunctions::AsLog)
-	//FLOG(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	//FWhenLog(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	// if (activation_func == ActivationFunctions::identity)
-	//	FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	//	FWhenLog(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	preoutput += bias;
-	//FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	//FWhenLog(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	return preoutput;
 }
 
@@ -76,7 +76,7 @@ void Unit::ComputeDelta(double superior_layer_delta) {
 void Unit::AdjustWeights() {
 	for (int i = 0; i < input_count; i ++) {
 		input_weights[i] += Unit::alfa * deltah * input_area[i]->GetOutput();
-		//FLOG(String("ok adjust=%1:%2\n").arg( GetPreOutput()  ) .arg(activation_func_derv(GetPreOutput())).toStdString().c_str());
+		//FWhenLog(String("ok adjust=%1:%2\n").arg( GetPreOutput()  ) .arg(activation_func_derv(GetPreOutput())).toStdString().c_str());
 	}
 }
 

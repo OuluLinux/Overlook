@@ -11,5 +11,6 @@ file
 	NarxSim.lay;
 
 mainconfig
-	"" = "GUI MT";
+	"" = "GUI MT",
+	"" = "GUI MT NOGTK";
 

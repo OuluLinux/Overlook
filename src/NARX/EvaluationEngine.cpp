@@ -20,7 +20,7 @@ void EvaluationEngine::Init(int slen) {
 void EvaluationEngine::Insert(double target, double pred) {
 	series[curlen] = target;
 	predicted[curlen] = pred;
-	LOG(Format("series:%1,predicted:%2\"", target, pred));
+	//LOG(Format("series:%n, predicted:%n", target, pred));
 	curlen++;
 }
 
@@ -29,7 +29,7 @@ double EvaluationEngine::F1() {
 
 	for (int i = 0; i < curlen; i++) {
 		ret += pow(series[i] - predicted[i], 2);
-		//FLOG(String(":%1,%2\n").arg(series[i]).arg(predicted[i]).toStdString().c_str());
+		//FWhenLog(String(":%1,%2\n").arg(series[i]).arg(predicted[i]).toStdString().c_str());
 	}
 
 	return ret;
@@ -66,7 +66,7 @@ double EvaluationEngine::F4() {
 
 	//char test[256];
 	//	sprintf(test, "aa %f %f\n", s1, s2);
-	//FLOG(test);
+	//FWhenLog(test);
 	return sqrt(s1 / s2);
 }
 
@@ -136,7 +136,7 @@ double EvaluationEngine::DA() {
 		//sprintf(test, "aa %f %f %f\n", Fd(predicted[i]),(2*i+1)/curlen * ( log(Fd(predicted[i])) + log(Fd(predicted[curlen-1-i])))
 		//	,ret
 		//	);
-		//FLOG(test);
+		//FWhenLog(test);
 	}
 
 	return - curlen - ret;
@@ -145,6 +145,6 @@ double EvaluationEngine::DA() {
 void EvaluationEngine::Clear() {
 	//for( int i=0;i<series_len;i++)
 	//	series[i]=predicted[i]=0;
-	//FLOG(String("curlen:%1\n").arg(curlen).toStdString().c_str());
+	//FWhenLog(String("curlen:%1\n").arg(curlen).toStdString().c_str());
 	curlen = 0;
 }

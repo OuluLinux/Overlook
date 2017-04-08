@@ -16,11 +16,11 @@ using namespace Upp;
 
 void NormalizeF();
 
-class NarxSim : public TopWindow {
+class NarxSim : public TopWindow, public NarxData {
 	NARX mynarx;
 	
 	TabCtrl tabs;
-	DocEdit logctrl;
+	ArrayCtrl logctrl;
 	Button next, prev;
 	
 	WithTrainSourceLayout<ParentCtrl>	train;
@@ -30,39 +30,26 @@ class NarxSim : public TopWindow {
 	WithTrainingLayout<ParentCtrl>		training;
 	WithPredictLayout<ParentCtrl>		predict;
 	
+	Array<Option> use_options;
 	
 	
 	double series_start, series_end;
 	ARCH arch;
-	int series_generated;
 	int old_M;
-	int series_len;
-	int test_len;
-	int train_len;
 	int series_func;
 	int series_noise;
 	int narx_stage1_5;
 	int narx_stage1_1;
 	int normalize;
-	Vector<Vector<double> > series;
-	Vector<Vector<double> > exogenous_series;
-	Vector<Vector<double> > Nexogenous_series;
-	Vector<Vector<double> > Nseries;
+	bool series_generated;
 	
 	Vector<double> Nvariance ;
 	Vector<double> N_exo_variance;
-	
 	Vector<double> N_E ;
 	Vector<double> N_exo_E;
 	
 	int N;
-	
-	
-	Vector<bool> used_exogenous;
-	
-	int epochs = 100;
-	
-	int M = 0;
+	int M;
 	
 
 public:
@@ -86,25 +73,18 @@ public:
 	void Predict();
 	void ProgressInc();
 	void Log(String s);
+	void PostNarxLog(String s);
+	void NarxLog(String s);
 	void NormalizeF();
-};
-
-
-#if 0
-class NARX2 : public QMainWindow {
-	Q_OBJECT
-
-public:
-	NARX2(QWidget* parent = 0, Qt::WFlags flags = 0);
-	~NARX2();
-
-public slots:
+	void TrainingFinished() {next.Enable();}
+	void SetProgress(int i, int total) {
+		training.progress.Set(i, total);
+		training.perc.SetLabel(IntStr(i * 100 / total) + "%");
+	}
 	
-
-public:
-	Ui::NARX2Class ui;
 };
-#endif
+
+
 
 
 #endif

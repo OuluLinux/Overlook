@@ -46,9 +46,9 @@ double OutputUnit::GetDelta(Unit& u) {
 	for (int i=0; i < input_count; i++)
 		preoutput += input_area[i]->GetOutput() * input_weights[i];
 	//if(activation_func == ActivationFunctions::AsLog)
-	//FLOG(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+	//FWhenLog(String("unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	 if (activation_func == ActivationFunctions::identity)
-		FLOG(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
+		FWhenLog(String("output unit preoutput:%1\n").arg(preoutput).toStdString().c_str());
 	preoutput += bias;
 	return preoutput;
     }*/

@@ -42,8 +42,8 @@ protected:
 	int H;
 	int a, a1;
 	int b;
-	int M;
-	int N;
+	int input_count;
+	int output_count;
 	int feedback, targets;
 	int hact;
 	int epoch;
@@ -68,7 +68,7 @@ public:
 	~NARX();
 
 	void SetData(NarxData& data) {this->data = &data;}
-	void Init(ARCH arch, int H = 1, int hact = 2, int a = 0, int b = 0, int M = 0, int N = 1, int feedback = 0, int targets = 0);
+	void Init(ARCH arch, int H = 1, int hact = 2, int a = 0, int b = 0, int input_count = 0, int output_count = 1, int feedback = 0, int targets = 0);
 	void Start() {Thread::Start(THISBACK(Run));}
 	void Train(int epochs);
 	void Test(int epo);

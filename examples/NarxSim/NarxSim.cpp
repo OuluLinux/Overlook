@@ -11,9 +11,9 @@ NarxSim::NarxSim() {
 	narx_stage1_1 = 0;
 	normalize = 1;
 	arch = MLP;
-	M = 0;
-	old_M = 0;
-	N = 1;
+	input_count = 0;
+	old_input_count = 0;
+	output_count = 1;
 	series_generated = false;
 	
 	mynarx.SetData(*this);
@@ -41,6 +41,7 @@ NarxSim::NarxSim() {
 	CtrlLayout(predict);
 	
 	train.series_type.SetData(0);
+	train.series_type.Disable(); // todo: clean file loading and include examples
 	train.predefined.SetData(0);
 	train.x_start.SetData(0);
 	train.x_end.SetData(1);
@@ -56,6 +57,7 @@ NarxSim::NarxSim() {
 	train.normalize.Set(true);
 	
 	seriestab.spinbox_test_percentage.SetData(5);
+	seriestab.use_split.Disable(); // todo "use series" feature
 	
 	archtab.check_exogenous.Set(true);
 	archtab.spinbox_hidden_units.SetData(3);
@@ -159,15 +161,15 @@ void NarxSim::Next1() {
 	
 	if (!series_generated) {
 
-		N = 1;
+		output_count = 1;
 		series_start = train.x_start.GetData();
 		series_end = train.x_end.GetData();
 		series_len = train.series_len.GetData();
 		series_func  = train.base_fn.GetIndex();
 		series_noise = train.noise_factor.GetData();
 		
-		series.SetCount(N);
-		for (int i = 0; i < N; i++)
+		series.SetCount(output_count);
+		for (int i = 0; i < output_count; i++)
 			series[i].SetCount(series_len);
 	
 		double step = ( series_end - series_start ) / series_len;
@@ -182,7 +184,7 @@ void NarxSim::Next1() {
 		double stepz = -0.03;
 		
 		// end hardcoded values for Y and Z variables
-		M = 1;
+		input_count = 1;
 		
 		int predef = train.predefined.GetData();
 	
@@ -194,7 +196,7 @@ void NarxSim::Next1() {
 			seriestab.use_split << use_options.Add().Set(true).SetLabel("X");
 			seriestab.use_split << use_options.Add().Set(true).SetLabel("Y");
 			seriestab.use_split << use_options.Add().Set(true).SetLabel("Z");
-			M = 3;
+			input_count = 3;
 		}
 		else if (predef == 1) {
 			seriestab.table_series.AddColumn("X (input value - exogenous)");
@@ -203,7 +205,7 @@ void NarxSim::Next1() {
 			seriestab.use_split << use_options.Add().Set(true).SetLabel("X");
 			seriestab.use_split << use_options.Add().Set(true).SetLabel("Y");
 			seriestab.table_series.Set(0, 0, "Use in NARX");
-			M = 2;
+			input_count = 2;
 		}
 		else {
 			seriestab.table_series.AddColumn("X (input value - exogenous)");
@@ -215,10 +217,10 @@ void NarxSim::Next1() {
 				used_exogenous[0]=0;*/
 		}
 	
-		exogenous_series.SetCount(M);
-		used_exogenous.SetCount(M);
+		exogenous_series.SetCount(input_count);
+		used_exogenous.SetCount(input_count);
 	
-		for (int i = 0; i < M; i++) {
+		for (int i = 0; i < input_count; i++) {
 			used_exogenous[i] = 0;
 			exogenous_series[i].SetCount(series_len);
 		}
@@ -273,7 +275,7 @@ void NarxSim::Next1() {
 	
 				exogenous_series[1][i] = cury;
 				exogenous_series[2][i] = curz;
-				M = 3;
+				input_count = 3;
 			}
 			else if (predef == 1) {
 				if (i >= 1)
@@ -283,7 +285,7 @@ void NarxSim::Next1() {
 	
 				exogenous_series[1][i] = cury;
 				//exogenous_series[2][i - 1] = curz;
-				M = 2;
+				input_count = 2;
 			}
 	
 			if (series_noise)
@@ -338,8 +340,8 @@ void NarxSim::Next2() {
 	}
 
 	if (!narx_stage1_1) {
-		for (int i = 0; i < M; i++) {
-			#error todo
+		for (int i = 0; i < input_count; i++) {
+			
 			//if (ui.table_series->item(0, i)->checkState() == Qt::Checked) {
 				used_exogenous[i] = 1;
 				Log("Loaded exogenous variable.");
@@ -442,16 +444,16 @@ void NarxSim::Next4() {
 		}
 
 		narx_stage1_5 = 1;
-		old_M = M;
+		old_input_count = input_count;
 
 		if (!archtab.check_exogenous.Get()) // we dont want to use any exogenous
-			M = 0;
+			input_count = 0;
 
 		mynarx.Init(arch, (int)archtab.spinbox_hidden_units.GetData(),
 						  /* now the act func for hiddens */ params.combo_hunits_act.GetIndex(),
 						  (int)params.spinbox_xregressor.GetData(), (int)params.spinbox_dregressor.GetData(),
-						  M,
-						  N,// output units
+						  input_count,
+						  output_count,// output units
 						  archtab.check_del_outputs.Get(), //feedback
 						  archtab.check_del_targets.Get()
 						 );
@@ -493,16 +495,16 @@ void NarxSim::Next5() {
 	
 	Predict();
 	
-	for(int i = 0; i < old_M; i++) {
+	for(int i = 0; i < old_input_count; i++) {
 		
 	}
 	
 	/*ui.scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-	ui.scrollAreaWidgetContents->setGeometry(40, 60, 201, 60 + 30 * old_M);
+	ui.scrollAreaWidgetContents->setGeometry(40, 60, 201, 60 + 30 * old_input_count);
 
 	if (!used_exogenous[0] || !M) ui.lineEdit_exo1->setEnabled(false);
 
-	for (int i = 1; i < old_M; i++) {
+	for (int i = 1; i < old_input_count; i++) {
 		QLabel* label_exo = new QLabel(ui.scrollAreaWidgetContents);
 		label_exo->setObjectName(String("label_exio%1").arg(i + 1));
 		label_exo->setGeometry(QRect(10, 10 + 30 * (i + 0), 21, 16));
@@ -539,21 +541,21 @@ void NarxSim::Next5() {
 	fscanf(series_file, "%d", &series_len);
 	fscanf(series_file, "%d", &M);
 	fscanf(series_file, "%d", &N);
-	Log(String("Loading %1 values from file.\nLoading %2 target series").arg(series_len).arg(N));
+	Log(String("Loading %1 values from file.\nLoading %2 target series").arg(series_len).arg(output_count));
 	series = new double*[N];
 
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < output_count; i++)
 		series[i] = new double[series_len];
 
 	exogenous_series = new double*[M];
 	used_exogenous = new int[M];
 
-	for (int i = 0; i < M; i++) {
+	for (int i = 0; i < input_count; i++) {
 		used_exogenous[i] = 0;
 		exogenous_series[i] = new double[series_len];
 	}
 
-	for (int i = 0; i < M; i++) {
+	for (int i = 0; i < input_count; i++) {
 		if (i) {
 			//add a new column for the exogenous variable
 			ui.table_series->insertColumn(i);
@@ -580,7 +582,7 @@ void NarxSim::Next5() {
 
 	double aux;
 
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < output_count; i++)
 		for (int j = 0; j < series_len; j++) {
 			//if(!i) ui.table_series->insertRow(j +1 );
 			if (i) {
@@ -643,34 +645,34 @@ void NarxSim::NormalizeF() {
 		return;
 	}
 
-	N_E.SetCount(N, 0.0);
-	Nvariance.SetCount(N, 0.0);
-	N_exo_E.SetCount(M, 0.0);
-	N_exo_variance.SetCount(M, 0.0);
+	N_E.SetCount(output_count, 0.0);
+	Nvariance.SetCount(output_count, 0.0);
+	N_exo_E.SetCount(input_count, 0.0);
+	N_exo_variance.SetCount(input_count, 0.0);
 
-	for (int i = 0; i < N; i++) {
+	for (int i = 0; i < output_count; i++) {
 		N_E[i] = 0;
 		Nvariance[i] = 1;
 	}
 
-	for (int i = 0; i < M; i++) {
+	for (int i = 0; i < input_count; i++) {
 		N_exo_E[i] = 0;
 		N_exo_variance[i] = 1;
 	}
 
-	for (int j = 0; j < M; j++) {
+	for (int j = 0; j < input_count; j++) {
 		for (int i = 0; i < train_len; i++)
 			N_exo_E[j] += exogenous_series[j][i];
 		N_exo_E[j] /= train_len;
 	}
 
-	for (int j = 0; j < N; j++) {
+	for (int j = 0; j < output_count; j++) {
 		for (int i = 0; i < train_len; i++)
 			N_E[j] += series[j][i];
 		N_E[j] /= train_len;
 	}
 
-	for (int j = 0; j < M; j++) {
+	for (int j = 0; j < input_count; j++) {
 		if (used_exogenous[j]) {
 			for (int i = 0; i < train_len; i++)
 				N_exo_variance[j] += pow(exogenous_series[j][i] - N_exo_E[j], 2);
@@ -679,29 +681,29 @@ void NarxSim::NormalizeF() {
 		}
 	}
 
-	for (int j = 0; j < N; j++) {
+	for (int j = 0; j < output_count; j++) {
 		for (int i = 0; i < train_len; i++)
 			Nvariance[j] += pow(series[j][i] - N_E[j], 2);
 		Nvariance[j] /= train_len;
 		Log(Format("Normalized target series %d, E=%n, variance = %n", j, N_E[j], Nvariance[j]));
 	}
 
-	Nseries.SetCount(N);
-	for (int i = 0; i < N; i++)
+	Nseries.SetCount(output_count);
+	for (int i = 0; i < output_count; i++)
 		Nseries[i].SetCount(series_len, 0.0);
 
-	Nexogenous_series.SetCount(M);
-	for (int i = 0; i < M; i++)
+	Nexogenous_series.SetCount(input_count);
+	for (int i = 0; i < input_count; i++)
 		Nexogenous_series[i].SetCount(series_len, 0.0);
 
-	for (int j = 0; j < N; j++) {
+	for (int j = 0; j < output_count; j++) {
 		for (int i = 0; i < series_len; i++) {
 			Nseries[j][i] = (series[j][i] - N_E[j]) / Nvariance[j];
 			//FLog(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());
 		}
 	}
 
-	for (int j = 0; j < M; j++) {
+	for (int j = 0; j < input_count; j++) {
 		for (int i = 0; i < series_len; i++) {
 			Nexogenous_series[j][i] = (exogenous_series[j][i] - N_exo_E[j]) / N_exo_variance[j];
 			//FLog(String("norm series:%1\n").arg(Nseries[j][i]).toStdString().c_str());

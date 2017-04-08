@@ -35,7 +35,7 @@ class NarxSim : public TopWindow, public NarxData {
 	
 	double series_start, series_end;
 	ARCH arch;
-	int old_M;
+	int old_input_count;
 	int series_func;
 	int series_noise;
 	int narx_stage1_5;
@@ -48,8 +48,8 @@ class NarxSim : public TopWindow, public NarxData {
 	Vector<double> N_E ;
 	Vector<double> N_exo_E;
 	
-	int N;
-	int M;
+	int output_count;
+	int input_count;
 	
 
 public:

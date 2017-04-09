@@ -21,6 +21,21 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 };
 
+class DummyTrainer : public Slot {
+public:
+	DummyTrainer();
+	virtual String GetKey() {return "dummytrainer";}
+	virtual bool Process(const SlotProcessAttributes& attr);
+};
+
+class TestValue : public Slot {
+	int series_noise;
+public:
+	TestValue();
+	virtual String GetKey() {return "testvalue";}
+	virtual bool Process(const SlotProcessAttributes& attr);
+};
+
 
 
 

@@ -171,6 +171,7 @@ public:
 	
 	void LinkPath(String dest, String src);
 	PathLinkPtr FindLinkPath(String path);
+	SlotPtr FindLinkSlot(const String& path);
 	void ParsePath(String path, PathArgs& out);
 	
 	SlotPtr ResolvePath(String path);

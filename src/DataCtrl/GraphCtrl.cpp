@@ -34,7 +34,6 @@ GraphCtrl::GraphCtrl() {
 	
 	WantFocus();
 	IgnoreMouse(false);
-	
 }
 
 void GraphCtrl::GetDataRange(Container& cont, int buffer) {

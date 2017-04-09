@@ -23,6 +23,7 @@ Slot::Slot() {
 	source = 0;
 	reserved_bytes = 0;
 	slot_offset = 0;
+	forced_without_data = false;
 }
 
 SlotPtr Slot::FindLinkSlot(const String& path) {

@@ -18,6 +18,7 @@ using namespace Upp;
 #include "FrontPage.h"
 #include "Container.h"
 #include "EventCtrl.h"
+#include "DervCtrl.h"
 
 namespace DataCtrl {
 	

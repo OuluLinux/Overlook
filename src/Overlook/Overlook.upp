@@ -15,5 +15,6 @@ file
 	Overlook.iml;
 
 mainconfig
-	"" = "GUI MT";
+	"" = "GUI MT",
+	"" = "GUI MT NOGTK";
 

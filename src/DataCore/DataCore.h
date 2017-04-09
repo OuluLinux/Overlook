@@ -7,5 +7,6 @@
 #include "Indicators.h"
 #include "EventManager.h"
 #include "Table.h"
+#include "Filters.h"
 
 #endif

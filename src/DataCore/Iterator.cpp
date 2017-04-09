@@ -54,6 +54,7 @@ void TimeVector::Iterator::SetPosition(int p) {
 bool TimeVector::Iterator::Process() {
 	DLOG(pos[0] << "/" << tv->bars[0]);
 	
+	// Get attributes of the TimeVector
 	int total_slot_bytes = tv->total_slot_bytes;
 	int slot_flag_offset = tv->slot_flag_offset;
 	int64 memory_limit = tv->memory_limit;
@@ -61,8 +62,8 @@ bool TimeVector::Iterator::Process() {
 	Vector<int>& slot_bytes = tv->slot_bytes;
 	Vector<SlotPtr>& slot = tv->slot;
 	
+	// Set attributes of the current time-position
 	SlotProcessAttributes attr;
-	
 	ASSERTEXC(tv->bars.GetCount() <= 16);
 	for(int i = 0; i < tv->bars.GetCount(); i++) {
 		attr.pos[i] = pos[i];
@@ -70,11 +71,14 @@ bool TimeVector::Iterator::Process() {
 		attr.periods[i] = tv->periods[i];
 	}
 	
-	
+	// Set attributes of TimeVector::Iterator
 	attr.it = this;
 	attr.sym_count = tv->symbols.GetCount();
 	attr.tf_count = tv->periods.GetCount();
 	
+	// Set attributes of how many timeframes are processed currently
+	// E.g. when a year changes, also month, day, hour, minute, second timeframes changes
+	//      but at wednesday 11:23am only minutes and seconds changes
 	attr.processing_tf_count = attr.tf_count;
 	for(int i = 0; i < attr.tf_count; i++) {
 		int& pos = this->pos[i];
@@ -84,41 +88,50 @@ bool TimeVector::Iterator::Process() {
 		}
 	}
 	
+	// Get symbol iterator
 	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator sym_begin, sym_iter, sym_iter_end;
 	Vector< Vector<SlotData>::Iterator >::Iterator symtf_begin, symtf_iter, symtf_iter_end;
-	
 	sym_begin = iter.Begin();
 	sym_iter = sym_begin;
 	sym_iter_end = iter.End();
 	
+	// Set attributes of all symbol iterators (time position)
 	attr.sym_it = &sym_begin;
 	attr.tf_it = &symtf_begin;
 	
 	bool enable_cache = tv->enable_cache;
 	bool check_memory_limit = memory_limit != 0;
+	bool process_failed = false;
 	
+	// Loop symbols
 	for (int i = 0; sym_iter != sym_iter_end; i++, sym_iter++) {
+		
+		// Get symbol/tf iterator
 		symtf_begin = sym_iter->Begin();
 		symtf_iter = symtf_begin;
 		symtf_iter_end = sym_iter->End();
 		
+		// Set attributes of current symbol
 		attr.sym_id = i;
 		
+		// Loop timeframes of the symbol
 		for(int j = 0; symtf_iter != symtf_iter_end && j < attr.processing_tf_count; j++, symtf_iter++) {
 			
+			// Get slot iterator
 			Vector<SlotData>::Iterator& slot_it = *symtf_iter;
-			
-			attr.tf_id = j;
-			attr.slot_it = &slot_it;
-			
-			ASSERT((int64)&tv->data[i][j][attr.pos[j]] == (int64)&*slot_it);
-			
 			SlotData& slot_data = *slot_it;
 			
+			// Set attributes of current symbol/tf
+			attr.tf_id = j;
+			attr.slot_it = &slot_it;
+			ASSERT((int64)&tv->data[i][j][attr.pos[j]] == (int64)&*slot_it);
+			
+			// Resize total slot memory if it is not the target size (first time only always?)
 			int64 file_pos;
 			bool has_file_pos = false;
 			if (slot_data.GetCount() != total_slot_bytes) {
-								
+				
+				// Load slot memory if caching is enabled
 				if (enable_cache) {
 					tv->cache_lock.Enter();
 					
@@ -128,11 +141,13 @@ bool TimeVector::Iterator::Process() {
 						ReleaseMemory(); // must be locked externally
 					}
 					
+					// Cache should be loaded only to empty slot memory (may change in future?)
 					if (!slot_data.IsEmpty()) {
 						tv->cache_lock.Leave();
 						throw DataExc("slot_data.IsEmpty()"); // might throw legal duplicate load, though...
 					}
 					
+					// Load slot memory from cache
 					slot_data.SetCount(total_slot_bytes); // don't lose lock for this
 					file_pos = tv->GetPersistencyCursor(i, j, attr.pos[j]);
 					has_file_pos = true;
@@ -146,44 +161,58 @@ bool TimeVector::Iterator::Process() {
 					if (check_memory_limit && reserved_memory >= memory_limit) {
 						ReleaseMemory();
 					}
-
+					
+					// Reserve memory (without zeroing for performance reasons)
 					ASSERTEXC(slot_data.IsEmpty());
 					slot_data.SetCount(total_slot_bytes);
 				}
 			}
 			
-			
+			// Loop slot memory area and slot processors
 			SlotData::Iterator it = slot_data.Begin();
 			Vector<SlotPtr>::Iterator sp = slot.Begin();
 			
+			// Set attributes of the begin of the total memory area of slots
 			attr.slot_vector = it;
 			
+			// Get a ready-flag iterator (=is-processed-flags), which are in the end of the memory area
 			byte* ready_slot = it + slot_flag_offset;
 			int ready_bit = 0;
 			
+			// Loop slot processors
 			for(int k = 0; k < slot_bytes.GetCount(); k++) {
+				
+				// Set attributes of the begin of the slot memory area
 				attr.slot_bytes = slot_bytes[k];
 				attr.data = it;
 				
+				// Check if slot is already processed
 				byte ready_mask = 1 << ready_bit;
 				bool is_ready = *ready_slot & ready_mask;
 				
+				// Process slot if not yet
 				if (!is_ready) {
 					Slot& slot = **sp;
 					bool ready = slot.Process(attr);
-					*ready_slot |= ready_mask;
+					if (ready)
+						*ready_slot |= ready_mask;
+					else
+						process_failed = true; // return error;
 				}
 				
+				// Increase the ready-bit position (position in a byte)
 				ready_bit++;
 				if (ready_bit == 8) {
 					ready_slot++;
 					ready_bit = 0;
 				}
 				
+				// Increase iterators to move next slot
 				sp++;
 				it += attr.slot_bytes;
 			}
 			
+			// Store processed values immediately to the persistent cache
 			if (enable_cache) {
 				if (!has_file_pos)
 					file_pos = tv->GetPersistencyCursor(i, j, attr.pos[j]);
@@ -195,13 +224,14 @@ bool TimeVector::Iterator::Process() {
 		}
 	}
 	
+	// Store cache to hard drive if cache is enabled
 	if (enable_cache) {
 		tv->cache_lock.Enter();
 		tv->cache_file.Flush();
 		tv->cache_lock.Leave();
 	}
 	
-	return false;
+	return process_failed;
 }
 
 bool TimeVector::Iterator::IsEnd() {

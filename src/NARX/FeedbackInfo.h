@@ -2,16 +2,17 @@
 
 class FeedbackInfo : Moveable<FeedbackInfo> {
 public:
-	Vector<double> Y;
-	Vector<double> X;
-	Vector<double> D;
+	Vector<Vector<double> > Y;
+	Vector<Vector<double> > X;
+	Vector<Vector<double> > D;
 
-	int x, y, d;
+	int xx, yx, dx;
+	int xy, yy, dy;
 
 public:
 	FeedbackInfo();
 	~FeedbackInfo();
 	
-	void Init(int x, int y, int d);
+	void Init(int xx, int xy, int yx, int yy, int dx, int dy);
 };
 

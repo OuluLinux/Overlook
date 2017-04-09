@@ -103,6 +103,12 @@ PathLinkPtr TimeVector::FindLinkPath(String path) {
 	return p;
 }
 
+SlotPtr TimeVector::FindLinkSlot(const String& path) {
+	PathLinkPtr link = FindLinkPath(path);
+	if (!link) return SlotPtr();
+	return link->link;
+}
+
 void TimeVector::ParsePath(String path, PathArgs& parsed_path) {
 	PathLexer lex(path);
 	try {

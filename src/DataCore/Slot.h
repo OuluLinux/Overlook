@@ -71,6 +71,8 @@ protected:
 	
 	void LoadCache(int sym_id, int tf_id, int pos);
 	
+	void SetWithoutData(bool b=true) {forced_without_data = b;}
+	
 	String path;
 	SlotPtr source;
 	TimeVector* vector;
@@ -84,6 +86,7 @@ protected:
 	int reserved_bytes;
 	int slot_offset;
 	int data_type;
+	bool forced_without_data;
 	
 public:
 	Slot();
@@ -99,6 +102,7 @@ public:
 	template <class T>
 	void AddValue(String name="", String description="") {AddValue(sizeof(T), name, description);}
 
+	bool IsWithoutData() const {return forced_without_data;}
 	int GetReservedBytes() {return reserved_bytes;}
 	int GetCount() {return values.GetCount();}
 	const SlotValue& operator[] (int i) const {return values[i];}
@@ -122,7 +126,7 @@ public:
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = *(*(attr.tf_it + tf_id) + newpos);
-		it -= shift;
+		//it -= shift;
 		if (!it->GetCount()) LoadCache(attr.sym_id, tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
@@ -131,8 +135,16 @@ public:
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + newpos);
-		it -= shift;
+		//it -= shift;
 		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);
+	}
+	template <class T>
+	T* GetValuePos(int i, int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr) {
+		if (pos < 0 || pos >= attr.bars[tf_id]) return 0;
+		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + pos);
+		//it -= shift;
+		if (!it->GetCount()) LoadCache(sym_id, tf_id, pos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
 	

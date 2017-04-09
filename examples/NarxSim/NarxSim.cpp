@@ -289,7 +289,7 @@ void NarxSim::Next1() {
 			}
 	
 			if (series_noise)
-				val += val * ((rand() % (2 * series_noise) - series_noise)) / 100 ;
+				val += val * ((Random(2 * series_noise) - series_noise)) / 100 ;
 			
 			if (predef == 0) {
 				seriestab.table_series.Set(i, 1, cury);

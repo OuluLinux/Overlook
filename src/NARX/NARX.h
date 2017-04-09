@@ -52,9 +52,9 @@ protected:
 	//Vector<Vector<double> > Y;
 	Vector<Unit> hunits;
 	Vector<OutputUnit> output_units;
-	Vector<InputUnit> inputs;
-	Vector<InputUnit> feedbacks;
-	Vector<InputUnit> exogenous;
+	Vector<Vector<InputUnit> > inputs;
+	Vector<Vector<InputUnit> > feedbacks;
+	Vector<Vector<InputUnit> > exogenous;
 	Vector<EvaluationEngine> ee;
 	Vector<EvaluationEngine> rw;
 

@@ -22,7 +22,6 @@ TimeVector::~TimeVector() {
 			delete sp;
 		}
 	}
-	
 }
 
 void TimeVector::AddPeriod(int period) {
@@ -83,7 +82,7 @@ void TimeVector::RefreshData() {
 	total_slot_bytes = 0;
 	for(int i = 0; i < slot.GetCount(); i++) {
 		int bytes = slot[i]->GetReservedBytes();
-		if (bytes == 0) throw DataExc();
+		if (bytes == 0 && !slot[i]->IsWithoutData()) throw DataExc();
 		slot_bytes[i] = bytes;
 		total_slot_bytes += bytes;
 	}

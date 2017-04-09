@@ -55,37 +55,59 @@ void NARX::Init(ARCH arch, int H, int hact, int a, int b, int input_count, int o
 	}
 
 	if (targets) {
-		inputs.SetCount(b * output_count);
+		inputs.SetCount(output_count);
 
-		for (int i = 0; i < b * output_count; i++) {
-			inputs[i].SetInput(0);
+		for (int i = 0; i < output_count; i++) {
+			inputs[i].SetCount(b);
+			for(int j = 0; j < b; j++) {
+				inputs[i][j].SetInput(0);
+			}
 		}
 
-		for (int i = 0; i < H; i++)
-			for (int j = 0; j < b * output_count; j++)
-				hunits[i].AddInputUnit(inputs[j]);
+		for (int i = 0; i < H; i++) {
+			for (int j = 0; j < output_count; j++) {
+				for(int k = 0; k < b; k++) {
+					hunits[i].AddInputUnit(inputs[j][k]);
+				}
+			}
+		}
 	}
+	
 
 	if (feedback) {
-		feedbacks.SetCount(output_count * b);
+		feedbacks.SetCount(output_count);
 
-		for (int i = 0; i < output_count * b; i++) {
-			feedbacks[i].SetInput(0);
+		for (int i = 0; i < output_count; i++) {
+			feedbacks[i].SetCount(b);
+			for(int j = 0; j < b; j++) {
+				feedbacks[i][j].SetInput(0);
+			}
 		}
 
-		for (int i = 0; i < H; i++)
-			for (int j = 0; j < output_count * b; j++)
-				hunits[i].AddInputUnit(feedbacks[j]);
+		for (int i = 0; i < H; i++) {
+			for (int j = 0; j < output_count; j++) {
+				for(int k = 0; k < b; k++) {
+					hunits[i].AddInputUnit(feedbacks[j][k]);
+				}
+			}
+		}
 	}
 
-	exogenous.SetCount(input_count * a1);
-	for (int i = 0; i < input_count * a1; i++) {
-		exogenous[i].SetInput(0);
+	exogenous.SetCount(input_count);
+	for (int i = 0; i < input_count; i++) {
+		exogenous[i].SetCount(a1);
+		for(int j = 0; j < a1; j++) {
+			exogenous[i][j].SetInput(0);
+		}
 	}
 
-	for (int i = 0; i < H; i++)
-		for (int j = 0; j < input_count * a1; j++)
-			hunits[i].AddInputUnit(exogenous[j]);
+	for (int i = 0; i < H; i++) {
+		for (int j = 0; j < input_count; j++) {
+			for(int k = 0; k < a1; k++) {
+				hunits[i].AddInputUnit(exogenous[j][k]);
+			}
+		}
+	}
 
 	//printf("%d\n", index);
 	output_units.SetCount(output_count);
@@ -131,28 +153,25 @@ void NARX::TrainEpoch(bool logging, int epo) {
 		for (int series_index = a; series_index < data->train_len ; series_index ++) {
 			if (targets) {
 				for (int j = 0; j < output_count; j++) {
-					for (int i = 1; i <= b; i++) {
-						if (series_index - i >= 0 ) {
-							inputs[j * b + i - 1].SetInput(data->Nseries[j][ series_index - i  ]);
+					for (int i = 0; i < b; i++) {
+						if (series_index - i - 1 >= 0 ) {
+							inputs[j][i].SetInput(data->Nseries[j][ series_index - i - 1 ]);
 							//FWhenLog(String("setting input:%1\n").arg(Nseries[j][ series_index - i  ]).toStdString().c_str());
 						}
 						else
-							inputs[j * b + i - 1].SetInput(0);
+							inputs[j][i].SetInput(0);
 					}
 				}
 			}
-
-			//exogenous[0]->SetInput(series[series_index]);
-
+			
 			for (int i = 0; i < input_count; i++) {
 				if (data->used_exogenous[i]) {
 					for (int j = 0; j < a1; j++) {
 						if (series_index - j >= 0)
-							exogenous[j + i * a1].SetInput(data->Nexogenous_series[i][series_index - j]);
+							exogenous[i][j].SetInput(data->Nexogenous_series[i][series_index - j]);
 						else
-							exogenous[j + i * a1].SetInput(0);
+							exogenous[i][j].SetInput(0);
 					}
-
 					//_log(String("ok %1").arg(exogenous_series[i][series_index]));
 					//FWhenLog(String("ok exo=%1\n").arg(exogenous_series[i][series_index]).toStdString().c_str());
 				}
@@ -193,7 +212,7 @@ void NARX::TrainEpoch(bool logging, int epo) {
 		originalnarx.SetData(*(NarxData*)this);
 		originalnarx.Init(arch, H, hact, a, b, input_count, output_count, feedback, targets); // tk targets
 		originalnarx.Copy(*this);
-		;
+		
 		/* must do the feedback arch now */
 		/*	 int weight_count = output_units[0]->GetInputCount();
 			double *final_weights= new double[weight_count];
@@ -208,7 +227,7 @@ void NARX::TrainEpoch(bool logging, int epo) {
 		Vector<FeedbackInfo> fi;
 		fi.SetCount(data->train_len);
 		for (int i = 0; i < data->train_len; i++)
-			fi[i].Init(input_count * a1, output_count * b, output_count * b);
+			fi[i].Init(input_count, a1, output_count, b, output_count, b);
 		
 		int t = 0;
 		
@@ -218,11 +237,11 @@ void NARX::TrainEpoch(bool logging, int epo) {
 				if (data->used_exogenous[i])
 					for (int j = a; j >= 0 ; j--) {
 						if (t >= j)
-							exogenous[i * a1 + j].SetInput(data->Nexogenous_series[i][t - j]);
+							exogenous[i][j].SetInput(data->Nexogenous_series[i][t - j]);
 						else
-							exogenous[i * a1 + j].SetInput(0);
+							exogenous[i][j].SetInput(0);
 
-						fi[t].X[i * a1 + j] = exogenous[i * a1 + j].GetInput();
+						fi[t].X[i][j] = exogenous[i][j].GetInput();
 					}
 			}
 
@@ -230,11 +249,11 @@ void NARX::TrainEpoch(bool logging, int epo) {
 				for (int i = 0; i < output_count; i++) {
 					for (int j = b; j > 0; j--) {
 						if (t >= j)
-							inputs[i * b + j - 1].SetInput(data->Nseries[i][t - j]);
+							inputs[i][j - 1].SetInput(data->Nseries[i][t - j]);
 						else
-							inputs[i * b + j - 1].SetInput(0);
+							inputs[i][j - 1].SetInput(0);
 
-						fi[t].D[i * b + j - 1] = inputs[i * b + j - 1].GetInput();
+						fi[t].D[i][j - 1] = inputs[i][j - 1].GetInput();
 					}
 				}
 			}
@@ -244,12 +263,12 @@ void NARX::TrainEpoch(bool logging, int epo) {
 					for (int j = b; j > 0; j--) {
 						//FWhenLog(String("testing%1\n").arg(fi[t].Y[i*N+j]).toStdString().c_str());
 						if (t >= j)
-							feedbacks[i * b + j - 1].SetInput(Y[i][t - j]);
+							feedbacks[i][j - 1].SetInput(Y[i][t - j]);
 						else
-							feedbacks[i * b + j - 1].SetInput(0);
+							feedbacks[i][j - 1].SetInput(0);
 
 						//FWhenLog(String("testing%1\n").arg(fi[t].Y[i*N+j]).toStdString().c_str());
-						fi[t].Y[i * b + j - 1] = feedbacks[i * b + j - 1].GetInput();
+						fi[t].Y[i][j - 1] = feedbacks[i][j - 1].GetInput();
 					}
 				}
 			}
@@ -276,20 +295,20 @@ void NARX::TrainEpoch(bool logging, int epo) {
 			/* if (exogenous) */
 			for (int i = 0; i < input_count; i++) {
 				for (int j = a; j >= 0 ; j--)
-					exogenous[i * a1 + j].SetInput(fi[t].X[i * a1 + j]);
+					exogenous[i][j].SetInput(fi[t].X[i][j]);
 			}
 
 			if (targets) {
 				for (int i = 0; i < output_count; i++) {
 					for (int j = b; j > 0; j--)
-						inputs[i * b + j - 1].SetInput(fi[t].D[i * b + j - 1]);
+						inputs[i][j - 1].SetInput(fi[t].D[i][j - 1]);
 				}
 			}
 
 			if (feedback) {
 				for (int i = 0; i < output_count; i++) {
 					for (int j = b; j > 0; j--)
-						feedbacks[i * b + j - 1].SetInput(fi[t].Y[i * b + j - 1]);
+						feedbacks[i][j - 1].SetInput(fi[t].Y[i][j - 1]);
 				}
 			}
 
@@ -327,7 +346,7 @@ void NARX::TrainEpoch(bool logging, int epo) {
 					double delta = 0;
 
 					for (int j = 0; j < H; j++)
-						delta += hunits[j].GetDelta(feedbacks[k * output_count + i]);
+						delta += hunits[j].GetDelta(feedbacks[k][i]);
 
 					if (t - i - 1 >= 0)
 						previous_deltas[t - i - 1][k] += delta;
@@ -372,17 +391,28 @@ void NARX::Run() {
 }
 
 void NARX::Copy(NARX& n) {
-	for (int i = 0; i < input_count * a1; i++)
-		exogenous[i].Copy(n.exogenous[i]);
-
-	if (targets)
-		for (int i = 0; i < output_count * b; i++)
-			inputs[i].Copy(n.inputs[i]);
-
-	if (feedback)
-		for (int i = 0; i < output_count * b; i++)
-			feedbacks[i].Copy(n.feedbacks[i]);
-
+	for (int i = 0; i < input_count; i++) {
+		for(int j = 0; j < a1; j++) {
+			exogenous[i][j].Copy(n.exogenous[i][j]);
+		}
+	}
+	
+	if (targets) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				inputs[i][j].Copy(n.inputs[i][j]);
+			}
+		}
+	}
+	
+	if (feedback) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				feedbacks[i][j].Copy(n.feedbacks[i][j]);
+			}
+		}
+	}
+	
 	for (int i = 0; i < H; i++)
 		hunits[i].Copy(n.hunits[i]);
 
@@ -391,16 +421,29 @@ void NARX::Copy(NARX& n) {
 }
 
 void NARX::Sum(NARX& n) {
-	for (int i = 0; i < input_count * a1; i++)
-		exogenous[i].Sum(n.exogenous[i]);
+	for (int i = 0; i < input_count; i++) {
+		for(int j = 0; j < a1; j++) {
+			exogenous[i][j].Sum(n.exogenous[i][j]);
+		}
+	}
+	
+	if (targets) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				inputs[i][j].Sum(n.inputs[i][j]);
+			}
+		}
+	}
+	
 
-	if (targets)
-		for (int i = 0; i < output_count * b; i++)
-			inputs[i].Sum(n.inputs[i]);
-
-	if (feedback)
-		for (int i = 0; i < output_count * b; i++)
-			feedbacks[i].Sum(n.feedbacks[i]);
+	if (feedback) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				feedbacks[i][j].Sum(n.feedbacks[i][j]);
+			}
+		}
+	}
+	
 
 	for (int i = 0; i < H; i++)
 		hunits[i].Sum(n.hunits[i]);
@@ -410,16 +453,29 @@ void NARX::Sum(NARX& n) {
 }
 
 void NARX::Divide(int len) {
-	for (int i = 0; i < input_count * a1; i++)
-		exogenous[i].Divide(len);
+	for (int i = 0; i < input_count; i++) {
+		for(int j = 0; j < a1; j++) {
+			exogenous[i][j].Divide(len);
+		}
+	}
+	
 
-	if (targets)
-		for (int i = 0; i < output_count * b; i++)
-			inputs[i].Divide(len);
+	if (targets) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				inputs[i][j].Divide(len);
+			}
+		}
+	}
 
-	if (feedback)
-		for (int i = 0; i < output_count * b; i++)
-			feedbacks[i].Divide(len);
+	if (feedback) {
+		for (int i = 0; i < output_count; i++) {
+			for(int j = 0; j < b; j++) {
+				feedbacks[i][j].Divide(len);
+			}
+		}
+	}
+	
 
 	for (int i = 0; i < H; i++)
 		hunits[i].Divide(len);
@@ -444,9 +500,9 @@ void NARX::Test(int epo) {
 			for (int j = 0; j < output_count; j++) {
 				for (int i = 1; i <= b; i++) {
 					if (series_index - i >= 0)
-						inputs[j * b + i - 1].SetInput(data->Nseries[j][ series_index - i ]);
+						inputs[j][i - 1].SetInput(data->Nseries[j][ series_index - i ]);
 					else
-						inputs[j * b + i - 1].SetInput(0);
+						inputs[j][i - 1].SetInput(0);
 				}
 			}
 		}
@@ -454,10 +510,10 @@ void NARX::Test(int epo) {
 		if (feedback) {
 			for (int j = 0; j < output_count; j++) {
 				for (int i = 0; i < b; i++) {
-					if (series_index - data->train_len - j - 1 >= 0)
-						feedbacks[j * b + i].SetInput(Y[j][series_index - data->train_len - j - 1]);
+					if (series_index - data->train_len - i - 1 >= 0)
+						feedbacks[j][i].SetInput(Y[j][series_index - data->train_len - i - 1]);
 					else
-						feedbacks[j * b + i].SetInput(0);
+						feedbacks[j][i].SetInput(0);
 				}
 			}
 		}
@@ -467,9 +523,9 @@ void NARX::Test(int epo) {
 			if (data->used_exogenous[i]) {
 				for (int j = 0; j < a1; j++) {
 					if (series_index - j >= 0)
-						exogenous[j + i * a1].SetInput(data->Nexogenous_series[i][series_index - j]);
+						exogenous[i][j].SetInput(data->Nexogenous_series[i][series_index - j]);
 					else
-						exogenous[j + i * a1].SetInput(0);
+						exogenous[i][j].SetInput(0);
 				}
 
 				//_log(String("ok %1").arg(exogenous_series[i][series_index]));
@@ -508,7 +564,7 @@ void NARX::Predict(int series_index_, Vector<double>& out) {
 	Vector<Vector<double> > Y;
 	Y.SetCount(output_count);
 	for (int i = 0; i < output_count; i++)
-		Y[i].SetCount(data->test_len, 0.0);
+		Y[i].SetCount(data->series_len, 0.0);
 	
 	// feedback requires buffer from beginning
 	int begin = feedback ? 0 : series_index_;
@@ -518,9 +574,9 @@ void NARX::Predict(int series_index_, Vector<double>& out) {
 			for (int j = 0; j < output_count; j++) {
 				for (int i = 1; i <= b; i++) {
 					if (series_index - i >= 0)
-						inputs[j * b + i - 1].SetInput(data->Nseries[j][ series_index - i ]);
+						inputs[j][i - 1].SetInput(data->Nseries[j][ series_index - i ]);
 					else
-						inputs[j * b + i - 1].SetInput(0);
+						inputs[j][i - 1].SetInput(0);
 				}
 			}
 		}
@@ -528,10 +584,10 @@ void NARX::Predict(int series_index_, Vector<double>& out) {
 		if (feedback) {
 			for (int j = 0; j < output_count; j++) {
 				for (int i = 0; i < b; i++) {
-					if (series_index - data->train_len - j - 1 >= 0)
-						feedbacks[j * b + i].SetInput(Y[j][series_index - data->train_len - j - 1]);
+					if (series_index - data->train_len - i - 1 >= 0)
+						feedbacks[j][i].SetInput(Y[j][series_index - i - 1]);
 					else
-						feedbacks[j * b + i].SetInput(0);
+						feedbacks[j][i].SetInput(0);
 				}
 			}
 		}
@@ -541,14 +597,19 @@ void NARX::Predict(int series_index_, Vector<double>& out) {
 			if (data->used_exogenous[i]) {
 				for (int j = 0; j < a1; j++) {
 					if (series_index - j >= 0)
-						exogenous[j + i * a1].SetInput(data->Nexogenous_series[i][series_index - j]);
+						exogenous[i][j].SetInput(data->Nexogenous_series[i][series_index - j]);
 					else
-						exogenous[j + i * a1].SetInput(0);
+						exogenous[i][j].SetInput(0);
 				}
 	
 				//_log(String("ok %1").arg(exogenous_series[i][series_index]));
 				//FWhenLog(String("ok exo=%1\n").arg(exogenous_series[i][series_index]).toStdString().c_str());
 			}
+		}
+		
+		for (int i = 0; i < output_count; i++) {
+			double out = output_units[i].GetOutput();
+			Y[i][series_index] = out;
 		}
 	}
 	

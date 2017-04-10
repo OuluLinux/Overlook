@@ -145,12 +145,16 @@ public:
 	void RefreshData();
 	void EnableCache(bool b=true) {enable_cache = b;}
 	void LimitMemory(int64 limit=2147483648L) {memory_limit = limit;}
-	void LoadCache(int sym_id, int tf_id, int pos);
+	
+	void LoadCache(int sym_id, int tf_id, int pos, bool locked=false);
+	void EnterCache() {cache_lock.Enter();}
+	void LeaveCache() {cache_lock.Leave();}
 	
 	bool IsReversed() const {return reversed;}
 	Time GetTime(int period, int pos) const {return begin + base_period * period * pos * (reversed ? -1 : 1);}
 	Time GetBegin() const {return begin;}
 	Time GetEnd() const {return end;}
+	int GetSymbolCount() const {return symbols.GetCount();}
 	int GetCount(int period) const {return timediff / base_period / period * (reversed ? -1 : 1);}
 	int GetBeginTS() {return begin_ts;}
 	int GetEndTS() {return end_ts;}
@@ -158,9 +162,22 @@ public:
 	int GetShift(int src_period, int dst_period, int shift);
 	int GetShiftFromTime(int timestamp, int period);
 	int GetTfFromSeconds(int period_seconds);
+	int GetPeriod(int i) const {return periods[i];}
+	int GetPeriodCount() const {return periods.GetCount();}
 	int64 GetPersistencyCursor(int sym_id, int tf_id, int shift);
 	const SlotData& GetSlot(int sym_id, int tf_id, int shift) const {return data[sym_id][tf_id][shift];}
 	int FindPeriod(int period) const {return periods.Find(period);}
+	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos, bool locked=false) {
+		const SlotData& data = GetSlot(sym_id, tf_id, shift);
+		if (!data.GetCount()) LoadCache(sym_id, tf_id, shift, locked);
+		return (T*)(data.Begin() + slot.slot_offset + slot.values[slot_value_pos].offset);
+	}
+	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos) const {
+		const SlotData& data = GetSlot(sym_id, tf_id, shift);
+		if (!data.GetCount()) return NULL;
+		return (T*)(data.Begin() + slot.slot_offset + slot.values[slot_value_pos].offset);
+	}
+	
 	
 	void SetCacheFile(String path) {cache_file_path = path;}
 	void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}

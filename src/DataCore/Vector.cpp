@@ -170,6 +170,15 @@ int64 TimeVector::GetPersistencyCursor(int sym_id, int tf_id, int shift) {
 	return pos;
 }
 
+
+
+
+
+
+
+
+
+
 TimeVector::Iterator TimeVector::Begin() {
 	Iterator it(this);
 	
@@ -182,20 +191,20 @@ void TimeVector::AddCustomSlot(String key, SlotFactory f) {
 	GetFactories().Add(key, f);
 }
 
-void TimeVector::LoadCache(int sym_id, int tf_id, int pos) {
+void TimeVector::LoadCache(int sym_id, int tf_id, int pos, bool locked) {
 	if (!enable_cache) throw DataExc();
 	int64 file_pos = GetPersistencyCursor(sym_id, tf_id, pos);
 	SlotData& slot_data = data[sym_id][tf_id][pos];
-	cache_lock.Enter();
+	if (!locked) cache_lock.Enter();
 	if (slot_data.GetCount()) {
-		cache_lock.Leave();
+		if (!locked) cache_lock.Leave();
 		return; // Should be empty. Possibility of threaded duplicate load exists.
 	}
 	reserved_memory += total_slot_bytes;
 	slot_data.SetCount(total_slot_bytes); // don't lose lock for this, not worth it
 	cache_file.Seek(file_pos);
 	cache_file.Get(slot_data.Begin(), total_slot_bytes);
-	cache_lock.Leave();
+	if (!locked) cache_lock.Leave();
 }
 
 }

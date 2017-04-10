@@ -3,7 +3,6 @@
 
 #include "Container.h"
 
-
 namespace DataCtrl {
 using namespace DataCore;
 
@@ -32,8 +31,8 @@ public:
 	
 	void Refresher();
 	
-	virtual String GetKey() const {return "derv";}
-	static String GetKeyStatic()  {return "derv";}
+	virtual String GetKey() const {return "dervctrl";}
+	static String GetKeyStatic()  {return "dervctrl";}
 	
 };
 

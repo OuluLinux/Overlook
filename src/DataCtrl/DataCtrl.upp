@@ -2,7 +2,8 @@ description "\377B0,0,128";
 
 uses
 	DataCore,
-	RefCore;
+	RefCore,
+	ConvNetCtrl;
 
 file
 	DataCtrl.h,
@@ -17,6 +18,9 @@ file
 	DervCtrl.h,
 	DervCtrl.cpp,
 	DervCtrl.lay,
+	RecurrentCtrl.h,
+	RecurrentCtrl.cpp,
+	RecurrentCtrl.lay,
 	GraphCtrl.h,
 	GraphCtrl.cpp,
 	GraphGroupCtrl.h,

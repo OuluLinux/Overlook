@@ -3,7 +3,8 @@ description "\377B0,0,128";
 uses
 	Core,
 	RefCtrl,
-	plugin/tidy;
+	plugin/tidy,
+	ConvNet;
 
 file
 	main.cpp,

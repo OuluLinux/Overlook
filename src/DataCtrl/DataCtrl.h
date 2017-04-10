@@ -19,6 +19,7 @@ using namespace Upp;
 #include "Container.h"
 #include "EventCtrl.h"
 #include "DervCtrl.h"
+#include "RecurrentCtrl.h"
 
 namespace DataCtrl {
 	

@@ -52,7 +52,7 @@ void TimeVector::Iterator::SetPosition(int p) {
 }
 
 bool TimeVector::Iterator::Process() {
-	DLOG(pos[0] << "/" << tv->bars[0]);
+	//DLOG(pos[0] << "/" << tv->bars[0]);
 	
 	// Get attributes of the TimeVector
 	int total_slot_bytes = tv->total_slot_bytes;
@@ -135,24 +135,29 @@ bool TimeVector::Iterator::Process() {
 				if (enable_cache) {
 					tv->cache_lock.Enter();
 					
-					// Check memory limits
-					reserved_memory += total_slot_bytes;
-					if (check_memory_limit && reserved_memory >= memory_limit) {
-						ReleaseMemory(); // must be locked externally
+					// If nobody loaded cache while we waited entering locked state, then we still load it
+					if (slot_data.GetCount() != total_slot_bytes) {
+						// Check memory limits
+						reserved_memory += total_slot_bytes;
+						if (check_memory_limit && reserved_memory >= memory_limit) {
+							ReleaseMemory(); // must be locked externally
+						}
+						
+						// Cache should be loaded only to empty slot memory
+						if (!slot_data.IsEmpty()) {
+							tv->cache_lock.Leave();
+							throw DataExc("slot_data.IsEmpty()"); // might throw legal duplicate load, though...
+						}
+						
+						// Load slot memory from cache
+						slot_data.SetCount(total_slot_bytes); // don't lose lock for this
+						file_pos = tv->GetPersistencyCursor(i, j, attr.pos[j]);
+						has_file_pos = true;
+						tv->cache_file.Seek(file_pos);
+						tv->cache_file.Get(slot_data.Begin(), total_slot_bytes);
 					}
+					// else you could check memory limits, but this is a rare occasion anyway
 					
-					// Cache should be loaded only to empty slot memory (may change in future?)
-					if (!slot_data.IsEmpty()) {
-						tv->cache_lock.Leave();
-						throw DataExc("slot_data.IsEmpty()"); // might throw legal duplicate load, though...
-					}
-					
-					// Load slot memory from cache
-					slot_data.SetCount(total_slot_bytes); // don't lose lock for this
-					file_pos = tv->GetPersistencyCursor(i, j, attr.pos[j]);
-					has_file_pos = true;
-					tv->cache_file.Seek(file_pos);
-					tv->cache_file.Get(slot_data.Begin(), total_slot_bytes);
 					tv->cache_lock.Leave();
 				}
 				else {
@@ -278,7 +283,7 @@ void TimeVector::Iterator::operator ++(int i) {
 }
 
 void TimeVector::Iterator::ReleaseMemory() {
-	LOG("TimeVector::Iterator::ReleaseMemory()");
+	//LOG("TimeVector::Iterator::ReleaseMemory()");
 	
 	Vector<int> begin_pos, end_pos, bars;
 	begin_pos <<= pos;

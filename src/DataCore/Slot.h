@@ -2,6 +2,8 @@
 #define _DataCore_Slot_h_
 
 #include <Core/Core.h>
+#include <ConvNet/ConvNet.h>
+#undef ASSERTEXC
 
 namespace DataCore {
 using namespace Upp;

@@ -40,17 +40,19 @@ void InitTimeVector() {
 
 void InitIndicators() {
 	TimeVector& tv = GetTimeVector();
-	//tv.LinkPath("/open", "/dummyvalue");
-	tv.LinkPath("/open", "/testvalue");
+	tv.LinkPath("/open", "/dummyvalue");
+	//tv.LinkPath("/open", "/testvalue");
 	tv.LinkPath("/open_norm", "/normvalue?src=\"/open\"");
 	tv.LinkPath("/open_derv", "/derivedvalue?src=\"/open\"");
 	
 	tv.LinkPath("/ma0", "/ma?method=0");
 	
-	tv.LinkPath("/dummytrainer", "/dummytrainer");
+	//tv.LinkPath("/dummytrainer", "/dummytrainer");
+	tv.LinkPath("/rnn", "/rnn");
 	
 	PathResolver& res = *GetPathResolver();
-	res.LinkPath("/derv_H1", "/derv?bar=\"/open\"&id=0&period=1");
+	res.LinkPath("/derv_H1", "/dervctrl?bar=\"/open\"&id=0&period=1");
+	res.LinkPath("/rnn_H1", "/rnnctrl?bar=\"/open\"&id=0&period=1");
 	
 	res.LinkPath("/H1", "/bardata?bar=\"/open\"&id=0&period=1");
 	res.LinkPath("/H1_ma0", "/H1/cont?slot=\"/ma0\"");
@@ -78,7 +80,7 @@ struct Runner {
 		while (!Thread::IsShutdownThreads()) {
 			while (!Thread::IsShutdownThreads()) {
 				bool all_processed = true;
-				for (TimeVector::Iterator it = tv.Begin(); !it.IsEnd(); it++) {
+				for (TimeVector::Iterator it = tv.Begin(); !it.IsEnd() && !Thread::IsShutdownThreads(); it++) {
 				
 					if (it.Process()) {
 						all_processed = false;

@@ -14,7 +14,8 @@ bool DummyValue::Process(const SlotProcessAttributes& attr) {
 	double* high = GetValue<double>(2, attr);
 	double counted = attr.GetCounted();
 	double period = attr.GetPeriod();
-	double shift = counted * period / (7*24);
+	//double shift = counted * period / (7*24) + attr.sym_id;
+	double shift = counted * period / 24 * (2*M_PI) + attr.sym_id;
 	double v = sin(shift) + attr.sym_id + 2;
 	*open = v;
 	*low = v * (1.0 - 0.00001);

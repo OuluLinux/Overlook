@@ -12,6 +12,7 @@ INITBLOCK {
 	DataCore::TimeVector::Register<NormalizedValue>();
 	DataCore::TimeVector::Register<DerivedValue>();
 	DataCore::TimeVector::Register<DummyTrainer>();
+	DataCore::TimeVector::Register<Recurrent>();
 }
 
 END_UPP_NAMESPACE

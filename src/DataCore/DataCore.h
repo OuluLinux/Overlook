@@ -8,5 +8,6 @@
 #include "EventManager.h"
 #include "Table.h"
 #include "Filters.h"
+#include "Neural.h"
 
 #endif

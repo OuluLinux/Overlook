@@ -4,6 +4,10 @@
 #define IMAGEFILE <Overlook/Overlook.iml>
 #include <Draw/iml_source.h>
 
+String addr = "192.168.0.5";
+int port = 42000;
+
+
 void InitTimeVector() {
 	TimeVector& tv = GetTimeVector();
 	
@@ -11,16 +15,30 @@ void InitTimeVector() {
 	tv.LimitMemory(2*sizeof(double)*4*3*100);
 	
 	// Init sym/tfs/time space
-	tv.AddSymbol("dummy 1");
-	tv.AddSymbol("dummy 2");
-	tv.AddSymbol("dummy 3");
-	
-	tv.SetBasePeriod(60*60);
-	
-	tv.AddPeriod(1		*60*60);
-	tv.AddPeriod(4		*60*60);
-	tv.AddPeriod(24		*60*60);
-	tv.AddPeriod(7*24	*60*60);
+	{
+		MetaTrader mt;
+		mt.Init(addr, port);
+		Vector<Symbol> symbols = mt.GetSymbols();
+		ASSERTEXC(!symbols.IsEmpty());
+		for(int i = 0; i < symbols.GetCount(); i++) {
+			tv.AddSymbol(symbols[i].name);
+		}
+		ASSERT(mt.GetTimeframe(0) == 1);
+		tv.SetBasePeriod(60*1);
+		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
+			tv.AddPeriod(mt.GetTimeframe(i) * 60);
+		}
+	}
+	{
+		//tv.AddSymbol("dummy 1");
+		//tv.AddSymbol("dummy 2");
+		//tv.AddSymbol("dummy 3");
+		//tv.SetBasePeriod(60*60);
+		//tv.AddPeriod(1		*60*60);
+		//tv.AddPeriod(4		*60*60);
+		//tv.AddPeriod(24		*60*60);
+		//tv.AddPeriod(7*24	*60*60);
+	}
 	
 	tv.SetBegin(Time(2014, 9, 1)); // Find begin of slowest #SPX data
 	Date now = GetSysTime();
@@ -40,10 +58,11 @@ void InitTimeVector() {
 
 void InitIndicators() {
 	TimeVector& tv = GetTimeVector();
-	tv.LinkPath("/open", "/dummyvalue");
+	//tv.LinkPath("/open", "/dummyvalue");
 	//tv.LinkPath("/open", "/testvalue");
-	tv.LinkPath("/open_norm", "/normvalue?src=\"/open\"");
-	tv.LinkPath("/open_derv", "/derivedvalue?src=\"/open\"");
+	tv.LinkPath("/open", "/db?addr=\"" + addr + "\"&port=" + IntStr(port));
+	//tv.LinkPath("/open_norm", "/normvalue?src=\"/open\"");
+	//tv.LinkPath("/open_derv", "/derivedvalue?src=\"/open\"");
 	
 	tv.LinkPath("/ma0", "/ma?method=0");
 	
@@ -51,7 +70,7 @@ void InitIndicators() {
 	tv.LinkPath("/rnn", "/rnn");
 	
 	PathResolver& res = *GetPathResolver();
-	res.LinkPath("/derv_H1", "/dervctrl?bar=\"/open\"&id=0&period=1");
+	//res.LinkPath("/derv_H1", "/dervctrl?bar=\"/open\"&id=0&period=1");
 	res.LinkPath("/rnn_H1", "/rnnctrl?bar=\"/open\"&id=0&period=1");
 	
 	res.LinkPath("/H1", "/bardata?bar=\"/open\"&id=0&period=1");

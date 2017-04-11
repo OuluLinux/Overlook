@@ -2,6 +2,7 @@
 #define _DataCore_Neural_h_
 
 #include "Slot.h"
+#include "SimBroker.h"
 
 namespace DataCore {
 
@@ -87,6 +88,68 @@ public:
 			}
 		}
 	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class DQNAgent : public Slot {
+	
+	// Eye sensor has a maximum range and senses walls
+	/*struct Eye : Moveable<Eye> {
+		double angle; // angle relative to agent its on
+		double max_range;
+		double sensed_proximity; // what the eye is seeing. will be set in world.tick()
+		double vx, vy;
+		int sensed_type; // what does the eye see?
+		
+		void Init(double angle) {
+			this->angle = angle;
+			max_range = 120;
+			sensed_proximity = 120;
+			sensed_type = -1;
+			vx = 0;
+			vy = 0;
+		}
+	};
+	
+	Vector<Eye> eyes;*/
+	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	
+	ConvNet::DQNAgent agent;
+	
+	Vector<SimBroker> brokers;
+	Vector<double> input_array;
+	SlotPtr src, rnn;
+	double digestion_signal, reward;
+	double smooth_reward;
+	int max_tail;
+	int action;
+	int iter;
+	bool do_training;
+	
+public:
+	DQNAgent();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() {return "dqn";}
+	virtual String GetName() {return "DQN-Agent";}
+	void Forward(const SlotProcessAttributes& attr);
+	void Backward(const SlotProcessAttributes& attr);
+	void Reset();
 };
 
 }

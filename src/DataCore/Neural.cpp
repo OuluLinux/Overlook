@@ -125,7 +125,7 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 			iter++;
 		
 		// Write current values to the sentence
-		int count = Upp::min(30, attr.GetCounted()-1);
+		int count = Upp::min(batch, attr.GetCounted()-1);
 		if (count > 10) {
 			lock.Enter();
 			
@@ -353,5 +353,199 @@ void Recurrent::Tick(const SlotProcessAttributes& attr) {
 		}
 	}*/
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DQNAgent::DQNAgent() {
+	AddValue<double>(); // signal
+	
+	//nflot = 1000;
+	iter = 0;
+	
+	// positional information
+	/*p.x = 300;
+	p.y = 300;
+	v.x = 0;
+	v.y = 0;
+	op = p;*/
+	
+	/*actions.Add(ACT_IDLE);
+	actions.Add(ACT_LONG);
+	actions.Add(ACT_SHORT);
+	actions.Add(ACT_DOWN);*/
+	
+	// properties
+	/*rad = 10;
+	for (int k = 0; k < 30; k++) {
+		eyes.Add().Init(k*0.21);
+	}*/
+	
+	digestion_signal = 0.0;
+	
+	// outputs on world
+	action = 0;
+	max_tail = 100;
+	smooth_reward = 0.0;
+	do_training = true;
+}
+
+void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void DQNAgent::Init() {
+	TimeVector& tv = GetTimeVector();
+	
+	src = tv.FindLinkSlot("/open");
+	rnn = tv.FindLinkSlot("/rnn");
+	ASSERTEXC(src);
+	ASSERTEXC(rnn);
+	
+	
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
+	brokers.SetCount(sym_count * tf_count);
+	
+}
+
+bool DQNAgent::Process(const SlotProcessAttributes& attr) {
+	
+	// Return reward value
+	Backward(attr);
+	
+	// Get new act
+	Forward(attr);
+	
+	// Process the new act
+	if (action == ACT_LONG) {
+		
+	}
+	else if (action == ACT_SHORT) {
+		
+	}
+	
+	return do_training;
+}
+
+
+void DQNAgent::Forward(const SlotProcessAttributes& attr) {
+	// in forward pass the agent simply behaves in the environment
+	// create input to brain
+	/*int num_eyes = eyes.GetCount();
+	int ne = num_eyes * 5;*/
+	
+	
+	int sym_count = attr.sym_count;
+	int tf_count = attr.tf_count;
+	int pos = 0;
+	
+	input_array.SetCount(sym_count * tf_count * 17);
+	
+	for(int i = 0; i < sym_count; i++) {
+		for(int j = 0; j < tf_count; j++) {
+			double *open = src->GetValue<double>(0, i, j, 0, attr);
+			ASSERTEXC(open);
+			input_array[pos++] = *open;
+			
+			for(int k = 0; k < 16; k++) {
+				double* pred = rnn->GetValue<double>(k, i, j, 0, attr);
+				ASSERTEXC(pred);
+				input_array[pos++] = *pred;
+			}
+		}
+	}
+	/*input_array.SetCount(num_eyes * 5 + 2, 0);
+	for (int i = 0; i < num_eyes; i++) {
+		Eye& e = eyes[i];
+		input_array[i*5] = 1.0;
+		input_array[i*5+1] = 1.0;
+		input_array[i*5+2] = 1.0;
+		input_array[i*5+3] = e.vx; // velocity information of the sensed target
+		input_array[i*5+4] = e.vy;
+		if(e.sensed_type != -1) {
+			// sensed_type is 0 for wall, 1 for food and 2 for poison.
+			// lets do a 1-of-k encoding into the input array
+			input_array[i*5 + e.sensed_type] = e.sensed_proximity/e.max_range; // normalize to [0,1]
+		}
+	}
+	
+	// proprioception and orientation
+    input_array[ne+0] = v.x;
+    input_array[ne+1] = v.y;*/
+
+    action = agent.Act(input_array);
+}
+
+void DQNAgent::Backward(const SlotProcessAttributes& attr) {
+	reward = digestion_signal;
+	
+	// pass to brain for learning
+	if (do_training)
+		agent.Learn(reward);
+	
+	smooth_reward += reward;
+	
+	/*if (iter % 50 == 0) {
+		while (smooth_reward_history.GetCount() >= nflot) {
+			smooth_reward_history.Remove(0);
+		}
+		smooth_reward_history.Add(smooth_reward);
+		
+		world->reward.SetLimit(nflot);
+		world->reward.AddValue(smooth_reward);
+		
+		iter = 0;
+	}*/
+	iter++;
+}
+
+void DQNAgent::Reset() {
+	agent.Reset();
+	
+	//rad = 10;
+	action = 0;
+	
+	smooth_reward = 0.0;
+	reward = 0;
+}
+
+
 
 }

@@ -14,6 +14,7 @@ INITBLOCK {
 	RefCore::PathResolver::RegisterStatic<TableCtrl>();
 	RefCore::PathResolver::RegisterStatic<DervCtrl>();
 	RefCore::PathResolver::RegisterStatic<RecurrentCtrl>();
+	RefCore::PathResolver::RegisterStatic<DQNCtrl>();
 	
 }
 

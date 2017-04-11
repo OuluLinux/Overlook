@@ -1,0 +1,13 @@
+LAYOUT(DQNLayout, 636, 388)
+	ITEM(Label, dv___0, SetLabel(t_("Reward graph:")).SetFont(StdFont().Bold()).LeftPosZ(4, 200).TopPosZ(248, 13))
+	ITEM(TrainingGraph, dv___1, LeftPosZ(8, 196).VSizePosZ(264, 4))
+	ITEM(Label, dv___2, SetLabel(t_("Status:")).SetFont(StdFont().Bold()).LeftPosZ(4, 200).TopPosZ(144, 13))
+	ITEM(Label, dv___3, LeftPosZ(8, 196).TopPosZ(160, 84))
+	ITEM(Label, dv___4, SetLabel(t_("Edit agent:")).SetFont(StdFont().Bold()).LeftPosZ(4, 200).TopPosZ(4, 13))
+	ITEM(DocEdit, dv___5, LeftPosZ(8, 196).TopPosZ(20, 120))
+	ITEM(DQNDraw, dv___6, HSizePosZ(208, 4).VSizePosZ(4, 112))
+	ITEM(Label, dv___7, SetLabel(t_("Exploration epsilon:")).HSizePosZ(208, 324).BottomPosZ(96, 16))
+	ITEM(SliderCtrl, dv___8, HSizePosZ(312, 4).BottomPosZ(96, 16))
+	ITEM(HeatmapTimeView, dv___9, HSizePosZ(208, 4).BottomPosZ(4, 92))
+END_LAYOUT
+

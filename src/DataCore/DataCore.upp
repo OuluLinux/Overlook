@@ -4,7 +4,8 @@ uses
 	Core,
 	RefCtrl,
 	plugin/tidy,
-	ConvNet;
+	ConvNet,
+	plugin/libmt;
 
 file
 	main.cpp,
@@ -21,6 +22,8 @@ file
 	EventManager.cpp,
 	Table.h,
 	Table.cpp,
+	SimBroker.h,
+	SimBroker.cpp,
 	"Custom Slots" readonly separator,
 	DummySlot.h,
 	DummySlot.cpp,

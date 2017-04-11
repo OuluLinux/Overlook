@@ -13,6 +13,8 @@ INITBLOCK {
 	DataCore::TimeVector::Register<DerivedValue>();
 	DataCore::TimeVector::Register<DummyTrainer>();
 	DataCore::TimeVector::Register<Recurrent>();
+	DataCore::TimeVector::Register<DataBridge>();
+	DataCore::TimeVector::Register<DQNAgent>();
 }
 
 END_UPP_NAMESPACE

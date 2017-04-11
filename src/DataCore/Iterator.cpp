@@ -201,8 +201,10 @@ bool TimeVector::Iterator::Process() {
 					bool ready = slot.Process(attr);
 					if (ready)
 						*ready_slot |= ready_mask;
-					else
+					else {
 						process_failed = true; // return error;
+						break; // don't process slots after this
+					}
 				}
 				
 				// Increase the ready-bit position (position in a byte)

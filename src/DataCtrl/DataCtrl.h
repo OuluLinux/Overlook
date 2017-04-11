@@ -20,6 +20,7 @@ using namespace Upp;
 #include "EventCtrl.h"
 #include "DervCtrl.h"
 #include "RecurrentCtrl.h"
+#include "DQNCtrl.h"
 
 namespace DataCtrl {
 	

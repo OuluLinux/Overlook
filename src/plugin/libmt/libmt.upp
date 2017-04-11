@@ -4,6 +4,7 @@ uses
 	Core/Rpc;
 
 file
+	Copying,
 	libmt.h,
 	libmt.cpp;
 

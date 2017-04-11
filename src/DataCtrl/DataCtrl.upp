@@ -7,6 +7,7 @@ uses
 	GraphLib;
 
 file
+	Copying,
 	DataCtrl.h,
 	DataCtrl.cpp,
 	DataCtrl_.icpp,

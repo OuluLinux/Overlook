@@ -1,7 +1,7 @@
 description "Nonlinear AutoRegressive with eXogenous inputs neural network\377B0,128,0";
 
 file
-	COPYING,
+	Copying,
 	NARX.h,
 	NARX.cpp,
 	ActivationFunctions.h,

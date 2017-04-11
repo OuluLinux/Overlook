@@ -3,7 +3,7 @@ description "\3770,128,128";
 noblitz;
 
 file
-	COPYING,
+	Copying,
 	access.c,
 	access.h,
 	alloc.c,

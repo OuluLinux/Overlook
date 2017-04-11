@@ -8,6 +8,7 @@ uses
 	RefCore;
 
 file
+	Copying,
 	main.cpp,
 	Overlook.h,
 	Overlook.cpp,

@@ -2,6 +2,8 @@
 
 #include "Unit.h"
 
+namespace Narx {
+
 class OutputUnit : public Unit, Moveable<OutputUnit> {
 protected:
 
@@ -29,3 +31,4 @@ public:
 
 };
 
+}

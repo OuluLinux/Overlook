@@ -23,7 +23,7 @@ void DervDraw::Paint(Draw& w) {
 	
 	int tf = tv.GetTfFromSeconds(7*24*60*60); // 1 week
 	int begin_pos = week * tf;
-	int end_pos = min(tv.GetCount(tf), begin_pos + tf);
+	int end_pos = Upp::min(tv.GetCount(tf), begin_pos + tf);
 	
 	TimeVector::Iterator it = tv.Begin();
 	it.SetPosition(begin_pos);

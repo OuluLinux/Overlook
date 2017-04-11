@@ -1,5 +1,7 @@
 #include "NARX.h"
 
+namespace Narx {
+
 double Unit::alfa = 0.2;
 
 Unit::Unit() {
@@ -115,4 +117,6 @@ double Unit::GetDelta(Unit& u) {
 void Unit::FixWeights() {
 	for (int i = 0; i < input_count; i ++)
 		old_weights[i] = input_weights[i];
+}
+
 }

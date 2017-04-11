@@ -1,5 +1,7 @@
 #pragma once
 
+namespace Narx {
+
 class FeedbackInfo : Moveable<FeedbackInfo> {
 public:
 	Vector<Vector<double> > Y;
@@ -16,3 +18,4 @@ public:
 	void Init(int xx, int xy, int yx, int yy, int dx, int dy);
 };
 
+}

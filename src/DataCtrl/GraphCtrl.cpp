@@ -86,8 +86,8 @@ void GraphCtrl::Paint(Draw& w) {
 	
 	Size sz(GetSize());
 	int max_right_offset = 10;
-	int right_offset = (this->right_offset ? max(max_right_offset - shift, 0) : 0);
-	shift = max(shift - max_right_offset, 0);
+	int right_offset = (this->right_offset ? Upp::max(max_right_offset - shift, 0) : 0);
+	shift = Upp::max(shift - max_right_offset, 0);
 	
 	real_screen_count = (GetRect().GetWidth() - right_off - 2 * border) / div;
 	count = real_screen_count - right_offset;
@@ -579,7 +579,7 @@ int GraphCtrl::GetPos() {
 }
 
 void GraphCtrl::Seek(int pos) {
-	pos = max(0, min(GetCount()-1, pos));
+	pos = Upp::max(0, Upp::min(GetCount()-1, pos));
 	group->SetShift(pos);
 	group->Refresh();
 }

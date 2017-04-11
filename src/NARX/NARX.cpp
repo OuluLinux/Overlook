@@ -1,9 +1,6 @@
 #include "NARX.h"
 
-
-
-
-
+namespace Narx {
 
 NARX::NARX() {
 	
@@ -616,4 +613,6 @@ void NARX::Predict(int series_index_, Vector<double>& out) {
 	for (int i = 0; i < output_count; i++) {
 		out[i] = output_units[i].GetOutput();
 	}
+}
+
 }

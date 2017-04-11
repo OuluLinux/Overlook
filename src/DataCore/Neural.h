@@ -1,10 +1,13 @@
 #ifndef _DataCore_Neural_h_
 #define _DataCore_Neural_h_
 
+#include <Mona/Mona.h>
+#include <NARX/NARX.h>
 #include "Slot.h"
 #include "SimBroker.h"
 
 namespace DataCore {
+
 
 class Recurrent : public Slot {
 	enum {PHASE_GATHERDATA, PHASE_TRAINING};
@@ -92,16 +95,23 @@ public:
 
 
 
-
-
-
-
-
-
-
-
-
-
+class RLAgent : public Slot {
+	ConvNet::Brain brain;
+	double reward_bonus, digestion_signal;
+	int prevactionix;
+	int simspeed;
+	int actionix;
+	
+	void Forward();
+	void Backward();
+public:
+	RLAgent();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() {return "rl";}
+	virtual String GetName() {return "RL-Agent";}
+};
 
 
 
@@ -151,6 +161,51 @@ public:
 	void Backward(const SlotProcessAttributes& attr);
 	void Reset();
 };
+
+
+
+class MonaAgent : public Slot {
+	
+	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	
+	Array<Array<Mona> > agent;
+	Vector<SENSOR> sensors;
+	
+	Vector<SimBroker> brokers;
+	Vector<double> input_array;
+	SlotPtr src, rnn;
+	double digestion_signal, reward;
+	double smooth_reward;
+	int max_tail;
+	int action;
+	int iter;
+	bool do_training;
+	
+public:
+	MonaAgent();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() {return "mona";}
+	virtual String GetName() {return "Mona";}
+};
+
+
+
+class NARX : public Slot {
+	Narx::NarxData data;
+	Narx::NARX narx;
+	
+public:
+	NARX();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() {return "narx";}
+	virtual String GetName() {return "NARX";}
+};
+
+
 
 }
 

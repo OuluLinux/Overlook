@@ -1,5 +1,7 @@
 #pragma once
 
+namespace Narx {
+
 class Unit : Moveable<Unit> {
 private:
 	double deltah;
@@ -54,3 +56,4 @@ public:
 	virtual void FixWeights();
 };
 
+}

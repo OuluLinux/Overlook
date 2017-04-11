@@ -1,5 +1,6 @@
 #include "NARX.h"
 
+namespace Narx {
 
 EvaluationEngine::EvaluationEngine() {
 	series_len = 0;
@@ -147,4 +148,6 @@ void EvaluationEngine::Clear() {
 	//	series[i]=predicted[i]=0;
 	//FWhenLog(String("curlen:%1\n").arg(curlen).toStdString().c_str());
 	curlen = 0;
+}
+
 }

@@ -371,8 +371,100 @@ void Recurrent::Tick(const SlotProcessAttributes& attr) {
 
 
 
+RLAgent::RLAgent() {
+	/*
+	// properties
+	rad = 10;
+	for (int k = 0; k < 9; k++) {
+		eyes.Add().Init((k-3)*0.25);
+	}
+	
+	// braaain
+	brain.Init(eyes.GetCount() * 3, actions.GetCount());
+	
+	reward_bonus = 0.0;
+	digestion_signal = 0.0;
+	
+	// outputs on world
+	rot1 = 0.0; // rotation speed of 1st wheel
+	rot2 = 0.0; // rotation speed of 2nd wheel
+	
+	prevactionix = -1;
+	simspeed = 2;
+	actionix = -1;
+	*/
+}
 
+void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
 
+void RLAgent::Init() {
+	
+}
+
+bool RLAgent::Process(const SlotProcessAttributes& attr) {
+	
+}
+
+void RLAgent::Forward() {
+	/*
+	// in forward pass the agent simply behaves in the environment
+	// create input to brain
+	int num_eyes = eyes.GetCount();
+	Vector<double> input_array;
+	input_array.SetCount(num_eyes * 3, 0);
+	for (int i=0; i < num_eyes; i++) {
+		Eye& e = eyes[i];
+		input_array[i*3] = 1.0;
+		input_array[i*3+1] = 1.0;
+		input_array[i*3+2] = 1.0;
+		if(e.sensed_type != -1) {
+			// sensed_type is 0 for wall, 1 for food and 2 for poison.
+			// lets do a 1-of-k encoding into the input array
+			input_array[i*3 + e.sensed_type] = e.sensed_proximity/e.max_range; // normalize to [0,1]
+		}
+	}
+	
+	// get action from brain
+	actionix = brain.Forward(input_array);
+	Pointf action = actions[actionix];
+	
+	// demultiplex into behavior variables
+	rot1 = action.x;
+	rot2 = action.y;
+	*/
+}
+
+void RLAgent::Backward() {
+	/*
+	// in backward pass agent learns.
+	// compute reward
+	double proximity_reward = 0.0;
+	int num_eyes = eyes.GetCount();
+	for(int i=0; i < num_eyes; i++) {
+		Eye& e = eyes[i];
+		// agents dont like to see walls, especially up close
+		proximity_reward += e.sensed_type == 0 ? e.sensed_proximity/e.max_range : 1.0;
+	}
+	proximity_reward = proximity_reward/num_eyes;
+	proximity_reward = min(1.0, proximity_reward * 2.0);
+	
+	// agents like to go straight forward
+	double forward_reward = 0.0;
+	if (actionix == 0 && proximity_reward > 0.75)
+		forward_reward = 0.1 * proximity_reward;
+	
+	// agents like to eat good things
+	double digestion_reward = digestion_signal;
+	digestion_signal = 0.0;
+	
+	double reward = proximity_reward + forward_reward + digestion_reward;
+	
+	// pass to brain for learning
+	brain.Backward(reward);
+	*/
+}
 
 
 
@@ -547,5 +639,287 @@ void DQNAgent::Reset() {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MonaAgent::MonaAgent() {
+	AddValue<double>(); // signal
+	
+	//nflot = 1000;
+	iter = 0;
+	
+	// positional information
+	/*p.x = 300;
+	p.y = 300;
+	v.x = 0;
+	v.y = 0;
+	op = p;*/
+	
+	/*actions.Add(ACT_IDLE);
+	actions.Add(ACT_LONG);
+	actions.Add(ACT_SHORT);
+	actions.Add(ACT_DOWN);*/
+	
+	// properties
+	/*rad = 10;
+	for (int k = 0; k < 30; k++) {
+		eyes.Add().Init(k*0.21);
+	}*/
+	
+	digestion_signal = 0.0;
+	
+	// outputs on world
+	action = 0;
+	max_tail = 100;
+	smooth_reward = 0.0;
+	do_training = true;
+}
+
+void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void MonaAgent::Init() {
+	TimeVector& tv = GetTimeVector();
+	
+	src = tv.FindLinkSlot("/open");
+	rnn = tv.FindLinkSlot("/rnn");
+	ASSERTEXC(src);
+	ASSERTEXC(rnn);
+	
+	
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
+	brokers.SetCount(sym_count * tf_count);
+	
+	
+	#if 0
+	mona.MAX_MEDIATOR_LEVEL = 1;
+	mona.Init(5, HOP+1, 1);
+	
+	// Set a long second effect interval
+	// for a higher level mediator.
+	mona.SetEffectEventIntervals(1, 2);
+	mona.SetEffectEventInterval(1, 0, 2, 0.5);
+	mona.SetEffectEventInterval(1, 1, 10, 0.5);
+	
+	// Set need and goal for cheese.
+	mona.SetNeed(0, CHEESE_NEED);
+	
+	sensors.SetCount(5);
+	sensors[0] = 0.0;
+	sensors[1] = 0.0;
+	sensors[2] = 0.0;
+	sensors[3] = (float)GOAL_ROOM;
+	sensors[4] = 1.0;
+	
+	mona.AddGoal(0, sensors, 0, CHEESE_GOAL);
+	
+	
+	// Reset need.
+    mona.SetNeed(0, CHEESE_NEED);
+
+    // Clear working memory.
+    mona.ClearWorkingMemory();
+    #endif
+}
+
+bool MonaAgent::Process(const SlotProcessAttributes& attr) {
+	
+	#if 0
+	//if (!start.isSelected() || (mouseX == -1) || (error != null))
+	//	return;
+	if (mouseX == -1)
+		return;
+	
+
+	// Determine correct response.
+	int cx = -1;
+	int cy = -1;
+	int cr = -1;
+	int r  = -1;
+	
+	bool has_goal = false;
+	for(int i = 0; i < maze.Top().GetCount(); i++) {
+		if (maze.Top()[i].selected) {
+			has_goal = true;
+			break;
+		}
+	}
+	
+	for (int i = mouseX + 1; (i < maze.GetCount()) && (cx == -1); i++) {
+		for (int j = 0; (j < maze[i].GetCount()) && (cx == -1); j++) {
+			if (maze[i][j].selected) {
+				cx = i;
+				cy = j;
+			}
+		}
+	}
+
+	if (cx == (mouseX + 1)) {
+		for (int i = 0; (i < maze[mouseX][mouseY].doors.GetCount()) && (cr == -1); i++) {
+			if (maze[mouseX][mouseY].doors[i] != NULL &&
+				(maze[mouseX][mouseY].doors[i]->cx == cx) &&
+				(maze[mouseX][mouseY].doors[i]->cy == cy)) {
+				cr = i;
+				break;
+			}
+		}
+	}
+	else {
+		if (cx != -1)
+			cr = HOP;
+		else {
+			cx = mouseX;
+			cy = mouseY;
+			cr = WAIT;
+		}
+	}
+
+	if ((ctrl_bar.train_mode.GetIndex() == TRAIN) || (cr == WAIT))
+		mona.OverrideResponse(cr);
+	else
+		mona.ClearResponseOverride();
+
+	// Initiate sensory/response cycle.
+	for (int i = 0; i < maze[mouseX][mouseY].doors.GetCount(); i++) {
+		if (maze[mouseX][mouseY].doors[i] != NULL)
+			sensors[i] = 1.0;
+		else {
+			
+			if (see_all_maze_doors && (mouseX > 1) && (mouseX < maze.GetCount()-2)) {
+				// Maze room door is visible although possibly blocked.
+				sensors[i] = 1.0;
+			}
+			else
+				sensors[i] = 0.0;
+		}
+	}
+
+	sensors[3] = (float)maze[mouseX][mouseY].type;
+
+	if (maze[mouseX][mouseY].has_cheese) {
+		sensors[4] = 1.0;
+		
+		// Eat the cheese!
+		maze[mouseX][mouseY].has_cheese = false;
+
+		//if ((squeakSound != null) && !mute.isSelected())
+		//	squeakSound.play();
+	}
+	else
+		sensors[4] = 0.0;
+
+	// Move mouse based on response.
+	r = mona.Cycle(sensors);
+
+	
+	if (r < WAIT)
+		PostCallback(THISBACK1(SetResponse, "Door " + IntStr(r)));
+	else if (r == WAIT)
+		PostCallback(THISBACK1(SetResponse, "Wait"));
+	else
+		PostCallback(THISBACK1(SetResponse, "Hop"));
+
+	// Move mouse.
+	bool stuck_in_last =
+		stuck_count > 5 ||
+		(mouseX == cx && mouseX == maze.GetCount()-1 && cr == WAIT) ||
+		(!has_goal && mouseX == maze.GetCount()-2 && cr == WAIT);
+	
+	if (r == cr) {
+		maze[mouseX][mouseY].has_mouse = false;
+		mouseX = cx;
+		mouseY = cy;
+		maze[mouseX][mouseY].has_mouse = true;
+	}
+	else {
+		stuck_count++;
+	}
+	
+	if (stuck_in_last) {
+		running = false;
+		
+		// Place cheese in selected goal room.
+		for (int i = 0; i < maze[end_maze_index + 1].GetCount(); i++) {
+			if (maze[end_maze_index + 1][i].selected) {
+				maze[end_maze_index + 1][i].has_cheese = true;
+				break;
+			}
+		}
+
+		// Move mouse back to leftmost selected room.
+		if (mouseX != -1) {
+			for (int i = 0; i < maze.GetCount(); i++) {
+				for (int j = 0; j < maze[i].GetCount(); j++) {
+					if (maze[i][j].selected) {
+						maze[mouseX][mouseY].has_mouse = false;
+						maze[i][j].has_mouse           = true;
+						mouseX = i;
+						mouseY = j;
+						return;
+					}
+				}
+			}
+		}
+	}
+	#endif
+	
+	return do_training;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+NARX::NARX() {
+	
+}
+
+void NARX::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void NARX::Init() {
+	
+	
+	
+}
+
+bool NARX::Process(const SlotProcessAttributes& attr) {
+	
+	
+	
+	return false;
+}
 
 }

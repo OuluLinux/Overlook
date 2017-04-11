@@ -67,7 +67,7 @@ public:
 	void RemoveExtCtrl();
 	void ViewPath(const String& view_path, bool try_ctrl=true);
 	
-	bool LinkPath(String dest, String src) {} //bool r = resolver->LinkPath(dest, src); RefreshFileList(); return r;}
+	//bool LinkPath(String dest, String src) {} //bool r = resolver->LinkPath(dest, src); RefreshFileList(); return r;}
 	void LinkFoundPeriods();
 	
 	

@@ -13,7 +13,7 @@ using namespace Upp;
 #include "ActivationFunctions.h"
 #include "FeedbackInfo.h"
 
-
+namespace Narx {
 
 void train_result_log(String);
 
@@ -87,3 +87,4 @@ public:
 	
 };
 
+}

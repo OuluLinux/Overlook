@@ -1,13 +1,14 @@
 #include "NARX.h"
 
+namespace Narx {
+
 OutputUnit::OutputUnit(): Unit() {
 	target = 0;
 }
 
-
 OutputUnit::~OutputUnit() {
+	
 }
-
 
 void OutputUnit::SetTarget(double target) {
 	this->target = target;
@@ -52,3 +53,4 @@ double OutputUnit::GetDelta(Unit& u) {
 	preoutput += bias;
 	return preoutput;
     }*/
+}

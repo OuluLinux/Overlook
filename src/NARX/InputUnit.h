@@ -2,6 +2,8 @@
 
 #include "Unit.h"
 
+namespace Narx {
+
 class InputUnit : public Unit, Moveable<InputUnit> {
 private:
 	double input_value;
@@ -16,3 +18,4 @@ public:
 
 };
 
+}

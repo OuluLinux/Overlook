@@ -1,0 +1,16 @@
+LAYOUT(NarxLayout, 876, 544)
+	ITEM(Label, dv___0, SetLabel(t_("Recurrent prediction:")).SetFont(StdFont().Bold()).LeftPosZ(4, 168).TopPosZ(4, 13))
+	ITEM(Label, dv___1, SetLabel(t_("Training stats:")).SetFont(StdFont().Bold()).RightPosZ(268, 168).TopPosZ(4, 13))
+	ITEM(Label, dv___2, SetLabel(t_("Learning rate: you want to anneal this over time if you're training for longer time.")).RightPosZ(4, 416).TopPosZ(16, 19))
+	ITEM(SliderCtrl, week_slider, HSizePosZ(68, 448).BottomPosZ(132, 16))
+	ITEM(Label, dv___4, SetLabel(t_("Week:")).LeftPosZ(16, 40).BottomPosZ(129, 19))
+	ITEM(SliderCtrl, learning_rate_slider, RightPosZ(60, 360).TopPosZ(36, 16))
+	ITEM(Label, lbl_learning_rate, SetLabel(t_("0.01")).SetAlign(ALIGN_CENTER).SetFont(Monospace()).SetFrame(ThinInsetFrame()).RightPosZ(4, 56).TopPosZ(36, 16))
+	ITEM(Label, lbl_time, SetLabel(t_("forw/bwd time per example: ")).RightPosZ(216, 204).TopPosZ(52, 13))
+	ITEM(Label, lbl_perp, SetLabel(t_("perplexity:")).SetFont(StdFontZ(15).Bold()).SetInk(Color(0, 170, 20)).RightPosZ(216, 204).TopPosZ(84, 20))
+	ITEM(Label, lbl_epoch, SetLabel(t_("epoch:")).SetFont(StdFontZ(15).Bold()).SetInk(Color(170, 42, 0)).RightPosZ(216, 204).TopPosZ(64, 20))
+	ITEM(TrainingGraph, perp, RightPosZ(4, 212).TopPosZ(52, 92))
+	ITEM(RecurrentDraw, draw, HSizePosZ(16, 448).VSizePosZ(20, 152))
+	ITEM(HeatmapTimeView, network_view, HSizePosZ(0, 0).BottomPosZ(0, 128))
+END_LAYOUT
+

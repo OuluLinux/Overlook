@@ -1,5 +1,6 @@
 #include "NARX.h"
 
+namespace Narx {
 
 double ActivationFunctions::Sigmoid(double arg) {
 	return 1.0 / (1.0 + exp( - arg));
@@ -47,4 +48,6 @@ double ActivationFunctions::PolDerv(double arg) {
 double ActivationFunctions::AsLogDerv(double arg) {
 	if (arg > 0) return 1 / (1 + arg);
 	else return 1 / (1 - arg);
+}
+
 }

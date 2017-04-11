@@ -15,6 +15,15 @@ INITBLOCK {
 	DataCore::TimeVector::Register<Recurrent>();
 	DataCore::TimeVector::Register<DataBridge>();
 	DataCore::TimeVector::Register<DQNAgent>();
+	DataCore::TimeVector::Register<MonaAgent>();
+	DataCore::TimeVector::Register<NARX>();
+	DataCore::TimeVector::Register<CostStats>();
+	DataCore::TimeVector::Register<ValueChange>();
+	DataCore::TimeVector::Register<WdayHourChanges>();
+	DataCore::TimeVector::Register<WdayHourStats>();
+	DataCore::TimeVector::Register<WdayHourDiff>();
+	DataCore::TimeVector::Register<EventOsc>();
+	DataCore::TimeVector::Register<RLAgent>();
 }
 
 END_UPP_NAMESPACE

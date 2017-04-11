@@ -1,5 +1,7 @@
 #include "NARX.h"
 
+namespace Narx {
+
 InputUnit::InputUnit(double input) {
 	input_value = input;
 }
@@ -21,4 +23,6 @@ void InputUnit::SetInput(double arg) {
 
 double InputUnit::GetInput() {
 	return input_value;
+}
+
 }

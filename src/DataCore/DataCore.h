@@ -9,5 +9,7 @@
 #include "Table.h"
 #include "Filters.h"
 #include "Neural.h"
+#include "Periodicals.h"
+#include "CostUtils.h"
 
 #endif

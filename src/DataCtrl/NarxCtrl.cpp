@@ -2,29 +2,29 @@
 
 namespace DataCtrl {
 
-RecurrentDraw::RecurrentDraw() {
+NarxDraw::NarxDraw() {
 	sym = 0;
 	tf = 0;
 	week = 0;
 	
 }
 
-void RecurrentDraw::Paint(Draw& w) {
+void NarxDraw::Paint(Draw& w) {
 	TimeVector& tv = GetTimeVector();
 	
 	if (!src) {
 		src = tv.FindLinkSlot("/open");
-		rnn = tv.FindLinkSlot("/rnn");
+		narx_slot = tv.FindLinkSlot("/narx");
 		ASSERTEXC(src);
-		ASSERTEXC(rnn);
-		rec = dynamic_cast<DataCore::Recurrent*>(&*rnn);
-		ASSERTEXC(rec);
+		ASSERTEXC(narx);
+		narx = dynamic_cast<Narx::NARX*>(&*narx_slot);
+		ASSERTEXC(narx);
 	}
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
-	
+	/*
 	int fast_tf = tv.GetPeriod(0);
 	int week_tf = tv.GetTfFromSeconds(7*24*60*60); // 1 week
 	int begin_pos = tv.GetShift(week_tf, fast_tf, week);
@@ -100,7 +100,7 @@ void RecurrentDraw::Paint(Draw& w) {
 	for(int i = 0; i < pts.GetCount(); i++) {
 		id.DrawPolyline(pts[i], 1, GrayColor(128*i/pts.GetCount()));
 	}
-	
+	*/
 	w.DrawImage(0, 0, id);
 }
 
@@ -119,11 +119,11 @@ void RecurrentDraw::Paint(Draw& w) {
 
 
 
-RecurrentCtrl::RecurrentCtrl() {
+NarxCtrl::NarxCtrl() {
 	CtrlLayout(*this);
 	
 	//refresh.Set(true);
-	
+	/*
 	learning_rate_slider.MinMax(1,1000);
 	learning_rate_slider.SetData(1000);
 	learning_rate_slider <<= THISBACK(SetLearningRate);
@@ -145,16 +145,17 @@ RecurrentCtrl::RecurrentCtrl() {
 	//resume <<= THISBACK(Resume);
 	set_rnn		<<= THISBACK1(SetPreset, 0);
 	set_lstm	<<= THISBACK1(SetPreset, 1);
-	set_rhn		<<= THISBACK1(SetPreset, 2);
+	set_rhn		<<= THISBACK1(SetPreset, 2);*/
 	
 	PostCallback(THISBACK(Refresher));
 }
 
-void RecurrentCtrl::SetArguments(const VectorMap<String, Value>& args) {
+void NarxCtrl::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
-void RecurrentCtrl::Init() {
+void NarxCtrl::Init() {
+	/*
 	TimeVector& tv = GetTimeVector();
 	
 	int week_tf = tv.GetTfFromSeconds(7*24*60*60); // 1 week
@@ -165,9 +166,9 @@ void RecurrentCtrl::Init() {
 	
 	SlotPtr rnn = tv.FindLinkSlot("/rnn");
 	ASSERTEXC(rnn);
-	rec = dynamic_cast<DataCore::Recurrent*>(&*rnn);
+	rec = dynamic_cast<DataCore::Narx*>(&*rnn);
 	ASSERTEXC(rec);
-	network_view.SetRecurrentSession(rec->GetSession(0, 0));
+	network_view.SetNarxSession(rec->GetSession(0, 0));
 	
 	lowtemp.SetData(rec->GetSampleTemperature(0) / 0.01);
 	medtemp.SetData(rec->GetSampleTemperature(1) / 0.01);
@@ -177,10 +178,11 @@ void RecurrentCtrl::Init() {
 	SetSampleTemperature(2);
 	
 	model_edit.SetData(rec->GetModel());
-	
+	*/
 }
 
-void RecurrentCtrl::Refresher() {
+void NarxCtrl::Refresher() {
+	/*
 	TimeVector& tv = GetTimeVector();
 	
 	draw.Refresh();
@@ -204,82 +206,29 @@ void RecurrentCtrl::Refresher() {
 	
 	//if (refresh.Get())
 		PostCallback(THISBACK(Refresher));
+	*/
 }
 
-void RecurrentCtrl::Reset() {
+void NarxCtrl::Reset() {
 	perp.Clear();
-	String model_str = model_edit.GetData();
-	rec->SetModel(model_str);
-	rec->Reload();
+	//String model_str = model_edit.GetData();
+	//rec->SetModel(model_str);
+	//narx->Reload();
 }
 
-void RecurrentCtrl::SetWeekFromSlider() {
+void NarxCtrl::SetWeekFromSlider() {
 	draw.week = week_slider.GetData();
 }
 
-void RecurrentCtrl::SetLearningRate() {
-	double value = learning_rate_slider.GetData();
+void NarxCtrl::SetLearningRate() {
+	/*double value = learning_rate_slider.GetData();
 	value *= 0.00001;
 	lbl_learning_rate.SetLabel(FormatDoubleFix(value, 5, FD_ZEROS));
-	rec->SetLearningRate(value);
+	narx->SetLearningRate(value);*/
 }
 
-void RecurrentCtrl::SetPreset(int i) {
-	String model_str;
-	if (i == 0) {
-		model_str = "{\n"
-	
-			// model parameters
-			"\t\"generator\":\"rnn\",\n" // can be 'rnn' or 'lstm' or 'highway'
-			"\t\"hidden_sizes\":[20,20],\n" // list of sizes of hidden layers
-			"\t\"letter_size\":5,\n" // size of letter embeddings
-			
-			// optimization
-			"\t\"regc\":0.000001,\n" // L2 regularization strength
-			"\t\"learning_rate\":0.01,\n" // learning rate
-			"\t\"clipval\":5.0\n" // clip gradients at this value
-			"}";
-	}
-	else if (i == 1) {
-		model_str = "{\n"
-	
-			// model parameters
-			"\t\"generator\":\"lstm\",\n" // can be 'rnn' or 'lstm' or 'highway'
-			"\t\"hidden_sizes\":[20,20],\n" // list of sizes of hidden layers
-			"\t\"letter_size\":5,\n" // size of letter embeddings
-			
-			// optimization
-			"\t\"regc\":0.000001,\n" // L2 regularization strength
-			"\t\"learning_rate\":0.01,\n" // learning rate
-			"\t\"clipval\":5.0\n" // clip gradients at this value
-			"}";
-	}
-	else if (i == 2) {
-		model_str = "{\n"
-	
-			// model parameters
-			"\t\"generator\":\"highway\",\n" // can be 'rnn' or 'lstm' or 'highway'
-			"\t\"hidden_sizes\":[20,20],\n" // list of sizes of hidden layers
-			
-			// optimization
-			"\t\"regc\":0.000001,\n" // L2 regularization strength
-			"\t\"learning_rate\":0.01,\n" // learning rate
-			"\t\"clipval\":5.0\n" // clip gradients at this value
-			"}";
-	}
-	model_edit.SetData(model_str);
-}
 
-void RecurrentCtrl::SetSampleTemperature(int i) {
-	SliderCtrl& temp = i == 0 ? lowtemp : i == 1 ? medtemp : hightemp;
-	Label& lbl_temp = i == 0 ? lbl_lowtemp : i == 1 ? lbl_medtemp : lbl_hightemp;
-	double value = temp.GetData();
-	value *= 0.01;
-	lbl_temp.SetLabel(FormatDoubleFix(value, 2, FD_ZEROS));
-	rec->SetSampleTemperature(i, value);
-}
-
-double RecurrentCtrl::Median(Vector<double>& values) {
+double NarxCtrl::Median(Vector<double>& values) {
 	Sort(values, StdGreater<double>());
 	int half = values.GetCount() / 2;
 	if (values.GetCount() % 2)
@@ -288,7 +237,7 @@ double RecurrentCtrl::Median(Vector<double>& values) {
 		return (values[half-1] + values[half]) / 2.0;
 }
 
-void RecurrentCtrl::SetStats(double epoch, double ppl, int time) {
+void NarxCtrl::SetStats(double epoch, double ppl, int time) {
 	lbl_epoch.SetLabel("epoch: " + FormatDoubleFix(epoch, 2, FD_ZEROS));
 	lbl_perp.SetLabel("perplexity: " + FormatDoubleFix(ppl, 2, FD_ZEROS));
 	lbl_time.SetLabel("forw/bwd time per example: " + FormatDoubleFix(time, 1) + "ms");

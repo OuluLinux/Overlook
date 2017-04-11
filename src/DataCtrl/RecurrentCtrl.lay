@@ -1,4 +1,4 @@
-LAYOUT(MainLayout, 876, 544)
+LAYOUT(RecurrentLayout, 876, 544)
 	ITEM(Button, restart, SetLabel(t_("Restart")).RightPosZ(4, 416).TopPosZ(288, 20))
 	ITEM(Button, set_rhn, SetLabel(t_("Set RHN")).RightPosZ(4, 136).BottomPosZ(132, 20))
 	ITEM(Button, set_lstm, SetLabel(t_("Set LSTM")).RightPosZ(144, 136).BottomPosZ(132, 20))

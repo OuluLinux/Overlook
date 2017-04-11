@@ -1,5 +1,7 @@
 #pragma once
 
+namespace Narx {
+	
 class ActivationFunctions {
 public:
 	static double Sigmoid(double arg);
@@ -17,3 +19,5 @@ public:
 	static double BSigmoidDerv(double arg);
 	static double AsLogDerv(double arg);
 };
+
+}

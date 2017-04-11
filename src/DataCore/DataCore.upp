@@ -5,7 +5,9 @@ uses
 	RefCtrl,
 	plugin/tidy,
 	ConvNet,
-	plugin/libmt;
+	plugin/libmt,
+	Mona,
+	NARX;
 
 file
 	main.cpp,
@@ -37,16 +39,8 @@ file
 	Periodicals.cpp,
 	Filters.h,
 	Filters.cpp,
-	Features.h,
-	Features.cpp,
-	Descriptors.h,
-	Descriptors.cpp,
-	Patcher.h,
-	Patcher.cpp,
 	Neural.h,
-	Neural.cpp,
-	Weighter.h,
-	Weighter.cpp;
+	Neural.cpp;
 
 mainconfig
 	"" = "DATACORE_ONLY MT";

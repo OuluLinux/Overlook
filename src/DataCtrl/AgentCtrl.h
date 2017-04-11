@@ -1,5 +1,5 @@
-#ifndef _DataCtrl_RecurrentCtrl_h_
-#define _DataCtrl_RecurrentCtrl_h_
+#ifndef _DataCtrl_AgentCtrl_h_
+#define _DataCtrl_AgentCtrl_h_
 
 #include <ConvNetCtrl/ConvNetCtrl.h>
 #include "Container.h"
@@ -8,7 +8,7 @@ namespace DataCtrl {
 using namespace DataCore;
 using namespace ConvNet;
 
-class RecurrentDraw : public Ctrl {
+class AgentDraw : public Ctrl {
 	Vector<Vector<Point> > pts;
 	Vector<double> tmp;
 	SlotPtr src, rnn;
@@ -16,8 +16,8 @@ class RecurrentDraw : public Ctrl {
 	int sym, tf;
 	
 public:
-	typedef RecurrentDraw CLASSNAME;
-	RecurrentDraw();
+	typedef AgentDraw CLASSNAME;
+	AgentDraw();
 	
 	virtual void Paint(Draw& w);
 	
@@ -26,31 +26,31 @@ public:
 	
 };
 
-#define LAYOUTFILE <DataCtrl/RecurrentCtrl.lay>
+#define LAYOUTFILE <DataCtrl/AgentCtrl.lay>
 #include <CtrlCore/lay.h>
 
-class RecurrentCtrl : public WithRecurrentLayout<MetaNodeCtrl> {
+class AgentCtrl : public WithAgentLayout<MetaNodeCtrl> {
 	DataCore::Recurrent* rec;
-	Vector<double> ppl_list;
+	//Vector<double> ppl_list;
 	
 public:
-	typedef RecurrentCtrl CLASSNAME;
-	RecurrentCtrl();
+	typedef AgentCtrl CLASSNAME;
+	AgentCtrl();
 	
 	void Refresher();
 	void Reset();
-	double Median(Vector<double>& values);
+	/*double Median(Vector<double>& values);
 	
 	void SetWeekFromSlider();
 	void SetLearningRate();
 	void SetSampleTemperature(int i);
 	void SetPreset(int i);
-	void SetStats(double epoch, double ppl, int time);
+	void SetStats(double epoch, double ppl, int time);*/
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual String GetKey() const {return "rnnctrl";}
-	static String GetKeyStatic()  {return "rnnctrl";}
+	virtual String GetKey() const {return "agentctrl";}
+	static String GetKeyStatic()  {return "agentctrl";}
 	
 };
 

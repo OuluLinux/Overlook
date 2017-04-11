@@ -1,42 +1,25 @@
-#ifndef _DataCtrl_DQNCtrl_h_
-#define _DataCtrl_DQNCtrl_h_
-
+#ifndef _DataCtrl_MonaCtrl_h_
+#define _DataCtrl_MonaCtrl_h_
 
 #include <ConvNetCtrl/ConvNetCtrl.h>
+#include <GraphLib/GraphLib.h>
 #include "Container.h"
 
 namespace DataCtrl {
 using namespace DataCore;
 using namespace ConvNet;
 
-class DQNDraw : public Ctrl {
-	Vector<Vector<Point> > pts;
-	Vector<double> tmp;
-	SlotPtr src, rnn;
-	DataCore::Recurrent* rec;
-	int sym, tf;
-	
-public:
-	typedef DQNDraw CLASSNAME;
-	DQNDraw();
-	
-	virtual void Paint(Draw& w);
-	
-	
-	int week;
-	
-};
 
-#define LAYOUTFILE <DataCtrl/DQNCtrl.lay>
+#define LAYOUTFILE <DataCtrl/MonaCtrl.lay>
 #include <CtrlCore/lay.h>
 
-class DQNCtrl : public WithDQNLayout<MetaNodeCtrl> {
+class MonaCtrl : public WithMonaLayout<MetaNodeCtrl> {
 	DataCore::Recurrent* rec;
 	//Vector<double> ppl_list;
 	
 public:
-	typedef DQNCtrl CLASSNAME;
-	DQNCtrl();
+	typedef MonaCtrl CLASSNAME;
+	MonaCtrl();
 	
 	void Refresher();
 	void Reset();
@@ -50,8 +33,8 @@ public:
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual String GetKey() const {return "dqnctrl";}
-	static String GetKeyStatic()  {return "dqnctrl";}
+	virtual String GetKey() const {return "monactrl";}
+	static String GetKeyStatic()  {return "monactrl";}
 	
 };
 

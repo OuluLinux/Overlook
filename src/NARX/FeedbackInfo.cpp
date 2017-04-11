@@ -1,7 +1,8 @@
 #include "NARX.h"
 
-extern int series_len;
+namespace Narx {
 
+extern int series_len;
 
 FeedbackInfo::FeedbackInfo() {
 	this->xx = 0;
@@ -36,4 +37,6 @@ void FeedbackInfo::Init(int xx, int xy, int yx, int yy, int dx, int dy) {
 
 FeedbackInfo::~FeedbackInfo() {
 	
+}
+
 }

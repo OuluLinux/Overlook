@@ -1,5 +1,7 @@
 #pragma once
 
+namespace Narx {
+
 class EvaluationEngine : Moveable<EvaluationEngine> {
 protected:
 	int series_len;
@@ -35,3 +37,4 @@ public:
 	void Clear();
 };
 
+}

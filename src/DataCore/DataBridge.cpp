@@ -264,22 +264,29 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	TimeVector& tv = GetTimeVector();
 	
-	if (attr.GetCounted() < attr.GetBars()-1) return has_written;
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	
+	//if (attr.GetCounted() < attr.GetBars()-1)
+	//	return has_written;
+	
+	ASSERT(attr.GetCounted() == 0);
 	
 	
 	// Open data-file
 	int period = attr.GetPeriod();
+	int mt_period = period * tv.GetBasePeriod() / 60;
 	String symbol = symbols[attr.sym_id].name;
 	String history_dir = ConfigFile("history");
-	String filename = symbol + IntStr(period) + ".hst";
+	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
-	if (!FileExists(local_history_file)) return false;
+	if (!FileExists(local_history_file))
+		return false;
 	FileIn src(local_history_file);
-	if (!src.IsOpen() || !src.GetSize()) return false;
+	if (!src.IsOpen() || !src.GetSize())
+		return false;
 	
 	
 	int count = 0;
-	
 	
 	// Init destination time vector settings
 	int bars = tv.GetCount(period);
@@ -296,7 +303,8 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	int digits;
 	src.Seek(4+64+12+4);
 	src.Get(&digits, 4);
-	if (digits > 20) return false;
+	if (digits > 20)
+		return false;
 	double point = 1.0 / pow(10.0, digits);
 	points.GetAdd(attr.sym_id) = point;
 	int data_size = src.GetSize();
@@ -310,6 +318,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	int cursor = (4+64+12+4+4+4+4 +13*4);
 	cursor += count * struct_size;
 	src.Seek(cursor);
+	
 	
 	while ((cursor + struct_size) <= data_size && count < bars) {
 		int time;
@@ -351,6 +360,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= prev_close;
 			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= prev_close;
 			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= 0;
+			SetReady(count, attr, true);
 			cur += step;
 			count++;
 		}
@@ -363,6 +373,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= low;
 			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= high;
 			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= tick_volume;
+			SetReady(count, attr, true);
 			cur += step;
 			count++;
 		}
@@ -375,9 +386,12 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 		*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= open;
 		*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= open;
 		*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= 0;
+		SetReady(count, attr, true);
 		cur += step;
 		count++;
 	}
+	
+	has_written = true;
 	
 	return true;
 }

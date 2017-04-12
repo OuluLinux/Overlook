@@ -1,5 +1,5 @@
 LAYOUT(MonaLayout, 576, 364)
-	ITEM(SpringGraph, graph, HSizePosZ(208, 4).VSizePosZ(4, 112))
+	ITEM(GraphLib::SpringGraph, graph, HSizePosZ(208, 4).VSizePosZ(4, 112))
 	ITEM(Label, dv___1, SetLabel(t_("Reward graph:")).SetFont(StdFont().Bold()).LeftPosZ(4, 200).TopPosZ(248, 13))
 	ITEM(TrainingGraph, dv___2, LeftPosZ(8, 196).VSizePosZ(264, 4))
 	ITEM(Label, dv___3, SetLabel(t_("Status:")).SetFont(StdFont().Bold()).LeftPosZ(4, 200).TopPosZ(144, 13))

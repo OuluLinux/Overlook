@@ -57,4 +57,22 @@ void Slot::LoadCache(int sym_id, int tf_id, int pos) {
 	vector->LoadCache(sym_id, tf_id, pos);
 }
 
+SlotData& Slot::GetData(int sym_id, int tf_id, int pos) {
+	return vector->data[sym_id][tf_id][pos];
+}
+
+void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
+	SlotData& data = GetData(attr.sym_id, attr.tf_id, pos);
+	byte* ready_slot = data.Begin() + vector->slot_flag_offset;
+	int slot_pos = attr.slot_pos;
+	int ready_bit = slot_pos % 8;
+	ready_slot += slot_pos / 8;
+	byte ready_mask = 1 << ready_bit;
+	if (ready)
+		*ready_slot |= ready_mask;
+	else
+		*ready_slot &= !ready_mask;
+}
+
+
 }

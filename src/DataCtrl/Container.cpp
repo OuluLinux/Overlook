@@ -84,13 +84,17 @@ void Container::Start() {
 }
 
 double Container::GetBufferValue(int i, int shift) {
+	ASSERT_(period_id != -1, "Container has no timeframe set");
+	
 	int id = GetId();
 	DataCore::TimeVector& tv = DataCore::GetTimeVector();
 	
 	DataCore::Slot& slot = *this->slot;
 	const DataCore::TimeVector::SlotData& slots = tv.GetSlot(id, period_id, shift);
 	
-	if (slots.IsEmpty()) tv.LoadCache(id, period_id, shift);
+	ASSERTEXC_(locked, "Cache should be locked before call because of performance reasons");
+	if (slots.IsEmpty())
+		tv.LoadCache(id, period_id, shift, locked);
 	ASSERTEXC(!slots.IsEmpty());
 	
 	const byte* cur = slots.Begin() + slot.GetOffset() + slot[i].offset;
@@ -111,7 +115,6 @@ int Container::GetBufferDataCount() {
 }
 
 void Container::Refresh() {
-	LOG("Container::Refresh");
 	
 	
 }

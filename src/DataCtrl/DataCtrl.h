@@ -1,6 +1,7 @@
 #ifndef _DataCtrl_DataCtrl_h_
 #define _DataCtrl_DataCtrl_h_
 
+#include <ConvNetCtrl/ConvNetCtrl.h>
 #include <CtrlLib/CtrlLib.h>
 using namespace Upp;
 
@@ -22,6 +23,7 @@ using namespace Upp;
 #include "RecurrentCtrl.h"
 #include "AgentCtrl.h"
 #include "NarxCtrl.h"
+#include "MonaCtrl.h"
 
 namespace DataCtrl {
 	

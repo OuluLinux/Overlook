@@ -41,6 +41,7 @@ struct SlotProcessAttributes {
 	int bars[16];							// count of time-positions for all timeframes
 	int periods[16];						// periods for all timeframes
 	int slot_bytes;							// reserved memory in bytes for current slot
+	int slot_pos;							// position of the current slot in the sym/tf/pos vector
 	byte* slot_vector;						// pointer to the sym/tf data
 	byte* data;								// pointer to the reserved memory
 	TimeVector* tv;							// pointer to the parent TimeVector
@@ -72,8 +73,8 @@ protected:
 	typedef Ptr<Slot> SlotPtr;
 	
 	void LoadCache(int sym_id, int tf_id, int pos);
-	
 	void SetWithoutData(bool b=true) {forced_without_data = b;}
+	SlotData& GetData(int sym_id, int tf_id, int pos);
 	
 	String path;
 	SlotPtr source;
@@ -128,7 +129,6 @@ public:
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = *(*(attr.tf_it + tf_id) + newpos);
-		//it -= shift;
 		if (!it->GetCount()) LoadCache(attr.sym_id, tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
@@ -137,19 +137,22 @@ public:
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + newpos);
-		//it -= shift;
 		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
 	T* GetValuePos(int i, int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr) {
-		if (pos < 0 || pos >= attr.bars[tf_id]) return 0;
-		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + pos);
-		//it -= shift;
-		if (!it->GetCount()) LoadCache(sym_id, tf_id, pos);
-		return (T*)(it->Begin() + slot_offset + values[i].offset);
+		if (pos < 0 || pos >= attr.bars[tf_id])
+			return 0;
+		SlotData& slot_data = GetData(sym_id, tf_id, pos);
+		if (!slot_data.GetCount())
+			LoadCache(sym_id, tf_id, pos);
+		byte* b = slot_data.Begin();
+		ASSERT(b);
+		return (T*)(b + slot_offset + values[i].offset);
 	}
 	
+	void SetReady(int pos, const SlotProcessAttributes& attr, bool ready=true);
 	void SetPath(String p) {path = p;}
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}

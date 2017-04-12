@@ -151,6 +151,7 @@ NarxCtrl::NarxCtrl() {
 }
 
 void NarxCtrl::SetArguments(const VectorMap<String, Value>& args) {
+	MetaNode::SetArguments(args);
 	
 }
 

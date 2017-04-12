@@ -64,6 +64,8 @@ void GraphCtrl::GetDataRange(Container& cont, int buffer) {
     int data_shift = cont.GetBufferSettings(buffer).shift;
     int data_begin = cont.GetBufferSettings(buffer).begin;
     ASSERT(data_begin >= 0);
+    
+    cont.Enter();
 	for(int i = 0; i < count; i++ ) {
         int pos = c - 1 - (shift + i + data_shift);
         if (pos >= c || pos < data_begin) continue;
@@ -74,17 +76,20 @@ void GraphCtrl::GetDataRange(Container& cont, int buffer) {
 		if (get_lo && value  < lo)
 			lo = value;
     }
+    cont.Leave();
 }
 
-void GraphCtrl::Paint(Draw& w) {
-	w.DrawRect(GetSize(), group->GetBackground());
+void GraphCtrl::Paint(Draw& draw) {
+	Size sz(GetSize());
+	ImageDraw w(sz);
 	
-	if (src.IsEmpty()) return;
+	w.DrawRect(sz, group->GetBackground());
+	
+	if (src.IsEmpty()) {draw.DrawImage(0,0,w); return;}
 	
 	div = group->GetWidthDivider();
 	shift = group->GetShift();
 	
-	Size sz(GetSize());
 	int max_right_offset = 10;
 	int right_offset = (this->right_offset ? Upp::max(max_right_offset - shift, 0) : 0);
 	shift = Upp::max(shift - max_right_offset, 0);
@@ -93,12 +98,13 @@ void GraphCtrl::Paint(Draw& w) {
 	count = real_screen_count - right_offset;
     latest_screen_count = count;
     
-    if (!src[0].Is() || !src[0]->IsLinkedResolver()) return;
+    if (!src[0].Is() || !src[0]->IsLinkedResolver()) {draw.DrawImage(0,0,w); return;}
     MetaTime& dt = src[0]->GetTime();
     
     int period = src[0]->GetPeriod();
     if (!period) {
         LOG("GraphCtrl::Paint invalid zero period");
+        draw.DrawImage(0,0,w);
         return;
     }
     int data_count = dt.GetCount(period);
@@ -118,7 +124,7 @@ void GraphCtrl::Paint(Draw& w) {
 		if (!var.Is()) continue;
 		
 		Container* cont_ = var.Get<Container>();
-		if (!cont_) return; // just bail out
+		if (!cont_) {draw.DrawImage(0,0,w); return;} // just bail out
 		
 		Container& cont = *cont_;
 		cont.Refresh();
@@ -179,6 +185,8 @@ void GraphCtrl::Paint(Draw& w) {
 	        }
         }
     }
+    
+    draw.DrawImage(0,0,w);
 }
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
@@ -292,6 +300,8 @@ void GraphCtrl::PaintCandlesticks(Draw& W, BarData& values) {
 	c = dt.GetCount(period);
 	diff = hi - lo;
 	
+	values.Enter();
+	
 	for(int i = 0; i < count; i++ ) {
         Vector<Point> P;
         double O, H, L, C;
@@ -330,6 +340,8 @@ void GraphCtrl::PaintCandlesticks(Draw& W, BarData& values) {
 	        W.DrawPolygon(P, c, 1, c2);
         }
     }
+	
+	values.Leave();
 	
     DrawBorder(W);
     
@@ -393,6 +405,8 @@ void GraphCtrl::PaintContainerLine(Draw& W, Container& cont, int shift, bool dra
 	if (line_width == 0) draw_type = -1;
 	
 	int buf_count = cont.GetBufferDataCount();
+	
+	cont.Enter();
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -462,6 +476,8 @@ void GraphCtrl::PaintContainerLine(Draw& W, Container& cont, int shift, bool dra
 	        W.DrawText(x+(i+0.5)*div, y+V, str, StdFont(), value_color);
 		}
 	}
+	
+	cont.Leave();
 	
 	if (draw_border) {
 		DrawBorder(W);

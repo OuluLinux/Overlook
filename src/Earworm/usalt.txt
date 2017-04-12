@@ -1,0 +1,394 @@
+
+"Peek-a-Boo" ,	Siouxsie and the Banshees 	,September 10, 1988 	1
+"Just Play Music!" ,	Big Audio Dynamite 	,September 17, 1988 	1
+"Peek-a-Boo"  ,	Siouxsie and the Banshees ,	September 24, 1988 	1
+"All That Money Wants" ,	The Psychedelic Furs ,	October 1, 1988 	3
+"Desire" ,	U2 	,October 22, 1988 	5
+"Orange Crush" ,	R.E.M. ,	November 26, 1988 	8
+"Charlotte Anne" ,	Julian Cope ,	January 21, 1989 	1
+"Stand" ,	R.E.M. ,	January 28, 1989 	2
+"Dirty Blvd." ,	Lou Reed 	,February 11, 1989 	4
+"I'll Be You" ,	The Replacements 	,March 11, 1989 	1
+"Veronica" 	,Elvis Costello 	,March 18, 1989 	2
+"The Mayor of Simpleton" ,	XTC 	,April 1, 1989 	5
+"Fascination Street" 	,The Cure 	,May 6, 1989 	7
+"So Alive" , 	Love and Rockets 	,June 24, 1989 	5
+"Disappointed" ,	Public Image Ltd. ,	July 29, 1989 	1
+"Channel Z" ,	The B-52's 	,August 5, 1989 	3
+"Come Anytime" ,	Hoodoo Gurus 	,August 26, 1989 	3
+"Love Shack" ,	The B-52's 	,September 16, 1989 	4
+"Sowing the Seeds of Love" ,	Tears for Fears 	,October 14, 1989 	1
+"Pictures of Matchstick Men" ,	Camper Van Beethoven ,	October 21, 1989 	3
+"Proud to Fall" ,	Ian McCulloch 	,November 11, 1989 	4
+"Love and Anger" ,	Kate Bush 	,December 9, 1989 	3
+"Blues from a Gun" ,	The Jesus and Mary Chain 	,December 30, 1989 	3
+
+
+"Blues from a Gun" ,	The Jesus and Mary Chain 	,December 30, 1989 	3
+"House" 	,The Psychedelic Furs 	,January 20, 1990 	3
+"Cuts You Up", 	Peter Murphy ,	February 10, 1990 	7
+"Nothing Compares 2 U" ,	Sinéad O'Connor 	,March 31, 1990 	1
+"Blue Sky Mine" ,	Midnight Oil 	,April 7, 1990 	1
+"Metropolis" ,	The Church ,	April 14, 1990 	1
+"Enjoy the Silence" 	,Depeche Mode ,	April 21, 1990 	3
+"The Emperor's New Clothes" 	,Sinéad O'Connor 	,May 12, 1990 	1
+"Forgotten Years" 	,Midnight Oil 	,May 19, 1990 	1
+"Here's Where the Story Ends" 	,The Sundays ,	May 26, 1990 	1
+"Policy of Truth" 	,Depeche Mode 	,June 2, 1990 	1
+"Way Down Now" ,	World Party 	,June 9, 1990 	5
+"Joey" ,	Concrete Blonde ,	July 14, 1990 	4
+"Jealous" 	,Gene Loves Jezebel ,August 11, 1990 	1
+"I'll Be Your Chauffeur" 	,David J 	,August 18, 1990 	1
+"Jealous" , 	Gene Loves Jezebel ,	August 25, 1990 	1
+"Stop!" ,	Jane's Addiction ,	September 1, 1990 	1
+"Every Beat of the Heart" ,	The Railway Children ,	September 8, 1990 	1
+"Stop!" , 	Jane's Addiction ,	September 15, 1990 	1
+"Suicide Blonde" 	,INXS 	,September 22, 1990 	1
+"Never Enough", 	The Cure ,	September 29, 1990 	2
+"Merry Go Round" 	,The Replacements 	,October 13, 1990 	1
+"Never Enough" ,	The Cure ,	October 20, 1990 	1
+"Been Caught Stealing" ,	Jane's Addiction 	,October 27, 1990 	1
+"Merry Go Round" , 	The Replacements ,	November 3, 1990 	3
+"Been Caught Stealing" , 	Jane's Addiction ,	November 24, 1990 	3
+"More" ,	The Sisters of Mercy ,	December 15, 1990 	5
+"Kinky Afro" 	,Happy Mondays 	,January 19, 1991 	1
+"All This Time" ,	Sting ,	January 26, 1991 	2
+"Right Here, Right Now" 	,Jesus Jones 	,February 9, 1991 	5
+"Losing My Religion" 	,R.E.M. ,	March 16, 1991 	8
+"See the Lights" 	Simple Minds 	May 11, 1991 	2
+"The Other Side of Summer" 	Elvis Costello 	May 25, 1991 	4
+"Get the Message" ,	Electronic 	,June 22, 1991 	2
+"Kiss Them for Me" 	,Siouxsie and the Banshees 	,July 6, 1991 	5
+"Rush" dagger[14] ,	Big Audio Dynamite II ,	August 10, 1991 	4
+"Until She Comes" ,	The Psychedelic Furs ,	September 7, 1991 	2
+"So You Think You're in Love" 	,Robyn Hitchcock and the Egyptians ,	September 21, 1991 	5
+"Give It Away", 	Red Hot Chili Peppers ,	October 26, 1991 	2
+"The Fly" ,	U2 	,November 9, 1991 	2
+"Smells Like Teen Spirit" 	,Nirvana 	,November 23, 1991 	1
+"Mysterious Ways" 	,U2 	,November 30, 1991 	9
+"Sax and Violins" 	,Talking Heads ,	February 1, 1992 	1
+"What's Good" 	,Lou Reed 	,February 8, 1992 	3
+"Hit" ,	The Sugarcubes 	,February 29, 1992 	5
+"One" , 	U2 	,April 4, 1992 	1
+"High" ,	The Cure 	,April 11, 1992 	4
+"Teen Angst (What the World Needs Now)" ,	Cracker ,	May 9, 1992 	2
+"Weirdo" ,	The Charlatans ,	May 23, 1992 	1
+"The Ballad of Peter Pumpkinhead" ,	XTC ,	May 30, 1992 	2
+"Friday I'm in Love" ,	The Cure 	,June 13, 1992 	4
+"Good Stuff" ,	The B-52's ,	July 11, 1992 	4
+"Midlife Crisis" 	,Faith No More ,	August 8, 1992 	1
+"Tomorrow" 	,Morrissey ,	August 15, 1992 	6
+"Digging in the Dirt" 	,Peter Gabriel ,	September 26, 1992 	2
+"Blood Makes Noise" 	,Suzanne Vega ,	October 10, 1992 	1
+"Drive" 	,R.E.M. 	,October 17, 1992 	5
+"These Are Days" 	10000 Maniacs 	November 21, 1992 	2
+"Somebody to Shove" 	Soul Asylum 	December 5, 1992 	1
+"Steam" 	Peter Gabriel 	December 12, 1992 	5
+"Not Sleeping Around" 	Ned's Atomic Dustbin 	January 16, 1993 	1
+"The Devil You Know" 	Jesus Jones 	January 23, 1993 	6
+"Feed the Tree" 	Belly 	March 6, 1993 	3
+"I Feel You" 	Depeche Mode 	March 27, 1993 	5
+"Regret"  	New Order 	May 1, 1993 	2
+"Walking in My Shoes" 	Depeche Mode 	May 15, 1993 	1
+"Regret"  	New Order 	May 22, 1993 	4
+"Pets" 	Porno for Pyros 	June 19, 1993 	5
+"Break It Down Again" 	Tears for Fears 	July 24, 1993 	3
+"Soul to Squeeze" 	Red Hot Chili Peppers 	August 14, 1993 	4
+"My Sister" 	The Juliana Hatfield Three 	September 11, 1993 	1
+"No Rain" 	Blind Melon 	September 18, 1993 	1
+"Soul to Squeeze"  	Red Hot Chili Peppers 	September 25, 1993 	1
+"No Rain"  	Blind Melon 	October 2, 1993 	2
+"Heart-Shaped Box" 	Nirvana 	October 16, 1993 	3
+"Into Your Arms" 	The Lemonheads 	November 6, 1993 	9
+"Daughter" 	Pearl Jam 	January 8, 1994 	1
+"Found Out About You" 	Gin Blossoms 	January 15, 1994 	1
+"All Apologies" 	Nirvana 	January 22, 1994 	2
+"Loser" 	Beck 	February 5, 1994 	5
+"Mmm Mmm Mmm Mmm" 	Crash Test Dummies 	March 12, 1994 	1
+"God" 	Tori Amos 	March 19, 1994 	2
+"The More You Ignore Me, the Closer I Get" 	Morrissey 	April 2, 1994 	7
+"Selling the Drama" 	Live 	May 21, 1994 	3
+"Longview" 	Green Day 	June 11, 1994 	1
+"Fall Down" 	Toad the Wet Sprocket 	June 18, 1994 	6
+"Come Out and Play" 	The Offspring 	July 30, 1994 	2
+"Einstein on the Beach (For an Eggman)" 	Counting Crows 	August 13, 1994 	1
+"Basket Case" 	Green Day 	August 20, 1994 	5
+"What's the Frequency, Kenneth?" 	R.E.M. 	September 24, 1994 	5
+"Zombie" 	The Cranberries 	October 29, 1994 	6
+"About a Girl" 	Nirvana 	December 10, 1994 	1
+"Bang and Blame" 	R.E.M. 	December 17, 1994 	3
+"When I Come Around" 	Green Day 	January 7, 1995 	7
+"Lightning Crashes" 	Live 	February 25, 1995 	9
+"Good" 	Better Than Ezra 	April 29, 1995 	5
+"Misery" 	Soul Asylum 	June 3, 1995 	3
+"Hold Me, Thrill Me, Kiss Me, Kill Me" 	U2 	June 24, 1995 	4
+"You Oughta Know" 	Alanis Morissette 	July 22, 1995 	5
+"J.A.R." 	Green Day 	August 26, 1995 	1
+"Tomorrow"  	Silverchair 	September 2, 1995 	3
+"Comedown" 	Bush 	September 23, 1995 	2
+"Name" 	Goo Goo Dolls 	October 7, 1995 	1
+"Hand in My Pocket" 	Alanis Morissette 	October 14, 1995 	1
+"Lump" 	The Presidents of the United States of America 	October 21, 1995 	1
+"Name"  	Goo Goo Dolls 	October 28, 1995 	3
+"My Friends" 	Red Hot Chili Peppers 	November 18, 1995 	4
+"Glycerine" 	Bush 	December 16, 1995 	2
+"Wonderwall" 	Oasis 	December 30, 1995 	9
+"1979" 	The Smashing Pumpkins 	March 2, 1996 	1
+"Wonderwall"  	Oasis 	March 9, 1996 	1
+"Ironic" 	Alanis Morissette 	March 16, 1996 	3
+"Champagne Supernova" 	Oasis 	April 6, 1996 	5
+"Salvation" 	The Cranberries 	May 11, 1996 	4
+"Mother Mother" 	Tracy Bonham 	June 8, 1996 	3
+"Counting Blue Cars" 	Dishwalla 	June 29, 1996 	1
+"Pepper"  	Butthole Surfers 	July 6, 1996 	3
+"Standing Outside a Broken Phone Booth with Money in My Hand" 	Primitive Radio Gods 	July 27, 1996 	6
+"Who You Are" 	Pearl Jam 	September 7, 1996 	1
+"Down" 	311 	September 14, 1996 	4
+"Novocaine for the Soul" 	Eels 	October 12, 1996 	2
+"What I Got" 	Sublime 	October 26, 1996 	3
+"Swallowed" 	Bush 	November 16, 1996 	7
+"#1 Crush" 	Garbage 	January 4, 1997 	4
+"Discothèque" 	U2 	February 1, 1997 	4
+"Lakini's Juice" 	Live 	March 1, 1997 	1
+"One Headlight" 	The Wallflowers 	March 8, 1997 	5
+"Staring at the Sun" 	U2 	April 12, 1997 	3
+"The Freshmen" 	The Verve Pipe 	May 3, 1997 	3
+"Semi-Charmed Life"  	Third Eye Blind 	May 24, 1997 	5
+"The Impression That I Get" 	The Mighty Mighty Bosstones 	June 28, 1997 	1
+"Semi-Charmed Life"   	Third Eye Blind 	July 5, 1997 	3
+"Push" 	Matchbox Twenty 	July 26, 1997 	1
+"Fly" 	Sugar Ray 	August 2, 1997 	8
+"Walkin' on the Sun" 	Smash Mouth 	September 27, 1997 	5
+"Tubthumping" 	Chumbawamba 	November 1, 1997 	7
+"Everything to Everyone" 	Everclear 	December 20, 1997 	1
+"Sex and Candy" dagger[20] 	Marcy Playground 	December 27, 1997 	15
+"The Way" 	Fastball 	April 11, 1998 	7
+"Closing Time" 	Semisonic 	May 30, 1998 	5
+"Iris" 	Goo Goo Dolls 	July 4, 1998 	5
+"Inside Out" 	Eve 6 	August 8, 1998 	2
+"One Week" 	Barenaked Ladies 	August 22, 1998 	1
+"Inside Out"  	Eve 6 	August 29, 1998 	1
+"One Week"  	Barenaked Ladies 	September 5, 1998 	4
+"Inside Out"  	Eve 6 	October 3, 1998 	1
+"Celebrity Skin" 	Hole 	October 10, 1998 	3
+"Slide" 	Goo Goo Dolls 	October 31, 1998 	1
+"Celebrity Skin"  	Hole 	November 7, 1998 	1
+"Slide"  	Goo Goo Dolls 	November 14, 1998 	1
+"Fly Away" 	Lenny Kravitz 	November 21, 1998 	2
+"Never There" 	Cake 	December 5, 1998 	3
+"What It's Like" 	Everlast 	December 26, 1998 	8
+"Every Morning" 	Sugar Ray 	February 20, 1999 	1
+"What It's Like"  	Everlast 	February 27, 1999 	1
+"Every Morning"  	Sugar Ray 	March 6, 1999 	5
+"My Own Worst Enemy"  	Lit 	April 10, 1999 	11
+"Scar Tissue" 	Red Hot Chili Peppers 	June 26, 1999 	16
+"Higher" 	Creed 	October 16, 1999 	1
+"The Chemicals Between Us" 	Bush 	October 23, 1999 	2
+"Learn to Fly" 	Foo Fighters 	November 6, 1999 	1
+"The Chemicals Between Us"  	Bush 	November 13, 1999 	2
+"Higher"  	Creed 	November 27, 1999 	1
+"The Chemicals Between Us"  	Bush 	December 4, 1999 	1
+"Higher"  	Creed 	December 11, 1999 	1
+"Re-Arranged" 	Limp Bizkit 	December 18, 1999 	1
+
+
+
+"All the Small Things" 	Blink-182 	December 25, 1999 	8
+"Otherside" 	Red Hot Chili Peppers 	February 19, 2000 	13
+"Kryptonite" dagger[10] 	3 Doors Down 	May 20, 2000 	11
+"Last Resort" 	Papa Roach 	August 5, 2000 	1
+"Californication" 	Red Hot Chili Peppers 	August 12, 2000 	1
+"Last Resort"  	Papa Roach 	August 19, 2000 	6
+"Minority" 	Green Day 	September 30, 2000 	5
+"Hemorrhage (In My Hands)" 	Fuel 	November 4, 2000 	12
+"Hanging by a Moment" 	Lifehouse 	January 27, 2001 	3
+"Butterfly" 	Crazy Town 	February 17, 2001 	2
+"Drive" dagger[11] 	Incubus 	March 3, 2001 	8
+"It's Been Awhile" 	Staind 	April 28, 2001 	16
+"Fat Lip" 	Sum 41 	August 18, 2001 	1
+"Smooth Criminal" 	Alien Ant Farm 	August 25, 2001 	4
+"How You Remind Me" 	Nickelback 	September 22, 2001 	13
+"In the End" 	Linkin Park 	December 22, 2001 	5
+"Blurry" dagger[12] 	Puddle of Mudd 	January 26, 2002 	9
+"Youth of the Nation" 	P.O.D. 	March 30, 2002 	2
+"The Middle" 	Jimmy Eat World 	April 13, 2002 	4
+"Seein' Red" 	Unwritten Law 	May 11, 2002 	4
+"Hero" 	Chad Kroeger featuring Josey Scott 	June 8, 2002 	3
+"By the Way" 	Red Hot Chili Peppers 	June 29, 2002 	14
+"Aerials" 	System of a Down 	October 5, 2002 	3
+"You Know You're Right" 	Nirvana 	October 26, 2002 	4
+"All My Life" 	Foo Fighters 	November 23, 2002 	10
+"Always" 	Saliva 	February 1, 2003 	1
+"No One Knows" 	Queens of the Stone Age 	February 8, 2003 	4
+"Can't Stop" 	Red Hot Chili Peppers 	March 8, 2003 	3
+"Bring Me to Life" 	Evanescence featuring Paul McCoy 	March 29, 2003 	2
+"Somewhere I Belong" 	Linkin Park 	April 12, 2003 	5
+"Like a Stone" 	Audioslave 	May 17, 2003 	2
+"Headstrong" dagger[8] double-dagger[7] 	Trapt 	May 31, 2003 	5
+"Send the Pain Below" 	Chevelle 	July 5, 2003 	1
+"Seven Nation Army" 	The White Stripes 	July 12, 2003 	3
+"Just Because" 	Jane's Addiction 	August 2, 2003 	1
+"Faint" 	Linkin Park 	August 9, 2003 	6
+"So Far Away" 	Staind 	September 20, 2003 	6
+"Weak and Powerless" 	A Perfect Circle 	November 1, 2003 	2
+"So Far Away"  	Staind 	November 15, 2003 	1
+"Numb" 	Linkin Park 	November 22, 2003 	12
+"Hit That" 	The Offspring 	February 14, 2004 	1
+"Megalomaniac" dagger[13] 	Incubus 	February 21, 2004 	6
+"I Miss You" 	Blink-182 	April 3, 2004 	2
+"The Reason" 	Hoobastank 	April 17, 2004 	1
+"Last Train Home" 	Lostprophets 	April 24, 2004 	1
+"Love Song" 	311 	May 1, 2004 	1
+"Cold Hard Bitch" 	Jet 	May 8, 2004 	3
+"Lying from You" 	Linkin Park 	May 29, 2004 	3
+"Ch-Check It Out" 	Beastie Boys 	June 19, 2004 	2
+"Slither" 	Velvet Revolver 	July 3, 2004 	4
+"Float On" 	Modest Mouse 	July 31, 2004 	1
+"Just Like You" 	Three Days Grace 	August 7, 2004 	3
+"Breaking the Habit" 	Linkin Park 	August 28, 2004 	4
+"American Idiot" 	Green Day 	September 25, 2004 	6
+"Vertigo" 	U2 	November 6, 2004 	4
+"Pain" 	Jimmy Eat World 	December 4, 2004 	1
+"Boulevard of Broken Dreams" 	Green Day 	December 11, 2004 	16
+"E-Pro" 	Beck 	April 2, 2005 	1
+"Be Yourself" 	Audioslave 	April 9, 2005 	4
+"Holiday" 	Green Day 	May 7, 2005 	3
+"The Hand That Feeds" 	Nine Inch Nails 	May 28, 2005 	5
+"Beverly Hills" 	Weezer 	July 2, 2005 	1
+"Best of You" dagger[14] 	Foo Fighters 	July 9, 2005 	7
+"Feel Good Inc." 	Gorillaz 	August 27, 2005 	8
+"Only" 	Nine Inch Nails 	October 22, 2005 	5
+"DOA" 	Foo Fighters 	November 26, 2005 	2
+"Only"  	Nine Inch Nails 	December 10, 2005 	2
+"DOA"  	Foo Fighters 	December 24, 2005 	4
+"Hypnotize" 	System of a Down 	January 21, 2006 	1
+"Perfect Situation" 	Weezer 	January 28, 2006 	4
+"Wasteland" 	10 Years 	February 25, 2006 	1
+"Every Day Is Exactly the Same" 	Nine Inch Nails 	March 4, 2006 	4
+"World Wide Suicide" 	Pearl Jam 	April 1, 2006 	3
+"Dani California" dagger[15] 	Red Hot Chili Peppers 	April 22, 2006 	14
+"Steady, As She Goes" 	The Raconteurs 	July 29, 2006 	1
+"Miss Murder" 	AFI 	August 5, 2006 	5
+"Animal I Have Become" 	Three Days Grace 	September 9, 2006 	2
+"Tell Me Baby" 	Red Hot Chili Peppers 	September 23, 2006 	4
+"When You Were Young" 	The Killers 	October 21, 2006 	2
+"Welcome to the Black Parade" 	My Chemical Romance 	November 4, 2006 	7
+"Anna Molly" 	Incubus 	December 23, 2006 	5
+"Snow (Hey Oh)" 	Red Hot Chili Peppers 	January 27, 2007 	5
+"Pain" 	Three Days Grace 	March 3, 2007 	4
+"From Yesterday" 	Thirty Seconds to Mars 	March 31, 2007 	2
+"Survivalism" 	Nine Inch Nails 	April 14, 2007 	1
+"What I've Done" dagger[16] 	Linkin Park 	April 21, 2007 	15
+"Icky Thump" 	The White Stripes 	August 4, 2007 	3
+"Paralyzer" 	Finger Eleven 	August 25, 2007 	1
+"The Pretender" 	Foo Fighters 	September 1, 2007 	18
+"Fake It" 	Seether 	January 5, 2008 	8
+"Long Road to Ruin" 	Foo Fighters 	March 1, 2008 	7
+"Psycho" 	Puddle of Mudd 	April 19, 2008 	2
+"Rise Above This" 	Seether 	May 3, 2008 	2
+"Pork and Beans" 	Weezer 	May 17, 2008 	11
+"Let It Die"  	Foo Fighters 	August 2, 2008 	4
+"Viva la Vida" 	Coldplay 	August 30, 2008 	2
+"Believe" 	Staind 	September 13, 2008 	3
+"You're Gonna Go Far, Kid" 	The Offspring 	October 4, 2008 	11
+"Sex on Fire" 	Kings of Leon 	December 20, 2008 	8
+"Second Chance" 	Shinedown 	February 14, 2009 	1
+"Love Hurts" 	Incubus 	February 21, 2009 	1
+"Second Chance"  	Shinedown 	February 28, 2009 	2
+"Love Hurts"  	Incubus 	March 14, 2009 	2
+"Brother" 	Pearl Jam 	March 28, 2009 	2
+"Use Somebody"  	Kings of Leon 	April 11, 2009 	3
+"Feel Good Drag" 	Anberlin 	May 2, 2009 	1
+"Know Your Enemy" 	Green Day 	May 9, 2009 	6
+"New Divide" 	Linkin Park 	June 20, 2009 	1
+"Panic Switch" 	Silversun Pickups 	June 27, 2009 	1
+"New Divide"  	Linkin Park 	July 4, 2009 	11
+"Notion" 	Kings of Leon 	September 19, 2009 	1
+"Uprising" 	Muse 	September 26, 2009 	2
+"Check My Brain" 	Alice in Chains 	October 10, 2009 	1
+"Uprising"  	Muse 	October 17, 2009 	15
+
+
+
+"Uprising" dagger[5] 	Muse 	October 17, 2009 	15
+"Kings and Queens" 	Thirty Seconds to Mars 	January 30, 2010 	3
+"1901" 	Phoenix 	February 20, 2010 	2
+"Back Against the Wall" 	Cage the Elephant 	March 6, 2010 	2
+"Resistance" 	Muse 	March 20, 2010 	3
+"Mountain Man" 	Crash Kings 	April 10, 2010 	1
+"Resistance"  	Muse 	April 17, 2010 	1
+"Between the Lines" 	Stone Temple Pilots 	April 24, 2010 	3
+"Lay Me Down" 	The Dirty Heads featuring Rome Ramirez 	May 15, 2010 	11
+"This Is War" 	Thirty Seconds to Mars 	July 31, 2010 	1
+"In One Ear" 	Cage the Elephant 	August 7, 2010 	4
+"The Catalyst" 	Linkin Park 	September 4, 2010 	4
+"Animal" 	Neon Trees 	October 2, 2010 	1
+"Little Lion Man" 	Mumford & Sons 	October 9, 2010 	1
+"Radioactive" 	Kings of Leon 	October 16, 2010 	3
+"Tighten Up" 	The Black Keys 	November 6, 2010 	9
+"Waiting for the End" 	Linkin Park 	January 8, 2011 	3
+"Tighten Up"  	The Black Keys 	January 29, 2011 	1
+"Waiting for the End"  	Linkin Park 	February 5, 2011 	1
+"Shake Me Down" 	Cage the Elephant 	February 12, 2011 	6
+"Rope" 	Foo Fighters 	March 26, 2011 	13
+"Pumped Up Kicks" dagger[6] 	Foster the People 	June 25, 2011 	2
+"You Are a Tourist" 	Death Cab for Cutie 	July 9, 2011 	1
+"Pumped Up Kicks"  dagger[6] 	Foster the People 	July 16, 2011 	3
+"Walk" 	Foo Fighters 	August 6, 2011 	2
+"The Adventures of Raindance Maggie" 	Red Hot Chili Peppers 	August 20, 2011 	4
+"Walk"  	Foo Fighters 	September 17, 2011 	6
+"The Sound of Winter" 	Bush 	October 29, 2011 	5
+"Paradise" 	Coldplay 	December 3, 2011 	1
+"The Sound of Winter"  	Bush 	December 10, 2011 	1
+"Lonely Boy" 	The Black Keys 	December 17, 2011 	11
+"Somebody That I Used to Know" dagger[7] 	Gotye featuring Kimbra 	March 3, 2012 	7
+"We Are Young" 	Fun featuring Janelle Monáe 	April 21, 2012 	2
+"Somebody That I Used to Know"  dagger[7] 	Gotye featuring Kimbra 	May 5, 2012 	5
+"Gold on the Ceiling" 	The Black Keys 	June 9, 2012 	3
+"Tongue Tied" 	Grouplove 	June 30, 2012 	1
+"Gold on the Ceiling"  	The Black Keys 	July 7, 2012 	2
+"Little Talks" 	Of Monsters and Men 	July 21, 2012 	2
+"Burn It Down" 	Linkin Park 	August 4, 2012 	1
+"Some Nights" 	Fun 	August 11, 2012 	2
+"Too Close" 	Alex Clare 	August 25, 2012 	4
+"Some Nights"  	Fun 	September 22, 2012 	1
+"Ho Hey" 	The Lumineers 	September 29, 2012 	2
+"Madness" 	Muse 	October 13, 2012 	1
+"I Will Wait" 	Mumford & Sons 	October 20, 2012 	1
+"Madness"  	Muse 	October 27, 2012 	18
+"Radioactive" dagger[8] 	Imagine Dragons 	March 2, 2013 	13
+"Sweater Weather" 	The Neighbourhood 	June 1, 2013 	2
+"Safe and Sound" 	Capital Cities 	June 15, 2013 	1
+"Sweater Weather"  	The Neighbourhood 	June 22, 2013 	9
+"Royals" 	Lorde 	August 24, 2013 	7
+"Out of My League" 	Fitz and The Tantrums 	October 12, 2013 	2
+"Pompeii" 	Bastille 	October 26, 2013 	4
+"Come a Little Closer" 	Cage the Elephant 	November 23, 2013 	10
+"Do I Wanna Know?" dagger[9] 	Arctic Monkeys 	February 1, 2014 	10
+"Come with Me Now" 	Kongos 	April 12, 2014 	3
+"The Walker" 	Fitz and The Tantrums 	May 3, 2014 	1
+"Come with Me Now"  	Kongos 	May 10, 2014 	2
+"Fever" 	The Black Keys 	May 24, 2014 	11
+"I Wanna Get Better" 	Bleachers 	August 9, 2014 	1
+"Dangerous" 	Big Data featuring Joywave 	August 16, 2014 	1
+"Riptide" 	Vance Joy 	August 23, 2014 	5
+"Stolen Dance" 	Milky Chance 	September 27, 2014 	10
+"Something from Nothing" 	Foo Fighters 	December 6, 2014 	8
+"Cigarette Daydreams" 	Cage the Elephant 	January 31, 2015 	4
+"Shut Up and Dance" 	Walk the Moon 	February 28, 2015 	4
+"Lampshades on Fire" 	Modest Mouse 	March 28, 2015 	3
+"Believe" 	Mumford & Sons 	April 18, 2015 	3
+"Hollow Moon (Bad Wolf)" 	Awolnation 	May 9, 2015 	2
+"Dead Inside" 	Muse 	May 23, 2015 	5
+"Renegades" dagger[10] 	X Ambassadors 	June 27, 2015 	11
+"First" 	Cold War Kids 	September 12, 2015 	1
+"Ex's and Oh's" 	Elle King 	September 19, 2015 	3
+"First"  	Cold War Kids 	October 10, 2015 	6
+"Stressed Out" 	Twenty One Pilots 	November 21, 2015 	12
+"Mess Around" 	Cage the Elephant 	February 13, 2016 	1
+"Adventure of a Lifetime" 	Coldplay 	February 20, 2016 	1
+"Mess Around"  	Cage the Elephant 	March 5, 2016 	2
+"Mountain at My Gates" 	Foals 	March 19, 2016 	1
+"Trip Switch" 	Nothing But Thieves 	March 26, 2016 	2
+"Ride" 	Twenty One Pilots 	April 9, 2016 	1
+

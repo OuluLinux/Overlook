@@ -4,6 +4,8 @@
 #include <CtrlLib/CtrlLib.h>
 #include <NARX/NARX.h>
 using namespace Upp;
+using namespace Narx;
+
 
 #define IMAGECLASS Imgs
 #define IMAGEFILE <NarxSim/NarxSim.iml>

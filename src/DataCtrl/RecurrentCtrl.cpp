@@ -11,6 +11,7 @@ RecurrentDraw::RecurrentDraw() {
 
 void RecurrentDraw::Paint(Draw& w) {
 	TimeVector& tv = GetTimeVector();
+	if (!IsVisible()) return;
 	
 	if (!src) {
 		src = tv.FindLinkSlot("/open");
@@ -151,6 +152,7 @@ RecurrentCtrl::RecurrentCtrl() {
 }
 
 void RecurrentCtrl::SetArguments(const VectorMap<String, Value>& args) {
+	MetaNode::SetArguments(args);
 	
 }
 

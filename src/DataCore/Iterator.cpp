@@ -52,6 +52,11 @@ void TimeVector::Iterator::SetPosition(int p) {
 }
 
 bool TimeVector::Iterator::Process() {
+	/*String bs;
+	for(int i = 0; i < pos.GetCount(); i++) {
+		bs << pos[i] << "/" << tv->bars[i] <<  "     ";
+	}
+	LOG(bs);*/
 	//DLOG(pos[0] << "/" << tv->bars[0]);
 	
 	// Get attributes of the TimeVector
@@ -190,6 +195,7 @@ bool TimeVector::Iterator::Process() {
 				// Set attributes of the begin of the slot memory area
 				attr.slot_bytes = slot_bytes[k];
 				attr.data = it;
+				attr.slot_pos = k;
 				
 				// Check if slot is already processed
 				byte ready_mask = 1 << ready_bit;
@@ -203,7 +209,7 @@ bool TimeVector::Iterator::Process() {
 						*ready_slot |= ready_mask;
 					else {
 						process_failed = true; // return error;
-						break; // don't process slots after this
+						break; // don't process slots after failed slot
 					}
 				}
 				
@@ -285,7 +291,7 @@ void TimeVector::Iterator::operator ++(int i) {
 }
 
 void TimeVector::Iterator::ReleaseMemory() {
-	//LOG("TimeVector::Iterator::ReleaseMemory()");
+	LOG("TimeVector::Iterator::ReleaseMemory()");
 	
 	Vector<int> begin_pos, end_pos, bars;
 	begin_pos <<= pos;

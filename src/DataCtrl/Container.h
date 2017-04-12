@@ -63,13 +63,11 @@ protected:
 	int bars, next_count;
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
+	bool locked;
 	
 public:
 	typedef Container CLASSNAME;
 	Container();
-	
-	
-	
 	
 	// Get settings
 	int GetBufferSettingsCount() const {return buffer_settings.GetCount();}
@@ -149,6 +147,9 @@ public:
 	
 	void Refresh();
 	void ClearContent();
+	
+	void Enter() {DataCore::GetTimeVector().EnterCache(); locked = true;}
+	void Leave() {DataCore::GetTimeVector().LeaveCache(); locked = false;}
 	
 };
 

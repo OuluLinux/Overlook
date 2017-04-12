@@ -103,6 +103,7 @@ public:
 	
 protected:
 	friend class Iterator;
+	friend class Slot;
 	
 	Upp::FileAppend cache_file;
 	Upp::SpinLock cache_lock;
@@ -111,11 +112,11 @@ protected:
 	Time begin, end;
 	int64 reserved_memory;
 	int64 memory_limit;
+	int64 bars_total;
 	int timediff;
 	int base_period;
 	int begin_ts, end_ts;
 	int header_size;
-	int bars_total;
 	int slot_flag_bytes, slot_flag_offset;
 	bool reversed;
 	bool enable_cache;
@@ -128,7 +129,7 @@ protected:
 	VectorMap<String, String> linked_paths;
 	Vector<String> symbols;
 	Vector<int> bars, slot_bytes;
-	int total_slot_bytes;
+	int64 total_slot_bytes;
 	
 	
 	typedef SlotPtr (*SlotFactory)();
@@ -155,12 +156,12 @@ public:
 	Time GetBegin() const {return begin;}
 	Time GetEnd() const {return end;}
 	int GetSymbolCount() const {return symbols.GetCount();}
-	int GetCount(int period) const {return timediff / base_period / period * (reversed ? -1 : 1);}
+	int GetCount(int period) const;
 	int GetBeginTS() {return begin_ts;}
 	int GetEndTS() {return end_ts;}
 	int GetBasePeriod() const {return base_period;}
-	int GetShift(int src_period, int dst_period, int shift);
-	int GetShiftFromTime(int timestamp, int period);
+	int64 GetShift(int src_period, int dst_period, int shift);
+	int64 GetShiftFromTime(int timestamp, int period);
 	int GetTfFromSeconds(int period_seconds);
 	int GetPeriod(int i) const {return periods[i];}
 	int GetPeriodCount() const {return periods.GetCount();}

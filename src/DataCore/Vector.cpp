@@ -35,7 +35,7 @@ void TimeVector::AddPeriod(int period) {
 	
 	if (count) {
 		int i = period / periods[count-1];
-		if (!i) throw DataExc();
+		if (i <= 1) throw DataExc();
 		if (count-1 != tfbars_in_slowtf.GetCount()) throw DataExc();
 		tfbars_in_slowtf.Add(i);
 	}
@@ -47,9 +47,16 @@ void TimeVector::AddSymbol(String sym) {
 	symbols.Add(sym);
 }
 
+int TimeVector::GetCount(int period) const {
+	int div = base_period * period;
+	int count = timediff / div;
+	if (count % div != 0) count++;
+	return count * (reversed ? -1 : 1);
+}
+
 void TimeVector::RefreshData() {
-	int sym_count = symbols.GetCount();
-	int tf_count = periods.GetCount();
+	int64 sym_count = symbols.GetCount();
+	int64 tf_count = periods.GetCount();
 	
 	if (sym_count == 0) throw DataExc();
 	if (tf_count == 0)  throw DataExc();
@@ -61,7 +68,6 @@ void TimeVector::RefreshData() {
 		int period = periods[i];
 		int count = GetCount(period);
 		if (!count) throw DataExc();
-		if (i > 0) count++; // for if faster modulus slow != 0
 		bars[i] = count;
 		bars_total += count;
 	}
@@ -98,17 +104,17 @@ void TimeVector::RefreshData() {
 		cache_file.Open(cache_file_path);
 		ASSERTEXC(cache_file.IsOpen());
 		
-		header_size = 4 * sizeof(int) + 2 * sizeof(Time);
+		header_size = 4 * sizeof(int64) + 2 * sizeof(Time);
 		
 		// Compare header
 		cache_file.Seek(0);
 		if (cache_file.GetSize() >= header_size) {
-			int header_sym_count, header_tf_count, header_total_slot_bytes, header_bars_total;
+			int64 header_sym_count, header_tf_count, header_total_slot_bytes, header_bars_total;
 			Time begin, end;
-			cache_file.Get(&header_sym_count, sizeof(int));
-			cache_file.Get(&header_tf_count, sizeof(int));
-			cache_file.Get(&header_total_slot_bytes, sizeof(int));
-			cache_file.Get(&header_bars_total, sizeof(int));
+			cache_file.Get(&header_sym_count, sizeof(int64));
+			cache_file.Get(&header_tf_count, sizeof(int64));
+			cache_file.Get(&header_total_slot_bytes, sizeof(int64));
+			cache_file.Get(&header_bars_total, sizeof(int64));
 			cache_file.Get(&begin, sizeof(Time));
 			cache_file.Get(&end, sizeof(Time));
 			
@@ -124,10 +130,10 @@ void TimeVector::RefreshData() {
 		
 		// Write header
 		else {
-			cache_file.Put(&sym_count, sizeof(int));
-			cache_file.Put(&tf_count, sizeof(int));
-			cache_file.Put(&total_slot_bytes, sizeof(int));
-			cache_file.Put(&bars_total, sizeof(int));
+			cache_file.Put(&sym_count, sizeof(int64));
+			cache_file.Put(&tf_count, sizeof(int64));
+			cache_file.Put(&total_slot_bytes, sizeof(int64));
+			cache_file.Put(&bars_total, sizeof(int64));
 			cache_file.Put(&begin, sizeof(Time));
 			cache_file.Put(&end, sizeof(Time));
 		}
@@ -135,6 +141,7 @@ void TimeVector::RefreshData() {
 		// Reserve file
 		int64 total_size = header_size + sym_count * total_slot_bytes * bars_total;
 		int64 append_size = total_size - cache_file.GetSize();
+		ASSERTEXC(total_size > 0);
 		cache_file.SeekEnd();
 		ASSERTEXC(append_size <= INT_MAX);
 		if (append_size > 0)
@@ -142,12 +149,12 @@ void TimeVector::RefreshData() {
 	}
 }
 
-int TimeVector::GetShift(int src_period, int dst_period, int shift) {
+int64 TimeVector::GetShift(int src_period, int dst_period, int shift) {
 	int64 timediff = shift * src_period; //		* base_period
 	return (int)(timediff / dst_period); //			/ base_period
 }
 
-int TimeVector::GetShiftFromTime(int timestamp, int period) {
+int64 TimeVector::GetShiftFromTime(int timestamp, int period) {
 	int64 timediff = timestamp - begin_ts;
 	return (int)(timediff / period / base_period * (reversed ? -1 : 1));
 }

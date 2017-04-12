@@ -26,6 +26,7 @@ void AgentCtrl::Reset() {
 }
 
 void AgentCtrl::SetArguments(const VectorMap<String, Value>& args) {
+	MetaNode::SetArguments(args);
 	
 }
 

@@ -29,9 +29,9 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "ma";}
+	virtual String GetKey() const {return "ma";}
 	virtual String GetName() {return "MovingAverage";}
-	virtual String GetShortName() {return SHORTNAME3("ma", ma_period, ma_shift, ma_method);}
+	virtual String GetShortName() const {return SHORTNAME3("ma", ma_period, ma_shift, ma_method);}
 };
 
 }

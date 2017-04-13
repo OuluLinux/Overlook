@@ -90,8 +90,8 @@ public:
 		TimeVector& GetTimeVector() {return *tv;}
 		
 		void SetPosition(int i);
-		bool Process();
-		void ReleaseMemory();
+		//bool Process();
+		void GetSlotProcessAttributes(Vector<SlotProcessAttributes>& attrs);
 		
 		bool IsBegin() const {return pos[0] == 0;}
 		bool IsEnd();
@@ -146,6 +146,9 @@ public:
 	void RefreshData();
 	void EnableCache(bool b=true) {enable_cache = b;}
 	void LimitMemory(int64 limit=2147483648L) {memory_limit = limit;}
+	void ReleaseMemory(int tf_id, int pos);
+	void ReleaseMemory(int fastest_pos);
+	void StoreChangedCache();
 	
 	void LoadCache(int sym_id, int tf_id, int pos, bool locked=false);
 	void EnterCache() {cache_lock.Enter();}
@@ -156,6 +159,7 @@ public:
 	Time GetBegin() const {return begin;}
 	Time GetEnd() const {return end;}
 	int GetSymbolCount() const {return symbols.GetCount();}
+	String GetSymbol(int i) const {return symbols[i];}
 	int GetCount(int period) const;
 	int GetBeginTS() {return begin_ts;}
 	int GetEndTS() {return end_ts;}
@@ -167,6 +171,8 @@ public:
 	int GetPeriodCount() const {return periods.GetCount();}
 	int64 GetPersistencyCursor(int sym_id, int tf_id, int shift);
 	const SlotData& GetSlot(int sym_id, int tf_id, int shift) const {return data[sym_id][tf_id][shift];}
+	int GetCustomSlotCount() const {return slot.GetCount();}
+	const Slot& GetCustomSlot(int i) const {return *slot[i];}
 	int FindPeriod(int period) const {return periods.Find(period);}
 	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos, bool locked=false) {
 		const SlotData& data = GetSlot(sym_id, tf_id, shift);

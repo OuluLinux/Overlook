@@ -13,8 +13,6 @@ class Recurrent : public Slot {
 	enum {PHASE_GATHERDATA, PHASE_TRAINING};
 	
 	Array<Array<ConvNet::RecurrentSession> > ses;
-	//VectorMap<int, int> letterToIndex;
-	//VectorMap<int, double> indexToLetter;
 	Vector<double> vocab;
 	Vector<double> temperatures;
 	Vector<int> sequence;
@@ -39,7 +37,7 @@ class Recurrent : public Slot {
 	void InitSessions();
 public:
 	Recurrent();
-	virtual String GetKey() {return "rnn";}
+	virtual String GetKey() const {return "rnn";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -109,7 +107,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "rl";}
+	virtual String GetKey() const {return "rl";}
 	virtual String GetName() {return "RL-Agent";}
 };
 
@@ -155,7 +153,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "dqn";}
+	virtual String GetKey() const {return "dqn";}
 	virtual String GetName() {return "DQN-Agent";}
 	void Forward(const SlotProcessAttributes& attr);
 	void Backward(const SlotProcessAttributes& attr);
@@ -186,7 +184,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "mona";}
+	virtual String GetKey() const {return "mona";}
 	virtual String GetName() {return "Mona";}
 };
 
@@ -201,7 +199,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "narx";}
+	virtual String GetKey() const {return "narx";}
 	virtual String GetName() {return "NARX";}
 };
 

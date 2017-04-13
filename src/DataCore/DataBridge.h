@@ -31,11 +31,11 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() {return "db";}
+	virtual String GetKey() const {return "db";}
 	virtual String GetName() {return "DataBridge";}
 	
 	/*virtual String GetName() {return "DataBridge";}
-	virtual String GetShortName() {return "databridge";}
+	virtual String GetShortName() const {return "databridge";}
 	virtual int SetArguments(const VectorMap<String, Value>& args);
 	virtual int Init();
 	virtual int Start();*/

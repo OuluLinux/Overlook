@@ -85,7 +85,7 @@ void TimeVector::RefreshData() {
 	}
 	
 	slot_bytes.SetCount(slot.GetCount(), 0);
-	total_slot_bytes = 0;
+	total_slot_bytes = 1; // one byte for "changed" flag
 	for(int i = 0; i < slot.GetCount(); i++) {
 		int bytes = slot[i]->GetReservedBytes();
 		if (bytes == 0 && !slot[i]->IsWithoutData()) throw DataExc();
@@ -94,7 +94,7 @@ void TimeVector::RefreshData() {
 	}
 	
 	// Reserve data for 'ready' flags
-	slot_flag_bytes = slot.GetCount() / 8 + (slot.GetCount() % 8) == 0 ? 0 : 1;
+	slot_flag_bytes = slot.GetCount() / 8 + ((slot.GetCount() % 8) == 0 ? 0 : 1);
 	slot_flag_offset = total_slot_bytes;
 	total_slot_bytes += slot_flag_bytes;
 	
@@ -177,15 +177,6 @@ int64 TimeVector::GetPersistencyCursor(int sym_id, int tf_id, int shift) {
 	return pos;
 }
 
-
-
-
-
-
-
-
-
-
 TimeVector::Iterator TimeVector::Begin() {
 	Iterator it(this);
 	
@@ -199,19 +190,151 @@ void TimeVector::AddCustomSlot(String key, SlotFactory f) {
 }
 
 void TimeVector::LoadCache(int sym_id, int tf_id, int pos, bool locked) {
-	if (!enable_cache) throw DataExc();
+	if (!locked) cache_lock.Enter();
+	
 	int64 file_pos = GetPersistencyCursor(sym_id, tf_id, pos);
 	SlotData& slot_data = data[sym_id][tf_id][pos];
-	if (!locked) cache_lock.Enter();
 	if (slot_data.GetCount()) {
 		if (!locked) cache_lock.Leave();
 		return; // Should be empty. Possibility of threaded duplicate load exists.
 	}
+	
+	// Check memory limits
 	reserved_memory += total_slot_bytes;
-	slot_data.SetCount(total_slot_bytes); // don't lose lock for this, not worth it
-	cache_file.Seek(file_pos);
-	cache_file.Get(slot_data.Begin(), total_slot_bytes);
+	if (memory_limit && reserved_memory >= memory_limit) {
+		StoreChangedCache();
+		ReleaseMemory(tf_id, pos);
+	}
+	
+	// Reserve memory (without zeroing for performance reasons)
+	ASSERTEXC(slot_data.IsEmpty());
+	slot_data.SetCount(total_slot_bytes);
+	
+	if (enable_cache) {
+		slot_data.SetCount(total_slot_bytes); // don't lose lock for this, not worth it
+		cache_file.Seek(file_pos);
+		cache_file.Get(slot_data.Begin(), total_slot_bytes);
+	}
+	
 	if (!locked) cache_lock.Leave();
+}
+
+void TimeVector::ReleaseMemory(int tf_id, int pos) {
+	int fast_pos = pos;
+	// Change position, if the current timeframe is not the smallest
+	if (tf_id != 0) {
+		fast_pos = GetShift(GetPeriod(tf_id), 1, pos);
+	}
+	ReleaseMemory(fast_pos);
+}
+
+void TimeVector::StoreChangedCache() {
+	
+	// Store only if cache is enabled
+	if (!enable_cache)
+		return;
+	
+	// Loop data range
+	Vector<Vector<Vector<SlotData> > >::Iterator sym_it  = data.Begin();
+	Vector<Vector<Vector<SlotData> > >::Iterator sym_end = data.End();
+	for (int i = 0; sym_it != sym_end; sym_it++, i++) {
+		Vector<Vector<SlotData> >::Iterator tf_it = sym_it->Begin();
+		Vector<Vector<SlotData> >::Iterator tf_end = sym_it->End();
+		for (int j = 0; tf_it != tf_end; tf_it++, j++) {
+			Vector<SlotData>::Iterator slotdata_it = tf_it->Begin();
+			Vector<SlotData>::Iterator slotdata_end = tf_it->End();
+			for (int k = 0; slotdata_it != slotdata_end; slotdata_it++, k++) {
+				byte* data = slotdata_it->Begin();
+				
+				// If slot has reserved memory and the content has been flagged as 'changed'
+				if (data && *data) {
+					
+					// Data should have constant size
+					ASSERT(slotdata_it->GetCount() == total_slot_bytes);
+					
+					// Write data to the persistent file
+					int64 file_pos = GetPersistencyCursor(i, j, k);
+					cache_file.Seek(file_pos);
+					cache_file.Put(data, total_slot_bytes);
+					
+					// Mark data as 'unchanged'
+					*data = false;
+				}
+			}
+		}
+	}
+}
+
+void TimeVector::ReleaseMemory(int fastest_pos) {
+	LOG("TimeVector::ReleaseMemory()");
+	
+	int tf_count = periods.GetCount();
+	int p = fastest_pos;
+	Vector<int> pos, begin_pos, end_pos;
+	pos.SetCount(tf_count, 0);
+	for(int i = 0; i < tf_count; i++) {
+		pos[i] = p;
+		if (i == tf_count-1) break;
+		p = GetShift(periods[i], periods[i+1], p);
+	}
+	begin_pos <<= pos;
+	end_pos <<= pos;
+	
+	int sym_count = symbols.GetCount();
+	int64 memory_limit = (int64)(this->memory_limit * 0.5);
+	int64 memory_size = 0;
+	int64 tf_row_size = sym_count * total_slot_bytes;
+	
+	if (!tf_count || !sym_count) throw DataExc();
+	
+	bool growing = true;
+	while (growing) {
+		growing = false;
+		
+		for(int i = 0; i < tf_count; i++) {
+			
+			int& begin = begin_pos[i];
+			int& end = end_pos[i];
+			
+			if (begin > 0) {
+				begin--;
+				memory_size += tf_row_size;
+				growing = true;
+			}
+			
+			if (end < bars[i]) {
+				end++;
+				memory_size += tf_row_size;
+				growing = true;
+			}
+			
+			if (memory_size >= memory_limit) {
+				growing = false;
+				break;
+			}
+		}
+	}
+	
+	memory_size = 0;
+	for(int i = 0; i < sym_count; i++) {
+		for(int j = 0; j < tf_count; j++) {
+			int begin = begin_pos[j];
+			int end = end_pos[j];
+			int limit = bars[j];
+			
+			Vector<Vector<byte> >::Iterator it = data[i][j].Begin();
+			for(int k = 0; k < begin; k++, it++)
+				it->Clear();
+			for(int k = begin; k < end; k++, it++) {
+				if (!it->IsEmpty())
+					memory_size += it->GetCount();
+			}
+			for(int k = end; k < limit; k++, it++)
+				it->Clear();
+		}
+	}
+	
+	reserved_memory = memory_size;
 }
 
 }

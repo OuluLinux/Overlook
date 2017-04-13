@@ -20,7 +20,7 @@ public:
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetName() {return "WdayHourChanges";}
-	virtual String GetShortName() {return "whch";}
+	virtual String GetShortName() const {return "whch";}
 	
 	const OnlineVariance& GetOnlineVariance(int shift);
 	
@@ -42,7 +42,7 @@ public:
 	WdayHourStats();
 	
 	virtual String GetName() {return "WdayHourStats";}
-	virtual String GetShortName() {return "whstat";}
+	virtual String GetShortName() const {return "whstat";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -63,7 +63,7 @@ public:
 	WdayHourDiff();
 	
 	virtual String GetName() {return "WdayHourDiff";}
-	virtual String GetShortName() {return "whd";}
+	virtual String GetShortName() const {return "whd";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -98,7 +98,7 @@ public:
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetName() {return "EventOsc";}
-	virtual String GetShortName() {return SHORTNAME0("eosc");}
+	virtual String GetShortName() const {return SHORTNAME0("eosc");}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 };
 

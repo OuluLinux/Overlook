@@ -10,6 +10,7 @@ NarxDraw::NarxDraw() {
 }
 
 void NarxDraw::Paint(Draw& w) {
+	if (!IsVisible()) return;
 	TimeVector& tv = GetTimeVector();
 	
 	if (!src) {

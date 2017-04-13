@@ -56,6 +56,10 @@ void MediaPlayer::Run() {
 			queue_mtx.Leave();
 		}
 		
+		if (search_queue.GetCount() < 2) {
+			WhenSearchQueueAlmostEmpty();
+		}
+		
 		Sleep(100);
 	}
 	
@@ -103,6 +107,7 @@ void MediaPlayer::Next() {
 			} else {
 				int random = Random(yt.GetCount());
 				addr = yt[random].GetAddress();
+				file.Replace(".mp4", IntStr(random) + ".mp4");
 				Cout() << "MediaPlayer::Next: random " << random << " address " << addr << "\n";
 			}
 			
@@ -123,4 +128,6 @@ void MediaPlayer::AddQueue(String path) {
 	queue.Add(path);
 	
 	queue_mtx.Leave();
+	
+	StoreThis();
 }

@@ -12,7 +12,7 @@ class NormalizedValue : public Slot {
 	OnlineVariance var;
 public:
 	NormalizedValue();
-	virtual String GetKey() {return "normvalue";}
+	virtual String GetKey() const {return "normvalue";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -23,7 +23,7 @@ class DerivedValue : public Slot {
 	SlotPtr src;
 public:
 	DerivedValue();
-	virtual String GetKey() {return "derivedvalue";}
+	virtual String GetKey() const {return "derivedvalue";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);

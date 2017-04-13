@@ -25,7 +25,7 @@ void TimeVector::LinkPath(String dest, String src) {
 	}
 	
 	// Find slot offset in datavector
-	int data_offset = 0;
+	int data_offset = 1; // one byte for "changed" flag
 	for(int i = 0; i < this->slot.GetCount(); i++)
 		data_offset += this->slot[i]->GetReservedBytes();
 	slot->slot_offset = data_offset;

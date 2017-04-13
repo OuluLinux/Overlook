@@ -30,27 +30,31 @@ struct DataExc : public Exc {
 
 typedef Vector<byte> SlotData;
 typedef Ptr<TimeVector> TimeVectorPtr;
+class Slot;
 
-struct SlotProcessAttributes {
+struct SlotProcessAttributes : Moveable<SlotProcessAttributes> {
 	int sym_id;								// id of symbol
 	int sym_count;							// count of symbol ids
 	int tf_id;								// timeframe-id from shorter to longer
 	int tf_count;							// count of timeframe ids
 	int processing_tf_count;				// count of timeframes currently being processed
+	int64 time;								// time of current position
+	int duration;							// time duration of processing of the slot
 	int pos[16];							// time-position for all timeframes
 	int bars[16];							// count of time-positions for all timeframes
 	int periods[16];						// periods for all timeframes
 	int slot_bytes;							// reserved memory in bytes for current slot
 	int slot_pos;							// position of the current slot in the sym/tf/pos vector
-	byte* slot_vector;						// pointer to the sym/tf data
-	byte* data;								// pointer to the reserved memory
+	Slot* slot;								// pointer to the current slot
+	// TOO VOLATILE TO USE byte* slot_vector;						// pointer to the sym/tf data
+	// TOO VOLATILE TO USE byte* data;								// pointer to the reserved memory
 	TimeVector* tv;							// pointer to the parent TimeVector
 	//TimeVector::Iterator* it;				// pointer to the calling iterator
-	void* it;								// (TimeVector::Iterator) pointer to the calling iterator
-	Vector<SlotData>::Iterator* slot_it;	// pointer to the iterator of current sym/tf
-	Vector< Vector<SlotData>::Iterator >::Iterator* tf_it;
+	// DEPREACED void* it;								// (TimeVector::Iterator) pointer to the calling iterator
+	Vector<SlotData>::Iterator slot_it;		// pointer to the iterator of current sym/tf
+	Vector< Vector<SlotData>::Iterator >::Iterator tf_it;
 											// pointer to the iterator of all sym
-	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator* sym_it;
+	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator sym_it;
 											// pointer to the iterator of all data
 	
 	/*String ToString() const {
@@ -106,20 +110,23 @@ public:
 	void AddValue(String name="", String description="") {AddValue(sizeof(T), name, description);}
 
 	bool IsWithoutData() const {return forced_without_data;}
-	int GetReservedBytes() {return reserved_bytes;}
-	int GetCount() {return values.GetCount();}
+	int GetReservedBytes() const {return reserved_bytes;}
+	int GetCount() const {return values.GetCount();}
 	const SlotValue& operator[] (int i) const {return values[i];}
 	int GetOffset() const {return slot_offset;}
+	bool IsReady(int pos, const SlotProcessAttributes& attr);
+	bool IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
+	String GetPath() const {return path;}
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) {
-		return (T*)(attr.slot_vector + slot_offset + values[i].offset);
+		return (T*)(attr.slot_it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
 	T* GetValue(int i, int shift, const SlotProcessAttributes& attr) {
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[attr.tf_id]) return 0;
-		Vector<SlotData>::Iterator it = *attr.slot_it;
+		Vector<SlotData>::Iterator it = attr.slot_it;
 		it -= shift;
 		if (!it->GetCount()) LoadCache(attr.sym_id, attr.tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
@@ -128,7 +135,7 @@ public:
 	T* GetValue(int i, int tf_id, int shift, const SlotProcessAttributes& attr) {
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
-		Vector<SlotData>::Iterator it = *(*(attr.tf_it + tf_id) + newpos);
+		Vector<SlotData>::Iterator it = (*(attr.tf_it + tf_id) + newpos);
 		if (!it->GetCount()) LoadCache(attr.sym_id, tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
@@ -136,7 +143,7 @@ public:
 	T* GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
-		Vector<SlotData>::Iterator it = *(*(*(attr.sym_it + sym_id) + tf_id) + newpos);
+		Vector<SlotData>::Iterator it = (*(*(attr.sym_it + sym_id) + tf_id) + newpos);
 		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
@@ -153,13 +160,14 @@ public:
 	}
 	
 	void SetReady(int pos, const SlotProcessAttributes& attr, bool ready=true);
+	void SetReady(const SlotProcessAttributes& attr, bool ready=true) {SetReady(attr.GetCounted(), attr, ready);}
 	void SetPath(String p) {path = p;}
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
 	
-	virtual String GetKey() {return "slot";}
+	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}
-	virtual String GetShortName() {return "shortname";}
+	virtual String GetShortName() const {return "shortname";}
 	virtual void SetArguments(const VectorMap<String, Value>& args) {}
 	virtual void Init() {}
 	virtual void Start() {}

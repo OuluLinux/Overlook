@@ -7,6 +7,7 @@ AgentDraw::AgentDraw() {
 }
 
 void AgentDraw::Paint(Draw& w) {
+	if (!IsVisible()) return;
 	
 }
 

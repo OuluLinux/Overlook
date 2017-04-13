@@ -16,6 +16,7 @@ INITBLOCK {
 	RefCore::PathResolver::RegisterStatic<RecurrentCtrl>();
 	RefCore::PathResolver::RegisterStatic<AgentCtrl>();
 	RefCore::PathResolver::RegisterStatic<MonaCtrl>();
+	RefCore::PathResolver::RegisterStatic<RunnerCtrl>();
 	
 }
 

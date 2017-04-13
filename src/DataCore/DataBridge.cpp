@@ -264,7 +264,7 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	TimeVector& tv = GetTimeVector();
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
 	//if (attr.GetCounted() < attr.GetBars()-1)
 	//	return has_written;

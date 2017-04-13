@@ -24,6 +24,7 @@ using namespace Upp;
 #include "AgentCtrl.h"
 #include "NarxCtrl.h"
 #include "MonaCtrl.h"
+#include "RunnerCtrl.h"
 
 namespace DataCtrl {
 	

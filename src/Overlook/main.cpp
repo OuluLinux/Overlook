@@ -15,6 +15,7 @@ void InitTimeVector() {
 	
 	tv.EnableCache();
 	tv.LimitMemory();
+	//tv.LimitMemory(640000);
 	
 	// Init sym/tfs/time space
 	{
@@ -75,6 +76,16 @@ void InitTimeVector() {
 	mt.SetEnd(tv.GetEnd());
 	mt.SetBasePeriod(tv.GetBasePeriod());
 	
+	
+	
+	
+	
+	
+	// Create or load cache base on linked slots (keep this 2. last)
+	tv.RefreshData();
+	
+	// Link runner (also starts processing, so keep this last)
+	res.LinkPath("/runner", "/runnerctrl");
 }
 
 void InitIndicators() {
@@ -105,7 +116,6 @@ void InitIndicators() {
 	res.LinkPath("/sym2_D1", "/bardata?bar=\"/open\"&id=1&period=4");*/
 	
 	
-	tv.RefreshData();
 }
 
 struct Runner {
@@ -116,26 +126,6 @@ struct Runner {
 	}
 	
 	void Run() {
-		TimeVector& tv = GetTimeVector();
-		
-		while (!Thread::IsShutdownThreads()) {
-			while (!Thread::IsShutdownThreads()) {
-				bool all_processed = true;
-				for (TimeVector::Iterator it = tv.Begin(); !it.IsEnd() && !Thread::IsShutdownThreads(); it++) {
-				
-					if (it.Process()) {
-						all_processed = false;
-					}
-					
-				}
-				if (all_processed)
-					break;
-			}
-			
-			for(int i = 0; i < 60 && !Thread::IsShutdownThreads(); i++) {
-				Sleep(1000);
-			}
-		}
 	}
 };
 

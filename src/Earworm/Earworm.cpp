@@ -2,6 +2,9 @@
 
 Earworm::Earworm()
 {
+	Title("Earworm");
+	Icon(Imgs::icon());
+	
 	CtrlLayout(*this, "Earworm");
 	
 	playing = 0;
@@ -21,8 +24,11 @@ Earworm::Earworm()
 	play.SetLabel("Play");
 	
 	mediaplayer.WhenStopped = THISBACK(PostPlayNext);
+	mediaplayer.WhenSearchQueueAlmostEmpty = THISBACK(PostPlayNext);
 	
 	RefreshCharts();
+	
+	mediaplayer.Start();
 }
 
 void Earworm::RefreshCharts() {
@@ -51,13 +57,15 @@ void Earworm::RefreshSongs() {
 void Earworm::Play() {
 	if (playing) return;
 	
-	mediaplayer.Reset();
+	//mediaplayer.Reset();
 	
 	QueueSelected();
 	
-	play.WhenAction.Clear();
+	//play.WhenAction.Clear();
 	play.Set(true);
-	play.WhenAction = THISBACK(RefreshState);
+	//play.WhenAction = THISBACK(RefreshState);
+	
+	PlayNext();
 }
 
 void Earworm::RefreshState() {
@@ -80,10 +88,11 @@ void Earworm::QueueSelected() {
 	
 	Cout() << "Searching " << search_str << " with random=" << (int)random_foundlist.Get() << "\n";
 	mediaplayer.AddSearchQueue(search_str, random_foundlist.Get());
-	mediaplayer.Start();
 }
 
 void Earworm::PlayNext() {
+	if (!play.Get()) return;
+	
 	Cout() << "Playing next\n";
 	
 	bool random_list = this->random_list.Get();

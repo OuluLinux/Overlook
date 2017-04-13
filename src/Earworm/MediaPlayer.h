@@ -25,7 +25,7 @@ public:
 	
 	void StoreThis() {StoreToFile(*this, ConfigFile("player.bin"));}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("player.bin"));}
-	void Serialize(Stream& s) {s % queue;}
+	void Serialize(Stream& s) {s % queue % search_queue % search_random;}
 	void Start();
 	void Stop();
 	void StopRunning() {running = false;}
@@ -35,7 +35,7 @@ public:
 	void Reset();
 	
 	Callback WhenStopped;
+	Callback WhenSearchQueueAlmostEmpty;
 };
-
 
 #endif

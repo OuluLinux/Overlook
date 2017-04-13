@@ -10,6 +10,8 @@ DervDraw::DervDraw() {
 }
 
 void DervDraw::Paint(Draw& w) {
+	if (!IsVisible()) return;
+	
 	TimeVector& tv = GetTimeVector();
 	
 	if (!src) {

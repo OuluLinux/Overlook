@@ -21,6 +21,13 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 };
 
+class DummyOscillator : public Slot {
+public:
+	DummyOscillator();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() const {return "dummyoscillator";}
+};
+
 class DummyTrainer : public Slot {
 public:
 	DummyTrainer();

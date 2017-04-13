@@ -47,6 +47,7 @@ void InitTimeVector() {
 		
 		// Add DataBridge
 		tv.LinkPath("/databridge", "/db?addr=\"" + addr + "\"&port=" + IntStr(port));
+		tv.LinkPath("/osc", "/dummyoscillator");
 		
 		// Add GUI objects
 		for(int i = 0; i < symbols.GetCount(); i++) {
@@ -61,6 +62,10 @@ void InitTimeVector() {
 				dest = "/name/" + symbols[i].name + "/tf" + IntStr(tfs[j]);
 				dest.Replace("#", "");
 				res.LinkPath(dest, src);
+				
+				
+				res.LinkPath(dest + "osc", dest + "/cont?slot=\"/osc\"");
+				
 			}
 		}
 	}
@@ -75,6 +80,12 @@ void InitTimeVector() {
 	mt.SetBegin(tv.GetBegin());
 	mt.SetEnd(tv.GetEnd());
 	mt.SetBasePeriod(tv.GetBasePeriod());
+	
+	
+	
+	
+	
+	
 	
 	
 	

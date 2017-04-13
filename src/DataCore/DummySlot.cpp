@@ -57,6 +57,67 @@ bool DummyIndicator::Process(const SlotProcessAttributes& attr) {
 
 
 
+
+
+DummyOscillator::DummyOscillator() {
+	AddValue<double>(); // osc 1
+	AddValue<double>(); // osc2
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"minimum\":-1,"
+			"\"maximum\":2,"
+			"\"point\":0.01,"
+			
+			"\"level0\":{"
+				"\"style\":\"DASH\","
+				"\"line_width\":2,"
+				"\"value\":0.5,"
+				"\"color\":\"192,128,192\""
+			"},"
+			
+			"\"value0\":{"
+				"\"label\":\"value 0\","
+				"\"color\":\"64,128,192\","
+				"\"style\":\"HISTOGRAM\","
+				"\"line_width\":2,"
+				"\"chr\":95,"
+				"\"begin\":10,"
+				"\"shift\":3"
+			"},"
+			
+			"\"value1\":{"
+				"\"label\":\"value 1\","
+				"\"color\":\"192,128,64\","
+				"\"style\":\"LINE\","
+				"\"line_style\":\"DOT\","
+				"\"line_width\":2,"
+				"\"chr\":95,"
+				"\"begin\":10,"
+				"\"shift\":3"
+			"}"
+		"}"
+	);
+}
+
+bool DummyOscillator::Process(const SlotProcessAttributes& attr) {
+	double* osc1 = GetValue<double>(0, attr);
+	double* osc2 = GetValue<double>(1, attr);
+	double counted = attr.GetCounted();
+	double period = attr.GetPeriod();
+	double shift = counted * period / 24 * (2*M_PI) + attr.sym_id;
+	*osc1 = sin(shift);
+	*osc2 = cos(shift);
+	return true;
+}
+
+
+
+
+
+
+
 DummyTrainer::DummyTrainer() {
 	SetWithoutData(); // just a safety measure
 }

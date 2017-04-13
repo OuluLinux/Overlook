@@ -23,6 +23,8 @@ void RunnerDraw::Paint(Draw& w) {
 }
 
 void RunnerDraw::RefreshDraw() {
+	if (!Thread::IsShutdownThreads()) return;
+	
 	Size sz(GetSize());
 	sz.cx -= sz.cx % 4;
 	sz.cy -= sz.cy % 4;
@@ -80,6 +82,9 @@ void RunnerDraw::RefreshDraw() {
 RunnerCtrl::RunnerCtrl() {
 	CtrlLayout(*this);
 	
+	running = false;
+	stopped = true;
+	
 	last_total_duration = 0;
 	last_total_ready = 0;
 	last_total = 0;
@@ -88,6 +93,11 @@ RunnerCtrl::RunnerCtrl() {
 	slotdraw.Init(1, this);
 	
 	PostCallback(THISBACK(Refresher));
+}
+
+RunnerCtrl::~RunnerCtrl() {
+	running = false;
+	while (!stopped) {Sleep(100);}
 }
 	
 void RunnerCtrl::Refresher() {
@@ -144,6 +154,8 @@ void RunnerCtrl::Init() {
 	// Draw existing data
 	slotdraw.RefreshDraw();
 	
+	running = true;
+	stopped = false;
 	Thread::Start(THISBACK(Run));
 }
 
@@ -187,8 +199,8 @@ void RunnerCtrl::Run() {
 	
 	TimeStop ts, ts_total;
 	
-	while (!Thread::IsShutdownThreads()) {
-		while (!Thread::IsShutdownThreads()) {
+	while (!Thread::IsShutdownThreads() && running) {
+		while (!Thread::IsShutdownThreads() && running) {
 			bool all_processed = true;
 			int64 skiptime = 0;
 			
@@ -231,6 +243,9 @@ void RunnerCtrl::Run() {
 				
 			}
 			
+			tv.StoreChangedCache();
+			if (!running) break;
+			
 			last_total_duration = ts_total.Elapsed();
 			last_total = total;
 			last_total_ready = total_ready;
@@ -239,16 +254,16 @@ void RunnerCtrl::Run() {
 			slotdraw.RefreshDraw();
 			PostCallback(THISBACK(Refresher));
 			
-			tv.StoreChangedCache();
-			
 			if (all_processed)
 				break;
 		}
 		
-		for(int i = 0; i < 60 && !Thread::IsShutdownThreads(); i++) {
+		for(int i = 0; i < 60 && !Thread::IsShutdownThreads() && running; i++) {
 			Sleep(1000);
 		}
 	}
+	
+	stopped = true;
 }
 
 }

@@ -80,14 +80,13 @@ protected:
 	void SetWithoutData(bool b=true) {forced_without_data = b;}
 	SlotData& GetData(int sym_id, int tf_id, int pos);
 	
-	String path;
+	String path, style;
 	SlotPtr source;
 	TimeVector* vector;
 	
 	struct SlotValue : Moveable<SlotValue> {
 		int64 bytes, offset;
 		String name, description;
-		byte type;
 	};
 	Vector<SlotValue> values;
 	int reserved_bytes;
@@ -98,8 +97,6 @@ protected:
 public:
 	Slot();
 	virtual ~Slot() {}
-	
-	enum {VALUE_MAINDOUBLE, TYPE_SEPARATEDOUBLE};
 	
 	SlotPtr FindLinkSlot(const String& path);
 	SlotPtr ResolvePath(const String& path);
@@ -117,6 +114,7 @@ public:
 	bool IsReady(int pos, const SlotProcessAttributes& attr);
 	bool IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
 	String GetPath() const {return path;}
+	const String& GetStyle() const {return style;}
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) {
@@ -164,6 +162,7 @@ public:
 	void SetPath(String p) {path = p;}
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
+	void SetStyle(const String& json) {style = json;}
 	
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}

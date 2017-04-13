@@ -49,7 +49,6 @@ void Slot::AddValue(uint16 bytes, String name, String description) {
 	value.name = name;
 	value.description = description;
 	value.offset = reserved_bytes;
-	value.type = VALUE_MAINDOUBLE;
 	reserved_bytes += bytes;
 }
 

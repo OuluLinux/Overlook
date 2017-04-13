@@ -38,12 +38,14 @@ protected:
 	friend class RunnerDraw;
 	Vector<SlotProcessAttributes> attrs;
 	int last_total_duration, last_total, last_total_ready;
+	bool running, stopped;
 	
 	void Run();
 	
 public:
 	typedef RunnerCtrl CLASSNAME;
 	RunnerCtrl();
+	~RunnerCtrl();
 	
 	void Refresher();
 	

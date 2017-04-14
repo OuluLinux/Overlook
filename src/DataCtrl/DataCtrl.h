@@ -25,6 +25,7 @@ using namespace Upp;
 #include "NarxCtrl.h"
 #include "MonaCtrl.h"
 #include "RunnerCtrl.h"
+#include "SimBrokerCtrl.h"
 
 namespace DataCtrl {
 	

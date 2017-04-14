@@ -98,6 +98,7 @@ void TimeVector::Iterator::GetSlotProcessAttributes(Vector<SlotProcessAttributes
 	// Get symbol iterator
 	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator sym_begin, sym_iter, sym_iter_end;
 	Vector< Vector<SlotData>::Iterator >::Iterator symtf_begin, symtf_iter, symtf_iter_end;
+	
 	sym_begin = iter.Begin();
 	sym_iter = sym_begin;
 	sym_iter_end = iter.End();

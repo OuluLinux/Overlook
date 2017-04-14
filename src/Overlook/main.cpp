@@ -16,7 +16,6 @@ void InitTimeVector() {
 	tv.EnableCache();
 	tv.LimitMemory();
 	//tv.LimitMemory(640000);
-	
 	// Init sym/tfs/time space
 	{
 		MetaTrader mt;
@@ -43,11 +42,27 @@ void InitTimeVector() {
 		}
 		
 		
+		// Init time range
+		Date now = GetSysTime();
+		do {++now;}
+		while (now.day != 15);
+		tv.SetBegin(::begin); // Find begin of fastest #SPX data
+		tv.SetEnd(Time(now.year, now.month, now.day));
+		MetaTime& mtime = res.GetTime();
+		mtime.SetBegin(tv.GetBegin());
+		mtime.SetEnd(tv.GetEnd());
+		mtime.SetBasePeriod(tv.GetBasePeriod());
+		
+
 		// Link symbols and timeframes
 		
 		// Add DataBridge
-		tv.LinkPath("/databridge", "/db?addr=\"" + addr + "\"&port=" + IntStr(port));
-		tv.LinkPath("/osc", "/dummyoscillator");
+		tv.LinkPath("/open", "/db?addr=\"" + addr + "\"&port=" + IntStr(port));
+		//tv.LinkPath("/osc", "/dummyoscillator");
+		//tv.LinkPath("/rnn", "/rnn");
+		//tv.LinkPath("/rl", "/rl");
+		//tv.LinkPath("/dqn", "/dqn");
+		tv.LinkPath("/mona", "/mona");
 		
 		// Add GUI objects
 		for(int i = 0; i < symbols.GetCount(); i++) {
@@ -55,8 +70,13 @@ void InitTimeVector() {
 				
 				// Add by number
 				String dest = "/id/id" + IntStr(i) + "/tf" + IntStr(tfs[j]);
-				String src = "/bardata?bar=\"/databridge\"&id=" + IntStr(i) + "&period=" + IntStr(tfs[j]);
+				String src = "/bardata?bar=\"/open\"&id=" + IntStr(i) + "&period=" + IntStr(tfs[j]);
 				res.LinkPath(dest, src);
+				
+				//res.LinkPath(dest + "_rl", dest + "/cont?slot=\"/rl\"");
+				//res.LinkPath(dest + "_dqn", dest + "/cont?slot=\"/dqn\"");
+				res.LinkPath(dest + "_mona", dest + "/cont?slot=\"/mona\"");
+				
 				
 				// Add by name
 				dest = "/name/" + symbols[i].name + "/tf" + IntStr(tfs[j]);
@@ -64,22 +84,12 @@ void InitTimeVector() {
 				res.LinkPath(dest, src);
 				
 				
-				res.LinkPath(dest + "osc", dest + "/cont?slot=\"/osc\"");
+				//res.LinkPath(dest + "_osc", dest + "/cont?slot=\"/osc\"");
 				
+				//res.LinkPath(dest + "_rnn", "/rnnctrl?bar=\"" + dest + "\"&id=0&period=1");
 			}
 		}
 	}
-	
-	// Init time range
-	Date now = GetSysTime();
-	do {++now;}
-	while (now.day != 15);
-	tv.SetBegin(::begin); // Find begin of fastest #SPX data
-	tv.SetEnd(Time(now.year, now.month, now.day));
-	MetaTime& mt = res.GetTime();
-	mt.SetBegin(tv.GetBegin());
-	mt.SetEnd(tv.GetEnd());
-	mt.SetBasePeriod(tv.GetBasePeriod());
 	
 	
 	

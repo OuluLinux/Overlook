@@ -139,11 +139,19 @@ public:
 	}
 	template <class T>
 	T* GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
-		int newpos = attr.pos[attr.tf_id] - shift;
+		/*int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = (*(*(attr.sym_it + sym_id) + tf_id) + newpos);
 		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
-		return (T*)(it->Begin() + slot_offset + values[i].offset);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);*/
+		int pos = attr.pos[attr.tf_id] - shift;
+		if (pos < 0 || pos >= attr.bars[tf_id]) return 0;
+		SlotData& slot_data = GetData(sym_id, tf_id, pos);
+		if (!slot_data.GetCount())
+			LoadCache(sym_id, tf_id, pos);
+		byte* b = slot_data.Begin();
+		ASSERT(b);
+		return (T*)(b + slot_offset + values[i].offset);
 	}
 	template <class T>
 	T* GetValuePos(int i, int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr) {

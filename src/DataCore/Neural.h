@@ -9,6 +9,9 @@
 namespace DataCore {
 
 
+
+
+
 class Recurrent : public Slot {
 	enum {PHASE_GATHERDATA, PHASE_TRAINING};
 	
@@ -93,15 +96,28 @@ public:
 
 
 
+// RLAgent and DQNAgent are almost identical. 
+
 class RLAgent : public Slot {
-	ConvNet::Brain brain;
-	double reward_bonus, digestion_signal;
-	int prevactionix;
-	int simspeed;
-	int actionix;
 	
-	void Forward();
-	void Backward();
+	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	
+	struct SymTf : Moveable<SymTf> {
+		ConvNet::Brain brain;
+		int action, prev_action;
+		double reward;
+	};
+	Vector<SymTf> data;
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
+	
+	SlotPtr src;
+	Vector<double> input_array;
+	int sym_count, tf_count;
+	int max_shift, total;
+	bool do_training;
+	
+	void Forward(const SlotProcessAttributes& attr);
+	void Backward(const SlotProcessAttributes& attr);
 public:
 	RLAgent();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -115,39 +131,24 @@ public:
 
 class DQNAgent : public Slot {
 	
-	// Eye sensor has a maximum range and senses walls
-	/*struct Eye : Moveable<Eye> {
-		double angle; // angle relative to agent its on
-		double max_range;
-		double sensed_proximity; // what the eye is seeing. will be set in world.tick()
-		double vx, vy;
-		int sensed_type; // what does the eye see?
-		
-		void Init(double angle) {
-			this->angle = angle;
-			max_range = 120;
-			sensed_proximity = 120;
-			sensed_type = -1;
-			vx = 0;
-			vy = 0;
-		}
+	struct SymTf : Moveable<SymTf> {
+		ConvNet::DQNAgent agent;
+		int action, prev_action, velocity;
+		double reward;
 	};
+	Vector<SymTf> data;
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	Vector<Eye> eyes;*/
-	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	int max_velocity;
 	
-	ConvNet::DQNAgent agent;
-	
-	Vector<SimBroker> brokers;
+	SlotPtr src;
 	Vector<double> input_array;
-	SlotPtr src, rnn;
-	double digestion_signal, reward;
-	double smooth_reward;
-	int max_tail;
-	int action;
-	int iter;
+	int sym_count, tf_count;
+	int max_shift, total;
 	bool do_training;
 	
+	void Forward(const SlotProcessAttributes& attr);
+	void Backward(const SlotProcessAttributes& attr);
 public:
 	DQNAgent();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -155,28 +156,27 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "dqn";}
 	virtual String GetName() {return "DQN-Agent";}
-	void Forward(const SlotProcessAttributes& attr);
-	void Backward(const SlotProcessAttributes& attr);
-	void Reset();
 };
 
 
 
 class MonaAgent : public Slot {
 	
-	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	enum {IDLE, LONG, SHORT, CLOSE};
 	
-	Array<Array<Mona> > agent;
-	Vector<SENSOR> sensors;
+	struct SymTf : Moveable<SymTf> {
+		Mona mona;
+		int action, prev_action;
+		double reward, prev_open;
+	};
+	Vector<SymTf> data;
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	Vector<SimBroker> brokers;
+	SlotPtr src;
 	Vector<double> input_array;
-	SlotPtr src, rnn;
-	double digestion_signal, reward;
-	double smooth_reward;
-	int max_tail;
-	int action;
-	int iter;
+	double CHEESE_NEED, CHEESE_GOAL;
+	int sym_count, tf_count;
+	int max_shift, total;
 	bool do_training;
 	
 public:

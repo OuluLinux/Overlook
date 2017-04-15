@@ -62,7 +62,8 @@ void InitTimeVector() {
 		//tv.LinkPath("/rnn", "/rnn");
 		//tv.LinkPath("/rl", "/rl");
 		//tv.LinkPath("/dqn", "/dqn");
-		tv.LinkPath("/mona", "/mona");
+		//tv.LinkPath("/mona", "/mona");
+		tv.LinkPath("/narx", "/narx");
 		
 		// Add GUI objects
 		for(int i = 0; i < symbols.GetCount(); i++) {
@@ -75,7 +76,8 @@ void InitTimeVector() {
 				
 				//res.LinkPath(dest + "_rl", dest + "/cont?slot=\"/rl\"");
 				//res.LinkPath(dest + "_dqn", dest + "/cont?slot=\"/dqn\"");
-				res.LinkPath(dest + "_mona", dest + "/cont?slot=\"/mona\"");
+				//res.LinkPath(dest + "_mona", dest + "/cont?slot=\"/mona\"");
+				res.LinkPath(dest + "_narx", dest + "/cont?slot=\"/narx\"");
 				
 				
 				// Add by name

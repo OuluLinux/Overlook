@@ -7,7 +7,7 @@
 #include "SimBroker.h"
 
 namespace DataCore {
-
+using namespace Narx;
 
 
 
@@ -96,7 +96,51 @@ public:
 
 
 
-// RLAgent and DQNAgent are almost identical. 
+
+
+class NARX : public Slot {
+	
+	struct Tf : Moveable<Tf> {
+		Vector<double> Y, pY;
+		int input_count;
+		
+		//Vector<Vector<double> > Y;
+		Vector<Unit> hunits;
+		Vector<OutputUnit> output_units;
+		Vector<Vector<InputUnit> > inputs;
+		Vector<Vector<InputUnit> > feedbacks;
+		Vector<Vector<InputUnit> > exogenous;
+		Vector<EvaluationEngine> ee;
+		Vector<EvaluationEngine> rw;
+	};
+	Tf& GetData(const SlotProcessAttributes& attr) {return data[attr.tf_id];}
+	
+	Vector<double> out;
+	Vector<Tf> data;
+	SlotPtr change, open;
+	int H;
+	int a, a1;
+	int b;
+	int tf_count;
+	int sym_count;
+	int feedback, targets;
+	int hact;
+	int epoch;
+
+	
+public:
+	NARX();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() const {return "narx";}
+	virtual String GetName() {return "NARX";}
+};
+
+
+
+
+// RLAgent and DQNAgent are almost identical.
 
 class RLAgent : public Slot {
 	
@@ -190,18 +234,6 @@ public:
 
 
 
-class NARX : public Slot {
-	Narx::NarxData data;
-	Narx::NARX narx;
-	
-public:
-	NARX();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
-	virtual void Init();
-	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() const {return "narx";}
-	virtual String GetName() {return "NARX";}
-};
 
 
 

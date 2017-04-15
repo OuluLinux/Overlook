@@ -370,6 +370,404 @@ void Recurrent::Tick(const SlotProcessAttributes& attr) {
 
 
 
+NARX::NARX() {
+	H = 8;				// hidden unit count
+	hact = 0;			// sigmoid function
+	a = 10;				// like max_shift for input values
+	b = 10;				// like max_shift for exogenous vlaues
+	targets = 1;
+	feedback = 1;
+	a1 = a + 1;
+	
+	AddValue<double>();
+}
+
+void NARX::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void NARX::Init() {
+	TimeVector& tv = GetTimeVector();
+	
+	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
+	
+	open = FindLinkSlot("/open");
+	ASSERTEXC(open);
+	change = FindLinkSlot("/change");
+	ASSERTEXC(change);
+	Panic("Change must be from previous to current, not current to next");
+	
+	sym_count = tv.GetSymbolCount();
+	tf_count = tv.GetPeriodCount();
+	
+	epoch = 0;
+	
+	data.SetCount(tf_count);
+	for(int i = 0; i < tf_count; i++) {
+		Tf& s = data[i];
+		
+		int slower_tfs = tf_count - 1 - i;
+		s.input_count = slower_tfs * sym_count;	// total exogenous values
+		
+		s.ee.SetCount(sym_count);
+		s.rw.SetCount(sym_count);
+		
+		for (int i = 0; i < sym_count; i++) {
+			s.ee[i].Init(1);
+			s.rw[i].Init(1);
+		}
+	
+		s.hunits.SetCount(H);
+	
+		for (int i = 0; i < H; i++) {
+			
+			if (hact == 2) {
+				s.hunits[i].set_activation_func(ActivationFunctions::AsLog);
+				s.hunits[i].set_activation_func_derv(ActivationFunctions::AsLogDerv);
+			}
+			else if (hact == 1) {
+				s.hunits[i].set_activation_func(ActivationFunctions::BSigmoid);
+				s.hunits[i].set_activation_func_derv(ActivationFunctions::BSigmoidDerv);
+			}
+			else if (hact == 0) {
+				s.hunits[i].set_activation_func(ActivationFunctions::Sigmoid);
+				s.hunits[i].set_activation_func_derv(ActivationFunctions::SigmoidDerv);
+			}
+		}
+	
+		if (targets) {
+			s.inputs.SetCount(sym_count);
+	
+			for (int i = 0; i < sym_count; i++) {
+				s.inputs[i].SetCount(b);
+				for(int j = 0; j < b; j++) {
+					s.inputs[i][j].SetInput(0);
+				}
+			}
+	
+			for (int i = 0; i < H; i++) {
+				for (int j = 0; j < sym_count; j++) {
+					for(int k = 0; k < b; k++) {
+						s.hunits[i].AddInputUnit(s.inputs[j][k]);
+					}
+				}
+			}
+		}
+		
+	
+		if (feedback) {
+			s.feedbacks.SetCount(sym_count);
+	
+			for (int i = 0; i < sym_count; i++) {
+				s.feedbacks[i].SetCount(b);
+				for(int j = 0; j < b; j++) {
+					s.feedbacks[i][j].SetInput(0);
+				}
+			}
+	
+			for (int i = 0; i < H; i++) {
+				for (int j = 0; j < sym_count; j++) {
+					for(int k = 0; k < b; k++) {
+						s.hunits[i].AddInputUnit(s.feedbacks[j][k]);
+					}
+				}
+			}
+		}
+	
+		s.exogenous.SetCount(s.input_count);
+		for (int i = 0; i < s.input_count; i++) {
+			s.exogenous[i].SetCount(a1);
+			for(int j = 0; j < a1; j++) {
+				s.exogenous[i][j].SetInput(0);
+			}
+		}
+	
+		for (int i = 0; i < H; i++) {
+			for (int j = 0; j < s.input_count; j++) {
+				for(int k = 0; k < a1; k++) {
+					s.hunits[i].AddInputUnit(s.exogenous[j][k]);
+				}
+			}
+		}
+	
+		//printf("%d\n", index);
+		s.output_units.SetCount(sym_count);
+	
+		for (int i = 0; i < sym_count; i++) {
+			s.output_units[i].set_activation_func(ActivationFunctions::Identity);
+			s.output_units[i].set_activation_func_derv(ActivationFunctions::IdentityDerv);
+		}
+	
+		for (int i = 0; i < H; i++)
+			for (int j = 0; j < sym_count; j++)
+				s.output_units[j].AddInputUnit(s.hunits[i]);
+	
+		//WhenLog(Format("NARX: arch=%d, H=%d, hact =%d, a=%d, b=%d, M=%d, N=%d, feedback=%d, targets=%d",
+		//	arch, H, hact, a, b, input_count, sym_count, feedback, targets));
+		
+	}
+}
+
+bool NARX::Process(const SlotProcessAttributes& attr) {
+	
+	Tf& s = GetData(attr);
+	
+	
+	//if (attr.sym_id != 0) return true;
+	ASSERT(attr.sym_id == 0);
+	
+	
+	LOG(Format("narx sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	
+	
+	// Clear feedback loop in the beginning
+	if (attr.GetCounted() == 0) {
+		s.Y.Clear();
+		s.Y.SetCount(sym_count, 0);
+		s.pY.Clear();
+		s.pY.SetCount(sym_count, 0);
+	}
+	
+	int series_index = attr.GetCounted();
+	
+	for (int i = 0; i < sym_count; i++) {
+		s.ee[i].Clear();
+		s.rw[i].Clear();
+	}
+
+	if (!feedback) {
+		int feedback_index = 0;
+		
+		if (targets) {
+			for (int j = 0; j < sym_count; j++) {
+				Vector<InputUnit>& in = s.inputs[j];
+				for (int i = 0; i < b; i++) {
+					double* d = change->GetValue<double>(0, j, attr.tf_id, i, attr);
+					in[i].SetInput(d ? *d : 0);
+				}
+			}
+		}
+		
+		for (int i = 0; i < s.input_count; i++) {
+			int sym = i % sym_count;
+			int tf = attr.tf_id + 1 + i / sym_count;
+			
+			Vector<InputUnit>& exo = s.exogenous[i];
+			for (int j = 0; j < a1; j++) {
+				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				exo[j].SetInput(d ? *d : 0);
+			}
+		}
+
+		for (int i = 0; i < sym_count; i++) {
+			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* p = change->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			ASSERT(d && *d != 0.0);
+			s.output_units[i].SetTarget(*d);
+			s.ee[i].Insert(*d, s.output_units[i].GetOutput());
+			s.rw[i].Insert(*d, p ? *p : 0);
+		}
+
+		//FWhenLog(String("input target:index %1 : %2, output narx: %3\n").arg(series_index).arg(series[series_index]).arg(output_unit->GetOutput()).toStdString().c_str());
+		for (int i = 0; i < sym_count; i++) {
+			s.output_units[i].FixWeights();
+			s.output_units[i].ComputeDelta();
+			s.output_units[i].AdjustWeights();
+		}
+
+		//FWhenLog(String("ok delta=%1\n").arg(delta).toStdString().c_str());
+		for (int i = 0; i < H; i++) {
+			double delta = 0;
+			
+			for (int j = 0; j < sym_count; j++)
+				delta += s.output_units[j].GetDelta(s.hunits[i]);
+			
+			s.hunits[i].ComputeDelta(delta);
+			s.hunits[i].AdjustWeights();
+		}
+	}
+	else {
+		s.Y.SetCount(sym_count, 0);
+		
+		FeedbackInfo fi;
+		fi.Init(s.input_count, a1, sym_count, b, sym_count, b);
+		
+		for (int i = 0; i < s.input_count; i++) {
+			int sym = i % sym_count;
+			int tf = attr.tf_id + 1 + i / sym_count;
+			
+			Vector<InputUnit>& exo = s.exogenous[i];
+			for (int j = a1-1; j >= 0 ; j--) {
+				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				exo[j].SetInput(d ? *d : 0);
+				fi.X[i][j] = exo[j].GetInput();
+			}
+		}
+
+		if (targets) {
+			for (int i = 0; i < sym_count; i++) {
+				Vector<InputUnit>& in = s.inputs[i];
+				for (int j = b-1; j >= 0; j--) {
+					double* d = change->GetValue<double>(0, i, attr.tf_id, j, attr);
+					in[j].SetInput(d ? *d : 0);
+					fi.D[i][j] = in[j].GetInput();
+				}
+			}
+		}
+		
+		for (int i = 0; i < sym_count; i++) {
+			Vector<InputUnit>& f = s.feedbacks[i];
+			for (int j = b-1; j >= 0; j--) {
+				//FWhenLog(String("testing%1\n").arg(fi.Y[i*N+j]).toStdString().c_str());
+				f[j].SetInput(s.Y[i]); // Value should have been set in previous iteration or 0 at first
+
+				//FWhenLog(String("testing%1\n").arg(fi.Y[i*N+j]).toStdString().c_str());
+				fi.Y[i][j] = f[j].GetInput();
+			}
+		}
+
+		for (int i = 0; i < sym_count; i++) {
+			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* p = change->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			ASSERT(d && *d != 0.0);
+			s.output_units[i].SetTarget(*d);
+			s.Y[i] = s.output_units[i].GetOutput();
+			//FWhenLog(String("testing%1\n").arg(Y[i][t]).toStdString().c_str());
+			s.ee[i].Insert(*d, s.Y[i]);
+			s.rw[i].Insert(*d, p ? *p : 0);
+		}
+		
+		for (int i = 0; i < s.input_count; i++) {
+			Vector<InputUnit>& exo = s.exogenous[i];
+			for (int j = a; j >= 0 ; j--)
+				exo[j].SetInput(fi.X[i][j]);
+		}
+
+		if (targets) {
+			for (int i = 0; i < sym_count; i++) {
+				Vector<InputUnit>& in = s.inputs[i];
+				for (int j = b-1; j >= 0; j--)
+					in[j].SetInput(fi.D[i][j]);
+			}
+		}
+
+		
+		for (int i = 0; i < sym_count; i++) {
+			for (int j = b-1; j >= 0; j--)
+				s.feedbacks[i][j].SetInput(fi.Y[i][j]);
+		}
+		
+		for (int i = 0; i < sym_count; i++) {
+			s.output_units[i].FixWeights();
+			
+			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
+			ASSERT(d && *d != 0.0);
+			s.output_units[i].SetTarget(*d);
+
+			s.output_units[i].ComputeDelta();
+			s.output_units[i].AdjustWeights();
+		}
+
+		for (int i = 0; i < H; i++) {
+			double delta = 0;
+
+			for (int j = 0; j < sym_count; j++)
+				delta += s.output_units[j].GetDelta(s.hunits[i]);
+
+			s.hunits[i].ComputeDelta(delta);
+			s.hunits[i].FixWeights();
+			s.hunits[i].AdjustWeights();
+		}
+	}
+	
+	/*
+	if (logging) WhenLog("Epoch finished :)");
+
+	for (int i = 0; i < sym_count; i++) {
+		WhenLog(Format("target %d:epoch %d: F1 = %n; F2 = %n; F3 = %n; F4 = %n; KS1= %n; KS2=%n; KS12=%n; DA = %n"
+					 "; F1RW=%n; F2RW=%n; F3RW=%n; F4RW=%n; KS1=%n; KS2=%n; KS12=%n; DA=%n",
+			  i,
+			  epo,
+			  ee[i].F1(), ee[i].F2(), ee[i].F3(), ee[i].F4(),
+			  ee[i].KS1(),
+			  ee[i].KS2(), ee[i].KS12(), ee[i].DA(),
+			  rw[i].F1(), rw[i].F2(), rw[i].F3(), rw[i].F4(),
+			  rw[i].KS1(), rw[i].KS2(), rw[i].KS12(), rw[i].DA()));
+	}
+
+	Test(epo);*/
+	
+	
+	
+	
+	
+	
+	// Predict
+	{
+		out.SetCount(sym_count);
+		
+		if (targets) {
+			for (int j = 0; j < sym_count; j++) {
+				Vector<InputUnit>& in = s.inputs[j];
+				for (int i = 0; i < b; i++) {
+					double* d = change->GetValue<double>(0, i, attr.tf_id, i, attr);
+					in[i].SetInput(d ? *d : 0);
+				}
+			}
+		}
+		
+		if (feedback) {
+			for (int j = 0; j < sym_count; j++) {
+				Vector<InputUnit>& f = s.feedbacks[j];
+				for (int i = 0; i < b; i++) {
+					f[i].SetInput(s.pY[j]);
+				}
+			}
+		}
+		
+		for (int i = 0; i < s.input_count; i++) {
+			Vector<InputUnit>& exo = s.exogenous[i];
+			int sym = i % sym_count;
+			int tf = attr.tf_id + 1 + i / sym_count;
+			
+			for (int j = 0; j < a1; j++) {
+				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				exo[j].SetInput(d ? *d : 0);
+			}
+			//_log(String("ok %1").arg(exogenous_series[i][series_index]));
+			//FWhenLog(String("ok exo=%1\n").arg(exogenous_series[i][series_index]).toStdString().c_str());
+		}
+		
+		for (int i = 0; i < sym_count; i++) {
+			double out = s.output_units[i].GetOutput();
+			s.pY[i] = out;
+			
+			double* prv = open->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* dst = GetValue<double>(0, i, attr.tf_id, 0, attr);
+			*dst = *prv * (1.0 + out);
+		}
+	}
+	
+	
+	return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 RLAgent::RLAgent() {
 	AddValue<double>("Reward");
@@ -435,7 +833,7 @@ bool RLAgent::Process(const SlotProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
 	// Return reward value
 	Backward(attr);
@@ -547,7 +945,7 @@ void DQNAgent::Init() {
 	//ASSERTEXC(rnn);
 	
 	tf_count = tv.GetPeriodCount();
-	max_shift = 10;
+	max_shift = 8;
 	sym_count = tv.GetSymbolCount();
 	total = max_shift;
 	
@@ -577,7 +975,7 @@ bool DQNAgent::Process(const SlotProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
 	// Return reward value
 	Backward(attr);
@@ -753,7 +1151,7 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
 	SymTf& s = GetData(attr);
 	
@@ -764,6 +1162,7 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 		double* open = src->GetValue<double>(0, 0, attr);
 		double change = *open / s.prev_open - 1.0;
 		s.reward = s.action == SHORT ? change * -1.0 : change;
+		s.reward -= 0.0001; // add some constant expenses
 	} else {
 		s.reward = 0.0;
 	}
@@ -850,42 +1249,5 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	return do_training;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-NARX::NARX() {
-	
-}
-
-void NARX::SetArguments(const VectorMap<String, Value>& args) {
-	
-}
-
-void NARX::Init() {
-	
-	
-	
-}
-
-bool NARX::Process(const SlotProcessAttributes& attr) {
-	
-	
-	
-	return false;
-}
 
 }

@@ -66,7 +66,9 @@ void Container::SetArguments(const VectorMap<String, Value>& args) {
 		
 		// Load style from JSON embedded to the slot
 		String style_json = slot->GetStyle();
-		Value js = ParseJSON(style_json);
+		Value js;
+		if (!style_json.IsEmpty())
+			js = ParseJSON(style_json);
 		if (js.IsNull()) {
 			LOG("JSON parse failed");
 		} else {

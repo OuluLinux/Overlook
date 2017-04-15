@@ -10,7 +10,7 @@ NarxDraw::NarxDraw() {
 }
 
 void NarxDraw::Paint(Draw& w) {
-	if (!IsVisible()) return;
+	/*if (!IsVisible()) return;
 	TimeVector& tv = GetTimeVector();
 	
 	if (!src) {
@@ -24,7 +24,8 @@ void NarxDraw::Paint(Draw& w) {
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
-	id.DrawRect(sz, White());
+	id.DrawRect(sz, White());*/
+	
 	/*
 	int fast_tf = tv.GetPeriod(0);
 	int week_tf = tv.GetTfFromSeconds(7*24*60*60); // 1 week
@@ -102,7 +103,8 @@ void NarxDraw::Paint(Draw& w) {
 		id.DrawPolyline(pts[i], 1, GrayColor(128*i/pts.GetCount()));
 	}
 	*/
-	w.DrawImage(0, 0, id);
+	
+	//w.DrawImage(0, 0, id);
 }
 
 

@@ -12,7 +12,6 @@ class NarxDraw : public Ctrl {
 	Vector<Vector<Point> > pts;
 	Vector<double> tmp;
 	SlotPtr src, narx_slot;
-	Narx::NARX* narx;
 	int sym, tf;
 	
 public:
@@ -30,7 +29,6 @@ public:
 #include <CtrlCore/lay.h>
 
 class NarxCtrl : public WithNarxLayout<MetaNodeCtrl> {
-	Narx::NARX* narx;
 	Vector<double> ppl_list;
 	
 public:

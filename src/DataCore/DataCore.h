@@ -9,6 +9,7 @@
 #include "Table.h"
 #include "Filters.h"
 #include "Neural.h"
+#include "NeuralHuge.h"
 #include "Periodicals.h"
 #include "CostUtils.h"
 

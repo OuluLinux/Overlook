@@ -60,10 +60,10 @@ SlotData& Slot::GetData(int sym_id, int tf_id, int pos) {
 	return vector->data[sym_id][tf_id][pos];
 }
 
-void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
-	SlotData& data = GetData(attr.sym_id, attr.tf_id, pos);
+void Slot::SetReady(int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr, bool ready) {
+	SlotData& data = GetData(sym_id, tf_id, pos);
 	if (!data.GetCount())
-		LoadCache(attr.sym_id, attr.tf_id, pos);
+		LoadCache(sym_id, tf_id, pos);
 	byte* slot_vector = data.Begin();
 	byte* ready_slot = slot_vector + vector->slot_flag_offset;
 	ASSERT(ready_slot);
@@ -78,6 +78,10 @@ void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
 	
 	// The first byte in the slot (sym/tf/pos) vector is reserved for the 'changed' flag. Set it true also.
 	*(bool*)slot_vector = true;
+}
+
+void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
+	SetReady(attr.sym_id, attr.tf_id, pos, attr, ready);
 }
 
 bool Slot::IsReady(int pos, const SlotProcessAttributes& attr) {

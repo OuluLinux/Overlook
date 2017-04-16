@@ -14,6 +14,16 @@ class SimBroker : Moveable<SimBroker> {
 public:
 	SimBroker();
 	
+	void Cycle();
+	
+	bool IsZeroSignal() const;
+	int GetOpenOrderCount() const;
+	double GetWorkingMemoryChange() const;
+	double GetPreviousCycleChange() const;
+	double GetEquityFactor() const;
+	
+	void SetSignal(int sym, int signal);
+	void SetEquityFactor(double d);
 };
 
 

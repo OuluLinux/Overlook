@@ -25,6 +25,7 @@ INITBLOCK {
 	DataCore::TimeVector::Register<WdayHourDiff>();
 	DataCore::TimeVector::Register<EventOsc>();
 	DataCore::TimeVector::Register<RLAgent>();
+	DataCore::TimeVector::Register<HugeDQNAgent>();
 }
 
 END_UPP_NAMESPACE

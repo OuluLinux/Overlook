@@ -165,6 +165,7 @@ public:
 		return (T*)(b + slot_offset + values[i].offset);
 	}
 	
+	void SetReady(int sym, int tf, int pos, const SlotProcessAttributes& attr, bool ready=true);
 	void SetReady(int pos, const SlotProcessAttributes& attr, bool ready=true);
 	void SetReady(const SlotProcessAttributes& attr, bool ready=true) {SetReady(attr.GetCounted(), attr, ready);}
 	void SetPath(String p) {path = p;}

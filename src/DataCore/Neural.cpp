@@ -740,11 +740,16 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		
 		for (int i = 0; i < sym_count; i++) {
 			double out = s.output_units[i].GetOutput();
+			ASSERT(out < 0.1 && out > -0.1); // sane limits for current usage, not generic
 			s.pY[i] = out;
 			
+			// Set value
 			double* prv = open->GetValue<double>(0, i, attr.tf_id, 0, attr);
 			double* dst = GetValue<double>(0, i, attr.tf_id, 0, attr);
 			*dst = *prv * (1.0 + out);
+			
+			// Mark the slot of the symbol as processed
+			SetReady(i, attr.tf_id, attr.GetCounted(), attr, true);
 		}
 	}
 	
@@ -1008,12 +1013,15 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 	ASSERT(pos == total);
 	input_array[pos++] = (double)s.velocity / (double)max_velocity;
 	
-	// get action from brain
-	s.prev_action = s.action;
-	s.action = s.agent.Act(input_array);
-	int acc = s.action - max_velocity;
-	s.velocity = Upp::max(Upp::min(s.velocity + acc, +max_velocity), -max_velocity);
-	
+	// get action from agent
+	for(int i = 0; i < 10; i++) {
+		s.prev_action = s.action;
+		s.action = s.agent.Act(input_array);
+		int acc = s.action - max_velocity;
+		if (acc == 0) break;
+		s.velocity = Upp::max(Upp::min(s.velocity + acc, +max_velocity), -max_velocity);
+		input_array[total] = (double)s.velocity / (double)max_velocity;
+	}
 }
 
 void DQNAgent::Backward(const SlotProcessAttributes& attr) {

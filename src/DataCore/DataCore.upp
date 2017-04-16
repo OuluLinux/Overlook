@@ -41,7 +41,9 @@ file
 	Filters.h,
 	Filters.cpp,
 	Neural.h,
-	Neural.cpp;
+	Neural.cpp,
+	NeuralHuge.h,
+	NeuralHuge.cpp;
 
 mainconfig
 	"" = "DATACORE_ONLY MT";

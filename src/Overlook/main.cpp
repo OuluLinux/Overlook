@@ -22,7 +22,8 @@ void InitTimeVector() {
 		mt.Init(addr, port);
 		
 		// Add symbols
-		Vector<Symbol> symbols = mt.GetSymbols();
+		Vector<Symbol> symbols;
+		symbols <<= mt.GetSymbols();
 		ASSERTEXC(!symbols.IsEmpty());
 		for(int i = 0; i < symbols.GetCount(); i++) {
 			tv.AddSymbol(symbols[i].name);
@@ -63,9 +64,12 @@ void InitTimeVector() {
 		//tv.LinkPath("/rl", "/rl");
 		//tv.LinkPath("/dqn", "/dqn");
 		//tv.LinkPath("/mona", "/mona");
-		tv.LinkPath("/narx", "/narx");
+		//tv.LinkPath("/narx", "/narx");
+		//tv.LinkPath("/hugedqn", "/hugedqn");
+		//tv.LinkPath("/hugemona", "/hugemona");
 		
 		// Add GUI objects
+		res.LinkPath("/broker", "/brokerctrl?broker=\"/open\"");
 		for(int i = 0; i < symbols.GetCount(); i++) {
 			for(int j = 0; j < tfs.GetCount(); j++) {
 				
@@ -77,7 +81,9 @@ void InitTimeVector() {
 				//res.LinkPath(dest + "_rl", dest + "/cont?slot=\"/rl\"");
 				//res.LinkPath(dest + "_dqn", dest + "/cont?slot=\"/dqn\"");
 				//res.LinkPath(dest + "_mona", dest + "/cont?slot=\"/mona\"");
-				res.LinkPath(dest + "_narx", dest + "/cont?slot=\"/narx\"");
+				//res.LinkPath(dest + "_narx", dest + "/cont?slot=\"/narx\"");
+				//res.LinkPath(dest + "_hugedqn", dest + "/cont?slot=\"/hugedqn\"");
+				//res.LinkPath(dest + "_hugemona", dest + "/cont?slot=\"/hugemona\"");
 				
 				
 				// Add by name

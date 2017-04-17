@@ -68,7 +68,60 @@ inline void SyncToTimeframe(Time& t, int tf) {
 
 enum ENUM_APPLIED_PRICE { PRICE_CLOSE, PRICE_OPEN, PRICE_HIGH, PRICE_LOW, PRICE_MEDIAN, PRICE_TYPICAL, PRICE_WEIGHTED, PRICE_VOLUME, PRICE_TIME, PRICE_SELLVOLUME};
 enum VOLUME_TICK { VOLUME_TICK, VOLUME_REAL};
-
+enum ORDER_POOL {MODE_TRADES, MODE_HISTORY};
+enum SELECT_ORDER {SELECT_BY_POS, SELECT_BY_TICKET};
+enum OPERATION_CMD {OP_BUY, OP_SELL, OP_BUYLIMIT, OP_BUYSTOP, OP_SELLLIMIT, OP_SELLSTOP};
+enum SYMBOL_PROPERTIES {
+	MODE_LOW=1, MODE_HIGH=2, MODE_TIME=5, MODE_BID=9, MODE_ASK=10, MODE_POINT=11, MODE_DIGITS=12,
+	MODE_SPREAD=13, MODE_STOPLEVEL=14, MODE_LOTSIZE=15, MODE_TICKVALUE=16, MODE_TICKSIZE=17, MODE_SWAPLONG=18,
+	MODE_SWAPSHORT=19, MODE_STARTING=20, MODE_EXPIRATION=21, MODE_TRADEALLOWED=22, MODE_MINLOT=23, MODE_LOTSTEP=24,
+	MODE_MAXLOT=25, MODE_SWAPTYPE=26, MODE_PROFITCALCMODE=27, MODE_MARGINCALCMODE=28, MODE_MARGININIT=29, MODE_MARGINMAINTENANCE=30,
+	MODE_MARGINHEDGED=31, MODE_MARGINREQUIRED=32, MODE_FREEZELEVEL=33, MODE_CLOSEBY_ALLOWED=34};
+	
+enum ENUM_ACCOUNT_INFO_INTEGER {
+	ACCOUNT_LOGIN, ACCOUNT_TRADE_MODE, ACCOUNT_LEVERAGE, ACCOUNT_LIMIT_ORDERS, ACCOUNT_MARGIN_SO_MODE,
+	ACCOUNT_TRADE_ALLOWED, ACCOUNT_TRADE_EXPERT
+};
+enum ENUM_ACCOUNT_INFO_DOUBLE {
+	ACCOUNT_BALANCE, ACCOUNT_CREDIT, ACCOUNT_PROFIT, ACCOUNT_EQUITY,
+	ACCOUNT_MARGIN, ACCOUNT_MARGIN_FREE, ACCOUNT_MARGIN_LEVEL, ACCOUNT_MARGIN_SO_CALL,
+	ACCOUNT_MARGIN_SO_SO, ACCOUNT_MARGIN_INITIAL, ACCOUNT_MARGIN_MAINTENANCE, ACCOUNT_ASSETS,
+	ACCOUNT_LIABILITIES, ACCOUNT_COMMISSION_BLOCKED
+};
+enum ENUM_ACCOUNT_INFO_STRING {
+	ACCOUNT_NAME, ACCOUNT_SERVER, ACCOUNT_CURRENCY, ACCOUNT_COMPANY
+};
+enum ENUM_ACCOUNT_TRADE_MODE {
+	ACCOUNT_TRADE_MODE_DEMO, ACCOUNT_TRADE_MODE_CONTEST, ACCOUNT_TRADE_MODE_REAL
+};
+enum ENUM_ACCOUNT_STOPOUT_MODE {
+	ACCOUNT_STOPOUT_MODE_PERCENT, ACCOUNT_STOPOUT_MODE_MONEY
+};
+enum ENUM_FREEMARGIN_CALCMODE {
+	FREEMARGINMODE_WITHOUTOPENORDERS, FREEMARGINMODE_WITHOPENORDERS, FREEMARGINMODE_WITHOPENPROFIT, FREEMARGINMODE_WITHOPENLOSS
+};
+enum ENUM_SYMBOL_INFO_INTEGER {
+	SYMBOL_SELECT, SYMBOL_VISIBLE, SYMBOL_SESSION_DEALS, SYMBOL_SESSION_BUY_ORDERS, SYMBOL_SESSION_SELL_ORDERS, SYMBOL_VOLUME, SYMBOL_VOLUMEHIGH,
+	SYMBOL_VOLUMELOW, SYMBOL_TIME, SYMBOL_DIGITS, SYMBOL_SPREAD_FLOAT, SYMBOL_SPREAD, SYMBOL_TRADE_CALC_MODE, SYMBOL_TRADE_MODE, SYMBOL_START_TIME,
+	SYMBOL_EXPIRATION_TIME, SYMBOL_TRADE_STOPS_LEVEL, SYMBOL_TRADE_FREEZE_LEVEL, SYMBOL_TRADE_EXEMODE, SYMBOL_SWAP_MODE, SYMBOL_SWAP_ROLLOVER3DAYS,
+	SYMBOL_EXPIRATION_MODE, SYMBOL_FILLING_MODE, SYMBOL_ORDER_MODE
+};
+enum ENUM_SYMBOL_INFO_DOUBLE {
+	SYMBOL_BID, SYMBOL_BIDHIGH, SYMBOL_BIDLOW, SYMBOL_ASK, SYMBOL_ASKHIGH,
+	SYMBOL_ASKLOW, SYMBOL_LAST, SYMBOL_LASTHIGH, SYMBOL_LASTLOW, SYMBOL_POINT,
+	SYMBOL_TRADE_TICK_VALUE, SYMBOL_TRADE_TICK_VALUE_PROFIT, SYMBOL_TRADE_TICK_VALUE_LOSS,
+	SYMBOL_TRADE_TICK_SIZE, SYMBOL_TRADE_CONTRACT_SIZE, SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX,
+	SYMBOL_VOLUME_STEP, SYMBOL_VOLUME_LIMIT, SYMBOL_SWAP_LONG, SYMBOL_SWAP_SHORT,
+	SYMBOL_MARGIN_INITIAL, SYMBOL_MARGIN_MAINTENANCE, SYMBOL_MARGIN_LONG, SYMBOL_MARGIN_SHORT,
+	SYMBOL_MARGIN_LIMIT, SYMBOL_MARGIN_STOP, SYMBOL_MARGIN_STOPLIMIT, SYMBOL_SESSION_VOLUME,
+	SYMBOL_SESSION_TURNOVER, SYMBOL_SESSION_INTEREST, SYMBOL_SESSION_BUY_ORDERS_VOLUME,
+	SYMBOL_SESSION_SELL_ORDERS_VOLUME, SYMBOL_SESSION_OPEN, SYMBOL_SESSION_CLOSE,
+	SYMBOL_SESSION_AW, SYMBOL_SESSION_PRICE_SETTLEMENT, SYMBOL_SESSION_PRICE_LIMIT_MIN,
+	SYMBOL_SESSION_PRICE_LIMIT_MAX
+};
+enum ENUM_SYMBOL_INFO_STRING {
+	SYMBOL_CURRENCY_BASE, SYMBOL_CURRENCY_PROFIT, SYMBOL_CURRENCY_MARGIN, SYMBOL_DESCRIPTION, SYMBOL_PATH
+};
 
 struct Price : Moveable<Price> {
 	double ask, bid, volume;
@@ -259,8 +312,6 @@ struct Symbol : public Moveable<Symbol> {
 };
 
 
-enum {TYPE_BUY, TYPE_SELL, TYPE_BUY_LIMIT, TYPE_SELL_LIMIT, TYPE_BUY_STOP, TYPE_SELL_STOP};
-	
 struct DbgDouble {
 	double value;
 	Vector<double> past_values;
@@ -411,12 +462,87 @@ struct MTOrder : Moveable<MTOrder> {
 	}
 };
 
-class MetaTrader {
+class Brokerage {
+	
+	
+public:
+	Brokerage() {}
+	
+	virtual double	AccountInfoDouble(int property_id) = 0;
+	virtual int		AccountInfoInteger(int property_id) = 0;
+	virtual String	AccountInfoString(int property_id) = 0;
+	virtual double	AccountBalance() = 0;
+	virtual double	AccountCredit() = 0;
+	virtual String	AccountCompany() = 0;
+	virtual String	AccountCurrency() = 0;
+	virtual double	AccountEquity() = 0;
+	virtual double	AccountFreeMargin() = 0;
+	virtual double	AccountFreeMarginCheck(String symbol, int cmd, double volume) = 0;
+	virtual double	AccountFreeMarginMode() = 0;
+	virtual int		AccountLeverage() = 0;
+	virtual double	AccountMargin() = 0;
+	virtual String	AccountName() = 0;
+	virtual int		AccountNumber() = 0;
+	virtual double	AccountProfit() = 0;
+	virtual String	AccountServer() = 0;
+	virtual int		AccountStopoutLevel() = 0;
+	virtual int		AccountStopoutMode() = 0;
+	virtual double	MarketInfo(String symbol, int type) = 0;
+	virtual int		SymbolsTotal(int selected) = 0;
+	virtual String	SymbolName(int pos, int selected) = 0;
+	virtual int		SymbolSelect(String name, int select) = 0;
+	virtual double	SymbolInfoDouble(String name, int prop_id) = 0;
+	virtual int		SymbolInfoInteger(String name, int prop_id) = 0;
+	virtual String	SymbolInfoString(String name, int prop_id) = 0;
+	virtual int		RefreshRates() = 0;
+	virtual int		iBars(String symbol, int timeframe) = 0;
+	virtual int		iBarShift(String symbol, int timeframe, int datetime) = 0;
+	virtual double	iClose(String symbol, int timeframe, int shift) = 0;
+	virtual double	iHigh(String symbol, int timeframe, int shift) = 0;
+	virtual double	iLow(String symbol, int timeframe, int shift) = 0;
+	virtual double	iOpen(String symbol, int timeframe, int shift) = 0;
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start) = 0;
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start) = 0;
+	virtual int		iTime(String symbol, int timeframe, int shift) = 0;
+	virtual int		iVolume(String symbol, int timeframe, int shift) = 0;
+	virtual int		OrderClose(int ticket, double lots, double price, int slippage) = 0;
+	virtual double	OrderClosePrice() = 0;
+	virtual int		OrderCloseTime() = 0;
+	virtual String	OrderComment() = 0;
+	virtual double	OrderCommission() = 0;
+	virtual int		OrderDelete(int ticket) = 0;
+	virtual int		OrderExpiration() = 0;
+	virtual double	OrderLots() = 0;
+	virtual int		OrderMagicNumber() = 0;
+	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) = 0;
+	virtual double	OrderOpenPrice() = 0;
+	virtual int		OrderOpenTime() = 0;
+	virtual double	OrderProfit() = 0;
+	virtual int		OrderSelect(int index, int select, int pool) = 0;
+	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0) = 0;
+	virtual int		OrdersHistoryTotal() = 0;
+	virtual double	OrderStopLoss() = 0;
+	virtual int		OrdersTotal() = 0;
+	virtual double	OrderSwap() = 0;
+	virtual String	OrderSymbol() = 0;
+	virtual double	OrderTakeProfit() = 0;
+	virtual int		OrderTicket() = 0;
+	virtual int		OrderType() = 0;
+	virtual bool    IsDemo() = 0;
+	virtual bool    IsConnected() = 0;
+	virtual const Vector<Symbol>&	GetSymbols() = 0;
+	virtual const Vector<Price>&	GetAskBid() = 0;
+	virtual const Vector<PriceTf>&	GetTickData() = 0;
+	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false) = 0;
+	
+};
+
+class MetaTrader : public Brokerage {
 	// Vars
 	int port;
 	Mutex lock;
 	String mainaddr;
-	//XmlRpcRequest socket;
+	
 	
 	Index<String> blocked_currencies;
 	
@@ -429,6 +555,9 @@ class MetaTrader {
 	//VectorMap<String, Symbol> symbols;
 	Index<String> currencies;
 	Vector<Price> current_prices;
+	Vector<Symbol> symbols;
+	Vector<Price> askbid;
+	Vector<PriceTf> pricetf;
 	Mutex current_price_lock;
 	
 	ArrayMap<int, String> periodstr;
@@ -456,76 +585,72 @@ public:
 	int		Check();
 	void	Disconnect();
 	
-	double	AccountInfoDouble(int property_id);
-	int		AccountInfoInteger(int property_id);
-	String	AccountInfoString(int property_id);
-	double	AccountBalance();
-	double	AccountCredit();
-	String	AccountCompany();
-	String	AccountCurrency();
-	double	AccountEquity();
-	double	AccountFreeMargin();
-	double	AccountFreeMarginCheck(String symbol, int cmd, double volume);
-	double	AccountFreeMarginMode();
-	int		AccountLeverage();
-	double	AccountMargin();
-	String	AccountName();
-	int		AccountNumber();
-	double	AccountProfit();
-	String	AccountServer();
-	int		AccountStopoutLevel();
-	int		AccountStopoutMode();
-	double	MarketInfo(String symbol, int type);
-	int		SymbolsTotal(int selected);
-	String	SymbolName(int pos, int selected);
-	int		SymbolSelect(String name, int select);
-	double	SymbolInfoDouble(String name, int prop_id);
-	int		SymbolInfoInteger(String name, int prop_id);
-	String	SymbolInfoString(String name, int prop_id);
-	
-	int		RefreshRates();
-	
-	int		iBars(String symbol, int timeframe);
-	int		iBarShift(String symbol, int timeframe, int datetime);
-	double	iClose(String symbol, int timeframe, int shift);
-	double	iHigh(String symbol, int timeframe, int shift);
-	double	iLow(String symbol, int timeframe, int shift);
-	double	iOpen(String symbol, int timeframe, int shift);
-	int		iHighest(String symbol, int timeframe, int type, int count, int start);
-	int		iLowest(String symbol, int timeframe, int type, int count, int start);
-	int		iTime(String symbol, int timeframe, int shift);
-	int		iVolume(String symbol, int timeframe, int shift);
-	
-	int		OrderClose(int ticket, double lots, double price, int slippage);
-	double	OrderClosePrice();
-	int		OrderCloseTime();
-	String	OrderComment();
-	double	OrderCommission();
-	int		OrderDelete(int ticket);
-	int		OrderExpiration();
-	double	OrderLots();
-	int		OrderMagicNumber();
-	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration);
-	double	OrderOpenPrice();
-	int		OrderOpenTime();
-	double	OrderProfit();
-	int		OrderSelect(int index, int select, int pool);
-	int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
-	//int		OrderSend(const Order& id, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
-	int		OrdersHistoryTotal();
-	double	OrderStopLoss();
-	int		OrdersTotal();
-	double	OrderSwap();
-	String	OrderSymbol();
-	double	OrderTakeProfit();
-	int		OrderTicket();
-	int		OrderType();
-	bool    IsDemo();
-	bool    IsConnected();
-	Vector<Symbol>	GetSymbols();
-	Vector<Price>	GetAskBid();
-	Vector<PriceTf>	GetTickData();
-	void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
+	virtual double	AccountInfoDouble(int property_id);
+	virtual int		AccountInfoInteger(int property_id);
+	virtual String	AccountInfoString(int property_id);
+	virtual double	AccountBalance();
+	virtual double	AccountCredit();
+	virtual String	AccountCompany();
+	virtual String	AccountCurrency();
+	virtual double	AccountEquity();
+	virtual double	AccountFreeMargin();
+	virtual double	AccountFreeMarginCheck(String symbol, int cmd, double volume);
+	virtual double	AccountFreeMarginMode();
+	virtual int		AccountLeverage();
+	virtual double	AccountMargin();
+	virtual String	AccountName();
+	virtual int		AccountNumber();
+	virtual double	AccountProfit();
+	virtual String	AccountServer();
+	virtual int		AccountStopoutLevel();
+	virtual int		AccountStopoutMode();
+	virtual double	MarketInfo(String symbol, int type);
+	virtual int		SymbolsTotal(int selected);
+	virtual String	SymbolName(int pos, int selected);
+	virtual int		SymbolSelect(String name, int select);
+	virtual double	SymbolInfoDouble(String name, int prop_id);
+	virtual int		SymbolInfoInteger(String name, int prop_id);
+	virtual String	SymbolInfoString(String name, int prop_id);
+	virtual int		RefreshRates();
+	virtual int		iBars(String symbol, int timeframe);
+	virtual int		iBarShift(String symbol, int timeframe, int datetime);
+	virtual double	iClose(String symbol, int timeframe, int shift);
+	virtual double	iHigh(String symbol, int timeframe, int shift);
+	virtual double	iLow(String symbol, int timeframe, int shift);
+	virtual double	iOpen(String symbol, int timeframe, int shift);
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iTime(String symbol, int timeframe, int shift);
+	virtual int		iVolume(String symbol, int timeframe, int shift);
+	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
+	virtual double	OrderClosePrice();
+	virtual int		OrderCloseTime();
+	virtual String	OrderComment();
+	virtual double	OrderCommission();
+	virtual int		OrderDelete(int ticket);
+	virtual int		OrderExpiration();
+	virtual double	OrderLots();
+	virtual int		OrderMagicNumber();
+	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration);
+	virtual double	OrderOpenPrice();
+	virtual int		OrderOpenTime();
+	virtual double	OrderProfit();
+	virtual int		OrderSelect(int index, int select, int pool);
+	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
+	virtual int		OrdersHistoryTotal();
+	virtual double	OrderStopLoss();
+	virtual int		OrdersTotal();
+	virtual double	OrderSwap();
+	virtual String	OrderSymbol();
+	virtual double	OrderTakeProfit();
+	virtual int		OrderTicket();
+	virtual int		OrderType();
+	virtual bool    IsDemo();
+	virtual bool    IsConnected();
+	virtual const Vector<Symbol>&	GetSymbols();
+	virtual const Vector<Price>&	GetAskBid();
+	virtual const Vector<PriceTf>&	GetTickData();
+	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
 	
 	String	GetSymbolsRaw();
 	String	GetAskBidRaw();

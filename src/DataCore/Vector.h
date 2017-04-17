@@ -130,6 +130,7 @@ protected:
 	Vector<String> symbols;
 	Vector<int> bars, slot_bytes;
 	int64 total_slot_bytes;
+	SlotProcessAttributes* current_slotattr;
 	
 	
 	typedef SlotPtr (*SlotFactory)();
@@ -184,6 +185,7 @@ public:
 		if (!data.GetCount()) return NULL;
 		return (T*)(data.Begin() + slot.slot_offset + slot.values[slot_value_pos].offset);
 	}
+	SlotProcessAttributes& GetCurrent() const {return *current_slotattr;}
 	
 	
 	void SetCacheFile(String path) {cache_file_path = path;}

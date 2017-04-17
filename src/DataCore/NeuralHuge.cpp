@@ -66,25 +66,33 @@ void HugeDQNAgent::Init() {
 	
 	max_velocity = 5;
 	do_training = true;
+	
+	//broker.Init();
 }
 
 bool HugeDQNAgent::Process(const SlotProcessAttributes& attr) {
 	
-	ASSERT(attr.tf_id == 0 && attr.sym_id == 0);
+	if (attr.tf_id == 0 && attr.sym_id == 0) {
+		
+		// Check if position is useless for training
+		/*double* open = src->GetValue<double>(0, 0, attr);
+		double* prev = src->GetValue<double>(0, 1, attr);
+		if (!prev || *prev == *open)
+			return true;*/
+		
+		LOG(Format("HugeDQNAgent::Process sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+		Cout() << Format("HugeDQNAgent::Process sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()) << "\n";
+		
+		// Return reward value
+		Backward(attr);
+		
+		// Get new action
+		Forward(attr);
+	}
 	
-	// Check if position is useless for training
-	/*double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
-	if (!prev || *prev == *open)
-		return true;*/
-	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
-	
-	// Return reward value
-	Backward(attr);
-	
-	// Get new action
-	Forward(attr);
+	// Write signal to symbol's data-row
+	double* out = GetValue<double>(0, attr);
+	*out = broker.GetSignal(attr.sym_id);
 	
 	return do_training;
 }
@@ -124,7 +132,7 @@ void HugeDQNAgent::Forward(const SlotProcessAttributes& attr) {
 	// Write open orders and moving average of reward
 	input_array[pos++] = broker.GetOpenOrderCount();
 	input_array[pos++] = broker.GetWorkingMemoryChange();
-	input_array[pos++] = broker.GetEquityFactor();
+	input_array[pos++] = broker.GetFreeMarginLevel();
 	ASSERT(pos == total);
 	
 	
@@ -140,16 +148,16 @@ void HugeDQNAgent::Forward(const SlotProcessAttributes& attr) {
 		// WAIT action breaks loop
 		if (action == 0) break;
 		
-		// Increase account factor
+		// Increase free margin level
 		else if (action == 1) {
-			broker.SetEquityFactor(broker.GetEquityFactor() + 0.05);
-			input_array[total-1] = broker.GetEquityFactor();
+			broker.SetFreeMarginLevel(broker.GetFreeMarginLevel() + 0.05);
+			input_array[total-1] = broker.GetFreeMarginLevel();
 		}
 		
-		// Decrease account factor
+		// Decrease free margin level
 		else if (action == 2) {
-			broker.SetEquityFactor(broker.GetEquityFactor() - 0.05);
-			input_array[total-1] = broker.GetEquityFactor();
+			broker.SetFreeMarginLevel(broker.GetFreeMarginLevel() - 0.05);
+			input_array[total-1] = broker.GetFreeMarginLevel();
 		}
 		
 		// Make change to signal
@@ -179,10 +187,6 @@ void HugeDQNAgent::Backward(const SlotProcessAttributes& attr) {
 	
 	// pass to brain for learning
 	agent.Learn(reward);
-	
-	// Write reward to oscillator
-	double* out = GetValue<double>(0, attr);
-	*out = reward;
 }
 
 
@@ -301,25 +305,32 @@ void HugeMonaAgent::Init() {
 	
 	max_velocity = 5;
 	do_training = true;
+	
+	//broker.Init();
 }
 
 bool HugeMonaAgent::Process(const SlotProcessAttributes& attr) {
 	
-	ASSERT(attr.tf_id == 0 && attr.sym_id == 0);
+	if (attr.tf_id == 0 && attr.sym_id == 0) {
+		
+		// Check if position is useless for training
+		/*double* open = src->GetValue<double>(0, 0, attr);
+		double* prev = src->GetValue<double>(0, 1, attr);
+		if (!prev || *prev == *open)
+			return true;*/
+		
+		LOG(Format("HugeMonaAgent::Process sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+		
+		// Return reward value
+		Backward(attr);
+		
+		// Get new action
+		Forward(attr);
+	}
 	
-	// Check if position is useless for training
-	/*double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
-	if (!prev || *prev == *open)
-		return true;*/
-	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
-	
-	// Return reward value
-	Backward(attr);
-	
-	// Get new action
-	Forward(attr);
+	// Write signal to symbol's data-row
+	double* out = GetValue<double>(0, attr);
+	*out = broker.GetSignal(attr.sym_id);
 	
 	return do_training;
 }
@@ -359,7 +370,7 @@ void HugeMonaAgent::Forward(const SlotProcessAttributes& attr) {
 	// Write open orders and moving average of reward
 	input_array[pos++] = broker.GetOpenOrderCount();
 	input_array[pos++] = broker.GetWorkingMemoryChange();
-	input_array[pos++] = broker.GetEquityFactor();
+	input_array[pos++] = broker.GetFreeMarginLevel();
 	input_array[pos++] = broker.GetPreviousCycleChange(); // reward
 	ASSERT(pos == total);
 	
@@ -376,16 +387,16 @@ void HugeMonaAgent::Forward(const SlotProcessAttributes& attr) {
 		// WAIT action breaks loop
 		if (action == 0) break;
 		
-		// Increase account factor
+		// Increase free margin level
 		else if (action == 1) {
-			broker.SetEquityFactor(broker.GetEquityFactor() + 0.05);
-			input_array[total-2] = broker.GetEquityFactor();
+			broker.SetFreeMarginLevel(broker.GetFreeMarginLevel() + 0.05);
+			input_array[total-2] = broker.GetFreeMarginLevel();
 		}
 		
-		// Decrease account factor
+		// Decrease free margin level
 		else if (action == 2) {
-			broker.SetEquityFactor(broker.GetEquityFactor() - 0.05);
-			input_array[total-2] = broker.GetEquityFactor();
+			broker.SetFreeMarginLevel(broker.GetFreeMarginLevel() - 0.05);
+			input_array[total-2] = broker.GetFreeMarginLevel();
 		}
 		
 		// Make change to signal
@@ -415,6 +426,7 @@ void HugeMonaAgent::Forward(const SlotProcessAttributes& attr) {
 			
 			// Clear working memory.
 		    agent.ClearWorkingMemory();
+		    broker.ClearWorkingMemory();
 		}
 	}
 	

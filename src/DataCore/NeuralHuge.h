@@ -7,8 +7,12 @@
 namespace DataCore {
 using namespace Narx;
 
-
-// HugeDQNAgent allows multiple actions for different symbols until wait action is given.
+/*
+	Huge agents allows multiple actions for different symbols until wait action is given.
+	These are too slow to process with current computers.
+	To avoid getting stuck with this, "agents of agents" or "double agents" was introduced.
+	This was still good exercise for the programmer and some common problems were solved.
+*/
 
 class HugeDQNAgent : public Slot {
 	

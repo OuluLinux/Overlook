@@ -153,10 +153,11 @@ void RunnerCtrl::Init() {
 	
 	// Draw existing data
 	slotdraw.RefreshDraw();
-	
+	/*
 	running = true;
 	stopped = false;
 	Thread::Start(THISBACK(Run));
+	*/
 }
 
 void RunnerCtrl::SetArguments(const VectorMap<String, Value>& args) {

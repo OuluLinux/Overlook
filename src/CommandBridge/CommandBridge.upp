@@ -1,4 +1,4 @@
-description "A custom drop-down console for Windows. Fills the need for guake and tools when coming back from linux, without slowness of cygwin and conemu. \377";
+description "A custom drop-down console. Useful for management.\377";
 
 uses
 	CtrlLib,

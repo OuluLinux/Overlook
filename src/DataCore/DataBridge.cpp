@@ -42,7 +42,7 @@ void DataBridge::Init() {
 		connected = mt.AccountNumber();
 		account_server = mt.AccountServer();
 		
-		symbols = mt.GetSymbols();
+		symbols <<= mt.GetSymbols();
 		
 		tfs.Clear();
 		int base_mtf = tv.GetBasePeriod() / 60;
@@ -151,6 +151,8 @@ void DataBridge::Init() {
 	*/
 	
 	
+	
+	demo.Init(mt);
 }
 
 void DataBridge::DownloadRemoteData() {

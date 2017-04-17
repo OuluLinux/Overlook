@@ -13,6 +13,7 @@ TimeVector::TimeVector() {
 	bars_total = 0;
 	reserved_memory = 0;
 	slot_flag_bytes = 0;
+	current_slotattr = NULL;
 }
 
 TimeVector::~TimeVector() {

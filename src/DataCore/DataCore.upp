@@ -1,4 +1,4 @@
-description "\377B0,0,128";
+description "High-performance data processing library.\377B0,0,128";
 
 uses
 	Core,
@@ -43,7 +43,9 @@ file
 	Neural.h,
 	Neural.cpp,
 	NeuralHuge.h,
-	NeuralHuge.cpp;
+	NeuralHuge.cpp,
+	NeuralDoubleAgents.h,
+	NeuralDoubleAgents.cpp;
 
 mainconfig
 	"" = "DATACORE_ONLY MT";

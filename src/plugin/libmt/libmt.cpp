@@ -13,12 +13,12 @@ inline dword TimestampNow() {
 
 String Order::GetTypeString() const {
 	switch (type) {
-		case TYPE_BUY: return "Buy";
-		case TYPE_SELL: return "Sell";
-		case TYPE_BUY_LIMIT: return "Buy Limit";
-		case TYPE_SELL_LIMIT: return "Sell Limit";
-		case TYPE_BUY_STOP: return "Buy Stop";
-		case TYPE_SELL_STOP: return "Sell Stop";
+		case OP_BUY: return "Buy";
+		case OP_SELL: return "Sell";
+		case OP_BUYLIMIT: return "Buy Limit";
+		case OP_SELLLIMIT: return "Sell Limit";
+		case OP_BUYSTOP: return "Buy Stop";
+		case OP_SELLSTOP: return "Sell Stop";
 		default: return "Unknown";
 	}
 }
@@ -544,8 +544,8 @@ String GetProxy(String currency) {
 		return "USD" + currency;
 }
 
-Vector<Symbol> MetaTrader::GetSymbols() {
-	Vector<Symbol> symbols;
+const Vector<Symbol>& MetaTrader::GetSymbols() {
+	symbols.SetCount(0);
 	
 	// Get symbols from Broker
 	String s;
@@ -737,9 +737,7 @@ Vector<Symbol> MetaTrader::GetSymbols() {
 	return symbols;
 }
 
-Vector<Price> MetaTrader::GetAskBid() {
-	Vector<Price> out;
-	
+const Vector<Price>& MetaTrader::GetAskBid() {
 	String content;
 	while (1) {
 		try {
@@ -755,7 +753,7 @@ Vector<Price> MetaTrader::GetAskBid() {
 	Vector<String> lines = Split(content, ";");
 	int c1 = lines.GetCount();
 	
-	out.SetCount(c1);
+	askbid.SetCount(c1);
 	for(int i = 0; i < c1; i++ ) {
 		Vector<String> line = Split(lines[i], ",");
 		double ask = StrDbl(line[1]);
@@ -763,13 +761,13 @@ Vector<Price> MetaTrader::GetAskBid() {
 		double volume = 0;
 		if (line.GetCount() > 3)
 			volume = StrDbl(line[3]);
-		Price& p = out[i];
+		Price& p = askbid[i];
 		p.time = time;
 		p.ask = ask;
 		p.bid = bid;
 		p.volume = volume;
 	}
-	return out;
+	return askbid;
 }
 
 
@@ -920,8 +918,8 @@ void MetaTrader::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int 
 #define GET_INT() StrInt(v[pos++])
 #define GET_DBL() StrDbl(v[pos++])
 
-Vector<PriceTf>	MetaTrader::GetTickData() {
-	Vector<PriceTf> out;
+const Vector<PriceTf>&	MetaTrader::GetTickData() {
+	pricetf.SetCount(0);
 	
 	// Send a message to Broker to store data
 	String s;
@@ -975,7 +973,7 @@ Vector<PriceTf>	MetaTrader::GetTickData() {
 				volume = GET_DBL();				
 			}
 			
-			PriceTf& p = out.Add();
+			PriceTf& p = pricetf.Add();
 			p.time = time;
 			p.high = high;
 			p.low = low;
@@ -989,7 +987,7 @@ Vector<PriceTf>	MetaTrader::GetTickData() {
 	int magic = GET_INT();
 	ASSERT(magic == 1234);
 	
-	return out;
+	return pricetf;
 }
 
 

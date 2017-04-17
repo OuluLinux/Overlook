@@ -3,6 +3,7 @@
 
 #include <plugin/libmt/libmt.h>
 #include "Slot.h"
+#include "SimBroker.h"
 
 namespace DataCore {
 
@@ -54,6 +55,9 @@ public:
 	int GetTf(int i) const {return tfs[i];}
 	int GetTfCount() const {return tfs.GetCount();}
 	
+	
+	
+	SimBroker demo;
 };
 
 }

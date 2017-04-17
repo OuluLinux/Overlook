@@ -26,6 +26,7 @@ INITBLOCK {
 	DataCore::TimeVector::Register<EventOsc>();
 	DataCore::TimeVector::Register<RLAgent>();
 	DataCore::TimeVector::Register<HugeDQNAgent>();
+	DataCore::TimeVector::Register<HugeMonaAgent>();
 }
 
 END_UPP_NAMESPACE

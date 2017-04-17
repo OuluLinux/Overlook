@@ -1,4 +1,4 @@
-description "Hit chart player. Plays the most popular music.\377";
+description "Cultural overlook, a hit chart player. Plays the most popular music.\377";
 
 uses
 	CtrlLib,

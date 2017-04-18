@@ -11,6 +11,8 @@ file
 	DataCtrl.h,
 	DataCtrl.cpp,
 	DataCtrl_.icpp,
+	SessionCtrl.h,
+	SessionCtrl.cpp,
 	Container.h,
 	Container.cpp,
 	EventCtrl.h,

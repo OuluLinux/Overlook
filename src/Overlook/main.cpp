@@ -16,6 +16,7 @@ void InitTimeVector() {
 	tv.EnableCache();
 	tv.LimitMemory();
 	//tv.LimitMemory(640000);
+	
 	// Init sym/tfs/time space
 	{
 		MetaTrader mt;
@@ -159,8 +160,13 @@ struct Runner {
 };
 
 GUI_APP_MAIN {
-	InitTimeVector();
-	InitIndicators();
+	//InitTimeVector();
+	//InitIndicators();
+	Loader loader;
+	loader.Run();
+	
+	if (loader.exit)
+		return;
 	
 	Runner run;
 	run.Start();

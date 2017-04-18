@@ -73,7 +73,7 @@ void BrokerCtrl::Init() {
 	
 	
 	
-	Thread::Start(THISBACK(DummyRunner));
+	//Thread::Start(THISBACK(DummyRunner));
 }
 
 void BrokerCtrl::Refresher() {

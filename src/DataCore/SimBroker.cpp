@@ -391,19 +391,47 @@ int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
 }
 
 double	SimBroker::iClose(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	TimeVector& tv = GetTimeVector();
+	int sym = FindSymbol(symbol);
+	SlotProcessAttributes& attr = tv.GetCurrent();
+	return *src->GetValue<double>(
+		0,
+		sym,
+		tv.FindPeriod(tv.GetTfFromSeconds(timeframe*60)),
+		-1+shift, attr);
 }
 
 double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	TimeVector& tv = GetTimeVector();
+	int sym = FindSymbol(symbol);
+	SlotProcessAttributes& attr = tv.GetCurrent();
+	return *src->GetValue<double>(
+		2,
+		sym,
+		tv.FindPeriod(tv.GetTfFromSeconds(timeframe*60)),
+		shift, attr);
 }
 
 double	SimBroker::iLow(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	TimeVector& tv = GetTimeVector();
+	int sym = FindSymbol(symbol);
+	SlotProcessAttributes& attr = tv.GetCurrent();
+	return *src->GetValue<double>(
+		1,
+		sym,
+		tv.FindPeriod(tv.GetTfFromSeconds(timeframe*60)),
+		shift, attr);
 }
 
 double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	TimeVector& tv = GetTimeVector();
+	int sym = FindSymbol(symbol);
+	SlotProcessAttributes& attr = tv.GetCurrent();
+	return *src->GetValue<double>(
+		0,
+		sym,
+		tv.FindPeriod(tv.GetTfFromSeconds(timeframe*60)),
+		shift, attr);
 }
 
 int		SimBroker::iHighest(String symbol, int timeframe, int type, int count, int start) {

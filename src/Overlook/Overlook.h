@@ -15,6 +15,22 @@ using namespace RefCore;
 #define IMAGEFILE <Overlook/Overlook.iml>
 #include <Draw/iml_header.h>
 
+#define LAYOUTFILE <Overlook/Overlook.lay>
+#include <CtrlCore/lay.h>
+
+
+class Loader : public WithLoaderLayout<TopWindow> {
+	
+public:
+	typedef Loader CLASSNAME;
+	Loader();
+	
+	
+	void Exit() {exit = true;}
+	
+	bool exit;
+};
+
 class Overlook : public TopWindow {
 	
 protected:

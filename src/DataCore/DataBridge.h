@@ -10,14 +10,16 @@ namespace DataCore {
 class DataBridge : public Slot {
 	MetaTrader mt;
 	
-	bool connected;
-	String account_server;
-	String addr;
-	int port;
 	Vector<Symbol> symbols;
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	VectorMap<int, double> points;
+	Index<String> currencies;
+	String account_server;
+	String addr;
+	int port;
+	int vnode_begin;
+	bool connected;
 	bool enable_bardata;
 	bool has_written;
 	bool running, stopped;
@@ -57,8 +59,6 @@ public:
 	int GetSymbolCount() const {return symbols.GetCount();}
 	int GetTf(int i) const {return tfs[i];}
 	int GetTfCount() const {return tfs.GetCount();}
-	
-	
 	
 	SimBroker demo;
 };

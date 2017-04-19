@@ -45,7 +45,10 @@ void Recurrent::LoadThis() {
 }
 
 void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("type");
+	if (i == -1) throw DataExc("Recurrent type must be set");
+	String type = args[i];
+	ASSERTEXC(type == "lstm"); // only lstm is supported currently
 }
 
 void Recurrent::Init() {
@@ -381,8 +384,6 @@ NARX::NARX() {
 	
 	AddValue<double>();
 	
-	Panic("TODO: DateTime Exogen series");
-	Panic("TODO: Total Volume");
 }
 
 void NARX::SetArguments(const VectorMap<String, Value>& args) {
@@ -390,6 +391,7 @@ void NARX::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void NARX::Init() {
+	
 	TimeVector& tv = GetTimeVector();
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
@@ -512,6 +514,9 @@ void NARX::Init() {
 }
 
 bool NARX::Process(const SlotProcessAttributes& attr) {
+	
+	Panic("TODO: DateTime Exogen series");
+	Panic("TODO: Total Volume");
 	
 	Tf& s = GetData(attr);
 	

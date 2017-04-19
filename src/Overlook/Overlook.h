@@ -19,12 +19,32 @@ using namespace RefCore;
 #include <CtrlCore/lay.h>
 
 
+struct OverlookSession {
+	
+	Time begin, end;
+	String addr;
+	int port;
+	Vector<int> tfs;
+	VectorMap<String, String> link_core, link_ctrl, link_symctrl;
+	String datadir;
+	
+	void Serialize(Stream& s) {
+		s % begin % end % addr % port % tfs % link_core % link_ctrl % datadir;
+	}
+};
+
+
 class Loader : public WithLoaderLayout<TopWindow> {
 	
 public:
 	typedef Loader CLASSNAME;
 	Loader();
 	
+	void RefreshSessions();
+	void ShowLicense();
+	void Load();
+	void Create();
+	void LoadSession(OverlookSession& ses);
 	
 	void Exit() {exit = true;}
 	

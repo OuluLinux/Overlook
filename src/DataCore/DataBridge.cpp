@@ -9,6 +9,7 @@ DataBridge::DataBridge()  {
 	has_written = false;
 	running = false;
 	stopped = true;
+	vnode_begin = -1;
 	
 	AddValue<double>(); // open
 	AddValue<double>(); // low
@@ -68,6 +69,26 @@ void DataBridge::Init() {
 		throw DataExc("DataBridge::Init: unknown error");
 	}
 	
+	// Find currencies
+	VectorMap<String, int> currencies;
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		Symbol& s = symbols[i];
+		tv.AddSymbol(s.name);
+		if (s.IsForex() && s.name.GetCount() == 6) {
+			String a = s.name.Left(3);
+			String b = s.name.Right(3);
+			currencies.GetAdd(a, 0)++;
+			currencies.GetAdd(b, 0)++;
+		}
+	}
+	SortByValue(currencies, StdGreater<int>()); // sort by must pairs having currency
+	this->currencies.Clear();
+	for(int i = 0; i < currencies.GetCount(); i++) {
+		this->currencies.Add(currencies.GetKey(i));
+	}
+	
+	
+	// Assert that first tf matches base period
 	if (tv.GetBasePeriod() != tfs[0] * 60) {
 		throw DataExc("Resolver's base period differs from mt");
 	}
@@ -157,7 +178,10 @@ void DataBridge::Init() {
 	}
 	*/
 	
-	
+
+
+	Panic("TODO vnode_begin");
+	// set vnode_begin
 	
 	demo.Init(mt);
 	
@@ -304,6 +328,11 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	
 	ASSERT(attr.GetCounted() == 0);
 	
+	if (vnode_begin != -1 && attr.sym_id >= vnode_begin) {
+		//ProcessVirtualNode(attr);
+		Panic("TODO");
+	}
+	
 	
 	// Open data-file
 	int period = attr.GetPeriod();
@@ -449,15 +478,148 @@ VirtualNode::VirtualNode() {
 }
 
 void VirtualNode::SetArguments(const VectorMap<String, Value>& args) {
+	/*
+	int i = args.Find("symbol");
+	if (i == -1) return 1;
+	symbol = args[i];
 	
+	i = args.Find("period");
+	if (i == -1) return 1;
+	period = args[i];
+	
+	return 0;
+	*/
 }
 
 void VirtualNode::Init() {
+	/*
+	BarData::Init();
 	
+	if (period == -1) return 1;
+	SetPeriod(period);
+	
+	SetSkipSetCount();
+	
+	PathResolver& res = GetResolver();
+	String this_path = GetPath();
+	
+	// Find all pairs
+	String pairpath = "/pairs";
+	PathLink* pairs = res.FindLinkPath(pairpath);
+	if (!pairs) return 1;
+	int count = pairs->keys.GetCount();
+	if (!count) return 1;
+	
+	for(int i = 0; i < count; i++) {
+		const String& key = pairs->keys.GetKey(i);
+		
+		String k0 = key.Left(3);
+		String k1 = key.Right(3);
+		if (k0 != symbol && k1 != symbol) continue;
+		
+		String period_str = IntStr(GetPeriod());
+		
+		// Add the PairData
+		String path = pairpath + "/" + key + "/tf" + period_str;
+		PathLink* link = res.FindLinkPath(path);
+		if (!link) {
+			LOG("MeshNodeConverter::Init: Not a linked path: " << path);
+			return 1;
+		}
+		
+		BarData* bd = link->link.Get<BarData>();
+		if (!bd) {
+			LOG("MeshNodeConverter::Init: Not a BarData: " << pairpath << "/" << key);
+			return 1;
+		}
+		
+		if (k0 == symbol) {
+			PairData& p = pairs0.Add();
+			p.bardata = link->link;
+			bd0.Add(bd);
+		} else {
+			PairData& p = pairs1.Add();
+			p.bardata = link->link;
+			bd1.Add(bd);
+		}
+		
+	}
+	
+	
+	return 0;
+	*/
 }
 
 bool VirtualNode::Process(const SlotProcessAttributes& attr) {
+	/*
+	int bars = GetTime().GetCount(period);
 	
+	int count0 = pairs0.GetCount();
+	int count1 = pairs1.GetCount();
+	pos.SetCount(count0 + count1, 0);
+	
+	for(int i = 0; i < count0; i++)
+		bd0[i]->Refresh();
+	for(int i = 0; i < count1; i++)
+		bd1[i]->Refresh();
+	
+	int counted = GetCounted();
+	int begin = max(counted-1, 1);
+	
+	SetPeriod(period);
+	open.SetCount(bars);
+	low.SetCount(bars);
+	high.SetCount(bars);
+	vol.SetCount(bars);
+	
+	double prev = 1.0;
+	if (begin > 1) {
+		prev = open.Get(begin-1);
+	} else {
+		open	.Set(0, 1.0);
+		low		.Set(0, 1.0);
+		high	.Set(0, 1.0);
+		vol		.Set(0, 0.0);
+	}
+	
+	// Loop time
+	for(int i = begin; i < bars; i++) {
+		
+		double change = 0;
+		double volume = 0;
+		
+		for(int j = 0; j < count0; j++) {
+			const Data32f& open = bd0[j]->GetOpen();
+			double diff = open.Get(i) - open.Get(i-1);
+			change -= diff;
+			volume += bd0[j]->GetVolume().Get(i);
+		}
+		
+		for(int j = 0; j < count1; j++) {
+			const Data32f& open = bd1[j]->GetOpen();
+			double diff = open.Get(i) - open.Get(i-1);
+			change += diff;
+			volume += bd1[j]->GetVolume().Get(i);
+		}
+		
+		double value = prev * (1 + change * 0.01);
+		
+		open	.Set(i,   value);
+		high	.Set(i-1, max(prev, value));
+		low		.Set(i-1, min(prev,  value));
+		vol		.Set(i,   volume);
+		
+		prev = value;
+	}
+	
+	high.Set(bars-1, open.Get(bars-1));
+	low.Set(bars-1, open.Get(bars-1));
+	
+	
+	ForceSetCounted(bars);
+	
+	return 0;
+	*/
 }
 
 }

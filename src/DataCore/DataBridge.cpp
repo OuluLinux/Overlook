@@ -7,11 +7,18 @@ DataBridge::DataBridge()  {
 	port = 0;
 	enable_bardata = true;
 	has_written = false;
+	running = false;
+	stopped = true;
 	
 	AddValue<double>(); // open
 	AddValue<double>(); // low
 	AddValue<double>(); // high
 	AddValue<double>(); // volume
+}
+
+DataBridge::~DataBridge()  {
+	running = false;
+	while (!stopped) Sleep(100);
 }
 
 void DataBridge::SetArguments(const VectorMap<String, Value>& args) {
@@ -153,6 +160,30 @@ void DataBridge::Init() {
 	
 	
 	demo.Init(mt);
+	
+	
+	running = true;
+	stopped = false;
+	Thread::Start(THISBACK(Run));
+}
+
+void DataBridge::Run() {
+	while (running && !Thread::IsShutdownThreads()) {
+		
+		// Refresh ask & bid
+		
+		
+		// Check soft takeprofit / stoploss limits
+		//  - use predicted channel slots
+		
+		
+		// Update hard (at broker) takeprofit / stoploss limits
+		
+		
+		
+		Sleep(1000);
+	}
+	stopped = true;
 }
 
 void DataBridge::DownloadRemoteData() {
@@ -400,5 +431,33 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+VirtualNode::VirtualNode() {
+	
+}
+
+void VirtualNode::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void VirtualNode::Init() {
+	
+}
+
+bool VirtualNode::Process(const SlotProcessAttributes& attr) {
+	
+}
 
 }

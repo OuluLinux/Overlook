@@ -10,8 +10,6 @@ INITBLOCK {
 	DataCore::TimeVector::Register<DummyIndicator>();
 	DataCore::TimeVector::Register<DummyOscillator>();
 	DataCore::TimeVector::Register<MovingAverage>();
-	DataCore::TimeVector::Register<NormalizedValue>();
-	DataCore::TimeVector::Register<DerivedValue>();
 	DataCore::TimeVector::Register<DummyTrainer>();
 	DataCore::TimeVector::Register<Recurrent>();
 	DataCore::TimeVector::Register<DataBridge>();
@@ -27,6 +25,11 @@ INITBLOCK {
 	DataCore::TimeVector::Register<RLAgent>();
 	DataCore::TimeVector::Register<HugeDQNAgent>();
 	DataCore::TimeVector::Register<HugeMonaAgent>();
+	DataCore::TimeVector::Register<Forecaster>();
+	DataCore::TimeVector::Register<DQNDoubleAgent>();
+	DataCore::TimeVector::Register<MonaDoubleAgent>();
+	DataCore::TimeVector::Register<ChannelPredicter>();
+	DataCore::TimeVector::Register<VirtualNode>();
 }
 
 END_UPP_NAMESPACE

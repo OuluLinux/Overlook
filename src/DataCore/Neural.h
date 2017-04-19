@@ -139,6 +139,35 @@ public:
 
 
 
+class Forecaster : public Slot {
+	
+	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	
+	struct SymTf : Moveable<SymTf> {
+		ConvNet::Session ses;
+		int action, prev_action;
+		double reward;
+	};
+	Vector<SymTf> data;
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
+	
+	SlotPtr src;
+	Vector<double> input_array;
+	int sym_count, tf_count;
+	int max_shift, total;
+	bool do_training;
+	
+	void Forward(const SlotProcessAttributes& attr);
+	void Backward(const SlotProcessAttributes& attr);
+public:
+	Forecaster();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() const {return "forecaster";}
+	virtual String GetName() {return "Forecaster";}
+};
+
 
 // RLAgent and DQNAgent are almost identical.
 

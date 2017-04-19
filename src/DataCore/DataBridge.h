@@ -20,6 +20,7 @@ class DataBridge : public Slot {
 	VectorMap<int, double> points;
 	bool enable_bardata;
 	bool has_written;
+	bool running, stopped;
 	
 	struct AskBid : Moveable<AskBid> {
 		int time;
@@ -27,7 +28,9 @@ class DataBridge : public Slot {
 	};
 	
 public:
+	typedef DataBridge CLASSNAME;
 	DataBridge();
+	~DataBridge();
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
@@ -41,7 +44,7 @@ public:
 	virtual int Init();
 	virtual int Start();*/
 	
-	
+	void Run();
 	void Serialize(Stream& s);
 	
 	void DownloadRemoteData();
@@ -58,6 +61,21 @@ public:
 	
 	
 	SimBroker demo;
+};
+
+
+
+class VirtualNode : public Slot {
+	
+public:
+	typedef VirtualNode CLASSNAME;
+	VirtualNode();
+	
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() const {return "vnode";}
+	virtual String GetName() {return "VirtualNode";}
 };
 
 }

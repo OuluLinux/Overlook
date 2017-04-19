@@ -25,7 +25,7 @@ CONSOLE_APP_MAIN {
 	tv.AddPeriod(24		*60*60);
 	tv.AddPeriod(7*24	*60*60);
 	
-	tv.SetBegin(Time(2014, 9, 1)); // Find begin of slowest #SPX data
+	tv.SetBegin(Time(2014, 9, 1));
 	Date now = GetSysTime();
 	do {++now;}
 	while (now.day != 15);

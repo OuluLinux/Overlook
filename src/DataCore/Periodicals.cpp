@@ -338,6 +338,21 @@ bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
 
 
 
+ChannelPredicter::ChannelPredicter() {
+	
+}
+
+void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void ChannelPredicter::Init() {
+	
+}
+
+bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
+	
+}
 
 
 

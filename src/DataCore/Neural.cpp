@@ -380,6 +380,9 @@ NARX::NARX() {
 	a1 = a + 1;
 	
 	AddValue<double>();
+	
+	Panic("TODO: DateTime Exogen series");
+	Panic("TODO: Total Volume");
 }
 
 void NARX::SetArguments(const VectorMap<String, Value>& args) {
@@ -756,6 +759,149 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 	
 	return true;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Forecaster::Forecaster() {
+	AddValue<double>("Next open");
+	
+	/*SetStyle(
+		"{"
+			//"\"window_type\":\"SEPARATE\","
+			//"\"minimum\":-1,"
+			//"\"maximum\":1,"
+			//"\"point\":0.01,"
+			
+			"\"value0\":{"
+				"\"label\":\"Reward\","
+				"\"color\":\"64,128,192\","
+				"\"style\":\"HISTOGRAM\","
+				"\"line_width\":2,"
+				"\"chr\":95,"
+				"\"begin\":10,"
+				"\"shift\":0"
+			"}"
+		"}"
+	);*/
+}
+
+void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void Forecaster::Init() {
+	/*TimeVector& tv = GetTimeVector();
+	
+	src = tv.FindLinkSlot("/open");
+	//rnn = tv.FindLinkSlot("/rnn");
+	ASSERTEXC(src);
+	//ASSERTEXC(rnn);
+	
+	tf_count = tv.GetPeriodCount();
+	max_shift = 4;
+	sym_count = tv.GetSymbolCount();
+	total = max_shift;
+	
+	data.SetCount(sym_count * tf_count);
+	
+	for(int i = 0; i < data.GetCount(); i++) {
+		SymTf& s = data[i];
+		
+		// braaainzzz.....
+		s.brain.Init(total, 3); // actions: idle, long, short
+		
+		s.action = ACT_IDLE;
+		s.prev_action = ACT_IDLE;
+	}
+	
+	
+	do_training = true;*/
+}
+
+bool Forecaster::Process(const SlotProcessAttributes& attr) {
+	/*
+	// Check if position is useless for training
+	double* open = src->GetValue<double>(0, 0, attr);
+	double* prev = src->GetValue<double>(0, 1, attr);
+	if (!prev || *prev == *open)
+		return true;
+	
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	
+	// Return reward value
+	Backward(attr);
+	
+	// Get new action
+	Forward(attr);
+	
+	return do_training;*/
+}
+
+void Forecaster::Forward(const SlotProcessAttributes& attr) {
+	/*SymTf& s = GetData(attr);
+	
+	// in forward pass the agent simply behaves in the environment
+	// create input to brain
+	input_array.SetCount(total);
+	int pos = 0;
+	double* prev = src->GetValue<double>(0, max_shift, attr);
+	for(int k = 0; k < max_shift; k++) {
+		double* open = src->GetValue<double>(0, max_shift-1-k, attr);
+		if (prev) {
+			double d = *open / *prev - 1.0;
+			input_array[pos++] = d;
+		} else {
+			input_array[pos++] = 0;
+		}
+		prev = open;
+	}
+	ASSERT(pos == total);
+	
+	// get action from brain
+	s.prev_action = s.action;
+	s.action = s.brain.Forward(input_array);*/
+}
+
+void Forecaster::Backward(const SlotProcessAttributes& attr) {
+	/*SymTf& s = GetData(attr);
+	
+	double* open = src->GetValue<double>(0, 0, attr);
+	double* prev_open = src->GetValue<double>(0, 1, attr);
+	double change = prev_open ? *open / *prev_open - 1.0: 0;
+	if (s.action == ACT_SHORT) change *= -1;
+	else if (s.action == ACT_IDLE) change = -0.00001;
+	
+	// in backward pass agent learns.
+	// compute reward
+	s.reward = change;
+	
+	// pass to brain for learning
+	s.brain.Backward(s.reward);
+	
+	// Write reward to oscillator
+	double* out = GetValue<double>(0, attr);
+	*out = s.reward;*/
+}
+
+
+
 
 
 

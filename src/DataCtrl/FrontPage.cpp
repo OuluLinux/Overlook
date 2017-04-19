@@ -12,19 +12,9 @@ bool FrontPageDraw::HasCacheFile(String path) {
 		return true;
 	
 	// Try to download file
-	String filename = GetFileName(path);
-	String url = "http://toimisto.zzz.fi/pics/" + filename;
-	HttpRequest h;
-	String content = h.Url(url).Execute();
+	path = ConfigFile("pics") + DIR_SEPS + GetFileName(path);
 	
-	// Store image
-	//if (content.GetCount()) {
-	FileOut out(path);
-	if (!out.IsOpen()) return false;
-	out << content;
-	return true;
-	//}
-	//else return false;
+	return FileExists(path);
 }
 
 void FrontPageDraw::MakeBackground() {
@@ -80,7 +70,7 @@ void FrontPageDraw::MakeBackground() {
 					// Normal copying
 					if (x < (1280/2-320/2)) {
 						*dest = *src;
-					} 
+					}
 					// Fading effect
 					else {
 						//int i = (x - (1280/2-320/2)) * 100000 / 320;

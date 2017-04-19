@@ -70,6 +70,21 @@ public:
 	
 };
 
+class ChannelPredicter : public Slot {
+	
+protected:
+	
+	
+public:
+	ChannelPredicter();
+	
+	virtual String GetName() {return "ChannelPredicter";}
+	virtual String GetShortName() const {return "chp";}
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	
+};
 
 
 

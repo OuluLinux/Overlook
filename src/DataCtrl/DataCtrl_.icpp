@@ -11,13 +11,13 @@ INITBLOCK {
 	RefCore::PathResolver::RegisterStatic<FrontPage>();
 	RefCore::PathResolver::RegisterStatic<GraphGroupCtrl>();
 	RefCore::PathResolver::RegisterStatic<EventCtrl>();
-	RefCore::PathResolver::RegisterStatic<TableCtrl>();
-	RefCore::PathResolver::RegisterStatic<DervCtrl>();
 	RefCore::PathResolver::RegisterStatic<RecurrentCtrl>();
 	RefCore::PathResolver::RegisterStatic<AgentCtrl>();
 	RefCore::PathResolver::RegisterStatic<MonaCtrl>();
 	RefCore::PathResolver::RegisterStatic<RunnerCtrl>();
 	RefCore::PathResolver::RegisterStatic<BrokerCtrl>();
+	RefCore::PathResolver::RegisterStatic<ForecasterCtrl>();
+	RefCore::PathResolver::RegisterStatic<ParameterCtrl>();
 	
 }
 

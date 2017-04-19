@@ -6,11 +6,10 @@
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "EventManager.h"
-#include "Table.h"
-#include "Filters.h"
 #include "Neural.h"
 #include "NeuralHuge.h"
 #include "Periodicals.h"
 #include "CostUtils.h"
+#include "NeuralDoubleAgents.h"
 
 #endif

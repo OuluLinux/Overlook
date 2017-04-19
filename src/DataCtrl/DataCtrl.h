@@ -15,17 +15,18 @@ using namespace Upp;
 
 #include "GraphGroupCtrl.h"
 #include "EventCtrl.h"
-#include "TableCtrl.h"
 #include "FrontPage.h"
 #include "Container.h"
 #include "EventCtrl.h"
-#include "DervCtrl.h"
 #include "RecurrentCtrl.h"
 #include "AgentCtrl.h"
 #include "NarxCtrl.h"
 #include "MonaCtrl.h"
 #include "RunnerCtrl.h"
 #include "BrokerCtrl.h"
+#include "ForecasterCtrl.h"
+#include "Visualization.h"
+#include "ParameterCtrl.h"
 
 namespace DataCtrl {
 	

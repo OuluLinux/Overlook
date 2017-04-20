@@ -1,104 +1,63 @@
+#include <boost/math/distributions.hpp>
+
 #include "DataCore.h"
+
 
 namespace DataCore {
 
-
-
-WdayHourChanges::WdayHourChanges() {
-	
-}
-
-void WdayHourChanges::SetArguments(const VectorMap<String, Value>& args) {
-	
-}
-
-void WdayHourChanges::Init() {
-	/*SetContainerSeparateWindow();
-	SetBufferCount(2);
-	SetBufferColor(0, Color(127,0,0));
-	SetBufferColor(1, Color(0,127,0));
-	
-	SetIndexCount(2);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, stddev)
-	
-	int period = GetMinutePeriod();
-	bool force_d0 = period >= 7*24*60;
-	
-	//wdayhour.SetCount(force_d0 ? 1 : 7*24*60 / period);;*/
-}
-
-bool WdayHourChanges::Process(const SlotProcessAttributes& attr) {
-/*	int bars = GetBars();
-	int counted = GetCounted();
-	int period = GetMinutePeriod();
-	int h_count = 24 * 60 / period; // originally hour only
-	bool force_d0 = period >= 7*24*60;
-	
-	BarData& pb = *GetSource().Get<BarData>();
-	const Data32f& open  = pb.GetOpen();
-	
-	bars--;
-	
-	for ( int i = counted; i < bars; i++ ) {
-		Time time = GetTime().GetTime(GetPeriod(), i);
-		
-		int h = (time.minute + time.hour * 60) / period;
-		int d = DayOfWeek(time);
-		int dh = h + d * h_count;
-		
-		if (force_d0) {
-			h = 0;
-			d = 0;
-			dh = 0;
-		}
-		
-		OnlineVariance& var = wdayhour[dh];
-		
-		double diff = SafeDiff(open.Get(i+1), open.Get(i));
-		if (diff != 0.0) {
-			var.AddResult(diff);
-		}
-		
-		mean.Set(i,    var.GetMean());
-		stddev.Set(i,  var.GetDeviation());
-	}
-	*/
-	return true;
-}
-
-const OnlineVariance& WdayHourChanges::GetOnlineVariance(int shift) {
-	/*int period = GetMinutePeriod();
-	Time time = GetTime().GetTime(GetPeriod(), shift);
-	
-	bool force_d0 = period >= 7*24*60;
-	if (force_d0)
-		return wdayhour[0];
-	
-	int h_count = 24 * 60 / period;
-	int h = (time.minute + time.hour * 60) / period;
-	int d = DayOfWeek(time);
-	int dh = h + d * h_count;
-	
-	return wdayhour[dh];*/
-}
-
-
-
-
-
-
-
-
-
-
-
-
+#define VAR_PERIOD(x) x.Clear(); x.SetPeriod(var_period);
+#define VAR_PERIOD_VEC(x) for(int i = 0; i < x.GetCount(); i++) {x[i].Clear(); x[i].SetPeriod(var_period);}
 
 
 WdayHourStats::WdayHourStats() {
 	var_period = 10;
+	
+	AddValue<double>("Total Mean");
+	AddValue<double>("Total StdDev");
+	AddValue<double>("Hour Mean");
+	AddValue<double>("Hour StdDev");
+	AddValue<double>("Day Mean");
+	AddValue<double>("Day StdDev");
+	AddValue<double>("DayHour Mean");
+	AddValue<double>("DayHour StdDev");
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"value0\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value1\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value2\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value3\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value4\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value5\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value6\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value7\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":2,"
+			"}"
+		"}"
+	);
 }
 
 void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
@@ -108,111 +67,96 @@ void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourStats::Init() {
-	/*
-	SetContainerSeparateWindow();
-	SetBufferCount(8);
-	SetBufferColor(0, Color(127,0,0));
-	SetBufferColor(1, Color(127,0,0));
-	SetBufferColor(2, Color(0,127,0));
-	SetBufferColor(3, Color(0,127,0));
-	SetBufferColor(4, Color(0,0,127));
-	SetBufferColor(5, Color(0,0,127));
-	SetBufferColor(6, Color(0,127,127));
-	SetBufferColor(7, Color(0,127,127));
-	SetBufferLineWidth(7, 2);
+	src = FindLinkSlot("/open");
+	ASSERTEXC(src);
 	
-	SetIndexCount(8);
+	TimeVector& tv = GetTimeVector();
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
+	int total = sym_count * tf_count;
+	data.SetCount(total);
 	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
-	
-	int period = GetMinutePeriod();
-	bool force_d0 = period >= 7*24*60;
-	
-	hour.SetCount(force_d0 ? 1 : 24*60 / period);
-	wday.SetCount(5);
-	wdayhour.SetCount(force_d0 ? 1 : 5*24*60 / period);
-	
-	VAR_PERIOD(total);
-	VAR_PERIOD_VEC(wdayhour);
-	VAR_PERIOD_VEC(wday);
-	VAR_PERIOD_VEC(hour);
-	
-	return 0;*/
+	for(int i = 0; i < total; i++) {
+		int sym = i / tf_count;
+		int tf = i % tf_count;
+		SymTf& s = data[i];
+		
+		int period = tv.GetPeriod(tf) * tv.GetBasePeriod() / 60; // minutes, not seconds
+		bool force_d0 = period >= 7*24*60;
+		s.hour.SetCount(force_d0 ? 1 : 24*60 / period);
+		s.wday.SetCount(5);
+		s.wdayhour.SetCount(force_d0 ? 1 : 5*24*60 / period);
+		
+		VAR_PERIOD(s.total);
+		VAR_PERIOD_VEC(s.wdayhour);
+		VAR_PERIOD_VEC(s.wday);
+		VAR_PERIOD_VEC(s.hour);
+	}
 }
 
 bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
-	/*
-	int bars = GetBars();
-	int counted = GetCounted();
-	int period = GetMinutePeriod();
-	int h_count = 24 * 60 / period; // originally hour only
+	double* t_mean		= GetValue<double>(0, attr);
+	double* t_stddev	= GetValue<double>(1, attr);
+	double* h_mean		= GetValue<double>(2, attr);
+	double* h_stddev	= GetValue<double>(3, attr);
+	double* d_mean		= GetValue<double>(4, attr);
+	double* d_stddev	= GetValue<double>(5, attr);
+	double* dh_mean		= GetValue<double>(6, attr);
+	double* dh_stddev	= GetValue<double>(7, attr);
+	
+	double* open		= src->GetValue<double>(0, 0,  attr);
+	double* close		= src->GetValue<double>(0, -1, attr);
+	
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	SymTf& s = data[attr.sym_id * tf_count + attr.tf_id];
+	
+	Time time = tv.GetTime(attr.GetPeriod(), attr.GetCounted());
+	int period = tv.GetPeriod(attr.tf_id) * tv.GetBasePeriod() / 60; // minutes, not seconds
+	int h = (time.minute + time.hour * 60) / period;
+	int d = DayOfWeek(time) - 1;
+	int h_count = 24 * 60 / period;
+	int dh = h + d * h_count;
 	bool force_d0 = period >= 7*24*60;
 	
-	BarData& pb = *GetSource().Get<BarData>();
-	const Data32f& open  = pb.GetOpen();
-	
-	bars--;
-	
-	for ( int i = counted; i < bars; i++ ) {
-		Time time = GetTime().GetTime(GetPeriod(), i);
-		
-		int h = (time.minute + time.hour * 60) / period;
-		int d = DayOfWeek(time) - 1;
-		int dh = h + d * h_count;
-		
-		if (force_d0) {
-			h = 0;
-			d = 0;
-			dh = 0;
-		}
-		else if (d == -1 || d == 5) {
-			continue;
-		}
-		
-		MovingOnlineVariance& t_var  = total;
-		MovingOnlineVariance& h_var  = hour[h];
-		MovingOnlineVariance& d_var  = wday[d];
-		MovingOnlineVariance& dh_var = wdayhour[dh];
-		
-		double change = SafeDiff(open.Get(i+1), open.Get(i));
-		if (change != 0.0) {
-			t_var.AddResult(change);
-			h_var.AddResult(change);
-			d_var.AddResult(change);
-			dh_var.AddResult(change);
-		}
-		
-		t_pre_mean.Set(i,    t_var.GetMean());
-		h_pre_mean.Set(i,    h_var.GetMean());
-		d_pre_mean.Set(i,    d_var.GetMean());
-		dh_pre_mean.Set(i,   dh_var.GetMean());
-		
-		t_pre_stddev.Set(i,  t_var.GetDeviation());
-		h_pre_stddev.Set(i,  h_var.GetDeviation());
-		d_pre_stddev.Set(i,  d_var.GetDeviation());
-		dh_pre_stddev.Set(i, dh_var.GetDeviation());
-		
-		t_var.Next();
-		h_var.Next();
-		d_var.Next();
-		dh_var.Next();
+	// If long periods or weekend
+	if (force_d0 || d == -1 || d == 5) {
+		h = 0;
+		d = 0;
+		dh = 0;
 	}
 	
-	return 0;*/
+	MovingOnlineVariance& t_var  = s.total;
+	MovingOnlineVariance& h_var  = s.hour[h];
+	MovingOnlineVariance& d_var  = s.wday[d];
+	MovingOnlineVariance& dh_var = s.wdayhour[dh];
+	
+	double diff = *close - *open;
+	
+	if (diff != 0.0) {
+		t_var.AddResult(diff);
+		h_var.AddResult(diff);
+		d_var.AddResult(diff);
+		dh_var.AddResult(diff);
+	}
+	
+	*t_mean			= t_var.GetMean();
+	*h_mean			= h_var.GetMean();
+	*d_mean			= d_var.GetMean();
+	*dh_mean		= dh_var.GetMean();
+	
+	*t_stddev		= t_var.GetDeviation();
+	*h_stddev		= h_var.GetDeviation();
+	*d_stddev		= d_var.GetDeviation();
+	*dh_stddev		= dh_var.GetDeviation();
+	
+	t_var.Next();
+	h_var.Next();
+	d_var.Next();
+	dh_var.Next();
+	
 	return true;
 }
-
-
-
-
-
 
 
 
@@ -232,6 +176,53 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 
 
 WdayHourDiff::WdayHourDiff() {
+	AddValue<double>("Total Mean");
+	AddValue<double>("Total StdDev");
+	AddValue<double>("Hour Mean");
+	AddValue<double>("Hour StdDev");
+	AddValue<double>("Day Mean");
+	AddValue<double>("Day StdDev");
+	AddValue<double>("DayHour Mean");
+	AddValue<double>("DayHour StdDev");
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"value0\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value1\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value2\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value3\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value4\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value5\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value6\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value7\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":2,"
+			"}"
+		"}"
+	);
+	
 	var_period_fast = 10;
 	var_period_diff = 10;
 }
@@ -246,83 +237,98 @@ void WdayHourDiff::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourDiff::Init() {
-	/*BarDataContainer::Init();
-	
-	SetContainerSeparateWindow();
-	SetBufferCount(8);
-	SetBufferColor(0, Color(127,0,0));
-	SetBufferColor(1, Color(127,0,0));
-	SetBufferColor(2, Color(0,127,0));
-	SetBufferColor(3, Color(0,127,0));
-	SetBufferColor(4, Color(0,0,127));
-	SetBufferColor(5, Color(0,0,127));
-	SetBufferColor(6, Color(0,127,127));
-	SetBufferColor(7, Color(0,127,127));
-	SetBufferLineWidth(7, 2);
-	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
-	
-	if (RequireIndicator("whstat", "period", var_period_fast)) return 1;
-	if (RequireIndicator("whstat", "period", var_period_fast + var_period_diff)) return 1;
-	
-	return 0;*/
+	whstat_fast = FindLinkSlot("/whstat_fast");
+	whstat_slow = FindLinkSlot("/whstat_slow");
+	ASSERTEXC(whstat_fast);
+	ASSERTEXC(whstat_slow);
 }
 
 bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
-	/*
-	int counted = GetCounted();
+	double* t_mean_fast		= whstat_fast->GetValue<double>(0, attr);
+	double* t_stddev_fast	= whstat_fast->GetValue<double>(1, attr);
+	double* h_mean_fast		= whstat_fast->GetValue<double>(2, attr);
+	double* h_stddev_fast	= whstat_fast->GetValue<double>(3, attr);
+	double* d_mean_fast		= whstat_fast->GetValue<double>(4, attr);
+	double* d_stddev_fast	= whstat_fast->GetValue<double>(5, attr);
+	double* dh_mean_fast	= whstat_fast->GetValue<double>(6, attr);
+	double* dh_stddev_fast	= whstat_fast->GetValue<double>(7, attr);
 	
-	if (counted > 0) counted--;
+	double* t_mean_slow		= whstat_slow->GetValue<double>(0, attr);
+	double* t_stddev_slow	= whstat_slow->GetValue<double>(1, attr);
+	double* h_mean_slow		= whstat_slow->GetValue<double>(2, attr);
+	double* h_stddev_slow	= whstat_slow->GetValue<double>(3, attr);
+	double* d_mean_slow		= whstat_slow->GetValue<double>(4, attr);
+	double* d_stddev_slow	= whstat_slow->GetValue<double>(5, attr);
+	double* dh_mean_slow	= whstat_slow->GetValue<double>(6, attr);
+	double* dh_stddev_slow	= whstat_slow->GetValue<double>(7, attr);
 	
-	Container& a = At(0);
-	const Data32f& t_pre_stddev_fast	= a.GetIndex(0);
-	const Data32f& t_pre_mean_fast		= a.GetIndex(1);
-	const Data32f& h_pre_stddev_fast	= a.GetIndex(2);
-	const Data32f& h_pre_mean_fast		= a.GetIndex(3);
-	const Data32f& d_pre_stddev_fast	= a.GetIndex(4);
-	const Data32f& d_pre_mean_fast		= a.GetIndex(5);
-	const Data32f& dh_pre_stddev_fast	= a.GetIndex(6);
-	const Data32f& dh_pre_mean_fast		= a.GetIndex(7);
+	double* t_mean		= GetValue<double>(0, attr);
+	double* t_stddev	= GetValue<double>(1, attr);
+	double* h_mean		= GetValue<double>(2, attr);
+	double* h_stddev	= GetValue<double>(3, attr);
+	double* d_mean		= GetValue<double>(4, attr);
+	double* d_stddev	= GetValue<double>(5, attr);
+	double* dh_mean		= GetValue<double>(6, attr);
+	double* dh_stddev	= GetValue<double>(7, attr);
 	
-	Container& b = At(1);
-	const Data32f& t_pre_stddev_slow	= b.GetIndex(0);
-	const Data32f& t_pre_mean_slow		= b.GetIndex(1);
-	const Data32f& h_pre_stddev_slow	= b.GetIndex(2);
-	const Data32f& h_pre_mean_slow		= b.GetIndex(3);
-	const Data32f& d_pre_stddev_slow	= b.GetIndex(4);
-	const Data32f& d_pre_mean_slow		= b.GetIndex(5);
-	const Data32f& dh_pre_stddev_slow	= b.GetIndex(6);
-	const Data32f& dh_pre_mean_slow		= b.GetIndex(7);
+	*t_mean			= *t_mean_fast    - *t_mean_slow;
+	*h_mean			= *h_mean_fast    - *h_mean_slow;
+	*d_mean			= *d_mean_fast    - *d_mean_slow;
+	*dh_mean		= *dh_mean_fast   - *dh_mean_slow;
 	
-	int count = min(min(GetBars(), t_pre_stddev_fast.GetCount()), t_pre_stddev_slow.GetCount());
-	//ASSERT( count >= bars - 1 ); // If fails and needs to be skipped, remember to reduce GetCounted value
+	*t_stddev		= *t_stddev_fast  - *t_stddev_slow;
+	*h_stddev		= *h_stddev_fast  - *h_stddev_slow;
+	*d_stddev		= *d_stddev_fast  - *d_stddev_slow;
+	*dh_stddev		= *dh_stddev_fast - *dh_stddev_slow;
 	
-	for ( int i = counted; i < count; i++ ) {
-		
-		t_pre_mean.Set(i,    t_pre_mean_fast.Get(i)    - t_pre_mean_slow.Get(i));
-		h_pre_mean.Set(i,    h_pre_mean_fast.Get(i)    - h_pre_mean_slow.Get(i));
-		d_pre_mean.Set(i,    d_pre_mean_fast.Get(i)    - d_pre_mean_slow.Get(i));
-		dh_pre_mean.Set(i,   dh_pre_mean_fast.Get(i)   - dh_pre_mean_slow.Get(i));
-		
-		t_pre_stddev.Set(i,  t_pre_stddev_fast.Get(i)  - t_pre_stddev_slow.Get(i));
-		h_pre_stddev.Set(i,  h_pre_stddev_fast.Get(i)  - h_pre_stddev_slow.Get(i));
-		d_pre_stddev.Set(i,  d_pre_stddev_fast.Get(i)  - d_pre_stddev_slow.Get(i));
-		dh_pre_stddev.Set(i, dh_pre_stddev_fast.Get(i) - dh_pre_stddev_slow.Get(i));
-		
-	}
-	
-	return 0;
-	*/
+	return true;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+ChannelStats::ChannelStats() {
+	AddValue<double>("Hour Max Change");
+	AddValue<double>("Hour Min Change");
+	AddValue<double>("Day Max Change");
+	AddValue<double>("Day Min Change");
+	AddValue<double>("DayHour Max Change");
+	AddValue<double>("DayHour Min Change");
+}
+
+void ChannelStats::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void ChannelStats::Init() {
+	whstat_slow = FindLinkSlot("/whstat_slow");
+	ASSERTEXC(whstat_slow);
+	
+}
+
+bool ChannelStats::Process(const SlotProcessAttributes& attr) {
+	for(int i = 2; i < 8; i+=2) {
+		double mean		= *whstat_slow->GetValue<double>(i+0, attr);
+		double stddev	= *whstat_slow->GetValue<double>(i+1, attr);
+		double* max		= GetValue<double>(i-2, attr);
+		double* min		= GetValue<double>(i-1, attr);
+		boost::math::normal_distribution<>my_normal (mean, stddev);
+		*max = quantile(my_normal, 0.95);
+		*min = quantile(complement(my_normal, 0.05));
+		ASSERT(*max >= *min);
+	}
+	return true;
+}
+
+
 
 
 
@@ -339,19 +345,48 @@ bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
 
 
 ChannelPredicter::ChannelPredicter() {
+	length = 4;
 	
+	AddValue<double>("Hour Min");
+	AddValue<double>("Hour Max");
+	AddValue<double>("Day Min");
+	AddValue<double>("Day Max");
+	AddValue<double>("DayHour Min");
+	AddValue<double>("DayHour Max");
 }
 
 void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("length");
+	if (i != -1)
+		length = args[i];
 }
 
 void ChannelPredicter::Init() {
+	src = FindLinkSlot("/open");
+	ASSERTEXC(src);
+	chstat = FindLinkSlot("/chstat");
+	ASSERTEXC(chstat);
 	
 }
 
 bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
-	
+	for(int j = 0; j < 6; j+=2) {
+		double min_sum = 0;
+		double max_sum = 0;
+		for(int i = 0; i < length; i++) {
+			double min	= *chstat->GetValue<double>(j+0, -i, attr);
+			double max	= *chstat->GetValue<double>(j+1, -i, attr);
+			ASSERT(max > min);
+			ASSERT(max > 0);
+			ASSERT(0 > min);
+			min_sum += min;
+			max_sum += max;
+		}
+		double open = *src->GetValue<double>(0, attr);
+		*GetValue<double>(j+0, attr) = open + min_sum;
+		*GetValue<double>(j+1, attr) = open + max_sum;
+	}
+	return true;
 }
 
 
@@ -366,9 +401,36 @@ bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
 
 
 EventOsc::EventOsc() {
+	AddValue<double>("High Level");
+	AddValue<double>("Medium Level");
+	AddValue<double>("Low Level");
+	AddValue<double>("Info Level");
+	
 	mul = 0.8;
 	emgr = NULL;
-	counted_events = 0;
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"value0\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":4,"
+			"},"
+			"\"value1\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":3,"
+			"},"
+			"\"value2\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":2,"
+			"},"
+			"\"value3\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+		"}"
+	);
+	
 }
 
 void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
@@ -379,86 +441,76 @@ void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void EventOsc::Init() {
-	/*BarDataContainer::Init();
-	
 	ASSERTEXC(!(mul <= 0 || mul > 0.9));
 	
-	int id = GetId();
-	ASSERTEXC(id != -1);
+	src = FindLinkSlot("/open");
+	ASSERTEXC(src);
 	
-	PathResolver& res = GetResolver();
-	PathLink* link = res.FindLinkPath("/id/id" + IntStr(id) + "/tf" + IntStr(GetPeriod()));
-	if (!link) return 1;
-	if (!link->link.Is()) return 1;
+	db = dynamic_cast<DataBridge*>(&*src);
+	ASSERTEXC(db);
 	
-	BridgeBarData* bbd = link->link.Get<BridgeBarData>();
-	if (bbd) {
-		keys.Add(bbd->GetKey0());
-		keys.Add(bbd->GetKey1());
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int sym_count = tv.GetSymbolCount();
+	int total = tf_count * sym_count;
+	
+	data.SetCount(total);
+	for(int i = 0; i < total; i++) {
+		int id = i / tf_count;
+		Sym& s = data[i];
+		s.counted_events = 0;
+		const Symbol& sym = db->GetSymbol(id);
+		
+		if (sym.IsForex()) {
+			s.keys.Add(sym.name.Left(3));
+			s.keys.Add(sym.name.Right(3));
+		}
+		else Panic("TODO");
 	}
-	
-	BridgeMeshConverter* bmc = link->link.Get<BridgeMeshConverter>();
-	if (bmc) {
-		keys.Add(bmc->GetKey());
-	}
-	
-	if (keys.IsEmpty()) return 1;
-	
-	DataVar dv = res.ResolvePath("/emgr");
-	if (!dv.Is()) return 1;
-	emgr = dv.Get<EventManager>();
-	if (!emgr) return 1;
-	
-	SetContainerSeparateWindow();
-	SetBufferCount(4);
-	SetBufferColor(3, Blue());
-	SetBufferColor(2, Green());
-	SetBufferColor(1, Yellow());
-	SetBufferColor(0, Red());
-	SetBufferLineWidth(2, 2);
-	SetBufferLineWidth(1, 3);
-	SetBufferLineWidth(0, 4);
-	SetIndexCount(4);
-	SetIndexBuffer(3, info);
-	SetIndexBuffer(2, low);
-	SetIndexBuffer(1, med);
-	SetIndexBuffer(0, high);
-	
-	return 0;
-	*/
 }
 
 bool EventOsc::Process(const SlotProcessAttributes& attr) {
-	/*int bars = GetBars();
+	EventManager& emgr = GetEventManager();
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
 	
-	int count = emgr->GetCount();
+	Sym& s = data[attr.sym_id * tf_count + attr.tf_id];
+	
+	int count = emgr.GetCount();
+	int bars = attr.GetBars();
 	
 	if (!count) {
-		emgr->Refresh();
-		count = emgr->GetCount();
+		emgr.Refresh();
+		count = emgr.GetCount();
 	}
 	
-	for(int i = counted_events; i < count; i++) {
-		Event& e = emgr->GetEvent(i);
-		if (keys.Find(e.currency) != -1) {
-			Data32f& buf = (e.impact == 0 ? info : (e.impact == 1 ? low : (e.impact == 2 ? med : high)));
-			int shift = GetTime().GetShiftFromTime(e.timestamp, GetPeriod());
+	for (int i = s.counted_events; i < count; i++) {
+		Event& e = emgr.GetEvent(i);
+		if (s.keys.Find(e.currency) != -1) {
+			int buf_id = 3 - e.impact;
+			int shift = tv.GetShiftFromTime(e.timestamp, attr.GetPeriod());
 			if (shift < 0 || shift >= bars) continue;
 			double value = 1.0;
 			int j = 0;
 			while (value >= 0.01) {
 				int a = shift - j;
 				int b = shift + j;
-				if (a >= 0) buf.Inc(a, value);
-				if (j && b < bars) buf.Inc(b, value);
+				if (a >= 0) {
+					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, a, attr);
+					if (d) *d = value;
+				}
+				if (j && b < bars) {
+					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, b, attr);
+					if (d) *d = value;
+				}
 				value *= mul;
 				j++;
 			}
 		}
 	}
-	counted_events = count;
 	
-	return 0;*/
+	s.counted_events = count;
+	
 	return true;
 }
 

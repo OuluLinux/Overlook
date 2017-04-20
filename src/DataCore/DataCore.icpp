@@ -18,7 +18,6 @@ INITBLOCK {
 	DataCore::TimeVector::Register<DataCore::NARX>();
 	DataCore::TimeVector::Register<SpreadStats>();
 	DataCore::TimeVector::Register<ValueChange>();
-	DataCore::TimeVector::Register<WdayHourChanges>();
 	DataCore::TimeVector::Register<WdayHourStats>();
 	DataCore::TimeVector::Register<WdayHourDiff>();
 	DataCore::TimeVector::Register<EventOsc>();
@@ -28,8 +27,8 @@ INITBLOCK {
 	DataCore::TimeVector::Register<Forecaster>();
 	DataCore::TimeVector::Register<DQNDoubleAgent>();
 	DataCore::TimeVector::Register<MonaDoubleAgent>();
+	DataCore::TimeVector::Register<ChannelStats>();
 	DataCore::TimeVector::Register<ChannelPredicter>();
-	DataCore::TimeVector::Register<VirtualNode>();
 }
 
 END_UPP_NAMESPACE

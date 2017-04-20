@@ -14,7 +14,6 @@ class DataBridge : public Slot {
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	VectorMap<int, double> points;
-	Index<String> currencies;
 	String account_server;
 	String addr;
 	int port;
@@ -28,6 +27,12 @@ class DataBridge : public Slot {
 		int time;
 		double ask, bid;
 	};
+	
+	struct Cur : Moveable<Cur> {
+		Vector<int> pairs0, pairs1;
+		String symbol;
+	};
+	Vector<Cur> curdata;
 	
 public:
 	typedef DataBridge CLASSNAME;
@@ -48,6 +53,7 @@ public:
 	
 	void Run();
 	void Serialize(Stream& s);
+	void ProcessVirtualNode(const SlotProcessAttributes& attr);
 	
 	void DownloadRemoteData();
 	int  DownloadHistory(Symbol& sym, int tf, bool force=false);
@@ -64,19 +70,6 @@ public:
 };
 
 
-
-class VirtualNode : public Slot {
-	
-public:
-	typedef VirtualNode CLASSNAME;
-	VirtualNode();
-	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
-	virtual void Init();
-	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetKey() const {return "vnode";}
-	virtual String GetName() {return "VirtualNode";}
-};
 
 }
 

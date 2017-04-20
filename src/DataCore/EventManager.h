@@ -42,7 +42,7 @@ const XmlNode& TryOpenLocation(String pos, const XmlNode& root, int& errorcode);
 
 
 
-class EventManager : public MetaNode {
+class EventManager {
 	
 	Vector<Event> events;
 	
@@ -76,11 +76,11 @@ public:
 	typedef EventManager CLASSNAME;
 	EventManager();
 	
-	virtual String GetName() {return "EventManager";}
+	/*virtual String GetName() {return "EventManager";}
 	virtual String GetShortName() const {return "events";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual void Start();
+	virtual void Start();*/
 	
 	void StoreThis();
 	void LoadThis();
@@ -110,6 +110,8 @@ public:
 int GetCalendarCacheCount();
 const Event& GetCalendarCacheEvent(int i);
 Mutex& GetCalendarCacheLock();
+
+inline EventManager& GetEventManager() {return Single<EventManager>();}
 
 }
 

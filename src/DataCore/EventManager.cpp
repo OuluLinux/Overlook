@@ -129,7 +129,7 @@ EventManager::EventManager() {
 	
 	
 }
-
+/*
 void EventManager::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
@@ -149,7 +149,7 @@ void EventManager::Start() {
 	
 	UpdateHistory();
 }
-
+*/
 void EventManager::StoreThis() {
 	StoreToFile(*this, ConfigFile("events.bin"));
 }
@@ -409,10 +409,14 @@ void EventManager::Dump() {
 }
 
 void EventManager::UpdateHistory() {
-	Date now = GetTime().GetEnd();
+	TimeVector& tv = GetTimeVector();
+	Date now = GetSysDate();
 	Date begin(2007,1,1);
 	if (events.GetCount())
 		begin = TimeFromTimestamp(events[events.GetCount()-1].timestamp);
+	
+	// Dates are correct only about two weeks beforehand, or not always even then.
+	now += 14;
 	
 	Date t(begin.year, begin.month, 1);
 	int downloaded = 0;

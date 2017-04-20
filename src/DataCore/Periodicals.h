@@ -6,37 +6,17 @@
 namespace DataCore {
 using namespace Upp;
 
-class WdayHourChanges : public Slot {
-	
-protected:
-	Vector<OnlineVariance> wdayhour;
-	
-	//Data32f stddev, mean;
-	
-public:
-	WdayHourChanges();
-	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
-	virtual void Init();
-	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetName() {return "WdayHourChanges";}
-	virtual String GetShortName() const {return "whch";}
-	
-	const OnlineVariance& GetOnlineVariance(int shift);
-	
-};
 
 class WdayHourStats : public Slot {
 	
 protected:
+	struct SymTf : Moveable<SymTf> {
+		MovingOnlineVariance total;
+		Vector<MovingOnlineVariance> wdayhour, wday, hour;
+	};
+	Vector<SymTf> data;
+	SlotPtr src;
 	int var_period;
-	MovingOnlineVariance total;
-	Vector<MovingOnlineVariance> wdayhour, wday, hour;
-	
-	//Data32f t_pre_stddev, t_pre_mean;
-	//Data32f h_pre_stddev, h_pre_mean;
-	//Data32f d_pre_stddev, d_pre_mean;
-	//Data32f dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourStats();
@@ -54,10 +34,7 @@ class WdayHourDiff : public Slot {
 protected:
 	
 	int var_period_fast, var_period_diff;
-	//Data32f t_pre_stddev, t_pre_mean;
-	//Data32f h_pre_stddev, h_pre_mean;
-	//Data32f d_pre_stddev, d_pre_mean;
-	//Data32f dh_pre_stddev, dh_pre_mean;
+	SlotPtr whstat_fast, whstat_slow;
 	
 public:
 	WdayHourDiff();
@@ -70,10 +47,26 @@ public:
 	
 };
 
+class ChannelStats : public Slot {
+	SlotPtr whstat_slow;
+	
+public:
+	ChannelStats();
+	
+	virtual String GetName() {return "ChannelStats";}
+	virtual String GetShortName() const {return "chstat";}
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	
+};
+
 class ChannelPredicter : public Slot {
 	
 protected:
 	
+	SlotPtr src, chstat;
+	int length;
 	
 public:
 	ChannelPredicter();
@@ -101,11 +94,16 @@ public:
 
 
 class EventOsc : public Slot {
-	//Data32f info, low, med, high;
-	double mul;
-	Index<String> keys;
+	struct Sym : Moveable<Sym> {
+		Index<String> keys;
+		int counted_events;
+	};
+	Vector<Sym> data;
+	
+	SlotPtr src;
+	DataBridge* db;
 	EventManager* emgr;
-	int counted_events;
+	double mul;
 	
 public:
 	EventOsc();

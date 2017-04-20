@@ -4,6 +4,16 @@ namespace DataCore {
 
 SpreadStats::SpreadStats() {
 	AddValue<double>("Average Spread");
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"value0\":{"
+				"\"color\":\"0,128,0\","
+				"\"line_width\":3,"
+			"}"
+		"}"
+	);
 }
 
 void SpreadStats::SetArguments(const VectorMap<String, Value>& args) {

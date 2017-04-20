@@ -6,53 +6,39 @@
 namespace DataCore {
 using namespace Upp;
 
-class CostStats : public Slot {
-	//Data32f mean_cost;
-	//BridgeAskBid* askbid;
-	Vector<OnlineVariance> stats;
+class SpreadStats : public Slot {
+	struct SymTf : Moveable<SymTf> {
+		Vector<OnlineVariance> stats;
+		bool has_stats;
+	};
+	Vector<SymTf> data;
 	
 public:
-	CostStats();
+	SpreadStats();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
-	virtual String GetName() {return "CostStats";}
-	virtual String GetShortName() const {return "cost";}
+	virtual String GetName() {return "SpreadStats";}
+	virtual String GetShortName() const {return "spread";}
 	
 };
 
 
 
 class ValueChange : public Slot {
-	bool has_proxy;
-	int proxy_id, proxy_factor;
-	/*Data32f inc, dec, cost;
-	Data32f best_inc, best_dec, worst_inc, worst_dec;
-	Data32f value_change;
-	
-	#ifdef PRICE_CHANGE_DEBUG
-	Data32f proxy_status;
-	Data32f proxy_cost, proxy_inc, proxy_dec;
-	#endif
-	
-	BarData *src_a, *src_b;*/
+	struct Sym : Moveable<Sym> {
+		bool has_proxy;
+		int proxy_id, proxy_factor;
+	};
+	SlotPtr src, spread;
+	Vector<Sym> data;
+	DataBridge* db;
 	
 public:
 	ValueChange();
 	
-	/*virtual void Serialize(Stream& s) {
-		BarDataContainer::Serialize(s);
-		s % has_proxy % proxy_id % proxy_factor
-		  % inc % dec % cost
-		  % best_inc % best_dec % worst_inc % worst_dec
-		  % value_change;
-		#ifdef PRICE_CHANGE_DEBUG
-		s % proxy_status % proxy_cost % proxy_inc % proxy_dec;
-		#endif
-	}*/
-	
 	virtual String GetName() {return "ValueChange";}
-	virtual String GetShortName() const {return "valc";}
+	virtual String GetShortName() const {return "change";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);

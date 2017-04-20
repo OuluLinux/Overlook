@@ -129,8 +129,8 @@ void Loader::Create() {
 	ses.link_core.Add("/ma", "/ma");
 	ses.link_symctrl.Add("ma", "/ma");
 	
-	ses.link_core.Add("/costs", "/costs");
-	ses.link_symctrl.Add("costs", "/costs");
+	ses.link_core.Add("/spread", "/spread");
+	ses.link_symctrl.Add("spread", "/spread");
 	
 	ses.link_core.Add("/change", "/change");
 	ses.link_symctrl.Add("change", "/change");

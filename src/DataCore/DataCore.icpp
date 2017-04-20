@@ -16,7 +16,7 @@ INITBLOCK {
 	DataCore::TimeVector::Register<DQNAgent>();
 	DataCore::TimeVector::Register<MonaAgent>();
 	DataCore::TimeVector::Register<DataCore::NARX>();
-	DataCore::TimeVector::Register<CostStats>();
+	DataCore::TimeVector::Register<SpreadStats>();
 	DataCore::TimeVector::Register<ValueChange>();
 	DataCore::TimeVector::Register<WdayHourChanges>();
 	DataCore::TimeVector::Register<WdayHourStats>();

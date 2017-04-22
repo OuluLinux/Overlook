@@ -6,6 +6,32 @@
 namespace DataCore {
 using namespace Upp;
 
+/*
+	These periodical indicators exploit the notion that the market week has fixed cycles which
+	causes repeating patterns. The week starts with the opening of Asia exchanges. Europe and
+	US exchanges reacts to tensions built up at weekend. The first 30mins of stock exchange might
+	determine the direction of entire day, and even big indices. Most exchanges has fixed
+	weekday for busiest activity. These wdayhour indicators have showed monday+thursday,
+	tuesday+friday and wednesday as the most active days in different symbols.
+	
+	The most fixed thing in weekday/hour statistics is the distribution of possible differences
+	in the value. It is reasonable to expect that the outcome will remain in the most probable
+	channel. The pressure for some symbol before tight channel might be interpreted as
+	weakness, and the lack of pressure for some symbol before wide channel might be interpreted
+	as uncertainty. These channel statistics are sensored by Forecaster class, which has
+	regression neural network. Channel statistics are joined to multi-symbol recurrent neural
+	network forecasts (NARX) by regression neural network and the Forecaster is expected to give
+	predictions inside the channel after training, while NARX as input source might give values
+	outside of the channel.
+	
+	Previously, I have tested these indicators against all popular traditional indicators
+	(stochastic oscillator, RSI, etc.) for trend prediction and these wdayhour indicators have
+	outperformed them always after genetic optimization.
+	
+	EventOscillator is not weekly-periodic indicator, or any strictly fixed period, but it
+	shows events, which usually occurs in monthly, quaterly or yearly period.
+	
+*/
 
 class WdayHourStats : public Slot {
 	

@@ -93,7 +93,7 @@ bool SpreadStats::Process(const SlotProcessAttributes& attr) {
 			
 			OnlineVariance& var = s.stats[dh];
 			
-			double spread = ask - bid;
+			double spread = ask / bid - 1.0;
 			if (spread > 0.0) // must be technically realistic
 				var.AddResult(spread);
 		}
@@ -131,7 +131,7 @@ bool SpreadStats::Process(const SlotProcessAttributes& attr) {
 
 
 ValueChange::ValueChange() {
-	AddValue<double>("Difference");
+	AddValue<double>("Change");
 	AddValue<double>("Increase");
 	AddValue<double>("Decrease");
 	AddValue<double>("Best Increase");
@@ -214,76 +214,80 @@ void ValueChange::Init() {
 }
 
 bool ValueChange::Process(const SlotProcessAttributes& attr) {
-	double* diff_		= GetValue<double>(0, attr);
-	double* inc			= GetValue<double>(1, attr);
-	double* dec			= GetValue<double>(2, attr);
-	double* best_inc	= GetValue<double>(3, attr);
-	double* best_dec	= GetValue<double>(4, attr);
-	double* worst_inc	= GetValue<double>(5, attr);
-	double* worst_dec	= GetValue<double>(6, attr);
-	double* value_diff	= GetValue<double>(7, attr);
-	double* open		= src->GetValue<double>(0, 0, attr);
-	double* close		= src->GetValue<double>(0, -1, attr);
-	double* low			= src->GetValue<double>(1, 0, attr);
-	double* high		= src->GetValue<double>(2, 0, attr);
-	double* spread		= this->spread->GetValue<double>(0, attr);
+	double* change_			= GetValue<double>(0, attr);
+	double* inc				= GetValue<double>(1, attr);
+	double* dec				= GetValue<double>(2, attr);
+	double* best_inc		= GetValue<double>(3, attr);
+	double* best_dec		= GetValue<double>(4, attr);
+	double* worst_inc		= GetValue<double>(5, attr);
+	double* worst_dec		= GetValue<double>(6, attr);
+	double* value_change	= GetValue<double>(7, attr);
+	double* open			= src->GetValue<double>(0, 1, attr);
+	double* close			= src->GetValue<double>(0, 0, attr);
+	double* low				= src->GetValue<double>(1, 1, attr);
+	double* high			= src->GetValue<double>(2, 1, attr);
+	double* spread_a		= this->spread->GetValue<double>(0, 1, attr);
+	double* spread_b		= this->spread->GetValue<double>(0, 0, attr);
+	double spread			= (*spread_a + *spread_b) * 0.5;
 
 	int id = attr.sym_id;
 	
 	Sym& s = data[id];
 	
 	if (!s.has_proxy) {
-		double cost = *spread;
+		double cost = spread;
 		double open_value = *open;
-		double diff = *close - open_value;
-		*inc = diff - cost;
-		*dec = -diff - cost;
-		double high_diff = *high - open_value;
-		double low_diff  = *low - open_value;
-		ASSERT(high_diff >= low_diff);
-		*best_inc = high_diff - cost;
-		*best_dec = -low_diff - cost;
-		*worst_inc = low_diff - cost;
-		*worst_dec = -high_diff - cost;
-		*value_diff = diff;
-		*diff_ = diff; // same without proxy
+		double change = *close / open_value - 1.0;
+		*inc = change - cost;
+		*dec = -change - cost;
+		double high_change = *high / open_value - 1.0;
+		double low_change  = *low / open_value - 1.0;
+		ASSERT(high_change >= low_change);
+		*best_inc = high_change - cost;
+		*best_dec = -low_change - cost;
+		*worst_inc = low_change - cost;
+		*worst_dec = -high_change - cost;
+		*value_change = change;
+		*change_ = change; // same without proxy
 	} else {
-		double* proxy_spread = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_spread_a = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_spread_b = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double proxy_spread			= (*proxy_spread_a + *proxy_spread_b) * 0.5;
 		
 		// Get buffers
-		double* proxy_open	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
-		double* proxy_close	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_low	= src->GetValue<double>(1, s.proxy_id, attr.tf_id, 0, attr);
-		double* proxy_high	= src->GetValue<double>(2, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_open	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_close	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_low	= src->GetValue<double>(1, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_high	= src->GetValue<double>(2, s.proxy_id, attr.tf_id, 1, attr);
 		
-		double cost = *spread + *proxy_spread;
+		double cost = spread + proxy_spread;
 		
 		// Proxy and normal.
 		double proxy_open_value = *proxy_open;
 		double open_value = *open;
-		double proxy_diff, proxy_high_diff, proxy_low_diff;
+		double proxy_change, proxy_high_change, proxy_low_change;
 		if (s.proxy_factor == 1) {
-			proxy_diff		= *proxy_close - proxy_open_value;
-			proxy_high_diff	= *proxy_high - proxy_open_value;
-			proxy_low_diff	= *proxy_low - proxy_open_value;
+			proxy_change		= *proxy_close / proxy_open_value - 1.0;
+			proxy_high_change	= *proxy_high / proxy_open_value - 1.0;
+			proxy_low_change	= *proxy_low / proxy_open_value - 1.0;
 		} else {
-			proxy_diff		= proxy_open_value - *proxy_close;
-			proxy_low_diff	= proxy_open_value - *proxy_high;
-			proxy_high_diff	= proxy_open_value - *proxy_low;
+			proxy_change		= proxy_open_value / *proxy_close - 1.0;
+			proxy_low_change	= proxy_open_value / *proxy_high - 1.0;
+			proxy_high_change	= proxy_open_value / *proxy_low - 1.0;
 		}
-		double diff = *proxy_close - open_value;
-		*inc	= diff + proxy_diff - cost;
-		*dec	= -diff - proxy_diff - cost;
-		double high_diff	= *high - open_value;
-		double low_diff	= *low - open_value;
-		ASSERT(high_diff >= low_diff);
-		ASSERT(proxy_high_diff >= proxy_low_diff);
-		*best_inc	= proxy_high_diff + high_diff - cost;
-		*best_dec	= -proxy_low_diff  - low_diff  - cost;
-		*worst_inc	= proxy_low_diff + low_diff - cost;
-		*worst_dec	= -proxy_high_diff - high_diff - cost;
-		*value_diff	= diff + proxy_diff;
-		*diff_ = diff; // different with proxy
+		double change = *close / open_value - 1.0;
+		*inc	= change + proxy_change - cost;
+		*dec	= -change - proxy_change - cost;
+		double high_change	= *high / open_value - 1.0;
+		double low_change	= *low / open_value - 1.0;
+		ASSERT(high_change >= low_change);
+		ASSERT(proxy_high_change >= proxy_low_change);
+		*best_inc	= proxy_high_change + high_change - cost;
+		*best_dec	= -proxy_low_change  - low_change  - cost;
+		*worst_inc	= proxy_low_change + low_change - cost;
+		*worst_dec	= -proxy_high_change - high_change - cost;
+		*value_change	= change + proxy_change;
+		*change_ = change; // different with proxy
 	}
 	
 	return true;

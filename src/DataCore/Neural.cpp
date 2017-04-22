@@ -877,7 +877,7 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	// Create input to ConvNet::Session
 	int pos = 0;
 	double* d;
-	d = change->GetValue<double>(0, 1, attr); // taking current peeks future
+	d = change->GetValue<double>(0, 0, attr);
 	input.Set(pos++, *d);
 	for(int i = 0; i < 16; i++) {
 		d = rnn->GetValue<double>(i, attr);
@@ -895,13 +895,21 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	}
 	ASSERT(pos == input.GetLength());
 	
+	
+	// Create output
+	d = change->GetValue<double>(0, -1, attr); // peeks future: only for training
+	output.Set(0, *d);
+	
+	
 	// Train once
 	s.ses.TrainOnce(input, output.GetWeights());
+	
 	
 	// Write value. Network has been forward-propagated in the TrainOnce.
 	double value = s.ses.GetNetwork().GetOutput().Get(0);
 	double* out = GetValue<double>(0, attr);
 	*out = value;
+	
 	
 	return do_training;
 }
@@ -985,7 +993,7 @@ void RLAgent::Init() {
 
 bool RLAgent::Process(const SlotProcessAttributes& attr) {
 	Panic("TODO: add spread costs");
-	
+	Panic("TODO: use forecaster and change");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1132,6 +1140,7 @@ void DQNAgent::Init() {
 
 bool DQNAgent::Process(const SlotProcessAttributes& attr) {
 	Panic("TODO: add spread costs");
+	Panic("TODO: use forecaster and change");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1315,6 +1324,7 @@ void MonaAgent::Init() {
 
 bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	Panic("TODO: add spread costs");
+	Panic("TODO: use forecaster and change");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);

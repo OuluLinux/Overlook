@@ -263,6 +263,38 @@ public:
 
 
 
+/*
+	Mona-meta-agent takes multiple agents (rl, dqn, mona) signals as inputs values from multiple
+	timeframes, and combines them as one better trader. Assertions have to be made, that it
+	really is performancing better than any single agent.
+*/
+class MonaMetaAgent : public Slot {
+	
+	enum {IDLE, LONG, SHORT, CLOSE};
+	
+	struct SymTf : Moveable<SymTf> {
+		Mona mona;
+		int action, prev_action;
+		double reward, prev_open;
+	};
+	Vector<SymTf> data;
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
+	
+	SlotPtr src, rl, dqn, mona;
+	Vector<double> input_array;
+	double CHEESE_NEED, CHEESE_GOAL;
+	int sym_count, tf_count;
+	int total;
+	bool do_training;
+	
+public:
+	MonaMetaAgent();
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual String GetKey() const {return "metamona";}
+	virtual String GetName() {return "MetaMona";}
+};
 
 
 }

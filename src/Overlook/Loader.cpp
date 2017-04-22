@@ -204,7 +204,10 @@ void Loader::Create() {
 		agents++;
 	}
 	
+	// Add meta agent (multi-agent, multi-tf)
 	ASSERT(agents > 0);
+	ses.link_core.Add("/metamona", "/metamona");
+	ses.link_symctrl.Add("metamona", "/metamona");
 	
 	
 	// Add multi agents

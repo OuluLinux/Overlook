@@ -23,12 +23,11 @@ INITBLOCK {
 	DataCore::TimeVector::Register<EventOsc>();
 	DataCore::TimeVector::Register<RLAgent>();
 	DataCore::TimeVector::Register<HugeDQNAgent>();
-	DataCore::TimeVector::Register<HugeMonaAgent>();
 	DataCore::TimeVector::Register<Forecaster>();
-	DataCore::TimeVector::Register<DQNDoubleAgent>();
 	DataCore::TimeVector::Register<MonaDoubleAgent>();
 	DataCore::TimeVector::Register<ChannelStats>();
 	DataCore::TimeVector::Register<ChannelPredicter>();
+	DataCore::TimeVector::Register<MonaMetaAgent>();
 }
 
 END_UPP_NAMESPACE

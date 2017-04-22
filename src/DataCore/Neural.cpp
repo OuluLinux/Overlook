@@ -927,6 +927,7 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 
 
 RLAgent::RLAgent() {
+	AddValue<char>("Signal");
 	AddValue<double>("Reward");
 	
 	SetStyle(
@@ -983,6 +984,8 @@ void RLAgent::Init() {
 }
 
 bool RLAgent::Process(const SlotProcessAttributes& attr) {
+	Panic("TODO: add spread costs");
+	
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1043,7 +1046,9 @@ void RLAgent::Backward(const SlotProcessAttributes& attr) {
 	s.brain.Backward(s.reward);
 	
 	// Write reward to oscillator
-	double* out = GetValue<double>(0, attr);
+	char* sig = GetValue<char>(0, attr);
+	*sig = s.action == ACT_LONG ? 1 : s.action == ACT_SHORT ? -1 : 0;
+	double* out = GetValue<double>(1, attr);
 	*out = s.reward;
 }
 
@@ -1067,6 +1072,7 @@ void RLAgent::Backward(const SlotProcessAttributes& attr) {
 
 
 DQNAgent::DQNAgent() {
+	AddValue<char>("Signal");
 	AddValue<double>("Reward");
 	
 	SetStyle(
@@ -1125,6 +1131,7 @@ void DQNAgent::Init() {
 }
 
 bool DQNAgent::Process(const SlotProcessAttributes& attr) {
+	Panic("TODO: add spread costs");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1193,7 +1200,9 @@ void DQNAgent::Backward(const SlotProcessAttributes& attr) {
 	s.agent.Learn(s.reward);
 	
 	// Write reward to oscillator
-	double* out = GetValue<double>(0, attr);
+	char* sig = GetValue<char>(0, attr);
+	*sig = s.velocity;
+	double* out = GetValue<double>(1, attr);
 	*out = s.reward;
 }
 
@@ -1220,6 +1229,7 @@ void DQNAgent::Backward(const SlotProcessAttributes& attr) {
 
 
 MonaAgent::MonaAgent() {
+	AddValue<char>("Signal");
 	AddValue<double>("Reward");
 	
 	// Cheese need and goal.
@@ -1304,6 +1314,7 @@ void MonaAgent::Init() {
 }
 
 bool MonaAgent::Process(const SlotProcessAttributes& attr) {
+	Panic("TODO: add spread costs");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1355,8 +1366,9 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	
 	
 	// Write default oscillator value
-	double* out = GetValue<double>(0, attr);
+	double* out = GetValue<double>(1, attr);
 	*out = 0.0;
+	
 	
 	// When action changes
 	if (s.action == IDLE) {
@@ -1406,8 +1418,236 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 		s.prev_open = *open;
 	}
 	
+	
+	// Write signal
+	char* sig = GetValue<char>(0, attr);
+	*sig = s.action == LONG ? 1 : s.action == SHORT ? -1 : 0;
+	
+	
 	return do_training;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MonaMetaAgent::MonaMetaAgent() {
+	AddValue<char>("Signal");
+	AddValue<double>("Reward");
+	
+	// Cheese need and goal.
+	CHEESE_NEED = 1.0;
+	CHEESE_GOAL = 0.5;
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			//"\"minimum\":-1,"
+			//"\"maximum\":1,"
+			//"\"point\":0.01,"
+			
+			"\"value0\":{"
+				"\"label\":\"Reward\","
+				"\"color\":\"64,128,192\","
+				"\"style\":\"HISTOGRAM\","
+				"\"line_width\":2,"
+				"\"chr\":95,"
+				"\"begin\":10,"
+				"\"shift\":0"
+			"}"
+		"}"
+	);
+}
+
+void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+	
+void MonaMetaAgent::Init() {
+	TimeVector& tv = GetTimeVector();
+	
+	src = tv.FindLinkSlot("/open");
+	ASSERTEXC(src);
+	
+	rl = FindLinkSlot("/rl");
+	ASSERTEXC(rl);
+	dqn = FindLinkSlot("/dqn");
+	ASSERTEXC(dqn);
+	mona = FindLinkSlot("/mona");
+	ASSERTEXC(mona);
+	
+	
+	tf_count = tv.GetPeriodCount();
+	sym_count = tv.GetSymbolCount();
+	total = 3 * tf_count + 2;
+	
+	data.SetCount(sym_count * tf_count);
+	
+	// Goal vector 0 .... 3, 0.01
+	input_array.SetCount(0);
+	input_array.SetCount(total, 0.0);
+	input_array[total-2] = CLOSE;
+	input_array[total-1] = 0.01;
+	
+	for(int i = 0; i < data.GetCount(); i++) {
+		SymTf& s = data[i];
+		
+		// My, my, my, aye-aye, whoa!
+		// M-m-m-my Mona
+		// M-m-m-my Mona
+		s.mona.MAX_MEDIATOR_LEVEL = 1;
+		s.mona.Init(total, 4, 1);
+		
+		// Set a long second effect interval
+		// for a higher level mediator.
+		s.mona.SetEffectEventIntervals(1, 2);
+		s.mona.SetEffectEventInterval(1, 0, 2, 0.5);
+		s.mona.SetEffectEventInterval(1, 1, 10, 0.5);
+		
+		// Set need and goal for cheese.
+		s.mona.SetNeed(0, CHEESE_NEED);
+		s.mona.AddGoal(0, input_array, 0, CHEESE_GOAL);
+		
+		// Reset need.
+	    s.mona.SetNeed(0, CHEESE_NEED);
+		s.mona.ClearResponseOverride();
+		
+		s.action = IDLE;
+		s.prev_action = IDLE;
+		s.reward = 0;
+		s.prev_open = 0;
+	}
+	
+	do_training = true;
+}
+
+bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
+	Panic("TODO: add spread costs");
+	
+	// Check if position is useless for training
+	double* open = src->GetValue<double>(0, 0, attr);
+	double* prev = src->GetValue<double>(0, 1, attr);
+	if (!prev || *prev == *open)
+		return true;
+	
+	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	
+	SymTf& s = GetData(attr);
+	
+	// in backward pass agent learns.
+	// compute reward
+	if (s.action != IDLE) {
+		ASSERT(s.action == LONG || s.action == SHORT);
+		double* open = src->GetValue<double>(0, 0, attr);
+		double change = *open / s.prev_open - 1.0;
+		s.reward = s.action == SHORT ? change * -1.0 : change;
+		s.reward -= 0.0001; // add some constant expenses. TODO: real spread
+	} else {
+		s.reward = 0.0;
+	}
+	
+	
+	// in forward pass the agent simply behaves in the environment
+	// create input to brain
+	input_array.SetCount(total);
+	int pos = 0;
+	for(int i = 0; i < 3; i++) {
+		SlotPtr src = i == 0 ? rl : i == 1 ? dqn : mona;
+		for(int j = 0; j < tf_count; j++) {
+			char* sig = src->GetValue<char>(0, j, 0, attr);
+			input_array[pos++] = *sig;
+		}
+	}
+	input_array[pos++] = s.action;
+	input_array[pos++] = s.reward;
+	ASSERT(pos == total);
+	
+	
+	// Calculate action
+	s.prev_action = s.action;
+	s.action = s.mona.Cycle(input_array);
+	ASSERT(s.action >= IDLE && s.action <= CLOSE);
+	
+	
+	// Write default oscillator value
+	double* out = GetValue<double>(1, attr);
+	*out = 0.0;
+	
+	
+	// When action changes
+	if (s.action == IDLE) {
+		// If previous state wasn't IDLE, then override state to that
+		if (s.prev_action != s.action) {
+			ASSERT(s.prev_action != CLOSE); // this would be weird error
+			s.mona.OverrideResponse(s.prev_action);
+			s.action = s.mona.Cycle(input_array);
+			s.mona.ClearResponseOverride();
+		}
+	}
+	else if (s.action == CLOSE && s.prev_action == IDLE) {
+		s.mona.OverrideResponse(IDLE);
+		s.action = s.mona.Cycle(input_array);
+		s.mona.ClearResponseOverride();
+	}
+	else if (s.action != s.prev_action) {
+		
+		// Close if currently open
+		if (s.prev_action != IDLE) {
+			
+			// Write reward to oscillator
+			*out = s.reward;
+		
+			// Set close state
+			for(int k = 0; k < total; k++)
+				input_array[k] = 0.0;
+			input_array[total-2] = CLOSE;
+			input_array[total-1] = s.reward; // useless, should be same already
+			
+			// Override action (response) to what Mona decided already previously
+			// but if the action was CLOSE then change it to the IDLE
+			if (s.action == CLOSE) s.action = IDLE;
+			s.mona.OverrideResponse(s.action);
+			int act = s.mona.Cycle(input_array); // this was similar to the backpropagation or the learning experience
+			ASSERT(act == s.action);
+			s.mona.ClearResponseOverride();
+			
+		    // Reset need.
+		    s.mona.SetNeed(0, CHEESE_NEED);
+		
+		    // Clear working memory.
+		    s.mona.ClearWorkingMemory();
+		}
+		double* open = src->GetValue<double>(1, attr);
+		s.prev_open = *open;
+	}
+	
+	
+	// Write signal
+	char* sig = GetValue<char>(0, attr);
+	*sig = s.action == LONG ? 1 : s.action == SHORT ? -1 : 0;
+	
+	
+	return do_training;
+}
 
 }

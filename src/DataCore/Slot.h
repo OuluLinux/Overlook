@@ -138,7 +138,7 @@ public:
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
-	T* GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
+	T*  GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
 		/*int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = (*(*(attr.sym_it + sym_id) + tf_id) + newpos);

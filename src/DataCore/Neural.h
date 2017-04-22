@@ -139,22 +139,21 @@ public:
 
 
 
+// Forecaster is just a regression neural network for multiple inputs.
+// It is like a complex version of ConvNet Regression1D example.
 class Forecaster : public Slot {
-	
-	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
+	String t;
+	ConvNet::Session ses;
 	
 	struct SymTf : Moveable<SymTf> {
 		ConvNet::Session ses;
-		int action, prev_action;
-		double reward;
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src;
-	Vector<double> input_array;
+	SlotPtr src, change, rnn, narx, chstat, chp;
+	ConvNet::Volume input, output;
 	int sym_count, tf_count;
-	int max_shift, total;
 	bool do_training;
 	
 	void Forward(const SlotProcessAttributes& attr);

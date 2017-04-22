@@ -29,7 +29,6 @@ file
 	RecurrentCtrl.lay,
 	ForecasterCtrl.h,
 	ForecasterCtrl.cpp,
-	ForecasterCtrl.lay,
 	AgentCtrl.h,
 	AgentCtrl.cpp,
 	AgentCtrl.lay,

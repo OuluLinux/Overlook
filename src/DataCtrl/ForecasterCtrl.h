@@ -8,30 +8,12 @@ namespace DataCtrl {
 using namespace DataCore;
 using namespace ConvNet;
 
-class ForecasterDraw : public Ctrl {
-	Vector<Vector<Point> > pts;
-	Vector<double> tmp;
-	SlotPtr src, rnn;
-	DataCore::Recurrent* rec;
-	int sym, tf;
-	
-public:
-	typedef ForecasterDraw CLASSNAME;
-	ForecasterDraw();
-	
-	virtual void Paint(Draw& w);
-	
-	
-	int week;
-	
-};
-
-#define LAYOUTFILE <DataCtrl/ForecasterCtrl.lay>
-#include <CtrlCore/lay.h>
-
-class ForecasterCtrl : public WithForecasterLayout<MetaNodeCtrl> {
-	DataCore::Recurrent* rec;
-	//Vector<double> ppl_list;
+class ForecasterCtrl : public MetaNodeCtrl {
+	Splitter hsplit;
+	ParentCtrl srcctrl;
+	DropList srclist;
+	PointCtrl pctrl;
+	LayerCtrl lctrl;
 	
 public:
 	typedef ForecasterCtrl CLASSNAME;

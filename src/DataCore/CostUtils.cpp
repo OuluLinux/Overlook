@@ -131,6 +131,7 @@ bool SpreadStats::Process(const SlotProcessAttributes& attr) {
 
 
 ValueChange::ValueChange() {
+	AddValue<double>("Difference");
 	AddValue<double>("Increase");
 	AddValue<double>("Decrease");
 	AddValue<double>("Best Increase");
@@ -143,34 +144,38 @@ ValueChange::ValueChange() {
 		"{"
 			"\"window_type\":\"SEPARATE\","
 			"\"value0\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":3,"
+				"\"color\":\"128,128,128\","
+				"\"line_width\":4,"
 			"},"
 			"\"value1\":{"
-				"\"color\":\"128,0,0\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":3,"
 			"},"
 			"\"value2\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":3,"
+			"},"
+			"\"value3\":{"
 				"\"color\":\"0,0,128\","
 				"\"line_width\":1,"
 			"},"
-			"\"value3\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":2,"
-			"},"
 			"\"value4\":{"
-				"\"color\":\"128,0,0\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":2,"
 			"},"
 			"\"value5\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":2,"
+			"},"
+			"\"value6\":{"
 				"\"color\":\"0,128,0\","
 				"\"line_width\":1,"
 			"},"
-			"\"value6\":{"
+			"\"value7\":{"
 				"\"color\":\"128,0,0\","
 				"\"line_width\":1,"
 			"},"
-			"\"value7\":{"
+			"\"value8\":{"
 				"\"color\":\"255,255,255\","
 				"\"line_width\":1,"
 			"},"
@@ -209,13 +214,14 @@ void ValueChange::Init() {
 }
 
 bool ValueChange::Process(const SlotProcessAttributes& attr) {
-	double* inc			= GetValue<double>(0, attr);
-	double* dec			= GetValue<double>(1, attr);
-	double* best_inc	= GetValue<double>(2, attr);
-	double* best_dec	= GetValue<double>(3, attr);
-	double* worst_inc	= GetValue<double>(4, attr);
-	double* worst_dec	= GetValue<double>(5, attr);
-	double* value_diff	= GetValue<double>(6, attr);
+	double* diff_		= GetValue<double>(0, attr);
+	double* inc			= GetValue<double>(1, attr);
+	double* dec			= GetValue<double>(2, attr);
+	double* best_inc	= GetValue<double>(3, attr);
+	double* best_dec	= GetValue<double>(4, attr);
+	double* worst_inc	= GetValue<double>(5, attr);
+	double* worst_dec	= GetValue<double>(6, attr);
+	double* value_diff	= GetValue<double>(7, attr);
 	double* open		= src->GetValue<double>(0, 0, attr);
 	double* close		= src->GetValue<double>(0, -1, attr);
 	double* low			= src->GetValue<double>(1, 0, attr);
@@ -240,6 +246,7 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 		*worst_inc = low_diff - cost;
 		*worst_dec = -high_diff - cost;
 		*value_diff = diff;
+		*diff_ = diff; // same without proxy
 	} else {
 		double* proxy_spread = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
 		
@@ -276,6 +283,7 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 		*worst_inc	= proxy_low_diff + low_diff - cost;
 		*worst_dec	= -proxy_high_diff - high_diff - cost;
 		*value_diff	= diff + proxy_diff;
+		*diff_ = diff; // different with proxy
 	}
 	
 	return true;

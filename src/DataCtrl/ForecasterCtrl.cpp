@@ -2,19 +2,15 @@
 
 namespace DataCtrl {
 
-ForecasterDraw::ForecasterDraw() {
-	
-}
-
-void ForecasterDraw::Paint(Draw& w) {
-	if (!IsVisible()) return;
-	
-}
-
-
 
 ForecasterCtrl::ForecasterCtrl() {
-	CtrlLayout(*this);
+	Add(hsplit.SizePos());
+	
+	hsplit.Horz();
+	hsplit << srcctrl << lctrl;
+	
+	srcctrl.Add(pctrl.HSizePos().VSizePos(0,30));
+	srcctrl.Add(srclist.HSizePos().BottomPos(0,30));
 	
 }
 

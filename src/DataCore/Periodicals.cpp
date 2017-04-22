@@ -382,9 +382,9 @@ bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
 			min_sum += min;
 			max_sum += max;
 		}
-		double open = *src->GetValue<double>(0, attr);
-		*GetValue<double>(j+0, attr) = open + min_sum;
-		*GetValue<double>(j+1, attr) = open + max_sum;
+		//double open = *src->GetValue<double>(0, attr);
+		*GetValue<double>(j+0, attr) = /*open +*/ min_sum;
+		*GetValue<double>(j+1, attr) = /*open +*/ max_sum;
 	}
 	return true;
 }

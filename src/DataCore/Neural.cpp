@@ -8,8 +8,8 @@ Recurrent::Recurrent() {
 		
 		// Different softmax sample temperatures:
 		//   lower setting will generate more likely predictions,
-		//   but you'll see more of the same common changes again and again. Higher
-		//   setting will generate less frequent changes but you might see more unrealistic errors.
+		//   but you'll see more of the same common values again and again. Higher
+		//   setting will generate less frequent values but you might see more unrealistic errors.
 		AddValue<double>();  // "coldest"	greedy argmax prediction
 		AddValue<double>();  // "cold"		low  temperate prediction
 		AddValue<double>();  // "warm"		med  temperate prediction
@@ -787,6 +787,15 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 Forecaster::Forecaster() {
 	AddValue<double>("Next open");
 	
+	// Neural Network structure
+	t =		"[\n"
+			"\t{\"type\":\"input\", \"input_width\":1, \"input_height\":1, \"input_depth\":1},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"sigmoid\"},\n"
+			"\t{\"type\":\"regression\", \"neuron_count\":1},\n"
+			"\t{\"type\":\"adadelta\", \"learning_rate\":0.01, \"momentum\":0, \"batch_size\":1, \"l2_decay\":0.001}\n"
+			"]\n";
+		
 	/*SetStyle(
 		"{"
 			//"\"window_type\":\"SEPARATE\","
@@ -812,36 +821,49 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void Forecaster::Init() {
-	/*TimeVector& tv = GetTimeVector();
+	TimeVector& tv = GetTimeVector();
 	
 	src = tv.FindLinkSlot("/open");
-	//rnn = tv.FindLinkSlot("/rnn");
+	change = tv.FindLinkSlot("/change");
+	rnn = tv.FindLinkSlot("/lstm");
+	narx = tv.FindLinkSlot("/narx");
+	chstat = tv.FindLinkSlot("/chstat");
+	chp = tv.FindLinkSlot("/chp");
 	ASSERTEXC(src);
-	//ASSERTEXC(rnn);
+	ASSERTEXC(change);
+	ASSERTEXC(rnn);
+	ASSERTEXC(chstat);
+	ASSERTEXC(chp);
 	
 	tf_count = tv.GetPeriodCount();
-	max_shift = 4;
 	sym_count = tv.GetSymbolCount();
-	total = max_shift;
+	
+	// Total input values:
+	//  - 1 previous value difference (change)
+	//  - 16 predictions from LSTM
+	//  - 1 prediction from NARX
+	//  - 6 min/max from ChannelStats
+	//  - 6 min/max from ChannelPredicter
+	//  = 30
+	Panic("TODO: check to read range -1 +1 values only");
+	input.Init(30, 1, 1, 0);
+	
+	output.Init(1, 1, 1, 0);
 	
 	data.SetCount(sym_count * tf_count);
 	
 	for(int i = 0; i < data.GetCount(); i++) {
 		SymTf& s = data[i];
-		
-		// braaainzzz.....
-		s.brain.Init(total, 3); // actions: idle, long, short
-		
-		s.action = ACT_IDLE;
-		s.prev_action = ACT_IDLE;
+		s.ses.SetTestPredict(true);
+		s.ses.SetPredictInterval(10);
+		ASSERTEXC(s.ses.MakeLayers(t));
 	}
 	
-	
-	do_training = true;*/
+	do_training = true;
 }
 
 bool Forecaster::Process(const SlotProcessAttributes& attr) {
-	/*
+	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
 	double* prev = src->GetValue<double>(0, 1, attr);
@@ -850,59 +872,38 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	
 	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
-	// Return reward value
-	Backward(attr);
+	SymTf& s = GetData(attr);
 	
-	// Get new action
-	Forward(attr);
-	
-	return do_training;*/
-}
-
-void Forecaster::Forward(const SlotProcessAttributes& attr) {
-	/*SymTf& s = GetData(attr);
-	
-	// in forward pass the agent simply behaves in the environment
-	// create input to brain
-	input_array.SetCount(total);
+	// Create input to ConvNet::Session
 	int pos = 0;
-	double* prev = src->GetValue<double>(0, max_shift, attr);
-	for(int k = 0; k < max_shift; k++) {
-		double* open = src->GetValue<double>(0, max_shift-1-k, attr);
-		if (prev) {
-			double d = *open / *prev - 1.0;
-			input_array[pos++] = d;
-		} else {
-			input_array[pos++] = 0;
-		}
-		prev = open;
+	double* d;
+	d = change->GetValue<double>(0, 1, attr); // taking current peeks future
+	input.Set(pos++, *d);
+	for(int i = 0; i < 16; i++) {
+		d = rnn->GetValue<double>(i, attr);
+		input.Set(pos++, *d);
 	}
-	ASSERT(pos == total);
+	d = narx->GetValue<double>(0, attr);
+	input.Set(pos++, *d);
+	for(int i = 0; i < 6; i++) {
+		d = chstat->GetValue<double>(i, attr);
+		input.Set(pos++, *d);
+	}
+	for(int i = 0; i < 6; i++) {
+		d = chp->GetValue<double>(i, attr);
+		input.Set(pos++, *d);
+	}
+	ASSERT(pos == input.GetLength());
 	
-	// get action from brain
-	s.prev_action = s.action;
-	s.action = s.brain.Forward(input_array);*/
-}
-
-void Forecaster::Backward(const SlotProcessAttributes& attr) {
-	/*SymTf& s = GetData(attr);
+	// Train once
+	s.ses.TrainOnce(input, output.GetWeights());
 	
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev_open = src->GetValue<double>(0, 1, attr);
-	double change = prev_open ? *open / *prev_open - 1.0: 0;
-	if (s.action == ACT_SHORT) change *= -1;
-	else if (s.action == ACT_IDLE) change = -0.00001;
-	
-	// in backward pass agent learns.
-	// compute reward
-	s.reward = change;
-	
-	// pass to brain for learning
-	s.brain.Backward(s.reward);
-	
-	// Write reward to oscillator
+	// Write value. Network has been forward-propagated in the TrainOnce.
+	double value = s.ses.GetNetwork().GetOutput().Get(0);
 	double* out = GetValue<double>(0, attr);
-	*out = s.reward;*/
+	*out = value;
+	
+	return do_training;
 }
 
 

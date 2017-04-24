@@ -1,6 +1,10 @@
 # Overlook
 
-Overlook is a scientific-ish time series predictor for market data.
+A scientific-ish time series predictor for market data.
+
+The work is currently ongoing. Please don't fork or try to run this yet.
+
+### Features
 
 Overlook is using neural network code from academic research projects:
  - ConvNetJS, a popular convolutive neural networks library, via ConvNetC++
@@ -8,7 +12,7 @@ Overlook is using neural network code from academic research projects:
  - Mona from Cortical Networks (MICrONS) Workshop sponsored by IARPA
 
 Overlook uses in some way following neural network models:
-- Common **Neural Network modules** (fully connected layers, non-linearities), Classification (SVM/Softmax) and Regression (L2)
+- Common **Neural Network modules** (fully connected layers, non-linearities), Classification (SVM/Softmax) and Regression
 - An **Reinforcement Learning** module, based on Deep Q Learning
 - Deep **Recurrent Neural Networks** (RNN) 
 - **Long Short-Term Memory networks** (LSTM) 

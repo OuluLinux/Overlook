@@ -65,6 +65,9 @@ public:
 	int GetSymbolCount() const {return symbols.GetCount();}
 	int GetTf(int i) const {return tfs[i];}
 	int GetTfCount() const {return tfs.GetCount();}
+	virtual String GetCtrl() const {return "dbctrl";}
+	virtual int GetCtrlType() const {return SLOT_ONCE;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 	
 	SimBroker demo;
 };

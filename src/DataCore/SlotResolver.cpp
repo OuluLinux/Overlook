@@ -70,6 +70,7 @@ void TimeVector::LinkPath(String dest, String src) {
 	p->link = slot;
 	
 	
+	slot->SetLinkPath(p->path);
 	
 }
 

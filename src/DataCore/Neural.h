@@ -41,6 +41,9 @@ class Recurrent : public Slot {
 public:
 	Recurrent();
 	virtual String GetKey() const {return "rnn";}
+	virtual String GetCtrl() const {return "rnnctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -135,6 +138,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "narx";}
 	virtual String GetName() {return "NARX";}
+	virtual String GetCtrl() const {return "narxctrl";}
+	virtual int GetCtrlType() const {return SLOT_TF;}
+	virtual int GetType() const {return SLOT_TF;}
 };
 
 
@@ -165,6 +171,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "forecaster";}
 	virtual String GetName() {return "Forecaster";}
+	virtual String GetCtrl() const {return "forecasterctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 };
 
 
@@ -197,6 +206,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "rl";}
 	virtual String GetName() {return "RL-Agent";}
+	virtual String GetCtrl() const {return "agentctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 };
 
 
@@ -228,6 +240,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "dqn";}
 	virtual String GetName() {return "DQN-Agent";}
+	virtual String GetCtrl() const {return "agentctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 };
 
 
@@ -258,6 +273,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "mona";}
 	virtual String GetName() {return "Mona";}
+	virtual String GetCtrl() const {return "agentctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 };
 
 
@@ -294,6 +312,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "metamona";}
 	virtual String GetName() {return "MetaMona";}
+	virtual String GetCtrl() const {return "agentctrl";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}
+	virtual int GetType() const {return SLOT_SYMTF;}
 };
 
 

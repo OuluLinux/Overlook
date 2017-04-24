@@ -2,6 +2,7 @@
 #define _DataCtrl_AgentCtrl_h_
 
 #include <ConvNetCtrl/ConvNetCtrl.h>
+#include <GraphLib/GraphLib.h>
 #include "Container.h"
 
 namespace DataCtrl {
@@ -32,6 +33,7 @@ public:
 class AgentCtrl : public WithAgentLayout<MetaNodeCtrl> {
 	DataCore::Recurrent* rec;
 	//Vector<double> ppl_list;
+	GraphLib::SpringGraph graph;
 	
 public:
 	typedef AgentCtrl CLASSNAME;

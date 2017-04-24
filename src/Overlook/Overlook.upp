@@ -15,7 +15,8 @@ file
 	Overlook.rc,
 	Overlook.iml,
 	Overlook.lay,
-	Loader.cpp;
+	Loader.cpp,
+	srcdoc.tpp;
 
 mainconfig
 	"" = "GUI MT",

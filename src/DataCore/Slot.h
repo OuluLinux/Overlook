@@ -32,6 +32,8 @@ typedef Vector<byte> SlotData;
 typedef Ptr<TimeVector> TimeVectorPtr;
 class Slot;
 
+enum {SLOT_SYMTF, SLOT_SYM, SLOT_TF, SLOT_ONCE};
+
 struct SlotProcessAttributes : Moveable<SlotProcessAttributes> {
 	int sym_id;								// id of symbol
 	int sym_count;							// count of symbol ids
@@ -80,7 +82,7 @@ protected:
 	void SetWithoutData(bool b=true) {forced_without_data = b;}
 	SlotData& GetData(int sym_id, int tf_id, int pos);
 	
-	String path, style;
+	String linkpath, path, style;
 	SlotPtr source;
 	TimeVector* vector;
 	
@@ -114,6 +116,7 @@ public:
 	bool IsReady(int pos, const SlotProcessAttributes& attr);
 	bool IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
 	String GetPath() const {return path;}
+	String GetLinkPath() const {return linkpath;}
 	const String& GetStyle() const {return style;}
 	
 	template <class T>
@@ -168,7 +171,8 @@ public:
 	void SetReady(int sym, int tf, int pos, const SlotProcessAttributes& attr, bool ready=true);
 	void SetReady(int pos, const SlotProcessAttributes& attr, bool ready=true);
 	void SetReady(const SlotProcessAttributes& attr, bool ready=true) {SetReady(attr.GetCounted(), attr, ready);}
-	void SetPath(String p) {path = p;}
+	void SetPath(String p) {ASSERT(path.IsEmpty()); path = p;}
+	void SetLinkPath(String p) {ASSERT(linkpath.IsEmpty()); linkpath = p;}
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
 	void SetStyle(const String& json) {style = json;}
@@ -176,6 +180,9 @@ public:
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}
 	virtual String GetShortName() const {return "shortname";}
+	virtual String GetCtrl() const {return "default";}
+	virtual int GetCtrlType() const {return SLOT_SYMTF;}	// new ctrl for every sym and tf
+	virtual int GetType() const {return SLOT_SYMTF;}		// processing separately for every sym and tf
 	virtual void SetArguments(const VectorMap<String, Value>& args) {}
 	virtual void Init() {}
 	virtual void Start() {}

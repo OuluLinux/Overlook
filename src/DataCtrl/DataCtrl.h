@@ -21,12 +21,12 @@ using namespace Upp;
 #include "RecurrentCtrl.h"
 #include "AgentCtrl.h"
 #include "NarxCtrl.h"
-#include "MonaCtrl.h"
 #include "RunnerCtrl.h"
 #include "BrokerCtrl.h"
 #include "ForecasterCtrl.h"
-#include "Visualization.h"
+#include "Notification.h"
 #include "ParameterCtrl.h"
+#include "DataBridgeCtrl.h"
 
 namespace DataCtrl {
 	

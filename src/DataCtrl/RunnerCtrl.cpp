@@ -80,7 +80,18 @@ void RunnerDraw::RefreshDraw() {
 
 
 RunnerCtrl::RunnerCtrl() {
-	CtrlLayout(*this);
+	CtrlLayout(progress);
+	
+	Add(tabs.SizePos());
+	tabs.Add(progress, "Progress");
+	tabs.Add(progress);
+	tabs.Add(sysmon, "System Monitor");
+	tabs.Add(sysmon);
+	tabs.Add(dependencies, "Dependencies");
+	tabs.Add(dependencies);
+	tabs.Add(details, "Details");
+	tabs.Add(details);
+	
 	
 	running = false;
 	stopped = true;
@@ -89,24 +100,32 @@ RunnerCtrl::RunnerCtrl() {
 	last_total_ready = 0;
 	last_total = 0;
 	
-	timedraw.Init(0, this);
-	slotdraw.Init(1, this);
-	
-	PostCallback(THISBACK(Refresher));
+	progress.timedraw.Init(0, this);
+	progress.slotdraw.Init(1, this);
 }
 
 RunnerCtrl::~RunnerCtrl() {
 	running = false;
 	while (!stopped) {Sleep(100);}
 }
+
+void RunnerCtrl::RefreshData() {
+	int tab = tabs.Get();
+	switch (tab) {
+		case 0: RefreshProgress(); break;
+		case 1: break;
+		case 2: break;
+		case 3: break;
+	}
+}
+
+void RunnerCtrl::RefreshProgress() {
+	progress.timedraw.Refresh();
+	progress.slotdraw.Refresh();
 	
-void RunnerCtrl::Refresher() {
-	timedraw.Refresh();
-	slotdraw.Refresh();
-	
-	totaltime.SetLabel("Time total: " + IntStr(last_total_duration) + "ms");
+	progress.totaltime.SetLabel("Time total: " + IntStr(last_total_duration) + "ms");
 	if (last_total) {
-		totalready.SetLabel("Ready total: " +
+		progress.totalready.SetLabel("Ready total: " +
 			IntStr(last_total_ready * 100 / last_total) + "%" " (" +
 			IntStr(last_total_ready) + "/" + IntStr(last_total) + ")");
 	}
@@ -119,31 +138,33 @@ void RunnerCtrl::Init() {
 	int tf_count = tv.GetPeriodCount();
 	int slot_count = tv.GetCustomSlotCount();
 	
-	symbols.AddColumn("Symbol");
+	
+	// Progress ParentCtrl
+	progress.symbols.AddColumn("Symbol");
 	for(int i = 0; i < sym_count; i++) {
-		symbols.Add(tv.GetSymbol(i));
+		progress.symbols.Add(tv.GetSymbol(i));
 	}
 	
-	tfs.AddColumn("Period");
-	tfs.AddColumn("Minutes");
-	tfs.AddColumn("Hours");
-	tfs.AddColumn("Days");
+	progress.tfs.AddColumn("Period");
+	progress.tfs.AddColumn("Minutes");
+	progress.tfs.AddColumn("Hours");
+	progress.tfs.AddColumn("Days");
 	for(int i = 0; i < tf_count; i++) {
 		int tf = tv.GetPeriod(i);
 		int mins = tf * tv.GetBasePeriod() / 60;
 		int hours = mins / 60;
 		int days = mins / (60 * 24);
-		tfs.Add(tf, mins, hours, days);
+		progress.tfs.Add(tf, mins, hours, days);
 	}
 	
-	slots.AddColumn("Name");
-	slots.AddColumn("Size");
-	slots.AddColumn("Offset");
-	slots.AddColumn("Path");
-	slots.ColumnWidths("1 1 1 3");
+	progress.slots.AddColumn("Name");
+	progress.slots.AddColumn("Size");
+	progress.slots.AddColumn("Offset");
+	progress.slots.AddColumn("Path");
+	progress.slots.ColumnWidths("1 1 1 3");
 	for(int i = 0; i < slot_count; i++) {
 		const Slot& s = tv.GetCustomSlot(i);
-		slots.Add(
+		progress.slots.Add(
 			s.GetKey(),
 			Format("0x%X", s.GetReservedBytes()),
 			Format("0x%X", s.GetOffset()),
@@ -152,7 +173,7 @@ void RunnerCtrl::Init() {
 	
 	
 	// Draw existing data
-	slotdraw.RefreshDraw();
+	progress.slotdraw.RefreshDraw();
 	/*
 	running = true;
 	stopped = false;
@@ -251,9 +272,9 @@ void RunnerCtrl::Run() {
 			last_total = total;
 			last_total_ready = total_ready;
 			
-			timedraw.RefreshDraw();
-			slotdraw.RefreshDraw();
-			PostCallback(THISBACK(Refresher));
+			progress.timedraw.RefreshDraw();
+			progress.slotdraw.RefreshDraw();
+			PostCallback(THISBACK(RefreshData));
 			
 			if (all_processed)
 				break;

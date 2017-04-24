@@ -17,8 +17,8 @@ public:
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual String GetKey() const {return "params";}
-	static String GetKeyStatic()  {return "params";}
+	virtual String GetKey() const {return "paramctrl";}
+	static String GetKeyStatic()  {return "paramctrl";}
 	
 };
 

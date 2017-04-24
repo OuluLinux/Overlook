@@ -1,15 +1,15 @@
-#ifndef _DataCtrl_Visualization_h_
-#define _DataCtrl_Visualization_h_
+#ifndef _DataCtrl_Notification_h_
+#define _DataCtrl_Notification_h_
 
 #include "Container.h"
 
 namespace DataCtrl {
 using namespace DataCore;
 
-class VisualizationCtrl;
+class NotificationCtrl;
 
-class VisualizationDraw : public Ctrl {
-	/*VisualizationCtrl* runner;
+class NotificationDraw : public Ctrl {
+	/*NotificationCtrl* runner;
 	Vector<Vector<double> > tmp;
 	Vector<Point> pts;
 	Vector<double> xsteps;
@@ -20,19 +20,19 @@ class VisualizationDraw : public Ctrl {
 	int mode;*/
 	
 public:
-	typedef VisualizationDraw CLASSNAME;
-	VisualizationDraw();
-	void Init(int mode, VisualizationCtrl* r);
+	typedef NotificationDraw CLASSNAME;
+	NotificationDraw();
+	void Init(int mode, NotificationCtrl* r);
 	void RefreshDraw();
 	
 	virtual void Paint(Draw& w);
 	
 };
 
-class Visualization : public MetaNodeCtrl {
+class Notification : public MetaNodeCtrl {
 	
 protected:
-	/*friend class VisualizationDraw;
+	/*friend class NotificationDraw;
 	Vector<SlotProcessAttributes> attrs;
 	int last_total_duration, last_total, last_total_ready;
 	bool running, stopped;
@@ -40,16 +40,16 @@ protected:
 	void Run();*/
 	
 public:
-	typedef Visualization CLASSNAME;
-	Visualization();
-	~Visualization();
+	typedef Notification CLASSNAME;
+	Notification();
+	~Notification();
 	
 	void Refresher();
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual String GetKey() const {return "visualization";}
-	static String GetKeyStatic()  {return "visualization";}
+	virtual String GetKey() const {return "notification";}
+	static String GetKeyStatic()  {return "notification";}
 	
 };
 

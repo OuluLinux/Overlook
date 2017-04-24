@@ -25,7 +25,7 @@ struct OverlookSession {
 	String addr;
 	int port;
 	Vector<int> tfs;
-	VectorMap<String, String> link_core, link_ctrl, link_symctrl;
+	VectorMap<String, String> link_core, link_ctrl;
 	String datadir;
 	
 	void Serialize(Stream& s) {

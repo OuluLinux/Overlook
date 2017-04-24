@@ -68,6 +68,9 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "doublemona";}
 	virtual String GetName() {return "Double Mona-Agent";}
+	virtual String GetCtrl() const {return "agentctrl";}
+	virtual int GetCtrlType() const {return SLOT_ONCE;}
+	virtual int GetType() const {return SLOT_ONCE;}
 };
 
 

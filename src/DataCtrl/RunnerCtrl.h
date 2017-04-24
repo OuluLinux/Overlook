@@ -32,13 +32,19 @@ public:
 #define LAYOUTFILE <DataCtrl/RunnerCtrl.lay>
 #include <CtrlCore/lay.h>
 
-class RunnerCtrl : public WithRunnerCtrlLayout<MetaNodeCtrl> {
+class RunnerCtrl : public MetaNodeCtrl {
 	
 protected:
 	friend class RunnerDraw;
 	Vector<SlotProcessAttributes> attrs;
 	int last_total_duration, last_total, last_total_ready;
 	bool running, stopped;
+	
+	TabCtrl tabs;
+	WithProgressLayout<ParentCtrl> progress;
+	GraphLib::SpringGraph dependencies;
+	ParentCtrl details;
+	ParentCtrl sysmon;
 	
 	void Run();
 	
@@ -47,7 +53,8 @@ public:
 	RunnerCtrl();
 	~RunnerCtrl();
 	
-	void Refresher();
+	void RefreshData();
+	void RefreshProgress();
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();

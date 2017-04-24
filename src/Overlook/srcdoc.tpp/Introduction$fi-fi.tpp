@@ -82,11 +82,13 @@ harjoittelemaan aiheen lykkäyksellä ja uudelleenkirjoituksella
 muutama kuukausi myöhemmin.&]
 [s0; Tässä dokumentaatiossa esitän ylpeänä havaintoja, joiden 
 perusteella Overlook on muovautunut nykyiseen muotoonsa. Monet 
-ominaisuudet ovat alkaneet ideoista, joita on tullut vastaan, 
-kun on joutunut odottamaan jossain, ja on ollut aikaa miettiä. 
-Ideoiden kirjaaminen niiden ilmettyä ja niiden kirjallinen pohtiminen 
-on ollut keskeisessä roolissa työn aikana. Kyseinen malli on 
-johtanut moniin umpikujiin, mutta myös merkittävään kehitykseen. 
+ominaisuudet ovat alkaneet ideoista, jotka ovat tulleet vastaan 
+odotellessani ja istuessani jossain kaukana tietokoneesta. Ideoiden 
+kirjaaminen niiden ilmettyä ja niiden kirjallinen pohtiminen 
+on ollut keskeisessä roolissa työn aikana. Kyseinen menetelmä 
+on johtanut moniin umpikujiin, mutta myös merkittävään kehitykseen. 
 Overlook sisältää vain tieteellisen käsittelyn kestävää 
 materiaalia ja tarkoituksena on kirjoittaa tästä ajan mittaan 
-tieteellinen artikkeli oli sille julkaisijaa tai ei.]]
+tieteellinen artikkeli oli sille julkaisijaa tai ei.&]
+[s0; [_ Tätä tekstiä tulee kohdella keskeneräisenä julkisena luonnoksena 
+julkaistun artikkelin sijaan.]]]

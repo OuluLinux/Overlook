@@ -102,6 +102,7 @@ void MonaDoubleAgent::Init() {
 }
 
 bool MonaDoubleAgent::Process(const SlotProcessAttributes& attr) {
+	Panic("TODO: check that channel predictor is followed strongly at this point");
 	
 	if (attr.tf_id == 0 && attr.sym_id == 0) {
 		

@@ -38,6 +38,7 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetName() {return "SpreadStats";}
 	virtual String GetShortName() const {return "spread";}
+	virtual String GetKey() const {return "spread";}
 	
 };
 
@@ -57,6 +58,7 @@ public:
 	
 	virtual String GetName() {return "ValueChange";}
 	virtual String GetShortName() const {return "change";}
+	virtual String GetKey() const {return "change";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);

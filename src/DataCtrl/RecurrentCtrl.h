@@ -32,6 +32,7 @@ public:
 class RecurrentCtrl : public WithRecurrentLayout<MetaNodeCtrl> {
 	DataCore::Recurrent* rec;
 	Vector<double> ppl_list;
+	String slotpath;
 	
 public:
 	typedef RecurrentCtrl CLASSNAME;

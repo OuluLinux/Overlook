@@ -8,16 +8,15 @@
 namespace DataCore {
 
 class DataBridge : public Slot {
-	MetaTrader mt;
-	
-	Vector<Symbol> symbols;
+	//MetaTrader mt;
+	//Vector<Symbol> symbols;
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	VectorMap<int, double> points;
 	String account_server;
 	String addr;
 	int port;
-	int vnode_begin;
+	int sym_count;
 	bool connected;
 	bool enable_bardata;
 	bool has_written;
@@ -28,11 +27,6 @@ class DataBridge : public Slot {
 		double ask, bid;
 	};
 	
-	struct Cur : Moveable<Cur> {
-		Vector<int> pairs0, pairs1;
-		String symbol;
-	};
-	Vector<Cur> curdata;
 	
 public:
 	typedef DataBridge CLASSNAME;
@@ -56,13 +50,12 @@ public:
 	void ProcessVirtualNode(const SlotProcessAttributes& attr);
 	
 	void DownloadRemoteData();
-	int  DownloadHistory(Symbol& sym, int tf, bool force=false);
+	int  DownloadHistory(const Symbol& sym, int tf, bool force=false);
 	int  DownloadAskBid();
 	int  DownloadRemoteFile(String remote_path, String local_path);
 	
-	MetaTrader& GetMetaTrader() {return mt;}
-	const Symbol& GetSymbol(int i) const {return symbols[i];}
-	int GetSymbolCount() const {return symbols.GetCount();}
+	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
+	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}
 	int GetTf(int i) const {return tfs[i];}
 	int GetTfCount() const {return tfs.GetCount();}
 	virtual String GetCtrl() const {return "dbctrl";}

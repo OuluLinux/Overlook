@@ -154,6 +154,9 @@ RecurrentCtrl::RecurrentCtrl() {
 void RecurrentCtrl::SetArguments(const VectorMap<String, Value>& args) {
 	MetaNode::SetArguments(args);
 	
+	int i = args.Find("slot");
+	ASSERTEXC(i != -1);
+	slotpath = args[i];
 }
 
 void RecurrentCtrl::Init() {
@@ -165,7 +168,7 @@ void RecurrentCtrl::Init() {
 	week_slider.SetData(0);
 	week_slider <<= THISBACK(SetWeekFromSlider);
 	
-	SlotPtr rnn = tv.FindLinkSlot("/rnn");
+	SlotPtr rnn = tv.FindLinkSlot(slotpath);
 	ASSERTEXC(rnn);
 	rec = dynamic_cast<DataCore::Recurrent*>(&*rnn);
 	ASSERTEXC(rec);

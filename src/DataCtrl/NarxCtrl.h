@@ -46,8 +46,8 @@ public:
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
-	virtual String GetKey() const {return "rnnctrl";}
-	static String GetKeyStatic()  {return "rnnctrl";}
+	virtual String GetKey() const {return "narxctrl";}
+	static String GetKeyStatic()  {return "narxctrl";}
 	
 };
 

@@ -31,14 +31,21 @@ using namespace Upp;
 	EventOscillator is not weekly-periodic indicator, or any strictly fixed period, but it
 	shows events, which usually occurs in monthly, quaterly or yearly period.
 	
+	NOTE: it is mathematically incorrect to use normal distrbution, because the probability is
+	nearly 0 for the price-change to be 0 during open market. Better solution would be to use
+	two separate gamma distributions for positive and negative, and Bernoulli distribution for
+	the price-change to be positive or negative. It would require a statistician to analyse the
+	correct distribution, but for this use case, it is not necessary, because we are only
+	interested about mean average and some kind of maximum/minimum channel, not how probable
+	some value-change is or something like that.
 */
 
 class WdayHourStats : public Slot {
 	
 protected:
 	struct SymTf : Moveable<SymTf> {
-		MovingOnlineVariance total;
-		Vector<MovingOnlineVariance> wdayhour, wday, hour;
+		MovingStepDistribution total;
+		Vector<MovingStepDistribution> wdayhour, wday, hour;
 	};
 	Vector<SymTf> data;
 	SlotPtr src;
@@ -49,6 +56,7 @@ public:
 	
 	virtual String GetName() {return "WdayHourStats";}
 	virtual String GetShortName() const {return "whstat";}
+	virtual String GetKey() const {return "whstat";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -66,21 +74,8 @@ public:
 	WdayHourDiff();
 	
 	virtual String GetName() {return "WdayHourDiff";}
-	virtual String GetShortName() const {return "whd";}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
-	virtual void Init();
-	virtual bool Process(const SlotProcessAttributes& attr);
-	
-};
-
-class ChannelStats : public Slot {
-	SlotPtr whstat_slow;
-	
-public:
-	ChannelStats();
-	
-	virtual String GetName() {return "ChannelStats";}
-	virtual String GetShortName() const {return "chstat";}
+	virtual String GetShortName() const {return "whdiff";}
+	virtual String GetKey() const {return "whdiff";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -91,7 +86,7 @@ class ChannelPredicter : public Slot {
 	
 protected:
 	
-	SlotPtr src, chstat;
+	SlotPtr src, whstat;
 	int length;
 	
 public:
@@ -99,6 +94,7 @@ public:
 	
 	virtual String GetName() {return "ChannelPredicter";}
 	virtual String GetShortName() const {return "chp";}
+	virtual String GetKey() const {return "chp";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
@@ -138,6 +134,7 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	virtual String GetName() {return "EventOsc";}
 	virtual String GetShortName() const {return SHORTNAME0("eosc");}
+	virtual String GetKey() const {return SHORTNAME0("eosc");}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 };
 

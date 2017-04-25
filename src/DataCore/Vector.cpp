@@ -45,6 +45,7 @@ void TimeVector::AddPeriod(int period) {
 }
 
 void TimeVector::AddSymbol(String sym) {
+	ASSERT(symbols.Find(sym) == -1); // no duplicates
 	symbols.Add(sym);
 }
 

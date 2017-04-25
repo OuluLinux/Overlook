@@ -127,7 +127,7 @@ protected:
 	Vector<int> tfbars_in_slowtf;
 	VectorMap<String, SlotPtr> resolved_slots;
 	VectorMap<String, String> linked_paths;
-	Vector<String> symbols;
+	Index<String> symbols;
 	Vector<int> bars, slot_bytes;
 	int64 total_slot_bytes;
 	SlotProcessAttributes* current_slotattr;

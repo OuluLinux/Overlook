@@ -311,7 +311,12 @@ struct Symbol : public Moveable<Symbol> {
 	
 };
 
+struct Currency : Moveable<Currency> {
+	Vector<int> pairs0, pairs1;
+	String name;
+};
 
+	
 struct DbgDouble {
 	double value;
 	Vector<double> past_values;
@@ -535,6 +540,7 @@ public:
 	virtual const Vector<PriceTf>&	GetTickData() = 0;
 	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false) = 0;
 	
+	
 };
 
 class MetaTrader : public Brokerage {
@@ -553,11 +559,11 @@ class MetaTrader : public Brokerage {
 	
 	
 	//VectorMap<String, Symbol> symbols;
-	Index<String> currencies;
 	Vector<Price> current_prices;
 	Vector<Symbol> symbols;
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
+	VectorMap<String, Currency> currencies;
 	Mutex current_price_lock;
 	
 	ArrayMap<int, String> periodstr;
@@ -669,10 +675,14 @@ public:
 	
 	
 	
+	const Vector<Symbol>& GetCacheSymbols() const {return symbols;}
+	const Symbol& GetSymbol(int i) const {return symbols[i];}
+	const Currency& GetCurrency(int i) const {return currencies[i];}
 	String GetAccountCurrency() {return account_currency;}
 	String GetAccountServer() {return account_server;}
 	String GetAccountName() {return account_name;}
 	String GetAccountNumber() {return account_id;}
+	String GetTimeframeString(int i) {return periodstr[i];}
 	double GetAccountBalance() {return balance;}
 	double GetAccountEquity() {return equity;}
 	double GetAccountLeverage() {return leverage;}
@@ -681,8 +691,10 @@ public:
 	bool IsConnectedCached() {return connected;}
 	int GetTimeframeCount() {return periodstr.GetCount();}
 	int GetTimeframe(int i) {return periodstr.GetKey(i);}
-	String GetTimeframeString(int i) {return periodstr[i];}
 	int GetTimeframeIdH1() {return tf_h1_id;}
+	int GetSymbolCount() const {return symbols.GetCount();}
+	int GetCurrencyCount() const {return currencies.GetCount();}
+	
 
 	int input, output;
 	
@@ -692,6 +704,8 @@ public:
 	void AddInputBytes(int i) {output += i;}
 
 };
+
+inline MetaTrader& GetMetaTrader() {return Single<MetaTrader>();}
 
 
 class MTPacket : Moveable<MTPacket> {

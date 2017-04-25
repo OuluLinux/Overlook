@@ -218,7 +218,10 @@ int MetaTrader::Init(String addr, int port) {
 	if (mainaddr.GetCount() == 0 || Connect(port)) {
 		return 1;
 	}
-	return 0;
+	
+	// Refresh symbols
+	GetSymbols();
+	return symbols.IsEmpty();
 }
 
 int MetaTrader::Check() {
@@ -565,7 +568,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	if (!account_currency.GetCount())
 		account_currency = "USD";
 	
-	Index<String> currencies;
+	VectorMap<String, int> currencies;
 	
 	// Parse symbol lines
 	int c1 = lines.GetCount();
@@ -690,8 +693,8 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		if (sym.IsForex()) {
 			String a = sym.name.Left(3);
 			String b = sym.name.Right(3);
-			if (currencies.Find(a) == -1) currencies.Add(a);
-			if (currencies.Find(b) == -1) currencies.Add(b);
+			currencies.GetAdd(a, 0)++;
+			currencies.GetAdd(b, 0)++;
 		}
 		
 		symbols.Add(sym);
@@ -715,7 +718,29 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		}
 		ASSERT(found);
 	}
-
+	
+	// Add currencies
+	SortByValue(currencies, StdGreater<int>()); // sort by must pairs having currency
+	this->currencies.Clear();
+	for(int i = 0; i < currencies.GetCount(); i++) {
+		const String& symbol = currencies.GetKey(i);
+		Currency& c = this->currencies.Add(symbol);
+		c.name = symbol;
+		for(int j = 0; j < symbols.GetCount(); j++) {
+			Symbol& s = symbols[j];
+			const String& key = s.name;
+			
+			String k0 = key.Left(3);
+			String k1 = key.Right(3);
+			
+			if (k0 == symbol) {
+				c.pairs0.Add(j);
+			}
+			else {
+				c.pairs1.Add(j);
+			}
+		}
+	}
 	
 	// Add currencies to symbol list
 	/*for(int i = 0; i < currencies.GetCount(); i++) {

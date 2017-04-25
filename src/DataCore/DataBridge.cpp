@@ -9,7 +9,7 @@ DataBridge::DataBridge()  {
 	has_written = false;
 	running = false;
 	stopped = true;
-	vnode_begin = -1;
+	sym_count = -1;
 	
 	AddValue<double>(); // open
 	AddValue<double>(); // low
@@ -36,21 +36,21 @@ void DataBridge::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void DataBridge::Serialize(Stream& s) {
-	s % mt % connected % account_server % symbols % tfs;
+	s % connected % account_server % tfs;
 }
 
 void DataBridge::Init() {
 	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
 	
-	//PathResolver& res = GetResolver();
 	TimeVector& tv = GetTimeVector();
+	MetaTrader& mt = GetMetaTrader();
+	
+	ASSERTEXC_(mt.GetSymbolCount() > 0, "MetaTrader must be initialized before DataBridge.");
 	
 	try {
-		mt.Init(addr, port);
 		connected = mt.AccountNumber();
 		account_server = mt.AccountServer();
-		
-		symbols <<= mt.GetSymbols();
+		sym_count = mt.GetSymbolCount();
 		
 		tfs.Clear();
 		int base_mtf = tv.GetBasePeriod() / 60;
@@ -69,138 +69,21 @@ void DataBridge::Init() {
 		throw DataExc("DataBridge::Init: unknown error");
 	}
 	
-	// Find currencies
-	VectorMap<String, int> currencies;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		Symbol& s = symbols[i];
-		tv.AddSymbol(s.name);
-		if (s.IsForex() && s.name.GetCount() == 6) {
-			String a = s.name.Left(3);
-			String b = s.name.Right(3);
-			currencies.GetAdd(a, 0)++;
-			currencies.GetAdd(b, 0)++;
-		}
+	// Check that symbol names match
+	for(int i = 0; i < sym_count; i++) {
+		ASSERTEXC(tv.GetSymbol(i) == mt.GetSymbol(i).name);
 	}
-	SortByValue(currencies, StdGreater<int>()); // sort by must pairs having currency
-	this->curdata.Clear();
-	for(int i = 0; i < currencies.GetCount(); i++) {
-		const String& symbol = currencies.GetKey(i);
-		Cur& c = curdata.Add();
-		c.symbol = symbol;
-		for(int j = 0; j < symbols.GetCount(); j++) {
-			Symbol& s = symbols[j];
-			const String& key = s.name;
-			
-			String k0 = key.Left(3);
-			String k1 = key.Right(3);
-			
-			if (k0 == symbol) {
-				c.pairs0.Add(j);
-			}
-			else {
-				c.pairs1.Add(j);
-			}
-		}
-	}
-	
 	
 	// Assert that first tf matches base period
 	if (tv.GetBasePeriod() != tfs[0] * 60) {
 		throw DataExc("Resolver's base period differs from mt");
 	}
 	
-	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
 	loaded.SetCount(sym_count * tf_count, false);
 	has_written = false;
 	
-	// Add BridgeBarData
-	/*int pair_count = 0;
-	Index<String> node_ids;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		
-		// Link frontpage
-		Symbol& sym = symbols[i];
-		bool is_pair = sym.IsForex();
-		String frontpage_link = "/symbols/" + sym.name;
-		String frontpage_path = "/fp?id=" + IntStr(i) + "&symbol=\"" + sym.name + "\"";
-		frontpage_link.Replace("#", "");
-		res.ResolvePath(frontpage_path);
-		res.LinkPath(frontpage_link, frontpage_path);
-		if (is_pair) {
-			String a = sym.name.Left(3);
-			String b = sym.name.Right(3);
-			if (node_ids.Find(a) == -1) node_ids.Add(a);
-			if (node_ids.Find(b) == -1) node_ids.Add(b);
-			String pair_link = "/pairs/" + sym.name;
-			res.LinkPath(pair_link, frontpage_path);
-			pair_count++;
-		}
-		
-		int id = res.GetNewId();
-		ASSERT(id == i); // mt id must match resolver id
-		
-		
-		if (enable_bardata) {
-			for(int j = 0; j < tfs.GetCount(); j++) {
-				int tf = tfs[j] / tfs[0];
-				String path = Format("/bbd?id=%d&symbol=\"%s\"&period=%d", i, sym.name, tf);
-				if (is_pair) {
-					path += "&key0=\"" + sym.name.Left(3) + "\"&key1=\"" + sym.name.Right(3) + "\"";
-				}
-				else if (!sym.currency_base.IsEmpty()) {
-					path += "&key0=\"" + sym.currency_base + "\"";
-				}
-				String link1 = "/symbols/" + sym.name + "/tf" + IntStr(tf);
-				String link2 = "/id/id" + IntStr(i) + "/tf" + IntStr(tf);
-				String link3 = "/rev_id/id" + IntStr(i) + "/tf" + IntStr(tf);
-				String path2 = "/revbd?id=" + IntStr(i) + "&period=" + IntStr(tf);
-				link1.Replace("#", "");
-				DataVar dv = res.ResolvePath(path);
-				if (!dv.Is()) return 1;
-				res.LinkPath(link1, path);
-				res.LinkPath(link2, path);
-				res.LinkPath(link3, path2);
-				dv->SetId(i);
-				if (is_pair) {
-					String link3 = "/pairs/" + sym.name + "/tf" + IntStr(tf);
-					res.LinkPath(link3, path);
-				}
-			}
-		}
-	}
-	
-	for(int i = 0; i < node_ids.GetCount(); i++) {
-		const String& key = node_ids[i];
-		int id = res.GetNewId();
-		
-		String frontpage_link = "/nodes/" + key;
-		String frontpage_path = "/fp?id=" + IntStr(id) + "&symbol=\"" + key + "\"";
-		res.LinkPath(frontpage_link, frontpage_path);
-		
-		if (enable_bardata) {
-			for(int j = 0; j < tfs.GetCount(); j++) {
-				String period_str = IntStr(tfs[j] / tfs[0]);
-				String path = "/bmc?symbol=\"" + key + "\"&period=" + period_str;
-				DataVar dv = res.ResolvePath(path);
-				if (!dv.Is()) return 1;
-				dv->SetId(id);
-				String link1 = "/nodes/" + key + "/tf" + period_str;
-				String link2 = "/id/id" + IntStr(id) + "/tf" + period_str;
-				res.LinkPath(link1, path);
-				res.LinkPath(link2, path);
-			}
-		}
-	}
-	*/
-	
-
-
-	Panic("TODO vnode_begin");
-	// set vnode_begin
-	
 	demo.Init(mt);
-	
 	
 	running = true;
 	stopped = false;
@@ -229,6 +112,7 @@ void DataBridge::Run() {
 void DataBridge::DownloadRemoteData() {
 	LOG("DataBridge::DownloadRemoteData");
 	
+	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
 	int actual = 0;
 	int total = symbols.GetCount() * tfs.GetCount();
 	for(int i = 0; i < symbols.GetCount(); i++) {
@@ -244,7 +128,7 @@ void DataBridge::DownloadRemoteData() {
 	DownloadAskBid();
 }
 
-int DataBridge::DownloadHistory(Symbol& sym, int tf, bool force) {
+int DataBridge::DownloadHistory(const Symbol& sym, int tf, bool force) {
 	String history_dir = ConfigFile("history");
 	RealizeDirectory(history_dir);
 	
@@ -265,6 +149,8 @@ int DataBridge::DownloadAskBid() {
 }
 
 int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
+	MetaTrader& mt = GetMetaTrader();
+	
 	TimeStop ts;
 	
 	FileAppend out(local_path);
@@ -335,13 +221,14 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 }
 
 bool DataBridge::Process(const SlotProcessAttributes& attr) {
+	MetaTrader& mt = GetMetaTrader();
 	TimeVector& tv = GetTimeVector();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
 	ASSERT(attr.GetCounted() == 0);
 	
-	if (vnode_begin != -1 && attr.sym_id >= vnode_begin) {
+	if (sym_count != -1 && attr.sym_id >= sym_count) {
 		ProcessVirtualNode(attr);
 		return true;
 	}
@@ -350,7 +237,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	// Open data-file
 	int period = attr.GetPeriod();
 	int mt_period = period * tv.GetBasePeriod() / 60;
-	String symbol = symbols[attr.sym_id].name;
+	String symbol = mt.GetSymbol(attr.sym_id).name;
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
@@ -468,9 +355,10 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 }
 
 void DataBridge::ProcessVirtualNode(const SlotProcessAttributes& attr) {
-	int cur = attr.sym_id - vnode_begin;
-	ASSERT(cur >= 0 && cur < curdata.GetCount());
-	Cur& c = curdata[cur];
+	MetaTrader& mt = GetMetaTrader();
+	int cur = attr.sym_id - sym_count;
+	ASSERT(cur >= 0 && cur < mt.GetCurrencyCount());
+	const Currency& c = mt.GetCurrency(cur);
 	
 	double change = 0;
 	double volume = 0;

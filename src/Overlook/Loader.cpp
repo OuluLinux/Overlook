@@ -30,7 +30,6 @@ Loader::Loader() {
 	mona.Set(true);
 	mona.Disable();
 	
-	rl2multi.Set(true);
 	rl2multi.Disable();
 	monamulti.Set(true);
 	monamulti.Disable();
@@ -129,9 +128,9 @@ void Loader::Create() {
 	ses.link_core.Add("/ma", "/ma");
 	ses.link_core.Add("/spread", "/spread");
 	ses.link_core.Add("/change", "/change");
-	ses.link_core.Add("/whch", "/whch");
-	ses.link_core.Add("/whstat", "/whstat");
-	ses.link_core.Add("/whd", "/whd");
+	ses.link_core.Add("/whstat_fast", "/whstat?period=10");
+	ses.link_core.Add("/whstat_slow", "/whstat?period=20");
+	ses.link_core.Add("/whdiff", "/whdiff");
 	ses.link_core.Add("/chp", "/chp");
 	ses.link_core.Add("/eosc", "/eosc");
 	
@@ -247,37 +246,29 @@ void Loader::Load() {
 }
 
 void Loader::LoadSession(OverlookSession& ses) {
+	MetaTrader& mt = GetMetaTrader();
 	TimeVector& tv = GetTimeVector();
 	PathResolver& res = *GetPathResolver();
+	
+	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
 	
 	try {
 		tv.EnableCache();
 		tv.LimitMemory();
 		
 		// Init sym/tfs/time space
-		MetaTrader mt;
-		mt.Init(ses.addr, ses.port);
+		ASSERTEXC(!mt.Init(ses.addr, ses.port));
 		
 		// Add symbols
-		Vector<Symbol> symbols;
-		symbols <<= mt.GetSymbols();
-		ASSERTEXC(!symbols.IsEmpty());
-		VectorMap<String, int> currencies;
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			Symbol& s = symbols[i];
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+			const Symbol& s = mt.GetSymbol(i);
 			tv.AddSymbol(s.name);
-			if (s.IsForex() && s.name.GetCount() == 6) {
-				String a = s.name.Left(3);
-				String b = s.name.Right(3);
-				currencies.GetAdd(a, 0)++;
-				currencies.GetAdd(b, 0)++;
-			}
 		}
-		SortByValue(currencies, StdGreater<int>()); // sort by must pairs having currency
-		for(int i = 0; i < currencies.GetCount(); i++) {
-			const String& cur = currencies.GetKey(i);
-			tv.AddSymbol(cur);
+		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
+			const Currency& c = mt.GetCurrency(i);
+			tv.AddSymbol(c.name);
 		}
+		
 		
 		// TODO: store symbols to session file and check that mt supports them
 		
@@ -325,7 +316,7 @@ void Loader::LoadSession(OverlookSession& ses) {
 			// Otherwise, link custom ctrl to /slotctrl/ folder.
 			else {
 				int type = slot->GetCtrlType();
-				String ctrl_dest = "/slotctrl/" + ctrlkey;
+				String ctrl_dest = "/slotctrl" + key;
 				String ctrl_src = "/" + ctrlkey + "?slot=\"" + key + "\"";
 				if (type == SLOT_SYMTF) {
 					linkcustomctrl_symtf.Add(ctrl_dest, ctrl_src);
@@ -358,7 +349,8 @@ void Loader::LoadSession(OverlookSession& ses) {
 				
 				// Add frontpage
 				String fp_dest = "/name/" + symbols[i].name;
-				String fp_src = "/fp?id=" + IntStr(i);
+				String fp_src = "/fp?id=" + IntStr(i) + "&symbol=\"" + symbols[i].name + "\"";
+				fp_dest.Replace("#", "");
 				res.LinkPath(fp_dest, fp_src);
 				
 				

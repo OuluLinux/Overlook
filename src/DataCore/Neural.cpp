@@ -30,6 +30,76 @@ Recurrent::Recurrent() {
 			"}";
 	
 	is_training_loop = false;
+	
+	SetStyle(
+		"{"
+			"\"window_type\":\"SEPARATE\","
+			"\"value0\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":4,"
+			"},"
+			"\"value1\":{"
+				"\"color\":\"0,0,255\","
+				"\"line_width\":4,"
+			"},"
+			"\"value2\":{"
+				"\"color\":\"255,0,0\","
+				"\"line_width\":4,"
+			"},"
+			"\"value3\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":4,"
+			"},"
+			"\"value4\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":3,"
+			"},"
+			"\"value5\":{"
+				"\"color\":\"0,0,255\","
+				"\"line_width\":3,"
+			"},"
+			"\"value6\":{"
+				"\"color\":\"255,0,0\","
+				"\"line_width\":3,"
+			"},"
+			"\"value7\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":3,"
+			"},"
+			"\"value8\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":2,"
+			"},"
+			"\"value9\":{"
+				"\"color\":\"0,0,255\","
+				"\"line_width\":2,"
+			"},"
+			"\"value10\":{"
+				"\"color\":\"255,0,0\","
+				"\"line_width\":2,"
+			"},"
+			"\"value11\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":2,"
+			"},"
+			"\"value12\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value13\":{"
+				"\"color\":\"0,0,255\","
+				"\"line_width\":1,"
+			"},"
+			"\"value14\":{"
+				"\"color\":\"255,0,0\","
+				"\"line_width\":1,"
+			"},"
+			"\"value15\":{"
+				"\"color\":\"128,0,0\","
+				"\"line_width\":1,"
+			"}"
+		"}"
+	);
 }
 
 void Recurrent::StoreThis() {
@@ -56,6 +126,10 @@ void Recurrent::Init() {
 	
 	src = FindLinkSlot("/open");
 	ASSERTEXC(src);
+	change = FindLinkSlot("/change");
+	ASSERTEXC(change);
+	whstat = FindLinkSlot("/whstat_slow");
+	ASSERTEXC(whstat);
 	
 	temperatures.SetCount(3);
 	temperatures[0] = 0.1;
@@ -67,7 +141,6 @@ void Recurrent::Init() {
 	value_count = 20;
 	batch = 30;
 	is_training_loop = true;
-	phase = PHASE_GATHERDATA;
 	
 	TimeVector& tv = GetTimeVector();
 	int sym_count = tv.GetSymbolCount();
@@ -102,7 +175,7 @@ void Recurrent::SetLearningRate(double rate) {
 bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	
 	// In first phase, end of data is required to find all possible changes
-	if (phase == PHASE_GATHERDATA) {
+	/*if (phase == PHASE_GATHERDATA) {
 		
 		// Gather statistics about the source values
 		if (attr.GetCounted() > 0) {
@@ -122,94 +195,90 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	}
 	
 	// In the second phase, training and prediction writing is processed
-	else if (phase == PHASE_TRAINING) {
+	else if (phase == PHASE_TRAINING) {*/
+	
+	if (attr.tf_id == 0 && attr.sym_id == 0)
+		iter++;
+	
+	// Write current values to the sentence
+	int count = Upp::min(batch, attr.GetCounted()-1);
+	if (count > 10) {
+		lock.Enter();
 		
-		if (attr.tf_id == 0 && attr.sym_id == 0)
-			iter++;
-		
-		// Write current values to the sentence
-		int count = Upp::min(batch, attr.GetCounted()-1);
-		if (count > 10) {
-			lock.Enter();
-			
-			// Run single training
-			// Run only unique batches
-			if (attr.GetCounted() % batch == 0) {
-				sequence.SetCount(count);
-				double prev_value = *src->GetValue<double>(0, count, attr);
-				for(int i = 0; i < count; i++) {
-					double* src_value = src->GetValue<double>(0, count-1-i, attr);
-					double value = *src_value;
-					sequence[i] = ToChar(value - prev_value);
-					prev_value = value;
-				}
-				Tick(attr);
-			}
-			/*
+		// Run single training
+		// Run only unique batches
+		if (attr.GetCounted() % batch == 0) {
 			sequence.SetCount(count);
-			double prev_value = *src->GetValue<double>(0, count, attr);
 			for(int i = 0; i < count; i++) {
-				double* src_value = src->GetValue<double>(0, count-1-i, attr);
-				double value = *src_value;
-				sequence[i] = ToChar(value - prev_value);
-				prev_value = value;
+				double* change = this->change->GetValue<double>(0, count-1-i, attr);
+				double* min = this->whstat->GetValue<double>(10, count-1-i, attr);
+				double* max = this->whstat->GetValue<double>(11, count-1-i, attr);
+				ASSERTEXC(change);
+				ASSERTEXC(min);
+				ASSERTEXC(max);
+				sequence[i] = ToChar(*change, *min, *max);
 			}
+			Tick(attr);
+		}
+		/*
+		sequence.SetCount(count);
+		double prev_value = *src->GetValue<double>(0, count, attr);
+		for(int i = 0; i < count; i++) {
+			double* src_value = src->GetValue<double>(0, count-1-i, attr);
+			double value = *src_value;
+			sequence[i] = ToChar(value - prev_value);
+			prev_value = value;
+		}
+		
+		// Run single training
+		// Run only unique batches
+		if (attr.GetCounted() % batch == 0) {
+			Tick(attr);
+		}
+		
+		
+		// Write predictions
+		// For 4 temperatures
+		double* src_value = src->GetValue<double>(0, attr);
+		for(int i = 0; i < 4; i++) {
 			
-			// Run single training
-			// Run only unique batches
-			if (attr.GetCounted() % batch == 0) {
-				Tick(attr);
+			// Erase the previous prediction (when i > 0)
+			sequence.SetCount(count);
+			
+			// First is greedy argmax and after that are temperatures
+			PredictSentence(i > 0, i == 0 ? 0 : temperatures[i-1]);
+			int new_count = sequence.GetCount();
+			ASSERT(new_count >= count);
+			
+			// For last 4 values and shifts of current temperature
+			double value = *src_value;
+			for(int j = count, k=0; j < count+4; j++, k+=4) {
+				double* val = GetValue<double>(i+k, attr);
+				if (j < new_count) value += FromChar(sequence[j]);
+				*val = value;
 			}
-			
-			
-			// Write predictions
-			// For 4 temperatures
-			double* src_value = src->GetValue<double>(0, attr);
-			for(int i = 0; i < 4; i++) {
-				
-				// Erase the previous prediction (when i > 0)
-				sequence.SetCount(count);
-				
-				// First is greedy argmax and after that are temperatures
-				PredictSentence(i > 0, i == 0 ? 0 : temperatures[i-1]);
-				int new_count = sequence.GetCount();
-				ASSERT(new_count >= count);
-				
-				// For last 4 values and shifts of current temperature
-				double value = *src_value;
-				for(int j = count, k=0; j < count+4; j++, k+=4) {
-					double* val = GetValue<double>(i+k, attr);
-					if (j < new_count) value += FromChar(sequence[j]);
-					*val = value;
-				}
-			}*/
-			
-			
-			
-			
-			lock.Leave();
-		}
-		else {
-			double value = *src->GetValue<double>(0, attr);
-			for(int i = 0; i < 4*4; i++)
-				*GetValue<double>(i, attr) = value;
-		}
+		}*/
 		
 		
-		// At last position, check if training should be finished
-		if (attr.GetCounted() == attr.GetBars()-1) {
-			
-			
-			//is_training_loop = false;
-			
-			StoreThis();
-		}
 		
-		// Train this again until training loop is finished, after this, only new values are
-		// trained.
-		return !is_training_loop;
+		
+		lock.Leave();
 	}
-	else return true;
+	
+	
+	// At last position, check if training should be finished
+	if (attr.GetCounted() == attr.GetBars()-1) {
+		
+		
+		//is_training_loop = false;
+		
+		//StoreThis();
+		Panic("TODO: serialize from runner");
+	}
+	
+	// Train this again until training loop is finished, after this, only new values are
+	// trained.
+	return !is_training_loop;
 }
 
 
@@ -222,8 +291,6 @@ void Recurrent::Reload() {
 	tick_time = 0;
 	
 	//tick_iter = 0;
-	
-	InitVocab(); // takes count threshold for characters
 	
 	InitSessions();
 	
@@ -246,55 +313,21 @@ void Recurrent::InitSessions() {
 	}
 }
 
-int Recurrent::ToChar(double diff) {
+int Recurrent::ToChar(double diff, double min, double max) {
+	double range = max - min;
+	double step = range / (value_count - 1);
 	int d = (diff - min) / step;
 	if (d < 0) d = 0;
 	else if (d >= value_count) d = value_count-1;
 	return d + 1; // first is START token
 }
 
-double Recurrent::FromChar(int i) {
-	int d = i - 1;
+double Recurrent::FromChar(int i, double min, double max) {
+	double range = max - min;
+	double step = range / (value_count - 1);
+	int d = i - 1; // first is START token
 	ASSERT(d >= 0 && d < value_count);
 	return d * step + min;
-}
-
-void Recurrent::InitVocab() {
-	
-	// filter by count threshold and create pointers
-	//letterToIndex.Clear();
-	//indexToLetter.Clear();
-	vocab.Clear();
-	
-	// Create "vocabulary", or acceptable rounded values
-	min = var.GetMean() - var.GetVariance();
-	max = var.GetMean() + var.GetVariance();
-	diff = max - min;
-	step = diff / (value_count-1);
-	/*
-	double v = min;
-	
-	// NOTE: start at one because we will have START and END tokens!
-	// that is, START token will be index 0 in model letter vectors
-	// and END token will be index 0 in the next character softmax
-	int q = 1;
-	for (int i = 0; i < count; i++) {
-		
-		// add character to vocab
-		letterToIndex.Add(i, q);
-		indexToLetter.Add(q, v);
-		vocab.Add(v);
-		q++;
-		
-		v += step;
-	}
-	*/
-	// globals written: indexToLetter, letterToIndex, vocab (list), and:
-	/*input_size	= vocab.GetCount() + 1;
-	output_size	= vocab.GetCount() + 1;
-	epoch_size	= sents.GetCount();
-	
-	input_stats.SetLabel(Format("found %d distinct characters: %s", vocab.GetCount(), Join(vocab, WString(""))));*/
 }
 
 void Recurrent::PredictSentence(const SlotProcessAttributes& attr, bool samplei, double temperature) {
@@ -400,7 +433,6 @@ void NARX::Init() {
 	ASSERTEXC(open);
 	change = FindLinkSlot("/change");
 	ASSERTEXC(change);
-	Panic("Change must be from previous to current, not current to next");
 	
 	sym_count = tv.GetSymbolCount();
 	tf_count = tv.GetPeriodCount();
@@ -827,12 +859,14 @@ void Forecaster::Init() {
 	change = tv.FindLinkSlot("/change");
 	rnn = tv.FindLinkSlot("/lstm");
 	narx = tv.FindLinkSlot("/narx");
-	chstat = tv.FindLinkSlot("/chstat");
+	whstat = tv.FindLinkSlot("/whstat_slow");
+	whdiff = tv.FindLinkSlot("/whdiff");
 	chp = tv.FindLinkSlot("/chp");
 	ASSERTEXC(src);
 	ASSERTEXC(change);
 	ASSERTEXC(rnn);
-	ASSERTEXC(chstat);
+	ASSERTEXC(whstat);
+	ASSERTEXC(whdiff);
 	ASSERTEXC(chp);
 	
 	tf_count = tv.GetPeriodCount();
@@ -842,11 +876,11 @@ void Forecaster::Init() {
 	//  - 1 previous value difference (change)
 	//  - 16 predictions from LSTM
 	//  - 1 prediction from NARX
-	//  - 6 min/max from ChannelStats
-	//  - 6 min/max from ChannelPredicter
-	//  = 30
-	Panic("TODO: check to read range -1 +1 values only");
-	input.Init(30, 1, 1, 0);
+	//  - 12 min/max from WdayHourStats
+	//  - 12 values from WdayHourDiff
+	//  - 7 min/max from ChannelPredicter
+	//  = 49
+	input.Init(49, 1, 1, 0);
 	
 	output.Init(1, 1, 1, 0);
 	
@@ -885,11 +919,15 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	}
 	d = narx->GetValue<double>(0, attr);
 	input.Set(pos++, *d);
-	for(int i = 0; i < 6; i++) {
-		d = chstat->GetValue<double>(i, attr);
+	for(int i = 0; i < 12; i++) {
+		d = whstat->GetValue<double>(i, attr);
 		input.Set(pos++, *d);
 	}
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < 12; i++) {
+		d = whdiff->GetValue<double>(i, attr);
+		input.Set(pos++, *d);
+	}
+	for(int i = 0; i < 7; i++) {
 		d = chp->GetValue<double>(i, attr);
 		input.Set(pos++, *d);
 	}

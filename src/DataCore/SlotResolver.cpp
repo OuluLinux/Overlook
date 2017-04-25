@@ -69,9 +69,7 @@ void TimeVector::LinkPath(String dest, String src) {
 	p->path = EncodePath(src_path);
 	p->link = slot;
 	
-	
-	slot->SetLinkPath(p->path);
-	
+	slot->SetLinkPath(dest);
 }
 
 PathLinkPtr TimeVector::FindLinkPath(String path) {

@@ -13,13 +13,17 @@ WdayHourStats::WdayHourStats() {
 	var_period = 10;
 	
 	AddValue<double>("Total Mean");
-	AddValue<double>("Total StdDev");
+	AddValue<double>("Total Min");
+	AddValue<double>("Total Max");
 	AddValue<double>("Hour Mean");
-	AddValue<double>("Hour StdDev");
+	AddValue<double>("Hour Min");
+	AddValue<double>("Hour Max");
 	AddValue<double>("Day Mean");
-	AddValue<double>("Day StdDev");
+	AddValue<double>("Day Min");
+	AddValue<double>("Day Max");
 	AddValue<double>("DayHour Mean");
-	AddValue<double>("DayHour StdDev");
+	AddValue<double>("DayHour Min");
+	AddValue<double>("DayHour Max");
 	
 	SetStyle(
 		"{"
@@ -33,7 +37,7 @@ WdayHourStats::WdayHourStats() {
 				"\"line_width\":1,"
 			"},"
 			"\"value2\":{"
-				"\"color\":\"0,128,0\","
+				"\"color\":\"128,0,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value3\":{"
@@ -41,20 +45,36 @@ WdayHourStats::WdayHourStats() {
 				"\"line_width\":1,"
 			"},"
 			"\"value4\":{"
-				"\"color\":\"0,0,128\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value5\":{"
-				"\"color\":\"0,0,128\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value6\":{"
-				"\"color\":\"0,128,128\","
+				"\"color\":\"0,0,128\","
 				"\"line_width\":1,"
 			"},"
 			"\"value7\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value8\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value9\":{"
 				"\"color\":\"0,128,128\","
-				"\"line_width\":2,"
+				"\"line_width\":1,"
+			"},"
+			"\"value10\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value11\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
 			"}"
 		"}"
 	);
@@ -96,13 +116,17 @@ void WdayHourStats::Init() {
 
 bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 	double* t_mean		= GetValue<double>(0, attr);
-	double* t_stddev	= GetValue<double>(1, attr);
-	double* h_mean		= GetValue<double>(2, attr);
-	double* h_stddev	= GetValue<double>(3, attr);
-	double* d_mean		= GetValue<double>(4, attr);
-	double* d_stddev	= GetValue<double>(5, attr);
-	double* dh_mean		= GetValue<double>(6, attr);
-	double* dh_stddev	= GetValue<double>(7, attr);
+	double* t_min		= GetValue<double>(1, attr);
+	double* t_max		= GetValue<double>(2, attr);
+	double* h_mean		= GetValue<double>(3, attr);
+	double* h_min		= GetValue<double>(4, attr);
+	double* h_max		= GetValue<double>(5, attr);
+	double* d_mean		= GetValue<double>(6, attr);
+	double* d_min		= GetValue<double>(7, attr);
+	double* d_max		= GetValue<double>(8, attr);
+	double* dh_mean		= GetValue<double>(9, attr);
+	double* dh_min		= GetValue<double>(10, attr);
+	double* dh_max		= GetValue<double>(11, attr);
 	
 	double* open		= src->GetValue<double>(0, 0,  attr);
 	double* close		= src->GetValue<double>(0, -1, attr);
@@ -126,10 +150,10 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 		dh = 0;
 	}
 	
-	MovingOnlineVariance& t_var  = s.total;
-	MovingOnlineVariance& h_var  = s.hour[h];
-	MovingOnlineVariance& d_var  = s.wday[d];
-	MovingOnlineVariance& dh_var = s.wdayhour[dh];
+	MovingStepDistribution& t_var  = s.total;
+	MovingStepDistribution& h_var  = s.hour[h];
+	MovingStepDistribution& d_var  = s.wday[d];
+	MovingStepDistribution& dh_var = s.wdayhour[dh];
 	
 	double diff = *close - *open;
 	
@@ -145,10 +169,15 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 	*d_mean			= d_var.GetMean();
 	*dh_mean		= dh_var.GetMean();
 	
-	*t_stddev		= t_var.GetDeviation();
-	*h_stddev		= h_var.GetDeviation();
-	*d_stddev		= d_var.GetDeviation();
-	*dh_stddev		= dh_var.GetDeviation();
+	*t_min			= t_var.Get(0.05);
+	*h_min			= h_var.Get(0.05);
+	*d_min			= d_var.Get(0.05);
+	*dh_min			= dh_var.Get(0.05);
+	
+	*t_max			= t_var.Get(0.95);
+	*h_max			= h_var.Get(0.95);
+	*d_max			= d_var.Get(0.95);
+	*dh_max			= dh_var.Get(0.95);
 	
 	t_var.Next();
 	h_var.Next();
@@ -177,13 +206,17 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 
 WdayHourDiff::WdayHourDiff() {
 	AddValue<double>("Total Mean");
-	AddValue<double>("Total StdDev");
+	AddValue<double>("Total Min");
+	AddValue<double>("Total Max");
 	AddValue<double>("Hour Mean");
-	AddValue<double>("Hour StdDev");
+	AddValue<double>("Hour Min");
+	AddValue<double>("Hour Max");
 	AddValue<double>("Day Mean");
-	AddValue<double>("Day StdDev");
+	AddValue<double>("Day Min");
+	AddValue<double>("Day Max");
 	AddValue<double>("DayHour Mean");
-	AddValue<double>("DayHour StdDev");
+	AddValue<double>("DayHour Min");
+	AddValue<double>("DayHour Max");
 	
 	SetStyle(
 		"{"
@@ -197,7 +230,7 @@ WdayHourDiff::WdayHourDiff() {
 				"\"line_width\":1,"
 			"},"
 			"\"value2\":{"
-				"\"color\":\"0,128,0\","
+				"\"color\":\"128,0,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value3\":{"
@@ -205,20 +238,36 @@ WdayHourDiff::WdayHourDiff() {
 				"\"line_width\":1,"
 			"},"
 			"\"value4\":{"
-				"\"color\":\"0,0,128\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value5\":{"
-				"\"color\":\"0,0,128\","
+				"\"color\":\"0,128,0\","
 				"\"line_width\":1,"
 			"},"
 			"\"value6\":{"
-				"\"color\":\"0,128,128\","
+				"\"color\":\"0,0,128\","
 				"\"line_width\":1,"
 			"},"
 			"\"value7\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value8\":{"
+				"\"color\":\"0,0,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value9\":{"
 				"\"color\":\"0,128,128\","
-				"\"line_width\":2,"
+				"\"line_width\":1,"
+			"},"
+			"\"value10\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
+			"},"
+			"\"value11\":{"
+				"\"color\":\"0,128,128\","
+				"\"line_width\":1,"
 			"}"
 		"}"
 	);
@@ -245,88 +294,63 @@ void WdayHourDiff::Init() {
 
 bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
 	double* t_mean_fast		= whstat_fast->GetValue<double>(0, attr);
-	double* t_stddev_fast	= whstat_fast->GetValue<double>(1, attr);
-	double* h_mean_fast		= whstat_fast->GetValue<double>(2, attr);
-	double* h_stddev_fast	= whstat_fast->GetValue<double>(3, attr);
-	double* d_mean_fast		= whstat_fast->GetValue<double>(4, attr);
-	double* d_stddev_fast	= whstat_fast->GetValue<double>(5, attr);
-	double* dh_mean_fast	= whstat_fast->GetValue<double>(6, attr);
-	double* dh_stddev_fast	= whstat_fast->GetValue<double>(7, attr);
+	double* t_min_fast		= whstat_fast->GetValue<double>(1, attr);
+	double* t_max_fast		= whstat_fast->GetValue<double>(2, attr);
+	double* h_mean_fast		= whstat_fast->GetValue<double>(3, attr);
+	double* h_min_fast		= whstat_fast->GetValue<double>(4, attr);
+	double* h_max_fast		= whstat_fast->GetValue<double>(5, attr);
+	double* d_mean_fast		= whstat_fast->GetValue<double>(6, attr);
+	double* d_min_fast		= whstat_fast->GetValue<double>(7, attr);
+	double* d_max_fast		= whstat_fast->GetValue<double>(8, attr);
+	double* dh_mean_fast	= whstat_fast->GetValue<double>(9, attr);
+	double* dh_min_fast		= whstat_fast->GetValue<double>(10, attr);
+	double* dh_max_fast		= whstat_fast->GetValue<double>(11, attr);
 	
 	double* t_mean_slow		= whstat_slow->GetValue<double>(0, attr);
-	double* t_stddev_slow	= whstat_slow->GetValue<double>(1, attr);
-	double* h_mean_slow		= whstat_slow->GetValue<double>(2, attr);
-	double* h_stddev_slow	= whstat_slow->GetValue<double>(3, attr);
-	double* d_mean_slow		= whstat_slow->GetValue<double>(4, attr);
-	double* d_stddev_slow	= whstat_slow->GetValue<double>(5, attr);
-	double* dh_mean_slow	= whstat_slow->GetValue<double>(6, attr);
-	double* dh_stddev_slow	= whstat_slow->GetValue<double>(7, attr);
+	double* t_min_slow		= whstat_slow->GetValue<double>(1, attr);
+	double* t_max_slow		= whstat_slow->GetValue<double>(2, attr);
+	double* h_mean_slow		= whstat_slow->GetValue<double>(3, attr);
+	double* h_min_slow		= whstat_slow->GetValue<double>(4, attr);
+	double* h_max_slow		= whstat_slow->GetValue<double>(5, attr);
+	double* d_mean_slow		= whstat_slow->GetValue<double>(6, attr);
+	double* d_min_slow		= whstat_slow->GetValue<double>(7, attr);
+	double* d_max_slow		= whstat_slow->GetValue<double>(8, attr);
+	double* dh_mean_slow	= whstat_slow->GetValue<double>(9, attr);
+	double* dh_min_slow		= whstat_slow->GetValue<double>(10, attr);
+	double* dh_max_slow		= whstat_slow->GetValue<double>(11, attr);
 	
-	double* t_mean		= GetValue<double>(0, attr);
-	double* t_stddev	= GetValue<double>(1, attr);
-	double* h_mean		= GetValue<double>(2, attr);
-	double* h_stddev	= GetValue<double>(3, attr);
-	double* d_mean		= GetValue<double>(4, attr);
-	double* d_stddev	= GetValue<double>(5, attr);
-	double* dh_mean		= GetValue<double>(6, attr);
-	double* dh_stddev	= GetValue<double>(7, attr);
+	double* t_mean			= GetValue<double>(0, attr);
+	double* t_min			= GetValue<double>(1, attr);
+	double* t_max			= GetValue<double>(2, attr);
+	double* h_mean			= GetValue<double>(3, attr);
+	double* h_min			= GetValue<double>(4, attr);
+	double* h_max			= GetValue<double>(5, attr);
+	double* d_mean			= GetValue<double>(6, attr);
+	double* d_min			= GetValue<double>(7, attr);
+	double* d_max			= GetValue<double>(8, attr);
+	double* dh_mean			= GetValue<double>(9, attr);
+	double* dh_min			= GetValue<double>(10, attr);
+	double* dh_max			= GetValue<double>(11, attr);
 	
-	*t_mean			= *t_mean_fast    - *t_mean_slow;
-	*h_mean			= *h_mean_fast    - *h_mean_slow;
-	*d_mean			= *d_mean_fast    - *d_mean_slow;
-	*dh_mean		= *dh_mean_fast   - *dh_mean_slow;
+	*t_mean					= *t_mean_fast    - *t_mean_slow;
+	*h_mean					= *h_mean_fast    - *h_mean_slow;
+	*d_mean					= *d_mean_fast    - *d_mean_slow;
+	*dh_mean				= *dh_mean_fast   - *dh_mean_slow;
 	
-	*t_stddev		= *t_stddev_fast  - *t_stddev_slow;
-	*h_stddev		= *h_stddev_fast  - *h_stddev_slow;
-	*d_stddev		= *d_stddev_fast  - *d_stddev_slow;
-	*dh_stddev		= *dh_stddev_fast - *dh_stddev_slow;
+	*t_min					= *t_min_fast     - *t_min_slow;
+	*h_min					= *h_min_fast     - *h_min_slow;
+	*d_min					= *d_min_fast     - *d_min_slow;
+	*dh_min					= *dh_min_fast    - *dh_min_slow;
+	
+	*t_max					= *t_max_fast     - *t_max_slow;
+	*h_max					= *h_max_fast     - *h_max_slow;
+	*d_max					= *d_max_fast     - *d_max_slow;
+	*dh_max					= *dh_max_fast    - *dh_max_slow;
 	
 	return true;
 }
 
 
-
-
-
-
-
-
-
-
-
-
-ChannelStats::ChannelStats() {
-	AddValue<double>("Hour Max Change");
-	AddValue<double>("Hour Min Change");
-	AddValue<double>("Day Max Change");
-	AddValue<double>("Day Min Change");
-	AddValue<double>("DayHour Max Change");
-	AddValue<double>("DayHour Min Change");
-}
-
-void ChannelStats::SetArguments(const VectorMap<String, Value>& args) {
-	
-}
-
-void ChannelStats::Init() {
-	whstat_slow = FindLinkSlot("/whstat_slow");
-	ASSERTEXC(whstat_slow);
-	
-}
-
-bool ChannelStats::Process(const SlotProcessAttributes& attr) {
-	for(int i = 2; i < 8; i+=2) {
-		double mean		= *whstat_slow->GetValue<double>(i+0, attr);
-		double stddev	= *whstat_slow->GetValue<double>(i+1, attr);
-		double* max		= GetValue<double>(i-2, attr);
-		double* min		= GetValue<double>(i-1, attr);
-		boost::math::normal_distribution<>my_normal (mean, stddev);
-		*max = quantile(my_normal, 0.95);
-		*min = quantile(complement(my_normal, 0.05));
-		ASSERT(*max >= *min);
-	}
-	return true;
-}
 
 
 
@@ -353,6 +377,7 @@ ChannelPredicter::ChannelPredicter() {
 	AddValue<double>("Day Max");
 	AddValue<double>("DayHour Min");
 	AddValue<double>("DayHour Max");
+	AddValue<double>("Average range");
 }
 
 void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
@@ -364,28 +389,30 @@ void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
 void ChannelPredicter::Init() {
 	src = FindLinkSlot("/open");
 	ASSERTEXC(src);
-	chstat = FindLinkSlot("/chstat");
-	ASSERTEXC(chstat);
+	whstat = FindLinkSlot("/whstat_slow");
+	ASSERTEXC(whstat);
 	
 }
 
 bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
+	double diff = 0.0;
 	for(int j = 0; j < 6; j+=2) {
 		double min_sum = 0;
 		double max_sum = 0;
 		for(int i = 0; i < length; i++) {
-			double min	= *chstat->GetValue<double>(j+0, -i, attr);
-			double max	= *chstat->GetValue<double>(j+1, -i, attr);
+			double min	= *whstat->GetValue<double>(j+0, -i, attr);
+			double max	= *whstat->GetValue<double>(j+1, -i, attr);
 			ASSERT(max > min);
 			ASSERT(max > 0);
 			ASSERT(0 > min);
 			min_sum += min;
 			max_sum += max;
+			diff += max - min;
 		}
-		//double open = *src->GetValue<double>(0, attr);
-		*GetValue<double>(j+0, attr) = /*open +*/ min_sum;
-		*GetValue<double>(j+1, attr) = /*open +*/ max_sum;
+		*GetValue<double>(j+0, attr) = min_sum;
+		*GetValue<double>(j+1, attr) = max_sum;
 	}
+	*GetValue<double>(6, attr) = diff / 3;
 	return true;
 }
 
@@ -452,6 +479,7 @@ void EventOsc::Init() {
 	TimeVector& tv = GetTimeVector();
 	int tf_count = tv.GetPeriodCount();
 	int sym_count = tv.GetSymbolCount();
+	int mtsym_count = db->GetSymbolCount();
 	int total = tf_count * sym_count;
 	
 	data.SetCount(total);
@@ -459,13 +487,22 @@ void EventOsc::Init() {
 		int id = i / tf_count;
 		Sym& s = data[i];
 		s.counted_events = 0;
-		const Symbol& sym = db->GetSymbol(id);
 		
-		if (sym.IsForex()) {
-			s.keys.Add(sym.name.Left(3));
-			s.keys.Add(sym.name.Right(3));
+		if (id < mtsym_count) {
+			const Symbol& sym = db->GetSymbol(id);
+			
+			if (sym.IsForex()) {
+				s.keys.Add(sym.name.Left(3));
+				s.keys.Add(sym.name.Right(3));
+			}
+			else {
+				s.keys.Add(sym.currency_base);
+			}
+		} else {
+			id -= mtsym_count;
+			const Currency& cur = GetMetaTrader().GetCurrency(id);
+			s.keys.Add(cur.name);
 		}
-		else Panic("TODO");
 	}
 }
 

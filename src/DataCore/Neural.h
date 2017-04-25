@@ -13,27 +13,22 @@ using namespace Narx;
 
 
 class Recurrent : public Slot {
-	enum {PHASE_GATHERDATA, PHASE_TRAINING};
-	
 	Array<Array<ConvNet::RecurrentSession> > ses;
-	Vector<double> vocab;
 	Vector<double> temperatures;
 	Vector<int> sequence;
 	OnlineVariance var;
-	SlotPtr src;
+	SlotPtr src, change, whstat;
 	String model_str;
-	double min, max, step, diff;
 	int batch;
 	int shifts;
-	int phase;
 	int value_count;
 	int iter;
 	int tick_time;
 	bool is_training_loop;
 	SpinLock lock;
 	
-	int ToChar(double diff);
-	double FromChar(int i);
+	int ToChar(double diff, double min, double max);
+	double FromChar(int i, double min, double max);
 	
 	void StoreThis();
 	void LoadThis();
@@ -64,7 +59,6 @@ public:
 	void Pause();
 	void Resume();
 	void Refresher();
-	void InitVocab();
 	void PredictSentence(const SlotProcessAttributes& attr, bool samplei=false, double temperature=1.0);
 	void Tick(const SlotProcessAttributes& attr);
 	
@@ -73,8 +67,7 @@ public:
 	
 	
 	void Serialize(Stream& s) {
-		s % vocab % temperatures % var % model_str %
-			min % max % step % diff % batch % shifts % phase % value_count % iter %
+		s % temperatures % var % model_str % batch % shifts % value_count % iter %
 			tick_time % is_training_loop;
 		if (s.IsLoading()) {
 			InitSessions();
@@ -157,7 +150,7 @@ class Forecaster : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, change, rnn, narx, chstat, chp;
+	SlotPtr src, change, rnn, narx, whstat, whdiff, chp;
 	ConvNet::Volume input, output;
 	int sym_count, tf_count;
 	bool do_training;

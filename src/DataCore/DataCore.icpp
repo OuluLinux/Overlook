@@ -25,7 +25,6 @@ INITBLOCK {
 	DataCore::TimeVector::Register<HugeDQNAgent>();
 	DataCore::TimeVector::Register<Forecaster>();
 	DataCore::TimeVector::Register<MonaDoubleAgent>();
-	DataCore::TimeVector::Register<ChannelStats>();
 	DataCore::TimeVector::Register<ChannelPredicter>();
 	DataCore::TimeVector::Register<MonaMetaAgent>();
 }

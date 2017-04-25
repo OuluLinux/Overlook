@@ -29,6 +29,9 @@ void SimBroker::Init(MetaTrader& mt) {
 	
 	TimeVector& tv = GetTimeVector();
 	src = tv.FindLinkSlot("/open");
+	ASSERTEXC(src);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
 }
 
 void SimBroker::Cycle() {

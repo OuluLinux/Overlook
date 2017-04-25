@@ -220,6 +220,13 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 			}
 			Tick(attr);
 		}
+		
+		
+		
+		// TODO: Remember to notice, that whstat has now change from previous to current
+		// instead of current to next.
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
 		/*
 		sequence.SetCount(count);
 		double prev_value = *src->GetValue<double>(0, count, attr);
@@ -908,6 +915,7 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	
 	SymTf& s = GetData(attr);
 	
+	
 	// Create input to ConvNet::Session
 	int pos = 0;
 	double* d;
@@ -1007,6 +1015,8 @@ void RLAgent::Init() {
 	//rnn = tv.FindLinkSlot("/rnn");
 	ASSERTEXC(src);
 	//ASSERTEXC(rnn);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 4;
@@ -1031,7 +1041,7 @@ void RLAgent::Init() {
 
 bool RLAgent::Process(const SlotProcessAttributes& attr) {
 	Panic("TODO: add spread costs");
-	Panic("TODO: use forecaster and change");
+	Panic("TODO: use forecaster");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1057,16 +1067,9 @@ void RLAgent::Forward(const SlotProcessAttributes& attr) {
 	// create input to brain
 	input_array.SetCount(total);
 	int pos = 0;
-	double* prev = src->GetValue<double>(0, max_shift, attr);
 	for(int k = 0; k < max_shift; k++) {
-		double* open = src->GetValue<double>(0, max_shift-1-k, attr);
-		if (prev) {
-			double d = *open / *prev - 1.0;
-			input_array[pos++] = d;
-		} else {
-			input_array[pos++] = 0;
-		}
-		prev = open;
+		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = change ? *change : 0;
 	}
 	ASSERT(pos == total);
 	
@@ -1078,9 +1081,8 @@ void RLAgent::Forward(const SlotProcessAttributes& attr) {
 void RLAgent::Backward(const SlotProcessAttributes& attr) {
 	SymTf& s = GetData(attr);
 	
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev_open = src->GetValue<double>(0, 1, attr);
-	double change = prev_open ? *open / *prev_open - 1.0: 0;
+	double change = *this->change->GetValue<double>(0, 0, attr);
+	
 	if (s.action == ACT_SHORT) change *= -1;
 	else if (s.action == ACT_IDLE) change = -0.00001;
 	
@@ -1152,6 +1154,8 @@ void DQNAgent::Init() {
 	//rnn = tv.FindLinkSlot("/rnn");
 	ASSERTEXC(src);
 	//ASSERTEXC(rnn);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
@@ -1205,16 +1209,9 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 	// create input to brain
 	input_array.SetCount(total + 1);
 	int pos = 0;
-	double* prev = src->GetValue<double>(0, max_shift, attr);
 	for(int k = 0; k < max_shift; k++) {
-		double* open = src->GetValue<double>(0, max_shift-1-k, attr);
-		if (prev) {
-			double d = *open / *prev - 1.0;
-			input_array[pos++] = d;
-		} else {
-			input_array[pos++] = 0;
-		}
-		prev = open;
+		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = change ? *change : 0;
 	}
 	ASSERT(pos == total);
 	input_array[pos++] = (double)s.velocity / (double)max_velocity;
@@ -1233,9 +1230,7 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 void DQNAgent::Backward(const SlotProcessAttributes& attr) {
 	SymTf& s = GetData(attr);
 	
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev_open = src->GetValue<double>(0, 1, attr);
-	double change = prev_open ? *open / *prev_open - 1.0: 0;
+	double change = *this->change->GetValue<double>(0, 0, attr);
 	double mul = (double)s.velocity / (double)max_velocity * 10.0;
 	change *= mul;
 	
@@ -1314,6 +1309,8 @@ void MonaAgent::Init() {
 	//rnn = tv.FindLinkSlot("/rnn");
 	ASSERTEXC(src);
 	//ASSERTEXC(rnn);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 10;
@@ -1362,7 +1359,7 @@ void MonaAgent::Init() {
 
 bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	Panic("TODO: add spread costs");
-	Panic("TODO: use forecaster and change");
+	Panic("TODO: use forecaster");
 	
 	// Check if position is useless for training
 	double* open = src->GetValue<double>(0, 0, attr);
@@ -1378,8 +1375,7 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	// compute reward
 	if (s.action != IDLE) {
 		ASSERT(s.action == LONG || s.action == SHORT);
-		double* open = src->GetValue<double>(0, 0, attr);
-		double change = *open / s.prev_open - 1.0;
+		double change = *this->change->GetValue<double>(0, attr);
 		s.reward = s.action == SHORT ? change * -1.0 : change;
 		s.reward -= 0.0001; // add some constant expenses
 	} else {
@@ -1391,16 +1387,9 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	// create input to brain
 	input_array.SetCount(total + 2);
 	int pos = 0;
-	prev = src->GetValue<double>(0, max_shift, attr);
 	for(int k = 0; k < max_shift; k++) {
-		double* open = src->GetValue<double>(0, max_shift-1-k, attr);
-		if (prev) {
-			double d = *open / *prev - 1.0;
-			input_array[pos++] = d;
-		} else {
-			input_array[pos++] = 0;
-		}
-		prev = open;
+		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = change ? *change : 0;
 	}
 	ASSERT(pos == total);
 	input_array[pos++] = s.action;
@@ -1543,6 +1532,8 @@ void MonaMetaAgent::Init() {
 	ASSERTEXC(dqn);
 	mona = FindLinkSlot("/mona");
 	ASSERTEXC(mona);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
 	
 	
 	tf_count = tv.GetPeriodCount();
@@ -1606,8 +1597,7 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	// compute reward
 	if (s.action != IDLE) {
 		ASSERT(s.action == LONG || s.action == SHORT);
-		double* open = src->GetValue<double>(0, 0, attr);
-		double change = *open / s.prev_open - 1.0;
+		double change = *this->change->GetValue<double>(0, attr);
 		s.reward = s.action == SHORT ? change * -1.0 : change;
 		s.reward -= 0.0001; // add some constant expenses. TODO: real spread
 	} else {

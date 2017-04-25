@@ -87,8 +87,8 @@ void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourStats::Init() {
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
+	change = FindLinkSlot("/change");
+	ASSERTEXC(change);
 	
 	TimeVector& tv = GetTimeVector();
 	int sym_count = tv.GetSymbolCount();
@@ -128,8 +128,7 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 	double* dh_min		= GetValue<double>(10, attr);
 	double* dh_max		= GetValue<double>(11, attr);
 	
-	double* open		= src->GetValue<double>(0, 0,  attr);
-	double* close		= src->GetValue<double>(0, -1, attr);
+	double* change		= this->change->GetValue<double>(0, 0, attr);
 	
 	TimeVector& tv = GetTimeVector();
 	int tf_count = tv.GetPeriodCount();
@@ -155,13 +154,11 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 	MovingStepDistribution& d_var  = s.wday[d];
 	MovingStepDistribution& dh_var = s.wdayhour[dh];
 	
-	double diff = *close - *open;
-	
-	if (diff != 0.0) {
-		t_var.AddResult(diff);
-		h_var.AddResult(diff);
-		d_var.AddResult(diff);
-		dh_var.AddResult(diff);
+	if (change && *change != 0.0) {
+		t_var.AddResult(*change);
+		h_var.AddResult(*change);
+		d_var.AddResult(*change);
+		dh_var.AddResult(*change);
 	}
 	
 	*t_mean			= t_var.GetMean();
@@ -391,7 +388,6 @@ void ChannelPredicter::Init() {
 	ASSERTEXC(src);
 	whstat = FindLinkSlot("/whstat_slow");
 	ASSERTEXC(whstat);
-	
 }
 
 bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
@@ -400,8 +396,8 @@ bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
 		double min_sum = 0;
 		double max_sum = 0;
 		for(int i = 0; i < length; i++) {
-			double min	= *whstat->GetValue<double>(j+0, -i, attr);
-			double max	= *whstat->GetValue<double>(j+1, -i, attr);
+			double min	= *whstat->GetValue<double>(j+0, -1-i, attr);
+			double max	= *whstat->GetValue<double>(j+1, -1-i, attr);
 			ASSERT(max > min);
 			ASSERT(max > 0);
 			ASSERT(0 > min);

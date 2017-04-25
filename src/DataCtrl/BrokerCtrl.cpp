@@ -85,6 +85,7 @@ void BrokerCtrl::Reset() {
 }
 
 void BrokerCtrl::DummyRunner() {
+	#if 0
 	Brokerage& b = db->demo;
 	
 	Vector<Symbol> symbols;
@@ -150,7 +151,7 @@ void BrokerCtrl::DummyRunner() {
 		
 		Sleep(500);
 	}
-	
+	#endif
 }
 
 }

@@ -83,8 +83,6 @@ void DataBridge::Init() {
 	loaded.SetCount(sym_count * tf_count, false);
 	has_written = false;
 	
-	demo.Init(mt);
-	
 	running = true;
 	stopped = false;
 	Thread::Start(THISBACK(Run));

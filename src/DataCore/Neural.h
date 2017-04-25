@@ -184,7 +184,7 @@ class RLAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src;
+	SlotPtr src, change;
 	Vector<double> input_array;
 	int sym_count, tf_count;
 	int max_shift, total;
@@ -218,7 +218,7 @@ class DQNAgent : public Slot {
 	
 	int max_velocity;
 	
-	SlotPtr src;
+	SlotPtr src, change;
 	Vector<double> input_array;
 	int sym_count, tf_count;
 	int max_shift, total;
@@ -252,7 +252,7 @@ class MonaAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src;
+	SlotPtr src, change;
 	Vector<double> input_array;
 	double CHEESE_NEED, CHEESE_GOAL;
 	int sym_count, tf_count;
@@ -291,7 +291,7 @@ class MonaMetaAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, rl, dqn, mona;
+	SlotPtr src, rl, dqn, mona, change;
 	Vector<double> input_array;
 	double CHEESE_NEED, CHEESE_GOAL;
 	int sym_count, tf_count;

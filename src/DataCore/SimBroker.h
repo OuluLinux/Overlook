@@ -14,7 +14,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	Index<String> symbol_idx;
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
-	SlotPtr src;
+	SlotPtr src, change;
 	String currency;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;

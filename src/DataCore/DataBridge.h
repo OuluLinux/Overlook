@@ -62,7 +62,6 @@ public:
 	virtual int GetCtrlType() const {return SLOT_ONCE;}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
-	SimBroker demo;
 };
 
 

@@ -48,7 +48,7 @@ protected:
 		Vector<MovingStepDistribution> wdayhour, wday, hour;
 	};
 	Vector<SymTf> data;
-	SlotPtr src;
+	SlotPtr change;
 	int var_period;
 	
 public:

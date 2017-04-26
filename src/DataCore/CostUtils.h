@@ -49,7 +49,6 @@ class ValueChange : public Slot {
 		bool has_proxy;
 		int proxy_id, proxy_factor;
 	};
-	SlotPtr src, spread;
 	Vector<Sym> data;
 	DataBridge* db;
 	

@@ -87,8 +87,7 @@ void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourStats::Init() {
-	change = FindLinkSlot("/change");
-	ASSERTEXC(change);
+	AddDependency("/change");
 	
 	TimeVector& tv = GetTimeVector();
 	int sym_count = tv.GetSymbolCount();
@@ -115,6 +114,8 @@ void WdayHourStats::Init() {
 }
 
 bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
+	const Slot& change_slot = GetDependency(0);
+	
 	double* t_mean		= GetValue<double>(0, attr);
 	double* t_min		= GetValue<double>(1, attr);
 	double* t_max		= GetValue<double>(2, attr);
@@ -128,7 +129,7 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 	double* dh_min		= GetValue<double>(10, attr);
 	double* dh_max		= GetValue<double>(11, attr);
 	
-	double* change		= this->change->GetValue<double>(0, 0, attr);
+	double* change		= change_slot.GetValue<double>(0, 0, attr);
 	
 	TimeVector& tv = GetTimeVector();
 	int tf_count = tv.GetPeriodCount();
@@ -283,38 +284,39 @@ void WdayHourDiff::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourDiff::Init() {
-	whstat_fast = FindLinkSlot("/whstat_fast");
-	whstat_slow = FindLinkSlot("/whstat_slow");
-	ASSERTEXC(whstat_fast);
-	ASSERTEXC(whstat_slow);
+	AddDependency("/whstat_fast");
+	AddDependency("/whstat_slow");
 }
 
 bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
-	double* t_mean_fast		= whstat_fast->GetValue<double>(0, attr);
-	double* t_min_fast		= whstat_fast->GetValue<double>(1, attr);
-	double* t_max_fast		= whstat_fast->GetValue<double>(2, attr);
-	double* h_mean_fast		= whstat_fast->GetValue<double>(3, attr);
-	double* h_min_fast		= whstat_fast->GetValue<double>(4, attr);
-	double* h_max_fast		= whstat_fast->GetValue<double>(5, attr);
-	double* d_mean_fast		= whstat_fast->GetValue<double>(6, attr);
-	double* d_min_fast		= whstat_fast->GetValue<double>(7, attr);
-	double* d_max_fast		= whstat_fast->GetValue<double>(8, attr);
-	double* dh_mean_fast	= whstat_fast->GetValue<double>(9, attr);
-	double* dh_min_fast		= whstat_fast->GetValue<double>(10, attr);
-	double* dh_max_fast		= whstat_fast->GetValue<double>(11, attr);
+	const Slot& whstat_fast = GetDependency(0);
+	const Slot& whstat_slow = GetDependency(1);
 	
-	double* t_mean_slow		= whstat_slow->GetValue<double>(0, attr);
-	double* t_min_slow		= whstat_slow->GetValue<double>(1, attr);
-	double* t_max_slow		= whstat_slow->GetValue<double>(2, attr);
-	double* h_mean_slow		= whstat_slow->GetValue<double>(3, attr);
-	double* h_min_slow		= whstat_slow->GetValue<double>(4, attr);
-	double* h_max_slow		= whstat_slow->GetValue<double>(5, attr);
-	double* d_mean_slow		= whstat_slow->GetValue<double>(6, attr);
-	double* d_min_slow		= whstat_slow->GetValue<double>(7, attr);
-	double* d_max_slow		= whstat_slow->GetValue<double>(8, attr);
-	double* dh_mean_slow	= whstat_slow->GetValue<double>(9, attr);
-	double* dh_min_slow		= whstat_slow->GetValue<double>(10, attr);
-	double* dh_max_slow		= whstat_slow->GetValue<double>(11, attr);
+	double* t_mean_fast		= whstat_fast.GetValue<double>(0, attr);
+	double* t_min_fast		= whstat_fast.GetValue<double>(1, attr);
+	double* t_max_fast		= whstat_fast.GetValue<double>(2, attr);
+	double* h_mean_fast		= whstat_fast.GetValue<double>(3, attr);
+	double* h_min_fast		= whstat_fast.GetValue<double>(4, attr);
+	double* h_max_fast		= whstat_fast.GetValue<double>(5, attr);
+	double* d_mean_fast		= whstat_fast.GetValue<double>(6, attr);
+	double* d_min_fast		= whstat_fast.GetValue<double>(7, attr);
+	double* d_max_fast		= whstat_fast.GetValue<double>(8, attr);
+	double* dh_mean_fast	= whstat_fast.GetValue<double>(9, attr);
+	double* dh_min_fast		= whstat_fast.GetValue<double>(10, attr);
+	double* dh_max_fast		= whstat_fast.GetValue<double>(11, attr);
+	
+	double* t_mean_slow		= whstat_slow.GetValue<double>(0, attr);
+	double* t_min_slow		= whstat_slow.GetValue<double>(1, attr);
+	double* t_max_slow		= whstat_slow.GetValue<double>(2, attr);
+	double* h_mean_slow		= whstat_slow.GetValue<double>(3, attr);
+	double* h_min_slow		= whstat_slow.GetValue<double>(4, attr);
+	double* h_max_slow		= whstat_slow.GetValue<double>(5, attr);
+	double* d_mean_slow		= whstat_slow.GetValue<double>(6, attr);
+	double* d_min_slow		= whstat_slow.GetValue<double>(7, attr);
+	double* d_max_slow		= whstat_slow.GetValue<double>(8, attr);
+	double* dh_mean_slow	= whstat_slow.GetValue<double>(9, attr);
+	double* dh_min_slow		= whstat_slow.GetValue<double>(10, attr);
+	double* dh_max_slow		= whstat_slow.GetValue<double>(11, attr);
 	
 	double* t_mean			= GetValue<double>(0, attr);
 	double* t_min			= GetValue<double>(1, attr);
@@ -384,20 +386,18 @@ void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void ChannelPredicter::Init() {
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
-	whstat = FindLinkSlot("/whstat_slow");
-	ASSERTEXC(whstat);
+	AddDependency("/whstat_slow");
 }
 
 bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
+	const Slot& whstat = GetDependency(0);
 	double diff = 0.0;
 	for(int j = 0; j < 6; j+=2) {
 		double min_sum = 0;
 		double max_sum = 0;
 		for(int i = 0; i < length; i++) {
-			double min	= *whstat->GetValue<double>(j+0, -1-i, attr);
-			double max	= *whstat->GetValue<double>(j+1, -1-i, attr);
+			double min	= *whstat.GetValue<double>(j+0, -1-i, attr);
+			double max	= *whstat.GetValue<double>(j+1, -1-i, attr);
 			ASSERT(max > min);
 			ASSERT(max > 0);
 			ASSERT(0 > min);
@@ -466,13 +466,13 @@ void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
 void EventOsc::Init() {
 	ASSERTEXC(!(mul <= 0 || mul > 0.9));
 	
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
+	AddDependency("/open");
 	
+	TimeVector& tv = GetTimeVector();
+	SlotPtr src = tv.FindLinkSlot("/open");
 	db = dynamic_cast<DataBridge*>(&*src);
 	ASSERTEXC(db);
 	
-	TimeVector& tv = GetTimeVector();
 	int tf_count = tv.GetPeriodCount();
 	int sym_count = tv.GetSymbolCount();
 	int mtsym_count = db->GetSymbolCount();

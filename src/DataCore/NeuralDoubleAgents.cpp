@@ -42,11 +42,8 @@ void MonaDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaDoubleAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	ASSERTEXC(src);
-	metamona = FindLinkSlot("/metamona");
-	ASSERTEXC(metamona);
-	
+	AddDependency("/open");
+	AddDependency("/metamona");
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -102,13 +99,15 @@ void MonaDoubleAgent::Init() {
 }
 
 bool MonaDoubleAgent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& metamona = GetDependency(1);
 	Panic("TODO: check that channel predictor is followed strongly at this point");
 	
 	if (attr.tf_id == 0 && attr.sym_id == 0) {
 		
 		// Check if position is useless for training
-		/*double* open = src->GetValue<double>(0, 0, attr);
-		double* prev = src->GetValue<double>(0, 1, attr);
+		/*double* open = src.GetValue<double>(0, 0, attr);
+		double* prev = src.GetValue<double>(0, 1, attr);
 		if (!prev || *prev == *open)
 			return true;*/
 		
@@ -131,6 +130,7 @@ bool MonaDoubleAgent::Process(const SlotProcessAttributes& attr) {
 
 
 void MonaDoubleAgent::Forward(const SlotProcessAttributes& attr) {
+	const Slot& metamona = GetDependency(1);
 	
 	// Reserve memory
 	input_array.SetCount(total);
@@ -138,7 +138,7 @@ void MonaDoubleAgent::Forward(const SlotProcessAttributes& attr) {
 	
 	// Write sensor values;
 	for(int i = 0; i < sym_count; i++) {
-		char* sig = metamona->GetValue<char>(0, i, attr.tf_id, 0, attr);
+		char* sig = metamona.GetValue<char>(0, i, attr.tf_id, 0, attr);
 		input_array[pos++] = *sig;
 	}
 	

@@ -26,7 +26,6 @@ class HugeDQNAgent : public Slot {
 	int actions_total;
 	int max_velocity;
 	
-	SlotPtr src;
 	Vector<double> input_array;
 	int sym_count, tf_count;
 	int max_shift, total;

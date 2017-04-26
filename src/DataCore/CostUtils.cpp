@@ -189,14 +189,11 @@ void ValueChange::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void ValueChange::Init() {
+	AddDependency("/open");
+	AddDependency("/spread");
+	
 	TimeVector& tv = GetTimeVector();
-	
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
-	
-	spread = FindLinkSlot("/spread");
-	ASSERTEXC(spread);
-	
+	SlotPtr src = tv.FindLinkSlot("/open");
 	db = dynamic_cast<DataBridge*>(&*src);
 	ASSERTEXC(db);
 	
@@ -219,6 +216,8 @@ void ValueChange::Init() {
 }
 
 bool ValueChange::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& spreadsrc = GetDependency(1);
 	double* change_			= GetValue<double>(0, attr);
 	double* inc				= GetValue<double>(1, attr);
 	double* dec				= GetValue<double>(2, attr);
@@ -227,12 +226,12 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 	double* worst_inc		= GetValue<double>(5, attr);
 	double* worst_dec		= GetValue<double>(6, attr);
 	double* value_change	= GetValue<double>(7, attr);
-	double* open			= src->GetValue<double>(0, 1, attr);
-	double* close			= src->GetValue<double>(0, 0, attr);
-	double* low				= src->GetValue<double>(1, 1, attr);
-	double* high			= src->GetValue<double>(2, 1, attr);
-	double* spread_a		= this->spread->GetValue<double>(0, 1, attr);
-	double* spread_b		= this->spread->GetValue<double>(0, 0, attr);
+	double* open			= src.GetValue<double>(0, 1, attr);
+	double* close			= src.GetValue<double>(0, 0, attr);
+	double* low				= src.GetValue<double>(1, 1, attr);
+	double* high			= src.GetValue<double>(2, 1, attr);
+	double* spread_a		= spreadsrc.GetValue<double>(0, 1, attr);
+	double* spread_b		= spreadsrc.GetValue<double>(0, 0, attr);
 	double spread			= (*spread_a + *spread_b) * 0.5;
 
 	int id = attr.sym_id;
@@ -255,15 +254,15 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 		*value_change = change;
 		*change_ = change; // same without proxy
 	} else {
-		double* proxy_spread_a = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_spread_b = this->spread->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_spread_a = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_spread_b = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
 		double proxy_spread			= (*proxy_spread_a + *proxy_spread_b) * 0.5;
 		
 		// Get buffers
-		double* proxy_open	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_close	= src->GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
-		double* proxy_low	= src->GetValue<double>(1, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_high	= src->GetValue<double>(2, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_open	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_close	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_low	= src.GetValue<double>(1, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_high	= src.GetValue<double>(2, s.proxy_id, attr.tf_id, 1, attr);
 		
 		double cost = spread + proxy_spread;
 		

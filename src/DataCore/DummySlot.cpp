@@ -31,16 +31,16 @@ DummyIndicator::DummyIndicator() {
 }
 
 void DummyIndicator::Init() {
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
+	AddDependency("/open");
 }
 
 bool DummyIndicator::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	double* value = GetValue<double>(0, attr);
 	double sum = 0;
 	int count = 0;
 	for(int i = 0; i < 10; i++) {
-		double* d = src->GetValue<double>(0, i, attr);
+		double* d = src.GetValue<double>(0, i, attr);
 		if (!d) continue;
 		sum += *d;
 		count++;

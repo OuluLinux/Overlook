@@ -17,7 +17,6 @@ class Recurrent : public Slot {
 	Vector<double> temperatures;
 	Vector<int> sequence;
 	OnlineVariance var;
-	SlotPtr src, change, whstat;
 	String model_str;
 	int batch;
 	int shifts;
@@ -113,7 +112,6 @@ class NARX : public Slot {
 	
 	Vector<double> out;
 	Vector<Tf> data;
-	SlotPtr change, open;
 	int H;
 	int a, a1;
 	int b;
@@ -150,7 +148,6 @@ class Forecaster : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, change, rnn, narx, whstat, whdiff, chp;
 	ConvNet::Volume input, output;
 	int sym_count, tf_count;
 	bool do_training;
@@ -184,7 +181,6 @@ class RLAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, change;
 	Vector<double> input_array;
 	int sym_count, tf_count;
 	int max_shift, total;
@@ -218,7 +214,6 @@ class DQNAgent : public Slot {
 	
 	int max_velocity;
 	
-	SlotPtr src, change;
 	Vector<double> input_array;
 	int sym_count, tf_count;
 	int max_shift, total;
@@ -252,7 +247,6 @@ class MonaAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, change;
 	Vector<double> input_array;
 	double CHEESE_NEED, CHEESE_GOAL;
 	int sym_count, tf_count;
@@ -291,7 +285,6 @@ class MonaMetaAgent : public Slot {
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
 	
-	SlotPtr src, rl, dqn, mona, change;
 	Vector<double> input_array;
 	double CHEESE_NEED, CHEESE_GOAL;
 	int sym_count, tf_count;

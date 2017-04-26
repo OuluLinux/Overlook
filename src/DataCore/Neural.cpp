@@ -124,12 +124,9 @@ void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
 void Recurrent::Init() {
 	//TODO: anchor this to timevector id in case of multiple instances
 	
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
-	change = FindLinkSlot("/change");
-	ASSERTEXC(change);
-	whstat = FindLinkSlot("/whstat_slow");
-	ASSERTEXC(whstat);
+	AddDependency("/open");
+	AddDependency("/change");
+	AddDependency("/whstat_slow");
 	
 	temperatures.SetCount(3);
 	temperatures[0] = 0.1;
@@ -173,14 +170,17 @@ void Recurrent::SetLearningRate(double rate) {
 }
 
 bool Recurrent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& change = GetDependency(1);
+	const Slot& whstat = GetDependency(2);
 	
 	// In first phase, end of data is required to find all possible changes
 	/*if (phase == PHASE_GATHERDATA) {
 		
 		// Gather statistics about the source values
 		if (attr.GetCounted() > 0) {
-			double* prev_value = src->GetValue<double>(0, 1, attr);
-			double* src_value  = src->GetValue<double>(0, 0, attr);
+			double* prev_value = src.GetValue<double>(0, 1, attr);
+			double* src_value  = src.GetValue<double>(0, 0, attr);
 			var.AddResult(*src_value - *prev_value);
 		}
 		
@@ -210,13 +210,13 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 		if (attr.GetCounted() % batch == 0) {
 			sequence.SetCount(count);
 			for(int i = 0; i < count; i++) {
-				double* change = this->change->GetValue<double>(0, count-1-i, attr);
-				double* min = this->whstat->GetValue<double>(10, count-1-i, attr);
-				double* max = this->whstat->GetValue<double>(11, count-1-i, attr);
-				ASSERTEXC(change);
+				double* value = change.GetValue<double>(0, count-1-i, attr);
+				double* min = whstat.GetValue<double>(10, count-1-i, attr);
+				double* max = whstat.GetValue<double>(11, count-1-i, attr);
+				ASSERTEXC(value);
 				ASSERTEXC(min);
 				ASSERTEXC(max);
-				sequence[i] = ToChar(*change, *min, *max);
+				sequence[i] = ToChar(*value, *min, *max);
 			}
 			Tick(attr);
 		}
@@ -229,9 +229,9 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 		
 		/*
 		sequence.SetCount(count);
-		double prev_value = *src->GetValue<double>(0, count, attr);
+		double prev_value = *src.GetValue<double>(0, count, attr);
 		for(int i = 0; i < count; i++) {
-			double* src_value = src->GetValue<double>(0, count-1-i, attr);
+			double* src_value = src.GetValue<double>(0, count-1-i, attr);
 			double value = *src_value;
 			sequence[i] = ToChar(value - prev_value);
 			prev_value = value;
@@ -246,7 +246,7 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 		
 		// Write predictions
 		// For 4 temperatures
-		double* src_value = src->GetValue<double>(0, attr);
+		double* src_value = src.GetValue<double>(0, attr);
 		for(int i = 0; i < 4; i++) {
 			
 			// Erase the previous prediction (when i > 0)
@@ -436,10 +436,8 @@ void NARX::Init() {
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
-	open = FindLinkSlot("/open");
-	ASSERTEXC(open);
-	change = FindLinkSlot("/change");
-	ASSERTEXC(change);
+	AddDependency("/open");
+	AddDependency("/change");
 	
 	sym_count = tv.GetSymbolCount();
 	tf_count = tv.GetPeriodCount();
@@ -553,6 +551,8 @@ void NARX::Init() {
 }
 
 bool NARX::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& change = GetDependency(1);
 	
 	Panic("TODO: DateTime Exogen series");
 	Panic("TODO: Total Volume");
@@ -589,7 +589,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			for (int j = 0; j < sym_count; j++) {
 				Vector<InputUnit>& in = s.inputs[j];
 				for (int i = 0; i < b; i++) {
-					double* d = change->GetValue<double>(0, j, attr.tf_id, i, attr);
+					double* d = change.GetValue<double>(0, j, attr.tf_id, i, attr);
 					in[i].SetInput(d ? *d : 0);
 				}
 			}
@@ -601,14 +601,14 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			
 			Vector<InputUnit>& exo = s.exogenous[i];
 			for (int j = 0; j < a1; j++) {
-				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				double* d = change.GetValue<double>(0, sym, tf, j, attr);
 				exo[j].SetInput(d ? *d : 0);
 			}
 		}
 
 		for (int i = 0; i < sym_count; i++) {
-			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
-			double* p = change->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
 			ASSERT(d && *d != 0.0);
 			s.output_units[i].SetTarget(*d);
 			s.ee[i].Insert(*d, s.output_units[i].GetOutput());
@@ -645,7 +645,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			
 			Vector<InputUnit>& exo = s.exogenous[i];
 			for (int j = a1-1; j >= 0 ; j--) {
-				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				double* d = change.GetValue<double>(0, sym, tf, j, attr);
 				exo[j].SetInput(d ? *d : 0);
 				fi.X[i][j] = exo[j].GetInput();
 			}
@@ -655,7 +655,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			for (int i = 0; i < sym_count; i++) {
 				Vector<InputUnit>& in = s.inputs[i];
 				for (int j = b-1; j >= 0; j--) {
-					double* d = change->GetValue<double>(0, i, attr.tf_id, j, attr);
+					double* d = change.GetValue<double>(0, i, attr.tf_id, j, attr);
 					in[j].SetInput(d ? *d : 0);
 					fi.D[i][j] = in[j].GetInput();
 				}
@@ -674,8 +674,8 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		}
 
 		for (int i = 0; i < sym_count; i++) {
-			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
-			double* p = change->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
 			ASSERT(d && *d != 0.0);
 			s.output_units[i].SetTarget(*d);
 			s.Y[i] = s.output_units[i].GetOutput();
@@ -707,7 +707,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		for (int i = 0; i < sym_count; i++) {
 			s.output_units[i].FixWeights();
 			
-			double* d = change->GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
 			ASSERT(d && *d != 0.0);
 			s.output_units[i].SetTarget(*d);
 
@@ -757,7 +757,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			for (int j = 0; j < sym_count; j++) {
 				Vector<InputUnit>& in = s.inputs[j];
 				for (int i = 0; i < b; i++) {
-					double* d = change->GetValue<double>(0, i, attr.tf_id, i, attr);
+					double* d = change.GetValue<double>(0, i, attr.tf_id, i, attr);
 					in[i].SetInput(d ? *d : 0);
 				}
 			}
@@ -778,7 +778,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			int tf = attr.tf_id + 1 + i / sym_count;
 			
 			for (int j = 0; j < a1; j++) {
-				double* d = change->GetValue<double>(0, sym, tf, j, attr);
+				double* d = change.GetValue<double>(0, sym, tf, j, attr);
 				exo[j].SetInput(d ? *d : 0);
 			}
 			//_log(String("ok %1").arg(exogenous_series[i][series_index]));
@@ -791,7 +791,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			s.pY[i] = out;
 			
 			// Set value
-			double* prv = open->GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* prv = src.GetValue<double>(0, i, attr.tf_id, 0, attr);
 			double* dst = GetValue<double>(0, i, attr.tf_id, 0, attr);
 			*dst = *prv * (1.0 + out);
 			
@@ -862,19 +862,15 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 void Forecaster::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	change = tv.FindLinkSlot("/change");
-	rnn = tv.FindLinkSlot("/lstm");
-	narx = tv.FindLinkSlot("/narx");
-	whstat = tv.FindLinkSlot("/whstat_slow");
-	whdiff = tv.FindLinkSlot("/whdiff");
-	chp = tv.FindLinkSlot("/chp");
-	ASSERTEXC(src);
-	ASSERTEXC(change);
-	ASSERTEXC(rnn);
-	ASSERTEXC(whstat);
-	ASSERTEXC(whdiff);
-	ASSERTEXC(chp);
+	AddDependency("/open");
+	AddDependency("/change");
+	AddDependency("/lstm");
+	AddDependency("/narx");
+	AddDependency("/whstat_slow");
+	AddDependency("/whdiff");
+	AddDependency("/chp");
+	AddDependency("/eosc");
+	AddDependency("/ma");
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -886,8 +882,10 @@ void Forecaster::Init() {
 	//  - 12 min/max from WdayHourStats
 	//  - 12 values from WdayHourDiff
 	//  - 7 min/max from ChannelPredicter
-	//  = 49
-	input.Init(49, 1, 1, 0);
+	//  - 4 from EventOsc
+	//  - 2 from moving average
+	//  = 55
+	input.Init(55, 1, 1, 0);
 	
 	output.Init(1, 1, 1, 0);
 	
@@ -904,10 +902,19 @@ void Forecaster::Init() {
 }
 
 bool Forecaster::Process(const SlotProcessAttributes& attr) {
+	const Slot& src		= GetDependency(0);
+	const Slot& change	= GetDependency(1);
+	const Slot& lstm	= GetDependency(2);
+	const Slot& narx	= GetDependency(3);
+	const Slot& whstat	= GetDependency(4);
+	const Slot& whdiff	= GetDependency(5);
+	const Slot& chp		= GetDependency(6);
+	const Slot& eosc	= GetDependency(7);
+	const Slot& ma		= GetDependency(8);
 	
 	// Check if position is useless for training
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
+	double* open = src.GetValue<double>(0, 0, attr);
+	double* prev = src.GetValue<double>(0, 1, attr);
 	if (!prev || *prev == *open)
 		return true;
 	
@@ -919,31 +926,51 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	// Create input to ConvNet::Session
 	int pos = 0;
 	double* d;
-	d = change->GetValue<double>(0, 0, attr);
+	d = change.GetValue<double>(0, 0, attr);
 	input.Set(pos++, *d);
 	for(int i = 0; i < 16; i++) {
-		d = rnn->GetValue<double>(i, attr);
+		d = lstm.GetValue<double>(i, attr);
 		input.Set(pos++, *d);
 	}
-	d = narx->GetValue<double>(0, attr);
+	d = narx.GetValue<double>(0, attr);
 	input.Set(pos++, *d);
 	for(int i = 0; i < 12; i++) {
-		d = whstat->GetValue<double>(i, attr);
+		d = whstat.GetValue<double>(i, attr);
 		input.Set(pos++, *d);
 	}
 	for(int i = 0; i < 12; i++) {
-		d = whdiff->GetValue<double>(i, attr);
+		d = whdiff.GetValue<double>(i, attr);
 		input.Set(pos++, *d);
 	}
 	for(int i = 0; i < 7; i++) {
-		d = chp->GetValue<double>(i, attr);
+		d = chp.GetValue<double>(i, attr);
 		input.Set(pos++, *d);
+	}
+	for(int i = 0; i < 4; i++) {
+		d = eosc.GetValue<double>(i, attr);
+		input.Set(pos++, *d);
+	}
+	{
+		double* cur = ma.GetValue<double>(0, 0, attr);
+		double* prev = ma.GetValue<double>(0, 1, attr);
+		double* prev2 = ma.GetValue<double>(0, 2, attr);
+		double diff = 0;
+		double diffdiff = 0;
+		if (prev) {
+			diff = *cur - *prev;
+			if (prev2) {
+				double prevdiff = *prev - *prev2;
+				diffdiff = diff - prevdiff;
+			}
+		}
+		input.Set(pos++, diff);
+		input.Set(pos++, diffdiff);
 	}
 	ASSERT(pos == input.GetLength());
 	
 	
 	// Create output
-	d = change->GetValue<double>(0, -1, attr); // peeks future: only for training
+	d = change.GetValue<double>(0, -1, attr); // peeks future: only for training
 	output.Set(0, *d);
 	
 	
@@ -1011,12 +1038,9 @@ void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
 void RLAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	//rnn = tv.FindLinkSlot("/rnn");
-	ASSERTEXC(src);
-	//ASSERTEXC(rnn);
-	change = tv.FindLinkSlot("/change");
-	ASSERTEXC(change);
+	AddDependency("/open");
+	AddDependency("/change");
+	AddDependency("/forecaster");
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 4;
@@ -1040,12 +1064,13 @@ void RLAgent::Init() {
 }
 
 bool RLAgent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	Panic("TODO: add spread costs");
 	Panic("TODO: use forecaster");
 	
 	// Check if position is useless for training
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
+	double* open = src.GetValue<double>(0, 0, attr);
+	double* prev = src.GetValue<double>(0, 1, attr);
 	if (!prev || *prev == *open)
 		return true;
 	
@@ -1061,6 +1086,7 @@ bool RLAgent::Process(const SlotProcessAttributes& attr) {
 }
 
 void RLAgent::Forward(const SlotProcessAttributes& attr) {
+	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
 	// in forward pass the agent simply behaves in the environment
@@ -1068,8 +1094,8 @@ void RLAgent::Forward(const SlotProcessAttributes& attr) {
 	input_array.SetCount(total);
 	int pos = 0;
 	for(int k = 0; k < max_shift; k++) {
-		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
-		input_array[pos++] = change ? *change : 0;
+		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = value ? *value : 0;
 	}
 	ASSERT(pos == total);
 	
@@ -1079,16 +1105,17 @@ void RLAgent::Forward(const SlotProcessAttributes& attr) {
 }
 
 void RLAgent::Backward(const SlotProcessAttributes& attr) {
+	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
-	double change = *this->change->GetValue<double>(0, 0, attr);
+	double value = *change.GetValue<double>(0, 0, attr);
 	
-	if (s.action == ACT_SHORT) change *= -1;
-	else if (s.action == ACT_IDLE) change = -0.00001;
+	if (s.action == ACT_SHORT) value *= -1;
+	else if (s.action == ACT_IDLE) value = -0.00001;
 	
 	// in backward pass agent learns.
 	// compute reward
-	s.reward = change;
+	s.reward = value;
 	
 	// pass to brain for learning
 	s.brain.Backward(s.reward);
@@ -1150,12 +1177,9 @@ void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 void DQNAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	//rnn = tv.FindLinkSlot("/rnn");
-	ASSERTEXC(src);
-	//ASSERTEXC(rnn);
-	change = tv.FindLinkSlot("/change");
-	ASSERTEXC(change);
+	AddDependency("/open");
+	AddDependency("/change");
+	AddDependency("/forecaster");
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
@@ -1181,12 +1205,13 @@ void DQNAgent::Init() {
 }
 
 bool DQNAgent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	Panic("TODO: add spread costs");
 	Panic("TODO: use forecaster and change");
 	
 	// Check if position is useless for training
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
+	double* open = src.GetValue<double>(0, 0, attr);
+	double* prev = src.GetValue<double>(0, 1, attr);
 	if (!prev || *prev == *open)
 		return true;
 	
@@ -1203,6 +1228,7 @@ bool DQNAgent::Process(const SlotProcessAttributes& attr) {
 
 
 void DQNAgent::Forward(const SlotProcessAttributes& attr) {
+	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
 	// in forward pass the agent simply behaves in the environment
@@ -1210,8 +1236,8 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 	input_array.SetCount(total + 1);
 	int pos = 0;
 	for(int k = 0; k < max_shift; k++) {
-		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
-		input_array[pos++] = change ? *change : 0;
+		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = value ? *value : 0;
 	}
 	ASSERT(pos == total);
 	input_array[pos++] = (double)s.velocity / (double)max_velocity;
@@ -1228,15 +1254,16 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 }
 
 void DQNAgent::Backward(const SlotProcessAttributes& attr) {
+	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
-	double change = *this->change->GetValue<double>(0, 0, attr);
+	double value = *change.GetValue<double>(0, 0, attr);
 	double mul = (double)s.velocity / (double)max_velocity * 10.0;
-	change *= mul;
+	value *= mul;
 	
 	// in backward pass agent learns.
 	// compute reward
-	s.reward = change;
+	s.reward = value;
 	
 	// pass to brain for learning
 	s.agent.Learn(s.reward);
@@ -1305,12 +1332,9 @@ void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	//rnn = tv.FindLinkSlot("/rnn");
-	ASSERTEXC(src);
-	//ASSERTEXC(rnn);
-	change = tv.FindLinkSlot("/change");
-	ASSERTEXC(change);
+	AddDependency("/open");
+	AddDependency("/change");
+	AddDependency("/forecaster");
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 10;
@@ -1358,12 +1382,14 @@ void MonaAgent::Init() {
 }
 
 bool MonaAgent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& change = GetDependency(1);
 	Panic("TODO: add spread costs");
 	Panic("TODO: use forecaster");
 	
 	// Check if position is useless for training
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
+	double* open = src.GetValue<double>(0, 0, attr);
+	double* prev = src.GetValue<double>(0, 1, attr);
 	if (!prev || *prev == *open)
 		return true;
 	
@@ -1375,8 +1401,8 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	// compute reward
 	if (s.action != IDLE) {
 		ASSERT(s.action == LONG || s.action == SHORT);
-		double change = *this->change->GetValue<double>(0, attr);
-		s.reward = s.action == SHORT ? change * -1.0 : change;
+		double value = *change.GetValue<double>(0, attr);
+		s.reward = s.action == SHORT ? value * -1.0 : value;
 		s.reward -= 0.0001; // add some constant expenses
 	} else {
 		s.reward = 0.0;
@@ -1388,8 +1414,8 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	input_array.SetCount(total + 2);
 	int pos = 0;
 	for(int k = 0; k < max_shift; k++) {
-		double* change = this->change->GetValue<double>(0, max_shift-1-k, attr);
-		input_array[pos++] = change ? *change : 0;
+		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		input_array[pos++] = value ? *value : 0;
 	}
 	ASSERT(pos == total);
 	input_array[pos++] = s.action;
@@ -1451,7 +1477,7 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 		    s.mona.ClearWorkingMemory();
 		}
 		
-		double* open = src->GetValue<double>(0, 0, attr);
+		double* open = src.GetValue<double>(0, 0, attr);
 		s.prev_open = *open;
 	}
 	
@@ -1523,18 +1549,12 @@ void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaMetaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	ASSERTEXC(src);
-	
-	rl = FindLinkSlot("/rl");
-	ASSERTEXC(rl);
-	dqn = FindLinkSlot("/dqn");
-	ASSERTEXC(dqn);
-	mona = FindLinkSlot("/mona");
-	ASSERTEXC(mona);
-	change = tv.FindLinkSlot("/change");
-	ASSERTEXC(change);
-	
+	AddDependency("/open");
+	AddDependency("/rl");
+	AddDependency("/dqn");
+	AddDependency("/mona");
+	AddDependency("/change");
+	AddDependency("/forecaster");
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -1581,11 +1601,16 @@ void MonaMetaAgent::Init() {
 }
 
 bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& rl = GetDependency(1);
+	const Slot& dqn = GetDependency(2);
+	const Slot& mona = GetDependency(3);
+	const Slot& change = GetDependency(4);
 	Panic("TODO: add spread costs");
 	
 	// Check if position is useless for training
-	double* open = src->GetValue<double>(0, 0, attr);
-	double* prev = src->GetValue<double>(0, 1, attr);
+	double* open = src.GetValue<double>(0, 0, attr);
+	double* prev = src.GetValue<double>(0, 1, attr);
 	if (!prev || *prev == *open)
 		return true;
 	
@@ -1597,8 +1622,8 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	// compute reward
 	if (s.action != IDLE) {
 		ASSERT(s.action == LONG || s.action == SHORT);
-		double change = *this->change->GetValue<double>(0, attr);
-		s.reward = s.action == SHORT ? change * -1.0 : change;
+		double value = *change.GetValue<double>(0, attr);
+		s.reward = s.action == SHORT ? value * -1.0 : value;
 		s.reward -= 0.0001; // add some constant expenses. TODO: real spread
 	} else {
 		s.reward = 0.0;
@@ -1610,9 +1635,9 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	input_array.SetCount(total);
 	int pos = 0;
 	for(int i = 0; i < 3; i++) {
-		SlotPtr src = i == 0 ? rl : i == 1 ? dqn : mona;
+		const Slot& sigsrc = i == 0 ? rl : i == 1 ? dqn : mona;
 		for(int j = 0; j < tf_count; j++) {
-			char* sig = src->GetValue<char>(0, j, 0, attr);
+			char* sig = sigsrc.GetValue<char>(0, j, 0, attr);
 			input_array[pos++] = *sig;
 		}
 	}
@@ -1675,7 +1700,7 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 		    // Clear working memory.
 		    s.mona.ClearWorkingMemory();
 		}
-		double* open = src->GetValue<double>(1, attr);
+		double* open = src.GetValue<double>(1, attr);
 		s.prev_open = *open;
 	}
 	

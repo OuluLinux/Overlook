@@ -48,7 +48,6 @@ protected:
 		Vector<MovingStepDistribution> wdayhour, wday, hour;
 	};
 	Vector<SymTf> data;
-	SlotPtr change;
 	int var_period;
 	
 public:
@@ -68,7 +67,6 @@ class WdayHourDiff : public Slot {
 protected:
 	
 	int var_period_fast, var_period_diff;
-	SlotPtr whstat_fast, whstat_slow;
 	
 public:
 	WdayHourDiff();
@@ -86,7 +84,6 @@ class ChannelPredicter : public Slot {
 	
 protected:
 	
-	SlotPtr src, whstat;
 	int length;
 	
 public:
@@ -122,7 +119,6 @@ class EventOsc : public Slot {
 	};
 	Vector<Sym> data;
 	
-	SlotPtr src;
 	DataBridge* db;
 	EventManager* emgr;
 	double mul;

@@ -91,7 +91,7 @@ RunnerCtrl::RunnerCtrl() {
 	tabs.Add(dependencies);
 	tabs.Add(details, "Details");
 	tabs.Add(details);
-	
+	tabs.WhenSet = THISBACK(RefreshData);
 	
 	running = false;
 	stopped = true;
@@ -114,7 +114,7 @@ void RunnerCtrl::RefreshData() {
 	switch (tab) {
 		case 0: RefreshProgress(); break;
 		case 1: break;
-		case 2: break;
+		case 2: RefreshDependencyGraph(); break;
 		case 3: break;
 	}
 }
@@ -129,6 +129,28 @@ void RunnerCtrl::RefreshProgress() {
 			IntStr(last_total_ready * 100 / last_total) + "%" " (" +
 			IntStr(last_total_ready) + "/" + IntStr(last_total) + ")");
 	}
+}
+
+void RunnerCtrl::RefreshDependencyGraph() {
+	dependencies.Clear();
+	
+	DataCore::TimeVector& tv = GetTimeVector();
+	for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
+		const Slot& slot = tv.GetCustomSlot(i);
+		
+		String src_path = slot.GetLinkPath();
+		dependencies.AddNode(src_path);
+		
+		int slot_deps = slot.GetDependencyCount();
+		for(int j = 0; j < slot_deps; j++) {
+			String dst_path = slot.GetDependencyPath(j);
+			
+			dependencies.AddEdge(src_path, dst_path).SetDirected();
+		}
+	}
+	
+	dependencies.RefreshLayout();
+	dependencies.Refresh();
 }
 
 void RunnerCtrl::Init() {

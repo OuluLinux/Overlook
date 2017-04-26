@@ -78,10 +78,11 @@ protected:
 	friend class TimeVector;
 	typedef Ptr<Slot> SlotPtr;
 	
-	void LoadCache(int sym_id, int tf_id, int pos);
+	void LoadCache(int sym_id, int tf_id, int pos) const;
 	void SetWithoutData(bool b=true) {forced_without_data = b;}
-	SlotData& GetData(int sym_id, int tf_id, int pos);
+	const SlotData& GetData(int sym_id, int tf_id, int pos) const;
 	
+	VectorMap<String, SlotPtr> dependencies;
 	String linkpath, path, style;
 	SlotPtr source;
 	TimeVector* vector;
@@ -107,7 +108,8 @@ public:
 	
 	template <class T>
 	void AddValue(String name="", String description="") {AddValue(sizeof(T), name, description);}
-
+	void AddDependency(String slot_path, String description="");
+	
 	bool IsWithoutData() const {return forced_without_data;}
 	int GetReservedBytes() const {return reserved_bytes;}
 	int GetCount() const {return values.GetCount();}
@@ -118,13 +120,16 @@ public:
 	String GetPath() const {return path;}
 	String GetLinkPath() const {return linkpath;}
 	const String& GetStyle() const {return style;}
+	const Slot& GetDependency(int i);
+	String GetDependencyPath(int i) const {return dependencies.GetKey(i);}
+	int GetDependencyCount() const {return dependencies.GetCount();}
 	
 	template <class T>
-	T* GetValue(int i, const SlotProcessAttributes& attr) {
+	T* GetValue(int i, const SlotProcessAttributes& attr) const {
 		return (T*)(attr.slot_it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
-	T* GetValue(int i, int shift, const SlotProcessAttributes& attr) {
+	T* GetValue(int i, int shift, const SlotProcessAttributes& attr) const {
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[attr.tf_id]) return 0;
 		Vector<SlotData>::Iterator it = attr.slot_it;
@@ -133,7 +138,7 @@ public:
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
-	T* GetValue(int i, int tf_id, int shift, const SlotProcessAttributes& attr) {
+	T* GetValue(int i, int tf_id, int shift, const SlotProcessAttributes& attr) const {
 		int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = (*(attr.tf_it + tf_id) + newpos);
@@ -141,29 +146,24 @@ public:
 		return (T*)(it->Begin() + slot_offset + values[i].offset);
 	}
 	template <class T>
-	T*  GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) {
-		/*int newpos = attr.pos[attr.tf_id] - shift;
-		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
-		Vector<SlotData>::Iterator it = (*(*(attr.sym_it + sym_id) + tf_id) + newpos);
-		if (!it->GetCount()) LoadCache(sym_id, tf_id, newpos);
-		return (T*)(it->Begin() + slot_offset + values[i].offset);*/
+	T*  GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) const {
 		int pos = attr.pos[attr.tf_id] - shift;
 		if (pos < 0 || pos >= attr.bars[tf_id]) return 0;
-		SlotData& slot_data = GetData(sym_id, tf_id, pos);
+		const SlotData& slot_data = GetData(sym_id, tf_id, pos);
 		if (!slot_data.GetCount())
 			LoadCache(sym_id, tf_id, pos);
-		byte* b = slot_data.Begin();
+		const byte* b = slot_data.Begin();
 		ASSERT(b);
 		return (T*)(b + slot_offset + values[i].offset);
 	}
 	template <class T>
-	T* GetValuePos(int i, int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr) {
+	T* GetValuePos(int i, int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr) const {
 		if (pos < 0 || pos >= attr.bars[tf_id])
 			return 0;
-		SlotData& slot_data = GetData(sym_id, tf_id, pos);
+		const SlotData& slot_data = GetData(sym_id, tf_id, pos);
 		if (!slot_data.GetCount())
 			LoadCache(sym_id, tf_id, pos);
-		byte* b = slot_data.Begin();
+		const byte* b = slot_data.Begin();
 		ASSERT(b);
 		return (T*)(b + slot_offset + values[i].offset);
 	}

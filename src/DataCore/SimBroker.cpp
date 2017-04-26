@@ -26,7 +26,6 @@ void SimBroker::Init(MetaTrader& mt) {
 	margin = 0;
 	margin_free = equity;
 	
-	
 	TimeVector& tv = GetTimeVector();
 	src = tv.FindLinkSlot("/open");
 	ASSERTEXC(src);

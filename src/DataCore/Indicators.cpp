@@ -7,6 +7,14 @@ MovingAverage::MovingAverage() {
 	ma_shift = 0;
 	ma_method = 0;
 	AddValue<double>();
+	
+	SetStyle(
+		"{"
+			"\"value0\":{"
+				"\"color\":\"255,0,0\","
+			"}"
+		"}"
+	);
 }
 
 void MovingAverage::SetArguments(const VectorMap<String, Value>& args) {
@@ -27,14 +35,17 @@ void MovingAverage::Init() {
 	if (ma_period < 2)
 		ma_period = 2;
 	draw_begin = ma_period - 1;
-	/*SetBufferCount(1);
-	SetBufferColor(0, Red());
-	SetBufferShift(0, ma_shift);
-	SetBufferBegin(0, draw_begin );
-	SetIndexCount(1);
-	SetIndexBuffer(0, buffer);*/
-	src = FindLinkSlot("/open");
-	ASSERTEXC(src);
+	SetStyle(
+		"{"
+			"\"value0\":{"
+				"\"color\":\"255,0,0\","
+				"\"shift\":" + IntStr(ma_shift) + ","
+				"\"begin\":" + IntStr(draw_begin) +
+			"}"
+		"}"
+	);
+	
+	AddDependency("/open");
 }
 
 bool MovingAverage::Process(const SlotProcessAttributes& attr) {
@@ -53,12 +64,13 @@ bool MovingAverage::Process(const SlotProcessAttributes& attr) {
 }
 
 bool MovingAverage::Simple(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	int end = attr.GetCounted();
 	int begin = Upp::max(0, end - ma_period);
 	int period = end - begin;
 	double sum = 0.0;
 	for(int i = 0; i < period; i++) {
-		double* d = src->GetValue<double>(0, i, attr);
+		double* d = src.GetValue<double>(0, i, attr);
 		ASSERT(d);
 		sum += *d;
 	}
@@ -69,10 +81,11 @@ bool MovingAverage::Simple(const SlotProcessAttributes& attr) {
 }
 
 bool MovingAverage::Exponential(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	int end = attr.GetCounted();
 	int begin = Upp::max(0, end - ma_period);
 	int period = end - begin;
-	double* d = src->GetValue<double>(0, attr);
+	double* d = src.GetValue<double>(0, attr);
 	double* value = GetValue<double>(0, attr);
 	ASSERT(d && value);
 	if (!period) {
@@ -87,6 +100,7 @@ bool MovingAverage::Exponential(const SlotProcessAttributes& attr) {
 }
 
 bool MovingAverage::Smoothed(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	int end = attr.GetCounted();
 	int begin = Upp::max(0, end - ma_period);
 	double* value = GetValue<double>(0, attr);
@@ -95,14 +109,14 @@ bool MovingAverage::Smoothed(const SlotProcessAttributes& attr) {
 		double sum = 0.0;
 		int count = (end+1);
 		for (int i = 0; i < count; i++) {
-			double* d = src->GetValue<double>(0, i, attr);
+			double* d = src.GetValue<double>(0, i, attr);
 			ASSERT(d);
 			sum += *d;
 		}
 		*value = sum / count;
 	}
 	else {
-		double* d = src->GetValue<double>(0, attr);
+		double* d = src.GetValue<double>(0, attr);
 		double* value1 = GetValue<double>(0, 1, attr);
 		ASSERT(d && value1);
 		double sum = (*value1) * ( ma_period - 1 ) + (*d);
@@ -112,6 +126,7 @@ bool MovingAverage::Smoothed(const SlotProcessAttributes& attr) {
 }
 
 bool MovingAverage::LinearlyWeighted(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	int end = attr.GetCounted();
 	int begin = Upp::max(0, end - ma_period);
 	int period = end - begin;
@@ -119,7 +134,7 @@ bool MovingAverage::LinearlyWeighted(const SlotProcessAttributes& attr) {
 	int div = 0;
 	for(int i = 0; i < period; i++) {
 		int mul = period - i;
-		double* d = src->GetValue<double>(0, i, attr);
+		double* d = src.GetValue<double>(0, i, attr);
 		ASSERT(d);
 		sum += *d * mul;
 		div += mul;

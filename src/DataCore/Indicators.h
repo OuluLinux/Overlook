@@ -15,7 +15,6 @@ class MovingAverage : public Slot {
 	int ma_period;
 	int ma_shift;
 	int ma_method;
-	SlotPtr src;
 	
 protected:
 	

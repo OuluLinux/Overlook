@@ -13,7 +13,7 @@ public:
 };
 
 class DummyIndicator : public Slot {
-	SlotPtr src;
+	
 public:
 	DummyIndicator();
 	virtual String GetKey() const {return "dummyindicator";}

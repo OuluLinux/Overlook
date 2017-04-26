@@ -33,10 +33,8 @@ void HugeDQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 void HugeDQNAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	src = tv.FindLinkSlot("/open");
-	//rnn = tv.FindLinkSlot("/rnn");
-	ASSERTEXC(src);
-	//ASSERTEXC(rnn);
+	AddDependency("/open");
+	AddDependency("/forecaster");
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
@@ -75,8 +73,8 @@ bool HugeDQNAgent::Process(const SlotProcessAttributes& attr) {
 	if (attr.tf_id == 0 && attr.sym_id == 0) {
 		
 		// Check if position is useless for training
-		/*double* open = src->GetValue<double>(0, 0, attr);
-		double* prev = src->GetValue<double>(0, 1, attr);
+		/*double* open = src.GetValue<double>(0, 0, attr);
+		double* prev = src.GetValue<double>(0, 1, attr);
 		if (!prev || *prev == *open)
 			return true;*/
 		
@@ -99,6 +97,7 @@ bool HugeDQNAgent::Process(const SlotProcessAttributes& attr) {
 
 
 void HugeDQNAgent::Forward(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
 	
 	// Reserve memory
 	input_array.SetCount(total);
@@ -107,9 +106,9 @@ void HugeDQNAgent::Forward(const SlotProcessAttributes& attr) {
 	// Write sensor values;
 	for(int i = 0; i < sym_count; i++) {
 		for(int j = 0; j < tf_count; j++) {
-			double* prev = src->GetValue<double>(0, i, j, max_shift, attr);
+			double* prev = src.GetValue<double>(0, i, j, max_shift, attr);
 			for(int k = 0; k < max_shift; k++) {
-				double* open = src->GetValue<double>(0, i, j, max_shift-1-k, attr);
+				double* open = src.GetValue<double>(0, i, j, max_shift-1-k, attr);
 				if (prev) {
 					double d = *open / *prev - 1.0;
 					input_array[pos++] = d;

@@ -6,9 +6,11 @@ topic "Journal";
 [{_}%FI-FI 
 [s1; Journal&]
 [s0; This is a casual journal about the progress of the Overlook. 
-It is intended for the audience who hopefully found this as a 
-success story later. I really see no good reason for interpreting 
-this in a hateful way.&]
+Please note that my native language is not English, but Finnish. 
+This journal is intended for the audience who hopefully finds 
+this as a success story later. I really see no good reason for 
+interpreting this in a hateful way. I hope that I am not too 
+naive regarding that.&]
 [s0; Everything in this journal must be considered as explicit statements, 
 without any binding interpretations. All interpretations of this 
 text must be considered to be equally valid and invalid, to the 
@@ -30,8 +32,25 @@ The time is 10.20 and there is snow raining outside my window.
 The sky is completely white from clouds. The snow what was melted 
 during early spring is replaced again by new snow. The temperature 
 is around 0 Celcius. I am way behind schedule if I check how 
-much coffee I have been drinking already.&]
-[s0; &]
-[s3; &]
-[s3; Test&]
-[s0; Testesttestst]]
+much coffee I have been drinking already. This is a isolated 
+place with long, dark and cold winter and short summer, which 
+is the very essential reason for my programming. I would rather 
+travel to Greece for most of the winter.&]
+[s0; Graph works. I noticed missed links from that image. Next: the 
+processing batches, which can have concurrent internal processing. 
+The progressing is kind of brute`-forcing now. I need to get 
+this finished by end of may. Luckily, I have free time now from 
+the university where I am studying computer science.&]
+[s0; Ok, so I planned the new batched runner thing. I checked the 
+huge todo and problem list, and then checked what code exists 
+and what should be added. That`'s the normal method. I can`'t 
+start implementing immediately, because it requires a more practical 
+mindset. I must take a break before it. I`'m listening to classic 
+rock internet radio channel... now playing Pearl Jam `- Even 
+Flow. I usually listen to classic rock or ambient electronic 
+internet radio. I can`'t stand too repeating playlist.&]
+[s0; I got the batches formed. The groups are interesting. There 
+is 8 groups in total currently. Such a difficult time to progress 
+now. Planned stuff doesn`'t fit well, and some old requirements 
+are invalid.&]
+[s0; ]]

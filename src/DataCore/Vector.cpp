@@ -179,14 +179,6 @@ int64 TimeVector::GetPersistencyCursor(int sym_id, int tf_id, int shift) {
 	return pos;
 }
 
-TimeVector::Iterator TimeVector::Begin() {
-	Iterator it(this);
-	
-	it.SetPosition(0);
-	
-	return it;
-}
-
 void TimeVector::AddCustomSlot(String key, SlotFactory f) {
 	GetFactories().Add(key, f);
 }

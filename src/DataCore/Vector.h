@@ -3,6 +3,8 @@
 
 #include "Slot.h"
 
+namespace DataCtrl {class RunnerCtrl;}
+
 namespace DataCore {
 
 
@@ -77,33 +79,11 @@ public:
 	typedef Vector<byte> SlotData;
 	typedef Ptr<TimeVector> TimeVectorPtr;
 	
-	class Iterator {
-		Ptr<TimeVector> tv;
-		Vector<Vector< Vector<SlotData>::Iterator > > iter;
-		Vector<int> pos;
-		
-	public:
-		Iterator(TimeVectorPtr tv);
-		Iterator(const Iterator& it);
-		
-		int GetPosition(int tf_id) const {return pos[tf_id];}
-		TimeVector& GetTimeVector() {return *tv;}
-		
-		void SetPosition(int i);
-		//bool Process();
-		void GetSlotProcessAttributes(Vector<SlotProcessAttributes>& attrs);
-		
-		bool IsBegin() const {return pos[0] == 0;}
-		bool IsEnd();
-		
-		void operator ++(int i);
-		void operator =(const Iterator& it);
-		
-	};
 	
 protected:
 	friend class Iterator;
 	friend class Slot;
+	friend class ::DataCtrl::RunnerCtrl;
 	
 	Upp::FileAppend cache_file;
 	Upp::SpinLock cache_lock;
@@ -193,7 +173,7 @@ public:
 	void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get()); reversed = begin_ts > end_ts;}
 	void SetBasePeriod(int period)	{base_period = period;}
 	
-	Iterator Begin();
+	//Iterator Begin();
 	
 	void LinkPath(String dest, String src);
 	PathLinkPtr FindLinkPath(String path);

@@ -39,25 +39,15 @@ struct SlotProcessAttributes : Moveable<SlotProcessAttributes> {
 	int sym_count;							// count of symbol ids
 	int tf_id;								// timeframe-id from shorter to longer
 	int tf_count;							// count of timeframe ids
-	int processing_tf_count;				// count of timeframes currently being processed
 	int64 time;								// time of current position
-	int duration;							// time duration of processing of the slot
 	int pos[16];							// time-position for all timeframes
 	int bars[16];							// count of time-positions for all timeframes
 	int periods[16];						// periods for all timeframes
 	int slot_bytes;							// reserved memory in bytes for current slot
 	int slot_pos;							// position of the current slot in the sym/tf/pos vector
 	Slot* slot;								// pointer to the current slot
-	// TOO VOLATILE TO USE byte* slot_vector;						// pointer to the sym/tf data
-	// TOO VOLATILE TO USE byte* data;								// pointer to the reserved memory
 	TimeVector* tv;							// pointer to the parent TimeVector
-	//TimeVector::Iterator* it;				// pointer to the calling iterator
-	// DEPREACED void* it;								// (TimeVector::Iterator) pointer to the calling iterator
 	Vector<SlotData>::Iterator slot_it;		// pointer to the iterator of current sym/tf
-	Vector< Vector<SlotData>::Iterator >::Iterator tf_it;
-											// pointer to the iterator of all sym
-	Vector<Vector< Vector<SlotData>::Iterator > >::Iterator sym_it;
-											// pointer to the iterator of all data
 	
 	/*String ToString() const {
 		return Format("sym=%d sym_count=%d tf_id=%d tf_count=%d period=%d pos=%d slot_bytes=%d slot_vector=%X data=%X tv=%X it=%X slot_it=%X",
@@ -95,6 +85,7 @@ protected:
 	int reserved_bytes;
 	int slot_offset;
 	int data_type;
+	int id;
 	bool forced_without_data;
 	
 public:
@@ -123,6 +114,7 @@ public:
 	const Slot& GetDependency(int i);
 	String GetDependencyPath(int i) const {return dependencies.GetKey(i);}
 	int GetDependencyCount() const {return dependencies.GetCount();}
+	int GetId() const {return id;}
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) const {
@@ -139,11 +131,19 @@ public:
 	}
 	template <class T>
 	T* GetValue(int i, int tf_id, int shift, const SlotProcessAttributes& attr) const {
-		int newpos = attr.pos[attr.tf_id] - shift;
+		/*int newpos = attr.pos[attr.tf_id] - shift;
 		if (newpos < 0 || newpos >= attr.bars[tf_id]) return 0;
 		Vector<SlotData>::Iterator it = (*(attr.tf_it + tf_id) + newpos);
 		if (!it->GetCount()) LoadCache(attr.sym_id, tf_id, newpos);
-		return (T*)(it->Begin() + slot_offset + values[i].offset);
+		return (T*)(it->Begin() + slot_offset + values[i].offset);*/
+		int pos = attr.pos[attr.tf_id] - shift;
+		if (pos < 0 || pos >= attr.bars[tf_id]) return 0;
+		const SlotData& slot_data = GetData(attr.sym_id, tf_id, pos);
+		if (!slot_data.GetCount())
+			LoadCache(attr.sym_id, tf_id, pos);
+		const byte* b = slot_data.Begin();
+		ASSERT(b);
+		return (T*)(b + slot_offset + values[i].offset);
 	}
 	template <class T>
 	T*  GetValue(int i, int sym_id, int tf_id, int shift, const SlotProcessAttributes& attr) const {

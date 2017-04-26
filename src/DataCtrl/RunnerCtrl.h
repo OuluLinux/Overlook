@@ -8,25 +8,28 @@ using namespace DataCore;
 
 class RunnerCtrl;
 
-class RunnerDraw : public Ctrl {
-	RunnerCtrl* runner;
-	Vector<Vector<double> > tmp;
-	Vector<Point> pts;
-	Vector<double> xsteps;
-	One<ImageDraw> tmp_draw;
-	SlotPtr src;
-	int sym, tf;
-	int week;
-	int mode;
-	
-public:
-	typedef RunnerDraw CLASSNAME;
-	RunnerDraw();
-	void Init(int mode, RunnerCtrl* r);
-	void RefreshDraw();
-	
-	virtual void Paint(Draw& w);
-	
+struct ProgressDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
+		Font fnt = Font(q, r.Height() - 2);
+		String txt = Font::GetFaceName(q);
+		w.DrawRect(r, paper);
+		w.DrawText(r.left + 2, r.top + (r.Height() - GetTextSize(txt, fnt).cy) / 2, txt, fnt, ink);
+	}
+};
+
+struct BatchPartStatus : Moveable<BatchPartStatus> {
+	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false;}
+	Slot* slot;
+	Time begin, end;
+	int sym_id, tf_id, actual, total;
+	bool complete;
+};
+
+struct Batch : Moveable<Batch> {
+	Batch() {begin = Time(1970,1,1); end = begin; stored = begin; loaded = begin;}
+	VectorMap<String, SlotPtr> slots;
+	Vector<BatchPartStatus> status;
+	Time begin, end, stored, loaded;
 };
 
 #define LAYOUTFILE <DataCtrl/RunnerCtrl.lay>
@@ -36,17 +39,21 @@ class RunnerCtrl : public MetaNodeCtrl {
 	
 protected:
 	friend class RunnerDraw;
+	
+	Vector<Batch> batches;
 	Vector<SlotProcessAttributes> attrs;
-	int last_total_duration, last_total, last_total_ready;
+	Atomic cursor;
 	bool running, stopped;
 	
 	TabCtrl tabs;
 	WithProgressLayout<ParentCtrl> progress;
 	GraphLib::SpringGraph dependencies;
-	ParentCtrl details;
+	WithDetails1Layout<ParentCtrl> details;
 	ParentCtrl sysmon;
 	
 	void Run();
+	void BatchProcessor(int thread_id, Batch* batch);
+	void Processor(BatchPartStatus& stat);
 	
 public:
 	typedef RunnerCtrl CLASSNAME;
@@ -56,6 +63,12 @@ public:
 	void RefreshData();
 	void RefreshProgress();
 	void RefreshDependencyGraph();
+	void RefreshDetails();
+	
+	void RefreshBatches();
+	
+	void SetProgressTotal(int actual, int total) {progress.total.Set(actual, total);}
+	void SetProgressBatch(int actual, int total) {progress.batch.Set(actual, total);}
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();

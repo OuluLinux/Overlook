@@ -16,7 +16,6 @@ file
 	DataCore.icpp,
 	Vector.h,
 	Vector.cpp,
-	Iterator.cpp,
 	SlotResolver.cpp,
 	Slot.h,
 	Slot.cpp,

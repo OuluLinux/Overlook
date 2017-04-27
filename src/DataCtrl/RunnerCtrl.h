@@ -10,9 +10,12 @@ class RunnerCtrl;
 
 struct ProgressDisplay : Display {
 	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
-		Font fnt = Font(q, r.Height() - 2);
-		String txt = Font::GetFaceName(q);
+		Font fnt = SansSerif(r.Height() - 2);
+		int perc = q;
+		int cx = r.GetWidth() * perc / 1000;
+		String txt = IntStr(perc / 10) + "%";
 		w.DrawRect(r, paper);
+		w.DrawRect(r.left, r.top, cx, r.GetHeight(), Color(0, 255, 0));
 		w.DrawText(r.left + 2, r.top + (r.Height() - GetTextSize(txt, fnt).cy) / 2, txt, fnt, ink);
 	}
 };

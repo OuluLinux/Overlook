@@ -232,6 +232,9 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 	double* high			= src.GetValue<double>(2, 1, attr);
 	double* spread_a		= spreadsrc.GetValue<double>(0, 1, attr);
 	double* spread_b		= spreadsrc.GetValue<double>(0, 0, attr);
+	
+	if (!open) return false;
+	
 	double spread			= (*spread_a + *spread_b) * 0.5;
 
 	int id = attr.sym_id;

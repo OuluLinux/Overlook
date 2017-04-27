@@ -79,6 +79,8 @@ void DataBridge::Init() {
 		throw DataExc("Resolver's base period differs from mt");
 	}
 	
+	points.SetCount(sym_count, 0.0001);
+	
 	int tf_count = tv.GetPeriodCount();
 	loaded.SetCount(sym_count * tf_count, false);
 	has_written = false;
@@ -224,12 +226,14 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	
 	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
-	ASSERT(attr.GetCounted() == 0);
-	
 	if (sym_count != -1 && attr.sym_id >= sym_count) {
+		if (attr.pos[0] == attr.bars[0]-1)
+			return false;
 		ProcessVirtualNode(attr);
 		return true;
 	}
+	
+	ASSERT(attr.GetCounted() == 0);
 	
 	
 	// Open data-file
@@ -262,7 +266,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	if (digits > 20)
 		return false;
 	double point = 1.0 / pow(10.0, digits);
-	points.GetAdd(attr.sym_id) = point;
+	points[attr.sym_id] = point;
 	int data_size = src.GetSize();
 	const int struct_size = 8 + 4*8 + 8 + 4 + 8;
 	byte row[struct_size];
@@ -307,7 +311,7 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 				// sacrifice a little bit of accuracy for optimal memory usage
 				point += base_point;
 			}
-			points.GetAdd(attr.sym_id) = point;
+			points[attr.sym_id] = point;
 			// TODO: check all data and don't rely on close
 		}
 		
@@ -365,7 +369,7 @@ void DataBridge::ProcessVirtualNode(const SlotProcessAttributes& attr) {
 		int id = c.pairs0[j];
 		double* open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
 		double* close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
-		double diff = (*close - *open) / points.Get(id);
+		double diff = (*close - *open) / points[id];
 		change -= diff;
 		double* vol	= GetValue<double>(3, id, attr.tf_id, 0, attr);
 		volume += *vol;
@@ -375,7 +379,7 @@ void DataBridge::ProcessVirtualNode(const SlotProcessAttributes& attr) {
 		int id = c.pairs1[j];
 		double* open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
 		double* close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
-		double diff = (*close - *open) / points.Get(id);
+		double diff = (*close - *open) / points[id];
 		change -= diff;
 		double* vol	= GetValue<double>(3, id, attr.tf_id, 0, attr);
 		volume += *vol;

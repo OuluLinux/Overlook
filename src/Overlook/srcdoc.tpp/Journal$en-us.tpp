@@ -53,4 +53,26 @@ internet radio. I can`'t stand too repeating playlist.&]
 is 8 groups in total currently. Such a difficult time to progress 
 now. Planned stuff doesn`'t fit well, and some old requirements 
 are invalid.&]
-[s0; ]]
+[s0; Finished. The RunnerCtrl now has batches. The result is a lot 
+different what I planned, but it turned out well. I am too tired 
+to debug it, though... This was rather difficult day, mostly 
+because I had to re`-plan the implementation few times and then 
+again change it while implementing. The change of the plan is 
+the worst energy consumer... Usually I don`'t have to re`-plan 
+this much.&]
+[s3; 27.4.2017&]
+[s0; The first batch is being processed. It happens somewhat correctly. 
+Seems like locking data areas for processing is a mess, and it 
+must be solved next. I am thinking about adding few more arguments 
+to `"AddDependency`" and then locking data areas for them, and 
+also asserting that data is really locked already at use time. 
+Without that, multithreading seems to be slower than single thread 
+:D ...that`'s bad.&]
+[s0; Also, I was thinking, that some continuous training would be 
+great. Agent slots doesn`'t need to be necessarily entirely trained 
+and processed, but all of them can be done incrementally. As 
+the input stays same, all neural networks just fits better to 
+existing and they doesn`'t change much. For that reason it is 
+possible. Basically, the whole stack will be trained instead 
+of just going from bottom to top once. That, while reacting fast 
+to the real`-time events simultaneously, will be a challenge.]]

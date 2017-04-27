@@ -154,6 +154,7 @@ public:
 	const SlotData& GetSlot(int sym_id, int tf_id, int shift) const {return data[sym_id][tf_id][shift];}
 	int GetCustomSlotCount() const {return slot.GetCount();}
 	const Slot& GetCustomSlot(int i) const {return *slot[i];}
+	Slot& GetCustomSlot(int i) {return *slot[i];}
 	int FindPeriod(int period) const {return periods.Find(period);}
 	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos, bool locked=false) {
 		const SlotData& data = GetSlot(sym_id, tf_id, shift);

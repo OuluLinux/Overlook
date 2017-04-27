@@ -54,8 +54,8 @@ void RunnerCtrl::RefreshBatches() {
 	// Split slots into batches
 	Vector<Slot*> not_added;
 	for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
-		const Slot& slot = tv.GetCustomSlot(i);
-		not_added.Add((Slot*)&slot);
+		Slot& slot = tv.GetCustomSlot(i);
+		not_added.Add(&slot);
 	}
 	
 	batches.Clear();
@@ -170,17 +170,18 @@ void RunnerCtrl::RefreshProgress() {
 			BatchPartStatus& s = b.status[i];
 			if (s.complete) continue;
 			
-			progress.incomplete.Set(i, 0, num);
-			progress.incomplete.Set(i, 1, s.slot->GetLinkPath());
-			progress.incomplete.Set(i, 2, tv.GetSymbol(s.sym_id));
-			progress.incomplete.Set(i, 3, tv.GetPeriod(s.tf_id));
-			progress.incomplete.Set(i, 4, Format("%", s.begin));
-			progress.incomplete.Set(i, 5, s.actual * 1000 / s.total);
+			progress.incomplete.Set(num, 0, num);
+			progress.incomplete.Set(num, 1, s.slot->GetLinkPath());
+			progress.incomplete.Set(num, 2, tv.GetSymbol(s.sym_id));
+			progress.incomplete.Set(num, 3, tv.GetPeriod(s.tf_id));
+			progress.incomplete.Set(num, 4, Format("%", s.begin));
+			progress.incomplete.Set(num, 5, s.actual * 1000 / s.total);
 			
-			progress.incomplete.SetDisplay(i, 5, Single<ProgressDisplay>());
+			progress.incomplete.SetDisplay(num, 5, Single<ProgressDisplay>());
 			
 			num++;
 		}
+		progress.incomplete.SetCount(num);
 		
 		progress.incomplete.SetSortColumn(5, true);
 	}
@@ -275,7 +276,7 @@ void RunnerCtrl::SetArguments(const VectorMap<String, Value>& args) {
 void RunnerCtrl::Run() {
 	TimeVector& tv = GetTimeVector();
 	
-	int cpus = CPU_Cores();
+	int cpus = 1;//CPU_Cores();
 	int sym_count = tv.GetSymbolCount();
 	
 	TimeStop ts, ts_total;
@@ -355,6 +356,7 @@ void RunnerCtrl::Processor(BatchPartStatus& stat) {
 	SlotProcessAttributes attr;
 	ASSERTEXC(tv.bars.GetCount() <= 16);
 	for(int i = 0; i < tv.bars.GetCount(); i++) {
+		attr.pos[i] = 0;
 		attr.bars[i] = tv.bars[i];
 		attr.periods[i] = tv.periods[i];
 	}
@@ -381,7 +383,7 @@ void RunnerCtrl::Processor(BatchPartStatus& stat) {
 	
 	stat.total = attr.bars[tf_id];
 	
-	for(int i = 0; i < stat.total; i++) {
+	for(int i = 0; i < stat.total; i++, attr.slot_it++) {
 		stat.actual = i;
 		
 		attr.time = tv.GetTime(tv.periods[0], attr.pos[0]).Get();
@@ -397,8 +399,6 @@ void RunnerCtrl::Processor(BatchPartStatus& stat) {
 			// Set sym/tf/pos/slot position as ready
 			attr.slot->SetReady(attr);
 		}
-		
-		attr.slot_it++;
 		
 		for(int i = 0; i < tfs; i++) {
 			int& pos = attr.pos[i];

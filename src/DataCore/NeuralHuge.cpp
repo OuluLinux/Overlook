@@ -33,8 +33,8 @@ void HugeDQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 void HugeDQNAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/forecaster");
+	AddDependency("/open", 1, 1);
+	AddDependency("/forecaster", 1, 1);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;

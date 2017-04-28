@@ -45,8 +45,7 @@ void RecurrentDraw::Paint(Draw& w) {
 	tmp.SetCount(total);
 	
 	// Lock currently cached pages for this usage (don't release these or other's pages)
-	tv.EnterCache();
-	
+	DataCore::Session& ses = GetSession();
 	double maxv = -DBL_MAX;
 	double minv = +DBL_MAX;
 	int t = 0;
@@ -55,13 +54,17 @@ void RecurrentDraw::Paint(Draw& w) {
 		
 		for(int j = 0; j < sym_count; j++) {
 			for(int k = 0; k < tf_count; k++) {
-				double src_value = *tv.GetSlotValue<double>(j, k, pos, *src, 0, true);
+				double* src_value_ = src->GetValuePos<double>(0, j, k, pos);
+				if (!src_value_) continue;
+				double src_value = *src_value_;
 				tmp[t++] = src_value;
 				if (src_value > maxv) maxv = src_value;
 				if (src_value < minv) minv = src_value;
 				
 				for (int v = 0; v < 4*4; v++) {
-					double rnn_value = *tv.GetSlotValue<double>(j, k, pos, *rnn, v, true);
+					double* rnn_value_ = rnn->GetValuePos<double>(0, j, k, pos);
+					if (!rnn_value_) continue;
+					double rnn_value = *rnn_value_;
 					tmp[t++] = rnn_value;
 					if (rnn_value > maxv) maxv = rnn_value;
 					if (rnn_value < minv) minv = rnn_value;
@@ -69,8 +72,6 @@ void RecurrentDraw::Paint(Draw& w) {
 			}
 		}
 	}
-	
-	tv.LeaveCache();
 	
 	double diff = maxv - minv;
 	

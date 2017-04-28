@@ -189,8 +189,8 @@ void ValueChange::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void ValueChange::Init() {
-	AddDependency("/open");
-	AddDependency("/spread");
+	AddDependency("/open", 1, 0);
+	AddDependency("/spread", 1, 0);
 	
 	TimeVector& tv = GetTimeVector();
 	SlotPtr src = tv.FindLinkSlot("/open");

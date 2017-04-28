@@ -31,7 +31,7 @@ DummyIndicator::DummyIndicator() {
 }
 
 void DummyIndicator::Init() {
-	AddDependency("/open");
+	AddDependency("/open", 0, 0);
 }
 
 bool DummyIndicator::Process(const SlotProcessAttributes& attr) {

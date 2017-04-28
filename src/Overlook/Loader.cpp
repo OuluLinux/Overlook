@@ -111,324 +111,122 @@ void Loader::RefreshSessions() {
 }
 
 void Loader::Create() {
+	DataCore::Session& ses = GetSession();
 	
-	OverlookSession ses;
 	
-	ses.begin = begin.GetData();
-	ses.end = end.GetData();
+	// Set settings
+	ses.SetName(list.Get(list.GetCursor(), 0));
+	ses.SetBegin(begin.GetData());
+	ses.SetEnd(end.GetData());
+	ses.SetAddress(server.GetData());
+	ses.SetPort(port.GetData());
 	
-	ses.addr = server.GetData();
-	ses.port = port.GetData();
 	
 	// Add DataBridge
-	ses.link_core.Add("/open", "/db?addr=\"" + (String)server.GetData() + "\"&port=" + IntStr((int)port.GetData()));
+	ses.LinkCore("/open", "/db?addr=\"" + (String)server.GetData() + "\"&port=" + IntStr((int)port.GetData()));
 	
 	
 	// Add some always used utils
-	ses.link_core.Add("/ma", "/ma");
-	ses.link_core.Add("/spread", "/spread");
-	ses.link_core.Add("/change", "/change");
-	ses.link_core.Add("/whstat_fast", "/whstat?period=10");
-	ses.link_core.Add("/whstat_slow", "/whstat?period=20");
-	ses.link_core.Add("/whdiff", "/whdiff");
-	ses.link_core.Add("/chp", "/chp");
-	ses.link_core.Add("/eosc", "/eosc");
+	ses.LinkCore("/ma", "/ma");
+	ses.LinkCore("/spread", "/spread");
+	ses.LinkCore("/change", "/change");
+	ses.LinkCore("/whstat_fast", "/whstat?period=10");
+	ses.LinkCore("/whstat_slow", "/whstat?period=20");
+	ses.LinkCore("/whdiff", "/whdiff");
+	ses.LinkCore("/chp", "/chp");
+	ses.LinkCore("/eosc", "/eosc");
+	
 	
 	// Add recurrent neural networks
 	int recurrents = 0;
 	if (rnn.Get()) {
-		ses.link_core.Add("/rnn", "/rnn?type=\"rnn\"");
+		ses.LinkCore("/rnn", "/rnn?type=\"rnn\"");
 		recurrents++;
 	}
 	
 	if (lstm.Get()) {
-		ses.link_core.Add("/lstm", "/rnn?type=\"lstm\"");
+		ses.LinkCore("/lstm", "/rnn?type=\"lstm\"");
 		recurrents++;
 	}
 	
 	if (highway.Get()) {
-		ses.link_core.Add("/highway", "/rnn?type=\"highway\"");
+		ses.LinkCore("/highway", "/rnn?type=\"highway\"");
 		recurrents++;
 	}
 	
 	if (narx.Get()) {
-		ses.link_core.Add("/narx", "/narx");
+		ses.LinkCore("/narx", "/narx");
 		recurrents++;
 	}
 	
 	
 	// Add forecaster
 	ASSERT(recurrents > 0);
-	ses.link_core.Add("/forecaster", "/forecaster");
+	ses.LinkCore("/forecaster", "/forecaster");
 	
 	
 	// Add agents
 	int agents = 0;
 	if (rl1.Get()) {
-		ses.link_core.Add("/rl", "/rl");
+		ses.LinkCore("/rl", "/rl");
 		agents++;
 	}
 	
 	if (rl2.Get()) {
-		ses.link_core.Add("/dqn", "/dqn");
+		ses.LinkCore("/dqn", "/dqn");
 		agents++;
 	}
 	
 	if (mona.Get()) {
-		ses.link_core.Add("/mona", "/mona");
+		ses.LinkCore("/mona", "/mona");
 		agents++;
 	}
 	
 	// Add meta agent (multi-agent, multi-tf)
 	ASSERT(agents > 0);
-	ses.link_core.Add("/metamona", "/metamona");
+	ses.LinkCore("/metamona", "/metamona");
 	
 	
 	// Add multi agents
 	int multiagents = 0;
 	if (rl2multi.Get()) {
-		ses.link_core.Add("/doubledqn", "/doubledqn");
+		ses.LinkCore("/doubledqn", "/doubledqn");
 		multiagents++;
 	}
 	
 	if (monamulti.Get()) {
-		ses.link_core.Add("/doublemona", "/doublemona");
+		ses.LinkCore("/doublemona", "/doublemona");
 		multiagents++;
 	}
 	
 	ASSERT(multiagents > 0);
 	
-	// Add Timeframes
-	if (tf0.Get()) ses.tfs.Add(1);
-	if (tf1.Get()) ses.tfs.Add(5);
-	if (tf2.Get()) ses.tfs.Add(15);
-	if (tf3.Get()) ses.tfs.Add(30);
-	if (tf4.Get()) ses.tfs.Add(60);
-	if (tf5.Get()) ses.tfs.Add(240);
-	if (tf6.Get()) ses.tfs.Add(1440);
-	if (tf7.Get()) ses.tfs.Add(10080);
 	
+	// Add Timeframes
+	if (tf0.Get()) ses.AddTimeframe(1);
+	if (tf1.Get()) ses.AddTimeframe(5);
+	if (tf2.Get()) ses.AddTimeframe(15);
+	if (tf3.Get()) ses.AddTimeframe(30);
+	if (tf4.Get()) ses.AddTimeframe(60);
+	if (tf5.Get()) ses.AddTimeframe(240);
+	if (tf6.Get()) ses.AddTimeframe(1440);
+	if (tf7.Get()) ses.AddTimeframe(10080);
 	
 	
 	// Add Ctrl objects
-	ses.link_ctrl.Add("/broker", "/brokerctrl?broker=\"/open\"");
-	ses.link_ctrl.Add("/notification", "/notification");
+	ses.LinkCtrl("/broker", "/brokerctrl?broker=\"/open\"");
+	ses.LinkCtrl("/notification", "/notification");
 	
 	
-	String filename = (String)title.GetData() + ".ol";
-	filename.Replace(" ", "_");
-	ses.datadir = filename + ".d";
-	
-	FileOut out(ConfigFile(filename));
-	out % ses;
-	
-	String dir = ConfigFile(ses.datadir);
-	if (DirectoryExists(dir))
-		DeleteFolderDeep(dir);
-	RealizeDirectory(dir);
-	
-	LoadSession(ses);
+	// Init
+	ses.Init();
 }
 
 
 void Loader::Load() {
 	int cursor = list.GetCursor();
 	if (cursor == -1) return;
-	String filename = (String)list.Get(cursor, 0) + ".ol";
-	String path = ConfigFile(filename);
-	if (!FileExists(path))
-		return;
 	
-	OverlookSession ses;
-	FileIn in(path);
-	in % ses;
-	LoadSession(ses);
-}
-
-void Loader::LoadSession(OverlookSession& ses) {
-	MetaTrader& mt = GetMetaTrader();
-	TimeVector& tv = GetTimeVector();
-	PathResolver& res = *GetPathResolver();
-	
-	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
-	
-	try {
-		tv.EnableCache();
-		tv.LimitMemory();
-		
-		// Init sym/tfs/time space
-		ASSERTEXC(!mt.Init(ses.addr, ses.port));
-		
-		// Add symbols
-		for(int i = 0; i < mt.GetSymbolCount(); i++) {
-			const Symbol& s = mt.GetSymbol(i);
-			tv.AddSymbol(s.name);
-		}
-		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
-			const Currency& c = mt.GetCurrency(i);
-			tv.AddSymbol(c.name);
-		}
-		
-		
-		// TODO: store symbols to session file and check that mt supports them
-		
-		// Add periods
-		ASSERT(mt.GetTimeframe(0) == 1);
-		int base = 15; // mins
-		tv.SetBasePeriod(60*base);
-		Vector<int> tfs;
-		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
-			int tf = mt.GetTimeframe(i);
-			if (tf >= base) {
-				tfs.Add(tf / base);
-				tv.AddPeriod(tf * 60);
-			}
-		}
-		
-		
-		// Init time range
-		tv.SetBegin(ses.begin);
-		tv.SetEnd(ses.end);
-		MetaTime& mtime = res.GetTime();
-		mtime.SetBegin(tv.GetBegin());
-		mtime.SetEnd(tv.GetEnd());
-		mtime.SetBasePeriod(tv.GetBasePeriod());
-		
-		
-		
-		// Link core
-		Index<String> linkctrl_symtf;
-		VectorMap<String, String> linkcustomctrl_symtf, linkcustomctrl_sym, linkcustomctrl_tf;
-		for(int i = 0; i < ses.link_core.GetCount(); i++) {
-			const String& key = ses.link_core.GetKey(i);
-			String value = ses.link_core[i];
-			tv.LinkPath(key, value);
-			
-			// Link ctrl
-			SlotPtr slot = tv.FindLinkSlot(key);
-			String ctrlkey = slot->GetCtrl();
-			
-			// By default, slotctrl is Container and it is added separately for every symbol
-			// and timeframe.
-			if (ctrlkey == "default") {
-				linkctrl_symtf.Add(key);
-			}
-			// Otherwise, link custom ctrl to /slotctrl/ folder.
-			else {
-				int type = slot->GetCtrlType();
-				String ctrl_dest = "/slotctrl" + key;
-				String ctrl_src = "/" + ctrlkey + "?slot=\"" + key + "\"";
-				if (type == SLOT_SYMTF) {
-					linkcustomctrl_symtf.Add(ctrl_dest, ctrl_src);
-				}
-				else if (type == SLOT_SYM) {
-					linkcustomctrl_sym.Add(ctrl_dest, ctrl_src);
-				}
-				else if (type == SLOT_TF) {
-					linkcustomctrl_tf.Add(ctrl_dest, ctrl_src);
-				}
-				else if (type == SLOT_ONCE) {
-					res.LinkPath(ctrl_dest, ctrl_src);
-				}
-				else Panic("Unknown slottype");
-			}
-		}
-		
-		
-		// Link ctrls
-		for(int i = 0; i < ses.link_ctrl.GetCount(); i++) {
-			const String& key = ses.link_ctrl.GetKey(i);
-			String value = ses.link_ctrl[i];
-			res.LinkPath(key, value);
-		}
-		
-		
-		// Link symbols and timeframes
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			for(int j = 0; j < tfs.GetCount(); j++) {
-				
-				// Add frontpage
-				String fp_dest = "/name/" + symbols[i].name;
-				String fp_src = "/fp?id=" + IntStr(i) + "&symbol=\"" + symbols[i].name + "\"";
-				fp_dest.Replace("#", "");
-				res.LinkPath(fp_dest, fp_src);
-				
-				
-				// Add by name
-				String dest = "/name/" + symbols[i].name + "/tf" + IntStr(tfs[j]);
-				String src = "/bardata?bar=\"/open\"&id=" + IntStr(i) + "&period=" + IntStr(tfs[j]);
-				dest.Replace("#", "");
-				res.LinkPath(dest, src);
-				
-				
-				// Add default sym/tf ctrls, by name
-				for(int k = 0; k < linkctrl_symtf.GetCount(); k++) {
-					const String& key = linkctrl_symtf[k];
-					String ctrl_dest = "/slotctrl" + key + "/" + symbols[i].name + "/tf" + IntStr(tfs[j]);
-					ctrl_dest.Replace("#", "");
-					String ctrl_src = dest + "/cont?slot=\"" + key + "\"&id=" + IntStr(i) + "&tf_id=" + IntStr(j);
-					res.LinkPath(ctrl_dest, ctrl_src);
-				}
-				
-				// Add custom sym/tf ctrls
-				for(int k = 0; k < linkcustomctrl_symtf.GetCount(); k++) {
-					const String& key = linkcustomctrl_symtf.GetKey(k);
-					String value = linkcustomctrl_symtf[k];
-					String ctrl_dest = key + "/" + symbols[i].name + "/tf" + IntStr(tfs[j]);
-					ctrl_dest.Replace("#", "");
-					String ctrl_src = value + "&id=" + IntStr(i) + "&tf_id=" + IntStr(j);
-					res.LinkPath(ctrl_dest, ctrl_src);
-				}
-				
-				// Add custom tf ctrls
-				if (i == 0) {
-					for(int k = 0; k < linkcustomctrl_tf.GetCount(); k++) {
-						const String& key = linkcustomctrl_tf.GetKey(k);
-						String value = linkcustomctrl_tf[k];
-						String ctrl_dest = key + "/tf" + IntStr(tfs[j]);
-						ctrl_dest.Replace("#", "");
-						String ctrl_src = value + "&tf_id=" + IntStr(j);
-						res.LinkPath(ctrl_dest, ctrl_src);
-					}
-				}
-			}
-			
-			// Add custom sym ctrls
-			for(int k = 0; k < linkcustomctrl_sym.GetCount(); k++) {
-				const String& key = linkcustomctrl_sym.GetKey(k);
-				String value = linkcustomctrl_sym[k];
-				String ctrl_dest = key + "/" + symbols[i].name;
-				ctrl_dest.Replace("#", "");
-				String ctrl_src = value + "&id=" + IntStr(i);
-				res.LinkPath(ctrl_dest, ctrl_src);
-			}
-		}
-		
-		
-		// Link parameter configuration ctrls for all slots
-		for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
-			const Slot& slot = tv.GetCustomSlot(i);
-			String linkpath = slot.GetLinkPath();
-			ASSERT(!linkpath.IsEmpty()); // sanity check
-			String ctrl_dest = "/params" + linkpath;
-			String ctrl_src = "/paramctrl?slot=\"" + linkpath + "\"";
-			res.LinkPath(ctrl_dest, ctrl_src);
-		}
-		
-		
-		// Create or load cache base on linked slots (keep this 2. last)
-		tv.RefreshData();
-		
-		// Link runner (also starts processing, so keep this last)
-		res.LinkPath("/runner", "/runnerctrl");
-		
-		
-		exit = false;
-	}
-	
-	catch (...) {
-		PromptOK("Load failed");
-	}
-	
-	Close();
+	DataCore::Session& ses = GetSession();
+	ses.SetName(list.Get(cursor, 0));
 }

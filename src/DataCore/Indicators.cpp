@@ -45,7 +45,7 @@ void MovingAverage::Init() {
 		"}"
 	);
 	
-	AddDependency("/open");
+	AddDependency("/open", 0, 0);
 }
 
 bool MovingAverage::Process(const SlotProcessAttributes& attr) {

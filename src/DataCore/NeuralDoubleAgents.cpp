@@ -42,8 +42,8 @@ void MonaDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaDoubleAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/metamona");
+	AddDependency("/open", 1, 0);
+	AddDependency("/metamona", 1, 0);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();

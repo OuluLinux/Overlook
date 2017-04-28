@@ -316,10 +316,10 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 		}
 		
 		while (cur < time && count < bars) {
-			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count, attr)	= prev_close;
-			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= prev_close;
-			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= prev_close;
-			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= 0;
+			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= prev_close;
+			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= prev_close;
+			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= prev_close;
+			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= 0;
 			SetReady(count, attr, true);
 			cur += step;
 			count++;
@@ -329,10 +329,10 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 		
 		if (count < bars && time == cur) {
 			//ASSERT(tv.GetTime(tf, count) == TimeFromTimestamp(time));
-			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count, attr)	= open;
-			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= low;
-			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= high;
-			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= tick_volume;
+			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= open;
+			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= low;
+			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= high;
+			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= tick_volume;
 			SetReady(count, attr, true);
 			cur += step;
 			count++;
@@ -342,10 +342,10 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	}
 	
 	while (count < bars) {
-		*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count, attr)	= open;
-		*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count, attr)	= open;
-		*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count, attr)	= open;
-		*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count, attr)	= 0;
+		*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= open;
+		*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= open;
+		*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= open;
+		*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= 0;
 		SetReady(count, attr, true);
 		cur += step;
 		count++;

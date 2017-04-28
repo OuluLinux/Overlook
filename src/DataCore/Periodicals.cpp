@@ -85,7 +85,7 @@ void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourStats::Init() {
-	AddDependency("/change");
+	AddDependency("/change", 0, 0);
 	
 	TimeVector& tv = GetTimeVector();
 	int sym_count = tv.GetSymbolCount();
@@ -282,8 +282,8 @@ void WdayHourDiff::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void WdayHourDiff::Init() {
-	AddDependency("/whstat_fast");
-	AddDependency("/whstat_slow");
+	AddDependency("/whstat_fast", 0, 0);
+	AddDependency("/whstat_slow", 0, 0);
 }
 
 bool WdayHourDiff::Process(const SlotProcessAttributes& attr) {
@@ -384,7 +384,7 @@ void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void ChannelPredicter::Init() {
-	AddDependency("/whstat_slow");
+	AddDependency("/whstat_slow", 0, 0);
 }
 
 bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
@@ -464,8 +464,6 @@ void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
 void EventOsc::Init() {
 	ASSERTEXC(!(mul <= 0 || mul > 0.9));
 	
-	AddDependency("/open");
-	
 	TimeVector& tv = GetTimeVector();
 	SlotPtr src = tv.FindLinkSlot("/open");
 	db = dynamic_cast<DataBridge*>(&*src);
@@ -527,11 +525,11 @@ bool EventOsc::Process(const SlotProcessAttributes& attr) {
 				int a = shift - j;
 				int b = shift + j;
 				if (a >= 0) {
-					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, a, attr);
+					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, a);
 					if (d) *d = value;
 				}
 				if (j && b < bars) {
-					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, b, attr);
+					double* d = GetValuePos<double>(buf_id, attr.sym_id, attr.tf_id, b);
 					if (d) *d = value;
 				}
 				value *= mul;

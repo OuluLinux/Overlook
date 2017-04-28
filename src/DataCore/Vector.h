@@ -3,8 +3,6 @@
 
 #include "Slot.h"
 
-namespace DataCtrl {class RunnerCtrl;}
-
 namespace DataCore {
 
 
@@ -76,19 +74,15 @@ String EncodePath(const PathArgs& path, int pos);
 class TimeVector : public Pte<TimeVector> {
 	
 public:
-	typedef Vector<byte> SlotData;
 	typedef Ptr<TimeVector> TimeVectorPtr;
 	
 	
 protected:
 	friend class Iterator;
 	friend class Slot;
-	friend class ::DataCtrl::RunnerCtrl;
+	friend class Session;
 	
-	Upp::FileAppend cache_file;
-	Upp::SpinLock cache_lock;
 	PathLink link_root;
-	String cache_file_path;
 	Time begin, end;
 	int64 reserved_memory;
 	int64 memory_limit;
@@ -96,20 +90,15 @@ protected:
 	int timediff;
 	int base_period;
 	int begin_ts, end_ts;
-	int header_size;
-	int slot_flag_bytes, slot_flag_offset;
-	bool reversed;
 	bool enable_cache;
 	
-	Index<int> periods;
-	Vector<Vector<Vector<SlotData> > > data;
-	Vector<SlotPtr> slot;
-	Vector<int> tfbars_in_slowtf;
 	VectorMap<String, SlotPtr> resolved_slots;
 	VectorMap<String, String> linked_paths;
+	Vector<SlotPtr> slot;
 	Index<String> symbols;
-	Vector<int> bars, slot_bytes;
-	int64 total_slot_bytes;
+	Index<int> periods;
+	Vector<int> tfbars_in_slowtf;
+	Vector<int> bars;
 	SlotProcessAttributes* current_slotattr;
 	
 	
@@ -122,21 +111,15 @@ public:
 	TimeVector();
 	~TimeVector();
 	
+	void Serialize(Stream& s);
+	
 	void AddPeriod(int period);
 	void AddSymbol(String sym);
 	void RefreshData();
 	void EnableCache(bool b=true) {enable_cache = b;}
 	void LimitMemory(int64 limit=2147483648L) {memory_limit = limit;}
-	void ReleaseMemory(int tf_id, int pos);
-	void ReleaseMemory(int fastest_pos);
-	void StoreChangedCache();
 	
-	void LoadCache(int sym_id, int tf_id, int pos, bool locked=false);
-	void EnterCache() {cache_lock.Enter();}
-	void LeaveCache() {cache_lock.Leave();}
-	
-	bool IsReversed() const {return reversed;}
-	Time GetTime(int period, int pos) const {return begin + base_period * period * pos * (reversed ? -1 : 1);}
+	Time GetTime(int period, int pos) const {return begin + base_period * period * pos;}
 	Time GetBegin() const {return begin;}
 	Time GetEnd() const {return end;}
 	int GetSymbolCount() const {return symbols.GetCount();}
@@ -150,31 +133,16 @@ public:
 	int GetTfFromSeconds(int period_seconds);
 	int GetPeriod(int i) const {return periods[i];}
 	int GetPeriodCount() const {return periods.GetCount();}
-	int64 GetPersistencyCursor(int sym_id, int tf_id, int shift);
-	const SlotData& GetSlot(int sym_id, int tf_id, int shift) const {return data[sym_id][tf_id][shift];}
 	int GetCustomSlotCount() const {return slot.GetCount();}
 	const Slot& GetCustomSlot(int i) const {return *slot[i];}
 	Slot& GetCustomSlot(int i) {return *slot[i];}
 	int FindPeriod(int period) const {return periods.Find(period);}
-	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos, bool locked=false) {
-		const SlotData& data = GetSlot(sym_id, tf_id, shift);
-		if (!data.GetCount()) LoadCache(sym_id, tf_id, shift, locked);
-		return (T*)(data.Begin() + slot.slot_offset + slot.values[slot_value_pos].offset);
-	}
-	template <class T> T* GetSlotValue(int sym_id, int tf_id, int shift, Slot& slot, int slot_value_pos) const {
-		const SlotData& data = GetSlot(sym_id, tf_id, shift);
-		if (!data.GetCount()) return NULL;
-		return (T*)(data.Begin() + slot.slot_offset + slot.values[slot_value_pos].offset);
-	}
 	SlotProcessAttributes& GetCurrent() const {return *current_slotattr;}
 	
 	
-	void SetCacheFile(String path) {cache_file_path = path;}
 	void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}
-	void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get()); reversed = begin_ts > end_ts;}
+	void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get());}
 	void SetBasePeriod(int period)	{base_period = period;}
-	
-	//Iterator Begin();
 	
 	void LinkPath(String dest, String src);
 	PathLinkPtr FindLinkPath(String path);
@@ -190,7 +158,7 @@ public:
 };
 
 
-inline TimeVector& GetTimeVector() {return Single<TimeVector>();}
+
 
 
 

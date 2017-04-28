@@ -19,7 +19,7 @@ using namespace RefCore;
 #include <CtrlCore/lay.h>
 
 
-struct OverlookSession {
+/*struct OverlookSession {
 	
 	Time begin, end;
 	String addr;
@@ -31,7 +31,7 @@ struct OverlookSession {
 	void Serialize(Stream& s) {
 		s % begin % end % addr % port % tfs % link_core % link_ctrl % datadir;
 	}
-};
+};*/
 
 
 class Loader : public WithLoaderLayout<TopWindow> {
@@ -44,7 +44,7 @@ public:
 	void ShowLicense();
 	void Load();
 	void Create();
-	void LoadSession(OverlookSession& ses);
+	//void LoadSession(OverlookSession& ses);
 	
 	void Exit() {exit = true;}
 	

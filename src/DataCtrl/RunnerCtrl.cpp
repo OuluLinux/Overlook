@@ -2,9 +2,6 @@
 
 namespace DataCtrl {
 
-
-
-
 RunnerCtrl::RunnerCtrl() {
 	CtrlLayout(progress);
 	CtrlLayout(details);
@@ -35,98 +32,8 @@ RunnerCtrl::RunnerCtrl() {
 	progress.incomplete.AddColumn("Begin");
 	progress.incomplete.AddColumn("Progress");
 	
-	running = false;
-	stopped = true;
-}
-
-RunnerCtrl::~RunnerCtrl() {
-	running = false;
-	while (!stopped) {Sleep(100);}
-}
-
-void RunnerCtrl::RefreshBatches() {
-	TimeVector& tv = GetTimeVector();
-	
-	int sym_count = tv.GetSymbolCount();
-	int tf_count = tv.GetPeriodCount();
-	
-	
-	// Split slots into batches
-	Vector<Slot*> not_added;
-	for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
-		Slot& slot = tv.GetCustomSlot(i);
-		not_added.Add(&slot);
-	}
-	
-	batches.Clear();
-	while (!not_added.IsEmpty()) {
-		
-		// Add new batch
-		Batch& current = batches.Add();
-		
-		for(int i = 0; i < not_added.GetCount(); i++) {
-			Slot& slot = *not_added[i];
-			
-			// Check if all slot's dependencies are in earlier batches
-			bool deps_earlier_only = true;
-			for(int j = 0; j < slot.GetDependencyCount(); j++) {
-				String path = slot.GetDependencyPath(j);
-				bool earlier_deb = false;
-				for(int k = 0; k < batches.GetCount()-1 && !earlier_deb; k++) {
-					Batch& b = batches[k];
-					for(int l = 0; l < b.slots.GetCount(); l++) {
-						if (b.slots.GetKey(l) == path) {
-							earlier_deb = true;
-							break;
-						}
-					}
-				}
-				if (!earlier_deb) {
-					deps_earlier_only = false;
-					break;
-				}
-			}
-			
-			if (deps_earlier_only) {
-				current.slots.Add(slot.GetLinkPath(), &slot);
-				
-				// Remove current from queue
-				not_added.Remove(i);
-				i--;
-			}
-		}
-	}
-	
-	// Print some interesting stats
-	for(int i = 0; i < batches.GetCount(); i++) {
-		Batch& b = batches[i];
-		LOG("Batch " << i);
-		for(int j = 0; j < b.slots.GetCount(); j++) {
-			LOG("      " << b.slots.GetKey(j));
-		}
-	}
-	
-	// Initialise status list
-	for(int i = 0; i < batches.GetCount(); i++) {
-		Batch& b = batches[i];
-		
-		int total = sym_count * tf_count * b.slots.GetCount();
-		b.status.SetCount(total);
-		
-		int s = 0;
-		for(int i = 0; i < b.slots.GetCount(); i++) {
-			SlotPtr slot = b.slots[i];
-			for(int j = 0; j < sym_count; j++) {
-				for(int k = 0; k < tf_count; k++) {
-					BatchPartStatus& stat = b.status[s++];
-					stat.slot = slot;
-					stat.sym_id = j;
-					stat.tf_id = k;
-				}
-			}
-		}
-		ASSERT(s == total);
-	}
+	progress_batch_updating = false;
+	progress_updating = false;
 }
 
 void RunnerCtrl::RefreshData() {
@@ -140,13 +47,13 @@ void RunnerCtrl::RefreshData() {
 }
 
 void RunnerCtrl::RefreshProgress() {
+	DataCore::Session& ses = GetSession();
 	DataCore::TimeVector& tv = GetTimeVector();
 	
 	int cursor = progress.batches.GetCursor();
 	
-	
-	for(int i = 0; i < batches.GetCount(); i++) {
-		Batch& b = batches[i];
+	for(int i = 0; i < ses.GetBatchCount(); i++) {
+		Batch& b = ses.GetBatch(i);
 		
 		progress.batches.Set(i, 0, i);
 		progress.batches.Set(i, 1, b.slots.GetCount());
@@ -163,7 +70,7 @@ void RunnerCtrl::RefreshProgress() {
 	}
 	
 	if (cursor != -1) {
-		Batch& b = batches[cursor];
+		Batch& b = ses.GetBatch(cursor);
 		
 		int num = 0;
 		for(int i = 0; i < b.status.GetCount(); i++) {
@@ -185,6 +92,8 @@ void RunnerCtrl::RefreshProgress() {
 		
 		progress.incomplete.SetSortColumn(5, true);
 	}
+	
+	progress_updating = false;
 }
 
 void RunnerCtrl::RefreshDependencyGraph() {
@@ -223,7 +132,12 @@ void RunnerCtrl::RefreshDetails() {
 
 
 void RunnerCtrl::Init() {
+	DataCore::Session& ses = GetSession();
 	TimeVector& tv = GetTimeVector();
+	
+	ses.WhenBatchFinished << THISBACK(PostRefreshData);
+	ses.WhenPartFinished << THISBACK(PostRefreshProgress);
+	ses.WhenProgress << THISBACK(PostProgress);
 	
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
@@ -257,160 +171,30 @@ void RunnerCtrl::Init() {
 		const Slot& s = tv.GetCustomSlot(i);
 		details.slots.Add(
 			s.GetKey(),
-			Format("0x%X", s.GetReservedBytes()),
-			Format("0x%X", s.GetOffset()),
+			"",//Format("0x%X", s.GetReservedBytes()),
+			"",//Format("0x%X", s.GetOffset()),
 			s.GetPath());
 	}
 	
-	RefreshBatches();
-	
-	running = true;
-	stopped = false;
-	Thread::Start(THISBACK(Run));
 }
 
 void RunnerCtrl::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
-void RunnerCtrl::Run() {
-	TimeVector& tv = GetTimeVector();
-	
-	int cpus = 1;//CPU_Cores();
-	int sym_count = tv.GetSymbolCount();
-	
-	TimeStop ts, ts_total;
-	
-	while (!Thread::IsShutdownThreads() && running) {
-		
-		for(int i = 0; i < batches.GetCount(); i++) {
-			PostCallback(THISBACK2(SetProgressTotal, i, batches.GetCount()));
-			
-			Batch& b = batches[i];
-			b.begin = GetSysTime();
-			
-			cursor = 0;
-			ts.Reset();
-			
-			CoWork co;
-			for(int j = 0; j < cpus; j++)
-				co & THISBACK2(BatchProcessor, j, &b);
-			co.Finish();
-			
-			b.end = GetSysTime();
-			PostCallback(THISBACK(RefreshData));
-		}
-		
-		for(int i = 0; i < 60 && !Thread::IsShutdownThreads() && running; i++) {
-			Sleep(1000);
-		}
-	}
-	
-	tv.StoreChangedCache();
-	
-	stopped = true;
-}
-
-void RunnerCtrl::BatchProcessor(int thread_id, Batch* batch) {
-	Batch& b = *batch;
-	
-	for (;;) {
-		int pos = cursor++;
-		PostCallback(THISBACK2(SetProgressBatch, pos, b.status.GetCount()));
-		
-		if (pos >= b.status.GetCount())
-			break;
-		
-		BatchPartStatus& stat = b.status[pos];
-		
-		Processor(stat);
-		
-		// If progress-tab is open, refresh stats
-		if (tabs.Get() == 0)
-			PostCallback(THISBACK(RefreshProgress));
+void RunnerCtrl::PostRefreshProgress() {
+	// If progress-tab is open, refresh stats
+	if (tabs.Get() == 0 && !progress_updating) {
+		progress_updating = true;
+		PostCallback(THISBACK(RefreshProgress));
 	}
 }
 
-void RunnerCtrl::Processor(BatchPartStatus& stat) {
-	int sym_id = stat.sym_id;
-	int tf_id = stat.tf_id;
-	Slot* slot = stat.slot;
-	
-	stat.begin = GetSysTime();
-	
-	TimeVector& tv = GetTimeVector();
-	
-	int id = slot->GetId();
-	int tfs = tv.periods.GetCount();
-	
-	
-	// Get attributes of the TimeVector
-	int total_slot_bytes = tv.total_slot_bytes;
-	int slot_flag_offset = tv.slot_flag_offset;
-	int64 memory_limit = tv.memory_limit;
-	int64& reserved_memory = tv.reserved_memory;
-	Vector<int>& slot_bytes = tv.slot_bytes;
-	
-	
-	// Set attributes of the current time-position
-	SlotProcessAttributes attr;
-	ASSERTEXC(tv.bars.GetCount() <= 16);
-	for(int i = 0; i < tv.bars.GetCount(); i++) {
-		attr.pos[i] = 0;
-		attr.bars[i] = tv.bars[i];
-		attr.periods[i] = tv.periods[i];
+void RunnerCtrl::PostPartProgress(int actual, int total) {
+	if (!progress_batch_updating) {
+		progress_batch_updating = true;
+		PostCallback(THISBACK2(SetProgressBatch, actual, total));
 	}
-	
-	
-	// Set attributes of TimeVector::Iterator
-	attr.sym_count = tv.symbols.GetCount();
-	attr.tf_count = tv.periods.GetCount();
-	
-	bool enable_cache = tv.enable_cache;
-	bool check_memory_limit = memory_limit != 0;
-	
-	
-	// Set attributes of current symbol/tf
-	attr.tf_id = tf_id;
-	attr.sym_id = sym_id;
-	attr.slot_it = tv.data[sym_id][tf_id].Begin();
-	
-	
-	// Set attributes of the begin of the slot memory area
-	attr.slot_bytes = slot_bytes[id];
-	attr.slot_pos = id;
-	attr.slot = slot;
-	
-	stat.total = attr.bars[tf_id];
-	
-	for(int i = 0; i < stat.total; i++, attr.slot_it++) {
-		stat.actual = i;
-		
-		attr.time = tv.GetTime(tv.periods[0], attr.pos[0]).Get();
-		
-		if (attr.slot->IsReady(attr)) {
-			continue;
-		}
-		
-		if (!attr.slot->Process(attr)) {
-			// failed, what now?
-		}
-		else {
-			// Set sym/tf/pos/slot position as ready
-			attr.slot->SetReady(attr);
-		}
-		
-		for(int i = 0; i < tfs; i++) {
-			int& pos = attr.pos[i];
-			pos++;
-			if (i < tfs-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
-				break;
-			}
-		}
-	}
-	
-	stat.end = GetSysTime();
-	stat.complete = true;
 }
 
 }

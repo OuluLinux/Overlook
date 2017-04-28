@@ -124,9 +124,9 @@ void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
 void Recurrent::Init() {
 	//TODO: anchor this to timevector id in case of multiple instances
 	
-	AddDependency("/open");
-	AddDependency("/change");
-	AddDependency("/whstat_slow");
+	AddDependency("/open", 0, 0);
+	AddDependency("/change", 0, 0);
+	AddDependency("/whstat_slow", 0, 0);
 	
 	temperatures.SetCount(3);
 	temperatures[0] = 0.1;
@@ -436,8 +436,8 @@ void NARX::Init() {
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
-	AddDependency("/open");
-	AddDependency("/change");
+	AddDependency("/open", 1, 0);
+	AddDependency("/change", 1, 1);
 	
 	sym_count = tv.GetSymbolCount();
 	tf_count = tv.GetPeriodCount();
@@ -862,15 +862,15 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 void Forecaster::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/change");
-	AddDependency("/lstm");
-	AddDependency("/narx");
-	AddDependency("/whstat_slow");
-	AddDependency("/whdiff");
-	AddDependency("/chp");
-	AddDependency("/eosc");
-	AddDependency("/ma");
+	AddDependency("/open", 0, 0);
+	AddDependency("/change", 0, 0);
+	AddDependency("/lstm", 0, 0);
+	AddDependency("/narx", 0, 0);
+	AddDependency("/whstat_slow", 0, 0);
+	AddDependency("/whdiff", 0, 0);
+	AddDependency("/chp", 0, 0);
+	AddDependency("/eosc", 0, 0);
+	AddDependency("/ma", 0, 0);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -1038,9 +1038,9 @@ void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
 void RLAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/change");
-	AddDependency("/forecaster");
+	AddDependency("/open", 0, 0);
+	AddDependency("/change", 0, 0);
+	AddDependency("/forecaster", 0, 0);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 4;
@@ -1177,9 +1177,9 @@ void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 void DQNAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/change");
-	AddDependency("/forecaster");
+	AddDependency("/open", 0, 0);
+	AddDependency("/change", 0, 0);
+	AddDependency("/forecaster", 0, 0);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
@@ -1332,9 +1332,9 @@ void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/change");
-	AddDependency("/forecaster");
+	AddDependency("/open", 0, 0);
+	AddDependency("/change", 0, 0);
+	AddDependency("/forecaster", 0, 0);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 10;
@@ -1549,12 +1549,12 @@ void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
 void MonaMetaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
-	AddDependency("/open");
-	AddDependency("/rl");
-	AddDependency("/dqn");
-	AddDependency("/mona");
-	AddDependency("/change");
-	AddDependency("/forecaster");
+	AddDependency("/open", 0, 0);
+	AddDependency("/rl", 0, 1);
+	AddDependency("/dqn", 0, 1);
+	AddDependency("/mona", 0, 1);
+	AddDependency("/change", 0, 0);
+	AddDependency("/forecaster", 0, 1);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -1607,6 +1607,7 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& mona = GetDependency(3);
 	const Slot& change = GetDependency(4);
 	Panic("TODO: add spread costs");
+	Panic("TODO: add forecaster (all tf)");
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);

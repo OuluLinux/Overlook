@@ -21,8 +21,6 @@ DataExc::DataExc(String msg) : Exc(msg) {
 Slot::Slot() {
 	vector = 0;
 	source = 0;
-	reserved_bytes = 0;
-	slot_offset = 0;
 	forced_without_data = false;
 	id = -1;
 }
@@ -49,24 +47,29 @@ void Slot::AddValue(uint16 bytes, String name, String description) {
 	value.bytes = bytes;
 	value.name = name;
 	value.description = description;
-	value.offset = reserved_bytes;
-	reserved_bytes += bytes;
+	data.Add();
 }
 
-void Slot::LoadCache(int sym_id, int tf_id, int pos) const {
-	vector->LoadCache(sym_id, tf_id, pos);
+void Slot::LoadCache(int sym_id, int tf_id) {
+	String filename;
+	filename << sym_id << "-" << tf_id << ".bin";
+	String path = AppendFileName(GetFileDir(), filename);
+	FileIn in(path);
+	in % data[sym_id][tf_id] % ready[sym_id][tf_id];
+	SerializeCache(in, sym_id, tf_id);
 }
 
-const SlotData& Slot::GetData(int sym_id, int tf_id, int pos) const {
-	return vector->data[sym_id][tf_id][pos];
+void Slot::StoreCache(int sym_id, int tf_id) {
+	String filename;
+	filename << sym_id << "-" << tf_id << ".bin";
+	String path = AppendFileName(GetFileDir(), filename);
+	FileOut out(path);
+	out % data[sym_id][tf_id] % ready[sym_id][tf_id];
+	SerializeCache(out, sym_id, tf_id);
 }
 
 void Slot::SetReady(int sym_id, int tf_id, int pos, const SlotProcessAttributes& attr, bool ready) {
-	const SlotData& data = GetData(sym_id, tf_id, pos);
-	if (!data.GetCount())
-		LoadCache(sym_id, tf_id, pos);
-	const byte* slot_vector = data.Begin();
-	byte* ready_slot = (byte*)slot_vector + vector->slot_flag_offset;
+	byte* ready_slot = this->ready[sym_id][tf_id].Begin();
 	ASSERT(ready_slot);
 	int slot_pos = attr.slot_pos;
 	int ready_bit = slot_pos % 8;
@@ -76,9 +79,6 @@ void Slot::SetReady(int sym_id, int tf_id, int pos, const SlotProcessAttributes&
 		*ready_slot |= ready_mask;
 	else
 		*ready_slot &= !ready_mask;
-	
-	// The first byte in the slot (sym/tf/pos) vector is reserved for the 'changed' flag. Set it true also.
-	*(bool*)slot_vector = true;
 }
 
 void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
@@ -86,19 +86,16 @@ void Slot::SetReady(int pos, const SlotProcessAttributes& attr, bool ready) {
 }
 
 bool Slot::IsReady(int pos, const SlotProcessAttributes& attr) {
-	const SlotData& data = GetData(attr.sym_id, attr.tf_id, pos);
-	if (!data.GetCount())
-		LoadCache(attr.sym_id, attr.tf_id, pos);
-	const byte* ready_slot = data.Begin() + vector->slot_flag_offset;
+	byte* ready_slot = ready[attr.sym_id][attr.tf_id].Begin();
 	ASSERT(ready_slot);
 	int slot_pos = attr.slot_pos;
 	int ready_bit = slot_pos % 8;
 	ready_slot += slot_pos / 8;
 	byte ready_mask = 1 << ready_bit;
-	return *ready_slot & ready_mask;
+	return ready_mask & *ready_slot;
 }
 
-void Slot::AddDependency(String slot_path, String description) {
+void Slot::AddDependency(String slot_path, bool other_symbols, bool other_timeframes) {
 	TimeVector& tv = GetTimeVector();
 	SlotPtr slot = tv.FindLinkSlot(slot_path);
 	ASSERTEXC_(slot, "Could not link slot: " + slot_path);

@@ -1,5 +1,6 @@
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
+#include "RunnerCtrl.h"
 
 namespace DataCtrl {
 
@@ -65,7 +66,6 @@ void GraphCtrl::GetDataRange(Container& cont, int buffer) {
     int data_begin = cont.GetBufferSettings(buffer).begin;
     ASSERT(data_begin >= 0);
     
-    cont.Enter();
 	for(int i = 0; i < count; i++ ) {
         int pos = c - 1 - (shift + i + data_shift);
         if (pos >= c || pos < data_begin) continue;
@@ -76,7 +76,6 @@ void GraphCtrl::GetDataRange(Container& cont, int buffer) {
 		if (get_lo && value  < lo)
 			lo = value;
     }
-    cont.Leave();
 }
 
 void GraphCtrl::Paint(Draw& draw) {
@@ -300,8 +299,6 @@ void GraphCtrl::PaintCandlesticks(Draw& W, BarData& values) {
 	c = dt.GetCount(period);
 	diff = hi - lo;
 	
-	values.Enter();
-	
 	for(int i = 0; i < count; i++ ) {
         Vector<Point> P;
         double O, H, L, C;
@@ -340,8 +337,6 @@ void GraphCtrl::PaintCandlesticks(Draw& W, BarData& values) {
 	        W.DrawPolygon(P, c, 1, c2);
         }
     }
-	
-	values.Leave();
 	
     DrawBorder(W);
     
@@ -405,8 +400,6 @@ void GraphCtrl::PaintContainerLine(Draw& W, Container& cont, int shift, bool dra
 	if (line_width == 0) draw_type = -1;
 	
 	int buf_count = cont.GetBufferDataCount();
-	
-	cont.Enter();
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -476,8 +469,6 @@ void GraphCtrl::PaintContainerLine(Draw& W, Container& cont, int shift, bool dra
 	        W.DrawText(x+(i+0.5)*div, y+V, str, StdFont(), value_color);
 		}
 	}
-	
-	cont.Leave();
 	
 	if (draw_border) {
 		DrawBorder(W);

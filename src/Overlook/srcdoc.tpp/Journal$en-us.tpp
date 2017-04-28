@@ -75,4 +75,52 @@ the input stays same, all neural networks just fits better to
 existing and they doesn`'t change much. For that reason it is 
 possible. Basically, the whole stack will be trained instead 
 of just going from bottom to top once. That, while reacting fast 
-to the real`-time events simultaneously, will be a challenge.]]
+to the real`-time events simultaneously, will be a challenge.&]
+[s3; 28.4.2017&]
+[s0; Last evening I got an idea, that the nn`-slot`-stack should 
+have specific time how long it can be trained. In that way, uniform 
+training could be guaranteed. Ever symbol/timeframe/custom`-slot 
+would get it`'s own share of processing time. The task`-switch 
+of slot`-processing is very light procedure, so rather fast switching 
+is possible. Only at least one full processing cycle is required 
+before moving to next batch, and lower slots should be ahead 
+of higher in processing position, but that is only recommended, 
+not required.&]
+[s0; Hmm... ok, so I have been reducing those spinlocks and memory 
+releases from old model, and I think that the current small memory 
+model is too fine`-grained for efficient usage. All time`-slots 
+for symbol are single memory units, and that causes too much 
+overhead. Previously I did the normal thing: reserved one long 
+vector for sym/tf/slot, but it had other problems. I guess, I 
+must fall back into that. There was a possibility, that slots 
+would require same type from different sym/tf, which required 
+preparing for sym/tf complexities inside one type of slot, but 
+it never came true. Now all reservations for those complexities 
+can be pruned away. I must say, that the current API was developed 
+with this small memory model and that is better than previous, 
+but the underlying model must be returned to have whole time`-range 
+in one vector. Actually, the small memory model was extremely 
+compact, and I could set the memory limit to 640kb, with over 
+1GB cache, and it would still work :) ...but now that feature 
+causes only overhead.&]
+[s0; Ok, so the normal memory model raises the minimum requirement 
+from that 640kb to a lot more. My PC and server can have more 
+than 64GB SSD swap memory, so it won`'t be problem for me, but 
+we try to think little guys too. My PC is by the way AMD CPU 
+8`-core 4GHz, Memory 8GB DDR3, and I don`'t care graphics any 
+more. I guess it`'s still high`-end PC currently. I have always 
+had AMD cpu in my built`-from`-parts PC since Amiga 500.&]
+[s0; Looks like there is some Fyre Festival situation going on. Some 
+critique is not valid, since there is clearly images about the 
+accomodation being in that kind of tents. However, the marketing 
+is too rosy as always and common sense was missing. I was the 
+opposite of the rich kid, and while I never would have fallen 
+into buying a Fyre ticket, that event could have also been a 
+success, if that huge ticket money was spent properly. Unfortunately, 
+the high price was a scam, like too many times in the past. Next 
+time when someone tries something similar, they should have a 
+great 24/7 buffet and the real security.&]
+[s0; Seems like changing the memory model is a big operation. I had 
+to comment the existing code out, and it`'s hard to see what 
+needs to be done. It will sort out eventually.&]
+[s0; Didn`'t finish the memory model changing today.]]

@@ -84,6 +84,14 @@ void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
 		var_period = args[i];
 }
 
+void WdayHourStats::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void WdayHourStats::Init() {
 	AddDependency("/change", 0, 0);
 	
@@ -160,20 +168,22 @@ bool WdayHourStats::Process(const SlotProcessAttributes& attr) {
 		dh_var.AddResult(*change);
 	}
 	
-	*t_mean			= t_var.GetMean();
-	*h_mean			= h_var.GetMean();
-	*d_mean			= d_var.GetMean();
-	*dh_mean		= dh_var.GetMean();
-	
-	*t_min			= t_var.Get(0.05);
-	*h_min			= h_var.Get(0.05);
-	*d_min			= d_var.Get(0.05);
-	*dh_min			= dh_var.Get(0.05);
-	
-	*t_max			= t_var.Get(0.95);
-	*h_max			= h_var.Get(0.95);
-	*d_max			= d_var.Get(0.95);
-	*dh_max			= dh_var.Get(0.95);
+	if (t_var.Get().GetCount()) {
+		*t_mean			= t_var.GetMean();
+		*h_mean			= h_var.GetMean();
+		*d_mean			= d_var.GetMean();
+		*dh_mean		= dh_var.GetMean();
+		
+		*t_min			= t_var.Get(0.05);
+		*h_min			= h_var.Get(0.05);
+		*d_min			= d_var.Get(0.05);
+		*dh_min			= dh_var.Get(0.05);
+		
+		*t_max			= t_var.Get(0.95);
+		*h_max			= h_var.Get(0.95);
+		*d_max			= d_var.Get(0.95);
+		*dh_max			= dh_var.Get(0.95);
+	}
 	
 	t_var.Next();
 	h_var.Next();
@@ -428,7 +438,6 @@ EventOsc::EventOsc() {
 	AddValue<double>("Info Level");
 	
 	mul = 0.8;
-	emgr = NULL;
 	
 	SetStyle(
 		"{"
@@ -459,6 +468,14 @@ void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
 	i = args.Find("mul");
 	if (i != -1)
 		mul = args[i];
+}
+
+void EventOsc::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	Sym& symtf = data[i];
+	s % symtf;
 }
 
 void EventOsc::Init() {
@@ -496,6 +513,9 @@ void EventOsc::Init() {
 			s.keys.Add(cur.name);
 		}
 	}
+	
+	EventManager& emgr = GetEventManager();
+	emgr.Init();
 }
 
 bool EventOsc::Process(const SlotProcessAttributes& attr) {
@@ -509,8 +529,9 @@ bool EventOsc::Process(const SlotProcessAttributes& attr) {
 	int bars = attr.GetBars();
 	
 	if (!count) {
-		emgr.Refresh();
-		count = emgr.GetCount();
+		//emgr.Refresh();
+		//count = emgr.GetCount();
+		return false;
 	}
 	
 	for (int i = s.counted_events; i < count; i++) {

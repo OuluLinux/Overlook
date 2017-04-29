@@ -712,6 +712,12 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			if (j == i) continue;
 			if (symbols[j].name == sym.proxy_name) {
 				sym.proxy_id = j;
+				
+				String a = sym.proxy_name.Left(3);
+				String b = sym.proxy_name.Right(3);
+				bool base_dest = b == account_currency; // base USD, buy AUDJPY, proxy AUDUSD.. USD->AUD->JPY ... AUDUSD selling
+				sym.proxy_factor = base_dest ? -1 : 1;
+				
 				found = true;
 				break;
 			}

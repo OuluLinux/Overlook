@@ -35,6 +35,8 @@ public:
 	double DA();
 
 	void Clear();
+	
+	void Serialize(Stream& s) {s % series_len % curlen % series % predicted;}
 };
 
 }

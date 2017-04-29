@@ -48,6 +48,7 @@ public:
 	
 	void Exit() {exit = true;}
 	
+	bool autostart;
 	bool exit;
 };
 

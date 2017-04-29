@@ -79,8 +79,8 @@ public:
 	/*virtual String GetName() {return "EventManager";}
 	virtual String GetShortName() const {return "events";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
-	virtual void Init();
 	virtual void Start();*/
+	void Init();
 	
 	void StoreThis();
 	void LoadThis();

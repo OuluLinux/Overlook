@@ -7,7 +7,7 @@ NARX::NARX() {
 }
 
 
-void NARX::Init(ARCH arch, int H, int hact, int a, int b, int input_count, int output_count, int feedback, int targets) {
+void NARX::Init(int arch, int H, int hact, int a, int b, int input_count, int output_count, int feedback, int targets) {
 	ASSERT(data);
 	this->H = H;
 	this->a = a;
@@ -123,7 +123,7 @@ void NARX::Init(ARCH arch, int H, int hact, int a, int b, int input_count, int o
 		arch, H, hact, a, b, input_count, output_count, feedback, targets));
 }
 
-ARCH NARX::GetArch() {
+int NARX::GetArch() {
 	return arch;
 }
 

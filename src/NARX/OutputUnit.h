@@ -27,8 +27,8 @@ public:
 	virtual void ComputeDelta();
 
 	virtual double GetDelta(Unit& u);
-
-
+	
+	void Serialize(Stream& s) {s % target % deltao; Unit::Serialize(s);}
 };
 
 }

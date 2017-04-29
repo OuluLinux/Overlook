@@ -6,6 +6,7 @@ Loader::Loader() {
 	
 	CtrlLayout(*this);
 	exit = true;
+	autostart = false;
 	
 	list.AddColumn("Filename");
 	
@@ -69,7 +70,7 @@ Loader::Loader() {
 	load <<= THISBACK(Load);
 	create <<= THISBACK(Create);
 	
-	RefreshSessions();
+	PostCallback(THISBACK(RefreshSessions));
 }
 
 void Loader::ShowLicense() {
@@ -101,13 +102,21 @@ void Loader::ShowLicense() {
 
 void Loader::RefreshSessions() {
 	FindFile ff;
-	String search_str = ConfigFile("*.ol");
+	String search_str = AppendFileName(ConfigFile("profiles"), "*");
 	ff.Search(search_str);
 	do {
-		String title = GetFileTitle(ff.GetPath());
-		list.Add(title);
+		if (ff.IsDirectory()) {
+			String title = GetFileTitle(ff.GetPath());
+			if (title.GetCount() >= 3)
+				list.Add(title);
+		}
 	}
 	while (ff.Next());
+	
+	if (autostart && list.GetCount()) {
+		list.SetCursor(0);
+		PostCallback(THISBACK(Load));
+	}
 }
 
 void Loader::Create() {
@@ -115,7 +124,7 @@ void Loader::Create() {
 	
 	
 	// Set settings
-	ses.SetName(list.Get(list.GetCursor(), 0));
+	ses.SetName(title.GetData());
 	ses.SetBegin(begin.GetData());
 	ses.SetEnd(end.GetData());
 	ses.SetAddress(server.GetData());
@@ -220,6 +229,9 @@ void Loader::Create() {
 	
 	// Init
 	ses.Init();
+	
+	exit = false;
+	Close();
 }
 
 
@@ -229,4 +241,8 @@ void Loader::Load() {
 	
 	DataCore::Session& ses = GetSession();
 	ses.SetName(list.Get(cursor, 0));
+	ses.LoadThis();
+	
+	exit = false;
+	Close();
 }

@@ -63,10 +63,10 @@ void RunnerCtrl::RefreshProgress() {
 			slotstr += b.slots.GetKey(j) + " ";
 		progress.batches.Set(i, 2, slotstr);
 		
-		progress.batches.Set(i, 3, Format("%", b.begin));
-		progress.batches.Set(i, 4, Format("%", b.end));
-		progress.batches.Set(i, 5, Format("%", b.stored));
-		progress.batches.Set(i, 6, Format("%", b.loaded));
+		progress.batches.Set(i, 3, b.begin.year		!= 1970 ? Format("%", b.begin)	: "");
+		progress.batches.Set(i, 4, b.end.year		!= 1970 ? Format("%", b.end)	: "");
+		progress.batches.Set(i, 5, b.stored.year	!= 1970 ? Format("%", b.stored)	: "");
+		progress.batches.Set(i, 6, b.loaded.year	!= 1970 ? Format("%", b.loaded)	: "");
 	}
 	
 	if (cursor != -1) {
@@ -81,7 +81,7 @@ void RunnerCtrl::RefreshProgress() {
 			progress.incomplete.Set(num, 1, s.slot->GetLinkPath());
 			progress.incomplete.Set(num, 2, tv.GetSymbol(s.sym_id));
 			progress.incomplete.Set(num, 3, tv.GetPeriod(s.tf_id));
-			progress.incomplete.Set(num, 4, Format("%", s.begin));
+			progress.incomplete.Set(num, 4, s.begin.year != 1970 ? Format("%", s.begin) : "");
 			progress.incomplete.Set(num, 5, s.actual * 1000 / s.total);
 			
 			progress.incomplete.SetDisplay(num, 5, Single<ProgressDisplay>());
@@ -138,6 +138,7 @@ void RunnerCtrl::Init() {
 	ses.WhenBatchFinished << THISBACK(PostRefreshData);
 	ses.WhenPartFinished << THISBACK(PostRefreshProgress);
 	ses.WhenProgress << THISBACK(PostProgress);
+	ses.WhenPartProgress << THISBACK(PostPartProgress);
 	
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
@@ -167,15 +168,17 @@ void RunnerCtrl::Init() {
 	details.slots.AddColumn("Offset");
 	details.slots.AddColumn("Path");
 	details.slots.ColumnWidths("1 1 1 3");
+	int offset = 0;
 	for(int i = 0; i < slot_count; i++) {
 		const Slot& s = tv.GetCustomSlot(i);
+		int resbytes = s.GetReservedBytes();
 		details.slots.Add(
 			s.GetKey(),
-			"",//Format("0x%X", s.GetReservedBytes()),
-			"",//Format("0x%X", s.GetOffset()),
+			Format("0x%X", resbytes),
+			Format("0x%X", offset),
 			s.GetPath());
+		offset += resbytes;
 	}
-	
 }
 
 void RunnerCtrl::SetArguments(const VectorMap<String, Value>& args) {

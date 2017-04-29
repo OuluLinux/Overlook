@@ -14,19 +14,25 @@
 
 namespace DataCore {
 
-struct BatchPartStatus : Moveable<BatchPartStatus> {
-	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false;}
-	Slot* slot;
-	Time begin, end;
-	int sym_id, tf_id, actual, total;
-	bool complete;
-};
-
 struct Batch : Moveable<Batch> {
-	Batch() {begin = Time(1970,1,1); end = begin; stored = begin; loaded = begin;}
+	Batch() {begin = Time(1970,1,1); end = begin; stored = begin; loaded = begin; cursor = 0;}
 	VectorMap<String, SlotPtr> slots;
+	Index<String> slot_links;
 	Vector<BatchPartStatus> status;
 	Time begin, end, stored, loaded;
+	Atomic cursor;
+	
+	void Serialize(Stream& s) {
+		s % slot_links % status % begin % end % stored % loaded;
+		if (s.IsLoading()) {
+			int i;
+			s % i;
+			cursor = i;
+		} else {
+			int i = cursor;
+			s % i;
+		}
+	}
 };
 
 class Session {
@@ -38,7 +44,6 @@ protected:
 	Time begin, end;
 	String addr;
 	String datadir;
-	Atomic cursor;
 	int port;
 	bool running, stopped;
 	
@@ -56,7 +61,6 @@ protected:
 	void Processor(BatchPartStatus& stat);
 	void RefreshBatches();
 	
-	
 public:
 	typedef Session CLASSNAME;
 	Session();
@@ -65,10 +69,14 @@ public:
 	void Init();
 	void StoreThis();
 	void LoadThis();
+	void StoreProgress();
+	void LoadProgress();
+	void Stop();
 	
 	TimeVector& GetTimeVector() {return tv;}
 	Batch& GetBatch(int i) {return batches[i];}
 	int GetBatchCount() const {return batches.GetCount();}
+	String GetName() const {return name;}
 	
 	void SetName(String s) {name = s;}
 	void SetBegin(Time t) {begin = t;}
@@ -82,7 +90,7 @@ public:
 	
 	void Enter(int slot, int sym_id, int tf_id);
 	void Leave(int slot, int sym_id, int tf_id);
-	
+	bool IsLocked(int slot, int sym_id, int tf_id);
 	
 	Callback WhenBatchFinished, WhenPartFinished;
 	Callback2<int, int> WhenProgress, WhenPartProgress;

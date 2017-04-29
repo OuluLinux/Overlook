@@ -3,6 +3,22 @@
 
 namespace DataCore {
 
+String XmlTreeString(const XmlNode& node, int indent=0, String prev_addr="") {
+	String out;
+	for(int i = 0; i < indent; i++) {
+		out.Cat(' ');
+	}
+	out << String(node.GetTag()) << " : " << String(node.GetText()) << " : " << prev_addr << " : ";
+	for(int i = 0; i < node.GetAttrCount(); i++) {
+		out += node.AttrId(i) + "=" + node.Attr(i) + ", ";
+	}
+	
+	out += "\n";
+	for(int i = 0; i < node.GetCount(); i++) {
+		out += XmlTreeString(node[i], indent+1, prev_addr + " " + IntStr(i));
+	}
+	return out;
+}
 
 
 
@@ -134,6 +150,12 @@ void EventManager::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
+
+void EventManager::Start() {
+	
+	UpdateHistory();
+}
+*/
 void EventManager::Init() {
 	ASSERTREF(!thrd.IsOpen());
 	
@@ -145,11 +167,7 @@ void EventManager::Init() {
 	thrd.Run(THISBACK(Updater));
 }
 
-void EventManager::Start() {
-	
-	UpdateHistory();
-}
-*/
+
 void EventManager::StoreThis() {
 	StoreToFile(*this, ConfigFile("events.bin"));
 }
@@ -190,7 +208,7 @@ void EventManager::Updater() {
 
 void EventManager::Refresh() {
 	SetTimeNow();
-	Update();
+	Update("", true);
 }
 
 
@@ -489,6 +507,7 @@ int EventManager::Update(String postfix, bool force_update) {
 	String cache_dir = ConfigFile("cache");
 	RealizeDirectory(cache_dir);
 	String file_name = postfix;
+	if (file_name.IsEmpty()) file_name = "default";
 	file_name.Replace("?", "");
 	file_name.Replace("=", "_");
 	file_name.Replace(".", "_");
@@ -500,7 +519,7 @@ int EventManager::Update(String postfix, bool force_update) {
 	}
 	else {
 		HttpRequest h;
-		//h.Trace();
+		h.Trace();
 		BasicHeaders(h);
 		
 		/*String proxy_addr = GetGlobalConfigData("proxy_addr");
@@ -555,9 +574,11 @@ int EventManager::Update(String postfix, bool force_update) {
 	
 	XmlNode xn = ParseXML(xml);
 	
-	
 	const XmlNode& x = TryOpenLocation("0 1 3 0 3 1 10 0 0 0 1 0 1", xn, errorcode);
-	if (errorcode) LEAVE;
+	if (errorcode) {
+		LOG(XmlTreeString(xn));
+		LEAVE;
+	}
 	
 	Vector<Event> e;
 	

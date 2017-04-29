@@ -121,6 +121,10 @@ void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
 	ASSERTEXC(type == "lstm"); // only lstm is supported currently
 }
 
+void Recurrent::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	s % ses[sym_id][tf_id];
+}
+
 void Recurrent::Init() {
 	//TODO: anchor this to timevector id in case of multiple instances
 	
@@ -859,6 +863,14 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
+void Forecaster::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void Forecaster::Init() {
 	TimeVector& tv = GetTimeVector();
 	
@@ -1035,6 +1047,14 @@ void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
+void RLAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void RLAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
@@ -1172,6 +1192,14 @@ DQNAgent::DQNAgent() {
 
 void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 	
+}
+
+void DQNAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
 }
 
 void DQNAgent::Init() {
@@ -1328,7 +1356,15 @@ MonaAgent::MonaAgent() {
 void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
-	
+
+void MonaAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void MonaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	
@@ -1545,7 +1581,15 @@ MonaMetaAgent::MonaMetaAgent() {
 void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
-	
+
+void MonaMetaAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void MonaMetaAgent::Init() {
 	TimeVector& tv = GetTimeVector();
 	

@@ -16,6 +16,8 @@ public:
 	~FeedbackInfo();
 	
 	void Init(int xx, int xy, int yx, int yy, int dx, int dy);
+	
+	void Serialize(Stream& s) {s % Y % X % D % xx % yx % dx % xy % yy % dy;}
 };
 
 }

@@ -54,6 +54,8 @@ public:
 	virtual void ComputeDelta(double superior_layer_delta);
 
 	virtual void FixWeights();
+	
+	void Serialize(Stream& s) {s % input_count % output % input_weights % bias % old_weights;}
 };
 
 }

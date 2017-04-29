@@ -20,6 +20,14 @@ void SpreadStats::SetArguments(const VectorMap<String, Value>& args) {
 	
 }
 
+void SpreadStats::SerializeCache(Stream& s, int sym_id, int tf_id) {
+	TimeVector& tv = GetTimeVector();
+	int tf_count = tv.GetPeriodCount();
+	int i = sym_id * tf_count + tf_id;
+	SymTf& symtf = data[i];
+	s % symtf;
+}
+
 void SpreadStats::Init() {
 	TimeVector& tv = GetTimeVector();
 	
@@ -207,6 +215,7 @@ void ValueChange::Init() {
 			s.has_proxy = sym.proxy_id != -1;
 			s.proxy_id = sym.proxy_id;
 			s.proxy_factor = sym.proxy_factor;
+			ASSERTEXC(!s.has_proxy || s.proxy_factor != 0);
 		} else {
 			s.has_proxy = false;
 			s.proxy_id = -1;
@@ -273,7 +282,7 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 		double proxy_open_value = *proxy_open;
 		double open_value = *open;
 		double proxy_change, proxy_high_change, proxy_low_change;
-		ASSERT(s.proxy_factor != 0);
+		ASSERTEXC(s.proxy_factor != 0);
 		if (s.proxy_factor == 1) {
 			proxy_change		= *proxy_close / proxy_open_value - 1.0;
 			proxy_high_change	= *proxy_high / proxy_open_value - 1.0;

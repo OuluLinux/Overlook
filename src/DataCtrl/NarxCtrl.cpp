@@ -150,7 +150,7 @@ NarxCtrl::NarxCtrl() {
 	set_lstm	<<= THISBACK1(SetPreset, 1);
 	set_rhn		<<= THISBACK1(SetPreset, 2);*/
 	
-	PostCallback(THISBACK(Refresher));
+	//PostCallback(THISBACK(Refresher));
 }
 
 void NarxCtrl::SetArguments(const VectorMap<String, Value>& args) {

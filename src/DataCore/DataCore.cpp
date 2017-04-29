@@ -10,6 +10,10 @@ Session::Session() {
 }
 
 Session::~Session() {
+	Stop();
+}
+
+void Session::Stop() {
 	running = false;
 	while (!stopped) {Sleep(100);}
 }
@@ -37,9 +41,16 @@ void Session::Leave(int slot, int sym_id, int tf_id) {
 	thrd_lock.Leave();
 }
 
+bool Session::IsLocked(int slot, int sym_id, int tf_id) {
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
+	int64 id = slot * sym_count * tf_count + sym_id * tf_count + tf_id;
+	return locked.Find(id) != -1;
+}
+
 void Session::StoreThis() {
 	ASSERT(!name.IsEmpty());
-	String dir = ConfigFile(name);
+	String dir = AppendFileName(ConfigFile("profiles"), name);
 	RealizeDirectory(dir);
 	ASSERT(DirectoryExists(dir));
 	
@@ -56,7 +67,9 @@ void Session::StoreThis() {
 		Slot& slot = tv.GetCustomSlot(i);
 		String link_path = slot.GetLinkPath().Mid(1);
 		link_path.Replace("/", "__");
-		String slot_path = AppendFileName(dir, link_path + ".bin");
+		String slotdir = AppendFileName(dir, link_path);
+		RealizeDirectory(slotdir);
+		String slot_path = AppendFileName(slotdir, "slot.bin");
 		FileOut slot_out(slot_path);
 		slot_out % slot;
 	}
@@ -66,7 +79,7 @@ void Session::LoadThis() {
 	ASSERT_(tv.GetCustomSlotCount() == 0, "Loading is allowed only at startup.");
 	
 	ASSERT(!name.IsEmpty());
-	String dir = ConfigFile(name);
+	String dir = AppendFileName(ConfigFile("profiles"), name);
 	RealizeDirectory(dir);
 	ASSERT(DirectoryExists(dir));
 	
@@ -85,12 +98,43 @@ void Session::LoadThis() {
 		Slot& slot = tv.GetCustomSlot(i);
 		String link_path = slot.GetLinkPath().Mid(1);
 		link_path.Replace("/", "__");
-		String slot_path = AppendFileName(dir, link_path + ".bin");
+		String slotdir = AppendFileName(dir, link_path);
+		RealizeDirectory(slotdir);
+		String slot_path = AppendFileName(slotdir, "slot.bin");
 		FileOut slot_in(slot_path);
 		slot_in % slot;
 	}
 }
 
+void Session::StoreProgress() {
+	ASSERT(!name.IsEmpty());
+	String dir = AppendFileName(ConfigFile("profiles"), name);
+	RealizeDirectory(dir);
+	ASSERT(DirectoryExists(dir));
+	
+	Time now = GetSysTime();
+	for(int i = 0; i < batches.GetCount(); i++)
+		batches[i].stored = now;
+	
+	String prog_path = AppendFileName(dir, "Progress.bin");
+	FileOut prog_out(prog_path);
+	prog_out % batches;
+}
+
+void Session::LoadProgress() {
+	ASSERT(!name.IsEmpty());
+	String dir = AppendFileName(ConfigFile("profiles"), name);
+	RealizeDirectory(dir);
+	ASSERT(DirectoryExists(dir));
+	
+	String prog_path = AppendFileName(dir, "Progress.bin");
+	FileIn prog_in(prog_path);
+	prog_in % batches;
+	
+	Time now = GetSysTime();
+	for(int i = 0; i < batches.GetCount(); i++)
+		batches[i].loaded = now;
+}
 
 void Session::Init() {
 	MetaTrader& mt = GetMetaTrader();
@@ -101,6 +145,7 @@ void Session::Init() {
 	try {
 		tv.EnableCache();
 		tv.LimitMemory();
+		
 		
 		// Init sym/tfs/time space
 		ASSERTEXC(!mt.Init(addr, port));
@@ -262,10 +307,6 @@ void Session::Init() {
 			res.LinkPath(ctrl_dest, ctrl_src);
 		}
 		
-		
-		// Create or load cache base on linked slots (keep this 2. last)
-		tv.RefreshData();
-		
 		// Link runner (also starts processing, so keep this last)
 		res.LinkPath("/runner", "/runnerctrl");
 		
@@ -275,9 +316,12 @@ void Session::Init() {
 		LOG("Load failed");
 	}
 	
+	tv.RefreshData();
 	
+	LoadProgress();
 	RefreshBatches();
 	
+	StoreThis();
 	
 	running = true;
 	stopped = false;
@@ -285,7 +329,7 @@ void Session::Init() {
 }
 
 void Session::Run() {
-	int cpus = 1;//CPU_Cores();
+	int cpus = CPU_Cores();
 	int sym_count = tv.GetSymbolCount();
 	
 	TimeStop ts, ts_total;
@@ -296,15 +340,20 @@ void Session::Run() {
 			WhenProgress(i, batches.GetCount());
 			
 			Batch& b = batches[i];
-			b.begin = GetSysTime();
 			
-			cursor = 0;
+			b.begin = GetSysTime();
+			//b.cursor = 0;
+			
 			ts.Reset();
 			
+			#if 0
 			CoWork co;
 			for(int j = 0; j < cpus; j++)
 				co & THISBACK2(BatchProcessor, j, &b);
 			co.Finish();
+			#else
+			BatchProcessor(0, &b);
+			#endif
 			
 			b.end = GetSysTime();
 			WhenBatchFinished();
@@ -320,9 +369,10 @@ void Session::Run() {
 
 void Session::BatchProcessor(int thread_id, Batch* batch) {
 	Batch& b = *batch;
+	TimeStop ts;
 	
-	for (;;) {
-		int pos = cursor++;
+	while (running) {
+		int pos = b.cursor++;
 		
 		WhenPartProgress(pos, b.status.GetCount());
 		
@@ -334,6 +384,11 @@ void Session::BatchProcessor(int thread_id, Batch* batch) {
 		Processor(stat);
 		
 		WhenPartFinished();
+		
+		if (thread_id == 0 && ts.Elapsed() > 10000) {
+			StoreProgress();
+			ts.Reset();
+		}
 	}
 }
 
@@ -345,18 +400,17 @@ void Session::Processor(BatchPartStatus& stat) {
 	stat.begin = GetSysTime();
 	
 	int id = slot->GetId();
-	int tfs = tv.GetPeriodCount();
-	
+	int tf_count = tv.GetPeriodCount();
+	ASSERT(tf_count > 0);
 	
 	// Get attributes of the TimeVector
 	int64 memory_limit = tv.memory_limit;
-	int64& reserved_memory = tv.reserved_memory;
 	
 	
 	// Set attributes of the current time-position
 	SlotProcessAttributes attr;
 	ASSERTEXC(tv.bars.GetCount() <= 16);
-	for(int i = 0; i < tv.bars.GetCount(); i++) {
+	for(int i = 0; i < tf_count; i++) {
 		attr.pos[i] = 0;
 		attr.bars[i] = tv.bars[i];
 		attr.periods[i] = tv.periods[i];
@@ -365,7 +419,7 @@ void Session::Processor(BatchPartStatus& stat) {
 	
 	// Set attributes of TimeVector::Iterator
 	attr.sym_count = tv.symbols.GetCount();
-	attr.tf_count = tv.periods.GetCount();
+	attr.tf_count = tf_count;
 	
 	bool enable_cache = tv.enable_cache;
 	bool check_memory_limit = memory_limit != 0;
@@ -382,7 +436,9 @@ void Session::Processor(BatchPartStatus& stat) {
 	
 	stat.total = attr.bars[tf_id];
 	
-	for(int i = 0; i < stat.total; i++) {
+	slot->Enter(stat);
+	
+	for(int i = 0; i < stat.total && running; i++) {
 		stat.actual = i;
 		
 		attr.time = tv.GetTime(tv.periods[0], attr.pos[0]).Get();
@@ -399,10 +455,10 @@ void Session::Processor(BatchPartStatus& stat) {
 			attr.slot->SetReady(attr);
 		}
 		
-		for(int i = 0; i < tfs; i++) {
+		for(int i = 0; i < tf_count; i++) {
 			int& pos = attr.pos[i];
 			pos++;
-			if (i < tfs-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
+			if (i < tf_count-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
 				break;
 			}
 		}
@@ -411,90 +467,118 @@ void Session::Processor(BatchPartStatus& stat) {
 	stat.end = GetSysTime();
 	stat.complete = true;
 	
-	
-	slot->StoreCache(attr.sym_id, attr.tf_id);
+	slot->Leave(stat);
 }
 
 void Session::RefreshBatches() {
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
+	int total = sym_count * tf_count;
 	
-	
-	// Split slots into batches
-	Vector<Slot*> not_added;
-	for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
-		Slot& slot = tv.GetCustomSlot(i);
-		not_added.Add(&slot);
-	}
-	
-	batches.Clear();
-	while (!not_added.IsEmpty()) {
+	// The initial batch setup
+	if (batches.IsEmpty()) {
 		
-		// Add new batch
-		Batch& current = batches.Add();
+		// Split slots into batches
+		Vector<Slot*> not_added;
+		for(int i = 0; i < tv.GetCustomSlotCount(); i++) {
+			Slot& slot = tv.GetCustomSlot(i);
+			not_added.Add(&slot);
+		}
 		
-		for(int i = 0; i < not_added.GetCount(); i++) {
-			Slot& slot = *not_added[i];
+		while (!not_added.IsEmpty()) {
 			
-			// Check if all slot's dependencies are in earlier batches
-			bool deps_earlier_only = true;
-			for(int j = 0; j < slot.GetDependencyCount(); j++) {
-				String path = slot.GetDependencyPath(j);
-				bool earlier_deb = false;
-				for(int k = 0; k < batches.GetCount()-1 && !earlier_deb; k++) {
-					Batch& b = batches[k];
-					for(int l = 0; l < b.slots.GetCount(); l++) {
-						if (b.slots.GetKey(l) == path) {
-							earlier_deb = true;
-							break;
+			// Add new batch
+			Batch& current = batches.Add();
+			
+			for(int i = 0; i < not_added.GetCount(); i++) {
+				Slot& slot = *not_added[i];
+				
+				// Check if all slot's dependencies are in earlier batches
+				bool deps_earlier_only = true;
+				for(int j = 0; j < slot.GetDependencyCount(); j++) {
+					String path = slot.GetDependencyPath(j);
+					bool earlier_deb = false;
+					for(int k = 0; k < batches.GetCount()-1 && !earlier_deb; k++) {
+						Batch& b = batches[k];
+						for(int l = 0; l < b.slots.GetCount(); l++) {
+							if (b.slots.GetKey(l) == path) {
+								earlier_deb = true;
+								break;
+							}
 						}
 					}
+					if (!earlier_deb) {
+						deps_earlier_only = false;
+						break;
+					}
 				}
-				if (!earlier_deb) {
-					deps_earlier_only = false;
-					break;
-				}
-			}
-			
-			if (deps_earlier_only) {
-				current.slots.Add(slot.GetLinkPath(), &slot);
 				
-				// Remove current from queue
-				not_added.Remove(i);
-				i--;
-			}
-		}
-	}
-	
-	// Print some interesting stats
-	for(int i = 0; i < batches.GetCount(); i++) {
-		Batch& b = batches[i];
-		LOG("Batch " << i);
-		for(int j = 0; j < b.slots.GetCount(); j++) {
-			LOG("      " << b.slots.GetKey(j));
-		}
-	}
-	
-	// Initialise status list
-	for(int i = 0; i < batches.GetCount(); i++) {
-		Batch& b = batches[i];
-		
-		int total = sym_count * tf_count * b.slots.GetCount();
-		b.status.SetCount(total);
-		
-		int s = 0;
-		for(int i = 0; i < b.slots.GetCount(); i++) {
-			SlotPtr slot = b.slots[i];
-			for(int j = 0; j < sym_count; j++) {
-				for(int k = 0; k < tf_count; k++) {
-					BatchPartStatus& stat = b.status[s++];
-					stat.slot = slot;
-					stat.sym_id = j;
-					stat.tf_id = k;
+				if (deps_earlier_only) {
+					current.slots.Add(slot.GetLinkPath(), &slot);
+					current.slot_links.Add(slot.GetLinkPath());
+					
+					// Remove current from queue
+					not_added.Remove(i);
+					i--;
 				}
 			}
 		}
-		ASSERT(s == total);
+		
+		// Print some interesting stats
+		for(int i = 0; i < batches.GetCount(); i++) {
+			Batch& b = batches[i];
+			LOG("Batch " << i);
+			for(int j = 0; j < b.slots.GetCount(); j++) {
+				LOG("      " << b.slots.GetKey(j));
+			}
+		}
+		
+		// Initialise status list
+		for(int i = 0; i < batches.GetCount(); i++) {
+			Batch& b = batches[i];
+			
+			int total = sym_count * tf_count * b.slots.GetCount();
+			b.status.SetCount(total);
+			
+			int s = 0;
+			for(int i = 0; i < b.slots.GetCount(); i++) {
+				SlotPtr slot = b.slots[i];
+				for(int j = 0; j < sym_count; j++) {
+					for(int k = 0; k < tf_count; k++) {
+						BatchPartStatus& stat = b.status[s++];
+						stat.slot = slot;
+						stat.sym_id = j;
+						stat.tf_id = k;
+					}
+				}
+			}
+			ASSERT(s == total);
+		}
+	}
+	
+	// Restore existing batches for continuing
+	else {
+		
+		// Update slot memory addresses
+		for(int i = 0; i < batches.GetCount(); i++) {
+			Batch& b = batches[i];
+			
+			b.slots.Clear();
+			for(int j = 0; j < b.slot_links.GetCount(); j++) {
+				const String& link = b.slot_links[j];
+				
+				SlotPtr slot = tv.FindLinkSlot(link);
+				ASSERTEXC(slot);
+				
+				b.slots.Add(link, slot);
+				
+				int begin = j * total;
+				int end = begin + total;
+				for(int k = begin; k < end; k++) {
+					b.status[k].slot = slot;
+				}
+			}
+		}
 	}
 }
 

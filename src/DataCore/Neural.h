@@ -41,6 +41,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 	
 	void Reset();
 	void Reload();
@@ -62,8 +63,6 @@ public:
 	void Tick(const SlotProcessAttributes& attr);
 	
 	ConvNet::RecurrentSession& GetSession(int sym, int tf) {return ses[sym][tf];}
-	
-	
 	
 	void Serialize(Stream& s) {
 		s % temperatures % var % model_str % batch % shifts % value_count % iter %
@@ -107,6 +106,11 @@ class NARX : public Slot {
 		Vector<Vector<InputUnit> > exogenous;
 		Vector<EvaluationEngine> ee;
 		Vector<EvaluationEngine> rw;
+		
+		void Serialize(Stream& s) {
+			s % Y % pY % input_count %
+				hunits % output_units % inputs % feedbacks % exogenous % ee % rw;
+		}
 	};
 	Tf& GetData(const SlotProcessAttributes& attr) {return data[attr.tf_id];}
 	
@@ -115,12 +119,12 @@ class NARX : public Slot {
 	int H;
 	int a, a1;
 	int b;
-	int tf_count;
-	int sym_count;
 	int feedback, targets;
 	int hact;
 	int epoch;
-
+	
+	int tf_count;
+	int sym_count;
 	
 public:
 	NARX();
@@ -132,6 +136,10 @@ public:
 	virtual String GetCtrl() const {return "narxctrl";}
 	virtual int GetCtrlType() const {return SLOT_TF;}
 	virtual int GetType() const {return SLOT_TF;}
+	
+	virtual void Serialize(Stream& s) {
+		s % data % H % a % a1 % b % feedback % targets % hact % epoch;
+	}
 };
 
 
@@ -144,6 +152,7 @@ class Forecaster : public Slot {
 	
 	struct SymTf : Moveable<SymTf> {
 		ConvNet::Session ses;
+		void Serialize(Stream& s) {s % ses;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -164,6 +173,7 @@ public:
 	virtual String GetCtrl() const {return "forecasterctrl";}
 	virtual int GetCtrlType() const {return SLOT_SYMTF;}
 	virtual int GetType() const {return SLOT_SYMTF;}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 
@@ -177,6 +187,7 @@ class RLAgent : public Slot {
 		ConvNet::Brain brain;
 		int action, prev_action;
 		double reward;
+		void Serialize(Stream& s) {s % brain % action % prev_action % reward;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -198,6 +209,7 @@ public:
 	virtual String GetCtrl() const {return "agentctrl";}
 	virtual int GetCtrlType() const {return SLOT_SYMTF;}
 	virtual int GetType() const {return SLOT_SYMTF;}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 
@@ -208,6 +220,7 @@ class DQNAgent : public Slot {
 		ConvNet::DQNAgent agent;
 		int action, prev_action, velocity;
 		double reward;
+		void Serialize(Stream& s) {s % agent % action % prev_action % velocity % reward;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -231,6 +244,7 @@ public:
 	virtual String GetCtrl() const {return "agentctrl";}
 	virtual int GetCtrlType() const {return SLOT_SYMTF;}
 	virtual int GetType() const {return SLOT_SYMTF;}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 
@@ -243,6 +257,7 @@ class MonaAgent : public Slot {
 		Mona mona;
 		int action, prev_action;
 		double reward, prev_open;
+		void Serialize(Stream& s) {s % mona % action % prev_action % reward % prev_open;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -263,6 +278,7 @@ public:
 	virtual String GetCtrl() const {return "agentctrl";}
 	virtual int GetCtrlType() const {return SLOT_SYMTF;}
 	virtual int GetType() const {return SLOT_SYMTF;}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 
@@ -281,6 +297,7 @@ class MonaMetaAgent : public Slot {
 		Mona mona;
 		int action, prev_action;
 		double reward, prev_open;
+		void Serialize(Stream& s) {s % mona % action % prev_action % reward % prev_open;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -301,6 +318,7 @@ public:
 	virtual String GetCtrl() const {return "agentctrl";}
 	virtual int GetCtrlType() const {return SLOT_SYMTF;}
 	virtual int GetType() const {return SLOT_SYMTF;}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 

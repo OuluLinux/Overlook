@@ -70,6 +70,10 @@ public:
 	virtual String GetCtrl() const {return "agentctrl";}
 	virtual int GetCtrlType() const {return SLOT_ONCE;}
 	virtual int GetType() const {return SLOT_ONCE;}
+	
+	virtual void Serialize(Stream& s) {
+		s % agent;
+	}
 };
 
 

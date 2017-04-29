@@ -46,6 +46,8 @@ protected:
 	struct SymTf : Moveable<SymTf> {
 		MovingStepDistribution total;
 		Vector<MovingStepDistribution> wdayhour, wday, hour;
+		
+		void Serialize(Stream& s) {s % total % wdayhour % wday % hour;}
 	};
 	Vector<SymTf> data;
 	int var_period;
@@ -59,6 +61,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 	
 };
 
@@ -116,11 +119,12 @@ class EventOsc : public Slot {
 	struct Sym : Moveable<Sym> {
 		Index<String> keys;
 		int counted_events;
+		
+		void Serialize(Stream& s) {s % keys % counted_events;}
 	};
 	Vector<Sym> data;
 	
 	DataBridge* db;
-	EventManager* emgr;
 	double mul;
 	
 public:
@@ -132,6 +136,7 @@ public:
 	virtual String GetShortName() const {return SHORTNAME0("eosc");}
 	virtual String GetKey() const {return SHORTNAME0("eosc");}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
 
 }

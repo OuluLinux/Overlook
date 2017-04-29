@@ -16,6 +16,7 @@ public:
 	void SetInput(double arg);
 	double GetInput();
 
+	void Serialize(Stream& s) {s % input_value; Unit::Serialize(s);}
 };
 
 }

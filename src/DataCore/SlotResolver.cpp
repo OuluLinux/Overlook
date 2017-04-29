@@ -260,6 +260,7 @@ SlotPtr TimeVector::ResolvePath(String path, const PathArgs& parsed_path) {
 		next->SetArguments(args);
 		
 		resolved_slots.Add(path, next);
+		next->DataInit();
 		next->Init();
 		
 		seeked_path = path;

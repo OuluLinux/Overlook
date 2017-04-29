@@ -28,6 +28,7 @@ class SpreadStats : public Slot {
 	struct SymTf : Moveable<SymTf> {
 		Vector<OnlineVariance> stats;
 		bool has_stats;
+		void Serialize(Stream& s) {s % stats % has_stats;}
 	};
 	Vector<SymTf> data;
 	
@@ -39,6 +40,7 @@ public:
 	virtual String GetName() {return "SpreadStats";}
 	virtual String GetShortName() const {return "spread";}
 	virtual String GetKey() const {return "spread";}
+	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 	
 };
 

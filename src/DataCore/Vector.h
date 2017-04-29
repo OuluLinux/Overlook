@@ -84,9 +84,7 @@ protected:
 	
 	PathLink link_root;
 	Time begin, end;
-	int64 reserved_memory;
 	int64 memory_limit;
-	int64 bars_total;
 	int timediff;
 	int base_period;
 	int begin_ts, end_ts;
@@ -112,12 +110,12 @@ public:
 	~TimeVector();
 	
 	void Serialize(Stream& s);
-	
+	void RefreshData();
 	void AddPeriod(int period);
 	void AddSymbol(String sym);
-	void RefreshData();
 	void EnableCache(bool b=true) {enable_cache = b;}
 	void LimitMemory(int64 limit=2147483648L) {memory_limit = limit;}
+	void CheckMemoryLimit();
 	
 	Time GetTime(int period, int pos) const {return begin + base_period * period * pos;}
 	Time GetBegin() const {return begin;}

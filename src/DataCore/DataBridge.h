@@ -12,7 +12,7 @@ class DataBridge : public Slot {
 	//Vector<Symbol> symbols;
 	Vector<int> tfs;
 	Vector<bool> loaded;
-	Vector<int> points;
+	Vector<double> points;
 	String account_server;
 	String addr;
 	int port;

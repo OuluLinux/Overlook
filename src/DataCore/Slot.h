@@ -53,6 +53,18 @@ struct SlotProcessAttributes : Moveable<SlotProcessAttributes> {
 	int GetPeriod() const {return periods[tf_id];}
 };
 
+struct BatchPartStatus : Moveable<BatchPartStatus> {
+	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false;}
+	Slot* slot;
+	Time begin, end;
+	int sym_id, tf_id, actual, total;
+	bool complete;
+	
+	void Serialize(Stream& s) {
+		s % begin % end % sym_id % tf_id % actual % total % complete;
+	}
+};
+
 
 class Slot : public Pte<Slot> {
 	
@@ -68,6 +80,7 @@ protected:
 	String linkpath, path, style, filedir;
 	SlotPtr source;
 	TimeVector* vector;
+	int64 reserved;
 	
 	struct SlotValue : Moveable<SlotValue> {
 		int bytes;
@@ -85,6 +98,11 @@ public:
 	virtual void SerializeCache(Stream& s, int sym_id, int tf_id) {}
 	void LoadCache(int sym_id, int tf_id);
 	void StoreCache(int sym_id, int tf_id);
+	void Reserve(int sym_id, int tf_id);
+	void DataInit();
+	void Enter(BatchPartStatus& stat);
+	void Leave(BatchPartStatus& stat);
+	void Free(int64 target, int64& reserved_memory);
 	
 	SlotPtr FindLinkSlot(const String& path);
 	SlotPtr ResolvePath(const String& path);
@@ -102,12 +120,14 @@ public:
 	bool IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
 	String GetPath() const {return path;}
 	String GetLinkPath() const {return linkpath;}
-	String GetFileDir() const {ASSERT(!filedir.IsEmpty()); return filedir;}
+	String GetFileDir();
 	const String& GetStyle() const {return style;}
 	const Slot& GetDependency(int i);
 	String GetDependencyPath(int i) const {return dependencies.GetKey(i);}
 	int GetDependencyCount() const {return dependencies.GetCount();}
 	int GetId() const {return id;}
+	int64 GetReserved() const {return reserved;}
+	int GetReservedBytes() const;
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) const {
@@ -158,7 +178,6 @@ public:
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
 	void SetStyle(const String& json) {style = json;}
-	void SetFileDirectory(String s) {filedir = s;}
 	
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}

@@ -123,4 +123,29 @@ great 24/7 buffet and the real security.&]
 [s0; Seems like changing the memory model is a big operation. I had 
 to comment the existing code out, and it`'s hard to see what 
 needs to be done. It will sort out eventually.&]
-[s0; Didn`'t finish the memory model changing today.]]
+[s0; Didn`'t finish the memory model changing today.&]
+[s3; 29.4.2017&]
+[s0; The program is now running and it seems to be free of memory`-errors. 
+I could valgrind it, but it probably shows clean, because the 
+U`+`+ memory debugger usually catches worst problems. It starts 
+and stops cleanly, but slowly. Some kind of beautiful waiting 
+screen is needed.&]
+[s0; Today, the target is to get first two batches processed, which 
+is rather easy one.&]
+[s0; The first batch done. The second batch crashes to some asserts. 
+How typical.&]
+[s0; The second batch done, earlier than expected.&]
+[s0; When I have time to work all day, then the second part of the 
+day is usually full of mistakes and difficulties to progress 
+because of me being tired. I overcome that by solving simpler 
+problems and fixing bugs only at next morning. It`'s usually 
+comfortable enough, but it requires knowing that you can`'t do 
+as good as in the morning and you shouldn`'t even try. The most 
+stressful thing is to have deadlines and strict jobs while being 
+tired, and being stressed is bad in the long run. Writing natural 
+language notes, like this, is also useful, because you can collapse 
+your thoughts into something concrete. It takes time to get into 
+this kind of work routine and many kind of rewards must be involved.&]
+[s0; I added serialization functions for remaining classes. I`'m 
+not sure if they work at first try. There is some tricky reloadings.&]
+[s0; ]]

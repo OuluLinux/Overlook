@@ -214,35 +214,105 @@ Previous Work
 \end_layout
 
 \begin_layout Standard
-text text text text text text text text text text text text text text text
+Text
 \end_layout
 
 \begin_layout Subsection
 Deep Neural Network
 \end_layout
 
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Kokkinos:2015:FPL:2801948.2801962"
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsection
 LSTM
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Portegys2010306,Sundermeyer2015"
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
 NARX
 \end_layout
 
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "548162,558801,Diaconescu:2008:UNN:1466884.1466892,MenezesJr20083335"
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsection
 Reinforced learning agent
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "DBLP:journals/corr/MnihKSGAWR13"
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
 Deep-Q-learning agent
 \end_layout
 
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Mnih2015"
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsection
 Mona agent
 \end_layout
 
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Portegys2010306,Portegys2015"
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsection
 Meta Trader expert advisors
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Dymova2016"
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -489,7 +559,7 @@ phy entries embedded in the \SpecialChar LaTeX
 
 \begin_inset CommandInset bibtex
 LatexCommand bibtex
-bibfiles "IEEEabrv,IEEEexample"
+bibfiles "Overlook_Proceeding"
 options "IEEEtran"
 
 \end_inset

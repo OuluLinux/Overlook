@@ -172,6 +172,11 @@ void Session::Init() {
 		Vector<int> tfs;
 		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			int tf = mt.GetTimeframe(i);
+			bool found = false;
+			for(int j = 0; j < this->tfs.GetCount(); j++) {
+				if (this->tfs[j] == tf) {found = true; break;}
+			}
+			if (!found ) continue;
 			if (tf >= base) {
 				tfs.Add(tf / base);
 				tv.AddPeriod(tf * 60);

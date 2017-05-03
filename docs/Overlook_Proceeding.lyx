@@ -249,6 +249,35 @@ Meta Trader expert advisors
 Methodology
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Itemize
+processed indicator values are checked to be sane values; non-zero and in
+ expected range
+\end_layout
+
+\begin_layout Itemize
+forecasted values of predictive modules are compared to real values in testing
+ data (separate from training data)
+\end_layout
+
+\begin_layout Itemize
+modules using forecasted values are tested with actual values and forecasted
+ values, and results are compared
+\end_layout
+
+\begin_layout Itemize
+modules causing orders are compared to the ideal order sequence, which is
+ found using greedy A* search (unrealistic in realtime)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Theorem
 \begin_inset Argument 1
 status open

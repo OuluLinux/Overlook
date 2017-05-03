@@ -15,6 +15,7 @@ public:
 	virtual String GetName() {return "Analyzer";}
 	virtual String GetShortName() const {return "analyzer";}
 	virtual String GetKey() const {return "analyzer";}
+	virtual String GetCtrl() const {return "analyzerctrl";}
 	
 };
 

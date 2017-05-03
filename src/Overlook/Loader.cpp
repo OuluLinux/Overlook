@@ -51,7 +51,7 @@ Loader::Loader() {
 	tf4.Set(true);
 	tf5.Set(true);
 	tf6.Set(true);
-	tf7.Set(true);
+	//tf7.Set(true); // too little data usually
 	tf0.Disable();
 	tf1.Disable();
 	tf2.Disable();
@@ -211,6 +211,10 @@ void Loader::Create() {
 	ASSERT(multiagents > 0);
 	
 	
+	// Add analyzer
+	ses.LinkCore("/analyzer", "/analyzer");
+	
+	
 	// Add Timeframes
 	if (tf0.Get()) ses.AddTimeframe(1);
 	if (tf1.Get()) ses.AddTimeframe(5);
@@ -225,6 +229,7 @@ void Loader::Create() {
 	// Add Ctrl objects
 	ses.LinkCtrl("/broker", "/brokerctrl?broker=\"/open\"");
 	ses.LinkCtrl("/notification", "/notification");
+	ses.LinkCtrl("/analyzerctrl", "/analyzerctrl");
 	
 	
 	// Init

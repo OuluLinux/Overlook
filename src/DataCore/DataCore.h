@@ -11,6 +11,7 @@
 #include "Periodicals.h"
 #include "CostUtils.h"
 #include "NeuralDoubleAgents.h"
+#include "Analyzer.h"
 
 namespace DataCore {
 
@@ -49,8 +50,8 @@ protected:
 	
 	// Data locking
 	struct LockedArea : Moveable<LockedArea> {int slot, sym, tf;};
-	VectorMap<int64, LockedArea> locked;
-	Mutex thrd_lock;
+	Vector<int> locked;
+	SpinLock thrd_lock;
 	
 	
 	TimeVector tv;

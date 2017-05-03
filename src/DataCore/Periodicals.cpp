@@ -406,9 +406,9 @@ bool ChannelPredicter::Process(const SlotProcessAttributes& attr) {
 		for(int i = 0; i < length; i++) {
 			double min	= *whstat.GetValue<double>(j+0, -1-i, attr);
 			double max	= *whstat.GetValue<double>(j+1, -1-i, attr);
-			ASSERT(max > min);
+			/*ASSERT(max > min);
 			ASSERT(max > 0);
-			ASSERT(0 > min);
+			ASSERT(0 > min);*/
 			min_sum += min;
 			max_sum += max;
 			diff += max - min;

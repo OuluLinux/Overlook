@@ -24,6 +24,8 @@ Slot::Slot() {
 	forced_without_data = false;
 	id = -1;
 	reserved = 0;
+	other_symbols = false;
+	other_timeframes = false;
 }
 
 String Slot::GetFileDir() {
@@ -67,6 +69,11 @@ void Slot::AddValue(uint16 bytes, String name, String description) {
 }
 
 void Slot::LoadCache(int sym_id, int tf_id) {
+	// only load to empty vector
+	int existing = data[sym_id][tf_id][0].GetCount();
+	if (existing > 0)
+		return;
+	
 	String filename;
 	filename << sym_id << "-" << tf_id << ".bin";
 	String dir = GetFileDir();
@@ -200,39 +207,125 @@ void Slot::AddDependency(String slot_path, bool other_symbols, bool other_timefr
 	TimeVector& tv = GetTimeVector();
 	SlotPtr slot = tv.FindLinkSlot(slot_path);
 	ASSERTEXC_(slot, "Could not link slot: " + slot_path);
-	dependencies.Add(slot_path, slot);
+	Dependency& dep = dependencies.Add(slot_path);
+	dep.slot = slot;
+	dep.other_symbols = other_symbols;
+	dep.other_timeframes = other_timeframes;
 }
 
 const Slot& Slot::GetDependency(int i) {
-	return *dependencies[i];
+	return *dependencies[i].slot;
 }
 
 void Slot::Enter(BatchPartStatus& stat) {
 	Session& ses = GetSession();
 	TimeVector& tv = GetTimeVector();
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
 	
-	// Lock source memory
-	ses.Enter(id, stat.sym_id, stat.tf_id);
+	
+	// Lock memory, load cache and reserve memory for current class according to settings
+	if (!other_symbols) {
+		if (!other_timeframes) {
+			// Lock source memory
+			ses.Enter(id, stat.sym_id, stat.tf_id);
+			
+			// Load cache
+			LoadCache(stat.sym_id, stat.tf_id);
+			
+			// Reserve rest of the memory
+			Reserve(stat.sym_id, stat.tf_id);
+		} else {
+			for(int i = 0; i < tf_count; i++) {
+				ses.Enter(id, stat.sym_id, i);
+				LoadCache(stat.sym_id, i);
+				Reserve(stat.sym_id, i);
+			}
+		}
+	} else {
+		if (!other_timeframes) {
+			for(int i = 0; i < sym_count; i++) {
+				ses.Enter(id, i, stat.tf_id);
+				LoadCache(i, stat.tf_id);
+				Reserve(i, stat.tf_id);
+			}
+		} else {
+			for(int i = 0; i < sym_count; i++) {
+				for(int j = 0; j < tf_count; j++) {
+					ses.Enter(id, i, j);
+					LoadCache(i, j);
+					Reserve(i, j);
+				}
+			}
+		}
+	}
+	
 	
 	// Check if memory release is needed
 	tv.CheckMemoryLimit();
 	
-	// Load cache
-	LoadCache(stat.sym_id, stat.tf_id);
 	
-	// Reserve rest of the memory
-	Reserve(stat.sym_id, stat.tf_id);
+	// Load caches of dependencies
+	for(int i = 0; i < dependencies.GetCount(); i++) {
+		Dependency& dep = dependencies[i];
+		Slot& slot = *dep.slot;
+		if (!dep.other_symbols) {
+			if (!dep.other_timeframes) {
+				slot.LoadCache(stat.sym_id, stat.tf_id);
+			} else {
+				for(int j = 0; j < tf_count; j++)
+					slot.LoadCache(stat.sym_id, j);
+			}
+		}
+		else {
+			if (!dep.other_timeframes) {
+				for(int j = 0; j < sym_count; j++)
+					slot.LoadCache(j, stat.tf_id);
+			} else {
+				for(int j = 0; j < sym_count; j++)
+					for(int k = 0; k < tf_count; k++)
+						slot.LoadCache(j, k);
+			}
+		}
+	}
 	
 }
 
 void Slot::Leave(BatchPartStatus& stat) {
 	Session& ses = GetSession();
+	TimeVector& tv = GetTimeVector();
+	int sym_count = tv.GetSymbolCount();
+	int tf_count = tv.GetPeriodCount();
 	
-	// Release source memory
-	ses.Leave(id, stat.sym_id, stat.tf_id);
-	
-	// Store changes
-	StoreCache(stat.sym_id, stat.tf_id);
+	// Unlock memory and store cache for current class according to settings
+	if (!other_symbols) {
+		if (!other_timeframes) {
+			// Release source memory
+			ses.Leave(id, stat.sym_id, stat.tf_id);
+			
+			// Store changes
+			StoreCache(stat.sym_id, stat.tf_id);
+		} else {
+			for(int i = 0; i < tf_count; i++) {
+				ses.Leave(id, stat.sym_id, i);
+				StoreCache(stat.sym_id, i);
+			}
+		}
+	} else {
+		if (!other_timeframes) {
+			for(int i = 0; i < sym_count; i++) {
+				ses.Leave(id, i, stat.tf_id);
+				StoreCache(i, stat.tf_id);
+			}
+		} else {
+			for(int i = 0; i < sym_count; i++) {
+				for(int j = 0; j < tf_count; j++) {
+					ses.Leave(id, i, j);
+					StoreCache(i, j);
+				}
+			}
+		}
+	}
 }
 
 int Slot::GetReservedBytes() const {

@@ -27,6 +27,7 @@ using namespace Upp;
 #include "Notification.h"
 #include "ParameterCtrl.h"
 #include "DataBridgeCtrl.h"
+#include "AnalyzerCtrl.h"
 
 namespace DataCtrl {
 	

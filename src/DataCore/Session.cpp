@@ -22,30 +22,31 @@ void Session::Enter(int slot, int sym_id, int tf_id) {
 	thrd_lock.Enter();
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
+	if (locked.IsEmpty())
+		locked.SetCount(sym_count * tf_count * tv.GetCustomSlotCount(), 0);
 	int64 id = slot * sym_count * tf_count + sym_id * tf_count + tf_id;
-	LockedArea& la = locked.Add(id);
-	la.slot = slot;
-	la.sym = sym_id;
-	la.tf = tf_id;
+	locked[id]++;
 	thrd_lock.Leave();
 }
 
 void Session::Leave(int slot, int sym_id, int tf_id) {
 	thrd_lock.Enter();
+	ASSERT(!locked.IsEmpty());
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
 	int64 id = slot * sym_count * tf_count + sym_id * tf_count + tf_id;
-	int i = locked.Find(id);
-	ASSERT(i != -1);
-	locked.Remove(i);
+	locked[id]--;
 	thrd_lock.Leave();
 }
 
 bool Session::IsLocked(int slot, int sym_id, int tf_id) {
+	if (locked.IsEmpty()) return false;
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
 	int64 id = slot * sym_count * tf_count + sym_id * tf_count + tf_id;
-	return locked.Find(id) != -1;
+	int locked_count = locked[id];
+	ASSERT(locked_count >= 0);
+	return locked_count;
 }
 
 void Session::StoreThis() {
@@ -537,22 +538,56 @@ void Session::RefreshBatches() {
 		for(int i = 0; i < batches.GetCount(); i++) {
 			Batch& b = batches[i];
 			
-			int total = sym_count * tf_count * b.slots.GetCount();
-			b.status.SetCount(total);
+			// Start from zero
+			b.status.SetCount(0);
 			
+			// Reserve memory for faster adding
+			int max_total = sym_count * tf_count * b.slots.GetCount();
+			b.status.Reserve(max_total);
+			
+			// Loop all slots in the batch and add processing queue according to the settings of the slot
 			int s = 0;
 			for(int i = 0; i < b.slots.GetCount(); i++) {
 				SlotPtr slot = b.slots[i];
-				for(int j = 0; j < sym_count; j++) {
-					for(int k = 0; k < tf_count; k++) {
-						BatchPartStatus& stat = b.status[s++];
+				
+				if (slot->other_symbols) {
+					if (slot->other_timeframes) {
+						BatchPartStatus& stat = b.status.Add();
 						stat.slot = slot;
-						stat.sym_id = j;
-						stat.tf_id = k;
+						stat.sym_id = 0;
+						stat.tf_id = 0;
+						stat.batch_slot = i;
+					} else {
+						for(int j = 0; j < tf_count; j++) {
+							BatchPartStatus& stat = b.status.Add();
+							stat.slot = slot;
+							stat.sym_id = 0;
+							stat.tf_id = j;
+							stat.batch_slot = i;
+						}
+					}
+				} else {
+					if (slot->other_timeframes) {
+						for(int j = 0; j < sym_count; j++) {
+							BatchPartStatus& stat = b.status.Add();
+							stat.slot = slot;
+							stat.sym_id = j;
+							stat.tf_id = 0;
+							stat.batch_slot = i;
+						}
+					} else {
+						for(int j = 0; j < sym_count; j++) {
+							for(int k = 0; k < tf_count; k++) {
+								BatchPartStatus& stat = b.status.Add();
+								stat.slot = slot;
+								stat.sym_id = j;
+								stat.tf_id = k;
+								stat.batch_slot = i;
+							}
+						}
 					}
 				}
 			}
-			ASSERT(s == total);
 		}
 	}
 	
@@ -571,12 +606,11 @@ void Session::RefreshBatches() {
 				ASSERTEXC(slot);
 				
 				b.slots.Add(link, slot);
-				
-				int begin = j * total;
-				int end = begin + total;
-				for(int k = begin; k < end; k++) {
-					b.status[k].slot = slot;
-				}
+			}
+			
+			for(int j = 0; j < b.status.GetCount(); j++) {
+				BatchPartStatus& s = b.status[j];
+				s.slot = b.slots[s.batch_slot];
 			}
 		}
 	}

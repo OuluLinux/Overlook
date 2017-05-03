@@ -442,6 +442,7 @@ void NARX::Init() {
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/change", 1, 1);
+	SetProcessing(1, 0);
 	
 	sym_count = tv.GetSymbolCount();
 	tf_count = tv.GetPeriodCount();
@@ -453,7 +454,8 @@ void NARX::Init() {
 		Tf& s = data[i];
 		
 		int slower_tfs = tf_count - 1 - i;
-		s.input_count = slower_tfs * sym_count;	// total exogenous values
+		s.value_count = slower_tfs * sym_count;
+		s.input_count = s.value_count + sym_count + 1;	// total exogenous values
 		
 		s.ee.SetCount(sym_count);
 		s.rw.SetCount(sym_count);
@@ -527,7 +529,7 @@ void NARX::Init() {
 				s.exogenous[i][j].SetInput(0);
 			}
 		}
-	
+		
 		for (int i = 0; i < H; i++) {
 			for (int j = 0; j < s.input_count; j++) {
 				for(int k = 0; k < a1; k++) {
@@ -554,12 +556,42 @@ void NARX::Init() {
 	}
 }
 
+void NARX::FillExogenous(const Slot& src, const Slot& change, Tf& s, const SlotProcessAttributes& attr) {
+	TimeVector& tv = GetTimeVector();
+	
+	for (int i = 0; i < s.input_count; i++) {
+		Vector<InputUnit>& exo = s.exogenous[i];
+		if (i < s.value_count) {
+			int sym = i % sym_count;
+			int tf = attr.tf_id + 1 + i / sym_count;
+			for (int j = 0; j < a1; j++) {
+				double* d = change.GetValue<double>(0, sym, tf, j, attr);
+				exo[j].SetInput(d ? *d : 0);
+			}
+		}
+		else {
+			int sym = i - s.value_count;
+			if (sym < sym_count) {
+				for (int j = 0; j < a1; j++) {
+					double* volume = src.GetValue<double>(3, sym, attr.tf_id, j, attr);
+					exo[j].SetInput(volume ? *volume : 0);
+				}
+			} else {
+				for (int j = 0; j < a1; j++) {
+					Time t = tv.GetTime(attr.GetPeriod(), attr.GetCounted() - j);
+					double h = t.hour;
+					double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
+					double wday = (DayOfWeek(t) + t1) / 7.0;
+					exo[j].SetInput(wday);
+				}
+			}
+		}
+	}
+}
+
 bool NARX::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& change = GetDependency(1);
-	
-	Panic("TODO: DateTime Exogen series");
-	Panic("TODO: Total Volume");
 	
 	Tf& s = GetData(attr);
 	
@@ -599,21 +631,12 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			}
 		}
 		
-		for (int i = 0; i < s.input_count; i++) {
-			int sym = i % sym_count;
-			int tf = attr.tf_id + 1 + i / sym_count;
-			
-			Vector<InputUnit>& exo = s.exogenous[i];
-			for (int j = 0; j < a1; j++) {
-				double* d = change.GetValue<double>(0, sym, tf, j, attr);
-				exo[j].SetInput(d ? *d : 0);
-			}
-		}
-
+		FillExogenous(src, change, s, attr);
+		
 		for (int i = 0; i < sym_count; i++) {
 			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
 			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
-			ASSERT(d && *d != 0.0);
+			ASSERT(p);
 			s.output_units[i].SetTarget(*d);
 			s.ee[i].Insert(*d, s.output_units[i].GetOutput());
 			s.rw[i].Insert(*d, p ? *p : 0);
@@ -643,14 +666,11 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		FeedbackInfo fi;
 		fi.Init(s.input_count, a1, sym_count, b, sym_count, b);
 		
+		FillExogenous(src, change, s, attr);
+		
 		for (int i = 0; i < s.input_count; i++) {
-			int sym = i % sym_count;
-			int tf = attr.tf_id + 1 + i / sym_count;
-			
 			Vector<InputUnit>& exo = s.exogenous[i];
 			for (int j = a1-1; j >= 0 ; j--) {
-				double* d = change.GetValue<double>(0, sym, tf, j, attr);
-				exo[j].SetInput(d ? *d : 0);
 				fi.X[i][j] = exo[j].GetInput();
 			}
 		}
@@ -680,7 +700,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		for (int i = 0; i < sym_count; i++) {
 			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
 			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
-			ASSERT(d && *d != 0.0);
+			ASSERT(p);
 			s.output_units[i].SetTarget(*d);
 			s.Y[i] = s.output_units[i].GetOutput();
 			//FWhenLog(String("testing%1\n").arg(Y[i][t]).toStdString().c_str());
@@ -712,7 +732,7 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			s.output_units[i].FixWeights();
 			
 			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
-			ASSERT(d && *d != 0.0);
+			ASSERT(d);
 			s.output_units[i].SetTarget(*d);
 
 			s.output_units[i].ComputeDelta();
@@ -776,22 +796,13 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 			}
 		}
 		
-		for (int i = 0; i < s.input_count; i++) {
-			Vector<InputUnit>& exo = s.exogenous[i];
-			int sym = i % sym_count;
-			int tf = attr.tf_id + 1 + i / sym_count;
-			
-			for (int j = 0; j < a1; j++) {
-				double* d = change.GetValue<double>(0, sym, tf, j, attr);
-				exo[j].SetInput(d ? *d : 0);
-			}
-			//_log(String("ok %1").arg(exogenous_series[i][series_index]));
-			//FWhenLog(String("ok exo=%1\n").arg(exogenous_series[i][series_index]).toStdString().c_str());
-		}
+		FillExogenous(src, change, s, attr);
 		
 		for (int i = 0; i < sym_count; i++) {
 			double out = s.output_units[i].GetOutput();
-			ASSERT(out < 0.1 && out > -0.1); // sane limits for current usage, not generic
+			//ASSERT(out < 0.1 && out > -0.1); // sane limits for current usage, not generic
+			if      (out < -0.1) out = -0.1;
+			else if (out > +0.1) out = +0.1;
 			s.pY[i] = out;
 			
 			// Set value

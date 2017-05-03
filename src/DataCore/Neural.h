@@ -96,7 +96,7 @@ class NARX : public Slot {
 	
 	struct Tf : Moveable<Tf> {
 		Vector<double> Y, pY;
-		int input_count;
+		int value_count, input_count;
 		
 		//Vector<Vector<double> > Y;
 		Vector<Unit> hunits;
@@ -108,7 +108,7 @@ class NARX : public Slot {
 		Vector<EvaluationEngine> rw;
 		
 		void Serialize(Stream& s) {
-			s % Y % pY % input_count %
+			s % Y % pY % value_count % input_count %
 				hunits % output_units % inputs % feedbacks % exogenous % ee % rw;
 		}
 	};
@@ -125,6 +125,8 @@ class NARX : public Slot {
 	
 	int tf_count;
 	int sym_count;
+	
+	void FillExogenous(const Slot& src, const Slot& change, Tf& s, const SlotProcessAttributes& attr);
 	
 public:
 	NARX();
@@ -320,7 +322,6 @@ public:
 	virtual int GetType() const {return SLOT_SYMTF;}
 	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 };
-
 
 }
 

@@ -54,14 +54,15 @@ struct SlotProcessAttributes : Moveable<SlotProcessAttributes> {
 };
 
 struct BatchPartStatus : Moveable<BatchPartStatus> {
-	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false;}
+	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
 	Slot* slot;
 	Time begin, end;
 	int sym_id, tf_id, actual, total;
+	byte batch_slot;
 	bool complete;
 	
 	void Serialize(Stream& s) {
-		s % begin % end % sym_id % tf_id % actual % total % complete;
+		s % begin % end % sym_id % tf_id % actual % total % batch_slot % complete;
 	}
 };
 
@@ -70,17 +71,23 @@ class Slot : public Pte<Slot> {
 	
 protected:
 	friend class TimeVector;
+	friend class Session;
 	typedef Ptr<Slot> SlotPtr;
 	
 	void SetWithoutData(bool b=true) {forced_without_data = b;}
 	
+	struct Dependency : Moveable<Dependency> {
+		SlotPtr slot;
+		bool other_symbols, other_timeframes;
+	};
 	Vector<Vector<Vector<Vector<byte> > > > data;
 	Vector<Vector<Vector<byte> > > ready;
-	VectorMap<String, SlotPtr> dependencies;
+	VectorMap<String, Dependency> dependencies;
 	String linkpath, path, style, filedir;
 	SlotPtr source;
 	TimeVector* vector;
 	int64 reserved;
+	bool other_symbols, other_timeframes;
 	
 	struct SlotValue : Moveable<SlotValue> {
 		int bytes;
@@ -178,6 +185,7 @@ public:
 	void SetSource(SlotPtr sp) {source = sp;}
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
 	void SetStyle(const String& json) {style = json;}
+	void SetProcessing(bool other_symbols, bool other_timeframes) {this->other_symbols = other_symbols; this->other_timeframes = other_timeframes;}
 	
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}

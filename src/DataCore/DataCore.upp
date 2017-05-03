@@ -15,7 +15,7 @@ file
 	main.cpp,
 	DataCore.h,
 	DataCore.icpp,
-	DataCore.cpp,
+	Session.cpp,
 	Vector.h,
 	Vector.cpp,
 	SlotResolver.cpp,
@@ -41,7 +41,9 @@ file
 	NeuralHuge.h,
 	NeuralHuge.cpp,
 	NeuralDoubleAgents.h,
-	NeuralDoubleAgents.cpp;
+	NeuralDoubleAgents.cpp,
+	Analyzer.h,
+	Analyzer.cpp;
 
 mainconfig
 	"" = "DATACORE_ONLY MT";

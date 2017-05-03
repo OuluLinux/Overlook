@@ -20,6 +20,7 @@ INITBLOCK {
 	RefCore::PathResolver::RegisterStatic<DataBridgeCtrl>();
 	RefCore::PathResolver::RegisterStatic<Notification>();
 	RefCore::PathResolver::RegisterStatic<NarxCtrl>();
+	RefCore::PathResolver::RegisterStatic<AnalyzerCtrl>();
 	
 }
 

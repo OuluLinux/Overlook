@@ -184,8 +184,8 @@ void EventManager::Updater() {
 	int interval = 60*10;
 	Time now = GetUtcTime();
 	int last_week_update = now.hour;
-	UpdateLastWeek();
-	UpdateNextWeek();
+	//UpdateLastWeek();
+	//UpdateNextWeek();
 	
 	while (!thrd.IsShutdownThreads()) {
 		now = GetUtcTime();

@@ -46,6 +46,8 @@ protected:
 	String addr;
 	String datadir;
 	int port;
+	int timeslot;
+	int loop;
 	bool running, stopped;
 	
 	// Data locking
@@ -56,11 +58,13 @@ protected:
 	
 	TimeVector tv;
 	String name;
+	enum {PROC_ATTACK, PROC_SUSTAIN, PROC_RELEASE}; // from musical terms
 	
 	void Run();
 	void BatchProcessor(int thread_id, Batch* batch);
 	void Processor(BatchPartStatus& stat);
 	void RefreshBatches();
+	bool Loop(BatchPartStatus& stat, SlotProcessAttributes& attr, TimeStop* ts=NULL, int call=PROC_SUSTAIN);
 	
 public:
 	typedef Session CLASSNAME;

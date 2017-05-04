@@ -90,8 +90,8 @@
 \begin_body
 
 \begin_layout Title
-Overlook: combining neural network architectures for better financial time
- series forecasting
+Combining neural network architectures for more accurate time series data
+ forecasting
 \end_layout
 
 \begin_layout Author
@@ -104,7 +104,7 @@ Seppo Pakonen, computer science student, faculty of information technology
  and electrical engineering, University of Oulu, Finland, e-mail: 
 \begin_inset CommandInset href
 LatexCommand href
-target "seppo.pakonen@gmail.com"
+target "seppo.pakonen@yandex.com"
 type "mailto:"
 
 \end_inset
@@ -127,12 +127,19 @@ status open
 
 \end_inset
 
-Seppo Pakonen: Overlook: combining neural network architectures for better
- financial time series forecasting
+Seppo Pakonen: Combining neural network architectures for more accurate
+ time series data forecasting
 \end_layout
 
 \begin_layout Abstract
-This is the abstract text.
+This is the abstract text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text.
 \end_layout
 
 \begin_layout Keywords
@@ -206,6 +213,14 @@ IEEEPARstart
 \end_inset
 
  is the text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
  text text text.
 \end_layout
 
@@ -214,7 +229,20 @@ Previous Work
 \end_layout
 
 \begin_layout Standard
-Text
+Text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text 
 \end_layout
 
 \begin_layout Subsection
@@ -320,6 +348,19 @@ Methodology
 \end_layout
 
 \begin_layout Standard
+Text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ 
+\end_layout
+
+\begin_layout Standard
 \begin_inset Note Note
 status open
 
@@ -343,6 +384,20 @@ modules causing orders are compared to the ideal order sequence, which is
  found using greedy A* search (unrealistic in realtime)
 \end_layout
 
+\begin_layout Itemize
+The training is constantly ongoing, during normal operating.
+ All results, including the performance of the whole system, are recorded,
+ and it will be shown here as a graph
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+All modules get constant processing time (or according to their needs),
+ and the task will be switched every few minutes.
+ The processing is multi-threaded.
+\end_layout
+
+\end_deeper
 \end_inset
 
 
@@ -375,8 +430,32 @@ If you don't want a theorem or lemma name don't add one.
 And here's the proof!
 \end_layout
 
+\begin_layout Standard
+Text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text.
+\end_layout
+
 \begin_layout Section
 Results
+\end_layout
+
+\begin_layout Standard
+Text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text.
 \end_layout
 
 \begin_layout Standard
@@ -490,7 +569,15 @@ table
 
 \end_inset
 
-
+Text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text
+ text text text text text text text text text text text text text text text.
 \end_layout
 
 \begin_layout Section
@@ -498,7 +585,13 @@ Conclusions
 \end_layout
 
 \begin_layout Standard
-bla bla
+Bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla
+ bla bla bla bla bla bla bla bla bla bla bla bla bla.
 \end_layout
 
 \begin_layout Appendices
@@ -614,12 +707,18 @@ in!
 status open
 
 \begin_layout Plain Layout
-Your Name
+Seppo Pakonen
 \end_layout
 
 \end_inset
 
- All about you and the what your interests are.
+ is a passionate computer programmer, who enjoys constant background music
+ of Internet radios and follows news from zerohedge, slashdot and similar
+ sites.
+ He performs best in school, when he stays away and does the work at home.
+ He is interested about scientific fringe theories, like the chronology
+ of Fomenko, while also having healthy amount of skepticism against non-mainstre
+am talk.
 \end_layout
 
 \end_body

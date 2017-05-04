@@ -7,6 +7,8 @@ Session::Session() {
 	
 	running = false;
 	stopped = true;
+	timeslot = 2 * 60 * 1000;
+	loop = 0;
 }
 
 Session::~Session() {
@@ -57,7 +59,7 @@ void Session::StoreThis() {
 	
 	String ses_path = AppendFileName(dir, "Session.bin");
 	FileOut ses_out(ses_path);
-	ses_out % begin % end % addr % port % tfs % link_core % link_ctrl % datadir;
+	ses_out % begin % end % addr % port % timeslot % loop % tfs % link_core % link_ctrl % datadir;
 	
 	String tv_path = AppendFileName(dir, "TimeVector.bin");
 	FileOut tv_out(tv_path);
@@ -86,7 +88,7 @@ void Session::LoadThis() {
 	
 	String ses_path = AppendFileName(dir, "Session.bin");
 	FileIn ses_in(ses_path);
-	ses_in % begin % end % addr % port % tfs % link_core % link_ctrl % datadir;
+	ses_in % begin % end % addr % port % timeslot % loop % tfs % link_core % link_ctrl % datadir;
 	
 	Init();
 	
@@ -368,6 +370,8 @@ void Session::Run() {
 		for(int i = 0; i < 60 && !Thread::IsShutdownThreads() && running; i++) {
 			Sleep(1000);
 		}
+		
+		loop++;
 	}
 	
 	stopped = true;
@@ -399,6 +403,8 @@ void Session::BatchProcessor(int thread_id, Batch* batch) {
 }
 
 void Session::Processor(BatchPartStatus& stat) {
+	ASSERT(!stat.complete);
+	
 	int sym_id = stat.sym_id;
 	int tf_id = stat.tf_id;
 	Slot* slot = stat.slot;
@@ -444,36 +450,123 @@ void Session::Processor(BatchPartStatus& stat) {
 	
 	slot->Enter(stat);
 	
-	for(int i = 0; i < stat.total && running; i++) {
-		stat.actual = i;
+	
+	// At first big loop (epoch?), process data once entirely
+	if (loop == 0) {
 		
-		attr.time = tv.GetTime(tv.periods[0], attr.pos[0]).Get();
-		
-		if (attr.slot->IsReady(attr)) {
-			continue;
+		// Some slots have attack (like the musical term). This can only be called once.
+		if (slot->HasAttack()) {
+			stat.actual = 0; // Start from begin
+			Loop(stat, attr, NULL, PROC_ATTACK);
 		}
 		
-		if (!attr.slot->Process(attr)) {
-			// failed, what now?
-		}
-		else {
-			// Set sym/tf/pos/slot position as ready
-			attr.slot->SetReady(attr);
-		}
+		// All slots must have sustain
+		stat.actual = 0; // Start from begin
+		bool success = Loop(stat, attr, NULL, PROC_SUSTAIN);
 		
-		for(int i = 0; i < tf_count; i++) {
-			int& pos = attr.pos[i];
-			pos++;
-			if (i < tf_count-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
-				break;
-			}
+		// Some slots have release (like the musical term)
+		if (slot->HasRelease()) {
+			stat.actual = 0; // Start from begin
+			Loop(stat, attr, NULL, PROC_RELEASE);
 		}
+		// Slot without release is only processed once, and successful loop will make it complete
+		else if (success)
+			stat.complete = true;
+	}
+	// In later loops, process constant time-slots
+	else {
+		TimeStop ts;
+		
+		// "Attack" is only allowed once in the first round, so it won't be called here
+		
+		// All slots must have sustain. Continue from previous position.
+		Loop(stat, attr, &ts, PROC_SUSTAIN);
+		
+		// Some slots have release (like the musical term), it must be called after sustain always
+		// Reset position to zero while calling this.
+		int actual = 0; // Start from begin
+		Swap(stat.actual, actual);
+		if (slot->HasRelease())
+			Loop(stat, attr, NULL, PROC_RELEASE);
+		Swap(stat.actual, actual);
 	}
 	
 	stat.end = GetSysTime();
-	stat.complete = true;
 	
 	slot->Leave(stat);
+}
+
+bool Session::Loop(BatchPartStatus& stat, SlotProcessAttributes& attr, TimeStop* ts, int call) {
+	int tf_count = tv.GetPeriodCount();
+	bool success = true;
+	
+	
+	// Loop until time limit, or once if TimeStop is NULL
+	do {
+		
+		// Reset position
+		if (stat.actual >= stat.total) stat.actual = 0;
+		
+		// Reset time positions
+		for(int i = 0; i < tf_count; i++) {
+			attr.pos[i] = 0;
+		}
+		
+		// Restore position vector to the actual
+		while (attr.pos[attr.tf_id] != stat.actual) {
+			for(int i = attr.tf_id; i < tf_count; i++) {
+				int& pos = attr.pos[i];
+				pos++;
+				if (i < tf_count-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
+					break;
+				}
+			}
+		}
+		
+		// Loop over time positions. Continue from previous position, if the previous loop was
+		// unfinished because of time limit.
+		for(; stat.actual < stat.total && running && (!ts || (ts && ts->Elapsed() < timeslot)); stat.actual++) {
+			attr.time = tv.GetTime(tv.periods[0], attr.pos[0]).Get();
+			
+			// Only first loop will check if slot is processed. In later loops this will be
+			// processed any way.
+			if (!loop && attr.slot->IsReady(attr)) {
+				continue;
+			}
+			
+			bool proc_success;
+			if (call == PROC_SUSTAIN)
+				proc_success = attr.slot->Process(attr);
+			else if (call == PROC_ATTACK)
+				proc_success = attr.slot->ProcessAttack(attr);
+			else if (call == PROC_RELEASE)
+				proc_success = attr.slot->ProcessRelease(attr);
+			else
+				Panic("Invalid call: " + IntStr(call));
+				
+			if (!proc_success) {
+				// failed, what now?
+				success = false;
+			}
+			else {
+				// Set sym/tf/pos/slot position as ready
+				attr.slot->SetReady(attr);
+			}
+			
+			// Increase position from current timeframe to longer.
+			// Keep shorter than this timeframe as 0.
+			for(int i = attr.tf_id; i < tf_count; i++) {
+				int& pos = attr.pos[i];
+				pos++;
+				if (i < tf_count-1 && (pos % tv.tfbars_in_slowtf[i]) != 0) {
+					break;
+				}
+			}
+		}
+	}
+	while (ts && ts->Elapsed() < timeslot);
+	
+	return success;
 }
 
 void Session::RefreshBatches() {

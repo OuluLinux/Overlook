@@ -41,6 +41,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual bool ProcessRelease(const SlotProcessAttributes& attr);
 	virtual void SerializeCache(Stream& s, int sym_id, int tf_id);
 	
 	void Reset();
@@ -133,6 +134,7 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);
+	virtual bool ProcessRelease(const SlotProcessAttributes& attr);
 	virtual String GetKey() const {return "narx";}
 	virtual String GetName() {return "NARX";}
 	virtual String GetCtrl() const {return "narxctrl";}

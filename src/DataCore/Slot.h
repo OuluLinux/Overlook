@@ -96,7 +96,7 @@ protected:
 	Vector<SlotValue> values;
 	int id;
 	bool forced_without_data;
-	
+	bool has_attack, has_release;
 public:
 	Slot();
 	virtual ~Slot() {}
@@ -120,21 +120,23 @@ public:
 	void AddValue(String name="", String description="") {AddValue(sizeof(T), name, description);}
 	void AddDependency(String slot_path, bool other_symbols, bool other_timeframes);
 	
-	bool IsWithoutData() const {return forced_without_data;}
-	int GetCount() const {return values.GetCount();}
-	const SlotValue& operator[] (int i) const {return values[i];}
-	bool IsReady(int pos, const SlotProcessAttributes& attr);
-	bool IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
-	String GetPath() const {return path;}
-	String GetLinkPath() const {return linkpath;}
-	String GetFileDir();
-	const String& GetStyle() const {return style;}
-	const Slot& GetDependency(int i);
-	String GetDependencyPath(int i) const {return dependencies.GetKey(i);}
-	int GetDependencyCount() const {return dependencies.GetCount();}
-	int GetId() const {return id;}
-	int64 GetReserved() const {return reserved;}
-	int GetReservedBytes() const;
+	const SlotValue&	operator[] (int i) const {return values[i];}
+	const String&		GetStyle() const {return style;}
+	const Slot&			GetDependency(int i);
+	bool	IsWithoutData() const {return forced_without_data;}
+	int		GetCount() const {return values.GetCount();}
+	bool	IsReady(int pos, const SlotProcessAttributes& attr);
+	bool	IsReady(const SlotProcessAttributes& attr) {return IsReady(attr.GetCounted(), attr);}
+	String	GetPath() const {return path;}
+	String	GetLinkPath() const {return linkpath;}
+	String	GetFileDir();
+	String	GetDependencyPath(int i) const {return dependencies.GetKey(i);}
+	int		GetDependencyCount() const {return dependencies.GetCount();}
+	int		GetId() const {return id;}
+	int64	GetReserved() const {return reserved;}
+	int		GetReservedBytes() const;
+	bool	HasAttack() const {return has_attack;}
+	bool	HasRelease() const {return has_release;}
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) const {
@@ -186,6 +188,8 @@ public:
 	void SetTimeVector(TimeVector* vector) {this->vector = vector;}
 	void SetStyle(const String& json) {style = json;}
 	void SetProcessing(bool other_symbols, bool other_timeframes) {this->other_symbols = other_symbols; this->other_timeframes = other_timeframes;}
+	void SetAttack(bool b=true) {has_attack = b;}
+	void SetRelease(bool b=true) {has_release = b;}
 	
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}
@@ -196,7 +200,9 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args) {}
 	virtual void Init() {}
 	virtual void Start() {}
-	virtual bool Process(const SlotProcessAttributes& attr) {return 1;}
+	virtual bool ProcessAttack(const SlotProcessAttributes& attr) {Panic("This shouldn't be called"); return false;}
+	virtual bool Process(const SlotProcessAttributes& attr) = 0; // sustain
+	virtual bool ProcessRelease(const SlotProcessAttributes& attr) {Panic("This shouldn't be called"); return false;}
 	
 	
 };

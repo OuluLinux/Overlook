@@ -26,6 +26,8 @@ Slot::Slot() {
 	reserved = 0;
 	other_symbols = false;
 	other_timeframes = false;
+	has_attack = false;
+	has_release = false;
 }
 
 String Slot::GetFileDir() {

@@ -143,6 +143,8 @@ void Recurrent::Init() {
 	batch = 30;
 	is_training_loop = true;
 	
+	LoadThis();
+	
 	TimeVector& tv = GetTimeVector();
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
@@ -150,7 +152,7 @@ void Recurrent::Init() {
 	for(int i = 0; i < ses.GetCount(); i++)
 		ses[i].SetCount(tf_count);
 	
-	LoadThis();
+	Reload();
 }
 
 double Recurrent::GetPerplexity() const {
@@ -178,29 +180,6 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	const Slot& change = GetDependency(1);
 	const Slot& whstat = GetDependency(2);
 	
-	// In first phase, end of data is required to find all possible changes
-	/*if (phase == PHASE_GATHERDATA) {
-		
-		// Gather statistics about the source values
-		if (attr.GetCounted() > 0) {
-			double* prev_value = src.GetValue<double>(0, 1, attr);
-			double* src_value  = src.GetValue<double>(0, 0, attr);
-			var.AddResult(*src_value - *prev_value);
-		}
-		
-		// In the end
-		if (attr.GetCounted() == attr.GetBars()-1) {
-			Reload();
-			phase = PHASE_TRAINING;
-		}
-		
-		// there are other phases after this, so return "unprocessed"
-		return false;
-	}
-	
-	// In the second phase, training and prediction writing is processed
-	else if (phase == PHASE_TRAINING) {*/
-	
 	if (attr.tf_id == 0 && attr.sym_id == 0)
 		iter++;
 	
@@ -217,74 +196,12 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 				double* value = change.GetValue<double>(0, count-1-i, attr);
 				double* min = whstat.GetValue<double>(10, count-1-i, attr);
 				double* max = whstat.GetValue<double>(11, count-1-i, attr);
-				ASSERTEXC(value);
-				ASSERTEXC(min);
-				ASSERTEXC(max);
 				sequence[i] = ToChar(*value, *min, *max);
 			}
 			Tick(attr);
 		}
 		
-		
-		
-		// TODO: Remember to notice, that whstat has now change from previous to current
-		// instead of current to next.
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
-		/*
-		sequence.SetCount(count);
-		double prev_value = *src.GetValue<double>(0, count, attr);
-		for(int i = 0; i < count; i++) {
-			double* src_value = src.GetValue<double>(0, count-1-i, attr);
-			double value = *src_value;
-			sequence[i] = ToChar(value - prev_value);
-			prev_value = value;
-		}
-		
-		// Run single training
-		// Run only unique batches
-		if (attr.GetCounted() % batch == 0) {
-			Tick(attr);
-		}
-		
-		
-		// Write predictions
-		// For 4 temperatures
-		double* src_value = src.GetValue<double>(0, attr);
-		for(int i = 0; i < 4; i++) {
-			
-			// Erase the previous prediction (when i > 0)
-			sequence.SetCount(count);
-			
-			// First is greedy argmax and after that are temperatures
-			PredictSentence(i > 0, i == 0 ? 0 : temperatures[i-1]);
-			int new_count = sequence.GetCount();
-			ASSERT(new_count >= count);
-			
-			// For last 4 values and shifts of current temperature
-			double value = *src_value;
-			for(int j = count, k=0; j < count+4; j++, k+=4) {
-				double* val = GetValue<double>(i+k, attr);
-				if (j < new_count) value += FromChar(sequence[j]);
-				*val = value;
-			}
-		}*/
-		
-		
-		
-		
 		lock.Leave();
-	}
-	
-	
-	// At last position, check if training should be finished
-	if (attr.GetCounted() == attr.GetBars()-1) {
-		
-		
-		//is_training_loop = false;
-		
-		//StoreThis();
-		Panic("TODO: serialize from runner");
 	}
 	
 	// Train this again until training loop is finished, after this, only new values are
@@ -292,7 +209,57 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	return !is_training_loop;
 }
 
-
+bool Recurrent::ProcessRelease(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& change = GetDependency(1);
+	const Slot& whstat = GetDependency(2);
+	
+	int count = Upp::min(batch, attr.GetCounted()-1);
+	sequence.SetCount(count);
+	for(int i = 0; i < count; i++) {
+		double* value = change.GetValue<double>(0, count-1-i, attr);
+		double* min = whstat.GetValue<double>(10, count-1-i, attr);
+		double* max = whstat.GetValue<double>(11, count-1-i, attr);
+		sequence[i] = ToChar(*value, *min, *max);
+	}
+	
+	// Write predictions
+	// For greedy and 3 temperatures
+	for(int i = 0; i < 4; i++) {
+		
+		// Erase the previous prediction (when i > 0)
+		sequence.SetCount(count);
+		
+		// First is greedy argmax and after that are temperatures
+		PredictSentence(attr, i > 0, i == 0 ? 0 : temperatures[i-1]);
+		int new_count = sequence.GetCount();
+		ASSERT(new_count >= count);
+		
+		// For last 4 values and shifts of current temperature
+		// Hints:
+		//  - from current time-position (+0) to next time-position (+1)
+		//		- sequence[count] is change
+		//		- whstat ... (.., -1 ...  is min/max change
+		//		- this->GetValue<double>(0+0*4, ... is greedy predicted change
+		//		- this->GetValue<double>(1+0*4, ... is low temperature predicted change
+		//  - from +1 to +2
+		//		- sequence[count+1] is change
+		//		- whstat ... (.., -2 ...  is min/max change
+		//		- this->GetValue<double>(0+1*4, ... is greedy predicted change
+		//		- this->GetValue<double>(1+1*4, ... is low temperature predicted change
+		for(int j = count, k=0, shift=-1; j < count+4 && j < new_count; j++, k+=4, shift--) {
+			double* val = GetValue<double>(i+k, attr);
+			double* min = whstat.GetValue<double>(10, shift, attr);
+			double* max = whstat.GetValue<double>(11, shift, attr);
+			if (j < new_count)
+				*val = FromChar(sequence[j], *min, *max);
+			else
+				*val = 0;
+		}
+	}
+	
+	return true;
+}
 
 void Recurrent::Reload() {
 	// note: reinit writes global vars
@@ -301,13 +268,9 @@ void Recurrent::Reload() {
 	iter = 0;
 	tick_time = 0;
 	
-	//tick_iter = 0;
-	
 	InitSessions();
 	
 	lock.Leave();
-	//learning_rate_slider.SetData(ses.GetLearningRate() / 0.00001);
-	//SetLearningRate();
 }
 
 void Recurrent::InitSessions() {
@@ -768,10 +731,14 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 
 	Test(epo);*/
 	
+	return true;
+}
+
+bool NARX::ProcessRelease(const SlotProcessAttributes& attr) {
+	const Slot& src = GetDependency(0);
+	const Slot& change = GetDependency(1);
 	
-	
-	
-	
+	Tf& s = GetData(attr);
 	
 	// Predict
 	{
@@ -815,11 +782,8 @@ bool NARX::Process(const SlotProcessAttributes& attr) {
 		}
 	}
 	
-	
 	return true;
 }
-
-
 
 
 

@@ -4,6 +4,8 @@ A scientific-ish time series predictor for market data.
 
 The work is currently ongoing. Please don't fork or try to run this yet.
 
+###### Welcome to overlook chat in #overlook @ quakenet. [Webchat](http://webchat.quakenet.org/)
+
 ### Features
 
 Overlook is using neural network code from academic research projects:

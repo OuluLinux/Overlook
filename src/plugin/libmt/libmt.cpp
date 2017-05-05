@@ -186,6 +186,7 @@ bool Symbol::IsOpen(Time t) const {
 
 
 MetaTrader::MetaTrader() {
+	init_success = false;
 	port = 42000;
 	
 	tf_h1_id = 4;
@@ -201,11 +202,11 @@ MetaTrader::MetaTrader() {
 	periodstr.Add(10080, "W");
 	
 	// These are by default the most expensive currencies
-	blocked_currencies.Add("RUR");
-	blocked_currencies.Add("RUB");
-	blocked_currencies.Add("CHF");
-	blocked_currencies.Add("XAU");
-	blocked_currencies.Add("XAG");
+	skipped_currencies.Add("RUR");
+	skipped_currencies.Add("RUB");
+	skipped_currencies.Add("CHF");
+	skipped_currencies.Add("XAU");
+	skipped_currencies.Add("XAG");
 }
 
 MetaTrader::~MetaTrader() {
@@ -215,45 +216,32 @@ MetaTrader::~MetaTrader() {
 int MetaTrader::Init(String addr, int port) {
 	mainaddr = addr;
 	this->port = port;
-	if (mainaddr.GetCount() == 0 || Connect(port)) {
-		return 1;
+	try {
+		if (mainaddr.IsEmpty() || !IsResponding()) {
+			return 1;
+		}
+		
+		// Refresh symbols
+		init_success = true; // GetSymbols requires this temporarily
+		GetSymbols();
+		init_success = !symbols.IsEmpty();
 	}
-	
-	// Refresh symbols
-	GetSymbols();
-	return symbols.IsEmpty();
-}
-
-int MetaTrader::Check() {
-	/*if (!socket.IsOpen()) {
-		return !Connect(port);
+	catch (ConnectionError e) {
+		init_success = false;
 	}
-	return 1;*/
-	return 1;
-}
-
-int MetaTrader::Connect(int port) {
-	//String addr = mainaddr+ ":" + IntStr(port);
-	//socket.Url(addr);
-	//socket.Timeout(10000);
-	
-	return 0;
-}
-
-void MetaTrader::Disconnect() {
-	
+	return !init_success;
 }
 
 #define MTFUNC0(code, rtype, name, gret) rtype MetaTrader::name() {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(0); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
@@ -261,55 +249,55 @@ void MetaTrader::Disconnect() {
 
 #define MTFUNC1(code, rtype, name, a1type, a1set, gret) rtype MetaTrader::name(a1type a1) {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(1); \
 	p.a1set(0, a1); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
 
 #define MTFUNC2(code, rtype, name, a1type, a1set, a2type, a2set, gret) rtype MetaTrader::name(a1type a1, a2type a2) {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(2); \
 	p.a1set(0, a1); \
 	p.a2set(1, a2); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
 
 #define MTFUNC3(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, gret) rtype MetaTrader::name(a1type a1, a2type a2, a3type a3) {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(3); \
 	p.a1set(0, a1); \
 	p.a2set(1, a2); \
 	p.a3set(2, a3); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
 
 #define MTFUNC4(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, gret) rtype MetaTrader::name(a1type a1, a2type a2, a3type a3, a4type a4) {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(4); \
@@ -317,17 +305,17 @@ void MetaTrader::Disconnect() {
 	p.a2set(1, a2); \
 	p.a3set(2, a3); \
 	p.a4set(3, a4); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
 
 #define MTFUNC5(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, a5type, a5set, gret) rtype MetaTrader::name(a1type a1, a2type a2, a3type a3, a4type a4, a5type a5) {\
 	lock.Enter(); \
-	if (!Check()) {lock.Leave(); throw ConnectionError();} \
+	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
 	p.SetCode(code); \
 	p.SetValuesCount(5); \
@@ -336,10 +324,10 @@ void MetaTrader::Disconnect() {
 	p.a3set(2, a3); \
 	p.a4set(3, a4); \
 	p.a5set(4, a5); \
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();} \
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();} \
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();} \
+	if(p.Import()) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();} \
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();} \
 	lock.Leave(); \
 	return p.gret(0); \
 }
@@ -417,12 +405,8 @@ MTFUNC3(70,	int,		FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetI
 
 
 int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
-//int MetaTrader::OrderSend(const Order& id, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
 	lock.Enter();
-	if (!Check()) {lock.Leave(); throw ConnectionError();}
-	//String symbol = GetSymbol(id.sym).name;
-	//int cmd = id.type;
-	//double volume = id.volume;
+	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
 	int code;
 	code = 51;
@@ -437,10 +421,10 @@ int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, i
 	p.SetDbl(6, takeprofit);
 	p.SetInt(7, magic);
 	p.SetInt(8, expiry);
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();}
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();}
+	if(p.Import()) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();}
 	lock.Leave();
 	return p.GetInt(0);
 }
@@ -450,23 +434,22 @@ int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, i
 
 Vector<Vector<Time> > MetaTrader::GetLatestPriceTimes() {
 	lock.Enter();
-	if (!Check()) {lock.Leave(); throw ConnectionError();}
+	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
 	int code;
 	code = 67;
 	p.SetCode(code);
 	p.SetValuesCount(0);
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();}
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();}
+	if(p.Import()) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();}
 	lock.Leave();
 	String content = p.GetStr(0);
 	Vector<String> data = Split(content, ";");
 	Vector<Vector<Time> > out;
 	for(int i = 0; i < data.GetCount(); i++) {
 		String& line = data[i];
-		//LOG("\"" << line << "\"");
 		Vector<String> line_data = Split(line, ",");
 		Vector<Time>& out_line = out.Add();
 		for(int j = 0; j < line_data.GetCount(); j++) {
@@ -482,23 +465,22 @@ Vector<Vector<Time> > MetaTrader::GetLatestPriceTimes() {
 	
 Vector<Vector<Time> > MetaTrader::GetEarliestPriceTimes() {
 	lock.Enter();
-	if (!Check()) {lock.Leave(); throw ConnectionError();}
+	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
 	int code;
 	code = 71;
 	p.SetCode(code);
 	p.SetValuesCount(0);
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCode() != code) {Disconnect(); lock.Leave(); throw ConnectionError();}
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();}
+	if(p.Import()) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCode() != code) {lock.Leave(); throw ConnectionError();}
 	lock.Leave();
 	String content = p.GetStr(0);
 	Vector<String> data = Split(content, ";");
 	Vector<Vector<Time> > out;
 	for(int i = 0; i < data.GetCount(); i++) {
 		String& line = data[i];
-		//LOG("\"" << line << "\"");
 		Vector<String> line_data = Split(line, ",");
 		Vector<Time>& out_line = out.Add();
 		for(int j = 0; j < line_data.GetCount(); j++) {
@@ -515,33 +497,31 @@ Vector<Vector<Time> > MetaTrader::GetEarliestPriceTimes() {
 
 bool MetaTrader::IsResponding() {
 	lock.Enter();
-	if (!Check()) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
 	p.SetCode(100);
 	p.SetValuesCount(0);
-	if(p.Export(*this, mainaddr, port)) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.Import()) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCount() == 0) {Disconnect(); lock.Leave(); throw ConnectionError();}
-	if(p.GetCode() != 100) {Disconnect(); lock.Leave(); throw ConnectionError();}
+	if(p.Export(*this, mainaddr, port)) {lock.Leave(); throw ConnectionError();}
+	if(p.Import()) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCount() == 0) {lock.Leave(); throw ConnectionError();}
+	if(p.GetCode() != 100) {lock.Leave(); throw ConnectionError();}
 	lock.Leave();
 	return p.GetInt(0) == 123456;
 }
 
-String GetProxy(String currency) {
-	const String& a = currency;
-	if (a == "AUD")
+String GetProxy(const String& currency) {
+	if      (currency == "AUD")
 		return "AUDUSD";
-	else if (a == "CAD")
+	else if (currency == "CAD")
 		return "USDCAD";
-	else if (a == "CHF")
+	else if (currency == "CHF")
 		return "USDCHF";
-	else if (a == "EUR")
+	else if (currency == "EUR")
 		return "EURUSD";
-	else if (a == "GBP")
+	else if (currency == "GBP")
 		return "GBPUSD";
-	else if (a == "NZD")
+	else if (currency == "NZD")
 		return "NZDUSD";
-	else if (a == "RUR")
+	else if (currency == "RUR")
 		return "USDRUR";
 	else
 		return "USD" + currency;
@@ -554,7 +534,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	String s;
 	while (1) {
 		try {
-			s = GetSymbolsRaw(); 
+			s = GetSymbolsRaw();
 			if (s.GetCount()) break;
 		}
 		catch (ConnectionError e) {
@@ -573,7 +553,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	// Parse symbol lines
 	int c1 = lines.GetCount();
 	for(int i = 0; i < c1; i++ ) {
-		lines[i].Replace("\r",""); 
+		lines[i].Replace("\r","");
 		Vector<String> line = Split(lines[i], ",", false);
 		Symbol sym;
 		
@@ -585,48 +565,46 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		sym.id = i;
 		
 		GET_STR(sym.name);
-		//GET_STR(sym.proxy_name);
-		//GET_INT(sym.is_skipping);
 		
-		GET_DBL(sym.lotsize);//MarketInfo(symbols[i], MODE_LOTSIZE) + "," +
-		GET_INT(sym.tradeallowed);//MarketInfo(symbols[i], MODE_TRADEALLOWED) + "," +
-		GET_DBL(sym.profit_calc_mode);//MarketInfo(symbols[i], MODE_PROFITCALCMODE) + "," +
-		GET_DBL(sym.margin_calc_mode);//MarketInfo(symbols[i], MODE_MARGINCALCMODE) + "," +
-		GET_DBL(sym.margin_hedged);//MarketInfo(symbols[i], MODE_MARGINHEDGED) + "," +
-		GET_DBL(sym.margin_required);//MarketInfo(symbols[i], MODE_MARGINREQUIRED) + "," +
+		GET_DBL(sym.lotsize);
+		GET_INT(sym.tradeallowed);			//MarketInfo(symbols[i], MODE_TRADEALLOWED)
+		GET_DBL(sym.profit_calc_mode);		//MarketInfo(symbols[i], MODE_PROFITCALCMODE)
+		GET_DBL(sym.margin_calc_mode);		//MarketInfo(symbols[i], MODE_MARGINCALCMODE)
+		GET_DBL(sym.margin_hedged);			//MarketInfo(symbols[i], MODE_MARGINHEDGED)
+		GET_DBL(sym.margin_required);		//MarketInfo(symbols[i], MODE_MARGINREQUIRED)
 		
-		GET_INT(sym.selected);//SymbolInfoInteger(symbols[i], SYMBOL_SELECT) + "," +
-		GET_INT(sym.visible);//SymbolInfoInteger(symbols[i], SYMBOL_VISIBLE) + "," +
-		GET_INT(sym.digits);//SymbolInfoInteger(symbols[i], SYMBOL_DIGITS) + "," +
-		GET_INT(sym.spread_floating);//SymbolInfoInteger(symbols[i], SYMBOL_SPREAD_FLOAT) + "," +
-		GET_INT(sym.spread);//SymbolInfoInteger(symbols[i], SYMBOL_SPREAD) + "," +
-		GET_INT(sym.calc_mode);//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_CALC_MODE) + "," +
-		GET_INT(sym.trade_mode);//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_MODE) + "," +
-		GET_INT(sym.start_time);//SymbolInfoInteger(symbols[i], SYMBOL_START_TIME) + "," +
-		GET_INT(sym.expiration_time);//SymbolInfoInteger(symbols[i], SYMBOL_EXPIRATION_TIME) + "," +
-		GET_INT(sym.stops_level);//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_STOPS_LEVEL) + "," +
-		GET_INT(sym.freeze_level);//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_FREEZE_LEVEL) + "," +
-		GET_INT(sym.execution_mode);//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_EXEMODE) + "," +
-		GET_INT(sym.swap_mode);//SymbolInfoInteger(symbols[i], SYMBOL_SWAP_MODE) + "," +
-		GET_INT(sym.swap_rollover3days);//SymbolInfoInteger(symbols[i], SYMBOL_SWAP_ROLLOVER3DAYS) + "," +
+		GET_INT(sym.selected);				//SymbolInfoInteger(symbols[i], SYMBOL_SELECT)
+		GET_INT(sym.visible);				//SymbolInfoInteger(symbols[i], SYMBOL_VISIBLE)
+		GET_INT(sym.digits);				//SymbolInfoInteger(symbols[i], SYMBOL_DIGITS)
+		GET_INT(sym.spread_floating);		//SymbolInfoInteger(symbols[i], SYMBOL_SPREAD_FLOAT)
+		GET_INT(sym.spread);				//SymbolInfoInteger(symbols[i], SYMBOL_SPREAD)
+		GET_INT(sym.calc_mode);				//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_CALC_MODE)
+		GET_INT(sym.trade_mode);			//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_MODE)
+		GET_INT(sym.start_time);			//SymbolInfoInteger(symbols[i], SYMBOL_START_TIME)
+		GET_INT(sym.expiration_time);		//SymbolInfoInteger(symbols[i], SYMBOL_EXPIRATION_TIME)
+		GET_INT(sym.stops_level);			//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_STOPS_LEVEL)
+		GET_INT(sym.freeze_level);			//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_FREEZE_LEVEL)
+		GET_INT(sym.execution_mode);		//SymbolInfoInteger(symbols[i], SYMBOL_TRADE_EXEMODE)
+		GET_INT(sym.swap_mode);				//SymbolInfoInteger(symbols[i], SYMBOL_SWAP_MODE)
+		GET_INT(sym.swap_rollover3days);	//SymbolInfoInteger(symbols[i], SYMBOL_SWAP_ROLLOVER3DAYS)
 
-		GET_DBL(sym.point);//SymbolInfoDouble(symbols[i], SYMBOL_POINT) + "," +
-		GET_DBL(sym.tick_value);//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_TICK_VALUE) + "," +
-		GET_DBL(sym.tick_size);//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_TICK_SIZE) + "," +
-		GET_DBL(sym.contract_size);//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_CONTRACT_SIZE) + "," +
-		GET_DBL(sym.volume_min);//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_MIN) + "," +
-		GET_DBL(sym.volume_max);//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_MAX) + "," +
-		GET_DBL(sym.volume_step);//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_STEP) + "," +
-		GET_DBL(sym.swap_long);//SymbolInfoDouble(symbols[i], SYMBOL_SWAP_LONG) + "," +
-		GET_DBL(sym.swap_short);//SymbolInfoDouble(symbols[i], SYMBOL_SWAP_SHORT) + "," +
-		GET_DBL(sym.margin_initial);//SymbolInfoDouble(symbols[i], SYMBOL_MARGIN_INITIAL) + "," +
-		GET_DBL(sym.margin_maintenance);//SymbolInfoDouble(symbols[i], SYMBOL_MARGIN_MAINTENANCE) + "," +
+		GET_DBL(sym.point);					//SymbolInfoDouble(symbols[i], SYMBOL_POINT)
+		GET_DBL(sym.tick_value);			//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_TICK_VALUE)
+		GET_DBL(sym.tick_size);				//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_TICK_SIZE)
+		GET_DBL(sym.contract_size);			//SymbolInfoDouble(symbols[i], SYMBOL_TRADE_CONTRACT_SIZE)
+		GET_DBL(sym.volume_min);			//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_MIN)
+		GET_DBL(sym.volume_max);			//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_MAX)
+		GET_DBL(sym.volume_step);			//SymbolInfoDouble(symbols[i], SYMBOL_VOLUME_STEP)
+		GET_DBL(sym.swap_long);				//SymbolInfoDouble(symbols[i], SYMBOL_SWAP_LONG)
+		GET_DBL(sym.swap_short);			//SymbolInfoDouble(symbols[i], SYMBOL_SWAP_SHORT)
+		GET_DBL(sym.margin_initial);		//SymbolInfoDouble(symbols[i], SYMBOL_MARGIN_INITIAL)
+		GET_DBL(sym.margin_maintenance);	//SymbolInfoDouble(symbols[i], SYMBOL_MARGIN_MAINTENANCE)
 		
-		GET_STR(sym.currency_base);//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_BASE) + "," +
-		GET_STR(sym.currency_profit);//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_PROFIT) + "," +
-		GET_STR(sym.currency_margin);//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_MARGIN) + "," +
-		GET_STR(sym.path);//SymbolInfoString(symbols[i], SYMBOL_PATH) + ";" ;
-		GET_STR(sym.description);//SymbolInfoString(symbols[i], SYMBOL_DESCRIPTION) + "," +
+		GET_STR(sym.currency_base);			//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_BASE)
+		GET_STR(sym.currency_profit);		//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_PROFIT)
+		GET_STR(sym.currency_margin);		//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_MARGIN)
+		GET_STR(sym.path);					//SymbolInfoString(symbols[i], SYMBOL_PATH) + ";" ;
+		GET_STR(sym.description);			//SymbolInfoString(symbols[i], SYMBOL_DESCRIPTION)
 		
 		sym.virtual_type = 0;
 		
@@ -659,7 +637,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			const String& name = sym.name;
 			
 			// TODO: handle symbols like EURUSDm, EUR/USD, etc.
-			ASSERT(name.GetCount() == 6);
+			ASSERT_(name.GetCount() == 6, "Only EURUSD, AUDJPY format is allowed, not EUR/USD or AUDJPYm. Hack this or change broker.");
 			
 			String a = name.Left(3);
 			String b = name.Right(3);
@@ -672,9 +650,9 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 				}
 				else Panic("TODO: add proxies for this currency");
 			}
-			if (blocked_currencies.Find(a) != -1)
+			if (skipped_currencies.Find(a) != -1)
 				sym.is_skipping = true;
-			if (blocked_currencies.Find(b) != -1)
+			if (skipped_currencies.Find(b) != -1)
 				sym.is_skipping = true;
 		}
 		else if (sym.IsCDF() || sym.IsCDFIndex() || sym.IsFuture()) {
@@ -684,7 +662,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 					sym.proxy_name = GetProxy(a);
 			}
 			else Panic("TODO: add proxies for this currency");
-			if (blocked_currencies.Find(a) != -1)
+			if (skipped_currencies.Find(a) != -1)
 				sym.is_skipping = true;
 		}
 		else Panic("What type " + sym.name + " has?");
@@ -748,23 +726,6 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		}
 	}
 	
-	// Add currencies to symbol list
-	/*for(int i = 0; i < currencies.GetCount(); i++) {
-		Symbol& sym = symbols.Add();
-		sym.name = currencies[i];
-		sym.description = "Currency " + sym.name;
-		sym.contract_size = 100000;
-		sym.calc_mode = Symbol::CALCMODE_FOREX;
-		sym.currency_base = sym.name;
-		sym.currency_margin = sym.name;
-		sym.currency_profit = sym.name;
-		sym.digits = 6;
-		sym.point = 0.00001;
-		sym.lotsize = 0.01;
-		sym.is_skipping = true;
-		sym.virtual_type = 1;
-	}*/
-	
 	return symbols;
 }
 
@@ -813,9 +774,6 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 	// Clear old data
 	orders.Clear();
 	
-	// Set begin limit for orders. Older than that are ignored. May be useful if you have much bad trades.
-	//Time realbegin = GetSysTime() - 30 * 24 * 60*60;
-	
 	Vector<String> v = Split(content, ",", false);
 	int pos = 0;
 	
@@ -845,7 +803,7 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 		o.commission = GET_DBL();
 		o.swap = GET_DBL();
 		o.expiration = TimeFromTimestamp(GET_INT());
-		o.is_open = is_open; 
+		o.is_open = is_open;
 		
 		if (!ts) {
 			orders.Remove(i);
@@ -863,7 +821,7 @@ void MetaTrader::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int 
 	String content;
 	while (1) {
 		try {
-			content = GetOrdersRaw(magic); 
+			content = GetOrdersRaw(magic);
 			if (content.GetCount()) break;
 		}
 		catch (ConnectionError) {
@@ -1001,7 +959,7 @@ const Vector<PriceTf>&	MetaTrader::GetTickData() {
 				low = GET_DBL();
 				open = GET_DBL();
 				close = GET_DBL();
-				volume = GET_DBL();				
+				volume = GET_DBL();
 			}
 			
 			PriceTf& p = pricetf.Add();
@@ -1031,10 +989,8 @@ bool MTPacket::Export(MetaTrader& mt, const String& addr, int port) {
 		str += values[i];
 	}
 	mt.AddOutputBytes(4 + str.GetCount());
-	//LOG(str);
 	result.Clear();
 	
-	//socket("mt4", str) >> result;
 	TcpSocket sock;
 	sock.Timeout(3000);
 	sock.Blocking();
@@ -1061,13 +1017,9 @@ bool MTPacket::Export(MetaTrader& mt, const String& addr, int port) {
 }
 
 bool MTPacket::Import() {
-	//if (!result.GetCount())
-      //  return 1;
-    
 	values.SetCount(2);
 	values[0] = latest_code;
 	values[1] = result;
-	//return !values[1].GetCount();
 	return 0;
 }
 

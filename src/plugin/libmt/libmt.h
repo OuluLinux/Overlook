@@ -6,7 +6,7 @@
 
 using namespace Upp;
 
-String GetProxy(String currency);
+String GetProxy(const String& currency);
 
 inline void SyncToTimeframe(Time& t, int tf) {
 	t.second = 0;
@@ -550,13 +550,13 @@ class MetaTrader : public Brokerage {
 	String mainaddr;
 	
 	
-	Index<String> blocked_currencies;
+	Index<String> skipped_currencies;
 	
 	String account_id, account_name, account_server, account_currency;
 	String last_error;
 	double balance, equity, margin, freemargin, leverage;
 	bool demo, connected, simulation;
-	
+	bool init_success;
 	
 	//VectorMap<String, Symbol> symbols;
 	Vector<Price> current_prices;
@@ -583,13 +583,9 @@ public:
 	
 	const String& GetAddr() const {return mainaddr;}
 	int GetPort() const {return port;}
-	//const Symbol& GetSymbol(int i) const {return symbols[i];}
 	
 	// Backend API functions, must be implemented
 	int		Init(String addr, int port=42000);
-	int		Connect(int port);
-	int		Check();
-	void	Disconnect();
 	
 	virtual double	AccountInfoDouble(int property_id);
 	virtual int		AccountInfoInteger(int property_id);

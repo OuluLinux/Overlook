@@ -318,22 +318,23 @@ void Session::Init() {
 		// Link runner (also starts processing, so keep this last)
 		res.LinkPath("/runner", "/runnerctrl");
 		
+		
+		tv.RefreshData();
+		
+		LoadProgress();
+		RefreshBatches();
+		
+		StoreThis();
+		
+		running = true;
+		stopped = false;
+		Thread::Start(THISBACK(Run));
 	}
 	
 	catch (...) {
 		LOG("Load failed");
 	}
 	
-	tv.RefreshData();
-	
-	LoadProgress();
-	RefreshBatches();
-	
-	StoreThis();
-	
-	running = true;
-	stopped = false;
-	Thread::Start(THISBACK(Run));
 }
 
 void Session::Run() {

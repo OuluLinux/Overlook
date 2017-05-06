@@ -24,6 +24,7 @@ RunnerCtrl::RunnerCtrl() {
 	progress.batches.AddColumn("End");
 	progress.batches.AddColumn("Stored");
 	progress.batches.AddColumn("Loaded");
+	progress.batches <<= THISBACK(RefreshData);
 	
 	progress.incomplete.AddColumn("#");
 	progress.incomplete.AddColumn("Slot");

@@ -122,7 +122,7 @@ void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void Recurrent::SerializeCache(Stream& s, int sym_id, int tf_id) {
-	s % ses[sym_id][tf_id];
+	s % data[sym_id * tf_count + tf_id];
 }
 
 void Recurrent::Init() {
@@ -131,6 +131,7 @@ void Recurrent::Init() {
 	AddDependency("/open", 0, 0);
 	AddDependency("/change", 0, 0);
 	AddDependency("/whstat_slow", 0, 0);
+	SetProcessedOnce(false);
 	
 	temperatures.SetCount(3);
 	temperatures[0] = 0.1;
@@ -146,11 +147,9 @@ void Recurrent::Init() {
 	LoadThis();
 	
 	TimeVector& tv = GetTimeVector();
-	int sym_count = tv.GetSymbolCount();
-	int tf_count = tv.GetPeriodCount();
-	ses.SetCount(sym_count);
-	for(int i = 0; i < ses.GetCount(); i++)
-		ses[i].SetCount(tf_count);
+	sym_count = tv.GetSymbolCount();
+	tf_count = tv.GetPeriodCount();
+	data.SetCount(sym_count * tf_count);
 	
 	Reload();
 }
@@ -158,20 +157,16 @@ void Recurrent::Init() {
 double Recurrent::GetPerplexity() const {
 	double av = 0.0;
 	int count = 0;
-	for(int i = 0; i < ses.GetCount(); i++) {
-		for(int j = 0; j < ses[i].GetCount(); j++) {
-			av += ses[i][j].GetPerplexity();
-			count++;
-		}
+	for(int i = 0; i < data.GetCount(); i++) {
+		av += data[i].ses.GetPerplexity();
+		count++;
 	}
 	return av / count;
 }
 
 void Recurrent::SetLearningRate(double rate) {
-	for(int i = 0; i < ses.GetCount(); i++) {
-		for(int j = 0; j < ses[i].GetCount(); j++) {
-			ses[i][j].SetLearningRate(rate);
-		}
+	for(int i = 0; i < data.GetCount(); i++) {
+		data[i].ses.SetLearningRate(rate);
 	}
 }
 
@@ -179,6 +174,7 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& change = GetDependency(1);
 	const Slot& whstat = GetDependency(2);
+	SymTf& s = GetData(attr);
 	
 	if (attr.tf_id == 0 && attr.sym_id == 0)
 		iter++;
@@ -186,22 +182,18 @@ bool Recurrent::Process(const SlotProcessAttributes& attr) {
 	// Write current values to the sentence
 	int count = Upp::min(batch, attr.GetCounted()-1);
 	if (count > 10) {
-		lock.Enter();
-		
 		// Run single training
 		// Run only unique batches
 		if (attr.GetCounted() % batch == 0) {
-			sequence.SetCount(count);
+			s.sequence.SetCount(count);
 			for(int i = 0; i < count; i++) {
 				double* value = change.GetValue<double>(0, count-1-i, attr);
 				double* min = whstat.GetValue<double>(10, count-1-i, attr);
 				double* max = whstat.GetValue<double>(11, count-1-i, attr);
-				sequence[i] = ToChar(*value, *min, *max);
+				s.sequence[i] = ToChar(*value, *min, *max);
 			}
 			Tick(attr);
 		}
-		
-		lock.Leave();
 	}
 	
 	// Train this again until training loop is finished, after this, only new values are
@@ -213,14 +205,15 @@ bool Recurrent::ProcessRelease(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& change = GetDependency(1);
 	const Slot& whstat = GetDependency(2);
+	SymTf& s = GetData(attr);
 	
 	int count = Upp::min(batch, attr.GetCounted()-1);
-	sequence.SetCount(count);
+	s.sequence.SetCount(count);
 	for(int i = 0; i < count; i++) {
 		double* value = change.GetValue<double>(0, count-1-i, attr);
 		double* min = whstat.GetValue<double>(10, count-1-i, attr);
 		double* max = whstat.GetValue<double>(11, count-1-i, attr);
-		sequence[i] = ToChar(*value, *min, *max);
+		s.sequence[i] = ToChar(*value, *min, *max);
 	}
 	
 	// Write predictions
@@ -228,11 +221,11 @@ bool Recurrent::ProcessRelease(const SlotProcessAttributes& attr) {
 	for(int i = 0; i < 4; i++) {
 		
 		// Erase the previous prediction (when i > 0)
-		sequence.SetCount(count);
+		s.sequence.SetCount(count);
 		
 		// First is greedy argmax and after that are temperatures
 		PredictSentence(attr, i > 0, i == 0 ? 0 : temperatures[i-1]);
-		int new_count = sequence.GetCount();
+		int new_count = s.sequence.GetCount();
 		ASSERT(new_count >= count);
 		
 		// For last 4 values and shifts of current temperature
@@ -252,7 +245,7 @@ bool Recurrent::ProcessRelease(const SlotProcessAttributes& attr) {
 			double* min = whstat.GetValue<double>(10, shift, attr);
 			double* max = whstat.GetValue<double>(11, shift, attr);
 			if (j < new_count)
-				*val = FromChar(sequence[j], *min, *max);
+				*val = FromChar(s.sequence[j], *min, *max);
 			else
 				*val = 0;
 		}
@@ -263,27 +256,21 @@ bool Recurrent::ProcessRelease(const SlotProcessAttributes& attr) {
 
 void Recurrent::Reload() {
 	// note: reinit writes global vars
-	lock.Enter();
-	
 	iter = 0;
 	tick_time = 0;
 	
 	InitSessions();
-	
-	lock.Leave();
 }
 
 void Recurrent::InitSessions() {
 	// eval options to set some globals
 	ValueMap js = ParseJSON(model_str);
-	for(int i = 0; i < ses.GetCount(); i++) {
-		for(int j = 0; j < ses[i].GetCount(); j++) {
-			ConvNet::RecurrentSession& ses = this->ses[i][j];
-			ses.Load(js);
-			ses.SetInputSize(value_count+1); // possible values + START token
-			ses.SetOutputSize(value_count+1);
-			ses.Init();
-		}
+	for(int i = 0; i < data.GetCount(); i++) {
+		ConvNet::RecurrentSession& ses = data[i].ses;
+		ses.Load(js);
+		ses.SetInputSize(value_count+1); // possible values + START token
+		ses.SetOutputSize(value_count+1);
+		ses.Init();
 	}
 }
 
@@ -305,29 +292,15 @@ double Recurrent::FromChar(int i, double min, double max) {
 }
 
 void Recurrent::PredictSentence(const SlotProcessAttributes& attr, bool samplei, double temperature) {
-	ses[attr.sym_id][attr.tf_id].Predict(sequence, samplei, temperature, true, 4);
-	/*
-	WString s;
-	for(int i = 0; i < sequence.GetCount(); i++) {
-		int chr = indexToLetter.Get(sequence[i]);
-		s.Cat(chr);
-	}
-	return s;*/
+	SymTf& s = GetData(attr);
+	s.ses.Predict(s.sequence, samplei, temperature, true, 4);
 }
 
 void Recurrent::Tick(const SlotProcessAttributes& attr) {
 	TimeStop ts;  // log start timestamp
 	
-	// sample sentence fromd data
-	/*int sentix = Random(data_sents.GetCount());
-	const WString& sent = data_sents[sentix];
-	
-	sequence.SetCount(sent.GetCount());
-	for(int i = 0; i < sent.GetCount(); i++) {
-		sequence[i] = letterToIndex.Get(sent[i]);
-	}*/
-	
-	ses[attr.sym_id][attr.tf_id].Learn(sequence);
+	SymTf& s = GetData(attr);
+	s.ses.Learn(s.sequence);
 	
 	tick_time = ts.Elapsed();
 	
@@ -406,6 +379,7 @@ void NARX::Init() {
 	AddDependency("/open", 1, 0);
 	AddDependency("/change", 1, 1);
 	SetProcessing(1, 0);
+	SetProcessedOnce(false);
 	
 	sym_count = tv.GetSymbolCount();
 	tf_count = tv.GetPeriodCount();
@@ -858,6 +832,7 @@ void Forecaster::Init() {
 	AddDependency("/chp", 0, 0);
 	AddDependency("/eosc", 0, 0);
 	AddDependency("/ma", 0, 0);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();
@@ -1036,6 +1011,7 @@ void RLAgent::Init() {
 	AddDependency("/open", 0, 0);
 	AddDependency("/change", 0, 0);
 	AddDependency("/forecaster", 0, 0);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 4;
@@ -1188,6 +1164,7 @@ void DQNAgent::Init() {
 	AddDependency("/open", 0, 0);
 	AddDependency("/change", 0, 0);
 	AddDependency("/forecaster", 0, 0);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
@@ -1358,6 +1335,7 @@ void MonaAgent::Init() {
 	AddDependency("/open", 0, 0);
 	AddDependency("/change", 0, 0);
 	AddDependency("/forecaster", 0, 0);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 10;
@@ -1587,6 +1565,7 @@ void MonaMetaAgent::Init() {
 	AddDependency("/mona", 0, 1);
 	AddDependency("/change", 0, 0);
 	AddDependency("/forecaster", 0, 1);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();

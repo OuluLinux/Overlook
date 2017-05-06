@@ -212,4 +212,6 @@ clean the code and do or discard your TODO list.&]
 [s0; I am currently at the round 4 and I try to finish it today. 
 This requries much patience from the programmer and this can`'t 
 be recommended to noobs.&]
-[s0;i150;O9; ]]
+[s0; Aaaand round 4 finished. I have still time to: test multithreading, 
+fix re`-processing looping broker reset, the change slot has 
+[/ cost] everywehere but shouldn`'t.]]

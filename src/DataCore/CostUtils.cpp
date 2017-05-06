@@ -140,13 +140,10 @@ bool SpreadStats::Process(const SlotProcessAttributes& attr) {
 
 ValueChange::ValueChange() {
 	AddValue<double>("Change");
-	AddValue<double>("Increase");
-	AddValue<double>("Decrease");
-	AddValue<double>("Best Increase");
-	AddValue<double>("Best Decrease");
-	AddValue<double>("Worst Increase");
-	AddValue<double>("Worst Decrease");
-	AddValue<double>("Value Change");
+	AddValue<double>("Change With Proxy");
+	AddValue<double>("Low Change With Proxy");
+	AddValue<double>("High Change With Proxy");
+	AddValue<double>("Spread Change");
 	
 	SetStyle(
 		"{"
@@ -228,55 +225,39 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& spreadsrc = GetDependency(1);
 	double* change_			= GetValue<double>(0, attr);
-	double* inc				= GetValue<double>(1, attr);
-	double* dec				= GetValue<double>(2, attr);
-	double* best_inc		= GetValue<double>(3, attr);
-	double* best_dec		= GetValue<double>(4, attr);
-	double* worst_inc		= GetValue<double>(5, attr);
-	double* worst_dec		= GetValue<double>(6, attr);
-	double* value_change	= GetValue<double>(7, attr);
+	double* value_change	= GetValue<double>(1, attr);
+	double* low_change		= GetValue<double>(2, attr);
+	double* high_change		= GetValue<double>(3, attr);
+	double* spread_change	= GetValue<double>(4, attr);
 	double* open			= src.GetValue<double>(0, 1, attr);
 	double* close			= src.GetValue<double>(0, 0, attr);
 	double* low				= src.GetValue<double>(1, 1, attr);
 	double* high			= src.GetValue<double>(2, 1, attr);
-	double* spread_a		= spreadsrc.GetValue<double>(0, 1, attr);
-	double* spread_b		= spreadsrc.GetValue<double>(0, 0, attr);
+	double* spread			= spreadsrc.GetValue<double>(0, 0, attr);
 	
-	if (!open) return false;
+	if (!open || *open == 0.0) return false;
 	
-	double spread			= (*spread_a + *spread_b) * 0.5;
-
 	int id = attr.sym_id;
 	
 	Sym& s = data[id];
 	
 	if (!s.has_proxy) {
-		double cost = spread;
 		double open_value = *open;
 		double change = *close / open_value - 1.0;
-		*inc = change - cost;
-		*dec = -change - cost;
-		double high_change = *high / open_value - 1.0;
-		double low_change  = *low / open_value - 1.0;
-		ASSERT(high_change >= low_change);
-		*best_inc = high_change - cost;
-		*best_dec = -low_change - cost;
-		*worst_inc = low_change - cost;
-		*worst_dec = -high_change - cost;
-		*value_change = change;
 		*change_ = change; // same without proxy
+		*low_change  = *low / open_value - 1.0;
+		*high_change = *high / open_value - 1.0;
+		*spread_change = *spread;
+		*value_change = change;
+		ASSERT(*high_change >= *low_change);
 	} else {
-		double* proxy_spread_a = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_spread_b = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
-		double proxy_spread			= (*proxy_spread_a + *proxy_spread_b) * 0.5;
+		double* proxy_spread = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
 		
 		// Get buffers
 		double* proxy_open	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
 		double* proxy_close	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
 		double* proxy_low	= src.GetValue<double>(1, s.proxy_id, attr.tf_id, 1, attr);
 		double* proxy_high	= src.GetValue<double>(2, s.proxy_id, attr.tf_id, 1, attr);
-		
-		double cost = spread + proxy_spread;
 		
 		// Proxy and normal.
 		double proxy_open_value = *proxy_open;
@@ -293,18 +274,14 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 			proxy_high_change	= proxy_open_value / *proxy_low - 1.0;
 		}
 		double change = *close / open_value - 1.0;
-		*inc	= change + proxy_change - cost;
-		*dec	= -change - proxy_change - cost;
-		double high_change	= *high / open_value - 1.0;
-		double low_change	= *low / open_value - 1.0;
-		ASSERT(high_change >= low_change);
-		ASSERT(proxy_high_change >= proxy_low_change);
-		*best_inc	= proxy_high_change + high_change - cost;
-		*best_dec	= -proxy_low_change  - low_change  - cost;
-		*worst_inc	= proxy_low_change + low_change - cost;
-		*worst_dec	= -proxy_high_change - high_change - cost;
-		*value_change	= change + proxy_change;
+		double low_change_	= *low / open_value - 1.0;
+		double high_change_	= *high / open_value - 1.0;
 		*change_ = change; // different with proxy
+		*low_change = proxy_low_change + low_change_;		// Note: unrealistic, probably not simultaneously
+		*high_change = proxy_high_change + high_change_;	// Note: unrealistic, probably not simultaneously
+		*spread_change = *spread + *proxy_spread;
+		*value_change	= change + proxy_change;
+		ASSERT(*high_change >= *low_change);
 	}
 	
 	return true;

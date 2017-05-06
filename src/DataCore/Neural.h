@@ -13,9 +13,27 @@ using namespace Narx;
 
 
 class Recurrent : public Slot {
-	Array<Array<ConvNet::RecurrentSession> > ses;
+	struct SymTf : Moveable<SymTf> {
+		Vector<int> sequence;
+		ConvNet::RecurrentSession ses;
+		
+		void Serialize(Stream& s) {
+			if (s.IsLoading()) {
+				ValueMap map;
+				s % map;
+				ses.Load(map);
+			}
+			else if(s.IsStoring()) {
+				ValueMap map;
+				ses.Store(map);
+				s % map;
+			}
+		}
+	};
+	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
+	Vector<SymTf> data;
+	
 	Vector<double> temperatures;
-	Vector<int> sequence;
 	OnlineVariance var;
 	String model_str;
 	int batch;
@@ -23,8 +41,8 @@ class Recurrent : public Slot {
 	int value_count;
 	int iter;
 	int tick_time;
+	int sym_count, tf_count;
 	bool is_training_loop;
-	SpinLock lock;
 	
 	int ToChar(double diff, double min, double max);
 	double FromChar(int i, double min, double max);
@@ -52,6 +70,7 @@ public:
 	int GetSampleTemperature(int i) const {return temperatures[i];}
 	double GetPerplexity() const;
 	String GetModel() const {return model_str;}
+	SymTf& GetData(int sym_id, int tf_id) {return data[sym_id * tf_count + tf_id];}
 	
 	void SetPreset(int i);
 	void SetLearningRate(double rate);
@@ -63,28 +82,11 @@ public:
 	void PredictSentence(const SlotProcessAttributes& attr, bool samplei=false, double temperature=1.0);
 	void Tick(const SlotProcessAttributes& attr);
 	
-	ConvNet::RecurrentSession& GetSession(int sym, int tf) {return ses[sym][tf];}
-	
 	void Serialize(Stream& s) {
 		s % temperatures % var % model_str % batch % shifts % value_count % iter %
 			tick_time % is_training_loop;
 		if (s.IsLoading()) {
 			InitSessions();
-			for(int i = 0; i < ses.GetCount(); i++) {
-				for(int j = 0; j < ses[i].GetCount(); j++) {
-					ValueMap map;
-					s % map;
-					ses[i][j].Load(map);
-				}
-			}
-		} else {
-			for(int i = 0; i < ses.GetCount(); i++) {
-				for(int j = 0; j < ses[i].GetCount(); j++) {
-					ValueMap map;
-					ses[i][j].Store(map);
-					s % map;
-				}
-			}
 		}
 	}
 };

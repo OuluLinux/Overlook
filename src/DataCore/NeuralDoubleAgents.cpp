@@ -44,6 +44,7 @@ void MonaDoubleAgent::Init() {
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/metamona", 1, 0);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	sym_count = tv.GetSymbolCount();

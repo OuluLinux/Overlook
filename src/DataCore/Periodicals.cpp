@@ -481,6 +481,8 @@ void EventOsc::SerializeCache(Stream& s, int sym_id, int tf_id) {
 void EventOsc::Init() {
 	ASSERTEXC(!(mul <= 0 || mul > 0.9));
 	
+	SetProcessedOnce(false);
+	
 	TimeVector& tv = GetTimeVector();
 	SlotPtr src = tv.FindLinkSlot("/open");
 	db = dynamic_cast<DataBridge*>(&*src);

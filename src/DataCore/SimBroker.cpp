@@ -59,6 +59,8 @@ void SimBroker::Clear() {
 void SimBroker::Cycle() {
 	
 	
+	// TODO: reset if time-position is less than previously, or if jumps too far to future
+	
 	
 }
 

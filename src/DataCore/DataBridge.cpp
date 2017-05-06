@@ -42,6 +42,8 @@ void DataBridge::Serialize(Stream& s) {
 void DataBridge::Init() {
 	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
 	
+	SetProcessing(1, 0);
+	
 	TimeVector& tv = GetTimeVector();
 	MetaTrader& mt = GetMetaTrader();
 	

@@ -32,6 +32,7 @@ void Analyzer::Init() {
 	AddDependency("/mona", 0, 0);
 	AddDependency("/metamona", 0, 0);
 	AddDependency("/doublemona", 0, 0);
+	SetProcessedOnce(false);
 	
 }
 

@@ -94,9 +94,10 @@ protected:
 		String name, description;
 	};
 	Vector<SlotValue> values;
+	SpinLock cache_lock;
 	int id;
 	bool forced_without_data;
-	bool has_attack, has_release;
+	bool has_attack, has_release, is_processed_once;;
 public:
 	Slot();
 	virtual ~Slot() {}
@@ -137,6 +138,7 @@ public:
 	int		GetReservedBytes() const;
 	bool	HasAttack() const {return has_attack;}
 	bool	HasRelease() const {return has_release;}
+	bool	IsProcessedOnce() const {return is_processed_once;}
 	
 	template <class T>
 	T* GetValue(int i, const SlotProcessAttributes& attr) const {
@@ -190,6 +192,7 @@ public:
 	void SetProcessing(bool other_symbols, bool other_timeframes) {this->other_symbols = other_symbols; this->other_timeframes = other_timeframes;}
 	void SetAttack(bool b=true) {has_attack = b;}
 	void SetRelease(bool b=true) {has_release = b;}
+	void SetProcessedOnce(bool b=true) {is_processed_once = b;}
 	
 	virtual String GetKey() const {return "slot";}
 	virtual String GetName() {return "name";}

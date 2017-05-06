@@ -28,6 +28,7 @@ Slot::Slot() {
 	other_timeframes = false;
 	has_attack = false;
 	has_release = false;
+	is_processed_once = true;
 }
 
 String Slot::GetFileDir() {
@@ -72,9 +73,12 @@ void Slot::AddValue(uint16 bytes, String name, String description) {
 
 void Slot::LoadCache(int sym_id, int tf_id) {
 	// only load to empty vector
+	cache_lock.Enter();
 	int existing = data[sym_id][tf_id][0].GetCount();
-	if (existing > 0)
+	if (existing > 0) {
+		cache_lock.Leave();
 		return;
+	}
 	
 	String filename;
 	filename << sym_id << "-" << tf_id << ".bin";
@@ -97,9 +101,12 @@ void Slot::LoadCache(int sym_id, int tf_id) {
 				reserved += tf[k].GetCount();
 		}
 	}
+	
+	cache_lock.Leave();
 }
 
 void Slot::StoreCache(int sym_id, int tf_id) {
+	cache_lock.Enter();
 	String filename;
 	filename << sym_id << "-" << tf_id << ".bin";
 	String dir = GetFileDir();
@@ -108,6 +115,7 @@ void Slot::StoreCache(int sym_id, int tf_id) {
 	FileOut out(path);
 	out % data[sym_id][tf_id] % ready[sym_id][tf_id];
 	SerializeCache(out, sym_id, tf_id);
+	cache_lock.Leave();
 }
 
 void Slot::Reserve(int sym_id, int tf_id) {

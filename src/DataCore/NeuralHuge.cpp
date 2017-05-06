@@ -35,6 +35,7 @@ void HugeDQNAgent::Init() {
 	
 	AddDependency("/open", 1, 1);
 	AddDependency("/forecaster", 1, 1);
+	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;

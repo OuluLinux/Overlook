@@ -173,7 +173,7 @@ void RecurrentCtrl::Init() {
 	ASSERTEXC(rnn);
 	rec = dynamic_cast<DataCore::Recurrent*>(&*rnn);
 	ASSERTEXC(rec);
-	network_view.SetRecurrentSession(rec->GetSession(0, 0));
+	network_view.SetRecurrentSession(rec->GetData(0, 0).ses);
 	
 	lowtemp.SetData(rec->GetSampleTemperature(0) / 0.01);
 	medtemp.SetData(rec->GetSampleTemperature(1) / 0.01);

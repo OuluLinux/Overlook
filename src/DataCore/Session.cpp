@@ -366,11 +366,12 @@ void Session::Run() {
 						continue;
 					
 					stat.actual = 0;
+					stat.total = 1;
 					stat.end = stat.begin = Time(1970,1,1);
 				}
 			}
 			
-			#if 0
+			#ifdef flagMT
 			CoWork co;
 			for(int j = 0; j < cpus; j++)
 				co & THISBACK2(BatchProcessor, j, &b);
@@ -383,9 +384,10 @@ void Session::Run() {
 			WhenBatchFinished();
 		}
 		
-		Sleep(1000);
-		
 		loop++;
+		StoreThis();
+		
+		Sleep(1000);
 	}
 	
 	stopped = true;
@@ -467,7 +469,7 @@ void Session::Processor(BatchPartStatus& stat) {
 	
 	
 	// At first big loop (epoch?), process data once entirely
-	if (loop == 0) {
+	if (loop == 0 || slot->IsProcessedOnce()) {
 		
 		// Some slots have attack (like the musical term). This can only be called once.
 		if (slot->HasAttack()) {
@@ -579,7 +581,7 @@ bool Session::Loop(BatchPartStatus& stat, SlotProcessAttributes& attr, TimeStop*
 			}
 		}
 	}
-	while (ts && ts->Elapsed() < timeslot);
+	while (ts && ts->Elapsed() < timeslot && running);
 	
 	return success;
 }

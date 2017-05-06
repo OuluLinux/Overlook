@@ -22,11 +22,14 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	int selected;
 	int lotsize;
 	int order_counter;
+	bool lightweight;
 	
 public:
 	SimBroker();
 	
 	void Init(MetaTrader& mt);
+	void InitLightweight();
+	void Clear();
 	void Cycle();
 	void ClearWorkingMemory();
 	

@@ -37,7 +37,9 @@ void Session::Leave(int slot, int sym_id, int tf_id) {
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
 	int64 id = slot * sym_count * tf_count + sym_id * tf_count + tf_id;
-	locked[id]--;
+	int& locked = this->locked[id];
+	locked--;
+	ASSERT(locked >= 0);
 	thrd_lock.Leave();
 }
 
@@ -355,6 +357,19 @@ void Session::Run() {
 			
 			ts.Reset();
 			
+			// Reset cursor
+			if (b.cursor >= b.status.GetCount()) {
+				b.cursor = 0;
+				for(int i = 0; i < b.status.GetCount(); i++) {
+					BatchPartStatus& stat = b.status[i];
+					if (stat.complete)
+						continue;
+					
+					stat.actual = 0;
+					stat.end = stat.begin = Time(1970,1,1);
+				}
+			}
+			
 			#if 0
 			CoWork co;
 			for(int j = 0; j < cpus; j++)
@@ -368,9 +383,7 @@ void Session::Run() {
 			WhenBatchFinished();
 		}
 		
-		for(int i = 0; i < 60 && !Thread::IsShutdownThreads() && running; i++) {
-			Sleep(1000);
-		}
+		Sleep(1000);
 		
 		loop++;
 	}
@@ -392,9 +405,10 @@ void Session::BatchProcessor(int thread_id, Batch* batch) {
 		
 		BatchPartStatus& stat = b.status[pos];
 		
-		Processor(stat);
-		
-		WhenPartFinished();
+		if (!stat.complete) {
+			Processor(stat);
+			WhenPartFinished();
+		}
 		
 		if (thread_id == 0 && ts.Elapsed() > 10000) {
 			StoreProgress();

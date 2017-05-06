@@ -1040,15 +1040,19 @@ void RLAgent::Init() {
 	tf_count = tv.GetPeriodCount();
 	max_shift = 4;
 	sym_count = tv.GetSymbolCount();
-	total = max_shift;
+	total = max_shift * 2;
 	
 	data.SetCount(sym_count * tf_count);
 	
 	for(int i = 0; i < data.GetCount(); i++) {
 		SymTf& s = data[i];
 		
+		// setup virtual brokerage
+		s.broker.InitLightweight();
+		s.broker.SetFreeMarginLevel(0.7);
+		
 		// braaainzzz.....
-		s.brain.Init(total, 3); // actions: idle, long, short
+		s.brain.Init(total, 3); // actions: short, idle, ong
 		
 		s.action = ACT_IDLE;
 		s.prev_action = ACT_IDLE;
@@ -1060,8 +1064,6 @@ void RLAgent::Init() {
 
 bool RLAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
-	Panic("TODO: add spread costs");
-	Panic("TODO: use forecaster");
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);
@@ -1082,14 +1084,18 @@ bool RLAgent::Process(const SlotProcessAttributes& attr) {
 
 void RLAgent::Forward(const SlotProcessAttributes& attr) {
 	const Slot& change = GetDependency(1);
+	const Slot& forecaster = GetDependency(2);
 	SymTf& s = GetData(attr);
 	
 	// in forward pass the agent simply behaves in the environment
 	// create input to brain
 	input_array.SetCount(total);
 	int pos = 0;
+	double* value;
 	for(int k = 0; k < max_shift; k++) {
-		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		value = change.GetValue<double>(0, k, attr);
+		input_array[pos++] = value ? *value : 0;
+		value = forecaster.GetValue<double>(0, k, attr);
 		input_array[pos++] = value ? *value : 0;
 	}
 	ASSERT(pos == total);
@@ -1097,16 +1103,15 @@ void RLAgent::Forward(const SlotProcessAttributes& attr) {
 	// get action from brain
 	s.prev_action = s.action;
 	s.action = s.brain.Forward(input_array);
+	s.broker.SetSignal(attr.sym_id, s.action - 1); // from 0:2 to -1:+1 --> signal
+	s.broker.Cycle();
 }
 
 void RLAgent::Backward(const SlotProcessAttributes& attr) {
 	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
-	double value = *change.GetValue<double>(0, 0, attr);
-	
-	if (s.action == ACT_SHORT) value *= -1;
-	else if (s.action == ACT_IDLE) value = -0.00001;
+	double value = s.broker.GetPreviousCycleChange();
 	
 	// in backward pass agent learns.
 	// compute reward
@@ -1187,12 +1192,16 @@ void DQNAgent::Init() {
 	tf_count = tv.GetPeriodCount();
 	max_shift = 8;
 	sym_count = tv.GetSymbolCount();
-	total = max_shift;
+	total = max_shift * 2;
 	
 	data.SetCount(sym_count * tf_count);
 	
 	for(int i = 0; i < data.GetCount(); i++) {
 		SymTf& s = data[i];
+		
+		// setup virtual brokerage
+		s.broker.InitLightweight();
+		s.broker.SetFreeMarginLevel(0.7);
 		
 		// My name is Bond, James Bond.
 		s.agent.Init(1, total+1, 11); // actions: acceleration range -5 +5
@@ -1209,8 +1218,6 @@ void DQNAgent::Init() {
 
 bool DQNAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
-	Panic("TODO: add spread costs");
-	Panic("TODO: use forecaster and change");
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);
@@ -1232,6 +1239,7 @@ bool DQNAgent::Process(const SlotProcessAttributes& attr) {
 
 void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 	const Slot& change = GetDependency(1);
+	const Slot& forecaster = GetDependency(2);
 	SymTf& s = GetData(attr);
 	
 	// in forward pass the agent simply behaves in the environment
@@ -1239,7 +1247,9 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 	input_array.SetCount(total + 1);
 	int pos = 0;
 	for(int k = 0; k < max_shift; k++) {
-		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		double* value = change.GetValue<double>(0, k, attr);
+		input_array[pos++] = value ? *value : 0;
+		value = forecaster.GetValue<double>(0, k, attr);
 		input_array[pos++] = value ? *value : 0;
 	}
 	ASSERT(pos == total);
@@ -1254,15 +1264,17 @@ void DQNAgent::Forward(const SlotProcessAttributes& attr) {
 		s.velocity = Upp::max(Upp::min(s.velocity + acc, +max_velocity), -max_velocity);
 		input_array[total] = (double)s.velocity / (double)max_velocity;
 	}
+	
+	// Only the last action is exported
+	s.broker.SetSignal(attr.sym_id, s.action);
+	s.broker.Cycle();
 }
 
 void DQNAgent::Backward(const SlotProcessAttributes& attr) {
 	const Slot& change = GetDependency(1);
 	SymTf& s = GetData(attr);
 	
-	double value = *change.GetValue<double>(0, 0, attr);
-	double mul = (double)s.velocity / (double)max_velocity * 10.0;
-	value *= mul;
+	double value = s.broker.GetPreviousCycleChange();
 	
 	// in backward pass agent learns.
 	// compute reward
@@ -1350,7 +1362,7 @@ void MonaAgent::Init() {
 	tf_count = tv.GetPeriodCount();
 	max_shift = 10;
 	sym_count = tv.GetSymbolCount();
-	total = max_shift;
+	total = max_shift * 2 + 2;
 	
 	data.SetCount(sym_count * tf_count);
 	
@@ -1362,6 +1374,10 @@ void MonaAgent::Init() {
 	
 	for(int i = 0; i < data.GetCount(); i++) {
 		SymTf& s = data[i];
+		
+		// setup virtual brokerage
+		s.broker.InitLightweight();
+		s.broker.SetFreeMarginLevel(0.7);
 		
 		// My, my, my, aye-aye, whoa!
 		// M-m-m-my Mona
@@ -1395,8 +1411,7 @@ void MonaAgent::Init() {
 bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& change = GetDependency(1);
-	Panic("TODO: add spread costs");
-	Panic("TODO: use forecaster");
+	const Slot& forecaster = GetDependency(2);
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);
@@ -1410,27 +1425,22 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	
 	// in backward pass agent learns.
 	// compute reward
-	if (s.action != IDLE) {
-		ASSERT(s.action == LONG || s.action == SHORT);
-		double value = *change.GetValue<double>(0, attr);
-		s.reward = s.action == SHORT ? value * -1.0 : value;
-		s.reward -= 0.0001; // add some constant expenses
-	} else {
-		s.reward = 0.0;
-	}
+	s.reward = s.broker.GetPreviousCycleChange();
 	
 	
 	// in forward pass the agent simply behaves in the environment
 	// create input to brain
-	input_array.SetCount(total + 2);
+	input_array.SetCount(total);
 	int pos = 0;
 	for(int k = 0; k < max_shift; k++) {
-		double* value = change.GetValue<double>(0, max_shift-1-k, attr);
+		double* value = change.GetValue<double>(0, k, attr);
+		input_array[pos++] = value ? *value : 0;
+		value = forecaster.GetValue<double>(0, k, attr);
 		input_array[pos++] = value ? *value : 0;
 	}
-	ASSERT(pos == total);
 	input_array[pos++] = s.action;
 	input_array[pos++] = s.reward;
+	ASSERT(pos == total);
 	
 	
 	// Calculate action
@@ -1497,6 +1507,9 @@ bool MonaAgent::Process(const SlotProcessAttributes& attr) {
 	char* sig = GetValue<char>(0, attr);
 	*sig = s.action == LONG ? 1 : s.action == SHORT ? -1 : 0;
 	
+	// Only the last action is exported
+	s.broker.SetSignal(attr.sym_id, *sig);
+	s.broker.Cycle();
 	
 	return do_training;
 }
@@ -1590,6 +1603,10 @@ void MonaMetaAgent::Init() {
 	for(int i = 0; i < data.GetCount(); i++) {
 		SymTf& s = data[i];
 		
+		// setup virtual brokerage
+		s.broker.InitLightweight();
+		s.broker.SetFreeMarginLevel(0.7);
+		
 		// My, my, my, aye-aye, whoa!
 		// M-m-m-my Mona
 		// M-m-m-my Mona
@@ -1625,8 +1642,6 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& dqn = GetDependency(2);
 	const Slot& mona = GetDependency(3);
 	const Slot& change = GetDependency(4);
-	Panic("TODO: add spread costs");
-	Panic("TODO: add forecaster (all tf)");
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);
@@ -1640,14 +1655,7 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	
 	// in backward pass agent learns.
 	// compute reward
-	if (s.action != IDLE) {
-		ASSERT(s.action == LONG || s.action == SHORT);
-		double value = *change.GetValue<double>(0, attr);
-		s.reward = s.action == SHORT ? value * -1.0 : value;
-		s.reward -= 0.0001; // add some constant expenses. TODO: real spread
-	} else {
-		s.reward = 0.0;
-	}
+	s.reward = s.broker.GetPreviousCycleChange();
 	
 	
 	// in forward pass the agent simply behaves in the environment
@@ -1728,6 +1736,11 @@ bool MonaMetaAgent::Process(const SlotProcessAttributes& attr) {
 	// Write signal
 	char* sig = GetValue<char>(0, attr);
 	*sig = s.action == LONG ? 1 : s.action == SHORT ? -1 : 0;
+	
+	
+	// Only the last action is exported
+	s.broker.SetSignal(attr.sym_id, *sig);
+	s.broker.Cycle();
 	
 	
 	return do_training;

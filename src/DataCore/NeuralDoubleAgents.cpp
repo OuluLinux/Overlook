@@ -68,6 +68,10 @@ void MonaDoubleAgent::Init() {
 	input_array.SetCount(total, 0.0);
 	input_array[total-3] = 0.01;
 	
+	// setup virtual brokerage
+	broker.InitLightweight();
+	broker.SetFreeMarginLevel(0.7);
+	
 	// My, my, my, aye-aye, whoa!
 	// M-m-m-my Mona
 	// M-m-m-my Mona
@@ -94,14 +98,11 @@ void MonaDoubleAgent::Init() {
 	
 	max_velocity = 5;
 	do_training = true;
-	
-	//broker.Init();
 }
 
 bool MonaDoubleAgent::Process(const SlotProcessAttributes& attr) {
 	const Slot& src = GetDependency(0);
 	const Slot& metamona = GetDependency(1);
-	Panic("TODO: check that channel predictor is followed strongly at this point");
 	
 	if (attr.tf_id == 0 && attr.sym_id == 0) {
 		

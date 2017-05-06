@@ -148,4 +148,68 @@ your thoughts into something concrete. It takes time to get into
 this kind of work routine and many kind of rewards must be involved.&]
 [s0; I added serialization functions for remaining classes. I`'m 
 not sure if they work at first try. There is some tricky reloadings.&]
-[s0; ]]
+[s3; 6.5.2017&]
+[s0; One week since previous entry. I didn`'t have much time to do 
+this at this week and I forgot this journal. I feel that this 
+is a little bit silly. I am going to give it a try anyway.&]
+[s0; This Overlook repository was forked once during the week, and 
+I got nice message concerning improvements of the program. This 
+is a very little amount of activity compared to popular open 
+source projects, but big deal for me. Forking this is still discourged, 
+as the app doesn`'t have any useful and working state yet.&]
+[s0; During the week, I fixed the processing of recurrent neural 
+network slots. The values might be still incorrect, but I can`'t 
+fix them yet. I can diagnose the data, only when the app runs 
+completely. So, one step at a time.&]
+[s0; This is absolutely massive project for one programmer. I would 
+highly appreciate other contributors. Also, processing times 
+are worrisome for the current computing capacity. I am not sure 
+that is the neural network training time something acceptable 
+and sane yet. The training must be repeated eventually, and probably 
+sooner than later, so I don`'t want to wait two weeks after reset...&]
+[s0; I also created a proceeding document in the [/ /docs] folder. 
+I am doing the master`'s thesis later, and that might be re`-used 
+in the thesis. It also helps a lot to keep this project coherent. 
+In that paper, you must say things as clear as possible, and 
+test results must be handled properly, which is very helpful, 
+even if the paper isn`'t published ever. I am still looking for 
+to finish this project in this May 2017, but the paper will propably 
+remain unfinished for some time.&]
+[s0; Today`'s objective is to get all agents running, but if something 
+bigger must be implemented, then it won`'t happen. After that 
+the big loop should run without problems, but the values will 
+still need bugfixes.&]
+[s0; Overlook is basically huge pipeline. It has complex dependencies, 
+which causes processing to be done in batches, which is like 
+car assembly line, where different stuff is done in different 
+places. To progress with the implementation efficiently, programmer 
+have to use a technique, which has different kind of rounds. 
+These rounds can take from hours to weeks. For example, round 
+structure has been following so far (`+ what I assume happening 
+next):&]
+[s0;i150;O9; 1. Planning of the pipeline&]
+[s0;i150;O9; 2. Creating all classes and main functions, and implementing 
+main frame, including threading model and all busy loops. The 
+program must shutdown properly, without memory leaks etc. , in 
+this point. The pipeline should work with dummy classes after 
+this point.&]
+[s0;i150;O9; 3. Implementing all classes and adding them to the pipeline. 
+Code must compile but not run. The programmer must be experienced 
+to be able to program without testing the code.&]
+[s0;i150;O9; 4. Running the program and fixing the runtime bugs in 
+the pipeline.&]
+[s0;i150;O9; 5. Implementing and testing rest of the GUI features. 
+This usually requires so much fast iterative testing and fixing, 
+that it must be done in per`-class basis. The pipeline must be 
+able to be restored from the cache file in 20 seconds for this 
+method to work.&]
+[s0;i150;O9; 6. Analysing the pipeline and checking all values with 
+the nice new GUI. It must be constant and everything must be 
+logged in a fail`-safe way.&]
+[s0;i150;O9; 7. Polishing the turd. Release the little fucker into 
+the wild and see what happens. In this point, you really must 
+clean the code and do or discard your TODO list.&]
+[s0; I am currently at the round 4 and I try to finish it today. 
+This requries much patience from the programmer and this can`'t 
+be recommended to noobs.&]
+[s0;i150;O9; ]]

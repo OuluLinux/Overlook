@@ -403,6 +403,63 @@ All modules get constant processing time (or according to their needs),
 
 \end_layout
 
+\begin_layout Subsection
+Implementation
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Enumerate
+Planning of the pipeline
+\end_layout
+
+\begin_layout Enumerate
+Creating all classes and main functions, and implementing main frame, including
+ threading model and all busy loops.
+ The program must shutdown properly, without memory leaks etc.
+ , in this point.
+ The pipeline should work with dummy classes after this point.
+\end_layout
+
+\begin_layout Enumerate
+Implementing all classes and adding them to the pipeline.
+ Code must compile but not run.
+ The programmer must be experienced to be able to program without testing
+ the code.
+\end_layout
+
+\begin_layout Enumerate
+Running the program and fixing the runtime bugs in the pipeline.
+\end_layout
+
+\begin_layout Enumerate
+Implementing and testing rest of the GUI features.
+ This usually requires so much fast iterative testing and fixing, that it
+ must be done in per-class basis.
+ The pipeline must be able to be restored from the cache file in 20 seconds
+ for this method to work.
+\end_layout
+
+\begin_layout Enumerate
+Analysing the pipeline and checking all values with the nice new GUI.
+ It must be constant and everything must be logged in a fail-safe way.
+ This also exports the test-results.
+\end_layout
+
+\begin_layout Enumerate
+Polishing the turd.
+ Release the little fucker into the wild and see what happens.
+ In this point, you really must clean the code and do or discard your TODO
+ list.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Theorem
 \begin_inset Argument 1
 status open

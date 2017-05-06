@@ -10,9 +10,13 @@ SimBroker::SimBroker() {
 	margin_stop = 0.2;
 	lotsize = 100000;
 	order_counter = 1000000;
+	lightweight = false;
+	
+	
 }
 
 void SimBroker::Init(MetaTrader& mt) {
+	lightweight = false;
 	
 	symbols <<= mt.GetSymbols();
 	currency = mt.GetAccountCurrency();
@@ -20,17 +24,36 @@ void SimBroker::Init(MetaTrader& mt) {
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
 	
-	balance = 1000;
-	equity = 1000;
-	leverage = 1000;
-	margin = 0;
-	margin_free = equity;
+	Clear();
 	
 	TimeVector& tv = GetTimeVector();
 	src = tv.FindLinkSlot("/open");
 	ASSERTEXC(src);
 	change = tv.FindLinkSlot("/change");
 	ASSERTEXC(change);
+}
+
+void SimBroker::InitLightweight() {
+	lightweight = true;
+	
+	Clear();
+	
+	TimeVector& tv = GetTimeVector();
+	src = tv.FindLinkSlot("/open");
+	ASSERTEXC(src);
+	change = tv.FindLinkSlot("/change");
+	ASSERTEXC(change);
+}
+
+void SimBroker::Clear() {
+	orders.Clear();
+	history_orders.Clear();
+	
+	balance = 1000;
+	equity = 1000;
+	leverage = 1000;
+	margin = 0;
+	margin_free = equity;
 }
 
 void SimBroker::Cycle() {

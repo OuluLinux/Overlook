@@ -189,9 +189,10 @@ class RLAgent : public Slot {
 	
 	struct SymTf : Moveable<SymTf> {
 		ConvNet::Brain brain;
+		SimBroker broker;
 		int action, prev_action;
 		double reward;
-		void Serialize(Stream& s) {s % brain % action % prev_action % reward;}
+		void Serialize(Stream& s) {s % brain %action % prev_action % reward;}
 	};
 	Vector<SymTf> data;
 	SymTf& GetData(const SlotProcessAttributes& attr) {return data[attr.sym_id * tf_count + attr.tf_id];}
@@ -222,6 +223,7 @@ class DQNAgent : public Slot {
 	
 	struct SymTf : Moveable<SymTf> {
 		ConvNet::DQNAgent agent;
+		SimBroker broker;
 		int action, prev_action, velocity;
 		double reward;
 		void Serialize(Stream& s) {s % agent % action % prev_action % velocity % reward;}
@@ -259,6 +261,7 @@ class MonaAgent : public Slot {
 	
 	struct SymTf : Moveable<SymTf> {
 		Mona mona;
+		SimBroker broker;
 		int action, prev_action;
 		double reward, prev_open;
 		void Serialize(Stream& s) {s % mona % action % prev_action % reward % prev_open;}
@@ -299,6 +302,7 @@ class MonaMetaAgent : public Slot {
 	
 	struct SymTf : Moveable<SymTf> {
 		Mona mona;
+		SimBroker broker;
 		int action, prev_action;
 		double reward, prev_open;
 		void Serialize(Stream& s) {s % mona % action % prev_action % reward % prev_open;}

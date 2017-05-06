@@ -3,6 +3,7 @@
 namespace DataCore {
 
 Analyzer::Analyzer() {
+	AddValue<double>("");
 	
 }
 

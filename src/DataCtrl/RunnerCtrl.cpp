@@ -75,7 +75,7 @@ void RunnerCtrl::RefreshProgress() {
 		int num = 0;
 		for(int i = 0; i < b.status.GetCount(); i++) {
 			BatchPartStatus& s = b.status[i];
-			if (s.complete) continue;
+			if (s.complete || s.actual == s.total) continue;
 			
 			progress.incomplete.Set(num, 0, num);
 			progress.incomplete.Set(num, 1, s.slot->GetLinkPath());

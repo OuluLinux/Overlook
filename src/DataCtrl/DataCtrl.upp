@@ -12,6 +12,7 @@ file
 	DataCtrl_.icpp,
 	AnalyzerCtrl.h,
 	AnalyzerCtrl.cpp,
+	AnalyzerCtrl.lay,
 	Container.h,
 	Container.cpp,
 	EventCtrl.h,

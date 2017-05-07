@@ -210,4 +210,19 @@ fix re`-processing looping broker reset, the change slot has
 [s3; 7.5.2017&]
 [s0; The analyzer part needs planning currently. The paper what I`'m 
 writing requries that, and it`'s also useful in general.&]
+[s0; Oh, I needed the ideal orders slot, and then I thought how it 
+could be used in forecasting or with agents, and then I remembered 
+two types what I ignored previously.&]
+[s0; The ignored forecaster was autoencoder neural network, which 
+basically has very tight bottleneck in the center, which causes 
+very generalized output, which is good if you want very generic 
+forecast. That might be useful input in the combining Forecaster 
+class. Alone it won`'t work well.&]
+[s0; The ignored agent was classifier neural network. I didn`'t know 
+how to imlement this previously. Basically, it uses that ideal 
+order signal as output, which is `"the sortest route to highest 
+value accumulation`". It is unrealistic to expect finding that 
+in real time, but it is possible afterwards. The market behaves 
+very randomly, so the classifier won`'t perform well alone, but 
+it can be a good additional signal for meta`-agent.&]
 [s0; ]]

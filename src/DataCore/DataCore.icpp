@@ -28,6 +28,7 @@ INITBLOCK {
 	DataCore::TimeVector::Register<ChannelPredicter>();
 	DataCore::TimeVector::Register<MonaMetaAgent>();
 	DataCore::TimeVector::Register<IdealOrders>();
+	DataCore::TimeVector::Register<AutoEncoder>();
 	DataCore::TimeVector::Register<ClassifierAgent>();
 }
 

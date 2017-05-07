@@ -817,7 +817,9 @@ Forecaster::Forecaster() {
 			"\t{\"type\":\"regression\", \"neuron_count\":1},\n"
 			"\t{\"type\":\"adadelta\", \"learning_rate\":0.01, \"momentum\":0, \"batch_size\":1, \"l2_decay\":0.001}\n"
 			"]\n";
-		
+	
+	single = -1;
+	pair = -1;
 	/*SetStyle(
 		"{"
 			//"\"window_type\":\"SEPARATE\","
@@ -839,7 +841,11 @@ Forecaster::Forecaster() {
 }
 
 void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i;
+	i = args.Find("single");
+	if (i != -1) single = args[i];
+	i = args.Find("pair");
+	if (i != -1) pair = args[i];
 }
 
 void Forecaster::SerializeCache(Stream& s, int sym_id, int tf_id) {
@@ -998,11 +1004,12 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 
 
 ClassifierAgent::ClassifierAgent() {
-	
+	ideal = false;
 }
 
 void ClassifierAgent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("ideal");
+	if (i != -1) ideal = args[i];
 }
 
 void ClassifierAgent::Init() {
@@ -1066,7 +1073,8 @@ RLAgent::RLAgent() {
 }
 
 void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("ideal");
+	if (i != -1) ideal = args[i];
 }
 
 void RLAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
@@ -1219,7 +1227,8 @@ DQNAgent::DQNAgent() {
 }
 
 void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("ideal");
+	if (i != -1) ideal = args[i];
 }
 
 void DQNAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
@@ -1390,7 +1399,8 @@ MonaAgent::MonaAgent() {
 }
 
 void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("ideal");
+	if (i != -1) ideal = args[i];
 }
 
 void MonaAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {
@@ -1617,7 +1627,8 @@ MonaMetaAgent::MonaMetaAgent() {
 }
 
 void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
-	
+	int i = args.Find("ideal");
+	if (i != -1) ideal = args[i];
 }
 
 void MonaMetaAgent::SerializeCache(Stream& s, int sym_id, int tf_id) {

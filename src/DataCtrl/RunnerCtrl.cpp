@@ -165,16 +165,18 @@ void RunnerCtrl::Init() {
 	}
 	
 	details.slots.AddColumn("Name");
+	details.slots.AddColumn("Link");
 	details.slots.AddColumn("Size");
 	details.slots.AddColumn("Offset");
 	details.slots.AddColumn("Path");
-	details.slots.ColumnWidths("1 1 1 3");
+	details.slots.ColumnWidths("1 2 1 1 3");
 	int offset = 0;
 	for(int i = 0; i < slot_count; i++) {
 		const Slot& s = tv.GetCustomSlot(i);
 		int resbytes = s.GetReservedBytes();
 		details.slots.Add(
 			s.GetKey(),
+			s.GetLinkPath(),
 			Format("0x%X", resbytes),
 			Format("0x%X", offset),
 			s.GetPath());

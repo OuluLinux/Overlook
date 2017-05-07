@@ -183,6 +183,7 @@ class Forecaster : public Slot {
 	
 	ConvNet::Volume input, output;
 	int sym_count, tf_count;
+	int single, pair;
 	bool do_training;
 	
 	void Forward(const SlotProcessAttributes& attr);
@@ -207,7 +208,7 @@ class ClassifierAgent : public Slot {
 		ConvNet::Session ses;
 	};
 	Vector<SymTf> data;
-	
+	bool ideal;
 public:
 	ClassifierAgent();
 	
@@ -243,6 +244,7 @@ class RLAgent : public Slot {
 	int sym_count, tf_count;
 	int max_shift, total;
 	bool do_training;
+	bool ideal;
 	
 	void Forward(const SlotProcessAttributes& attr);
 	void Backward(const SlotProcessAttributes& attr);
@@ -279,6 +281,7 @@ class DQNAgent : public Slot {
 	int sym_count, tf_count;
 	int max_shift, total;
 	bool do_training;
+	bool ideal;
 	
 	void Forward(const SlotProcessAttributes& attr);
 	void Backward(const SlotProcessAttributes& attr);
@@ -316,6 +319,7 @@ class MonaAgent : public Slot {
 	int sym_count, tf_count;
 	int max_shift, total;
 	bool do_training;
+	bool ideal;
 	
 public:
 	MonaAgent();
@@ -357,6 +361,7 @@ class MonaMetaAgent : public Slot {
 	int sym_count, tf_count;
 	int total;
 	bool do_training;
+	bool ideal;
 	
 public:
 	MonaMetaAgent();

@@ -181,32 +181,42 @@ void Loader::Create() {
 	// Add forecaster
 	ASSERT(forecasters > 0);
 	ses.LinkCore("/forecaster", "/forecaster");
-	
+	if (!trade_real) {
+		for(int i = 0; i < forecasters; i++)
+			ses.LinkCore("/forecaster_s" + IntStr(i), "/forecaster?single=" + IntStr(i));
+		for(int i = 0; i < forecasters; i+=2)
+			ses.LinkCore("/forecaster_p" + IntStr(i / 2), "/forecaster?pair=" + IntStr(i / 2));
+	}
 	
 	// Add agents
 	int agents = 0;
 	if (classagent.Get()) {
 		ses.LinkCore("/classagent", "/classagent");
 		agents++;
+		if (!trade_real) ses.LinkCore("/classagent_ideal", "/classagent?ideal=1");
 	}
 	if (rl1.Get()) {
 		ses.LinkCore("/rl", "/rl");
 		agents++;
+		if (!trade_real) ses.LinkCore("/rl_ideal", "/rl?ideal=1");
 	}
 	
 	if (rl2.Get()) {
 		ses.LinkCore("/dqn", "/dqn");
 		agents++;
+		if (!trade_real) ses.LinkCore("/dqn_ideal", "/dqn?ideal=1");
 	}
 	
 	if (mona.Get()) {
 		ses.LinkCore("/mona", "/mona");
 		agents++;
+		if (!trade_real) ses.LinkCore("/mona_ideal", "/mona?ideal=1");
 	}
 	
 	// Add meta agent (multi-agent, multi-tf)
 	ASSERT(agents > 0);
 	ses.LinkCore("/metamona", "/metamona");
+	if (!trade_real) ses.LinkCore("/metamona_ideal", "/metamona?ideal=1");
 	
 	
 	// Add multi agents
@@ -214,11 +224,13 @@ void Loader::Create() {
 	if (rl2multi.Get()) {
 		ses.LinkCore("/doubledqn", "/doubledqn");
 		multiagents++;
+		if (!trade_real) ses.LinkCore("/doubledqn_ideal", "/doubledqn?ideal=1");
 	}
 	
 	if (monamulti.Get()) {
 		ses.LinkCore("/doublemona", "/doublemona");
 		multiagents++;
+		if (!trade_real) ses.LinkCore("/doublemona_ideal", "/doublemona?ideal=1");
 	}
 	
 	ASSERT(multiagents > 0);

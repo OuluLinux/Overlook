@@ -11,6 +11,24 @@ using namespace Narx;
 
 
 
+class AutoEncoder : public Slot {
+	struct SymTf : Moveable<SymTf> {
+		ConvNet::Session ses;
+	};
+	Vector<SymTf> data;
+	
+public:
+	AutoEncoder();
+	
+	virtual String GetName() {return "AutoEncoder";}
+	virtual String GetShortName() const {return "aenc";}
+	virtual String GetKey() const {return "aenc";}
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	
+};
+
 
 class Recurrent : public Slot {
 	struct SymTf : Moveable<SymTf> {
@@ -183,8 +201,30 @@ public:
 };
 
 
-// RLAgent and DQNAgent are almost identical.
 
+class ClassifierAgent : public Slot {
+	struct SymTf : Moveable<SymTf> {
+		ConvNet::Session ses;
+	};
+	Vector<SymTf> data;
+	
+public:
+	ClassifierAgent();
+	
+	virtual String GetName() {return "ClassifierAgent";}
+	virtual String GetShortName() const {return "classagent";}
+	virtual String GetKey() const {return "classagent";}
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	
+};
+
+
+
+
+
+// RLAgent and DQNAgent are almost identical.
 class RLAgent : public Slot {
 	
 	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};

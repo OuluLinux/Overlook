@@ -287,4 +287,55 @@ bool ValueChange::Process(const SlotProcessAttributes& attr) {
 	return true;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IdealOrders::IdealOrders() {
+	
+}
+
+void IdealOrders::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void IdealOrders::Init() {
+	AddDependency("/open", 1, 0);
+	
+}
+
+bool IdealOrders::Process(const SlotProcessAttributes& attr) {
+	
+	// Search ideal order sequence with A* search in SimBroker
+	Panic("TODO");
+	
+	return false;
+}
+
+
 }

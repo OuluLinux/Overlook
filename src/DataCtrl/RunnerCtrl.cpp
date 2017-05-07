@@ -41,7 +41,7 @@ void RunnerCtrl::RefreshData() {
 	int tab = tabs.Get();
 	switch (tab) {
 		case 0: RefreshProgress();			break;
-		case 1:								break;
+		case 1:	break; // TODO: this shows the ctrl of currently running slot
 		case 2: RefreshDependencyGraph();	break;
 		case 3: RefreshDetails();			break;
 	}

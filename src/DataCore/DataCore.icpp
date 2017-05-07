@@ -27,7 +27,8 @@ INITBLOCK {
 	DataCore::TimeVector::Register<MonaDoubleAgent>();
 	DataCore::TimeVector::Register<ChannelPredicter>();
 	DataCore::TimeVector::Register<MonaMetaAgent>();
-	DataCore::TimeVector::Register<Analyzer>();
+	DataCore::TimeVector::Register<IdealOrders>();
+	DataCore::TimeVector::Register<ClassifierAgent>();
 }
 
 END_UPP_NAMESPACE

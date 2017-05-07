@@ -17,6 +17,8 @@ Loader::Loader() {
 	bardata.SetIndex(0);
 	bardata.Disable();
 	
+	autoencoder.Set(true);
+	autoencoder.Disable();
 	rnn.Disable();
 	lstm.Set(true);
 	lstm.Disable();
@@ -24,6 +26,8 @@ Loader::Loader() {
 	narx.Set(true);
 	narx.Disable();
 	
+	classagent.Set(true);
+	classagent.Disable();
 	rl1.Set(true);
 	rl1.Disable();
 	rl2.Set(true);
@@ -61,8 +65,7 @@ Loader::Loader() {
 	tf6.Disable();
 	tf7.Disable();
 	
-	trade_real.Set(true);
-	trade_real.Disable();
+	trade_real.Set(false);
 	
 	title.SetData("The Profile");
 	
@@ -122,6 +125,7 @@ void Loader::RefreshSessions() {
 void Loader::Create() {
 	DataCore::Session& ses = GetSession();
 	
+	bool trade_real = this->trade_real;
 	
 	// Set settings
 	ses.SetName(title.GetData());
@@ -138,6 +142,7 @@ void Loader::Create() {
 	// Add some always used utils
 	ses.LinkCore("/ma", "/ma");
 	ses.LinkCore("/spread", "/spread");
+	ses.LinkCore("/ideal", "/ideal");
 	ses.LinkCore("/change", "/change");
 	ses.LinkCore("/whstat_fast", "/whstat?period=10");
 	ses.LinkCore("/whstat_slow", "/whstat?period=20");
@@ -146,36 +151,44 @@ void Loader::Create() {
 	ses.LinkCore("/eosc", "/eosc");
 	
 	
-	// Add recurrent neural networks
-	int recurrents = 0;
+	// Add forecaster components (autoencoder and recurrent neural networks)
+	int forecasters = 0;
+	if (autoencoder.Get()) {
+		ses.LinkCore("/aenc", "/aenc");
+		forecasters++;
+	}
 	if (rnn.Get()) {
 		ses.LinkCore("/rnn", "/rnn?type=\"rnn\"");
-		recurrents++;
+		forecasters++;
 	}
 	
 	if (lstm.Get()) {
 		ses.LinkCore("/lstm", "/rnn?type=\"lstm\"");
-		recurrents++;
+		forecasters++;
 	}
 	
 	if (highway.Get()) {
 		ses.LinkCore("/highway", "/rnn?type=\"highway\"");
-		recurrents++;
+		forecasters++;
 	}
 	
 	if (narx.Get()) {
 		ses.LinkCore("/narx", "/narx");
-		recurrents++;
+		forecasters++;
 	}
 	
 	
 	// Add forecaster
-	ASSERT(recurrents > 0);
+	ASSERT(forecasters > 0);
 	ses.LinkCore("/forecaster", "/forecaster");
 	
 	
 	// Add agents
 	int agents = 0;
+	if (classagent.Get()) {
+		ses.LinkCore("/classagent", "/classagent");
+		agents++;
+	}
 	if (rl1.Get()) {
 		ses.LinkCore("/rl", "/rl");
 		agents++;
@@ -209,11 +222,6 @@ void Loader::Create() {
 	}
 	
 	ASSERT(multiagents > 0);
-	
-	
-	// Add analyzer
-	ses.LinkCore("/analyzer", "/analyzer");
-	
 	
 	// Add Timeframes
 	if (tf0.Get()) ses.AddTimeframe(1);

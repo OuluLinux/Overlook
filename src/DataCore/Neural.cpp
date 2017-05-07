@@ -2,6 +2,36 @@
 
 namespace DataCore {
 
+AutoEncoder::AutoEncoder() {
+	
+}
+
+void AutoEncoder::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void AutoEncoder::Init() {
+	AddDependency("/open", 0, 0);
+	
+}
+
+bool AutoEncoder::Process(const SlotProcessAttributes& attr) {
+	
+	// Add autoencoder by looking MNIST digits autoencoder as example
+	//  - but instead of backpropagating with input, use future values
+	Panic("TODO");
+	
+	return false;
+}
+
+
+
+
+
+
+
+
+
 Recurrent::Recurrent() {
 	shifts = 4;
 	for(int i = 0; i < shifts; i++) {
@@ -832,6 +862,7 @@ void Forecaster::Init() {
 	AddDependency("/chp", 0, 0);
 	AddDependency("/eosc", 0, 0);
 	AddDependency("/ma", 0, 0);
+	AddDependency("/aenc", 0, 0);
 	SetProcessedOnce(false);
 	
 	tf_count = tv.GetPeriodCount();
@@ -873,6 +904,7 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	const Slot& chp		= GetDependency(6);
 	const Slot& eosc	= GetDependency(7);
 	const Slot& ma		= GetDependency(8);
+	Panic("TODO: use also autoencoder");
 	
 	// Check if position is useless for training
 	double* open = src.GetValue<double>(0, 0, attr);
@@ -948,6 +980,46 @@ bool Forecaster::Process(const SlotProcessAttributes& attr) {
 	
 	return do_training;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ClassifierAgent::ClassifierAgent() {
+	
+}
+
+void ClassifierAgent::SetArguments(const VectorMap<String, Value>& args) {
+	
+}
+
+void ClassifierAgent::Init() {
+	AddDependency("/open", 0, 0);
+	AddDependency("/ideal", 0, 0);
+	
+}
+
+bool ClassifierAgent::Process(const SlotProcessAttributes& attr) {
+	
+	// Add classifier by looking Classify2D as example
+	//  - but instead of 2D (x,y) input use previous values as input and ideal order signal as output
+	Panic("TODO");
+	
+	return false;
+}
+
 
 
 

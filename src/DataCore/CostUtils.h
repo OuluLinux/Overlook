@@ -2,6 +2,7 @@
 #define _DataCore_CostUtils_h_
 
 #include "Slot.h"
+#include "SimBroker.h"
 
 namespace DataCore {
 using namespace Upp;
@@ -60,6 +61,26 @@ public:
 	virtual String GetName() {return "ValueChange";}
 	virtual String GetShortName() const {return "change";}
 	virtual String GetKey() const {return "change";}
+	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Init();
+	virtual bool Process(const SlotProcessAttributes& attr);
+	
+};
+
+
+
+class IdealOrders : public Slot {
+	struct SymTf : Moveable<SymTf> {
+		SimBroker broker;
+	};
+	Vector<SymTf> data;
+	
+public:
+	IdealOrders();
+	
+	virtual String GetName() {return "IdealOrders";}
+	virtual String GetShortName() const {return "ideal";}
+	virtual String GetKey() const {return "ideal";}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const SlotProcessAttributes& attr);

@@ -41,9 +41,7 @@ file
 	NeuralHuge.h,
 	NeuralHuge.cpp,
 	NeuralDoubleAgents.h,
-	NeuralDoubleAgents.cpp,
-	Analyzer.h,
-	Analyzer.cpp;
+	NeuralDoubleAgents.cpp;
 
 mainconfig
 	"" = "DATACORE_ONLY MT";

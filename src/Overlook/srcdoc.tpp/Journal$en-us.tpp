@@ -5,20 +5,12 @@ topic "Journal";
 [=phN111;*R $$3,3#0680C0FF67EEE4E167183D1E74BF079F:Chapter 3]
 [{_}%FI-FI 
 [s1; Journal&]
-[s0; This is a casual journal about the progress of the Overlook. 
-Please note that my native language is not English, but Finnish. 
-This journal is intended for the audience who hopefully finds 
-this as a success story later. I really see no good reason for 
-interpreting this in a hateful way. I hope that I am not too 
-naive regarding that.&]
-[s0; Everything in this journal must be considered as explicit statements, 
-without any binding interpretations. All interpretations of this 
-text must be considered to be equally valid and invalid, to the 
-extent of the law. This usually is total nonsense compared to 
-final versions and statements. The nonsense is considered to 
-have entertainment value. One main reason for this is also to 
-give insight of the personal struggle of the programming experience.&]
-[s0;= AUTHOR DOES NOT GUARANTEE THIS TEXT TO REFLECT REALITY.&]
+[s0; This journal is totally ridiculous. It is a casual journal about 
+the progress of the Overlook. Please note that my native language 
+is not English, but Finnish. This journal is intended for the 
+audience who see some entertainment value in this. This shouldn`'t 
+be considered to be final statement of anything.&]
+[s0;= &]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
 making small single modules working, and then combining them 
@@ -214,4 +206,8 @@ This requries much patience from the programmer and this can`'t
 be recommended to noobs.&]
 [s0; Aaaand round 4 finished. I have still time to: test multithreading, 
 fix re`-processing looping broker reset, the change slot has 
-[/ cost] everywehere but shouldn`'t.]]
+[/ cost] everywehere but shouldn`'t.&]
+[s3; 7.5.2017&]
+[s0; The analyzer part needs planning currently. The paper what I`'m 
+writing requries that, and it`'s also useful in general.&]
+[s0; ]]

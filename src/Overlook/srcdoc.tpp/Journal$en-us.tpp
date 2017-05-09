@@ -220,9 +220,62 @@ forecast. That might be useful input in the combining Forecaster
 class. Alone it won`'t work well.&]
 [s0; The ignored agent was classifier neural network. I didn`'t know 
 how to imlement this previously. Basically, it uses that ideal 
-order signal as output, which is `"the sortest route to highest 
+order signal as output, which is `"the shortest route to highest 
 value accumulation`". It is unrealistic to expect finding that 
 in real time, but it is possible afterwards. The market behaves 
 very randomly, so the classifier won`'t perform well alone, but 
 it can be a good additional signal for meta`-agent.&]
+[s3; 9.5.2017&]
+[s0; A lot of plan changes today. I needed my old A`* search algorithm 
+code. When I found it, I decided to import some other old code 
+too. You can check it from CoreUtils... Anyway, one thing led 
+to another, and I need to redesign everything from the AnalyzerCtrl 
+viewpoint. Ok, not everything, but many things. There was the 
+QueryTable code and I noticed that it was also a very simple 
+predictor and there is always demand for different types of predictors 
+in this project. I noticed, that the QueryTable is so generic, 
+that it could be used as a dummy alternative instead of almost 
+any forecaster or agent. The QueryTable imports integer values 
+and exports integer values, if you reduce the string`-complexity. 
+Comparing QueryTable and NN forecasters is kind of like comparing 
+discrete and continuous probability distributions.&]
+[s0; So, all NN classes in Overlook could be over`-simplified to 
+QueryTables, and all values could be changed to be discrete values 
+in some range. That might be stupid to implement, but for me 
+it gave a new idea about class structure for connecting classes 
+to each other, and by classifing different types of signals.&]
+[s0; I haven`'t developed this idea yet, but seems like from analyzer`'s 
+viewpoint, you should make the testing more comprehensive and 
+automatic, and the combination of slots should be done based 
+of that testing [_ instead of the manual loader.]&]
+[s0; Currently user sets what slots he wants to use, but the premise 
+is that user wants the best performance and better solution would 
+be that the performance analyzer combines best performing slots 
+or uses existing pre`-analyzed combination.&]
+[s0; One expects, that NN forecasters and agents outperforms QueryTable 
+alternatives, but it should be measured.&]
+[s0; This also opens possibility of out`-of`-order slot connections. 
+Basically it causes falling back to one class object per symbol/timeframe. 
+It might be too complicated, though. Also, there is no need to 
+make unreasonable combinations and the rules for combinations 
+will still be rather strict.&]
+[s0; [* Damn, so much more work.]&]
+[s0; I guess, that the basis will be some kind of prioritising system, 
+which can connect different kind of slots in different symbol/timeframes. 
+It prunes out probably known outcomes and verifies the best performing 
+combinations.&]
+[s0; The prioritising system needs a new Slot`-class replacement 
+and that new class should prefer smallest possible processing 
+unit (1. sym`+tf, 2. sym, 3. tf, 4. all). [_ All kind of processing 
+units should still be possible,] because that is required by 
+some slots (e.g. NARX). Different phases could be: source`-data, 
+indicator, forecaster, forecaster`-combiner, agent and agent`-combiner. 
+Values between slots are classified based on their origin`-phase 
+and type of value. Custom slots will define what classes of values 
+they can use. It is better in that way instead of defining exact 
+sources of values. Some slots could export same signal in floating`-point 
+values and in integer`-values.&]
+[s0; The overview of the change of the plan is now clear, but details 
+are still missing. This is almost enough from today. Must sleep 
+on this. FML.&]
 [s0; ]]

@@ -1,30 +1,25 @@
-# Overlook
+# Overlook (in progress)
+A scientific time series predictor for financial data. This is a master's thesis project, which will be completed eventually. The target time for completion is spring 2019.
 
-A scientific-ish time series predictor for market data.
-
-The work is currently ongoing. Please don't fork or try to run this yet.
-
-###### Welcome to overlook chat in #overlook @ quakenet. [Webchat](http://webchat.quakenet.org/)
+The program is still very buggy. Please don't fork or try to run this yet. The work is currently ongoing.
 
 ### Features
-
-Overlook is using neural network code from academic research projects:
- - ConvNetJS, a popular convolutive neural networks library, via ConvNetC++
- - NARX from NarxSim master's thesis project
- - Mona from Cortical Networks (MICrONS) Workshop sponsored by IARPA
-
-Overlook uses in some way following neural network models:
-- Common **Neural Network modules** (fully connected layers, non-linearities), Classification (SVM/Softmax) and Regression
+Overlook uses following neural network models in some way:
+- Forecasting **Autoencoder**
+- Ideal order **Classifier**
+- **Linear regression**
 - An **Reinforcement Learning** module, based on Deep Q Learning
-- Deep **Recurrent Neural Networks** (RNN) 
 - **Long Short-Term Memory networks** (LSTM) 
-- **Recurrent Highway Networks** (RHN)
 - **Mona**, a goal-seeking neural network that learns hierarchies of cause and effect contexts
 - **NARX**, Nonlinear AutoRegressive with eXogenous inputs neural network architecture
+
+Other features available for programmers:
+- Common **Neural Network modules**
+- Deep **Recurrent Neural Networks** (RNN)
+- **Recurrent Highway Networks** (RHN)
 - **TDNN**, time delay neural network
 
-If some advanced virtual neural network architecture is not included, please send a message to the author.
-
+Ideas for improvements are welcome.
 
 Some other features:
 - High performance processing via fixed size memory. Symbols, timeframes and slot-processors can only be added in the initialization.
@@ -34,3 +29,9 @@ Some other features:
 - GUI for almost everything
 - Cross-platform compatibility (Windows / Linux / BSDs)
 
+
+### Requirements
+- Ultimate++ installed with working compiling (Windows / Linux / FreeBSD)
+- TheIDE package must include few other repositories from github.com/sppp: ConvNetC++, Mona, UltimateScript
+- Generic formatting of symbols in the MT4 account (e.g. EURUSD, #AAPL)
+- Knowledge how to debug c++ and U++ library, because there will be dragons in this path.

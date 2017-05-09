@@ -167,7 +167,6 @@ public:
 };
 
 
-
 // Forecaster is just a regression neural network for multiple inputs.
 // It is like a complex version of ConvNet Regression1D example.
 class Forecaster : public Slot {
@@ -202,7 +201,6 @@ public:
 };
 
 
-
 class ClassifierAgent : public Slot {
 	struct SymTf : Moveable<SymTf> {
 		ConvNet::Session ses;
@@ -220,9 +218,6 @@ public:
 	virtual bool Process(const SlotProcessAttributes& attr);
 	
 };
-
-
-
 
 
 // RLAgent and DQNAgent are almost identical.
@@ -335,13 +330,6 @@ public:
 };
 
 
-
-
-/*
-	Mona-meta-agent takes multiple agents (rl, dqn, mona) signals as inputs values from multiple
-	timeframes, and combines them as one better trader. Assertions have to be made, that it
-	really is performancing better than any single agent.
-*/
 class MonaMetaAgent : public Slot {
 	
 	enum {IDLE, LONG, SHORT, CLOSE};

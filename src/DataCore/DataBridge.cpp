@@ -246,11 +246,11 @@ bool DataBridge::Process(const SlotProcessAttributes& attr) {
 	if (!FileExists(local_history_file))
 		return false;
 	FileIn src(local_history_file);
+	ASSERTEXC(src.IsOpen() && src.GetSize());
 	if (!src.IsOpen() || !src.GetSize()) {
 		LOG("ERROR: invalid file " << local_history_file);
 		return false;
 	}
-	//ASSERTEXC(src.IsOpen() && src.GetSize());
 	
 	
 	int count = 0;
@@ -372,12 +372,13 @@ void DataBridge::ProcessVirtualNode(const SlotProcessAttributes& attr) {
 		int id = c.pairs0[j];
 		double *open, *close;
 		
-		// Hackish solution to wait normal symbols to be loaded in multithreaded version.
+		// Hackish solution to wait for normal symbols to be loaded in multithreaded version.
 		// NOTE: This fails with infinite loop if memory is released because of limit, but this is
 		// usually the first slot, so it shouldn't be a problem.
 		// The correct solution would be to split this into: real symbols and virtual nodes,
 		// which writes values into a dummy slot, which has both of them as dependency, and
 		// virtual-node-slot have real symbols as dependency.
+		// TODO: correct solution
 		for(;;) {
 			open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
 			close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
@@ -392,8 +393,13 @@ void DataBridge::ProcessVirtualNode(const SlotProcessAttributes& attr) {
 	
 	for(int j = 0; j < c.pairs1.GetCount(); j++) {
 		int id = c.pairs1[j];
-		double* open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
-		double* close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
+		double *open, *close;
+		for(;;) {
+			open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
+			close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
+			if (open) break;
+			Sleep(100);
+		}
 		double diff = (*close - *open) / points[id];
 		change -= diff;
 		double* vol	= GetValue<double>(3, id, attr.tf_id, 0, attr);

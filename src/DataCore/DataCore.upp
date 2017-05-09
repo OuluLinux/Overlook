@@ -36,6 +36,7 @@ file
 	Indicators.cpp,
 	Periodicals.h,
 	Periodicals.cpp,
+	QueryTable.h,
 	Neural.h,
 	Neural.cpp,
 	NeuralHuge.h,

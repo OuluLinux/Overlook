@@ -1,1 +1,0 @@
-BINARY_MASK(jpg_all, "*.jpg" BZ2)

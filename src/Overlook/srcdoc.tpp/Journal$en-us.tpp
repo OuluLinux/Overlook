@@ -5,11 +5,12 @@ topic "Journal";
 [=phN111;*R $$3,3#0680C0FF67EEE4E167183D1E74BF079F:Chapter 3]
 [{_}%FI-FI 
 [s1; Journal&]
-[s0; This journal is totally ridiculous. It is a casual journal about 
+[s0; This journal exist to encourage other programmers to write the 
+progress in this way. It is a voice of a casual narrator about 
 the progress of the Overlook. Please note that my native language 
 is not English, but Finnish. This journal is intended for the 
 audience who see some entertainment value in this. This shouldn`'t 
-be considered to be final statement of anything.&]
+be considered to be final statement about anything.&]
 [s0;= &]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
@@ -278,4 +279,200 @@ values and in integer`-values.&]
 [s0; The overview of the change of the plan is now clear, but details 
 are still missing. This is almost enough from today. Must sleep 
 on this. FML.&]
+[s3; 10.5.2017&]
+[s0; I have been thinking how to implement new changes with least 
+work and working time. Seems like I should build another base 
+system from scratch and then copy`-paste all compatible parts. 
+I could skip the reference memory model, because this can be 
+done better without it. That means skipping all [/ linking] of 
+paths. It was essential in the research phase, but it is not 
+required for final product anymore. It was flexible for testing 
+and for searching the final plan.&]
+[s0; Another shortcut is that I could combine [/ Core] and [/ Ctrl ]code. 
+That would mean that e.g. MovingAverage does both drawing the 
+graph and calculating values. It`'s far from [/ high performance 
+computing] as we know it, but I am going to run this in desktop 
+PCs anyway. I am not huge fan for simplifying the program that 
+far.&]
+[s0; I am going to make all changes in place of current project files. 
+I will put all files in the Overlook folder this time.&]
+[s0; Now, let`'s do the planning. Custom classes and their features 
+will be same, but the underlying system changes, and that must 
+be planned:&]
+[s0;i150;O2; All graphics and computing are in the same classes&]
+[s0;i150;O2; Different phases in the pipeline are: source`-data, indicator, 
+forecaster, forecaster`-combiner, agent and agent`-combiner.&]
+[s0;i150;O2; Prioritizer has huge sym/tf/phase space to prioritize 
+different combinations of pipeline`-units. The success of one 
+combination will prioritize it higher on all sym/tf, etc.&]
+[s0;i150;O2; Prioritizer`-slots are tied to phase and their import 
+and export values have typed values (by their phase and type 
+of signal). I guess these rules limits combinations enough.&]
+[s0;i150;O2; Prioritizer`-slots define their processing area size. 
+They can process 1. sym`+tf, 2. sym, 3. tf, 4. all. My traditional 
+indicator collection in archives can be imported when sym`+tf 
+are supported again.&]
+[s0;i150;O2; The processing queue in the Prioritizer is derived from 
+current Session class. The prioritized queue will replace batches, 
+and analyze`-queue will change priorities when processing have 
+been completed. Basically all [/ processing`-receipes] exists in 
+the same queue and only the processing will trigger the creation 
+of the processing slot object. All priority changes are done 
+after the analyzing, which can be followed from the GUI.&]
+[s0;i150;O2; The paper need results, which can be exported from analyzing 
+results. It can be improved easily over time, when all the primitive 
+analyzing is done in small parts at first, and the more comprehensive 
+analyzing can be done from same points later.&]
+[s0; I am little sad about the need to rewrite so much. This version 
+required some seriously hard work already. However, this is 12th 
+time during 6 years when this kind of rewrite plan had to be 
+made, if I remember correctly. I wrote the progress down somewhere, 
+but I have no clue where that text is.&]
+[s0; The QueryTable will be the first dummy slot in every phase. 
+Even the prioritizing could be done with it. Then NN archs can 
+compete with it, and when they outperform QueryTable, they can 
+the primary processor.&]
+[s0; Round 2. Creating all classes. Also, moved everything to sourceforge 
+in part of the new UltimateScript project :)&]
+[s0; ...&]
+[s0; Well this was unexpected day. I copied all the most important 
+existing code and tried to reduce useless complexity at the same 
+time. The line count is around 10000 lines, which is good.&]
+[s3; 11.5.2017&]
+[s0; The implementation plan for Prioritizer class was getting more 
+clear today. Instead of iterating all combinations of slots somehow, 
+the combination must be created from last to first based on QueryTable 
+values. For most of the slots, there is huge amount of input 
+switches, which suggests that combination iteration is very bad 
+solution.&]
+[s0; I also planned the featuers of QueryTable custom slots. They 
+are very simple when compared to neural network alternatives, 
+but that is good at the beginnig as NN slots can be added later.&]
+[s0; Today`'s tasks are:&]
+[s0;i150;O0; implementing queue generating function using QueryTable, 
+which requires slot`-value`-types etc.&]
+[s0;i150;O0; continue implementing QueryTable classes until time 
+runs out&]
+[s0; I might not complete the first task today. It`'s very complex.&]
+[s0; ...&]
+[s0; I searched the import and export types of values for existing 
+classes. This changes plan again. These types can automatically 
+be connected with QueryTable and existing custom slots can be 
+provided as bridges between value`-types. So these bridges between 
+value`-types are being connected, and the combinations are tested. 
+&]
+[s0; Seems like this should be started from new project. The existing 
+package is a mess. I will add good stuff from it later. Sadly, 
+this journal stays here too.&]
+[s0; ...&]
+[s0; This priority`-queue maker from recursive reverse visiter is 
+a tough nut to crack. I haven`'t had this difficult problem in 
+months. &]
+[s0; ...&]
+[s0; Finally, I cracked that nut. The combination of slots is a binary`-string. 
+It enables some features which I am too tired to describe now. 
+One thing sure is that I will start implementing it tomorrow. 
+It allows very fast QueryTable processing and small memory footprint.&]
+[s0; Basically, you can put all arguments affecting the system into 
+the binary`-string, and you can easily fetch all results relating 
+to a single argument. Then you can analyze how valuable some 
+argument`-value is. In the end the application can show detailed 
+list of reasons why the best combination is what it is.&]
+[s0; This was exhausting day, and I almost didn`'t write code at 
+all. Very weird... I just refined this plan. The complete opposite 
+is to do some hand routine where you don`'t need to think at 
+all.&]
+[s0; [_ This day will be the cornerstone of the results of my master`'s 
+thesis, however.]&]
+[s3; 12.5.2017&]
+[s0; Yesterday was especially troublesome day. It is almost unbelieveable 
+that I managed to summarise the final binary`-string plan. The 
+clues kept coming throughout the day, but they weren`'t obvious.&]
+[s0; Seems like the project progresses normally today. I`'m on the 
+way of implemention already. The tasks for today are:&]
+[s0;i150;O0; custom slots must export input `& output types&]
+[s0;i150;O0; in `& out types must be collected at custom slot registration&]
+[s0;i150;O0; RefreshQueue combination queue maker&]
+[s0;i150;O0; unique slot processing queue for combination queue&]
+[s0;i150;O0; new slot objects to the queue objects or move from previous 
+queue&]
+[s0;i150;O0; the correct processing order based on dependency relationships&]
+[s0;i150;O0; processing of slots&]
+[s0; Yet, yesterday I was completely stuck with the plan.&]
+[s0; ...&]
+[s0; This comination`-queue maker is the worst bottleneck. I made 
+a plan and schematic`-like picture, but I still almost get stuck. 
+This is completely new topic for me, maybe that`'s why.&]
+[s0; ...&]
+[s0; The progressing is exceptionally slow. The RefreshQueue combination 
+queue maker has such a resistance. &]
+[s0; I managed to iterate all initial combinations, but some of them 
+might be bad. There are some rules for those, and I haven`'t 
+checked them all yet.&]
+[s0; Ok, the progressing speed was 1/4 of what I hoped, but that 
+is still better than being stuck. This was almost fun and it 
+was pure entertainment compared to the confused planning of yesterday.&]
+[s3; 13.5.2017&]
+[s0; I found a nice graphical list of neural network architectures 
+via stumbleupon http://www.asimovinstitute.org/neural`-network`-zoo/ 
+. It would be interesting to implement all of these in the Overlook 
+and make a performance comparison. The included ConvNetC`+`+ 
+supports almost all of those already, and many of those has been 
+demonstrated in the ConvNetC`+`+ examples. The missing features 
+are rather easy to implement with the correct documentation. 
+I don`'t have high hopes for finding anything useful from those, 
+but it sure would be interesting. It would also be good for the 
+sake of completeness.&]
+[s0; Today things go smoothly. The speed of progress has been improving 
+two days in a row.&]
+[s0; There is some epic computer security problem going on. Every 
+news source reports it. Those doesn`'t really affect my FBSD 
+systems. This is vulnerable, of course, but the reward for exploiting 
+them is so low, that probably no one bothers. The feeling of 
+open and secure OS is just best.&]
+[s0; ...&]
+[s0; I did some major restructuring. The new Factory class handles 
+all custom classes in the project now. The main overlook program 
+is just opening static objects which are registered to the factory. 
+Very simple and nice.&]
+[s0; ...&]
+[s0; Seems like in 24 hours happened `"Biggest Ransomware Attack 
+In History`". Only news reports about it yet. Some smaller blogs 
+too. ZeroHedge has long discussion topic about it, and . The 
+New York Times has `"Animated Map of How Tens of Thousands of 
+Computers Were Infected With Ransomware`" (https://t.co/LDFCW9K5Ls) 
+which is interesting, because it shows a global response in one 
+hour. This may not be big thing in total cost of damages, but 
+it will cause huge wave of discussion in every smallest possible 
+traditional news source, [_ and at the same time globally.] That 
+will be a wake up call about the real global scale of human establishment 
+for many for sure. Unfortunately, it will cause an opposition 
+of people wanting to ban bitcoin and crypto`-currencies, without 
+understanding that they want to ban a mathematical algorithm, 
+which was invented a short time ago.&]
+[s0; ...&]
+[s0; I managed to implement all the queueing today. Still, querytable 
+isn`'t being used. Seems like I must postpone it until result 
+vector has enought items in it.&]
+[s3; 14.5.2017&]
+[s0; Heavy snowfall at outside. Usually this doesn`'t happen in May. 
+I haven`'t seen anything like this ever before. This feels like 
+January and I can`'t tell any difference from the view what I 
+see from my window. It should be almost summer. Two years ago 
+the may was especially sunny and between 15`-20 degress of Celcius 
+at daytime, now it rains snow all the time. This is still somewhat 
+normal in Finland, but not usual. This year`'s potato farming 
+will definitely suffer with this trend.&]
+[s0; I am implementing the processing of the job`-queue, but there 
+is some dragons ahead. Previously I tested some high`-performance 
+computing model, but it had to be ditched eventually. It just 
+wasn`'t flexible enough and benefits were also lost in the end. 
+Now I am falling back to the model, which is very similar to 
+the MetaTrader`'s MQL language. This, however, allows processing 
+of multiple symbols and timeframes at once, which is requirement 
+for classes like NARX. There is some positive implications from 
+this too: I can import all my old indicators to the overlook. 
+If it had been any more difficult than copy`-pasting, I would 
+have skipped it, but now I can adjust the base class to do just 
+that.&]
 [s0; ]]

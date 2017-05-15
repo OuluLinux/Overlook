@@ -1,7 +1,0 @@
-#ifndef _DataCore_icpp_init_stub
-#define _DataCore_icpp_init_stub
-#include "Core/init"
-#define BLITZ_INDEX__ F6ca50b7cbeb9e21bc7381d16b1587d10
-#include "DataCore.icpp"
-#undef BLITZ_INDEX__
-#endif

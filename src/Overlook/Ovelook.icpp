@@ -1,0 +1,67 @@
+#include "Overlook.h"
+using namespace Overlook;
+
+NAMESPACE_UPP
+
+INITBLOCK {
+	
+	
+	// Generic ctrls
+	Factory::Register<BaseSystem, BaseSystemCtrl>("Base system");
+	
+	Factory::Register<Prioritizer, PrioritizerCtrl>("Prioritizer");
+	
+	
+	
+	
+	// Cores and ctrls...
+	
+	// Register slots in correct dependency order!!!
+	// Earlier (upper) slots can't find later registered (lower) slots as inputs!!!
+	
+	Factory::RegisterPipe<DataBridge, GraphGroupCtrl>("DataBridge");
+	
+	Factory::RegisterPipe<SpreadStats, GraphGroupCtrl>("Spread Statistics");
+	Factory::RegisterPipe<ValueChange, GraphGroupCtrl>("Change of data-values");
+	Factory::RegisterPipe<IdealOrders, GraphGroupCtrl>("Ideal order signal");
+	
+	
+	Factory::RegisterPipe<MovingAverage, GraphGroupCtrl>("Moving average");
+	
+	Factory::RegisterPipe<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
+	Factory::RegisterPipe<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
+	Factory::RegisterPipe<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
+	Factory::RegisterPipe<EventOsc, GraphGroupCtrl>("Known event intensity oscillator");
+	
+	
+	Factory::RegisterPipe<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
+	
+	Factory::RegisterPipe<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
+	
+	Factory::RegisterPipe<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
+	
+	Factory::RegisterPipe<QueryTableAgent, AgentCtrl>("QueryTable agent");
+	
+	Factory::RegisterPipe<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
+	
+	Factory::RegisterPipe<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
+	
+	Factory::RegisterPipe<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");
+	
+	/*
+	Factory::RegisterPipe<AutoEncoder>();
+	Factory::RegisterPipe<Recurrent>();
+	Factory::RegisterPipe<::Factory::NARX>();
+	Factory::RegisterPipe<Forecaster>();
+	Factory::RegisterPipe<ClassifierAgent>();
+	Factory::RegisterPipe<RLAgent>();
+	Factory::RegisterPipe<::Factory::DQNAgent>();
+	Factory::RegisterPipe<MonaAgent>();
+	Factory::RegisterPipe<MonaMetaAgent>();
+	Factory::RegisterPipe<MonaDoubleAgent>();
+	*/
+	int c = Factory::GetFactoryInputs().GetCount();
+	ASSERT(Factory::GetFactoryInputs().GetCount());
+}
+
+END_UPP_NAMESPACE

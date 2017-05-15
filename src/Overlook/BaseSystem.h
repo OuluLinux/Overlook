@@ -10,6 +10,7 @@ using namespace Upp;
 class BaseSystem : public Core {
 	
 protected:
+	friend class DataBridge;
 	
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
@@ -73,7 +74,9 @@ public:
 	virtual void Init();
 	virtual void Start() {}
 	
-	
+	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
+		out.Add(ValueType(SourcePhase, TimeValue, SymTf, 1));
+	}
 };
 
 
@@ -87,7 +90,6 @@ public:
 	
 };
 
-inline BaseSystem& GetBaseSystem() {return Factory::GetCore<BaseSystem>();}
 }
 
 #endif

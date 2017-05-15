@@ -2,15 +2,15 @@
 
 namespace Overlook {
 
-/*Pipe::Pipe() {
+/*Core::Core() {
 	
 }
 
-Pipe::~Pipe() {
+Core::~Core() {
 	
 }*/
 /*
-void Pipe::AddValue(uint16 bytes, String name, String description) {
+void Core::AddValue(uint16 bytes, String name, String description) {
 	CoreValue& value = values.Add();
 	value.bytes = bytes;
 	value.name = name;
@@ -18,7 +18,7 @@ void Pipe::AddValue(uint16 bytes, String name, String description) {
 	data.Add();
 }
 
-void Pipe::SetReady(int sym_id, int tf_id, int pos, const CoreProcessAttributes& attr, bool ready) {
+void Core::SetReady(int sym_id, int tf_id, int pos, const CoreProcessAttributes& attr, bool ready) {
 	byte* ready_slot = this->ready[sym_id][tf_id].Begin();
 	ASSERT(ready_slot);
 	int slot_pos = attr.slot_pos;
@@ -31,11 +31,11 @@ void Pipe::SetReady(int sym_id, int tf_id, int pos, const CoreProcessAttributes&
 		*ready_slot &= !ready_mask;
 }
 
-void Pipe::SetReady(int pos, const CoreProcessAttributes& attr, bool ready) {
+void Core::SetReady(int pos, const CoreProcessAttributes& attr, bool ready) {
 	SetReady(attr.sym_id, attr.tf_id, pos, attr, ready);
 }
 
-bool Pipe::IsReady(int pos, const CoreProcessAttributes& attr) {
+bool Core::IsReady(int pos, const CoreProcessAttributes& attr) {
 	byte* ready_slot = ready[attr.sym_id][attr.tf_id].Begin();
 	if (!ready_slot)
 		return false;
@@ -48,7 +48,7 @@ bool Pipe::IsReady(int pos, const CoreProcessAttributes& attr) {
 */
 
 
-Pipe::Pipe()
+Core::Core()
 {
 	window_type = WINDOW_CHART;
 	bars = 0;
@@ -64,11 +64,11 @@ Pipe::Pipe()
 	tf_id = -1;
 }
 
-Pipe::~Pipe() {
+Core::~Core() {
 	
 }
 
-void Pipe::ClearContent() {
+void Core::ClearContent() {
 	bars = 0;
 	counted = 0;
 	for(int i = 0; i < indices.GetCount(); i++) {
@@ -78,13 +78,13 @@ void Pipe::ClearContent() {
 }
 
 
-void Pipe::Refresh()
+void Core::Refresh()
 {
 	/*
 	lock.EnterWrite();
 	
 	if (src.Is()) {
-		Pipe* cont = src.Get<Pipe>();
+		Core* cont = src.Get<Core>();
 		if (cont)
 			cont->Refresh();
 	}
@@ -109,14 +109,14 @@ void Pipe::Refresh()
 	*/
 }
 
-void Pipe::SetIndexBuffer ( int i, FloatVector& vec)
+void Core::SetIndexBuffer ( int i, FloatVector& vec)
 {
 	indices[i] = &vec;
 	if (i < buffer_settings.GetCount())
 		buffer_settings[i].buffer = &vec;
 }
 
-void Pipe::SetPoint(double d) {
+void Core::SetPoint(double d) {
 	point = d;
 	for(int i = 0; i < indices.GetCount(); i++) {
 		indices[i]->SetPoint(d);
@@ -130,23 +130,23 @@ void Pipe::SetPoint(double d) {
 
 
 
-double Pipe::Open ( int shift ) {
+double Core::Open ( int shift ) {
 	//return data->GetIndexValue(0, shift);
 }
 
-double Pipe::High( int shift ) {
+double Core::High( int shift ) {
 	//return data->GetIndexValue(2, shift);
 }
 
-double Pipe::Low( int shift ) {
+double Core::Low( int shift ) {
 	//return data->GetIndexValue(1, shift);
 }
 
-double Pipe::Volume ( int shift ) {
+double Core::Volume ( int shift ) {
 	//return data->GetIndexValue(3, shift);
 }
 
-int Pipe::HighestHigh(int period, int shift) {
+int Core::HighestHigh(int period, int shift) {
 	ASSERT(period > 0);
 	double highest = -DBL_MAX;
 	int highest_pos = -1;
@@ -160,7 +160,7 @@ int Pipe::HighestHigh(int period, int shift) {
 	return highest_pos;
 }
 
-int Pipe::LowestLow(int period, int shift) {
+int Core::LowestLow(int period, int shift) {
 	ASSERT(period > 0);
 	double lowest = DBL_MAX;
 	int lowest_pos = -1;
@@ -174,7 +174,7 @@ int Pipe::LowestLow(int period, int shift) {
 	return lowest_pos;
 }
 
-int Pipe::HighestOpen(int period, int shift) {
+int Core::HighestOpen(int period, int shift) {
 	ASSERT(period > 0);
 	double highest = -DBL_MAX;
 	int highest_pos = -1;
@@ -188,7 +188,7 @@ int Pipe::HighestOpen(int period, int shift) {
 	return highest_pos;
 }
 
-int Pipe::LowestOpen(int period, int shift) {
+int Core::LowestOpen(int period, int shift) {
 	ASSERT(period > 0);
 	double lowest = DBL_MAX;
 	int lowest_pos = -1;
@@ -202,11 +202,11 @@ int Pipe::LowestOpen(int period, int shift) {
 	return lowest_pos;
 }
 
-int Pipe::GetMinutePeriod() {
+int Core::GetMinutePeriod() {
 	
 }
 
-double Pipe::GetAppliedValue ( int applied_value, int i )
+double Core::GetAppliedValue ( int applied_value, int i )
 {
 	double dValue;
 	
@@ -249,7 +249,7 @@ double Pipe::GetAppliedValue ( int applied_value, int i )
 	return ( dValue );
 }
 
-void Pipe::RefreshSource() {
+void Core::RefreshSource() {
 	/*data = src.Get<BarData>();
 	if (data)
 		SetPoint(data->GetPoint());*/

@@ -9,14 +9,12 @@ using namespace Overlook;
 
 
 GUI_APP_MAIN {
-	Factory::Init();
 	
 	::Overlook::Overlook ol;
 	ol.Init();
 	ol.Run();
 	ol.Deinit();
 	
-	Factory::Deinit();
 	Thread::ShutdownThreads();
 }
 

@@ -152,7 +152,7 @@ void SpreadMeanProfit::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void SpreadMeanProfit::Init() {
-	/*SetPipeSeparateWindow();
+	/*SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetIndexCount(1);
 	SetIndexBuffer ( 0, mean_profit );
@@ -166,7 +166,7 @@ void SpreadMeanProfit::Init() {
 	if (!askbid)
 		throw DataExc();
 	
-	if (!GetSource().Get<Pipe>())
+	if (!GetSource().Get<Core>())
 		throw DataExc(); // require bardata source
 	*/
 }
@@ -181,7 +181,7 @@ void SpreadMeanProfit::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	Pipe& pb = *GetSource().Get<Pipe>();
+	Core& pb = *GetSource().Get<Core>();
 	FloatVector& open = pb.GetBuffer(0);
 	
 	bars--;
@@ -233,7 +233,7 @@ void SpreadProfitDistribution::SetArguments(const VectorMap<String, Value>& args
 }
 
 void SpreadProfitDistribution::Init() {
-	/*SetPipeSeparateWindow();
+	/*SetCoreSeparateWindow();
 	SetBufferCount(2);
 	SetIndexCount(2);
 	SetIndexBuffer ( 0, mean );
@@ -257,7 +257,7 @@ void SpreadProfitDistribution::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	BridgeAskBid& askbid = dynamic_cast<BridgeAskBid&>(At(0));
-	Pipe& subtfchanges = At(1);
+	Core& subtfchanges = At(1);
 	
 	FloatVector& abschange_mean   = subtfchanges.GetBuffer(2);
 	FloatVector& abschange_stddev = subtfchanges.GetBuffer(3);
@@ -318,7 +318,7 @@ void SpreadProbability::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void SpreadProbability::Init() {
-	/*SetPipeSeparateWindow();
+	/*SetCoreSeparateWindow();
 	SetBufferCount(2);
 	SetIndexCount(2);
 	SetIndexBuffer ( 0, profit );
@@ -328,14 +328,14 @@ void SpreadProbability::Init() {
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	
-	SetPipeLevelCount(3);
-	SetPipeLevel(0, 0.5);
-	SetPipeLevel(1, 0.7);
-	SetPipeLevel(2, 0.3);
-	SetPipeLevelsColor(Color(192, 192, 192));
-	SetPipeLevelsStyle(STYLE_DOT);
-	SetPipeMinimum(0);
-	SetPipeMaximum(1);
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 0.5);
+	SetCoreLevel(1, 0.7);
+	SetCoreLevel(2, 0.3);
+	SetCoreLevelsColor(Color(192, 192, 192));
+	SetCoreLevelsStyle(STYLE_DOT);
+	SetCoreMinimum(0);
+	SetCoreMaximum(1);
 	
 	if (RequireIndicator("costpdist")) throw DataExc();
 	*/
@@ -349,12 +349,12 @@ void SpreadProbability::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	Pipe& cost_profit_dist = At(0);
+	Core& cost_profit_dist = At(0);
 	
 	FloatVector& cost_profit_mean   = cost_profit_dist.GetBuffer(0);
 	FloatVector& cost_profit_stddev = cost_profit_dist.GetBuffer(1);
 	
-	Pipe& pb = *GetSource().Get<Pipe>();
+	Core& pb = *GetSource().Get<Core>();
 	FloatVector& open = pb.GetBuffer(0);
 	
 	bars--;

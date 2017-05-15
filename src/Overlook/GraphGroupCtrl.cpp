@@ -49,21 +49,21 @@ GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
 }
 
 void GraphGroupCtrl::SetGraph(Core* src) {
-	/*ClearPipes();
+	/*ClearCores();
 	if (!src.Is())
 		return;
-	bardata = src.Get<Pipe>();
+	bardata = src.Get<Core>();
 	if (!bardata) {
 		Core* bdata = src->GetSource();
-		bardata = bdata.Get<Pipe>();
+		bardata = bdata.Get<Core>();
 		GraphCtrl& main = AddGraph(bdata);
 		ArrayNode* arr = src.Get<ArrayNode>();
 		if (arr) {
 			// Array of containers
 			for(int i = 0; i < arr->sub_nodes.GetCount(); i++) {
 				Core*& src = arr->sub_nodes[i];
-				Pipe* cont = src.Get<Pipe>();
-				if (cont && !cont->IsPipeSeparateWindow()) {
+				Core* cont = src.Get<Core>();
+				if (cont && !cont->IsCoreSeparateWindow()) {
 					main.AddSource(src);
 				} else {
 					AddGraph(src);
@@ -71,8 +71,8 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 			}
 		} else {
 			// Single container
-			Pipe* cont = src.Get<Pipe>();
-			if (cont && !cont->IsPipeSeparateWindow()) {
+			Core* cont = src.Get<Core>();
+			if (cont && !cont->IsCoreSeparateWindow()) {
 				main.AddSource(src);
 			} else {
 				AddGraph(src);
@@ -84,7 +84,7 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 	period = src->GetPeriod();*/
 }
 
-void GraphGroupCtrl::ClearPipes() {
+void GraphGroupCtrl::ClearCores() {
 	split.Clear();
 	graphs.Clear();
 }

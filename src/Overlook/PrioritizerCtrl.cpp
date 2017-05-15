@@ -44,27 +44,28 @@ PrioritizerCtrl::PrioritizerCtrl() {
 }
 	
 void PrioritizerCtrl::RefreshData() {
-	BaseSystem& base = GetBaseSystem();
-	Prioritizer& prior = Factory::GetCore<Prioritizer>();
+	BaseSystem& base = core->Get<BaseSystem>();
+	Prioritizer& prio = *dynamic_cast<Prioritizer*>(core);
+	
 	
 	String s;
 	int tab = tabs.Get();
 	if (tab == 0) {
-		prior.lock.Enter();
+		prio.lock.Enter();
 		
-		for(int i = 0; i < prior.GetPipelineCount(); i++) {
-			PipelineItem& q = prior.GetPipeline(i);
+		for(int i = 0; i < prio.GetCorelineCount(); i++) {
+			CorelineItem& q = prio.GetCoreline(i);
 			pipeline_queue.Set(i, 0, i);
 			pipeline_queue.Set(i, 1, HexVector(q.value));
 			pipeline_queue.Set(i, 2, q.priority);
 		}
-		pipeline_queue.SetCount(prior.GetPipelineCount());
+		pipeline_queue.SetCount(prio.GetCorelineCount());
 		
-		for(int i = 0; i < prior.GetCoreCount(); i++) {
-			CoreItem& q = prior.GetCore(i);
+		for(int i = 0; i < prio.GetCoreCount(); i++) {
+			CoreItem& q = prio.GetCore(i);
 			process_queue.Set(i, 0, i);
 			process_queue.Set(i, 1, q.factory);
-			process_queue.Set(i, 2, Factory::GetPipeFactories()[q.factory].a);
+			process_queue.Set(i, 2, Factory::GetCtrlFactories()[q.factory].a);
 			process_queue.Set(i, 3, HexVector(q.value));
 			
 			s = "";
@@ -87,21 +88,21 @@ void PrioritizerCtrl::RefreshData() {
 			
 			process_queue.Set(i, 6, q.priority);
 		}
-		process_queue.SetCount(prior.GetCoreCount());
+		process_queue.SetCount(prio.GetCoreCount());
 		
-		for(int i = 0; i < prior.GetJobCount(); i++) {
-			JobItem& j = prior.GetJob(i);
+		for(int i = 0; i < prio.GetJobCount(); i++) {
+			JobItem& j = prio.GetJob(i);
 			
 			job_queue.Set(i, 0, i);
 			job_queue.Set(i, 1, j.factory);
-			job_queue.Set(i, 2, Factory::GetPipeFactories()[j.factory].a);
+			job_queue.Set(i, 2, Factory::GetCtrlFactories()[j.factory].a);
 			job_queue.Set(i, 3, base.GetSymbol(j.sym));
 			job_queue.Set(i, 4, base.GetPeriodString(j.tf));
 			job_queue.Set(i, 5, j.priority);
 		}
-		job_queue.SetCount(prior.GetJobCount());
+		job_queue.SetCount(prio.GetJobCount());
 		
-		prior.lock.Leave();
+		prio.lock.Leave();
 	}
 	else {
 		

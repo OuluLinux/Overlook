@@ -19,9 +19,9 @@ using namespace Upp;
 enum {SourcePhase, IndiPhase, ForecastPhase, ForecastCombPhase, AgentPhase, AgentCombPhase, DestPhase};
 
 enum {
+	TimeValue,
 	RealValue,
 	RealChangeValue,
-	RealIndicatorValue,
 	SpreadChangeValue,
 	RealProxyChangeValue,
 	SpreadProxyChangeValue,
@@ -30,7 +30,8 @@ enum {
 	IdealOrderSignal,
 	ForecastChangeValue,
 	ForecastChannelValue,
-	IndicatorValue,
+	IndicatorValue,				// Any indicator value
+	RealIndicatorValue,			// Indicator value in the scale of price value
 	TimeOscillatorValue,
 	ForecastOrderSignal,
 	RealVolumeValue
@@ -102,7 +103,7 @@ struct DataExc : public Exc {
 
 typedef Vector<byte> CoreData;
 
-class Pipe;
+class Core;
 
 enum {SLOT_SYMTF, SLOT_SYM, SLOT_TF, SLOT_ONCE};
 
@@ -117,7 +118,7 @@ struct CoreProcessAttributes : Moveable<CoreProcessAttributes> {
 	int periods[16];						// periods for all timeframes
 	int slot_bytes;							// reserved memory in bytes for current slot
 	int slot_pos;							// position of the current slot in the sym/tf/pos vector
-	Pipe* slot;								// pointer to the current slot
+	Core* slot;								// pointer to the current slot
 	
 	int GetBars() const {return bars[tf_id];}
 	int GetCounted() const {return pos[tf_id];}
@@ -126,7 +127,7 @@ struct CoreProcessAttributes : Moveable<CoreProcessAttributes> {
 
 struct BatchPartStatus : Moveable<BatchPartStatus> {
 	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
-	Pipe* slot;
+	Core* slot;
 	Time begin, end;
 	int sym_id, tf_id, actual, total;
 	byte batch_slot;

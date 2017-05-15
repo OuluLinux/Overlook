@@ -6,7 +6,7 @@
 namespace Overlook {
 
 
-class QueryTableForecaster : public Pipe {
+class QueryTableForecaster : public Core {
 	
 public:
 	typedef QueryTableForecaster CLASSNAME;
@@ -20,7 +20,7 @@ public:
 	}
 };
 
-class QueryTableHugeForecaster : public Pipe {
+class QueryTableHugeForecaster : public Core {
 	
 public:
 	typedef QueryTableHugeForecaster CLASSNAME;
@@ -34,7 +34,7 @@ public:
 	}
 };
 
-class QueryTableMetaForecaster : public Pipe {
+class QueryTableMetaForecaster : public Core {
 	
 public:
 	typedef QueryTableMetaForecaster CLASSNAME;
@@ -53,7 +53,7 @@ public:
 };
 
 
-class QueryTableAgent : public Pipe {
+class QueryTableAgent : public Core {
 	
 public:
 	typedef QueryTableAgent CLASSNAME;
@@ -71,7 +71,7 @@ public:
 };
 
 
-class QueryTableHugeAgent : public Pipe {
+class QueryTableHugeAgent : public Core {
 	
 public:
 	typedef QueryTableHugeAgent CLASSNAME;
@@ -89,7 +89,7 @@ public:
 };
 
 
-class QueryTableMetaAgent : public Pipe {
+class QueryTableMetaAgent : public Core {
 	
 public:
 	typedef QueryTableMetaAgent CLASSNAME;
@@ -105,7 +105,7 @@ public:
 	}
 };
 
-class QueryTableDoubleAgent : public Pipe {
+class QueryTableDoubleAgent : public Core {
 	
 public:
 	typedef QueryTableDoubleAgent CLASSNAME;

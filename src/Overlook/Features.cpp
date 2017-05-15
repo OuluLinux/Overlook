@@ -30,7 +30,7 @@ void FeatureDetector::Init()
 	String path = this_path + "/zz";
 	buf = res.ResolvePath(path);
 	if (!buf.Is()) throw DataExc();
-	cont = buf.Get<Pipe>();
+	cont = buf.Get<Core>();
 	if (!cont) throw DataExc();
 	
 	
@@ -47,7 +47,7 @@ void FeatureDetector::Start() {
 	int bars = cont->GetBars();
 	const FloatVector& keypoints = cont->GetIndex(1);
 	//DataVar src = cont->GetSource();
-	Pipe* bd = src.Get<Pipe>();
+	Core* bd = src.Get<Core>();
 	if (!bd) throw DataExc();
 	
 	const FloatVector& open = bd->GetOpen();

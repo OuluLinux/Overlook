@@ -11,7 +11,7 @@ namespace Overlook {
 using namespace Narx;
 
 
-class AutoEncoder : public Pipe {
+class AutoEncoder : public Core {
 	ConvNet::Session ses;
 	
 public:
@@ -29,7 +29,7 @@ public:
 };
 
 
-class Recurrent : public Pipe {
+class Recurrent : public Core {
 	Vector<int> sequence;
 	ConvNet::RecurrentSession ses;
 	
@@ -104,7 +104,7 @@ public:
 
 
 
-class NARX : public Pipe {
+class NARX : public Core {
 	
 	Vector<double> Y, pY;
 	int value_count, input_count;
@@ -156,7 +156,7 @@ public:
 
 // Forecaster is just a regression neural network for multiple inputs.
 // It is like a complex version of ConvNet Regression1D example.
-class Forecaster : public Pipe {
+class Forecaster : public Core {
 	String t;
 	ConvNet::Session ses;
 	
@@ -188,7 +188,7 @@ public:
 };
 
 
-class ClassifierAgent : public Pipe {
+class ClassifierAgent : public Core {
 	ConvNet::Session ses;
 	bool ideal;
 	
@@ -210,7 +210,7 @@ public:
 
 
 // RLAgent and DQNAgent are almost identical.
-class RLAgent : public Pipe {
+class RLAgent : public Core {
 	
 	enum {ACT_IDLE, ACT_LONG, ACT_SHORT};
 	
@@ -245,7 +245,7 @@ public:
 
 
 
-class DQNAgent : public Pipe {
+class DQNAgent : public Core {
 	
 	ConvNet::DQNAgent agent;
 	SimBroker broker;
@@ -280,7 +280,7 @@ public:
 
 
 
-class MonaAgent : public Pipe {
+class MonaAgent : public Core {
 	
 	enum {IDLE, LONG, SHORT, CLOSE};
 	
@@ -314,7 +314,7 @@ public:
 };
 
 
-class MonaMetaAgent : public Pipe {
+class MonaMetaAgent : public Core {
 	
 	enum {IDLE, LONG, SHORT, CLOSE};
 	
@@ -347,7 +347,7 @@ public:
 	
 };
 
-class MonaDoubleAgent : public Pipe {
+class MonaDoubleAgent : public Core {
 	
 	Mona agent;
 	SimBroker broker;

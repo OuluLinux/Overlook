@@ -32,8 +32,8 @@ protected:
 	void GotMouseMove(Point p, GraphCtrl* g);
 	void DrawBorder(Draw& W);
 	void DrawGrid(Draw& W, bool draw_vert_grid);
-	void DrawLines(Draw& d, Pipe& cont);
-	void PaintPipeLine(Draw& d, Pipe& cont, int shift, bool draw_border, int buffer);
+	void DrawLines(Draw& d, Core& cont);
+	void PaintCoreLine(Draw& d, Core& cont, int shift, bool draw_border, int buffer);
 	Rect GetGraphCtrlRect();
 	
 	
@@ -42,7 +42,7 @@ public:
     typedef GraphCtrl CLASSNAME;
     GraphCtrl();
     
-    void PaintCandlesticks(Draw& W, Pipe& values);
+    void PaintCandlesticks(Draw& W, Core& values);
 	void PostRefresh() {PostCallback(THISBACK(GraphCtrlRefresh));}
 	void GraphCtrlRefresh() {Refresh();}
 	void AddSource(Core* src) {this->src.Add(src);}
@@ -56,7 +56,7 @@ public:
 	virtual void RightDown(Point, dword);
 	virtual void MiddleDown(Point p, dword keyflags);
 	
-	void GetDataRange(Pipe& cont, int buffer);
+	void GetDataRange(Core& cont, int buffer);
 	int GetCount();
 	int GetPos();
 	

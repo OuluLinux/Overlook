@@ -5,7 +5,7 @@
 namespace Overlook {
 
 
-class WdayHourChanges : public Pipe {
+class WdayHourChanges : public Core {
 	
 protected:
 	Vector<OnlineVariance> wdayhour;
@@ -27,7 +27,7 @@ public:
 	}
 };
 
-class WdayHourStats : public Pipe {
+class WdayHourStats : public Core {
 	
 protected:
 	int var_period;
@@ -52,7 +52,7 @@ public:
 	}
 };
 
-class WdayHourDiff : public Pipe {
+class WdayHourDiff : public Core {
 	
 protected:
 	
@@ -75,7 +75,7 @@ public:
 	}
 };
 
-class WdayHourForecastErrors : public Pipe {
+class WdayHourForecastErrors : public Core {
 	
 protected:
 	int var_period;
@@ -101,7 +101,7 @@ public:
 
 
 
-class WdayHourErrorAdjusted : public Pipe {
+class WdayHourErrorAdjusted : public Core {
 	
 protected:
 	FloatVector t_pre_stddev, t_pre_mean;
@@ -125,7 +125,7 @@ public:
 
 
 
-class WeekStats : public Pipe {
+class WeekStats : public Core {
 	
 protected:
 	int var_period;
@@ -151,7 +151,7 @@ public:
 	}
 };
 
-class WeekStatsForecastErrors : public Pipe {
+class WeekStatsForecastErrors : public Core {
 	
 protected:
 	int var_period;
@@ -177,7 +177,7 @@ public:
 
 
 
-class WeekStatsErrorAdjusted : public Pipe {
+class WeekStatsErrorAdjusted : public Core {
 	
 protected:
 	FloatVector w_pre_stddev, w_pre_mean;
@@ -199,7 +199,7 @@ public:
 };
 
 
-class WdayHourDiffWeek : public Pipe {
+class WdayHourDiffWeek : public Core {
 	
 protected:
 	FloatVector mean, cdf;
@@ -219,7 +219,7 @@ public:
 
 
 
-class WdayHourWeekAdjusted : public Pipe {
+class WdayHourWeekAdjusted : public Core {
 	
 protected:
 	FloatVector t_pre_stddev, t_pre_mean;
@@ -242,7 +242,7 @@ public:
 
 
 
-class SubTfChanges : public Pipe {
+class SubTfChanges : public Core {
 	
 protected:
 	int other_counted;
@@ -251,7 +251,7 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
 	/*Indicator* tf_week_shift;
-	Pipe* other_values;
+	Core* other_values;
 	*/
 	
 public:
@@ -268,7 +268,7 @@ public:
 };
 
 
-class MetaTfChanges : public Pipe {
+class MetaTfChanges : public Core {
 	
 protected:
 	int offset;
@@ -294,11 +294,11 @@ public:
 
 
 
-class HourHeat : public Pipe {
+class HourHeat : public Core {
 	
 protected:
 	FloatVector sub, day, sum;
-	Pipe *subtf, *metatf;
+	Core *subtf, *metatf;
 	
 public:
 	HourHeat();
@@ -314,7 +314,7 @@ public:
 };
 
 
-class MetaTfCDF : public Pipe {
+class MetaTfCDF : public Core {
 	
 protected:
 	int offset;
@@ -339,7 +339,7 @@ public:
 };
 
 
-class WdayHourTrending : public Pipe {
+class WdayHourTrending : public Core {
 	
 protected:
 	int var_period;
@@ -361,7 +361,7 @@ public:
 	}
 };
 
-class WdayHourTrendSuccess : public Pipe {
+class WdayHourTrendSuccess : public Core {
 	
 protected:
 	int var_period;
@@ -383,7 +383,7 @@ public:
 };
 
 
-class OpportinityQuality : public Pipe {
+class OpportinityQuality : public Core {
 	
 protected:
 	Array<FloatVector> buffers;
@@ -404,7 +404,7 @@ public:
 };
 
 
-class EdgeStatistics : public Pipe {
+class EdgeStatistics : public Core {
 	
 protected:
 	FloatVector mean, dev;
@@ -420,7 +420,7 @@ protected:
 public:
 	EdgeStatistics();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % mean % dev % es_counted % vars;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % es_counted % vars;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -435,7 +435,7 @@ public:
 	TideStatistics is simplified EdgeStatistics.
 	The lowest periodical value means changing trend.
 */
-class TideStatistics : public Pipe {
+class TideStatistics : public Core {
 	
 protected:
 	FloatVector mean, dev;
@@ -449,7 +449,7 @@ protected:
 public:
 	TideStatistics();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % mean % dev % ts_counted % vars;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % ts_counted % vars;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -464,7 +464,7 @@ public:
 	Disconnections is simplified version of EdgeStatistics and TideStatistics,
 	which exports probable changing trend positions as disconnection positions.
 */
-class Disconnections : public Pipe {
+class Disconnections : public Core {
 	
 protected:
 	FloatVector discbuf;
@@ -481,7 +481,7 @@ protected:
 public:
 	Disconnections();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % discbuf % dis_counted % prev_disc_pos;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % discbuf % dis_counted % prev_disc_pos;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -494,7 +494,7 @@ public:
 
 
 
-class EventOsc : public Pipe {
+class EventOsc : public Core {
 	FloatVector info, low, med, high;
 	double mul;
 	Index<String> keys;
@@ -504,7 +504,7 @@ class EventOsc : public Pipe {
 public:
 	EventOsc();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % info % low % med % high % counted_events;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high % counted_events;}
 	
 	virtual void Init();
 	virtual void Start();
@@ -518,7 +518,7 @@ public:
 
 
 
-class GroupEventOsc : public Pipe {
+class GroupEventOsc : public Core {
 	FloatVector info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
@@ -526,7 +526,7 @@ class GroupEventOsc : public Pipe {
 public:
 	GroupEventOsc();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % info % low % med % high;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high;}
 	
 	virtual void Init();
 	virtual void Start();
@@ -541,7 +541,7 @@ public:
 
 
 
-class FeatureOsc : public Pipe {
+class FeatureOsc : public Core {
 	FloatVector info, low, med, high;
 	double mul;
 	FeatureDetector* feat;
@@ -550,7 +550,7 @@ class FeatureOsc : public Pipe {
 public:
 	FeatureOsc();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % info % low % med % high % counted_features;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high % counted_features;}
 	
 	virtual void Init();
 	virtual void Start();
@@ -564,7 +564,7 @@ public:
 
 
 
-class GroupFeatureOsc : public Pipe {
+class GroupFeatureOsc : public Core {
 	FloatVector info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
@@ -572,7 +572,7 @@ class GroupFeatureOsc : public Pipe {
 public:
 	GroupFeatureOsc();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % info % low % med % high;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high;}
 	
 	virtual void Init();
 	virtual void Start();
@@ -588,7 +588,7 @@ public:
 
 
 
-class ChannelPredicter : public Pipe {
+class ChannelPredicter : public Core {
 	
 protected:
 	

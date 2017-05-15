@@ -34,7 +34,10 @@ void Overlook::Refresher() {
 }
 
 void Overlook::Init() {
-	BaseSystem& bs = GetBaseSystem();
+	user.Init();
+	optimizer.Init();
+	
+	BaseSystem& bs = user.GetBaseSystem();
 	
 	// Init gui
 	for(int i = 0; i < bs.GetPeriodCount(); i++)
@@ -43,8 +46,6 @@ void Overlook::Init() {
 		symlist.Add(bs.GetSymbol(i));
 	for(int i = 0; i < Factory::GetCtrlFactories().GetCount(); i++)
 		ctrllist.Add(Factory::GetCtrlFactories()[i].a);
-	for(int i = 0; i < Factory::GetPipeFactories().GetCount(); i++)
-		ctrllist.Add(Factory::GetPipeFactories()[i].a);
 	
 	tflist.SetIndex(0);
 	symlist.SetIndex(0);
@@ -64,32 +65,29 @@ void Overlook::SetView() {
 	
 	if (prev_view) {
 		RemoveChild(prev_view);
+		delete prev_view;
 		prev_view = NULL;
 		prev_core = NULL;
 	}
 	
 	Core* core;
 	CustomCtrl* view;
-	if (c < Factory::GetCtrlFactories().GetCount()) {
-		view = Factory::GetCtrlFactories()[c].c();
-		core = NULL;
-	} else {
-		int fac_id = c - Factory::GetCtrlFactories().GetCount();
-		view = Factory::GetPipeFactories()[fac_id].c();
-		Prioritizer& prio = Factory::GetCore<Prioritizer>();
-		core = &prio.GetPipe(fac_id, s, t);
-	}
+	view = Factory::GetCtrlFactories()[c].c();
 	
-	if (!view->IsInited()) {
-		view->SetSymbol(s);
-		view->SetTf(t);
-		
-		
-		view->Init(core);
-		
-		
-		view->SetInited();
-	}
+	// Get core-object by creating job-queue for factory/symbol/timeframe combination
+	user.CreateSingle(c, s, t);
+	user.Process();
+	ASSERT(user.GetJobCount());
+	JobItem& ji = user.GetJob(user.GetJobCount()-1);
+	ASSERT(ji.core);
+	core = ji.core;
+	
+	view->core = core;
+	view->SetSymbol(s);
+	view->SetTf(t);
+	
+	
+	view->Init(core);
 	
 	view->RefreshData();
 	

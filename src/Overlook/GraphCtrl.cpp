@@ -35,7 +35,7 @@ GraphCtrl::GraphCtrl() {
 	IgnoreMouse(false);
 }
 
-void GraphCtrl::GetDataRange(Pipe& cont, int buffer) {
+void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 	/*
 	if (buffer >= cont.GetBufferSettingsCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
@@ -79,7 +79,7 @@ void GraphCtrl::GetDataRange(Pipe& cont, int buffer) {
 
 void GraphCtrl::Paint(Draw& draw) {
 	/*
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	Size sz(GetSize());
 	ImageDraw w(sz);
@@ -123,13 +123,13 @@ void GraphCtrl::Paint(Draw& draw) {
 		Core*& var = src[i];
 		if (!var.Is()) continue;
 		
-		Pipe* cont_ = var.Get<Pipe>();
+		Core* cont_ = var.Get<Core>();
 		if (!cont_) {draw.DrawImage(0,0,w); return;} // just bail out
 		
-		Pipe& cont = *cont_;
+		Core& cont = *cont_;
 		cont.Refresh();
 		
-		if (dynamic_cast<Pipe*>(&cont)) {
+		if (dynamic_cast<Core*>(&cont)) {
 		    GetDataRange(cont, 1); // low
 		    GetDataRange(cont, 2); // high
 		}
@@ -145,10 +145,10 @@ void GraphCtrl::Paint(Draw& draw) {
 	for(int i = 0; i < src.GetCount(); i++) {
 		Core*& var = src[i];
 		if (!var.Is()) continue;
-		Pipe& cont = *var.Get<Pipe>();
-		Pipe* bardata = dynamic_cast<Pipe*>(&cont);
+		Core& cont = *var.Get<Core>();
+		Core* bardata = dynamic_cast<Core*>(&cont);
 		if (bardata) {
-			Pipe& ts = dynamic_cast<Pipe&>(cont);
+			Core& ts = dynamic_cast<Core&>(cont);
 			PaintCandlesticks(w, ts);
 		}
 		else {
@@ -156,10 +156,10 @@ void GraphCtrl::Paint(Draw& draw) {
 			graph_label += cont.GetShortName();
 			
 			int bufs = cont.GetBufferCount();
-			//Pipe* bdcont = dynamic_cast<Pipe*>(&cont);
+			//Core* bdcont = dynamic_cast<Core*>(&cont);
 			//ASSERT(bdcont != 0);
 			for(int j = 0; j < bufs; j++) {
-				PaintPipeLine(w, cont, shift, i==0, j);
+				PaintCoreLine(w, cont, shift, i==0, j);
 			}
 		}
 	}
@@ -192,13 +192,13 @@ void GraphCtrl::Paint(Draw& draw) {
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	/*
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	nt gridw, gridh, w, h, y, pos, c;
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = group->GetGridColor();
-	Pipe& pb = group->GetPipe();// GetValues(id, tf);
+	Core& pb = group->GetCore();// GetValues(id, tf);
     int period = group->GetPeriod();
     
 	y = r.top;
@@ -287,8 +287,8 @@ Rect GraphCtrl::GetGraphCtrlRect() {
     return r;
 }
 
-void GraphCtrl::PaintCandlesticks(Draw& W, Pipe& values) {
-	BaseSystem& ol = GetBaseSystem();
+void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
+	BaseSystem& ol = group->GetCore().Get<BaseSystem>();
 	
 	DrawGrid(W, true);
     
@@ -353,8 +353,8 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Pipe& values) {
     
 }
 
-void GraphCtrl::PaintPipeLine(Draw& W, Pipe& cont, int shift, bool draw_border, int buffer) {
-	/*BaseSystem& ol = GetBaseSystem();
+void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	if (draw_border) {
 		DrawGrid(W, false);
@@ -482,18 +482,18 @@ void GraphCtrl::PaintPipeLine(Draw& W, Pipe& cont, int shift, bool draw_border, 
 	}*/
 }
 
-void GraphCtrl::DrawLines(Draw& d, Pipe& cont) {
-	if (cont.IsPipeSeparateWindow()) {
+void GraphCtrl::DrawLines(Draw& d, Core& cont) {
+	if (cont.IsCoreSeparateWindow()) {
 		Rect r = GetGraphCtrlRect();
 		double diff = hi - lo;
 		int h = r.GetHeight();
 		int w = r.GetWidth();
 		Color grid_color = group->GetGridColor();
 		String text;
-		for(int i = 0; i < cont.GetPipeLevelCount(); i++) {
-			double value = cont.GetPipeLevelValue(i);
-			int type = cont.GetPipeLevelType(i);
-			int line_width = cont.GetPipeLevelLineWidth(i);
+		for(int i = 0; i < cont.GetCoreLevelCount(); i++) {
+			double value = cont.GetCoreLevelValue(i);
+			int type = cont.GetCoreLevelType(i);
+			int line_width = cont.GetCoreLevelLineWidth(i);
 			
 			if (type == STYLE_DASH)				line_width = PEN_DASH;
 			else if (type == STYLE_DOT)			line_width = PEN_DOT;
@@ -583,7 +583,7 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 
 int GraphCtrl::GetCount() {
 	/*if (!group) return 0;
-	int c = group->GetPipe().GetBufferDataCount();
+	int c = group->GetCore().GetBufferDataCount();
     return c;*/
 }
 

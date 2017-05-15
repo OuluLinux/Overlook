@@ -9,7 +9,6 @@ INITBLOCK {
 	// Generic ctrls
 	Factory::Register<BaseSystem, BaseSystemCtrl>("Base system");
 	
-	Factory::Register<Prioritizer, PrioritizerCtrl>("Prioritizer");
 	
 	
 	
@@ -19,46 +18,46 @@ INITBLOCK {
 	// Register slots in correct dependency order!!!
 	// Earlier (upper) slots can't find later registered (lower) slots as inputs!!!
 	
-	Factory::RegisterPipe<DataBridge, GraphGroupCtrl>("DataBridge");
+	Factory::Register<DataBridge, GraphGroupCtrl>("DataBridge");
 	
-	Factory::RegisterPipe<SpreadStats, GraphGroupCtrl>("Spread Statistics");
-	Factory::RegisterPipe<ValueChange, GraphGroupCtrl>("Change of data-values");
-	Factory::RegisterPipe<IdealOrders, GraphGroupCtrl>("Ideal order signal");
-	
-	
-	Factory::RegisterPipe<MovingAverage, GraphGroupCtrl>("Moving average");
-	
-	Factory::RegisterPipe<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
-	Factory::RegisterPipe<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
-	Factory::RegisterPipe<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
-	Factory::RegisterPipe<EventOsc, GraphGroupCtrl>("Known event intensity oscillator");
+	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
+	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
+	Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
 	
 	
-	Factory::RegisterPipe<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
+	Factory::Register<MovingAverage, GraphGroupCtrl>("Moving average");
 	
-	Factory::RegisterPipe<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
+	Factory::Register<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
+	Factory::Register<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
+	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
+	Factory::Register<EventOsc, GraphGroupCtrl>("Known event intensity oscillator");
 	
-	Factory::RegisterPipe<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
 	
-	Factory::RegisterPipe<QueryTableAgent, AgentCtrl>("QueryTable agent");
+	Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
 	
-	Factory::RegisterPipe<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
+	Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
 	
-	Factory::RegisterPipe<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
+	Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
 	
-	Factory::RegisterPipe<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");
+	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
+	
+	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
+	
+	Factory::Register<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
+	
+	Factory::Register<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");
 	
 	/*
-	Factory::RegisterPipe<AutoEncoder>();
-	Factory::RegisterPipe<Recurrent>();
-	Factory::RegisterPipe<::Factory::NARX>();
-	Factory::RegisterPipe<Forecaster>();
-	Factory::RegisterPipe<ClassifierAgent>();
-	Factory::RegisterPipe<RLAgent>();
-	Factory::RegisterPipe<::Factory::DQNAgent>();
-	Factory::RegisterPipe<MonaAgent>();
-	Factory::RegisterPipe<MonaMetaAgent>();
-	Factory::RegisterPipe<MonaDoubleAgent>();
+	Factory::Register<AutoEncoder>();
+	Factory::Register<Recurrent>();
+	Factory::Register<::Factory::NARX>();
+	Factory::Register<Forecaster>();
+	Factory::Register<ClassifierAgent>();
+	Factory::Register<RLAgent>();
+	Factory::Register<::Factory::DQNAgent>();
+	Factory::Register<MonaAgent>();
+	Factory::Register<MonaMetaAgent>();
+	Factory::Register<MonaDoubleAgent>();
 	*/
 	int c = Factory::GetFactoryInputs().GetCount();
 	ASSERT(Factory::GetFactoryInputs().GetCount());

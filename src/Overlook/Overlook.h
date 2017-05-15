@@ -49,6 +49,8 @@ protected:
 	Core* prev_core;
 	TimeCallback tc;
 	
+	Prioritizer user, optimizer;
+	
 	void SetView();
 	
 public:

@@ -5,7 +5,7 @@
 namespace Overlook {
 
 
-class SpreadStats : public Pipe {
+class SpreadStats : public Core {
 	FloatVector mean_cost;
 	BridgeAskBid* askbid;
 	Vector<OnlineVariance> stats;
@@ -23,7 +23,7 @@ public:
 	}
 };
 
-class SpreadMeanProfit : public Pipe {
+class SpreadMeanProfit : public Core {
 	FloatVector mean_profit;
 	BridgeAskBid* askbid;
 	
@@ -40,7 +40,7 @@ public:
 	}
 };
 
-class SpreadProfitDistribution : public Pipe {
+class SpreadProfitDistribution : public Core {
 	FloatVector mean, stddev;
 	
 public:
@@ -56,7 +56,7 @@ public:
 	}
 };
 
-class SpreadProbability : public Pipe {
+class SpreadProbability : public Core {
 	FloatVector profit, real;
 	
 public:
@@ -74,7 +74,7 @@ public:
 
 
 
-class ValueChange : public Pipe {
+class ValueChange : public Core {
 	bool has_proxy;
 	int proxy_id, proxy_factor;
 	DataBridge* db;
@@ -99,7 +99,7 @@ public:
 
 
 
-class IdealOrders : public Pipe {
+class IdealOrders : public Core {
 	SimBroker broker;
 	
 public:

@@ -66,7 +66,7 @@ void MovingAverage::SetArguments(const VectorMap<String, Value>& args) {
 
 void MovingAverage::Init()
 {
-	/*Pipe::Init();
+	/*Core::Init();
 	
 	int draw_begin;
 	if (ma_period < 2)
@@ -238,7 +238,7 @@ void MovingAverageConvergenceDivergence::SetArguments(const VectorMap<String, Va
 void MovingAverageConvergenceDivergence::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(2);
 	SetBufferColor(0, Silver);
 	SetBufferColor(1, Red);
@@ -249,7 +249,7 @@ void MovingAverageConvergenceDivergence::Init()
 	SetIndexBuffer ( 1, signal_buffer );
 	SetBufferBegin ( 1, signal_sma_period );
 	
-	//SetPipeDigits(GetDigits()+1);
+	//SetCoreDigits(GetDigits()+1);
 	
 	SetBufferStyle(0, DRAW_HISTOGRAM);
 	SetBufferStyle(1, DRAW_LINE);
@@ -278,8 +278,8 @@ void MovingAverageConvergenceDivergence::Start()
 	if ( counted > 0 )
 		counted--;
 
-	Pipe& a_ind = At(0);
-	Pipe& b_ind = At(1);
+	Core& a_ind = At(0);
+	Core& b_ind = At(1);
 	
 	for (int i = counted; i < bars; i++ )
 	{
@@ -312,7 +312,7 @@ void AverageDirectionalMovement::SetArguments(const VectorMap<String, Value>& ar
 void AverageDirectionalMovement::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	
 	SetBufferCount(3);
 	SetBufferColor(0, LightSeaGreen);
@@ -455,13 +455,13 @@ void BollingerBands::SetArguments(const VectorMap<String, Value>& args) {
 void BollingerBands::Init()
 {
 	/*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	SetBufferCount(3);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1,  LightSeaGreen);
 	SetBufferColor(2,  LightSeaGreen);
 	
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	
 	SetIndexCount(3);
 	
@@ -518,7 +518,7 @@ void BollingerBands::Start()
 	else
 		pos = 0;
 
-	Pipe& ts = *GetSource().Get<Pipe>();
+	Core& ts = *GetSource().Get<Core>();
 	for ( int i = pos; i < bars; i++ )
 	{
 		ml_buffer.Set(i, SimpleMAOpenValueAsc( ts, i, bands_period ));
@@ -577,7 +577,7 @@ void Envelopes::SetArguments(const VectorMap<String, Value>& args) {
 void Envelopes::Init()
 {
 	/*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	SetBufferCount(2);
 	SetBufferColor(0, Blue);
 	SetBufferColor(1, Red);
@@ -594,7 +594,7 @@ void Envelopes::Init()
 	
 	SetBufferStyle(0, DRAW_LINE);
 	SetBufferStyle(1, DRAW_LINE);
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	
 	if (RequireIndicator("ma", "period", ma_period, "offset", 0, "method", ma_method)) throw DataExc();
 	*/
@@ -612,7 +612,7 @@ void Envelopes::Start() {
 	if (counted) counted--;
 	else counted = ma_period;
 	
-	Pipe& ind0 = At(0);
+	Core& ind0 = At(0);
 	
 	for (int i = counted; i < bars; i++) {
 		double value = ind0.GetIndexValue( i );
@@ -644,7 +644,7 @@ void ParabolicSAR::SetArguments(const VectorMap<String, Value>& args) {
 
 void ParabolicSAR::Init() {
 /*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, Lime);
 	
@@ -663,7 +663,7 @@ void ParabolicSAR::Init() {
 	last_rev_pos = 0;
 	direction_long = false;
 	
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	SetBufferStyle(0, DRAW_ARROW);
 	SetBufferArrow(0, 159);
 	*/
@@ -855,8 +855,8 @@ void StandardDeviation::SetArguments(const VectorMap<String, Value>& args) {
 void StandardDeviation::Init()
 {
 /*
-	SetPipeSeparateWindow();
-	SetPipeMinimum(0);
+	SetCoreSeparateWindow();
+	SetCoreMinimum(0);
 	SetBufferCount(1);
 	SetBufferColor(0, Blue);
 	
@@ -889,7 +889,7 @@ void StandardDeviation::Start()
 	else
 		counted = period;
 	
-	Pipe& ind0 = At(0);
+	Core& ind0 = At(0);
 	
 	for (int i = counted; i < bars; i++)
 	{
@@ -930,11 +930,11 @@ void AverageTrueRange::SetArguments(const VectorMap<String, Value>& args) {
 
 void AverageTrueRange::Init() {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
 	
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	SetBufferStyle(0,DRAW_LINE);
 	
 	SetIndexCount(2);
@@ -1025,11 +1025,11 @@ void BearsPower::SetArguments(const VectorMap<String, Value>& args) {
 
 void BearsPower::Init() {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, Silver);
 	
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	
 	SetIndexCount(1);
 	
@@ -1054,7 +1054,7 @@ void BearsPower::Start() {
 	if ( counted > 0 )
 		counted--;
 	
-	Pipe& ind0 = At(0);
+	Core& ind0 = At(0);
 	
 	for (int i = counted; i < bars; i++) {
 		buffer.Set(i, Low( i ) - ind0.GetIndexValue( i ));
@@ -1085,11 +1085,11 @@ void BullsPower::SetArguments(const VectorMap<String, Value>& args) {
 void BullsPower::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, Silver);
 	
-	//SetPipeDigits(GetDigits());
+	//SetCoreDigits(GetDigits());
 	SetIndexCount(1);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
@@ -1113,7 +1113,7 @@ void BullsPower::Start()
 	if ( counted > 0 )
 		counted--;
 	
-	Pipe& ind0 = At(0);
+	Core& ind0 = At(0);
 	
 	for ( int i = counted; i < bars; i++ ) {
 		buffer.Set(i, High( i ) - ind0.GetIndexValue(i) );
@@ -1143,14 +1143,14 @@ void CommodityChannelIndex::SetArguments(const VectorMap<String, Value>& args) {
 void CommodityChannelIndex::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, LightSeaGreen);
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, -100.0);
-	SetPipeLevel(1,  100.0);
-	SetPipeLevelsColor(Silver);
-	SetPipeLevelsStyle(STYLE_DOT);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, -100.0);
+	SetCoreLevel(1,  100.0);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"CCI");
@@ -1268,14 +1268,14 @@ void DeMarker::SetArguments(const VectorMap<String, Value>& args) {
 void DeMarker::Init()
 {
 	/*
-	SetPipeSeparateWindow();
-	SetPipeMinimum(-0.5);  // normalized
-	SetPipeMaximum(0.5);   // normalized
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-0.5);  // normalized
+	SetCoreMaximum(0.5);   // normalized
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, 0.3 - 0.5); // normalized
-	SetPipeLevel(1, 0.7 - 0.5); // normalized
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 0.3 - 0.5); // normalized
+	SetCoreLevel(1, 0.7 - 0.5); // normalized
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"DeMarker");
@@ -1377,7 +1377,7 @@ void ForceIndex::SetArguments(const VectorMap<String, Value>& args) {
 void ForceIndex::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
 	
@@ -1407,7 +1407,7 @@ void ForceIndex::Start()
 	if (counted == 0)
 		counted++;
 	
-	Pipe& ind0 = At(0);
+	Core& ind0 = At(0);
 	
 	for ( int i = counted; i < bars; i++ )
 	{
@@ -1446,7 +1446,7 @@ void Momentum::Init()
 {
 	/*
 
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
 	
@@ -1525,13 +1525,13 @@ void OsMA::SetArguments(const VectorMap<String, Value>& args) {
 void OsMA::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, Silver);
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
-	//SetPipeDigits(GetDigits() + 2);
+	//SetCoreDigits(GetDigits() + 2);
 	
 	SetIndexCount(3);
 	
@@ -1568,8 +1568,8 @@ void OsMA::Start()
 	if ( counted > 0 )
 		counted--;
 	
-	Pipe& ind1 = At(0);
-	Pipe& ind2 = At(1);
+	Core& ind1 = At(0);
+	Core& ind2 = At(1);
 	
 	for (int i = counted; i < bars; i++)
 	{
@@ -1604,16 +1604,16 @@ void RelativeStrengthIndex::SetArguments(const VectorMap<String, Value>& args) {
 void RelativeStrengthIndex::Init()
 {
 /*
-	SetPipeSeparateWindow();
-	SetPipeMinimum(-50); // normalized
-	SetPipeMaximum(50);  // normalized
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-50); // normalized
+	SetCoreMaximum(50);  // normalized
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, 30.0 - 50); // normalized
-	SetPipeLevel(1, 70.0 - 50); // normalized
-	SetPipeLevelsColor(Silver);
-	SetPipeLevelsStyle(STYLE_DOT);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 30.0 - 50); // normalized
+	SetCoreLevel(1, 70.0 - 50); // normalized
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
 	
 	if ( period < 1 )
 		throw DataExc();
@@ -1715,7 +1715,7 @@ void RelativeVigorIndex::SetArguments(const VectorMap<String, Value>& args) {
 void RelativeVigorIndex::Init()
 {
 
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(2);
 	SetBufferColor(0, Green);
 	SetBufferColor(1, Red);
@@ -1829,17 +1829,17 @@ void StochasticOscillator::SetArguments(const VectorMap<String, Value>& args) {
 void StochasticOscillator::Init()
 {
 
-	SetPipeSeparateWindow();
-	SetPipeMinimum(-50); // normalized
-	SetPipeMaximum(50);  // normalized
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-50); // normalized
+	SetCoreMaximum(50);  // normalized
 	SetBufferCount(2);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1, Red);
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, 20.0 - 50); // normalized
-	SetPipeLevel(1, 80.0 - 50); // normalized
-	SetPipeLevelsColor(Silver);
-	SetPipeLevelsStyle(STYLE_DOT);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 20.0 - 50); // normalized
+	SetCoreLevel(1, 80.0 - 50); // normalized
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
 	
 	SetIndexCount(4);
 	
@@ -1847,7 +1847,7 @@ void StochasticOscillator::Init()
 	SetIndexBuffer ( 1, signal_buffer );
 	SetIndexBuffer ( 2, high_buffer );
 	SetIndexBuffer ( 3, low_buffer );
-	//SetPipeDigits(2);
+	//SetCoreDigits(2);
 	SetBufferLabel( 0, "Main");
 	SetBufferLabel( 1, "Signal" );
 	SetBufferBegin(0, k_period + slowing - 2 );
@@ -1976,14 +1976,14 @@ void WilliamsPercentRange::SetArguments(const VectorMap<String, Value>& args) {
 void WilliamsPercentRange::Init()
 {
 
-	SetPipeSeparateWindow();
-	SetPipeMinimum(-50); // normalized
-	SetPipeMaximum(50);  // normalized
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-50); // normalized
+	SetCoreMaximum(50);  // normalized
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, -20 + 50); // normalized
-	SetPipeLevel(1, -80 + 50); // normalized
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, -20 + 50); // normalized
+	SetCoreLevel(1, -80 + 50); // normalized
 	
 	SetIndexCount(1);
 	
@@ -2035,11 +2035,11 @@ void AccumulationDistribution::SetArguments(const VectorMap<String, Value>& args
 void AccumulationDistribution::Init()
 {
 	
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, LightSeaGreen);
 	
-	//SetPipeDigits(0);
+	//SetCoreDigits(0);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	
@@ -2141,12 +2141,12 @@ void MoneyFlowIndex::SetArguments(const VectorMap<String, Value>& args) {
 void MoneyFlowIndex::Init()
 {
 
-	SetPipeSeparateWindow();
-	SetPipeMinimum(-50); // normalized
-	SetPipeMaximum(50);  // normalized
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, 20 - 50); // normalized
-	SetPipeLevel(1, 80 - 50); // normalized
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-50); // normalized
+	SetCoreMaximum(50);  // normalized
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 20 - 50); // normalized
+	SetCoreLevel(1, 80 - 50); // normalized
 	SetBufferCount(1);
 	SetBufferColor(0, Blue);
 	
@@ -2231,7 +2231,7 @@ void ValueAndVolumeTrend::SetArguments(const VectorMap<String, Value>& args) {
 void ValueAndVolumeTrend::Init()
 {
 	
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
 	
@@ -2239,7 +2239,7 @@ void ValueAndVolumeTrend::Init()
 	SetIndexBuffer ( 0, buffer );
 	
 	SetBufferStyle(0, DRAW_LINE);
-	//SetPipeDigits(0);
+	//SetCoreDigits(0);
 	
 }
 
@@ -2290,7 +2290,7 @@ void OnBalanceVolume::SetArguments(const VectorMap<String, Value>& args) {
 void OnBalanceVolume::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue);
 	
@@ -2298,7 +2298,7 @@ void OnBalanceVolume::Init()
 	SetIndexBuffer ( 0, buffer );
 	
 	SetBufferStyle(0,DRAW_LINE);
-	//SetPipeDigits(0);
+	//SetCoreDigits(0);
 	SetBufferLabel(0, "OBV");
 	*/
 }
@@ -2351,7 +2351,7 @@ void Volumes::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void Volumes::Init() {
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, Green);
 	
@@ -2393,13 +2393,13 @@ void AcceleratorOscillator::SetArguments(const VectorMap<String, Value>& args) {
 void AcceleratorOscillator::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(3);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Red);
 	
-	//SetPipeDigits(GetDigits() + 2);
+	//SetCoreDigits(GetDigits() + 2);
 	
 	SetBufferStyle ( 0, DRAW_NONE );
 	SetBufferStyle ( 1, DRAW_HISTOGRAM );
@@ -2432,8 +2432,8 @@ void AcceleratorOscillator::Start()
 	if ( bars <= DATA_LIMIT )
 		throw DataExc();
 	
-	Pipe& ind1 = At(0);
-	Pipe& ind2 = At(1);
+	Core& ind1 = At(0);
+	Core& ind2 = At(1);
 	
 	if ( counted > 0 )
 	{
@@ -2530,7 +2530,7 @@ void GatorOscillator::SetArguments(const VectorMap<String, Value>& args) {
 void GatorOscillator::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(6);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Red);
@@ -2587,10 +2587,10 @@ void GatorOscillator::Start()
 	int    bars    = GetBars();
 	int    counted = GetCounted();
 	
-	Pipe& ind1 = At(0);
-	Pipe& ind2 = At(1);
-	Pipe& ind3 = At(2);
-	Pipe& ind4 = At(3);
+	Core& ind1 = At(0);
+	Core& ind2 = At(1);
+	Core& ind3 = At(2);
+	Core& ind4 = At(3);
 	
 
 	if ( counted <= teeth_period + teeth_shift - lips_shift )
@@ -2707,7 +2707,7 @@ void AwesomeOscillator::SetArguments(const VectorMap<String, Value>& args) {
 void AwesomeOscillator::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(3);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Green);
@@ -2716,7 +2716,7 @@ void AwesomeOscillator::Init()
 	SetBufferStyle ( 0, DRAW_NONE );
 	SetBufferStyle ( 1, DRAW_HISTOGRAM );
 	SetBufferStyle ( 2, DRAW_HISTOGRAM );
-	//SetPipeDigits ( GetDigits() + 1 );
+	//SetCoreDigits ( GetDigits() + 1 );
 	
 	SetIndexCount(3);
 	SetIndexBuffer ( 0, buffer );
@@ -2742,8 +2742,8 @@ void AwesomeOscillator::Start()
 	if ( bars <= DATA_LIMIT )
 		throw DataExc();
 
-	Pipe& ind1 = At(0);
-	Pipe& ind2 = At(1);
+	Core& ind1 = At(0);
+	Core& ind2 = At(1);
 	
 	if (counted > 0) {
 		counted--;
@@ -2820,7 +2820,7 @@ void Fractals::SetArguments(const VectorMap<String, Value>& args) {
 void Fractals::Init()
 {
 /*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	
 	SetBufferCount(6);
 	SetBufferColor(0, Blue);
@@ -2982,7 +2982,7 @@ void FractalOsc::SetArguments(const VectorMap<String, Value>& args) {
 void FractalOsc::Init()
 {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	
 	SetBufferCount(2);
 	SetBufferColor(0, Red);
@@ -3012,7 +3012,7 @@ void FractalOsc::Start()
 	else
 		counted = 1+max(left_bars,right_bars);
 	
-	Pipe& ind = At(0);
+	Core& ind = At(0);
 	
 	bars--;
 	
@@ -3048,12 +3048,12 @@ void MarketFacilitationIndex::SetArguments(const VectorMap<String, Value>& args)
 void MarketFacilitationIndex::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	
 	
-	SetPipeLevelCount(2);
-	SetPipeLevel(0, 20);
-	SetPipeLevel(1, 80);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 20);
+	SetCoreLevel(1, 80);
 	SetBufferCount(4);
 	SetBufferColor(0, Lime);
 	SetBufferColor(1, SaddleBrown);
@@ -3092,7 +3092,7 @@ void MarketFacilitationIndex::Start()
 	if (counted > 0)
 		counted--;
 	
-	Pipe& bd = *GetSource().Get<Pipe>();
+	Core& bd = *GetSource().Get<Core>();
 	double point = bd.GetPoint();
 	
 	for (int i = counted; i < bars; i++ )
@@ -3247,7 +3247,7 @@ void ZigZag::SetArguments(const VectorMap<String, Value>& args) {
 void ZigZag::Init()
 {
 	/*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	
 	SetBufferCount(2);
 	SetBufferColor(0, Red());
@@ -3324,7 +3324,7 @@ void ZigZag::Start()
 		}
 	}
 
-	Pipe& bd = *GetSource().Get<Pipe>();
+	Core& bd = *GetSource().Get<Core>();
 	double point = bd.GetPoint();
 	
 	for (int i = counted; i < bars; i++ )
@@ -3509,7 +3509,7 @@ void ZigZagOsc::SetArguments(const VectorMap<String, Value>& args) {
 void ZigZagOsc::Init()
 {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, GrayColor());
 	
@@ -3527,7 +3527,7 @@ void ZigZagOsc::Start()
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	Pipe& ind = At(0);
+	Core& ind = At(0);
 	
 	
 	double prev, next;
@@ -3598,7 +3598,7 @@ void LinearTimeFrames::SetArguments(const VectorMap<String, Value>& args) {
 
 void LinearTimeFrames::Init() {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(4);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
@@ -3607,8 +3607,8 @@ void LinearTimeFrames::Init() {
 	SetBufferLineWidth(0, 3);
 	SetBufferLineWidth(1, 2);
 	SetBufferLineWidth(2, 1);
-	SetPipeMinimum(0);
-	SetPipeMaximum(1);
+	SetCoreMinimum(0);
+	SetCoreMaximum(1);
 	
 	SetIndexCount(4);
 	
@@ -3671,7 +3671,7 @@ void RepeatingAverage::SetArguments(const VectorMap<String, Value>& args) {
 
 void RepeatingAverage::Init() {
 	/*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	SetBufferCount(4);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
@@ -3786,7 +3786,7 @@ void RepeatingAverageOscillator::SetArguments(const VectorMap<String, Value>& ar
 
 void RepeatingAverageOscillator::Init() {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(5);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
@@ -3814,7 +3814,7 @@ void RepeatingAverageOscillator::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	Pipe& ind = At(0);
+	Core& ind = At(0);
 	
 	
 	for (int i = counted; i < bars; i++) {
@@ -3862,7 +3862,7 @@ void SupportResistance::SetArguments(const VectorMap<String, Value>& args) {
 
 void SupportResistance::Init() {
 /*
-	SetPipeChartWindow();
+	SetCoreChartWindow();
 	SetBufferCount(2);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
@@ -3879,7 +3879,7 @@ void SupportResistance::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	Pipe& bd = *GetSource().Get<Pipe>();
+	Core& bd = *GetSource().Get<Core>();
 	double point = bd.GetPoint();
 	
 	ASSERT(point > 0);
@@ -4005,7 +4005,7 @@ void SupportResistanceOscillator::SetArguments(const VectorMap<String, Value>& a
 
 void SupportResistanceOscillator::Init() {
 /*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(2);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
@@ -4015,8 +4015,8 @@ void SupportResistanceOscillator::Init() {
 	SetIndexBuffer(0, osc);
 	SetIndexBuffer(1, osc_av);
 	
-	SetPipeMinimum(-1);
-	SetPipeMaximum(1);
+	SetCoreMinimum(-1);
+	SetCoreMaximum(1);
 	
 	if (RequireIndicator("supres", "period", period, "max_crosses", max_crosses, "max_radius", max_radius)) throw DataExc();
 	*/
@@ -4027,7 +4027,7 @@ void SupportResistanceOscillator::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	Pipe& ind = At(0);
+	Core& ind = At(0);
 	
 	Vector<double> crosses;
 	int prev_pos = counted ? counted-1 : 0;
@@ -4066,7 +4066,7 @@ void Psychological::SetArguments(const VectorMap<String, Value>& args) {
 
 void Psychological::Init() {
 	/*
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 	SetBufferCount(1);
 	SetBufferColor(0, DodgerBlue());
 	SetIndexCount(1);
@@ -4151,9 +4151,9 @@ void CorrelationOscillator::Init() {
 	
 	if (sym_count < 0) throw DataExc();
 	
-	SetPipeMaximum(+1.0);
-	SetPipeMinimum(-1.0);
-	SetPipeSeparateWindow();
+	SetCoreMaximum(+1.0);
+	SetCoreMinimum(-1.0);
+	SetCoreSeparateWindow();
 	SetBufferCount(sym_count);
 	SetIndexCount(sym_count);
 	
@@ -4165,7 +4165,7 @@ void CorrelationOscillator::Init() {
 	
 	SetBufferBegin(0, period);
 	
-	Pipe* bd = GetSource().Get<Pipe>();
+	Core* bd = GetSource().Get<Core>();
 	if (!bd) throw DataExc();
 	open = &bd->GetOpen();
 	
@@ -4181,7 +4181,7 @@ void CorrelationOscillator::Init() {
 		PathLink& link = ids->keys[j];
 		j = link.keys.Find(tf_str);
 		if (j == -1) throw DataExc();
-		Pipe* bd = link.keys[j].link.Get<Pipe>();
+		Core* bd = link.keys[j].link.Get<Core>();
 		if (!bd) throw DataExc();
 		opens[i] = &bd->GetOpen();
 		sources[i] = bd;
@@ -4300,7 +4300,7 @@ ParallelSymLR::ParallelSymLR()
 {
 	period = 13;
 	method = 0;
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 }
 
 void ParallelSymLR::SetArguments(const VectorMap<String, Value>& args) {
@@ -4328,10 +4328,10 @@ void ParallelSymLR::Init()
 	
 	if (RequireIndicator("ma", "period", period, "method", method)) throw DataExc();
 	
-	SetPipeLevelCount(1);
-	SetPipeLevel(0, 0);
-	SetPipeLevelsColor(GrayColor(192));
-	SetPipeLevelsStyle(STYLE_DOT);
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+	SetCoreLevelsColor(GrayColor(192));
+	SetCoreLevelsStyle(STYLE_DOT);
 	*/
 }
 
@@ -4353,7 +4353,7 @@ void ParallelSymLR::Start()
 	bars -= shift;
 	
 	// Calculate averages
-	Pipe& cont = At(0);
+	Core& cont = At(0);
 	cont.Refresh();
 	
 	// Prepare values for loop
@@ -4408,7 +4408,7 @@ ParallelSymLREdge::ParallelSymLREdge()
 	period = 13;
 	method = 0;
 	slowing = 54;
-	SetPipeSeparateWindow();
+	SetCoreSeparateWindow();
 }
 
 void ParallelSymLREdge::SetArguments(const VectorMap<String, Value>& args) {
@@ -4462,8 +4462,8 @@ void ParallelSymLREdge::Start()
 	bars -= shift;
 	
 	// Refresh source data
-	Pipe& cont = At(0);
-	Pipe& slowcont = At(1);
+	Core& cont = At(0);
+	Core& slowcont = At(1);
 	cont.Refresh();
 	slowcont.Refresh();
 	

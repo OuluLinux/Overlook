@@ -10,7 +10,7 @@ enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
 
-class MovingAverage : public Pipe {
+class MovingAverage : public Core {
 	FloatVector buffer;
 	int ma_period;
 	int ma_shift;
@@ -29,19 +29,19 @@ protected:
 public:
 	MovingAverage();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % buffer;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	
 	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+		in.Add(ValueType(SourcePhase, RealValue, SymTf, 1));
+		out.Add(ValueType(IndiPhase, RealIndicatorValue, SymTf, 1));
 	}
 };
 
 
-class MovingAverageConvergenceDivergence : public Pipe {
+class MovingAverageConvergenceDivergence : public Core {
 	FloatVector    buffer;
 	FloatVector    signal_buffer;
 	int fast_ema_period;
@@ -64,7 +64,7 @@ public:
 };
 
 
-class AverageDirectionalMovement : public Pipe {
+class AverageDirectionalMovement : public Core {
 	FloatVector    adx_buffer;
 	FloatVector    pdi_buffer;
 	FloatVector    ndi_buffer;
@@ -88,7 +88,7 @@ public:
 };
 
 
-class BollingerBands : public Pipe {
+class BollingerBands : public Core {
 	FloatVector    ml_buffer;
 	FloatVector    tl_buffer;
 	FloatVector    bl_buffer;
@@ -115,7 +115,7 @@ public:
 };
 
 
-class Envelopes : public Pipe {
+class Envelopes : public Core {
 	
 	int                ma_period;
 	int                ma_shift;
@@ -141,7 +141,7 @@ public:
 };
 
 
-class ParabolicSAR : public Pipe {
+class ParabolicSAR : public Core {
 	double         sar_step;
 	double         sar_maximum;
 	
@@ -170,7 +170,7 @@ public:
 };
 
 
-class StandardDeviation : public Pipe {
+class StandardDeviation : public Core {
 	int period;
 	int ma_method;
 	int applied_value;
@@ -193,7 +193,7 @@ public:
 };
 
 
-class AverageTrueRange : public Pipe {
+class AverageTrueRange : public Core {
 	int period;
 	
 	FloatVector atr_buffer;
@@ -214,7 +214,7 @@ public:
 };
 
 
-class BearsPower : public Pipe {
+class BearsPower : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -233,7 +233,7 @@ public:
 };
 
 
-class BullsPower : public Pipe {
+class BullsPower : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -252,7 +252,7 @@ public:
 };
 
 
-class CommodityChannelIndex : public Pipe {
+class CommodityChannelIndex : public Core {
 	int period;
 	
 	FloatVector cci_buffer;
@@ -273,7 +273,7 @@ public:
 };
 
 
-class DeMarker : public Pipe {
+class DeMarker : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -294,7 +294,7 @@ public:
 };
 
 
-class ForceIndex : public Pipe {
+class ForceIndex : public Core {
 	int period;
 	int ma_method;
 	int applied_value;
@@ -315,7 +315,7 @@ public:
 };
 
 
-class Momentum : public Pipe {
+class Momentum : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -334,7 +334,7 @@ public:
 };
 
 
-class OsMA : public Pipe {
+class OsMA : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
@@ -355,7 +355,7 @@ public:
 };
 
 
-class RelativeStrengthIndex : public Pipe {
+class RelativeStrengthIndex : public Core {
 	int period;
 	
 	FloatVector    buffer;
@@ -376,7 +376,7 @@ public:
 };
 
 
-class RelativeVigorIndex : public Pipe {
+class RelativeVigorIndex : public Core {
 	int period;
 	
 	FloatVector     buffer;
@@ -396,7 +396,7 @@ public:
 };
 
 
-class StochasticOscillator : public Pipe {
+class StochasticOscillator : public Core {
 	int k_period;
 	int d_period;
 	int slowing;
@@ -421,7 +421,7 @@ public:
 
 
 
-class WilliamsPercentRange : public Pipe {
+class WilliamsPercentRange : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -442,7 +442,7 @@ public:
 };
 
 
-class AccumulationDistribution : public Pipe {
+class AccumulationDistribution : public Core {
 	FloatVector buffer;
 	
 public:
@@ -458,7 +458,7 @@ public:
 	}
 };
 
-class MoneyFlowIndex : public Pipe {
+class MoneyFlowIndex : public Core {
 	int period;
 	
 	FloatVector buffer;
@@ -476,7 +476,7 @@ public:
 	}
 };
 
-class ValueAndVolumeTrend : public Pipe {
+class ValueAndVolumeTrend : public Core {
 	int applied_value;
 	FloatVector buffer;
 	
@@ -493,7 +493,7 @@ public:
 	}
 };
 
-class OnBalanceVolume : public Pipe {
+class OnBalanceVolume : public Core {
 	int applied_value;
 	FloatVector buffer;
 	
@@ -511,7 +511,7 @@ public:
 };
 
 
-class Volumes : public Pipe {
+class Volumes : public Core {
 	FloatVector buf;
 	
 public:
@@ -528,7 +528,7 @@ public:
 };
 
 
-class AcceleratorOscillator : public Pipe {
+class AcceleratorOscillator : public Core {
 	FloatVector     buffer;
 	FloatVector     up_buffer;
 	FloatVector     down_buffer;
@@ -549,7 +549,7 @@ public:
 };
 
 
-class GatorOscillator : public Pipe {
+class GatorOscillator : public Core {
 	int jaws_period;
 	int jaws_shift;
 	int teeth_period;
@@ -580,7 +580,7 @@ public:
 };
 
 
-class AwesomeOscillator : public Pipe {
+class AwesomeOscillator : public Core {
 	FloatVector     buffer;
 	FloatVector     up_buffer;
 	FloatVector     down_buffer;
@@ -599,7 +599,7 @@ public:
 };
 
 
-class Fractals : public Pipe {
+class Fractals : public Core {
 	int left_bars;
 	int right_bars;
 	int levels;
@@ -627,7 +627,7 @@ public:
 	}
 };
 
-class FractalOsc : public Pipe {
+class FractalOsc : public Core {
 	int left_bars;
 	int right_bars;
 	int smoothing_period;
@@ -647,7 +647,7 @@ public:
 };
 
 
-class MarketFacilitationIndex : public Pipe {
+class MarketFacilitationIndex : public Core {
 	FloatVector buffer;
 	FloatVector up_up_buffer;
 	FloatVector down_down_buffer;
@@ -668,7 +668,7 @@ public:
 };
 
 
-class ZigZag : public Pipe {
+class ZigZag : public Core {
 	FloatVector keypoint_buffer;
 	FloatVector high_buffer;
 	FloatVector low_buffer;
@@ -686,7 +686,7 @@ public:
 	ZigZag();
 	
 	virtual void Serialize(Stream& s) {
-		Pipe::Serialize(s);
+		Core::Serialize(s);
 		s % keypoint_buffer % high_buffer % low_buffer % osc;
 		s % input_depth % input_deviation % input_backstep % extremum_level;
 	}
@@ -700,7 +700,7 @@ public:
 	}
 };
 
-class ZigZagOsc : public Pipe {
+class ZigZagOsc : public Core {
 	FloatVector osc;
 	
 	int depth;
@@ -723,7 +723,7 @@ public:
 
 
 
-class LinearTimeFrames : public Pipe {
+class LinearTimeFrames : public Core {
 	FloatVector day, month, year, week;
 	
 public:
@@ -740,7 +740,7 @@ public:
 };
 
 
-class RepeatingAverage : public Pipe {
+class RepeatingAverage : public Core {
 	int period, smoothing_period, applied_value;
 	FloatVector average1, average2, average3, average4;
 	
@@ -757,7 +757,7 @@ public:
 	}
 };
 
-class RepeatingAverageOscillator : public Pipe {
+class RepeatingAverageOscillator : public Core {
 	int period, smoothing_period, applied_value;
 	FloatVector diff1, diff2, maindiff, avdiff, main_av_diff;
 	
@@ -775,7 +775,7 @@ public:
 };
 
 
-class SupportResistance : public Pipe {
+class SupportResistance : public Core {
 	int period, max_crosses, max_radius;
 	FloatVector support, resistance;
 	
@@ -793,7 +793,7 @@ public:
 };
 
 
-class SupportResistanceOscillator : public Pipe {
+class SupportResistanceOscillator : public Core {
 	int period, max_crosses, max_radius, smoothing_period;
 	FloatVector osc, osc_av;
 	
@@ -811,7 +811,7 @@ public:
 };
 
 
-class Psychological : public Pipe {
+class Psychological : public Core {
 	int period;
 	FloatVector buf;
 	
@@ -829,7 +829,7 @@ public:
 };
 
 
-class CorrelationOscillator : public Pipe {
+class CorrelationOscillator : public Core {
 	struct OnlineAverage : Moveable<OnlineAverage> {
 		double mean_a, mean_b;
 		int count;
@@ -846,7 +846,7 @@ class CorrelationOscillator : public Pipe {
 	int period;
 	Array<FloatVector> buf;
 	int sym_count;
-	Vector<Pipe*> sources;
+	Vector<Core*> sources;
 	Vector<ConstFloatVector*> opens;
 	Vector<OnlineAverage> averages;
 	//PathLink* ids;
@@ -881,7 +881,7 @@ public:
 	This data can be statistically evaluated, and periodical time of change of direction can
 	be estimated.
 */
-class ParallelSymLR : public Pipe {
+class ParallelSymLR : public Core {
 	
 public:
 	FloatVector buffer;
@@ -896,7 +896,7 @@ protected:
 public:
 	ParallelSymLR();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % buffer;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
@@ -912,7 +912,7 @@ public:
 	The edge filter for data is the same that for images.
 	Positive peak values are when trend is changing.
 */
-class ParallelSymLREdge : public Pipe {
+class ParallelSymLREdge : public Core {
 	
 public:
 	FloatVector symlr;
@@ -929,7 +929,7 @@ protected:
 public:
 	ParallelSymLREdge();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % symlr % edge % buffer;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % symlr % edge % buffer;}
 	
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);

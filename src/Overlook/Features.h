@@ -30,12 +30,12 @@ public:
 	
 };
 
-class FeatureDetector : public Pipe {
+class FeatureDetector : public Core {
 	
 protected:
 	friend class GroupFeatureDetector;
 	//DataVar buf;
-	Pipe *cont;
+	Core *cont;
 	int counted;
 	VectorMap<int, FeatureKeypoint> keypoints;
 	VectorMap<int, Vector<int> > keypoint_groups, keypoint_group_pos;

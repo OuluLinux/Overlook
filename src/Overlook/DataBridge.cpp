@@ -40,9 +40,12 @@ void DataBridge::Serialize(Stream& s) {
 }
 
 void DataBridge::Init() {
+	BaseSystem& ol = Get<BaseSystem>();
+	addr = ol.addr;
+	port = ol.port;
+	
 	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
 	
-	BaseSystem& ol = GetBaseSystem();
 	MetaTrader& mt = GetMetaTrader();
 	
 	ASSERTEXC_(mt.GetSymbolCount() > 0, "MetaTrader must be initialized before DataBridge.");
@@ -222,7 +225,7 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 
 bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	/*MetaTrader& mt = GetMetaTrader();
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
@@ -432,7 +435,7 @@ void BridgeAskBid::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void BridgeAskBid::Init() {
-	/*Pipe::Init();
+	/*Core::Init();
 	
 	SetBufferCount(2);
 	SetIndexCount(2);
@@ -506,7 +509,7 @@ void BridgeAskBid::Start() {
 	}
 	
 	
-	const FloatVector& open = GetSource().Get<Pipe>()->GetOpen();
+	const FloatVector& open = GetSource().Get<Core>()->GetOpen();
 	
 	DataTime& dt = GetTime();
 	for(int i = counted; i < bars; i++) {

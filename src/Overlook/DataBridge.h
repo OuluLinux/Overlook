@@ -3,7 +3,7 @@
 
 namespace Overlook {
 
-class DataBridge : public Pipe {
+class DataBridge : public Core {
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	Vector<double> points;
@@ -28,6 +28,7 @@ public:
 	~DataBridge();
 	
 	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
+		in.Add(ValueType(SourcePhase, TimeValue, SymTf, 1));
 		out.Add(ValueType(SourcePhase, RealValue, SymTf, 1));
 	}
 	
@@ -51,7 +52,7 @@ public:
 	
 };
 
-class BridgeAskBid : public Pipe {
+class BridgeAskBid : public Core {
 	FloatVector ask, bid;
 	int cursor;
 	
@@ -64,7 +65,7 @@ protected:
 public:
 	BridgeAskBid();
 	
-	virtual void Serialize(Stream& s) {Pipe::Serialize(s); s % ask % bid /*% ask_high % bid_low*/ % cursor;}
+	virtual void Serialize(Stream& s) {Core::Serialize(s); s % ask % bid /*% ask_high % bid_low*/ % cursor;}
 	
 	virtual void Start();
 	virtual void Init();

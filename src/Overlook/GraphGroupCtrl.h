@@ -9,7 +9,7 @@ class GraphGroupCtrl : public CustomCtrl {
 	
 protected:
 	
-	Pipe* bardata;
+	Core* bardata;
 	Array<GraphCtrl> graphs;
 	Splitter split;
 	
@@ -18,8 +18,8 @@ protected:
 	int shift;
 	bool right_offset, keep_at_end;
 	
-	void AddSeparatePipe(int id, const Vector<double>& settings);
-	void AddValuePipe(int id, const Vector<double>& settings);
+	void AddSeparateCore(int id, const Vector<double>& settings);
+	void AddValueCore(int id, const Vector<double>& settings);
 	void SetTimeValueTool(bool enable);
 	void GraphMouseMove(Point pt, GraphCtrl* g);
 	void Refresh0() {ParentCtrl::Refresh();}
@@ -30,7 +30,7 @@ public:
 	GraphGroupCtrl();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
-	void ClearPipes();
+	void ClearCores();
 	GraphCtrl& AddGraph(Core* src);
 	void SetGraph(Core* src);
 	void SetShift(int i) {shift = i;}
@@ -41,7 +41,7 @@ public:
 	virtual void Start();
 	virtual void RefreshData();
 	
-	Pipe& GetPipe() {return *bardata;}
+	Core& GetCore() {return *bardata;}
 	Color GetBackground() {return White();}
 	Color GetGridColor() {return GrayColor();}
 	int GetPeriod() {return period;}

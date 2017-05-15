@@ -182,7 +182,7 @@ void Recurrent::Init() {
 	
 	LoadThis();
 	
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	sym_count = ol.GetSymbolCount();
 	tf_count = ol.GetPeriodCount();
 	data.SetCount(sym_count * tf_count);
@@ -421,7 +421,7 @@ void NARX::SetArguments(const VectorMap<String, Value>& args) {
 
 void NARX::Init() {
 	/*
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
@@ -543,7 +543,7 @@ void NARX::Init() {
 }
 
 void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessAttributes& attr) {
-	/*BaseSystem& ol = GetBaseSystem();
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	for (int i = 0; i < s.input_count; i++) {
 		Vector<InputUnit>& exo = s.exogenous[i];
@@ -872,7 +872,7 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void Forecaster::Init() {
-	/*BaseSystem& ol = GetBaseSystem();
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1102,7 +1102,7 @@ void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
 
 void RLAgent::Init() {
 	/*
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1258,7 +1258,7 @@ void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 
 void DQNAgent::Init() {
 	/*
-	BaseSystem& ol = GetBaseSystem();
+	BaseSystem& ol = Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1425,7 +1425,7 @@ void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaAgent::Init() {
-	/*BaseSystem& ol = GetBaseSystem();
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1647,7 +1647,7 @@ void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaMetaAgent::Init() {
-	/*BaseSystem& ol = GetBaseSystem();
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/rl", 0, 1);
@@ -1873,7 +1873,7 @@ void MonaDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaDoubleAgent::Init() {
-	/*BaseSystem& ol = GetBaseSystem();
+	/*BaseSystem& ol = Get<BaseSystem>();
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/metamona", 1, 0);

@@ -475,4 +475,14 @@ this too: I can import all my old indicators to the overlook.
 If it had been any more difficult than copy`-pasting, I would 
 have skipped it, but now I can adjust the base class to do just 
 that.&]
+[s3; 15.5.2017&]
+[s0; I am continuing developing Overlook in github. I tested to combine 
+all libraries to one repository, but it wasn`'t such a good idea. 
+First of all, the UltimateScript, where I added them, could have 
+them in a repository, but they should be converted to it`'s own 
+GUI`-libraries, which hasn`'t been started even yet, in it takes 
+forever to get there. Second, I can`'t showcase invidual modules, 
+which has unique value. I am going to work on UltimateScript 
+this summer, though, but it`'s better to start that from empty 
+desk (or repository).&]
 [s0; ]]

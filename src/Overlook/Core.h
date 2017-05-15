@@ -9,18 +9,6 @@ using namespace Upp;
 
 class Overlook;
 
-class Core {
-	
-	
-public:
-	Core() {}
-	
-	virtual void SetArguments(const VectorMap<String, Value>& args) {}
-	virtual void Init() {}
-	virtual void Deinit() {}
-	virtual void Start() {}
-	
-};
 
 
 
@@ -113,7 +101,7 @@ struct DataBufferSettings : public Moveable<DataBufferSettings> {
 };
 
 
-class Pipe : public Core {
+class Core {
 	
 	// Settings
 	Vector<FloatVector*> indices;
@@ -137,10 +125,16 @@ class Pipe : public Core {
 	
 protected:
 	
-	Pipe();
-	~Pipe();
+	Core();
 	
 public:
+	
+	virtual ~Core();
+	
+	virtual void SetArguments(const VectorMap<String, Value>& args) {}
+	virtual void Init() {}
+	virtual void Deinit() {}
+	virtual void Start() {}
 	
 	virtual void Serialize(Stream& s) {
 		s % short_name % counted % levels % buffer_settings
@@ -155,17 +149,17 @@ public:
 	int GetWindowType() {return window_type;}
 	int GetCounted() {return counted;}
 	double GetPoint() const {return point;}
-	int GetPipeLevelCount() const {return levels.GetCount();}
-	int GetPipeLevelType(int i) const {return levels[i].style;}
-	int GetPipeLevelLineWidth(int i) const {return levels[i].line_width;}
+	int GetCoreLevelCount() const {return levels.GetCount();}
+	int GetCoreLevelType(int i) const {return levels[i].style;}
+	int GetCoreLevelLineWidth(int i) const {return levels[i].line_width;}
 	int GetBufferStyle(int i) {return buffer_settings[i].style;}
 	int GetBufferArrow(int i) {return buffer_settings[i].chr;}
 	double GetMaximum() const {return maximum;}
 	double GetMinimum() const {return minimum;}
-	double GetPipeLevelValue(int i) const {return levels[i].value;}
-	double GetPipeMinimum() {return minimum;}
-	double GetPipeMaximum() {return maximum;}
-	bool IsPipeSeparateWindow() {return window_type == WINDOW_SEPARATE;}
+	double GetCoreLevelValue(int i) const {return levels[i].value;}
+	double GetCoreMinimum() {return minimum;}
+	double GetCoreMaximum() {return maximum;}
+	bool IsCoreSeparateWindow() {return window_type == WINDOW_SEPARATE;}
 	bool HasMaximum() const {return has_maximum;}
 	bool HasMinimum() const {return has_minimum;}
 	int GetBufferCount() {return buffer_settings.GetCount();}
@@ -182,6 +176,7 @@ public:
 	double GetIndexValue(int i, int shift) {return indices[i]->Get(shift);}
 	double GetIndexValue(int shift) {return indices[0]->Get(shift);}
 	int GetMinutePeriod();
+	template <class T> T& Get() {}
 	
 	
 	// Set settings
@@ -190,21 +185,21 @@ public:
 	void SetBufferColor(int i, Color c) {buffer_settings[i].clr = c;}
 	void SetBufferLineWidth(int i, int line_width) {buffer_settings[i].line_width = line_width;}
 	void SetBufferType(int i, int style) {buffer_settings[i].line_style = style;}
-	//void SetPipeDigits(int digits) {this->digits = digits;}
+	//void SetCoreDigits(int digits) {this->digits = digits;}
 	void SetPoint(double d);
-	void SetPipeLevelCount(int count) {levels.SetCount(count);}
-	void SetPipeLevel(int i, double value) {levels[i].value = value;}
-	void SetPipeLevelType(int i, int style) {levels[i].style = style;}
-	void SetPipeLevelLineWidth(int i, int line_width) {levels[i].line_width = line_width;}
-	void SetPipeLevelsColor(Color clr) {levels_clr = clr;}
-	void SetPipeLevelsStyle(int style) {levels_style = style;}
-	void SetPipeMinimum(double value) {minimum = value; has_minimum = true;}
-	void SetPipeMaximum(double value) {maximum = value; has_maximum = true;}
+	void SetCoreLevelCount(int count) {levels.SetCount(count);}
+	void SetCoreLevel(int i, double value) {levels[i].value = value;}
+	void SetCoreLevelType(int i, int style) {levels[i].style = style;}
+	void SetCoreLevelLineWidth(int i, int line_width) {levels[i].line_width = line_width;}
+	void SetCoreLevelsColor(Color clr) {levels_clr = clr;}
+	void SetCoreLevelsStyle(int style) {levels_style = style;}
+	void SetCoreMinimum(double value) {minimum = value; has_minimum = true;}
+	void SetCoreMaximum(double value) {maximum = value; has_maximum = true;}
 	void SetBufferLabel(int i, String label)  {buffer_settings[i].label = label;}
 	void SetBufferStyle(int i, int style)     {buffer_settings[i].style = style;}
 	void SetBufferArrow(int i, int chr)       {buffer_settings[i].chr   = chr;}
-	void SetPipeChartWindow() {window_type = WINDOW_CHART;}
-	void SetPipeSeparateWindow() {window_type = WINDOW_SEPARATE;}
+	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
+	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
 	void SetBufferShift(int i, int shift) {buffer_settings[i].shift = shift;}
 	void SetBufferBegin(int i, int begin) {buffer_settings[i].begin = begin;}
 	void SetIndexCount(int count) {indices.SetCount(count);}

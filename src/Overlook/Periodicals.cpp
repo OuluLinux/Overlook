@@ -113,6 +113,8 @@ const OnlineVariance& WdayHourChanges::GetOnlineVariance(int shift) {
 	int dh = h + d * h_count;
 	
 	return wdayhour[dh];*/
+	
+	Panic("TODO"); return OnlineVariance();
 }
 
 
@@ -3057,7 +3059,7 @@ ChannelPredicter::ChannelPredicter() {
 }
 
 String ChannelPredicter::GetStyle() const {
-	
+	return "";
 }
 
 void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
@@ -3091,6 +3093,7 @@ bool ChannelPredicter::Process(const CoreProcessAttributes& attr) {
 	}
 	*GetValue<double>(6, attr) = diff / 3;
 	return true;*/
+	Panic("TODO"); return 0;
 }
 
 

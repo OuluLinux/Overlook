@@ -27,9 +27,9 @@ public:
 	DataBridge();
 	~DataBridge();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(SourcePhase, TimeValue, SymTf, 1));
-		out.Add(ValueType(SourcePhase, RealValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, TimeValue, SymTf, 1);
+		reg.AddOut(SourcePhase, RealValue, SymTf, 1);
 	}
 	
 	virtual void SetArguments(const VectorMap<String, Value>& args);

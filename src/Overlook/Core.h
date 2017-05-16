@@ -100,8 +100,61 @@ struct DataBufferSettings : public Moveable<DataBufferSettings> {
 	void Serialize(Stream& s) {s % label % clr % style % line_style % line_width % chr % begin % shift;}
 };
 
+// Class for registering input and output types of values of classes
+struct ValueRegister {
+	ValueRegister() {}
+	
+	virtual void AddIn(int phase, int type, int scale, int count) = 0;
+	virtual void AddInOptional(int phase, int type, int scale, int count) = 0;
+	virtual void AddOut(int phase, int type, int scale, int count) = 0;
+	
+};
 
-class Core {
+struct CoreIO : public ValueRegister {
+	struct In : Moveable<In> {
+		In() {core = NULL; output_id = -1;}
+		Core* core;
+		int output_id;
+	};
+	
+	Vector<In> inputs;
+	
+	CoreIO() {}
+	
+	virtual void AddIn(int phase, int type, int scale, int count) {
+		In& in = inputs.Add();
+	}
+	
+	virtual void AddInOptional(int phase, int type, int scale, int count) {
+		
+	}
+	
+	virtual void AddOut(int phase, int type, int scale, int count) {
+		
+	}
+	
+	
+	template <class T> T* Get() {
+		for(int i = 0; i < inputs.GetCount(); i++) {
+			Core* c = inputs[i].core;
+			T* t = dynamic_cast<T*>(c);
+			if (t) return t;
+			t = c->Get<T>();
+			if (t) return t;
+		}
+		return NULL;
+	}
+	
+	
+	void SetInput(int input_id, Core& core, int src_output_id) {
+		In& in = inputs[input_id];
+		in.core = &core;
+		in.output_id = src_output_id;
+	}
+	
+};
+
+class Core : public CoreIO {
 	
 	// Settings
 	Vector<FloatVector*> indices;
@@ -135,7 +188,7 @@ public:
 	virtual void Init() {}
 	virtual void Deinit() {}
 	virtual void Start() {}
-	
+	virtual void GetIO(ValueRegister& reg) {Panic("Never here");}
 	virtual void Serialize(Stream& s) {
 		s % short_name % counted % levels % buffer_settings
 		  % levels_clr % minimum % maximum % point % levels_style
@@ -176,7 +229,7 @@ public:
 	double GetIndexValue(int i, int shift) {return indices[i]->Get(shift);}
 	double GetIndexValue(int shift) {return indices[0]->Get(shift);}
 	int GetMinutePeriod();
-	template <class T> T& Get() {}
+	
 	
 	
 	// Set settings
@@ -213,6 +266,7 @@ public:
 	// Visible main functions
 	void Refresh();
 	void ClearContent();
+	void RefreshIO() {GetIO(*this);}
 	
 protected:
 	

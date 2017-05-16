@@ -128,6 +128,7 @@ void Prioritizer::CreateCombination() {
 	ASSERT_(Factory::GetFactoryInputs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
 	for(int i = 0; i < Factory::GetFactoryInputs().GetCount(); i++) {
 		const Vector<ValueType>& factory_inputs = Factory::GetFactoryInputs()[i];
+		const Vector<ValueType>& factory_outputs = Factory::GetFactoryOutputs()[i];
 		
 		// One part per slot-factory
 		CombinationPart& part = combparts.Add();
@@ -136,6 +137,7 @@ void Prioritizer::CreateCombination() {
 		
 		combination_bits++; // enabled bit
 		
+		// Add inputs
 		for(int i2 = 0; i2 < factory_inputs.GetCount(); i2++) {
 			const ValueType& input = factory_inputs[i2];
 			part.inputs.Add(input);
@@ -158,6 +160,11 @@ void Prioritizer::CreateCombination() {
 					}
 				}
 			}
+		}
+		// Add outputs
+		for(int i2 = 0; i2 < factory_outputs.GetCount(); i2++) {
+			const ValueType& output = factory_outputs[i2];
+			part.outputs.Add(output);
 		}
 		
 		part.end = combination_bits;
@@ -190,6 +197,8 @@ void Prioritizer::CreateCombination() {
 		}
 	}
 	
+	
+	job_combination_bytes = combination_bits / 8 + (combination_bits % 8 != 0 ? 1 : 0);
 	
 	combination_bits += 200 + 10; // max symbols and timeframes
 	combination_bytes = combination_bits / 8 + (combination_bits % 8 != 0 ? 1 : 0);
@@ -622,70 +631,43 @@ void Prioritizer::RefreshCoreQueue() {
 	
 	slot_queue.Clear();
 	
-	Vector<byte> dep_mask;
+	
 	Vector<byte> unique_slot_comb;
-	Vector<int> depmask_begins, depmask_ends;
 	int fac_count = Factory::GetCtrlFactoryCount();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
 	
+	
+	
+	// Loop all enabled pipeline-combinations
 	for(int i = 0; i < pl_queue.GetCount(); i++) {
 		CorelineItem& pi = pl_queue[i];
 		ASSERT(!pi.value.IsEmpty());
 		
 		// Combination consist of all factories + sym + tf
+		// Loop all factories from begin to the end
 		for(int j = 0; j < fac_count; j++) {
 			const CombinationPart& part = combparts[j];
 			
-			// Skip disabled slots
+			// Skip factories, which are disabled in the combination
 			int enabled_bit = GetBitEnabled(j);
 			bool enabled = ReadBit(pi.value, enabled_bit);
 			if (!enabled) continue;
 			
+			// Here, the 'part' is the active factory in the combination.
+			// Dependency mask has all earlier factories enabled, which this active factory needs.
+			// We can't just collect all enabled factories until this point, because some of
+			// them are not needed by this factory. They must be searched separately, which is
+			// done next by creating unique combination from this factory and it's dependencies
+			// and by comparing it to existing core-queue.
+			CreateUniqueCombination(pi.value, j, unique_slot_comb);
 			
-			// Create dependency mask based on combination
-			dep_mask.SetCount(0);
-			dep_mask.SetCount(combination_bytes, 0);
-			
-			// Get true-value ranges in the mask
-			depmask_begins.SetCount(0);
-			depmask_ends.SetCount(0);
-			depmask_begins.Add(part.begin);
-			depmask_ends.Add(part.end);
-			Panic("TODO: missing recursive parts from the current, not ALL. Because other later indi can enable something between, which should be masked.");
-			for(int k = j-1; k >= 0; k--) {
-				const CombinationPart& part = combparts[k];
-				depmask_begins.Add(part.begin);
-				depmask_ends.Add(part.end);
-			}
-			ASSERT(!depmask_begins.IsEmpty());
-			
-			// Write ranges to the mask
-			for(int k = 0; k < depmask_begins.GetCount(); k++) {
-				int begin = depmask_begins[k];
-				int end = depmask_ends[k];
-				for (int l = begin; l < end; l++) {
-					int byt = l / 8;
-					int bit = l % 8;
-					byte* b = dep_mask.Begin() + byt;
-					byte mask = 1 << bit;
-					*b |= mask;
-				}
-			}
-			
-			
-			// Create unique slot combination
-			unique_slot_comb.SetCount(0);
-			unique_slot_comb.SetCount(combination_bytes, 0);
-			for(int k = 0; k < combination_bytes; k++)
-				unique_slot_comb[k] = dep_mask[k] & pi.value[k];
-			
-			
-			// Check if current slot is currently at the queue already
+			// Loop existing core-queue and check if the current slot is in the queue already.
 			bool found = false;
 			for(int k = 0; k < slot_queue.GetCount(); k++) {
 				CoreItem& si = slot_queue[k];
 				
+				// Compare the unique combination
 				bool equal = true;
 				for(int i = 0; i < combination_bytes; i++) {
 					if (si.value[i] != unique_slot_comb[i]) {
@@ -694,10 +676,11 @@ void Prioritizer::RefreshCoreQueue() {
 					}
 				}
 				
+				// If the combination is same
 				if (equal) {
 					found = true;
 					
-					// Add pipeline-item to iniator list
+					// Add pipeline-item to iniator list (which is the list of reasons why the item was added)
 					si.pipeline_src.Add(i);
 					
 					// Add priorities of symbols and timeframes
@@ -718,7 +701,8 @@ void Prioritizer::RefreshCoreQueue() {
 			}
 			
 			
-			// If combination was original, add it to the processing list
+			// If combination wasn't added already to the core-queue, then it is original and
+			// it can be added to the core-queue.
 			if (!found) {
 				CoreItem& si = slot_queue.Add();
 				
@@ -758,37 +742,54 @@ void Prioritizer::RefreshJobQueue() {
 	Vector<JobItem> new_job_queue;
 	Vector<JobItem>& old_job_queue = this->job_queue;
 	
-	Vector<byte> src_unique_comb;
+	Vector<byte> unique_slot_comb;
 	
+	// Loop current unique-slot queue
 	for(int i = 0; i < slot_queue.GetCount(); i++) {
 		CoreItem& ci = slot_queue[i];
+		const CombinationPart& part = combparts[ci.factory];
 		
+		// Add room for symbol and timeframe in the priority-number
 		int64 priority_base = (int64)ci.priority * (int64)total;
 		
+		// Loop enabled symbols in the current unique-slot
 		for(int j = 0; j < ci.symlist.GetCount(); j++) {
 			int sym = ci.symlist.GetKey(j);
 			int sym_prio = ci.symlist[j];
+			
+			// Loop enabled timeframes in the current unique-slot
 			for(int k = 0; k < ci.tflist.GetCount(); k++) {
 				int tf = ci.tflist.GetKey(k);
 				int tf_prio = ci.tflist[k];
 				
+				// Add new job item for current slot/symbol/tf combination
+				const ValueType& first_output = part.outputs[0]; // all outputs should have the same scale
 				JobItem& ji = new_job_queue.Add();
-				ji.value <<= ci.value;
+				ji.priority = priority_base + (int64)sym * tf_count + (int64)tf; // TODO: fix this, it's not correct
+				ji.factory = ci.factory;
+				ji.all_sym = first_output.scale == Sym || first_output.scale == All;
+				ji.all_tf = first_output.scale == Tf || first_output.scale == All;
 				ji.sym = sym;
 				ji.tf = tf;
-				ji.priority = priority_base + (int64)sym * tf_count + (int64)tf;
-				ji.factory = ci.factory;
 				
+				// Copy only the important part of the unique combination without symbol & timeframe.
+				ASSERT(ci.value.GetCount() == combination_bytes);
+				ji.value.SetCount(job_combination_bytes);
+				for(int l = 0; l < job_combination_bytes; l++)
+					ji.value[l] = ci.value[l];
 				
-				// Assign core-object to the JobItem
+				// Assign core-object to the JobItem.
+				// Find existing object from previous queue or create and initialize a new one.
 				
-				// Search existing job-queue for existing core-object
+				// Search existing job-queue for existing core-object.
 				bool found = false;
 				for (int l = 0; l < old_job_queue.GetCount(); l++) {
 					JobItem& old_ji = old_job_queue[l];
 					
+					// Symbol and timeframe must match. (works also for sym/tf/all types)
 					if (old_ji.sym != sym || old_ji.tf != tf) continue;
 					
+					// Try to match the unique combination
 					bool equal = true;
 					for(int i = 0; i < job_combination_bytes; i++) {
 						if (old_ji.value[i] != ji.value[i]) {
@@ -799,26 +800,27 @@ void Prioritizer::RefreshJobQueue() {
 					if (!equal) continue;
 					
 					// JobItem is equal. Move the core-object pointer.
-					// Assume that dependencies are being moved also.
+					// Assume that dependencies are being moved also, because their slot should
+					// be enabled with the same combination.
 					ji.core = old_ji.core;
 					old_ji.core = NULL;
 					
 					found = true;
 				}
 				
-				// Create core-object
+				// If old object wasn't found, create core-object and initialize it
 				if (!found) {
+					
+					// Create core-object
 					ji.core = Factory::GetCtrlFactories()[ji.factory].b();
 					
+					// Set attributes
+					ji.core->RefreshIO();
 					ji.core->SetSymbol(sym);
 					ji.core->SetTimeframe(tf);
 					
-					
-					
 					// Connect input sources
-					
 					// Loop all inputs of the custom core-class
-					const CombinationPart& part = combparts[ji.factory];
 					for (int l = 0; l < part.input_src.GetCount(); l++) {
 						
 						// Loop possible sources for one input
@@ -827,14 +829,16 @@ void Prioritizer::RefreshJobQueue() {
 						int src_count = 0; // count enabled sources for debugging (1 is correct)
 						#endif
 						for (int m = 0; m < input_src.GetCount(); m++) {
+							
+							// Check if source is enabled
 							const IntPair& src = input_src[k];
 							int src_enabled_bit = GetBitCore(ji.factory, l, m);
 							bool src_enabled = ReadBit(ji.value, src_enabled_bit);
 							if (!src_enabled) continue;
 							
-							
-							Panic("TODO: unique comb from src fac");
-							// set src_unique_comb
+							// Create unique combination for current input source factory
+							CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
+							ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
 							
 							
 							// Search source and loop existing job queue
@@ -842,13 +846,13 @@ void Prioritizer::RefreshJobQueue() {
 							for (int n = 0; n < new_job_queue.GetCount(); n++) {
 								JobItem& src_ji = new_job_queue[n];
 								
-								Panic("TODO: sym tf comparison?!?? Some jobs & classes are for all sym+tf....");
-								
 								if (src_ji.factory != src.a) continue;
+								if ((!src_ji.all_sym && src_ji.sym != sym)) continue;
+								if ((!src_ji.all_tf  && src_ji.tf  != tf )) continue;
 								
 								bool equal = true;
 								for (int o = 0; o < job_combination_bytes; o++) {
-									if (src_unique_comb[o] != src_ji.value[o]) {
+									if (unique_slot_comb[o] != src_ji.value[o]) {
 										equal = false;
 										break;
 									}
@@ -858,7 +862,7 @@ void Prioritizer::RefreshJobQueue() {
 								
 								// Source found
 								ASSERT(src_ji.core);
-								ji.core->SetInput(l, *src_ji.core);
+								ji.core->SetInput(l, *src_ji.core, src.b);
 								
 								
 								found = true;
@@ -875,8 +879,10 @@ void Prioritizer::RefreshJobQueue() {
 							#endif
 						}
 					}
+					
 					//ji.core->SetArguments(*args);
 					
+					// Initialize
 					ji.core->Init();
 				}
 			}
@@ -897,5 +903,79 @@ void Prioritizer::RefreshJobQueue() {
 }
 
 
+void Prioritizer::CreateUniqueCombination(const Vector<byte>& src, int fac_id, Vector<byte>& unique_slot_comb) {
+	const CombinationPart& part = combparts[fac_id];
+	
+	int bytes = src.GetCount();
+	ASSERT(bytes > 0);
+	ASSERT(bytes == combination_bytes || bytes == job_combination_bytes);
+	
+	Vector<int> depmask_begins, depmask_ends;
+	Vector<byte> dep_mask;
+	Vector<bool> enabled_fac;
+	
+	int fac_count = Factory::GetCtrlFactoryCount();
+	enabled_fac.SetCount(fac_count);
+	
+	// Create dependency mask based on combination
+	dep_mask.SetCount(0);
+	dep_mask.SetCount(bytes, 0);
+	
+	// Get true-value ranges in the mask
+	depmask_begins.SetCount(0);
+	depmask_ends.SetCount(0);
+	depmask_begins.Add(part.begin);
+	depmask_ends.Add(part.end);
+	
+	// Enable this factory and disable others
+	for(int k = 0; k < fac_count; k++)
+		enabled_fac[k] = false;
+	enabled_fac[fac_id] = true;
+	for(int k = fac_id; k >= 0; k--) {
+		if (!enabled_fac[k]) continue;
+		
+		const CombinationPart& part = combparts[k];
+		depmask_begins.Add(part.begin);
+		depmask_ends.Add(part.end);
+		
+		// Enable sources of current
+		for (int l = 0; l < part.input_src.GetCount(); l++) {
+			
+			// Get enabled input
+			const Vector<IntPair>& src_list = part.input_src[l];
+			for (int m = 0; m < src_list.GetCount(); m++) {
+				int enabled_bit = GetBitCore(k, l, m);
+				bool src_is_enabled = ReadBit(src, enabled_bit);
+				
+				// Unmask source if it was enabled
+				if (src_is_enabled) {
+					const IntPair& src = src_list[m];
+					enabled_fac[src.a] = true;
+					ASSERT(src.a < k); // factory id must be less than current
+				}
+			}
+		}
+	}
+	ASSERT(!depmask_begins.IsEmpty());
+	
+	// Write ranges to the mask
+	for(int k = 0; k < depmask_begins.GetCount(); k++) {
+		int begin = depmask_begins[k];
+		int end = depmask_ends[k];
+		for (int l = begin; l < end; l++) {
+			int byt = l / 8;
+			int bit = l % 8;
+			byte* b = dep_mask.Begin() + byt;
+			byte mask = 1 << bit;
+			*b |= mask;
+		}
+	}
+	
+	// Create unique slot combination
+	unique_slot_comb.SetCount(0);
+	unique_slot_comb.SetCount(bytes, 0);
+	for(int k = 0; k < bytes; k++)
+		unique_slot_comb[k] = dep_mask[k] & src[k];
+}
 
 }

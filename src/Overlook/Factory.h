@@ -4,6 +4,15 @@
 namespace Overlook {
 using namespace Upp;
 
+struct FactoryValueRegister : public ValueRegister {
+	Vector<ValueType> *in, *out, *inopt;
+	
+	virtual void AddIn(int phase, int type, int scale, int count) {in->Add(ValueType(phase, type, scale, count));}
+	virtual void AddInOptional(int phase, int type, int scale, int count) {inopt->Add(ValueType(phase, type, scale, count));}
+	virtual void AddOut(int phase, int type, int scale, int count) {out->Add(ValueType(phase, type, scale, count));}
+	
+};
+
 class Factory {
 	
 protected:
@@ -27,7 +36,11 @@ public:
 	
 	template <class CoreT, class CtrlT> static void Register(String name) {
 		AddCustomCtrl(name, &Factory::CoreFactoryFn<CoreT>, &Factory::CtrlFactoryFn<CtrlT>);
-		CoreT::GetIO(Inputs().Add(), OptionalInputs().Add(), Outputs().Add());
+		FactoryValueRegister reg;
+		reg.in = &Inputs().Add();
+		reg.inopt = &OptionalInputs().Add();
+		reg.out = &Outputs().Add();
+		CoreT().GetIO(reg); // unfortunately one object must be created, because GetIO can't be static and virtual at the same time and it is cleaner to use virtual.
 	}
 	
 	template <class CoreT> static CoreT& GetCore() {return *dynamic_cast<CoreT*>(CoreFactoryFn<CoreT>());}

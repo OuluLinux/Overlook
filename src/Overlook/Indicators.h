@@ -34,9 +34,9 @@ public:
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(SourcePhase, RealValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, RealIndicatorValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, RealValue, SymTf, 1);
+		reg.AddOut(IndiPhase, RealIndicatorValue, SymTf, 1);
 	}
 };
 
@@ -57,9 +57,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -81,9 +81,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -108,9 +108,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -134,9 +134,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -163,9 +163,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -186,9 +186,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -207,9 +207,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -226,9 +226,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -245,9 +245,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -266,9 +266,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -287,9 +287,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -308,9 +308,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -327,9 +327,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -369,9 +369,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -389,9 +389,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -413,9 +413,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -435,9 +435,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -452,9 +452,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -470,9 +470,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -487,9 +487,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -504,9 +504,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -521,9 +521,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -542,9 +542,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -573,9 +573,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -592,9 +592,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -621,9 +621,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -640,9 +640,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -661,9 +661,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -694,9 +694,9 @@ public:
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -714,9 +714,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -733,9 +733,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -751,9 +751,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -768,9 +768,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -786,9 +786,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -804,9 +804,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -822,9 +822,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -861,9 +861,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -901,9 +901,9 @@ public:
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -934,9 +934,9 @@ public:
 	virtual void Init();
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 

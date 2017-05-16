@@ -26,7 +26,7 @@ void SimBroker::Init(MetaTrader& mt) {
 	
 	Clear();
 	
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	src = ol.FindLinkCore("/open");
 	ASSERTEXC(src);
 	change = ol.FindLinkCore("/change");
@@ -38,7 +38,7 @@ void SimBroker::InitLightweight() {
 	
 	Clear();
 	
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	src = ol.FindLinkCore("/open");
 	ASSERTEXC(src);
 	change = ol.FindLinkCore("/change");
@@ -110,6 +110,7 @@ double SimBroker::GetFreeMarginLevel() const {
 
 Time SimBroker::GetTime() const {
 	
+	Panic("TODO"); return Time();
 }
 
 void SimBroker::SetSignal(int sym, int signal) {
@@ -199,6 +200,7 @@ double	SimBroker::AccountFreeMargin() {
 
 double	SimBroker::AccountFreeMarginCheck(String symbol, int cmd, double volume) {
 	
+	Panic("TODO"); return 0;
 }
 
 double	SimBroker::AccountFreeMarginMode() {
@@ -239,7 +241,7 @@ int		SimBroker::AccountStopoutMode() {
 
 double	SimBroker::MarketInfo(String symbol, int type) {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	
 	int sym = FindSymbol(symbol);
@@ -283,6 +285,8 @@ double	SimBroker::MarketInfo(String symbol, int type) {
 		case MODE_FREEZELEVEL:			return symbols[sym].freeze_level;
 		case MODE_CLOSEBY_ALLOWED:		return false;
 	}*/
+	
+	Panic("TODO"); return 0;
 }
 
 int		SimBroker::SymbolsTotal(int selected) {
@@ -300,7 +304,7 @@ int		SimBroker::SymbolSelect(String name, int select) {
 }
 
 double	SimBroker::SymbolInfoDouble(String name, int prop_id) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	
@@ -349,10 +353,12 @@ double	SimBroker::SymbolInfoDouble(String name, int prop_id) {
 		case SYMBOL_SESSION_PRICE_LIMIT_MAX:		return 0;
 		default: return 0;
 	}*/
+	
+	Panic("TODO"); return 0;
 }
 
 int		SimBroker::SymbolInfoInteger(String name, int prop_id) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	
@@ -386,6 +392,8 @@ int		SimBroker::SymbolInfoInteger(String name, int prop_id) {
 		case SYMBOL_ORDER_MODE:				return 0;
 		default: return 0;
 	}*/
+	
+	Panic("TODO"); return 0;
 }
 
 String	SimBroker::SymbolInfoString(String name, int prop_id) {
@@ -401,6 +409,8 @@ String	SimBroker::SymbolInfoString(String name, int prop_id) {
 		case SYMBOL_PATH:					return symbols[sym].path;
 		default: return "";
 	}*/
+	
+	Panic("TODO"); return 0;
 }
 
 int		SimBroker::RefreshRates() {
@@ -408,9 +418,11 @@ int		SimBroker::RefreshRates() {
 }
 
 int		SimBroker::iBars(String symbol, int timeframe) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	int period = timeframe*60 / ol.GetBasePeriod();
 	return ol.GetCount(period);*/
+	
+	Panic("TODO"); return 0;
 }
 
 int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
@@ -418,7 +430,7 @@ int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
 }
 
 double	SimBroker::iClose(String symbol, int timeframe, int shift) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	return *src->GetValue<double>(
@@ -426,10 +438,12 @@ double	SimBroker::iClose(String symbol, int timeframe, int shift) {
 		sym,
 		ol.FindPeriod(ol.GetTfFromSeconds(timeframe*60)),
 		-1+shift, attr);*/
+		
+	Panic("TODO"); return 0;
 }
 
 double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	return *src->GetValue<double>(
@@ -437,10 +451,12 @@ double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
 		sym,
 		ol.FindPeriod(ol.GetTfFromSeconds(timeframe*60)),
 		shift, attr);*/
+		
+	Panic("TODO"); return 0;
 }
 
 double	SimBroker::iLow(String symbol, int timeframe, int shift) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	return *src->GetValue<double>(
@@ -448,10 +464,12 @@ double	SimBroker::iLow(String symbol, int timeframe, int shift) {
 		sym,
 		ol.FindPeriod(ol.GetTfFromSeconds(timeframe*60)),
 		shift, attr);*/
+		
+	Panic("TODO"); return 0;
 }
 
 double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = ol.GetCurrent();
 	return *src->GetValue<double>(
@@ -459,6 +477,8 @@ double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
 		sym,
 		ol.FindPeriod(ol.GetTfFromSeconds(timeframe*60)),
 		shift, attr);*/
+		
+	Panic("TODO"); return 0;
 }
 
 int		SimBroker::iHighest(String symbol, int timeframe, int type, int count, int start) {
@@ -516,6 +536,7 @@ double	SimBroker::OrderCommission() {
 
 int		SimBroker::OrderDelete(int ticket) {
 	Panic("TODO: pending orders");
+	return 0;
 }
 
 int		SimBroker::OrderExpiration() {
@@ -528,10 +549,12 @@ double	SimBroker::OrderLots() {
 
 int		SimBroker::OrderMagicNumber() {
 	Panic("Magic numbers aren't allowed to use because they are used internally in databridge.");
+	return 0;
 }
 
 int		SimBroker::OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {
-	Panic("TODO");
+	
+	Panic("TODO"); return 0;
 }
 
 double	SimBroker::OrderOpenPrice() {
@@ -658,6 +681,7 @@ const Vector<Price>&	SimBroker::GetAskBid() {
 	
 	
 	//return askbid;
+	Panic("TODO"); return Vector<Price>();
 }
 
 const Vector<PriceTf>&	SimBroker::GetTickData() {
@@ -665,6 +689,7 @@ const Vector<PriceTf>&	SimBroker::GetTickData() {
 	
 	
 	// return pricetf;
+	Panic("TODO"); return Vector<PriceTf>();
 }
 
 void SimBroker::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history) {

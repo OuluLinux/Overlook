@@ -14,9 +14,9 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, SymTf, 1));
-		out.Add(ValueType(ForecastPhase, ForecastChangeValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
+		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf, 1);
 	}
 };
 
@@ -28,9 +28,9 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, All, 1));
-		out.Add(ValueType(ForecastPhase, ForecastChangeValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, All, 1);
+		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf, 1);
 	}
 };
 
@@ -42,13 +42,13 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, SymTf, 1));
-		in.Add(ValueType(ForecastPhase, ForecastChangeValue, Sym, 1));
-		in.Add(ValueType(IndiPhase, ForecastChannelValue, Sym, 1));
-		in_opt.Add(ValueType(ForecastPhase, ForecastChangeValue, Sym, 5));
-		in_opt.Add(ValueType(IndiPhase, IndicatorValue, Sym, 5));
-		out.Add(ValueType(ForecastCombPhase, ForecastChangeValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
+		reg.AddIn(ForecastPhase, ForecastChangeValue, Sym, 1);
+		reg.AddIn(IndiPhase, ForecastChannelValue, Sym, 1);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym, 5);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym, 5);
+		reg.AddOut(ForecastCombPhase, ForecastChangeValue, SymTf, 1);
 	}
 };
 
@@ -61,12 +61,12 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, SymTf, 1));
-		in.Add(ValueType(ForecastCombPhase, ForecastChangeValue, SymTf, 1));
-		in.Add(ValueType(IndiPhase, ForecastChannelValue, SymTf, 1));
-		in.Add(ValueType(IndiPhase, IdealOrderSignal, SymTf, 1));
-		out.Add(ValueType(AgentPhase, ForecastOrderSignal, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf, 1);
+		reg.AddIn(IndiPhase, IdealOrderSignal, SymTf, 1);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
 	}
 };
 
@@ -79,12 +79,12 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, All, 1));
-		in.Add(ValueType(ForecastCombPhase, ForecastChangeValue, All, 1));
-		in.Add(ValueType(IndiPhase, ForecastChannelValue, All, 1));
-		in.Add(ValueType(IndiPhase, IdealOrderSignal, All, 1));
-		out.Add(ValueType(AgentPhase, ForecastOrderSignal, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, All, 1);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, All, 1);
+		reg.AddIn(IndiPhase, ForecastChannelValue, All, 1);
+		reg.AddIn(IndiPhase, IdealOrderSignal, All, 1);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
 	}
 };
 
@@ -97,11 +97,11 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, Sym, 1));
-		in.Add(ValueType(AgentPhase, ForecastOrderSignal, Sym, 1));
-		in_opt.Add(ValueType(AgentPhase, ForecastOrderSignal, Sym, 5));
-		out.Add(ValueType(AgentCombPhase, ForecastOrderSignal, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, Sym, 1);
+		reg.AddIn(AgentPhase, ForecastOrderSignal, Sym, 1);
+		reg.AddInOptional(AgentPhase, ForecastOrderSignal, Sym, 5);
+		reg.AddOut(AgentCombPhase, ForecastOrderSignal, SymTf, 1);
 	}
 };
 
@@ -113,10 +113,10 @@ public:
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
 	virtual bool Process(const CoreProcessAttributes& attr);
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealChangeValue, All, 1));
-		in.Add(ValueType(AgentCombPhase, ForecastOrderSignal, All, 1));
-		out.Add(ValueType(AgentCombPhase, ForecastOrderSignal, All, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealChangeValue, All, 1);
+		reg.AddIn(AgentCombPhase, ForecastOrderSignal, All, 1);
+		reg.AddOut(AgentCombPhase, ForecastOrderSignal, All, 1);
 	}
 };
 	

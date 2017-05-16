@@ -11,7 +11,7 @@ RecurrentDraw::RecurrentDraw() {
 
 void RecurrentDraw::Paint(Draw& w) {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	if (!IsVisible()) return;
 	
@@ -164,7 +164,7 @@ void RecurrentCtrl::SetArguments(const VectorMap<String, Value>& args) {
 
 void RecurrentCtrl::Init() {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	int week_tf = ol.GetTfFromSeconds(7*24*60*60); // 1 week
 	int week_count = ol.GetCount(week_tf);
@@ -190,7 +190,7 @@ void RecurrentCtrl::Init() {
 }
 
 void RecurrentCtrl::Refresher() {
-	BaseSystem& ol = core->Get<BaseSystem>();
+	BaseSystem& ol = *core->Get<BaseSystem>();
 	
 	draw.Refresh();
 	network_view.Refresh();

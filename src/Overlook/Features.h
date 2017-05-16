@@ -59,9 +59,9 @@ public:
 	int GetKeypointCount() const {return keypoints.GetCount();}
 	const FeatureKeypoint& GetKeypoint(int i) const {return keypoints[i];}
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 

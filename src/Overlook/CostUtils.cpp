@@ -570,7 +570,7 @@ IdealOrders::IdealOrders() {
 }
 
 String IdealOrders::GetStyle() const {
-	
+	return "";
 }
 
 void IdealOrders::SetArguments(const VectorMap<String, Value>& args) {

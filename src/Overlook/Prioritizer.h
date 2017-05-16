@@ -53,7 +53,7 @@ struct CombinationResult : Moveable<CombinationResult> {
 };
 
 struct CombinationPart : Moveable<CombinationPart> {
-	Vector<ValueType> inputs;
+	Vector<ValueType> inputs, outputs;
 	Vector<Vector<IntPair> > input_src;
 	int begin, end, size;
 	bool single_sources;
@@ -92,6 +92,8 @@ public:
 	typedef JobItem CLASSNAME;
 	JobItem() {
 		core = NULL;
+		all_sym = false;
+		all_tf = false;
 	}
 	
 	Vector<byte> value; // combination
@@ -99,6 +101,7 @@ public:
 	int64 priority;
 	int factory;
 	int sym, tf;
+	bool all_sym, all_tf;
 	
 };
 
@@ -122,6 +125,7 @@ protected:
 public:
 	void CreateNormal();
 	void CreateSingle(int main_fac_id, int sym_id, int tf_id);
+	void CreateUniqueCombination(const Vector<byte>& src, int fac_id, Vector<byte>& unique_slot_comb);
 	
 	int GetCorelineCount() const {return pl_queue.GetCount();}
 	CorelineItem& GetCoreline(int i) {return pl_queue[i];}
@@ -142,7 +146,7 @@ protected:
 	Vector<CombinationResult> results;
 	Vector<CombinationPart> combparts;
 	Vector<int> inputs_to_enabled, enabled_to_factory;
-	int combination_bits, combination_bytes, combination_errors;
+	int combination_bits, combination_bytes, combination_errors, job_combination_bytes;
 	
 	
 	// Utils

@@ -40,7 +40,7 @@ void DataBridge::Serialize(Stream& s) {
 }
 
 void DataBridge::Init() {
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	addr = ol.addr;
 	port = ol.port;
 	
@@ -225,7 +225,7 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 
 bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	/*MetaTrader& mt = GetMetaTrader();
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
 	
@@ -360,6 +360,8 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	has_written = true;
 	
 	return true;*/
+	
+	Panic("TODO"); return 0;
 }
 
 void DataBridge::ProcessVirtualNode(const CoreProcessAttributes& attr) {

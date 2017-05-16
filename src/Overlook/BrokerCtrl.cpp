@@ -56,7 +56,7 @@ BrokerCtrl::BrokerCtrl() {
 }
 
 void BrokerCtrl::SetArguments(const VectorMap<String, Value>& args) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	MetaNode::SetArguments(args);
 	

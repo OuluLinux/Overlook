@@ -62,6 +62,7 @@ Core::Core()
 	point = 0.01;
 	sym_id = -1;
 	tf_id = -1;
+	
 }
 
 Core::~Core() {
@@ -132,18 +133,22 @@ void Core::SetPoint(double d) {
 
 double Core::Open ( int shift ) {
 	//return data->GetIndexValue(0, shift);
+	Panic("TODO"); return 0;
 }
 
 double Core::High( int shift ) {
 	//return data->GetIndexValue(2, shift);
+	Panic("TODO"); return 0;
 }
 
 double Core::Low( int shift ) {
 	//return data->GetIndexValue(1, shift);
+	Panic("TODO"); return 0;
 }
 
 double Core::Volume ( int shift ) {
 	//return data->GetIndexValue(3, shift);
+	Panic("TODO"); return 0;
 }
 
 int Core::HighestHigh(int period, int shift) {
@@ -204,6 +209,7 @@ int Core::LowestOpen(int period, int shift) {
 
 int Core::GetMinutePeriod() {
 	
+	Panic("TODO"); return 0;
 }
 
 double Core::GetAppliedValue ( int applied_value, int i )

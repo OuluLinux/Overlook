@@ -79,7 +79,7 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 
 void GraphCtrl::Paint(Draw& draw) {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	Size sz(GetSize());
 	ImageDraw w(sz);
@@ -192,7 +192,7 @@ void GraphCtrl::Paint(Draw& draw) {
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	nt gridw, gridh, w, h, y, pos, c;
 	double diff, step;
@@ -288,7 +288,7 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	BaseSystem& ol = group->GetCore().Get<BaseSystem>();
+	BaseSystem& ol = *group->GetCore().Get<BaseSystem>();
 	
 	DrawGrid(W, true);
     
@@ -354,7 +354,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 }
 
 void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	if (draw_border) {
 		DrawGrid(W, false);
@@ -585,6 +585,7 @@ int GraphCtrl::GetCount() {
 	/*if (!group) return 0;
 	int c = group->GetCore().GetBufferDataCount();
     return c;*/
+    Panic("TODO"); return 0;
 }
 
 int GraphCtrl::GetPos() {

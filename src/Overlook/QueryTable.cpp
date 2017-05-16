@@ -17,6 +17,7 @@ void QueryTableForecaster::Init() {
 
 bool QueryTableForecaster::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -34,6 +35,7 @@ void QueryTableHugeForecaster::Init() {
 
 bool QueryTableHugeForecaster::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -51,6 +53,7 @@ void QueryTableMetaForecaster::Init() {
 
 bool QueryTableMetaForecaster::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -68,6 +71,7 @@ void QueryTableAgent::Init() {
 
 bool QueryTableAgent::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -85,6 +89,7 @@ void QueryTableHugeAgent::Init() {
 
 bool QueryTableHugeAgent::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -102,6 +107,7 @@ void QueryTableMetaAgent::Init() {
 
 bool QueryTableMetaAgent::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 
@@ -119,6 +125,7 @@ void QueryTableDoubleAgent::Init() {
 
 bool QueryTableDoubleAgent::Process(const CoreProcessAttributes& attr) {
 	
+	Panic("TODO"); return 0;
 }
 
 }

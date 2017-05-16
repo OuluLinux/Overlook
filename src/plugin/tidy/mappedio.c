@@ -1,3 +1,8 @@
+// Include windows.h header in this point to avoid some weird "DWORD CR : 2;" macro error
+#ifdef flagWIN32
+	#include <windows.h>
+#endif
+
 /* Interface to mmap style I/O
 
    (c) 2006-2008 (W3C) MIT, ERCIM, Keio University

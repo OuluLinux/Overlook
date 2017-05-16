@@ -17,9 +17,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -34,9 +34,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -50,9 +50,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -66,9 +66,9 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		//in.Add(ValueType(, , SymTf, 1));
-		//out.Add(ValueType(, , SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		//reg.AddIn(, , SymTf, 1);
+		//reg.AddOut(, , SymTf, 1);
 	}
 };
 
@@ -82,14 +82,14 @@ class ValueChange : public Core {
 public:
 	ValueChange();
 	
-	virtual String GetStyle() const {}
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(SourcePhase, RealValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, RealChangeValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, RealProxyChangeValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, SpreadProxyChangeValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, RealLowChangeValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, RealHighChangeValue, SymTf, 1));
+	virtual String GetStyle() const {return "";}
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, RealValue, SymTf, 1);
+		reg.AddOut(IndiPhase, RealChangeValue, SymTf, 1);
+		reg.AddOut(IndiPhase, RealProxyChangeValue, SymTf, 1);
+		reg.AddOut(IndiPhase, SpreadProxyChangeValue, SymTf, 1);
+		reg.AddOut(IndiPhase, RealLowChangeValue, SymTf, 1);
+		reg.AddOut(IndiPhase, RealHighChangeValue, SymTf, 1);
 	}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();
@@ -106,10 +106,10 @@ public:
 	IdealOrders();
 	
 	virtual String GetStyle() const;
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		in.Add(ValueType(IndiPhase, RealProxyChangeValue, SymTf, 1));
-		in.Add(ValueType(IndiPhase, SpreadProxyChangeValue, SymTf, 1));
-		out.Add(ValueType(IndiPhase, IdealOrderSignal, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(IndiPhase, RealProxyChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, SpreadProxyChangeValue, SymTf, 1);
+		reg.AddOut(IndiPhase, IdealOrderSignal, SymTf, 1);
 	}
 	virtual void SetArguments(const VectorMap<String, Value>& args);
 	virtual void Init();

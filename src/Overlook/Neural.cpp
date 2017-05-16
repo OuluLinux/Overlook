@@ -8,7 +8,7 @@ AutoEncoder::AutoEncoder() {
 }
 
 String AutoEncoder::GetStyle() const {
-	
+	return "";
 }
 
 void AutoEncoder::SetArguments(const VectorMap<String, Value>& args) {
@@ -182,7 +182,7 @@ void Recurrent::Init() {
 	
 	LoadThis();
 	
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	sym_count = ol.GetSymbolCount();
 	tf_count = ol.GetPeriodCount();
 	data.SetCount(sym_count * tf_count);
@@ -199,6 +199,7 @@ double Recurrent::GetPerplexity() const {
 		count++;
 	}
 	return av / count;*/
+	Panic("TODO"); return 0;
 }
 
 void Recurrent::SetLearningRate(double rate) {
@@ -238,6 +239,7 @@ bool Recurrent::Process(const CoreProcessAttributes& attr) {
 	// trained.
 	return !is_training_loop;
 	*/
+	Panic("TODO"); return 0;
 }
 
 bool Recurrent::ProcessRelease(const CoreProcessAttributes& attr) {
@@ -293,6 +295,7 @@ bool Recurrent::ProcessRelease(const CoreProcessAttributes& attr) {
 	
 	return true;
 	*/
+	Panic("TODO"); return 0;
 }
 
 void Recurrent::Reload() {
@@ -412,7 +415,7 @@ NARX::NARX() {
 }
 
 String NARX::GetStyle() const {
-	
+	return "";
 }
 
 void NARX::SetArguments(const VectorMap<String, Value>& args) {
@@ -421,7 +424,7 @@ void NARX::SetArguments(const VectorMap<String, Value>& args) {
 
 void NARX::Init() {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
@@ -543,7 +546,7 @@ void NARX::Init() {
 }
 
 void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessAttributes& attr) {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	for (int i = 0; i < s.input_count; i++) {
 		Vector<InputUnit>& exo = s.exogenous[i];
@@ -806,6 +809,7 @@ bool NARX::ProcessRelease(const CoreProcessAttributes& attr) {
 	}
 	
 	return true;*/
+	Panic("TODO"); return 0;
 }
 
 
@@ -860,7 +864,7 @@ Forecaster::Forecaster() {
 }
 
 String Forecaster::GetStyle() const {
-	
+	return "";
 }
 
 void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
@@ -872,7 +876,7 @@ void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void Forecaster::Init() {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1002,6 +1006,7 @@ bool Forecaster::Process(const CoreProcessAttributes& attr) {
 	
 	return do_training;
 	*/
+	Panic("TODO"); return 0;
 }
 
 
@@ -1025,7 +1030,7 @@ ClassifierAgent::ClassifierAgent() {
 }
 
 String ClassifierAgent::GetStyle() const {
-	
+	return "";
 }
 
 void ClassifierAgent::SetArguments(const VectorMap<String, Value>& args) {
@@ -1102,7 +1107,7 @@ void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
 
 void RLAgent::Init() {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1155,6 +1160,7 @@ bool RLAgent::Process(const CoreProcessAttributes& attr) {
 	
 	return do_training;
 	*/
+	Panic("TODO"); return 0;
 }
 
 void RLAgent::Forward(const CoreProcessAttributes& attr) {
@@ -1182,6 +1188,7 @@ void RLAgent::Forward(const CoreProcessAttributes& attr) {
 	s.broker.SetSignal(attr.sym_id, s.action - 1); // from 0:2 to -1:+1 --> signal
 	s.broker.Cycle();
 	*/
+	Panic("TODO");
 }
 
 void RLAgent::Backward(const CoreProcessAttributes& attr) {
@@ -1258,7 +1265,7 @@ void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
 
 void DQNAgent::Init() {
 	/*
-	BaseSystem& ol = Get<BaseSystem>();
+	BaseSystem& ol = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1311,6 +1318,7 @@ bool DQNAgent::Process(const CoreProcessAttributes& attr) {
 	Forward(attr);
 	
 	return do_training;*/
+	Panic("TODO"); return 0;
 }
 
 
@@ -1425,7 +1433,7 @@ void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaAgent::Init() {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1585,6 +1593,7 @@ bool MonaAgent::Process(const CoreProcessAttributes& attr) {
 	s.broker.Cycle();
 	
 	return do_training;*/
+	Panic("TODO"); return 0;
 }
 
 
@@ -1647,7 +1656,7 @@ void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaMetaAgent::Init() {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/rl", 0, 1);
@@ -1813,6 +1822,7 @@ bool MonaMetaAgent::Process(const CoreProcessAttributes& attr) {
 	
 	
 	return do_training;*/
+	Panic("TODO"); return 0;
 }
 
 
@@ -1873,7 +1883,7 @@ void MonaDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
 }
 
 void MonaDoubleAgent::Init() {
-	/*BaseSystem& ol = Get<BaseSystem>();
+	/*BaseSystem& ol = *Get<BaseSystem>();
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/metamona", 1, 0);
@@ -1961,6 +1971,7 @@ bool MonaDoubleAgent::Process(const CoreProcessAttributes& attr) {
 	*out = broker.GetSignal(attr.sym_id);
 	
 	return do_training;*/
+	Panic("TODO"); return 0;
 }
 
 

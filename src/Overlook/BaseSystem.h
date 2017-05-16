@@ -74,8 +74,8 @@ public:
 	virtual void Init();
 	virtual void Start() {}
 	
-	static void GetIO(Vector<ValueType>& in, Vector<ValueType>& in_opt, Vector<ValueType>& out) {
-		out.Add(ValueType(SourcePhase, TimeValue, SymTf, 1));
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddOut(SourcePhase, TimeValue, SymTf, 1);
 	}
 };
 

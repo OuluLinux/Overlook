@@ -40,7 +40,17 @@ void Combination::SetValue(int bit, bool value) {
 		*b &= ~mask;
 }
 
-
+void RemoveDuplicates(Vector<int>& sorted_vec) {
+	for(int i = 0; i < sorted_vec.GetCount(); i++) {
+		int a = sorted_vec[i];
+		for(int j = i+1; j < sorted_vec.GetCount(); j++) {
+			if (a == sorted_vec[j]) {
+				sorted_vec.Remove(j);
+				j--;
+			}
+		}
+	}
+}
 
 
 
@@ -382,7 +392,9 @@ void Prioritizer::CreateNormal() {
 	pl_queue.Clear();
 	Combination comb;
 	comb.SetSize(combination_bytes);
-	VisitSymTf(comb);
+	Vector<int> factory_queue;
+	factory_queue.Add(Factory::GetCtrlFactories().GetCount()-1);
+	VisitSymTf(comb, factory_queue);
 	
 	
 	// Create unique-slot-queue from the whole pipeline-queue.
@@ -412,7 +424,7 @@ void Prioritizer::CreateSingle(int main_fac_id, int sym_id, int tf_id) {
 	
 }
 
-void Prioritizer::VisitSymTf(Combination& comb) {
+void Prioritizer::VisitSymTf(Combination& comb, Vector<int>& factory_queue) {
 	
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
@@ -460,10 +472,10 @@ void Prioritizer::VisitSymTf(Combination& comb) {
 	}
 	
 	// Enable the last factory and visit it
-	int last_factory = Factory::GetCtrlFactoryCount() - 1;
-	int last_factory_enabled = GetBitEnabled(last_factory);
-	comb.SetValue(last_factory_enabled, true);
-	VisitCombination(last_factory, comb);
+	int factory = factory_queue[0];
+	int factory_enabled = GetBitEnabled(factory);
+	comb.SetValue(factory_enabled, true);
+	VisitCombination(comb, factory_queue);
 }
 
 void Prioritizer::VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& comb) {
@@ -476,13 +488,19 @@ void Prioritizer::VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& com
 	// Visit the given factory
 	int factory_enabled = GetBitEnabled(fac_id);
 	comb.SetValue(factory_enabled, true);
-	VisitCombination(fac_id, comb);
+	Vector<int> factory_queue;
+	factory_queue.Add(fac_id);
+	VisitCombination(comb, factory_queue);
 }
 
-void Prioritizer::VisitCombination(int factory, Combination& comb) {
+void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue) {
 	
 	// Visit combination until source slot
-	if (factory > 0) {
+	if (!factory_queue.IsEmpty()) {
+		int factory = factory_queue[0];
+		factory_queue.Remove(0);
+		
+		
 		const CombinationPart& part = combparts[factory];
 		
 		// Check, that slots are false
@@ -505,19 +523,27 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 				
 				// Copy existing.
 				Combination comb2 = comb;
-				
+				if (ReadBit(comb2.value, GetBitEnabled(4))) {
+					LOG("enabled 4");
+				}
 				
 				// Add all minimal cases
 				int case_count = 0;
 				for(int i = 0; i < part.input_src.GetCount(); i++) {
-					const Vector<IntPair>& src = part.input_src[i];
+					const Vector<IntPair>& src_list = part.input_src[i];
 					
-					if (src.GetCount() <= 1) {
+					if (src_list.GetCount() == 1) {
+						if (factory == 4) {
+							LOG("factory==4");
+						}
 						int bit = GetBitCore(factory, i, 0);
 						comb2.SetValue(bit, true);
 						bit = InputToEnabled(bit);
 						comb2.SetValue(bit, true);
+						ASSERT(bit == GetBitEnabled(src_list[0].a));
 					}
+					// (else) Multiple sources are handled later with sub-combinations
+					ASSERT(src_list.GetCount() != 0);
 				}
 				
 				
@@ -532,6 +558,7 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 					}
 				}
 				int sub_comb_count = sub_comb.GetCount();
+				ASSERT(sub_comb_count > 0);
 				
 				
 				// Iterate all sub-combinations
@@ -540,10 +567,10 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 					
 					// Copy existing with fixed flags
 					Combination comb3 = comb2;
-					
+					Vector<int> comb_factory_queue;
+					comb_factory_queue <<= factory_queue;
 					
 					// Set current combination values
-					int highest_factory = -1;
 					for(int i = 0; i < sub_comb_count; i++) {
 						const InpMaxSrc& s = sub_comb[i];
 						int bit = GetBitCore(factory, s.a, s.c);
@@ -551,14 +578,13 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 						bit = InputToEnabled(bit);
 						comb3.SetValue(bit, true);
 						int src_factory = EnabledToFactory(bit);
-						if (src_factory > highest_factory) highest_factory = src_factory;
+						comb_factory_queue.Add(src_factory);
 					}
-					ASSERT(highest_factory < factory);
-					ASSERT(highest_factory != -1);
-					
+					Sort(comb_factory_queue, StdGreater<int>());
+					RemoveDuplicates(comb_factory_queue);
 					
 					// Visit new combination
-					VisitCombination(highest_factory, comb3);
+					VisitCombination(comb3, comb_factory_queue);
 					case_count++;
 					
 					
@@ -587,7 +613,7 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 				
 				// Use QueryTable to prune useless combinations
 				
-				VisitCombination(factory-1, comb);
+				VisitCombination(comb, factory_queue);
 				
 			}
 		}
@@ -597,7 +623,6 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 			// Copy existing.
 			Combination comb2 = comb;
 			
-			int highest_factory = -1;
 			for(int i = 0; i < part.input_src.GetCount(); i++) {
 				ASSERT(part.input_src[i].GetCount() == 1);
 				
@@ -607,21 +632,26 @@ void Prioritizer::VisitCombination(int factory, Combination& comb) {
 				bit = InputToEnabled(bit);
 				comb2.SetValue(bit, true);
 				int src_factory = EnabledToFactory(bit);
-				if (src_factory > highest_factory) highest_factory = src_factory;
+				factory_queue.Add(src_factory);
 			}
 			
-			ASSERT(highest_factory < factory);
-			//ASSERT(highest_factory >= 0);
-			VisitCombination(highest_factory, comb2);
-			
+			Sort(factory_queue, StdGreater<int>());
+			RemoveDuplicates(factory_queue);
+			VisitCombination(comb2, factory_queue);
 		}
 		
 		
 	}
 	// Add combination to the queue
 	else {
+		#ifdef flagDEBUG
+		if (!CheckCombination(comb.value)) {
+			LOG(GetCombinationString(comb.value));
+			Panic("Combination failed check");
+		}
+		#endif
 		int priority = pl_queue.GetCount();
-		CorelineItem& pi = pl_queue.Add();
+		PipelineItem& pi = pl_queue.Add();
 		pi.value <<= comb.value;
 		pi.priority = priority;
 	}
@@ -641,7 +671,7 @@ void Prioritizer::RefreshCoreQueue() {
 	
 	// Loop all enabled pipeline-combinations
 	for(int i = 0; i < pl_queue.GetCount(); i++) {
-		CorelineItem& pi = pl_queue[i];
+		PipelineItem& pi = pl_queue[i];
 		ASSERT(!pi.value.IsEmpty());
 		
 		// Combination consist of all factories + sym + tf
@@ -743,6 +773,7 @@ void Prioritizer::RefreshJobQueue() {
 	Vector<JobItem>& old_job_queue = this->job_queue;
 	
 	Vector<byte> unique_slot_comb;
+	Vector<int> enabled_input_factories;
 	
 	// Loop current unique-slot queue
 	for(int i = 0; i < slot_queue.GetCount(); i++) {
@@ -811,6 +842,8 @@ void Prioritizer::RefreshJobQueue() {
 				// If old object wasn't found, create core-object and initialize it
 				if (!found) {
 					
+					LOG("Create " << Factory::GetCtrlFactories()[ji.factory].a);
+					
 					// Create core-object
 					ji.core = Factory::GetCtrlFactories()[ji.factory].b();
 					
@@ -827,14 +860,27 @@ void Prioritizer::RefreshJobQueue() {
 						const Vector<IntPair>& input_src = part.input_src[l];
 						#ifdef flagDEBUG
 						int src_count = 0; // count enabled sources for debugging (1 is correct)
+						int enabled_count = 0; // exactly one must be enabled
 						#endif
+						enabled_input_factories.SetCount(0);
 						for (int m = 0; m < input_src.GetCount(); m++) {
 							
 							// Check if source is enabled
-							const IntPair& src = input_src[k];
+							const IntPair& src = input_src[m];
 							int src_enabled_bit = GetBitCore(ji.factory, l, m);
 							bool src_enabled = ReadBit(ji.value, src_enabled_bit);
 							if (!src_enabled) continue;
+							
+							#ifdef flagDEBUG
+							int bit = InputToEnabled(src_enabled_bit);
+							int enabled_bit = GetBitEnabled(src.a);
+							ASSERT(bit == enabled_bit);
+							ASSERT(ReadBit(ji.value, bit));
+							#endif
+							
+							enabled_count++;
+							enabled_input_factories.Add(src.a);
+							DUMP(src);
 							
 							// Create unique combination for current input source factory
 							CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
@@ -845,6 +891,10 @@ void Prioritizer::RefreshJobQueue() {
 							bool found = false;
 							for (int n = 0; n < new_job_queue.GetCount(); n++) {
 								JobItem& src_ji = new_job_queue[n];
+							
+								LOG(src_ji.factory << " != " << src.a << "\t" <<
+									src_ji.sym << " != " << sym << "\t" <<
+									src_ji.tf << " != " << tf);
 								
 								if (src_ji.factory != src.a) continue;
 								if ((!src_ji.all_sym && src_ji.sym != sym)) continue;
@@ -857,7 +907,16 @@ void Prioritizer::RefreshJobQueue() {
 										break;
 									}
 								}
-								if (!equal) continue;
+								if (!equal)	{
+									/*LOG("DIFFERENT COMBOS");
+									LOG("SRC:");
+									LOG(GetCombinationString(ji.value));
+									LOG("A:");
+									LOG(GetCombinationString(unique_slot_comb));
+									LOG("B:");
+									LOG(GetCombinationString(src_ji.value));*/
+									continue;
+								}
 								
 								
 								// Source found
@@ -868,16 +927,44 @@ void Prioritizer::RefreshJobQueue() {
 								found = true;
 								break;
 							}
-							ASSERT(found);
 							
-							// Catch invalid combinations
-							#ifndef flagDEBUG
-							break;
-							#else
-							ASSERT(src_count == 0);
-							src_count++;
-							#endif
+							if (found) {
+								// Catch invalid combinations
+								#ifdef flagDEBUG
+								src_count++;
+								#endif
+								break;
+							}
 						}
+						#ifdef flagDEBUG
+						if (enabled_count == 0) {
+							LOG("Combination:");
+							LOG(GetCombinationString(ci.value));
+							DUMPC(new_job_queue);
+							LOG("Checking all source pipeline combinations");
+							for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
+								const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
+								CheckCombination(pi.value);
+							}
+						}
+						ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
+						ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
+						if (src_count == 0) {
+							LOG(GetCombinationString(ci.value));
+							String inputs = "\"";
+							for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
+								if (i) inputs.Cat(',');
+								inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
+							}
+							inputs << "\"";
+							Panic("Creating object \"" +
+								Factory::GetCtrlFactories()[ji.factory].a +
+								"\" and can't find any of " +
+								inputs +
+								" inputs.");
+						}
+						ASSERT(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
+						#endif
 					}
 					
 					//ji.core->SetArguments(*args);
@@ -902,6 +989,65 @@ void Prioritizer::RefreshJobQueue() {
 	Swap(old_job_queue, new_job_queue);
 }
 
+bool Prioritizer::CheckCombination(const Vector<byte>& comb) {
+	//LOG("\t" << i << ": " << HexVector(comb));
+	for(int i = 0; i < combparts.GetCount(); i++) {
+		const CombinationPart& part = combparts[i];
+		if (!ReadBit(comb, GetBitEnabled(i))) continue;
+		
+		for(int j = 0; j < part.input_src.GetCount(); j++) {
+			const Vector<IntPair>& src_list = part.input_src[j];
+			int enabled_count = 0;
+			
+			for(int k = 0; k < src_list.GetCount(); k++) {
+				const IntPair& src = src_list[k];
+				
+				int bit = GetBitCore(i, j, k);
+				if (ReadBit(comb, bit)) {
+					enabled_count++;
+					bit = InputToEnabled(bit);
+					if (!ReadBit(comb, bit)) {
+						LOG("ERROR: Source factory is not enabled");
+						return false;
+					}
+				}
+			}
+			if (!enabled_count) {
+				LOG("ERROR: No enabled sources");
+				return false;
+			}
+		}
+	}
+	
+	int sym_count = bs.GetSymbolCount();
+	int tf_count = bs.GetPeriodCount();
+	
+	bool enabled_sym = false;
+	for(int i = 0; i < sym_count; i++) {
+		if (ReadBit(comb, GetBitSym(i))) {
+			enabled_sym = true;
+			break;
+		}
+	}
+	if (!enabled_sym) {
+		LOG("ERROR: no symbols are enabled");
+		return false;
+	}
+	
+	bool enabled_tf = false;
+	for(int i = 0; i < tf_count; i++) {
+		if (ReadBit(comb, GetBitTf(i))) {
+			enabled_tf = true;
+			break;
+		}
+	}
+	if (!enabled_tf) {
+		LOG("ERROR: no timeframes are enabled");
+		return false;
+	}
+	
+	return true;
+}
 
 void Prioritizer::CreateUniqueCombination(const Vector<byte>& src, int fac_id, Vector<byte>& unique_slot_comb) {
 	const CombinationPart& part = combparts[fac_id];
@@ -974,8 +1120,44 @@ void Prioritizer::CreateUniqueCombination(const Vector<byte>& src, int fac_id, V
 	// Create unique slot combination
 	unique_slot_comb.SetCount(0);
 	unique_slot_comb.SetCount(bytes, 0);
-	for(int k = 0; k < bytes; k++)
-		unique_slot_comb[k] = dep_mask[k] & src[k];
+	int nonzero_count = 0;
+	for(int k = 0; k < bytes; k++) {
+		byte b = dep_mask[k] & src[k];
+		if (b != 0) nonzero_count++;
+		unique_slot_comb[k] = b;
+	}
+	ASSERT_(nonzero_count > 0, "ERROR: creating unique combination from factory which was not enabled"); // empty is not unique
+}
+
+String Prioritizer::GetCombinationString(const Vector<byte>& vec) {
+	String s;
+	
+	for(int i = 0; i < combparts.GetCount(); i++) {
+		const CombinationPart& part = combparts[i];
+		
+		int enabled_bit = GetBitEnabled(i);
+		bool enabled = ReadBit(vec, enabled_bit);
+		if (!enabled) continue;
+		
+		s << i << ":\t\"" << Factory::GetCtrlFactories()[i].a << "\"\n";
+		
+		for(int j = 0; j < part.input_src.GetCount(); j++) {
+			const Vector<IntPair>& src_list = part.input_src[j];
+			
+			s << "\tinput " << j << ":\n";
+			for(int k = 0; k < src_list.GetCount(); k++) {
+				const IntPair& src = src_list[k];
+				
+				int src_enabled_bit = GetBitCore(i, j, k);
+				bool src_enabled = ReadBit(vec, src_enabled_bit);
+				if (!src_enabled) continue;
+				
+				s << "\t\tsrc " << k << ":\t\"" << Factory::GetCtrlFactories()[src.a].a << "\", output=" << src.b << "\n";
+			}
+		}
+	}
+	
+	return s;
 }
 
 }

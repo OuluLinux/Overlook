@@ -599,8 +599,8 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, ForecastChangeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf, 1);
+		/*reg.AddIn(IndiPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf, 1);*/
 		reg.AddOut(IndiPhase, ForecastChannelValue, SymTf, 1);
 	}
 	virtual void SetArguments(const VectorMap<String, Value>& args);

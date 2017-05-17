@@ -53,13 +53,13 @@ void PrioritizerCtrl::RefreshData() {
 	if (tab == 0) {
 		prio.lock.Enter();
 		
-		for(int i = 0; i < prio.GetCorelineCount(); i++) {
-			CorelineItem& q = prio.GetCoreline(i);
+		for(int i = 0; i < prio.GetPipelineCount(); i++) {
+			PipelineItem& q = prio.GetPipeline(i);
 			pipeline_queue.Set(i, 0, i);
 			pipeline_queue.Set(i, 1, HexVector(q.value));
 			pipeline_queue.Set(i, 2, q.priority);
 		}
-		pipeline_queue.SetCount(prio.GetCorelineCount());
+		pipeline_queue.SetCount(prio.GetPipelineCount());
 		
 		for(int i = 0; i < prio.GetCoreCount(); i++) {
 			CoreItem& q = prio.GetCore(i);

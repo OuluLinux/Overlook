@@ -485,4 +485,20 @@ forever to get there. Second, I can`'t showcase invidual modules,
 which has unique value. I am going to work on UltimateScript 
 this summer, though, but it`'s better to start that from empty 
 desk (or repository).&]
+[s3; 17.5.2017&]
+[s0; Implementing the Prioritizer class was a lot more difficult 
+than expected. Yesterday, I had to add features which caused 
+more complexity to it again. Today I finally got into debugging 
+it. Now I am creating functions to dump all the debugging information, 
+and even that is rather difficult. I am not complaining about 
+it, but just writing it as a note. You can`'t always do easy 
+routines, which can be done as fast as your hands can write. 
+It would be a bad sign if you could.&]
+[s0; ...&]
+[s0; Looks like the initial job`-queue is being formed correctly. 
+It was difficult to debug the prioritizer enough to do that. 
+I am afraid that there will be some hard`-to`-find bugs left 
+there. Not good. Now I could finally start work on basic graph 
+indicators and make them work. Almost enough from today... must 
+have a break, at least.&]
 [s0; ]]

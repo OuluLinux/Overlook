@@ -113,7 +113,7 @@ struct ValueRegister {
 struct CoreIO : public ValueRegister {
 	struct In : Moveable<In> {
 		In() {core = NULL; output_id = -1;}
-		Core* core;
+		CoreIO* core;
 		int output_id;
 	};
 	
@@ -136,7 +136,7 @@ struct CoreIO : public ValueRegister {
 	
 	template <class T> T* Get() {
 		for(int i = 0; i < inputs.GetCount(); i++) {
-			Core* c = inputs[i].core;
+			CoreIO* c = inputs[i].core;
 			T* t = dynamic_cast<T*>(c);
 			if (t) return t;
 			t = c->Get<T>();
@@ -146,7 +146,7 @@ struct CoreIO : public ValueRegister {
 	}
 	
 	
-	void SetInput(int input_id, Core& core, int src_output_id) {
+	void SetInput(int input_id, CoreIO& core, int src_output_id) {
 		In& in = inputs[input_id];
 		in.core = &core;
 		in.output_id = src_output_id;

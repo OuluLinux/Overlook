@@ -141,11 +141,12 @@ struct BatchPartStatus : Moveable<BatchPartStatus> {
 
 
 template <class T>
-String HexVector(Vector<T>& vec) {
+String HexVector(const Vector<T>& vec) {
 	String s;
 	int byts = sizeof(T);
 	int chrs = sizeof(T) * 2;
-	T* o = vec.Begin();
+	typedef const T ConstT;
+	ConstT* o = vec.Begin();
 	for(int i = 0; i < vec.GetCount(); i++) {
 		T mask = 0xFF << ((byts-1) * 8);
 		for(int j = 0; j < byts; j++) {

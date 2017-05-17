@@ -59,11 +59,11 @@ struct CombinationPart : Moveable<CombinationPart> {
 	bool single_sources;
 };
 
-class CorelineItem : Moveable<CorelineItem> {
+class PipelineItem : Moveable<PipelineItem> {
 	
 public:
-	typedef CorelineItem CLASSNAME;
-	CorelineItem() {priority = 0;}
+	typedef PipelineItem CLASSNAME;
+	PipelineItem() {priority = 0;}
 	
 	
 	Vector<byte> value;
@@ -95,7 +95,10 @@ public:
 		all_sym = false;
 		all_tf = false;
 	}
-	
+	String ToString() const {
+		return Format("core=%X priority=%d factory=%d sym=%d tf=%d all_sym=%d all_tf=%d combination=\"%s\"",
+			(int64)core, priority, factory, sym, tf, (int)all_sym, (int)all_tf, HexVector(value)) ;
+	}
 	Vector<byte> value; // combination
 	Core* core;
 	int64 priority;
@@ -111,30 +114,30 @@ class Prioritizer {
 	
 protected:
 	
-	Vector<CorelineItem> pl_queue;
+	Vector<PipelineItem> pl_queue;
 	Vector<CoreItem> slot_queue;
 	Vector<JobItem> job_queue;
 	BaseSystem bs;
 	
 	void RefreshCoreQueue();
 	void RefreshJobQueue();
-	void VisitSymTf(Combination& comb);
+	void VisitSymTf(Combination& comb, Vector<int>& factory_queue);
 	void VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& comb);
-	void VisitCombination(int factory, Combination& com);
-	
+	void VisitCombination(Combination& com, Vector<int>& factory_queue);
+	bool CheckCombination(const Vector<byte>& comb);
 public:
 	void CreateNormal();
 	void CreateSingle(int main_fac_id, int sym_id, int tf_id);
 	void CreateUniqueCombination(const Vector<byte>& src, int fac_id, Vector<byte>& unique_slot_comb);
 	
-	int GetCorelineCount() const {return pl_queue.GetCount();}
-	CorelineItem& GetCoreline(int i) {return pl_queue[i];}
+	int GetPipelineCount() const {return pl_queue.GetCount();}
+	PipelineItem& GetPipeline(int i) {return pl_queue[i];}
 	int GetCoreCount() const {return slot_queue.GetCount();}
 	CoreItem& GetCore(int i) {return slot_queue[i];}
 	int GetJobCount() const {return job_queue.GetCount();}
 	JobItem& GetJob(int i) {return job_queue[i];}
 	BaseSystem& GetBaseSystem() {return bs;}
-	
+	String GetCombinationString(const Vector<byte>& vec);
 	
 	
 protected:

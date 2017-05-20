@@ -51,38 +51,25 @@ MovingAverage::MovingAverage()
 	ma_counted = 0;
 }
 
-void MovingAverage::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		ma_period = args[i];
-	i = args.Find("offset");
-	if (i != -1)
-		ma_shift = args[i];
-	i = args.Find("method");
-	if (i != -1)
-		ma_method = args[i];
+void MovingAverage::Arguments(ArgumentBase& args) {
+	args.Arg("period", ma_period);
+	args.Arg("offset", ma_shift);
+	args.Arg("method", ma_method);
 }
 
-void MovingAverage::Init()
-{
-	/*Core::Init();
-	
+void MovingAverage::Init() {
 	int draw_begin;
 	if (ma_period < 2)
 		ma_period = 13;
 	draw_begin = ma_period - 1;
-	SetBufferCount(1);
+	
 	SetBufferColor(0, Red());
 	SetBufferShift(0, ma_shift);
 	SetBufferBegin(0, draw_begin );
-	SetIndexCount(1);
-	SetIndexBuffer(0, buffer);*/
 }
 
-void MovingAverage::Start()
-{
-	/*int bars = GetBars();
+void MovingAverage::Start() {
+	int bars = GetBars();
 	if ( bars <= ma_period )
 		throw DataExc();
 	ma_counted = GetCounted();
@@ -105,22 +92,11 @@ void MovingAverage::Start()
 		case MODE_LINWEIGHT:
 			LinearlyWeighted();
 	}
-	
-	// Add keypoints
-	double prev = begin > 0 ? buffer.Get(begin-1) : 0;
-	double prev_diff = begin > 1 ? prev - buffer.Get(begin-2) : 0;
-	for(int i = begin; i < bars; i++) {
-		double value = buffer.Get(i);
-		double diff = value - prev;
-		
-		prev = value;
-		prev_diff = diff;
-	}
-	*/
 }
 
 void MovingAverage::Simple()
 {
+	Buffer& buffer = GetBuffer(0);
 	double sum = 0;
 	int bars = GetBars();
 	int pos = ma_counted;
@@ -141,6 +117,7 @@ void MovingAverage::Simple()
 
 void MovingAverage::Exponential()
 {
+	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
 	double pr = 2.0 / ( ma_period + 1 );
 	int pos = 1;
@@ -156,6 +133,7 @@ void MovingAverage::Exponential()
 
 void MovingAverage::Smoothed()
 {
+	Buffer& buffer = GetBuffer(0);
 	double sum = 0;
 	int bars = GetBars();
 	int pos = ma_period;
@@ -177,6 +155,7 @@ void MovingAverage::Smoothed()
 
 void MovingAverage::LinearlyWeighted()
 {
+	Buffer& buffer = GetBuffer(0);
 	double sum = 0.0, lsum = 0.0;
 	double value;
 	int bars = GetBars();
@@ -223,30 +202,23 @@ MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence()
 	
 }
 
-void MovingAverageConvergenceDivergence::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("fast_ema");
-	if (i != -1)
-		fast_ema_period = args[i];
-	i = args.Find("slow_ema");
-	if (i != -1)
-		slow_ema_period = args[i];
-	i = args.Find("signal_sma");
-	if (i != -1)
-		signal_sma_period = args[i];
+void MovingAverageConvergenceDivergence::Arguments(ArgumentBase& args) {
+	args.Arg("fast_ema", fast_ema_period);
+	args.Arg("slow_ema", slow_ema_period);
+	args.Arg("signal_sma", signal_sma_period);
 }
 
 void MovingAverageConvergenceDivergence::Init()
 {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Silver);
 	SetBufferColor(1, Red);
 	SetBufferLineWidth(0, 2);
 	
-	SetIndexCount(2);
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, signal_buffer );
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, signal_buffer );
 	SetBufferBegin ( 1, signal_sma_period );
 	
 	//SetCoreDigits(GetDigits()+1);
@@ -303,10 +275,8 @@ AverageDirectionalMovement::AverageDirectionalMovement()
 	period_adx = 14;
 }
 
-void AverageDirectionalMovement::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period_adx = args[i];
+void AverageDirectionalMovement::Arguments(ArgumentBase& args) {
+	args.Arg("period", period_adx);
 }
 
 void AverageDirectionalMovement::Init()
@@ -314,7 +284,7 @@ void AverageDirectionalMovement::Init()
 	/*
 	SetCoreSeparateWindow();
 	
-	SetBufferCount(3);
+	//SetBufferCount(6, 3);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1,  YellowGreen);
 	SetBufferColor(2,  Wheat);
@@ -327,13 +297,12 @@ void AverageDirectionalMovement::Init()
 	if ( period_adx >= 100 || period_adx <= 0 )
 		throw DataExc();
 	
-	SetIndexCount(6);
-	SetIndexBuffer ( 0, adx_buffer );
-	SetIndexBuffer ( 1, pdi_buffer );
-	SetIndexBuffer ( 2, ndi_buffer );
-	SetIndexBuffer ( 3, pd_buffer);
-	SetIndexBuffer ( 4, nd_buffer);
-	SetIndexBuffer ( 5, tmp_buffer);
+	//SetIndexBuffer ( 0, adx_buffer );
+	//SetIndexBuffer ( 1, pdi_buffer );
+	//SetIndexBuffer ( 2, ndi_buffer );
+	//SetIndexBuffer ( 3, pd_buffer);
+	//SetIndexBuffer ( 4, nd_buffer);
+	//SetIndexBuffer ( 5, tmp_buffer);
 	SetBufferBegin ( 0, period_adx );
 	SetBufferBegin ( 1, period_adx );
 	SetBufferBegin ( 2, period_adx );
@@ -440,30 +409,22 @@ BollingerBands::BollingerBands()
 	plot_begin = 0;
 }
 
-void BollingerBands::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		bands_period = args[i];
-	i = args.Find("shift");
-	if (i != -1)
-		bands_shift = args[i];
-	i = args.Find("deviation");
-	if (i != -1)
-		bands_deviation = args[i];
+void BollingerBands::Arguments(ArgumentBase& args) {
+	args.Arg("period", bands_period);
+	args.Arg("shift", bands_shift);
+	args.Arg("deviation", bands_deviation);
 }
 
 void BollingerBands::Init()
 {
 	/*
 	SetCoreChartWindow();
-	SetBufferCount(3);
+	//SetBufferCount(4, 3);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1,  LightSeaGreen);
 	SetBufferColor(2,  LightSeaGreen);
 	
 	//SetCoreDigits(GetDigits());
-	
-	SetIndexCount(3);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferShift(0,bands_shift);
@@ -483,12 +444,10 @@ void BollingerBands::Init()
 	if ( bands_deviation == 0.0 )
 		throw DataExc();
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer ( 0, ml_buffer );
-	SetIndexBuffer ( 1, tl_buffer );
-	SetIndexBuffer ( 2, bl_buffer );
-	SetIndexBuffer ( 3, stddev_buffer );
+	//SetIndexBuffer ( 0, ml_buffer );
+	//SetIndexBuffer ( 1, tl_buffer );
+	//SetIndexBuffer ( 2, bl_buffer );
+	//SetIndexBuffer ( 3, stddev_buffer );
 
 
 	plot_begin = bands_period - 1;
@@ -529,7 +488,7 @@ void BollingerBands::Start()
 	*/
 }
 
-double BollingerBands::StdDev_Func ( int position, const FloatVector& MAvalue, int period )
+double BollingerBands::StdDev_Func ( int position, const Buffer& MAvalue, int period )
 {
 	double tmp = 0.0;
 
@@ -559,34 +518,24 @@ Envelopes::Envelopes() {
 	deviation = 0.1;
 }
 
-void Envelopes::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		ma_period = args[i];
-	i = args.Find("shift");
-	if (i != -1)
-		ma_shift = args[i];
-	i = args.Find("deviation");
-	if (i != -1)
-		deviation = args[i];
-	i = args.Find("method");
-	if (i != -1)
-		ma_method = args[i];
+void Envelopes::Arguments(ArgumentBase& args) {
+	args.Arg("period", ma_period);
+	args.Arg("shift", ma_shift);
+	args.Arg("deviation", deviation);
+	args.Arg("method", ma_method);
 }
 
 void Envelopes::Init()
 {
 	/*
 	SetCoreChartWindow();
-	SetBufferCount(2);
+	//SetBufferCount(3, 2);
 	SetBufferColor(0, Blue);
 	SetBufferColor(1, Red);
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 0, up_buffer );
-	SetIndexBuffer ( 1, down_buffer );
-	SetIndexBuffer ( 2, ma_buffer );
+	//SetIndexBuffer ( 0, up_buffer );
+	//SetIndexBuffer ( 1, down_buffer );
+	//SetIndexBuffer ( 2, ma_buffer );
 
 	SetBufferBegin ( 0, ma_period - 1 );
 	SetBufferShift ( 0, ma_shift );
@@ -633,19 +582,15 @@ ParabolicSAR::ParabolicSAR()
 	sar_maximum = 0.2;
 }
 
-void ParabolicSAR::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("step");
-	if (i != -1)
-		sar_step = args[i];
-	i = args.Find("maximum");
-	if (i != -1)
-		sar_maximum = args[i];
+void ParabolicSAR::Arguments(ArgumentBase& args) {
+	args.Arg("step", sar_step);
+	args.Arg("maximum", sar_maximum);
 }
 
 void ParabolicSAR::Init() {
 /*
 	SetCoreChartWindow();
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, Lime);
 	
 	if (sar_step <= 0.0)
@@ -654,11 +599,9 @@ void ParabolicSAR::Init() {
 	if (sar_maximum <= 0.0)
 		throw DataExc();
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 0, sar_buffer );
-	SetIndexBuffer ( 1, ep_buffer );
-	SetIndexBuffer ( 2, af_buffer );
+	//SetIndexBuffer ( 0, sar_buffer );
+	//SetIndexBuffer ( 1, ep_buffer );
+	//SetIndexBuffer ( 2, af_buffer );
 
 	last_rev_pos = 0;
 	direction_long = false;
@@ -846,10 +789,8 @@ StandardDeviation::StandardDeviation()
 	
 }
 
-void StandardDeviation::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void StandardDeviation::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void StandardDeviation::Init()
@@ -857,12 +798,10 @@ void StandardDeviation::Init()
 /*
 	SetCoreSeparateWindow();
 	SetCoreMinimum(0);
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Blue);
 	
-	SetIndexCount(1);
-	
-	SetIndexBuffer ( 0, stddev_buffer );
+	//SetIndexBuffer ( 0, stddev_buffer );
 	SetBufferShift ( 0, shift );
 	SetBufferBegin ( 0, period );
 	
@@ -922,28 +861,25 @@ AverageTrueRange::AverageTrueRange()
 	
 }
 
-void AverageTrueRange::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void AverageTrueRange::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void AverageTrueRange::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(2, 1);
 	SetBufferColor(0, DodgerBlue);
 	
 	//SetCoreDigits(GetDigits());
 	SetBufferStyle(0,DRAW_LINE);
 	
-	SetIndexCount(2);
-	SetIndexBuffer(0,atr_buffer);
-	SetIndexBuffer(1,tr_buffer);
+	//SetIndexBuffer(0,atr_buffer);
+	//SetIndexBuffer(1,tr_buffer);
 	SetBufferLabel(0, "ATR");
 	
-	SetIndexBuffer ( 0, atr_buffer );
-	SetIndexBuffer ( 1, tr_buffer );
+	//SetIndexBuffer ( 0, atr_buffer );
+	//SetIndexBuffer ( 1, tr_buffer );
 
 	if ( period <= 0 )
 		throw DataExc();
@@ -1017,27 +953,23 @@ BearsPower::BearsPower()
 	
 }
 
-void BearsPower::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void BearsPower::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void BearsPower::Init() {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Silver);
 	
 	//SetCoreDigits(GetDigits());
-	
-	SetIndexCount(1);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
 	
 	SetBufferLabel(0,"ATR");
 	
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	
 	if (RequireIndicator("ma", "period", period, "offset", 0, "method", MODE_EMA)) throw DataExc();
 	*/
@@ -1076,26 +1008,21 @@ BullsPower::BullsPower()
 	
 }
 
-void BullsPower::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void BullsPower::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void BullsPower::Init()
 {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Silver);
-	
-	//SetCoreDigits(GetDigits());
-	SetIndexCount(1);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
 	SetBufferLabel(0,"Bulls");
 	
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	
 	if (RequireIndicator("ma", "period", period, "offset", 0, "method", MODE_EMA)) throw DataExc();
 	*/
@@ -1134,17 +1061,15 @@ CommodityChannelIndex::CommodityChannelIndex()
 	
 }
 
-void CommodityChannelIndex::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void CommodityChannelIndex::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void CommodityChannelIndex::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, LightSeaGreen);
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, -100.0);
@@ -1155,11 +1080,9 @@ void CommodityChannelIndex::Init()
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"CCI");
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 1, value_buffer );
-	SetIndexBuffer ( 2, mov_buffer );
-	SetIndexBuffer ( 0, cci_buffer );
+	//SetIndexBuffer ( 1, value_buffer );
+	//SetIndexBuffer ( 2, mov_buffer );
+	//SetIndexBuffer ( 0, cci_buffer );
 
 	if ( period <= 1 )
 		throw DataExc();
@@ -1259,10 +1182,8 @@ DeMarker::DeMarker()
 	
 }
 
-void DeMarker::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void DeMarker::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void DeMarker::Init()
@@ -1271,7 +1192,7 @@ void DeMarker::Init()
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-0.5);  // normalized
 	SetCoreMaximum(0.5);   // normalized
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 0.3 - 0.5); // normalized
@@ -1280,11 +1201,9 @@ void DeMarker::Init()
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"DeMarker");
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, max_buffer );
-	SetIndexBuffer ( 2, min_buffer );
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, max_buffer );
+	//SetIndexBuffer ( 2, min_buffer );
 	SetBufferBegin ( 0, period );
 	*/
 }
@@ -1368,24 +1287,21 @@ ForceIndex::ForceIndex()
 	applied_value = 0;
 }
 
-void ForceIndex::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void ForceIndex::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void ForceIndex::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferBegin(0,period);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	SetBufferBegin ( 0, period );
 	
 	if (RequireIndicator("ma", "period", period, "offset", 0, "method", ma_method)) throw DataExc();
@@ -1435,11 +1351,8 @@ Momentum::Momentum()
 	
 }
 
-void Momentum::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void Momentum::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void Momentum::Init()
@@ -1447,11 +1360,10 @@ void Momentum::Init()
 	/*
 
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 
 	if ( period <= 0 )
 		throw DataExc();
@@ -1509,35 +1421,26 @@ OsMA::OsMA()
 	params = false;
 }
 
-void OsMA::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("slow_ema");
-	if (i != -1)
-		slow_ema_period = args[i];
-	i = args.Find("fast_ema");
-	if (i != -1)
-		fast_ema_period = args[i];
-	i = args.Find("signal_sma");
-	if (i != -1)
-		signal_sma_period = args[i];
-	
+void OsMA::Arguments(ArgumentBase& args) {
+	args.Arg("slow_ema", slow_ema_period);
+	args.Arg("fast_ema", fast_ema_period);
+	args.Arg("signal_sma", signal_sma_period);
 }
 
 void OsMA::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, Silver);
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
 	//SetCoreDigits(GetDigits() + 2);
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 0, osma_buffer );
-	SetIndexBuffer ( 1, buffer );
-	SetIndexBuffer ( 2, signal_buffer );
+	//SetIndexBuffer ( 0, osma_buffer );
+	//SetIndexBuffer ( 1, buffer );
+	//SetIndexBuffer ( 2, signal_buffer );
 	SetBufferBegin ( 0, signal_sma_period );
 
 	if ( fast_ema_period <= 1 || slow_ema_period <= 1 || signal_sma_period <= 1 || fast_ema_period >= slow_ema_period )
@@ -1594,11 +1497,8 @@ RelativeStrengthIndex::RelativeStrengthIndex()
 	
 }
 
-void RelativeStrengthIndex::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void RelativeStrengthIndex::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void RelativeStrengthIndex::Init()
@@ -1607,7 +1507,7 @@ void RelativeStrengthIndex::Init()
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-50); // normalized
 	SetCoreMaximum(50);  // normalized
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 30.0 - 50); // normalized
@@ -1618,11 +1518,9 @@ void RelativeStrengthIndex::Init()
 	if ( period < 1 )
 		throw DataExc();
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, pos_buffer );
-	SetIndexBuffer ( 2, neg_buffer );
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, pos_buffer );
+	//SetIndexBuffer ( 2, neg_buffer );
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "RSI");
@@ -1705,26 +1603,18 @@ RelativeVigorIndex::RelativeVigorIndex()
 	
 }
 
-void RelativeVigorIndex::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void RelativeVigorIndex::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void RelativeVigorIndex::Init()
 {
 
 	SetCoreSeparateWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Green);
 	SetBufferColor(1, Red);
 	
-	
-	SetIndexCount(2);
-	
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, signal_buffer );
 	SetBufferBegin ( 0, period + 3 );
 	SetBufferBegin ( 1, period + 7 );
 	
@@ -1737,6 +1627,7 @@ void RelativeVigorIndex::Init()
 
 void RelativeVigorIndex::Start()
 {
+	Buffer& buffer = GetBuffer(0);
 	double value_up, value_down, num, denum;
 
 	int bars = GetBars();
@@ -1811,19 +1702,10 @@ StochasticOscillator::StochasticOscillator()
 	
 }
 
-void StochasticOscillator::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("k_period");
-	if (i != -1)
-		k_period = args[i];
-	
-	i = args.Find("d_period");
-	if (i != -1)
-		d_period = args[i];
-	
-	i = args.Find("slowing");
-	if (i != -1)
-		slowing = args[i];
-	
+void StochasticOscillator::Arguments(ArgumentBase& args) {
+	args.Arg("k_period", k_period);
+	args.Arg("d_period", d_period);
+	args.Arg("slowing", slowing);
 }
 
 void StochasticOscillator::Init()
@@ -1832,7 +1714,7 @@ void StochasticOscillator::Init()
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-50); // normalized
 	SetCoreMaximum(50);  // normalized
-	SetBufferCount(2);
+	//SetBufferCount(4, 2);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1, Red);
 	SetCoreLevelCount(2);
@@ -1841,13 +1723,12 @@ void StochasticOscillator::Init()
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, signal_buffer );
-	SetIndexBuffer ( 2, high_buffer );
-	SetIndexBuffer ( 3, low_buffer );
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, signal_buffer );
+	//SetIndexBuffer ( 2, high_buffer );
+	//SetIndexBuffer ( 3, low_buffer );
 	//SetCoreDigits(2);
+	
 	SetBufferLabel( 0, "Main");
 	SetBufferLabel( 1, "Signal" );
 	SetBufferBegin(0, k_period + slowing - 2 );
@@ -1859,8 +1740,11 @@ void StochasticOscillator::Init()
 	
 }
 
-void StochasticOscillator::Start()
-{
+void StochasticOscillator::Start() {
+	Buffer& buffer = GetBuffer(0);
+	Buffer& signal_buffer = GetBuffer(1);
+	Buffer& high_buffer = GetBuffer(2);
+	Buffer& low_buffer = GetBuffer(3);
 	int i, k, start;
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -1966,11 +1850,8 @@ WilliamsPercentRange::WilliamsPercentRange()
 	
 }
 
-void WilliamsPercentRange::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void WilliamsPercentRange::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void WilliamsPercentRange::Init()
@@ -1979,15 +1860,13 @@ void WilliamsPercentRange::Init()
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-50); // normalized
 	SetCoreMaximum(50);  // normalized
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, -20 + 50); // normalized
 	SetCoreLevel(1, -80 + 50); // normalized
 	
-	SetIndexCount(1);
-	
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	SetBufferBegin ( 0, period );
 	
 	SetBufferStyle(0,DRAW_LINE);
@@ -2028,7 +1907,7 @@ AccumulationDistribution::AccumulationDistribution() {
 	
 }
 
-void AccumulationDistribution::SetArguments(const VectorMap<String, Value>& args) {
+void AccumulationDistribution::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -2036,15 +1915,14 @@ void AccumulationDistribution::Init()
 {
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, LightSeaGreen);
 	
 	//SetCoreDigits(0);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	
 }
 
@@ -2066,6 +1944,7 @@ bool IsEqualDoubles ( double d1, double d2, double epsilon = 0.00001 )
 
 void AccumulationDistribution::Start()
 {
+	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -2131,11 +2010,8 @@ MoneyFlowIndex::MoneyFlowIndex()
 	
 }
 
-void MoneyFlowIndex::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void MoneyFlowIndex::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void MoneyFlowIndex::Init()
@@ -2147,11 +2023,10 @@ void MoneyFlowIndex::Init()
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 20 - 50); // normalized
 	SetCoreLevel(1, 80 - 50); // normalized
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Blue);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	SetBufferBegin ( 0, period );
 	
 	SetBufferStyle(0,DRAW_LINE);
@@ -2221,22 +2096,18 @@ ValueAndVolumeTrend::ValueAndVolumeTrend()
 	
 }
 
-void ValueAndVolumeTrend::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("applied_value");
-	if (i != -1)
-		applied_value = args[i];
-	
+void ValueAndVolumeTrend::Arguments(ArgumentBase& args) {
+	args.Arg("applied_value", applied_value);
 }
 
 void ValueAndVolumeTrend::Init()
 {
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	
 	SetBufferStyle(0, DRAW_LINE);
 	//SetCoreDigits(0);
@@ -2280,22 +2151,18 @@ OnBalanceVolume::OnBalanceVolume()
 	
 }
 
-void OnBalanceVolume::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("applied_value");
-	if (i != -1)
-		applied_value = args[i];
-	
+void OnBalanceVolume::Arguments(ArgumentBase& args) {
+	args.Arg("applied_value", applied_value);
 }
 
 void OnBalanceVolume::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 0, buffer );
 	
 	SetBufferStyle(0,DRAW_LINE);
 	//SetCoreDigits(0);
@@ -2346,17 +2213,16 @@ Volumes::Volumes() {
 	
 }
 
-void Volumes::SetArguments(const VectorMap<String, Value>& args) {
+void Volumes::Arguments(ArgumentBase& args) {
 	
 }
 
 void Volumes::Init() {
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Green);
 	
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, buf );
+	//SetIndexBuffer ( 0, buf );
 	SetBufferStyle(0, DRAW_HISTOGRAM);
 	SetBufferLabel(0,"Volume");
 }
@@ -2386,7 +2252,7 @@ AcceleratorOscillator::AcceleratorOscillator() {
 	
 }
 
-void AcceleratorOscillator::SetArguments(const VectorMap<String, Value>& args) {
+void AcceleratorOscillator::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -2394,7 +2260,7 @@ void AcceleratorOscillator::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(3);
+	//SetBufferCount(5, 3);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Red);
@@ -2404,12 +2270,12 @@ void AcceleratorOscillator::Init()
 	SetBufferStyle ( 0, DRAW_NONE );
 	SetBufferStyle ( 1, DRAW_HISTOGRAM );
 	SetBufferStyle ( 2, DRAW_HISTOGRAM );
-	SetIndexCount(5);
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, up_buffer );
-	SetIndexBuffer ( 2, down_buffer );
-	SetIndexBuffer ( 3, macd_buffer );
-	SetIndexBuffer ( 4, signal_buffer);
+	
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, up_buffer );
+	//SetIndexBuffer ( 2, down_buffer );
+	//SetIndexBuffer ( 3, macd_buffer );
+	//SetIndexBuffer ( 4, signal_buffer);
 	SetBufferBegin ( 0, DATA_LIMIT );
 	SetBufferBegin ( 1, DATA_LIMIT );
 	SetBufferBegin ( 2, DATA_LIMIT );
@@ -2492,46 +2358,22 @@ GatorOscillator::GatorOscillator()
 	applied_value = PRICE_MEDIAN;
 }
 
-void GatorOscillator::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("jaws_period");
-	if (i != -1)
-		jaws_period = args[i];
-	
-	i = args.Find("jaws_shift");
-	if (i != -1)
-		jaws_shift = args[i];
-	
-	i = args.Find("teeth_period");
-	if (i != -1)
-		teeth_period = args[i];
-	
-	i = args.Find("teeth_shift");
-	if (i != -1)
-		teeth_shift = args[i];
-	
-	i = args.Find("lips_period");
-	if (i != -1)
-		lips_period = args[i];
-	
-	i = args.Find("lips_shift");
-	if (i != -1)
-		lips_shift = args[i];
-	
-	i = args.Find("ma_method");
-	if (i != -1)
-		ma_method = args[i];
-	
-	i = args.Find("applied_value");
-	if (i != -1)
-		applied_value = args[i];
-	
+void GatorOscillator::Arguments(ArgumentBase& args) {
+	args.Arg("jaws_period", jaws_period);
+	args.Arg("jaws_shift", jaws_shift);
+	args.Arg("teeth_period", teeth_period);
+	args.Arg("teeth_shift", teeth_shift);
+	args.Arg("lips_period", lips_period);
+	args.Arg("lips_shift", lips_shift);
+	args.Arg("ma_method", ma_method);
+	args.Arg("applied_value", applied_value);
 }
 
 void GatorOscillator::Init()
 {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(6);
+	//SetBufferCount(6, 6);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Red);
 	SetBufferColor(2, Green);
@@ -2539,13 +2381,12 @@ void GatorOscillator::Init()
 	SetBufferColor(4, Red);
 	SetBufferColor(5, Green);
 	
-	SetIndexCount(6);
-	SetIndexBuffer ( 0, up_buffer );
-	SetIndexBuffer ( 1, up_red_buffer );
-	SetIndexBuffer ( 2, up_green_buffer );
-	SetIndexBuffer ( 3, down_buffer );
-	SetIndexBuffer ( 4, down_red_buffer );
-	SetIndexBuffer ( 5, down_green_buffer );
+	//SetIndexBuffer ( 0, up_buffer );
+	//SetIndexBuffer ( 1, up_red_buffer );
+	//SetIndexBuffer ( 2, up_green_buffer );
+	//SetIndexBuffer ( 3, down_buffer );
+	//SetIndexBuffer ( 4, down_red_buffer );
+	//SetIndexBuffer ( 5, down_green_buffer );
 	
 	SetBufferBegin ( 1, jaws_period + jaws_shift - teeth_shift );
 	SetBufferBegin ( 2, jaws_period + jaws_shift - teeth_shift );
@@ -2700,7 +2541,7 @@ AwesomeOscillator::AwesomeOscillator()
 	
 }
 
-void AwesomeOscillator::SetArguments(const VectorMap<String, Value>& args) {
+void AwesomeOscillator::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -2708,7 +2549,7 @@ void AwesomeOscillator::Init()
 {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(3);
+	//SetBufferCount(3, 3);
 	SetBufferColor(0, Black);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Red);
@@ -2718,10 +2559,9 @@ void AwesomeOscillator::Init()
 	SetBufferStyle ( 2, DRAW_HISTOGRAM );
 	//SetCoreDigits ( GetDigits() + 1 );
 	
-	SetIndexCount(3);
-	SetIndexBuffer ( 0, buffer );
-	SetIndexBuffer ( 1, up_buffer );
-	SetIndexBuffer ( 2, down_buffer );
+	//SetIndexBuffer ( 0, buffer );
+	//SetIndexBuffer ( 1, up_buffer );
+	//SetIndexBuffer ( 2, down_buffer );
 	
 	SetBufferBegin ( 0, DATA_LIMIT );
 	SetBufferBegin ( 1, DATA_LIMIT );
@@ -2806,15 +2646,9 @@ Fractals::Fractals()
 	
 }
 
-void Fractals::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("left_bars");
-	if (i != -1)
-		left_bars = args[i];
-	
-	i = args.Find("right_bars");
-	if (i != -1)
-		right_bars = args[i];
-	
+void Fractals::Arguments(ArgumentBase& args) {
+	args.Arg("left_bars", left_bars);
+	args.Arg("right_bars", right_bars);
 }
 
 void Fractals::Init()
@@ -2822,7 +2656,7 @@ void Fractals::Init()
 /*
 	SetCoreChartWindow();
 	
-	SetBufferCount(6);
+	//SetBufferCount(6, 6);
 	SetBufferColor(0, Blue);
 	SetBufferColor(1, Blue);
 	SetBufferColor(2, Blue);
@@ -2830,31 +2664,29 @@ void Fractals::Init()
 	SetBufferColor(4, Blue);
 	SetBufferColor(5, Blue);
 	
-	SetIndexCount(6);
-	
 	SetBufferStyle(0, DRAW_LINE);
 	SetBufferArrow(0, 158);
-	SetIndexBuffer(0, line_up_buf1);
+	//SetIndexBuffer(0, line_up_buf1);
 	
 	SetBufferStyle(1, DRAW_LINE);
 	SetBufferArrow(1, 158);
-	SetIndexBuffer(1, line_up_buf2);
+	//SetIndexBuffer(1, line_up_buf2);
 	
 	SetBufferStyle(2, DRAW_ARROW);
 	SetBufferArrow(2, 119);
-	SetIndexBuffer(2, arrow_up_buf);
+	//SetIndexBuffer(2, arrow_up_buf);
 	
 	SetBufferStyle(3, DRAW_ARROW);
 	SetBufferArrow(3, 119);
-	SetIndexBuffer(3, arrow_down_buf);
+	//SetIndexBuffer(3, arrow_down_buf);
 	
 	SetBufferStyle(4, DRAW_ARROW);
 	SetBufferArrow(4, 119);
-	SetIndexBuffer(4, arrow_breakup_buf);
+	//SetIndexBuffer(4, arrow_breakup_buf);
 	
 	SetBufferStyle(5, DRAW_ARROW);
 	SetBufferArrow(5, 119);
-	SetIndexBuffer(5, arrow_breakdown_buf);
+	//SetIndexBuffer(5, arrow_breakdown_buf);
 	*/
 }
 
@@ -2964,19 +2796,10 @@ FractalOsc::FractalOsc()
 	
 }
 
-void FractalOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("left_bars");
-	if (i != -1)
-		left_bars = args[i];
-	
-	i = args.Find("right_bars");
-	if (i != -1)
-		right_bars = args[i];
-	
-	i = args.Find("smoothing");
-	if (i != -1)
-		smoothing_period = args[i];
-	
+void FractalOsc::Arguments(ArgumentBase& args) {
+	args.Arg("left_bars", left_bars);
+	args.Arg("right_bars", right_bars);
+	args.Arg("smoothing", smoothing_period);
 }
 
 void FractalOsc::Init()
@@ -2984,16 +2807,14 @@ void FractalOsc::Init()
 /*
 	SetCoreSeparateWindow();
 	
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Blue);
 	
-	SetIndexCount(2);
-	
-	SetIndexBuffer(0, buf);
+	//SetIndexBuffer(0, buf);
 	SetBufferStyle(0, DRAW_LINE);
 	
-	SetIndexBuffer(1, av);
+	//SetIndexBuffer(1, av);
 	SetBufferStyle(1, DRAW_LINE);
 	
 	if (RequireIndicator("frac", "left_bars", left_bars, "right_bars", right_bars)) throw DataExc();
@@ -3041,7 +2862,7 @@ MarketFacilitationIndex::MarketFacilitationIndex()
 	
 }
 
-void MarketFacilitationIndex::SetArguments(const VectorMap<String, Value>& args) {
+void MarketFacilitationIndex::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -3054,19 +2875,18 @@ void MarketFacilitationIndex::Init()
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 20);
 	SetCoreLevel(1, 80);
-	SetBufferCount(4);
+	
+	//SetBufferCount(5, 4);
 	SetBufferColor(0, Lime);
 	SetBufferColor(1, SaddleBrown);
 	SetBufferColor(2, Blue);
 	SetBufferColor(3, Pink);
 	
-	SetIndexCount(5);
-	
-	SetIndexBuffer ( 0, up_up_buffer );
-	SetIndexBuffer ( 1, down_down_buffer );
-	SetIndexBuffer ( 2, up_down_buffer );
-	SetIndexBuffer ( 3, down_up_buffer );
-	SetIndexBuffer ( 4, buffer );
+	//SetIndexBuffer ( 0, up_up_buffer );
+	//SetIndexBuffer ( 1, down_down_buffer );
+	//SetIndexBuffer ( 2, up_down_buffer );
+	//SetIndexBuffer ( 3, down_up_buffer );
+	//SetIndexBuffer ( 4, buffer );
 
 	SetBufferStyle ( 0, DRAW_HISTOGRAM );
 	SetBufferStyle ( 1, DRAW_HISTOGRAM );
@@ -3228,20 +3048,11 @@ ZigZag::ZigZag()
 	extremum_level	= 3;  // recounting's depth of extremums
 }
 
-void ZigZag::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("depth");
-	if (i != -1)
-		input_depth = args[i];
-	i = args.Find("deviation");
-	if (i != -1)
-		input_depth = args[i];
-	i = args.Find("backstep");
-	if (i != -1)
-		input_backstep = args[i];
-	i = args.Find("level");
-	if (i != -1)
-		extremum_level = args[i];
+void ZigZag::Arguments(ArgumentBase& args) {
+	args.Arg("depth", input_depth);
+	args.Arg("deviation", input_depth);
+	args.Arg("backstep", input_backstep);
+	args.Arg("level", extremum_level);
 }
 
 void ZigZag::Init()
@@ -3249,7 +3060,7 @@ void ZigZag::Init()
 	/*
 	SetCoreChartWindow();
 	
-	SetBufferCount(2);
+	//SetBufferCount(4, 2);
 	SetBufferColor(0, Red());
 	SetBufferColor(1, Red());
 	
@@ -3259,12 +3070,11 @@ void ZigZag::Init()
 	
 	SetBufferStyle(0, DRAW_NONE);
 	SetBufferStyle(1, DRAW_SECTION);
-		
-	SetIndexCount(4);
-	SetIndexBuffer( 0, osc );
-	SetIndexBuffer( 1, keypoint_buffer);
-	SetIndexBuffer( 2, high_buffer);
-	SetIndexBuffer( 3, low_buffer);
+	
+	//SetIndexBuffer( 0, osc );
+	//SetIndexBuffer( 1, keypoint_buffer);
+	//SetIndexBuffer( 2, high_buffer);
+	//SetIndexBuffer( 3, low_buffer);
 	*/
 }
 
@@ -3491,31 +3301,22 @@ ZigZagOsc::ZigZagOsc()
 	
 }
 
-void ZigZagOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("depth");
-	if (i != -1)
-		depth = args[i];
-	
-	i = args.Find("deviation");
-	if (i != -1)
-		deviation = args[i];
-	
-	i = args.Find("backstep");
-	if (i != -1)
-		backstep = args[i];
-	
+void ZigZagOsc::Arguments(ArgumentBase& args) {
+	args.Arg("depth", depth);
+	args.Arg("deviation", deviation);
+	args.Arg("backstep", backstep);
 }
 
 void ZigZagOsc::Init()
 {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, GrayColor());
 	
 	SetBufferStyle(0, DRAW_HISTOGRAM);
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, osc );
+	
+	//SetIndexBuffer ( 0, osc );
 	
 	if (RequireIndicator("zz", "depth", depth, "deviation", deviation, "backstep", backstep)) throw DataExc();
 	*/
@@ -3592,14 +3393,14 @@ LinearTimeFrames::LinearTimeFrames() {
 	
 }
 
-void LinearTimeFrames::SetArguments(const VectorMap<String, Value>& args) {
+void LinearTimeFrames::Arguments(ArgumentBase& args) {
 	
 }
 
 void LinearTimeFrames::Init() {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Blue);
@@ -3610,12 +3411,10 @@ void LinearTimeFrames::Init() {
 	SetCoreMinimum(0);
 	SetCoreMaximum(1);
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer(0, day);
-	SetIndexBuffer(1, month);
-	SetIndexBuffer(2, year);
-	SetIndexBuffer(3, week);
+	//SetIndexBuffer(0, day);
+	//SetIndexBuffer(1, month);
+	//SetIndexBuffer(2, year);
+	//SetIndexBuffer(3, week);
 	*/
 }
 
@@ -3654,25 +3453,16 @@ RepeatingAverage::RepeatingAverage() {
 	applied_value = 5;
 }
 
-void RepeatingAverage::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
-	i = args.Find("smoothing");
-	if (i != -1)
-		smoothing_period = args[i];
-	
-	i = args.Find("applied_value");
-	if (i != -1)
-		applied_value = args[i];
-	
+void RepeatingAverage::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("smoothing", smoothing_period);
+	args.Arg("applied_value", applied_value);
 }
 
 void RepeatingAverage::Init() {
 	/*
 	SetCoreChartWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Red);
@@ -3680,12 +3470,10 @@ void RepeatingAverage::Init() {
 	SetBufferType(2, STYLE_DOT);
 	SetBufferType(3, STYLE_DOT);
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer(0, average1);
-	SetIndexBuffer(1, average2);
-	SetIndexBuffer(2, average3);
-	SetIndexBuffer(3, average4);
+	//SetIndexBuffer(0, average1);
+	//SetIndexBuffer(1, average2);
+	//SetIndexBuffer(2, average3);
+	//SetIndexBuffer(3, average4);
 	*/
 }
 
@@ -3769,25 +3557,16 @@ RepeatingAverageOscillator::RepeatingAverageOscillator() {
 	applied_value = 5;
 }
 
-void RepeatingAverageOscillator::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
-	i = args.Find("smoothing");
-	if (i != -1)
-		smoothing_period = args[i];
-	
-	i = args.Find("applied_value");
-	if (i != -1)
-		applied_value = args[i];
-	
+void RepeatingAverageOscillator::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("smoothing", smoothing_period);
+	args.Arg("applied_value", applied_value);
 }
 
 void RepeatingAverageOscillator::Init() {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(5);
+	//SetBufferCount(5, 5);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
 	SetBufferColor(2, Red);
@@ -3797,13 +3576,11 @@ void RepeatingAverageOscillator::Init() {
 	SetBufferType(1, STYLE_DOT);
 	SetBufferLineWidth(4, 2);
 	
-	SetIndexCount(5);
-	
-	SetIndexBuffer(0, diff1);
-	SetIndexBuffer(1, diff2);
-	SetIndexBuffer(2, maindiff);
-	SetIndexBuffer(3, avdiff);
-	SetIndexBuffer(4, main_av_diff);
+	//SetIndexBuffer(0, diff1);
+	//SetIndexBuffer(1, diff2);
+	//SetIndexBuffer(2, maindiff);
+	//SetIndexBuffer(3, avdiff);
+	//SetIndexBuffer(4, main_av_diff);
 	
 	if (RequireIndicator("repav", "period", period, "smoothing", smoothing_period, "applied_value", applied_value)) throw DataExc();
 	*/
@@ -3845,32 +3622,21 @@ SupportResistance::SupportResistance() {
 	max_radius = 100;
 }
 
-void SupportResistance::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
-	i = args.Find("max_crosses");
-	if (i != -1)
-		max_crosses = args[i];
-	
-	i = args.Find("max_radius");
-	if (i != -1)
-		max_radius = args[i];
-	
+void SupportResistance::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("max_crosses", max_crosses);
+	args.Arg("max_radius", max_radius);
 }
 
 void SupportResistance::Init() {
 /*
 	SetCoreChartWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
 	
-	SetIndexCount(2);
-	
-	SetIndexBuffer(0, support);
-	SetIndexBuffer(1, resistance);
+	//SetIndexBuffer(0, support);
+	//SetIndexBuffer(1, resistance);
 	*/
 }
 
@@ -3984,36 +3750,22 @@ SupportResistanceOscillator::SupportResistanceOscillator() {
 	smoothing_period = 30;
 }
 
-void SupportResistanceOscillator::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
-	i = args.Find("max_crosses");
-	if (i != -1)
-		max_crosses = args[i];
-	
-	i = args.Find("max_radius");
-	if (i != -1)
-		max_radius = args[i];
-	
-	i = args.Find("smoothing");
-	if (i != -1)
-		smoothing_period = args[i];
-	
+void SupportResistanceOscillator::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("max_crosses", max_crosses);
+	args.Arg("max_radius", max_radius);
+	args.Arg("smoothing", smoothing_period);
 }
 
 void SupportResistanceOscillator::Init() {
 /*
 	SetCoreSeparateWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Red);
 	SetBufferColor(1, Green);
 	
-	SetIndexCount(2);
-	
-	SetIndexBuffer(0, osc);
-	SetIndexBuffer(1, osc_av);
+	//SetIndexBuffer(0, osc);
+	//SetIndexBuffer(1, osc_av);
 	
 	SetCoreMinimum(-1);
 	SetCoreMaximum(1);
@@ -4057,21 +3809,17 @@ Psychological::Psychological() {
 	period = 25;
 }
 
-void Psychological::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void Psychological::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void Psychological::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, DodgerBlue());
-	SetIndexCount(1);
 	SetBufferStyle(0, DRAW_LINE);
-	SetIndexBuffer(0, buf);
+	//SetIndexBuffer(0, buf);
 	SetBufferBegin(0, period);
 	SetBufferLabel(0, "Psychological");
 	*/
@@ -4133,11 +3881,8 @@ CorrelationOscillator::CorrelationOscillator() {
 	//ids = 0;
 }
 
-void CorrelationOscillator::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	
+void CorrelationOscillator::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void CorrelationOscillator::Init() {
@@ -4154,12 +3899,11 @@ void CorrelationOscillator::Init() {
 	SetCoreMaximum(+1.0);
 	SetCoreMinimum(-1.0);
 	SetCoreSeparateWindow();
-	SetBufferCount(sym_count);
-	SetIndexCount(sym_count);
+	//SetBufferCount(sym_count, sym_count);
 	
 	buf.SetCount(sym_count);
 	for(int i = 0; i < sym_count; i++) {
-		SetIndexBuffer(i, buf[i]);
+		//SetIndexBuffer(i, buf[i]);
 		SetBufferColor(i, RainbowColor((double)i / sym_count));
 	}
 	
@@ -4194,10 +3938,10 @@ void CorrelationOscillator::Process(int id) {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
-	const FloatVector& a = *open;
-	const FloatVector& b = *opens[id];
+	const Vector<double>& a = *open;
+	const Vector<double>& b = *opens[id];
 	
-	FloatVector& buf = this->buf[id];
+	Vector<double>& buf = this->buf[id];
 	
 	OnlineAverage& s = averages[id];
 	
@@ -4303,14 +4047,9 @@ ParallelSymLR::ParallelSymLR()
 	SetCoreSeparateWindow();
 }
 
-void ParallelSymLR::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	i = args.Find("method");
-	if (i != -1)
-		method = args[i];
+void ParallelSymLR::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("method", method);
 }
 
 void ParallelSymLR::Init()
@@ -4320,11 +4059,11 @@ void ParallelSymLR::Init()
 	if (period < 2)
 		period = 13;
 	draw_begin = period - 1;
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Red());
 	SetBufferBegin(0, draw_begin );
-	SetIndexCount(1);
-	SetIndexBuffer(0, buffer);
+	
+	//SetIndexBuffer(0, buffer);
 	
 	if (RequireIndicator("ma", "period", period, "method", method)) throw DataExc();
 	
@@ -4357,7 +4096,7 @@ void ParallelSymLR::Start()
 	cont.Refresh();
 	
 	// Prepare values for loop
-	FloatVector& dbl = cont.GetIndex(0);
+	Vector<double>& dbl = cont.GetIndex(0);
 	double prev1 = dbl.Get(max(0, counted-1));
 	double prev2 = dbl.Get(max(0, counted-1+shift));
 	double prev_value = counted > 0 ? buffer.Get(counted-1) : 0;
@@ -4411,17 +4150,10 @@ ParallelSymLREdge::ParallelSymLREdge()
 	SetCoreSeparateWindow();
 }
 
-void ParallelSymLREdge::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	i = args.Find("method");
-	if (i != -1)
-		method = args[i];
-	i = args.Find("slowing");
-	if (i != -1)
-		slowing = args[i];
+void ParallelSymLREdge::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("method", method);
+	args.Arg("slowing", slowing);
 }
 
 void ParallelSymLREdge::Init()
@@ -4431,13 +4163,13 @@ void ParallelSymLREdge::Init()
 	if (period < 2)
 		period = 13;
 	draw_begin = period - 1;
-	SetBufferCount(1);
+	//SetBufferCount(3, 1);
 	SetBufferColor(0, Red());
 	SetBufferBegin(0, draw_begin );
-	SetIndexCount(3);
-	SetIndexBuffer(0, buffer);
-	SetIndexBuffer(1, edge);
-	SetIndexBuffer(2, symlr);
+	
+	//SetIndexBuffer(0, buffer);
+	//SetIndexBuffer(1, edge);
+	//SetIndexBuffer(2, symlr);
 	
 	if (RequireIndicator("ma", "period", period, "method", method)) throw DataExc();
 	if (RequireIndicator("ma", "period", slowing, "method", method, "offset", IntStr(-slowing/2))) throw DataExc();
@@ -4468,8 +4200,8 @@ void ParallelSymLREdge::Start()
 	slowcont.Refresh();
 	
 	// Prepare values for looping
-	FloatVector& dbl = cont.GetIndex(0);
-	FloatVector& slow_dbl = slowcont.GetIndex(0);
+	Vector<double>& dbl = cont.GetIndex(0);
+	Vector<double>& slow_dbl = slowcont.GetIndex(0);
 	double prev_slow = slow_dbl.Get(max(0, counted-1));
 	double prev1 = dbl.Get(max(0, counted-1)) - prev_slow;
 	double prev2 = dbl.Get(max(0, counted-1+shift)) - prev_slow;

@@ -2,47 +2,17 @@
 
 namespace Overlook {
 
-
-DataBridge::DataBridge()  {
+DataBridgeCommon::DataBridgeCommon() {
+	inited = false;
 	port = 0;
-	enable_bardata = true;
-	has_written = false;
-	running = false;
-	stopped = true;
 	sym_count = -1;
 	
-	//AddValue<double>(); // open
-	//AddValue<double>(); // low
-	//AddValue<double>(); // high
-	//AddValue<double>(); // volume
 }
 
-DataBridge::~DataBridge()  {
-	running = false;
-	while (!stopped) Sleep(100);
-}
-
-void DataBridge::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("addr");
-	if (i != -1)	addr = args[i];
-	else			throw DataExc("No address argument");
-	i = args.Find("port");
-	if (i != -1)	port = args[i];
-	else			throw DataExc("No port argument");
-	i = args.Find("enable_bardata");
-	if (i != -1)
-		enable_bardata = args[i];
-}
-
-void DataBridge::Serialize(Stream& s) {
-	s % connected % account_server % tfs;
-}
-
-void DataBridge::Init() {
-	BaseSystem& ol = *Get<BaseSystem>();
-	addr = ol.addr;
-	port = ol.port;
+void DataBridgeCommon::Init(DataBridge* db) {
+	BaseSystem& bs = *db->Get<BaseSystem>();
+	addr = bs.addr;
+	port = bs.port;
 	
 	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
 	
@@ -56,7 +26,7 @@ void DataBridge::Init() {
 		sym_count = mt.GetSymbolCount();
 		
 		tfs.Clear();
-		int base_mtf = ol.GetBasePeriod() / 60;
+		int base_mtf = bs.GetBasePeriod() / 60;
 		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			int tf = mt.GetTimeframe(i);
 			if (tf >= base_mtf)
@@ -65,55 +35,30 @@ void DataBridge::Init() {
 		
 		DownloadRemoteData();
 	}
-	catch (ConnectionError e) {
-		throw DataExc("DataBridge::Init: connection failed to " + addr + ":" + IntStr(port));
-	}
 	catch (...) {
 		throw DataExc("DataBridge::Init: unknown error");
 	}
 	
 	// Check that symbol names match
 	for(int i = 0; i < sym_count; i++) {
-		ASSERTEXC(ol.GetSymbol(i) == mt.GetSymbol(i).name);
+		ASSERTEXC(bs.GetSymbol(i) == mt.GetSymbol(i).name);
 	}
 	
 	// Assert that first tf matches base period
-	if (ol.GetBasePeriod() != tfs[0] * 60) {
+	if (bs.GetBasePeriod() != tfs[0] * 60) {
 		throw DataExc("Resolver's base period differs from mt");
 	}
 	
 	points.SetCount(sym_count, 0.0001);
 	
-	int tf_count = ol.GetPeriodCount();
+	int tf_count = bs.GetPeriodCount();
 	loaded.SetCount(sym_count * tf_count, false);
-	has_written = false;
 	
-	running = true;
-	stopped = false;
-	Thread::Start(THISBACK(Run));
+	inited = true;
 }
 
-void DataBridge::Run() {
-	while (running && !Thread::IsShutdownThreads()) {
-		
-		// Refresh ask & bid
-		
-		
-		// Check soft takeprofit / stoploss limits
-		//  - use predicted channel slots
-		
-		
-		// Update hard (at broker) takeprofit / stoploss limits
-		
-		
-		
-		Sleep(1000);
-	}
-	stopped = true;
-}
-
-void DataBridge::DownloadRemoteData() {
-	LOG("DataBridge::DownloadRemoteData");
+void DataBridgeCommon::DownloadRemoteData() {
+	LOG("DataBridgeCommon::DownloadRemoteData");
 	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
 	int actual = 0;
@@ -131,7 +76,7 @@ void DataBridge::DownloadRemoteData() {
 	DownloadAskBid();
 }
 
-int DataBridge::DownloadHistory(const Symbol& sym, int tf, bool force) {
+int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 	String history_dir = ConfigFile("history");
 	RealizeDirectory(history_dir);
 	
@@ -144,14 +89,14 @@ int DataBridge::DownloadHistory(const Symbol& sym, int tf, bool force) {
 	return DownloadRemoteFile(remote_path, local_path);
 }
 
-int DataBridge::DownloadAskBid() {
+int DataBridgeCommon::DownloadAskBid() {
 	String local_path = ConfigFile("askbid.bin");
 	String remote_path = "MQL4\\files\\askbid.bin";
 	
 	return DownloadRemoteFile(remote_path, local_path);
 }
 
-int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
+int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) {
 	MetaTrader& mt = GetMetaTrader();
 	
 	TimeStop ts;
@@ -219,49 +164,97 @@ int DataBridge::DownloadRemoteFile(String remote_path, String local_path) {
 		out.Put(buf, size);
 	}
 	
-	LOG("DataBridge::DownloadRemoteFile: for " << remote_path << " took " << ts.ToString());
+	LOG("DataBridgeCommon::DownloadRemoteFile: for " << remote_path << " took " << ts.ToString());
 	return 0;
 }
 
-bool DataBridge::Process(const CoreProcessAttributes& attr) {
-	/*MetaTrader& mt = GetMetaTrader();
-	BaseSystem& ol = *Get<BaseSystem>();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DataBridge::DataBridge()  {
+	SetSkipAllocate();
 	
-	LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+}
+
+DataBridge::~DataBridge()  {
 	
-	if (sym_count != -1 && attr.sym_id >= sym_count) {
-		if (attr.pos[0] == attr.bars[0]-1)
-			return false;
-		ProcessVirtualNode(attr);
-		return true;
+}
+
+void DataBridge::Arguments(ArgumentBase& args) {
+	
+}
+
+void DataBridge::Serialize(Stream& s) {
+	
+}
+
+void DataBridge::Init() {
+	//SetBufferCount(4, 4); // open, low, high, volume
+	
+}
+
+void DataBridge::Start() {
+	
+	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	if (!common.IsInited()) {
+		common.lock.Enter();
+		if (!common.IsInited()) {
+			common.Init(this);
+		}
+		common.lock.Leave();
 	}
 	
-	ASSERT(attr.GetCounted() == 0);
+	MetaTrader& mt = GetMetaTrader();
+	BaseSystem& bs = *Get<BaseSystem>();
+	
+	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
+	
+	int sym_count = common.GetSymbolCount();
+	if (GetSymbol() >= sym_count)
+		return;
+	
+	int bars = GetBars();
+	ASSERT(bars > 0);
+	for(int i = 0; i < outputs.GetCount(); i++)
+		for(int j = 0; j < outputs[i].buffers.GetCount(); j++)
+			outputs[i].buffers[j].value.SetCount(bars, 0);
 	
 	
 	// Open data-file
-	int period = attr.GetPeriod();
-	int mt_period = period * ol.GetBasePeriod() / 60;
-	String symbol = mt.GetSymbol(attr.sym_id).name;
+	int period = GetPeriod();
+	int mt_period = period * bs.GetBasePeriod() / 60;
+	String symbol = bs.GetSymbol(GetSymbol());
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
 	if (!FileExists(local_history_file))
-		return false;
+		throw DataExc();
 	FileIn src(local_history_file);
 	ASSERTEXC(src.IsOpen() && src.GetSize());
 	if (!src.IsOpen() || !src.GetSize()) {
 		LOG("ERROR: invalid file " << local_history_file);
-		return false;
+		throw DataExc();
 	}
-	
-	
 	int count = 0;
 	
+	
 	// Init destination time vector settings
-	int bars = ol.GetCount(period);
-	int begin = ol.GetBeginTS();
-	int step = ol.GetBasePeriod() * period;
+	int begin = bs.GetBeginTS();
+	int step = bs.GetBasePeriod() * period;
 	int cur = begin;
 	
 	
@@ -270,9 +263,9 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	src.Seek(4+64+12+4);
 	src.Get(&digits, 4);
 	if (digits > 20)
-		return false;
+		throw DataExc();
 	double point = 1.0 / pow(10.0, digits);
-	points[attr.sym_id] = point;
+	common.points[GetSymbol()] = point;
 	int data_size = src.GetSize();
 	const int struct_size = 8 + 4*8 + 8 + 4 + 8;
 	byte row[struct_size];
@@ -284,6 +277,12 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	int cursor = (4+64+12+4+4+4+4 +13*4);
 	cursor += count * struct_size;
 	src.Seek(cursor);
+	
+	
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
 	
 	
 	while ((cursor + struct_size) <= data_size && count < bars) {
@@ -317,16 +316,15 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 				// sacrifice a little bit of accuracy for optimal memory usage
 				point += base_point;
 			}
-			points[attr.sym_id] = point;
+			common.points[GetSymbol()] = point;
 			// TODO: check all data and don't rely on close
 		}
 		
 		while (cur < time && count < bars) {
-			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= prev_close;
-			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= prev_close;
-			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= prev_close;
-			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= 0;
-			SetReady(count, attr, true);
+			open_buf.Set(count, prev_close);
+			low_buf.Set(count, prev_close);
+			high_buf.Set(count, prev_close);
+			volume_buf.Set(count, 0);
 			cur += step;
 			count++;
 		}
@@ -334,12 +332,11 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 		prev_close = close;
 		
 		if (count < bars && time == cur) {
-			//ASSERT(ol.GetTime(tf, count) == TimeFromTimestamp(time));
-			*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= open;
-			*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= low;
-			*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= high;
-			*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= tick_volume;
-			SetReady(count, attr, true);
+			//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
+			open_buf.Set(count, open);
+			low_buf.Set(count, low);
+			high_buf.Set(count, high);
+			volume_buf.Set(count, tick_volume);
 			cur += step;
 			count++;
 		}
@@ -348,107 +345,158 @@ bool DataBridge::Process(const CoreProcessAttributes& attr) {
 	}
 	
 	while (count < bars) {
-		*GetValuePos<double>(0, attr.sym_id, attr.tf_id, count)	= open;
-		*GetValuePos<double>(1, attr.sym_id, attr.tf_id, count)	= open;
-		*GetValuePos<double>(2, attr.sym_id, attr.tf_id, count)	= open;
-		*GetValuePos<double>(3, attr.sym_id, attr.tf_id, count)	= 0;
-		SetReady(count, attr, true);
+		open_buf.Set(count, open);
+		low_buf.Set(count, open);
+		high_buf.Set(count, open);
+		volume_buf.Set(count, 0);
 		cur += step;
 		count++;
 	}
-	
-	has_written = true;
-	
-	return true;*/
-	
-	Panic("TODO"); return 0;
 }
 
-void DataBridge::ProcessVirtualNode(const CoreProcessAttributes& attr) {
-	/*MetaTrader& mt = GetMetaTrader();
-	int cur = attr.sym_id - sym_count;
-	ASSERT(cur >= 0 && cur < mt.GetCurrencyCount());
-	const Currency& c = mt.GetCurrency(cur);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VirtualNode::VirtualNode()  {
+	SetSkipAllocate();
 	
-	double change = 0;
-	double volume = 0;
-	
-	for(int j = 0; j < c.pairs0.GetCount(); j++) {
-		int id = c.pairs0[j];
-		double *open, *close;
-		
-		// Hackish solution to wait for normal symbols to be loaded in multithreaded version.
-		// NOTE: This fails with infinite loop if memory is released because of limit, but this is
-		// usually the first slot, so it shouldn't be a problem.
-		// The correct solution would be to split this into: real symbols and virtual nodes,
-		// which writes values into a dummy slot, which has both of them as dependency, and
-		// virtual-node-slot have real symbols as dependency.
-		// TODO: correct solution
-		for(;;) {
-			open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
-			close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
-			if (open) break;
-			Sleep(100);
-		}
-		double diff = (*close - *open) / points[id];
-		change -= diff;
-		double* vol	= GetValue<double>(3, id, attr.tf_id, 0, attr);
-		volume += *vol;
-	}
-	
-	for(int j = 0; j < c.pairs1.GetCount(); j++) {
-		int id = c.pairs1[j];
-		double *open, *close;
-		for(;;) {
-			open	= GetValue<double>(0, id, attr.tf_id,  0, attr);
-			close	= GetValue<double>(0, id, attr.tf_id, -1, attr);
-			if (open) break;
-			Sleep(100);
-		}
-		double diff = (*close - *open) / points[id];
-		change -= diff;
-		double* vol	= GetValue<double>(3, id, attr.tf_id, 0, attr);
-		volume += *vol;
-	}
-	
-	double* prev = GetValue<double>(0, 1, attr);
-	double value = prev ? *prev * (1 + change * 0.00001) : 1.0;
-	
-	*GetValue<double>(0, attr) = value;
-	*GetValue<double>(1, attr) = value;
-	*GetValue<double>(2, attr) = value;
-	*GetValue<double>(3, attr) = volume;
-	
-	if (prev) {
-		double* prev_low = GetValue<double>(1, 1, attr);
-		double* prev_high = GetValue<double>(2, 1, attr);
-		*prev_low = Upp::min(*prev, value);
-		*prev_high = Upp::max(*prev, value);
-	}*/
 }
+
+VirtualNode::~VirtualNode()  {
+	
+}
+
+void VirtualNode::Arguments(ArgumentBase& args) {
+	
+}
+
+void VirtualNode::Init() {
+	//SetBufferCount(4, 4); // open, low, high, volume
+	
+}
+
+void VirtualNode::Start() {
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	BaseSystem& bs = *Get<BaseSystem>();
+	MetaTrader& mt = GetMetaTrader();
+	int sym_count = mt.GetSymbolCount();
+	int cur = GetSymbol() - sym_count;
+	if (cur < 0)
+		return;
+	ASSERT(cur >= 0 && cur < mt.GetCurrencyCount());
+	
+	int bars = GetBars();
+	ASSERT(bars > 0);
+	for(int i = 0; i < outputs.GetCount(); i++)
+		for(int j = 0; j < outputs[i].buffers.GetCount(); j++)
+			outputs[i].buffers[j].value.SetCount(bars, 0);
+		
+	const Currency& c = mt.GetCurrency(cur);
+	int tf = GetTimeframe();
+	
+	for(int i = 0; i < bars; i++) {
+		int count = 0;
+		double change_sum = 0;
+		double volume_sum = 0;
+		for(int j = 0; j < c.pairs0.GetCount(); j++) {
+			int id = c.pairs0[j];
+			
+			ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+			ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
+			double open   = open_buf.Get(i);
+			double close  = open_buf.Get(i+1);
+			double vol    = vol_buf.Get(i);
+			double change = (close / open) - 1.0;
+			
+			change_sum += change;
+			volume_sum += vol;
+			count++;
+		}
+		
+		for(int j = 0; j < c.pairs1.GetCount(); j++) {
+			int id = c.pairs1[j];
+			
+			ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+			ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
+			double open   = open_buf.Get(i);
+			double close  = open_buf.Get(i+1);
+			double vol    = vol_buf.Get(i);
+			double change = (close / open) - 1.0;
+			
+			change_sum -= change;
+			volume_sum += vol;
+			count++;
+		}
+		
+		double prev = i ? open.Get(i-1) : 1.0;
+		double change = change_sum / count;
+		double value = prev * change;
+		
+		open.Set(i, value);
+		low.Set(i, value);
+		high.Set(i, value);
+		volume.Set(i, volume_sum);
+		
+		if (i) {
+			low		.Set(i-1, Upp::min(low		.Get(i-1), value));
+			high	.Set(i-1, Upp::max(high		.Get(i-1), value));
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 BridgeAskBid::BridgeAskBid() {
 	cursor = 0;
 }
 
-void BridgeAskBid::SetArguments(const VectorMap<String, Value>& args) {
+void BridgeAskBid::Arguments(ArgumentBase& args) {
 	
 }
 
 void BridgeAskBid::Init() {
 	/*Core::Init();
 	
-	SetBufferCount(2);
-	SetIndexCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Red());
-	SetIndexBuffer(0, ask );
+	//SetIndexBuffer(0, ask );
 	SetBufferColor(1, Green());
-	SetIndexBuffer(1, bid );
+	//SetIndexBuffer(1, bid );
 	//SetBufferColor(2, Red());
-	//SetIndexBuffer(2, ask_high );
+	////SetIndexBuffer(2, ask_high );
 	//SetBufferColor(3, Green());
-	//SetIndexBuffer(3, bid_low );
+	////SetIndexBuffer(3, bid_low );
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -511,7 +559,7 @@ void BridgeAskBid::Start() {
 	}
 	
 	
-	const FloatVector& open = GetSource().Get<Core>()->GetOpen();
+	const Vector<double>& open = GetSource().Get<Core>()->GetOpen();
 	
 	DataTime& dt = GetTime();
 	for(int i = counted; i < bars; i++) {
@@ -545,5 +593,31 @@ void BridgeAskBid::Start() {
 	}
 	*/
 }
+
+
+
+
+
+
+
+
+
+
+
+SymbolSource::SymbolSource() {
 	
+}
+
+void SymbolSource::Arguments(ArgumentBase& args) {
+	
+}
+
+void SymbolSource::Init() {
+	
+}
+
+void SymbolSource::Start() {
+	
+}
+
 }

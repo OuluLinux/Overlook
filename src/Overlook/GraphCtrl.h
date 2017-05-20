@@ -12,9 +12,10 @@ class GraphGroupCtrl;
 
 
 class GraphCtrl : public Ctrl {
-	
 	Vector<Core*> src;
 	GraphGroupCtrl* group;
+	BaseSystem* base;
+	
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;

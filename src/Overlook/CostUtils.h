@@ -6,69 +6,69 @@ namespace Overlook {
 
 
 class SpreadStats : public Core {
-	FloatVector mean_cost;
+	Vector<double> mean_cost;
 	BridgeAskBid* askbid;
 	Vector<OnlineVariance> stats;
 	
 public:
 	SpreadStats();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class SpreadMeanProfit : public Core {
-	FloatVector mean_profit;
+	Vector<double> mean_profit;
 	BridgeAskBid* askbid;
 	
 public:
 	SpreadMeanProfit();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class SpreadProfitDistribution : public Core {
-	FloatVector mean, stddev;
+	Vector<double> mean, stddev;
 	
 public:
 	SpreadProfitDistribution();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class SpreadProbability : public Core {
-	FloatVector profit, real;
+	Vector<double> profit, real;
 	
 public:
 	SpreadProbability();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -84,14 +84,14 @@ public:
 	
 	virtual String GetStyle() const {return "";}
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, RealValue, SymTf, 1);
-		reg.AddOut(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddOut(IndiPhase, RealProxyChangeValue, SymTf, 1);
-		reg.AddOut(IndiPhase, SpreadProxyChangeValue, SymTf, 1);
-		reg.AddOut(IndiPhase, RealLowChangeValue, SymTf, 1);
-		reg.AddOut(IndiPhase, RealHighChangeValue, SymTf, 1);
+		reg.AddIn(SourcePhase, RealValue, Sym);
+		reg.AddOut(IndiPhase, RealChangeValue, SymTf);
+		reg.AddOut(IndiPhase, RealProxyChangeValue, SymTf);
+		reg.AddOut(IndiPhase, SpreadProxyChangeValue, SymTf);
+		reg.AddOut(IndiPhase, RealLowChangeValue, SymTf);
+		reg.AddOut(IndiPhase, RealHighChangeValue, SymTf);
 	}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
@@ -107,13 +107,13 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealProxyChangeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, SpreadProxyChangeValue, SymTf, 1);
-		reg.AddOut(IndiPhase, IdealOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealProxyChangeValue, SymTf);
+		reg.AddIn(IndiPhase, SpreadProxyChangeValue, SymTf);
+		reg.AddOut(IndiPhase, IdealOrderSignal, SymTf);
 	}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	
 };
 

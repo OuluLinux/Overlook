@@ -38,20 +38,18 @@ WdayHourChanges::WdayHourChanges() {
 	
 }
 
-void WdayHourChanges::SetArguments(const VectorMap<String, Value>& args) {
+void WdayHourChanges::Arguments(ArgumentBase& args) {
 	
 }
 
 void WdayHourChanges::Init() {
 	SetCoreSeparateWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(0,127,0));
 	
-	SetIndexCount(2);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, stddev);
+	//SetIndexBuffer ( 0, mean);
+	//SetIndexBuffer ( 1, stddev);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -69,7 +67,7 @@ void WdayHourChanges::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	bars--;
 	
@@ -134,16 +132,13 @@ WdayHourStats::WdayHourStats() {
 	var_period = 10;
 }
 
-void WdayHourStats::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
-	
+void WdayHourStats::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WdayHourStats::Init() {
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -154,16 +149,14 @@ void WdayHourStats::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
+	//SetIndexBuffer ( 0, t_pre_mean);
+	//SetIndexBuffer ( 1, t_pre_stddev);
+	//SetIndexBuffer ( 2, h_pre_mean);
+	//SetIndexBuffer ( 3, h_pre_stddev);
+	//SetIndexBuffer ( 4, d_pre_mean);
+	//SetIndexBuffer ( 5, d_pre_stddev);
+	//SetIndexBuffer ( 6, dh_pre_mean);
+	//SetIndexBuffer ( 7, dh_pre_stddev);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -188,7 +181,7 @@ void WdayHourStats::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	bars--;
 	
@@ -266,13 +259,9 @@ WdayHourDiff::WdayHourDiff() {
 	var_period_diff = 10;
 }
 
-void WdayHourDiff::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period_fast");
-	if (i != -1)
-		var_period_fast = args[i];
-	i = args.Find("period_diff");
-	if (i != -1)
-		var_period_diff = args[i];
+void WdayHourDiff::Arguments(ArgumentBase& args) {
+	args.Arg("period_fast", var_period_fast);
+	args.Arg("period_diff", var_period_diff);
 }
 
 void WdayHourDiff::Init() {
@@ -280,7 +269,7 @@ void WdayHourDiff::Init() {
 	Core::Init();
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -291,16 +280,14 @@ void WdayHourDiff::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
+	//SetIndexBuffer ( 0, t_pre_mean);
+	//SetIndexBuffer ( 1, t_pre_stddev);
+	//SetIndexBuffer ( 2, h_pre_mean);
+	//SetIndexBuffer ( 3, h_pre_stddev);
+	//SetIndexBuffer ( 4, d_pre_mean);
+	//SetIndexBuffer ( 5, d_pre_stddev);
+	//SetIndexBuffer ( 6, dh_pre_mean);
+	//SetIndexBuffer ( 7, dh_pre_stddev);
 	
 	if (RequireIndicator("whstat", "period", var_period_fast)) throw DataExc();
 	if (RequireIndicator("whstat", "period", var_period_fast + var_period_diff)) throw DataExc();
@@ -314,24 +301,24 @@ void WdayHourDiff::Start() {
 	if (counted > 0) counted--;
 	
 	Core& a = At(0);
-	const FloatVector& t_pre_stddev_fast	= a.GetIndex(0);
-	const FloatVector& t_pre_mean_fast		= a.GetIndex(1);
-	const FloatVector& h_pre_stddev_fast	= a.GetIndex(2);
-	const FloatVector& h_pre_mean_fast		= a.GetIndex(3);
-	const FloatVector& d_pre_stddev_fast	= a.GetIndex(4);
-	const FloatVector& d_pre_mean_fast		= a.GetIndex(5);
-	const FloatVector& dh_pre_stddev_fast	= a.GetIndex(6);
-	const FloatVector& dh_pre_mean_fast		= a.GetIndex(7);
+	const Vector<double>& t_pre_stddev_fast	= a.GetIndex(0);
+	const Vector<double>& t_pre_mean_fast		= a.GetIndex(1);
+	const Vector<double>& h_pre_stddev_fast	= a.GetIndex(2);
+	const Vector<double>& h_pre_mean_fast		= a.GetIndex(3);
+	const Vector<double>& d_pre_stddev_fast	= a.GetIndex(4);
+	const Vector<double>& d_pre_mean_fast		= a.GetIndex(5);
+	const Vector<double>& dh_pre_stddev_fast	= a.GetIndex(6);
+	const Vector<double>& dh_pre_mean_fast		= a.GetIndex(7);
 	
 	Core& b = At(1);
-	const FloatVector& t_pre_stddev_slow	= b.GetIndex(0);
-	const FloatVector& t_pre_mean_slow		= b.GetIndex(1);
-	const FloatVector& h_pre_stddev_slow	= b.GetIndex(2);
-	const FloatVector& h_pre_mean_slow		= b.GetIndex(3);
-	const FloatVector& d_pre_stddev_slow	= b.GetIndex(4);
-	const FloatVector& d_pre_mean_slow		= b.GetIndex(5);
-	const FloatVector& dh_pre_stddev_slow	= b.GetIndex(6);
-	const FloatVector& dh_pre_mean_slow		= b.GetIndex(7);
+	const Vector<double>& t_pre_stddev_slow	= b.GetIndex(0);
+	const Vector<double>& t_pre_mean_slow		= b.GetIndex(1);
+	const Vector<double>& h_pre_stddev_slow	= b.GetIndex(2);
+	const Vector<double>& h_pre_mean_slow		= b.GetIndex(3);
+	const Vector<double>& d_pre_stddev_slow	= b.GetIndex(4);
+	const Vector<double>& d_pre_mean_slow		= b.GetIndex(5);
+	const Vector<double>& dh_pre_stddev_slow	= b.GetIndex(6);
+	const Vector<double>& dh_pre_mean_slow		= b.GetIndex(7);
 	
 	int count = min(min(GetBars(), t_pre_stddev_fast.GetCount()), t_pre_stddev_slow.GetCount());
 	//ASSERT( count >= bars - 1 ); // If fails and needs to be skipped, remember to reduce GetCounted value
@@ -376,16 +363,14 @@ WdayHourForecastErrors::WdayHourForecastErrors() {
 	
 }
 
-void WdayHourForecastErrors::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
+void WdayHourForecastErrors::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WdayHourForecastErrors::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -396,16 +381,14 @@ void WdayHourForecastErrors::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
+	//SetIndexBuffer ( 0, t_pre_mean);
+	//SetIndexBuffer ( 1, t_pre_stddev);
+	//SetIndexBuffer ( 2, h_pre_mean);
+	//SetIndexBuffer ( 3, h_pre_stddev);
+	//SetIndexBuffer ( 4, d_pre_mean);
+	//SetIndexBuffer ( 5, d_pre_stddev);
+	//SetIndexBuffer ( 6, dh_pre_mean);
+	//SetIndexBuffer ( 7, dh_pre_stddev);
 	
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 1.0); 
@@ -441,18 +424,18 @@ void WdayHourForecastErrors::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& wdayhourstats = At(0);
 	
-	const FloatVector& stat_t_pre_mean		= wdayhourstats.GetBuffer(0);
-	const FloatVector& stat_t_pre_stddev	= wdayhourstats.GetBuffer(1);
-	const FloatVector& stat_h_pre_mean		= wdayhourstats.GetBuffer(2);
-	const FloatVector& stat_h_pre_stddev	= wdayhourstats.GetBuffer(3);
-	const FloatVector& stat_d_pre_mean		= wdayhourstats.GetBuffer(4);
-	const FloatVector& stat_d_pre_stddev	= wdayhourstats.GetBuffer(5);
-	const FloatVector& stat_dh_pre_mean		= wdayhourstats.GetBuffer(6);
-	const FloatVector& stat_dh_pre_stddev	= wdayhourstats.GetBuffer(7);
+	const Vector<double>& stat_t_pre_mean		= wdayhourstats.GetBuffer(0);
+	const Vector<double>& stat_t_pre_stddev	= wdayhourstats.GetBuffer(1);
+	const Vector<double>& stat_h_pre_mean		= wdayhourstats.GetBuffer(2);
+	const Vector<double>& stat_h_pre_stddev	= wdayhourstats.GetBuffer(3);
+	const Vector<double>& stat_d_pre_mean		= wdayhourstats.GetBuffer(4);
+	const Vector<double>& stat_d_pre_stddev	= wdayhourstats.GetBuffer(5);
+	const Vector<double>& stat_dh_pre_mean		= wdayhourstats.GetBuffer(6);
+	const Vector<double>& stat_dh_pre_stddev	= wdayhourstats.GetBuffer(7);
 	
 	bars--;
 	
@@ -533,14 +516,14 @@ WdayHourErrorAdjusted::WdayHourErrorAdjusted() {
 	
 }
 
-void WdayHourErrorAdjusted::SetArguments(const VectorMap<String, Value>& args) {
+void WdayHourErrorAdjusted::Arguments(ArgumentBase& args) {
 	
 }
 
 void WdayHourErrorAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -551,16 +534,14 @@ void WdayHourErrorAdjusted::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
+	//SetIndexBuffer ( 0, t_pre_mean);
+	//SetIndexBuffer ( 1, t_pre_stddev);
+	//SetIndexBuffer ( 2, h_pre_mean);
+	//SetIndexBuffer ( 3, h_pre_stddev);
+	//SetIndexBuffer ( 4, d_pre_mean);
+	//SetIndexBuffer ( 5, d_pre_stddev);
+	//SetIndexBuffer ( 6, dh_pre_mean);
+	//SetIndexBuffer ( 7, dh_pre_stddev);
 	
 	if (RequireIndicator("whstat")) throw DataExc();
 	if (RequireIndicator("whfe")) throw DataExc();
@@ -574,28 +555,28 @@ void WdayHourErrorAdjusted::Start() {
 	
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& wdayhourstats = At(0);
 	Core& wdayhourforecasterrors = At(1);
 	
-	const FloatVector& stat_t_pre_mean		= wdayhourstats.GetBuffer(0);
-	const FloatVector& stat_t_pre_stddev	= wdayhourstats.GetBuffer(1);
-	const FloatVector& stat_h_pre_mean		= wdayhourstats.GetBuffer(2);
-	const FloatVector& stat_h_pre_stddev	= wdayhourstats.GetBuffer(3);
-	const FloatVector& stat_d_pre_mean		= wdayhourstats.GetBuffer(4);
-	const FloatVector& stat_d_pre_stddev	= wdayhourstats.GetBuffer(5);
-	const FloatVector& stat_dh_pre_mean		= wdayhourstats.GetBuffer(6);
-	const FloatVector& stat_dh_pre_stddev	= wdayhourstats.GetBuffer(7);
+	const Vector<double>& stat_t_pre_mean		= wdayhourstats.GetBuffer(0);
+	const Vector<double>& stat_t_pre_stddev	= wdayhourstats.GetBuffer(1);
+	const Vector<double>& stat_h_pre_mean		= wdayhourstats.GetBuffer(2);
+	const Vector<double>& stat_h_pre_stddev	= wdayhourstats.GetBuffer(3);
+	const Vector<double>& stat_d_pre_mean		= wdayhourstats.GetBuffer(4);
+	const Vector<double>& stat_d_pre_stddev	= wdayhourstats.GetBuffer(5);
+	const Vector<double>& stat_dh_pre_mean		= wdayhourstats.GetBuffer(6);
+	const Vector<double>& stat_dh_pre_stddev	= wdayhourstats.GetBuffer(7);
 	
-	const FloatVector& err_t_pre_mean		= wdayhourforecasterrors.GetBuffer(0);
-	const FloatVector& err_t_pre_stddev		= wdayhourforecasterrors.GetBuffer(1);
-	const FloatVector& err_h_pre_mean		= wdayhourforecasterrors.GetBuffer(2);
-	const FloatVector& err_h_pre_stddev		= wdayhourforecasterrors.GetBuffer(3);
-	const FloatVector& err_d_pre_mean		= wdayhourforecasterrors.GetBuffer(4);
-	const FloatVector& err_d_pre_stddev		= wdayhourforecasterrors.GetBuffer(5);
-	const FloatVector& err_dh_pre_mean		= wdayhourforecasterrors.GetBuffer(6);
-	const FloatVector& err_dh_pre_stddev	= wdayhourforecasterrors.GetBuffer(7);
+	const Vector<double>& err_t_pre_mean		= wdayhourforecasterrors.GetBuffer(0);
+	const Vector<double>& err_t_pre_stddev		= wdayhourforecasterrors.GetBuffer(1);
+	const Vector<double>& err_h_pre_mean		= wdayhourforecasterrors.GetBuffer(2);
+	const Vector<double>& err_h_pre_stddev		= wdayhourforecasterrors.GetBuffer(3);
+	const Vector<double>& err_d_pre_mean		= wdayhourforecasterrors.GetBuffer(4);
+	const Vector<double>& err_d_pre_stddev		= wdayhourforecasterrors.GetBuffer(5);
+	const Vector<double>& err_dh_pre_mean		= wdayhourforecasterrors.GetBuffer(6);
+	const Vector<double>& err_dh_pre_stddev	= wdayhourforecasterrors.GetBuffer(7);
 	
 	for ( int i = counted; i < bars; i++ ) {
 		
@@ -646,16 +627,14 @@ WeekStats::WeekStats() {
 	
 }
 
-void WeekStats::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
+void WeekStats::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WeekStats::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -666,16 +645,14 @@ void WeekStats::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, w_pre_mean);
-	SetIndexBuffer ( 1, w_pre_stddev);
-	SetIndexBuffer ( 2, m_pre_mean);
-	SetIndexBuffer ( 3, m_pre_stddev);
-	SetIndexBuffer ( 4, q_pre_mean);
-	SetIndexBuffer ( 5, q_pre_stddev);
-	SetIndexBuffer ( 6, y_pre_mean);
-	SetIndexBuffer ( 7, y_pre_stddev);
+	//SetIndexBuffer ( 0, w_pre_mean);
+	//SetIndexBuffer ( 1, w_pre_stddev);
+	//SetIndexBuffer ( 2, m_pre_mean);
+	//SetIndexBuffer ( 3, m_pre_stddev);
+	//SetIndexBuffer ( 4, q_pre_mean);
+	//SetIndexBuffer ( 5, q_pre_stddev);
+	//SetIndexBuffer ( 6, y_pre_mean);
+	//SetIndexBuffer ( 7, y_pre_stddev);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period < 7*24*60;
@@ -702,7 +679,7 @@ void WeekStats::Start() {
 		throw DataExc();
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	for (int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -815,16 +792,14 @@ WeekStatsForecastErrors::WeekStatsForecastErrors() {
 	
 }
 
-void WeekStatsForecastErrors::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
+void WeekStatsForecastErrors::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WeekStatsForecastErrors::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -835,16 +810,14 @@ void WeekStatsForecastErrors::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, w_pre_mean);
-	SetIndexBuffer ( 1, w_pre_stddev);
-	SetIndexBuffer ( 2, m_pre_mean);
-	SetIndexBuffer ( 3, m_pre_stddev);
-	SetIndexBuffer ( 4, q_pre_mean);
-	SetIndexBuffer ( 5, q_pre_stddev);
-	SetIndexBuffer ( 6, y_pre_mean);
-	SetIndexBuffer ( 7, y_pre_stddev);
+	//SetIndexBuffer ( 0, w_pre_mean);
+	//SetIndexBuffer ( 1, w_pre_stddev);
+	//SetIndexBuffer ( 2, m_pre_mean);
+	//SetIndexBuffer ( 3, m_pre_stddev);
+	//SetIndexBuffer ( 4, q_pre_mean);
+	//SetIndexBuffer ( 5, q_pre_stddev);
+	//SetIndexBuffer ( 6, y_pre_mean);
+	//SetIndexBuffer ( 7, y_pre_stddev);
 	
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, 1.0);
@@ -882,18 +855,18 @@ void WeekStatsForecastErrors::Start() {
 		throw DataExc();
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& weekstats = At(0);
 	
-	FloatVector& stat_w_pre_mean		= weekstats.GetBuffer(0);
-	FloatVector& stat_w_pre_stddev	= weekstats.GetBuffer(1);
-	FloatVector& stat_m_pre_mean		= weekstats.GetBuffer(2);
-	FloatVector& stat_m_pre_stddev	= weekstats.GetBuffer(3);
-	FloatVector& stat_q_pre_mean		= weekstats.GetBuffer(4);
-	FloatVector& stat_q_pre_stddev	= weekstats.GetBuffer(5);
-	FloatVector& stat_y_pre_mean		= weekstats.GetBuffer(6);
-	FloatVector& stat_y_pre_stddev	= weekstats.GetBuffer(7);
+	Vector<double>& stat_w_pre_mean		= weekstats.GetBuffer(0);
+	Vector<double>& stat_w_pre_stddev	= weekstats.GetBuffer(1);
+	Vector<double>& stat_m_pre_mean		= weekstats.GetBuffer(2);
+	Vector<double>& stat_m_pre_stddev	= weekstats.GetBuffer(3);
+	Vector<double>& stat_q_pre_mean		= weekstats.GetBuffer(4);
+	Vector<double>& stat_q_pre_stddev	= weekstats.GetBuffer(5);
+	Vector<double>& stat_y_pre_mean		= weekstats.GetBuffer(6);
+	Vector<double>& stat_y_pre_stddev	= weekstats.GetBuffer(7);
 	
 	bars--;
 	
@@ -974,14 +947,14 @@ WeekStatsErrorAdjusted::WeekStatsErrorAdjusted() {
 	
 }
 
-void WeekStatsErrorAdjusted::SetArguments(const VectorMap<String, Value>& args) {
+void WeekStatsErrorAdjusted::Arguments(ArgumentBase& args) {
 	
 }
 
 void WeekStatsErrorAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -992,16 +965,14 @@ void WeekStatsErrorAdjusted::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, w_pre_mean);
-	SetIndexBuffer ( 1, w_pre_stddev);
-	SetIndexBuffer ( 2, m_pre_mean);
-	SetIndexBuffer ( 3, m_pre_stddev);
-	SetIndexBuffer ( 4, q_pre_mean);
-	SetIndexBuffer ( 5, q_pre_stddev);
-	SetIndexBuffer ( 6, y_pre_mean);
-	SetIndexBuffer ( 7, y_pre_stddev);
+	//SetIndexBuffer ( 0, w_pre_mean);
+	//SetIndexBuffer ( 1, w_pre_stddev);
+	//SetIndexBuffer ( 2, m_pre_mean);
+	//SetIndexBuffer ( 3, m_pre_stddev);
+	//SetIndexBuffer ( 4, q_pre_mean);
+	//SetIndexBuffer ( 5, q_pre_stddev);
+	//SetIndexBuffer ( 6, y_pre_mean);
+	//SetIndexBuffer ( 7, y_pre_stddev);
 	
 	if (RequireIndicator("ws")) throw DataExc();
 	if (RequireIndicator("wsfe")) throw DataExc();
@@ -1025,28 +996,28 @@ void WeekStatsErrorAdjusted::Start() {
 		throw DataExc();
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& weekstats = At(0);
 	Core& weekstatsforecasterrors = At(1);
 	
-	FloatVector& stat_w_pre_mean	= weekstats.GetBuffer(0);
-	FloatVector& stat_w_pre_stddev	= weekstats.GetBuffer(1);
-	FloatVector& stat_m_pre_mean	= weekstats.GetBuffer(2);
-	FloatVector& stat_m_pre_stddev	= weekstats.GetBuffer(3);
-	FloatVector& stat_q_pre_mean	= weekstats.GetBuffer(4);
-	FloatVector& stat_q_pre_stddev	= weekstats.GetBuffer(5);
-	FloatVector& stat_y_pre_mean	= weekstats.GetBuffer(6);
-	FloatVector& stat_y_pre_stddev	= weekstats.GetBuffer(7);
+	Vector<double>& stat_w_pre_mean	= weekstats.GetBuffer(0);
+	Vector<double>& stat_w_pre_stddev	= weekstats.GetBuffer(1);
+	Vector<double>& stat_m_pre_mean	= weekstats.GetBuffer(2);
+	Vector<double>& stat_m_pre_stddev	= weekstats.GetBuffer(3);
+	Vector<double>& stat_q_pre_mean	= weekstats.GetBuffer(4);
+	Vector<double>& stat_q_pre_stddev	= weekstats.GetBuffer(5);
+	Vector<double>& stat_y_pre_mean	= weekstats.GetBuffer(6);
+	Vector<double>& stat_y_pre_stddev	= weekstats.GetBuffer(7);
 	
-	FloatVector& err_w_pre_mean		= weekstatsforecasterrors.GetBuffer(0);
-	FloatVector& err_w_pre_stddev	= weekstatsforecasterrors.GetBuffer(1);
-	FloatVector& err_m_pre_mean		= weekstatsforecasterrors.GetBuffer(2);
-	FloatVector& err_m_pre_stddev	= weekstatsforecasterrors.GetBuffer(3);
-	FloatVector& err_q_pre_mean		= weekstatsforecasterrors.GetBuffer(4);
-	FloatVector& err_q_pre_stddev	= weekstatsforecasterrors.GetBuffer(5);
-	FloatVector& err_y_pre_mean		= weekstatsforecasterrors.GetBuffer(6);
-	FloatVector& err_y_pre_stddev	= weekstatsforecasterrors.GetBuffer(7);
+	Vector<double>& err_w_pre_mean		= weekstatsforecasterrors.GetBuffer(0);
+	Vector<double>& err_w_pre_stddev	= weekstatsforecasterrors.GetBuffer(1);
+	Vector<double>& err_m_pre_mean		= weekstatsforecasterrors.GetBuffer(2);
+	Vector<double>& err_m_pre_stddev	= weekstatsforecasterrors.GetBuffer(3);
+	Vector<double>& err_q_pre_mean		= weekstatsforecasterrors.GetBuffer(4);
+	Vector<double>& err_q_pre_stddev	= weekstatsforecasterrors.GetBuffer(5);
+	Vector<double>& err_y_pre_mean		= weekstatsforecasterrors.GetBuffer(6);
+	Vector<double>& err_y_pre_stddev	= weekstatsforecasterrors.GetBuffer(7);
 	
 	
 	
@@ -1091,22 +1062,20 @@ WdayHourDiffWeek::WdayHourDiffWeek() {
 	
 }
 
-void WdayHourDiffWeek::SetArguments(const VectorMap<String, Value>& args) {
+void WdayHourDiffWeek::Arguments(ArgumentBase& args) {
 	
 }
 
 void WdayHourDiffWeek::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(2);
+	//SetBufferCount(2, 2);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(0,127,0));
 	SetBufferLineWidth(1, 2);
 	
-	SetIndexCount(2);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, cdf);
+	//SetIndexBuffer ( 0, mean);
+	//SetIndexBuffer ( 1, cdf);
 	
 	SetCoreLevelCount(2);
 	SetCoreLevel(0,  0.5);
@@ -1131,7 +1100,7 @@ void WdayHourDiffWeek::Start() {
 	if (period >= 7*24*60*60) throw DataExc();
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& wdayhourerradj = At(0);
 	Core& weekstatserradj = At(1);
@@ -1141,23 +1110,23 @@ void WdayHourDiffWeek::Start() {
 	int b = GetPeriod();
 	ASSERT(a == b);
 	
-	FloatVector& wd_t_pre_mean		= wdayhourerradj.GetBuffer(0);
-	FloatVector& wd_t_pre_stddev	= wdayhourerradj.GetBuffer(1);
-	FloatVector& wd_h_pre_mean		= wdayhourerradj.GetBuffer(2);
-	FloatVector& wd_h_pre_stddev	= wdayhourerradj.GetBuffer(3);
-	FloatVector& wd_d_pre_mean		= wdayhourerradj.GetBuffer(4);
-	FloatVector& wd_d_pre_stddev	= wdayhourerradj.GetBuffer(5);
-	FloatVector& wd_dh_pre_mean		= wdayhourerradj.GetBuffer(6);
-	FloatVector& wd_dh_pre_stddev	= wdayhourerradj.GetBuffer(7);
+	Vector<double>& wd_t_pre_mean		= wdayhourerradj.GetBuffer(0);
+	Vector<double>& wd_t_pre_stddev	= wdayhourerradj.GetBuffer(1);
+	Vector<double>& wd_h_pre_mean		= wdayhourerradj.GetBuffer(2);
+	Vector<double>& wd_h_pre_stddev	= wdayhourerradj.GetBuffer(3);
+	Vector<double>& wd_d_pre_mean		= wdayhourerradj.GetBuffer(4);
+	Vector<double>& wd_d_pre_stddev	= wdayhourerradj.GetBuffer(5);
+	Vector<double>& wd_dh_pre_mean		= wdayhourerradj.GetBuffer(6);
+	Vector<double>& wd_dh_pre_stddev	= wdayhourerradj.GetBuffer(7);
 	
-	FloatVector& week_w_pre_mean	= weekstatserradj.GetBuffer(0);
-	FloatVector& week_w_pre_stddev	= weekstatserradj.GetBuffer(1);
-	FloatVector& week_m_pre_mean	= weekstatserradj.GetBuffer(2);
-	FloatVector& week_m_pre_stddev	= weekstatserradj.GetBuffer(3);
-	FloatVector& week_q_pre_mean	= weekstatserradj.GetBuffer(4);
-	FloatVector& week_q_pre_stddev	= weekstatserradj.GetBuffer(5);
-	FloatVector& week_y_pre_mean	= weekstatserradj.GetBuffer(6);
-	FloatVector& week_y_pre_stddev	= weekstatserradj.GetBuffer(7);
+	Vector<double>& week_w_pre_mean	= weekstatserradj.GetBuffer(0);
+	Vector<double>& week_w_pre_stddev	= weekstatserradj.GetBuffer(1);
+	Vector<double>& week_m_pre_mean	= weekstatserradj.GetBuffer(2);
+	Vector<double>& week_m_pre_stddev	= weekstatserradj.GetBuffer(3);
+	Vector<double>& week_q_pre_mean	= weekstatserradj.GetBuffer(4);
+	Vector<double>& week_q_pre_stddev	= weekstatserradj.GetBuffer(5);
+	Vector<double>& week_y_pre_mean	= weekstatserradj.GetBuffer(6);
+	Vector<double>& week_y_pre_stddev	= weekstatserradj.GetBuffer(7);
 	
 	int this_period = GetPeriod();
 	int w1_period = weekstatserradj.GetPeriod();
@@ -1241,14 +1210,14 @@ WdayHourWeekAdjusted::WdayHourWeekAdjusted() {
 	
 }
 
-void WdayHourWeekAdjusted::SetArguments(const VectorMap<String, Value>& args) {
+void WdayHourWeekAdjusted::Arguments(ArgumentBase& args) {
 	
 }
 
 void WdayHourWeekAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -1259,16 +1228,14 @@ void WdayHourWeekAdjusted::Init() {
 	SetBufferColor(7, Color(0,127,127));
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, t_pre_mean);
-	SetIndexBuffer ( 1, t_pre_stddev);
-	SetIndexBuffer ( 2, h_pre_mean);
-	SetIndexBuffer ( 3, h_pre_stddev);
-	SetIndexBuffer ( 4, d_pre_mean);
-	SetIndexBuffer ( 5, d_pre_stddev);
-	SetIndexBuffer ( 6, dh_pre_mean);
-	SetIndexBuffer ( 7, dh_pre_stddev);
+	//SetIndexBuffer ( 0, t_pre_mean);
+	//SetIndexBuffer ( 1, t_pre_stddev);
+	//SetIndexBuffer ( 2, h_pre_mean);
+	//SetIndexBuffer ( 3, h_pre_stddev);
+	//SetIndexBuffer ( 4, d_pre_mean);
+	//SetIndexBuffer ( 5, d_pre_stddev);
+	//SetIndexBuffer ( 6, dh_pre_mean);
+	//SetIndexBuffer ( 7, dh_pre_stddev);
 	
 	
 	if (RequireIndicator("whea")) throw DataExc();
@@ -1285,28 +1252,28 @@ void WdayHourWeekAdjusted::Start() {
 	if (period >= 7*24*60*60) throw DataExc();
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	Core& wdayhourerradj = At(0);
 	Core& weekstatserradj = At(1);
 	
-	FloatVector& wd_t_pre_mean		= wdayhourerradj.GetBuffer(0);
-	FloatVector& wd_t_pre_stddev		= wdayhourerradj.GetBuffer(1);
-	FloatVector& wd_h_pre_mean		= wdayhourerradj.GetBuffer(2);
-	FloatVector& wd_h_pre_stddev		= wdayhourerradj.GetBuffer(3);
-	FloatVector& wd_d_pre_mean		= wdayhourerradj.GetBuffer(4);
-	FloatVector& wd_d_pre_stddev		= wdayhourerradj.GetBuffer(5);
-	FloatVector& wd_dh_pre_mean		= wdayhourerradj.GetBuffer(6);
-	FloatVector& wd_dh_pre_stddev	= wdayhourerradj.GetBuffer(7);
+	Vector<double>& wd_t_pre_mean		= wdayhourerradj.GetBuffer(0);
+	Vector<double>& wd_t_pre_stddev		= wdayhourerradj.GetBuffer(1);
+	Vector<double>& wd_h_pre_mean		= wdayhourerradj.GetBuffer(2);
+	Vector<double>& wd_h_pre_stddev		= wdayhourerradj.GetBuffer(3);
+	Vector<double>& wd_d_pre_mean		= wdayhourerradj.GetBuffer(4);
+	Vector<double>& wd_d_pre_stddev		= wdayhourerradj.GetBuffer(5);
+	Vector<double>& wd_dh_pre_mean		= wdayhourerradj.GetBuffer(6);
+	Vector<double>& wd_dh_pre_stddev	= wdayhourerradj.GetBuffer(7);
 	
-	FloatVector& week_w_pre_mean		= weekstatserradj.GetBuffer(0);
-	FloatVector& week_w_pre_stddev	= weekstatserradj.GetBuffer(1);
-	FloatVector& week_m_pre_mean		= weekstatserradj.GetBuffer(2);
-	FloatVector& week_m_pre_stddev	= weekstatserradj.GetBuffer(3);
-	FloatVector& week_q_pre_mean		= weekstatserradj.GetBuffer(4);
-	FloatVector& week_q_pre_stddev	= weekstatserradj.GetBuffer(5);
-	FloatVector& week_y_pre_mean		= weekstatserradj.GetBuffer(6);
-	FloatVector& week_y_pre_stddev	= weekstatserradj.GetBuffer(7);
+	Vector<double>& week_w_pre_mean		= weekstatserradj.GetBuffer(0);
+	Vector<double>& week_w_pre_stddev	= weekstatserradj.GetBuffer(1);
+	Vector<double>& week_m_pre_mean		= weekstatserradj.GetBuffer(2);
+	Vector<double>& week_m_pre_stddev	= weekstatserradj.GetBuffer(3);
+	Vector<double>& week_q_pre_mean		= weekstatserradj.GetBuffer(4);
+	Vector<double>& week_q_pre_stddev	= weekstatserradj.GetBuffer(5);
+	Vector<double>& week_y_pre_mean		= weekstatserradj.GetBuffer(6);
+	Vector<double>& week_y_pre_stddev	= weekstatserradj.GetBuffer(7);
 	
 	int this_period = GetPeriod();
 	int w1_period = weekstatserradj.GetPeriod();
@@ -1375,16 +1342,14 @@ SubTfChanges::SubTfChanges() {
 	
 }
 
-void SubTfChanges::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
+void SubTfChanges::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void SubTfChanges::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,0,127));
@@ -1392,12 +1357,10 @@ void SubTfChanges::Init() {
 	SetBufferLineWidth(1, 2);
 	SetBufferLineWidth(3, 2);
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, stddev);
-	SetIndexBuffer ( 2, absmean);
-	SetIndexBuffer ( 3, absstddev);
+	//SetIndexBuffer ( 0, mean);
+	//SetIndexBuffer ( 1, stddev);
+	//SetIndexBuffer ( 2, absmean);
+	//SetIndexBuffer ( 3, absstddev);
 	
 	// TODO get tf-id from periods
 	
@@ -1429,7 +1392,7 @@ void SubTfChanges::Start() {
 	
 	if (period >= 7*24*60*60) throw DataExc();
 	
-	FloatVector& other_open  = other_values.GetBuffer(0);
+	Vector<double>& other_open  = other_values.GetBuffer(0);
 	
 	int this_period = GetPeriod();
 	int other_period = other_values.GetPeriod();
@@ -1519,16 +1482,14 @@ MetaTfChanges::MetaTfChanges() {
 	var_period = 10;
 }
 
-void MetaTfChanges::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
+void MetaTfChanges::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void MetaTfChanges::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,0,127));
@@ -1536,12 +1497,10 @@ void MetaTfChanges::Init() {
 	SetBufferLineWidth(1, 2);
 	SetBufferLineWidth(3, 2);
 	
-	SetIndexCount(4);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, stddev);
-	SetIndexBuffer ( 2, absmean);
-	SetIndexBuffer ( 3, absstddev);
+	//SetIndexBuffer ( 0, mean);
+	//SetIndexBuffer ( 1, stddev);
+	//SetIndexBuffer ( 2, absmean);
+	//SetIndexBuffer ( 3, absstddev);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -1566,7 +1525,7 @@ void MetaTfChanges::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	
 	Core& bd = *GetSource().Get<Core>();
-	const FloatVector& open  = bd.GetOpen();
+	const Vector<double>& open  = bd.GetOpen();
 	
 	// If already processed
 	if (counted >= bars)
@@ -1665,24 +1624,22 @@ HourHeat::HourHeat() {
 	
 }
 
-void HourHeat::SetArguments(const VectorMap<String, Value>& args) {
+void HourHeat::Arguments(ArgumentBase& args) {
 	
 }
 
 void HourHeat::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(3);
+	//SetBufferCount(3, 3);
 	SetBufferColor(0, Color(127,127,0));
 	SetBufferColor(1, Color(0,127,127));
 	SetBufferColor(2, Color(127,0,127));
 	SetBufferLineWidth(2, 2);
 	
-	SetIndexCount(3);
-	
-	SetIndexBuffer (0, sub);
-	SetIndexBuffer (1, day);
-	SetIndexBuffer (2, sum);
+	//SetIndexBuffer (0, sub);
+	//SetIndexBuffer (1, day);
+	//SetIndexBuffer (2, sum);
 	
 	if (RequireIndicator("stfc")) throw DataExc();
 	if (RequireIndicator("mtfc")) throw DataExc();
@@ -1704,10 +1661,10 @@ void HourHeat::Start() {
 	Core& subtf = At(0);
 	Core& metatf = At(1);
 	
-	FloatVector& submean = subtf.GetBuffer(2);
-	FloatVector& substddev = subtf.GetBuffer(3);
-	FloatVector& metamean = metatf.GetBuffer(2);
-	FloatVector& metastddev = metatf.GetBuffer(3);
+	Vector<double>& submean = subtf.GetBuffer(2);
+	Vector<double>& substddev = subtf.GetBuffer(3);
+	Vector<double>& metamean = metatf.GetBuffer(2);
+	Vector<double>& metastddev = metatf.GetBuffer(3);
 	
 	for (int i = counted; i < bars; i++ ) {
 		Time t = GetTime().GetTime(GetPeriod(), i);
@@ -1769,34 +1726,20 @@ MetaTfCDF::MetaTfCDF() {
 	var_period = 10;
 }
 
-void MetaTfCDF::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("offset");
-	if (i != -1)
-		offset = args[i];
-	
-	i = args.Find("prev_open_time");
-	if (i != -1)
-		prev_open_time = args[i];
-	
-	i = args.Find("prev_open");
-	if (i != -1)
-		prev_open = args[i];
-	
-	i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
-	
+void MetaTfCDF::Arguments(ArgumentBase& args) {
+	args.Arg("offset", offset);
+	args.Arg("prev_open_time", prev_open_time);
+	args.Arg("prev_open", prev_open);
+	args.Arg("period", var_period);
 }
 
 void MetaTfCDF::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Color(0,127,0));
 	
-	SetIndexCount(1);
-	
-	SetIndexBuffer ( 0, value);
+	//SetIndexBuffer ( 0, value);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -1819,7 +1762,7 @@ void MetaTfCDF::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	
 	Core& bd = *GetSource().Get<Core>();
-	const FloatVector& open = bd.GetOpen();
+	const Vector<double>& open = bd.GetOpen();
 	
 	// If already processed
 	if (counted >= bars)
@@ -1907,17 +1850,14 @@ WdayHourTrending::WdayHourTrending() {
 	var_period = 10;
 }
 
-void WdayHourTrending::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
-	
+void WdayHourTrending::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WdayHourTrending::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(8);
+	//SetBufferCount(8, 8);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -1929,16 +1869,14 @@ void WdayHourTrending::Init() {
 	SetBufferLineWidth(6, 2);
 	SetBufferLineWidth(7, 2);
 	
-	SetIndexCount(8);
-	
-	SetIndexBuffer ( 0, shift1_mean);
-	SetIndexBuffer ( 1, shift1_stddev);
-	SetIndexBuffer ( 2, shift2_mean);
-	SetIndexBuffer ( 3, shift2_stddev);
-	SetIndexBuffer ( 4, shift3_mean);
-	SetIndexBuffer ( 5, shift3_stddev);
-	SetIndexBuffer ( 6, mean_av);
-	SetIndexBuffer ( 7, stddev_av);
+	//SetIndexBuffer ( 0, shift1_mean);
+	//SetIndexBuffer ( 1, shift1_stddev);
+	//SetIndexBuffer ( 2, shift2_mean);
+	//SetIndexBuffer ( 3, shift2_stddev);
+	//SetIndexBuffer ( 4, shift3_mean);
+	//SetIndexBuffer ( 5, shift3_stddev);
+	//SetIndexBuffer ( 6, mean_av);
+	//SetIndexBuffer ( 7, stddev_av);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -1962,7 +1900,7 @@ void WdayHourTrending::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	bars--;
 	
@@ -2040,17 +1978,14 @@ WdayHourTrendSuccess::WdayHourTrendSuccess() {
 	var_period = 10;
 }
 
-void WdayHourTrendSuccess::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("period");
-	if (i != -1)
-		var_period = args[i];
-	
+void WdayHourTrendSuccess::Arguments(ArgumentBase& args) {
+	args.Arg("period", var_period);
 }
 
 void WdayHourTrendSuccess::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(5);
+	//SetBufferCount(5, 5);
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
 	SetBufferColor(2, Color(0,127,0));
@@ -2058,13 +1993,11 @@ void WdayHourTrendSuccess::Init() {
 	SetBufferColor(4, Color(127,0,127));
 	SetBufferLineWidth(4, 2);
 	
-	SetIndexCount(5);
-	
-	SetIndexBuffer ( 0, mean);
-	SetIndexBuffer ( 1, stddev);
-	SetIndexBuffer ( 2, success);
-	SetIndexBuffer ( 3, erradj);
-	SetIndexBuffer ( 4, dir);
+	//SetIndexBuffer ( 0, mean);
+	//SetIndexBuffer ( 1, stddev);
+	//SetIndexBuffer ( 2, success);
+	//SetIndexBuffer ( 3, erradj);
+	//SetIndexBuffer ( 4, dir);
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
@@ -2088,16 +2021,16 @@ void WdayHourTrendSuccess::Start() {
 	
 	Core& whtrend = At(0);
 	
-	FloatVector& shift1_mean = whtrend.GetBuffer(0);
-	FloatVector& shift2_mean = whtrend.GetBuffer(2);
-	FloatVector& shift3_mean = whtrend.GetBuffer(4);
+	Vector<double>& shift1_mean = whtrend.GetBuffer(0);
+	Vector<double>& shift2_mean = whtrend.GetBuffer(2);
+	Vector<double>& shift3_mean = whtrend.GetBuffer(4);
 	
-	FloatVector& shift1_stddev = whtrend.GetBuffer(1);
-	FloatVector& shift2_stddev = whtrend.GetBuffer(3);
-	FloatVector& shift3_stddev = whtrend.GetBuffer(5);
+	Vector<double>& shift1_stddev = whtrend.GetBuffer(1);
+	Vector<double>& shift2_stddev = whtrend.GetBuffer(3);
+	Vector<double>& shift3_stddev = whtrend.GetBuffer(5);
 	
 	Core& pb = *GetSource().Get<Core>();
-	const FloatVector& open  = pb.GetOpen();
+	const Vector<double>& open  = pb.GetOpen();
 	
 	bars--;
 	
@@ -2186,39 +2119,25 @@ OpportinityQuality::OpportinityQuality() {
 	weights[3] = 0.5;
 }
 
-void OpportinityQuality::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("w0");
-	if (i != -1)
-		weights[0] = args[i];
-	
-	i = args.Find("w1");
-	if (i != -1)
-		weights[1] = args[i];
-	
-	i = args.Find("w2");
-	if (i != -1)
-		weights[2] = args[i];
-	
-	i = args.Find("w3");
-	if (i != -1)
-		weights[3] = args[i];
-	
+void OpportinityQuality::Arguments(ArgumentBase& args) {
+	args.Arg("w0", weights[0]);
+	args.Arg("w1", weights[1]);
+	args.Arg("w2", weights[2]);
+	args.Arg("w3", weights[3]);
 }
 
 void OpportinityQuality::Init() {
 	/*
 	SetCoreSeparateWindow();
-	SetBufferCount(1+weights.GetCount());
+	//SetBufferCount(1+weights.GetCount(), 1+weights.GetCount());
 	SetBufferColor(0, Color(0,127,127));
 	SetBufferLineWidth(0, 2);
 	
-	SetIndexCount(1+weights.GetCount());
-	
-	SetIndexBuffer (0, quality);
+	//SetIndexBuffer (0, quality);
 	
 	buffers.SetCount(weights.GetCount());
 	for(int i = 0; i < buffers.GetCount(); i++) {
-		SetIndexBuffer(1+i, buffers[i]);
+		//SetIndexBuffer(1+i, buffers[i]);
 		SetBufferColor(1+i, Color(127+i*20,0,127-i*20));
 	}
 	
@@ -2239,11 +2158,11 @@ void OpportinityQuality::Start() {
 	Core& trendsucc = At(2);
 	Core& spreadprob = At(3);
 	
-	FloatVector& abuf = mtfcdf.GetBuffer(0);
-	FloatVector& bbuf = hourheat.GetBuffer(2);
-	FloatVector& cbuf_mean = trendsucc.GetBuffer(0);
-	FloatVector& cbuf_stddev = trendsucc.GetBuffer(1);
-	FloatVector& dbuf = spreadprob.GetBuffer(0);
+	Vector<double>& abuf = mtfcdf.GetBuffer(0);
+	Vector<double>& bbuf = hourheat.GetBuffer(2);
+	Vector<double>& cbuf_mean = trendsucc.GetBuffer(0);
+	Vector<double>& cbuf_stddev = trendsucc.GetBuffer(1);
+	Vector<double>& dbuf = spreadprob.GetBuffer(0);
 	
 	for ( int i = counted; i < bars; i++ ) {
 		
@@ -2288,17 +2207,10 @@ EdgeStatistics::EdgeStatistics()
 	SetCoreSeparateWindow();
 }
 
-void EdgeStatistics::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];
-	i = args.Find("method");
-	if (i != -1)
-		method = args[i];
-	i = args.Find("slowing");
-	if (i != -1)
-		slowing = args[i];
+void EdgeStatistics::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
+	args.Arg("method", method);
+	args.Arg("slowing", slowing);
 }
 
 void EdgeStatistics::Init()
@@ -2308,12 +2220,12 @@ void EdgeStatistics::Init()
 	if (period < 2)
 		throw DataExc();
 	draw_begin = period - 1;
-	SetBufferCount(1);
+	//SetBufferCount(2, 1);
 	SetBufferColor(0, Red());
 	SetBufferBegin(0, draw_begin );
-	SetIndexCount(2);
-	SetIndexBuffer(0, mean);
-	SetIndexBuffer(1, dev);
+	
+	//SetIndexBuffer(0, mean);
+	//SetIndexBuffer(1, dev);
 	
 	if (RequireIndicator("symlre", "period", period, "method", method, "slowing", slowing)) throw DataExc();
 	
@@ -2334,7 +2246,7 @@ void EdgeStatistics::Start()
 	Core& cont = At(0);
 	cont.Refresh();
 	
-	FloatVector& dbl = cont.GetIndex(0);
+	Vector<double>& dbl = cont.GetIndex(0);
 	
 	// Loop unprocessed data
 	int begin = max(es_counted, period);
@@ -2408,11 +2320,8 @@ TideStatistics::TideStatistics()
 	SetCoreSeparateWindow();
 }
 
-void TideStatistics::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void TideStatistics::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void TideStatistics::Init()
@@ -2422,12 +2331,12 @@ void TideStatistics::Init()
 	if (period < 2)
 		period = 15;
 	draw_begin = period - 1;
-	SetBufferCount(1);
+	//SetBufferCount(2, 1);
 	SetBufferColor(0, Red());
 	SetBufferBegin(0, draw_begin );
-	SetIndexCount(2);
-	SetIndexBuffer(0, mean);
-	SetIndexBuffer(1, dev);
+	
+	//SetIndexBuffer(0, mean);
+	//SetIndexBuffer(1, dev);
 	
 	vars.SetCount(period);
 	*/
@@ -2444,7 +2353,7 @@ void TideStatistics::Start()
 	bars -= period;
 	
 	// Prepare values
-	const FloatVector& dbl = GetSource().Get<Core>()->GetOpen();
+	const Vector<double>& dbl = GetSource().Get<Core>()->GetOpen();
 	
 	// Loop unprocessed data
 	for(int i = ts_counted; i < bars; i++) {
@@ -2520,11 +2429,8 @@ Disconnections::Disconnections()
 	SetCoreSeparateWindow();
 }
 
-void Disconnections::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];
+void Disconnections::Arguments(ArgumentBase& args) {
+	args.Arg("period", period);
 }
 
 void Disconnections::Init()
@@ -2534,12 +2440,12 @@ void Disconnections::Init()
 	if (period < 2)
 		throw DataExc();
 	draw_begin = period - 1;
-	SetBufferCount(1);
+	//SetBufferCount(1, 1);
 	SetBufferColor(0, Green());
 	SetBufferBegin(0, draw_begin );
 	SetBufferLineWidth(0, 2);
-	SetIndexCount(1);
-	SetIndexBuffer(0, discbuf);
+	
+	//SetIndexBuffer(0, discbuf);
 	SetCoreMaximum(1.0);
 	SetCoreMinimum(0.0);
 	
@@ -2562,8 +2468,8 @@ void Disconnections::Start()
 	cont1.Refresh();
 	cont2.Refresh();
 	
-	FloatVector& dbl1 = cont1.GetIndex(0);
-	FloatVector& dbl2 = cont2.GetIndex(0);
+	Vector<double>& dbl1 = cont1.GetIndex(0);
+	Vector<double>& dbl2 = cont2.GetIndex(0);
 	
 	Vector<double> buf1, buf2;
 	Vector<bool> discs;
@@ -2663,11 +2569,8 @@ EventOsc::EventOsc() {
 	counted_events = 0;
 }
 
-void EventOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("mul");
-	if (i != -1)
-		mul = args[i];
+void EventOsc::Arguments(ArgumentBase& args) {
+	args.Arg("mul", mul);
 }
 
 void EventOsc::Init() {
@@ -2703,7 +2606,7 @@ void EventOsc::Init() {
 	if (!emgr) throw DataExc();
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(3, Blue());
 	SetBufferColor(2, Green());
 	SetBufferColor(1, Yellow());
@@ -2711,11 +2614,11 @@ void EventOsc::Init() {
 	SetBufferLineWidth(2, 2);
 	SetBufferLineWidth(1, 3);
 	SetBufferLineWidth(0, 4);
-	SetIndexCount(4);
-	SetIndexBuffer(3, info);
-	SetIndexBuffer(2, low);
-	SetIndexBuffer(1, med);
-	SetIndexBuffer(0, high);
+	
+	//SetIndexBuffer(3, info);
+	//SetIndexBuffer(2, low);
+	//SetIndexBuffer(1, med);
+	//SetIndexBuffer(0, high);
 	*/
 }
 
@@ -2733,7 +2636,7 @@ void EventOsc::Start() {
 	for(int i = counted_events; i < count; i++) {
 		Event& e = emgr->GetEvent(i);
 		if (keys.Find(e.currency) != -1) {
-			FloatVector& buf = (e.impact == 0 ? info : (e.impact == 1 ? low : (e.impact == 2 ? med : high)));
+			Vector<double>& buf = (e.impact == 0 ? info : (e.impact == 1 ? low : (e.impact == 2 ? med : high)));
 			int shift = GetTime().GetShiftFromTime(e.timestamp, GetPeriod());
 			if (shift < 0 || shift >= bars) continue;
 			double value = 1.0;
@@ -2769,14 +2672,9 @@ GroupEventOsc::GroupEventOsc() {
 	ownmul = 10;
 }
 
-void GroupEventOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("mul");
-	if (i != -1)
-		mul = args[i];
-	i = args.Find("ownmul");
-	if (i != -1)
-		ownmul = args[i];
+void GroupEventOsc::Arguments(ArgumentBase& args) {
+	args.Arg("mul", mul);
+	args.Arg("ownmul", ownmul);
 }
 
 void GroupEventOsc::Init() {
@@ -2807,7 +2705,7 @@ void GroupEventOsc::Init() {
 	if (feat_count <= 1) throw DataExc();
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(3, Blue());
 	SetBufferColor(2, Green());
 	SetBufferColor(1, Yellow());
@@ -2815,11 +2713,11 @@ void GroupEventOsc::Init() {
 	SetBufferLineWidth(2, 2);
 	SetBufferLineWidth(1, 3);
 	SetBufferLineWidth(0, 4);
-	SetIndexCount(4);
-	SetIndexBuffer(3, info);
-	SetIndexBuffer(2, low);
-	SetIndexBuffer(1, med);
-	SetIndexBuffer(0, high);
+	
+	//SetIndexBuffer(3, info);
+	//SetIndexBuffer(2, low);
+	//SetIndexBuffer(1, med);
+	//SetIndexBuffer(0, high);
 	*/
 }
 
@@ -2874,11 +2772,8 @@ FeatureOsc::FeatureOsc() {
 	counted_features = 0;
 }
 
-void FeatureOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("mul");
-	if (i != -1)
-		mul = args[i];
+void FeatureOsc::Arguments(ArgumentBase& args) {
+	args.Arg("mul", mul);
 }
 
 void FeatureOsc::Init() {
@@ -2893,7 +2788,7 @@ void FeatureOsc::Init() {
 	if (RequireIndicator("feat")) throw DataExc();
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(3, Blue());
 	SetBufferColor(2, Green());
 	SetBufferColor(1, Yellow());
@@ -2901,11 +2796,11 @@ void FeatureOsc::Init() {
 	SetBufferLineWidth(2, 2);
 	SetBufferLineWidth(1, 3);
 	SetBufferLineWidth(0, 4);
-	SetIndexCount(4);
-	SetIndexBuffer(3, info);
-	SetIndexBuffer(2, low);
-	SetIndexBuffer(1, med);
-	SetIndexBuffer(0, high);
+	
+	//SetIndexBuffer(3, info);
+	//SetIndexBuffer(2, low);
+	//SetIndexBuffer(1, med);
+	//SetIndexBuffer(0, high);
 	*/
 }
 
@@ -2920,7 +2815,7 @@ void FeatureOsc::Start() {
 		const FeatureKeypoint& kp = feat.GetKeypoint(i);
 		int shift = kp.GetShift();
 		int impact = kp.GetImpact();
-		FloatVector& buf = (impact == 0 ? info : (impact == 1 ? low : (impact == 2 ? med : high)));
+		Vector<double>& buf = (impact == 0 ? info : (impact == 1 ? low : (impact == 2 ? med : high)));
 		if (shift < 0 || shift >= bars) continue;
 		double value = 1.0;
 		int j = 0;
@@ -2964,14 +2859,9 @@ GroupFeatureOsc::GroupFeatureOsc() {
 	ownmul = 10;
 }
 
-void GroupFeatureOsc::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("mul");
-	if (i != -1)
-		mul = args[i];
-	i = args.Find("ownmul");
-	if (i != -1)
-		ownmul = args[i];
+void GroupFeatureOsc::Arguments(ArgumentBase& args) {
+	args.Arg("mul", mul);
+	args.Arg("ownmul", ownmul);
 }
 
 void GroupFeatureOsc::Init() {
@@ -2997,7 +2887,7 @@ void GroupFeatureOsc::Init() {
 	if (feat_count <= 1) throw DataExc();
 	
 	SetCoreSeparateWindow();
-	SetBufferCount(4);
+	//SetBufferCount(4, 4);
 	SetBufferColor(3, Blue());
 	SetBufferColor(2, Green());
 	SetBufferColor(1, Yellow());
@@ -3005,11 +2895,11 @@ void GroupFeatureOsc::Init() {
 	SetBufferLineWidth(2, 2);
 	SetBufferLineWidth(1, 3);
 	SetBufferLineWidth(0, 4);
-	SetIndexCount(4);
-	SetIndexBuffer(3, info);
-	SetIndexBuffer(2, low);
-	SetIndexBuffer(1, med);
-	SetIndexBuffer(0, high);
+	
+	//SetIndexBuffer(3, info);
+	//SetIndexBuffer(2, low);
+	//SetIndexBuffer(1, med);
+	//SetIndexBuffer(0, high);
 	*/
 }
 
@@ -3062,17 +2952,15 @@ String ChannelPredicter::GetStyle() const {
 	return "";
 }
 
-void ChannelPredicter::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("length");
-	if (i != -1)
-		length = args[i];
+void ChannelPredicter::Arguments(ArgumentBase& args) {
+	args.Arg("length", length);
 }
 
 void ChannelPredicter::Init() {
 	//AddDependency("/whstat_slow", 0, 0);
 }
 
-bool ChannelPredicter::Process(const CoreProcessAttributes& attr) {
+void ChannelPredicter::Start() {
 	/*const Core& whstat = GetDependency(0);
 	double diff = 0.0;
 	for(int j = 0; j < 6; j+=2) {
@@ -3093,7 +2981,7 @@ bool ChannelPredicter::Process(const CoreProcessAttributes& attr) {
 	}
 	*GetValue<double>(6, attr) = diff / 3;
 	return true;*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 

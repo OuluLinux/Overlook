@@ -55,14 +55,14 @@ BrokerCtrl::BrokerCtrl() {
 	split << trade << exposure << history << journal;
 }
 
-void BrokerCtrl::SetArguments(const VectorMap<String, Value>& args) {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+void BrokerCtrl::Arguments(ArgumentBase& args) {
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	MetaNode::SetArguments(args);
 	
-	int i = args.Find("broker");
+	args.Arg("broker");
 	if (i == -1) throw DataExc("No broker path set");
-	broker = ol.FindLinkCore(args[i]);
+	broker = bs.FindLinkCore(args[i]);
 	ASSERTEXC(broker);
 	
 	db = dynamic_cast<DataBridge*>(&*broker);

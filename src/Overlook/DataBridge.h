@@ -3,7 +3,13 @@
 
 namespace Overlook {
 
-class DataBridge : public Core {
+class DataBridge;
+
+class DataBridgeCommon {
+	
+protected:
+	friend class DataBridge;
+	
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	Vector<double> points;
@@ -12,15 +18,31 @@ class DataBridge : public Core {
 	int port;
 	int sym_count;
 	bool connected;
-	bool enable_bardata;
-	bool has_written;
-	bool running, stopped;
+	bool inited;
 	
-	struct AskBid : Moveable<AskBid> {
-		int time;
-		double ask, bid;
-	};
+public:
+	DataBridgeCommon();
+	void Init(DataBridge* db);
 	
+	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
+	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}
+	int GetTf(int i) const {return tfs[i];}
+	int GetTfCount() const {return tfs.GetCount();}
+	void DownloadRemoteData();
+	int  DownloadHistory(const Symbol& sym, int tf, bool force=false);
+	int  DownloadAskBid();
+	int  DownloadRemoteFile(String remote_path, String local_path);
+	bool IsInited() const {return inited;}
+	
+	Mutex lock;
+};
+
+struct AskBid : Moveable<AskBid> {
+	int time;
+	double ask, bid;
+};
+
+class DataBridge : public Core {
 	
 public:
 	typedef DataBridge CLASSNAME;
@@ -28,32 +50,55 @@ public:
 	~DataBridge();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf, 1);
-		reg.AddOut(SourcePhase, RealValue, SymTf, 1);
+		reg.AddIn(SourcePhase, TimeValue, SymTf);
+		reg.AddOut(SourcePhase, DataBridgeValue, SymTf, 4, 0);
 	}
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	
-	void Run();
 	void Serialize(Stream& s);
-	void ProcessVirtualNode(const CoreProcessAttributes& attr);
+};
+
+class VirtualNode : public Core {
 	
-	void DownloadRemoteData();
-	int  DownloadHistory(const Symbol& sym, int tf, bool force=false);
-	int  DownloadAskBid();
-	int  DownloadRemoteFile(String remote_path, String local_path);
+public:
+	typedef VirtualNode CLASSNAME;
+	VirtualNode();
+	~VirtualNode();
 	
-	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
-	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}
-	int GetTf(int i) const {return tfs[i];}
-	int GetTfCount() const {return tfs.GetCount();}
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, DataBridgeValue, Sym);
+		reg.AddOut(SourcePhase, VirtualNodeValue, SymTf, 4, 0);
+	}
+	
+	virtual void Arguments(ArgumentBase& args);
+	virtual void Init();
+	virtual void Start();
+	
+};
+
+class SymbolSource : public Core {
+
+public:
+	typedef SymbolSource CLASSNAME;
+	SymbolSource();
+	
+	virtual void Arguments(ArgumentBase& args);
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, DataBridgeValue, SymTf);
+		reg.AddIn(SourcePhase, VirtualNodeValue, SymTf);
+		reg.AddOut(SourcePhase, RealValue, SymTf, 4, 0);
+	}
 	
 };
 
 class BridgeAskBid : public Core {
-	FloatVector ask, bid;
+	Vector<double> ask, bid;
 	int cursor;
 	
 protected:
@@ -69,7 +114,7 @@ public:
 	
 	virtual void Start();
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 };
 

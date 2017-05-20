@@ -11,11 +11,11 @@ NarxDraw::NarxDraw() {
 
 void NarxDraw::Paint(Draw& w) {
 	/*if (!IsVisible()) return;
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	if (!src) {
-		src = ol.FindLinkCore("/open");
-		narx_slot = ol.FindLinkCore("/narx");
+		src = bs.FindLinkCore("/open");
+		narx_slot = bs.FindLinkCore("/narx");
 		ASSERTEXC(src);
 		ASSERTEXC(narx);
 		narx = dynamic_cast<Narx::NARX*>(&*narx_slot);
@@ -27,11 +27,11 @@ void NarxDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());*/
 	
 	/*
-	int fast_tf = ol.GetPeriod(0);
-	int week_tf = ol.GetTfFromSeconds(7*24*60*60); // 1 week
-	int begin_pos = ol.GetShift(week_tf, fast_tf, week);
-	int end_pos   = ol.GetShift(week_tf, fast_tf, week+1);
-	end_pos = Upp::min(ol.GetCount(1), end_pos);
+	int fast_tf = bs.GetPeriod(0);
+	int week_tf = bs.GetTfFromSeconds(7*24*60*60); // 1 week
+	int begin_pos = bs.GetShift(week_tf, fast_tf, week);
+	int end_pos   = bs.GetShift(week_tf, fast_tf, week+1);
+	end_pos = Upp::min(bs.GetCount(1), end_pos);
 	
 	int count = end_pos - begin_pos;
 	double xstep = (double)sz.cx / (count-1);
@@ -153,22 +153,22 @@ NarxCtrl::NarxCtrl() {
 	//PostCallback(THISBACK(Refresher));
 }
 
-void NarxCtrl::SetArguments(const VectorMap<String, Value>& args) {
+void NarxCtrl::Arguments(ArgumentBase& args) {
 	//MetaNode::SetArguments(args);
 	
 }
 
 void NarxCtrl::Init() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
-	int week_tf = ol.GetTfFromSeconds(7*24*60*60); // 1 week
-	int week_count = ol.GetCount(week_tf);
+	int week_tf = bs.GetTfFromSeconds(7*24*60*60); // 1 week
+	int week_count = bs.GetCount(week_tf);
 	week_slider.MinMax(0, week_count-1);
 	week_slider.SetData(0);
 	week_slider <<= THISBACK(SetWeekFromSlider);
 	
-	Core* rnn = ol.FindLinkCore("/rnn");
+	Core* rnn = bs.FindLinkCore("/rnn");
 	ASSERTEXC(rnn);
 	rec = dynamic_cast<Narx*>(&*rnn);
 	ASSERTEXC(rec);
@@ -187,14 +187,14 @@ void NarxCtrl::Init() {
 
 void NarxCtrl::Refresher() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	draw.Refresh();
 	network_view.Refresh();
 	
 	int tick_iter	= rec->GetIter();
 	if (tick_iter > 0) {
-		int epoch_size	= ol.GetCount(1);
+		int epoch_size	= bs.GetCount(1);
 		double ppl		= rec->GetPerplexity();
 		int tick_time	= rec->GetTickTime();
 		

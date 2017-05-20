@@ -15,6 +15,8 @@ BaseSystem::BaseSystem() {
 }
 
 void BaseSystem::Init() {
+	// Don't reserve memory for vector contents in this class
+	SetSkipSetCount();
 	
 	MetaTrader& mt = GetMetaTrader();
 	
@@ -118,6 +120,10 @@ int BaseSystem::GetCount(int period) const {
 	int count = timediff / div;
 	if (count % div != 0) count++;
 	return count;
+}
+
+int BaseSystem::GetCountTf(int tf_id) const {
+	return GetCount(periods[tf_id]);
 }
 
 int64 BaseSystem::GetShift(int src_period, int dst_period, int shift) {

@@ -11,7 +11,7 @@ enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
 class MovingAverage : public Core {
-	FloatVector buffer;
+	Vector<double> buffer;
 	int ma_period;
 	int ma_shift;
 	int ma_method;
@@ -32,18 +32,18 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, RealValue, SymTf, 1);
-		reg.AddOut(IndiPhase, RealIndicatorValue, SymTf, 1);
+		reg.AddIn(SourcePhase, RealValue, SymTf);
+		reg.AddOut(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
 	}
 };
 
 
 class MovingAverageConvergenceDivergence : public Core {
-	FloatVector    buffer;
-	FloatVector    signal_buffer;
+	Vector<double>    buffer;
+	Vector<double>    signal_buffer;
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
@@ -53,64 +53,64 @@ class MovingAverageConvergenceDivergence : public Core {
 public:
 	MovingAverageConvergenceDivergence();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class AverageDirectionalMovement : public Core {
-	FloatVector    adx_buffer;
-	FloatVector    pdi_buffer;
-	FloatVector    ndi_buffer;
-	FloatVector    pd_buffer;
-	FloatVector    nd_buffer;
-	FloatVector    tmp_buffer;
+	Vector<double>    adx_buffer;
+	Vector<double>    pdi_buffer;
+	Vector<double>    ndi_buffer;
+	Vector<double>    pd_buffer;
+	Vector<double>    nd_buffer;
+	Vector<double>    tmp_buffer;
 	int period_adx;
 	
 	
 public:
 	AverageDirectionalMovement();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class BollingerBands : public Core {
-	FloatVector    ml_buffer;
-	FloatVector    tl_buffer;
-	FloatVector    bl_buffer;
-	FloatVector    stddev_buffer;
+	Vector<double>    ml_buffer;
+	Vector<double>    tl_buffer;
+	Vector<double>    bl_buffer;
+	Vector<double>    stddev_buffer;
 	
 	int           bands_period;
 	int           bands_shift;
 	double        bands_deviation;
 	int           plot_begin;
 	
-	double StdDev_Func(int position, const FloatVector& MAvalue, int period);
+	double StdDev_Func(int position, const Buffer& MAvalue, int period);
 	
 public:
 	BollingerBands();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -122,21 +122,21 @@ class Envelopes : public Core {
 	int                ma_method;
 	double             deviation;
 	
-	FloatVector                   up_buffer;
-	FloatVector                   down_buffer;
-	FloatVector                   ma_buffer;
+	Vector<double>                   up_buffer;
+	Vector<double>                   down_buffer;
+	Vector<double>                   ma_buffer;
 	
 	
 public:
 	Envelopes();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -145,9 +145,9 @@ class ParabolicSAR : public Core {
 	double         sar_step;
 	double         sar_maximum;
 	
-	FloatVector           sar_buffer;
-	FloatVector           ep_buffer;
-	FloatVector           af_buffer;
+	Vector<double>           sar_buffer;
+	Vector<double>           ep_buffer;
+	Vector<double>           af_buffer;
 	
 	int                  last_rev_pos;
 	bool                 direction_long;
@@ -159,13 +159,13 @@ class ParabolicSAR : public Core {
 public:
 	ParabolicSAR();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -176,19 +176,19 @@ class StandardDeviation : public Core {
 	int applied_value;
 	int shift;
 	
-	FloatVector stddev_buffer;
+	Vector<double> stddev_buffer;
 
 	
 public:
 	StandardDeviation();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -196,20 +196,20 @@ public:
 class AverageTrueRange : public Core {
 	int period;
 	
-	FloatVector atr_buffer;
-	FloatVector tr_buffer;
+	Vector<double> atr_buffer;
+	Vector<double> tr_buffer;
 	
 	
 public:
 	AverageTrueRange();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -217,18 +217,18 @@ public:
 class BearsPower : public Core {
 	int period;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	BearsPower();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -236,18 +236,18 @@ public:
 class BullsPower : public Core {
 	int period;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	BullsPower();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -255,20 +255,20 @@ public:
 class CommodityChannelIndex : public Core {
 	int period;
 	
-	FloatVector cci_buffer;
-	FloatVector value_buffer;
-	FloatVector mov_buffer;
+	Vector<double> cci_buffer;
+	Vector<double> value_buffer;
+	Vector<double> mov_buffer;
 
 public:
 	CommodityChannelIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -276,20 +276,20 @@ public:
 class DeMarker : public Core {
 	int period;
 	
-	FloatVector buffer;
-	FloatVector max_buffer;
-	FloatVector min_buffer;
+	Vector<double> buffer;
+	Vector<double> max_buffer;
+	Vector<double> min_buffer;
 	
 public:
 	DeMarker();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -299,18 +299,18 @@ class ForceIndex : public Core {
 	int ma_method;
 	int applied_value;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	ForceIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -318,18 +318,18 @@ public:
 class Momentum : public Core {
 	int period;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	Momentum();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -339,16 +339,16 @@ class OsMA : public Core {
 	int slow_ema_period;
 	int signal_sma_period;
 	
-	FloatVector osma_buffer;
-	FloatVector buffer;
-	FloatVector signal_buffer;
+	Vector<double> osma_buffer;
+	Vector<double> buffer;
+	Vector<double> signal_buffer;
 	
 	bool   params;
 	
 public:
 	OsMA();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
@@ -358,20 +358,20 @@ public:
 class RelativeStrengthIndex : public Core {
 	int period;
 	
-	FloatVector    buffer;
-	FloatVector    pos_buffer;
-	FloatVector    neg_buffer;
+	Vector<double>    buffer;
+	Vector<double>    pos_buffer;
+	Vector<double>    neg_buffer;
 	
 public:
 	RelativeStrengthIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -379,19 +379,19 @@ public:
 class RelativeVigorIndex : public Core {
 	int period;
 	
-	FloatVector     buffer;
-	FloatVector     signal_buffer;
+	Vector<double>     buffer;
+	Vector<double>     signal_buffer;
 	
 public:
 	RelativeVigorIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -401,21 +401,21 @@ class StochasticOscillator : public Core {
 	int d_period;
 	int slowing;
 	
-	FloatVector    buffer;
-	FloatVector    signal_buffer;
-	FloatVector    high_buffer;
-	FloatVector    low_buffer;
+	Vector<double>    buffer;
+	Vector<double>    signal_buffer;
+	Vector<double>    high_buffer;
+	Vector<double>    low_buffer;
 		
 public:
 	StochasticOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -424,127 +424,127 @@ public:
 class WilliamsPercentRange : public Core {
 	int period;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 	bool CompareDouble(double Number1, double Number2);
 	
 public:
 	WilliamsPercentRange();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class AccumulationDistribution : public Core {
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	AccumulationDistribution();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class MoneyFlowIndex : public Core {
 	int period;
 	
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	MoneyFlowIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class ValueAndVolumeTrend : public Core {
 	int applied_value;
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	ValueAndVolumeTrend();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class OnBalanceVolume : public Core {
 	int applied_value;
-	FloatVector buffer;
+	Vector<double> buffer;
 	
 public:
 	OnBalanceVolume();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class Volumes : public Core {
-	FloatVector buf;
+	Vector<double> buf;
 	
 public:
 	Volumes();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class AcceleratorOscillator : public Core {
-	FloatVector     buffer;
-	FloatVector     up_buffer;
-	FloatVector     down_buffer;
-	FloatVector     macd_buffer;
-	FloatVector     signal_buffer;
+	Vector<double>     buffer;
+	Vector<double>     up_buffer;
+	Vector<double>     down_buffer;
+	Vector<double>     macd_buffer;
+	Vector<double>     signal_buffer;
 	
 public:
 	AcceleratorOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -559,42 +559,42 @@ class GatorOscillator : public Core {
 	int ma_method;
 	int applied_value;
 	
-	FloatVector up_buffer;
-	FloatVector up_red_buffer;
-	FloatVector up_green_buffer;
-	FloatVector down_buffer;
-	FloatVector down_red_buffer;
-	FloatVector down_green_buffer;
+	Vector<double> up_buffer;
+	Vector<double> up_red_buffer;
+	Vector<double> up_green_buffer;
+	Vector<double> down_buffer;
+	Vector<double> down_red_buffer;
+	Vector<double> down_green_buffer;
 	
 public:
 	GatorOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class AwesomeOscillator : public Core {
-	FloatVector     buffer;
-	FloatVector     up_buffer;
-	FloatVector     down_buffer;
+	Vector<double>     buffer;
+	Vector<double>     up_buffer;
+	Vector<double>     down_buffer;
 	
 public:
 	AwesomeOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -604,12 +604,12 @@ class Fractals : public Core {
 	int right_bars;
 	int levels;
 	
-	FloatVector line_up_buf1;
-	FloatVector line_up_buf2;
-	FloatVector arrow_up_buf;
-	FloatVector arrow_down_buf;
-	FloatVector arrow_breakup_buf;
-	FloatVector arrow_breakdown_buf;
+	Vector<double> line_up_buf1;
+	Vector<double> line_up_buf2;
+	Vector<double> arrow_up_buf;
+	Vector<double> arrow_down_buf;
+	Vector<double> arrow_breakup_buf;
+	Vector<double> arrow_breakdown_buf;
 	
 	double IsFractalUp(int index, int left, int right, int maxind);
 	double IsFractalDown(int index, int left, int right, int maxind);
@@ -617,13 +617,13 @@ class Fractals : public Core {
 public:
 	Fractals();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -631,48 +631,48 @@ class FractalOsc : public Core {
 	int left_bars;
 	int right_bars;
 	int smoothing_period;
-	FloatVector buf, av;
+	Vector<double> buf, av;
 	
 public:
 	FractalOsc();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class MarketFacilitationIndex : public Core {
-	FloatVector buffer;
-	FloatVector up_up_buffer;
-	FloatVector down_down_buffer;
-	FloatVector up_down_buffer;
-	FloatVector down_up_buffer;
+	Vector<double> buffer;
+	Vector<double> up_up_buffer;
+	Vector<double> down_down_buffer;
+	Vector<double> up_down_buffer;
+	Vector<double> down_up_buffer;
 	
 public:
 	MarketFacilitationIndex();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class ZigZag : public Core {
-	FloatVector keypoint_buffer;
-	FloatVector high_buffer;
-	FloatVector low_buffer;
-	FloatVector osc;
+	Vector<double> keypoint_buffer;
+	Vector<double> high_buffer;
+	Vector<double> low_buffer;
+	Vector<double> osc;
 	
 	int input_depth;
 	int input_deviation;
@@ -692,16 +692,16 @@ public:
 	}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class ZigZagOsc : public Core {
-	FloatVector osc;
+	Vector<double> osc;
 	
 	int depth;
 	int deviation;
@@ -710,13 +710,13 @@ class ZigZagOsc : public Core {
 public:
 	ZigZagOsc();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -724,107 +724,107 @@ public:
 
 
 class LinearTimeFrames : public Core {
-	FloatVector day, month, year, week;
+	Vector<double> day, month, year, week;
 	
 public:
 	LinearTimeFrames();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class RepeatingAverage : public Core {
 	int period, smoothing_period, applied_value;
-	FloatVector average1, average2, average3, average4;
+	Vector<double> average1, average2, average3, average4;
 	
 public:
 	RepeatingAverage();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 class RepeatingAverageOscillator : public Core {
 	int period, smoothing_period, applied_value;
-	FloatVector diff1, diff2, maindiff, avdiff, main_av_diff;
+	Vector<double> diff1, diff2, maindiff, avdiff, main_av_diff;
 	
 public:
 	RepeatingAverageOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class SupportResistance : public Core {
 	int period, max_crosses, max_radius;
-	FloatVector support, resistance;
+	Vector<double> support, resistance;
 	
 public:
 	SupportResistance();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class SupportResistanceOscillator : public Core {
 	int period, max_crosses, max_radius, smoothing_period;
-	FloatVector osc, osc_av;
+	Vector<double> osc, osc_av;
 	
 public:
 	SupportResistanceOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 class Psychological : public Core {
 	int period;
-	FloatVector buf;
+	Vector<double> buf;
 	
 public:
 	Psychological();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -841,29 +841,29 @@ class CorrelationOscillator : public Core {
 		}
 	};
 	
-	typedef const FloatVector ConstFloatVector;
+	typedef const Vector<double> ConstVector;
 	
 	int period;
-	Array<FloatVector> buf;
+	Array<Vector<double>> buf;
 	int sym_count;
 	Vector<Core*> sources;
-	Vector<ConstFloatVector*> opens;
+	Vector<ConstVector*> opens;
 	Vector<OnlineAverage> averages;
 	//PathLink* ids;
-	//ConstFloatVector* open;
+	//ConstVector<double>* open;
 	
 	void Process(int id);
 	
 public:
 	CorrelationOscillator();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -884,7 +884,7 @@ public:
 class ParallelSymLR : public Core {
 	
 public:
-	FloatVector buffer;
+	Vector<double> buffer;
 	int period;
 	int method;
 	//DataVar buf;
@@ -899,11 +899,11 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -915,9 +915,9 @@ public:
 class ParallelSymLREdge : public Core {
 	
 public:
-	FloatVector symlr;
-	FloatVector edge;
-	FloatVector buffer;
+	Vector<double> symlr;
+	Vector<double> edge;
+	Vector<double> buffer;
 	int period;
 	int method;
 	int slowing;
@@ -932,11 +932,11 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % symlr % edge % buffer;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 

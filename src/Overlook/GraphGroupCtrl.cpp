@@ -16,16 +16,6 @@ GraphGroupCtrl::GraphGroupCtrl() {
 }
 
 void GraphGroupCtrl::Init(Core* src) {
-	/*LOG("GraphGroupCtrl::Init");
-	
-	bardata = 0;
-	period = 0;
-
-	Core* src = GetSource();
-	if (src.Is()) {
-		SetGraph(src);
-	}*/
-	
 	bardata = 0;
 	period = 0;
 	
@@ -49,39 +39,20 @@ GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
 }
 
 void GraphGroupCtrl::SetGraph(Core* src) {
-	/*ClearCores();
-	if (!src.Is())
-		return;
-	bardata = src.Get<Core>();
-	if (!bardata) {
-		Core* bdata = src->GetSource();
-		bardata = bdata.Get<Core>();
-		GraphCtrl& main = AddGraph(bdata);
-		ArrayNode* arr = src.Get<ArrayNode>();
-		if (arr) {
-			// Array of containers
-			for(int i = 0; i < arr->sub_nodes.GetCount(); i++) {
-				Core*& src = arr->sub_nodes[i];
-				Core* cont = src.Get<Core>();
-				if (cont && !cont->IsCoreSeparateWindow()) {
-					main.AddSource(src);
-				} else {
-					AddGraph(src);
-				}
-			}
-		} else {
-			// Single container
-			Core* cont = src.Get<Core>();
-			if (cont && !cont->IsCoreSeparateWindow()) {
-				main.AddSource(src);
-			} else {
-				AddGraph(src);
-			}
-		}
+	BaseSystem* bs = src->Get<BaseSystem>();
+	ASSERT(bs);
+	ASSERT(src);
+	ClearCores();
+	bardata = src->Get<DataBridge>();
+	ASSERT(bardata);
+	GraphCtrl& main = AddGraph(bardata);
+	bool separate_window = src->IsCoreSeparateWindow();
+	if (!separate_window) {
+		main.AddSource(src);
 	} else {
 		AddGraph(src);
 	}
-	period = src->GetPeriod();*/
+	period = bs->GetPeriod(src->GetTimeframe());
 }
 
 void GraphGroupCtrl::ClearCores() {

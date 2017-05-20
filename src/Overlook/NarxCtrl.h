@@ -41,7 +41,7 @@ public:
 	void SetSampleTemperature(int i);
 	void SetStats(double epoch, double ppl, int time);
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	
 };

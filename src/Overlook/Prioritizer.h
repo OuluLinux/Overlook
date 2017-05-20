@@ -43,6 +43,7 @@ struct Combination : Moveable<Combination> {
 	
 	void SetSize(int bytes);
 	void SetValue(int bit, bool value);
+	void SetOrValue(int bit, bool value);
 	
 };
 
@@ -158,6 +159,8 @@ protected:
 	int GetBitSym(int sym_id) const;
 	int GetBitCore(int fac_id, int input_id, int src_id) const;
 	int GetBitEnabled(int fac_id) const;
+	int GetBitAllSymbols(int fac_id) const;
+	int GetBitAllTimeframes(int fac_id) const;
 	int InputToEnabled(int bit) const;
 	int EnabledToFactory(int bit) const;
 	
@@ -168,8 +171,9 @@ protected:
 	
 	void RefreshQueue();
 	void ProcessThread(int thread_id);
-	void Process(CoreItem& qi);
+	void Process(JobItem& ji);
 	void Run();
+	void CreateJobCore(JobItem& ji);
 	
 public:
 	typedef Prioritizer CLASSNAME;

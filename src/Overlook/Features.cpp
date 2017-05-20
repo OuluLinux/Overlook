@@ -10,11 +10,8 @@ FeatureDetector::FeatureDetector() {
 	
 }
 
-void FeatureDetector::SetArguments(const VectorMap<String, Value>& args) {
-	/*int i;
-	i = args.Find("period");
-	if (i != -1)
-		period = args[i];*/
+void FeatureDetector::Arguments(ArgumentBase& args) {
+	//args.Arg("period", period);
 }
 
 void FeatureDetector::Init()
@@ -45,12 +42,12 @@ void FeatureDetector::Start() {
 	// Refresh keypoint data
 	cont->Refresh();
 	int bars = cont->GetBars();
-	const FloatVector& keypoints = cont->GetIndex(1);
+	const Vector<double>& keypoints = cont->GetIndex(1);
 	//DataVar src = cont->GetSource();
 	Core* bd = src.Get<Core>();
 	if (!bd) throw DataExc();
 	
-	const FloatVector& open = bd->GetOpen();
+	const Vector<double>& open = bd->GetOpen();
 	int counted_keypoints = this->keypoints.GetCount();
 	
 	for(int i = counted; i < bars; i++) {

@@ -21,7 +21,7 @@ public:
 	
 	void Refresher();
 	void Reset();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	
 	

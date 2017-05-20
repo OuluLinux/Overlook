@@ -146,7 +146,7 @@ EventManager::EventManager() {
 	
 }
 /*
-void EventManager::SetArguments(const VectorMap<String, Value>& args) {
+void EventManager::Arguments(ArgumentBase& args) {
 	
 }
 

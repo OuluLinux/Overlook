@@ -11,7 +11,7 @@ String AutoEncoder::GetStyle() const {
 	return "";
 }
 
-void AutoEncoder::SetArguments(const VectorMap<String, Value>& args) {
+void AutoEncoder::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -20,13 +20,12 @@ void AutoEncoder::Init() {
 	
 }
 
-bool AutoEncoder::Process(const CoreProcessAttributes& attr) {
+void AutoEncoder::Start() {
 	
 	// Add autoencoder by looking MNIST digits autoencoder as example
 	//  - but instead of backpropagating with input, use future values
 	Panic("TODO");
 	
-	return false;
 }
 
 
@@ -66,6 +65,7 @@ Recurrent::Recurrent() {
 	
 	is_training_loop = false;
 	
+	type = "lstm";
 }
 
 
@@ -152,11 +152,8 @@ void Recurrent::LoadThis() {
 	LoadFromFile(*this, AppendFileName(dir, "Recurrent.bin"));
 }
 
-void Recurrent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("type");
-	if (i == -1) throw DataExc("Recurrent type must be set");
-	String type = args[i];
-	ASSERTEXC(type == "lstm"); // only lstm is supported currently
+void Recurrent::Arguments(ArgumentBase& args) {
+	args.Arg("type", type);
 }
 
 void Recurrent::Init() {
@@ -182,9 +179,9 @@ void Recurrent::Init() {
 	
 	LoadThis();
 	
-	BaseSystem& ol = *Get<BaseSystem>();
-	sym_count = ol.GetSymbolCount();
-	tf_count = ol.GetPeriodCount();
+	BaseSystem& bs = *Get<BaseSystem>();
+	sym_count = bs.GetSymbolCount();
+	tf_count = bs.GetPeriodCount();
 	data.SetCount(sym_count * tf_count);
 	
 	Reload();
@@ -208,22 +205,22 @@ void Recurrent::SetLearningRate(double rate) {
 	}*/
 }
 
-bool Recurrent::Process(const CoreProcessAttributes& attr) {
+void Recurrent::Start() {
 	/*
 	const Core& src = GetDependency(0);
 	const Core& change = GetDependency(1);
 	const Core& whstat = GetDependency(2);
 	SymTf& s = GetData(attr);
 	
-	if (attr.tf_id == 0 && attr.sym_id == 0)
+	if (GetTimeframe() == 0 && GetSymbol() == 0)
 		iter++;
 	
 	// Write current values to the sentence
-	int count = Upp::min(batch, attr.GetCounted()-1);
+	int count = Upp::min(batch, GetBars()-1);
 	if (count > 10) {
 		// Run single training
 		// Run only unique batches
-		if (attr.GetCounted() % batch == 0) {
+		if (GetBars() % batch == 0) {
 			s.sequence.SetCount(count);
 			for(int i = 0; i < count; i++) {
 				double* value = change.GetValue<double>(0, count-1-i, attr);
@@ -239,7 +236,7 @@ bool Recurrent::Process(const CoreProcessAttributes& attr) {
 	// trained.
 	return !is_training_loop;
 	*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 bool Recurrent::ProcessRelease(const CoreProcessAttributes& attr) {
@@ -249,7 +246,7 @@ bool Recurrent::ProcessRelease(const CoreProcessAttributes& attr) {
 	const Core& whstat = GetDependency(2);
 	SymTf& s = GetData(attr);
 	
-	int count = Upp::min(batch, attr.GetCounted()-1);
+	int count = Upp::min(batch, GetBars()-1);
 	s.sequence.SetCount(count);
 	for(int i = 0; i < count; i++) {
 		double* value = change.GetValue<double>(0, count-1-i, attr);
@@ -418,13 +415,13 @@ String NARX::GetStyle() const {
 	return "";
 }
 
-void NARX::SetArguments(const VectorMap<String, Value>& args) {
+void NARX::Arguments(ArgumentBase& args) {
 	
 }
 
 void NARX::Init() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
@@ -433,8 +430,8 @@ void NARX::Init() {
 	SetProcessing(1, 0);
 	SetProcessedOnce(false);
 	
-	sym_count = ol.GetSymbolCount();
-	tf_count = ol.GetPeriodCount();
+	sym_count = bs.GetSymbolCount();
+	tf_count = bs.GetPeriodCount();
 	
 	epoch = 0;
 	
@@ -546,13 +543,13 @@ void NARX::Init() {
 }
 
 void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessAttributes& attr) {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	for (int i = 0; i < s.input_count; i++) {
 		Vector<InputUnit>& exo = s.exogenous[i];
 		if (i < s.value_count) {
 			int sym = i % sym_count;
-			int tf = attr.tf_id + 1 + i / sym_count;
+			int tf = GetTimeframe() + 1 + i / sym_count;
 			for (int j = 0; j < a1; j++) {
 				double* d = change.GetValue<double>(0, sym, tf, j, attr);
 				exo[j].SetInput(d ? *d : 0);
@@ -562,12 +559,12 @@ void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessA
 			int sym = i - s.value_count;
 			if (sym < sym_count) {
 				for (int j = 0; j < a1; j++) {
-					double* volume = src.GetValue<double>(3, sym, attr.tf_id, j, attr);
+					double* volume = src.GetValue<double>(3, sym, GetTimeframe(), j, attr);
 					exo[j].SetInput(volume ? *volume : 0);
 				}
 			} else {
 				for (int j = 0; j < a1; j++) {
-					Time t = ol.GetTime(attr.GetPeriod(), attr.GetCounted() - j);
+					Time t = bs.GetTime(GetPeriod(), GetBars() - j);
 					double h = t.hour;
 					double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 					double wday = (DayOfWeek(t) + t1) / 7.0;
@@ -578,29 +575,29 @@ void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessA
 	}*/
 }
 
-bool NARX::Process(const CoreProcessAttributes& attr) {
+void NARX::Start() {
 	/*const Core& src = GetDependency(0);
 	const Core& change = GetDependency(1);
 	
 	Tf& s = GetData(attr);
 	
 	
-	//if (attr.sym_id != 0) return true;
-	ASSERT(attr.sym_id == 0);
+	//if (GetSymbol() != 0) return true;
+	ASSERT(GetSymbol() == 0);
 	
 	
-	LOG(Format("narx sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	LOG(Format("narx sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	
 	// Clear feedback loop in the beginning
-	if (attr.GetCounted() == 0) {
+	if (GetBars() == 0) {
 		s.Y.Clear();
 		s.Y.SetCount(sym_count, 0);
 		s.pY.Clear();
 		s.pY.SetCount(sym_count, 0);
 	}
 	
-	int series_index = attr.GetCounted();
+	int series_index = GetBars();
 	
 	for (int i = 0; i < sym_count; i++) {
 		s.ee[i].Clear();
@@ -614,7 +611,7 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 			for (int j = 0; j < sym_count; j++) {
 				Vector<InputUnit>& in = s.inputs[j];
 				for (int i = 0; i < b; i++) {
-					double* d = change.GetValue<double>(0, j, attr.tf_id, i, attr);
+					double* d = change.GetValue<double>(0, j, GetTimeframe(), i, attr);
 					in[i].SetInput(d ? *d : 0);
 				}
 			}
@@ -623,8 +620,8 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 		FillExogenous(src, change, s, attr);
 		
 		for (int i = 0; i < sym_count; i++) {
-			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
-			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* d = change.GetValue<double>(0, i, GetTimeframe(), -1, attr);
+			double* p = change.GetValue<double>(0, i, GetTimeframe(), 0, attr);
 			ASSERT(p);
 			s.output_units[i].SetTarget(*d);
 			s.ee[i].Insert(*d, s.output_units[i].GetOutput());
@@ -668,7 +665,7 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 			for (int i = 0; i < sym_count; i++) {
 				Vector<InputUnit>& in = s.inputs[i];
 				for (int j = b-1; j >= 0; j--) {
-					double* d = change.GetValue<double>(0, i, attr.tf_id, j, attr);
+					double* d = change.GetValue<double>(0, i, GetTimeframe(), j, attr);
 					in[j].SetInput(d ? *d : 0);
 					fi.D[i][j] = in[j].GetInput();
 				}
@@ -687,8 +684,8 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 		}
 
 		for (int i = 0; i < sym_count; i++) {
-			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
-			double* p = change.GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* d = change.GetValue<double>(0, i, GetTimeframe(), -1, attr);
+			double* p = change.GetValue<double>(0, i, GetTimeframe(), 0, attr);
 			ASSERT(p);
 			s.output_units[i].SetTarget(*d);
 			s.Y[i] = s.output_units[i].GetOutput();
@@ -720,7 +717,7 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 		for (int i = 0; i < sym_count; i++) {
 			s.output_units[i].FixWeights();
 			
-			double* d = change.GetValue<double>(0, i, attr.tf_id, -1, attr);
+			double* d = change.GetValue<double>(0, i, GetTimeframe(), -1, attr);
 			ASSERT(d);
 			s.output_units[i].SetTarget(*d);
 
@@ -757,7 +754,6 @@ bool NARX::Process(const CoreProcessAttributes& attr) {
 
 	Test(epo);*/
 	
-	return true;
 }
 
 bool NARX::ProcessRelease(const CoreProcessAttributes& attr) {
@@ -774,7 +770,7 @@ bool NARX::ProcessRelease(const CoreProcessAttributes& attr) {
 			for (int j = 0; j < sym_count; j++) {
 				Vector<InputUnit>& in = s.inputs[j];
 				for (int i = 0; i < b; i++) {
-					double* d = change.GetValue<double>(0, i, attr.tf_id, i, attr);
+					double* d = change.GetValue<double>(0, i, GetTimeframe(), i, attr);
 					in[i].SetInput(d ? *d : 0);
 				}
 			}
@@ -799,12 +795,12 @@ bool NARX::ProcessRelease(const CoreProcessAttributes& attr) {
 			s.pY[i] = out;
 			
 			// Set value
-			double* prv = src.GetValue<double>(0, i, attr.tf_id, 0, attr);
-			double* dst = GetValue<double>(0, i, attr.tf_id, 0, attr);
+			double* prv = src.GetValue<double>(0, i, GetTimeframe(), 0, attr);
+			double* dst = GetValue<double>(0, i, GetTimeframe(), 0, attr);
 			*dst = *prv * (1.0 + out);
 			
 			// Mark the slot of the symbol as processed
-			SetReady(i, attr.tf_id, attr.GetCounted(), attr, true);
+			SetReady(i, GetTimeframe(), GetBars(), attr, true);
 		}
 	}
 	
@@ -867,16 +863,13 @@ String Forecaster::GetStyle() const {
 	return "";
 }
 
-void Forecaster::SetArguments(const VectorMap<String, Value>& args) {
-	int i;
-	i = args.Find("single");
-	if (i != -1) single = args[i];
-	i = args.Find("pair");
-	if (i != -1) pair = args[i];
+void Forecaster::Arguments(ArgumentBase& args) {
+	args.Arg("single", single);
+	args.Arg("pair", pair);
 }
 
 void Forecaster::Init() {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -890,8 +883,8 @@ void Forecaster::Init() {
 	//AddDependency("/aenc", 0, 0);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
-	sym_count = ol.GetSymbolCount();
+	tf_count = bs.GetPeriodCount();
+	sym_count = bs.GetSymbolCount();
 	
 	// Total input values:
 	//  - 1 previous value difference (change)
@@ -919,7 +912,7 @@ void Forecaster::Init() {
 	do_training = true;
 }
 
-bool Forecaster::Process(const CoreProcessAttributes& attr) {
+void Forecaster::Start() {
 	/*
 	const Core& src		= GetDependency(0);
 	const Core& change	= GetDependency(1);
@@ -938,7 +931,7 @@ bool Forecaster::Process(const CoreProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	SymTf& s = GetData(attr);
 	
@@ -1006,7 +999,7 @@ bool Forecaster::Process(const CoreProcessAttributes& attr) {
 	
 	return do_training;
 	*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -1033,9 +1026,8 @@ String ClassifierAgent::GetStyle() const {
 	return "";
 }
 
-void ClassifierAgent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("ideal");
-	if (i != -1) ideal = args[i];
+void ClassifierAgent::Arguments(ArgumentBase& args) {
+	args.Arg("ideal", ideal);
 }
 
 void ClassifierAgent::Init() {
@@ -1044,13 +1036,12 @@ void ClassifierAgent::Init() {
 	
 }
 
-bool ClassifierAgent::Process(const CoreProcessAttributes& attr) {
+void ClassifierAgent::Start() {
 	
 	// Add classifier by looking Classify2D as example
 	//  - but instead of 2D (x,y) input use previous values as input and ideal order signal as output
 	Panic("TODO");
 	
-	return false;
 }
 
 
@@ -1100,23 +1091,22 @@ String RLAgent::GetStyle() const {
 		"}";
 }
 
-void RLAgent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("ideal");
-	if (i != -1) ideal = args[i];
+void RLAgent::Arguments(ArgumentBase& args) {
+	args.Arg("ideal", ideal);
 }
 
 void RLAgent::Init() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
 	//AddDependency("/forecaster", 0, 0);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
+	tf_count = bs.GetPeriodCount();
 	max_shift = 4;
-	sym_count = ol.GetSymbolCount();
+	sym_count = bs.GetSymbolCount();
 	total = max_shift * 2;
 	
 	data.SetCount(sym_count * tf_count);
@@ -1140,7 +1130,7 @@ void RLAgent::Init() {
 	*/
 }
 
-bool RLAgent::Process(const CoreProcessAttributes& attr) {
+void RLAgent::Start() {
 	/*
 	const Core& src = GetDependency(0);
 	
@@ -1150,7 +1140,7 @@ bool RLAgent::Process(const CoreProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	// Return reward value
 	Backward(attr);
@@ -1160,7 +1150,7 @@ bool RLAgent::Process(const CoreProcessAttributes& attr) {
 	
 	return do_training;
 	*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 void RLAgent::Forward(const CoreProcessAttributes& attr) {
@@ -1185,7 +1175,7 @@ void RLAgent::Forward(const CoreProcessAttributes& attr) {
 	// get action from brain
 	s.prev_action = s.action;
 	s.action = s.brain.Forward(input_array);
-	s.broker.SetSignal(attr.sym_id, s.action - 1); // from 0:2 to -1:+1 --> signal
+	s.broker.SetSignal(GetSymbol(), s.action - 1); // from 0:2 to -1:+1 --> signal
 	s.broker.Cycle();
 	*/
 	Panic("TODO");
@@ -1258,23 +1248,22 @@ String DQNAgent::GetStyle() const {
 		"}";
 }
 
-void DQNAgent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("ideal");
-	if (i != -1) ideal = args[i];
+void DQNAgent::Arguments(ArgumentBase& args) {
+	args.Arg("ideal", ideal);
 }
 
 void DQNAgent::Init() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
 	//AddDependency("/forecaster", 0, 0);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
+	tf_count = bs.GetPeriodCount();
 	max_shift = 8;
-	sym_count = ol.GetSymbolCount();
+	sym_count = bs.GetSymbolCount();
 	total = max_shift * 2;
 	
 	data.SetCount(sym_count * tf_count);
@@ -1300,7 +1289,7 @@ void DQNAgent::Init() {
 	*/
 }
 
-bool DQNAgent::Process(const CoreProcessAttributes& attr) {
+void DQNAgent::Start() {
 	/*const Core& src = GetDependency(0);
 	
 	// Check if position is useless for training
@@ -1309,7 +1298,7 @@ bool DQNAgent::Process(const CoreProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	// Return reward value
 	Backward(attr);
@@ -1318,7 +1307,7 @@ bool DQNAgent::Process(const CoreProcessAttributes& attr) {
 	Forward(attr);
 	
 	return do_training;*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -1351,7 +1340,7 @@ void DQNAgent::Forward(const CoreProcessAttributes& attr) {
 	}
 	
 	// Only the last action is exported
-	s.broker.SetSignal(attr.sym_id, s.action);
+	s.broker.SetSignal(GetSymbol(), s.action);
 	s.broker.Cycle();*/
 }
 
@@ -1427,22 +1416,21 @@ String MonaAgent::GetStyle() const {
 		"}";
 }
 
-void MonaAgent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("ideal");
-	if (i != -1) ideal = args[i];
+void MonaAgent::Arguments(ArgumentBase& args) {
+	args.Arg("ideal", ideal);
 }
 
 void MonaAgent::Init() {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
 	//AddDependency("/forecaster", 0, 0);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
+	tf_count = bs.GetPeriodCount();
 	max_shift = 10;
-	sym_count = ol.GetSymbolCount();
+	sym_count = bs.GetSymbolCount();
 	total = max_shift * 2 + 2;
 	
 	data.SetCount(sym_count * tf_count);
@@ -1489,7 +1477,7 @@ void MonaAgent::Init() {
 	do_training = true;*/
 }
 
-bool MonaAgent::Process(const CoreProcessAttributes& attr) {
+void MonaAgent::Start() {
 	/*const Core& src = GetDependency(0);
 	const Core& change = GetDependency(1);
 	const Core& forecaster = GetDependency(2);
@@ -1500,7 +1488,7 @@ bool MonaAgent::Process(const CoreProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	SymTf& s = GetData(attr);
 	
@@ -1589,11 +1577,11 @@ bool MonaAgent::Process(const CoreProcessAttributes& attr) {
 	*sig = s.action == LONG ? 1 : s.action == SHORT ? -1 : 0;
 	
 	// Only the last action is exported
-	s.broker.SetSignal(attr.sym_id, *sig);
+	s.broker.SetSignal(GetSymbol(), *sig);
 	s.broker.Cycle();
 	
 	return do_training;*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -1650,13 +1638,12 @@ String MonaMetaAgent::GetStyle() const {
 		"}";
 }
 
-void MonaMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
-	int i = args.Find("ideal");
-	if (i != -1) ideal = args[i];
+void MonaMetaAgent::Arguments(ArgumentBase& args) {
+	args.Arg("ideal", ideal);
 }
 
 void MonaMetaAgent::Init() {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/rl", 0, 1);
@@ -1666,8 +1653,8 @@ void MonaMetaAgent::Init() {
 	//AddDependency("/forecaster", 0, 1);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
-	sym_count = ol.GetSymbolCount();
+	tf_count = bs.GetPeriodCount();
+	sym_count = bs.GetSymbolCount();
 	total = 3 * tf_count + 2;
 	
 	data.SetCount(sym_count * tf_count);
@@ -1714,7 +1701,7 @@ void MonaMetaAgent::Init() {
 	do_training = true;*/
 }
 
-bool MonaMetaAgent::Process(const CoreProcessAttributes& attr) {
+void MonaMetaAgent::Start() {
 	/*const Core& src = GetDependency(0);
 	const Core& rl = GetDependency(1);
 	const Core& dqn = GetDependency(2);
@@ -1727,7 +1714,7 @@ bool MonaMetaAgent::Process(const CoreProcessAttributes& attr) {
 	if (!prev || *prev == *open)
 		return true;
 	
-	//LOG(Format("sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+	//LOG(Format("sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 	
 	SymTf& s = GetData(attr);
 	
@@ -1817,12 +1804,12 @@ bool MonaMetaAgent::Process(const CoreProcessAttributes& attr) {
 	
 	
 	// Only the last action is exported
-	s.broker.SetSignal(attr.sym_id, *sig);
+	s.broker.SetSignal(GetSymbol(), *sig);
 	s.broker.Cycle();
 	
 	
 	return do_training;*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -1878,19 +1865,19 @@ String MonaDoubleAgent::GetStyle() const {
 		"}";
 }
 
-void MonaDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
+void MonaDoubleAgent::Arguments(ArgumentBase& args) {
 	
 }
 
 void MonaDoubleAgent::Init() {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	/*BaseSystem& bs = *Get<BaseSystem>();
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/metamona", 1, 0);
 	SetProcessedOnce(false);
 	
-	tf_count = ol.GetPeriodCount();
-	sym_count = ol.GetSymbolCount();
+	tf_count = bs.GetPeriodCount();
+	sym_count = bs.GetSymbolCount();
 	
 	// Sensors total:
 	// - data sensors = sym_count
@@ -1944,11 +1931,11 @@ void MonaDoubleAgent::Init() {
 	do_training = true;*/
 }
 
-bool MonaDoubleAgent::Process(const CoreProcessAttributes& attr) {
+void MonaDoubleAgent::Start() {
 	/*const Core& src = GetDependency(0);
 	const Core& metamona = GetDependency(1);
 	
-	if (attr.tf_id == 0 && attr.sym_id == 0) {
+	if (GetTimeframe() == 0 && GetSymbol() == 0) {
 		*/
 		// Check if position is useless for training
 		/*double* open = src.GetValue<double>(0, 0, attr);
@@ -1956,7 +1943,7 @@ bool MonaDoubleAgent::Process(const CoreProcessAttributes& attr) {
 		if (!prev || *prev == *open)
 			return true;*/
 		/*
-		LOG(Format("MonaDoubleAgent::Process sym=%d tf=%d pos=%d", attr.sym_id, attr.tf_id, attr.GetCounted()));
+		LOG(Format("MonaDoubleAgent::Process sym=%d tf=%d pos=%d", GetSymbol(), GetTimeframe(), GetBars()));
 		
 		// Get new action
 		Forward(attr);
@@ -1964,14 +1951,14 @@ bool MonaDoubleAgent::Process(const CoreProcessAttributes& attr) {
 	
 	// Write signal
 	char* sig = GetValue<char>(0, attr);
-	*sig = velocity[attr.sym_id];
+	*sig = velocity[GetSymbol()];
 	
 	// Write signal to symbol's data-row
 	double* out = GetValue<double>(0, attr);
-	*out = broker.GetSignal(attr.sym_id);
+	*out = broker.GetSignal(GetSymbol());
 	
 	return do_training;*/
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -1984,7 +1971,7 @@ void MonaDoubleAgent::Forward(const CoreProcessAttributes& attr) {
 	
 	// Write sensor values;
 	for(int i = 0; i < sym_count; i++) {
-		char* sig = metamona.GetValue<char>(0, i, attr.tf_id, 0, attr);
+		char* sig = metamona.GetValue<char>(0, i, GetTimeframe(), 0, attr);
 		input_array[pos++] = *sig;
 	}
 	

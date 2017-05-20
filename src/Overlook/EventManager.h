@@ -75,7 +75,7 @@ public:
 	EventManager();
 	
 	/*
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Start();*/
 	void Init();
 	

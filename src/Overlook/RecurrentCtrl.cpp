@@ -11,13 +11,13 @@ RecurrentDraw::RecurrentDraw() {
 
 void RecurrentDraw::Paint(Draw& w) {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
 	if (!IsVisible()) return;
 	
 	if (!src) {
-		src = ol.FindLinkCore("/open");
-		rnn = ol.FindLinkCore("/rnn");
+		src = bs.FindLinkCore("/open");
+		rnn = bs.FindLinkCore("/rnn");
 		ASSERTEXC(src);
 		ASSERTEXC(rnn);
 		rec = dynamic_cast<Recurrent*>(&*rnn);
@@ -28,11 +28,11 @@ void RecurrentDraw::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	int fast_tf = ol.GetPeriod(0);
-	int week_tf = ol.GetTfFromSeconds(7*24*60*60); // 1 week
-	int begin_pos = ol.GetShift(week_tf, fast_tf, week);
-	int end_pos   = ol.GetShift(week_tf, fast_tf, week+1);
-	end_pos = Upp::min(ol.GetCount(1), end_pos);
+	int fast_tf = bs.GetPeriod(0);
+	int week_tf = bs.GetTfFromSeconds(7*24*60*60); // 1 week
+	int begin_pos = bs.GetShift(week_tf, fast_tf, week);
+	int end_pos   = bs.GetShift(week_tf, fast_tf, week+1);
+	end_pos = Upp::min(bs.GetCount(1), end_pos);
 	
 	int count = end_pos - begin_pos;
 	double xstep = (double)sz.cx / (count-1);
@@ -155,24 +155,21 @@ RecurrentCtrl::RecurrentCtrl() {
 	//PostCallback(THISBACK(Refresher));
 }
 
-void RecurrentCtrl::SetArguments(const VectorMap<String, Value>& args) {
-	
-	int i = args.Find("slot");
-	ASSERTEXC(i != -1);
-	slotpath = args[i];
+void RecurrentCtrl::Arguments(ArgumentBase& args) {
+	args.Arg("slot", slotpath);
 }
 
 void RecurrentCtrl::Init() {
 	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	BaseSystem& bs = *Get<BaseSystem>();
 	
-	int week_tf = ol.GetTfFromSeconds(7*24*60*60); // 1 week
-	int week_count = ol.GetCount(week_tf);
+	int week_tf = bs.GetTfFromSeconds(7*24*60*60); // 1 week
+	int week_count = bs.GetCount(week_tf);
 	week_slider.MinMax(0, week_count-1);
 	week_slider.SetData(0);
 	week_slider <<= THISBACK(SetWeekFromSlider);
 	
-	Core* rnn = ol.FindLinkCore(slotpath);
+	Core* rnn = bs.FindLinkCore(slotpath);
 	ASSERTEXC(rnn);
 	rec = dynamic_cast<Recurrent*>(&*rnn);
 	ASSERTEXC(rec);
@@ -190,14 +187,14 @@ void RecurrentCtrl::Init() {
 }
 
 void RecurrentCtrl::Refresher() {
-	BaseSystem& ol = *core->Get<BaseSystem>();
+	BaseSystem& bs = *core->Get<BaseSystem>();
 	
 	draw.Refresh();
 	network_view.Refresh();
 	
 	int tick_iter	= rec->GetIter();
 	if (tick_iter > 0) {
-		int epoch_size	= ol.GetCount(1);
+		int epoch_size	= bs.GetCount(1);
 		double ppl		= rec->GetPerplexity();
 		int tick_time	= rec->GetTickTime();
 		

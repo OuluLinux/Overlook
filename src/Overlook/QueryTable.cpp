@@ -7,7 +7,7 @@ QueryTableForecaster::QueryTableForecaster() {
 	
 }
 
-void QueryTableForecaster::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableForecaster::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -15,9 +15,9 @@ void QueryTableForecaster::Init() {
 	
 }
 
-bool QueryTableForecaster::Process(const CoreProcessAttributes& attr) {
+void QueryTableForecaster::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -25,7 +25,7 @@ QueryTableHugeForecaster::QueryTableHugeForecaster() {
 	
 }
 
-void QueryTableHugeForecaster::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableHugeForecaster::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -33,9 +33,9 @@ void QueryTableHugeForecaster::Init() {
 	
 }
 
-bool QueryTableHugeForecaster::Process(const CoreProcessAttributes& attr) {
+void QueryTableHugeForecaster::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -43,7 +43,7 @@ QueryTableMetaForecaster::QueryTableMetaForecaster() {
 	
 }
 
-void QueryTableMetaForecaster::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableMetaForecaster::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -51,9 +51,9 @@ void QueryTableMetaForecaster::Init() {
 	
 }
 
-bool QueryTableMetaForecaster::Process(const CoreProcessAttributes& attr) {
+void QueryTableMetaForecaster::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -61,7 +61,7 @@ QueryTableAgent::QueryTableAgent() {
 	
 }
 
-void QueryTableAgent::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableAgent::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -69,9 +69,9 @@ void QueryTableAgent::Init() {
 	
 }
 
-bool QueryTableAgent::Process(const CoreProcessAttributes& attr) {
+void QueryTableAgent::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -79,7 +79,7 @@ QueryTableHugeAgent::QueryTableHugeAgent() {
 	
 }
 
-void QueryTableHugeAgent::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableHugeAgent::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -87,9 +87,9 @@ void QueryTableHugeAgent::Init() {
 	
 }
 
-bool QueryTableHugeAgent::Process(const CoreProcessAttributes& attr) {
+void QueryTableHugeAgent::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -97,7 +97,7 @@ QueryTableMetaAgent::QueryTableMetaAgent() {
 	
 }
 
-void QueryTableMetaAgent::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableMetaAgent::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -105,9 +105,9 @@ void QueryTableMetaAgent::Init() {
 	
 }
 
-bool QueryTableMetaAgent::Process(const CoreProcessAttributes& attr) {
+void QueryTableMetaAgent::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 
@@ -115,7 +115,7 @@ QueryTableDoubleAgent::QueryTableDoubleAgent() {
 	
 }
 
-void QueryTableDoubleAgent::SetArguments(const VectorMap<String, Value>& args) {
+void QueryTableDoubleAgent::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -123,9 +123,9 @@ void QueryTableDoubleAgent::Init() {
 	
 }
 
-bool QueryTableDoubleAgent::Process(const CoreProcessAttributes& attr) {
+void QueryTableDoubleAgent::Start() {
 	
-	Panic("TODO"); return 0;
+	Panic("TODO");
 }
 
 }

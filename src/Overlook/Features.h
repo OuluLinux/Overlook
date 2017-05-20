@@ -54,14 +54,14 @@ public:
 	}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	int GetKeypointCount() const {return keypoints.GetCount();}
 	const FeatureKeypoint& GetKeypoint(int i) const {return keypoints[i];}
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 

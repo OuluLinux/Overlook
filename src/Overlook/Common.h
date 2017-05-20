@@ -21,6 +21,8 @@ enum {SourcePhase, IndiPhase, ForecastPhase, ForecastCombPhase, AgentPhase, Agen
 enum {
 	TimeValue,
 	RealValue,
+	DataBridgeValue,
+	VirtualNodeValue,
 	RealChangeValue,
 	SpreadChangeValue,
 	RealProxyChangeValue,
@@ -45,11 +47,11 @@ enum {
 };
 
 struct ValueType : Moveable<ValueType> {
-	ValueType() : phase(-1), type(-1), scale(-1), count(-1) {}
-	ValueType(const ValueType& v) : phase(v.phase), type(v.type), scale(v.scale), count(v.count) {}
-	ValueType(int phase, int type, int scale, int count) : phase(phase), type(type), scale(scale), count(count) {}
-	bool operator==(const ValueType& vt) const {return phase == vt.phase && type == vt.type && scale == vt.scale && count == vt.count;}
-	String ToString() const {return Format("{phase=%d type=\"%s\", type-id=%d, scale=%d, count=%d}", phase, TypeString(), type, scale, count);}
+	ValueType() : phase(-1), type(-1), scale(-1) {}
+	ValueType(const ValueType& v) : phase(v.phase), type(v.type), scale(v.scale) {}
+	ValueType(int phase, int type, int scale) : phase(phase), type(type), scale(scale) {}
+	bool operator==(const ValueType& vt) const {return phase == vt.phase && type == vt.type && scale == vt.scale;}
+	String ToString() const {return Format("{phase=%d type=\"%s\", type-id=%d, scale=%d}", phase, TypeString(), type, scale);}
 	String TypeString() const {
 		switch (type) {
 			case 0: return "RealValue";
@@ -71,7 +73,7 @@ struct ValueType : Moveable<ValueType> {
 		}
 	}
 	
-	int phase, type, scale, count;
+	int phase, type, scale;
 };
 
 struct DataExc : public Exc {

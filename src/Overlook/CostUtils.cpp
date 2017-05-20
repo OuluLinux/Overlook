@@ -18,7 +18,7 @@ SpreadStats::SpreadStats() {
 	);*/
 }
 
-void SpreadStats::SetArguments(const VectorMap<String, Value>& args) {
+void SpreadStats::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -56,9 +56,9 @@ void SpreadStats::Start() {
 	
 	int sym_count = tv.GetSymbolCount();
 	int tf_count = tv.GetPeriodCount();
-	SymTf& s = data[attr.sym_id * tf_count + attr.tf_id];
+	SymTf& s = data[GetSymbol() * tf_count + GetTimeframe()];
 	
-	int period = tv.GetPeriod(attr.tf_id) * tv.GetBasePeriod() / 60; // minutes, not seconds
+	int period = tv.GetPeriod(GetTimeframe()) * tv.GetBasePeriod() / 60; // minutes, not seconds
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 		
@@ -85,7 +85,7 @@ void SpreadStats::Start() {
 			src.Get(&bid, 8);
 			cursor += struct_size;
 			
-			if (attr.sym_id != askbid_id) continue;
+			if (GetSymbol() != askbid_id) continue;
 			
 			Time time = TimeFromTimestamp(timestamp);
 			int h = (time.minute + time.hour * 60) / period;
@@ -113,7 +113,7 @@ void SpreadStats::Start() {
 	}
 	
 	// Get value
-	Time time = tv.GetTime(attr.GetPeriod(), attr.GetCounted());
+	Time time = tv.GetTime(GetPeriod(), GetBars());
 	int h = (time.minute + time.hour * 60) / period;
 	int d = DayOfWeek(time) - 1;
 	int dh = h + d * h_count;
@@ -147,15 +147,14 @@ SpreadMeanProfit::SpreadMeanProfit() {
 	
 }
 
-void SpreadMeanProfit::SetArguments(const VectorMap<String, Value>& args) {
+void SpreadMeanProfit::Arguments(ArgumentBase& args) {
 	
 }
 
 void SpreadMeanProfit::Init() {
 	/*SetCoreSeparateWindow();
-	SetBufferCount(1);
-	SetIndexCount(1);
-	SetIndexBuffer ( 0, mean_profit );
+	//SetBufferCount(1, 1);
+	//SetIndexBuffer ( 0, mean_profit );
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferColor(0, Color(0,0,127));
@@ -182,7 +181,7 @@ void SpreadMeanProfit::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	Core& pb = *GetSource().Get<Core>();
-	FloatVector& open = pb.GetBuffer(0);
+	Vector<double>& open = pb.GetBuffer(0);
 	
 	bars--;
 	for(int i = counted; i < bars; i++) {
@@ -228,16 +227,15 @@ SpreadProfitDistribution::SpreadProfitDistribution() {
 	
 }
 
-void SpreadProfitDistribution::SetArguments(const VectorMap<String, Value>& args) {
+void SpreadProfitDistribution::Arguments(ArgumentBase& args) {
 	
 }
 
 void SpreadProfitDistribution::Init() {
 	/*SetCoreSeparateWindow();
-	SetBufferCount(2);
-	SetIndexCount(2);
-	SetIndexBuffer ( 0, mean );
-	SetIndexBuffer ( 1, stddev );
+	//SetBufferCount(2, 2);
+	//SetIndexBuffer ( 0, mean );
+	//SetIndexBuffer ( 1, stddev );
 	SetBufferLineWidth(1, 2);
 	
 	SetBufferColor(0, Color(127,0,0));
@@ -259,8 +257,8 @@ void SpreadProfitDistribution::Start() {
 	BridgeAskBid& askbid = dynamic_cast<BridgeAskBid&>(At(0));
 	Core& subtfchanges = At(1);
 	
-	FloatVector& abschange_mean   = subtfchanges.GetBuffer(2);
-	FloatVector& abschange_stddev = subtfchanges.GetBuffer(3);
+	Vector<double>& abschange_mean   = subtfchanges.GetBuffer(2);
+	Vector<double>& abschange_stddev = subtfchanges.GetBuffer(3);
 	
 	for(int i = counted; i < bars; i++) {
 		Time t = GetTime().GetTime(GetPeriod(), i);
@@ -313,16 +311,15 @@ SpreadProbability::SpreadProbability() {
 	
 }
 
-void SpreadProbability::SetArguments(const VectorMap<String, Value>& args) {
+void SpreadProbability::Arguments(ArgumentBase& args) {
 	
 }
 
 void SpreadProbability::Init() {
 	/*SetCoreSeparateWindow();
-	SetBufferCount(2);
-	SetIndexCount(2);
-	SetIndexBuffer ( 0, profit );
-	SetIndexBuffer ( 1, real );
+	//SetBufferCount(2, 2);
+	//SetIndexBuffer ( 0, profit );
+	//SetIndexBuffer ( 1, real );
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferColor(0, Color(127,0,0));
@@ -351,11 +348,11 @@ void SpreadProbability::Start() {
 	
 	Core& cost_profit_dist = At(0);
 	
-	FloatVector& cost_profit_mean   = cost_profit_dist.GetBuffer(0);
-	FloatVector& cost_profit_stddev = cost_profit_dist.GetBuffer(1);
+	Vector<double>& cost_profit_mean   = cost_profit_dist.GetBuffer(0);
+	Vector<double>& cost_profit_stddev = cost_profit_dist.GetBuffer(1);
 	
 	Core& pb = *GetSource().Get<Core>();
-	FloatVector& open = pb.GetBuffer(0);
+	Vector<double>& open = pb.GetBuffer(0);
 	
 	bars--;
 	
@@ -449,7 +446,7 @@ ValueChange::ValueChange() {
 	*/
 }
 
-void ValueChange::SetArguments(const VectorMap<String, Value>& args) {
+void ValueChange::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -497,7 +494,7 @@ void ValueChange::Start() {
 	
 	if (!open || *open == 0.0) return false;
 	
-	int id = attr.sym_id;
+	int id = GetSymbol();
 	
 	Sym& s = data[id];
 	
@@ -511,13 +508,13 @@ void ValueChange::Start() {
 		*value_change = change;
 		ASSERT(*high_change >= *low_change);
 	} else {
-		double* proxy_spread = spreadsrc.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
+		double* proxy_spread = spreadsrc.GetValue<double>(0, s.proxy_id, GetTimeframe(), 0, attr);
 		
 		// Get buffers
-		double* proxy_open	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_close	= src.GetValue<double>(0, s.proxy_id, attr.tf_id, 0, attr);
-		double* proxy_low	= src.GetValue<double>(1, s.proxy_id, attr.tf_id, 1, attr);
-		double* proxy_high	= src.GetValue<double>(2, s.proxy_id, attr.tf_id, 1, attr);
+		double* proxy_open	= src.GetValue<double>(0, s.proxy_id, GetTimeframe(), 1, attr);
+		double* proxy_close	= src.GetValue<double>(0, s.proxy_id, GetTimeframe(), 0, attr);
+		double* proxy_low	= src.GetValue<double>(1, s.proxy_id, GetTimeframe(), 1, attr);
+		double* proxy_high	= src.GetValue<double>(2, s.proxy_id, GetTimeframe(), 1, attr);
 		
 		// Proxy and normal.
 		double proxy_open_value = *proxy_open;
@@ -573,7 +570,7 @@ String IdealOrders::GetStyle() const {
 	return "";
 }
 
-void IdealOrders::SetArguments(const VectorMap<String, Value>& args) {
+void IdealOrders::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -582,12 +579,11 @@ void IdealOrders::Init() {
 	
 }
 
-bool IdealOrders::Process(const CoreProcessAttributes& attr) {
+void IdealOrders::Start() {
 	
 	// Search ideal order sequence with A* search in SimBroker
 	Panic("TODO");
 	
-	return false;
 }
 
 

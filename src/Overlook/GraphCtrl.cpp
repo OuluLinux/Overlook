@@ -22,6 +22,7 @@ GraphCtrl::GraphCtrl() {
 	group = 0;
 	count = 0;
 	shift = 0;
+	base = NULL;
 	
 	latest_screen_count = 0;
 	mouse_left_is_down = false;
@@ -36,8 +37,8 @@ GraphCtrl::GraphCtrl() {
 }
 
 void GraphCtrl::GetDataRange(Core& cont, int buffer) {
-	/*
-	if (buffer >= cont.GetBufferSettingsCount()) {
+	
+	if (buffer >= cont.GetBufferCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
 		return;
 	}
@@ -52,7 +53,7 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 		if (lo > 0) lo = 0;
 	}
 	
-	int c = cont.GetBufferDataCount();
+	int c = cont.GetBars();
 	bool get_hi = !cont.HasMaximum();
 	bool get_lo = !cont.HasMinimum();
 	bool get_any = get_hi || get_lo;
@@ -61,12 +62,13 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 	if (!get_lo)
 		lo = cont.GetMinimum();
 	if (!get_any) return;
-    int data_shift = cont.GetBufferSettings(buffer).shift;
-    int data_begin = cont.GetBufferSettings(buffer).begin;
+    int data_shift = cont.GetBuffer(buffer).shift;
+    int data_begin = cont.GetBuffer(buffer).begin;
     ASSERT(data_begin >= 0);
     
 	for(int i = 0; i < count; i++ ) {
         int pos = c - 1 - (shift + i + data_shift);
+        if (pos > cont.GetBuffer(buffer).GetCount()) continue;
         if (pos >= c || pos < data_begin) continue;
         double value = cont.GetBufferValue(buffer, pos);
         if (skip_zero && value == 0) continue;
@@ -74,19 +76,24 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 			hi = value;
 		if (get_lo && value  < lo)
 			lo = value;
-    }*/
+    }
 }
 
 void GraphCtrl::Paint(Draw& draw) {
-	/*
-	BaseSystem& ol = *Get<BaseSystem>();
+	if (src.IsEmpty()) {draw.DrawRect(GetSize(), White()); return;}
+	
+	if (!base) {
+		base = src[0]->Get<BaseSystem>();
+		if (!base) {draw.DrawRect(GetSize(), White()); return;}
+	}
+	
+	BaseSystem& bs = *base;
 	
 	Size sz(GetSize());
 	ImageDraw w(sz);
 	
 	w.DrawRect(sz, group->GetBackground());
 	
-	if (src.IsEmpty()) {draw.DrawImage(0,0,w); return;}
 	
 	div = group->GetWidthDivider();
 	shift = group->GetShift();
@@ -99,7 +106,10 @@ void GraphCtrl::Paint(Draw& draw) {
 	count = real_screen_count - right_offset;
     latest_screen_count = count;
     
-    if (!src[0] || !src[0]->IsLinkedResolver()) {draw.DrawImage(0,0,w); return;}
+    if (!src[0]) {
+		draw.DrawImage(0,0,w);
+		return;
+	}
     
     int period = src[0]->GetPeriod();
     if (!period) {
@@ -107,7 +117,7 @@ void GraphCtrl::Paint(Draw& draw) {
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = ol.GetCount(period);
+    int data_count = bs.GetCount(period);
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -120,16 +130,13 @@ void GraphCtrl::Paint(Draw& draw) {
     lo = DBL_MAX;
     for(int i = 0; i < src.GetCount(); i++) {
 		
-		Core*& var = src[i];
-		if (!var.Is()) continue;
-		
-		Core* cont_ = var.Get<Core>();
+		Core*& cont_ = src[i];
 		if (!cont_) {draw.DrawImage(0,0,w); return;} // just bail out
 		
 		Core& cont = *cont_;
 		cont.Refresh();
 		
-		if (dynamic_cast<Core*>(&cont)) {
+		if (dynamic_cast<DataBridge*>(&cont)) {
 		    GetDataRange(cont, 1); // low
 		    GetDataRange(cont, 2); // high
 		}
@@ -143,17 +150,14 @@ void GraphCtrl::Paint(Draw& draw) {
 	
 	String graph_label;
 	for(int i = 0; i < src.GetCount(); i++) {
-		Core*& var = src[i];
-		if (!var.Is()) continue;
-		Core& cont = *var.Get<Core>();
-		Core* bardata = dynamic_cast<Core*>(&cont);
+		Core& cont = *src[i];
+		DataBridge* bardata = dynamic_cast<DataBridge*>(&cont);
 		if (bardata) {
-			Core& ts = dynamic_cast<Core&>(cont);
-			PaintCandlesticks(w, ts);
-		}
-		else {
+			PaintCandlesticks(w, cont);
+		} else {
 			if (graph_label.GetCount()) graph_label += ", ";
-			graph_label += cont.GetShortName();
+			
+			//graph_label += cont.GetShortName();
 			
 			int bufs = cont.GetBufferCount();
 			//Core* bdcont = dynamic_cast<Core*>(&cont);
@@ -172,9 +176,9 @@ void GraphCtrl::Paint(Draw& draw) {
         
         if (latest_mouse_move_pt.y >= 0) {
 	        int x = latest_mouse_move_pt.x;
-	        int pos = ol.GetCount(period) - count + (x - border) / div - shift;
+	        int pos = bs.GetCount(period) - count + (x - border) / div - shift;
 	        if (pos >= 0 && pos < data_count) {
-	            Time t = ol.GetTime(period, pos);
+	            Time t = bs.GetTime(period, pos);
 	            String timestr = Format("%", t);
 	            Font fnt = StdFont(12);
 	            Size str_sz = GetTextSize(timestr, fnt);
@@ -187,14 +191,14 @@ void GraphCtrl::Paint(Draw& draw) {
     }
     
     draw.DrawImage(0,0,w);
-    */
+    
 }
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
-	/*
-	BaseSystem& ol = *Get<BaseSystem>();
 	
-	nt gridw, gridh, w, h, y, pos, c;
+	BaseSystem& bs = *base;
+	
+	int gridw, gridh, w, h, y, pos, c;
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = group->GetGridColor();
@@ -204,7 +208,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	y = r.top;
     w = r.GetWidth();
 	h = r.GetHeight();
-	c = ol.GetCount(period);
+	c = pb.GetBuffer(0).GetCount();
 	
 	gridw = w / grid + 1;
     gridh = h / grid + 1;
@@ -220,7 +224,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         pos = c - count - shift + i * grid/div;
         if (pos >= c || pos < 0) continue;
         
-        Time time = ol.GetTime(period, pos);
+        Time time = bs.GetTime(period, pos);
         String text = Format("%", time);
         Size text_sz = GetTextSize(text, gridfont);
         W.DrawText(border+i*grid-text_sz.cx-5, y+h+2, text, gridfont, gridcolor);
@@ -257,7 +261,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
         
     }
-    */
+    
 }
 
 void GraphCtrl::DrawBorder(Draw& W) {
@@ -288,7 +292,7 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	BaseSystem& ol = *group->GetCore().Get<BaseSystem>();
+	BaseSystem& bs = *group->GetCore().Get<BaseSystem>();
 	
 	DrawGrid(W, true);
     
@@ -302,7 +306,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	y = r.top;
     h = r.GetHeight();
     w = r.GetWidth();
-	c = ol.GetCount(period);
+	c = values.GetBuffer(0).GetCount();
 	diff = hi - lo;
 	
 	for(int i = 0; i < count; i++ ) {
@@ -347,14 +351,15 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
     DrawBorder(W);
     
     // Draw indicator about window range in total data range
-	int shift_x  = (c - shift - count) * w / c;
-	int width_x = count * w / c + 1;
+	int shift_x  = c ? (c - shift - count) * w / c : 0;
+	int width_x = c ? count * w / c + 1 : 0;
     W.DrawRect(shift_x, 0, width_x, 3, Blue());
     
 }
 
 void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {
-	/*BaseSystem& ol = *Get<BaseSystem>();
+	ASSERT(base);
+	BaseSystem& bs = *base;
 	
 	if (draw_border) {
 		DrawGrid(W, false);
@@ -370,10 +375,10 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
     x = border;
 	y = r.top;
     h = r.GetHeight();
-	c = ol.GetCount(period);
+	c = cont.GetBuffer(0).GetCount();
 	diff = hi - lo;
-	data_shift = cont.GetBufferSettings(buffer).shift;
-	data_begin = cont.GetBufferSettings(buffer).begin;
+	data_shift = cont.GetBuffer(buffer).shift;
+	data_begin = cont.GetBuffer(buffer).begin;
 	data_count = c;
 	skip_zero = false;
 	draw_type = 0;
@@ -405,7 +410,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	
 	if (line_width == 0) draw_type = -1;
 	
-	int buf_count = cont.GetBufferDataCount();
+	int buf_count = cont.GetBars();
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -479,7 +484,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	if (draw_border) {
 		DrawBorder(W);
 		DrawLines(W, cont);
-	}*/
+	}
 }
 
 void GraphCtrl::DrawLines(Draw& d, Core& cont) {
@@ -582,10 +587,9 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 }
 
 int GraphCtrl::GetCount() {
-	/*if (!group) return 0;
-	int c = group->GetCore().GetBufferDataCount();
-    return c;*/
-    Panic("TODO"); return 0;
+	if (!group) return 0;
+	int c = group->GetCore().GetBars();
+    return c;
 }
 
 int GraphCtrl::GetPos() {

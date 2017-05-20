@@ -40,6 +40,15 @@ void Combination::SetValue(int bit, bool value) {
 		*b &= ~mask;
 }
 
+void Combination::SetOrValue(int bit, bool value) {
+	int byt = bit / 8;
+	bit = bit % 8;
+	byte* b = this->value.Begin() + byt;
+	byte mask = 1 << bit;
+	if (value)
+		*b |= mask;
+}
+
 void RemoveDuplicates(Vector<int>& sorted_vec) {
 	for(int i = 0; i < sorted_vec.GetCount(); i++) {
 		int a = sorted_vec[i];
@@ -88,48 +97,6 @@ void Prioritizer::Deinit() {
 	Stop();
 }
 
-/*Core& Prioritizer::GetCore(int fac_id, uint32 input_comb, int sym_id, int tf_id, VectorMap<String, Value>* args) {
-	input_comb |= 1; // always enabled
-	VectorMap<uint32, VectorMap<int, VectorMap<int, Core*> > >& combs = GetCoreData()[fac_id];
-	VectorMap<int, VectorMap<int, Core*> >& symtf = combs.GetAdd(input_comb);
-	VectorMap<int, Core*>& tf = symtf.GetAdd(sym_id);
-	Core*& pipe = tf.GetAdd(tf_id, NULL);
-	if (pipe) return *pipe;
-	Lock().Enter();
-	if (pipe) {Lock().Leave(); return *pipe;} // in case of same object being created while waiting lock
-	
-	pipe = Factory::GetCtrlFactories()[fac_id].b();
-	
-	pipe->SetSymbol(sym_id);
-	pipe->SetTimeframe(tf_id);
-	
-	if (args)
-		pipe->SetArguments(*args);
-	
-	pipe->Init();
-	
-	Lock().Leave();
-	return *pipe;
-}*/
-
-/*Core& Prioritizer::GetCore(int fac_id, int sym_id, int tf_id) {
-	
-	Jobber jobs(this);
-	
-	prio.CreateSingle(fac_id, sym_id, tf_id);
-	
-	for(int i = 0; i < prio.GetJobCount(); i++) {
-		JobItem& j = prio.GetJob(i);
-		LOG(Format("%d: fac=%d, sym=%d, tf=%d, priority=%d", i, j.factory, j.sym, j.tf, j.priority));
-	}
-	//nt32 comb = GetCoreDefaultCombination(fac_id);
-	//Core* pipe = &GetCore(fac_id, comb, sym_id, tf_id);
-	
-	
-	LOG("");
-	//return *pipe;
-}*/
-
 void Prioritizer::CreateCombination() {
 	ASSERT(combparts.IsEmpty());
 	
@@ -146,6 +113,8 @@ void Prioritizer::CreateCombination() {
 		part.begin = combination_bits;
 		
 		combination_bits++; // enabled bit
+		combination_bits++; // all symbols enabled bit
+		combination_bits++; // all timeframes enabled bit
 		
 		// Add inputs
 		for(int i2 = 0; i2 < factory_inputs.GetCount(); i2++) {
@@ -282,23 +251,29 @@ void Prioritizer::Run() {
 void Prioritizer::Process() {
 	ASSERT_(!job_queue.IsEmpty(), "Job-queue must be created first");
 	
+	for(int i = 0; i < job_queue.GetCount(); i++) {
+		JobItem& ji = job_queue[i];
+		LOG("Job " << i);
+		LOG(GetCombinationString(ji.value));
+		Process(ji);
+	}
 }
 
 void Prioritizer::ProcessThread(int thread_id) {
 	while (running) {
 		int i = cursor++;
 		
-		if (i >= slot_queue.GetCount()) {
+		if (i >= job_queue.GetCount()) {
 			LOG("ERROR: queue finished");
 			Sleep(1000);
 			continue;
 		}
 		
-		CoreItem& qi = slot_queue[i];
+		JobItem& ji = job_queue[i];
 		
 		LOG("Process " << i << ", thread-id " << thread_id);
 		
-		Process(qi);
+		Process(ji);
 		
 		
 		Sleep(100);
@@ -307,10 +282,183 @@ void Prioritizer::ProcessThread(int thread_id) {
 	thread_count--;
 }
 
-void Prioritizer::Process(CoreItem& qi) {
+void Prioritizer::Process(JobItem& ji) {
+	
+	// Load dependencies to the scope
+	if (!ji.core)
+		CreateJobCore(ji);
+	
+	// Process core-object
+	ji.core->Refresh();
 	
 }
 
+void Prioritizer::CreateJobCore(JobItem& ji) {
+	ASSERT(ji.core == NULL);
+	const CombinationPart& part = combparts[ji.factory];
+	Vector<int> enabled_input_factories;
+	Vector<byte> unique_slot_comb;
+	
+	
+	// Create core-object
+	ji.core = Factory::GetCtrlFactories()[ji.factory].b();
+	
+	// Set attributes
+	ji.core->RefreshIO();
+	ji.core->SetSymbol(ji.sym);
+	ji.core->SetTimeframe(ji.tf, bs.GetPeriod(ji.tf));
+	
+	// Connect input sources
+	// Loop all inputs of the custom core-class
+	for (int l = 0; l < part.input_src.GetCount(); l++) {
+		
+		const ValueType& input = part.inputs[l];
+		bool input_all_sym = input.scale == Sym || input.scale == All;
+		bool input_all_tf  = input.scale == Tf  || input.scale == All;
+
+		// Loop possible sources for one input
+		const Vector<IntPair>& input_src = part.input_src[l];
+		#ifdef flagDEBUG
+		int src_count = 0; // count enabled sources for debugging (1 is correct)
+		int enabled_count = 0; // exactly one must be enabled
+		#endif
+		enabled_input_factories.SetCount(0);
+		for (int m = 0; m < input_src.GetCount(); m++) {
+			
+			// Check if source is enabled
+			const IntPair& src = input_src[m];
+			int src_enabled_bit = GetBitCore(ji.factory, l, m);
+			bool src_enabled = ReadBit(ji.value, src_enabled_bit);
+			if (!src_enabled) continue;
+			
+			#ifdef flagDEBUG
+			int bit = InputToEnabled(src_enabled_bit);
+			int enabled_bit = GetBitEnabled(src.a);
+			ASSERT(bit == enabled_bit);
+			ASSERT(ReadBit(ji.value, bit));
+			#endif
+			
+			enabled_count++;
+			enabled_input_factories.Add(src.a);
+			/*DUMP(src);
+			
+			if (ji.factory == 2) {
+				LOG("");
+			}*/
+			
+			// Create unique combination for current input source factory
+			CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
+			ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
+			
+			
+			// Search source and loop existing job queue
+			bool found = false;
+			int input_count = 0;
+			bool is_one_input_only = !input_all_sym && !input_all_tf;
+			bool is_many_to_many_exceptions_allowed = input_all_sym && input_all_tf;
+			for (int n = 0; n < job_queue.GetCount(); n++) {
+				JobItem& src_ji = job_queue[n];
+				
+				/*LOG(src_ji.factory << " != " << src.a << "\t" <<
+					src_ji.sym << " != " << sym << "\t" <<
+					src_ji.tf << " != " << tf);*/
+				
+				// Factory must match
+				if (src_ji.factory != src.a) continue;
+				
+				if (src_ji.factory == 3 && src_ji.sym == 70 && src_ji.tf == 0) {
+					LOG("");
+				}
+				
+				// If input takes all sym&tf, the symbol doesn't need to match
+				// If source gives all sym&tf, the symbol doesn't need to match
+				if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
+				if (!input_all_tf  && !src_ji.all_tf  && src_ji.tf  != ji.tf ) continue;
+				
+				bool equal = true;
+				for (int o = 0; o < job_combination_bytes; o++) {
+					if (unique_slot_comb[o] != src_ji.value[o]) {
+						equal = false;
+						break;
+					}
+				}
+				if (!equal)	{
+					/*LOG("DIFFERENT COMBOS");
+					LOG("SRC:");
+					LOG(GetCombinationString(ji.value));
+					LOG("A:");
+					LOG(GetCombinationString(unique_slot_comb));
+					LOG("B:");
+					LOG(GetCombinationString(src_ji.value));*/
+					continue;
+				}
+				
+				#ifdef flagDEBUG
+				// Check for multiple types of inputs
+				if (!is_many_to_many_exceptions_allowed &&
+					!is_one_input_only &&
+					(src_ji.all_sym || src_ji.all_tf) &&
+					input_count > 0)
+					Panic("ERROR: multiple many-to-many or one-to-many, but input can take only one");
+				#endif
+				
+				
+				// Source found
+				ASSERT(src_ji.core);
+				ji.core->AddInput(src_ji.sym, src_ji.tf, l, *src_ji.core, src.b);
+				
+				
+				input_count++;
+				found = true;
+				if (is_one_input_only)
+					break;
+			}
+			ASSERT_(is_one_input_only || input_count > 1, "Couldn't find multiple inputs");
+			
+			if (found) {
+				// Catch invalid combinations
+				#ifdef flagDEBUG
+				src_count++;
+				#endif
+				break;
+			}
+		}
+		#ifdef flagDEBUG
+		if (enabled_count == 0) {
+			LOG("Combination:");
+			LOG(GetCombinationString(ji.value));
+			DUMPC(job_queue);
+			/*LOG("Checking all source pipeline combinations");
+			for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
+				const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
+				CheckCombination(pi.value);
+			}*/
+		}
+		ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
+		ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
+		if (src_count == 0) {
+			//LOG(GetCombinationString(ci.value));
+			String inputs = "\"";
+			for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
+				if (i) inputs.Cat(',');
+				inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
+			}
+			inputs << "\"";
+			Panic("Creating object \"" +
+				Factory::GetCtrlFactories()[ji.factory].a +
+				"\" and can't find any of " +
+				inputs +
+				" inputs.");
+		}
+		ASSERT_(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
+		#endif
+	}
+	
+	//ji.core->SetArguments(*args);
+	
+	// Initialize
+	ji.core->Init();
+}
 
 
 
@@ -342,6 +490,8 @@ int Prioritizer::GetBitCore(int fac_id, int input_id, int src_id) const {
 	int begin = part.begin;
 	
 	begin++; // enabled bit
+	begin++; // all symbols enabled bit
+	begin++; // all timeframes enabled bit
 	
 	for(int i = 0; i < input_id; i++) {
 		begin += part.input_src[i].GetCount();
@@ -355,6 +505,14 @@ int Prioritizer::GetBitCore(int fac_id, int input_id, int src_id) const {
 
 int Prioritizer::GetBitEnabled(int fac_id) const {
 	return combparts[fac_id].begin;
+}
+
+int Prioritizer::GetBitAllSymbols(int fac_id) const {
+	return combparts[fac_id].begin + 1;
+}
+
+int Prioritizer::GetBitAllTimeframes(int fac_id) const {
+	return combparts[fac_id].begin + 2;
 }
 
 int Prioritizer::InputToEnabled(int bit) const {
@@ -500,6 +658,10 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 		int factory = factory_queue[0];
 		factory_queue.Remove(0);
 		
+		// 'Enable all' bits must be recursively delivered to other factories
+		bool all_symbols_enabled = comb.GetValue(GetBitAllSymbols(factory));
+		bool all_timeframes_enabled = comb.GetValue(GetBitAllTimeframes(factory));
+		
 		
 		const CombinationPart& part = combparts[factory];
 		
@@ -523,9 +685,6 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 				
 				// Copy existing.
 				Combination comb2 = comb;
-				if (ReadBit(comb2.value, GetBitEnabled(4))) {
-					LOG("enabled 4");
-				}
 				
 				// Add all minimal cases
 				int case_count = 0;
@@ -533,14 +692,20 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 					const Vector<IntPair>& src_list = part.input_src[i];
 					
 					if (src_list.GetCount() == 1) {
-						if (factory == 4) {
-							LOG("factory==4");
-						}
+						
+						// Set 'enabled' bit
 						int bit = GetBitCore(factory, i, 0);
 						comb2.SetValue(bit, true);
 						bit = InputToEnabled(bit);
 						comb2.SetValue(bit, true);
 						ASSERT(bit == GetBitEnabled(src_list[0].a));
+						int src_factory = EnabledToFactory(bit);
+						
+						// Set 'activate all symbols/timeframes' bit
+						const ValueType& input = part.inputs[i];
+						comb2.SetOrValue(GetBitAllSymbols(src_factory),    all_symbols_enabled    || input.scale == Sym || input.scale == All);
+						comb2.SetOrValue(GetBitAllTimeframes(src_factory), all_timeframes_enabled || input.scale == Tf  || input.scale == All);
+						
 					}
 					// (else) Multiple sources are handled later with sub-combinations
 					ASSERT(src_list.GetCount() != 0);
@@ -573,15 +738,24 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 					// Set current combination values
 					for(int i = 0; i < sub_comb_count; i++) {
 						const InpMaxSrc& s = sub_comb[i];
+						
+						// Set 'enabled' bit
 						int bit = GetBitCore(factory, s.a, s.c);
 						comb3.SetValue(bit, true);
 						bit = InputToEnabled(bit);
 						comb3.SetValue(bit, true);
 						int src_factory = EnabledToFactory(bit);
 						comb_factory_queue.Add(src_factory);
+						
+						// Set 'activate all symbols/timeframes' bit
+						const ValueType& input = part.inputs[s.a];
+						comb3.SetOrValue(GetBitAllSymbols(src_factory),    all_symbols_enabled    || input.scale == Sym || input.scale == All);
+						comb3.SetOrValue(GetBitAllTimeframes(src_factory), all_timeframes_enabled || input.scale == Tf  || input.scale == All);
+						
 					}
 					Sort(comb_factory_queue, StdGreater<int>());
 					RemoveDuplicates(comb_factory_queue);
+					
 					
 					// Visit new combination
 					VisitCombination(comb3, comb_factory_queue);
@@ -633,6 +807,12 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 				comb2.SetValue(bit, true);
 				int src_factory = EnabledToFactory(bit);
 				factory_queue.Add(src_factory);
+				
+				// Set 'activate all symbols/timeframes' bit
+				const ValueType& input = part.inputs[i];
+				comb2.SetOrValue(GetBitAllSymbols(src_factory),    all_symbols_enabled    || input.scale == Sym || input.scale == All);
+				comb2.SetOrValue(GetBitAllTimeframes(src_factory), all_timeframes_enabled || input.scale == Tf  || input.scale == All);
+				
 			}
 			
 			Sort(factory_queue, StdGreater<int>());
@@ -658,7 +838,6 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 }
 
 void Prioritizer::RefreshCoreQueue() {
-	
 	slot_queue.Clear();
 	
 	
@@ -666,7 +845,6 @@ void Prioritizer::RefreshCoreQueue() {
 	int fac_count = Factory::GetCtrlFactoryCount();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
-	
 	
 	
 	// Loop all enabled pipeline-combinations
@@ -683,6 +861,11 @@ void Prioritizer::RefreshCoreQueue() {
 			int enabled_bit = GetBitEnabled(j);
 			bool enabled = ReadBit(pi.value, enabled_bit);
 			if (!enabled) continue;
+			
+			// Check if some input requires all symbols and  timeframes
+			bool input_all_sym = ReadBit(pi.value, GetBitAllSymbols(j));
+			bool input_all_tf =  ReadBit(pi.value, GetBitAllTimeframes(j));
+			
 			
 			// Here, the 'part' is the active factory in the combination.
 			// Dependency mask has all earlier factories enabled, which this active factory needs.
@@ -715,13 +898,13 @@ void Prioritizer::RefreshCoreQueue() {
 					
 					// Add priorities of symbols and timeframes
 					for (int s = 0; s < sym_count; s++) {
-						if (ReadBit(pi.value, GetBitSym(s))) {
+						if (input_all_sym || ReadBit(pi.value, GetBitSym(s))) {
 							int& prio = si.symlist.GetAdd(s, INT_MAX);
 							prio = Upp::min(prio, pi.priority);
 						}
 					}
 					for (int t = 0; t < tf_count; t++) {
-						if (ReadBit(pi.value, GetBitTf(t))) {
+						if (input_all_tf || ReadBit(pi.value, GetBitTf(t))) {
 							int& prio = si.tflist.GetAdd(t, INT_MAX);
 							prio = Upp::min(prio, pi.priority);
 						}
@@ -743,10 +926,10 @@ void Prioritizer::RefreshCoreQueue() {
 				
 				// Add priorities of symbols and timeframes
 				for (int s = 0; s < sym_count; s++)
-					if (ReadBit(pi.value, GetBitSym(s)))
-						si.symlist.Add(s, pi.priority);
+					if (input_all_sym || ReadBit(pi.value, GetBitSym(s)))
+						si.symlist.Add(s, pi.priority); // Note: adding to empty vector, no min() required.
 				for (int t = 0; t < tf_count; t++)
-					if (ReadBit(pi.value, GetBitTf(t)))
+					if (input_all_tf || ReadBit(pi.value, GetBitTf(t)))
 						si.tflist.Add(t, pi.priority);
 			}
 		}
@@ -772,8 +955,6 @@ void Prioritizer::RefreshJobQueue() {
 	Vector<JobItem> new_job_queue;
 	Vector<JobItem>& old_job_queue = this->job_queue;
 	
-	Vector<byte> unique_slot_comb;
-	Vector<int> enabled_input_factories;
 	
 	// Loop current unique-slot queue
 	for(int i = 0; i < slot_queue.GetCount(); i++) {
@@ -784,6 +965,7 @@ void Prioritizer::RefreshJobQueue() {
 		int64 priority_base = (int64)ci.priority * (int64)total;
 		
 		// Loop enabled symbols in the current unique-slot
+		DUMPM(ci.symlist);
 		for(int j = 0; j < ci.symlist.GetCount(); j++) {
 			int sym = ci.symlist.GetKey(j);
 			int sym_prio = ci.symlist[j];
@@ -842,135 +1024,13 @@ void Prioritizer::RefreshJobQueue() {
 				// If old object wasn't found, create core-object and initialize it
 				if (!found) {
 					
-					LOG("Create " << Factory::GetCtrlFactories()[ji.factory].a);
+					//LOG("Create " << Factory::GetCtrlFactories()[ji.factory].a);
 					
-					// Create core-object
-					ji.core = Factory::GetCtrlFactories()[ji.factory].b();
-					
-					// Set attributes
-					ji.core->RefreshIO();
-					ji.core->SetSymbol(sym);
-					ji.core->SetTimeframe(tf);
-					
-					// Connect input sources
-					// Loop all inputs of the custom core-class
-					for (int l = 0; l < part.input_src.GetCount(); l++) {
-						
-						// Loop possible sources for one input
-						const Vector<IntPair>& input_src = part.input_src[l];
-						#ifdef flagDEBUG
-						int src_count = 0; // count enabled sources for debugging (1 is correct)
-						int enabled_count = 0; // exactly one must be enabled
-						#endif
-						enabled_input_factories.SetCount(0);
-						for (int m = 0; m < input_src.GetCount(); m++) {
-							
-							// Check if source is enabled
-							const IntPair& src = input_src[m];
-							int src_enabled_bit = GetBitCore(ji.factory, l, m);
-							bool src_enabled = ReadBit(ji.value, src_enabled_bit);
-							if (!src_enabled) continue;
-							
-							#ifdef flagDEBUG
-							int bit = InputToEnabled(src_enabled_bit);
-							int enabled_bit = GetBitEnabled(src.a);
-							ASSERT(bit == enabled_bit);
-							ASSERT(ReadBit(ji.value, bit));
-							#endif
-							
-							enabled_count++;
-							enabled_input_factories.Add(src.a);
-							DUMP(src);
-							
-							// Create unique combination for current input source factory
-							CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
-							ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
-							
-							
-							// Search source and loop existing job queue
-							bool found = false;
-							for (int n = 0; n < new_job_queue.GetCount(); n++) {
-								JobItem& src_ji = new_job_queue[n];
-							
-								LOG(src_ji.factory << " != " << src.a << "\t" <<
-									src_ji.sym << " != " << sym << "\t" <<
-									src_ji.tf << " != " << tf);
-								
-								if (src_ji.factory != src.a) continue;
-								if ((!src_ji.all_sym && src_ji.sym != sym)) continue;
-								if ((!src_ji.all_tf  && src_ji.tf  != tf )) continue;
-								
-								bool equal = true;
-								for (int o = 0; o < job_combination_bytes; o++) {
-									if (unique_slot_comb[o] != src_ji.value[o]) {
-										equal = false;
-										break;
-									}
-								}
-								if (!equal)	{
-									/*LOG("DIFFERENT COMBOS");
-									LOG("SRC:");
-									LOG(GetCombinationString(ji.value));
-									LOG("A:");
-									LOG(GetCombinationString(unique_slot_comb));
-									LOG("B:");
-									LOG(GetCombinationString(src_ji.value));*/
-									continue;
-								}
-								
-								
-								// Source found
-								ASSERT(src_ji.core);
-								ji.core->SetInput(l, *src_ji.core, src.b);
-								
-								
-								found = true;
-								break;
-							}
-							
-							if (found) {
-								// Catch invalid combinations
-								#ifdef flagDEBUG
-								src_count++;
-								#endif
-								break;
-							}
-						}
-						#ifdef flagDEBUG
-						if (enabled_count == 0) {
-							LOG("Combination:");
-							LOG(GetCombinationString(ci.value));
-							DUMPC(new_job_queue);
-							LOG("Checking all source pipeline combinations");
-							for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
-								const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
-								CheckCombination(pi.value);
-							}
-						}
-						ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
-						ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
-						if (src_count == 0) {
-							LOG(GetCombinationString(ci.value));
-							String inputs = "\"";
-							for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
-								if (i) inputs.Cat(',');
-								inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
-							}
-							inputs << "\"";
-							Panic("Creating object \"" +
-								Factory::GetCtrlFactories()[ji.factory].a +
-								"\" and can't find any of " +
-								inputs +
-								" inputs.");
-						}
-						ASSERT(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
-						#endif
+					// Link permanentcore-object
+					if (ji.factory == 0) {
+						// Link BaseSystem object
+						ji.core = &bs;
 					}
-					
-					//ji.core->SetArguments(*args);
-					
-					// Initialize
-					ji.core->Init();
 				}
 			}
 		}
@@ -979,11 +1039,13 @@ void Prioritizer::RefreshJobQueue() {
 	// Loop old queue and remove core-objects
 	for(int i = 0; i < old_job_queue.GetCount(); i++) {
 		JobItem& ji = old_job_queue[i];
-		if (ji.core) {
+		if (ji.core && ji.factory > 0) {
 			delete ji.core;
 			ji.core = NULL;
 		}
 	}
+	
+	LOG("Job queue size: " << new_job_queue.GetCount());
 	
 	// Set new queue
 	Swap(old_job_queue, new_job_queue);

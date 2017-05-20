@@ -12,64 +12,6 @@ class Overlook;
 
 
 
-template <class T, bool FLT>
-class DataBuffer {
-	Vector<T> vec;
-	double point;
-public:
-	DataBuffer() : point(0.01) {}
-	void Serialize(Stream& s) {
-		// This fast serialisation speeded one realm's loading: 5.434 -> 4.889
-		#ifdef BIG_ENDIANG
-			#error DataBuffer serialization is unimplemented.
-		#endif
-		if (s.IsStoring()) {
-			int count = vec.GetCount();
-			s.Put(&count, sizeof(int));
-			if (count)
-				s.Put(vec.Begin(), sizeof(T) * count);
-		} else {
-			int count;
-			s.Get(&count, sizeof(int));
-			ASSERT(count >= 0 && count < 1000000);
-			vec.SetCount(count);
-			if (count)
-				s.Get(vec.Begin(), sizeof(T) * count);
-		}
-		s % point;
-		
-		// Use this for cleaner version, also big endian compatible
-		//s % vec % point;
-	}
-	void Dump() {DUMP(vec);}
-	
-	//T& operator[] (int i) {return vec[i];}
-	//const T& operator[] (int i) const {return vec[i];}
-	
-	void Set(int i, double d) {vec[i] = FLT ? d / point : d;}
-	double Get(int i) const {return FLT ? vec[i] * point : vec[i];}
-	
-	void SetMax(int i, double d) {T& v = vec[i]; T t = FLT ? d / point : d; if (v < t) v = t;}
-	void SetMin(int i, double d) {T& v = vec[i]; T t = FLT ? d / point : d; if (v > t) v = t;}
-	void Inc(int i, double d) {T& v = vec[i]; T t = FLT ? d / point : d; v += t;}
-	
-	void Add(const T& value) {vec.Add(value);}
-	void SetPoint(double d) {point = d;}
-	void SetCount(int count) {vec.SetCount(count, 0);}
-	void SetCount(int count, T value) {vec.SetCount(count, value);}
-	void Clear() {vec.Clear();}
-	
-	int GetCount() const {return vec.GetCount();}
-	double GetPoint() const {ASSERT(!FLT); return point;}
-	
-};
-
-// The most used buffer classes
-//typedef DataBuffer<double> DataDouble;
-//typedef DataBuffer<char>   DataByte;
-//typedef DataBuffer<uint16, false> Data16;
-typedef DataBuffer<float, true> FloatVector;
-
 
 // Visual setting enumerators
 enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
@@ -90,81 +32,151 @@ struct DataLevel : public Moveable<DataLevel> {
 
 
 // Class for default visual settings for a single visible line of a container
-struct DataBufferSettings : public Moveable<DataBufferSettings> {
-	FloatVector* buffer;
+struct Buffer : public Moveable<Buffer> {
+	Vector<double> value;
 	String label;
 	Color clr;
 	int style, line_style, line_width, chr, begin, shift;
+	bool visible;
 	
-	DataBufferSettings() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0) {}
-	void Serialize(Stream& s) {s % label % clr % style % line_style % line_width % chr % begin % shift;}
+	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true) {}
+	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
+	void Set(int i, double value) {this->value[i] = value;}
+	void SetCount(int i) {value.SetCount(i, 0);}
+	
+	double Get(int i) const {return value[i];}
+	int GetCount() const {return value.GetCount();}
+	
 };
+
+typedef const Buffer ConstBuffer;
+
 
 // Class for registering input and output types of values of classes
 struct ValueRegister {
 	ValueRegister() {}
 	
-	virtual void AddIn(int phase, int type, int scale, int count) = 0;
-	virtual void AddInOptional(int phase, int type, int scale, int count) = 0;
-	virtual void AddOut(int phase, int type, int scale, int count) = 0;
+	virtual void AddIn(int phase, int type, int scale) = 0;
+	virtual void AddInOptional(int phase, int type, int scale) = 0;
+	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) = 0;
 	
 };
 
 struct CoreIO : public ValueRegister {
-	struct In : Moveable<In> {
-		In() {core = NULL; output_id = -1;}
-		CoreIO* core;
-		int output_id;
+	struct Out : Moveable<Out> {
+		Out() : visible(0) {}
+		Vector<Buffer> buffers;
+		int visible;
+		void Serialize(Stream& s) {s % buffers % visible;}
 	};
+	typedef Tuple4<CoreIO*, Out*, int, int> Source;
+	struct In : Moveable<In> {
+		In() {}
+		VectorMap<int, Source> sources;
+	};
+	Vector<In> inputs, optional_inputs;
+	Vector<Out> outputs;
+	Vector<Buffer*> buffers;
 	
-	Vector<In> inputs;
+	typedef const Out ConstOut;
+	typedef const In  ConstIn;
+	
 	
 	CoreIO() {}
 	
-	virtual void AddIn(int phase, int type, int scale, int count) {
+	virtual void AddIn(int phase, int type, int scale) {
 		In& in = inputs.Add();
 	}
 	
-	virtual void AddInOptional(int phase, int type, int scale, int count) {
+	virtual void AddInOptional(int phase, int type, int scale) {
 		
 	}
 	
-	virtual void AddOut(int phase, int type, int scale, int count) {
-		
+	virtual void AddOut(int phase, int type, int scale, int count, int visible) {
+		Out& out = outputs.Add();
+		out.buffers.SetCount(count);
+		out.visible = visible;
+		for(int i = 0; i < out.buffers.GetCount(); i++)
+			buffers.Add(&out.buffers[i]);
+	}
+	
+	void RefreshBuffers() {
+		buffers.SetCount(0);
+		for(int j = 0; j < outputs.GetCount(); j++)
+			for(int i = 0; i < outputs[j].buffers.GetCount(); i++)
+				buffers.Add(&outputs[j].buffers[i]);
 	}
 	
 	
 	template <class T> T* Get() {
+		T* t = dynamic_cast<T*>(this);
+		if (t) return t;
 		for(int i = 0; i < inputs.GetCount(); i++) {
-			CoreIO* c = inputs[i].core;
-			T* t = dynamic_cast<T*>(c);
-			if (t) return t;
-			t = c->Get<T>();
-			if (t) return t;
+			ConstIn& in = inputs[i];
+			for(int j = 0; j < in.sources.GetCount(); j++) {
+				CoreIO* c = in.sources[j].a;
+				ASSERT(c);
+				T* t = dynamic_cast<T*>(c);
+				if (t) return t;
+				t = c->Get<T>();
+				if (t) return t;
+			}
 		}
 		return NULL;
 	}
+	double GetBufferValue(int i, int shift) {return buffers[i]->value[shift];}
+	double GetBufferValue(int shift) {return outputs[0].buffers[0].value[shift];}
+	int GetBufferStyle(int i) {return buffers[i]->style;}
+	int GetBufferArrow(int i) {return buffers[i]->chr;}
+	int GetBufferLineWidth(int i) {return buffers[i]->line_width;}
+	int GetBufferType(int i) {return buffers[i]->line_style;}
+	Color GetBufferColor(int i) {return buffers[i]->clr;}
+	int GetBufferCount() {return buffers.GetCount();}
+	Buffer& GetBuffer(int buffer) {return *buffers[buffer];}
+	ConstBuffer& GetBuffer(int buffer) const {return *buffers[buffer];}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {
+		DUMPM(inputs[input].sources);
+		return inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer];}
+	Out& GetOutput(int output) {return outputs[output];}
+	ConstOut& GetOutput(int output) const {return outputs[output];}
+	int GetOutputCount() const {return outputs.GetCount();}
 	
 	
-	void SetInput(int input_id, CoreIO& core, int src_output_id) {
+	void AddInput(int sym_id, int tf_id, int input_id, CoreIO& core, int output_id) {
 		In& in = inputs[input_id];
-		in.core = &core;
-		in.output_id = src_output_id;
+		if (core.GetOutputCount()) {
+			in.sources.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
+		} else {
+			in.sources.Add(sym_id * 100 + tf_id, Source(&core, NULL, sym_id, tf_id));
+		}
 	}
+	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
+	void SetBufferLineWidth(int i, int line_width) {buffers[i]->line_width = line_width;}
+	void SetBufferType(int i, int style) {buffers[i]->line_style = style;}
+	void SetBufferStyle(int i, int style) {buffers[i]->style = style;}
+	void SetBufferShift(int i, int shift) {buffers[i]->shift = shift;}
+	void SetBufferBegin(int i, int begin) {buffers[i]->begin = begin;}
 	
+	
+};
+
+struct ArgumentBase {
+	void Arg(const char* var, bool& v) {}
+	void Arg(const char* var, int& v, int min=0, int max=0, int step=0) {}
+	void Arg(const char* var, double& v, double min=0.0, double max=0.0, double step=0.0) {}
+	void Arg(const char* var, Time& v, Time min=Time(1970,1,1), Time max=Time(2070,1,1), int step=0) {}
+	void Arg(const char* var, String& v) {}
 };
 
 class Core : public CoreIO {
 	
 	// Settings
-	Vector<FloatVector*> indices;
 	String short_name;
 	int counted;
 	
 	
 	// Visual settings
 	Vector<DataLevel> levels;
-	Vector<DataBufferSettings> buffer_settings;
 	Color levels_clr;
 	RWMutex lock;
 	double minimum, maximum;
@@ -173,8 +185,12 @@ class Core : public CoreIO {
 	int window_type;
 	int bars, next_count;
 	int sym_id, tf_id;
+	int period;
+	int visible_count;
+	int end_offset;
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
+	bool skip_allocate;
 	
 protected:
 	
@@ -184,20 +200,23 @@ public:
 	
 	virtual ~Core();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args) {}
+	virtual void Arguments(ArgumentBase& args) {}
 	virtual void Init() {}
 	virtual void Deinit() {}
 	virtual void Start() {}
 	virtual void GetIO(ValueRegister& reg) {Panic("Never here");}
 	virtual void Serialize(Stream& s) {
-		s % short_name % counted % levels % buffer_settings
+		s % short_name % counted % levels % outputs
 		  % levels_clr % minimum % maximum % point % levels_style
 		  % window_type % bars % next_count % has_maximum % has_minimum
 		  % skip_setcount;
+		if (s.IsLoading()) {
+			RefreshBuffers();
+		}
 	}
 	
+	
 	// Get settings
-	const String& GetBufferLabel(int i) {return buffer_settings[i].label;}
 	int GetBars() {return bars;}
 	int GetWindowType() {return window_type;}
 	int GetCounted() {return counted;}
@@ -205,8 +224,6 @@ public:
 	int GetCoreLevelCount() const {return levels.GetCount();}
 	int GetCoreLevelType(int i) const {return levels[i].style;}
 	int GetCoreLevelLineWidth(int i) const {return levels[i].line_width;}
-	int GetBufferStyle(int i) {return buffer_settings[i].style;}
-	int GetBufferArrow(int i) {return buffer_settings[i].chr;}
 	double GetMaximum() const {return maximum;}
 	double GetMinimum() const {return minimum;}
 	double GetCoreLevelValue(int i) const {return levels[i].value;}
@@ -215,30 +232,15 @@ public:
 	bool IsCoreSeparateWindow() {return window_type == WINDOW_SEPARATE;}
 	bool HasMaximum() const {return has_maximum;}
 	bool HasMinimum() const {return has_minimum;}
-	int GetBufferCount() {return buffer_settings.GetCount();}
-	FloatVector& GetBuffer(int buffer) {return *buffer_settings[buffer].buffer;}
-	const FloatVector& GetBuffer(int buffer) const {return *buffer_settings[buffer].buffer;}
-	FloatVector& GetIndex(int buffer) {return *indices[buffer];}
-	const DataBufferSettings& GetBufferSettings(int buffer) {return buffer_settings[buffer];}
-	double GetBufferValue(int i, int shift) {return buffer_settings[i].buffer->Get(shift);}
-	double GetBufferValue(int shift) {return buffer_settings[0].buffer->Get(shift);}
-	Color GetBufferColor(int i) {return buffer_settings[i].clr;}
-	int GetBufferLineWidth(int i) {return buffer_settings[i].line_width;}
-	int GetBufferType(int i) {return buffer_settings[i].line_style;}
-	int GetIndexCount() {return indices.GetCount();}
-	double GetIndexValue(int i, int shift) {return indices[i]->Get(shift);}
-	double GetIndexValue(int shift) {return indices[0]->Get(shift);}
 	int GetMinutePeriod();
-	
+	int GetTimeframe() const {return tf_id;}
+	int GetSymbol() const {return sym_id;}
+	int GetPeriod() const;
+	int GetVisibleCount() const {return visible_count;}
 	
 	
 	// Set settings
 	void SetWindowType(int i) {window_type = i;}
-	void SetBufferCount(int count) {buffer_settings.SetCount(count);}
-	void SetBufferColor(int i, Color c) {buffer_settings[i].clr = c;}
-	void SetBufferLineWidth(int i, int line_width) {buffer_settings[i].line_width = line_width;}
-	void SetBufferType(int i, int style) {buffer_settings[i].line_style = style;}
-	//void SetCoreDigits(int digits) {this->digits = digits;}
 	void SetPoint(double d);
 	void SetCoreLevelCount(int count) {levels.SetCount(count);}
 	void SetCoreLevel(int i, double value) {levels[i].value = value;}
@@ -248,19 +250,15 @@ public:
 	void SetCoreLevelsStyle(int style) {levels_style = style;}
 	void SetCoreMinimum(double value) {minimum = value; has_minimum = true;}
 	void SetCoreMaximum(double value) {maximum = value; has_maximum = true;}
-	void SetBufferLabel(int i, String label)  {buffer_settings[i].label = label;}
-	void SetBufferStyle(int i, int style)     {buffer_settings[i].style = style;}
-	void SetBufferArrow(int i, int chr)       {buffer_settings[i].chr   = chr;}
 	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
 	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
-	void SetBufferShift(int i, int shift) {buffer_settings[i].shift = shift;}
-	void SetBufferBegin(int i, int begin) {buffer_settings[i].begin = begin;}
-	void SetIndexCount(int count) {indices.SetCount(count);}
-	void SetIndexBuffer(int i, FloatVector& vec);
 	void ForceSetCounted(int i) {counted = i; bars = i; next_count = i;}
 	void SetSkipSetCount(bool b=true) {skip_setcount = b;}
 	void SetSymbol(int i) {sym_id = i;}
-	void SetTimeframe(int i) {tf_id = i;}
+	void SetTimeframe(int i, int period);
+	void SetBufferLabel(int i, const String& s) {}
+	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
+	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
 	
 	
 	// Visible main functions

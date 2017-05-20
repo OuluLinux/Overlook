@@ -10,7 +10,7 @@ using namespace Upp;
 class BaseSystem : public Core {
 	
 protected:
-	friend class DataBridge;
+	friend class DataBridgeCommon;
 	
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
@@ -36,6 +36,7 @@ protected:
 public:
 	
 	int GetCount(int period) const;
+	int GetCountTf(int tf_id) const;
 	Time GetTime(int period, int pos) const {return begin + base_period * period * pos;}
 	Time GetBegin() const {return begin;}
 	Time GetEnd() const {return end;}
@@ -70,12 +71,12 @@ public:
 	typedef BaseSystem CLASSNAME;
 	BaseSystem();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args) {}
+	virtual void Arguments(ArgumentBase& args) {}
 	virtual void Init();
 	virtual void Start() {}
 	
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddOut(SourcePhase, TimeValue, SymTf, 1);
+		reg.AddOut(SourcePhase, TimeValue, All);
 	}
 };
 

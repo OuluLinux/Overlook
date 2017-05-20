@@ -19,12 +19,12 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf);
 	}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	
 };
 
@@ -36,6 +36,7 @@ class Recurrent : public Core {
 	Vector<double> temperatures;
 	OnlineVariance var;
 	String model_str;
+	String type;
 	int batch;
 	int shifts;
 	int value_count;
@@ -54,14 +55,14 @@ public:
 	Recurrent();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf, 1);
-		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf);
+		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual bool ProcessRelease(const CoreProcessAttributes& attr);
 	
 	
@@ -133,16 +134,16 @@ class NARX : public Core {
 	
 public:
 	NARX();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual bool ProcessRelease(const CoreProcessAttributes& attr);
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, RealVolumeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, TimeOscillatorValue, SymTf, 1);
-		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(IndiPhase, RealVolumeValue, SymTf);
+		reg.AddIn(IndiPhase, TimeOscillatorValue, SymTf);
+		reg.AddOut(ForecastPhase, ForecastChangeValue, SymTf);
 	}
 	virtual int GetType() const {return SLOT_TF;}
 	
@@ -171,17 +172,25 @@ class Forecaster : public Core {
 	void Backward(const CoreProcessAttributes& attr);
 public:
 	Forecaster();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(ForecastPhase, ForecastChangeValue, Sym, 1);
-		reg.AddIn(IndiPhase, ForecastChannelValue, Sym, 1);
-		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym, 5);
-		reg.AddInOptional(IndiPhase, IndicatorValue, Sym, 5);
-		reg.AddOut(ForecastCombPhase, ForecastChangeValue, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddIn(IndiPhase, ForecastChannelValue, Sym);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddInOptional(ForecastPhase, ForecastChangeValue, Sym);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym);
+		reg.AddInOptional(IndiPhase, IndicatorValue, Sym);
+		reg.AddOut(ForecastCombPhase, ForecastChangeValue, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
@@ -197,14 +206,14 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym, 1);
-		reg.AddIn(IndiPhase, IdealOrderSignal, Sym, 1);
-		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym);
+		reg.AddIn(IndiPhase, IdealOrderSignal, Sym);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf);
 	}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	
 };
 
@@ -230,14 +239,14 @@ class RLAgent : public Core {
 	void Backward(const CoreProcessAttributes& attr);
 public:
 	RLAgent();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym, 1);
-		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
@@ -265,14 +274,14 @@ class DQNAgent : public Core {
 	void Backward(const CoreProcessAttributes& attr);
 public:
 	DQNAgent();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym, 1);
-		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
@@ -300,14 +309,14 @@ class MonaAgent : public Core {
 	
 public:
 	MonaAgent();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf, 1);
-		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym, 1);
-		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
+		reg.AddIn(ForecastCombPhase, ForecastChangeValue, Sym);
+		reg.AddOut(AgentPhase, ForecastOrderSignal, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
@@ -333,15 +342,15 @@ class MonaMetaAgent : public Core {
 	
 public:
 	MonaMetaAgent();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, Sym, 1);
-		reg.AddIn(AgentPhase, ForecastOrderSignal, Sym, 1);
-		reg.AddInOptional(AgentPhase, ForecastOrderSignal, Sym, 5);
-		reg.AddOut(AgentCombPhase, ForecastOrderSignal, SymTf, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, Sym);
+		reg.AddIn(AgentPhase, ForecastOrderSignal, Sym);
+		reg.AddInOptional(AgentPhase, ForecastOrderSignal, Sym);
+		reg.AddOut(AgentCombPhase, ForecastOrderSignal, SymTf);
 	}
 	virtual int GetType() const {return SLOT_SYMTF;}
 	
@@ -365,14 +374,14 @@ class MonaDoubleAgent : public Core {
 	void Forward(const CoreProcessAttributes& attr);
 public:
 	MonaDoubleAgent();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, All, 1);
-		reg.AddIn(AgentCombPhase, ForecastOrderSignal, All, 1);
-		reg.AddOut(AgentCombPhase, ForecastOrderSignal, All, 1);
+		reg.AddIn(IndiPhase, RealChangeValue, All);
+		reg.AddIn(AgentCombPhase, ForecastOrderSignal, All);
+		reg.AddOut(AgentCombPhase, ForecastOrderSignal, All);
 	}
 	virtual int GetType() const {return SLOT_ONCE;}
 	

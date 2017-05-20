@@ -7,6 +7,8 @@ INITBLOCK {
 	
 	
 	// Generic ctrls
+	
+	// BASESYSTEM MUST BE FIRST TO REGISTER ALWAYS
 	Factory::Register<BaseSystem, BaseSystemCtrl>("Base system");
 	
 	
@@ -19,6 +21,8 @@ INITBLOCK {
 	// Earlier (upper) slots can't find later registered (lower) slots as inputs!!!
 	
 	Factory::Register<DataBridge, GraphGroupCtrl>("DataBridge");
+	Factory::Register<VirtualNode, GraphGroupCtrl>("VirtualNode");
+	Factory::Register<SymbolSource, GraphGroupCtrl>("SymbolSource");
 	
 	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");

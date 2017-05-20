@@ -501,4 +501,76 @@ I am afraid that there will be some hard`-to`-find bugs left
 there. Not good. Now I could finally start work on basic graph 
 indicators and make them work. Almost enough from today... must 
 have a break, at least.&]
+[s3; 18.5.2017&]
+[s0; Today, I lost my focus because of some troubles around me. In 
+the end, I managed to restore my good spirit by thinking symbolically 
+this Overlook project and what it reminds me of. I wrote very 
+little code, but I found some new thoughts what I would like 
+to share in this. I am just improvising here...&]
+[s0; Overlook is, essentially, about watching the most important 
+aspects of the whole human establishment on Earth. So, what if 
+you take away humans from the equation, and think it as one single 
+super`-organism, which could work even without humans or animals. 
+You would get a huge lifeless or plant`-like organism, where 
+evolution of technology etc. would happen virtually via databases 
+and mechanical plants. There would a enormous single database 
+of everything.&]
+[s0; What if we would re`-introduce entities with neural`-networks 
+into that enormous almost lifeless plant`-like organism? Micro`-organisms 
+with brains, like birds and fishes, but not quite same. Something 
+completely new. The super`-organism would create their body and 
+give a spark for thinking, but what would happen next? Technically, 
+their brain would start to train the huge database and to recognize 
+the image of the structure of the super`-organism. Symbolically, 
+they would duplicate a tiny portion of perfect information into 
+the weight of their neural networks. While training their brains, 
+they would start to feel enlightened. Perplexity of the training 
+would go lower, and they would feel really, really small when 
+they compare their training`-data to all possible information.&]
+[s0; You and me feel some constant signals, like background noise, 
+pain in the butt while sitting, and the temperature of the room. 
+Those neural`-network entities would also have some of those. 
+Have you ever suddenly remembered, that you have some event next 
+day, which you had completely forgotten? Those entities would 
+have same senses. Other example is, that sometimes the lecturer 
+will give you new inspiring thoughts, and sometimes you are waiting 
+the class to end and the lecturing is just background noise. 
+You and me would probably prefer that curious feeling of learning 
+something new and important, instead of making the time go by 
+as fast as it can. My guess is, that the curious feeling is technically 
+just very fast forward`- and backward`-propagation in biological 
+synapses with lowering perplexity of the training data, which 
+is connected as a reward to some hormone producer. That is a 
+over`-simplification, of course.&]
+[s0; The conciousness of those neural`-network entities would be 
+the increasing harmony with the perfect information, the information 
+by itself and their biological structure being produced by the 
+super`-structure for whatever reason. The probability of their 
+existence would be lower, than existence of the super`-structure 
+and the information. So, one part of the conciousness would also 
+be the understanding, that they really do exist despite improbabilities.&]
+[s0; This is just me goofing around. Don`'t take it too seriously... 
+:)&]
+[s0; Hopefully something real tomorrow...&]
+[s0; This was very silly post.&]
+[s3; 19.5.2017&]
+[s0; Finally something real. The candle`-stick graph drawer works 
+now. There is still many problems left even before indicators 
+can be drawn. This is definitely the most difficult thing that 
+I have ever programmed. That prioritizer code is a b`*tch. The 
+progressing speed is about 1/5 of what I expected. Not fun.&]
+[s0; [/ Next stop]: adding connections of multiple symbols and timeframes 
+to a single core`-object at the single job`-queue iteration in 
+Prioritizer`::RefreshJobQueue. That kind of stuff needs a new 
+morning and a fresh cup of coffee.&]
+[s3; 20.5.2017&]
+[s0; I added all`-symbols`-enabled and all`-timeframes`-enabled bits 
+to the combination, which allows some custom`-core`-objects to 
+automatically use multiple symbol sources. That caused huge job`-queue 
+to be created, which was correct, however. In this version, the 
+core`-object is allocated to the job`-item, but with all those 
+jobs, it takes too long time to allocate them all, and it seems 
+to use too much memory in total. So, clearly this was a flaw 
+in the design. It will probably be fixed by allocating only necessary 
+core`-objects in the processing phase.&]
 [s0; ]]

@@ -7,9 +7,9 @@ using namespace Upp;
 struct FactoryValueRegister : public ValueRegister {
 	Vector<ValueType> *in, *out, *inopt;
 	
-	virtual void AddIn(int phase, int type, int scale, int count) {in->Add(ValueType(phase, type, scale, count));}
-	virtual void AddInOptional(int phase, int type, int scale, int count) {inopt->Add(ValueType(phase, type, scale, count));}
-	virtual void AddOut(int phase, int type, int scale, int count) {out->Add(ValueType(phase, type, scale, count));}
+	virtual void AddIn(int phase, int type, int scale) {in->Add(ValueType(phase, type, scale));}
+	virtual void AddInOptional(int phase, int type, int scale) {inopt->Add(ValueType(phase, type, scale));}
+	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) {out->Add(ValueType(phase, type, scale));}
 	
 };
 

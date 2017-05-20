@@ -32,11 +32,11 @@ void Core::SetReady(int sym_id, int tf_id, int pos, const CoreProcessAttributes&
 }
 
 void Core::SetReady(int pos, const CoreProcessAttributes& attr, bool ready) {
-	SetReady(attr.sym_id, attr.tf_id, pos, attr, ready);
+	SetReady(GetSymbol(), GetTimeframe(), pos, attr, ready);
 }
 
 bool Core::IsReady(int pos, const CoreProcessAttributes& attr) {
-	byte* ready_slot = ready[attr.sym_id][attr.tf_id].Begin();
+	byte* ready_slot = ready[GetSymbol()][GetTimeframe()].Begin();
 	if (!ready_slot)
 		return false;
 	int slot_pos = attr.slot_pos;
@@ -59,9 +59,13 @@ Core::Core()
 	maximum = 0;
 	minimum = 0;
 	skip_setcount = false;
+	skip_allocate = false;
 	point = 0.01;
 	sym_id = -1;
 	tf_id = -1;
+	period = 0;
+	visible_count = 0;
+	end_offset = 0;
 	
 }
 
@@ -72,58 +76,37 @@ Core::~Core() {
 void Core::ClearContent() {
 	bars = 0;
 	counted = 0;
-	for(int i = 0; i < indices.GetCount(); i++) {
-		FloatVector& id = *indices[i];
-		id.Clear();
+	for(int i = 0; i < buffers.GetCount(); i++) {
+		buffers[i]->value.Clear();
 	}
 }
 
 
-void Core::Refresh()
-{
-	/*
+void Core::Refresh() {
 	lock.EnterWrite();
 	
-	if (src.Is()) {
-		Core* cont = src.Get<Core>();
-		if (cont)
-			cont->Refresh();
-	}
-		
+	// Some indicators might want the set size by them selves
 	if (!skip_setcount) {
-		BarData* src_data = src.Get<BarData>();
-		if (src_data) {
-			int count = src_data->GetBars();
-			for(int i = 0; i < indices.GetCount(); i++) {
-				indices[i]->SetCount(count);
+		int count = Get<BaseSystem>()->GetCountTf(tf_id) + end_offset;
+		bars = count;
+		next_count = count;
+		if (!skip_allocate) {
+			for(int i = 0; i < buffers.GetCount(); i++) {
+				buffers[i]->value.SetCount(count, 0);
 			}
-			bars = count;
-			next_count = count;
 		}
 	}
-	
-	RefreshDependencies();
+		
 	Start();
-
+	
 	counted = next_count;
 	lock.LeaveWrite();
-	*/
 }
 
-void Core::SetIndexBuffer ( int i, FloatVector& vec)
-{
-	indices[i] = &vec;
-	if (i < buffer_settings.GetCount())
-		buffer_settings[i].buffer = &vec;
-}
 
 void Core::SetPoint(double d) {
 	point = d;
-	for(int i = 0; i < indices.GetCount(); i++) {
-		indices[i]->SetPoint(d);
-	}
 }
-
 
 
 
@@ -132,8 +115,7 @@ void Core::SetPoint(double d) {
 
 
 double Core::Open ( int shift ) {
-	//return data->GetIndexValue(0, shift);
-	Panic("TODO"); return 0;
+	return inputs[0].sources[0].b->buffers[0].Get(shift);
 }
 
 double Core::High( int shift ) {
@@ -208,8 +190,18 @@ int Core::LowestOpen(int period, int shift) {
 }
 
 int Core::GetMinutePeriod() {
-	
-	Panic("TODO"); return 0;
+	BaseSystem* bs = Get<BaseSystem>();
+	return bs->GetBasePeriod() * bs->GetPeriod(tf_id);
+}
+
+int Core::GetPeriod() const {
+	ASSERT(period != 0);
+	return period;
+}
+
+void Core::SetTimeframe(int i, int period) {
+	tf_id = i;
+	this->period = period;
 }
 
 double Core::GetAppliedValue ( int applied_value, int i )

@@ -10,20 +10,20 @@ class WdayHourChanges : public Core {
 protected:
 	Vector<OnlineVariance> wdayhour;
 	
-	FloatVector stddev, mean;
+	Vector<double> stddev, mean;
 	
 public:
 	WdayHourChanges();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	const OnlineVariance& GetOnlineVariance(int shift);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -34,21 +34,21 @@ protected:
 	MovingOnlineVariance total;
 	Vector<MovingOnlineVariance> wdayhour, wday, hour;
 	
-	FloatVector t_pre_stddev, t_pre_mean;
-	FloatVector h_pre_stddev, h_pre_mean;
-	FloatVector d_pre_stddev, d_pre_mean;
-	FloatVector dh_pre_stddev, dh_pre_mean;
+	Vector<double> t_pre_stddev, t_pre_mean;
+	Vector<double> h_pre_stddev, h_pre_mean;
+	Vector<double> d_pre_stddev, d_pre_mean;
+	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourStats();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -57,21 +57,21 @@ class WdayHourDiff : public Core {
 protected:
 	
 	int var_period_fast, var_period_diff;
-	FloatVector t_pre_stddev, t_pre_mean;
-	FloatVector h_pre_stddev, h_pre_mean;
-	FloatVector d_pre_stddev, d_pre_mean;
-	FloatVector dh_pre_stddev, dh_pre_mean;
+	Vector<double> t_pre_stddev, t_pre_mean;
+	Vector<double> h_pre_stddev, h_pre_mean;
+	Vector<double> d_pre_stddev, d_pre_mean;
+	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourDiff();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -81,21 +81,21 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> total, wdayhour, wday, hour;
 	
-	FloatVector t_pre_stddev, t_pre_mean;
-	FloatVector h_pre_stddev, h_pre_mean;
-	FloatVector d_pre_stddev, d_pre_mean;
-	FloatVector dh_pre_stddev, dh_pre_mean;
+	Vector<double> t_pre_stddev, t_pre_mean;
+	Vector<double> h_pre_stddev, h_pre_mean;
+	Vector<double> d_pre_stddev, d_pre_mean;
+	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourForecastErrors();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -104,22 +104,22 @@ public:
 class WdayHourErrorAdjusted : public Core {
 	
 protected:
-	FloatVector t_pre_stddev, t_pre_mean;
-	FloatVector h_pre_stddev, h_pre_mean;
-	FloatVector d_pre_stddev, d_pre_mean;
-	FloatVector dh_pre_stddev, dh_pre_mean;
+	Vector<double> t_pre_stddev, t_pre_mean;
+	Vector<double> h_pre_stddev, h_pre_mean;
+	Vector<double> d_pre_stddev, d_pre_mean;
+	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 	
 public:
 	WdayHourErrorAdjusted();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -132,22 +132,22 @@ protected:
 	MovingOnlineVariance week;
 	Vector<MovingOnlineVariance> month, quarter, year;
 	
-	FloatVector w_pre_stddev, w_pre_mean;
-	FloatVector m_pre_stddev, m_pre_mean;
-	FloatVector q_pre_stddev, q_pre_mean;
-	FloatVector y_pre_stddev, y_pre_mean;
+	Vector<double> w_pre_stddev, w_pre_mean;
+	Vector<double> m_pre_stddev, m_pre_mean;
+	Vector<double> q_pre_stddev, q_pre_mean;
+	Vector<double> y_pre_stddev, y_pre_mean;
 	
 	
 public:
 	WeekStats();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -157,21 +157,21 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> week, month, quarter, year;
 	
-	FloatVector w_pre_stddev, w_pre_mean;
-	FloatVector m_pre_stddev, m_pre_mean;
-	FloatVector q_pre_stddev, q_pre_mean;
-	FloatVector y_pre_stddev, y_pre_mean;
+	Vector<double> w_pre_stddev, w_pre_mean;
+	Vector<double> m_pre_stddev, m_pre_mean;
+	Vector<double> q_pre_stddev, q_pre_mean;
+	Vector<double> y_pre_stddev, y_pre_mean;
 	
 public:
 	WeekStatsForecastErrors();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -180,21 +180,21 @@ public:
 class WeekStatsErrorAdjusted : public Core {
 	
 protected:
-	FloatVector w_pre_stddev, w_pre_mean;
-	FloatVector m_pre_stddev, m_pre_mean;
-	FloatVector q_pre_stddev, q_pre_mean;
-	FloatVector y_pre_stddev, y_pre_mean;
+	Vector<double> w_pre_stddev, w_pre_mean;
+	Vector<double> m_pre_stddev, m_pre_mean;
+	Vector<double> q_pre_stddev, q_pre_mean;
+	Vector<double> y_pre_stddev, y_pre_mean;
 	
 public:
 	WeekStatsErrorAdjusted();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -202,18 +202,18 @@ public:
 class WdayHourDiffWeek : public Core {
 	
 protected:
-	FloatVector mean, cdf;
+	Vector<double> mean, cdf;
 	
 public:
 	WdayHourDiffWeek();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -222,21 +222,21 @@ public:
 class WdayHourWeekAdjusted : public Core {
 	
 protected:
-	FloatVector t_pre_stddev, t_pre_mean;
-	FloatVector h_pre_stddev, h_pre_mean;
-	FloatVector d_pre_stddev, d_pre_mean;
-	FloatVector dh_pre_stddev, dh_pre_mean;
+	Vector<double> t_pre_stddev, t_pre_mean;
+	Vector<double> h_pre_stddev, h_pre_mean;
+	Vector<double> d_pre_stddev, d_pre_mean;
+	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourWeekAdjusted();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -246,7 +246,7 @@ class SubTfChanges : public Core {
 	
 protected:
 	int other_counted;
-	FloatVector stddev, mean, absstddev, absmean;
+	Vector<double> stddev, mean, absstddev, absmean;
 	
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
@@ -257,13 +257,13 @@ protected:
 public:
 	SubTfChanges();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -272,7 +272,7 @@ class MetaTfChanges : public Core {
 	
 protected:
 	int offset;
-	FloatVector stddev, mean, absstddev, absmean;
+	Vector<double> stddev, mean, absstddev, absmean;
 	
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
@@ -282,13 +282,13 @@ protected:
 public:
 	MetaTfChanges();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -297,19 +297,19 @@ public:
 class HourHeat : public Core {
 	
 protected:
-	FloatVector sub, day, sum;
+	Vector<double> sub, day, sum;
 	Core *subtf, *metatf;
 	
 public:
 	HourHeat();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -318,7 +318,7 @@ class MetaTfCDF : public Core {
 	
 protected:
 	int offset;
-	FloatVector value;
+	Vector<double> value;
 	
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour;
@@ -328,13 +328,13 @@ protected:
 public:
 	MetaTfCDF();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -345,19 +345,19 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> s1, s2, s3; // Shifts
 	
-	FloatVector shift1_mean, shift2_mean, shift3_mean, mean_av;
-	FloatVector shift1_stddev, shift2_stddev, shift3_stddev, stddev_av;
+	Vector<double> shift1_mean, shift2_mean, shift3_mean, mean_av;
+	Vector<double> shift1_stddev, shift2_stddev, shift3_stddev, stddev_av;
 	
 public:
 	WdayHourTrending();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -367,18 +367,18 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> vars;
 	
-	FloatVector dir, mean, stddev, success, erradj;
+	Vector<double> dir, mean, stddev, success, erradj;
 	
 public:
 	WdayHourTrendSuccess();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -386,20 +386,20 @@ public:
 class OpportinityQuality : public Core {
 	
 protected:
-	Array<FloatVector> buffers;
-	FloatVector quality;
+	Array<Vector<double>> buffers;
+	Vector<double> quality;
 	Vector<double> weights;
 	
 public:
 	OpportinityQuality();
 	
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -407,7 +407,7 @@ public:
 class EdgeStatistics : public Core {
 	
 protected:
-	FloatVector mean, dev;
+	Vector<double> mean, dev;
 	int period, method, slowing;
 	//DataVar buf;
 	int es_counted;
@@ -423,11 +423,11 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % es_counted % vars;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -438,7 +438,7 @@ public:
 class TideStatistics : public Core {
 	
 protected:
-	FloatVector mean, dev;
+	Vector<double> mean, dev;
 	int period, ts_counted;
 	Vector<OnlineVariance> vars;
 	int event_probable_edge;
@@ -452,11 +452,11 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % ts_counted % vars;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -467,7 +467,7 @@ public:
 class Disconnections : public Core {
 	
 protected:
-	FloatVector discbuf;
+	Vector<double> discbuf;
 	int period;
 	//DataVar buf1;
 	//DataVar buf2;
@@ -484,18 +484,18 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % discbuf % dis_counted % prev_disc_pos;}
 	
 	virtual void Init();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 
 class EventOsc : public Core {
-	FloatVector info, low, med, high;
+	Vector<double> info, low, med, high;
 	double mul;
 	Index<String> keys;
 	EventManager* emgr;
@@ -508,18 +508,18 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 
 class GroupEventOsc : public Core {
-	FloatVector info, low, med, high;
+	Vector<double> info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
 	
@@ -530,11 +530,11 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -542,7 +542,7 @@ public:
 
 
 class FeatureOsc : public Core {
-	FloatVector info, low, med, high;
+	Vector<double> info, low, med, high;
 	double mul;
 	FeatureDetector* feat;
 	int counted_features;
@@ -554,18 +554,18 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
 
 
 class GroupFeatureOsc : public Core {
-	FloatVector info, low, med, high;
+	Vector<double> info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
 	
@@ -576,11 +576,11 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf, 1);
-		//reg.AddOut(, , SymTf, 1);
+		//reg.AddIn(, , SymTf);
+		//reg.AddOut(, , SymTf);
 	}
 };
 
@@ -599,13 +599,13 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		/*reg.AddIn(IndiPhase, ForecastChangeValue, SymTf, 1);
-		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf, 1);*/
-		reg.AddOut(IndiPhase, ForecastChannelValue, SymTf, 1);
+		/*reg.AddIn(IndiPhase, ForecastChangeValue, SymTf);
+		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf);*/
+		reg.AddOut(IndiPhase, ForecastChannelValue, SymTf);
 	}
-	virtual void SetArguments(const VectorMap<String, Value>& args);
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
-	virtual bool Process(const CoreProcessAttributes& attr);
+	virtual void Start();
 	
 };
 

@@ -5,6 +5,7 @@ namespace Overlook {
 using namespace Upp;
 
 BaseSystem::BaseSystem() {
+	SetSkipAllocate();
 	timediff = 0;
 	base_period = 60;
 	

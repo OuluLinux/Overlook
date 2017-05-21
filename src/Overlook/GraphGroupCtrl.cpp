@@ -43,16 +43,22 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 	ASSERT(bs);
 	ASSERT(src);
 	ClearCores();
-	bardata = src->Get<DataBridge>();
-	ASSERT(bardata);
-	GraphCtrl& main = AddGraph(bardata);
-	bool separate_window = src->IsCoreSeparateWindow();
-	if (!separate_window) {
-		main.AddSource(src);
+	BarData* src_cast = dynamic_cast<BarData*>(src);
+	if (src_cast) {
+		bardata = src_cast;
+		GraphCtrl& main = AddGraph(bardata);
 	} else {
-		AddGraph(src);
+		bardata = src->Get<BarData>();
+		ASSERT(bardata);
+		GraphCtrl& main = AddGraph(bardata);
+		bool separate_window = src->IsCoreSeparateWindow();
+		if (!separate_window) {
+			main.AddSource(src);
+		} else {
+			AddGraph(src);
+		}
+		period = bs->GetPeriod(src->GetTimeframe());
 	}
-	period = bs->GetPeriod(src->GetTimeframe());
 }
 
 void GraphGroupCtrl::ClearCores() {

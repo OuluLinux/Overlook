@@ -3889,7 +3889,7 @@ void CorrelationOscillator::Init() {
 	/*
 	ids = GetResolver().FindLinkPath("/id");
 	if (!ids) throw DataExc();
-	int id = GetId();
+	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
 	sym_count = ids->keys.GetCount() - 1 - id;

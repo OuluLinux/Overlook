@@ -6,9 +6,6 @@ namespace Overlook {
 
 
 class SpreadStats : public Core {
-	Vector<double> mean_cost;
-	BridgeAskBid* askbid;
-	Vector<OnlineVariance> stats;
 	
 public:
 	SpreadStats();
@@ -18,8 +15,8 @@ public:
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+		reg.AddIn(SourcePhase, AskBidValue, SymTf);
+		reg.AddOut(SourcePhase, SpreadValue, SymTf, 1, 1);
 	}
 };
 

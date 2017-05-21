@@ -2579,7 +2579,7 @@ void EventOsc::Init() {
 	
 	if (mul <= 0 || mul > 0.9) throw DataExc();
 	
-	int id = GetId();
+	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
 	PathResolver& res = GetResolver();
@@ -2685,7 +2685,7 @@ void GroupEventOsc::Init() {
 	if (ownmul < 0.01) throw DataExc();
 	
 	int period = GetPeriod();
-	int id = GetId();
+	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
 	PathResolver& res = GetResolver();
@@ -2697,7 +2697,7 @@ void GroupEventOsc::Init() {
 	
 	feat_count = link->keys.GetCount();
 	for(int i = 0; i < feat_count; i++) {
-		int id = link->keys[i].keys[0].link->GetId();
+		int id = link->keys[i].keys[0].link->GetSymbol();
 		if (id == -1) throw DataExc();
 		if (RequireIdIndicator(id, period, "eosc", "mul", mul)) throw DataExc();
 	}
@@ -2725,7 +2725,7 @@ void GroupEventOsc::Start() {
 	/*
 	int counted = GetCounted();
 	int bars = GetBars();
-	int id = GetId();
+	int id = GetSymbol();
 	double mul = 1.0 / (feat_count - 1.0);
 	double ownmul = mul * this->ownmul;
 	for (int i = counted; i < bars; i++) {
@@ -2782,7 +2782,7 @@ void FeatureOsc::Init() {
 	
 	if (mul <= 0 || mul > 0.9) throw DataExc();
 	
-	int id = GetId();
+	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
 	if (RequireIndicator("feat")) throw DataExc();
@@ -2872,7 +2872,7 @@ void GroupFeatureOsc::Init() {
 	if (ownmul < 0.01) throw DataExc();
 	
 	int period = GetPeriod();
-	int id = GetId();
+	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
 	PathResolver& res = GetResolver();
@@ -2907,7 +2907,7 @@ void GroupFeatureOsc::Start() {
 	/*
 	int counted = GetCounted();
 	int bars = GetBars();
-	int id = GetId();
+	int id = GetSymbol();
 	double mul = 1.0 / (feat_count - 1.0);
 	double ownmul = mul * this->ownmul;
 	for (int i = counted; i < bars; i++) {

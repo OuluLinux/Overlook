@@ -413,48 +413,61 @@ void VirtualNode::Start() {
 	const Currency& c = mt.GetCurrency(cur);
 	int tf = GetTimeframe();
 	
-	for(int i = 0; i < bars; i++) {
-		int count = 0;
+	typedef Tuple3<ConstBuffer*,ConstBuffer*,bool> Source;
+	Vector<Source> sources;
+	for(int i = 0; i < c.pairs0.GetCount(); i++) {
+		int id = c.pairs0[i];
+		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
+		sources.Add(Source(&open_buf, &vol_buf, false));
+	}
+	for(int i = 0; i < c.pairs1.GetCount(); i++) {
+		int id = c.pairs1[i];
+		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
+		sources.Add(Source(&open_buf, &vol_buf, true));
+	}
+	
+	int counted = GetCounted();
+	if (!counted) {
+		open.Set(0, 1.0);
+		low.Set(0, 1.0);
+		high.Set(0, 1.0);
+		volume.Set(0, 0);
+		counted = 1;
+	}
+	
+	for(int i = counted; i < bars; i++) {
 		double change_sum = 0;
 		double volume_sum = 0;
-		for(int j = 0; j < c.pairs0.GetCount(); j++) {
-			int id = c.pairs0[j];
+		
+		for(int j = 0; j < sources.GetCount(); j++) {
+			Source& s = sources[j];
+			ConstBuffer& open_buf = *s.a;
+			ConstBuffer& vol_buf  = *s.b;
+			bool inverse = s.c;
 			
-			ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
-			ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
-			double open   = open_buf.Get(i);
-			double close  = open_buf.Get(i+1);
+			double open   = open_buf.Get(i-1);
+			double close  = open_buf.Get(i);
 			double vol    = vol_buf.Get(i);
 			double change = (close / open) - 1.0;
+			if (inverse) change *= -1.0;
 			
 			change_sum += change;
 			volume_sum += vol;
-			count++;
 		}
 		
-		for(int j = 0; j < c.pairs1.GetCount(); j++) {
-			int id = c.pairs1[j];
-			
-			ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
-			ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
-			double open   = open_buf.Get(i);
-			double close  = open_buf.Get(i+1);
-			double vol    = vol_buf.Get(i);
-			double change = (close / open) - 1.0;
-			
-			change_sum -= change;
-			volume_sum += vol;
-			count++;
-		}
-		
-		double prev = i ? open.Get(i-1) : 1.0;
-		double change = change_sum / count;
-		double value = prev * change;
+		double prev = open.Get(i-1);
+		double change = change_sum / sources.GetCount();
+		double value = prev * (1.0 + change);
+		double volume_av = volume_sum / sources.GetCount();
 		
 		open.Set(i, value);
 		low.Set(i, value);
 		high.Set(i, value);
-		volume.Set(i, volume_sum);
+		volume.Set(i, volume_av);
+		
+		LOG(Format("pos=%d open=%f volume=%f", i, value, volume_av));
 		
 		if (i) {
 			low		.Set(i-1, Upp::min(low		.Get(i-1), value));
@@ -486,30 +499,21 @@ void BridgeAskBid::Arguments(ArgumentBase& args) {
 }
 
 void BridgeAskBid::Init() {
-	/*Core::Init();
-	
-	//SetBufferCount(2, 2);
 	SetBufferColor(0, Red());
-	//SetIndexBuffer(0, ask );
 	SetBufferColor(1, Green());
-	//SetIndexBuffer(1, bid );
-	//SetBufferColor(2, Red());
-	////SetIndexBuffer(2, ask_high );
-	//SetBufferColor(3, Green());
-	////SetIndexBuffer(3, bid_low );
 	
 	int period = GetMinutePeriod();
 	bool force_d0 = period >= 7*24*60;
-	stats.SetCount(force_d0 ? 1 : 5*24*60 / period);*/
+	stats.SetCount(force_d0 ? 1 : 5*24*60 / period);
 }
 
 void BridgeAskBid::Start() {
-	/*
-	int id = GetId();
+	int id = GetSymbol();
+	int tf = GetTimeframe();
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	if (id == -1) return 1;
+	ASSERTEXC(id >= 0);
 	
 	int period = GetMinutePeriod();
 	int h_count = 24 * 60 / period; // originally hour only
@@ -518,7 +522,7 @@ void BridgeAskBid::Start() {
 	// Open askbid-file
 	String local_askbid_file = ConfigFile("askbid.bin");
 	FileIn src(local_askbid_file);
-	if (!src.IsOpen() || !src.GetSize()) return 1;
+	ASSERTEXC(src.IsOpen() && src.GetSize());
 	int data_size = src.GetSize();
 	
 	src.Seek(cursor);
@@ -553,20 +557,24 @@ void BridgeAskBid::Start() {
 		
 		OnlineVariance& var = stats[dh];
 		
-		double spread = ask - bid;
-		if (spread != 0.0)
-			var.AddResult(spread);
+		if (ask != 0.0 && bid != 0.0) {
+			double spread = ask - bid;
+			if (spread != 0.0)
+				var.AddResult(spread);
+		}
 	}
 	
 	
-	const Vector<double>& open = GetSource().Get<Core>()->GetOpen();
+	ConstBuffer& open = GetInputBuffer(0, id, tf, 0);
+	BaseSystem& bs = *Get<BaseSystem>();
+	Buffer& ask = GetBuffer(0);
+	Buffer& bid = GetBuffer(1);
 	
-	DataTime& dt = GetTime();
 	for(int i = counted; i < bars; i++) {
 		
 		double spread = 0;
 		
-		Time t = dt.GetTime(GetPeriod(), i);
+		Time t = bs.GetTime(GetPeriod(), i);
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;
 		int dh = h + d * h_count;
@@ -585,13 +593,12 @@ void BridgeAskBid::Start() {
 			}
 		}
 		
-		double ask = open.Get(i);
-		double bid = ask - spread;
+		double ask_value = open.Get(i);
+		double bid_value = ask_value - spread;
 		
-		this->ask.Set(i, ask);
-		this->bid.Set(i, bid);
+		ask.Set(i, ask_value);
+		bid.Set(i, bid_value);
 	}
-	*/
 }
 
 
@@ -617,7 +624,31 @@ void SymbolSource::Init() {
 }
 
 void SymbolSource::Start() {
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
 	
+	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	int sym_count = common.GetSymbolCount();
+	int sym = GetSymbol();
+	int cur = sym - sym_count;
+	int tf = GetTimeframe();
+	int counted = GetCounted();
+	int bars = GetBars();
+	int input = cur < 0 ? 0 : 1; // DataBridgeValue or VirtualNode
+	
+	ConstBuffer& src_open   = GetInputBuffer(input, sym, tf, 0);
+	ConstBuffer& src_low    = GetInputBuffer(input, sym, tf, 1);
+	ConstBuffer& src_high   = GetInputBuffer(input, sym, tf, 2);
+	ConstBuffer& src_volume = GetInputBuffer(input, sym, tf, 3);
+	
+	for(int i = counted; i < bars; i++) {
+		open	.Set(i, src_open.Get(i));
+		low		.Set(i, src_low.Get(i));
+		high	.Set(i, src_high.Get(i));
+		volume	.Set(i, src_volume.Get(i));
+	}
 }
 
 }

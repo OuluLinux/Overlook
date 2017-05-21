@@ -47,8 +47,8 @@ void Overlook::Init() {
 	for(int i = 0; i < Factory::GetCtrlFactories().GetCount(); i++)
 		ctrllist.Add(Factory::GetCtrlFactories()[i].a);
 	
-	tflist.SetIndex(0);
-	symlist.SetIndex(0);
+	tflist.SetIndex(tflist.GetCount()-2); // TODO: clear these development values
+	symlist.SetIndex(70);
 	ctrllist.SetIndex(1);
 	
 	PostCallback(THISBACK(SetView));

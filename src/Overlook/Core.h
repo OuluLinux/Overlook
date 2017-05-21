@@ -284,7 +284,9 @@ protected:
 };
 
 
-
+class BarData : public Core {
+	
+};
 
 
 

@@ -5,131 +5,55 @@ namespace Overlook {
 
 
 SpreadStats::SpreadStats() {
-	//AddValue<double>("Average Spread");
-	
-	/*SetStyle(
-		"{"
-			"\"window_type\":\"SEPARATE\","
-			"\"value0\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":3,"
-			"}"
-		"}"
-	);*/
+	SetCoreSeparateWindow();
 }
 
 void SpreadStats::Arguments(ArgumentBase& args) {
 	
 }
 
-/*void SpreadStats::SerializeCache(Stream& s, int sym_id, int tf_id) {
-	TimeVector& tv = GetTimeVector();
-	int tf_count = tv.GetPeriodCount();
-	int i = sym_id * tf_count + tf_id;
-	SymTf& symtf = data[i];
-	s % symtf;
-}*/
-
 void SpreadStats::Init() {
-	/*TimeVector& tv = GetTimeVector();
-	
-	int sym_count = tv.GetSymbolCount();
-	int tf_count = tv.GetPeriodCount();
-	int total = sym_count * tf_count;
-	data.SetCount(total);
-	
-	for(int i = 0; i < total; i++) {
-		int sym = i / tf_count;
-		int tf = i % tf_count;
-		SymTf& s = data[i];
-		
-		int period = tv.GetPeriod(tf) * tv.GetBasePeriod() / 60; // minutes, not seconds
-		bool force_d0 = period >= 7*24*60;
-		s.stats.SetCount(force_d0 ? 1 : 5*24*60 / period);
-		s.has_stats = false;
-	}*/
+	SetBufferLineWidth(0, 3);
+	SetBufferColor(0, Color(0,128,0));
 }
 
 void SpreadStats::Start() {
-	/*
-	TimeVector& tv = GetTimeVector();
-	
-	int sym_count = tv.GetSymbolCount();
-	int tf_count = tv.GetPeriodCount();
-	SymTf& s = data[GetSymbol() * tf_count + GetTimeframe()];
-	
-	int period = tv.GetPeriod(GetTimeframe()) * tv.GetBasePeriod() / 60; // minutes, not seconds
+	int id = GetSymbol();
+	int tf = GetTimeframe();
+	int bars = GetBars();
+	int counted = GetCounted();
+	int period = GetMinutePeriod();
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
+	BridgeAskBid& ab = *Get<BridgeAskBid>();
+	BaseSystem& bs = *Get<BaseSystem>();
+	Buffer& spread_buf = GetBuffer(0);
+	
+	for (int i = counted; i < bars; i++) {
 		
-	if (!s.has_stats) {
+		double spread = 0;
 		
-		// Open askbid-file
-		String local_askbid_file = ConfigFile("askbid.bin");
-		FileIn src(local_askbid_file);
-		ASSERTEXC_(src.IsOpen() && src.GetSize(), "DataBridge should have downloaded askbid.bin");
-		int data_size = src.GetSize();
-		int cursor = 0;
-		
-		src.Seek(cursor);
-		
-		int struct_size = 4 + 4 + 8 + 8;
-		
-		while ((cursor + struct_size) <= data_size) {
+		Time t = bs.GetTime(GetPeriod(), i);
+		int h = (t.minute + t.hour * 60) / period;
+		int d = DayOfWeek(t) - 1;
+		int dh = h + d * h_count;
+		if (force_d0) {
+			h = 0;
+			d = 0;
+			dh = 0;
+		}
+		if (d == -1 || d == 5) {
 			
-			int timestamp, askbid_id;
-			double ask, bid;
-			src.Get(&timestamp, 4);
-			src.Get(&askbid_id, 4);
-			src.Get(&ask, 8);
-			src.Get(&bid, 8);
-			cursor += struct_size;
-			
-			if (GetSymbol() != askbid_id) continue;
-			
-			Time time = TimeFromTimestamp(timestamp);
-			int h = (time.minute + time.hour * 60) / period;
-			int d = DayOfWeek(time) - 1;
-			int dh = h + d * h_count;
-			
-			if (force_d0) {
-				h = 0;
-				d = 0;
-				dh = 0;
+		}
+		else {
+			OnlineVariance& var = ab.stats[dh];
+			if (var.GetEventCount()) {
+				spread = var.GetMean();
 			}
-			// Skip weekend
-			else if (d == -1 || d == 5) {
-				continue;
-			}
-			
-			OnlineVariance& var = s.stats[dh];
-			
-			double spread = ask / bid - 1.0;
-			if (spread > 0.0) // must be technically realistic
-				var.AddResult(spread);
 		}
 		
-		s.has_stats = true;
+		spread_buf.Set(i, spread);
 	}
-	
-	// Get value
-	Time time = tv.GetTime(GetPeriod(), GetBars());
-	int h = (time.minute + time.hour * 60) / period;
-	int d = DayOfWeek(time) - 1;
-	int dh = h + d * h_count;
-	if (force_d0 || d == -1 || d == 5) {
-		h = 0;
-		d = 0;
-		dh = 0;
-	}
-	OnlineVariance& var = s.stats[dh];
-	double mean_spread = var.GetMean();
-	
-	// Write value
-	double* out = GetValue<double>(0, attr);
-	*out = mean_spread;
-	
-	return true;*/
 }
 
 

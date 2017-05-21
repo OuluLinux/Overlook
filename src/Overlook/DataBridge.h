@@ -42,7 +42,7 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-class DataBridge : public Core {
+class DataBridge : public BarData {
 	
 public:
 	typedef DataBridge CLASSNAME;
@@ -61,7 +61,7 @@ public:
 	void Serialize(Stream& s);
 };
 
-class VirtualNode : public Core {
+class VirtualNode : public BarData {
 	
 public:
 	typedef VirtualNode CLASSNAME;
@@ -79,7 +79,7 @@ public:
 	
 };
 
-class SymbolSource : public Core {
+class SymbolSource : public BarData {
 
 public:
 	typedef SymbolSource CLASSNAME;
@@ -98,24 +98,26 @@ public:
 };
 
 class BridgeAskBid : public Core {
-	Vector<double> ask, bid;
 	int cursor;
 	
 protected:
 	friend class CostMeanProfit;
 	friend class CostProfitDistribution;
+	friend class SpreadStats;
 	Vector<OnlineVariance> stats;
 	
 	
 public:
 	BridgeAskBid();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % ask % bid /*% ask_high % bid_low*/ % cursor;}
-	
+	virtual void Arguments(ArgumentBase& args);
 	virtual void Start();
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
+	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, RealValue, SymTf);
+		reg.AddOut(SourcePhase, AskBidValue, SymTf, 2, 2);
+	}
 };
 
 }

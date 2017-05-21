@@ -9,7 +9,7 @@ class GraphGroupCtrl : public CustomCtrl {
 	
 protected:
 	
-	Core* bardata;
+	BarData* bardata;
 	Array<GraphCtrl> graphs;
 	Splitter split;
 	

@@ -712,6 +712,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		c.name = symbol;
 		for(int j = 0; j < symbols.GetCount(); j++) {
 			Symbol& s = symbols[j];
+			if (!s.IsForex()) continue;
 			const String& key = s.name;
 			
 			String k0 = key.Left(3);
@@ -720,7 +721,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			if (k0 == symbol) {
 				c.pairs0.Add(j);
 			}
-			else {
+			else if (k1 == symbol) {
 				c.pairs1.Add(j);
 			}
 		}

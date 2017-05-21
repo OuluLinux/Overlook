@@ -24,6 +24,7 @@ INITBLOCK {
 	Factory::Register<VirtualNode, GraphGroupCtrl>("VirtualNode");
 	Factory::Register<SymbolSource, GraphGroupCtrl>("SymbolSource");
 	
+	Factory::Register<BridgeAskBid, GraphGroupCtrl>("BridgeAskBid");
 	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
 	Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");

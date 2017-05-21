@@ -36,7 +36,9 @@ enum {
 	RealIndicatorValue,			// Indicator value in the scale of price value
 	TimeOscillatorValue,
 	ForecastOrderSignal,
-	RealVolumeValue
+	RealVolumeValue,
+	AskBidValue,
+	SpreadValue
 };
 
 enum {
@@ -69,6 +71,8 @@ struct ValueType : Moveable<ValueType> {
 			case 12: return "TimeOscillatorValue";
 			case 13: return "ForecastOrderSignal";
 			case 14: return "RealVolumeValue";
+			case 15: return "AskBidValue";
+			case 16: return "SpreadValue";
 			default: return "Invalid type";
 		}
 	}

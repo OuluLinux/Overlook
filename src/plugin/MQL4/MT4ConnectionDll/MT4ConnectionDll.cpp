@@ -3,10 +3,6 @@
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason,  LPVOID lpReserved)
 {
-	FileOut Test("C:\\testestest");
-	test << "test";
-	test.Flush();
-	
 	switch (reason) {
 	case DLL_PROCESS_ATTACH:
 		TLOG("Process attach");

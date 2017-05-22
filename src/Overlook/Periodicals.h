@@ -263,7 +263,7 @@ public:
 	
 	virtual void GetIO(ValueRegister& reg) {
 		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+		reg.AddOut(IndiPhase, SubTfValue, SymTf, 4, 4);
 	}
 };
 

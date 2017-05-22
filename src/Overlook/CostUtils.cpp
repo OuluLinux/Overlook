@@ -76,26 +76,15 @@ void SpreadMeanProfit::Arguments(ArgumentBase& args) {
 }
 
 void SpreadMeanProfit::Init() {
-	/*SetCoreSeparateWindow();
-	//SetBufferCount(1, 1);
-	//SetIndexBuffer ( 0, mean_profit );
+	SetCoreSeparateWindow();
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferColor(0, Color(0,0,127));
-	
-	if (RequireIndicator("askbid")) throw DataExc();
-	
-	askbid = dynamic_cast<BridgeAskBid*>(&At(0));
-	if (!askbid)
-		throw DataExc();
-	
-	if (!GetSource().Get<Core>())
-		throw DataExc(); // require bardata source
-	*/
 }
 
 void SpreadMeanProfit::Start() {
-	/*BridgeAskBid& askbid = *this->askbid;
+	const BridgeAskBid& askbid = *Get<BridgeAskBid>();
+	const BaseSystem& bs = *Get<BaseSystem>();
 	
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -104,12 +93,13 @@ void SpreadMeanProfit::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	Core& pb = *GetSource().Get<Core>();
-	Vector<double>& open = pb.GetBuffer(0);
+	const Buffer& open = GetInputBuffer(1, 0);
+	Buffer& mean_profit = GetBuffer(0);
 	
-	bars--;
+	if (!counted) counted = 1;
+	
 	for(int i = counted; i < bars; i++) {
-		Time t = GetTime().GetTime(GetPeriod(), i);
+		Time t = bs.GetTime(GetPeriod(), i);
 		
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;
@@ -124,11 +114,11 @@ void SpreadMeanProfit::Start() {
 			continue;
 		}
 		
-		OnlineVariance& var = askbid.stats[dh];
+		const OnlineVariance& var = askbid.GetStat(dh);
 		
-		double change = open.Get(i+1) - open.Get(i);
-		mean_profit.Set(i, fabs(change) - var.GetMean());
-	}*/
+		double abs_change = fabs(open.Get(i) / open.Get(i-1) - 1.0) ;
+		mean_profit.Set(i, abs_change - var.GetMean());
+	}
 }
 
 
@@ -156,36 +146,33 @@ void SpreadProfitDistribution::Arguments(ArgumentBase& args) {
 }
 
 void SpreadProfitDistribution::Init() {
-	/*SetCoreSeparateWindow();
-	//SetBufferCount(2, 2);
-	//SetIndexBuffer ( 0, mean );
-	//SetIndexBuffer ( 1, stddev );
+	SetCoreSeparateWindow();
 	SetBufferLineWidth(1, 2);
 	
 	SetBufferColor(0, Color(127,0,0));
 	SetBufferColor(1, Color(127,0,0));
-	
-	if (RequireIndicator("askbid")) throw DataExc();
-	if (RequireIndicator("stfc")) throw DataExc();
-	*/
 }
 
 void SpreadProfitDistribution::Start() {
-	/*int bars = GetBars();
+	int bars = GetBars();
 	int counted = GetCounted();
 	const int size = 300;
 	int period = GetMinutePeriod();
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	BridgeAskBid& askbid = dynamic_cast<BridgeAskBid&>(At(0));
-	Core& subtfchanges = At(1);
 	
-	Vector<double>& abschange_mean   = subtfchanges.GetBuffer(2);
-	Vector<double>& abschange_stddev = subtfchanges.GetBuffer(3);
+	const BridgeAskBid& askbid = *Get<BridgeAskBid>();
+	const BaseSystem& bs = *Get<BaseSystem>();
+	
+	
+	const Buffer& abschange_mean   = GetInputBuffer(2, 2);
+	const Buffer& abschange_stddev = GetInputBuffer(2, 3);
+	Buffer& mean_buf = GetBuffer(0);
+	Buffer& stddev_buf = GetBuffer(1);
 	
 	for(int i = counted; i < bars; i++) {
-		Time t = GetTime().GetTime(GetPeriod(), i);
+		Time t = bs.GetTime(GetPeriod(), i);
 		
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;
@@ -200,14 +187,15 @@ void SpreadProfitDistribution::Start() {
 			continue;
 		}
 		
-		OnlineVariance& var = askbid.stats[dh];
+		const OnlineVariance& var = askbid.GetStat(dh);
 		
 		double mean = abschange_mean.Get(i) - var.GetMean();
-		double stddev = sqrt(pow(abschange_stddev.Get(i), 2) - var.GetVariance());
+		double ac = abschange_stddev.Get(i);
+		double stddev = sqrt(ac * ac - var.GetVariance());
 		
-		this->mean.Set(i, mean);
-		this->stddev.Set(i, stddev);
-	}*/
+		mean_buf.Set(i, mean);
+		stddev_buf.Set(i, stddev);
+	}
 }
 
 
@@ -240,10 +228,7 @@ void SpreadProbability::Arguments(ArgumentBase& args) {
 }
 
 void SpreadProbability::Init() {
-	/*SetCoreSeparateWindow();
-	//SetBufferCount(2, 2);
-	//SetIndexBuffer ( 0, profit );
-	//SetIndexBuffer ( 1, real );
+	SetCoreSeparateWindow();
 	SetBufferLineWidth(0, 2);
 	
 	SetBufferColor(0, Color(127,0,0));
@@ -257,53 +242,32 @@ void SpreadProbability::Init() {
 	SetCoreLevelsStyle(STYLE_DOT);
 	SetCoreMinimum(0);
 	SetCoreMaximum(1);
-	
-	if (RequireIndicator("costpdist")) throw DataExc();
-	*/
 }
 
 void SpreadProbability::Start() {
-	/*int bars = GetBars();
+	int bars = GetBars();
 	int counted = GetCounted();
 	const int size = 300;
 	int period = GetMinutePeriod();
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	Core& cost_profit_dist = At(0);
+	const Buffer& cost_profit_mean   = GetInputBuffer(2, 0);
+	const Buffer& cost_profit_stddev = GetInputBuffer(2, 1);
+	const Buffer& open = GetInputBuffer(1, 0);
+	Buffer& profit = GetBuffer(0);
+	Buffer& real = GetBuffer(1);
 	
-	Vector<double>& cost_profit_mean   = cost_profit_dist.GetBuffer(0);
-	Vector<double>& cost_profit_stddev = cost_profit_dist.GetBuffer(1);
-	
-	Core& pb = *GetSource().Get<Core>();
-	Vector<double>& open = pb.GetBuffer(0);
-	
-	bars--;
+	if (!counted) counted = 1;
 	
 	for(int i = counted; i < bars; i++) {
-		Time t = GetTime().GetTime(GetPeriod(), i);
-		
-		int h = (t.minute + t.hour * 60) / period;
-		int d = DayOfWeek(t) - 1;
-		int dh = h + d * h_count;
-		
-		if (force_d0) {
-			h = 0;
-			d = 0;
-			dh = 0;
-		}
-		else if (d == -1 || d == 5) {
-			continue;
-		}
-		
 		double mean = cost_profit_mean.Get(i);
 		double stddev = cost_profit_stddev.Get(i);
-		double change = open.Get(i+1) - open.Get(i);
+		double change = open.Get(i) - open.Get(i-1);
 		
 		profit.Set(i, NormalCDF(0, mean, stddev));
 		real.Set(i, NormalCDF(change, mean, stddev));
-		
-	}*/
+	}
 }
 
 
@@ -319,153 +283,117 @@ void SpreadProbability::Start() {
 
 
 ValueChange::ValueChange() {
-	/*
-	AddValue<double>("Change");
-	AddValue<double>("Change With Proxy");
-	AddValue<double>("Low Change With Proxy");
-	AddValue<double>("High Change With Proxy");
-	AddValue<double>("Spread Change");
+	SetCoreSeparateWindow();
 	
-	SetStyle(
-		"{"
-			"\"window_type\":\"SEPARATE\","
-			"\"value0\":{"
-				"\"color\":\"128,128,128\","
-				"\"line_width\":4,"
-			"},"
-			"\"value1\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":3,"
-			"},"
-			"\"value2\":{"
-				"\"color\":\"128,0,0\","
-				"\"line_width\":3,"
-			"},"
-			"\"value3\":{"
-				"\"color\":\"0,0,128\","
-				"\"line_width\":1,"
-			"},"
-			"\"value4\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":2,"
-			"},"
-			"\"value5\":{"
-				"\"color\":\"128,0,0\","
-				"\"line_width\":2,"
-			"},"
-			"\"value6\":{"
-				"\"color\":\"0,128,0\","
-				"\"line_width\":1,"
-			"},"
-			"\"value7\":{"
-				"\"color\":\"128,0,0\","
-				"\"line_width\":1,"
-			"},"
-			"\"value8\":{"
-				"\"color\":\"255,255,255\","
-				"\"line_width\":1,"
-			"},"
-		"}"
-	);
-	*/
 }
 
 void ValueChange::Arguments(ArgumentBase& args) {
 	
+	SetBufferColor(0, GrayColor(128));
+	SetBufferLineWidth(0, 4);
+	SetBufferColor(1, Color(0,128,0));
+	SetBufferLineWidth(1, 3);
+	SetBufferColor(2, Color(128,0,0));
+	SetBufferLineWidth(2, 3);
+	SetBufferColor(3, Color(0,0,128));
+	SetBufferLineWidth(3, 1);
+	SetBufferColor(4, Color(0,128,0));
+	SetBufferLineWidth(4, 2);
+	SetBufferColor(5, Color(128,0,0));
+	SetBufferLineWidth(5, 2);
+	SetBufferColor(6, Color(0,128,0));
+	SetBufferLineWidth(6, 1);
+	SetBufferColor(7, Color(128,0,0));
+	SetBufferLineWidth(7, 1);
+	SetBufferColor(8, Color(255,255,255));
+	SetBufferLineWidth(8, 1);
 }
 
 void ValueChange::Init() {
-	/*AddDependency("/open", 1, 0);
-	AddDependency("/spread", 1, 0);
-	
-	TimeVector& tv = GetTimeVector();
-	SlotPtr src = tv.FindLinkSlot("/open");
-	db = dynamic_cast<DataBridge*>(&*src);
-	ASSERTEXC(db);
-	
-	int sym_count = tv.GetSymbolCount();
-	data.SetCount(sym_count);
-	
-	for(int i = 0; i < sym_count; i++) {
-		Sym& s = data[i];
-		if (i < db->GetSymbolCount()) {
-			const Symbol& sym = db->GetSymbol(i);
-			s.has_proxy = sym.proxy_id != -1;
-			s.proxy_id = sym.proxy_id;
-			s.proxy_factor = sym.proxy_factor;
-			ASSERTEXC(!s.has_proxy || s.proxy_factor != 0);
-		} else {
-			s.has_proxy = false;
-			s.proxy_id = -1;
-			s.proxy_factor = 0;
-		}
-	}*/
+	MetaTrader& mt = GetMetaTrader();
+	int id = GetSymbol();
+	if (id < mt.GetSymbolCount()) {
+		const Symbol& sym = mt.GetSymbol(id);
+		has_proxy = sym.proxy_id != -1;
+		proxy_id = sym.proxy_id;
+		proxy_factor = sym.proxy_factor;
+		ASSERTEXC(!has_proxy || proxy_factor != 0);
+	} else {
+		has_proxy = false;
+		proxy_id = -1;
+		proxy_factor = 0;
+	}
 }
 
 void ValueChange::Start() {
-	/*const Slot& src = GetDependency(0);
-	const Slot& spreadsrc = GetDependency(1);
-	double* change_			= GetValue<double>(0, attr);
-	double* value_change	= GetValue<double>(1, attr);
-	double* low_change		= GetValue<double>(2, attr);
-	double* high_change		= GetValue<double>(3, attr);
-	double* spread_change	= GetValue<double>(4, attr);
-	double* open			= src.GetValue<double>(0, 1, attr);
-	double* close			= src.GetValue<double>(0, 0, attr);
-	double* low				= src.GetValue<double>(1, 1, attr);
-	double* high			= src.GetValue<double>(2, 1, attr);
-	double* spread			= spreadsrc.GetValue<double>(0, 0, attr);
+	int bars = GetBars();
+	int counted = GetCounted();
 	
-	if (!open || *open == 0.0) return false;
+	const Buffer& open				= GetInputBuffer(0, 0);
+	const Buffer& low				= GetInputBuffer(0, 1);
+	const Buffer& high				= GetInputBuffer(0, 2);
+	const Buffer& spread			= GetInputBuffer(1, 0);
+	ConstBuffer* proxy_spread		= has_proxy ? &GetInputBuffer(1, proxy_id, GetTimeframe(), 0) : 0;
+	ConstBuffer* proxy_open			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 0) : 0;
+	ConstBuffer* proxy_low			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 1) : 0;
+	ConstBuffer* proxy_high			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 2) : 0;
+	Buffer& change					= GetBuffer(0);
+	Buffer& value_change			= GetBuffer(1);
+	Buffer& low_change				= GetBuffer(2);
+	Buffer& high_change				= GetBuffer(3);
+	Buffer& spread_change			= GetBuffer(4);
+	Buffer& proxy_low_buf			= GetBuffer(5);
+	Buffer& proxy_high_buf			= GetBuffer(6);
 	
-	int id = GetSymbol();
+	if (!counted) counted = 1;
 	
-	Sym& s = data[id];
-	
-	if (!s.has_proxy) {
-		double open_value = *open;
-		double change = *close / open_value - 1.0;
-		*change_ = change; // same without proxy
-		*low_change  = *low / open_value - 1.0;
-		*high_change = *high / open_value - 1.0;
-		*spread_change = *spread;
-		*value_change = change;
-		ASSERT(*high_change >= *low_change);
-	} else {
-		double* proxy_spread = spreadsrc.GetValue<double>(0, s.proxy_id, GetTimeframe(), 0, attr);
-		
-		// Get buffers
-		double* proxy_open	= src.GetValue<double>(0, s.proxy_id, GetTimeframe(), 1, attr);
-		double* proxy_close	= src.GetValue<double>(0, s.proxy_id, GetTimeframe(), 0, attr);
-		double* proxy_low	= src.GetValue<double>(1, s.proxy_id, GetTimeframe(), 1, attr);
-		double* proxy_high	= src.GetValue<double>(2, s.proxy_id, GetTimeframe(), 1, attr);
-		
-		// Proxy and normal.
-		double proxy_open_value = *proxy_open;
-		double open_value = *open;
-		double proxy_change, proxy_high_change, proxy_low_change;
-		ASSERTEXC(s.proxy_factor != 0);
-		if (s.proxy_factor == 1) {
-			proxy_change		= *proxy_close / proxy_open_value - 1.0;
-			proxy_high_change	= *proxy_high / proxy_open_value - 1.0;
-			proxy_low_change	= *proxy_low / proxy_open_value - 1.0;
+	for(int i = counted; i < bars; i++) {
+		if (!has_proxy) {
+			double open_value = open.Get(i-1);
+			double change_value = open.Get(i) / open_value - 1.0;
+			change.Set(i, change_value);
+			double low_change_ = low.Get(i-1) / open_value - 1.0;
+			double high_change_ = high.Get(i-1) / open_value - 1.0;
+			low_change.Set(i, low_change_);
+			high_change.Set(i, high_change_);
+			spread_change.Set(i, spread.Get(i-1));
+			value_change.Set(i, change_value);
+			proxy_low_buf.Set(i, low_change_);
+			proxy_high_buf.Set(i, high_change_);
 		} else {
-			proxy_change		= proxy_open_value / *proxy_close - 1.0;
-			proxy_low_change	= proxy_open_value / *proxy_high - 1.0;
-			proxy_high_change	= proxy_open_value / *proxy_low - 1.0;
+			double proxy_spread_value = proxy_spread->Get(i-1);
+			
+			// Get buffers
+			double proxy_open_value		= proxy_open->Get(i-1);
+			double proxy_close_value	= proxy_open->Get(i);
+			double proxy_low_value		= proxy_low->Get(i-1);
+			double proxy_high_value		= proxy_high->Get(i-1);
+			
+			// Proxy and normal.
+			double open_value = open.Get(i-1);
+			double proxy_change, proxy_high_change, proxy_low_change;
+			ASSERTEXC(proxy_factor != 0);
+			if (proxy_factor == 1) {
+				proxy_change		= proxy_close_value / proxy_open_value - 1.0;
+				proxy_high_change	= proxy_high_value / proxy_open_value - 1.0;
+				proxy_low_change	= proxy_low_value / proxy_open_value - 1.0;
+			} else {
+				proxy_change		= proxy_open_value / proxy_close_value - 1.0;
+				proxy_low_change	= proxy_open_value / proxy_high_value - 1.0;
+				proxy_high_change	= proxy_open_value / proxy_low_value - 1.0;
+			}
+			double change_value = open.Get(i) / open_value - 1.0;
+			double low_change_	= low.Get(i-1) / open_value - 1.0;
+			double high_change_	= high.Get(i-1) / open_value - 1.0;
+			change.Set(i, change_value); // different with proxy
+			low_change.Set(i, low_change_);
+			high_change.Set(i, high_change_);
+			spread_change.Set(i, spread.Get(i-1) + proxy_spread_value);
+			proxy_low_buf.Set(i, proxy_low_change + low_change_);		// Note: unrealistic, probably not simultaneously
+			proxy_high_buf.Set(i, proxy_high_change + high_change_);	// Note: unrealistic, probably not simultaneously
+			value_change.Set(i, change_value + proxy_change);
 		}
-		double change = *close / open_value - 1.0;
-		double low_change_	= *low / open_value - 1.0;
-		double high_change_	= *high / open_value - 1.0;
-		*change_ = change; // different with proxy
-		*low_change = proxy_low_change + low_change_;		// Note: unrealistic, probably not simultaneously
-		*high_change = proxy_high_change + high_change_;	// Note: unrealistic, probably not simultaneously
-		*spread_change = *spread + *proxy_spread;
-		*value_change	= change + proxy_change;
-		ASSERT(*high_change >= *low_change);
 	}
-	
-	return true;*/
 }
 
 

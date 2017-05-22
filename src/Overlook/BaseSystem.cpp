@@ -11,7 +11,7 @@ BaseSystem::BaseSystem() {
 	
 	
 	
-	addr = "192.168.0.5";
+	addr = "192.168.0.106";
 	port = 42000;
 }
 

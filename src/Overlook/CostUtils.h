@@ -15,13 +15,13 @@ public:
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
+		reg.AddIn(SourcePhase, TimeValue, SymTf);
 		reg.AddIn(SourcePhase, AskBidValue, SymTf);
 		reg.AddOut(SourcePhase, SpreadValue, SymTf, 1, 1);
 	}
 };
 
 class SpreadMeanProfit : public Core {
-	Vector<double> mean_profit;
 	BridgeAskBid* askbid;
 	
 public:
@@ -32,8 +32,10 @@ public:
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+		reg.AddIn(SourcePhase, TimeValue, SymTf);
+		reg.AddIn(SourcePhase, RealValue, SymTf);
+		reg.AddIn(SourcePhase, AskBidValue, SymTf);
+		reg.AddOut(SourcePhase, SpreadOvercomeValue, SymTf, 1, 1);
 	}
 };
 
@@ -48,8 +50,10 @@ public:
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+		reg.AddIn(SourcePhase, TimeValue, SymTf);
+		reg.AddIn(SourcePhase, AskBidValue, SymTf);
+		reg.AddIn(IndiPhase, SubTfValue, SymTf);
+		reg.AddOut(SourcePhase, SpreadOvercomeDistValue, SymTf, 2, 2);
 	}
 };
 
@@ -64,8 +68,10 @@ public:
 	virtual void Start();
 	
 	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+		reg.AddIn(SourcePhase, TimeValue, SymTf);
+		reg.AddIn(SourcePhase, RealValue, SymTf);
+		reg.AddIn(SourcePhase, SpreadOvercomeDistValue, SymTf);
+		reg.AddOut(SourcePhase, SpreadProbValue, SymTf, 2, 2);
 	}
 };
 
@@ -82,11 +88,8 @@ public:
 	virtual String GetStyle() const {return "";}
 	virtual void GetIO(ValueRegister& reg) {
 		reg.AddIn(SourcePhase, RealValue, Sym);
-		reg.AddOut(IndiPhase, RealChangeValue, SymTf);
-		reg.AddOut(IndiPhase, RealProxyChangeValue, SymTf);
-		reg.AddOut(IndiPhase, SpreadProxyChangeValue, SymTf);
-		reg.AddOut(IndiPhase, RealLowChangeValue, SymTf);
-		reg.AddOut(IndiPhase, RealHighChangeValue, SymTf);
+		reg.AddIn(SourcePhase, SpreadValue, Tf);
+		reg.AddOut(IndiPhase, RealChangeValue, SymTf, 7, 7);
 	}
 	virtual void Arguments(ArgumentBase& args);
 	virtual void Init();
@@ -104,8 +107,7 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealProxyChangeValue, SymTf);
-		reg.AddIn(IndiPhase, SpreadProxyChangeValue, SymTf);
+		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
 		reg.AddOut(IndiPhase, IdealOrderSignal, SymTf);
 	}
 	virtual void Arguments(ArgumentBase& args);

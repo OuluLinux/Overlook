@@ -9,7 +9,6 @@ enum {MODE_SMA, MODE_EMA, MODE_SMMA, MODE_LWMA};
 enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
-
 class MovingAverage : public Core {
 	Vector<double> buffer;
 	int ma_period;

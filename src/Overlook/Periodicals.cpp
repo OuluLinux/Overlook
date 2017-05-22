@@ -69,7 +69,7 @@ void WdayHourChanges::Start() {
 	Core& pb = *GetSource().Get<Core>();
 	const Vector<double>& open  = pb.GetOpen();
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -183,7 +183,7 @@ void WdayHourStats::Start() {
 	Core& pb = *GetSource().Get<Core>();
 	const Vector<double>& open  = pb.GetOpen();
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -437,7 +437,7 @@ void WdayHourForecastErrors::Start() {
 	const Vector<double>& stat_dh_pre_mean		= wdayhourstats.GetBuffer(6);
 	const Vector<double>& stat_dh_pre_stddev	= wdayhourstats.GetBuffer(7);
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -868,7 +868,7 @@ void WeekStatsForecastErrors::Start() {
 	Vector<double>& stat_y_pre_mean		= weekstats.GetBuffer(6);
 	Vector<double>& stat_y_pre_stddev	= weekstats.GetBuffer(7);
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -1402,7 +1402,7 @@ void SubTfChanges::Start() {
 	if (other_counted >= other_bars)
 		throw DataExc();
 	
-	other_bars--;
+	other_//bars--;
 	
 	double prev_open = 0;
 	int prev_shift = GetTime().GetShift(other_period, this_period, other_counted);
@@ -1531,7 +1531,7 @@ void MetaTfChanges::Start() {
 	if (counted >= bars)
 		return 0;
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -1769,7 +1769,7 @@ void MetaTfCDF::Start() {
 		throw DataExc();
 	
 	if (counted) counted--;
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -1902,7 +1902,7 @@ void WdayHourTrending::Start() {
 	Core& pb = *GetSource().Get<Core>();
 	const Vector<double>& open  = pb.GetOpen();
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -2032,7 +2032,7 @@ void WdayHourTrendSuccess::Start() {
 	Core& pb = *GetSource().Get<Core>();
 	const Vector<double>& open  = pb.GetOpen();
 	
-	bars--;
+	//bars--;
 	
 	for ( int i = counted; i < bars; i++ ) {
 		Time time = GetTime().GetTime(GetPeriod(), i);
@@ -2480,7 +2480,7 @@ void Disconnections::Start()
 	int limit = bars + period + 1;
 	dis_counted = max(1, dis_counted - period);
 	
-	bars--;
+	//bars--;
 	
 	for(int i = dis_counted; i < limit; i++) {
 		int mod = i % period;

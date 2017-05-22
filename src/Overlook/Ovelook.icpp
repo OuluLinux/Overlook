@@ -26,6 +26,9 @@ INITBLOCK {
 	
 	Factory::Register<BridgeAskBid, GraphGroupCtrl>("BridgeAskBid");
 	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
+	Factory::Register<SpreadMeanProfit, GraphGroupCtrl>("SpreadMeanProfit");
+	Factory::Register<SpreadProfitDistribution, GraphGroupCtrl>("SpreadProfitDistribution");
+	Factory::Register<SpreadProbability, GraphGroupCtrl>("SpreadProbability");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
 	Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
 	

@@ -24,11 +24,15 @@ enum {
 	DataBridgeValue,
 	VirtualNodeValue,
 	RealChangeValue,
+	
+	// TRASH
 	SpreadChangeValue,
 	RealProxyChangeValue,
 	SpreadProxyChangeValue,
 	RealLowChangeValue,
 	RealHighChangeValue,
+	// TRASH END
+	
 	IdealOrderSignal,
 	ForecastChangeValue,
 	ForecastChannelValue,
@@ -38,7 +42,11 @@ enum {
 	ForecastOrderSignal,
 	RealVolumeValue,
 	AskBidValue,
-	SpreadValue
+	SpreadValue,
+	SpreadOvercomeValue,
+	SubTfValue,
+	SpreadOvercomeDistValue,
+	SpreadProbValue
 };
 
 enum {
@@ -73,6 +81,10 @@ struct ValueType : Moveable<ValueType> {
 			case 14: return "RealVolumeValue";
 			case 15: return "AskBidValue";
 			case 16: return "SpreadValue";
+			case 17: return "SpreadOvercomeValue";
+			case 18: return "SubTfValue";
+			case 19: return "SpreadOvercomeDistValue";
+			case 20: return "SpreadProbValue";
 			default: return "Invalid type";
 		}
 	}

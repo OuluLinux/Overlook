@@ -91,7 +91,7 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 
 int DataBridgeCommon::DownloadAskBid() {
 	String local_path = ConfigFile("askbid.bin");
-	String remote_path = "MQL4\\files\\askbid.bin";
+	String remote_path = "askbid.bin";
 	
 	return DownloadRemoteFile(remote_path, local_path);
 }
@@ -164,7 +164,7 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 		out.Put(buf, size);
 	}
 	
-	LOG("DataBridgeCommon::DownloadRemoteFile: for " << remote_path << " took " << ts.ToString());
+	LOG("DataBridgeCommon::DownloadRemoteFile: for " << size << " bytes in " << remote_path << " took " << ts.ToString());
 	return 0;
 }
 
@@ -467,7 +467,7 @@ void VirtualNode::Start() {
 		high.Set(i, value);
 		volume.Set(i, volume_av);
 		
-		LOG(Format("pos=%d open=%f volume=%f", i, value, volume_av));
+		//LOG(Format("pos=%d open=%f volume=%f", i, value, volume_av));
 		
 		if (i) {
 			low		.Set(i-1, Upp::min(low		.Get(i-1), value));
@@ -508,11 +508,12 @@ void BridgeAskBid::Init() {
 }
 
 void BridgeAskBid::Start() {
+	BaseSystem& bs = *Get<BaseSystem>();
 	int id = GetSymbol();
 	int tf = GetTimeframe();
 	int bars = GetBars();
 	int counted = GetCounted();
-	
+	String id_str = bs.GetSymbol(id).Left(6);
 	ASSERTEXC(id >= 0);
 	
 	int period = GetMinutePeriod();
@@ -527,19 +528,29 @@ void BridgeAskBid::Start() {
 	
 	src.Seek(cursor);
 	
-	int struct_size = 4 + 4 + 8 + 8;
+	int struct_size = 4 + 6 + 8 + 8;
 	
 	while ((cursor + struct_size) <= data_size) {
 		
-		int timestamp, askbid_id;
+		int timestamp;
 		double ask, bid;
 		src.Get(&timestamp, 4);
-		src.Get(&askbid_id, 4);
+		
+		String askbid_id;
+		for(int i = 0; i < 6; i++) {
+			char c;
+			src.Get(&c, 1);
+			askbid_id.Cat(c);
+		}
+		if (id_str != askbid_id) {
+			src.SeekCur(8+8);
+			cursor += struct_size;
+			continue;
+		}
 		src.Get(&ask, 8);
 		src.Get(&bid, 8);
 		cursor += struct_size;
 		
-		if (id != askbid_id) continue;
 		
 		Time time = TimeFromTimestamp(timestamp);
 		int h = (time.minute + time.hour * 60) / period;
@@ -558,7 +569,7 @@ void BridgeAskBid::Start() {
 		OnlineVariance& var = stats[dh];
 		
 		if (ask != 0.0 && bid != 0.0) {
-			double spread = ask - bid;
+			double spread = ask / bid - 1.0;
 			if (spread != 0.0)
 				var.AddResult(spread);
 		}
@@ -566,7 +577,6 @@ void BridgeAskBid::Start() {
 	
 	
 	ConstBuffer& open = GetInputBuffer(0, id, tf, 0);
-	BaseSystem& bs = *Get<BaseSystem>();
 	Buffer& ask = GetBuffer(0);
 	Buffer& bid = GetBuffer(1);
 	
@@ -594,7 +604,7 @@ void BridgeAskBid::Start() {
 		}
 		
 		double ask_value = open.Get(i);
-		double bid_value = ask_value - spread;
+		double bid_value = ask_value / (spread + 1.0);
 		
 		ask.Set(i, ask_value);
 		bid.Set(i, bid_value);

@@ -118,6 +118,9 @@ public:
 		reg.AddIn(SourcePhase, RealValue, SymTf);
 		reg.AddOut(SourcePhase, AskBidValue, SymTf, 2, 2);
 	}
+	
+	const OnlineVariance& GetStat(int i) const {return stats[i];}
+	
 };
 
 }

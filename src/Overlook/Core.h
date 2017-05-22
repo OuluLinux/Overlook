@@ -134,9 +134,7 @@ struct CoreIO : public ValueRegister {
 	int GetBufferCount() {return buffers.GetCount();}
 	Buffer& GetBuffer(int buffer) {return *buffers[buffer];}
 	ConstBuffer& GetBuffer(int buffer) const {return *buffers[buffer];}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {
-		DUMPM(inputs[input].sources);
-		return inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer];}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer];}
 	Out& GetOutput(int output) {return outputs[output];}
 	ConstOut& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
@@ -237,7 +235,8 @@ public:
 	int GetSymbol() const {return sym_id;}
 	int GetPeriod() const;
 	int GetVisibleCount() const {return visible_count;}
-	
+	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
+	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
 	
 	// Set settings
 	void SetWindowType(int i) {window_type = i;}

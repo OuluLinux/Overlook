@@ -646,7 +646,7 @@ void ParabolicSAR::Start ()
 	double prev_high = High( prev_pos );
 	double prev_low  = Low( prev_pos );
 	
-	bars--;
+	//bars--;
 	
 	for (int i = pos; i < bars; i++) {
 		double low  = Low( i );
@@ -898,7 +898,7 @@ void AverageTrueRange::Start()
 	if ( bars <= period || period <= 0 )
 		throw DataExc();
 
-	bars--;
+	//bars--;
 	if ( counted == 0 )
 	{
 		tr_buffer.Set(0, 0.0);
@@ -1126,7 +1126,7 @@ void CommodityChannelIndex::Start()
 	if (pos == 0)
 		pos++;
 	
-	bars--;
+	//bars--;
 	for ( i = pos; i < bars; i++ )
 	{
 		double h = High( i );
@@ -1396,7 +1396,7 @@ void Momentum::Start()
 	else
 		counted--;
 	
-	bars--;
+	//bars--;
 	for (int i = counted; i < bars; i++ )
 	{
 		double close1 = Open( i+1 );
@@ -1641,7 +1641,7 @@ void RelativeVigorIndex::Start()
 
 	if (counted < 4+period) counted = 4+period;
 	
-	bars--;
+	//bars--;
 	
 	for (int i = counted; i < bars; i++ )
 	{
@@ -1797,7 +1797,7 @@ void StochasticOscillator::Start() {
 			buffer.Set(i, 0.0);
 	}
 
-	bars--;
+	//bars--;
 	
 	for ( i = start; i < bars; i++ )
 	{
@@ -1887,7 +1887,7 @@ void WilliamsPercentRange::Start()
 		buffer.Set(0, 0);
 	}
 	
-	bars--;
+	//bars--;
 	for (int i = counted; i < bars; i++)
 	{
 		int highest = HighestHigh( period, i );
@@ -1953,7 +1953,7 @@ void AccumulationDistribution::Start()
 		buffer.Set(0, 0);
 	}
 	
-	bars--;
+	//bars--;
 	for (int i=counted; i < bars; i++)
 	{
 		double close = Open(i+1);
@@ -2703,7 +2703,7 @@ void Fractals::Start()
 	
 	double prev_close = Open(counted);
 	
-	bars--;
+	//bars--;
 	
 	for(int i = counted; i < bars; i++)
 	{
@@ -2835,7 +2835,7 @@ void FractalOsc::Start()
 	
 	Core& ind = At(0);
 	
-	bars--;
+	//bars--;
 	
 	for(int i = counted; i < bars; i++)
 	{
@@ -3501,7 +3501,7 @@ void RepeatingAverage::Start() {
 			Panic("Unknown tf-period " + IntStr(tf_period));
 	}
 	
-	bars--;
+	//bars--;
 	int prev_pos = counted ? counted - 1 : 0;
 	for (int i = counted; i < bars; i++) {
 		for (int part = 0; part < 2; part++) {
@@ -3651,7 +3651,7 @@ void SupportResistance::Start() {
 	ASSERT(point > 0);
 	
 	if (counted) counted--;
-	bars--;
+	//bars--;
 	
 	Vector<double> crosses;
 	for (int i = counted; i < bars; i++) {
@@ -3842,7 +3842,7 @@ void Psychological::Start() {
 	if (counted == 0)
 		counted = (1 + period + 1);
 	
-	bars--;
+	//bars--;
 	
 	for(int i=counted; i < bars; i++)
 	{

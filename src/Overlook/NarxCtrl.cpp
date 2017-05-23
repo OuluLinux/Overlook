@@ -153,11 +153,6 @@ NarxCtrl::NarxCtrl() {
 	//PostCallback(THISBACK(Refresher));
 }
 
-void NarxCtrl::Arguments(ArgumentBase& args) {
-	//MetaNode::SetArguments(args);
-	
-}
-
 void NarxCtrl::Init() {
 	/*
 	BaseSystem& bs = *Get<BaseSystem>();

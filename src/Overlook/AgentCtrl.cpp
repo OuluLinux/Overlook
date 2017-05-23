@@ -26,11 +26,6 @@ void AgentCtrl::Reset() {
 	
 }
 
-void AgentCtrl::Arguments(ArgumentBase& args) {
-	//MetaNode::SetArguments(args);
-	
-}
-
 void AgentCtrl::Init() {
 	
 }

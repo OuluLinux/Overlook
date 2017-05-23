@@ -10,7 +10,7 @@ Overlook::Overlook()
 	MinimizeBox().MaximizeBox().Sizeable();
 	
 	Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
-	droplist_split << ctrllist << symlist << tflist;
+	droplist_split << ctrllist << symlist << tflist << config;
 	droplist_split.Horz();
 	
 	prev_core = NULL;
@@ -19,6 +19,8 @@ Overlook::Overlook()
 	ctrllist <<= THISBACK(SetView);
 	symlist <<= THISBACK(SetView);
 	tflist <<= THISBACK(SetView);
+	config.SetLabel("Configure");
+	config <<= THISBACK(Configure);
 	
 	PostCallback(THISBACK(Refresher));
 }
@@ -94,6 +96,40 @@ void Overlook::SetView() {
 	Add(view->VSizePos(30).HSizePos());
 	prev_view = view;
 	prev_core = core;
+}
+
+void Overlook::Configure() {
+	TopWindow tw;
+	tw.Title("Configure arguments");
+	Button ok;
+	ParentCtrl ctrl;
+	Array<Label> labels;
+	Array<EditDoubleSpin> edits;
+	ok.SetLabel("OK");
+	tw.Add(ctrl.HSizePos().VSizePos(0,30));
+	tw.Add(ok.BottomPos(3,24).RightPos(3, 100));
+	
+	int c = ctrllist.GetIndex();
+	int s = symlist.GetIndex();
+	int t = tflist.GetIndex();
+	const FactoryValueRegister& reg = Factory::GetRegs()[c];
+	
+	Size sz(320, reg.in.GetCount()*30 + 50);
+	tw.SetRect(sz);
+	int xoff = sz.cx * 0.5;
+	
+	for(int i = 0; i < reg.in.GetCount(); i++) {
+		Label& lbl = labels.Add();
+		lbl.SetLabel("Arg " + IntStr(i+1) + ":");
+		lbl.SetAlign(ALIGN_RIGHT);
+		EditDoubleSpin& edit = edits.Add();
+		lbl.SetRect(4, i*30, xoff-8, 30);
+		edit.SetRect(xoff, i*30, sz.cx-xoff, 30);
+		ctrl.Add(lbl);
+		ctrl.Add(edit);
+	}
+	
+	tw.Run();
 }
 
 }

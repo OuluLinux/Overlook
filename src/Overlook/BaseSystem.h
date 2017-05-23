@@ -75,8 +75,8 @@ public:
 	virtual void Init();
 	virtual void Start() {}
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddOut(SourcePhase, TimeValue, All);
+	virtual void IO(ValueRegister& reg) {
+		reg % Out(SourcePhase, TimeValue, All);
 	}
 };
 

@@ -53,38 +53,61 @@ typedef const Buffer ConstBuffer;
 
 
 // Class for registering input and output types of values of classes
+struct ValueBase {
+	
+};
+
+struct In : public ValueBase {
+	In(int phase, int type, int scale) {}
+};
+typedef In InOptional;
+
+struct Out : public ValueBase {
+	Out(int phase, int type, int scale, int count=0, int visible=0) {}
+};
+
+struct Arg : public ValueBase {
+	Arg(const char* key, bool& value) {}
+	Arg(const char* key, int& value) {}
+	Arg(const char* key, double& value) {}
+	Arg(const char* key, Time& value) {}
+	Arg(const char* key, String& value) {}
+};
+
 struct ValueRegister {
 	ValueRegister() {}
 	
-	virtual void AddIn(int phase, int type, int scale) = 0;
+	/*virtual void AddIn(int phase, int type, int scale) = 0;
 	virtual void AddInOptional(int phase, int type, int scale) = 0;
-	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) = 0;
+	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) = 0;*/
+	virtual void IO(const ValueBase& base) = 0;
+	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
 	
 };
 
 struct CoreIO : public ValueRegister {
-	struct Out : Moveable<Out> {
-		Out() : visible(0) {}
+	struct Output : Moveable<Output> {
+		Output() : visible(0) {}
 		Vector<Buffer> buffers;
 		int visible;
 		void Serialize(Stream& s) {s % buffers % visible;}
 	};
-	typedef Tuple4<CoreIO*, Out*, int, int> Source;
-	struct In : Moveable<In> {
-		In() {}
+	typedef Tuple4<CoreIO*, Output*, int, int> Source;
+	struct Input : Moveable<Input> {
+		Input() {}
 		VectorMap<int, Source> sources;
 	};
-	Vector<In> inputs, optional_inputs;
-	Vector<Out> outputs;
+	Vector<Input> inputs, optional_inputs;
+	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
 	
-	typedef const Out ConstOut;
-	typedef const In  ConstIn;
+	typedef const Output ConstOutput;
+	typedef const Input  ConstInput;
 	
 	
 	CoreIO() {}
 	
-	virtual void AddIn(int phase, int type, int scale) {
+	/*virtual void AddIn(int phase, int type, int scale) {
 		In& in = inputs.Add();
 	}
 	
@@ -98,6 +121,10 @@ struct CoreIO : public ValueRegister {
 		out.visible = visible;
 		for(int i = 0; i < out.buffers.GetCount(); i++)
 			buffers.Add(&out.buffers[i]);
+	}*/
+	
+	virtual void IO(const ValueBase& base) {
+		
 	}
 	
 	void RefreshBuffers() {
@@ -112,7 +139,7 @@ struct CoreIO : public ValueRegister {
 		T* t = dynamic_cast<T*>(this);
 		if (t) return t;
 		for(int i = 0; i < inputs.GetCount(); i++) {
-			ConstIn& in = inputs[i];
+			ConstInput& in = inputs[i];
 			for(int j = 0; j < in.sources.GetCount(); j++) {
 				CoreIO* c = in.sources[j].a;
 				ASSERT(c);
@@ -135,13 +162,13 @@ struct CoreIO : public ValueRegister {
 	Buffer& GetBuffer(int buffer) {return *buffers[buffer];}
 	ConstBuffer& GetBuffer(int buffer) const {return *buffers[buffer];}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer];}
-	Out& GetOutput(int output) {return outputs[output];}
-	ConstOut& GetOutput(int output) const {return outputs[output];}
+	Output& GetOutput(int output) {return outputs[output];}
+	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
 	
 	
 	void AddInput(int sym_id, int tf_id, int input_id, CoreIO& core, int output_id) {
-		In& in = inputs[input_id];
+		Input& in = inputs[input_id];
 		if (core.GetOutputCount()) {
 			in.sources.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
 		} else {
@@ -202,7 +229,7 @@ public:
 	virtual void Init() {}
 	virtual void Deinit() {}
 	virtual void Start() {}
-	virtual void GetIO(ValueRegister& reg) {Panic("Never here");}
+	virtual void IO(ValueRegister& reg) {Panic("Never here");}
 	virtual void Serialize(Stream& s) {
 		s % short_name % counted % levels % outputs
 		  % levels_clr % minimum % maximum % point % levels_style
@@ -263,7 +290,7 @@ public:
 	// Visible main functions
 	void Refresh();
 	void ClearContent();
-	void RefreshIO() {GetIO(*this);}
+	void RefreshIO() {IO(*this);}
 	
 protected:
 	

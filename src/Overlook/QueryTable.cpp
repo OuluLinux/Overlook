@@ -7,10 +7,6 @@ QueryTableForecaster::QueryTableForecaster() {
 	
 }
 
-void QueryTableForecaster::Arguments(ArgumentBase& args) {
-	
-}
-
 void QueryTableForecaster::Init() {
 	
 }
@@ -22,10 +18,6 @@ void QueryTableForecaster::Start() {
 
 
 QueryTableHugeForecaster::QueryTableHugeForecaster() {
-	
-}
-
-void QueryTableHugeForecaster::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -43,10 +35,6 @@ QueryTableMetaForecaster::QueryTableMetaForecaster() {
 	
 }
 
-void QueryTableMetaForecaster::Arguments(ArgumentBase& args) {
-	
-}
-
 void QueryTableMetaForecaster::Init() {
 	
 }
@@ -58,10 +46,6 @@ void QueryTableMetaForecaster::Start() {
 
 
 QueryTableAgent::QueryTableAgent() {
-	
-}
-
-void QueryTableAgent::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -79,10 +63,6 @@ QueryTableHugeAgent::QueryTableHugeAgent() {
 	
 }
 
-void QueryTableHugeAgent::Arguments(ArgumentBase& args) {
-	
-}
-
 void QueryTableHugeAgent::Init() {
 	
 }
@@ -97,10 +77,6 @@ QueryTableMetaAgent::QueryTableMetaAgent() {
 	
 }
 
-void QueryTableMetaAgent::Arguments(ArgumentBase& args) {
-	
-}
-
 void QueryTableMetaAgent::Init() {
 	
 }
@@ -112,10 +88,6 @@ void QueryTableMetaAgent::Start() {
 
 
 QueryTableDoubleAgent::QueryTableDoubleAgent() {
-	
-}
-
-void QueryTableDoubleAgent::Arguments(ArgumentBase& args) {
 	
 }
 

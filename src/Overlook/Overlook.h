@@ -44,6 +44,7 @@ protected:
 	
 	Splitter droplist_split;
 	DropList ctrllist, symlist, tflist;
+	Button config;
 	VectorMap<String, Ctrl*> ctrls;
 	CustomCtrl* prev_view;
 	Core* prev_core;
@@ -52,7 +53,7 @@ protected:
 	Prioritizer user, optimizer;
 	
 	void SetView();
-	
+	void Configure();
 public:
 	typedef Overlook CLASSNAME;
 	Overlook();

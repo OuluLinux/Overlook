@@ -21,7 +21,7 @@ public:
 	
 	void Refresher();
 	void Reset();
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	
 	

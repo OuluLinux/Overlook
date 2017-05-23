@@ -49,12 +49,12 @@ public:
 	DataBridge();
 	~DataBridge();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf);
-		reg.AddOut(SourcePhase, DataBridgeValue, SymTf, 4, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, TimeValue, SymTf);
+		reg % Out(SourcePhase, DataBridgeValue, SymTf, 4, 0);
 	}
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
@@ -68,12 +68,12 @@ public:
 	VirtualNode();
 	~VirtualNode();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, DataBridgeValue, Sym);
-		reg.AddOut(SourcePhase, VirtualNodeValue, SymTf, 4, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, DataBridgeValue, Sym);
+		reg % Out(SourcePhase, VirtualNodeValue, SymTf, 4, 0);
 	}
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
@@ -85,14 +85,14 @@ public:
 	typedef SymbolSource CLASSNAME;
 	SymbolSource();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, DataBridgeValue, SymTf);
-		reg.AddIn(SourcePhase, VirtualNodeValue, SymTf);
-		reg.AddOut(SourcePhase, RealValue, SymTf, 4, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, DataBridgeValue, SymTf);
+		reg % In(SourcePhase, VirtualNodeValue, SymTf);
+		reg % Out(SourcePhase, RealValue, SymTf, 4, 0);
 	}
 	
 };
@@ -110,13 +110,13 @@ protected:
 public:
 	BridgeAskBid();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Start();
 	virtual void Init();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, RealValue, SymTf);
-		reg.AddOut(SourcePhase, AskBidValue, SymTf, 2, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf);
+		reg % Out(SourcePhase, AskBidValue, SymTf, 2, 2);
 	}
 	
 	const OnlineVariance& GetStat(int i) const {return stats[i];}

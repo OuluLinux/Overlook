@@ -102,10 +102,10 @@ void Prioritizer::CreateCombination() {
 	
 	combination_bits = 0;
 	
-	ASSERT_(Factory::GetFactoryInputs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
-	for(int i = 0; i < Factory::GetFactoryInputs().GetCount(); i++) {
-		const Vector<ValueType>& factory_inputs = Factory::GetFactoryInputs()[i];
-		const Vector<ValueType>& factory_outputs = Factory::GetFactoryOutputs()[i];
+	ASSERT_(Factory::GetRegs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
+	for(int i = 0; i < Factory::GetRegs().GetCount(); i++) {
+		const Vector<ValueType>& factory_inputs = Factory::GetRegs()[i].in;
+		const Vector<ValueType>& factory_outputs = Factory::GetRegs()[i].out;
 		
 		// One part per slot-factory
 		CombinationPart& part = combparts.Add();
@@ -126,7 +126,7 @@ void Prioritizer::CreateCombination() {
 			// way some wrong combinations can be easily avoided. Be sure to register slots in
 			// correct order.
 			for(int j = 0; j < i; j++) {
-				const Vector<ValueType>& factory_outputs = Factory::GetFactoryOutputs()[j];
+				const Vector<ValueType>& factory_outputs = Factory::GetRegs()[j].out;
 				
 				for(int k = 0; k < factory_outputs.GetCount(); k++) {
 					const ValueType& output = factory_outputs[k];

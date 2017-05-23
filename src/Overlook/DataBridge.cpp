@@ -194,10 +194,6 @@ DataBridge::~DataBridge()  {
 	
 }
 
-void DataBridge::Arguments(ArgumentBase& args) {
-	
-}
-
 void DataBridge::Serialize(Stream& s) {
 	
 }
@@ -381,10 +377,6 @@ VirtualNode::~VirtualNode()  {
 	
 }
 
-void VirtualNode::Arguments(ArgumentBase& args) {
-	
-}
-
 void VirtualNode::Init() {
 	//SetBufferCount(4, 4); // open, low, high, volume
 	
@@ -492,10 +484,6 @@ void VirtualNode::Start() {
 
 BridgeAskBid::BridgeAskBid() {
 	cursor = 0;
-}
-
-void BridgeAskBid::Arguments(ArgumentBase& args) {
-	
 }
 
 void BridgeAskBid::Init() {
@@ -622,10 +610,6 @@ void BridgeAskBid::Start() {
 
 
 SymbolSource::SymbolSource() {
-	
-}
-
-void SymbolSource::Arguments(ArgumentBase& args) {
 	
 }
 

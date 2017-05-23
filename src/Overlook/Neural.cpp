@@ -11,10 +11,6 @@ String AutoEncoder::GetStyle() const {
 	return "";
 }
 
-void AutoEncoder::Arguments(ArgumentBase& args) {
-	
-}
-
 void AutoEncoder::Init() {
 	//AddDependency("/open", 0, 0);
 	
@@ -150,10 +146,6 @@ void Recurrent::LoadThis() {
 	String dir = ConfigFile("TimeVector.bin.d");
 	RealizeDirectory(dir);
 	LoadFromFile(*this, AppendFileName(dir, "Recurrent.bin"));
-}
-
-void Recurrent::Arguments(ArgumentBase& args) {
-	args.Arg("type", type);
 }
 
 void Recurrent::Init() {
@@ -413,10 +405,6 @@ NARX::NARX() {
 
 String NARX::GetStyle() const {
 	return "";
-}
-
-void NARX::Arguments(ArgumentBase& args) {
-	
 }
 
 void NARX::Init() {
@@ -863,11 +851,6 @@ String Forecaster::GetStyle() const {
 	return "";
 }
 
-void Forecaster::Arguments(ArgumentBase& args) {
-	args.Arg("single", single);
-	args.Arg("pair", pair);
-}
-
 void Forecaster::Init() {
 	/*BaseSystem& bs = *Get<BaseSystem>();
 	
@@ -1026,10 +1009,6 @@ String ClassifierAgent::GetStyle() const {
 	return "";
 }
 
-void ClassifierAgent::Arguments(ArgumentBase& args) {
-	args.Arg("ideal", ideal);
-}
-
 void ClassifierAgent::Init() {
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/ideal", 0, 0);
@@ -1089,10 +1068,6 @@ String RLAgent::GetStyle() const {
 				"\"shift\":0"
 			"}"
 		"}";
-}
-
-void RLAgent::Arguments(ArgumentBase& args) {
-	args.Arg("ideal", ideal);
 }
 
 void RLAgent::Init() {
@@ -1246,10 +1221,6 @@ String DQNAgent::GetStyle() const {
 				"\"shift\":0"
 			"}"
 		"}";
-}
-
-void DQNAgent::Arguments(ArgumentBase& args) {
-	args.Arg("ideal", ideal);
 }
 
 void DQNAgent::Init() {
@@ -1414,10 +1385,6 @@ String MonaAgent::GetStyle() const {
 				"\"shift\":0"
 			"}"
 		"}";
-}
-
-void MonaAgent::Arguments(ArgumentBase& args) {
-	args.Arg("ideal", ideal);
 }
 
 void MonaAgent::Init() {
@@ -1636,10 +1603,6 @@ String MonaMetaAgent::GetStyle() const {
 				"\"shift\":0"
 			"}"
 		"}";
-}
-
-void MonaMetaAgent::Arguments(ArgumentBase& args) {
-	args.Arg("ideal", ideal);
 }
 
 void MonaMetaAgent::Init() {
@@ -1863,10 +1826,6 @@ String MonaDoubleAgent::GetStyle() const {
 				"\"shift\":0"
 			"}"
 		"}";
-}
-
-void MonaDoubleAgent::Arguments(ArgumentBase& args) {
-	
 }
 
 void MonaDoubleAgent::Init() {

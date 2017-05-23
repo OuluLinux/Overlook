@@ -67,8 +67,8 @@ INITBLOCK {
 	Factory::Register<MonaMetaAgent>();
 	Factory::Register<MonaDoubleAgent>();
 	*/
-	int c = Factory::GetFactoryInputs().GetCount();
-	ASSERT(Factory::GetFactoryInputs().GetCount());
+	int c = Factory::GetRegs().GetCount();
+	ASSERT(Factory::GetRegs().GetCount());
 }
 
 END_UPP_NAMESPACE

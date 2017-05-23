@@ -8,10 +8,6 @@ SpreadStats::SpreadStats() {
 	SetCoreSeparateWindow();
 }
 
-void SpreadStats::Arguments(ArgumentBase& args) {
-	
-}
-
 void SpreadStats::Init() {
 	SetBufferLineWidth(0, 3);
 	SetBufferColor(0, Color(0,128,0));
@@ -68,10 +64,6 @@ void SpreadStats::Start() {
 
 SpreadMeanProfit::SpreadMeanProfit() {
 	askbid = NULL;
-	
-}
-
-void SpreadMeanProfit::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -138,10 +130,6 @@ void SpreadMeanProfit::Start() {
 
 
 SpreadProfitDistribution::SpreadProfitDistribution() {
-	
-}
-
-void SpreadProfitDistribution::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -223,10 +211,6 @@ SpreadProbability::SpreadProbability() {
 	
 }
 
-void SpreadProbability::Arguments(ArgumentBase& args) {
-	
-}
-
 void SpreadProbability::Init() {
 	SetCoreSeparateWindow();
 	SetBufferLineWidth(0, 2);
@@ -287,8 +271,7 @@ ValueChange::ValueChange() {
 	
 }
 
-void ValueChange::Arguments(ArgumentBase& args) {
-	
+void ValueChange::Init() {
 	SetBufferColor(0, GrayColor(128));
 	SetBufferLineWidth(0, 4);
 	SetBufferColor(1, Color(0,128,0));
@@ -307,9 +290,7 @@ void ValueChange::Arguments(ArgumentBase& args) {
 	SetBufferLineWidth(7, 1);
 	SetBufferColor(8, Color(255,255,255));
 	SetBufferLineWidth(8, 1);
-}
-
-void ValueChange::Init() {
+	
 	MetaTrader& mt = GetMetaTrader();
 	int id = GetSymbol();
 	if (id < mt.GetSymbolCount()) {
@@ -420,10 +401,6 @@ IdealOrders::IdealOrders() {
 
 String IdealOrders::GetStyle() const {
 	return "";
-}
-
-void IdealOrders::Arguments(ArgumentBase& args) {
-	
 }
 
 void IdealOrders::Init() {

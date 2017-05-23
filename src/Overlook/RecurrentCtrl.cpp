@@ -155,10 +155,6 @@ RecurrentCtrl::RecurrentCtrl() {
 	//PostCallback(THISBACK(Refresher));
 }
 
-void RecurrentCtrl::Arguments(ArgumentBase& args) {
-	args.Arg("slot", slotpath);
-}
-
 void RecurrentCtrl::Init() {
 	/*
 	BaseSystem& bs = *Get<BaseSystem>();

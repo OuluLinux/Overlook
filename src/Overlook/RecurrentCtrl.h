@@ -45,7 +45,7 @@ public:
 	void SetPreset(int i);
 	void SetStats(double epoch, double ppl, int time);
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	
 };

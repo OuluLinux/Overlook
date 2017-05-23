@@ -38,10 +38,6 @@ WdayHourChanges::WdayHourChanges() {
 	
 }
 
-void WdayHourChanges::Arguments(ArgumentBase& args) {
-	
-}
-
 void WdayHourChanges::Init() {
 	SetCoreSeparateWindow();
 	//SetBufferCount(2, 2);
@@ -130,10 +126,6 @@ const OnlineVariance& WdayHourChanges::GetOnlineVariance(int shift) {
 
 WdayHourStats::WdayHourStats() {
 	var_period = 10;
-}
-
-void WdayHourStats::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void WdayHourStats::Init() {
@@ -259,11 +251,6 @@ WdayHourDiff::WdayHourDiff() {
 	var_period_diff = 10;
 }
 
-void WdayHourDiff::Arguments(ArgumentBase& args) {
-	args.Arg("period_fast", var_period_fast);
-	args.Arg("period_diff", var_period_diff);
-}
-
 void WdayHourDiff::Init() {
 	/*
 	Core::Init();
@@ -361,10 +348,6 @@ void WdayHourDiff::Start() {
 WdayHourForecastErrors::WdayHourForecastErrors() {
 	var_period = 10;
 	
-}
-
-void WdayHourForecastErrors::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void WdayHourForecastErrors::Init() {
@@ -516,10 +499,6 @@ WdayHourErrorAdjusted::WdayHourErrorAdjusted() {
 	
 }
 
-void WdayHourErrorAdjusted::Arguments(ArgumentBase& args) {
-	
-}
-
 void WdayHourErrorAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -625,10 +604,6 @@ WeekStats::WeekStats() {
 	var_period = 10;
 	
 	
-}
-
-void WeekStats::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void WeekStats::Init() {
@@ -792,10 +767,6 @@ WeekStatsForecastErrors::WeekStatsForecastErrors() {
 	
 }
 
-void WeekStatsForecastErrors::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
-}
-
 void WeekStatsForecastErrors::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -947,10 +918,6 @@ WeekStatsErrorAdjusted::WeekStatsErrorAdjusted() {
 	
 }
 
-void WeekStatsErrorAdjusted::Arguments(ArgumentBase& args) {
-	
-}
-
 void WeekStatsErrorAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -1059,10 +1026,6 @@ void WeekStatsErrorAdjusted::Start() {
 
 
 WdayHourDiffWeek::WdayHourDiffWeek() {
-	
-}
-
-void WdayHourDiffWeek::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -1210,10 +1173,6 @@ WdayHourWeekAdjusted::WdayHourWeekAdjusted() {
 	
 }
 
-void WdayHourWeekAdjusted::Arguments(ArgumentBase& args) {
-	
-}
-
 void WdayHourWeekAdjusted::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -1340,10 +1299,6 @@ SubTfChanges::SubTfChanges() {
 	other_counted = 0;
 	var_period = 10;
 	
-}
-
-void SubTfChanges::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void SubTfChanges::Init() {
@@ -1480,10 +1435,6 @@ MetaTfChanges::MetaTfChanges() {
 	prev_open_time = Time(1970,1,1);
 	prev_open = 0;
 	var_period = 10;
-}
-
-void MetaTfChanges::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void MetaTfChanges::Init() {
@@ -1624,10 +1575,6 @@ HourHeat::HourHeat() {
 	
 }
 
-void HourHeat::Arguments(ArgumentBase& args) {
-	
-}
-
 void HourHeat::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -1724,13 +1671,6 @@ MetaTfCDF::MetaTfCDF() {
 	prev_open_time = Time(1970,1,1);
 	prev_open = 0;
 	var_period = 10;
-}
-
-void MetaTfCDF::Arguments(ArgumentBase& args) {
-	args.Arg("offset", offset);
-	args.Arg("prev_open_time", prev_open_time);
-	args.Arg("prev_open", prev_open);
-	args.Arg("period", var_period);
 }
 
 void MetaTfCDF::Init() {
@@ -1848,10 +1788,6 @@ void MetaTfCDF::Start() {
 
 WdayHourTrending::WdayHourTrending() {
 	var_period = 10;
-}
-
-void WdayHourTrending::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void WdayHourTrending::Init() {
@@ -1976,10 +1912,6 @@ void WdayHourTrending::Start() {
 
 WdayHourTrendSuccess::WdayHourTrendSuccess() {
 	var_period = 10;
-}
-
-void WdayHourTrendSuccess::Arguments(ArgumentBase& args) {
-	args.Arg("period", var_period);
 }
 
 void WdayHourTrendSuccess::Init() {
@@ -2119,13 +2051,6 @@ OpportinityQuality::OpportinityQuality() {
 	weights[3] = 0.5;
 }
 
-void OpportinityQuality::Arguments(ArgumentBase& args) {
-	args.Arg("w0", weights[0]);
-	args.Arg("w1", weights[1]);
-	args.Arg("w2", weights[2]);
-	args.Arg("w3", weights[3]);
-}
-
 void OpportinityQuality::Init() {
 	/*
 	SetCoreSeparateWindow();
@@ -2205,12 +2130,6 @@ EdgeStatistics::EdgeStatistics()
 	slowing = 10;
 	es_counted = 0;
 	SetCoreSeparateWindow();
-}
-
-void EdgeStatistics::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("method", method);
-	args.Arg("slowing", slowing);
 }
 
 void EdgeStatistics::Init()
@@ -2320,10 +2239,6 @@ TideStatistics::TideStatistics()
 	SetCoreSeparateWindow();
 }
 
-void TideStatistics::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void TideStatistics::Init()
 {
 	/*
@@ -2427,10 +2342,6 @@ Disconnections::Disconnections()
 	dis_counted = 0;
 	prev_disc_pos = 0;
 	SetCoreSeparateWindow();
-}
-
-void Disconnections::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void Disconnections::Init()
@@ -2569,10 +2480,6 @@ EventOsc::EventOsc() {
 	counted_events = 0;
 }
 
-void EventOsc::Arguments(ArgumentBase& args) {
-	args.Arg("mul", mul);
-}
-
 void EventOsc::Init() {
 	/*
 	Core::Init();
@@ -2672,11 +2579,6 @@ GroupEventOsc::GroupEventOsc() {
 	ownmul = 10;
 }
 
-void GroupEventOsc::Arguments(ArgumentBase& args) {
-	args.Arg("mul", mul);
-	args.Arg("ownmul", ownmul);
-}
-
 void GroupEventOsc::Init() {
 	/*
 	Core::Init();
@@ -2772,10 +2674,6 @@ FeatureOsc::FeatureOsc() {
 	counted_features = 0;
 }
 
-void FeatureOsc::Arguments(ArgumentBase& args) {
-	args.Arg("mul", mul);
-}
-
 void FeatureOsc::Init() {
 	/*
 	Core::Init();
@@ -2857,11 +2755,6 @@ GroupFeatureOsc::GroupFeatureOsc() {
 	mul = 0.8;
 	feat_count = 0;
 	ownmul = 10;
-}
-
-void GroupFeatureOsc::Arguments(ArgumentBase& args) {
-	args.Arg("mul", mul);
-	args.Arg("ownmul", ownmul);
 }
 
 void GroupFeatureOsc::Init() {
@@ -2950,10 +2843,6 @@ ChannelPredicter::ChannelPredicter() {
 
 String ChannelPredicter::GetStyle() const {
 	return "";
-}
-
-void ChannelPredicter::Arguments(ArgumentBase& args) {
-	args.Arg("length", length);
 }
 
 void ChannelPredicter::Init() {

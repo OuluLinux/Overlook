@@ -146,10 +146,6 @@ EventManager::EventManager() {
 	
 }
 /*
-void EventManager::Arguments(ArgumentBase& args) {
-	
-}
-
 
 void EventManager::Start() {
 	

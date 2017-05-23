@@ -75,7 +75,7 @@ public:
 	EventManager();
 	
 	/*
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Start();*/
 	void Init();
 	

@@ -15,15 +15,15 @@ protected:
 public:
 	WdayHourChanges();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
 	const OnlineVariance& GetOnlineVariance(int shift);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -42,13 +42,14 @@ protected:
 public:
 	WdayHourStats();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -65,13 +66,15 @@ protected:
 public:
 	WdayHourDiff();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period_fast", var_period_fast);
+		reg % Arg("period_diff", var_period_diff);
 	}
 };
 
@@ -89,13 +92,14 @@ protected:
 public:
 	WdayHourForecastErrors();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -113,13 +117,13 @@ protected:
 public:
 	WdayHourErrorAdjusted();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -141,13 +145,14 @@ protected:
 public:
 	WeekStats();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -165,13 +170,14 @@ protected:
 public:
 	WeekStatsForecastErrors();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -188,13 +194,13 @@ protected:
 public:
 	WeekStatsErrorAdjusted();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -207,13 +213,13 @@ protected:
 public:
 	WdayHourDiffWeek();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -230,13 +236,13 @@ protected:
 public:
 	WdayHourWeekAdjusted();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -257,13 +263,14 @@ protected:
 public:
 	SubTfChanges();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		reg.AddOut(IndiPhase, SubTfValue, SymTf, 4, 4);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		reg % Out(IndiPhase, SubTfValue, SymTf, 4, 4);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -282,13 +289,14 @@ protected:
 public:
 	MetaTfChanges();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -303,13 +311,13 @@ protected:
 public:
 	HourHeat();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -328,13 +336,17 @@ protected:
 public:
 	MetaTfCDF();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("offset", offset);
+		reg % Arg("prev_open_time", prev_open_time);
+		reg % Arg("prev_open", prev_open);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -351,13 +363,14 @@ protected:
 public:
 	WdayHourTrending();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -372,13 +385,14 @@ protected:
 public:
 	WdayHourTrendSuccess();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", var_period);
 	}
 };
 
@@ -393,13 +407,17 @@ protected:
 public:
 	OpportinityQuality();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("w0", weights[0]);
+		reg % Arg("w1", weights[1]);
+		reg % Arg("w2", weights[2]);
+		reg % Arg("w3", weights[3]);
 	}
 };
 
@@ -423,11 +441,14 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % es_counted % vars;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("method", method);
+		reg % Arg("slowing", slowing);
 	}
 };
 
@@ -452,11 +473,12 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % ts_counted % vars;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -484,11 +506,12 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % discbuf % dis_counted % prev_disc_pos;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -508,11 +531,12 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("mul", mul);
 	}
 };
 
@@ -530,11 +554,13 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("mul", mul);
+		reg % Arg("ownmul", ownmul);
 	}
 };
 
@@ -554,11 +580,12 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("mul", mul);
 	}
 };
 
@@ -576,11 +603,13 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("mul", mul);
+		reg % Arg("ownmul", ownmul);
 	}
 };
 
@@ -598,12 +627,13 @@ public:
 	ChannelPredicter();
 	
 	virtual String GetStyle() const;
-	virtual void GetIO(ValueRegister& reg) {
-		/*reg.AddIn(IndiPhase, ForecastChangeValue, SymTf);
-		reg.AddIn(IndiPhase, ForecastChannelValue, SymTf);*/
-		reg.AddOut(IndiPhase, ForecastChannelValue, SymTf);
+	virtual void IO(ValueRegister& reg) {
+		/*reg % In(IndiPhase, ForecastChangeValue, SymTf);
+		reg % In(IndiPhase, ForecastChannelValue, SymTf);*/
+		reg % Out(IndiPhase, ForecastChannelValue, SymTf);
+		reg % Arg("length", length);
 	}
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	

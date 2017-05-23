@@ -51,12 +51,6 @@ MovingAverage::MovingAverage()
 	ma_counted = 0;
 }
 
-void MovingAverage::Arguments(ArgumentBase& args) {
-	args.Arg("period", ma_period);
-	args.Arg("offset", ma_shift);
-	args.Arg("method", ma_method);
-}
-
 void MovingAverage::Init() {
 	int draw_begin;
 	if (ma_period < 2)
@@ -199,18 +193,10 @@ MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence()
 	signal_sma_period = 9;
 	
 	params = false;
-	
-}
-
-void MovingAverageConvergenceDivergence::Arguments(ArgumentBase& args) {
-	args.Arg("fast_ema", fast_ema_period);
-	args.Arg("slow_ema", slow_ema_period);
-	args.Arg("signal_sma", signal_sma_period);
 }
 
 void MovingAverageConvergenceDivergence::Init()
 {
-	/*
 	SetCoreSeparateWindow();
 	//SetBufferCount(2, 2);
 	SetBufferColor(0, Silver);
@@ -235,9 +221,8 @@ void MovingAverageConvergenceDivergence::Init()
 	else
 		params = true;
 	
-	if (RequireIndicator("ma", "period", fast_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
-	if (RequireIndicator("ma", "period", slow_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
-	*/
+	//if (RequireIndicator("ma", "period", fast_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
+	//if (RequireIndicator("ma", "period", slow_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
 }
 
 void MovingAverageConvergenceDivergence::Start()
@@ -273,10 +258,6 @@ void MovingAverageConvergenceDivergence::Start()
 AverageDirectionalMovement::AverageDirectionalMovement()
 {
 	period_adx = 14;
-}
-
-void AverageDirectionalMovement::Arguments(ArgumentBase& args) {
-	args.Arg("period", period_adx);
 }
 
 void AverageDirectionalMovement::Init()
@@ -409,12 +390,6 @@ BollingerBands::BollingerBands()
 	plot_begin = 0;
 }
 
-void BollingerBands::Arguments(ArgumentBase& args) {
-	args.Arg("period", bands_period);
-	args.Arg("shift", bands_shift);
-	args.Arg("deviation", bands_deviation);
-}
-
 void BollingerBands::Init()
 {
 	/*
@@ -518,13 +493,6 @@ Envelopes::Envelopes() {
 	deviation = 0.1;
 }
 
-void Envelopes::Arguments(ArgumentBase& args) {
-	args.Arg("period", ma_period);
-	args.Arg("shift", ma_shift);
-	args.Arg("deviation", deviation);
-	args.Arg("method", ma_method);
-}
-
 void Envelopes::Init()
 {
 	/*
@@ -580,11 +548,6 @@ ParabolicSAR::ParabolicSAR()
 {
 	sar_step = 0.02;
 	sar_maximum = 0.2;
-}
-
-void ParabolicSAR::Arguments(ArgumentBase& args) {
-	args.Arg("step", sar_step);
-	args.Arg("maximum", sar_maximum);
 }
 
 void ParabolicSAR::Init() {
@@ -789,10 +752,6 @@ StandardDeviation::StandardDeviation()
 	
 }
 
-void StandardDeviation::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void StandardDeviation::Init()
 {
 /*
@@ -859,10 +818,6 @@ AverageTrueRange::AverageTrueRange()
 {
 	period = 14;
 	
-}
-
-void AverageTrueRange::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void AverageTrueRange::Init() {
@@ -953,10 +908,6 @@ BearsPower::BearsPower()
 	
 }
 
-void BearsPower::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void BearsPower::Init() {
 /*
 	SetCoreSeparateWindow();
@@ -1008,10 +959,6 @@ BullsPower::BullsPower()
 	
 }
 
-void BullsPower::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void BullsPower::Init()
 {
 	/*
@@ -1059,10 +1006,6 @@ CommodityChannelIndex::CommodityChannelIndex()
 	period = 14;
 	
 	
-}
-
-void CommodityChannelIndex::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void CommodityChannelIndex::Init()
@@ -1182,10 +1125,6 @@ DeMarker::DeMarker()
 	
 }
 
-void DeMarker::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void DeMarker::Init()
 {
 	/*
@@ -1287,10 +1226,6 @@ ForceIndex::ForceIndex()
 	applied_value = 0;
 }
 
-void ForceIndex::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void ForceIndex::Init()
 {
 /*
@@ -1349,10 +1284,6 @@ Momentum::Momentum()
 {
 	period = 14;
 	
-}
-
-void Momentum::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void Momentum::Init()
@@ -1419,12 +1350,6 @@ OsMA::OsMA()
 	slow_ema_period = 26;
 	signal_sma_period = 9;
 	params = false;
-}
-
-void OsMA::Arguments(ArgumentBase& args) {
-	args.Arg("slow_ema", slow_ema_period);
-	args.Arg("fast_ema", fast_ema_period);
-	args.Arg("signal_sma", signal_sma_period);
 }
 
 void OsMA::Init()
@@ -1495,10 +1420,6 @@ RelativeStrengthIndex::RelativeStrengthIndex()
 {
 	period = 14;
 	
-}
-
-void RelativeStrengthIndex::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void RelativeStrengthIndex::Init()
@@ -1603,10 +1524,6 @@ RelativeVigorIndex::RelativeVigorIndex()
 	
 }
 
-void RelativeVigorIndex::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void RelativeVigorIndex::Init()
 {
 
@@ -1700,12 +1617,6 @@ StochasticOscillator::StochasticOscillator()
 	d_period = 3;
 	slowing = 3;
 	
-}
-
-void StochasticOscillator::Arguments(ArgumentBase& args) {
-	args.Arg("k_period", k_period);
-	args.Arg("d_period", d_period);
-	args.Arg("slowing", slowing);
 }
 
 void StochasticOscillator::Init()
@@ -1850,10 +1761,6 @@ WilliamsPercentRange::WilliamsPercentRange()
 	
 }
 
-void WilliamsPercentRange::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void WilliamsPercentRange::Init()
 {
 
@@ -1903,11 +1810,11 @@ void WilliamsPercentRange::Start()
 
 
 
-AccumulationDistribution::AccumulationDistribution() {
-	
-}
 
-void AccumulationDistribution::Arguments(ArgumentBase& args) {
+
+
+
+AccumulationDistribution::AccumulationDistribution() {
 	
 }
 
@@ -2010,10 +1917,6 @@ MoneyFlowIndex::MoneyFlowIndex()
 	
 }
 
-void MoneyFlowIndex::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-}
-
 void MoneyFlowIndex::Init()
 {
 
@@ -2096,10 +1999,6 @@ ValueAndVolumeTrend::ValueAndVolumeTrend()
 	
 }
 
-void ValueAndVolumeTrend::Arguments(ArgumentBase& args) {
-	args.Arg("applied_value", applied_value);
-}
-
 void ValueAndVolumeTrend::Init()
 {
 	
@@ -2149,10 +2048,6 @@ OnBalanceVolume::OnBalanceVolume()
 {
 	applied_value = 5;
 	
-}
-
-void OnBalanceVolume::Arguments(ArgumentBase& args) {
-	args.Arg("applied_value", applied_value);
 }
 
 void OnBalanceVolume::Init()
@@ -2213,10 +2108,6 @@ Volumes::Volumes() {
 	
 }
 
-void Volumes::Arguments(ArgumentBase& args) {
-	
-}
-
 void Volumes::Init() {
 	SetCoreSeparateWindow();
 	//SetBufferCount(1, 1);
@@ -2249,10 +2140,6 @@ void Volumes::Start() {
 
 
 AcceleratorOscillator::AcceleratorOscillator() {
-	
-}
-
-void AcceleratorOscillator::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -2356,17 +2243,6 @@ GatorOscillator::GatorOscillator()
 	lips_shift = 3;
 	ma_method = 2;
 	applied_value = PRICE_MEDIAN;
-}
-
-void GatorOscillator::Arguments(ArgumentBase& args) {
-	args.Arg("jaws_period", jaws_period);
-	args.Arg("jaws_shift", jaws_shift);
-	args.Arg("teeth_period", teeth_period);
-	args.Arg("teeth_shift", teeth_shift);
-	args.Arg("lips_period", lips_period);
-	args.Arg("lips_shift", lips_shift);
-	args.Arg("ma_method", ma_method);
-	args.Arg("applied_value", applied_value);
 }
 
 void GatorOscillator::Init()
@@ -2541,10 +2417,6 @@ AwesomeOscillator::AwesomeOscillator()
 	
 }
 
-void AwesomeOscillator::Arguments(ArgumentBase& args) {
-	
-}
-
 void AwesomeOscillator::Init()
 {
 /*
@@ -2644,11 +2516,6 @@ Fractals::Fractals()
 	left_bars  = 3;
 	right_bars = 0;
 	
-}
-
-void Fractals::Arguments(ArgumentBase& args) {
-	args.Arg("left_bars", left_bars);
-	args.Arg("right_bars", right_bars);
 }
 
 void Fractals::Init()
@@ -2796,12 +2663,6 @@ FractalOsc::FractalOsc()
 	
 }
 
-void FractalOsc::Arguments(ArgumentBase& args) {
-	args.Arg("left_bars", left_bars);
-	args.Arg("right_bars", right_bars);
-	args.Arg("smoothing", smoothing_period);
-}
-
 void FractalOsc::Init()
 {
 /*
@@ -2859,10 +2720,6 @@ void FractalOsc::Start()
 
 MarketFacilitationIndex::MarketFacilitationIndex()
 {
-	
-}
-
-void MarketFacilitationIndex::Arguments(ArgumentBase& args) {
 	
 }
 
@@ -3046,13 +2903,6 @@ ZigZag::ZigZag()
 	input_deviation	= 5;  // Deviation
 	input_backstep	= 3;  // Backstep
 	extremum_level	= 3;  // recounting's depth of extremums
-}
-
-void ZigZag::Arguments(ArgumentBase& args) {
-	args.Arg("depth", input_depth);
-	args.Arg("deviation", input_depth);
-	args.Arg("backstep", input_backstep);
-	args.Arg("level", extremum_level);
 }
 
 void ZigZag::Init()
@@ -3301,12 +3151,6 @@ ZigZagOsc::ZigZagOsc()
 	
 }
 
-void ZigZagOsc::Arguments(ArgumentBase& args) {
-	args.Arg("depth", depth);
-	args.Arg("deviation", deviation);
-	args.Arg("backstep", backstep);
-}
-
 void ZigZagOsc::Init()
 {
 	/*
@@ -3393,10 +3237,6 @@ LinearTimeFrames::LinearTimeFrames() {
 	
 }
 
-void LinearTimeFrames::Arguments(ArgumentBase& args) {
-	
-}
-
 void LinearTimeFrames::Init() {
 /*
 	SetCoreSeparateWindow();
@@ -3451,12 +3291,6 @@ RepeatingAverage::RepeatingAverage() {
 	period = 5;
 	smoothing_period = 5;
 	applied_value = 5;
-}
-
-void RepeatingAverage::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("smoothing", smoothing_period);
-	args.Arg("applied_value", applied_value);
 }
 
 void RepeatingAverage::Init() {
@@ -3557,12 +3391,6 @@ RepeatingAverageOscillator::RepeatingAverageOscillator() {
 	applied_value = 5;
 }
 
-void RepeatingAverageOscillator::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("smoothing", smoothing_period);
-	args.Arg("applied_value", applied_value);
-}
-
 void RepeatingAverageOscillator::Init() {
 /*
 	SetCoreSeparateWindow();
@@ -3620,12 +3448,6 @@ SupportResistance::SupportResistance() {
 	period = 300;
 	max_crosses = 100;
 	max_radius = 100;
-}
-
-void SupportResistance::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("max_crosses", max_crosses);
-	args.Arg("max_radius", max_radius);
 }
 
 void SupportResistance::Init() {
@@ -3750,13 +3572,6 @@ SupportResistanceOscillator::SupportResistanceOscillator() {
 	smoothing_period = 30;
 }
 
-void SupportResistanceOscillator::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("max_crosses", max_crosses);
-	args.Arg("max_radius", max_radius);
-	args.Arg("smoothing", smoothing_period);
-}
-
 void SupportResistanceOscillator::Init() {
 /*
 	SetCoreSeparateWindow();
@@ -3807,10 +3622,6 @@ void SupportResistanceOscillator::Start() {
 
 Psychological::Psychological() {
 	period = 25;
-}
-
-void Psychological::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void Psychological::Init() {
@@ -3879,10 +3690,6 @@ CorrelationOscillator::CorrelationOscillator() {
 	period = 10;
 	sym_count = -1;
 	//ids = 0;
-}
-
-void CorrelationOscillator::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
 }
 
 void CorrelationOscillator::Init() {
@@ -4047,11 +3854,6 @@ ParallelSymLR::ParallelSymLR()
 	SetCoreSeparateWindow();
 }
 
-void ParallelSymLR::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("method", method);
-}
-
 void ParallelSymLR::Init()
 {
 	/*
@@ -4148,12 +3950,6 @@ ParallelSymLREdge::ParallelSymLREdge()
 	method = 0;
 	slowing = 54;
 	SetCoreSeparateWindow();
-}
-
-void ParallelSymLREdge::Arguments(ArgumentBase& args) {
-	args.Arg("period", period);
-	args.Arg("method", method);
-	args.Arg("slowing", slowing);
 }
 
 void ParallelSymLREdge::Init()

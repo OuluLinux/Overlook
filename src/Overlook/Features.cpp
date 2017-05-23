@@ -10,10 +10,6 @@ FeatureDetector::FeatureDetector() {
 	
 }
 
-void FeatureDetector::Arguments(ArgumentBase& args) {
-	//args.Arg("period", period);
-}
-
 void FeatureDetector::Init()
 {
 	/*

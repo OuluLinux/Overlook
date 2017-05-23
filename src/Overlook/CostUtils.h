@@ -10,14 +10,14 @@ class SpreadStats : public Core {
 public:
 	SpreadStats();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf);
-		reg.AddIn(SourcePhase, AskBidValue, SymTf);
-		reg.AddOut(SourcePhase, SpreadValue, SymTf, 1, 1);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, TimeValue, SymTf);
+		reg % In(SourcePhase, AskBidValue, SymTf);
+		reg % Out(SourcePhase, SpreadValue, SymTf, 1, 1);
 	}
 };
 
@@ -27,15 +27,15 @@ class SpreadMeanProfit : public Core {
 public:
 	SpreadMeanProfit();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf);
-		reg.AddIn(SourcePhase, RealValue, SymTf);
-		reg.AddIn(SourcePhase, AskBidValue, SymTf);
-		reg.AddOut(SourcePhase, SpreadOvercomeValue, SymTf, 1, 1);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, TimeValue, SymTf);
+		reg % In(SourcePhase, RealValue, SymTf);
+		reg % In(SourcePhase, AskBidValue, SymTf);
+		reg % Out(SourcePhase, SpreadOvercomeValue, SymTf, 1, 1);
 	}
 };
 
@@ -45,15 +45,15 @@ class SpreadProfitDistribution : public Core {
 public:
 	SpreadProfitDistribution();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf);
-		reg.AddIn(SourcePhase, AskBidValue, SymTf);
-		reg.AddIn(IndiPhase, SubTfValue, SymTf);
-		reg.AddOut(SourcePhase, SpreadOvercomeDistValue, SymTf, 2, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, TimeValue, SymTf);
+		reg % In(SourcePhase, AskBidValue, SymTf);
+		reg % In(IndiPhase, SubTfValue, SymTf);
+		reg % Out(SourcePhase, SpreadOvercomeDistValue, SymTf, 2, 2);
 	}
 };
 
@@ -63,15 +63,15 @@ class SpreadProbability : public Core {
 public:
 	SpreadProbability();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, TimeValue, SymTf);
-		reg.AddIn(SourcePhase, RealValue, SymTf);
-		reg.AddIn(SourcePhase, SpreadOvercomeDistValue, SymTf);
-		reg.AddOut(SourcePhase, SpreadProbValue, SymTf, 2, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, TimeValue, SymTf);
+		reg % In(SourcePhase, RealValue, SymTf);
+		reg % In(SourcePhase, SpreadOvercomeDistValue, SymTf);
+		reg % Out(SourcePhase, SpreadProbValue, SymTf, 2, 2);
 	}
 };
 
@@ -86,12 +86,12 @@ public:
 	ValueChange();
 	
 	virtual String GetStyle() const {return "";}
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, RealValue, Sym);
-		reg.AddIn(SourcePhase, SpreadValue, Tf);
-		reg.AddOut(IndiPhase, RealChangeValue, SymTf, 7, 7);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, Sym);
+		reg % In(SourcePhase, SpreadValue, Tf);
+		reg % Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
 	}
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
@@ -106,11 +106,11 @@ public:
 	IdealOrders();
 	
 	virtual String GetStyle() const;
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(IndiPhase, RealChangeValue, SymTf);
-		reg.AddOut(IndiPhase, IdealOrderSignal, SymTf);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(IndiPhase, RealChangeValue, SymTf);
+		reg % Out(IndiPhase, IdealOrderSignal, SymTf);
 	}
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	

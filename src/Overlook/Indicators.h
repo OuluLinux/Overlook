@@ -10,7 +10,6 @@ enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
 class MovingAverage : public Core {
-	Vector<double> buffer;
 	int ma_period;
 	int ma_shift;
 	int ma_method;
@@ -28,14 +27,17 @@ protected:
 public:
 	MovingAverage();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
+	//virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		reg.AddIn(SourcePhase, RealValue, SymTf);
-		reg.AddOut(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", ma_period)
+			% Arg("offset", ma_shift)
+			% Arg("method", ma_method);
 	}
 };
 
@@ -52,13 +54,16 @@ class MovingAverageConvergenceDivergence : public Core {
 public:
 	MovingAverageConvergenceDivergence();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf);
+		reg % Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+		reg % Arg("fast_ema", fast_ema_period);
+		reg % Arg("slow_ema", slow_ema_period);
+		reg % Arg("signal_sma", signal_sma_period);
 	}
 };
 
@@ -76,13 +81,14 @@ class AverageDirectionalMovement : public Core {
 public:
 	AverageDirectionalMovement();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period_adx);
 	}
 };
 
@@ -103,13 +109,16 @@ class BollingerBands : public Core {
 public:
 	BollingerBands();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", bands_period);
+		reg % Arg("shift", bands_shift);
+		reg % Arg("deviation", bands_deviation);
 	}
 };
 
@@ -129,13 +138,17 @@ class Envelopes : public Core {
 public:
 	Envelopes();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", ma_period);
+		reg % Arg("shift", ma_shift);
+		reg % Arg("deviation", deviation);
+		reg % Arg("method", ma_method);
 	}
 };
 
@@ -158,13 +171,15 @@ class ParabolicSAR : public Core {
 public:
 	ParabolicSAR();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("step", sar_step);
+		reg % Arg("maximum", sar_maximum);
 	}
 };
 
@@ -181,13 +196,14 @@ class StandardDeviation : public Core {
 public:
 	StandardDeviation();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -202,13 +218,14 @@ class AverageTrueRange : public Core {
 public:
 	AverageTrueRange();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -221,13 +238,14 @@ class BearsPower : public Core {
 public:
 	BearsPower();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -240,13 +258,14 @@ class BullsPower : public Core {
 public:
 	BullsPower();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -261,13 +280,14 @@ class CommodityChannelIndex : public Core {
 public:
 	CommodityChannelIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -282,13 +302,14 @@ class DeMarker : public Core {
 public:
 	DeMarker();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -303,13 +324,14 @@ class ForceIndex : public Core {
 public:
 	ForceIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -322,13 +344,14 @@ class Momentum : public Core {
 public:
 	Momentum();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -347,10 +370,17 @@ class OsMA : public Core {
 public:
 	OsMA();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("slow_ema", slow_ema_period);
+		reg % Arg("fast_ema", fast_ema_period);
+		reg % Arg("signal_sma", signal_sma_period);
+	}
 };
 
 
@@ -364,13 +394,14 @@ class RelativeStrengthIndex : public Core {
 public:
 	RelativeStrengthIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -384,13 +415,14 @@ class RelativeVigorIndex : public Core {
 public:
 	RelativeVigorIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -408,13 +440,16 @@ class StochasticOscillator : public Core {
 public:
 	StochasticOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("k_period", k_period);
+		reg % Arg("d_period", d_period);
+		reg % Arg("slowing", slowing);
 	}
 };
 
@@ -430,13 +465,14 @@ class WilliamsPercentRange : public Core {
 public:
 	WilliamsPercentRange();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -447,13 +483,13 @@ class AccumulationDistribution : public Core {
 public:
 	AccumulationDistribution();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -465,13 +501,14 @@ class MoneyFlowIndex : public Core {
 public:
 	MoneyFlowIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -482,13 +519,14 @@ class ValueAndVolumeTrend : public Core {
 public:
 	ValueAndVolumeTrend();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("applied_value", applied_value);
 	}
 };
 
@@ -499,13 +537,14 @@ class OnBalanceVolume : public Core {
 public:
 	OnBalanceVolume();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("applied_value", applied_value);
 	}
 };
 
@@ -516,13 +555,13 @@ class Volumes : public Core {
 public:
 	Volumes();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -537,13 +576,13 @@ class AcceleratorOscillator : public Core {
 public:
 	AcceleratorOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -568,13 +607,21 @@ class GatorOscillator : public Core {
 public:
 	GatorOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("jaws_period", jaws_period);
+		reg % Arg("jaws_shift", jaws_shift);
+		reg % Arg("teeth_period", teeth_period);
+		reg % Arg("teeth_shift", teeth_shift);
+		reg % Arg("lips_period", lips_period);
+		reg % Arg("lips_shift", lips_shift);
+		reg % Arg("ma_method", ma_method);
+		reg % Arg("applied_value", applied_value);
 	}
 };
 
@@ -587,13 +634,13 @@ class AwesomeOscillator : public Core {
 public:
 	AwesomeOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -616,13 +663,15 @@ class Fractals : public Core {
 public:
 	Fractals();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("left_bars", left_bars);
+		reg % Arg("right_bars", right_bars);
 	}
 };
 
@@ -635,13 +684,16 @@ class FractalOsc : public Core {
 public:
 	FractalOsc();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("left_bars", left_bars);
+		reg % Arg("right_bars", right_bars);
+		reg % Arg("smoothing", smoothing_period);
 	}
 };
 
@@ -656,13 +708,13 @@ class MarketFacilitationIndex : public Core {
 public:
 	MarketFacilitationIndex();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -691,11 +743,15 @@ public:
 	}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("depth", input_depth);
+		reg % Arg("deviation", input_depth);
+		reg % Arg("backstep", input_backstep);
+		reg % Arg("level", extremum_level);
 	}
 };
 
@@ -709,13 +765,16 @@ class ZigZagOsc : public Core {
 public:
 	ZigZagOsc();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("depth", depth);
+		reg % Arg("deviation", deviation);
+		reg % Arg("backstep", backstep);
 	}
 };
 
@@ -728,13 +787,13 @@ class LinearTimeFrames : public Core {
 public:
 	LinearTimeFrames();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
 	}
 };
 
@@ -746,13 +805,16 @@ class RepeatingAverage : public Core {
 public:
 	RepeatingAverage();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("smoothing", smoothing_period);
+		reg % Arg("applied_value", applied_value);
 	}
 };
 
@@ -763,13 +825,16 @@ class RepeatingAverageOscillator : public Core {
 public:
 	RepeatingAverageOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("smoothing", smoothing_period);
+		reg % Arg("applied_value", applied_value);
 	}
 };
 
@@ -781,13 +846,16 @@ class SupportResistance : public Core {
 public:
 	SupportResistance();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("max_crosses", max_crosses);
+		reg % Arg("max_radius", max_radius);
 	}
 };
 
@@ -799,13 +867,17 @@ class SupportResistanceOscillator : public Core {
 public:
 	SupportResistanceOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("max_crosses", max_crosses);
+		reg % Arg("max_radius", max_radius);
+		reg % Arg("smoothing", smoothing_period);
 	}
 };
 
@@ -817,13 +889,14 @@ class Psychological : public Core {
 public:
 	Psychological();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -856,13 +929,14 @@ class CorrelationOscillator : public Core {
 public:
 	CorrelationOscillator();
 	
-	virtual void Arguments(ArgumentBase& args);
+	
 	virtual void Init();
 	virtual void Start();
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
 	}
 };
 
@@ -898,11 +972,13 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("method", method);
 	}
 };
 
@@ -931,11 +1007,14 @@ public:
 	virtual void Serialize(Stream& s) {Core::Serialize(s); s % symlr % edge % buffer;}
 	
 	virtual void Init();
-	virtual void Arguments(ArgumentBase& args);
 	
-	virtual void GetIO(ValueRegister& reg) {
-		//reg.AddIn(, , SymTf);
-		//reg.AddOut(, , SymTf);
+	
+	virtual void IO(ValueRegister& reg) {
+		//reg % In(, , SymTf);
+		//reg % Out(, , SymTf);
+		reg % Arg("period", period);
+		reg % Arg("method", method);
+		reg % Arg("slowing", slowing);
 	}
 };
 

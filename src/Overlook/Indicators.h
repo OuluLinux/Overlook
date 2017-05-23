@@ -60,7 +60,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf);
-		reg % Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+		reg % Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 		reg % Arg("fast_ema", fast_ema_period);
 		reg % Arg("slow_ema", slow_ema_period);
 		reg % Arg("signal_sma", signal_sma_period);

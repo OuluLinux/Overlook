@@ -54,35 +54,76 @@ typedef const Buffer ConstBuffer;
 
 // Class for registering input and output types of values of classes
 struct ValueBase {
-	
+	int phase, type, scale, count, visible, data_type;
+	const char* s0;
+	void* data;
+	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
+	enum {IN_, INOPT_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_};
 };
 
 struct In : public ValueBase {
-	In(int phase, int type, int scale) {}
+	In(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = IN_;}
 };
-typedef In InOptional;
-
+struct InOptional : public ValueBase {
+	InOptional(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = INOPT_;}
+};
 struct Out : public ValueBase {
-	Out(int phase, int type, int scale, int count=0, int visible=0) {}
+	Out(int phase, int type, int scale, int count=0, int visible=0) {this->phase = phase; this->type = type; this->scale = scale; this->count = count; this->visible = visible; data_type = OUT_;}
 };
 
 struct Arg : public ValueBase {
-	Arg(const char* key, bool& value) {}
-	Arg(const char* key, int& value) {}
-	Arg(const char* key, double& value) {}
-	Arg(const char* key, Time& value) {}
-	Arg(const char* key, String& value) {}
+	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
+	Arg(const char* key, int& value)	{s0 = key; data = &value; data_type = INT_;}
+	Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
+	Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
+	Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
 };
 
 struct ValueRegister {
 	ValueRegister() {}
 	
-	/*virtual void AddIn(int phase, int type, int scale) = 0;
-	virtual void AddInOptional(int phase, int type, int scale) = 0;
-	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) = 0;*/
 	virtual void IO(const ValueBase& base) = 0;
 	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
+};
+
+struct ArgChanger : public ValueRegister {
+	ArgChanger() : cursor(0), storing(0) {}
 	
+	virtual void IO(const ValueBase& base) {
+		if (!storing) {
+			keys.SetCount(cursor+1);
+			keys[cursor] = base.s0;
+			args.SetCount(cursor+1);
+			if (base.data_type == ValueBase::BOOL_)
+				args[cursor++] = *(bool*)base.data;
+			else if (base.data_type == ValueBase::INT_)
+				args[cursor++] = *(int*)base.data;
+			else if (base.data_type == ValueBase::DOUBLE_)
+				args[cursor++] = *(double*)base.data;
+			else if (base.data_type == ValueBase::TIME_)
+				args[cursor++] = *(Time*)base.data;
+			else if (base.data_type == ValueBase::STRING_)
+				args[cursor++] = *(String*)base.data;
+		} else {
+			if (base.data_type == ValueBase::BOOL_)
+				*(bool*)base.data = args[cursor++];
+			else if (base.data_type == ValueBase::INT_)
+				*(int*)base.data = args[cursor++];
+			else if (base.data_type == ValueBase::DOUBLE_)
+				*(double*)base.data = args[cursor++];
+			else if (base.data_type == ValueBase::TIME_)
+				*(Time*)base.data = args[cursor++];
+			else if (base.data_type == ValueBase::STRING_)
+				*(String*)base.data = args[cursor++];
+		}
+	}
+	void SetLoading() {storing = false; cursor = 0;}
+	void SetStoring() {storing = true;  cursor = 0;}
+	
+	Vector<Value> args;
+	Vector<String> keys;
+	int cursor;
+	bool storing;
 };
 
 struct CoreIO : public ValueRegister {
@@ -107,24 +148,17 @@ struct CoreIO : public ValueRegister {
 	
 	CoreIO() {}
 	
-	/*virtual void AddIn(int phase, int type, int scale) {
-		In& in = inputs.Add();
-	}
-	
-	virtual void AddInOptional(int phase, int type, int scale) {
-		
-	}
-	
-	virtual void AddOut(int phase, int type, int scale, int count, int visible) {
-		Out& out = outputs.Add();
-		out.buffers.SetCount(count);
-		out.visible = visible;
-		for(int i = 0; i < out.buffers.GetCount(); i++)
-			buffers.Add(&out.buffers[i]);
-	}*/
-	
 	virtual void IO(const ValueBase& base) {
-		
+		if (base.data_type == ValueBase::IN_) {
+			inputs.Add();
+		}
+		else if (base.data_type == ValueBase::OUT_) {
+			Output& out = outputs.Add();
+			out.buffers.SetCount(base.count);
+			out.visible = base.visible;
+			for(int i = 0; i < out.buffers.GetCount(); i++)
+				buffers.Add(&out.buffers[i]);
+		}
 	}
 	
 	void RefreshBuffers() {

@@ -59,6 +59,7 @@ void DataBridgeCommon::Init(DataBridge* db) {
 
 void DataBridgeCommon::DownloadRemoteData() {
 	LOG("DataBridgeCommon::DownloadRemoteData");
+	DUMPC(tfs);
 	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
 	int actual = 0;
@@ -81,8 +82,16 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 	RealizeDirectory(history_dir);
 	
 	String filename = sym.name + IntStr(tf) + ".hst";
+	String remote_filename = filename;
+	
+	// At some point MT4 started to add weird 0023 text in front of the filename.
+	// I don't understand this, and this hardcoded fix might be wrong for others.
+	// Please contact the author if you have some other number than 0023 or some other issue.
+	if (remote_filename.Left(1) == "#")
+		remote_filename = "#0023" + remote_filename.Mid(1);
+	
 	String local_path = AppendFileName(history_dir, filename);
-	String remote_path = "history/" + account_server + "/" + filename;
+	String remote_path = "history/" + account_server + "/" + remote_filename;
 	
 	if (!force && FileExists(local_path)) return 0;
 	
@@ -97,6 +106,8 @@ int DataBridgeCommon::DownloadAskBid() {
 }
 
 int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) {
+	//LOG("DownloadRemoteFile " << remote_path << " ----> " << local_path);
+	
 	MetaTrader& mt = GetMetaTrader();
 	
 	TimeStop ts;
@@ -164,7 +175,7 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 		out.Put(buf, size);
 	}
 	
-	LOG("DataBridgeCommon::DownloadRemoteFile: for " << size << " bytes in " << remote_path << " took " << ts.ToString());
+	LOG("DataBridgeCommon::DownloadRemoteFile: " << out.GetSize() << " bytes for " << remote_path << " took " << ts.ToString());
 	return 0;
 }
 

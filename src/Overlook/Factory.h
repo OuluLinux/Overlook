@@ -5,12 +5,25 @@ namespace Overlook {
 using namespace Upp;
 
 struct FactoryValueRegister : public ValueRegister, Moveable<FactoryValueRegister> {
-	Vector<ValueType> in, out, inopt;
+	typedef Tuple2<String, int> ArgType;
 	
-	/*virtual void AddIn(int phase, int type, int scale) {in.Add(ValueType(phase, type, scale));}
-	virtual void AddInOptional(int phase, int type, int scale) {inopt.Add(ValueType(phase, type, scale));}
-	virtual void AddOut(int phase, int type, int scale, int count=0, int visible=0) {out.Add(ValueType(phase, type, scale));}*/
-	virtual void IO(const ValueBase& base) {}
+	Vector<ValueType> in, out, inopt;
+	Vector<ArgType> args;
+	
+	virtual void IO(const ValueBase& base) {
+		if (base.data_type == ValueBase::IN_) {
+			in.Add(ValueType(base.phase, base.type, base.scale));
+		}
+		else if (base.data_type == ValueBase::INOPT_) {
+			inopt.Add(ValueType(base.phase, base.type, base.scale));
+		}
+		else if (base.data_type == ValueBase::OUT_) {
+			out.Add(ValueType(base.phase, base.type, base.scale));
+		}
+		else {
+			args.Add(ArgType(base.s0, base.data_type - ValueBase::BOOL_));
+		}
+	}
 	
 };
 

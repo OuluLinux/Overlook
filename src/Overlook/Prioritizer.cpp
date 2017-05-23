@@ -976,12 +976,17 @@ void Prioritizer::RefreshJobQueue() {
 				int tf_prio = ci.tflist[k];
 				
 				// Add new job item for current slot/symbol/tf combination
-				const ValueType& first_output = part.outputs[0]; // all outputs should have the same scale
 				JobItem& ji = new_job_queue.Add();
 				ji.priority = priority_base + (int64)sym * tf_count + (int64)tf; // TODO: fix this, it's not correct
 				ji.factory = ci.factory;
-				ji.all_sym = first_output.scale == Sym || first_output.scale == All;
-				ji.all_tf = first_output.scale == Tf || first_output.scale == All;
+				if (!part.outputs.IsEmpty()){
+					const ValueType& first_output = part.outputs[0]; // all outputs should have the same scale
+					ji.all_sym = first_output.scale == Sym || first_output.scale == All;
+					ji.all_tf = first_output.scale == Tf || first_output.scale == All;
+				} else {
+					ji.all_sym = false;
+					ji.all_tf = false;
+				}
 				ji.sym = sym;
 				ji.tf = tf;
 				

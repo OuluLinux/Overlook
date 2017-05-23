@@ -573,4 +573,41 @@ jobs, it takes too long time to allocate them all, and it seems
 to use too much memory in total. So, clearly this was a flaw 
 in the design. It will probably be fixed by allocating only necessary 
 core`-objects in the processing phase.&]
-[s0; ]]
+[s3; 23.5.2017&]
+[s0; Today, I worked on the feature that allows user to configure 
+custom core`-objects, e.g. changing period in the moving average 
+indicator. This version, which uses prioritizer to resolve dependencies 
+for the export object, doesn`'t allow configuring dependencies 
+from dependee. It causes some headache, but it is actually very 
+reasonable feature. Turns out, that most of the indicators doesn`'t 
+require features, that couldn`'t be calculated locally, and those 
+shouldn`'t be in the way of the prioritizer combination. Rest 
+of old indicators, which relies heavily on some dependency, usually 
+just proxies argument values to the dependency, and those values 
+could be written directly the dependency. ... . I didn`'t foresee 
+these things, but they occured while I was trying to implement 
+some required features.&]
+[s0; Also, some other simplifying was done today. [/ GetIO ]has to 
+be changed to [/ IO,] because it can now be used for setting values. 
+These simplifications makes me happy, because I don`'t need to 
+reduce features, the amount of code is less and the readiblity 
+of the code is better.&]
+[s0; I still don`'t have a fast hand`-routine for converting old 
+indicators to the current system, but it looks like in following 
+days it could be found. I still have a problem, that some custom`-core`-classes 
+requires different symbols and timeframes, and those should be 
+known partially in the combination creation and entirely in the 
+custom slot creation point, which is still long before the creation 
+of the object... So, I guess there must be some sort of lambda`-function, 
+that can be statically exported to change those arguments.&]
+[s0; To sum it all, in the old version, all dependencies could be 
+configured in the Init method, but in the current version, all 
+custom`-class dependencies must be solved internally, and all 
+different symbol/timeframe dependencies must be solved with a 
+static function. Previously 1 part, now 2 parts. All java programmers 
+have been used to static functions and classes, but with the 
+C`+`+ rule, that everything must be owned by someone, static 
+functions must have a good reason to exist. Of course, some people 
+code C`+`+ like java etc. and it works, but with the target of 
+clean, readable, safe and compact code, you don`'t code C`+`+ 
+like java.]]

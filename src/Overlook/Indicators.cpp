@@ -186,8 +186,7 @@ void MovingAverage::LinearlyWeighted()
 
 
 
-MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence()
-{
+MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence() {
 	fast_ema_period = 12;
 	slow_ema_period = 26;
 	signal_sma_period = 9;
@@ -195,39 +194,27 @@ MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence()
 	params = false;
 }
 
-void MovingAverageConvergenceDivergence::Init()
-{
+void MovingAverageConvergenceDivergence::Init() {
 	SetCoreSeparateWindow();
-	//SetBufferCount(2, 2);
+	
 	SetBufferColor(0, Silver);
 	SetBufferColor(1, Red);
 	SetBufferLineWidth(0, 2);
 	
-	//SetIndexBuffer ( 0, buffer );
-	//SetIndexBuffer ( 1, signal_buffer );
 	SetBufferBegin ( 1, signal_sma_period );
-	
-	//SetCoreDigits(GetDigits()+1);
 	
 	SetBufferStyle(0, DRAW_HISTOGRAM);
 	SetBufferStyle(1, DRAW_LINE);
 	
 	SetBufferLabel(0,"MACD");
 	SetBufferLabel(1,"Signal");
-	
-	
-	if ( fast_ema_period <= 1 || slow_ema_period <= 1 || signal_sma_period <= 1 || fast_ema_period >= slow_ema_period )
-		throw DataExc();
-	else
-		params = true;
-	
-	//if (RequireIndicator("ma", "period", fast_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
-	//if (RequireIndicator("ma", "period", slow_ema_period, "offset", 0, "method", MODE_EMA)) throw DataExc();
 }
 
-void MovingAverageConvergenceDivergence::Start()
-{
-	/*int bars = GetBars();
+void MovingAverageConvergenceDivergence::Start() {
+	/*Buffer& buffer = GetBuffer(0);
+	Buffer& signal_buffer = GetBuffer(1);
+	
+	int bars = GetBars();
 	if ( bars <= signal_sma_period || !params )
 		throw DataExc();
 

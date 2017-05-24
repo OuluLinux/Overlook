@@ -610,4 +610,20 @@ C`+`+ rule, that everything must be owned by someone, static
 functions must have a good reason to exist. Of course, some people 
 code C`+`+ like java etc. and it works, but with the target of 
 clean, readable, safe and compact code, you don`'t code C`+`+ 
-like java.]]
+like java.&]
+[s3; 24.5.2017&]
+[s0; Quick update, because I`'ve already programmed enough today.&]
+[s0; This prioritizer class is ridiculously complex, but it will 
+allow some complex optimizing, which can take some shortcuts 
+in the heavy processing, hopefully. Usually those custom`-core 
+classes make just clean pipes, but sometimes they require data 
+of different symbols and timeframes, and you don`'t want to calculate 
+them all. That was the problem, and today I implemented the feature, 
+which allows adding different symbols and timeframes to input 
+with a static function. This was something, what I didn`'t see 
+coming, and I haven`'t programmed anything like this before. 
+So, it is challenging, but also interesting. Everything in Prioritizer 
+implementation looks very weird and complicated now, even for 
+me. I can`'t even split big loops into separate functions, because 
+I don`'t see clear pattern. It`'s like programming in assembly 
+language.]]

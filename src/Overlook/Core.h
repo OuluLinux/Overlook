@@ -58,15 +58,22 @@ struct ValueBase {
 	const char* s0;
 	void* data;
 	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
-	enum {IN_, INOPT_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_};
+	enum {IN_, INOPT_, INDYN_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_};
 };
 
 struct In : public ValueBase {
 	In(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = IN_;}
 };
+
 struct InOptional : public ValueBase {
 	InOptional(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = INOPT_;}
 };
+
+typedef bool (*FilterFunction)(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf);
+struct InDynamic : public ValueBase {
+	InDynamic(int phase, int type, FilterFunction fn) {this->phase = phase; this->type = type; this->scale = scale; data_type = INDYN_; data = (void*)fn;}
+};
+
 struct Out : public ValueBase {
 	Out(int phase, int type, int scale, int count=0, int visible=0) {this->phase = phase; this->type = type; this->scale = scale; this->count = count; this->visible = visible; data_type = OUT_;}
 };
@@ -126,14 +133,16 @@ struct ArgChanger : public ValueRegister {
 	bool storing;
 };
 
-struct CoreIO : public ValueRegister {
+struct CoreIO : public ValueRegister, public Pte<CoreIO> {
+	typedef Ptr<CoreIO> CoreIOPtr;
+	
 	struct Output : Moveable<Output> {
 		Output() : visible(0) {}
 		Vector<Buffer> buffers;
 		int visible;
 		void Serialize(Stream& s) {s % buffers % visible;}
 	};
-	typedef Tuple4<CoreIO*, Output*, int, int> Source;
+	typedef Tuple4<CoreIOPtr, Output*, int, int> Source;
 	struct Input : Moveable<Input> {
 		Input() {}
 		VectorMap<int, Source> sources;
@@ -150,6 +159,13 @@ struct CoreIO : public ValueRegister {
 	
 	virtual void IO(const ValueBase& base) {
 		if (base.data_type == ValueBase::IN_) {
+			inputs.Add();
+		}
+		else if (base.data_type == ValueBase::INOPT_) {
+			Panic("TODO: optional input signal is not received here yet");
+			inputs.Add();
+		}
+		else if (base.data_type == ValueBase::INDYN_) {
 			inputs.Add();
 		}
 		else if (base.data_type == ValueBase::OUT_) {
@@ -201,7 +217,7 @@ struct CoreIO : public ValueRegister {
 	int GetOutputCount() const {return outputs.GetCount();}
 	
 	
-	void AddInput(int sym_id, int tf_id, int input_id, CoreIO& core, int output_id) {
+	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 		Input& in = inputs[input_id];
 		if (core.GetOutputCount()) {
 			in.sources.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
@@ -218,6 +234,8 @@ struct CoreIO : public ValueRegister {
 	
 	
 };
+
+typedef Ptr<CoreIO> CoreIOPtr;
 
 struct ArgumentBase {
 	void Arg(const char* var, bool& v) {}

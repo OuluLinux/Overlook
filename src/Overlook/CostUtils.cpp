@@ -286,10 +286,10 @@ void ValueChange::Init() {
 	SetBufferLineWidth(5, 2);
 	SetBufferColor(6, Color(0,128,0));
 	SetBufferLineWidth(6, 1);
-	SetBufferColor(7, Color(128,0,0));
+	/*SetBufferColor(7, Color(128,0,0));
 	SetBufferLineWidth(7, 1);
 	SetBufferColor(8, Color(255,255,255));
-	SetBufferLineWidth(8, 1);
+	SetBufferLineWidth(8, 1);*/
 	
 	MetaTrader& mt = GetMetaTrader();
 	int id = GetSymbol();

@@ -99,8 +99,8 @@ public:
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
 		reg % In(IndiPhase, RealChangeValue, Sym);
-		reg % In(AgentPhase, ForecastOrderSignal, Sym);
-		reg % InOptional(AgentPhase, ForecastOrderSignal, Sym);
+		///reg % In(AgentPhase, ForecastOrderSignal, Sym);
+		//reg % InOptional(AgentPhase, ForecastOrderSignal, Sym);
 		reg % Out(AgentCombPhase, ForecastOrderSignal, SymTf);
 	}
 };

@@ -54,7 +54,8 @@ struct CombinationResult : Moveable<CombinationResult> {
 };
 
 struct CombinationPart : Moveable<CombinationPart> {
-	Vector<ValueType> inputs, outputs;
+	Vector<RegisterInput> inputs;
+	Vector<ValueType> outputs;
 	Vector<Vector<IntPair> > input_src;
 	int begin, end, size;
 	bool single_sources;

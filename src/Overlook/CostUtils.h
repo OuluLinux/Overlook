@@ -52,7 +52,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, TimeValue, SymTf);
 		reg % In(SourcePhase, AskBidValue, SymTf);
-		reg % In(IndiPhase, SubTfValue, SymTf);
+		//reg % In(IndiPhase, SubTfValue, SymTf);
 		reg % Out(SourcePhase, SpreadOvercomeDistValue, SymTf, 2, 2);
 	}
 };
@@ -87,13 +87,30 @@ public:
 	
 	virtual String GetStyle() const {return "";}
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, Sym);
-		reg % In(SourcePhase, SpreadValue, Tf);
+		reg % InDynamic(SourcePhase, RealValue, &FilterFunction);
+		reg % InDynamic(SourcePhase, SpreadValue, &FilterFunction);
+		reg % In(SourcePhase, TimeValue, SymTf);
 		reg % Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
 	}
 	
 	virtual void Init();
 	virtual void Start();
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		// Match SymTf
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		if (in_sym == out_sym)
+			return true;
+		
+		// Enable proxy, if it exists
+		MetaTrader& mt = GetMetaTrader();
+		if (in_sym < mt.GetSymbolCount()) {
+			const Symbol& sym = mt.GetSymbol(in_sym);
+			return out_sym == sym.proxy_id;
+		}
+		return false;
+	}
 	
 };
 

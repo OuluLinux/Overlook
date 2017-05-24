@@ -100,7 +100,7 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 
 int DataBridgeCommon::DownloadAskBid() {
 	String local_path = ConfigFile("askbid.bin");
-	String remote_path = "askbid.bin";
+	String remote_path = "MQL4\\Files\\askbid.bin";
 	
 	return DownloadRemoteFile(remote_path, local_path);
 }

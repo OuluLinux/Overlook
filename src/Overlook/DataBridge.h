@@ -54,7 +54,6 @@ public:
 		reg % Out(SourcePhase, DataBridgeValue, SymTf, 4, 0);
 	}
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -69,10 +68,30 @@ public:
 	~VirtualNode();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, DataBridgeValue, Sym);
+		reg % InDynamic(SourcePhase, DataBridgeValue, &FilterFunction);
+		reg % In(SourcePhase, TimeValue, SymTf);
 		reg % Out(SourcePhase, VirtualNodeValue, SymTf, 4, 0);
 	}
 	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		MetaTrader& mt = GetMetaTrader();
+		int sym_count = mt.GetSymbolCount();
+		int cur = in_sym - sym_count;
+		if (cur < 0)
+			return false;
+		if (out_sym >= sym_count)
+			return false;
+		const Currency& c = mt.GetCurrency(cur);
+		for(int i = 0; i < c.pairs0.GetCount(); i++)
+			if (c.pairs0[i] == out_sym)
+				return true;
+		for(int i = 0; i < c.pairs1.GetCount(); i++)
+			if (c.pairs1[i] == out_sym)
+				return true;
+		return false;
+	}
 	
 	virtual void Init();
 	virtual void Start();
@@ -92,6 +111,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, DataBridgeValue, SymTf);
 		reg % In(SourcePhase, VirtualNodeValue, SymTf);
+		reg % In(SourcePhase, TimeValue, SymTf);
 		reg % Out(SourcePhase, RealValue, SymTf, 4, 0);
 	}
 	

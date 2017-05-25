@@ -108,7 +108,7 @@ void BasicHeaders(HttpRequest& h) {
 const XmlNode& TryOpenLocation(String pos, const XmlNode& root, int& errorcode) {
 	Vector<String> p = Split(pos, " ");
 	const XmlNode* xn = &root;
-	for(int i = 0; i < p.GetCount(); i++ ) {
+	for(int i = 0; i < p.GetCount(); i++) {
 		int j = StrInt(p[i]);
 		if (j >= xn->GetCount()) {
 			errorcode = 1;
@@ -121,7 +121,7 @@ const XmlNode& TryOpenLocation(String pos, const XmlNode& root, int& errorcode) 
 }
 
 bool FindNode(String value, const XmlNode& n, XmlNode*& subnode) {
-	for(int i = 0; i < n.GetCount(); i++ ) {
+	for(int i = 0; i < n.GetCount(); i++) {
 		if (n[i].Attr("class") == value) {
 			if (n[i].GetCount() == 0) return 0;
 			const XmlNode* t = &n[i];
@@ -326,7 +326,7 @@ void EventManager::ParseEvent(const XmlNode& n, Event& event) {
 		event.actual = (*sn)[0].GetText();
 		if (event.actual == "span") event.actual = (*sn)[0][0].GetText();
 		String& s = event.actual;
-		for(int i = 0; i < s.GetCount(); i++ ) {
+		for(int i = 0; i < s.GetCount(); i++) {
 			char c = s[i];
 			if (!IsDigit(c) && c != '-' && c != '.') {
 				event.unit = s.Mid(i);
@@ -340,7 +340,7 @@ void EventManager::ParseEvent(const XmlNode& n, Event& event) {
 		event.forecast = (*sn)[0].GetText();
 		if (event.forecast == "span") event.forecast = (*sn)[0][0].GetText();
 		String& s = event.forecast;
-		for(int i = 0; i < s.GetCount(); i++ ) {
+		for(int i = 0; i < s.GetCount(); i++) {
 			char c = s[i];
 			if (!IsDigit(c) && c != '-' && c != '.') {
 				s = s.Left(i);
@@ -353,7 +353,7 @@ void EventManager::ParseEvent(const XmlNode& n, Event& event) {
 		event.previous = (*sn)[0].GetText();
 		if (event.previous == "span") event.previous = (*sn)[0][0].GetText();
 		String& s = event.previous;
-		for(int i = 0; i < s.GetCount(); i++ ) {
+		for(int i = 0; i < s.GetCount(); i++) {
 			char c = s[i];
 			if (!IsDigit(c) && c != '-' && c != '.') {
 				s = s.Left(i);
@@ -579,7 +579,7 @@ int EventManager::Update(String postfix, bool force_update) {
 	Vector<Event> e;
 	
 	int count = x.GetCount();
-	for(int i = 0; i < x.GetCount(); i++ ) {
+	for(int i = 0; i < x.GetCount(); i++) {
 		String eventid = x[i].Attr("data-eventid");
 		if (!eventid.GetCount()) continue;
 		//TLOG(eventid);

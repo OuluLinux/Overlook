@@ -44,7 +44,7 @@ PrioritizerCtrl::PrioritizerCtrl() {
 }
 	
 void PrioritizerCtrl::RefreshData() {
-	BaseSystem& base = *core->Get<BaseSystem>();
+	BaseSystem& base = core->GetBaseSystem();
 	Prioritizer& prio = *dynamic_cast<Prioritizer*>(core);
 	
 	

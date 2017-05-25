@@ -46,6 +46,7 @@ struct Buffer : public Moveable<Buffer> {
 	
 	double Get(int i) const {return value[i];}
 	int GetCount() const {return value.GetCount();}
+	bool IsEmpty() const {return value.IsEmpty();}
 	
 };
 
@@ -53,14 +54,6 @@ typedef const Buffer ConstBuffer;
 
 
 // Class for registering input and output types of values of classes
-struct ValueBase {
-	int phase, type, scale, count, visible, data_type;
-	const char* s0;
-	void* data;
-	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
-	enum {IN_, INOPT_, INDYN_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_};
-};
-
 struct In : public ValueBase {
 	In(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = IN_;}
 };
@@ -84,13 +77,6 @@ struct Arg : public ValueBase {
 	Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
 	Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
 	Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
-};
-
-struct ValueRegister {
-	ValueRegister() {}
-	
-	virtual void IO(const ValueBase& base) = 0;
-	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
 };
 
 struct ArgChanger : public ValueRegister {
@@ -133,6 +119,8 @@ struct ArgChanger : public ValueRegister {
 	bool storing;
 };
 
+class BaseSystem;
+
 struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
@@ -145,17 +133,21 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef Tuple4<CoreIOPtr, Output*, int, int> Source;
 	struct Input : Moveable<Input> {
 		Input() {}
+		void operator=(const Input& in) {sources <<= in.sources;}
 		VectorMap<int, Source> sources;
 	};
 	Vector<Input> inputs, optional_inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
+	BaseSystem* base;
+	int factory;
 	
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
 	
 	
 	CoreIO() {}
+	virtual ~CoreIO() {}
 	
 	virtual void IO(const ValueBase& base) {
 		if (base.data_type == ValueBase::IN_) {
@@ -215,7 +207,9 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
-	
+	BaseSystem& GetBaseSystem() {return *base;}
+	const BaseSystem& GetBaseSystem() const {return *base;}
+	inline const CoreIO& GetInput(int input, int sym, int tf) const {return *inputs[input].sources.Get(sym * 100 + tf).a;}
 	
 	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 		Input& in = inputs[input_id];
@@ -231,6 +225,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	void SetBufferStyle(int i, int style) {buffers[i]->style = style;}
 	void SetBufferShift(int i, int shift) {buffers[i]->shift = shift;}
 	void SetBufferBegin(int i, int begin) {buffers[i]->begin = begin;}
+	void SetBufferArrow(int i, int chr)   {buffers[i]->chr = chr;}
 	
 	
 };
@@ -253,6 +248,8 @@ class Core : public CoreIO {
 	
 	
 	// Visual settings
+	Array<Core> subcores;
+	Vector<int> subcore_factories;
 	Vector<DataLevel> levels;
 	Color levels_clr;
 	RWMutex lock;
@@ -263,7 +260,6 @@ class Core : public CoreIO {
 	int bars, next_count;
 	int sym_id, tf_id;
 	int period;
-	int visible_count;
 	int end_offset;
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
@@ -291,6 +287,12 @@ public:
 			RefreshBuffers();
 		}
 	}
+	void InitAll();
+	template <class T> Core& AddSubCore()  {
+		ASSERT_(subcore_factories.Add(Factory::Find<T>()) != -1, "This class is not registered to the factory");
+		return subcores.Add(new T);}
+	Core& At(int i) {return subcores[i];}
+	Core& Set(String key, Value value);
 	
 	
 	// Get settings
@@ -313,9 +315,10 @@ public:
 	int GetTimeframe() const {return tf_id;}
 	int GetSymbol() const {return sym_id;}
 	int GetPeriod() const;
-	int GetVisibleCount() const {return visible_count;}
+	int GetVisibleCount() const {return outputs[0].visible;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
+	
 	
 	// Set settings
 	void SetWindowType(int i) {window_type = i;}

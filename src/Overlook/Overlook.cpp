@@ -26,7 +26,10 @@ Overlook::Overlook()
 }
 
 Overlook::~Overlook() {
-	
+	if (prev_view) {
+		RemoveChild(prev_view);
+		delete prev_view;
+	}
 }
 
 void Overlook::Refresher() {
@@ -153,7 +156,7 @@ void Overlook::Configure() {
 		reg.SetStoring();
 		prev_core->IO(reg);
 		prev_core->ClearContent();
-		prev_core->Init();
+		prev_core->InitAll();
 		prev_core->Refresh();
 		Refresh();
 	}

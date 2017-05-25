@@ -4,6 +4,15 @@
 namespace Overlook {
 using namespace Upp;
 
+double SimpleMA ( const int position, const int period, ConstBuffer& value );
+double ExponentialMA ( const int position, const int period, const double prev_value, ConstBuffer& value );
+double SmoothedMA ( const int position, const int period, const double prev_value, ConstBuffer& value );
+double LinearWeightedMA ( const int position, const int period, ConstBuffer& value );
+int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer, int &weightsum );
+int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+
 
 enum {MODE_SMA, MODE_EMA, MODE_SMMA, MODE_LWMA};
 enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
@@ -27,10 +36,7 @@ protected:
 public:
 	MovingAverage();
 	
-	//virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
-	
 	virtual void Init();
-	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
@@ -43,62 +49,44 @@ public:
 
 
 class MovingAverageConvergenceDivergence : public Core {
-	Vector<double>    buffer;
-	Vector<double>    signal_buffer;
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
-	bool params;
-	
 	
 public:
 	MovingAverageConvergenceDivergence();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf);
-		reg % Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
-		reg % Arg("fast_ema", fast_ema_period);
-		reg % Arg("slow_ema", slow_ema_period);
-		reg % Arg("signal_sma", signal_sma_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+			% Arg("fast_ema", fast_ema_period)
+			% Arg("slow_ema", slow_ema_period)
+			% Arg("signal_sma", signal_sma_period);
 	}
 };
 
 
 class AverageDirectionalMovement : public Core {
-	Vector<double>    adx_buffer;
-	Vector<double>    pdi_buffer;
-	Vector<double>    ndi_buffer;
-	Vector<double>    pd_buffer;
-	Vector<double>    nd_buffer;
-	Vector<double>    tmp_buffer;
 	int period_adx;
-	
 	
 public:
 	AverageDirectionalMovement();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period_adx);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 3)
+			% Arg("period", period_adx);
 	}
 };
 
 
 class BollingerBands : public Core {
-	Vector<double>    ml_buffer;
-	Vector<double>    tl_buffer;
-	Vector<double>    bl_buffer;
-	Vector<double>    stddev_buffer;
-	
 	int           bands_period;
 	int           bands_shift;
 	double        bands_deviation;
@@ -114,56 +102,43 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", bands_period);
-		reg % Arg("shift", bands_shift);
-		reg % Arg("deviation", bands_deviation);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 3)
+			% Arg("period", bands_period)
+			% Arg("shift", bands_shift)
+			% Arg("deviation", bands_deviation);
 	}
 };
 
 
 class Envelopes : public Core {
-	
 	int                ma_period;
 	int                ma_shift;
 	int                ma_method;
 	double             deviation;
 	
-	Vector<double>                   up_buffer;
-	Vector<double>                   down_buffer;
-	Vector<double>                   ma_buffer;
-	
-	
 public:
 	Envelopes();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", ma_period);
-		reg % Arg("shift", ma_shift);
-		reg % Arg("deviation", deviation);
-		reg % Arg("method", ma_method);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 2)
+			% Arg("period", ma_period)
+			% Arg("shift", ma_shift)
+			% Arg("deviation", deviation)
+			% Arg("method", ma_method);
 	}
 };
 
 
 class ParabolicSAR : public Core {
-	double         sar_step;
-	double         sar_maximum;
-	
-	Vector<double>           sar_buffer;
-	Vector<double>           ep_buffer;
-	Vector<double>           af_buffer;
-	
-	int                  last_rev_pos;
-	bool                 direction_long;
-	
+	double		sar_step;
+	double		sar_maximum;
+	int			last_rev_pos;
+	bool		direction_long;
 	
 	double GetHigh( int pos, int start_period );
 	double GetLow( int pos, int start_period );
@@ -171,15 +146,14 @@ class ParabolicSAR : public Core {
 public:
 	ParabolicSAR();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("step", sar_step);
-		reg % Arg("maximum", sar_maximum);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("step", sar_step)
+			% Arg("maximum", sar_maximum);
 	}
 };
 
@@ -190,20 +164,16 @@ class StandardDeviation : public Core {
 	int applied_value;
 	int shift;
 	
-	Vector<double> stddev_buffer;
-
-	
 public:
 	StandardDeviation();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -211,21 +181,16 @@ public:
 class AverageTrueRange : public Core {
 	int period;
 	
-	Vector<double> atr_buffer;
-	Vector<double> tr_buffer;
-	
-	
 public:
 	AverageTrueRange();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -233,27 +198,22 @@ public:
 class BearsPower : public Core {
 	int period;
 	
-	Vector<double> buffer;
-	
 public:
 	BearsPower();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
 
 class BullsPower : public Core {
 	int period;
-	
-	Vector<double> buffer;
 	
 public:
 	BullsPower();
@@ -263,9 +223,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -273,31 +233,22 @@ public:
 class CommodityChannelIndex : public Core {
 	int period;
 	
-	Vector<double> cci_buffer;
-	Vector<double> value_buffer;
-	Vector<double> mov_buffer;
-
 public:
 	CommodityChannelIndex();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("period", period);
 	}
 };
 
 
 class DeMarker : public Core {
 	int period;
-	
-	Vector<double> buffer;
-	Vector<double> max_buffer;
-	Vector<double> min_buffer;
 	
 public:
 	DeMarker();
@@ -307,9 +258,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -319,8 +270,6 @@ class ForceIndex : public Core {
 	int ma_method;
 	int applied_value;
 	
-	Vector<double> buffer;
-	
 public:
 	ForceIndex();
 	
@@ -329,9 +278,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -339,19 +288,16 @@ public:
 class Momentum : public Core {
 	int period;
 	
-	Vector<double> buffer;
-	
 public:
 	Momentum();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -360,26 +306,20 @@ class OsMA : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
-	
-	Vector<double> osma_buffer;
-	Vector<double> buffer;
-	Vector<double> signal_buffer;
-	
-	bool   params;
+	bool params;
 	
 public:
 	OsMA();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("slow_ema", slow_ema_period);
-		reg % Arg("fast_ema", fast_ema_period);
-		reg % Arg("signal_sma", signal_sma_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("fast_ema_period", fast_ema_period)
+			% Arg("slow_ema_period", slow_ema_period)
+			% Arg("signal_sma", signal_sma_period);
 	}
 };
 
@@ -387,30 +327,22 @@ public:
 class RelativeStrengthIndex : public Core {
 	int period;
 	
-	Vector<double>    buffer;
-	Vector<double>    pos_buffer;
-	Vector<double>    neg_buffer;
-	
 public:
 	RelativeStrengthIndex();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("period", period);
 	}
 };
 
 
 class RelativeVigorIndex : public Core {
 	int period;
-	
-	Vector<double>     buffer;
-	Vector<double>     signal_buffer;
 	
 public:
 	RelativeVigorIndex();
@@ -420,9 +352,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+			% Arg("period", period);
 	}
 };
 
@@ -431,25 +363,19 @@ class StochasticOscillator : public Core {
 	int k_period;
 	int d_period;
 	int slowing;
-	
-	Vector<double>    buffer;
-	Vector<double>    signal_buffer;
-	Vector<double>    high_buffer;
-	Vector<double>    low_buffer;
 		
 public:
 	StochasticOscillator();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("k_period", k_period);
-		reg % Arg("d_period", d_period);
-		reg % Arg("slowing", slowing);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
+			% Arg("k_period", k_period)
+			% Arg("d_period", d_period)
+			% Arg("slowing", slowing);
 	}
 };
 
@@ -458,81 +384,70 @@ public:
 class WilliamsPercentRange : public Core {
 	int period;
 	
-	Vector<double> buffer;
-	
 	bool CompareDouble(double Number1, double Number2);
 	
 public:
 	WilliamsPercentRange();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
 
 class AccumulationDistribution : public Core {
-	Vector<double> buffer;
 	
 public:
 	AccumulationDistribution();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
 	}
 };
 
 class MoneyFlowIndex : public Core {
 	int period;
 	
-	Vector<double> buffer;
-	
 public:
 	MoneyFlowIndex();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
 class ValueAndVolumeTrend : public Core {
 	int applied_value;
-	Vector<double> buffer;
 	
 public:
 	ValueAndVolumeTrend();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("applied_value", applied_value);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("applied_value", applied_value);
 	}
 };
 
 class OnBalanceVolume : public Core {
 	int applied_value;
-	Vector<double> buffer;
 	
 public:
 	OnBalanceVolume();
@@ -542,15 +457,14 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("applied_value", applied_value);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("applied_value", applied_value);
 	}
 };
 
 
 class Volumes : public Core {
-	Vector<double> buf;
 	
 public:
 	Volumes();
@@ -560,18 +474,13 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
 	}
 };
 
 
 class AcceleratorOscillator : public Core {
-	Vector<double>     buffer;
-	Vector<double>     up_buffer;
-	Vector<double>     down_buffer;
-	Vector<double>     macd_buffer;
-	Vector<double>     signal_buffer;
 	
 public:
 	AcceleratorOscillator();
@@ -581,8 +490,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 3);
 	}
 };
 
@@ -597,13 +506,6 @@ class GatorOscillator : public Core {
 	int ma_method;
 	int applied_value;
 	
-	Vector<double> up_buffer;
-	Vector<double> up_red_buffer;
-	Vector<double> up_green_buffer;
-	Vector<double> down_buffer;
-	Vector<double> down_red_buffer;
-	Vector<double> down_green_buffer;
-	
 public:
 	GatorOscillator();
 	
@@ -612,35 +514,31 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("jaws_period", jaws_period);
-		reg % Arg("jaws_shift", jaws_shift);
-		reg % Arg("teeth_period", teeth_period);
-		reg % Arg("teeth_shift", teeth_shift);
-		reg % Arg("lips_period", lips_period);
-		reg % Arg("lips_shift", lips_shift);
-		reg % Arg("ma_method", ma_method);
-		reg % Arg("applied_value", applied_value);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
+			% Arg("jaws_period", jaws_period)
+			% Arg("jaws_shift", jaws_shift)
+			% Arg("teeth_period", teeth_period)
+			% Arg("teeth_shift", teeth_shift)
+			% Arg("lips_period", lips_period)
+			% Arg("lips_shift", lips_shift)
+			% Arg("ma_method", ma_method)
+			% Arg("applied_value", applied_value);
 	}
 };
 
 
 class AwesomeOscillator : public Core {
-	Vector<double>     buffer;
-	Vector<double>     up_buffer;
-	Vector<double>     down_buffer;
 	
 public:
 	AwesomeOscillator();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 3);
 	}
 };
 
@@ -650,36 +548,28 @@ class Fractals : public Core {
 	int right_bars;
 	int levels;
 	
-	Vector<double> line_up_buf1;
-	Vector<double> line_up_buf2;
-	Vector<double> arrow_up_buf;
-	Vector<double> arrow_down_buf;
-	Vector<double> arrow_breakup_buf;
-	Vector<double> arrow_breakdown_buf;
-	
 	double IsFractalUp(int index, int left, int right, int maxind);
 	double IsFractalDown(int index, int left, int right, int maxind);
 	
 public:
 	Fractals();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("left_bars", left_bars);
-		reg % Arg("right_bars", right_bars);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
+			% Arg("left_bars", left_bars)
+			% Arg("right_bars", right_bars);
 	}
 };
+
 
 class FractalOsc : public Core {
 	int left_bars;
 	int right_bars;
 	int smoothing_period;
-	Vector<double> buf, av;
 	
 public:
 	FractalOsc();
@@ -689,42 +579,31 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("left_bars", left_bars);
-		reg % Arg("right_bars", right_bars);
-		reg % Arg("smoothing", smoothing_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+			% Arg("left_bars", left_bars)
+			% Arg("right_bars", right_bars)
+			% Arg("smoothing", smoothing_period);
 	}
 };
 
 
 class MarketFacilitationIndex : public Core {
-	Vector<double> buffer;
-	Vector<double> up_up_buffer;
-	Vector<double> down_down_buffer;
-	Vector<double> up_down_buffer;
-	Vector<double> down_up_buffer;
 	
 public:
 	MarketFacilitationIndex();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 4);
 	}
 };
 
 
 class ZigZag : public Core {
-	Vector<double> keypoint_buffer;
-	Vector<double> high_buffer;
-	Vector<double> low_buffer;
-	Vector<double> osc;
-	
 	int input_depth;
 	int input_deviation;
 	int input_backstep;
@@ -736,28 +615,19 @@ protected:
 public:
 	ZigZag();
 	
-	virtual void Serialize(Stream& s) {
-		Core::Serialize(s);
-		s % keypoint_buffer % high_buffer % low_buffer % osc;
-		s % input_depth % input_deviation % input_backstep % extremum_level;
-	}
-	
 	virtual void Init();
 	
-	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("depth", input_depth);
-		reg % Arg("deviation", input_depth);
-		reg % Arg("backstep", input_backstep);
-		reg % Arg("level", extremum_level);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
+			% Arg("depth", input_depth)
+			% Arg("deviation", input_depth)
+			% Arg("backstep", input_backstep)
+			% Arg("level", extremum_level);
 	}
 };
 
 class ZigZagOsc : public Core {
-	Vector<double> osc;
-	
 	int depth;
 	int deviation;
 	int backstep;
@@ -770,11 +640,11 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("depth", depth);
-		reg % Arg("deviation", deviation);
-		reg % Arg("backstep", backstep);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("depth", depth)
+			% Arg("deviation", deviation)
+			% Arg("backstep", backstep);
 	}
 };
 
@@ -782,7 +652,6 @@ public:
 
 
 class LinearTimeFrames : public Core {
-	Vector<double> day, month, year, week;
 	
 public:
 	LinearTimeFrames();
@@ -792,77 +661,33 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-	}
-};
-
-
-class RepeatingAverage : public Core {
-	int period, smoothing_period, applied_value;
-	Vector<double> average1, average2, average3, average4;
-	
-public:
-	RepeatingAverage();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("smoothing", smoothing_period);
-		reg % Arg("applied_value", applied_value);
-	}
-};
-
-class RepeatingAverageOscillator : public Core {
-	int period, smoothing_period, applied_value;
-	Vector<double> diff1, diff2, maindiff, avdiff, main_av_diff;
-	
-public:
-	RepeatingAverageOscillator();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("smoothing", smoothing_period);
-		reg % Arg("applied_value", applied_value);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4);
 	}
 };
 
 
 class SupportResistance : public Core {
 	int period, max_crosses, max_radius;
-	Vector<double> support, resistance;
 	
 public:
 	SupportResistance();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("max_crosses", max_crosses);
-		reg % Arg("max_radius", max_radius);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+			% Arg("period", period)
+			% Arg("max_crosses", max_crosses)
+			% Arg("max_radius", max_radius);
 	}
 };
 
 
 class SupportResistanceOscillator : public Core {
 	int period, max_crosses, max_radius, smoothing_period;
-	Vector<double> osc, osc_av;
 	
 public:
 	SupportResistanceOscillator();
@@ -872,19 +697,18 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("max_crosses", max_crosses);
-		reg % Arg("max_radius", max_radius);
-		reg % Arg("smoothing", smoothing_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+			% Arg("period", period)
+			% Arg("max_crosses", max_crosses)
+			% Arg("max_radius", max_radius)
+			% Arg("smoothing", smoothing_period);
 	}
 };
 
 
 class Psychological : public Core {
-	int period;
-	Vector<double> buf;
+	int period, sym_count;
 	
 public:
 	Psychological();
@@ -894,9 +718,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period);
 	}
 };
 
@@ -916,15 +740,11 @@ class CorrelationOscillator : public Core {
 	typedef const Vector<double> ConstVector;
 	
 	int period;
-	Array<Vector<double>> buf;
 	int sym_count;
-	Vector<Core*> sources;
-	Vector<ConstVector*> opens;
+	Vector<ConstBuffer*> opens;
 	Vector<OnlineAverage> averages;
-	//PathLink* ids;
-	//ConstVector<double>* open;
 	
-	void Process(int id);
+	void Process(int id, int output);
 	
 public:
 	CorrelationOscillator();
@@ -934,9 +754,11 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
+		if (sym_count == -1 && base)
+			sym_count = GetBaseSystem().GetSymbolCount();
+		reg % In(SourcePhase, RealValue, Sym)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, sym_count-1, sym_count-1)
+			% Arg("period", period);
 	}
 };
 
@@ -957,10 +779,8 @@ public:
 class ParallelSymLR : public Core {
 	
 public:
-	Vector<double> buffer;
 	int period;
 	int method;
-	//DataVar buf;
 	int event_up, event_down, event_plus, event_minus;
 	
 protected:
@@ -969,16 +789,13 @@ protected:
 public:
 	ParallelSymLR();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % buffer;}
-	
 	virtual void Init();
 	
-	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("method", method);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period)
+			% Arg("method", method);
 	}
 };
 
@@ -990,9 +807,6 @@ public:
 class ParallelSymLREdge : public Core {
 	
 public:
-	Vector<double> symlr;
-	Vector<double> edge;
-	Vector<double> buffer;
 	int period;
 	int method;
 	int slowing;
@@ -1004,17 +818,14 @@ protected:
 public:
 	ParallelSymLREdge();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % symlr % edge % buffer;}
-	
 	virtual void Init();
 	
-	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("method", method);
-		reg % Arg("slowing", slowing);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("period", period)
+			% Arg("method", method)
+			% Arg("slowing", slowing);
 	}
 };
 

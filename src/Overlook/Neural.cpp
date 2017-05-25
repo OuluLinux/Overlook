@@ -171,7 +171,7 @@ void Recurrent::Init() {
 	
 	LoadThis();
 	
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	sym_count = bs.GetSymbolCount();
 	tf_count = bs.GetPeriodCount();
 	data.SetCount(sym_count * tf_count);
@@ -409,7 +409,7 @@ String NARX::GetStyle() const {
 
 void NARX::Init() {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	ASSERTEXC_(hact >= 0 && hact < 3, "Hidden unit activation can be in range [0,2]");
 	
@@ -531,7 +531,7 @@ void NARX::Init() {
 }
 
 void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessAttributes& attr) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	for (int i = 0; i < s.input_count; i++) {
 		Vector<InputUnit>& exo = s.exogenous[i];
@@ -852,7 +852,7 @@ String Forecaster::GetStyle() const {
 }
 
 void Forecaster::Init() {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1072,7 +1072,7 @@ String RLAgent::GetStyle() const {
 
 void RLAgent::Init() {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1225,7 +1225,7 @@ String DQNAgent::GetStyle() const {
 
 void DQNAgent::Init() {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1388,7 +1388,7 @@ String MonaAgent::GetStyle() const {
 }
 
 void MonaAgent::Init() {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/change", 0, 0);
@@ -1606,7 +1606,7 @@ String MonaMetaAgent::GetStyle() const {
 }
 
 void MonaMetaAgent::Init() {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	//AddDependency("/open", 0, 0);
 	//AddDependency("/rl", 0, 1);
@@ -1829,7 +1829,7 @@ String MonaDoubleAgent::GetStyle() const {
 }
 
 void MonaDoubleAgent::Init() {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	AddDependency("/open", 1, 0);
 	AddDependency("/metamona", 1, 0);

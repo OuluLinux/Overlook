@@ -304,6 +304,8 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 	ji.core = Factory::GetCtrlFactories()[ji.factory].b();
 	
 	// Set attributes
+	ji.core->base = &bs;
+	ji.core->factory = ji.factory;
 	ji.core->RefreshIO();
 	ji.core->SetSymbol(ji.sym);
 	ji.core->SetTimeframe(ji.tf, bs.GetPeriod(ji.tf));
@@ -464,7 +466,8 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 	//ji.core->SetArguments(*args);
 	
 	// Initialize
-	ji.core->Init();
+	ji.core->InitAll();
+	
 }
 
 
@@ -1005,7 +1008,6 @@ void Prioritizer::RefreshCoreQueue() {
 					}
 				}
 				
-				VectorMap<int,int> add_tf;
 				for(int k = 0; k < ci.tflist.GetCount(); k++) {
 					int tf = ci.tflist.GetKey(k);
 					int priority = ci.tflist[k];

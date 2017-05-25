@@ -10,7 +10,7 @@ BaseSystem::BaseSystem() {
 	base_period = 60;
 	
 	
-	
+	factory = 0; // basesystem always has factory-id 0
 	addr = "127.0.0.1";
 	port = 42000;
 }

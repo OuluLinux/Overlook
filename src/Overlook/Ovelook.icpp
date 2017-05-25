@@ -34,25 +34,77 @@ INITBLOCK {
 	
 	
 	Factory::Register<MovingAverage, GraphGroupCtrl>("Moving average");
+	Factory::Register<MovingAverageConvergenceDivergence, GraphGroupCtrl>("Moving Average Convergence/Divergence");
+	Factory::Register<AverageDirectionalMovement, GraphGroupCtrl>("Average Directional Movement");
+	Factory::Register<BollingerBands, GraphGroupCtrl>("Bollinger Bands");
+	Factory::Register<Envelopes, GraphGroupCtrl>("Envelopes");
+	Factory::Register<ParabolicSAR, GraphGroupCtrl>("Parabolic SAR");
+	Factory::Register<StandardDeviation, GraphGroupCtrl>("Standard Deviation");
+	Factory::Register<AverageTrueRange, GraphGroupCtrl>("Average True Range");
+	Factory::Register<BearsPower, GraphGroupCtrl>("Bears Power");
+	Factory::Register<BullsPower, GraphGroupCtrl>("Bulls Power");
+	Factory::Register<CommodityChannelIndex, GraphGroupCtrl>("Commodity Channel Index");
+	Factory::Register<DeMarker, GraphGroupCtrl>("DeMarker");
+	Factory::Register<ForceIndex, GraphGroupCtrl>("Force Index");
+	Factory::Register<Momentum, GraphGroupCtrl>("Momentum");
+	Factory::Register<OsMA, GraphGroupCtrl>("OsMA");
+	Factory::Register<RelativeStrengthIndex, GraphGroupCtrl>("Relative Strength Index");
+	Factory::Register<RelativeVigorIndex, GraphGroupCtrl>("Relative Vigor Index");
+	Factory::Register<StochasticOscillator, GraphGroupCtrl>("Stochastic Oscillator");
+	Factory::Register<WilliamsPercentRange, GraphGroupCtrl>("Williams Percent Range");
+	Factory::Register<AccumulationDistribution, GraphGroupCtrl>("Accumulation Distribution");
+	Factory::Register<MoneyFlowIndex, GraphGroupCtrl>("Money Flow Index");
+	Factory::Register<ValueAndVolumeTrend, GraphGroupCtrl>("Value And Volume Trend");
+	Factory::Register<OnBalanceVolume, GraphGroupCtrl>("On Balance Volume");
+	Factory::Register<Volumes, GraphGroupCtrl>("Volumes");
+	Factory::Register<AcceleratorOscillator, GraphGroupCtrl>("Accelerator Oscillator");
+	Factory::Register<GatorOscillator, GraphGroupCtrl>("Gator Oscillator");
+	Factory::Register<AwesomeOscillator, GraphGroupCtrl>("Awesome Oscillator");
+	Factory::Register<Fractals, GraphGroupCtrl>("Fractals");
+	Factory::Register<FractalOsc, GraphGroupCtrl>("FractalOsc");
+	Factory::Register<MarketFacilitationIndex, GraphGroupCtrl>("Market Facilitation Index");
+	Factory::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
+	Factory::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
+	Factory::Register<LinearTimeFrames, GraphGroupCtrl>("Linear TimeFrames");
+	Factory::Register<SupportResistance, GraphGroupCtrl>("Support/Resistance");
+	Factory::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
+	Factory::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
+	Factory::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
+	Factory::Register<ParallelSymLR, GraphGroupCtrl>("Parallel Sym-LR");
+	Factory::Register<ParallelSymLREdge, GraphGroupCtrl>("Parallel Sym-LR Edge");
 	
+	Factory::Register<FeatureDetector, GraphGroupCtrl>("Feature Detector");
+	
+	Factory::Register<WdayHourChanges, GraphGroupCtrl>("WdayHour changes");
 	Factory::Register<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
 	Factory::Register<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
+	Factory::Register<WdayHourForecastErrors, GraphGroupCtrl>("WdayHour Forecast Errors");
+	Factory::Register<WdayHourErrorAdjusted, GraphGroupCtrl>("WdayHour Error Adjusted");
+	Factory::Register<WeekStats, GraphGroupCtrl>("Week Stats");
+	Factory::Register<WeekStatsForecastErrors, GraphGroupCtrl>("Week Stats Forecast Errors");
+	Factory::Register<WeekStatsErrorAdjusted, GraphGroupCtrl>("Week Stats Error Adjusted");
+	Factory::Register<WdayHourDiffWeek, GraphGroupCtrl>("Wday Hour Diff Week");
+	Factory::Register<WdayHourWeekAdjusted, GraphGroupCtrl>("Wday Hour Week Adjusted");
+	Factory::Register<SubTfChanges, GraphGroupCtrl>("Sub Tf Changes");
+	Factory::Register<MetaTfChanges, GraphGroupCtrl>("Meta Tf Changes");
+	Factory::Register<HourHeat, GraphGroupCtrl>("Hour Heat");
+	Factory::Register<MetaTfCDF, GraphGroupCtrl>("Meta Tf CDF");
+	Factory::Register<WdayHourTrending, GraphGroupCtrl>("Wday Hour Trending");
+	Factory::Register<WdayHourTrendSuccess, GraphGroupCtrl>("Wday Hour Trend Success");
+	Factory::Register<EventOsc, GraphGroupCtrl>("Event Oscillator");
+	Factory::Register<GroupEventOsc, GraphGroupCtrl>("Group Event Oscillator");
+	Factory::Register<FeatureOsc, GraphGroupCtrl>("Feature Oscillator");
+	Factory::Register<GroupFeatureOsc, GraphGroupCtrl>("Group Feature Oscillator");
+	Factory::Register<GroupFeatureOsc, GraphGroupCtrl>("Group Feature Oscillator");
 	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
-	Factory::Register<EventOsc, GraphGroupCtrl>("Known event intensity oscillator");
 	
 	
 	Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
-	
 	Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
-	
 	Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
-	
 	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
-	
 	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
-	
 	Factory::Register<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
-	
 	Factory::Register<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");
 	
 	/*

@@ -51,7 +51,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % Out(SourcePhase, DataBridgeValue, SymTf, 4, 0);
+		reg % Out(SourcePhase, DataBridgeValue, SymTf, 4, 3);
 	}
 	
 	virtual void Init();
@@ -70,7 +70,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % InDynamic(SourcePhase, DataBridgeValue, &FilterFunction);
 		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % Out(SourcePhase, VirtualNodeValue, SymTf, 4, 0);
+		reg % Out(SourcePhase, VirtualNodeValue, SymTf, 4, 3);
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
@@ -112,7 +112,7 @@ public:
 		reg % In(SourcePhase, DataBridgeValue, SymTf);
 		reg % In(SourcePhase, VirtualNodeValue, SymTf);
 		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % Out(SourcePhase, RealValue, SymTf, 4, 0);
+		reg % Out(SourcePhase, RealValue, SymTf, 4, 3);
 	}
 	
 };

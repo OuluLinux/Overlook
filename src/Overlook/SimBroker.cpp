@@ -26,7 +26,7 @@ void SimBroker::Init(MetaTrader& mt) {
 	
 	Clear();
 	
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	src = bs.FindLinkCore("/open");
 	ASSERTEXC(src);
 	change = bs.FindLinkCore("/change");
@@ -38,7 +38,7 @@ void SimBroker::InitLightweight() {
 	
 	Clear();
 	
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	src = bs.FindLinkCore("/open");
 	ASSERTEXC(src);
 	change = bs.FindLinkCore("/change");
@@ -241,7 +241,7 @@ int		SimBroker::AccountStopoutMode() {
 
 double	SimBroker::MarketInfo(String symbol, int type) {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	
 	int sym = FindSymbol(symbol);
@@ -304,7 +304,7 @@ int		SimBroker::SymbolSelect(String name, int select) {
 }
 
 double	SimBroker::SymbolInfoDouble(String name, int prop_id) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	
@@ -358,7 +358,7 @@ double	SimBroker::SymbolInfoDouble(String name, int prop_id) {
 }
 
 int		SimBroker::SymbolInfoInteger(String name, int prop_id) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	
@@ -418,7 +418,7 @@ int		SimBroker::RefreshRates() {
 }
 
 int		SimBroker::iBars(String symbol, int timeframe) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	int period = timeframe*60 / bs.GetBasePeriod();
 	return bs.GetCount(period);*/
 	
@@ -430,7 +430,7 @@ int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
 }
 
 double	SimBroker::iClose(String symbol, int timeframe, int shift) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	return *src->GetValue<double>(
@@ -443,7 +443,7 @@ double	SimBroker::iClose(String symbol, int timeframe, int shift) {
 }
 
 double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	return *src->GetValue<double>(
@@ -456,7 +456,7 @@ double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
 }
 
 double	SimBroker::iLow(String symbol, int timeframe, int shift) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	return *src->GetValue<double>(
@@ -469,7 +469,7 @@ double	SimBroker::iLow(String symbol, int timeframe, int shift) {
 }
 
 double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
-	/*BaseSystem& bs = *Get<BaseSystem>();
+	/*BaseSystem& bs = GetBaseSystem();
 	int sym = FindSymbol(symbol);
 	CoreProcessAttributes& attr = bs.GetCurrent();
 	return *src->GetValue<double>(

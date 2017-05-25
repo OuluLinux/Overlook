@@ -552,7 +552,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	
 	// Parse symbol lines
 	int c1 = lines.GetCount();
-	for(int i = 0; i < c1; i++ ) {
+	for(int i = 0; i < c1; i++) {
 		lines[i].Replace("\r","");
 		Vector<String> line = Split(lines[i], ",", false);
 		Symbol sym;
@@ -747,7 +747,7 @@ const Vector<Price>& MetaTrader::GetAskBid() {
 	int c1 = lines.GetCount();
 	
 	askbid.SetCount(c1);
-	for(int i = 0; i < c1; i++ ) {
+	for(int i = 0; i < c1; i++) {
 		Vector<String> line = Split(lines[i], ",");
 		double ask = StrDbl(line[1]);
 		double bid = StrDbl(line[2]);

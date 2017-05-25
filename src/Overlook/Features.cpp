@@ -7,50 +7,23 @@ namespace Overlook {
 FeatureDetector::FeatureDetector() {
 	counted = 0;
 	group_counter = 0;
-	
 }
 
-void FeatureDetector::Init()
-{
-	/*
-	DataNode::Init();
-	
-	// Resolve source data containers
-	PathResolver& res = GetResolver();
-	String this_path = GetPath();
-	this_path = this_path.Left(this_path.ReverseFind("/"));
-	
-	String path = this_path + "/zz";
-	buf = res.ResolvePath(path);
-	if (!buf.Is()) throw DataExc();
-	cont = buf.Get<Core>();
-	if (!cont) throw DataExc();
-	
-	
-	// Add table columns
-	//AddColumn("Key");
-	//AddColumn("Value");
-	*/
+void FeatureDetector::Init() {
+	AddSubCore<ZigZag>();
 }
 
 void FeatureDetector::Start() {
-	/*
-	// Refresh keypoint data
-	cont->Refresh();
-	int bars = cont->GetBars();
-	const Vector<double>& keypoints = cont->GetIndex(1);
-	//DataVar src = cont->GetSource();
-	Core* bd = src.Get<Core>();
-	if (!bd) throw DataExc();
+	int bars = GetBars();
+	ConstBuffer& keypoints = At(0).GetBuffer(1);
 	
-	const Vector<double>& open = bd->GetOpen();
+	ConstBuffer& open = GetInputBuffer(0, 0);
 	int counted_keypoints = this->keypoints.GetCount();
 	
 	for(int i = counted; i < bars; i++) {
 		double d = keypoints.Get(i);
 		
 		if (d != 0.0) {
-			
 			// Collect statistics about distance between keypoints
 			int kp_count = this->keypoints.GetCount();
 			if (kp_count) {
@@ -61,12 +34,11 @@ void FeatureDetector::Start() {
 			// Add new keypoint
 			FeatureKeypoint& kp = this->keypoints.Add(i);
 			kp.SetShift(i);
-			
 		}
 	}
 	
 	if (counted_keypoints == this->keypoints.GetCount())
-		return 0;
+		return;
 	
 	// Gather keypoint data
 	int distance = keypoint_distance.GetMean() + 0.5;
@@ -159,7 +131,6 @@ void FeatureDetector::Start() {
 			// Create new group, but don't initialize lists yet without matching pair
 			kp_a.SetGroup(group_counter);
 			group_counter++;
-			
 		}
 	}
 	
@@ -197,7 +168,6 @@ void FeatureDetector::Start() {
 	}
 	
 	counted = bars;
-	*/
 }
 
 
@@ -210,7 +180,6 @@ FeatureKeypoint::FeatureKeypoint() {
 }
 
 void FeatureKeypoint::SetData(const Vector<double>& data) {
-	/*
 	ASSERT(data.GetCount() > 2);
 	abssum = 0;
 	
@@ -270,7 +239,6 @@ void FeatureKeypoint::SetData(const Vector<double>& data) {
 		double value = (descriptors[i] - low) / range;
 		descriptors[i] = value;
 	}
-	*/
 }
 
 String FeatureKeypoint::ToString() const {

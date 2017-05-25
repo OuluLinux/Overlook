@@ -11,7 +11,7 @@ NarxDraw::NarxDraw() {
 
 void NarxDraw::Paint(Draw& w) {
 	/*if (!IsVisible()) return;
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	if (!src) {
 		src = bs.FindLinkCore("/open");
@@ -155,7 +155,7 @@ NarxCtrl::NarxCtrl() {
 
 void NarxCtrl::Init() {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	int week_tf = bs.GetTfFromSeconds(7*24*60*60); // 1 week
 	int week_count = bs.GetCount(week_tf);
@@ -182,7 +182,7 @@ void NarxCtrl::Init() {
 
 void NarxCtrl::Refresher() {
 	/*
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	draw.Refresh();
 	network_view.Refresh();

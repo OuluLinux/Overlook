@@ -10,11 +10,8 @@ class WdayHourChanges : public Core {
 protected:
 	Vector<OnlineVariance> wdayhour;
 	
-	Vector<double> stddev, mean;
-	
 public:
 	WdayHourChanges();
-	
 	
 	virtual void Init();
 	virtual void Start();
@@ -22,8 +19,8 @@ public:
 	const OnlineVariance& GetOnlineVariance(int shift);
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
 
@@ -34,34 +31,23 @@ protected:
 	MovingOnlineVariance total;
 	Vector<MovingOnlineVariance> wdayhour, wday, hour;
 	
-	Vector<double> t_pre_stddev, t_pre_mean;
-	Vector<double> h_pre_stddev, h_pre_mean;
-	Vector<double> d_pre_stddev, d_pre_mean;
-	Vector<double> dh_pre_stddev, dh_pre_mean;
-	
 public:
 	WdayHourStats();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Arg("period", var_period);
 	}
 };
 
 class WdayHourDiff : public Core {
 	
 protected:
-	
 	int var_period_fast, var_period_diff;
-	Vector<double> t_pre_stddev, t_pre_mean;
-	Vector<double> h_pre_stddev, h_pre_mean;
-	Vector<double> d_pre_stddev, d_pre_mean;
-	Vector<double> dh_pre_stddev, dh_pre_mean;
 	
 public:
 	WdayHourDiff();
@@ -71,10 +57,10 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period_fast", var_period_fast);
-		reg % Arg("period_diff", var_period_diff);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Arg("period_fast", var_period_fast)
+			% Arg("period_diff", var_period_diff);
 	}
 };
 
@@ -84,11 +70,6 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> total, wdayhour, wday, hour;
 	
-	Vector<double> t_pre_stddev, t_pre_mean;
-	Vector<double> h_pre_stddev, h_pre_mean;
-	Vector<double> d_pre_stddev, d_pre_mean;
-	Vector<double> dh_pre_stddev, dh_pre_mean;
-	
 public:
 	WdayHourForecastErrors();
 	
@@ -97,9 +78,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Arg("period", var_period);
 	}
 };
 
@@ -107,23 +88,15 @@ public:
 
 class WdayHourErrorAdjusted : public Core {
 	
-protected:
-	Vector<double> t_pre_stddev, t_pre_mean;
-	Vector<double> h_pre_stddev, h_pre_mean;
-	Vector<double> d_pre_stddev, d_pre_mean;
-	Vector<double> dh_pre_stddev, dh_pre_mean;
-	
-	
 public:
 	WdayHourErrorAdjusted();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8);
 	}
 };
 
@@ -136,23 +109,16 @@ protected:
 	MovingOnlineVariance week;
 	Vector<MovingOnlineVariance> month, quarter, year;
 	
-	Vector<double> w_pre_stddev, w_pre_mean;
-	Vector<double> m_pre_stddev, m_pre_mean;
-	Vector<double> q_pre_stddev, q_pre_mean;
-	Vector<double> y_pre_stddev, y_pre_mean;
-	
-	
 public:
 	WeekStats();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Arg("period", var_period);
 	}
 };
 
@@ -162,11 +128,6 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> week, month, quarter, year;
 	
-	Vector<double> w_pre_stddev, w_pre_mean;
-	Vector<double> m_pre_stddev, m_pre_mean;
-	Vector<double> q_pre_stddev, q_pre_mean;
-	Vector<double> y_pre_stddev, y_pre_mean;
-	
 public:
 	WeekStatsForecastErrors();
 	
@@ -175,21 +136,16 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Arg("period", var_period);
 	}
 };
 
 
 
 class WeekStatsErrorAdjusted : public Core {
-	
-protected:
-	Vector<double> w_pre_stddev, w_pre_mean;
-	Vector<double> m_pre_stddev, m_pre_mean;
-	Vector<double> q_pre_stddev, q_pre_mean;
-	Vector<double> y_pre_stddev, y_pre_mean;
+	bool skip;
 	
 public:
 	WeekStatsErrorAdjusted();
@@ -199,16 +155,13 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, WeekStatsErrorAdjustedValue, SymTf, 8, 8);
 	}
 };
 
 
 class WdayHourDiffWeek : public Core {
-	
-protected:
-	Vector<double> mean, cdf;
 	
 public:
 	WdayHourDiffWeek();
@@ -218,8 +171,16 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% InDynamic(IndiPhase, WeekStatsErrorAdjustedValue, &FilterFunction)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym != -1)
+			return in_sym == out_sym;
+		BaseSystem& bs = *(BaseSystem*)basesystem;
+		return bs.GetPeriod(out_tf) * bs.GetBasePeriod() == 7*24*60*60; // 1 week timeframe
 	}
 };
 
@@ -227,50 +188,51 @@ public:
 
 class WdayHourWeekAdjusted : public Core {
 	
-protected:
-	Vector<double> t_pre_stddev, t_pre_mean;
-	Vector<double> h_pre_stddev, h_pre_mean;
-	Vector<double> d_pre_stddev, d_pre_mean;
-	Vector<double> dh_pre_stddev, dh_pre_mean;
-	
 public:
 	WdayHourWeekAdjusted();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% InDynamic(IndiPhase, WeekStatsErrorAdjustedValue, &FilterFunction)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym != -1)
+			return in_sym == out_sym;
+		BaseSystem& bs = *(BaseSystem*)basesystem;
+		return bs.GetPeriod(out_tf) * bs.GetBasePeriod() == 7*24*60*60; // 1 week timeframe
 	}
 };
-
 
 
 class SubTfChanges : public Core {
 	
 protected:
-	int other_counted;
-	Vector<double> stddev, mean, absstddev, absmean;
-	
 	int var_period;
+	int other_counted;
 	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
-	/*Indicator* tf_week_shift;
-	Core* other_values;
-	*/
 	
 public:
 	SubTfChanges();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		reg % Out(IndiPhase, SubTfValue, SymTf, 4, 4);
-		reg % Arg("period", var_period);
+		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
+			% Out(IndiPhase, SubTfValue, SymTf, 4, 4)
+			% Arg("period", var_period);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym != -1)
+			return in_sym == out_sym;
+		else
+			return out_tf == in_tf + 1 || out_tf == in_tf;
 	}
 };
 
@@ -279,7 +241,6 @@ class MetaTfChanges : public Core {
 	
 protected:
 	int offset;
-	Vector<double> stddev, mean, absstddev, absmean;
 	
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
@@ -294,9 +255,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, MetaTfValue, SymTf, 4, 4)
+			% Arg("period", var_period);
 	}
 };
 
@@ -305,7 +266,6 @@ public:
 class HourHeat : public Core {
 	
 protected:
-	Vector<double> sub, day, sum;
 	Core *subtf, *metatf;
 	
 public:
@@ -316,8 +276,10 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% In(SourcePhase, SubTfValue, SymTf)
+			% In(SourcePhase, MetaTfValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 3);
 	}
 };
 
@@ -326,7 +288,6 @@ class MetaTfCDF : public Core {
 	
 protected:
 	int offset;
-	Vector<double> value;
 	
 	int var_period;
 	Vector<MovingOnlineVariance> wdayhour;
@@ -336,17 +297,16 @@ protected:
 public:
 	MetaTfCDF();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("offset", offset);
-		reg % Arg("prev_open_time", prev_open_time);
-		reg % Arg("prev_open", prev_open);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("offset", offset)
+			% Arg("prev_open_time", prev_open_time)
+			% Arg("prev_open", prev_open)
+			% Arg("period", var_period);
 	}
 };
 
@@ -357,20 +317,16 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> s1, s2, s3; // Shifts
 	
-	Vector<double> shift1_mean, shift2_mean, shift3_mean, mean_av;
-	Vector<double> shift1_stddev, shift2_stddev, shift3_stddev, stddev_av;
-	
 public:
 	WdayHourTrending();
-	
 	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, WdayHourTrendingValue, SymTf, 8, 8)
+			% Arg("period", var_period);
 	}
 };
 
@@ -380,145 +336,22 @@ protected:
 	int var_period;
 	Vector<MovingOnlineVariance> vars;
 	
-	Vector<double> dir, mean, stddev, success, erradj;
-	
 public:
 	WdayHourTrendSuccess();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", var_period);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% In(SourcePhase, WdayHourTrendingValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 5)
+			% Arg("period", var_period);
 	}
 };
-
-
-class OpportinityQuality : public Core {
-	
-protected:
-	Array<Vector<double>> buffers;
-	Vector<double> quality;
-	Vector<double> weights;
-	
-public:
-	OpportinityQuality();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("w0", weights[0]);
-		reg % Arg("w1", weights[1]);
-		reg % Arg("w2", weights[2]);
-		reg % Arg("w3", weights[3]);
-	}
-};
-
-
-class EdgeStatistics : public Core {
-	
-protected:
-	Vector<double> mean, dev;
-	int period, method, slowing;
-	//DataVar buf;
-	int es_counted;
-	Vector<OnlineVariance> vars;
-	int event_probable_edge;
-	
-protected:
-	virtual void Start();
-	
-public:
-	EdgeStatistics();
-	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % es_counted % vars;}
-	
-	virtual void Init();
-	
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-		reg % Arg("method", method);
-		reg % Arg("slowing", slowing);
-	}
-};
-
-/*
-	TideStatistics is simplified EdgeStatistics.
-	The lowest periodical value means changing trend.
-*/
-class TideStatistics : public Core {
-	
-protected:
-	Vector<double> mean, dev;
-	int period, ts_counted;
-	Vector<OnlineVariance> vars;
-	int event_probable_edge;
-	
-protected:
-	virtual void Start();
-	
-public:
-	TideStatistics();
-	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % mean % dev % ts_counted % vars;}
-	
-	virtual void Init();
-	
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-	}
-};
-
-/*
-	Disconnections is simplified version of EdgeStatistics and TideStatistics,
-	which exports probable changing trend positions as disconnection positions.
-*/
-class Disconnections : public Core {
-	
-protected:
-	Vector<double> discbuf;
-	int period;
-	//DataVar buf1;
-	//DataVar buf2;
-	int dis_counted;
-	int event_disconnection;
-	int prev_disc_pos;
-	
-protected:
-	virtual void Start();
-	
-public:
-	Disconnections();
-	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % discbuf % dis_counted % prev_disc_pos;}
-	
-	virtual void Init();
-	
-	
-	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("period", period);
-	}
-};
-
 
 
 class EventOsc : public Core {
-	Vector<double> info, low, med, high;
 	double mul;
 	Index<String> keys;
 	EventManager* emgr;
@@ -527,40 +360,33 @@ class EventOsc : public Core {
 public:
 	EventOsc();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high % counted_events;}
-	
 	virtual void Init();
 	virtual void Start();
 	
-	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("mul", mul);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("mul", mul);
 	}
 };
 
 
 
 class GroupEventOsc : public Core {
-	Vector<double> info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
 	
 public:
 	GroupEventOsc();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high;}
-	
 	virtual void Init();
 	virtual void Start();
 	
-	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("mul", mul);
-		reg % Arg("ownmul", ownmul);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
+			% Arg("mul", mul)
+			% Arg("ownmul", ownmul);
 	}
 };
 
@@ -568,7 +394,6 @@ public:
 
 
 class FeatureOsc : public Core {
-	Vector<double> info, low, med, high;
 	double mul;
 	FeatureDetector* feat;
 	int counted_features;
@@ -576,40 +401,35 @@ class FeatureOsc : public Core {
 public:
 	FeatureOsc();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high % counted_features;}
-	
 	virtual void Init();
 	virtual void Start();
 	
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("mul", mul);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
+			% Arg("mul", mul);
 	}
 };
 
 
 
 class GroupFeatureOsc : public Core {
-	Vector<double> info, low, med, high;
 	int feat_count;
 	double mul, ownmul;
 	
 public:
 	GroupFeatureOsc();
 	
-	virtual void Serialize(Stream& s) {Core::Serialize(s); s % info % low % med % high;}
-	
 	virtual void Init();
 	virtual void Start();
 	
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
-		reg % Arg("mul", mul);
-		reg % Arg("ownmul", ownmul);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
+			% Arg("mul", mul)
+			% Arg("ownmul", ownmul);
 	}
 };
 
@@ -628,10 +448,9 @@ public:
 	
 	virtual String GetStyle() const;
 	virtual void IO(ValueRegister& reg) {
-		/*reg % In(IndiPhase, ForecastChangeValue, SymTf);
-		reg % In(IndiPhase, ForecastChannelValue, SymTf);*/
-		reg % Out(IndiPhase, ForecastChannelValue, SymTf);
-		reg % Arg("length", length);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, ForecastChannelValue, SymTf)
+			% Arg("length", length);
 	}
 	
 	virtual void Init();

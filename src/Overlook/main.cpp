@@ -9,6 +9,7 @@ using namespace Overlook;
 
 
 GUI_APP_MAIN {
+	//MemoryBreakpoint();
 	
 	::Overlook::Overlook ol;
 	ol.Init();
@@ -18,42 +19,3 @@ GUI_APP_MAIN {
 	Thread::ShutdownThreads();
 }
 
-
-
-
-
-
-#if 0
-
-
-
-GUI_APP_MAIN {
-	bool autostart = false;
-	
-	const Vector<String>& args = CommandLine();
-	for(int i = 0; i < args.GetCount(); i++) {
-		const String& a = args[i];
-		if (a == "-autostart")
-			autostart = true;
-	}
-	
-	{
-		Loader loader;
-		loader.autostart = autostart;
-		loader.Run();
-		
-		if (loader.exit)
-			return;
-	}
-	
-	
-	{
-		Overlook ie;
-		ie.Run();
-		GetSession().Stop();
-		GetRefContext().Clear();
-	}
-	
-	Thread::ShutdownThreads();
-}
-#endif

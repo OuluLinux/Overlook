@@ -2,9 +2,9 @@
 #define _Overlook_Overlook_h_
 
 #include "Common.h"
+#include "Factory.h"
 #include "Core.h"
 #include "CustomCtrl.h"
-#include "Factory.h"
 #include "BaseSystem.h"
 #include "Prioritizer.h"
 #include "SimBroker.h"

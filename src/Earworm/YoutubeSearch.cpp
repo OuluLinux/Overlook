@@ -20,7 +20,7 @@ void BasicHeaders(HttpRequest& h)
 const XmlNode& TryOpenLocation(String pos, const XmlNode& root, int& errorcode) {
 	Vector<String> p = Split(pos, " ");
 	const XmlNode* xn = &root;
-	for(int i = 0; i < p.GetCount(); i++ ) {
+	for(int i = 0; i < p.GetCount(); i++) {
 		int j = StrInt(p[i]);
 		if (j >= xn->GetCount()) {
 			errorcode = 1;

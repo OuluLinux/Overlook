@@ -22,7 +22,7 @@ void SpreadStats::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	BridgeAskBid& ab = *Get<BridgeAskBid>();
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	Buffer& spread_buf = GetBuffer(0);
 	
 	for (int i = counted; i < bars; i++) {
@@ -76,7 +76,7 @@ void SpreadMeanProfit::Init() {
 
 void SpreadMeanProfit::Start() {
 	const BridgeAskBid& askbid = *Get<BridgeAskBid>();
-	const BaseSystem& bs = *Get<BaseSystem>();
+	const BaseSystem& bs = GetBaseSystem();
 	
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -151,7 +151,7 @@ void SpreadProfitDistribution::Start() {
 	
 	
 	const BridgeAskBid& askbid = *Get<BridgeAskBid>();
-	const BaseSystem& bs = *Get<BaseSystem>();
+	const BaseSystem& bs = GetBaseSystem();
 	
 	
 	const Buffer& abschange_mean   = GetInputBuffer(2, 2);

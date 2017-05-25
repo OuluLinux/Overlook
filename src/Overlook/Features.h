@@ -48,20 +48,14 @@ protected:
 public:
 	FeatureDetector();
 	
-	virtual void Serialize(Stream& s) {
-		s % counted % keypoints % keypoint_groups % keypoint_group_pos
-		  % keypoint_distance % group_counter;
-	}
-	
 	virtual void Init();
-	
 	
 	int GetKeypointCount() const {return keypoints.GetCount();}
 	const FeatureKeypoint& GetKeypoint(int i) const {return keypoints[i];}
 	
 	virtual void IO(ValueRegister& reg) {
-		//reg % In(, , SymTf);
-		//reg % Out(, , SymTf);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, FeatureValue, SymTf, 0, 0);
 	}
 };
 

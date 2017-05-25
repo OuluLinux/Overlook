@@ -39,8 +39,7 @@ GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
 }
 
 void GraphGroupCtrl::SetGraph(Core* src) {
-	BaseSystem* bs = src->Get<BaseSystem>();
-	ASSERT(bs);
+	BaseSystem& bs = src->GetBaseSystem();
 	ASSERT(src);
 	ClearCores();
 	BarData* src_cast = dynamic_cast<BarData*>(src);
@@ -57,7 +56,7 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 		} else {
 			AddGraph(src);
 		}
-		period = bs->GetPeriod(src->GetTimeframe());
+		period = bs.GetPeriod(src->GetTimeframe());
 	}
 }
 

@@ -46,7 +46,11 @@ enum {
 	SpreadOvercomeValue,
 	SubTfValue,
 	SpreadOvercomeDistValue,
-	SpreadProbValue
+	SpreadProbValue,
+	FeatureValue,
+	WeekStatsErrorAdjustedValue,
+	MetaTfValue,
+	WdayHourTrendingValue
 };
 
 enum {
@@ -85,6 +89,10 @@ struct ValueType : Moveable<ValueType> {
 			case 18: return "SubTfValue";
 			case 19: return "SpreadOvercomeDistValue";
 			case 20: return "SpreadProbValue";
+			case 21: return "FeatureValue";
+			case 22: return "WeekStatsErrorAdjustedValue";
+			case 23: return "MetaTfValue";
+			case 24: return "WdayHourTrendingValue";
 			default: return "Invalid type";
 		}
 	}

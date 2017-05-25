@@ -97,6 +97,9 @@ public:
 		all_sym = false;
 		all_tf = false;
 	}
+	~JobItem() {
+		if (core && core->factory > 0) {delete core; core = NULL;} // Don't ever delete BaseSystem here (factory==0)
+	}
 	String ToString() const {
 		return Format("core=%X priority=%d factory=%d sym=%d tf=%d all_sym=%d all_tf=%d combination=\"%s\"",
 			(int64)core, priority, factory, sym, tf, (int)all_sym, (int)all_tf, HexVector(value)) ;

@@ -10,7 +10,7 @@ DataBridgeCommon::DataBridgeCommon() {
 }
 
 void DataBridgeCommon::Init(DataBridge* db) {
-	BaseSystem& bs = *db->Get<BaseSystem>();
+	BaseSystem& bs = db->GetBaseSystem();
 	addr = bs.addr;
 	port = bs.port;
 	
@@ -226,7 +226,7 @@ void DataBridge::Start() {
 	}
 	
 	MetaTrader& mt = GetMetaTrader();
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
 	
@@ -399,7 +399,7 @@ void VirtualNode::Start() {
 	Buffer& high   = GetBuffer(2);
 	Buffer& volume = GetBuffer(3);
 	
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	MetaTrader& mt = GetMetaTrader();
 	int sym_count = mt.GetSymbolCount();
 	int cur = GetSymbol() - sym_count;
@@ -507,7 +507,7 @@ void BridgeAskBid::Init() {
 }
 
 void BridgeAskBid::Start() {
-	BaseSystem& bs = *Get<BaseSystem>();
+	BaseSystem& bs = GetBaseSystem();
 	int id = GetSymbol();
 	int tf = GetTimeframe();
 	int bars = GetBars();

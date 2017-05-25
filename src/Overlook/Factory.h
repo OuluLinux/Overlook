@@ -14,6 +14,21 @@ struct RegisterInput : Moveable<RegisterInput> {
 
 enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC};
 
+struct ValueBase {
+	int phase, type, scale, count, visible, data_type;
+	const char* s0;
+	void* data;
+	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
+	enum {IN_, INOPT_, INDYN_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_};
+};
+
+struct ValueRegister {
+	ValueRegister() {}
+	
+	virtual void IO(const ValueBase& base) = 0;
+	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
+};
+
 struct FactoryValueRegister : public ValueRegister, Moveable<FactoryValueRegister> {
 	typedef Tuple2<String, int> ArgType;
 	
@@ -45,6 +60,8 @@ struct FactoryValueRegister : public ValueRegister, Moveable<FactoryValueRegiste
 	
 };
 
+class Core;
+class CustomCtrl;
 
 class Factory {
 	
@@ -77,6 +94,15 @@ public:
 	static int GetCtrlFactoryCount() {return GetCtrlFactories().GetCount();}
 	static const Vector<FactoryValueRegister>& GetRegs() {return Regs();}
 	
+	template <class CoreT> static int Find() {
+		CoreFactoryPtr factory_fn = &Factory::CoreFactoryFn<CoreT>;
+		const Vector<CoreCtrlFactory>& facs = CtrlFactories();
+		for(int i = 0; i < facs.GetCount(); i++) {
+			if (facs[i].b == factory_fn)
+				return i;
+		}
+		return -1;
+	}
 };
 
 

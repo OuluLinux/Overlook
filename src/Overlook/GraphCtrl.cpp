@@ -38,7 +38,7 @@ GraphCtrl::GraphCtrl() {
 
 void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 	
-	if (buffer >= cont.GetBufferCount()) {
+	if (buffer >= cont.GetVisibleCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
 		return;
 	}
@@ -66,7 +66,9 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
     int data_begin = cont.GetBuffer(buffer).begin;
     ASSERT(data_begin >= 0);
     
-	for(int i = 0; i < count; i++ ) {
+    if (cont.GetBuffer(buffer).IsEmpty()) return;
+    
+	for(int i = 0; i < count; i++) {
         int pos = c - 1 - (shift + i + data_shift);
         if (pos > cont.GetBuffer(buffer).GetCount()) continue;
         if (pos >= c || pos < data_begin) continue;
@@ -83,7 +85,7 @@ void GraphCtrl::Paint(Draw& draw) {
 	if (src.IsEmpty()) {draw.DrawRect(GetSize(), White()); return;}
 	
 	if (!base) {
-		base = src[0]->Get<BaseSystem>();
+		base = &src[0]->GetBaseSystem();
 		if (!base) {draw.DrawRect(GetSize(), White()); return;}
 	}
 	
@@ -141,7 +143,7 @@ void GraphCtrl::Paint(Draw& draw) {
 		    GetDataRange(cont, 2); // high
 		}
 		else {
-			int bufs = cont.GetBufferCount();
+			int bufs = cont.GetVisibleCount();
 			for(int j = 0; j < bufs; j++) {
 				GetDataRange(cont, j);
 			}
@@ -159,7 +161,7 @@ void GraphCtrl::Paint(Draw& draw) {
 			
 			//graph_label += cont.GetShortName();
 			
-			int bufs = cont.GetBufferCount();
+			int bufs = cont.GetVisibleCount();
 			//Core* bdcont = dynamic_cast<Core*>(&cont);
 			//ASSERT(bdcont != 0);
 			for(int j = 0; j < bufs; j++) {
@@ -216,7 +218,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	diff = hi - lo;
     step = diff / (1.*h / grid);
 
-	for(int i = 1; i < gridw; i++ )
+	for(int i = 1; i < gridw; i++)
         W.DrawLine(border + i*grid, y, border + i*grid, y+h, PEN_DOT, gridcolor);
 
 	int gridstep = 4;
@@ -231,7 +233,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         W.DrawLine(border+i*grid, y+h, border + i * grid, y+h+fonth, PEN_SOLID, gridcolor);
     }
     if (draw_vert_grid) {
-	    for(int i = 0; i < gridh; i++ ) {
+	    for(int i = 0; i < gridh; i++) {
 	        String text = FormatDoubleFix(hi - i*step, 5, FD_ZEROS); // TODO: digits according to symbol
 	        
 	        W.DrawLine(border, y+i*grid, w + border, y+i*grid, PEN_DOT, gridcolor);
@@ -292,7 +294,7 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	BaseSystem& bs = *group->GetCore().Get<BaseSystem>();
+	BaseSystem& bs = group->GetCore().GetBaseSystem();
 	
 	DrawGrid(W, true);
     
@@ -309,7 +311,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	c = values.GetBuffer(0).GetCount();
 	diff = hi - lo;
 	
-	for(int i = 0; i < count; i++ ) {
+	for(int i = 0; i < count; i++) {
         Vector<Point> P;
         double O, H, L, C;
         pos = c - (count + shift - i);
@@ -420,7 +422,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 			begin -= 200;
 			end += 200;
 		}
-		for(int i = begin; i < end; i++ ) {
+		for(int i = begin; i < end; i++) {
 	        double V;
 			pos = c - (count + shift - i + data_shift);
 	        if (pos >= data_count || pos < data_begin || pos >= buf_count)
@@ -442,7 +444,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 			W.DrawPolyline(P, line_width, value_color);
 	}
 	else if (draw_type == 1) {
-		for(int i = 0; i < real_screen_count; i++ ) {
+		for(int i = 0; i < real_screen_count; i++) {
 	        double V, Z;
 	        pos = c - (count + shift - i + data_shift);
 	        if (pos >= data_count || pos < data_begin)
@@ -467,7 +469,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 		int chr = cont.GetBufferArrow(buffer);
 		String str;
 		str.Cat(chr);
-		for(int i = 0; i < real_screen_count; i++ ) {
+		for(int i = 0; i < real_screen_count; i++) {
 	        double V;
 			pos = c - (count + shift - i + data_shift);
 	        if (pos >= data_count || pos < data_begin)

@@ -28,7 +28,7 @@ INITBLOCK {
 	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
 	Factory::Register<SpreadMeanProfit, GraphGroupCtrl>("SpreadMeanProfit");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
-	Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
+	//Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
 	
 	
 	Factory::Register<MovingAverage, GraphGroupCtrl>("Moving average");
@@ -83,13 +83,13 @@ INITBLOCK {
 	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
 	
 	
-	Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
+	/*Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
 	Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
 	Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
 	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
 	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
 	Factory::Register<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
-	Factory::Register<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");
+	Factory::Register<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");*/
 	
 	/*
 	Factory::Register<AutoEncoder>();

@@ -1,6 +1,23 @@
 #include "Overlook.h"
 
 namespace Overlook {
+	
+#ifdef flagDEBUG
+double Buffer::Get(int i) const {
+	check_cio->SafetyCheck(i);
+	return value[i];
+}
+
+void Buffer::Set(int i, double value) {
+	check_cio->SafetyCheck(i);
+	this->value[i] = value;
+}
+
+void Buffer::Inc(int i, double value) {
+	check_cio->SafetyCheck(i);
+	this->value[i] += value;
+}
+#endif
 
 /*Core::Core() {
 	
@@ -65,7 +82,6 @@ Core::Core()
 	tf_id = -1;
 	period = 0;
 	end_offset = 0;
-	
 }
 
 Core::~Core() {
@@ -185,18 +201,22 @@ void Core::SetPoint(double d) {
 
 
 double Core::Open ( int shift ) {
+	ASSERT(shift <= read_safety_limit);
 	return inputs[0].sources[0].b->buffers[0].Get(shift);
 }
 
 double Core::Low( int shift ) {
+	ASSERT(shift < read_safety_limit);
 	return inputs[0].sources[0].b->buffers[1].Get(shift);
 }
 
 double Core::High( int shift ) {
+	ASSERT(shift < read_safety_limit);
 	return inputs[0].sources[0].b->buffers[2].Get(shift);
 }
 
 double Core::Volume ( int shift ) {
+	ASSERT(shift < read_safety_limit);
 	return inputs[0].sources[0].b->buffers[3].Get(shift);
 }
 
@@ -276,25 +296,31 @@ double Core::GetAppliedValue ( int applied_value, int i ) {
 	
 	switch ( applied_value ) {
 		case 0:
+			ASSERT(i <= read_safety_limit);
 			dValue = Open(i);
 			break;
 		case 1:
+			ASSERT(i < read_safety_limit);
 			dValue = High(i);
 			break;
 		case 2:
+			ASSERT(i < read_safety_limit);
 			dValue = Low(i);
 			break;
 		case 3:
+			ASSERT(i < read_safety_limit);
 			dValue =
 				( High(i) + Low(i) )
 				/ 2.0;
 			break;
 		case 4:
+			ASSERT(i < read_safety_limit);
 			dValue =
 				( High(i) + Low(i) + Open(i) )
 				/ 3.0;
 			break;
 		case 5:
+			ASSERT(i < read_safety_limit);
 			dValue =
 				( High(i) + Low(i) + 2 * Open(i) )
 				/ 4.0;

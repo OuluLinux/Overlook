@@ -19,6 +19,7 @@ void FeatureDetector::Start() {
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	int counted_keypoints = this->keypoints.GetCount();
+	SetSafetyLimit(bars);
 	
 	for(int i = counted; i < bars; i++) {
 		double d = keypoints.Get(i);
@@ -65,6 +66,10 @@ void FeatureDetector::Start() {
 		for(int j = begin, k = 0; j < end; j++, k++) {
 			data[k] = open.Get(j);
 		}
+		
+		// Check if dataset is too small
+		if (data.GetCount() <= 2)
+			return;
 		
 		// Process data vector
 		kp.SetData(data);

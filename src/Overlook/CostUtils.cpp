@@ -26,6 +26,7 @@ void SpreadStats::Start() {
 	Buffer& spread_buf = GetBuffer(0);
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		
 		double spread = 0;
 		
@@ -91,6 +92,7 @@ void SpreadMeanProfit::Start() {
 	if (!counted) counted = 1;
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time t = bs.GetTime(GetPeriod(), i);
 		
 		int h = (t.minute + t.hour * 60) / period;
@@ -186,6 +188,7 @@ void ValueChange::Start() {
 	if (!counted) counted = 1;
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		if (!has_proxy) {
 			double open_value = open.Get(i-1);
 			double change_value = open.Get(i) / open_value - 1.0;

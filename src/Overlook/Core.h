@@ -30,6 +30,7 @@ struct DataLevel : public Moveable<DataLevel> {
 	void Serialize(Stream& s) {s % style % line_width % value % clr;}
 };
 
+class CoreIO;
 
 // Class for default visual settings for a single visible line of a container
 struct Buffer : public Moveable<Buffer> {
@@ -41,14 +42,22 @@ struct Buffer : public Moveable<Buffer> {
 	
 	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
-	void Set(int i, double value) {this->value[i] = value;}
 	void SetCount(int i) {value.SetCount(i, 0);}
-	void Inc(int i, double value) {this->value[i] += value;}
 	
-	double Get(int i) const {return value[i];}
 	int GetCount() const {return value.GetCount();}
 	bool IsEmpty() const {return value.IsEmpty();}
 	
+	#ifdef flagDEBUG
+	CoreIO* check_cio;
+	void SafetyCheck(CoreIO* io) {check_cio = io;}
+	double Get(int i) const;
+	void Set(int i, double value);
+	void Inc(int i, double value);
+	#else
+	double Get(int i) const {return value[i];}
+	void Set(int i, double value) {this->value[i] = value;}
+	void Inc(int i, double value) {this->value[i] += value;}
+	#endif
 };
 
 typedef const Buffer ConstBuffer;
@@ -146,8 +155,22 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
 	
+	#ifdef flagDEBUG
+	int read_safety_limit;
+	void SafetyCheck(int i) {ASSERT(i <= read_safety_limit);}
+	void SetSafetyLimit(int i) {read_safety_limit = i;}
+	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {Buffer& b = (Buffer&)cb; b.SafetyCheck((CoreIO*)this); return cb;}
+	Buffer& SafetyBuffer(Buffer& b) {b.SafetyCheck((CoreIO*)this); return b;}
+	#else
+	void SafetyCheck(int i) const {}
+	void SetSafetyLimit(int i) const {}
+	#endif
 	
-	CoreIO() {}
+	CoreIO() {
+		#ifdef flagDEBUG
+		read_safety_limit = 0;
+		#endif
+	}
 	virtual ~CoreIO() {}
 	
 	virtual void IO(const ValueBase& base) {
@@ -202,9 +225,9 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	int GetBufferType(int i) {return buffers[i]->line_style;}
 	Color GetBufferColor(int i) {return buffers[i]->clr;}
 	int GetBufferCount() {return buffers.GetCount();}
-	Buffer& GetBuffer(int buffer) {return *buffers[buffer];}
-	ConstBuffer& GetBuffer(int buffer) const {return *buffers[buffer];}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer];}
+	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
+	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer]);}
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
@@ -341,7 +364,6 @@ public:
 	void SetBufferLabel(int i, const String& s) {}
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
-	
 	
 	// Visible main functions
 	void Refresh();

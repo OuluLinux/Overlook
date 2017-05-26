@@ -328,6 +328,7 @@ void DataBridge::Start() {
 		}
 		
 		while (cur < time && count < bars) {
+			SetSafetyLimit(count);
 			open_buf.Set(count, prev_close);
 			low_buf.Set(count, prev_close);
 			high_buf.Set(count, prev_close);
@@ -339,6 +340,7 @@ void DataBridge::Start() {
 		prev_close = close;
 		
 		if (count < bars && time == cur) {
+			SetSafetyLimit(count);
 			//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
 			open_buf.Set(count, open);
 			low_buf.Set(count, low);
@@ -352,6 +354,7 @@ void DataBridge::Start() {
 	}
 	
 	while (count < bars) {
+		SetSafetyLimit(count);
 		open_buf.Set(count, open);
 		low_buf.Set(count, open);
 		high_buf.Set(count, open);
@@ -441,6 +444,7 @@ void VirtualNode::Start() {
 	}
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double change_sum = 0;
 		double volume_sum = 0;
 		
@@ -580,7 +584,7 @@ void BridgeAskBid::Start() {
 	Buffer& bid = GetBuffer(1);
 	
 	for(int i = counted; i < bars; i++) {
-		
+		SetSafetyLimit(i);
 		double spread = 0;
 		
 		Time t = bs.GetTime(GetPeriod(), i);
@@ -649,6 +653,7 @@ void SymbolSource::Start() {
 	ConstBuffer& src_volume = GetInputBuffer(input, sym, tf, 3);
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		open	.Set(i, src_open.Get(i));
 		low		.Set(i, src_low.Get(i));
 		high	.Set(i, src_high.Get(i));

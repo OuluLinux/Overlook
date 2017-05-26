@@ -66,6 +66,7 @@ void WdayHourChanges::Start() {
 		counted = 1;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time time = bs.GetTime(GetPeriod(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
@@ -174,6 +175,7 @@ void WdayHourStats::Start() {
 		counted = 1;
 	
 	for ( int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time time = bs.GetTime(GetPeriod(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
@@ -303,6 +305,7 @@ void WdayHourDiff::Start() {
 	//ASSERT( count >= bars - 1 ); // If fails and needs to be skipped, remember to reduce GetCounted value
 	
 	for ( int i = counted; i < count; i++) {
+		SetSafetyLimit(i);
 		t_pre_mean.Set(i,    t_pre_mean_fast.Get(i)    - t_pre_mean_slow.Get(i));
 		h_pre_mean.Set(i,    h_pre_mean_fast.Get(i)    - h_pre_mean_slow.Get(i));
 		d_pre_mean.Set(i,    d_pre_mean_fast.Get(i)    - d_pre_mean_slow.Get(i));
@@ -375,9 +378,13 @@ void WeekStats::Start() {
 	if (force_d0)
 		return;
 	
+	if (!counted) counted++;
+	else counted--;
+	
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time time = GetBaseSystem().GetTime(GetPeriod(), i);
 		
 		int m = 0;
@@ -421,7 +428,7 @@ void WeekStats::Start() {
 		MovingOnlineVariance& q_var  = quarter[q];
 		MovingOnlineVariance& y_var  = year[y];
 		
-		double change = open.Get(i+1) - open.Get(i);
+		double change = open.Get(i) - open.Get(i-1);
 		if (change != 0.0) {
 			w_var.AddResult(change);
 			m_var.AddResult(change);
@@ -508,6 +515,7 @@ void WdayHourTrending::Start() {
 		counted++;
 	
 	for ( int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time time = bs.GetTime(GetPeriod(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
@@ -626,6 +634,7 @@ void WdayHourTrendSuccess::Start() {
 	//bars--;
 	
 	for ( int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		Time time = bs.GetTime(GetPeriod(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
@@ -732,7 +741,7 @@ void FeatureOsc::Start() {
 	Buffer& info	= GetBuffer(3);
 	
 	int bars = GetBars();
-	
+	SetSafetyLimit(bars);
 	FeatureDetector& feat = *Get<FeatureDetector>();
 	
 	int count = feat.GetKeypointCount();
@@ -745,9 +754,9 @@ void FeatureOsc::Start() {
 		double value = 1.0;
 		int j = 0;
 		while (value >= 0.01) {
-			int a = shift - j;
+			//int a = shift - j;
 			int b = shift + j;
-			if (a >= 0) buf.Inc(a, value);
+			//if (a >= 0) buf.Inc(a, value); // this actually gives harmful peek to future
 			if (j && b < bars) buf.Inc(b, value);
 			value *= mul;
 			j++;
@@ -789,6 +798,7 @@ void ChannelPredicter::Start() {
 	int counted = GetCounted();
 	
 	for ( int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double diff = 0.0;
 		for(int j = 0; j < 6; j+=2) {
 			double mean = whstat.GetBuffer(j+0).Get(i);

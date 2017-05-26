@@ -264,10 +264,11 @@ void MovingAverage::Simple()
 	int bars = GetBars();
 	int pos = ma_counted;
 	if (pos < ma_period) pos = ma_period;
+	SetSafetyLimit(pos);
 	for (int i = 1; i < ma_period; i++)
 		sum += Open(pos - i);
-	while (pos < bars)
-	{
+	while (pos < bars) {
+		SetSafetyLimit(pos);
 		sum += Open( pos );
 		buffer.Set(pos, sum / ma_period);
 		sum -= Open( pos - ma_period + 1 );
@@ -287,6 +288,7 @@ void MovingAverage::Exponential()
 	if ( ma_counted > 2 )
 		pos = ma_counted + 1;
 	while (pos < bars) {
+		SetSafetyLimit(pos);
 		if (pos == 1)
 			buffer.Set(pos-1, Open(pos - 1));
 		buffer.Set(pos, Open(pos) * pr + buffer.Get(pos-1) * ( 1 - pr ));
@@ -303,6 +305,7 @@ void MovingAverage::Smoothed()
 	if (pos < ma_counted)
 		pos = ma_counted;
 	while (pos < bars) {
+		SetSafetyLimit(pos);
 		if (pos == ma_period) {
 			for (int i = 0, k = pos; i < ma_period; i++, k--) {
 				sum += Open(k);
@@ -326,6 +329,7 @@ void MovingAverage::LinearlyWeighted()
 	if (pos > bars - ma_period)
 		pos = bars - ma_period;
 	for (int i = 1; i <= ma_period; i++, pos++) {
+		SetSafetyLimit(pos);
 		value = Open( pos );
 		sum += value * i;
 		lsum += value;
@@ -334,6 +338,7 @@ void MovingAverage::LinearlyWeighted()
 	pos--;
 	int i = pos - ma_period;
 	while (pos < bars) {
+		SetSafetyLimit(pos);
 		buffer.Set(pos, sum / weight);
 		pos++;
 		i++;
@@ -403,8 +408,8 @@ void MovingAverageConvergenceDivergence::Start() {
 	ConstBuffer& a_buf = a_ind.GetBuffer(0);
 	ConstBuffer& b_buf = b_ind.GetBuffer(0);
 	
-	for (int i = counted; i < bars; i++)
-	{
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double a_value = a_buf.Get(i);
 		double b_value = b_buf.Get(i);
 		double diff = a_value - b_value;
@@ -459,17 +464,21 @@ void AverageDirectionalMovement::Start() {
 	if ( counted > 0 )
 		counted--;
 	else {
-		counted = 1;
-		pdi_buffer.Set(0, 0.0);
-		ndi_buffer.Set(0, 0.0);
-		adx_buffer.Set(0, 0.0);
+		counted = 2;
+		for(int i = 0; i < 2; i++) {
+			SetSafetyLimit(i);
+			pdi_buffer.Set(i, 0.0);
+			ndi_buffer.Set(i, 0.0);
+			adx_buffer.Set(i, 0.0);
+		}
 	}
 	
 	for ( int i = counted; i < bars; i++) {
-		double Hi		= High(i);
-		double prev_hi	= High( i-1 );
-		double Lo		= Low(i);
-		double prev_lo	= Low( i-1 );
+		SetSafetyLimit(i);
+		double Hi		= High(i - 1);
+		double prev_hi	= High(i - 2);
+		double Lo		= Low(i - 1);
+		double prev_lo	= Low(i - 2);
 		double prev_cl	= Open(i);
 
 		double tmp_p = Hi - prev_hi;
@@ -599,8 +608,8 @@ void BollingerBands::Start() {
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	
-	for ( int i = pos; i < bars; i++)
-	{
+	for ( int i = pos; i < bars; i++) {
+		SetSafetyLimit(i);
 		ml_buffer.Set(i, SimpleMA( i, bands_period, open ));
 		stddev_buffer.Set(i, StdDev_Func ( i, ml_buffer, bands_period ));
 		tl_buffer.Set(i, ml_buffer.Get(i) + bands_deviation * stddev_buffer.Get(i));
@@ -615,8 +624,7 @@ double BollingerBands::StdDev_Func ( int position, const Buffer& MAvalue, int pe
 		return tmp;
 	
 	int bars = GetBars();
-	for (int i = 0; i < period; i++)
-	{
+	for (int i = 0; i < period; i++) {
 		double value = Open (position - i );
 		tmp += pow ( value - MAvalue.Get( position ), 2 );
 	}
@@ -668,10 +676,9 @@ void Envelopes::Start() {
 	if (counted) counted--;
 	else counted = ma_period;
 	
-	ConstBuffer& ind0 = At(0).GetBuffer(0);
-	
 	for (int i = counted; i < bars; i++) {
-		double value = ind0.Get(i);
+		SetSafetyLimit(i);
+		double value = Open(i);
 		ASSERT(value != 0);
 		ma_buffer.Set(i, value);
 		up_buffer.Set(i, ( 1 + deviation / 100.0 ) * ma_buffer.Get(i));
@@ -723,6 +730,7 @@ void ParabolicSAR::Start () {
 	int pos = counted - 1;
 
 	if ( pos < 1 ) {
+		SetSafetyLimit(1);
 		pos = 1;
 		af_buffer.Set(0, sar_step);
 		af_buffer.Set(1, sar_step);
@@ -747,13 +755,14 @@ void ParabolicSAR::Start () {
 	//bars--;
 	
 	for (int i = pos; i < bars; i++) {
-		double low  = Low(i);
-		double high = High(i);
+		SetSafetyLimit(i);
+		double low  = Low(i-1);
+		double high = High(i-1);
 
 		if ( direction_long ) {
 			if ( sar_buffer.Get(i-1) > low ) {
 				direction_long = false;
-				sar_buffer.Set(i-1, GetHigh( i, last_rev_pos ));
+				sar_buffer.Set(i-1, GetHigh( i-1, last_rev_pos ));
 				ep_buffer.Set(i, low);
 				last_rev_pos = i;
 				af_buffer.Set(i, sar_step);
@@ -762,7 +771,7 @@ void ParabolicSAR::Start () {
 		else {
 			if ( sar_buffer.Get(i-1) < high ) {
 				direction_long = true;
-				sar_buffer.Set(i-1, GetLow( i, last_rev_pos ));
+				sar_buffer.Set(i-1, GetLow( i-1, last_rev_pos ));
 				ep_buffer.Set(i, high);
 				last_rev_pos = i;
 				af_buffer.Set(i, sar_step);
@@ -789,7 +798,7 @@ void ParabolicSAR::Start () {
 			sar_buffer.Set(i, value);
 
 			if ( value > low || value > prev_low )
-				sar_buffer.Set(i+1, Upp::min( low, prev_low ));
+				sar_buffer.Set(i, Upp::min( low, prev_low ));
 		}
 
 		else {
@@ -902,6 +911,7 @@ void StandardDeviation::Start() {
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		amount = 0.0;
 		ma = ma_buf.Get(i);
 
@@ -954,6 +964,7 @@ void AverageTrueRange::Start() {
 		atr_buffer.Set(0, 0.0);
 		
 		for (int i = 1; i < bars; i++) {
+			SetSafetyLimit(i);
 			double h = High(i-1);
 			double l = Low(i-1);
 			double c = Open(i);
@@ -978,6 +989,7 @@ void AverageTrueRange::Start() {
 		counted--;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double h = High(i-1);
 		double l = Low(i-1);
 		double c = Open(i);
@@ -1016,11 +1028,14 @@ void BearsPower::Start() {
 
 	if ( counted > 0 )
 		counted--;
+	else
+		counted++;
 	
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
 	
 	for (int i = counted; i < bars; i++) {
-		buffer.Set(i, Low(i) - ma_buf.Get(i));
+		SetSafetyLimit(i);
+		buffer.Set(i, Low(i-1) - ma_buf.Get(i));
 	}
 }
 
@@ -1057,11 +1072,14 @@ void BullsPower::Start() {
 
 	if ( counted > 0 )
 		counted--;
+	else
+		counted++;
 	
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
 	
 	for ( int i = counted; i < bars; i++) {
-		buffer.Set(i, High(i) - ma_buf.Get(i) );
+		SetSafetyLimit(i);
+		buffer.Set(i, High(i-1) - ma_buf.Get(i) );
 	}
 }
 
@@ -1109,6 +1127,7 @@ void CommodityChannelIndex::Start() {
 	
 	if ( counted < 1 ) {
 		for ( i = 1; i < period; i++) {
+			SetSafetyLimit(i);
 			double h = High(i-1);
 			double l = Low(i-1);
 			double c = Open(i);
@@ -1129,6 +1148,7 @@ void CommodityChannelIndex::Start() {
 	
 	//bars--;
 	for ( i = pos; i < bars; i++) {
+		SetSafetyLimit(i);
 		double h = High(i-1);
 		double l = Low(i-1);
 		double c = Open(i);
@@ -1145,10 +1165,13 @@ void CommodityChannelIndex::Start() {
 	i = pos;
 
 	while ( i < bars ) {
+		SetSafetyLimit(i);
 		sum = 0.0;
 		k = i + 1 - period;
-
+		SafetyCheck(k);
+		
 		while ( k <= i ) {
+			SafetyCheck(k);
 			sum += fabs ( value_buffer.Get(k) - mov_buffer.Get(i) );
 			k++;
 		}
@@ -1209,13 +1232,16 @@ void DeMarker::Start() {
 		counted--;
 	else
 		counted = 2;
-
+	
+	SetSafetyLimit(counted);
 	double prev_high = counted >= 2 ? High( counted - 1 ) : 0;
 	double prev_low  = counted >= 2 ? Low( counted - 1 ) : 0;
 
 	for (int i = counted; i < bars; i++) {
-		double high = High(i);
-		double low  = Low(i);
+		SetSafetyLimit(i);
+		
+		double high = High(i-1);
+		double low  = Low(i-1);
 
 		num = high - prev_high;
 
@@ -1242,6 +1268,7 @@ void DeMarker::Start() {
 	
 	for (int i = counted; i < bars; i++)
 	{
+		SetSafetyLimit(i);
 		double maxvalue = SimpleMA ( i, period, max_buffer );
 		num = maxvalue + SimpleMA ( i, period, min_buffer );
 
@@ -1297,7 +1324,8 @@ void ForceIndex::Start() {
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
 	
 	for ( int i = counted; i < bars; i++) {
-		double volume = Volume(i);
+		SetSafetyLimit(i);
+		double volume = Volume(i-1);
 		double ma1 = ma_buf.Get(i);
 		double ma2 = ma_buf.Get( i - 1 );
 		buffer.Set(i, volume * (ma1 - ma2));
@@ -1341,17 +1369,18 @@ void Momentum::Start() {
 		throw DataExc();
 
 	if ( counted <= 0 ) {
-		for (int i = 0; i < period; i++)
+		for (int i = 0; i < period; i++) {
+			SetSafetyLimit(i);
 			buffer.Set(i, 0.0);
-
+		}
 		counted = period;
 	}
 	else
 		counted--;
 	
 	//bars--;
-	for (int i = counted; i < bars; i++)
-	{
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double close1 = Open( i );
 		double close2 = Open( i - period );
 		buffer.Set(i, close1 * 100 / close2 - 100);
@@ -1412,6 +1441,7 @@ void OsMA::Start() {
 	ConstBuffer& ma2_buf = At(1).GetBuffer(0);
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double ma1 = ma1_buf.Get(i);
 		double ma2 = ma2_buf.Get(i);
 		buffer.Set(i, ma1 - ma2);
@@ -1475,6 +1505,7 @@ void RelativeStrengthIndex::Start() {
 		double prev_value  = Open( 0 );
 
 		for (int i = 1; i <= period; i++) {
+			SetSafetyLimit(i);
 			double value  = Open(i);
 
 			if ( prev_value == 0 ) {
@@ -1501,6 +1532,7 @@ void RelativeStrengthIndex::Start() {
 	double prev_value  = Open(pos-1);
 
 	for (int i = pos; i < bars; i++) {
+		SetSafetyLimit(i);
 		double value  = Open(i);
 		diff = value - prev_value;
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
@@ -1555,6 +1587,7 @@ void RelativeVigorIndex::Start()
 	//bars--;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		num = 0.0;
 		denum = 0.0;
 
@@ -1639,7 +1672,7 @@ void StochasticOscillator::Start() {
 	Buffer& signal_buffer = GetBuffer(1);
 	Buffer& high_buffer = GetBuffer(2);
 	Buffer& low_buffer = GetBuffer(3);
-	int i, k, start;
+	int start;
 	int bars = GetBars();
 	int counted = GetCounted();
 
@@ -1651,18 +1684,20 @@ void StochasticOscillator::Start() {
 	if ( start + 1 < counted )
 		start = counted - 2;
 	else {
-		for ( i = 0; i < start; i++) {
+		for (int i = 0; i < start; i++) {
+			SetSafetyLimit(i);
 			low_buffer.Set(i, 0.0);
 			high_buffer.Set(i, 0.0);
 		}
 	}
 
 	
-	for ( i = start; i < bars; i++) {
+	for (int i = start; i < bars; i++) {
+		SetSafetyLimit(i);
 		double dmin = 1000000.0;
 		double dmax = -1000000.0;
 
-		for ( k = i - k_period + 1; k <= i; k++ ) {
+		for (int k = i - k_period; k < i; k++) {
 			double low = Low( k );
 			double high = High( k );
 
@@ -1682,17 +1717,18 @@ void StochasticOscillator::Start() {
 	if ( start + 1 < counted )
 		start = counted - 2;
 	else {
-		for ( i = 0;i < start; i++)
+		for (int i = 0; i < start; i++)
 			buffer.Set(i, 0.0);
 	}
 
 	//bars--;
 	
-	for ( i = start; i < bars; i++) {
+	for (int i = start; i < bars; i++) {
+		SetSafetyLimit(i);
 		double sumlow = 0.0;
 		double sumhigh = 0.0;
 
-		for ( k = ( i - slowing + 1 ); k <= i; k++ ) {
+		for (int k = ( i - slowing + 1 ); k <= i; k++) {
 			double close = Open( k );
 			sumlow += ( close - low_buffer.Get(k-1) );
 			sumhigh += ( high_buffer.Get(k) - low_buffer.Get(k-1) );
@@ -1709,14 +1745,14 @@ void StochasticOscillator::Start() {
 	if ( start + 1 < counted )
 		start = counted - 2;
 	else {
-		for ( i = 0;i < start;i++ )
+		for (int i = 0;i < start; i++)
 			signal_buffer.Set(i, 0.0);
 	}
 
-	for ( i = start; i < bars; i++) {
+	for (int i = start; i < bars; i++) {
 		double sum = 0.0;
 
-		for ( k = 0; k < d_period; k++ )
+		for (int k = 0; k < d_period; k++ )
 			sum += buffer.Get(i - k);
 
 		signal_buffer.Set(i, sum / d_period);
@@ -1760,6 +1796,7 @@ void WilliamsPercentRange::Start() {
 	
 	//bars--;
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		int highest = HighestHigh( period, i-1 );
 		int lowest = LowestLow( period, i-1 );
 		double max_high = High( highest );
@@ -1813,8 +1850,8 @@ void AccumulationDistribution::Start() {
 	}
 	
 	//bars--;
-	for (int i=counted; i < bars; i++)
-	{
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double close = Open(i);
 		buffer.Set(i, (close - Low(i-1)) - (High(i-1) - close));
 		
@@ -1824,7 +1861,7 @@ void AccumulationDistribution::Start() {
 				buffer.Set(i, 0.0);
 			else {
 				buffer.Set(i, buffer.Get(i) / diff);
-				buffer.Set(i, buffer.Get(i) * (double)Volume(i));
+				buffer.Set(i, buffer.Get(i) * (double)Volume(i-1));
 			}
 		}
 		
@@ -1872,6 +1909,7 @@ void MoneyFlowIndex::Start() {
 		counted = period + 2;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		pos_mf = 0.0;
 		neg_mf = 0.0;
 		cur_tp = (
@@ -1933,6 +1971,7 @@ void ValueAndVolumeTrend::Start() {
 		counted = 2;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double volume = Volume(i-1);
 		cur_value = GetAppliedValue ( applied_value, i - 1);
 		prev_value = GetAppliedValue ( applied_value, i - 2 );
@@ -1971,16 +2010,17 @@ void OnBalanceVolume::Start() {
 		counted = 2;
 	
 	for (int i = counted; i < bars; i++) {
-		double cur_value = GetAppliedValue ( applied_value, i);
-		double prev_value = GetAppliedValue ( applied_value, i - 1 );
+		SetSafetyLimit(i);
+		double cur_value = GetAppliedValue ( applied_value, i - 1);
+		double prev_value = GetAppliedValue ( applied_value, i - 2);
 
 		if ( cur_value == prev_value )
 			buffer.Set(i, buffer.Get(i));
 		else {
 			if ( cur_value < prev_value )
-				buffer.Set(i, buffer.Get(i) - Volume(i));
+				buffer.Set(i, buffer.Get(i) - Volume(i - 1));
 			else
-				buffer.Set(i, buffer.Get(i) + Volume(i));
+				buffer.Set(i, buffer.Get(i) + Volume(i - 1));
 		}
 	}
 }
@@ -2010,8 +2050,12 @@ void Volumes::Start() {
 	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
 	int counted = GetCounted();
-	for (int i = counted; i < bars; i++)
-		buffer.Set(i, Volume(i));
+	if (!counted) counted++;
+	else counted--;
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		buffer.Set(i, Volume(i-1));
+	}
 }
 
 
@@ -2071,16 +2115,20 @@ void AcceleratorOscillator::Start() {
 		prev = macd_buffer.Get(counted) - signal_buffer.Get(counted);
 	}
 
-	for (int i = counted; i < bars; i++)
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		macd_buffer.Set(i,
 			ind1.Get(i) -
 			ind2.Get(i));
+	}
 
 	SimpleMAOnBuffer ( bars, counted, 0, 5, macd_buffer, signal_buffer );
 	
 	bool up = true;
 
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		current = macd_buffer.Get(i) - signal_buffer.Get(i);
 
 		if ( current > prev )
@@ -2184,6 +2232,8 @@ void GatorOscillator::Start() {
 	if (counted) counted--;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		current =
 			ind1.Get(i) -
 			ind2.Get(i);
@@ -2196,6 +2246,8 @@ void GatorOscillator::Start() {
 
 
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		prev = down_buffer.Get(i-1);
 		current = down_buffer.Get(i);
 
@@ -2224,6 +2276,8 @@ void GatorOscillator::Start() {
 	if (counted) counted--;
 	
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		current =
 			ind3.Get(i) -
 			ind4.Get(i);
@@ -2235,6 +2289,8 @@ void GatorOscillator::Start() {
 	}
 
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		prev = up_buffer.Get(i-1);
 		current = up_buffer.Get(i);
 
@@ -2306,17 +2362,22 @@ void AwesomeOscillator::Start() {
 	
 	if (counted > 0) {
 		counted--;
+		SetSafetyLimit(counted);
 		if (counted)
 			prev = buffer.Get(counted - 1);
 	}
 
-	for (int i = counted; i < bars; i++)
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		buffer.Set(i,
 			ind1.Get(i) - ind2.Get(i));
+	}
 
 	bool up = true;
 
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		current = buffer.Get(i);
 
 		if ( current > prev )
@@ -2394,11 +2455,14 @@ void Fractals::Start() {
 	else
 		counted--;
 	
+	SetSafetyLimit(counted);
 	double prev_close = Open(counted);
 	
 	//bars--;
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		double close = Open(i);
 		
 		line_up_buf1.Set(i, IsFractalUp(i-1, left_bars, right_bars, bars));
@@ -2509,6 +2573,7 @@ void FractalOsc::Start() {
 	//bars--;
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double close = Open(i);
 		double buf1 = ind1.Get(i);
 		double buf2 = ind2.Get(i);
@@ -2563,13 +2628,15 @@ void MarketFacilitationIndex::Start() {
 	
 	if (counted > 0)
 		counted--;
+	else
+		counted++;
 	
 	const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
 	double point = sym.point;
 	
-	for (int i = counted; i < bars; i++)
-	{
-		double volume = Volume(i);
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double volume = Volume(i-1);
 		if ( IsEqualDoubles ( volume, 0.0 ) ) {
 			if ( i == 0 )
 				buffer.Set(i, 0.0);
@@ -2578,7 +2645,7 @@ void MarketFacilitationIndex::Start() {
 		}
 		else
 			buffer.Set(i,
-				( High(i) - Low(i) ) /
+				( High(i-1) - Low(i-1) ) /
 				( volume * point ));
 	}
 	
@@ -2608,15 +2675,17 @@ void MarketFacilitationIndex::Start() {
 	}
 	
 	double volume_prev;
+	SetSafetyLimit(counted);
 	if (counted > 0)
 		volume_prev = Volume(counted-1);
 	else {
-		volume_prev = Volume(counted);
+		volume_prev = Volume(counted-1);
 		counted++;
 	}
 	
 	for (int i = counted; i < bars; i++) {
-		double volume = Volume(i);
+		SetSafetyLimit(i);
+		double volume = Volume(i-1);
 		if ( i < bars - 1 ) {
 			if ( buffer.Get(i) > buffer.Get(i-1) )
 				mfi_up = true;
@@ -2756,8 +2825,9 @@ void ZigZag::Start() {
 		point = sym.point;
 	}
 	
-	for (int i = counted; i < bars; i++)
-	{
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1); // This indicator peeks anyway
+		
 		int lowest = LowestLow(input_depth, i);
 		extremum = Low(lowest);
 		double low = Low(i);
@@ -2827,6 +2897,8 @@ void ZigZag::Start() {
 	}
 
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1); // This indicator peeks anyway
+		
 		double low = Low(i);
 		double high = High(i);
 		
@@ -2941,6 +3013,8 @@ void ZigZagOsc::Start() {
 	
 	double diff, step;
 	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1); // This indicator peeks anyway
+		
 		if (has_prev) {
 			if (has_next && next_pos == i) {
 				prev_pos = i;
@@ -3007,6 +3081,8 @@ void LinearTimeFrames::Start() {
 	int counted =  GetCounted();
 	BaseSystem& base = GetBaseSystem();
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		Time t = base.GetTime(GetPeriod(), i);
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
@@ -3058,12 +3134,15 @@ void SupportResistance::Start() {
 	ASSERT(point > 0);
 	
 	if (counted) counted--;
+	else counted++;
 	//bars--;
 	
 	Vector<double> crosses;
 	for (int i = counted; i < bars; i++) {
-		int highest = HighestHigh(period, i);
-		int lowest  = LowestLow(period, i);
+		SetSafetyLimit(i);
+		
+		int highest = HighestHigh(period, i-1);
+		int lowest  = LowestLow(period, i-1);
 		double highesthigh = High(highest);
 		double lowestlow   = Low(lowest);
 		
@@ -3081,7 +3160,7 @@ void SupportResistance::Start() {
 		for(int j = 0; j < count; j++)
 			crosses[j] = 0;
 		
-		for(int j = i - period + 1; j <= i ; j++) {
+		for(int j = i - period; j < i ; j++) {
 			if (j < 0) continue;
 			double high = High(j);
 			double low  = Low(j);
@@ -3093,7 +3172,6 @@ void SupportResistance::Start() {
 			for(int k = low_pos; k <= high_pos; k++) {
 				crosses[k]++;
 			}
-			
 		}
 		
 		double close = Open(i);
@@ -3176,7 +3254,9 @@ void SupportResistanceOscillator::Start() {
 	int prev_pos = counted ? counted-1 : 0;
 	double prev_value = counted ? osc_av.Get(counted-1) : 0;
 	for (int i = counted; i < bars; i++) {
-		double applied_value = GetAppliedValue(5, i);
+		SetSafetyLimit(i);
+		
+		double applied_value = Open(i);
 		double s = ind1.Get(i);
 		double r = ind2.Get(i);
 		double range = r - s;
@@ -3227,6 +3307,8 @@ void Psychological::Start() {
 	//bars--;
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		int count=0;
 		for (int j=i-period+1; j <= i; j++) {
 			if (Open(j) > Open(j-1)) {
@@ -3300,10 +3382,13 @@ void CorrelationOscillator::Process(int id, int output) {
 		s.mean_a = a.Get(0);
 		s.mean_b = b.Get(0);
 		s.count = 1;
-		for(int i = 1; i < period; i++)
+		for(int i = 1; i < period; i++) {
+			SetSafetyLimit(i);
 			s.Add(a.Get(i), b.Get(i));
+		}
 		counted = period;
 	}
+	SetSafetyLimit(counted);
 	
 	Vector<double> cache_a, cache_b;
 	cache_a.SetCount(period);
@@ -3316,6 +3401,8 @@ void CorrelationOscillator::Process(int id, int output) {
 	}
 	
 	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
 		double da = a.Get(i);
 		double db = b.Get(i);
 		
@@ -3433,6 +3520,7 @@ void ParallelSymLR::Start() {
 	
 	// Loop unprocessed range of time
 	for(int i = counted; i < bars-shift; i++) {
+		SetSafetyLimit(i);
 		
 		// Calculate values
 		double d1 = dbl.Get(i);
@@ -3504,7 +3592,7 @@ void ParallelSymLREdge::Start() {
 		throw DataExc();
 	
 	if ( counted > 0 )
-		counted--;
+		counted-=3;
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.
 	int shift = period / 2;
@@ -3525,6 +3613,8 @@ void ParallelSymLREdge::Start() {
 	
 	// Calculate 'ParallelSymLR' data locally. See info for that.
 	for(int i = counted; i < bars-shift; i++) {
+		SetSafetyLimit(i);
+		
 		double slow = slow_dbl.Get(i);
 		double d1 = dbl.Get(i) - slow;
 		double d2 = dbl.Get(i+shift) - slow;
@@ -3538,6 +3628,7 @@ void ParallelSymLREdge::Start() {
 	
 	// Loop unprocessed area
 	for(int i = Upp::max(2, counted); i < bars - 2; i++) {
+		SetSafetyLimit(i + 2);
 		
 		// Finds local maximum value for constant range. TODO: optimize
 		double high = 0;

@@ -49,8 +49,6 @@ file
 	BaseSystem.cpp,
 	Prioritizer.h,
 	Prioritizer.cpp,
-	EventManager.h,
-	EventManager.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	"Custom Slots" readonly separator,

@@ -27,8 +27,6 @@ INITBLOCK {
 	Factory::Register<BridgeAskBid, GraphGroupCtrl>("BridgeAskBid");
 	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
 	Factory::Register<SpreadMeanProfit, GraphGroupCtrl>("SpreadMeanProfit");
-	Factory::Register<SpreadProfitDistribution, GraphGroupCtrl>("SpreadProfitDistribution");
-	Factory::Register<SpreadProbability, GraphGroupCtrl>("SpreadProbability");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
 	Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
 	
@@ -78,24 +76,10 @@ INITBLOCK {
 	Factory::Register<WdayHourChanges, GraphGroupCtrl>("WdayHour changes");
 	Factory::Register<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
 	Factory::Register<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
-	Factory::Register<WdayHourForecastErrors, GraphGroupCtrl>("WdayHour Forecast Errors");
-	Factory::Register<WdayHourErrorAdjusted, GraphGroupCtrl>("WdayHour Error Adjusted");
 	Factory::Register<WeekStats, GraphGroupCtrl>("Week Stats");
-	Factory::Register<WeekStatsForecastErrors, GraphGroupCtrl>("Week Stats Forecast Errors");
-	Factory::Register<WeekStatsErrorAdjusted, GraphGroupCtrl>("Week Stats Error Adjusted");
-	Factory::Register<WdayHourDiffWeek, GraphGroupCtrl>("Wday Hour Diff Week");
-	Factory::Register<WdayHourWeekAdjusted, GraphGroupCtrl>("Wday Hour Week Adjusted");
-	Factory::Register<SubTfChanges, GraphGroupCtrl>("Sub Tf Changes");
-	Factory::Register<MetaTfChanges, GraphGroupCtrl>("Meta Tf Changes");
-	Factory::Register<HourHeat, GraphGroupCtrl>("Hour Heat");
-	Factory::Register<MetaTfCDF, GraphGroupCtrl>("Meta Tf CDF");
 	Factory::Register<WdayHourTrending, GraphGroupCtrl>("Wday Hour Trending");
 	Factory::Register<WdayHourTrendSuccess, GraphGroupCtrl>("Wday Hour Trend Success");
-	Factory::Register<EventOsc, GraphGroupCtrl>("Event Oscillator");
-	Factory::Register<GroupEventOsc, GraphGroupCtrl>("Group Event Oscillator");
 	Factory::Register<FeatureOsc, GraphGroupCtrl>("Feature Oscillator");
-	Factory::Register<GroupFeatureOsc, GraphGroupCtrl>("Group Feature Oscillator");
-	Factory::Register<GroupFeatureOsc, GraphGroupCtrl>("Group Feature Oscillator");
 	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
 	
 	

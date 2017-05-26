@@ -258,7 +258,7 @@ int Core::LowestOpen(int period, int shift) {
 
 int Core::GetMinutePeriod() {
 	BaseSystem& bs = GetBaseSystem();
-	return bs.GetBasePeriod() * bs.GetPeriod(tf_id);
+	return bs.GetBasePeriod() * bs.GetPeriod(tf_id) / 60;
 }
 
 int Core::GetPeriod() const {
@@ -271,53 +271,38 @@ void Core::SetTimeframe(int i, int period) {
 	this->period = period;
 }
 
-double Core::GetAppliedValue ( int applied_value, int i )
-{
+double Core::GetAppliedValue ( int applied_value, int i ) {
 	double dValue;
 	
-	switch ( applied_value )
-	{
-
+	switch ( applied_value ) {
 		case 0:
 			dValue = Open(i);
 			break;
-
 		case 1:
 			dValue = High(i);
 			break;
-
 		case 2:
 			dValue = Low(i);
 			break;
-
 		case 3:
 			dValue =
 				( High(i) + Low(i) )
 				/ 2.0;
 			break;
-
 		case 4:
 			dValue =
 				( High(i) + Low(i) + Open(i) )
 				/ 3.0;
 			break;
-
 		case 5:
 			dValue =
 				( High(i) + Low(i) + 2 * Open(i) )
 				/ 4.0;
 			break;
-
 		default:
 			dValue = 0.0;
 	}
 	return ( dValue );
-}
-
-void Core::RefreshSource() {
-	/*data = src.Get<BarData>();
-	if (data)
-		SetPoint(data->GetPoint());*/
 }
 
 }

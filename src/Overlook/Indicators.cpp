@@ -2750,8 +2750,11 @@ void ZigZag::Start() {
 		}
 	}
 
-	const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-	double point = sym.point;
+	double point = 0.00001;
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
 	
 	for (int i = counted; i < bars; i++)
 	{

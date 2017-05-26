@@ -43,6 +43,7 @@ struct Buffer : public Moveable<Buffer> {
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
 	void Set(int i, double value) {this->value[i] = value;}
 	void SetCount(int i) {value.SetCount(i, 0);}
+	void Inc(int i, double value) {this->value[i] += value;}
 	
 	double Get(int i) const {return value[i];}
 	int GetCount() const {return value.GetCount();}
@@ -359,8 +360,6 @@ protected:
 	int LowestLow(int period, int shift);
 	int HighestOpen(int period, int shift);
 	int LowestOpen(int period, int shift);
-	
-	virtual void RefreshSource();
 	
 };
 

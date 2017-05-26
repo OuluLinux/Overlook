@@ -21,6 +21,7 @@ public:
 	}
 };
 
+
 class SpreadMeanProfit : public Core {
 	BridgeAskBid* askbid;
 	
@@ -39,43 +40,6 @@ public:
 	}
 };
 
-class SpreadProfitDistribution : public Core {
-	Vector<double> mean, stddev;
-	
-public:
-	SpreadProfitDistribution();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % In(SourcePhase, AskBidValue, SymTf);
-		//reg % In(IndiPhase, SubTfValue, SymTf);
-		reg % Out(SourcePhase, SpreadOvercomeDistValue, SymTf, 2, 2);
-	}
-};
-
-class SpreadProbability : public Core {
-	Vector<double> profit, real;
-	
-public:
-	SpreadProbability();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % In(SourcePhase, RealValue, SymTf);
-		reg % In(SourcePhase, SpreadOvercomeDistValue, SymTf);
-		reg % Out(SourcePhase, SpreadProbValue, SymTf, 2, 2);
-	}
-};
-
-
 
 class ValueChange : public Core {
 	bool has_proxy;
@@ -85,7 +49,6 @@ class ValueChange : public Core {
 public:
 	ValueChange();
 	
-	virtual String GetStyle() const {return "";}
 	virtual void IO(ValueRegister& reg) {
 		reg % InDynamic(SourcePhase, RealValue, &FilterFunction);
 		reg % InDynamic(SourcePhase, SpreadValue, &FilterFunction);
@@ -122,7 +85,6 @@ class IdealOrders : public Core {
 public:
 	IdealOrders();
 	
-	virtual String GetStyle() const;
 	virtual void IO(ValueRegister& reg) {
 		reg % In(IndiPhase, RealChangeValue, SymTf);
 		reg % Out(IndiPhase, IdealOrderSignal, SymTf);

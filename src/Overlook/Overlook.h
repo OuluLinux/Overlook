@@ -8,7 +8,6 @@
 #include "BaseSystem.h"
 #include "Prioritizer.h"
 #include "SimBroker.h"
-#include "EventManager.h"
 
 #include "DataBridge.h"
 #include "CostUtils.h"

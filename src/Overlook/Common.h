@@ -50,7 +50,9 @@ enum {
 	FeatureValue,
 	WeekStatsErrorAdjustedValue,
 	MetaTfValue,
-	WdayHourTrendingValue
+	WdayHourTrendingValue,
+	FeatureOscValue,
+	WdayHourStatsValue
 };
 
 enum {
@@ -93,6 +95,8 @@ struct ValueType : Moveable<ValueType> {
 			case 22: return "WeekStatsErrorAdjustedValue";
 			case 23: return "MetaTfValue";
 			case 24: return "WdayHourTrendingValue";
+			case 25: return "FeatureOscValue";
+			case 26: return "WdayHourStatsValue";
 			default: return "Invalid type";
 		}
 	}

@@ -39,7 +39,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+			% Out(IndiPhase, WdayHourStatsValue, SymTf, 8, 8)
 			% Arg("period", var_period);
 	}
 };
@@ -64,43 +64,6 @@ public:
 	}
 };
 
-class WdayHourForecastErrors : public Core {
-	
-protected:
-	int var_period;
-	Vector<MovingOnlineVariance> total, wdayhour, wday, hour;
-	
-public:
-	WdayHourForecastErrors();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
-			% Arg("period", var_period);
-	}
-};
-
-
-
-class WdayHourErrorAdjusted : public Core {
-	
-public:
-	WdayHourErrorAdjusted();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8);
-	}
-};
-
-
 
 class WeekStats : public Core {
 	
@@ -118,194 +81,6 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
-			% Arg("period", var_period);
-	}
-};
-
-class WeekStatsForecastErrors : public Core {
-	
-protected:
-	int var_period;
-	Vector<MovingOnlineVariance> week, month, quarter, year;
-	
-public:
-	WeekStatsForecastErrors();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
-			% Arg("period", var_period);
-	}
-};
-
-
-
-class WeekStatsErrorAdjusted : public Core {
-	bool skip;
-	
-public:
-	WeekStatsErrorAdjusted();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, WeekStatsErrorAdjustedValue, SymTf, 8, 8);
-	}
-};
-
-
-class WdayHourDiffWeek : public Core {
-	
-public:
-	WdayHourDiffWeek();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% InDynamic(IndiPhase, WeekStatsErrorAdjustedValue, &FilterFunction)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
-	}
-	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym != -1)
-			return in_sym == out_sym;
-		BaseSystem& bs = *(BaseSystem*)basesystem;
-		return bs.GetPeriod(out_tf) * bs.GetBasePeriod() == 7*24*60*60; // 1 week timeframe
-	}
-};
-
-
-
-class WdayHourWeekAdjusted : public Core {
-	
-public:
-	WdayHourWeekAdjusted();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% InDynamic(IndiPhase, WeekStatsErrorAdjustedValue, &FilterFunction)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8);
-	}
-	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym != -1)
-			return in_sym == out_sym;
-		BaseSystem& bs = *(BaseSystem*)basesystem;
-		return bs.GetPeriod(out_tf) * bs.GetBasePeriod() == 7*24*60*60; // 1 week timeframe
-	}
-};
-
-
-class SubTfChanges : public Core {
-	
-protected:
-	int var_period;
-	int other_counted;
-	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
-	
-public:
-	SubTfChanges();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
-			% Out(IndiPhase, SubTfValue, SymTf, 4, 4)
-			% Arg("period", var_period);
-	}
-	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym != -1)
-			return in_sym == out_sym;
-		else
-			return out_tf == in_tf + 1 || out_tf == in_tf;
-	}
-};
-
-
-class MetaTfChanges : public Core {
-	
-protected:
-	int offset;
-	
-	int var_period;
-	Vector<MovingOnlineVariance> wdayhour, abswdayhour;
-	Time prev_open_time;
-	double prev_open;
-	
-public:
-	MetaTfChanges();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, MetaTfValue, SymTf, 4, 4)
-			% Arg("period", var_period);
-	}
-};
-
-
-
-class HourHeat : public Core {
-	
-protected:
-	Core *subtf, *metatf;
-	
-public:
-	HourHeat();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% In(SourcePhase, SubTfValue, SymTf)
-			% In(SourcePhase, MetaTfValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 3);
-	}
-};
-
-
-class MetaTfCDF : public Core {
-	
-protected:
-	int offset;
-	
-	int var_period;
-	Vector<MovingOnlineVariance> wdayhour;
-	Time prev_open_time;
-	double prev_open;
-	
-public:
-	MetaTfCDF();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("offset", offset)
-			% Arg("prev_open_time", prev_open_time)
-			% Arg("prev_open", prev_open)
 			% Arg("period", var_period);
 	}
 };
@@ -344,49 +119,9 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% In(SourcePhase, WdayHourTrendingValue, SymTf)
+			% In(IndiPhase, WdayHourTrendingValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 5)
 			% Arg("period", var_period);
-	}
-};
-
-
-class EventOsc : public Core {
-	double mul;
-	Index<String> keys;
-	EventManager* emgr;
-	int counted_events;
-	
-public:
-	EventOsc();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("mul", mul);
-	}
-};
-
-
-
-class GroupEventOsc : public Core {
-	int feat_count;
-	double mul, ownmul;
-	
-public:
-	GroupEventOsc();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
-			% Arg("mul", mul)
-			% Arg("ownmul", ownmul);
 	}
 };
 
@@ -404,53 +139,26 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
+			% In(IndiPhase, FeatureValue, SymTf)
+			% Out(IndiPhase, FeatureOscValue, SymTf, 4, 4)
 			% Arg("mul", mul);
 	}
 };
 
 
 
-class GroupFeatureOsc : public Core {
-	int feat_count;
-	double mul, ownmul;
-	
-public:
-	GroupFeatureOsc();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4)
-			% Arg("mul", mul)
-			% Arg("ownmul", ownmul);
-	}
-};
-
-
-
-
 
 class ChannelPredicter : public Core {
-	
-protected:
-	
-	int length;
 	
 public:
 	ChannelPredicter();
 	
-	virtual String GetStyle() const;
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, ForecastChannelValue, SymTf)
-			% Arg("length", length);
+			% In(IndiPhase, WdayHourStatsValue, SymTf)
+			% Out(IndiPhase, ForecastChannelValue, SymTf, 7, 7);
 	}
 	
 	virtual void Init();

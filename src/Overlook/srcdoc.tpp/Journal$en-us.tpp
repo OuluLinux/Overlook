@@ -626,4 +626,166 @@ So, it is challenging, but also interesting. Everything in Prioritizer
 implementation looks very weird and complicated now, even for 
 me. I can`'t even split big loops into separate functions, because 
 I don`'t see clear pattern. It`'s like programming in assembly 
-language.]]
+language.&]
+[s3; 26.5.2017&]
+[s0; Today, I am going to rant a little bit. Very little. That amount, 
+what you would tell to your co`-workers at the dinner table.&]
+[s0; Living in this kind of small and isolated place while supporting 
+hi`-tech culture is a disaster. You can`'t focus to essential 
+and important details, while everyone has lost their curiosity 
+and don`'t see the point in any voluntary team`-work. The only 
+motivation is money, and even with that you can`'t get motivated 
+and skilled team from this small amount of people. Resources 
+are really scarce. Also, the incredibly stupid teenage drinking 
+alcoholism culture doesn`'t help at all. It helps low reproduction 
+statistics, but it`'s kinda evil way to improve that. So, the 
+money loses some attractiveness, if you will still certainly 
+get bad jobs and bad team with it. My recent experiences in team 
+projects have only supported my understanding. This people is 
+just keeping a screen of skilled workforce, they will never be 
+capable to do development with this training. I am a skilled 
+long`-term hobbyist programmer, and I have sometimes being doing 
+[* all] the work in a team, while others are still taking the credit. 
+Disgusting. Their moral doesn`'t prevent taking the credit from 
+work of others at all. It is very important to offically upkeep 
+a image of high`-skilled workforce for economic reasons, but 
+in practice, this is just a dog`-training and indocrination.&]
+[s0; The public schooling has absolutely nothing to do with my programming 
+skills. In contrast, they were actually harming that, because 
+they tried to make me do things in old way when I could do something 
+more efficiently by programming. So, no thanks to public school, 
+at all, or to university, in this regard. Only negative feedback 
+for them. For my programming skills, I can only thank: Clickteam 
+for The Games Factory, Adobe for Flash MX (now Animate), Microsoft 
+for Visual Basic 6, people behind Python, and the biggest thanks 
+goes to Ultimate`+`+, which made programming great again.&]
+[s0; I am not saying, that money is not a good motivation, but I 
+am saying, that you should not start from fast and high yielding 
+plan. Being too greedy is bad. Waiting for long`-term reward 
+is usually good with a good plan. With that greedy attitude you 
+are only producing that marketing crap, which doesn`'t have any 
+content in it. If I had wanted, I could have gone making a career 
+in software development and have a decent salary in this point. 
+I am a skilled programmer, I`'ve been in team leader training 
+in army and I have high work morale, so I could have that job, 
+but I don`'t want, at least yet. So, I could have had in this 
+point a nice career, a big house bought with loan, and big`-tit 
+blonde making me beautiful babies, but that was not what I wanted. 
+I never wanted that. Ok, so in this point I probably lose all 
+US readers :D .... but bear with me, I am living in isolated place 
+with 100k`-200k residents, and I am basically writing my name 
+to the gravestone if I am taking a girlfriend here. Also, the 
+feminist movement, or something like that, have caused high divorce 
+rate, and we have more single`-mothers now than ever. So there 
+is high probability, that the woman leaves you for the most stupidest 
+reason, and ruins everything. Last thing what I would want after 
+making a family, was a woman blackmailing me for more money to 
+keep the family together. But that`'s the reality here. In Iceland, 
+they have the free`-sex culture, what you can search from google, 
+but we have the opposite of that. We have some very old`-school 
+religious culture here. That, were you are not allowed have TV, 
+or even be friends with regular people. Even the regular people 
+is rather old`-school in many of those matters.&]
+[s0;%- [%FI-FI I tried long`-term relationship once. It was a huge 
+failure and caused huge losses for me. The lesson was that money 
+is more involved in relationship that people accepts publicly, 
+even when the other person is denying the importance of money. 
+In my relationship`-story, the first bad sign was that there 
+was alcholism in her family tree. At the beginning it was sweet 
+and rather normal. She had two personalities. Other was the innocent 
+little girl and the other was underage drinking and smoking social 
+daredevil. I did fit into the innocent family part well, but 
+as her dark side took over her, being her felt like it was forced. 
+Look, I am not a morality preacher, but that included constant 
+lying and keeping two personalities. Not healthy or fun for others. 
+Last part in the relationship was when she found some guy, whose 
+family was rich, and who started to give her all sorts of crazy 
+pills for free. I guess there was sex involved too. That was 
+not a fair competition and I was dragged into that because of 
+her dark side. It was way too much for me, but that guy`'s crazy 
+pills made her so crazy, that she lost it totally. When I tried 
+to break up, she went totally suicidal. She climbed on top of 
+high places and tried suicide, and I had to forcily prevent her. 
+She even went tried to freeze herself to death by going almost 
+frozen lake, and I had to get her out from it. Her alcoholism 
+supporting family almost did not care at all, so I was clueless 
+what I had to do. ][%FI-FI/ Luckily][%FI-FI  she tried suicide in 
+front of her family, so they took her into the mental hospital. 
+I thought I was free from that hell, but I was wrong. That girl 
+found a guy from mental hospital, who was a huge drug dealer, 
+and who made his business all over country. It included stealing 
+cars and travelling with them to places (which is in record after 
+they got caught). I thought I was free from their idiotic network, 
+but unfortunately I was wrong. The girl went even more nuts, 
+and in her head she ][%FI-FI/ changed identity with me][%FI-FI  , 
+and tried to say to anyone that I did force her in all sorts 
+of things while we had the relationship. Doctors and other professionals 
+can see past her talk, but her new friends were these incredibly 
+retard drug dealer people who couldn`'t. So, she got drunk and 
+high and told all crazy things about me being evil monster to 
+that people. I got some hint of that, when I was out in the city 
+center, and got attacked by 3 guys. They attacked me directly 
+from behind, with the only intention to hurt me. They started 
+by hitting me with a beer bottle to the head, and I almost lost 
+eyesight from right eye. Luckily, I managed to run away with 
+bleeding head. I was drunk and saw those guys for 1`-3 seconds 
+in dark night and I initally reported them to be something different, 
+but afterwards I am sure they were her new friends. At that point 
+I started to get treated bad by my old friends too. Turned out, 
+that her crazy gossipping has reached them too, and no`-one from 
+my old friends had guts to warn me about those empty stories. 
+This is small and boring place where stories travel fast. Unluckily, 
+even at that point I was far from it being over. In our country, 
+the military service is mandatory. I did not support or resist 
+the idea and I was somewhat curious about it. So there I was, 
+doing it all, you know, in the army. Greetings to all servicemen. 
+I should have known, that I had went through traumatic experience, 
+and that was not a good place for me, but unfortunately I had 
+no`-one to discuss it with. Things went south really fast, when 
+I was assigned to a military police team leader team with one 
+of her new friends, which was some incredibly retarted and narsistic 
+taxi driver. Even at that point I did not know how bad her crazy 
+gossipping was. So, that guy had some narsistic personality disorder, 
+just like her, and he continued that gossipping in our team. 
+Unfortunately, even our ]second lieutenant got that gossip, and 
+did not tell me, but took part in the crazy gossip ring. It is 
+important to emphasize the point, that second lieutenant military 
+policy took part into that gossip instead of solving and eliminating 
+it, effectively continuing the violence, which started in that 
+attack in the city centre. I was basically bullied by higher 
+ranking officials for 6 months, without knowing the reason, and 
+afterwards shockingly know that they had taken the side of those 
+attackers. I changed to sivil service afterwards, so now I don`'t 
+need to be in contact with those traitors of justice anymore. 
+After the service I was back in the city. Here the weird treating 
+of me continued, and I smelled the injustice, but couldn`'t quite 
+grasp it. Basically, her crazy group had got larger and those 
+tried to make me look bad and they somewhat succeeded in it, 
+but it doesn`'t really matter anymore. Last point was, when her 
+newest boyfriend sent text messages to me pretending to be her. 
+I met him instead of her, and he repeated death`-threats to me 
+and he threated to come into my apartment beating me to death. 
+I wasn`'t really in danger, because you know, I was trained to 
+be military police and he was skinny and alone, but he might 
+have knife or gun, so I did not take risks. Her friends are known 
+to have guns also, even though guns are highly regulated in our 
+country. Turns out, that bad guys get the guns anyway. The craziest 
+part was, that her parents had allowed that guy to go `"make 
+me man`" like that. They even insulted my mother, when she insisted 
+to be in contact with her parents, because my mother thought 
+that there was some sense in them left. Finally it was over. 
+I have enough material to make a report, but this is so big mess 
+now, that I am not sure will they take me seriously now. There 
+is a huge list of unlucky details for that story, but I think 
+this is enough now. This might even be too much to tell publicly, 
+but I don`'t think this text will reach people very fast. In 
+the end, I have heightened sense of injustice and sense of all 
+history falsification. I have still constant pain from that attack, 
+but luckily I kept my eyesight. I am now greatly tramatized, 
+but also I feel the peace with the world now more than ever. 
+It is going to be fine. That sad little people can`'t win in 
+the long run. Justice is like a weed, finding it`'s way trough 
+thoughest cracks in the pavement.&]
+[s0;%- I could go on and on, but this was off`-topic, and I have 
+work to do, so let`'s focus on that, shall we?&]
+[s0;%- ]]

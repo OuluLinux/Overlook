@@ -44,16 +44,17 @@ public:
 class ValueChange : public Core {
 	bool has_proxy;
 	int proxy_id, proxy_factor;
+	double max_value, min_value;
 	DataBridge* db;
 	
 public:
 	ValueChange();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % InDynamic(SourcePhase, RealValue, &FilterFunction);
-		reg % InDynamic(SourcePhase, SpreadValue, &FilterFunction);
-		reg % In(SourcePhase, TimeValue, SymTf);
-		reg % Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
+		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
+			% InDynamic(SourcePhase, SpreadValue, &FilterFunction)
+			% In(SourcePhase, TimeValue, SymTf)
+			% Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
 	}
 	
 	virtual void Init();
@@ -75,6 +76,8 @@ public:
 		return false;
 	}
 	
+	double GetMax() const {return max_value;}
+	double GetMin() const {return min_value;}
 };
 
 

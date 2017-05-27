@@ -127,7 +127,8 @@ void SpreadMeanProfit::Start() {
 
 ValueChange::ValueChange() {
 	SetCoreSeparateWindow();
-	
+	max_value = 0;
+	min_value = 0;
 }
 
 void ValueChange::Init() {
@@ -192,6 +193,8 @@ void ValueChange::Start() {
 		if (!has_proxy) {
 			double open_value = open.Get(i-1);
 			double change_value = open.Get(i) / open_value - 1.0;
+			if (change_value > max_value) max_value = change_value;
+			if (change_value < min_value) min_value = change_value;
 			change.Set(i, change_value);
 			double low_change_ = low.Get(i-1) / open_value - 1.0;
 			double high_change_ = high.Get(i-1) / open_value - 1.0;
@@ -224,6 +227,8 @@ void ValueChange::Start() {
 				proxy_high_change	= proxy_open_value / proxy_low_value - 1.0;
 			}
 			double change_value = open.Get(i) / open_value - 1.0;
+			if (change_value > max_value) max_value = change_value;
+			if (change_value < min_value) min_value = change_value;
 			double low_change_	= low.Get(i-1) / open_value - 1.0;
 			double high_change_	= high.Get(i-1) / open_value - 1.0;
 			change.Set(i, change_value); // different with proxy

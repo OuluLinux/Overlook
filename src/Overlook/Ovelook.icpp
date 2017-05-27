@@ -83,8 +83,8 @@ INITBLOCK {
 	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
 	
 	
-	/*Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
-	Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
+	Factory::Register<QueryTableForecaster, ForecasterCtrl>("QueryTable forecaster");
+	/*Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
 	Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
 	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
 	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");

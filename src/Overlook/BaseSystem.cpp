@@ -8,7 +8,7 @@ BaseSystem::BaseSystem() {
 	SetSkipAllocate();
 	timediff = 0;
 	base_period = 60;
-	
+	end = GetSysTime();
 	
 	factory = 0; // basesystem always has factory-id 0
 	addr = "127.0.0.1";
@@ -45,7 +45,7 @@ void BaseSystem::Init() {
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
 		int base = 1; // mins
-		SetBasePeriod(60*base);
+		//SetBasePeriod(60*base);
 		Vector<int> tfs;
 		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			int tf = mt.GetTimeframe(i);
@@ -57,14 +57,14 @@ void BaseSystem::Init() {
 		
 		
 		// Init time range
-		Time begin, end;
+		/*Time begin, end;
 		begin = Time(2016, 12, 1);
 		Date now = GetSysTime();
 		do {++now;}
 		while (now.day != 15);
 		end = Time(now.year, now.month, now.day);
 		SetBegin(begin);
-		SetEnd(end);
+		SetEnd(end);*/
 		
 		
 		int64 sym_count = symbols.GetCount();
@@ -75,8 +75,7 @@ void BaseSystem::Init() {
 		
 		bars.SetCount(tf_count);
 		for(int i = 0; i < bars.GetCount(); i++) {
-			int period = periods[i];
-			int count = GetCount(period);
+			int count = GetCountTf(i);
 			if (!count) throw DataExc();
 			bars[i] = count;
 		}
@@ -109,6 +108,21 @@ void BaseSystem::AddPeriod(String nice_str, int period) {
 	
 	period_strings.Add(nice_str);
 	periods.Add(period);
+	
+	// TODO: some algorithm to calculate begins and ends, and persistently using it again
+	Time begin(2017,1,1);
+	if (period == 1)			begin = Time(2016,11,15);
+	else if (period == 5)		begin = Time(2016,5,1);
+	else if (period == 15)		begin = Time(2016,1,20);
+	else if (period == 30)		begin = Time(2015,11,9);
+	else if (period == 60)		begin = Time(2015,5,13);
+	else if (period == 240)		begin = Time(2009,12,21);
+	else if (period == 1440)	begin = Time(2000,5,3);
+	else if (period == 10080)	begin = Time(1996,6,23);
+	else if (period == 43200)	begin = Time(1995,1,1);
+	else Panic("Invalid period: " + IntStr(period));
+	this->begin.Add(begin);
+	this->begin_ts.Add(begin.Get() - Time(1970,1,1).Get());
 }
 
 void BaseSystem::AddSymbol(String sym) {
@@ -116,17 +130,25 @@ void BaseSystem::AddSymbol(String sym) {
 	symbols.Add(sym);
 }
 
-int BaseSystem::GetCount(int period) const {
+/*int BaseSystem::GetCount(int period) const {
 	int div = base_period * period;
 	int count = timediff / div;
 	if (count % div != 0) count++;
 	return count;
+}*/
+
+Time BaseSystem::GetTimeTf(int tf, int pos) const {
+	return begin[tf] + periods[tf] * pos * base_period;
 }
 
 int BaseSystem::GetCountTf(int tf_id) const {
-	return GetCount(periods[tf_id]);
+	int64 timediff = end.Get() - begin[tf_id].Get();
+	int div = base_period * periods[tf_id];
+	int count = timediff / div;
+	if (count % div != 0) count++;
+	return count;
 }
-
+/*
 int64 BaseSystem::GetShift(int src_period, int dst_period, int shift) {
 	int64 timediff = shift * src_period; //		* base_period
 	return (int)(timediff / dst_period); //			/ base_period
@@ -140,7 +162,7 @@ int64 BaseSystem::GetShiftFromTime(int timestamp, int period) {
 int BaseSystem::GetTfFromSeconds(int period_seconds) {
 	return period_seconds / base_period;
 }
-
+*/
 
 
 

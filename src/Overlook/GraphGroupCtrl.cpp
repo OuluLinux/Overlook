@@ -5,7 +5,7 @@ namespace Overlook {
 GraphGroupCtrl::GraphGroupCtrl() {
 	right_offset = false;
 	keep_at_end = true;
-	period = 0;
+	tf = -1;
 	
 	Add(split.VSizePos().HSizePos());
 	
@@ -17,7 +17,7 @@ GraphGroupCtrl::GraphGroupCtrl() {
 
 void GraphGroupCtrl::Init(Core* src) {
 	bardata = 0;
-	period = 0;
+	tf = -1;
 	
 	SetGraph(src);
 }
@@ -39,8 +39,9 @@ GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
 }
 
 void GraphGroupCtrl::SetGraph(Core* src) {
-	BaseSystem& bs = src->GetBaseSystem();
 	ASSERT(src);
+	tf = src->GetTf();
+	BaseSystem& bs = src->GetBaseSystem();
 	ClearCores();
 	BarData* src_cast = dynamic_cast<BarData*>(src);
 	if (src_cast) {
@@ -56,7 +57,6 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 		} else {
 			AddGraph(src);
 		}
-		period = bs.GetPeriod(src->GetTimeframe());
 	}
 }
 

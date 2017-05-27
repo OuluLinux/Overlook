@@ -214,6 +214,17 @@ void DataBridge::Init() {
 	
 }
 
+inline int IncreaseMonthTS(int ts) {
+	Time t(1970,1,1);
+	int64 epoch = t.Get();
+	t += ts;
+	int year = t.year;
+	int month = t.month;
+	month++;
+	if (month == 13) {year++; month=1;}
+	return Time(year,month,1).Get() - epoch;
+}
+
 void DataBridge::Start() {
 	
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
@@ -243,6 +254,7 @@ void DataBridge::Start() {
 	
 	// Open data-file
 	int period = GetPeriod();
+	int tf = GetTf();
 	int mt_period = period * bs.GetBasePeriod() / 60;
 	String symbol = bs.GetSymbol(GetSymbol());
 	String history_dir = ConfigFile("history");
@@ -251,19 +263,21 @@ void DataBridge::Start() {
 	if (!FileExists(local_history_file))
 		throw DataExc();
 	FileIn src(local_history_file);
-	ASSERTEXC(src.IsOpen() && src.GetSize());
-	if (!src.IsOpen() || !src.GetSize()) {
+	if (!src.IsOpen() || !src.GetSize())
+		return;
+	//ASSERTEXC(src.IsOpen() && src.GetSize());
+	/*if (!src.IsOpen() || !src.GetSize()) {
 		LOG("ERROR: invalid file " << local_history_file);
 		throw DataExc();
-	}
+	}*/
 	int count = 0;
 	
 	
 	// Init destination time vector settings
-	int begin = bs.GetBeginTS();
+	int begin = bs.GetBeginTS(tf);
 	int step = bs.GetBasePeriod() * period;
 	int cur = begin;
-	
+	bool inc_month = period == 43200 && bs.GetBasePeriod() == 60;
 	
 	// Read the history file
 	int digits;
@@ -333,7 +347,8 @@ void DataBridge::Start() {
 			low_buf.Set(count, prev_close);
 			high_buf.Set(count, prev_close);
 			volume_buf.Set(count, 0);
-			cur += step;
+			if (!inc_month)		cur += step;
+			else				cur = IncreaseMonthTS(cur);
 			count++;
 		}
 		
@@ -346,7 +361,8 @@ void DataBridge::Start() {
 			low_buf.Set(count, low);
 			high_buf.Set(count, high);
 			volume_buf.Set(count, tick_volume);
-			cur += step;
+			if (!inc_month)		cur += step;
+			else				cur = IncreaseMonthTS(cur);
 			count++;
 		}
 		
@@ -359,7 +375,8 @@ void DataBridge::Start() {
 		low_buf.Set(count, open);
 		high_buf.Set(count, open);
 		volume_buf.Set(count, 0);
-		cur += step;
+		if (!inc_month)		cur += step;
+		else				cur = IncreaseMonthTS(cur);
 		count++;
 	}
 }
@@ -457,7 +474,7 @@ void VirtualNode::Start() {
 			double open   = open_buf.Get(i-1);
 			double close  = open_buf.Get(i);
 			double vol    = vol_buf.Get(i);
-			double change = (close / open) - 1.0;
+			double change = open != 0.0 ? (close / open) - 1.0 : 0.0;
 			if (inverse) change *= -1.0;
 			
 			change_sum += change;
@@ -587,7 +604,7 @@ void BridgeAskBid::Start() {
 		SetSafetyLimit(i);
 		double spread = 0;
 		
-		Time t = bs.GetTime(GetPeriod(), i);
+		Time t = bs.GetTimeTf(GetTf(), i);
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;
 		int dh = h + d * h_count;

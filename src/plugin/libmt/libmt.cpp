@@ -201,6 +201,8 @@ MetaTrader::MetaTrader() {
 	periodstr.Add(1440, "D");
 	periodstr.Add(10080, "W");
 	
+	periodstr.Add(43200, "M");
+	
 	// These are by default the most expensive currencies
 	skipped_currencies.Add("RUR");
 	skipped_currencies.Add("RUB");

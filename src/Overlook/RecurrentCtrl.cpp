@@ -190,7 +190,7 @@ void RecurrentCtrl::Refresher() {
 	
 	int tick_iter	= rec->GetIter();
 	if (tick_iter > 0) {
-		int epoch_size	= bs.GetCount(1);
+		int epoch_size	= bs.GetCountTf(core->GetTf());
 		double ppl		= rec->GetPerplexity();
 		int tick_time	= rec->GetTickTime();
 		

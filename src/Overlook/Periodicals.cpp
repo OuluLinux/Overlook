@@ -64,10 +64,12 @@ void WdayHourChanges::Start() {
 	//bars--;
 	if (!counted)
 		counted = 1;
+	else
+		counted--;
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = bs.GetTime(GetPeriod(), i);
+		Time time = bs.GetTimeTf(GetTf(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
 		int d = DayOfWeek(time);
@@ -86,15 +88,15 @@ void WdayHourChanges::Start() {
 			var.AddResult(diff);
 		}
 		
-		mean.Set(i,    var.GetMean());
-		stddev.Set(i,  var.GetDeviation());
+		mean.Set(i-1,    var.GetMean());
+		stddev.Set(i-1,  var.GetDeviation());
 	}
 }
 
 const OnlineVariance& WdayHourChanges::GetOnlineVariance(int shift) {
 	BaseSystem& bs = GetBaseSystem();
 	int period = GetMinutePeriod();
-	Time time = bs.GetTime(GetPeriod(), shift);
+	Time time = bs.GetTimeTf(GetTf(), shift);
 	
 	bool force_d0 = period >= 7*24*60;
 	if (force_d0)
@@ -173,10 +175,12 @@ void WdayHourStats::Start() {
 	//bars--;
 	if (!counted)
 		counted = 1;
+	else
+		counted--;
 	
 	for ( int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = bs.GetTime(GetPeriod(), i);
+		Time time = bs.GetTimeTf(GetTf(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
 		int d = DayOfWeek(time) - 1;
@@ -204,15 +208,15 @@ void WdayHourStats::Start() {
 			dh_var.AddResult(change);
 		}
 		
-		t_pre_mean.Set(i,    t_var.GetMean());
-		h_pre_mean.Set(i,    h_var.GetMean());
-		d_pre_mean.Set(i,    d_var.GetMean());
-		dh_pre_mean.Set(i,   dh_var.GetMean());
+		t_pre_mean.Set(i-1,    t_var.GetMean());
+		h_pre_mean.Set(i-1,    h_var.GetMean());
+		d_pre_mean.Set(i-1,    d_var.GetMean());
+		dh_pre_mean.Set(i-1,   dh_var.GetMean());
 		
-		t_pre_stddev.Set(i,  t_var.GetDeviation());
-		h_pre_stddev.Set(i,  h_var.GetDeviation());
-		d_pre_stddev.Set(i,  d_var.GetDeviation());
-		dh_pre_stddev.Set(i, dh_var.GetDeviation());
+		t_pre_stddev.Set(i-1,  t_var.GetDeviation());
+		h_pre_stddev.Set(i-1,  h_var.GetDeviation());
+		d_pre_stddev.Set(i-1,  d_var.GetDeviation());
+		dh_pre_stddev.Set(i-1, dh_var.GetDeviation());
 		
 		
 		
@@ -385,7 +389,7 @@ void WeekStats::Start() {
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = GetBaseSystem().GetTime(GetPeriod(), i);
+		Time time = GetBaseSystem().GetTimeTf(GetTf(), i);
 		
 		int m = 0;
 		{
@@ -436,15 +440,15 @@ void WeekStats::Start() {
 			y_var.AddResult(change);
 		}
 		
-		w_pre_mean.Set(i,    w_var.GetMean());
-		m_pre_mean.Set(i,    m_var.GetMean());
-		q_pre_mean.Set(i,    q_var.GetMean());
-		y_pre_mean.Set(i,    y_var.GetMean());
+		w_pre_mean.Set(i-1,    w_var.GetMean());
+		m_pre_mean.Set(i-1,    m_var.GetMean());
+		q_pre_mean.Set(i-1,    q_var.GetMean());
+		y_pre_mean.Set(i-1,    y_var.GetMean());
 		
-		w_pre_stddev.Set(i,  w_var.GetDeviation());
-		m_pre_stddev.Set(i,  m_var.GetDeviation());
-		q_pre_stddev.Set(i,  q_var.GetDeviation());
-		y_pre_stddev.Set(i,  y_var.GetDeviation());
+		w_pre_stddev.Set(i-1,  w_var.GetDeviation());
+		m_pre_stddev.Set(i-1,  m_var.GetDeviation());
+		q_pre_stddev.Set(i-1,  q_var.GetDeviation());
+		y_pre_stddev.Set(i-1,  y_var.GetDeviation());
 		
 		w_var.Next();
 		m_var.Next();
@@ -516,7 +520,7 @@ void WdayHourTrending::Start() {
 	
 	for ( int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = bs.GetTime(GetPeriod(), i);
+		Time time = bs.GetTimeTf(GetTf(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
 		int d = DayOfWeek(time) - 1;
@@ -558,17 +562,17 @@ void WdayHourTrending::Start() {
 		double m1 = s1_var.GetMean();
 		double m2 = s2_var.GetMean();
 		double m3 = s3_var.GetMean();
-		shift1_mean.Set(i, m1);
-		shift2_mean.Set(i, m2);
-		shift3_mean.Set(i, m3);
+		shift1_mean.Set(i-1, m1);
+		shift2_mean.Set(i-1, m2);
+		shift3_mean.Set(i-1, m3);
 		mean_av.Set(i, (m1 + m2 + m3) / 3.0);
 		
 		double d1 = s1_var.GetDeviation();
 		double d2 = s2_var.GetDeviation();
 		double d3 = s3_var.GetDeviation();
-		shift1_stddev.Set(i, d1);
-		shift2_stddev.Set(i, d2);
-		shift3_stddev.Set(i, d3);
+		shift1_stddev.Set(i-1, d1);
+		shift2_stddev.Set(i-1, d2);
+		shift3_stddev.Set(i-1, d3);
 		stddev_av.Set(i, (d1 + d2 + d3) / 3.0);
 		
 		s1_var.Next();
@@ -635,7 +639,7 @@ void WdayHourTrendSuccess::Start() {
 	
 	for ( int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = bs.GetTime(GetPeriod(), i);
+		Time time = bs.GetTimeTf(GetTf(), i);
 		
 		int h = (time.minute + time.hour * 60) / period;
 		int d = DayOfWeek(time) - 1;
@@ -674,7 +678,7 @@ void WdayHourTrendSuccess::Start() {
 		change3 *= (cdf3 - 0.5) * 2;
 		
 		double change_sum = change1 + change2 + change3;
-		dir.Set(i, change_sum);
+		dir.Set(i-1, change_sum);
 		
 		//double change_sum = (change1 >= 0 ? 1 : -1) + (change2 >= 0 ? 1 : -1) + (change3 >= 0 ? 1 : -1);
 		
@@ -691,12 +695,12 @@ void WdayHourTrendSuccess::Start() {
 			var.AddResult(type_change);
 		
 		double mean_av = var.GetMean();
-		mean.Set(i, mean_av);
-		stddev.Set(i, var.GetDeviation());
-		success.Set(i, type_change);
+		mean.Set(i-1, mean_av);
+		stddev.Set(i-1, var.GetDeviation());
+		success.Set(i-1, type_change);
 		
 		double erradj_change = (mean_av < 0 ? -1.0 : 1.0) * type_change;
-		erradj.Set(i, erradj_change);
+		erradj.Set(i-1, erradj_change);
 		
 		
 		var.Next();

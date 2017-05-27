@@ -25,31 +25,34 @@ protected:
 protected:
 	
 	// Time
-	Time begin, end;
+	Vector<Time> begin;
+	Vector<int> begin_ts, end_ts;
+	Time end;
 	int timediff;
 	int base_period;
-	int begin_ts, end_ts;
 	
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
 	
 	
 public:
 	
-	int GetCount(int period) const;
+	//int GetCount(int period) const;
 	int GetCountTf(int tf_id) const;
-	Time GetTime(int period, int pos) const {return begin + base_period * period * pos;}
-	Time GetBegin() const {return begin;}
+	Time GetTimeTf(int tf, int pos) const;// {return begin + base_period * period * pos;}
+	Time GetBegin(int tf) const {return begin[tf];}
 	Time GetEnd() const {return end;}
-	int GetBeginTS() {return begin_ts;}
-	int GetEndTS() {return end_ts;}
+	int GetBeginTS(int tf) {return begin_ts[tf];}
+	int GetEndTS(int tf) {return end_ts[tf];}
 	int GetBasePeriod() const {return base_period;}
-	int64 GetShift(int src_period, int dst_period, int shift);
-	int64 GetShiftFromTime(int timestamp, int period);
-	int GetTfFromSeconds(int period_seconds);
+	//int64 GetShift(int src_period, int dst_period, int shift);
+	//int64 GetShiftFromTime(int timestamp, int period);
+	int64 GetShiftTf(int src_tf, int dst_tf, int shift);
+	int64 GetShiftFromTimeTf(int timestamp, int tf);
+	//int GetTfFromSeconds(int period_seconds);
 	
-	void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}
-	void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get());}
-	void SetBasePeriod(int period)	{base_period = period;}
+	//void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}
+	//void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get());}
+	//void SetBasePeriod(int period)	{base_period = period;}
 	
 	
 public:

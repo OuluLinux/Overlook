@@ -552,7 +552,7 @@ void NARX::FillExogenous(const Core& src, const Core& change, const CoreProcessA
 				}
 			} else {
 				for (int j = 0; j < a1; j++) {
-					Time t = bs.GetTime(GetPeriod(), GetBars() - j);
+					Time t = bs.GetTimeTf(GetTf(), GetBars() - j);
 					double h = t.hour;
 					double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 					double wday = (DayOfWeek(t) + t1) / 7.0;

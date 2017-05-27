@@ -788,4 +788,22 @@ the long run. Justice is like a weed, finding it`'s way trough
 thoughest cracks in the pavement.&]
 [s0;%- I could go on and on, but this was off`-topic, and I have 
 work to do, so let`'s focus on that, shall we?&]
-[s0;%- ]]
+[s0;%- ...&]
+[s0;%- One interesting feature, what separates Overlook from MT4, 
+is having fixed time`-positions, which allows to leave out close`-price 
+and time slots. There was a common mistake in many mt4 expert 
+advisors, which uses close price even though the decision was 
+done in the open price point. Basically, all MT4 code prefers 
+close`-price, even though open price would be correct in the 
+point of decision. The indicator is recalculated when new time 
+bar is added, where the open price is only constant value. So, 
+in Overlook there is still possibility to use future data, but 
+today I added checks that no wrong indicator can read those. 
+It caused errors and solving those actually changed the output 
+of some indicators. However, these AI agents etc. won`'t be too 
+strict about those things. It is still difficult to keep indicators 
+from peeking future and refreshing values correctly when time 
+goes by. ZigZag, for example, is completely peeking indicator 
+and it is used in the feature detector. It is a huge problem, 
+because it gives peeked data. It is currently broken in that 
+way, but I don`'t know how to fix it yet.]]

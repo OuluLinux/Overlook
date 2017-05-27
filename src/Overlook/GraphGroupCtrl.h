@@ -13,7 +13,7 @@ protected:
 	Array<GraphCtrl> graphs;
 	Splitter split;
 	
-	int period;
+	int tf;
 	int div;
 	int shift;
 	bool right_offset, keep_at_end;
@@ -44,7 +44,7 @@ public:
 	Core& GetCore() {return *bardata;}
 	Color GetBackground() {return White();}
 	Color GetGridColor() {return GrayColor();}
-	int GetPeriod() {return period;}
+	int GetTf() {return tf;}
 	int GetWidthDivider() {return div;}
 	int GetShift() {return shift;}
 	bool GetRightOffset() {return right_offset;}

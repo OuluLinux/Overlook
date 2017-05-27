@@ -2631,8 +2631,11 @@ void MarketFacilitationIndex::Start() {
 	else
 		counted++;
 	
-	const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-	double point = sym.point;
+	double point = 0.00001;
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -3083,7 +3086,7 @@ void LinearTimeFrames::Start() {
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		Time t = base.GetTime(GetPeriod(), i);
+		Time t = base.GetTimeTf(GetTf(), i);
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 		day.Set(i, t1);
@@ -3128,8 +3131,11 @@ void SupportResistance::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-	double point = sym.point;
+	double point = 0.00001;
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
 	
 	ASSERT(point > 0);
 	

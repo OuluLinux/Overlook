@@ -337,6 +337,7 @@ public:
 	bool HasMinimum() const {return has_minimum;}
 	int GetMinutePeriod();
 	int GetTimeframe() const {return tf_id;}
+	int GetTf() const {return tf_id;}
 	int GetSymbol() const {return sym_id;}
 	int GetPeriod() const;
 	int GetVisibleCount() const {return outputs[0].visible;}

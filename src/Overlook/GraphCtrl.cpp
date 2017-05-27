@@ -113,13 +113,13 @@ void GraphCtrl::Paint(Draw& draw) {
 		return;
 	}
     
-    int period = src[0]->GetPeriod();
-    if (!period) {
-        LOG("GraphCtrl::Paint invalid zero period");
+    int tf = src[0]->GetTf();
+    if (tf == -1) {
+        LOG("GraphCtrl::Paint invalid tf");
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = bs.GetCount(period);
+    int data_count = bs.GetCountTf(tf);
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -178,9 +178,9 @@ void GraphCtrl::Paint(Draw& draw) {
         
         if (latest_mouse_move_pt.y >= 0) {
 	        int x = latest_mouse_move_pt.x;
-	        int pos = bs.GetCount(period) - count + (x - border) / div - shift;
+	        int pos = bs.GetCountTf(tf) - count + (x - border) / div - shift;
 	        if (pos >= 0 && pos < data_count) {
-	            Time t = bs.GetTime(period, pos);
+	            Time t = bs.GetTimeTf(tf, pos);
 	            String timestr = Format("%", t);
 	            Font fnt = StdFont(12);
 	            Size str_sz = GetTextSize(timestr, fnt);
@@ -205,7 +205,8 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = group->GetGridColor();
 	Core& pb = group->GetCore();// GetValues(id, tf);
-    int period = group->GetPeriod();
+    int tf = group->GetTf();
+    if (tf == -1) return;
     
 	y = r.top;
     w = r.GetWidth();
@@ -226,7 +227,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         pos = c - count - shift + i * grid/div;
         if (pos >= c || pos < 0) continue;
         
-        Time time = bs.GetTime(period, pos);
+        Time time = bs.GetTimeTf(tf, pos);
         String text = Format("%", time);
         Size text_sz = GetTextSize(text, gridfont);
         W.DrawText(border+i*grid-text_sz.cx-5, y+h+2, text, gridfont, gridcolor);
@@ -301,7 +302,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	int f, pos, x, c2, y, h, c, w;
 	double diff;
     Rect r(GetGraphCtrlRect());
-    int period = group->GetPeriod();
+    int tf = group->GetTf();
     
     f = 2;
     x = border;
@@ -372,7 +373,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
     Rect r(GetGraphCtrlRect());
     bool skip_zero;
     Color value_color = cont.GetBufferColor(buffer);
-    int period = group->GetPeriod();
+    int tf = group->GetTf();
     
     x = border;
 	y = r.top;

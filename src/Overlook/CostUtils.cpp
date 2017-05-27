@@ -30,7 +30,7 @@ void SpreadStats::Start() {
 		
 		double spread = 0;
 		
-		Time t = bs.GetTime(GetPeriod(), i);
+		Time t = bs.GetTimeTf(GetTf(), i);
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;
 		int dh = h + d * h_count;
@@ -93,7 +93,7 @@ void SpreadMeanProfit::Start() {
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time t = bs.GetTime(GetPeriod(), i);
+		Time t = bs.GetTimeTf(GetTf(), i);
 		
 		int h = (t.minute + t.hour * 60) / period;
 		int d = DayOfWeek(t) - 1;

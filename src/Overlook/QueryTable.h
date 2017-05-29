@@ -1,23 +1,72 @@
 #ifndef _Overlook_QueryTable_h_
 #define _Overlook_QueryTable_h_
 
-// Theory: http://www.saedsayad.com/decision_tree.htm
+// Theory:
+//  - http://www.saedsayad.com/decision_tree.htm
+//  - http://www.saedsayad.com/decision_tree_overfitting.htm
+//  - http://www.cs.bc.edu/~alvarez/ML/statPruning.html
+//  - http://www3.nd.edu/~rjohns15/cse40647.sp14/www/content/lectures/24%20-%20Decision%20Trees%203.pdf
+
+/*
+	Notes:
+	 - tree is pruned from the root, if you don't change to use the validation dataset ;)
+*/
 
 namespace Overlook {
 
+inline int MaxBits(uint32 max_value) {
+	uint32 lim = 0;
+	for(int i = 0; i < 32; i++) {
+		lim |= 1 << i;
+		if (lim >= max_value)
+			return i+1;
+	}
+	Panic("Invalid value");
+}
+
+class DecisionTreeNode : Moveable<DecisionTreeNode> {
+	
+protected:
+	friend class QueryTable;
+	
+	Vector<DecisionTreeNode> nodes;
+	QueryTable* qt;
+	double gain;
+	double error;
+	int dataset_size;
+	int subset_column, subset_column_value;
+	int column;
+	int target_value;
+	
+public:
+	DecisionTreeNode();
+	
+	String ToString() const {return LineString(0);}
+	String LineString(int depth) const;
+	
+};
+
+typedef const DecisionTreeNode ConstDecisionTreeNode;
 
 class QueryTable {
+	
+protected:
+	friend class DecisionTreeNode;
+	
 	struct Column : Moveable<Column> {
-		Column() : bit_begin(0), bit_end(0) {}
-		int bit_begin, bit_end, size;
+		Column() : bit_begin(0), bit_end(0), max_value(0) {}
+		int bit_begin, bit_end, size, max_value;
 		String name;
 	};
 	Vector<Vector<byte> > data;
-	Vector<double> gains;
 	Vector<Column> columns;
 	String target_name;
+	double z;
 	int bytes, bits;
 	int target_count;
+	int test;
+	
+	enum {PRUNE_ERROREST, PRUNE_CHI2};
 	
 public:
 	
@@ -47,6 +96,7 @@ public:
 	void Set(int row, int col, int value) {
 		Vector<byte>& vec = data[row];
 		const Column& pred = columns[col];
+		ASSERT(value >= 0 && value < pred.max_value);
 		int byt = pred.bit_begin / 8;
 		int bit = pred.bit_begin % 8;
 		byte* v = vec.Begin() + byt;
@@ -62,15 +112,39 @@ public:
 		}
 	}
 	
+	int Predict(const DecisionTreeNode& root, int row, int target_col) const {
+		ConstDecisionTreeNode* n = &root;
+		for (;;) {
+			int col = n->column;
+			int c = Get(row, col);
+			bool found = false;
+			for(int i = 0; i < n->nodes.GetCount(); i++) {
+				ConstDecisionTreeNode& sub = n->nodes[i];
+				if (sub.subset_column_value == c) {
+					found = true;
+					n = &sub;
+				}
+			}
+			if (!found || n->column == -1) {
+				ASSERT(n->target_value != -1);
+				return n->target_value;
+			}
+		}
+		Panic("Invalid prediction");
+		return -1;
+	}
+	
 	void SetCount(int i) {
 		int old_count = data.GetCount();
 		data.SetCount(i);
 		for(int i = old_count; i < data.GetCount(); i++) data[i].SetCount(bytes, 0);
 	}
 	
-	Column& AddColumn(const String& name, int bits) {
+	Column& AddColumn(const String& name, int max_value) {
+		int bits = MaxBits(max_value-1);
 		Column& p = columns.Add();
 		p.name = name;
+		p.max_value = max_value;
 		p.bit_begin = this->bits;
 		p.bit_end = p.bit_begin + bits;
 		p.size = bits;
@@ -80,11 +154,11 @@ public:
 		return p;
 	}
 	
-	//void AddValue(int i, const T& value) {columns[i].Add(value);}
-	//void AddTargetValue(const T& value) {target.Add(value);}
-	
-	const Vector<double>& GetInfoGains() const {return gains;}
-	int GetLargestInfoGainPredictor(int target_id);
+	void PruneErrorEstimation(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
+	void PruneChi2(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
+	double GetValidationError(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
+	void GetDecisionTree(int target_id, DecisionTreeNode& root, int row_count);
+	void GetDecisionTree(int target_id, const DecisionTreeNode& root, DecisionTreeNode& node, const Vector<int>& dataset, Index<int>& used_columns, const Vector<int>& validation_dataset);
 	void EndTargets() {target_count = columns.GetCount();}
 };
 
@@ -99,7 +173,8 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % In(IndiPhase, RealChangeValue, SymTf)
+		reg % In(SourcePhase, RealValue, SymTf)
+			% In(IndiPhase, RealChangeValue, SymTf)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf);
 	}

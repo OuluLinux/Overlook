@@ -9,7 +9,7 @@
 
 /*
 	Notes:
-	 - tree is pruned from the root, if you don't change to use the validation dataset ;)
+	 - tree is pruned from the root, if you accidentaly use success percentage instead of failure percentage
 */
 
 namespace Overlook {
@@ -32,11 +32,10 @@ protected:
 	Vector<DecisionTreeNode> nodes;
 	QueryTable* qt;
 	double gain;
-	double error;
-	int dataset_size;
+	double error, chi2;
 	int subset_column, subset_column_value;
 	int column;
-	int target_value;
+	int dataset_size, target_value, target_value_count;
 	
 public:
 	DecisionTreeNode();
@@ -62,11 +61,13 @@ protected:
 	Vector<Column> columns;
 	String target_name;
 	double z;
+	double underfit_limit;
+	int overfit_size_limit;
 	int bytes, bits;
 	int target_count;
 	int test;
 	
-	enum {PRUNE_ERROREST, PRUNE_CHI2};
+	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
 	
 public:
 	
@@ -134,6 +135,9 @@ public:
 		return -1;
 	}
 	
+	int GetCount() const {return data.GetCount();}
+	
+	void Reserve(int i) {data.Reserve(i);}
 	void SetCount(int i) {
 		int old_count = data.GetCount();
 		data.SetCount(i);
@@ -154,8 +158,8 @@ public:
 		return p;
 	}
 	
-	void PruneErrorEstimation(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
-	void PruneChi2(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
+	void PruneErrorEstimation(int target_id, DecisionTreeNode& root);
+	void PruneReducedError(int target_id, DecisionTreeNode& root, const Vector<int>& validation_dataset);
 	double GetValidationError(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset);
 	void GetDecisionTree(int target_id, DecisionTreeNode& root, int row_count);
 	void GetDecisionTree(int target_id, const DecisionTreeNode& root, DecisionTreeNode& node, const Vector<int>& dataset, Index<int>& used_columns, const Vector<int>& validation_dataset);
@@ -176,7 +180,7 @@ public:
 		reg % In(SourcePhase, RealValue, SymTf)
 			% In(IndiPhase, RealChangeValue, SymTf)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
-			% Out(ForecastPhase, ForecastChangeValue, SymTf);
+			% Out(ForecastPhase, ForecastChangeValue, SymTf, 1, 1);
 	}
 };
 

@@ -7,6 +7,7 @@ DecisionTreeNode::DecisionTreeNode() {
 	qt = NULL;
 	column = -1;
 	target_value = -1;
+	target_value_count = 0;
 	subset_column = -1;
 	subset_column_value = -1;
 	dataset_size = 0;
@@ -33,16 +34,20 @@ QueryTable::QueryTable() {
 	bytes = 0;
 	bits = 0;
 	target_count = 0;
-	test = PRUNE_ERROREST;
+	test = PRUNE_REDUCEERROR;
 	z = 0.67; // equal to a confidence level of 50%
 	//z = 0.69; // equal to a confidence level of 75%
 	//z = 1.96; // equal to a confidence level of 95%
+	underfit_limit = 0.666;
+	overfit_size_limit = 10;
 }
 
 void QueryTable::GetDecisionTree(int target_id, DecisionTreeNode& root, int row_count) {
+	bool has_validation_set = test == PRUNE_REDUCEERROR;
+	
 	Vector<int> dataset, validation_dataset;
 	for(int i = 0; i < row_count; i++) {
-		if (Random(10) == 5)
+		if (has_validation_set && Random(10) == 1)
 			validation_dataset.Add(i);
 		else
 			dataset.Add(i);
@@ -52,13 +57,13 @@ void QueryTable::GetDecisionTree(int target_id, DecisionTreeNode& root, int row_
 	
 	// Post-prune leafs that has higher information gain than root
 	if (test == PRUNE_ERROREST)
-		PruneErrorEstimation(target_id, root, validation_dataset);
-	else if (test == PRUNE_CHI2)
-		PruneChi2(target_id, root, validation_dataset);
+		PruneErrorEstimation(target_id, root);
+	else if (test == PRUNE_REDUCEERROR)
+		PruneReducedError(target_id, root, validation_dataset);
 	else
 		Panic("Invalid test type");
 	
-	ASSERT_(!root.nodes.IsEmpty(), "Oh no, all leafs were pruned!");
+	//ASSERT_(!root.nodes.IsEmpty(), "Oh no, all leafs were pruned!");
 }
 
 
@@ -91,7 +96,7 @@ void QueryTable::GetDecisionTree(int target_id, const DecisionTreeNode& root, De
 	// Loop over all columns, which are not target columns (columns between targets and forecasts)
 	int processed_columns = 0;
 	double max_gain = -DBL_MAX;
-	int max_id = -1, max_value = -1;
+	int max_id = -1, max_value = -1, max_value_count;
 	for(int i = this->target_count; i < columns.GetCount(); i++) {
 		
 		// Skip columns (predictors) which have been added to the decision tree already
@@ -144,7 +149,7 @@ void QueryTable::GetDecisionTree(int target_id, const DecisionTreeNode& root, De
 		// Find the maximum information gain predictor
 		if (gain > max_gain) {
 			
-			// Get most common target value
+			// Get most common value
 			VectorMap<int, int> target_values;
 			for(int j = 0; j < pred_counts.GetCount(); j++) {
 				const VectorMap<int, int>& pred_target_count = pred_counts[j];
@@ -152,11 +157,11 @@ void QueryTable::GetDecisionTree(int target_id, const DecisionTreeNode& root, De
 					target_values.GetAdd(pred_target_count.GetKey(k), 0) += pred_target_count[k];
 			}
 			SortByValue(target_values, StdGreater<int>());
-			int target_value = target_values.GetKey(0);
 			
 			max_gain = gain;
 			max_id = i;
-			max_value = target_value;
+			max_value = target_values.GetKey(0);
+			max_value_count = target_values[0];
 		}
 	}
 	
@@ -172,7 +177,15 @@ void QueryTable::GetDecisionTree(int target_id, const DecisionTreeNode& root, De
 	node.qt = this;
 	node.dataset_size = dataset.GetCount();
 	node.target_value = max_value;
+	node.target_value_count = max_value_count;
 	ASSERT(max_value != -1);
+	
+	// Calculate error (http://www.saedsayad.com/decision_tree_overfitting.htm)
+	double f = 1.0 - (double)node.target_value_count / (double)node.dataset_size;
+	double N = node.dataset_size;
+	double a = f + z*z / (2.0*N) + z * sqrt(f/N - f*f/N + z*z/(4.0*N*N));
+	double b = 1.0 + z*z/N;
+	node.error = a / b;
 	
 	// Return when there is no information gain at all
 	if (max_gain <= 0)
@@ -225,83 +238,113 @@ double QueryTable::GetValidationError(int target_id, const DecisionTreeNode& roo
 }
 
 
-void QueryTable::PruneErrorEstimation(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset) {
+void QueryTable::PruneErrorEstimation(int target_id, DecisionTreeNode& root) {
+	if (root.nodes.IsEmpty()) return;
 	
-	// Calculate error (http://www.saedsayad.com/decision_tree_overfitting.htm)
-	double f = GetValidationError(target_id, root, validation_dataset);
-	double N = validation_dataset.GetCount();
-	double a = f + z*z / (2.0*N) + z * sqrt(f/N - f*f/N + z*z/(4.0*N*N));
-	double b = 1.0 + z*z/N;
-	root.error = a / b;
-	
-	double root_error = root.error;
+	// Avoid underfitting! Do not prune if error percentage is small enough!
+	double data_error = 1.0 - (double)root.target_value_count / (double)root.dataset_size;
+	bool avoid_underfitting = data_error < underfit_limit;
 	
 	// Calculate combined error rate of leafs
 	double leaf_error_sum = 0;
-	double dataset_total = 0.0;
-	for(int i = 0; i < root.nodes.GetCount(); i++) {
-		const DecisionTreeNode& n = root.nodes[i];
-		double size = n.dataset_size;
-		double leaf_error = size * n.error;
-		leaf_error_sum += leaf_error;
-		dataset_total += size;
+	if (!avoid_underfitting) {
+		double dataset_total = 0.0;
+		for(int i = 0; i < root.nodes.GetCount(); i++) {
+			const DecisionTreeNode& n = root.nodes[i];
+			double size = n.dataset_size;
+			double leaf_error = size * n.error;
+			leaf_error_sum += leaf_error;
+			dataset_total += size;
+		}
+		leaf_error_sum /= dataset_total;
 	}
-	leaf_error_sum /= dataset_total;
 	
 	// "The error rate at the parent node is 0.46 and since the error rate for its children (0.51)
 	//  increases with the split, we do not want to keep the children."
 	//   - http://www.saedsayad.com/decision_tree_overfitting.htm
-	if (leaf_error_sum > root_error) {
+	if (!avoid_underfitting && leaf_error_sum > root.error || root.dataset_size <= overfit_size_limit) {
 		root.nodes.Clear();
 	} else {
 		for(int i = 0; i < root.nodes.GetCount(); i++)
-			PruneErrorEstimation(root.nodes[i]);
+			PruneErrorEstimation(target_id, root.nodes[i]);
 	}
 }
 
-void QueryTable::PruneChi2(int target_id, const DecisionTreeNode& root, const Vector<int>& validation_dataset) {
-	// Calculate Chi^2 value and its probability
-	VectorMap<int, VectorMap<int, int> > max_gain_pred_counts;*/
+void QueryTable::PruneReducedError(int target_id, DecisionTreeNode& root, const Vector<int>& validation_dataset) {
+	if (root.nodes.IsEmpty()) return;
 	
-	Vector<int> cols;
-	VectorMap<int,int> rows;
-	int sum = 0;
-	cols.SetCount(max_gain_pred_counts.GetCount(), 0);
-	for(int i = 0; i < max_gain_pred_counts.GetCount(); i++) {
-		const VectorMap<int, int>& vec = max_gain_pred_counts[i];
-		int& col_sum = cols[i];
-		for(int j = 0; j < vec.GetCount(); j++) {
-			int t = vec.GetKey(j);
-			int v = vec[j];
-			rows.GetAdd(t,0) += v;
-			col_sum += v;
-			sum += v;
+	// Calculate correctly predicted value count
+	// Get subset for nodes
+	double node_error = 0;
+	double leaf_error_sum = 0;
+	Vector<Vector<int> > subsets;
+	int predicted_value_count = 0;
+	Vector<Tuple2<int, int> > substats;
+	substats.SetCount(root.nodes.GetCount(), Tuple2<int, int>(0,0));
+	subsets.SetCount(root.nodes.GetCount());
+	ASSERT(root.target_value != -1);
+	for(int i = 0; i < validation_dataset.GetCount(); i++) {
+		int row = validation_dataset[i];
+		
+		// Check matching target value
+		int t = Get(row, target_id);
+		if (t == root.target_value)
+			predicted_value_count++;
+		
+		// Add value to specific subset
+		int c = Get(row, root.column);
+		for(int j = 0; j < root.nodes.GetCount(); j++) {
+			const DecisionTreeNode& sub = root.nodes[j];
+			if (c == sub.subset_column_value) {
+				Tuple2<int, int>& stats = substats[j];
+				subsets[j].Add(row);
+				ASSERT(sub.target_value != -1);
+				if (t == sub.target_value) stats.a++;
+				stats.b++;
+				break;
+			}
 		}
 	}
-	double dsum = sum;
-	double chi_sum = 0;
-	for(int i = 0; i < cols.GetCount(); i++) {
-		double c = cols[i];
-		for(int j = 0; j < rows.GetCount(); j++) {
-			double r = rows[j];
-			double e = c * r / dsum;
-			double n = max_gain_pred_counts[i].GetAdd(rows.GetKey(j), 0);
-			double a = n - e;
-			double X = a*a / e;
-			chi_sum += X;
-		}
-	}
-	double df = (cols.GetCount() - 1)*(rows.GetCount()-1);
-	root.chi2 = sqrt(chi_sum / (dsum * sqrt(df)));
-
 	
-	double limit = 0.05;
-	if (root.chi2 <= limit)
-		root.nodes.Clear();
-	else {
+	// Avoid underfitting! Do not prune if error percentage is small enough!
+	double f = 1.0 - (double)predicted_value_count / (double)validation_dataset.GetCount();
+	bool avoid_underfitting = f < underfit_limit;
+	
+	if (!avoid_underfitting) {
+		// Calculate error (http://www.saedsayad.com/decision_tree_overfitting.htm)
+		double N = validation_dataset.GetCount();
+		double a = f + z*z / (2.0*N) + z * sqrt(f/N - f*f/N + z*z/(4.0*N*N));
+		double b = 1.0 + z*z/N;
+		node_error = a / b;
+		
+		
+		// Calculate combined error rate of leafs
+		double dataset_total = 0.0;
 		for(int i = 0; i < root.nodes.GetCount(); i++) {
-			PruneChi2(root.nodes[i]);
+			const Tuple2<int, int>& stats = substats[i];
+			
+			// Calculate error (http://www.saedsayad.com/decision_tree_overfitting.htm)
+			double f = 1.0 - (double)stats.a / (double)stats.b;
+			double N = stats.b;
+			double a = f + z*z / (2.0*N) + z * sqrt(f/N - f*f/N + z*z/(4.0*N*N));
+			double b = 1.0 + z*z/N;
+			double subnode_error = a / b;
+			
+			double leaf_error = stats.b * subnode_error;
+			leaf_error_sum += leaf_error;
+			dataset_total += stats.b;
 		}
+		leaf_error_sum /= dataset_total;
+	}
+	
+	// "The error rate at the parent node is 0.46 and since the error rate for its children (0.51)
+	//  increases with the split, we do not want to keep the children."
+	//   - http://www.saedsayad.com/decision_tree_overfitting.htm
+	if (!avoid_underfitting && leaf_error_sum > node_error || root.dataset_size <= overfit_size_limit) {
+		root.nodes.Clear();
+	} else {
+		for(int i = 0; i < root.nodes.GetCount(); i++)
+			PruneReducedError(target_id, root.nodes[i], subsets[i]);
 	}
 }
 
@@ -312,60 +355,34 @@ void QueryTable::PruneChi2(int target_id, const DecisionTreeNode& root, const Ve
 
 
 
-
-
-
-
-
-
+#define PREV_STEPS 8
+#define PREV_LEN 8
 
 QueryTableForecaster::QueryTableForecaster() {
 	
 }
 
 void QueryTableForecaster::Init() {
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-1);
+	SetCoreMaximum(+1);
+	SetBufferColor(0, Green);
+	SetBufferLineWidth(0, 2);
+	
 	
 	// Add targets
-	for(int i = 0; i < 3; i++) {
-		int max_value = pow(2, 1+i);
-		String change = IntStr(max_value) + "-Change ";
-		for(int j = 0; j < 6; j++) {
-			int max_value = pow(2, 1+j);
-			String desc = change + IntStr(max_value) + "-Step";
-			qt.AddColumn(desc, max_value);
-		}
-	}
+	qt.AddColumn("Next change", PREV_STEPS);
 	qt.EndTargets();
 	
+	// Add previous values
+	for(int i = 1; i <= PREV_LEN; i++) {
+		qt.AddColumn("Cur diff -" + IntStr(i), PREV_STEPS);
+		if (i > 1) qt.AddColumn("Change -" + IntStr(i), PREV_STEPS);
+	}
+	
 	// Add constants columns
-	/*
-	qt.AddColumn("Half-Year",		(2));
-	qt.AddColumn("Quarter-Year",	(4));
-	qt.AddColumn("1/6-Year",		(6));
-	qt.AddColumn("Month",			(12));
-	
-	qt.AddColumn("1/2-Month",		(2));
-	qt.AddColumn("1/4-Month",		(5));
-	qt.AddColumn("Day",				(31));
-	
-	qt.AddColumn("Week-Begin",		(2));
+	//  Note: adding month and day causes underfitting
 	qt.AddColumn("Wday",			(7));
-	qt.AddColumn("WdayHour",		(7*24));
-	
-	qt.AddColumn("1/2-day",			(2));
-	qt.AddColumn("1/4-day",			(4));
-	qt.AddColumn("1/8-day",			(8));
-	qt.AddColumn("1/12-day",		(12));
-	qt.AddColumn("Hour",			(24));
-	
-	qt.AddColumn("1/2-hour",		(2));
-	qt.AddColumn("1/4-hour",		(4));
-	qt.AddColumn("5-min",			(12));*/
-	
-	qt.AddColumn("Month",			(12));
-	qt.AddColumn("Day",				(31));
-	qt.AddColumn("Wday",			(7));
-	qt.AddColumn("WdayHour",		(7*24));
 	qt.AddColumn("Hour",			(24));
 	qt.AddColumn("5-min",			(12));
 	
@@ -389,14 +406,27 @@ void QueryTableForecaster::Start() {
 	double min_change = bc.GetMin();
 	double diff = max_change - min_change;
 	
-	bars -= 32;
+	bars -= 1;
 	
-	qt.SetCount(bars);
+	qt.Reserve(bars);
 	
 	TimeStop ts;
+	VectorMap<int, int> in_qt;
+	in_qt.Reserve(bars - counted);
 	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+32);
+		SetSafetyLimit(i+1);
 		
+		// Only add valid data to avoid underfitting
+		double open = Open(i);
+		double close = Open(i+1);
+		if (open == close) continue;
+		
+		// Add row
+		int row = qt.GetCount();
+		in_qt.Add(i, row);
+		qt.SetCount(row+1);
+		
+		// Get some time values in binary format (starts from 0)
 		Time t = bs.GetTimeTf(tf, i);
 		int month = t.month-1;
 		int day = t.day-1;
@@ -404,76 +434,74 @@ void QueryTableForecaster::Start() {
 		int minute = t.minute;
 		int dow = DayOfWeek(t);
 		int wdayhour = dow*24 + t.hour;
-		double open = Open(i);
-		
 		int pos = 0;
-		for(int j = 0; j < 3; j++) {
-			int len = pow(2, j);
-			int read_pos = i + len;
-			double close = Open(read_pos);
-			double change = (open != 0.0 ? close / open - 1.0 : 0.0);
+		
+		// Add target value after one timestep
+		double change = (open != 0.0 ? close / open - 1.0 : 0.0);
+		const int div = PREV_STEPS;
+		double step = diff / div;
+		int v = (change - min_change) / step;
+		if (v < 0)
+			v = 0;
+		if (v >= div)
+			v = div -1;
+		qt.Set(row, pos++, v);
+		
+		// Add previous changes in value
+		double prev = open;
+		for(int j = 1; j <= PREV_LEN; j++) {
+			int k = Upp::max(0, i - j);
+			double cur = Open(k);
 			
-			for(int k = 0; k < 6; k++) {
-				int div = pow(2, k + 1);
-				double step = diff / div;
-				int v = (change - min_change) / step;
-				if (v < 0)
-					v = 0;
-				if (v >= div)
-					v = div -1;
-				
-				qt.Set(i, pos++, v);
+			double change1 = cur != 0.0 ? open / cur - 1.0 : 0.0;
+			int v = (change1 - min_change) / step;
+			if (v < 0) v = 0;
+			if (v >= div) v = div -1;
+			qt.Set(row, pos++, v);
+			
+			if (j > 1) {
+				double change2 = cur != 0.0 ? prev / cur - 1.0 : 0.0;
+				v = (change2 - min_change) / step;
+				if (v < 0) v = 0;
+				if (v >= div) v = div -1;
+				qt.Set(row, pos++, v);
 			}
-		}
-		
-		/*qt.Set(i, pos++, month / 6);
-		qt.Set(i, pos++, month / 3);
-		qt.Set(i, pos++, month / 2);
-		qt.Set(i, pos++, month);
-		
-		qt.Set(i, pos++, Upp::min(1, day / 15));
-		qt.Set(i, pos++, day / 7);
-		qt.Set(i, pos++, day);
-		
-		qt.Set(i, pos++, dow >= 3);
-		qt.Set(i, pos++, dow);
-		qt.Set(i, pos++, wdayhour);
-		
-		qt.Set(i, pos++, hour / 12);
-		qt.Set(i, pos++, hour / 6);
-		qt.Set(i, pos++, hour / 3);
-		qt.Set(i, pos++, hour / 2);
-		qt.Set(i, pos++, hour);
-		
-		qt.Set(i, pos++, minute / 30);
-		qt.Set(i, pos++, minute / 15);
-		qt.Set(i, pos++, minute / 5);*/
-		qt.Set(i, pos++, month);
-		qt.Set(i, pos++, day);
-		qt.Set(i, pos++, dow);
-		qt.Set(i, pos++, wdayhour);
-		qt.Set(i, pos++, hour);
-		qt.Set(i, pos++, minute / 5);
-		
-	}
-	
-	LOG(ts.ToString());
-	
-	int target = 0;
-	for(int i = 0; i < 3; i++) {
-		for(int j = 0; j < 6; j++) {
-			LOG("TARGET " << target);
-			DecisionTreeNode tree;
-			qt.GetDecisionTree(target++, tree, bars);
-			LOG(tree.ToString());
 			
+			prev = cur;
 		}
+		
+		// Add constant time values
+		qt.Set(row, pos++, dow);
+		qt.Set(row, pos++, hour);
+		qt.Set(row, pos++, minute / 5);
+		
+		
+		// TODO: add indicators
+		
 	}
 	
+	// Create decision tree
+	DecisionTreeNode tree;
+	qt.GetDecisionTree(0, tree, qt.GetCount());
 	
-	//int col = qt.GetLargestInfoGainPredictor(0);
-	//DUMP(col);
-	//DUMPC(qt.GetInfoGains());
+	// Draw error oscillator
+	Buffer& buf = GetBuffer(0);
+	for (int i = counted; i < bars; i++) {
+		
+		// Skip invalid values, which weren't added to the query-table
+		int j = in_qt.Find(i);
+		if (j == -1) {
+			buf.Set(i, -1);
+			continue;
+		}
+		int row = in_qt[j];
+		
+		// Get prediction and correct value
+		double predicted = qt.Predict(tree, row, 0);
+		double correct = qt.Get(row, 0);
+		double diff = fabs(predicted - correct) / PREV_STEPS;
+		buf.Set(i, diff);
+	}
 }
 
 

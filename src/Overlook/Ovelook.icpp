@@ -84,8 +84,8 @@ INITBLOCK {
 	
 	
 	Factory::Register<QueryTableForecaster, GraphGroupCtrl>("QueryTable forecaster");
-	/*Factory::Register<QueryTableHugeForecaster, ForecasterCtrl>("Huge QueryTable forecaster");
-	Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
+	Factory::Register<QueryTableHugeForecaster, GraphGroupCtrl>("Huge QueryTable forecaster");
+	/*Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
 	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
 	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
 	Factory::Register<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");

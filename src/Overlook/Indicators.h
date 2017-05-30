@@ -726,6 +726,8 @@ public:
 
 
 class CorrelationOscillator : public Core {
+	
+public:
 	struct OnlineAverage : Moveable<OnlineAverage> {
 		double mean_a, mean_b;
 		int count;
@@ -737,6 +739,7 @@ class CorrelationOscillator : public Core {
 		}
 	};
 	
+protected:
 	typedef const Vector<double> ConstVector;
 	
 	int period;
@@ -757,7 +760,7 @@ public:
 		if (sym_count == -1 && base)
 			sym_count = GetBaseSystem().GetSymbolCount();
 		reg % In(SourcePhase, RealValue, Sym)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, sym_count-1, sym_count-1)
+			% Out(IndiPhase, CorrelationValue, SymTf, sym_count-1, sym_count-1)
 			% Arg("period", period);
 	}
 };

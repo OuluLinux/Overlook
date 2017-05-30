@@ -228,6 +228,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer]);}
+	CoreIO* GetInputCore(int input, int sym, int tf) const {return inputs[input].sources.Get(sym * 100 + tf).a;}
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}

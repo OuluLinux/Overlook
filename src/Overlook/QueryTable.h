@@ -178,7 +178,7 @@ public:
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% In(IndiPhase, RealChangeValue, SymTf)
+			% In(SourcePhase, RealChangeValue, SymTf)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf, 1, 1);
 	}
@@ -186,6 +186,8 @@ public:
 
 
 class QueryTableHugeForecaster : public Core {
+	QueryTable qt;
+	int corr_period;
 	
 public:
 	typedef QueryTableHugeForecaster CLASSNAME;
@@ -194,8 +196,18 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % In(IndiPhase, RealChangeValue, All)
-			% Out(ForecastPhase, ForecastChangeValue, SymTf);
+		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
+			% InDynamic(IndiPhase, RealChangeValue, &FilterFunction)
+			% InDynamic(IndiPhase, CorrelationValue, &FilterFunction)
+			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
+			% Out(ForecastPhase, ForecastChangeValue, SymTf, 6, 6)
+			% Arg("Correlation period", corr_period);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return out_tf >= in_tf;
+		return true;
 	}
 };
 

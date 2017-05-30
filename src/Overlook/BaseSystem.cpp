@@ -148,6 +148,15 @@ int BaseSystem::GetCountTf(int tf_id) const {
 	if (count % div != 0) count++;
 	return count;
 }
+
+int64 BaseSystem::GetShiftTf(int src_tf, int dst_tf, int shift) {
+	int64 src_period = periods[src_tf];
+	int64 dst_period = periods[dst_tf];
+	int64 timediff = shift * src_period * base_period;
+	timediff -= begin_ts[dst_tf] - begin_ts[src_tf];
+	int64 dst_shift = timediff / base_period / dst_period;
+	return dst_shift;
+}
 /*
 int64 BaseSystem::GetShift(int src_period, int dst_period, int shift) {
 	int64 timediff = shift * src_period; //		* base_period

@@ -806,4 +806,20 @@ from peeking future and refreshing values correctly when time
 goes by. ZigZag, for example, is completely peeking indicator 
 and it is used in the feature detector. It is a huge problem, 
 because it gives peeked data. It is currently broken in that 
-way, but I don`'t know how to fix it yet.]]
+way, but I don`'t know how to fix it yet.&]
+[s3;%- 30.5.2017&]
+[s0;%- I just completed the first and simplest query`-table forecaster. 
+I had to learn a lot about the decision tree theory via documentation 
+and trial and error, but finally I made it. There is many problems 
+because of the overfitting, but in this case the underfitting 
+was even a bigger problem. Unlike in MT4, in this weekends and 
+closed markets causes zero`-change bars, which caused the pruning 
+function to delete all nodes which predicted something else than 
+zero change. Well, I guess it`'s overfitting to zero`-change, 
+but underfitting describes it better.&]
+[s0;%- The proper testing is still undone. It probably needs to be 
+done in larger scale, with all other classes in the pipeline, 
+so I postpone that temporarily.&]
+[s0;%- What next? I still have time today. Let`'s see after lunch 
+break.&]
+[s0;%- ]]

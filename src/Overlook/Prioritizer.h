@@ -83,6 +83,7 @@ public:
 	VectorMap<int, int> symlist, tflist;
 	Vector<byte> pipeline_src;
 	Vector<byte> value;
+	String unique;
 	int priority;
 	int factory;
 	
@@ -106,6 +107,7 @@ public:
 	}
 	Vector<byte> value; // combination
 	Core* core;
+	String unique;
 	int64 priority;
 	int factory;
 	int sym, tf;

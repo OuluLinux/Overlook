@@ -24,6 +24,8 @@ inline int MaxBits(uint32 max_value) {
 	Panic("Invalid value");
 }
 
+class QueryTable;
+
 class DecisionTreeNode : Moveable<DecisionTreeNode> {
 	
 protected:
@@ -178,7 +180,7 @@ public:
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% In(SourcePhase, RealChangeValue, SymTf)
+			% In(IndiPhase, RealChangeValue, SymTf)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf, 1, 1);
 	}
@@ -186,6 +188,7 @@ public:
 
 
 class QueryTableHugeForecaster : public Core {
+	Array<DecisionTreeNode> tree;
 	QueryTable qt;
 	int corr_period;
 	
@@ -198,7 +201,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
 			% InDynamic(IndiPhase, RealChangeValue, &FilterFunction)
-			% InDynamic(IndiPhase, CorrelationValue, &FilterFunction)
+			% InDynamic(IndiPhase, CorrelationValue, &FilterFunctionSym)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf, 6, 6)
 			% Arg("Correlation period", corr_period);
@@ -208,6 +211,11 @@ public:
 		if (in_sym == -1)
 			return out_tf >= in_tf;
 		return true;
+	}
+	static bool FilterFunctionSym(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return out_tf >= in_tf;
+		return out_sym == in_sym;
 	}
 };
 

@@ -822,4 +822,33 @@ done in larger scale, with all other classes in the pipeline,
 so I postpone that temporarily.&]
 [s0;%- What next? I still have time today. Let`'s see after lunch 
 break.&]
-[s0;%- ]]
+[s3;%- 31.5.2017&]
+[s0;%- Hello. It starts to look clearer and clearer that neural networks 
+are unnecessary for Overlook. Slower timeframes are easier to 
+forecast and faster timeframes goes along with the slower usually, 
+so you can try to forecast faster changes by using slower forecast 
+as input. Events are also highly repeating and networked. I will 
+re`-introduce neural networks to this by stricly comparing them 
+to decision trees, but current neural network custom core classes 
+are wrong. They are not being used and they will be removed. 
+Mona neural network is probably gone for good from the Overlook, 
+and recurrent networks can`'t do decision tree`'s job, but fully`-connected 
+deep neural networks will be used if they perform better than 
+decision trees. The nature of the markets is more web`-like than 
+reoccuring patterns of single stocks, indices or currencypairs. 
+This is simply an improvement in the plan and makes the result 
+better, in the exchange to small amount of lost work by me. I 
+have no personal attachments to any part of the plan.&]
+[s0;%- I feel that doing this project as the public open source project 
+helps me to notice obvious things, that other programmers would 
+see if they looked my code, even though I can see from statistics 
+that nobody probably haven`'t read this yet. Only the notion 
+of potential observers seems to make my subconscious attitude 
+little different, like what observer does to the probability 
+distribution in those weird quantum state phenomenons, but I 
+really don`'t know and connecting those two separate ideas is 
+silly.&]
+[s0;%- I debugged the huge query`-table forecaster. It starts in 
+`~5 seconds in my 4GHz machine and seems to give correct results. 
+Making the decision tree from this many predictors is slow, but 
+it`'s nothing compared to neural network training.]]

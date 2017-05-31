@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -244,3 +246,4 @@ void NarxCtrl::SetStats(double epoch, double ppl, int time) {
 
 
 }
+#endif

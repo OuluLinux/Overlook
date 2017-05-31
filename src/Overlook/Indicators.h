@@ -23,7 +23,6 @@ class MovingAverage : public Core {
 	int ma_shift;
 	int ma_method;
 	int ma_counted;
-	int event_up, event_down;
 	
 protected:
 	virtual void Start();
@@ -153,7 +152,9 @@ public:
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
 			% Arg("step", sar_step)
-			% Arg("maximum", sar_maximum);
+			% Arg("maximum", sar_maximum)
+			% Persistent(last_rev_pos)
+			% Persistent(direction_long);
 	}
 };
 
@@ -161,8 +162,6 @@ public:
 class StandardDeviation : public Core {
 	int period;
 	int ma_method;
-	int applied_value;
-	int shift;
 	
 public:
 	StandardDeviation();
@@ -173,7 +172,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period)
+			% Arg("ma_method", ma_method);
 	}
 };
 
@@ -268,7 +268,6 @@ public:
 class ForceIndex : public Core {
 	int period;
 	int ma_method;
-	int applied_value;
 	
 public:
 	ForceIndex();
@@ -280,7 +279,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period)
+			% Arg("ma_method", ma_method);
 	}
 };
 
@@ -306,7 +306,6 @@ class OsMA : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
-	bool params;
 	
 public:
 	OsMA();
@@ -346,7 +345,6 @@ class RelativeVigorIndex : public Core {
 	
 public:
 	RelativeVigorIndex();
-	
 	
 	virtual void Init();
 	virtual void Start();
@@ -452,7 +450,6 @@ class OnBalanceVolume : public Core {
 public:
 	OnBalanceVolume();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -469,7 +466,6 @@ class Volumes : public Core {
 public:
 	Volumes();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -484,7 +480,6 @@ class AcceleratorOscillator : public Core {
 	
 public:
 	AcceleratorOscillator();
-	
 	
 	virtual void Init();
 	virtual void Start();
@@ -546,7 +541,6 @@ public:
 class Fractals : public Core {
 	int left_bars;
 	int right_bars;
-	int levels;
 	
 	double IsFractalUp(int index, int left, int right, int maxind);
 	double IsFractalDown(int index, int left, int right, int maxind);
@@ -656,7 +650,6 @@ class LinearTimeFrames : public Core {
 public:
 	LinearTimeFrames();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -708,11 +701,10 @@ public:
 
 
 class Psychological : public Core {
-	int period, sym_count;
+	int period;
 	
 public:
 	Psychological();
-	
 	
 	virtual void Init();
 	virtual void Start();
@@ -752,7 +744,6 @@ protected:
 public:
 	CorrelationOscillator();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -780,11 +771,8 @@ public:
 	be estimated.
 */
 class ParallelSymLR : public Core {
-	
-public:
 	int period;
 	int method;
-	int event_up, event_down, event_plus, event_minus;
 	
 protected:
 	virtual void Start();
@@ -808,12 +796,9 @@ public:
 	Positive peak values are when trend is changing.
 */
 class ParallelSymLREdge : public Core {
-	
-public:
 	int period;
 	int method;
 	int slowing;
-	int event_trendchange;
 	
 protected:
 	virtual void Start();

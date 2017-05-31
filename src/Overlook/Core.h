@@ -37,15 +37,17 @@ struct Buffer : public Moveable<Buffer> {
 	Vector<double> value;
 	String label;
 	Color clr;
-	int style, line_style, line_width, chr, begin, shift;
+	int style, line_style, line_width, chr, begin, shift, earliest_write;
 	bool visible;
 	
-	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true) {}
+	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
 	void SetCount(int i) {value.SetCount(i, 0);}
 	
+	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
 	int GetCount() const {return value.GetCount();}
 	bool IsEmpty() const {return value.IsEmpty();}
+	double GetUnsafe(int i) const {return value[i];}
 	
 	#ifdef flagDEBUG
 	CoreIO* check_cio;
@@ -55,9 +57,11 @@ struct Buffer : public Moveable<Buffer> {
 	void Inc(int i, double value);
 	#else
 	double Get(int i) const {return value[i];}
-	void Set(int i, double value) {this->value[i] = value;}
+	void Set(int i, double value) {this->value[i] = value; if (i < earliest_write) earliest_write = i;}
 	void Inc(int i, double value) {this->value[i] += value;}
 	#endif
+	
+	
 };
 
 typedef const Buffer ConstBuffer;
@@ -87,6 +91,13 @@ struct Arg : public ValueBase {
 	Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
 	Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
 	Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
+};
+
+struct Persistent : public ValueBase, Moveable<Persistent> {
+	Persistent(bool& b)					{data = &b; data_type = PERS_BOOL_;}
+	Persistent(int& i)					{data = &i; data_type = PERS_INT_;}
+	Persistent(double& d)				{data = &d; data_type = PERS_DOUBLE_;}
+	Persistent(VectorMap<int,int>& m)	{data = &m; data_type = PERS_INTMAP_;}
 };
 
 struct ArgChanger : public ValueRegister {
@@ -137,8 +148,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	struct Output : Moveable<Output> {
 		Output() : visible(0) {}
 		Vector<Buffer> buffers;
-		int visible;
-		void Serialize(Stream& s) {s % buffers % visible;}
+		int phase, type, visible;
 	};
 	typedef Tuple4<CoreIOPtr, Output*, int, int> Source;
 	struct Input : Moveable<Input> {
@@ -149,8 +159,12 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Vector<Input> inputs, optional_inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
+	Vector<Persistent> persistents;
 	BaseSystem* base;
+	String unique;
 	int factory;
+	int sym_id, tf_id;
+	int counted, bars;
 	
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
@@ -166,40 +180,14 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	void SetSafetyLimit(int i) const {}
 	#endif
 	
-	CoreIO() {
-		#ifdef flagDEBUG
-		read_safety_limit = 0;
-		#endif
-	}
-	virtual ~CoreIO() {}
+	CoreIO();
+	virtual ~CoreIO();
 	
-	virtual void IO(const ValueBase& base) {
-		if (base.data_type == ValueBase::IN_) {
-			inputs.Add();
-		}
-		else if (base.data_type == ValueBase::INOPT_) {
-			Panic("TODO: optional input signal is not received here yet");
-			inputs.Add();
-		}
-		else if (base.data_type == ValueBase::INDYN_) {
-			inputs.Add();
-		}
-		else if (base.data_type == ValueBase::OUT_) {
-			Output& out = outputs.Add();
-			out.buffers.SetCount(base.count);
-			out.visible = base.visible;
-			for(int i = 0; i < out.buffers.GetCount(); i++)
-				buffers.Add(&out.buffers[i]);
-		}
-	}
+	void StoreCache();
+	void LoadCache();
 	
-	void RefreshBuffers() {
-		buffers.SetCount(0);
-		for(int j = 0; j < outputs.GetCount(); j++)
-			for(int i = 0; i < outputs[j].buffers.GetCount(); i++)
-				buffers.Add(&outputs[j].buffers[i]);
-	}
-	
+	virtual void IO(const ValueBase& base);
+	void RefreshBuffers();
 	
 	template <class T> T* Get() {
 		T* t = dynamic_cast<T*>(this);
@@ -235,15 +223,9 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	BaseSystem& GetBaseSystem() {return *base;}
 	const BaseSystem& GetBaseSystem() const {return *base;}
 	inline const CoreIO& GetInput(int input, int sym, int tf) const {return *inputs[input].sources.Get(sym * 100 + tf).a;}
+	String GetCacheDirectory() const;
 	
-	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
-		Input& in = inputs[input_id];
-		if (core.GetOutputCount()) {
-			in.sources.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
-		} else {
-			in.sources.Add(sym_id * 100 + tf_id, Source(&core, NULL, sym_id, tf_id));
-		}
-	}
+	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
 	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
 	void SetBufferLineWidth(int i, int line_width) {buffers[i]->line_width = line_width;}
 	void SetBufferType(int i, int style) {buffers[i]->line_style = style;}
@@ -251,7 +233,9 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	void SetBufferShift(int i, int shift) {buffers[i]->shift = shift;}
 	void SetBufferBegin(int i, int begin) {buffers[i]->begin = begin;}
 	void SetBufferArrow(int i, int chr)   {buffers[i]->chr = chr;}
-	
+	void SetUnique(const String& s) {unique = s;}
+	void SetSymbol(int i) {sym_id = i;}
+	void SetTimeframe(int i) {tf_id = i;}
 	
 };
 
@@ -265,11 +249,12 @@ struct ArgumentBase {
 	void Arg(const char* var, String& v) {}
 };
 
+class BarData;
+
 class Core : public CoreIO {
 	
 	// Settings
 	String short_name;
-	int counted;
 	
 	
 	// Visual settings
@@ -282,8 +267,7 @@ class Core : public CoreIO {
 	double point;
 	int levels_style;
 	int window_type;
-	int bars, next_count;
-	int sym_id, tf_id;
+	int next_count;
 	int period;
 	int end_offset;
 	bool has_maximum, has_minimum;
@@ -304,13 +288,13 @@ public:
 	virtual void Start() {}
 	virtual void IO(ValueRegister& reg) {Panic("Never here");}
 	virtual void Serialize(Stream& s) {
-		s % short_name % counted % levels % outputs
+		/*s % short_name % counted % levels % outputs
 		  % levels_clr % minimum % maximum % point % levels_style
 		  % window_type % bars % next_count % has_maximum % has_minimum
 		  % skip_setcount;
 		if (s.IsLoading()) {
 			RefreshBuffers();
-		}
+		}*/
 	}
 	void InitAll();
 	template <class T> Core& AddSubCore()  {
@@ -344,9 +328,11 @@ public:
 	int GetVisibleCount() const {return outputs[0].visible;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
+	BarData* GetBarData();
 	
 	
 	// Set settings
+	void SetTimeframe(int i, int period);
 	void SetWindowType(int i) {window_type = i;}
 	void SetPoint(double d);
 	void SetCoreLevelCount(int count) {levels.SetCount(count);}
@@ -361,8 +347,6 @@ public:
 	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
 	void ForceSetCounted(int i) {counted = i; bars = i; next_count = i;}
 	void SetSkipSetCount(bool b=true) {skip_setcount = b;}
-	void SetSymbol(int i) {sym_id = i;}
-	void SetTimeframe(int i, int period);
 	void SetBufferLabel(int i, const String& s) {}
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}

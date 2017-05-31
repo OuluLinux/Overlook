@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_AgentCtrl_h_
 #define _Overlook_AgentCtrl_h_
 
@@ -53,4 +55,5 @@ public:
 
 }
 
+#endif
 #endif

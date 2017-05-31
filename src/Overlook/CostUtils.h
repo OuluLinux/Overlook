@@ -10,7 +10,6 @@ class SpreadStats : public Core {
 public:
 	SpreadStats();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -28,7 +27,6 @@ class SpreadMeanProfit : public Core {
 public:
 	SpreadMeanProfit();
 	
-	
 	virtual void Init();
 	virtual void Start();
 	
@@ -44,6 +42,8 @@ public:
 class ValueChange : public Core {
 	bool has_proxy;
 	int proxy_id, proxy_factor;
+	VectorMap<int,int> median_max_map, median_min_map;
+	double median_max, median_min;
 	double max_value, min_value;
 	DataBridge* db;
 	
@@ -54,7 +54,9 @@ public:
 		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
 			% InDynamic(SourcePhase, SpreadValue, &FilterFunction)
 			% In(SourcePhase, TimeValue, SymTf)
-			% Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
+			% Out(IndiPhase, RealChangeValue, SymTf, 7, 7)
+			% Persistent(max_value) % Persistent(min_value)
+			% Persistent(median_max) % Persistent(median_min) % Persistent(median_max_map) % Persistent(median_min_map);
 	}
 	
 	virtual void Init();
@@ -78,6 +80,8 @@ public:
 	
 	double GetMax() const {return max_value;}
 	double GetMin() const {return min_value;}
+	double GetMedianMax() const {return median_max;}
+	double GetMedianMin() const {return median_min;}
 };
 
 

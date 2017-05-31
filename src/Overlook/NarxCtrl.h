@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_NarxCtrl_h_
 #define _Overlook_NarxCtrl_h_
 
@@ -48,4 +50,5 @@ public:
 
 }
 
+#endif
 #endif

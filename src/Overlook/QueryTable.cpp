@@ -41,7 +41,7 @@ QueryTable::QueryTable() {
 	//z = 0.69; // equal to a confidence level of 75%
 	//z = 1.96; // equal to a confidence level of 95%
 	underfit_limit = 0.666;
-	overfit_size_limit = 10;
+	overfit_size_limit = 2;
 }
 
 void QueryTable::GetDecisionTree(int target_id, DecisionTreeNode& root, int row_count) {
@@ -127,7 +127,7 @@ void QueryTable::GetDecisionTree(int target_id, const DecisionTreeNode& root, De
 		// Loop over all unique values in the column
 		double pred_entropy = 0;
 		for(int j = 0; j < pred_counts.GetCount(); j++) {
-			VectorMap<int, int>& pred_target_count = pred_counts[j];
+			const VectorMap<int, int>& pred_target_count = pred_counts[j];
 			
 			// Sum total value count in the table with this unique predictor category
 			int pred_cat_total = 0;
@@ -405,8 +405,8 @@ void QueryTableForecaster::Start() {
 	int tf = GetTf();
 	BaseSystem& bs = GetBaseSystem();
 	ValueChange& bc = *Get<ValueChange>();
-	double max_change = bc.GetMax();
-	double min_change = bc.GetMin();
+	double max_change = bc.GetMedianMax() * 2;
+	double min_change = bc.GetMedianMin() * 2;
 	double diff = max_change - min_change;
 	
 	bars -= 1;
@@ -531,7 +531,7 @@ void QueryTableHugeForecaster::Init() {
 	SetCoreMaximum(+1);
 	for(int i = 0; i < 6; i++) {
 		SetBufferColor(i, RainbowColor(i / 6.0));
-		SetBufferLineWidth(i, 2);
+		SetBufferLineWidth(i, 6-i);
 	}
 	
 	// Add targets
@@ -576,10 +576,13 @@ void QueryTableHugeForecaster::Init() {
 }
 
 void QueryTableHugeForecaster::Start() {
-	int bars = GetBars();
-	int counted = GetCounted();
 	int id = GetSymbol();
 	int thistf = GetTf();
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (bars == counted)
+		return;
+	
 	
 	BaseSystem& bs = GetBaseSystem();
 	int sym_count = bs.GetSymbolCount();
@@ -587,7 +590,7 @@ void QueryTableHugeForecaster::Start() {
 	
 	// Get some useful values for all syms and tfs
 	Vector<ConstBuffer*> bufs;
-	Vector<int> max_changes, min_changes, diffs;
+	Vector<double> max_changes, min_changes, diffs;
 	bufs.SetCount(sym_count * tf_count, NULL);
 	max_changes.SetCount(sym_count * tf_count, 0);
 	min_changes.SetCount(sym_count * tf_count, 0);
@@ -599,20 +602,23 @@ void QueryTableHugeForecaster::Start() {
 	for (int sym = 0; sym < sym_count; sym++) {
 		for (int tf = 0; tf < tf_count; tf++) {
 			int i = sym * tf_count + tf;
-			bufs[i] = &GetInputBuffer(0, sym, tf, 0);
+			bufs[i] = &GetInputBuffer(0, sym, tf + thistf, 0);
 			ValueChange& bc = *dynamic_cast<ValueChange*>(GetInputCore(1, sym, tf + thistf));
-			double max_change = bc.GetMax();
-			double min_change = bc.GetMin();
+			double max_change = bc.GetMedianMax() * 2;
+			double min_change = bc.GetMedianMin() * 2;
 			double diff = max_change - min_change;
+			//LOG(Format("i=%d sym=%d tf=%d max=%f min=%f diff=%f", i, sym, tf, max_change, min_change, diff));
 			max_changes[i] = max_change;
 			min_changes[i] = min_change;
 			diffs[i] = diff;
 		}
 	}
 	
-	double max_change = max_changes[id * tf_count];
-	double min_change = min_changes[id * tf_count];
-	double diff       = diffs[id * tf_count];
+	int ii = id * tf_count;
+	double max_change = max_changes[ii];
+	double min_change = min_changes[ii];
+	double diff       = diffs[ii];
+	//LOG(Format("i=%d sym=%d tf=%d max=%f min=%f diff=%f", ii, id, 0, max_change, min_change, diff));
 	
 	int peek = pow(2, MAXTIMESTEP-1);
 	bars -= peek;
@@ -646,14 +652,13 @@ void QueryTableHugeForecaster::Start() {
 		int pos = 0;
 		time_pos[0] = i;
 		for(int j = 1; j < tf_count; j++)
-			time_pos[i] = bs.GetShiftTf(thistf, thistf + j, i);
-		
+			time_pos[j] = bs.GetShiftTf(thistf, thistf + j, i);
 		
 		// Add target value after timestep
 		for(int j = 0; j < MAXTIMESTEP; j++) {
 			int len = pow(2, j);
-			int pos = i + len;
-			double next = Open(pos);
+			int k = i + len;
+			double next = Open(k);
 			double change = open != 0.0 ? next / open - 1.0 : 0.0;
 			const int div = PREV_STEPS;
 			double step = diff / div;
@@ -671,25 +676,26 @@ void QueryTableHugeForecaster::Start() {
 			for (int tf = 0; tf < tf_count; tf++) {
 				int j = sym * tf_count + tf;
 				ConstBuffer& buf = *bufs[j];
-				int pos = time_pos[tf];
-				double open = buf.Get(pos);
-				double next = buf.Get(pos+1);
+				int k = time_pos[tf];
+				double open = k > 0 ? buf.GetUnsafe(k-1) : 0.0;
+				double cur = buf.GetUnsafe(k);
 				double min_change = min_changes[j];
 				double diff = diffs[j];
 				const int div = PREV_STEPS;
 				double step = diff / div;
 				
 				// Difference to previous time-position
-				double change = open != 0.0 ? next / open - 1.0 : 0.0;
+				double change = open != 0.0 ? cur / open - 1.0 : 0.0;
 				int v = (change - min_change) / step;
 				if (v < 0) v = 0;
 				if (v >= div) v = div -1;
 				qt.Set(row, pos++, v);
 				
 				// Correlation to the main symbol
-				ConstBuffer& cbuf = GetInputBuffer(2, csym);
-				double corr = cbuf.Get(pos);
+				ConstBuffer& cbuf = GetInputBuffer(2, GetSymbol(), thistf + tf, csym);
+				double corr = cbuf.GetUnsafe(k);
 				v = (corr + 1.0) / 2.0 * PREV_STEPS;
+				if (v == PREV_STEPS) v = PREV_STEPS - 1; // equal to 1.0 doesn't need own range
 				ASSERT(v >= 0 && v < PREV_STEPS);
 				qt.Set(row, pos++, v);
 			}
@@ -706,9 +712,11 @@ void QueryTableHugeForecaster::Start() {
 		
 	}
 	
-	// Create decision tree
-	DecisionTreeNode tree;
-	qt.GetDecisionTree(0, tree, qt.GetCount());
+	// Create decision trees
+	tree.Clear();
+	tree.SetCount(MAXTIMESTEP);
+	for(int i = 0; i < tree.GetCount(); i++)
+		qt.GetDecisionTree(i, tree[i], qt.GetCount());
 	
 	// Draw error oscillator
 	for (int i = counted; i < bars; i++) {
@@ -724,7 +732,7 @@ void QueryTableHugeForecaster::Start() {
 		
 		// Get prediction and correct value
 		for(int j = 0; j < MAXTIMESTEP; j++) {
-			double predicted = qt.Predict(tree, row, j);
+			double predicted = qt.Predict(tree[j], row, j);
 			double correct = qt.Get(row, j);
 			double diff = fabs(predicted - correct) / PREV_STEPS;
 			GetBuffer(j).Set(i, diff);

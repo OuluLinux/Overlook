@@ -43,7 +43,8 @@ struct AskBid : Moveable<AskBid> {
 };
 
 class DataBridge : public BarData {
-	
+	void RefreshFromHistory();
+	void RefreshFromAskBid();
 public:
 	typedef DataBridge CLASSNAME;
 	DataBridge();
@@ -57,7 +58,6 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	void Serialize(Stream& s);
 };
 
 class VirtualNode : public BarData {
@@ -126,7 +126,6 @@ protected:
 	friend class SpreadStats;
 	Vector<OnlineVariance> stats;
 	
-	
 public:
 	BridgeAskBid();
 	
@@ -135,8 +134,9 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf);
-		reg % Out(SourcePhase, AskBidValue, SymTf, 2, 2);
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(SourcePhase, AskBidValue, SymTf, 2, 2)
+			% Persistent(cursor);
 	}
 	
 	const OnlineVariance& GetStat(int i) const {return stats[i];}

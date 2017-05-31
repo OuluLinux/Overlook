@@ -252,9 +252,10 @@ void Prioritizer::Process() {
 	ASSERT_(!job_queue.IsEmpty(), "Job-queue must be created first");
 	
 	for(int i = 0; i < job_queue.GetCount(); i++) {
+		LOG(i << "/" << job_queue.GetCount());
 		JobItem& ji = job_queue[i];
-		LOG("Job " << i);
-		LOG(GetCombinationString(ji.value));
+		//LOG("Job " << i);
+		//LOG(GetCombinationString(ji.value));
 		Process(ji);
 	}
 }
@@ -291,6 +292,9 @@ void Prioritizer::Process(JobItem& ji) {
 	// Process core-object
 	ji.core->Refresh();
 	
+	// Store cache file
+	ji.core->StoreCache();
+	
 }
 
 void Prioritizer::CreateJobCore(JobItem& ji) {
@@ -307,8 +311,10 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 	ji.core->base = &bs;
 	ji.core->factory = ji.factory;
 	ji.core->RefreshIO();
+	ji.core->SetUnique(ji.unique);
 	ji.core->SetSymbol(ji.sym);
 	ji.core->SetTimeframe(ji.tf, bs.GetPeriod(ji.tf));
+	ji.core->LoadCache();
 	
 	// Connect input sources
 	// Loop all inputs of the custom core-class
@@ -363,9 +369,9 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 			for (int n = 0; n < job_queue.GetCount(); n++) {
 				JobItem& src_ji = job_queue[n];
 				
-				LOG(src_ji.factory << " != " << src.a << "\t" <<
+				/*LOG(src_ji.factory << " != " << src.a << "\t" <<
 					src_ji.sym << " != " << ji.sym << "\t" <<
-					src_ji.tf << " != " << ji.tf);
+					src_ji.tf << " != " << ji.tf);*/
 				
 				// Factory must match
 				if (src_ji.factory != src.a) continue;
@@ -1108,11 +1114,21 @@ void Prioritizer::RefreshJobQueue() {
 		CoreItem& ci = slot_queue[i];
 		const CombinationPart& part = combparts[ci.factory];
 		
+		// Get unique string and trim it
+		String unique, unique_long = HexVector(ci.value);
+		for (int j = unique_long.GetCount()-1; j >= 0; j--) {
+			if (unique_long[j] != '0') {
+				unique = unique_long.Left(j+1);
+				break;
+			}
+		}
+		ASSERT(!unique.IsEmpty());
+		
 		// Add room for symbol and timeframe in the priority-number
 		int64 priority_base = (int64)ci.priority * (int64)total;
 		
 		// Loop enabled symbols in the current unique-slot
-		DUMPM(ci.symlist);
+		//DUMPM(ci.symlist);
 		for(int j = 0; j < ci.symlist.GetCount(); j++) {
 			int sym = ci.symlist.GetKey(j);
 			int sym_prio = ci.symlist[j];
@@ -1134,6 +1150,7 @@ void Prioritizer::RefreshJobQueue() {
 					ji.all_sym = false;
 					ji.all_tf = false;
 				}
+				ji.unique = unique;
 				ji.sym = sym;
 				ji.tf = tf;
 				

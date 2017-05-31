@@ -48,7 +48,7 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 		bardata = src_cast;
 		GraphCtrl& main = AddGraph(bardata);
 	} else {
-		bardata = src->Get<BarData>();
+		bardata = src->GetBarData();
 		ASSERT(bardata);
 		GraphCtrl& main = AddGraph(bardata);
 		bool separate_window = src->IsCoreSeparateWindow();

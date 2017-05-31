@@ -205,10 +205,6 @@ DataBridge::~DataBridge()  {
 	
 }
 
-void DataBridge::Serialize(Stream& s) {
-	
-}
-
 void DataBridge::Init() {
 	//SetBufferCount(4, 4); // open, low, high, volume
 	
@@ -226,7 +222,32 @@ inline int IncreaseMonthTS(int ts) {
 }
 
 void DataBridge::Start() {
+	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	int sym_count = common.GetSymbolCount();
+	if (GetSymbol() >= sym_count)
+		return;
 	
+	if (GetCounted() == 0)
+		RefreshFromHistory();
+	else
+		RefreshFromAskBid();
+}
+
+void DataBridge::RefreshFromAskBid() {
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	
+	// TODO: make proper solution. This even puts 0 to value
+	int bars = GetBars();
+	ASSERT(bars > 0);
+	for(int i = 0; i < outputs.GetCount(); i++)
+		for(int j = 0; j < outputs[i].buffers.GetCount(); j++)
+			outputs[i].buffers[j].value.SetCount(bars, 0);
+}
+
+void DataBridge::RefreshFromHistory() {
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	if (!common.IsInited()) {
 		common.lock.Enter();
@@ -241,9 +262,6 @@ void DataBridge::Start() {
 	
 	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
 	
-	int sym_count = common.GetSymbolCount();
-	if (GetSymbol() >= sym_count)
-		return;
 	
 	int bars = GetBars();
 	ASSERT(bars > 0);
@@ -293,18 +311,15 @@ void DataBridge::Start() {
 	double prev_close;
 	double open = 0;
 	
-	
-	// Seek to begin of the data
-	int cursor = (4+64+12+4+4+4+4 +13*4);
-	cursor += count * struct_size;
-	src.Seek(cursor);
-	
-	
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
 	
+	// Seek to begin of the data
+	int cursor = (4+64+12+4+4+4+4 +13*4);
+	cursor += count * struct_size;
+	src.Seek(cursor);
 	
 	while ((cursor + struct_size) <= data_size && count < bars) {
 		int time;
@@ -459,6 +474,7 @@ void VirtualNode::Start() {
 		volume.Set(0, 0);
 		counted = 1;
 	}
+	else counted--;
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);

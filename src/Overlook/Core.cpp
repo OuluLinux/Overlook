@@ -11,6 +11,7 @@ double Buffer::Get(int i) const {
 void Buffer::Set(int i, double value) {
 	check_cio->SafetyCheck(i);
 	this->value[i] = value;
+	if (i < earliest_write) earliest_write = i;
 }
 
 void Buffer::Inc(int i, double value) {
@@ -78,8 +79,6 @@ Core::Core()
 	skip_setcount = false;
 	skip_allocate = false;
 	point = 0.01;
-	sym_id = -1;
-	tf_id = -1;
 	period = 0;
 	end_offset = 0;
 }
@@ -197,27 +196,28 @@ void Core::SetPoint(double d) {
 
 
 
-
-
+BarData* Core::GetBarData() {
+	return dynamic_cast<BarData*>(GetInputCore(0, GetSymbol(), GetTimeframe()));
+}
 
 double Core::Open ( int shift ) {
 	ASSERT(shift <= read_safety_limit);
-	return inputs[0].sources[0].b->buffers[0].Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
 }
 
 double Core::Low( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return inputs[0].sources[0].b->buffers[1].Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
 }
 
 double Core::High( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return inputs[0].sources[0].b->buffers[2].Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
 }
 
 double Core::Volume ( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return inputs[0].sources[0].b->buffers[3].Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
 }
 
 int Core::HighestHigh(int period, int shift) {
@@ -287,7 +287,7 @@ int Core::GetPeriod() const {
 }
 
 void Core::SetTimeframe(int i, int period) {
-	tf_id = i;
+	CoreIO::SetTimeframe(i);
 	this->period = period;
 }
 

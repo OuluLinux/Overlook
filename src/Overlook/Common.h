@@ -4,12 +4,12 @@
 #include <PlotCtrl/PlotCtrl.h>
 #include <Core/Core.h>
 
-#include <ConvNet/ConvNet.h>
+/*#include <ConvNet/ConvNet.h>
 #include <NARX/NARX.h>
 #include <Mona/Mona.h>
 
 #include <ConvNetCtrl/ConvNetCtrl.h>
-#include <GraphLib/GraphLib.h>
+#include <GraphLib/GraphLib.h>*/
 
 #undef ASSERTEXC
 

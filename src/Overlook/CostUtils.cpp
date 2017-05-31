@@ -129,6 +129,8 @@ ValueChange::ValueChange() {
 	SetCoreSeparateWindow();
 	max_value = 0;
 	min_value = 0;
+	median_max = 0;
+	median_min = 0;
 }
 
 void ValueChange::Init() {
@@ -170,6 +172,12 @@ void ValueChange::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
+	double point = 0.00001;
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
+	
 	const Buffer& open				= GetInputBuffer(0, 0);
 	const Buffer& low				= GetInputBuffer(0, 1);
 	const Buffer& high				= GetInputBuffer(0, 2);
@@ -190,9 +198,10 @@ void ValueChange::Start() {
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
+		double change_value;
 		if (!has_proxy) {
 			double open_value = open.Get(i-1);
-			double change_value = open.Get(i) / open_value - 1.0;
+			change_value = open.Get(i) / open_value - 1.0;
 			if (change_value > max_value) max_value = change_value;
 			if (change_value < min_value) min_value = change_value;
 			change.Set(i, change_value);
@@ -226,7 +235,7 @@ void ValueChange::Start() {
 				proxy_low_change	= proxy_open_value / proxy_high_value - 1.0;
 				proxy_high_change	= proxy_open_value / proxy_low_value - 1.0;
 			}
-			double change_value = open.Get(i) / open_value - 1.0;
+			change_value = open.Get(i) / open_value - 1.0;
 			if (change_value > max_value) max_value = change_value;
 			if (change_value < min_value) min_value = change_value;
 			double low_change_	= low.Get(i-1) / open_value - 1.0;
@@ -239,7 +248,45 @@ void ValueChange::Start() {
 			proxy_high_buf.Set(i, proxy_high_change + high_change_);	// Note: unrealistic, probably not simultaneously
 			value_change.Set(i, change_value + proxy_change);
 		}
+		
+		int step = change_value / point;
+		if (step >= 0) median_max_map.GetAdd(step, 0)++;
+		else median_min_map.GetAdd(step, 0)++;
 	}
+	
+	
+	// Get median values
+	{
+		SortByKey(median_max_map, StdLess<int>());
+		int64 total = 0;
+		for(int i = 0; i < median_max_map.GetCount(); i++)
+			total += median_max_map[i];
+		int64 target = total / 2;
+		total = 0;
+		for(int i = 0; i < median_max_map.GetCount(); i++) {
+			total += median_max_map[i];
+			if (total > target) {
+				median_max = median_max_map.GetKey(i) * point;
+				break;
+			}
+		}
+	}
+	{
+		SortByKey(median_min_map, StdLess<int>());
+		int64 total = 0;
+		for(int i = 0; i < median_min_map.GetCount(); i++)
+			total += median_min_map[i];
+		int64 target = total / 2;
+		total = 0;
+		for(int i = 0; i < median_min_map.GetCount(); i++) {
+			total += median_min_map[i];
+			if (total > target) {
+				median_min = median_min_map.GetKey(i) * point;
+				break;
+			}
+		}
+	}
+	
 }
 
 

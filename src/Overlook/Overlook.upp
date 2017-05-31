@@ -2,16 +2,9 @@ description "The main time-series predictor application, with brokerage connecti
 
 uses
 	CtrlLib,
-	CoreUtils,
-	CtrlUtils,
 	plugin/libmt,
 	plugin/tidy,
-	ConvNet,
-	NARX,
-	Mona,
-	Painter,
-	GraphLib,
-	ConvNetCtrl;
+	Painter;
 
 file
 	Copying,
@@ -36,7 +29,6 @@ file
 	ForecasterCombCtrl.cpp,
 	AgentCtrl.h,
 	AgentCtrl.cpp,
-	AgentCtrl.lay,
 	AgentCombCtrl.h,
 	AgentCombCtrl.cpp,
 	Core readonly separator,
@@ -45,6 +37,7 @@ file
 	Factory.cpp,
 	Core.h,
 	Core.cpp,
+	CoreIO.cpp,
 	BaseSystem.h,
 	BaseSystem.cpp,
 	Prioritizer.h,
@@ -60,7 +53,7 @@ file
 	Indicators.cpp,
 	Features.h,
 	Features.cpp,
-	Periodicals.h,
+	Periodicals.h options(BUILDER_OPTION) PCH,
 	Periodicals.cpp,
 	QueryTable.h,
 	QueryTable.cpp,

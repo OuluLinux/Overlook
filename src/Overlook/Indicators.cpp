@@ -874,8 +874,6 @@ double ParabolicSAR::GetLow( int pos, int start_pos )
 StandardDeviation::StandardDeviation() {
 	period = 20;
 	ma_method = 0;
-	applied_value = 0;
-	shift = 0;
 }
 
 void StandardDeviation::Init() {
@@ -883,8 +881,6 @@ void StandardDeviation::Init() {
 	SetCoreMinimum(0);
 	
 	SetBufferColor(0, Blue);
-	
-	SetBufferShift ( 0, shift );
 	SetBufferBegin ( 0, period );
 	
 	SetBufferStyle(0,DRAW_LINE);
@@ -1291,7 +1287,6 @@ void DeMarker::Start() {
 ForceIndex::ForceIndex() {
 	period = 13;
 	ma_method = 0;
-	applied_value = 0;
 }
 
 void ForceIndex::Init() {
@@ -1398,7 +1393,6 @@ OsMA::OsMA() {
 	fast_ema_period = 12;
 	slow_ema_period = 26;
 	signal_sma_period = 9;
-	params = false;
 }
 
 void OsMA::Init() {
@@ -1411,12 +1405,6 @@ void OsMA::Init() {
 	
 	SetBufferBegin ( 0, signal_sma_period );
 
-	if ( fast_ema_period <= 1 || slow_ema_period <= 1 || signal_sma_period <= 1 || fast_ema_period >= slow_ema_period ) {
-		Panic ( "Wrong input parameters" );
-	}
-	else
-		params = true;
-	
 	AddSubCore<MovingAverage>().Set("period", fast_ema_period).Set("offset", 0).Set("method", MODE_EMA);
 	AddSubCore<MovingAverage>().Set("period", slow_ema_period).Set("offset", 0).Set("method", MODE_EMA);
 }
@@ -1431,8 +1419,8 @@ void OsMA::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 
-	if ( bars <= signal_sma_period || !params )
-		throw DataExc();
+	if ( bars <= signal_sma_period )
+		return;
 
 	if ( counted > 0 )
 		counted--;

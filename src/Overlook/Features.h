@@ -12,10 +12,6 @@ class FeatureKeypoint : Moveable<FeatureKeypoint> {
 public:
 	FeatureKeypoint();
 	
-	virtual void Serialize(Stream& s) {
-		s % descriptors % group;
-	}
-	
 	int GetGroup() const {return group;}
 	String ToString() const;
 	bool IsMatch(const FeatureKeypoint& kp) const;

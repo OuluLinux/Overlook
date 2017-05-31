@@ -665,9 +665,10 @@ void WdayHourTrendSuccess::Start() {
 		
 		MovingOnlineVariance& var  = vars[dh];
 		
-		double cdf1 = 1 - NormalCDF(0, shift1_mean.Get(i), shift1_stddev.Get(i));
-		double cdf2 = 1 - NormalCDF(0, shift2_mean.Get(i), shift2_stddev.Get(i));
-		double cdf3 = 1 - NormalCDF(0, shift3_mean.Get(i), shift3_stddev.Get(i));
+		Panic("TODO");
+		double cdf1 = 0;//1 - NormalCDF(0, shift1_mean.Get(i), shift1_stddev.Get(i));
+		double cdf2 = 0;//1 - NormalCDF(0, shift2_mean.Get(i), shift2_stddev.Get(i));
+		double cdf3 = 0;//1 - NormalCDF(0, shift3_mean.Get(i), shift3_stddev.Get(i));
 		
 		double change1 = open.Get(i-1+1) / open.Get(i-1) - 1;
 		double change2 = open.Get(i-2+1) / open.Get(i-2) - 1;

@@ -71,18 +71,14 @@ void PrioritizerCtrl::RefreshData() {
 			s = "";
 			for(int j = 0; j < q.symlist.GetCount(); j++) {
 				if (j) s.Cat(',');
-				const int& a = q.symlist.GetKey(j);
-				const int& b = q.symlist[j];
-				s << "(" << a << "," << b << ")";
+				s << q.symlist[j];
 			}
 			process_queue.Set(i, 4, s);
 			
 			s = "";
 			for(int j = 0; j < q.tflist.GetCount(); j++) {
 				if (j) s.Cat(',');
-				const int& a = q.tflist.GetKey(j);
-				const int& b = q.tflist[j];
-				s << "(" << a << "," << b << ")";
+				s << q.tflist[j];
 			}
 			process_queue.Set(i, 5, s);
 			

@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 
@@ -22,9 +24,6 @@ inline double SafeDiv(double a, double b, double max, double min) {
 	if (value > max) return max;
 	return value;
 }
-
-
-
 
 
 
@@ -829,3 +828,4 @@ void ChannelPredicter::Start() {
 
 	
 }
+#endif

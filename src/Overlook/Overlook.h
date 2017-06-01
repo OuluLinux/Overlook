@@ -2,6 +2,8 @@
 #define _Overlook_Overlook_h_
 
 #include "Common.h"
+#include "QueryTable.h"
+
 #include "Factory.h"
 #include "Core.h"
 #include "CustomCtrl.h"
@@ -10,24 +12,14 @@
 #include "SimBroker.h"
 
 #include "DataBridge.h"
-#include "CostUtils.h"
 #include "Indicators.h"
-#include "Features.h"
-#include "Periodicals.h"
-#include "QueryTable.h"
-#include "Neural.h"
+#include "Forecasters.h"
+#include "Agent.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
-#include "ForecasterCtrl.h"
-#include "ForecasterCombCtrl.h"
-#include "AgentCtrl.h"
-#include "AgentCombCtrl.h"
 
-#include "RecurrentCtrl.h"
-#include "NarxCtrl.h"
 #include "BrokerCtrl.h"
-#include "EventCtrl.h"
 #include "PrioritizerCtrl.h"
 
 #define IMAGECLASS OverlookImg

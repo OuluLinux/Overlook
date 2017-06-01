@@ -30,7 +30,7 @@ struct DataLevel : public Moveable<DataLevel> {
 	void Serialize(Stream& s) {s % style % line_width % value % clr;}
 };
 
-class CoreIO;
+struct CoreIO;
 
 // Class for default visual settings for a single visible line of a container
 struct Buffer : public Moveable<Buffer> {
@@ -42,7 +42,7 @@ struct Buffer : public Moveable<Buffer> {
 	
 	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
-	void SetCount(int i) {value.SetCount(i, 0);}
+	void SetCount(int i) {value.SetCount(i, 0.0);}
 	
 	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
 	int GetCount() const {return value.GetCount();}
@@ -81,6 +81,10 @@ struct InDynamic : public ValueBase {
 	InDynamic(int phase, int type, FilterFunction fn) {this->phase = phase; this->type = type; this->scale = scale; data_type = INDYN_; data = (void*)fn;}
 };
 
+struct InSlower : public ValueBase {
+	InSlower() {data_type = INSLOW_;}
+};
+
 struct Out : public ValueBase {
 	Out(int phase, int type, int scale, int count=0, int visible=0) {this->phase = phase; this->type = type; this->scale = scale; this->count = count; this->visible = visible; data_type = OUT_;}
 };
@@ -98,6 +102,7 @@ struct Persistent : public ValueBase, Moveable<Persistent> {
 	Persistent(int& i)					{data = &i; data_type = PERS_INT_;}
 	Persistent(double& d)				{data = &d; data_type = PERS_DOUBLE_;}
 	Persistent(VectorMap<int,int>& m)	{data = &m; data_type = PERS_INTMAP_;}
+	Persistent(QueryTable& q)			{data = &q; data_type = PERS_QUERYTABLE_;}
 };
 
 struct ArgChanger : public ValueRegister {
@@ -345,7 +350,7 @@ public:
 	void SetCoreMaximum(double value) {maximum = value; has_maximum = true;}
 	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
 	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
-	void ForceSetCounted(int i) {counted = i; bars = i; next_count = i;}
+	void ForceSetCounted(int i) {counted = i; next_count = i;}
 	void SetSkipSetCount(bool b=true) {skip_setcount = b;}
 	void SetBufferLabel(int i, const String& s) {}
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}

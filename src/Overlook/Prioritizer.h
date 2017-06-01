@@ -77,12 +77,13 @@ class CoreItem : Moveable<CoreItem> {
 	
 public:
 	typedef CoreItem CLASSNAME;
-	CoreItem() {priority = 0;}
+	CoreItem() {pipeline = NULL; priority = 0;}
 	
 	
-	VectorMap<int, int> symlist, tflist;
+	Index<int> symlist, tflist;
 	Vector<byte> pipeline_src;
 	Vector<byte> value;
+	PipelineItem* pipeline;
 	String unique;
 	int priority;
 	int factory;
@@ -98,8 +99,22 @@ public:
 		all_sym = false;
 		all_tf = false;
 	}
+	JobItem(const JobItem& src) {
+		*this = src;
+	}
 	~JobItem() {
 		if (core && core->factory > 0) {delete core; core = NULL;} // Don't ever delete BaseSystem here (factory==0)
+	}
+	void operator=(const JobItem& src) {
+		value <<= src.value;
+		core = src.core;
+		unique = src.unique;
+		priority = src.priority;
+		factory = src.factory;
+		sym = src.sym;
+		tf = src.tf;
+		all_sym = src.all_sym;
+		all_tf = src.all_tf;
 	}
 	String ToString() const {
 		return Format("core=%X priority=%d factory=%d sym=%d tf=%d all_sym=%d all_tf=%d combination=\"%s\"",

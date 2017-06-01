@@ -1,136 +1,9 @@
 #include "Overlook.h"
 
-
 namespace Overlook {
-
-
-SpreadStats::SpreadStats() {
-	SetCoreSeparateWindow();
-}
-
-void SpreadStats::Init() {
-	SetBufferLineWidth(0, 3);
-	SetBufferColor(0, Color(0,128,0));
-}
-
-void SpreadStats::Start() {
-	int id = GetSymbol();
-	int tf = GetTimeframe();
-	int bars = GetBars();
-	int counted = GetCounted();
-	int period = GetMinutePeriod();
-	int h_count = 24 * 60 / period; // originally hour only
-	bool force_d0 = period >= 7*24*60;
-	BridgeAskBid& ab = *Get<BridgeAskBid>();
-	BaseSystem& bs = GetBaseSystem();
-	Buffer& spread_buf = GetBuffer(0);
-	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double spread = 0;
-		
-		Time t = bs.GetTimeTf(GetTf(), i);
-		int h = (t.minute + t.hour * 60) / period;
-		int d = DayOfWeek(t) - 1;
-		int dh = h + d * h_count;
-		if (force_d0) {
-			h = 0;
-			d = 0;
-			dh = 0;
-		}
-		if (d == -1 || d == 5) {
-			
-		}
-		else {
-			OnlineVariance& var = ab.stats[dh];
-			if (var.GetEventCount()) {
-				spread = var.GetMean();
-			}
-		}
-		
-		spread_buf.Set(i, spread);
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-SpreadMeanProfit::SpreadMeanProfit() {
-	askbid = NULL;
-	
-}
-
-void SpreadMeanProfit::Init() {
-	SetCoreSeparateWindow();
-	SetBufferLineWidth(0, 2);
-	
-	SetBufferColor(0, Color(0,0,127));
-}
-
-void SpreadMeanProfit::Start() {
-	const BridgeAskBid& askbid = *Get<BridgeAskBid>();
-	const BaseSystem& bs = GetBaseSystem();
-	
-	int bars = GetBars();
-	int counted = GetCounted();
-	const int size = 300;
-	int period = GetMinutePeriod();
-	int h_count = 24 * 60 / period; // originally hour only
-	bool force_d0 = period >= 7*24*60;
-	
-	const Buffer& open = GetInputBuffer(1, 0);
-	Buffer& mean_profit = GetBuffer(0);
-	
-	if (!counted) counted = 1;
-	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		Time t = bs.GetTimeTf(GetTf(), i);
-		
-		int h = (t.minute + t.hour * 60) / period;
-		int d = DayOfWeek(t) - 1;
-		int dh = h + d * h_count;
-		
-		if (force_d0) {
-			h = 0;
-			d = 0;
-			dh = 0;
-		}
-		else if (d == -1 || d == 5) {
-			continue;
-		}
-		
-		const OnlineVariance& var = askbid.GetStat(dh);
-		
-		double abs_change = fabs(open.Get(i) / open.Get(i-1) - 1.0) ;
-		mean_profit.Set(i, abs_change - var.GetMean());
-	}
-}
-
-
-
-
-
-
-
-
-
-
 
 ValueChange::ValueChange() {
 	SetCoreSeparateWindow();
-	max_value = 0;
-	min_value = 0;
-	median_max = 0;
-	median_min = 0;
 }
 
 void ValueChange::Init() {
@@ -198,12 +71,9 @@ void ValueChange::Start() {
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		double change_value;
 		if (!has_proxy) {
 			double open_value = open.Get(i-1);
-			change_value = open.Get(i) / open_value - 1.0;
-			if (change_value > max_value) max_value = change_value;
-			if (change_value < min_value) min_value = change_value;
+			double change_value = open.Get(i) / open_value - 1.0;
 			change.Set(i, change_value);
 			double low_change_ = low.Get(i-1) / open_value - 1.0;
 			double high_change_ = high.Get(i-1) / open_value - 1.0;
@@ -235,9 +105,7 @@ void ValueChange::Start() {
 				proxy_low_change	= proxy_open_value / proxy_high_value - 1.0;
 				proxy_high_change	= proxy_open_value / proxy_low_value - 1.0;
 			}
-			change_value = open.Get(i) / open_value - 1.0;
-			if (change_value > max_value) max_value = change_value;
-			if (change_value < min_value) min_value = change_value;
+			double change_value = open.Get(i) / open_value - 1.0;
 			double low_change_	= low.Get(i-1) / open_value - 1.0;
 			double high_change_	= high.Get(i-1) / open_value - 1.0;
 			change.Set(i, change_value); // different with proxy
@@ -248,81 +116,9 @@ void ValueChange::Start() {
 			proxy_high_buf.Set(i, proxy_high_change + high_change_);	// Note: unrealistic, probably not simultaneously
 			value_change.Set(i, change_value + proxy_change);
 		}
-		
-		int step = change_value / point;
-		if (step >= 0) median_max_map.GetAdd(step, 0)++;
-		else median_min_map.GetAdd(step, 0)++;
 	}
 	
 	
-	// Get median values
-	{
-		SortByKey(median_max_map, StdLess<int>());
-		int64 total = 0;
-		for(int i = 0; i < median_max_map.GetCount(); i++)
-			total += median_max_map[i];
-		int64 target = total / 2;
-		total = 0;
-		for(int i = 0; i < median_max_map.GetCount(); i++) {
-			total += median_max_map[i];
-			if (total > target) {
-				median_max = median_max_map.GetKey(i) * point;
-				break;
-			}
-		}
-	}
-	{
-		SortByKey(median_min_map, StdLess<int>());
-		int64 total = 0;
-		for(int i = 0; i < median_min_map.GetCount(); i++)
-			total += median_min_map[i];
-		int64 target = total / 2;
-		total = 0;
-		for(int i = 0; i < median_min_map.GetCount(); i++) {
-			total += median_min_map[i];
-			if (total > target) {
-				median_min = median_min_map.GetKey(i) * point;
-				break;
-			}
-		}
-	}
-	
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-IdealOrders::IdealOrders() {
-	
-}
-
-void IdealOrders::Init() {
-	//AddDependency("/open", 1, 0);
-	
-}
-
-void IdealOrders::Start() {
-	
-	// Search ideal order sequence with A* search in SimBroker
-	Panic("TODO");
-	
-}
-
-
 
 }

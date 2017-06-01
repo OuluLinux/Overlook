@@ -192,8 +192,14 @@ void Prioritizer::CreateCombination() {
 		for(int j = 0; j < part.input_src.GetCount(); j++) {
 			const Vector<IntPair>& inputs = part.input_src[j];
 			if (inputs.IsEmpty()) {
-				LOG("        ERROR: input not found: " << part.inputs[j].ToString());
-				combination_errors++;
+				const RegisterInput& input = Factory::GetRegs()[i].in[j];
+				if (input.input_type == REGIN_SLOWER) {
+					LOG("         (same class, slower tf instances)");
+				}
+				else {
+					LOG("        ERROR: input not found: " << part.inputs[j].ToString());
+					combination_errors++;
+				}
 			} else {
 				String str;
 				for(int k = 0; k < inputs.GetCount(); k++) {
@@ -205,7 +211,7 @@ void Prioritizer::CreateCombination() {
 		}
 	}
 	if (combination_errors) {
-		LOG("Found " << combination_errors << " errors. Can't run system.");
+		Panic("Found " + IntStr(combination_errors) + " errors. Can't run system.");
 	}
 }
 
@@ -324,8 +330,9 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 		
 		bool input_all_sym = input.scale == Sym || input.scale == All;
 		bool input_all_tf  = input.scale == Tf  || input.scale == All;
-		bool input_dynamic = fn != NULL;
-
+		bool input_dynamic = input.input_type == REGIN_DYNAMIC && fn != NULL;
+		bool input_slower = input.input_type == REGIN_SLOWER;
+		
 		// Loop possible sources for one input
 		const Vector<IntPair>& input_src = part.input_src[l];
 		#ifdef flagDEBUG
@@ -364,7 +371,7 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 			// Search source and loop existing job queue
 			bool found = false;
 			int input_count = 0;
-			bool is_one_input_only = !input_all_sym && !input_all_tf && !input_dynamic;
+			bool is_one_input_only = !input_all_sym && !input_all_tf && !input_dynamic && !input_slower;
 			bool is_many_to_many_exceptions_allowed = input_all_sym && input_all_tf;
 			for (int n = 0; n < job_queue.GetCount(); n++) {
 				JobItem& src_ji = job_queue[n];
@@ -381,6 +388,11 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 				if (input_dynamic) {
 					bool keep = fn(&bs, ji.sym, ji.tf, src_ji.sym, src_ji.tf);
 					if (!keep) continue;
+				}
+				// With slower tf inputs, all slower tfs are kept
+				else if (input_slower) {
+					if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
+					if (src_ji.tf <= ji.tf) continue;
 				}
 				// Normally, only symbol & timeframe are being matched.
 				else {
@@ -819,7 +831,7 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 			Combination comb2 = comb;
 			
 			for(int i = 0; i < part.input_src.GetCount(); i++) {
-				ASSERT(part.input_src[i].GetCount() == 1);
+				if (part.input_src[i].IsEmpty()) continue;
 				
 				// Set slot value true
 				int bit = GetBitCore(factory, i, 0);
@@ -920,14 +932,12 @@ void Prioritizer::RefreshCoreQueue() {
 					// Add priorities of symbols and timeframes
 					for (int s = 0; s < sym_count; s++) {
 						if (input_all_sym || ReadBit(pi.value, GetBitSym(s))) {
-							int& prio = si.symlist.GetAdd(s, INT_MAX);
-							prio = Upp::min(prio, pi.priority);
+							si.symlist.FindAdd(s);
 						}
 					}
 					for (int t = 0; t < tf_count; t++) {
 						if (input_all_tf || ReadBit(pi.value, GetBitTf(t))) {
-							int& prio = si.tflist.GetAdd(t, INT_MAX);
-							prio = Upp::min(prio, pi.priority);
+							si.tflist.FindAdd(t);
 						}
 					}
 					break;
@@ -939,7 +949,7 @@ void Prioritizer::RefreshCoreQueue() {
 			// it can be added to the core-queue.
 			if (!found) {
 				CoreItem& si = slot_queue.Add();
-				
+				si.pipeline = &pi;
 				si.value <<= unique_slot_comb;
 				si.factory = j;
 				si.priority = pi.priority * Factory::GetCtrlFactories().GetCount() + j;
@@ -998,30 +1008,41 @@ void Prioritizer::RefreshCoreQueue() {
 		for(int j = 0; j < reg.in.GetCount(); j++) {
 			const RegisterInput& in = reg.in[j];
 			
-			VectorMap<int,int> add_sym, add_tf;
+			Index<int> add_sym, add_tf;
 			
 			if (in.input_type == REGIN_DYNAMIC) {
 				FilterFunction filter = (FilterFunction)in.data;
 				
 				for(int k = 0; k < ci.symlist.GetCount(); k++) {
-					int sym = ci.symlist.GetKey(k);
-					int priority = ci.symlist[k];
+					int sym = ci.symlist[k];
 					for(int l = 0; l < sym_count; l++) {
 						if (filter(&bs, sym, -1, l, -1)) {
-							int& prio = add_sym.GetAdd(l, INT_MAX);
-							prio = Upp::min(prio, priority);
+							add_sym.FindAdd(l);
 						}
 					}
 				}
 				
 				for(int k = 0; k < ci.tflist.GetCount(); k++) {
-					int tf = ci.tflist.GetKey(k);
-					int priority = ci.tflist[k];
+					int tf = ci.tflist[k];
 					for(int l = 0; l < tf_count; l++) {
 						if (filter(&bs, -1, tf, -1, l)) {
-							int& prio = add_tf.GetAdd(l, INT_MAX);
-							prio = Upp::min(prio, priority);
+							add_tf.FindAdd(l);
 						}
+					}
+				}
+			}
+			else if (in.input_type == REGIN_SLOWER) {
+				add_sym <<= ci.symlist;
+				add_tf  <<= ci.tflist;
+				int slowest_tf = INT_MAX;
+				for(int k = 0; k < add_tf.GetCount(); k++)
+					slowest_tf = Upp::min(slowest_tf, add_tf[k]);
+				if (slowest_tf != INT_MAX) {
+					for(int k = slowest_tf+1; k < tf_count; k++) {
+						// Only add timeframes that are enabled in the pipeline combination
+						if (!ReadBit(ci.pipeline->value, GetBitTf(k)))
+							continue;
+						add_tf.FindAdd(k);
 					}
 				}
 			}
@@ -1066,21 +1087,19 @@ void Prioritizer::RefreshCoreQueue() {
 				found = true;
 				bool reprocess = false;
 				for(int l = 0; l < add_sym.GetCount(); l++) {
-					int sym = add_sym.GetKey(l);
-					int priority = add_sym[l];
-					int& prio = src_ci.symlist.GetAdd(sym, INT_MAX);
-					if (priority < prio) {
-						prio = priority;
+					int sym = add_sym[l];
+					int m = src_ci.symlist.Find(sym);
+					if (m == -1) {
+						src_ci.symlist.Add(sym);
 						reprocess = true;
 					}
 				}
 				
 				for(int l = 0; l < add_tf.GetCount(); l++) {
-					int tf = add_tf.GetKey(l);
-					int priority = add_tf[l];
-					int& prio = src_ci.tflist.GetAdd(tf, INT_MAX);
-					if (priority < prio) {
-						prio = priority;
+					int tf = add_tf[l];
+					int m = src_ci.tflist.Find(tf);
+					if (m == -1) {
+						src_ci.tflist.Add(tf);
 						reprocess = true;
 					}
 				}
@@ -1128,19 +1147,17 @@ void Prioritizer::RefreshJobQueue() {
 		int64 priority_base = (int64)ci.priority * (int64)total;
 		
 		// Loop enabled symbols in the current unique-slot
-		//DUMPM(ci.symlist);
+		//DUMPC(ci.symlist);
 		for(int j = 0; j < ci.symlist.GetCount(); j++) {
-			int sym = ci.symlist.GetKey(j);
-			int sym_prio = ci.symlist[j];
+			int sym = ci.symlist[j];
 			
 			// Loop enabled timeframes in the current unique-slot
 			for(int k = 0; k < ci.tflist.GetCount(); k++) {
-				int tf = ci.tflist.GetKey(k);
-				int tf_prio = ci.tflist[k];
+				int tf = ci.tflist[k];
 				
 				// Add new job item for current slot/symbol/tf combination
 				JobItem& ji = new_job_queue.Add();
-				ji.priority = priority_base + (int64)sym + (int64)tf * tf_count; // TODO: fix this, it's not correct
+				ji.priority = priority_base + (int64)sym + (int64)(tf_count-1-tf) * (int64)sym_count;
 				ji.factory = ci.factory;
 				if (!part.outputs.IsEmpty()){
 					const ValueType& first_output = part.outputs[0]; // all outputs should have the same scale
@@ -1214,6 +1231,14 @@ void Prioritizer::RefreshJobQueue() {
 		}
 	}
 	
+	// Sort job-queue by priority
+	struct PrioritySorter {
+		bool operator()(const JobItem& a, const JobItem& b) const {
+			return a.priority < b.priority;
+		}
+	};
+	Sort(new_job_queue, PrioritySorter());
+	
 	LOG("Job queue size: " << new_job_queue.GetCount());
 	
 	// Set new queue
@@ -1244,6 +1269,9 @@ bool Prioritizer::CheckCombination(const Vector<byte>& comb) {
 				}
 			}
 			if (!enabled_count) {
+				const RegisterInput& input = Factory::GetRegs()[i].in[j];
+				if (input.input_type == REGIN_SLOWER) continue;
+				
 				LOG("ERROR: No enabled sources");
 				return false;
 			}

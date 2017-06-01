@@ -851,4 +851,68 @@ silly.&]
 [s0;%- I debugged the huge query`-table forecaster. It starts in 
 `~5 seconds in my 4GHz machine and seems to give correct results. 
 Making the decision tree from this many predictors is slow, but 
-it`'s nothing compared to neural network training.]]
+it`'s nothing compared to neural network training.&]
+[s3;%- 1.6.2017&]
+[s0;%- It`'s 1.6, first day of summer, and there is hailstorm outside. 
+It looks like it`'s snowing, but in fast`-forward, because hails 
+are heavier and comes down faster. The temperature is `+5 Celsius. 
+Worst spring in years, as far as I remember.&]
+[s0;%- I am re`-planning forecaster and agent classes again. Now, 
+when neural networks will compete first with the decision tree, 
+there won`'t be much complexity in the pipeline. One agent is 
+enough in the beginning, instead of many weird neural network 
+efforts. I am using more generic approach now. All classes must 
+try to use their slower timeframe instance as input, and they 
+must try to work in the fastest timeframe, in which they are 
+the proxy of slower tf or they use their own calculations if 
+it`'s better. It seems complicated now, but the result should 
+simple. I did something similar with the SubTf and MetaTf indicators, 
+which tracked the `"progress`" of expected volatily in comparison 
+to longer period. Those indicators are useless now, but they 
+were the precursor of this model. I should make them work again 
+for historical reasons only.&]
+[s0;%- Looks like I get better performance comparison to my master`'s 
+thesis now. The description is much simpler now: everything was 
+designed with the minimum system (query`-table and decision trees) 
+and neural network systems are being compared to the decision 
+tree system in 8 different predictor sets. I knew I would get 
+some kind of performance comparison, but this is just much more 
+smoother and better than I expected. Only the math is an obstacle 
+to the completion of my master`'s degree in computer science 
+(or whatever it was called). There is just this evil elitist 
+math teacher, which is blocking the progress. I have been in 
+very different schools in different `"social classes`". I got 
+very high grades in the large `"people`'s school`" `-like place. 
+There I was [/ the best] in math. Then we moved and I went to [/ the 
+elitist school], where my friends behaved like little children 
+and they wanted to be doctors and pilots and yes, they became 
+those. There they didn`'t even bother to teach. They just kept 
+the limit too high to motivate them to do something impossible. 
+That was so ugly that I [/ wanted] to change to more liberal school, 
+where people didn`'t even bother to try to do the math. Now in 
+university, I have only those [/ elitist] and entitlement teachers 
+left, who keeps the price of the title high. Basically they exploit 
+the fact that there is no real comptetition to make good learning 
+material in good price, and they can just throw the bone to the 
+most difficult maze and say `"[/ go fetch it]`", instead of providing 
+comprehensive material with included solutions, so that they 
+could be analyzed and the whole structure of things could be 
+observed and solving problems could be optimized. It`'s like 
+there is a artifical limit to prevent people learning more in 
+the sake of their elitist social entitlement program. What I 
+have done with my computer science attitude, is that I searched 
+the automation to all math problems, including statistics and 
+differential equations, which made me also to understand the 
+math behind it all. However, [/ the evil teacher] actually did 
+put to exam [_ only problems without automated solution] (all exception 
+cases)[* ,] and he continues to do it, essentially stripping off 
+all my motivation. So basically he does huge effort to prevent 
+this method to work and he tries to make old`-school math heads 
+look better than they deserve. So, I am stuck with that old`-school 
+devil who actually actively targets my method to prevent it to 
+work. He is literally so bad, that his statistical exercises 
+includes proving, that `"[/ punishing children with violence improves 
+their learning]`". It`'s fucking unbelieveable to have that kind 
+of teacher in an university and this doesn`'t even come from 
+some [/ `"leftist safe`-space student`"]. It`'s really medieval.&]
+[s0;%- ]]

@@ -25,6 +25,9 @@ void CoreIO::IO(const ValueBase& base) {
 	else if (base.data_type == ValueBase::INDYN_) {
 		inputs.Add();
 	}
+	else if (base.data_type == ValueBase::INSLOW_) {
+		inputs.Add();
+	}
 	else if (base.data_type == ValueBase::OUT_) {
 		Output& out = outputs.Add();
 		out.phase = base.phase;
@@ -101,6 +104,10 @@ void CoreIO::StoreCache() {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
 			out % v;
 		}
+		else if (p.data_type == ValueBase::PERS_QUERYTABLE_) {
+			QueryTable& v = *(QueryTable*)p.data;
+			out % v;
+		}
 		else Panic("Invalid datatype");
 	}
 	
@@ -168,6 +175,10 @@ void CoreIO::LoadCache() {
 		}
 		else if (p.data_type == ValueBase::PERS_INTMAP_) {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
+			in % v;
+		}
+		else if (p.data_type == ValueBase::PERS_QUERYTABLE_) {
+			QueryTable& v = *(QueryTable*)p.data;
 			in % v;
 		}
 		else Panic("Invalid datatype");

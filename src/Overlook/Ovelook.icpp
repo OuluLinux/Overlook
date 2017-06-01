@@ -5,14 +5,10 @@ NAMESPACE_UPP
 
 INITBLOCK {
 	
-	
 	// Generic ctrls
 	
 	// BASESYSTEM MUST BE FIRST TO REGISTER ALWAYS
 	Factory::Register<BaseSystem, BaseSystemCtrl>("Base system");
-	
-	
-	
 	
 	
 	// Cores and ctrls...
@@ -23,14 +19,7 @@ INITBLOCK {
 	Factory::Register<DataBridge, GraphGroupCtrl>("DataBridge");
 	Factory::Register<VirtualNode, GraphGroupCtrl>("VirtualNode");
 	Factory::Register<SymbolSource, GraphGroupCtrl>("SymbolSource");
-	
-	Factory::Register<BridgeAskBid, GraphGroupCtrl>("BridgeAskBid");
-	Factory::Register<SpreadStats, GraphGroupCtrl>("Spread Statistics");
-	Factory::Register<SpreadMeanProfit, GraphGroupCtrl>("SpreadMeanProfit");
 	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
-	//Factory::Register<IdealOrders, GraphGroupCtrl>("Ideal order signal");
-	
-	
 	Factory::Register<MovingAverage, GraphGroupCtrl>("Moving average");
 	Factory::Register<MovingAverageConvergenceDivergence, GraphGroupCtrl>("Moving Average Convergence/Divergence");
 	Factory::Register<AverageDirectionalMovement, GraphGroupCtrl>("Average Directional Movement");
@@ -68,41 +57,16 @@ INITBLOCK {
 	Factory::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
 	Factory::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
 	Factory::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
-	Factory::Register<ParallelSymLR, GraphGroupCtrl>("Parallel Sym-LR");
-	Factory::Register<ParallelSymLREdge, GraphGroupCtrl>("Parallel Sym-LR Edge");
+	Factory::Register<Edge, GraphGroupCtrl>("Edge");
+	Factory::Register<Ideal, GraphGroupCtrl>("Ideal");
+	Factory::Register<Custom, GraphGroupCtrl>("Custom");
+	Factory::Register<Feature, GraphGroupCtrl>("Feature");
+	Factory::Register<Channel, GraphGroupCtrl>("Channel");
+	Factory::Register<SlowTarget, GraphGroupCtrl>("SlowTarget");
+	Factory::Register<Average, GraphGroupCtrl>("Average");
+	Factory::Register<Trending, GraphGroupCtrl>("Trending");
+	Factory::Register<Agent, GraphGroupCtrl>("Agent");
 	
-	Factory::Register<FeatureDetector, GraphGroupCtrl>("Feature Detector");
-	
-	Factory::Register<WdayHourChanges, GraphGroupCtrl>("WdayHour changes");
-	Factory::Register<WdayHourStats, GraphGroupCtrl>("WdayHour statistics");
-	Factory::Register<WdayHourDiff, GraphGroupCtrl>("WdayHour slow/fast difference");
-	Factory::Register<WeekStats, GraphGroupCtrl>("Week Stats");
-	Factory::Register<WdayHourTrending, GraphGroupCtrl>("Wday Hour Trending");
-	Factory::Register<WdayHourTrendSuccess, GraphGroupCtrl>("Wday Hour Trend Success");
-	Factory::Register<FeatureOsc, GraphGroupCtrl>("Feature Oscillator");
-	Factory::Register<ChannelPredicter, GraphGroupCtrl>("Max/Min channel predicter");
-	
-	
-	Factory::Register<QueryTableForecaster, GraphGroupCtrl>("QueryTable forecaster");
-	Factory::Register<QueryTableHugeForecaster, GraphGroupCtrl>("Huge QueryTable forecaster");
-	/*Factory::Register<QueryTableMetaForecaster, ForecasterCombCtrl>("QueryTable meta-forecaster");
-	Factory::Register<QueryTableAgent, AgentCtrl>("QueryTable agent");
-	Factory::Register<QueryTableHugeAgent, AgentCtrl>("Huge QueryTable agent");
-	Factory::Register<QueryTableMetaAgent, AgentCombCtrl>("QueryTable meta-agent");
-	Factory::Register<QueryTableDoubleAgent, AgentCombCtrl>("QueryTable double-agent");*/
-	
-	/*
-	Factory::Register<AutoEncoder>();
-	Factory::Register<Recurrent>();
-	Factory::Register<::Factory::NARX>();
-	Factory::Register<Forecaster>();
-	Factory::Register<ClassifierAgent>();
-	Factory::Register<RLAgent>();
-	Factory::Register<::Factory::DQNAgent>();
-	Factory::Register<MonaAgent>();
-	Factory::Register<MonaMetaAgent>();
-	Factory::Register<MonaDoubleAgent>();
-	*/
 	int c = Factory::GetRegs().GetCount();
 	ASSERT(Factory::GetRegs().GetCount());
 }

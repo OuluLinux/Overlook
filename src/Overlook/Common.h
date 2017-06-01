@@ -194,6 +194,47 @@ String HexVector(const Vector<T>& vec) {
 	return s;
 }
 
+inline Color Silver() {return Color(192, 192, 192);}
+inline Color Wheat() {return Color(245, 222, 179);}
+inline Color LightSeaGreen() {return Color(32, 178, 170);}
+inline Color YellowGreen() {return Color(154, 205, 50);}
+inline Color Lime() {return Color(0, 255, 0);}
+inline Color DodgerBlue() {return Color(30, 144, 255);}
+inline Color SaddleBrown() {return Color(139, 69, 19);}
+inline Color Pink() {return Color(255, 192, 203);}
+inline Color RainbowColor(double progress) {
+    int div = progress * 6;
+    int ascending = (int) (progress * 255);
+    int descending = 255 - ascending;
+
+    switch (div)
+    {
+        case 0:
+            return Color(255, ascending, 0);
+        case 1:
+            return Color(descending, 255, 0);
+        case 2:
+            return Color(0, 255, ascending);
+        case 3:
+            return Color(0, descending, 255);
+        case 4:
+            return Color(ascending, 0, 255);
+        default: // case 5:
+            return Color(255, 0, descending);
+    }
+}
+
+inline int IncreaseMonthTS(int ts) {
+	Time t(1970,1,1);
+	int64 epoch = t.Get();
+	t += ts;
+	int year = t.year;
+	int month = t.month;
+	month++;
+	if (month == 13) {year++; month=1;}
+	return Time(year,month,1).Get() - epoch;
+}
+
 }
 
 #endif

@@ -12,14 +12,14 @@ struct RegisterInput : Moveable<RegisterInput> {
 	String ToString() const {return ValueType(phase, type, scale).ToString() + Format(" input_type=%d data=%X", input_type, (int64)data);}
 };
 
-enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC};
+enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_SLOWER};
 
 struct ValueBase {
 	int phase, type, scale, count, visible, data_type;
 	const char* s0;
 	void* data;
 	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
-	enum {IN_, INOPT_, INDYN_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_};
+	enum {IN_, INOPT_, INDYN_, INSLOW_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_, PERS_QUERYTABLE_};
 };
 
 struct ValueRegister {
@@ -39,16 +39,16 @@ struct FactoryValueRegister : public ValueRegister, Moveable<FactoryValueRegiste
 	
 	virtual void IO(const ValueBase& base) {
 		if (base.data_type == ValueBase::IN_) {
-			//in.Add(ValueType(base.phase, base.type, base.scale));
 			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_NORMAL, NULL));
 		}
 		else if (base.data_type == ValueBase::INOPT_) {
-			//inopt.Add(ValueType(base.phase, base.type, base.scale));
 			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_OPTIONAL, NULL));
 		}
 		else if (base.data_type == ValueBase::INDYN_) {
-			//indyn.Add(ValueType(base.phase, base.type, SymTf));
 			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_DYNAMIC, base.data));
+		}
+		else if (base.data_type == ValueBase::INSLOW_) {
+			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_SLOWER, NULL));
 		}
 		else if (base.data_type == ValueBase::OUT_) {
 			out.Add(ValueType(base.phase, base.type, base.scale));

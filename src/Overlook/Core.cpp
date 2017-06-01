@@ -197,7 +197,11 @@ void Core::SetPoint(double d) {
 
 
 BarData* Core::GetBarData() {
-	return dynamic_cast<BarData*>(GetInputCore(0, GetSymbol(), GetTimeframe()));
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		BarData* bd = dynamic_cast<BarData*>(GetInputCore(i, GetSymbol(), GetTimeframe()));
+		if (bd) return bd;
+	}
+	return Get<BarData>();
 }
 
 double Core::Open ( int shift ) {
@@ -207,17 +211,17 @@ double Core::Open ( int shift ) {
 
 double Core::Low( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 1).Get(shift);
 }
 
 double Core::High( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 2).Get(shift);
 }
 
 double Core::Volume ( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
+	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 3).Get(shift);
 }
 
 int Core::HighestHigh(int period, int shift) {

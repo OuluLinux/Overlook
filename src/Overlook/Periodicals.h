@@ -1,8 +1,11 @@
+#if 0
+
 #ifndef _Overlook_Periodicals_h_
 #define _Overlook_Periodicals_h_
 
 
 namespace Overlook {
+
 
 
 class WdayHourChanges : public Core {
@@ -170,4 +173,5 @@ public:
 
 }
 
+#endif
 #endif

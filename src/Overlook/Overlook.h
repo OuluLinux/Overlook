@@ -41,7 +41,7 @@ protected:
 	Core* prev_core;
 	TimeCallback tc;
 	
-	Prioritizer user, optimizer;
+	Prioritizer user, optimizer, realtime;
 	
 	void SetView();
 	void Configure();

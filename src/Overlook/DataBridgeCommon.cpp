@@ -6,7 +6,17 @@ DataBridgeCommon::DataBridgeCommon() {
 	inited = false;
 	port = 0;
 	sym_count = -1;
-	
+	cursor = 0;
+}
+
+void DataBridgeCommon::CheckInit(DataBridge* db) {
+	if (!IsInited()) {
+		lock.Enter();
+		if (!IsInited()) {
+			Init(db);
+		}
+		lock.Leave();
+	}
 }
 
 void DataBridgeCommon::Init(DataBridge* db) {
@@ -31,6 +41,14 @@ void DataBridgeCommon::Init(DataBridge* db) {
 			int tf = mt.GetTimeframe(i);
 			if (tf >= base_mtf)
 				tfs.Add(tf);
+		}
+		
+		// Get maximum of 6 chars strings to match src symbols
+		short_ids.Clear();
+		data.SetCount(sym_count);
+		for(int i = 0; i < sym_count; i++) {
+			const String& sym = mt.GetSymbol(i).name;
+			short_ids.Add( sym.GetCount() > 6 ? sym.Left(6) : sym );
 		}
 		
 		DownloadRemoteData();
@@ -177,6 +195,54 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	
 	LOG("DataBridgeCommon::DownloadRemoteFile: " << out.GetSize() << " bytes for " << remote_path << " took " << ts.ToString());
 	return 0;
+}
+
+void DataBridgeCommon::RefreshAskBidData() {
+	lock.Enter();
+	
+	// 3 second update interval is enough...
+	if (since_last_askbid_refresh.Elapsed() < 3000 && cursor > 0) {
+		lock.Leave();
+		return;
+	}
+		
+	// Open askbid-file
+	String local_askbid_file = ConfigFile("askbid.bin");
+	FileIn src(local_askbid_file);
+	ASSERTEXC(src.IsOpen() && src.GetSize());
+	int data_size = src.GetSize();
+	
+	src.Seek(cursor);
+	
+	int struct_size = 4 + 6 + 8 + 8;
+	String src_id;
+	while ((cursor + struct_size) <= data_size) {
+		int timestamp;
+		src.Get(&timestamp, 4);
+		
+		src_id = "";
+		for(int i = 0; i < 6; i++) {
+			char c;
+			src.Get(&c, 1);
+			if (!c) {
+				src.SeekCur(6-1-i);
+				break;
+			}
+			src_id.Cat(c);
+		}
+		int i = short_ids.Find(src_id);
+		ASSERT(i != -1);
+		Vector<AskBid>& data = this->data[i];
+		AskBid& ab = data.Add();
+		ab.a = TimeFromTimestamp(timestamp);
+		src.Get(&ab.b, 8); // ask
+		src.Get(&ab.c, 8); // bid
+		cursor += struct_size;
+	}
+	
+	since_last_askbid_refresh.Reset();
+	
+	lock.Leave();
 }
 
 }

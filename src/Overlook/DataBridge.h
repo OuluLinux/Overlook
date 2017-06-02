@@ -10,19 +10,26 @@ class DataBridgeCommon {
 protected:
 	friend class DataBridge;
 	
+	typedef Tuple3<Time, double, double> AskBid;
+	Vector<Vector<AskBid> > data;
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	Vector<double> points;
+	Index<String> short_ids;
 	String account_server;
 	String addr;
+	TimeStop since_last_askbid_refresh;
 	int port;
 	int sym_count;
+	int cursor;
 	bool connected;
 	bool inited;
 	
+	void RefreshAskBidData();
+	void Init(DataBridge* db);
 public:
 	DataBridgeCommon();
-	void Init(DataBridge* db);
+	void CheckInit(DataBridge* db);
 	
 	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
 	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}

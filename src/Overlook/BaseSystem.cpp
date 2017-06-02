@@ -174,6 +174,12 @@ int64 BaseSystem::GetShiftFromTimeTf(int timestamp, int tf) {
 	int64 timediff = timestamp - begin_ts[tf];
 	return (int64)(timediff / periods[tf] / base_period);
 }
+
+int64 BaseSystem::GetShiftFromTimeTf(const Time& t, int tf) {
+	int64 timediff = t.Get() - begin[tf].Get();
+	return (int64)(timediff / periods[tf] / base_period);
+}
+
 /*
 int64 BaseSystem::GetShift(int src_period, int dst_period, int shift) {
 	int64 timediff = shift * src_period; //		* base_period

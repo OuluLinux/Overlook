@@ -48,6 +48,7 @@ public:
 	//int64 GetShiftFromTime(int timestamp, int period);
 	int64 GetShiftTf(int src_tf, int dst_tf, int shift);
 	int64 GetShiftFromTimeTf(int timestamp, int tf);
+	int64 GetShiftFromTimeTf(const Time& t, int tf);
 	//int GetTfFromSeconds(int period_seconds);
 	
 	//void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}

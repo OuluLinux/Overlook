@@ -48,6 +48,8 @@ void DataBridge::Init() {
 
 void DataBridge::Start() {
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	common.CheckInit(this);
+	
 	int sym_count = common.GetSymbolCount();
 	
 	// Regular symbols
@@ -71,6 +73,10 @@ void DataBridge::RefreshFromAskBid() {
 	Buffer& spread_buf = GetBuffer(4);
 		
 	BaseSystem& bs = GetBaseSystem();
+	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	
+	common.RefreshAskBidData();
+	
 	int id = GetSymbol();
 	int tf = GetTimeframe();
 	int bars = GetBars();
@@ -101,51 +107,19 @@ void DataBridge::RefreshFromAskBid() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	// Open askbid-file
-	String local_askbid_file = ConfigFile("askbid.bin");
-	FileIn src(local_askbid_file);
-	ASSERTEXC(src.IsOpen() && src.GetSize());
-	int data_size = src.GetSize();
+	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
+	spread_qt.Reserve(data.GetCount());
 	
-	src.Seek(cursor);
-	
-	
-	
-	
-	// TODO: common askbid source and spread_qt.Reserve
-	
-	
-	
-	int struct_size = 4 + 6 + 8 + 8;
-	
-	while ((cursor + struct_size) <= data_size) {
-		int timestamp;
-		double ask, bid;
-		src.Get(&timestamp, 4);
+	for(; cursor < data.GetCount(); cursor++) {
 		
-		bool equal = true;
-		for(int i = 0; i < 6; i++) {
-			char c;
-			src.Get(&c, 1);
-			if (!c) {
-				src.SeekCur(6-1-i);
-				break;
-			}
-			if (!equal) continue;
-			if (c != id_chr[i])
-				equal = false;
-		}
-		if (!equal) {
-			src.SeekCur(8+8);
-			cursor += struct_size;
-			continue;
-		}
-		src.Get(&ask, 8);
-		src.Get(&bid, 8);
-		cursor += struct_size;
+		// Get local references
+		const DataBridgeCommon::AskBid& askbid = data[cursor];
+		const Time& t = askbid.a;
+		const double& ask = askbid.b;
+		const double& bid = askbid.c;
 		
 		
-		Time t = TimeFromTimestamp(timestamp);
+		// Get shift in data from time
 		int h, d, dh;
 		if (force_d0) {
 			h = 0;
@@ -156,10 +130,10 @@ void DataBridge::RefreshFromAskBid() {
 			d = DayOfWeek(t) - 1;
 			dh = h + d * h_count;
 		}
-		int shift = bs.GetShiftFromTimeTf(timestamp, tf);
+		int shift = bs.GetShiftFromTimeTf(t, tf);
 		
 		
-		// Add row
+		// Add data row to spread querytable
 		int row = spread_qt.GetCount();
 		spread_qt.SetCount(row+1);
 		
@@ -220,6 +194,8 @@ void DataBridge::RefreshFromAskBid() {
 	}
 	DUMPM(stats);*/
 	
+	bool five_mins = GetMinutePeriod() < 5;
+	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double spread = 0;
@@ -230,6 +206,15 @@ void DataBridge::RefreshFromAskBid() {
 		int minute = t.minute;
 		
 		
+		// Find min/max
+		double diff = i ? open_buf.Get(i) - open_buf.Get(i-1) : 0.0;
+		int step = diff / point;
+		if (step >= 0) median_max_map.GetAdd(step, 0)++;
+		else median_min_map.GetAdd(step, 0)++;
+		if (step > max_value) max_value = step;
+		if (step < min_value) min_value = step;
+		
+		
 		// Get spread value
 		spread_qt.ClearQuery();
 		int pos = 1;
@@ -237,7 +222,7 @@ void DataBridge::RefreshFromAskBid() {
 		spread_qt.SetQuery(pos++, hour);
 		spread_qt.SetQuery(pos++, minute / 5);
 		double average_diff_point = spread_qt.QueryAverage(0);
-		double diff = average_diff_point * point;
+		diff = average_diff_point * point;
 		spread_buf.Set(i, diff);
 		
 		
@@ -258,13 +243,16 @@ void DataBridge::RefreshFromAskBid() {
 		volume_buf.Set(i, average_volume);
 		
 		
-		// Find min/max
-		diff = i ? open_buf.Get(i) - open_buf.Get(i-1) : 0.0;
-		int step = diff / point;
-		if (step >= 0) median_max_map.GetAdd(step, 0)++;
-		else median_min_map.GetAdd(step, 0)++;
-		if (step > max_value) max_value = step;
-		if (step < min_value) min_value = step;
+		// Make 1M tf faster
+		if (five_mins && (minute % 5) == 0) {
+			int end = i + 5;
+			SetSafetyLimit(end);
+			for(int j = i+1; j < end && j < bars; j++) {
+				spread_buf.Set(j, diff);
+				volume_buf.Set(j, average_volume);
+			}
+			i += 4;
+		}
 	}
 	
 	RefreshMedian();
@@ -307,13 +295,6 @@ void DataBridge::RefreshMedian() {
 
 void DataBridge::RefreshFromHistory() {
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
-	if (!common.IsInited()) {
-		common.lock.Enter();
-		if (!common.IsInited()) {
-			common.Init(this);
-		}
-		common.lock.Leave();
-	}
 	
 	MetaTrader& mt = GetMetaTrader();
 	BaseSystem& bs = GetBaseSystem();
@@ -452,8 +433,10 @@ void DataBridge::RefreshFromHistory() {
 	RefreshMedian();
 	
 	// Fill volume querytable
-	volume_qt.Reserve(count);
-	for(int i = 0; i < count; i++) {
+	bool five_mins = GetMinutePeriod() < 5;
+	int steps = five_mins ? 5 : 1;
+	volume_qt.Reserve(count / steps);
+	for(int i = 0; i < count; i += steps) {
 		Time t = bs.GetTimeTf(tf, i);
 		int row = volume_qt.GetCount();
 		volume_qt.SetCount(row+1);

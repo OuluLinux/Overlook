@@ -81,8 +81,9 @@ struct InDynamic : public ValueBase {
 	InDynamic(int phase, int type, FilterFunction fn) {this->phase = phase; this->type = type; this->scale = scale; data_type = INDYN_; data = (void*)fn;}
 };
 
-struct InSlower : public ValueBase {
-	InSlower() {data_type = INSLOW_;}
+struct InHigherPriority : public ValueBase {
+	InHigherPriority() {data_type = INHIGHPRIO_; data = NULL;}
+	InHigherPriority(FilterFunction fn) {data_type = INHIGHPRIO_; data = (void*)fn;}
 };
 
 struct Out : public ValueBase {

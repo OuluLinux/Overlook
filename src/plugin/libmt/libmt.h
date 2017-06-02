@@ -312,7 +312,7 @@ struct Symbol : public Moveable<Symbol> {
 };
 
 struct Currency : Moveable<Currency> {
-	Vector<int> pairs0, pairs1;
+	Index<int> pairs0, pairs1;
 	String name;
 };
 

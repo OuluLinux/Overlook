@@ -14,7 +14,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };

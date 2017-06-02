@@ -49,13 +49,18 @@ void DataBridge::Init() {
 void DataBridge::Start() {
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	int sym_count = common.GetSymbolCount();
-	if (GetSymbol() >= sym_count)
-		return;
 	
-	if (GetCounted() == 0)
-		RefreshFromHistory();
+	// Regular symbols
+	if (GetSymbol() < sym_count) {
+		if (GetCounted() == 0)
+			RefreshFromHistory();
+		RefreshFromAskBid();
+	}
 	
-	RefreshFromAskBid();
+	// Generated symbols
+	else {
+		RefreshVirtualNode();
+	}
 }
 
 void DataBridge::RefreshFromAskBid() {
@@ -70,9 +75,13 @@ void DataBridge::RefreshFromAskBid() {
 	int tf = GetTimeframe();
 	int bars = GetBars();
 	int counted = GetCounted();
-	String id_str = bs.GetSymbol(id).Left(6);
 	ASSERTEXC(id >= 0);
 	double half_point = point * 0.5;
+	
+	String id_str = bs.GetSymbol(id).Left(6);
+	char id_chr[6] = {0,0,0,0,0,0};
+	for(int i = 0; i < id_str.GetCount(); i++)
+		id_chr[i] = id_str[i];
 	
 	// Allocate memory
 	ASSERT(bars > 0);
@@ -114,13 +123,19 @@ void DataBridge::RefreshFromAskBid() {
 		double ask, bid;
 		src.Get(&timestamp, 4);
 		
-		String askbid_id;
+		bool equal = true;
 		for(int i = 0; i < 6; i++) {
 			char c;
 			src.Get(&c, 1);
-			askbid_id.Cat(c);
+			if (!c) {
+				src.SeekCur(6-1-i);
+				break;
+			}
+			if (!equal) continue;
+			if (c != id_chr[i])
+				equal = false;
 		}
-		if (id_str != askbid_id) {
+		if (!equal) {
 			src.SeekCur(8+8);
 			cursor += struct_size;
 			continue;
@@ -474,6 +489,105 @@ void DataBridge::RefreshFromHistory() {
 		count++;
 	}
 	
+}
+
+void DataBridge::RefreshVirtualNode() {
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	BaseSystem& bs = GetBaseSystem();
+	MetaTrader& mt = GetMetaTrader();
+	int sym_count = mt.GetSymbolCount();
+	int cur = GetSymbol() - sym_count;
+	if (cur < 0)
+		return;
+	ASSERT(cur >= 0 && cur < mt.GetCurrencyCount());
+	
+	int bars = GetBars();
+	ASSERT(bars > 0);
+	for(int i = 0; i < outputs.GetCount(); i++)
+		for(int j = 0; j < outputs[i].buffers.GetCount(); j++)
+			outputs[i].buffers[j].value.SetCount(bars, 0);
+		
+	const Currency& c = mt.GetCurrency(cur);
+	int tf = GetTimeframe();
+	
+	typedef Tuple3<ConstBuffer*,ConstBuffer*,bool> Source;
+	Vector<Source> sources;
+	for(int i = 0; i < c.pairs0.GetCount(); i++) {
+		int id = c.pairs0[i];
+		ConstBuffer& open_buf = GetInputBuffer(1,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(1,id,tf,3);
+		sources.Add(Source(&open_buf, &vol_buf, false));
+	}
+	for(int i = 0; i < c.pairs1.GetCount(); i++) {
+		int id = c.pairs1[i];
+		ConstBuffer& open_buf = GetInputBuffer(1,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(1,id,tf,3);
+		sources.Add(Source(&open_buf, &vol_buf, true));
+	}
+	
+	int counted = GetCounted();
+	if (!counted) {
+		open.Set(0, 1.0);
+		low.Set(0, 1.0);
+		high.Set(0, 1.0);
+		volume.Set(0, 0);
+		counted = 1;
+	}
+	else counted--;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double change_sum = 0;
+		double volume_sum = 0;
+		
+		for(int j = 0; j < sources.GetCount(); j++) {
+			Source& s = sources[j];
+			ConstBuffer& open_buf = *s.a;
+			ConstBuffer& vol_buf  = *s.b;
+			bool inverse = s.c;
+			
+			double open   = open_buf.Get(i-1);
+			double close  = open_buf.Get(i);
+			double vol    = vol_buf.Get(i);
+			double change = open != 0.0 ? (close / open) - 1.0 : 0.0;
+			if (inverse) change *= -1.0;
+			
+			change_sum += change;
+			volume_sum += vol;
+		}
+		
+		double prev = open.Get(i-1);
+		double change = change_sum / sources.GetCount();
+		double value = prev * (1.0 + change);
+		double volume_av = volume_sum / sources.GetCount();
+		
+		open.Set(i, value);
+		low.Set(i, value);
+		high.Set(i, value);
+		volume.Set(i, volume_av);
+		
+		//LOG(Format("pos=%d open=%f volume=%f", i, value, volume_av));
+		
+		if (i) {
+			low		.Set(i-1, Upp::min(low		.Get(i-1), value));
+			high	.Set(i-1, Upp::max(high		.Get(i-1), value));
+		}
+		
+		
+		// Find min/max
+		double diff = i ? open.Get(i) - open.Get(i-1) : 0.0;
+		int step = diff / point;
+		if (step >= 0) median_max_map.GetAdd(step, 0)++;
+		else median_min_map.GetAdd(step, 0)++;
+		if (diff > max_value) max_value = diff;
+		if (diff < min_value) min_value = diff;
+	}
+	
+	RefreshMedian();
 }
 
 int DataBridge::GetChangeStep(int shift, int steps) {

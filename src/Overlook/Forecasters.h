@@ -14,7 +14,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -30,7 +30,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -50,7 +50,7 @@ public:
 		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
 			% InDynamic(IndiPhase, RealChangeValue, &FilterFunction)
 			% InDynamic(IndiPhase, CorrelationValue, &FilterFunctionSym)
-			% InSlower()
+			% InHigherPriority()
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf, 6, 6)
 			% Arg("Correlation period", corr_period);
@@ -79,7 +79,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -95,7 +95,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -111,7 +111,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -127,7 +127,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -143,7 +143,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };
@@ -159,7 +159,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
-			% InSlower()
+			% InHigherPriority()
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
 	}
 };

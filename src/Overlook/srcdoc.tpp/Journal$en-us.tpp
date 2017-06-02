@@ -866,11 +866,11 @@ try to use their slower timeframe instance as input, and they
 must try to work in the fastest timeframe, in which they are 
 the proxy of slower tf or they use their own calculations if 
 it`'s better. It seems complicated now, but the result should 
-simple. I did something similar with the SubTf and MetaTf indicators, 
-which tracked the `"progress`" of expected volatily in comparison 
-to longer period. Those indicators are useless now, but they 
-were the precursor of this model. I should make them work again 
-for historical reasons only.&]
+be simple. I did something similar with the SubTf and MetaTf 
+indicators, which tracked the `"progress`" of expected volatily 
+in comparison to longer period. Those indicators are useless 
+now, but they were the precursor of this model. I should make 
+them work again for historical reasons only.&]
 [s0;%- Looks like I get better performance comparison to my master`'s 
 thesis now. The description is much simpler now: everything was 
 designed with the minimum system (query`-table and decision trees) 

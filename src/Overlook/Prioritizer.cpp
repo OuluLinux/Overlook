@@ -193,8 +193,8 @@ void Prioritizer::CreateCombination() {
 			const Vector<IntPair>& inputs = part.input_src[j];
 			if (inputs.IsEmpty()) {
 				const RegisterInput& input = Factory::GetRegs()[i].in[j];
-				if (input.input_type == REGIN_SLOWER) {
-					LOG("         (same class, slower tf instances)");
+				if (input.input_type == REGIN_HIGHPRIO) {
+					LOG("         (same class, higher priority instances)");
 				}
 				else {
 					LOG("        ERROR: input not found: " << part.inputs[j].ToString());
@@ -302,200 +302,6 @@ void Prioritizer::Process(JobItem& ji) {
 	ji.core->StoreCache();
 	
 }
-
-void Prioritizer::CreateJobCore(JobItem& ji) {
-	ASSERT(ji.core == NULL);
-	const CombinationPart& part = combparts[ji.factory];
-	Vector<int> enabled_input_factories;
-	Vector<byte> unique_slot_comb;
-	
-	
-	// Create core-object
-	ji.core = Factory::GetCtrlFactories()[ji.factory].b();
-	
-	// Set attributes
-	ji.core->base = &bs;
-	ji.core->factory = ji.factory;
-	ji.core->RefreshIO();
-	ji.core->SetUnique(ji.unique);
-	ji.core->SetSymbol(ji.sym);
-	ji.core->SetTimeframe(ji.tf, bs.GetPeriod(ji.tf));
-	ji.core->LoadCache();
-	
-	// Connect input sources
-	// Loop all inputs of the custom core-class
-	for (int l = 0; l < part.input_src.GetCount(); l++) {
-		const RegisterInput& input = part.inputs[l];
-		FilterFunction fn = (FilterFunction)input.data;
-		
-		bool input_all_sym = input.scale == Sym || input.scale == All;
-		bool input_all_tf  = input.scale == Tf  || input.scale == All;
-		bool input_dynamic = input.input_type == REGIN_DYNAMIC && fn != NULL;
-		bool input_slower = input.input_type == REGIN_SLOWER;
-		
-		// Loop possible sources for one input
-		const Vector<IntPair>& input_src = part.input_src[l];
-		#ifdef flagDEBUG
-		int src_count = 0; // count enabled sources for debugging (1 is correct)
-		int enabled_count = 0; // exactly one must be enabled
-		#endif
-		enabled_input_factories.SetCount(0);
-		for (int m = 0; m < input_src.GetCount(); m++) {
-			
-			// Check if source is enabled
-			const IntPair& src = input_src[m]; // src.a = factory, src.b = it's output id
-			int src_enabled_bit = GetBitCore(ji.factory, l, m);
-			bool src_enabled = ReadBit(ji.value, src_enabled_bit);
-			if (!src_enabled) continue;
-			
-			#ifdef flagDEBUG
-			int bit = InputToEnabled(src_enabled_bit);
-			int enabled_bit = GetBitEnabled(src.a);
-			ASSERT(bit == enabled_bit);
-			ASSERT(ReadBit(ji.value, bit));
-			#endif
-			
-			enabled_count++;
-			enabled_input_factories.Add(src.a);
-			/*DUMP(src);
-			
-			if (ji.factory == 2) {
-				LOG("");
-			}*/
-			
-			// Create unique combination for current input source factory
-			CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
-			ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
-			
-			
-			// Search source and loop existing job queue
-			bool found = false;
-			int input_count = 0;
-			bool is_one_input_only = !input_all_sym && !input_all_tf && !input_dynamic && !input_slower;
-			bool is_many_to_many_exceptions_allowed = input_all_sym && input_all_tf;
-			for (int n = 0; n < job_queue.GetCount(); n++) {
-				JobItem& src_ji = job_queue[n];
-				
-				/*LOG(src_ji.factory << " != " << src.a << "\t" <<
-					src_ji.sym << " != " << ji.sym << "\t" <<
-					src_ji.tf << " != " << ji.tf);*/
-				
-				// Factory must match
-				if (src_ji.factory != src.a) continue;
-				
-				
-				// With dynamic input, only the return value of the filter function matters.
-				if (input_dynamic) {
-					bool keep = fn(&bs, ji.sym, ji.tf, src_ji.sym, src_ji.tf);
-					if (!keep) continue;
-				}
-				// With slower tf inputs, all slower tfs are kept
-				else if (input_slower) {
-					if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
-					if (src_ji.tf <= ji.tf) continue;
-				}
-				// Normally, only symbol & timeframe are being matched.
-				else {
-					// If input takes all sym&tf, the symbol doesn't need to match
-					// If source gives all sym&tf, the symbol doesn't need to match
-					if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
-					if (!input_all_tf  && !src_ji.all_tf  && src_ji.tf  != ji.tf ) continue;
-				}
-				
-				bool equal = true;
-				for (int o = 0; o < job_combination_bytes; o++) {
-					if (unique_slot_comb[o] != src_ji.value[o]) {
-						equal = false;
-						break;
-					}
-				}
-				if (!equal)	{
-					/*LOG("DIFFERENT COMBOS");
-					LOG("SRC:");
-					LOG(GetCombinationString(ji.value));
-					LOG("A:");
-					LOG(GetCombinationString(unique_slot_comb));
-					LOG("B:");
-					LOG(GetCombinationString(src_ji.value));*/
-					continue;
-				}
-				
-				#ifdef flagDEBUG
-				// Check for multiple types of inputs
-				if (!is_many_to_many_exceptions_allowed &&
-					!is_one_input_only &&
-					(src_ji.all_sym || src_ji.all_tf) &&
-					input_count > 0)
-					Panic("ERROR: multiple many-to-many or one-to-many, but input can take only one");
-				#endif
-				
-				
-				// Source found
-				ASSERT(src_ji.core);
-				ji.core->AddInput(l, src_ji.sym, src_ji.tf, *src_ji.core, src.b);
-				
-				
-				input_count++;
-				found = true;
-				if (is_one_input_only)
-					break;
-			}
-			ASSERT_(is_one_input_only || input_count > 1 || input_dynamic, "Couldn't find multiple inputs");
-			
-			if (found) {
-				// Catch invalid combinations
-				#ifdef flagDEBUG
-				src_count++;
-				#endif
-				break;
-			}
-		}
-		#ifdef flagDEBUG
-		if (enabled_count == 0) {
-			LOG("Combination:");
-			LOG(GetCombinationString(ji.value));
-			DUMPC(job_queue);
-			/*LOG("Checking all source pipeline combinations");
-			for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
-				const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
-				CheckCombination(pi.value);
-			}*/
-		}
-		ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
-		ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
-		if (src_count == 0 && !input_dynamic) {
-			//LOG(GetCombinationString(ci.value));
-			String inputs = "\"";
-			for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
-				if (i) inputs.Cat(',');
-				inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
-			}
-			inputs << "\"";
-			Panic("Creating object \"" +
-				Factory::GetCtrlFactories()[ji.factory].a +
-				"\" and can't find any of " +
-				inputs +
-				" inputs.");
-			ASSERT_(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
-		}
-		#endif
-	}
-	
-	//ji.core->SetArguments(*args);
-	
-	// Initialize
-	ji.core->InitAll();
-	
-}
-
-
-
-
-
-
-
-
-
 
 bool Prioritizer::IsBegin() const {
 	return results.GetCount() < 100; // TODO: fix
@@ -986,6 +792,10 @@ void Prioritizer::RefreshCoreQueue() {
 			if (input.input_type == REGIN_DYNAMIC) {
 				has_dynamic[i] = true;
 			}
+			// Also higher priority inputs with filter functions are dynamic inputs
+			else if (input.input_type == REGIN_HIGHPRIO && input.data) {
+				has_dynamic[i] = true;
+			}
 		}
 	}
 	
@@ -1009,10 +819,10 @@ void Prioritizer::RefreshCoreQueue() {
 			const RegisterInput& in = reg.in[j];
 			
 			Index<int> add_sym, add_tf;
+			FilterFunction filter = (FilterFunction)in.data;
 			
-			if (in.input_type == REGIN_DYNAMIC) {
-				FilterFunction filter = (FilterFunction)in.data;
-				
+			// Dynamic input or higher priority input with filter function
+			if (in.input_type == REGIN_DYNAMIC || (filter && in.input_type == REGIN_HIGHPRIO)) {
 				for(int k = 0; k < ci.symlist.GetCount(); k++) {
 					int sym = ci.symlist[k];
 					for(int l = 0; l < sym_count; l++) {
@@ -1031,7 +841,7 @@ void Prioritizer::RefreshCoreQueue() {
 					}
 				}
 			}
-			else if (in.input_type == REGIN_SLOWER) {
+			else if (in.input_type == REGIN_HIGHPRIO) {
 				add_sym <<= ci.symlist;
 				add_tf  <<= ci.tflist;
 				int slowest_tf = INT_MAX;
@@ -1055,62 +865,94 @@ void Prioritizer::RefreshCoreQueue() {
 			if (add_sym.IsEmpty() && add_tf.IsEmpty())
 				continue;
 			
-			int factory_id = -1;
-			const Vector<IntPair>& input_src = part.input_src[j];
-			for(int k = 0; k < input_src.GetCount(); k++) {
-				int src_enabled_bit = GetBitCore(ci.factory, j, k);
-				if (ReadBit(ci.value, src_enabled_bit)) {
-					factory_id = EnabledToFactory(InputToEnabled(src_enabled_bit));
-					break;
-				}
-			}
-			ASSERT_(factory_id != -1, "Some input must be enabled");
-			
-			Vector<byte> unique_slot_comb;
-			CreateUniqueCombination(ci.value, factory_id, unique_slot_comb);
-			
-			bool found = false;
-			int prev_slot_queue_count = process_slot_queue.GetCount();
-			for(int k = 0; k < i; k++) {
-				CoreItem& src_ci = slot_queue[k];
-				const CombinationPart& part_cmp = combparts[src_ci.factory];
-				
-				bool equal = true;
-				for (int o = 0; o < job_combination_bytes; o++) {
-					if (unique_slot_comb[o] != src_ci.value[o]) {
-						equal = false;
-						break;
-					}
-				}
-				if (!equal)	continue;
-				
-				found = true;
+			// With higher priority input, changes are being committed to current CoreItem
+			if (in.input_type == REGIN_HIGHPRIO) {
+				CoreItem& ci = slot_queue[i]; // take the 'const' off for this
 				bool reprocess = false;
 				for(int l = 0; l < add_sym.GetCount(); l++) {
 					int sym = add_sym[l];
-					int m = src_ci.symlist.Find(sym);
+					int m = ci.symlist.Find(sym);
 					if (m == -1) {
-						src_ci.symlist.Add(sym);
+						ci.symlist.Add(sym);
 						reprocess = true;
 					}
 				}
-				
 				for(int l = 0; l < add_tf.GetCount(); l++) {
 					int tf = add_tf[l];
-					int m = src_ci.tflist.Find(tf);
+					int m = ci.tflist.Find(tf);
 					if (m == -1) {
-						src_ci.tflist.Add(tf);
+						ci.tflist.Add(tf);
 						reprocess = true;
 					}
 				}
-				
 				if (reprocess) {
-					process_slot_queue.Insert(prev_slot_queue_count, k); // last must be lowest. avoid sorting with this
+					// Add the same position to the queue again
+					process_slot_queue.Add(i); // last must be lowest. avoid sorting with this
 				}
-				
-				break;
 			}
-			ASSERT(found);
+			// With regular inputs, changes are being committed to some different class queue-item
+			else {
+				int factory_id = -1;
+				
+				// Find enabled factory
+				const Vector<IntPair>& input_src = part.input_src[j];
+				for(int k = 0; k < input_src.GetCount(); k++) {
+					int src_enabled_bit = GetBitCore(ci.factory, j, k);
+					if (ReadBit(ci.value, src_enabled_bit)) {
+						factory_id = EnabledToFactory(InputToEnabled(src_enabled_bit));
+						break;
+					}
+				}
+				ASSERT_(factory_id != -1, "Some input must be enabled");
+				
+				// Create unique identifier which can be used to match correct item in the queue
+				Vector<byte> unique_slot_comb;
+				CreateUniqueCombination(ci.value, factory_id, unique_slot_comb);
+				
+				// Search queue for matching item
+				bool found = false;
+				int prev_slot_queue_count = process_slot_queue.GetCount();
+				for(int k = 0; k < i; k++) {
+					CoreItem& src_ci = slot_queue[k];
+					const CombinationPart& part_cmp = combparts[src_ci.factory];
+					
+					bool equal = true;
+					for (int o = 0; o < job_combination_bytes; o++) {
+						if (unique_slot_comb[o] != src_ci.value[o]) {
+							equal = false;
+							break;
+						}
+					}
+					if (!equal)	continue;
+					
+					found = true;
+					bool reprocess = false;
+					for(int l = 0; l < add_sym.GetCount(); l++) {
+						int sym = add_sym[l];
+						int m = src_ci.symlist.Find(sym);
+						if (m == -1) {
+							src_ci.symlist.Add(sym);
+							reprocess = true;
+						}
+					}
+					
+					for(int l = 0; l < add_tf.GetCount(); l++) {
+						int tf = add_tf[l];
+						int m = src_ci.tflist.Find(tf);
+						if (m == -1) {
+							src_ci.tflist.Add(tf);
+							reprocess = true;
+						}
+					}
+					
+					if (reprocess) {
+						process_slot_queue.Insert(prev_slot_queue_count, k); // last must be lowest. avoid sorting with this
+					}
+					
+					break; // TODO: check this or change Insert(prev_slot_queue_count... --> Add(
+				}
+				ASSERT(found);
+			}
 		}
 		
 	}
@@ -1132,6 +974,19 @@ void Prioritizer::RefreshJobQueue() {
 	for(int i = 0; i < slot_queue.GetCount(); i++) {
 		CoreItem& ci = slot_queue[i];
 		const CombinationPart& part = combparts[ci.factory];
+		
+		// Core-object-swap tends to work only with fixed inputs, not with dynamic.
+		// This is probably because of dynamic input connections breaks somehow.
+		// TODO: fix core-object-swap with dynamic inputs
+		bool has_dynamic_inputs = false;
+		for(int i = 0; i < part.inputs.GetCount(); i++) {
+			const RegisterInput& input = part.inputs[i];
+			bool input_dynamic = (input.input_type == REGIN_DYNAMIC && input.data != NULL) || (input.input_type == REGIN_HIGHPRIO && input.data != NULL);
+			if (input_dynamic) {
+				has_dynamic_inputs = true;
+				break;
+			}
+		}
 		
 		// Get unique string and trim it
 		String unique, unique_long = HexVector(ci.value);
@@ -1182,40 +1037,42 @@ void Prioritizer::RefreshJobQueue() {
 				
 				// Search existing job-queue for existing core-object.
 				bool found = false;
-				for (int l = 0; l < old_job_queue.GetCount(); l++) {
-					JobItem& old_ji = old_job_queue[l];
-					
-					// Symbol and timeframe must match. (works also for sym/tf/all types)
-					if (old_ji.sym != sym || old_ji.tf != tf) continue;
-					
-					// Try to match the unique combination
-					bool equal = true;
-					for(int i = 0; i < job_combination_bytes; i++) {
-						if (old_ji.value[i] != ji.value[i]) {
-							equal = false;
-							break;
+				if (!has_dynamic_inputs) {
+					for (int l = 0; l < old_job_queue.GetCount(); l++) {
+						JobItem& old_ji = old_job_queue[l];
+						
+						
+						// Symbol and timeframe must match. (works also for sym/tf/all types)
+						if (old_ji.sym != sym || old_ji.tf != tf) continue;
+						
+						// Try to match the unique combination
+						bool equal = true;
+						for(int i = 0; i < job_combination_bytes; i++) {
+							if (old_ji.value[i] != ji.value[i]) {
+								equal = false;
+								break;
+							}
 						}
+						if (!equal) continue;
+						
+						// JobItem is equal. Move the core-object pointer.
+						// Assume that dependencies are being moved also, because their slot should
+						// be enabled with the same combination.
+						ji.core = old_ji.core;
+						old_ji.core = NULL;
+						
+						found = true;
 					}
-					if (!equal) continue;
-					
-					// JobItem is equal. Move the core-object pointer.
-					// Assume that dependencies are being moved also, because their slot should
-					// be enabled with the same combination.
-					ji.core = old_ji.core;
-					old_ji.core = NULL;
-					
-					found = true;
 				}
 				
 				// If old object wasn't found, create core-object and initialize it
 				if (!found) {
-					
-					//LOG("Create " << Factory::GetCtrlFactories()[ji.factory].a);
-					
 					// Link permanentcore-object
 					if (ji.factory == 0) {
 						// Link BaseSystem object
 						ji.core = &bs;
+					} else {
+						ASSERT(ji.core == NULL);
 					}
 				}
 			}
@@ -1270,7 +1127,7 @@ bool Prioritizer::CheckCombination(const Vector<byte>& comb) {
 			}
 			if (!enabled_count) {
 				const RegisterInput& input = Factory::GetRegs()[i].in[j];
-				if (input.input_type == REGIN_SLOWER) continue;
+				if (input.input_type == REGIN_HIGHPRIO) continue;
 				
 				LOG("ERROR: No enabled sources");
 				return false;
@@ -1417,6 +1274,215 @@ String Prioritizer::GetCombinationString(const Vector<byte>& vec) {
 	}
 	
 	return s;
+}
+
+void Prioritizer::CreateJobCore(JobItem& ji) {
+	ASSERT(ji.core == NULL);
+	const CombinationPart& part = combparts[ji.factory];
+	Vector<int> enabled_input_factories;
+	Vector<byte> unique_slot_comb;
+	
+	
+	// Create core-object
+	ji.core = Factory::GetCtrlFactories()[ji.factory].b();
+	
+	// Set attributes
+	ji.core->base = &bs;
+	ji.core->factory = ji.factory;
+	ji.core->RefreshIO();
+	ji.core->SetUnique(ji.unique);
+	ji.core->SetSymbol(ji.sym);
+	ji.core->SetTimeframe(ji.tf, bs.GetPeriod(ji.tf));
+	ji.core->LoadCache();
+	
+	// Connect input sources
+	// Loop all inputs of the custom core-class
+	for (int l = 0; l < part.input_src.GetCount(); l++) {
+		const RegisterInput& input = part.inputs[l];
+		bool input_dynamic = (input.input_type == REGIN_DYNAMIC && input.data != NULL) || (input.input_type == REGIN_HIGHPRIO && input.data != NULL);
+		
+		// For higher priority inputs, the only source is this same factory
+		if (input.input_type == REGIN_HIGHPRIO) {
+			ASSERT_(part.outputs.GetCount(), "The class must have at least one output to connect it as input.");
+			int found_inputs = ConnectFactory(l, 0, input, ji, ji.factory);
+		}
+		// Normally loop possible sources for one input
+		else {
+			const Vector<IntPair>& input_src = part.input_src[l];
+			#ifdef flagDEBUG
+			int src_count = 0; // count enabled sources for debugging (1 is correct)
+			int enabled_count = 0; // exactly one must be enabled
+			#endif
+			enabled_input_factories.SetCount(0);
+			for (int m = 0; m < input_src.GetCount(); m++) {
+				
+				// Check if source is enabled
+				const IntPair& src = input_src[m]; // src.a = factory, src.b = it's output id
+				int src_enabled_bit = GetBitCore(ji.factory, l, m);
+				bool src_enabled = ReadBit(ji.value, src_enabled_bit);
+				if (!src_enabled) continue;
+				
+				#ifdef flagDEBUG
+				int bit = InputToEnabled(src_enabled_bit);
+				int enabled_bit = GetBitEnabled(src.a);
+				ASSERT(bit == enabled_bit);
+				ASSERT(ReadBit(ji.value, bit));
+				#endif
+				
+				enabled_count++;
+				enabled_input_factories.Add(src.a);
+				/*DUMP(src);
+				
+				if (ji.factory == 2) {
+					LOG("");
+				}*/
+				
+				// Create unique combination for current input source factory
+				CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
+				ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
+				
+				int found_inputs = ConnectFactory(l, src.b, input, ji, src.a, &unique_slot_comb);
+				
+				if (found_inputs) {
+					// Catch invalid combinations
+					#ifdef flagDEBUG
+					src_count++;
+					#endif
+					break;
+				}
+			}
+			#ifdef flagDEBUG
+			if (enabled_count == 0) {
+				LOG("Combination:");
+				LOG(GetCombinationString(ji.value));
+				DUMPC(job_queue);
+				/*LOG("Checking all source pipeline combinations");
+				for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
+					const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
+					CheckCombination(pi.value);
+				}*/
+			}
+			ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
+			ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
+			if (src_count == 0 && input.input_type == REGIN_DYNAMIC) {
+				//LOG(GetCombinationString(ci.value));
+				String inputs = "\"";
+				for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
+					if (i) inputs.Cat(',');
+					inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
+				}
+				inputs << "\"";
+				Panic("Creating object \"" +
+					Factory::GetCtrlFactories()[ji.factory].a +
+					"\" and can't find any of " +
+					inputs +
+					" inputs.");
+				ASSERT_(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
+			}
+			#endif
+		}
+	}
+	
+	//ji.core->SetArguments(*args);
+	
+	// Initialize
+	ji.core->InitAll();
+	
+}
+
+int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb) {
+	FilterFunction fn = (FilterFunction)input.data;
+	bool input_all_sym = input.scale == Sym || input.scale == All;
+	bool input_all_tf  = input.scale == Tf  || input.scale == All;
+	bool input_dynamic = (input.input_type == REGIN_DYNAMIC && fn != NULL) || (input.input_type == REGIN_HIGHPRIO && fn != NULL);
+	bool input_highprio = input.input_type == REGIN_HIGHPRIO;
+	
+	// Search source and loop existing job queue
+	bool found = false;
+	int input_count = 0;
+	bool is_one_input_only = !input_all_sym && !input_all_tf && !input_dynamic && !input_highprio;
+	bool is_many_to_many_exceptions_allowed = input_all_sym && input_all_tf;
+	for (int n = 0; n < job_queue.GetCount(); n++) {
+		JobItem& src_ji = job_queue[n];
+		
+		/*LOG(src_ji.factory << " != " << src.a << "\t" <<
+			src_ji.sym << " != " << ji.sym << "\t" <<
+			src_ji.tf << " != " << ji.tf);*/
+		
+		// Factory must match
+		if (src_ji.factory != factory) continue;
+		
+		
+		// With dynamic input, only the return value of the filter function matters.
+		if (input_dynamic) {
+			bool keep = fn(&bs, ji.sym, ji.tf, src_ji.sym, src_ji.tf);
+			if (!keep) continue;
+		}
+		// With higher priority inputs, higher priority instances of the same class are connected:
+		else if (input_highprio) {
+			// Without filter function
+			//  - slower tf inputs has higher priority, all slower tfs are kept
+			if (!fn) {
+				if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
+				if (src_ji.tf <= ji.tf) continue;
+			}
+			// With filter function
+			else {
+				bool keep = fn(&bs, ji.sym, ji.tf, src_ji.sym, src_ji.tf);
+				if (!keep) continue;
+			}
+		}
+		// Normally, only symbol & timeframe are being matched.
+		else {
+			// If input takes all sym&tf, the symbol doesn't need to match
+			// If source gives all sym&tf, the symbol doesn't need to match
+			if (!input_all_sym && !src_ji.all_sym && src_ji.sym != ji.sym) continue;
+			if (!input_all_tf  && !src_ji.all_tf  && src_ji.tf  != ji.tf ) continue;
+		}
+		
+		bool equal = true;
+		if (unique_slot_comb) {
+			for (int o = 0; o < job_combination_bytes; o++) {
+				if ((*unique_slot_comb)[o] != src_ji.value[o]) {
+					equal = false;
+					break;
+				}
+			}
+		}
+		if (!equal)	{
+			/*LOG("DIFFERENT COMBOS");
+			LOG("SRC:");
+			LOG(GetCombinationString(ji.value));
+			LOG("A:");
+			LOG(GetCombinationString(unique_slot_comb));
+			LOG("B:");
+			LOG(GetCombinationString(src_ji.value));*/
+			continue;
+		}
+		
+		#ifdef flagDEBUG
+		// Check for multiple types of inputs
+		if (!is_many_to_many_exceptions_allowed &&
+			!is_one_input_only &&
+			(src_ji.all_sym || src_ji.all_tf) &&
+			input_count > 0)
+			Panic("ERROR: multiple many-to-many or one-to-many, but input can take only one");
+		#endif
+		
+		
+		// Source found
+		ASSERT(src_ji.core);
+		ji.core->AddInput(input_id, src_ji.sym, src_ji.tf, *src_ji.core, output_id);
+		
+		
+		input_count++;
+		found = true;
+		if (is_one_input_only)
+			break;
+	}
+	ASSERT_(is_one_input_only || input_count > 1 || input_dynamic, "Couldn't find multiple inputs");
+	
+	return input_count;
 }
 
 }

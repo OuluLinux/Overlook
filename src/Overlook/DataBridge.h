@@ -53,6 +53,7 @@ class DataBridge : public BarData {
 	
 	void RefreshFromHistory();
 	void RefreshFromAskBid();
+	void RefreshVirtualNode();
 	void RefreshMedian();
 public:
 	typedef DataBridge CLASSNAME;
@@ -61,7 +62,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, TimeValue, SymTf)
-			% Out(SourcePhase, DataBridgeValue, SymTf, 5, 3)
+			% InHigherPriority(&FilterFunction)
+			% Out(SourcePhase, RealValue, SymTf, 5, 3)
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(spread_qt) % Persistent(volume_qt)
 			% Persistent(max_value) % Persistent(min_value)
@@ -77,77 +79,30 @@ public:
 	double GetMedianMax() const {return median_max * point;}
 	double GetMedianMin() const {return median_min * point;}
 	
-};
-
-class VirtualNode : public BarData {
-	VectorMap<int,int> median_max_map, median_min_map;
-	double point;
-	int median_max, median_min;
-	int max_value, min_value;
-	
-public:
-	typedef VirtualNode CLASSNAME;
-	VirtualNode();
-	~VirtualNode();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % InDynamic(SourcePhase, DataBridgeValue, &FilterFunction)
-			% Out(SourcePhase, VirtualNodeValue, SymTf, 5, 3)
-			% Persistent(max_value) % Persistent(min_value)
-			% Persistent(median_max) % Persistent(median_min) % Persistent(median_max_map) % Persistent(median_min_map);
-	}
-	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf == out_tf;
 		MetaTrader& mt = GetMetaTrader();
 		int sym_count = mt.GetSymbolCount();
-		int cur = in_sym - sym_count;
-		if (cur < 0)
+		
+		// Never add timeframes
+		if (in_sym == -1)
 			return false;
+		
+		// Never for regular symbols
+		if (in_sym < sym_count)
+			return false;
+		
+		// Never for irregular input symbols
 		if (out_sym >= sym_count)
 			return false;
+		
+		// Get virtual symbol
+		int cur = in_sym - sym_count;
 		const Currency& c = mt.GetCurrency(cur);
-		for(int i = 0; i < c.pairs0.GetCount(); i++)
-			if (c.pairs0[i] == out_sym)
-				return true;
-		for(int i = 0; i < c.pairs1.GetCount(); i++)
-			if (c.pairs1[i] == out_sym)
-				return true;
+		if (c.pairs0.Find(out_sym) != -1 || c.pairs1.Find(out_sym) != -1)
+			return true; // add pair sources add inputs
+		
 		return false;
 	}
-	
-	virtual void Init();
-	virtual void Start();
-	
-	double GetMax() const {return max_value * point;}
-	double GetMin() const {return min_value * point;}
-	double GetMedianMax() const {return median_max * point;}
-	double GetMedianMin() const {return median_min * point;}
-	
-};
-
-class SymbolSource : public BarData {
-	double max_value, min_value, median_max, median_min;
-	
-public:
-	typedef SymbolSource CLASSNAME;
-	SymbolSource();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, DataBridgeValue, SymTf)
-			% In(SourcePhase, VirtualNodeValue, SymTf)
-			% Out(SourcePhase, RealValue, SymTf, 5, 3);
-	}
-	
-	double GetMax() const {return max_value;}
-	double GetMin() const {return min_value;}
-	double GetMedianMax() const {return median_max;}
-	double GetMedianMin() const {return median_min;}
 };
 
 

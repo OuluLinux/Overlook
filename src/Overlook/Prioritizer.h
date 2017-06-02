@@ -127,7 +127,6 @@ public:
 	int factory;
 	int sym, tf;
 	bool all_sym, all_tf;
-	
 };
 
 class Prioritizer {
@@ -147,6 +146,7 @@ protected:
 	void VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& comb);
 	void VisitCombination(Combination& com, Vector<int>& factory_queue);
 	bool CheckCombination(const Vector<byte>& comb);
+	int  ConnectFactory(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb=NULL);
 public:
 	void CreateNormal();
 	void CreateSingle(int main_fac_id, int sym_id, int tf_id);

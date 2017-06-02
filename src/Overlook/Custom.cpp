@@ -86,9 +86,9 @@ void Custom::Start() {
 		for (int tf = 0; tf < tf_count; tf++) {
 			int i = sym * tf_count + tf;
 			bufs[i] = &GetInputBuffer(0, sym, tf + thistf, 0);
-			SymbolSource& ss = *dynamic_cast<SymbolSource*>(GetInputCore(0, sym, tf + thistf));
-			double max_change = ss.GetMedianMax() * 2;
-			double min_change = ss.GetMedianMin() * 2;
+			DataBridge& db = *dynamic_cast<DataBridge*>(GetInputCore(0, sym, tf + thistf));
+			double max_change = db.GetMedianMax() * 2;
+			double min_change = db.GetMedianMin() * 2;
 			double diff = max_change - min_change;
 			//LOG(Format("i=%d sym=%d tf=%d max=%f min=%f diff=%f", i, sym, tf, max_change, min_change, diff));
 			max_changes[i] = max_change;

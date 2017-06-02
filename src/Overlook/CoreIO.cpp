@@ -25,7 +25,7 @@ void CoreIO::IO(const ValueBase& base) {
 	else if (base.data_type == ValueBase::INDYN_) {
 		inputs.Add();
 	}
-	else if (base.data_type == ValueBase::INSLOW_) {
+	else if (base.data_type == ValueBase::INHIGHPRIO_) {
 		inputs.Add();
 	}
 	else if (base.data_type == ValueBase::OUT_) {

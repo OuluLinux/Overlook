@@ -45,8 +45,6 @@ file
 	DataBridge.h,
 	DataBridgeCommon.cpp,
 	DataBridge.cpp,
-	VirtualNode.cpp,
-	SymbolSource.cpp,
 	ValueChange.cpp,
 	Indicators.h,
 	Indicators.cpp,

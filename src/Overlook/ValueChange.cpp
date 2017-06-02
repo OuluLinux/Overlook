@@ -54,11 +54,11 @@ void ValueChange::Start() {
 	const Buffer& open				= GetInputBuffer(0, 0);
 	const Buffer& low				= GetInputBuffer(0, 1);
 	const Buffer& high				= GetInputBuffer(0, 2);
-	const Buffer& spread			= GetInputBuffer(1, 0);
-	ConstBuffer* proxy_spread		= has_proxy ? &GetInputBuffer(1, proxy_id, GetTimeframe(), 0) : 0;
+	const Buffer& spread			= GetInputBuffer(0, 4);
 	ConstBuffer* proxy_open			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 0) : 0;
 	ConstBuffer* proxy_low			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 1) : 0;
 	ConstBuffer* proxy_high			= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 2) : 0;
+	ConstBuffer* proxy_spread		= has_proxy ? &GetInputBuffer(0, proxy_id, GetTimeframe(), 4) : 0;
 	Buffer& change					= GetBuffer(0);
 	Buffer& value_change			= GetBuffer(1);
 	Buffer& low_change				= GetBuffer(2);

@@ -18,7 +18,7 @@ DataBridge::~DataBridge()  {
 }
 
 void DataBridge::Init() {
-	spread_qt.AddColumn("Spread points", 1024);
+	spread_qt.AddColumn("Spread points", 4096);
 	spread_qt.EndTargets();
 	spread_qt.AddColumn("Wday",			7);
 	spread_qt.AddColumn("Hour",			24);
@@ -54,9 +54,10 @@ void DataBridge::Start() {
 	
 	// Regular symbols
 	if (GetSymbol() < sym_count) {
-		if (GetCounted() == 0)
+		bool init_round = GetCounted() == 0;
+		if (init_round)
 			RefreshFromHistory();
-		RefreshFromAskBid();
+		RefreshFromAskBid(init_round);
 	}
 	
 	// Generated symbols
@@ -65,7 +66,7 @@ void DataBridge::Start() {
 	}
 }
 
-void DataBridge::RefreshFromAskBid() {
+void DataBridge::RefreshFromAskBid(bool init_round) {
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
 	Buffer& high_buf = GetBuffer(2);
@@ -196,6 +197,42 @@ void DataBridge::RefreshFromAskBid() {
 	
 	bool five_mins = GetMinutePeriod() < 5;
 	
+	
+	// Fill missing spread data. Set spread value based on querytable at the first refresh.
+	if (init_round) {
+		double prev_spread = 0;
+		for(int i = 0; i < counted; i += 5) {
+			Time t = bs.GetTimeTf(tf, i);
+			int dow = DayOfWeek(t);
+			int hour = t.hour;
+			int minute = t.minute;
+			
+			// Set spread value
+			spread_qt.ClearQuery();
+			int pos = 1;
+			spread_qt.SetQuery(pos++, dow);
+			spread_qt.SetQuery(pos++, hour);
+			spread_qt.SetQuery(pos++, minute / 5);
+			double average_diff_point = spread_qt.QueryAverage(0);
+			double diff = average_diff_point * point;
+			if (diff == 0)
+				diff = prev_spread;
+			else
+				prev_spread = diff;
+			spread_buf.Set(i, diff);
+			
+			
+			// Make it faster
+			int end = i + 5;
+			SetSafetyLimit(end);
+			for(int j = i+1; j < end && j < bars; j++) {
+				spread_buf.Set(j, diff);
+			}
+		}
+	}
+	
+	// Fill spread and volume data based on query table (actual data would be better, though)
+	double prev_spread = 0;
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double spread = 0;
@@ -215,21 +252,10 @@ void DataBridge::RefreshFromAskBid() {
 		if (step < min_value) min_value = step;
 		
 		
-		// Get spread value
-		spread_qt.ClearQuery();
-		int pos = 1;
-		spread_qt.SetQuery(pos++, dow);
-		spread_qt.SetQuery(pos++, hour);
-		spread_qt.SetQuery(pos++, minute / 5);
-		double average_diff_point = spread_qt.QueryAverage(0);
-		diff = average_diff_point * point;
-		spread_buf.Set(i, diff);
-		
-		
-		// Get volume value
+		// Set volume value
 		int i0 = GetChangeStep(i, 16);
 		volume_qt.ClearQuery();
-		pos = 1;
+		int pos = 1;
 		if (!slow_volume) {
 			volume_qt.SetQuery(pos++, dow);
 			volume_qt.SetQuery(pos++, hour);
@@ -241,6 +267,21 @@ void DataBridge::RefreshFromAskBid() {
 		}
 		double average_volume = volume_qt.QueryAverage(0);
 		volume_buf.Set(i, average_volume);
+		
+		
+		// Set spread value
+		spread_qt.ClearQuery();
+		pos = 1;
+		spread_qt.SetQuery(pos++, dow);
+		spread_qt.SetQuery(pos++, hour);
+		spread_qt.SetQuery(pos++, minute / 5);
+		double average_diff_point = spread_qt.QueryAverage(0);
+		diff = average_diff_point * point;
+		if (diff == 0)
+			diff = prev_spread;
+		else
+			prev_spread = diff;
+		spread_buf.Set(i, diff);
 		
 		
 		// Make 1M tf faster

@@ -42,6 +42,7 @@ INITBLOCK {
 	Factory::Register<ValueAndVolumeTrend, GraphGroupCtrl>("Value And Volume Trend");
 	Factory::Register<OnBalanceVolume, GraphGroupCtrl>("On Balance Volume");
 	Factory::Register<Volumes, GraphGroupCtrl>("Volumes");
+	Factory::Register<Spreads, GraphGroupCtrl>("Spreads");
 	Factory::Register<AcceleratorOscillator, GraphGroupCtrl>("Accelerator Oscillator");
 	Factory::Register<GatorOscillator, GraphGroupCtrl>("Gator Oscillator");
 	Factory::Register<AwesomeOscillator, GraphGroupCtrl>("Awesome Oscillator");
@@ -55,10 +56,11 @@ INITBLOCK {
 	Factory::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
 	Factory::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
 	Factory::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
+	Factory::Register<TrendChange, GraphGroupCtrl>("TrendChange");
+	Factory::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
 	Factory::Register<Edge, GraphGroupCtrl>("Edge");
 	Factory::Register<Ideal, GraphGroupCtrl>("Ideal");
 	Factory::Register<Custom, GraphGroupCtrl>("Custom");
-	Factory::Register<Feature, GraphGroupCtrl>("Feature");
 	Factory::Register<Channel, GraphGroupCtrl>("Channel");
 	Factory::Register<SlowTarget, GraphGroupCtrl>("SlowTarget");
 	Factory::Register<Average, GraphGroupCtrl>("Average");

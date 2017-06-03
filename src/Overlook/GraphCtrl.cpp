@@ -100,10 +100,17 @@ void GraphCtrl::Paint(Draw& draw) {
 	div = group->GetWidthDivider();
 	shift = group->GetShift();
 	
-	int max_right_offset = 10;
-	int right_offset = (this->right_offset ? Upp::max(max_right_offset - shift, 0) : 0);
+	// Enable offset
+	int max_future_bars = 0;
+	for(int i = 0; i < src.GetCount(); i++)
+		max_future_bars = Upp::max(max_future_bars, src[i]->GetFutureBars());
+	
+	// Set shift with right offset
+	int max_right_offset = Upp::max(max_future_bars, 10);
+	int right_offset = (this->right_offset || max_future_bars ? Upp::max(max_right_offset - shift, 0) : 0);
 	shift = Upp::max(shift - max_right_offset, 0);
 	
+	// Get real count of bars in the screen
 	real_screen_count = (GetRect().GetWidth() - right_off - 2 * border) / div;
 	count = real_screen_count - right_offset;
     latest_screen_count = count;

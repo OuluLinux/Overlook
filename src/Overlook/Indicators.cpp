@@ -1995,7 +1995,46 @@ void Volumes::Start() {
 	else counted--;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		buffer.Set(i, Volume(i-1));
+		buffer.Set(i, Volume(i));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Spreads::Spreads() {
+	
+}
+
+void Spreads::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetBufferStyle(0, DRAW_HISTOGRAM);
+	SetBufferLabel(0,"Spread");
+}
+
+void Spreads::Start() {
+	Buffer& buffer = GetBuffer(0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (!counted) counted++;
+	else counted--;
+	ConstBuffer& spread_buf = GetInputBuffer(0, 4);
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		buffer.Set(i, spread_buf.Get(i));
 	}
 }
 
@@ -3394,6 +3433,221 @@ void CorrelationOscillator::Start() {
 		j++;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TrendChange::TrendChange() {
+	period = 13;
+	method = 0;
+	SetCoreSeparateWindow();
+}
+
+void TrendChange::Init() {
+	int draw_begin;
+	if (period < 2)
+		period = 13;
+	draw_begin = period - 1;
+	
+	SetBufferColor(0, Red());
+	SetBufferBegin(0, draw_begin );
+	
+	AddSubCore<MovingAverage>().Set("period", period).Set("method", method);
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+	SetCoreLevelsColor(GrayColor(192));
+	SetCoreLevelsStyle(STYLE_DOT);
+}
+
+void TrendChange::Start() {
+	Buffer& buffer = GetBuffer(0);
+	
+	int bars = GetBars();
+	if ( bars <= period )
+		throw DataExc();
+	
+	int counted = GetCounted();
+	if ( counted < 0 )
+		throw DataExc();
+	
+	if ( counted > 0 )
+		counted--;
+	
+	// The newest part can't be evaluated. Only after 'shift' amount of time.
+	int shift = period / 2;
+	counted = Upp::max(0, counted - shift);
+	//bars -= shift;
+	
+	// Calculate averages
+	ConstBuffer& dbl = At(0).GetBuffer(0);
+	
+	// Prepare values for loop
+	SetSafetyLimit(counted);
+	double prev1 = dbl.Get(Upp::max(0, counted-1));
+	double prev2 = dbl.Get(Upp::max(0, counted-1+shift));
+	double prev_value = counted > 0 ? buffer.Get(counted-1) : 0;
+	double prev_diff = counted > 1 ? prev_value - buffer.Get(counted-2) : 0;
+	
+	// Loop unprocessed range of time
+	for(int i = counted; i < bars-shift; i++) {
+		SetSafetyLimit(i);
+		
+		// Calculate values
+		double d1 = dbl.Get(i);
+		double d2 = dbl.Get(i+shift);
+		double diff1 = d1 - prev1;
+		double diff2 = d2 - prev2;
+		double value = diff1 * diff2;
+		double diff = value - prev_value;
+		
+		// Set value
+		buffer.Set(i, value);
+		
+		// Store values for next iteration
+		prev1 = d1;
+		prev2 = d2;
+		prev_value = value;
+		prev_diff = diff;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TrendChangeEdge::TrendChangeEdge() {
+	period = 13;
+	method = 0;
+	slowing = 54;
+	SetCoreSeparateWindow();
+}
+
+void TrendChangeEdge::Init() {
+	int draw_begin;
+	if (period < 2)
+		period = 13;
+	draw_begin = period - 1;
+	
+	SetBufferColor(0, Red());
+	SetBufferBegin(0, draw_begin );
+	
+	AddSubCore<MovingAverage>().Set("period", period).Set("method", method);
+	AddSubCore<MovingAverage>().Set("period", slowing).Set("method", method).Set("offset", -slowing/2);
+}
+
+void TrendChangeEdge::Start() {
+	Buffer& buffer = GetBuffer(0);
+	Buffer& edge = GetBuffer(1);
+	Buffer& symlr = GetBuffer(2);
+	
+	int bars = GetBars();
+	if ( bars <= period )
+		throw DataExc();
+	
+	int counted = GetCounted();
+	if ( counted < 0 )
+		throw DataExc();
+	
+	if ( counted > 0 )
+		counted-=3;
+	
+	// The newest part can't be evaluated. Only after 'shift' amount of time.
+	int shift = period / 2;
+	counted = Upp::max(0, counted - shift);
+	
+	// Refresh source data
+	Core& cont = At(0);
+	Core& slowcont = At(1);
+	cont.Refresh();
+	slowcont.Refresh();
+	
+	// Prepare values for looping
+	ConstBuffer& dbl = cont.GetBuffer(0);
+	ConstBuffer& slow_dbl = slowcont.GetBuffer(0);
+	double prev_slow = slow_dbl.Get(Upp::max(0, counted-1));
+	double prev1 = dbl.Get(Upp::max(0, counted-1)) - prev_slow;
+	double prev2 = dbl.Get(Upp::max(0, counted-1+shift)) - prev_slow;
+	
+	// Calculate 'TrendChange' data locally. See info for that.
+	for(int i = counted; i < bars-shift; i++) {
+		SetSafetyLimit(i);
+		
+		double slow = slow_dbl.Get(i);
+		double d1 = dbl.Get(i) - slow;
+		double d2 = dbl.Get(i+shift) - slow;
+		double diff1 = d1 - prev1;
+		double diff2 = d2 - prev2;
+		double r1 = diff1 * diff2;
+		symlr.Set(i, r1);
+		prev1 = d1;
+		prev2 = d2;
+	}
+	
+	// Loop unprocessed area
+	for(int i = Upp::max(2, counted); i < bars - 2; i++) {
+		SetSafetyLimit(i + 2);
+		
+		// Finds local maximum value for constant range. TODO: optimize
+		double high = 0;
+		int high_pos = -1;
+		for(int j = 0; j < period; j++) {
+			int pos = i - j;
+			if (pos < 0) continue;
+			double d = fabs(symlr.Get(pos));
+			if (d > high) {
+				high = d;
+				high_pos = pos;
+			}
+		}
+		double mul = high_pos == -1 ? 0 : (high - fabs(symlr.Get(i) - 0.0)) / high;
+		
+		// Calculates edge filter value
+		double edge_value =
+			 1.0 * symlr.Get(i-2) +
+			 2.0 * symlr.Get(i-1) +
+			-2.0 * symlr.Get(i+1) +
+			-1.0 * symlr.Get(i+2);
+		
+		// Store value
+		edge.Set(i, edge_value);
+		double d = Upp::max(0.0, edge_value * mul);
+		ASSERT(IsFin(d));
+		buffer.Set(i, d);
+	}
+}
+
+
+
+
+
+
 
 
 

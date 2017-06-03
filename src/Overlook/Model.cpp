@@ -2,14 +2,14 @@
 
 namespace Overlook {
 
-Custom::Custom() {
+Model::Model() {
 	corr_period = 4;
 	max_timesteps = 3;
 	steps = 8;
 	peek = 0;
 }
 
-void Custom::Init() {
+void Model::Init() {
 	peek = 2;
 	
 	
@@ -70,7 +70,7 @@ void Custom::Init() {
 	}*/
 }
 
-void Custom::Start() {
+void Model::Start() {
 	int id = GetSymbol();
 	int thistf = GetTf();
 	int bars = GetBars();
@@ -153,7 +153,7 @@ void Custom::Start() {
 		}
 		
 		// Add previous changes in value
-		for (int sym = 0, csym = 0; sym < sym_count; sym++) {
+		/*for (int sym = 0, csym = 0; sym < sym_count; sym++) {
 			if (sym == GetSymbol()) continue; // skip this
 			ConstBuffer& buf = *bufs[sym];
 			double open = i > 0 ? buf.GetUnsafe(i-1) : 0.0;
@@ -178,7 +178,7 @@ void Custom::Start() {
 			qt.Set(row, pos++, v);
 			
 			csym++;
-		}
+		}*/
 		
 		// Add constant time values
 		qt.Set(row, pos++, dow);
@@ -191,7 +191,7 @@ void Custom::Start() {
 	}
 	
 	// Create decision trees
-	tree.Clear();
+	/*tree.Clear();
 	tree.SetCount(max_timesteps);
 	for(int i = 0; i < tree.GetCount(); i++)
 		qt.GetDecisionTree(i, tree[i], qt.GetCount());
@@ -216,7 +216,7 @@ void Custom::Start() {
 			double diff = fabs(predicted - correct) / steps;
 			GetBuffer(j).Set(i, diff);
 		}
-	}
+	}*/
 	
 	// Draw error oscillator
 	/*for (int i = counted; i < bars; i++) {

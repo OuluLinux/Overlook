@@ -59,7 +59,7 @@ class DataBridge : public BarData {
 	bool slow_volume, day_volume;
 	
 	void RefreshFromHistory();
-	void RefreshFromAskBid();
+	void RefreshFromAskBid(bool init_round);
 	void RefreshVirtualNode();
 	void RefreshMedian();
 public:

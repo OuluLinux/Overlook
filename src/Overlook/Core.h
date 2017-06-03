@@ -276,6 +276,7 @@ class Core : public CoreIO {
 	int next_count;
 	int period;
 	int end_offset;
+	int future_bars;
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
 	bool skip_allocate;
@@ -332,6 +333,7 @@ public:
 	int GetSymbol() const {return sym_id;}
 	int GetPeriod() const;
 	int GetVisibleCount() const {return outputs[0].visible;}
+	int GetFutureBars() const {return future_bars;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
 	BarData* GetBarData();
@@ -356,6 +358,7 @@ public:
 	void SetBufferLabel(int i, const String& s) {}
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
+	void SetFutureBars(int i) {future_bars = i;}
 	
 	// Visible main functions
 	void Refresh();

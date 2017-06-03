@@ -81,6 +81,7 @@ Core::Core()
 	point = 0.01;
 	period = 0;
 	end_offset = 0;
+	future_bars = 0;
 }
 
 Core::~Core() {
@@ -220,7 +221,7 @@ double Core::High( int shift ) {
 }
 
 double Core::Volume ( int shift ) {
-	ASSERT(shift < read_safety_limit);
+	ASSERT(shift <= read_safety_limit);
 	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 3).Get(shift);
 }
 

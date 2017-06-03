@@ -476,6 +476,21 @@ public:
 };
 
 
+class Spreads : public Core {
+	
+public:
+	Spreads();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+	}
+};
+
+
 class AcceleratorOscillator : public Core {
 	
 public:
@@ -756,6 +771,62 @@ public:
 	}
 };
 
+
+
+/*
+	TrendChange takes two box-averages, one symmetric (peeks future) and one moving average.
+	The it takes the change of average values and multiplies them:
+	 >= 0 both averages are going same direction
+	  < 0 the symmetric is changing direction, but lagging moving average is not yet
+	This data can be statistically evaluated, and periodical time of change of direction can
+	be estimated.
+*/
+class TrendChange : public Core {
+	int period;
+	int method;
+	
+protected:
+	virtual void Start();
+	
+public:
+	TrendChange();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+			% Arg("period", period)
+			% Arg("method", method);
+	}
+};
+
+/*
+	TrendChangeEdge does the edge filtering to the TrendChange.
+	The edge filter for data is the same that for images.
+	Positive peak values are when trend is changing.
+*/
+class TrendChangeEdge : public Core {
+	int period;
+	int method;
+	int slowing;
+	
+protected:
+	virtual void Start();
+	
+public:
+	TrendChangeEdge();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In(SourcePhase, RealValue, SymTf)
+			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+			% Arg("period", period)
+			% Arg("method", method)
+			% Arg("slowing", slowing);
+	}
+};
 
 }
 

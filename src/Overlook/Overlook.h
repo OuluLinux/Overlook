@@ -13,6 +13,7 @@
 
 #include "DataBridge.h"
 #include "Indicators.h"
+#include "Model.h"
 #include "Forecasters.h"
 #include "Agent.h"
 

@@ -1412,6 +1412,9 @@ int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput
 		// Factory must match
 		if (src_ji.factory != factory) continue;
 		
+		// Never lower priority
+		if (src_ji.priority > ji.priority)
+			continue;
 		
 		// With dynamic input, only the return value of the filter function matters.
 		if (input_dynamic) {
@@ -1480,7 +1483,7 @@ int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput
 		if (is_one_input_only)
 			break;
 	}
-	ASSERT_(is_one_input_only || input_count > 1 || input_dynamic, "Couldn't find multiple inputs");
+	ASSERT_(is_one_input_only || input_count > 1 || input_dynamic || input_highprio, "Couldn't find multiple inputs");
 	
 	return input_count;
 }

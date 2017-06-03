@@ -53,7 +53,8 @@ enum {
 	WdayHourTrendingValue,
 	FeatureOscValue,
 	WdayHourStatsValue,
-	CorrelationValue
+	CorrelationValue,
+	ForecastRealValue
 };
 
 enum {
@@ -99,6 +100,7 @@ struct ValueType : Moveable<ValueType> {
 			case 25: return "FeatureOscValue";
 			case 26: return "WdayHourStatsValue";
 			case 27: return "CorrelationValue";
+			case 28: return "ForecastRealValue";
 			default: return "Invalid type";
 		}
 	}
@@ -115,7 +117,7 @@ struct DataExc : public Exc {
 	
 	DataExc(String msg) : Exc(msg) {
 		#ifdef flagDEBUG
-		Panic("debug DataExc");
+		Panic(msg);
 		#endif
 	}
 };

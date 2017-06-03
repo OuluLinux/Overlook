@@ -26,7 +26,7 @@ void BaseSystem::Init() {
 	try {
 		
 		// Init sym/tfs/time space
-		ASSERTEXC(!mt.Init(addr, port));
+		ASSERTEXC_(!mt.Init(addr, port), "Can't connect to MT4. Is MT4Connection script activated in MT4?");
 		
 		// Add symbols
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {

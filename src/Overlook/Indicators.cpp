@@ -3063,7 +3063,7 @@ void LinearTimeFrames::Start() {
 	Buffer& week = GetBuffer(3);
 	int bars = GetBars();
 	int counted =  GetCounted();
-	BaseSystem& base = GetBaseSystem();
+	System& base = GetSystem();
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
@@ -3328,7 +3328,7 @@ void CorrelationOscillator::Init() {
 	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
-	sym_count = GetBaseSystem().GetSymbolCount();
+	sym_count = GetSystem().GetSymbolCount();
 	if (sym_count < 0) throw DataExc();
 	
 	SetCoreMaximum(+1.0);
@@ -3360,7 +3360,7 @@ void CorrelationOscillator::Process(int id, int output) {
 	OnlineAverage& s = averages[id];
 	
 	if (b.GetCount() == 0) {
-		LOG("CorrelationOscillator error: No data for symbol " << GetBaseSystem().GetSymbol(id));
+		LOG("CorrelationOscillator error: No data for symbol " << GetSystem().GetSymbol(id));
 		return;
 	}
 	

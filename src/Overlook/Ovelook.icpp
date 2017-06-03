@@ -5,70 +5,53 @@ NAMESPACE_UPP
 
 INITBLOCK {
 	
-	// Generic ctrls
-	
-	// BASESYSTEM MUST BE FIRST TO REGISTER ALWAYS
-	Factory::Register<BaseSystem, BaseSystemCtrl>("Base system");
-	
-	
 	// Cores and ctrls...
 	
-	// Register slots in correct dependency order!!!
-	// Earlier (upper) slots can't find later registered (lower) slots as inputs!!!
+	System::Register<DataBridge, GraphGroupCtrl>("DataBridge");
+	System::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
+	System::Register<MovingAverage, GraphGroupCtrl>("Moving average");
+	System::Register<MovingAverageConvergenceDivergence, GraphGroupCtrl>("Moving Average Convergence/Divergence");
+	System::Register<AverageDirectionalMovement, GraphGroupCtrl>("Average Directional Movement");
+	System::Register<BollingerBands, GraphGroupCtrl>("Bollinger Bands");
+	System::Register<Envelopes, GraphGroupCtrl>("Envelopes");
+	System::Register<ParabolicSAR, GraphGroupCtrl>("Parabolic SAR");
+	System::Register<StandardDeviation, GraphGroupCtrl>("Standard Deviation");
+	System::Register<AverageTrueRange, GraphGroupCtrl>("Average True Range");
+	System::Register<BearsPower, GraphGroupCtrl>("Bears Power");
+	System::Register<BullsPower, GraphGroupCtrl>("Bulls Power");
+	System::Register<CommodityChannelIndex, GraphGroupCtrl>("Commodity Channel Index");
+	System::Register<DeMarker, GraphGroupCtrl>("DeMarker");
+	System::Register<ForceIndex, GraphGroupCtrl>("Force Index");
+	System::Register<Momentum, GraphGroupCtrl>("Momentum");
+	System::Register<OsMA, GraphGroupCtrl>("OsMA");
+	System::Register<RelativeStrengthIndex, GraphGroupCtrl>("Relative Strength Index");
+	System::Register<RelativeVigorIndex, GraphGroupCtrl>("Relative Vigor Index");
+	System::Register<StochasticOscillator, GraphGroupCtrl>("Stochastic Oscillator");
+	System::Register<WilliamsPercentRange, GraphGroupCtrl>("Williams Percent Range");
+	System::Register<AccumulationDistribution, GraphGroupCtrl>("Accumulation Distribution");
+	System::Register<MoneyFlowIndex, GraphGroupCtrl>("Money Flow Index");
+	System::Register<ValueAndVolumeTrend, GraphGroupCtrl>("Value And Volume Trend");
+	System::Register<OnBalanceVolume, GraphGroupCtrl>("On Balance Volume");
+	System::Register<Volumes, GraphGroupCtrl>("Volumes");
+	System::Register<Spreads, GraphGroupCtrl>("Spreads");
+	System::Register<AcceleratorOscillator, GraphGroupCtrl>("Accelerator Oscillator");
+	System::Register<GatorOscillator, GraphGroupCtrl>("Gator Oscillator");
+	System::Register<AwesomeOscillator, GraphGroupCtrl>("Awesome Oscillator");
+	System::Register<Fractals, GraphGroupCtrl>("Fractals");
+	System::Register<FractalOsc, GraphGroupCtrl>("FractalOsc");
+	System::Register<MarketFacilitationIndex, GraphGroupCtrl>("Market Facilitation Index");
+	System::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
+	System::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
+	System::Register<LinearTimeFrames, GraphGroupCtrl>("Linear TimeFrames");
+	System::Register<SupportResistance, GraphGroupCtrl>("Support/Resistance");
+	System::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
+	System::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
+	System::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
+	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
+	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
 	
-	Factory::Register<DataBridge, GraphGroupCtrl>("DataBridge");
-	Factory::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
-	Factory::Register<MovingAverage, GraphGroupCtrl>("Moving average");
-	Factory::Register<MovingAverageConvergenceDivergence, GraphGroupCtrl>("Moving Average Convergence/Divergence");
-	Factory::Register<AverageDirectionalMovement, GraphGroupCtrl>("Average Directional Movement");
-	Factory::Register<BollingerBands, GraphGroupCtrl>("Bollinger Bands");
-	Factory::Register<Envelopes, GraphGroupCtrl>("Envelopes");
-	Factory::Register<ParabolicSAR, GraphGroupCtrl>("Parabolic SAR");
-	Factory::Register<StandardDeviation, GraphGroupCtrl>("Standard Deviation");
-	Factory::Register<AverageTrueRange, GraphGroupCtrl>("Average True Range");
-	Factory::Register<BearsPower, GraphGroupCtrl>("Bears Power");
-	Factory::Register<BullsPower, GraphGroupCtrl>("Bulls Power");
-	Factory::Register<CommodityChannelIndex, GraphGroupCtrl>("Commodity Channel Index");
-	Factory::Register<DeMarker, GraphGroupCtrl>("DeMarker");
-	Factory::Register<ForceIndex, GraphGroupCtrl>("Force Index");
-	Factory::Register<Momentum, GraphGroupCtrl>("Momentum");
-	Factory::Register<OsMA, GraphGroupCtrl>("OsMA");
-	Factory::Register<RelativeStrengthIndex, GraphGroupCtrl>("Relative Strength Index");
-	Factory::Register<RelativeVigorIndex, GraphGroupCtrl>("Relative Vigor Index");
-	Factory::Register<StochasticOscillator, GraphGroupCtrl>("Stochastic Oscillator");
-	Factory::Register<WilliamsPercentRange, GraphGroupCtrl>("Williams Percent Range");
-	Factory::Register<AccumulationDistribution, GraphGroupCtrl>("Accumulation Distribution");
-	Factory::Register<MoneyFlowIndex, GraphGroupCtrl>("Money Flow Index");
-	Factory::Register<ValueAndVolumeTrend, GraphGroupCtrl>("Value And Volume Trend");
-	Factory::Register<OnBalanceVolume, GraphGroupCtrl>("On Balance Volume");
-	Factory::Register<Volumes, GraphGroupCtrl>("Volumes");
-	Factory::Register<Spreads, GraphGroupCtrl>("Spreads");
-	Factory::Register<AcceleratorOscillator, GraphGroupCtrl>("Accelerator Oscillator");
-	Factory::Register<GatorOscillator, GraphGroupCtrl>("Gator Oscillator");
-	Factory::Register<AwesomeOscillator, GraphGroupCtrl>("Awesome Oscillator");
-	Factory::Register<Fractals, GraphGroupCtrl>("Fractals");
-	Factory::Register<FractalOsc, GraphGroupCtrl>("FractalOsc");
-	Factory::Register<MarketFacilitationIndex, GraphGroupCtrl>("Market Facilitation Index");
-	Factory::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
-	Factory::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
-	Factory::Register<LinearTimeFrames, GraphGroupCtrl>("Linear TimeFrames");
-	Factory::Register<SupportResistance, GraphGroupCtrl>("Support/Resistance");
-	Factory::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
-	Factory::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
-	Factory::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
-	Factory::Register<TrendChange, GraphGroupCtrl>("TrendChange");
-	Factory::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
-	Factory::Register<Edge, GraphGroupCtrl>("Edge");
-	Factory::Register<Ideal, GraphGroupCtrl>("Ideal");
-	Factory::Register<Custom, GraphGroupCtrl>("Custom");
-	Factory::Register<Channel, GraphGroupCtrl>("Channel");
-	Factory::Register<SlowTarget, GraphGroupCtrl>("SlowTarget");
-	Factory::Register<Average, GraphGroupCtrl>("Average");
-	Factory::Register<Trending, GraphGroupCtrl>("Trending");
-	Factory::Register<Agent, GraphGroupCtrl>("Agent");
-	
-	int c = Factory::GetRegs().GetCount();
-	ASSERT(Factory::GetRegs().GetCount());
+	int c = System::GetRegs().GetCount();
+	ASSERT(System::GetRegs().GetCount());
 }
 
 END_UPP_NAMESPACE

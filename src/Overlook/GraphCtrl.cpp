@@ -85,11 +85,11 @@ void GraphCtrl::Paint(Draw& draw) {
 	if (src.IsEmpty()) {draw.DrawRect(GetSize(), White()); return;}
 	
 	if (!base) {
-		base = &src[0]->GetBaseSystem();
+		base = &src[0]->GetSystem();
 		if (!base) {draw.DrawRect(GetSize(), White()); return;}
 	}
 	
-	BaseSystem& bs = *base;
+	System& bs = *base;
 	
 	Size sz(GetSize());
 	ImageDraw w(sz);
@@ -205,7 +205,7 @@ void GraphCtrl::Paint(Draw& draw) {
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	
-	BaseSystem& bs = *base;
+	System& bs = *base;
 	
 	int gridw, gridh, w, h, y, pos, c;
 	double diff, step;
@@ -302,7 +302,7 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	BaseSystem& bs = group->GetCore().GetBaseSystem();
+	System& bs = group->GetCore().GetSystem();
 	
 	DrawGrid(W, true);
     
@@ -369,7 +369,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 
 void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {
 	ASSERT(base);
-	BaseSystem& bs = *base;
+	System& bs = *base;
 	
 	if (draw_border) {
 		DrawGrid(W, false);

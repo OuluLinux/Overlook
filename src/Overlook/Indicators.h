@@ -764,7 +764,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		if (sym_count == -1 && base)
-			sym_count = GetBaseSystem().GetSymbolCount();
+			sym_count = GetSystem().GetSymbolCount();
 		reg % In(SourcePhase, RealValue, Sym)
 			% Out(IndiPhase, CorrelationValue, SymTf, sym_count-1, sym_count-1)
 			% Arg("period", period);

@@ -73,7 +73,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	Buffer& volume_buf = GetBuffer(3);
 	Buffer& spread_buf = GetBuffer(4);
 		
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
 	common.RefreshAskBidData();
@@ -338,7 +338,7 @@ void DataBridge::RefreshFromHistory() {
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
 	MetaTrader& mt = GetMetaTrader();
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
 	
@@ -521,7 +521,7 @@ void DataBridge::RefreshVirtualNode() {
 	Buffer& high   = GetBuffer(2);
 	Buffer& volume = GetBuffer(3);
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	int sym_count = mt.GetSymbolCount();
 	int cur = GetSymbol() - sym_count;

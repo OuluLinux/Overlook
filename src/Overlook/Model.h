@@ -16,6 +16,7 @@ class Model : public Core {
 	DecisionTreeNode tree;
 	QueryTable qt;
 	int corr_period, max_timesteps, steps, peek;
+	int arg_priority, arg_targetmode, arg_reason, arg_level;
 	
 public:
 	typedef Model CLASSNAME;
@@ -30,6 +31,13 @@ public:
 			% InHigherPriority()
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastRealValue, SymTf, 3, 3)
+			
+			// 4 main arguments
+			% Arg("Priority (moment vs probable target)", )
+			% Arg("Target (heuristic vs scheduled)", )
+			% Arg("Reason (match past vs match more probable)", )
+			% Arg("Level (low level vs high level, immediate values vs derived indicator values)", )
+			
 			% Arg("Correlation period", corr_period);
 	}
 	

@@ -39,18 +39,15 @@ void Overlook::Refresher() {
 }
 
 void Overlook::Init() {
-	user.Init();
-	optimizer.Init();
-	
-	BaseSystem& bs = user.GetBaseSystem();
+	sys.Init();
 	
 	// Init gui
-	for(int i = 0; i < bs.GetPeriodCount(); i++)
-		tflist.Add(bs.GetPeriodString(i));
-	for(int i = 0; i < bs.GetSymbolCount(); i++)
-		symlist.Add(bs.GetSymbol(i));
-	for(int i = 0; i < Factory::GetCtrlFactories().GetCount(); i++)
-		ctrllist.Add(Factory::GetCtrlFactories()[i].a);
+	for(int i = 0; i < sys.GetPeriodCount(); i++)
+		tflist.Add(sys.GetPeriodString(i));
+	for(int i = 0; i < sys.GetSymbolCount(); i++)
+		symlist.Add(sys.GetSymbol(i));
+	for(int i = 0; i < System::GetCtrlFactories().GetCount(); i++)
+		ctrllist.Add(System::GetCtrlFactories()[i].a);
 	
 	tflist.SetIndex(tflist.GetCount()-2); // TODO: clear these development values
 	symlist.SetIndex(70);
@@ -64,7 +61,7 @@ void Overlook::Deinit() {
 }
 
 void Overlook::SetView() {
-	int c = ctrllist.GetIndex();
+	/*int c = ctrllist.GetIndex();
 	int s = symlist.GetIndex();
 	int t = tflist.GetIndex();
 	
@@ -77,7 +74,7 @@ void Overlook::SetView() {
 	
 	Core* core;
 	CustomCtrl* view;
-	view = Factory::GetCtrlFactories()[c].c();
+	view = System::GetCtrlFactories()[c].c();
 	
 	// Get core-object by creating job-queue for factory/symbol/timeframe combination
 	user.CreateSingle(c, s, t);
@@ -98,11 +95,11 @@ void Overlook::SetView() {
 	
 	Add(view->VSizePos(30).HSizePos());
 	prev_view = view;
-	prev_core = core;
+	prev_core = core;*/
 }
 
 void Overlook::Configure() {
-	if (!prev_core) return;
+	/*if (!prev_core) return;
 	
 	static One<TopWindow> tw;
 	static bool save;
@@ -159,7 +156,7 @@ void Overlook::Configure() {
 		prev_core->InitAll();
 		prev_core->Refresh();
 		Refresh();
-	}
+	}*/
 }
 
 }

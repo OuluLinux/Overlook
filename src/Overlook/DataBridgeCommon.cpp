@@ -20,7 +20,7 @@ void DataBridgeCommon::CheckInit(DataBridge* db) {
 }
 
 void DataBridgeCommon::Init(DataBridge* db) {
-	BaseSystem& bs = db->GetBaseSystem();
+	System& bs = db->GetSystem();
 	addr = bs.addr;
 	port = bs.port;
 	

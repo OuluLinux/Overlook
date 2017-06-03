@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -19,8 +21,8 @@ PrioritizerCtrl::PrioritizerCtrl() {
 	pipeline_queue.AddColumn("Priority");
 	
 	process_queue.AddColumn("ID");
-	process_queue.AddColumn("Factory-ID");
-	process_queue.AddColumn("Factory-Name");
+	process_queue.AddColumn("System-ID");
+	process_queue.AddColumn("System-Name");
 	process_queue.AddColumn("Combination");
 	process_queue.AddColumn("Symbols");
 	process_queue.AddColumn("Timeframes");
@@ -28,8 +30,8 @@ PrioritizerCtrl::PrioritizerCtrl() {
 	process_queue.ColumnWidths("1 1 3 5 1 1");
 	
 	job_queue.AddColumn("ID");
-	job_queue.AddColumn("Factory-ID");
-	job_queue.AddColumn("Factory-Name");
+	job_queue.AddColumn("System-ID");
+	job_queue.AddColumn("System-Name");
 	job_queue.AddColumn("Symbol");
 	job_queue.AddColumn("Timeframe");
 	job_queue.AddColumn("Priority");
@@ -44,7 +46,7 @@ PrioritizerCtrl::PrioritizerCtrl() {
 }
 	
 void PrioritizerCtrl::RefreshData() {
-	BaseSystem& base = core->GetBaseSystem();
+	System& base = core->GetSystem();
 	Prioritizer& prio = *dynamic_cast<Prioritizer*>(core);
 	
 	
@@ -65,7 +67,7 @@ void PrioritizerCtrl::RefreshData() {
 			CoreItem& q = prio.GetCore(i);
 			process_queue.Set(i, 0, i);
 			process_queue.Set(i, 1, q.factory);
-			process_queue.Set(i, 2, Factory::GetCtrlFactories()[q.factory].a);
+			process_queue.Set(i, 2, System::GetCtrlFactories()[q.factory].a);
 			process_queue.Set(i, 3, HexVector(q.value));
 			
 			s = "";
@@ -91,7 +93,7 @@ void PrioritizerCtrl::RefreshData() {
 			
 			job_queue.Set(i, 0, i);
 			job_queue.Set(i, 1, j.factory);
-			job_queue.Set(i, 2, Factory::GetCtrlFactories()[j.factory].a);
+			job_queue.Set(i, 2, System::GetCtrlFactories()[j.factory].a);
 			job_queue.Set(i, 3, base.GetSymbol(j.sym));
 			job_queue.Set(i, 4, base.GetPeriodString(j.tf));
 			job_queue.Set(i, 5, j.priority);
@@ -106,3 +108,4 @@ void PrioritizerCtrl::RefreshData() {
 }
 
 }
+#endif

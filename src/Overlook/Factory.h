@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Factory_h_
 #define _Overlook_Factory_h_
 
@@ -14,13 +16,7 @@ struct RegisterInput : Moveable<RegisterInput> {
 
 enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_HIGHPRIO};
 
-struct ValueBase {
-	int phase, type, scale, count, visible, data_type;
-	const char* s0;
-	void* data;
-	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1;}
-	enum {IN_, INOPT_, INDYN_, INHIGHPRIO_, OUT_, BOOL_, INT_, DOUBLE_, TIME_, STRING_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_, PERS_QUERYTABLE_};
-};
+
 
 struct ValueRegister {
 	ValueRegister() {}
@@ -83,7 +79,7 @@ protected:
 public:
 	
 	template <class CoreT, class CtrlT> static void Register(String name) {
-		AddCustomCtrl(name, &Factory::CoreFactoryFn<CoreT>, &Factory::CtrlFactoryFn<CtrlT>);
+		AddCustomCtrl(name, &System::CoreFactoryFn<CoreT>, &System::CtrlFactoryFn<CtrlT>);
 		FactoryValueRegister& reg = Regs().Add();
 		CoreT().IO(reg); // unfortunately one object must be created, because IO can't be static and virtual at the same time and it is cleaner to use virtual.
 	}
@@ -95,7 +91,7 @@ public:
 	static const Vector<FactoryValueRegister>& GetRegs() {return Regs();}
 	
 	template <class CoreT> static int Find() {
-		CoreFactoryPtr factory_fn = &Factory::CoreFactoryFn<CoreT>;
+		CoreFactoryPtr factory_fn = &System::CoreFactoryFn<CoreT>;
 		const Vector<CoreCtrlFactory>& facs = CtrlFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
 			if (facs[i].b == factory_fn)
@@ -107,5 +103,7 @@ public:
 
 
 }
+
+#endif
 
 #endif

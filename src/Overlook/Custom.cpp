@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -13,7 +15,7 @@ void Custom::Init() {
 	peek = 2;
 	
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
 	
@@ -75,7 +77,7 @@ void Custom::Start() {
 	int thistf = GetTf();
 	int bars = GetBars();
 	int counted = GetCounted();
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	if (bars == counted)
 		return;
@@ -241,3 +243,4 @@ void Custom::Start() {
 }
 
 }
+#endif

@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -100,12 +102,12 @@ void Prioritizer::Deinit() {
 void Prioritizer::CreateCombination() {
 	ASSERT(combparts.IsEmpty());
 	combination_bits = 0;
-	ASSERT_(Factory::GetRegs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
+	ASSERT_(System::GetRegs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
 	
 	// Compare input types to output types and add matching pairs to input sources.
-	for(int i = 0; i < Factory::GetRegs().GetCount(); i++) {
-		const Vector<RegisterInput>& factory_inputs = Factory::GetRegs()[i].in;
-		const Vector<ValueType>& factory_outputs = Factory::GetRegs()[i].out;
+	for(int i = 0; i < System::GetRegs().GetCount(); i++) {
+		const Vector<RegisterInput>& factory_inputs = System::GetRegs()[i].in;
+		const Vector<ValueType>& factory_outputs = System::GetRegs()[i].out;
 		
 		// One part per slot-factory
 		CombinationPart& part = combparts.Add();
@@ -126,7 +128,7 @@ void Prioritizer::CreateCombination() {
 			// way some wrong combinations can be easily avoided. Be sure to register slots in
 			// correct order.
 			for(int j = 0; j < i; j++) {
-				const Vector<ValueType>& factory_outputs = Factory::GetRegs()[j].out;
+				const Vector<ValueType>& factory_outputs = System::GetRegs()[j].out;
 				
 				for(int k = 0; k < factory_outputs.GetCount(); k++) {
 					const ValueType& output = factory_outputs[k];
@@ -187,12 +189,12 @@ void Prioritizer::CreateCombination() {
 	combination_errors = 0;
 	for(int i = 0; i < combparts.GetCount(); i++) {
 		const CombinationPart& part = combparts[i];
-		LOG("    part " << i << ": \"" << Factory::GetCtrlFactories()[i].a << "\" begin=" << part.begin << " size=" << part.size << " single-source=" << (int)part.single_sources);
+		LOG("    part " << i << ": \"" << System::GetCtrlFactories()[i].a << "\" begin=" << part.begin << " size=" << part.size << " single-source=" << (int)part.single_sources);
 		
 		for(int j = 0; j < part.input_src.GetCount(); j++) {
 			const Vector<IntPair>& inputs = part.input_src[j];
 			if (inputs.IsEmpty()) {
-				const RegisterInput& input = Factory::GetRegs()[i].in[j];
+				const RegisterInput& input = System::GetRegs()[i].in[j];
 				if (input.input_type == REGIN_HIGHPRIO) {
 					LOG("         (same class, higher priority instances)");
 				}
@@ -353,7 +355,7 @@ int Prioritizer::InputToEnabled(int bit) const {
 	return inputs_to_enabled[bit];
 }
 
-int Prioritizer::EnabledToFactory(int bit) const {
+int Prioritizer::EnabledToSystem(int bit) const {
 	return enabled_to_factory[bit];
 }
 
@@ -385,7 +387,7 @@ void Prioritizer::CreateNormal() {
 	Combination comb;
 	comb.SetSize(combination_bytes);
 	Vector<int> factory_queue;
-	factory_queue.Add(Factory::GetCtrlFactories().GetCount()-1);
+	factory_queue.Add(System::GetCtrlFactories().GetCount()-1);
 	VisitSymTf(comb, factory_queue);
 	
 	
@@ -540,7 +542,7 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 						bit = InputToEnabled(bit);
 						comb2.SetValue(bit, true);
 						ASSERT(bit == GetBitEnabled(src_list[0].a));
-						int src_factory = EnabledToFactory(bit);
+						int src_factory = EnabledToSystem(bit);
 						
 						// Set 'activate all symbols/timeframes' bit
 						comb2.SetOrValue(GetBitAllSymbols(src_factory),    all_symbols_enabled    || in.scale == Sym || in.scale == All);
@@ -583,7 +585,7 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 						comb3.SetValue(bit, true);
 						bit = InputToEnabled(bit);
 						comb3.SetValue(bit, true);
-						int src_factory = EnabledToFactory(bit);
+						int src_factory = EnabledToSystem(bit);
 						comb_factory_queue.Add(src_factory);
 						
 						// Set 'activate all symbols/timeframes' bit
@@ -644,7 +646,7 @@ void Prioritizer::VisitCombination(Combination& comb, Vector<int>& factory_queue
 				comb2.SetValue(bit, true);
 				bit = InputToEnabled(bit);
 				comb2.SetValue(bit, true);
-				int src_factory = EnabledToFactory(bit);
+				int src_factory = EnabledToSystem(bit);
 				factory_queue.Add(src_factory);
 				
 				// Set 'activate all symbols/timeframes' bit
@@ -681,7 +683,7 @@ void Prioritizer::RefreshCoreQueue() {
 	
 	
 	Vector<byte> unique_slot_comb;
-	int fac_count = Factory::GetCtrlFactoryCount();
+	int fac_count = System::GetCtrlSystemCount();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
 	
@@ -758,7 +760,7 @@ void Prioritizer::RefreshCoreQueue() {
 				si.pipeline = &pi;
 				si.value <<= unique_slot_comb;
 				si.factory = j;
-				si.priority = pi.priority * Factory::GetCtrlFactories().GetCount() + j;
+				si.priority = pi.priority * System::GetCtrlFactories().GetCount() + j;
 				si.pipeline_src.Add(i);
 				
 				// Add priorities of symbols and timeframes
@@ -784,9 +786,9 @@ void Prioritizer::RefreshCoreQueue() {
 	
 	// Find which factories has dynamic inputs for fast checking
 	Vector<bool> has_dynamic;
-	has_dynamic.SetCount(Factory::GetRegs().GetCount(), false);
-	for(int i = 0; i < Factory::GetRegs().GetCount(); i++) {
-		const FactoryValueRegister& reg = Factory::GetRegs()[i];
+	has_dynamic.SetCount(System::GetRegs().GetCount(), false);
+	for(int i = 0; i < System::GetRegs().GetCount(); i++) {
+		const SystemValueRegister& reg = System::GetRegs()[i];
 		for(int j = 0; j < reg.in.GetCount(); j++) {
 			const RegisterInput& input = reg.in[j];
 			if (input.input_type == REGIN_DYNAMIC) {
@@ -813,7 +815,7 @@ void Prioritizer::RefreshCoreQueue() {
 		
 		const CoreItem& ci = slot_queue[i];
 		const CombinationPart& part = combparts[ci.factory];
-		const FactoryValueRegister& reg = Factory::GetRegs()[ci.factory];
+		const SystemValueRegister& reg = System::GetRegs()[ci.factory];
 		
 		for(int j = 0; j < reg.in.GetCount(); j++) {
 			const RegisterInput& in = reg.in[j];
@@ -899,7 +901,7 @@ void Prioritizer::RefreshCoreQueue() {
 				for(int k = 0; k < input_src.GetCount(); k++) {
 					int src_enabled_bit = GetBitCore(ci.factory, j, k);
 					if (ReadBit(ci.value, src_enabled_bit)) {
-						factory_id = EnabledToFactory(InputToEnabled(src_enabled_bit));
+						factory_id = EnabledToSystem(InputToEnabled(src_enabled_bit));
 						break;
 					}
 				}
@@ -1069,7 +1071,7 @@ void Prioritizer::RefreshJobQueue() {
 				if (!found) {
 					// Link permanentcore-object
 					if (ji.factory == 0) {
-						// Link BaseSystem object
+						// Link System object
 						ji.core = &bs;
 					} else {
 						ASSERT(ji.core == NULL);
@@ -1126,7 +1128,7 @@ bool Prioritizer::CheckCombination(const Vector<byte>& comb) {
 				}
 			}
 			if (!enabled_count) {
-				const RegisterInput& input = Factory::GetRegs()[i].in[j];
+				const RegisterInput& input = System::GetRegs()[i].in[j];
 				if (input.input_type == REGIN_HIGHPRIO) continue;
 				
 				LOG("ERROR: No enabled sources");
@@ -1176,7 +1178,7 @@ void Prioritizer::CreateUniqueCombination(const Vector<byte>& src, int fac_id, V
 	Vector<byte> dep_mask;
 	Vector<bool> enabled_fac;
 	
-	int fac_count = Factory::GetCtrlFactoryCount();
+	int fac_count = System::GetCtrlSystemCount();
 	enabled_fac.SetCount(fac_count);
 	
 	// Create dependency mask based on combination
@@ -1255,7 +1257,7 @@ String Prioritizer::GetCombinationString(const Vector<byte>& vec) {
 		bool enabled = ReadBit(vec, enabled_bit);
 		if (!enabled) continue;
 		
-		s << i << ":\t\"" << Factory::GetCtrlFactories()[i].a << "\"\n";
+		s << i << ":\t\"" << System::GetCtrlFactories()[i].a << "\"\n";
 		
 		for(int j = 0; j < part.input_src.GetCount(); j++) {
 			const Vector<IntPair>& src_list = part.input_src[j];
@@ -1268,7 +1270,7 @@ String Prioritizer::GetCombinationString(const Vector<byte>& vec) {
 				bool src_enabled = ReadBit(vec, src_enabled_bit);
 				if (!src_enabled) continue;
 				
-				s << "\t\tsrc " << k << ":\t\"" << Factory::GetCtrlFactories()[src.a].a << "\", output=" << src.b << "\n";
+				s << "\t\tsrc " << k << ":\t\"" << System::GetCtrlFactories()[src.a].a << "\", output=" << src.b << "\n";
 			}
 		}
 	}
@@ -1284,7 +1286,7 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 	
 	
 	// Create core-object
-	ji.core = Factory::GetCtrlFactories()[ji.factory].b();
+	ji.core = System::GetCtrlFactories()[ji.factory].b();
 	
 	// Set attributes
 	ji.core->base = &bs;
@@ -1304,7 +1306,7 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 		// For higher priority inputs, the only source is this same factory
 		if (input.input_type == REGIN_HIGHPRIO) {
 			ASSERT_(part.outputs.GetCount(), "The class must have at least one output to connect it as input.");
-			int found_inputs = ConnectFactory(l, 0, input, ji, ji.factory);
+			int found_inputs = ConnectSystem(l, 0, input, ji, ji.factory);
 		}
 		// Normally loop possible sources for one input
 		else {
@@ -1341,7 +1343,7 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 				CreateUniqueCombination(ji.value, src.a, unique_slot_comb);
 				ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);
 				
-				int found_inputs = ConnectFactory(l, src.b, input, ji, src.a, &unique_slot_comb);
+				int found_inputs = ConnectSystem(l, src.b, input, ji, src.a, &unique_slot_comb);
 				
 				if (found_inputs) {
 					// Catch invalid combinations
@@ -1369,11 +1371,11 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 				String inputs = "\"";
 				for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
 					if (i) inputs.Cat(',');
-					inputs << Factory::GetCtrlFactories()[enabled_input_factories[i]].a;
+					inputs << System::GetCtrlFactories()[enabled_input_factories[i]].a;
 				}
 				inputs << "\"";
 				Panic("Creating object \"" +
-					Factory::GetCtrlFactories()[ji.factory].a +
+					System::GetCtrlFactories()[ji.factory].a +
 					"\" and can't find any of " +
 					inputs +
 					" inputs.");
@@ -1390,7 +1392,7 @@ void Prioritizer::CreateJobCore(JobItem& ji) {
 	
 }
 
-int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb) {
+int Prioritizer::ConnectSystem(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb) {
 	FilterFunction fn = (FilterFunction)input.data;
 	bool input_all_sym = input.scale == Sym || input.scale == All;
 	bool input_all_tf  = input.scale == Tf  || input.scale == All;
@@ -1409,7 +1411,7 @@ int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput
 			src_ji.sym << " != " << ji.sym << "\t" <<
 			src_ji.tf << " != " << ji.tf);*/
 		
-		// Factory must match
+		// System must match
 		if (src_ji.factory != factory) continue;
 		
 		// Never lower priority
@@ -1489,3 +1491,4 @@ int Prioritizer::ConnectFactory(int input_id, int output_id, const RegisterInput
 }
 
 }
+#endif

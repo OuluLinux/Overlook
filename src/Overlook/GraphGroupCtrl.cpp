@@ -41,7 +41,7 @@ GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
 void GraphGroupCtrl::SetGraph(Core* src) {
 	ASSERT(src);
 	tf = src->GetTf();
-	BaseSystem& bs = src->GetBaseSystem();
+	System& bs = src->GetSystem();
 	ClearCores();
 	BarData* src_cast = dynamic_cast<BarData*>(src);
 	if (src_cast) {

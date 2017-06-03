@@ -4,24 +4,20 @@
 #include "Common.h"
 #include "QueryTable.h"
 
-#include "Factory.h"
 #include "Core.h"
 #include "CustomCtrl.h"
-#include "BaseSystem.h"
-#include "Prioritizer.h"
+#include "System.h"
 #include "SimBroker.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "Model.h"
 #include "Forecasters.h"
-#include "Agent.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
 
 #include "BrokerCtrl.h"
-#include "PrioritizerCtrl.h"
 
 #define IMAGECLASS OverlookImg
 #define IMAGEFILE <Overlook/Overlook.iml>
@@ -42,7 +38,7 @@ protected:
 	Core* prev_core;
 	TimeCallback tc;
 	
-	Prioritizer user, optimizer, realtime;
+	System sys;
 	
 	void SetView();
 	void Configure();

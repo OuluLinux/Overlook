@@ -10,7 +10,14 @@ progress in this way. It is a voice of a casual narrator about
 the progress of the Overlook. Please note that my native language 
 is not English, but Finnish. This journal is intended for the 
 audience who see some entertainment value in this. This shouldn`'t 
-be considered to be final statement about anything.&]
+be considered to be final statement about anything. This is not 
+intended to be interpreted in any specific way and all interpretations 
+are welcome to a civil discussion. The story and names are being 
+limited to include the copyright holder only, unless the person 
+has given a permission to use his story and/or name publicly. 
+However, the story may include a one`-sided and personally experienced 
+story from social events, which may or may not be equal to the 
+objective truth.&]
 [s0;= &]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
@@ -915,4 +922,51 @@ includes proving, that `"[/ punishing children with violence improves
 their learning]`". It`'s fucking unbelieveable to have that kind 
 of teacher in an university and this doesn`'t even come from 
 some [/ `"leftist safe`-space student`"]. It`'s really medieval.&]
-[s0;%- ]]
+[s3;%- 3.6.2017&]
+[s0;%- Hi, again.&]
+[s0;%- This is the day when I thought that this program would have 
+been ready. I hope that two week extension is enough, because 
+I have huge todo list of school work for this summer. I couldn`'t 
+get any summer job because of that, which makes the budget tight, 
+but bearable.&]
+[s0;%- There have been some change of plans already today. I started 
+normally by planning the implementation of the `'[/ Custom]`' forecaster 
+class, which was next thing in the TODO list. Then, I thought 
+that some more abstract Model class would be better and it could 
+be reused by inheriting in other forecaster classes too. That 
+required checking of all requirements for upcoming forecasters, 
+and that required the detailed description of every class. After 
+describing classes the Occam`'s razor principle did hit me once 
+again. One class might be better than all of those custom classes 
+[/ (one class to rule them all... is the Lord of the Ring only 
+about Occam`'s razor principle after all?)]. So, instead of inheritable 
+Model class, I decided to do only one class. That is a good change 
+of plan, but all change of plans tends to cause much stress for 
+me because of some [/ biological branch predictor in the brain] 
+or whatever. I can probably plan the class today only, and that`'s 
+all.&]
+[s0;%- ...&]
+[s0;%- I have planned again big portion of the app. This follows 
+the Occam`'s razor princple. This is smaller, scales better and 
+the previous version is a subset of this. As usual, some work 
+seems to have been useless. In previous plan, I thought that 
+I could measure the performance of pipelines and then construct 
+better pipelines with that information. My mistake was, that 
+I thought that it could be performed better with decision trees 
+and NNs than with genetic optimizer. I was wrong. Clearly some 
+result table with genetic optimization is better. You know, sorting 
+results by performance, combining best ones, adding random values... 
+With that, only the traditional use case is problematic with 
+candlesticks and an indicator of single sym/tf combination. &]
+[s0;%- ...&]
+[s0;%- I need to make big changes to the whole project structure. 
+I broke some code and I will fix it in next days. I did the detailed 
+list of changes but I don`'t care enough to translate it to English 
+and add here. The revised plan includes everything that current 
+version has and solves all remaining issues with the pipeline 
+optimizer. Now I can`'t say anymore that I had done useless work 
+at all, because Prioritizer clearly did solve many other problems 
+and it will be re`-used as parts. Implementing the new System 
+class will cause a lot of headache, however, and I am not happy 
+about it.&]
+[s0;%- I think Overlook will be ready in 2 weeks.]]

@@ -94,7 +94,7 @@ void QueryTableForecaster::Start() {
 		return;
 	
 	int tf = GetTf();
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	ValueChange& bc = *Get<ValueChange>();
 	double max_change = bc.GetMedianMax() * 2;
 	double min_change = bc.GetMedianMin() * 2;
@@ -232,7 +232,7 @@ void QueryTableHugeForecaster::Init() {
 	}
 	qt.EndTargets();
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount() - GetTimeframe();
 	
@@ -275,7 +275,7 @@ void QueryTableHugeForecaster::Start() {
 		return;
 	
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount() - GetTimeframe();
 	

@@ -125,7 +125,7 @@ void Core::InitAll() {
 	Init();
 	
 	// Initialize sub-cores
-	const FactoryValueRegister& src_reg = Factory::GetRegs()[factory];
+	const SystemValueRegister& src_reg = System::GetRegs()[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
 		Core& core = subcores[i];
 		core.base = base;
@@ -134,7 +134,7 @@ void Core::InitAll() {
 		core.SetSymbol(GetSymbol());
 		core.SetTimeframe(GetTimeframe(), GetPeriod());
 		
-		const FactoryValueRegister& reg = Factory::GetRegs()[core.factory];
+		const SystemValueRegister& reg = System::GetRegs()[core.factory];
 		
 		// Loop all inputs of the sub-core-object to be connected
 		ASSERT(core.inputs.GetCount() == reg.in.GetCount());
@@ -173,7 +173,7 @@ void Core::Refresh() {
 	
 	// Some indicators might want to set the size by themselves
 	if (!skip_setcount) {
-		int count = GetBaseSystem().GetCountTf(tf_id) + end_offset;
+		int count = GetSystem().GetCountTf(tf_id) + end_offset;
 		bars = count;
 		next_count = count;
 		if (!skip_allocate) {
@@ -282,7 +282,7 @@ int Core::LowestOpen(int period, int shift) {
 }
 
 int Core::GetMinutePeriod() {
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	return bs.GetBasePeriod() * bs.GetPeriod(tf_id) / 60;
 }
 

@@ -58,7 +58,7 @@ void WdayHourChanges::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	
 	//bars--;
 	if (!counted)
@@ -93,7 +93,7 @@ void WdayHourChanges::Start() {
 }
 
 const OnlineVariance& WdayHourChanges::GetOnlineVariance(int shift) {
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int period = GetMinutePeriod();
 	Time time = bs.GetTimeTf(GetTf(), shift);
 	
@@ -169,7 +169,7 @@ void WdayHourStats::Start() {
 	bool force_d0 = period >= 7*24*60;
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	
 	//bars--;
 	if (!counted)
@@ -388,7 +388,7 @@ void WeekStats::Start() {
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time time = GetBaseSystem().GetTimeTf(GetTf(), i);
+		Time time = GetSystem().GetTimeTf(GetTf(), i);
 		
 		int m = 0;
 		{
@@ -510,7 +510,7 @@ void WdayHourTrending::Start() {
 	int h_count = 24 * 60 / period; // originally hour only
 	bool force_d0 = period >= 7*24*60;
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	
 	//bars--;
@@ -608,7 +608,7 @@ void WdayHourTrendSuccess::Init() {
 }
 
 void WdayHourTrendSuccess::Start() {
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	Buffer& mean		= GetBuffer(0);
 	Buffer& stddev		= GetBuffer(1);
 	Buffer& success		= GetBuffer(2);

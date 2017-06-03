@@ -1,13 +1,12 @@
-#ifndef _Overlook_BaseSystem_h_
-#define _Overlook_BaseSystem_h_
+#if 0
 
-#include <CtrlUtils/CtrlUtils.h>
-#include <CoreUtils/CoreUtils.h>
+#ifndef _Overlook_System_h_
+#define _Overlook_System_h_
 
 namespace Overlook {
 using namespace Upp;
 
-class BaseSystem : public Core {
+class System : public Core {
 	
 protected:
 	friend class DataBridgeCommon;
@@ -72,8 +71,8 @@ public:
 	
 public:
 	
-	typedef BaseSystem CLASSNAME;
-	BaseSystem();
+	typedef System CLASSNAME;
+	System();
 	
 	virtual void Arguments(ArgumentBase& args) {}
 	virtual void Init();
@@ -85,16 +84,17 @@ public:
 };
 
 
-class BaseSystemCtrl : public CustomCtrl {
+class SystemCtrl : public CustomCtrl {
 	
 	
 public:
-	typedef BaseSystemCtrl CLASSNAME;
-	BaseSystemCtrl();
+	typedef SystemCtrl CLASSNAME;
+	SystemCtrl();
 	
 	
 };
 
 }
 
+#endif
 #endif

@@ -13,7 +13,7 @@ void Model::Init() {
 	peek = 2;
 	
 	
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	int tf_count = bs.GetPeriodCount();
 	
@@ -75,7 +75,7 @@ void Model::Start() {
 	int thistf = GetTf();
 	int bars = GetBars();
 	int counted = GetCounted();
-	BaseSystem& bs = GetBaseSystem();
+	System& bs = GetSystem();
 	int sym_count = bs.GetSymbolCount();
 	if (bars == counted)
 		return;

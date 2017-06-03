@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_PrioritizerCtrl_h_
 #define _Overlook_PrioritizerCtrl_h_
 
@@ -20,4 +22,5 @@ public:
 
 }
 
+#endif
 #endif

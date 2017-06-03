@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Prioritizer_h_
 #define _Overlook_Prioritizer_h_
 
@@ -103,7 +105,7 @@ public:
 		*this = src;
 	}
 	~JobItem() {
-		if (core && core->factory > 0) {delete core; core = NULL;} // Don't ever delete BaseSystem here (factory==0)
+		if (core && core->factory > 0) {delete core; core = NULL;} // Don't ever delete System here (factory==0)
 	}
 	void operator=(const JobItem& src) {
 		value <<= src.value;
@@ -138,7 +140,7 @@ protected:
 	Vector<PipelineItem> pl_queue;
 	Vector<CoreItem> slot_queue;
 	Vector<JobItem> job_queue;
-	BaseSystem bs;
+	System bs;
 	
 	void RefreshCoreQueue();
 	void RefreshJobQueue();
@@ -146,7 +148,7 @@ protected:
 	void VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& comb);
 	void VisitCombination(Combination& com, Vector<int>& factory_queue);
 	bool CheckCombination(const Vector<byte>& comb);
-	int  ConnectFactory(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb=NULL);
+	int  ConnectSystem(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb=NULL);
 public:
 	void CreateNormal();
 	void CreateSingle(int main_fac_id, int sym_id, int tf_id);
@@ -158,7 +160,7 @@ public:
 	CoreItem& GetCore(int i) {return slot_queue[i];}
 	int GetJobCount() const {return job_queue.GetCount();}
 	JobItem& GetJob(int i) {return job_queue[i];}
-	BaseSystem& GetBaseSystem() {return bs;}
+	System& GetSystem() {return bs;}
 	String GetCombinationString(const Vector<byte>& vec);
 	
 	
@@ -183,7 +185,7 @@ protected:
 	int GetBitAllSymbols(int fac_id) const;
 	int GetBitAllTimeframes(int fac_id) const;
 	int InputToEnabled(int bit) const;
-	int EnabledToFactory(int bit) const;
+	int EnabledToSystem(int bit) const;
 	
 	
 	typedef Vector<VectorMap<uint32, VectorMap<int, VectorMap<int, Core*> > > > CoreData;
@@ -218,4 +220,5 @@ public:
 
 }
 
+#endif
 #endif

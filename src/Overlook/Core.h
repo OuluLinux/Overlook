@@ -146,7 +146,7 @@ struct ArgChanger : public ValueRegister {
 	bool storing;
 };
 
-class BaseSystem;
+class System;
 
 struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef Ptr<CoreIO> CoreIOPtr;
@@ -166,7 +166,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
 	Vector<Persistent> persistents;
-	BaseSystem* base;
+	System* base;
 	String unique;
 	int factory;
 	int sym_id, tf_id;
@@ -226,8 +226,8 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
-	BaseSystem& GetBaseSystem() {return *base;}
-	const BaseSystem& GetBaseSystem() const {return *base;}
+	System& GetSystem() {return *base;}
+	const System& GetSystem() const {return *base;}
 	inline const CoreIO& GetInput(int input, int sym, int tf) const {return *inputs[input].sources.Get(sym * 100 + tf).a;}
 	String GetCacheDirectory() const;
 	
@@ -305,7 +305,7 @@ public:
 	}
 	void InitAll();
 	template <class T> Core& AddSubCore()  {
-		ASSERT_(subcore_factories.Add(Factory::Find<T>()) != -1, "This class is not registered to the factory");
+		ASSERT_(subcore_factories.Add(System::Find<T>()) != -1, "This class is not registered to the factory");
 		return subcores.Add(new T);}
 	Core& At(int i) {return subcores[i];}
 	Core& Set(String key, Value value);

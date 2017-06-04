@@ -33,12 +33,13 @@ public:
 			% Out(ForecastPhase, ForecastRealValue, SymTf, 3, 3)
 			
 			// 4 main arguments
-			% Arg("Priority (moment vs probable target)", )
-			% Arg("Target (heuristic vs scheduled)", )
-			% Arg("Reason (match past vs match more probable)", )
-			% Arg("Level (low level vs high level, immediate values vs derived indicator values)", )
+			% Arg("Learning model (decision tree vs neural network vs similarity)", arg_priority, 0, 15)
+			% Arg("Priority (moment vs probable target)", arg_priority, 0, 15)
+			% Arg("Target (heuristic vs scheduled)", arg_targetmode, 0, 15)
+			% Arg("Reason (match past vs match more probable)", arg_reason, 0, 15)
+			% Arg("Level (low level vs high level, immediate values vs derived indicator values)", arg_level, 0, 15)
 			
-			% Arg("Correlation period", corr_period);
+			% Arg("Correlation period", corr_period, 2, 16);
 	}
 	
 };

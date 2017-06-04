@@ -61,7 +61,7 @@ void Overlook::Deinit() {
 }
 
 void Overlook::SetView() {
-	/*int c = ctrllist.GetIndex();
+	int c = ctrllist.GetIndex();
 	int s = symlist.GetIndex();
 	int t = tflist.GetIndex();
 	
@@ -76,13 +76,8 @@ void Overlook::SetView() {
 	CustomCtrl* view;
 	view = System::GetCtrlFactories()[c].c();
 	
-	// Get core-object by creating job-queue for factory/symbol/timeframe combination
-	user.CreateSingle(c, s, t);
-	user.Process();
-	ASSERT(user.GetJobCount());
-	JobItem& ji = user.GetJob(user.GetJobCount()-1);
-	ASSERT(ji.core);
-	core = ji.core;
+	core = sys.CreateSingle(c, s, t);
+	ASSERT(core);
 	
 	view->core = core;
 	view->SetSymbol(s);
@@ -95,7 +90,7 @@ void Overlook::SetView() {
 	
 	Add(view->VSizePos(30).HSizePos());
 	prev_view = view;
-	prev_core = core;*/
+	prev_core = core;
 }
 
 void Overlook::Configure() {

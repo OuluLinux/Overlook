@@ -502,12 +502,15 @@ BollingerBands::BollingerBands()
 	bands_period = 20;
 	bands_shift = 0;
 	bands_deviation = 2.0;
+	deviation = 20;
 	
 	plot_begin = 0;
 }
 
 void BollingerBands::Init() {
 	SetCoreChartWindow();
+	
+	bands_deviation = deviation * 0.1;
 	
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1,  LightSeaGreen);
@@ -596,10 +599,13 @@ Envelopes::Envelopes() {
 	ma_shift = 0;
 	ma_method = MODE_SMA;
 	deviation = 0.1;
+	dev = 10;
 }
 
 void Envelopes::Init() {
 	SetCoreChartWindow();
+	
+	deviation = dev * 0.1;
 	
 	SetBufferColor(0, Blue);
 	SetBufferColor(1, Red);
@@ -649,10 +655,15 @@ void Envelopes::Start() {
 ParabolicSAR::ParabolicSAR() {
 	sar_step = 0.02;
 	sar_maximum = 0.2;
+	step = 20;
+	maximum = 20;
 }
 
 void ParabolicSAR::Init() {
 	SetCoreChartWindow();
+	
+	sar_step = step * 0.001;
+	sar_maximum = maximum * 0.01;
 	
 	SetBufferColor(0, Lime);
 	
@@ -2488,7 +2499,7 @@ double Fractals::IsFractalUp(int index, int left, int right, int maxind) {
 
 double Fractals::IsFractalDown(int index, int left, int right, int maxind)
 {
-	double min = Low(index), test;
+	double min = Low(index);
 	for(int i = index - left; i <= (index + right); i++) {
 		if (i < 0 || i > maxind)
 			return(0);

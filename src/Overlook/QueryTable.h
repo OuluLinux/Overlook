@@ -83,6 +83,7 @@ public:
 	int Get(int row, int col) const;
 	void Set(int row, int col, int value);
 	int Predict(const DecisionTreeNode& root, int row, int target_col) const;
+	int Predict(const DecisionTreeNode& root, const Vector<byte>& row, int target_col) const;
 	int GetCount() const {return data.GetCount();}
 	void Reserve(int i) {data.Reserve(i);}
 	void SetCount(int i);
@@ -96,6 +97,9 @@ public:
 	void ClearQuery();
 	void SetQuery(int column, int value);
 	double QueryAverage(int target);
+	int GetColumnCount() const {return columns.GetCount();}
+	void Sort(int column, bool descending=false);
+	void Evolve(int best_row, int candidate_row, Vector<byte>& output_row);
 };
 
 

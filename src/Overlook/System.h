@@ -15,11 +15,20 @@ struct RegisterInput : Moveable<RegisterInput> {
 enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_HIGHPRIO};
 
 
+struct ArgType : Moveable<ArgType> {
+	ArgType() {}
+	ArgType(const ArgType& src) {*this = src;}
+	ArgType(String desc, int min, int max) : desc(desc), min(min), max(max) {}
+	void operator=(const ArgType& src) {
+		
+	}
+	
+	String desc;
+	int min, max;
+};
 
 struct SystemValueRegister : public ValueRegister, Moveable<SystemValueRegister> {
-	typedef Tuple2<String, int> ArgType;
 	
-	//Vector<ValueType> in, out, inopt, indyn;
 	Vector<RegisterInput> in;
 	Vector<ValueType> out;
 	Vector<ArgType> args;
@@ -40,12 +49,33 @@ struct SystemValueRegister : public ValueRegister, Moveable<SystemValueRegister>
 		else if (base.data_type == ValueBase::OUT_) {
 			out.Add(ValueType(base.phase, base.type, base.scale));
 		}
-		else {
-			args.Add(ArgType(base.s0, base.data_type - ValueBase::BOOL_));
+		else if (base.data_type == ValueBase::BOOL_) {
+			args.Add(ArgType(base.s0, 0, 1));
+		}
+		else if (base.data_type == ValueBase::INT_) {
+			args.Add(ArgType(base.s0, base.min, base.max));
 		}
 	}
 	
 };
+
+struct PipelineItem : Moveable<PipelineItem> {
+	typedef PipelineItem CLASSNAME;
+	PipelineItem() {priority = INT_MAX;}
+	
+	Vector<byte> value;
+	int priority;
+};
+
+struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
+	typedef CoreItem CLASSNAME;
+	CoreItem() {core = NULL; sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
+	
+	Vector<byte> value;
+	Core* core;
+	int sym, tf, priority, factory;
+};
+
 
 class System {
 	
@@ -89,16 +119,25 @@ public:
 	}
 	
 protected:
+	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
+	
 	friend class DataBridgeCommon;
 	
+	Data			data;
+	QueryTable		table;
+	Array<PipelineItem> pl_queue;
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
+	Vector<String>	period_strings;
 	Index<String>	symbols;
 	Index<int>		periods;
-	Vector<String>	period_strings;
+	SpinLock		pl_queue_lock;
 	String			addr;
+	double			exploration;
+	Atomic			nonstopped_workers;
 	int64			memory_limit;
 	int				port;
+	bool			running, stopped;
 	
 	
 protected:
@@ -110,8 +149,25 @@ protected:
 	int timediff;
 	int base_period;
 	
+	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
+	void MainLoop();
+	void Worker(int id);
+	void RefreshPipeline();
 	
+	// Pipeline
+	void InitGeneticOptimizer();
+	void RefreshRealtime();
+	void GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids=NULL);
+	int  GetHash(const PipelineItem& pi, int sym, int tf, int model_col);
+	int  GetLeaf(int model_col, int leaf_id);
+	bool IsLeafEnabled(int model_col);
+	void VisitModel(const CoreItem& ci, Vector<Ptr<CoreItem> >& ci_queue);
+	
+	// Jobs
+	void Process(CoreItem& ci);
+	void CreateCore(CoreItem& ci);
+	int  ConnectSystem(int input_id, int output_id, const RegisterInput& input, CoreItem& ci, int factory, Vector<byte>* unique_slot_comb);
 	
 public:
 	
@@ -133,6 +189,7 @@ public:
 	//void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}
 	//void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get());}
 	//void SetBasePeriod(int period)	{base_period = period;}
+	Core* CreateSingle(int column, int sym, int tf);
 	
 	
 public:
@@ -153,10 +210,12 @@ public:
 	
 	typedef System CLASSNAME;
 	System();
+	~System();
 	
-	virtual void Arguments(ArgumentBase& args) {}
-	virtual void Init();
-	virtual void Start() {}
+	void Init();
+	void Start();
+	void Stop();
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % Out(SourcePhase, TimeValue, All);

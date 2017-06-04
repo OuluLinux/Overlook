@@ -607,8 +607,8 @@ void DataBridge::RefreshVirtualNode() {
 		int step = diff / point;
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
-		if (diff > max_value) max_value = diff;
-		if (diff < min_value) min_value = diff;
+		if (step > max_value) max_value = step;
+		if (step < min_value) min_value = step;
 	}
 	
 	RefreshMedian();

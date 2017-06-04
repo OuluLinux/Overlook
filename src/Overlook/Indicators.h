@@ -40,9 +40,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", ma_period)
-			% Arg("offset", ma_shift)
-			% Arg("method", ma_method);
+			% Arg("period", ma_period, 2, 127)
+			% Arg("offset", ma_shift, 0, 0)
+			% Arg("method", ma_method, 0, 3);
 	}
 };
 
@@ -61,9 +61,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
-			% Arg("fast_ema", fast_ema_period)
-			% Arg("slow_ema", slow_ema_period)
-			% Arg("signal_sma", signal_sma_period);
+			% Arg("fast_ema", fast_ema_period, 2, 127)
+			% Arg("slow_ema", slow_ema_period, 2, 127)
+			% Arg("signal_sma", signal_sma_period, 2, 127);
 	}
 };
 
@@ -80,7 +80,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 3)
-			% Arg("period", period_adx);
+			% Arg("period", period_adx, 2, 127);
 	}
 };
 
@@ -90,6 +90,7 @@ class BollingerBands : public Core {
 	int           bands_shift;
 	double        bands_deviation;
 	int           plot_begin;
+	int           deviation;
 	
 	double StdDev_Func(int position, const Buffer& MAvalue, int period);
 	
@@ -103,9 +104,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 3)
-			% Arg("period", bands_period)
-			% Arg("shift", bands_shift)
-			% Arg("deviation", bands_deviation);
+			% Arg("period", bands_period, 2, 127)
+			% Arg("shift", bands_shift, 0, 0)
+			% Arg("deviation", deviation, 2, 127);
 	}
 };
 
@@ -115,6 +116,7 @@ class Envelopes : public Core {
 	int                ma_shift;
 	int                ma_method;
 	double             deviation;
+	int                dev;
 	
 public:
 	Envelopes();
@@ -125,10 +127,10 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 2)
-			% Arg("period", ma_period)
-			% Arg("shift", ma_shift)
-			% Arg("deviation", deviation)
-			% Arg("method", ma_method);
+			% Arg("period", ma_period, 2, 127)
+			% Arg("shift", ma_shift, 0, 0)
+			% Arg("deviation", dev, 2, 127)
+			% Arg("method", ma_method, 0, 3);
 	}
 };
 
@@ -137,6 +139,7 @@ class ParabolicSAR : public Core {
 	double		sar_step;
 	double		sar_maximum;
 	int			last_rev_pos;
+	int			step, maximum;
 	bool		direction_long;
 	
 	double GetHigh( int pos, int start_period );
@@ -151,8 +154,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("step", sar_step)
-			% Arg("maximum", sar_maximum)
+			% Arg("step", step, 2, 127)
+			% Arg("maximum", maximum, 2, 127)
 			% Persistent(last_rev_pos)
 			% Persistent(direction_long);
 	}
@@ -172,8 +175,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period)
-			% Arg("ma_method", ma_method);
+			% Arg("period", period, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3);
 	}
 };
 
@@ -190,7 +193,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -207,7 +210,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -225,7 +228,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -242,7 +245,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -260,7 +263,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -279,8 +282,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period)
-			% Arg("ma_method", ma_method);
+			% Arg("period", period, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3);
 	}
 };
 
@@ -297,7 +300,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -316,9 +319,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("fast_ema_period", fast_ema_period)
-			% Arg("slow_ema_period", slow_ema_period)
-			% Arg("signal_sma", signal_sma_period);
+			% Arg("fast_ema_period", fast_ema_period, 2, 127)
+			% Arg("slow_ema_period", slow_ema_period, 2, 127)
+			% Arg("signal_sma", signal_sma_period, 2, 127);
 	}
 };
 
@@ -335,7 +338,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -352,7 +355,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -371,9 +374,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
-			% Arg("k_period", k_period)
-			% Arg("d_period", d_period)
-			% Arg("slowing", slowing);
+			% Arg("k_period", k_period, 2, 127)
+			% Arg("d_period", d_period, 2, 127)
+			% Arg("slowing", slowing, 2, 127);
 	}
 };
 
@@ -393,7 +396,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -424,7 +427,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -440,7 +443,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("applied_value", applied_value);
+			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
 
@@ -456,7 +459,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("applied_value", applied_value);
+			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
 
@@ -526,14 +529,14 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
-			% Arg("jaws_period", jaws_period)
-			% Arg("jaws_shift", jaws_shift)
-			% Arg("teeth_period", teeth_period)
-			% Arg("teeth_shift", teeth_shift)
-			% Arg("lips_period", lips_period)
-			% Arg("lips_shift", lips_shift)
-			% Arg("ma_method", ma_method)
-			% Arg("applied_value", applied_value);
+			% Arg("jaws_period", jaws_period, 2, 127)
+			% Arg("teeth_period", teeth_period, 2, 127)
+			% Arg("lips_period", lips_period, 2, 127)
+			% Arg("jaws_shift", jaws_shift, 2, 127)
+			% Arg("teeth_shift", teeth_shift, 2, 127)
+			% Arg("lips_shift", lips_shift, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3)
+			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
 
@@ -569,8 +572,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
-			% Arg("left_bars", left_bars)
-			% Arg("right_bars", right_bars);
+			% Arg("left_bars", left_bars, 2, 20)
+			% Arg("right_bars", right_bars, 0, 0);
 	}
 };
 
@@ -590,9 +593,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
-			% Arg("left_bars", left_bars)
-			% Arg("right_bars", right_bars)
-			% Arg("smoothing", smoothing_period);
+			% Arg("left_bars", left_bars, 2, 20)
+			% Arg("right_bars", right_bars, 0, 0)
+			% Arg("smoothing", smoothing_period, 2, 127);
 	}
 };
 
@@ -629,10 +632,10 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
-			% Arg("depth", input_depth)
-			% Arg("deviation", input_depth)
-			% Arg("backstep", input_backstep)
-			% Arg("level", extremum_level);
+			% Arg("depth", input_depth, 2, 16)
+			% Arg("deviation", input_depth, 2, 16)
+			% Arg("backstep", input_backstep, 2, 16)
+			% Arg("level", extremum_level, 2, 16);
 	}
 };
 
@@ -651,9 +654,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("depth", depth)
-			% Arg("deviation", deviation)
-			% Arg("backstep", backstep);
+			% Arg("depth", depth, 2, 16)
+			% Arg("deviation", deviation, 2, 16)
+			% Arg("backstep", backstep, 2, 16);
 	}
 };
 
@@ -687,9 +690,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
-			% Arg("period", period)
-			% Arg("max_crosses", max_crosses)
-			% Arg("max_radius", max_radius);
+			% Arg("period", period, 300, 300)
+			% Arg("max_crosses", max_crosses, 100, 100)
+			% Arg("max_radius", max_radius, 100, 100);
 	}
 };
 
@@ -707,10 +710,10 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
-			% Arg("period", period)
-			% Arg("max_crosses", max_crosses)
-			% Arg("max_radius", max_radius)
-			% Arg("smoothing", smoothing_period);
+			% Arg("period", period, 2, 127)
+			% Arg("max_crosses", max_crosses, 300, 300)
+			% Arg("max_radius", max_radius, 100, 100)
+			% Arg("smoothing", smoothing_period, 100, 100);
 	}
 };
 
@@ -727,7 +730,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -767,7 +770,7 @@ public:
 			sym_count = GetSystem().GetSymbolCount();
 		reg % In(SourcePhase, RealValue, Sym)
 			% Out(IndiPhase, CorrelationValue, SymTf, sym_count-1, sym_count-1)
-			% Arg("period", period);
+			% Arg("period", period, 2, 16);
 	}
 };
 
@@ -796,8 +799,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
-			% Arg("period", period)
-			% Arg("method", method);
+			% Arg("period", period, 2, 16)
+			% Arg("method", method, 0, 3);
 	}
 };
 
@@ -822,9 +825,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In(SourcePhase, RealValue, SymTf)
 			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
-			% Arg("period", period)
-			% Arg("method", method)
-			% Arg("slowing", slowing);
+			% Arg("period", period, 2, 16)
+			% Arg("method", method, 0, 3)
+			% Arg("slowing", slowing, 2, 127);
 	}
 };
 

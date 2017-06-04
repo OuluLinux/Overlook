@@ -9,6 +9,13 @@ System::System() {
 	
 	addr = "127.0.0.1";
 	port = 42000;
+	running = false;
+	stopped = true;
+	exploration = 0.2;
+}
+
+System::~System() {
+	Stop();
 }
 
 void System::Init() {
@@ -33,7 +40,10 @@ void System::Init() {
 		}
 		
 		
-		// TODO: store symbols to session file and check that mt supports them
+		// Resize databank
+		data.SetCount(mt.GetSymbolCount());
+		for(int i = 0; i < data.GetCount(); i++)
+			data[i].SetCount(mt.GetTimeframeCount());
 		
 		
 		// Add periods
@@ -77,10 +87,11 @@ void System::Init() {
 		//StoreThis();
 		
 	}
-	
 	catch (...) {
 		LOG("Load failed");
 	}
+	
+	InitGeneticOptimizer();
 	
 }
 

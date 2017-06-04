@@ -31,6 +31,8 @@ file
 	CoreIO.cpp,
 	System.h,
 	System.cpp,
+	SystemMain.cpp,
+	SystemOptimizer.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	QueryTable.h,

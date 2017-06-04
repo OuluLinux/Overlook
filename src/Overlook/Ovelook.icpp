@@ -49,6 +49,7 @@ INITBLOCK {
 	System::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
 	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
 	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
+	System::Register<Model, GraphGroupCtrl>("Model");
 	
 	int c = System::GetRegs().GetCount();
 	ASSERT(System::GetRegs().GetCount());

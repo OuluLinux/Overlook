@@ -92,10 +92,10 @@ struct Out : public ValueBase {
 
 struct Arg : public ValueBase {
 	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
-	Arg(const char* key, int& value)	{s0 = key; data = &value; data_type = INT_;}
-	Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
-	Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
-	Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
+	Arg(const char* key, int& value, int min, int max) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
+	//Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
+	//Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
+	//Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
 };
 
 struct Persistent : public ValueBase, Moveable<Persistent> {
@@ -118,23 +118,11 @@ struct ArgChanger : public ValueRegister {
 				args[cursor++] = *(bool*)base.data;
 			else if (base.data_type == ValueBase::INT_)
 				args[cursor++] = *(int*)base.data;
-			else if (base.data_type == ValueBase::DOUBLE_)
-				args[cursor++] = *(double*)base.data;
-			else if (base.data_type == ValueBase::TIME_)
-				args[cursor++] = *(Time*)base.data;
-			else if (base.data_type == ValueBase::STRING_)
-				args[cursor++] = *(String*)base.data;
 		} else {
 			if (base.data_type == ValueBase::BOOL_)
 				*(bool*)base.data = args[cursor++];
 			else if (base.data_type == ValueBase::INT_)
 				*(int*)base.data = args[cursor++];
-			else if (base.data_type == ValueBase::DOUBLE_)
-				*(double*)base.data = args[cursor++];
-			else if (base.data_type == ValueBase::TIME_)
-				*(Time*)base.data = args[cursor++];
-			else if (base.data_type == ValueBase::STRING_)
-				*(String*)base.data = args[cursor++];
 		}
 	}
 	void SetLoading() {storing = false; cursor = 0;}

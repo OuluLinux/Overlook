@@ -969,4 +969,28 @@ at all, because Prioritizer clearly did solve many other problems
 and it will be re`-used as parts. Implementing the new System 
 class will cause a lot of headache, however, and I am not happy 
 about it.&]
-[s0;%- I think Overlook will be ready in 2 weeks.]]
+[s0;%- I think Overlook will be ready in 2 weeks.&]
+[s3;%- 4.6.2017&]
+[s0;%- I can easily say that the [C SystemOptimizer.cpp] and it`'s 
+past versions is the most difficult thing I have ever programmed. 
+It`'s one of those things where you know parts, but not what 
+the whole combined thing should be. Basically it genetically 
+optimizes tree`-structured pipelines (with differential evolution 
+algorithm) and creates job`-queues where all duplicate objects 
+are avoided for performance reasons. All leaf objects can be 
+easily re`-used and the root`-object is never the same, and the 
+area in between is like gradient of those. Object dependencies 
+and their priorities must also be known, so that less important 
+objects can be released instead of regularly used objects. Now 
+I am trying to re`-use existing code from Prioritizer, but the 
+task is difficult. You can usually do a lot of routine programming 
+or limited amount of problem`-solving`-like programming in a 
+day. The [C SystemOptimizer.cpp] is a huge pile of problems, which 
+demands many days, while in the paper it looks like there is 
+almost no progress at all. The plan is detailed enough, but it 
+also must be simplified at the same time when parts are connected 
+and unnecessary complexity is recognized, which makes this a 
+constant battle with heuristic guide. That kind of working is 
+hard to do in a team and zero`-budget... Luckily, this, the most 
+frustrating project I`'ve ever worked with, is probably finished 
+in about two weeks.]]

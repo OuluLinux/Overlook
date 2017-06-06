@@ -137,6 +137,11 @@ int QueryTable::Predict(const DecisionTreeNode& root, int row, int target_col) c
 	return -1;
 }
 
+int QueryTable::Predict(const DecisionTreeNode& root, const Vector<byte>& row, int target_col) const {
+	Panic("TODO");
+	return -1;
+}
+
 void QueryTable::GetDecisionTree(int target_id, DecisionTreeNode& root, int row_count) {
 	bool has_validation_set = test == PRUNE_REDUCEERROR;
 	
@@ -502,6 +507,14 @@ double QueryTable::QueryAverage(int target) {
 	
 	// Return mean average
 	return var.GetMean();
+}
+
+void QueryTable::Sort(int column, bool descending) {
+	Panic("TODO");
+}
+
+void QueryTable::Evolve(int best_row, int candidate_row, Vector<byte>& output_row) {
+	Panic("TODO");
 }
 
 }

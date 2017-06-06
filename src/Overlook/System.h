@@ -5,11 +5,11 @@ namespace Overlook {
 using namespace Upp;
 
 struct RegisterInput : Moveable<RegisterInput> {
-	int phase, type, scale, input_type;
+	int input_type;
 	void* data;
-	RegisterInput(int p, int t, int s, int intype, void* filter_fn) {phase=p; type=t; scale=s; input_type=intype; data=filter_fn;}
-	RegisterInput(const RegisterInput& o) {phase=o.phase; type=o.type; scale=o.scale; input_type=o.input_type; data=o.data;}
-	String ToString() const {return ValueType(phase, type, scale).ToString() + Format(" input_type=%d data=%X", input_type, (int64)data);}
+	RegisterInput(int intype, void* filter_fn) {input_type=intype; data=filter_fn;}
+	RegisterInput(const RegisterInput& o) {input_type=o.input_type; data=o.data;}
+	String ToString() const {return Format(" input_type=%d data=%X", input_type, (int64)data);}
 };
 
 enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_HIGHPRIO};
@@ -71,11 +71,25 @@ struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
 	typedef CoreItem CLASSNAME;
 	CoreItem() {core = NULL; sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
 	
-	Vector<byte> value;
 	Core* core;
+	String unique;
 	int sym, tf, priority, factory;
 };
 
+struct InputSource : Moveable<InputSource> {
+	InputSource() : factory(-1), output(-1) {}
+	InputSource(int factory, int output) : factory(factory), output(output) {}
+	InputSource(const InputSource& src) {*this = src;}
+	void operator=(const InputSource& src) {factory = src.factory; output = src.output;}
+	int factory, output;
+};
+
+struct CombinationPart : Moveable<CombinationPart> {
+	Vector<RegisterInput> inputs;
+	Vector<ValueType> outputs;
+	Vector<Vector<InputSource> > input_src;
+	bool single_sources;
+};
 
 class System {
 	
@@ -123,12 +137,16 @@ protected:
 	
 	friend class DataBridgeCommon;
 	
+	Vector<CombinationPart>		combparts;
+	Array<PipelineItem>			pl_queue;
 	Data			data;
+	Vector<String>	period_strings;
 	QueryTable		table;
-	Array<PipelineItem> pl_queue;
+	Vector<int>		traditional_enabled_cols;
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
-	Vector<String>	period_strings;
+	/*Vector<int>		inputs_to_enabled;
+	Vector<int>		enabled_to_factory;*/
 	Index<String>	symbols;
 	Index<int>		periods;
 	SpinLock		pl_queue_lock;
@@ -148,6 +166,10 @@ protected:
 	Time end;
 	int timediff;
 	int base_period;
+	int structural_columns;
+	int traditional_indicators, traditional_arg_count;
+	int template_id, template_arg_count, slot_args;
+	int ma_id;
 	
 	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
@@ -158,16 +180,22 @@ protected:
 	// Pipeline
 	void InitGeneticOptimizer();
 	void RefreshRealtime();
-	void GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids=NULL);
-	int  GetHash(const PipelineItem& pi, int sym, int tf, int model_col);
-	int  GetLeaf(int model_col, int leaf_id);
-	bool IsLeafEnabled(int model_col);
-	void VisitModel(const CoreItem& ci, Vector<Ptr<CoreItem> >& ci_queue);
+	int  GetHash(const PipelineItem& pi, int sym, int tf, Vector<int>& path);
+	void GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids);
+	void GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Vector<int>& sym_ids);
+	void CreateCore(CoreItem& ci);
+	int  GetEnabledColumn(const Vector<int>& path);
+	int  GetIndicatorFactory(const Vector<int>& path);
+	int  GetPathPriority(const Vector<int>& path);
+	void SolveClassConnections();
+	//int  GetBitCore(int struct_id, int fac_id, int input_id, int src_id) const;
+	//int  GetBitEnabled(int struct_id, int fac_id) const;
+	void ConnectCore(CoreItem& ci);
+	int  ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
+	int  GetSymbolEnabled(int sym) const;
 	
 	// Jobs
 	void Process(CoreItem& ci);
-	void CreateCore(CoreItem& ci);
-	int  ConnectSystem(int input_id, int output_id, const RegisterInput& input, CoreItem& ci, int factory, Vector<byte>* unique_slot_comb);
 	
 public:
 	

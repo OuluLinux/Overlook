@@ -19,7 +19,7 @@
 namespace Overlook {
 using namespace Upp;
 
-enum {SourcePhase, IndiPhase, ForecastPhase, ForecastCombPhase, AgentPhase, AgentCombPhase, DestPhase};
+/*enum {SourcePhase, IndiPhase, ForecastPhase, ForecastCombPhase, AgentPhase, AgentCombPhase, DestPhase};
 
 enum {
 	TimeValue,
@@ -58,14 +58,7 @@ enum {
 	WdayHourStatsValue,
 	CorrelationValue,
 	ForecastRealValue
-};
-
-enum {
-	SymTf,
-	Sym,
-	Tf,
-	All
-};
+};*/
 
 struct ValueBase {
 	int phase, type, scale, count, visible, data_type, min, max;
@@ -82,7 +75,7 @@ struct ValueRegister {
 	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
 };
 
-struct ValueType : Moveable<ValueType> {
+/*struct ValueType : Moveable<ValueType> {
 	ValueType() : phase(-1), type(-1), scale(-1) {}
 	ValueType(const ValueType& v) : phase(v.phase), type(v.type), scale(v.scale) {}
 	ValueType(int phase, int type, int scale) : phase(phase), type(type), scale(scale) {}
@@ -124,7 +117,7 @@ struct ValueType : Moveable<ValueType> {
 	}
 	
 	int phase, type, scale;
-};
+};*/
 
 struct DataExc : public Exc {
 	DataExc() {

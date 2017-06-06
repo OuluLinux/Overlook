@@ -1,8 +1,8 @@
-#ifndef _Overlook_Model_h_
-#define _Overlook_Model_h_
+#ifndef _Overlook_Template_h_
+#define _Overlook_Template_h_
 
 /*
-	Model for all advanced custom core classes
+	Template for all advanced custom core classes
 	
 	Features:
 	 - takes slower tf instances as inputs (higher priority) because the slower has higher
@@ -12,15 +12,15 @@
 
 namespace Overlook {
 
-class Model : public Core {
+class Template : public Core {
 	DecisionTreeNode tree;
 	QueryTable qt;
 	int corr_period, max_timesteps, steps, peek;
 	int arg_priority, arg_targetmode, arg_reason, arg_level;
 	
 public:
-	typedef Model CLASSNAME;
-	Model();
+	typedef Template CLASSNAME;
+	Template();
 	
 	virtual void Init();
 	virtual void Start();
@@ -33,7 +33,7 @@ public:
 			% Out(ForecastPhase, ForecastRealValue, SymTf, 3, 3)
 			
 			// 4 main arguments
-			% Arg("Learning model (decision tree vs neural network vs similarity)", arg_priority, 0, 15)
+			% Arg("Learning template (decision tree vs neural network vs similarity)", arg_priority, 0, 15)
 			% Arg("Priority (moment vs probable target)", arg_priority, 0, 15)
 			% Arg("Target (heuristic vs scheduled)", arg_targetmode, 0, 15)
 			% Arg("Reason (match past vs match more probable)", arg_reason, 0, 15)

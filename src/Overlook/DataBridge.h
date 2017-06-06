@@ -68,8 +68,7 @@ public:
 	~DataBridge();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, TimeValue, SymTf)
-			% InHigherPriority(&FilterFunction)
+		reg % InHigherPriority(&FilterFunction)
 			% Out(SourcePhase, RealValue, SymTf, 5, 3)
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(spread_qt) % Persistent(volume_qt)

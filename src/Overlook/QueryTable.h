@@ -53,6 +53,7 @@ class QueryTable {
 	
 protected:
 	friend class DecisionTreeNode;
+	friend class System;
 	
 	int Get0(int col, const Vector<byte>& vec) const;
 	void Set0(int col, int value, Vector<byte>& vec);
@@ -73,8 +74,6 @@ protected:
 	int bytes, bits;
 	int target_count;
 	int test;
-	
-	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
 	
 public:
 	
@@ -100,6 +99,11 @@ public:
 	int GetColumnCount() const {return columns.GetCount();}
 	void Sort(int column, bool descending=false);
 	void Evolve(int best_row, int candidate_row, Vector<byte>& output_row);
+	void SetPruning(int i) {test = i;}
+	int GetRowBits() const {return bits;}
+	
+	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
+	
 };
 
 

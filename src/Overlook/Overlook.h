@@ -11,7 +11,7 @@
 
 #include "DataBridge.h"
 #include "Indicators.h"
-#include "Model.h"
+#include "Template.h"
 #include "Forecasters.h"
 
 #include "GraphCtrl.h"

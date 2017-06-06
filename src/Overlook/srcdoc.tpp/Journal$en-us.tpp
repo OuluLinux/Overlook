@@ -993,4 +993,72 @@ and unnecessary complexity is recognized, which makes this a
 constant battle with heuristic guide. That kind of working is 
 hard to do in a team and zero`-budget... Luckily, this, the most 
 frustrating project I`'ve ever worked with, is probably finished 
-in about two weeks.]]
+in about two weeks.&]
+[s3;%- 5.6.2017&]
+[s0;%- I am still working on [C SystemOptimizer.cpp] and it still is 
+ridiculously difficult. I had to write all certain things as 
+comments in that file. That showed the point of uncertainty very 
+well and it was like modern highway stopped suddenly to the wall 
+of rainforest jungle. There is some code from old Prioritizer 
+class, which implements all the same necessary stuff but for 
+different system, which is like a lighthouse glowing in the dark, 
+but it doesn`'t help to get trough.&]
+[s0;%- ...&]
+[s0;%- What... I made huge mistake again... I thought that a type 
+of input`-indicator could be in one column, but I thought it 
+and it is bad idea. The mutation happens by combining many values 
+and it doesn`'t work for classifiers. I knew it was wrong from 
+past coding, but I didn`'t connect it to this. Mutating the enabled/disabled 
+bit works, however. That was how it worked in the Prioritizer, 
+but somehow I missed the point once again. So, now I must re`-check 
+all column values again, that there is not a single classifier 
+as a value. Only weaks classifiers are allowed, like which average 
+method is used in moving average...&]
+[s0;%- Hmm.... seems like I am so stuck with this that I didn`'t 
+even write it in a wrong way yet.&]
+[s0;%- So, now there must be room for enabled bits for all traditional 
+sources, and their arguments, to make the mutations work. That 
+shrinks the tree`-structure of template classes to a stub, but 
+that doesn`'t really matter. I didn`'t expect the multi`-level 
+structure to bring much more value anyway.&]
+[s3;%- 6.6.2017&]
+[s0;%- I was so pissed yesterday about being stuck, that I didn`'t 
+commit anything. The way I commit everyday, is not good for community 
+or company projects, of course, but this is not one. I have been 
+in team projects where I was the only one to make commits and 
+the work anyway, so I got less interested about if the project 
+will compile and link... &]
+[s0;%- ...&]
+[s0;%- Exciting findings... I simplified some old code and that gave 
+me some interesting questions and answers...&]
+[s0;%- So, the decision tree allows only one target value. At first, 
+you think that it should give the long/short signal. `"[/ But but 
+but I want more than one investment instrument...]`". Ok, fine, 
+either you discard the decision tree or you start to be creative. 
+Why don`'t you just use artifical neural networks, which gives 
+you multiple outputs, which you can interpret as many long/shorts 
+signals and give reward accordingly? Well, remember how I told 
+how there is this tree`-structured pipeline, which has combiner 
+at the root and the disabled/enabled bit is for leaf nodes to 
+allow sane mutations in genetic optimizer? Turns out, that it 
+might not be that good idea to put enabled/disabled bit row to 
+the direction of root, like it is in the direction of leafs... 
+That would be something that would happen if you would put artifical 
+neural network in the root combiner without working decision 
+tree model to replace it.&]
+[s0;%- There is a good reason for not using that enabled/disabled 
+bit row for all market symbols. If you look what the correlation 
+oscillator indicator draws, you`'ll see, that there is usually 
+very strong correlation for or against other symbols. You`'ll 
+see, that sometimes some symbol suddenly flips it`'s side (`+1 
+to `-1 or `-1 to `+1), but most of the time symbols are almost 
+`-1 or `+1 by their correlation value (with medium to small sample 
+size). There is actually a good classifier for root target which 
+has a reasonable description. That would be [/ strongly correlating 
+groups with descending order]; the largest strongly correlating 
+group would have the identification number 0. Weaker groups would 
+have their id starting from 1. After that there would be sub`-groups 
+and maybe even some intersecting areas. I think that is what 
+the Overlook will have as the target value of the root combiner. 
+However, I might find some flaws in this model.&]
+[s0;%- ]]

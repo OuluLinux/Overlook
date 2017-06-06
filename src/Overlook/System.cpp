@@ -12,6 +12,13 @@ System::System() {
 	running = false;
 	stopped = true;
 	exploration = 0.2;
+	
+	structural_columns = 0;
+	template_arg_count = 0;
+	slot_args = 0;
+	traditional_indicators = 0;
+	traditional_arg_count = 0;
+	ma_id = -1;
 }
 
 System::~System() {
@@ -91,6 +98,7 @@ void System::Init() {
 		LOG("Load failed");
 	}
 	
+	SolveClassConnections();
 	InitGeneticOptimizer();
 	
 }

@@ -45,7 +45,8 @@ void System::Worker(int id) {
 		
 		// Get core-item queue from pipeline-item
 		Vector<Ptr<CoreItem> > ci_queue;
-		GetCoreQueue(*pi, ci_queue);
+		//GetCoreQueue(*pi, ci_queue);
+		Panic("TODO");
 		
 		
 		// Process job-queue
@@ -65,8 +66,21 @@ Core* System::CreateSingle(int column, int sym, int tf) {
 	// Get core-item queue from pipeline-combination
 	PipelineItem pi;
 	Vector<Ptr<CoreItem> > ci_queue;
-	GetCoreQueue(pi, ci_queue);
 	
+	// Enable symbol
+	ASSERT(sym >= 0 && sym < symbols.GetCount());
+	Vector<int> sym_ids;
+	sym_ids.Add(sym);
+	
+	// Enable timeframe
+	ASSERT(tf >= 0 && tf < periods.GetCount());
+	
+	// Enable column
+	Vector<int> path;
+	path.Add(1000 + column);
+	
+	// Get working queue
+	GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 	
 	// Process job-queue
 	for(int i = 0; i < ci_queue.GetCount(); i++) {

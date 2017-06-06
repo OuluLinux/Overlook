@@ -2,14 +2,14 @@
 
 namespace Overlook {
 
-Model::Model() {
+Template::Template() {
 	corr_period = 4;
 	max_timesteps = 3;
 	steps = 8;
 	peek = 0;
 }
 
-void Model::Init() {
+void Template::Init() {
 	peek = 2;
 	
 	
@@ -70,7 +70,7 @@ void Model::Init() {
 	}*/
 }
 
-void Model::Start() {
+void Template::Start() {
 	int id = GetSymbol();
 	int thistf = GetTf();
 	int bars = GetBars();

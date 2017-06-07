@@ -61,25 +61,27 @@ void System::Worker(int id) {
 	nonstopped_workers--;
 }
 
-Core* System::CreateSingle(int column, int sym, int tf) {
+Core* System::CreateSingle(int factory, int sym, int tf) {
 	
-	// Get core-item queue from pipeline-combination
+	// Enable column
+	Vector<int> path;
+	path.Add(1000 + factory);
 	PipelineItem pi;
-	Vector<Ptr<CoreItem> > ci_queue;
+	pi.value.SetCount(table.GetRowBytes(), 0);
+	int col = GetEnabledColumn(path);
+	if (col != -1)
+		table.Set0(col, true, pi.value);
 	
 	// Enable symbol
 	ASSERT(sym >= 0 && sym < symbols.GetCount());
-	Vector<int> sym_ids;
+	Index<int> sym_ids;
 	sym_ids.Add(sym);
 	
 	// Enable timeframe
 	ASSERT(tf >= 0 && tf < periods.GetCount());
 	
-	// Enable column
-	Vector<int> path;
-	path.Add(1000 + column);
-	
 	// Get working queue
+	Vector<Ptr<CoreItem> > ci_queue;
 	GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 	
 	// Process job-queue
@@ -87,7 +89,7 @@ Core* System::CreateSingle(int column, int sym, int tf) {
 		Process(*ci_queue[i]);
 	}
 	
-	return ci_queue.Top()->core;
+	return &*ci_queue.Top()->core;
 }
 
 void System::Process(CoreItem& ci) {

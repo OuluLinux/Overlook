@@ -29,6 +29,7 @@ Overlook::~Overlook() {
 	if (prev_view) {
 		RemoveChild(prev_view);
 		delete prev_view;
+		prev_view = NULL;
 	}
 }
 
@@ -51,7 +52,7 @@ void Overlook::Init() {
 	
 	tflist.SetIndex(tflist.GetCount()-2); // TODO: clear these development values
 	symlist.SetIndex(70);
-	ctrllist.SetIndex(1);
+	ctrllist.SetIndex(0);
 	
 	PostCallback(THISBACK(SetView));
 }

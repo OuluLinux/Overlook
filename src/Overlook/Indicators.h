@@ -38,8 +38,8 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", ma_period, 2, 127)
 			% Arg("offset", ma_shift, 0, 0)
 			% Arg("method", ma_method, 0, 3);
@@ -59,8 +59,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+		reg % In<DataBridge>()
+			% Out(2, 2)
 			% Arg("fast_ema", fast_ema_period, 2, 127)
 			% Arg("slow_ema", slow_ema_period, 2, 127)
 			% Arg("signal_sma", signal_sma_period, 2, 127);
@@ -78,8 +78,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 3)
+		reg % In<DataBridge>()
+			% Out(6, 3)
 			% Arg("period", period_adx, 2, 127);
 	}
 };
@@ -102,8 +102,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 3)
+		reg % In<DataBridge>()
+			% Out(4, 3)
 			% Arg("period", bands_period, 2, 127)
 			% Arg("shift", bands_shift, 0, 0)
 			% Arg("deviation", deviation, 2, 127);
@@ -125,8 +125,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 2)
+		reg % In<DataBridge>()
+			% Out(3, 2)
 			% Arg("period", ma_period, 2, 127)
 			% Arg("shift", ma_shift, 0, 0)
 			% Arg("deviation", dev, 2, 127)
@@ -152,8 +152,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("step", step, 2, 127)
 			% Arg("maximum", maximum, 2, 127)
 			% Persistent(last_rev_pos)
@@ -173,8 +173,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127)
 			% Arg("ma_method", ma_method, 0, 3);
 	}
@@ -191,8 +191,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 1)
+		reg % In<DataBridge>()
+			% Out(2, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -208,8 +208,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -226,8 +226,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -243,8 +243,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -261,8 +261,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -280,8 +280,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127)
 			% Arg("ma_method", ma_method, 0, 3);
 	}
@@ -298,8 +298,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -317,8 +317,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("fast_ema_period", fast_ema_period, 2, 127)
 			% Arg("slow_ema_period", slow_ema_period, 2, 127)
 			% Arg("signal_sma", signal_sma_period, 2, 127);
@@ -336,8 +336,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -353,8 +353,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+		reg % In<DataBridge>()
+			% Out(2, 2)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -372,8 +372,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
+		reg % In<DataBridge>()
+			% Out(4, 2)
 			% Arg("k_period", k_period, 2, 127)
 			% Arg("d_period", d_period, 2, 127)
 			% Arg("slowing", slowing, 2, 127);
@@ -394,8 +394,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -410,8 +410,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
@@ -425,8 +425,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -441,8 +441,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
@@ -457,8 +457,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
@@ -473,8 +473,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
@@ -488,8 +488,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1);
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
@@ -503,8 +503,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 3);
+		reg % In<DataBridge>()
+			% Out(5, 3);
 	}
 };
 
@@ -527,8 +527,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
+		reg % In<DataBridge>()
+			% Out(6, 6)
 			% Arg("jaws_period", jaws_period, 2, 127)
 			% Arg("teeth_period", teeth_period, 2, 127)
 			% Arg("lips_period", lips_period, 2, 127)
@@ -550,8 +550,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 3);
+		reg % In<DataBridge>()
+			% Out(3, 3);
 	}
 };
 
@@ -570,8 +570,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 6, 6)
+		reg % In<DataBridge>()
+			% Out(6, 6)
 			% Arg("left_bars", left_bars, 2, 20)
 			% Arg("right_bars", right_bars, 0, 0);
 	}
@@ -591,8 +591,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+		reg % In<DataBridge>()
+			% Out(2, 2)
 			% Arg("left_bars", left_bars, 2, 20)
 			% Arg("right_bars", right_bars, 0, 0)
 			% Arg("smoothing", smoothing_period, 2, 127);
@@ -609,8 +609,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 4);
+		reg % In<DataBridge>()
+			% Out(5, 4);
 	}
 };
 
@@ -630,8 +630,8 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 2)
+		reg % In<DataBridge>()
+			% Out(4, 2)
 			% Arg("depth", input_depth, 2, 16)
 			% Arg("deviation", input_depth, 2, 16)
 			% Arg("backstep", input_backstep, 2, 16)
@@ -652,8 +652,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("depth", depth, 2, 16)
 			% Arg("deviation", deviation, 2, 16)
 			% Arg("backstep", backstep, 2, 16);
@@ -672,8 +672,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 4, 4);
+		reg % In<DataBridge>()
+			% Out(4, 4);
 	}
 };
 
@@ -688,8 +688,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+		reg % In<DataBridge>()
+			% Out(2, 2)
 			% Arg("period", period, 300, 300)
 			% Arg("max_crosses", max_crosses, 100, 100)
 			% Arg("max_radius", max_radius, 100, 100);
@@ -708,8 +708,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2)
+		reg % In<DataBridge>()
+			% Out(2, 2)
 			% Arg("period", period, 2, 127)
 			% Arg("max_crosses", max_crosses, 300, 300)
 			% Arg("max_radius", max_radius, 100, 100)
@@ -728,8 +728,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -768,8 +768,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		if (sym_count == -1 && base)
 			sym_count = GetSystem().GetSymbolCount();
-		reg % In(SourcePhase, RealValue, Sym)
-			% Out(IndiPhase, CorrelationValue, SymTf, sym_count-1, sym_count-1)
+		reg % In<DataBridge>()
+			% Out(sym_count-1, sym_count-1)
 			% Arg("period", period, 2, 16);
 	}
 };
@@ -797,8 +797,8 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 1, 1)
+		reg % In<DataBridge>()
+			% Out(1, 1)
 			% Arg("period", period, 2, 16)
 			% Arg("method", method, 0, 3);
 	}
@@ -823,8 +823,8 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 3, 1)
+		reg % In<DataBridge>()
+			% Out(3, 1)
 			% Arg("period", period, 2, 16)
 			% Arg("method", method, 0, 3)
 			% Arg("slowing", slowing, 2, 127);

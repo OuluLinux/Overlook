@@ -25,12 +25,11 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, Sym)
-			% In(IndiPhase, RealChangeValue, Sym)
-			% In(IndiPhase, CorrelationValue, SymTf)
-			% InHigherPriority()
-			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
-			% Out(ForecastPhase, ForecastRealValue, SymTf, 3, 3)
+		reg % In<DataBridge>()
+			% In<ValueChange>()
+			% In<Template>(&TemplateIn)
+			% InOptional()
+			% Out(3, 3)
 			
 			// 4 main arguments
 			% Arg("Learning template (decision tree vs neural network vs similarity)", arg_priority, 0, 15)
@@ -42,6 +41,10 @@ public:
 			% Arg("Correlation period", corr_period, 2, 16);
 	}
 	
+	static bool TemplateIn(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		Panic("TODO");
+		return false;
+	}
 };
 
 }

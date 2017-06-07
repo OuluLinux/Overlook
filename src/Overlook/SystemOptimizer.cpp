@@ -86,93 +86,45 @@ namespace Overlook {
 
 const int max_sources = 2;
 
-void System::SolveClassConnections() {
-	ASSERT(combparts.IsEmpty());
-	ASSERT_(System::GetRegs().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
-	
-	// Compare input types to output types and add matching pairs to input sources.
-	for(int i = 0; i < System::GetRegs().GetCount(); i++) {
-		const Vector<RegisterInput>& factory_inputs = System::GetRegs()[i].in;
-		const Vector<ValueType>& factory_outputs = System::GetRegs()[i].out;
-		
-		// One part per slot-factory
-		CombinationPart& part = combparts.Add();
-		part.input_src.SetCount(factory_inputs.GetCount());
-		
-		// Add inputs
-		for(int i2 = 0; i2 < factory_inputs.GetCount(); i2++) {
-			const RegisterInput& input = factory_inputs[i2];
-			part.inputs.Add(input);
-			
-			// Find output to input.
-			// Limit range to input position, because it simplifies dependency mask and this
-			// way some wrong combinations can be easily avoided. Be sure to register slots in
-			// correct order.
-			for(int j = 0; j < i; j++) {
-				const Vector<ValueType>& factory_outputs = System::GetRegs()[j].out;
-				
-				for(int k = 0; k < factory_outputs.GetCount(); k++) {
-					const ValueType& output = factory_outputs[k];
-					
-					// If one of outputs of the registered slot factory is equal to input
-					if (output.type == input.type && output.phase == input.phase) {
-						
-						part.input_src[i2].Add(InputSource(j, k));
-					}
-				}
-			}
-		}
-		// Add outputs
-		for(int i2 = 0; i2 < factory_outputs.GetCount(); i2++) {
-			const ValueType& output = factory_outputs[i2];
-			part.outputs.Add(output);
-		}
-		
-		// Check if slot can branch with different sources
-		part.single_sources = true;
-		for(int j = 0; j < part.input_src.GetCount(); j++) {
-			if (part.input_src[j].GetCount() > 1) {
-				part.single_sources = false;
-				break;
-			}
+void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count) {
+	int byt = bit_begin / 8;
+	int bit = bit_begin % 8;
+	byte* v = vec.Begin() + byt;
+	for(int i = 0; i < bit_count; i++) {
+		bool b = (1 << i);
+		if (!b)		*v &= ~(1 << bit);
+		else		*v |=  (1 << bit);
+		bit++;
+		if (bit == 8) {
+			bit = 0;
+			v++;
 		}
 	}
-	
-	// Debugging checks
-	#ifdef flagDEBUG
-	int combination_errors = 0;
-	for(int i = 0; i < combparts.GetCount(); i++) {
-		const CombinationPart& part = combparts[i];
-		LOG("    part " << i << ": \"" << System::GetCtrlFactories()[i].a << "\" single-source=" << (int)part.single_sources);
-		
-		for(int j = 0; j < part.input_src.GetCount(); j++) {
-			const Vector<InputSource>& inputs = part.input_src[j];
-			if (inputs.IsEmpty()) {
-				const RegisterInput& input = System::GetRegs()[i].in[j];
-				if (input.input_type == REGIN_HIGHPRIO) {
-					LOG("         (same class, higher priority instances)");
-				}
-				else {
-					LOG("        ERROR: input not found: " << part.inputs[j].ToString());
-					combination_errors++;
-				}
-			} else {
-				String str;
-				for(int k = 0; k < inputs.GetCount(); k++) {
-					const InputSource& is = inputs[k];
-					str << " (" << is.factory << "," << is.output << ")";
-				}
-				LOG("        " << str);
-			}
-		}
-	}
-	if (combination_errors) {
-		Panic("Found " + IntStr(combination_errors) + " errors. Can't run system.");
-	}
-	#endif
 }
 
-int  System::GetSymbolEnabled(int sym) const {
+void System::InitRegistry() {
+	ASSERT(regs.IsEmpty());
+	ASSERT_(System::GetCtrlFactories().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
+	
+	// Register factories
+	for(int i = 0; i < System::GetCtrlFactories().GetCount(); i++) {
+		// unfortunately one object must be created, because IO can't be static and virtual at the same time and it is cleaner to use virtual.
+		One<Core> core = System::GetCtrlFactories()[i].b();
+		core->base = this;
+		FactoryRegister& reg = regs.Add();
+		core->IO(reg);
+	}
+	
+	// Resize databank
+	data.SetCount(symbols.GetCount());
+	for(int i = 0; i < data.GetCount(); i++) {
+		data[i].SetCount(periods.GetCount());
+		for(int j = 0; j < periods.GetCount(); j++)
+			data[i][j].SetCount(regs.GetCount());
+	}
+}
+
+int System::GetSymbolEnabled(int sym) const {
 	ASSERT(sym >= 0 && sym < symbols.GetCount());
 	int col = 0;
 	col++; // target
@@ -186,42 +138,124 @@ inline uint32 Pow2(int exp) {
 	return r;
 }
 
+int System::GetPathPriority(const Vector<int>& path) {
+	ASSERT(max_sources == 2);
+	int priority = 0;
+	if (path.GetCount()) {
+		priority++;
+		for(int i = 0; i < path.GetCount(); i++) {
+			int j = path[i];
+			ASSERT(j >= 0);
+			
+			// Structural node
+			if (j < 1000) {
+				ASSERT(j < max_sources);
+				ASSERT(i <= 3);
+				int sub_nodes = 0;
+				for(int k = i+1; k <= 3; k++) {
+					int e = 3 - k;
+					ASSERT(e >= 0);
+					sub_nodes += Pow2(e);
+				}
+				priority += j * sub_nodes;
+				if (path.GetCount() == i+1)
+					break;
+				priority++;
+			}
+			// Traditional indicator
+			else return 0;
+		}
+	}
+	return priority;
+}
+
 int System::GetEnabledColumn(const Vector<int>& path) {
 	ASSERT(max_sources == 2);
 	int col = 1 + symbols.GetCount();
-	for(int i = 0; i < path.GetCount(); i++) {
-		int j = path[i];
-		ASSERT(j >= 0);
-		
-		// Structural node
-		if (j < 1000) {
-			ASSERT(j < max_sources);
-			// Combiner
-			if (i == 0) {
-				ASSERT(j == 0);
-				col += slot_args;
-			}
-			// Template-tree
-			else {
+	if (path.GetCount()) {
+		col += slot_args;
+		for(int i = 0; i < path.GetCount(); i++) {
+			int j = path[i];
+			ASSERT(j >= 0);
+			
+			// Structural node
+			if (j < 1000) {
+				ASSERT(j < max_sources);
 				ASSERT(i <= 3);
 				int sub_nodes = 0;
-				for(int k = i; k < 4; k++) {
+				for(int k = i+1; k <= 3; k++) {
 					int e = 3 - k;
 					ASSERT(e >= 0);
 					sub_nodes += Pow2(e);
 				}
 				col += j * sub_nodes * slot_args;
+				if (path.GetCount() == i+1)
+					break;
+				col += slot_args;
 			}
-		}
-		// Traditional indicator
-		else {
-			j -= 1000;
-			col += traditional_enabled_cols[j];
-			ASSERT_(i == path.GetCount()-1, "This must be the last position in the path");
+			// Traditional indicator
+			else {
+				ASSERT(ma_id != -1);
+				j -= 1000 + ma_id;
+				if (j < 0)
+					return -1;
+				col += traditional_enabled_cols[j];
+				ASSERT_(i == path.GetCount()-1, "This must be the last position in the path");
+			}
 		}
 	}
 	ASSERT(col >= 0 && col < table.GetColumnCount());
 	return col;
+}
+
+void System::MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const {
+	Vector<byte> mask;
+	mask.SetCount(table.GetRowBytes(), 0);
+	
+	// Mask vector
+	ASSERT(max_sources == 2);
+	int col = 1 + symbols.GetCount();
+	if (path.GetCount()) {
+		col += slot_args;
+		for(int i = 0; i < path.GetCount(); i++) {
+			int j = path[i];
+			ASSERT(j >= 0);
+			
+			// Structural node
+			if (j < 1000) {
+				ASSERT(j < max_sources);
+				ASSERT(i <= 3);
+				int sub_nodes = 0;
+				for(int k = i+1; k <= 3; k++) {
+					int e = 3 - k;
+					ASSERT(e >= 0);
+					sub_nodes += Pow2(e);
+				}
+				col += j * sub_nodes * slot_args;
+				if (path.GetCount() == i+1) {
+					MaskBits(mask, col, sub_nodes * slot_args);
+					break;
+				}
+				col += slot_args;
+			}
+			// Traditional indicator
+			else {
+				j -= 1000;
+				col += traditional_enabled_cols[j];
+				MaskBits(mask, col, traditional_col_length[j]);
+				break; // all maskable is masked
+			}
+		}
+	}
+	else {
+		MaskBits(mask, col, table.GetRowBits() - col);
+	}
+	
+	// AND operate vector
+	dst.SetCount(mask.GetCount());
+	for(int i = 0; i < mask.GetCount(); i++) {
+		dst[i] = mask[i] & src[i];
+	}
 }
 
 void System::InitGeneticOptimizer() {
@@ -239,7 +273,7 @@ void System::InitGeneticOptimizer() {
 	// Columns for structure
 	structural_columns = 1 + 1 + max_sources + max_sources * max_sources;
 	template_id = Find<Template>();
-	const Vector<ArgType>& template_args = GetRegs()[template_id].args;
+	const Vector<ArgType>& template_args = regs[template_id].args;
 	template_arg_count = template_args.GetCount();
 	
 	// Columns for traditional indicator arguments
@@ -250,8 +284,10 @@ void System::InitGeneticOptimizer() {
 	traditional_indicators = psych_id - ma_id + 1;
 	traditional_arg_count = 0;
 	for(int j = 0; j < traditional_indicators; j++) {
+		int len = regs[ma_id + j].args.GetCount();
 		traditional_enabled_cols.Add(traditional_arg_count + j);
-		traditional_arg_count += GetRegs()[ma_id + j].args.GetCount();
+		traditional_col_length.Add(len);
+		traditional_arg_count += len;
 	}
 	
 	// Enable slot, template arguments, enable trad. indicators, arguments for trad. indicators
@@ -277,8 +313,8 @@ void System::InitGeneticOptimizer() {
 		// Columns in the traditional indicator inputs of one structural slot
 		for(int j = 0; j < traditional_indicators; j++) {
 			int factory = ma_id + j;
-			const CombinationPart& part = combparts[factory];
-			const SystemValueRegister& reg = GetRegs()[factory];
+			const FactoryRegister& part = regs[factory];
+			const FactoryRegister& reg = regs[factory];
 			const String& title = GetCtrlFactories()[factory].a;
 			String desc = slot_desc + " " + title + " enabled";
 			
@@ -295,26 +331,31 @@ void System::InitGeneticOptimizer() {
 		}
 	}
 	
-	// Connect input source slots to their enabled bits
-	/*int combination_bits = table.GetRowBits();
-	inputs_to_enabled.SetCount(combination_bits, -1);
-	enabled_to_factory.SetCount(combination_bits, -1);
 	
-	for(int i = 0; i < combparts.GetCount(); i++) {
-		const CombinationPart& part = combparts[i];
-		for(int j = 0; j < part.input_src.GetCount(); j++) {
-			const Vector<InputSource>& src = part.input_src[j];
-			for(int k = 0; k < src.GetCount(); k++) {
-				const InputSource& is = src[k];
-				for(int l = 0; l < structural_columns; l++) {
-					int input_bit = GetBitCore(l, i, j, k);
-					int enabled_bit = GetBitEnabled(l, is.factory);
-					inputs_to_enabled[input_bit] = enabled_bit;
-					enabled_to_factory[enabled_bit] = is.factory;
-				}
+	// Test path->column function
+	{
+		Vector<int> path;
+		int col = 1 + symbols.GetCount();
+		ASSERT(GetEnabledColumn(path) == col);
+		col += slot_args;
+		path.Add(0);
+		ASSERT(GetEnabledColumn(path) == col);
+		col += slot_args;
+		for(int i = 0; i < max_sources; i++) {
+			path.Add(i);
+			ASSERT(GetEnabledColumn(path) == col);
+			col += slot_args;
+			for(int j = 0; j < max_sources; j++) {
+				path.Add(j);
+				ASSERT(GetEnabledColumn(path) == col);
+				col += slot_args;
+				path.Pop();
 			}
+			path.Pop();
 		}
-	}*/
+		int col_count = table.GetColumnCount();
+		ASSERT(col == col_count);
+	}
 }
 
 void System::RefreshPipeline() {
@@ -385,9 +426,9 @@ void System::RefreshPipeline() {
 	}
 }
 
-void System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids) {
+int System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids) {
 	
-	Vector<int> sym_ids;
+	Index<int> sym_ids;
 	const int sym_count = GetSymbolCount();
 	for (int sym = 0; sym < sym_count; sym++) {
 		int sym_enabled_col = GetSymbolEnabled(sym);
@@ -412,6 +453,8 @@ void System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_que
 	// Sort queue by priority
 	struct PrioritySorter {
 		bool operator()(const Ptr<CoreItem>& a, const Ptr<CoreItem>& b) const {
+			if (a->priority == b->priority)
+				return a->factory < b->factory;
 			return a->priority < b->priority;
 		}
 	};
@@ -419,9 +462,11 @@ void System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_que
 	
 	// Remove duplicates
 	Panic("TODO");
+	
+	return 0;
 }
 
-void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Vector<int>& sym_ids) {
+int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids) {
 	ASSERT(table.GetColumnCount() > 0);
 	ASSERT(ma_id != -1);
 	
@@ -433,6 +478,7 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 	
 	
 	// Template objects
+	Vector<int> input_hashes;
 	if (is_template) {
 		ASSERT(sub_pos >= 0 && sub_pos < max_sources);
 		
@@ -443,11 +489,13 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 			path.Add(i);
 			int col = GetEnabledColumn(path);
 			if (!table.Get0(col, pi.value)) {
+				path.Pop();
 				continue;
 			}
-			
-			GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
+			int h = GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 			path.Pop();
+			
+			input_hashes.Add(h);
 		}
 		
 		for(int i = 0; i < traditional_indicators; i++) {
@@ -456,68 +504,110 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 			path.Add(1000 + ma_id + i);
 			int col = GetEnabledColumn(path);
 			if (!table.Get0(col, pi.value)) {
+				path.Pop();
 				continue;
 			}
-			
-			GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
+			int h = GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 			path.Pop();
+			
+			input_hashes.Add(h);
 		}
+		Panic("TODO check input_hashes position matching");
 	}
 	// Traditional indicator
 	else {
 		// Loop inputs of the factory
-		const CombinationPart& part = combparts[factory];
-		const SystemValueRegister& reg = System::GetRegs()[factory];
+		const FactoryRegister& reg = regs[factory];
 		
 		// Connect input sources
 		// Loop all inputs of the custom core-class
-		for (int l = 0; l < part.input_src.GetCount(); l++) {
+		Index<int> sub_sym_ids;
+		for (int l = 0; l < reg.in.GetCount(); l++) {
 			const RegisterInput& input = reg.in[l];
-			if (input.input_type == REGIN_DYNAMIC) {
+			FilterFunction fn = (FilterFunction)input.data;
+			
+			// Get all symbols what input requires
+			sub_sym_ids.Clear();
+			for(int i = 0; i < sym_ids.GetCount(); i++) {
+				int in_sym = sym_ids[i];
 				
-			} else {
-				// In current version, where traditional indicators and template model are separated,
-				// only one source is allowed for traditional indicator input.
-				const Vector<InputSource>& sources = part.input_src[l];
-				ASSERT_(sources.GetCount() == 1, "Traditional indicator inputs should have only 1 possible source output");
-				const InputSource& source = sources[0];
-				
-				
-				//const RegisterInput& input = part.inputs[l];
-				
-				
-				path.Add(1000 + source.factory);
-				GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
+				for(int j = 0; j < GetSymbolCount(); j++) {
+					if (fn(this, in_sym, -1, j, -1))
+						sub_sym_ids.FindAdd(j);
+				}
+			}
+			
+			int h = 0;
+			if (!sub_sym_ids.IsEmpty()) {
+				path.Add(1000 + input.factory);
+				h = GetCoreQueue(path, pi, ci_queue, tf, sub_sym_ids);
 				path.Pop();
 			}
+			
+			input_hashes.Add(h);
 		}
 	}
 	
-	// Mask this and all dependencies in the pipeline combination
-	Vector<byte> comb;
-	Panic("TODO");
-	
-	// Get unique string and trim it
-	String unique, unique_long = HexVector(comb);
-	for (int j = unique_long.GetCount()-1; j >= 0; j--) {
-		if (unique_long[j] != '0') {
-			unique = unique_long.Left(j+1);
-			break;
+	// Get the unique hash for core item
+	int hash = 0;
+	String unique;
+	Vector<int> args;
+	if (is_template) {
+		// Mask this and all dependencies in the pipeline combination
+		ASSERT(!pi.value.IsEmpty());
+		Vector<byte> comb;
+		MaskPath(pi.value, path, comb);
+		
+		// Get unique string and trim it
+		String unique_long = HexVector(comb);
+		for (int j = unique_long.GetCount()-1; j >= 0; j--) {
+			if (unique_long[j] != '0') {
+				unique = unique_long.Left(j+1);
+				break;
+			}
 		}
+		ASSERT(!unique.IsEmpty());
+		hash = GetHash(comb);
 	}
-	ASSERT(!unique.IsEmpty());
+	else {
+		CombineHash ch;
+		
+		int arg_col = GetEnabledColumn(path);
+		if (arg_col != -1) {
+			arg_col++; // enabled column
+			
+			const FactoryRegister& reg = regs[factory];
+			for(int i = 0; i < reg.args.GetCount(); i++) {
+				const ArgType& arg = reg.args[i];
+				
+				int value = arg.min + table.Get0(arg_col, pi.value);
+				ASSERT(value >= arg.min && value <= arg.max);
+				args.Add(value);
+				
+				ch << value << 1;
+				
+				arg_col++;
+			}
+			
+			hash = ch;
+			unique = IntStr(hash);
+		}
+		else unique = "default";
+	}
 	
 	
 	for (int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
 		
-		int hash = GetHash(pi, sym, tf, path);
 		
 		// Get CoreItem
 		CoreItem& ci = data[sym][tf][factory].GetAdd(hash);
 		
 		// Init object if it was just created
 		if (ci.sym == -1) {
+			int path_priority = GetPathPriority(path);
+			ASSERT(path_priority >= -regs.GetCount() && path_priority < structural_columns);
+			
 			ci.sym = sym;
 			ci.tf = tf;
 			ci.priority = // lower value is more important
@@ -527,7 +617,7 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 				
 				// Structural column might require all symbols, so it is more important than symbol.
 				// Also, root is the column 0 and it must be processed last.
-				GetPathPriority(path) * sym_count +
+				path_priority * sym_count +
 				
 				// Lower symbols must be processed before higher, because cores are allowed to
 				// require lower id symbols in the same timeframe and same structural column.
@@ -535,9 +625,8 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 			
 			ci.factory = factory;
 			ci.unique = unique;
-			
-			// Set arguments from combination
-			Panic("TODO");
+			ci.input_hashes <<= input_hashes;
+			ci.args <<= args;
 			
 			// Connect core inputs
 			ConnectCore(ci);
@@ -545,199 +634,87 @@ void System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<
 		
 		ci_queue.Add(&ci);
 	}
+	
+	return hash;
 }
 
-int System::GetHash(const PipelineItem& pi, int sym, int tf, Vector<int>& path) {
+int System::GetHash(const Vector<byte>& vec) {
+	CombineHash ch;
 	
-	Panic("TODO"); return 0;
+	int full_ints = vec.GetCount() / 4;
+	int int_mod = vec.GetCount() % 4;
+	
+	int* i = (int*)vec.Begin();
+	for(int j = 0; j < full_ints; j++) {
+		ch << *i << 1;
+		i++;
+	}
+	byte* b = (byte*)i;
+	for(int j = 0; j < int_mod; j++) {
+		ch << *b << 1;
+		b++;
+	}
+	return ch;
 }
 
 
 void System::ConnectCore(CoreItem& ci) {
 	ASSERT(ci.core == NULL);
-	const CombinationPart& part = combparts[ci.factory];
+	const FactoryRegister& part = regs[ci.factory];
 	Vector<int> enabled_input_factories;
 	Vector<byte> unique_slot_comb;
 
 	// Connect input sources
 	// Loop all inputs of the custom core-class
-	for (int l = 0; l < part.input_src.GetCount(); l++) {
-		const RegisterInput& input = part.inputs[l];
-		bool input_dynamic = (input.input_type == REGIN_DYNAMIC && input.data != NULL) || (input.input_type == REGIN_HIGHPRIO && input.data != NULL);
-		
-		// For higher priority inputs, the only source is this same factory
-		if (input.input_type == REGIN_HIGHPRIO) {
-			ASSERT_(part.outputs.GetCount(), "The class must have at least one output to connect it as input.");
-			int hash;
-			Panic("TODO");
-			int found_inputs = ConnectInput(l, 0, ci, ci.factory, hash);
-		}
-		// Normally loop possible sources for one input
-		else {
-			const Vector<InputSource>& input_src = part.input_src[l];
-			#ifdef flagDEBUG
-			int src_count = 0; // count enabled sources for debugging (1 is correct)
-			int enabled_count = 0; // exactly one must be enabled
-			#endif
-			enabled_input_factories.SetCount(0);
-			
-			for (int m = 0; m < input_src.GetCount(); m++) {
-				
-				// Check if source is enabled
-				/*const InputSource& src = input_src[m];
-				int src_enabled_bit = GetBitCore(ci.factory, l, m);
-				bool src_enabled = ReadBit(ci.value, src_enabled_bit);
-				if (!src_enabled) continue;*/
-				Panic("TODO"); // break first
-				
-				/*#ifdef flagDEBUG
-				int bit = InputToEnabled(src_enabled_bit);
-				int enabled_bit = GetBitEnabled(src.factory);
-				ASSERT(bit == enabled_bit);
-				ASSERT(ReadBit(ci.value, bit));
-				#endif*/
-				
-				const InputSource& src = input_src[0];
-				
-				enabled_count++;
-				enabled_input_factories.Add(src.factory);
-				
-				// Create unique combination for current input source factory
-				/*CreateUniqueCombination(ci.value, src.factory, unique_slot_comb);
-				ASSERT(unique_slot_comb.GetCount() == job_combination_bytes);*/
-				int hash;
-				Panic("TODO");
-				
-				int found_inputs = ConnectInput(l, src.output, ci, src.factory, hash);
-				
-				if (found_inputs) {
-					// Catch invalid combinations
-					#ifdef flagDEBUG
-					src_count++;
-					#endif
-					break;
-				}
-			}
-			#ifdef flagDEBUG
-			if (enabled_count == 0) {
-				//LOG("Combination:");
-				//LOG(GetCombinationString(ci.value));
-				//DUMPC(job_queue);
-				/*LOG("Checking all source pipeline combinations");
-				for(int i = 0; i < ci.pipeline_src.GetCount(); i++) {
-					const PipelineItem& pi = pl_queue[ci.pipeline_src[i]];
-					CheckCombination(pi.value);
-				}*/
-			}
-			ASSERT_(enabled_count > 0, "Combination is invalid: not a single source is enabled");
-			ASSERT_(enabled_count < 2, "Combination is invalid: too many sources are enabled");
-			if (src_count == 0 && input.input_type == REGIN_DYNAMIC) {
-				//LOG(GetCombinationString(ci.value));
-				String inputs = "\"";
-				for(int i = 0; i < enabled_input_factories.GetCount(); i++) {
-					if (i) inputs.Cat(',');
-					inputs << System::GetCtrlFactories()[enabled_input_factories[i]].a;
-				}
-				inputs << "\"";
-				Panic("Creating object \"" +
-					System::GetCtrlFactories()[ci.factory].a +
-					"\" and can't find any of " +
-					inputs +
-					" inputs.");
-				ASSERT_(src_count > 0, "Didn't find earlier job to connect as input. Maybe some core class has no input sources");
-			}
-			#endif
-		}
+	for (int l = 0; l < part.in.GetCount(); l++) {
+		const RegisterInput& input = part.in[l];
+		ConnectInput(l, 0, ci, input.factory, ci.input_hashes[l]);
 	}
 }
 
-int System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash) {
-	const RegisterInput& input = combparts[ci.factory].inputs[input_id];
+void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash) {
+	Vector<int> symlist, tflist;
+	const RegisterInput& input = regs[ci.factory].in[input_id];
+	const int sym_count = GetSymbolCount();
+	const int tf_count = GetPeriodCount();
+	
 	
 	FilterFunction fn = (FilterFunction)input.data;
-	bool input_all_sym = input.scale == Sym || input.scale == All;
-	bool input_all_tf  = input.scale == Tf  || input.scale == All;
-	bool input_dynamic = (input.input_type == REGIN_DYNAMIC && fn != NULL) || (input.input_type == REGIN_HIGHPRIO && fn != NULL);
-	bool input_highprio = input.input_type == REGIN_HIGHPRIO;
+	ASSERT(fn);
 	
-	// Search source and loop existing job queue
-	bool found = false;
-	int input_count = 0;
-	bool is_one_input_only = !input_all_sym && !input_all_tf && !input_dynamic && !input_highprio;
-	bool is_many_to_many_exceptions_allowed = input_all_sym && input_all_tf;
-	/*for (int n = 0; n < job_queue.GetCount(); n++) {
-		JobItem& src_ci = job_queue[n];
-		
-		// System must match
-		if (src_ci.factory != factory) continue;
-		
-		// Never lower priority
-		if (src_ci.priority > ci.priority)
-			continue;
-		
-		// With dynamic input, only the return value of the filter function matters.
-		if (input_dynamic) {
-			bool keep = fn(&bs, ci.sym, ci.tf, src_ci.sym, src_ci.tf);
-			if (!keep) continue;
-		}
-		// With higher priority inputs, higher priority instances of the same class are connected:
-		else if (input_highprio) {
-			// Without filter function
-			//  - slower tf inputs has higher priority, all slower tfs are kept
-			if (!fn) {
-				if (!input_all_sym && !src_ci.all_sym && src_ci.sym != ci.sym) continue;
-				if (src_ci.tf <= ci.tf) continue;
-			}
-			// With filter function
-			else {
-				bool keep = fn(&bs, ci.sym, ci.tf, src_ci.sym, src_ci.tf);
-				if (!keep) continue;
-			}
-		}
-		// Normally, only symbol & timeframe are being matched.
-		else {
-			// If input takes all sym&tf, the symbol doesn't need to match
-			// If source gives all sym&tf, the symbol doesn't need to match
-			if (!input_all_sym && !src_ci.all_sym && src_ci.sym != ci.sym) continue;
-			if (!input_all_tf  && !src_ci.all_tf  && src_ci.tf  != ci.tf ) continue;
-		}
-		
-		bool equal = true;
-		if (unique_slot_comb) {
-			for (int o = 0; o < job_combination_bytes; o++) {
-				if ((*unique_slot_comb)[o] != src_ci.value[o]) {
-					equal = false;
-					break;
-				}
-			}
-		}
-		if (!equal)	{
-			continue;
-		}
-		
-		#ifdef flagDEBUG
-		// Check for multiple types of inputs
-		if (!is_many_to_many_exceptions_allowed &&
-			!is_one_input_only &&
-			(src_ci.all_sym || src_ci.all_tf) &&
-			input_count > 0)
-			Panic("ERROR: multiple many-to-many or one-to-many, but input can take only one");
-		#endif
-		
-		
-		// Source found
-		ASSERT(src_ci.core);
-		ci.core->AddInput(input_id, src_ci.sym, src_ci.tf, *src_ci.core, output_id);
-		
-		
-		input_count++;
-		found = true;
-		if (is_one_input_only)
-			break;
-	}*/
-	ASSERT_(is_one_input_only || input_count > 1 || input_dynamic || input_highprio, "Couldn't find multiple inputs");
 	
-	return input_count;
+	// Filter timeframes
+	for(int i = tf_count-1; i >= ci.tf; i--) {
+		if (fn(this, -1, ci.tf, -1, i)) {
+			tflist.Add(i);
+		}
+	}
+	
+	
+	// Filter symbols
+	for(int i = 0; i < sym_count; i++) {
+		if (fn(this, ci.sym, -1, i, -1)) {
+			symlist.Add(i);
+		}
+	}
+	
+	for(int i = 0; i < symlist.GetCount(); i++) {
+		int sym = symlist[i];
+		
+		for(int j = 0; j < tflist.GetCount(); j++) {
+			int tf = tflist[j];
+			
+			
+			CoreItem& src_ci = data[sym][tf][factory].GetAdd(hash);
+			ASSERT_(src_ci.sym != -1, "Source CoreItem was not yet initialized");
+			
+			ASSERT_(src_ci.priority <= ci.priority, "Source didn't have higher priority than current");
+			
+			
+			// Source found
+			ci.AddInput(input_id, src_ci.sym, src_ci.tf, src_ci, output_id);
+		}
+	}
 }
 
 void System::CreateCore(CoreItem& ci) {
@@ -745,56 +722,46 @@ void System::CreateCore(CoreItem& ci) {
 	
 	// Create core-object
 	ci.core = System::GetCtrlFactories()[ci.factory].b();
+	Core& c = *ci.core;
 	
 	// Set attributes
-	ci.core->base = this;
-	ci.core->factory = ci.factory;
-	ci.core->RefreshIO();
-	ci.core->SetUnique(ci.unique);
-	ci.core->SetSymbol(ci.sym);
-	ci.core->SetTimeframe(ci.tf, GetPeriod(ci.tf));
-	ci.core->LoadCache();
+	c.base = this;
+	c.factory = ci.factory;
+	c.RefreshIO();
+	c.SetUnique(ci.unique);
+	c.SetSymbol(ci.sym);
+	c.SetTimeframe(ci.tf, GetPeriod(ci.tf));
+	c.LoadCache();
 	
 	// Connect object
-	Panic("TODO");
+	for(int i = 0; i < ci.inputs.GetCount(); i++) {
+		const VectorMap<int, SourceDef>& src_list = ci.inputs[i];
+		Input& in = c.inputs.Add();
+		
+		for(int j = 0; j < src_list.GetCount(); j++) {
+			const SourceDef& src_def = src_list[j];
+			Source& src_obj = in.Add(src_list.GetKey(j));
+			
+			src_obj.core = &c;
+			src_obj.output = &c.outputs[src_def.output];
+			src_obj.sym = src_def.sym;
+			src_obj.tf = src_def.tf;
+		}
+	}
 	
-	//ci.core->SetArguments(*args);
+	// Set arguments
+	ArgChanger arg;
+	arg.SetLoading();
+	c.IO(arg);
+	if (ci.args.GetCount() == arg.keys.GetCount()) {
+		for(int i = 0; i < arg.keys.GetCount(); i++)
+			arg.args[i] = ci.args[i];
+		arg.SetStoring();
+		c.IO(arg);
+	}
 	
 	// Initialize
-	ci.core->InitAll();
+	c.InitAll();
 }
-
-int System::GetPathPriority(const Vector<int>& path) {
-	Panic("TODO");
-	return -1;
-}
-
-/*int System::GetBitCore(int struct_id, int fac_id, int input_id, int src_id) const {
-	
-	// Struct-id begin
-	
-	
-	const CombinationPart& part = combparts[fac_id];
-	int begin = part.begin;
-	
-	begin++; // enabled bit
-	begin++; // all symbols enabled bit
-	begin++; // all timeframes enabled bit
-	
-	for(int i = 0; i < input_id; i++) {
-		begin += part.input_src[i].GetCount();
-	}
-	#ifdef flagDEBUG
-	const Vector<IntPair>& src = part.input_src[input_id];
-	ASSERT(src_id >= 0 && src_id < src.GetCount());
-	#endif
-	return begin + src_id;
-}
-
-int System::GetBitEnabled(int struct_id, int fac_id) const {
-	Panic("TODO");
-	return -1;
-}*/
-
 
 }

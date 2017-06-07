@@ -4,9 +4,6 @@ using namespace Overlook;
 NAMESPACE_UPP
 
 INITBLOCK {
-	
-	// Cores and ctrls...
-	
 	System::Register<DataBridge, GraphGroupCtrl>("DataBridge");
 	System::Register<ValueChange, GraphGroupCtrl>("Change of data-values");
 	System::Register<MovingAverage, GraphGroupCtrl>("Moving average");
@@ -50,9 +47,6 @@ INITBLOCK {
 	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
 	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
 	System::Register<Template, GraphGroupCtrl>("Template");
-	
-	int c = System::GetRegs().GetCount();
-	ASSERT(System::GetRegs().GetCount());
 }
 
 END_UPP_NAMESPACE

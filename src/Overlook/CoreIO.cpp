@@ -2,6 +2,21 @@
 
 namespace Overlook {
 
+
+void CoreItem::AddInput(int input_id, int sym_id, int tf_id, CoreItem& core, int output_id) {
+	if (inputs.GetCount() <= input_id) inputs.SetCount(input_id+1);
+	InputDef& in = inputs[input_id];
+	in.Add(sym_id * 100 + tf_id, SourceDef(&core, output_id, sym_id, tf_id));
+}
+
+
+
+
+
+
+
+
+
 CoreIO::CoreIO() {
 	sym_id = -1;
 	tf_id = -1;
@@ -22,16 +37,8 @@ void CoreIO::IO(const ValueBase& base) {
 		Panic("TODO: optional input signal is not received here yet");
 		inputs.Add();
 	}
-	else if (base.data_type == ValueBase::INDYN_) {
-		inputs.Add();
-	}
-	else if (base.data_type == ValueBase::INHIGHPRIO_) {
-		inputs.Add();
-	}
 	else if (base.data_type == ValueBase::OUT_) {
 		Output& out = outputs.Add();
-		out.phase = base.phase;
-		out.type = base.type;
 		out.buffers.SetCount(base.count);
 		out.visible = base.visible;
 		for(int i = 0; i < out.buffers.GetCount(); i++)
@@ -52,10 +59,18 @@ void CoreIO::RefreshBuffers() {
 void CoreIO::AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 	Input& in = inputs[input_id];
 	if (core.GetOutputCount()) {
-		in.sources.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
+		in.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
 	} else {
-		in.sources.Add(sym_id * 100 + tf_id, Source(&core, NULL, sym_id, tf_id));
+		in.Add(sym_id * 100 + tf_id, Source(&core, NULL, sym_id, tf_id));
 	}
+}
+
+CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
+	return inputs[input].Get(sym * 100 + tf).core;
+}
+
+const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
+	return *inputs[input].Get(sym * 100 + tf).core;
 }
 
 String CoreIO::GetCacheDirectory() const {

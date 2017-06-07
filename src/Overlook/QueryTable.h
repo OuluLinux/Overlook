@@ -101,6 +101,7 @@ public:
 	void Evolve(int best_row, int candidate_row, Vector<byte>& output_row);
 	void SetPruning(int i) {test = i;}
 	int GetRowBits() const {return bits;}
+	int GetRowBytes() const {return bytes;}
 	
 	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
 	

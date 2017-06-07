@@ -2,6 +2,9 @@
 
 namespace Overlook {
 
+
+
+
 System::System() {
 	timediff = 0;
 	base_period = 60;
@@ -19,10 +22,12 @@ System::System() {
 	traditional_indicators = 0;
 	traditional_arg_count = 0;
 	ma_id = -1;
+	
 }
 
 System::~System() {
 	Stop();
+	data.Clear();
 }
 
 void System::Init() {
@@ -45,12 +50,6 @@ void System::Init() {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		
-		
-		// Resize databank
-		data.SetCount(mt.GetSymbolCount());
-		for(int i = 0; i < data.GetCount(); i++)
-			data[i].SetCount(mt.GetTimeframeCount());
 		
 		
 		// Add periods
@@ -98,7 +97,7 @@ void System::Init() {
 		LOG("Load failed");
 	}
 	
-	SolveClassConnections();
+	InitRegistry();
 	InitGeneticOptimizer();
 	
 }
@@ -142,13 +141,6 @@ void System::AddSymbol(String sym) {
 	ASSERT(symbols.Find(sym) == -1); // no duplicates
 	symbols.Add(sym);
 }
-
-/*int System::GetCount(int period) const {
-	int div = base_period * period;
-	int count = timediff / div;
-	if (count % div != 0) count++;
-	return count;
-}*/
 
 Time System::GetTimeTf(int tf, int pos) const {
 	return begin[tf] + periods[tf] * pos * base_period;

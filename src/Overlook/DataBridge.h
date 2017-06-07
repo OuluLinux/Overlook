@@ -68,8 +68,8 @@ public:
 	~DataBridge();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % InHigherPriority(&FilterFunction)
-			% Out(SourcePhase, RealValue, SymTf, 5, 3)
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(5, 3)
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(spread_qt) % Persistent(volume_qt)
 			% Persistent(max_value) % Persistent(min_value)
@@ -89,9 +89,9 @@ public:
 		MetaTrader& mt = GetMetaTrader();
 		int sym_count = mt.GetSymbolCount();
 		
-		// Never add timeframes
+		// Add this timeframe
 		if (in_sym == -1)
-			return false;
+			return in_tf == out_tf;
 		
 		// Never for regular symbols
 		if (in_sym < sym_count)
@@ -121,8 +121,8 @@ public:
 	ValueChange();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
-			% Out(IndiPhase, RealChangeValue, SymTf, 7, 7);
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(7, 7);
 	}
 	
 	virtual void Init();

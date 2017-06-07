@@ -9,10 +9,6 @@ using namespace Upp;
 
 class Overlook;
 
-
-
-
-
 // Visual setting enumerators
 enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
 enum {WINDOW_SEPARATE, WINDOW_CHART};
@@ -68,34 +64,31 @@ typedef const Buffer ConstBuffer;
 
 
 // Class for registering input and output types of values of classes
+typedef bool (*FilterFunction)(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf);
+
+inline bool SymTfFilter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+	if (in_sym == -1)
+		return in_tf == out_tf;
+	else
+		return in_sym == out_sym;
+}
+
+template <class T>
 struct In : public ValueBase {
-	In(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = IN_;}
+	In(FilterFunction fn=SymTfFilter) {data_type = IN_; data = (void*)fn; factory = System::GetId<T>();}
 };
 
 struct InOptional : public ValueBase {
-	InOptional(int phase, int type, int scale) {this->phase = phase; this->type = type; this->scale = scale; data_type = INOPT_;}
-};
-
-typedef bool (*FilterFunction)(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf);
-struct InDynamic : public ValueBase {
-	InDynamic(int phase, int type, FilterFunction fn) {this->phase = phase; this->type = type; this->scale = scale; data_type = INDYN_; data = (void*)fn;}
-};
-
-struct InHigherPriority : public ValueBase {
-	InHigherPriority() {data_type = INHIGHPRIO_; data = NULL;}
-	InHigherPriority(FilterFunction fn) {data_type = INHIGHPRIO_; data = (void*)fn;}
+	InOptional() {data_type = INOPT_;}
 };
 
 struct Out : public ValueBase {
-	Out(int phase, int type, int scale, int count=0, int visible=0) {this->phase = phase; this->type = type; this->scale = scale; this->count = count; this->visible = visible; data_type = OUT_;}
+	Out(int count, int visible) {this->count = count; this->visible = visible; data_type = OUT_;}
 };
 
 struct Arg : public ValueBase {
 	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
 	Arg(const char* key, int& value, int min, int max) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
-	//Arg(const char* key, double& value)	{s0 = key; data = &value; data_type = DOUBLE_;}
-	//Arg(const char* key, Time& value)	{s0 = key; data = &value; data_type = TIME_;}
-	//Arg(const char* key, String& value)	{s0 = key; data = &value; data_type = STRING_;}
 };
 
 struct Persistent : public ValueBase, Moveable<Persistent> {
@@ -134,22 +127,67 @@ struct ArgChanger : public ValueRegister {
 	bool storing;
 };
 
+struct Output : Moveable<Output> {
+	Output() : visible(0) {}
+	Vector<Buffer> buffers;
+	int phase, type, visible;
+};
+
+class Core;
 class System;
+struct CoreItem;
+
+struct Source : Moveable<Source> {
+	Source() : core(NULL), output(NULL), sym(-1), tf(-1) {}
+	Source(CoreIO* c, Output* out, int s, int t) : core(c), output(out), sym(s), tf(t) {}
+	Source(const Source& src) {*this = src;}
+	void operator=(const Source& src) {
+		core = src.core;
+		output = src.output;
+		sym = src.sym;
+		tf = src.tf;
+	}
+	
+	CoreIO* core;
+	Output* output;
+	int sym, tf;
+};
+
+struct SourceDef : Moveable<SourceDef> {
+	SourceDef() : coreitem(NULL), output(-1), sym(-1), tf(-1) {}
+	SourceDef(CoreItem* ci, int out, int s, int t) : coreitem(ci), output(out), sym(s), tf(t) {}
+	SourceDef(const Source& src) {*this = src;}
+	void operator=(const SourceDef& src) {
+		coreitem = src.coreitem;
+		output = src.output;
+		sym = src.sym;
+		tf = src.tf;
+	}
+	
+	CoreItem* coreitem;
+	int output, sym, tf;
+};
+
+typedef VectorMap<int, Source>		Input;
+typedef VectorMap<int, SourceDef>	InputDef;
+
+struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
+	typedef CoreItem CLASSNAME;
+	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
+	~CoreItem() {}
+	
+	void AddInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
+	
+	One<Core> core;
+	String unique;
+	int sym, tf, priority, factory;
+	Vector<VectorMap<int, SourceDef> > inputs;
+	Vector<int> input_hashes, args;
+};
 
 struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
-	struct Output : Moveable<Output> {
-		Output() : visible(0) {}
-		Vector<Buffer> buffers;
-		int phase, type, visible;
-	};
-	typedef Tuple4<CoreIOPtr, Output*, int, int> Source;
-	struct Input : Moveable<Input> {
-		Input() {}
-		void operator=(const Input& in) {sources <<= in.sources;}
-		VectorMap<int, Source> sources;
-	};
 	Vector<Input> inputs, optional_inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
@@ -188,8 +226,8 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 		if (t) return t;
 		for(int i = 0; i < inputs.GetCount(); i++) {
 			ConstInput& in = inputs[i];
-			for(int j = 0; j < in.sources.GetCount(); j++) {
-				CoreIO* c = in.sources[j].a;
+			for(int j = 0; j < in.GetCount(); j++) {
+				CoreIO* c = in[j].core;
 				ASSERT(c);
 				T* t = dynamic_cast<T*>(c);
 				if (t) return t;
@@ -209,14 +247,14 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	int GetBufferCount() {return buffers.GetCount();}
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].sources.Get(sym * 100 + tf).b->buffers[buffer]);}
-	CoreIO* GetInputCore(int input, int sym, int tf) const {return inputs[input].sources.Get(sym * 100 + tf).a;}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(sym * 100 + tf).output->buffers[buffer]);}
+	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	int GetOutputCount() const {return outputs.GetCount();}
 	System& GetSystem() {return *base;}
 	const System& GetSystem() const {return *base;}
-	inline const CoreIO& GetInput(int input, int sym, int tf) const {return *inputs[input].sources.Get(sym * 100 + tf).a;}
+	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory() const;
 	
 	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);

@@ -4,16 +4,17 @@
 namespace Overlook {
 using namespace Upp;
 
+void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
+
 struct RegisterInput : Moveable<RegisterInput> {
-	int input_type;
+	int factory, input_type;
 	void* data;
-	RegisterInput(int intype, void* filter_fn) {input_type=intype; data=filter_fn;}
-	RegisterInput(const RegisterInput& o) {input_type=o.input_type; data=o.data;}
-	String ToString() const {return Format(" input_type=%d data=%X", input_type, (int64)data);}
+	RegisterInput(int fac, int intype, void* filter_fn) {factory=fac; input_type=intype; data=filter_fn;}
+	RegisterInput(const RegisterInput& o) {factory=o.factory; input_type=o.input_type; data=o.data;}
+	String ToString() const {return Format(" factory=%d input_type=%d data=%X", factory, input_type, (int64)data);}
 };
 
-enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_HIGHPRIO};
-
+enum {REGIN_NORMAL, REGIN_OPTIONAL};
 
 struct ArgType : Moveable<ArgType> {
 	ArgType() {}
@@ -27,53 +28,12 @@ struct ArgType : Moveable<ArgType> {
 	int min, max;
 };
 
-struct SystemValueRegister : public ValueRegister, Moveable<SystemValueRegister> {
-	
-	Vector<RegisterInput> in;
-	Vector<ValueType> out;
-	Vector<ArgType> args;
-	
-	virtual void IO(const ValueBase& base) {
-		if (base.data_type == ValueBase::IN_) {
-			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_NORMAL, NULL));
-		}
-		else if (base.data_type == ValueBase::INOPT_) {
-			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_OPTIONAL, NULL));
-		}
-		else if (base.data_type == ValueBase::INDYN_) {
-			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_DYNAMIC, base.data));
-		}
-		else if (base.data_type == ValueBase::INHIGHPRIO_) {
-			in.Add(RegisterInput(base.phase, base.type, base.scale, REGIN_HIGHPRIO, base.data));
-		}
-		else if (base.data_type == ValueBase::OUT_) {
-			out.Add(ValueType(base.phase, base.type, base.scale));
-		}
-		else if (base.data_type == ValueBase::BOOL_) {
-			args.Add(ArgType(base.s0, 0, 1));
-		}
-		else if (base.data_type == ValueBase::INT_) {
-			args.Add(ArgType(base.s0, base.min, base.max));
-		}
-	}
-	
-};
-
-struct PipelineItem : Moveable<PipelineItem> {
-	typedef PipelineItem CLASSNAME;
-	PipelineItem() {priority = INT_MAX;}
-	
-	Vector<byte> value;
-	int priority;
-};
-
-struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
-	typedef CoreItem CLASSNAME;
-	CoreItem() {core = NULL; sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
-	
-	Core* core;
-	String unique;
-	int sym, tf, priority, factory;
+struct OutputType : Moveable<OutputType> {
+	OutputType() : count(0), visible(0) {}
+	OutputType(int count, int visible) : count(count), visible(visible) {}
+	OutputType(const OutputType& src) {*this = src;}
+	void operator=(const OutputType& src) {count = src.count; visible = src.visible;}
+	int count, visible;
 };
 
 struct InputSource : Moveable<InputSource> {
@@ -84,11 +44,44 @@ struct InputSource : Moveable<InputSource> {
 	int factory, output;
 };
 
-struct CombinationPart : Moveable<CombinationPart> {
-	Vector<RegisterInput> inputs;
-	Vector<ValueType> outputs;
-	Vector<Vector<InputSource> > input_src;
-	bool single_sources;
+struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
+	Vector<RegisterInput> in;
+	Vector<OutputType> out;
+	Vector<ArgType> args;
+	
+	FactoryRegister() {}
+	FactoryRegister(const FactoryRegister& src) {*this = src;}
+	void operator=(const FactoryRegister& src) {
+		in <<= src.in;
+		out <<= src.out;
+		args <<= src.args;
+	}
+	
+	virtual void IO(const ValueBase& base) {
+		if (base.data_type == ValueBase::IN_) {
+			in.Add(RegisterInput(base.factory, REGIN_NORMAL, base.data));
+		}
+		else if (base.data_type == ValueBase::INOPT_) {
+			in.Add(RegisterInput(base.factory, REGIN_OPTIONAL, base.data));
+		}
+		else if (base.data_type == ValueBase::OUT_) {
+			out.Add(OutputType(base.count, base.visible));
+		}
+		else if (base.data_type == ValueBase::BOOL_) {
+			args.Add(ArgType(base.s0, 0, 1));
+		}
+		else if (base.data_type == ValueBase::INT_) {
+			args.Add(ArgType(base.s0, base.min, base.max));
+		}
+	}
+};
+
+struct PipelineItem : Moveable<PipelineItem> {
+	typedef PipelineItem CLASSNAME;
+	PipelineItem() {priority = INT_MAX;}
+	
+	Vector<byte> value;
+	int priority;
 };
 
 class System {
@@ -104,23 +97,26 @@ protected:
 	template <class T> static CustomCtrl*	CtrlSystemFn() { return new T; }
 	inline static Vector<CoreCtrlSystem>&	CtrlFactories() {return Single<Vector<CoreCtrlSystem> >();}
 	
-	// These static values doesn't work between threads, unless a method returns them.
-	static Vector<SystemValueRegister>& Regs() {static Vector<SystemValueRegister> v; return v;}
-	
-	
 public:
 	
 	template <class CoreT, class CtrlT> static void Register(String name) {
+		GetId<CoreT>();
 		AddCustomCtrl(name, &System::CoreSystemFn<CoreT>, &System::CtrlSystemFn<CtrlT>);
-		SystemValueRegister& reg = Regs().Add();
-		CoreT().IO(reg); // unfortunately one object must be created, because IO can't be static and virtual at the same time and it is cleaner to use virtual.
 	}
 	
 	template <class CoreT> static CoreT& GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
+	template <class CoreT> static int GetId() {
+		static bool inited;
+		static int id;
+		if (!inited) {
+			id = CtrlFactories().GetCount();
+			inited = true;
+		}
+		return id;
+	}
 	
 	inline static const Vector<CoreCtrlSystem>& GetCtrlFactories() {return CtrlFactories();}
 	static int GetCtrlSystemCount() {return GetCtrlFactories().GetCount();}
-	static const Vector<SystemValueRegister>& GetRegs() {return Regs();}
 	
 	template <class CoreT> static int Find() {
 		CoreFactoryPtr System_fn = &System::CoreSystemFn<CoreT>;
@@ -136,17 +132,17 @@ protected:
 	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
 	
 	friend class DataBridgeCommon;
+	friend class Core;
 	
-	Vector<CombinationPart>		combparts;
+	Vector<FactoryRegister>		regs;
 	Array<PipelineItem>			pl_queue;
 	Data			data;
 	Vector<String>	period_strings;
 	QueryTable		table;
 	Vector<int>		traditional_enabled_cols;
+	Vector<int>		traditional_col_length;
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
-	/*Vector<int>		inputs_to_enabled;
-	Vector<int>		enabled_to_factory;*/
 	Index<String>	symbols;
 	Index<int>		periods;
 	SpinLock		pl_queue_lock;
@@ -180,26 +176,24 @@ protected:
 	// Pipeline
 	void InitGeneticOptimizer();
 	void RefreshRealtime();
-	int  GetHash(const PipelineItem& pi, int sym, int tf, Vector<int>& path);
-	void GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids);
-	void GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Vector<int>& sym_ids);
+	int  GetHash(const Vector<byte>& vec);
+	int  GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids);
+	int  GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
 	void CreateCore(CoreItem& ci);
 	int  GetEnabledColumn(const Vector<int>& path);
 	int  GetIndicatorFactory(const Vector<int>& path);
 	int  GetPathPriority(const Vector<int>& path);
-	void SolveClassConnections();
-	//int  GetBitCore(int struct_id, int fac_id, int input_id, int src_id) const;
-	//int  GetBitEnabled(int struct_id, int fac_id) const;
+	void InitRegistry();
 	void ConnectCore(CoreItem& ci);
-	int  ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
+	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
 	int  GetSymbolEnabled(int sym) const;
+	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
 	
 	// Jobs
 	void Process(CoreItem& ci);
 	
 public:
 	
-	//int GetCount(int period) const;
 	int GetCountTf(int tf_id) const;
 	Time GetTimeTf(int tf, int pos) const;// {return begin + base_period * period * pos;}
 	Time GetBegin(int tf) const {return begin[tf];}
@@ -207,17 +201,10 @@ public:
 	int GetBeginTS(int tf) {return begin_ts[tf];}
 	int GetEndTS(int tf) {return end_ts[tf];}
 	int GetBasePeriod() const {return base_period;}
-	//int64 GetShift(int src_period, int dst_period, int shift);
-	//int64 GetShiftFromTime(int timestamp, int period);
 	int64 GetShiftTf(int src_tf, int dst_tf, int shift);
 	int64 GetShiftFromTimeTf(int timestamp, int tf);
 	int64 GetShiftFromTimeTf(const Time& t, int tf);
-	//int GetTfFromSeconds(int period_seconds);
-	
-	//void SetBegin(Time t)	{begin = t; begin_ts = (int)(t.Get() - Time(1970,1,1).Get());}
-	//void SetEnd(Time t)	{end = t; end_ts = (int)(t.Get() - Time(1970,1,1).Get()); timediff = (int)(end.Get() - begin.Get());}
-	//void SetBasePeriod(int period)	{base_period = period;}
-	Core* CreateSingle(int column, int sym, int tf);
+	Core* CreateSingle(int factory, int sym, int tf);
 	
 	
 public:
@@ -244,10 +231,6 @@ public:
 	void Start();
 	void Stop();
 	
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % Out(SourcePhase, TimeValue, All);
-	}
 };
 
 }

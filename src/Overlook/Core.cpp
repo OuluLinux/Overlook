@@ -20,51 +20,6 @@ void Buffer::Inc(int i, double value) {
 }
 #endif
 
-/*Core::Core() {
-	
-}
-
-Core::~Core() {
-	
-}*/
-/*
-void Core::AddValue(uint16 bytes, String name, String description) {
-	CoreValue& value = values.Add();
-	value.bytes = bytes;
-	value.name = name;
-	value.description = description;
-	data.Add();
-}
-
-void Core::SetReady(int sym_id, int tf_id, int pos, const CoreProcessAttributes& attr, bool ready) {
-	byte* ready_slot = this->ready[sym_id][tf_id].Begin();
-	ASSERT(ready_slot);
-	int slot_pos = attr.slot_pos;
-	int ready_bit = slot_pos % 8;
-	ready_slot += slot_pos / 8;
-	byte ready_mask = 1 << ready_bit;
-	if (ready)
-		*ready_slot |= ready_mask;
-	else
-		*ready_slot &= !ready_mask;
-}
-
-void Core::SetReady(int pos, const CoreProcessAttributes& attr, bool ready) {
-	SetReady(GetSymbol(), GetTimeframe(), pos, attr, ready);
-}
-
-bool Core::IsReady(int pos, const CoreProcessAttributes& attr) {
-	byte* ready_slot = ready[GetSymbol()][GetTimeframe()].Begin();
-	if (!ready_slot)
-		return false;
-	int slot_pos = attr.slot_pos;
-	int ready_bit = slot_pos % 8;
-	ready_slot += slot_pos / 8;
-	byte ready_mask = 1 << ready_bit;
-	return ready_mask & *ready_slot;
-}
-*/
-
 
 Core::Core()
 {
@@ -125,7 +80,7 @@ void Core::InitAll() {
 	Init();
 	
 	// Initialize sub-cores
-	const SystemValueRegister& src_reg = System::GetRegs()[factory];
+	const FactoryRegister& src_reg = GetSystem().regs[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
 		Core& core = subcores[i];
 		core.base = base;
@@ -134,7 +89,7 @@ void Core::InitAll() {
 		core.SetSymbol(GetSymbol());
 		core.SetTimeframe(GetTimeframe(), GetPeriod());
 		
-		const SystemValueRegister& reg = System::GetRegs()[core.factory];
+		const FactoryRegister& reg = GetSystem().regs[core.factory];
 		
 		// Loop all inputs of the sub-core-object to be connected
 		ASSERT(core.inputs.GetCount() == reg.in.GetCount());
@@ -142,20 +97,19 @@ void Core::InitAll() {
 			Input& in = core.inputs[j];
 			const RegisterInput& rin = reg.in[j];
 			
-			
 			// Loop all connected inputs of this parent object
 			bool found = false;
 			for(int k = 0; k < inputs.GetCount(); k++) {
 				const Input& src_in = inputs[k];
 				const RegisterInput& src_rin = src_reg.in[k];
-				if (rin.phase == src_rin.phase && rin.type == src_rin.type) {
-					
-					// Copy input
-					in = src_in;
-					
-					found = true;
-					break;
-				}
+				if (src_rin.factory != rin.factory)
+					continue;
+				
+				// Copy input
+				in <<= src_in;
+				
+				found = true;
+				break;
 			}
 			ASSERT_(found, "Parent object did not have all inputs what sub-object needed");
 		}

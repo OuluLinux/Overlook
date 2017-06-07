@@ -19,53 +19,12 @@
 namespace Overlook {
 using namespace Upp;
 
-/*enum {SourcePhase, IndiPhase, ForecastPhase, ForecastCombPhase, AgentPhase, AgentCombPhase, DestPhase};
-
-enum {
-	TimeValue,
-	RealValue,
-	DataBridgeValue,
-	VirtualNodeValue,
-	RealChangeValue,
-	
-	// TRASH
-	SpreadChangeValue,
-	RealProxyChangeValue,
-	SpreadProxyChangeValue,
-	RealLowChangeValue,
-	RealHighChangeValue,
-	// TRASH END
-	
-	IdealOrderSignal,
-	ForecastChangeValue,
-	ForecastChannelValue,
-	IndicatorValue,				// Any indicator value
-	RealIndicatorValue,			// Indicator value in the scale of price value
-	TimeOscillatorValue,
-	ForecastOrderSignal,
-	RealVolumeValue,
-	AskBidValue,
-	SpreadValue,
-	SpreadOvercomeValue,
-	SubTfValue,
-	SpreadOvercomeDistValue,
-	SpreadProbValue,
-	FeatureValue,
-	WeekStatsErrorAdjustedValue,
-	MetaTfValue,
-	WdayHourTrendingValue,
-	FeatureOscValue,
-	WdayHourStatsValue,
-	CorrelationValue,
-	ForecastRealValue
-};*/
-
 struct ValueBase {
-	int phase, type, scale, count, visible, data_type, min, max;
+	int count, visible, data_type, min, max, factory;
 	const char* s0;
 	void* data;
-	ValueBase() {phase=-1; type=-1; scale=-1; count=0; visible=0; s0=0; data=0; data_type = -1; min = -1; max = -1;}
-	enum {IN_, INOPT_, INDYN_, INHIGHPRIO_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_, PERS_QUERYTABLE_};
+	ValueBase() {count=0; visible=0; s0=0; data=0; data_type = -1; min = -1; max = -1; factory = -1;}
+	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_, PERS_QUERYTABLE_};
 };
 
 struct ValueRegister {
@@ -74,50 +33,6 @@ struct ValueRegister {
 	virtual void IO(const ValueBase& base) = 0;
 	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
 };
-
-/*struct ValueType : Moveable<ValueType> {
-	ValueType() : phase(-1), type(-1), scale(-1) {}
-	ValueType(const ValueType& v) : phase(v.phase), type(v.type), scale(v.scale) {}
-	ValueType(int phase, int type, int scale) : phase(phase), type(type), scale(scale) {}
-	bool operator==(const ValueType& vt) const {return phase == vt.phase && type == vt.type && scale == vt.scale;}
-	String ToString() const {return Format("{phase=%d type=\"%s\", type-id=%d, scale=%d}", phase, TypeString(), type, scale);}
-	String TypeString() const {
-		switch (type) {
-			case 0: return "RealValue";
-			case 1: return "RealChangeValue";
-			case 2: return "RealIndicatorValue";
-			case 3: return "SpreadChangeValue";
-			case 4: return "RealProxyChangeValue";
-			case 5: return "SpreadProxyChangeValue";
-			case 6: return "RealLowChangeValue";
-			case 7: return "RealHighChangeValue";
-			case 8: return "IdealOrderSignal";
-			case 9: return "ForecastChangeValue";
-			case 10: return "ForecastChannelValue";
-			case 11: return "IndicatorValue";
-			case 12: return "TimeOscillatorValue";
-			case 13: return "ForecastOrderSignal";
-			case 14: return "RealVolumeValue";
-			case 15: return "AskBidValue";
-			case 16: return "SpreadValue";
-			case 17: return "SpreadOvercomeValue";
-			case 18: return "SubTfValue";
-			case 19: return "SpreadOvercomeDistValue";
-			case 20: return "SpreadProbValue";
-			case 21: return "FeatureValue";
-			case 22: return "WeekStatsErrorAdjustedValue";
-			case 23: return "MetaTfValue";
-			case 24: return "WdayHourTrendingValue";
-			case 25: return "FeatureOscValue";
-			case 26: return "WdayHourStatsValue";
-			case 27: return "CorrelationValue";
-			case 28: return "ForecastRealValue";
-			default: return "Invalid type";
-		}
-	}
-	
-	int phase, type, scale;
-};*/
 
 struct DataExc : public Exc {
 	DataExc() {

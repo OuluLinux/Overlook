@@ -1061,4 +1061,24 @@ have their id starting from 1. After that there would be sub`-groups
 and maybe even some intersecting areas. I think that is what 
 the Overlook will have as the target value of the root combiner. 
 However, I might find some flaws in this model.&]
-[s0;%- ]]
+[s3;%- 7.6.2017&]
+[s0;%- Good morning. I woke early enough to watch sunrise from clear 
+blue sky at 4:30 am. I am lucky to have very nice view for that 
+from my desktop where I program. It`'s going to be warm (20 Celcius) 
+ day. In these days trees will get their full leaf and the summer 
+will truly begin. Best time to be in Oulu, Finland. It`'s already 
+entirely bright night and it continues to be so for couple of 
+months while having the peak brightness after two weeks from 
+now.&]
+[s0;%- I noticed, that I should create virtual nodes for baskets, 
+just like I have already done for single currencies now. In that 
+way there is no need to calculate values for items in basket 
+separately. In those baskets I would put highly positively correlating 
+symbols, which is opposite of hedging, where you put negatively 
+correlating symbols in the same basket to cancel changes in total 
+value.&]
+[s0;%- ...&]
+[s0;%- A lot of progress was made today with SystemOptimizer.cpp, 
+but it`'s still not completely in the previous working state. 
+It`'s worth noticing how much complexity have been reduced today 
+without limiting features.]]

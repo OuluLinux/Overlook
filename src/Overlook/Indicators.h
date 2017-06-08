@@ -768,9 +768,17 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		if (sym_count == -1 && base)
 			sym_count = GetSystem().GetSymbolCount();
-		reg % In<DataBridge>()
+		reg % In<DataBridge>(&FilterFunction)
 			% Out(sym_count-1, sym_count-1)
 			% Arg("period", period, 2, 16);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		// Accept all symbols in the same timeframe
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		else
+			return true;
 	}
 };
 

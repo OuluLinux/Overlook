@@ -22,8 +22,8 @@ public:
 	const OnlineVariance& GetOnlineVariance(int shift);
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+		reg % In<DataBridge>()
+			% Out(2, 2);
 	}
 };
 
@@ -41,7 +41,7 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% Out(IndiPhase, WdayHourStatsValue, SymTf, 8, 8)
 			% Arg("period", var_period);
 	}
@@ -60,8 +60,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+		reg % In<DataBridge>()
+			% Out(8, 8)
 			% Arg("period_fast", var_period_fast)
 			% Arg("period_diff", var_period_diff);
 	}
@@ -82,8 +82,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 8, 8)
+		reg % In<DataBridge>()
+			% Out(8, 8)
 			% Arg("period", var_period);
 	}
 };
@@ -102,7 +102,7 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% Out(IndiPhase, WdayHourTrendingValue, SymTf, 8, 8)
 			% Arg("period", var_period);
 	}
@@ -121,9 +121,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% In(IndiPhase, WdayHourTrendingValue, SymTf)
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 5, 5)
+			% Out(5, 5)
 			% Arg("period", var_period);
 	}
 };
@@ -143,7 +143,7 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% In(IndiPhase, FeatureValue, SymTf)
 			% Out(IndiPhase, FeatureOscValue, SymTf, 4, 4)
 			% Arg("mul", mul);
@@ -159,7 +159,7 @@ public:
 	ChannelPredicter();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% In(IndiPhase, WdayHourStatsValue, SymTf)
 			% Out(IndiPhase, ForecastChannelValue, SymTf, 7, 7);
 	}

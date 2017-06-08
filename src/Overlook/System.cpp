@@ -22,7 +22,7 @@ System::System() {
 	traditional_indicators = 0;
 	traditional_arg_count = 0;
 	ma_id = -1;
-	
+	structural_priorities = 0;
 }
 
 System::~System() {

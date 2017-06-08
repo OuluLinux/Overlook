@@ -9,41 +9,49 @@ INITBLOCK {
 	System::Register<MovingAverage, GraphGroupCtrl>("Moving average");
 	System::Register<MovingAverageConvergenceDivergence, GraphGroupCtrl>("Moving Average Convergence/Divergence");
 	System::Register<AverageDirectionalMovement, GraphGroupCtrl>("Average Directional Movement");
+	
 	System::Register<BollingerBands, GraphGroupCtrl>("Bollinger Bands");
 	System::Register<Envelopes, GraphGroupCtrl>("Envelopes");
 	System::Register<ParabolicSAR, GraphGroupCtrl>("Parabolic SAR");
 	System::Register<StandardDeviation, GraphGroupCtrl>("Standard Deviation");
 	System::Register<AverageTrueRange, GraphGroupCtrl>("Average True Range");
+	
 	System::Register<BearsPower, GraphGroupCtrl>("Bears Power");
 	System::Register<BullsPower, GraphGroupCtrl>("Bulls Power");
 	System::Register<CommodityChannelIndex, GraphGroupCtrl>("Commodity Channel Index");
 	System::Register<DeMarker, GraphGroupCtrl>("DeMarker");
 	System::Register<ForceIndex, GraphGroupCtrl>("Force Index");
+	
 	System::Register<Momentum, GraphGroupCtrl>("Momentum");
 	System::Register<OsMA, GraphGroupCtrl>("OsMA");
 	System::Register<RelativeStrengthIndex, GraphGroupCtrl>("Relative Strength Index");
 	System::Register<RelativeVigorIndex, GraphGroupCtrl>("Relative Vigor Index");
 	System::Register<StochasticOscillator, GraphGroupCtrl>("Stochastic Oscillator");
+	
 	System::Register<WilliamsPercentRange, GraphGroupCtrl>("Williams Percent Range");
 	System::Register<AccumulationDistribution, GraphGroupCtrl>("Accumulation Distribution");
 	System::Register<MoneyFlowIndex, GraphGroupCtrl>("Money Flow Index");
 	System::Register<ValueAndVolumeTrend, GraphGroupCtrl>("Value And Volume Trend");
 	System::Register<OnBalanceVolume, GraphGroupCtrl>("On Balance Volume");
+	
 	System::Register<Volumes, GraphGroupCtrl>("Volumes");
 	System::Register<Spreads, GraphGroupCtrl>("Spreads");
 	System::Register<AcceleratorOscillator, GraphGroupCtrl>("Accelerator Oscillator");
 	System::Register<GatorOscillator, GraphGroupCtrl>("Gator Oscillator");
 	System::Register<AwesomeOscillator, GraphGroupCtrl>("Awesome Oscillator");
+	
 	System::Register<Fractals, GraphGroupCtrl>("Fractals");
 	System::Register<FractalOsc, GraphGroupCtrl>("FractalOsc");
 	System::Register<MarketFacilitationIndex, GraphGroupCtrl>("Market Facilitation Index");
 	System::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
 	System::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
+	
 	System::Register<LinearTimeFrames, GraphGroupCtrl>("Linear TimeFrames");
 	System::Register<SupportResistance, GraphGroupCtrl>("Support/Resistance");
 	System::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
 	System::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
 	System::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
+	
 	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
 	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
 	System::Register<Template, GraphGroupCtrl>("Template");

@@ -80,7 +80,7 @@ protected:
 	void VisitSymTf(int fac_id, int sym_id, int tf_id, Combination& comb);
 	void VisitCombination(Combination& com, Vector<int>& factory_queue);
 	bool CheckCombination(const Vector<byte>& comb);
-	int  ConnectSystem(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb=NULL);
+	int  ConnectInput(int input_id, int output_id, const RegisterInput& input, JobItem& ji, int factory, Vector<byte>* unique_slot_comb=NULL);
 public:
 	void CreateNormal();
 	void CreateSingle(int main_fac_id, int sym_id, int tf_id);
@@ -103,7 +103,7 @@ protected:
 	bool running, stopped;
 	
 	Vector<CombinationResult> results;
-	Vector<CombinationPart> combparts;
+	Vector<CombinationPart> regs;
 	Vector<int> inputs_to_enabled, enabled_to_factory;
 	int combination_bits, combination_bytes, combination_errors, job_combination_bytes;
 	
@@ -139,7 +139,7 @@ public:
 	virtual void Deinit();
 	
 	
-	void CreateCombination();
+	void InitRegistry();
 	void Start() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(Run));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	void Process();

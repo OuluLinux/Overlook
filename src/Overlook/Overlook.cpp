@@ -95,7 +95,7 @@ void Overlook::SetView() {
 }
 
 void Overlook::Configure() {
-	/*if (!prev_core) return;
+	if (!prev_core) return;
 	
 	static One<TopWindow> tw;
 	static bool save;
@@ -152,7 +152,7 @@ void Overlook::Configure() {
 		prev_core->InitAll();
 		prev_core->Refresh();
 		Refresh();
-	}*/
+	}
 }
 
 }

@@ -6,15 +6,7 @@
 namespace Overlook {
 using namespace Upp;
 
-struct RegisterInput : Moveable<RegisterInput> {
-	int phase, type, scale, input_type;
-	void* data;
-	RegisterInput(int p, int t, int s, int intype, void* filter_fn) {phase=p; type=t; scale=s; input_type=intype; data=filter_fn;}
-	RegisterInput(const RegisterInput& o) {phase=o.phase; type=o.type; scale=o.scale; input_type=o.input_type; data=o.data;}
-	String ToString() const {return ValueType(phase, type, scale).ToString() + Format(" input_type=%d data=%X", input_type, (int64)data);}
-};
-
-enum {REGIN_NORMAL, REGIN_OPTIONAL, REGIN_DYNAMIC, REGIN_HIGHPRIO};
+enum {REGIN_NORMAL, REGIN_OPTIONAL};
 
 
 

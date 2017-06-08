@@ -19,13 +19,16 @@ enum {REGIN_NORMAL, REGIN_OPTIONAL};
 struct ArgType : Moveable<ArgType> {
 	ArgType() {}
 	ArgType(const ArgType& src) {*this = src;}
-	ArgType(String desc, int min, int max) : desc(desc), min(min), max(max) {}
+	ArgType(String desc, int min, int max, int def) : desc(desc), min(min), max(max), def(def) {}
 	void operator=(const ArgType& src) {
-		
+		desc = src.desc;
+		max  = src.max;
+		min  = src.min;
+		def  = src.def;
 	}
 	
 	String desc;
-	int min, max;
+	int min, max, def;
 };
 
 struct OutputType : Moveable<OutputType> {
@@ -68,10 +71,10 @@ struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
 			out.Add(OutputType(base.count, base.visible));
 		}
 		else if (base.data_type == ValueBase::BOOL_) {
-			args.Add(ArgType(base.s0, 0, 1));
+			args.Add(ArgType(base.s0, 0, 1, *(bool*)base.data));
 		}
 		else if (base.data_type == ValueBase::INT_) {
-			args.Add(ArgType(base.s0, base.min, base.max));
+			args.Add(ArgType(base.s0, base.min, base.max, *(int*)base.data));
 		}
 	}
 };
@@ -166,6 +169,7 @@ protected:
 	int traditional_indicators, traditional_arg_count;
 	int template_id, template_arg_count, slot_args;
 	int ma_id;
+	int structural_priorities;
 	
 	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}

@@ -63,7 +63,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% In(IndiPhase, RealChangeValue, SymTf)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)
 			% Out(ForecastPhase, ForecastChangeValue, SymTf, 1, 1);
@@ -83,7 +83,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % InDynamic(SourcePhase, RealValue, &FilterFunction)
+		reg % In<DataBridge>(&FilterFunction)
 			% InDynamic(IndiPhase, RealChangeValue, &FilterFunction)
 			% InDynamic(IndiPhase, CorrelationValue, &FilterFunctionSym)
 			//% InOptional(IndiPhase, RealIndicatorValue, SymTf)

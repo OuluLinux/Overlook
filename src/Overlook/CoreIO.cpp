@@ -20,6 +20,7 @@ void CoreItem::AddInput(int input_id, int sym_id, int tf_id, CoreItem& core, int
 CoreIO::CoreIO() {
 	sym_id = -1;
 	tf_id = -1;
+	factory = -1;
 	#ifdef flagDEBUG
 	read_safety_limit = 0;
 	#endif
@@ -73,14 +74,24 @@ const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
 	return *inputs[input].Get(sym * 100 + tf).core;
 }
 
-String CoreIO::GetCacheDirectory() const {
-	// TODO: arguments
-	//CombineHash ch;
-	//for(int i = 0; i < args.GetCount(); i++)
-	uint32 arghash = 0;
+String CoreIO::GetCacheDirectory() {
+	ASSERT(factory != -1);
+	int64 arghash = 0;
+	Core* core = dynamic_cast<Core*>(this);
+	if (core) {
+		ArgChanger arg;
+		arg.SetLoading();
+		core->IO(arg);
+		if (!arg.args.IsEmpty()) {
+			CombineHash ch;
+			for(int i = 0; i < arg.args.GetCount(); i++)
+				ch << (int)arg.args[i] << 1;
+			arghash = ch;
+		}
+	}
 	
 	ASSERT(!unique.IsEmpty());
-	String coredir = unique + Format("-%d-%d-%d", sym_id, tf_id, (int64)arghash);
+	String coredir = unique + Format("-%d-%d-%d-", sym_id, tf_id, factory) + IntStr64(arghash);
 	String dir = AppendFileName(ConfigFile("corecache"), coredir);
 	RealizeDirectory(dir);
 	return dir;

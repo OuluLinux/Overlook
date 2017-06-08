@@ -69,8 +69,21 @@ Core* System::CreateSingle(int factory, int sym, int tf) {
 	PipelineItem pi;
 	pi.value.SetCount(table.GetRowBytes(), 0);
 	int col = GetEnabledColumn(path);
-	if (col != -1)
+	if (col != -1) {
 		table.Set0(col, true, pi.value);
+	
+		// Set default arguments
+		col++; // seek argument begin position
+		const FactoryRegister& reg = regs[factory];
+		for(int i = 0; i < reg.args.GetCount(); i++) {
+			const ArgType& at = reg.args[i];
+			int def = at.def;
+			if (def < at.min) def = at.min;
+			if (def > at.max) def = at.max;
+			def -= at.min;
+			table.Set0(col++, def, pi.value);
+		}
+	}
 	
 	// Enable symbol
 	ASSERT(sym >= 0 && sym < symbols.GetCount());

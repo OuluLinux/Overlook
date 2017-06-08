@@ -80,8 +80,8 @@ void QueryTableForecaster::Init() {
 	// Add columns from inputs
 	for(int i = 0; i < optional_inputs.GetCount(); i++) {
 		Input& indi_input = optional_inputs[i];
-		if (indi_input.sources.IsEmpty()) continue;
-		ASSERT(indi_input.sources.GetCount() == 1);
+		if (indi_input.IsEmpty()) continue;
+		ASSERT(indi_input.GetCount() == 1);
 		
 		Panic("TODO");
 	}

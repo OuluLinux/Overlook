@@ -9,7 +9,7 @@ namespace Overlook {
 	These classes are frameworks for building different datasets.
 	
 	Datasets can be effectively learned with the decision tree method, but binary descriptor
-	matching and virtual neural network models can also be used.
+	matching and virtual neural network templates can also be used.
 	The binary feature descriptor matching is derived from image processing, where the
 	similarity can be measured by calculating Hamming distance to other descriptors in
 	different time-positions.
@@ -38,7 +38,7 @@ namespace Overlook {
 	between those points. Also, the slower trend is expected to be more powerful than faster,
 	but important market events are exception to that, e.g. central bank press conferences.
 */
-class Edge : public Model {
+class Edge : public Template {
 	QueryTable qt;
 	
 public:
@@ -48,9 +48,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -74,9 +74,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -100,7 +100,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, Sym)
+		reg % In<DataBridge>()
 			% In(IndiPhase, RealChangeValue, Sym)
 			% In(IndiPhase, CorrelationValue, SymTf)
 			% InHigherPriority()
@@ -130,9 +130,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -157,9 +157,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -182,9 +182,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -206,9 +206,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 
@@ -230,9 +230,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% InHigherPriority()
-			% Out(IndiPhase, RealIndicatorValue, SymTf, 2, 2);
+			% Out(2, 2);
 	}
 };
 

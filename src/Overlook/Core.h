@@ -228,6 +228,8 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 			ConstInput& in = inputs[i];
 			for(int j = 0; j < in.GetCount(); j++) {
 				CoreIO* c = in[j].core;
+				if (c == this)
+					continue;
 				ASSERT(c);
 				T* t = dynamic_cast<T*>(c);
 				if (t) return t;
@@ -255,7 +257,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	System& GetSystem() {return *base;}
 	const System& GetSystem() const {return *base;}
 	const CoreIO& GetInput(int input, int sym, int tf) const;
-	String GetCacheDirectory() const;
+	String GetCacheDirectory();
 	
 	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
 	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}

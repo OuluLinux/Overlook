@@ -233,6 +233,9 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	
 	// Fill spread and volume data based on query table (actual data would be better, though)
 	double prev_spread = 0;
+	int begin = counted;
+	if (init_round) // Fix unfinished volume bar at history -> askbid switching point
+		counted--;
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double spread = 0;
@@ -487,15 +490,17 @@ void DataBridge::RefreshFromHistory() {
 		int i0 = GetChangeStep(i, 16);
 		int pos = 0;
 		int tick_volume = volume_buf.Get(i);
-		volume_qt.Set(row, pos++, Upp::min(tick_volume, 524287));
-		if (!slow_volume) {
-			volume_qt.Set(row, pos++, dow);
-			volume_qt.Set(row, pos++, hour);
-			volume_qt.Set(row, pos++, minute / 5);
-		} else {
-			if (day_volume)
+		if (tick_volume > 0) {
+			volume_qt.Set(row, pos++, Upp::min(tick_volume, 524287));
+			if (!slow_volume) {
 				volume_qt.Set(row, pos++, dow);
-			volume_qt.Set(row, pos++, i0);
+				volume_qt.Set(row, pos++, hour);
+				volume_qt.Set(row, pos++, minute / 5);
+			} else {
+				if (day_volume)
+					volume_qt.Set(row, pos++, dow);
+				volume_qt.Set(row, pos++, i0);
+			}
 		}
 	}
 	
@@ -542,14 +547,14 @@ void DataBridge::RefreshVirtualNode() {
 	Vector<Source> sources;
 	for(int i = 0; i < c.pairs0.GetCount(); i++) {
 		int id = c.pairs0[i];
-		ConstBuffer& open_buf = GetInputBuffer(1,id,tf,0);
-		ConstBuffer& vol_buf  = GetInputBuffer(1,id,tf,3);
+		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
 		sources.Add(Source(&open_buf, &vol_buf, false));
 	}
 	for(int i = 0; i < c.pairs1.GetCount(); i++) {
 		int id = c.pairs1[i];
-		ConstBuffer& open_buf = GetInputBuffer(1,id,tf,0);
-		ConstBuffer& vol_buf  = GetInputBuffer(1,id,tf,3);
+		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
+		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
 		sources.Add(Source(&open_buf, &vol_buf, true));
 	}
 	

@@ -291,12 +291,12 @@ void MovingAverage::LinearlyWeighted()
 	pos--;
 	int i = pos - ma_period;
 	while (pos < bars) {
-		SetSafetyLimit(pos);
 		buffer.Set(pos, sum / weight);
 		pos++;
 		i++;
 		if ( pos == bars )
 			break;
+		SetSafetyLimit(pos);
 		value = Open(pos);
 		sum = sum - lsum + value * ma_period;
 		lsum -= Open(i);
@@ -712,7 +712,7 @@ void ParabolicSAR::Start () {
 	int prev_pos = pos - 1;
 	if (prev_pos < 0) prev_pos = 0;
 	
-	
+	SetSafetyLimit(prev_pos+1);
 	double prev_high = High( prev_pos );
 	double prev_low  = Low( prev_pos );
 	
@@ -1480,7 +1480,8 @@ void RelativeStrengthIndex::Start() {
 		buffer.Set(period, 100.0 - ( 100.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) ));
 		pos = period + 1;
 	}
-
+	
+	SetSafetyLimit(pos-1);
 	double prev_value  = Open(pos-1);
 
 	for (int i = pos; i < bars; i++) {
@@ -3250,6 +3251,7 @@ void SupportResistanceOscillator::Start() {
 	
 	Vector<double> crosses;
 	int prev_pos = counted ? counted-1 : 0;
+	SetSafetyLimit(counted-1);
 	double prev_value = counted ? osc_av.Get(counted-1) : 0;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);

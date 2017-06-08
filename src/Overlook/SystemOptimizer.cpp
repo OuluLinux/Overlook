@@ -1,22 +1,19 @@
 /*
 SystemOptimizer.cpp
 
+System optimizer searches for better investing algorithm pipelines with genetic optimizer.
 Genetic optimizer is embedded in the QueryTable class, and InitGeneticOptimizer prepares
 columns in the QueryTable instance. Target value is the profit encoded to 0-65536 range
-integer. Currently, the structure has maximum size of 1+1+2+2*2, where the first is
-multiplexer-like class, which combines all symbols. After that, there is one Template class for
-every symbol. That is also the first step of tree-like structure, where 7-sub-Templates can be
-used as input value. The tree-structure is limited to 2-leaf-nodes and 3 steps, and the total
-size of Template instances in the tree is 1+2+2*2. The size can be changed, but currently there is
-no need to make it any other. To sum all columns, there is 1 for target, x for all symbols, y
-for columns inside one Template blocks and 1+2*2*2 for Template blocks, which gives 1+x+y*(1+1+2+2*2).
-The fixed size allows the fixed size of rows and matching bit-ranges in every row. That makes
-the processing faster and the algorithm less complex.
+integer. Currently, the pipeline has a tree-structure and it is limited to 2-leaf-nodes and 3
+steps having maximum size of sum(x, 0, 2, 2^x). The size can be changed, but currently there is
+no need to make it any other. The fixed size allows the fixed size of rows and matching
+bit-ranges in every row. That makes the processing faster and the algorithm less complex.
 
-Genetic optimizer is based on differential evolution algorithm. Only tweak is that population
-and generation concepts are not being used. This rather uses the top values of the table as
-population and allows multi-threading by generating more than one candidate to the queue. I
-consider it to be similar enough to the original and studied algorithm. Basically, it takes the
+Genetic optimizer is based on differential evolution algorithm. Only difference to exactly
+original algorithm is that population and generation concepts are not being used. The system
+optimizer rather uses the top values of the table as population and allows multi-threading by
+generating more than one candidate to the queue.
+I consider it to be similar enough to the original and studied algorithm. Basically, it takes the
 best rows and combines it with every unit in the population in a random way. Some leaf-values
 are not used in the tree-structure, if some parent node disables the whole leaf, which causes
 the need to clean all useless mutations, or otherwise duplicate rows accumulates into the table.
@@ -39,20 +36,18 @@ in practice for the whole system. Even if the small timeframe data was available
 multiplier between that and largest would be 40320, which would consume too much memory in my
 computer. Different parts can be tested separately, however.
 
-Row is evaluated by processing it's component in correct order and by taking the output value
-from the last object. The row is usually called pipeline for that reason here. The whole tree
-can be in the writing moment 1+1+7+7*7. It can be masked based on recursive dependencies of the
+Row is evaluated by processing it's components in correct order and by taking the output value
+from the last component. The row is usually called pipeline for that reason here. The whole tree
+can be in the writing moment 1+1+2+2*2. It can be masked based on recursive dependencies of the
 root node. GetCoreQueue doesn't have separate unmasking part, but it first unmasks only the
 root and then recursively unmasks all it's dependencies while also increasing the queue.
 One template might have traditional indicators as inputs, which also must be added to the queue
-with VisitTemplate funcion. This might cause duplicate items in the queue, which must be removed
-at the end.
+This might cause duplicate items in the queue, which must be removed at the end.
 
 Traditional indicator arguments are in the argument space of the structural Template node. Due to
 the fixed bit-ranges in the row, there must be fixed size of maximum indicators and arguments.
-Most important arguments of indicators must then be first. Also, the range of row values
-must be converted to the range of the indicator argument. Indicators must be enabled with
-boolean switches rather than 'how many' indicators can be used, so that the genetic mutation
+Also, the range of row values must be converted to the range of the indicator argument. Indicators must be
+enabled with boolean switches rather than 'how many' indicators can be used, so that the genetic mutation
 doesn't have wrong kind of leverage. That is also how sub-nodes of template nodes are enabled.
 
 All Template objects and traditional indicator objects are in the same memory structure. They are
@@ -140,7 +135,7 @@ inline uint32 Pow2(int exp) {
 
 int System::GetPathPriority(const Vector<int>& path) {
 	ASSERT(max_sources == 2);
-	int priority = 0;
+	int priority = 3;
 	if (path.GetCount()) {
 		priority++;
 		for(int i = 0; i < path.GetCount(); i++) {
@@ -162,8 +157,9 @@ int System::GetPathPriority(const Vector<int>& path) {
 					break;
 				priority++;
 			}
-			// Traditional indicator
-			else return 0;
+			// Traditional indicator (0 - DataBridge, 1 - ValueChange, 2 - others)
+			else if (i == path.GetCount()-1)
+				return Upp::min(2, j - 1000);
 		}
 	}
 	return priority;
@@ -197,10 +193,15 @@ int System::GetEnabledColumn(const Vector<int>& path) {
 			else {
 				ASSERT(ma_id != -1);
 				j -= 1000 + ma_id;
-				if (j < 0)
+				if (j < 0 || j >= traditional_indicators)
 					return -1;
 				col += traditional_enabled_cols[j];
-				ASSERT_(i == path.GetCount()-1, "This must be the last position in the path");
+				
+				// Dependencies of a traditional indicators doesn't have argument values in the
+				// combination row. So, they don't have location (column) in the combination
+				// row.
+				if (i < path.GetCount()-1)
+					return -1;
 			}
 		}
 	}
@@ -285,13 +286,18 @@ void System::InitGeneticOptimizer() {
 	traditional_arg_count = 0;
 	for(int j = 0; j < traditional_indicators; j++) {
 		int len = regs[ma_id + j].args.GetCount();
-		traditional_enabled_cols.Add(traditional_arg_count + j);
+		traditional_enabled_cols.Add(1 + template_arg_count + j + traditional_arg_count);
 		traditional_col_length.Add(len);
 		traditional_arg_count += len;
 	}
 	
 	// Enable slot, template arguments, enable trad. indicators, arguments for trad. indicators
 	slot_args = 1 + template_arg_count + traditional_indicators + traditional_arg_count;
+	
+	// Priorities for structural elements are simplified to be:
+	// - 3 for traditional indicators (DataBridge, ValueChange, other derivatives)
+	// - 'structural_columns' for the template-tree
+	structural_priorities = 3 + structural_columns;
 	
 	ASSERT_(template_id != -1, "Template class have not been registered to the system");
 	for(int i = 0; i < structural_columns; i++) {
@@ -590,9 +596,9 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 			}
 			
 			hash = ch;
-			unique = IntStr(hash);
 		}
-		else unique = "default";
+		// Unique string can be same for all traditional indicators
+		unique = "src";
 	}
 	
 	
@@ -606,18 +612,18 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 		// Init object if it was just created
 		if (ci.sym == -1) {
 			int path_priority = GetPathPriority(path);
-			ASSERT(path_priority >= -regs.GetCount() && path_priority < structural_columns);
+			ASSERT(path_priority >= 0 && path_priority < structural_priorities);
 			
 			ci.sym = sym;
 			ci.tf = tf;
 			ci.priority = // lower value is more important
 				
 				// Slowest tf is most important in this system.
-				(tf_count-1-tf) * sym_count * structural_columns +
+				((tf_count-1-tf) * structural_priorities +
 				
 				// Structural column might require all symbols, so it is more important than symbol.
 				// Also, root is the column 0 and it must be processed last.
-				path_priority * sym_count +
+				path_priority * sym_count) +
 				
 				// Lower symbols must be processed before higher, because cores are allowed to
 				// require lower id symbols in the same timeframe and same structural column.
@@ -627,6 +633,8 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 			ci.unique = unique;
 			ci.input_hashes <<= input_hashes;
 			ci.args <<= args;
+			//LOG(Format("%X\tfac=%d\tpath_priority=%d\tprio=%d", (int64)&ci, ci.factory, path_priority, ci.priority));
+			//DUMPC(args);
 			
 			// Connect core inputs
 			ConnectCore(ci);
@@ -736,14 +744,17 @@ void System::CreateCore(CoreItem& ci) {
 	// Connect object
 	for(int i = 0; i < ci.inputs.GetCount(); i++) {
 		const VectorMap<int, SourceDef>& src_list = ci.inputs[i];
-		Input& in = c.inputs.Add();
+		Input& in = c.inputs[i];
 		
 		for(int j = 0; j < src_list.GetCount(); j++) {
+			int key = src_list.GetKey(j);
 			const SourceDef& src_def = src_list[j];
-			Source& src_obj = in.Add(src_list.GetKey(j));
+			Source& src_obj = in.Add(key);
+			CoreItem& src_ci = *src_def.coreitem;
+			ASSERT_(!src_ci.core.IsEmpty(), "Core object must be created before this point");
 			
-			src_obj.core = &c;
-			src_obj.output = &c.outputs[src_def.output];
+			src_obj.core = &*src_ci.core;
+			src_obj.output = &src_obj.core->outputs[src_def.output];
 			src_obj.sym = src_def.sym;
 			src_obj.tf = src_def.tf;
 		}

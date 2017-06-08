@@ -52,7 +52,7 @@ public:
 	const FeatureKeypoint& GetKeypoint(int i) const {return keypoints[i];}
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In(SourcePhase, RealValue, SymTf)
+		reg % In<DataBridge>()
 			% Out(IndiPhase, FeatureValue, SymTf, 0, 0);
 	}
 };

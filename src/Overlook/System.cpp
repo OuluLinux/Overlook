@@ -3,15 +3,16 @@
 namespace Overlook {
 
 
-
+String arg_addr;
+int arg_port;
 
 System::System() {
 	timediff = 0;
 	base_period = 60;
 	end = GetSysTime();
 	
-	addr = "127.0.0.1";
-	port = 42000;
+	addr = arg_addr.IsEmpty() ?  "127.0.0.1" : arg_addr;
+	port = arg_port == 0 ? 42000 : arg_port;
 	running = false;
 	stopped = true;
 	exploration = 0.2;

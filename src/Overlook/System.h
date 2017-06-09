@@ -4,6 +4,9 @@
 namespace Overlook {
 using namespace Upp;
 
+extern String arg_addr;
+extern int arg_port;
+
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
 
 struct RegisterInput : Moveable<RegisterInput> {
@@ -87,6 +90,8 @@ struct PipelineItem : Moveable<PipelineItem> {
 	int priority;
 	int sym;
 };
+
+class CustomCtrl;
 
 class System {
 	

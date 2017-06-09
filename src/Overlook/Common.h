@@ -163,6 +163,100 @@ inline int IncreaseMonthTS(int ts) {
 	return Time(year,month,1).Get() - epoch;
 }
 
+struct CoreIO;
+
+// Class for default visual settings for a single visible line of a container
+struct Buffer : public Moveable<Buffer> {
+	Vector<double> value;
+	String label;
+	Color clr;
+	int style, line_style, line_width, chr, begin, shift, earliest_write;
+	bool visible;
+	
+	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
+	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
+	void SetCount(int i) {value.SetCount(i, 0.0);}
+	
+	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
+	int GetCount() const {return value.GetCount();}
+	bool IsEmpty() const {return value.IsEmpty();}
+	double GetUnsafe(int i) const {return value[i];}
+	
+	#ifdef flagDEBUG
+	CoreIO* check_cio;
+	void SafetyCheck(CoreIO* io) {check_cio = io;}
+	double Get(int i) const;
+	void Set(int i, double value);
+	void Inc(int i, double value);
+	#else
+	double Get(int i) const {return value[i];}
+	void Set(int i, double value) {this->value[i] = value; if (i < earliest_write) earliest_write = i;}
+	void Inc(int i, double value) {this->value[i] += value;}
+	#endif
+	
+	
+};
+
+typedef const Buffer ConstBuffer;
+
+struct Output : Moveable<Output> {
+	Output() : visible(0) {}
+	Vector<Buffer> buffers;
+	int phase, type, visible;
+};
+
+class Core;
+class System;
+struct CoreItem;
+
+struct Source : Moveable<Source> {
+	Source() : core(NULL), output(NULL), sym(-1), tf(-1) {}
+	Source(CoreIO* c, Output* out, int s, int t) : core(c), output(out), sym(s), tf(t) {}
+	Source(const Source& src) {*this = src;}
+	void operator=(const Source& src) {
+		core = src.core;
+		output = src.output;
+		sym = src.sym;
+		tf = src.tf;
+	}
+	
+	CoreIO* core;
+	Output* output;
+	int sym, tf;
+};
+
+struct SourceDef : Moveable<SourceDef> {
+	SourceDef() : coreitem(NULL), output(-1), sym(-1), tf(-1) {}
+	SourceDef(CoreItem* ci, int out, int s, int t) : coreitem(ci), output(out), sym(s), tf(t) {}
+	SourceDef(const Source& src) {*this = src;}
+	void operator=(const SourceDef& src) {
+		coreitem = src.coreitem;
+		output = src.output;
+		sym = src.sym;
+		tf = src.tf;
+	}
+	
+	CoreItem* coreitem;
+	int output, sym, tf;
+};
+
+typedef VectorMap<int, Source>		Input;
+typedef VectorMap<int, SourceDef>	InputDef;
+
+struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
+	typedef CoreItem CLASSNAME;
+	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
+	~CoreItem() {}
+	
+	void AddInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
+	
+	One<Core> core;
+	String unique;
+	int sym, tf, priority, factory;
+	Vector<VectorMap<int, SourceDef> > inputs;
+	Vector<int> input_hashes, args;
+};
+
 }
 
 #endif

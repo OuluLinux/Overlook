@@ -714,7 +714,7 @@ int System::GetHash(const Vector<byte>& vec) {
 
 
 void System::ConnectCore(CoreItem& ci) {
-	ASSERT(ci.core == NULL);
+	ASSERT(&*ci.core == NULL);
 	const FactoryRegister& part = regs[ci.factory];
 	Vector<int> enabled_input_factories;
 	Vector<byte> unique_slot_comb;
@@ -773,7 +773,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 }
 
 void System::CreateCore(CoreItem& ci) {
-	ASSERT(ci.core == NULL);
+	ASSERT(&*ci.core == NULL);
 	
 	// Create core-object
 	ci.core = System::GetCtrlFactories()[ci.factory].b();

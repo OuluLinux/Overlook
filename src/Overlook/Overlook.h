@@ -4,9 +4,9 @@
 #include "Common.h"
 #include "QueryTable.h"
 
+#include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"
-#include "System.h"
 #include "SimBroker.h"
 
 #include "DataBridge.h"

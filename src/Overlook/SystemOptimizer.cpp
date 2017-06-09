@@ -36,9 +36,19 @@ in practice for the whole system. Even if the small timeframe data was available
 multiplier between that and largest would be 40320, which would consume too much memory in my
 computer. Different parts can be tested separately, however.
 
+<<<<<<< .mine
+Row is evaluated by processing it's components in correct order and by taking the output value
+from the last component. The row is usually called pipeline for that reason here. The whole tree
+can be in the writing moment 1+2+2*2. It can be masked based on recursive dependencies of the
+||||||| .r83
+Row is evaluated by processing it's component in correct order and by taking the output value
+from the last object. The row is usually called pipeline for that reason here. The whole tree
+can be in the writing moment 1+1+7+7*7. It can be masked based on recursive dependencies of the
+=======
 Row is evaluated by processing it's components in correct order and by taking the output value
 from the last component. The row is usually called pipeline for that reason here. The whole tree
 can be in the writing moment 1+1+2+2*2. It can be masked based on recursive dependencies of the
+>>>>>>> .r84
 root node. GetCoreQueue doesn't have separate unmasking part, but it first unmasks only the
 root and then recursively unmasks all it's dependencies while also increasing the queue.
 One template might have traditional indicators as inputs, which also must be added to the queue
@@ -79,7 +89,9 @@ Remaining issues:
 
 namespace Overlook {
 
+const int max_depth = 2;
 const int max_sources = 2;
+const int max_timeslots = 8;
 
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count) {
 	int byt = bit_begin / 8;
@@ -117,14 +129,17 @@ void System::InitRegistry() {
 		for(int j = 0; j < periods.GetCount(); j++)
 			data[i][j].SetCount(regs.GetCount());
 	}
+	
 }
 
-int System::GetSymbolEnabled(int sym) const {
-	ASSERT(sym >= 0 && sym < symbols.GetCount());
-	int col = 0;
-	col++; // target
-	col += sym;
-	return col;
+void System::SetBasketCount(int i) {
+	ASSERT(i >= 0 && data.GetCount());
+	data.SetCount(structural_begin + i);
+	for(int i = structural_begin; i < data.GetCount(); i++) {
+		data[i].SetCount(periods.GetCount());
+		for(int j = 0; j < periods.GetCount(); j++)
+			data[i][j].SetCount(regs.GetCount());
+	}
 }
 
 inline uint32 Pow2(int exp) {
@@ -136,73 +151,66 @@ inline uint32 Pow2(int exp) {
 int System::GetPathPriority(const Vector<int>& path) {
 	ASSERT(max_sources == 2);
 	int priority = 3;
-	if (path.GetCount()) {
-		priority++;
-		for(int i = 0; i < path.GetCount(); i++) {
-			int j = path[i];
-			ASSERT(j >= 0);
-			
-			// Structural node
-			if (j < 1000) {
-				ASSERT(j < max_sources);
-				ASSERT(i <= 3);
-				int sub_nodes = 0;
-				for(int k = i+1; k <= 3; k++) {
-					int e = 3 - k;
-					ASSERT(e >= 0);
-					sub_nodes += Pow2(e);
-				}
-				priority += j * sub_nodes;
-				if (path.GetCount() == i+1)
-					break;
-				priority++;
+	for(int i = 0; i < path.GetCount(); i++) {
+		int j = path[i];
+		ASSERT(j >= 0);
+		
+		// Structural node
+		if (j < 1000) {
+			ASSERT(j < max_sources);
+			ASSERT(i <= max_depth);
+			int sub_nodes = 0;
+			for(int k = i+1; k <= max_depth; k++) {
+				int e = max_depth - k;
+				ASSERT(e >= 0);
+				sub_nodes += Pow2(e);
 			}
-			// Traditional indicator (0 - DataBridge, 1 - ValueChange, 2 - others)
-			else if (i == path.GetCount()-1)
-				return Upp::min(2, j - 1000);
+			priority += j * sub_nodes;
+			if (path.GetCount() == i+1)
+				break;
+			priority++;
 		}
+		// Traditional indicator (0 - DataBridge, 1 - ValueChange, 2 - others)
+		else if (i == path.GetCount()-1)
+			return Upp::min(2, j - 1000);
 	}
 	return priority;
 }
 
 int System::GetEnabledColumn(const Vector<int>& path) {
 	ASSERT(max_sources == 2);
-	int col = 1 + symbols.GetCount();
-	if (path.GetCount()) {
-		col += slot_args;
-		for(int i = 0; i < path.GetCount(); i++) {
-			int j = path[i];
-			ASSERT(j >= 0);
+	int col = structural_begin;
+	for(int i = 0; i < path.GetCount(); i++) {
+		int j = path[i];
+		ASSERT(j >= 0);
+		
+		// Structural node
+		if (j < 1000) {
+			ASSERT(j < max_sources);
+			ASSERT(i <= max_depth);
+			int sub_nodes = 0;
+			for(int k = i+1; k <= max_depth; k++) {
+				int e = max_depth - k;
+				ASSERT(e >= 0);
+				sub_nodes += Pow2(e);
+			}
+			col += (1 + j * sub_nodes) * slot_args;
+			if (path.GetCount() == i+1)
+				break;
+		}
+		// Traditional indicator
+		else {
+			ASSERT(ma_id != -1);
+			j -= 1000 + ma_id;
+			if (j < 0 || j >= traditional_indicators)
+				return -1;
+			col += traditional_enabled_cols[j];
 			
-			// Structural node
-			if (j < 1000) {
-				ASSERT(j < max_sources);
-				ASSERT(i <= 3);
-				int sub_nodes = 0;
-				for(int k = i+1; k <= 3; k++) {
-					int e = 3 - k;
-					ASSERT(e >= 0);
-					sub_nodes += Pow2(e);
-				}
-				col += j * sub_nodes * slot_args;
-				if (path.GetCount() == i+1)
-					break;
-				col += slot_args;
-			}
-			// Traditional indicator
-			else {
-				ASSERT(ma_id != -1);
-				j -= 1000 + ma_id;
-				if (j < 0 || j >= traditional_indicators)
-					return -1;
-				col += traditional_enabled_cols[j];
-				
-				// Dependencies of a traditional indicators doesn't have argument values in the
-				// combination row. So, they don't have location (column) in the combination
-				// row.
-				if (i < path.GetCount()-1)
-					return -1;
-			}
+			// Dependencies of a traditional indicators doesn't have argument values in the
+			// combination row. So, they don't have location (column) in the combination
+			// row.
+			if (i < path.GetCount()-1)
+				return -1;
 		}
 	}
 	ASSERT(col >= 0 && col < table.GetColumnCount());
@@ -215,41 +223,35 @@ void System::MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<b
 	
 	// Mask vector
 	ASSERT(max_sources == 2);
-	int col = 1 + symbols.GetCount();
-	if (path.GetCount()) {
-		col += slot_args;
-		for(int i = 0; i < path.GetCount(); i++) {
-			int j = path[i];
-			ASSERT(j >= 0);
-			
-			// Structural node
-			if (j < 1000) {
-				ASSERT(j < max_sources);
-				ASSERT(i <= 3);
-				int sub_nodes = 0;
-				for(int k = i+1; k <= 3; k++) {
-					int e = 3 - k;
-					ASSERT(e >= 0);
-					sub_nodes += Pow2(e);
-				}
-				col += j * sub_nodes * slot_args;
-				if (path.GetCount() == i+1) {
-					MaskBits(mask, col, sub_nodes * slot_args);
-					break;
-				}
-				col += slot_args;
+	int col = structural_begin;
+	for(int i = 0; i < path.GetCount(); i++) {
+		int j = path[i];
+		ASSERT(j >= 0);
+		
+		// Structural node
+		if (j < 1000) {
+			ASSERT(j < max_sources);
+			ASSERT(i <= max_depth);
+			int sub_nodes = 0;
+			for(int k = i+1; k <= max_depth; k++) {
+				int e = max_depth - k;
+				ASSERT(e >= 0);
+				sub_nodes += Pow2(e);
 			}
-			// Traditional indicator
-			else {
-				j -= 1000;
-				col += traditional_enabled_cols[j];
-				MaskBits(mask, col, traditional_col_length[j]);
-				break; // all maskable is masked
+			col += j * sub_nodes * slot_args;
+			if (path.GetCount() == i+1) {
+				MaskBits(mask, col, sub_nodes * slot_args);
+				break;
 			}
+			col += slot_args;
 		}
-	}
-	else {
-		MaskBits(mask, col, table.GetRowBits() - col);
+		// Traditional indicator
+		else {
+			j -= 1000;
+			col += traditional_enabled_cols[j];
+			MaskBits(mask, col, traditional_col_length[j]);
+			break; // all maskable is masked
+		}
 	}
 	
 	// AND operate vector
@@ -267,12 +269,44 @@ void System::InitGeneticOptimizer() {
 	table.AddColumn("Result", 65536);
 	table.EndTargets();
 	
-	// Columns for enabled symbols
-	for(int i = 0; i < symbols.GetCount(); i++)
-		table.AddColumn(symbols[i] + " enabled", 2);
+	
+	
+	for(int i = 0; i < max_timeslots; i++) {
+		String slot_desc = "Time #" + IntStr(i);
+		
+		// Timeslot columns
+		table.AddColumn(slot_desc + " timeslot method", 3);
+		
+		// Method #1, wday/hour
+		table.AddColumn(slot_desc + " wdayhour", 24*7);
+		
+		// Method #2, hour of day
+		table.AddColumn(slot_desc + " hour", 24);
+		
+		// Method #3, always (no arguments)
+		
+		
+		// Basket columns
+		table.AddColumn(slot_desc + " basket method", 2);
+		
+		// Method #1, group id (priority increasing from highest=0)
+		table.AddColumn(slot_desc + " group", 16);
+		
+		// Method #2, symbol enabled bits
+		for(int j = 0; j < symbols.GetCount(); j++)
+			table.AddColumn(slot_desc + " sym" + IntStr(j), 2);
+		
+	}
+	structural_begin = table.GetColumnCount();
+	
+	
+	
+	
 	
 	// Columns for structure
-	structural_columns = 1 + 1 + max_sources + max_sources * max_sources;
+	structural_columns = 0;
+	for(int i = 0; i <= max_depth; i++)
+		structural_columns += pow(2, i);
 	template_id = Find<Template>();
 	const Vector<ArgType>& template_args = regs[template_id].args;
 	template_arg_count = template_args.GetCount();
@@ -324,8 +358,8 @@ void System::InitGeneticOptimizer() {
 			const String& title = GetCtrlFactories()[factory].a;
 			String desc = slot_desc + " " + title + " enabled";
 			
-			// Is traditional indicator enabled
-			table.AddColumn(desc, 2);
+			// Is traditional indicator important
+			table.AddColumn(desc, 16);
 			
 			// Arguments for a traditional indicator
 			for(int k = 0; k < reg.args.GetCount(); k++) {
@@ -341,19 +375,18 @@ void System::InitGeneticOptimizer() {
 	// Test path->column function
 	{
 		Vector<int> path;
-		int col = 1 + symbols.GetCount();
-		ASSERT(GetEnabledColumn(path) == col);
-		col += slot_args;
-		path.Add(0);
+		int col = structural_begin;
 		ASSERT(GetEnabledColumn(path) == col);
 		col += slot_args;
 		for(int i = 0; i < max_sources; i++) {
 			path.Add(i);
-			ASSERT(GetEnabledColumn(path) == col);
+			int tgt = GetEnabledColumn(path);
+			ASSERT(tgt == col);
 			col += slot_args;
 			for(int j = 0; j < max_sources; j++) {
 				path.Add(j);
-				ASSERT(GetEnabledColumn(path) == col);
+				int tgt = GetEnabledColumn(path);
+				ASSERT(tgt == col);
 				col += slot_args;
 				path.Pop();
 			}
@@ -364,11 +397,23 @@ void System::InitGeneticOptimizer() {
 	}
 }
 
+void System::InitDataset() {
+	
+	// Create totally random work queue to avoid possibly wrong local fitting
+	pl_queue.SetCount(max_queue);
+	for(int i = 0; i < max_queue; i++) {
+		PipelineItem& pi = pl_queue[i];
+		pi.value.SetCount(table.GetRowBytes(), 0);
+		for(int j = 1; j < table.GetColumnCount(); j++) {
+			int max_value = table.GetColumn(j).max_value;
+			int value = max_value > 1 ? Random(max_value) : 0;
+			table.Set0(j, value, pi.value);
+		}
+	}
+}
+
 void System::RefreshPipeline() {
 	const int target_col = 0;
-	const int cores = CPU_Cores();
-	const int min_queue = cores * 4;
-	const int max_queue = cores * 20;
 	
 	
 	// Don't fill queue until it is small enough. Calculating decision tree is demanding.
@@ -379,6 +424,8 @@ void System::RefreshPipeline() {
 	// This also determines what is considered to be 'best' by the differential evolution
 	table.Sort(target_col, true);
 	const int table_rows = Upp::min(1000, table.GetCount());
+	if (table_rows < 2)
+		return;
 	const int discard_limit = table_rows / 2;
 	const int target_limit = table.Get(discard_limit, target_col);
 	ASSERT(table_rows > 2);
@@ -405,22 +452,12 @@ void System::RefreshPipeline() {
 			//   set, which also might make worse results...
 			table.Evolve(0, 1+i, pi->value);
 			
-			
 			// Evaluate new combination with decision tree
 			int prediction = table.Predict(tree, pi->value, target_col);
 			
 			
 			// If prediction is good or exploration can be done, then try to add this
 			if (prediction >= target_limit || Randomf() <= exploration) {
-				
-				// Clean useless mutation
-				Panic("TODO");
-				
-				// Trim excess traditional nodes away
-				Panic("TODO");
-				
-				// Check that row doesn't exist in the table
-				Panic("TODO");
 				
 				// Add the combination to the working queue
 				pi->priority = i;
@@ -432,16 +469,27 @@ void System::RefreshPipeline() {
 	}
 }
 
-int System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids) {
-	
-	Index<int> sym_ids;
-	const int sym_count = GetSymbolCount();
-	for (int sym = 0; sym < sym_count; sym++) {
-		int sym_enabled_col = GetSymbolEnabled(sym);
-		if (table.Get0(sym_enabled_col, pi.value))
-			sym_ids.Add(sym);
+void System::GetBasketArgs(PipelineItem& pi) {
+	ASSERT(pi.sym != -1);
+	Vector<int>& args = basket_args.GetAdd(pi.sym);
+	CombineHash ch;
+	args.SetCount(structural_begin-1);
+	for(int i = 1; i < structural_begin; i++) {
+		int j = table.Get0(i, pi.value);
+		args[i-1] = j;
+		ch << j << 1;
 	}
-	ASSERT_(!sym_ids.IsEmpty(), "No symbol is enabled");
+	basket_hashes.GetAdd(pi.sym) = ch;
+}
+
+int System::GetCoreQueue(PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids, int thread_id) {
+	if (pi.sym == -1) {
+		pi.sym = basket_sym_begin + thread_id;
+		GetBasketArgs(pi);
+	}
+	int sym = pi.sym;
+	Index<int> sym_ids;
+	sym_ids.Add(sym);
 	
 	const int tf_count = GetPeriodCount();
 	for (int tf = tf_count -1; tf >= 0; tf--) {
@@ -452,8 +500,8 @@ int System::GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queu
 		
 		// Columns for structure
 		Vector<int> path;
+		path.Add(0);
 		GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
-		
 	}
 	
 	// Sort queue by priority
@@ -604,7 +652,6 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 	
 	for (int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
-		
 		
 		// Get CoreItem
 		CoreItem& ci = data[sym][tf][factory].GetAdd(hash);

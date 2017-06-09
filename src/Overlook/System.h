@@ -81,10 +81,11 @@ struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
 
 struct PipelineItem : Moveable<PipelineItem> {
 	typedef PipelineItem CLASSNAME;
-	PipelineItem() {priority = INT_MAX;}
+	PipelineItem() {priority = INT_MAX; sym = -1;}
 	
 	Vector<byte> value;
 	int priority;
+	int sym;
 };
 
 class System {
@@ -137,8 +138,10 @@ protected:
 	friend class DataBridgeCommon;
 	friend class Core;
 	
-	Vector<FactoryRegister>		regs;
-	Array<PipelineItem>			pl_queue;
+	Vector<FactoryRegister>				regs;
+	Array<PipelineItem>					pl_queue;
+	ArrayMap<int, Vector<int> >			basket_args;
+	ArrayMap<int, int>					basket_hashes;
 	Data			data;
 	Vector<String>	period_strings;
 	QueryTable		table;
@@ -154,6 +157,7 @@ protected:
 	Atomic			nonstopped_workers;
 	int64			memory_limit;
 	int				port;
+	int				basket_sym_begin;
 	bool			running, stopped;
 	
 	
@@ -170,6 +174,8 @@ protected:
 	int template_id, template_arg_count, slot_args;
 	int ma_id;
 	int structural_priorities;
+	int structural_begin;
+	int max_queue, min_queue;
 	
 	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
@@ -179,9 +185,10 @@ protected:
 	
 	// Pipeline
 	void InitGeneticOptimizer();
+	void InitDataset();
 	void RefreshRealtime();
 	int  GetHash(const Vector<byte>& vec);
-	int  GetCoreQueue(const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids);
+	int  GetCoreQueue(PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids, int thread_id);
 	int  GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
 	void CreateCore(CoreItem& ci);
 	int  GetEnabledColumn(const Vector<int>& path);
@@ -190,8 +197,9 @@ protected:
 	void InitRegistry();
 	void ConnectCore(CoreItem& ci);
 	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
-	int  GetSymbolEnabled(int sym) const;
 	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
+	void GetBasketArgs(PipelineItem& pi);
+	void SetBasketCount(int i);
 	
 	// Jobs
 	void Process(CoreItem& ci);

@@ -16,6 +16,10 @@ System::System() {
 	stopped = true;
 	exploration = 0.2;
 	
+	const int cores = CPU_Cores();
+	min_queue = cores * 4;
+	max_queue = cores * 20;
+	
 	structural_columns = 0;
 	template_arg_count = 0;
 	slot_args = 0;
@@ -23,6 +27,8 @@ System::System() {
 	traditional_arg_count = 0;
 	ma_id = -1;
 	structural_priorities = 0;
+	structural_begin = 0;
+	basket_sym_begin = 0;
 }
 
 System::~System() {
@@ -50,7 +56,7 @@ void System::Init() {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		
+		basket_sym_begin = symbols.GetCount();
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
@@ -99,6 +105,7 @@ void System::Init() {
 	
 	InitRegistry();
 	InitGeneticOptimizer();
+	InitDataset();
 	
 }
 

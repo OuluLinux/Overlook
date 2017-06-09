@@ -9,7 +9,8 @@ void System::Start() {
 	
 	Thread::Start(THISBACK(MainLoop));
 	
-	nonstopped_workers = CPU_Cores();
+	nonstopped_workers = 1;//CPU_Cores();
+	SetBasketCount(nonstopped_workers);
 	for(int i = 0; i < nonstopped_workers; i++)
 		Thread::Start(THISBACK1(Worker, i));
 }
@@ -36,24 +37,28 @@ void System::MainLoop() {
 }
 
 void System::Worker(int id) {
+	const int tf_count = GetPeriodCount();
 	
 	while (running) {
-		pl_queue_lock.Enter();
-		One<PipelineItem> pi = pl_queue.Detach(0);
-		pl_queue_lock.Leave();
-		
-		
-		// Get core-item queue from pipeline-item
-		Vector<Ptr<CoreItem> > ci_queue;
-		//GetCoreQueue(*pi, ci_queue);
-		Panic("TODO");
-		
-		
-		// Process job-queue
-		for(int i = 0; i < ci_queue.GetCount(); i++) {
-			Process(*ci_queue[i]);
+		if (!pl_queue.IsEmpty()) {
+			pl_queue_lock.Enter();
+			One<PipelineItem> pi = pl_queue.Detach(0);
+			pl_queue_lock.Leave();
+			
+			for (int tf = tf_count-1; tf >= 0; tf--) {
+				Index<int> tfs;
+				tfs.Add(tf);
+				
+				// Get core-item queue from pipeline-item
+				Vector<Ptr<CoreItem> > ci_queue;
+				GetCoreQueue(*pi, ci_queue, &tfs, id);
+				
+				// Process job-queue
+				for(int i = 0; i < ci_queue.GetCount(); i++) {
+					Process(*ci_queue[i]);
+				}
+			}
 		}
-		
 		
 		Sleep(100);
 	}

@@ -1081,4 +1081,47 @@ value.&]
 [s0;%- A lot of progress was made today with SystemOptimizer.cpp, 
 but it`'s still not completely in the previous working state. 
 It`'s worth noticing how much complexity have been reduced today 
-without limiting features.]]
+without limiting features.&]
+[s3;%- 8.6.2017&]
+[s0;%- The perfection is forever, and our brains and genetics only 
+tune into that eventually. There, I said it. That`'s how I believe. 
+Sooner than later is usually more pleasant, but rush too fast 
+and you might not see something important.&]
+[s0;%- To the practical matters... The classic viewing mode works 
+again (candlesticks `+ indicators). I have had this at this point 
+many times before, but I had to change something structural, 
+so something would break and I would have to fix it.&]
+[s0;%- About the basket symbols what I mentioned yesterday... changing 
+between those at different times should be decided by the optimizer, 
+not by some template object. That would take the planned combiner 
+object away, and that is probably how I end up doing. It will 
+decrease a great deal of complexity, because there is no need 
+for combiner to listen all the most important baskets and switch 
+between them. Optimizer will have the primary time`-range, which 
+will be trimmed to include the most efficient time`-range, and 
+secondary time`-slots will fill the remaining time, and they 
+will be trimmed again until limit is reached. This kind of simplifying 
+is very powerful and this is how you should do it: immediately 
+after you have recognized the opportunity and before the old 
+and more complex design has been implemented further. Unfortunately, 
+sometimes you have contracts to make something in a bad and old 
+design. There is, of course, a small probability, that some opportunities 
+turns about to be useless learning experiences, meaning that 
+you were wrong ;)&]
+[s0;%- ...&]
+[s0;%- I took a walk (there`'s freakin`' hot outside) and got an 
+idea, that maybe the optimizer should seek to the timeslot `& 
+basket instead of only timeslot. Also some basic environment 
+states could be seeked. The optimizer becomes some multi`-headed 
+monster, which tries to fill the whole surface with some sharpest 
+tops. Every head has a differential solver and a decision tree 
+pruner and they have a strict priority order. That seems interesting, 
+at least for me.&]
+[s3;%- 9.6.2017&]
+[s0;%- Ok, so the simple and efficient solution is to add timeslot 
+and basket optimization to the differential evolution solver. 
+No need to make it more complicated.&]
+[s0;%- The main optimization loop is slowly but steadily starting... 
+Next: basket bardata from long argument vector and templates. 
+The alpha version will be ready soon.... I can`'t wait to get 
+this project to slower development phase.]]

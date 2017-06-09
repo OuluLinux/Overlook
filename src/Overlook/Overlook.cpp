@@ -9,25 +9,41 @@ Overlook::Overlook()
 	Icon(OverlookImg::icon());
 	MinimizeBox().MaximizeBox().Sizeable();
 	
-	Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
+	Add(tabs.SizePos());
+	tabs.Add(visins);
+	tabs.Add(visins, "Visual Inspection");
+	tabs.Add(opt);
+	tabs.Add(opt, "Optimizer");
+	
+	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
 	droplist_split << ctrllist << symlist << tflist << config;
 	droplist_split.Horz();
-	
 	prev_core = NULL;
 	prev_view = NULL;
-	
 	ctrllist <<= THISBACK(SetView);
 	symlist <<= THISBACK(SetView);
 	tflist <<= THISBACK(SetView);
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
 	
+	opt.Add(opt_hsplit.SizePos());
+	opt_hsplit.Horz();
+	opt_hsplit << opt_list << opt_tabs;
+	opt_draw.Vert();
+	opt_tabs.Add(opt_draw);
+	opt_tabs.Add(opt_draw, "Drawers");
+	opt_tabs.Add(opt_details);
+	opt_tabs.Add(opt_details, "Details");
+	opt_tabs.Add(opt_simbroker);
+	opt_tabs.Add(opt_simbroker, "SimBroker");
+	
+	
 	PostCallback(THISBACK(Refresher));
 }
 
 Overlook::~Overlook() {
 	if (prev_view) {
-		RemoveChild(prev_view);
+		visins.RemoveChild(prev_view);
 		delete prev_view;
 		prev_view = NULL;
 	}
@@ -55,6 +71,8 @@ void Overlook::Init() {
 	ctrllist.SetIndex(0);
 	
 	PostCallback(THISBACK(SetView));
+	
+	sys.Start();
 }
 
 void Overlook::Deinit() {
@@ -67,7 +85,7 @@ void Overlook::SetView() {
 	int t = tflist.GetIndex();
 	
 	if (prev_view) {
-		RemoveChild(prev_view);
+		visins.RemoveChild(prev_view);
 		delete prev_view;
 		prev_view = NULL;
 		prev_core = NULL;
@@ -89,7 +107,7 @@ void Overlook::SetView() {
 	
 	view->RefreshData();
 	
-	Add(view->VSizePos(30).HSizePos());
+	visins.Add(view->VSizePos(30).HSizePos());
 	prev_view = view;
 	prev_core = core;
 }

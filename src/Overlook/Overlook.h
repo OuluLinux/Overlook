@@ -30,6 +30,10 @@ class Overlook : public TopWindow {
 protected:
 	friend class PrioritizerCtrl;
 	
+	TabCtrl tabs;
+	ParentCtrl visins, opt;
+	
+	// Visual inspection
 	Splitter droplist_split;
 	DropList ctrllist, symlist, tflist;
 	Button config;
@@ -37,6 +41,14 @@ protected:
 	CustomCtrl* prev_view;
 	Core* prev_core;
 	TimeCallback tc;
+	
+	// Optimizer
+	Splitter opt_hsplit;
+	ArrayCtrl opt_list;
+	TabCtrl opt_tabs;
+	Splitter opt_draw;
+	ParentCtrl opt_details, opt_simbroker;
+	
 	
 	System sys;
 	

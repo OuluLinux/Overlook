@@ -47,13 +47,16 @@ void DataBridge::Init() {
 }
 
 void DataBridge::Start() {
+	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	common.CheckInit(this);
 	
 	int sym_count = common.GetSymbolCount();
+	int sym = GetSymbol();
+	int cur = sym - sym_count;
 	
 	// Regular symbols
-	if (GetSymbol() < sym_count) {
+	if (sym < sym_count) {
 		bool init_round = GetCounted() == 0;
 		if (init_round)
 			RefreshFromHistory();
@@ -61,8 +64,13 @@ void DataBridge::Start() {
 	}
 	
 	// Generated symbols
-	else {
+	else if (cur < mt.GetCurrencyCount()) {
 		RefreshVirtualNode();
+	}
+	
+	// Basket
+	else {
+		RefreshBasket();
 	}
 }
 
@@ -634,6 +642,10 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 	if (v < 0) v = 0;
 	if (v >= steps) v = steps -1;
 	return v;
+}
+
+void DataBridge::RefreshBasket() {
+	
 }
 
 }

@@ -74,6 +74,9 @@ protected:
 	int bytes, bits;
 	int target_count;
 	int test;
+	int sort_column;
+	bool sort_descending;
+	
 	
 public:
 	
@@ -97,11 +100,13 @@ public:
 	void SetQuery(int column, int value);
 	double QueryAverage(int target);
 	int GetColumnCount() const {return columns.GetCount();}
+	const Column& GetColumn(int i) const {return columns[i];}
 	void Sort(int column, bool descending=false);
 	void Evolve(int best_row, int candidate_row, Vector<byte>& output_row);
 	void SetPruning(int i) {test = i;}
 	int GetRowBits() const {return bits;}
 	int GetRowBytes() const {return bytes;}
+	bool operator()(const Vector<byte>& a, const Vector<byte>& b) const;
 	
 	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
 	

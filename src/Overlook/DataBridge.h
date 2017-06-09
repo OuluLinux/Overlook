@@ -61,6 +61,7 @@ class DataBridge : public BarData {
 	void RefreshFromHistory();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshVirtualNode();
+	void RefreshBasket();
 	void RefreshMedian();
 public:
 	typedef DataBridge CLASSNAME;

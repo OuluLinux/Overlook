@@ -510,7 +510,18 @@ double QueryTable::QueryAverage(int target) {
 }
 
 void QueryTable::Sort(int column, bool descending) {
-	Panic("TODO");
+	sort_column = column;
+	sort_descending = descending;
+	Upp::Sort(data, *this);
+}
+
+bool QueryTable::operator()(const Vector<byte>& a, const Vector<byte>& b) const {
+	int av = Get0(sort_column, a);
+	int bv = Get0(sort_column, b);
+	if (sort_descending == false)
+		return av < bv;
+	else
+		return av > bv;
 }
 
 void QueryTable::Evolve(int best_row, int candidate_row, Vector<byte>& output_row) {

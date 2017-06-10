@@ -18,6 +18,9 @@ has given a permission to use his story and/or name publicly.
 However, the story may include a one`-sided and personally experienced 
 story from social events, which may or may not be equal to the 
 objective truth.&]
+[s0; This document is an artistic expression as whole without target 
+audience. This is only an opinion of the author and this is not 
+checked for wrong facts.&]
 [s0;= &]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
@@ -1124,4 +1127,55 @@ No need to make it more complicated.&]
 [s0;%- The main optimization loop is slowly but steadily starting... 
 Next: basket bardata from long argument vector and templates. 
 The alpha version will be ready soon.... I can`'t wait to get 
-this project to slower development phase.]]
+this project to slower development phase.&]
+[s3;%- 10.6.2017&]
+[s0;%- Happy name day me.&]
+[s0;%- One can connect dots, how the Overlook is using MT4 and market 
+symbols and genetic optimization to improve results, but one 
+important feature of the Overlook is to make connecting those 
+dots difficult. I mean, you can`'t give everything to everyone 
+on the golden serving dish, right? However, the life doesn`'t 
+need to be bloody zero`-sum game neither. Some golden rules must 
+be applied.&]
+[s0;%- I have witnessed the most heart breaking discrimination of 
+poor people many times, which have had completely elitist zero`-sum 
+game nature. The most heart breaking is that, when someone haven`'t 
+had a chance yet, and the weaker position have been the fault 
+of their parents. Of course, we have genes, but we also have 
+brains, and it`'s weak minded to weight bad genes or bad inheritance 
+instead of strong. My sister is one of those. Girls are very 
+evil in that point. They demand irrational sweetness of life 
+more than men, and discriminate other girls for the stupidest 
+elitist reason. Men at least can come together with the sports 
+by nature. It is also sad to see accumulating effects of one 
+single unjust treatment and the evil ignorance of those greedy 
+sweet`-tooths. That makes you want to listen to `"The Prodigy 
+`- Smack My Bitch Up`".&]
+[s0;%- Ultimately, there is the world of all uncesessities, which 
+allows using human resources by luring people unknowingly into 
+life`-long traps with marketing and claims for moar success, 
+moar `$`$`$ and moar something, which is generally accepted for 
+some GDP increase or whatever. Start looking that more in`-depth 
+and someone will say `"[/ The big bubble of human resources filling 
+the result of evolution of the society is none of your business, 
+stay away!]`", `"[/ No taking of pictures!]`" or `"[/ Only the simulation 
+of official timeline in very low resolution for recreational 
+purposes is allowed!]`". However, the brain`-dead culture of 
+recreationial ceremonies and related stories is only valid as 
+long as those stories are not analyzed with personal computers 
+using scientific big data methods, artifical neural networks 
+and logical reasoning. Even then they would try to sell some 
+of it as true by some so`-called trusted scheme and religious 
+fake`-science. Only the immature system needs the exploration 
+of doing something which is not needed, but it is hard to tell, 
+which parts of the system actually are mature. Some parts have 
+known mature versions, but some narcissistic predatory adult 
+cry`-babies are blocking their distribution, because it would 
+prevent them exploiting existing immature versions. The corruption 
+is about someone trying to keep your life limited to the noisy 
+M1 timeframe and putting random expensive nonsense into it. It 
+is about making you sad but smiling under eye. It is about making 
+someone else too rich in your expense without you knowing it. 
+It is about not having opportunities to travel and meet new people 
+by making you to scare your own shadow.&]
+[s0;%- ]]

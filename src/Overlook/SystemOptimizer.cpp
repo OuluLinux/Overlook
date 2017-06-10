@@ -1,7 +1,50 @@
 /*
-SystemOptimizer.cpp
+
+                                      Foreword
+                                      ========
+This is what I do best. It's not about being Robin Hood, but about classifying markets when
+socialists want you to classify plants.
+
+
+                                    Introduction
+                                    ============
 
 System optimizer searches for better investing algorithm pipelines with genetic optimizer.
+Pipeline is formed from one compact integer vector, which includes 3 features: time-slots, market
+symbol baskets and the decision maker tree-structure of template classes. Known long period,
+such as one week, is splitted into time-slots, which has dynamic begin and end. Those time-slots
+has importance number, and for every time-position the first matching time-slot is searched.
+Baskets can be formed from all available investing instruments. They can be formed in different
+ways and new methods can always be added. The most basic method is to allow genetic optimizer
+to decide what market tickers (symbols) are used. One other way is to find correlation groups,
+which will smooth the fast changes, but they will also have the risk of one symbol detaching
+from the group.
+
+New instrument is created based on time-slots and baskets. Their change of price can be summed
+to one vector. That way, useless calculation of separate items in the basket can be avoided.
+The instrument is then processed with the template tree-structured pipeline, which gives
+the long/short/idle signal. The tree-structure is tested in different time-scales from longest
+timeframe to shortest, because the longest have usually higher probability of success and it
+overcomes costs easier. Every node of the tree-structure also takes the slower timeframe
+instance of the node as input to make proxying of the slower signal possible.
+
+Every template-node takes arguments from the genetic optimizer, and those arguments are
+being optimized of course. Template class has 5 arguments: learning template (decision tree vs
+neural network vs similarity), priority (moment vs probable target), target (heuristic vs
+scheduled), reason (match past vs match more probable), level (immediate values vs derived
+indicator values). Given arguments affects the dataset, which is used for learning. A data
+source matches to some value range in some argument. The set of sources is difficult to find
+and it requires insights to the web effect of market instruments and to the reasons behind
+changes of prices. With previous hints you might find some of them, but some sources are also
+based on methods found in the literacy since 80's. Some simplest methods are just hiding in
+broad daylight.
+
+<TODO a chapter about template sources>
+
+
+                             Implementation description
+                             ==========================
+
 Genetic optimizer is embedded in the QueryTable class, and InitGeneticOptimizer prepares
 columns in the QueryTable instance. Target value is the profit encoded to 0-65536 range
 integer. Currently, the pipeline has a tree-structure and it is limited to 2-leaf-nodes and 3
@@ -36,19 +79,9 @@ in practice for the whole system. Even if the small timeframe data was available
 multiplier between that and largest would be 40320, which would consume too much memory in my
 computer. Different parts can be tested separately, however.
 
-<<<<<<< .mine
 Row is evaluated by processing it's components in correct order and by taking the output value
 from the last component. The row is usually called pipeline for that reason here. The whole tree
 can be in the writing moment 1+2+2*2. It can be masked based on recursive dependencies of the
-||||||| .r83
-Row is evaluated by processing it's component in correct order and by taking the output value
-from the last object. The row is usually called pipeline for that reason here. The whole tree
-can be in the writing moment 1+1+7+7*7. It can be masked based on recursive dependencies of the
-=======
-Row is evaluated by processing it's components in correct order and by taking the output value
-from the last component. The row is usually called pipeline for that reason here. The whole tree
-can be in the writing moment 1+1+2+2*2. It can be masked based on recursive dependencies of the
->>>>>>> .r84
 root node. GetCoreQueue doesn't have separate unmasking part, but it first unmasks only the
 root and then recursively unmasks all it's dependencies while also increasing the queue.
 One template might have traditional indicators as inputs, which also must be added to the queue

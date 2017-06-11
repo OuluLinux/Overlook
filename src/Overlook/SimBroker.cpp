@@ -725,7 +725,7 @@ void SimBroker::RefreshData() {
 		if (sym.margin_calc_mode == Symbol::CALCMODE_FOREX) {
 			ASSERT(sym.name.GetCount() == 6); // TODO: allow EUR/USD and EURUSDm style names
 			String a = sym.name.Left(3);
-			String b = sym.name.Right(3);
+			String b = sym.name.Mid(3,3);
 			
 			if (a == base) {
 				// For example: base=USD, sym=USDCHF, cmd=buy, lots=0.01, a=USD, b=CHF
@@ -750,8 +750,8 @@ void SimBroker::RefreshData() {
 				//for (int side = 0; side < 2 && !found; side++)
 				for(int k = 0; k < sym_count; k++) {
 					String s = GetSymbol(k).name;
-					if ( (s.Left(3)  == base && (s.Right(3) == a || s.Right(3) == b)) ||
-						 (s.Right(3) == base && (s.Left(3)  == a || s.Left(3)  == b)) ) {
+					if ( (s.Left(3)  == base && (s.Mid(3,3) == a || s.Mid(3,3) == b)) ||
+						 (s.Mid(3,3) == base && (s.Left(3)  == a || s.Left(3)  == b)) ) {
 						// For example: base=USD, sym=CHFJPY, cmd=buy, lots=0.01, s=USDCHF, a=CHF, b=JPY
 						//  - CHF += 0.01 * 1000
 						{
@@ -800,13 +800,13 @@ void SimBroker::RefreshData() {
 		for(int j = 0; j < sym_count; j++) {
 			String s = GetSymbol(j).name;
 			
-			if (s.Left(3) == cur && s.Right(3) == base) {
+			if (s.Left(3) == cur && s.Mid(3,3) == base) {
 				rate = GetBid(j);
 				cur_rates.Add(cur, rate);
 				found = true;
 				break;
 			}
-			else if (s.Right(3) == cur && s.Left(3) == base) {
+			else if (s.Mid(3,3) == cur && s.Left(3) == base) {
 				rate = 1 / GetAsk(j);
 				cur_rates.Add(cur, rate);
 				found = true;
@@ -841,7 +841,7 @@ void SimBroker::RefreshData() {
 			for(int j = 0; j < sym_count; j++) {
 				String s = GetSymbol(j).name;
 				
-				if (s.Left(3) == cur && s.Right(3) == base) {
+				if (s.Left(3) == cur && s.Mid(3,3) == base) {
 					rate = GetBid(j);
 					if (volume < 0)		rate *= GetAsk(id);
 					else				rate *= GetBid(id);
@@ -849,7 +849,7 @@ void SimBroker::RefreshData() {
 					found = true;
 					break;
 				}
-				else if (s.Right(3) == cur && s.Left(3) == base) {
+				else if (s.Mid(3,3) == cur && s.Left(3) == base) {
 					rate = 1 / GetAsk(j);
 					if (volume < 0)		rate *= GetAsk(id);
 					else				rate *= GetBid(id);

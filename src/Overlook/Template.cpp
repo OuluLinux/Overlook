@@ -14,7 +14,7 @@ void Template::Init() {
 	
 	
 	System& bs = GetSystem();
-	int sym_count = bs.GetSymbolCount();
+	int sym_count = bs.GetBrokerSymbolCount();
 	int tf_count = bs.GetPeriodCount();
 	
 	// Set how far into future bars are being drawn
@@ -76,7 +76,7 @@ void Template::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	System& bs = GetSystem();
-	int sym_count = bs.GetSymbolCount();
+	int sym_count = bs.GetTotalSymbolCount();
 	if (bars == counted)
 		return;
 	

@@ -52,6 +52,7 @@ void DataBridge::Start() {
 	common.CheckInit(this);
 	
 	int sym_count = common.GetSymbolCount();
+	int cur_count = mt.GetCurrencyCount();
 	int sym = GetSymbol();
 	int cur = sym - sym_count;
 	
@@ -64,8 +65,13 @@ void DataBridge::Start() {
 	}
 	
 	// Generated symbols
-	else if (cur < mt.GetCurrencyCount()) {
+	else if (cur < cur_count) {
 		RefreshVirtualNode();
+	}
+	
+	// Correlation for baskets
+	else if (cur == cur_count) {
+		RefreshCorrelation();
 	}
 	
 	// Basket
@@ -644,8 +650,354 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 	return v;
 }
 
-void DataBridge::RefreshBasket() {
+void DataBridge::RefreshCorrelation() {
+	MetaTrader& mt = GetMetaTrader();
+	int sym_count = mt.GetSymbolCount();
+	int tf = GetTf();
 	
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	const int period = 4;
+	Vector<double> cache_a, cache_b;
+	cache_a.SetCount(period);
+	cache_b.SetCount(period);
+	
+	Vector<ConstBuffer*> bufs;
+	bufs.SetCount(sym_count);
+	for(int i = 0; i < sym_count; i++)
+		bufs[i] = &GetInputBuffer(0, i, tf, 0);
+	
+	Vector<double> values, tmp1, tmp2, coeffs;
+	Vector<bool> in_group;
+	values.SetCount(sym_count);
+	tmp1.SetCount(period);
+	tmp2.SetCount(period);
+	coeffs.SetCount(sym_count * (sym_count-1));
+	
+	bool initial = counted < period;
+	if (initial)
+		counted = period;
+	
+	for(int i = counted; i < bars; i++) {
+		
+		// Calculate correlation values
+		SetSafetyLimit(i);
+		int l = 0;
+		for(int j = 1; j < sym_count; j++) {
+			ConstBuffer& a = *bufs[j];
+			
+			double avg1 = 0;
+		    double sumSqr1 = 0;
+			for(int j = 0; j < period; j++) {
+				int pos = i-j;
+				double v1 = a.Get(pos);
+				tmp1[j] = v1;
+				avg1 += v1;
+		    }
+			for(int j = 0; j < period; j++) {
+				double v1 = tmp1[j];
+				sumSqr1 += pow(v1 - avg1, 2.0);
+			}
+			
+			for(int k = 0; k < j; k++) {
+				ConstBuffer& b = *bufs[k];
+				
+				double avg2 = 0;
+				double sum1 = 0;
+			    double sumSqr2 = 0;
+			    for(int j = 0; j < period; j++) {
+					int pos = i-j;
+					double v2 = b.Get(pos);
+					tmp2[j] = v2;
+					avg2 += v2;
+			    }
+				for(int j = 0; j < period; j++) {
+					double v1 = tmp1[j];
+					double v2 = tmp2[j];
+					sum1 += (v1 - avg1) * (v2 - avg2);
+					sumSqr2 += pow(v2 - avg2, 2.0);
+				}
+		    
+				double mul = sumSqr1 * sumSqr2;
+				double correlation_coef = mul != 0.0 ? sum1 / sqrt(mul) : 0;
+				coeffs[l++] = correlation_coef;
+			}
+		}
+		
+		// Find groups
+		Vector<Index<int> > groups;
+		l = 0;
+		in_group.SetCount(0);
+		in_group.SetCount(sym_count, false);
+		int without_group = sym_count;
+		while (without_group > 0) {
+			Index<int>& group = groups.Add();
+			for(int j = 1; j < sym_count; j++) {
+				if ((!group.IsEmpty() && group.Find(j) == -1) || in_group[j]) {
+					l += j;
+					continue;
+				}
+				for(int k = 0; k < j; k++) {
+					if (in_group[k]) {l++; continue;}
+					double correlation_coef = coeffs[l++];
+					if (correlation_coef >= 0.75) {
+						if (group.IsEmpty()) {
+							in_group[j] = true;
+							group.Add(j);
+						}
+						in_group[k] = true;
+						group.Add(k);
+					}
+				}
+			}
+			if (group.IsEmpty()) break;
+		}
+		
+		
+		// Sort groups by descending size
+		struct Sorter {
+			bool operator()(const Index<int>& a, const Index<int>& b) const {
+				return a.GetCount() > b.GetCount();
+			}
+		};
+		Sort(groups, Sorter());
+		
+		
+		// Add groups in the result vector
+		ASSERT(groups.GetCount() <= 0xF);
+		int pos = i / 2;
+		int sub_pos = i % 2;
+		for(int j = 0; j < groups.GetCount(); j++) {
+			const Index<int>& group = groups[j];
+			for(int k = 0; k < group.GetCount(); k++) {
+				int sym = group[k];
+				
+				byte& buf = ext_data[sym][pos];
+				if (sub_pos == 0)
+					buf = (buf & 0xF0) | j;
+				else
+					buf = (buf & 0x0F) | (j << 4);
+			}
+			
+			// Count symbols in same group
+			for(int k0 = 0; k0 < group.GetCount(); k0++) {
+				int s0 = group[k0];
+				for(int k1 = 0; k1 < group.GetCount(); k1++) {
+					if (k0 == k1) continue;
+					int s1 = group[k1];
+					sym_group_stats[s0][s1]++;
+				}
+			}
+		}
+	}
+	
+	// Get strongest pairs
+	typedef Tuple2<int,int> Pair;
+	Vector<Pair> strongest_pairs;
+	for(int i = 0; i < sym_count; i++) {
+		int strongest_id = -1;
+		int strongest_count = 0;
+		const Vector<int>& counts = sym_group_stats[i];
+		for(int j = 0; j < sym_count; j++) {
+			if (i == j) continue;
+			int count = counts[j];
+			if (count > strongest_count) {
+				strongest_count = count;
+				strongest_id = j;
+			}
+		}
+		ASSERT(strongest_id != -1);
+		strongest_pairs.Add(Pair(i, strongest_id));
+	}
+	
+	// Create groups from pairs
+	Vector<Index<int> > groups;
+	for(int i = 0; i < strongest_pairs.GetCount(); i++) {
+		const Pair& p = strongest_pairs[i];
+		bool added = false;
+		for(int j = 0; j < groups.GetCount(); j++) {
+			Index<int>& group = groups[j];
+			// If A is in the group and B is not in the group, add B to the group
+			if (group.Find(p.a) != -1) {
+				if (group.Find(p.b) == -1) {
+					group.Add(p.b);
+					added = true;
+				}
+			}
+			else if (group.Find(p.b) != -1) {
+				if (group.Find(p.a) == -1) {
+					group.Add(p.a);
+					added = true;
+				}
+			}
+			if (added) break;
+		}
+		if (!added) {
+			Index<int>& group = groups.Add();
+			group.Add(p.a);
+			group.Add(p.b);
+		}
+	}
+	
+	
+	// Sort groups by their size descending
+	struct GroupSorter {
+		bool operator() (const Index<int>& a, const Index<int>& b) const {
+			return a.GetCount() > b.GetCount();
+		}
+	};
+	Sort(groups, GroupSorter());
+	
+	
+	// Copy group to compatible and persistent variable
+	sym_groups.SetCount(groups.GetCount());
+	for(int i = 0; i < groups.GetCount(); i++) {
+		const Index<int>& src = groups[i];
+		Vector<int>& dst = sym_groups[i];
+		dst.SetCount(src.GetCount());
+		for(int j = 0; j < src.GetCount(); j++)
+			dst[j] = src[j];
+	}
+}
+
+void DataBridge::RefreshBasket() {
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	MetaTrader& mt = GetMetaTrader();
+	int counted = GetCounted();
+	int bars = GetBars();
+	int sym_count = mt.GetSymbolCount();
+	int cur_count = mt.GetCurrencyCount();
+	int corr_sym = sym_count + cur_count;
+	int tf = GetTf();
+	
+	DataBridge& corr_db = dynamic_cast<DataBridge&>(*GetInputCore(0, corr_sym, tf));
+	
+	System& sys = GetSystem();
+	const Vector<int>& args = sys.basket_args.Get(GetSymbol());
+	int slot_cols = 5 + sym_count;
+	int slots = args.GetCount() / slot_cols;
+	
+	if (ts.IsEmpty()) {
+		ts.SetCount(slots);
+		for(int i = 0; i < slots; i++) {
+			TimeSlot& ts = this->ts[i];
+			int j = slots * i;
+			ts.timeslot_method		= args[j++];
+			ts.timeslot_wdayhour	= args[j++];
+			ts.timeslot_hour		= args[j++];
+			ts.basket_method		= args[j++];
+			ts.basket_group			= args[j++];
+			
+			
+			// Method #1, time-pos group id (priority increasing from highest=0)
+			if (ts.basket_method == 0) {
+				// Updated every time
+			}
+			
+			// Method #2, all-time group id (priority increasing from highest=0)
+			else if (ts.basket_method == 1) {
+				if (ts.basket_group < corr_db.sym_groups.GetCount()) {
+					const Vector<int>& group = corr_db.sym_groups[ts.basket_group];
+					for(int j = 0; j < group.GetCount(); j++)
+						ts.symbols.Add(group[j], +1); // add group member as positively correlating member
+				}
+			}
+			
+			// Method #3, symbol enabled bits
+			else if (ts.basket_method == 2) {
+				for(int j = 0; j < sym_count; j++) {
+					int k = args[j++];
+					if (k != 0)
+						ts.symbols.Add(j, k-1);
+				}
+			}
+			else Panic("Invalid method");
+		}
+	}
+	
+	
+	Vector<Vector<int> > groups;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		// Get matching timeslot rule
+		int matching_ts = -1;
+		for(int j = 0; j < slots; j++) {
+			TimeSlot& ts = this->ts[j];
+			Panic("TODO");
+			if (1) {
+				matching_ts = j;
+				break;
+			}
+		}
+		if (matching_ts == -1) {
+			Panic("TODO");
+		}
+		
+		TimeSlot& ts = this->ts[matching_ts];
+		
+		// Update method #1 group
+		if (ts.basket_method == 0) {
+			int pos = i / 2;
+			int sub = i % 2;
+			
+			// Get groups of symbols
+			for(int j = 0; j < groups.GetCount(); j++)
+				groups[j].SetCount(0);
+			for(int j = 0; j < sym_count; j++) {
+				const Vector<byte>& group_buf = ext_data[j];
+				int group_id = sub == 0 ? (group_buf[pos] & 0x0F) : ((group_buf[pos] & 0xF0) >> 4);
+				if (groups.GetCount() <= group_id) groups.SetCount(group_id+1);
+				groups[group_id].Add(j);
+			}
+			
+			// Sort groups by their size descending
+			struct GroupSorter {
+				bool operator() (const Vector<int>& a, const Vector<int>& b) const {
+					return a.GetCount() > b.GetCount();
+				}
+			};
+			Sort(groups, GroupSorter());
+			
+			ts.symbols.Clear();
+			if (ts.basket_group < groups.GetCount()) {
+				const Vector<int>& group = groups[ts.basket_group];
+				for(int j = 0; j < group.GetCount(); j++)
+					ts.symbols.Add(group[j], +1); // add group member as positively correlating member
+			}
+		}
+		
+		// Continue from previous value
+		double value = 1.0, low_value = 1.0, high_value = 1.0, volume_value = 0.0;;
+		if (i) {
+			double prev = open.Get(i-1);
+			double mul = 0.0, low_mul = 0.0, high_mul = 0.0;
+			for(int j = 0; j < ts.symbols.GetCount(); j++) {
+				int sym = ts.symbols.GetKey(j);
+				ConstBuffer& src_open = GetInputBuffer(0, sym, tf, 0);
+				ConstBuffer& src_low  = GetInputBuffer(0, sym, tf, 1);
+				ConstBuffer& src_high = GetInputBuffer(0, sym, tf, 2);
+				ConstBuffer& src_vol  = GetInputBuffer(0, sym, tf, 3);
+				mul += src_open.Get(i) / src_open.Get(i-1) - 1.0;
+				low_mul += src_low.Get(i) / src_low.Get(i-1) - 1.0;
+				high_mul += src_high.Get(i) / src_high.Get(i-1) - 1.0;
+				volume_value += src_vol.Get(i);
+			}
+			value = prev * (1.0 + mul);
+			low_value = prev * (1.0 + low_mul);
+			high_value = prev * (1.0 + high_mul);
+		}
+		open.Set(i, value);
+		low.Set(i, low_value);
+		high.Set(i, high_value);
+		volume.Set(i, volume_value);
+	}
 }
 
 }

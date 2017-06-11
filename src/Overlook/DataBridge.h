@@ -49,9 +49,18 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
+struct TimeSlot : Moveable<TimeSlot> {
+	int timeslot_method, timeslot_wdayhour, timeslot_hour;
+	int basket_method, basket_group;
+	VectorMap<int, int> symbols;
+};
+
 class DataBridge : public BarData {
 	QueryTable spread_qt, volume_qt;
+	Vector<TimeSlot> ts;
 	VectorMap<int,int> median_max_map, median_min_map;
+	Vector<Vector<byte> > ext_data;
+	Vector<Vector<int> > sym_group_stats, sym_groups;
 	double point;
 	int median_max, median_min;
 	int max_value, min_value;
@@ -61,6 +70,7 @@ class DataBridge : public BarData {
 	void RefreshFromHistory();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshVirtualNode();
+	void RefreshCorrelation();
 	void RefreshBasket();
 	void RefreshMedian();
 public:
@@ -74,7 +84,8 @@ public:
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(spread_qt) % Persistent(volume_qt)
 			% Persistent(max_value) % Persistent(min_value)
-			% Persistent(median_max) % Persistent(median_min) % Persistent(median_max_map) % Persistent(median_min_map);
+			% Persistent(median_max) % Persistent(median_min) % Persistent(median_max_map) % Persistent(median_min_map)
+			% Persistent(ext_data) % Persistent(sym_group_stats) % Persistent(sym_groups);
 	}
 	
 	virtual void Init();
@@ -87,14 +98,13 @@ public:
 	double GetMedianMin() const {return median_min * point;}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		MetaTrader& mt = GetMetaTrader();
-		int sym_count = mt.GetSymbolCount();
-		
 		// Add this timeframe
 		if (in_sym == -1)
 			return in_tf == out_tf;
 		
 		// Never for regular symbols
+		MetaTrader& mt = GetMetaTrader();
+		int sym_count = mt.GetSymbolCount();
 		if (in_sym < sym_count)
 			return false;
 		
@@ -102,11 +112,17 @@ public:
 		if (out_sym >= sym_count)
 			return false;
 		
+		// All regular symbols for correlation and baskets
+		int cur_count = mt.GetCurrencyCount();
+		int corr_sym = sym_count + cur_count;
+		if (in_sym >= corr_sym)
+			return out_sym < sym_count;
+		
 		// Get virtual symbol
 		int cur = in_sym - sym_count;
-		const Currency& c = mt.GetCurrency(cur);
-		if (c.pairs0.Find(out_sym) != -1 || c.pairs1.Find(out_sym) != -1)
-			return true; // add pair sources add inputs
+			const Currency& c = mt.GetCurrency(cur);
+			if (c.pairs0.Find(out_sym) != -1 || c.pairs1.Find(out_sym) != -1)
+				return true; // add pair sources add inputs
 		
 		return false;
 	}

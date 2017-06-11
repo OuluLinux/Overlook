@@ -201,7 +201,8 @@ MetaTrader::MetaTrader() {
 	periodstr.Add(1440, "D");
 	periodstr.Add(10080, "W");
 	
-	periodstr.Add(43200, "M");
+	//periodstr.Add(43200, "M"); // Not actually fixed period, can't use this. Days in month: (28 / 30 / 31)
+	
 	
 	// These are by default the most expensive currencies
 	skipped_currencies.Add("RUR");
@@ -551,6 +552,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		account_currency = "USD";
 	
 	VectorMap<String, int> currencies;
+	VectorMap<int,int> postfix_counts;
 	
 	// Parse symbol lines
 	int c1 = lines.GetCount();
@@ -639,10 +641,20 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			const String& name = sym.name;
 			
 			// TODO: handle symbols like EURUSDm, EUR/USD, etc.
-			ASSERT_(name.GetCount() == 6, "Only EURUSD, AUDJPY format is allowed, not EUR/USD or AUDJPYm. Hack this or change broker.");
+			ASSERT_(	name.GetCount() == 6 ||
+						(name.GetCount() == 7 && name.Right(1) == "."),
+						"Only 'EURUSD', 'AUDJPYm', 'EURCHF.' format is allowed, not 'EUR/USD'. Hack this or change broker.");
+			
+			// Count postfixes
+			if (name.GetCount() == 6)
+				postfix_counts.GetAdd(0, 0)++;
+			else if (name.GetCount() == 7)
+				postfix_counts.GetAdd(name.Right(1)[0], 0)++;
+			
+			
 			
 			String a = name.Left(3);
-			String b = name.Right(3);
+			String b = name.Mid(3,3);
 			if (a == account_currency || b == account_currency) {
 				// No need for proxy
 			} else {
@@ -672,13 +684,17 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		// Find currencies
 		if (sym.IsForex()) {
 			String a = sym.name.Left(3);
-			String b = sym.name.Right(3);
+			String b = sym.name.Mid(3,3);
 			currencies.GetAdd(a, 0)++;
 			currencies.GetAdd(b, 0)++;
 		}
 		
 		symbols.Add(sym);
 	}
+	
+	// Sort postfix stats
+	SortByValue(postfix_counts, StdGreater<int>());
+	int postfix = postfix_counts.GetKey(0);
 	
 	// Find proxy ids
 	for(int i = 0; i < symbols.GetCount(); i++) {
@@ -688,13 +704,20 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			continue;
 		}
 		bool found = false;
+		
+		
+		// Add postfix to the proxy symbol
+		if (postfix)
+			sym.proxy_name.Cat(postfix);
+		
+		
 		for(int j = 0; j < symbols.GetCount(); j++) {
 			if (j == i) continue;
 			if (symbols[j].name == sym.proxy_name) {
 				sym.proxy_id = j;
 				
 				String a = sym.proxy_name.Left(3);
-				String b = sym.proxy_name.Right(3);
+				String b = sym.proxy_name.Mid(3,3);
 				bool base_dest = b == account_currency; // base USD, buy AUDJPY, proxy AUDUSD.. USD->AUD->JPY ... AUDUSD selling
 				sym.proxy_factor = base_dest ? -1 : 1;
 				
@@ -702,7 +725,9 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 				break;
 			}
 		}
-		ASSERT(found);
+		if (!found) {
+			LOG("Warning: no proxy was found for symbol " << sym.name);
+		}
 	}
 	
 	// Add currencies
@@ -718,7 +743,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			const String& key = s.name;
 			
 			String k0 = key.Left(3);
-			String k1 = key.Right(3);
+			String k1 = key.Mid(3,3);
 			
 			if (k0 == symbol) {
 				c.pairs0.Add(j);

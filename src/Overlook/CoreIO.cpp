@@ -134,6 +134,14 @@ void CoreIO::StoreCache() {
 			QueryTable& v = *(QueryTable*)p.data;
 			out % v;
 		}
+		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
+			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
+			out % v;
+		}
+		else if (p.data_type == ValueBase::PERS_INTGRID_) {
+			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
+			out % v;
+		}
 		else Panic("Invalid datatype");
 	}
 	
@@ -205,6 +213,14 @@ void CoreIO::LoadCache() {
 		}
 		else if (p.data_type == ValueBase::PERS_QUERYTABLE_) {
 			QueryTable& v = *(QueryTable*)p.data;
+			in % v;
+		}
+		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
+			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
+			in % v;
+		}
+		else if (p.data_type == ValueBase::PERS_INTGRID_) {
+			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
 			in % v;
 		}
 		else Panic("Invalid datatype");

@@ -30,6 +30,7 @@ System::System() {
 	structural_priorities = 0;
 	structural_begin = 0;
 	basket_sym_begin = 0;
+	source_symbol_count = 0;
 }
 
 System::~System() {
@@ -53,11 +54,13 @@ void System::Init() {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
 		}
+		source_symbol_count = this->symbols.GetCount();
+		
 		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		basket_sym_begin = symbols.GetCount();
+		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount() + 1;
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);

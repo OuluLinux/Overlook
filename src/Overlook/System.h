@@ -141,6 +141,7 @@ protected:
 	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
 	
 	friend class DataBridgeCommon;
+	friend class DataBridge;
 	friend class Core;
 	
 	Vector<FactoryRegister>				regs;
@@ -181,6 +182,7 @@ protected:
 	int structural_priorities;
 	int structural_begin;
 	int max_queue, min_queue;
+	int source_symbol_count;
 	
 	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
@@ -229,7 +231,8 @@ public:
 	void AddPeriod(String nice_str, int period);
 	void AddSymbol(String sym);
 	
-	int GetSymbolCount() const {return symbols.GetCount();}
+	int GetBrokerSymbolCount() const {return source_symbol_count;}
+	int GetTotalSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	
 	int GetPeriod(int i) const {return periods[i];}

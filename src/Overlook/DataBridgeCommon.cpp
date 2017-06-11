@@ -101,13 +101,6 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 	
 	String filename = sym.name + IntStr(tf) + ".hst";
 	String remote_filename = filename;
-	
-	// At some point MT4 started to add weird 0023 text in front of the filename.
-	// I don't understand this, and this hardcoded fix might be wrong for others.
-	// Please contact the author if you have some other number than 0023 or some other issue.
-	if (remote_filename.Left(1) == "#")
-		remote_filename = "#0023" + remote_filename.Mid(1);
-	
 	String local_path = AppendFileName(history_dir, filename);
 	String remote_path = "history/" + account_server + "/" + remote_filename;
 	

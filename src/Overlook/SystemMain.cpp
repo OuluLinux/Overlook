@@ -113,7 +113,7 @@ Core* System::CreateSingle(int factory, int sym, int tf) {
 void System::Process(CoreItem& ci) {
 	
 	// Load dependencies to the scope
-	if (!ci.core)
+	if (ci.core.IsEmpty())
 		CreateCore(ci);
 	
 	// Process core-object

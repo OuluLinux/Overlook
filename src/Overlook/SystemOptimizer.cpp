@@ -24,7 +24,7 @@ New instrument is created based on time-slots and baskets. Their change of price
 to one vector. That way, useless calculation of separate items in the basket can be avoided.
 The instrument is then processed with the template tree-structured pipeline, which gives
 the long/short/idle signal. The tree-structure is tested in different time-scales from longest
-timeframe to shortest, because the longest have usually higher probability of success and it
+timeframe to shortest, because of the longest have usually higher probability of success and it
 overcomes costs easier. Every node of the tree-structure also takes the slower timeframe
 instance of the node as input to make proxying of the slower signal possible.
 
@@ -320,14 +320,14 @@ void System::InitGeneticOptimizer() {
 		
 		
 		// Basket columns
-		table.AddColumn(slot_desc + " basket method", 2);
+		table.AddColumn(slot_desc + " basket method", 3);
 		
-		// Method #1, group id (priority increasing from highest=0)
+		// Method #1 & #2, group id (priority increasing from highest=0)
 		table.AddColumn(slot_desc + " group", 16);
 		
-		// Method #2, symbol enabled bits
+		// Method #3, symbol enabled bits
 		for(int j = 0; j < symbols.GetCount(); j++)
-			table.AddColumn(slot_desc + " sym" + IntStr(j), 2);
+			table.AddColumn(slot_desc + " sym" + IntStr(j), 3);
 		
 	}
 	structural_begin = table.GetColumnCount();
@@ -561,7 +561,7 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 	bool is_template = sub_pos < 1000;
 	int factory = is_template ? template_id : path.Top() - 1000;
 	const int tf_count = GetPeriodCount();
-	const int sym_count = GetSymbolCount();
+	const int sym_count = GetTotalSymbolCount();
 	
 	
 	// Template objects
@@ -618,7 +618,7 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 			for(int i = 0; i < sym_ids.GetCount(); i++) {
 				int in_sym = sym_ids[i];
 				
-				for(int j = 0; j < GetSymbolCount(); j++) {
+				for(int j = 0; j < GetTotalSymbolCount(); j++) {
 					if (fn(this, in_sym, -1, j, -1))
 						sub_sym_ids.FindAdd(j);
 				}
@@ -747,7 +747,6 @@ int System::GetHash(const Vector<byte>& vec) {
 
 
 void System::ConnectCore(CoreItem& ci) {
-	ASSERT(&*ci.core == NULL);
 	const FactoryRegister& part = regs[ci.factory];
 	Vector<int> enabled_input_factories;
 	Vector<byte> unique_slot_comb;
@@ -763,7 +762,7 @@ void System::ConnectCore(CoreItem& ci) {
 void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash) {
 	Vector<int> symlist, tflist;
 	const RegisterInput& input = regs[ci.factory].in[input_id];
-	const int sym_count = GetSymbolCount();
+	const int sym_count = GetTotalSymbolCount();
 	const int tf_count = GetPeriodCount();
 	
 	
@@ -806,7 +805,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 }
 
 void System::CreateCore(CoreItem& ci) {
-	ASSERT(&*ci.core == NULL);
+	ASSERT(ci.core.IsEmpty());
 	
 	// Create core-object
 	ci.core = System::GetCtrlFactories()[ci.factory].b();

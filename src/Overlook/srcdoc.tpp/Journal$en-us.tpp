@@ -1178,4 +1178,64 @@ is about making you sad but smiling under eye. It is about making
 someone else too rich in your expense without you knowing it. 
 It is about not having opportunities to travel and meet new people 
 by making you to scare your own shadow.&]
+[s3;%- 11.6.2017&]
+[s0;%- Today, I want to talk about porn. I have been working on the 
+DataBridge correlation code, but it doesn`'t have anything to 
+mention about.&]
+[s0;%- Oh porn, the magical thing which tickles our primitive instincts...&]
+[s0;%- I was one of those who found the secret porn stash with my 
+4 friends. That was not my father`'s but my friend`'s father`'s. 
+I was around 10 years old. We didn`'t think it as bad then, and 
+I haven`'t changed my mind ever after. I understand the sensitivity 
+of the subject, however.&]
+[s0;%- Few decades ago, everything was more innocent. Pinup girls 
+showed only a little bit of leg and had their mouths shaped in 
+a weird kissing way. Then the actual penetration came along. 
+It was tied to a story, but eventually the story had to go. Then 
+came renting of videos and Internet. The XXX culture started 
+to grow even more as business.&]
+[s0;%- All of those of us who have seen porn knows, that there is 
+a lot of dick and pussy in the screen. You can`'t somehow unsee 
+men`'s parts even if you are heterosexual, like me. It is part 
+of the whole product. You start to understand the friendship 
+between straights and gays. There is no big difference between 
+what you see with girl`-boy anal and what gays see with boy`-boy 
+anal. You don`'t have the feeling, but you can understand.&]
+[s0;%- I like mine in traditional ways. Big tit womanizers are a 
+huge seller for me. However, that is not very popular anymore. 
+The statistics shows, that most popular videos are not about 
+the image of women what 70`'s James Bond films gave. In view 
+statistics, it is going to weird direction... Most of the society 
+is completely clueless about the real evolution of adult entertainment. 
+Some may have noticed, that sex toys and lingerie is more popular 
+than ever, but that is not the whole story.&]
+[s0;%- This topic deserves a scientific paper, but unfortunately 
+I have time to write only about my experiences. It is extremely 
+important to understand, that the virtual adult entertainment 
+industry has nothing to do with non`-virtual counterparts. To 
+my understanding, only a small fraction of audience would mix 
+those two. Healthy people will have strong emotional response 
+to physical contact, which is not comparable to virtual experience.&]
+[s0;%- Mixing the pleasant virtual experience to real life can be 
+challenging. Many of us are in a relationship, where the partner 
+have had a traditional and religious image of reproduction. Someone 
+can sometimes find out, that the partner has insanely strong 
+opposing reaction to porn. The topic may scar both the porn loving 
+and the porn hating party. Wrong behavior is to prevent the other 
+loving porn or trying the other love porn. Personally, I was 
+one of those unlucky men, who had that kind of partner, which 
+tried to both prevent me loving porn and who accused me trying 
+to make her love porn, when I obviously rather broke up with 
+her for being selfish and narcissist. She was a actual nutjob 
+in other ways too, though. She went to extreme opposition and 
+started to ruin my public image with insane lies; after I had 
+saved her life around 5 times from violent suicide and was crying 
+from emotional stress, she was still in denial of me being the 
+good guy so much, that she started to gossip that I was weird 
+crying gay`-hater. My biggest mistake was, that I didn`'t file 
+a official report, but I was young and clueless and adults around 
+me were stupid. Shit happens.&]
+[s0;%- Anyway, for some of us the porn is a healer, which keeps us 
+sane in the hateful world, and for some others, it is from the 
+devil which eats good men. Pick your side.&]
 [s0;%- ]]

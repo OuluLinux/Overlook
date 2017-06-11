@@ -3341,7 +3341,7 @@ void CorrelationOscillator::Init() {
 	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
-	sym_count = GetSystem().GetSymbolCount();
+	sym_count = GetSystem().GetBrokerSymbolCount();
 	if (sym_count < 0) throw DataExc();
 	
 	SetCoreMaximum(+1.0);

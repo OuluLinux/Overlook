@@ -50,9 +50,38 @@ struct AskBid : Moveable<AskBid> {
 };
 
 struct TimeSlot : Moveable<TimeSlot> {
-	int timeslot_method, timeslot_wdayhour, timeslot_hour;
-	int basket_method, basket_group;
+	int timeslot_method;
+	int timeslot_wdayhour_begin, timeslot_hour_begin;
+	int timeslot_wdayhour_len, timeslot_hour_len;
+	int basket_method;
+	int basket_timepos_group, basket_alltime_group;
 	VectorMap<int, int> symbols;
+	
+	bool IsMatch(const Time& t, int day_of_week) const {
+		// Method #1: wdayhour
+		if (timeslot_method == 0) {
+			int wdayhour = day_of_week * 24 + t.hour;
+			return
+				wdayhour >= timeslot_wdayhour_begin &&
+				wdayhour < (timeslot_wdayhour_begin + timeslot_wdayhour_len);
+		}
+		// Method #2: hour of day
+		else if (timeslot_method == 1) {
+			int end = timeslot_hour_begin + timeslot_hour_len;
+			if (end <= 24)
+				return
+					t.hour >= timeslot_hour_begin && t.hour < end;
+			else
+				return
+					(t.hour >= timeslot_hour_begin && t.hour < end) ||
+					(t.hour >= 0 && t.hour < (end-24));
+		}
+		// Method #3: always
+		else if (timeslot_method == 2)
+			return true;
+		else Panic("Invalid method");
+		return false;
+	}
 };
 
 class DataBridge : public BarData {
@@ -105,18 +134,20 @@ public:
 		// Never for regular symbols
 		MetaTrader& mt = GetMetaTrader();
 		int sym_count = mt.GetSymbolCount();
+		int cur_count = mt.GetCurrencyCount();
+		int corr_sym = sym_count + cur_count;
 		if (in_sym < sym_count)
 			return false;
 		
 		// Never for irregular input symbols
-		if (out_sym >= sym_count)
+		if (out_sym >= sym_count && out_sym != corr_sym)
 			return false;
 		
 		// All regular symbols for correlation and baskets
-		int cur_count = mt.GetCurrencyCount();
-		int corr_sym = sym_count + cur_count;
-		if (in_sym >= corr_sym)
+		if (in_sym == corr_sym)
 			return out_sym < sym_count;
+		if (in_sym > corr_sym)
+			return out_sym < sym_count || out_sym == corr_sym;
 		
 		// Get virtual symbol
 		int cur = in_sym - sym_count;

@@ -61,7 +61,7 @@ void Overlook::Init() {
 	// Init gui
 	for(int i = 0; i < sys.GetPeriodCount(); i++)
 		tflist.Add(sys.GetPeriodString(i));
-	for(int i = 0; i < sys.GetBrokerSymbolCount(); i++)
+	for(int i = 0; i < sys.GetTotalSymbolCount(); i++)
 		symlist.Add(sys.GetSymbol(i));
 	for(int i = 0; i < System::GetCtrlFactories().GetCount(); i++)
 		ctrllist.Add(System::GetCtrlFactories()[i].a);
@@ -72,7 +72,7 @@ void Overlook::Init() {
 	
 	PostCallback(THISBACK(SetView));
 	
-	//sys.Start();
+	sys.Start();
 }
 
 void Overlook::Deinit() {

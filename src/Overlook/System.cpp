@@ -60,7 +60,15 @@ void System::Init() {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount() + 1;
+		AddSymbol("Correlation");
+		AddSymbol("Real-time");
+		
+		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount() + 2;
+		int cpus = CPU_Cores();
+		for(int i = 0; i < cpus; i++)
+			AddSymbol("Thread #" + IntStr(i));
+		
+		
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
@@ -111,6 +119,23 @@ void System::Init() {
 	InitGeneticOptimizer();
 	InitDataset();
 	
+	
+	// Add some default basket symbols
+	int basket_syms = CPU_Cores() + 1;
+	int sym = mt.GetSymbolCount() + mt.GetCurrencyCount() + 1;
+	for(int i = 0; i < basket_syms; i++) {
+		Vector<int>& args = basket_args.Add(sym++);
+		args.Add(2); // time-slot method
+		args.Add(0);
+		args.Add(0);
+		args.Add(0);
+		args.Add(0);
+		args.Add(1); // all-time method
+		args.Add(0);
+		args.Add(i); // basket id
+		for(int j = 0; j < mt.GetSymbolCount(); j++)
+			 args.Add(0);
+	}
 }
 
 void System::AddPeriod(String nice_str, int period) {

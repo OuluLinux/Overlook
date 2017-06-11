@@ -45,7 +45,7 @@ void CoreIO::IO(const ValueBase& base) {
 		for(int i = 0; i < out.buffers.GetCount(); i++)
 			buffers.Add(&out.buffers[i]);
 	}
-	else if (base.data_type >= ValueBase::PERS_BOOL_ && base.data_type <= ValueBase::PERS_DOUBLE_) {
+	else if (base.data_type >= ValueBase::PERS_BOOL_) {
 		persistents.Add((const Persistent&)base);
 	}
 }

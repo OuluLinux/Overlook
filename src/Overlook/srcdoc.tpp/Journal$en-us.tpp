@@ -1222,7 +1222,7 @@ have had a traditional and religious image of reproduction. Someone
 can sometimes find out, that the partner has insanely strong 
 opposing reaction to porn. The topic may scar both the porn loving 
 and the porn hating party. Wrong behavior is to prevent the other 
-loving porn or trying the other love porn. Personally, I was 
+loving porn or trying the other to love porn. Personally, I was 
 one of those unlucky men, who had that kind of partner, which 
 tried to both prevent me loving porn and who accused me trying 
 to make her love porn, when I obviously rather broke up with 

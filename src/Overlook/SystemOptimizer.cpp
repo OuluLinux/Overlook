@@ -311,10 +311,12 @@ void System::InitGeneticOptimizer() {
 		table.AddColumn(slot_desc + " timeslot method", 3);
 		
 		// Method #1, wday/hour
-		table.AddColumn(slot_desc + " wdayhour", 24*7);
+		table.AddColumn(slot_desc + " wdayhour begin", 24*7);
+		table.AddColumn(slot_desc + " wdayhour length", 24);
 		
 		// Method #2, hour of day
-		table.AddColumn(slot_desc + " hour", 24);
+		table.AddColumn(slot_desc + " hour begin", 24);
+		table.AddColumn(slot_desc + " hour length", 24);
 		
 		// Method #3, always (no arguments)
 		
@@ -322,8 +324,11 @@ void System::InitGeneticOptimizer() {
 		// Basket columns
 		table.AddColumn(slot_desc + " basket method", 3);
 		
-		// Method #1 & #2, group id (priority increasing from highest=0)
-		table.AddColumn(slot_desc + " group", 16);
+		// Method #1 group id (priority increasing from highest=0)
+		table.AddColumn(slot_desc + " time-pos group", 16);
+		
+		// Method #2, group id (priority increasing from highest=0)
+		table.AddColumn(slot_desc + " all-time group", 16);
 		
 		// Method #3, symbol enabled bits
 		for(int j = 0; j < symbols.GetCount(); j++)
@@ -599,7 +604,7 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 			
 			input_hashes.Add(h);
 		}
-		Panic("TODO check input_hashes position matching");
+		Panic("TODO check input_hashes position matching... (connecting doesn't work at all with this yet)"); 
 	}
 	// Traditional indicator
 	else {

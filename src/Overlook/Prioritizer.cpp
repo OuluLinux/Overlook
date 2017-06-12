@@ -1477,7 +1477,7 @@ int Prioritizer::ConnectInput(int input_id, int output_id, const RegisterInput& 
 		
 		// Source found
 		ASSERT(src_ji.core);
-		ji.core->AddInput(input_id, src_ji.sym, src_ji.tf, *src_ji.core, output_id);
+		ji.core->SetInput(input_id, src_ji.sym, src_ji.tf, *src_ji.core, output_id);
 		
 		
 		input_count++;

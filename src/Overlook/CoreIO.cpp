@@ -3,8 +3,7 @@
 namespace Overlook {
 
 
-void CoreItem::AddInput(int input_id, int sym_id, int tf_id, CoreItem& core, int output_id) {
-	if (inputs.GetCount() <= input_id) inputs.SetCount(input_id+1);
+void CoreItem::SetInput(int input_id, int sym_id, int tf_id, CoreItem& core, int output_id) {
 	InputDef& in = inputs[input_id];
 	in.Add(sym_id * 100 + tf_id, SourceDef(&core, output_id, sym_id, tf_id));
 }
@@ -18,9 +17,11 @@ void CoreItem::AddInput(int input_id, int sym_id, int tf_id, CoreItem& core, int
 
 
 CoreIO::CoreIO() {
+	serialized = true;
 	sym_id = -1;
 	tf_id = -1;
 	factory = -1;
+	hash = -1;
 	#ifdef flagDEBUG
 	read_safety_limit = 0;
 	#endif
@@ -35,7 +36,6 @@ void CoreIO::IO(const ValueBase& base) {
 		inputs.Add();
 	}
 	else if (base.data_type == ValueBase::INOPT_) {
-		Panic("TODO: optional input signal is not received here yet");
 		inputs.Add();
 	}
 	else if (base.data_type == ValueBase::OUT_) {
@@ -57,7 +57,7 @@ void CoreIO::RefreshBuffers() {
 			buffers.Add(&outputs[j].buffers[i]);
 }
 
-void CoreIO::AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
+void CoreIO::SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 	Input& in = inputs[input_id];
 	if (core.GetOutputCount()) {
 		in.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
@@ -90,14 +90,16 @@ String CoreIO::GetCacheDirectory() {
 		}
 	}
 	
-	ASSERT(!unique.IsEmpty());
-	String coredir = unique + Format("-%d-%d-%d-", sym_id, tf_id, factory) + IntStr64(arghash);
+	String coredir = Format("%d-%d-%d-%d-", sym_id, tf_id, factory, hash) + IntStr64(arghash);
 	String dir = AppendFileName(ConfigFile("corecache"), coredir);
 	RealizeDirectory(dir);
 	return dir;
 }
 
 void CoreIO::StoreCache() {
+	if (!serialized)
+		return;
+	
 	if (outputs.IsEmpty() || outputs.GetCount() == 1 && outputs[0].buffers.IsEmpty())
 		return;
 	
@@ -169,6 +171,9 @@ void CoreIO::StoreCache() {
 }
 
 void CoreIO::LoadCache() {
+	if (!serialized)
+		return;
+	
 	String dir = GetCacheDirectory();
 	
 	String file = AppendFileName(dir, "core.bin");

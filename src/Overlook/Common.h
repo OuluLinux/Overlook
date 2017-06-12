@@ -242,19 +242,20 @@ struct SourceDef : Moveable<SourceDef> {
 
 typedef VectorMap<int, Source>		Input;
 typedef VectorMap<int, SourceDef>	InputDef;
+typedef Tuple2<int, int>			FactoryHash;
 
 struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
 	typedef CoreItem CLASSNAME;
-	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1;}
+	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1; hash = -1;}
 	~CoreItem() {}
-	
-	void AddInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
+	void operator=(const CoreItem& ci) {Panic("TODO");}
+	void SetInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
 	
 	One<Core> core;
-	String unique;
-	int sym, tf, priority, factory;
+	int sym, tf, priority, factory, hash;
 	Vector<VectorMap<int, SourceDef> > inputs;
-	Vector<int> input_hashes, args;
+	Vector<int> args;
+	Vector<FactoryHash> input_hashes;
 };
 
 }

@@ -16,7 +16,7 @@ class Template : public Core {
 	DecisionTreeNode tree;
 	QueryTable qt;
 	int corr_period, max_timesteps, steps, peek;
-	int arg_priority, arg_targetmode, arg_reason, arg_level;
+	int arg_learningmode, arg_priority, arg_targetmode, arg_reason, arg_level;
 	
 public:
 	typedef Template CLASSNAME;
@@ -25,14 +25,18 @@ public:
 	virtual void Init();
 	virtual void Start();
 	virtual void IO(ValueRegister& reg) {
+		for(int i = 0; i < max_sources; i++)
+			reg % In<Template>(&TemplateIn);
+		
+		for(int i = 0; i < max_traditional; i++)
+			reg % InOptional();
+		
 		reg % In<DataBridge>()
 			% In<ValueChange>()
-			% In<Template>(&TemplateIn)
-			% InOptional()
 			% Out(3, 3)
-			
+		
 			// 4 main arguments
-			% Arg("Learning template (decision tree vs neural network vs similarity)", arg_priority, 0, 15)
+			% Arg("Learning template (decision tree vs neural network vs similarity)", arg_learningmode, 0, 15)
 			% Arg("Priority (moment vs probable target)", arg_priority, 0, 15)
 			% Arg("Target (heuristic vs scheduled)", arg_targetmode, 0, 15)
 			% Arg("Reason (match past vs match more probable)", arg_reason, 0, 15)
@@ -42,7 +46,9 @@ public:
 	}
 	
 	static bool TemplateIn(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		Panic("TODO");
+		
+		
+		
 		return false;
 	}
 };

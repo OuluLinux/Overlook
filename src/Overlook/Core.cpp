@@ -37,6 +37,7 @@ Core::Core()
 	period = 0;
 	end_offset = 0;
 	future_bars = 0;
+	db_src = -1;
 }
 
 Core::~Core() {
@@ -71,6 +72,19 @@ void Core::ClearContent() {
 
 void Core::InitAll() {
 	
+	// Find DataBridge input if it exists
+	db_src = -1;
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		const Input& in = inputs[i];
+		if (in.IsEmpty()) continue;
+		const Source& src = in[0];
+		if (src.core && src.core->factory == 0) {
+			db_src = i;
+			break;
+		}
+	}
+		
+		
 	// Clear values what can be added in the Init
 	subcores.Clear();
 	subcore_factories.Clear();
@@ -78,6 +92,7 @@ void Core::InitAll() {
 	
 	// Initialize normally
 	Init();
+	
 	
 	// Initialize sub-cores
 	const FactoryRegister& src_reg = GetSystem().regs[factory];
@@ -161,22 +176,22 @@ BarData* Core::GetBarData() {
 
 double Core::Open ( int shift ) {
 	ASSERT(shift <= read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0).Get(shift);
+	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 0).Get(shift);
 }
 
 double Core::Low( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 1).Get(shift);
+	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 1).Get(shift);
 }
 
 double Core::High( int shift ) {
 	ASSERT(shift < read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 2).Get(shift);
+	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 2).Get(shift);
 }
 
 double Core::Volume ( int shift ) {
 	ASSERT(shift <= read_safety_limit);
-	return GetInputBuffer(0, GetSymbol(), GetTimeframe(), 3).Get(shift);
+	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 3).Get(shift);
 }
 
 int Core::HighestHigh(int period, int shift) {

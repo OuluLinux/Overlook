@@ -100,10 +100,10 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	Vector<Buffer*> buffers;
 	Vector<Persistent> persistents;
 	System* base;
-	String unique;
-	int factory;
-	int sym_id, tf_id;
+	int sym_id, tf_id, factory, hash;
 	int counted, bars;
+	int db_src;
+	bool serialized;
 	
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
@@ -166,7 +166,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory();
 	
-	void AddInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
+	void SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
 	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
 	void SetBufferLineWidth(int i, int line_width) {buffers[i]->line_width = line_width;}
 	void SetBufferType(int i, int style) {buffers[i]->line_style = style;}
@@ -174,9 +174,10 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	void SetBufferShift(int i, int shift) {buffers[i]->shift = shift;}
 	void SetBufferBegin(int i, int begin) {buffers[i]->begin = begin;}
 	void SetBufferArrow(int i, int chr)   {buffers[i]->chr = chr;}
-	void SetUnique(const String& s) {unique = s;}
 	void SetSymbol(int i) {sym_id = i;}
 	void SetTimeframe(int i) {tf_id = i;}
+	void SetFactory(int i) {factory = i;}
+	void SetHash(int i) {hash = i;}
 	
 };
 

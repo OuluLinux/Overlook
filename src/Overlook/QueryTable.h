@@ -70,6 +70,7 @@ protected:
 	Vector<byte> query;
 	double z;
 	double underfit_limit;
+	double scale, probability;
 	int overfit_size_limit;
 	int bytes, bits;
 	int target_count;
@@ -102,13 +103,14 @@ public:
 	int GetColumnCount() const {return columns.GetCount();}
 	const Column& GetColumn(int i) const {return columns[i];}
 	void Sort(int column, bool descending=false);
-	void Evolve(int best_row, int candidate_row, Vector<byte>& output_row);
+	void Evolve(int best_row, int candidate, Vector<byte>& output_row);
 	void SetPruning(int i) {test = i;}
 	int GetRowBits() const {return bits;}
 	int GetRowBytes() const {return bytes;}
 	bool operator()(const Vector<byte>& a, const Vector<byte>& b) const;
 	
 	enum {PRUNE_ERROREST, PRUNE_REDUCEERROR};
+	SpinLock lock;
 	
 };
 

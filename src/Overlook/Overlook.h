@@ -63,7 +63,7 @@ public:
 	void Deinit();
 	void Refresher();
 	void PostRefresher() {tc.Kill(); PostCallback(THISBACK(Refresher));}
-	
+	void RefreshOptimizerView();
 };
 
 

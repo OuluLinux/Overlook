@@ -42,6 +42,8 @@ QueryTable::QueryTable() {
 	//z = 1.96; // equal to a confidence level of 95%
 	underfit_limit = 0.666;
 	overfit_size_limit = 2;
+	scale = 0.7;
+	probability = 0.9;
 }
 
 void QueryTable::Serialize(Stream& s) {
@@ -116,10 +118,14 @@ QueryTable::Column& QueryTable::AddColumn(const String& name, int max_value) {
 }
 
 int QueryTable::Predict(const DecisionTreeNode& root, int row, int target_col) const {
+	return Predict(root, data[row], target_col);
+}
+
+int QueryTable::Predict(const DecisionTreeNode& root, const Vector<byte>& row, int target_col) const {
 	ConstDecisionTreeNode* n = &root;
 	for (;;) {
 		int col = n->column;
-		int c = Get(row, col);
+		int c = Get0(col, row);
 		bool found = false;
 		for(int i = 0; i < n->nodes.GetCount(); i++) {
 			ConstDecisionTreeNode& sub = n->nodes[i];
@@ -134,11 +140,6 @@ int QueryTable::Predict(const DecisionTreeNode& root, int row, int target_col) c
 		}
 	}
 	Panic("Invalid prediction");
-	return -1;
-}
-
-int QueryTable::Predict(const DecisionTreeNode& root, const Vector<byte>& row, int target_col) const {
-	Panic("TODO");
 	return -1;
 }
 
@@ -524,8 +525,27 @@ bool QueryTable::operator()(const Vector<byte>& a, const Vector<byte>& b) const 
 		return av > bv;
 }
 
-void QueryTable::Evolve(int best_row, int candidate_row, Vector<byte>& output_row) {
-	Panic("TODO");
+void QueryTable::Evolve(int best_row, int candidate, Vector<byte>& output_row) {
+	ASSERT(data.GetCount() >= 3);
+	int sample_row1, sample_row2;
+	do {sample_row1 = Random(data.GetCount());} while (sample_row1 == candidate);
+	do {sample_row2 = Random(data.GetCount());} while (sample_row2 == sample_row1);
+	
+	const Vector<byte>& best_solution	= data[best_row];
+	const Vector<byte>& src				= data[candidate];
+	const Vector<byte>& sample1			= data[sample_row1];
+	const Vector<byte>& sample2			= data[sample_row2];
+	
+	output_row <<= src;
+	
+	int n = Random(columns.GetCount());
+	for(int i = 0; i < columns.GetCount() && Randomf() < probability; i++) {
+		int best		= Get0(n, best_solution);
+		int value1		= Get0(n, sample1);
+		int value2		= Get0(n, sample2);
+		Set0(n, best + scale * (value1 - value2), output_row);
+		n = (n + 1) % columns.GetCount();
+	}
 }
 
 }

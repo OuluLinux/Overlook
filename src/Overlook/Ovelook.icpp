@@ -43,14 +43,14 @@ INITBLOCK {
 	System::Register<Fractals, GraphGroupCtrl>("Fractals");
 	System::Register<FractalOsc, GraphGroupCtrl>("FractalOsc");
 	System::Register<MarketFacilitationIndex, GraphGroupCtrl>("Market Facilitation Index");
-	System::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
-	System::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
-	
 	System::Register<LinearTimeFrames, GraphGroupCtrl>("Linear TimeFrames");
 	System::Register<SupportResistance, GraphGroupCtrl>("Support/Resistance");
+	
 	System::Register<SupportResistanceOscillator, GraphGroupCtrl>("Support/Resistance Oscillator");
 	System::Register<Psychological, GraphGroupCtrl>("Psychological Oscillator");
 	System::Register<CorrelationOscillator, GraphGroupCtrl>("Correlation Oscillator");
+	System::Register<ZigZag, GraphGroupCtrl>("Zig-Zag");
+	System::Register<ZigZagOsc, GraphGroupCtrl>("Zig-Zag Oscillator");
 	
 	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
 	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");

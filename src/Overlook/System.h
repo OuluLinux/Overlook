@@ -6,6 +6,10 @@ using namespace Upp;
 
 extern String arg_addr;
 extern int arg_port;
+extern const int max_depth;
+extern const int max_sources;
+extern const int max_timeslots;
+extern const int max_traditional;
 
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
 
@@ -180,9 +184,9 @@ protected:
 	int template_id, template_arg_count, slot_args;
 	int ma_id;
 	int structural_priorities;
-	int structural_begin;
+	int target_count, structural_begin;
 	int max_queue, min_queue;
-	int source_symbol_count;
+	int source_symbol_count, serializable_count;
 	
 	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
@@ -240,6 +244,7 @@ public:
 	int GetPeriodCount() const {return periods.GetCount();}
 	int FindPeriod(int period) const {return periods.Find(period);}
 	
+	const QueryTable& GetTable() const {return table;}
 	
 public:
 	

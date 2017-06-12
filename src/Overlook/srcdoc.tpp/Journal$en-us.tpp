@@ -1238,4 +1238,16 @@ me were stupid. Shit happens.&]
 [s0;%- Anyway, for some of us the porn is a healer, which keeps us 
 sane in the hateful world, and for some others, it is from the 
 devil which eats good men. Pick your side.&]
+[s3;%- 12.6.2017&]
+[s0;%- Focusing on the project again. Basket symbols are now working 
+and the next step is to make the optimization loop running. After 
+that is the implementation of Template class, all the detailed 
+debugging of optimization and real`-time code. Finally there 
+is only cleaning of code, commenting and documentation. This 
+took longer than expected, but this should be over in a couple 
+of weeks.&]
+[s0;%- ...&]
+[s0;%- The main optimization loop runs now. It is unstable and template 
+doesn`'t process for real, but it runs for a long time until 
+some small bug occurs with the traditional indicator.&]
 [s0;%- ]]

@@ -925,6 +925,7 @@ void DataBridge::RefreshBasket() {
 			ts.basket_timepos_group		= args[j++];
 			ts.basket_alltime_group		= args[j++];
 			
+			LOG(ts.basket_method);
 			
 			// Method #1, time-pos group id (priority increasing from highest=0)
 			if (ts.basket_method == 0) {
@@ -935,8 +936,11 @@ void DataBridge::RefreshBasket() {
 			else if (ts.basket_method == 1) {
 				if (ts.basket_alltime_group < corr_db.sym_groups.GetCount()) {
 					const Vector<int>& group = corr_db.sym_groups[ts.basket_alltime_group];
-					for(int j = 0; j < group.GetCount(); j++)
-						ts.symbols.Add(group[j], +1); // add group member as positively correlating member
+					for(int j = 0; j < group.GetCount(); j++) {
+						int sym = group[j];
+						ASSERT(sym < sym_count);
+						ts.symbols.Add(sym, +1); // add group member as positively correlating member
+					}
 				}
 			}
 			
@@ -985,6 +989,7 @@ void DataBridge::RefreshBasket() {
 		}
 		if (matching_ts == -1) {
 			double prev = i == 0 ? 1.0 : open.Get(i-1);
+			ASSERT(prev > 0.0);
 			open.Set(i, prev);
 			low.Set(i, prev);
 			high.Set(i, prev);
@@ -1003,7 +1008,7 @@ void DataBridge::RefreshBasket() {
 			for(int j = 0; j < groups.GetCount(); j++)
 				groups[j].SetCount(0);
 			for(int j = 0; j < sym_count; j++) {
-				const Vector<byte>& group_buf = ext_data[j];
+				const Vector<byte>& group_buf = corr_db.ext_data[j];
 				int group_id = sub == 0 ? (group_buf[pos] & 0x0F) : ((group_buf[pos] & 0xF0) >> 4);
 				if (groups.GetCount() <= group_id) groups.SetCount(group_id+1);
 				groups[group_id].Add(j);
@@ -1020,8 +1025,11 @@ void DataBridge::RefreshBasket() {
 			ts.symbols.Clear();
 			if (ts.basket_timepos_group < groups.GetCount()) {
 				const Vector<int>& group = groups[ts.basket_timepos_group];
-				for(int j = 0; j < group.GetCount(); j++)
-					ts.symbols.Add(group[j], +1); // add group member as positively correlating member
+				for(int j = 0; j < group.GetCount(); j++) {
+					int sym = group[j];
+					ASSERT(sym < sym_count);
+					ts.symbols.Add(sym, +1); // add group member as positively correlating member
+				}
 			}
 		}
 		
@@ -1061,7 +1069,8 @@ void DataBridge::RefreshBasket() {
 			low.Set(prev_pos, low_value);
 			high.Set(prev_pos, high_value);
 			spread_value = (value * (spread_mul + 1.0)) - value;
-			ASSERT(spread_value >= 0.0);
+			if (spread_value < 0.0) spread_value = 0.0; // Some very small rounding errors
+			ASSERT(value > 0.0);
 		}
 		open.Set(i, value);
 		low.Set(i, value);

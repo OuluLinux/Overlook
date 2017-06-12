@@ -28,6 +28,7 @@ System::System() {
 	traditional_arg_count = 0;
 	ma_id = -1;
 	structural_priorities = 0;
+	target_count = 0;
 	structural_begin = 0;
 	basket_sym_begin = 0;
 	source_symbol_count = 0;
@@ -61,6 +62,8 @@ void System::Init() {
 			AddSymbol(c.name);
 		}
 		AddSymbol("Correlation");
+		
+		serializable_count = this->symbols.GetCount();
 		AddSymbol("Real-time");
 		
 		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount() + 2;
@@ -121,6 +124,7 @@ void System::Init() {
 	
 	
 	// Add some default basket symbols
+	ASSERT(basket_args.IsEmpty());
 	int basket_syms = CPU_Cores() + 1;
 	int sym = mt.GetSymbolCount() + mt.GetCurrencyCount() + 1;
 	for(int i = 0; i < basket_syms; i++) {

@@ -39,11 +39,20 @@ void System::MainLoop() {
 void System::Worker(int id) {
 	const int tf_count = GetPeriodCount();
 	
+	int counter = 0;
+	
 	while (running) {
 		if (!pl_queue.IsEmpty()) {
+			
+			// Get pipeline to process
 			pl_queue_lock.Enter();
 			One<PipelineItem> pi = pl_queue.Detach(0);
 			pl_queue_lock.Leave();
+			
+			LOG("Worker " << id << " starting to process a pipeline");
+			
+			int best_tf;
+			int best_result;
 			
 			for (int tf = tf_count-1; tf >= 0; tf--) {
 				Index<int> tfs;
@@ -54,10 +63,23 @@ void System::Worker(int id) {
 				GetCoreQueue(*pi, ci_queue, &tfs, id);
 				
 				// Process job-queue
-				for(int i = 0; i < ci_queue.GetCount(); i++) {
+				for(int i = 0; i < ci_queue.GetCount() && running; i++) {
 					Process(*ci_queue[i]);
 				}
+				
+				// Break if result is too bad;
+				best_tf = tf;
+				best_result = counter++;
+				break;
 			}
+			
+			// Return result to the query table
+			table.lock.Enter();
+			int row = table.GetCount();
+			table.SetCount(row+1);
+			table.Set(row, 0, best_result);
+			table.Set(row, 1, best_tf);
+			table.lock.Leave();
 		}
 		
 		Sleep(100);

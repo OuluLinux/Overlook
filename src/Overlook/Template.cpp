@@ -81,6 +81,8 @@ void Template::Start() {
 		return;
 	
 	
+	return;
+	
 	
 	// Get some useful values for all syms and tfs
 	Vector<ConstBuffer*> bufs;

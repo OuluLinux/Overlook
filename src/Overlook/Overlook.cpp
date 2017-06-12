@@ -38,6 +38,10 @@ Overlook::Overlook()
 	opt_tabs.Add(opt_simbroker, "SimBroker");
 	
 	
+	opt_list.AddColumn("#");
+	opt_list.AddColumn("Result");
+	opt_list.AddColumn("Target timeframe");
+	
 	PostCallback(THISBACK(Refresher));
 }
 
@@ -50,8 +54,14 @@ Overlook::~Overlook() {
 }
 
 void Overlook::Refresher() {
-	if (prev_view)
-		prev_view->RefreshData();
+	int tab = tabs.Get();
+	if (tab == 0) {
+		if (prev_view)
+			prev_view->RefreshData();
+	}
+	else if (tab == 1) {
+		RefreshOptimizerView();
+	}
 	tc.Set(1000, THISBACK(PostRefresher));
 }
 
@@ -76,7 +86,7 @@ void Overlook::Init() {
 }
 
 void Overlook::Deinit() {
-	
+	sys.Stop();
 }
 
 void Overlook::SetView() {
@@ -170,6 +180,21 @@ void Overlook::Configure() {
 		prev_core->InitAll();
 		prev_core->Refresh();
 		Refresh();
+	}
+}
+
+void Overlook::RefreshOptimizerView() {
+	
+	const QueryTable& qt = sys.GetTable();
+	
+	for(int i = 0; i < qt.GetCount(); i++) {
+		int list_row = qt.GetCount() - 1 - i;
+		int result = qt.Get(i, 0);
+		int target_tf = qt.Get(i, 1);
+		
+		opt_list.Set(list_row, 0, i);
+		opt_list.Set(list_row, 1, result);
+		opt_list.Set(list_row, 2, target_tf);
 	}
 }
 

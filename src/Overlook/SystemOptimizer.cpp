@@ -125,6 +125,7 @@ namespace Overlook {
 const int max_depth = 2;
 const int max_sources = 2;
 const int max_timeslots = 8;
+const int max_traditional = 3;
 
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count) {
 	int byt = bit_begin / 8;
@@ -198,10 +199,9 @@ int System::GetPathPriority(const Vector<int>& path) {
 				ASSERT(e >= 0);
 				sub_nodes += Pow2(e);
 			}
-			priority += j * sub_nodes;
+			priority += (1 + j * sub_nodes);
 			if (path.GetCount() == i+1)
 				break;
-			priority++;
 		}
 		// Traditional indicator (0 - DataBridge, 1 - ValueChange, 2 - others)
 		else if (i == path.GetCount()-1)
@@ -271,12 +271,11 @@ void System::MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<b
 				ASSERT(e >= 0);
 				sub_nodes += Pow2(e);
 			}
-			col += j * sub_nodes * slot_args;
+			col += (1 + j * sub_nodes) * slot_args;
 			if (path.GetCount() == i+1) {
 				MaskBits(mask, col, sub_nodes * slot_args);
 				break;
 			}
-			col += slot_args;
 		}
 		// Traditional indicator
 		else {
@@ -300,7 +299,9 @@ void System::InitGeneticOptimizer() {
 	
 	// Target value
 	table.AddColumn("Result", 65536);
+	table.AddColumn("Target timeframe", 16);
 	table.EndTargets();
+	target_count = table.GetColumnCount();
 	
 	
 	
@@ -460,10 +461,13 @@ void System::RefreshPipeline() {
 	
 	// Sort table by descending result value: greatest at first
 	// This also determines what is considered to be 'best' by the differential evolution
-	table.Sort(target_col, true);
 	const int table_rows = Upp::min(1000, table.GetCount());
 	if (table_rows < 2)
 		return;
+	
+	table.lock.Enter();
+	
+	table.Sort(target_col, true);
 	const int discard_limit = table_rows / 2;
 	const int target_limit = table.Get(discard_limit, target_col);
 	ASSERT(table_rows > 2);
@@ -477,7 +481,7 @@ void System::RefreshPipeline() {
 	// Fill the pipeline queue
 	One<PipelineItem> pi;
 	while (pl_queue.GetCount() < max_queue) {
-		int new_count = Upp::min(table.GetCount()-1, max_queue - pl_queue.GetCount());
+		int new_count = Upp::min(table.GetCount()-2, max_queue - pl_queue.GetCount());
 		ASSERT(new_count > 0);
 		
 		for(int i = 0; i < new_count; i++) {
@@ -505,16 +509,18 @@ void System::RefreshPipeline() {
 			}
 		}
 	}
+	
+	table.lock.Leave();
 }
 
 void System::GetBasketArgs(PipelineItem& pi) {
 	ASSERT(pi.sym != -1);
 	Vector<int>& args = basket_args.GetAdd(pi.sym);
 	CombineHash ch;
-	args.SetCount(structural_begin-1);
-	for(int i = 1; i < structural_begin; i++) {
+	args.SetCount(structural_begin-target_count);
+	for(int i = target_count; i < structural_begin; i++) {
 		int j = table.Get0(i, pi.value);
-		args[i-1] = j;
+		args[i-target_count] = j;
 		ch << j << 1;
 	}
 	basket_hashes.GetAdd(pi.sym) = ch;
@@ -553,7 +559,24 @@ int System::GetCoreQueue(PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Ind
 	Sort(ci_queue, PrioritySorter());
 	
 	// Remove duplicates
-	Panic("TODO");
+	Vector<int> rem_list;
+	for(int i = 0; i < ci_queue.GetCount(); i++) {
+		CoreItem& a = *ci_queue[i];
+		for(int j = i+1; j < ci_queue.GetCount(); j++) {
+			CoreItem& b = *ci_queue[j];
+			if (a.sym == b.sym && a.tf == b.tf && a.factory == b.factory && a.hash == b.hash) {
+				rem_list.Add(j);
+				i++;
+			}
+			else break;
+		}
+	}
+	ci_queue.Remove(rem_list);
+	
+	for(int i = 0; i < ci_queue.GetCount(); i++) {
+		CoreItem& ci = *ci_queue[i];
+		LOG(Format("%d: sym=%d tf=%d factory=%d hash=%d", i, ci.sym, ci.tf, ci.factory, ci.hash));
+	}
 	
 	return 0;
 }
@@ -570,95 +593,110 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 	
 	
 	// Template objects
-	Vector<int> input_hashes;
+	Vector<FactoryHash> input_hashes;
 	if (is_template) {
 		ASSERT(sub_pos >= 0 && sub_pos < max_sources);
 		
 		// Columns for structure
-		for(int i = 0; i < max_sources; i++) {
+		if (path.GetCount() < max_depth) {
+			for(int i = 0; i < max_sources; i++) {
 			
-			// Check if sub-node is enabled
-			path.Add(i);
-			int col = GetEnabledColumn(path);
-			if (!table.Get0(col, pi.value)) {
+				// Check if sub-node is enabled
+				path.Add(i);
+				int col = GetEnabledColumn(path);
+				if (!table.Get0(col, pi.value)) {
+					path.Pop();
+					input_hashes.Add(FactoryHash(-1,0));
+					continue;
+				}
+				int h = GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 				path.Pop();
-				continue;
+				
+				input_hashes.Add(FactoryHash(template_id, h));
 			}
-			int h = GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
-			path.Pop();
-			
-			input_hashes.Add(h);
+		}
+		else {
+			for(int i = 0; i < max_sources; i++)
+				input_hashes.Add(FactoryHash(-1,0));
 		}
 		
+		int enabled_traditional_count = 0;
+		VectorMap<int,int> indicator_importances;
 		for(int i = 0; i < traditional_indicators; i++) {
 			
 			// Check if sub-node is enabled
-			path.Add(1000 + ma_id + i);
+			int factory = ma_id + i;
+			path.Add(1000 + factory);
 			int col = GetEnabledColumn(path);
-			if (!table.Get0(col, pi.value)) {
-				path.Pop();
-				continue;
+			int importance = table.Get0(col, pi.value);
+			if (importance) {
+				indicator_importances.Add(i, importance);
 			}
+			path.Pop();
+		}
+		
+		SortByValue(indicator_importances, StdGreater<int>());
+		
+		int indi_count = Upp::min(max_traditional, indicator_importances.GetCount());
+		
+		for(int i = 0; i < indi_count; i++) {
+			int row_factory = indicator_importances.GetKey(i);
+			int factory = ma_id + row_factory;
+			
+			path.Add(1000 + factory);
 			int h = GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
 			path.Pop();
 			
-			input_hashes.Add(h);
+			input_hashes.Add(FactoryHash(factory, h));
 		}
-		Panic("TODO check input_hashes position matching... (connecting doesn't work at all with this yet)"); 
+		for(int i = indi_count; i < max_traditional; i++)
+			input_hashes.Add(FactoryHash(-1, 0));
 	}
-	// Traditional indicator
-	else {
-		// Loop inputs of the factory
-		const FactoryRegister& reg = regs[factory];
+	
+
+	// Traditional indicator inputs
+	
+	// Loop inputs of the factory
+	const FactoryRegister& reg = regs[factory];
+	
+	// Connect input sources
+	// Loop all inputs of the custom core-class
+	Index<int> sub_sym_ids;
+	for (int l = input_hashes.GetCount(); l < reg.in.GetCount(); l++) {
+		const RegisterInput& input = reg.in[l];
+		ASSERT(input.factory >= 0);
+		FilterFunction fn = (FilterFunction)input.data;
 		
-		// Connect input sources
-		// Loop all inputs of the custom core-class
-		Index<int> sub_sym_ids;
-		for (int l = 0; l < reg.in.GetCount(); l++) {
-			const RegisterInput& input = reg.in[l];
-			FilterFunction fn = (FilterFunction)input.data;
+		// Get all symbols what input requires
+		sub_sym_ids.Clear();
+		for(int i = 0; i < sym_ids.GetCount(); i++) {
+			int in_sym = sym_ids[i];
 			
-			// Get all symbols what input requires
-			sub_sym_ids.Clear();
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
-				int in_sym = sym_ids[i];
-				
-				for(int j = 0; j < GetTotalSymbolCount(); j++) {
-					if (fn(this, in_sym, -1, j, -1))
-						sub_sym_ids.FindAdd(j);
-				}
+			for(int j = 0; j < GetTotalSymbolCount(); j++) {
+				if (fn(this, in_sym, -1, j, -1))
+					sub_sym_ids.FindAdd(j);
 			}
-			
-			int h = 0;
-			if (!sub_sym_ids.IsEmpty()) {
-				path.Add(1000 + input.factory);
-				h = GetCoreQueue(path, pi, ci_queue, tf, sub_sym_ids);
-				path.Pop();
-			}
-			
-			input_hashes.Add(h);
 		}
+		
+		int h = 0;
+		if (!sub_sym_ids.IsEmpty()) {
+			path.Add(1000 + input.factory);
+			h = GetCoreQueue(path, pi, ci_queue, tf, sub_sym_ids);
+			path.Pop();
+		}
+		
+		input_hashes.Add(FactoryHash(input.factory, h));
 	}
 	
 	// Get the unique hash for core item
 	int hash = 0;
-	String unique;
+	
 	Vector<int> args;
 	if (is_template) {
 		// Mask this and all dependencies in the pipeline combination
 		ASSERT(!pi.value.IsEmpty());
 		Vector<byte> comb;
-		MaskPath(pi.value, path, comb);
-		
-		// Get unique string and trim it
-		String unique_long = HexVector(comb);
-		for (int j = unique_long.GetCount()-1; j >= 0; j--) {
-			if (unique_long[j] != '0') {
-				unique = unique_long.Left(j+1);
-				break;
-			}
-		}
-		ASSERT(!unique.IsEmpty());
+		MaskPath(pi.value, path, comb);;
 		hash = GetHash(comb);
 	}
 	else {
@@ -683,8 +721,6 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 			
 			hash = ch;
 		}
-		// Unique string can be same for all traditional indicators
-		unique = "src";
 	}
 	
 	
@@ -715,7 +751,7 @@ int System::GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<C
 				sym;
 			
 			ci.factory = factory;
-			ci.unique = unique;
+			ci.hash = hash;
 			ci.input_hashes <<= input_hashes;
 			ci.args <<= args;
 			//LOG(Format("%X\tfac=%d\tpath_priority=%d\tprio=%d", (int64)&ci, ci.factory, path_priority, ci.priority));
@@ -758,9 +794,33 @@ void System::ConnectCore(CoreItem& ci) {
 
 	// Connect input sources
 	// Loop all inputs of the custom core-class
+	ci.inputs.SetCount(part.in.GetCount());
+	ASSERT(ci.input_hashes.GetCount() == part.in.GetCount());
 	for (int l = 0; l < part.in.GetCount(); l++) {
 		const RegisterInput& input = part.in[l];
-		ConnectInput(l, 0, ci, input.factory, ci.input_hashes[l]);
+		int factory = ci.input_hashes[l].a;
+		int hash = ci.input_hashes[l].b;
+		
+		// Regular inputs
+		if (input.input_type == REGIN_NORMAL) {
+			
+			// Skip disabled template sub-nodes
+			if (factory == -1 && input.factory == template_id)
+				continue;
+			
+			ASSERT(input.factory == factory);
+			ConnectInput(l, 0, ci, input.factory, hash);
+		}
+		
+		// Optional factory inputs
+		else if (input.input_type == REGIN_OPTIONAL) {
+			// Skip disabled
+			if (factory == -1)
+				continue;
+			
+			ConnectInput(l, 0, ci, factory, hash);
+		}
+		else Panic("Invalid input type");
 	}
 }
 
@@ -772,22 +832,26 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 	
 	
 	FilterFunction fn = (FilterFunction)input.data;
-	ASSERT(fn);
-	
-	
-	// Filter timeframes
-	for(int i = tf_count-1; i >= ci.tf; i--) {
-		if (fn(this, -1, ci.tf, -1, i)) {
-			tflist.Add(i);
+	if (fn) {
+		
+		// Filter timeframes
+		for(int i = tf_count-1; i >= ci.tf; i--) {
+			if (fn(this, -1, ci.tf, -1, i)) {
+				tflist.Add(i);
+			}
+		}
+		
+		
+		// Filter symbols
+		for(int i = 0; i < sym_count; i++) {
+			if (fn(this, ci.sym, -1, i, -1)) {
+				symlist.Add(i);
+			}
 		}
 	}
-	
-	
-	// Filter symbols
-	for(int i = 0; i < sym_count; i++) {
-		if (fn(this, ci.sym, -1, i, -1)) {
-			symlist.Add(i);
-		}
+	else {
+		tflist.Add(ci.tf);
+		symlist.Add(ci.sym);
 	}
 	
 	for(int i = 0; i < symlist.GetCount(); i++) {
@@ -804,7 +868,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 			
 			
 			// Source found
-			ci.AddInput(input_id, src_ci.sym, src_ci.tf, src_ci, output_id);
+			ci.SetInput(input_id, src_ci.sym, src_ci.tf, src_ci, output_id);
 		}
 	}
 }
@@ -818,14 +882,22 @@ void System::CreateCore(CoreItem& ci) {
 	
 	// Set attributes
 	c.base = this;
-	c.factory = ci.factory;
 	c.RefreshIO();
-	c.SetUnique(ci.unique);
 	c.SetSymbol(ci.sym);
 	c.SetTimeframe(ci.tf, GetPeriod(ci.tf));
+	c.SetFactory(ci.factory);
+	c.SetHash(ci.hash);
+	
+	// Prevent serialization from basket symbols
+	if (ci.sym >= serializable_count)
+		c.serialized = false;
 	c.LoadCache();
 	
+	
 	// Connect object
+	int obj_count = c.inputs.GetCount();
+	int def_count = ci.inputs.GetCount();
+	ASSERT(obj_count == def_count);
 	for(int i = 0; i < ci.inputs.GetCount(); i++) {
 		const VectorMap<int, SourceDef>& src_list = ci.inputs[i];
 		Input& in = c.inputs[i];

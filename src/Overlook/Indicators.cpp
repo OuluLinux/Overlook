@@ -392,7 +392,7 @@ void AverageDirectionalMovement::Init() {
 	SetBufferLabel(1,"+DI");
 	SetBufferLabel(2,"-DI");
 	
-	if ( period_adx >= 100 || period_adx <= 0 )
+	if ( period_adx >= 128 || period_adx <= 1 )
 		throw DataExc();
 	
 	SetBufferBegin ( 0, period_adx );
@@ -2103,6 +2103,7 @@ void AcceleratorOscillator::Start() {
 	Buffer& ind2 = At(1).GetBuffer(0);
 	
 	if ( counted > 0 ) {
+		SetSafetyLimit(counted);
 		counted--;
 		prev = macd_buffer.Get(counted) - signal_buffer.Get(counted);
 	}
@@ -2221,7 +2222,8 @@ void GatorOscillator::Start() {
 	if ( counted <= teeth_period + teeth_shift - lips_shift )
 		counted = ( teeth_period + teeth_shift - lips_shift );
 	
-	if (counted) counted--;
+	if (counted > 0) counted--;
+	else counted++;
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -2265,7 +2267,8 @@ void GatorOscillator::Start() {
 	if ( counted <= jaws_period + jaws_shift - teeth_shift )
 		counted = ( jaws_period + jaws_shift - teeth_shift );
 	
-	if (counted) counted--;
+	if (counted > 1) counted--;
+	else counted++;
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -2279,7 +2282,7 @@ void GatorOscillator::Start() {
 		else
 			up_buffer.Set(i, -current);
 	}
-
+	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		

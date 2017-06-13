@@ -7,6 +7,14 @@ Template::Template() {
 	max_timesteps = 3;
 	steps = 8;
 	peek = 0;
+	
+	arg_learningmode	= 0;
+	arg_targetperiod	= 0;
+	arg_usetime			= 1;
+	arg_usetrend		= 1;
+	arg_usecorr			= 1;
+	arg_usetrad			= 1;
+	arg_usechan			= 0;
 }
 
 void Template::Init() {
@@ -35,39 +43,58 @@ void Template::Init() {
 	}
 	
 	// Add targets
-	for(int i = 0; i < max_timesteps; i++) {
-		int len = pow(2, i);
-		qt.AddColumn("Change +" + IntStr(len), steps);
-	}
+	// - types: change, trending, zigzag, edge, mid-channel
+	qt.AddColumn("Target signal", steps);
 	qt.EndTargets();
-	
-	
-	// Add previous values
-	for (int sym = 0; sym < sym_count; sym++) {
-		if (sym == GetSymbol()) continue; // skip this
-		qt.AddColumn("Cur diff -1 (" + IntStr(sym) + ")", steps);
-		qt.AddColumn("Correlation (" + IntStr(sym) + ")", steps);
-	}
 	
 	// Add constants columns
 	//  Note: adding month and day causes underfitting
-	qt.AddColumn("Wday",			7);
-	qt.AddColumn("Hour",			24);
-	qt.AddColumn("5-min",			12);
+	if (arg_usetime) {
+		qt.AddColumn("Wday",			7);
+		qt.AddColumn("Hour",			24);
+		qt.AddColumn("5-min",			12);
+	}
 	
-	// Add columns from inputs
-	/*for (int sym = 0; sym < sym_count; sym++) {
-		if (sym == GetSymbol()) continue; // skip this
-		for (int tf = 0; tf < tf_count; tf++) {
-			for(int i = 0; i < optional_inputs.GetCount(); i++) {
-				Input& indi_input = optional_inputs[i];
-				if (indi_input.sources.IsEmpty()) continue;
-				ASSERT(indi_input.sources.GetCount() == 1);
-				
-				Panic("TODO");
+	// Add previous values
+	if (arg_usetrend) {
+		for (int sym = 0; sym < sym_count; sym++) {
+			if (sym == GetSymbol()) continue; // skip this
+			qt.AddColumn("Cur diff -1 (" + IntStr(sym) + ")", steps);
+		}
+	}
+	
+	// Add correlation values
+	if (arg_usecorr) {
+		for (int sym = 0; sym < sym_count; sym++) {
+			if (sym == GetSymbol()) continue; // skip this
+			qt.AddColumn("Correlation (" + IntStr(sym) + ")", steps);
+		}
+	}
+	
+	// Add columns from input templates
+	Panic("TODO");
+	
+	// Add columns from optional inputs
+	if (arg_usetrad) {
+		for(int i = max_sources; i < max_sources + max_traditional; i++) {
+			const Input& input = inputs[i];
+			if (input.IsEmpty()) continue;
+			ASSERT(input.GetCount() == 1);
+			const Source& src = input[0];
+			const Output& out = *src.output;
+			for(int j = 0; j < out.buffers.GetCount(); j++) {
+				String desc = "Indi" + IntStr(i) + " out" + IntStr(j);
+				qt.AddColumn(desc + " value",	steps);
+				qt.AddColumn(desc + " change",	steps);
 			}
 		}
-	}*/
+	}
+	
+	// Always add columns from longer timeframe targets
+	for(int i = GetTf()+1; i < tf_count; i++) {
+		qt.AddColumn("Target tf" + IntStr(i), steps);
+	}
+	
 }
 
 void Template::Start() {
@@ -82,6 +109,7 @@ void Template::Start() {
 	
 	
 	return;
+	Panic("TODO");
 	
 	
 	// Get some useful values for all syms and tfs

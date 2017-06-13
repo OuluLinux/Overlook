@@ -44,23 +44,7 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	Template.h,
-	Template.cpp,
-	Trash readonly separator,
-	BaseSystem.h,
-	BaseSystem.cpp,
-	PrioritizerCtrl.h,
-	PrioritizerCtrl.cpp,
-	Factory.h,
-	Prioritizer.h,
-	Prioritizer.cpp,
-	Forecasters.h,
-	Custom.cpp,
-	Etc.h,
-	Etc.cpp,
-	Features.h,
-	Features.cpp,
-	Periodicals.h options(BUILDER_OPTION) PCH,
-	Periodicals.cpp;
+	Template.cpp;
 
 mainconfig
 	"" = "GUI MT",

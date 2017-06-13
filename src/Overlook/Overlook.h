@@ -12,7 +12,6 @@
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "Template.h"
-#include "Forecasters.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"

@@ -228,7 +228,7 @@ public:
 	int64 GetShiftFromTimeTf(int timestamp, int tf);
 	int64 GetShiftFromTimeTf(const Time& t, int tf);
 	Core* CreateSingle(int factory, int sym, int tf);
-	
+	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	
 public:
 	

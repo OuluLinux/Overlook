@@ -16,7 +16,7 @@ class Template : public Core {
 	DecisionTreeNode tree;
 	QueryTable qt;
 	int corr_period, max_timesteps, steps, peek;
-	int arg_learningmode, arg_priority, arg_targetmode, arg_reason, arg_level;
+	int arg_learningmode, arg_targetperiod, arg_usetime, arg_usetrend, arg_usecorr, arg_usetrad, arg_usechan;
 	
 public:
 	typedef Template CLASSNAME;
@@ -37,10 +37,12 @@ public:
 		
 			// 4 main arguments
 			% Arg("Learning template (decision tree vs neural network vs similarity)", arg_learningmode, 0, 15)
-			% Arg("Priority (moment vs probable target)", arg_priority, 0, 15)
-			% Arg("Target (heuristic vs scheduled)", arg_targetmode, 0, 15)
-			% Arg("Reason (match past vs match more probable)", arg_reason, 0, 15)
-			% Arg("Level (low level vs high level, immediate values vs derived indicator values)", arg_level, 0, 15)
+			% Arg("Target period", arg_targetperiod, 0, 31)
+			% Arg("Use time", arg_usetime, 0, 1)
+			% Arg("Use trend", arg_usetrend, 0, 1)
+			% Arg("Use correlation", arg_usecorr, 0, 1)
+			% Arg("Use traditional indicators", arg_usetrad, 0, 1)
+			% Arg("Use channel", arg_usechan, 0, 1)
 			
 			% Arg("Correlation period", corr_period, 2, 16);
 	}

@@ -529,7 +529,7 @@ void QueryTable::Evolve(int best_row, int candidate, Vector<byte>& output_row) {
 	ASSERT(data.GetCount() >= 3);
 	int sample_row1, sample_row2;
 	do {sample_row1 = Random(data.GetCount());} while (sample_row1 == candidate);
-	do {sample_row2 = Random(data.GetCount());} while (sample_row2 == sample_row1);
+	do {sample_row2 = Random(data.GetCount());} while (sample_row2 == sample_row1 || sample_row2 == candidate);
 	
 	const Vector<byte>& best_solution	= data[best_row];
 	const Vector<byte>& src				= data[candidate];

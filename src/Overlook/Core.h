@@ -95,7 +95,7 @@ struct ArgChanger : public ValueRegister {
 struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
-	Vector<Input> inputs, optional_inputs;
+	Vector<Input> inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
 	Vector<Persistent> persistents;

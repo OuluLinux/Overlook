@@ -49,45 +49,10 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-struct TimeSlot : Moveable<TimeSlot> {
-	int timeslot_method;
-	int timeslot_wdayhour_begin, timeslot_hour_begin;
-	int timeslot_wdayhour_len, timeslot_hour_len;
-	int basket_method;
-	int basket_timepos_group, basket_alltime_group;
-	VectorMap<int, int> symbols;
-	
-	bool IsMatch(const Time& t, int day_of_week) const {
-		// Method #1: wdayhour
-		if (timeslot_method == 0) {
-			int wdayhour = day_of_week * 24 + t.hour;
-			return
-				wdayhour >= timeslot_wdayhour_begin &&
-				wdayhour < (timeslot_wdayhour_begin + timeslot_wdayhour_len);
-		}
-		// Method #2: hour of day
-		else if (timeslot_method == 1) {
-			int end = timeslot_hour_begin + timeslot_hour_len;
-			if (end <= 24)
-				return
-					t.hour >= timeslot_hour_begin && t.hour < end;
-			else
-				return
-					(t.hour >= timeslot_hour_begin && t.hour < end) ||
-					(t.hour >= 0 && t.hour < (end-24));
-		}
-		// Method #3: always
-		else if (timeslot_method == 2)
-			return true;
-		else Panic("Invalid method");
-		return false;
-	}
-};
-
 class DataBridge : public BarData {
 	QueryTable spread_qt, volume_qt;
-	Vector<TimeSlot> ts;
 	VectorMap<int,int> median_max_map, median_min_map;
+	VectorMap<int,int> symbols;
 	Vector<Vector<byte> > ext_data;
 	Vector<Vector<int> > sym_group_stats, sym_groups;
 	double point;
@@ -112,9 +77,12 @@ public:
 			% Out(5, 3)
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(spread_qt) % Persistent(volume_qt)
-			% Persistent(max_value) % Persistent(min_value)
-			% Persistent(median_max) % Persistent(median_min) % Persistent(median_max_map) % Persistent(median_min_map)
-			% Persistent(ext_data) % Persistent(sym_group_stats) % Persistent(sym_groups);
+			% Persistent(median_max_map) % Persistent(median_min_map)
+			% Persistent(symbols)
+			% Persistent(ext_data)
+			% Persistent(sym_group_stats) % Persistent(sym_groups)
+			% Persistent(median_max) % Persistent(median_min)
+			% Persistent(max_value) % Persistent(min_value);
 	}
 	
 	virtual void Init();
@@ -187,6 +155,8 @@ public:
 		MetaTrader& mt = GetMetaTrader();
 		if (in_sym < mt.GetSymbolCount()) {
 			const Symbol& sym = mt.GetSymbol(in_sym);
+			if (sym.proxy_id == -1)
+				return false;
 			return out_sym == sym.proxy_id;
 		}
 		return false;

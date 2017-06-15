@@ -69,13 +69,10 @@ void DataBridge::Start() {
 		RefreshVirtualNode();
 	}
 	
-	// Correlation for baskets
-	else if (cur == cur_count) {
-		RefreshCorrelation();
-	}
-	
-	// Basket
-	else {
+	// Baskets
+	else if (cur >= cur_count) {
+		// Correlation for baskets
+		if (cur == cur_count) RefreshCorrelation();
 		RefreshBasket();
 	}
 }
@@ -416,6 +413,10 @@ void DataBridge::RefreshFromHistory() {
 	volume_qt.Reserve(expected_count);
 	
 	while ((cursor + struct_size) <= data_size && count < bars) {
+		if ((count % 10) == 0) {
+			GetSystem().WhenSubProgress(count, bars*2);
+		}
+		
 		int time;
 		double high, low, close;
 		int64 tick_volume, real_volume;
@@ -495,6 +496,10 @@ void DataBridge::RefreshFromHistory() {
 	int steps = five_mins ? 5 : 1;
 	volume_qt.Reserve(count / steps);
 	for(int i = 0; i < count; i += steps) {
+		if ((count % 10) == 0) {
+			GetSystem().WhenSubProgress(bars + count, bars*2);
+		}
+		
 		Time t = bs.GetTimeTf(tf, i);
 		int row = volume_qt.GetCount();
 		volume_qt.SetCount(row+1);
@@ -690,6 +695,9 @@ void DataBridge::RefreshCorrelation() {
 	
 	TimeStop ts;
 	for(int i = counted; i < bars; i++) {
+		if ((i % 10) == 0) {
+			GetSystem().WhenSubProgress(i, bars);
+		}
 		
 		// Calculate correlation values
 		SetSafetyLimit(i);
@@ -902,58 +910,21 @@ void DataBridge::RefreshBasket() {
 	int sym_count = mt.GetSymbolCount();
 	int cur_count = mt.GetCurrencyCount();
 	int corr_sym = sym_count + cur_count;
-	int tf = GetTf();
-	
-	DataBridge& corr_db = dynamic_cast<DataBridge&>(*GetInputCore(0, corr_sym, tf));
-	
 	int sym = GetSymbol();
-	const Vector<int>& args = sys.basket_args.Get(sym);
-	int slot_cols = 8 + sym_count;
-	int slots = args.GetCount() / slot_cols;
+	int tf = GetTf();
+	int basket_alltime_group = sym - corr_sym;
 	
-	if (ts.IsEmpty()) {
-		ts.SetCount(slots);
-		for(int i = 0; i < slots; i++) {
-			TimeSlot& ts = this->ts[i];
-			int j = slots * i;
-			ts.timeslot_method			= args[j++];
-			ts.timeslot_wdayhour_begin	= args[j++];
-			ts.timeslot_wdayhour_len	= 1 + args[j++];
-			ts.timeslot_hour_begin		= args[j++];
-			ts.timeslot_hour_len		= 1 + args[j++];
-			ts.basket_method			= args[j++];
-			ts.basket_timepos_group		= args[j++];
-			ts.basket_alltime_group		= args[j++];
-			
-			LOG(ts.basket_method);
-			
-			// Method #1, time-pos group id (priority increasing from highest=0)
-			if (ts.basket_method == 0) {
-				// Updated every time
-			}
-			
-			// Method #2, all-time group id (priority increasing from highest=0)
-			else if (ts.basket_method == 1) {
-				if (ts.basket_alltime_group < corr_db.sym_groups.GetCount()) {
-					const Vector<int>& group = corr_db.sym_groups[ts.basket_alltime_group];
-					for(int j = 0; j < group.GetCount(); j++) {
-						int sym = group[j];
-						ASSERT(sym < sym_count);
-						ts.symbols.Add(sym, +1); // add group member as positively correlating member
-					}
-				}
-			}
-			
-			// Method #3, symbol enabled bits
-			else if (ts.basket_method == 2) {
-				for(int j = 0; j < sym_count; j++) {
-					int k = args[j++];
-					if (k != 0)
-						ts.symbols.Add(j, k-1);
-				}
-			}
-			else Panic("Invalid method");
+	DataBridge& corr_db = sym == corr_sym ? *this : dynamic_cast<DataBridge&>(*GetInputCore(0, corr_sym, tf));
+	
+	if (symbols.IsEmpty()) {
+		ASSERT_(basket_alltime_group < corr_db.sym_groups.GetCount(), "Somehow correlation groups have not been found enough");
+		const Vector<int>& group = corr_db.sym_groups[basket_alltime_group];
+		for(int j = 0; j < group.GetCount(); j++) {
+			int sym = group[j];
+			ASSERT(sym < sym_count);
+			symbols.Add(sym, +1); // add group member as positively correlating member
 		}
+		ASSERT(!symbols.IsEmpty());
 	}
 	
 	// Allocate memory
@@ -970,68 +941,14 @@ void DataBridge::RefreshBasket() {
 		}
 	}
 	
-	
-	Vector<Vector<int> > groups;
-	
 	for(int i = counted; i < bars; i++) {
+		if ((i % 10) == 0) {
+			GetSystem().WhenSubProgress(i, bars);
+		}
+		
 		SetSafetyLimit(i);
 		Time t = sys.GetTimeTf(tf, i);
 		int day_of_week = DayOfWeek(t);
-		
-		// Get matching timeslot rule
-		int matching_ts = -1;
-		for(int j = 0; j < slots; j++) {
-			TimeSlot& ts = this->ts[j];
-			if (ts.IsMatch(t, day_of_week)) {
-				matching_ts = j;
-				break;
-			}
-		}
-		if (matching_ts == -1) {
-			double prev = i == 0 ? 1.0 : open.Get(i-1);
-			ASSERT(prev > 0.0);
-			open.Set(i, prev);
-			low.Set(i, prev);
-			high.Set(i, prev);
-			volume.Set(i, 0);
-			continue;
-		}
-		
-		TimeSlot& ts = this->ts[matching_ts];
-		
-		// Update method #1 group
-		if (ts.basket_method == 0) {
-			int pos = i / 2;
-			int sub = i % 2;
-			
-			// Get groups of symbols
-			for(int j = 0; j < groups.GetCount(); j++)
-				groups[j].SetCount(0);
-			for(int j = 0; j < sym_count; j++) {
-				const Vector<byte>& group_buf = corr_db.ext_data[j];
-				int group_id = sub == 0 ? (group_buf[pos] & 0x0F) : ((group_buf[pos] & 0xF0) >> 4);
-				if (groups.GetCount() <= group_id) groups.SetCount(group_id+1);
-				groups[group_id].Add(j);
-			}
-			
-			// Sort groups by their size descending
-			struct GroupSorter {
-				bool operator() (const Vector<int>& a, const Vector<int>& b) const {
-					return a.GetCount() > b.GetCount();
-				}
-			};
-			Sort(groups, GroupSorter());
-			
-			ts.symbols.Clear();
-			if (ts.basket_timepos_group < groups.GetCount()) {
-				const Vector<int>& group = groups[ts.basket_timepos_group];
-				for(int j = 0; j < group.GetCount(); j++) {
-					int sym = group[j];
-					ASSERT(sym < sym_count);
-					ts.symbols.Add(sym, +1); // add group member as positively correlating member
-				}
-			}
-		}
 		
 		// Continue from previous value
 		double value = 1.0, low_value = 1.0, high_value = 1.0, volume_value = 0.0, spread_value = 0.0;
@@ -1041,8 +958,8 @@ void DataBridge::RefreshBasket() {
 			const int prev_pos = i-1;
 			double prev = open.Get(prev_pos);
 			double mul = 0.0, low_mul = 0.0, high_mul = 0.0, spread_mul = 0.0;
-			for(int j = 0; j < ts.symbols.GetCount(); j++) {
-				int sym = ts.symbols.GetKey(j);
+			for(int j = 0; j < symbols.GetCount(); j++) {
+				int sym = symbols.GetKey(j);
 				ConstBuffer& src_open = GetInputBuffer(0, sym, tf, 0);
 				ConstBuffer& src_low  = GetInputBuffer(0, sym, tf, 1);
 				ConstBuffer& src_high = GetInputBuffer(0, sym, tf, 2);
@@ -1057,10 +974,10 @@ void DataBridge::RefreshBasket() {
 				spread_mul += (open_value + spread_value) / open_value - 1.0;
 			}
 			// Get average
-			mul /= ts.symbols.GetCount();
-			low_mul /= ts.symbols.GetCount();
-			high_mul /= ts.symbols.GetCount();
-			spread_mul /= ts.symbols.GetCount();
+			mul /= symbols.GetCount();
+			low_mul /= symbols.GetCount();
+			high_mul /= symbols.GetCount();
+			spread_mul /= symbols.GetCount();
 			
 			// Calculate new values
 			value = prev * (1.0 + mul);

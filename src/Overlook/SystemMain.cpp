@@ -8,11 +8,11 @@ void System::Start() {
 	stopped = false;
 	
 	Thread::Start(THISBACK(MainLoop));
-	
+	/*
 	nonstopped_workers = 1;//CPU_Cores();
 	SetBasketCount(nonstopped_workers);
 	for(int i = 0; i < nonstopped_workers; i++)
-		Thread::Start(THISBACK1(Worker, i));
+		Thread::Start(THISBACK1(Worker, i));*/
 }
 
 void System::Stop() {
@@ -23,9 +23,6 @@ void System::Stop() {
 void System::MainLoop() {
 	
 	while (running) {
-		
-		// Create new combinations for threads to evaluate
-		RefreshPipeline();
 		
 		// Refresh current real-time combination
 		RefreshRealtime();
@@ -42,7 +39,7 @@ void System::Worker(int id) {
 	int counter = 0;
 	
 	while (running) {
-		if (!pl_queue.IsEmpty()) {
+		/*if (!pl_queue.IsEmpty()) {
 			
 			// Get pipeline to process
 			pl_queue_lock.Enter();
@@ -80,7 +77,7 @@ void System::Worker(int id) {
 			table.Set(row, 0, best_result);
 			table.Set(row, 1, best_tf);
 			table.lock.Leave();
-		}
+		}*/
 		
 		Sleep(100);
 	}
@@ -90,27 +87,9 @@ void System::Worker(int id) {
 
 Core* System::CreateSingle(int factory, int sym, int tf) {
 	
-	// Enable column
+	// Enable factory
 	Vector<int> path;
-	path.Add(1000 + factory);
-	PipelineItem pi;
-	pi.value.SetCount(table.GetRowBytes(), 0);
-	int col = GetEnabledColumn(path);
-	if (col != -1) {
-		table.Set0(col, true, pi.value);
-	
-		// Set default arguments
-		col++; // seek argument begin position
-		const FactoryRegister& reg = regs[factory];
-		for(int i = 0; i < reg.args.GetCount(); i++) {
-			const ArgType& at = reg.args[i];
-			int def = at.def;
-			if (def < at.min) def = at.min;
-			if (def > at.max) def = at.max;
-			def -= at.min;
-			table.Set0(col++, def, pi.value);
-		}
-	}
+	path.Add(factory);
 	
 	// Enable symbol
 	ASSERT(sym >= 0 && sym < symbols.GetCount());
@@ -122,10 +101,11 @@ Core* System::CreateSingle(int factory, int sym, int tf) {
 	
 	// Get working queue
 	Vector<Ptr<CoreItem> > ci_queue;
-	GetCoreQueue(path, pi, ci_queue, tf, sym_ids);
+	GetCoreQueue(path, ci_queue, tf, sym_ids);
 	
 	// Process job-queue
 	for(int i = 0; i < ci_queue.GetCount(); i++) {
+		WhenProgress(i, ci_queue.GetCount());
 		Process(*ci_queue[i]);
 	}
 	

@@ -3,8 +3,8 @@
 namespace Overlook {
 
 
-String arg_addr;
-int arg_port;
+String arg_addr = "127.0.0.1";
+int arg_port = 42000;
 
 System::System() {
 	timediff = 0;
@@ -17,20 +17,6 @@ System::System() {
 	stopped = true;
 	exploration = 0.2;
 	
-	const int cores = CPU_Cores();
-	min_queue = cores * 4;
-	max_queue = cores * 20;
-	
-	structural_columns = 0;
-	template_arg_count = 0;
-	slot_args = 0;
-	traditional_indicators = 0;
-	traditional_arg_count = 0;
-	ma_id = -1;
-	structural_priorities = 0;
-	target_count = 0;
-	structural_begin = 0;
-	basket_sym_begin = 0;
 	source_symbol_count = 0;
 }
 
@@ -40,7 +26,6 @@ System::~System() {
 }
 
 void System::Init() {
-	
 	MetaTrader& mt = GetMetaTrader();
 	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
@@ -61,15 +46,10 @@ void System::Init() {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		AddSymbol("Correlation");
-		
-		serializable_count = this->symbols.GetCount();
-		AddSymbol("Real-time");
-		
-		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount() + 2;
-		int cpus = CPU_Cores();
-		for(int i = 0; i < cpus; i++)
-			AddSymbol("Thread #" + IntStr(i));
+		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
+		int baskets = 8;
+		for(int i = 0; i < baskets; i++)
+			AddSymbol("Basket #" + IntStr(i));
 		
 		
 		
@@ -119,27 +99,6 @@ void System::Init() {
 	}
 	
 	InitRegistry();
-	InitGeneticOptimizer();
-	InitDataset();
-	
-	
-	// Add some default basket symbols
-	ASSERT(basket_args.IsEmpty());
-	int basket_syms = CPU_Cores() + 1;
-	int sym = mt.GetSymbolCount() + mt.GetCurrencyCount() + 1;
-	for(int i = 0; i < basket_syms; i++) {
-		Vector<int>& args = basket_args.Add(sym++);
-		args.Add(2); // time-slot method
-		args.Add(0);
-		args.Add(0);
-		args.Add(0);
-		args.Add(0);
-		args.Add(1); // all-time method
-		args.Add(0);
-		args.Add(i); // basket id
-		for(int j = 0; j < mt.GetSymbolCount(); j++)
-			 args.Add(0);
-	}
 }
 
 void System::AddPeriod(String nice_str, int period) {

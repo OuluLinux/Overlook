@@ -2,8 +2,59 @@
 
 namespace Overlook {
 
+LoaderWindow::LoaderWindow(Overlook& ol) {
+	NoCloseBox();
+	this->ol = &ol;
+	
+	ImageDraw id(64, 64);
+	id.DrawRect(0,0,64,64,Black());
+	id.DrawText(0,0, "O", Arial(64), White());
+	Icon(id);
+	
+	Title("Loading Overlook");
+	Add(lbl.HSizePos(4, 4).TopPos(3, 24));
+	Add(prog.HSizePos(4, 4).TopPos(33, 12));
+	Add(sub.HSizePos(4, 4).TopPos(33+15, 12));
+	Add(subsub.HSizePos(4, 4).TopPos(33+30, 12));
+	SetRect(0, 0, 400, 80);
+	prog.Set(0, 1);
+	sub.Set(0, 1);
+	subsub.Set(0, 1);
+	ret_value = 0;
+}
 
-Overlook::Overlook()
+void LoaderWindow::Progress(int actual, int total, String label) {
+	LOG("Progress " << actual << "/" << total);
+	prog.Set(actual, total);
+	sub.Set(0, 1);
+	subsub.Set(0, 1);
+	this->label = label;
+	lbl.SetLabel(label);
+}
+
+void LoaderWindow::SubProgress(int actual, int total) {
+	sub.Set(actual, total);
+	subsub.Set(0, 1);
+	lbl.SetLabel(label + " " + IntStr(actual) + "/" + IntStr(total));
+}
+
+void LoaderWindow::SubSubProgress(int actual, int total) {
+	subsub.Set(actual, total);
+}
+
+
+
+
+
+
+
+
+
+
+Overlook::Overlook() :
+	loader(*this),
+	trainer(sys),
+	trainerctrl(trainer)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -11,9 +62,9 @@ Overlook::Overlook()
 	
 	Add(tabs.SizePos());
 	tabs.Add(visins);
-	tabs.Add(visins, "Visual Inspection");
-	tabs.Add(opt);
-	tabs.Add(opt, "Optimizer");
+	tabs.Add(visins, "Traditional");
+	tabs.Add(trainerctrl);
+	tabs.Add(trainerctrl, "Trainer");
 	
 	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
 	droplist_split << ctrllist << symlist << tflist << config;
@@ -25,22 +76,6 @@ Overlook::Overlook()
 	tflist <<= THISBACK(SetView);
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
-	
-	opt.Add(opt_hsplit.SizePos());
-	opt_hsplit.Horz();
-	opt_hsplit << opt_list << opt_tabs;
-	opt_draw.Vert();
-	opt_tabs.Add(opt_draw);
-	opt_tabs.Add(opt_draw, "Drawers");
-	opt_tabs.Add(opt_details);
-	opt_tabs.Add(opt_details, "Details");
-	opt_tabs.Add(opt_simbroker);
-	opt_tabs.Add(opt_simbroker, "SimBroker");
-	
-	
-	opt_list.AddColumn("#");
-	opt_list.AddColumn("Result");
-	opt_list.AddColumn("Target timeframe");
 	
 	PostCallback(THISBACK(Refresher));
 }
@@ -60,13 +95,17 @@ void Overlook::Refresher() {
 			prev_view->RefreshData();
 	}
 	else if (tab == 1) {
-		RefreshOptimizerView();
+		trainerctrl.RefreshData();
+	}
+	else if (tab == 2) {
+		
 	}
 	tc.Set(1000, THISBACK(PostRefresher));
 }
 
 void Overlook::Init() {
 	sys.Init();
+	trainer.Init();
 	
 	// Init gui
 	for(int i = 0; i < sys.GetPeriodCount(); i++)
@@ -81,7 +120,26 @@ void Overlook::Init() {
 	ctrllist.SetIndex(0);
 	
 	PostCallback(THISBACK(SetView));
+}
+
+void Overlook::Load() {
+	Thread::Start(THISBACK(Loader));
+	loader.Run();
+}
+
+void Overlook::Loader() {
+	loader.PostProgress(0, 2, "Creating work queue");
+	sys.WhenProgress = callback(&loader, &LoaderWindow::PostSubProgress);
+	sys.WhenSubProgress = callback(&loader, &LoaderWindow::PostSubSubProgress);
+	trainer.RefreshWorkQueue();
 	
+	loader.PostProgress(1, 2, "Processing data");
+	trainer.ProcessWorkQueue();
+	
+	loader.PostClose();
+}
+
+void Overlook::Start() {
 	sys.Start();
 }
 
@@ -183,19 +241,8 @@ void Overlook::Configure() {
 	}
 }
 
-void Overlook::RefreshOptimizerView() {
+void Overlook::RefreshPipelineView() {
 	
-	const QueryTable& qt = sys.GetTable();
-	
-	for(int i = 0; i < qt.GetCount(); i++) {
-		int list_row = qt.GetCount() - 1 - i;
-		int result = qt.Get(i, 0);
-		int target_tf = qt.Get(i, 1);
-		
-		opt_list.Set(list_row, 0, i);
-		opt_list.Set(list_row, 1, result);
-		opt_list.Set(list_row, 2, target_tf);
-	}
 }
 
 }

@@ -110,6 +110,15 @@ void CoreIO::StoreCache() {
 	if (!out.IsOpen())
 		Panic("Couldn't open file: " + file);
 	
+	Put(out, dir, 0);
+	Core* c = dynamic_cast<Core*>(this);
+	if (c) {
+		for(int i = 0; i < c->subcores.GetCount(); i++)
+			c->subcores[i].Put(out, dir, 1+i);
+	}
+}
+
+void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 	int output_count = outputs.GetCount();
 	int persistent_count = persistents.GetCount();
 	out % output_count % persistent_count % counted % bars;
@@ -155,7 +164,7 @@ void CoreIO::StoreCache() {
 			Buffer& buf = output.buffers[j];
 			
 			// Store values incrementally
-			String file = AppendFileName(dir, Format("%d-%d.bin", i, j));
+			String file = AppendFileName(dir, Format("%d-%d-%d.bin", i, j, subcore_id));
 			FileAppend out(file);
 			if (!out.IsOpen())
 				Panic("Couldn't open file: " + file);
@@ -181,6 +190,15 @@ void CoreIO::LoadCache() {
 	if (!in.IsOpen())
 		return;
 	
+	Get(in, dir, 0);
+	Core* c = dynamic_cast<Core*>(this);
+	if (c) {
+		for(int i = 0; i < c->subcores.GetCount(); i++)
+			c->subcores[i].Get(in, dir, 1+i);
+	}
+}
+
+void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	int output_count = 0;
 	in % output_count;
 	if (output_count != outputs.GetCount()) {
@@ -245,7 +263,7 @@ void CoreIO::LoadCache() {
 			Buffer& buf = output.buffers[j];
 			
 			// Store values incrementally
-			String file = AppendFileName(dir, Format("%d-%d.bin", i, j));
+			String file = AppendFileName(dir, Format("%d-%d-%d.bin", i, j, subcore_id));
 			FileIn in(file);
 			if (!in.IsOpen()) {
 				LOG("CoreIO::LoadCache: error: file doesn't exist: " + file);

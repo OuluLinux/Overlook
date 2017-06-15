@@ -699,8 +699,8 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	// Find proxy ids
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		Symbol& sym = symbols[i];
+		sym.proxy_id = -1;
 		if (sym.proxy_name.IsEmpty()) {
-			sym.proxy_id = -1;
 			continue;
 		}
 		bool found = false;

@@ -767,7 +767,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		if (sym_count == -1 && base)
-			sym_count = GetSystem().GetBrokerSymbolCount();
+			sym_count = GetSystem().GetTotalSymbolCount();
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(sym_count-1, sym_count-1)
 			% Arg("period", period, 2, 16);

@@ -6,10 +6,6 @@ using namespace Upp;
 
 extern String arg_addr;
 extern int arg_port;
-extern const int max_depth;
-extern const int max_sources;
-extern const int max_timeslots;
-extern const int max_traditional;
 
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
 
@@ -149,14 +145,8 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>				regs;
-	Array<PipelineItem>					pl_queue;
-	ArrayMap<int, Vector<int> >			basket_args;
-	ArrayMap<int, int>					basket_hashes;
 	Data			data;
 	Vector<String>	period_strings;
-	QueryTable		table;
-	Vector<int>		traditional_enabled_cols;
-	Vector<int>		traditional_col_length;
 	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
 	Index<String>	symbols;
@@ -179,44 +169,25 @@ protected:
 	Time end;
 	int timediff;
 	int base_period;
-	int structural_columns;
-	int traditional_indicators, traditional_arg_count;
-	int template_id, template_arg_count, slot_args;
-	int ma_id;
-	int structural_priorities;
-	int target_count, structural_begin;
-	int max_queue, min_queue;
-	int source_symbol_count, serializable_count;
+	int source_symbol_count;
 	
-	// Main loop
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
 	void MainLoop();
 	void Worker(int id);
-	void RefreshPipeline();
-	
-	// Pipeline
-	void InitGeneticOptimizer();
-	void InitDataset();
 	void RefreshRealtime();
 	int  GetHash(const Vector<byte>& vec);
-	int  GetCoreQueue(PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, Index<int>* tf_ids, int thread_id);
-	int  GetCoreQueue(Vector<int>& path, const PipelineItem& pi, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
+	int  GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
 	void CreateCore(CoreItem& ci);
-	int  GetEnabledColumn(const Vector<int>& path);
-	int  GetIndicatorFactory(const Vector<int>& path);
-	int  GetPathPriority(const Vector<int>& path);
 	void InitRegistry();
 	void ConnectCore(CoreItem& ci);
 	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
 	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
-	void GetBasketArgs(PipelineItem& pi);
 	void SetBasketCount(int i);
-	
-	// Jobs
-	void Process(CoreItem& ci);
 	
 public:
 	
+	void Process(CoreItem& ci);
+	int GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Index<int>& indi_ids);
 	int GetCountTf(int tf_id) const;
 	Time GetTimeTf(int tf, int pos) const;// {return begin + base_period * period * pos;}
 	Time GetBegin(int tf) const {return begin[tf];}
@@ -231,20 +202,23 @@ public:
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	
 public:
+
+	
 	
 	void AddPeriod(String nice_str, int period);
 	void AddSymbol(String sym);
 	
+	int GetFactoryCount() const {return GetRegs().GetCount();}
+	
 	int GetBrokerSymbolCount() const {return source_symbol_count;}
 	int GetTotalSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
+	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	
 	int GetPeriod(int i) const {return periods[i];}
 	String GetPeriodString(int i) const {return period_strings[i];}
 	int GetPeriodCount() const {return periods.GetCount();}
 	int FindPeriod(int period) const {return periods.Find(period);}
-	
-	const QueryTable& GetTable() const {return table;}
 	
 public:
 	
@@ -256,6 +230,8 @@ public:
 	void Start();
 	void Stop();
 	
+	Callback2<int,int> WhenProgress;
+	Callback2<int,int> WhenSubProgress;
 };
 
 }

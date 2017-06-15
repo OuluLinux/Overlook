@@ -124,6 +124,8 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	
 	void StoreCache();
 	void LoadCache();
+	void Put(Stream& out, const String& dir, int subcore_id);
+	void Get(Stream& in, const String& dir, int subcore_id);
 	
 	virtual void IO(const ValueBase& base);
 	void RefreshBuffers();
@@ -195,6 +197,9 @@ class BarData;
 
 class Core : public CoreIO {
 	
+protected:
+	friend class CoreIO;
+	
 	// Settings
 	String short_name;
 	
@@ -216,8 +221,6 @@ class Core : public CoreIO {
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
 	bool skip_allocate;
-	
-protected:
 	
 	Core();
 	

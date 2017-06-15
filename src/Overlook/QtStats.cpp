@@ -2,22 +2,18 @@
 
 namespace Overlook {
 
-Template::Template() {
+QtStats::QtStats() {
 	corr_period = 4;
 	max_timesteps = 3;
 	steps = 8;
 	peek = 0;
 	
-	arg_learningmode	= 0;
-	arg_targetperiod	= 0;
 	arg_usetime			= 1;
 	arg_usetrend		= 1;
 	arg_usecorr			= 1;
-	arg_usetrad			= 1;
-	arg_usechan			= 0;
 }
 
-void Template::Init() {
+void QtStats::Init() {
 	peek = 2;
 	
 	
@@ -47,7 +43,7 @@ void Template::Init() {
 	qt.AddColumn("Target signal", steps);
 	qt.EndTargets();
 	
-	// Add constants columns
+	// Add constant time values
 	//  Note: adding month and day causes underfitting
 	if (arg_usetime) {
 		qt.AddColumn("Wday",			7);
@@ -71,45 +67,18 @@ void Template::Init() {
 		}
 	}
 	
-	// Add columns from input templates
-	Panic("TODO");
-	
-	// Add columns from optional inputs
-	if (arg_usetrad) {
-		for(int i = max_sources; i < max_sources + max_traditional; i++) {
-			const Input& input = inputs[i];
-			if (input.IsEmpty()) continue;
-			ASSERT(input.GetCount() == 1);
-			const Source& src = input[0];
-			const Output& out = *src.output;
-			for(int j = 0; j < out.buffers.GetCount(); j++) {
-				String desc = "Indi" + IntStr(i) + " out" + IntStr(j);
-				qt.AddColumn(desc + " value",	steps);
-				qt.AddColumn(desc + " change",	steps);
-			}
-		}
-	}
-	
-	// Always add columns from longer timeframe targets
-	for(int i = GetTf()+1; i < tf_count; i++) {
-		qt.AddColumn("Target tf" + IntStr(i), steps);
-	}
-	
 }
 
-void Template::Start() {
+void QtStats::Start() {
 	int id = GetSymbol();
 	int thistf = GetTf();
 	int bars = GetBars();
 	int counted = GetCounted();
-	System& bs = GetSystem();
-	int sym_count = bs.GetTotalSymbolCount();
+	System& sys = GetSystem();
+	int sym_count = sys.GetTotalSymbolCount();
+	int tf_count = sys.GetPeriodCount();
 	if (bars == counted)
 		return;
-	
-	
-	return;
-	Panic("TODO");
 	
 	
 	// Get some useful values for all syms and tfs
@@ -159,7 +128,7 @@ void Template::Start() {
 		qt.SetCount(row+1);
 		
 		// Get some time values in binary format (starts from 0)
-		Time t = bs.GetTimeTf(thistf, i);
+		Time t = sys.GetTimeTf(thistf, i);
 		int month = t.month-1;
 		int day = t.day-1;
 		int hour = t.hour;
@@ -168,56 +137,57 @@ void Template::Start() {
 		int pos = 0;
 		
 		// Add target value after timestep
-		for(int j = 0; j < max_timesteps; j++) {
-			int len = pow(2, j);
-			int k = i + len;
-			double next = Open(k);
-			double change = open != 0.0 ? next / open - 1.0 : 0.0;
-			double step = diff / steps;
-			int v = (change - min_change) / step;
-			if (v < 0)
-				v = 0;
-			if (v >= steps)
-				v = steps -1;
-			qt.Set(row, pos++, v);
+		int v = 0; // get ideal signal
+		Panic("TODO");
+		qt.Set(row, pos++, v);
+		
+		// Add constant time values
+		if (arg_usetime) {
+			qt.Set(row, pos++, dow);
+			qt.Set(row, pos++, hour);
+			qt.Set(row, pos++, minute / 5);
 		}
 		
 		// Add previous changes in value
-		/*for (int sym = 0, csym = 0; sym < sym_count; sym++) {
-			if (sym == GetSymbol()) continue; // skip this
-			ConstBuffer& buf = *bufs[sym];
-			double open = i > 0 ? buf.GetUnsafe(i-1) : 0.0;
-			double cur = buf.GetUnsafe(i);
-			double min_change = min_changes[sym];
-			double diff = diffs[sym];
-			double step = diff / steps;
-			
-			// Difference to previous time-position
-			double change = open != 0.0 ? cur - open : 0.0;
-			int v = (change - min_change) / step;
-			if (v < 0) v = 0;
-			if (v >= steps) v = steps -1;
-			qt.Set(row, pos++, v);
-			
-			// Correlation to the main symbol
-			ConstBuffer& cbuf = GetInputBuffer(2, GetSymbol(), thistf, csym);
-			double corr = cbuf.GetUnsafe(i);
-			v = (corr + 1.0) / 2.0 * steps;
-			if (v == steps) v = steps - 1; // equal to 1.0 doesn't need own range
-			ASSERT(v >= 0 && v < steps);
-			qt.Set(row, pos++, v);
-			
-			csym++;
-		}*/
+		if (arg_usetrend) {
+			for (int sym = 0, csym = 0; sym < sym_count; sym++) {
+				if (sym == GetSymbol()) continue; // skip this
+				ConstBuffer& buf = *bufs[sym];
+				double open = i > 0 ? buf.GetUnsafe(i-1) : 0.0;
+				double cur = buf.GetUnsafe(i);
+				double min_change = min_changes[sym];
+				double diff = diffs[sym];
+				double step = diff / steps;
+				
+				// Difference to previous time-position
+				double change = open != 0.0 ? cur - open : 0.0;
+				int v = (change - min_change) / step;
+				if (v < 0) v = 0;
+				if (v >= steps) v = steps -1;
+				qt.Set(row, pos++, v);
+				
+				csym++;
+			}
+		}
 		
-		// Add constant time values
-		qt.Set(row, pos++, dow);
-		qt.Set(row, pos++, hour);
-		qt.Set(row, pos++, minute / 5);
+		// Add correlation values
+		if (arg_usecorr) {
+			for (int sym = 0, csym = 0; sym < sym_count; sym++) {
+				if (sym == GetSymbol()) continue; // skip this
+				
+				// Correlation to the main symbol
+				ConstBuffer& cbuf = GetInputBuffer(2, GetSymbol(), thistf, csym);
+				double corr = cbuf.GetUnsafe(i);
+				v = (corr + 1.0) / 2.0 * steps;
+				if (v == steps) v = steps - 1; // equal to 1.0 doesn't need own range
+				ASSERT(v >= 0 && v < steps);
+				qt.Set(row, pos++, v);
+				
+				csym++;
+			}
+		}
 		
-		
-		// TODO: add indicators
-		
+		ASSERT(pos == qt.GetColumnCount());
 	}
 	
 	// Create decision trees
@@ -248,11 +218,11 @@ void Template::Start() {
 		}
 	}*/
 	
-	// Draw error oscillator
-	/*for (int i = counted; i < bars; i++) {
+	// Export target signal
+	for (int i = counted; i < bars; i++) {
 		
 		// Skip invalid values, which weren't added to the query-table
-		int j = in_qt.Find(i);
+		/*int j = in_qt.Find(i);
 		if (j == -1) {
 			for(int j = 0; j < max_timesteps; j++)
 				GetBuffer(j).Set(i, -1);
@@ -266,8 +236,8 @@ void Template::Start() {
 			double correct = qt.Get(row, j);
 			double diff = fabs(predicted - correct) / steps;
 			GetBuffer(j).Set(i, diff);
-		}
-	}*/
+		}*/
+	}
 }
 
 }

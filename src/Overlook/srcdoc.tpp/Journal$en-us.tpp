@@ -1250,4 +1250,100 @@ of weeks.&]
 [s0;%- The main optimization loop runs now. It is unstable and template 
 doesn`'t process for real, but it runs for a long time until 
 some small bug occurs with the traditional indicator.&]
+[s3;%- 14.6.2017&]
+[s0;%- Today, I had to take a big step backward. There were some 
+undesired setbacks with the target value to genetic optimizer 
+and tweet from `@karpathy yesterday gave insight to a new method. 
+Previously, I have translated the `@karpathy`'s ConvNetJS library 
+from JavaScript to C`+`+ and I understand how powerful neural 
+networks are, but I always thought that the differential evolution 
+solver would be better in this problem. I think I made a mistake 
+in that. The link was to [^https`:`/`/blog`.openai`.com`/deep`-reinforcement`-learning`-from`-human`-preferences`/^ L
+earning from Human Preferences] and it has a great footnote comparing 
+human input and user defined reward function. Trading is also 
+complex problem like that. Also, user input to trading is important 
+for ethical reasons, me thinks. 100% automated conqueror sounds 
+baaaaaad... and technical leverage for user`'s preferences sounds 
+like a shoe that fits well.&]
+[s0;%- What I understood from that scientific paper, was that it 
+is almost like a DQN agent where the program gives a set of visualized 
+decisions and users decides which is better. `"All weight is 
+put on the better`", which is something I don`'t understand in 
+practise. It might be, that the better set is being used in training 
+only and worse is discarded, or it might be that the better might 
+be trained with `+1 reward and the worse with `-1 loss. The difference 
+to DQN is that there is no begin and end states with reward but 
+right and wrong set of states.&]
+[s0;%- I guess I must go back to basics and do an example with air 
+hockey, which is something what I planned to do with mona, but 
+this is fine too. I did some useless work, but I also did some 
+awesome features what I wouldn`'t otherwise had done, like highly 
+correlating basket symbols. I didn`'t trim any features and this 
+is simplier, so it can`'t be bad neither.&]
+[s0;%- Replacing that differential evolution algorithm with some 
+DQN`-like NN causes some new problems. Evolution algorithm works 
+fine with huge list of items in the set, but NN slows down fast 
+with increasing items. Also, getting multiple output values from 
+DQN`-like agents is problematic. I got an idea from Mona NN that 
+you could change location and that would be remembered while 
+reading sensors, so with this DQN`-like NN it could also work. 
+Instead of putting all available sensors to the NN, you could 
+change reading position, and then proceed to different actions, 
+until wait action is selected. That`'s something worth testing. 
+I guess both methods could be compared with that air hockey, 
+because it still works with that single action per time`-step 
+method.&]
+[s0;%- Hmm... it actually has even simpler version, which it sort 
+of inherits. You could put those sequences to querytable with 
+those weights, and run it from that, instead of training NN. 
+Actually, you could skip the user rating which sequence is better 
+by simple function.&]
+[s0;%- I am trying to follow that paper and start with existing DQN`-agent, 
+but I will adjust that to larger amount of inputs by adding sub`-timestep 
+`"movement`" and few writable memory`-sensors. Then it is going 
+to train the better sequence, which is selected by some simple 
+function, and which contains many time`-steps. It is a make`-it`-or`-break`-it 
+moment for me at this summer, because I don`'t have much time. 
+If it doesn`'t work, then I need to read more some scientific 
+papers and try again later. I have only good experiences from 
+DQN`-agent, however.&]
+[s3;%- 15.6.2017&]
+[s0;%- That sequential comparison for DQN`-agent was the missing 
+key, what blocked me from using DQN in overlook. I am thankful 
+for that paper. I need to remove some existing code, but not 
+too much. At least the DE solver will go.&]
+[s0;%- The other approach seems to fit unexpectedly well now. It 
+is a iterator going trough the time`-range and showing all information 
+in a heatmap, and then NN get trained by more correct sequence 
+from two sequences of actions. It requires a lot less complexity 
+from the system, but it still requires a huge work`-queue to 
+be processed until even one single time`-step can be taken. It 
+must process all data and technical indicators before starting 
+iteration.&]
+[s0;%- One interesting new approach would be to sweep the whole data 
+range in one time step in fixed order and use next time`-step 
+result as the comparison value, and then train the better sequence. 
+In the context of exhausting amount of inputs, that might be 
+worth testing. Some read/write sensors could be used as memory 
+during the sweep.&]
+[s0;%- Hmm... seems like this is a possible many`-core application. 
+I might have misunderstood some details in that paper, because 
+the lack of source code, but currently I understand it as an 
+extended DQN`-agent with training on better sequence of two sequences 
+and with fixed zero reward. With too many inputs for sensors, 
+one could try to sweep all inputs with DQN`-agent having small 
+`"register`-memory`" in sensors and sweep it syncronizedly by 
+many of those small DQN agents in same spot or different spots. 
+They would all write to outputs until time is out for current 
+time`-step. Two sequences would be measured and better one would 
+be used in training. I don`'t know does it work or is it useful, 
+but it would fit well to GPGPU kernels. It would be something 
+like [* many`-inputs to many`-outputs with DQN`-agent swarm]. It 
+would be very interesting to test that... It would be almost 
+like that example in the paper, where the sequence constist of 
+multiple time`-steps, but in this steps would be inside one time`-step 
+and only one time`-step would be compared, because of the length 
+of the sequence. Basically it would shrink multi`-time`-step 
+sequence to one time`-step sequence, and use it to control multiple 
+inputs and outputs internally. Yeaaaa, I think I`'ll do it immediately.&]
 [s0;%- ]]

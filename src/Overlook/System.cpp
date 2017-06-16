@@ -154,22 +154,25 @@ int System::GetCountTf(int tf_id) const {
 }
 
 int64 System::GetShiftTf(int src_tf, int dst_tf, int shift) {
+	ASSERT_(src_tf != dst_tf, "Why?");
 	int64 src_period = periods[src_tf];
 	int64 dst_period = periods[dst_tf];
 	int64 timediff = shift * src_period * base_period;
 	timediff -= begin_ts[dst_tf] - begin_ts[src_tf];
 	int64 dst_shift = timediff / base_period / dst_period;
 	
+	#if 0
 	// Sanity check
 	timediff = GetTimeTf(src_tf, shift).Get() - GetTimeTf(dst_tf, dst_shift).Get();
 	if (src_tf > dst_tf) {
 		ASSERT(timediff == 0);
 		Panic("TODO");
 	} else {
-		int64 maxdiff = src_period * base_period;
+		int64 maxdiff = dst_period * base_period;
 		ASSERT(timediff > -maxdiff && timediff < maxdiff);
 		Panic("TODO");
 	}
+	#endif
 	
 	return dst_shift;
 }

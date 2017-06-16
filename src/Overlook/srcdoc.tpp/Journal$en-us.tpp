@@ -1340,10 +1340,23 @@ be used in training. I don`'t know does it work or is it useful,
 but it would fit well to GPGPU kernels. It would be something 
 like [* many`-inputs to many`-outputs with DQN`-agent swarm]. It 
 would be very interesting to test that... It would be almost 
-like that example in the paper, where the sequence constist of 
+like that example in the paper, where the sequence consist of 
 multiple time`-steps, but in this steps would be inside one time`-step 
 and only one time`-step would be compared, because of the length 
 of the sequence. Basically it would shrink multi`-time`-step 
 sequence to one time`-step sequence, and use it to control multiple 
-inputs and outputs internally. Yeaaaa, I think I`'ll do it immediately.&]
-[s0;%- ]]
+inputs and outputs internally. Yeaaaa, I think I`'ll do it immediately. 
+I`'ll fall back to that paper version when everything fails...&]
+[s3;%- 16.6.2017&]
+[s0;%- I`'ve been thinking about that DQN`-agent swarm, and one interesting 
+use case to test would be to create huge amount of small agent`-compatible 
+objects (aka. physical swarm) and then add 0`-10% of DQN`-swarm`-agents 
+for them. Then you would loop those swarm`-agents through all 
+objects multiple times in one time`-step and then you would compare 
+two outcomes after one`-step, and you would prefer the sequence, 
+which is better e.g. where swarm objects has less collisions. 
+You might even be able to move huge swarms through some obstacle 
+courses, like training some flying bee swarm. If that would work 
+in pracise, it would be an ideal many`-core application.&]
+[s0;%- Today, I hope I can get the iterator working for that DQN`-agent 
+thing and start implementation of the agent too.]]

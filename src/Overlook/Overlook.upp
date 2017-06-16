@@ -4,7 +4,8 @@ uses
 	CtrlLib,
 	plugin/libmt,
 	plugin/tidy,
-	Painter;
+	Painter,
+	ConvNet;
 
 file
 	Copying,

@@ -73,7 +73,7 @@ protected:
 	Trainer trainer;
 	TrainerCtrl trainerctrl;
 	
-	LoaderWindow loader;
+	One<LoaderWindow> loader;
 	System sys;
 	
 	void SetView();

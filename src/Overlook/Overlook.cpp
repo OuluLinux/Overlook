@@ -52,7 +52,6 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 
 Overlook::Overlook() :
-	loader(*this),
 	trainer(sys),
 	trainerctrl(trainer)
 {
@@ -123,20 +122,28 @@ void Overlook::Init() {
 }
 
 void Overlook::Load() {
+	loader = new LoaderWindow(*this);
 	Thread::Start(THISBACK(Loader));
-	loader.Run();
+	loader->Run();
+	loader.Clear();
 }
 
 void Overlook::Loader() {
-	loader.PostProgress(0, 2, "Creating work queue");
-	sys.WhenProgress = callback(&loader, &LoaderWindow::PostSubProgress);
-	sys.WhenSubProgress = callback(&loader, &LoaderWindow::PostSubSubProgress);
+	loader->PostProgress(0, 4, "Creating work queue");
+	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
+	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
 	trainer.RefreshWorkQueue();
 	
-	loader.PostProgress(1, 2, "Processing data");
+	loader->PostProgress(1, 4, "Processing data");
 	trainer.ProcessWorkQueue();
 	
-	loader.PostClose();
+	loader->PostProgress(2, 4, "Finding value buffers");
+	trainer.ResetValueBuffers();
+	
+	loader->PostProgress(3, 4, "Reseting iterators");
+	trainer.ResetIterators();
+	
+	loader->PostClose();
 }
 
 void Overlook::Start() {

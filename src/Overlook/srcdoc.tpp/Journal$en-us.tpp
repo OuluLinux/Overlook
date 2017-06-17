@@ -1359,4 +1359,19 @@ You might even be able to move huge swarms through some obstacle
 courses, like training some flying bee swarm. If that would work 
 in pracise, it would be an ideal many`-core application.&]
 [s0;%- Today, I hope I can get the iterator working for that DQN`-agent 
-thing and start implementation of the agent too.]]
+thing and start implementation of the agent too.&]
+[s3;%- 17.6.2017&]
+[s0;%- It was hard to see the obvious solution somehow. The most 
+safest and fastest design is to use one sequence`-DQN`-agent 
+per sym/tf and give them few steps inside time`-step to allow 
+competition. That can be implemented in Cuda or OpenCL too. Luckily, 
+I didn`'t implement any other design yet. This design is almost 
+proven with the ConvNetC`+`+ WaterWorld demo and with that scientific 
+paper. Only difference is to make agents interact with each other 
+for common reward. It should work as expected as the behaviour 
+is similar to the WaterWorld demo.&]
+[s0;%- I am very happy about this fix. Now the design matches to 
+my previous expectations about combining all symbol instances. 
+I tried many different suggestions, but this is the best so far. 
+Rest of the details will show themself while I implement this.&]
+[s0;%- The Overlook is now rapidly approaching the alpha version.]]

@@ -1,8 +1,9 @@
 #ifndef _Overlook_Common_h_
 #define _Overlook_Common_h_
 
-#include <PlotCtrl/PlotCtrl.h>
 #include <Core/Core.h>
+#include <PlotCtrl/PlotCtrl.h>
+#include <ConvNet/ConvNet.h>
 #include <CtrlUtils/CtrlUtils.h>
 #include <CoreUtils/CoreUtils.h>
 

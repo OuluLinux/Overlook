@@ -4,7 +4,8 @@ namespace Overlook {
 using namespace Upp;
 
 Trainer::Trainer(System& sys) : sys(&sys) {
-	
+	stopped = true;
+	running = false;
 }
 
 void Trainer::Init() {
@@ -40,6 +41,7 @@ void Trainer::Init() {
 		sym_ids.Add(i);
 	}
 	
+	
 	indi = sys->Find<MovingAverageConvergenceDivergence>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
@@ -52,6 +54,129 @@ void Trainer::Init() {
 	indi = sys->Find<WilliamsPercentRange>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
+	
+	
+	seqs.SetCount(4);
+}
+
+void Trainer::Start() {
+	stopped = false;
+	running = true;
+	Thread::Start(THISBACK(Runner));
+}
+
+void Trainer::Stop() {
+	running = false;
+	while (!stopped) Sleep(100);
+}
+
+void Trainer::Runner() {
+	ASSERT(!seqs.IsEmpty());
+	ASSERT(!agents.IsEmpty());
+	
+	CoWork co;
+	int sequence_size = 24;
+	int subtimesteps = 4;
+	
+	// Set sequence-count in agents
+	for(int i = 0; i < agents.GetCount(); i++)
+		agents[i].SetSequenceCount(seqs.GetCount());
+	
+	while (running) {
+		
+		// Train different timeframes
+		for (int tf_iter = 0; tf_iter < tf_ids.GetCount() && running; tf_iter++) {
+			Iterator& iter = iters[tf_iter];
+			int begin = iter.pos.Top();
+			int best_seq = -1;
+			double best_seq_max = -DBL_MAX;
+			
+			for (int s = 0; s < seqs.GetCount(); s++) {
+				
+				// Reset simbroker
+				SimBroker& sb = seqs[s];
+				sb.Reset();
+				Panic("TODO");
+				
+				// Seek begin of the sequence time
+				Seek(tf_iter, begin);
+				
+				// Iterate sequence
+				for(int i = 0; i < agents.GetCount(); i++)
+					agents[i].BeginSequence(s);
+				
+				// Iterate timesteps
+				for(int i = 0; i < sequence_size && running; i++) {
+					
+					// Iterate steps in one timestep
+					for (int substep = 0; substep < subtimesteps; substep++) {
+						
+						// Run agent acting in threads
+						for(int j = 0; j < sym_ids.GetCount(); j++) {
+							for(int k = 0; k <= tf_iter; k++) {
+								int agent_id = j * tf_ids.GetCount() + k;
+								co & THISBACK1(AgentAct, tf_iter, agent_id);
+							}
+						}
+						
+						co.Finish();
+					}
+					
+					// Make final orders for timestep
+					Panic("TODO");
+					sb.Cycle();
+					
+					// Increase heatmap iterator timepos
+					if (!SeekCur(tf_iter, +1))
+						break;
+				}
+				
+				// Compare sequence results
+				double result = sb.GetEquity();
+				if (equity >= best_seq_max) {
+					best_seq_max = equity;
+					best_seq = s;
+				}
+			}
+			
+			// Train best sequence with agents
+			for(int i = 0; i < agents.GetCount(); i++) {
+				SDQNAgent& agent = agents[i];
+				agent.Learn(best_seq, 0.0);
+			}
+		}
+		
+		Sleep(100);
+	}
+	
+	stopped = true;
+}
+
+void Trainer::AgentAct(int tf_iter, int agent_id) {
+	Iterator& iter = iters[tf_iter];
+	SDQNAgent& agent = agents[agent_id];
+	
+	// Fill values
+	// - last change of major currencies and indices (EUR/USD/GBP/JPY, SPX/FDAX/FTSE/NI)
+	// - technical indicators (value & change of value)
+	// - total agent volume
+	// - symbol / total volume fraction
+	// - longer tf volume in same symbol
+	Vector<double> slist;
+	
+	// Major changes
+	Panic("TODO");
+	
+	// Technical indicators
+	const Vector<DoublePair>& values = iter.value[tf][sym];
+	
+	// Total agent volume
+	Panic("TODO");
+	
+	// Longer tf action in same symbol
+	Panic("TODO");
+	
+	agent.Act(slist);
 }
 
 void Trainer::RefreshWorkQueue() {
@@ -59,7 +184,7 @@ void Trainer::RefreshWorkQueue() {
 }
 
 void Trainer::ResetValueBuffers() {
-	// Find value buffer ids
+	// Find value buffer ids 
 	VectorMap<int, int> bufout_ids;
 	int buf_id = 0;
 	for(int i = 0; i < indi_ids.GetCount(); i++) {

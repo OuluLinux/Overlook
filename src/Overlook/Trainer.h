@@ -3,6 +3,7 @@
 
 namespace Overlook {
 using namespace Upp;
+using ConvNet::SDQNAgent;
 
 typedef Tuple2<double, double> DoublePair;
 
@@ -25,12 +26,22 @@ protected:
 	Vector<Ptr<CoreItem> > work_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Index<int> tf_ids, sym_ids, indi_ids;
+	Array<SDQNAgent> agents;
+	Array<SimBroker> seqs;
 	System* sys;
+	bool running, stopped;
+	
+	void Runner();
+	void AgentAct(int tf_iter, int agent_id);
 	
 public:
+	typedef Trainer CLASSNAME;
 	Trainer(System& sys);
+	~Trainer() {Stop();}
 	
 	void Init();
+	void Start();
+	void Stop();
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
 	void ResetIterators();

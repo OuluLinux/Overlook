@@ -143,11 +143,14 @@ void Overlook::Loader() {
 	loader->PostProgress(3, 4, "Reseting iterators");
 	trainer.ResetIterators();
 	
+	sys.WhenProgress.Clear();
+	sys.WhenSubProgress.Clear();
 	loader->PostClose();
 }
 
 void Overlook::Start() {
 	sys.Start();
+	trainer.Start();
 }
 
 void Overlook::Deinit() {

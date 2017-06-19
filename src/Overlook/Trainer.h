@@ -10,7 +10,7 @@ typedef Tuple2<double, double> DoublePair;
 struct Iterator : Moveable<Iterator> {
 	Vector<Vector<Vector<DoublePair> > > value;
 	Vector<Vector<double> > min_value, max_value;
-	Vector<int> pos, tfs, periods, period_in_slower;
+	Vector<int> pos, tfs, periods, period_in_slower, time_values;
 	Time begin;
 	int begin_ts;
 	int value_count;
@@ -23,7 +23,7 @@ protected:
 	friend class TrainerCtrl;
 	friend class TrainerDraw;
 	Vector<Iterator> iters;
-	Vector<Ptr<CoreItem> > work_queue;
+	Vector<Ptr<CoreItem> > work_queue, major_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Index<int> tf_ids, sym_ids, indi_ids;
 	Array<SDQNAgent> agents;
@@ -32,7 +32,7 @@ protected:
 	bool running, stopped;
 	
 	void Runner();
-	void AgentAct(int tf_iter, int agent_id);
+	void AgentAct(int tf_iter, int seq, int sym);
 	
 public:
 	typedef Trainer CLASSNAME;

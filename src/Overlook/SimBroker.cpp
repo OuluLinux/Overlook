@@ -11,7 +11,7 @@ SimBroker::SimBroker() {
 	lotsize = 100000;
 	order_counter = 1000000;
 	lightweight = false;
-	
+	initial_balance = 1000;
 	
 }
 
@@ -49,8 +49,8 @@ void SimBroker::Clear() {
 	orders.Clear();
 	history_orders.Clear();
 	
-	balance = 1000;
-	equity = 1000;
+	balance = initial_balance;
+	equity = initial_balance;
 	leverage = 1000;
 	margin = 0;
 	margin_free = equity;
@@ -61,7 +61,7 @@ void SimBroker::Cycle() {
 	
 	// TODO: reset if time-position is less than previously, or if jumps too far to future
 	
-	
+	Panic("TODO");
 }
 
 void SimBroker::ClearWorkingMemory() {
@@ -83,6 +83,7 @@ bool SimBroker::IsZeroSignal() const {
 int SimBroker::GetSignal(int symbol) const {
 	
 	
+	Panic("TODO");
 	return 0;
 }
 
@@ -113,10 +114,24 @@ Time SimBroker::GetTime() const {
 	Panic("TODO"); return Time();
 }
 
-void SimBroker::SetSignal(int sym, int signal) {
+void SimBroker::PutSignal(int sym, int signal) {
 	
 	
 	
+	Panic("TODO");
+}
+
+int SimBroker::GetTotalSignal() const {
+	
+	Panic("TODO");
+	return 0;
+}
+
+void SimBroker::FlushSignals() {
+	
+	
+	
+	Panic("TODO");
 }
 
 void SimBroker::SetFreeMarginLevel(double d) {

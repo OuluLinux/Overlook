@@ -735,25 +735,27 @@ public:
 };
 
 
+struct OnlineAverage : Moveable<OnlineAverage> {
+	double mean_a, mean_b;
+	int count;
+	OnlineAverage() : mean_a(0), mean_b(0), count(0) {}
+	void Add(double a, double b) {
+		double delta_a = a - mean_a; mean_a += delta_a / count;
+		double delta_b = b - mean_b; mean_b += delta_b / count;
+		count++;
+	}
+};
+
+
 class CorrelationOscillator : public Core {
-	
-public:
-	struct OnlineAverage : Moveable<OnlineAverage> {
-		double mean_a, mean_b;
-		int count;
-		OnlineAverage() : mean_a(0), mean_b(0), count(0) {}
-		void Add(double a, double b) {
-			double delta_a = a - mean_a; mean_a += delta_a / count;
-			double delta_b = b - mean_b; mean_b += delta_b / count;
-			count++;
-		}
-	};
 	
 protected:
 	typedef const Vector<double> ConstVector;
 	
 	int period;
 	int sym_count;
+	ConstBuffer* this_open;
+	Vector<int> major_sym;
 	Vector<ConstBuffer*> opens;
 	Vector<OnlineAverage> averages;
 	
@@ -766,19 +768,34 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		if (sym_count == -1 && base)
-			sym_count = GetSystem().GetTotalSymbolCount();
+		if (sym_count == -1)
+			sym_count = 4 + GetMetaTrader().GetIndexCount();
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(sym_count-1, sym_count-1)
+			% Out(sym_count, sym_count)
 			% Arg("period", period, 2, 16);
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		static Index<int> major_sym;
+		if (major_sym.IsEmpty()) {
+			MetaTrader& mt = GetMetaTrader();
+			
+			// Add most important currencies
+			for(int i = 0, j = mt.GetSymbolCount(); i < 4; i++, j++)
+				major_sym.Add(j);
+			
+			// Add most important indices
+			for(int i = 0; i < mt.GetIndexCount(); i++)
+				major_sym.Add(mt.GetIndexId(i));
+		}
+		
 		// Accept all symbols in the same timeframe
 		if (in_sym == -1)
 			return in_tf == out_tf;
-		else
+		
+		if (major_sym.Find(out_sym) != -1 || out_sym == in_sym)
 			return true;
+		return false;
 	}
 };
 

@@ -564,6 +564,7 @@ class MetaTrader : public Brokerage {
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
 	VectorMap<String, Currency> currencies;
+	Vector<int> indices;
 	Mutex current_price_lock;
 	
 	ArrayMap<int, String> periodstr;
@@ -690,6 +691,8 @@ public:
 	int GetTimeframeIdH1() {return tf_h1_id;}
 	int GetSymbolCount() const {return symbols.GetCount();}
 	int GetCurrencyCount() const {return currencies.GetCount();}
+	int GetIndexId(int i) const {return indices[i];}
+	int GetIndexCount() const {return indices.GetCount();}
 	
 
 	int input, output;

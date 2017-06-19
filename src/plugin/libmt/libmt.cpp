@@ -532,6 +532,7 @@ String GetProxy(const String& currency) {
 
 const Vector<Symbol>& MetaTrader::GetSymbols() {
 	symbols.SetCount(0);
+	indices.SetCount(0);
 	
 	// Get symbols from Broker
 	String s;
@@ -689,8 +690,13 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			currencies.GetAdd(b, 0)++;
 		}
 		
+		if (!sym.IsForex() && sym.name.Left(1) != "#")
+			indices.Add(symbols.GetCount());
+		
 		symbols.Add(sym);
 	}
+	
+	//for(int i = 0; i < indices.GetCount(); i++) {LOG(i << ":\t" << symbols[indices[i]].name);}
 	
 	// Sort postfix stats
 	SortByValue(postfix_counts, StdGreater<int>());

@@ -16,7 +16,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	String currency;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
-	double leverage;
+	double leverage, initial_balance;
 	int selected;
 	int lotsize;
 	int order_counter;
@@ -38,11 +38,14 @@ public:
 	double GetWorkingMemoryChange() const;
 	double GetPreviousCycleChange() const;
 	double GetFreeMarginLevel() const;
+	double GetInitialBalance() const {return initial_balance;}
 	Time GetTime() const;
 	
-	void SetSignal(int sym, int signal);
 	void SetFreeMarginLevel(double d);
 	
+	void PutSignal(int sym, int signal);
+	int GetTotalSignal() const;
+	void FlushSignals();
 	
 	// MT4-like functions
 	virtual double	AccountInfoDouble(int property_id);

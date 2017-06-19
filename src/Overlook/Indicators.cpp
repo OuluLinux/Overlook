@@ -3338,14 +3338,25 @@ void Psychological::Start() {
 CorrelationOscillator::CorrelationOscillator() {
 	period = 10;
 	sym_count = -1;
+	this_open = NULL;
 }
 
 void CorrelationOscillator::Init() {
 	int id = GetSymbol();
 	if (id == -1) throw DataExc();
 	
-	sym_count = GetSystem().GetTotalSymbolCount();
-	if (sym_count < 0) throw DataExc();
+	MetaTrader& mt = GetMetaTrader();
+	
+	ASSERT(sym_count != -1);
+	major_sym.SetCount(sym_count, -1);
+	
+	// Add most important currencies
+	for(int i = 0, j = mt.GetSymbolCount(); i < 4; i++, j++)
+		major_sym[i] = j;
+	
+	// Add most important indices
+	for(int i = 0; i < mt.GetIndexCount(); i++)
+		major_sym[4+i] = mt.GetIndexId(i);
 	
 	SetCoreMaximum(+1.0);
 	SetCoreMinimum(-1.0);
@@ -3359,21 +3370,22 @@ void CorrelationOscillator::Init() {
 	opens.SetCount(sym_count, 0);
 	averages.SetCount(sym_count);
 	for(int i = 0; i < sym_count; i++) {
-		ConstBuffer& open = GetInputBuffer(0, i, GetTimeframe(), 0);
+		ConstBuffer& open = GetInputBuffer(0, major_sym[i], GetTimeframe(), 0);
 		opens[i] = &open;
 	}
+	this_open = &GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0);
 }
 
 void CorrelationOscillator::Process(int id, int output) {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
-	ConstBuffer& a = *opens[GetSymbol()];
-	ConstBuffer& b = *opens[id];
+	ConstBuffer& a = *this_open;
+	ConstBuffer& b = *opens[output];
 	
 	Buffer& buf = GetBuffer(output);
 	
-	OnlineAverage& s = averages[id];
+	OnlineAverage& s = averages[output];
 	
 	if (b.GetCount() == 0) {
 		LOG("CorrelationOscillator error: No data for symbol " << GetSystem().GetSymbol(id));
@@ -3443,10 +3455,8 @@ void CorrelationOscillator::Start() {
 	
 	if (counted > 0) counted = Upp::max(counted - period, 0);
 	
-	for(int i = 0, j = 0; i < sym_count; i++) {
-		if (i == GetSymbol()) continue;
-		Process(i, j);
-		j++;
+	for(int i = 0; i < major_sym.GetCount(); i++) {
+		Process(major_sym[i], i);
 	}
 }
 

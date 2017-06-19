@@ -26,19 +26,26 @@ void Trainer::Init() {
 	
 	
 	MetaTrader& mt = GetMetaTrader();
-	if (mt.AccountCurrency() != "USD")
-		Panic("Only USD is allowed currency");
-	
-	for(int i = 0; i < mt.GetSymbolCount(); i++) {
-		const Symbol& sym = mt.GetSymbol(i);
-		// Skip symbols with proxy
-		if (sym.proxy_id != -1) continue;
-		sym_ids.Add(i);
-	}
-	
-	int basket_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
-	for(int i = basket_begin; i < sys->GetTotalSymbolCount(); i++) {
-		sym_ids.Add(i);
+	String acc_cur = mt.AccountCurrency();
+	if (0) {
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+			const Symbol& sym = mt.GetSymbol(i);
+			// Skip symbols with proxy
+			if (sym.proxy_id != -1) continue;
+			// Skip symbols with different currency than base
+			if (sym.currency_base != acc_cur) continue;
+			sym_ids.Add(i);
+		}
+		
+		int basket_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
+		for(int i = basket_begin; i < sys->GetTotalSymbolCount(); i++) {
+			sym_ids.Add(i);
+		}
+	} else {
+		int basket_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
+		for(int i = basket_begin, j = 0; i < sys->GetTotalSymbolCount() && j < 2; i++, j++) {
+			sym_ids.Add(i);
+		}
 	}
 	
 	
@@ -52,6 +59,9 @@ void Trainer::Init() {
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
 	indi = sys->Find<WilliamsPercentRange>();
+	ASSERT(indi != -1);
+	indi_ids.Add(indi);
+	indi = sys->Find<CorrelationOscillator>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
 	
@@ -95,8 +105,7 @@ void Trainer::Runner() {
 				
 				// Reset simbroker
 				SimBroker& sb = seqs[s];
-				sb.Reset();
-				Panic("TODO");
+				sb.Clear();
 				
 				// Seek begin of the sequence time
 				Seek(tf_iter, begin);
@@ -113,17 +122,13 @@ void Trainer::Runner() {
 						
 						// Run agent acting in threads
 						for(int j = 0; j < sym_ids.GetCount(); j++) {
-							for(int k = 0; k <= tf_iter; k++) {
-								int agent_id = j * tf_ids.GetCount() + k;
-								co & THISBACK1(AgentAct, tf_iter, agent_id);
-							}
+							co & THISBACK3(AgentAct, tf_iter, s, j);
 						}
-						
 						co.Finish();
+						sb.FlushSignals();
 					}
 					
 					// Make final orders for timestep
-					Panic("TODO");
 					sb.Cycle();
 					
 					// Increase heatmap iterator timepos
@@ -131,11 +136,13 @@ void Trainer::Runner() {
 						break;
 				}
 				
-				// Compare sequence results
-				double result = sb.GetEquity();
-				if (equity >= best_seq_max) {
-					best_seq_max = equity;
-					best_seq = s;
+				// Check for failure (minimal accepted success)
+				if (sb.AccountEquity() > sb.GetInitialBalance()) {
+					double equity = sb.AccountEquity();
+					if (equity >= best_seq_max) {
+						best_seq_max = equity;
+						best_seq = s;
+					}
 				}
 			}
 			
@@ -152,31 +159,66 @@ void Trainer::Runner() {
 	stopped = true;
 }
 
-void Trainer::AgentAct(int tf_iter, int agent_id) {
+void Trainer::AgentAct(int tf_iter, int seq, int sym) {
 	Iterator& iter = iters[tf_iter];
-	SDQNAgent& agent = agents[agent_id];
+	SimBroker& sb = seqs[seq];
+	int prev_actions[16];
+	int sym_id = sym_ids[sym];
 	
-	// Fill values
-	// - last change of major currencies and indices (EUR/USD/GBP/JPY, SPX/FDAX/FTSE/NI)
-	// - technical indicators (value & change of value)
-	// - total agent volume
-	// - symbol / total volume fraction
-	// - longer tf volume in same symbol
-	Vector<double> slist;
-	
-	// Major changes
-	Panic("TODO");
-	
-	// Technical indicators
-	const Vector<DoublePair>& values = iter.value[tf][sym];
-	
-	// Total agent volume
-	Panic("TODO");
-	
-	// Longer tf action in same symbol
-	Panic("TODO");
-	
-	agent.Act(slist);
+	for(int tf = 0; tf <= tf_iter; tf++) {
+		int agent_id = sym * tf_ids.GetCount() + tf;
+		SDQNAgent& agent = agents[agent_id];
+		
+		// Fill values
+		// - time
+		// - last change of major currencies and indices (EUR/USD/GBP/JPY, SPX/FDAX/FTSE/NI)
+		// - technical indicators (value & change of value)
+		// - total agent volume
+		// - symbol / total volume fraction
+		// - longer tf volume in same symbol
+		const int sensor_count = 0;
+		Vector<double> slist;
+		slist.SetCount(sensor_count);
+		
+		// Time
+		int j = 0;
+		for(int i = 0; i < iter.time_values.GetCount(); i++)
+			slist[j++] = iter.time_values[i];
+		ASSERT(!slist.IsEmpty());
+		
+		
+		// Technical indicators
+		const Vector<DoublePair>& values = iter.value[tf][sym];
+		for(int i = 0; i < values.GetCount(); i++) {
+			const DoublePair& v = values[i];
+			slist[j++] = v.a;
+			slist[j++] = v.b != 0.0 ? (v.a / v.b - 1.0) : 0.0;
+		}
+		
+		
+		// Total agent volume
+		double sym_sig = sb.GetSignal(sym_id);
+		double total_sig = sb.GetTotalSignal();
+		double sym_frac_sig = total_sig != 0.0 ? sym_sig / total_sig : 0.0;
+		slist[j++] = sym_sig;
+		slist[j++] = sym_frac_sig;
+		slist[j++] = total_sig;
+		
+		
+		// Longer tf action in same symbol
+		for(int i = 0; i < tf_iter; i++)
+			slist[j++] = prev_actions[i];
+		
+		
+		// Act according to sensor inputs
+		ASSERT(j == sensor_count);
+		int action = agent.Act(slist);
+		prev_actions[tf] = action;
+		if (action == 1)
+			sb.PutSignal(sym_id, +1);
+		else if (action == 2)
+			sb.PutSignal(sym_id, -1);
+	}
 }
 
 void Trainer::RefreshWorkQueue() {
@@ -184,7 +226,7 @@ void Trainer::RefreshWorkQueue() {
 }
 
 void Trainer::ResetValueBuffers() {
-	// Find value buffer ids 
+	// Find value buffer ids
 	VectorMap<int, int> bufout_ids;
 	int buf_id = 0;
 	for(int i = 0; i < indi_ids.GetCount(); i++) {
@@ -316,6 +358,22 @@ bool Trainer::Seek(int tf_iter, int shift) {
 	}
 	else if (shift < 0)
 		return false;
+	
+	
+	// Get some time values in binary format (starts from 0)
+	Time t = sys->GetTimeTf(main_tf, shift);
+	int month = t.month-1;
+	int day = t.day-1;
+	int hour = t.hour;
+	int minute = t.minute;
+	int dow = DayOfWeek(t);
+	iter.time_values.SetCount(5);
+	iter.time_values[0] = month;
+	iter.time_values[1] = day;
+	iter.time_values[2] = dow;
+	iter.time_values[3] = hour;
+	iter.time_values[4] = minute / 5;
+	
 	
 	// Find that time-position in longer timeframes
 	iter.pos[tf_iter] = shift;

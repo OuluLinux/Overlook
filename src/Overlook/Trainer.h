@@ -32,7 +32,7 @@ protected:
 	bool running, stopped;
 	
 	void Runner();
-	void AgentAct(int tf_iter, int seq, int sym);
+	void Learn(int agent_id, int best_seq);
 	
 public:
 	typedef Trainer CLASSNAME;
@@ -46,6 +46,7 @@ public:
 	void ProcessWorkQueue();
 	void ResetIterators();
 	void ResetValueBuffers();
+	void InitAgents();
 	
 	bool Seek(int tf_iter, int shift);
 	bool SeekCur(int tf_iter, int shift);

@@ -11,6 +11,7 @@ Trainer::Trainer(System& sys) : sys(&sys) {
 void Trainer::Init() {
 	int tf, indi;
 	
+	
 	tf = sys->FindPeriod(10080);
 	ASSERT(tf != -1);
 	tf_ids.Add(tf);
@@ -27,18 +28,15 @@ void Trainer::Init() {
 	
 	MetaTrader& mt = GetMetaTrader();
 	String acc_cur = mt.AccountCurrency();
+	
 	if (0) {
-		for(int i = 0; i < mt.GetSymbolCount(); i++) {
-			const Symbol& sym = mt.GetSymbol(i);
-			// Skip symbols with proxy
-			if (sym.proxy_id != -1) continue;
-			// Skip symbols with different currency than base
-			if (sym.currency_base != acc_cur) continue;
+		int basket_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
+		
+		for(int i = mt.GetSymbolCount(), j = 0; i < basket_begin && j < 4; i++, j++) {
 			sym_ids.Add(i);
 		}
 		
-		int basket_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
-		for(int i = basket_begin; i < sys->GetTotalSymbolCount(); i++) {
+		for(int i = basket_begin, j = 0; i < sys->GetTotalSymbolCount() && j < 4; i++, j++) {
 			sym_ids.Add(i);
 		}
 	} else {
@@ -65,8 +63,34 @@ void Trainer::Init() {
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
 	
-	
+}
+
+void Trainer::InitAgents() {
+	int buf_count = value_buffers[0][0].GetCount();
+	ASSERT(buf_count);
+	String param_str =	"{\n"
+						"\t\"update\":\"qlearn\",\n"
+						"\t\"gamma\":0.9,\n"
+						"\t\"epsilon\":0.2,\n"
+						"\t\"alpha\":0.005,\n"
+						"\t\"experience_add_every\":5,\n"
+						"\t\"experience_size\":10000,\n"
+						"\t\"learning_steps_per_iteration\":5,\n"
+						"\t\"tderror_clamp\":1.0,\n"
+						"\t\"num_hidden_units\":100,\n"
+						"}\n";
 	seqs.SetCount(4);
+	agents.SetCount(tf_ids.GetCount() * indi_ids.GetCount());
+	const int sensor_count = 1 + 1 + 5 + buf_count * 2 + (sym_ids.GetCount()-1) + 2 + tf_ids.GetCount();
+	for(int i = 0; i < tf_ids.GetCount(); i++) {
+		for(int j = 0; j < indi_ids.GetCount(); j++) {
+			int agent_id = j * tf_ids.GetCount() + i;
+			SDQNAgent& agent = agents[agent_id];
+			agent.Init(1, sensor_count, 3);
+			agent.LoadInitJSON(param_str);
+			agent.Reset();
+		}
+	}
 }
 
 void Trainer::Start() {
@@ -81,16 +105,30 @@ void Trainer::Stop() {
 }
 
 void Trainer::Runner() {
+	
+	// Sanity checks
 	ASSERT(!seqs.IsEmpty());
 	ASSERT(!agents.IsEmpty());
 	
+	
+	// Construct variables
+	Vector<double> slist;
+	Vector<Vector<int> > prev_actions;
+	Vector<int> rand_signals;
 	CoWork co;
 	int sequence_size = 24;
 	int subtimesteps = 4;
+	int buf_count = value_buffers[0][0].GetCount();
+	ASSERT(buf_count);
+	rand_signals.SetCount(sym_ids.GetCount());
+	prev_actions.SetCount(sym_ids.GetCount());
+	for(int i = 0; i < prev_actions.GetCount(); i++) prev_actions[i].SetCount(tf_ids.GetCount(), 0);
+	
 	
 	// Set sequence-count in agents
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].SetSequenceCount(seqs.GetCount());
+	
 	
 	while (running) {
 		
@@ -100,19 +138,28 @@ void Trainer::Runner() {
 			int begin = iter.pos.Top();
 			int best_seq = -1;
 			double best_seq_max = -DBL_MAX;
+			bool reset_pos = false;
 			
-			for (int s = 0; s < seqs.GetCount(); s++) {
+			// Randomize initial signals
+			for(int i = 0; i < rand_signals.GetCount(); i++)
+				rand_signals[i] = -5 + Random(11);
+			
+			for (int seq = 0; seq < seqs.GetCount() && running; seq++) {
 				
 				// Reset simbroker
-				SimBroker& sb = seqs[s];
+				SimBroker& sb = seqs[seq];
 				sb.Clear();
+				
+				// Set initial random signal to every sequence to avoid overfitting 0-signal beginning
+				for(int i = 0; i < rand_signals.GetCount(); i++)
+					sb.SetSignal(sym_ids[i], rand_signals[i]);
 				
 				// Seek begin of the sequence time
 				Seek(tf_iter, begin);
 				
 				// Iterate sequence
 				for(int i = 0; i < agents.GetCount(); i++)
-					agents[i].BeginSequence(s);
+					agents[i].BeginSequence(seq);
 				
 				// Iterate timesteps
 				for(int i = 0; i < sequence_size && running; i++) {
@@ -120,37 +167,108 @@ void Trainer::Runner() {
 					// Iterate steps in one timestep
 					for (int substep = 0; substep < subtimesteps; substep++) {
 						
-						// Run agent acting in threads
-						for(int j = 0; j < sym_ids.GetCount(); j++) {
-							co & THISBACK3(AgentAct, tf_iter, s, j);
+						for(int tf = 0; tf <= tf_iter; tf++) {
+							for(int sym = 0; sym < sym_ids.GetCount(); sym++) {
+								int sym_id = sym_ids[sym];
+								int agent_id = sym * tf_ids.GetCount() + tf;
+								SDQNAgent& agent = agents[agent_id];
+								
+								const int sensor_count = 1 + 1 + 5 + buf_count * 2 + (sym_ids.GetCount()-1) + 2 + tf_ids.GetCount();
+								slist.SetCount(sensor_count);
+								int j = 0;
+								
+								
+								// Timeframe depth
+								slist[j++] = tf_iter;
+								
+								
+								// Time
+								slist[j++] = substep;
+								for(int i = 0; i < iter.time_values.GetCount(); i++)
+									slist[j++] = iter.time_values[i];
+								ASSERT(!slist.IsEmpty());
+								
+								
+								// Technical indicators
+								const Vector<DoublePair>& values = iter.value[tf][sym];
+								for(int i = 0; i < values.GetCount(); i++) {
+									const DoublePair& v = values[i];
+									slist[j++] = v.a;
+									slist[j++] = v.b != 0.0 ? (v.a / v.b - 1.0) : 0.0;
+								}
+								
+								
+								// Symbol signal
+								int total_sig = 0;
+								int sym_sig = 0;
+								for(int s = 0; s < sym_ids.GetCount(); s++) {
+									int sig = sb.GetSignal(s);
+									if (s == sym)
+										sym_sig = sig;
+									else {
+										slist[j++] = sig;
+										total_sig += abs(sig);
+									}
+								}
+								
+								
+								// Total agent volume
+								double sym_frac_sig = total_sig != 0.0 ? (double)abs(sym_sig) / (double)total_sig : 0.0;
+								slist[j++] = sym_frac_sig;
+								slist[j++] = total_sig;
+								
+								
+								// Longer tf action in same symbol
+								for(int i = 0; i < tf_iter; i++)
+									slist[j++] = prev_actions[sym][i];
+								for(int i = tf_iter; i < tf_ids.GetCount(); i++)
+									slist[j++] = 0.0;
+								
+								
+								// Act according to sensor inputs
+								ASSERT(j == sensor_count);
+								int action = agent.Act(slist);
+								prev_actions[sym][tf] = action;
+								if (action == 1)
+									sb.PutSignal(sym_id, +1);
+								else if (action == 2)
+									sb.PutSignal(sym_id, -1);
+							}
 						}
-						co.Finish();
-						sb.FlushSignals();
 					}
 					
 					// Make final orders for timestep
 					sb.Cycle();
 					
 					// Increase heatmap iterator timepos
-					if (!SeekCur(tf_iter, +1))
+					if (!SeekCur(tf_iter, +1)) {
+						reset_pos = true;
 						break;
+					}
 				}
 				
-				// Check for failure (minimal accepted success)
+				// Compare results
+				LOG(Format("Compare: seq=%d, equity=%f", seq, sb.AccountEquity()));
 				if (sb.AccountEquity() > sb.GetInitialBalance()) {
 					double equity = sb.AccountEquity();
 					if (equity >= best_seq_max) {
 						best_seq_max = equity;
-						best_seq = s;
+						best_seq = seq;
 					}
 				}
 			}
 			
 			// Train best sequence with agents
-			for(int i = 0; i < agents.GetCount(); i++) {
-				SDQNAgent& agent = agents[i];
-				agent.Learn(best_seq, 0.0);
+			if (best_seq != -1 && running) {
+				LOG(Format("Best sequence: seq=%d, equity=%f", best_seq, best_seq_max));
+				for(int i = 0; i < agents.GetCount(); i++)
+					co & THISBACK2(Learn, i, best_seq);
+				co.Finish();
 			}
+			
+			// Check for end of data
+			if (reset_pos)
+				Seek(tf_iter, 0);
 		}
 		
 		Sleep(100);
@@ -159,66 +277,9 @@ void Trainer::Runner() {
 	stopped = true;
 }
 
-void Trainer::AgentAct(int tf_iter, int seq, int sym) {
-	Iterator& iter = iters[tf_iter];
-	SimBroker& sb = seqs[seq];
-	int prev_actions[16];
-	int sym_id = sym_ids[sym];
-	
-	for(int tf = 0; tf <= tf_iter; tf++) {
-		int agent_id = sym * tf_ids.GetCount() + tf;
-		SDQNAgent& agent = agents[agent_id];
-		
-		// Fill values
-		// - time
-		// - last change of major currencies and indices (EUR/USD/GBP/JPY, SPX/FDAX/FTSE/NI)
-		// - technical indicators (value & change of value)
-		// - total agent volume
-		// - symbol / total volume fraction
-		// - longer tf volume in same symbol
-		const int sensor_count = 0;
-		Vector<double> slist;
-		slist.SetCount(sensor_count);
-		
-		// Time
-		int j = 0;
-		for(int i = 0; i < iter.time_values.GetCount(); i++)
-			slist[j++] = iter.time_values[i];
-		ASSERT(!slist.IsEmpty());
-		
-		
-		// Technical indicators
-		const Vector<DoublePair>& values = iter.value[tf][sym];
-		for(int i = 0; i < values.GetCount(); i++) {
-			const DoublePair& v = values[i];
-			slist[j++] = v.a;
-			slist[j++] = v.b != 0.0 ? (v.a / v.b - 1.0) : 0.0;
-		}
-		
-		
-		// Total agent volume
-		double sym_sig = sb.GetSignal(sym_id);
-		double total_sig = sb.GetTotalSignal();
-		double sym_frac_sig = total_sig != 0.0 ? sym_sig / total_sig : 0.0;
-		slist[j++] = sym_sig;
-		slist[j++] = sym_frac_sig;
-		slist[j++] = total_sig;
-		
-		
-		// Longer tf action in same symbol
-		for(int i = 0; i < tf_iter; i++)
-			slist[j++] = prev_actions[i];
-		
-		
-		// Act according to sensor inputs
-		ASSERT(j == sensor_count);
-		int action = agent.Act(slist);
-		prev_actions[tf] = action;
-		if (action == 1)
-			sb.PutSignal(sym_id, +1);
-		else if (action == 2)
-			sb.PutSignal(sym_id, -1);
-	}
+void Trainer::Learn(int agent_id, int best_seq) {
+	SDQNAgent& agent = agents[agent_id];
+	agent.Learn(best_seq, 0.0);
 }
 
 void Trainer::RefreshWorkQueue() {
@@ -372,7 +433,7 @@ bool Trainer::Seek(int tf_iter, int shift) {
 	iter.time_values[1] = day;
 	iter.time_values[2] = dow;
 	iter.time_values[3] = hour;
-	iter.time_values[4] = minute / 5;
+	iter.time_values[4] = minute;
 	
 	
 	// Find that time-position in longer timeframes

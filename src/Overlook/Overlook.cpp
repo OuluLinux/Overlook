@@ -142,6 +142,7 @@ void Overlook::Loader() {
 	
 	loader->PostProgress(3, 4, "Reseting iterators");
 	trainer.ResetIterators();
+	trainer.InitAgents();
 	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();
@@ -155,6 +156,7 @@ void Overlook::Start() {
 
 void Overlook::Deinit() {
 	sys.Stop();
+	trainer.Stop();
 }
 
 void Overlook::SetView() {

@@ -5,19 +5,23 @@ topic "Journal";
 [=phN111;*R $$3,3#0680C0FF67EEE4E167183D1E74BF079F:Chapter 3]
 [{_}%FI-FI 
 [s1; Journal&]
-[s0; This journal exist to encourage other programmers to write the 
-progress in this way. It is a voice of a casual narrator about 
-the progress of the Overlook. Please note that my native language 
-is not English, but Finnish. This journal is intended for the 
-audience who see some entertainment value in this. This shouldn`'t 
-be considered to be final statement about anything. This is not 
-intended to be interpreted in any specific way and all interpretations 
-are welcome to a civil discussion. The story and names are being 
-limited to include the copyright holder only, unless the person 
-has given a permission to use his story and/or name publicly. 
-However, the story may include a one`-sided and personally experienced 
-story from social events, which may or may not be equal to the 
-objective truth.&]
+[s0; I write this journal to tell how original this application is 
+and to communicate the countless hours and the sweat what I did 
+see for this. The public release is merely a by`-product. The 
+progress of this project is driven only by my curiosity. I also 
+want to encourage other programmers to write the progress in 
+this way. This is not something I would do in all projects.&]
+[s0; I write as a casual narrator about the progress of the Overlook. 
+Please note that my native language is not English, but Finnish. 
+This journal is intended for the audience who see some entertainment 
+value in this. This shouldn`'t be considered to be final statement 
+about anything. This is not intended to be interpreted in any 
+specific way and all interpretations are welcome to a civil discussion. 
+The story and names are being limited to include the copyright 
+holder only, unless the person has given a permission to use 
+his story and/or name publicly. However, the story may include 
+a one`-sided and personally experienced story from social events, 
+which may or may not be equal to the objective truth.&]
 [s0; This document is an artistic expression as whole without target 
 audience. This is only an opinion of the author and this is not 
 checked for wrong facts.&]
@@ -1374,4 +1378,27 @@ is similar to the WaterWorld demo.&]
 my previous expectations about combining all symbol instances. 
 I tried many different suggestions, but this is the best so far. 
 Rest of the details will show themself while I implement this.&]
-[s0;%- The Overlook is now rapidly approaching the alpha version.]]
+[s0;%- The Overlook is now rapidly approaching the alpha version.&]
+[s3;%- 19.6.2017&]
+[s0;%- The main trainer loop runs, but without SimBroker implementation. 
+I`'m worried that I forgot some sensors and I`'m worried that 
+the agent has too many sensors now. Other parts of the loop seems 
+to be okay; I can`'t find bugs with random checks.&]
+[s0;%- Upcoming: SimBroker implementation and GUI for training, which 
+allows inspection and debugging of the training. I`'ve been busy 
+and super lazy in past days, but I hope I get better. The good 
+objective is to get real`-time trading working before weekend. 
+That would also mean that the first alpha version would be ready 
+at the midsummer party and I would have two good reasons to take 
+beer. The long hangover wouldn`'t be a problem, because following 
+development would be on`-demand after test results. Maybe I`'ll 
+work harder when I think that as a reward...&]
+[s3;%- 20.6.2017&]
+[s0;%- This journal tends to go off`-topic too easily... but I think 
+this free`-speech smell in this kind of project makes a good 
+statement. I only draw a line on political commentary.&]
+[s0;%- I`'ve been writing the SimBroker`::Cycle() function and it 
+is really difficult. It`'s too overwhelming to write it at once. 
+I have written all parts of that previously, but this time all 
+parts are in one tight function. I have only this task for today 
+and it might still be too much.]]

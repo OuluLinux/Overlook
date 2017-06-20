@@ -24,6 +24,8 @@ void SimBroker::Init(MetaTrader& mt) {
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
 	
+	signals.SetCount(mt.GetSymbolCount() + mt.GetCurrencyCount() + 8, 0);
+	
 	Clear();
 	
 	/*System& bs = GetSystem();
@@ -49,6 +51,8 @@ void SimBroker::Clear() {
 	orders.Clear();
 	history_orders.Clear();
 	
+	for(int i = 0; i < signals.GetCount(); i++) signals[i] = 0;
+	
 	balance = initial_balance;
 	equity = initial_balance;
 	leverage = 1000;
@@ -58,15 +62,118 @@ void SimBroker::Clear() {
 
 void SimBroker::Cycle() {
 	
-	
 	// TODO: reset if time-position is less than previously, or if jumps too far to future
-	
 	Panic("TODO");
-}
-
-void SimBroker::ClearWorkingMemory() {
 	
 	
+	// Create list of orders what should be opened according to signals
+	VectorMap<int, int> queue;
+	int total_sig = 0;
+	for(int i = 0; i < signals.GetCount(); i++) {
+		int sig = signals[i];
+		if (!sig) continue;
+		
+		// Extend to symbols in correlation-basket
+		if (i > basket_begin) {
+			const Vector<int>& basket_syms;
+			
+			for(int j = 0; j < basket_syms.GetCount(); j++) {
+				int& qsig = queue.GetAdd(basket_syms[j], 0);
+				qsig += sig;
+				total_sig += abs(sig);
+			}
+		}
+		// Extend to symbols in currency-basket
+		else if (i > cur_begin) {
+			const Vector<int>& cur_syms;
+			
+			for(int j = 0; j < cur_syms.GetCount(); j++) {
+				int& qsig = queue.GetAdd(cur_syms[j], 0);
+				Panic("TODO currency a/b multiplier");
+				qsig += sig;
+				total_sig += abs(sig);
+			}
+		}
+		// Single symbols
+		else {
+			int& qsig = queue.GetAdd(i, 0);
+			qsig += sig;
+			total_sig += abs(sig);
+		}
+	}
+	
+	// Find minimum relative volume
+	double min_vol = DBL_MAX;
+	VectorMap<int, double> sym_sig_lots;
+	for(int i = 0; i < queue.GetCount(); i++) {
+		int& qsig = queue[i];
+		if (!qsig) continue;
+		
+		// Get relative volume
+		double vol = (double)abs(qsig) / (double)total_sig;
+		if (vol < min_vol) min_vol = vol;
+		
+		// Assign long/short direction to the volume
+		if (qsig < 0) vol *= -1.0;
+		sym_sig_lots.Add(queue.GetKey(i), vol);
+	}
+	
+	// Normalize volume to minimum lots
+	for(int i = 0; i < sym_sig_lots.GetCount(); i++) {
+		double& qvol = sym_sig_lots[i];
+		
+		// Round volume to lots
+		bool neg = qvol < 0.0;
+		int v = qvol / min_vol + (!neg ? +0.5 : -0.5);
+		ASSERT(v != 0);
+		qvol = v * 0.01;
+	}
+	
+	// Do some magic management for the volume
+	Panic("TODO");
+	
+	
+	// Find orders which exceeds the common and intersecting volume area
+	//  - all to opposite direction
+	//  - exceeding amount to same direction
+	typedef Tuple2<int, double> Reduce;
+	Vector<Reduce> reduce;
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		
+		int j = sym_sig_lots.Find(o.sym);
+		
+		// If order's symbol is not in the open list, close the order.
+		if (j == -1) {
+			reduce.Add(Reduce(i, o.volume));
+			continue;
+		}
+		
+		double& lots = sym_sig_lots[j];
+		bool dst_short = lots < 0.0;
+		bool src_short = o.type == 1;
+		ASSERT_(o.type < 2, "Only simple long/short is allowed currently");
+		
+		// If order is to opposite direction, close the order
+		if (dst_short != src_short) {
+			reduce.Add(Reduce(i, o.volume));
+			continue;
+		}
+		
+		// If order exceeds the lots to same direction, reduce the order lots
+		Panic("TODO multiple orders with same sym/type");
+		Panic("TODO multiple orders with opposing sym/type");
+		double abs_lots = fabs(lots);
+		int exceeding = (o.lots - abs_lots + 0.005) / 0.01;
+		if (exceeding > 0) {
+			reduce.Add(Reduce(i, exceeding * 0.01));
+			continue;
+		}
+	}
+	
+	
+	// Commit orders which wasn't in the common area
+	Panic("TODO");
 	
 }
 
@@ -74,33 +181,12 @@ int SimBroker::FindSymbol(const String& symbol) const {
 	return symbol_idx.Find(symbol);
 }
 
-bool SimBroker::IsZeroSignal() const {
-	
-	
-	return false;
-}
-
 int SimBroker::GetSignal(int symbol) const {
-	
-	
-	Panic("TODO");
-	return 0;
+	return signals[symbol];
 }
 
 int SimBroker::GetOpenOrderCount() const {
 	return orders.GetCount();
-}
-
-double SimBroker::GetWorkingMemoryChange() const {
-	
-	
-	return 0;
-}
-
-double SimBroker::GetPreviousCycleChange() const {
-	
-	
-	return 0;
 }
 
 double SimBroker::GetFreeMarginLevel() const {
@@ -115,23 +201,7 @@ Time SimBroker::GetTime() const {
 }
 
 void SimBroker::PutSignal(int sym, int signal) {
-	
-	
-	
-	Panic("TODO");
-}
-
-int SimBroker::GetTotalSignal() const {
-	
-	Panic("TODO");
-	return 0;
-}
-
-void SimBroker::FlushSignals() {
-	
-	
-	
-	Panic("TODO");
+	signals[sym] += signal;
 }
 
 void SimBroker::SetFreeMarginLevel(double d) {

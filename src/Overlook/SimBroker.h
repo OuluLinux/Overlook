@@ -11,8 +11,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	Index<String> symbol_idx;
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
-	//Core* src, change;
-	
+	Vector<int> signals;
 	String currency;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
@@ -29,14 +28,10 @@ public:
 	void InitLightweight();
 	void Clear();
 	void Cycle();
-	void ClearWorkingMemory();
 	
 	int FindSymbol(const String& symbol) const;
-	bool IsZeroSignal() const;
 	int GetSignal(int symbol) const;
 	int GetOpenOrderCount() const;
-	double GetWorkingMemoryChange() const;
-	double GetPreviousCycleChange() const;
 	double GetFreeMarginLevel() const;
 	double GetInitialBalance() const {return initial_balance;}
 	Time GetTime() const;
@@ -44,8 +39,7 @@ public:
 	void SetFreeMarginLevel(double d);
 	
 	void PutSignal(int sym, int signal);
-	int GetTotalSignal() const;
-	void FlushSignals();
+	void SetSignal(int sym, int signal) {signals[sym] = signal;}
 	
 	// MT4-like functions
 	virtual double	AccountInfoDouble(int property_id);

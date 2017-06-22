@@ -26,9 +26,10 @@ GUI_APP_MAIN {
 	
 	::Overlook::Overlook ol;
 	ol.Init();
-	ol.Load();
-	if (autostart)
+	if (autostart) {
+		ol.Load();
 		ol.Start();
+	}
 	ol.Run();
 	ol.Deinit();
 	

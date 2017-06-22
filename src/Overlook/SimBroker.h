@@ -6,25 +6,30 @@
 namespace Overlook {
 
 class SimBroker : public Brokerage, Moveable<SimBroker> {
-	Vector<Order> orders, history_orders;
-	Vector<Symbol> symbols;
-	Index<String> symbol_idx;
-	Vector<Price> askbid;
-	Vector<PriceTf> pricetf;
-	Vector<int> signals;
+	Vector<Order>	history_orders;
+	Vector<Order>	orders;
+	Vector<Symbol>	symbols;
+	Vector<Price>	askbid;
+	Vector<PriceTf>	pricetf;
+	Vector<int>		signals;
+	Index<String>	symbol_idx;
+	System* sys;
 	String currency;
+	Time prev_cycle_time;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
 	double leverage, initial_balance;
 	int selected;
 	int lotsize;
 	int order_counter;
+	int basket_begin, cur_begin;
 	bool lightweight;
+	bool is_failed;
 	
 public:
 	SimBroker();
 	
-	void Init(MetaTrader& mt);
+	void Init(MetaTrader& mt, System& sys);
 	void InitLightweight();
 	void Clear();
 	void Cycle();
@@ -35,9 +40,10 @@ public:
 	double GetFreeMarginLevel() const;
 	double GetInitialBalance() const {return initial_balance;}
 	Time GetTime() const;
+	bool IsFailed() const {return is_failed;}
 	
 	void SetFreeMarginLevel(double d);
-	
+	void SetFailed(bool b=true) {is_failed = b;}
 	void PutSignal(int sym, int signal);
 	void SetSignal(int sym, int signal) {signals[sym] = signal;}
 	
@@ -107,7 +113,8 @@ public:
 	virtual const Vector<Symbol>&	GetSymbols();
 	virtual const Vector<Price>&	GetAskBid();
 	virtual const Vector<PriceTf>&	GetTickData();
-	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
+	virtual const Vector<Order>&	GetOpenOrders() {return orders;}
+	virtual const Vector<Order>&	GetHistoryOrders() {return history_orders;}
 	
 };
 

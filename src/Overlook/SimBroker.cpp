@@ -12,10 +12,14 @@ SimBroker::SimBroker() {
 	order_counter = 1000000;
 	lightweight = false;
 	initial_balance = 1000;
-	
+	basket_begin = -1;
+	cur_begin = -1;
+	sys = NULL;
+	is_failed = false;
 }
 
-void SimBroker::Init(MetaTrader& mt) {
+void SimBroker::Init(MetaTrader& mt, System& sys) {
+	this->sys = &sys;
 	lightweight = false;
 	
 	symbols <<= mt.GetSymbols();
@@ -24,7 +28,9 @@ void SimBroker::Init(MetaTrader& mt) {
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
 	
-	signals.SetCount(mt.GetSymbolCount() + mt.GetCurrencyCount() + 8, 0);
+	cur_begin = mt.GetSymbolCount();
+	basket_begin = cur_begin + mt.GetCurrencyCount();
+	signals.SetCount(basket_begin + 8, 0);
 	
 	Clear();
 	
@@ -58,12 +64,19 @@ void SimBroker::Clear() {
 	leverage = 1000;
 	margin = 0;
 	margin_free = equity;
+	is_failed = false;
+	
+	prev_cycle_time = Time(1970,1,1);
 }
 
 void SimBroker::Cycle() {
+	ASSERT(basket_begin != -1 && cur_begin != -1);
+	System& sys = *this->sys;
 	
-	// TODO: reset if time-position is less than previously, or if jumps too far to future
-	Panic("TODO");
+	// Assert that time is going forward
+	Time now = GetTime();
+	ASSERT(now > prev_cycle_time);
+	prev_cycle_time = now;
 	
 	
 	// Create list of orders what should be opened according to signals
@@ -75,8 +88,8 @@ void SimBroker::Cycle() {
 		
 		// Extend to symbols in correlation-basket
 		if (i > basket_begin) {
-			const Vector<int>& basket_syms;
-			
+			const Vector<int>& basket_syms = sys.basket_symbols[i - basket_begin];
+			ASSERT(!basket_syms.IsEmpty());
 			for(int j = 0; j < basket_syms.GetCount(); j++) {
 				int& qsig = queue.GetAdd(basket_syms[j], 0);
 				qsig += sig;
@@ -85,12 +98,14 @@ void SimBroker::Cycle() {
 		}
 		// Extend to symbols in currency-basket
 		else if (i > cur_begin) {
-			const Vector<int>& cur_syms;
-			
+			const Vector<int>& cur_syms = sys.currency_symbols[i - cur_begin];
+			ASSERT(!cur_syms.IsEmpty());
 			for(int j = 0; j < cur_syms.GetCount(); j++) {
 				int& qsig = queue.GetAdd(cur_syms[j], 0);
-				Panic("TODO currency a/b multiplier");
-				qsig += sig;
+				int cur_sym_id = cur_syms[j];
+				const Symbol& sym = symbols[cur_sym_id];
+				ASSERT_(sym.base_mul != 0 && (sym.base_mul == -1 || sym.base_mul == +1), "No symbols without base currency allowed currently");
+				qsig += sig * sym.base_mul;
 				total_sig += abs(sig);
 			}
 		}
@@ -119,18 +134,38 @@ void SimBroker::Cycle() {
 	}
 	
 	// Normalize volume to minimum lots
+	double total_lots = 0;
 	for(int i = 0; i < sym_sig_lots.GetCount(); i++) {
 		double& qvol = sym_sig_lots[i];
 		
-		// Round volume to lots
+		// Divide by minimum lots and round volume to lots
 		bool neg = qvol < 0.0;
 		int v = qvol / min_vol + (!neg ? +0.5 : -0.5);
 		ASSERT(v != 0);
 		qvol = v * 0.01;
+		total_lots += qvol;
 	}
 	
-	// Do some magic management for the volume
+	
+	// Do some magic management for the minimum volume
+	double max_total_lots;
+	// TODO: use the "RefreshData": solve from "row.base_value" == equity * free_margin_level
 	Panic("TODO");
+	if (total_lots > max_total_lots) {
+		// Oh-oh, we have a failed signal
+		SetFailed();
+		return;
+	}
+	double lot_multiplier = max_total_lots / total_lots;
+	for(int i = 0; i < sym_sig_lots.GetCount(); i++) {
+		double& qvol = sym_sig_lots[i];
+		
+		// Multiply and round volume to lots
+		bool neg = qvol < 0.0;
+		int v = qvol * lot_multiplier + (!neg ? +0.5 : -0.5);
+		ASSERT(v != 0);
+		qvol = v * 0.01;
+	}
 	
 	
 	// Find orders which exceeds the common and intersecting volume area
@@ -164,7 +199,7 @@ void SimBroker::Cycle() {
 		Panic("TODO multiple orders with same sym/type");
 		Panic("TODO multiple orders with opposing sym/type");
 		double abs_lots = fabs(lots);
-		int exceeding = (o.lots - abs_lots + 0.005) / 0.01;
+		int exceeding = (o.volume - abs_lots + 0.005) / 0.01;
 		if (exceeding > 0) {
 			reduce.Add(Reduce(i, exceeding * 0.01));
 			continue;
@@ -777,9 +812,6 @@ const Vector<PriceTf>&	SimBroker::GetTickData() {
 	Panic("TODO"); return Vector<PriceTf>();
 }
 
-void SimBroker::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history) {
-	
-}
 
 
 #if 0

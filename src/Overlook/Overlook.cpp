@@ -63,7 +63,12 @@ Overlook::Overlook() :
 	tabs.Add(visins);
 	tabs.Add(visins, "Traditional");
 	tabs.Add(trainerctrl);
-	tabs.Add(trainerctrl, "Trainer");
+	tabs.Add(trainerctrl, "Training");
+	tabs.Add(testctrl);
+	tabs.Add(testctrl, "Testing");
+	tabs.Add(rt_ctrl);
+	tabs.Add(rt_ctrl, "Real-Time");
+	
 	
 	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
 	droplist_split << ctrllist << symlist << tflist << config;
@@ -75,6 +80,8 @@ Overlook::Overlook() :
 	tflist <<= THISBACK(SetView);
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
+	
+	rt_ctrl.SetBroker(GetMetaTrader());
 	
 	PostCallback(THISBACK(Refresher));
 }
@@ -97,7 +104,10 @@ void Overlook::Refresher() {
 		trainerctrl.RefreshData();
 	}
 	else if (tab == 2) {
-		
+		RefreshTesting();
+	}
+	else if (tab == 3) {
+		rt_ctrl.RefreshData();
 	}
 	tc.Set(1000, THISBACK(PostRefresher));
 }
@@ -105,6 +115,8 @@ void Overlook::Refresher() {
 void Overlook::Init() {
 	sys.Init();
 	trainer.Init();
+	rt_ctrl.Init();
+	
 	
 	// Init gui
 	for(int i = 0; i < sys.GetPeriodCount(); i++)
@@ -253,7 +265,9 @@ void Overlook::Configure() {
 	}
 }
 
-void Overlook::RefreshPipelineView() {
+void Overlook::RefreshTesting() {
+	
+	
 	
 }
 

@@ -86,7 +86,7 @@ void Trainer::InitAgents() {
 		for(int j = 0; j < indi_ids.GetCount(); j++) {
 			int agent_id = j * tf_ids.GetCount() + i;
 			SDQNAgent& agent = agents[agent_id];
-			agent.Init(1, sensor_count, 3);
+			agent.Init(1, sensor_count, ACTIONCOUNT);
 			agent.LoadInitJSON(param_str);
 			agent.Reset();
 		}
@@ -229,10 +229,18 @@ void Trainer::Runner() {
 								ASSERT(j == sensor_count);
 								int action = agent.Act(slist);
 								prev_actions[sym][tf] = action;
-								if (action == 1)
+								if (action == ACT_NOACT)
+									; // do nothing
+								else if (action == ACT_INCSIG)
 									sb.PutSignal(sym_id, +1);
-								else if (action == 2)
+								else if (action == ACT_DECSIG)
 									sb.PutSignal(sym_id, -1);
+								else if (action == ACT_RESETSIG)
+									sb.SetSignal(sym_id, 0);
+								else if (action == ACT_INCBET)
+									sb.SetFreeMarginLevel(sb.GetFreeMarginLevel() + 0.01);
+								else if (action == ACT_DECBET)
+									sb.SetFreeMarginLevel(sb.GetFreeMarginLevel() - 0.01);
 							}
 						}
 					}
@@ -249,7 +257,7 @@ void Trainer::Runner() {
 				
 				// Compare results
 				LOG(Format("Compare: seq=%d, equity=%f", seq, sb.AccountEquity()));
-				if (sb.AccountEquity() > sb.GetInitialBalance()) {
+				if (sb.AccountEquity() > sb.GetInitialBalance() && !sb.IsFailed()) {
 					double equity = sb.AccountEquity();
 					if (equity >= best_seq_max) {
 						best_seq_max = equity;

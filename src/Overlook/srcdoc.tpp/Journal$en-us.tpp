@@ -1401,4 +1401,46 @@ statement. I only draw a line on political commentary.&]
 is really difficult. It`'s too overwhelming to write it at once. 
 I have written all parts of that previously, but this time all 
 parts are in one tight function. I have only this task for today 
-and it might still be too much.]]
+and it might still be too much.&]
+[s0;%- ...&]
+[s0;%- So, it is sort of difficult to progress with the implementation 
+now. I couldn`'t plan this better because of unknown release 
+target and now when it is known, it is hard to get good picture 
+of everything. I think I should literally draw picture of this.&]
+[s0;%- ...&]
+[s0;%- I remembered what the reward is despite the performance of 
+the trading automation; you get constant excitement about being 
+involved in the markets with real money. It is like morning coffee. 
+That is my [/ real] objective, even if the performance would be 
+rather bad. I am also confident that I can get something worth 
+processing with the sequential`-DQN`-agent, but it might take 
+a while to tune it correctly. This is my 10`-20 year plan, so 
+I`'m not in a hurry. I am sharing this program to help others 
+to get that kind of excitement, but please don`'t quit your day 
+job.&]
+[s3;%- 22.6.2017&]
+[s0;%- Good day. Seems like I get stuck with this before my morning 
+coffee ends (which is medium roast 0.7 litres with milk and without 
+sugar by the way, and some would say that it is way too much). 
+Also, I have work to do relating to next year in university, 
+so I am doing this only at the morning for now on.&]
+[s0;%- ...&]
+[s0;%- I think the education about AI in investing is totally non`-existent. 
+While I highly appreciate the MetaTrader community about their 
+efforts, I think the quality of those expert advisors is mostly 
+total rubbish. This is what I think about them:&]
+[s0;i150;O0;%- They don`'t recognize slower timeframes being usually 
+easier to predict and trading faster is exception to the slower 
+target.&]
+[s0;i150;O0;%- Some instruments follow other: just try some simple 
+cross`-symbol predictor and test to hide each of them. It shows 
+that hiding the leader increases the error rate.&]
+[s0;i150;O0;%- They don`'t try to calculate virtual currency instrument 
+from pairs, which could be could source of cross`-symbol prediction.&]
+[s0;i150;O0;%- They don`'t have money management usually, and if 
+they do have, they don`'t have the safe range optimizer. This 
+is the important factor which could enable exponential growth 
+in theory (, but probably not in practice).&]
+[s0;%- The Overlook considers all of those things while being free 
+and open source. You`'re welcome.&]
+[s0;%- ]]

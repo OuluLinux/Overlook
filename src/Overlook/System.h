@@ -142,8 +142,11 @@ protected:
 	
 	friend class DataBridgeCommon;
 	friend class DataBridge;
+	friend class SimBroker;
 	friend class Core;
 	
+	Vector<Vector<int> >				basket_symbols;
+	Vector<Vector<int> >				currency_symbols;
 	Vector<FactoryRegister>				regs;
 	Data			data;
 	Vector<String>	period_strings;

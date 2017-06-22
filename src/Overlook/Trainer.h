@@ -34,6 +34,7 @@ protected:
 	void Runner();
 	void Learn(int agent_id, int best_seq);
 	
+	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_INCBET, ACT_DECBET,     ACTIONCOUNT};
 public:
 	typedef Trainer CLASSNAME;
 	Trainer(System& sys);

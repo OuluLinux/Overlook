@@ -1,10 +1,10 @@
-#if 0
-
 #include "Overlook.h"
 	
 namespace Overlook {
 
 BrokerCtrl::BrokerCtrl() {
+	broker = NULL;
+	
 	CtrlLayout(*this);
 	
 	current.AddColumn("Symbol");
@@ -64,6 +64,49 @@ void BrokerCtrl::Init() {
 	//Thread::Start(THISBACK(DummyRunner));
 }
 
+void BrokerCtrl::RefreshData() {
+	Brokerage& b = *broker;
+	
+	String w;
+	w =		"Market watch: "	+ Format("%", GetSysTime()) + "\n"
+			"Balance: "			+ Format("%2!,n", b.AccountBalance()) + "\n"
+			"Equity: "			+ Format("%2!,n", b.AccountEquity()) + "\n"
+			"Margin: "			+ Format("%2!,n", b.AccountMargin()) + "\n"
+			"Free Margin: "		+ Format("%2!,n", b.AccountFreeMargin());
+	watch.SetLabel(w);
+	
+	const Vector<Symbol>& symbols = b.GetSymbols();
+	
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		const Price& price = b.GetAskBid()[i];
+		current.Set(i, 0, symbols[i].name);
+		current.Set(i, 1, price.bid);
+		current.Set(i, 2, price.ask);
+	}
+	
+	
+	const Vector<Order>& orders = b.GetOpenOrders();
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		trade.Set(i, 0, o.ticket);
+		trade.Set(i, 1, o.begin);
+		trade.Set(i, 2, o.type == 0 ? "Buy" : "Sell");
+		trade.Set(i, 3, o.volume);
+		trade.Set(i, 4, o.symbol);
+		trade.Set(i, 5, o.open);
+		trade.Set(i, 6, o.stoploss);
+		trade.Set(i, 7, o.takeprofit);
+		trade.Set(i, 8, o.close);
+		trade.Set(i, 9, o.commission);
+		trade.Set(i, 10, o.swap);
+		trade.Set(i, 11, o.profit);
+	}
+	trade.SetCount(orders.GetCount());
+	
+	
+	
+}
+
 void BrokerCtrl::Refresher() {
 	
 }
@@ -73,8 +116,10 @@ void BrokerCtrl::Reset() {
 }
 
 void BrokerCtrl::DummyRunner() {
-	#if 0
-	Brokerage& b = db->demo;
+	if (!broker)
+		return;
+	
+	Brokerage& b = *broker;
 	
 	Vector<Symbol> symbols;
 	symbols <<= b.GetSymbols();
@@ -139,8 +184,6 @@ void BrokerCtrl::DummyRunner() {
 		
 		Sleep(500);
 	}
-	#endif
 }
 
 }
-#endif

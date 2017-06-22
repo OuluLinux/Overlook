@@ -196,6 +196,7 @@ struct Symbol : public Moveable<Symbol> {
 	int execution_mode;
 	int swap_mode;
 	int swap_rollover3days;
+	int base_mul;
 	
 	double point;
 	double tick_value;
@@ -251,51 +252,52 @@ struct Symbol : public Moveable<Symbol> {
 	operator String() const {return name;}
 	String GetId() const {return name;}
 	
-	void Serialize(Stream& s) {s
-		% id
-		% name % proxy_name
-		% is_skipping
-		% tradeallowed
-		
-		% lotsize
-		% profit_calc_mode
-		% margin_calc_mode
-		% margin_hedged
-		% margin_required
-		
-		% selected
-		% visible
-		% digits
-		% spread_floating
-		% spread
-		% calc_mode
-		% trade_mode
-		% start_time
-		% expiration_time
-		% stops_level
-		% freeze_level
-		% execution_mode
-		% swap_mode
-		% swap_rollover3days
-		
-		% point
-		% tick_value
-		% tick_size
-		% contract_size
-		% volume_min
-		% volume_max
-		% volume_step
-		% swap_long
-		% swap_short
-		% margin_initial
-		% margin_maintenance
-		
-		% currency_base
-		% currency_profit
-		% currency_margin
-		% description
-		% path;
-		
+	void Serialize(Stream& s) {
+		s	% id
+			% name % proxy_name
+			% is_skipping
+			% tradeallowed
+			
+			% lotsize
+			% profit_calc_mode
+			% margin_calc_mode
+			% margin_hedged
+			% margin_required
+			
+			% selected
+			% visible
+			% digits
+			% spread_floating
+			% spread
+			% calc_mode
+			% trade_mode
+			% start_time
+			% expiration_time
+			% stops_level
+			% freeze_level
+			% execution_mode
+			% swap_mode
+			% swap_rollover3days
+			% base_mul
+			
+			% point
+			% tick_value
+			% tick_size
+			% contract_size
+			% volume_min
+			% volume_max
+			% volume_step
+			% swap_long
+			% swap_short
+			% margin_initial
+			% margin_maintenance
+			
+			% currency_base
+			% currency_profit
+			% currency_margin
+			% description
+			% path;
+			
 		for(int i = 0; i < 7; i++) {
 			s % quotes_begin_hours[i] % quotes_begin_minutes[i];
 			s % quotes_end_hours[i]   % quotes_end_minutes[i];
@@ -538,8 +540,8 @@ public:
 	virtual const Vector<Symbol>&	GetSymbols() = 0;
 	virtual const Vector<Price>&	GetAskBid() = 0;
 	virtual const Vector<PriceTf>&	GetTickData() = 0;
-	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false) = 0;
-	
+	virtual const Vector<Order>&	GetOpenOrders() = 0;
+	virtual const Vector<Order>&	GetHistoryOrders() = 0;
 	
 };
 
@@ -558,7 +560,7 @@ class MetaTrader : public Brokerage {
 	bool demo, connected, simulation;
 	bool init_success;
 	
-	//VectorMap<String, Symbol> symbols;
+	Vector<Order> orders, history_orders;
 	Vector<Price> current_prices;
 	Vector<Symbol> symbols;
 	Vector<Price> askbid;
@@ -653,7 +655,10 @@ public:
 	virtual const Vector<Symbol>&	GetSymbols();
 	virtual const Vector<Price>&	GetAskBid();
 	virtual const Vector<PriceTf>&	GetTickData();
-	virtual void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
+	virtual const Vector<Order>&	GetOpenOrders() {return orders;}
+	virtual const Vector<Order>&	GetHistoryOrders() {return history_orders;}
+	
+	void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
 	
 	String	GetSymbolsRaw();
 	String	GetAskBidRaw();

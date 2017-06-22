@@ -26,6 +26,8 @@ System::~System() {
 }
 
 void System::Init() {
+	ASSERT(symbols.IsEmpty());
+	
 	MetaTrader& mt = GetMetaTrader();
 	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
@@ -45,11 +47,20 @@ void System::Init() {
 		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
+			
+			// TODO: this could probably be skipped by using "mt.GetCurrency().pairs0/1"
+			Vector<int>& cur_syms = currency_symbols.Add();
+			for(int j = 0; j < c.pairs0.GetCount(); j++)
+				cur_syms.Add(c.pairs0[j]);
+			for(int j = 0; j < c.pairs1.GetCount(); j++)
+				cur_syms.Add(c.pairs1[j]);
 		}
 		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
 		int baskets = 8;
-		for(int i = 0; i < baskets; i++)
+		for(int i = 0; i < baskets; i++) {
 			AddSymbol("Basket #" + IntStr(i));
+			basket_symbols.Add();
+		}
 		
 		
 		

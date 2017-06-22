@@ -18,6 +18,11 @@ void TrainerDraw::Paint(Draw& w) {
 	Trainer& trainer = *ctrl.trainer;
 	System& sys = *trainer.sys;
 	
+	if (trainer.iters.IsEmpty()) {
+		w.DrawImage(0, 0, id);
+		return;
+	}
+	
 	int tf = ctrl.tf_list.GetIndex();
 	if (tf == -1) tf = 0;
 	const Iterator& iter = trainer.iters[tf];
@@ -100,6 +105,9 @@ void TrainerCtrl::SetTimeframe() {
 }
 
 void TrainerCtrl::RefreshData() {
+	if (trainer->iters.IsEmpty())
+		return;
+	
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = *trainer->sys;
 	

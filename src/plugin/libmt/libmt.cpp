@@ -57,6 +57,7 @@ Symbol& Symbol::operator = (const Symbol& sym) {
 	execution_mode = sym.execution_mode;
 	swap_mode = sym.swap_mode;
 	swap_rollover3days = sym.swap_rollover3days;
+	base_mul = sym.base_mul;
 	
 	point = sym.point;
 	tick_value = sym.tick_value;
@@ -636,10 +637,12 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		
 		ASSERT(j == line.GetCount());
 		sym.is_skipping = false;
+		sym.base_mul = 0;
 		
 		// Get proxy symbols
 		if (sym.IsForex()) {
 			const String& name = sym.name;
+			int id = symbols.GetCount();
 			
 			// TODO: handle symbols like EURUSDm, EUR/USD, etc.
 			ASSERT_(	name.GetCount() == 6 ||
@@ -656,8 +659,13 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			
 			String a = name.Left(3);
 			String b = name.Mid(3,3);
-			if (a == account_currency || b == account_currency) {
+			if (a == account_currency) {
 				// No need for proxy
+				sym.base_mul = +1;
+			}
+			else if (b == account_currency) {
+				// No need for proxy
+				sym.base_mul = -1;
 			} else {
 				if (account_currency == "USD") {
 					if (a != account_currency)

@@ -57,10 +57,15 @@ class Overlook : public TopWindow {
 protected:
 	friend class PrioritizerCtrl;
 	
+	// Loader
+	One<LoaderWindow> loader;
+	System sys;
+	
+	// Main view
 	TabCtrl tabs;
-	ParentCtrl visins;
 	
 	// Visual inspection
+	ParentCtrl visins;
 	Splitter droplist_split;
 	DropList ctrllist, symlist, tflist;
 	Button config;
@@ -73,12 +78,18 @@ protected:
 	Trainer trainer;
 	TrainerCtrl trainerctrl;
 	
-	One<LoaderWindow> loader;
-	System sys;
+	// Testing view
+	ParentCtrl testctrl;
+	
+	// Realtime view
+	BrokerCtrl rt_ctrl;
+	
 	
 	void SetView();
 	void Configure();
 	void Loader();
+	void RefreshTesting();
+	
 public:
 	typedef Overlook CLASSNAME;
 	Overlook();
@@ -90,7 +101,7 @@ public:
 	void Deinit();
 	void Refresher();
 	void PostRefresher() {tc.Kill(); PostCallback(THISBACK(Refresher));}
-	void RefreshPipelineView();
+	
 };
 
 

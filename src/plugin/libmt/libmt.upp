@@ -6,5 +6,9 @@ uses
 file
 	Copying,
 	libmt.h,
-	libmt.cpp;
+	Common.h,
+	Brokerage.h,
+	Brokerage.cpp,
+	MetaTrader.h,
+	MetaTrader.cpp;
 

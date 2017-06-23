@@ -1436,11 +1436,28 @@ target.&]
 cross`-symbol predictor and test to hide each of them. It shows 
 that hiding the leader increases the error rate.&]
 [s0;i150;O0;%- They don`'t try to calculate virtual currency instrument 
-from pairs, which could be could source of cross`-symbol prediction.&]
+from pairs, which could be good source of cross`-symbol prediction.&]
 [s0;i150;O0;%- They don`'t have money management usually, and if 
 they do have, they don`'t have the safe range optimizer. This 
 is the important factor which could enable exponential growth 
 in theory (, but probably not in practice).&]
 [s0;%- The Overlook considers all of those things while being free 
 and open source. You`'re welcome.&]
+[s3;%- 23.6.2017&]
+[s0;%- Implementing SimBroker`::Cycle turns out to be harder and harder 
+every day. It should be done with correct exposure calculations. 
+I have correct (enough) exposure calculations, which I modeled 
+from exposure`-values, what MT4 gave. However, those work in 
+forward propagation way and now I need backward propagation. 
+With this, I must start from the value what forward propagation 
+returns. Why? Well, when you want to update your orders and want 
+to have some target total margin, then you want to get real volumes 
+from relative volumes of your requested orders. If you have already 
+opened orders, you want to take those into account with their 
+existing margins. To make this even more complicated, this is 
+called in the most busiest training loop in every time`-tick, 
+so it should be high`-performance`-computing`-friendly.&]
+[s0;%- Seems like Brokerage class has had too little attention: SimBroker 
+and MetaTrader classes has many duplicate features. Also, it 
+should cache variables better, because the bridge is sloooooooow.&]
 [s0;%- ]]

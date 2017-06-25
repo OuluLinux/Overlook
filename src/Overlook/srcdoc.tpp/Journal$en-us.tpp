@@ -1460,4 +1460,49 @@ so it should be high`-performance`-computing`-friendly.&]
 [s0;%- Seems like Brokerage class has had too little attention: SimBroker 
 and MetaTrader classes has many duplicate features. Also, it 
 should cache variables better, because the bridge is sloooooooow.&]
+[s3;%- 25.6.2017&]
+[s0;%- The Brokerage class is still a mess. Nothing more to say...&]
+[s0;%- ...&]
+[s0;%- Hmm... it seems like it is difficult to separate pairs from 
+virtual currency nodes while calculating volumes from total base 
+currency exposure. Also, it is tempting to treat currencies as 
+a basket of pairs. However, preferring that would require proving 
+the assumption, that virtual currency nodes maintain integrity 
+better than other kind of baskets, like basket of highly correlating 
+pairs. I actually have very little knowledge of these sorts of 
+things, because I can`'t find relevant scientific papers, and 
+they might not even exists. This is mostly my best guess only. 
+I am lacking all proper theory. However, the objective is to 
+get something worth running at background (and this is not rocket 
+science), and current reasonable solutions and minimum requirements 
+would suggest that currency basket (of pairs) would have higher 
+priority, and other sort of baskets should be added later while 
+comparing their performance to currency baskets. This description 
+is not as clear as it is in the code.&]
+[s0;%- In the code, it seems to be reasonable to give relative weights 
+for currencies, indices and stock CFDs, and the program would 
+solve weights for pairs from currency weights. That would require 
+minimum amount of programming while being more intuitive in real`-life. 
+The difference would be to not allow giving signals for single 
+currency pairs, which is something that manual traders wouldn`'t 
+even consider.&]
+[s0;%- Basically, the Occam`'s razor principle would suggest that 
+manual traders trades only the most direct currency pair, and 
+automatic traders trades weighted pairs from currency weights, 
+because the correct backward exposure calculation is easier in 
+that way (to put it mildly). That doesn`'t even have anything 
+to do with the integrity of virtual currency node from pairs, 
+but which is also reasonable assumption and which would suggest 
+that basket of pairs is more stable and easier to predict. Also, 
+single pairs tend to have more spikes, which is also something 
+to avoid with automated solution.&]
+[s0;%- In the end, benefits for ditching single pair signals and 
+custom baskets until further interest outweights my curiosity 
+to research this more.&]
+[s0;%- To simplify to the maximum: the sequence`-DQN`-agent gives 
+direct signal to the asset, and then that drives volumes of instruments 
+indirectly using that backward exposure calculation.&]
+[s0;%- To be continued tomorrow at the same bat channel `[[^https`:`/`/www`.youtube`.com`/watch`?v`=alQ0zUjLLmg^ 1
+], [^https`:`/`/www`.youtube`.com`/watch`?v`=mlsXRq`-Y6zE^ 2], 
+[^https`:`/`/www`.youtube`.com`/watch`?v`=iwbsx6LvnfY^ 3]`].&]
 [s0;%- ]]

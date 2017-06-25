@@ -20,61 +20,56 @@ public:
 	
 	void Serialize(Stream& s) {s % port % mainaddr;}
 	int Init(String addr, int port=42000);
-	
-	
-	/*
 	const String& GetAddr() const {return mainaddr;}
 	int GetPort() const {return port;}
-	String GetLastError();
-	const Currency& GetCurrency(int i) const {return currencies[i];}
-	String GetAccountCurrency() {return account_currency;}
-	String GetAccountServer() {return account_server;}
-	String GetAccountName() {return account_name;}
-	String GetAccountNumber() {return account_id;}
-	String GetTimeframeString(int i) {return periodstr[i];}
-	double GetAccountBalance() {return balance;}
-	double GetAccountEquity() {return equity;}
-	double GetAccountLeverage() {return leverage;}
-	double GetAccountFreeMargin() {return freemargin;}
-	bool IsDemoCached() {return demo;}
-	bool IsConnectedCached() {return connected;}
-	int GetTimeframeCount() {return periodstr.GetCount();}
-	int GetTimeframe(int i) {return periodstr.GetKey(i);}
-	int GetTimeframeIdH1() {return tf_h1_id;}
-	int GetSymbolCount() const {return symbols.GetCount();}
-	int GetCurrencyCount() const {return currencies.GetCount();}
-	int GetIndexId(int i) const {return indices[i];}
-	int GetIndexCount() const {return indices.GetCount();}
-	*/
 
 	
 	// Brokerage functions without caching
-	virtual double	RealtimeAsk(int sym) {}
-	virtual double	RealtimeBid(int sym) {}
-	virtual int		OrderClose(int ticket, double lots, double price, int slippage) {}
-	virtual double	OrderClosePrice() {}
-	virtual int		OrderCloseTime() {}
-	virtual String	OrderComment() {}
-	virtual double	OrderCommission() {}
-	virtual int		OrderDelete(int ticket) {}
-	virtual int		OrderExpiration() {}
-	virtual double	OrderLots() {}
-	virtual int		OrderMagicNumber() {}
-	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {}
-	virtual double	OrderOpenPrice() {}
-	virtual int		OrderOpenTime() {}
-	virtual double	OrderProfit() {}
-	virtual int		OrderSelect(int index, int select, int pool) {}
-	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0) {}
-	virtual int		OrdersHistoryTotal() {}
-	virtual double	OrderStopLoss() {}
-	virtual int		OrdersTotal() {}
-	virtual double	OrderSwap() {}
-	virtual String	OrderSymbol() {}
-	virtual double	OrderTakeProfit() {}
-	virtual int		OrderTicket() {}
-	virtual int		OrderType() {}
-	
+	//  - function wrapper is needed, because remote calls are implemented with macros and
+	//    some calls would intersect with Brokerage class methods, if the "_" prefix wouldn't
+	//    be used. This is not a perfect solution, but it's best what could be thought while
+	//    implementing.
+	//  - improvement would be to add variable prefix to macros
+	virtual int		iBars(String symbol, int timeframe);
+	virtual int		iBarShift(String symbol, int timeframe, int datetime);
+	virtual double	iClose(String symbol, int timeframe, int shift);
+	virtual double	iHigh(String symbol, int timeframe, int shift);
+	virtual double	iLow(String symbol, int timeframe, int shift);
+	virtual double	iOpen(String symbol, int timeframe, int shift);
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iTime(String symbol, int timeframe, int shift);
+	virtual int		iVolume(String symbol, int timeframe, int shift);
+	virtual int		RefreshRates();
+	virtual Time	GetTime() const {return GetSysTime();}
+	virtual double	RealtimeAsk(int sym) {return _MarketInfo(symbols[sym].name, MODE_ASK);}
+	virtual double	RealtimeBid(int sym) {return _MarketInfo(symbols[sym].name, MODE_BID);}
+	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
+	virtual double	OrderClosePrice();
+	virtual int		OrderCloseTime();
+	virtual String	OrderComment();
+	virtual double	OrderCommission();
+	virtual int		OrderDelete(int ticket);
+	virtual int		OrderExpiration();
+	virtual double	OrderLots();
+	virtual int		OrderMagicNumber();
+	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration);
+	virtual double	OrderOpenPrice();
+	virtual int		OrderOpenTime();
+	virtual double	OrderProfit();
+	virtual int		OrderSelect(int index, int select, int pool);
+	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
+	virtual int		OrdersHistoryTotal();
+	virtual double	OrderStopLoss();
+	virtual int		OrdersTotal();
+	virtual double	OrderSwap();
+	virtual String	OrderSymbol();
+	virtual double	OrderTakeProfit();
+	virtual int		OrderTicket();
+	virtual int		OrderType();
+	virtual bool    IsDemo();
+	virtual bool    IsConnected();
+		
 	// Remote calling statistics
 	int GetInputBytes() {return input;}
 	int GetOutputBytes() {return output;}
@@ -82,17 +77,19 @@ public:
 	void AddInputBytes(int i) {output += i;}
 
 	// Remote calls without equal MQL counterpart
-	bool IsResponding();
-	int FindPriceTime(int sym, int tf, dword ts);
-	Vector<Vector<Time> > GetLatestPriceTimes();
-	Vector<Vector<Time> > GetEarliestPriceTimes();
-	void GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
-	String	GetSymbolsRaw();
-	String	GetAskBidRaw();
-	String	GetPricesRaw();
-	String	GetHistoryOrdersRaw(int magic);
-	String	GetOrdersRaw(int magic);
+	bool _IsResponding();
+	Vector<Vector<Time> > _GetLatestPriceTimes();
+	Vector<Vector<Time> > _GetEarliestPriceTimes();
+	void _GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
+	String	_GetSymbolsRaw();
+	String	_GetAskBidRaw();
+	String	_GetPricesRaw();
+	String	_GetHistoryOrdersRaw(int magic);
+	String	_GetOrdersRaw(int magic);
 	void LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_open);
+	const Vector<Symbol>&	_GetSymbols();
+	const Vector<Price>&	_GetAskBid();
+	const Vector<PriceTf>&	_GetTickData();
 	
 	// Remote calls
 	double	_AccountInfoDouble(int property_id);
@@ -157,6 +154,9 @@ public:
 	int		_OrderType();
 	bool    _IsDemo();
 	bool    _IsConnected();
+	String	_GetLastError();
+	int		_FindPriceTime(int sym, int tf, dword ts);
+	
 };
 
 inline MetaTrader& GetMetaTrader() {return Single<MetaTrader>();}

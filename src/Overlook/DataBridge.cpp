@@ -893,10 +893,10 @@ void DataBridge::RefreshCorrelation() {
 		dst.SetCount(src.GetCount());
 		for(int j = 0; j < src.GetCount(); j++)
 			dst[j] = src[j];
+		
+		// Copy symbols to the system
+		GetMetaTrader().SetBasket(i, dst);
 	}
-	
-	// Copy symbols to the system
-	GetSystem().basket_symbols <<= sym_groups;
 }
 
 void DataBridge::RefreshBasket() {

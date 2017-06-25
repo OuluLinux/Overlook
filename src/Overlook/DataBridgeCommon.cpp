@@ -79,7 +79,7 @@ void DataBridgeCommon::DownloadRemoteData() {
 	LOG("DataBridgeCommon::DownloadRemoteData");
 	DUMPC(tfs);
 	
-	const Vector<Symbol>& symbols = GetMetaTrader().GetCacheSymbols();
+	const Vector<Symbol>& symbols = GetMetaTrader().GetSymbols();
 	int actual = 0;
 	int total = symbols.GetCount() * tfs.GetCount();
 	for(int i = 0; i < symbols.GetCount(); i++) {

@@ -4,20 +4,14 @@
 #include <plugin/libmt/libmt.h>
 
 namespace Overlook {
+using namespace libmt;
 
 class SimBroker : public Brokerage, Moveable<SimBroker> {
 	System* sys;
 	String currency;
 	Time prev_cycle_time;
-	double free_margin_level, min_free_margin_level, max_free_margin_level;
-	double balance, equity, margin, margin_free, margin_call, margin_stop;
-	double leverage, initial_balance;
-	int selected;
-	int lotsize;
 	int order_counter;
-	int basket_begin, cur_begin;
 	bool lightweight;
-	bool is_failed;
 	
 public:
 	SimBroker();
@@ -32,15 +26,24 @@ public:
 	int GetOpenOrderCount() const;
 	double GetFreeMarginLevel() const;
 	double GetInitialBalance() const {return initial_balance;}
-	Time GetTime() const;
-	bool IsFailed() const {return is_failed;}
 	
 	void SetFreeMarginLevel(double d);
-	void SetFailed(bool b=true) {is_failed = b;}
-	void PutSignal(int sym, int signal);
-	void SetSignal(int sym, int signal) {signals[sym] = signal;}
 	
 	// MT4-like functions
+	virtual int		iBars(String symbol, int timeframe);
+	virtual int		iBarShift(String symbol, int timeframe, int datetime);
+	virtual double	iClose(String symbol, int timeframe, int shift);
+	virtual double	iHigh(String symbol, int timeframe, int shift);
+	virtual double	iLow(String symbol, int timeframe, int shift);
+	virtual double	iOpen(String symbol, int timeframe, int shift);
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start);
+	virtual int		iTime(String symbol, int timeframe, int shift);
+	virtual int		iVolume(String symbol, int timeframe, int shift);
+	virtual int		RefreshRates();
+	virtual Time GetTime() const;
+	virtual double	RealtimeAsk(int sym);
+	virtual double	RealtimeBid(int sym);
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
 	virtual double	OrderClosePrice();
 	virtual int		OrderCloseTime();
@@ -64,6 +67,8 @@ public:
 	virtual double	OrderTakeProfit();
 	virtual int		OrderTicket();
 	virtual int		OrderType();
+	virtual bool    IsDemo();
+	virtual bool    IsConnected();
 	
 };
 

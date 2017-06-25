@@ -167,7 +167,7 @@ struct SpreadTick : Moveable<SpreadTick> {
 };
 
 struct Symbol : public Moveable<Symbol> {
-	Symbol() {}
+	Symbol() : base_cur0(-1), base_cur1(-1) {}
 	Symbol(const Symbol& bs) {*this = bs;}
 	Symbol& operator = (const Symbol& sym);
 	
@@ -177,6 +177,7 @@ struct Symbol : public Moveable<Symbol> {
 	
 	bool is_skipping;
 	bool tradeallowed;
+	bool is_base_currency;
 	
 	double lotsize;
 	int profit_calc_mode;
@@ -199,6 +200,7 @@ struct Symbol : public Moveable<Symbol> {
 	int swap_mode;
 	int swap_rollover3days;
 	int base_mul;
+	int base_cur0, base_cur1;
 	
 	double point;
 	double tick_value;
@@ -226,7 +228,7 @@ struct Symbol : public Moveable<Symbol> {
 	double margin_factor;
 	int virtual_type;
 	
-	enum CALCMODE { CALCMODE_FOREX, CALCMODE_CDF, CALCMODE_FUTURES, CALCMODE_CDF_INDICES };
+	enum CALCMODE { CALCMODE_FOREX, CALCMODE_CFD, CALCMODE_FUTURES, CALCMODE_CFD_INDICES };
 	enum SWAPTYPE { SWAPTYPE_INPOINTS, SWAPTYPE_INSYMBOLBASECURRENCY, SWAPTYPE_BYINTEREST, SWAPTYPE_INMARGINCURRENCY };
 	enum SYMBOL_TRADE_MODE { SYMBOL_TRADE_MODE_DISABLED, SYMBOL_TRADE_MODE_LONGONLY, SYMBOL_TRADE_MODE_SHORTONLY, SYMBOL_TRADE_MODE_CLOSEONLY, SYMBOL_TRADE_MODE_FULL };
 	enum SYMBOL_TRADE_EXECUTION { SYMBOL_TRADE_EXECUTION_REQUEST, SYMBOL_TRADE_EXECUTION_INSTANT, SYMBOL_TRADE_EXECUTION_MARKET, SYMBOL_TRADE_EXECUTION_EXCHANGE };
@@ -247,8 +249,8 @@ struct Symbol : public Moveable<Symbol> {
 	int proxy_id, proxy_factor;
 	
 	bool IsForex() const {return calc_mode == CALCMODE_FOREX;}
-	bool IsCDF() const {return calc_mode == CALCMODE_CDF;}
-	bool IsCDFIndex() const {return calc_mode == CALCMODE_CDF_INDICES;}
+	bool IsCFD() const {return calc_mode == CALCMODE_CFD;}
+	bool IsCFDIndex() const {return calc_mode == CALCMODE_CFD_INDICES;}
 	bool IsFuture() const {return calc_mode == CALCMODE_FUTURES;}
 	
 	operator String() const {return name;}
@@ -259,6 +261,7 @@ struct Symbol : public Moveable<Symbol> {
 			% name % proxy_name
 			% is_skipping
 			% tradeallowed
+			% is_base_currency
 			
 			% lotsize
 			% profit_calc_mode
@@ -281,6 +284,8 @@ struct Symbol : public Moveable<Symbol> {
 			% swap_mode
 			% swap_rollover3days
 			% base_mul
+			% base_cur0
+			% base_cur1
 			
 			% point
 			% tick_value
@@ -316,7 +321,8 @@ struct Symbol : public Moveable<Symbol> {
 };
 
 struct Currency : Moveable<Currency> {
-	Index<int> pairs0, pairs1;
+	Index<int> pairs0, pairs1, all_pairs;
+	int base_mul, base_pair;
 	String name;
 };
 

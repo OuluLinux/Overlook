@@ -5,42 +5,76 @@ namespace libmt {
 
 class Brokerage {
 	
+protected:
 	Vector<Order> orders, history_orders;
 	Index<String> skipped_currencies;
 	Index<String>	symbol_idx;
 	
-	String account_id, account_name, account_server, account_currency;
+	double free_margin_level, min_free_margin_level, max_free_margin_level;
+	double balance, equity, margin, margin_free, margin_call, margin_stop;
+	double leverage, initial_balance;
+	int selected;
+	int lotsize;
+	
+	String account_name, account_server, account_currency;
 	String last_error;
-	double balance, equity, margin, freemargin, leverage;
+	int basket_begin, cur_begin;
+	int account_id;
 	bool demo, connected, simulation;
 	bool init_success;
+	bool is_failed;
 	
+	Vector<Vector<int> > basket_symbols;
 	Vector<Price> current_prices;
 	Vector<Symbol> symbols;
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
 	VectorMap<String, Currency> currencies;
 	Vector<int> indices;
+	Vector<int> signals;
 	Mutex current_price_lock;
 	
 	ArrayMap<int, String> periodstr;
 	int tf_h1_id;
 	
+	// Exposure temp vars
+	Vector<double> cur_volumes, idx_volumes, cur_rates, cur_base_values, idx_rates, idx_base_values;
+	
+	
 public:
 	enum {MODE_OPEN, MODE_LOW, MODE_HIGH, MODE_CLOSE, MODE_VOLUME, MODE_TIME};
 	
 	
-	Brokerage() {}
+	Brokerage();
 	
 	void ForwardExposure();
 	void BackwardExposure();
+	void PutSignal(int sym, int signal);
+	void SetSignal(int sym, int signal) {signals[sym] = signal;}
+	bool IsFailed() const {return is_failed;}
+	void SetFailed(bool b=true) {is_failed = b;}
 	
 	const Vector<Order>&	GetOpenOrders() {return orders;}
 	const Vector<Order>&	GetHistoryOrders() {return history_orders;}
-	const Vector<Symbol>&	GetSymbols();
-	const Vector<Price>&	GetAskBid();
-	const Vector<PriceTf>&	GetTickData();
+	const Vector<Symbol>&	GetSymbols() {return symbols;}
+	const Vector<Price>&	GetAskBid() {return current_prices;}
+	const Vector<PriceTf>&	GetTickData() {return pricetf;}
 	const Symbol& GetSymbol(int i) const {return symbols[i];}
+	int GetTimeframe(int i) {return periodstr.GetKey(i);}
+	const Currency& GetCurrency(int i) const {return currencies[i];}
+	String GetTimeframeString(int i) {return periodstr[i];}
+	bool IsDemoCached() {return demo;}
+	bool IsConnectedCached() {return connected;}
+	int GetTimeframeCount() {return periodstr.GetCount();}
+	int GetTimeframeIdH1() {return tf_h1_id;}
+	int GetSymbolCount() const {return symbols.GetCount();}
+	int GetCurrencyCount() const {return currencies.GetCount();}
+	int GetIndexId(int i) const {return indices[i];}
+	int GetIndexCount() const {return indices.GetCount();}
+	int GetBasketCount() const {return basket_symbols.GetCount();}
+	void SetBasketCount(int i) {basket_symbols.SetCount(i);}
+	void SetBasket(int i, const Vector<int>& basket) {basket_symbols[i] <<= basket;}
+	const Vector<int>& GetBasket(int i) const {return basket_symbols[i];}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);
@@ -68,20 +102,19 @@ public:
 	double	SymbolInfoDouble(String name, int prop_id);
 	int		SymbolInfoInteger(String name, int prop_id);
 	String	SymbolInfoString(String name, int prop_id);
-	int		RefreshRates();
-	int		iBars(String symbol, int timeframe);
-	int		iBarShift(String symbol, int timeframe, int datetime);
-	double	iClose(String symbol, int timeframe, int shift);
-	double	iHigh(String symbol, int timeframe, int shift);
-	double	iLow(String symbol, int timeframe, int shift);
-	double	iOpen(String symbol, int timeframe, int shift);
-	int		iHighest(String symbol, int timeframe, int type, int count, int start);
-	int		iLowest(String symbol, int timeframe, int type, int count, int start);
-	int		iTime(String symbol, int timeframe, int shift);
-	int		iVolume(String symbol, int timeframe, int shift);
-	bool    IsDemo();
-	bool    IsConnected();
 	
+	virtual int		iBars(String symbol, int timeframe) = 0;
+	virtual int		iBarShift(String symbol, int timeframe, int datetime) = 0;
+	virtual double	iClose(String symbol, int timeframe, int shift) = 0;
+	virtual double	iHigh(String symbol, int timeframe, int shift) = 0;
+	virtual double	iLow(String symbol, int timeframe, int shift) = 0;
+	virtual double	iOpen(String symbol, int timeframe, int shift) = 0;
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start) = 0;
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start) = 0;
+	virtual int		iTime(String symbol, int timeframe, int shift) = 0;
+	virtual int		iVolume(String symbol, int timeframe, int shift) = 0;
+	virtual int		RefreshRates() = 0;
+	virtual Time	GetTime() const = 0;
 	virtual double	RealtimeAsk(int sym) = 0;
 	virtual double	RealtimeBid(int sym) = 0;
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage) = 0;
@@ -107,6 +140,8 @@ public:
 	virtual double	OrderTakeProfit() = 0;
 	virtual int		OrderTicket() = 0;
 	virtual int		OrderType() = 0;
+	virtual bool    IsDemo() = 0;
+	virtual bool    IsConnected() = 0;
 	
 };
 

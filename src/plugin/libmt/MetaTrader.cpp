@@ -36,8 +36,9 @@ Symbol& Symbol::operator = (const Symbol& sym) {
 	name = sym.name;
 	proxy_name = sym.proxy_name;
 	
-	tradeallowed	= sym.tradeallowed;
-	is_skipping		= sym.is_skipping;
+	tradeallowed			= sym.tradeallowed;
+	is_skipping				= sym.is_skipping;
+	is_base_currency		= sym.is_base_currency;
 	
 	lotsize = sym.lotsize;
 	profit_calc_mode = sym.profit_calc_mode;
@@ -60,6 +61,8 @@ Symbol& Symbol::operator = (const Symbol& sym) {
 	swap_mode = sym.swap_mode;
 	swap_rollover3days = sym.swap_rollover3days;
 	base_mul = sym.base_mul;
+	base_cur0 = sym.base_cur0;
+	base_cur1 = sym.base_cur1;
 	
 	point = sym.point;
 	tick_value = sym.tick_value;
@@ -103,9 +106,9 @@ Symbol& Symbol::operator = (const Symbol& sym) {
 String Symbol::GetCalculationMode(int mode) {
 	switch (mode) {
 		case CALCMODE_FOREX:		return "Forex";
-		case CALCMODE_CDF:			return "CDF";
+		case CALCMODE_CFD:			return "CFD";
 		case CALCMODE_FUTURES:		return "Futures";
-		case CALCMODE_CDF_INDICES:	return "CDF Indicex";
+		case CALCMODE_CFD_INDICES:	return "CFD Indicex";
 		default:					return "";
 	}
 }
@@ -223,7 +226,7 @@ int MetaTrader::Init(String addr, int port) {
 	mainaddr = addr;
 	this->port = port;
 	try {
-		if (mainaddr.IsEmpty() || !IsResponding()) {
+		if (mainaddr.IsEmpty() || !_IsResponding()) {
 			return 1;
 		}
 		
@@ -238,7 +241,7 @@ int MetaTrader::Init(String addr, int port) {
 	return !init_success;
 }
 
-#define MTFUNC0(code, rtype, name, gret) rtype MetaTrader::_##name() {\
+#define MTFUNC0(code, rtype, name, gret) rtype MetaTrader::##name() {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -253,7 +256,7 @@ int MetaTrader::Init(String addr, int port) {
 }
 
 
-#define MTFUNC1(code, rtype, name, a1type, a1set, gret) rtype MetaTrader::_##name(a1type a1) {\
+#define MTFUNC1(code, rtype, name, a1type, a1set, gret) rtype MetaTrader::##name(a1type a1) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -268,7 +271,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC2(code, rtype, name, a1type, a1set, a2type, a2set, gret) rtype MetaTrader::_##name(a1type a1, a2type a2) {\
+#define MTFUNC2(code, rtype, name, a1type, a1set, a2type, a2set, gret) rtype MetaTrader::##name(a1type a1, a2type a2) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -284,7 +287,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC3(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, gret) rtype MetaTrader::_##name(a1type a1, a2type a2, a3type a3) {\
+#define MTFUNC3(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -301,7 +304,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC4(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, gret) rtype MetaTrader::_##name(a1type a1, a2type a2, a3type a3, a4type a4) {\
+#define MTFUNC4(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3, a4type a4) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -319,7 +322,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC5(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, a5type, a5set, gret) rtype MetaTrader::_##name(a1type a1, a2type a2, a3type a3, a4type a4, a5type a5) {\
+#define MTFUNC5(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, a5type, a5set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3, a4type a4, a5type a5) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -339,32 +342,32 @@ int MetaTrader::Init(String addr, int port) {
 }
 
 	
-MTFUNC1(0,	double,		AccountInfoDouble,		int,	SetInt,		GetDbl);
-MTFUNC1(1,	int,		AccountInfoInteger,		int,	SetInt,		GetInt);
-MTFUNC1(2,	String,		AccountInfoString,		int,	SetInt,		GetStr);
-MTFUNC0(3,	double,		AccountBalance,			GetDbl);
-MTFUNC0(4,	double,		AccountCredit,			GetDbl);
-MTFUNC0(5,	String,		AccountCompany,			GetStr);
-MTFUNC0(6,	String,		AccountCurrency,		GetStr);
-MTFUNC0(7,	double,		AccountEquity,			GetDbl);
-MTFUNC0(8,	double,		AccountFreeMargin,		GetDbl);
-MTFUNC3(9,	double,		AccountFreeMarginCheck, String, SetStr,	int, SetInt, double, SetDbl, GetDbl);
-MTFUNC0(10,	double,		AccountFreeMarginMode,	GetDbl);
-MTFUNC0(11,	int,		AccountLeverage,		GetInt);
-MTFUNC0(12,	double,		AccountMargin,			GetDbl);
-MTFUNC0(13,	String,		AccountName,			GetStr);
-MTFUNC0(14,	int,		AccountNumber,			GetInt);
-MTFUNC0(15,	double,		AccountProfit,			GetDbl);
-MTFUNC0(16,	String,		AccountServer,			GetStr);
-MTFUNC0(17,	int,		AccountStopoutLevel,	GetInt);
-MTFUNC0(18,	int,		AccountStopoutMode,		GetInt);
-MTFUNC2(19,	double,		MarketInfo,				String, SetStr,	int, SetInt, GetDbl);
-MTFUNC1(20,	int,		SymbolsTotal,			int, SetInt, GetInt);
-MTFUNC2(21,	String,		SymbolName,				int, SetInt, int, SetInt, GetStr);
-MTFUNC2(22,	int,		SymbolSelect,			String, SetStr,	int, SetInt, GetInt);
-MTFUNC2(23,	double,		SymbolInfoDouble,		String, SetStr,	int, SetInt, GetDbl);
-MTFUNC2(24,	int,		SymbolInfoInteger,		String, SetStr,	int, SetInt, GetInt);
-MTFUNC2(25,	String,		SymbolInfoString,		String, SetStr,	int, SetInt, GetStr);
+MTFUNC1(0,	double,		_AccountInfoDouble,		int,	SetInt,		GetDbl);
+MTFUNC1(1,	int,		_AccountInfoInteger,	int,	SetInt,		GetInt);
+MTFUNC1(2,	String,		_AccountInfoString,		int,	SetInt,		GetStr);
+MTFUNC0(3,	double,		_AccountBalance,		GetDbl);
+MTFUNC0(4,	double,		_AccountCredit,			GetDbl);
+MTFUNC0(5,	String,		_AccountCompany,		GetStr);
+MTFUNC0(6,	String,		_AccountCurrency,		GetStr);
+MTFUNC0(7,	double,		_AccountEquity,			GetDbl);
+MTFUNC0(8,	double,		_AccountFreeMargin,		GetDbl);
+MTFUNC3(9,	double,		_AccountFreeMarginCheck, String, SetStr,	int, SetInt, double, SetDbl, GetDbl);
+MTFUNC0(10,	double,		_AccountFreeMarginMode,	GetDbl);
+MTFUNC0(11,	int,		_AccountLeverage,		GetInt);
+MTFUNC0(12,	double,		_AccountMargin,			GetDbl);
+MTFUNC0(13,	String,		_AccountName,			GetStr);
+MTFUNC0(14,	int,		_AccountNumber,			GetInt);
+MTFUNC0(15,	double,		_AccountProfit,			GetDbl);
+MTFUNC0(16,	String,		_AccountServer,			GetStr);
+MTFUNC0(17,	int,		_AccountStopoutLevel,	GetInt);
+MTFUNC0(18,	int,		_AccountStopoutMode,	GetInt);
+MTFUNC2(19,	double,		_MarketInfo,			String, SetStr,	int, SetInt, GetDbl);
+MTFUNC1(20,	int,		_SymbolsTotal,			int, SetInt, GetInt);
+MTFUNC2(21,	String,		_SymbolName,			int, SetInt, int, SetInt, GetStr);
+MTFUNC2(22,	int,		_SymbolSelect,			String, SetStr,	int, SetInt, GetInt);
+MTFUNC2(23,	double,		_SymbolInfoDouble,		String, SetStr,	int, SetInt, GetDbl);
+MTFUNC2(24,	int,		_SymbolInfoInteger,		String, SetStr,	int, SetInt, GetInt);
+MTFUNC2(25,	String,		_SymbolInfoString,		String, SetStr,	int, SetInt, GetStr);
 MTFUNC0(26,	int,		RefreshRates,			GetInt);
 MTFUNC2(27,	int,		iBars,					String, SetStr,	int, SetInt, GetInt);
 MTFUNC3(28,	int,		iBarShift,				String, SetStr,	int, SetInt, int, SetInt, GetInt);
@@ -398,15 +401,15 @@ MTFUNC0(56,	String,		OrderSymbol,			GetStr);
 MTFUNC0(57,	double,		OrderTakeProfit,		GetDbl);
 MTFUNC0(58,	int,		OrderTicket,			GetInt);
 MTFUNC0(59,	int,		OrderType,				GetInt);
-MTFUNC0(60,	String,		GetSymbolsRaw,			GetStr);
-MTFUNC0(61,	String,		GetAskBidRaw,			GetStr);
-MTFUNC0(62,	String,		GetPricesRaw,			GetStr);
-MTFUNC1(63,	String,		GetHistoryOrdersRaw,	int,  SetInt,	GetStr);
-MTFUNC1(64,	String,		GetOrdersRaw,			int,  SetInt,	GetStr);
-MTFUNC0(66,	String,		GetLastError,			GetStr);
+MTFUNC0(60,	String,		_GetSymbolsRaw,			GetStr);
+MTFUNC0(61,	String,		_GetAskBidRaw,			GetStr);
+MTFUNC0(62,	String,		_GetPricesRaw,			GetStr);
+MTFUNC1(63,	String,		_GetHistoryOrdersRaw,	int,  SetInt,	GetStr);
+MTFUNC1(64,	String,		_GetOrdersRaw,			int,  SetInt,	GetStr);
+MTFUNC0(66,	String,		_GetLastError,			GetStr);
 MTFUNC0(68,	bool,		IsDemo,					GetInt);
 MTFUNC0(69,	bool,		IsConnected,			GetInt);
-MTFUNC3(70,	int,		FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetInt);
+MTFUNC3(70,	int,		_FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetInt);
 
 
 
@@ -438,7 +441,7 @@ int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, i
 
 
 
-Vector<Vector<Time> > MetaTrader::GetLatestPriceTimes() {
+Vector<Vector<Time> > MetaTrader::_GetLatestPriceTimes() {
 	lock.Enter();
 	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
@@ -469,7 +472,7 @@ Vector<Vector<Time> > MetaTrader::GetLatestPriceTimes() {
 	return out;
 }
 	
-Vector<Vector<Time> > MetaTrader::GetEarliestPriceTimes() {
+Vector<Vector<Time> > MetaTrader::_GetEarliestPriceTimes() {
 	lock.Enter();
 	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;
@@ -501,7 +504,7 @@ Vector<Vector<Time> > MetaTrader::GetEarliestPriceTimes() {
 }
 
 
-bool MetaTrader::IsResponding() {
+bool MetaTrader::_IsResponding() {
 	lock.Enter();
 	MTPacket p;
 	p.SetCode(100);
@@ -533,7 +536,7 @@ String GetProxy(const String& currency) {
 		return "USD" + currency;
 }
 
-const Vector<Symbol>& MetaTrader::GetSymbols() {
+const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	symbols.SetCount(0);
 	indices.SetCount(0);
 	
@@ -541,7 +544,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	String s;
 	while (1) {
 		try {
-			s = GetSymbolsRaw();
+			s = _GetSymbolsRaw();
 			if (s.GetCount()) break;
 		}
 		catch (ConnectionError e) {
@@ -551,7 +554,8 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	
 	Vector<String> lines = Split(s, ";");
 	
-	String account_currency = GetAccountCurrency();
+	String account_currency = AccountCurrency();
+	ASSERT(!account_currency.IsEmpty());
 	if (!account_currency.GetCount())
 		account_currency = "USD";
 	
@@ -639,7 +643,10 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		
 		ASSERT(j == line.GetCount());
 		sym.is_skipping = false;
+		sym.is_base_currency = false;
 		sym.base_mul = 0;
+		sym.base_cur0 = -1;
+		sym.base_cur1 = -1;
 		
 		// Get proxy symbols
 		if (sym.IsForex()) {
@@ -680,7 +687,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			if (skipped_currencies.Find(b) != -1)
 				sym.is_skipping = true;
 		}
-		else if (sym.IsCDF() || sym.IsCDFIndex() || sym.IsFuture()) {
+		else if (sym.IsCFD() || sym.IsCFDIndex() || sym.IsFuture()) {
 			const String& a = sym.currency_margin;
 			if (account_currency == "USD") {
 				if (a != account_currency)
@@ -698,6 +705,10 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 			String b = sym.name.Mid(3,3);
 			currencies.GetAdd(a, 0)++;
 			currencies.GetAdd(b, 0)++;
+			sym.base_cur0 = currencies.Find(a);
+			sym.base_cur1 = currencies.Find(b);
+			if (a == account_currency || b == account_currency)
+				sym.is_base_currency = true;
 		}
 		
 		if (!sym.IsForex() && sym.name.Left(1) != "#")
@@ -735,7 +746,7 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 				String a = sym.proxy_name.Left(3);
 				String b = sym.proxy_name.Mid(3,3);
 				bool base_dest = b == account_currency; // base USD, buy AUDJPY, proxy AUDUSD.. USD->AUD->JPY ... AUDUSD selling
-				sym.proxy_factor = base_dest ? -1 : 1;
+				sym.proxy_factor = base_dest ? -1 : +1;
 				
 				found = true;
 				break;
@@ -753,19 +764,31 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 		const String& symbol = currencies.GetKey(i);
 		Currency& c = this->currencies.Add(symbol);
 		c.name = symbol;
+		c.base_mul = 0;
+		c.base_pair = -1;
 		for(int j = 0; j < symbols.GetCount(); j++) {
 			Symbol& s = symbols[j];
 			if (!s.IsForex()) continue;
 			const String& key = s.name;
 			
-			String k0 = key.Left(3);
-			String k1 = key.Mid(3,3);
+			String a = key.Left(3);
+			String b = key.Mid(3,3);
 			
-			if (k0 == symbol) {
+			if (a == symbol) {
 				c.pairs0.Add(j);
+				c.all_pairs.Add(j);
+				if (b == account_currency) {
+					c.base_mul = -1;
+					c.base_pair = j;
+				}
 			}
-			else if (k1 == symbol) {
+			else if (b == symbol) {
 				c.pairs1.Add(j);
+				c.all_pairs.Add(j);
+				if (a == account_currency) {
+					c.base_mul = +-1;
+					c.base_pair = j;
+				}
 			}
 		}
 	}
@@ -773,11 +796,11 @@ const Vector<Symbol>& MetaTrader::GetSymbols() {
 	return symbols;
 }
 
-const Vector<Price>& MetaTrader::GetAskBid() {
+const Vector<Price>& MetaTrader::_GetAskBid() {
 	String content;
 	while (1) {
 		try {
-			content = GetAskBidRaw();
+			content = _GetAskBidRaw();
 			if (content.GetCount()) break;
 		}
 		catch (ConnectionError e) {
@@ -859,13 +882,13 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 }
 
 
-void MetaTrader::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history) {
+void MetaTrader::_GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history) {
 	
 	// Load open orders data from Broker
 	String content;
 	while (1) {
 		try {
-			content = GetOrdersRaw(magic);
+			content = _GetOrdersRaw(magic);
 			if (content.GetCount()) break;
 		}
 		catch (ConnectionError) {
@@ -911,7 +934,7 @@ void MetaTrader::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int 
 	content.Clear();
 	while (1) {
 		try {
-			content = GetHistoryOrdersRaw(magic);
+			content = _GetHistoryOrdersRaw(magic);
 			if (content.GetCount()) break;
 		}
 		catch (ConnectionError) {
@@ -951,14 +974,14 @@ void MetaTrader::GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int 
 #define GET_INT() StrInt(v[pos++])
 #define GET_DBL() StrDbl(v[pos++])
 
-const Vector<PriceTf>&	MetaTrader::GetTickData() {
+const Vector<PriceTf>&	MetaTrader::_GetTickData() {
 	pricetf.SetCount(0);
 	
 	// Send a message to Broker to store data
 	String s;
 	while (1) {
 		try {
-			s = GetPricesRaw();
+			s = _GetPricesRaw();
 			if (s.GetCount()) break;
 		}
 		catch (ConnectionError e) {

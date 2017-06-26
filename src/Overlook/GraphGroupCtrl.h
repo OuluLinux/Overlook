@@ -39,7 +39,7 @@ public:
 		
 	virtual void Init(Core* src);
 	virtual void Start();
-	virtual void RefreshData();
+	virtual void Data();
 	
 	Core& GetCore() {return *bardata;}
 	Color GetBackground() {return White();}

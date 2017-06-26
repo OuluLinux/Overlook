@@ -158,7 +158,6 @@ protected:
 	Atomic			nonstopped_workers;
 	int64			memory_limit;
 	int				port;
-	int				basket_sym_begin;
 	bool			running, stopped;
 	
 	
@@ -183,7 +182,6 @@ protected:
 	void ConnectCore(CoreItem& ci);
 	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
 	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
-	void SetBasketCount(int i);
 	
 public:
 	

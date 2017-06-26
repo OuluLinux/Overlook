@@ -23,7 +23,7 @@ public:
 	}
 	virtual ~CustomCtrl() {}
 	virtual void Init(Core* c) {}
-	virtual void RefreshData() {}
+	virtual void Data() {}
 	
 	
 	Core& GetCore() {return *core;}

@@ -33,7 +33,7 @@ public:
 	typedef TrainerCtrl CLASSNAME;
 	TrainerCtrl(Trainer& trainer);
 	
-	void RefreshData();
+	void Data();
 	void SetTimeframe();
 	void SeekCur(int step);
 	

@@ -65,7 +65,7 @@ void GraphGroupCtrl::ClearCores() {
 	graphs.Clear();
 }
 
-void GraphGroupCtrl::RefreshData() {
+void GraphGroupCtrl::Data() {
 	Refresh();
 }
 

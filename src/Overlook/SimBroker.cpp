@@ -6,7 +6,6 @@ SimBroker::SimBroker() {
 	order_counter = 1000000;
 	lightweight = false;
 	initial_balance = 1000;
-	basket_begin = -1;
 	cur_begin = -1;
 	sys = NULL;
 }
@@ -22,8 +21,6 @@ void SimBroker::Init(MetaTrader& mt, System& sys) {
 		symbol_idx.Add(symbols[i].name);
 	
 	cur_begin = mt.GetSymbolCount();
-	basket_begin = cur_begin + mt.GetCurrencyCount();
-	signals.SetCount(basket_begin + 8, 0);
 	
 	Clear();
 	

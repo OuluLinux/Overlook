@@ -893,9 +893,6 @@ void DataBridge::RefreshCorrelation() {
 		dst.SetCount(src.GetCount());
 		for(int j = 0; j < src.GetCount(); j++)
 			dst[j] = src[j];
-		
-		// Copy symbols to the system
-		GetMetaTrader().SetBasket(i, dst);
 	}
 }
 

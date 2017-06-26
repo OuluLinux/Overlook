@@ -64,7 +64,7 @@ void BrokerCtrl::Init() {
 	//Thread::Start(THISBACK(DummyRunner));
 }
 
-void BrokerCtrl::RefreshData() {
+void BrokerCtrl::Data() {
 	Brokerage& b = *broker;
 	
 	String w;
@@ -102,6 +102,40 @@ void BrokerCtrl::RefreshData() {
 		trade.Set(i, 11, o.profit);
 	}
 	trade.SetCount(orders.GetCount());
+	
+	
+	const Vector<Asset>& assets = b.GetAssets();
+	for(int i = 0; i < assets.GetCount(); i++) {
+		const Asset& a = assets[i];
+		const String& name =
+			a.sym < b.GetSymbolCount() ?
+				b.GetSymbol(a.sym).name :
+				b.GetCurrency(a.sym - b.GetSymbolCount()).name;
+		exposure.Set(i, 0, name);
+		exposure.Set(i, 1, a.volume);
+		exposure.Set(i, 2, a.rate);
+		exposure.Set(i, 3, a.base_value);
+	}
+	exposure.SetCount(assets.GetCount());
+	
+	
+	const Vector<Order>& horders = b.GetHistoryOrders();
+	for(int i = 0; i < horders.GetCount(); i++) {
+		const Order& o = horders[i];
+		history.Set(i, 0, o.ticket);
+		history.Set(i, 1, o.begin);
+		history.Set(i, 2, o.type == 0 ? "Buy" : "Sell");
+		history.Set(i, 3, o.volume);
+		history.Set(i, 4, o.symbol);
+		history.Set(i, 5, o.open);
+		history.Set(i, 6, o.stoploss);
+		history.Set(i, 7, o.takeprofit);
+		history.Set(i, 8, o.end);
+		history.Set(i, 9, o.close);
+		history.Set(i, 10, o.swap);
+		history.Set(i, 11, o.profit);
+	}
+	history.SetCount(horders.GetCount());
 	
 	
 	

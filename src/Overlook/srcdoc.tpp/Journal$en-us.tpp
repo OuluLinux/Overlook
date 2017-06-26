@@ -1491,10 +1491,10 @@ manual traders trades only the most direct currency pair, and
 automatic traders trades weighted pairs from currency weights, 
 because the correct backward exposure calculation is easier in 
 that way (to put it mildly). That doesn`'t even have anything 
-to do with the integrity of virtual currency node from pairs, 
-but which is also reasonable assumption and which would suggest 
-that basket of pairs is more stable and easier to predict. Also, 
-single pairs tend to have more spikes, which is also something 
+to do with the integrity of virtual currency node (derived from 
+pairs), but which is also reasonable assumption and which would 
+suggest that basket of pairs is more stable and easier to predict. 
+Also, single pairs tends to have more spikes, which is also something 
 to avoid with automated solution.&]
 [s0;%- In the end, benefits for ditching single pair signals and 
 custom baskets until further interest outweights my curiosity 
@@ -1505,4 +1505,7 @@ indirectly using that backward exposure calculation.&]
 [s0;%- To be continued tomorrow at the same bat channel `[[^https`:`/`/www`.youtube`.com`/watch`?v`=alQ0zUjLLmg^ 1
 ], [^https`:`/`/www`.youtube`.com`/watch`?v`=mlsXRq`-Y6zE^ 2], 
 [^https`:`/`/www`.youtube`.com`/watch`?v`=iwbsx6LvnfY^ 3]`].&]
-[s0;%- ]]
+[s3;%- 26.6.2017&]
+[s0;%- Newly implemented exposure calculations must be tested and 
+a proper gui widget for that is needed. That will allow manual 
+testing of the SimBroker class. Maybe tomorrow...]]

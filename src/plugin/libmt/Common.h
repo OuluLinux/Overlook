@@ -324,8 +324,22 @@ struct Currency : Moveable<Currency> {
 	Index<int> pairs0, pairs1, all_pairs;
 	int base_mul, base_pair;
 	String name;
+	
+	Currency() : base_mul(0), base_pair(-1) {}
+	Currency(const Currency& c) {
+		pairs0 <<= c.pairs0;
+		pairs1 <<= c.pairs1;
+		all_pairs <<= c.all_pairs;
+		base_mul = c.base_mul;
+		base_pair = c.base_pair;
+		name = c.name;
+	}
 };
 
+struct Asset : Moveable<Asset> {
+	int sym;
+	double volume, rate, base_value;
+};
 	
 struct DbgDouble {
 	double value;

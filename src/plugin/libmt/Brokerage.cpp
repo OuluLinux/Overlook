@@ -3,7 +3,6 @@
 namespace libmt {
 	
 Brokerage::Brokerage() {
-	basket_begin = -1;
 	cur_begin = -1;
 	is_failed = false;
 	min_free_margin_level = 0.65;
@@ -11,7 +10,55 @@ Brokerage::Brokerage() {
 	free_margin_level = 0.90;
 	margin_call = 0.5;
 	margin_stop = 0.2;
-	lotsize = 100000;
+	selected = -1;
+	tf_h1_id = -1;
+	account_currency_id = -1;
+}
+
+void Brokerage::operator=(const Brokerage& b) {
+	orders <<= b.orders;
+	history_orders <<= b.history_orders;
+	skipped_currencies <<= b.skipped_currencies;
+	symbol_idx <<= b.symbol_idx;
+	account_name = b.account_name;
+	account_server = b.account_server;
+	account_currency = b.account_currency;
+	last_error = b.last_error;
+	free_margin_level = b.free_margin_level;
+	min_free_margin_level = b.min_free_margin_level;
+	max_free_margin_level = b.max_free_margin_level;
+	balance = b.balance;
+	equity = b.equity;
+	margin = b.margin;
+	margin_free = b.margin_free;
+	margin_call = b.margin_call;
+	margin_stop = b.margin_stop;
+	leverage = b.leverage;
+	initial_balance = b.initial_balance;
+	cur_begin = b.cur_begin;
+	account_currency_id = b.account_currency_id;
+	account_id = b.account_id;
+	selected = b.selected;
+	demo = b.demo;
+	connected = b.connected;
+	simulation = b.simulation;
+	init_success = b.init_success;
+	is_failed = b.is_failed;
+	basket_symbols <<= b.basket_symbols;
+	symbols <<= b.symbols;
+	askbid <<= b.askbid;
+	pricetf <<= b.pricetf;
+	currencies <<= b.currencies;
+	indices <<= b.indices;
+	signals <<= b.signals;
+	periodstr <<= b.periodstr;
+	tf_h1_id = b.tf_h1_id;
+	cur_volumes <<= b.cur_volumes;
+	idx_volumes <<= b.idx_volumes;
+	cur_rates <<= b.cur_rates;
+	cur_base_values <<= b.cur_base_values;
+	idx_rates <<= b.idx_rates;
+	idx_base_values <<= b.idx_base_values;
 }
 
 void Brokerage::PutSignal(int sym, int signal) {
@@ -25,6 +72,13 @@ void Brokerage::ForwardExposure() {
 	
 	int sym_count = symbols.GetCount();
 	int cur_count = currencies.GetCount();
+	
+	idx_rates.SetCount(sym_count, 0.0);
+	idx_volumes.SetCount(sym_count, 0.0);
+	idx_base_values.SetCount(sym_count, 0.0);
+	cur_rates.SetCount(cur_count, 0.0);
+	cur_volumes.SetCount(cur_count, 0.0);
+	cur_base_values.SetCount(cur_count, 0.0);
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
@@ -116,6 +170,10 @@ void Brokerage::ForwardExposure() {
 		
 		double& rate = idx_rates[i];
 		double volume = idx_volumes[i];
+		if (volume == 0.0) {
+			idx_base_values[i] = 0.0;
+			continue;
+		}
 		
 		if (sym.is_base_currency) {
 			if (volume < 0)		rate = askbid[i].ask;
@@ -144,55 +202,81 @@ void Brokerage::ForwardExposure() {
 	}
 	
 	// Currencies
+	assets.SetCount(0);
 	for(int i = 0; i < cur_count; i++) {
-		// row.asset = cur_volumes.GetKey(i);
-		// row.volume = cur_volumes[i];
-		// row.rate = cur_rates[i];
+		double volume = cur_volumes[i];
+		if (volume == 0.0) continue;
 		
-		double base_value = cur_base_values[i];
+		Asset& a		= assets.Add();
+		a.sym			= sym_count + i;
+		a.volume		= volume;
+		a.rate			= cur_rates[i];
+		a.base_value	= cur_base_values[i];
 		
 		// Freaky logic, but gives correct result, which have been checked many, many times.
-		if (base_value > 0)
-			base_volume -= base_value * leverage * 2;
+		if (a.base_value > 0)
+			base_volume -= a.base_value * leverage * 2;
 		else
-			base_volume -= base_value * leverage;
+			base_volume -= a.base_value * leverage;
 	}
 	
 	// Indices and CFDs
 	for(int i = 0; i < sym_count; i++) {
-		double rate = idx_rates[i];
-		double base_value = idx_base_values[i];
+		double volume = idx_volumes[i];
+		if (volume == 0.0) continue;
+		
 		const Symbol& sym = symbols[i];
 		
-		// row.asset = bs.name;
-		// row.volume = idx_volumes[i];
-		// row.rate = rate;
-		// row.base_value = base_value;
+		Asset& a		= assets.Add();
+		a.sym			= i;
+		a.volume		= idx_volumes[i];
+		a.rate			= idx_rates[i];
+		a.base_value	= idx_base_values[i];
 		
 		if (sym.is_base_currency) {
-			if (base_value > 0)
-				base_volume -= base_value * leverage;
+			if (a.base_value > 0)
+				base_volume -= a.base_value * leverage;
 			else
-				base_volume += base_value * leverage;
+				base_volume += a.base_value * leverage;
 		}
 	}
 	
 	// Base currency
-	//  row.asset = base;
-	//  row.volume = base_volume;
-	//  row.rate = 1.00;
-	//  row.base_value = base_volume / leverage;
-	double base_value = base_volume / leverage;
-	DUMP(base_value);
+	Asset& a = assets.Add();
+	a.sym = account_currency_id;
+	a.volume = base_volume;
+	a.rate = 1.00;
+	a.base_value = base_volume / leverage;
 }
 
 void Brokerage::BackwardExposure() {
+	ASSERT(signals.GetCount() == symbols.GetCount() + currencies.GetCount());
+	double leverage = AccountLeverage();
+	int sym_count = symbols.GetCount();
+	int cur_count = currencies.GetCount();
+	
+	
+	// Get maximum margin sum
+	ASSERT(free_margin_level >= 0.20 && free_margin_level <= 1.0);
+	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level);
 	
 	
 	// Get leveraged value
+	double base_volume = max_margin_sum * leverage;
 	
 	
 	// Get currency, index and stock asset values using relative signal
+	for(int i = 0; i < sym_count; i++) {
+		int signal = signals[i];
+		
+		
+	}
+	for(int i = 0; i < cur_count; i++) {
+		int signal = signals[sym_count + i];
+		
+		
+	}
+	
 	
 	
 	// Get volumes (lots) from asset values
@@ -284,7 +368,7 @@ void Brokerage::BackwardExposure() {
 	
 	// Do some magic management for the minimum volume
 	double max_total_lots;
-	// TODO: use the "RefreshData": solve from "row.base_value" == equity * free_margin_level
+	// TODO: use the "Data": solve from "row.base_value" == equity * free_margin_level
 	Panic("TODO");
 	if (total_lots > max_total_lots) {
 		// Oh-oh, we have a failed signal

@@ -10,28 +10,27 @@ protected:
 	Index<String> skipped_currencies;
 	Index<String>	symbol_idx;
 	
+	String account_name, account_server, account_currency;
+	String last_error;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
 	double leverage, initial_balance;
-	int selected;
-	int lotsize;
-	
-	String account_name, account_server, account_currency;
-	String last_error;
-	int basket_begin, cur_begin;
+	int cur_begin;
+	int account_currency_id;
 	int account_id;
+	int selected;
 	bool demo, connected, simulation;
 	bool init_success;
 	bool is_failed;
 	
 	Vector<Vector<int> > basket_symbols;
-	Vector<Price> current_prices;
 	Vector<Symbol> symbols;
 	Vector<Price> askbid;
 	Vector<PriceTf> pricetf;
 	VectorMap<String, Currency> currencies;
 	Vector<int> indices;
 	Vector<int> signals;
+	Vector<Asset> assets;
 	Mutex current_price_lock;
 	
 	ArrayMap<int, String> periodstr;
@@ -47,6 +46,8 @@ public:
 	
 	Brokerage();
 	
+	void operator=(const Brokerage& b);
+	
 	void ForwardExposure();
 	void BackwardExposure();
 	void PutSignal(int sym, int signal);
@@ -54,27 +55,22 @@ public:
 	bool IsFailed() const {return is_failed;}
 	void SetFailed(bool b=true) {is_failed = b;}
 	
-	const Vector<Order>&	GetOpenOrders() {return orders;}
-	const Vector<Order>&	GetHistoryOrders() {return history_orders;}
-	const Vector<Symbol>&	GetSymbols() {return symbols;}
-	const Vector<Price>&	GetAskBid() {return current_prices;}
-	const Vector<PriceTf>&	GetTickData() {return pricetf;}
+	const Vector<Order>&	GetOpenOrders() const {return orders;}
+	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}
+	const Vector<Symbol>&	GetSymbols() const {return symbols;}
+	const Vector<Price>&	GetAskBid() const {return askbid;}
+	const Vector<PriceTf>&	GetTickData() const {return pricetf;}
+	const Vector<Asset>&	GetAssets() const {return assets;}
 	const Symbol& GetSymbol(int i) const {return symbols[i];}
 	int GetTimeframe(int i) {return periodstr.GetKey(i);}
 	const Currency& GetCurrency(int i) const {return currencies[i];}
 	String GetTimeframeString(int i) {return periodstr[i];}
-	bool IsDemoCached() {return demo;}
-	bool IsConnectedCached() {return connected;}
 	int GetTimeframeCount() {return periodstr.GetCount();}
 	int GetTimeframeIdH1() {return tf_h1_id;}
 	int GetSymbolCount() const {return symbols.GetCount();}
 	int GetCurrencyCount() const {return currencies.GetCount();}
 	int GetIndexId(int i) const {return indices[i];}
 	int GetIndexCount() const {return indices.GetCount();}
-	int GetBasketCount() const {return basket_symbols.GetCount();}
-	void SetBasketCount(int i) {basket_symbols.SetCount(i);}
-	void SetBasket(int i, const Vector<int>& basket) {basket_symbols[i] <<= basket;}
-	const Vector<int>& GetBasket(int i) const {return basket_symbols[i];}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);
@@ -102,6 +98,8 @@ public:
 	double	SymbolInfoDouble(String name, int prop_id);
 	int		SymbolInfoInteger(String name, int prop_id);
 	String	SymbolInfoString(String name, int prop_id);
+	bool    IsDemo() {return demo;}
+	bool    IsConnected() {return connected;}
 	
 	virtual int		iBars(String symbol, int timeframe) = 0;
 	virtual int		iBarShift(String symbol, int timeframe, int datetime) = 0;
@@ -140,8 +138,6 @@ public:
 	virtual double	OrderTakeProfit() = 0;
 	virtual int		OrderTicket() = 0;
 	virtual int		OrderType() = 0;
-	virtual bool    IsDemo() = 0;
-	virtual bool    IsConnected() = 0;
 	
 };
 

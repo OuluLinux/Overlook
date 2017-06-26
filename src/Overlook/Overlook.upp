@@ -25,6 +25,8 @@ file
 	BrokerCtrl.h,
 	BrokerCtrl.cpp,
 	BrokerCtrl.lay,
+	ExposureTester.h,
+	ExposureTester.cpp,
 	TrainerCtrl.h,
 	TrainerCtrl.cpp,
 	Core readonly separator,

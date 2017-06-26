@@ -67,8 +67,6 @@ public:
 	virtual double	OrderTakeProfit();
 	virtual int		OrderTicket();
 	virtual int		OrderType();
-	virtual bool    IsDemo();
-	virtual bool    IsConnected();
 		
 	// Remote calling statistics
 	int GetInputBytes() {return input;}

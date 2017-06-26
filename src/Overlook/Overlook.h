@@ -8,6 +8,7 @@
 #include "Core.h"
 #include "CustomCtrl.h"
 #include "SimBroker.h"
+#include "ExposureTester.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
@@ -64,7 +65,7 @@ protected:
 	// Main view
 	TabCtrl tabs;
 	
-	// Visual inspection
+	// Traditional view
 	ParentCtrl visins;
 	Splitter droplist_split;
 	DropList ctrllist, symlist, tflist;
@@ -73,6 +74,9 @@ protected:
 	CustomCtrl* prev_view;
 	Core* prev_core;
 	TimeCallback tc;
+	
+	// Exposure tester
+	ExposureTester exposurectrl;
 	
 	// Trainer view
 	Trainer trainer;

@@ -232,7 +232,33 @@ int MetaTrader::Init(String addr, int port) {
 		
 		// Refresh symbols
 		init_success = true; // GetSymbols requires this temporarily
-		GetSymbols();
+		
+		account_name = _AccountName();
+		account_server = _AccountServer();
+		account_currency = _AccountCurrency();
+		balance = _AccountBalance();
+		equity = _AccountEquity();
+		margin = _AccountMargin();
+		margin_free = _AccountFreeMargin();
+		margin_call = _AccountInfoDouble(ACCOUNT_MARGIN_SO_CALL);
+		margin_stop = _AccountInfoDouble(ACCOUNT_MARGIN_SO_SO);
+		leverage = _AccountLeverage();
+		initial_balance = balance;
+		account_id = _AccountNumber();
+		demo = _IsDemo();
+		simulation = false;
+		connected = _IsConnected();
+		
+		
+		int stop_out_mode = _AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
+		double margin_mode_div = stop_out_mode == ACCOUNT_STOPOUT_MODE_MONEY ? equity : 100.0;
+		free_margin_level = (margin_free + margin) / equity;
+		max_free_margin_level = 0.99;
+		min_free_margin_level = margin_call / margin_mode_div;
+		
+		_GetSymbols();
+		_GetAskBid();
+		
 		init_success = !symbols.IsEmpty();
 	}
 	catch (ConnectionError e) {
@@ -407,8 +433,8 @@ MTFUNC0(62,	String,		_GetPricesRaw,			GetStr);
 MTFUNC1(63,	String,		_GetHistoryOrdersRaw,	int,  SetInt,	GetStr);
 MTFUNC1(64,	String,		_GetOrdersRaw,			int,  SetInt,	GetStr);
 MTFUNC0(66,	String,		_GetLastError,			GetStr);
-MTFUNC0(68,	bool,		IsDemo,					GetInt);
-MTFUNC0(69,	bool,		IsConnected,			GetInt);
+MTFUNC0(68,	bool,		_IsDemo,				GetInt);
+MTFUNC0(69,	bool,		_IsConnected,			GetInt);
 MTFUNC3(70,	int,		_FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetInt);
 
 
@@ -554,7 +580,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	
 	Vector<String> lines = Split(s, ";");
 	
-	String account_currency = AccountCurrency();
+	String account_currency = _AccountCurrency();
 	ASSERT(!account_currency.IsEmpty());
 	if (!account_currency.GetCount())
 		account_currency = "USD";
@@ -710,6 +736,10 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			if (a == account_currency || b == account_currency)
 				sym.is_base_currency = true;
 		}
+		else {
+			if (sym.currency_base == account_currency)
+				sym.is_base_currency = true;
+		}
 		
 		if (!sym.IsForex() && sym.name.Left(1) != "#")
 			indices.Add(symbols.GetCount());
@@ -766,6 +796,8 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		c.name = symbol;
 		c.base_mul = 0;
 		c.base_pair = -1;
+		if (symbol == account_currency)
+			account_currency_id = symbols.GetCount() + i;
 		for(int j = 0; j < symbols.GetCount(); j++) {
 			Symbol& s = symbols[j];
 			if (!s.IsForex()) continue;

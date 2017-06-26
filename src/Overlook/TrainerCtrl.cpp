@@ -94,7 +94,7 @@ TrainerCtrl::TrainerCtrl(Trainer& trainer) :
 	step_bwd <<= THISBACK1(SeekCur, -1);
 	step_fwd <<= THISBACK1(SeekCur, +1);
 	tf_list <<= THISBACK(SetTimeframe);
-	time_slider <<= THISBACK(RefreshData);
+	time_slider <<= THISBACK(Data);
 }
 
 void TrainerCtrl::SetTimeframe() {
@@ -104,7 +104,7 @@ void TrainerCtrl::SetTimeframe() {
 	time_slider.SetData(iter.bars-1);
 }
 
-void TrainerCtrl::RefreshData() {
+void TrainerCtrl::Data() {
 	if (trainer->iters.IsEmpty())
 		return;
 	

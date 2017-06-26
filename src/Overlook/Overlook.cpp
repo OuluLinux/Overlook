@@ -62,6 +62,8 @@ Overlook::Overlook() :
 	Add(tabs.SizePos());
 	tabs.Add(visins);
 	tabs.Add(visins, "Traditional");
+	tabs.Add(exposurectrl);
+	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(trainerctrl);
 	tabs.Add(trainerctrl, "Training");
 	tabs.Add(testctrl);
@@ -98,16 +100,19 @@ void Overlook::Refresher() {
 	int tab = tabs.Get();
 	if (tab == 0) {
 		if (prev_view)
-			prev_view->RefreshData();
+			prev_view->Data();
 	}
 	else if (tab == 1) {
-		trainerctrl.RefreshData();
+		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		RefreshTesting();
+		trainerctrl.Data();
 	}
 	else if (tab == 3) {
-		rt_ctrl.RefreshData();
+		RefreshTesting();
+	}
+	else if (tab == 4) {
+		rt_ctrl.Data();
 	}
 	tc.Set(1000, THISBACK(PostRefresher));
 }
@@ -116,6 +121,7 @@ void Overlook::Init() {
 	sys.Init();
 	trainer.Init();
 	rt_ctrl.Init();
+	exposurectrl.Init();
 	
 	
 	// Init gui
@@ -197,7 +203,7 @@ void Overlook::SetView() {
 	
 	view->Init(core);
 	
-	view->RefreshData();
+	view->Data();
 	
 	visins.Add(view->VSizePos(30).HSizePos());
 	prev_view = view;

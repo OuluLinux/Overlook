@@ -29,7 +29,6 @@ void System::Init() {
 	ASSERT(symbols.IsEmpty());
 	
 	MetaTrader& mt = GetMetaTrader();
-	ASSERT(mt.GetBasketCount() == 0);
 	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetSymbols();
 	
@@ -49,13 +48,6 @@ void System::Init() {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
 		}
-		basket_sym_begin = mt.GetSymbolCount() + mt.GetCurrencyCount();
-		int baskets = 8;
-		for(int i = 0; i < baskets; i++) {
-			AddSymbol("Basket #" + IntStr(i));
-		}
-		mt.SetBasketCount(baskets);
-		
 		
 		
 		// Add periods

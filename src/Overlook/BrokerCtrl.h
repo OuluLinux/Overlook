@@ -22,7 +22,7 @@ public:
 	void Reset();
 	
 	virtual void Init();
-	virtual void RefreshData();
+	virtual void Data();
 	
 	void SetBroker(Brokerage& broker) {this->broker = &broker;}
 	void DummyRunner();

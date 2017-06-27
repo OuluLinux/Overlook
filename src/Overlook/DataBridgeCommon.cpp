@@ -117,7 +117,7 @@ int DataBridgeCommon::DownloadAskBid() {
 }
 
 int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) {
-	//LOG("DownloadRemoteFile " << remote_path << " ----> " << local_path);
+	LOG("DownloadRemoteFile " << remote_path << " ----> " << local_path);
 	
 	MetaTrader& mt = GetMetaTrader();
 	

@@ -20,12 +20,15 @@ public:
 	
 	void Refresher();
 	void Reset();
+	void Close();
+	void CloseAll();
 	
 	virtual void Init();
 	virtual void Data();
 	
 	void SetBroker(Brokerage& broker) {this->broker = &broker;}
 	void DummyRunner();
+	void OpenOrder(int type);
 };
 
 }

@@ -78,13 +78,13 @@ public:
 	bool _IsResponding();
 	Vector<Vector<Time> > _GetLatestPriceTimes();
 	Vector<Vector<Time> > _GetEarliestPriceTimes();
-	void _GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history = false);
+	void _GetOrders(int magic, bool force_history = false);
 	String	_GetSymbolsRaw();
 	String	_GetAskBidRaw();
 	String	_GetPricesRaw();
 	String	_GetHistoryOrdersRaw(int magic);
 	String	_GetOrdersRaw(int magic);
-	void LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_open);
+	void LoadOrderFile(String content, Vector<Order>& orders, bool is_open);
 	const Vector<Symbol>&	_GetSymbols();
 	const Vector<Price>&	_GetAskBid();
 	const Vector<PriceTf>&	_GetTickData();

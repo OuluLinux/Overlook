@@ -358,95 +358,58 @@ struct DbgDouble {
 struct Order : Moveable<Order> {
 	
 	// Ctors
-	Order() : open(0), close(0), takeprofit(0), stoploss(0), id(-1) {}
-	Order(const Order& o) {*this = o;}
+	Order() {
+		open = 0.0;			close = 0.0;		volume = 0.0;		profit = 0.0;
+		stoploss = 0.0;		takeprofit = 0.0;	swap = 0.0;			commission = 0.0;
+		symbol = -1;		ticket = -1;		type = -1;			is_open = false;
+	}
+	Order(const Order& o) {
+		*this = o;
+	}
 	Order& operator = (const Order& o) {
 		begin = o.begin;
 		end = o.end;
-		price_change = o.price_change;
-		spread = o.spread;
-		volume = o.volume;
-		profit = o.profit;
-		best  = o.best;
-		worst = o.worst;
-		id = o.id;
-		sym = o.sym;
-		tf = o.tf;
-		type = o.type;
-		proxy = o.proxy;
-		is_open = o.is_open;
-		
-		symbol = o.symbol;
-		comment = o.comment;
 		expiration = o.expiration;
 		open = o.open;
 		close = o.close;
-		open_proxy = o.open_proxy;
-		close_proxy = o.close_proxy;
 		stoploss = o.stoploss;
 		takeprofit = o.takeprofit;
+		volume = o.volume;
+		profit = o.profit;
 		commission = o.commission;
 		swap = o.swap;
+		symbol = o.symbol;
 		ticket = o.ticket;
-		
-		shift = o.shift;
-		
+		type = o.type;
+		is_open = o.is_open;
 		return *this;
 	}
 	
 	
-	//
 	Time begin, end;
-	double price_change;
-	double spread;
-	double volume;
-	double profit;
-	double best, worst;
-	int id;
-	int sym;
-	int tf;
-	int type;
-	int proxy;
-	bool is_open;
-	
-	// Public vars
-	String symbol;
-	String comment;
 	Time expiration;
 	double open, close;
-	double open_proxy, close_proxy;
-	double stoploss, takeprofit;
-	double commission;
-	double swap;
+	double takeprofit, stoploss;
+	double volume, profit, commission, swap;
+	int symbol;
 	int ticket;
-	int shift;
+	int type;
+	bool is_open;
 	
 	// Main funcs
 	void Serialize(Stream& s) {
-		s
-			% begin % end
-			% price_change
-			% spread
-			% volume
-			% profit
-			% best % worst
-			% id
-			% sym
-			% tf
-			% type
-			% proxy
-			% is_open
-			
-			% symbol
-			% comment
+		s	% begin % end
 			% expiration
 			% open % close
-			% open_proxy % close_proxy
 			% stoploss % takeprofit
+			% volume
+			% profit
 			% commission
 			% swap
+			% symbol
 			% ticket
-			% shift;
+			% type
+			% is_open;
 	}
 	String GetTypeString() const;
 	
@@ -458,38 +421,6 @@ struct ConnectionError : public Exc { ConnectionError() {*(String*)this = "MT4 C
 
 
 
-// Class for temp order data
-struct MTOrder : Moveable<MTOrder> {
-	int ticket;
-	String symbol;
-	double open, close;
-	Time begin, end;
-	int type;
-	double takeprofit, stoploss;
-	double volume, profit, commission, swap;
-	Time expiration;
-	bool is_open;
-	
-	operator Order() {
-		Order out;
-		out.ticket = ticket;
-		out.symbol = symbol;
-		out.open = open;
-		out.close = close;
-		out.begin = begin;
-		out.end = end;
-		out.type = type;
-		out.takeprofit = takeprofit;
-		out.stoploss = stoploss;
-		out.volume = volume;
-		out.profit = profit;
-		out.commission = commission;
-		out.swap = swap;
-		out.expiration = expiration;
-		out.is_open = is_open;
-		return out;
-	}
-};
 
 }
 

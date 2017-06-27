@@ -247,6 +247,8 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	int begin = counted;
 	if (init_round) // Fix unfinished volume bar at history -> askbid switching point
 		counted--;
+	if (counted < 1) counted = 1;
+	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double spread = 0;
@@ -372,8 +374,10 @@ void DataBridge::RefreshFromHistory() {
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
-	if (!FileExists(local_history_file))
+	if (!FileExists(local_history_file)) {
+		DUMP(local_history_file);
 		throw DataExc();
+	}
 	FileIn src(local_history_file);
 	if (!src.IsOpen() || !src.GetSize())
 		return;

@@ -24,7 +24,7 @@ ExposureTester::ExposureTester() {
 }
 
 void ExposureTester::Init() {
-	
+	broker.Init();
 	broker.Brokerage::operator=(GetMetaTrader());
 	
 	brokerctrl.SetBroker(broker);

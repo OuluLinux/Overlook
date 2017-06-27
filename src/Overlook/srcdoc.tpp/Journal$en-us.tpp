@@ -1508,4 +1508,61 @@ indirectly using that backward exposure calculation.&]
 [s3;%- 26.6.2017&]
 [s0;%- Newly implemented exposure calculations must be tested and 
 a proper gui widget for that is needed. That will allow manual 
-testing of the SimBroker class. Maybe tomorrow...]]
+testing of the SimBroker class. Maybe tomorrow...&]
+[s3;%- 27.6.2017&]
+[s0;%- Somehow I mixed together profit calculations and exposure, 
+but they have nothing in common in code. That was a small mistake, 
+however, and I only removed additional variables for open/close 
+price of proxy symbols... The exposure calculation doesn`'t give 
+equal values to MT4, but it is close enough for me. Also, as 
+long as the agent is trained for the same algorithm, it doesn`'t 
+affect to the outcome.&]
+[s0;%- ...&]
+[s0;%- I took a walk outside, where happens to be internationally 
+nice summer weather, and I pondered what is the problem, because 
+this is not progressing steadily. I would like to communicate 
+this in very scientific way, but that is not going to happen, 
+so I am just trying something...&]
+[s0;%- ...so, previously I did an experiement, where I generated 
+changing value dataset for nodes. Then I `"connected`" those 
+nodes and generated pair instruments. Then I tried to regenerate 
+the node value from pairs. The result was closer to original, 
+when there was many nodes, and worse, when there was only a few 
+nodes. From this I jump far to the real life, where those nodes 
+are currencies and connected pairs are available pair instruments. 
+Now, one must ask, that once in isolated system, with multiple 
+nodes, is it equal to put weight on all nodes (assets) via [* the 
+single immediate pair] or via [* all pairs] (all cross`-sections 
+between nodes)? If not, how it is different and why?&]
+[s0;%- ...&]
+[s0;%- Ok, so the answer is very experiemental. I have two graphs 
+on my monitor. The other is EURUSD and the other is virtual EUR 
+graph with mostly USD centric instrument`-set. So, most people 
+would expect these to be equal, and they are very similar, but 
+not equal. That is just obvious. First part of the answer is 
+obvious no, it is not equal, but why? Currencies have a large 
+real`-world asset base, but the trading happens in the most outer 
+layer of the real`-world counterpart, sort of. The outer layer 
+balances itself with other parts of the layer and with the base 
+value, but it is not constant. There are `"internal pairs`", 
+sort of, what are not shown. Actually, by exposing those connections 
+you might have even higher success rate in predictions... Visually, 
+it looks like EURUSD follows the virtual node sometimes many 
+days. Oops, I might have said too much ;)&]
+[s0;%- Technically, I am not sure. The exposure would show same value 
+of assets, but they would be committed via different instruments, 
+which in practice wouldn`'t be linked to same constant asset.&]
+[s0;%- ...&]
+[s0;%- Actually, this gave an idea about `"next generation Overlook`", 
+which would have `"multi`-timeframe currency`-agents`" instead 
+of `"trading agents`". Pair data would be generated with simple 
+function and difference to real data or MSE would be returned 
+for the trainer. Then next values would be predicted and those 
+would be traded in very simple ways.... but why wait to next 
+generation?&]
+[s0;%- So, actually, it could be possible to have that previously 
+mentioned `"multi`-timeframe currency`-agent`", which would generate 
+multi`-timeframe predictions for pairs, and then separate trader 
+agent would be trained for that pair. The sweet`-spot for correct 
+predictions might actually be that virtual currency node.&]
+[s0;%- ]]

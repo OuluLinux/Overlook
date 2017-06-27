@@ -8,9 +8,9 @@ class Brokerage {
 protected:
 	Vector<Order> orders, history_orders;
 	Index<String> skipped_currencies;
-	Index<String>	symbol_idx;
+	Index<String> symbol_idx;
 	
-	String account_name, account_server, account_currency;
+	String account_name, account_server, account_currency, account_company;
 	String last_error;
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
@@ -98,9 +98,11 @@ public:
 	double	SymbolInfoDouble(String name, int prop_id);
 	int		SymbolInfoInteger(String name, int prop_id);
 	String	SymbolInfoString(String name, int prop_id);
-	bool    IsDemo() {return demo;}
-	bool    IsConnected() {return connected;}
+	bool    IsDemo() const {return demo;}
+	bool    IsConnected() const {return connected;}
+	String	GetLastError() const {return last_error;}
 	
+	// Original MQL-like functions
 	virtual int		iBars(String symbol, int timeframe) = 0;
 	virtual int		iBarShift(String symbol, int timeframe, int datetime) = 0;
 	virtual double	iClose(String symbol, int timeframe, int shift) = 0;
@@ -138,6 +140,9 @@ public:
 	virtual double	OrderTakeProfit() = 0;
 	virtual int		OrderTicket() = 0;
 	virtual int		OrderType() = 0;
+	
+	// More efficient alternatives
+	virtual int		OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
 	
 };
 

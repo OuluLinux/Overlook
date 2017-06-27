@@ -236,6 +236,7 @@ int MetaTrader::Init(String addr, int port) {
 		account_name = _AccountName();
 		account_server = _AccountServer();
 		account_currency = _AccountCurrency();
+		account_company = _AccountCompany();
 		balance = _AccountBalance();
 		equity = _AccountEquity();
 		margin = _AccountMargin();
@@ -258,6 +259,7 @@ int MetaTrader::Init(String addr, int port) {
 		
 		_GetSymbols();
 		_GetAskBid();
+		_GetOrders(0, true);
 		
 		init_success = !symbols.IsEmpty();
 	}
@@ -565,6 +567,7 @@ String GetProxy(const String& currency) {
 const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	symbols.SetCount(0);
 	indices.SetCount(0);
+	symbol_idx.Clear();
 	
 	// Get symbols from Broker
 	String s;
@@ -745,6 +748,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			indices.Add(symbols.GetCount());
 		
 		symbols.Add(sym);
+		symbol_idx.Add(sym.name);
 	}
 	
 	//for(int i = 0; i < indices.GetCount(); i++) {LOG(i << ":\t" << symbols[indices[i]].name);}
@@ -868,7 +872,8 @@ const Vector<Price>& MetaTrader::_GetAskBid() {
 #define GET_INT() StrInt(v[pos++])
 #define GET_DBL() StrDbl(v[pos++])
 
-void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_open) {
+void MetaTrader::LoadOrderFile(String content, Vector<Order>& orders, bool is_open) {
+	ASSERT(!symbol_idx.IsEmpty());
 	
 	// Clear old data
 	orders.Clear();
@@ -884,10 +889,11 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 		skip = 0;
 		int ticket = GET_INT();
 		int i = orders.GetCount();
-		MTOrder& o = orders.Add();
+		Order& o = orders.Add();
 		int strsize, t;
 		o.ticket = ticket;
-		o.symbol = GET();
+		String symbol = GET();
+		o.symbol = symbol_idx.Find(symbol);
 		o.open = GET_DBL();
 		o.close = GET_DBL();
 		int ts = GET_INT();
@@ -904,7 +910,7 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 		o.expiration = TimeFromTimestamp(GET_INT());
 		o.is_open = is_open;
 		
-		if (!ts) {
+		if (!ts || o.symbol == -1) {
 			orders.Remove(i);
 		}
 		if (skip) break;
@@ -914,7 +920,7 @@ void MetaTrader::LoadOrderFile(String content, Vector<MTOrder>& orders, bool is_
 }
 
 
-void MetaTrader::_GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int magic, bool force_history) {
+void MetaTrader::_GetOrders(int magic, bool force_history) {
 	
 	// Load open orders data from Broker
 	String content;
@@ -928,39 +934,25 @@ void MetaTrader::_GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int
 		}
 	}
 	
-	// Load MTOrder from data
-	Vector<MTOrder> open_orders;
-	LoadOrderFile(content, open_orders, true);
 	
-	// Compare current open orders to MT open orders
-	bool all_equal = true;
-	if (open.GetCount() != open_orders.GetCount())
-		all_equal = false;
-	open.Clear();
-	for(int i = 0; i < open_orders.GetCount(); i++) {
-		MTOrder& mto = open_orders[i];
-		
-		// Update existing orders
-		int j = orders.Find(mto.ticket);
-		if (j != -1) {
-			Order& bo = orders[j];
-			bo = mto;
-			// Add pointer
-			open.Add(bo.ticket);
-		}
-		
-		// Add new orders
-		else {
-			Order& bo = orders.Add(mto.ticket);
-			bo = mto;
-			// Add pointer
-			open.Add(bo.ticket);
-			all_equal = false;
+	// Load Order from data
+	Vector<Order> open_orders;
+	LoadOrderFile(content, open_orders, true);
+	bool all_equal = open_orders.GetCount() == this->orders.GetCount();
+	if (all_equal) {
+		for(int i = 0; i < open_orders.GetCount(); i++) {
+			if (open_orders[i].ticket != this->orders[i].ticket) {
+				all_equal = false;
+				break;
+			}
 		}
 	}
+	this->orders <<= open_orders;
+	
 	
 	// Don't update history files if open orders are not changed
 	if (all_equal && !force_history) return;
+	
 	
 	// Load history orders data from Broker
 	content.Clear();
@@ -974,32 +966,11 @@ void MetaTrader::_GetOrders(ArrayMap<int, Order>& orders, Vector<int>& open, int
 		}
 	}
 	
-	// Load stored file
-	Vector<MTOrder> history_orders;
-	LoadOrderFile(content, history_orders, false);
-	//LOG(content);
 	
-	// Update history data
-	for(int i = 0; i < history_orders.GetCount(); i++) {
-		MTOrder& mto = history_orders[i];
-		
-		// Update existing orders
-		int j = orders.Find(mto.ticket);
-		if (j != -1) {
-			Order& bo = orders[j];
-			bo = mto;
-			// Add pointer
-			open.Add(bo.ticket);
-		}
-		
-		// Add new orders
-		else {
-			Order& bo = orders.Add(mto.ticket);
-			bo = mto;
-			// Add pointer
-			open.Add(bo.ticket);
-		}
-	}
+	// Load stored file
+	Vector<Order> history_orders;
+	LoadOrderFile(content, history_orders, false);
+	this->history_orders <<= history_orders;
 }
 
 
@@ -1105,7 +1076,7 @@ bool MTPacket::Export(MetaTrader& mt, const String& addr, int port) {
 	
 	got = sock.Get(&len, 4);
 	TEST(got == 4);
-	TEST(len >= 0 && len < 256*256);
+	TEST(len >= 0 && len < 512*512);
 	if (len == 0)
 		result.Clear();
 	else

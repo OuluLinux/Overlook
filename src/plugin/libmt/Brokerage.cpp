@@ -23,6 +23,7 @@ void Brokerage::operator=(const Brokerage& b) {
 	account_name = b.account_name;
 	account_server = b.account_server;
 	account_currency = b.account_currency;
+	account_company = b.account_company;
 	last_error = b.last_error;
 	free_margin_level = b.free_margin_level;
 	min_free_margin_level = b.min_free_margin_level;
@@ -72,7 +73,14 @@ void Brokerage::ForwardExposure() {
 	
 	int sym_count = symbols.GetCount();
 	int cur_count = currencies.GetCount();
+	int skip_account_cur = account_currency_id - sym_count;
 	
+	idx_rates.SetCount(0);
+	idx_volumes.SetCount(0);
+	idx_base_values.SetCount(0);
+	cur_rates.SetCount(0);
+	cur_volumes.SetCount(0);
+	cur_base_values.SetCount(0);
 	idx_rates.SetCount(sym_count, 0.0);
 	idx_volumes.SetCount(sym_count, 0.0);
 	idx_base_values.SetCount(sym_count, 0.0);
@@ -83,24 +91,24 @@ void Brokerage::ForwardExposure() {
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
 		
-		if (o.sym < 0 || o.sym >= sym_count)
+		if (o.symbol < 0 || o.symbol >= sym_count)
 			continue;
 		
-		const Symbol& sym = GetSymbol(o.sym);
+		const Symbol& sym = GetSymbol(o.symbol);
 		
 		if (sym.margin_calc_mode == Symbol::CALCMODE_FOREX) {
 			if (sym.base_mul == +1) {
 				// For example: base=USD, sym=USDCHF, cmd=buy, lots=0.01, a=USD, b=CHF
-				double& cur_volume = cur_volumes[sym.base_cur0];
+				double& cur_volume = cur_volumes[sym.base_cur1];
 				if (o.type == OP_BUY)
-					cur_volume += -1 * o.volume * sym.lotsize * askbid[o.sym].ask;
+					cur_volume += -1 * o.volume * sym.lotsize * askbid[o.symbol].ask;
 				else if (o.type == OP_SELL)
-					cur_volume += o.volume * sym.lotsize * askbid[o.sym].bid;
+					cur_volume += o.volume * sym.lotsize * askbid[o.symbol].bid;
 				else Panic("Type handling not implemented");
 			}
 			else if (sym.base_mul == -1) {
 				// For example: base=USD, sym=AUDUSD, cmd=buy, lots=0.01, a=AUD, b=USD
-				double& cur_volume = cur_volumes[sym.base_cur1];
+				double& cur_volume = cur_volumes[sym.base_cur0];
 				if (o.type == OP_BUY)
 					cur_volume += o.volume * sym.lotsize;
 				else if (o.type == OP_SELL)
@@ -131,7 +139,7 @@ void Brokerage::ForwardExposure() {
 			}
 		}
 		else {
-			double& idx_volume = idx_volumes[o.sym];
+			double& idx_volume = idx_volumes[o.symbol];
 			double value;
 			if (o.type == OP_BUY)
 				value = o.volume * sym.contract_size;
@@ -145,6 +153,7 @@ void Brokerage::ForwardExposure() {
 	
 	// Get values in base currency: currencies
 	for(int i = 0; i < cur_count; i++) {
+		if (i == skip_account_cur) continue;
 		const Currency& cur = currencies[i];
 		
 		double& rate = cur_rates[i];
@@ -203,7 +212,10 @@ void Brokerage::ForwardExposure() {
 	
 	// Currencies
 	assets.SetCount(0);
+	double base_value = 0.0;
 	for(int i = 0; i < cur_count; i++) {
+		if (i == skip_account_cur) continue;
+		
 		double volume = cur_volumes[i];
 		if (volume == 0.0) continue;
 		
@@ -214,10 +226,14 @@ void Brokerage::ForwardExposure() {
 		a.base_value	= cur_base_values[i];
 		
 		// Freaky logic, but gives correct result, which have been checked many, many times.
+		double base_volume_change = 0;
 		if (a.base_value > 0)
-			base_volume -= a.base_value * leverage * 2;
+			base_volume_change = -1.0 * a.base_value * leverage * 2;
 		else
-			base_volume -= a.base_value * leverage;
+			base_volume_change = -1.0 * a.base_value * leverage;
+		
+		base_volume += base_volume_change;
+		base_value  += a.volume * a.rate;
 	}
 	
 	// Indices and CFDs
@@ -234,10 +250,14 @@ void Brokerage::ForwardExposure() {
 		a.base_value	= idx_base_values[i];
 		
 		if (sym.is_base_currency) {
+			double base_volume_change = 0;
 			if (a.base_value > 0)
-				base_volume -= a.base_value * leverage;
+				base_volume_change = -1.0 * a.base_value * leverage;
 			else
-				base_volume += a.base_value * leverage;
+				base_volume_change = +1.0 * a.base_value * leverage;
+		
+			base_volume += base_volume_change;
+			base_value  += a.volume / a.rate;
 		}
 	}
 	
@@ -247,7 +267,10 @@ void Brokerage::ForwardExposure() {
 	a.volume = base_volume;
 	a.rate = 1.00;
 	a.base_value = base_volume / leverage;
+	
+	
 }
+
 
 void Brokerage::BackwardExposure() {
 	ASSERT(signals.GetCount() == symbols.GetCount() + currencies.GetCount());
@@ -473,10 +496,10 @@ int		Brokerage::AccountInfoInteger(int property_id) {
 
 String	Brokerage::AccountInfoString(int property_id) {
 	switch (property_id) {
-		case ACCOUNT_NAME:					return "<client name>";
-		case ACCOUNT_SERVER:				return "<server name>";
+		case ACCOUNT_NAME:					return account_name;
+		case ACCOUNT_SERVER:				return account_server;
 		case ACCOUNT_CURRENCY:				return account_currency;
-		case ACCOUNT_COMPANY:				return "<company name>";
+		case ACCOUNT_COMPANY:				return account_company;
 	}
 }
 
@@ -718,6 +741,20 @@ String	Brokerage::SymbolInfoString(String name, int prop_id) {
 	}*/
 	
 	Panic("TODO"); return 0;
+
+}
+
+int Brokerage::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
+	return OrderSend(
+		symbols[symbol].name,
+		cmd,
+		volume,
+		price,
+		slippage,
+		stoploss,
+		takeprofit,
+		magic,
+		expiry);
 }
 
 }

@@ -53,6 +53,11 @@ BrokerCtrl::BrokerCtrl() {
 	
 	volume.SetData(0.01);
 	
+	close		<<= THISBACK(Close);
+	closeall	<<= THISBACK(CloseAll);
+	buy			<<= THISBACK1(OpenOrder, 0);
+	sell		<<= THISBACK1(OpenOrder, 1);
+	
 	split.Vert();
 	split << trade << exposure << history << journal;
 }
@@ -68,7 +73,7 @@ void BrokerCtrl::Data() {
 	Brokerage& b = *broker;
 	
 	String w;
-	w =		"Market watch: "	+ Format("%", GetSysTime()) + "\n"
+	w =		"Market watch: "	+ Format("%",     b.GetTime()) + "\n"
 			"Balance: "			+ Format("%2!,n", b.AccountBalance()) + "\n"
 			"Equity: "			+ Format("%2!,n", b.AccountEquity()) + "\n"
 			"Margin: "			+ Format("%2!,n", b.AccountMargin()) + "\n"
@@ -88,11 +93,12 @@ void BrokerCtrl::Data() {
 	const Vector<Order>& orders = b.GetOpenOrders();
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
+		const Symbol& sym = b.GetSymbol(o.symbol);
 		trade.Set(i, 0, o.ticket);
-		trade.Set(i, 1, o.begin);
+		trade.Set(i, 1, Format("%", o.begin));
 		trade.Set(i, 2, o.type == 0 ? "Buy" : "Sell");
 		trade.Set(i, 3, o.volume);
-		trade.Set(i, 4, o.symbol);
+		trade.Set(i, 4, sym.name);
 		trade.Set(i, 5, o.open);
 		trade.Set(i, 6, o.stoploss);
 		trade.Set(i, 7, o.takeprofit);
@@ -122,15 +128,16 @@ void BrokerCtrl::Data() {
 	const Vector<Order>& horders = b.GetHistoryOrders();
 	for(int i = 0; i < horders.GetCount(); i++) {
 		const Order& o = horders[i];
+		const Symbol& sym = b.GetSymbol(o.symbol);
 		history.Set(i, 0, o.ticket);
-		history.Set(i, 1, o.begin);
+		history.Set(i, 1, Format("%", o.begin));
 		history.Set(i, 2, o.type == 0 ? "Buy" : "Sell");
 		history.Set(i, 3, o.volume);
-		history.Set(i, 4, o.symbol);
+		history.Set(i, 4, sym.name);
 		history.Set(i, 5, o.open);
 		history.Set(i, 6, o.stoploss);
 		history.Set(i, 7, o.takeprofit);
-		history.Set(i, 8, o.end);
+		history.Set(i, 8, Format("%", o.end));
 		history.Set(i, 9, o.close);
 		history.Set(i, 10, o.swap);
 		history.Set(i, 11, o.profit);
@@ -147,6 +154,83 @@ void BrokerCtrl::Refresher() {
 
 void BrokerCtrl::Reset() {
 	
+}
+
+void BrokerCtrl::Close() {
+	int order_id = trade.GetCursor();
+	if (order_id == -1) return;
+	
+	Brokerage& b = *broker;
+	b.ForwardExposure();
+	
+	const Order& o = b.GetOpenOrders()[order_id];
+	double close = o.type == OP_BUY ?
+		b.RealtimeBid(o.symbol) :
+		b.RealtimeAsk(o.symbol);
+	int r = b.OrderClose(o.ticket, o.volume, close, 100);
+	if (r) {
+		LOG("Order closed");
+		b.ForwardExposure();
+		Data();
+	} else {
+		LOG("Order close failed");
+		info.SetLabel(b.GetLastError());
+	}
+}
+
+void BrokerCtrl::CloseAll() {
+	Brokerage& b = *broker;
+	
+	const Vector<Order>& orders = b.GetOpenOrders();
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		double close = o.type == OP_BUY ?
+			b.RealtimeBid(o.symbol) :
+			b.RealtimeAsk(o.symbol);
+		int r = b.OrderClose(o.ticket, o.volume, close, 100);
+		if (r) {
+			LOG("Order closed");
+			b.ForwardExposure();
+			Data();
+		} else {
+			LOG("Order close failed");
+			info.SetLabel(b.GetLastError());
+		}
+	}
+}
+
+void BrokerCtrl::OpenOrder(int type) {
+	int sym_id = current.GetCursor();
+	if (sym_id == -1) return;
+	
+	Brokerage& b = *broker;
+	
+	double lots = 0.01;
+	double open = type == OP_BUY ?
+		b.RealtimeAsk(sym_id) :
+		b.RealtimeBid(sym_id);
+	int slippage = 100;
+	double stoploss = type == OP_BUY ? open * 0.99 : open * 1.01;
+	double takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
+	int magic = 0;
+	int ticket = b.OrderSend(
+		sym_id,
+		type,
+		lots,
+		open,
+		slippage,
+		stoploss,
+		takeprofit,
+		magic,
+		0);
+	if (ticket != -1) {
+		LOG("Order opened successfully: ticket=" << ticket);
+	} else {
+		LOG("ERROR: opening order failed: " + b.GetLastError());
+		info.SetLabel(b.GetLastError());
+	}
+	b.ForwardExposure();
+	Data();
 }
 
 void BrokerCtrl::DummyRunner() {

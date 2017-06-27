@@ -7,16 +7,15 @@ namespace Overlook {
 using namespace libmt;
 
 class SimBroker : public Brokerage, Moveable<SimBroker> {
-	System* sys;
 	String currency;
-	Time prev_cycle_time;
+	Time prev_cycle_time, cycle_time;
 	int order_counter;
 	bool lightweight;
 	
 public:
 	SimBroker();
 	
-	void Init(MetaTrader& mt, System& sys);
+	void Init();
 	void InitLightweight();
 	void Clear();
 	void Cycle();
@@ -26,6 +25,7 @@ public:
 	int GetOpenOrderCount() const;
 	double GetFreeMarginLevel() const;
 	double GetInitialBalance() const {return initial_balance;}
+	double GetCloseProfit(const Order& o, double volume) const;
 	
 	void SetFreeMarginLevel(double d);
 	
@@ -59,6 +59,7 @@ public:
 	virtual double	OrderProfit();
 	virtual int		OrderSelect(int index, int select, int pool=MODE_TRADES);
 	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
+	virtual int		OrderSend(int    symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
 	virtual int		OrdersHistoryTotal();
 	virtual double	OrderStopLoss();
 	virtual int		OrdersTotal();

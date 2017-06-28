@@ -64,6 +64,12 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
+	tabs.Add(curctrl);
+	tabs.Add(curctrl, "Currency autoencoder");
+	tabs.Add(pairctrl);
+	tabs.Add(pairctrl, "Pair autoencoder");
+	tabs.Add(webctrl);
+	tabs.Add(webctrl, "Web autoencoder");
 	tabs.Add(trainerctrl);
 	tabs.Add(trainerctrl, "Training");
 	tabs.Add(testctrl);

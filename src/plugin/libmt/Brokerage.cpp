@@ -120,7 +120,7 @@ void Brokerage::ForwardExposure() {
 				// For example: base=USD, sym=CHFJPY, cmd=buy, lots=0.01, s=USDCHF, a=CHF, b=JPY
 				//  - CHF += 0.01 * 1000
 				{
-					double& cur_volume = cur_volumes[sym.base_cur0];
+					double& cur_volume = cur_volumes[sym.base_cur1];
 					if (o.type == OP_BUY)
 						cur_volume += o.volume * sym.lotsize;
 					else if (o.type == OP_SELL)
@@ -129,7 +129,7 @@ void Brokerage::ForwardExposure() {
 				}
 				//  - JPY += -1 * 0.01 * 1000 * open-price
 				{
-					double& cur_volume = cur_volumes[sym.base_cur1];
+					double& cur_volume = cur_volumes[sym.base_cur0];
 					if (o.type == OP_BUY)
 						cur_volume += -1 * o.volume * sym.lotsize * o.open;
 					else if (o.type == OP_SELL)
@@ -187,7 +187,7 @@ void Brokerage::ForwardExposure() {
 		if (sym.is_base_currency) {
 			if (volume < 0)		rate = askbid[i].ask;
 			else				rate = askbid[i].bid;
-			double base_value = volume * rate * fabs(volume / sym.contract_size);
+			double base_value = volume * rate * sym.margin_factor;// * fabs(volume / sym.contract_size);
 			idx_base_values[i] = base_value;
 		} else {
 			const Symbol& proxy_sym = symbols[sym.proxy_id];

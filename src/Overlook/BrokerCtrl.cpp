@@ -11,6 +11,7 @@ BrokerCtrl::BrokerCtrl() {
 	current.AddColumn("Bid");
 	current.AddColumn("Ask");
 	current.ColumnWidths("3 2 2");
+	current <<= THISBACK(PriceCursor);
 	
 	trade.AddColumn("Order");
 	trade.AddColumn("Time");
@@ -47,11 +48,9 @@ BrokerCtrl::BrokerCtrl() {
 	history.AddColumn("Profit");
 	history.ColumnWidths("3 4 2 2 2 2 2 2 4 2 2 3");
 	
-	journal.AddColumn("Time");
-	journal.AddColumn("Message");
-	journal.ColumnWidths("1 6");
-	
 	volume.SetData(0.01);
+	takeprofit.SetData(0.0);
+	stoploss.SetData(0.0);
 	
 	close		<<= THISBACK(Close);
 	closeall	<<= THISBACK(CloseAll);
@@ -59,7 +58,7 @@ BrokerCtrl::BrokerCtrl() {
 	sell		<<= THISBACK1(OpenOrder, 1);
 	
 	split.Vert();
-	split << trade << exposure << history << journal;
+	split << trade << exposure << history;
 }
 
 void BrokerCtrl::Init() {
@@ -71,6 +70,9 @@ void BrokerCtrl::Init() {
 
 void BrokerCtrl::Data() {
 	Brokerage& b = *broker;
+	
+	SimBroker* sb = dynamic_cast<SimBroker*>(&b);
+	if (sb) sb->RefreshOrders();
 	
 	String w;
 	w =		"Market watch: "	+ Format("%",     b.GetTime()) + "\n"
@@ -148,6 +150,13 @@ void BrokerCtrl::Data() {
 	
 }
 
+void BrokerCtrl::PriceCursor() {
+	int cursor = current.GetCursor();
+	if (cursor == -1) {info.SetLabel(""); return;}
+	const Price& price = broker->GetAskBid()[cursor];
+	info.SetLabel(DblStr(price.bid) + "/" + DblStr(price.ask));
+}
+
 void BrokerCtrl::Refresher() {
 	
 }
@@ -192,6 +201,7 @@ void BrokerCtrl::CloseAll() {
 			LOG("Order closed");
 			b.ForwardExposure();
 			Data();
+			i--;
 		} else {
 			LOG("Order close failed");
 			info.SetLabel(b.GetLastError());
@@ -205,13 +215,15 @@ void BrokerCtrl::OpenOrder(int type) {
 	
 	Brokerage& b = *broker;
 	
-	double lots = 0.01;
+	double lots = this->volume.GetData();
 	double open = type == OP_BUY ?
 		b.RealtimeAsk(sym_id) :
 		b.RealtimeBid(sym_id);
 	int slippage = 100;
-	double stoploss = type == OP_BUY ? open * 0.99 : open * 1.01;
-	double takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
+	double stoploss = this->stoploss.GetData();
+	double takeprofit = this->takeprofit.GetData();
+	if (stoploss   == 0.0) stoploss   = type == OP_BUY  ? open * 0.99 : open * 1.01;
+	if (takeprofit == 0.0) takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
 	int magic = 0;
 	int ticket = b.OrderSend(
 		sym_id,
@@ -255,8 +267,11 @@ void BrokerCtrl::DummyRunner() {
 				b.MarketInfo(sym, MODE_ASK) :
 				b.MarketInfo(sym, MODE_BID);
 			int slippage = 100;
-			double stoploss = type == OP_BUY ? open * 0.99 : open * 1.01;
-			double takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
+			double stoploss = this->stoploss.GetData();
+			double takeprofit = this->takeprofit.GetData();
+			if (stoploss   == 0.0) stoploss   = type == OP_BUY  ? open * 0.99 : open * 1.01;
+			if (takeprofit == 0.0) takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
+			
 			int ticket = b.OrderSend(
 				sym,
 				type,

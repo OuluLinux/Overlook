@@ -9,6 +9,7 @@
 #include "CustomCtrl.h"
 #include "SimBroker.h"
 #include "ExposureTester.h"
+#include "AutoencCtrl.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
@@ -77,6 +78,15 @@ protected:
 	
 	// Exposure tester
 	ExposureTester exposurectrl;
+	
+	// Currency autoencoder view
+	AutoencCtrl curctrl;
+	
+	// Pair autoencoder view
+	AutoencCtrl pairctrl;
+	
+	// Web autoencoder view
+	AutoencCtrl webctrl;
 	
 	// Trainer view
 	Trainer trainer;

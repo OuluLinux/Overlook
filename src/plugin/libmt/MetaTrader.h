@@ -22,7 +22,7 @@ public:
 	int Init(String addr, int port=42000);
 	const String& GetAddr() const {return mainaddr;}
 	int GetPort() const {return port;}
-
+	void GetMarginPercentages();
 	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and

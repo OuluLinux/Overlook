@@ -260,6 +260,7 @@ int MetaTrader::Init(String addr, int port) {
 		_GetSymbols();
 		_GetAskBid();
 		_GetOrders(0, true);
+		GetMarginPercentages();
 		
 		init_success = !symbols.IsEmpty();
 	}
@@ -734,14 +735,14 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			String b = sym.name.Mid(3,3);
 			currencies.GetAdd(a, 0)++;
 			currencies.GetAdd(b, 0)++;
-			sym.base_cur0 = currencies.Find(a);
-			sym.base_cur1 = currencies.Find(b);
 			if (a == account_currency || b == account_currency)
 				sym.is_base_currency = true;
 		}
 		else {
 			if (sym.currency_base == account_currency)
 				sym.is_base_currency = true;
+			else
+				sym.proxy_name = GetProxy(sym.currency_base);
 		}
 		
 		if (!sym.IsForex() && sym.name.Left(1) != "#")
@@ -791,8 +792,21 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		}
 	}
 	
-	// Add currencies
+	// Sort currencies
 	SortByValue(currencies, StdGreater<int>()); // sort by must pairs having currency
+	
+	// Find currencies for symbols;
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		Symbol& sym = symbols[i];
+		if (sym.IsForex()) {
+			String a = sym.name.Left(3);
+			String b = sym.name.Mid(3,3);
+			sym.base_cur0 = currencies.Find(a);
+			sym.base_cur1 = currencies.Find(b);
+		}
+	}
+	
+	// Add currencies
 	this->currencies.Clear();
 	for(int i = 0; i < currencies.GetCount(); i++) {
 		const String& symbol = currencies.GetKey(i);
@@ -1049,7 +1063,42 @@ const Vector<PriceTf>&	MetaTrader::_GetTickData() {
 	return pricetf;
 }
 
-
+void MetaTrader::GetMarginPercentages() {
+    // Get margin percentage
+    for(int i = 0; i < symbols.GetCount(); i++) {
+        Symbol& sym = symbols[i];
+        if (sym.calc_mode == Symbol::CALCMODE_FOREX)
+			sym.margin_factor = 1;
+        else {
+            double ask = askbid[i].ask;
+            double margin_percentage = sym.margin_required / ask / sym.contract_size;
+            if (sym.currency_margin != account_currency) {
+                bool found = false;
+                for(int j = 0; j < symbols.GetCount(); j++) {
+                    if (j == i) continue;
+                    Symbol& s = symbols[j];
+                    if (s.calc_mode != Symbol::CALCMODE_FOREX) continue;
+                    String a = s.name.Left(3);
+                    String b = s.name.Right(3);
+                    if (a == account_currency && b == sym.currency_margin) {
+                        margin_percentage *= askbid[j].ask;
+                        found = true;
+                        break;
+                    }
+                    else if (b == account_currency && a == sym.currency_margin) {
+                        margin_percentage /= askbid[j].ask;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) margin_percentage = -1;
+            }
+            int dec = (margin_percentage + 0.0005) * 1000;
+            margin_percentage = dec * 0.001;
+            sym.margin_factor = margin_percentage;
+        }
+    }
+}
 
 
 #define TEST(x) if (!(x)) {LOG("MTPacket error: " #x); return 1;}

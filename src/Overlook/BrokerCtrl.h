@@ -10,7 +10,7 @@ using namespace ConvNet;
 
 class BrokerCtrl : public WithBrokerLayout<CustomCtrl> {
 	Brokerage* broker;
-	ArrayCtrl trade, history, exposure, journal;
+	ArrayCtrl trade, history, exposure;
 	ArrayMap<int, Order> orders;
 	Vector<int> open_tickets;
 	
@@ -22,6 +22,7 @@ public:
 	void Reset();
 	void Close();
 	void CloseAll();
+	void PriceCursor();
 	
 	virtual void Init();
 	virtual void Data();

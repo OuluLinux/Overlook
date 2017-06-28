@@ -67,6 +67,24 @@ void SimBroker::Cycle() {
 	BackwardExposure();
 }
 
+void SimBroker::RefreshOrders() {
+	double used_margin = 0;
+	double equity = balance;
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.profit = GetCloseProfit(o, o.volume);
+		equity += o.profit;
+		
+		const Symbol& sym = symbols[o.symbol];
+		double order_used_margin = o.open * o.volume * sym.contract_size * sym.margin_factor;
+		used_margin += order_used_margin;
+	}
+	this->margin = used_margin;
+	this->margin_free = equity * free_margin_level - used_margin;
+	this->equity = equity;
+}
+
+
 int SimBroker::FindSymbol(const String& symbol) const {
 	return symbol_idx.Find(symbol);
 }
@@ -227,12 +245,16 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 			ho.profit = GetCloseProfit(ho, ho.volume);
 			ho.end = GetTime();
 			orders.Remove(i);
+			balance += ho.profit;
 		}
 		// Reduce
 		else {
 			double profit = GetCloseProfit(o, lots);
 			o.volume -= lots;
+			balance -= profit;
 		}
+		
+		RefreshOrders();
 		
 		return true;
 	}
@@ -242,16 +264,49 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 
 double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 	const Symbol& sym = symbols[o.symbol];
+	volume *= sym.lotsize;
+	if (!sym.IsForex())
+		volume *= o.open;
 	
-	if (sym.base_mul != 0) {
+	if (sym.is_base_currency) {
 		if (o.type == OP_BUY)
-			return      volume * sym.lotsize * (askbid[o.symbol].bid / o.open - 1.0);
+			return      volume * (askbid[o.symbol].bid / o.open - 1.0);
 		else if (o.type == OP_SELL)
-			return -1 * volume * sym.lotsize * (askbid[o.symbol].ask / o.open - 1.0);
+			return -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
 		else Panic("Type handling not implemented");
 	}
 	else {
-		Panic("TODO proxies");
+		// return mt4 profits as is, because proxy_open is not set.
+		if (o.proxy_open == 0.0)
+			return o.profit;
+		
+		const Symbol& proxy = symbols[sym.proxy_id];
+		ASSERT(proxy.base_mul != 0);
+		if (o.type == OP_BUY) {
+			double change = volume * (askbid[o.symbol].bid / o.open - 1.0);
+			double proxy_change;
+			if (proxy.base_mul == +1) {
+				proxy_change =      volume * (askbid[sym.proxy_id].bid / o.proxy_open - 1.0);
+			}
+			else if (proxy.base_mul == -1) {
+				proxy_change = -1 * volume * (askbid[sym.proxy_id].ask / o.proxy_open - 1.0);
+			}
+			else Panic("Invalid proxy sym");
+			return change + proxy_change;
+		}
+		else if (o.type == OP_SELL) {
+			double change = -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
+			double proxy_change;
+			if (proxy.base_mul == -1) {
+				proxy_change =      volume * (askbid[sym.proxy_id].bid / o.proxy_open - 1.0);
+			}
+			else if (proxy.base_mul == +1) {
+				proxy_change = -1 * volume * (askbid[sym.proxy_id].ask / o.proxy_open - 1.0);
+			}
+			else Panic("Invalid proxy sym");
+			return change + proxy_change;
+		}
+		else Panic("Type handling not implemented");
 	}
 }
 
@@ -361,12 +416,17 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	o.volume = volume;
 	o.symbol = symbol;
 	o.open = cmd != OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+	if (!s.is_base_currency) {
+		Symbol& proxy = symbols[s.proxy_id];
+		o.proxy_open = proxy.base_mul == (cmd == OP_BUY ? -1 : +1) ? askbid[s.proxy_id].bid : askbid[s.proxy_id].ask;
+	}
 	o.stoploss = stoploss;
 	o.takeprofit = takeprofit;
 	//o.magic = magic;
 	//o.expiration = expiry;
 	o.ticket = order_counter++;
 	o.is_open = true;
+	o.profit = GetCloseProfit(o, volume);
 	return o.ticket;
 }
 

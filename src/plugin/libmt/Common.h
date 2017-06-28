@@ -362,6 +362,7 @@ struct Order : Moveable<Order> {
 		open = 0.0;			close = 0.0;		volume = 0.0;		profit = 0.0;
 		stoploss = 0.0;		takeprofit = 0.0;	swap = 0.0;			commission = 0.0;
 		symbol = -1;		ticket = -1;		type = -1;			is_open = false;
+		proxy_open = 0.0;	proxy_close = 0.0;
 	}
 	Order(const Order& o) {
 		*this = o;
@@ -372,6 +373,8 @@ struct Order : Moveable<Order> {
 		expiration = o.expiration;
 		open = o.open;
 		close = o.close;
+		proxy_open = o.proxy_open;
+		proxy_close = o.proxy_close;
 		stoploss = o.stoploss;
 		takeprofit = o.takeprofit;
 		volume = o.volume;
@@ -389,6 +392,7 @@ struct Order : Moveable<Order> {
 	Time begin, end;
 	Time expiration;
 	double open, close;
+	double proxy_open, proxy_close;
 	double takeprofit, stoploss;
 	double volume, profit, commission, swap;
 	int symbol;
@@ -401,6 +405,7 @@ struct Order : Moveable<Order> {
 		s	% begin % end
 			% expiration
 			% open % close
+			% proxy_open % proxy_close
 			% stoploss % takeprofit
 			% volume
 			% profit

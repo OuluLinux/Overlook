@@ -19,6 +19,7 @@ public:
 	void InitLightweight();
 	void Clear();
 	void Cycle();
+	void RefreshOrders();
 	
 	int FindSymbol(const String& symbol) const;
 	int GetSignal(int symbol) const;

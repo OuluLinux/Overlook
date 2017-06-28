@@ -225,15 +225,17 @@ void DataBridgeCommon::RefreshAskBidData() {
 		}
 		if (!src_id.IsEmpty()) {
 			int i = short_ids.Find(src_id);
-			ASSERT(i != -1);
-			Vector<AskBid>& data = this->data[i];
-			AskBid& ab = data.Add();
-			ab.a = TimeFromTimestamp(timestamp);
-			src.Get(&ab.b, 8); // ask
-			src.Get(&ab.c, 8); // bid
-		} else {
-			src.SeekCur(8+8);
+			if (i != -1) {
+				Vector<AskBid>& data = this->data[i];
+				AskBid& ab = data.Add();
+				ab.a = TimeFromTimestamp(timestamp);
+				src.Get(&ab.b, 8); // ask
+				src.Get(&ab.c, 8); // bid
+			}
+			else src.SeekCur(8+8);
 		}
+		else src.SeekCur(8+8);
+		
 		cursor += struct_size;
 	}
 	

@@ -1565,4 +1565,45 @@ mentioned `"multi`-timeframe currency`-agent`", which would generate
 multi`-timeframe predictions for pairs, and then separate trader 
 agent would be trained for that pair. The sweet`-spot for correct 
 predictions might actually be that virtual currency node.&]
+[s3;%- 28.6.2017&]
+[s0;%- I would much rather do this in a team, but I can`'t find anyone 
+who is voluntary and skilled. I like to play co`-op multiplayer 
+games like [/ Sven Coop] , [/ Alien Swarm: Reactive Drop ]and even[/  
+Serious Sam], but most can`'t see the `"co`-op game`" in this...&]
+[s0;%- After yesterday`'s [/ new] information, I thought about one 
+simpler design, which might be better starting point. This is 
+not entirely new. You could put autoencoder forecaster to currency, 
+all pairs, and to the web, and use simple trading mechanisms. 
+Usually simpler structures are better starting point and they 
+can be extended with more advanced solutions. It`'s just difficult 
+to see what is simple here. Also, I still have the problem of 
+separating training and testing areas, so that is easier with 
+less dynamic and iterating design.&]
+[s0;%- ...&]
+[s0;%- I first noticed the `"proxy`" effect with non`-base pairs, 
+when I calculated profits separately from MT4 and they didn`'t 
+match. Then I added the proxy`-change and it matched. I guess 
+you could hedge that change, but then you must pay proxy spread 
+twice. I think that is confusing, because some brokers might 
+hedge that automatically and some not, and they don`'t say that. 
+Currently I am assuming that it must be manually hedged if you 
+don`'t want the proxy effect. That`'s not bad, but it is confusing 
+to notice it from calculations and not from some friendly description.&]
+[s0;%- So, trading the whole web of pairs is difficult, but not impossible. 
+First you get relative lots for crosses, then you check how much 
+they require proxies, then you balance proxies to relative lots 
+(possibly hedging), and then you get the relative margin, and 
+then you check how much you want the total margin to be, and 
+then you multiply those relative lots to be real lots. It`'s 
+nice to have high leverage for that situation, but not for the 
+casino`-like `"all`-in for single pair or stock`"...&]
+[s0;%- ...&]
+[s0;%- I searched for my old codebase and found a lot of useful code. 
+My old margin calculations were a real time`-saver... Exposure 
+calculations seems to be ok now and also profit calculations 
+passed initial checks, but I am suspicious about them still. 
+This part is one of those `"undocumented`" parts, where you can`'t 
+find any good existing material. BrokerCtrl works mostly now, 
+but it has some small things to do still.&]
+[s0;%- &]
 [s0;%- ]]

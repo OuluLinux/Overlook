@@ -5,7 +5,8 @@ uses
 	plugin/libmt,
 	plugin/tidy,
 	Painter,
-	ConvNet;
+	ConvNet,
+	ConvNetCtrl;
 
 file
 	Copying,
@@ -29,6 +30,8 @@ file
 	ExposureTester.cpp,
 	TrainerCtrl.h,
 	TrainerCtrl.cpp,
+	AutoencCtrl.h,
+	AutoencCtrl.cpp,
 	Core readonly separator,
 	Common.h,
 	Core.h,

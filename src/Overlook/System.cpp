@@ -38,16 +38,22 @@ void System::Init() {
 		ASSERTEXC_(!mt.Init(addr, port), "Can't connect to MT4. Is MT4Connection script activated in MT4?");
 		
 		// Add symbols
-		for(int i = 0; i < mt.GetSymbolCount(); i++) {
-			const Symbol& s = mt.GetSymbol(i);
-			AddSymbol(s.name);
-		}
 		source_symbol_count = this->symbols.GetCount();
+		int ae_iters = 4;
+		for(int j = 0; j < ae_iters; j++) {
+			for(int i = 0; i < mt.GetSymbolCount(); i++) {
+				const Symbol& s = mt.GetSymbol(i);
+				if (j == 0)
+					AddSymbol(s.name);
+				else
+					AddSymbol("#" + IntStr(j) + " " + s.name);
+			}
+		}
 		
-		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
+		/*for(int i = 0; i < mt.GetCurrencyCount(); i++) {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
-		}
+		}*/
 		
 		
 		// Add periods

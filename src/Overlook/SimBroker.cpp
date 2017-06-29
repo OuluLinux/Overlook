@@ -64,7 +64,7 @@ void SimBroker::Cycle() {
 	
 	// cycle_time = 
 	
-	BackwardExposure();
+	SignalOrders();
 }
 
 void SimBroker::RefreshOrders() {
@@ -73,10 +73,12 @@ void SimBroker::RefreshOrders() {
 	for(int i = 0; i < orders.GetCount(); i++) {
 		Order& o = orders[i];
 		o.profit = GetCloseProfit(o, o.volume);
+		o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 		equity += o.profit;
 		
 		const Symbol& sym = symbols[o.symbol];
 		double order_used_margin = o.open * o.volume * sym.contract_size * sym.margin_factor;
+		if (sym.IsForex()) order_used_margin /= (double)AccountLeverage();
 		used_margin += order_used_margin;
 	}
 	this->margin = used_margin;
@@ -400,7 +402,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 	else return false;
 }
 
-int SimBroker::OrderSend( String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
+int SimBroker::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
 	return OrderSend(FindSymbol(symbol), cmd, volume, price, slippage, stoploss, takeprofit, magic, expiry);
 }
 
@@ -417,6 +419,10 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	o.symbol = symbol;
 	o.open = cmd != OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 	if (!s.is_base_currency) {
+		if (s.proxy_id == -1) {
+			last_error = "Invalid proxy";
+			return -1;
+		}
 		Symbol& proxy = symbols[s.proxy_id];
 		o.proxy_open = proxy.base_mul == (cmd == OP_BUY ? -1 : +1) ? askbid[s.proxy_id].bid : askbid[s.proxy_id].ask;
 	}

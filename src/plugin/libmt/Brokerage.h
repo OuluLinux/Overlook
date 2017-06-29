@@ -36,8 +36,10 @@ protected:
 	ArrayMap<int, String> periodstr;
 	int tf_h1_id;
 	
-	// Exposure temp vars
+	// Temp vars
 	Vector<double> cur_volumes, idx_volumes, cur_rates, cur_base_values, idx_rates, idx_base_values;
+	Vector<double> buy_lots, sell_lots;
+	Vector<int> buy_signals, sell_signals;
 	
 	
 public:
@@ -49,11 +51,12 @@ public:
 	void operator=(const Brokerage& b);
 	
 	void ForwardExposure();
-	void BackwardExposure();
+	void SignalOrders();
 	void PutSignal(int sym, int signal);
-	void SetSignal(int sym, int signal) {signals[sym] = signal;}
+	void SetSignal(int sym, int signal);
 	bool IsFailed() const {return is_failed;}
 	void SetFailed(bool b=true) {is_failed = b;}
+	void CloseAll();
 	
 	const Vector<Order>&	GetOpenOrders() const {return orders;}
 	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}

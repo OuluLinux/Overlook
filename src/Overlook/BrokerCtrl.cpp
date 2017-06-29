@@ -189,24 +189,12 @@ void BrokerCtrl::Close() {
 
 void BrokerCtrl::CloseAll() {
 	Brokerage& b = *broker;
-	
-	const Vector<Order>& orders = b.GetOpenOrders();
-	for(int i = 0; i < orders.GetCount(); i++) {
-		const Order& o = orders[i];
-		double close = o.type == OP_BUY ?
-			b.RealtimeBid(o.symbol) :
-			b.RealtimeAsk(o.symbol);
-		int r = b.OrderClose(o.ticket, o.volume, close, 100);
-		if (r) {
-			LOG("Order closed");
-			b.ForwardExposure();
-			Data();
-			i--;
-		} else {
-			LOG("Order close failed");
-			info.SetLabel(b.GetLastError());
-		}
+	b.CloseAll();
+	if (b.GetOpenOrders().GetCount()) {
+		info.SetLabel(b.GetLastError());
 	}
+	b.ForwardExposure();
+	Data();
 }
 
 void BrokerCtrl::OpenOrder(int type) {

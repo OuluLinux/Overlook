@@ -9,9 +9,9 @@ ExposureTester::ExposureTester() {
 	hsplit.SetPos(2000);
 	hsplit.Horz();
 	
-	expctrl.Add(siglist.HSizePos().VSizePos(0,60));
-	expctrl.Add(next.BottomPos(30,30).HSizePos());
-	expctrl.Add(reset.BottomPos(0,30).HSizePos());
+	expctrl.Add(siglist.HSizePos().VSizePos());
+	//expctrl.Add(next.BottomPos(30,30).HSizePos());
+	//expctrl.Add(reset.BottomPos(0,30).HSizePos());
 	next.SetLabel("Next");
 	reset.SetLabel("Reset");
 	next <<= THISBACK(Next);
@@ -41,8 +41,10 @@ void ExposureTester::Init() {
 }
 
 void ExposureTester::Signal() {
-	//broker.BackwardExposure();
-	broker.ForwardExposure();
+	for(int i = 0; i < broker.GetSymbolCount(); i++) {
+		broker.SetSignal(i, edits[i].GetData());
+	}
+	broker.SignalOrders();
 	brokerctrl.Data();
 }
 

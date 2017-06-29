@@ -11,15 +11,14 @@ class AutoencCtrl : public ParentCtrl {
 	Session ses;
 	SpinLock ticking_lock;
 	
+	Splitter hsplit, tasksplit, leftsplit, rightsplit;
 	
-	Splitter hsplit, leftsplit, rightsplit;
-	
+	ArrayCtrl threadlist, tasklist;
 	ParentCtrl settings;
 	Label lrate, lmom, lbatch, ldecay;
 	EditDouble rate, mom, decay;
 	EditInt batch;
 	Button apply, save_net, load_net;
-	DocEdit net_edit;
 	
 	TrainingGraph graph;
 	Label status;
@@ -44,7 +43,7 @@ public:
 	void ResetAll();
 	void PostReload() {PostCallback(THISBACK(Reload));}
 	void StepInterval(int steps);
-	
+	void LoadData();
 };
 
 }

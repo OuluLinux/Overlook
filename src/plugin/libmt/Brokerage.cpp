@@ -62,7 +62,13 @@ void Brokerage::operator=(const Brokerage& b) {
 	idx_base_values <<= b.idx_base_values;
 }
 
+void Brokerage::SetSignal(int sym, int signal) {
+	if (signals.IsEmpty()) signals.SetCount(symbols.GetCount(), 0);
+	signals[sym] = signal;
+}
+
 void Brokerage::PutSignal(int sym, int signal) {
+	if (signals.IsEmpty()) signals.SetCount(symbols.GetCount(), 0);
 	signals[sym] += signal;
 }
 
@@ -272,8 +278,25 @@ void Brokerage::ForwardExposure() {
 }
 
 
-void Brokerage::BackwardExposure() {
-	ASSERT(signals.GetCount() == symbols.GetCount() + currencies.GetCount());
+void Brokerage::CloseAll() {
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		double close = o.type == OP_BUY ?
+			RealtimeBid(o.symbol) :
+			RealtimeAsk(o.symbol);
+		int r = OrderClose(o.ticket, o.volume, close, 100);
+		if (r) {
+			LOG("Order closed");
+			i--;
+		} else {
+			LOG("Order close failed");
+		}
+	}
+}
+
+
+void Brokerage::SignalOrders() {
+	ASSERT(signals.GetCount() == symbols.GetCount());
 	double leverage = AccountLeverage();
 	int sym_count = symbols.GetCount();
 	int cur_count = currencies.GetCount();
@@ -281,32 +304,162 @@ void Brokerage::BackwardExposure() {
 	
 	// Get maximum margin sum
 	ASSERT(free_margin_level >= 0.20 && free_margin_level <= 1.0);
+	if (free_margin_level == 1.0)
+		free_margin_level = 0.8;
 	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level);
 	
 	
-	// Get leveraged value
-	double base_volume = max_margin_sum * leverage;
-	
-	
-	// Get currency, index and stock asset values using relative signal
+	// Get long/short signals
+	// Shortcomings:
+	//  - volumes should match, signals might not have correct value
+	buy_signals.SetCount(0);
+	buy_signals.SetCount(signals.GetCount(), 0);
+	sell_signals.SetCount(0);
+	sell_signals.SetCount(signals.GetCount(), 0);
+	buy_lots.SetCount(0);
+	buy_lots.SetCount(signals.GetCount(), 0);
+	sell_lots.SetCount(0);
+	sell_lots.SetCount(signals.GetCount(), 0);
 	for(int i = 0; i < sym_count; i++) {
+		const Symbol& sym = symbols[i];
 		int signal = signals[i];
-		
-		
+		if (!signal) continue;
+		if (signal > 0) {
+			buy_signals[i] += signal;
+			if (sym.proxy_id != -1) {
+				const Symbol& proxy = symbols[sym.proxy_id];
+				if (proxy.base_mul == +1)
+					buy_signals[sym.proxy_id] += signal;
+				else
+					sell_signals[sym.proxy_id] += signal;
+			}
+		}
+		else {
+			sell_signals[i] -= signal;
+			if (sym.proxy_id != -1) {
+				const Symbol& proxy = symbols[sym.proxy_id];
+				if (proxy.base_mul == +1)
+					sell_signals[sym.proxy_id] -= signal;
+				else
+					buy_signals[sym.proxy_id] -= signal;
+			}
+		}
 	}
-	for(int i = 0; i < cur_count; i++) {
-		int signal = signals[sym_count + i];
-		
-		
+	
+	// Balance signals
+	for(int i = 0; i < sym_count; i++) {
+		int& buy  =  buy_signals[i];
+		int& sell = sell_signals[i];
+		if (buy == 0 || sell == 0) continue;
+		if (buy > sell) {
+			buy -= sell;
+			sell = 0;
+		}
+		else {
+			sell -= buy;
+			buy = 0;
+		}
 	}
 	
 	
+	int sig_abs_total = 0;
+	int min_sig = INT_MAX;
+	for(int i = 0; i < sym_count; i++) {
+		int buy = buy_signals[i];
+		int sell = sell_signals[i];
+		if (buy  > 0 && buy < min_sig) min_sig = buy;
+		if (sell > 0 && sell < min_sig) min_sig = sell;
+		sig_abs_total += buy + sell;
+	}
+	if (!sig_abs_total) {
+		CloseAll();
+		return;
+	}
 	
-	// Get volumes (lots) from asset values
+	double minimum_margin_sum = 0;
+	for(int i = 0; i < sym_count; i++) {
+		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
+		const Symbol& sym = symbols[i];
+		const Price& p = askbid[i];
+		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
+		double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
+		double buy_used_margin = p.ask * buy_lots * sym.contract_size * sym.margin_factor;
+		double sell_used_margin = p.bid * sell_lots * sym.contract_size * sym.margin_factor;
+		if (sym.IsForex()) {
+			buy_used_margin  /= leverage;
+			sell_used_margin /= leverage;
+		}
+		minimum_margin_sum += buy_used_margin;
+		minimum_margin_sum += sell_used_margin;
+	}
 	
+	double lot_multiplier = max_margin_sum / minimum_margin_sum;
+	if (lot_multiplier < 1.0) {
+		last_error = "Total margin is too much";
+		CloseAll();
+		return;
+	}
 	
-	// Commit changes (open/close orders)
+	for(int i = 0; i < sym_count; i++) {
+		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
+		const Symbol& sym = symbols[i];
+		const Price& p = askbid[i];
+		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01 * lot_multiplier;
+		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01 * lot_multiplier;
+		buy_lots[i]  = ((int)(sym_buy_lots  / 0.01)) * 0.01;
+		sell_lots[i] = ((int)(sym_sell_lots / 0.01)) * 0.01;
+	}
 	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		if (o.type == OP_BUY) {
+			double& lots = buy_lots[o.symbol];
+			if (o.volume <= lots) {
+				lots -= o.volume;
+			} else {
+				double reduce = o.volume - lots;
+				for(int j = 0; j < 3; j++) {
+					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
+					if (success) break;
+				}
+				lots = 0;
+			}
+		}
+		else if (o.type == OP_SELL) {
+			double& lots = sell_lots[o.symbol];
+			if (o.volume <= lots) {
+				lots -= o.volume;
+			} else {
+				double reduce = o.volume - lots;
+				for(int j = 0; j < 3; j++) {
+					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
+					if (success) break;
+				}
+				lots = 0;
+			}
+		}
+	}
+	
+	for(int i = 0; i < sym_count; i++) {
+		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01) continue;
+		double sym_buy_lots = buy_lots[i];
+		double sym_sell_lots = sell_lots[i];
+		const Symbol& sym = symbols[i];
+		if (sym_buy_lots > 0.0) {
+			double price = RealtimeBid(i);
+			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * 0.99, price * 1.01, 0, 0);
+			if (r == -1) {
+				LOG("Brokerage::SignalOrders: OrderSend faild with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+			}
+		}
+		if (sym_sell_lots > 0.0) {
+			double price = RealtimeAsk(i);
+			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * 1.01, price * 0.99, 0, 0);
+			if (r == -1) {
+				LOG("Brokerage::SignalOrders: OrderSend faild with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+			}
+		}
+	}
 	
 	/*ASSERT(basket_begin != -1 && cur_begin != -1);
 	

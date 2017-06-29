@@ -5,8 +5,13 @@ namespace Overlook {
 AutoencCtrl::AutoencCtrl() {
 	Add(hsplit.SizePos());
 	hsplit.Horz();
-	hsplit << leftsplit << rightsplit;
-	hsplit.SetPos(2500);
+	hsplit << tasksplit << leftsplit << rightsplit;
+	hsplit.SetPos(1500, 0);
+	hsplit.SetPos(1500+2500, 1);
+	
+	tasksplit.Vert();
+	tasksplit << threadlist << tasklist;
+	tasksplit.SetPos(2500);
 	
 	leftsplit.Vert();
 	leftsplit << settings << graph << status;
@@ -15,11 +20,13 @@ AutoencCtrl::AutoencCtrl() {
 	rightsplit << aenc_view << layer_view;
 	rightsplit.SetPos(6400);
 	
+	threadlist.AddColumn("Thread name");
+	tasklist.AddColumn("Task name");
+	tasklist.AddColumn("Level");
+	tasklist.ColumnWidths("3 1");
+	
 	aenc_view.SetSession(ses);
 	layer_view.HideGradients();
-	
-	
-	
 	
 	lrate.SetLabel("Learning rate:");
 	lmom.SetLabel("Momentum:");
@@ -136,7 +143,17 @@ void AutoencCtrl::SaveFile() {
 void AutoencCtrl::Reload() {
 	ses.StopTraining();
 	
-	String net_str = net_edit.GetData();
+	String net_str =
+		"[\n"
+		"\t{\"type\":\"input\", \"input_width\":28, \"input_height\":28, \"input_depth\":1},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":2},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
+		"\t{\"type\":\"regression\", \"neuron_count\":784},\n" // 24*24=576, 28*28=784
+		"\t{\"type\":\"adadelta\", \"learning_rate\":1, \"batch_size\":50, \"l1_decay\":0.001, \"l2_decay\":0.001}\n"
+		"]\n";
 	
 	ticking_lock.Enter();
 	

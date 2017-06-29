@@ -79,14 +79,8 @@ protected:
 	// Exposure tester
 	ExposureTester exposurectrl;
 	
-	// Currency autoencoder view
-	AutoencCtrl curctrl;
-	
-	// Pair autoencoder view
-	AutoencCtrl pairctrl;
-	
-	// Web autoencoder view
-	AutoencCtrl webctrl;
+	// Autoencoder view
+	AutoencCtrl aectrl;
 	
 	// Trainer view
 	Trainer trainer;

@@ -1605,5 +1605,20 @@ passed initial checks, but I am suspicious about them still.
 This part is one of those `"undocumented`" parts, where you can`'t 
 find any good existing material. BrokerCtrl works mostly now, 
 but it has some small things to do still.&]
-[s0;%- &]
-[s0;%- ]]
+[s3;%- 29.6.2017&]
+[s0;%- Automatic signal trading works now in SimBroker. It has some 
+issues by not using volumes, but at least with pairs it seems 
+to give matching values to MT4.&]
+[s0;%- I think I`'ll try full autoencoder stack first, which means 
+that RL`-agents will skipped temporarily. The last step will 
+take all sym/tf forecasts as input and it gives smallest tf what 
+can be followed per sym, and those will be applied directly to 
+Brokerage class as signals. It`'s pretty straightforward, and 
+that makes it even nicer. All levels are not autoencoders exactly. 
+First level will reconstruct input data, but next levels uses 
+previous level output as input and tries to reconstruct original 
+from that. Last level will try to construct different signal 
+entirely. It gives very generalized signal, and I think that 
+is a good starting point.&]
+[s0;%- This is a little embarrasing continuous changing of the plan, 
+but I much rather fix the design before implementation than after.]]

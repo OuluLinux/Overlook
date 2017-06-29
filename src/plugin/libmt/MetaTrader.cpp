@@ -256,6 +256,7 @@ int MetaTrader::Init(String addr, int port) {
 		free_margin_level = (margin_free + margin) / equity;
 		max_free_margin_level = 0.99;
 		min_free_margin_level = margin_call / margin_mode_div;
+		if (free_margin_level > 1.0) free_margin_level = 1.0;
 		
 		_GetSymbols();
 		_GetAskBid();

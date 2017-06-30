@@ -1621,4 +1621,138 @@ from that. Last level will try to construct different signal
 entirely. It gives very generalized signal, and I think that 
 is a good starting point.&]
 [s0;%- This is a little embarrasing continuous changing of the plan, 
-but I much rather fix the design before implementation than after.]]
+but I much rather fix the design before implementation than after.&]
+[s0;%- ...&]
+[s0;%- Yet another walk outside and another new idea. ConvNet MagicNet 
+neural network architecture optimizer can be used instead of 
+autoencoder.&]
+[s3;%- 30.6.2017&]
+[s0;%- Because of this constant changing of the design, I decided 
+to start today from writing down all previous designs and reasons 
+for not using them in their full form. The signal part and the 
+money manager part is always considered to be separate and the 
+success depends only on signal, but gets amplified with the proper 
+MM.&]
+[s0;%- I think this progress is universal and could be happen in 
+very similar ways to others too.&]
+[s0;%- [* Major phases were ](as known during involvement)[* :]&]
+[s0;%-  `- Fundamental and basic technical signals&]
+[s0;%-  `- Local optimizer based signals&]
+[s0;%-  `- Scheduler and local optimizer based signals&]
+[s0;%-  `- Chained signals. Fundamentals and probable asset based 
+signals&]
+[s0;%-  `- Agent chain signals&]
+[s0;%-  `- Autoencoder chain signals&]
+[s0;%-  `- [/ latest:] currency`-NN, web`-NN, accelerator`-NN signals&]
+[s0;%- [* Simplified phases were ](as better afterthoughts):&]
+[s0;%-  `- from peer`-reviewing observer to fundamental structure 
+analyzer&]
+[s0;%-  `- from breaking to combining pieces together&]
+[s0;%-  `- from scalping to recognizing long`-term probabilities&]
+[s0;%- -|( `- from slowing down fast to making slow faster)&]
+[s0;%-  `- from news to structural&]
+[s0;%-  `- from iterative units to best weights of whole web of instruments&]
+[s0;%-  `- from fixed to locally optimized neural network architectures&]
+[s0;%-  `- from genetic optimizers to neural networks (MT4 has Gen.Opt.)&]
+[s0;%- [* ...and as implementation`-wise ](or more like `-dumb)&]
+[s0;%- [_ Testing all ways to trade traditional signals]&]
+[s0;%-  `- compared all traditional indis and found out that traditional 
+indicators are useless&]
+[s0;%-  `+ learned about spreads and characteristics of instruments&]
+[s0;%-  `+ found periodical stats to outperform momentum`-following 
+trading&]
+[s0;%- [_ Local optimizer base signals]&]
+[s0;%-  `- configuring stupid algorithm well once doesn`'t give long 
+term performance&]
+[s0;%-  `+ found that configured algorithm gets worse gradually, 
+not immediately or never&]
+[s0;%-  `+ found that optimization should be continuous during realtime 
+operation&]
+[s0;%- [_ Scheduler and local optimizer based signals]&]
+[s0;%-  `- periodical scheduler implementation is a nightmare&]
+[s0;%-  `- it is a very big and monolithic piece of complex inflexibility&]
+[s0;%-  `+ found that following fixed timeframe changes is simpler 
+and more powerful&]
+[s0;%-  `+ found that querytable methods are better solutions to 
+periodical statistics (and tech superset)&]
+[s0;%- [_ Chained signals. Fundamentals and probable asset based signals]&]
+[s0;%-  `- any loose strategy with existing methods did not work&]
+[s0;%-  `+ improved probability math...&]
+[s0;%-  `+ `"one future`" via slow tf instead of fast heuristic found&]
+[s0;%- -|`+ the quest for `"fastest slow strength`" begun&]
+[s0;%-  `+ found that stocks and indices has better success rate 
+when compared to other instruments&]
+[s0;%-  `+ found proxy costs&]
+[s0;%-  `- they are open very short time&]
+[s0;%-  `- they have a lot of technical difficulties because of repeating 
+opens and closes&]
+[s0;%-  `- in the end, even forex`-crosses are betters instruments&]
+[s0;%-  `- parsing fundamental news and interpreting them with a 
+machine is a nightmare&]
+[s0;%-  `+ found cent accounts to allow all instruments simultaneously, 
+instead of only few&]
+[s0;%- -|`+ also more accurate volume is possible with them&]
+[s0;%- [_ Agent chain signals]&]
+[s0;%-  `- too experiemental, no known existing solutions, should 
+have known demos&]
+[s0;%-  `+ idea of chaining web of signals&]
+[s0;%-  `- the chaining must be structurally correct, and signal 
+must be derived from strong to weak&]
+[s0;%- -|`- I was chaining from weak to strong... :/&]
+[s0;%- [_ Autoencoder chain signals]&]
+[s0;%-  `+ fits fundamental structures&]
+[s0;%-  `+ found `"outer layer of currency asset`", proxy hedging 
+and web of signals&]
+[s0;%-  `- does have fixed network structure&]
+[s0;%-  `- has easily too many levels&]
+[s0;%- [* To conclude...]&]
+[s0;%- ... this is clearly more like racing environment than good`-will 
+scientific research, which was actually a disappointment. I think 
+the content of everything I mentioned previously is very good 
+knowledge of the surrounding world, instead of some trading secrets 
+which should be taught only to selected few. I don`'t know why 
+this is so undocumented topic and nobody seems to be willing 
+to co`-work with me in this.&]
+[s0;%- As previously mentioned, the good base is to start from something 
+strong and to derive it with usable instruments and to extend 
+it with new techniques.&]
+[s0;%- Strong points are:&]
+[s0;%-  `+ start from slow predictions, and use the fastest which 
+performs better than slower&]
+[s0;%-  `+ start from forces, what are caused to currencies because 
+of pair exchanges&]
+[s0;%-  `+ split risks to multiple instruments, so spikes doesn`'t 
+damage that much&]
+[s0;%-  `+ consider trading the full predictable wave of all instruments 
+as one big single order&]
+[s0;%-  `+ use combination of neural networks and genetic optimizer 
+by optimizing the architecture&]
+[s0;%- -|`- but don`'t settle on small networks if your computer is 
+inefficient&]
+[s0;%-  `+ follow repeating events instead of momentum&]
+[s0;%- And the current design to implement those includes features 
+such as:&]
+[s0;%-  `- from strong to weak&]
+[s0;%- -|`- first prediction from neural network modelling internal 
+tensions of currencies&]
+[s0;%- -|`- second prediction from neural network modelling balancing 
+web of currency`-pairs&]
+[s0;%- -|`- third prediction from NN trained for fastest safe timeframe 
+for reading predictions&]
+[s0;%-  `- probability math&]
+[s0;%- -|`- the neural network library and the setup and is from tested 
+source&]
+[s0;%-  `- split risks to multiple instruments&]
+[s0;%- -|`- all crosses are traded and illusion of currency exposure 
+is ignored&]
+[s0;%-  `- be flexible with local optimizer&]
+[s0;%- -|`- all NN archs are optimized with magicnet (`+ gen.opt.) 
+architecture optimizer&]
+[s0;%-  `- follow repeating events instead of momentum&]
+[s0;%- -|`- training is done with real time`-value vectors rather 
+than heuristic view at single time`-pos&]
+[s0;%- ...&]
+[s0;%- Actually, one could join all those NN`-layers, but that`'s 
+some difficult crafting there...&]
+[s0;%- Fuck, change of plans, again....&]
+[s0;%- ]]

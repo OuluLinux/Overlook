@@ -28,10 +28,8 @@ file
 	BrokerCtrl.lay,
 	ExposureTester.h,
 	ExposureTester.cpp,
-	TrainerCtrl.h,
-	TrainerCtrl.cpp,
-	AutoencCtrl.h,
-	AutoencCtrl.cpp,
+	AICtrl.h,
+	AICtrl.cpp,
 	Core readonly separator,
 	Common.h,
 	Core.h,
@@ -43,8 +41,6 @@ file
 	SystemOptimizer.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
-	Trainer.h,
-	Trainer.cpp,
 	QueryTable.h,
 	QueryTable.cpp,
 	DataBridge.h,
@@ -54,7 +50,12 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	QtStats.h,
-	QtStats.cpp;
+	QtStats.cpp,
+	Trash readonly separator,
+	Trainer.h,
+	Trainer.cpp,
+	TrainerCtrl.h,
+	TrainerCtrl.cpp;
 
 mainconfig
 	"" = "GUI MT",

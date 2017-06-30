@@ -39,15 +39,9 @@ void System::Init() {
 		
 		// Add symbols
 		source_symbol_count = this->symbols.GetCount();
-		int ae_iters = 4;
-		for(int j = 0; j < ae_iters; j++) {
-			for(int i = 0; i < mt.GetSymbolCount(); i++) {
-				const Symbol& s = mt.GetSymbol(i);
-				if (j == 0)
-					AddSymbol(s.name);
-				else
-					AddSymbol("#" + IntStr(j) + " " + s.name);
-			}
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+			const Symbol& s = mt.GetSymbol(i);
+			AddSymbol(s.name);
 		}
 		
 		/*for(int i = 0; i < mt.GetCurrencyCount(); i++) {

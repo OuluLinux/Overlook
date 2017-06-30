@@ -51,9 +51,7 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 
 
-Overlook::Overlook() :
-	trainer(sys),
-	trainerctrl(trainer)
+Overlook::Overlook()
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -64,12 +62,8 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(aectrl);
-	tabs.Add(aectrl, "AutoEncoder");
-	tabs.Add(trainerctrl);
-	tabs.Add(trainerctrl, "Training");
-	tabs.Add(testctrl);
-	tabs.Add(testctrl, "Testing");
+	tabs.Add(aictrl);
+	tabs.Add(aictrl, "AI");
 	tabs.Add(rt_ctrl);
 	tabs.Add(rt_ctrl, "Real-Time");
 	
@@ -108,10 +102,7 @@ void Overlook::Refresher() {
 		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		trainerctrl.Data();
-	}
-	else if (tab == 3) {
-		RefreshTesting();
+		
 	}
 	else if (tab == 4) {
 		rt_ctrl.Data();
@@ -121,7 +112,6 @@ void Overlook::Refresher() {
 
 void Overlook::Init() {
 	sys.Init();
-	trainer.Init();
 	rt_ctrl.Init();
 	exposurectrl.Init();
 	
@@ -152,7 +142,7 @@ void Overlook::Loader() {
 	loader->PostProgress(0, 4, "Creating work queue");
 	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
 	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
-	trainer.RefreshWorkQueue();
+	/*trainer.RefreshWorkQueue();
 	
 	loader->PostProgress(1, 4, "Processing data");
 	trainer.ProcessWorkQueue();
@@ -163,7 +153,7 @@ void Overlook::Loader() {
 	loader->PostProgress(3, 4, "Reseting iterators");
 	trainer.ResetIterators();
 	trainer.InitAgents();
-	
+	*/
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();
 	loader->PostClose();
@@ -171,12 +161,12 @@ void Overlook::Loader() {
 
 void Overlook::Start() {
 	sys.Start();
-	trainer.Start();
+	//trainer.Start();
 }
 
 void Overlook::Deinit() {
 	sys.Stop();
-	trainer.Stop();
+	//trainer.Stop();
 }
 
 void Overlook::SetView() {
@@ -271,12 +261,6 @@ void Overlook::Configure() {
 		prev_core->Refresh();
 		Refresh();
 	}
-}
-
-void Overlook::RefreshTesting() {
-	
-	
-	
 }
 
 }

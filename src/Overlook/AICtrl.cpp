@@ -2,13 +2,7 @@
 
 namespace Overlook {
 
-AutoencCtrl::AutoencCtrl() {
-	Add(hsplit.SizePos());
-	hsplit.Horz();
-	hsplit << tasksplit << leftsplit << rightsplit;
-	hsplit.SetPos(1500, 0);
-	hsplit.SetPos(1500+2500, 1);
-	
+TrainCtrl::TrainCtrl() {
 	tasksplit.Vert();
 	tasksplit << threadlist << tasklist;
 	tasksplit.SetPos(2500);
@@ -64,13 +58,32 @@ AutoencCtrl::AutoencCtrl() {
 	graph.SetModeLoss();
 }
 
-AutoencCtrl::~AutoencCtrl() {
+
+
+
+
+
+
+
+
+
+AICtrl::AICtrl() {
+	Add(hsplit.SizePos());
+	hsplit.Horz();
+	hsplit << tasksplit << leftsplit << rightsplit;
+	hsplit.SetPos(1500, 0);
+	hsplit.SetPos(1500+2500, 1);
+	
+	
+}
+
+AICtrl::~AICtrl() {
 	
 	ses.StopTraining();
 	
 }
 
-void AutoencCtrl::UpdateNetParamDisplay() {
+void AICtrl::UpdateNetParamDisplay() {
 	TrainerBase* t = ses.GetTrainer();
 	if (!t) return;
 	TrainerBase& trainer = *t;
@@ -80,7 +93,7 @@ void AutoencCtrl::UpdateNetParamDisplay() {
 	decay.SetData(trainer.GetL2Decay());
 }
 
-void AutoencCtrl::ApplySettings() {
+void AICtrl::ApplySettings() {
 	TrainerBase* t = ses.GetTrainer();
 	if (!t) return;
 	TrainerBase& trainer = *t;
@@ -90,7 +103,7 @@ void AutoencCtrl::ApplySettings() {
 	trainer.SetL2Decay(decay.GetData());
 }
 
-void AutoencCtrl::OpenFile() {
+void AICtrl::OpenFile() {
 	String file = SelectFileOpen("JSON files\t*.json\nAll files\t*.*");
 	if (file.IsEmpty()) return;
 	
@@ -121,7 +134,7 @@ void AutoencCtrl::OpenFile() {
 	ResetAll();
 }
 
-void AutoencCtrl::SaveFile() {
+void AICtrl::SaveFile() {
 	String file = SelectFileSaveAs("JSON files\t*.json\nAll files\t*.*");
 	if (file.IsEmpty()) return;
 	
@@ -140,7 +153,7 @@ void AutoencCtrl::SaveFile() {
 	fout << json;
 }
 
-void AutoencCtrl::Reload() {
+void AICtrl::Reload() {
 	ses.StopTraining();
 	
 	String net_str =
@@ -169,7 +182,7 @@ void AutoencCtrl::Reload() {
 	}
 }
 
-void AutoencCtrl::RefreshStatus() {
+void AICtrl::RefreshStatus() {
 	String s;
 	s << "   Forward time per example: " << ses.GetForwardTime() << "\n";
 	s << "   Backprop time per example: " << ses.GetBackwardTime() << "\n";
@@ -180,7 +193,7 @@ void AutoencCtrl::RefreshStatus() {
 	status.SetLabel(s);
 }
 
-void AutoencCtrl::Refresher() {
+void AICtrl::Refresher() {
 	layer_view.Refresh();
 	aenc_view.Refresh();
 		
@@ -190,7 +203,7 @@ void AutoencCtrl::Refresher() {
 	PostCallback(THISBACK(Refresher));
 }
 
-void AutoencCtrl::ResetAll() {
+void AICtrl::ResetAll() {
 	UpdateNetParamDisplay();
 	graph.Clear();
 }

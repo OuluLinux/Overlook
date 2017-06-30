@@ -1,5 +1,5 @@
-#ifndef _Overlook_AutoencCtrl_h_
-#define _Overlook_AutoencCtrl_h_
+#ifndef _Overlook_AICtrl_h_
+#define _Overlook_AICtrl_h_
 
 #include <ConvNet/ConvNet.h>
 #include <ConvNetCtrl/ConvNetCtrl.h>
@@ -7,11 +7,17 @@
 namespace Overlook {
 using namespace Upp;
 
-class AutoencCtrl : public ParentCtrl {
+
+class TrainCtrl : public ParentCtrl {
+	
+public:
+	typedef TrainCtrl CLASSNAME;
+	TrainCtrl();
+	
 	Session ses;
 	SpinLock ticking_lock;
 	
-	Splitter hsplit, tasksplit, leftsplit, rightsplit;
+	Splitter tasksplit, leftsplit, rightsplit;
 	
 	ArrayCtrl threadlist, tasklist;
 	ParentCtrl settings;
@@ -25,11 +31,53 @@ class AutoencCtrl : public ParentCtrl {
 	
 	LayerCtrl aenc_view;
 	SessionConvLayers layer_view;
+};
+
+
+class TrainerThread {
+	TrainCtrl train;
 	
 public:
-	typedef AutoencCtrl CLASSNAME;
-	AutoencCtrl();
-	~AutoencCtrl();
+	typedef TrainerThread CLASSNAME;
+	TrainerThread();
+	
+	
+	
+};
+
+
+class LevelCtrl {
+	Array<TrainerThread> thrds;
+	
+public:
+	typedef LevelCtrl CLASSNAME;
+	LevelCtrl();
+	virtual ~LevelCtrl();
+	
+	
+	
+};
+
+
+class CurrencyLevel : public LevelCtrl {
+	
+	
+public:
+	typedef CurrencyLevel CLASSNAME;
+	CurrencyLevel();
+	
+	
+};
+
+
+class AICtrl : public ParentCtrl {
+	Splitter hsplit;
+	Array<LevelCtrl> levels;
+	
+public:
+	typedef AICtrl CLASSNAME;
+	AICtrl();
+	~AICtrl();
 	
 	Session& GetSession() {return ses;}
 	
@@ -45,6 +93,7 @@ public:
 	void StepInterval(int steps);
 	void LoadData();
 };
+
 
 }
 

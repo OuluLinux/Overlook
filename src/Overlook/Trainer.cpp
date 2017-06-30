@@ -1,3 +1,4 @@
+#if 0
 #include "Overlook.h"
 
 namespace Overlook {
@@ -495,3 +496,4 @@ bool Trainer::SeekCur(int tf_iter, int shift) {
 }
 
 }
+#endif

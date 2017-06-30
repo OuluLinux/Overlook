@@ -9,7 +9,7 @@
 #include "CustomCtrl.h"
 #include "SimBroker.h"
 #include "ExposureTester.h"
-#include "AutoencCtrl.h"
+#include "AICtrl.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
@@ -19,9 +19,6 @@
 #include "GraphGroupCtrl.h"
 
 #include "BrokerCtrl.h"
-
-#include "Trainer.h"
-#include "TrainerCtrl.h"
 
 #define IMAGECLASS OverlookImg
 #define IMAGEFILE <Overlook/Overlook.iml>
@@ -79,15 +76,8 @@ protected:
 	// Exposure tester
 	ExposureTester exposurectrl;
 	
-	// Autoencoder view
-	AutoencCtrl aectrl;
-	
-	// Trainer view
-	Trainer trainer;
-	TrainerCtrl trainerctrl;
-	
-	// Testing view
-	ParentCtrl testctrl;
+	// AI view
+	AICtrl aictrl;
 	
 	// Realtime view
 	BrokerCtrl rt_ctrl;
@@ -96,7 +86,6 @@ protected:
 	void SetView();
 	void Configure();
 	void Loader();
-	void RefreshTesting();
 	
 public:
 	typedef Overlook CLASSNAME;

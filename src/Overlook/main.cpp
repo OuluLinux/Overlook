@@ -24,14 +24,16 @@ GUI_APP_MAIN {
 		}
 	}
 	
-	::Overlook::Overlook ol;
-	ol.Init();
-	if (autostart) {
-		ol.Load();
-		ol.Start();
+	{
+		::Overlook::Overlook ol;
+		ol.Init();
+		if (autostart) {
+			ol.Load();
+			ol.Start();
+		}
+		ol.Run();
+		ol.Deinit();
 	}
-	ol.Run();
-	ol.Deinit();
 	
 	Thread::ShutdownThreads();
 }

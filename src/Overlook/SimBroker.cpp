@@ -20,27 +20,19 @@ void SimBroker::Init() {
 	
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
-	
 	cur_begin = mt.GetSymbolCount();
-	
-	
-	/*System& bs = GetSystem();
-	src = bs.FindLinkCore("/open");
-	ASSERTEXC(src);
-	change = bs.FindLinkCore("/change");
-	ASSERTEXC(change);*/
 }
 
 void SimBroker::InitLightweight() {
-	lightweight = true;
-	
 	Clear();
 	
-	/*System& bs = GetSystem();
-	src = bs.FindLinkCore("/open");
-	ASSERTEXC(src);
-	change = bs.FindLinkCore("/change");
-	ASSERTEXC(change);*/
+	lightweight = true;
+	
+	if (symbol_idx.IsEmpty()) {
+		for(int i = 0; i < symbols.GetCount(); i++)
+			symbol_idx.Add(symbols[i].name);
+		cur_begin = GetMetaTrader().GetSymbolCount();
+	}
 }
 
 void SimBroker::Clear() {

@@ -1,0 +1,19 @@
+LAYOUT(Configuration, 688, 400)
+	ITEM(Label, dv___0, SetLabel(t_("Threads:")).LeftPosZ(4, 60).TopPosZ(4, 19))
+	ITEM(EditIntSpin, thrdcount, Min(1).LeftPosZ(64, 124).TopPosZ(4, 19))
+	ITEM(ArrayCtrl, thrdlist, LeftPosZ(4, 184).VSizePosZ(28, 8))
+	ITEM(Label, dv___3, SetLabel(t_("Neural settings:")).SetAlign(ALIGN_RIGHT).LeftPosZ(200, 92).TopPosZ(28, 19))
+	ITEM(DocEdit, settings, HSizePosZ(296, 4).VSizePosZ(28, 36))
+	ITEM(Label, dv___5, SetLabel(t_("Filename:")).SetAlign(ALIGN_RIGHT).LeftPosZ(200, 92).TopPosZ(4, 19))
+	ITEM(EditString, filename, LeftPosZ(296, 120).TopPosZ(4, 19))
+	ITEM(Label, dv___7, SetFrame(LeftSeparatorFrame()).LeftPosZ(192, 8).VSizePosZ(4, 8))
+	ITEM(Button, reload, SetLabel(t_("Reload")).RightPosZ(124, 116).BottomPosZ(8, 24))
+	ITEM(Button, reset, SetLabel(t_("Reset")).RightPosZ(4, 116).BottomPosZ(8, 24))
+END_LAYOUT
+
+LAYOUT(Statistics, 600, 352)
+	ITEM(Label, epoch, SetLabel(t_("Epoch: 0")).LeftPosZ(4, 108).TopPosZ(4, 19))
+	ITEM(ProgressIndicator, prog, HSizePosZ(116, 4).TopPosZ(4, 20))
+	ITEM(Splitter, graphs, HSizePosZ(4, 4).VSizePosZ(28, 4))
+END_LAYOUT
+

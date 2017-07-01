@@ -28,8 +28,9 @@ file
 	BrokerCtrl.lay,
 	ExposureTester.h,
 	ExposureTester.cpp,
-	AICtrl.h,
-	AICtrl.cpp,
+	TrainerCtrl.h,
+	TrainerCtrl.cpp,
+	TrainerCtrl.lay,
 	Core readonly separator,
 	Common.h,
 	Core.h,
@@ -51,11 +52,8 @@ file
 	Indicators.cpp,
 	QtStats.h,
 	QtStats.cpp,
-	Trash readonly separator,
 	Trainer.h,
-	Trainer.cpp,
-	TrainerCtrl.h,
-	TrainerCtrl.cpp;
+	Trainer.cpp;
 
 mainconfig
 	"" = "GUI MT",

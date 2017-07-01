@@ -1,8 +1,54 @@
-#if 0
 #include "Overlook.h"
 
 namespace Overlook {
 using namespace Upp;
+
+
+TrainerConfiguration::TrainerConfiguration(Trainer& trainer) :
+	trainer(&trainer)
+{
+	CtrlLayout(*this);
+	thrdcount.SetData(1);
+	
+}
+
+void TrainerConfiguration::Data()
+{
+	
+	
+	
+	
+	
+}
+
+
+
+
+
+
+
+TrainerStatistics::TrainerStatistics(Trainer& trainer) :
+	trainer(&trainer)
+{
+	CtrlLayout(*this);
+	
+}
+
+void TrainerStatistics::Data()
+{
+	
+	
+	
+	
+	
+}
+
+
+
+
+
+
+
 
 TrainerDraw::TrainerDraw(TrainerCtrl& ctrl) : ctrl(&ctrl) {
 	
@@ -142,4 +188,3 @@ void TrainerCtrl::SeekCur(int step) {
 }
 
 }
-#endif

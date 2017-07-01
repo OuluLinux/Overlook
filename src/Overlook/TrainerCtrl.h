@@ -1,10 +1,27 @@
 #ifndef _Overlook_TrainerCtrl_h_
 #define _Overlook_TrainerCtrl_h_
 
+
 namespace Overlook {
 using namespace Upp;
 
 class TrainerCtrl;
+
+#define LAYOUTFILE <Overlook/TrainerCtrl.lay>
+#include <CtrlCore/lay.h>
+
+
+class TrainerConfiguration : public WithConfiguration<ParentCtrl> {
+	Trainer* trainer;
+	
+public:
+	typedef TrainerConfiguration CLASSNAME;
+	TrainerConfiguration(Trainer& trainer);
+	
+	void Data();
+	
+	
+};
 
 class TrainerDraw : public Ctrl {
 	TrainerCtrl* ctrl;
@@ -15,7 +32,6 @@ public:
 	virtual void Paint(Draw& w);
 	
 };
-
 
 class TrainerCtrl : public ParentCtrl {
 	
@@ -36,6 +52,18 @@ public:
 	void Data();
 	void SetTimeframe();
 	void SeekCur(int step);
+	
+};
+
+class TrainerStatistics : public WithStatistics<ParentCtrl> {
+	Trainer* trainer;
+	
+public:
+	typedef TrainerStatistics CLASSNAME;
+	TrainerStatistics(Trainer& trainer);
+	
+	void Data();
+	
 	
 };
 

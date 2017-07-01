@@ -1755,4 +1755,35 @@ than heuristic view at single time`-pos&]
 [s0;%- Actually, one could join all those NN`-layers, but that`'s 
 some difficult crafting there...&]
 [s0;%- Fuck, change of plans, again....&]
-[s0;%- ]]
+[s3;%- 1.7.2017&]
+[s0;%- I am a month late with this already.&]
+[s0;%- So, what`'s today? Yesterday I found out, that a big single 
+regression NN could be the most generalized solution, which is 
+what is searched for here. It fits well to what I know. It feels 
+like it`'s obvious solution, but it`'s not if you need to find 
+it out by yourself. If you don`'t know all required things about 
+markets, then it`'s just one possible solution and you can`'t 
+tell why it is better than others.&]
+[s0;%- Implementation`-wise, it`'s not a big deal. It is very similar 
+to ConvNet examples, what I did. It has only a few `"moving`-parts`". 
+That`'s very good, because otherwise you would worry about unknown 
+bugs in the runtime. This constant changing of the design only 
+gives me a headache, and it`'s exhausting to start working on 
+the revised design. The headache goes away, however, but it will 
+be worse if you let the feeling of frustration to get a grip 
+on you. Picturing the new design is like rendering 3D image with 
+global illumination, and it starts with grainy radiation and 
+eventually it forms into a clear picture. That headache is like 
+starting rendering that new picture. Physically it is more like 
+tiredness and only a little bit of real headache.&]
+[s0;%- Performance`-wise, it`'s a big deal. It consumes all processing 
+power what I can provide. This solution should be processed with 
+some accelerated processing card. ConvNet can easily wrap any 
+NN library for those cards, so that is a easy feat. I don`'t 
+currently have any and I am looking forward to getting one. With 
+other solutions accelerationg cards wouldn`'t be an option, but 
+with this final solution it is.&]
+[s0;%- By the way, those other solutions are not forgotten. All fast 
+timeframe area, which cannot be traded with the most generalized 
+design, can be processed separately with more dynamic solutions. 
+That is my understanding currently, at least.]]

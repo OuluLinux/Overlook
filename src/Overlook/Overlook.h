@@ -9,11 +9,13 @@
 #include "CustomCtrl.h"
 #include "SimBroker.h"
 #include "ExposureTester.h"
-#include "AICtrl.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "QtStats.h"
+
+#include "Trainer.h"
+#include "TrainerCtrl.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
@@ -57,30 +59,33 @@ protected:
 	friend class PrioritizerCtrl;
 	
 	// Loader
-	One<LoaderWindow> loader;
-	System sys;
+	One<LoaderWindow>		loader;
+	System					sys;
 	
 	// Main view
-	TabCtrl tabs;
+	TabCtrl					tabs;
 	
 	// Traditional view
-	ParentCtrl visins;
-	Splitter droplist_split;
-	DropList ctrllist, symlist, tflist;
-	Button config;
+	ParentCtrl				visins;
+	Splitter				droplist_split;
+	DropList				ctrllist, symlist, tflist;
+	Button					config;
 	VectorMap<String, Ctrl*> ctrls;
-	CustomCtrl* prev_view;
-	Core* prev_core;
-	TimeCallback tc;
+	CustomCtrl*				prev_view;
+	Core*					prev_core;
+	TimeCallback			tc;
 	
 	// Exposure tester
-	ExposureTester exposurectrl;
+	ExposureTester			exposurectrl;
 	
-	// AI view
-	AICtrl aictrl;
+	// Trainer view
+	Trainer					trainer;
+	TrainerConfiguration	confctrl;
+	TrainerCtrl				trainerctrl;
+	TrainerStatistics		statsctrl;
 	
 	// Realtime view
-	BrokerCtrl rt_ctrl;
+	BrokerCtrl				rt_ctrl;
 	
 	
 	void SetView();

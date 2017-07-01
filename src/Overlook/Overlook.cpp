@@ -51,7 +51,11 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 
 
-Overlook::Overlook()
+Overlook::Overlook() :
+	trainer(sys),
+	confctrl(trainer),
+	trainerctrl(trainer),
+	statsctrl(trainer)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -62,8 +66,12 @@ Overlook::Overlook()
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(aictrl);
-	tabs.Add(aictrl, "AI");
+	tabs.Add(confctrl);
+	tabs.Add(confctrl, "Configuration");
+	tabs.Add(trainerctrl);
+	tabs.Add(trainerctrl, "Trainer");
+	tabs.Add(statsctrl);
+	tabs.Add(statsctrl, "Statistics");
 	tabs.Add(rt_ctrl);
 	tabs.Add(rt_ctrl, "Real-Time");
 	
@@ -114,6 +122,7 @@ void Overlook::Init() {
 	sys.Init();
 	rt_ctrl.Init();
 	exposurectrl.Init();
+	trainer.Init();
 	
 	
 	// Init gui
@@ -142,7 +151,7 @@ void Overlook::Loader() {
 	loader->PostProgress(0, 4, "Creating work queue");
 	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
 	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
-	/*trainer.RefreshWorkQueue();
+	trainer.RefreshWorkQueue();
 	
 	loader->PostProgress(1, 4, "Processing data");
 	trainer.ProcessWorkQueue();
@@ -152,8 +161,8 @@ void Overlook::Loader() {
 	
 	loader->PostProgress(3, 4, "Reseting iterators");
 	trainer.ResetIterators();
-	trainer.InitAgents();
-	*/
+	trainer.InitThreads();
+	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();
 	loader->PostClose();
@@ -161,12 +170,12 @@ void Overlook::Loader() {
 
 void Overlook::Start() {
 	sys.Start();
-	//trainer.Start();
+	trainer.Start();
 }
 
 void Overlook::Deinit() {
+	trainer.Stop();
 	sys.Stop();
-	//trainer.Stop();
 }
 
 void Overlook::SetView() {

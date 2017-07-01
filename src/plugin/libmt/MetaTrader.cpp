@@ -271,7 +271,7 @@ int MetaTrader::Init(String addr, int port) {
 	return !init_success;
 }
 
-#define MTFUNC0(code, rtype, name, gret) rtype MetaTrader::##name() {\
+#define MTFUNC0(code, rtype, name, gret) rtype MetaTrader:: name () {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -286,7 +286,7 @@ int MetaTrader::Init(String addr, int port) {
 }
 
 
-#define MTFUNC1(code, rtype, name, a1type, a1set, gret) rtype MetaTrader::##name(a1type a1) {\
+#define MTFUNC1(code, rtype, name, a1type, a1set, gret) rtype MetaTrader:: name (a1type a1) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -301,7 +301,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC2(code, rtype, name, a1type, a1set, a2type, a2set, gret) rtype MetaTrader::##name(a1type a1, a2type a2) {\
+#define MTFUNC2(code, rtype, name, a1type, a1set, a2type, a2set, gret) rtype MetaTrader:: name (a1type a1, a2type a2) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -317,7 +317,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC3(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3) {\
+#define MTFUNC3(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, gret) rtype MetaTrader:: name (a1type a1, a2type a2, a3type a3) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -334,7 +334,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC4(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3, a4type a4) {\
+#define MTFUNC4(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, gret) rtype MetaTrader:: name (a1type a1, a2type a2, a3type a3, a4type a4) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \
@@ -352,7 +352,7 @@ int MetaTrader::Init(String addr, int port) {
 	return p.gret(0); \
 }
 
-#define MTFUNC5(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, a5type, a5set, gret) rtype MetaTrader::##name(a1type a1, a2type a2, a3type a3, a4type a4, a5type a5) {\
+#define MTFUNC5(code, rtype, name, a1type, a1set, a2type, a2set, a3type, a3set, a4type, a4set, a5type, a5set, gret) rtype MetaTrader:: name (a1type a1, a2type a2, a3type a3, a4type a4, a5type a5) {\
 	lock.Enter(); \
 	if (!init_success) {lock.Leave(); throw ConnectionError();} \
 	MTPacket p; \

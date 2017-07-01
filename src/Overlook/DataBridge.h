@@ -129,37 +129,21 @@ public:
 
 
 class ValueChange : public Core {
-	bool has_proxy;
-	int proxy_id, proxy_factor;
-	DataBridge* db;
 	
 public:
 	ValueChange();
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(7, 7);
+			% Out(3, 3);
 	}
 	
 	virtual void Init();
 	virtual void Start();
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		// Match SymTf
-		if (in_sym == -1)
-			return in_tf == out_tf;
-		if (in_sym == out_sym)
-			return true;
-		
-		// Enable proxy, if it exists
-		MetaTrader& mt = GetMetaTrader();
-		if (in_sym < mt.GetSymbolCount()) {
-			const Symbol& sym = mt.GetSymbol(in_sym);
-			if (sym.proxy_id == -1)
-				return false;
-			return out_sym == sym.proxy_id;
-		}
-		return false;
+		if (in_sym == -1)	return in_tf  == out_tf;
+		else				return in_sym == out_sym;
 	}
 };
 

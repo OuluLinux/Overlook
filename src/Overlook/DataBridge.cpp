@@ -150,7 +150,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		spread_qt.SetCount(row+1);
 		
 		double diff = ask - bid + half_point;
-		int diff_points = diff / point;
+		int diff_points = Upp::min(4095, (int)(diff / point));
 		int dow = DayOfWeek(t);
 		int hour = t.hour;
 		int minute = t.minute;
@@ -529,6 +529,7 @@ void DataBridge::RefreshFromHistory() {
 	
 	ForceSetCounted(count);
 	buffer_cursor = count-1;
+	ASSERT(buffer_cursor >= 0);
 	
 	while (count < bars) {
 		SetSafetyLimit(count);

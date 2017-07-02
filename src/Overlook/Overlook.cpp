@@ -160,8 +160,8 @@ void Overlook::Loader() {
 	trainer.ResetValueBuffers();
 	
 	loader->PostProgress(3, 4, "Reseting iterators");
-	trainer.ResetIterators();
 	trainer.InitThreads();
+	trainer.ResetIterator();
 	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();

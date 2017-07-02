@@ -41,7 +41,6 @@ protected:
 	Trainer* trainer;
 	SliderCtrl time_slider;
 	Label time_lbl;
-	DropList tf_list;
 	TrainerDraw draw;
 	Button step_bwd, step_fwd;
 	
@@ -50,7 +49,6 @@ public:
 	TrainerCtrl(Trainer& trainer);
 	
 	void Data();
-	void SetTimeframe();
 	void SeekCur(int step);
 	
 };

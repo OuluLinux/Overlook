@@ -65,14 +65,8 @@ void TrainerDraw::Paint(Draw& w) {
 	Trainer& trainer = *ctrl.trainer;
 	System& sys = *trainer.sys;
 	
-	if (trainer.iters.IsEmpty()) {
-		w.DrawImage(0, 0, id);
-		return;
-	}
 	
-	int tf = ctrl.tf_list.GetIndex();
-	if (tf == -1) tf = 0;
-	const Iterator& iter = trainer.iters[tf];
+	const Iterator& iter = trainer.iter;
 	
 	int sym_count		= trainer.sym_ids.GetCount();
 	int tf_count		= iter.pos.GetCount();
@@ -87,12 +81,12 @@ void TrainerDraw::Paint(Draw& w) {
 	
 	int row = 0;
 	for(int i = 0; i < tf_count; i++) {
-		const Vector<Vector<DoublePair> >& sym_values = iter.value[i];
+		const Vector<Vector<DoubleTrio> >& sym_values = iter.value[i];
 		const Vector<double>& min_values = iter.min_value[i];
 		const Vector<double>& max_values = iter.max_value[i];
 		
 		for(int j = 0; j < sym_count; j++) {
-			const Vector<DoublePair>& values = sym_values[j];
+			const Vector<DoubleTrio>& values = sym_values[j];
 			
 			int y = row * ystep;
 			int y2 = (row + 1) * ystep;
@@ -127,7 +121,6 @@ TrainerCtrl::TrainerCtrl(Trainer& trainer) :
 {
 	Add(time_lbl.TopPos(3, 24).LeftPos(0, 46));
 	Add(time_slider.TopPos(3, 24).LeftPos(50, 300));
-	Add(tf_list.TopPos(3, 24).LeftPos(400, 200));
 	Add(step_bwd.TopPos(3, 24).LeftPos(600, 100));
 	Add(step_fwd.TopPos(3, 24).LeftPos(700, 100));
 	Add(draw.VSizePos(30).HSizePos());
@@ -140,50 +133,30 @@ TrainerCtrl::TrainerCtrl(Trainer& trainer) :
 	
 	step_bwd <<= THISBACK1(SeekCur, -1);
 	step_fwd <<= THISBACK1(SeekCur, +1);
-	tf_list <<= THISBACK(SetTimeframe);
 	time_slider <<= THISBACK(Data);
 }
 
-void TrainerCtrl::SetTimeframe() {
-	int iter_id = tf_list.GetIndex();
-	Iterator& iter = trainer->iters[iter_id];
-	time_slider.MinMax(0, iter.bars-1);
-	time_slider.SetData(iter.bars-1);
-}
-
 void TrainerCtrl::Data() {
-	if (trainer->iters.IsEmpty())
-		return;
-	
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = *trainer->sys;
 	
-	if (tf_list.GetCount() == 0) {
-		for(int i = 0; i < trainer->tf_ids.GetCount(); i++) {
-			int tf = trainer->tf_ids[i];
-			tf_list.Add(sys.GetPeriodString(tf));
-		}
-		tf_list.SetIndex(0);
-		SetTimeframe();
-	}
+	time_slider.MinMax(0, trainer->iter.bars-1);
+	time_slider.SetData(trainer->iter.bars-1);
 	
-	int iter_id = tf_list.GetIndex();
-	Iterator& iter = trainer->iters[iter_id];
+	Iterator& iter = trainer->iter;
 	int pos = time_slider.GetData();
 	if (iter.pos.Top() != pos) {
-		trainer->Seek(iter_id, pos);
+		trainer->Seek(pos);
 	}
 	
 	draw.Refresh();
 }
 
 void TrainerCtrl::SeekCur(int step) {
-	int iter_id = tf_list.GetIndex();
-	if (!trainer->SeekCur(iter_id, step))
+	if (!trainer->SeekCur(step))
 		return;
-	Iterator& iter = trainer->iters[iter_id];
-	time_slider.MinMax(0, iter.bars-1);
-	time_slider.SetData(iter.pos.Top());
+	time_slider.MinMax(0, trainer->iter.bars-1);
+	time_slider.SetData(trainer->iter.pos.Top());
 	draw.Refresh();
 }
 

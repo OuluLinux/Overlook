@@ -1786,4 +1786,22 @@ with this final solution it is.&]
 [s0;%- By the way, those other solutions are not forgotten. All fast 
 timeframe area, which cannot be traded with the most generalized 
 design, can be processed separately with more dynamic solutions. 
-That is my understanding currently, at least.]]
+That is my understanding currently, at least.&]
+[s3;%- 2.7.2017&]
+[s0;%- To the Overlook, again. A little experimental tweak is required. 
+It surprised me that it was something new, which is usually a 
+very bad sign. Visually, it is like that Classify2D example but 
+with additional slow moving dots, and one would expect, that 
+the network follows them without too much problems. It is an 
+internal performance value, and I try to make the NN to give 
+it`'s expectation about it`'s performance. It is low at begin 
+but should get higher during training, and those low values is 
+expected to be overwritten during training. This is just an idea 
+and maybe a bad one.&]
+[s0;%- ...&]
+[s0;%- Training seems to work, but data reading position is not changing 
+yet. The quality of training must be checked with monitor widgets 
+during runtime. My 8`-core 4GHz CPU hits 100% immediately and 
+it starts a new training phase which will take weeks and months, 
+but which will be limited after more training gets useless. The 
+alpha version is just around the corner...]]

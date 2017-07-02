@@ -5,7 +5,7 @@ namespace Overlook {
 using namespace Upp;
 using ConvNet::SDQNAgent;
 
-typedef Tuple2<double, double> DoublePair;
+typedef Tuple3<double, double, double> DoubleTrio;
 
 struct SessionThread {
 	typedef SessionThread CLASSNAME;
@@ -13,13 +13,18 @@ struct SessionThread {
 	ConvNet::Session	ses;
 	SimBroker			broker;
 	
+	ConvNet::Window loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window, test_window;
+	ConvNet::Window accuracy_result_window;
+	
 	void Serialize(Stream& s) {s % ses;}
 };
 
 struct Iterator : Moveable<Iterator> {
-	Vector<Vector<Vector<DoublePair> > > value;
+	Vector<Vector<Vector<DoubleTrio> > > value;
 	Vector<Vector<double> > min_value, max_value;
 	Vector<int> pos, tfs, periods, period_in_slower, time_values;
+	Array<ConvNet::VolumeData<double> > volume_out;
+	Volume volume_in;
 	Time begin;
 	int begin_ts;
 	int value_count;
@@ -39,12 +44,13 @@ protected:
 	
 	
 	// Tmp vars
-	Vector<Iterator> iters;
+	Iterator iter;
 	Vector<Ptr<CoreItem> > work_queue, major_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Index<int> tf_ids, sym_ids, indi_ids;
 	System* sys;
 	int not_stopped;
+	int input_width, input_height, input_depth, output_width;
 	bool running;
 	
 	void LoadThis();
@@ -66,11 +72,11 @@ public:
 	void Stop();
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
-	void ResetIterators();
+	void ResetIterator();
 	void ResetValueBuffers();
 	
-	bool Seek(int tf_iter, int shift);
-	bool SeekCur(int tf_iter, int shift);
+	bool Seek(int shift);
+	bool SeekCur(int shift);
 };
 
 }

@@ -91,6 +91,7 @@ protected:
 	void SetView();
 	void Configure();
 	void Loader();
+	void Data(bool periodic);
 	
 public:
 	typedef Overlook CLASSNAME;

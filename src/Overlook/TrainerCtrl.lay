@@ -7,8 +7,8 @@ LAYOUT(Configuration, 688, 400)
 	ITEM(Label, dv___5, SetLabel(t_("Filename:")).SetAlign(ALIGN_RIGHT).LeftPosZ(200, 92).TopPosZ(4, 19))
 	ITEM(EditString, filename, LeftPosZ(296, 120).TopPosZ(4, 19))
 	ITEM(Label, dv___7, SetFrame(LeftSeparatorFrame()).LeftPosZ(192, 8).VSizePosZ(4, 8))
-	ITEM(Button, reload, SetLabel(t_("Reload")).RightPosZ(124, 116).BottomPosZ(8, 24))
-	ITEM(Button, reset, SetLabel(t_("Reset")).RightPosZ(4, 116).BottomPosZ(8, 24))
+	ITEM(Button, apply, SetLabel(t_("Apply")).RightPosZ(4, 116).BottomPosZ(8, 24))
+	ITEM(Button, reset, SetLabel(t_("Reset")).RightPosZ(124, 116).BottomPosZ(8, 24))
 END_LAYOUT
 
 LAYOUT(Statistics, 600, 352)

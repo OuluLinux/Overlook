@@ -9,16 +9,64 @@ TrainerConfiguration::TrainerConfiguration(Trainer& trainer) :
 {
 	CtrlLayout(*this);
 	thrdcount.SetData(1);
-	
+	thrdlist.AddColumn("Name");
+	thrdlist.NoHeader();
+	thrdlist <<= THISBACK(Data);
+	apply <<= THISBACK(Apply);
+	reset <<= THISBACK(Reset);
 }
 
 void TrainerConfiguration::Data()
 {
+	for(int i = 0; i < trainer->thrds.GetCount(); i++)
+		thrdlist.Set(i, 0, trainer->thrds[i].name);
+	thrdlist.SetCount(trainer->thrds.GetCount());
 	
+	int thrd = thrdlist.GetCursor();
+	if (thrd == -1) return;
+	const SessionThread& st = trainer->thrds[thrd];
 	
+	filename.SetData(st.name);
+	settings.SetData(st.params);
+}
+
+void TrainerConfiguration::Apply() {
+	int thrd = thrdlist.GetCursor();
+	if (thrd == -1) return;
+	SessionThread& st = trainer->thrds[thrd];
 	
+	st.name = filename.GetData();
+	st.params = settings.GetData();
 	
+	trainer->StoreThis();
+	Data();
+}
+
+void TrainerConfiguration::Reset() {
+	int thrd = thrdlist.GetCursor();
+	if (thrd == -1) return;
+	SessionThread& st = trainer->thrds[thrd];
 	
+	st.name = IntStr(thrd+1) + ". thread";
+	st.params =
+		"[\n"
+		"\t{\"type\":\"input\""
+			", \"input_width\":"  + IntStr(trainer->input_width)  +
+			", \"input_height\":" + IntStr(trainer->input_height) +
+			", \"input_depth\":"  + IntStr(trainer->input_depth)  +
+			"},\n" // 2 inputs: x, y
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+		"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(trainer->output_width) + "},\n"
+		"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
+		"]\n";
+	
+	Data();
 }
 
 
@@ -50,7 +98,7 @@ void TrainerStatistics::Data()
 
 
 
-TrainerDraw::TrainerDraw(TrainerCtrl& ctrl) : ctrl(&ctrl) {
+TrainerDraw::TrainerDraw(TrainerThreadCtrl& ctrl) : ctrl(&ctrl) {
 	
 }
 
@@ -61,12 +109,12 @@ void TrainerDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	
-	TrainerCtrl& ctrl = *this->ctrl;
+	TrainerThreadCtrl& ctrl = *this->ctrl;
 	Trainer& trainer = *ctrl.trainer;
 	System& sys = *trainer.sys;
 	
 	
-	const Iterator& iter = trainer.iter;
+	const Iterator& iter = trainer.iters[0];
 	
 	int sym_count		= trainer.sym_ids.GetCount();
 	int tf_count		= iter.pos.GetCount();
@@ -74,7 +122,7 @@ void TrainerDraw::Paint(Draw& w) {
 	
 	int rows = sym_count * tf_count;
 	int cols = value_count;
-	int grid_w = sz.cx - 300;
+	int grid_w = sz.cx;
 	double xstep = (double)grid_w / (double)cols;
 	double ystep = (double)sz.cy / (double)rows;
 	
@@ -115,49 +163,83 @@ void TrainerDraw::Paint(Draw& w) {
 
 
 
-TrainerCtrl::TrainerCtrl(Trainer& trainer) :
+TrainerThreadCtrl::TrainerThreadCtrl(Trainer& trainer, int thrd_id) :
 	trainer(&trainer),
-	draw(*this)
+	draw(*this),
+	thrd_id(thrd_id)
 {
 	Add(time_lbl.TopPos(3, 24).LeftPos(0, 46));
 	Add(time_slider.TopPos(3, 24).LeftPos(50, 300));
-	Add(step_bwd.TopPos(3, 24).LeftPos(600, 100));
-	Add(step_fwd.TopPos(3, 24).LeftPos(700, 100));
-	Add(draw.VSizePos(30).HSizePos());
+	Add(hsplit.VSizePos(30).HSizePos());
+	
+	hsplit.Horz();
+	hsplit << draw << conv << timescroll;
+	hsplit.SetPos(2000, 0);
+	hsplit.SetPos(8000, 1);
 	
 	time_lbl.SetLabel("Time:");
 	time_lbl.AlignRight();
 	time_slider.MinMax(0, 100).SetData(50);
-	step_bwd.SetLabel("<--");
-	step_fwd.SetLabel("-->");
 	
-	step_bwd <<= THISBACK1(SeekCur, -1);
-	step_fwd <<= THISBACK1(SeekCur, +1);
-	time_slider <<= THISBACK(Data);
+	init = true;
+}
+
+void TrainerThreadCtrl::Data() {
+	MetaTrader& mt = GetMetaTrader();
+	System& sys = *trainer->sys;
+	Iterator& iter = trainer->iters[thrd_id];
+	SessionThread& thrd = trainer->thrds[thrd_id];
+	
+	if (init) {
+		init = false;
+		conv.SetSession(thrd.ses);
+		timescroll.SetSession(thrd.ses);
+		conv.RefreshLayers();
+	}
+	
+	time_slider.MinMax(0, iter.bars-1);
+	time_slider.SetData(iter.pos.Top());
+	
+	draw.Refresh();
+	conv.Refresh();
+	timescroll.Refresh();
+}
+
+
+
+
+TrainerCtrl::TrainerCtrl(Trainer& trainer) :
+	trainer(&trainer)
+{
+	Add(thrdlist.TopPos(3, 24).LeftPos(4, 100));
+	init = true;
 }
 
 void TrainerCtrl::Data() {
-	MetaTrader& mt = GetMetaTrader();
-	System& sys = *trainer->sys;
-	
-	time_slider.MinMax(0, trainer->iter.bars-1);
-	time_slider.SetData(trainer->iter.bars-1);
-	
-	Iterator& iter = trainer->iter;
-	int pos = time_slider.GetData();
-	if (iter.pos.Top() != pos) {
-		trainer->Seek(pos);
+	if (init) {
+		init = false;
+		for(int i = 0; i < trainer->thrds.GetCount(); i++) {
+			Ctrl& ctrl = thrds.Add(new TrainerThreadCtrl(*trainer, i));
+			thrdlist.Add(trainer->thrds[i].name);
+			Add(ctrl.HSizePos().VSizePos(30));
+			ctrl.Hide();
+		}
+		thrdlist.SetIndex(0);
+		thrdlist <<= THISBACK(SetView);
+		thrds[0].Show();
 	}
-	
-	draw.Refresh();
+	int i = thrdlist.GetIndex();
+	if (i == -1) return;
+	thrds[i].Data();
 }
 
-void TrainerCtrl::SeekCur(int step) {
-	if (!trainer->SeekCur(step))
-		return;
-	time_slider.MinMax(0, trainer->iter.bars-1);
-	time_slider.SetData(trainer->iter.pos.Top());
-	draw.Refresh();
+void TrainerCtrl::SetView() {
+	for(int i = 0; i < thrds.GetCount(); i++)
+		thrds[i].Hide();
+	int i = thrdlist.GetIndex();
+	thrds[i].Show();
 }
 
 }
+
+

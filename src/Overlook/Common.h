@@ -4,6 +4,7 @@
 #include <Core/Core.h>
 #include <PlotCtrl/PlotCtrl.h>
 #include <ConvNet/ConvNet.h>
+#include <ConvNetCtrl/ConvNetCtrl.h>
 #include <CtrlUtils/CtrlUtils.h>
 #include <CoreUtils/CoreUtils.h>
 

@@ -74,6 +74,7 @@ Overlook::Overlook() :
 	tabs.Add(statsctrl, "Statistics");
 	tabs.Add(rt_ctrl);
 	tabs.Add(rt_ctrl, "Real-Time");
+	tabs.WhenSet << THISBACK1(Data, false);
 	
 	
 	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
@@ -101,6 +102,17 @@ Overlook::~Overlook() {
 }
 
 void Overlook::Refresher() {
+	Data(true);
+	int tab = tabs.Get();
+	if (tab == 3) {
+		PostRefresher();
+	}
+	else {
+		tc.Set(1000, THISBACK(PostRefresher));
+	}
+}
+
+void Overlook::Data(bool periodic) {
 	int tab = tabs.Get();
 	if (tab == 0) {
 		if (prev_view)
@@ -110,12 +122,17 @@ void Overlook::Refresher() {
 		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		
+		if (!periodic) confctrl.Data();
+	}
+	else if (tab == 3) {
+		trainerctrl.Data();
 	}
 	else if (tab == 4) {
+		statsctrl.Data();
+	}
+	else if (tab == 5) {
 		rt_ctrl.Data();
 	}
-	tc.Set(1000, THISBACK(PostRefresher));
 }
 
 void Overlook::Init() {
@@ -161,7 +178,7 @@ void Overlook::Loader() {
 	
 	loader->PostProgress(3, 4, "Reseting iterators");
 	trainer.InitThreads();
-	trainer.ResetIterator();
+	trainer.ResetIterators();
 	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();

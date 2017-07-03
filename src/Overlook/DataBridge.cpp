@@ -6,6 +6,7 @@ DataBridge::DataBridge()  {
 	SetSkipAllocate();
 	cursor = 0;
 	buffer_cursor = 0;
+	data_begin = 0;
 	max_value = 0;
 	min_value = 0;
 	median_max = 0;
@@ -442,7 +443,8 @@ void DataBridge::RefreshFromHistory() {
 		cursor += struct_size;
 		
 		// At first value
-		if (count == 0) {
+		bool set_data_begin = count == 0;
+		if (set_data_begin) {
 			prev_close = close;
 			
 			// Check that value is in the range of 1*point - UINT16_MAX*point
@@ -464,6 +466,10 @@ void DataBridge::RefreshFromHistory() {
 			if (!inc_month)		cur += step;
 			else				cur = IncreaseMonthTS(cur);
 			count++;
+		}
+		
+		if (set_data_begin) {
+			data_begin = count;
 		}
 		
 		prev_close = close;

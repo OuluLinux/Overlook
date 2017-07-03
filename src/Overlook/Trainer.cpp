@@ -9,8 +9,9 @@ Trainer::Trainer(System& sys) : sys(&sys) {
 	input_width = 0;
 	input_height = 0;
 	input_depth = 0;
+	test_interval = 100;
 	
-	thrd_count = CPU_Cores();
+	thrd_count = 2;//CPU_Cores();
 	
 }
 
@@ -58,8 +59,6 @@ void Trainer::Init() {
 }
 
 void Trainer::InitThreads() {
-	if (!thrds.IsEmpty())
-		return;
 	
 	input_width  = sym_ids.GetCount();
 	input_height = tf_ids.GetCount();
@@ -68,30 +67,38 @@ void Trainer::InitThreads() {
 	int volume = input_width * input_height * input_depth;
 	
 	thrds.SetCount(thrd_count);
+	iters.SetCount(thrd_count);
+	train_epochs.SetCount(thrd_count, 0);
+	train_iters.SetCount(thrd_count, 0);
 	
 	for(int i = 0; i < thrds.GetCount(); i++) {
 		SessionThread& t = thrds[i];
 		
-		String net =
-			"[\n"
-			"\t{\"type\":\"input\""
-				", \"input_width\":"  + IntStr(input_width)  +
-				", \"input_height\":" + IntStr(input_height) +
-				", \"input_depth\":"  + IntStr(input_depth)  +
-				"},\n" // 2 inputs: x, y
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
-			"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
-			"]\n";
+		if (t.params.IsEmpty()) {
+			t.params =
+				"[\n"
+				"\t{\"type\":\"input\""
+					", \"input_width\":"  + IntStr(input_width)  +
+					", \"input_height\":" + IntStr(input_height) +
+					", \"input_depth\":"  + IntStr(input_depth)  +
+					"},\n" // 2 inputs: x, y
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+				"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
+				"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
+				"]\n";
+		}
+		if (t.name.IsEmpty()) {
+			t.name = IntStr(i+1) + ". thread";
+		}
 		
 		
-		t.ses.MakeLayers(net);
+		t.ses.MakeLayers(t.params);
 		
 		SimBroker& sb = t.broker;
 		sb.Brokerage::operator=((Brokerage&)GetMetaTrader());
@@ -114,9 +121,23 @@ void Trainer::Stop() {
 	while (not_stopped) Sleep(100);
 }
 
-void Trainer::Runner(int i) {
+void Trainer::ShuffleTraining(Vector<int>& shuffled_pos) {
+	// Get vector of random positions of train_pos vector
+	int count = train_pos.GetCount();
+	shuffled_pos.SetCount(count);
+	for(int i = 0; i < count; i++)
+		shuffled_pos[i] = i;
+	for(int i = 0; i < count; i++)
+		Swap(shuffled_pos[i], shuffled_pos[Random(count)]);
+	
+	// Change position in train_pos to time-position
+	for(int i = 0; i < count; i++)
+		shuffled_pos[i] = train_pos[shuffled_pos[i]];
+}
+
+void Trainer::Runner(int thrd_id) {
 	Vector<VolumePtr> vec;
-	SessionData d;
+	//SessionData d;
 	int forward_time, backward_time;
 	
 	int step_num = 0;
@@ -126,13 +147,41 @@ void Trainer::Runner(int i) {
 	
 	// Sanity checks
 	ASSERT(!thrds.IsEmpty());
-	SessionThread& st = thrds[i];
+	Iterator& iter = iters[thrd_id];
+	SessionThread& st = thrds[thrd_id];
+	int& train_iter = train_iters[thrd_id];
+	int& train_epoch = train_epochs[thrd_id];
+	
+	//st.ses.SetUsedData(d);
 	TrainerBase& trainer = *st.ses.GetTrainer();
 	ConvNet::Net& net = st.ses.GetNetwork();
 	Volume& x = iter.volume_in;
-	VolumeData<double>& y = iter.volume_out[i];
+	VolumeData<double>& y = iter.volume_out[thrd_id];
+	
+	Vector<int> train_pos;
+	ShuffleTraining(train_pos);
+	train_iter = 0;
+	train_epoch = 0;
+	vec.SetCount(1);
 	
 	while (running) {
+		
+		// Reshuffle training data after epoch
+		if (train_iter >= train_pos.GetCount()) {
+			ShuffleTraining(train_pos);
+			train_iter = 0;
+			train_epoch++;
+		}
+		
+		// Test net
+		if (step_num % test_interval == 0) {
+			double real_value = 0;
+			for(int i = 0; i < test_pos.GetCount(); i++) {
+				Seek(thrd_id, test_pos[i]);
+				vec[0] = &x;
+				const Volume& fwd = net.Forward(vec, true);
+			}
+		}
 		
 		// use x to build our estimate of validation error
 		if (test_predict && (step_num % predict_interval) == 0) {
@@ -152,7 +201,7 @@ void Trainer::Runner(int i) {
 		
 		TimeStop ts;
 		
-		vec.SetCount(1);
+		
 		vec[0] = &x;
 		const Volume& fwd = net.Forward(vec, true);
 		
@@ -163,8 +212,9 @@ void Trainer::Runner(int i) {
 			int tf = 0;
 			for(; tf < tf_ids.GetCount(); tf++) {
 				int pos = i + tf * sym_ids.GetCount();
-				double predicted	= fwd.Get(pos);
-				double real			= y.Get(pos);
+				double real = y.Get(pos);
+				if (real == 0.0) break;
+				double predicted = fwd.Get(pos);
 				bool same_dir = (predicted * real) > 0.0;
 				if (!same_dir) break;
 			}
@@ -207,7 +257,7 @@ void Trainer::Runner(int i) {
 		
 		//if ((step_num % step_cb_interal) == 0)
 		//	WhenStepInterval(step_num);
-		LOG(Format("thrd=%d step=%d", i, step_num));
+		LOG(Format("thrd=%d step=%d", thrd_id, step_num));
 		step_num++;
 	}
 	
@@ -216,6 +266,11 @@ void Trainer::Runner(int i) {
 
 void Trainer::RefreshWorkQueue() {
 	sys->GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+}
+
+void Trainer::ResetIterators() {
+	for(int i = 0; i < iters.GetCount(); i++)
+		ResetIterator(i);
 }
 
 void Trainer::ResetValueBuffers() {
@@ -245,6 +300,7 @@ void Trainer::ResetValueBuffers() {
 	
 	// Get value buffers
 	int total_bufs = 0;
+	data_begins.SetCount(tf_ids.GetCount(), 0);
 	for(int i = 0; i < work_queue.GetCount(); i++) {
 		CoreItem& ci = *work_queue[i];
 		ASSERT(!ci.core.IsEmpty());
@@ -256,6 +312,9 @@ void Trainer::ResetValueBuffers() {
 		int sym_id = sym_ids.Find(sym);
 		int tf_id = tf_ids.Find(tf);
 		if (sym_id == -1 || tf_id == -1) continue;
+		
+		DataBridge* db = dynamic_cast<DataBridge*>(&*ci.core);
+		if (db) data_begins[tf_id] = Upp::max(data_begins[tf_id], db->GetDataBegin());
 		
 		Vector<ConstBuffer*>& indi_buffers = value_buffers[sym_id][tf_id];
 		
@@ -274,6 +333,48 @@ void Trainer::ResetValueBuffers() {
 	}
 	int expected_total = sym_ids.GetCount() * tf_ids.GetCount() * buf_count;
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
+	
+	
+	// Get unique data positions for training
+	// - slower tf data-begin positions in fastest tf are required
+	// - start from fastest tf data begin and seek to beginning with fastest available unique data step
+	// - also, add all positions from fastest tf begin to end
+	ASSERT(train_pos.IsEmpty());
+	ASSERT(test_pos.IsEmpty());
+	int main_tf = tf_ids.Top();
+	Vector<int> fast_begins;
+	for(int i = 0; i < tf_ids.GetCount()-1; i++)
+		fast_begins.Add(sys->GetShiftTf(main_tf, tf_ids[i], 0));
+	int pos = data_begins.Top();
+	int bars = sys->GetCountTf(main_tf);
+	train_pos.Reserve(bars * 0.6);
+	for(int i = pos; i < bars; i++) train_pos.Add(i);
+	pos--;
+	while (pos >= 0) {
+		int fastest = tf_ids.GetCount() - 2;
+		for (; fastest >= 0; fastest--) {
+			if (pos >= fast_begins[fastest])
+				break;
+		}
+		if (fastest == -1)
+			break;
+		pos = sys->GetShiftTf(tf_ids[fastest], main_tf, sys->GetShiftTf(main_tf, tf_ids[fastest], pos));
+		train_pos.Add(pos);
+		pos--;
+	}
+	Sort(train_pos, StdLess<int>());
+	
+	// Move some training data to testing data
+	int test_size = 0.1 * train_pos.GetCount();
+	test_pos.SetCount(test_size);
+	for(int i = 0; i < test_size; i++) {
+		int j = Random(train_pos.GetCount());
+		int pos = train_pos[j];
+		train_pos.Remove(j);
+		test_pos[i] = pos;
+	}
+	Sort(test_pos, StdLess<int>());
+	
 }
 
 void Trainer::ProcessWorkQueue() {
@@ -284,7 +385,8 @@ void Trainer::ProcessWorkQueue() {
 	}
 }
 
-void Trainer::ResetIterator() {
+void Trainer::ResetIterator(int thrd_id) {
+	Iterator& iter = iters[thrd_id];
 	ASSERT(!value_buffers.IsEmpty());
 	int sym_count = sym_ids.GetCount();
 	int buf_count = value_buffers[0][0].GetCount();
@@ -342,10 +444,11 @@ void Trainer::ResetIterator() {
 	
 	
 	// Seek to beginning
-	Seek(0);
+	Seek(thrd_id, 0);
 }
 
-bool Trainer::Seek(int shift) {
+bool Trainer::Seek(int thrd_id, int shift) {
+	Iterator& iter = iters[thrd_id];
 	int tf_iter = tf_ids.GetCount() - 1;
 	int sym_count = sym_ids.GetCount();
 	int buf_count = value_buffers[0][0].GetCount();
@@ -423,11 +526,12 @@ bool Trainer::Seek(int shift) {
 	return true;
 }
 
-bool Trainer::SeekCur(int shift) {
+bool Trainer::SeekCur(int thrd_id, int shift) {
+	Iterator& iter = iters[thrd_id];
 	int new_shift = iter.pos.Top() + shift;
 	if (new_shift < 0) return false;
 	if (new_shift >= iter.bars) return false;
-	return Seek(new_shift);
+	return Seek(thrd_id, new_shift);
 }
 
 }

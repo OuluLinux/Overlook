@@ -59,6 +59,7 @@ class DataBridge : public BarData {
 	int median_max, median_min;
 	int max_value, min_value;
 	int cursor, buffer_cursor;
+	int data_begin;
 	bool slow_volume, day_volume;
 	
 	void RefreshFromHistory();
@@ -76,6 +77,7 @@ public:
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(5, 3)
 			% Persistent(cursor) % Persistent(buffer_cursor)
+			% Persistent(data_begin)
 			% Persistent(spread_qt) % Persistent(volume_qt)
 			% Persistent(median_max_map) % Persistent(median_min_map)
 			% Persistent(symbols)
@@ -89,6 +91,7 @@ public:
 	virtual void Start();
 	
 	int GetChangeStep(int shift, int steps);
+	int GetDataBegin() const {return data_begin;}
 	double GetMax() const {return max_value * point;}
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}

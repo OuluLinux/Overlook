@@ -11,12 +11,14 @@ struct SessionThread {
 	typedef SessionThread CLASSNAME;
 	
 	ConvNet::Session	ses;
+	String				name, params;
+	
 	SimBroker			broker;
 	
 	ConvNet::Window loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window, test_window;
 	ConvNet::Window accuracy_result_window;
 	
-	void Serialize(Stream& s) {s % ses;}
+	void Serialize(Stream& s) {s % ses % name % params;}
 };
 
 struct Iterator : Moveable<Iterator> {
@@ -36,6 +38,9 @@ class Trainer {
 protected:
 	friend class TrainerCtrl;
 	friend class TrainerDraw;
+	friend class TrainerConfiguration;
+	friend class TrainerStatistics;
+	friend class TrainerThreadCtrl;
 	
 	
 	// Persistent vars
@@ -44,18 +49,24 @@ protected:
 	
 	
 	// Tmp vars
-	Iterator iter;
+	Vector<Iterator> iters;
 	Vector<Ptr<CoreItem> > work_queue, major_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Index<int> tf_ids, sym_ids, indi_ids;
+	Vector<int> data_begins;
+	Vector<int> train_pos, test_pos;
+	Vector<int> train_epochs, train_iters;
 	System* sys;
 	int not_stopped;
+	int test_interval;
 	int input_width, input_height, input_depth, output_width;
 	bool running;
 	
 	void LoadThis();
-	void StoreThis();
 	void Runner(int i);
+	void ResetIterator(int thrd_id);
+	bool Seek(int thrd_id, int shift);
+	bool SeekCur(int thrd_id, int shift);
 	
 	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_INCBET, ACT_DECBET,     ACTIONCOUNT};
 	
@@ -65,6 +76,7 @@ public:
 	~Trainer() {Stop();}
 	
 	void Serialize(Stream& s) {s % thrd_count % thrds;}
+	void StoreThis();
 	
 	void Init();
 	void InitThreads();
@@ -72,11 +84,9 @@ public:
 	void Stop();
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
-	void ResetIterator();
+	void ResetIterators();
 	void ResetValueBuffers();
-	
-	bool Seek(int shift);
-	bool SeekCur(int shift);
+	void ShuffleTraining(Vector<int>& train_pos);
 };
 
 }

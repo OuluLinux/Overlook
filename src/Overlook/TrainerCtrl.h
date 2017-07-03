@@ -5,7 +5,7 @@
 namespace Overlook {
 using namespace Upp;
 
-class TrainerCtrl;
+class TrainerThreadCtrl;
 
 #define LAYOUTFILE <Overlook/TrainerCtrl.lay>
 #include <CtrlCore/lay.h>
@@ -19,21 +19,23 @@ public:
 	TrainerConfiguration(Trainer& trainer);
 	
 	void Data();
+	void Apply();
+	void Reset();
 	
 	
 };
 
 class TrainerDraw : public Ctrl {
-	TrainerCtrl* ctrl;
+	TrainerThreadCtrl* ctrl;
 	
 public:
-	TrainerDraw(TrainerCtrl& ctrl);
+	TrainerDraw(TrainerThreadCtrl& ctrl);
 	
 	virtual void Paint(Draw& w);
 	
 };
 
-class TrainerCtrl : public ParentCtrl {
+class TrainerThreadCtrl : public ParentCtrl {
 	
 protected:
 	friend class TrainerDraw;
@@ -42,16 +44,37 @@ protected:
 	SliderCtrl time_slider;
 	Label time_lbl;
 	TrainerDraw draw;
-	Button step_bwd, step_fwd;
+	Splitter hsplit;
+	ConvNet::SessionConvLayers conv;
+	ConvNet::HeatmapTimeView timescroll;
+	int thrd_id;
+	bool init;
+	
+public:
+	typedef TrainerThreadCtrl CLASSNAME;
+	TrainerThreadCtrl(Trainer& trainer, int thrd_id);
+	
+	void Data();
+	
+};
+
+class TrainerCtrl : public ParentCtrl {
+protected:
+	Trainer* trainer;
+	Array<TrainerThreadCtrl> thrds;
+	DropList thrdlist;
+	bool init;
 	
 public:
 	typedef TrainerCtrl CLASSNAME;
 	TrainerCtrl(Trainer& trainer);
 	
 	void Data();
-	void SeekCur(int step);
+	void SetView();
 	
 };
+
+
 
 class TrainerStatistics : public WithStatistics<ParentCtrl> {
 	Trainer* trainer;

@@ -1792,16 +1792,27 @@ That is my understanding currently, at least.&]
 It surprised me that it was something new, which is usually a 
 very bad sign. Visually, it is like that Classify2D example but 
 with additional slow moving dots, and one would expect, that 
-the network follows them without too much problems. It is an 
-internal performance value, and I try to make the NN to give 
-it`'s expectation about it`'s performance. It is low at begin 
-but should get higher during training, and those low values is 
-expected to be overwritten during training. This is just an idea 
-and maybe a bad one.&]
+the network follows them without too much problems. It is a internal 
+performance value, and I try to make the NN to give it`'s expectation 
+about it`'s performance. It is low at begin but should get higher 
+during training, and those low values is expected to be overwritten 
+during training. This is just an idea and maybe a bad one.&]
 [s0;%- ...&]
 [s0;%- Training seems to work, but data reading position is not changing 
 yet. The quality of training must be checked with monitor widgets 
 during runtime. My 8`-core 4GHz CPU hits 100% immediately and 
 it starts a new training phase which will take weeks and months, 
 but which will be limited after more training gets useless. The 
-alpha version is just around the corner...]]
+alpha version is just around the corner...&]
+[s3;%- 3.7.2017&]
+[s0;%- Training runs now. Quality checks are not done yet, but widgets 
+shows reasonable processing happening. I have slightly pessimistic 
+expectations about this... The lack of processing power without 
+GPGPU or Phi etc. is a real problem. All current IOs are required, 
+so I probably hit a limit with this hardware or the network is 
+too small. I can consider buying those only later in this year. 
+I have Parallella though, but it`'s not enough ;) I`'ll probably 
+get some decent second hand card.&]
+[s0;%- &]
+[s0;%- &]
+[s0;%- ]]

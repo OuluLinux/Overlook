@@ -80,7 +80,6 @@ protected:
 	
 	// Trainer view
 	Trainer					trainer;
-	TrainerConfiguration	confctrl;
 	TrainerCtrl				trainerctrl;
 	TrainerStatistics		statsctrl;
 	

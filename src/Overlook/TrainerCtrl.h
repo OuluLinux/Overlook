@@ -10,21 +10,6 @@ class TrainerThreadCtrl;
 #define LAYOUTFILE <Overlook/TrainerCtrl.lay>
 #include <CtrlCore/lay.h>
 
-
-class TrainerConfiguration : public WithConfiguration<ParentCtrl> {
-	Trainer* trainer;
-	
-public:
-	typedef TrainerConfiguration CLASSNAME;
-	TrainerConfiguration(Trainer& trainer);
-	
-	void Data();
-	void Apply();
-	void Reset();
-	
-	
-};
-
 class TrainerDraw : public Ctrl {
 	TrainerThreadCtrl* ctrl;
 	
@@ -42,7 +27,8 @@ protected:
 	
 	Trainer* trainer;
 	SliderCtrl time_slider;
-	Label time_lbl;
+	Label time_lbl, epoch;
+	ProgressIndicator prog;
 	TrainerDraw draw;
 	Splitter hsplit;
 	ConvNet::SessionConvLayers conv;
@@ -74,10 +60,35 @@ public:
 	
 };
 
+class TrainerStatistics;
 
+class StatsGraph : public Ctrl {
+	
+protected:
+	friend class LayerView;
+	Trainer* trainer;
+	TrainerStatistics* stats;
+	Vector<Point> polyline;
+	int mode;
+	
+	const ConvNet::Window& GetData(int thrd);
+	
+public:
+	typedef StatsGraph CLASSNAME;
+	StatsGraph(int mode, Trainer& t, TrainerStatistics* s);
+	
+	virtual void Paint(Draw& w);
+};
 
 class TrainerStatistics : public WithStatistics<ParentCtrl> {
+	
+protected:
+	friend class StatsGraph;
 	Trainer* trainer;
+	Splitter hsplit, vsplit0, vsplit1;
+	StatsGraph profit, sigprofit, loss, reward, thrdprio, thrdperf;
+	int mode;
+	bool init;
 	
 public:
 	typedef TrainerStatistics CLASSNAME;

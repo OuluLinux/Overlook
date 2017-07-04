@@ -1661,7 +1661,7 @@ indicators are useless&]
 [s0;%-  `+ learned about spreads and characteristics of instruments&]
 [s0;%-  `+ found periodical stats to outperform momentum`-following 
 trading&]
-[s0;%- [_ Local optimizer base signals]&]
+[s0;%- [_ Local optimizer based signals]&]
 [s0;%-  `- configuring stupid algorithm well once doesn`'t give long 
 term performance&]
 [s0;%-  `+ found that configured algorithm gets worse gradually, 
@@ -1680,12 +1680,12 @@ periodical statistics (and tech superset)&]
 [s0;%-  `+ improved probability math...&]
 [s0;%-  `+ `"one future`" via slow tf instead of fast heuristic found&]
 [s0;%- -|`+ the quest for `"fastest slow strength`" begun&]
-[s0;%-  `+ found that stocks and indices has better success rate 
-when compared to other instruments&]
+[s0;%-  `+ found that stocks and indices has better forecast success 
+rate when compared to other instruments&]
 [s0;%-  `+ found proxy costs&]
-[s0;%-  `- they are open very short time&]
-[s0;%-  `- they have a lot of technical difficulties because of repeating 
-opens and closes&]
+[s0;%-  `- stocks are open very short time&]
+[s0;%-  `- stocks have a lot of technical difficulties because of 
+repeating opens and closes&]
 [s0;%-  `- in the end, even forex`-crosses are betters instruments&]
 [s0;%-  `- parsing fundamental news and interpreting them with a 
 machine is a nightmare&]
@@ -1693,7 +1693,7 @@ machine is a nightmare&]
 instead of only few&]
 [s0;%- -|`+ also more accurate volume is possible with them&]
 [s0;%- [_ Agent chain signals]&]
-[s0;%-  `- too experiemental, no known existing solutions, should 
+[s0;%-  `- too experimental, no known existing solutions, should 
 have known demos&]
 [s0;%-  `+ idea of chaining web of signals&]
 [s0;%-  `- the chaining must be structurally correct, and signal 
@@ -1781,8 +1781,8 @@ power what I can provide. This solution should be processed with
 some accelerated processing card. ConvNet can easily wrap any 
 NN library for those cards, so that is a easy feat. I don`'t 
 currently have any and I am looking forward to getting one. With 
-other solutions accelerationg cards wouldn`'t be an option, but 
-with this final solution it is.&]
+other solutions, acceleration cards wasn`'t an option, but with 
+this final solution it is.&]
 [s0;%- By the way, those other solutions are not forgotten. All fast 
 timeframe area, which cannot be traded with the most generalized 
 design, can be processed separately with more dynamic solutions. 
@@ -1813,6 +1813,33 @@ so I probably hit a limit with this hardware or the network is
 too small. I can consider buying those only later in this year. 
 I have Parallella though, but it`'s not enough ;) I`'ll probably 
 get some decent second hand card.&]
-[s0;%- &]
-[s0;%- &]
+[s3;%- 4.7.2017&]
+[s0;%- Ok, so the reading position wasn`'t changing even yesterday. 
+I misinterpreted the indicator. Now it trains properly. Next: 
+some graphs about quality, and that is the exciting part. They 
+tell me that was this all work useless or not ;)&]
+[s0;%- ...&]
+[s0;%- Hmm... I got stuck. Some kind of network architecture manager 
+is required to remember tested setups. Then you could add automatic 
+architecture optimizer, like ConvNet MagicNet, to it, but it 
+should be more intelligent. Basically it is easiest to just fork 
+ConvNet MagicNet and connect those graphs to it.&]
+[s0;%- Or maybe not. Automatic NN arch evolution is still better 
+idea, but MagicNet trains all nets synchronously, and this already 
+uses threads, so maybe best of boths should be combined. I`'ll 
+just run thread per core, and when one finishes, then it will 
+generate new session using differential evolution. It`'s actually 
+better than MagicNet, which randomizes everything for new session 
+always.&]
+[s0;%- ...&]
+[s0;%- Graphs works. I made simple and fast drawers, even though 
+nicer plotters could have been used.&]
+[s0;%- First results about performance have emerged: with timeframes 
+W1,D1,H4,H1 average correct boolean`-direction (long/short) between 
+all symbols is between D1 and H4 (0.63 in 0.5`-0.75). That value 
+reaches surprisingly fast some plateau and I don`'t know yet 
+how it should be interpreted. This doesn`'t have the arch optimizer 
+enabled yet and I haven`'t tested it with test data yet (which 
+hasn`'t been used in training), but 0.63 with that would be very 
+good indicator.&]
 [s0;%- ]]

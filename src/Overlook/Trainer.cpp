@@ -9,7 +9,7 @@ Trainer::Trainer(System& sys) : sys(&sys) {
 	input_width = 0;
 	input_height = 0;
 	input_depth = 0;
-	test_interval = 100;
+	test_interval = 1000;
 	
 	thrd_count = 2;//CPU_Cores();
 	
@@ -59,50 +59,57 @@ void Trainer::Init() {
 }
 
 void Trainer::InitThreads() {
-	
 	input_width  = sym_ids.GetCount();
 	input_height = tf_ids.GetCount();
 	input_depth  = 1;
 	output_width = input_width * (input_height + 1);
 	int volume = input_width * input_height * input_depth;
 	
-	thrds.SetCount(thrd_count);
+	thrds.SetCount(thrd_count, NULL);
 	iters.SetCount(thrd_count);
-	train_epochs.SetCount(thrd_count, 0);
-	train_iters.SetCount(thrd_count, 0);
+	thrd_priorities.SetCount(thrd_count);
+	thrd_performances.SetCount(thrd_count);
 	
-	for(int i = 0; i < thrds.GetCount(); i++) {
-		SessionThread& t = thrds[i];
-		
-		if (t.params.IsEmpty()) {
-			t.params =
-				"[\n"
-				"\t{\"type\":\"input\""
-					", \"input_width\":"  + IntStr(input_width)  +
-					", \"input_height\":" + IntStr(input_height) +
-					", \"input_depth\":"  + IntStr(input_depth)  +
-					"},\n" // 2 inputs: x, y
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-				"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
-				"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
-				"]\n";
+	if (1) {
+		sessions.SetCount(thrd_count);
+		for(int i = 0; i < sessions.GetCount(); i++) {
+			SessionThread& t = sessions[i];
+			thrds[i] = &t;
+			
+			t.loss_window.Init(2000);
+			t.reward_window.Init(2000);
+			
+			if (t.params.IsEmpty()) {
+				t.params =
+					"[\n"
+					"\t{\"type\":\"input\""
+						", \"input_width\":"  + IntStr(input_width)  +
+						", \"input_height\":" + IntStr(input_height) +
+						", \"input_depth\":"  + IntStr(input_depth)  +
+						"},\n" // 2 inputs: x, y
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+					"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
+					"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
+					"]\n";
+			}
+			if (t.name.IsEmpty()) {
+				t.name = IntStr(i+1) + ". thread";
+				t.epochs = 0;
+			}
+			
+			
+			t.ses.MakeLayers(t.params);
+			
+			SimBroker& sb = t.broker;
+			sb.Brokerage::operator=((Brokerage&)GetMetaTrader());
+			sb.InitLightweight();
 		}
-		if (t.name.IsEmpty()) {
-			t.name = IntStr(i+1) + ". thread";
-		}
-		
-		
-		t.ses.MakeLayers(t.params);
-		
-		SimBroker& sb = t.broker;
-		sb.Brokerage::operator=((Brokerage&)GetMetaTrader());
-		sb.InitLightweight();
 	}
 }
 
@@ -112,7 +119,7 @@ void Trainer::Start() {
 	running = true;
 	for(int i = 0; i < thrds.GetCount(); i++) {
 		not_stopped++;
-		Thread::Start(THISBACK1(Runner, i));
+		Thread::Start(THISBACK1(ThreadHandler, i));
 	}
 }
 
@@ -135,9 +142,20 @@ void Trainer::ShuffleTraining(Vector<int>& shuffled_pos) {
 		shuffled_pos[i] = train_pos[shuffled_pos[i]];
 }
 
+void Trainer::ThreadHandler(int i) {
+	Runner(i);
+	
+	while (running) {
+		
+		
+		
+		Sleep(100);
+	}
+	
+}
+
 void Trainer::Runner(int thrd_id) {
 	Vector<VolumePtr> vec;
-	//SessionData d;
 	int forward_time, backward_time;
 	
 	int step_num = 0;
@@ -148,11 +166,8 @@ void Trainer::Runner(int thrd_id) {
 	// Sanity checks
 	ASSERT(!thrds.IsEmpty());
 	Iterator& iter = iters[thrd_id];
-	SessionThread& st = thrds[thrd_id];
-	int& train_iter = train_iters[thrd_id];
-	int& train_epoch = train_epochs[thrd_id];
+	SessionThread& st = *thrds[thrd_id];
 	
-	//st.ses.SetUsedData(d);
 	TrainerBase& trainer = *st.ses.GetTrainer();
 	ConvNet::Net& net = st.ses.GetNetwork();
 	Volume& x = iter.volume_in;
@@ -160,18 +175,19 @@ void Trainer::Runner(int thrd_id) {
 	
 	Vector<int> train_pos;
 	ShuffleTraining(train_pos);
-	train_iter = 0;
-	train_epoch = 0;
+	st.epoch_actual = 0;
+	st.epoch_total = train_pos.GetCount();
 	vec.SetCount(1);
 	
 	while (running) {
 		
 		// Reshuffle training data after epoch
-		if (train_iter >= train_pos.GetCount()) {
+		if (st.epoch_actual >= train_pos.GetCount()) {
 			ShuffleTraining(train_pos);
-			train_iter = 0;
-			train_epoch++;
+			st.epoch_actual = 0;
+			st.epochs++;
 		}
+		Seek(thrd_id, train_pos[st.epoch_actual]);
 		
 		// Test net
 		if (step_num % test_interval == 0) {
@@ -208,6 +224,7 @@ void Trainer::Runner(int thrd_id) {
 		
 		// Experimental internal performance value
 		// - value which gives succeeding limit between less & more predictable output values
+		double av_perf_value = 0;
 		for(int i = 0; i < sym_ids.GetCount(); i++) {
 			int tf = 0;
 			for(; tf < tf_ids.GetCount(); tf++) {
@@ -220,7 +237,9 @@ void Trainer::Runner(int thrd_id) {
 			}
 			double perf_value = (double)tf / (double)tf_ids.GetCount();
 			y.Set(perf_begin + i, perf_value);
+			av_perf_value += perf_value;
 		}
+		av_perf_value /= sym_ids.GetCount();
 		
 		
 		trainer.Backward(y);
@@ -228,11 +247,9 @@ void Trainer::Runner(int thrd_id) {
 		
 		backward_time = ts.Elapsed();
 		
-		double reward = trainer.GetReward();
 		double loss = trainer.GetLoss();
 		double loss_l1d = trainer.GetL1DecayLoss();
 		double loss_l2d = trainer.GetL2DecayLoss();
-		step_num++;
 		
 		
 		// keep track of stats such as the average training error and loss
@@ -249,16 +266,16 @@ void Trainer::Runner(int thrd_id) {
 			st.train_window.Add(-mse);
 		}
 		
-		st.reward_window.Add(reward);
+		st.reward_window.Add(av_perf_value);
 		st.loss_window.Add(loss);
-		st.l1_loss_window.Add(loss_l1d);
-		st.l2_loss_window.Add(loss_l2d);
+		//st.l1_loss_window.Add(loss_l1d);
+		//st.l2_loss_window.Add(loss_l2d);
 		
 		
 		//if ((step_num % step_cb_interal) == 0)
 		//	WhenStepInterval(step_num);
-		LOG(Format("thrd=%d step=%d", thrd_id, step_num));
 		step_num++;
+		st.epoch_actual++;
 	}
 	
 	not_stopped--;

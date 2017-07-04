@@ -12,13 +12,18 @@ struct SessionThread {
 	
 	ConvNet::Session	ses;
 	String				name, params;
+	int					epochs, epoch_actual, epoch_total;
 	
 	SimBroker			broker;
 	
-	ConvNet::Window loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window, test_window;
-	ConvNet::Window accuracy_result_window;
+	ConvNet::Window		loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window;
+	ConvNet::Window		test_window0, test_window1;
 	
-	void Serialize(Stream& s) {s % ses % name % params;}
+	void Serialize(Stream& s) {
+		s % ses % name % params % epochs % epoch_actual % epoch_total
+		  % loss_window % reward_window % l1_loss_window % l2_loss_window % train_window % accuracy_window
+		  % test_window0 % test_window1;
+	}
 };
 
 struct Iterator : Moveable<Iterator> {
@@ -41,21 +46,23 @@ protected:
 	friend class TrainerConfiguration;
 	friend class TrainerStatistics;
 	friend class TrainerThreadCtrl;
+	friend class StatsGraph;
 	
 	
 	// Persistent vars
 	int thrd_count;
-	Array<SessionThread> thrds;
+	Array<SessionThread> sessions;
 	
 	
 	// Tmp vars
+	Array<ConvNet::Window> thrd_priorities, thrd_performances;
+	Vector<SessionThread*> thrds;
 	Vector<Iterator> iters;
 	Vector<Ptr<CoreItem> > work_queue, major_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Index<int> tf_ids, sym_ids, indi_ids;
 	Vector<int> data_begins;
 	Vector<int> train_pos, test_pos;
-	Vector<int> train_epochs, train_iters;
 	System* sys;
 	int not_stopped;
 	int test_interval;
@@ -63,7 +70,8 @@ protected:
 	bool running;
 	
 	void LoadThis();
-	void Runner(int i);
+	void ThreadHandler(int i);
+	void Runner(int thrd_id);
 	void ResetIterator(int thrd_id);
 	bool Seek(int thrd_id, int shift);
 	bool SeekCur(int thrd_id, int shift);
@@ -75,7 +83,7 @@ public:
 	Trainer(System& sys);
 	~Trainer() {Stop();}
 	
-	void Serialize(Stream& s) {s % thrd_count % thrds;}
+	void Serialize(Stream& s) {s % thrd_count % sessions;}
 	void StoreThis();
 	
 	void Init();

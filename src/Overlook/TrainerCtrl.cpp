@@ -71,13 +71,15 @@ void TrainerDraw::Paint(Draw& w) {
 TrainerThreadCtrl::TrainerThreadCtrl(Trainer& trainer, int thrd_id) :
 	trainer(&trainer),
 	draw(*this),
-	thrd_id(thrd_id)
+	thrd_id(thrd_id),
+	reward(3, trainer)
 {
 	Add(time_lbl.TopPos(3, 24).LeftPos(0, 46));
 	Add(time_slider.TopPos(3, 24).LeftPos(50, 300));
 	Add(epoch.TopPos(3, 24).LeftPos(350, 100));
 	Add(prog.TopPos(3, 24).HSizePos(450));
-	Add(hsplit.VSizePos(30).HSizePos());
+	Add(hsplit.VSizePos(30,200).HSizePos());
+	Add(reward.BottomPos(0,200).HSizePos());
 	
 	hsplit.Horz();
 	hsplit << draw << conv << timescroll;
@@ -88,17 +90,19 @@ TrainerThreadCtrl::TrainerThreadCtrl(Trainer& trainer, int thrd_id) :
 	time_lbl.AlignRight();
 	time_slider.MinMax(0, 100).SetData(50);
 	
-	init = true;
+	prev_thrd = NULL;
 }
 
 void TrainerThreadCtrl::Data() {
+	if (trainer->thrds[thrd_id].IsEmpty()) return;
+	
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = *trainer->sys;
 	Iterator& iter = trainer->iters[thrd_id];
 	SessionThread& thrd = *trainer->thrds[thrd_id];
 	
-	if (init) {
-		init = false;
+	if (prev_thrd != &thrd) {
+		prev_thrd = &thrd;
 		conv.SetSession(thrd.ses);
 		timescroll.SetSession(thrd.ses);
 		conv.RefreshLayers();
@@ -113,6 +117,7 @@ void TrainerThreadCtrl::Data() {
 	draw.Refresh();
 	conv.Refresh();
 	timescroll.Refresh();
+	reward.Refresh();
 }
 
 
@@ -163,77 +168,43 @@ void TrainerCtrl::SetView() {
 
 
 
-TrainerStatistics::TrainerStatistics(Trainer& trainer) :
-	trainer(&trainer),
-	profit(0, trainer, this),		sigprofit(1, trainer, this),		loss(2, trainer, this),
-	reward(3, trainer, this),		thrdprio(4, trainer, this),			thrdperf(5, trainer, this)
-{
-	CtrlLayout(*this);
-	
-	Add(hsplit.SizePos());
-	hsplit.Horz();
-	hsplit << vsplit0 << vsplit1;
-	
-	vsplit0.Vert();
-	vsplit0 << reward << sigprofit << thrdperf;
-	vsplit1.Vert();
-	vsplit1 << loss << profit << thrdprio;
-	
-	init = true;
-}
-
-void TrainerStatistics::Data()
-{
-	if (init) {
-		init = false;
-		/*for(int i = 0; i < trainer->thrds.GetCount(); i++) {
-			const SessionThread& st = trainer->thrds[i];
-			
-		}*/
-		
-		
-		
-	}
-	
-	profit.Refresh();
-	sigprofit.Refresh();
-	loss.Refresh();
-	reward.Refresh();
-	thrdprio.Refresh();
-	thrdperf.Refresh();
-}
-
-
-
-
-
-
-
-
-
-
-StatsGraph::StatsGraph(int mode, Trainer& t, TrainerStatistics* s) : trainer(&t), mode(mode), stats(s) {
+StatsGraph::StatsGraph(int mode, Trainer& t) : trainer(&t), mode(mode) {
 	
 	
 	
 }
 
 const ConvNet::Window& StatsGraph::GetData(int thrd) {
-	if (stats->mode == 0) {
-		switch (mode) {
-			// Profit
-			case 0:		return trainer->thrds[thrd]->test_window1;
-			// Signal Profit
-			case 1:		return trainer->thrds[thrd]->test_window0;
-			// Loss
-			case 2:		return trainer->thrds[thrd]->loss_window;
-			// Reward
-			case 3:		return trainer->thrds[thrd]->reward_window;
-			// Thread Priority
-			case 4:		return trainer->thrd_priorities[thrd];
-			// Thread Performance
-			case 5:		return trainer->thrd_performances[thrd];
-		}
+	switch (mode) {
+		case 0:		if (trainer->thrds[thrd].IsEmpty()) return null_win;
+					return trainer->thrds[thrd]->test_window1;
+		
+		case 1:		if (trainer->thrds[thrd].IsEmpty()) return null_win;
+					return trainer->thrds[thrd]->test_window0;
+		
+		case 2:		if (trainer->thrds[thrd].IsEmpty()) return null_win;
+					return trainer->thrds[thrd]->loss_window;
+		
+		case 3:		if (trainer->thrds[thrd].IsEmpty()) return null_win;
+					return trainer->thrds[thrd]->reward_window;
+		
+		case 4:		return trainer->thrd_priorities[thrd];
+		
+		case 5:		return trainer->thrd_performances[thrd];
+		
+		case 6:		return trainer->ses_sigchanges;
+		
+		case 7:		if (trainer->sessions.IsEmpty()) return null_win;
+					return trainer->sessions[trainer->session_cur].loss_window;
+		
+		case 8:		if (trainer->sessions.IsEmpty()) return null_win;
+					return trainer->sessions[trainer->session_cur].reward_window;
+		
+		case 9:		if (trainer->sessions.IsEmpty()) return null_win;
+					return trainer->sessions[trainer->session_cur].test_reward_window;
+		
+		case 10:	if (trainer->sessions.IsEmpty()) return null_win;
+					return trainer->sessions[trainer->session_cur].test_window0;
 	}
 	Panic("Invalid mode");
 }
@@ -243,7 +214,7 @@ void StatsGraph::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	int thrd_count = trainer->thrds.GetCount();
+	int thrd_count = mode < 6 ? trainer->thrds.GetCount() : 1;
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	
@@ -291,6 +262,56 @@ void StatsGraph::Paint(Draw& w) {
 	
 	
 	w.DrawImage(0, 0, id);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+TrainerResult::TrainerResult(Trainer& trainer) :
+	trainer(&trainer),
+	graph(6, trainer),
+	reward(8, trainer),
+	loss(7, trainer),
+	avdepth(9, trainer),
+	sigtotal(10, trainer)
+{
+	Add(hsplit.SizePos());
+	
+	hsplit << seslist << vsplit;
+	hsplit.SetPos(2000);
+	hsplit.Horz();
+	
+	vsplit.Vert();
+	vsplit << graph << reward << loss << avdepth << sigtotal;
+	
+	
+	seslist.AddColumn("#");
+	seslist.AddColumn("Signal");
+	seslist <<= THISBACK(Data);
+}
+	
+void TrainerResult::Data() {
+	for(int i = 0; i < trainer->sessions.GetCount(); i++) {
+		const SessionThread& st = trainer->sessions[i];
+		seslist.Set(i, 0, st.id);
+		seslist.Set(i, 1, st.total_sigchange);
+	}
+	trainer->session_cur = seslist.GetCursor();
+	if (trainer->session_cur == -1) trainer->session_cur = 0;
+	
+	graph.Refresh();
+	reward.Refresh();
+	loss.Refresh();
+	avdepth.Refresh();
+	sigtotal.Refresh();
 }
 
 }

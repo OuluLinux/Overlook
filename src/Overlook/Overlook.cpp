@@ -54,7 +54,7 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 Overlook::Overlook() :
 	trainer(sys),
 	trainerctrl(trainer),
-	statsctrl(trainer)
+	resultctrl(trainer)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -67,8 +67,8 @@ Overlook::Overlook() :
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(trainerctrl);
 	tabs.Add(trainerctrl, "Trainer");
-	tabs.Add(statsctrl);
-	tabs.Add(statsctrl, "Statistics");
+	tabs.Add(resultctrl);
+	tabs.Add(resultctrl, "Results");
 	tabs.Add(rt_ctrl);
 	tabs.Add(rt_ctrl, "Real-Time");
 	tabs.WhenSet << THISBACK1(Data, false);
@@ -101,7 +101,7 @@ Overlook::~Overlook() {
 void Overlook::Refresher() {
 	Data(true);
 	int tab = tabs.Get();
-	if (tab == 2 || tab == 3) {
+	if (tab == 2) {
 		PostRefresher();
 	}
 	else {
@@ -122,7 +122,7 @@ void Overlook::Data(bool periodic) {
 		trainerctrl.Data();
 	}
 	else if (tab == 3) {
-		statsctrl.Data();
+		resultctrl.Data();
 	}
 	else if (tab == 4) {
 		rt_ctrl.Data();

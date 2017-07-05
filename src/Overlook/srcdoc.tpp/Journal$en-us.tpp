@@ -1835,11 +1835,19 @@ always.&]
 [s0;%- Graphs works. I made simple and fast drawers, even though 
 nicer plotters could have been used.&]
 [s0;%- First results about performance have emerged: with timeframes 
-W1,D1,H4,H1 average correct boolean`-direction (long/short) between 
+W1,D1,H4,H1 average correct boolean`-direction (long/short) for 
 all symbols is between D1 and H4 (0.63 in 0.5`-0.75). That value 
 reaches surprisingly fast some plateau and I don`'t know yet 
 how it should be interpreted. This doesn`'t have the arch optimizer 
 enabled yet and I haven`'t tested it with test data yet (which 
 hasn`'t been used in training), but 0.63 with that would be very 
 good indicator.&]
-[s0;%- ]]
+[s3;%- 5.7.2017&]
+[s0;%- Some positive results with the test data, or not as bad as 
+they could have been. The copy`-pasted differential evolution 
+code clearly works, but some limiting plateau occurs always.&]
+[s0;%- Serialization works and all reasonable graphs works. Some 
+values are cleary incorrect, but I`'ll focus on details later. 
+This can be connected to real demo account tomorrow. Rapid loss 
+of value can be expected, but the best reward of having this 
+s`*it done is certain.]]

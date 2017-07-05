@@ -81,7 +81,7 @@ protected:
 	// Trainer view
 	Trainer					trainer;
 	TrainerCtrl				trainerctrl;
-	TrainerStatistics		statsctrl;
+	TrainerResult			resultctrl;
 	
 	// Realtime view
 	BrokerCtrl				rt_ctrl;

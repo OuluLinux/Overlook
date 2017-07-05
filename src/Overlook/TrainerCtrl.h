@@ -20,6 +20,25 @@ public:
 	
 };
 
+class StatsGraph : public Ctrl {
+	
+protected:
+	friend class LayerView;
+	Trainer* trainer;
+	RealtimeStatistics* stats;
+	Vector<Point> polyline;
+	ConvNet::Window null_win;
+	int mode;
+	
+	const ConvNet::Window& GetData(int thrd);
+	
+public:
+	typedef StatsGraph CLASSNAME;
+	StatsGraph(int mode, Trainer& t);
+	
+	virtual void Paint(Draw& w);
+};
+
 class TrainerThreadCtrl : public ParentCtrl {
 	
 protected:
@@ -33,8 +52,9 @@ protected:
 	Splitter hsplit;
 	ConvNet::SessionConvLayers conv;
 	ConvNet::HeatmapTimeView timescroll;
+	StatsGraph reward;
+	SessionThread* prev_thrd;
 	int thrd_id;
-	bool init;
 	
 public:
 	typedef TrainerThreadCtrl CLASSNAME;
@@ -60,39 +80,18 @@ public:
 	
 };
 
-class TrainerStatistics;
-
-class StatsGraph : public Ctrl {
-	
-protected:
-	friend class LayerView;
-	Trainer* trainer;
-	TrainerStatistics* stats;
-	Vector<Point> polyline;
-	int mode;
-	
-	const ConvNet::Window& GetData(int thrd);
-	
-public:
-	typedef StatsGraph CLASSNAME;
-	StatsGraph(int mode, Trainer& t, TrainerStatistics* s);
-	
-	virtual void Paint(Draw& w);
-};
-
-class TrainerStatistics : public WithStatistics<ParentCtrl> {
+class TrainerResult : public WithStatistics<ParentCtrl> {
 	
 protected:
 	friend class StatsGraph;
 	Trainer* trainer;
-	Splitter hsplit, vsplit0, vsplit1;
-	StatsGraph profit, sigprofit, loss, reward, thrdprio, thrdperf;
-	int mode;
-	bool init;
+	ArrayCtrl seslist;
+	Splitter hsplit, vsplit;
+	StatsGraph graph, reward, loss, avdepth, sigtotal;
 	
 public:
-	typedef TrainerStatistics CLASSNAME;
-	TrainerStatistics(Trainer& trainer);
+	typedef TrainerResult CLASSNAME;
+	TrainerResult(Trainer& trainer);
 	
 	void Data();
 	

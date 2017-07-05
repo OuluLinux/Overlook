@@ -10,9 +10,47 @@ Trainer::Trainer(System& sys) : sys(&sys) {
 	input_height = 0;
 	input_depth = 0;
 	test_interval = 1000;
+	training_limit = 1000;
+	session_cur = 0;
+	max_sessions = 100;
 	
 	thrd_count = 2;//CPU_Cores();
+	session_count = 0;
+	evol_cont_probability = 0.9;
+	evol_scale = 0.7;
 	
+	// From MagicNet
+	// -------------
+	
+	// optional inputs
+	train_ratio = 0.7;
+	num_folds = 10;
+	num_candidates = 50; // we evaluate several in parallel
+	
+	// how many epochs of data to train every network? for every fold?
+	// higher values mean higher accuracy in final results, but more expensive
+	num_epochs = 50;
+	
+	// number of best models to average during prediction. Usually higher = better
+	ensemble_size = 10;
+	
+	// candidate parameters
+	batch_size_min = 10;
+	batch_size_max = 300;
+	l2_decay_min = -4;
+	l2_decay_max = 2;
+	learning_rate_min = -4;
+	learning_rate_max = 0;
+	momentum_min = 0.9;
+	momentum_max = 0.9;
+	neurons_min = 5;
+	neurons_max = 30;
+	
+}
+
+Trainer::~Trainer() {
+	Stop();
+	StoreThis();
 }
 
 void Trainer::LoadThis() {
@@ -65,52 +103,10 @@ void Trainer::InitThreads() {
 	output_width = input_width * (input_height + 1);
 	int volume = input_width * input_height * input_depth;
 	
-	thrds.SetCount(thrd_count, NULL);
+	thrds.SetCount(thrd_count);
 	iters.SetCount(thrd_count);
 	thrd_priorities.SetCount(thrd_count);
 	thrd_performances.SetCount(thrd_count);
-	
-	if (1) {
-		sessions.SetCount(thrd_count);
-		for(int i = 0; i < sessions.GetCount(); i++) {
-			SessionThread& t = sessions[i];
-			thrds[i] = &t;
-			
-			t.loss_window.Init(2000);
-			t.reward_window.Init(2000);
-			
-			if (t.params.IsEmpty()) {
-				t.params =
-					"[\n"
-					"\t{\"type\":\"input\""
-						", \"input_width\":"  + IntStr(input_width)  +
-						", \"input_height\":" + IntStr(input_height) +
-						", \"input_depth\":"  + IntStr(input_depth)  +
-						"},\n" // 2 inputs: x, y
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-					"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
-					"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
-					"]\n";
-			}
-			if (t.name.IsEmpty()) {
-				t.name = IntStr(i+1) + ". thread";
-				t.epochs = 0;
-			}
-			
-			
-			t.ses.MakeLayers(t.params);
-			
-			SimBroker& sb = t.broker;
-			sb.Brokerage::operator=((Brokerage&)GetMetaTrader());
-			sb.InitLightweight();
-		}
-	}
 }
 
 void Trainer::Start() {
@@ -142,21 +138,271 @@ void Trainer::ShuffleTraining(Vector<int>& shuffled_pos) {
 		shuffled_pos[i] = train_pos[shuffled_pos[i]];
 }
 
-void Trainer::ThreadHandler(int i) {
-	Runner(i);
+inline void ClearValueChangers(Vector<ValueChanger*>& v) {
+	for(int i = 0; i < v.GetCount(); i++)
+		delete v[i];
+	v.Clear();
+}
+
+void Trainer::EvolveSettings(SessionThread& st) {
+	int c0, r1, r2;
 	
-	while (running) {
-		
-		
-		
-		Sleep(100);
+	int max_session = Upp::min(sessions.GetCount() - thrds.GetCount(), max_sessions);
+	c0 = 1 + session_count % (max_session - 1);
+	do {r1 = Random(max_session);} while (r1 == c0);
+	do {r2 = Random(max_session);} while (r2 == c0 || r2 == r1);
+	
+	Vector<ValueChanger*> best_solution, trial_solution, cand, src1, src2;
+	sessions[0]		.settings.GetChangers(best_solution);
+	sessions[c0]	.settings.GetChangers(cand);
+	sessions[r1]	.settings.GetChangers(src1);
+	sessions[r2]	.settings.GetChangers(src2);
+	
+	st.settings.GetChangers(trial_solution);
+	int dimension = trial_solution.GetCount();
+	ASSERT(best_solution.GetCount() == dimension);
+	ASSERT(cand.GetCount() == dimension);
+	ASSERT(src1.GetCount() == dimension);
+	ASSERT(src2.GetCount() == dimension);
+	
+	// Randomize starting position
+	int n = Random(dimension);
+	
+	for(int i = 0; i < dimension; i++ )
+		trial_solution[i]->Set(cand[i]->Get());
+	
+	for (int i = 0; (Randomf() < evol_cont_probability) && (i < dimension); i++) {
+		trial_solution[n]->Set(best_solution[n]->Get() + evol_scale * (src1[n]->Get() - src2[n]->Get()));
+		n = (n + 1) % dimension;
 	}
 	
+	ClearValueChangers(best_solution);
+	ClearValueChangers(trial_solution);
+	ClearValueChangers(cand);
+	ClearValueChangers(src1);
+	ClearValueChangers(src2);
+}
+
+
+void Trainer::RandomSettings(SessionThread& st) {
+	int max_layers = 15;
+	
+	SessionSettings& set = st.settings;
+	set.layers.Clear();
+	set.neural_layers = 1 + Random(max_layers);
+	
+	// Randomize all layers for DE even if all layers are not activated
+	set.layers.SetCount(max_layers);
+	for (int q = 0; q < set.layers.GetCount(); q++) {
+		SessionSettings::Layer& lay = set.layers[q];
+		lay.neuron_count = neurons_min + Random(neurons_max - neurons_min);
+		lay.act = Random(3); // tanh, maxout, relu
+		lay.bias_pref = lay.act == 2 ? 0.1 : 0.0; // 0.1 for relu
+		lay.has_dropout = Randomf() < 0.5;
+		lay.dropout_prob = Randomf();
+	}
+	
+	set.batch_size	= batch_size_min + Random(batch_size_max - batch_size_min); // batch size
+	set.l2			= pow(10, l2_decay_min + Randomf() + (l2_decay_max - l2_decay_min)); // l2 weight decay
+	set.lr			= pow(10, learning_rate_min + Randomf() * (learning_rate_max - learning_rate_min)); // learning rate
+	set.mom			= momentum_min + Randomf() * (momentum_max - momentum_min); // momentum. Lets just use 0.9, works okay usually ;p
+	
+	double tp		= Randomf(); // trainer type
+	if (tp < 1.0/3.0)
+		set.trainer_type = 0;
+	else if (tp < 2.0/3.0)
+		set.trainer_type = 1;
+	else
+		set.trainer_type = 2;
+}
+
+void Trainer::SampleCandidate(int thrd_id) {
+	lock.Enter();
+	session_count++;
+	thrds[thrd_id].Create();
+	SessionThread& d = *thrds[thrd_id];
+	SessionSettings& set = d.settings;
+	Session& cand = d.ses;
+	d.id = session_count-1;
+	d.total_sigchange = 0.0;
+	d.is_finished = false;
+	lock.Leave();
+	
+	d.epochs = 0;
+	d.loss_window.Init(2000);
+	d.reward_window.Init(2000);
+	SimBroker& sb = d.broker;
+	sb.Brokerage::operator=((Brokerage&)GetMetaTrader());
+	sb.InitLightweight();
+	
+	if (session_count < 10 || Randomf() < 0.05) {
+		RandomSettings(d);
+	}
+	else {
+		set.layers.SetCount(15);
+		EvolveSettings(d);
+		
+		// Normalize values
+		if (set.neural_layers < 1) set.neural_layers = 1;
+		if (set.neural_layers > 15) set.neural_layers = 15;
+		
+		for (int q = 0; q < set.layers.GetCount(); q++) {
+			SessionSettings::Layer& lay = set.layers[q];
+			if (lay.neuron_count < neurons_min)	lay.neuron_count = neurons_min;
+			if (lay.neuron_count > neurons_max)	lay.neuron_count = neurons_max;
+			if (lay.act < 0) lay.act = 0;
+			if (lay.act > 2) lay.act = 2;
+			lay.bias_pref = lay.act == 2 ? 0.1 : 0.0; // 0.1 for relu
+			if (lay.dropout_prob < 0.0) lay.dropout_prob = 0.0;
+			if (lay.dropout_prob > 1.0) lay.dropout_prob = 1.0;
+		}
+		if (set.batch_size < batch_size_min)	set.batch_size = batch_size_min;
+		if (set.batch_size > batch_size_max)	set.batch_size = batch_size_max;
+		
+		if (set.l2 < l2_decay_min)	set.l2 = l2_decay_min;
+		if (set.l2 > l2_decay_max)	set.l2 = l2_decay_max;
+		
+		if (set.lr < learning_rate_min)	set.lr = learning_rate_min;
+		if (set.lr > learning_rate_max)	set.lr = learning_rate_max;
+		
+		if (set.mom < momentum_min)	set.mom = momentum_min;
+		if (set.mom > momentum_max)	set.mom = momentum_max;
+		
+		if (set.trainer_type < 0)	set.trainer_type = 0;
+		if (set.trainer_type > 2)	set.trainer_type = 2;
+	}
+	
+	// sample network topology and hyperparameters
+	cand.AddInputLayer(input_width, input_height, input_depth);
+	
+	for (int q = 0; q < set.neural_layers; q++) {
+		const SessionSettings::Layer& lay = set.layers[q];
+		
+		FullyConnLayer& fc = cand.AddFullyConnLayer(lay.neuron_count);
+		fc.bias_pref = lay.bias_pref;
+		
+		if (lay.act == 0) {
+			cand.AddTanhLayer();
+		}
+		else if (lay.act == 1) {
+			cand.AddMaxoutLayer(2); // 2 is default
+		}
+		else if (lay.act == 2) {
+			cand.AddReluLayer();
+		}
+		else Panic("What activation");
+		
+		if (lay.has_dropout) {
+			cand.AddDropoutLayer(lay.dropout_prob);
+		}
+	}
+	
+	cand.AddFullyConnLayer(output_width);
+	cand.AddRegressionLayer();
+	
+	
+	// Add trainer
+	TrainerBase* trainer = NULL;
+	if (set.trainer_type == 0) {
+		trainer = new AdadeltaTrainer(cand.GetNetwork());
+	}
+	else if (set.trainer_type == 1) {
+		trainer = new AdagradTrainer(cand.GetNetwork());
+	}
+	else {
+		trainer = new SgdTrainer(cand.GetNetwork());
+	}
+	trainer->SetBatchSize(set.batch_size);
+	trainer->SetLearningRate(set.lr);
+	trainer->SetL2Decay(set.l2);
+	trainer->SetMomentum(set.mom);
+	cand.AttachTrainer(trainer); // Session will own and delete the trainer
+}
+
+void Trainer::ThreadHandler(int thrd_id) {
+	Vector<VolumePtr> vec;
+	Iterator& iter = iters[thrd_id];
+	Volume& x = iter.volume_in;
+	VolumeData<double>& y = iter.volume_out[thrd_id];
+	int perf_begin = tf_ids.GetCount() * sym_ids.GetCount();
+	vec.SetCount(1);
+	
+	while (running) {
+		// Sample candidate
+		SampleCandidate(thrd_id);
+		SessionThread& st = *thrds[thrd_id];
+		ConvNet::Net& net = st.ses.GetNetwork();
+		
+		
+		// Process sample
+		Runner(thrd_id);
+		
+		
+		// Test net with separate test data
+		double total_change = 0;
+		for(int i = 0; i < test_pos.GetCount(); i++) {
+			Seek(thrd_id, test_pos[i]);
+			vec[0] = &x;
+			const Volume& fwd = net.Forward(vec, true);
+			double av_perf_value = 0.0;
+			double av_change = 0.0;
+			for(int j = 0; j < sym_ids.GetCount(); j++) {
+				int tf = 0;
+				double change = 0.0;
+				double sig = 0.0;
+				for(; tf < tf_ids.GetCount(); tf++) {
+					int pos = j + tf * sym_ids.GetCount();
+					double real = y.Get(pos);
+					if (real == 0.0) break;
+					double predicted = fwd.Get(pos);
+					bool same_dir = (predicted * real) > 0.0;
+					change = (same_dir ? +1.0 : -1.0) * fabs(real);
+					sig = predicted >= 0 ? +1.0 : -1.0;
+					if (!same_dir) break;
+				}
+				double perf_value = (double)tf / (double)tf_ids.GetCount();
+				y.Set(perf_begin + j, perf_value);
+				av_perf_value += perf_value;
+				av_change += change;
+				total_change += change;
+			}
+			av_perf_value /= sym_ids.GetCount();
+			av_change /= sym_ids.GetCount();
+			
+			st.test_reward_window.Add(av_perf_value);
+			st.test_window0.Add(av_change);
+		}
+		
+		st.total_sigchange = total_change;
+		st.is_finished = true;
+		
+		
+		// Sort results
+		struct SessionSorter {
+			bool operator()(const SessionThread& a, const SessionThread& b) const {
+				if (!a.is_finished) return false;
+				return a.total_sigchange > b.total_sigchange;
+			}
+		};
+		lock.Enter();
+		sessions.Add(thrds[thrd_id].Detach());
+		ses_sigchanges.Add(total_change);
+		Sort(sessions, SessionSorter());
+		if (sessions.GetCount() > max_sessions)
+			sessions.Remove(max_sessions, sessions.GetCount() - max_sessions);
+		if (last_store.Elapsed() > 5 * 60 * 1000) {
+			StoreThis();
+			last_store.Reset();
+		}
+		lock.Leave();
+	}
+	
+	not_stopped--;
 }
 
 void Trainer::Runner(int thrd_id) {
-	Vector<VolumePtr> vec;
 	int forward_time, backward_time;
+	Vector<VolumePtr> vec;
 	
 	int step_num = 0;
 	int predict_interval = 10;
@@ -179,6 +425,9 @@ void Trainer::Runner(int thrd_id) {
 	st.epoch_total = train_pos.GetCount();
 	vec.SetCount(1);
 	
+	int last_top_step = 0;
+	double last_top = 0;
+	
 	while (running) {
 		
 		// Reshuffle training data after epoch
@@ -188,16 +437,6 @@ void Trainer::Runner(int thrd_id) {
 			st.epochs++;
 		}
 		Seek(thrd_id, train_pos[st.epoch_actual]);
-		
-		// Test net
-		if (step_num % test_interval == 0) {
-			double real_value = 0;
-			for(int i = 0; i < test_pos.GetCount(); i++) {
-				Seek(thrd_id, test_pos[i]);
-				vec[0] = &x;
-				const Volume& fwd = net.Forward(vec, true);
-			}
-		}
 		
 		// use x to build our estimate of validation error
 		if (test_predict && (step_num % predict_interval) == 0) {
@@ -223,7 +462,6 @@ void Trainer::Runner(int thrd_id) {
 		
 		
 		// Experimental internal performance value
-		// - value which gives succeeding limit between less & more predictable output values
 		double av_perf_value = 0;
 		for(int i = 0; i < sym_ids.GetCount(); i++) {
 			int tf = 0;
@@ -240,6 +478,13 @@ void Trainer::Runner(int thrd_id) {
 			av_perf_value += perf_value;
 		}
 		av_perf_value /= sym_ids.GetCount();
+		
+		
+		// Check for top value
+		if (av_perf_value > last_top) {
+			last_top = av_perf_value;
+			last_top_step = step_num;
+		}
 		
 		
 		trainer.Backward(y);
@@ -276,9 +521,13 @@ void Trainer::Runner(int thrd_id) {
 		//	WhenStepInterval(step_num);
 		step_num++;
 		st.epoch_actual++;
+		
+		
+		// Check for training limit
+		if (step_num - last_top_step >= training_limit) {
+			break;
+		}
 	}
-	
-	not_stopped--;
 }
 
 void Trainer::RefreshWorkQueue() {

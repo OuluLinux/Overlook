@@ -62,15 +62,17 @@ struct SessionThread {
 	bool				is_finished;
 	
 	ConvNet::Window		loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window;
-	ConvNet::Window		test_reward_window, test_window0, test_window1;
-	double				total_sigchange;
+	ConvNet::Window		test_reward_window, test_window0, test_window1, train_broker;
+	double				total_sigchange, train_brokerprofit;
+	int					train_brokerorders;
 	
 	SimBroker			broker;
 	
 	void Serialize(Stream& s) {
 		s % settings % ses % params % epochs % epoch_actual % epoch_total % id % is_finished
 		  % loss_window % reward_window % l1_loss_window % l2_loss_window % train_window % accuracy_window
-		  % test_reward_window % test_window0 % test_window1 % total_sigchange;
+		  % test_reward_window % test_window0 % test_window1 % train_broker % total_sigchange
+		  % train_brokerprofit % train_brokerorders;
 	}
 };
 
@@ -86,6 +88,7 @@ struct Iterator : Moveable<Iterator> {
 	int bars;
 };
 
+
 class Trainer {
 	
 protected:
@@ -96,6 +99,7 @@ protected:
 	friend class TrainerThreadCtrl;
 	friend class StatsGraph;
 	friend class TrainerResult;
+	friend class RealtimeSession;
 	
 	
 	// Persistent vars
@@ -109,8 +113,10 @@ protected:
 	Array<ConvNet::Window> thrd_priorities, thrd_performances;
 	Array<One<SessionThread> > thrds;
 	Vector<Iterator> iters;
-	Vector<Ptr<CoreItem> > work_queue, major_queue;
+	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
+	Vector<Core*> databridge_cores;
+	Vector<double> tf_muls;
 	Index<int> tf_ids, sym_ids, indi_ids;
 	Vector<int> data_begins;
 	Vector<int> train_pos, test_pos;
@@ -150,6 +156,7 @@ protected:
 	void SampleCandidate(int thrd_id);
 	void EvolveSettings(SessionThread& st);
 	void RandomSettings(SessionThread& st);
+	void SetAskBid(SimBroker& sb, int pos);
 	
 	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_INCBET, ACT_DECBET,     ACTIONCOUNT};
 	
@@ -167,9 +174,32 @@ public:
 	void Stop();
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
+	void ProcessDataBridgeQueue();
 	void ResetIterators();
 	void ResetValueBuffers();
 	void ShuffleTraining(Vector<int>& train_pos);
+	void SetBrokerageSignals(Session& session, Brokerage& broker, int pos);
+	
+};
+
+struct RealtimeSession {
+	typedef RealtimeSession CLASSNAME;
+	RealtimeSession(Trainer& trainer);
+	
+	void Init();
+	void Run();
+	void Stop();
+	void PostEvent(int event);
+	void Start() {running = true; stopped = false; Thread::Start(THISBACK(Run));}
+	
+	enum {EVENT_REFRESH};
+	
+protected:
+	Brokerage* broker;
+	Trainer* trainer;
+	Vector<int> event_queue;
+	SpinLock lock;
+	bool running, stopped;
 };
 
 }

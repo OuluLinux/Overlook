@@ -53,8 +53,10 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 Overlook::Overlook() :
 	trainer(sys),
+	rtses(trainer),
 	trainerctrl(trainer),
-	resultctrl(trainer)
+	resultctrl(trainer),
+	rtnetctrl(trainer, rtses)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -66,11 +68,13 @@ Overlook::Overlook() :
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(trainerctrl);
-	tabs.Add(trainerctrl, "Trainer");
+	tabs.Add(trainerctrl, "Trainer (UNSAFE!)");
 	tabs.Add(resultctrl);
 	tabs.Add(resultctrl, "Results");
-	tabs.Add(rt_ctrl);
-	tabs.Add(rt_ctrl, "Real-Time");
+	tabs.Add(rtnetctrl);
+	tabs.Add(rtnetctrl, "Real-Time Network");
+	tabs.Add(rtctrl);
+	tabs.Add(rtctrl, "Real-Time Account");
 	tabs.WhenSet << THISBACK1(Data, false);
 	
 	
@@ -85,7 +89,7 @@ Overlook::Overlook() :
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
 	
-	rt_ctrl.SetBroker(GetMetaTrader());
+	rtctrl.SetBroker(GetMetaTrader());
 	
 	PostCallback(THISBACK(Refresher));
 }
@@ -125,15 +129,19 @@ void Overlook::Data(bool periodic) {
 		resultctrl.Data();
 	}
 	else if (tab == 4) {
-		rt_ctrl.Data();
+		rtnetctrl.Data();
+	}
+	else if (tab == 5) {
+		rtctrl.Data();
 	}
 }
 
 void Overlook::Init() {
 	sys.Init();
-	rt_ctrl.Init();
+	rtctrl.Init();
 	exposurectrl.Init();
 	trainer.Init();
+	rtses.Init();
 	
 	
 	// Init gui
@@ -182,11 +190,13 @@ void Overlook::Loader() {
 void Overlook::Start() {
 	sys.Start();
 	trainer.Start();
+	rtses.Start();
 }
 
 void Overlook::Deinit() {
 	trainer.Stop();
 	sys.Stop();
+	rtses.Stop();
 }
 
 void Overlook::SetView() {

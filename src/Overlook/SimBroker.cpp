@@ -107,6 +107,13 @@ void SimBroker::SetFreeMarginLevel(double d) {
 	free_margin_level = d;
 }
 
+void SimBroker::SetPrice(int sym, double price) {
+	Price& p = askbid[sym];
+	double spread = p.ask / p.bid;
+	p.bid = price;
+	p.ask = price * spread;
+}
+
 
 
 

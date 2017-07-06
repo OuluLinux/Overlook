@@ -1850,4 +1850,21 @@ code clearly works, but some limiting plateau occurs always.&]
 values are cleary incorrect, but I`'ll focus on details later. 
 This can be connected to real demo account tomorrow. Rapid loss 
 of value can be expected, but the best reward of having this 
-s`*it done is certain.]]
+s`*it done is certain.&]
+[s3;%- 6.7.2017&]
+[s0;%- Found the stupid bug in the signal sum calculation, which 
+gave incorrect values. That signal is like what would happen 
+if all orders would have the same volume and there would be no 
+costs. It`'s easier to calculate and it gives the most important 
+information. So, that value is clearly positive with top networks 
+and with the testing data, which is actually the biggest deal. 
+Some practical issues remains still, though. Also, there is always 
+a good chance for unexpected setbacks.&]
+[s0;%- Overlook just opened it`'s first live MT4 orders (110 at once). 
+All good, for now. No active updating yet, so this account might 
+go south fast, but it`'s only fake virtual money anyway.&]
+[s0;%- Only few tasks left before the alpha version. Then everything 
+must be cleaned and commented, and after that, only slow long 
+term debugging and fine`-tuning remains, but that takes very 
+little time. End of the tunnel ahead...&]
+[s0;%- ]]

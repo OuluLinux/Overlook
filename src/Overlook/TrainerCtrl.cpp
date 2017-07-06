@@ -205,6 +205,9 @@ const ConvNet::Window& StatsGraph::GetData(int thrd) {
 		
 		case 10:	if (trainer->sessions.IsEmpty()) return null_win;
 					return trainer->sessions[trainer->session_cur].test_window0;
+		
+		case 11:	if (trainer->sessions.IsEmpty()) return null_win;
+					return trainer->sessions[trainer->session_cur].train_broker;
 	}
 	Panic("Invalid mode");
 }
@@ -281,20 +284,23 @@ TrainerResult::TrainerResult(Trainer& trainer) :
 	reward(8, trainer),
 	loss(7, trainer),
 	avdepth(9, trainer),
-	sigtotal(10, trainer)
+	sigtotal(10, trainer),
+	sigbroker(11, trainer)
 {
 	Add(hsplit.SizePos());
 	
 	hsplit << seslist << vsplit;
-	hsplit.SetPos(2000);
+	hsplit.SetPos(3000);
 	hsplit.Horz();
 	
 	vsplit.Vert();
-	vsplit << graph << reward << loss << avdepth << sigtotal;
+	vsplit << graph << reward << loss << avdepth << sigtotal << sigbroker;
 	
 	
 	seslist.AddColumn("#");
-	seslist.AddColumn("Signal");
+	seslist.AddColumn("Profit");
+	seslist.AddColumn("Orders");
+	seslist.AddColumn("Test-Signal");
 	seslist <<= THISBACK(Data);
 }
 	
@@ -302,7 +308,9 @@ void TrainerResult::Data() {
 	for(int i = 0; i < trainer->sessions.GetCount(); i++) {
 		const SessionThread& st = trainer->sessions[i];
 		seslist.Set(i, 0, st.id);
-		seslist.Set(i, 1, st.total_sigchange);
+		seslist.Set(i, 1, st.train_brokerprofit);
+		seslist.Set(i, 2, st.train_brokerorders);
+		seslist.Set(i, 3, st.total_sigchange);
 	}
 	trainer->session_cur = seslist.GetCursor();
 	if (trainer->session_cur == -1) trainer->session_cur = 0;
@@ -313,6 +321,32 @@ void TrainerResult::Data() {
 	avdepth.Refresh();
 	sigtotal.Refresh();
 }
+
+
+
+
+
+
+
+
+
+
+RealtimeNetworkCtrl::RealtimeNetworkCtrl(Trainer& trainer, RealtimeSession& rtses) :
+	trainer(&trainer), rtses(&rtses)
+{
+	Add(refresh_signals.TopPos(2, 26).LeftPos(2, 96));
+	refresh_signals.SetLabel("Refresh Signals");
+	refresh_signals <<= THISBACK(RefreshSignals);
+}
+
+void RealtimeNetworkCtrl::Data() {
+	
+}
+
+void RealtimeNetworkCtrl::RefreshSignals() {
+	rtses->PostEvent(RealtimeSession::EVENT_REFRESH);
+}
+
 
 }
 

@@ -87,7 +87,7 @@ protected:
 	Trainer* trainer;
 	ArrayCtrl seslist;
 	Splitter hsplit, vsplit;
-	StatsGraph graph, reward, loss, avdepth, sigtotal;
+	StatsGraph graph, reward, loss, avdepth, sigtotal, sigbroker;
 	
 public:
 	typedef TrainerResult CLASSNAME;
@@ -95,6 +95,21 @@ public:
 	
 	void Data();
 	
+	
+};
+
+class RealtimeNetworkCtrl : public ParentCtrl {
+	Trainer* trainer;
+	RealtimeSession* rtses;
+	
+	Button refresh_signals;
+	
+public:
+	typedef RealtimeNetworkCtrl CLASSNAME;
+	RealtimeNetworkCtrl(Trainer& trainer, RealtimeSession& rtses);
+	
+	void Data();
+	void RefreshSignals();
 	
 };
 

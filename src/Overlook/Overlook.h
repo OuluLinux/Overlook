@@ -84,7 +84,9 @@ protected:
 	TrainerResult			resultctrl;
 	
 	// Realtime view
-	BrokerCtrl				rt_ctrl;
+	RealtimeSession			rtses;
+	RealtimeNetworkCtrl		rtnetctrl;
+	BrokerCtrl				rtctrl;
 	
 	
 	void SetView();

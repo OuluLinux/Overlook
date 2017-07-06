@@ -29,6 +29,7 @@ public:
 	double GetCloseProfit(const Order& o, double volume) const;
 	
 	void SetFreeMarginLevel(double d);
+	void SetPrice(int sym, double price);
 	
 	// MT4-like functions
 	virtual int		iBars(String symbol, int timeframe);
@@ -42,7 +43,7 @@ public:
 	virtual int		iTime(String symbol, int timeframe, int shift);
 	virtual int		iVolume(String symbol, int timeframe, int shift);
 	virtual int		RefreshRates();
-	virtual Time GetTime() const;
+	virtual Time	GetTime() const;
 	virtual double	RealtimeAsk(int sym);
 	virtual double	RealtimeBid(int sym);
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);

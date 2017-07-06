@@ -7,7 +7,7 @@ Brokerage::Brokerage() {
 	is_failed = false;
 	min_free_margin_level = 0.65;
 	max_free_margin_level = 0.95;
-	free_margin_level = 0.90;
+	free_margin_level = 0.98;
 	margin_call = 0.5;
 	margin_stop = 0.2;
 	selected = -1;
@@ -419,7 +419,7 @@ void Brokerage::SignalOrders() {
 			} else {
 				double reduce = o.volume - lots;
 				for(int j = 0; j < 3; j++) {
-					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
+					int success = OrderClose(o.ticket, reduce, RealtimeBid(o.symbol), 100);
 					if (success) break;
 				}
 				lots = 0;
@@ -446,14 +446,14 @@ void Brokerage::SignalOrders() {
 		double sym_sell_lots = sell_lots[i];
 		const Symbol& sym = symbols[i];
 		if (sym_buy_lots > 0.0) {
-			double price = RealtimeBid(i);
+			double price = RealtimeAsk(i);
 			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * 0.99, price * 1.01, 0, 0);
 			if (r == -1) {
 				LOG("Brokerage::SignalOrders: OrderSend faild with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
 			}
 		}
 		if (sym_sell_lots > 0.0) {
-			double price = RealtimeAsk(i);
+			double price = RealtimeBid(i);
 			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * 1.01, price * 0.99, 0, 0);
 			if (r == -1) {
 				LOG("Brokerage::SignalOrders: OrderSend faild with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));

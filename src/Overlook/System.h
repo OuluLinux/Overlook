@@ -211,6 +211,7 @@ public:
 	
 	int GetBrokerSymbolCount() const {return source_symbol_count;}
 	int GetTotalSymbolCount() const {return symbols.GetCount();}
+	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	

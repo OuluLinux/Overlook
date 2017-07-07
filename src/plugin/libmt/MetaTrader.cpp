@@ -222,6 +222,21 @@ MetaTrader::~MetaTrader() {
 	
 }
 
+void MetaTrader::Data() {
+	balance = _AccountBalance();
+	equity = _AccountEquity();
+	margin = _AccountMargin();
+	margin_free = _AccountFreeMargin();
+	margin_call = _AccountInfoDouble(ACCOUNT_MARGIN_SO_CALL);
+	margin_stop = _AccountInfoDouble(ACCOUNT_MARGIN_SO_SO);
+	leverage = _AccountLeverage();
+	initial_balance = balance;
+	connected = _IsConnected();
+	_GetSymbols();
+	_GetAskBid();
+	_GetOrders(0, true);
+}
+
 int MetaTrader::Init(String addr, int port) {
 	mainaddr = addr;
 	this->port = port;

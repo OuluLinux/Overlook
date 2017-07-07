@@ -1867,4 +1867,45 @@ go south fast, but it`'s only fake virtual money anyway.&]
 must be cleaned and commented, and after that, only slow long 
 term debugging and fine`-tuning remains, but that takes very 
 little time. End of the tunnel ahead...&]
+[s3;%- 7.7.2017&]
+[s0;%- The date of three sevens.&]
+[s0;%- The list of tasks and issues is still long. Few important:&]
+[s0;i150;O0;%- Costs affect the target length of orders, which must 
+be considered. Patience and full coverage is preferred over reducing 
+instruments, because of less risks and pair`-specific noise over 
+asset.&]
+[s0;i150;O0;%- Positive and negative limits of orders must be dynamically 
+followed to avoid unwanted `"channel`-breaks`" in value.&]
+[s0;i150;O0;%- Positive result with SimBroker must be asserted before 
+continuing to MT4 demo account. That is just no`-brainer.&]
+[s0;%- ...&]
+[s0;%- I had to solve numerous weird bugs, which in the end found 
+out to be caused by forgotten vector reallocations during Volume 
+object writing. There was also other concurrency problems related 
+to that. It`'s worst kind of debugging, sort of. With `"cheap`" 
+debugging you can`'t be sure which causes the bug. The fixed 
+result was better than expected. It solved efficiently many problems 
+at once.&]
+[s0;%- First time, the sum of all 110 MT4 orders resulted total positive 
+sum. Not bad. That`'s just a meaningless detail, but sweet one.&]
+[s0;%- ...&]
+[s0;%- I got an idea how to configure SimBroker without using differential 
+evolution local optimizer.&]
+[s0;%- 1. Take that sequence trainer from that earlier mentioned 
+scientific paper.&]
+[s0;%- 2. Apply that to the DQN`-agent.&]
+[s0;%- 3. Use fully connected regression network instead of RL`-graph 
+actions.&]
+[s0;%- That network will give configuration values. Few sequences 
+of configuration values are recorded. The sequence with best 
+result is used in training and others are discarded. Add some 
+random input value if sequences are otherwise too similar. This 
+is still very close to that proven method, and it is expected 
+to work (or is it?). The most ridiculous thing is that this sounds 
+like a baking receipe, even though the idea might be a worth 
+of good published paper.&]
+[s0;%- ...&]
+[s0;%- Actually, it bypasses easily this current solution, if implemented. 
+With few lines of code it can be made to give signals. Change 
+of plans?&]
 [s0;%- ]]

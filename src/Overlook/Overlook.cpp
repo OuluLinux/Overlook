@@ -68,7 +68,7 @@ Overlook::Overlook() :
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(trainerctrl);
-	tabs.Add(trainerctrl, "Trainer (UNSAFE!)");
+	tabs.Add(trainerctrl, "Trainer");
 	tabs.Add(resultctrl);
 	tabs.Add(resultctrl, "Results");
 	tabs.Add(rtnetctrl);

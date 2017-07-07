@@ -80,6 +80,8 @@ void Trainer::Init() {
 	ASSERT(tf != -1);
 	tf_ids.Add(tf);
 	
+	tf_limit = tf_ids.GetCount() - 1; // skip M30
+	
 	
 	tf_muls.SetCount(tf_ids.GetCount(), 1.0);
 	for(int i = 0; i < tf_ids.GetCount(); i++)
@@ -90,11 +92,14 @@ void Trainer::Init() {
 	String acc_cur = mt.AccountCurrency();
 	
 	int sym_count = mt.GetSymbolCount();
+	CombineHash ch;
 	for(int i = 0; i < sym_count; i++) {
 		const Symbol& sym = mt.GetSymbol(i);
 		if (sym.tradeallowed)
 			sym_ids.Add(i);
+		ch << 1 << sym.name.GetHashValue();
 	}
+	symset_hash = ch;
 	
 	indi = sys->Find<ValueChange>();
 	ASSERT(indi != -1);
@@ -105,7 +110,7 @@ void Trainer::InitThreads() {
 	input_width  = sym_ids.GetCount();
 	input_height = tf_ids.GetCount();
 	input_depth  = 1;
-	output_width = input_width * (input_height + 1);
+	output_width = input_width * (tf_limit + 1);
 	int volume = input_width * input_height * input_depth;
 	
 	thrds.SetCount(thrd_count);
@@ -228,9 +233,13 @@ void Trainer::SampleCandidate(int thrd_id) {
 	SessionThread& d = *thrds[thrd_id];
 	SessionSettings& set = d.settings;
 	Session& cand = d.ses;
+	ConvNet::Net& net = cand.GetNetwork();
+	net.Enter();
+	
 	d.id = session_count-1;
 	d.total_sigchange = 0.0;
 	d.is_finished = false;
+	d.symset_hash = symset_hash;
 	lock.Leave();
 	
 	d.epochs = 0;
@@ -322,6 +331,8 @@ void Trainer::SampleCandidate(int thrd_id) {
 	trainer->SetL2Decay(set.l2);
 	trainer->SetMomentum(set.mom);
 	cand.AttachTrainer(trainer); // Session will own and delete the trainer
+	
+	net.Leave();
 }
 
 void Trainer::ThreadHandler(int thrd_id) {
@@ -329,9 +340,9 @@ void Trainer::ThreadHandler(int thrd_id) {
 	Iterator& iter = iters[thrd_id];
 	Volume& x = iter.volume_in;
 	VolumeData<double>& y = iter.volume_out[thrd_id];
-	int perf_begin = tf_ids.GetCount() * sym_ids.GetCount();
+	int perf_begin = tf_limit * sym_ids.GetCount();
 	vec.SetCount(1);
-	double perf_round = 1.0 / tf_ids.GetCount() / 2.0;
+	double perf_round = 1.0 / tf_limit / 2.0;
 	
 	while (running) {
 		// Sample candidate
@@ -349,7 +360,8 @@ void Trainer::ThreadHandler(int thrd_id) {
 		vec[0] = &x;
 		for(int i = 0; i < test_pos.GetCount(); i++) {
 			Seek(thrd_id, test_pos[i]);
-			const Volume& fwd = net.Forward(vec, true);
+			net.Enter();
+			const Volume& fwd = net.Forward(vec, false);
 			double av_perf_value = 0.0;
 			double av_change = 0.0;
 			for(int j = 0; j < sym_ids.GetCount(); j++) {
@@ -357,11 +369,11 @@ void Trainer::ThreadHandler(int thrd_id) {
 				double prev = 0.0;
 				double sig = 0.0;
 				double perf_value = fwd.Get(perf_begin + j) + perf_round;
-				int tf = perf_value * tf_ids.GetCount() - 1;
+				int tf = perf_value * tf_limit - 1;
 				
 				if (tf >= 0) {
-					if (tf >= tf_ids.GetCount())
-						tf = tf_ids.GetCount() - 1;
+					if (tf >= tf_limit)
+						tf = tf_limit - 1;
 					
 					// Get real and predicted values
 					int pos = j + tf * sym_ids.GetCount();
@@ -378,6 +390,7 @@ void Trainer::ThreadHandler(int thrd_id) {
 					total_change += change;
 				}
 			}
+			net.Leave();
 			
 			av_perf_value /= sym_ids.GetCount();
 			av_change /= sym_ids.GetCount();
@@ -393,21 +406,23 @@ void Trainer::ThreadHandler(int thrd_id) {
 		TimeStop ts;
 		for(int i = data_begins.Top(); i < iter.bars; i++) {
 			Seek(thrd_id, i);
-			const Volume& fwd = net.Forward(vec, true);
+			net.Enter();
+			const Volume& fwd = net.Forward(vec, false);
 			for(int j = 0; j < sym_ids.GetCount(); j++) {
 				double sig = 0.0;
 				double perf_value = fwd.Get(perf_begin + j) + perf_round;
-				int tf = perf_value * tf_ids.GetCount() - 1;
+				int tf = perf_value * tf_limit - 1;
 				
 				if (tf >= 0) {
-					if (tf >= tf_ids.GetCount())
-						tf = tf_ids.GetCount() - 1;
+					if (tf >= tf_limit)
+						tf = tf_limit - 1;
 					int pos = j + tf * sym_ids.GetCount();
 					double predicted = fwd.Get(pos);
 					sig = predicted >= 0 ? +1.0 : -1.0;
 				}
 				st.broker.SetSignal(sym_ids[j], sig);
 			}
+			net.Leave();
 			SetAskBid(st.broker, i);
 			if (i < iter.bars-1)	st.broker.Cycle();
 			else					st.broker.CloseAll();
@@ -425,16 +440,35 @@ void Trainer::ThreadHandler(int thrd_id) {
 				return a.total_sigchange > b.total_sigchange;
 			}
 		};
+		
 		lock.Enter();
+		
+		// Check for networks which has different symbol-set for some environment reason
+		for(int i = 0; i < sessions.GetCount(); i++) {
+			if (sessions[i].symset_hash != symset_hash) {
+				sessions.Remove(i);
+				i--;
+			}
+		}
+		
+		// Add and sort sessions
 		sessions.Add(thrds[thrd_id].Detach());
 		ses_sigchanges.Add(total_change);
 		Sort(sessions, SessionSorter());
-		if (sessions.GetCount() > max_sessions)
+		
+		// Remove exceeding amount of sessions
+		if (sessions.GetCount() > max_sessions) {
 			sessions.Remove(max_sessions, sessions.GetCount() - max_sessions);
+		}
+		
+		// Store sessions periodically
 		if (last_store.Elapsed() > 5 * 60 * 1000) {
+			for(int i = 0; i < sessions.GetCount(); i++) sessions[i].ses.GetNetwork().Enter();
 			StoreThis();
+			for(int i = 0; i < sessions.GetCount(); i++) sessions[i].ses.GetNetwork().Leave();
 			last_store.Reset();
 		}
+		
 		lock.Leave();
 	}
 	
@@ -448,7 +482,7 @@ void Trainer::Runner(int thrd_id) {
 	int step_num = 0;
 	int predict_interval = 10;
 	bool test_predict = true;
-	int perf_begin = tf_ids.GetCount() * sym_ids.GetCount();
+	int perf_begin = tf_limit * sym_ids.GetCount();
 	
 	// Sanity checks
 	ASSERT(!thrds.IsEmpty());
@@ -482,6 +516,7 @@ void Trainer::Runner(int thrd_id) {
 		// use x to build our estimate of validation error
 		if (test_predict && (step_num % predict_interval) == 0) {
 			TimeStop ts;
+			net.Enter();
 			Volume& v = net.Forward(x);
 			forward_time = ts.Elapsed();
 			
@@ -491,6 +526,7 @@ void Trainer::Runner(int thrd_id) {
 				double diff = y.Get(i) - v.Get(i);
 				mse += diff * diff;
 			}
+			net.Leave();
 			mse /= perf_begin;
 			st.accuracy_window.Add(-mse);
 		}
@@ -500,6 +536,7 @@ void Trainer::Runner(int thrd_id) {
 		
 		// Forward propagate current input vector
 		vec[0] = &x;
+		net.Enter();
 		const Volume& fwd = net.Forward(vec, true);
 		
 		
@@ -508,7 +545,7 @@ void Trainer::Runner(int thrd_id) {
 		for(int i = 0; i < sym_ids.GetCount(); i++) {
 			int tf = 0;
 			double prev;
-			for(; tf < tf_ids.GetCount(); tf++) {
+			for(; tf < tf_limit; tf++) {
 				
 				// Get real and predicted values
 				int pos = i + tf * sym_ids.GetCount();
@@ -530,10 +567,11 @@ void Trainer::Runner(int thrd_id) {
 				else prev = real * tf_muls[tf];
 			}
 			// How deep we got?
-			double perf_value = (double)tf / (double)tf_ids.GetCount();
+			double perf_value = (double)tf / (double)tf_limit;
 			y.Set(perf_begin + i, perf_value);
 			av_perf_value += perf_value;
 		}
+		net.Leave();
 		av_perf_value /= sym_ids.GetCount();
 		
 		
@@ -545,6 +583,7 @@ void Trainer::Runner(int thrd_id) {
 		
 		
 		// Backward propagate output vector with performance values (do trainining)
+		net.Enter();
 		trainer.Backward(y);
 		trainer.TrainImplem();
 		
@@ -560,7 +599,7 @@ void Trainer::Runner(int thrd_id) {
 		// if last layer is softmax, then add prediction value to the average
 		if (test_predict) {
 			// Mean squared error
-			Volume& v = net.GetOutput();
+			const Volume& v = net.GetOutput();
 			double mse = 0.0;
 			for (int i = 0; i < v.GetLength(); i++) {
 				double diff = y.Get(i) - v.Get(i);
@@ -569,6 +608,7 @@ void Trainer::Runner(int thrd_id) {
 			mse /= v.GetLength();
 			st.train_window.Add(-mse);
 		}
+		net.Leave();
 		
 		st.reward_window.Add(av_perf_value);
 		st.loss_window.Add(loss);
@@ -868,8 +908,10 @@ bool Trainer::Seek(int thrd_id, int shift) {
 				double& max = max_sym_values[k];
 				if (dst.a < min) min = dst.a;
 				if (dst.a > max) max = dst.a;
-				for (int t = 0; t < iter.volume_out.GetCount(); t++)
-					iter.volume_out[t].Set(j + i * sym_values.GetCount(), dst.c);
+				if (i < tf_limit) {
+					for (int t = 0; t < iter.volume_out.GetCount(); t++)
+						iter.volume_out[t].Set(j + i * sym_values.GetCount(), dst.c);
+				}
 				iter.volume_in.Set(j, i, 0, dst.a);
 			}
 		}
@@ -894,9 +936,9 @@ void Trainer::SetAskBid(SimBroker& sb, int pos) {
 	}
 }
 
-void Trainer::SetBrokerageSignals(Session& session, Brokerage& broker, int pos) {
-	int perf_begin = tf_ids.GetCount() * sym_ids.GetCount();
-	double perf_round = 1.0 / tf_ids.GetCount() / 2.0;
+void Trainer::SetBrokerageSignals(Brokerage& broker, int pos) {
+	int perf_begin = tf_limit * sym_ids.GetCount();
+	double perf_round = 1.0 / tf_limit / 2.0;
 	
 	// Fill input volume
 	Seek(thrd_count, pos);
@@ -904,28 +946,49 @@ void Trainer::SetBrokerageSignals(Session& session, Brokerage& broker, int pos) 
 	
 	
 	// Forward with session
+	SessionThread* st = NULL;
 	Vector<VolumePtr> vec;
 	vec.SetCount(1);
 	vec[0] = &iter.volume_in;
-	ConvNet::Net& net = session.GetNetwork();
-	const Volume& fwd = net.Forward(vec, true);
+	Volume* v = NULL;
+	for(int i = 0; i < sessions.GetCount(); i++) {
+		SessionThread& s = sessions[i];
+		if (s.symset_hash != symset_hash) continue;
+		ConvNet::Net& net = s.ses.GetNetwork();
+		net.Enter();
+		Volume& fwd = net.Forward(vec, false);
+		if (fwd.GetCount() != output_width) {
+			net.Leave();
+		} else {
+			st = &s;
+			v = &fwd;
+			break;
+		}
+	}
+	if (!st) {
+		LOG("SetBrokerageSignals: error: no valid network found");
+		return;
+	}
+	const Volume& fwd = *v;
 	
 	
 	// Get signals
 	for(int j = 0; j < sym_ids.GetCount(); j++) {
 		double sig = 0.0;
 		double perf_value = fwd.Get(perf_begin + j) + perf_round;
-		int tf = perf_value * tf_ids.GetCount() - 1;
+		int tf = perf_value * tf_limit - 1;
 		
 		if (tf >= 0) {
-			if (tf >= tf_ids.GetCount())
-				tf = tf_ids.GetCount() - 1;
+			if (tf >= tf_limit)
+				tf  = tf_limit - 1;
 			int pos = j + tf * sym_ids.GetCount();
 			double predicted = fwd.Get(pos);
 			sig = predicted >= 0 ? +1.0 : -1.0;
 		}
 		broker.SetSignal(sym_ids[j], sig);
 	}
+	
+	st->ses.GetNetwork().Leave();
 }
 
 
@@ -960,7 +1023,13 @@ void RealtimeSession::Run() {
 	System& sys = *trainer->sys;
 	Trainer& trainer = *this->trainer;
 	
+	int prev_pos = sys.GetShiftFromTimeTf(GetSysTime(), trainer.tf_ids.Top());
+	
 	while (running) {
+		int cur_pos = sys.GetShiftFromTimeTf(GetSysTime(), trainer.tf_ids.Top());
+		if (prev_pos < cur_pos)
+			PostEvent(EVENT_REFRESH);
+		
 		if (event_queue.IsEmpty()) {Sleep(500); continue;}
 		
 		lock.Enter();
@@ -969,10 +1038,9 @@ void RealtimeSession::Run() {
 		lock.Leave();
 		
 		if (event == EVENT_REFRESH) {
-			SessionThread* st = &trainer.sessions[0];
+			GetMetaTrader().Data();
 			trainer.ProcessDataBridgeQueue();
-			int cur_pos = sys.GetShiftFromTimeTf(GetSysTime(), trainer.tf_ids.Top());
-			trainer.SetBrokerageSignals(st->ses, *broker, cur_pos);
+			trainer.SetBrokerageSignals(*broker, cur_pos);
 			broker->SignalOrders();
 		}
 		

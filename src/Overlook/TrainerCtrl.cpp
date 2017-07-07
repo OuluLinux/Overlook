@@ -103,6 +103,7 @@ void TrainerThreadCtrl::Data() {
 	
 	if (prev_thrd != &thrd) {
 		prev_thrd = &thrd;
+		conv.Clear();
 		conv.SetSession(thrd.ses);
 		timescroll.SetSession(thrd.ses);
 		conv.RefreshLayers();

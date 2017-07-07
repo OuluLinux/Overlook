@@ -65,6 +65,7 @@ struct SessionThread {
 	ConvNet::Window		test_reward_window, test_window0, test_window1, train_broker;
 	double				total_sigchange, train_brokerprofit;
 	int					train_brokerorders;
+	int					symset_hash;
 	
 	SimBroker			broker;
 	
@@ -72,7 +73,7 @@ struct SessionThread {
 		s % settings % ses % params % epochs % epoch_actual % epoch_total % id % is_finished
 		  % loss_window % reward_window % l1_loss_window % l2_loss_window % train_window % accuracy_window
 		  % test_reward_window % test_window0 % test_window1 % train_broker % total_sigchange
-		  % train_brokerprofit % train_brokerorders;
+		  % train_brokerprofit % train_brokerorders % symset_hash;
 	}
 };
 
@@ -129,6 +130,8 @@ protected:
 	int input_width, input_height, input_depth, output_width;
 	int training_limit;
 	int session_cur;
+	int tf_limit;
+	int symset_hash;
 	bool running;
 	
 	
@@ -178,7 +181,7 @@ public:
 	void ResetIterators();
 	void ResetValueBuffers();
 	void ShuffleTraining(Vector<int>& train_pos);
-	void SetBrokerageSignals(Session& session, Brokerage& broker, int pos);
+	void SetBrokerageSignals(Brokerage& broker, int pos);
 	
 };
 

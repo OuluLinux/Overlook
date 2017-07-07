@@ -23,6 +23,7 @@ public:
 	const String& GetAddr() const {return mainaddr;}
 	int GetPort() const {return port;}
 	void GetMarginPercentages();
+	void Data();
 	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and

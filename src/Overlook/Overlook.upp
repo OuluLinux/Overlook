@@ -28,9 +28,8 @@ file
 	BrokerCtrl.lay,
 	ExposureTester.h,
 	ExposureTester.cpp,
-	TrainerCtrl.h,
-	TrainerCtrl.cpp,
-	TrainerCtrl.lay,
+	AgentCtrl.h,
+	AgentCtrl.cpp,
 	Core readonly separator,
 	Common.h,
 	Core.h,
@@ -52,11 +51,9 @@ file
 	Indicators.cpp,
 	QtStats.h,
 	QtStats.cpp,
-	Trainer.h,
-	Trainer.cpp;
+	Agent.h,
+	Agent.cpp;
 
 mainconfig
-	"" = "GUI MT",
-	"" = "GUI MT NOGTK",
-	"" = "GUI MT NOGTK USEMALLOC";
+	"" = "GUI MT";
 

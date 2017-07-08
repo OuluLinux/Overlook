@@ -52,6 +52,7 @@ void Brokerage::operator=(const Brokerage& b) {
 	currencies <<= b.currencies;
 	indices <<= b.indices;
 	signals <<= b.signals;
+	signal_freezed <<= b.signal_freezed;
 	periodstr <<= b.periodstr;
 	tf_h1_id = b.tf_h1_id;
 	cur_volumes <<= b.cur_volumes;
@@ -63,8 +64,15 @@ void Brokerage::operator=(const Brokerage& b) {
 }
 
 void Brokerage::SetSignal(int sym, int signal) {
-	if (signals.IsEmpty()) signals.SetCount(symbols.GetCount(), 0);
+	if (signals.IsEmpty()) {
+		signals.SetCount(symbols.GetCount(), 0);
+		signal_freezed.SetCount(symbols.GetCount(), 0);
+	}
 	signals[sym] = signal;
+}
+
+void Brokerage::SetSignalFreeze(int sym, bool freeze_signal) {
+	signal_freezed[sym] = freeze_signal;
 }
 
 void Brokerage::PutSignal(int sym, int signal) {
@@ -412,6 +420,8 @@ void Brokerage::SignalOrders() {
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
+		if (signal_freezed[o.symbol])
+			continue;
 		if (o.type == OP_BUY) {
 			double& lots = buy_lots[o.symbol];
 			if (o.volume <= lots) {
@@ -441,7 +451,10 @@ void Brokerage::SignalOrders() {
 	}
 	
 	for(int i = 0; i < sym_count; i++) {
-		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01) continue;
+		if (signal_freezed[i])
+			continue;
+		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01)
+			continue;
 		double sym_buy_lots = buy_lots[i];
 		double sym_sell_lots = sell_lots[i];
 		const Symbol& sym = symbols[i];
@@ -460,151 +473,6 @@ void Brokerage::SignalOrders() {
 			}
 		}
 	}
-	
-	/*ASSERT(basket_begin != -1 && cur_begin != -1);
-	
-	// Create list of orders what should be opened according to signals
-	Vector<int> queue;
-	queue.SetCount(0);
-	queue.SetCount(symbols.GetCount(), 0);
-	
-	int total_sig = 0;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		int sig = signals[i];
-		if (!sig) continue;
-		
-		// Extend to symbols in correlation-basket
-		if (i > basket_begin) {
-			const Vector<int>& basket_syms = basket_symbols[i - basket_begin];
-			ASSERT(!basket_syms.IsEmpty());
-			for(int j = 0; j < basket_syms.GetCount(); j++) {
-				int& qsig = queue[basket_syms[j]];
-				qsig += sig;
-				total_sig += abs(sig);
-			}
-		}
-		// Extend to symbols in currency-basket
-		else if (i > cur_begin) {
-			const Currency& cur = currencies[i - cur_begin];
-			const Index<int>& cur_syms = cur.all_pairs;
-			ASSERT(!cur_syms.IsEmpty());
-			for(int j = 0; j < cur_syms.GetCount(); j++) {
-				int& qsig = queue[cur_syms[j]];
-				int cur_sym_id = cur_syms[j];
-				const Symbol& sym = symbols[cur_sym_id];
-				ASSERT_(sym.base_mul != 0 && (sym.base_mul == -1 || sym.base_mul == +1), "No symbols without base currency allowed currently");
-				qsig += sig * sym.base_mul;
-				total_sig += abs(sig);
-			}
-		}
-		// Single symbols
-		else {
-			int& qsig = queue[i];
-			qsig += sig;
-			total_sig += abs(sig);
-		}
-	}
-	
-	// Find minimum relative volume
-	double min_vol = DBL_MAX;
-	Vector<double> sym_sig_lots;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		int& qsig = queue[i];
-		if (!qsig) continue;
-		
-		// Get relative volume
-		double vol = (double)abs(qsig) / (double)total_sig;
-		if (vol < min_vol) min_vol = vol;
-		
-		// Assign long/short direction to the volume
-		if (qsig < 0) vol *= -1.0;
-		sym_sig_lots[i] = vol;
-	}
-	
-	// Normalize volume to minimum lots
-	double total_lots = 0;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		double& qvol = sym_sig_lots[i];
-		
-		// Divide by minimum lots and round volume to lots
-		bool neg = qvol < 0.0;
-		int v = qvol / min_vol + (!neg ? +0.5 : -0.5);
-		ASSERT(v != 0);
-		qvol = v * 0.01;
-		total_lots += qvol;
-	}
-	*/
-	
-	
-	
-	
-	
-	/*
-
-	
-	// Do some magic management for the minimum volume
-	double max_total_lots;
-	// TODO: use the "Data": solve from "row.base_value" == equity * free_margin_level
-	Panic("TODO");
-	if (total_lots > max_total_lots) {
-		// Oh-oh, we have a failed signal
-		SetFailed();
-		return;
-	}
-	double lot_multiplier = max_total_lots / total_lots;
-	for(int i = 0; i < sym_sig_lots.GetCount(); i++) {
-		double& qvol = sym_sig_lots[i];
-		
-		// Multiply and round volume to lots
-		bool neg = qvol < 0.0;
-		int v = qvol * lot_multiplier + (!neg ? +0.5 : -0.5);
-		ASSERT(v != 0);
-		qvol = v * 0.01;
-	}
-	
-	
-	// Find orders which exceeds the common and intersecting volume area
-	//  - all to opposite direction
-	//  - exceeding amount to same direction
-	typedef Tuple2<int, double> Reduce;
-	Vector<Reduce> reduce;
-	for(int i = 0; i < orders.GetCount(); i++) {
-		Order& o = orders[i];
-		
-		int j = sym_sig_lots.Find(o.sym);
-		
-		// If order's symbol is not in the open list, close the order.
-		if (j == -1) {
-			reduce.Add(Reduce(i, o.volume));
-			continue;
-		}
-		
-		double& lots = sym_sig_lots[j];
-		bool dst_short = lots < 0.0;
-		bool src_short = o.type == 1;
-		ASSERT_(o.type < 2, "Only simple long/short is allowed currently");
-		
-		// If order is to opposite direction, close the order
-		if (dst_short != src_short) {
-			reduce.Add(Reduce(i, o.volume));
-			continue;
-		}
-		
-		// If order exceeds the lots to same direction, reduce the order lots
-		Panic("TODO multiple orders with same sym/type");
-		Panic("TODO multiple orders with opposing sym/type");
-		double abs_lots = fabs(lots);
-		int exceeding = (o.volume - abs_lots + 0.005) / 0.01;
-		if (exceeding > 0) {
-			reduce.Add(Reduce(i, exceeding * 0.01));
-			continue;
-		}
-	}
-	
-	
-	// Commit orders which wasn't in the common area
-	Panic("TODO");
-	*/
 }
 
 

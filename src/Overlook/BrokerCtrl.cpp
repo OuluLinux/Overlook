@@ -2,7 +2,7 @@
 	
 namespace Overlook {
 
-BrokerCtrl::BrokerCtrl() {
+MainBrokerCtrl::MainBrokerCtrl() {
 	broker = NULL;
 	
 	CtrlLayout(*this);
@@ -61,14 +61,14 @@ BrokerCtrl::BrokerCtrl() {
 	split << trade << exposure << history;
 }
 
-void BrokerCtrl::Init() {
+void MainBrokerCtrl::Init() {
 	
 	
 	
 	//Thread::Start(THISBACK(DummyRunner));
 }
 
-void BrokerCtrl::Data() {
+void MainBrokerCtrl::Data() {
 	Brokerage& b = *broker;
 	
 	SimBroker* sb = dynamic_cast<SimBroker*>(&b);
@@ -150,22 +150,22 @@ void BrokerCtrl::Data() {
 	
 }
 
-void BrokerCtrl::PriceCursor() {
+void MainBrokerCtrl::PriceCursor() {
 	int cursor = current.GetCursor();
 	if (cursor == -1) {info.SetLabel(""); return;}
 	const Price& price = broker->GetAskBid()[cursor];
 	info.SetLabel(DblStr(price.bid) + "/" + DblStr(price.ask));
 }
 
-void BrokerCtrl::Refresher() {
+void MainBrokerCtrl::Refresher() {
 	
 }
 
-void BrokerCtrl::Reset() {
+void MainBrokerCtrl::Reset() {
 	
 }
 
-void BrokerCtrl::Close() {
+void MainBrokerCtrl::Close() {
 	int order_id = trade.GetCursor();
 	if (order_id == -1) return;
 	
@@ -187,7 +187,7 @@ void BrokerCtrl::Close() {
 	}
 }
 
-void BrokerCtrl::CloseAll() {
+void MainBrokerCtrl::CloseAll() {
 	Brokerage& b = *broker;
 	b.CloseAll();
 	if (b.GetOpenOrders().GetCount()) {
@@ -197,7 +197,7 @@ void BrokerCtrl::CloseAll() {
 	Data();
 }
 
-void BrokerCtrl::OpenOrder(int type) {
+void MainBrokerCtrl::OpenOrder(int type) {
 	int sym_id = current.GetCursor();
 	if (sym_id == -1) return;
 	
@@ -233,7 +233,7 @@ void BrokerCtrl::OpenOrder(int type) {
 	Data();
 }
 
-void BrokerCtrl::DummyRunner() {
+void MainBrokerCtrl::DummyRunner() {
 	if (!broker)
 		return;
 	
@@ -305,6 +305,46 @@ void BrokerCtrl::DummyRunner() {
 		
 		Sleep(500);
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BrokerCtrl::BrokerCtrl() {
+	
+	drawers.Vert();
+	
+	Add(main);
+	Add(main, "Account");
+	Add(drawers);
+	Add(drawers, "Graphs");
+}
+
+void BrokerCtrl::Init() {
+	main.Init();
+}
+
+void BrokerCtrl::Data() {
+	int tab = Get();
+	if (tab == 0)
+		main.Data();
 }
 
 }

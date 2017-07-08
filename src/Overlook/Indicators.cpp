@@ -3543,7 +3543,7 @@ void TrendChange::Start() {
 		// Set value
 		buffer.Set(i, value);
 		
-		// Store values for next iteration
+		// Store values for next snapation
 		prev1 = d1;
 		prev2 = d2;
 		prev_value = value;

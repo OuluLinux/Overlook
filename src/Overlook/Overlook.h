@@ -14,8 +14,11 @@
 #include "Indicators.h"
 #include "QtStats.h"
 
-#include "Trainer.h"
-#include "TrainerCtrl.h"
+//#include "Trainer.h"
+//#include "TrainerCtrl.h"
+
+#include "Agent.h"
+#include "AgentCtrl.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
@@ -78,10 +81,10 @@ protected:
 	// Exposure tester
 	ExposureTester			exposurectrl;
 	
-	// Trainer view
-	Trainer					trainer;
-	TrainerCtrl				trainerctrl;
-	TrainerResult			resultctrl;
+	// Agent view
+	Agent					agent;
+	AgentCtrl				agentctrl;
+	AgentTraining			trainingctrl;
 	
 	// Realtime view
 	RealtimeSession			rtses;

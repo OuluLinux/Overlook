@@ -1908,4 +1908,14 @@ of good published paper.&]
 [s0;%- Actually, it bypasses easily this current solution, if implemented. 
 With few lines of code it can be made to give signals. Change 
 of plans?&]
-[s0;%- ]]
+[s3;%- 8.7.2017&]
+[s0;%- I`'ve been poking that weird regression network sequence agent 
+this morning. It has two ways to implement it. The first is simpler, 
+non`-threaded version, and the other is greedy threaded, where 
+combination testing is done using a little outdated network while 
+training is being constantly done in other thread. The current 
+state is closer to that second one, so that will be used.&]
+[s0;%- ...&]
+[s0;%- I implemented it right away. The core of the engine seems 
+to work, but it`'s not connected to GUI. That`'s a good point 
+to continue tomorrow.]]

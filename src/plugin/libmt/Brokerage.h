@@ -30,6 +30,7 @@ protected:
 	VectorMap<String, Currency> currencies;
 	Vector<int> indices;
 	Vector<int> signals;
+	Vector<bool> signal_freezed;
 	Vector<Asset> assets;
 	Mutex current_price_lock;
 	
@@ -54,6 +55,7 @@ public:
 	void SignalOrders();
 	void PutSignal(int sym, int signal);
 	void SetSignal(int sym, int signal);
+	void SetSignalFreeze(int sym, bool freeze_signal);
 	bool IsFailed() const {return is_failed;}
 	void SetFailed(bool b=true) {is_failed = b;}
 	void CloseAll();
@@ -74,6 +76,9 @@ public:
 	int GetCurrencyCount() const {return currencies.GetCount();}
 	int GetIndexId(int i) const {return indices[i];}
 	int GetIndexCount() const {return indices.GetCount();}
+	double GetMinFreeMargin() const {return min_free_margin_level;}
+	double GetMaxFreeMargin() const {return max_free_margin_level;}
+	void SetFreeMargin(double d) {free_margin_level = d;}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

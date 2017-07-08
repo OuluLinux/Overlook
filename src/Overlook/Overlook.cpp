@@ -52,11 +52,11 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 
 Overlook::Overlook() :
-	trainer(sys),
-	rtses(trainer),
-	trainerctrl(trainer),
-	resultctrl(trainer),
-	rtnetctrl(trainer, rtses)
+	agent(sys),
+	rtses(agent),
+	agentctrl(agent),
+	trainingctrl(agent),
+	rtnetctrl(agent, rtses)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -67,10 +67,10 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(trainerctrl);
-	tabs.Add(trainerctrl, "Trainer");
-	tabs.Add(resultctrl);
-	tabs.Add(resultctrl, "Results");
+	tabs.Add(agentctrl);
+	tabs.Add(agentctrl, "Agent");
+	tabs.Add(trainingctrl);
+	tabs.Add(trainingctrl, "Training");
 	tabs.Add(rtnetctrl);
 	tabs.Add(rtnetctrl, "Real-Time Network");
 	tabs.Add(rtctrl);
@@ -123,10 +123,10 @@ void Overlook::Data(bool periodic) {
 		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		trainerctrl.Data();
+		agentctrl.Data();
 	}
 	else if (tab == 3) {
-		resultctrl.Data();
+		trainingctrl.Data();
 	}
 	else if (tab == 4) {
 		rtnetctrl.Data();
@@ -140,7 +140,7 @@ void Overlook::Init() {
 	sys.Init();
 	rtctrl.Init();
 	exposurectrl.Init();
-	trainer.Init();
+	agent.Init();
 	rtses.Init();
 	
 	
@@ -170,17 +170,16 @@ void Overlook::Loader() {
 	loader->PostProgress(0, 4, "Creating work queue");
 	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
 	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
-	trainer.RefreshWorkQueue();
+	agent.RefreshWorkQueue();
 	
 	loader->PostProgress(1, 4, "Processing data");
-	trainer.ProcessWorkQueue();
+	agent.ProcessWorkQueue();
 	
 	loader->PostProgress(2, 4, "Finding value buffers");
-	trainer.ResetValueBuffers();
+	agent.ResetValueBuffers();
 	
-	loader->PostProgress(3, 4, "Reseting iterators");
-	trainer.InitThreads();
-	trainer.ResetIterators();
+	loader->PostProgress(3, 4, "Reseting snapshots");
+	agent.InitThreads();
 	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();
@@ -189,12 +188,12 @@ void Overlook::Loader() {
 
 void Overlook::Start() {
 	sys.Start();
-	trainer.Start();
+	agent.Start();
 	rtses.Start();
 }
 
 void Overlook::Deinit() {
-	trainer.Stop();
+	agent.Stop();
 	sys.Stop();
 	rtses.Stop();
 }

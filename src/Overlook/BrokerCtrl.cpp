@@ -68,8 +68,28 @@ void MainBrokerCtrl::Init() {
 	//Thread::Start(THISBACK(DummyRunner));
 }
 
+void MainBrokerCtrl::ReadOnly() {
+	buy.Hide();
+	sell.Hide();
+	takeprofit.Hide();
+	tplbl.Hide();
+	stoploss.Hide();
+	sllbl.Hide();
+	volume.Hide();
+	vollbl.Hide();
+	close.Hide();
+	closeall.Hide();
+	info.Hide();
+	watch.LeftPosZ(4, 172).TopPosZ(4, 104);
+	current.LeftPosZ(4, 172).VSizePosZ(132, 4);
+}
+
 void MainBrokerCtrl::Data() {
+	ASSERT_(broker, "Broker is not yet set to BrokerCtrl");
+	
 	Brokerage& b = *broker;
+	
+	b.Enter();
 	
 	SimBroker* sb = dynamic_cast<SimBroker*>(&b);
 	if (sb) sb->RefreshOrders();
@@ -79,7 +99,9 @@ void MainBrokerCtrl::Data() {
 			"Balance: "			+ Format("%2!,n", b.AccountBalance()) + "\n"
 			"Equity: "			+ Format("%2!,n", b.AccountEquity()) + "\n"
 			"Margin: "			+ Format("%2!,n", b.AccountMargin()) + "\n"
-			"Free Margin: "		+ Format("%2!,n", b.AccountFreeMargin());
+			"Free Margin: "		+ Format("%2!,n", b.AccountFreeMargin()) + "\n"
+			"Open orders: "		+ Format("%d",    b.GetOpenOrders().GetCount()) + "\n"
+			"History orders: "	+ Format("%d",    b.GetHistoryOrders().GetCount());
 	watch.SetLabel(w);
 	
 	const Vector<Symbol>& symbols = b.GetSymbols();
@@ -147,7 +169,7 @@ void MainBrokerCtrl::Data() {
 	history.SetCount(horders.GetCount());
 	
 	
-	
+	b.Leave();
 }
 
 void MainBrokerCtrl::PriceCursor() {

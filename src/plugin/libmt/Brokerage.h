@@ -32,7 +32,7 @@ protected:
 	Vector<int> signals;
 	Vector<bool> signal_freezed;
 	Vector<Asset> assets;
-	Mutex current_price_lock;
+	Mutex current_price_lock, order_lock;
 	
 	ArrayMap<int, String> periodstr;
 	int tf_h1_id;
@@ -59,6 +59,8 @@ public:
 	bool IsFailed() const {return is_failed;}
 	void SetFailed(bool b=true) {is_failed = b;}
 	void CloseAll();
+	void Enter() {order_lock.Enter();}
+	void Leave() {order_lock.Leave();}
 	
 	const Vector<Order>&	GetOpenOrders() const {return orders;}
 	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}

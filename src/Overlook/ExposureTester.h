@@ -10,7 +10,7 @@ class ExposureTester : public ParentCtrl {
 	ParentCtrl expctrl;
 	Button next, reset;
 	ArrayCtrl siglist;
-	BrokerCtrl brokerctrl;
+	MainBrokerCtrl brokerctrl;
 	SimBroker broker;
 	Array<EditIntSpin> edits;
 	

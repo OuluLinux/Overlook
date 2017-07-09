@@ -4,7 +4,7 @@ namespace Overlook {
 using namespace Upp;
 
 AgentDraw::AgentDraw(Agent& agent) : agent(&agent) {
-	
+	snap_id = -1;
 }
 
 void AgentDraw::Paint(Draw& w) {
@@ -14,11 +14,11 @@ void AgentDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	
-	/*Agent& agent = *this->agent;
+	Agent& agent = *this->agent;
 	System& sys = *agent.sys;
 	
-	
-	const Snapshot& snap = agent.snaps[0];
+	if (snap_id < -1 || snap_id >= agent.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
+	const Snapshot& snap = snap_id >= 0 ? agent.snaps[snap_id] : agent.latest_snap;
 	
 	int sym_count		= agent.sym_ids.GetCount();
 	int tf_count		= snap.pos.GetCount();
@@ -58,10 +58,68 @@ void AgentDraw::Paint(Draw& w) {
 			
 			row++;
 		}
-	}*/
+	}
 	
 	w.DrawImage(0,0,id);
 }
+
+
+
+
+
+
+TrainingGraph::TrainingGraph(Agent& agent) : agent(&agent) {
+	
+}
+
+void TrainingGraph::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	
+	id.DrawRect(sz, White());
+	
+	Agent& agent = *this->agent;
+	const Vector<double>& data = agent.GetSequenceResults();
+	
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	
+	int count = data.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = data[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	
+	if (count >= 2 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (count - 1);
+		Font fnt = Monospace(10);
+		
+		int count = data.GetCount();
+		if (count >= 2) {
+			polyline.SetCount(count);
+			for(int j = 0; j < count; j++) {
+				double v = data[j];
+				double y = sz.cy - (v - min) / diff * sz.cy;
+				int x = j * xstep;
+				polyline[j] = Point(x, y);
+			}
+			id.DrawPolyline(polyline, 1, Color(193, 255, 255));
+			for(int j = 0; j < polyline.GetCount(); j++) {
+				const Point& p = polyline[j];
+				id.DrawRect(p.x-1, p.y-1, 3, 3, Blue());
+			}
+		}
+	}
+	
+	
+	w.DrawImage(0, 0, id);
+}
+
+
+
+
 
 
 
@@ -78,36 +136,23 @@ AgentThreadCtrl::AgentThreadCtrl(Agent& agent, int thrd_id) :
 	hsplit << draw << brokerctrl;
 	hsplit.SetPos(500, 0);
 	
-	prev_thrd = NULL;
+	brokerctrl.ReadOnly();
 }
 
 void AgentThreadCtrl::Data() {
-	/*
-	if (agent->thrds[thrd_id].IsEmpty()) return;
-	
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = *agent->sys;
-	Snapshot& snap = agent->snaps[thrd_id];
-	SequencerThread& thrd = *agent->thrds[thrd_id];
-	
-	if (prev_thrd != &thrd) {
-		prev_thrd = &thrd;
-		conv.Clear();
-		conv.SetSession(thrd.ses);
-		timescroll.SetSession(thrd.ses);
-		conv.RefreshLayers();
-	}
+	SequencerThread& thrd = agent->thrds[thrd_id];
+	Snapshot& snap = agent->snaps[thrd.snap_id];
 	
 	time_slider.MinMax(0, snap.bars-1);
 	time_slider.SetData(snap.pos.Top());
 	
-	prog.Set(thrd.epoch_actual, thrd.epoch_total);
-	epoch.SetLabel("Epoch: " + IntStr(thrd.epochs));
-	
+	draw.SetSnap(thrd.snap_id);
 	draw.Refresh();
-	conv.Refresh();
-	timescroll.Refresh();
-	reward.Refresh();*/
+	
+	brokerctrl.SetBroker(thrd.broker);
+	brokerctrl.Data();
 }
 
 
@@ -122,11 +167,14 @@ void AgentThreadCtrl::Data() {
 
 AgentCtrl::AgentCtrl(Agent& agent) :
 	agent(&agent),
-	reward(3, agent)
+	reward(agent)
 {
-	Add(thrdlist.TopPos(3, 24).LeftPos(4, 100));
+	Add(thrdlist.TopPos(3, 24).LeftPos(5, 96));
+	Add(update_brokerctrl.TopPos(3, 24).LeftPos(102, 96));
 	Add(reward.BottomPos(0,200).HSizePos());
 	init = true;
+	update_brokerctrl.Set(false);
+	update_brokerctrl.SetLabel("Update broker");
 }
 
 void AgentCtrl::Data() {
@@ -142,9 +190,15 @@ void AgentCtrl::Data() {
 		thrdlist <<= THISBACK(SetView);
 		thrds[0].Show();
 	}
-	int i = thrdlist.GetIndex();
-	if (i == -1) return;
-	thrds[i].Data();
+	
+	if (update_brokerctrl.Get()) {
+		int i = thrdlist.GetIndex();
+		if (i == -1) return;
+		thrds[i].Data();
+	}
+	
+	
+	reward.Refresh();
 }
 
 void AgentCtrl::SetView() {
@@ -160,50 +214,10 @@ void AgentCtrl::SetView() {
 
 
 
-StatsGraph::StatsGraph(int mode, Agent& agent) : agent(&agent), mode(mode) {
+StatsGraph::StatsGraph(Agent& agent) : agent(&agent) {
 	
 	
 	
-}
-
-const ConvNet::Window& StatsGraph::GetData(int thrd) {
-	return null_win;
-	/*
-	switch (mode) {
-		case 0:		if (agent->thrds[thrd].IsEmpty()) return null_win;
-					return agent->thrds[thrd]->test_window1;
-		
-		case 1:		if (agent->thrds[thrd].IsEmpty()) return null_win;
-					return agent->thrds[thrd]->test_window0;
-		
-		case 2:		if (agent->thrds[thrd].IsEmpty()) return null_win;
-					return agent->thrds[thrd]->loss_window;
-		
-		case 3:		if (agent->thrds[thrd].IsEmpty()) return null_win;
-					return agent->thrds[thrd]->reward_window;
-		
-		case 4:		return agent->thrd_priorities[thrd];
-		
-		case 5:		return agent->thrd_performances[thrd];
-		
-		case 6:		return agent->seq_results;
-		
-		case 7:		if (agent->sessions.IsEmpty()) return null_win;
-					return agent->sessions[agent->session_cur].loss_window;
-		
-		case 8:		if (agent->sessions.IsEmpty()) return null_win;
-					return agent->sessions[agent->session_cur].reward_window;
-		
-		case 9:		if (agent->sessions.IsEmpty()) return null_win;
-					return agent->sessions[agent->session_cur].test_reward_window;
-		
-		case 10:	if (agent->sessions.IsEmpty()) return null_win;
-					return agent->sessions[agent->session_cur].test_window0;
-		
-		case 11:	if (agent->sessions.IsEmpty()) return null_win;
-					return agent->sessions[agent->session_cur].train_broker;
-	}
-	Panic("Invalid mode");*/
 }
 
 void StatsGraph::Paint(Draw& w) {
@@ -211,16 +225,18 @@ void StatsGraph::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	int thrd_count = mode < 6 ? agent->thrds.GetCount() : 1;
+	int thrd_count = agent->thrd_equities.GetCount();
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
+	last.SetCount(thrd_count);
 	
 	int max_steps = 0;
 	for(int i = 0; i < thrd_count; i++) {
-		const ConvNet::Window& data = GetData(i);
-		int count = data.GetBufferCount();
+		const Vector<double>& data = agent->thrd_equities[i];
+		int count = data.GetCount();
 		for(int j = 0; j < count; j++) {
-			double d = data.Get(j);
+			double d = data[j];
+			if (d == 0.0) break;
 			if (d > max) max = d;
 			if (d < min) min = d;
 		}
@@ -229,27 +245,30 @@ void StatsGraph::Paint(Draw& w) {
 	}
 	
 	
-	if (max_steps > 1) {
+	if (max_steps > 1 && max > min) {
 		double diff = max - min;
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
 		for(int i = 0; i < thrd_count; i++) {
-			const ConvNet::Window& data = GetData(i);
-			int count = data.GetBufferCount();
+			const Vector<double>& data = agent->thrd_equities[i];
+			int count = data.GetCount();
 			if (count >= 2) {
 				polyline.SetCount(count);
 				for(int j = 0; j < count; j++) {
-					double y = sz.cy - (data.Get(j) - min) / diff * sz.cy;
+					double v = data[j];
+					double y = sz.cy - (v - min) / diff * sz.cy;
 					polyline[j] = Point(j * xstep, y);
 				}
-				id.DrawPolyline(polyline, 1, RainbowColor((double)i / thrd_count));
+				last[i] = data[count-1];
+				if (polyline.GetCount() >= 2)
+					id.DrawPolyline(polyline, 1, RainbowColor((double)i / thrd_count));
 			}
 		}
 		
 		for(int i = 0; i < thrd_count; i++) {
 			int y = i * 13;
-			String str = DblStr(GetData(i).GetAverage());
+			String str = DblStr(last[i]);
 			Size str_sz = GetTextSize(str, fnt);
 			id.DrawRect(3, y, 13, 13, RainbowColor((double)i / thrd_count));
 			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
@@ -274,11 +293,13 @@ void StatsGraph::Paint(Draw& w) {
 
 AgentTraining::AgentTraining(Agent& agent) :
 	agent(&agent),
-	draw(agent)
+	draw(agent),
+	reward(agent)
 {
-	Add(epoch.TopPos(3, 24).LeftPos(350, 100));
-	Add(prog.TopPos(3, 24).HSizePos(450));
-	Add(hsplit.VSizePos(30).HSizePos());
+	Add(epoch.TopPos(3, 24).LeftPos(2, 96));
+	Add(prog.TopPos(3, 24).HSizePos(100));
+	Add(hsplit.VSizePos(30, 200).HSizePos());
+	Add(reward.BottomPos(0,200).HSizePos());
 	
 	hsplit << seslist << draw << conv << timescroll;
 	hsplit.Horz();
@@ -288,48 +309,46 @@ AgentTraining::AgentTraining(Agent& agent) :
 	
 	
 	seslist.AddColumn("#");
-	seslist.AddColumn("Tf");
 	seslist.AddColumn("Profit");
 	seslist.AddColumn("Orders");
-	seslist.AddColumn("Test-Signal");
+	seslist.ColumnWidths("1 3 2");
 	seslist <<= THISBACK(Data);
+	
+	init = true;
 }
 	
 void AgentTraining::Data() {
-	/*
-	for(int i = 0; i < agent->sessions.GetCount(); i++) {
-		const SequencerThread& st = agent->sessions[i];
-		seslist.Set(i, 0, st.id);
-		//seslist.Set(i, 1, st.train_brokerprofit);
-		//seslist.Set(i, 2, st.train_brokerorders);
-		//seslist.Set(i, 3, st.total_sigchange);
+	prog.Set(agent->epoch_actual, agent->epoch_total);
+	epoch.SetLabel("Epoch: " + IntStr(agent->epochs));
+	
+	
+	if (init) {
+		init = false;
+		conv.Clear();
+		conv.SetSession(agent->ses);
+		timescroll.SetSession(agent->ses);
+		conv.RefreshLayers();
+	}
+	
+	for(int i = 0; i < agent->sequences.GetCount(); i++) {
+		const Sequence& seq = agent->sequences[i];
+		seslist.Set(i, 0, seq.id);
+		seslist.Set(i, 1, seq.equity);
+		seslist.Set(i, 2, seq.orders);
 	}
 	agent->session_cur = seslist.GetCursor();
 	if (agent->session_cur == -1) agent->session_cur = 0;
-	*/
 	
 	
+	draw.SetSnap(agent->epoch_actual);
+	draw.Refresh();
+	conv.Refresh();
+	timescroll.Refresh();
+	reward.Refresh();
 }
 
 
 
-
-
-TfCompDraw::TfCompDraw(Agent& agent) :
-	agent(&agent)
-{
-	
-}
-
-void TfCompDraw::Paint(Draw& w) {
-	Size sz(GetSize());
-	ImageDraw id(sz);
-	id.DrawRect(sz, White());
-	
-	
-	
-	w.DrawImage(0, 0, id);
-}
 
 
 
@@ -337,12 +356,12 @@ void TfCompDraw::Paint(Draw& w) {
 
 RealtimeNetworkCtrl::RealtimeNetworkCtrl(Agent& agent, RealtimeSession& rtses) :
 	agent(&agent), rtses(&rtses),
-	draw(agent),
-	tfcmp(agent)
+	draw(agent)
 {
-	Add(hsplit.VSizePos(150).HSizePos());
-	Add(tfcmplbl.TopPos(0,150).LeftPos(100, 200));
-	Add(tfcmp.TopPos(0,150).HSizePos(300));
+	Add(hsplit.VSizePos(30).HSizePos());
+	Add(tfcmplbl.TopPos(2,26).LeftPos(202, 196));
+	
+	brokerctrl.ReadOnly();
 	
 	hsplit << draw << brokerctrl;
 	hsplit.Horz();
@@ -352,15 +371,26 @@ RealtimeNetworkCtrl::RealtimeNetworkCtrl(Agent& agent, RealtimeSession& rtses) :
 	refresh_signals.SetLabel("Refresh Signals");
 	refresh_signals <<= THISBACK(RefreshSignals);
 	
-	Add(killall_signals.TopPos(32, 26).LeftPos(2, 96));
+	Add(killall_signals.TopPos(2, 26).LeftPos(102, 96));
 	killall_signals.SetLabel("Kill All Signals");
 	killall_signals <<= THISBACK(KillSignals);
 	
 	tfcmplbl.SetLabel("<No-brainer assertions>");
+	
+	draw.SetSnap(-1);
+	brokerctrl.SetBroker(agent.latest_broker);
 }
 
 void RealtimeNetworkCtrl::Data() {
-	
+	if (agent->latest_broker.AccountEquity() > agent->latest_broker.GetInitialBalance()) {
+		tfcmplbl.SetLabel("Network can be used in trading.");
+		tfcmplbl.SetInk(Color(28, 85, 0));
+	} else {
+		tfcmplbl.SetLabel("Network can NOT be used in trading.");
+		tfcmplbl.SetInk(Color(109, 0, 26));
+	}
+	brokerctrl.Data();
+	draw.Refresh();
 }
 
 void RealtimeNetworkCtrl::RefreshSignals() {

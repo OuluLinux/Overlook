@@ -304,6 +304,8 @@ void Brokerage::CloseAll() {
 
 
 void Brokerage::SignalOrders() {
+	Enter();
+	
 	ASSERT(signals.GetCount() == symbols.GetCount());
 	double leverage = AccountLeverage();
 	int sym_count = symbols.GetCount();
@@ -381,6 +383,7 @@ void Brokerage::SignalOrders() {
 	}
 	if (!sig_abs_total) {
 		CloseAll();
+		Leave();
 		return;
 	}
 	
@@ -405,6 +408,7 @@ void Brokerage::SignalOrders() {
 	if (lot_multiplier < 1.0) {
 		last_error = "Total margin is too much";
 		CloseAll();
+		Leave();
 		return;
 	}
 	
@@ -473,6 +477,8 @@ void Brokerage::SignalOrders() {
 			}
 		}
 	}
+	
+	Leave();
 }
 
 

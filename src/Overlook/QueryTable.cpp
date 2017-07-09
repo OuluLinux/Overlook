@@ -99,6 +99,7 @@ void QueryTable::Set0(int col, int value, Vector<byte>& vec) {
 
 void QueryTable::SetCount(int i) {
 	int old_count = data.GetCount();
+	if (old_count == i) return;
 	data.SetCount(i);
 	for(int i = old_count; i < data.GetCount(); i++) data[i].SetCount(bytes, 0);
 }

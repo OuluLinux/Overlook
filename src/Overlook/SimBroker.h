@@ -8,7 +8,7 @@ using namespace libmt;
 
 class SimBroker : public Brokerage, Moveable<SimBroker> {
 	String currency;
-	Time prev_cycle_time, cycle_time;
+	Time cycle_time;
 	int order_counter;
 	bool lightweight;
 	
@@ -30,6 +30,7 @@ public:
 	
 	void SetFreeMarginLevel(double d);
 	void SetPrice(int sym, double price);
+	void SetTime(const Time& t) {cycle_time = t;}
 	
 	// MT4-like functions
 	virtual int		iBars(String symbol, int timeframe);

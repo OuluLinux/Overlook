@@ -5,29 +5,26 @@ namespace Overlook {
 
 class AgentDraw : public Ctrl {
 	Agent* agent;
+	int snap_id;
 	
 public:
 	AgentDraw(Agent& agent);
 	
 	virtual void Paint(Draw& w);
+	void SetSnap(int i) {snap_id = i;}
 	
 };
 
 class StatsGraph : public Ctrl {
 	
 protected:
-	friend class LayerView;
 	Agent* agent;
-	RealtimeStatistics* stats;
 	Vector<Point> polyline;
-	ConvNet::Window null_win;
-	int mode;
-	
-	const ConvNet::Window& GetData(int thrd);
+	Vector<double> last;
 	
 public:
 	typedef StatsGraph CLASSNAME;
-	StatsGraph(int mode, Agent& t);
+	StatsGraph(Agent& t);
 	
 	virtual void Paint(Draw& w);
 };
@@ -41,8 +38,7 @@ protected:
 	SliderCtrl time_slider;
 	Splitter hsplit;
 	AgentDraw draw;
-	BrokerCtrl brokerctrl;
-	SequencerThread* prev_thrd;
+	MainBrokerCtrl brokerctrl;
 	int thrd_id;
 	
 public:
@@ -59,6 +55,7 @@ protected:
 	Array<AgentThreadCtrl> thrds;
 	StatsGraph reward;
 	DropList thrdlist;
+	Option update_brokerctrl;
 	bool init;
 	
 public:
@@ -70,18 +67,30 @@ public:
 	
 };
 
+class TrainingGraph : public Ctrl {
+	Agent* agent;
+	Vector<Point> polyline;
+	
+public:
+	typedef TrainingGraph CLASSNAME;
+	TrainingGraph(Agent& t);
+	
+	virtual void Paint(Draw& w);
+};
+
 class AgentTraining : public ParentCtrl {
 	
 protected:
 	friend class AgentDraw;
-	friend class StatsGraph;
 	Agent* agent;
 	ArrayCtrl seslist;
 	Splitter hsplit;
+	bool init;
 	
 	Label epoch;
 	ProgressIndicator prog;
 	AgentDraw draw;
+	TrainingGraph reward;
 	ConvNet::SessionConvLayers conv;
 	ConvNet::HeatmapTimeView timescroll;
 	
@@ -96,17 +105,6 @@ public:
 };
 
 
-class TfCompDraw : public Ctrl {
-	Agent* agent;
-	
-public:
-	TfCompDraw(Agent& agent);
-	
-	virtual void Paint(Draw& w);
-	
-};
-
-
 class RealtimeNetworkCtrl : public ParentCtrl {
 	Agent* agent;
 	RealtimeSession* rtses;
@@ -115,7 +113,6 @@ class RealtimeNetworkCtrl : public ParentCtrl {
 	Splitter hsplit;
 	AgentDraw draw;
 	BrokerCtrl brokerctrl;
-	TfCompDraw tfcmp;
 	Label tfcmplbl;
 	
 public:

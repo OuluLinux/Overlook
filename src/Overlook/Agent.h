@@ -24,11 +24,18 @@ struct Snapshot : Moveable<Snapshot> {
 struct Sequence {
 	
 	
+	int id, orders;
 	double equity;
 	Vector<Volume> outputs;
 	
 	
-	void Serialize(Stream& s);
+	Sequence() {
+		id = -1;
+		orders = 0;
+	}
+	void Serialize(Stream& s) {
+		s % id % orders % equity % outputs;
+	}
 	
 };
 
@@ -42,12 +49,15 @@ struct SequenceSorter {
 
 struct SequencerThread {
 	typedef SequencerThread CLASSNAME;
-	
+	SequencerThread() {
+		snap_id = 0;
+		id = -1;
+	}
 	One<Sequence>		seq;
 	ConvNet::Session	ses;
 	SimBroker			broker;
 	int					id;
-	
+	int					snap_id;
 	
 };
 
@@ -62,36 +72,23 @@ protected:
 	friend class AgentThreadCtrl;
 	friend class StatsGraph;
 	friend class AgentTraining;
+	friend class TrainingGraph;
+	friend class RealtimeNetworkCtrl;
 	friend struct RealtimeSession;
 	
 	
 	// Persistent vars
-	int						thrd_count;
-	ConvNet::Window			seq_results;
-	int						session_count;
 	Array<Sequence>			sequences;
+	Vector<double>			seq_results;
 	ConvNet::Session		ses;
-	
-	//ConvNet::Window			loss_window, reward_window, l1_loss_window, l2_loss_window, train_window, accuracy_window;
-	//ConvNet::Window			test_reward_window, test_window0, test_window1, train_broker;
-	String					params;
+	int						sequence_count;
 	int						epochs, epoch_actual, epoch_total;
-	int  prev_symset_hash;
-	int  seq_cur;
-	/*double				total_sigchange, train_brokerprofit;
-	int						train_brokerorders;
-	int						symset_hash;*/
-	/*void Serialize(Stream& s) {
-		s % settings % ses % params % epochs % epoch_actual % epoch_total % id % is_finished
-		  % loss_window % reward_window % l1_loss_window % l2_loss_window % train_window % accuracy_window
-		  % test_reward_window % test_window0 % test_window1 % train_broker % total_sigchange
-		  % train_brokerprofit % train_brokerorders % symset_hash;
-	}*/
-	
+	int						prev_symset_hash;
 	
 	
 	// Tmp vars
 	// Array<ConvNet::Window> thrd_priorities, thrd_performances;
+	Vector<Vector<double> > thrd_equities;
 	Array<Sequence> tmp_sequences;
 	Array<Snapshot> snaps;
 	Array<SequencerThread> thrds;
@@ -102,9 +99,12 @@ protected:
 	Index<int> tf_ids, sym_ids, indi_ids;
 	Vector<int> data_begins;
 	Vector<int> train_pos;
+	SimBroker latest_broker;
+	Snapshot latest_snap;
 	TimeStop last_store;
 	ConvNet::Session ro_ses;
 	System* sys;
+	int						thrd_count;
 	int max_sequences, max_tmp_sequences;
 	int not_stopped;
 	int test_interval;
@@ -113,6 +113,7 @@ protected:
 	int session_cur;
 	int tf_limit;
 	int symset_hash;
+	int seq_cur;
 	bool running;
 	Mutex sequencer_lock, trainer_lock;
 	
@@ -131,7 +132,10 @@ public:
 	Agent(System& sys);
 	~Agent();
 	
-	void Serialize(Stream& s) {/*s % thrd_count % sequences % seq_results % session_count;*/}
+	void Serialize(Stream& s) {
+		s % sequences % seq_results % ses % sequence_count % epochs % epoch_actual % epoch_total
+		  % prev_symset_hash;
+	}
 	void StoreThis();
 	
 	void Init();
@@ -148,6 +152,7 @@ public:
 	bool Seek(Snapshot& snap, int shift);
 	bool SeekCur(Snapshot& snap, int shift);
 	
+	const Vector<double>& GetSequenceResults() const {return seq_results;}
 };
 
 struct RealtimeSession {

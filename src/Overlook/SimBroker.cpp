@@ -36,6 +36,8 @@ void SimBroker::InitLightweight() {
 }
 
 void SimBroker::Clear() {
+	Enter();
+	
 	orders.Clear();
 	history_orders.Clear();
 	
@@ -48,8 +50,9 @@ void SimBroker::Clear() {
 	margin_free = equity;
 	is_failed = false;
 	
-	prev_cycle_time = Time(1970,1,1);
 	cycle_time = Time(1970,1,1);
+	
+	Leave();
 }
 
 void SimBroker::Cycle() {

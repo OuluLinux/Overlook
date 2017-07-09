@@ -31,6 +31,7 @@ public:
 	void SetBroker(Brokerage& broker) {this->broker = &broker;}
 	void DummyRunner();
 	void OpenOrder(int type);
+	void ReadOnly();
 };
 
 
@@ -43,6 +44,7 @@ public:
 	BrokerCtrl();
 	
 	void SetBroker(Brokerage& broker) {main.SetBroker(broker);}
+	void ReadOnly() {main.ReadOnly();}
 	
 	virtual void Init();
 	virtual void Data();

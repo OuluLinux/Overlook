@@ -12,11 +12,11 @@ Agent::Agent(System& sys) : sys(&sys) {
 	test_interval = 1000;
 	training_limit = 1000;
 	session_cur = 0;
-	max_sequences = 100;
+	max_sequences = 5;
 	
 	thrd_count = 2;//CPU_Cores();
 	max_tmp_sequences = 8;
-	session_count = 0;
+	sequence_count = 0;
 	
 	symset_hash = 0;
 	prev_symset_hash = 0;
@@ -33,6 +33,11 @@ void Agent::LoadThis() {
 }
 
 void Agent::StoreThis() {
+	String backup_dir = ConfigFile("backups");
+	RealizeDirectory(backup_dir);
+	Time t = GetSysTime();
+	String backup_file = Format("%d_%d_%d_%d_%d.bin", t.year, t.month, t.day, t.hour, t.minute);
+	StoreToFile(*this,	AppendFileName(backup_dir, backup_file));
 	StoreToFile(*this,	ConfigFile("trainer.bin"));
 }
 
@@ -99,13 +104,13 @@ void Agent::InitThreads() {
 				", \"input_height\":" + IntStr(input_height) +
 				", \"input_depth\":"  + IntStr(input_depth)  +
 				"},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":40, \"activation\": \"relu\"},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":30, \"activation\": \"relu\"},\n"
 			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
 			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
 			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
-			"\t{\"type\":\"fc\", \"neuron_count\":20, \"activation\": \"relu\"},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":30, \"activation\": \"relu\"},\n"
+			"\t{\"type\":\"fc\", \"neuron_count\":40, \"activation\": \"relu\"},\n"
 			"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_width) + "},\n"
 			"\t{\"type\":\"sgd\", \"learning_rate\":0.01, \"momentum\":0.9, \"batch_size\":5, \"l2_decay\":0.0}\n"
 			"]\n";
@@ -127,9 +132,21 @@ void Agent::InitThreads() {
 	}
 	
 	GenerateSnapshots();
+	
+	thrd_equities.SetCount(thrd_count);
+	for(int i = 0; i < thrd_equities.GetCount(); i++)
+		thrd_equities[i].SetCount(snaps.GetCount(), 0);
+	
+	
+	ResetSnapshot(latest_snap);
+	Seek(latest_snap, sys->GetCountTf(tf_ids.Top())-1);
+	latest_broker.Brokerage::operator=((Brokerage&)GetMetaTrader());
+	latest_broker.InitLightweight();
 }
 
 void Agent::Start() {
+	return;
+	
 	Stop();
 	
 	running = true;
@@ -158,7 +175,7 @@ void Agent::TrainerHandler() {
 	ConvNet::Net& net = ses.GetNetwork();
 	Vector<int> train_pos;
 	epoch_actual = 0;
-	epoch_total = train_pos.GetCount();
+	epoch_total = snaps.GetCount();
 	vec.SetCount(1);
 	
 	while (running) {
@@ -203,7 +220,7 @@ void Agent::TrainerHandler() {
 		
 		// Forward propagate current input vector
 		vec[0] = &x;
-		net.Forward(vec, true);
+		trainer.Forward(vec);
 		
 		
 		// Backward propagate output vector with performance values (do training)
@@ -279,8 +296,9 @@ void Agent::SequencerHandler(int thrd_id) {
 			
 			
 			// Add the best sequence to trainer list and sort the list
-			sequences.Add(tmp_sequences.Detach(0));
-			seq_results.Add(st.broker.AccountEquity());
+			Sequence& seq = sequences.Add(tmp_sequences.Detach(0));
+			seq.id = sequence_count++;
+			seq_results.Add(seq.equity);
 			Sort(sequences, SequenceSorter());
 			
 			
@@ -323,25 +341,43 @@ void Agent::Runner(int thrd_id) {
 	
 	double free_margin_min = st.broker.GetMinFreeMargin();
 	double free_margin_max = st.broker.GetMaxFreeMargin();
-	if (free_margin_min < 0.20) free_margin_min = 0.20;
+	if (free_margin_min < 0.60) free_margin_min = 0.60;
 	if (free_margin_max > 0.99) free_margin_max = 0.99;
 	double free_margin_diff = free_margin_max - free_margin_min;
 	
 	
+	Vector<double>& thrd_equity = thrd_equities[thrd_id];
+	// for(int i = 0; i < thrd_equity.GetCount(); i++) thrd_equity[i] = 0.0;
+	
 	st.broker.Clear();
 	for(int i = 0; i < snaps.GetCount(); i++) {
+		st.snap_id = i;
+		
 		Snapshot& snap = snaps[i];
 		vec[0] = &snap.volume_in;
 		
+		
+		// Forward propagate neural network
 		const Volume& fwd = net.Forward(vec, false);
+		
 		
 		// Collect outputs for training
 		seq.outputs.Add(fwd);
 		
 		
+		// Randomize some correct outputs
+		// - real sig (random tf)
+		// - random prob for changing for seq
+		Panic("TODO");
+		
+		
 		// Set signals and signal freezing
 		for(int j = 0; j < sym_ids.GetCount(); j++) {
-			st.broker.SetSignal(sym_ids[j], fwd.Get(j));
+			int sig = fwd.Get(j) * 100;
+			if (sig < +10 && sig > -10) sig = 0;
+			else if (sig > +20) sig = +20;
+			else if (sig < -20) sig = -20;
+			st.broker.SetSignal(sym_ids[j], sig);
 			st.broker.SetSignalFreeze(sym_ids[j], fwd.Get(j + sym_ids.GetCount()) >= 0.5);
 		}
 		
@@ -353,20 +389,17 @@ void Agent::Runner(int thrd_id) {
 		st.broker.SetFreeMargin(free_margin_level);
 		
 		
+		// Refresh values
 		SetAskBid(st.broker, train_pos[i]);
 		if (i < snaps.GetCount()-1)	st.broker.Cycle();
 		else						st.broker.CloseAll();
 		
-		//st.train_broker.Add(st.broker.AccountEquity());
+		
+		thrd_equity[i] = st.broker.AccountEquity();
 	}
 	
 	seq.equity = st.broker.AccountEquity();
-	
-	/*st.train_brokerprofit = st.broker.AccountEquity() - st.broker.GetInitialBalance();
-	st.train_brokerorders = st.broker.OrdersHistoryTotal();
-	st.is_finished = true;*/
-	
-	
+	seq.orders = st.broker.GetHistoryOrders().GetCount();
 }
 
 void Agent::RefreshWorkQueue() {
@@ -454,33 +487,17 @@ void Agent::ResetValueBuffers() {
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 	
 	
-	// Get unique data positions for training
-	// - slower tf data-begin positions in fastest tf are required
-	// - start from fastest tf data begin and seek to beginning with fastest available unique data step
-	// - also, add all positions from fastest tf begin to end
-	ASSERT(train_pos.IsEmpty());
 	int main_tf = tf_ids.Top();
-	Vector<int> fast_begins;
-	for(int i = 0; i < tf_ids.GetCount()-1; i++)
-		fast_begins.Add(sys->GetShiftTf(main_tf, tf_ids[i], 0));
 	int pos = data_begins.Top();
 	int bars = sys->GetCountTf(main_tf);
-	train_pos.Reserve(bars * 0.6);
-	for(int i = pos; i < bars; i++) train_pos.Add(i);
-	pos--;
-	while (pos >= 0) {
-		int fastest = tf_ids.GetCount() - 2;
-		for (; fastest >= 0; fastest--) {
-			if (pos >= fast_begins[fastest])
-				break;
-		}
-		if (fastest == -1)
-			break;
-		pos = sys->GetShiftTf(tf_ids[fastest], main_tf, sys->GetShiftTf(main_tf, tf_ids[fastest], pos));
-		train_pos.Add(pos);
-		pos--;
+	train_pos.Reserve(bars - pos);
+	for(int i = pos; i < bars; i++) {
+		Time t = sys->GetTimeTf(main_tf, i);
+		int wday = DayOfWeek(t);
+		if (wday == 0 || wday == 6)
+			continue;
+		train_pos.Add(i);
 	}
-	Sort(train_pos, StdLess<int>());
 }
 
 
@@ -666,41 +683,106 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 		ConstBuffer& open = core.GetBuffer(0);
 		sb.SetPrice(sym_ids[i], open.Get(pos));
 	}
+	sb.SetTime(sys->GetTimeTf(tf_ids.Top(), pos));
 }
 
 void Agent::SetBrokerageSignals(Brokerage& broker, int pos) {
 	
+	// Some environment values
+	double free_margin_min = broker.GetMinFreeMargin();
+	double free_margin_max = broker.GetMaxFreeMargin();
+	if (free_margin_min < 0.60) free_margin_min = 0.60;
+	if (free_margin_max > 0.99) free_margin_max = 0.99;
+	double free_margin_diff = free_margin_max - free_margin_min;
+	
+	
 	// Fill input volume
-	Snapshot snap;
-	Seek(snap, pos);
+	Seek(latest_snap, pos);
 	
 	
-	// Forward network
+	// Acquire network lock
 	ConvNet::Net& net = ses.GetNetwork();
 	Vector<VolumePtr> vec;
 	vec.SetCount(1);
-	vec[0] = &snap.volume_in;
 	net.Enter();
-	Volume& fwd = net.Forward(vec, false);
 	
 	
-	// Get signals
-	/*
-	for(int j = 0; j < sym_ids.GetCount(); j++) {
-		double sig = 0.0;
-		double perf_value = fwd.Get(perf_begin + j) + perf_round;
-		int tf = perf_value * tf_limit - 1;
-		
-		if (tf >= 0) {
-			if (tf >= tf_limit)
-				tf  = tf_limit - 1;
-			int pos = j + tf * sym_ids.GetCount();
-			double predicted = fwd.Get(pos);
-			sig = predicted >= 0 ? +1.0 : -1.0;
+	// Check that network is giving positive results with one SimBroker
+	latest_broker.Clear();
+	int begin = sys->GetShiftFromTimeTf(GetSysTime() - 7*24*60*60, tf_ids.Top());
+	int begin_pos = train_pos.GetCount() - 1;
+	for (;begin_pos >= 0; begin_pos--) {
+		if (train_pos[begin_pos] < begin) {
+			begin_pos++;
+			break;
 		}
-		broker.SetSignal(sym_ids[j], sig);
-	}*/
-	Panic("TODO");
+	}
+	if (begin_pos < 0) begin_pos = 0;
+	for(int i = begin_pos; i < snaps.GetCount(); i++) {
+		Snapshot& snap = snaps[i];
+		
+		// Forward network
+		vec[0] = &snap.volume_in;
+		Volume& fwd = net.Forward(vec, false);
+		
+		// Set signals and signal freezing
+		for(int j = 0; j < sym_ids.GetCount(); j++) {
+			int sig = fwd.Get(j) * 100;
+			if (sig < +10 && sig > -10) sig = 0;
+			else if (sig > +20) sig = +20;
+			else if (sig < -20) sig = -20;
+			latest_broker.SetSignal(sym_ids[j], sig);
+			latest_broker.SetSignalFreeze(sym_ids[j], fwd.Get(j + sym_ids.GetCount()) >= 0.5);
+		}
+		
+		// Set freemargin-level
+		double free_margin_level = free_margin_min + free_margin_diff * fwd.Get(2 * sym_ids.GetCount());
+		if (free_margin_level < free_margin_min) free_margin_level = free_margin_min;
+		if (free_margin_level > free_margin_max) free_margin_level = free_margin_max;
+		latest_broker.SetFreeMargin(free_margin_level);
+		
+		// Refresh values
+		SetAskBid(latest_broker, train_pos[i]);
+		if (i < snaps.GetCount()-1)	latest_broker.Cycle();
+		else						latest_broker.CloseAll();
+	}
+	
+	// Reset signals if result is bad
+	if (latest_broker.AccountEquity() <= latest_broker.GetInitialBalance()) {
+		LOG("Agent::SetBrokerageSignals: simbroker result was bad, reseting signals");
+		
+		for(int i = 0; i < broker.GetSymbolCount(); i++) {
+			broker.SetSignal(i, 0);
+			broker.SetSignalFreeze(i, false);
+		}
+	}
+	
+	// Otherwise set real signal
+	else {
+		LOG("Agent::SetBrokerageSignals: simbroker result was good, using signals");
+		
+		// Forward network
+		vec[0] = &latest_snap.volume_in;
+		Volume& fwd = net.Forward(vec, false);
+		
+		
+		// Set signals and signal freezing
+		for(int j = 0; j < sym_ids.GetCount(); j++) {
+			int sig = fwd.Get(j) * 100;
+			if (sig < +10 && sig > -10) sig = 0;
+			else if (sig > +20) sig = +20;
+			else if (sig < -20) sig = -20;
+			broker.SetSignal(sym_ids[j], sig);
+			broker.SetSignalFreeze(sym_ids[j], fwd.Get(j + sym_ids.GetCount()) >= 0.5);
+		}
+		
+		
+		// Set freemargin-level
+		double free_margin_level = free_margin_min + free_margin_diff * fwd.Get(2 * sym_ids.GetCount());
+		if (free_margin_level < free_margin_min) free_margin_level = free_margin_min;
+		if (free_margin_level > free_margin_max) free_margin_level = free_margin_max;
+		broker.SetFreeMargin(free_margin_level);
+	}
 	
 	net.Leave();
 }

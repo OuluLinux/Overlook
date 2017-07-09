@@ -1918,4 +1918,14 @@ state is closer to that second one, so that will be used.&]
 [s0;%- ...&]
 [s0;%- I implemented it right away. The core of the engine seems 
 to work, but it`'s not connected to GUI. That`'s a good point 
-to continue tomorrow.]]
+to continue tomorrow.&]
+[s3;%- 9.7.2017&]
+[s0;%- I got the first results of that weird regression network sequence 
+agent. It clearly shows slow increasing in the performance. It 
+simply works.&]
+[s0;%- ...&]
+[s0;%- No no no.... I was almost finished, but this will never be 
+reactive enough, like DQN`-Agent. Even single`-threaded DQN`-agent 
+with h4x for multiple output actions seems better. Instead of 
+1 gradient you set multiple gradients at once. Gotta change plan.&]
+[s0;%- ]]

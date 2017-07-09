@@ -145,8 +145,6 @@ void Agent::InitThreads() {
 }
 
 void Agent::Start() {
-	return;
-	
 	Stop();
 	
 	running = true;
@@ -347,7 +345,8 @@ void Agent::Runner(int thrd_id) {
 	
 	
 	Vector<double>& thrd_equity = thrd_equities[thrd_id];
-	// for(int i = 0; i < thrd_equity.GetCount(); i++) thrd_equity[i] = 0.0;
+	
+	double rand_prob = 0.99 + 0.01 * Randomf();
 	
 	st.broker.Clear();
 	for(int i = 0; i < snaps.GetCount(); i++) {
@@ -365,18 +364,21 @@ void Agent::Runner(int thrd_id) {
 		seq.outputs.Add(fwd);
 		
 		
-		// Randomize some correct outputs
-		// - real sig (random tf)
-		// - random prob for changing for seq
-		Panic("TODO");
-		
-		
 		// Set signals and signal freezing
 		for(int j = 0; j < sym_ids.GetCount(); j++) {
 			int sig = fwd.Get(j) * 100;
 			if (sig < +10 && sig > -10) sig = 0;
 			else if (sig > +20) sig = +20;
 			else if (sig < -20) sig = -20;
+			
+			// Randomize some correct outputs
+			if (Randomf() > rand_prob) {
+				//double next_change = snap.value[Random(tf_ids.GetCount())][j][0].c;
+				double next_change = snap.value.Top()[j][0].c;
+				if (next_change > 0)	sig = +20;
+				else					sig = -20;
+			}
+			
 			st.broker.SetSignal(sym_ids[j], sig);
 			st.broker.SetSignalFreeze(sym_ids[j], fwd.Get(j + sym_ids.GetCount()) >= 0.5);
 		}

@@ -14,9 +14,6 @@
 #include "Indicators.h"
 #include "QtStats.h"
 
-//#include "Trainer.h"
-//#include "TrainerCtrl.h"
-
 #include "Agent.h"
 #include "AgentCtrl.h"
 

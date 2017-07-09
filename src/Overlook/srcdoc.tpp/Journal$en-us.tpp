@@ -1928,4 +1928,6 @@ simply works.&]
 reactive enough, like DQN`-Agent. Even single`-threaded DQN`-agent 
 with h4x for multiple output actions seems better. Instead of 
 1 gradient you set multiple gradients at once. Gotta change plan.&]
-[s0;%- ]]
+[s0;%- ...&]
+[s0;%- Or maybe not, this is actually very close to it already. That 
+is actually very small change.]]

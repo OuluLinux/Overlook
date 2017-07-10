@@ -735,6 +735,18 @@ public:
 };
 
 
+struct Average : Moveable<Average> {
+	double mean;
+	int count;
+	Average() : mean(0.0), count(0) {}
+	void Add(double v) {
+		double delta = v - mean;
+		mean += delta / count;
+		count++;
+	}
+};
+
+
 struct OnlineAverage : Moveable<OnlineAverage> {
 	double mean_a, mean_b;
 	int count;
@@ -853,6 +865,43 @@ public:
 			% Arg("period", period, 2, 16)
 			% Arg("method", method, 0, 3)
 			% Arg("slowing", slowing, 2, 127);
+	}
+};
+
+
+
+class PeriodicalChange : public Core {
+	Vector<double> means;
+	Vector<int> counts;
+	int split_type, tfmin;
+	
+protected:
+	virtual void Start();
+	
+	void Add(int i, double d) {
+		double& mean = means[i];
+		int& count = counts[i];
+		if (!count) {
+			mean = d;
+			count = 1;
+		} else {
+			double delta = d - mean;
+			mean += delta / count;
+			count++;
+		}
+	}
+	double Get(int i) {return means[i];}
+	
+public:
+	PeriodicalChange();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Persistent(means)
+			% Persistent(counts);
 	}
 };
 

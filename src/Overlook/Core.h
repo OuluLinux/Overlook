@@ -58,6 +58,8 @@ struct Persistent : public ValueBase, Moveable<Persistent> {
 	Persistent(bool& b)						{data = &b; data_type = PERS_BOOL_;}
 	Persistent(int& i)						{data = &i; data_type = PERS_INT_;}
 	Persistent(double& d)					{data = &d; data_type = PERS_DOUBLE_;}
+	Persistent(Vector<int>& v)				{data = &v; data_type = PERS_INTVEC_;}
+	Persistent(Vector<double>& v)			{data = &v; data_type = PERS_DBLVEC_;}
 	Persistent(VectorMap<int,int>& m)		{data = &m; data_type = PERS_INTMAP_;}
 	Persistent(QueryTable& q)				{data = &q; data_type = PERS_QUERYTABLE_;}
 	Persistent(Vector<Vector<byte> > & v)	{data = &v; data_type = PERS_BYTEGRID_;}

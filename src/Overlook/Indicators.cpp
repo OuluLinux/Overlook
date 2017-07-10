@@ -3684,10 +3684,90 @@ void TrendChangeEdge::Start() {
 
 
 
+PeriodicalChange::PeriodicalChange() {
+	
+	
+	
+}
 
+void PeriodicalChange::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	
+	tfmin = GetMinutePeriod();
+	int w1 = 7 * 24 * 60;
+	int count = 0;
+	
+	split_type = 0;
+	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
+	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
+	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
+	
+	means.SetCount(count, 0.0);
+	counts.SetCount(count, 0);
+}
 
-
-
-
+void PeriodicalChange::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	Buffer& dst = GetBuffer(0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1);
+		
+		double prev = src.Get(i);
+		if (prev == 0.0)
+			continue;
+		double change = src.Get(i+1) / prev - 1.0;
+		if (!IsFin(change))
+			continue;
+		
+		Time t = sys.GetTimeTf(GetTf(), i);
+		
+		if (split_type == 0) {
+			int wday = DayOfWeek(t);
+			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+			int avpos = wdaymin / tfmin;
+			Add(avpos, change);
+		}
+		else if (split_type == 1) {
+			int wday = DayOfWeek(t);
+			Add(wday, change);
+		}
+		else {
+			int pos = (DayOfYear(t) % (7 * 4)) / 7;
+			Add(pos, change);
+		}
+	}
+	
+	
+	if (counted) counted--;
+	bars++;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		Time t = sys.GetTimeTf(GetTf(), i);
+		double av_change = 0;
+		if (split_type == 0) {
+			int wday = DayOfWeek(t);
+			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+			int avpos = wdaymin / tfmin;
+			av_change = means[avpos];
+		}
+		else if (split_type == 1) {
+			int wday = DayOfWeek(t);
+			av_change = means[wday];
+		}
+		else {
+			int pos = (DayOfYear(t) % (7 * 4)) / 7;
+			av_change = means[pos];
+		}
+		
+		dst.Set(i, av_change);
+	}
+}
 
 }

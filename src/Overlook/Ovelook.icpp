@@ -55,6 +55,8 @@ INITBLOCK {
 	System::Register<TrendChange, GraphGroupCtrl>("TrendChange");
 	System::Register<TrendChangeEdge, GraphGroupCtrl>("TrendChangeEdge");
 	System::Register<QtStats, GraphGroupCtrl>("QtStats");
+	System::Register<PeriodicalChange, GraphGroupCtrl>("PeriodicalChange");
+	System::Register<OpenValueChange, GraphGroupCtrl>("OpenValueChange");
 }
 
 END_UPP_NAMESPACE

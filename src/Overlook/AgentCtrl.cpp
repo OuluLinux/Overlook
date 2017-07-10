@@ -22,7 +22,7 @@ void AgentDraw::Paint(Draw& w) {
 	
 	int sym_count		= agent.sym_ids.GetCount();
 	int tf_count		= snap.pos.GetCount();
-	int value_count		= snap.value_count;
+	int value_count		= agent.buf_count;
 	
 	int rows = sym_count * tf_count;
 	int cols = value_count;
@@ -33,12 +33,12 @@ void AgentDraw::Paint(Draw& w) {
 	
 	int row = 0;
 	for(int i = 0; i < tf_count; i++) {
-		const Vector<Vector<DoubleTrio> >& sym_values = snap.value[i];
+		//const Vector<Vector<DoubleTrio> >& sym_values = snap.value[i];
 		const Vector<double>& min_values = snap.min_value[i];
 		const Vector<double>& max_values = snap.max_value[i];
 		
 		for(int j = 0; j < sym_count; j++) {
-			const Vector<DoubleTrio>& values = sym_values[j];
+			//const Vector<DoubleTrio>& values = sym_values[j];
 			
 			int y = row * ystep;
 			int y2 = (row + 1) * ystep;
@@ -48,9 +48,10 @@ void AgentDraw::Paint(Draw& w) {
 				int x = k * xstep;
 				int x2 = (k + 1) * xstep;
 				int w = x2 - x;
+				double d = snap.volume_in.Get(j, i, k);
 				double min = min_values[k];
 				double max = max_values[k];
-				double value = 255.0 * (values[k].a - min) / (max - min);
+				double value = 255.0 * (d - min) / (max - min);
 				int clr = Upp::min(255.0, value);
 				Color c(255 - clr, clr, 0);
 				id.DrawRect(x, y, w, h, c);

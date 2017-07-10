@@ -15,6 +15,22 @@ Brokerage::Brokerage() {
 	account_currency_id = -1;
 }
 
+void Brokerage::Clear() {
+	orders.Clear();
+	history_orders.Clear();
+	
+	for(int i = 0; i < signals.GetCount(); i++) signals[i] = 0;
+	for(int i = 0; i < signal_freezed.GetCount(); i++) signal_freezed[i] = 0;
+	
+	balance = initial_balance;
+	equity = initial_balance;
+	leverage = 1000;
+	margin = 0;
+	margin_free = equity;
+	free_margin_level = 0.95;
+	
+}
+
 void Brokerage::operator=(const Brokerage& b) {
 	orders <<= b.orders;
 	history_orders <<= b.history_orders;
@@ -294,10 +310,10 @@ void Brokerage::CloseAll() {
 			RealtimeAsk(o.symbol);
 		int r = OrderClose(o.ticket, o.volume, close, 100);
 		if (r) {
-			LOG("Order closed");
+			//LOG("Order closed");
 			i--;
 		} else {
-			LOG("Order close failed");
+			//LOG("Order close failed");
 		}
 	}
 }
@@ -424,6 +440,7 @@ void Brokerage::SignalOrders() {
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
+		
 		if (signal_freezed[o.symbol])
 			continue;
 		if (o.type == OP_BUY) {

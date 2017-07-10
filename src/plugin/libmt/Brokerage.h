@@ -6,7 +6,7 @@ namespace libmt {
 class Brokerage {
 	
 protected:
-	Vector<Order> orders, history_orders;
+	Array<Order> orders, history_orders;
 	Index<String> skipped_currencies;
 	Index<String> symbol_idx;
 	
@@ -51,8 +51,10 @@ public:
 	
 	void operator=(const Brokerage& b);
 	
+	virtual void Clear();
 	void ForwardExposure();
 	void SignalOrders();
+	int  GetSignal(int sym) const {if (signals.IsEmpty()) return 0; return signals[sym];}
 	void PutSignal(int sym, int signal);
 	void SetSignal(int sym, int signal);
 	void SetSignalFreeze(int sym, bool freeze_signal);
@@ -62,8 +64,8 @@ public:
 	void Enter() {order_lock.Enter();}
 	void Leave() {order_lock.Leave();}
 	
-	const Vector<Order>&	GetOpenOrders() const {return orders;}
-	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}
+	const Array<Order>&	GetOpenOrders() const {return orders;}
+	const Array<Order>&	GetHistoryOrders() const {return history_orders;}
 	const Vector<Symbol>&	GetSymbols() const {return symbols;}
 	const Vector<Price>&	GetAskBid() const {return askbid;}
 	const Vector<PriceTf>&	GetTickData() const {return pricetf;}
@@ -78,9 +80,10 @@ public:
 	int GetCurrencyCount() const {return currencies.GetCount();}
 	int GetIndexId(int i) const {return indices[i];}
 	int GetIndexCount() const {return indices.GetCount();}
+	double GetFreeMarginLevel() const {return free_margin_level;}
 	double GetMinFreeMargin() const {return min_free_margin_level;}
 	double GetMaxFreeMargin() const {return max_free_margin_level;}
-	void SetFreeMargin(double d) {free_margin_level = d;}
+	void SetFreeMargin(double d) {ASSERT(d >= 0.20 && d <= 1.0); free_margin_level = d;}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

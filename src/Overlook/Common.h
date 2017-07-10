@@ -26,7 +26,7 @@ struct ValueBase {
 	const char* s0;
 	void* data;
 	ValueBase() {count=0; visible=0; s0=0; data=0; data_type = -1; min = -1; max = -1; factory = -1;}
-	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTMAP_, PERS_QUERYTABLE_, PERS_BYTEGRID_, PERS_INTGRID_};
+	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTVEC_, PERS_DBLVEC_, PERS_INTMAP_, PERS_QUERYTABLE_, PERS_BYTEGRID_, PERS_INTGRID_};
 };
 
 struct ValueRegister {

@@ -269,7 +269,7 @@ int MetaTrader::Init(String addr, int port) {
 		int stop_out_mode = _AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
 		double margin_mode_div = stop_out_mode == ACCOUNT_STOPOUT_MODE_MONEY ? equity : 100.0;
 		free_margin_level = (margin_free + margin) / equity;
-		max_free_margin_level = 0.99;
+		max_free_margin_level = 0.95;
 		min_free_margin_level = margin_call / margin_mode_div;
 		if (free_margin_level > 1.0) free_margin_level = 1.0;
 		
@@ -902,7 +902,7 @@ const Vector<Price>& MetaTrader::_GetAskBid() {
 #define GET_INT() StrInt(v[pos++])
 #define GET_DBL() StrDbl(v[pos++])
 
-void MetaTrader::LoadOrderFile(String content, Vector<Order>& orders, bool is_open) {
+void MetaTrader::LoadOrderFile(String content, Array<Order>& orders, bool is_open) {
 	ASSERT(!symbol_idx.IsEmpty());
 	
 	// Clear old data
@@ -966,7 +966,7 @@ void MetaTrader::_GetOrders(int magic, bool force_history) {
 	
 	
 	// Load Order from data
-	Vector<Order> open_orders;
+	Array<Order> open_orders;
 	LoadOrderFile(content, open_orders, true);
 	bool all_equal = open_orders.GetCount() == this->orders.GetCount();
 	if (all_equal) {
@@ -998,7 +998,7 @@ void MetaTrader::_GetOrders(int magic, bool force_history) {
 	
 	
 	// Load stored file
-	Vector<Order> history_orders;
+	Array<Order> history_orders;
 	LoadOrderFile(content, history_orders, false);
 	this->history_orders <<= history_orders;
 }

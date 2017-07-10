@@ -7,6 +7,7 @@ namespace Overlook {
 using namespace libmt;
 
 class SimBroker : public Brokerage, Moveable<SimBroker> {
+	Vector<double> symbol_profits, prev_symbol_profits, symbol_profit_diffs;
 	String currency;
 	Time cycle_time;
 	int order_counter;
@@ -17,16 +18,17 @@ public:
 	
 	void Init();
 	void InitLightweight();
-	void Clear();
+	virtual void Clear();
 	void Cycle();
+	void CycleChanges();
 	void RefreshOrders();
 	
 	int FindSymbol(const String& symbol) const;
 	int GetSignal(int symbol) const;
 	int GetOpenOrderCount() const;
-	double GetFreeMarginLevel() const;
 	double GetInitialBalance() const {return initial_balance;}
 	double GetCloseProfit(const Order& o, double volume) const;
+	const Vector<double>& GetSymbolCycleChanges() const {return symbol_profit_diffs;}
 	
 	void SetFreeMarginLevel(double d);
 	void SetPrice(int sym, double price);

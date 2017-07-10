@@ -38,28 +38,50 @@ void SimBroker::InitLightweight() {
 void SimBroker::Clear() {
 	Enter();
 	
-	orders.Clear();
-	history_orders.Clear();
+	Brokerage::Clear();
 	
-	for(int i = 0; i < signals.GetCount(); i++) signals[i] = 0;
-	
-	balance = initial_balance;
-	equity = initial_balance;
-	leverage = 1000;
-	margin = 0;
-	margin_free = equity;
 	is_failed = false;
-	
+	order_counter = 1000000;
 	cycle_time = Time(1970,1,1);
+	
+	
+	symbol_profits.SetCount(symbols.GetCount(), 0);
+	prev_symbol_profits.SetCount(symbols.GetCount(), 0);
+	symbol_profit_diffs.SetCount(symbols.GetCount(), 0);
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		symbol_profits[i] = 0;
+		prev_symbol_profits[i] = 0;
+		symbol_profit_diffs[i] = 0;
+	}
 	
 	Leave();
 }
 
 void SimBroker::Cycle() {
-	
-	// cycle_time = 
-	
 	SignalOrders();
+}
+
+void SimBroker::CycleChanges() {
+	ASSERT(!symbol_profits.IsEmpty());
+	
+	
+	// Move current symbol profits to previous and reset current values
+	Swap(symbol_profits, prev_symbol_profits);
+	for(int i = 0; i < symbol_profits.GetCount(); i++)
+		symbol_profits[i] = 0;
+	
+	
+	// Add order profits to sum
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		symbol_profits[o.symbol] += o.profit;
+	}
+	
+	// Calculate difference between previous values
+	for(int i = 0; i < symbol_profits.GetCount(); i++) {
+		double diff = symbol_profits[i] - prev_symbol_profits[i];
+		symbol_profit_diffs[i] = diff;
+	}
 }
 
 void SimBroker::RefreshOrders() {
@@ -92,12 +114,6 @@ int SimBroker::GetSignal(int symbol) const {
 
 int SimBroker::GetOpenOrderCount() const {
 	return orders.GetCount();
-}
-
-double SimBroker::GetFreeMarginLevel() const {
-	
-	
-	return 0;
 }
 
 Time SimBroker::GetTime() const {
@@ -244,11 +260,10 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 		
 		// Close
 		if (lots == o.volume) {
-			Order& ho = history_orders.Add(o);
+			Order& ho = history_orders.Add(orders.Detach(i));
 			ho.close = ho.type == OP_BUY ? askbid[ho.symbol].bid : askbid[ho.symbol].ask;
 			ho.profit = GetCloseProfit(ho, ho.volume);
 			ho.end = GetTime();
-			orders.Remove(i);
 			balance += ho.profit;
 		}
 		// Reduce

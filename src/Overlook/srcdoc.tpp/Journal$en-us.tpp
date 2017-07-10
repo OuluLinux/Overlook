@@ -1930,4 +1930,36 @@ with h4x for multiple output actions seems better. Instead of
 1 gradient you set multiple gradients at once. Gotta change plan.&]
 [s0;%- ...&]
 [s0;%- Or maybe not, this is actually very close to it already. That 
-is actually very small change.]]
+is actually very small change.&]
+[s0;%- ...&]
+[s0;%- I`'ll try that experience learning next. Those have beginning 
+state, ending state and `'value change`' between those. Usually 
+they give only one action, but I`'ll try to hack 3 actions (long/short/idle) 
+for every symbol simultaneously. There`'s no technical limits 
+at all. The most challenging task is to collect those experiences 
+properly. By the way, the single action version has a working 
+example in the ConvNetC`+`+ library.&]
+[s0;%- The task list is getting REALLY short. The Overlook is feature 
+complete tomorrow or day after it. Then only cleaning, commenting 
+and `"real`" documentation remains. The finest documentation 
+is a master`'s thesis document to my school, but that isn`'t 
+in a hurry. [/ They see my journal, they hatin`'... red`-marking, 
+tryin`' catch me writin`' dirty...]&]
+[s3;%- 10.7.2017&]
+[s0;%- I couldn`'t see it coming, but this experience training version 
+is very close to yesterday`'s version. I was almost frustrated 
+about useless work already, but it was pointless luckily. Network 
+outputs changes only a little, training is slightly different 
+and rewards must be calculated for all symbols every time step, 
+but that`'s all. Only the monitoring and verifying of the process 
+will be some long`-term challenge. The multi`-action tweak is 
+still the only difference to proven neural network applications. 
+The rest of these problems are practical.&]
+[s0;%- ...&]
+[s0;%- Ok, this is almost finished. Today had the last foggy technological 
+step. The code still needs much scrutiny, but that`'s always 
+better to do after a break.&]
+[s0;%- ...&]
+[s0;%- I found more bugs. Bad ones. I don`'t think it`'s done yet, 
+but it`'s enough today.&]
+[s0;%- ]]

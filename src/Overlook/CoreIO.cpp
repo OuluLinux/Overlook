@@ -137,6 +137,14 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			double v = *(double*)p.data;
 			out.Put(&v, sizeof(double));
 		}
+		else if (p.data_type == ValueBase::PERS_INTVEC_) {
+			Vector<int>& v = *(Vector<int>*)p.data;
+			out % v;
+		}
+		else if (p.data_type == ValueBase::PERS_DBLVEC_) {
+			Vector<double>& v = *(Vector<double>*)p.data;
+			out % v;
+		}
 		else if (p.data_type == ValueBase::PERS_INTMAP_) {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
 			out % v;
@@ -229,6 +237,14 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 		else if (p.data_type == ValueBase::PERS_DOUBLE_) {
 			double* v = (double*)p.data;
 			in.Get(v, sizeof(double));
+		}
+		else if (p.data_type == ValueBase::PERS_INTVEC_) {
+			Vector<int>& v = *(Vector<int>*)p.data;
+			in % v;
+		}
+		else if (p.data_type == ValueBase::PERS_DBLVEC_) {
+			Vector<double>& v = *(Vector<double>*)p.data;
+			in % v;
 		}
 		else if (p.data_type == ValueBase::PERS_INTMAP_) {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;

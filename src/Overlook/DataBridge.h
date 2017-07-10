@@ -131,6 +131,25 @@ public:
 };
 
 
+class OpenValueChange : public Core {
+	
+public:
+	OpenValueChange();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(1, 1);
+	}
+	
+	virtual void Init();
+	virtual void Start();
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)	return in_tf  == out_tf;
+		else				return in_sym == out_sym;
+	}
+};
+
 class ValueChange : public Core {
 	
 public:

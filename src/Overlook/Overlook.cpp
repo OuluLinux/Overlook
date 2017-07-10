@@ -68,7 +68,7 @@ Overlook::Overlook() :
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(agentctrl);
-	tabs.Add(agentctrl, "Agent");
+	tabs.Add(agentctrl, "Experiencer");
 	tabs.Add(trainingctrl);
 	tabs.Add(trainingctrl, "Training");
 	tabs.Add(rtnetctrl);

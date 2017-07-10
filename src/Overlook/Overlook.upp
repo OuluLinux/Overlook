@@ -55,5 +55,5 @@ file
 	Agent.cpp;
 
 mainconfig
-	"" = "GUI";
+	"" = "GUI MT";
 

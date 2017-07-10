@@ -9,34 +9,41 @@ typedef Tuple3<double, double, double> DoubleTrio;
 typedef ConvNet::VolumeData<double> VolumeDouble;
 
 struct Snapshot : Moveable<Snapshot> {
-	Vector<Vector<Vector<DoubleTrio> > > value;
+	//Vector<Vector<Vector<DoubleTrio> > > value;
 	Vector<Vector<double> > min_value, max_value;
 	Vector<int> pos, tfs, periods, period_in_slower, time_values;
-	//ConvNet::VolumeData<double> volume_out;
 	Volume volume_in;
 	Time begin;
 	int begin_ts;
-	int value_count;
+	//int value_count;
 	int bars;
 };
 
 
+struct Experience : Moveable<Experience> {
+	Volume input;
+	Vector<double> reward;
+	Vector<int> action;
+	
+	void Serialize(Stream& s) {
+		s % input % reward % action;
+	}
+};
+
 struct Sequence {
-	
-	
 	int id, orders;
 	double equity;
-	Vector<Volume> outputs;
+	Vector<Experience> exps;
 	
 	
 	Sequence() {
 		id = -1;
 		orders = 0;
 	}
-	void Serialize(Stream& s) {
-		s % id % orders % equity % outputs;
-	}
 	
+	void Serialize(Stream& s) {
+		s % id % orders % equity % exps;
+	}
 };
 
 
@@ -47,18 +54,62 @@ struct SequenceSorter {
 };
 
 
+struct TfSymAverage {
+	Vector<Vector<double> > data;
+	Vector<Vector<double> > tf_sums;
+	Vector<int> tf_periods;
+	int sym_count;
+	int pos;
+	int bars;
+	
+	TfSymAverage() : sym_count(-1), pos(-1), bars(-1) {}
+	
+	void Reset(int bars) {
+		this->bars = bars;
+		pos = 0;
+		data.SetCount(0);
+		tf_sums.SetCount(0);
+		data.SetCount(sym_count);
+		tf_sums.SetCount(sym_count);
+		for(int i = 0; i < data.GetCount(); i++) data[i].SetCount(bars, 0.0);
+		for(int i = 0; i < tf_sums.GetCount(); i++) tf_sums[i].SetCount(tf_periods.GetCount(), 0.0);
+	}
+	void SeekNext() {
+		if (pos >= bars) return;
+		for(int i = 0; i < sym_count; i++) {
+			double value = data[i][pos];
+			for(int j = 0; j < tf_periods.GetCount(); j++) {
+				int prev = pos - tf_periods[j];
+				if (prev >= 0)
+					tf_sums[i][j] -= data[i][prev];
+				tf_sums[i][j] += value;
+			}
+		}
+		pos++;
+	}
+	void Set(int sym, double value) {
+		data[sym][pos] = value;
+	}
+	double Get(int sym, int tf) {
+		return tf_sums[sym][tf] / tf_periods[tf];
+	}
+};
+
+
 struct SequencerThread {
 	typedef SequencerThread CLASSNAME;
 	SequencerThread() {
 		snap_id = 0;
 		id = -1;
+		rand_epsilon = 1.0;
 	}
 	One<Sequence>		seq;
 	ConvNet::Session	ses;
 	SimBroker			broker;
+	TfSymAverage		average;
+	double				rand_epsilon;
 	int					id;
 	int					snap_id;
-	
 };
 
 
@@ -97,6 +148,7 @@ protected:
 	Vector<Core*> databridge_cores;
 	Vector<double> tf_muls;
 	Index<int> tf_ids, sym_ids, indi_ids;
+	Vector<int> tf_periods;
 	Vector<int> data_begins;
 	Vector<int> train_pos;
 	SimBroker latest_broker;
@@ -104,7 +156,10 @@ protected:
 	TimeStop last_store;
 	ConvNet::Session ro_ses;
 	System* sys;
-	int						thrd_count;
+	double epsilon_min;
+	int buf_count;
+	int learning_epochs_total, learning_epochs_burnin;
+	int thrd_count;
 	int max_sequences, max_tmp_sequences;
 	int not_stopped;
 	int test_interval;
@@ -124,8 +179,11 @@ protected:
 	void Runner(int thrd_id);
 	void SetAskBid(SimBroker& sb, int pos);
 	void GenerateSnapshots();
+	void ForwardSignals(ConvNet::Net& net, Brokerage& broker, const Volume& fwd, Experience& exp, double epsilon=0.0, bool sig_freeze=false);
+	int GetRandomAction() const {return Random(ACTIONCOUNT);}
+	int GetAction(const Volume& fwd, int sym) const;
 	
-	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_INCBET, ACT_DECBET,     ACTIONCOUNT};
+	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG,     ACTIONCOUNT};
 	
 public:
 	typedef Agent CLASSNAME;

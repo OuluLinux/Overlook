@@ -2,6 +2,50 @@
 
 namespace Overlook {
 
+OpenValueChange::OpenValueChange() {
+	SetCoreSeparateWindow();
+}
+
+void OpenValueChange::Init() {
+	SetBufferColor(0, Color(128,0,0));
+	SetBufferLineWidth(0, 1);
+}
+
+void OpenValueChange::Start() {
+	int tf = GetTimeframe();
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	double point = 0.00001;
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
+	
+	const Buffer& open				= GetInputBuffer(0, 0);
+	Buffer& value_change			= GetBuffer(0);
+	
+	if (!counted) counted = 1;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double open_value = open.Get(i-1);
+		double change_value = open.Get(i) / open_value - 1.0;
+		value_change.Set(i, change_value);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
 ValueChange::ValueChange() {
 	SetCoreSeparateWindow();
 }

@@ -114,7 +114,7 @@ void MainBrokerCtrl::Data() {
 	}
 	
 	
-	const Vector<Order>& orders = b.GetOpenOrders();
+	const Array<Order>& orders = b.GetOpenOrders();
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
 		const Symbol& sym = b.GetSymbol(o.symbol);
@@ -149,7 +149,7 @@ void MainBrokerCtrl::Data() {
 	exposure.SetCount(assets.GetCount());
 	
 	
-	const Vector<Order>& horders = b.GetHistoryOrders();
+	const Array<Order>& horders = b.GetHistoryOrders();
 	for(int i = 0; i < horders.GetCount(); i++) {
 		const Order& o = horders[i];
 		const Symbol& sym = b.GetSymbol(o.symbol);
@@ -200,11 +200,11 @@ void MainBrokerCtrl::Close() {
 		b.RealtimeAsk(o.symbol);
 	int r = b.OrderClose(o.ticket, o.volume, close, 100);
 	if (r) {
-		LOG("Order closed");
+		//LOG("Order closed");
 		b.ForwardExposure();
 		Data();
 	} else {
-		LOG("Order close failed");
+		//DLOG("Order close failed");
 		info.SetLabel(b.GetLastError());
 	}
 }

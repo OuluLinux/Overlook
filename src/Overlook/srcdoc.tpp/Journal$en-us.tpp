@@ -1962,4 +1962,30 @@ better to do after a break.&]
 [s0;%- ...&]
 [s0;%- I found more bugs. Bad ones. I don`'t think it`'s done yet, 
 but it`'s enough today.&]
+[s0;%- ...&]
+[s0;%- Fucking unbelieveable. I get rid of this bullshit in 2 days...&]
+[s3;%- 11.7.2017&]
+[s0;%- After one night of training, the Overlook seems to show green 
+for real usage. The multi`-action tweak seems to work. It is 
+a lot faster than putting the values separately.&]
+[s0;%- ...&]
+[s0;%- A lot of constraints with this. When positive and negative 
+values are splitted to separate normalized sensors, the volume 
+size gets huge. That allows only immediate previous and next 
+values.&]
+[s0;%- I am definitely seeing some satisfying results here. The loss 
+value seems to decrease gradually and tests are passing for real 
+usage.&]
+[s0;%- ...&]
+[s0;%- Hmm.... this seems bad.&]
+[s0;%- I am starting to notice, that I missed the simplest and most 
+obvious solution, which is to create single`-threaded solutions 
+for single instruments, which ignores all web`-effects, but those 
+were very theoretical anyway. This current plan has many weaknesses 
+and inflexibilities, but I solved many issues with this and got 
+it running, so it`'s not that bad. This actually gives positive 
+results already, but in a very cumbersome way.&]
+[s0;%- Yeah, I am going to pivot into that... I think I learned a 
+lot with this version, and now it`'s going to be easy.&]
+[s0;%- &]
 [s0;%- ]]

@@ -26,9 +26,10 @@ void OpenValueChange::Start() {
 	Buffer& value_change			= GetBuffer(0);
 	
 	if (!counted) counted = 1;
+	else counted--;
 	
 	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+		SetSafetyLimit(i+1);
 		double open_value = open.Get(i-1);
 		double change_value = open.Get(i) / open_value - 1.0;
 		value_change.Set(i, change_value);

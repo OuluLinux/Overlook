@@ -2,7 +2,7 @@
 	
 namespace Overlook {
 
-MainBrokerCtrl::MainBrokerCtrl() {
+BrokerCtrl::BrokerCtrl() {
 	broker = NULL;
 	
 	CtrlLayout(*this);
@@ -61,14 +61,14 @@ MainBrokerCtrl::MainBrokerCtrl() {
 	split << trade << exposure << history;
 }
 
-void MainBrokerCtrl::Init() {
+void BrokerCtrl::Init() {
 	
 	
 	
 	//Thread::Start(THISBACK(DummyRunner));
 }
 
-void MainBrokerCtrl::ReadOnly() {
+void BrokerCtrl::ReadOnly() {
 	buy.Hide();
 	sell.Hide();
 	takeprofit.Hide();
@@ -84,7 +84,7 @@ void MainBrokerCtrl::ReadOnly() {
 	current.LeftPosZ(4, 172).VSizePosZ(132, 4);
 }
 
-void MainBrokerCtrl::Data() {
+void BrokerCtrl::Data() {
 	ASSERT_(broker, "Broker is not yet set to BrokerCtrl");
 	
 	Brokerage& b = *broker;
@@ -137,6 +137,7 @@ void MainBrokerCtrl::Data() {
 	const Vector<Asset>& assets = b.GetAssets();
 	for(int i = 0; i < assets.GetCount(); i++) {
 		const Asset& a = assets[i];
+		if (a.sym == -1) continue;
 		const String& name =
 			a.sym < b.GetSymbolCount() ?
 				b.GetSymbol(a.sym).name :
@@ -152,6 +153,7 @@ void MainBrokerCtrl::Data() {
 	const Array<Order>& horders = b.GetHistoryOrders();
 	for(int i = 0; i < horders.GetCount(); i++) {
 		const Order& o = horders[i];
+		if (o.symbol < 0 || o.symbol >= b.GetSymbolCount()) continue;
 		const Symbol& sym = b.GetSymbol(o.symbol);
 		history.Set(i, 0, o.ticket);
 		history.Set(i, 1, Format("%", o.begin));
@@ -172,22 +174,22 @@ void MainBrokerCtrl::Data() {
 	b.Leave();
 }
 
-void MainBrokerCtrl::PriceCursor() {
+void BrokerCtrl::PriceCursor() {
 	int cursor = current.GetCursor();
 	if (cursor == -1) {info.SetLabel(""); return;}
 	const Price& price = broker->GetAskBid()[cursor];
 	info.SetLabel(DblStr(price.bid) + "/" + DblStr(price.ask));
 }
 
-void MainBrokerCtrl::Refresher() {
+void BrokerCtrl::Refresher() {
 	
 }
 
-void MainBrokerCtrl::Reset() {
+void BrokerCtrl::Reset() {
 	
 }
 
-void MainBrokerCtrl::Close() {
+void BrokerCtrl::Close() {
 	int order_id = trade.GetCursor();
 	if (order_id == -1) return;
 	
@@ -209,7 +211,7 @@ void MainBrokerCtrl::Close() {
 	}
 }
 
-void MainBrokerCtrl::CloseAll() {
+void BrokerCtrl::CloseAll() {
 	Brokerage& b = *broker;
 	b.CloseAll();
 	if (b.GetOpenOrders().GetCount()) {
@@ -219,7 +221,7 @@ void MainBrokerCtrl::CloseAll() {
 	Data();
 }
 
-void MainBrokerCtrl::OpenOrder(int type) {
+void BrokerCtrl::OpenOrder(int type) {
 	int sym_id = current.GetCursor();
 	if (sym_id == -1) return;
 	
@@ -255,7 +257,7 @@ void MainBrokerCtrl::OpenOrder(int type) {
 	Data();
 }
 
-void MainBrokerCtrl::DummyRunner() {
+void BrokerCtrl::DummyRunner() {
 	if (!broker)
 		return;
 	
@@ -348,25 +350,5 @@ void MainBrokerCtrl::DummyRunner() {
 
 
 
-
-BrokerCtrl::BrokerCtrl() {
-	
-	drawers.Vert();
-	
-	Add(main);
-	Add(main, "Account");
-	Add(drawers);
-	Add(drawers, "Graphs");
-}
-
-void BrokerCtrl::Init() {
-	main.Init();
-}
-
-void BrokerCtrl::Data() {
-	int tab = Get();
-	if (tab == 0)
-		main.Data();
-}
 
 }

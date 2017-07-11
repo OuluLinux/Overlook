@@ -6,6 +6,7 @@ using namespace Upp;
 Agent::Agent(System& sys) : sys(&sys) {
 	not_stopped = 0;
 	running = false;
+	paused = false;
 	input_width = 0;
 	input_height = 0;
 	input_depth = 0;
@@ -14,6 +15,9 @@ Agent::Agent(System& sys) : sys(&sys) {
 	session_cur = 0;
 	max_sequences = 5;
 	buf_count = 0;
+	prefer_high = true;
+	train_single = false;
+	step_cb_interal = 100;
 	
 	thrd_count = 2;//CPU_Cores();
 	max_tmp_sequences = 8;
@@ -23,15 +27,17 @@ Agent::Agent(System& sys) : sys(&sys) {
 	prev_symset_hash = 0;
 	seq_cur = 0;
 	
+	global_free_margin_level = 0.97;
+	
 	// what epsilon value do we bottom out on? 0.0 => purely deterministic policy at end
 	epsilon_min = 0.005;
 	
 
 	// number of epochs we will learn for
-	learning_epochs_total = 100;
+	learning_epochs_total = 1000;
 	
 	// how many epochs of the above to perform only random actions (in the beginning)?
-	learning_epochs_burnin = 5;
+	learning_epochs_burnin = 100;
 	
 }
 
@@ -71,8 +77,9 @@ void Agent::Init() {
 	tf = sys->FindPeriod(30);
 	ASSERT(tf != -1);
 	tf_ids.Add(tf);
-	
-	tf_limit = tf_ids.GetCount() - 1; // skip M30
+	tf = sys->FindPeriod(5);
+	ASSERT(tf != -1);
+	tf_ids.Add(tf);
 	
 	
 	tf_muls.SetCount(tf_ids.GetCount(), 1.0);
@@ -92,7 +99,7 @@ void Agent::Init() {
 	CombineHash ch;
 	for(int i = 0; i < sym_count; i++) {
 		const Symbol& sym = mt.GetSymbol(i);
-		if (sym.tradeallowed)
+		if (sym.tradeallowed && sym.volume_min == 0.01 && sym.currency_margin == mt.AccountCurrency() && !sym.IsForex())
 			sym_ids.Add(i);
 		ch << 1 << sym.name.GetHashValue();
 	}
@@ -117,8 +124,8 @@ void Agent::InitThreads() {
 	ASSERT(buf_count != 0);
 	input_width  = sym_ids.GetCount();
 	input_height = tf_ids.GetCount();
-	input_depth  = buf_count + 1;
-	output_width = (sym_ids.GetCount() + 1) * ACTIONCOUNT;
+	input_depth  = buf_count * 2;
+	output_width = sym_ids.GetCount() * ACTIONCOUNT;
 	int volume = input_width * input_height * input_depth;
 	
 	if (ses.GetInput() == NULL) {
@@ -141,6 +148,15 @@ void Agent::InitThreads() {
 			"]\n";
 		
 		ses.MakeLayers(params);
+	}
+	else {
+		// Trainer is not serialized, create it.
+		ConvNet::SgdTrainer* sgd = new ConvNet::SgdTrainer(ses.GetNetwork());
+		sgd->SetLearningRate(0.01);
+		sgd->SetMomentum(0.9);
+		sgd->SetBatchSize(5);
+		sgd->SetL2Decay(0);
+		ses.AttachTrainer(sgd);
 	}
 	
 	ro_ses.CopyFrom(ses);
@@ -196,6 +212,7 @@ void Agent::TrainerHandler() {
 	int predict_interval = 10;
 	bool test_predict = true;
 	
+	ASSERT(ses.GetTrainer());
 	TrainerBase& trainer = *ses.GetTrainer();
 	ConvNet::Net& net = ses.GetNetwork();
 	Vector<int> train_pos;
@@ -203,18 +220,22 @@ void Agent::TrainerHandler() {
 	epoch_total = snaps.GetCount();
 	vec.SetCount(1);
 	
-	bool forced_next_sequence = false;
+	bool forced_next_sequence = true;
+	
+	One<Sequence> seq_ptr;
 	
 	while (running) {
 		
 		// Wait until threads have provided sequences
-		if (sequences.IsEmpty()) {
+		if (paused || sequences.IsEmpty()) {
 			Sleep(100);
 			continue;
 		}
 		
 		// Reshuffle training data after epoch
-		if (forced_next_sequence || epoch_actual >= sequences[seq_cur].exps.GetCount()) {
+		if (forced_next_sequence ||
+			seq_cur >= sequences.GetCount() ||
+			epoch_actual >= sequences[seq_cur].exps.GetCount()) {
 			forced_next_sequence = false;
 			
 			// Return trained network for sequencer
@@ -223,10 +244,21 @@ void Agent::TrainerHandler() {
 			sequencer_lock.Leave();
 			
 			
+			// Add current sequence back to queue
+			trainer_lock.Enter();
+			if (!seq_ptr.IsEmpty())
+				sequences.Insert(seq_cur, seq_ptr.Detach());
+			
+			
 			// Set next sequence
 			seq_cur++;
 			if (seq_cur >= sequences.GetCount())
 				seq_cur = 0;
+			
+			
+			// Detach sequence for training
+			seq_ptr = sequences.Detach(seq_cur);
+			trainer_lock.Leave();
 			
 			
 			// Reset position in sequence
@@ -234,36 +266,48 @@ void Agent::TrainerHandler() {
 			epochs++;
 		}
 		
-		trainer_lock.Enter();
-		Sequence& seq = sequences[seq_cur];
-		trainer_lock.Leave();
-		
+		Sequence& seq = *seq_ptr;
 		Experience& exp = seq.exps[epoch_actual];
 		Volume& x = exp.input;
+		ASSERT(x.GetWidth()  == input_width);
+		ASSERT(x.GetHeight() == input_height);
+		ASSERT(x.GetDepth()  == input_depth);
 		
 		
 		TimeStop ts;
 		
 		
 		// Train network
-		trainer.Train(x, ACTIONCOUNT, exp.action, exp.reward);
+		// If 'proven'
+		if (train_single) {
+			for(int i = 0; i < sym_ids.GetCount(); i++) {
+				int p = exp.action[i];
+				double y = exp.reward[i];
+				int pos = i * ACTIONCOUNT + p;
+				trainer.Train(x, pos, y);
+			}
+		}
+		// If 'hack'
+		else {
+			trainer.Train(x, ACTIONCOUNT, exp.action, exp.reward);
+		}
 		
 		
 		// Collect some stats
-		backward_time = ts.Elapsed();
+		double reward = trainer.GetReward();
 		double loss = trainer.GetLoss();
 		double loss_l1d = trainer.GetL1DecayLoss();
 		double loss_l2d = trainer.GetL2DecayLoss();
 		
 		
-		//reward_window.Add(av_perf_value);
-		//loss_window.Add(loss);
-		//st.l1_loss_window.Add(loss_l1d);
-		//st.l2_loss_window.Add(loss_l2d);
+		ses.reward_window.Add(reward);
+		ses.loss_window.Add(loss);
+		ses.l1_loss_window.Add(loss_l1d);
+		ses.l2_loss_window.Add(loss_l2d);
 		
 		
-		//if ((step_num % step_cb_interal) == 0)
-		//	WhenStepInterval(step_num);
+		if ((step_num % step_cb_interal) == 0 && epochs >= 10)
+			ses.WhenStepInterval(step_num);
 		step_num++;
 		epoch_actual++;
 	}
@@ -278,13 +322,17 @@ void Agent::SequencerHandler(int thrd_id) {
 	
 	Vector<VolumePtr> vec;
 	Volume& x = snap.volume_in;
-	//VolumeDouble& y = snap.volume_out;
 	
 	vec.SetCount(1);
 	
 	
 	while (running) {
 		ConvNet::Net& net = st.ses.GetNetwork();
+		
+		if (paused) {
+			Sleep(100);
+			continue;
+		}
 		
 		
 		// Process sample
@@ -337,7 +385,7 @@ void Agent::SequencerHandler(int thrd_id) {
 			
 			
 			// Prefer high equity (might give too insensitive response)
-			if (0) {
+			if (prefer_high) {
 				Sort(sequences, SequenceSorter());
 			}
 			
@@ -402,27 +450,12 @@ void Agent::Runner(int thrd_id) {
 		vec[0] = &exp.input;
 		
 		
-		// Modify input to contain some additional sensor values
-		for(int j = 0; j < sym_ids.GetCount(); j++) {
-			for(int k = 0; k < tf_ids.GetCount(); k++) {
-				double average = st.average.Get(j, k);
-				exp.input.Set(j, k, buf_count, average);
-			}
-		}
-		
-		
 		// Forward propagate neural network
 		const Volume& fwd = net.Forward(vec, false);
 		
 		
 		// Set broker signals based on network output
-		ForwardSignals(net, st.broker, fwd, exp, st.rand_epsilon, true);
-		
-		
-		// Set signals to signal average calculator
-		for(int j = 0; j < sym_ids.GetCount(); j++)
-			st.average.Set(j, st.broker.GetSignal(sym_ids[j]));
-		st.average.SeekNext();
+		ForwardSignals(net, st.broker, fwd, exp, st.rand_epsilon, false);
 		
 		
 		// Refresh values
@@ -436,15 +469,15 @@ void Agent::Runner(int thrd_id) {
 		if (i) {
 			Experience& prev_exp = seq.exps[i - 1];
 			const Vector<double>& sym_changes = st.broker.GetSymbolCycleChanges();
-			prev_exp.reward.SetCount(sym_ids.GetCount() + 1);
-			double sum = 0;
+			prev_exp.reward.SetCount(sym_ids.GetCount());
 			for(int i = 0; i < sym_ids.GetCount(); i++) {
 				double d = sym_changes[sym_ids[i]] / equity;
-				prev_exp.reward[i] = d;
-				sum += d;
+				st.average.Set(i, d);
 			}
-			ASSERT(IsFin(sum));
-			prev_exp.reward[sym_ids.GetCount()] = sum;
+			st.average.SeekNext();
+			for(int i = 0; i < sym_ids.GetCount(); i++) {
+				prev_exp.reward[i] = st.average.Get(i, tf_ids.GetCount()-2); // 2nd fastest tf average
+			}
 		}
 		
 		
@@ -472,7 +505,7 @@ void Agent::ForwardSignals(ConvNet::Net& net, Brokerage& broker, const Volume& f
 	// Prepare some common variables
 	bool rand_all = epsilon >= 1.0;
 	if (exp.action.IsEmpty())
-		exp.action.SetCount(sym_ids.GetCount()+1, 0);
+		exp.action.SetCount(sym_ids.GetCount(), 0);
 	
 	
 	// Set signals and signal freezing
@@ -511,6 +544,7 @@ void Agent::ForwardSignals(ConvNet::Net& net, Brokerage& broker, const Volume& f
 		if (!sig_freeze) {
 			// Don't use signal freezing. Might cause unreasonable costs.
 			broker.SetSignal(sym, signal);
+			broker.SetSignalFreeze(sym, false);
 		} else {
 			// Set signal to broker, but freeze it if it's same than previously.
 			int prev_signal = broker.GetSignal(sym);
@@ -523,33 +557,7 @@ void Agent::ForwardSignals(ConvNet::Net& net, Brokerage& broker, const Volume& f
 		}
 	}
 	
-	
-	// Get free-margin stats
-	int action = GetAction(fwd, sym_ids.GetCount());
-	exp.action[sym_ids.GetCount()] = action;
-	if (action == ACT_NOACT) {
-		
-	}
-	else {
-		double free_margin_level = broker.GetFreeMarginLevel();
-		double free_margin_min = broker.GetMinFreeMargin();
-		double free_margin_max = broker.GetMaxFreeMargin();
-		if (free_margin_min < 0.60) free_margin_min = 0.60;
-		if (free_margin_max > 0.95) free_margin_max = 0.95;
-		double free_margin_diff = free_margin_max - free_margin_min;
-		double free_margin_step = free_margin_diff / 100.0;
-		
-		if (action == ACT_INCSIG)
-			free_margin_level += free_margin_step;
-		else
-			free_margin_level -= free_margin_step;
-		
-		if (free_margin_level < free_margin_min) free_margin_level = free_margin_min;
-		if (free_margin_level > free_margin_max) free_margin_level = free_margin_max;
-		
-		broker.SetFreeMargin(free_margin_level);
-	}
-	
+	broker.SetFreeMargin(global_free_margin_level);
 }
 
 void Agent::RefreshWorkQueue() {
@@ -646,6 +654,10 @@ void Agent::ResetValueBuffers() {
 		int wday = DayOfWeek(t);
 		if (wday == 0 || wday == 6)
 			continue;
+		if (t.hour < 16 || (t.hour == 16 && t.minute < 30))
+			continue;
+		if (t.hour >= 23)
+			continue;
 		train_pos.Add(i);
 	}
 }
@@ -698,6 +710,36 @@ void Agent::ProcessDataBridgeQueue() {
 		DLOG(i << "/" << db_queue.GetCount());
 		sys->WhenProgress(i, db_queue.GetCount());
 		sys->Process(*db_queue[i]);
+	}
+}
+
+void Agent::RefreshSnapshots() {
+	ProcessWorkQueue();
+	
+	int tf_snap = tf_ids.GetCount()-1;
+	int main_tf = tf_ids[tf_snap];
+	int pos = train_pos.Top()+1;
+	int bars = sys->GetCountTf(main_tf);
+	train_pos.Reserve(bars - pos);
+	for(int i = pos; i < bars; i++) {
+		Time t = sys->GetTimeTf(main_tf, i);
+		int wday = DayOfWeek(t);
+		if (wday == 0 || wday == 6)
+			continue;
+		if (t.hour < 16 || (t.hour == 16 && t.minute < 30))
+			continue;
+		if (t.hour >= 23)
+			continue;
+		
+		LOG("Agent::RefreshSnapshots: Creating snapshot at " << Format("%", t));
+		One<Snapshot> snap;
+		snap.Create();
+		
+		ResetSnapshot(*snap);
+		Seek(*snap, i);
+		
+		snaps.Add(snap.Detach());
+		train_pos.Add(i);
 	}
 }
 
@@ -787,6 +829,9 @@ bool Agent::Seek(Snapshot& snap, int shift) {
 	snap.time_values[2] = dow;
 	snap.time_values[3] = hour;
 	snap.time_values[4] = minute;
+	snap.time = t;
+	snap.added = GetSysTime();
+	snap.is_valid = true;
 	
 	
 	// Find that time-position in longer timeframes
@@ -802,7 +847,7 @@ bool Agent::Seek(Snapshot& snap, int shift) {
 	// Refresh values (tf / sym / value)
 	for(int i = 0; i < tf_ids.GetCount(); i++) {
 		int pos = snap.pos[i];
-		int next_pos = pos+1;
+		// int next_pos = pos+1;
 		//   Vector<Vector<DoubleTrio> >& sym_values		= snap.value[i];
 		Vector<double>& min_sym_values			= snap.min_value[i];
 		Vector<double>& max_sym_values			= snap.max_value[i];
@@ -830,10 +875,24 @@ bool Agent::Seek(Snapshot& snap, int shift) {
 				double& max = max_sym_values[k];
 				if (d < min) min = d;
 				if (d > max) max = d;
-				snap.volume_in.Set(j, i, k, d);
+				snap.volume_in.Set(j, i, k * 2, d);
 			}
-			// Reset space for previous symbol signal
-			snap.volume_in.Set(j, i, buf_count, 0);
+		}
+		
+		// Normalize values to range 0 - 1
+		for(int j = 0; j < sym_ids.GetCount(); j++) {
+			for(int k = 0; k < buf_count; k++) {
+				double d = snap.volume_in.Get(j, i, k * 2);
+				if (d >= 0) {
+					d = d / max_sym_values[k];
+					snap.volume_in.Set(j, i, k * 2 + 0, d);
+					snap.volume_in.Set(j, i, k * 2 + 1, 0);
+				} else {
+					d = d / min_sym_values[k];
+					snap.volume_in.Set(j, i, k * 2 + 0, 0);
+					snap.volume_in.Set(j, i, k * 2 + 1, d);
+				}
+			}
 		}
 	}
 	
@@ -857,6 +916,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 }
 
 void Agent::SetBrokerageSignals(Brokerage& broker, int pos) {
+	signal_lock.Enter();
 	
 	// Fill input volume
 	Seek(latest_snap, pos);
@@ -892,13 +952,12 @@ void Agent::SetBrokerageSignals(Brokerage& broker, int pos) {
 		
 		
 		// Set signals and signal freezing
-		ForwardSignals(net, latest_broker, fwd, tmp_exp, 0.0, true);
+		ForwardSignals(net, latest_broker, fwd, tmp_exp, 0.0, false);
 		
 		
 		// Refresh values
 		SetAskBid(latest_broker, train_pos[i]);
-		if (i < snaps.GetCount()-1)	latest_broker.Cycle();
-		else						latest_broker.CloseAll();
+		latest_broker.Cycle();
 	}
 	
 	// Reset signals if result is bad
@@ -921,10 +980,11 @@ void Agent::SetBrokerageSignals(Brokerage& broker, int pos) {
 		
 		
 		// Set signals
-		ForwardSignals(net, broker, fwd, tmp_exp, 0.0, true);
+		ForwardSignals(net, broker, fwd, tmp_exp, 0.0, false);
 	}
 	
 	net.Leave();
+	signal_lock.Leave();
 }
 
 
@@ -963,8 +1023,10 @@ void RealtimeSession::Run() {
 	
 	while (running) {
 		int cur_pos = sys.GetShiftFromTimeTf(GetSysTime(), agent.tf_ids.Top());
-		if (prev_pos < cur_pos)
+		if (prev_pos < cur_pos) {
+			prev_pos = cur_pos;
 			PostEvent(EVENT_REFRESH);
+		}
 		
 		if (event_queue.IsEmpty()) {Sleep(500); continue;}
 		
@@ -975,15 +1037,19 @@ void RealtimeSession::Run() {
 		
 		if (event == EVENT_REFRESH) {
 			GetMetaTrader().Data();
+			agent.RefreshSnapshots();
 			agent.ProcessDataBridgeQueue();
 			agent.SetBrokerageSignals(*broker, cur_pos);
-			broker->SignalOrders();
+			for(int i = 0; i < broker->GetSymbolCount(); i++) {
+				LOG(i << ": " << broker->GetSymbol(i).name << ": signal=" << broker->GetSignal(i));
+			}
+			broker->SignalOrders(true);
 		}
 		else if (event == EVENT_KILL) {
 			GetMetaTrader().Data();
 			for(int i = 0; i < broker->GetSymbolCount(); i++)
 				broker->SetSignal(i, 0);
-			broker->SignalOrders();
+			broker->SignalOrders(true);
 		}
 		
 		Sleep(100);

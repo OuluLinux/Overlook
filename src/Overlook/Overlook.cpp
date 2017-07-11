@@ -56,17 +56,21 @@ Overlook::Overlook() :
 	rtses(agent),
 	agentctrl(agent),
 	trainingctrl(agent),
-	rtnetctrl(agent, rtses)
+	rtnetctrl(agent, rtses),
+	snapctrl(agent)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
 	MinimizeBox().MaximizeBox().Sizeable();
+	
 	
 	Add(tabs.SizePos());
 	tabs.Add(visins);
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
+	tabs.Add(snapctrl);
+	tabs.Add(snapctrl, "Snapshot list");
 	tabs.Add(agentctrl);
 	tabs.Add(agentctrl, "Experiencer");
 	tabs.Add(trainingctrl);
@@ -105,7 +109,7 @@ Overlook::~Overlook() {
 void Overlook::Refresher() {
 	Data(true);
 	int tab = tabs.Get();
-	if (tab == 2) {
+	if (tab == 3) {
 		PostRefresher();
 	}
 	else {
@@ -123,15 +127,18 @@ void Overlook::Data(bool periodic) {
 		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		agentctrl.Data();
+		snapctrl.Data();
 	}
 	else if (tab == 3) {
-		trainingctrl.Data();
+		agentctrl.Data();
 	}
 	else if (tab == 4) {
-		rtnetctrl.Data();
+		trainingctrl.Data();
 	}
 	else if (tab == 5) {
+		rtnetctrl.Data();
+	}
+	else if (tab == 6) {
 		rtctrl.Data();
 	}
 }
@@ -153,7 +160,7 @@ void Overlook::Init() {
 		ctrllist.Add(System::GetCtrlFactories()[i].a);
 	
 	tflist.SetIndex(tflist.GetCount()-2); // TODO: clear these development values
-	symlist.SetIndex(70);
+	symlist.SetIndex(0);
 	ctrllist.SetIndex(0);
 	
 	PostCallback(THISBACK(SetView));

@@ -8,7 +8,7 @@ using namespace ConvNet;
 #define LAYOUTFILE <Overlook/BrokerCtrl.lay>
 #include <CtrlCore/lay.h>
 
-class MainBrokerCtrl : public WithBrokerLayout<CustomCtrl> {
+class BrokerCtrl : public WithBrokerLayout<CustomCtrl> {
 	Brokerage* broker;
 	
 	ArrayCtrl trade, history, exposure;
@@ -16,8 +16,8 @@ class MainBrokerCtrl : public WithBrokerLayout<CustomCtrl> {
 	Vector<int> open_tickets;
 	
 public:
-	typedef MainBrokerCtrl CLASSNAME;
-	MainBrokerCtrl();
+	typedef BrokerCtrl CLASSNAME;
+	BrokerCtrl();
 	
 	void Refresher();
 	void Reset();
@@ -35,22 +35,6 @@ public:
 };
 
 
-class BrokerCtrl : public TabCtrl {
-	MainBrokerCtrl main;
-	Splitter drawers;
-	
-public:
-	typedef BrokerCtrl CLASSNAME;
-	BrokerCtrl();
-	
-	void SetBroker(Brokerage& broker) {main.SetBroker(broker);}
-	void ReadOnly() {main.ReadOnly();}
-	
-	virtual void Init();
-	virtual void Data();
-	
-	
-};
 
 }
 

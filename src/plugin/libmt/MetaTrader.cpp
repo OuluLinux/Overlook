@@ -693,6 +693,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		sym.base_mul = 0;
 		sym.base_cur0 = -1;
 		sym.base_cur1 = -1;
+		sym.margin_factor = 1;
 		
 		// Get proxy symbols
 		if (sym.IsForex()) {
@@ -772,7 +773,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	
 	// Sort postfix stats
 	SortByValue(postfix_counts, StdGreater<int>());
-	int postfix = postfix_counts.GetKey(0);
+	int postfix = postfix_counts.IsEmpty() ? 0 : postfix_counts.GetKey(0);
 	
 	// Find proxy ids
 	for(int i = 0; i < symbols.GetCount(); i++) {
@@ -1111,6 +1112,7 @@ void MetaTrader::GetMarginPercentages() {
             }
             int dec = (margin_percentage + 0.0005) * 1000;
             margin_percentage = dec * 0.001;
+            ASSERT(IsFin(margin_percentage));
             sym.margin_factor = margin_percentage;
         }
     }

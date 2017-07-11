@@ -6,17 +6,20 @@ using namespace Upp;
 using ConvNet::SDQNAgent;
 
 typedef Tuple3<double, double, double> DoubleTrio;
-typedef ConvNet::VolumeData<double> VolumeDouble;
 
 struct Snapshot : Moveable<Snapshot> {
 	//Vector<Vector<Vector<DoubleTrio> > > value;
 	Vector<Vector<double> > min_value, max_value;
 	Vector<int> pos, tfs, periods, period_in_slower, time_values;
 	Volume volume_in;
+	Time time, added;
 	Time begin;
 	int begin_ts;
-	//int value_count;
 	int bars;
+	bool is_valid;
+	
+	Snapshot() : is_valid(false) {}
+	
 };
 
 
@@ -125,6 +128,7 @@ protected:
 	friend class AgentTraining;
 	friend class TrainingGraph;
 	friend class RealtimeNetworkCtrl;
+	friend class SnapshotCtrl;
 	friend struct RealtimeSession;
 	
 	
@@ -132,6 +136,7 @@ protected:
 	Array<Sequence>			sequences;
 	Vector<double>			seq_results;
 	ConvNet::Session		ses;
+	double					global_free_margin_level;
 	int						sequence_count;
 	int						epochs, epoch_actual, epoch_total;
 	int						prev_symset_hash;
@@ -157,6 +162,7 @@ protected:
 	ConvNet::Session ro_ses;
 	System* sys;
 	double epsilon_min;
+	int step_cb_interal;
 	int buf_count;
 	int learning_epochs_total, learning_epochs_burnin;
 	int thrd_count;
@@ -166,12 +172,13 @@ protected:
 	int input_width, input_height, input_depth, output_width;
 	int training_limit;
 	int session_cur;
-	int tf_limit;
 	int symset_hash;
 	int seq_cur;
+	bool train_single;
+	bool prefer_high;
 	bool running;
-	Mutex sequencer_lock, trainer_lock;
-	
+	bool paused;
+	Mutex sequencer_lock, trainer_lock, signal_lock;
 	
 	void LoadThis();
 	void SequencerHandler(int i);
@@ -191,7 +198,7 @@ public:
 	~Agent();
 	
 	void Serialize(Stream& s) {
-		s % sequences % seq_results % ses % sequence_count % epochs % epoch_actual % epoch_total
+		s % sequences % seq_results % ses % global_free_margin_level % sequence_count % epochs % epoch_actual % epoch_total
 		  % prev_symset_hash;
 	}
 	void StoreThis();
@@ -206,6 +213,7 @@ public:
 	void ResetValueBuffers();
 	void SetBrokerageSignals(Brokerage& broker, int pos);
 	
+	void RefreshSnapshots();
 	void ResetSnapshot(Snapshot& snap);
 	bool Seek(Snapshot& snap, int shift);
 	bool SeekCur(Snapshot& snap, int shift);

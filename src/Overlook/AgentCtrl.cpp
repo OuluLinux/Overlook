@@ -22,7 +22,7 @@ void AgentDraw::Paint(Draw& w) {
 	
 	int sym_count		= agent.sym_ids.GetCount();
 	int tf_count		= snap.pos.GetCount();
-	int value_count		= agent.buf_count;
+	int value_count		= agent.buf_count * 2;
 	
 	int rows = sym_count * tf_count;
 	int cols = value_count;
@@ -49,8 +49,8 @@ void AgentDraw::Paint(Draw& w) {
 				int x2 = (k + 1) * xstep;
 				int w = x2 - x;
 				double d = snap.volume_in.Get(j, i, k);
-				double min = min_values[k];
-				double max = max_values[k];
+				double min = min_values[k / 2];
+				double max = max_values[k / 2];
 				double value = 255.0 * (d - min) / (max - min);
 				int clr = Upp::min(255.0, value);
 				Color c(255 - clr, clr, 0);
@@ -170,12 +170,12 @@ AgentCtrl::AgentCtrl(Agent& agent) :
 	agent(&agent),
 	reward(agent)
 {
-	Add(thrdlist.TopPos(3, 24).LeftPos(5, 96));
+	Add(thrdlist.TopPos(3, 24).LeftPos(2, 96));
 	Add(update_brokerctrl.TopPos(3, 24).LeftPos(102, 96));
 	Add(reward.BottomPos(0,200).HSizePos());
 	init = true;
 	update_brokerctrl.Set(false);
-	update_brokerctrl.SetLabel("Update broker");
+	update_brokerctrl.SetLabel("Update visible");
 }
 
 void AgentCtrl::Data() {
@@ -297,12 +297,23 @@ AgentTraining::AgentTraining(Agent& agent) :
 	draw(agent),
 	reward(agent)
 {
-	Add(epoch.TopPos(3, 24).LeftPos(2, 96));
-	Add(prog.TopPos(3, 24).HSizePos(100));
+	Add(paused.TopPos(3, 24).LeftPos(2, 196));
+	Add(prefer_highresults.TopPos(3, 24).LeftPos(202, 196));
+	Add(lbl_fmlevel.TopPos(3, 24).LeftPos(402, 96));
+	Add(fmlevel.TopPos(3, 24).LeftPos(502, 96));
+	
+	Add(epoch.TopPos(3, 24).LeftPos(602, 96));
+	Add(prog.TopPos(3, 24).HSizePos(700));
 	Add(hsplit.VSizePos(30, 200).HSizePos());
 	Add(reward.BottomPos(0,200).HSizePos());
 	
-	hsplit << seslist << draw << conv << timescroll;
+	lbl_fmlevel.SetLabel("Free-margin level:");
+	fmlevel.SetData(agent.global_free_margin_level);
+	fmlevel.MinMax(0.60, 0.99);
+	fmlevel.SetInc(0.01);
+	fmlevel <<= THISBACK(SetFreeMarginLevel);
+	
+	hsplit << leftctrl << draw << conv << timescroll;
 	hsplit.Horz();
 	hsplit.SetPos(1500, 0);
 	hsplit.SetPos(2000, 1);
@@ -315,7 +326,43 @@ AgentTraining::AgentTraining(Agent& agent) :
 	seslist.ColumnWidths("1 3 2");
 	seslist <<= THISBACK(Data);
 	
+	
+	paused.SetLabel("Paused");
+	paused.Set(agent.paused);
+	paused <<= THISBACK(SetPaused);
+	
+	
+	prefer_highresults.SetLabel("Prefer high values");
+	prefer_highresults.Set(agent.prefer_high);
+	prefer_highresults <<= THISBACK(SetPreferHigh);
+	
 	init = true;
+	
+	leftctrl.Vert();
+	leftctrl << seslist << graph << settings;
+	lrate.SetLabel("Learning rate:");
+	lmom.SetLabel("Momentum:");
+	lbatch.SetLabel("Batch size:");
+	ldecay.SetLabel("Weight decay:");
+	apply.SetLabel("Apply");
+	apply <<= THISBACK(ApplySettings);
+	int row = 20;
+	settings.Add(lrate.HSizePos(4,4).TopPos(0,row));
+	settings.Add(rate.HSizePos(4,4).TopPos(1*row,row));
+	settings.Add(lmom.HSizePos(4,4).TopPos(2*row,row));
+	settings.Add(mom.HSizePos(4,4).TopPos(3*row,row));
+	settings.Add(lbatch.HSizePos(4,4).TopPos(4*row,row));
+	settings.Add(batch.HSizePos(4,4).TopPos(5*row,row));
+	settings.Add(ldecay.HSizePos(4,4).TopPos(6*row,row));
+	settings.Add(decay.HSizePos(4,4).TopPos(7*row,row));
+	settings.Add(apply.HSizePos(4,4).TopPos(8*row,row));
+	rate.SetData(0.01);
+	mom.SetData(0.9);
+	batch.SetData(20);
+	decay.SetData(0.001);
+	
+	graph.SetSession(agent.ses);
+	graph.SetModeLoss();
 }
 	
 void AgentTraining::Data() {
@@ -329,6 +376,18 @@ void AgentTraining::Data() {
 		conv.SetSession(agent->ses);
 		timescroll.SetSession(agent->ses);
 		conv.RefreshLayers();
+		
+		prefer_highresults.Set(agent->prefer_high);
+		fmlevel.SetData(agent->global_free_margin_level);
+		
+		TrainerBase* t = agent->ses.GetTrainer();
+		if (t) {
+			TrainerBase& trainer = *t;
+			rate.SetData(trainer.GetLearningRate());
+			mom.SetData(trainer.GetMomentum());
+			batch.SetData(trainer.GetBatchSize());
+			decay.SetData(trainer.GetL2Decay());
+		}
 	}
 	
 	for(int i = 0; i < agent->sequences.GetCount(); i++) {
@@ -348,7 +407,15 @@ void AgentTraining::Data() {
 	reward.Refresh();
 }
 
-
+void AgentTraining::ApplySettings() {
+	TrainerBase* t = agent->ses.GetTrainer();
+	if (!t) return;
+	TrainerBase& trainer = *t;
+	trainer.SetLearningRate(rate.GetData());
+	trainer.SetMomentum(mom.GetData());
+	trainer.SetBatchSize(batch.GetData());
+	trainer.SetL2Decay(decay.GetData());
+}
 
 
 
@@ -402,5 +469,51 @@ void RealtimeNetworkCtrl::KillSignals() {
 	rtses->PostEvent(RealtimeSession::EVENT_KILL);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+SnapshotCtrl::SnapshotCtrl(Agent& agent) :
+	agent(&agent),
+	draw(agent)
+{
+	Add(hsplit.SizePos());
+	hsplit.Horz();
+	hsplit << draw << list;
+	hsplit.SetPos(2000);
+	
+	list.AddColumn("#");
+	list.AddColumn("Time");
+	list.AddColumn("Added");
+	list.AddColumn("Is valid");
+	
+	list <<= THISBACK(Data);
+}
+
+void SnapshotCtrl::Data() {
+	int cursor = list.GetCursor();
+	
+	for(int i = 0; i < agent->snaps.GetCount(); i++) {
+		const Snapshot& snap = agent->snaps[i];
+		list.Set(i, 0, i);
+		list.Set(i, 1, snap.time);
+		list.Set(i, 2, snap.added);
+		list.Set(i, 3, snap.is_valid ? "Valid" : "Invalid");
+	}
+	
+	if (cursor >= 0 && cursor < agent->snaps.GetCount())
+		draw.SetSnap(cursor);
+	
+	draw.Refresh();
+}
 
 }

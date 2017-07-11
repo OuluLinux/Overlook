@@ -79,6 +79,7 @@ protected:
 	ExposureTester			exposurectrl;
 	
 	// Agent view
+	SnapshotCtrl			snapctrl;
 	Agent					agent;
 	AgentCtrl				agentctrl;
 	AgentTraining			trainingctrl;

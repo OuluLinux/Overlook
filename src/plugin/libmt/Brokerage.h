@@ -53,7 +53,7 @@ public:
 	
 	virtual void Clear();
 	void ForwardExposure();
-	void SignalOrders();
+	void SignalOrders(bool debug_print=false);
 	int  GetSignal(int sym) const {if (signals.IsEmpty()) return 0; return signals[sym];}
 	void PutSignal(int sym, int signal);
 	void SetSignal(int sym, int signal);

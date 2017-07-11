@@ -38,7 +38,7 @@ protected:
 	SliderCtrl time_slider;
 	Splitter hsplit;
 	AgentDraw draw;
-	MainBrokerCtrl brokerctrl;
+	BrokerCtrl brokerctrl;
 	int thrd_id;
 	
 public:
@@ -83,10 +83,12 @@ class AgentTraining : public ParentCtrl {
 protected:
 	friend class AgentDraw;
 	Agent* agent;
-	ArrayCtrl seslist;
 	Splitter hsplit;
 	bool init;
 	
+	Option paused, prefer_highresults;
+	Label lbl_fmlevel;
+	EditDoubleSpin fmlevel;
 	Label epoch;
 	ProgressIndicator prog;
 	AgentDraw draw;
@@ -94,13 +96,24 @@ protected:
 	ConvNet::SessionConvLayers conv;
 	ConvNet::HeatmapTimeView timescroll;
 	
+	Splitter leftctrl;
+	ArrayCtrl seslist;
+	ParentCtrl settings;
+	Label lrate, lmom, lbatch, ldecay;
+	EditDouble rate, mom, decay;
+	EditInt batch;
+	Button apply;
+	ConvNet::TrainingGraph graph;
 	
 public:
 	typedef AgentTraining CLASSNAME;
 	AgentTraining(Agent& agent);
 	
 	void Data();
-	
+	void ApplySettings();
+	void SetPreferHigh() {agent->prefer_high = prefer_highresults.Get();}
+	void SetFreeMarginLevel() {agent->global_free_margin_level = fmlevel.GetData();}
+	void SetPaused() {agent->paused = paused.GetData();}
 	
 };
 
@@ -123,6 +136,20 @@ public:
 	void RefreshSignals();
 	void KillSignals();
 	
+};
+
+
+class SnapshotCtrl : public ParentCtrl {
+	Agent* agent;
+	Splitter hsplit;
+	ArrayCtrl list;
+	AgentDraw draw;
+	
+public:
+	typedef SnapshotCtrl CLASSNAME;
+	SnapshotCtrl(Agent& agent);
+	
+	void Data();
 };
 
 }

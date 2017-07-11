@@ -45,6 +45,7 @@ void ExposureTester::Signal() {
 		broker.SetSignal(i, edits[i].GetData());
 	}
 	broker.SignalOrders();
+	broker.ForwardExposure();
 	brokerctrl.Data();
 }
 

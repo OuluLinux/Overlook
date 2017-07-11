@@ -13,6 +13,7 @@ Brokerage::Brokerage() {
 	selected = -1;
 	tf_h1_id = -1;
 	account_currency_id = -1;
+	leverage = 0;
 }
 
 void Brokerage::Clear() {
@@ -88,6 +89,10 @@ void Brokerage::SetSignal(int sym, int signal) {
 }
 
 void Brokerage::SetSignalFreeze(int sym, bool freeze_signal) {
+	if (signals.IsEmpty()) {
+		signals.SetCount(symbols.GetCount(), 0);
+		signal_freezed.SetCount(symbols.GetCount(), 0);
+	}
 	signal_freezed[sym] = freeze_signal;
 }
 
@@ -319,14 +324,14 @@ void Brokerage::CloseAll() {
 }
 
 
-void Brokerage::SignalOrders() {
+void Brokerage::SignalOrders(bool debug_print) {
 	Enter();
 	
 	ASSERT(signals.GetCount() == symbols.GetCount());
 	double leverage = AccountLeverage();
 	int sym_count = symbols.GetCount();
 	int cur_count = currencies.GetCount();
-	
+	ASSERT(leverage > 0);
 	
 	// Get maximum margin sum
 	ASSERT(free_margin_level >= 0.20 && free_margin_level <= 1.0);
@@ -371,6 +376,10 @@ void Brokerage::SignalOrders() {
 			}
 		}
 	}
+	if (debug_print) {
+		DUMPC(sell_signals);
+		DUMPC(buy_signals);
+	}
 	
 	// Balance signals
 	for(int i = 0; i < sym_count; i++) {
@@ -402,7 +411,11 @@ void Brokerage::SignalOrders() {
 		Leave();
 		return;
 	}
+	if (debug_print) {
+		DUMP(sig_abs_total);
+	}
 	
+	ASSERT(IsFin(leverage));
 	double minimum_margin_sum = 0;
 	for(int i = 0; i < sym_count; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
@@ -410,17 +423,33 @@ void Brokerage::SignalOrders() {
 		const Price& p = askbid[i];
 		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
 		double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
+		ASSERT(IsFin(p.ask));
+		ASSERT(IsFin(p.bid));
+		ASSERT(IsFin(buy_lots));
+		ASSERT(IsFin(sell_lots));
+		ASSERT(IsFin(sym.contract_size));
+		ASSERT(IsFin(sym.margin_factor));
 		double buy_used_margin = p.ask * buy_lots * sym.contract_size * sym.margin_factor;
 		double sell_used_margin = p.bid * sell_lots * sym.contract_size * sym.margin_factor;
 		if (sym.IsForex()) {
 			buy_used_margin  /= leverage;
 			sell_used_margin /= leverage;
 		}
+		ASSERT(IsFin(buy_used_margin));
+		ASSERT(IsFin(sell_used_margin));
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
 	}
+	if (debug_print) {
+		DUMP(min_sig);
+		DUMP(minimum_margin_sum);
+	}
 	
 	double lot_multiplier = max_margin_sum / minimum_margin_sum;
+	if (debug_print) {
+		DUMP(max_margin_sum);
+		DUMP(lot_multiplier);
+	}
 	if (lot_multiplier < 1.0) {
 		last_error = "Total margin is too much";
 		CloseAll();
@@ -436,6 +465,10 @@ void Brokerage::SignalOrders() {
 		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01 * lot_multiplier;
 		buy_lots[i]  = ((int)(sym_buy_lots  / 0.01)) * 0.01;
 		sell_lots[i] = ((int)(sym_sell_lots / 0.01)) * 0.01;
+	}
+	if (debug_print) {
+		DUMPC(buy_lots);
+		DUMPC(sell_lots);
 	}
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
@@ -482,14 +515,14 @@ void Brokerage::SignalOrders() {
 		if (sym_buy_lots > 0.0) {
 			double price = RealtimeAsk(i);
 			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * 0.99, price * 1.01, 0, 0);
-			if (r == -1) {
+			if (r == -1 && debug_print) {
 				LOG("Brokerage::SignalOrders: OrderSend faild with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
 			}
 		}
 		if (sym_sell_lots > 0.0) {
 			double price = RealtimeBid(i);
 			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * 1.01, price * 0.99, 0, 0);
-			if (r == -1) {
+			if (r == -1 && debug_print) {
 				LOG("Brokerage::SignalOrders: OrderSend faild with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
 			}
 		}

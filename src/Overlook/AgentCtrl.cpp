@@ -20,11 +20,10 @@ void AgentDraw::Paint(Draw& w) {
 	if (snap_id < -1 || snap_id >= agent.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
 	const Snapshot& snap = snap_id >= 0 ? agent.snaps[snap_id] : agent.latest_snap;
 	
-	int sym_count		= agent.sym_ids.GetCount();
 	int tf_count		= snap.pos.GetCount();
 	int value_count		= agent.buf_count * 2;
 	
-	int rows = sym_count * tf_count;
+	int rows = tf_count;
 	int cols = value_count;
 	int grid_w = sz.cx;
 	double xstep = (double)grid_w / (double)cols;
@@ -33,32 +32,22 @@ void AgentDraw::Paint(Draw& w) {
 	
 	int row = 0;
 	for(int i = 0; i < tf_count; i++) {
-		//const Vector<Vector<DoubleTrio> >& sym_values = snap.value[i];
-		const Vector<double>& min_values = snap.min_value[i];
-		const Vector<double>& max_values = snap.max_value[i];
+		int y = row * ystep;
+		int y2 = (row + 1) * ystep;
+		int h = y2-y;
 		
-		for(int j = 0; j < sym_count; j++) {
-			//const Vector<DoubleTrio>& values = sym_values[j];
-			
-			int y = row * ystep;
-			int y2 = (row + 1) * ystep;
-			int h = y2-y;
-			
-			for(int k = 0; k < value_count; k++) {
-				int x = k * xstep;
-				int x2 = (k + 1) * xstep;
-				int w = x2 - x;
-				double d = snap.volume_in.Get(j, i, k);
-				double min = min_values[k / 2];
-				double max = max_values[k / 2];
-				double value = 255.0 * (d - min) / (max - min);
-				int clr = Upp::min(255.0, value);
-				Color c(255 - clr, clr, 0);
-				id.DrawRect(x, y, w, h, c);
-			}
-			
-			row++;
+		for(int k = 0; k < value_count; k++) {
+			int x = k * xstep;
+			int x2 = (k + 1) * xstep;
+			int w = x2 - x;
+			double d = snap.values[i * value_count + k];
+			double value = 255.0 *  Upp::min(1.0, Upp::max(0.0, d));
+			int clr = Upp::min(255.0, value);
+			Color c(255 - clr, clr, 0);
+			id.DrawRect(x, y, w, h, c);
 		}
+		
+		row++;
 	}
 	
 	w.DrawImage(0,0,id);
@@ -143,7 +132,7 @@ AgentThreadCtrl::AgentThreadCtrl(Agent& agent, int thrd_id) :
 void AgentThreadCtrl::Data() {
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = *agent->sys;
-	SequencerThread& thrd = agent->thrds[thrd_id];
+	/*SequencerThread& thrd = agent->thrds[thrd_id];
 	Snapshot& snap = agent->snaps[thrd.snap_id];
 	
 	time_slider.MinMax(0, snap.bars-1);
@@ -153,7 +142,7 @@ void AgentThreadCtrl::Data() {
 	draw.Refresh();
 	
 	brokerctrl.SetBroker(thrd.broker);
-	brokerctrl.Data();
+	brokerctrl.Data();*/
 }
 
 
@@ -179,7 +168,7 @@ AgentCtrl::AgentCtrl(Agent& agent) :
 }
 
 void AgentCtrl::Data() {
-	if (init) {
+	/*if (init) {
 		init = false;
 		for(int i = 0; i < agent->thrds.GetCount(); i++) {
 			Ctrl& ctrl = thrds.Add(new AgentThreadCtrl(*agent, i));
@@ -196,7 +185,7 @@ void AgentCtrl::Data() {
 		int i = thrdlist.GetIndex();
 		if (i == -1) return;
 		thrds[i].Data();
-	}
+	}*/
 	
 	
 	reward.Refresh();
@@ -226,24 +215,21 @@ void StatsGraph::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	int thrd_count = agent->thrd_equities.GetCount();
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
-	last.SetCount(thrd_count);
+	double last = 0.0;
 	
 	int max_steps = 0;
-	for(int i = 0; i < thrd_count; i++) {
-		const Vector<double>& data = agent->thrd_equities[i];
-		int count = data.GetCount();
-		for(int j = 0; j < count; j++) {
-			double d = data[j];
-			if (d == 0.0) break;
-			if (d > max) max = d;
-			if (d < min) min = d;
-		}
-		if (count > max_steps)
-			max_steps = count;
+	const Vector<double>& data = agent->thrd_equity;
+	int count = data.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = data[j];
+		if (d == 0.0) break;
+		if (d > max) max = d;
+		if (d < min) min = d;
 	}
+	if (count > max_steps)
+		max_steps = count;
 	
 	
 	if (max_steps > 1 && max > min) {
@@ -251,30 +237,26 @@ void StatsGraph::Paint(Draw& w) {
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
-		for(int i = 0; i < thrd_count; i++) {
-			const Vector<double>& data = agent->thrd_equities[i];
-			int count = data.GetCount();
-			if (count >= 2) {
-				polyline.SetCount(count);
-				for(int j = 0; j < count; j++) {
-					double v = data[j];
-					double y = sz.cy - (v - min) / diff * sz.cy;
-					polyline[j] = Point(j * xstep, y);
-				}
-				last[i] = data[count-1];
-				if (polyline.GetCount() >= 2)
-					id.DrawPolyline(polyline, 1, RainbowColor((double)i / thrd_count));
+		const Vector<double>& data = agent->thrd_equity;
+		int count = data.GetCount();
+		if (count >= 2) {
+			polyline.SetCount(count);
+			for(int j = 0; j < count; j++) {
+				double v = data[j];
+				double y = sz.cy - (v - min) / diff * sz.cy;
+				polyline[j] = Point(j * xstep, y);
 			}
+			last = data[count-1];
+			if (polyline.GetCount() >= 2)
+				id.DrawPolyline(polyline, 1, RainbowColor(Randomf()));
 		}
 		
-		for(int i = 0; i < thrd_count; i++) {
-			int y = i * 13;
-			String str = DblStr(last[i]);
-			Size str_sz = GetTextSize(str, fnt);
-			id.DrawRect(3, y, 13, 13, RainbowColor((double)i / thrd_count));
-			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			id.DrawText(16, y, str, fnt, Black());
-		}
+		int y = 0;
+		String str = DblStr(last);
+		Size str_sz = GetTextSize(str, fnt);
+		id.DrawRect(3, y, 13, 13, RainbowColor(Randomf()));
+		id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+		id.DrawText(16, y, str, fnt, Black());
 	}
 	
 	
@@ -302,10 +284,8 @@ AgentTraining::AgentTraining(Agent& agent) :
 	Add(lbl_fmlevel.TopPos(3, 24).LeftPos(402, 96));
 	Add(fmlevel.TopPos(3, 24).LeftPos(502, 96));
 	
-	Add(epoch.TopPos(3, 24).LeftPos(602, 96));
-	Add(prog.TopPos(3, 24).HSizePos(700));
-	Add(hsplit.VSizePos(30, 200).HSizePos());
-	Add(reward.BottomPos(0,200).HSizePos());
+	Add(hsplit.VSizePos(0, 200).HSizePos());
+	Add(reward.BottomPos(0, 200).HSizePos());
 	
 	lbl_fmlevel.SetLabel("Free-margin level:");
 	fmlevel.SetData(agent.global_free_margin_level);
@@ -360,20 +340,15 @@ AgentTraining::AgentTraining(Agent& agent) :
 	mom.SetData(0.9);
 	batch.SetData(20);
 	decay.SetData(0.001);
-	
-	graph.SetSession(agent.ses);
-	graph.SetModeLoss();
 }
 	
 void AgentTraining::Data() {
-	prog.Set(agent->epoch_actual, agent->epoch_total);
-	epoch.SetLabel("Epoch: " + IntStr(agent->epochs));
 	
 	
 	if (init) {
 		init = false;
 		conv.Clear();
-		conv.SetSession(agent->ses);
+		/*conv.SetSession(agent->ses);
 		timescroll.SetSession(agent->ses);
 		conv.RefreshLayers();
 		
@@ -387,9 +362,9 @@ void AgentTraining::Data() {
 			mom.SetData(trainer.GetMomentum());
 			batch.SetData(trainer.GetBatchSize());
 			decay.SetData(trainer.GetL2Decay());
-		}
+		}*/
 	}
-	
+	/*
 	for(int i = 0; i < agent->sequences.GetCount(); i++) {
 		const Sequence& seq = agent->sequences[i];
 		seslist.Set(i, 0, seq.id);
@@ -398,9 +373,9 @@ void AgentTraining::Data() {
 	}
 	agent->session_cur = seslist.GetCursor();
 	if (agent->session_cur == -1) agent->session_cur = 0;
+	*/
 	
-	
-	draw.SetSnap(agent->epoch_actual);
+	draw.SetSnap(0);
 	draw.Refresh();
 	conv.Refresh();
 	timescroll.Refresh();
@@ -408,13 +383,13 @@ void AgentTraining::Data() {
 }
 
 void AgentTraining::ApplySettings() {
-	TrainerBase* t = agent->ses.GetTrainer();
+	/*TrainerBase* t = agent->ses.GetTrainer();
 	if (!t) return;
 	TrainerBase& trainer = *t;
 	trainer.SetLearningRate(rate.GetData());
 	trainer.SetMomentum(mom.GetData());
 	trainer.SetBatchSize(batch.GetData());
-	trainer.SetL2Decay(decay.GetData());
+	trainer.SetL2Decay(decay.GetData());*/
 }
 
 
@@ -462,11 +437,11 @@ void RealtimeNetworkCtrl::Data() {
 }
 
 void RealtimeNetworkCtrl::RefreshSignals() {
-	rtses->PostEvent(RealtimeSession::EVENT_REFRESH);
+	//rtses->PostEvent(RealtimeSession::EVENT_REFRESH);
 }
 
 void RealtimeNetworkCtrl::KillSignals() {
-	rtses->PostEvent(RealtimeSession::EVENT_KILL);
+	//rtses->PostEvent(RealtimeSession::EVENT_KILL);
 }
 
 

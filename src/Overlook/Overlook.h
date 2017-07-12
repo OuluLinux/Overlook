@@ -4,18 +4,21 @@
 #include "Common.h"
 #include "QueryTable.h"
 
+#include "SimBroker.h"
+#include "Agent.h"
+#include "Manager.h"
 #include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"
-#include "SimBroker.h"
 #include "ExposureTester.h"
 
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "QtStats.h"
 
-#include "Agent.h"
 #include "AgentCtrl.h"
+
+#include "ManagerCtrl.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
@@ -78,16 +81,13 @@ protected:
 	// Exposure tester
 	ExposureTester			exposurectrl;
 	
-	// Agent view
-	SnapshotCtrl			snapctrl;
-	Agent					agent;
-	AgentCtrl				agentctrl;
-	AgentTraining			trainingctrl;
+	// Manager view
+	ManagerCtrl				mgrctrl;
 	
-	// Realtime view
-	RealtimeSession			rtses;
-	RealtimeNetworkCtrl		rtnetctrl;
+	
 	BrokerCtrl				rtctrl;
+	
+	//RealtimeSession			rtses;
 	
 	
 	void SetView();

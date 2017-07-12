@@ -1987,5 +1987,44 @@ it running, so it`'s not that bad. This actually gives positive
 results already, but in a very cumbersome way.&]
 [s0;%- Yeah, I am going to pivot into that... I think I learned a 
 lot with this version, and now it`'s going to be easy.&]
-[s0;%- &]
-[s0;%- ]]
+[s0;%- Fortunately, it seems that I can just remove all symbol`-loops 
+in the Agent class and dedicate one Agent object to one symbol/instrument.&]
+[s3;%- 12.7.2017&]
+[s0;%- I haven`'t done yet the university course, where you define 
+complexities of functions, but I can say for sure, that it will 
+reduce a lot when all for`-symbol loops are taken away from the 
+Agent class.&]
+[s0;%- ...&]
+[s0;%- This solution could have been done first, but I couldn`'t 
+prune those other possibilities out without knowing why. In the 
+end, this is the most obvious solution: DQN`-agent training with 
+SimBroker using one instrument, and best agents are combined 
+and exported to the MT4 account. I was talking about this all 
+the time but I guess the implementation was harder to grasp than 
+expected. I just had too many questions to go this directly.&]
+[s0;%- I mean, this really gets simplified in front of my eyes to 
+that solution which I knew really well all the time. My excuse 
+is that maybe there was just too many details what couldn`'t 
+be known by doing this first :)&]
+[s0;%- I am clearly looking for reasons here to justify all that 
+useless work... How I could keep all that web effect stuff that 
+I was talking about? Maybe if I somehow connected all latest 
+signals of all agents, and used them as inputs? Like a little 
+virtual social network for those little virtual agents. Without 
+that, I am just back in the square one, so let`'s do it! It just 
+requires a synced group class.&]
+[s0;%- Agent groups. Well, that could work. Code started to move 
+to that direction fast already.&]
+[s0;%- ...&]
+[s0;%- Agents can be tested with and without previous signals of 
+other group members as inputs. Hypothesis is that it does improve 
+results and calculations can be repeated from statistical mathematics 
+courses. I usually skip to conclusions faster, but real math 
+can be done nevertheless.&]
+[s0;%- This pivoting to agent groups shows as very broken code... 
+I am not happy about the delay in the completion, but I am happy 
+about the improvement in the design.&]
+[s0;%- In conclusion, I converted the Agent to use DQN`-agent instead 
+of deep fully connected neural network. I also moved instrument`-web 
+features from Agent to AgentGroup. Both non`-obvious changes 
+improves quality and robustness.]]

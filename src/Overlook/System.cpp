@@ -96,6 +96,8 @@ void System::Init() {
 	}
 	
 	InitRegistry();
+	
+	mgr.Init();
 }
 
 void System::AddPeriod(String nice_str, int period) {

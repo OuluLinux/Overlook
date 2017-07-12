@@ -531,6 +531,16 @@ void Brokerage::SignalOrders(bool debug_print) {
 	Leave();
 }
 
+void Brokerage::SetOrderSignals() {
+	Vector<int> signals;
+	signals.SetCount(symbols.GetCount(), 0);
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		int sig = o.type == OP_BUY ? +1 : -1;
+		signals[o.symbol] = sig;
+	}
+}
 
 
 

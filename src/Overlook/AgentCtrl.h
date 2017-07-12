@@ -90,7 +90,6 @@ protected:
 	Label lbl_fmlevel;
 	EditDoubleSpin fmlevel;
 	Label epoch;
-	ProgressIndicator prog;
 	AgentDraw draw;
 	TrainingGraph reward;
 	ConvNet::SessionConvLayers conv;

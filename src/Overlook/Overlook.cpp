@@ -52,12 +52,7 @@ void LoaderWindow::SubSubProgress(int actual, int total) {
 
 
 Overlook::Overlook() :
-	agent(sys),
-	rtses(agent),
-	agentctrl(agent),
-	trainingctrl(agent),
-	rtnetctrl(agent, rtses),
-	snapctrl(agent)
+	mgrctrl(sys)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -69,14 +64,8 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Traditional");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(snapctrl);
-	tabs.Add(snapctrl, "Snapshot list");
-	tabs.Add(agentctrl);
-	tabs.Add(agentctrl, "Experiencer");
-	tabs.Add(trainingctrl);
-	tabs.Add(trainingctrl, "Training");
-	tabs.Add(rtnetctrl);
-	tabs.Add(rtnetctrl, "Real-Time Network");
+	tabs.Add(mgrctrl);
+	tabs.Add(mgrctrl, "Agent Manager");
 	tabs.Add(rtctrl);
 	tabs.Add(rtctrl, "Real-Time Account");
 	tabs.WhenSet << THISBACK1(Data, false);
@@ -127,18 +116,9 @@ void Overlook::Data(bool periodic) {
 		exposurectrl.Data();
 	}
 	else if (tab == 2) {
-		snapctrl.Data();
+		mgrctrl.Data();
 	}
 	else if (tab == 3) {
-		agentctrl.Data();
-	}
-	else if (tab == 4) {
-		trainingctrl.Data();
-	}
-	else if (tab == 5) {
-		rtnetctrl.Data();
-	}
-	else if (tab == 6) {
 		rtctrl.Data();
 	}
 }
@@ -147,8 +127,8 @@ void Overlook::Init() {
 	sys.Init();
 	rtctrl.Init();
 	exposurectrl.Init();
-	agent.Init();
-	rtses.Init();
+	//agent.Init();
+	//rtses.Init();
 	
 	
 	// Init gui
@@ -174,7 +154,7 @@ void Overlook::Load() {
 }
 
 void Overlook::Loader() {
-	loader->PostProgress(0, 4, "Creating work queue");
+	/*loader->PostProgress(0, 4, "Creating work queue");
 	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
 	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
 	agent.RefreshWorkQueue();
@@ -190,19 +170,19 @@ void Overlook::Loader() {
 	
 	sys.WhenProgress.Clear();
 	sys.WhenSubProgress.Clear();
-	loader->PostClose();
+	loader->PostClose();*/
 }
 
 void Overlook::Start() {
 	sys.Start();
-	agent.Start();
-	rtses.Start();
+	//agent.Start();
+	//rtses.Start();
 }
 
 void Overlook::Deinit() {
-	agent.Stop();
+	//rtses.Stop();
+	//agent.Stop();
 	sys.Stop();
-	rtses.Stop();
 }
 
 void Overlook::SetView() {

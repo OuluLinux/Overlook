@@ -146,6 +146,7 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>				regs;
+	Manager			mgr;
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		tfbars_in_slowtf;
@@ -199,6 +200,7 @@ public:
 	int64 GetShiftFromTimeTf(const Time& t, int tf);
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
+	Manager& GetManager() {return mgr;}
 	
 public:
 

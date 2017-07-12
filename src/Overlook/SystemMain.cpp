@@ -8,6 +8,7 @@ void System::Start() {
 	stopped = false;
 	
 	Thread::Start(THISBACK(MainLoop));
+	mgr.Start();
 	/*
 	nonstopped_workers = 1;//CPU_Cores();
 	SetBasketCount(nonstopped_workers);
@@ -16,6 +17,7 @@ void System::Start() {
 }
 
 void System::Stop() {
+	mgr.Stop();
 	running = false;
 	while (!stopped && nonstopped_workers != 0) Sleep(100);
 }

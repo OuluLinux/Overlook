@@ -10,7 +10,6 @@ using namespace Overlook;
 
 GUI_APP_MAIN {
 	const Vector<String>& args = CommandLine();
-	bool autostart = false;
 	for(int i = 1; i < args.GetCount(); i+=2) {
 		const String& s = args[i-1];
 		if (s == "-addr") {
@@ -19,18 +18,11 @@ GUI_APP_MAIN {
 		else if (s == "-port") {
 			arg_port = ScanInt(args[i]);
 		}
-		else if (s == "-autostart") {
-			autostart = ScanInt(args[i]);
-		}
 	}
 	
 	{
 		::Overlook::Overlook ol;
 		ol.Init();
-		if (autostart) {
-			ol.Load();
-			ol.Start();
-		}
 		ol.Run();
 		ol.Deinit();
 	}

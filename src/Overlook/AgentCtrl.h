@@ -8,7 +8,7 @@ class AgentDraw : public Ctrl {
 	int snap_id;
 	
 public:
-	AgentDraw(Agent& agent);
+	AgentDraw();
 	
 	virtual void Paint(Draw& w);
 	void SetSnap(int i) {snap_id = i;}
@@ -24,7 +24,7 @@ protected:
 	
 public:
 	typedef StatsGraph CLASSNAME;
-	StatsGraph(Agent& t);
+	StatsGraph();
 	
 	virtual void Paint(Draw& w);
 };
@@ -43,7 +43,7 @@ protected:
 	
 public:
 	typedef AgentThreadCtrl CLASSNAME;
-	AgentThreadCtrl(Agent& agent, int thrd_id);
+	AgentThreadCtrl();
 	
 	void Data();
 	
@@ -60,7 +60,7 @@ protected:
 	
 public:
 	typedef AgentCtrl CLASSNAME;
-	AgentCtrl(Agent& agent);
+	AgentCtrl();
 	
 	void Data();
 	void SetView();
@@ -73,7 +73,7 @@ class TrainingGraph : public Ctrl {
 	
 public:
 	typedef TrainingGraph CLASSNAME;
-	TrainingGraph(Agent& t);
+	TrainingGraph();
 	
 	virtual void Paint(Draw& w);
 };
@@ -87,8 +87,6 @@ protected:
 	bool init;
 	
 	Option paused, prefer_highresults;
-	Label lbl_fmlevel;
-	EditDoubleSpin fmlevel;
 	Label epoch;
 	AgentDraw draw;
 	TrainingGraph reward;
@@ -106,13 +104,13 @@ protected:
 	
 public:
 	typedef AgentTraining CLASSNAME;
-	AgentTraining(Agent& agent);
+	AgentTraining();
 	
 	void Data();
 	void ApplySettings();
 	void SetPreferHigh() {agent->prefer_high = prefer_highresults.Get();}
-	void SetFreeMarginLevel() {agent->global_free_margin_level = fmlevel.GetData();}
 	void SetPaused() {agent->paused = paused.GetData();}
+	void SetAgent(Agent& agent) {this->agent = &agent;}
 	
 };
 
@@ -129,7 +127,7 @@ class RealtimeNetworkCtrl : public ParentCtrl {
 	
 public:
 	typedef RealtimeNetworkCtrl CLASSNAME;
-	RealtimeNetworkCtrl(Agent& agent, RealtimeSession& rtses);
+	RealtimeNetworkCtrl();
 	
 	void Data();
 	void RefreshSignals();
@@ -139,15 +137,16 @@ public:
 
 
 class SnapshotCtrl : public ParentCtrl {
-	Agent* agent;
+	AgentGroup* group;
 	Splitter hsplit;
 	ArrayCtrl list;
 	AgentDraw draw;
 	
 public:
 	typedef SnapshotCtrl CLASSNAME;
-	SnapshotCtrl(Agent& agent);
+	SnapshotCtrl();
 	
+	void SetGroup(AgentGroup& group) {this->group = &group;}
 	void Data();
 };
 

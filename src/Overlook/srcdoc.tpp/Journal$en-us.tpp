@@ -2027,4 +2027,12 @@ about the improvement in the design.&]
 [s0;%- In conclusion, I converted the Agent to use DQN`-agent instead 
 of deep fully connected neural network. I also moved instrument`-web 
 features from Agent to AgentGroup. Both non`-obvious changes 
-improves quality and robustness.]]
+improves quality and robustness.&]
+[s3;%- 13.7.2017&]
+[s0;%- With new AgentGroup and Manager classes it is easy to test 
+how other symbol data and previous signals affects the result. 
+My hypothesis is that they both improves results in input and 
+soon it can be tested. I am not going to do extensive statistical 
+math immediately, but if this will be a source of my master`'s 
+thesis, then the math part will be polished to the maximum.&]
+[s0;%- ]]

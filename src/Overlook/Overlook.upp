@@ -56,6 +56,8 @@ file
 	QtStats.cpp,
 	Manager.h,
 	Manager.cpp,
+	AgentGroup.h,
+	AgentGroup.cpp,
 	Agent.h,
 	Agent.cpp;
 

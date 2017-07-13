@@ -3,11 +3,14 @@
 namespace Overlook {
 using namespace Upp;
 
-AgentDraw::AgentDraw(Agent& agent) : agent(&agent) {
+AgentDraw::AgentDraw() {
+	agent = NULL;
 	snap_id = -1;
 }
 
 void AgentDraw::Paint(Draw& w) {
+	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
@@ -15,13 +18,14 @@ void AgentDraw::Paint(Draw& w) {
 	
 	
 	Agent& agent = *this->agent;
-	System& sys = *agent.sys;
+	AgentGroup& group = *agent.group;
+	System& sys = *group.sys;
 	
-	if (snap_id < -1 || snap_id >= agent.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
-	const Snapshot& snap = snap_id >= 0 ? agent.snaps[snap_id] : agent.latest_snap;
+	if (snap_id < -1 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
+	const Snapshot& snap = group.snaps[snap_id];
 	
-	int tf_count		= snap.pos.GetCount();
-	int value_count		= agent.buf_count * 2;
+	int tf_count		= group.tf_ids.GetCount();
+	int value_count		= group.buf_count * 2;
 	
 	int rows = tf_count;
 	int cols = value_count;
@@ -58,11 +62,14 @@ void AgentDraw::Paint(Draw& w) {
 
 
 
-TrainingGraph::TrainingGraph(Agent& agent) : agent(&agent) {
+TrainingGraph::TrainingGraph() {
+	agent = NULL;
 	
 }
 
 void TrainingGraph::Paint(Draw& w) {
+	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
@@ -115,11 +122,9 @@ void TrainingGraph::Paint(Draw& w) {
 
 
 
-AgentThreadCtrl::AgentThreadCtrl(Agent& agent, int thrd_id) :
-	agent(&agent),
-	thrd_id(thrd_id),
-	draw(agent)
+AgentThreadCtrl::AgentThreadCtrl()
 {
+	agent = NULL;
 	Add(hsplit.SizePos());
 	
 	hsplit.Horz();
@@ -131,7 +136,8 @@ AgentThreadCtrl::AgentThreadCtrl(Agent& agent, int thrd_id) :
 
 void AgentThreadCtrl::Data() {
 	MetaTrader& mt = GetMetaTrader();
-	System& sys = *agent->sys;
+	AgentGroup& group = *agent->group;
+	System& sys = *group.sys;
 	/*SequencerThread& thrd = agent->thrds[thrd_id];
 	Snapshot& snap = agent->snaps[thrd.snap_id];
 	
@@ -155,10 +161,9 @@ void AgentThreadCtrl::Data() {
 
 
 
-AgentCtrl::AgentCtrl(Agent& agent) :
-	agent(&agent),
-	reward(agent)
+AgentCtrl::AgentCtrl()
 {
+	agent = NULL;
 	Add(thrdlist.TopPos(3, 24).LeftPos(2, 96));
 	Add(update_brokerctrl.TopPos(3, 24).LeftPos(102, 96));
 	Add(reward.BottomPos(0,200).HSizePos());
@@ -204,13 +209,16 @@ void AgentCtrl::SetView() {
 
 
 
-StatsGraph::StatsGraph(Agent& agent) : agent(&agent) {
+StatsGraph::StatsGraph() {
+	agent = NULL;
 	
 	
 	
 }
 
 void StatsGraph::Paint(Draw& w) {
+	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	
 	Size sz(GetSize());
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
@@ -274,24 +282,14 @@ void StatsGraph::Paint(Draw& w) {
 
 
 
-AgentTraining::AgentTraining(Agent& agent) :
-	agent(&agent),
-	draw(agent),
-	reward(agent)
+AgentTraining::AgentTraining()
 {
+	agent = NULL;
 	Add(paused.TopPos(3, 24).LeftPos(2, 196));
 	Add(prefer_highresults.TopPos(3, 24).LeftPos(202, 196));
-	Add(lbl_fmlevel.TopPos(3, 24).LeftPos(402, 96));
-	Add(fmlevel.TopPos(3, 24).LeftPos(502, 96));
 	
 	Add(hsplit.VSizePos(0, 200).HSizePos());
 	Add(reward.BottomPos(0, 200).HSizePos());
-	
-	lbl_fmlevel.SetLabel("Free-margin level:");
-	fmlevel.SetData(agent.global_free_margin_level);
-	fmlevel.MinMax(0.60, 0.99);
-	fmlevel.SetInc(0.01);
-	fmlevel <<= THISBACK(SetFreeMarginLevel);
 	
 	hsplit << leftctrl << draw << conv << timescroll;
 	hsplit.Horz();
@@ -306,7 +304,7 @@ AgentTraining::AgentTraining(Agent& agent) :
 	seslist.ColumnWidths("1 3 2");
 	seslist <<= THISBACK(Data);
 	
-	
+	/*
 	paused.SetLabel("Paused");
 	paused.Set(agent.paused);
 	paused <<= THISBACK(SetPaused);
@@ -315,7 +313,7 @@ AgentTraining::AgentTraining(Agent& agent) :
 	prefer_highresults.SetLabel("Prefer high values");
 	prefer_highresults.Set(agent.prefer_high);
 	prefer_highresults <<= THISBACK(SetPreferHigh);
-	
+	*/
 	init = true;
 	
 	leftctrl.Vert();
@@ -371,8 +369,6 @@ void AgentTraining::Data() {
 		seslist.Set(i, 1, seq.equity);
 		seslist.Set(i, 2, seq.orders);
 	}
-	agent->session_cur = seslist.GetCursor();
-	if (agent->session_cur == -1) agent->session_cur = 0;
 	*/
 	
 	draw.SetSnap(0);
@@ -397,10 +393,9 @@ void AgentTraining::ApplySettings() {
 
 
 
-RealtimeNetworkCtrl::RealtimeNetworkCtrl(Agent& agent, RealtimeSession& rtses) :
-	agent(&agent), rtses(&rtses),
-	draw(agent)
+RealtimeNetworkCtrl::RealtimeNetworkCtrl()
 {
+	agent = NULL;
 	Add(hsplit.VSizePos(30).HSizePos());
 	Add(tfcmplbl.TopPos(2,26).LeftPos(202, 196));
 	
@@ -421,11 +416,13 @@ RealtimeNetworkCtrl::RealtimeNetworkCtrl(Agent& agent, RealtimeSession& rtses) :
 	tfcmplbl.SetLabel("<No-brainer assertions>");
 	
 	draw.SetSnap(-1);
-	brokerctrl.SetBroker(agent.latest_broker);
+	
+	//brokerctrl.SetBroker(agent.latest_broker);
+	
 }
 
 void RealtimeNetworkCtrl::Data() {
-	if (agent->latest_broker.AccountEquity() > agent->latest_broker.GetInitialBalance()) {
+	/*if (agent->latest_broker.AccountEquity() > agent->latest_broker.GetInitialBalance()) {
 		tfcmplbl.SetLabel("Network can be used in trading.");
 		tfcmplbl.SetInk(Color(28, 85, 0));
 	} else {
@@ -433,7 +430,7 @@ void RealtimeNetworkCtrl::Data() {
 		tfcmplbl.SetInk(Color(109, 0, 26));
 	}
 	brokerctrl.Data();
-	draw.Refresh();
+	draw.Refresh();*/
 }
 
 void RealtimeNetworkCtrl::RefreshSignals() {
@@ -457,10 +454,9 @@ void RealtimeNetworkCtrl::KillSignals() {
 
 
 
-SnapshotCtrl::SnapshotCtrl(Agent& agent) :
-	agent(&agent),
-	draw(agent)
+SnapshotCtrl::SnapshotCtrl()
 {
+	group = NULL;
 	Add(hsplit.SizePos());
 	hsplit.Horz();
 	hsplit << draw << list;
@@ -469,23 +465,24 @@ SnapshotCtrl::SnapshotCtrl(Agent& agent) :
 	list.AddColumn("#");
 	list.AddColumn("Time");
 	list.AddColumn("Added");
-	list.AddColumn("Is valid");
 	
 	list <<= THISBACK(Data);
 }
 
 void SnapshotCtrl::Data() {
+	if (!group) return;
+	
+	AgentGroup& group = *this->group;
 	int cursor = list.GetCursor();
 	
-	for(int i = 0; i < agent->snaps.GetCount(); i++) {
-		const Snapshot& snap = agent->snaps[i];
+	for(int i = 0; i < group.snaps.GetCount(); i++) {
+		const Snapshot& snap = group.snaps[i];
 		list.Set(i, 0, i);
 		list.Set(i, 1, snap.time);
 		list.Set(i, 2, snap.added);
-		list.Set(i, 3, snap.is_valid ? "Valid" : "Invalid");
 	}
 	
-	if (cursor >= 0 && cursor < agent->snaps.GetCount())
+	if (cursor >= 0 && cursor < group.snaps.GetCount())
 		draw.SetSnap(cursor);
 	
 	draw.Refresh();

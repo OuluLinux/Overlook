@@ -6,6 +6,7 @@
 
 #include "SimBroker.h"
 #include "Agent.h"
+#include "AgentGroup.h"
 #include "Manager.h"
 #include "System.h"
 #include "Core.h"
@@ -17,7 +18,6 @@
 #include "QtStats.h"
 
 #include "AgentCtrl.h"
-
 #include "ManagerCtrl.h"
 
 #include "GraphCtrl.h"
@@ -31,38 +31,13 @@
 
 namespace Overlook {
 
-class LoaderWindow : public TopWindow {
-	
-protected:
-	Overlook* ol;
-	Label lbl;
-	String label;
-	ProgressIndicator prog, sub, subsub;
-	int ret_value;
-	
-	void Progress(int actual, int total, String label);
-	void SubProgress(int actual, int total);
-	void SubSubProgress(int actual, int total);
-	void Close0() {Close();}
-	
-public:
-	typedef LoaderWindow CLASSNAME;
-	LoaderWindow(Overlook& ol);
-	
-	bool IsFail() {return ret_value;}
-	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
-	void PostSubProgress(int actual, int total) {PostCallback(THISBACK2(SubProgress, actual, total));}
-	void PostSubSubProgress(int actual, int total) {PostCallback(THISBACK2(SubSubProgress, actual, total));}
-	void PostClose() {PostCallback(THISBACK(Close0));}
-};
+
 
 class Overlook : public TopWindow {
 	
 protected:
 	friend class PrioritizerCtrl;
 	
-	// Loader
-	One<LoaderWindow>		loader;
 	System					sys;
 	
 	// Main view
@@ -92,7 +67,6 @@ protected:
 	
 	void SetView();
 	void Configure();
-	void Loader();
 	void Data(bool periodic);
 	
 public:
@@ -101,7 +75,6 @@ public:
 	~Overlook();
 	
 	void Init();
-	void Load();
 	void Start();
 	void Deinit();
 	void Refresher();

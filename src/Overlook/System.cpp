@@ -6,7 +6,9 @@ namespace Overlook {
 String arg_addr = "127.0.0.1";
 int arg_port = 42000;
 
-System::System() {
+System::System() :
+	mgr(this)
+{
 	timediff = 0;
 	base_period = 60;
 	end = GetSysTime();
@@ -153,7 +155,7 @@ int System::GetCountTf(int tf_id) const {
 }
 
 int64 System::GetShiftTf(int src_tf, int dst_tf, int shift) {
-	ASSERT_(src_tf != dst_tf, "Why?");
+	if (src_tf == dst_tf) return shift;
 	int64 src_period = periods[src_tf];
 	int64 dst_period = periods[dst_tf];
 	int64 timediff = shift * src_period * base_period;

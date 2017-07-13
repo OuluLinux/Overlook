@@ -2,55 +2,6 @@
 
 namespace Overlook {
 
-LoaderWindow::LoaderWindow(Overlook& ol) {
-	NoCloseBox();
-	this->ol = &ol;
-	
-	ImageDraw id(64, 64);
-	id.DrawRect(0,0,64,64,Black());
-	id.DrawText(0,0, "O", Arial(64), White());
-	Icon(id);
-	
-	Title("Loading Overlook");
-	Add(lbl.HSizePos(4, 4).TopPos(3, 24));
-	Add(prog.HSizePos(4, 4).TopPos(33, 12));
-	Add(sub.HSizePos(4, 4).TopPos(33+15, 12));
-	Add(subsub.HSizePos(4, 4).TopPos(33+30, 12));
-	SetRect(0, 0, 400, 80);
-	prog.Set(0, 1);
-	sub.Set(0, 1);
-	subsub.Set(0, 1);
-	ret_value = 0;
-}
-
-void LoaderWindow::Progress(int actual, int total, String label) {
-	LOG("Progress " << actual << "/" << total);
-	prog.Set(actual, total);
-	sub.Set(0, 1);
-	subsub.Set(0, 1);
-	this->label = label;
-	lbl.SetLabel(label);
-}
-
-void LoaderWindow::SubProgress(int actual, int total) {
-	sub.Set(actual, total);
-	subsub.Set(0, 1);
-	lbl.SetLabel(label + " " + IntStr(actual) + "/" + IntStr(total));
-}
-
-void LoaderWindow::SubSubProgress(int actual, int total) {
-	subsub.Set(actual, total);
-}
-
-
-
-
-
-
-
-
-
-
 Overlook::Overlook() :
 	mgrctrl(sys)
 {
@@ -144,33 +95,6 @@ void Overlook::Init() {
 	ctrllist.SetIndex(0);
 	
 	PostCallback(THISBACK(SetView));
-}
-
-void Overlook::Load() {
-	loader = new LoaderWindow(*this);
-	Thread::Start(THISBACK(Loader));
-	loader->Run();
-	loader.Clear();
-}
-
-void Overlook::Loader() {
-	/*loader->PostProgress(0, 4, "Creating work queue");
-	sys.WhenProgress = callback(&*loader, &LoaderWindow::PostSubProgress);
-	sys.WhenSubProgress = callback(&*loader, &LoaderWindow::PostSubSubProgress);
-	agent.RefreshWorkQueue();
-	
-	loader->PostProgress(1, 4, "Processing data");
-	agent.ProcessWorkQueue();
-	
-	loader->PostProgress(2, 4, "Finding value buffers");
-	agent.ResetValueBuffers();
-	
-	loader->PostProgress(3, 4, "Reseting snapshots");
-	agent.InitThreads();
-	
-	sys.WhenProgress.Clear();
-	sys.WhenSubProgress.Clear();
-	loader->PostClose();*/
 }
 
 void Overlook::Start() {

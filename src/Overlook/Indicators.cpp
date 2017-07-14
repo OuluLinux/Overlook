@@ -3770,4 +3770,187 @@ void PeriodicalChange::Start() {
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sensors::Sensors() {
+	
+	
+	
+}
+
+void Sensors::Init() {
+	SetCoreSeparateWindow();
+	
+	#ifdef LARGE_SENSOR
+	for(int i = 0; i < 10; i++)
+		SetBufferColor(i, RainbowColor((double)i / 10.0));
+	#else
+	for(int i = 0; i < 4; i++)
+		SetBufferColor(i, RainbowColor((double)i / 4.0));
+	#endif
+	
+	tfmin = GetMinutePeriod();
+	int w1 = 7 * 24 * 60;
+	int count = 0;
+	
+	split_type = 0;
+	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
+	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
+	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
+	
+	total_mean = 0.0;
+	total_count = 0;
+	means.SetCount(count, 0.0);
+	counts.SetCount(count, 0);
+}
+
+void Sensors::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	Vector<Buffer*> bufs;
+	#ifdef LARGE_SENSOR
+	for(int i = 0; i < 10; i++)
+	#else
+	for(int i = 0; i < 4; i++)
+	#endif
+		bufs.Add(&GetBuffer(i));
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1);
+		
+		double prev = src.Get(i);
+		if (prev == 0.0)
+			continue;
+		double change = src.Get(i+1) / prev - 1.0;
+		if (!IsFin(change))
+			continue;
+		
+		Time t = sys.GetTimeTf(GetTf(), i);
+		
+		if (split_type == 0) {
+			int wday = DayOfWeek(t);
+			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+			int avpos = wdaymin / tfmin;
+			Add(avpos, change);
+		}
+		else if (split_type == 1) {
+			int wday = DayOfWeek(t);
+			Add(wday, change);
+		}
+		else {
+			int pos = (DayOfYear(t) % (7 * 4)) / 7;
+			Add(pos, change);
+		}
+	}
+	
+	
+	if (counted) counted--;
+	bars++;
+	
+	double range_max = total_mean * 1.5;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		#ifdef LARGE_SENSOR
+		
+		double changes[5];
+		for(int j = 0; j < 3; j++) {
+			Time t = sys.GetTimeTf(GetTf(), i+j);
+			if (split_type == 0) {
+				int wday = DayOfWeek(t);
+				int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+				int avpos = wdaymin / tfmin;
+				changes[2+j] = means[avpos];
+			}
+			else if (split_type == 1) {
+				int wday = DayOfWeek(t);
+				changes[2+j] = means[wday];
+			}
+			else {
+				int pos = (DayOfYear(t) % (7 * 4)) / 7;
+				changes[2+j] = means[pos];
+			}
+		}
+		
+		double open0 = src.Get(i);
+		double open1 = i > 0 ? src.Get(i-1) : 0.0;
+		double open2 = i > 1 ? src.Get(i-2) : 0.0;
+		
+		changes[1] = i > 0 ? (open0 / open1 - 1.0) : 0.0;
+		changes[0] = i > 1 ? (open1 / open2 - 1.0) : 0.0;
+		
+		
+		for(int j = 0; j < 5; j++) {
+			double d = changes[j];
+			double pos, neg;
+			if (d >= 0) {
+				pos = Upp::max(0.0, range_max - d) / range_max;
+				neg = 1.0;
+			} else {
+				pos = 1.0;
+				neg = Upp::max(0.0, range_max + d) / range_max;
+			}
+			bufs[j * 2 + 0]->Set(i, pos);
+			bufs[j * 2 + 1]->Set(i, neg);
+		}
+		
+		#else
+		
+		double changes[2];
+		Time t = sys.GetTimeTf(GetTf(), i);
+		if (split_type == 0) {
+			int wday = DayOfWeek(t);
+			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+			int avpos = wdaymin / tfmin;
+			changes[1] = means[avpos];
+		}
+		else if (split_type == 1) {
+			int wday = DayOfWeek(t);
+			changes[1] = means[wday];
+		}
+		else {
+			int pos = (DayOfYear(t) % (7 * 4)) / 7;
+			changes[1] = means[pos];
+		}
+		
+		double open0 = src.Get(i);
+		double open1 = i > 0 ? src.Get(i-1) : 0.0;
+		
+		changes[0] = i > 0 ? (open0 / open1 - 1.0) : 0.0;
+		
+		for(int j = 0; j < 2; j++) {
+			double d = changes[j];
+			double pos, neg;
+			if (d >= 0) {
+				pos = Upp::max(0.0, range_max - d) / range_max;
+				neg = 1.0;
+			} else {
+				pos = 1.0;
+				neg = Upp::max(0.0, range_max + d) / range_max;
+			}
+			bufs[j * 2 + 0]->Set(i, pos);
+			bufs[j * 2 + 1]->Set(i, neg);
+		}
+		
+		#endif
+	}
+}
+
 }

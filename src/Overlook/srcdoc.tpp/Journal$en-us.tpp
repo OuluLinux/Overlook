@@ -2035,4 +2035,34 @@ My hypothesis is that they both improves results in input and
 soon it can be tested. I am not going to do extensive statistical 
 math immediately, but if this will be a source of my master`'s 
 thesis, then the math part will be polished to the maximum.&]
-[s0;%- ]]
+[s3;%- 14.7.2017&]
+[s0;%- Well, this is fun. DQN`-agent seems to hit high peaks with 
+early training and after a while, it simply hits the upper maximum 
+and stays there. How realistic is that? Not exactly simulation, 
+but it`'s getting there. Also, it doesn`'t repeat always. These 
+are the results what I wanted to see anyway.&]
+[s0;%- I have weird Déjà vu feeling while writing this... In previous 
+versions, I have seen good results and then immediatelly started 
+an upgrade which breaks all existing functionality. Is it different 
+this time?&]
+[s0;%- I would say, that there won`'t be more powerful AI than DQN`-agent 
+in this for a while. Also, if I happen to find something else, 
+I might not even care anymore update this.&]
+[s0;%- So, there is a good chance that this engine finally stays. 
+I haven`'t had time for fine`-tuning and re`-checking stuff when 
+I had to focus on the engine, but now I might finally have time.&]
+[s0;%- Some agents are really hitting the maximum value and getting 
+SimBroker stuck, which is actually the funniest bug for a while. 
+Some of the instruments fails constantly, so it`'s not all positive. 
+Also, I don`'t test this now with test data and real environments 
+have all sort of constraints, so it is not realistical, but that`'s 
+not the point.&]
+[s0;%- Today was a bit more relaxed day. I am in a hurry and I don`'t 
+have much time for this, but one must listen to himself sometimes. 
+Next semester is coming and it sets a great pressure to prepare 
+some math, but I also need to get this to run at background before 
+that.&]
+[s0;%- There is tens of issues what still must be resolved. The rewriting 
+of the engine has been a time consumer, but if this is final 
+(and it probably is), then this fine`-tuning part is going to 
+be over in two weeks too.]]

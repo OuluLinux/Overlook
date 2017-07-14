@@ -905,6 +905,62 @@ public:
 	}
 };
 
+//#define LARGE_SENSOR
+
+class Sensors : public Core {
+	Vector<double> means;
+	Vector<int> counts;
+	double total_mean;
+	int total_count;
+	int split_type, tfmin;
+	
+protected:
+	virtual void Start();
+	
+	void Add(int i, double d) {
+		double& mean = means[i];
+		int& count = counts[i];
+		if (!count) {
+			mean = d;
+			count = 1;
+		} else {
+			double delta = d - mean;
+			mean += delta / count;
+			count++;
+		}
+		
+		if (!total_count) {
+			total_mean = fabs(d);
+			total_count = 1;
+		} else {
+			double delta = fabs(d) - total_mean;
+			total_mean += delta / total_count;
+			total_count++;
+		}
+	}
+	double Get(int i) {return means[i];}
+	
+public:
+	Sensors();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+		#ifdef LARGE_SENSOR
+			% Out(10, 10)
+		#else
+			% Out(4, 4)
+		#endif
+			% Persistent(means)
+			% Persistent(counts)
+			% Persistent(total_mean)
+			% Persistent(total_count);
+	}
+};
+
+
+
 }
 
 #endif

@@ -12,7 +12,7 @@ AgentGroup::AgentGroup() {
 	
 	
 	global_free_margin_level = 0.97;
-	reward_period = 10;
+	reward_period = 4;
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
@@ -21,11 +21,16 @@ AgentGroup::AgentGroup() {
 	
 }
 
+AgentGroup::~AgentGroup() {
+	Stop();
+}
+
 void AgentGroup::Progress(int actual, int total, String desc) {
 	a0 = actual;
 	t0 = total;
 	prog_desc = desc;
 	WhenProgress(actual, total, desc);
+	SubProgress(0, 1);
 }
 
 void AgentGroup::SubProgress(int actual, int total) {
@@ -81,12 +86,16 @@ void AgentGroup::Init() {
 	
 	
 	int indi;
-	indi = sys->Find<OpenValueChange>();
+	
+	indi = sys->Find<Sensors>();
+	ASSERT(indi != -1);
+	indi_ids.Add(indi);
+	/*indi = sys->Find<OpenValueChange>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
 	indi = sys->Find<PeriodicalChange>();
 	ASSERT(indi != -1);
-	indi_ids.Add(indi);
+	indi_ids.Add(indi);*/
 	/*indi = sys->Find<StochasticOscillator>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);*/
@@ -94,13 +103,13 @@ void AgentGroup::Init() {
 	
 	RefreshWorkQueue();
 	
-	WhenProgress(1, 5, "Processing data");
+	Progress(1, 5, "Processing data");
 	ProcessWorkQueue();
 	
-	WhenProgress(2, 5, "Finding value buffers");
+	Progress(2, 5, "Finding value buffers");
 	ResetValueBuffers();
 	
-	data_size = sym_ids.GetCount() * tf_ids.GetCount() * buf_count * 2;
+	data_size = sym_ids.GetCount() * tf_ids.GetCount() * buf_count;
 	signal_size = sym_ids.GetCount() * tf_ids.GetCount() * 2;
 	total_size = data_size + signal_size;
 	DUMPC(sym_ids);
@@ -110,12 +119,12 @@ void AgentGroup::Init() {
 	DUMP(signal_size);
 	DUMP(total_size);
 	input_width  = 1;
-	input_height = (buf_count + 1) * sym_ids.GetCount() * tf_ids.GetCount() * 2;
+	input_height = (buf_count + 2) * sym_ids.GetCount() * tf_ids.GetCount();
 	
-	WhenProgress(3, 5, "Reseting snapshots");
+	Progress(3, 5, "Reseting snapshots");
 	InitThreads();
 	
-	WhenProgress(4, 5, "Initializing agents");
+	Progress(4, 5, "Initializing agents");
 	if (agents.IsEmpty())
 		CreateAgents();
 	for(int i = 0; i < agents.GetCount(); i++) {
@@ -123,6 +132,8 @@ void AgentGroup::Init() {
 		a.group = this;
 		agents[i].Init();
 	}
+	
+	Progress(0, 1, "Complete");
 }
 
 void AgentGroup::Start() {
@@ -130,6 +141,13 @@ void AgentGroup::Start() {
 		Agent& a = agents[i];
 		ASSERT(a.group);
 		a.Start();
+	}
+}
+
+void AgentGroup::Stop() {
+	for(int i = 0; i < agents.GetCount(); i++) {
+		Agent& a = agents[i];
+		a.Stop();
 	}
 }
 
@@ -204,7 +222,7 @@ void AgentGroup::GenerateSnapshots() {
 	snaps.SetCount(train_pos.GetCount());
 	for(int i = 0; i < train_pos.GetCount(); i++) {
 		if (i % 87 == 0)
-			sys->WhenProgress(i, train_pos.GetCount());
+			SubProgress(i, train_pos.GetCount());
 		Snapshot& snap = snaps[i];
 		ResetSnapshot(snap);
 		Seek(snap, train_pos[i]);
@@ -253,7 +271,6 @@ void AgentGroup::ResetSnapshot(Snapshot& snap) {
 
 bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	int tf_snap = tf_ids.GetCount() - 1;
-	int buf_count = value_buffers[0].GetCount();
 	int main_tf = tf_ids[tf_snap];
 	int bars = sys->GetCountTf(main_tf);
 	if (shift >= bars || shift < 0)
@@ -382,7 +399,7 @@ void AgentGroup::ResetValueBuffers() {
 			total_bufs++;
 		}
 	}
-	int expected_total = tf_ids.GetCount() * buf_count;
+	int expected_total = sym_ids.GetCount() * tf_ids.GetCount() * buf_count;
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 	
 	
@@ -402,7 +419,7 @@ void AgentGroup::ResetValueBuffers() {
 void AgentGroup::ProcessWorkQueue() {
 	for(int i = 0; i < work_queue.GetCount(); i++) {
 		DLOG(i << "/" << work_queue.GetCount());
-		sys->WhenProgress(i, work_queue.GetCount());
+		SubProgress(i, work_queue.GetCount());
 		sys->Process(*work_queue[i]);
 	}
 }
@@ -410,7 +427,7 @@ void AgentGroup::ProcessWorkQueue() {
 void AgentGroup::ProcessDataBridgeQueue() {
 	for(int i = 0; i < db_queue.GetCount(); i++) {
 		DLOG(i << "/" << db_queue.GetCount());
-		sys->WhenProgress(i, db_queue.GetCount());
+		SubProgress(i, db_queue.GetCount());
 		sys->Process(*db_queue[i]);
 	}
 }

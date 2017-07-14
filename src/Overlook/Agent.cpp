@@ -14,9 +14,7 @@ Agent::Agent() {
 	group_count = 0;
 	iter = 0;
 	smooth_reward = 0.0;
-	prefer_high = true;
 	running = false;
-	paused = false;
 	
 }
 
@@ -40,20 +38,22 @@ void Agent::Init() {
 	thrd_equity.SetCount(group->snaps.GetCount(), 0);
 	
 	signal_average.tf_periods <<= group->tf_periods;
-	reward_average.tf_periods <<= group->tf_periods;
+	reward_average.tf_periods.SetCount(1);
+	reward_average.tf_periods[0] = group->reward_period;
 	
 	broker.Brokerage::operator=((Brokerage&)GetMetaTrader());
 	broker.InitLightweight();
 }
 
 void Agent::Start() {
-	Stop();
+	if (running) return;
 	running = true;
 	not_stopped++;
 	Thread::Start(THISBACK(Main));
 }
 
 void Agent::Stop() {
+	if (!running) return;
 	running = false;
 	while (not_stopped) Sleep(100);
 }
@@ -64,12 +64,6 @@ void Agent::Main() {
 	
 	while (running) {
 		epoch_total = group->snaps.GetCount();
-		
-		// Wait until threads have provided sequences
-		if (paused) {
-			Sleep(100);
-			continue;
-		}
 		
 		// Do some action
 		Action();
@@ -114,7 +108,7 @@ void Agent::Action() {
 	broker.RefreshOrders();
 	broker.CycleChanges();
 	double equity = broker.AccountEquity();
-	prev_reward = equity - prev_equity;
+	prev_reward = (equity - prev_equity) / Upp::max(1.0, prev_equity);
 	prev_equity = equity;
 	
 	
@@ -128,6 +122,12 @@ void Agent::Action() {
 	// Write some stats for plotter
 	thrd_equity[epoch_actual] = equity;
 	
+	
+	epoch_actual++;
+	if (epoch_actual >= epoch_total) {
+		seq_results.Add(equity);
+		epoch_actual = 0;
+	}
 }
 
 void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {

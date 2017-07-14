@@ -72,6 +72,7 @@ protected:
 	friend class SnapshotCtrl;
 	friend class ManagerCtrl;
 	friend class AgentGroup;
+	friend class AgentTabCtrl;
 	friend struct RealtimeSession;
 	
 	
@@ -94,9 +95,7 @@ protected:
 	int iter;
 	int group_count;
 	int not_stopped;
-	bool prefer_high;
 	bool running;
-	bool paused;
 	
 	void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap);
 	void Backward(double reward);

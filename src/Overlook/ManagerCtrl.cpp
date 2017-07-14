@@ -4,16 +4,10 @@ namespace Overlook {
 
 GroupOverview::GroupOverview()
 {
+	CtrlLayout(*this);
 	
-	Add(lbl.HSizePos(4, 4).TopPos(3, 24));
-	Add(prog.HSizePos(4, 4).TopPos(33, 12));
-	Add(sub.HSizePos(4, 4).TopPos(33+15, 12));
-	Add(subsub.HSizePos(4, 4).TopPos(33+30, 12));
-	SetRect(0, 0, 400, 80);
 	prog.Set(0, 1);
 	sub.Set(0, 1);
-	subsub.Set(0, 1);
-	ret_value = 0;
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
@@ -24,25 +18,24 @@ void GroupOverview::SetGroup(AgentGroup& group) {
 	this->group = &group;
 	this->group->WhenProgress = THISBACK(PostProgress);
 	this->group->WhenSubProgress = THISBACK(PostSubProgress);
+	
+	fmlevel.SetData(group.global_free_margin_level);
+	enable.Set(group.enable_training);
+	
+	Data();
 }
 
 void GroupOverview::Progress(int actual, int total, String label) {
 	LOG("Progress " << actual << "/" << total);
 	prog.Set(actual, total);
 	sub.Set(0, 1);
-	subsub.Set(0, 1);
 	this->label = label;
 	lbl.SetLabel(label);
 }
 
 void GroupOverview::SubProgress(int actual, int total) {
 	sub.Set(actual, total);
-	subsub.Set(0, 1);
 	lbl.SetLabel(label + " " + IntStr(actual) + "/" + IntStr(total));
-}
-
-void GroupOverview::SubSubProgress(int actual, int total) {
-	subsub.Set(actual, total);
 }
 
 void GroupOverview::Data() {
@@ -50,6 +43,11 @@ void GroupOverview::Data() {
 		lbl.SetLabel(group->prog_desc);
 		prog.Set(group->a0, group->t0);
 		sub.Set(group->a1, group->t1);
+		
+		String infostr;
+		infostr << "dummy info";
+		
+		info.SetLabel(infostr);
 	}
 }
 
@@ -62,6 +60,7 @@ void GroupOverview::Data() {
 
 
 GroupTabCtrl::GroupTabCtrl() {
+	group = NULL;
 	
 	Add(overview);
 	Add(overview, "Overview");
@@ -73,10 +72,18 @@ GroupTabCtrl::GroupTabCtrl() {
 	//Add(rtnetctrl, "Real-Time Network");
 	
 	
-	
+	WhenSet << THISBACK(Data);
 }
 
 void GroupTabCtrl::SetGroup(AgentGroup& group) {
+	this->group = &group;
+	overview.fmlevel.SetData(group.global_free_margin_level);
+	
+	overview.enable.WhenAction.Clear();
+	overview.enable.Set(group.enable_training);
+	overview.enable <<= THISBACK(SetEnabled);
+	overview.fmlevel <<= THISBACK(SetFreeMargin);
+	
 	overview	.SetGroup(group);
 	//agentctrl	.SetGroup(group);
 	snapctrl	.SetGroup(group);
@@ -92,6 +99,81 @@ void GroupTabCtrl::Data() {
 		snapctrl.Data();
 }
 
+void GroupTabCtrl::SetEnabled() {
+	group->enable_training = overview.enable.Get();
+	if (group->enable_training)	group->Start();
+	else						group->Stop();
+}
+
+void GroupTabCtrl::SetFreeMargin() {
+	group->global_free_margin_level = overview.fmlevel.GetData();
+	if (group->global_free_margin_level < 0.60)
+		group->global_free_margin_level = 0.60;
+	if (group->global_free_margin_level > 0.99)
+		group->global_free_margin_level = 0.99;
+}
+
+
+
+
+
+
+
+
+
+
+AgentTabCtrl::AgentTabCtrl() {
+	agent = NULL;
+	CtrlLayout(overview);
+	
+	Add(overview);
+	Add(overview, "Overview");
+	Add(agent_view);
+	Add(agent_view, "Training");
+	
+	WhenSet << THISBACK(Data);
+}
+
+void AgentTabCtrl::Data() {
+	int tab = Get();
+	
+	if (tab == 0) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(agent->sym);
+		
+		String trading_hours;
+		for(int i = 0; i < 7; i++) {
+			if (i)
+				trading_hours << "\n";
+			
+			trading_hours << Format("%d:%02d - %d:%02d",
+				sym.trades_begin_hours[i], sym.trades_begin_minutes[i],
+				sym.trades_end_hours[i],   sym.trades_end_minutes[i]);
+		}
+		overview.opentimes.SetLabel(trading_hours);
+		overview.margincur.SetLabel(sym.currency_margin);
+		overview.minvolume.SetLabel(DblStr(sym.volume_min));
+		
+		double minimum_margin =
+			GetMetaTrader().GetAskBid()[agent->sym].ask *
+			sym.volume_min *
+			sym.contract_size *
+			sym.margin_factor;
+		if (sym.IsForex())
+			minimum_margin /= GetMetaTrader().AccountLeverage();
+		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));
+	}
+	else if (tab == 1) {
+		agent_view.Data();
+	}
+}
+
+void AgentTabCtrl::SetAgent(Agent& agent) {
+	this->agent = &agent;
+	
+	agent_view.SetAgent(agent);
+}
+
+
 
 
 
@@ -104,7 +186,6 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	view = -1;
 	
 	CtrlLayout(newview);
-	CtrlLayout(confview);
 	
 	Add(hsplit.SizePos());
 	
@@ -113,9 +194,8 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	hsplit.SetPos(1500);
 	
 	mainview.Add(newview.SizePos());
-	mainview.Add(confview.SizePos());
 	mainview.Add(group_tabs.SizePos());
-	mainview.Add(agent_view.SizePos());
+	mainview.Add(agent_tabs.SizePos());
 	
 	
 	String t =
@@ -144,40 +224,30 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.tflist.ColumnWidths("3 1");
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
-	newview.reward.SetData(10);
+	newview.reward.SetData(4);
 	newview.fmlevel.SetData(0.97);
 	newview.alldata.Set(true);
 	newview.allsig.Set(true);
 	
 	
-	MultiButton::SubButton& amonitor	= buttons.AddButton();
-	MultiButton::SubButton& gmonitor	= buttons.AddButton();
-	MultiButton::SubButton& configure	= buttons.AddButton();
-	MultiButton::SubButton& add_new		= buttons.AddButton();
-	add_new.SetLabel("Add ");
-	configure.SetLabel("Settings");
-	gmonitor.SetLabel("Group");
-	amonitor.SetLabel("Agent");
+	add_new.SetLabel("New Group");
 	add_new   <<= THISBACK1(SetView, 0);
-	configure <<= THISBACK1(SetView, 1);
-	gmonitor  <<= THISBACK1(SetView, 2);
-	amonitor  <<= THISBACK1(SetView, 3);
 	
 	
-	ctrl.Add(buttons.TopPos(0, 30).HSizePos());
+	ctrl.Add(add_new.TopPos(0, 30).HSizePos());
 	ctrl.Add(listsplit.VSizePos(30).HSizePos());
 	listsplit.Vert();
 	listsplit << glist << alist;
 	
 	glist.AddColumn("Name");
 	glist.AddColumn("Profit");
-	glist <<= THISBACK1(SetView, 2);
-	glist.WhenLeftClick << THISBACK1(SetView, 2);
+	glist <<= THISBACK1(SetView, 1);
+	glist.WhenLeftClick << THISBACK1(SetView, 1);
 	
 	alist.AddColumn("Symbol");
 	alist.AddColumn("Profit");
-	alist <<= THISBACK1(SetView, 3);
-	alist.WhenLeftClick << THISBACK1(SetView, 3);
+	alist <<= THISBACK1(SetView, 2);
+	alist.WhenLeftClick << THISBACK1(SetView, 2);
 	
 	SetView(0);
 }
@@ -198,8 +268,7 @@ void ManagerCtrl::SetView(int view) {
 	Manager& mgr = sys->GetManager();
 	
 	newview.Hide();
-	confview.Hide();
-	agent_view.Hide();
+	agent_tabs.Hide();
 	group_tabs.Hide();
 	
 	if (view == 0) {
@@ -207,10 +276,6 @@ void ManagerCtrl::SetView(int view) {
 		newview.SetFocus();
 	}
 	else if (view == 1) {
-		confview.Show();
-		confview.SetFocus();
-	}
-	else if (view == 2) {
 		int group_id = glist.GetCursor();
 		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
 			group_tabs.SetGroup(mgr.groups[group_id]);
@@ -218,15 +283,15 @@ void ManagerCtrl::SetView(int view) {
 			group_tabs.SetFocus();
 		}
 	}
-	else if (view == 3) {
+	else if (view == 2) {
 		int group_id = glist.GetCursor();
 		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
 			AgentGroup& group = mgr.groups[group_id];
 			int agent_id = alist.GetCursor();
 			if (agent_id >= 0 && agent_id < group.agents.GetCount()) {
-				agent_view.SetAgent(group.agents[agent_id]);
-				agent_view.Show();
-				agent_view.SetFocus();
+				agent_tabs.SetAgent(group.agents[agent_id]);
+				agent_tabs.Show();
+				agent_tabs.SetFocus();
 			}
 		}
 	}
@@ -290,13 +355,10 @@ void ManagerCtrl::Data() {
 		
 	}
 	else if (view == 1) {
-		
+		group_tabs.Data();
 	}
 	else if (view == 2) {
-		
-	}
-	else if (view == 3) {
-		
+		agent_tabs.Data();
 	}
 }
 

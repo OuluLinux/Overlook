@@ -7,19 +7,14 @@ namespace Overlook {
 #include <CtrlCore/lay.h>
 
 
-class GroupOverview : public ParentCtrl {
+class GroupOverview : public WithGroupOverview<ParentCtrl> {
 	
 protected:
 	AgentGroup* group;
-	Label lbl;
 	String label;
-	ProgressIndicator prog, sub, subsub;
-	int ret_value;
 	
 	void Progress(int actual, int total, String label);
 	void SubProgress(int actual, int total);
-	void SubSubProgress(int actual, int total);
-	void Close0() {Close();}
 	
 public:
 	typedef GroupOverview CLASSNAME;
@@ -28,14 +23,13 @@ public:
 	void SetGroup(AgentGroup& group);
 	
 	void Data();
-	bool IsFail() {return ret_value;}
 	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
 	void PostSubProgress(int actual, int total) {PostCallback(THISBACK2(SubProgress, actual, total));}
-	void PostSubSubProgress(int actual, int total) {PostCallback(THISBACK2(SubSubProgress, actual, total));}
-	void PostClose() {PostCallback(THISBACK(Close0));}
+	
 };
 
 class GroupTabCtrl : public TabCtrl {
+	AgentGroup*				group;
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
 	AgentCtrl				agentctrl;
@@ -48,6 +42,24 @@ public:
 	
 	void Data();
 	void SetGroup(AgentGroup& group);
+	void SetEnabled();
+	void SetFreeMargin();
+	
+};
+
+class AgentTabCtrl : public TabCtrl {
+	Agent* agent;
+	WithAgentOverview<ParentCtrl>	overview;
+	AgentTraining					agent_view;
+	
+	
+	
+public:
+	typedef AgentTabCtrl CLASSNAME;
+	AgentTabCtrl();
+	
+	void Data();
+	void SetAgent(Agent& agent);
 	
 };
 
@@ -57,12 +69,11 @@ class ManagerCtrl : public ParentCtrl {
 	ParentCtrl						ctrl;
 	ParentCtrl						mainview;
 	WithNewAgentGroup<ParentCtrl>	newview;
-	WithConfigure<ParentCtrl>		confview;
-	MultiButton						buttons;
+	Button							add_new;
 	Array<Option>					new_opts;
 	
 	GroupTabCtrl					group_tabs;
-	AgentTraining					agent_view;
+	AgentTabCtrl					agent_tabs;
 	
 	System* sys;
 	int view;

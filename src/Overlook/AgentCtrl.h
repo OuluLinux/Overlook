@@ -4,7 +4,7 @@
 namespace Overlook {
 
 class AgentDraw : public Ctrl {
-	Agent* agent;
+	AgentGroup* group;
 	int snap_id;
 	
 public:
@@ -12,13 +12,14 @@ public:
 	
 	virtual void Paint(Draw& w);
 	void SetSnap(int i) {snap_id = i;}
-	
+	void SetGroup(AgentGroup& group) {this->group = &group;}
 };
 
 class StatsGraph : public Ctrl {
 	
 protected:
 	Agent* agent;
+	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
 	
@@ -27,6 +28,9 @@ public:
 	StatsGraph();
 	
 	virtual void Paint(Draw& w);
+	
+	void SetAgent(Agent& agent) {this->agent = &agent; clr = RainbowColor(Randomf());}
+	
 };
 
 class AgentThreadCtrl : public ParentCtrl {
@@ -54,7 +58,6 @@ protected:
 	Agent* agent;
 	Array<AgentThreadCtrl> thrds;
 	StatsGraph reward;
-	DropList thrdlist;
 	Option update_brokerctrl;
 	bool init;
 	
@@ -63,7 +66,6 @@ public:
 	AgentCtrl();
 	
 	void Data();
-	void SetView();
 	
 };
 
@@ -76,6 +78,9 @@ public:
 	TrainingGraph();
 	
 	virtual void Paint(Draw& w);
+	
+	void SetAgent(Agent& agent) {this->agent = &agent;}
+	
 };
 
 class AgentTraining : public ParentCtrl {
@@ -86,20 +91,16 @@ protected:
 	Splitter hsplit;
 	bool init;
 	
-	Option paused, prefer_highresults;
 	Label epoch;
 	AgentDraw draw;
 	TrainingGraph reward;
-	ConvNet::SessionConvLayers conv;
+	StatsGraph stats;
 	ConvNet::HeatmapTimeView timescroll;
 	
-	Splitter leftctrl;
-	ArrayCtrl seslist;
-	ParentCtrl settings;
-	Label lrate, lmom, lbatch, ldecay;
-	EditDouble rate, mom, decay;
-	EditInt batch;
-	Button apply;
+	BrokerCtrl broker;
+	
+	Splitter bsplit, vsplit;
+	Option update_broker;
 	ConvNet::TrainingGraph graph;
 	
 public:
@@ -108,10 +109,7 @@ public:
 	
 	void Data();
 	void ApplySettings();
-	void SetPreferHigh() {agent->prefer_high = prefer_highresults.Get();}
-	void SetPaused() {agent->paused = paused.GetData();}
-	void SetAgent(Agent& agent) {this->agent = &agent;}
-	
+	void SetAgent(Agent& agent);
 };
 
 
@@ -146,7 +144,7 @@ public:
 	typedef SnapshotCtrl CLASSNAME;
 	SnapshotCtrl();
 	
-	void SetGroup(AgentGroup& group) {this->group = &group;}
+	void SetGroup(AgentGroup& group) {this->group = &group; draw.SetGroup(group);}
 	void Data();
 };
 

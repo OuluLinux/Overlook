@@ -41,8 +41,10 @@ struct AgentGroup {
 	
 	
 	AgentGroup();
+	~AgentGroup();
 	void Init();
 	void Start();
+	void Stop();
 	void StoreThis();
 	void LoadThis();
 	void Serialize(Stream& s);

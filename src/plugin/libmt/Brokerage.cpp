@@ -14,6 +14,7 @@ Brokerage::Brokerage() {
 	tf_h1_id = -1;
 	account_currency_id = -1;
 	leverage = 0;
+	fixed_volume = false;
 }
 
 void Brokerage::Clear() {
@@ -421,8 +422,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
 		const Price& p = askbid[i];
-		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
-		double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
+		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min;
+		double sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min;
 		ASSERT(IsFin(p.ask));
 		ASSERT(IsFin(p.bid));
 		ASSERT(IsFin(buy_lots));
@@ -445,7 +446,7 @@ void Brokerage::SignalOrders(bool debug_print) {
 		DUMP(minimum_margin_sum);
 	}
 	
-	double lot_multiplier = max_margin_sum / minimum_margin_sum;
+	double lot_multiplier = fixed_volume ? 1.0 : max_margin_sum / minimum_margin_sum;
 	if (debug_print) {
 		DUMP(max_margin_sum);
 		DUMP(lot_multiplier);
@@ -461,10 +462,10 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
 		const Price& p = askbid[i];
-		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01 * lot_multiplier;
-		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01 * lot_multiplier;
-		buy_lots[i]  = ((int)(sym_buy_lots  / 0.01)) * 0.01;
-		sell_lots[i] = ((int)(sym_sell_lots / 0.01)) * 0.01;
+		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * lot_multiplier;
+		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * lot_multiplier;
+		buy_lots[i]  = ((int)(sym_buy_lots  / sym.volume_min)) * sym.volume_min;
+		sell_lots[i] = ((int)(sym_sell_lots / sym.volume_min)) * sym.volume_min;
 	}
 	if (debug_print) {
 		DUMPC(buy_lots);

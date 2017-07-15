@@ -3,12 +3,12 @@
 namespace Overlook {
 using namespace Upp;
 
-AgentDraw::AgentDraw() {
+SnapshotDraw::SnapshotDraw() {
 	group = NULL;
 	snap_id = -1;
 }
 
-void AgentDraw::Paint(Draw& w) {
+void SnapshotDraw::Paint(Draw& w) {
 	if (!group) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
@@ -67,20 +67,20 @@ void AgentDraw::Paint(Draw& w) {
 
 
 TrainingGraph::TrainingGraph() {
-	agent = NULL;
+	trainee = NULL;
 	
 }
 
 void TrainingGraph::Paint(Draw& w) {
-	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
 	id.DrawRect(sz, White());
 	
-	Agent& agent = *this->agent;
-	const Vector<double>& data = agent.GetSequenceResults();
+	TraineeBase& trainee = *this->trainee;
+	const Vector<double>& data = trainee.GetSequenceResults();
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
@@ -164,7 +164,7 @@ void AgentThreadCtrl::Data() {
 
 
 
-
+/*
 AgentCtrl::AgentCtrl()
 {
 	agent = NULL;
@@ -176,7 +176,7 @@ AgentCtrl::AgentCtrl()
 }
 
 void AgentCtrl::Data() {
-	/*if (init) {
+	if (init) {
 		init = false;
 		for(int i = 0; i < agent->thrds.GetCount(); i++) {
 			Ctrl& ctrl = thrds.Add(new AgentThreadCtrl(*agent, i));
@@ -193,12 +193,12 @@ void AgentCtrl::Data() {
 		int i = thrdlist.GetIndex();
 		if (i == -1) return;
 		thrds[i].Data();
-	}*/
+	}
 	
 	
 	reward.Refresh();
 }
-
+*/
 
 
 
@@ -207,12 +207,12 @@ void AgentCtrl::Data() {
 
 
 StatsGraph::StatsGraph() {
-	agent = NULL;
+	trainee = NULL;
 	clr = RainbowColor(Randomf());
 }
 
 void StatsGraph::Paint(Draw& w) {
-	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz(GetSize());
 	ImageDraw id(sz);
@@ -224,7 +224,7 @@ void StatsGraph::Paint(Draw& w) {
 	double peak = 0.0;
 	
 	int max_steps = 0;
-	const Vector<double>& data = agent->thrd_equity;
+	const Vector<double>& data = trainee->thrd_equity;
 	int count = data.GetCount();
 	for(int j = 0; j < count; j++) {
 		double d = data[j];
@@ -241,7 +241,7 @@ void StatsGraph::Paint(Draw& w) {
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
-		const Vector<double>& data = agent->thrd_equity;
+		const Vector<double>& data = trainee->thrd_equity;
 		int count = data.GetCount();
 		if (count >= 2) {
 			polyline.SetCount(count);
@@ -289,13 +289,11 @@ void StatsGraph::Paint(Draw& w) {
 
 
 
-AgentTraining::AgentTraining()
+TrainingCtrl::TrainingCtrl()
 {
-	agent = NULL;
+	trainee = NULL;
 	
-	update_broker.SetLabel("Update Broker");
-	Add(update_broker.LeftPos(2,200).TopPos(2, 26));
-	Add(vsplit.HSizePos().VSizePos(30));
+	Add(vsplit.SizePos());
 	
 	vsplit << hsplit << bsplit;
 	vsplit.Vert();
@@ -315,18 +313,18 @@ AgentTraining::AgentTraining()
 	
 }
 
-void AgentTraining::SetAgent(Agent& agent) {
-	this->agent = &agent;
+void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
+	this->trainee = &trainee;
 	
-	broker.SetBroker(agent.broker);
-	stats.SetAgent(agent);
-	reward.SetAgent(agent);
-	draw.SetGroup(*agent.group);
-	timescroll.SetGraph(agent.dqn.GetGraph());
+	broker.SetBroker(trainee.broker);
+	stats.SetTrainee(trainee);
+	reward.SetTrainee(trainee);
+	draw.SetGroup(*trainee.group);
+	timescroll.SetGraph(trainee.dqn.GetGraph());
 }
 
-void AgentTraining::Data() {
-	if (!agent) return;
+void TrainingCtrl::Data() {
+	if (!trainee) return;
 	
 	if (init) {
 		init = false;
@@ -357,9 +355,8 @@ void AgentTraining::Data() {
 	*/
 	
 	
-	if (update_broker.Get())
-		broker.Data();
-	draw.SetSnap(agent->epoch_actual);
+	broker.Data();
+	draw.SetSnap(trainee->epoch_actual);
 	draw.Refresh();
 	timescroll.Refresh();
 	reward.Refresh();

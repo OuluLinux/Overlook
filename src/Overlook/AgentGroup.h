@@ -3,7 +3,9 @@
 
 namespace Overlook {
 
-struct AgentGroup {
+class AgentGroup : public TraineeBase {
+	
+public:
 	
 	// Persistent
 	Array<Agent> agents;
@@ -28,10 +30,11 @@ struct AgentGroup {
 	Vector<int> data_begins;
 	Vector<int> tf_periods;
 	Index<int> indi_ids;
-	SimBroker broker;
+	TimeStop last_store;
 	int buf_count;
 	int data_size, signal_size, total_size;
 	System* sys;
+	bool running, stopped;
 	
 	// Maybe
 	/*Vector<int> pos, tfs, periods, period_in_slower;
@@ -39,12 +42,16 @@ struct AgentGroup {
 	int begin_ts;
 	int bars;*/
 	
-	
+public:
+	typedef AgentGroup CLASSNAME;
 	AgentGroup();
 	~AgentGroup();
 	void Init();
 	void Start();
 	void Stop();
+	void Main();
+	virtual void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap=NULL);
+	virtual void Backward(double reward);
 	void StoreThis();
 	void LoadThis();
 	void Serialize(Stream& s);
@@ -60,7 +67,7 @@ struct AgentGroup {
 	void CreateAgents();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
-	
+	virtual void SetAskBid(SimBroker& sb, int pos);
 	
 	int GetSignalBegin() const;
 	int GetSignalEnd() const;

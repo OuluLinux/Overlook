@@ -19,7 +19,6 @@ void GroupOverview::SetGroup(AgentGroup& group) {
 	this->group->WhenProgress = THISBACK(PostProgress);
 	this->group->WhenSubProgress = THISBACK(PostSubProgress);
 	
-	fmlevel.SetData(group.global_free_margin_level);
 	enable.Set(group.enable_training);
 	
 	Data();
@@ -45,7 +44,21 @@ void GroupOverview::Data() {
 		sub.Set(group->a1, group->t1);
 		
 		String infostr;
-		infostr << "dummy info";
+		infostr << "Name: " << group->name << "\n";
+		infostr << "Free-margin level: " << group->global_free_margin_level << "\n";
+		infostr << "Reward period: " << group->input_width << "x" << group->input_height << "\n";
+		infostr << "Single data: " << (group->single_data ? "True" : "False") << "\n";
+		infostr << "Single signal: " << (group->single_signal ? "True" : "False") << "\n";
+		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
+		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
+		infostr << "Input dimensions: " << group->reward_period << "\n";
+		infostr << "Created: " << Format("%", group->created) << "\n";
+		infostr << "Snapshot data-size: " << group->data_size << "\n";
+		for(int i = 0; i < group->tf_ids.GetCount(); i++) {
+			infostr << "    tf" << i << ": " << group->tf_ids[i] << ", " << group->sys->GetPeriodString(group->tf_ids[i]) << "\n";
+		}
+		
+		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
 		
 		info.SetLabel(infostr);
 	}
@@ -64,8 +77,8 @@ GroupTabCtrl::GroupTabCtrl() {
 	
 	Add(overview);
 	Add(overview, "Overview");
-	Add(agentctrl);
-	Add(agentctrl, "Experiencer");
+	Add(trainingctrl);
+	Add(trainingctrl, "Training");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
 	//Add(rtnetctrl);
@@ -77,15 +90,13 @@ GroupTabCtrl::GroupTabCtrl() {
 
 void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	this->group = &group;
-	overview.fmlevel.SetData(group.global_free_margin_level);
 	
 	overview.enable.WhenAction.Clear();
 	overview.enable.Set(group.enable_training);
 	overview.enable <<= THISBACK(SetEnabled);
-	overview.fmlevel <<= THISBACK(SetFreeMargin);
 	
 	overview	.SetGroup(group);
-	//agentctrl	.SetGroup(group);
+	trainingctrl.SetTrainee(group);
 	snapctrl	.SetGroup(group);
 }
 
@@ -94,7 +105,7 @@ void GroupTabCtrl::Data() {
 	if      (tab == 0)
 		overview.Data();
 	else if (tab == 1)
-		agentctrl.Data();
+		trainingctrl.Data();
 	else if (tab == 2)
 		snapctrl.Data();
 }
@@ -105,13 +116,6 @@ void GroupTabCtrl::SetEnabled() {
 	else						group->Stop();
 }
 
-void GroupTabCtrl::SetFreeMargin() {
-	group->global_free_margin_level = overview.fmlevel.GetData();
-	if (group->global_free_margin_level < 0.60)
-		group->global_free_margin_level = 0.60;
-	if (group->global_free_margin_level > 0.99)
-		group->global_free_margin_level = 0.99;
-}
 
 
 
@@ -128,8 +132,8 @@ AgentTabCtrl::AgentTabCtrl() {
 	
 	Add(overview);
 	Add(overview, "Overview");
-	Add(agent_view);
-	Add(agent_view, "Training");
+	Add(trainingctrl);
+	Add(trainingctrl, "Training");
 	
 	WhenSet << THISBACK(Data);
 }
@@ -152,6 +156,11 @@ void AgentTabCtrl::Data() {
 		overview.opentimes.SetLabel(trading_hours);
 		overview.margincur.SetLabel(sym.currency_margin);
 		overview.minvolume.SetLabel(DblStr(sym.volume_min));
+		overview.peakvalue.SetLabel(DblStr(agent->peak_value));
+		overview.bestresult.SetLabel(DblStr(agent->best_result));
+		overview.traintime.SetLabel(DblStr(agent->training_time));
+		overview.iters.SetLabel(IntStr(agent->iter));
+		
 		
 		double minimum_margin =
 			GetMetaTrader().GetAskBid()[agent->sym].ask *
@@ -163,14 +172,14 @@ void AgentTabCtrl::Data() {
 		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));
 	}
 	else if (tab == 1) {
-		agent_view.Data();
+		trainingctrl.Data();
 	}
 }
 
 void AgentTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
-	agent_view.SetAgent(agent);
+	trainingctrl.SetTrainee(agent);
 }
 
 
@@ -211,8 +220,9 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 			"\t\"num_hidden_units\":100,\n"
 			"}\n";
 	newview.params.SetData(t);
-	newview.create <<= THISBACK(NewAgent);
+	newview.create <<= THISBACK(PostNewAgent);
 	newview.symlist <<= THISBACK(Data);
+	
 	
 	newview.symlist.AddColumn("");
 	newview.symlist.AddColumn("");
@@ -225,9 +235,9 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
 	newview.reward.SetData(4);
-	newview.fmlevel.SetData(0.97);
 	newview.alldata.Set(true);
 	newview.allsig.Set(true);
+	newview.freeze_sig.Set(true);
 	
 	
 	add_new.SetLabel("New Group");
@@ -245,7 +255,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	glist.WhenLeftClick << THISBACK1(SetView, 1);
 	
 	alist.AddColumn("Symbol");
-	alist.AddColumn("Profit");
+	alist.AddColumn("Best result");
 	alist <<= THISBACK1(SetView, 2);
 	alist.WhenLeftClick << THISBACK1(SetView, 2);
 	
@@ -306,9 +316,7 @@ void ManagerCtrl::Data() {
 		AgentGroup& g = mgr.groups[i];
 		
 		glist.Set(i, 0, g.name);
-		glist.Set(i, 1, g.agents.GetCount());
-		if (!g.tf_ids.IsEmpty())
-			glist.Set(i, 2, sys->GetPeriodString(g.tf_ids.Top()));
+		glist.Set(i, 1, g.peak_value);
 	}
 	glist.SetCount(mgr.groups.GetCount());
 	
@@ -321,7 +329,7 @@ void ManagerCtrl::Data() {
 			Agent& a = g.agents[i];
 			
 			alist.Set(i, 0, sys->GetSymbol(a.sym));
-			alist.Set(i, 1, 1234);
+			alist.Set(i, 1, a.peak_value);
 		}
 		alist.SetCount(g.agents.GetCount());
 	}
@@ -398,7 +406,6 @@ void ManagerCtrl::NewAgent() {
 		
 	
 	group.reward_period				= newview.reward.GetData();
-	group.global_free_margin_level	= newview.fmlevel.GetData();
 	group.single_data				= !newview.alldata.Get();
 	group.single_signal				= !newview.allsig.Get();
 	group.sig_freeze				= newview.freeze_sig.Get();
@@ -411,7 +418,7 @@ void ManagerCtrl::NewAgent() {
 	
 	mgr.groups.Add(group_.Detach());
 	
-	Data();
+	PostCallback(THISBACK(Data));
 	glist.SetCursor(glist.GetCount()-1);
 }
 

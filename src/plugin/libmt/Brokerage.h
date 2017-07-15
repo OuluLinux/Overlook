@@ -22,6 +22,7 @@ protected:
 	bool demo, connected, simulation;
 	bool init_success;
 	bool is_failed;
+	bool fixed_volume;
 	
 	Vector<Vector<int> > basket_symbols;
 	Vector<Symbol> symbols;
@@ -85,6 +86,7 @@ public:
 	double GetMinFreeMargin() const {return min_free_margin_level;}
 	double GetMaxFreeMargin() const {return max_free_margin_level;}
 	void SetFreeMargin(double d) {ASSERT(d >= 0.20 && d <= 1.0); free_margin_level = d;}
+	void SetFixedVolume(bool b=true) {fixed_volume = b;}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

@@ -25,15 +25,18 @@ void Manager::Init() {
 }
 
 void Manager::Start() {
-	
-	
-	
+	for(int i = 0; i < groups.GetCount(); i++) {
+		AgentGroup& ag = groups[i];
+		if (ag.enable_training)
+			ag.Start();
+		ag.Stop();
+	}
 }
 
 void Manager::Stop() {
-	
-	
-	
+	for(int i = 0; i < groups.GetCount(); i++) {
+		groups[i].Stop();
+	}
 }
 
 }

@@ -2047,7 +2047,7 @@ an upgrade which breaks all existing functionality. Is it different
 this time?&]
 [s0;%- I would say, that there won`'t be more powerful AI than DQN`-agent 
 in this for a while. Also, if I happen to find something else, 
-I might not even care anymore update this.&]
+I might not even care anymore to update this.&]
 [s0;%- So, there is a good chance that this engine finally stays. 
 I haven`'t had time for fine`-tuning and re`-checking stuff when 
 I had to focus on the engine, but now I might finally have time.&]
@@ -2065,4 +2065,59 @@ that.&]
 [s0;%- There is tens of issues what still must be resolved. The rewriting 
 of the engine has been a time consumer, but if this is final 
 (and it probably is), then this fine`-tuning part is going to 
-be over in two weeks too.]]
+be over in two weeks too.&]
+[s3;%- 15.7.2017&]
+[s0;%- Hi all, again. First, I want to note, that I am fan of rap/hiphop/reggae/dance
+hall etc. music. I have been listening to those via Internet 
+radios since before teenage. I actually searched for the history 
+of hiphop musics as teenager and listened to most known artists 
+which affected to the evolution of the culture. Nowadays, I must 
+focus on working, so I listen to background music without vocals, 
+but that also usually have impacts from hiphop anyway. I have 
+also been producing some hiphop music, which has been successful 
+(best song >200000 listening before youtube... I lost track at 
+some point), but I didn`'t pursue that path, because I was such 
+a nerd.&]
+[s0;%- As you can see, the Overlook is an good example, where cold 
+professional attitude would have prevented the most important 
+progress and evolution of the design. I know that some people 
+counts this as failure, deplorable and even cancer invidualism, 
+but I would say them, that they are clueless and their world`-view 
+is too narrow. This is not forced worldview, this is not parasitic, 
+this is not anti`-social. Sometimes people forgets, that the 
+unity of thoughts is only a simplified song about surrounding 
+world. It makes you have a great high, but the hangover is unbearable.&]
+[s0;%- ...&]
+[s0;%- But back to the programming.&]
+[s0;%- There is some hard`-to`-see problems with the free`-margin`-level 
+money manager. It`'s basically too passive and impossible to 
+train properly for agents. Following notes have required a lot 
+of testing and work, which has been done in the past:&]
+[s0;%-  `- the result of combined agents is chaotic&]
+[s0;%- -|`- one goes negative&]
+[s0;%- -|-|1. allowed margins decreases&]
+[s0;%- -|-|2. volumes are fixed&]
+[s0;%- -|-|3. new orders get too small volume&]
+[s0;%- -|-|4. volumes are not balanced to risks of instruments anymore&]
+[s0;%- -|`- one goes positive&]
+[s0;%- -|-|1. allowed margins increases&]
+[s0;%- -|-|2. new orders get high volume&]
+[s0;%- -|-|3. one goes too much negative temporarily&]
+[s0;%- -|-|4. open volumes are too high, and must be reduced and it`'s 
+just costs and losses&]
+[s0;%-  `- single agent training is actually incorrect&]
+[s0;%- -|`- reward is relative to the value of the account, but not 
+to the volume&]
+[s0;%- -|-|`- agent is not trained for the risks of the volume&]
+[s0;%- -|`- the other way around: when reward is relative to the volume:&]
+[s0;%- -|-|`- agent is not trained to balance the account value&]
+[s0;%- So there you have it. Using that kind of MM is just plain 
+WRONG! Well, I was the one who made the mistake here, but I am 
+just going to overwrite this with the proper solution, which 
+is to train for signal and MM with separate agents. Hopefully 
+I prevented a lot of useless work for someone with this.&]
+[s0;%- ...&]
+[s0;%- Training seems to be very demanding, but results seems promising 
+otherwise. Results has constant increasing average trends. I 
+haven`'t had this kind of system ever, so it takes some time 
+to learn how to tune this correctly.]]

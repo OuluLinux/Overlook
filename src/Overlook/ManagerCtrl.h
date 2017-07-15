@@ -32,8 +32,7 @@ class GroupTabCtrl : public TabCtrl {
 	AgentGroup*				group;
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
-	AgentCtrl				agentctrl;
-	AgentTraining			trainingctrl;
+	TrainingCtrl			trainingctrl;
 	RealtimeNetworkCtrl		rtnetctrl;
 	
 public:
@@ -43,14 +42,13 @@ public:
 	void Data();
 	void SetGroup(AgentGroup& group);
 	void SetEnabled();
-	void SetFreeMargin();
 	
 };
 
 class AgentTabCtrl : public TabCtrl {
 	Agent* agent;
 	WithAgentOverview<ParentCtrl>	overview;
-	AgentTraining					agent_view;
+	TrainingCtrl					trainingctrl;
 	
 	
 	
@@ -87,6 +85,7 @@ public:
 	void Data();
 	void SetView(int i);
 	void NewAgent();
+	void PostNewAgent() {PostCallback(THISBACK(NewAgent));}
 };
 
 }

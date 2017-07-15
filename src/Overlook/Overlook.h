@@ -5,6 +5,7 @@
 #include "QueryTable.h"
 
 #include "SimBroker.h"
+#include "Trainee.h"
 #include "Agent.h"
 #include "AgentGroup.h"
 #include "Manager.h"

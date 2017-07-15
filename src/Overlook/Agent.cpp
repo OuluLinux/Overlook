@@ -8,41 +8,20 @@ Agent::Agent() {
 	sym = -1;
 	group_id = -1;
 	
-	group = NULL;
-	
 	not_stopped = 0;
 	group_count = 0;
-	iter = 0;
 	smooth_reward = 0.0;
 	running = false;
-	
 }
 
 Agent::~Agent() {
 	Stop();
 }
 
-void Agent::Create() {
-	dqn.Init(group->input_width, group->input_height, ACTIONCOUNT);
-	dqn.Reset();
-	
-	ASSERT(!group->param_str.IsEmpty());
-	dqn.LoadInitJSON(group->param_str);
-}
-
 void Agent::Init() {
-	ASSERT(group != NULL);
-	ASSERT(group->input_width != 0);
-	ASSERT(group->snaps.GetCount() != 0);
+	TraineeBase::Init();
 	
-	thrd_equity.SetCount(group->snaps.GetCount(), 0);
-	
-	signal_average.tf_periods <<= group->tf_periods;
-	reward_average.tf_periods.SetCount(1);
-	reward_average.tf_periods[0] = group->reward_period;
-	
-	broker.Brokerage::operator=((Brokerage&)GetMetaTrader());
-	broker.InitLightweight();
+	broker.SetFixedVolume();
 }
 
 void Agent::Start() {
@@ -68,66 +47,9 @@ void Agent::Main() {
 		// Do some action
 		Action();
 		
-		// Store sequences periodically
-		/*if (last_store.Elapsed() > 60 * 60 * 1000) {
-			StoreThis();
-			last_store.Reset();
-		}*/
 	}
 	
 	not_stopped--;
-}
-
-void Agent::Action() {
-	
-	if (!epoch_actual) {
-		broker.Clear();
-		broker.SetSignal(0,0);
-		signal_average.Reset(group->snaps.GetCount());
-		reward_average.tf_periods.SetCount(1);
-		reward_average.tf_periods[0] = group->reward_period;
-		reward_average.Reset(group->snaps.GetCount());
-		prev_reward = 0;
-		prev_equity = broker.AccountEquity();
-	}
-	else {
-		Backward(prev_reward);
-		reward_average.Set(prev_reward);
-		reward_average.SeekNext();
-	}
-	
-	
-	// Set broker signals based on DQN-agent action
-	Snapshot& snap = group->snaps[epoch_actual];
-	Snapshot* next_snap = epoch_actual + 1 < epoch_total ? &group->snaps[epoch_actual + 1] : NULL;
-	Forward(snap, broker, next_snap);
-	
-	
-	// Refresh values
-	SetAskBid(broker, group->train_pos[epoch_actual]);
-	broker.RefreshOrders();
-	broker.CycleChanges();
-	double equity = broker.AccountEquity();
-	prev_reward = (equity - prev_equity) / Upp::max(1.0, prev_equity);
-	prev_equity = equity;
-	
-	
-	// Refresh odrers
-	if (epoch_actual < group->snaps.GetCount()-1)
-		broker.Cycle();
-	else
-		broker.CloseAll();
-	
-	
-	// Write some stats for plotter
-	thrd_equity[epoch_actual] = equity;
-	
-	
-	epoch_actual++;
-	if (epoch_actual >= epoch_total) {
-		seq_results.Add(equity);
-		epoch_actual = 0;
-	}
 }
 
 void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
@@ -228,7 +150,6 @@ void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 		}
 	}
 	
-	broker.SetFreeMargin(group->global_free_margin_level);
 }
 
 void Agent::Backward(double reward) {
@@ -282,7 +203,8 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 }
 
 void Agent::Serialize(Stream& s) {
-	s % seq_results % dqn % sym % proxy_sym % group_id;
+	TraineeBase::Serialize(s);
+	s % sym % proxy_sym % group_id;
 }
 
 }

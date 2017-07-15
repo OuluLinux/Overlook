@@ -3,12 +3,12 @@
 
 namespace Overlook {
 
-class AgentDraw : public Ctrl {
+class SnapshotDraw : public Ctrl {
 	AgentGroup* group;
 	int snap_id;
 	
 public:
-	AgentDraw();
+	SnapshotDraw();
 	
 	virtual void Paint(Draw& w);
 	void SetSnap(int i) {snap_id = i;}
@@ -18,7 +18,7 @@ public:
 class StatsGraph : public Ctrl {
 	
 protected:
-	Agent* agent;
+	TraineeBase* trainee;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
@@ -29,19 +29,19 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetAgent(Agent& agent) {this->agent = &agent; clr = RainbowColor(Randomf());}
+	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
 	
 };
 
 class AgentThreadCtrl : public ParentCtrl {
 	
 protected:
-	friend class AgentDraw;
+	friend class SnapshotDraw;
 	
 	Agent* agent;
 	SliderCtrl time_slider;
 	Splitter hsplit;
-	AgentDraw draw;
+	SnapshotDraw draw;
 	BrokerCtrl brokerctrl;
 	int thrd_id;
 	
@@ -52,7 +52,7 @@ public:
 	void Data();
 	
 };
-
+/*
 class AgentCtrl : public ParentCtrl {
 protected:
 	Agent* agent;
@@ -68,9 +68,9 @@ public:
 	void Data();
 	
 };
-
+*/
 class TrainingGraph : public Ctrl {
-	Agent* agent;
+	TraineeBase* trainee;
 	Vector<Point> polyline;
 	
 public:
@@ -79,20 +79,20 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetAgent(Agent& agent) {this->agent = &agent;}
+	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
 	
 };
 
-class AgentTraining : public ParentCtrl {
+class TrainingCtrl : public ParentCtrl {
 	
 protected:
-	friend class AgentDraw;
-	Agent* agent;
+	friend class SnapshotDraw;
+	TraineeBase* trainee;
 	Splitter hsplit;
 	bool init;
 	
 	Label epoch;
-	AgentDraw draw;
+	SnapshotDraw draw;
 	TrainingGraph reward;
 	StatsGraph stats;
 	ConvNet::HeatmapTimeView timescroll;
@@ -100,16 +100,16 @@ protected:
 	BrokerCtrl broker;
 	
 	Splitter bsplit, vsplit;
-	Option update_broker;
 	ConvNet::TrainingGraph graph;
 	
 public:
-	typedef AgentTraining CLASSNAME;
-	AgentTraining();
+	typedef TrainingCtrl CLASSNAME;
+	TrainingCtrl();
 	
 	void Data();
 	void ApplySettings();
-	void SetAgent(Agent& agent);
+	void SetTrainee(TraineeBase& trainee);
+	
 };
 
 
@@ -119,7 +119,7 @@ class RealtimeNetworkCtrl : public ParentCtrl {
 	
 	Button refresh_signals, killall_signals;
 	Splitter hsplit;
-	AgentDraw draw;
+	SnapshotDraw draw;
 	BrokerCtrl brokerctrl;
 	Label tfcmplbl;
 	
@@ -138,7 +138,7 @@ class SnapshotCtrl : public ParentCtrl {
 	AgentGroup* group;
 	Splitter hsplit;
 	ArrayCtrl list;
-	AgentDraw draw;
+	SnapshotDraw draw;
 	
 public:
 	typedef SnapshotCtrl CLASSNAME;

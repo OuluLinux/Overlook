@@ -85,7 +85,7 @@ public:
 	void Data();
 	void SetView(int i);
 	void NewAgent();
-	void PostNewAgent() {PostCallback(THISBACK(NewAgent));}
+	void PostNewAgent() {Thread::Start(THISBACK(NewAgent));}
 };
 
 }

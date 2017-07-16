@@ -30,10 +30,6 @@ void TraineeBase::Init() {
 	
 	thrd_equity.SetCount(group->snaps.GetCount(), 0);
 	
-	signal_average.tf_periods <<= group->tf_periods;
-	reward_average.tf_periods.SetCount(1);
-	reward_average.tf_periods[0] = group->reward_period;
-	
 	broker.Brokerage::operator=((Brokerage&)GetMetaTrader());
 	broker.InitLightweight();
 }
@@ -43,10 +39,6 @@ void TraineeBase::Action() {
 	if (!epoch_actual) {
 		broker.Clear();
 		broker.SetSignal(0,0);
-		signal_average.Reset(group->snaps.GetCount());
-		reward_average.tf_periods.SetCount(1);
-		reward_average.tf_periods[0] = group->reward_period;
-		reward_average.Reset(group->snaps.GetCount());
 		prev_reward = 0;
 		prev_equity = broker.AccountEquity();
 		begin_equity = prev_equity;
@@ -58,9 +50,6 @@ void TraineeBase::Action() {
 			broker.Clear();
 			broker.SetSignal(0,0);
 		}
-		Backward(prev_reward);
-		reward_average.Set(prev_reward);
-		reward_average.SeekNext();
 	}
 	
 	
@@ -72,13 +61,8 @@ void TraineeBase::Action() {
 	
 	// Refresh values
 	SetAskBid(broker, group->train_pos[epoch_actual]);
-	broker.RefreshOrders();
-	broker.CycleChanges();
-	double equity = broker.AccountEquity();
-	prev_reward = equity - prev_equity;
-	prev_equity = equity;
-	double diff = equity - broker.GetInitialBalance();
-	if (diff > peak_value) peak_value = diff;
+	//broker.RefreshOrders();
+	//broker.CycleChanges();
 	
 	
 	// Refresh odrers
@@ -86,6 +70,11 @@ void TraineeBase::Action() {
 		broker.Cycle();
 	else
 		broker.CloseAll();
+	double reward = broker.PopCloseSum();
+	Backward(reward);
+	double equity = broker.AccountEquity();
+	double diff = equity - broker.GetInitialBalance();
+	if (diff > peak_value) peak_value = diff;
 	
 	
 	// Write some stats for plotter

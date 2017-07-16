@@ -15,9 +15,7 @@ public:
 	String name;
 	String param_str;
 	double global_free_margin_level;
-	int reward_period;
 	int input_width, input_height;
-	bool single_data, single_signal;
 	bool sig_freeze;
 	bool enable_training;
 	

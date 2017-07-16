@@ -11,12 +11,9 @@ AgentGroup::AgentGroup() {
 	signal_size = 0;
 	
 	global_free_margin_level = 0.97;
-	reward_period = 4;
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
-	single_data = false;
-	single_signal = false;
 	running = false;
 	stopped = true;
 }
@@ -92,7 +89,7 @@ void AgentGroup::Init() {
 	ResetValueBuffers();
 	
 	data_size = sym_ids.GetCount() * tf_ids.GetCount() * buf_count;
-	signal_size = sym_ids.GetCount() * tf_ids.GetCount() * 2;
+	signal_size = sym_ids.GetCount() * 2;
 	total_size = data_size + signal_size;
 	DUMPC(sym_ids);
 	DUMPC(tf_ids);
@@ -101,7 +98,7 @@ void AgentGroup::Init() {
 	DUMP(signal_size);
 	DUMP(total_size);
 	input_width  = 1;
-	input_height = (buf_count + 2) * sym_ids.GetCount() * tf_ids.GetCount();
+	input_height = (buf_count * tf_ids.GetCount() + 2) * sym_ids.GetCount();
 	
 	Progress(3, 6, "Reseting snapshots");
 	InitThreads();
@@ -172,12 +169,18 @@ void AgentGroup::Main() {
 
 void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 	
+	// Input values
+	// - free-margin-level
+	// - active instruments total / maximum
+	// - 'accum_buf'
+	// - account change sensor
+	// - instrument value / (0.1 * equity) or something
+	
     for(int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
 		
 	    // Get signals from snapshots, where agents have wrote their latest signals.
 	    int sig_pos = GetSignalPos(i);
-	    sig_pos += (tf_ids.GetCount() - 1) * 2;
 	    double pos = 1.0 - snap.values[sig_pos];
 	    double neg = 1.0 - snap.values[sig_pos + 1];
 	    double dsignal = pos > 0.0 ? +pos : -neg;
@@ -221,6 +224,9 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap)
 		if (global_free_margin_level < 0.85)
 			global_free_margin_level = 0.85;
 	}
+	else if (action == ACT_RESETSIG) {
+		global_free_margin_level = 0.97;
+	}
 	else Panic("Invalid action");
 	broker.SetFreeMargin(global_free_margin_level);
 }
@@ -261,7 +267,7 @@ void AgentGroup::LoadThis() {
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
 	s % agents % tf_ids % sym_ids % created % name % param_str % global_free_margin_level
-	  % reward_period % input_width % input_height % single_data % single_signal % sig_freeze
+	  % input_width % input_height % sig_freeze
 	  % enable_training;
 }
 
@@ -275,7 +281,7 @@ int AgentGroup::GetSignalEnd() const {
 
 int AgentGroup::GetSignalPos(int group_id) const {
 	ASSERT(group_id >= 0 && group_id <= sym_ids.GetCount());
-	return data_size + group_id * tf_ids.GetCount() * 2;
+	return data_size + group_id * 2;
 }
 
 

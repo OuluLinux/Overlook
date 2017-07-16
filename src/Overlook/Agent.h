@@ -35,6 +35,7 @@ protected:
 	// Tmp vars
 	Vector<double> input_array;
 	double smooth_reward;
+	int accum_buf;
 	int group_count;
 	int not_stopped;
 	bool running;

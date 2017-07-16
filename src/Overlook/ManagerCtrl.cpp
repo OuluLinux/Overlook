@@ -47,11 +47,8 @@ void GroupOverview::Data() {
 		infostr << "Name: " << group->name << "\n";
 		infostr << "Free-margin level: " << group->global_free_margin_level << "\n";
 		infostr << "Reward period: " << group->input_width << "x" << group->input_height << "\n";
-		infostr << "Single data: " << (group->single_data ? "True" : "False") << "\n";
-		infostr << "Single signal: " << (group->single_signal ? "True" : "False") << "\n";
 		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
 		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
-		infostr << "Input dimensions: " << group->reward_period << "\n";
 		infostr << "Created: " << Format("%", group->created) << "\n";
 		infostr << "Snapshot data-size: " << group->data_size << "\n";
 		for(int i = 0; i < group->tf_ids.GetCount(); i++) {
@@ -234,9 +231,6 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.tflist.ColumnWidths("3 1");
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
-	newview.reward.SetData(4);
-	newview.alldata.Set(true);
-	newview.allsig.Set(true);
 	newview.freeze_sig.Set(true);
 	
 	
@@ -405,21 +399,19 @@ void ManagerCtrl::NewAgent() {
 	}
 		
 	
-	group.reward_period				= newview.reward.GetData();
-	group.single_data				= !newview.alldata.Get();
-	group.single_signal				= !newview.allsig.Get();
 	group.sig_freeze				= newview.freeze_sig.Get();
 	group.param_str					= newview.params.GetData();
 	
 	group.sys = sys;
-	group.Init();
-	group.StoreThis();
-	group.Start();
 	
 	mgr.groups.Add(group_.Detach());
 	
 	PostCallback(THISBACK(Data));
 	glist.SetCursor(glist.GetCount()-1);
+	
+	group.Init();
+	group.StoreThis();
+	group.Start();
 }
 
 }

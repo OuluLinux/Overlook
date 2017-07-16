@@ -2120,4 +2120,25 @@ I prevented a lot of useless work for someone with this.&]
 [s0;%- Training seems to be very demanding, but results seems promising 
 otherwise. Results has constant increasing average trends. I 
 haven`'t had this kind of system ever, so it takes some time 
-to learn how to tune this correctly.]]
+to learn how to tune this correctly.&]
+[s3;%- 16.7.2017&]
+[s0;%- Ok, so the reward model was wrong. I didn`'t follow original 
+examples too strictly... The reward comes only from closing orders, 
+but the realtime change value should be forwarded via inputs. 
+Also, average signal to input was wrong, and original had `"velocity`", 
+which has similar counterpart in this as accumulated signal, 
+which is interpreted simply to `+1 or `-1. Orderlist started 
+to look a lot more realistic with these fixes...&]
+[s0;%- This solves the issue of not having continuous orders, and 
+now shorter timeframes can be used. M1 is now a valid target, 
+but I am very skeptical to scalping methods. With this, it is 
+still worth testing and easy. Short timeframes actually have 
+a lot more price`-change area (the surface is kind of a fractal 
+with only technical limitations), but it`'s hard to combine with 
+longer strategies. I think that if you can`'t `"accelerate`" 
+good slow strategy to faster, then you should avoid fast strategies. 
+I know that institutional, HFT and big business worlds are just 
+completely different topics. My computer science knowledge is 
+related to business exactly this amount and nothing more, and 
+I do all I can to finally close this topic fast as possible.&]
+[s0;%- ]]

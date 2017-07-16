@@ -7,11 +7,13 @@ SimBroker::SimBroker() {
 	lightweight = false;
 	initial_balance = 1000;
 	cur_begin = -1;
+	close_sum = 0;
 }
 
 void SimBroker::Init() {
 	Clear();
 	
+	close_sum = 0;
 	lightweight = false;
 	
 	MetaTrader& mt = GetMetaTrader();
@@ -43,6 +45,7 @@ void SimBroker::Clear() {
 	is_failed = false;
 	order_counter = 1000000;
 	cycle_time = Time(1970,1,1);
+	close_sum = 0;
 	
 	
 	symbol_profits.SetCount(symbols.GetCount(), 0);
@@ -55,6 +58,12 @@ void SimBroker::Clear() {
 	}
 	
 	Leave();
+}
+
+double SimBroker::PopCloseSum() {
+	double d = close_sum;
+	close_sum = 0;
+	return d;
 }
 
 void SimBroker::Cycle() {
@@ -265,12 +274,14 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 			ho.profit = GetCloseProfit(ho, ho.volume);
 			ho.end = GetTime();
 			balance += ho.profit;
+			close_sum += ho.profit;
 		}
 		// Reduce
 		else {
 			double profit = GetCloseProfit(o, lots);
 			o.volume -= lots;
 			balance -= profit;
+			close_sum += profit;
 		}
 		
 		RefreshOrders();

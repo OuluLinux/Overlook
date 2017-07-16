@@ -44,6 +44,10 @@ void Agent::Main() {
 	while (running) {
 		epoch_total = group->snaps.GetCount();
 		
+		if (epoch_actual == 0) {
+			accum_buf = 0;
+		}
+		
 		// Do some action
 		Action();
 		
@@ -55,50 +59,13 @@ void Agent::Main() {
 void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 	ASSERT(group_id != -1);
 	
-	// Put time values to the input
+	// Input values
 	// - time_values
-	// - all data from snapshot (or single symbol)
-	// - all previous signals (or single sym)
-	int action;
-	if (!group->single_data && !group->single_signal) {
-		// The simplest case is to just use the whole vector of the snapshot
-		ASSERT(snap.values.GetCount() == group->input_height);
-		action = dqn.Act(snap.values);
-	}
-	else {
-		// Copy partial data to separate vector
-		Panic("TODO");
-		if (group->single_data) {
-			
-		}
-		else {
-			// in forward pass the agent simply behaves in the environment
-			int ag_begin = group->GetSignalBegin();
-			int ag_end   = group->GetSignalEnd();
-			int ag_diff  = ag_end - ag_begin;
-			
-			
-			// Copy values from data input (expect values to be in 0-1 range
-			/*int j = 0;
-			for(int i = 0; i < tf_ids.GetCount(); i++) {
-				for(int k = 0; k < buf_count; k++) {
-					double d = snap.values[i * buf_count + k];
-					ASSERT(d >= 0.0 && d <= 1.0);
-					input_array[j++] = d;
-				}
-			}*/
-		}
-		
-		
-		if (group->single_signal) {
-			
-		}
-		else {
-			
-		}
-		
-		action = dqn.Act(input_array);
-	}
+	// - all data from snapshot
+	// - 'accum_buf'
+	// - account change sensor
+	ASSERT(snap.values.GetCount() == group->input_height);
+	int action = dqn.Act(snap.values);
 	
     
     // Convert action to simple signal
@@ -106,30 +73,29 @@ void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 	if      (action == ACT_NOACT)  signal =  0;
 	else if (action == ACT_INCSIG) signal = +1;
 	else if (action == ACT_DECSIG) signal = -1;
+	else if (action == ACT_RESETSIG) {signal = 0; accum_buf = 0;}
 	else Panic("Invalid action");
 	
+	accum_buf += signal;
+	if      (accum_buf > +20) accum_buf = +20;
+	else if (accum_buf < -20) accum_buf = -20;
+	
+	if (accum_buf < 0) signal = -1;
+	else if (accum_buf > 0) signal = +1;
+	else signal = 0;
 	
 	if (next_snap) {
 		
-		// Collect average of the value
-		signal_average.Set(signal);
-		signal_average.SeekNext();
-	
-	
 		// Write latest average to the group values
-		int ag_begin = group->GetSignalPos(group_id);
-		int ag_end   = group->GetSignalPos(group_id + 1);
-		ASSERT(ag_end - ag_begin == group->tf_ids.GetCount() * 2);
-		for(int i = ag_begin, j = 0; i < ag_end; j++) {
-			double d = signal_average.Get(j);
-			ASSERT(d >= -1.0 && d <= 1.0);
-			if (d >= 0) {
-				next_snap->values[i++] = 1.0 - d;
-				next_snap->values[i++] = 1.0;
-			} else {
-				next_snap->values[i++] = 1.0;
-				next_snap->values[i++] = 1.0 + d;
-			}
+		int i = group->GetSignalPos(group_id);
+		double d = accum_buf / 20.0;
+		ASSERT(d >= -1.0 && d <= 1.0);
+		if (d >= 0) {
+			next_snap->values[i++] = 1.0 - d;
+			next_snap->values[i++] = 1.0;
+		} else {
+			next_snap->values[i++] = 1.0;
+			next_snap->values[i++] = 1.0 + d;
 		}
 	}
 	

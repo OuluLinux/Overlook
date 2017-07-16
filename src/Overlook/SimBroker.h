@@ -10,6 +10,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	Vector<double> symbol_profits, prev_symbol_profits, symbol_profit_diffs;
 	String currency;
 	Time cycle_time;
+	double close_sum;
 	int order_counter;
 	bool lightweight;
 	
@@ -26,6 +27,7 @@ public:
 	int FindSymbol(const String& symbol) const;
 	int GetSignal(int symbol) const;
 	int GetOpenOrderCount() const;
+	double PopCloseSum();
 	double GetInitialBalance() const {return initial_balance;}
 	double GetCloseProfit(const Order& o, double volume) const;
 	const Vector<double>& GetSymbolCycleChanges() const {return symbol_profit_diffs;}

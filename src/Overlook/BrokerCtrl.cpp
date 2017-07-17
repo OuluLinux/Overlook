@@ -129,7 +129,7 @@ void BrokerCtrl::Data() {
 		trade.Set(i, 8, o.close);
 		trade.Set(i, 9, o.commission);
 		trade.Set(i, 10, o.swap);
-		trade.Set(i, 11, o.profit);
+		trade.Set(i, 11, Format("%2n", o.profit));
 	}
 	trade.SetCount(orders.GetCount());
 	
@@ -166,7 +166,7 @@ void BrokerCtrl::Data() {
 		history.Set(i, 8, Format("%", o.end));
 		history.Set(i, 9, o.close);
 		history.Set(i, 10, o.swap);
-		history.Set(i, 11, o.profit);
+		history.Set(i, 11, Format("%2n", o.profit));
 	}
 	history.SetCount(horders.GetCount());
 	

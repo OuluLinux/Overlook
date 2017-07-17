@@ -242,7 +242,7 @@ struct Symbol : public Moveable<Symbol> {
 	String GetQuotesRange(int wday) const;
 	String GetTradesRange(int wday) const;
 	
-	bool IsOpen(Time t) const;
+	bool IsOpen(const Time& t) const;
 	
 	
 	// Old MT4Symbol

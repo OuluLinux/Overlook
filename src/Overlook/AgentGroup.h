@@ -9,13 +9,15 @@ public:
 	
 	// Persistent
 	Array<Agent> agents;
-	Vector<int> train_pos;
+	Vector<Vector<int> > train_pos;
+	Vector<int> train_pos_all;
 	Index<int> tf_ids, sym_ids;
 	Time created;
 	String name;
 	String param_str;
 	double global_free_margin_level;
-	int input_width, input_height;
+	int agent_input_width, agent_input_height;
+	int group_input_width, group_input_height;
 	bool sig_freeze;
 	bool enable_training;
 	
@@ -25,10 +27,12 @@ public:
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Core*> databridge_cores;
 	Array<Snapshot> snaps;
+	Vector<double> input_values;
 	Vector<int> data_begins;
 	Vector<int> tf_periods;
 	Index<int> indi_ids;
 	TimeStop last_store;
+	double prev_reward;
 	int buf_count;
 	int data_size, signal_size, total_size;
 	System* sys;
@@ -48,7 +52,7 @@ public:
 	void Start();
 	void Stop();
 	void Main();
-	virtual void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap=NULL);
+	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap=NULL);
 	virtual void Backward(double reward);
 	void StoreThis();
 	void LoadThis();

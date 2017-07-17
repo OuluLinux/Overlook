@@ -29,18 +29,19 @@ protected:
 	
 	
 	// Persistent vars
-	int sym, proxy_sym, group_id;
+	int sym, proxy_sym;
 	
 	
 	// Tmp vars
 	Vector<double> input_array;
+	Snapshot* next_snap;
 	double smooth_reward;
 	int accum_buf;
 	int group_count;
 	int not_stopped;
 	bool running;
 	
-	virtual void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap);
+	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap);
 	virtual void Backward(double reward);
 	void RealAction();
 	void Main();

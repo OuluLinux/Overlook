@@ -4,9 +4,9 @@ namespace Overlook {
 using namespace Upp;
 
 Agent::Agent() {
+	next_snap = NULL;
 	proxy_sym = -1;
 	sym = -1;
-	group_id = -1;
 	
 	not_stopped = 0;
 	group_count = 0;
@@ -42,7 +42,7 @@ void Agent::Main() {
 	epoch_actual = 0;
 	
 	while (running) {
-		epoch_total = group->snaps.GetCount();
+		epoch_total = group->train_pos[group_id].GetCount();
 		
 		if (epoch_actual == 0) {
 			accum_buf = 0;
@@ -56,15 +56,18 @@ void Agent::Main() {
 	not_stopped--;
 }
 
-void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
+void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 	ASSERT(group_id != -1);
+	this->next_snap = next_snap;
 	
 	// Input values
 	// - time_values
 	// - all data from snapshot
 	// - 'accum_buf'
 	// - account change sensor
-	ASSERT(snap.values.GetCount() == group->input_height);
+	DUMP(snap.values.GetCount());
+	DUMP(group->agent_input_height);
+	ASSERT(snap.values.GetCount() == group->agent_input_height);
 	int action = dqn.Act(snap.values);
 	
     
@@ -97,6 +100,26 @@ void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 			next_snap->values[i++] = 1.0;
 			next_snap->values[i++] = 1.0 + d;
 		}
+		
+		
+		// Write instrument sensors
+		double max = 10.0;
+		d = 0.0;
+		const Array<Order>& open_orders = broker.GetOpenOrders();
+		for(int i = 0; i < open_orders.GetCount(); i++)
+			d += open_orders[i].profit;
+		if (d > 0.0) {
+			next_snap->values[i++] = 1.0 - Upp::max(0.0, Upp::min(1.0, d / max));
+			next_snap->values[i++] = 1.0;
+		}
+		else if (d < 0.0) {
+			next_snap->values[i++] = 1.0;
+			next_snap->values[i++] = 1.0 - Upp::max(0.0, Upp::min(1.0, -d / max));
+		}
+		else {
+			next_snap->values[i++] = 1.0;
+			next_snap->values[i++] = 1.0;
+		}
 	}
 	
 	
@@ -119,6 +142,28 @@ void Agent::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 }
 
 void Agent::Backward(double reward) {
+	// Write reward average to the next snapshot
+	if (next_snap) {
+		double pos, neg;
+		int reward_pos = group->GetSignalPos(group_id) + 4;
+		if (reward > 0.0) {
+			reward_average.Add(reward);
+			double max = reward_average.mean * 2.0;
+			next_snap->values[reward_pos + 0] = 1.0 - Upp::max(0.0, Upp::min(1.0, reward / max));
+			next_snap->values[reward_pos + 1] = 1.0;
+		}
+		else if (reward < 0.0) {
+			loss_average.Add(-reward);
+			double max = loss_average.mean * 2.0;
+			next_snap->values[reward_pos + 0] = 1.0;
+			next_snap->values[reward_pos + 1] = 1.0 - Upp::max(0.0, Upp::min(1.0, -reward / max));
+		}
+		else {
+			next_snap->values[reward_pos + 0] = 1.0;
+			next_snap->values[reward_pos + 1] = 1.0;
+		}
+	}
+	
 	
 	// pass to brain for learning
 	dqn.Learn(reward);
@@ -170,7 +215,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 
 void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % sym % proxy_sym % group_id;
+	s % sym % proxy_sym;
 }
 
 }

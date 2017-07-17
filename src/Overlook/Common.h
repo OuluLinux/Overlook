@@ -21,6 +21,39 @@
 namespace Overlook {
 using namespace Upp;
 
+struct OnlineAverage : Moveable<OnlineAverage> {
+	double mean_a, mean_b;
+	int count;
+	OnlineAverage() : mean_a(0), mean_b(0), count(0) {}
+	void Add(double a, double b) {
+		if (count == 0) {
+			mean_a = a;
+			mean_b = b;
+		} else {
+			double delta_a = a - mean_a; mean_a += delta_a / count;
+			double delta_b = b - mean_b; mean_b += delta_b / count;
+		}
+		count++;
+	}
+	void Serialize(Stream& s) {s % mean_a % mean_b % count;}
+};
+
+struct OnlineAverage1 : Moveable<OnlineAverage> {
+	double mean;
+	int count;
+	OnlineAverage1() : mean(0), count(0) {}
+	void Add(double a) {
+		if (count == 0) {
+			mean = a;
+		} else {
+			double delta = a - mean;
+			mean += delta / count;
+		}
+		count++;
+	}
+	void Serialize(Stream& s) {s % mean % count;}
+};
+
 struct ValueBase {
 	int count, visible, data_type, min, max, factory;
 	const char* s0;

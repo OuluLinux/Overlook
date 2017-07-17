@@ -55,9 +55,11 @@ struct TraineeBase {
 	// Persistent
 	ConvNet::DQNAgent dqn;
 	Vector<double> seq_results;
+	OnlineAverage1 reward_average, loss_average;
 	double peak_value;
 	double best_result;
 	double training_time;
+	int group_id;
 	int iter;
 	
 	// Temp
@@ -65,8 +67,6 @@ struct TraineeBase {
 	Vector<double> thrd_equity;
 	SimBroker broker;
 	TimeStop ts;
-	double prev_equity;
-	double prev_reward;
 	double begin_equity;
 	int epoch_actual, epoch_total;
 	
@@ -74,10 +74,10 @@ struct TraineeBase {
 	
 	TraineeBase();
 	void Init();
-	void Create();
+	void Create(int width, int height);
 	void Action();
 	void Serialize(Stream& s);
-	virtual void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) = 0;
+	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) = 0;
 	virtual void Backward(double reward) = 0;
 	virtual void SetAskBid(SimBroker& sb, int pos) = 0;
 	const Vector<double>& GetSequenceResults() const {return seq_results;}

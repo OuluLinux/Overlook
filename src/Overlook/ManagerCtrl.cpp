@@ -46,7 +46,8 @@ void GroupOverview::Data() {
 		String infostr;
 		infostr << "Name: " << group->name << "\n";
 		infostr << "Free-margin level: " << group->global_free_margin_level << "\n";
-		infostr << "Reward period: " << group->input_width << "x" << group->input_height << "\n";
+		infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
+		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
 		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
 		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
 		infostr << "Created: " << Format("%", group->created) << "\n";
@@ -244,7 +245,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	listsplit << glist << alist;
 	
 	glist.AddColumn("Name");
-	glist.AddColumn("Profit");
+	glist.AddColumn("Best result");
 	glist <<= THISBACK1(SetView, 1);
 	glist.WhenLeftClick << THISBACK1(SetView, 1);
 	

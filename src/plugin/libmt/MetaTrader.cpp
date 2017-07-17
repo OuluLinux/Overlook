@@ -169,7 +169,7 @@ String Symbol::GetTradesRange(int wday) const {
 		(int)trades_end_hours[wday],	(int)trades_end_minutes[wday]);
 }
 
-bool Symbol::IsOpen(Time t) const {
+bool Symbol::IsOpen(const Time& t) const {
 	if (is_skipping) return false;
 	int wday = DayOfWeek(t);
 	Time begin(t.year, t.month, t.day, trades_begin_hours[wday], trades_begin_minutes[wday]);

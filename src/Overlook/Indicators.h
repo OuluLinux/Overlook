@@ -746,19 +746,6 @@ struct Average : Moveable<Average> {
 	}
 };
 
-
-struct OnlineAverage : Moveable<OnlineAverage> {
-	double mean_a, mean_b;
-	int count;
-	OnlineAverage() : mean_a(0), mean_b(0), count(0) {}
-	void Add(double a, double b) {
-		double delta_a = a - mean_a; mean_a += delta_a / count;
-		double delta_b = b - mean_b; mean_b += delta_b / count;
-		count++;
-	}
-};
-
-
 class CorrelationOscillator : public Core {
 	
 protected:

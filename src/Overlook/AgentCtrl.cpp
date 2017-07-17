@@ -45,7 +45,7 @@ void SnapshotDraw::Paint(Draw& w) {
 				int x = k * xstep;
 				int x2 = (k + 1) * xstep;
 				int w = x2 - x;
-				double d = snap.values[(j * group.tf_ids.GetCount() + i) * value_count + k];
+				double d = snap.values[1 + (j * group.tf_ids.GetCount() + i) * value_count + k];
 				double min = 0.0;
 				double max = 1.0;
 				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));

@@ -38,8 +38,6 @@ protected:
 	double smooth_reward;
 	int accum_buf;
 	int group_count;
-	int not_stopped;
-	bool running;
 	
 	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap);
 	virtual void Backward(double reward);

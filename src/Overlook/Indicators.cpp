@@ -3798,7 +3798,7 @@ void Sensors::Init() {
 	for(int i = 0; i < 10; i++)
 		SetBufferColor(i, RainbowColor((double)i / 10.0));
 	#else
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < 2; i++)
 		SetBufferColor(i, RainbowColor((double)i / 4.0));
 	#endif
 	
@@ -3824,7 +3824,7 @@ void Sensors::Start() {
 	#ifdef LARGE_SENSOR
 	for(int i = 0; i < 10; i++)
 	#else
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < 2; i++)
 	#endif
 		bufs.Add(&GetBuffer(i));
 	
@@ -3863,7 +3863,7 @@ void Sensors::Start() {
 	if (counted) counted--;
 	bars++;
 	
-	double range_max = total_mean * 1.5;
+	double range_max = total_mean * 3.0;
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -3912,43 +3912,19 @@ void Sensors::Start() {
 		}
 		
 		#else
-		
-		double changes[2];
-		Time t = sys.GetTimeTf(GetTf(), i);
-		if (split_type == 0) {
-			int wday = DayOfWeek(t);
-			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
-			int avpos = wdaymin / tfmin;
-			changes[1] = means[avpos];
-		}
-		else if (split_type == 1) {
-			int wday = DayOfWeek(t);
-			changes[1] = means[wday];
-		}
-		else {
-			int pos = (DayOfYear(t) % (7 * 4)) / 7;
-			changes[1] = means[pos];
-		}
-		
 		double open0 = src.Get(i);
 		double open1 = i > 0 ? src.Get(i-1) : 0.0;
-		
-		changes[0] = i > 0 ? (open0 / open1 - 1.0) : 0.0;
-		
-		for(int j = 0; j < 2; j++) {
-			double d = changes[j];
-			double pos, neg;
-			if (d >= 0) {
-				pos = Upp::max(0.0, range_max - d) / range_max;
-				neg = 1.0;
-			} else {
-				pos = 1.0;
-				neg = Upp::max(0.0, range_max + d) / range_max;
-			}
-			bufs[j * 2 + 0]->Set(i, pos);
-			bufs[j * 2 + 1]->Set(i, neg);
+		double d = i > 0 ? (open0 / open1 - 1.0) : 0.0;
+		double pos, neg;
+		if (d >= 0) {
+			pos = Upp::max(0.0, range_max - d) / range_max;
+			neg = 1.0;
+		} else {
+			pos = 1.0;
+			neg = Upp::max(0.0, range_max + d) / range_max;
 		}
-		
+		bufs[0]->Set(i, pos);
+		bufs[1]->Set(i, neg);
 		#endif
 	}
 }

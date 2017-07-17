@@ -59,6 +59,7 @@ struct TraineeBase {
 	double peak_value;
 	double best_result;
 	double training_time;
+	double last_drawdown;
 	int group_id;
 	int iter;
 	
@@ -69,6 +70,8 @@ struct TraineeBase {
 	TimeStop ts;
 	double begin_equity;
 	int epoch_actual, epoch_total;
+	int main_id;
+	bool at_main;
 	
 	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG,     ACTIONCOUNT};
 	

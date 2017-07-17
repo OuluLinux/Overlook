@@ -137,6 +137,17 @@ public:
 		return -1;
 	}
 	
+	template <class T>
+	inline static ArrayMap<int, T>& GetBusyTasklist() {
+		static ArrayMap<int, T> list;
+		return list;
+	}
+	template <class T>
+	inline static Vector<T>& GetBusyRunning() {
+		static Vector<T> list;
+		return list;
+	}
+	
 protected:
 	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
 	
@@ -145,7 +156,7 @@ protected:
 	friend class SimBroker;
 	friend class Core;
 	
-	Vector<FactoryRegister>				regs;
+	Vector<FactoryRegister>		regs;
 	Manager			mgr;
 	Data			data;
 	Vector<String>	period_strings;
@@ -153,13 +164,16 @@ protected:
 	Vector<int>		bars;
 	Index<String>	symbols;
 	Index<int>		periods;
+	SpinLock		task_lock;
 	SpinLock		pl_queue_lock;
 	String			addr;
 	double			exploration;
 	Atomic			nonstopped_workers;
+	Atomic			busy_task;
 	int64			memory_limit;
 	int				port;
-	bool			running, stopped;
+	int				task_counter;
+	bool			running;
 	
 	
 protected:
@@ -173,7 +187,6 @@ protected:
 	int source_symbol_count;
 	
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
-	void MainLoop();
 	void Worker(int id);
 	void RefreshRealtime();
 	int  GetHash(const Vector<byte>& vec);
@@ -201,6 +214,8 @@ public:
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	Manager& GetManager() {return mgr;}
+	int  AddTaskBusy(Callback task);
+	void RemoveBusyTask(int main_id);
 	
 public:
 

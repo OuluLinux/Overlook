@@ -937,7 +937,7 @@ public:
 		#ifdef LARGE_SENSOR
 			% Out(10, 10)
 		#else
-			% Out(4, 4)
+			% Out(2, 2)
 		#endif
 			% Persistent(means)
 			% Persistent(counts)

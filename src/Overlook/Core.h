@@ -119,6 +119,8 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	#else
 	void SafetyCheck(int i) const {}
 	void SetSafetyLimit(int i) const {}
+	Buffer& SafetyBuffer(Buffer& cb) const {return cb;}
+	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {return cb;}
 	#endif
 	
 	CoreIO();

@@ -12,6 +12,9 @@ TraineeBase::TraineeBase() {
 	peak_value = 0.0;
 	best_result = 0.0;
 	training_time = 0.0;
+	last_drawdown = 0.0;
+	main_id = -1;
+	at_main = false;
 }
 
 void TraineeBase::Create(int width, int height) {
@@ -108,15 +111,17 @@ void TraineeBase::Action() {
 	if (epoch_actual >= epoch_total) {
 		seq_results.Add(equity);
 		epoch_actual = 0;
-		if (diff > best_result) best_result = diff;
+		if (diff > best_result || best_result == 0.0)
+			best_result = diff;
 		training_time += ts.Elapsed() / (1000.0 * 60.0 * 60.0);
 		ts.Reset();
+		last_drawdown = broker.GetDrawdown();
 	}
 }
 
 void TraineeBase::Serialize(Stream& s) {
 	s % dqn % seq_results % reward_average % loss_average % peak_value % best_result % training_time
-	  % group_id % iter;
+	  % last_drawdown % group_id % iter;
 }
 
 }

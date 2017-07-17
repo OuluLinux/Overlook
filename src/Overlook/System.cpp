@@ -16,8 +16,9 @@ System::System() :
 	addr = arg_addr.IsEmpty() ?  "127.0.0.1" : arg_addr;
 	port = arg_port == 0 ? 42000 : arg_port;
 	running = false;
-	stopped = true;
 	exploration = 0.2;
+	task_counter = 0;
+	nonstopped_workers = 0;
 	
 	source_symbol_count = 0;
 }

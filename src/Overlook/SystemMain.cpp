@@ -3,85 +3,111 @@
 namespace Overlook {
 
 void System::Start() {
-	Stop();
+	if (running) return;
 	running = true;
-	stopped = false;
 	
-	Thread::Start(THISBACK(MainLoop));
 	mgr.Start();
-	/*
-	nonstopped_workers = 1;//CPU_Cores();
-	SetBasketCount(nonstopped_workers);
+	
+	busy_task = 0;
+	nonstopped_workers = Upp::max(1, CPU_Cores() - 2);
 	for(int i = 0; i < nonstopped_workers; i++)
-		Thread::Start(THISBACK1(Worker, i));*/
+		Thread::Start(THISBACK1(Worker, i));
 }
 
 void System::Stop() {
 	mgr.Stop();
 	running = false;
-	while (!stopped && nonstopped_workers != 0) Sleep(100);
+	while (nonstopped_workers > 0) Sleep(100);
 }
 
-void System::MainLoop() {
-	
-	while (running) {
-		
-		// Refresh current real-time combination
-		RefreshRealtime();
-		
-		Sleep(100);
+int System::AddTaskBusy(Callback task) {
+	task_lock.Enter();
+	ArrayMap<int, Callback>& busy_tasks = GetBusyTasklist<Callback>();
+	Vector<One<Atomic> >& busy_running = GetBusyRunning<One<Atomic> >();
+	int id = task_counter++;
+	busy_tasks.Add(id, task);
+	busy_running.Add(new Atomic(0));
+	task_lock.Leave();
+	return id;
+}
+
+void System::RemoveBusyTask(int main_id) {
+	task_lock.Enter();
+	ArrayMap<int, Callback>& busy_tasks = GetBusyTasklist<Callback>();
+	Vector<One<Atomic> >& busy_running = GetBusyRunning<One<Atomic> >();
+	int i = busy_tasks.Find(main_id);
+	if (i != -1) {
+		Atomic& task_running = *busy_running[i];
+		task_running++;
+		if (task_running > 1) {
+			task_lock.Leave();
+			while (task_running > 1)
+				Sleep(1);
+			task_lock.Enter();
+			i = busy_tasks.Find(main_id);
+		}
+		busy_tasks.Remove(i);
+		busy_running.Remove(i);
 	}
-	
-	stopped = true;
+	task_lock.Leave();
 }
 
 void System::Worker(int id) {
-	const int tf_count = GetPeriodCount();
-	
-	int counter = 0;
 	
 	while (running) {
-		/*if (!pl_queue.IsEmpty()) {
-			
-			// Get pipeline to process
-			pl_queue_lock.Enter();
-			One<PipelineItem> pi = pl_queue.Detach(0);
-			pl_queue_lock.Leave();
-			
-			LOG("Worker " << id << " starting to process a pipeline");
-			
-			int best_tf;
-			int best_result;
-			
-			for (int tf = tf_count-1; tf >= 0; tf--) {
-				Index<int> tfs;
-				tfs.Add(tf);
-				
-				// Get core-item queue from pipeline-item
-				Vector<Ptr<CoreItem> > ci_queue;
-				GetCoreQueue(*pi, ci_queue, &tfs, id);
-				
-				// Process job-queue
-				for(int i = 0; i < ci_queue.GetCount() && running; i++) {
-					Process(*ci_queue[i]);
-				}
-				
-				// Break if result is too bad;
-				best_tf = tf;
-				best_result = counter++;
+		
+		// Do some workarounds to have shared memory variables... some cross-platform dragons here...
+		task_lock.Enter();
+		ArrayMap<int, Callback>& busy_tasks = GetBusyTasklist<Callback>();
+		Vector<One<Atomic> >& busy_running = GetBusyRunning<One<Atomic> >();
+		
+		
+		// Avoid using too many threads for too little tasks
+		if (id >= busy_tasks.GetCount()) {
+			task_lock.Leave();
+			Sleep(1000);
+			continue;
+		}
+		
+		
+		// Try to find a task, which is not yet running.
+		// Break this loop easily to avoid getting stuck.
+		int task;
+		bool do_break = false;
+		bool do_continue = true;
+		for (int i = 0; i < busy_running.GetCount(); i++) {
+			task = busy_task++;
+			if (busy_task >= busy_running.GetCount())
+				busy_task = 0;
+			if (task >= busy_running.GetCount())
+				break;
+			Atomic& ai = *busy_running[task];
+			if (ai == 0) {
+				do_continue = false;
 				break;
 			}
-			
-			// Return result to the query table
-			table.lock.Enter();
-			int row = table.GetCount();
-			table.SetCount(row+1);
-			table.Set(row, 0, best_result);
-			table.Set(row, 1, best_tf);
-			table.lock.Leave();
-		}*/
+			if (!running) {
+				do_break = true;
+				break;
+			}
+		}
+		if (do_break) {
+			task_lock.Leave();
+			break;
+		}
+		if (do_continue) {
+			task_lock.Leave();
+			continue;
+		}
 		
-		Sleep(100);
+		
+		// Run the task
+		Atomic& task_running = *busy_running[task];
+		task_running++;
+		task_lock.Leave();
+		
+		busy_tasks[task]();
+		task_running--;
 	}
 	
 	nonstopped_workers--;
@@ -125,12 +151,6 @@ void System::Process(CoreItem& ci) {
 	
 	// Store cache file
 	ci.core->StoreCache();
-	
-}
-
-void System::RefreshRealtime() {
-	
-	
 	
 }
 

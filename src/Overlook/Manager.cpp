@@ -29,7 +29,6 @@ void Manager::Start() {
 		AgentGroup& ag = groups[i];
 		if (ag.enable_training)
 			ag.Start();
-		ag.Stop();
 	}
 }
 

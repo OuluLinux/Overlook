@@ -2141,4 +2141,20 @@ I know that institutional, HFT and big business worlds are just
 completely different topics. My computer science knowledge is 
 related to business exactly this amount and nothing more, and 
 I do all I can to finally close this topic fast as possible.&]
-[s0;%- ]]
+[s3;%- 17.7.2017&]
+[s0;%- It`'s almost over! This project, I mean. This AI won`'t scare 
+anyone. It`'s a nice demo and maybe a source of fine master`'s 
+thesis, but that`'s it. I guess that the training will take 1`-2 
+weeks, because of the count of agents.&]
+[s0;%- Technically, I am almost satisfied. Many parts of the DataBridge 
+are very hackish solutions, but I don`'t seem to find anything 
+that I would really want to change. The result feels robust, 
+except that the underlying asserts are triggered sometimes by 
+imperfections in the DataBridge connections.&]
+[s0;%- Many ideas have been popped into my mind at previous days, 
+but none of them has been an improvement in the end. That`'s 
+good. This is finally holding water, metaphorically.&]
+[s0;%- GCC and MSC compiles working release versions with 2`-5x speedup 
+to debug version. If this has any positive results, then I`'ll 
+upload release to the github. Only some realtime fixes and cleaning 
+left... finally?]]

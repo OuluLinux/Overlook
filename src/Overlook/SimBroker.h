@@ -11,6 +11,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	String currency;
 	Time cycle_time;
 	double close_sum;
+	double profit_sum, loss_sum;
 	int order_counter;
 	bool lightweight;
 	
@@ -32,6 +33,7 @@ public:
 	double GetCloseProfit(const Order& o, double volume) const;
 	const Vector<double>& GetSymbolProfits() const {return symbol_profits;}
 	const Vector<double>& GetSymbolCycleChanges() const {return symbol_profit_diffs;}
+	double GetDrawdown() const;
 	
 	void SetFreeMarginLevel(double d);
 	void SetPrice(int sym, double price);

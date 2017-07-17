@@ -8,6 +8,8 @@ SimBroker::SimBroker() {
 	initial_balance = 1000;
 	cur_begin = -1;
 	close_sum = 0;
+	profit_sum = 0.0;
+	loss_sum = 0.0;
 }
 
 void SimBroker::Init() {
@@ -46,6 +48,8 @@ void SimBroker::Clear() {
 	order_counter = 1000000;
 	cycle_time = Time(1970,1,1);
 	close_sum = 0;
+	profit_sum = 0.0;
+	loss_sum = 0.0;
 	
 	
 	symbol_profits.SetCount(symbols.GetCount(), 0);
@@ -115,6 +119,13 @@ void SimBroker::RefreshOrders() {
 
 int SimBroker::FindSymbol(const String& symbol) const {
 	return symbol_idx.Find(symbol);
+}
+
+double SimBroker::GetDrawdown() const {
+	double total = profit_sum + loss_sum;
+	if (total == 0.0)
+		return 1.0;
+	return loss_sum / total;
 }
 
 int SimBroker::GetSignal(int symbol) const {
@@ -275,6 +286,8 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 			ho.end = GetTime();
 			balance += ho.profit;
 			close_sum += ho.profit;
+			if (ho.profit >= 0) profit_sum += ho.profit;
+			else                loss_sum   -= ho.profit;
 		}
 		// Reduce
 		else {
@@ -282,6 +295,8 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 			o.volume -= lots;
 			balance -= profit;
 			close_sum += profit;
+			if (profit >= 0) profit_sum += profit;
+			else             loss_sum   -= profit;
 		}
 		
 		RefreshOrders();

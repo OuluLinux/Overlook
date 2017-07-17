@@ -21,6 +21,7 @@ public:
 	GroupOverview();
 	
 	void SetGroup(AgentGroup& group);
+	void SetEpsilon() {if (group) group->SetEpsilon(epsilon.GetData());}
 	
 	void Data();
 	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
@@ -82,10 +83,12 @@ public:
 	
 	void SelectAll();
 	void SelectNone();
+	void Select(int i);
 	void Data();
 	void SetView(int i);
 	void NewAgent();
 	void PostNewAgent() {Thread::Start(THISBACK(NewAgent));}
+	void LastCursor() {glist.SetCursor(glist.GetCount()-1);}
 };
 
 }

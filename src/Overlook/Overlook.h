@@ -38,7 +38,6 @@ class Overlook : public TopWindow {
 	
 protected:
 	friend class PrioritizerCtrl;
-	
 	System					sys;
 	
 	// Main view

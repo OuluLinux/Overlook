@@ -8,6 +8,7 @@ GroupOverview::GroupOverview()
 	
 	prog.Set(0, 1);
 	sub.Set(0, 1);
+	epsilon <<= THISBACK(SetEpsilon);
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
@@ -25,21 +26,20 @@ void GroupOverview::SetGroup(AgentGroup& group) {
 }
 
 void GroupOverview::Progress(int actual, int total, String label) {
-	LOG("Progress " << actual << "/" << total);
 	prog.Set(actual, total);
 	sub.Set(0, 1);
 	this->label = label;
-	lbl.SetLabel(label);
+	lbl.SetLabel(Format("%s: %d/%d, %d/%d", label, actual, total, group->a1, group->t1));
 }
 
 void GroupOverview::SubProgress(int actual, int total) {
 	sub.Set(actual, total);
-	lbl.SetLabel(label + " " + IntStr(actual) + "/" + IntStr(total));
+	lbl.SetLabel(Format("%s: %d/%d, %d/%d", group->prog_desc, group->a0, group->t0, actual, total));
 }
 
 void GroupOverview::Data() {
 	if (group) {
-		lbl.SetLabel(group->prog_desc);
+		lbl.SetLabel(Format("%s: %d/%d, %d/%d", group->prog_desc, group->a0, group->t0, group->a1, group->t1));
 		prog.Set(group->a0, group->t0);
 		sub.Set(group->a1, group->t1);
 		
@@ -58,6 +58,7 @@ void GroupOverview::Data() {
 		
 		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
 		
+		epsilon.SetData(group->dqn.GetEpsilon());
 		info.SetLabel(infostr);
 	}
 }
@@ -137,6 +138,8 @@ AgentTabCtrl::AgentTabCtrl() {
 }
 
 void AgentTabCtrl::Data() {
+	if (!agent) return;
+	
 	int tab = Get();
 	
 	if (tab == 0) {
@@ -158,6 +161,7 @@ void AgentTabCtrl::Data() {
 		overview.bestresult.SetLabel(DblStr(agent->best_result));
 		overview.traintime.SetLabel(DblStr(agent->training_time));
 		overview.iters.SetLabel(IntStr(agent->iter));
+		overview.epsilon.SetLabel(DblStr(agent->dqn.GetEpsilon()));
 		
 		
 		double minimum_margin =
@@ -233,6 +237,12 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
 	newview.freeze_sig.Set(true);
+	newview.allbasefx  <<= THISBACK1(Select, 0);
+	newview.allbasecfd <<= THISBACK1(Select, 1);
+	newview.allfx      <<= THISBACK1(Select, 2);
+	newview.allcfd     <<= THISBACK1(Select, 3);
+	newview.allindices <<= THISBACK1(Select, 4);
+	newview.allfutures <<= THISBACK1(Select, 5);
 	
 	
 	add_new.SetLabel("New Group");
@@ -246,11 +256,13 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	
 	glist.AddColumn("Name");
 	glist.AddColumn("Best result");
+	glist.AddColumn("Drawdown");
 	glist <<= THISBACK1(SetView, 1);
 	glist.WhenLeftClick << THISBACK1(SetView, 1);
 	
 	alist.AddColumn("Symbol");
 	alist.AddColumn("Best result");
+	alist.AddColumn("Drawdown");
 	alist <<= THISBACK1(SetView, 2);
 	alist.WhenLeftClick << THISBACK1(SetView, 2);
 	
@@ -266,6 +278,24 @@ void ManagerCtrl::SelectAll() {
 void ManagerCtrl::SelectNone() {
 	for(int i = 0; i < newview.symlist.GetCount(); i++) {
 		newview.symlist.Set(i, 1, false);
+	}
+}
+
+void ManagerCtrl::Select(int j) {
+	MetaTrader& mt = GetMetaTrader();
+	for(int i = 0; i < newview.symlist.GetCount(); i++) {
+		const Symbol& s = mt.GetSymbol(i);
+		bool sel = false;
+		switch (j) {
+			case 0: sel = s.IsForex() && s.is_base_currency; break;
+			case 1: sel = s.IsCFD()   && s.is_base_currency; break;
+			case 2: sel = s.IsForex(); break;
+			case 3: sel = s.IsCFD(); break;
+			case 4: sel = s.IsCFDIndex(); break;
+			case 5: sel = s.IsFuture(); break;
+		}
+		if (sel)
+			newview.symlist.Set(i, 1, true);
 	}
 }
 
@@ -311,7 +341,8 @@ void ManagerCtrl::Data() {
 		AgentGroup& g = mgr.groups[i];
 		
 		glist.Set(i, 0, g.name);
-		glist.Set(i, 1, g.peak_value);
+		glist.Set(i, 1, g.best_result);
+		glist.Set(i, 2, g.last_drawdown);
 	}
 	glist.SetCount(mgr.groups.GetCount());
 	
@@ -323,8 +354,9 @@ void ManagerCtrl::Data() {
 		for(int i = 0; i < g.agents.GetCount(); i++) {
 			Agent& a = g.agents[i];
 			
-			alist.Set(i, 0, sys->GetSymbol(a.sym));
-			alist.Set(i, 1, a.peak_value);
+			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
+			alist.Set(i, 1, a.best_result);
+			alist.Set(i, 2, a.last_drawdown);
 		}
 		alist.SetCount(g.agents.GetCount());
 	}
@@ -408,7 +440,8 @@ void ManagerCtrl::NewAgent() {
 	mgr.groups.Add(group_.Detach());
 	
 	PostCallback(THISBACK(Data));
-	glist.SetCursor(glist.GetCount()-1);
+	PostCallback(THISBACK(LastCursor));
+	
 	
 	group.Init();
 	group.StoreThis();

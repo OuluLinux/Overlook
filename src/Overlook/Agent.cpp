@@ -8,10 +8,8 @@ Agent::Agent() {
 	proxy_sym = -1;
 	sym = -1;
 	
-	not_stopped = 0;
 	group_count = 0;
 	smooth_reward = 0.0;
-	running = false;
 }
 
 Agent::~Agent() {
@@ -25,35 +23,31 @@ void Agent::Init() {
 }
 
 void Agent::Start() {
-	if (running) return;
-	running = true;
-	not_stopped++;
-	Thread::Start(THISBACK(Main));
+	if (main_id != -1) return;
+	epoch_actual = 0;
+	main_id = group->sys->AddTaskBusy(THISBACK(Main));
 }
 
 void Agent::Stop() {
-	if (!running) return;
-	running = false;
-	while (not_stopped) Sleep(100);
+	if (main_id == -1) return;
+	group->sys->RemoveBusyTask(main_id);
+	main_id = -1;
+	while (at_main) Sleep(100);
 }
 
 void Agent::Main() {
-	ASSERT(group);
-	epoch_actual = 0;
-	
-	while (running) {
-		epoch_total = group->train_pos[group_id].GetCount();
-		
+	ASSERT(!at_main);
+	at_main = true;
+	epoch_total = group->train_pos[group_id].GetCount();
+	if (epoch_total > 0) {
 		if (epoch_actual == 0) {
 			accum_buf = 0;
 		}
 		
 		// Do some action
 		Action();
-		
 	}
-	
-	not_stopped--;
+	at_main = false;
 }
 
 void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {

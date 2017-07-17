@@ -11,13 +11,12 @@ AgentGroup::AgentGroup() {
 	group_input_height = 0;
 	data_size = 0;
 	signal_size = 0;
+	act_iter = 0;
 	
 	global_free_margin_level = 0.97;
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
-	running = false;
-	stopped = true;
 }
 
 AgentGroup::~AgentGroup() {
@@ -36,6 +35,12 @@ void AgentGroup::SubProgress(int actual, int total) {
 	a1 = actual;
 	t1 = total;
 	WhenSubProgress(actual, total);
+}
+
+void AgentGroup::SetEpsilon(double d) {
+	dqn.SetEpsilon(d);
+	for(int i = 0; i < agents.GetCount(); i++)
+		agents[i].dqn.SetEpsilon(d);
 }
 
 void AgentGroup::CreateAgents() {
@@ -123,10 +128,10 @@ void AgentGroup::Init() {
 }
 
 void AgentGroup::Start() {
-	if (running) return;
-	running = true;
-	stopped = false;
-	Thread::Start(THISBACK(Main));
+	if (main_id != -1) return;
+	act_iter = 0;
+	main_id = sys->AddTaskBusy(THISBACK(Main));
+	
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		ASSERT(a.group);
@@ -135,9 +140,10 @@ void AgentGroup::Start() {
 }
 
 void AgentGroup::Stop() {
-	if (!running) return;
-	running = false;
-	while (!stopped) Sleep(100);
+	if (main_id == -1) return;
+	sys->RemoveBusyTask(main_id);
+	main_id = -1;
+	while (at_main) Sleep(100);
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		a.Stop();
@@ -146,27 +152,25 @@ void AgentGroup::Stop() {
 }
 
 void AgentGroup::Main() {
-	int act_iter = 0;
-	while (running) {
-		epoch_total = snaps.GetCount();
-		
-		if (epoch_actual == 0) {
-			prev_reward = 0;
-		}
-		
-		// Do some action
-		Action();
-		
-		
-		// Store sequences periodically
-		if ((act_iter % 1000) == 0 && last_store.Elapsed() > 60 * 60 * 1000) {
-			StoreThis();
-			last_store.Reset();
-		}
-		act_iter++;
+	ASSERT(!at_main);
+	at_main = true;
+	epoch_total = snaps.GetCount();
+	
+	if (epoch_actual == 0) {
+		prev_reward = 0;
 	}
 	
-	stopped = true;
+	// Do some action
+	Action();
+	
+	
+	// Store sequences periodically
+	if ((act_iter % 1000) == 0 && last_store.Elapsed() > 60 * 60 * 1000) {
+		StoreThis();
+		last_store.Reset();
+	}
+	act_iter++;
+	at_main = false;
 }
 
 void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
@@ -197,34 +201,40 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 	int active_count = 0;
     for(int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
+		int signal;
+		const Agent& a = agents[i];
 		
-	    // Get signals from snapshots, where agents have wrote their latest signals.
-	    int sig_pos = GetSignalPos(i);
-	    double pos = 1.0 - snap.values[sig_pos];
-	    double neg = 1.0 - snap.values[sig_pos + 1];
-	    double dsignal = pos > 0.0 ? +pos : -neg;
-	    
-	    
-	    int signal;
-		if      (dsignal == 0.0) signal =  0;
-		else if (dsignal >  0.0) {signal = +1; active_count++;}
-		else if (dsignal <  0.0) {signal = -1; active_count++;}
-		else Panic("Invalid action");
-		
-		
-		// Set signal to broker
-		if (!sig_freeze) {
-			// Don't use signal freezing. Might cause unreasonable costs.
-			broker.SetSignal(sym, signal);
-			broker.SetSignalFreeze(sym, false);
-		} else {
-			// Set signal to broker, but freeze it if it's same than previously.
-			int prev_signal = broker.GetSignal(sym);
-			if (signal != prev_signal) {
+		// Very minimum requirement: positive drawdown
+		if (a.last_drawdown >= 0.50)
+			signal = 0;
+		else {
+		    // Get signals from snapshots, where agents have wrote their latest signals.
+		    int sig_pos = GetSignalPos(i);
+		    double pos = 1.0 - snap.values[sig_pos];
+		    double neg = 1.0 - snap.values[sig_pos + 1];
+		    double dsignal = pos > 0.0 ? +pos : -neg;
+		    
+		    
+		    if      (dsignal == 0.0) signal =  0;
+			else if (dsignal >  0.0) {signal = +1; active_count++;}
+			else if (dsignal <  0.0) {signal = -1; active_count++;}
+			else Panic("Invalid action");
+			
+			
+			// Set signal to broker
+			if (!sig_freeze) {
+				// Don't use signal freezing. Might cause unreasonable costs.
 				broker.SetSignal(sym, signal);
 				broker.SetSignalFreeze(sym, false);
 			} else {
-				broker.SetSignalFreeze(sym, true);
+				// Set signal to broker, but freeze it if it's same than previously.
+				int prev_signal = broker.GetSignal(sym);
+				if (signal != prev_signal) {
+					broker.SetSignal(sym, signal);
+					broker.SetSignalFreeze(sym, false);
+				} else {
+					broker.SetSignalFreeze(sym, true);
+				}
 			}
 		}
     }
@@ -359,13 +369,16 @@ void AgentGroup::RefreshSnapshots() {
 		
 		snaps.Add(snap.Detach());
 		int pospos = train_pos_all.GetCount();
-		train_pos_all.Add(i);
-		
+		bool any_match = false;
 		for(int j = 0; j < sym_ids.GetCount(); j++) {
 			const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
-			if (sym.IsOpen(t))
+			if (sym.IsOpen(t)) {
 				train_pos[j].Add(pospos);
+				any_match = true;
+			}
 		}
+		if (any_match)
+			train_pos_all.Add(i);
 	}
 }
 
@@ -481,6 +494,13 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 }
 
 void AgentGroup::RefreshWorkQueue() {
+	Index<int> sym_ids;
+	sym_ids <<= this->sym_ids;
+	for(int i = 0; i < sym_ids.GetCount(); i++) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(i);
+		if (sym.proxy_id == -1) continue;
+		sym_ids.FindAdd(sym.proxy_id);
+	}
 	sys->GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	
 	// Get DataBridge work queue
@@ -511,8 +531,6 @@ void AgentGroup::ResetValueBuffers() {
 	for(int i = 0; i < db_queue.GetCount(); i++) {
 		CoreItem& ci = *db_queue[i];
 		if (ci.factory != factory) continue;
-		int sym_id = sym_ids.Find(ci.sym);
-		if (sym_id == -1) continue;
 		databridge_cores[ci.sym] = &*ci.core;
 	}
 	
@@ -578,18 +596,22 @@ void AgentGroup::ResetValueBuffers() {
 		if (wday == 0 || wday == 6)
 			continue;
 		int pospos = train_pos_all.GetCount();
-		train_pos_all.Add(i);
+		bool any_match = false;
 		for(int j = 0; j < sym_ids.GetCount(); j++) {
 			const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
-			if (sym.IsOpen(t))
+			if (sym.IsOpen(t)) {
 				train_pos[j].Add(pospos);
+				any_match = true;
+			}
 		}
+		if (any_match)
+			train_pos_all.Add(i);
 	}
 }
 
 void AgentGroup::ProcessWorkQueue() {
 	for(int i = 0; i < work_queue.GetCount(); i++) {
-		DLOG(i << "/" << work_queue.GetCount());
+		//LOG(i << "/" << work_queue.GetCount());
 		SubProgress(i, work_queue.GetCount());
 		sys->Process(*work_queue[i]);
 	}
@@ -597,7 +619,7 @@ void AgentGroup::ProcessWorkQueue() {
 
 void AgentGroup::ProcessDataBridgeQueue() {
 	for(int i = 0; i < db_queue.GetCount(); i++) {
-		DLOG(i << "/" << db_queue.GetCount());
+		//LOG(i << "/" << db_queue.GetCount());
 		SubProgress(i, db_queue.GetCount());
 		sys->Process(*db_queue[i]);
 	}

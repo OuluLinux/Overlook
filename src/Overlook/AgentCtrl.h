@@ -3,6 +3,8 @@
 
 namespace Overlook {
 
+class RealtimeSession;
+
 class SnapshotDraw : public Ctrl {
 	AgentGroup* group;
 	int snap_id;

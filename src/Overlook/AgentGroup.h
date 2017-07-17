@@ -35,8 +35,8 @@ public:
 	double prev_reward;
 	int buf_count;
 	int data_size, signal_size, total_size;
+	int act_iter;
 	System* sys;
-	bool running, stopped;
 	
 	// Maybe
 	/*Vector<int> pos, tfs, periods, period_in_slower;
@@ -69,6 +69,7 @@ public:
 	void CreateAgents();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
+	void SetEpsilon(double d);
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	
 	int GetSignalBegin() const;

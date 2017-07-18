@@ -9,7 +9,6 @@ Overlook::Overlook() :
 	Icon(OverlookImg::icon());
 	MinimizeBox().MaximizeBox().Sizeable();
 	
-	
 	Add(tabs.SizePos());
 	tabs.Add(visins);
 	tabs.Add(visins, "Traditional");
@@ -32,8 +31,6 @@ Overlook::Overlook() :
 	tflist <<= THISBACK(SetView);
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
-	
-	rtctrl.SetBroker(GetMetaTrader());
 	
 	PostCallback(THISBACK(Refresher));
 }
@@ -64,7 +61,7 @@ void Overlook::Data(bool periodic) {
 			prev_view->Data();
 	}
 	else if (tab == 1) {
-		exposurectrl.Data();
+		
 	}
 	else if (tab == 2) {
 		mgrctrl.Data();
@@ -78,9 +75,6 @@ void Overlook::Init() {
 	sys.Init();
 	rtctrl.Init();
 	exposurectrl.Init();
-	//agent.Init();
-	//rtses.Init();
-	
 	
 	// Init gui
 	for(int i = 0; i < sys.GetPeriodCount(); i++)
@@ -99,13 +93,9 @@ void Overlook::Init() {
 
 void Overlook::Start() {
 	sys.Start();
-	//agent.Start();
-	//rtses.Start();
 }
 
 void Overlook::Deinit() {
-	//rtses.Stop();
-	//agent.Stop();
 	sys.Stop();
 }
 
@@ -131,7 +121,6 @@ void Overlook::SetView() {
 	view->core = core;
 	view->SetSymbol(s);
 	view->SetTf(t);
-	
 	
 	view->Init(core);
 	

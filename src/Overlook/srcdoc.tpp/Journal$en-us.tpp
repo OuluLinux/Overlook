@@ -2157,4 +2157,32 @@ good. This is finally holding water, metaphorically.&]
 [s0;%- GCC and MSC compiles working release versions with 2`-5x speedup 
 to debug version. If this has any positive results, then I`'ll 
 upload release to the github. Only some realtime fixes and cleaning 
-left... finally?]]
+left... finally?&]
+[s3;%- 18.7.2017&]
+[s0;%- The program trained for 12 hours with 8 fx instruments and 
+all drawdowns are between 20`-50% in D1 timeframe, but I haven`'t 
+tested that with separate test data yet. However, stock CFDs 
+are even more successful in my experience. To finish this pre`-alpha 
+stage, I am going to train D1 stock CFDs and fix the realtime 
+support.&]
+[s0;%- ...&]
+[s0;%- Using DQN`-agent as the group optimizer was terrible idea. 
+It`'s just not a good tool for the job. In the past, I made an 
+indicator, which shows average volatility per hour of week or 
+day of week. It did show, that different instruments have different 
+days of peak volatility. So, the theory is, that with genetic 
+optimizer, one can optimize weights of instruments per timeslots 
+to maximize `"usefulness`".&]
+[s0;%- ...&]
+[s0;%- Only realtime sync details and some small fixes left...&]
+[s0;%- ...&]
+[s0;%- CFDs seems to fail, which surprised me. They might work only 
+with W1 tf and slower...&]
+[s0;%- I am going to give only one hint how to tune this and it`'s 
+the following: currently, I guess that the best result comes using 
+this with base currency USD, with timeframes D1,W1 and with instruments 
+AUDJPY, AUDUSD, EURAUD, EURUSD, GBPAUD, GBPJPY, GBPUSD, NQ, NZDUSD, 
+USDCAD, USDJPY, YM. It have been pretty much instant <50% drawdown 
+with training data (and the result is still unknown with testing 
+data), but it`'s not a promise of any results.&]
+[s0;%- ]]

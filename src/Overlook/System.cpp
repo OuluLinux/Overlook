@@ -41,16 +41,16 @@ void System::Init() {
 		ASSERTEXC_(!mt.Init(addr, port), "Can't connect to MT4. Is MT4Connection script activated in MT4?");
 		
 		// Add symbols
-		source_symbol_count = this->symbols.GetCount();
+		source_symbol_count = mt.GetSymbolCount();
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
 		}
 		
-		/*for(int i = 0; i < mt.GetCurrencyCount(); i++) {
+		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
 			const Currency& c = mt.GetCurrency(i);
 			AddSymbol(c.name);
-		}*/
+		}
 		
 		
 		// Add periods
@@ -66,18 +66,6 @@ void System::Init() {
 			}
 		}
 		
-		
-		// Init time range
-		/*Time begin, end;
-		begin = Time(2016, 12, 1);
-		Date now = GetSysTime();
-		do {++now;}
-		while (now.day != 15);
-		end = Time(now.year, now.month, now.day);
-		SetBegin(begin);
-		SetEnd(end);*/
-		
-		
 		int64 sym_count = symbols.GetCount();
 		int64 tf_count = periods.GetCount();
 	
@@ -90,9 +78,6 @@ void System::Init() {
 			if (!count) throw DataExc();
 			bars[i] = count;
 		}
-		
-		//StoreThis();
-		
 	}
 	catch (...) {
 		LOG("Load failed");

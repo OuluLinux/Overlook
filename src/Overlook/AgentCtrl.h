@@ -3,8 +3,6 @@
 
 namespace Overlook {
 
-class RealtimeSession;
-
 class SnapshotDraw : public Ctrl {
 	AgentGroup* group;
 	int snap_id;
@@ -17,7 +15,7 @@ public:
 	void SetGroup(AgentGroup& group) {this->group = &group;}
 };
 
-class StatsGraph : public Ctrl {
+class EquityGraph : public Ctrl {
 	
 protected:
 	TraineeBase* trainee;
@@ -26,8 +24,8 @@ protected:
 	Vector<double> last;
 	
 public:
-	typedef StatsGraph CLASSNAME;
-	StatsGraph();
+	typedef EquityGraph CLASSNAME;
+	EquityGraph();
 	
 	virtual void Paint(Draw& w);
 	
@@ -35,49 +33,13 @@ public:
 	
 };
 
-class AgentThreadCtrl : public ParentCtrl {
-	
-protected:
-	friend class SnapshotDraw;
-	
-	Agent* agent;
-	SliderCtrl time_slider;
-	Splitter hsplit;
-	SnapshotDraw draw;
-	BrokerCtrl brokerctrl;
-	int thrd_id;
-	
-public:
-	typedef AgentThreadCtrl CLASSNAME;
-	AgentThreadCtrl();
-	
-	void Data();
-	
-};
-/*
-class AgentCtrl : public ParentCtrl {
-protected:
-	Agent* agent;
-	Array<AgentThreadCtrl> thrds;
-	StatsGraph reward;
-	Option update_brokerctrl;
-	bool init;
-	
-public:
-	typedef AgentCtrl CLASSNAME;
-	AgentCtrl();
-	
-	void Data();
-	
-};
-*/
-class TrainingGraph : public Ctrl {
+class ResultGraph : public Ctrl {
 	TraineeBase* trainee;
 	Vector<Point> polyline;
 	
 public:
-	typedef TrainingGraph CLASSNAME;
-	TrainingGraph();
+	typedef ResultGraph CLASSNAME;
+	ResultGraph();
 	
 	virtual void Paint(Draw& w);
 	
@@ -91,12 +53,11 @@ protected:
 	friend class SnapshotDraw;
 	TraineeBase* trainee;
 	Splitter hsplit;
-	bool init;
 	
 	Label epoch;
 	SnapshotDraw draw;
-	TrainingGraph reward;
-	StatsGraph stats;
+	ResultGraph reward;
+	EquityGraph stats;
 	ConvNet::HeatmapTimeView timescroll;
 	
 	BrokerCtrl broker;
@@ -113,28 +74,6 @@ public:
 	void SetTrainee(TraineeBase& trainee);
 	
 };
-
-
-class RealtimeNetworkCtrl : public ParentCtrl {
-	Agent* agent;
-	RealtimeSession* rtses;
-	
-	Button refresh_signals, killall_signals;
-	Splitter hsplit;
-	SnapshotDraw draw;
-	BrokerCtrl brokerctrl;
-	Label tfcmplbl;
-	
-public:
-	typedef RealtimeNetworkCtrl CLASSNAME;
-	RealtimeNetworkCtrl();
-	
-	void Data();
-	void RefreshSignals();
-	void KillSignals();
-	
-};
-
 
 class SnapshotCtrl : public ParentCtrl {
 	AgentGroup* group;

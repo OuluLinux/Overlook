@@ -6,7 +6,6 @@ namespace Overlook {
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
 #include <CtrlCore/lay.h>
 
-
 class GroupOverview : public WithGroupOverview<ParentCtrl> {
 	
 protected:
@@ -34,7 +33,6 @@ class GroupTabCtrl : public TabCtrl {
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
 	TrainingCtrl			trainingctrl;
-	RealtimeNetworkCtrl		rtnetctrl;
 	
 public:
 	typedef GroupTabCtrl CLASSNAME;
@@ -43,6 +41,7 @@ public:
 	void Data();
 	void SetGroup(AgentGroup& group);
 	void SetEnabled();
+	void ResetGroupOptimizer();
 	
 };
 
@@ -50,8 +49,6 @@ class AgentTabCtrl : public TabCtrl {
 	Agent* agent;
 	WithAgentOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
-	
-	
 	
 public:
 	typedef AgentTabCtrl CLASSNAME;
@@ -89,6 +86,21 @@ public:
 	void NewAgent();
 	void PostNewAgent() {Thread::Start(THISBACK(NewAgent));}
 	void LastCursor() {glist.SetCursor(glist.GetCount()-1);}
+};
+
+class RealtimeCtrl : public ParentCtrl {
+	Splitter				hsplit;
+	BrokerCtrl				brokerctrl;
+	ArrayCtrl				journal;
+	
+public:
+	typedef RealtimeCtrl CLASSNAME;
+	RealtimeCtrl();
+	
+	void Data();
+	void Init();
+	
+	
 };
 
 }

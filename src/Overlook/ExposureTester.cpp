@@ -10,16 +10,9 @@ ExposureTester::ExposureTester() {
 	hsplit.Horz();
 	
 	expctrl.Add(siglist.HSizePos().VSizePos());
-	//expctrl.Add(next.BottomPos(30,30).HSizePos());
-	//expctrl.Add(reset.BottomPos(0,30).HSizePos());
-	next.SetLabel("Next");
-	reset.SetLabel("Reset");
-	next <<= THISBACK(Next);
-	reset <<= THISBACK(Reset);
 	
 	siglist.AddColumn("Symbol");
 	siglist.AddColumn("Signal");
-	
 	
 }
 
@@ -47,24 +40,6 @@ void ExposureTester::Signal() {
 	broker.SignalOrders();
 	broker.ForwardExposure();
 	brokerctrl.Data();
-}
-
-void ExposureTester::Next() {
-	
-	
-	
-}
-
-void ExposureTester::Reset() {
-	
-	
-	
-}
-
-void ExposureTester::Data() {
-	
-	
-	
 }
 
 }

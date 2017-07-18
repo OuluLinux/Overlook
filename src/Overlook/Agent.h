@@ -14,22 +14,20 @@ class Agent : public TraineeBase {
 protected:
 	friend class AgentCtrl;
 	friend class SnapshotDraw;
-	friend class AgentConfiguration;
-	friend class RealtimeStatistics;
-	friend class AgentThreadCtrl;
-	friend class StatsGraph;
+	friend class EquityGraph;
 	friend class TrainingCtrl;
-	friend class TrainingGraph;
-	friend class RealtimeNetworkCtrl;
+	friend class ResultGraph;
 	friend class SnapshotCtrl;
 	friend class ManagerCtrl;
 	friend class AgentGroup;
 	friend class AgentTabCtrl;
-	friend struct RealtimeSession;
+	friend class GroupOverview;
 	
 	
 	// Persistent vars
+	ConvNet::DQNAgent dqn;
 	int sym, proxy_sym;
+	bool accum_signal;
 	
 	
 	// Tmp vars
@@ -39,6 +37,7 @@ protected:
 	int accum_buf;
 	int group_count;
 	
+	virtual void Create(int width, int height);
 	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap);
 	virtual void Backward(double reward);
 	void RealAction();
@@ -46,7 +45,6 @@ protected:
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	int GetRandomAction() const {return Random(ACTIONCOUNT);}
 	int GetAction(const Volume& fwd, int sym) const;
-	
 	
 	
 public:

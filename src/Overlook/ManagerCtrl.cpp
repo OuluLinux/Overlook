@@ -58,7 +58,8 @@ void GroupOverview::Data() {
 		
 		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
 		
-		epsilon.SetData(group->dqn.GetEpsilon());
+		if (!group->agents.IsEmpty())
+			epsilon.SetData(group->agents[0].dqn.GetEpsilon());
 		info.SetLabel(infostr);
 	}
 }
@@ -80,9 +81,6 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(trainingctrl, "Training");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
-	//Add(rtnetctrl);
-	//Add(rtnetctrl, "Real-Time Network");
-	
 	
 	WhenSet << THISBACK(Data);
 }
@@ -93,6 +91,7 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	overview.enable.WhenAction.Clear();
 	overview.enable.Set(group.enable_training);
 	overview.enable <<= THISBACK(SetEnabled);
+	overview.reset_go <<= THISBACK(ResetGroupOptimizer);
 	
 	overview	.SetGroup(group);
 	trainingctrl.SetTrainee(group);
@@ -113,6 +112,10 @@ void GroupTabCtrl::SetEnabled() {
 	group->enable_training = overview.enable.Get();
 	if (group->enable_training)	group->Start();
 	else						group->Stop();
+}
+
+void GroupTabCtrl::ResetGroupOptimizer() {
+	group->reset_optimizer = true;
 }
 
 
@@ -371,23 +374,12 @@ void ManagerCtrl::Data() {
 			}
 		}
 		if (newview.symlist.GetCount() == 0) {
-			for(int i = 0; i < sys->GetSymbolCount(); i++) {
+			for(int i = 0; i < sys->GetBrokerSymbolCount(); i++) {
 				newview.symlist.Set(i, 0, sys->GetSymbol(i));
 				newview.symlist.Set(i, 1, 0);
 				newview.symlist.SetCtrl(i, 1, new_opts.Add());
 			}
 		}
-		
-		
-		// Set opening times
-		
-		
-		// Set base currency
-		
-		
-		// Set minimum base margin
-		// newview.minbasemargin
-		
 	}
 	else if (view == 1) {
 		group_tabs.Data();
@@ -408,6 +400,13 @@ void ManagerCtrl::NewAgent() {
 	if (group.name == "") {
 		PromptOK(DeQtf("Set name"));
 		return;
+	}
+	
+	for(int i = 0; i < mgr.groups.GetCount(); i++) {
+		if (group.name == mgr.groups[i].name) {
+			PromptOK(DeQtf("An agent with the name " + group.name + " exists already."));
+			return;
+		}
 	}
 	
 	// Timeframes
@@ -434,6 +433,7 @@ void ManagerCtrl::NewAgent() {
 	
 	group.sig_freeze				= newview.freeze_sig.Get();
 	group.param_str					= newview.params.GetData();
+	group.accum_signal				= newview.accum_signal.Get();
 	
 	group.sys = sys;
 	
@@ -446,6 +446,48 @@ void ManagerCtrl::NewAgent() {
 	group.Init();
 	group.StoreThis();
 	group.Start();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RealtimeCtrl::RealtimeCtrl() {
+	Add(hsplit.SizePos());
+	hsplit.Horz();
+	hsplit << brokerctrl << journal;
+	hsplit.SetPos(8000);
+	
+	
+	journal.AddColumn("Time");
+	journal.AddColumn("Level");
+	journal.AddColumn("Message");
+	
+	
+	brokerctrl.SetBroker(GetMetaTrader());
+}
+
+void RealtimeCtrl::Data() {
+	
+	
+	
+}
+
+void RealtimeCtrl::Init() {
+	
+	
+	
 }
 
 }

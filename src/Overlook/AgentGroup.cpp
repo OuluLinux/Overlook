@@ -17,10 +17,18 @@ AgentGroup::AgentGroup() {
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
+	reset_optimizer = false;
+	accum_signal = false;
 }
 
 AgentGroup::~AgentGroup() {
 	Stop();
+}
+
+void AgentGroup::PutLatest(Brokerage& broker) {
+	
+	
+	
 }
 
 void AgentGroup::Progress(int actual, int total, String desc) {
@@ -38,7 +46,6 @@ void AgentGroup::SubProgress(int actual, int total) {
 }
 
 void AgentGroup::SetEpsilon(double d) {
-	dqn.SetEpsilon(d);
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].dqn.SetEpsilon(d);
 }
@@ -57,6 +64,25 @@ void AgentGroup::CreateAgents() {
 		a.proxy_sym = sym.proxy_id;
 		a.Create(agent_input_width, agent_input_height);
 	}
+}
+
+void AgentGroup::Create(int width, int height) {
+	go.SetArrayCount(width);
+	go.SetCount(height);
+	go.SetPopulation(1000);
+	go.SetMaxGenerations(100);
+	
+	
+	int sensors = timeslots * sym_ids.GetCount();
+	ASSERT(height == sensors + 1);
+	for(int i = 0; i < sensors; i++) {
+		go.Set(i, -100, +100, 1);
+	}
+	go.Set(sensors, 0.0, 1.0, 0.001);
+	
+	
+	//go.UseLimits();
+	go.Init();
 }
 
 void AgentGroup::InitThreads() {
@@ -81,7 +107,6 @@ void AgentGroup::Init() {
 	
 	
 	int indi;
-	
 	indi = sys->Find<Sensors>();
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
@@ -101,8 +126,11 @@ void AgentGroup::Init() {
 	total_size = data_size + signal_size;
 	agent_input_width  = 1;
 	agent_input_height = GetSignalPos(sym_ids.GetCount());
+	fastest_period_mins = sys->GetPeriod(tf_ids.Top()) * sys->GetBasePeriod() / 60;
+	int wdaymins = 5 * 24 * 60;
+	timeslots = Upp::max(1, wdaymins / fastest_period_mins);
 	group_input_width  = 1;
-	group_input_height = GetSignalPos(sym_ids.GetCount()) + 1 + 1 + 2;
+	group_input_height = timeslots * sym_ids.GetCount() + 1;
 	
 	Progress(3, 6, "Reseting snapshots");
 	InitThreads();
@@ -156,12 +184,25 @@ void AgentGroup::Main() {
 	at_main = true;
 	epoch_total = snaps.GetCount();
 	
+	
+	if (reset_optimizer) {
+		reset_optimizer = false;
+		Create(group_input_width, group_input_height);
+	}
+	
 	if (epoch_actual == 0) {
 		prev_reward = 0;
+		go.Start();
 	}
 	
 	// Do some action
 	Action();
+	
+	
+	if (epoch_actual == epoch_total-1) {
+		double energy = broker.AccountEquity() - broker.GetInitialBalance();
+		go.Stop(energy);
+	}
 	
 	
 	// Store sequences periodically
@@ -185,20 +226,14 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 	// - account change sensor
 	// - instrument value / (0.1 * equity) or something
 	
-	int snap_values = GetSignalPos(sym_ids.GetCount());
-	int input_size = snap_values + 1 + 1 + 2;
-	input_values.SetCount(input_size);
-	ASSERT(input_size == group_input_height);
+	int timeslot = ((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * snap.time_values[4] / fastest_period_mins;
+	ASSERT(timeslot >= 0 && timeslot < timeslots);
 	
+	const Vector<double>& go_values = go.GetTrialSolution();
+	ASSERT(go_values.GetCount() == group_input_height);
 	
-	// Copy common values from snapshot to input
-	memcpy(input_values.Begin(), snap.values.Begin(), snap_values);
 	
 	// Additional sensor values
-	int vpos = snap_values;
-	input_values[vpos++] = global_free_margin_level;
-	
-	int active_count = 0;
     for(int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
 		int signal;
@@ -215,10 +250,17 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 		    double dsignal = pos > 0.0 ? +pos : -neg;
 		    
 		    
+		    // Simplify signals
 		    if      (dsignal == 0.0) signal =  0;
-			else if (dsignal >  0.0) {signal = +1; active_count++;}
-			else if (dsignal <  0.0) {signal = -1; active_count++;}
+			else if (dsignal >  0.0) signal = +1;
+			else if (dsignal <  0.0) signal = -1;
 			else Panic("Invalid action");
+			
+			
+			// Multiply signal by genetic optimizer value
+			int go_pos = i * timeslots + timeslot;
+			double sig_multiplier = go_values[go_pos];
+			signal = Upp::min(+100, Upp::max(-100, (int)(sig_multiplier * signal)));
 			
 			
 			// Set signal to broker
@@ -238,65 +280,20 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 			}
 		}
     }
-    
-    // Active sensor
-	input_values[vpos++] = (double)active_count / sym_ids.GetCount();
 	
-	
-	// Average reward sensor
-	if (prev_reward > 0.0) {
-		reward_average.Add(prev_reward);
-		double max = reward_average.mean * 2.0;
-		input_values[vpos++] = 1.0 - Upp::max(0.0, Upp::min(1.0, prev_reward / max));
-		input_values[vpos++] = 1.0;
-	}
-	else if (prev_reward < 0.0) {
-		loss_average.Add(-prev_reward);
-		double max = loss_average.mean * 2.0;
-		input_values[vpos++] = 1.0;
-		input_values[vpos++] = 1.0 - Upp::max(0.0, Upp::min(1.0, -prev_reward / max));
-	}
-	else {
-		input_values[vpos++] = 1.0;
-		input_values[vpos++] = 1.0;
-	}
-	ASSERT(vpos == group_input_height);
-	
-	
-	int action = dqn.Act(input_values);
-	if      (action == ACT_NOACT) {
-		
-	}
-	else if (action == ACT_INCSIG) {
-		global_free_margin_level += 0.01;
-		if (global_free_margin_level > 0.99)
-			global_free_margin_level = 0.99;
-	}
-	else if (action == ACT_DECSIG) {
-		global_free_margin_level -= 0.01;
-		if (global_free_margin_level < 0.85)
-			global_free_margin_level = 0.85;
-	}
-	else if (action == ACT_RESETSIG) {
-		global_free_margin_level = 0.97;
-	}
-	else Panic("Invalid action");
-	broker.SetFreeMargin(global_free_margin_level);
+	// Set free-margin level
+	double fmlevel = go_values.Top();
+	if (fmlevel < 0.80)
+		fmlevel = 0.80;
+	else if (fmlevel > 0.99)
+		fmlevel = 0.99;
+	broker.SetFreeMarginLevel(fmlevel);
+	global_free_margin_level = fmlevel;
 }
 
 void AgentGroup::Backward(double reward) {
 	prev_reward = reward;
 	
-	// pass to brain for learning
-	dqn.Learn(reward);
-	
-	/*smooth_reward += reward;
-	
-	if (iter % 50 == 0) {
-		smooth_reward /= 50;
-		WhenRewardAverage(smooth_reward);
-		smooth_reward = 0;
-	}*/
 	iter++;
 }
 
@@ -320,12 +317,12 @@ void AgentGroup::LoadThis() {
 
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % agents % tf_ids % sym_ids % created % name % param_str
+	s % go % agents % tf_ids % sym_ids % created % name % param_str
 	  % global_free_margin_level
 	  % agent_input_width % agent_input_height
 	  % group_input_width % group_input_height
 	  % sig_freeze
-	  % enable_training;
+	  % enable_training % accum_signal;
 }
 
 int AgentGroup::GetSignalBegin() const {
@@ -354,13 +351,19 @@ void AgentGroup::RefreshSnapshots() {
 	for(int i = 0; i < train_pos.GetCount(); i++)
 		train_pos[i].Reserve(bars - pos);
 	
+	int tf_mins = sys->GetPeriod(main_tf) * sys->GetBasePeriod() / 60;
+	int tf_type;
+	if (tf_mins < 24*60) tf_type = 0;
+	else if (tf_mins == 24*60) tf_type = 1;
+	else tf_type = 2;
+	
 	for(int i = pos; i < bars; i++) {
 		Time t = sys->GetTimeTf(main_tf, i);
 		int wday = DayOfWeek(t);
-		if (wday == 0 || wday == 6)
+		if (tf_type < 2 && (wday == 0 || wday == 6))
 			continue;
 		
-		LOG("Agent::RefreshSnapshots: Creating snapshot at " << Format("%", t));
+		//LOG("Agent::RefreshSnapshots: Creating snapshot at " << Format("%", t));
 		One<Snapshot> snap;
 		snap.Create();
 		
@@ -368,17 +371,36 @@ void AgentGroup::RefreshSnapshots() {
 		Seek(*snap, i);
 		
 		snaps.Add(snap.Detach());
-		int pospos = train_pos_all.GetCount();
-		bool any_match = false;
-		for(int j = 0; j < sym_ids.GetCount(); j++) {
-			const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
-			if (sym.IsOpen(t)) {
-				train_pos[j].Add(pospos);
-				any_match = true;
+		
+		if (tf_type == 0) {
+			if (wday == 0 || wday == 6)
+				continue;
+			int pospos = train_pos_all.GetCount();
+			bool any_match = false;
+			for(int j = 0; j < sym_ids.GetCount(); j++) {
+				const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
+				if (sym.IsOpen(t)) {
+					train_pos[j].Add(pospos);
+					any_match = true;
+				}
 			}
+			if (any_match)
+				train_pos_all.Add(i);
 		}
-		if (any_match)
+		else if (tf_type == 1) {
+			if (wday == 0 || wday == 6)
+				continue;
+			int pospos = train_pos_all.GetCount();
 			train_pos_all.Add(i);
+			for(int j = 0; j < sym_ids.GetCount(); j++)
+				train_pos[j].Add(pospos);
+		}
+		else if (tf_type == 2) {
+			int pospos = train_pos_all.GetCount();
+			train_pos_all.Add(i);
+			for(int j = 0; j < sym_ids.GetCount(); j++)
+				train_pos[j].Add(pospos);
+		}
 	}
 }
 
@@ -399,38 +421,10 @@ void AgentGroup::GenerateSnapshots() {
 
 void AgentGroup::ResetSnapshot(Snapshot& snap) {
 	ASSERT(!value_buffers.IsEmpty());
-	//int buf_count = value_buffers[0].GetCount();
-	
-	//int tf_snap = tf_ids.GetCount()-1;
-	//int main_tf = tf_ids[tf_snap];
-	
-	//snap.bars = sys->GetCountTf(main_tf);
-	
-	
-	// Add periods and their multipliers to next longer timeframes
-	/*int tf_count = tf_ids.GetCount();
-	snap.pos.SetCount(tf_count, 0);
-	int prev_period = 0;
-	for(int j = 0; j < tf_count; j++) {
-		int tf = tf_ids[j];
-		int period = sys->GetPeriod(tf);
-		snap.tfs.Add(tf);
-		snap.periods.Add(period);
-		if (prev_period == 0) snap.period_in_slower.Add(0);
-		else                  snap.period_in_slower.Add(prev_period / period);
-		prev_period = period;
-	}*/
-	
 	
 	// Reserve memory for values
 	snap.values.SetCount(total_size, 0.0);
 	snap.time_values.SetCount(5);
-	
-	
-	// Get time range between shortest timeframe and now
-	//snap.begin = sys->GetBegin(main_tf);
-	//snap.begin_ts = sys->GetBeginTS(main_tf);
-	
 	
 	// Seek to beginning
 	Seek(snap, 0);
@@ -459,16 +453,6 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	snap.time = t;
 	snap.added = GetSysTime();
 	snap.shift = shift;
-	
-	
-	// Find that time-position in longer timeframes
-	/*snap.pos[tf_snap] = shift;
-	for(int i = 0; i < tf_snap; i++) {
-		int tf = snap.tfs[i];
-		int slow_shift = sys->GetShiftTf(main_tf, tf, shift);
-		ASSERT(slow_shift >= 0);
-		snap.pos[i] = slow_shift;
-	}*/
 	
 	
 	// Time sensor
@@ -552,7 +536,7 @@ void AgentGroup::ResetValueBuffers() {
 		CoreItem& ci = *work_queue[i];
 		ASSERT(!ci.core.IsEmpty());
 		const Core& core = *ci.core;
-		const Output& output = core.outputs[0];
+		const Output& output = core.GetOutput(0);
 		
 		int sym_id = sym_ids.Find(ci.sym);
 		if (sym_id == -1) continue;
@@ -590,39 +574,69 @@ void AgentGroup::ResetValueBuffers() {
 	for(int i = 0; i < train_pos.GetCount(); i++)
 		train_pos[i].Reserve(bars - pos);
 	
+	int tf_mins = sys->GetPeriod(main_tf) * sys->GetBasePeriod() / 60;
+	int tf_type;
+	if (tf_mins < 24*60) tf_type = 0;
+	else if (tf_mins == 24*60) tf_type = 1;
+	else tf_type = 2;
+	
 	for(int i = pos; i < bars; i++) {
 		Time t = sys->GetTimeTf(main_tf, i);
 		int wday = DayOfWeek(t);
-		if (wday == 0 || wday == 6)
-			continue;
-		int pospos = train_pos_all.GetCount();
-		bool any_match = false;
-		for(int j = 0; j < sym_ids.GetCount(); j++) {
-			const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
-			if (sym.IsOpen(t)) {
-				train_pos[j].Add(pospos);
-				any_match = true;
+		if (tf_type == 0) {
+			if (wday == 0 || wday == 6)
+				continue;
+			int pospos = train_pos_all.GetCount();
+			bool any_match = false;
+			for(int j = 0; j < sym_ids.GetCount(); j++) {
+				const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[j]);
+				if (sym.IsOpen(t)) {
+					train_pos[j].Add(pospos);
+					any_match = true;
+				}
 			}
+			if (any_match)
+				train_pos_all.Add(i);
 		}
-		if (any_match)
+		else if (tf_type == 1) {
+			if (wday == 0 || wday == 6)
+				continue;
+			int pospos = train_pos_all.GetCount();
 			train_pos_all.Add(i);
+			for(int j = 0; j < sym_ids.GetCount(); j++)
+				train_pos[j].Add(pospos);
+		}
+		else if (tf_type == 2) {
+			int pospos = train_pos_all.GetCount();
+			train_pos_all.Add(i);
+			for(int j = 0; j < sym_ids.GetCount(); j++)
+				train_pos[j].Add(pospos);
+		}
 	}
 }
 
 void AgentGroup::ProcessWorkQueue() {
+	work_lock.Enter();
+	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
 		//LOG(i << "/" << work_queue.GetCount());
 		SubProgress(i, work_queue.GetCount());
 		sys->Process(*work_queue[i]);
 	}
+	
+	work_lock.Leave();
 }
 
 void AgentGroup::ProcessDataBridgeQueue() {
+	work_lock.Enter();
+	
 	for(int i = 0; i < db_queue.GetCount(); i++) {
 		//LOG(i << "/" << db_queue.GetCount());
 		SubProgress(i, db_queue.GetCount());
 		sys->Process(*db_queue[i]);
 	}
+	
+	work_lock.Leave();
 }
 
 void AgentGroup::SetAskBid(SimBroker& sb, int pos) {

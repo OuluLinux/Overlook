@@ -33,7 +33,6 @@
 namespace Overlook {
 
 
-
 class Overlook : public TopWindow {
 	
 protected:
@@ -60,9 +59,7 @@ protected:
 	ManagerCtrl				mgrctrl;
 	
 	
-	BrokerCtrl				rtctrl;
-	
-	//RealtimeSession			rtses;
+	RealtimeCtrl				rtctrl;
 	
 	
 	void SetView();

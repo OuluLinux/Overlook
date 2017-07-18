@@ -24,7 +24,6 @@ protected:
 	void GraphMouseMove(Point pt, GraphCtrl* g);
 	void Refresh0() {ParentCtrl::Refresh();}
 	
-	
 public:
 	typedef GraphGroupCtrl CLASSNAME;
 	GraphGroupCtrl();

@@ -20,11 +20,17 @@ String DecisionTreeNode::LineString(int depth) const {
 	String out;
 	for(int i = 0; i < depth; i++)
 		out << "    ";
-	if (column == -1) {out << "<invalid>\n"; return out;}
-	if (subset_column != -1) {
-		out << "(Subset: \"" << qt->columns[subset_column].name << "\" value=" << subset_column_value << "),\t";
+	if (column == -1) {
+		out << "<invalid>\n";
+		return out;
 	}
-	out << "\"" << qt->columns[column].name << "\" column=" << column << " gain=" << gain << " dataset_size=" << dataset_size << " target_value=" << target_value << " error=" << error << "\n";
+	if (subset_column != -1) {
+		out << "(Subset: \"" << qt->columns[subset_column].name
+		    << "\" value=" << subset_column_value << "),\t";
+	}
+	out << "\"" << qt->columns[column].name << "\" column=" << column << " gain=" << gain
+	    << " dataset_size=" << dataset_size << " target_value=" << target_value << " error="
+	    << error << "\n";
 	for(int i = 0; i < nodes.GetCount(); i++)
 		out << nodes[i].LineString(depth+1);
 	return out;

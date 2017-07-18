@@ -8,7 +8,6 @@ namespace Overlook {
 class ExposureTester : public ParentCtrl {
 	Splitter hsplit;
 	ParentCtrl expctrl;
-	Button next, reset;
 	ArrayCtrl siglist;
 	BrokerCtrl brokerctrl;
 	SimBroker broker;
@@ -19,10 +18,7 @@ public:
 	ExposureTester();
 	
 	void Init();
-	void Data();
 	void Signal();
-	void Next();
-	void Reset();
 	
 };
 

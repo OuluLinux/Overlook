@@ -78,7 +78,7 @@ void Core::InitAll() {
 		const Input& in = inputs[i];
 		if (in.IsEmpty()) continue;
 		const Source& src = in[0];
-		if (src.core && src.core->factory == 0) {
+		if (src.core && src.core->GetFactory() == 0) {
 			db_src = i;
 			break;
 		}

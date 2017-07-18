@@ -277,7 +277,6 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 		}
 		
 		
-		
 		// Close
 		if (lots == o.volume) {
 			Order& ho = history_orders.Add(orders.Detach(i));
@@ -289,6 +288,7 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 			if (ho.profit >= 0) profit_sum += ho.profit;
 			else                loss_sum   -= ho.profit;
 		}
+		
 		// Reduce
 		else {
 			double profit = GetCloseProfit(o, lots);

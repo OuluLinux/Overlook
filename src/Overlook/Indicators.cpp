@@ -964,6 +964,13 @@ void AverageTrueRange::Start() {
 
 
 
+
+
+
+
+
+
+
 BearsPower::BearsPower() {
 	period = 13;
 }
@@ -1042,6 +1049,12 @@ void BullsPower::Start() {
 		buffer.Set(i, High(i-1) - ma_buf.Get(i) );
 	}
 }
+
+
+
+
+
+
 
 
 
@@ -3385,7 +3398,7 @@ void CorrelationOscillator::Process(int id, int output) {
 	
 	Buffer& buf = GetBuffer(output);
 	
-	OnlineAverage& s = averages[output];
+	OnlineAverage2& s = averages[output];
 	
 	if (b.GetCount() == 0) {
 		LOG("CorrelationOscillator error: No data for symbol " << GetSystem().GetSymbol(id));
@@ -3798,7 +3811,7 @@ void Sensors::Init() {
 	for(int i = 0; i < 10; i++)
 		SetBufferColor(i, RainbowColor((double)i / 10.0));
 	#else
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < SMALL_COUNT*2; i++)
 		SetBufferColor(i, RainbowColor((double)i / 4.0));
 	#endif
 	
@@ -3824,7 +3837,7 @@ void Sensors::Start() {
 	#ifdef LARGE_SENSOR
 	for(int i = 0; i < 10; i++)
 	#else
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < SMALL_COUNT*2; i++)
 	#endif
 		bufs.Add(&GetBuffer(i));
 	
@@ -3912,19 +3925,22 @@ void Sensors::Start() {
 		}
 		
 		#else
-		double open0 = src.Get(i);
-		double open1 = i > 0 ? src.Get(i-1) : 0.0;
-		double d = i > 0 ? (open0 / open1 - 1.0) : 0.0;
-		double pos, neg;
-		if (d >= 0) {
-			pos = Upp::max(0.0, range_max - d) / range_max;
-			neg = 1.0;
-		} else {
-			pos = 1.0;
-			neg = Upp::max(0.0, range_max + d) / range_max;
+		for(int j = 0; j < SMALL_COUNT; j++) {
+			if (i-1-j < 0) break;
+			double open0 = src.Get(i-j);
+			double open1 = src.Get(i-1-j);
+			double d = i > 0 ? (open0 / open1 - 1.0) : 0.0;
+			double pos, neg;
+			if (d >= 0) {
+				pos = Upp::max(0.0, range_max - d) / range_max;
+				neg = 1.0;
+			} else {
+				pos = 1.0;
+				neg = Upp::max(0.0, range_max + d) / range_max;
+			}
+			bufs[j*2 + 0]->Set(i, pos);
+			bufs[j*2 + 1]->Set(i, neg);
 		}
-		bufs[0]->Set(i, pos);
-		bufs[1]->Set(i, neg);
 		#endif
 	}
 }

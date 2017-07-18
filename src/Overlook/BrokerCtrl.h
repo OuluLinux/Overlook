@@ -29,12 +29,9 @@ public:
 	void Data();
 	
 	void SetBroker(Brokerage& broker) {this->broker = &broker;}
-	void DummyRunner();
 	void OpenOrder(int type);
 	void ReadOnly();
 };
-
-
 
 }
 

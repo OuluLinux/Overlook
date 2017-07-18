@@ -6,7 +6,8 @@ uses
 	plugin/tidy,
 	Painter,
 	ConvNet,
-	ConvNetCtrl;
+	ConvNetCtrl,
+	CoreUtils;
 
 file
 	Copying,

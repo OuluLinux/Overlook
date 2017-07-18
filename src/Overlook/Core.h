@@ -36,6 +36,7 @@ inline bool SymTfFilter(void* basesystem, int in_sym, int in_tf, int out_sym, in
 		return in_sym == out_sym;
 }
 
+// Classes for IO arguments
 template <class T>
 struct In : public ValueBase {
 	In(FilterFunction fn=SymTfFilter) {data_type = IN_; data = (void*)fn; factory = System::GetId<T>();}
@@ -66,6 +67,7 @@ struct Persistent : public ValueBase, Moveable<Persistent> {
 	Persistent(Vector<Vector<int> > & v)	{data = &v; data_type = PERS_INTGRID_;}
 };
 
+// Utility function for changing class arguments
 struct ArgChanger : public ValueRegister {
 	ArgChanger() : cursor(0), storing(0) {}
 	
@@ -94,7 +96,12 @@ struct ArgChanger : public ValueRegister {
 	bool storing;
 };
 
-struct CoreIO : public ValueRegister, public Pte<CoreIO> {
+class CoreIO : public ValueRegister, public Pte<CoreIO> {
+	
+protected:
+	friend class System;
+	friend class Buffer;
+	
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
 	Vector<Input> inputs;
@@ -110,6 +117,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
 	
+	// Some utility functions for checking that indicator values are strictly L-R
 	#ifdef flagDEBUG
 	int read_safety_limit;
 	void SafetyCheck(int i) {ASSERT(i <= read_safety_limit);}
@@ -123,6 +131,7 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {return cb;}
 	#endif
 	
+public:
 	CoreIO();
 	virtual ~CoreIO();
 	
@@ -152,25 +161,27 @@ struct CoreIO : public ValueRegister, public Pte<CoreIO> {
 		}
 		return NULL;
 	}
-	double GetBufferValue(int i, int shift) {return buffers[i]->value[shift];}
-	double GetBufferValue(int shift) {return outputs[0].buffers[0].value[shift];}
-	int GetBufferStyle(int i) {return buffers[i]->style;}
-	int GetBufferArrow(int i) {return buffers[i]->chr;}
-	int GetBufferLineWidth(int i) {return buffers[i]->line_width;}
-	int GetBufferType(int i) {return buffers[i]->line_style;}
-	Color GetBufferColor(int i) {return buffers[i]->clr;}
-	int GetBufferCount() {return buffers.GetCount();}
+	
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(sym * 100 + tf).output->buffers[buffer]);}
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
-	int GetOutputCount() const {return outputs.GetCount();}
 	System& GetSystem() {return *base;}
 	const System& GetSystem() const {return *base;}
 	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory();
+	Color GetBufferColor(int i) {return buffers[i]->clr;}
+	double GetBufferValue(int i, int shift) {return buffers[i]->value[shift];}
+	double GetBufferValue(int shift) {return outputs[0].buffers[0].value[shift];}
+	int GetBufferStyle(int i) {return buffers[i]->style;}
+	int GetBufferArrow(int i) {return buffers[i]->chr;}
+	int GetBufferLineWidth(int i) {return buffers[i]->line_width;}
+	int GetBufferType(int i) {return buffers[i]->line_style;}
+	int GetBufferCount() {return buffers.GetCount();}
+	int GetOutputCount() const {return outputs.GetCount();}
+	int GetFactory() const {return factory;}
 	
 	void SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
 	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
@@ -236,16 +247,8 @@ public:
 	virtual void Init() {}
 	virtual void Deinit() {}
 	virtual void Start() {}
-	virtual void IO(ValueRegister& reg) {Panic("Never here");}
-	virtual void Serialize(Stream& s) {
-		/*s % short_name % counted % levels % outputs
-		  % levels_clr % minimum % maximum % point % levels_style
-		  % window_type % bars % next_count % has_maximum % has_minimum
-		  % skip_setcount;
-		if (s.IsLoading()) {
-			RefreshBuffers();
-		}*/
-	}
+	virtual void IO(ValueRegister& reg) = 0;
+	
 	void InitAll();
 	template <class T> Core& AddSubCore()  {
 		ASSERT_(subcore_factories.Add(System::Find<T>()) != -1, "This class is not registered to the factory");
@@ -323,12 +326,7 @@ protected:
 	
 };
 
-
-class BarData : public Core {
-	
-};
-
-
+class BarData : public Core {};
 
 }
 

@@ -23,7 +23,6 @@ void GraphGroupCtrl::Init(Core* src) {
 }
 
 void GraphGroupCtrl::Start() {
-	LOG("GraphGroupCtrl::Start");
 	
 }
 

@@ -8,6 +8,7 @@ class AgentGroup : public TraineeBase {
 public:
 	
 	// Persistent
+	CoreUtils::GeneticOptimizer go;
 	Array<Agent> agents;
 	Vector<Vector<int> > train_pos;
 	Vector<int> train_pos_all;
@@ -20,29 +21,26 @@ public:
 	int group_input_width, group_input_height;
 	bool sig_freeze;
 	bool enable_training;
-	
+	bool accum_signal;
 	
 	// Temp
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Core*> databridge_cores;
 	Array<Snapshot> snaps;
-	Vector<double> input_values;
 	Vector<int> data_begins;
 	Vector<int> tf_periods;
 	Index<int> indi_ids;
 	TimeStop last_store;
 	double prev_reward;
+	int fastest_period_mins;
+	int timeslots;
 	int buf_count;
 	int data_size, signal_size, total_size;
 	int act_iter;
+	bool reset_optimizer;
 	System* sys;
-	
-	// Maybe
-	/*Vector<int> pos, tfs, periods, period_in_slower;
-	Time begin;
-	int begin_ts;
-	int bars;*/
+	Mutex work_lock;
 	
 public:
 	typedef AgentGroup CLASSNAME;
@@ -52,6 +50,7 @@ public:
 	void Start();
 	void Stop();
 	void Main();
+	virtual void Create(int width, int height);
 	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap=NULL);
 	virtual void Backward(double reward);
 	void StoreThis();
@@ -70,6 +69,7 @@ public:
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
 	void SetEpsilon(double d);
+	void PutLatest(Brokerage& broker);
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	
 	int GetSignalBegin() const;

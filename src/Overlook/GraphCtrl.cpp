@@ -166,11 +166,9 @@ void GraphCtrl::Paint(Draw& draw) {
 		} else {
 			if (graph_label.GetCount()) graph_label += ", ";
 			
-			//graph_label += cont.GetShortName();
+			graph_label += System::GetCtrlFactories()[cont.GetFactory()].a;
 			
 			int bufs = cont.GetVisibleCount();
-			//Core* bdcont = dynamic_cast<Core*>(&cont);
-			//ASSERT(bdcont != 0);
 			for(int j = 0; j < bufs; j++) {
 				PaintCoreLine(w, cont, shift, i==0, j);
 			}
@@ -200,7 +198,6 @@ void GraphCtrl::Paint(Draw& draw) {
     }
     
     draw.DrawImage(0,0,w);
-    
 }
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
@@ -211,7 +208,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = group->GetGridColor();
-	Core& pb = group->GetCore();// GetValues(id, tf);
+	Core& pb = group->GetCore();
     int tf = group->GetTf();
     if (tf == -1) return;
     
@@ -269,9 +266,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         W.DrawLine(r.left, vy, r.left + w, vy, PEN_DOT, gridcolor);
         text = FormatDoubleFix(v, 5, FD_ZEROS);
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
-        
     }
-    
 }
 
 void GraphCtrl::DrawBorder(Draw& W) {
@@ -287,7 +282,6 @@ void GraphCtrl::DrawBorder(Draw& W) {
 	Vector<Point> P;
     P << Point(x, y) << Point(x+w, y) << Point(x+w, y+h) << Point(x, y+h) << Point(x,y);
     W.DrawPolyline(P, 1, gridcolor);
-    
 }
 
 Rect GraphCtrl::GetGraphCtrlRect() {
@@ -364,7 +358,6 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	int shift_x  = c ? (c - shift - count) * w / c : 0;
 	int width_x = c ? count * w / c + 1 : 0;
     W.DrawRect(shift_x, 0, width_x, 3, Blue());
-    
 }
 
 void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {

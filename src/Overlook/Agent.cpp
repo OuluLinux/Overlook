@@ -10,10 +10,20 @@ Agent::Agent() {
 	
 	group_count = 0;
 	smooth_reward = 0.0;
+	accum_signal = false;
 }
 
 Agent::~Agent() {
 	Stop();
+}
+
+void Agent::Create(int width, int height) {
+	// Don't use ACT_RESETSIG if signal accumulation is not in use
+	dqn.Init(width, height, accum_signal ? ACTIONCOUNT : ACTIONCOUNT-1);
+	dqn.Reset();
+	
+	ASSERT(!group->param_str.IsEmpty());
+	dqn.LoadInitJSON(group->param_str);
 }
 
 void Agent::Init() {
@@ -59,8 +69,6 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 	// - all data from snapshot
 	// - 'accum_buf'
 	// - account change sensor
-	DUMP(snap.values.GetCount());
-	DUMP(group->agent_input_height);
 	ASSERT(snap.values.GetCount() == group->agent_input_height);
 	int action = dqn.Act(snap.values);
 	
@@ -73,19 +81,23 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 	else if (action == ACT_RESETSIG) {signal = 0; accum_buf = 0;}
 	else Panic("Invalid action");
 	
-	accum_buf += signal;
-	if      (accum_buf > +20) accum_buf = +20;
-	else if (accum_buf < -20) accum_buf = -20;
-	
-	if (accum_buf < 0) signal = -1;
-	else if (accum_buf > 0) signal = +1;
-	else signal = 0;
+    if (accum_signal) {
+		accum_buf += signal;
+		if      (accum_buf > +20) accum_buf = +20;
+		else if (accum_buf < -20) accum_buf = -20;
+		
+		if (accum_buf < 0) signal = -1;
+		else if (accum_buf > 0) signal = +1;
+		else signal = 0;
+    }
 	
 	if (next_snap) {
 		
 		// Write latest average to the group values
 		int i = group->GetSignalPos(group_id);
-		double d = accum_buf / 20.0;
+		double d = accum_signal ?
+			accum_buf / 20.0 :
+			signal;
 		ASSERT(d >= -1.0 && d <= 1.0);
 		if (d >= 0) {
 			next_snap->values[i++] = 1.0 - d;
@@ -117,20 +129,13 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 	}
 	
 	
-	// Set signal to broker
-	if (!group->sig_freeze) {
-		// Don't use signal freezing. Might cause unreasonable costs.
+	// Set signal to broker, but freeze it if it's same than previously.
+	int prev_signal = broker.GetSignal(sym);
+	if (signal != prev_signal) {
 		broker.SetSignal(sym, signal);
 		broker.SetSignalFreeze(sym, false);
 	} else {
-		// Set signal to broker, but freeze it if it's same than previously.
-		int prev_signal = broker.GetSignal(sym);
-		if (signal != prev_signal) {
-			broker.SetSignal(sym, signal);
-			broker.SetSignalFreeze(sym, false);
-		} else {
-			broker.SetSignalFreeze(sym, true);
-		}
+		broker.SetSignalFreeze(sym, true);
 	}
 	
 }
@@ -209,7 +214,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 
 void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % sym % proxy_sym;
+	s % dqn % sym % proxy_sym % accum_signal;
 }
 
 }

@@ -12,12 +12,27 @@ void System::Start() {
 	nonstopped_workers = Upp::max(1, CPU_Cores() - 2);
 	for(int i = 0; i < nonstopped_workers; i++)
 		Thread::Start(THISBACK1(Worker, i));
+	
+	nonstopped_workers++;
+	Thread::Start(THISBACK(Main));
 }
 
 void System::Stop() {
 	mgr.Stop();
 	running = false;
 	while (nonstopped_workers > 0) Sleep(100);
+}
+
+void System::Main() {
+	
+	while (running) {
+		
+		mgr.Main();
+		
+		Sleep(1000);
+	}
+	
+	nonstopped_workers--;
 }
 
 int System::AddTaskBusy(Callback task) {

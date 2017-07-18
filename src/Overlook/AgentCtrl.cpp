@@ -66,12 +66,21 @@ void SnapshotDraw::Paint(Draw& w) {
 
 
 
-TrainingGraph::TrainingGraph() {
+
+
+
+
+
+
+
+
+
+ResultGraph::ResultGraph() {
 	trainee = NULL;
 	
 }
 
-void TrainingGraph::Paint(Draw& w) {
+void ResultGraph::Paint(Draw& w) {
 	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
@@ -126,34 +135,6 @@ void TrainingGraph::Paint(Draw& w) {
 
 
 
-AgentThreadCtrl::AgentThreadCtrl()
-{
-	agent = NULL;
-	Add(hsplit.SizePos());
-	
-	hsplit.Horz();
-	hsplit << draw << brokerctrl;
-	hsplit.SetPos(500, 0);
-	
-	brokerctrl.ReadOnly();
-}
-
-void AgentThreadCtrl::Data() {
-	MetaTrader& mt = GetMetaTrader();
-	AgentGroup& group = *agent->group;
-	System& sys = *group.sys;
-	/*SequencerThread& thrd = agent->thrds[thrd_id];
-	Snapshot& snap = agent->snaps[thrd.snap_id];
-	
-	time_slider.MinMax(0, snap.bars-1);
-	time_slider.SetData(snap.pos.Top());
-	
-	draw.SetSnap(thrd.snap_id);
-	draw.Refresh();
-	
-	brokerctrl.SetBroker(thrd.broker);
-	brokerctrl.Data();*/
-}
 
 
 
@@ -164,54 +145,12 @@ void AgentThreadCtrl::Data() {
 
 
 
-/*
-AgentCtrl::AgentCtrl()
-{
-	agent = NULL;
-	Add(update_brokerctrl.TopPos(3, 24).LeftPos(2, 96));
-	Add(reward.BottomPos(0,200).HSizePos());
-	init = true;
-	update_brokerctrl.Set(false);
-	update_brokerctrl.SetLabel("Update visible");
-}
-
-void AgentCtrl::Data() {
-	if (init) {
-		init = false;
-		for(int i = 0; i < agent->thrds.GetCount(); i++) {
-			Ctrl& ctrl = thrds.Add(new AgentThreadCtrl(*agent, i));
-			thrdlist.Add("Thread " + IntStr(i) + ".");
-			Add(ctrl.HSizePos().VSizePos(30,200));
-			ctrl.Hide();
-		}
-		thrdlist.SetIndex(0);
-		thrdlist <<= THISBACK(SetView);
-		thrds[0].Show();
-	}
-	
-	if (update_brokerctrl.Get()) {
-		int i = thrdlist.GetIndex();
-		if (i == -1) return;
-		thrds[i].Data();
-	}
-	
-	
-	reward.Refresh();
-}
-*/
-
-
-
-
-
-
-
-StatsGraph::StatsGraph() {
+EquityGraph::EquityGraph() {
 	trainee = NULL;
 	clr = RainbowColor(Randomf());
 }
 
-void StatsGraph::Paint(Draw& w) {
+void EquityGraph::Paint(Draw& w) {
 	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz(GetSize());
@@ -301,15 +240,12 @@ TrainingCtrl::TrainingCtrl()
 	
 	broker.ReadOnly();
 	
-	hsplit << draw << broker << timescroll;
+	hsplit << draw << broker;
 	hsplit.Horz();
 	hsplit.SetPos(2000, 0);
-	hsplit.SetPos(8000, 1);
 	
 	bsplit.Horz();
 	bsplit << stats << reward;
-	
-	init = true;
 	
 }
 
@@ -320,40 +256,20 @@ void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
 	stats.SetTrainee(trainee);
 	reward.SetTrainee(trainee);
 	draw.SetGroup(*trainee.group);
-	timescroll.SetGraph(trainee.dqn.GetGraph());
+	
+	Agent* agent = dynamic_cast<Agent*>(&trainee);
+	if (agent) {
+		if (hsplit.GetFrameCount() == 2) {
+			hsplit << timescroll;
+			hsplit.SetPos(2000, 0);
+			hsplit.SetPos(8000, 1);
+		}
+		timescroll.SetGraph(agent->dqn.GetGraph());
+	}
 }
 
 void TrainingCtrl::Data() {
 	if (!trainee) return;
-	
-	if (init) {
-		init = false;
-		//broker.Clear();
-		/*conv.SetSession(agent->ses);
-		timescroll.SetSession(agent->ses);
-		conv.RefreshLayers();
-		
-		prefer_highresults.Set(agent->prefer_high);
-		fmlevel.SetData(agent->global_free_margin_level);
-		
-		TrainerBase* t = agent->ses.GetTrainer();
-		if (t) {
-			TrainerBase& trainer = *t;
-			rate.SetData(trainer.GetLearningRate());
-			mom.SetData(trainer.GetMomentum());
-			batch.SetData(trainer.GetBatchSize());
-			decay.SetData(trainer.GetL2Decay());
-		}*/
-	}
-	/*
-	for(int i = 0; i < agent->sequences.GetCount(); i++) {
-		const Sequence& seq = agent->sequences[i];
-		seslist.Set(i, 0, seq.id);
-		seslist.Set(i, 1, seq.equity);
-		seslist.Set(i, 2, seq.orders);
-	}
-	*/
-	
 	
 	broker.Data();
 	draw.SetSnap(trainee->epoch_actual);
@@ -363,62 +279,6 @@ void TrainingCtrl::Data() {
 	stats.Refresh();
 	reward.Refresh();
 }
-
-
-
-
-
-
-
-RealtimeNetworkCtrl::RealtimeNetworkCtrl()
-{
-	agent = NULL;
-	Add(hsplit.VSizePos(30).HSizePos());
-	Add(tfcmplbl.TopPos(2,26).LeftPos(202, 196));
-	
-	brokerctrl.ReadOnly();
-	
-	hsplit << draw << brokerctrl;
-	hsplit.Horz();
-	hsplit.SetPos(500);
-	
-	Add(refresh_signals.TopPos(2, 26).LeftPos(2, 96));
-	refresh_signals.SetLabel("Refresh Signals");
-	refresh_signals <<= THISBACK(RefreshSignals);
-	
-	Add(killall_signals.TopPos(2, 26).LeftPos(102, 96));
-	killall_signals.SetLabel("Kill All Signals");
-	killall_signals <<= THISBACK(KillSignals);
-	
-	tfcmplbl.SetLabel("<No-brainer assertions>");
-	
-	draw.SetSnap(-1);
-	
-	//brokerctrl.SetBroker(agent.latest_broker);
-	
-}
-
-void RealtimeNetworkCtrl::Data() {
-	/*if (agent->latest_broker.AccountEquity() > agent->latest_broker.GetInitialBalance()) {
-		tfcmplbl.SetLabel("Network can be used in trading.");
-		tfcmplbl.SetInk(Color(28, 85, 0));
-	} else {
-		tfcmplbl.SetLabel("Network can NOT be used in trading.");
-		tfcmplbl.SetInk(Color(109, 0, 26));
-	}
-	brokerctrl.Data();
-	draw.Refresh();*/
-}
-
-void RealtimeNetworkCtrl::RefreshSignals() {
-	//rtses->PostEvent(RealtimeSession::EVENT_REFRESH);
-}
-
-void RealtimeNetworkCtrl::KillSignals() {
-	//rtses->PostEvent(RealtimeSession::EVENT_KILL);
-}
-
-
 
 
 

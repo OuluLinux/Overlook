@@ -1,6 +1,5 @@
 #include "Overlook.h"
 
-
 namespace Overlook {
 
 TraineeBase::TraineeBase() {
@@ -15,14 +14,6 @@ TraineeBase::TraineeBase() {
 	last_drawdown = 0.0;
 	main_id = -1;
 	at_main = false;
-}
-
-void TraineeBase::Create(int width, int height) {
-	dqn.Init(width, height, ACTIONCOUNT);
-	dqn.Reset();
-	
-	ASSERT(!group->param_str.IsEmpty());
-	dqn.LoadInitJSON(group->param_str);
 }
 
 void TraineeBase::Init() {
@@ -120,7 +111,7 @@ void TraineeBase::Action() {
 }
 
 void TraineeBase::Serialize(Stream& s) {
-	s % dqn % seq_results % reward_average % loss_average % peak_value % best_result % training_time
+	s % seq_results % reward_average % loss_average % peak_value % best_result % training_time
 	  % last_drawdown % group_id % iter;
 }
 

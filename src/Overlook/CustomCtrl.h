@@ -25,10 +25,7 @@ public:
 	virtual void Init(Core* c) {}
 	virtual void Data() {}
 	
-	
 	Core& GetCore() {return *core;}
-	
-	
 	
 };
 

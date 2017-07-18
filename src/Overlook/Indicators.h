@@ -756,7 +756,7 @@ protected:
 	ConstBuffer* this_open;
 	Vector<int> major_sym;
 	Vector<ConstBuffer*> opens;
-	Vector<OnlineAverage> averages;
+	Vector<OnlineAverage2> averages;
 	
 	void Process(int id, int output);
 	
@@ -893,6 +893,7 @@ public:
 };
 
 //#define LARGE_SENSOR
+#define SMALL_COUNT 3
 
 class Sensors : public Core {
 	Vector<double> means;
@@ -937,7 +938,7 @@ public:
 		#ifdef LARGE_SENSOR
 			% Out(10, 10)
 		#else
-			% Out(2, 2)
+			% Out(SMALL_COUNT*2, SMALL_COUNT*2)
 		#endif
 			% Persistent(means)
 			% Persistent(counts)

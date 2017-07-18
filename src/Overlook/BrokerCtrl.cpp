@@ -63,9 +63,6 @@ BrokerCtrl::BrokerCtrl() {
 
 void BrokerCtrl::Init() {
 	
-	
-	
-	//Thread::Start(THISBACK(DummyRunner));
 }
 
 void BrokerCtrl::ReadOnly() {
@@ -202,11 +199,9 @@ void BrokerCtrl::Close() {
 		b.RealtimeAsk(o.symbol);
 	int r = b.OrderClose(o.ticket, o.volume, close, 100);
 	if (r) {
-		//LOG("Order closed");
 		b.ForwardExposure();
 		Data();
 	} else {
-		//DLOG("Order close failed");
 		info.SetLabel(b.GetLastError());
 	}
 }
@@ -256,99 +251,5 @@ void BrokerCtrl::OpenOrder(int type) {
 	b.ForwardExposure();
 	Data();
 }
-
-void BrokerCtrl::DummyRunner() {
-	if (!broker)
-		return;
-	
-	Brokerage& b = *broker;
-	
-	Vector<Symbol> symbols;
-	symbols <<= b.GetSymbols();
-	int magic = 513251;
-	
-	while (!Thread::IsShutdownThreads()) {
-		bool open = Random(2);
-		
-		if (open) {
-			int sym_id = Random(symbols.GetCount());
-			String sym = symbols[sym_id].name;
-			int type = Random(2); // 0 = OP_BUY, 1 = OP_SELL
-			double lots = 0.01;
-			double open = type == OP_BUY ?
-				b.MarketInfo(sym, MODE_ASK) :
-				b.MarketInfo(sym, MODE_BID);
-			int slippage = 100;
-			double stoploss = this->stoploss.GetData();
-			double takeprofit = this->takeprofit.GetData();
-			if (stoploss   == 0.0) stoploss   = type == OP_BUY  ? open * 0.99 : open * 1.01;
-			if (takeprofit == 0.0) takeprofit = type == OP_SELL ? open * 0.99 : open * 1.01;
-			
-			int ticket = b.OrderSend(
-				sym,
-				type,
-				lots,
-				open,
-				slippage,
-				stoploss,
-				takeprofit,
-				magic,
-				0);
-			if (ticket == -1) {
-				LOG("Order opened successfully: ticket=" << ticket);
-			} else {
-				LOG("ERROR: opening order failed");
-			}
-		}
-		
-		else {
-			int count = b.OrdersTotal();
-			if (!count) continue;
-			
-			if (b.OrderSelect(0, SELECT_BY_POS, MODE_TRADES)) {
-				int ticket = b.OrderTicket();
-				double lots = b.OrderLots();
-				int type = b.OrderType();
-				ASSERT(type == OP_BUY || type == OP_SELL); // others shouldn't use this
-				String sym = b.OrderSymbol();
-				double close = type == OP_BUY ?
-					b.MarketInfo(sym, MODE_BID) :
-					b.MarketInfo(sym, MODE_ASK);
-				
-				int slippage = 100;
-				
-				if (b.OrderClose(ticket, lots, close, slippage)) {
-					LOG("Order close succeeded: " << sym << " " << ticket);
-				} else {
-					LOG("ERROR: Order close failed: " << sym << " " << ticket);
-				}
-			} else {
-				LOG("ERROR: couldn't select open order pos=0");
-			}
-		}
-		
-		Sleep(500);
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

@@ -9,7 +9,7 @@
 
 /*
 	Notes:
-	 - tree is pruned from the root, if you accidentaly use success percentage instead of failure percentage
+	 - tree is pruned from the root, if you accidentally use success percentage instead of failure percentage
 */
 
 namespace Overlook {

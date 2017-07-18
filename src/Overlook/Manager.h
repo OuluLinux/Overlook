@@ -4,7 +4,8 @@
 namespace Overlook {
 
 class Manager {
-	
+	Time prev_update;
+	int prev_shift;
 	
 public:
 	typedef Manager CLASSNAME;
@@ -13,8 +14,9 @@ public:
 	void Init();
 	void Start();
 	void Stop();
+	void Main();
 	
-	
+	AgentGroup* GetBestGroup();
 	
 	Array<AgentGroup> groups;
 	System* sys;

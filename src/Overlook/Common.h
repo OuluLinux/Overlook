@@ -5,26 +5,17 @@
 #include <PlotCtrl/PlotCtrl.h>
 #include <ConvNet/ConvNet.h>
 #include <ConvNetCtrl/ConvNetCtrl.h>
-#include <CtrlUtils/CtrlUtils.h>
-#include <CoreUtils/CoreUtils.h>
-
-
-/*#include <ConvNet/ConvNet.h>
-#include <NARX/NARX.h>
-#include <Mona/Mona.h>
-
-#include <ConvNetCtrl/ConvNetCtrl.h>
-#include <GraphLib/GraphLib.h>*/
+#include <CoreUtils/Optimizer.h>
 
 #undef ASSERTEXC
 
 namespace Overlook {
 using namespace Upp;
 
-struct OnlineAverage : Moveable<OnlineAverage> {
+struct OnlineAverage2 : Moveable<OnlineAverage2> {
 	double mean_a, mean_b;
 	int count;
-	OnlineAverage() : mean_a(0), mean_b(0), count(0) {}
+	OnlineAverage2() : mean_a(0), mean_b(0), count(0) {}
 	void Add(double a, double b) {
 		if (count == 0) {
 			mean_a = a;
@@ -38,7 +29,7 @@ struct OnlineAverage : Moveable<OnlineAverage> {
 	void Serialize(Stream& s) {s % mean_a % mean_b % count;}
 };
 
-struct OnlineAverage1 : Moveable<OnlineAverage> {
+struct OnlineAverage1 : Moveable<OnlineAverage1> {
 	double mean;
 	int count;
 	OnlineAverage1() : mean(0), count(0) {}
@@ -100,26 +91,6 @@ typedef Vector<byte> CoreData;
 
 class Core;
 
-enum {SLOT_SYMTF, SLOT_SYM, SLOT_TF, SLOT_ONCE};
-
-struct CoreProcessAttributes : Moveable<CoreProcessAttributes> {
-	int sym_id;								// id of symbol
-	int sym_count;							// count of symbol ids
-	int tf_id;								// timeframe-id from shorter to longer
-	int tf_count;							// count of timeframe ids
-	int64 time;								// time of current position
-	int pos[16];							// time-position for all timeframes
-	int bars[16];							// count of time-positions for all timeframes
-	int periods[16];						// periods for all timeframes
-	int slot_bytes;							// reserved memory in bytes for current slot
-	int slot_pos;							// position of the current slot in the sym/tf/pos vector
-	Core* slot;								// pointer to the current slot
-	
-	int GetBars() const {return bars[tf_id];}
-	int GetCounted() const {return pos[tf_id];}
-	int GetPeriod() const {return periods[tf_id];}
-};
-
 struct BatchPartStatus : Moveable<BatchPartStatus> {
 	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
 	Core* slot;
@@ -132,8 +103,6 @@ struct BatchPartStatus : Moveable<BatchPartStatus> {
 		s % begin % end % sym_id % tf_id % actual % total % batch_slot % complete;
 	}
 };
-
-
 
 template <class T>
 String HexVector(const Vector<T>& vec) {
@@ -198,16 +167,19 @@ inline int IncreaseMonthTS(int ts) {
 	return Time(year,month,1).Get() - epoch;
 }
 
-struct CoreIO;
+class CoreIO;
 
-// Class for default visual settings for a single visible line of a container
-struct Buffer : public Moveable<Buffer> {
+// Class for default visual settings for a single visible line of an indicator
+class Buffer : public Moveable<Buffer> {
+	
+public:
 	Vector<double> value;
 	String label;
 	Color clr;
 	int style, line_style, line_width, chr, begin, shift, earliest_write;
 	bool visible;
 	
+public:
 	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
 	void SetCount(int i) {value.SetCount(i, 0.0);}
@@ -217,6 +189,8 @@ struct Buffer : public Moveable<Buffer> {
 	bool IsEmpty() const {return value.IsEmpty();}
 	double GetUnsafe(int i) const {return value[i];}
 	
+	
+	// Some utility functions for checking that indicator values are strictly L-R
 	#ifdef flagDEBUG
 	CoreIO* check_cio;
 	void SafetyCheck(CoreIO* io) {check_cio = io;}
@@ -242,9 +216,11 @@ struct Output : Moveable<Output> {
 
 class Core;
 class System;
-struct CoreItem;
+class CoreItem;
 
-struct Source : Moveable<Source> {
+class Source : Moveable<Source> {
+	
+public:
 	Source() : core(NULL), output(NULL), sym(-1), tf(-1) {}
 	Source(CoreIO* c, Output* out, int s, int t) : core(c), output(out), sym(s), tf(t) {}
 	Source(const Source& src) {*this = src;}
@@ -260,7 +236,9 @@ struct Source : Moveable<Source> {
 	int sym, tf;
 };
 
-struct SourceDef : Moveable<SourceDef> {
+class SourceDef : Moveable<SourceDef> {
+	
+public:
 	SourceDef() : coreitem(NULL), output(-1), sym(-1), tf(-1) {}
 	SourceDef(CoreItem* ci, int out, int s, int t) : coreitem(ci), output(out), sym(s), tf(t) {}
 	SourceDef(const Source& src) {*this = src;}
@@ -279,18 +257,22 @@ typedef VectorMap<int, Source>		Input;
 typedef VectorMap<int, SourceDef>	InputDef;
 typedef Tuple2<int, int>			FactoryHash;
 
-struct CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
+class CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
+	
+public:
+	One<Core> core;
+	int sym, tf, priority, factory, hash;
+	Vector<VectorMap<int, SourceDef> > inputs;
+	Vector<int> args;
+	Vector<FactoryHash> input_hashes;
+	
+public:
 	typedef CoreItem CLASSNAME;
 	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1; hash = -1;}
 	~CoreItem() {}
 	void operator=(const CoreItem& ci) {Panic("TODO");}
 	void SetInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
 	
-	One<Core> core;
-	int sym, tf, priority, factory, hash;
-	Vector<VectorMap<int, SourceDef> > inputs;
-	Vector<int> args;
-	Vector<FactoryHash> input_hashes;
 };
 
 }

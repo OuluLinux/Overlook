@@ -218,24 +218,20 @@ public:
 	void RemoveBusyTask(int main_id);
 	
 public:
-
-	
 	
 	void AddPeriod(String nice_str, int period);
 	void AddSymbol(String sym);
 	
+	String GetSymbol(int i) const {return symbols[i];}
+	String GetPeriodString(int i) const {return period_strings[i];}
 	int GetFactoryCount() const {return GetRegs().GetCount();}
-	
 	int GetBrokerSymbolCount() const {return source_symbol_count;}
 	int GetTotalSymbolCount() const {return symbols.GetCount();}
 	int GetSymbolCount() const {return symbols.GetCount();}
-	String GetSymbol(int i) const {return symbols[i];}
-	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
-	
 	int GetPeriod(int i) const {return periods[i];}
-	String GetPeriodString(int i) const {return period_strings[i];}
 	int GetPeriodCount() const {return periods.GetCount();}
 	int FindPeriod(int period) const {return periods.Find(period);}
+	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	
 public:
 	
@@ -246,6 +242,7 @@ public:
 	void Init();
 	void Start();
 	void Stop();
+	void Main();
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;

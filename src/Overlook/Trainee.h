@@ -53,7 +53,6 @@ class AgentGroup;
 
 struct TraineeBase {
 	// Persistent
-	ConvNet::DQNAgent dqn;
 	Vector<double> seq_results;
 	OnlineAverage1 reward_average, loss_average;
 	double peak_value;
@@ -77,16 +76,14 @@ struct TraineeBase {
 	
 	TraineeBase();
 	void Init();
-	void Create(int width, int height);
 	void Action();
 	void Serialize(Stream& s);
+	virtual void Create(int width, int height) = 0;
 	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) = 0;
 	virtual void Backward(double reward) = 0;
 	virtual void SetAskBid(SimBroker& sb, int pos) = 0;
 	const Vector<double>& GetSequenceResults() const {return seq_results;}
 	
-	
-
 };
 
 }

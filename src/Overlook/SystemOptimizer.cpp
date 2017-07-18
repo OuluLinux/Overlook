@@ -24,30 +24,22 @@ void System::InitRegistry() {
 	}
 	
 }
-/*
-void System::SetBasketCount(int i) {
-	ASSERT(i >= 0 && data.GetCount());
-	int structural_begin = GetBrokerSymbolCount() + GetMetaTrader().GetCurrencyCount() + 1;
-	data.SetCount(structural_begin + i);
-	for(int i = structural_begin; i < data.GetCount(); i++) {
-		data[i].SetCount(periods.GetCount());
-		for(int j = 0; j < periods.GetCount(); j++)
-			data[i][j].SetCount(regs.GetCount());
-	}
-}
-*/
+
+// This function is only a demonstration how to make work queues
 void System::GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue) {
 	Index<int> sym_ids, tf_ids, indi_ids;
+	bool all = false;
 	
-	if (0) {
+	if (all) {
 		for(int i = 0; i < symbols.GetCount(); i++)
 			sym_ids.Add(i);
 		
 		for(int i = periods.GetCount()-1; i >= 0; i--)
 			tf_ids.Add(i);
 		
-		int indi_limit = Find<ZigZag>();
+		int indi_limit = Find<Sensors>();
 		ASSERT(indi_limit != -1);
+		indi_limit++;
 		for(int i = 0; i < indi_limit; i++)
 			indi_ids.Add(i);
 	} else {

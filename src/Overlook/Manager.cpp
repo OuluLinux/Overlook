@@ -47,16 +47,31 @@ void Manager::Stop() {
 
 void Manager::Main() {
 	Time time = GetMetaTrader().GetTime();
+	sys->SetEnd(time);
 	
 	AgentGroup* best_group = GetBestGroup();
 	if (best_group) {
 		int shift = sys->GetShiftFromTimeTf(time, best_group->tf_ids.Top());
 		if (prev_shift != shift) {
+			sys->WhenInfo("Shift changed");
+			
+			// Forced askbid data download
+			DataBridgeCommon& common = GetDataBridgeCommon();
+			common.DownloadAskBid();
+			common.RefreshAskBidData(true);
+			
+			// Refresh databridges
 			best_group->ProcessDataBridgeQueue();
 			
-			best_group->PutLatest(GetMetaTrader());
+			// Use best group to set broker signals
+			bool succ = best_group->PutLatest(GetMetaTrader());
 			
-			prev_shift = shift;
+			// Notify about successful signals
+			if (succ) {
+				prev_shift = shift;
+				
+				sys->WhenRealtimeUpdate();
+			}
 		}
 	} else {
 		prev_shift = -1;
@@ -68,10 +83,12 @@ AgentGroup* Manager::GetBestGroup() {
 	AgentGroup* group = NULL;
 	
 	for(int i = 0; i < groups.GetCount(); i++) {
+		AgentGroup& g = groups[i];
+		if (!g.allow_realtime)
+			continue;
 		if (!group) {
-			group = &groups[i];
+			group = &g;
 		} else {
-			AgentGroup& g = groups[i];
 			if (group->best_result < g.best_result)
 				group = &g;
 		}

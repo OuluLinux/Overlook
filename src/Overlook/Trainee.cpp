@@ -14,6 +14,7 @@ TraineeBase::TraineeBase() {
 	last_drawdown = 0.0;
 	main_id = -1;
 	at_main = false;
+	save_epoch = true;
 }
 
 void TraineeBase::Init() {
@@ -29,6 +30,7 @@ void TraineeBase::Init() {
 }
 
 void TraineeBase::Action() {
+	thrd_equity.SetCount(group->snaps.GetCount(), 0);
 	
 	if (!epoch_actual) {
 		broker.Clear();
@@ -38,7 +40,7 @@ void TraineeBase::Action() {
 	}
 	else {
 		// Just reset if fail is too much to take
-		if (broker.AccountEquity() < 0.4 * begin_equity) {
+		if (save_epoch && broker.AccountEquity() < 0.3 * begin_equity) {
 			broker.Clear();
 			broker.SetSignal(0,0);
 		}
@@ -99,7 +101,7 @@ void TraineeBase::Action() {
 	
 	
 	epoch_actual++;
-	if (epoch_actual >= epoch_total) {
+	if (epoch_actual >= epoch_total && !group->allow_realtime) {
 		seq_results.Add(equity);
 		epoch_actual = 0;
 		if (diff > best_result || best_result == 0.0)

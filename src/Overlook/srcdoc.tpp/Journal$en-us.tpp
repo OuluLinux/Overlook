@@ -2185,4 +2185,14 @@ AUDJPY, AUDUSD, EURAUD, EURUSD, GBPAUD, GBPJPY, GBPUSD, NQ, NZDUSD,
 USDCAD, USDJPY, YM. It have been pretty much instant <50% drawdown 
 with training data (and the result is still unknown with testing 
 data), but it`'s not a promise of any results.&]
-[s0;%- ]]
+[s3;%- 19.7.2017&]
+[s0;%- It`'s pretty much done now. Drawdown after 1 day of training 
+is <5% at best in training data, and realtime connection seems 
+to work. It`'s only up to the user to tune this properly, which 
+is not hard if the user has any will to do it. Only few tasks 
+left before changing the status to `"after release`".&]
+[s0;%- There is only some tidying to do before the first release. 
+The app is alpha quality otherwise now. I am probably going to 
+push the release at friday with a small final rant... and after 
+that, I am going to drink a bottle of vodka and smoke a pack 
+of cigarettes with my friends.]]

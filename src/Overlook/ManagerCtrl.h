@@ -21,6 +21,7 @@ public:
 	
 	void SetGroup(AgentGroup& group);
 	void SetEpsilon() {if (group) group->SetEpsilon(epsilon.GetData());}
+	void SetMode();
 	
 	void Data();
 	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
@@ -92,15 +93,19 @@ class RealtimeCtrl : public ParentCtrl {
 	Splitter				hsplit;
 	BrokerCtrl				brokerctrl;
 	ArrayCtrl				journal;
+	System*					sys;
 	
 public:
 	typedef RealtimeCtrl CLASSNAME;
-	RealtimeCtrl();
+	RealtimeCtrl(System& sys);
 	
 	void Data();
 	void Init();
+	void PostData() {PostCallback(THISBACK(Data));}
 	
-	
+	void AddMessage(String time, String level, String msg);
+	void Info(String msg);
+	void Error(String msg);
 };
 
 }

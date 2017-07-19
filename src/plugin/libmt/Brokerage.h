@@ -55,6 +55,7 @@ public:
 	virtual void Clear();
 	void ForwardExposure();
 	void SignalOrders(bool debug_print=false);
+	void SetFreeMarginLevel(double d);
 	void SetOrderSignals();
 	int  GetSignal(int sym) const {if (signals.IsEmpty()) return 0; return signals[sym];}
 	void PutSignal(int sym, int signal);
@@ -160,6 +161,8 @@ public:
 	// More efficient alternatives
 	virtual int		OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
 	
+	Callback1<String> WhenInfo;
+	Callback1<String> WhenError;
 };
 
 }

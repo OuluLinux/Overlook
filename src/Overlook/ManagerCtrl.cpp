@@ -8,7 +8,20 @@ GroupOverview::GroupOverview()
 	
 	prog.Set(0, 1);
 	sub.Set(0, 1);
+	
+	modelist.Add("Agent training");
+	modelist.Add("Group optimizing");
+	modelist.Add("Allow real-time trading");
+	modelist.SetIndex(0);
+	modelist <<= THISBACK(SetMode);
+	
 	epsilon <<= THISBACK(SetEpsilon);
+}
+
+void GroupOverview::SetMode() {
+	int i = modelist.GetIndex();
+	if (group)
+		group->SetMode(i);
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
@@ -92,6 +105,7 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	overview.enable.Set(group.enable_training);
 	overview.enable <<= THISBACK(SetEnabled);
 	overview.reset_go <<= THISBACK(ResetGroupOptimizer);
+	overview.modelist.SetIndex(group.mode);
 	
 	overview	.SetGroup(group);
 	trainingctrl.SetTrainee(group);
@@ -463,7 +477,9 @@ void ManagerCtrl::NewAgent() {
 
 
 
-RealtimeCtrl::RealtimeCtrl() {
+RealtimeCtrl::RealtimeCtrl(System& sys) :
+	sys(&sys)
+{
 	Add(hsplit.SizePos());
 	hsplit.Horz();
 	hsplit << brokerctrl << journal;
@@ -473,21 +489,49 @@ RealtimeCtrl::RealtimeCtrl() {
 	journal.AddColumn("Time");
 	journal.AddColumn("Level");
 	journal.AddColumn("Message");
+	journal.ColumnWidths("3 1 3");
 	
 	
 	brokerctrl.SetBroker(GetMetaTrader());
+	
+	sys.WhenRealtimeUpdate << THISBACK(PostData);
+}
+
+void RealtimeCtrl::AddMessage(String time, String level, String msg) {
+	journal.Insert(0);
+	journal.Set(0, 0, time);
+	journal.Set(0, 1, level);
+	journal.Set(0, 2, msg);
+}
+
+void RealtimeCtrl::Info(String msg) {
+	PostCallback(THISBACK3(AddMessage,
+		Format("%", GetSysTime()),
+		"Info",
+		msg));
+}
+
+void RealtimeCtrl::Error(String msg) {
+	PostCallback(THISBACK3(AddMessage,
+		Format("%", GetSysTime()),
+		"Error",
+		msg));
 }
 
 void RealtimeCtrl::Data() {
+	MetaTrader& mt = GetMetaTrader();
+	mt.ForwardExposure();
 	
-	
-	
+	brokerctrl.Data();
 }
 
 void RealtimeCtrl::Init() {
+	MetaTrader& mt = GetMetaTrader();
+	mt.WhenInfo  << THISBACK(Info);
+	mt.WhenError << THISBACK(Error);
 	
-	
-	
+	sys->WhenInfo  << THISBACK(Info);
+	sys->WhenError << THISBACK(Error);
 }
 
 }

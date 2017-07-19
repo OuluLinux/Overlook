@@ -86,7 +86,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	Buffer& spread_buf = GetBuffer(4);
 		
 	System& bs = GetSystem();
-	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	DataBridgeCommon& common = GetDataBridgeCommon();
 	
 	common.RefreshAskBidData();
 	
@@ -144,6 +144,9 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			dh = h + d * h_count;
 		}
 		int shift = bs.GetShiftFromTimeTf(t, tf);
+		if (shift >= bars) {
+			break;
+		}
 		
 		
 		// Add data row to spread querytable
@@ -211,9 +214,10 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	
 	
 	// Fill missing spread data. Set spread value based on querytable at the first refresh.
+	int step = 100;
 	if (init_round) {
 		double prev_spread = 0;
-		for(int i = 0; i < counted; i += 5) {
+		for(int i = 0; i < counted; i += step) {
 			Time t = bs.GetTimeTf(tf, i);
 			int dow = DayOfWeek(t);
 			int hour = t.hour;
@@ -235,7 +239,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			
 			
 			// Make it faster
-			int end = i + 5;
+			int end = i + step;
 			SetSafetyLimit(end);
 			for(int j = i+1; j < end && j < bars; j++) {
 				spread_buf.Set(j, diff);

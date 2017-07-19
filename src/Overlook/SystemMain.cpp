@@ -26,7 +26,6 @@ void System::Stop() {
 void System::Main() {
 	
 	while (running) {
-		
 		mgr.Main();
 		
 		Sleep(1000);

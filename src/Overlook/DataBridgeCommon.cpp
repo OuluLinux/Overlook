@@ -190,11 +190,11 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	return 0;
 }
 
-void DataBridgeCommon::RefreshAskBidData() {
+void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	lock.Enter();
 	
 	// 3 second update interval is enough...
-	if (since_last_askbid_refresh.Elapsed() < 3000 && cursor > 0) {
+	if (!forced && since_last_askbid_refresh.Elapsed() < 3000 && cursor > 0) {
 		lock.Leave();
 		return;
 	}

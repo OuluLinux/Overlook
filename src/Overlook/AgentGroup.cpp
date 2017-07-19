@@ -12,6 +12,7 @@ AgentGroup::AgentGroup() {
 	data_size = 0;
 	signal_size = 0;
 	act_iter = 0;
+	mode = 0;
 	
 	global_free_margin_level = 0.97;
 	buf_count = 0;
@@ -19,16 +20,51 @@ AgentGroup::AgentGroup() {
 	sig_freeze = true;
 	reset_optimizer = false;
 	accum_signal = false;
+	allow_realtime = false;
 }
 
 AgentGroup::~AgentGroup() {
 	Stop();
 }
 
-void AgentGroup::PutLatest(Brokerage& broker) {
+bool AgentGroup::PutLatest(Brokerage& broker) {
+	if (!allow_realtime) return false;
 	
+	WhenInfo("Refreshing snapshots");
+	RefreshSnapshots();
 	
+	Time time = GetMetaTrader().GetTime();
+	int shift = sys->GetShiftFromTimeTf(time, tf_ids.Top());
+	if (shift != train_pos_all.Top()) {
+		WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, train_pos_all.Top()));
+		return false;
+	}
 	
+	WhenInfo("Looping agents until latest snapshot");
+	for(int i = 0; i < agents.GetCount(); i++) {
+		Agent& agent = agents[i];
+		agent.RefreshTotalEpochs();
+		while (agent.epoch_actual < agent.epoch_total) {
+			agent.Main();
+		}
+		ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
+	}
+	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
+	Forward(shift_snap, broker, NULL);
+	
+	WhenInfo("Refreshing broker data");
+	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
+	if (mt) {
+		mt->Data();
+	} else {
+		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
+		sb->RefreshOrders();
+	}
+	
+	WhenInfo("Updating orders");
+	broker.SignalOrders(true);
+	
+	return true;
 }
 
 void AgentGroup::Progress(int actual, int total, String desc) {
@@ -48,6 +84,36 @@ void AgentGroup::SubProgress(int actual, int total) {
 void AgentGroup::SetEpsilon(double d) {
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].dqn.SetEpsilon(d);
+}
+
+void AgentGroup::SetMode(int i) {
+	
+	// Only the change of mode matters
+	if (i == mode) return;
+	
+	
+	// Stop previous mode
+	if      (mode == 0) {
+		StopAgents();
+	}
+	else if (mode == 1) {
+		StopGroup();
+	}
+	else if (mode == 2) {
+		allow_realtime = false;
+	}
+	
+	// Start new mode
+	mode = i;
+	if      (mode == 0) {
+		StartAgents();
+	}
+	else if (mode == 1) {
+		StartGroup();
+	}
+	else if (mode == 2) {
+		allow_realtime = true;
+	}
 }
 
 void AgentGroup::CreateAgents() {
@@ -76,7 +142,7 @@ void AgentGroup::Create(int width, int height) {
 	int sensors = timeslots * sym_ids.GetCount();
 	ASSERT(height == sensors + 1);
 	for(int i = 0; i < sensors; i++) {
-		go.Set(i, -100, +100, 1);
+		go.Set(i, 0, +4, 1);
 	}
 	go.Set(sensors, 0.0, 1.0, 0.001);
 	
@@ -98,6 +164,8 @@ void AgentGroup::InitThreads() {
 void AgentGroup::Init() {
 	ASSERT(sys);
 	
+	WhenInfo  << Proxy(sys->WhenInfo);
+	WhenError << Proxy(sys->WhenError);
 	
 	tf_periods.SetCount(tf_ids.GetCount(), 1);
 	for(int i = 0; i < tf_ids.GetCount(); i++) {
@@ -153,13 +221,23 @@ void AgentGroup::Init() {
 	}
 	
 	Progress(0, 1, "Complete");
+	
+	save_epoch = false;
 }
 
 void AgentGroup::Start() {
+	int m = mode;
+	mode = -1;
+	SetMode(m);
+}
+
+void AgentGroup::StartGroup() {
 	if (main_id != -1) return;
 	act_iter = 0;
 	main_id = sys->AddTaskBusy(THISBACK(Main));
-	
+}
+
+void AgentGroup::StartAgents() {
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		ASSERT(a.group);
@@ -168,29 +246,39 @@ void AgentGroup::Start() {
 }
 
 void AgentGroup::Stop() {
+	StopGroup();
+	StopAgents();
+	StoreThis();
+}
+
+void AgentGroup::StopGroup() {
 	if (main_id == -1) return;
 	sys->RemoveBusyTask(main_id);
 	main_id = -1;
 	while (at_main) Sleep(100);
+}
+
+void AgentGroup::StopAgents() {
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		a.Stop();
 	}
-	StoreThis();
 }
 
 void AgentGroup::Main() {
 	ASSERT(!at_main);
 	at_main = true;
 	epoch_total = snaps.GetCount();
-	
+	if (epoch_actual >= epoch_total)
+		epoch_actual = 0;
 	
 	if (reset_optimizer) {
 		reset_optimizer = false;
+		seq_results.Clear();
 		Create(group_input_width, group_input_height);
 	}
 	
-	if (epoch_actual == 0) {
+	if (!allow_realtime && epoch_actual == 0) {
 		prev_reward = 0;
 		go.Start();
 	}
@@ -198,10 +286,10 @@ void AgentGroup::Main() {
 	// Do some action
 	Action();
 	
-	
-	if (epoch_actual == epoch_total-1) {
+	if (!allow_realtime && (!epoch_actual == epoch_total-1 || broker.AccountEquity() < 0.4 * begin_equity)) {
 		double energy = broker.AccountEquity() - broker.GetInitialBalance();
 		go.Stop(energy);
+		epoch_actual = 0;
 	}
 	
 	
@@ -214,7 +302,7 @@ void AgentGroup::Main() {
 	at_main = false;
 }
 
-void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
+void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap) {
 	
 	// Input values
 	// - data values
@@ -226,10 +314,12 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 	// - account change sensor
 	// - instrument value / (0.1 * equity) or something
 	
-	int timeslot = ((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * snap.time_values[4] / fastest_period_mins;
+	int timeslot = (((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * 60 + snap.time_values[4]) / fastest_period_mins;
 	ASSERT(timeslot >= 0 && timeslot < timeslots);
 	
-	const Vector<double>& go_values = go.GetTrialSolution();
+	const Vector<double>& go_values = !allow_realtime ?
+		 go.GetTrialSolution() :
+		 go.GetBestSolution();
 	ASSERT(go_values.GetCount() == group_input_height);
 	
 	
@@ -240,9 +330,12 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 		const Agent& a = agents[i];
 		
 		// Very minimum requirement: positive drawdown
+		#ifndef flagDEBUG
 		if (a.last_drawdown >= 0.50)
 			signal = 0;
-		else {
+		else
+		#endif
+		{
 		    // Get signals from snapshots, where agents have wrote their latest signals.
 		    int sig_pos = GetSignalPos(i);
 		    double pos = 1.0 - snap.values[sig_pos];
@@ -260,7 +353,7 @@ void AgentGroup::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap)
 			// Multiply signal by genetic optimizer value
 			int go_pos = i * timeslots + timeslot;
 			double sig_multiplier = go_values[go_pos];
-			signal = Upp::min(+100, Upp::max(-100, (int)(sig_multiplier * signal)));
+			signal = Upp::min(+4, Upp::max(0, (int)(sig_multiplier * signal)));
 			
 			
 			// Set signal to broker
@@ -321,7 +414,7 @@ void AgentGroup::Serialize(Stream& s) {
 	  % global_free_margin_level
 	  % agent_input_width % agent_input_height
 	  % group_input_width % group_input_height
-	  % sig_freeze
+	  % mode % sig_freeze
 	  % enable_training % accum_signal;
 }
 
@@ -384,20 +477,24 @@ void AgentGroup::RefreshSnapshots() {
 					any_match = true;
 				}
 			}
-			if (any_match)
+			if (any_match) {
 				train_pos_all.Add(i);
+				WhenInfo("Added snapshot: " + Format("%",t));
+			}
 		}
 		else if (tf_type == 1) {
 			if (wday == 0 || wday == 6)
 				continue;
 			int pospos = train_pos_all.GetCount();
 			train_pos_all.Add(i);
+			WhenInfo("Added snapshot: " + Format("%",t));
 			for(int j = 0; j < sym_ids.GetCount(); j++)
 				train_pos[j].Add(pospos);
 		}
 		else if (tf_type == 2) {
 			int pospos = train_pos_all.GetCount();
 			train_pos_all.Add(i);
+			WhenInfo("Added snapshot: " + Format("%",t));
 			for(int j = 0; j < sym_ids.GetCount(); j++)
 				train_pos[j].Add(pospos);
 		}
@@ -568,6 +665,10 @@ void AgentGroup::ResetValueBuffers() {
 	int main_tf = tf_ids.Top();
 	int pos = data_begins.Top();
 	int bars = sys->GetCountTf(main_tf);
+	
+	#ifdef flagDEBUG
+	pos = Upp::max(pos, bars-1000);
+	#endif
 	
 	train_pos_all.Reserve(bars - pos);
 	train_pos.SetCount(sym_ids.GetCount());

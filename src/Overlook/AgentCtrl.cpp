@@ -259,7 +259,7 @@ void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
 	
 	Agent* agent = dynamic_cast<Agent*>(&trainee);
 	if (agent) {
-		if (hsplit.GetFrameCount() == 2) {
+		if (hsplit.GetCount() == 2) {
 			hsplit << timescroll;
 			hsplit.SetPos(2000, 0);
 			hsplit.SetPos(8000, 1);

@@ -180,7 +180,7 @@ protected:
 	
 	// Time
 	Vector<Time> begin;
-	Vector<int> begin_ts, end_ts;
+	Vector<int> begin_ts;
 	Time end;
 	int timediff;
 	int base_period;
@@ -206,7 +206,6 @@ public:
 	Time GetBegin(int tf) const {return begin[tf];}
 	Time GetEnd() const {return end;}
 	int GetBeginTS(int tf) {return begin_ts[tf];}
-	int GetEndTS(int tf) {return end_ts[tf];}
 	int GetBasePeriod() const {return base_period;}
 	int64 GetShiftTf(int src_tf, int dst_tf, int shift);
 	int64 GetShiftFromTimeTf(int timestamp, int tf);
@@ -216,6 +215,7 @@ public:
 	Manager& GetManager() {return mgr;}
 	int  AddTaskBusy(Callback task);
 	void RemoveBusyTask(int main_id);
+	void SetEnd(const Time& t) {end = t;}
 	
 public:
 	
@@ -246,6 +246,9 @@ public:
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;
+	Callback1<String>  WhenInfo;
+	Callback1<String>  WhenError;
+	Callback           WhenRealtimeUpdate;
 };
 
 }

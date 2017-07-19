@@ -3,7 +3,8 @@
 namespace Overlook {
 
 Overlook::Overlook() :
-	mgrctrl(sys)
+	mgrctrl(sys),
+	rtctrl(sys)
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());

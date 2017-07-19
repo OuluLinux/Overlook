@@ -17,6 +17,10 @@ Agent::~Agent() {
 	Stop();
 }
 
+void Agent::RefreshTotalEpochs() {
+	epoch_total = group->train_pos[group_id].GetCount();
+}
+
 void Agent::Create(int width, int height) {
 	// Don't use ACT_RESETSIG if signal accumulation is not in use
 	dqn.Init(width, height, accum_signal ? ACTIONCOUNT : ACTIONCOUNT-1);
@@ -48,7 +52,7 @@ void Agent::Stop() {
 void Agent::Main() {
 	ASSERT(!at_main);
 	at_main = true;
-	epoch_total = group->train_pos[group_id].GetCount();
+	RefreshTotalEpochs();
 	if (epoch_total > 0) {
 		if (epoch_actual == 0) {
 			accum_buf = 0;

@@ -140,12 +140,6 @@ Time SimBroker::GetTime() const {
 	return cycle_time;
 }
 
-void SimBroker::SetFreeMarginLevel(double d) {
-	if (d < min_free_margin_level) d = min_free_margin_level;
-	if (d > max_free_margin_level) d = max_free_margin_level;
-	free_margin_level = d;
-}
-
 void SimBroker::SetPrice(int sym, double price) {
 	Price& p = askbid[sym];
 	double spread = p.ask / p.bid;

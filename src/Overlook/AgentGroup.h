@@ -19,6 +19,7 @@ public:
 	double global_free_margin_level;
 	int agent_input_width, agent_input_height;
 	int group_input_width, group_input_height;
+	int mode;
 	bool sig_freeze;
 	bool enable_training;
 	bool accum_signal;
@@ -39,6 +40,7 @@ public:
 	int data_size, signal_size, total_size;
 	int act_iter;
 	bool reset_optimizer;
+	bool allow_realtime;
 	System* sys;
 	Mutex work_lock;
 	
@@ -48,11 +50,16 @@ public:
 	~AgentGroup();
 	void Init();
 	void Start();
+	void StartGroup();
+	void StartAgents();
 	void Stop();
+	void StopGroup();
+	void StopAgents();
 	void Main();
 	virtual void Create(int width, int height);
-	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap=NULL);
+	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap=NULL) {Forward(snap, (Brokerage&)broker, next_snap);}
 	virtual void Backward(double reward);
+	void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap=NULL);
 	void StoreThis();
 	void LoadThis();
 	void Serialize(Stream& s);
@@ -69,7 +76,8 @@ public:
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
 	void SetEpsilon(double d);
-	void PutLatest(Brokerage& broker);
+	void SetMode(int i);
+	bool PutLatest(Brokerage& broker);
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	
 	int GetSignalBegin() const;
@@ -80,6 +88,9 @@ public:
 	Callback2<int, int> WhenSubProgress;
 	int a0, t0, a1, t1;
 	String prog_desc;
+	
+	Callback1<String> WhenInfo;
+	Callback1<String> WhenError;
 };
 
 }

@@ -85,6 +85,7 @@ void BrokerCtrl::Data() {
 	ASSERT_(broker, "Broker is not yet set to BrokerCtrl");
 	
 	Brokerage& b = *broker;
+	MetaTrader& mt = GetMetaTrader();
 	
 	b.Enter();
 	
@@ -114,12 +115,15 @@ void BrokerCtrl::Data() {
 	const Array<Order>& orders = b.GetOpenOrders();
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
-		const Symbol& sym = b.GetSymbol(o.symbol);
+		String name =
+			o.symbol >= 0 && o.symbol < mt.GetSymbolCount() ?
+				mt.GetSymbol(o.symbol).name :
+				IntStr(o.symbol);
 		trade.Set(i, 0, o.ticket);
 		trade.Set(i, 1, Format("%", o.begin));
 		trade.Set(i, 2, o.type == 0 ? "Buy" : "Sell");
 		trade.Set(i, 3, o.volume);
-		trade.Set(i, 4, sym.name);
+		trade.Set(i, 4, name);
 		trade.Set(i, 5, o.open);
 		trade.Set(i, 6, o.stoploss);
 		trade.Set(i, 7, o.takeprofit);
@@ -132,17 +136,24 @@ void BrokerCtrl::Data() {
 	
 	
 	const Vector<Asset>& assets = b.GetAssets();
+	double base_value_sum = 0;
+	for(int i = 0; i < assets.GetCount(); i++)
+		base_value_sum += assets[i].base_value;
 	for(int i = 0; i < assets.GetCount(); i++) {
 		const Asset& a = assets[i];
 		if (a.sym == -1) continue;
+		int cur = a.sym - mt.GetSymbolCount();
 		const String& name =
-			a.sym < b.GetSymbolCount() ?
-				b.GetSymbol(a.sym).name :
-				b.GetCurrency(a.sym - b.GetSymbolCount()).name;
+			a.sym < mt.GetSymbolCount() ?
+				mt.GetSymbol(a.sym).name :
+				(cur < mt.GetCurrencyCount() ?
+					mt.GetCurrency(cur).name : "<unknown>");
 		exposure.Set(i, 0, name);
 		exposure.Set(i, 1, a.volume);
 		exposure.Set(i, 2, a.rate);
 		exposure.Set(i, 3, a.base_value);
+		exposure.Set(i, 4, a.base_value / base_value_sum);
+		exposure.SetDisplay(i, 4, Single<AssetGraphDislay>());
 	}
 	exposure.SetCount(assets.GetCount());
 	

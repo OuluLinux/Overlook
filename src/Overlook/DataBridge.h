@@ -25,7 +25,7 @@ protected:
 	bool connected;
 	bool inited;
 	
-	void RefreshAskBidData();
+	
 	void Init(DataBridge* db);
 public:
 	DataBridgeCommon();
@@ -40,9 +40,12 @@ public:
 	int  DownloadAskBid();
 	int  DownloadRemoteFile(String remote_path, String local_path);
 	bool IsInited() const {return inited;}
+	void RefreshAskBidData(bool forced=false);
 	
 	Mutex lock;
 };
+
+inline DataBridgeCommon& GetDataBridgeCommon() {return Single<DataBridgeCommon>();}
 
 struct AskBid : Moveable<AskBid> {
 	int time;

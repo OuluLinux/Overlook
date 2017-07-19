@@ -81,6 +81,12 @@ void Brokerage::operator=(const Brokerage& b) {
 	idx_base_values <<= b.idx_base_values;
 }
 
+void Brokerage::SetFreeMarginLevel(double d) {
+	if (d < min_free_margin_level) d = min_free_margin_level;
+	if (d > max_free_margin_level) d = max_free_margin_level;
+	free_margin_level = d;
+}
+
 void Brokerage::SetSignal(int sym, int signal) {
 	if (signals.IsEmpty()) {
 		signals.SetCount(symbols.GetCount(), 0);
@@ -485,7 +491,11 @@ void Brokerage::SignalOrders(bool debug_print) {
 				double reduce = o.volume - lots;
 				for(int j = 0; j < 3; j++) {
 					int success = OrderClose(o.ticket, reduce, RealtimeBid(o.symbol), 100);
-					if (success) break;
+					if (success) {
+						const Symbol& sym = symbols[o.symbol];
+						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						break;
+					}
 				}
 				lots = 0;
 			}
@@ -498,7 +508,11 @@ void Brokerage::SignalOrders(bool debug_print) {
 				double reduce = o.volume - lots;
 				for(int j = 0; j < 3; j++) {
 					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
-					if (success) break;
+					if (success) {
+						const Symbol& sym = symbols[o.symbol];
+						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						break;
+					}
 				}
 				lots = 0;
 			}
@@ -516,15 +530,23 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (sym_buy_lots > 0.0) {
 			double price = RealtimeAsk(i);
 			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * 0.99, price * 1.01, 0, 0);
-			if (r == -1 && debug_print) {
-				LOG("Brokerage::SignalOrders: OrderSend faild with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+			if (debug_print) {
+				if (r == -1) {
+					WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+				} else {
+					WhenInfo("OrderSend succeeded with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+				}
 			}
 		}
 		if (sym_sell_lots > 0.0) {
 			double price = RealtimeBid(i);
 			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * 1.01, price * 0.99, 0, 0);
-			if (r == -1 && debug_print) {
-				LOG("Brokerage::SignalOrders: OrderSend faild with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+			if (debug_print) {
+				if (r == -1) {
+					WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+				} else {
+					WhenInfo("OrderSend succeeded with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+				}
 			}
 		}
 	}

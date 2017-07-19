@@ -35,7 +35,6 @@ public:
 	const Vector<double>& GetSymbolCycleChanges() const {return symbol_profit_diffs;}
 	double GetDrawdown() const;
 	
-	void SetFreeMarginLevel(double d);
 	void SetPrice(int sym, double price);
 	void SetTime(const Time& t) {cycle_time = t;}
 	

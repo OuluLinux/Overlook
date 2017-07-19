@@ -8,6 +8,26 @@ using namespace ConvNet;
 #define LAYOUTFILE <Overlook/BrokerCtrl.lay>
 #include <CtrlCore/lay.h>
 
+struct AssetGraphDislay : public Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+	                   Color ink, Color paper, dword style) const {
+		w.DrawRect(r, paper);
+		Rect g = r;
+		g.top += 2;
+		g.bottom -= 2;
+		double d = q;
+		if (d < 0) {
+			Color clr = Color(135, 22, 0);
+			g.left  += g.Width() * (1.0 + d);
+			w.DrawRect(g, clr);
+		} else {
+			Color clr = Color(0, 134, 0);
+			g.right -= g.Width() * (1.0 - d);
+			w.DrawRect(g, clr);
+		}
+	}
+};
+
 class BrokerCtrl : public WithBrokerLayout<CustomCtrl> {
 	Brokerage* broker;
 	

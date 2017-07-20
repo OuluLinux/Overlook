@@ -398,7 +398,7 @@ void AgentGroup::StoreThis() {
 	String file = ConfigFile(name + ".agrp");
 	bool rem_bak = false;
 	if (FileExists(file)) {
-		MoveFile(file, file + ".bak");
+		FileMove(file, file + ".bak");
 		rem_bak = true;
 	}
 	StoreToFile(*this,	file);

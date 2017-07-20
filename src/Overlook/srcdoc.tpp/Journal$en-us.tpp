@@ -5,31 +5,34 @@ topic "Journal";
 [=phN111;*R $$3,3#0680C0FF67EEE4E167183D1E74BF079F:Chapter 3]
 [{_}%FI-FI 
 [s1; Journal&]
-[s0; I write this journal to tell how original this application is 
-and to communicate the countless hours and the sweat what I did 
-see for this. The public release is merely a by`-product. The 
-progress of this project is driven only by my curiosity. I also 
-want to encourage other programmers to write the progress in 
-this way. This is not something I would do in all projects.&]
-[s0; I write as a casual narrator about the progress of the Overlook. 
-Please note that my native language is not English, but Finnish. 
-This journal is intended for the audience who see some entertainment 
-value in this. This shouldn`'t be considered to be final statement 
-about anything. This is not intended to be interpreted in any 
-specific way and all interpretations are welcome to a civil discussion. 
-The story and names are being limited to include the copyright 
-holder only, unless the person has given a permission to use 
-his story and/or name publicly. However, the story may include 
-a one`-sided and personally experienced story from social events, 
-which may or may not be equal to the objective truth.&]
-[s0; This document is an artistic expression as whole without target 
-audience. This is only an opinion of the author and this is not 
-checked for wrong facts.&]
-[s0;= &]
+[s0; I write this journal to keep myself focused on the end result: 
+the working product. This text is sort of an invenstement, which 
+loses value if I don`'t get the product work.&]
+[s0; I like to tell how original this application is and to communicate 
+the countless hours and the sweat what I did see for this. The 
+public release is merely a by`-product. The progress of this 
+project is driven only by my curiosity. Please note that my native 
+language is not English, but Finnish. This journal is intended 
+for the audience who see some entertainment value in this. This 
+document is an artistic expression as whole without target audience. 
+This is only an opinion of the author and this is not checked 
+for wrong facts.&]
+[s0; This journal is mostly about very uninteresting stuff and this 
+is intented for those who would otherwise check the progress 
+via git commit history. This text tells mostly about technical 
+problems in a difficult way, but it has some juicier off`-topic 
+sections.&]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
-making small single modules working, and then combining them 
-to a bigger working module, until a one working program is achieved.&]
+searching for the best desigin via trial and error. Some ideas 
+seemed good but turned out to be bad. All of the ideas were related 
+to the end result in some way, however.&]
+[s0; The result was good and the whole process went almost as expected. 
+Only the completion took longer than expected.&]
+[s0; The following phase took almost 3 months and work was done almost 
+every day. During that time, estimated 600`-800 hours was worked 
+on this directly. The count of hours was very well noted during 
+development, which did lead to a lot of off`-topic text.&]
 [s3; 26.4.2017&]
 [s0; Welcome to the first entry of this journal.&]
 [s0; Today, I am trying to get runner working. Slots should be processed 
@@ -274,7 +277,7 @@ Basically it causes falling back to one class object per symbol/timeframe.
 It might be too complicated, though. Also, there is no need to 
 make unreasonable combinations and the rules for combinations 
 will still be rather strict.&]
-[s0; [* Damn, so much more work.]&]
+[s0; Damn, so much more work.&]
 [s0; I guess, that the basis will be some kind of prioritising system, 
 which can connect different kind of slots in different symbol/timeframes. 
 It prunes out probably known outcomes and verifies the best performing 
@@ -396,8 +399,8 @@ list of reasons why the best combination is what it is.&]
 all. Very weird... I just refined this plan. The complete opposite 
 is to do some hand routine where you don`'t need to think at 
 all.&]
-[s0; [_ This day will be the cornerstone of the results of my master`'s 
-thesis, however.]&]
+[s0; This day will be the cornerstone of the results of my master`'s 
+thesis, however.&]
 [s3; 12.5.2017&]
 [s0; Yesterday was especially troublesome day. It is almost unbelieveable 
 that I managed to summarise the final binary`-string plan. The 
@@ -1090,10 +1093,6 @@ but it`'s still not completely in the previous working state.
 It`'s worth noticing how much complexity have been reduced today 
 without limiting features.&]
 [s3;%- 8.6.2017&]
-[s0;%- The perfection is forever, and our brains and genetics only 
-tune into that eventually. There, I said it. That`'s how I believe. 
-Sooner than later is usually more pleasant, but rush too fast 
-and you might not see something important.&]
 [s0;%- To the practical matters... The classic viewing mode works 
 again (candlesticks `+ indicators). I have had this at this point 
 many times before, but I had to change something structural, 
@@ -1205,14 +1204,6 @@ of the whole product. You start to understand the friendship
 between straights and gays. There is no big difference between 
 what you see with girl`-boy anal and what gays see with boy`-boy 
 anal. You don`'t have the feeling, but you can understand.&]
-[s0;%- I like mine in traditional ways. Big tit womanizers are a 
-huge seller for me. However, that is not very popular anymore. 
-The statistics shows, that most popular videos are not about 
-the image of women what 70`'s James Bond films gave. In view 
-statistics, it is going to weird direction... Most of the society 
-is completely clueless about the real evolution of adult entertainment. 
-Some may have noticed, that sex toys and lingerie is more popular 
-than ever, but that is not the whole story.&]
 [s0;%- This topic deserves a scientific paper, but unfortunately 
 I have time to write only about my experiences. It is extremely 
 important to understand, that the virtual adult entertainment 
@@ -2195,4 +2186,41 @@ left before changing the status to `"after release`".&]
 The app is alpha quality otherwise now. I am probably going to 
 push the release at friday with a small final rant... and after 
 that, I am going to drink a bottle of vodka and smoke a pack 
-of cigarettes with my friends.]]
+of cigarettes with my friends.&]
+[s3;%- 20.7.2017&]
+[s0;%- Fucking margin calculations were wrong and now I must restart 
+training. I did those correctly in the past, but seems like I 
+didn`'t remember them at all while writing this. This was those 
+last tasks in the TODO list and it broke more than expected. 
+The reward changes and the agent can`'t understand it. Actually, 
+I added some variables that should be serialized, and since I 
+don`'t do versioned files, then old files would break anyway. 
+Also, I think I`'ll change broker to InstaForex because of their 
+awesome cent account and red color.&]
+[s0;%- ...&]
+[s0;%- I just checked this journal for release. I didn`'t read it 
+in details, but it can`'t be too bad. I have tried to keep some 
+high standards with this. I can`'t really remove or fix much.&]
+[s0;%- [* Yeah, the release is happening tomorrow.]&]
+[s0;%- I almost can`'t believe this. So many times the schedule was 
+extended because this was incomplete, but now I can`'t do anything 
+more, except to make the release package.&]
+[s0;%- I am satisfied to the end result. Constraints for doing this 
+are strict, but I think I managed to make quite a product in 
+those limits.&]
+[s0;%- I am going to write the results to the after`-release section 
+of this journal. I don`'t think I need to make big changes to 
+make this work, but I might be wrong... I haven`'t proven this 
+to work in test data or in real environment yet.&]
+[s0;%- I think this was worth the time and effort.&]
+[s0;%- My immediate reward is to not need to think about working 
+on this at next day. Then, I can finally do school work, which 
+is more relaxed, believe me or not. I will be working on math 
+programming environment until start of semester, because I made 
+such a success in learning using my previous hackish environment. 
+I`'ll use javascript for that this time.&]
+[s0;%- Oops, I forgot that I broke exposure calculations previously 
+for some stupid reasons. Now they seem to work again, at least 
+for forex.&]
+[s0;%- I promised a rant tomorrow with the release and I still plan 
+to do it.]]

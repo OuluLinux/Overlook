@@ -106,9 +106,7 @@ void SimBroker::RefreshOrders() {
 		o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 		equity += o.profit;
 		
-		const Symbol& sym = symbols[o.symbol];
-		double order_used_margin = o.open * o.volume * sym.contract_size * sym.margin_factor;
-		if (sym.IsForex()) order_used_margin /= (double)AccountLeverage();
+		double order_used_margin = GetMargin(o.symbol, o.volume);
 		used_margin += order_used_margin;
 	}
 	this->margin = used_margin;
@@ -147,94 +145,48 @@ void SimBroker::SetPrice(int sym, double price) {
 	p.ask = price * spread;
 }
 
-
-
-
-
-
-
 int		SimBroker::RefreshRates() {
 	return false;
 }
 
 int		SimBroker::iBars(String symbol, int timeframe) {
-	/*System& bs = GetSystem();
-	int period = timeframe*60 / bs.GetBasePeriod();
-	return bs.GetCount(period);*/
-	
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double	SimBroker::iClose(String symbol, int timeframe, int shift) {
-	/*System& bs = GetSystem();
-	int sym = FindSymbol(symbol);
-	CoreProcessAttributes& attr = bs.GetCurrent();
-	return *src->GetValue<double>(
-		0,
-		sym,
-		ol.FindPeriod(bs.GetTfFromSeconds(timeframe*60)),
-		-1+shift, attr);*/
-		
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
-	/*System& bs = GetSystem();
-	int sym = FindSymbol(symbol);
-	CoreProcessAttributes& attr = bs.GetCurrent();
-	return *src->GetValue<double>(
-		2,
-		sym,
-		ol.FindPeriod(bs.GetTfFromSeconds(timeframe*60)),
-		shift, attr);*/
-		
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double	SimBroker::iLow(String symbol, int timeframe, int shift) {
-	/*System& bs = GetSystem();
-	int sym = FindSymbol(symbol);
-	CoreProcessAttributes& attr = bs.GetCurrent();
-	return *src->GetValue<double>(
-		1,
-		sym,
-		ol.FindPeriod(bs.GetTfFromSeconds(timeframe*60)),
-		shift, attr);*/
-		
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
-	/*System& bs = GetSystem();
-	int sym = FindSymbol(symbol);
-	CoreProcessAttributes& attr = bs.GetCurrent();
-	return *src->GetValue<double>(
-		0,
-		sym,
-		ol.FindPeriod(bs.GetTfFromSeconds(timeframe*60)),
-		shift, attr);*/
-		
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int		SimBroker::iHighest(String symbol, int timeframe, int type, int count, int start) {
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int		SimBroker::iLowest(String symbol, int timeframe, int type, int count, int start) {
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int		SimBroker::iTime(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int		SimBroker::iVolume(String symbol, int timeframe, int shift) {
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double	SimBroker::RealtimeAsk(int sym) {
@@ -366,8 +318,7 @@ double SimBroker::OrderCommission() {
 }
 
 int SimBroker::OrderDelete(int ticket) {
-	Panic("TODO: pending orders");
-	return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 int SimBroker::OrderExpiration() {
@@ -384,8 +335,7 @@ int SimBroker::OrderMagicNumber() {
 }
 
 int SimBroker::OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {
-	
-	Panic("TODO"); return 0;
+	Panic("no need to implement yet"); return 0;
 }
 
 double SimBroker::OrderOpenPrice() {
@@ -465,8 +415,6 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	}
 	o.stoploss = stoploss;
 	o.takeprofit = takeprofit;
-	//o.magic = magic;
-	//o.expiration = expiry;
 	o.ticket = order_counter++;
 	o.is_open = true;
 	o.profit = GetCloseProfit(o, volume);

@@ -15,6 +15,7 @@ protected:
 	double free_margin_level, min_free_margin_level, max_free_margin_level;
 	double balance, equity, margin, margin_free, margin_call, margin_stop;
 	double leverage, initial_balance;
+	double limit_factor;
 	int cur_begin;
 	int account_currency_id;
 	int account_id;
@@ -83,11 +84,13 @@ public:
 	int GetCurrencyCount() const {return currencies.GetCount();}
 	int GetIndexId(int i) const {return indices[i];}
 	int GetIndexCount() const {return indices.GetCount();}
+	double GetMargin(int sym, double volume);
 	double GetFreeMarginLevel() const {return free_margin_level;}
 	double GetMinFreeMargin() const {return min_free_margin_level;}
 	double GetMaxFreeMargin() const {return max_free_margin_level;}
 	void SetFreeMargin(double d) {ASSERT(d >= 0.20 && d <= 1.0); free_margin_level = d;}
 	void SetFixedVolume(bool b=true) {fixed_volume = b;}
+	void SetLimitFactor(double d) {limit_factor = d;}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

@@ -712,7 +712,6 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 				postfix_counts.GetAdd(name.Right(1)[0], 0)++;
 			
 			
-			
 			String a = name.Left(3);
 			String b = name.Mid(3,3);
 			if (a == account_currency) {
@@ -724,8 +723,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 				sym.base_mul = -1;
 			} else {
 				if (account_currency == "USD") {
-					if (a != account_currency)
-						sym.proxy_name = GetProxy(a);
+					sym.proxy_name = GetProxy(a);
 				}
 				else Panic("TODO: add proxies for this currency");
 			}

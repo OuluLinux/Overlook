@@ -14,7 +14,40 @@ Brokerage::Brokerage() {
 	tf_h1_id = -1;
 	account_currency_id = -1;
 	leverage = 0;
+	limit_factor = 0.01;
 	fixed_volume = false;
+}
+
+double Brokerage::GetMargin(int sym_id, double volume) {
+	ASSERT(leverage > 0);
+	const Symbol& sym = symbols[sym_id];
+	double used_margin = 0.0;
+	if (sym.IsForex()) {
+		if (sym.proxy_id == -1) {
+			used_margin = volume * sym.contract_size;
+		} else {
+			const Price& p = askbid[sym.proxy_id];
+			if (sym.proxy_factor == -1)
+				used_margin = p.ask * volume * sym.contract_size;
+			else
+				used_margin = (1.0 / p.ask) * volume * sym.contract_size;
+		}
+		used_margin /= leverage;
+	}
+	else {
+		if (sym.proxy_id == -1) {
+			used_margin = volume * sym.contract_size * sym.margin_factor;
+		} else {
+			const Price& p = askbid[sym.proxy_id];
+			if (sym.proxy_factor == -1)
+				used_margin = p.ask * volume * sym.contract_size * sym.margin_factor;
+			else
+				used_margin = (1.0 / p.ask) * volume * sym.contract_size * sym.margin_factor;
+		}
+	}
+	ASSERT(IsFin(used_margin));
+	ASSERT(volume == 0.0 || used_margin > 0.0);
+	return used_margin;
 }
 
 void Brokerage::Clear() {
@@ -162,7 +195,7 @@ void Brokerage::ForwardExposure() {
 				// For example: base=USD, sym=CHFJPY, cmd=buy, lots=0.01, s=USDCHF, a=CHF, b=JPY
 				//  - CHF += 0.01 * 1000
 				{
-					double& cur_volume = cur_volumes[sym.base_cur1];
+					double& cur_volume = cur_volumes[sym.base_cur0];
 					if (o.type == OP_BUY)
 						cur_volume += o.volume * sym.lotsize;
 					else if (o.type == OP_SELL)
@@ -171,7 +204,7 @@ void Brokerage::ForwardExposure() {
 				}
 				//  - JPY += -1 * 0.01 * 1000 * open-price
 				{
-					double& cur_volume = cur_volumes[sym.base_cur0];
+					double& cur_volume = cur_volumes[sym.base_cur1];
 					if (o.type == OP_BUY)
 						cur_volume += -1 * o.volume * sym.lotsize * o.open;
 					else if (o.type == OP_SELL)
@@ -436,14 +469,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 		ASSERT(IsFin(sell_lots));
 		ASSERT(IsFin(sym.contract_size));
 		ASSERT(IsFin(sym.margin_factor));
-		double buy_used_margin = p.ask * buy_lots * sym.contract_size * sym.margin_factor;
-		double sell_used_margin = p.bid * sell_lots * sym.contract_size * sym.margin_factor;
-		if (sym.IsForex()) {
-			buy_used_margin  /= leverage;
-			sell_used_margin /= leverage;
-		}
-		ASSERT(IsFin(buy_used_margin));
-		ASSERT(IsFin(sell_used_margin));
+		double buy_used_margin = GetMargin(i, buy_lots);
+		double sell_used_margin = GetMargin(i, sell_lots);
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
 	}
@@ -529,7 +556,7 @@ void Brokerage::SignalOrders(bool debug_print) {
 		const Symbol& sym = symbols[i];
 		if (sym_buy_lots > 0.0) {
 			double price = RealtimeAsk(i);
-			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * 0.99, price * 1.01, 0, 0);
+			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * (1 - limit_factor), price * (1 + limit_factor), 0, 0);
 			if (debug_print) {
 				if (r == -1) {
 					WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
@@ -540,7 +567,7 @@ void Brokerage::SignalOrders(bool debug_print) {
 		}
 		if (sym_sell_lots > 0.0) {
 			double price = RealtimeBid(i);
-			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * 1.01, price * 0.99, 0, 0);
+			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * (1 + limit_factor), price * (1 - limit_factor), 0, 0);
 			if (debug_print) {
 				if (r == -1) {
 					WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));

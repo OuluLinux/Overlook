@@ -50,7 +50,7 @@ void Agent::Stop() {
 }
 
 void Agent::Main() {
-	ASSERT(!at_main);
+	if (at_main) return;
 	at_main = true;
 	RefreshTotalEpochs();
 	if (epoch_total > 0) {

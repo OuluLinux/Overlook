@@ -16,12 +16,18 @@ GroupOverview::GroupOverview()
 	modelist <<= THISBACK(SetMode);
 	
 	epsilon <<= THISBACK(SetEpsilon);
+	limit_factor <<= THISBACK(SetLimitFactor);
 }
 
 void GroupOverview::SetMode() {
 	int i = modelist.GetIndex();
 	if (group)
 		group->SetMode(i);
+}
+
+void GroupOverview::SetLimitFactor() {
+	if (group)
+		group->limit_factor = limit_factor.GetData();
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
@@ -71,8 +77,10 @@ void GroupOverview::Data() {
 		
 		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
 		
-		if (!group->agents.IsEmpty())
+		if (!group->agents.IsEmpty()) {
 			epsilon.SetData(group->agents[0].dqn.GetEpsilon());
+			limit_factor.SetData(group->limit_factor);
+		}
 		info.SetLabel(infostr);
 	}
 }
@@ -181,13 +189,7 @@ void AgentTabCtrl::Data() {
 		overview.epsilon.SetLabel(DblStr(agent->dqn.GetEpsilon()));
 		
 		
-		double minimum_margin =
-			GetMetaTrader().GetAskBid()[agent->sym].ask *
-			sym.volume_min *
-			sym.contract_size *
-			sym.margin_factor;
-		if (sym.IsForex())
-			minimum_margin /= GetMetaTrader().AccountLeverage();
+		double minimum_margin = GetMetaTrader().GetMargin(agent->sym, sym.volume_min);
 		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));
 	}
 	else if (tab == 1) {
@@ -253,7 +255,6 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.tflist.ColumnWidths("3 1");
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
-	newview.freeze_sig.Set(true);
 	newview.allbasefx  <<= THISBACK1(Select, 0);
 	newview.allbasecfd <<= THISBACK1(Select, 1);
 	newview.allfx      <<= THISBACK1(Select, 2);

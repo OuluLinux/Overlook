@@ -14,6 +14,7 @@ AgentGroup::AgentGroup() {
 	act_iter = 0;
 	mode = 0;
 	
+	limit_factor = 0.01;
 	global_free_margin_level = 0.97;
 	buf_count = 0;
 	enable_training = true;
@@ -60,6 +61,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
 		sb->RefreshOrders();
 	}
+	broker.SetLimitFactor(limit_factor);
 	
 	WhenInfo("Updating orders");
 	broker.SignalOrders(true);
@@ -411,7 +413,7 @@ void AgentGroup::LoadThis() {
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
 	s % go % agents % tf_ids % sym_ids % created % name % param_str
-	  % global_free_margin_level
+	  % global_free_margin_level % limit_factor
 	  % agent_input_width % agent_input_height
 	  % group_input_width % group_input_height
 	  % mode % sig_freeze

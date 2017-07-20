@@ -21,6 +21,7 @@ public:
 	
 	void SetGroup(AgentGroup& group);
 	void SetEpsilon() {if (group) group->SetEpsilon(epsilon.GetData());}
+	void SetLimitFactor();
 	void SetMode();
 	
 	void Data();
@@ -42,6 +43,7 @@ public:
 	void Data();
 	void SetGroup(AgentGroup& group);
 	void SetEnabled();
+	void SetLimitFactor();
 	void ResetGroupOptimizer();
 	
 };

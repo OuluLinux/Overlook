@@ -17,6 +17,7 @@ public:
 	String name;
 	String param_str;
 	double global_free_margin_level;
+	double limit_factor;
 	int agent_input_width, agent_input_height;
 	int group_input_width, group_input_height;
 	int mode;

@@ -46,31 +46,52 @@ void Manager::Stop() {
 }
 
 void Manager::Main() {
-	Time time = GetMetaTrader().GetTime();
+	MetaTrader& mt = GetMetaTrader();
+	Time time = mt.GetTime();
 	sys->SetEnd(time);
 	
 	AgentGroup* best_group = GetBestGroup();
 	if (best_group) {
 		int shift = sys->GetShiftFromTimeTf(time, best_group->tf_ids.Top());
 		if (prev_shift != shift) {
-			sys->WhenInfo("Shift changed");
-			
-			// Forced askbid data download
-			DataBridgeCommon& common = GetDataBridgeCommon();
-			common.DownloadAskBid();
-			common.RefreshAskBidData(true);
-			
-			// Refresh databridges
-			best_group->ProcessDataBridgeQueue();
-			
-			// Use best group to set broker signals
-			bool succ = best_group->PutLatest(GetMetaTrader());
-			
-			// Notify about successful signals
-			if (succ) {
+			int wday = DayOfWeek(time);
+			if (wday == 0 || wday == 6) {
+				// Do nothing
 				prev_shift = shift;
+			} else {
+				sys->WhenInfo("Shift changed");
 				
-				sys->WhenRealtimeUpdate();
+				// Forced askbid data download
+				DataBridgeCommon& common = GetDataBridgeCommon();
+				common.DownloadAskBid();
+				common.RefreshAskBidData(true);
+				
+				// Refresh databridges
+				best_group->ProcessDataBridgeQueue();
+				
+				// Use best group to set broker signals
+				bool succ = best_group->PutLatest(mt);
+				
+				// Notify about successful signals
+				if (succ) {
+					prev_shift = shift;
+					
+					sys->WhenRealtimeUpdate();
+				}
+			}
+		}
+		
+		// Check for market closing (weekend and holidays)
+		else {
+			sys->WhenInfo("Closing all orders before market break");
+			Time after_hour = time + 60*60;
+			int wday_after_hour = DayOfWeek(after_hour);
+			if (wday_after_hour == 0 || wday_after_hour == 6) {
+				for(int i = 0; i < mt.GetSymbolCount(); i++) {
+					mt.SetSignal(i, 0);
+					mt.SetSignalFreeze(i, false);
+				}
+				mt.SignalOrders(true);
 			}
 		}
 	} else {

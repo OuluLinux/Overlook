@@ -13,7 +13,7 @@ Brokerage::Brokerage() {
 	selected = -1;
 	tf_h1_id = -1;
 	account_currency_id = -1;
-	leverage = 0;
+	leverage = 1000;
 	limit_factor = 0.01;
 	fixed_volume = false;
 }
@@ -24,7 +24,8 @@ double Brokerage::GetMargin(int sym_id, double volume) {
 	double used_margin = 0.0;
 	if (sym.IsForex()) {
 		if (sym.proxy_id == -1) {
-			used_margin = volume * sym.contract_size;
+			const Price& p = askbid[sym_id];
+			used_margin = p.ask * volume * sym.contract_size;
 		} else {
 			const Price& p = askbid[sym.proxy_id];
 			if (sym.proxy_factor == -1)
@@ -36,7 +37,8 @@ double Brokerage::GetMargin(int sym_id, double volume) {
 	}
 	else {
 		if (sym.proxy_id == -1) {
-			used_margin = volume * sym.contract_size * sym.margin_factor;
+			const Price& p = askbid[sym_id];
+			used_margin = p.ask * volume * sym.contract_size * sym.margin_factor;
 		} else {
 			const Price& p = askbid[sym.proxy_id];
 			if (sym.proxy_factor == -1)
@@ -59,7 +61,6 @@ void Brokerage::Clear() {
 	
 	balance = initial_balance;
 	equity = initial_balance;
-	leverage = 1000;
 	margin = 0;
 	margin_free = equity;
 	free_margin_level = 0.95;

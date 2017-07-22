@@ -2223,4 +2223,13 @@ I`'ll use javascript for that this time.&]
 for some stupid reasons. Now they seem to work again, at least 
 for forex.&]
 [s0;%- I promised a rant tomorrow with the release and I still plan 
-to do it.]]
+to do it.&]
+[s3;%- 22.7.2017&]
+[s0;%- Well that was a fun release day... too fun to write that rant. 
+Also, turned out that my friend gets married next summer and 
+I am the best man, so that`'s new to me. Today in hangover, I`'ve 
+started making N`-Trance `- Set you free remix, but I got also 
+improvement idea to Overlook, which I had to do.&]
+[s0;%- There was a gap between H4 and D1: H8 and H12, which might 
+have more success than H4. I added few lines to generate those.&]
+[s0;%- ]]

@@ -375,6 +375,14 @@ void DataBridge::RefreshFromHistory() {
 	int period = GetPeriod();
 	int tf = GetTf();
 	int mt_period = period * bs.GetBasePeriod() / 60;
+	bool join_bars = false;
+	int sub_count = 0;
+	if (tf >= mt.GetTimeframeCount()) {
+		sub_count = mt_period / 240;
+		ASSERT(mt_period % 240 == 0);
+		mt_period = 240;
+		join_bars = true;
+	}
 	String symbol = bs.GetSymbol(GetSymbol());
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
@@ -459,6 +467,23 @@ void DataBridge::RefreshFromHistory() {
 			}
 			common.points[GetSymbol()] = point;
 			// TODO: check all data and don't rely on close
+		}
+		else {
+			if (join_bars) {
+				if (time < cur) {
+					double prev_low = low_buf.Get(count-1);
+					if (low < prev_low) low_buf.Set(count-1, low);
+					
+					double prev_high = high_buf.Get(count-1);
+					if (high > prev_high) high_buf.Set(count-1, high);
+					
+					volume_buf.Inc(count-1, tick_volume);
+					continue;
+				}
+			} else {
+				if (time < cur)
+					continue;
+			}
 		}
 		
 		while (cur < time && count < bars) {

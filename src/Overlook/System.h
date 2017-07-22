@@ -160,7 +160,6 @@ protected:
 	Manager			mgr;
 	Data			data;
 	Vector<String>	period_strings;
-	Vector<int>		tfbars_in_slowtf;
 	Vector<int>		bars;
 	Index<String>	symbols;
 	Index<int>		periods;

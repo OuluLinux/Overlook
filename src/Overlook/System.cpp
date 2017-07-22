@@ -58,13 +58,18 @@ void System::Init() {
 		int base = 1; // mins
 		//SetBasePeriod(60*base);
 		Vector<int> tfs;
+		bool has_h12 = false, has_h8 = false;
 		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			int tf = mt.GetTimeframe(i);
+			if (tf == 720) has_h12 = true;
+			if (tf == 480) has_h8 = true;
 			if (tf >= base) {
 				tfs.Add(tf / base);
-				AddPeriod(mt.GetTimeframeString(i), tf * 60);
+				AddPeriod(mt.GetTimeframeString(i), tf * 60 / base);
 			}
 		}
+		if (!has_h12 && (720 % base) == 0) AddPeriod("H12 gen", 720 * 60 / base);
+		if (!has_h8 && (480 % base) == 0)  AddPeriod("H8 gen", 480 * 60 / base);
 		
 		int64 sym_count = symbols.GetCount();
 		int64 tf_count = periods.GetCount();
@@ -97,13 +102,6 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	period /= base_period;
 	
-	if (count) {
-		int i = period / periods[count-1];
-		if (i <= 1) throw DataExc();
-		if (count-1 != tfbars_in_slowtf.GetCount()) throw DataExc();
-		tfbars_in_slowtf.Add(i);
-	}
-	
 	period_strings.Add(nice_str);
 	periods.Add(period);
 	
@@ -115,6 +113,8 @@ void System::AddPeriod(String nice_str, int period) {
 	else if (period == 30)		begin = Time(2015,11,9);
 	else if (period == 60)		begin = Time(2015,5,13);
 	else if (period == 240)		begin = Time(2009,12,21);
+	else if (period == 480)		begin = Time(2009,12,21);
+	else if (period == 720)		begin = Time(2009,12,21);
 	else if (period == 1440)	begin = Time(2000,5,3);
 	else if (period == 10080)	begin = Time(1996,6,23);
 	else if (period == 43200)	begin = Time(1995,1,1);

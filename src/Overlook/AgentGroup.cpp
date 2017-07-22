@@ -13,6 +13,8 @@ AgentGroup::AgentGroup() {
 	signal_size = 0;
 	act_iter = 0;
 	mode = 0;
+	main_tf = -1;
+	main_tf_pos = -1;
 	
 	limit_factor = 0.01;
 	global_free_margin_level = 0.97;
@@ -35,7 +37,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	RefreshSnapshots();
 	
 	Time time = GetMetaTrader().GetTime();
-	int shift = sys->GetShiftFromTimeTf(time, tf_ids.Top());
+	int shift = sys->GetShiftFromTimeTf(time, main_tf);
 	if (shift != train_pos_all.Top()) {
 		WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, train_pos_all.Top()));
 		return false;
@@ -166,12 +168,24 @@ void AgentGroup::InitThreads() {
 void AgentGroup::Init() {
 	ASSERT(sys);
 	
+	main_tf = -1;
+	main_tf_pos = -1;
+	int main_tf_period = INT_MAX;
+	for(int i = 0; i < tf_ids.GetCount(); i++) {
+		int period = sys->GetPeriod(tf_ids[i]);
+		if (period < main_tf_period) {
+			main_tf_period = period;
+			main_tf = tf_ids[i];
+			main_tf_pos = i;
+		}
+	}
+	
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
 	
 	tf_periods.SetCount(tf_ids.GetCount(), 1);
 	for(int i = 0; i < tf_ids.GetCount(); i++) {
-		int period = sys->GetPeriod(tf_ids[i]) / sys->GetPeriod(tf_ids.Top());
+		int period = sys->GetPeriod(tf_ids[i]) / main_tf_period;
 		tf_periods[i] = period;
 	}
 	
@@ -196,7 +210,7 @@ void AgentGroup::Init() {
 	total_size = data_size + signal_size;
 	agent_input_width  = 1;
 	agent_input_height = GetSignalPos(sym_ids.GetCount());
-	fastest_period_mins = sys->GetPeriod(tf_ids.Top()) * sys->GetBasePeriod() / 60;
+	fastest_period_mins = sys->GetPeriod(main_tf) * sys->GetBasePeriod() / 60;
 	int wdaymins = 5 * 24 * 60;
 	timeslots = Upp::max(1, wdaymins / fastest_period_mins);
 	group_input_width  = 1;
@@ -436,8 +450,6 @@ int AgentGroup::GetSignalPos(int group_id) const {
 void AgentGroup::RefreshSnapshots() {
 	ProcessWorkQueue();
 	
-	int tf_snap = tf_ids.GetCount()-1;
-	int main_tf = tf_ids[tf_snap];
 	int pos = train_pos_all.Top()+1;
 	int bars = sys->GetCountTf(main_tf);
 	
@@ -530,8 +542,6 @@ void AgentGroup::ResetSnapshot(Snapshot& snap) {
 }
 
 bool AgentGroup::Seek(Snapshot& snap, int shift) {
-	int tf_snap = tf_ids.GetCount() - 1;
-	int main_tf = tf_ids[tf_snap];
 	int bars = sys->GetCountTf(main_tf);
 	if (shift >= bars || shift < 0)
 		return false;
@@ -588,7 +598,7 @@ void AgentGroup::RefreshWorkQueue() {
 	
 	// Get DataBridge work queue
 	Index<int> db_tf_ids, db_indi_ids;
-	db_tf_ids.Add(tf_ids.Top());
+	db_tf_ids.Add(main_tf);
 	db_indi_ids.Add(sys->Find<DataBridge>());
 	sys->GetCoreQueue(db_queue, sym_ids, db_tf_ids, db_indi_ids);
 }
@@ -664,8 +674,7 @@ void AgentGroup::ResetValueBuffers() {
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 	
 	
-	int main_tf = tf_ids.Top();
-	int pos = data_begins.Top();
+	int pos = data_begins[main_tf_pos];
 	int bars = sys->GetCountTf(main_tf);
 	
 	#ifdef flagDEBUG
@@ -749,7 +758,7 @@ void AgentGroup::SetAskBid(SimBroker& sb, int pos) {
 		ConstBuffer& open = core.GetBuffer(0);
 		sb.SetPrice(core.GetSymbol(), open.Get(pos));
 	}
-	sb.SetTime(sys->GetTimeTf(tf_ids.Top(), pos));
+	sb.SetTime(sys->GetTimeTf(main_tf, pos));
 }
 
 }

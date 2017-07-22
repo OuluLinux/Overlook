@@ -213,7 +213,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 		ConstBuffer& open = core.GetBuffer(0);
 		sb.SetPrice(proxy_sym, open.Get(pos));
 	}
-	sb.SetTime(group->sys->GetTimeTf(group->tf_ids.Top(), pos));
+	sb.SetTime(group->sys->GetTimeTf(group->main_tf, pos));
 }
 
 void Agent::Serialize(Stream& s) {

@@ -26,7 +26,7 @@ void Manager::Init() {
 	AgentGroup* best_group = GetBestGroup();
 	prev_update = GetMetaTrader().GetTime();
 	if (best_group)
-		prev_shift = sys->GetShiftFromTimeTf(prev_update, best_group->tf_ids.Top());
+		prev_shift = sys->GetShiftFromTimeTf(prev_update, best_group->main_tf);
 	else
 		prev_shift = -1;
 }
@@ -52,7 +52,7 @@ void Manager::Main() {
 	
 	AgentGroup* best_group = GetBestGroup();
 	if (best_group) {
-		int shift = sys->GetShiftFromTimeTf(time, best_group->tf_ids.Top());
+		int shift = sys->GetShiftFromTimeTf(time, best_group->main_tf);
 		if (prev_shift != shift) {
 			int wday = DayOfWeek(time);
 			if (wday == 0 || wday == 6) {

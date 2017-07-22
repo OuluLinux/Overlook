@@ -40,6 +40,7 @@ public:
 	int buf_count;
 	int data_size, signal_size, total_size;
 	int act_iter;
+	int main_tf, main_tf_pos;
 	bool reset_optimizer;
 	bool allow_realtime;
 	System* sys;

@@ -94,6 +94,8 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 		else if (accum_buf > 0) signal = +1;
 		else signal = 0;
     }
+    
+    snap.signals[group_id] = signal;
 	
 	if (next_snap) {
 		

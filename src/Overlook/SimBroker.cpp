@@ -10,6 +10,19 @@ SimBroker::SimBroker() {
 	close_sum = 0;
 	profit_sum = 0.0;
 	loss_sum = 0.0;
+	collect_limit = 0.0;
+	collected = 0.0;
+	do_collect = false;
+	
+}
+
+void SimBroker::SetCollecting(double d) {
+	if (d <= 0.0)
+		do_collect = false;
+	else {
+		do_collect = true;
+		collect_limit = d;
+	}
 }
 
 void SimBroker::Init() {
@@ -50,6 +63,7 @@ void SimBroker::Clear() {
 	close_sum = 0;
 	profit_sum = 0.0;
 	loss_sum = 0.0;
+	collected = 0.0;
 	
 	
 	symbol_profits.SetCount(symbols.GetCount(), 0);
@@ -72,6 +86,12 @@ double SimBroker::PopCloseSum() {
 
 void SimBroker::Cycle() {
 	SignalOrders();
+	if (do_collect) {
+		if (balance > collect_limit) {
+			collected += balance - collect_limit;
+			balance = collect_limit;
+		}
+	}
 }
 
 void SimBroker::CycleChanges() {

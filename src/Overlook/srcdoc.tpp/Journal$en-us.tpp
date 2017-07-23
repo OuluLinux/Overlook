@@ -2232,4 +2232,11 @@ started making N`-Trance `- Set you free remix, but I got also
 improvement idea to Overlook, which I had to do.&]
 [s0;%- There was a gap between H4 and D1: H8 and H12, which might 
 have more success than H4. I added few lines to generate those.&]
+[s3;%- 23.7.2017&]
+[s0;%- Turned out, that AgentGroup optimizer was still buggy. It`'s 
+now fixed, but there is still improvements to do. SimBroker gets 
+stuck with high account value and reason for it is hard to trace. 
+Maybe DQN`-agent could be brought back with different reward 
+model and it could do some `"collecting`" to avoid getting account 
+value too high. Btw, it`'s still not related to real life performance...&]
 [s0;%- ]]

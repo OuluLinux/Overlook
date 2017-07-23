@@ -42,6 +42,7 @@ struct TfSymAverage {
 struct Snapshot : Moveable<Snapshot> {
 	Vector<double> values;
 	Vector<int> time_values;
+	Vector<char> signals;
 	Time time, added;
 	int shift;
 	

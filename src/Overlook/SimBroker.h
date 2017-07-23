@@ -12,8 +12,10 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	Time cycle_time;
 	double close_sum;
 	double profit_sum, loss_sum;
+	double collect_limit, collected;
 	int order_counter;
 	bool lightweight;
+	bool do_collect;
 	
 public:
 	SimBroker();
@@ -34,9 +36,11 @@ public:
 	const Vector<double>& GetSymbolProfits() const {return symbol_profits;}
 	const Vector<double>& GetSymbolCycleChanges() const {return symbol_profit_diffs;}
 	double GetDrawdown() const;
+	double GetCollected() const {return collected;}
 	
 	void SetPrice(int sym, double price);
 	void SetTime(const Time& t) {cycle_time = t;}
+	void SetCollecting(double d);
 	
 	// MT4-like functions
 	virtual int		iBars(String symbol, int timeframe);

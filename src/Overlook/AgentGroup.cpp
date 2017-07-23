@@ -17,7 +17,7 @@ AgentGroup::AgentGroup() {
 	main_tf_pos = -1;
 	
 	limit_factor = 0.01;
-	global_free_margin_level = 0.97;
+	global_free_margin_level = 0.90;
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
@@ -139,16 +139,15 @@ void AgentGroup::CreateAgents() {
 void AgentGroup::Create(int width, int height) {
 	go.SetArrayCount(width);
 	go.SetCount(height);
-	go.SetPopulation(1000);
+	go.SetPopulation(10);
 	go.SetMaxGenerations(100);
 	
 	
-	int sensors = timeslots * sym_ids.GetCount();
-	ASSERT(height == sensors + 1);
+	int sensors = timeslots;
+	ASSERT(height == sensors);
 	for(int i = 0; i < sensors; i++) {
-		go.Set(i, 0, +4, 1);
+		go.Set(i, 0.75, 0.999, 0.001);
 	}
-	go.Set(sensors, 0.0, 1.0, 0.001);
 	
 	
 	//go.UseLimits();
@@ -196,6 +195,8 @@ void AgentGroup::Init() {
 	indi_ids.Add(indi);
 	
 	
+	broker.SetCollecting(1000000.0);
+	
 	RefreshWorkQueue();
 	
 	Progress(1, 6, "Processing data");
@@ -214,7 +215,7 @@ void AgentGroup::Init() {
 	int wdaymins = 5 * 24 * 60;
 	timeslots = Upp::max(1, wdaymins / fastest_period_mins);
 	group_input_width  = 1;
-	group_input_height = timeslots * sym_ids.GetCount() + 1;
+	group_input_height = timeslots;
 	
 	Progress(3, 6, "Reseting snapshots");
 	InitThreads();
@@ -303,7 +304,7 @@ void AgentGroup::Main() {
 	Action();
 	
 	if (!allow_realtime && (!epoch_actual == epoch_total-1 || broker.AccountEquity() < 0.4 * begin_equity)) {
-		double energy = broker.AccountEquity() - broker.GetInitialBalance();
+		double energy = broker.GetCollected() + broker.AccountEquity() - broker.GetInitialBalance();
 		go.Stop(energy);
 		epoch_actual = 0;
 	}
@@ -353,51 +354,36 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap)
 		#endif
 		{
 		    // Get signals from snapshots, where agents have wrote their latest signals.
-		    int sig_pos = GetSignalPos(i);
-		    double pos = 1.0 - snap.values[sig_pos];
-		    double neg = 1.0 - snap.values[sig_pos + 1];
-		    double dsignal = pos > 0.0 ? +pos : -neg;
-		    
-		    
-		    // Simplify signals
-		    if      (dsignal == 0.0) signal =  0;
-			else if (dsignal >  0.0) signal = +1;
-			else if (dsignal <  0.0) signal = -1;
-			else Panic("Invalid action");
+		    signal = snap.signals[i];
+		}
 			
-			
-			// Multiply signal by genetic optimizer value
-			int go_pos = i * timeslots + timeslot;
-			double sig_multiplier = go_values[go_pos];
-			signal = Upp::min(+4, Upp::max(0, (int)(sig_multiplier * signal)));
-			
-			
-			// Set signal to broker
-			if (!sig_freeze) {
-				// Don't use signal freezing. Might cause unreasonable costs.
+		// Set signal to broker
+		if (!sig_freeze) {
+			// Don't use signal freezing. Might cause unreasonable costs.
+			broker.SetSignal(sym, signal);
+			broker.SetSignalFreeze(sym, false);
+		} else {
+			// Set signal to broker, but freeze it if it's same than previously.
+			int prev_signal = broker.GetSignal(sym);
+			if (signal != prev_signal) {
 				broker.SetSignal(sym, signal);
 				broker.SetSignalFreeze(sym, false);
 			} else {
-				// Set signal to broker, but freeze it if it's same than previously.
-				int prev_signal = broker.GetSignal(sym);
-				if (signal != prev_signal) {
-					broker.SetSignal(sym, signal);
-					broker.SetSignalFreeze(sym, false);
-				} else {
-					broker.SetSignalFreeze(sym, true);
-				}
+				broker.SetSignalFreeze(sym, true);
 			}
 		}
     }
 	
 	// Set free-margin level
-	double fmlevel = go_values.Top();
-	if (fmlevel < 0.80)
-		fmlevel = 0.80;
+	/*double fmlevel = go_values[timeslot];
+	if (fmlevel < 0.75)
+		fmlevel = 0.75;
 	else if (fmlevel > 0.99)
 		fmlevel = 0.99;
 	broker.SetFreeMarginLevel(fmlevel);
-	global_free_margin_level = fmlevel;
+	global_free_margin_level = fmlevel;*/
+	
+	
 }
 
 void AgentGroup::Backward(double reward) {
@@ -563,6 +549,7 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	snap.added = GetSysTime();
 	snap.shift = shift;
 	
+	snap.signals.SetCount(sym_ids.GetCount(), 0);
 	
 	// Time sensor
 	int vpos = 0;

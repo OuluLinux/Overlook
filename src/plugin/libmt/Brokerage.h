@@ -91,6 +91,7 @@ public:
 	void SetFreeMargin(double d) {ASSERT(d >= 0.20 && d <= 1.0); free_margin_level = d;}
 	void SetFixedVolume(bool b=true) {fixed_volume = b;}
 	void SetLimitFactor(double d) {limit_factor = d;}
+	void SetLeverage(double d) {leverage = d;}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

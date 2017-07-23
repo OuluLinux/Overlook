@@ -64,7 +64,7 @@ void GroupOverview::Data() {
 		
 		String infostr;
 		infostr << "Name: " << group->name << "\n";
-		infostr << "Free-margin level: " << group->global_free_margin_level << "\n";
+		infostr << "Free-margin level: " << group->fmlevel << "\n";
 		infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
 		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
 		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";

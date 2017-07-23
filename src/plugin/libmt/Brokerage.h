@@ -54,6 +54,8 @@ public:
 	void operator=(const Brokerage& b);
 	
 	virtual void Clear();
+	virtual void CollectOnce(double d) {}
+	
 	void ForwardExposure();
 	void SignalOrders(bool debug_print=false);
 	void SetFreeMarginLevel(double d);

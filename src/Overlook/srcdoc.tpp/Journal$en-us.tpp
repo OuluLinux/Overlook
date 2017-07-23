@@ -6,7 +6,7 @@ topic "Journal";
 [{_}%FI-FI 
 [s1; Journal&]
 [s0; I write this journal to keep myself focused on the end result: 
-the working product. This text is sort of an invenstement, which 
+the working product. This text is sort of an investment, which 
 loses value if I don`'t get the product work.&]
 [s0; I like to tell how original this application is and to communicate 
 the countless hours and the sweat what I did see for this. The 
@@ -2239,4 +2239,13 @@ stuck with high account value and reason for it is hard to trace.
 Maybe DQN`-agent could be brought back with different reward 
 model and it could do some `"collecting`" to avoid getting account 
 value too high. Btw, it`'s still not related to real life performance...&]
+[s0;%- ...&]
+[s0;%- Hmm... so many mistakes today. The reward function for AgentGroup 
+is definitely not any collecting or order closing. It actually 
+seems to lose almost in every way to timeslot local optimizer, 
+but it just doesn`'t break the SimBroker for too high value...&]
+[s0;%- ...&]
+[s0;%- This just might work. DQN with AgentGroup seems to match the 
+performance of the timeslot optimizer after training for a while. 
+I think I`'ll stick with this solution.&]
 [s0;%- ]]

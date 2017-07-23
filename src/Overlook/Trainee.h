@@ -72,8 +72,7 @@ struct TraineeBase {
 	int epoch_actual, epoch_total;
 	int main_id;
 	bool at_main, save_epoch;
-	
-	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG,     ACTIONCOUNT};
+	bool data_looped_once;
 	
 	TraineeBase();
 	void Init();

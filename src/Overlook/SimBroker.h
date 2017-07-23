@@ -13,6 +13,7 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 	double close_sum;
 	double profit_sum, loss_sum;
 	double collect_limit, collected;
+	double prev_equity;
 	int order_counter;
 	bool lightweight;
 	bool do_collect;
@@ -23,6 +24,7 @@ public:
 	void Init();
 	void InitLightweight();
 	virtual void Clear();
+	virtual void CollectOnce(double d) {balance -= d;}
 	void Cycle();
 	void CycleChanges();
 	void RefreshOrders();

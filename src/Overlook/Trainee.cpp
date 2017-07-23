@@ -15,6 +15,7 @@ TraineeBase::TraineeBase() {
 	main_id = -1;
 	at_main = false;
 	save_epoch = true;
+	data_looped_once = false;
 }
 
 void TraineeBase::Init() {
@@ -89,6 +90,7 @@ void TraineeBase::Action() {
 		broker.Cycle();
 	else
 		broker.CloseAll();
+	
 	double reward = broker.PopCloseSum();
 	Backward(reward);
 	double equity = broker.AccountEquity();
@@ -101,7 +103,7 @@ void TraineeBase::Action() {
 	
 	
 	epoch_actual++;
-	if (epoch_actual >= epoch_total && !group->allow_realtime) {
+	if (epoch_actual >= epoch_total && !group->allow_realtime && !group->is_looping) {
 		seq_results.Add(equity);
 		epoch_actual = 0;
 		if (diff > best_result || best_result == 0.0)
@@ -109,6 +111,7 @@ void TraineeBase::Action() {
 		training_time += ts.Elapsed() / (1000.0 * 60.0 * 60.0);
 		ts.Reset();
 		last_drawdown = broker.GetDrawdown();
+		data_looped_once = true;
 	}
 }
 

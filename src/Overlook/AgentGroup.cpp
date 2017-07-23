@@ -17,13 +17,14 @@ AgentGroup::AgentGroup() {
 	main_tf_pos = -1;
 	
 	limit_factor = 0.01;
-	global_free_margin_level = 0.90;
+	fmlevel = 0.90;
 	buf_count = 0;
 	enable_training = true;
 	sig_freeze = true;
 	reset_optimizer = false;
 	accum_signal = false;
 	allow_realtime = false;
+	is_looping = false;
 }
 
 AgentGroup::~AgentGroup() {
@@ -44,14 +45,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	}
 	
 	WhenInfo("Looping agents until latest snapshot");
-	for(int i = 0; i < agents.GetCount(); i++) {
-		Agent& agent = agents[i];
-		agent.RefreshTotalEpochs();
-		while (agent.epoch_actual < agent.epoch_total) {
-			agent.Main();
-		}
-		ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
-	}
+	LoopAgentsToEnd();
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
 	Forward(shift_snap, broker, NULL);
 	
@@ -71,6 +65,26 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	return true;
 }
 
+void AgentGroup::LoopAgentsToEnd() {
+	is_looping = true;
+	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
+	for(int i = 0; i < agents.GetCount(); i++) {
+		co & THISBACK1(LoopAgentToEnd, i);
+	}
+	co.Finish();
+	is_looping = false;
+}
+
+void AgentGroup::LoopAgentToEnd(int i) {
+	Agent& agent = agents[i];
+	agent.RefreshTotalEpochs();
+	while (agent.epoch_actual < agent.epoch_total) {
+		agent.Main();
+	}
+	ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
+}
+
 void AgentGroup::Progress(int actual, int total, String desc) {
 	a0 = actual;
 	t0 = total;
@@ -86,6 +100,7 @@ void AgentGroup::SubProgress(int actual, int total) {
 }
 
 void AgentGroup::SetEpsilon(double d) {
+	dqn.SetEpsilon(d);
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].dqn.SetEpsilon(d);
 }
@@ -109,10 +124,10 @@ void AgentGroup::SetMode(int i) {
 	
 	// Start new mode
 	mode = i;
-	if      (mode == 0) {
+	if      (mode == 0 && enable_training) {
 		StartAgents();
 	}
-	else if (mode == 1) {
+	else if (mode == 1 && enable_training) {
 		StartGroup();
 	}
 	else if (mode == 2) {
@@ -137,21 +152,13 @@ void AgentGroup::CreateAgents() {
 }
 
 void AgentGroup::Create(int width, int height) {
-	go.SetArrayCount(width);
-	go.SetCount(height);
-	go.SetPopulation(10);
-	go.SetMaxGenerations(100);
 	
+	// Don't use ACT_RESETSIG if signal accumulation is not in use
+	dqn.Init(width, height, 12);
+	dqn.Reset();
 	
-	int sensors = timeslots;
-	ASSERT(height == sensors);
-	for(int i = 0; i < sensors; i++) {
-		go.Set(i, 0.75, 0.999, 0.001);
-	}
-	
-	
-	//go.UseLimits();
-	go.Init();
+	ASSERT(!group->param_str.IsEmpty());
+	dqn.LoadInitJSON(group->param_str);
 }
 
 void AgentGroup::InitThreads() {
@@ -194,9 +201,6 @@ void AgentGroup::Init() {
 	ASSERT(indi != -1);
 	indi_ids.Add(indi);
 	
-	
-	broker.SetCollecting(1000000.0);
-	
 	RefreshWorkQueue();
 	
 	Progress(1, 6, "Processing data");
@@ -211,18 +215,17 @@ void AgentGroup::Init() {
 	total_size = data_size + signal_size;
 	agent_input_width  = 1;
 	agent_input_height = GetSignalPos(sym_ids.GetCount());
-	fastest_period_mins = sys->GetPeriod(main_tf) * sys->GetBasePeriod() / 60;
-	int wdaymins = 5 * 24 * 60;
-	timeslots = Upp::max(1, wdaymins / fastest_period_mins);
+	
 	group_input_width  = 1;
-	group_input_height = timeslots;
+	group_input_height = agent_input_height + 2;
+	input_values.SetCount(group_input_height, 0);
 	
 	Progress(3, 6, "Reseting snapshots");
 	InitThreads();
 	
 	Progress(4, 6, "Initializing group trainee");
 	group = this;
-	if (agents.IsEmpty()) {
+	if (dqn.GetWidth() == 0) {
 		Create(group_input_width, group_input_height);
 	}
 	TraineeBase::Init();
@@ -286,8 +289,10 @@ void AgentGroup::Main() {
 	ASSERT(!at_main);
 	at_main = true;
 	epoch_total = snaps.GetCount();
-	if (epoch_actual >= epoch_total)
+	if (epoch_actual >= epoch_total) {
+		data_looped_once = true;
 		epoch_actual = 0;
+	}
 	
 	if (reset_optimizer) {
 		reset_optimizer = false;
@@ -295,17 +300,26 @@ void AgentGroup::Main() {
 		Create(group_input_width, group_input_height);
 	}
 	
-	if (!allow_realtime && epoch_actual == 0) {
-		prev_reward = 0;
-		go.Start();
+	if (epoch_actual == 0) {
+		if (!allow_realtime) {
+			
+			// Loop agents to the end if program boots directly to group optimizer.
+			bool all_looped_once = true;
+			for(int i = 0; i < agents.GetCount(); i++)
+				if (!agents[i].data_looped_once)
+					all_looped_once = false;
+			if (!all_looped_once)
+				LoopAgentsToEnd();
+			
+		}
+		prev_equity = broker.GetInitialBalance();
 	}
+	
 	
 	// Do some action
 	Action();
 	
 	if (!allow_realtime && (!epoch_actual == epoch_total-1 || broker.AccountEquity() < 0.4 * begin_equity)) {
-		double energy = broker.GetCollected() + broker.AccountEquity() - broker.GetInitialBalance();
-		go.Stop(energy);
 		epoch_actual = 0;
 	}
 	
@@ -327,18 +341,12 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap)
 	//		- data sensors
 	//		- 'accum_buf'
 	// - free-margin-level
-	// - active instruments total / maximum
-	// - account change sensor
-	// - instrument value / (0.1 * equity) or something
+	// - account value sensor
+	memcpy(input_values.Begin(), snap.values.Begin(), snap.values.GetCount());
+	int sensor_id = group_input_height - 2;
 	
-	int timeslot = (((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * 60 + snap.time_values[4]) / fastest_period_mins;
-	ASSERT(timeslot >= 0 && timeslot < timeslots);
-	
-	const Vector<double>& go_values = !allow_realtime ?
-		 go.GetTrialSolution() :
-		 go.GetBestSolution();
-	ASSERT(go_values.GetCount() == group_input_height);
-	
+	input_values[sensor_id++] = fmlevel;
+	input_values[sensor_id++] = Upp::max(0.0, Upp::min(1.0, broker.AccountEquity() * 0.00000001));
 	
 	// Additional sensor values
     for(int i = 0; i < sym_ids.GetCount(); i++) {
@@ -375,20 +383,21 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap)
     }
 	
 	// Set free-margin level
-	/*double fmlevel = go_values[timeslot];
-	if (fmlevel < 0.75)
-		fmlevel = 0.75;
-	else if (fmlevel > 0.99)
-		fmlevel = 0.99;
+	ASSERT(input_values.GetCount() == group_input_height);
+	
+	int action = dqn.Act(input_values);
+	fmlevel = 1.0 - (1 + action) * 0.025;
 	broker.SetFreeMarginLevel(fmlevel);
-	global_free_margin_level = fmlevel;*/
-	
-	
 }
 
 void AgentGroup::Backward(double reward) {
-	prev_reward = reward;
+	double equity = broker.AccountEquity();
+	double change = equity - prev_equity;
+	reward = change / prev_equity;
 	
+	dqn.Learn(reward);
+	
+	prev_equity = equity;
 	iter++;
 }
 
@@ -412,8 +421,8 @@ void AgentGroup::LoadThis() {
 
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % go % agents % tf_ids % sym_ids % created % name % param_str
-	  % global_free_margin_level % limit_factor
+	s % dqn % agents % tf_ids % sym_ids % created % name % param_str
+	  % fmlevel % limit_factor
 	  % agent_input_width % agent_input_height
 	  % group_input_width % group_input_height
 	  % mode % sig_freeze
@@ -456,7 +465,6 @@ void AgentGroup::RefreshSnapshots() {
 		if (tf_type < 2 && (wday == 0 || wday == 6))
 			continue;
 		
-		//LOG("Agent::RefreshSnapshots: Creating snapshot at " << Format("%", t));
 		One<Snapshot> snap;
 		snap.Create();
 		

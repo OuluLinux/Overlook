@@ -46,6 +46,7 @@ protected:
 	int GetRandomAction() const {return Random(ACTIONCOUNT);}
 	int GetAction(const Volume& fwd, int sym) const;
 	
+	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG,     ACTIONCOUNT};
 	
 public:
 	typedef Agent CLASSNAME;

@@ -52,9 +52,9 @@ void Manager::Main() {
 	
 	AgentGroup* best_group = GetBestGroup();
 	if (best_group) {
+		int wday = DayOfWeek(time);
 		int shift = sys->GetShiftFromTimeTf(time, best_group->main_tf);
 		if (prev_shift != shift) {
-			int wday = DayOfWeek(time);
 			if (wday == 0 || wday == 6) {
 				// Do nothing
 				prev_shift = shift;
@@ -83,10 +83,10 @@ void Manager::Main() {
 		
 		// Check for market closing (weekend and holidays)
 		else {
-			sys->WhenInfo("Closing all orders before market break");
 			Time after_hour = time + 60*60;
 			int wday_after_hour = DayOfWeek(after_hour);
-			if (wday_after_hour == 0 || wday_after_hour == 6) {
+			if (wday == 5 && wday_after_hour == 6) {
+				sys->WhenInfo("Closing all orders before market break");
 				for(int i = 0; i < mt.GetSymbolCount(); i++) {
 					mt.SetSignal(i, 0);
 					mt.SetSignalFreeze(i, false);

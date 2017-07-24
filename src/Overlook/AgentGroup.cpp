@@ -79,6 +79,7 @@ void AgentGroup::LoopAgentsToEnd() {
 void AgentGroup::LoopAgentToEnd(int i) {
 	Agent& agent = agents[i];
 	agent.RefreshTotalEpochs();
+	agent.epoch_actual = 0;
 	while (agent.epoch_actual < agent.epoch_total) {
 		agent.Main();
 	}

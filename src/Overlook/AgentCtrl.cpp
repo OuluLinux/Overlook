@@ -27,14 +27,25 @@ void SnapshotDraw::Paint(Draw& w) {
 	int tf_count		= group.tf_ids.GetCount();
 	int value_count		= group.buf_count;
 	
-	int rows = sym_count * tf_count;
+	int rows = 1 + sym_count * tf_count + sym_count;
 	int cols = value_count;
 	int grid_w = sz.cx;
 	double xstep = (double)grid_w / (double)cols;
 	double ystep = (double)sz.cy / (double)rows;
-	
-	
 	int row = 0;
+	
+	
+	// Time value
+	{
+		double value = 255.0 * Upp::max(0.0, Upp::min(1.0, snap.values[0]));
+		int clr = Upp::min(255.0, value);
+		Color c(255 - clr, clr, 0);
+		id.DrawRect(0, 0, sz.cx, ystep+1, c);
+	}
+	row++;
+	
+	
+	// Data sensors
 	for(int i = 0; i < tf_count; i++) {
 		for(int j = 0; j < sym_count; j++) {
 			int y = row * ystep;
@@ -57,6 +68,31 @@ void SnapshotDraw::Paint(Draw& w) {
 			row++;
 		}
 	}
+	
+	// Sensor values
+	cols = 6;
+	xstep = (double)grid_w / (double)cols;
+	for(int j = 0; j < sym_count; j++) {
+		int y = row * ystep;
+		int y2 = (row + 1) * ystep;
+		int h = y2-y;
+		
+		for(int k = 0; k < cols; k++) {
+			int x = k * xstep;
+			int x2 = (k + 1) * xstep;
+			int w = x2 - x;
+			double d = snap.values[group.data_size + j * cols + k];
+			double min = 0.0;
+			double max = 1.0;
+			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
+			int clr = Upp::min(255.0, value);
+			Color c(255 - clr, clr, 0);
+			id.DrawRect(x, y, w, h, c);
+		}
+		
+		row++;
+	}
+	
 	
 	w.DrawImage(0,0,id);
 }

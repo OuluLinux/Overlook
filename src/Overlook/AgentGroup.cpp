@@ -47,7 +47,12 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	WhenInfo("Looping agents until latest snapshot");
 	LoopAgentsToEnd();
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
+	
+	// Set probability for random actions to 0
+	double prev_epsilon = dqn.GetEpsilon();
+	dqn.SetEpsilon(0);
 	Forward(shift_snap, broker, NULL);
+	dqn.SetEpsilon(prev_epsilon); // restore random probability
 	
 	WhenInfo("Refreshing broker data");
 	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
@@ -67,12 +72,15 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 
 void AgentGroup::LoopAgentsToEnd() {
 	is_looping = true;
+	double prev_epsilon = dqn.GetEpsilon();
+	SetEpsilon(0);
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
 	for(int i = 0; i < agents.GetCount(); i++) {
 		co & THISBACK1(LoopAgentToEnd, i);
 	}
 	co.Finish();
+	SetEpsilon(prev_epsilon);
 	is_looping = false;
 }
 

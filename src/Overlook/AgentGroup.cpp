@@ -133,14 +133,16 @@ void AgentGroup::SetMode(int i) {
 	
 	// Start new mode
 	mode = i;
-	if      (mode == 0 && enable_training) {
-		StartAgents();
-	}
-	else if (mode == 1 && enable_training) {
-		StartGroup();
-	}
-	else if (mode == 2) {
-		allow_realtime = true;
+	if (enable_training) {
+		if      (mode == 0) {
+			StartAgents();
+		}
+		else if (mode == 1) {
+			StartGroup();
+		}
+		else if (mode == 2) {
+			allow_realtime = true;
+		}
 	}
 }
 

@@ -354,6 +354,7 @@ void SnapshotCtrl::Data() {
 		list.Set(i, 1, snap.time);
 		list.Set(i, 2, snap.added);
 	}
+	list.SetCount(group.snaps.GetCount());
 	
 	if (cursor >= 0 && cursor < group.snaps.GetCount())
 		draw.SetSnap(cursor);

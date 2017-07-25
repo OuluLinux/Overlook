@@ -2248,4 +2248,18 @@ but it just doesn`'t break the SimBroker for too high value...&]
 [s0;%- This just might work. DQN with AgentGroup seems to match the 
 performance of the timeslot optimizer after training for a while. 
 I think I`'ll stick with this solution.&]
-[s0;%- ]]
+[s3;%- 24.7.2017&]
+[s0;%- Still some bugfixing had do be done today. Also, training 
+had to be restarted, because serialization changed so much. Turned 
+out, that the experience vector must be serialized too or otherwise 
+the training doesn`'t continue correctly after restart. The serialization 
+file grew from 200Mt to 2Gt... and that can`'t be fixed.&]
+[s0;%- I haven`'t had correct realtime processing yet, but maybe 
+starting from midnight... There is sill chance for bad bugs, 
+but I think I`'ll still start the Post`-Release part tomorrow.&]
+[s3;%- 25.7.2017&]
+[s0;%- I finally noticed incorrect profit calculations with proxy 
+currency. There`'s no documentation for that so I had to find 
+out those formulas by trial and error. Everything must be re`-trained 
+after this fix...&]
+[s0;%-  ]]

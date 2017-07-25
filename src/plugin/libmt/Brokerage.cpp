@@ -398,23 +398,9 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (!signal) continue;
 		if (signal > 0) {
 			buy_signals[i] += signal;
-			if (sym.proxy_id != -1) {
-				const Symbol& proxy = symbols[sym.proxy_id];
-				if (proxy.base_mul == +1)
-					buy_signals[sym.proxy_id] += signal;
-				else
-					sell_signals[sym.proxy_id] += signal;
-			}
 		}
 		else {
 			sell_signals[i] -= signal;
-			if (sym.proxy_id != -1) {
-				const Symbol& proxy = symbols[sym.proxy_id];
-				if (proxy.base_mul == +1)
-					sell_signals[sym.proxy_id] -= signal;
-				else
-					buy_signals[sym.proxy_id] -= signal;
-			}
 		}
 	}
 	if (debug_print) {

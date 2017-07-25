@@ -295,27 +295,25 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 		ASSERT(proxy.base_mul != 0);
 		if (o.type == OP_BUY) {
 			double change = volume * (askbid[o.symbol].bid / o.open - 1.0);
-			double proxy_change;
 			if (proxy.base_mul == +1) {
-				proxy_change =      volume * (askbid[sym.proxy_id].bid / o.proxy_open - 1.0);
+				change /= askbid[sym.proxy_id].bid;
 			}
 			else if (proxy.base_mul == -1) {
-				proxy_change = -1 * volume * (askbid[sym.proxy_id].ask / o.proxy_open - 1.0);
+				change *= askbid[sym.proxy_id].ask;
 			}
 			else Panic("Invalid proxy sym");
-			return change + proxy_change;
+			return change;
 		}
 		else if (o.type == OP_SELL) {
 			double change = -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
-			double proxy_change;
-			if (proxy.base_mul == -1) {
-				proxy_change =      volume * (askbid[sym.proxy_id].bid / o.proxy_open - 1.0);
+			if (proxy.base_mul == +1) {
+				change /= askbid[sym.proxy_id].ask;
 			}
-			else if (proxy.base_mul == +1) {
-				proxy_change = -1 * volume * (askbid[sym.proxy_id].ask / o.proxy_open - 1.0);
+			else if (proxy.base_mul == -1) {
+				change *= askbid[sym.proxy_id].bid;
 			}
 			else Panic("Invalid proxy sym");
-			return change + proxy_change;
+			return change;
 		}
 		else Panic("Type handling not implemented");
 	}

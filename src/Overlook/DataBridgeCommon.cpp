@@ -125,7 +125,7 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	
 	FileAppend out(local_path);
 	if (!out.IsOpen()) return 1;
-	int offset = out.GetSize();
+	int offset = (int)out.GetSize(); // No >2Gt files expected
 	out.SeekEnd();
 	
 	// Get the MT4 remote file
@@ -203,7 +203,7 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	String local_askbid_file = ConfigFile("askbid.bin");
 	FileIn src(local_askbid_file);
 	ASSERTEXC(src.IsOpen() && src.GetSize());
-	int data_size = src.GetSize();
+	int data_size = (int)src.GetSize(); // No >2Gt files expected
 	
 	src.Seek(cursor);
 	

@@ -300,7 +300,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	
 	DrawGrid(W, true);
     
-	int f, pos, x, c2, y, h, c, w;
+	int f, pos, x, y, h, c, w;
 	double diff;
     Rect r(GetGraphCtrlRect());
     int tf = group->GetTf();
@@ -368,7 +368,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 		DrawGrid(W, false);
 	}
 	
-	int pos, x, c2, y, h, c, data_shift, data_begin, data_count, draw_type, style, line_width, line_style;
+	int pos, x, y, h, c, data_shift, data_begin, data_count, draw_type, style, line_width, line_style;
 	double diff;
     Rect r(GetGraphCtrlRect());
     bool skip_zero;
@@ -433,7 +433,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	        if (skip_zero && value == 0) continue;
 	        V = (1 - (value  - lo) / diff) * h;
 			
-			P << Point(x+(i+0.5)*div, y+V);
+			P << Point((int)(x+(i+0.5)*div), (int)(y+V));
 		}
 		
 		if (line_style == STYLE_DASH)				line_width = PEN_DASH;
@@ -455,9 +455,9 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	        if (skip_zero && value == 0) continue;
 	        V = (1 - (value  - lo) / diff) * h;
 			Z = (1 - (0      - lo) / diff) * h;
-			int xV = x+(i+0.25)*div;
-			int yV = y+V;
-			int yZ = y+Z;
+			int xV = (int)(x+(i+0.25)*div);
+			int yV = (int)(y+V);
+			int yZ = (int)(y+Z);
 			int height = abs(yV-yZ);
 			if (value < 0) {
 				W.DrawRect(xV, yZ, div/2, height, value_color);
@@ -480,7 +480,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	        if (skip_zero && value == 0) continue;
 	        V = (1 - (value  - lo) / diff) * h;
 	        
-	        W.DrawText(x+(i+0.5)*div, y+V, str, StdFont(), value_color);
+	        W.DrawText((int)(x+(i+0.5)*div), (int)(y+V), str, StdFont(), value_color);
 		}
 	}
 	
@@ -509,7 +509,7 @@ void GraphCtrl::DrawLines(Draw& d, Core& cont) {
 			else if (type == STYLE_DASHDOTDOT)	line_width = PEN_DASHDOTDOT;
 			else if (line_width == 1)			line_width = PEN_DOT;
 			
-			int y = r.top +  (1 - (value  - lo) / diff) * h;
+			int y = (int)(r.top +  (1 - (value  - lo) / diff) * h);
 			
 			d.DrawLine(r.left, y, r.left+w, y, line_width, grid_color);
 			text = FormatDoubleFix(value, 5, FD_ZEROS);

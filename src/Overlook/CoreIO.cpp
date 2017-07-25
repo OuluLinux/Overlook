@@ -181,7 +181,7 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			int64 add = begin != INT_MAX ? buf.value.GetCount() - begin : -1;
 			if (add > 0) {
 				out.Seek(begin * sizeof(double));
-				out.Put(buf.value.Begin() + begin, add * sizeof(double));
+				out.Put(buf.value.Begin() + begin, (int)(add * sizeof(double)));
 			}
 		}
 	}
@@ -286,7 +286,7 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 				continue;
 			}
 			
-			int count = in.GetSize() / sizeof(double);
+			int count = (int)(in.GetSize() / sizeof(double));
 			if (count > 0) {
 				buf.value.SetCount(count);
 				in.Get(buf.value.Begin(), count * sizeof(double));

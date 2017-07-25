@@ -550,7 +550,8 @@ void QueryTable::Evolve(int best_row, int candidate, Vector<byte>& output_row) {
 		int best		= Get0(n, best_solution);
 		int value1		= Get0(n, sample1);
 		int value2		= Get0(n, sample2);
-		Set0(n, best + scale * (value1 - value2), output_row);
+		int int_value   = (int)(best + scale * (value1 - value2));
+		Set0(n, int_value, output_row);
 		n = (n + 1) % columns.GetCount();
 	}
 }

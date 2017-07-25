@@ -135,7 +135,7 @@ inline Color DodgerBlue() {return Color(30, 144, 255);}
 inline Color SaddleBrown() {return Color(139, 69, 19);}
 inline Color Pink() {return Color(255, 192, 203);}
 inline Color RainbowColor(double progress) {
-    int div = progress * 6;
+    int div = (int)(progress * 6);
     int ascending = (int) (progress * 255);
     int descending = 255 - ascending;
 
@@ -164,7 +164,7 @@ inline int IncreaseMonthTS(int ts) {
 	int month = t.month;
 	month++;
 	if (month == 13) {year++; month=1;}
-	return Time(year,month,1).Get() - epoch;
+	return (int)(Time(year,month,1).Get() - epoch);
 }
 
 class CoreIO;

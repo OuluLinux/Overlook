@@ -206,9 +206,9 @@ public:
 	Time GetEnd() const {return end;}
 	int GetBeginTS(int tf) {return begin_ts[tf];}
 	int GetBasePeriod() const {return base_period;}
-	int64 GetShiftTf(int src_tf, int dst_tf, int shift);
-	int64 GetShiftFromTimeTf(int timestamp, int tf);
-	int64 GetShiftFromTimeTf(const Time& t, int tf);
+	int GetShiftTf(int src_tf, int dst_tf, int shift);
+	int GetShiftFromTimeTf(int timestamp, int tf);
+	int GetShiftFromTimeTf(const Time& t, int tf);
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	Manager& GetManager() {return mgr;}

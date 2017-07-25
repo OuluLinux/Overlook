@@ -38,9 +38,9 @@ void SnapshotDraw::Paint(Draw& w) {
 	// Time value
 	{
 		double value = 255.0 * Upp::max(0.0, Upp::min(1.0, snap.values[0]));
-		int clr = Upp::min(255.0, value);
+		int clr = (int)Upp::min(255.0, value);
 		Color c(255 - clr, clr, 0);
-		id.DrawRect(0, 0, sz.cx, ystep+1, c);
+		id.DrawRect(0, 0, sz.cx, (int)(ystep+1), c);
 	}
 	row++;
 	
@@ -48,19 +48,19 @@ void SnapshotDraw::Paint(Draw& w) {
 	// Data sensors
 	for(int i = 0; i < tf_count; i++) {
 		for(int j = 0; j < sym_count; j++) {
-			int y = row * ystep;
-			int y2 = (row + 1) * ystep;
+			int y = (int)(row * ystep);
+			int y2 = (int)((row + 1) * ystep);
 			int h = y2-y;
 			
 			for(int k = 0; k < value_count; k++) {
-				int x = k * xstep;
-				int x2 = (k + 1) * xstep;
+				int x = (int)(k * xstep);
+				int x2 = (int)((k + 1) * xstep);
 				int w = x2 - x;
 				double d = snap.values[1 + (j * group.tf_ids.GetCount() + i) * value_count + k];
 				double min = 0.0;
 				double max = 1.0;
 				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-				int clr = Upp::min(255.0, value);
+				int clr = (int)Upp::min(255.0, value);
 				Color c(255 - clr, clr, 0);
 				id.DrawRect(x, y, w, h, c);
 			}
@@ -73,19 +73,19 @@ void SnapshotDraw::Paint(Draw& w) {
 	cols = 6;
 	xstep = (double)grid_w / (double)cols;
 	for(int j = 0; j < sym_count; j++) {
-		int y = row * ystep;
-		int y2 = (row + 1) * ystep;
+		int y = (int)(row * ystep);
+		int y2 = (int)((row + 1) * ystep);
 		int h = y2-y;
 		
 		for(int k = 0; k < cols; k++) {
-			int x = k * xstep;
-			int x2 = (k + 1) * xstep;
+			int x = (int)(k * xstep);
+			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
 			double d = snap.values[group.data_size + j * cols + k];
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-			int clr = Upp::min(255.0, value);
+			int clr = (int)Upp::min(255.0, value);
 			Color c(255 - clr, clr, 0);
 			id.DrawRect(x, y, w, h, c);
 		}
@@ -147,8 +147,8 @@ void ResultGraph::Paint(Draw& w) {
 			polyline.SetCount(count);
 			for(int j = 0; j < count; j++) {
 				double v = data[j];
-				double y = sz.cy - (v - min) / diff * sz.cy;
-				int x = j * xstep;
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				int x = (int)(j * xstep);
 				polyline[j] = Point(x, y);
 			}
 			id.DrawPolyline(polyline, 1, Color(193, 255, 255));
@@ -222,8 +222,9 @@ void EquityGraph::Paint(Draw& w) {
 			polyline.SetCount(count);
 			for(int j = 0; j < count; j++) {
 				double v = data[j];
-				double y = sz.cy - (v - min) / diff * sz.cy;
-				polyline[j] = Point(j * xstep, y);
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline[j] = Point(x, y);
 				if (v > peak) peak = v;
 			}
 			last = data[count-1];

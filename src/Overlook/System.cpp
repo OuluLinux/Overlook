@@ -71,8 +71,8 @@ void System::Init() {
 		if (!has_h12 && (720 % base) == 0) AddPeriod("H12 gen", 720 * 60 / base);
 		if (!has_h8 && (480 % base) == 0)  AddPeriod("H8 gen", 480 * 60 / base);
 		
-		int64 sym_count = symbols.GetCount();
-		int64 tf_count = periods.GetCount();
+		int sym_count = symbols.GetCount();
+		int tf_count = periods.GetCount();
 	
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();
@@ -120,7 +120,7 @@ void System::AddPeriod(String nice_str, int period) {
 	else if (period == 43200)	begin = Time(1995,1,1);
 	else Panic("Invalid period: " + IntStr(period));
 	this->begin.Add(begin);
-	this->begin_ts.Add(begin.Get() - Time(1970,1,1).Get());
+	this->begin_ts.Add((int)(begin.Get() - Time(1970,1,1).Get()));
 }
 
 void System::AddSymbol(String sym) {
@@ -135,12 +135,12 @@ Time System::GetTimeTf(int tf, int pos) const {
 int System::GetCountTf(int tf_id) const {
 	int64 timediff = end.Get() - begin[tf_id].Get();
 	int div = base_period * periods[tf_id];
-	int count = timediff / div;
+	int count = (int)(timediff / div);
 	if (count % div != 0) count++;
 	return count;
 }
 
-int64 System::GetShiftTf(int src_tf, int dst_tf, int shift) {
+int System::GetShiftTf(int src_tf, int dst_tf, int shift) {
 	if (src_tf == dst_tf) return shift;
 	int64 src_period = periods[src_tf];
 	int64 dst_period = periods[dst_tf];
@@ -161,17 +161,17 @@ int64 System::GetShiftTf(int src_tf, int dst_tf, int shift) {
 	}
 	#endif
 	
-	return dst_shift;
+	return (int)dst_shift;
 }
 
-int64 System::GetShiftFromTimeTf(int timestamp, int tf) {
+int System::GetShiftFromTimeTf(int timestamp, int tf) {
 	int64 timediff = timestamp - begin_ts[tf];
-	return (int64)(timediff / periods[tf] / base_period);
+	return (int)(timediff / periods[tf] / base_period);
 }
 
-int64 System::GetShiftFromTimeTf(const Time& t, int tf) {
+int System::GetShiftFromTimeTf(const Time& t, int tf) {
 	int64 timediff = t.Get() - begin[tf].Get();
-	return (int64)(timediff / periods[tf] / base_period);
+	return (int)(timediff / periods[tf] / base_period);
 }
 
 void System::AddCustomCtrl(const String& name, CoreFactoryPtr f, CtrlFactoryPtr c) {

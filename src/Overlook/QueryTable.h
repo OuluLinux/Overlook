@@ -22,6 +22,7 @@ inline int MaxBits(uint32 max_value) {
 			return i+1;
 	}
 	Panic("Invalid value");
+	return 0; // NEVER
 }
 
 class QueryTable;

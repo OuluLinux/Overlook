@@ -324,7 +324,7 @@ double SimBroker::OrderClosePrice() {
 }
 
 int SimBroker::OrderCloseTime() {
-	return orders[selected].end.Get() - Time(1970,1,1).Get();
+	return (int)(orders[selected].end.Get() - Time(1970,1,1).Get());
 }
 
 String SimBroker::OrderComment() {
@@ -340,7 +340,7 @@ int SimBroker::OrderDelete(int ticket) {
 }
 
 int SimBroker::OrderExpiration() {
-	return orders[selected].expiration.Get() - Time(1970,1,1).Get();
+	return (int)(orders[selected].expiration.Get() - Time(1970,1,1).Get());
 }
 
 double SimBroker::OrderLots() {
@@ -361,7 +361,7 @@ double SimBroker::OrderOpenPrice() {
 }
 
 int SimBroker::OrderOpenTime() {
-	return orders[selected].begin.Get() - Time(1970,1,1).Get();
+	return (int)(orders[selected].begin.Get() - Time(1970,1,1).Get());
 }
 
 double SimBroker::OrderProfit() {

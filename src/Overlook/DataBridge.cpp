@@ -266,7 +266,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		
 		// Find min/max
 		double diff = i ? open_buf.Get(i) - open_buf.Get(i-1) : 0.0;
-		int step = diff / point;
+		int step = (int)(diff / point);
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
@@ -410,7 +410,7 @@ void DataBridge::RefreshFromHistory() {
 		throw DataExc();
 	double point = 1.0 / pow(10.0, digits);
 	common.points[GetSymbol()] = point;
-	int data_size = src.GetSize();
+	int data_size = (int)src.GetSize();
 	const int struct_size = 8 + 4*8 + 8 + 4 + 8;
 	byte row[struct_size];
 	double prev_close;
@@ -424,7 +424,7 @@ void DataBridge::RefreshFromHistory() {
 	// Seek to begin of the data
 	int cursor = (4+64+12+4+4+4+4 +13*4);
 	int count = 0;
-	int expected_count = (src.GetSize() - cursor) / struct_size;
+	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
 	src.Seek(cursor);
 	
 	volume_qt.Reserve(expected_count);
@@ -477,7 +477,7 @@ void DataBridge::RefreshFromHistory() {
 					double prev_high = high_buf.Get(count-1);
 					if (high > prev_high) high_buf.Set(count-1, high);
 					
-					volume_buf.Inc(count-1, tick_volume);
+					volume_buf.Inc(count-1, (int)tick_volume);
 					continue;
 				}
 			} else {
@@ -518,7 +518,7 @@ void DataBridge::RefreshFromHistory() {
 		
 		// Find min/max
 		double diff = count >= 2 ? open_buf.Get(count-1) - open_buf.Get(count-2) : 0.0;
-		int step = diff / point;
+		int step = (int)(diff / point);
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
@@ -547,7 +547,7 @@ void DataBridge::RefreshFromHistory() {
 		int minute = t.minute;
 		int i0 = GetChangeStep(i, 16);
 		int pos = 0;
-		int tick_volume = volume_buf.Get(i);
+		int tick_volume = (int)volume_buf.Get(i);
 		if (tick_volume > 0) {
 			volume_qt.Set(row, pos++, Upp::min(tick_volume, 524287));
 			if (!slow_volume) {
@@ -668,7 +668,7 @@ void DataBridge::RefreshVirtualNode() {
 		
 		// Find min/max
 		double diff = i ? open.Get(i) - open.Get(i-1) : 0.0;
-		int step = diff / point;
+		int step = (int)(diff / point);
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
@@ -682,14 +682,14 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 	int change = 0;
 	if (shift > 0) {
 		ConstBuffer& open_buf = GetBuffer(0);
-		change = (open_buf.Get(shift) - open_buf.Get(shift-1)) / point;
+		change = (int)((open_buf.Get(shift) - open_buf.Get(shift-1)) / point);
 	}
 	int max_change = median_max * 2;
 	int min_change = median_min * 2;
 	int diff = max_change - min_change;
 	if (!diff) return steps / 2;
 	double step = (double)diff / steps;
-	int v = (change - min_change) / step;
+	int v = (int)((change - min_change) / step);
 	if (v < 0) v = 0;
 	if (v >= steps) v = steps -1;
 	return v;

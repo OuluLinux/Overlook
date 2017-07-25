@@ -18,11 +18,11 @@ struct AssetGraphDislay : public Display {
 		double d = q;
 		if (d < 0) {
 			Color clr = Color(135, 22, 0);
-			g.left  += g.Width() * (1.0 + d);
+			g.left  += (int)(g.Width() * (1.0 + d));
 			w.DrawRect(g, clr);
 		} else {
 			Color clr = Color(0, 134, 0);
-			g.right -= g.Width() * (1.0 - d);
+			g.right -= (int)(g.Width() * (1.0 - d));
 			w.DrawRect(g, clr);
 		}
 	}

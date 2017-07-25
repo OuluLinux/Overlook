@@ -161,7 +161,7 @@ void Overlook::Configure() {
 	
 	Size sz(320, reg.args.GetCount()*30 + 50);
 	tw->SetRect(sz);
-	int xoff = sz.cx * 0.5;
+	int xoff = (int)(sz.cx * 0.5);
 	
 	for(int i = 0; i < reg.args.GetCount(); i++) {
 		Label& lbl = labels.Add();

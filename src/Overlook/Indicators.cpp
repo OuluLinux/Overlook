@@ -3152,7 +3152,7 @@ void SupportResistance::Start() {
 	else counted++;
 	//bars--;
 	
-	Vector<double> crosses;
+	Vector<int> crosses;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
@@ -3161,7 +3161,7 @@ void SupportResistance::Start() {
 		double highesthigh = High(highest);
 		double lowestlow   = Low(lowest);
 		
-		int count = (highesthigh - lowestlow) / point + 1;
+		int count = (int)((highesthigh - lowestlow) / point + 1);
 		double inc = point;
 		int inc_points = 1;
 		while (count > 1000) {
@@ -3180,8 +3180,8 @@ void SupportResistance::Start() {
 			double high = High(j);
 			double low  = Low(j);
 			
-			int low_pos  = (low  - lowestlow)   / inc;
-			int high_pos = (high - lowestlow) / inc;
+			int low_pos  = (int)((low  - lowestlow) / inc);
+			int high_pos = (int)((high - lowestlow) / inc);
 			if (high_pos >= count) high_pos = count - 1;
 			
 			for(int k = low_pos; k <= high_pos; k++) {
@@ -3190,7 +3190,7 @@ void SupportResistance::Start() {
 		}
 		
 		double close = Open(i);
-		int value_pos = (close  - lowestlow)  / inc;
+		int value_pos = (int)((close  - lowestlow) / inc);
 		if (value_pos >= count) value_pos = count - 1;
 		if (value_pos < 0) value_pos = 0;
 		

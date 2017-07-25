@@ -149,7 +149,6 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) {
 void Agent::Backward(double reward) {
 	// Write reward average to the next snapshot
 	if (next_snap) {
-		double pos, neg;
 		int reward_pos = group->GetSignalPos(group_id) + 4;
 		if (reward > 0.0) {
 			reward_average.Add(reward);
@@ -186,7 +185,7 @@ void Agent::Backward(double reward) {
 
 int Agent::GetAction(const Volume& fwd, int sym) const {
 	int pos = sym * ACTIONCOUNT;
-	double max_col = 0;
+	int max_col = 0;
 	double max_val = fwd.Get(pos);
 	for(int i = 1; i < ACTIONCOUNT; i++) {
 		double val = fwd.Get(pos + i);

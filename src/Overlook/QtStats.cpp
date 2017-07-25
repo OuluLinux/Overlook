@@ -106,7 +106,7 @@ void QtStats::Start() {
 	double diff       = diffs[id];
 	//LOG(Format("i=%d sym=%d tf=%d max=%f min=%f diff=%f", ii, id, 0, max_change, min_change, diff));
 	
-	peek = pow(2, max_timesteps-1);
+	peek = (int)pow(2, max_timesteps-1);
 	bars -= peek;
 	
 	qt.Reserve(bars);
@@ -178,7 +178,7 @@ void QtStats::Start() {
 				// Correlation to the main symbol
 				ConstBuffer& cbuf = GetInputBuffer(2, GetSymbol(), thistf, csym);
 				double corr = cbuf.GetUnsafe(i);
-				v = (corr + 1.0) / 2.0 * steps;
+				v = (int)((corr + 1.0) / 2.0 * steps);
 				if (v == steps) v = steps - 1; // equal to 1.0 doesn't need own range
 				ASSERT(v >= 0 && v < steps);
 				qt.Set(row, pos++, v);

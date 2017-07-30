@@ -8,7 +8,7 @@ class AgentGroup : public TraineeBase {
 public:
 	
 	// Persistent
-	ConvNet::DQNAgent dqn;
+	CoreUtils::GeneticOptimizer go;
 	Array<Agent> agents;
 	Vector<int> train_pos_all;
 	Index<int> tf_ids, sym_ids;
@@ -28,18 +28,19 @@ public:
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Vector<Core*> > databridge_cores;
 	Array<Snapshot> snaps;
-	Vector<double> input_values;
+	Vector<int> symsignals;
 	Vector<int> data_begins;
 	Vector<int> tf_minperiods, tf_periods, tf_types;
 	Index<int> indi_ids;
-	TimeStop last_store;
+	TimeStop last_store, last_datagather;
 	double prev_equity;
-	int fastest_period_mins;
+	double prev_reward;
 	int buf_count;
 	int data_size, signal_size, total_size;
 	int act_iter;
 	int main_tf, main_tf_pos;
 	int symid_count;
+	int fastest_period_mins, timeslots;
 	bool reset_optimizer;
 	bool allow_realtime;
 	bool is_looping;
@@ -59,6 +60,7 @@ public:
 	void StopGroup();
 	void StopAgents();
 	void Main();
+	void Data();
 	virtual void Create(int width, int height);
 	virtual void Forward(Snapshot& snap, SimBroker& broker) {Forward(snap, (Brokerage&)broker);}
 	virtual void Backward(double reward);

@@ -46,10 +46,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
 	
 	// Set probability for random actions to 0
-	double prev_epsilon = dqn.GetEpsilon();
-	dqn.SetEpsilon(0);
 	Forward(shift_snap, broker);
-	dqn.SetEpsilon(prev_epsilon); // restore random probability
 	
 	WhenInfo("Refreshing broker data");
 	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
@@ -63,13 +60,15 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	
 	WhenInfo("Updating orders");
 	broker.SignalOrders(true);
+	broker.RefreshLimits();
 	
 	return true;
 }
 
 void AgentGroup::LoopAgentsToEnd() {
+	if (agents.IsEmpty()) return;
 	is_looping = true;
-	double prev_epsilon = dqn.GetEpsilon();
+	double prev_epsilon = agents[0].dqn.GetEpsilon();
 	SetEpsilon(0);
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
@@ -106,7 +105,6 @@ void AgentGroup::SubProgress(int actual, int total) {
 }
 
 void AgentGroup::SetEpsilon(double d) {
-	dqn.SetEpsilon(d);
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].dqn.SetEpsilon(d);
 }
@@ -169,13 +167,24 @@ void AgentGroup::CreateAgents() {
 }
 
 void AgentGroup::Create(int width, int height) {
+	go.SetArrayCount(width);
+	go.SetCount(height);
+	go.SetPopulation(100);
+	go.SetMaxGenerations(1000);
 	
-	// Don't use ACT_RESETSIG if signal accumulation is not in use
-	dqn.Init(width, height, 12);
-	dqn.Reset();
 	
-	ASSERT(!group->param_str.IsEmpty());
-	dqn.LoadInitJSON(group->param_str);
+	int sensors = symid_count + timeslots;
+	ASSERT(height == sensors);
+	
+	for(int i = 0; i < symid_count; i++)
+		go.Set(i, 0, +10, 1, "Agent #" + IntStr(i) + " weight");
+	
+	for(int i = 0; i < timeslots; i++)
+		go.Set(symid_count + i, 0.70, 0.99, 0.01, "Timeslot #" + IntStr(i) + " free-margin level");
+	
+	
+	go.UseLimits();
+	go.Init();
 }
 
 void AgentGroup::Init() {
@@ -197,6 +206,10 @@ void AgentGroup::Init() {
 	}
 	tf_id = main_tf_pos;
 	tf = main_tf;
+	
+	fastest_period_mins = sys->GetPeriod(main_tf) * sys->GetBasePeriod() / 60;
+	int wdaymins = 5 * 24 * 60;
+	timeslots = Upp::max(1, wdaymins / fastest_period_mins);
 	
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
@@ -240,12 +253,11 @@ void AgentGroup::Init() {
 	RefreshSnapshots();
 	
 	group_input_width  = 1;
-	group_input_height = 1 + tf_ids.GetCount() * (sym_ids.GetCount() * buf_count + sym_ids.GetCount() * 2 * 2);
-	input_values.SetCount(group_input_height, 0);
+	group_input_height = symid_count + timeslots;
 	
 	Progress(4, 6, "Initializing group trainee");
 	group = this;
-	if (dqn.GetWidth() == 0) {
+	if (go.GetCount() <= 0) {
 		Create(group_input_width, group_input_height);
 	}
 	TraineeBase::Init();
@@ -305,6 +317,36 @@ void AgentGroup::StopAgents() {
 	}
 }
 
+void AgentGroup::Data() {
+	if (last_datagather.Elapsed() < 5*60*1000)
+		return;
+	
+	MetaTrader& mt = GetMetaTrader();
+	Array<Order> orders;
+	Vector<int> signals;
+	orders <<= mt.GetOpenOrders();
+	signals <<= mt.GetSignals();
+	
+	mt.Data();
+	
+	int file_version = 1;
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	Time time = mt.GetTime();
+	
+	FileAppend fout(ConfigFile(name + ".log"));
+	int64 begin_pos = fout.GetSize();
+	int size = 0;
+	fout.Put(&size, sizeof(int));
+	fout % file_version % balance % equity % time % signals % orders;
+	int64 end_pos = fout.GetSize();
+	size = end_pos - begin_pos - sizeof(int);
+	fout.Seek(begin_pos);
+	fout.Put(&size, sizeof(int));
+	
+	last_datagather.Reset();
+}
+
 void AgentGroup::Main() {
 	ASSERT(!at_main);
 	at_main = true;
@@ -333,13 +375,19 @@ void AgentGroup::Main() {
 			
 		}
 		prev_equity = broker.GetInitialBalance();
+		prev_reward = 0.0;
+		
+		if (!allow_realtime)
+			go.Start();
 	}
 	
 	
 	// Do some action
 	Action();
 	
-	if (!allow_realtime && (!epoch_actual == epoch_total-1 || broker.AccountEquity() < 0.4 * begin_equity)) {
+	if (!allow_realtime && (end_of_epoch || broker.AccountEquity() < 0.3 * begin_equity)) {
+		double energy = broker.AccountEquity() - broker.GetInitialBalance();
+		go.Stop(energy);
 		epoch_actual = 0;
 	}
 	
@@ -355,24 +403,26 @@ void AgentGroup::Main() {
 
 void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 	
-	// Input values
-	// - data values [0:1]
-	//		- time value
-	//		- data sensors	[1:data_size]
-	//		- 'accum_buf'
-	// - free-margin-level
-	// - account value sensor
-	memcpy(input_values.Begin(), snap.values.Begin(), snap.values.GetCount());
-	int sensor_id = group_input_height - 2;
+	int timeslot = (((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * 60 + snap.time_values[4]) / fastest_period_mins;
+	ASSERT(timeslot >= 0 && timeslot < timeslots);
 	
-	input_values[sensor_id++] = fmlevel;
-	input_values[sensor_id++] = Upp::max(0.0, Upp::min(1.0, broker.AccountEquity() * 0.00000001));
+	const Vector<double>& go_values = !allow_realtime ?
+		 go.GetTrialSolution() :
+		 go.GetBestSolution();
+	ASSERT(go_values.GetCount() == group_input_height);
 	
-	// Additional sensor values
-    for(int i = 0; i < sym_ids.GetCount(); i++) {
-		int sym = sym_ids[i];
+	
+	fmlevel = Upp::min(0.99, Upp::max(0.70, go_values[symid_count + timeslot]));
+	broker.SetFreeMarginLevel(fmlevel);
+	
+	symsignals.SetCount(sym_ids.GetCount());
+	for(int i = 0; i < symsignals.GetCount(); i++) symsignals[i] = 0;
+	
+    for(int i = 0; i < agents.GetCount(); i++) {
+		int sym_id = i % sym_ids.GetCount();
 		int signal;
 		const Agent& a = agents[i];
+		
 		
 		// Very minimum requirement: positive drawdown
 		#ifndef flagDEBUG
@@ -384,7 +434,19 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 		    // Get signals from snapshots, where agents have wrote their latest signals.
 		    signal = snap.signals[i];
 		}
-			
+		
+		
+		int weight = Upp::min(10, Upp::max(0, (int)(go_values[i] + 0.5)));
+		signal *= weight;
+		
+		symsignals[sym_id] += signal;
+    }
+		
+	
+	for(int i = 0; i < symsignals.GetCount(); i++) {
+		int sym = sym_ids[i];
+		int signal = symsignals[i];
+		
 		// Set signal to broker
 		if (!sig_freeze) {
 			// Don't use signal freezing. Might cause unreasonable costs.
@@ -401,13 +463,6 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 			}
 		}
     }
-	
-	// Set free-margin level
-	ASSERT(input_values.GetCount() == group_input_height);
-	
-	int action = dqn.Act(input_values);
-	fmlevel = 1.0 - (1 + action) * 0.025;
-	broker.SetFreeMarginLevel(fmlevel);
 }
 
 void AgentGroup::Backward(double reward) {
@@ -415,7 +470,7 @@ void AgentGroup::Backward(double reward) {
 	double change = equity - prev_equity;
 	reward = change / prev_equity;
 	
-	dqn.Learn(reward);
+	prev_reward = reward;
 	
 	prev_equity = equity;
 	iter++;
@@ -441,7 +496,7 @@ void AgentGroup::LoadThis() {
 
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % dqn % agents % tf_ids % sym_ids % created % name % param_str
+	s % go % agents % tf_ids % sym_ids % created % name % param_str
 	  % fmlevel % limit_factor
 	  % group_input_width % group_input_height
 	  % mode % sig_freeze
@@ -538,6 +593,13 @@ void AgentGroup::RefreshSnapshots() {
 		snap.Create();
 		
 		Seek(*snap, pos);
+		
+		// Remove those snapshots which aren't used at all for better perforfmance
+		if (snap->tfs_used == 0) {
+			train_pos_all.Remove(i);
+			i--;
+			continue;
+		}
 		
 		snap->id = i;
 		
@@ -680,7 +742,7 @@ void AgentGroup::ResetValueBuffers() {
 	databridge_cores.Clear();
 	databridge_cores.SetCount(sys->GetSymbolCount());
 	for(int i = 0; i < databridge_cores.GetCount(); i++)
-		databridge_cores[i].SetCount(sys->GetPeriodCount());
+		databridge_cores[i].SetCount(sys->GetPeriodCount(), NULL);
 	int factory = sys->Find<DataBridge>();
 	for(int i = 0; i < db_queue.GetCount(); i++) {
 		CoreItem& ci = *db_queue[i];
@@ -735,9 +797,13 @@ void AgentGroup::ResetValueBuffers() {
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 	
 	
-	int pos = data_begins[main_tf_pos];
-	int bars = sys->GetCountTf(main_tf);
-	int group_size = symid_count;
+	data_begin = data_begins[main_tf_pos];
+	
+	
+	
+	//int bars = sys->GetCountTf(main_tf);
+	//int group_size = symid_count;
+	
 	
 	
 	/*

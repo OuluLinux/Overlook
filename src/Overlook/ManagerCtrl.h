@@ -35,6 +35,7 @@ class GroupTabCtrl : public TabCtrl {
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
 	TrainingCtrl			trainingctrl;
+	DataCtrl				datactrl;
 	
 public:
 	typedef GroupTabCtrl CLASSNAME;

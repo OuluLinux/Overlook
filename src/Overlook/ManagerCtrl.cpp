@@ -102,6 +102,8 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(trainingctrl, "Training");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
+	Add(datactrl);
+	Add(datactrl, "Recorded data");
 	
 	WhenSet << THISBACK(Data);
 }
@@ -118,6 +120,7 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	overview	.SetGroup(group);
 	trainingctrl.SetTrainee(group);
 	snapctrl	.SetGroup(group);
+	datactrl	.SetGroup(group);
 }
 
 void GroupTabCtrl::Data() {
@@ -128,6 +131,8 @@ void GroupTabCtrl::Data() {
 		trainingctrl.Data();
 	else if (tab == 2)
 		snapctrl.Data();
+	else if (tab == 3)
+		datactrl.Data();
 }
 
 void GroupTabCtrl::SetEnabled() {

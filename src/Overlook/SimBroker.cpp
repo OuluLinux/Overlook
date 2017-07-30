@@ -415,7 +415,7 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	if (symbol == -1) return -1;
 	if (cmd != OP_BUY && cmd != OP_SELL) {last_error = "Invalid command"; return -1;}
 	Symbol& s = symbols[symbol];
-	if (volume < s.volume_min || volume > s.volume_max) {last_error = "Invalid volume"; return -1;}
+	if (volume < s.volume_min) {last_error = "Invalid volume"; return -1;}
 	// TODO: check slippage, stoploss and takeprofit
 	Order& o = orders.Add();
 	o.begin = GetTime();

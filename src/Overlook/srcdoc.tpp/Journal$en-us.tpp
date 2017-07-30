@@ -2262,4 +2262,59 @@ but I think I`'ll still start the Post`-Release part tomorrow.&]
 currency. There`'s no documentation for that so I had to find 
 out those formulas by trial and error. Everything must be re`-trained 
 after this fix...&]
-[s0;%-  ]]
+[s3;%-  27.7.2017&]
+[s0;%- I still didn`'t change to `"after`-release journal`" mode. 
+I have a short tasklist to do and after that I`'ll release v0.2. 
+It will be a lot better than v0.1, which had that fatal error 
+in latest snapshot signal writing which prevented it to work 
+in real`-time properly.&]
+[s0;%- ...&]
+[s0;%- I`'ve been getting positive results in real`-time mode with 
+H12 timeframe. It`'s the first time that I`'m feeling some hard 
+support with this project, but I have still so much to do that 
+I can`'t focus on that.&]
+[s0;%- I must still bring back the DE solver to optimize AgentGroup 
+stuff. This time it will also combine different timeframes. Modes 
+with H12, D1 and W1 works alone, but it`'s even more reliable 
+to use all of them simultaneously, which is what I`'m going to 
+do. So, the slowest must have some fixed volume, which must be 
+cannibalized in case of negative peaks in faster tfs, but that`'s 
+the only exception. Then again, it`'s useless to hedge different 
+tfs against each other and unless you did that negative peak, 
+then you can re`-open the slower with same volume. So obviously 
+you don`'t acquire that useless margin and you go with that weird 
+re`-open mode, and then it`'s so complicated that I can`'t even 
+... tell about it yet. It`'s basically about a list of balancing 
+tasks which must be done in correct order and only input signals 
+(of H12,D1,W1 agents and their weights) can be changed and the 
+huge sequence of signals are trained only by the end result.&]
+[s0;%- One of the tasks is to create a analyzer module, which follows 
+unique real`-time modes what I use and gathers all real`-time 
+data properly. I`'ve said already, that I am trying to use this 
+in my master`'s thesis in the computer science and I have time 
+to do some long`-term testing before that, which requires the 
+data collecting. The Overlook is not the most easiest topic to 
+defend in ethics debate and it basically brings all the dirt 
+from all sides visible, but unless they go full retard religious 
+or nationalist mode, then this is ethical.&]
+[s0;%- ...&]
+[s0;%- Personally, I am so prone to think that the brain is a biological 
+neural machine with inputs and outputs, that I can only think 
+that `"which training/experience will make the brain to put out 
+that it has connection to superior brain instance or not when 
+the input is X`". So in my opinion, a discussion about atheism 
+or theism is outdated.&]
+[s3;%- 30.7.2017&]
+[s0;%- I finished the tasklist. I could release the v0.2, but I`'ll 
+run the app for a while and check for bugs.&]
+[s0;%- The snapshot is HUGE with 21 pairs.. almost 7 Gb and it cannot 
+be made any smaller... unbelieveable. So yeah, serializing the 
+runtime takes fucking 7 Gb snapshot... all of that stuff has 
+valid reason.&]
+[s0;%- The app lacks all sorts of user friendly features, such as 
+progress bar for writing/reading that 7Gb snapshot. I`'m dreaming 
+about the v1.0 release, where all those issues have been resolved 
+and the user gets beautiful fully automated solution, but it`'s 
+a long way there and I have barely time and interest for this 
+engine part.&]
+[s0;%- ]]

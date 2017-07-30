@@ -69,6 +69,7 @@ public:
 	void CloseAll();
 	void Enter() {order_lock.Enter();}
 	void Leave() {order_lock.Leave();}
+	void RefreshLimits();
 	
 	const Array<Order>&	GetOpenOrders() const {return orders;}
 	const Array<Order>&	GetHistoryOrders() const {return history_orders;}
@@ -76,6 +77,7 @@ public:
 	const Vector<Price>&	GetAskBid() const {return askbid;}
 	const Vector<PriceTf>&	GetTickData() const {return pricetf;}
 	const Vector<Asset>&	GetAssets() const {return assets;}
+	const Vector<int>&		GetSignals() const {return signals;}
 	const Symbol& GetSymbol(int i) const {return symbols[i];}
 	int GetTimeframe(int i) {return periodstr.GetKey(i);}
 	const Currency& GetCurrency(int i) const {return currencies[i];}

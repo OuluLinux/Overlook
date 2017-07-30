@@ -6,6 +6,7 @@ namespace libmt {
 class MetaTrader : public Brokerage {
 	Mutex lock;
 	Mutex current_price_lock;
+	Mutex data_lock;
 	String mainaddr;
 	int input, output;
 	int port;

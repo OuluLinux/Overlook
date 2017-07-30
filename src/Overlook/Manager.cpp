@@ -93,6 +93,9 @@ void Manager::Main() {
 				}
 				mt.SignalOrders(true);
 			}
+			
+			if (wday != 0 && wday != 6)
+				best_group->Data();
 		}
 	} else {
 		prev_shift = -1;

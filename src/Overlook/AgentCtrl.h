@@ -89,6 +89,46 @@ public:
 	void Data();
 };
 
+class DataCtrl;
+
+class DataGraph : public Ctrl {
+	
+protected:
+	DataCtrl* dc;
+	Color clr;
+	Vector<Point> polyline;
+	Vector<double> last;
+	
+public:
+	typedef DataGraph CLASSNAME;
+	DataGraph(DataCtrl* dc);
+	
+	virtual void Paint(Draw& w);
+	
+};
+
+class DataCtrl : public ParentCtrl {
+	DataGraph graph;
+	Label data;
+	SliderCtrl timeslider;
+	Splitter hsplit;
+	ArrayCtrl siglist, trade;
+	AgentGroup* group;
+	Vector<int> poslist;
+	int last_pos;
+	
+public:
+	typedef DataCtrl CLASSNAME;
+	DataCtrl();
+	
+	void Data();
+	void GuiData();
+	void SetGroup(AgentGroup& group);
+	
+	
+	Vector<double> equity;
+};
+
 }
 
 #endif

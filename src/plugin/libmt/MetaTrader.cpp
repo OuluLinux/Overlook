@@ -223,6 +223,7 @@ MetaTrader::~MetaTrader() {
 }
 
 void MetaTrader::Data() {
+	data_lock.Enter();
 	balance = _AccountBalance();
 	equity = _AccountEquity();
 	margin = _AccountMargin();
@@ -235,6 +236,7 @@ void MetaTrader::Data() {
 	_GetSymbols();
 	_GetAskBid();
 	_GetOrders(0, true);
+	data_lock.Leave();
 }
 
 int MetaTrader::Init(String addr, int port) {

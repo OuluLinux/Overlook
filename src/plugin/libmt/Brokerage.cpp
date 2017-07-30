@@ -484,8 +484,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 		const Price& p = askbid[i];
 		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * lot_multiplier;
 		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * lot_multiplier;
-		buy_lots[i]  = ((int)(sym_buy_lots  / sym.volume_min)) * sym.volume_min;
-		sell_lots[i] = ((int)(sym_sell_lots / sym.volume_min)) * sym.volume_min;
+		buy_lots[i]  = ((int64)(sym_buy_lots  / sym.volume_min)) * sym.volume_min;
+		sell_lots[i] = ((int64)(sym_sell_lots / sym.volume_min)) * sym.volume_min;
 	}
 	if (debug_print) {
 		DUMPC(buy_lots);
@@ -579,7 +579,22 @@ void Brokerage::SetOrderSignals() {
 	}
 }
 
-
+void Brokerage::RefreshLimits() {
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		if (o.type == OP_BUY) {
+			double stop = RealtimeBid(i);
+			double tp = stop * (1 + limit_factor);
+			double sl = stop * (1 - limit_factor);
+			OrderModify(o.ticket, stop, sl, tp, 0);
+		} else {
+			double stop = RealtimeAsk(i);
+			double tp = stop * (1 - limit_factor);
+			double sl = stop * (1 + limit_factor);
+			OrderModify(o.ticket, stop, sl, tp, 0);
+		}
+	}
+}
 
 
 

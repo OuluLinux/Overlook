@@ -65,7 +65,7 @@ void GroupOverview::Data() {
 		String infostr;
 		infostr << "Name: " << group->name << "\n";
 		infostr << "Free-margin level: " << group->fmlevel << "\n";
-		infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
+		//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
 		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
 		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
 		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
@@ -280,6 +280,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	glist.WhenLeftClick << THISBACK1(SetView, 1);
 	
 	alist.AddColumn("Symbol");
+	alist.AddColumn("Tf");
 	alist.AddColumn("Best result");
 	alist.AddColumn("Drawdown");
 	alist <<= THISBACK1(SetView, 2);
@@ -374,8 +375,9 @@ void ManagerCtrl::Data() {
 			Agent& a = g.agents[i];
 			
 			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
-			alist.Set(i, 1, a.best_result);
-			alist.Set(i, 2, a.last_drawdown);
+			alist.Set(i, 1, sys->GetPeriodString(a.tf));
+			alist.Set(i, 2, a.best_result);
+			alist.Set(i, 3, a.last_drawdown);
 		}
 		alist.SetCount(g.agents.GetCount());
 	}
@@ -426,14 +428,28 @@ void ManagerCtrl::NewAgent() {
 	}
 	
 	// Timeframes
+	Vector<int> tf_ids;
 	for(int i = newview.tflist.GetCount()-1; i >= 0; i--) {
 		if (newview.tflist.Get(i, 1))
-			group.tf_ids.Add(i);
+			tf_ids.Add(i);
 	}
-	if (group.tf_ids.IsEmpty()) {
+	if (tf_ids.IsEmpty()) {
 		PromptOK(DeQtf("At least one timeframe must be selected"));
 		return;
 	}
+	
+	// Sort timeframes
+	struct TfSorter {
+		System* sys;
+		bool operator()(int a, int b) const {
+			return sys->GetPeriod(a) > sys->GetPeriod(b);
+		}
+	};
+	TfSorter sorter;
+	sorter.sys = sys;
+	Sort(tf_ids, sorter);
+	for(int i = 0; i < tf_ids.GetCount(); i++)
+		group.tf_ids.Add(tf_ids[i]);
 	
 	
 	// Symbols

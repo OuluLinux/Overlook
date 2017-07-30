@@ -56,7 +56,7 @@ void SnapshotDraw::Paint(Draw& w) {
 				int x = (int)(k * xstep);
 				int x2 = (int)((k + 1) * xstep);
 				int w = x2 - x;
-				double d = snap.values[1 + (j * group.tf_ids.GetCount() + i) * value_count + k];
+				double d = snap.values[1 + (i * group.sym_ids.GetCount() + j) * value_count + k];
 				double min = 0.0;
 				double max = 1.0;
 				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -70,7 +70,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	}
 	
 	// Sensor values
-	cols = 6;
+	cols = 4;
 	xstep = (double)grid_w / (double)cols;
 	for(int j = 0; j < sym_count; j++) {
 		int y = (int)(row * ystep);
@@ -203,7 +203,7 @@ void EquityGraph::Paint(Draw& w) {
 	int count = data.GetCount();
 	for(int j = 0; j < count; j++) {
 		double d = data[j];
-		if (d == 0.0) break;
+		if (d == 0.0) continue;
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
@@ -219,15 +219,16 @@ void EquityGraph::Paint(Draw& w) {
 		const Vector<double>& data = trainee->thrd_equity;
 		int count = data.GetCount();
 		if (count >= 2) {
-			polyline.SetCount(count);
+			polyline.SetCount(0);
 			for(int j = 0; j < count; j++) {
 				double v = data[j];
+				if (v == 0.0) continue;
+				last = v;
 				int x = (int)(j * xstep);
 				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline[j] = Point(x, y);
+				polyline.Add(Point(x, y));
 				if (v > peak) peak = v;
 			}
-			last = data[count-1];
 			if (polyline.GetCount() >= 2)
 				id.DrawPolyline(polyline, 1, clr);
 		}
@@ -339,6 +340,7 @@ SnapshotCtrl::SnapshotCtrl()
 	list.AddColumn("#");
 	list.AddColumn("Time");
 	list.AddColumn("Added");
+	list.AddColumn("Tfs");
 	
 	list <<= THISBACK(Data);
 }
@@ -354,6 +356,7 @@ void SnapshotCtrl::Data() {
 		list.Set(i, 0, i);
 		list.Set(i, 1, snap.time);
 		list.Set(i, 2, snap.added);
+		list.Set(i, 3, snap.tfs_used);
 	}
 	list.SetCount(group.snaps.GetCount());
 	

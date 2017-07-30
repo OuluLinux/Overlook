@@ -33,6 +33,7 @@ struct OnlineAverage1 : Moveable<OnlineAverage1> {
 	double mean;
 	int count;
 	OnlineAverage1() : mean(0), count(0) {}
+	void Clear() {mean = 0.0; count = 0;}
 	void Add(double a) {
 		if (count == 0) {
 			mean = a;

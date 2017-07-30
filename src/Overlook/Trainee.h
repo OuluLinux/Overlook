@@ -44,10 +44,13 @@ struct Snapshot : Moveable<Snapshot> {
 	Vector<int> time_values;
 	Vector<char> signals;
 	Time time, added;
-	int shift;
+	int shift, tfs_used, id;
+	uint16 tfmask;
 	
-	Snapshot() : shift(-1) {}
+	Snapshot() : shift(-1), id(-1), tfmask(0) {}
 	
+	bool IsActive(int tf_id) const {return tfmask & (1 << tf_id);}
+	void SetActive(int tf_id) {tfmask |= (1 << tf_id);}
 };
 
 class AgentGroup;
@@ -60,6 +63,8 @@ struct TraineeBase {
 	double best_result;
 	double training_time;
 	double last_drawdown;
+	int data_begin;
+	int tf_id, tf;
 	int group_id;
 	int iter;
 	
@@ -68,7 +73,7 @@ struct TraineeBase {
 	Vector<double> thrd_equity;
 	SimBroker broker;
 	TimeStop ts;
-	double begin_equity;
+	double begin_equity, prev_equity;
 	int epoch_actual, epoch_total;
 	int main_id;
 	bool at_main, save_epoch;
@@ -77,9 +82,10 @@ struct TraineeBase {
 	TraineeBase();
 	void Init();
 	void Action();
+	void SeekActive();
 	void Serialize(Stream& s);
 	virtual void Create(int width, int height) = 0;
-	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap) = 0;
+	virtual void Forward(Snapshot& snap, SimBroker& broker) = 0;
 	virtual void Backward(double reward) = 0;
 	virtual void SetAskBid(SimBroker& sb, int pos) = 0;
 	const Vector<double>& GetSequenceResults() const {return seq_results;}

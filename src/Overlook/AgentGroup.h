@@ -10,7 +10,6 @@ public:
 	// Persistent
 	ConvNet::DQNAgent dqn;
 	Array<Agent> agents;
-	Vector<Vector<int> > train_pos;
 	Vector<int> train_pos_all;
 	Index<int> tf_ids, sym_ids;
 	Time created;
@@ -18,7 +17,6 @@ public:
 	String param_str;
 	double fmlevel;
 	double limit_factor;
-	int agent_input_width, agent_input_height;
 	int group_input_width, group_input_height;
 	int mode;
 	bool sig_freeze;
@@ -28,11 +26,11 @@ public:
 	// Temp
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
-	Vector<Core*> databridge_cores;
+	Vector<Vector<Core*> > databridge_cores;
 	Array<Snapshot> snaps;
 	Vector<double> input_values;
 	Vector<int> data_begins;
-	Vector<int> tf_periods;
+	Vector<int> tf_minperiods, tf_periods, tf_types;
 	Index<int> indi_ids;
 	TimeStop last_store;
 	double prev_equity;
@@ -41,6 +39,7 @@ public:
 	int data_size, signal_size, total_size;
 	int act_iter;
 	int main_tf, main_tf_pos;
+	int symid_count;
 	bool reset_optimizer;
 	bool allow_realtime;
 	bool is_looping;
@@ -61,13 +60,12 @@ public:
 	void StopAgents();
 	void Main();
 	virtual void Create(int width, int height);
-	virtual void Forward(Snapshot& snap, SimBroker& broker, Snapshot* next_snap=NULL) {Forward(snap, (Brokerage&)broker, next_snap);}
+	virtual void Forward(Snapshot& snap, SimBroker& broker) {Forward(snap, (Brokerage&)broker);}
 	virtual void Backward(double reward);
-	void Forward(Snapshot& snap, Brokerage& broker, Snapshot* next_snap=NULL);
+	void Forward(Snapshot& snap, Brokerage& broker);
 	void StoreThis();
 	void LoadThis();
 	void Serialize(Stream& s);
-	void GenerateSnapshots();
 	void RefreshSnapshots();
 	void ResetSnapshot(Snapshot& snap);
 	bool Seek(Snapshot& snap, int shift);
@@ -75,7 +73,6 @@ public:
 	void ProcessWorkQueue();
 	void ProcessDataBridgeQueue();
 	void ResetValueBuffers();
-	void InitThreads();
 	void CreateAgents();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);

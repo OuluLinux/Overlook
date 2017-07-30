@@ -5,9 +5,12 @@ namespace Overlook {
 TraineeBase::TraineeBase() {
 	group = NULL;
 	group_id = -1;
+	tf_id = -1;
+	tf = -1;
 	iter = 0;
 	epoch_actual = 0;
 	epoch_total = 0;
+	data_begin = 0;
 	peak_value = 0.0;
 	best_result = 0.0;
 	training_time = 0.0;
@@ -20,7 +23,6 @@ TraineeBase::TraineeBase() {
 
 void TraineeBase::Init() {
 	ASSERT(group != NULL);
-	ASSERT(group->agent_input_width != 0);
 	ASSERT(group->group_input_width != 0);
 	ASSERT(group->snaps.GetCount() != 0);
 	
@@ -33,11 +35,14 @@ void TraineeBase::Init() {
 void TraineeBase::Action() {
 	thrd_equity.SetCount(group->snaps.GetCount(), 0);
 	
-	if (!epoch_actual) {
+	if (epoch_actual == 0) {
 		broker.Clear();
 		broker.SetSignal(0,0);
 		begin_equity = broker.AccountEquity();
+		prev_equity = begin_equity;
 		ts.Reset();
+		reward_average.Clear();
+		loss_average.Clear();
 	}
 	else {
 		// Just reset if fail is too much to take
@@ -47,31 +52,11 @@ void TraineeBase::Action() {
 		}
 	}
 	
+	SeekActive();
+	
 	
 	// Set broker signals based on DQN-agent action
-	int time_pos;
-	int snap_pos, snap_next_pos;
-	if (group_id == -1) {
-		snap_pos = epoch_actual;
-		snap_next_pos = snap_pos + 1;
-		time_pos = group->train_pos_all[snap_pos];
-		if (snap_next_pos >= epoch_total)
-			snap_next_pos = -1;
-	} else {
-		snap_pos = group->train_pos[group_id][epoch_actual];
-		snap_next_pos = snap_pos + 1;
-		time_pos = group->train_pos_all[snap_pos];
-		int next_time_pos = time_pos + 1;
-		// Skip the end and discontinuation
-		int j = epoch_actual + 1;
-		if (j < group->train_pos[group_id].GetCount()) {
-			int time_pos_of_actual_next_snap = group->train_pos_all[group->train_pos[group_id][j]];
-			if (time_pos_of_actual_next_snap != next_time_pos)
-				snap_next_pos = -1;
-		}
-		else
-			snap_next_pos = -1;
-	}
+	int time_pos = group->train_pos_all[epoch_actual];
 	
 	
 	// Refresh values
@@ -79,23 +64,24 @@ void TraineeBase::Action() {
 	broker.RefreshOrders();
 	broker.CycleChanges();
 	
+	double equity = broker.AccountEquity();
+	double reward = equity - prev_equity;
+	prev_equity = equity;
+	if (reward > 0)			reward_average.Add(reward);
+	else if (reward < 0)	loss_average.Add(-reward);
+	double diff = equity - broker.GetInitialBalance();
+	if (diff > peak_value) peak_value = diff;
 	
-	Snapshot& snap = group->snaps[snap_pos];
-	Snapshot* next_snap = snap_next_pos != -1 ? &group->snaps[snap_next_pos] : NULL;
-	Forward(snap, broker, next_snap);
+	Snapshot& snap = group->snaps[epoch_actual];
+	ASSERT(snap.id == epoch_actual);
+	Forward(snap, broker);
 	
 	
 	// Refresh odrers
-	if (next_snap)
-		broker.Cycle();
-	else
-		broker.CloseAll();
+	if (epoch_actual < group->snaps.GetCount()-1)	broker.Cycle();
+	else											broker.CloseAll();
 	
-	double reward = broker.PopCloseSum();
 	Backward(reward);
-	double equity = broker.AccountEquity();
-	double diff = equity - broker.GetInitialBalance();
-	if (diff > peak_value) peak_value = diff;
 	
 	
 	// Write some stats for plotter
@@ -103,6 +89,8 @@ void TraineeBase::Action() {
 	
 	
 	epoch_actual++;
+	SeekActive();
+	
 	if (epoch_actual >= epoch_total && !group->allow_realtime && !group->is_looping) {
 		seq_results.Add(equity);
 		epoch_actual = 0;
@@ -115,9 +103,20 @@ void TraineeBase::Action() {
 	}
 }
 
+void TraineeBase::SeekActive() {
+	// Skip useless snapshots for this agent
+	for (; epoch_actual < group->snaps.GetCount(); epoch_actual++) {
+		Snapshot& snap = group->snaps[epoch_actual];
+		if (snap.shift < data_begin)
+			continue;
+		if (snap.IsActive(tf_id))
+			break;
+	}
+}
+
 void TraineeBase::Serialize(Stream& s) {
 	s % seq_results % reward_average % loss_average % peak_value % best_result % training_time
-	  % last_drawdown % group_id % iter;
+	  % last_drawdown % tf_id % tf % group_id % iter;
 }
 
 }

@@ -25,7 +25,8 @@ AgentGroup::AgentGroup() {
 }
 
 AgentGroup::~AgentGroup() {
-	Stop();
+	StopGroup();
+	StopAgents();
 }
 
 bool AgentGroup::PutLatest(Brokerage& broker) {

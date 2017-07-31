@@ -561,8 +561,9 @@ void DataCtrl::Data() {
 		
 		pos += sizeof(int) + size;
 		
+		int file_version;
 		double balance, equity;
-		fin % balance % equity;
+		fin % file_version % balance % equity;
 		fin.Seek(pos);
 		
 		this->equity.Add(equity);

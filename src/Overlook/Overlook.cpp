@@ -12,7 +12,7 @@ Overlook::Overlook() :
 	
 	Add(tabs.SizePos());
 	tabs.Add(visins);
-	tabs.Add(visins, "Traditional");
+	tabs.Add(visins, "Classic");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(mgrctrl);

@@ -42,7 +42,7 @@ protected:
 	// Main view
 	TabCtrl					tabs;
 	
-	// Traditional view
+	// Classic view
 	ParentCtrl				visins;
 	Splitter				droplist_split;
 	DropList				ctrllist, symlist, tflist;

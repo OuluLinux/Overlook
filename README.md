@@ -18,6 +18,9 @@ Agent training.
 Realtime trading.
 ![Realtime trading.](https://github.com/sppp/Overlook/raw/master/docs/realtime.jpg)
 
+Data recording.
+![Data recording.](https://github.com/sppp/Overlook/raw/master/docs/datarecord.jpg)
+
 
 ### How to compile and run
 1. Install Ultimate++ and get some examples to run.

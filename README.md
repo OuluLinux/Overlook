@@ -15,10 +15,11 @@ New agent group form.
 Agent training.
 ![Agent training.](https://github.com/sppp/Overlook/raw/master/docs/training.jpg)
 
+Group optimizer. (Differential Evolution solver, genetic optimizer)
+![Group optimizer.](https://github.com/sppp/Overlook/raw/master/docs/groupoptimizer.jpg)
+
 Realtime trading.
 ![Realtime trading.](https://github.com/sppp/Overlook/raw/master/docs/realtime.jpg)
 
 Data recording.
 ![Data recording.](https://github.com/sppp/Overlook/raw/master/docs/datarecord.jpg)
-
-

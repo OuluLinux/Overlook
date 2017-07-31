@@ -2317,4 +2317,20 @@ about the v1.0 release, where all those issues have been resolved
 and the user gets beautiful fully automated solution, but it`'s 
 a long way there and I have barely time and interest for this 
 engine part.&]
-[s0;%- ]]
+[s2;%- Post`-Release Journal&]
+[s0; This is the time after the released alpha version and before 
+the v1.0 release. It started from the version v0.2, because v0.1 
+turned out to not work in the real`-time mode.&]
+[s3; 31.7.2017&]
+[s0; I just released the v0.2. If I had wrote any journal text today, 
+then I would had swiched to post`-release only tomorrow.&]
+[s0; This is not as exciting as v0.1, but it feels good, man.&]
+[s0; I haven`'t witnessed any good long`-term performance yet, but 
+it`'s nearly there. I`'ve been using fast timeframes as H4, which 
+are known to fail easier. Last mistake that I found was to not 
+use randomness in group optimization, which caused optimizer 
+to weight more on overfitted H4. One cannot avoid the overfitting 
+to training data, because data can`'t be generated, but by adding 
+the randomness it looks more like real`-world like situation 
+and group weights are tuned accordingly.&]
+[s0; ]]

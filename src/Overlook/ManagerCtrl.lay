@@ -36,7 +36,7 @@ LAYOUT(GroupOverview, 612, 240)
 	ITEM(Label, dv___9, SetLabel(t_("Enable:")).SetAlign(ALIGN_RIGHT).LeftPosZ(16, 136).TopPosZ(64, 20))
 	ITEM(Option, enable, LeftPosZ(156, 116).TopPosZ(64, 20))
 	ITEM(EditDoubleSpin, limit_factor, SetInc(0.001).Max(0.02).Min(0.001).LeftPosZ(156, 116).TopPosZ(176, 19))
-	ITEM(EditDoubleSpin, epsilon, SetInc(0.01).Max(1).Min(0).LeftPosZ(156, 116).TopPosZ(152, 19))
+	ITEM(EditDoubleSpin, epsilon, SetInc(0.01).Max(0.5).Min(0.01).LeftPosZ(156, 116).TopPosZ(152, 19))
 END_LAYOUT
 
 LAYOUT(AgentOverview, 772, 248)

@@ -92,7 +92,7 @@ void TraineeBase::Action() {
 	epoch_actual++;
 	SeekActive();
 	
-	if (epoch_actual >= epoch_total && !group->allow_realtime && !group->is_looping) {
+	if (epoch_actual >= epoch_total && !group->is_realtime && !group->is_looping) {
 		seq_results.Add(equity);
 		epoch_actual = 0;
 		if (diff > best_result || best_result == 0.0)

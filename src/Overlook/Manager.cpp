@@ -108,7 +108,7 @@ AgentGroup* Manager::GetBestGroup() {
 	
 	for(int i = 0; i < groups.GetCount(); i++) {
 		AgentGroup& g = groups[i];
-		if (!g.allow_realtime)
+		if (!g.is_realtime)
 			continue;
 		if (!group) {
 			group = &g;

@@ -42,7 +42,7 @@ public:
 	int symid_count;
 	int fastest_period_mins, timeslots;
 	bool reset_optimizer;
-	bool allow_realtime;
+	bool is_realtime;
 	bool is_looping;
 	System* sys;
 	Mutex work_lock;

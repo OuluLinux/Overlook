@@ -20,7 +20,7 @@ AgentGroup::AgentGroup() {
 	sig_freeze = true;
 	reset_optimizer = false;
 	accum_signal = false;
-	allow_realtime = false;
+	is_realtime = false;
 	is_looping = false;
 }
 
@@ -30,7 +30,7 @@ AgentGroup::~AgentGroup() {
 }
 
 bool AgentGroup::PutLatest(Brokerage& broker) {
-	if (!allow_realtime) return false;
+	if (!is_realtime) return false;
 	
 	WhenInfo("Refreshing snapshots");
 	RefreshSnapshots();
@@ -70,7 +70,15 @@ void AgentGroup::LoopAgentsToEnd() {
 	if (agents.IsEmpty()) return;
 	is_looping = true;
 	double prev_epsilon = agents[0].dqn.GetEpsilon();
-	SetEpsilon(0);
+	
+	// Always 0 randomness in realtime
+	if (is_realtime)
+		SetEpsilon(0);
+	// Always relatively high random probability in optimization,
+	// because agents overfits to training data and reality is more random-like.
+	else
+		SetEpsilon(0.2);
+	
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
 	for(int i = 0; i < agents.GetCount(); i++) {
@@ -124,7 +132,7 @@ void AgentGroup::SetMode(int i) {
 		StopGroup();
 	}
 	else if (mode == 2) {
-		allow_realtime = false;
+		is_realtime = false;
 	}
 	
 	// Start new mode
@@ -137,7 +145,7 @@ void AgentGroup::SetMode(int i) {
 			StartGroup();
 		}
 		else if (mode == 2) {
-			allow_realtime = true;
+			is_realtime = true;
 		}
 	}
 }
@@ -364,7 +372,7 @@ void AgentGroup::Main() {
 	}
 	
 	if (epoch_actual == 0) {
-		if (!allow_realtime) {
+		if (!is_realtime) {
 			
 			// Loop agents to the end if program boots directly to group optimizer.
 			bool all_looped_once = true;
@@ -378,7 +386,7 @@ void AgentGroup::Main() {
 		prev_equity = broker.GetInitialBalance();
 		prev_reward = 0.0;
 		
-		if (!allow_realtime)
+		if (!is_realtime)
 			go.Start();
 	}
 	
@@ -386,7 +394,7 @@ void AgentGroup::Main() {
 	// Do some action
 	Action();
 	
-	if (!allow_realtime && (end_of_epoch || broker.AccountEquity() < 0.3 * begin_equity)) {
+	if (!is_realtime && (end_of_epoch || broker.AccountEquity() < 0.3 * begin_equity)) {
 		double energy = broker.AccountEquity() - broker.GetInitialBalance();
 		go.Stop(energy);
 		epoch_actual = 0;
@@ -407,7 +415,7 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 	int timeslot = (((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * 60 + snap.time_values[4]) / fastest_period_mins;
 	ASSERT(timeslot >= 0 && timeslot < timeslots);
 	
-	const Vector<double>& go_values = !allow_realtime ?
+	const Vector<double>& go_values = !is_realtime ?
 		 go.GetTrialSolution() :
 		 go.GetBestSolution();
 	ASSERT(go_values.GetCount() == group_input_height);

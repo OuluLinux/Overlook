@@ -14,7 +14,7 @@ TraineeBase::TraineeBase() {
 	peak_value = 0.0;
 	best_result = 0.0;
 	training_time = 0.0;
-	last_drawdown = 0.0;
+	last_drawdown = 1.0;
 	main_id = -1;
 	at_main = false;
 	save_epoch = true;

@@ -72,7 +72,10 @@ void GroupOverview::Data() {
 		infostr << "Created: " << Format("%", group->created) << "\n";
 		infostr << "Snapshot data-size: " << group->data_size << "\n";
 		for(int i = 0; i < group->tf_ids.GetCount(); i++) {
-			infostr << "    tf" << i << ": " << group->tf_ids[i] << ", " << group->sys->GetPeriodString(group->tf_ids[i]) << "\n";
+			infostr
+				<< "    tf" << i << ": " << group->tf_ids[i] << ", "
+				<< group->sys->GetPeriodString(group->tf_ids[i]) << ", av_dd="
+				<< group->GetTfDrawdown(i) << "\n";
 		}
 		
 		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
@@ -105,6 +108,10 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(datactrl);
 	Add(datactrl, "Recorded data");
 	
+	overview.tflimits.AddColumn("Tf");
+	overview.tflimits.AddColumn("Drawdown");
+	overview.tflimits.AddColumn("Limit");
+	
 	WhenSet << THISBACK(Data);
 }
 
@@ -117,10 +124,33 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	overview.reset_go <<= THISBACK(ResetGroupOptimizer);
 	overview.modelist.SetIndex(group.mode);
 	
+	overview.tflimits.Clear();
+	tflimitedit.Clear();
+	for(int i = 0; i < group.tf_ids.GetCount(); i++) {
+		overview.tflimits.Set(i, 0, group.sys->GetPeriodString(group.tf_ids[i]));
+		overview.tflimits.Set(i, 1, group.GetTfDrawdown(i));
+		overview.tflimits.Set(i, 2, group.tf_limit[i]);
+		
+		EditDoubleSpin& edit = tflimitedit.Add();
+		overview.tflimits.SetCtrl(i, 2, edit);
+		#ifdef flagDEBUG
+		edit.MinMax(0.01, 1.0);
+		#else
+		edit.MinMax(0.01, 0.5);
+		#endif
+		edit <<= THISBACK1(SetTfLimit, i);
+	}
+	
 	overview	.SetGroup(group);
 	trainingctrl.SetTrainee(group);
 	snapctrl	.SetGroup(group);
 	datactrl	.SetGroup(group);
+}
+
+void GroupTabCtrl::SetTfLimit(int tf_id) {
+	if (!group) return;
+	double tflimit = tflimitedit[tf_id].GetData();
+	group->SetTfLimit(tf_id, tflimit);
 }
 
 void GroupTabCtrl::Data() {

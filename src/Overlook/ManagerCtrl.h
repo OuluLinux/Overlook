@@ -36,6 +36,7 @@ class GroupTabCtrl : public TabCtrl {
 	SnapshotCtrl			snapctrl;
 	TrainingCtrl			trainingctrl;
 	DataCtrl				datactrl;
+	Array<EditDoubleSpin>	tflimitedit;
 	
 public:
 	typedef GroupTabCtrl CLASSNAME;
@@ -46,7 +47,7 @@ public:
 	void SetEnabled();
 	void SetLimitFactor();
 	void ResetGroupOptimizer();
-	
+	void SetTfLimit(int tf_id);
 };
 
 class AgentTabCtrl : public TabCtrl {

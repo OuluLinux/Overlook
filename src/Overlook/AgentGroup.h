@@ -10,7 +10,7 @@ public:
 	// Persistent
 	CoreUtils::GeneticOptimizer go;
 	Array<Agent> agents;
-	Vector<int> train_pos_all;
+	Vector<double> tf_limit;
 	Index<int> tf_ids, sym_ids;
 	Time created;
 	String name;
@@ -28,6 +28,7 @@ public:
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Vector<Core*> > databridge_cores;
 	Array<Snapshot> snaps;
+	Vector<int> train_pos_all;
 	Vector<int> symsignals;
 	Vector<int> data_begins;
 	Vector<int> tf_minperiods, tf_periods, tf_types;
@@ -39,6 +40,7 @@ public:
 	int data_size, signal_size, total_size;
 	int act_iter;
 	int main_tf, main_tf_pos;
+	int current_submode;
 	int symid_count;
 	int fastest_period_mins, timeslots;
 	bool reset_optimizer;
@@ -46,7 +48,7 @@ public:
 	bool is_looping;
 	System* sys;
 	Mutex work_lock;
-	
+	TimeCallback watchdog;
 	
 public:
 	typedef AgentGroup CLASSNAME;
@@ -55,7 +57,7 @@ public:
 	void Init();
 	void Start();
 	void StartGroup();
-	void StartAgents();
+	void StartAgents(int submode);
 	void Stop();
 	void StopGroup();
 	void StopAgents();
@@ -84,10 +86,14 @@ public:
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	void LoopAgentsToEnd();
 	void LoopAgentToEnd(int i);
+	void SetTfLimit(int tf_id, double limit);
+	void CheckAgentSubMode();
 	
 	int GetSignalBegin() const;
 	int GetSignalEnd() const;
 	int GetSignalPos(int group_id) const;
+	double GetTfDrawdown(int tf_id);
+	int GetAgentSubMode();
 	
 	Callback3<int, int, String> WhenProgress;
 	Callback2<int, int> WhenSubProgress;

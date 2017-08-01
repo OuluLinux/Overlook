@@ -11,6 +11,7 @@ AgentGroup::AgentGroup() {
 	mode = 0;
 	main_tf = -1;
 	main_tf_pos = -1;
+	current_submode = -1;
 	symid_count = 0;
 	
 	limit_factor = 0.01;
@@ -80,7 +81,7 @@ void AgentGroup::LoopAgentsToEnd() {
 		SetEpsilon(0.2);
 	
 	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
+	co.SetPoolSize(Upp::max(1, CPU_Cores() - 1));
 	for(int i = 0; i < agents.GetCount(); i++) {
 		co & THISBACK1(LoopAgentToEnd, i);
 	}
@@ -125,6 +126,7 @@ void AgentGroup::SetMode(int i) {
 	
 	
 	// Stop previous mode
+	watchdog.Kill();
 	if      (mode == 0) {
 		StopAgents();
 	}
@@ -139,7 +141,8 @@ void AgentGroup::SetMode(int i) {
 	mode = i;
 	if (enable_training) {
 		if      (mode == 0) {
-			StartAgents();
+			StartAgents(GetAgentSubMode());
+			watchdog.Set(1000, THISBACK(CheckAgentSubMode));
 		}
 		else if (mode == 1) {
 			StartGroup();
@@ -198,6 +201,8 @@ void AgentGroup::Create(int width, int height) {
 void AgentGroup::Init() {
 	ASSERT(sys);
 	ASSERT(!tf_ids.IsEmpty());
+	
+	tf_limit.SetCount(tf_ids.GetCount(), 0.3);
 	
 	symid_count = sym_ids.GetCount() *  tf_ids.GetCount();
 	
@@ -297,11 +302,13 @@ void AgentGroup::StartGroup() {
 	main_id = sys->AddTaskBusy(THISBACK(Main));
 }
 
-void AgentGroup::StartAgents() {
+void AgentGroup::StartAgents(int submode) {
+	current_submode = submode;
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		ASSERT(a.group);
-		a.Start();
+		if (a.tf_id == submode)
+			a.Start();
 	}
 }
 
@@ -504,7 +511,7 @@ void AgentGroup::LoadThis() {
 
 void AgentGroup::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % go % agents % tf_ids % sym_ids % created % name % param_str
+	s % go % agents % tf_limit % tf_ids % sym_ids % created % name % param_str
 	  % fmlevel % limit_factor
 	  % group_input_width % group_input_height
 	  % mode % sig_freeze
@@ -522,6 +529,52 @@ int AgentGroup::GetSignalEnd() const {
 int AgentGroup::GetSignalPos(int group_id) const {
 	ASSERT(group_id >= 0 && group_id <= symid_count);
 	return data_size + group_id * 2 * 2;
+}
+
+void AgentGroup::SetTfLimit(int tf_id, double limit) {
+	tf_limit[tf_id] = limit;
+	watchdog.KillSet(1, THISBACK(CheckAgentSubMode));
+}
+
+double AgentGroup::GetTfDrawdown(int tf_id) {
+	double dd = 0;
+	int dd_div = 0;
+	for(int i = 0; i < agents.GetCount(); i++) {
+		const Agent& a = agents[i];
+		if (a.tf_id != tf_id)
+			continue;
+		dd += a.last_drawdown;
+		dd_div++;
+	}
+	if (!dd_div) return 1.0;
+	return dd / dd_div;
+}
+
+int AgentGroup::GetAgentSubMode() {
+	int submode = 0;
+	
+	for(int i = 0; i < tf_ids.GetCount(); i++) {
+		double dd = GetTfDrawdown(i);
+		if (dd > tf_limit[i])
+			break;
+		submode = i+1;
+	}
+	
+	return submode;
+}
+
+void AgentGroup::CheckAgentSubMode() {
+	if (mode == 0) {
+		int submode = GetAgentSubMode();
+		if (submode != current_submode) {
+			StopAgents();
+			mode = -1;
+			current_submode = -1;
+			SetMode(0);
+		}
+		else
+			watchdog.Set(1000, THISBACK(CheckAgentSubMode));
+	}
 }
 
 void AgentGroup::RefreshSnapshots() {

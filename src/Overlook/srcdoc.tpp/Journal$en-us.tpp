@@ -2347,4 +2347,12 @@ I haven`'t tested anything like this before and it`'s definetely
 the most complex test so far. I`'m amazed that the app scales 
 to this test. These features actually came up during implementation 
 and they weren`'t in the design.&]
+[s0; What the hell, I`'ll test with W1,D1,H4,M30,M5,M1 with ratios 
+7,6,8,6,5 with average of 6.4. It`'s pretty ridiculous and it 
+might totally fail to updating orders between every minute. However, 
+enabling the freezing of signals might prevent that.&]
+[s0; ...&]
+[s0; I had to add feature for focusing on single timeframe at a time. 
+It switches tf processing from W1 to D1 to H4 etc. when drawdown 
+is small enough.&]
 [s0; ]]

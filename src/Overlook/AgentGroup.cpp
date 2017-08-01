@@ -168,8 +168,7 @@ void AgentGroup::CreateAgents() {
 			a.group_id = group_id;
 			a.proxy_sym = sym.proxy_id;
 			a.agent_input_width  = 1;
-			if (!j)		a.agent_input_height = 1 +     sym_ids.GetCount() * buf_count + sym_ids.GetCount() * 2 * 2;
-			else		a.agent_input_height = 1 + 2 * sym_ids.GetCount() * buf_count + sym_ids.GetCount() * 2 * 2 * 2;
+			a.agent_input_height = 1 + (j+1) * (sym_ids.GetCount() * buf_count + sym_ids.GetCount() * 2 * 2);
 			a.Create(a.agent_input_width, a.agent_input_height);
 		}
 	}

@@ -2333,4 +2333,18 @@ to weight more on overfitted H4. One cannot avoid the overfitting
 to training data, because data can`'t be generated, but by adding 
 the randomness it looks more like real`-world like situation 
 and group weights are tuned accordingly.&]
+[s3; 1.8.2017&]
+[s0; I must test one tweak today. The other option is to retreat 
+a little too much to slow long`-term strategy.&]
+[s0; Faster tf agents had only 2 tfs in DQN inputs for performance 
+reasons, but if you put all slow tfs to their inputs, they`'ll 
+get better support. However, it is going to be slower to train.&]
+[s0; So, I`'ll test all instruments with timeframes W1,D1,H4,M30... 
+Ratios between them are 7,6,8 with average of 7. Faster tfs have 
+been tested to not work well alone, but if they get full chain 
+of signals from slower agents, it might change the result completely. 
+I haven`'t tested anything like this before and it`'s definetely 
+the most complex test so far. I`'m amazed that the app scales 
+to this test. These features actually came up during implementation 
+and they weren`'t in the design.&]
 [s0; ]]

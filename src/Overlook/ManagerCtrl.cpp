@@ -241,7 +241,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 			"\t\"epsilon\":0.2,\n"
 			"\t\"alpha\":0.005,\n"
 			"\t\"experience_add_every\":5,\n"
-			"\t\"experience_size\":10000,\n"
+			"\t\"experience_size\":1000,\n"
 			"\t\"learning_steps_per_iteration\":5,\n"
 			"\t\"tderror_clamp\":1.0,\n"
 			"\t\"num_hidden_units\":100,\n"
@@ -380,7 +380,7 @@ void ManagerCtrl::Data() {
 			Agent& a = g.agents[i];
 			
 			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
-			alist.Set(i, 1, sys->GetPeriodString(a.tf));
+			alist.Set(i, 1, a.tf != -1 ? sys->GetPeriodString(a.tf) : "");
 			alist.Set(i, 2, a.best_result);
 			alist.Set(i, 3, a.last_drawdown);
 		}

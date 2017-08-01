@@ -110,34 +110,22 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	
 	// all data from snapshot
 	int block = group->sym_ids.GetCount() * group->buf_count;
+	int block_count = tf_id + 1;
+	int data_begin = 1; // after first time value
 	memcpy(
 		input_array.Begin() + cursor,
-		snap.values.Begin() + 1,
-		block * sizeof(double));
-	cursor += block;
-	if (tf_id > 0) {
-		int data_begin = 1 + tf_id * block;
-		memcpy(
-			input_array.Begin() + cursor,
-			snap.values.Begin() + data_begin,
-			block * sizeof(double));
-		cursor += block;
-	}
+		snap.values.Begin() + data_begin,
+		block * block_count * sizeof(double));
+	cursor += block * block_count;
+	
 	
 	// sensors
 	block = group->sym_ids.GetCount() * 2 * 2;
 	memcpy(
 		input_array.Begin() + cursor,
 		snap.values.Begin() + group->data_size,
-		block * sizeof(double));
-	cursor += block;
-	if (tf_id > 0) {
-		memcpy(
-			input_array.Begin() + cursor,
-			snap.values.Begin() + group->data_size + tf_id * block,
-			block * sizeof(double));
-		cursor += block;
-	}
+		block * block_count * sizeof(double));
+	cursor += block * block_count;
 	
 	ASSERT(cursor == agent_input_height);
 	int action = dqn.Act(input_array);

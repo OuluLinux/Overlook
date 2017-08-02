@@ -9,7 +9,7 @@ void System::Start() {
 	mgr.Start();
 	
 	busy_task = 0;
-	nonstopped_workers = Upp::max(1, CPU_Cores() - 1);
+	nonstopped_workers = Upp::max(1, CPU_Cores() - 2);
 	for(int i = 0; i < nonstopped_workers; i++)
 		Thread::Start(THISBACK1(Worker, i));
 	

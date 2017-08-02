@@ -138,7 +138,14 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 		#else
 		edit.MinMax(0.01, 0.5);
 		#endif
-		edit <<= THISBACK1(SetTfLimit, i);
+		
+		// Everything just breaks if you change this limit to tighter after it has proceeded
+		// to faster tf...
+		if (group.GetTfDrawdown(i) < group.tf_limit[i]) {
+			edit.Disable();
+		} else {
+			edit <<= THISBACK1(SetTfLimit, i);
+		}
 	}
 	
 	overview	.SetGroup(group);

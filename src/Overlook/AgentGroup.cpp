@@ -81,7 +81,7 @@ void AgentGroup::LoopAgentsToEnd() {
 		SetEpsilon(0.2);
 	
 	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores() - 1));
+	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
 	for(int i = 0; i < agents.GetCount(); i++) {
 		co & THISBACK1(LoopAgentToEnd, i);
 	}
@@ -202,7 +202,7 @@ void AgentGroup::Init() {
 	ASSERT(sys);
 	ASSERT(!tf_ids.IsEmpty());
 	
-	tf_limit.SetCount(tf_ids.GetCount(), 0.3);
+	tf_limit.SetCount(tf_ids.GetCount(), 0.2);
 	
 	symid_count = sym_ids.GetCount() *  tf_ids.GetCount();
 	

@@ -13,7 +13,6 @@ Agent::Agent() {
 	smooth_reward = 0.0;
 	agent_input_width = 0;
 	agent_input_height = 0;
-	ACTIONCOUNT = 0;
 }
 
 Agent::~Agent() {
@@ -25,8 +24,6 @@ void Agent::RefreshTotalEpochs() {
 }
 
 void Agent::Create(int width, int height) {
-	ACTIONCOUNT = !group->accum_signal ? ACT_DECSIG+1 : ACT_SETMINUS+1;
-	
 	// Don't use ACT_RESETSIG if signal accumulation is not in use
 	dqn.Init(width, height, ACTIONCOUNT);
 	dqn.Reset();
@@ -76,7 +73,6 @@ void Agent::Main() {
 	RefreshTotalEpochs();
 	if (epoch_total > 0) {
 		if (epoch_actual == 0) {
-			accum_buf = 0;
 			prev_equity = broker.AccountEquity();
 		}
 		
@@ -96,7 +92,7 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	// Input values
 	// - time_values
 	// - all data from snapshot
-	// - 'accum_buf'
+	// - previous signal
 	// - account change sensor
 	input_array.SetCount(agent_input_height);
 	int cursor = 0;
@@ -138,28 +134,12 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	if      (action == ACT_NOACT)  signal =  0;
 	else if (action == ACT_INCSIG) signal = +1;
 	else if (action == ACT_DECSIG) signal = -1;
-	else if (action == ACT_RESETSIG) {signal = 0; accum_buf = 0;}
-	else if (action == ACT_SETPLUS)  {signal = 0; accum_buf = +1;}
-	else if (action == ACT_SETMINUS) {signal = 0; accum_buf = -1;}
 	else Panic("Invalid action");
 	
-    if (group->accum_signal) {
-		accum_buf += signal;
-		if      (accum_buf > +20) accum_buf = +20;
-		else if (accum_buf < -20) accum_buf = -20;
-		
-		if (accum_buf < 0) signal = -1;
-		else if (accum_buf > 0) signal = +1;
-		else signal = 0;
-    }
-    
     snap.signals[group_id] = signal;
 	
-	
 	// Write latest average to the group values
-	double d = group->accum_signal ?
-		accum_buf / 20.0 :
-		signal;
+	double d = signal;
 	ASSERT(d >= -1.0 && d <= 1.0);
 	double pos, neg;
 	if (d >= 0) {
@@ -282,8 +262,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
 	s % dqn % sym_id % sym % proxy_sym
-	  % agent_input_width % agent_input_height
-	  % ACTIONCOUNT;
+	  % agent_input_width % agent_input_height;
 }
 
 }

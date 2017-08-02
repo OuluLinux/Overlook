@@ -28,7 +28,6 @@ protected:
 	ConvNet::DQNAgent dqn;
 	int agent_id, sym_id, sym, proxy_sym;
 	int agent_input_width, agent_input_height;
-	int ACTIONCOUNT;
 	
 	
 	// Tmp vars
@@ -36,7 +35,6 @@ protected:
 	Snapshot* cur_snap;
 	double smooth_reward;
 	double prev_equity;
-	int accum_buf;
 	int group_count;
 	int tf_step;
 	bool has_yeartime;
@@ -48,7 +46,7 @@ protected:
 	void Main();
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	
-	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_SETPLUS, ACT_SETMINUS};
+	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACTIONCOUNT};
 	
 public:
 	typedef Agent CLASSNAME;

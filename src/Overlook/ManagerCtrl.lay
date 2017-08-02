@@ -17,9 +17,7 @@ LAYOUT(NewAgentGroup, 612, 428)
 	ITEM(Button, allbasefx, SetLabel(t_("All base currency forex")).LeftPosZ(160, 140).TopPosZ(300, 16))
 	ITEM(Button, all, SetLabel(t_("All")).LeftPosZ(160, 68).TopPosZ(276, 20))
 	ITEM(ArrayCtrl, tflist, LeftPosZ(160, 140).TopPosZ(52, 92))
-	ITEM(Label, dv___18, SetLabel(t_("Accumulate signal:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 152).TopPosZ(392, 19))
-	ITEM(Option, accum_signal, SetLabel(t_("(for short/fast timeframes)")).SetFont(StdFont().Italic()).LeftPosZ(160, 276).TopPosZ(392, 20))
-	ITEM(Label, dv___20, SetLabel(t_("Freeze signals until change:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 152).TopPosZ(368, 19))
+	ITEM(Label, dv___18, SetLabel(t_("Freeze signals until change:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 152).TopPosZ(368, 19))
 	ITEM(Option, freeze_sig, SetLabel(t_("(prevent costs of order modifications)")).SetFont(StdFont().Italic()).LeftPosZ(160, 276).TopPosZ(368, 20))
 END_LAYOUT
 

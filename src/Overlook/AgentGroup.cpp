@@ -22,7 +22,6 @@ AgentGroup::AgentGroup() {
 	enable_training = true;
 	sig_freeze = true;
 	reset_optimizer = false;
-	accum_signal = false;
 	is_realtime = false;
 	is_looping = false;
 }
@@ -536,7 +535,7 @@ void AgentGroup::Serialize(Stream& s) {
 	  % fmlevel % limit_factor
 	  % group_input_width % group_input_height
 	  % mode % sig_freeze
-	  % enable_training % accum_signal;
+	  % enable_training;
 }
 
 int AgentGroup::GetSignalBegin() const {

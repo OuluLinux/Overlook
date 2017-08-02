@@ -21,7 +21,6 @@ public:
 	int mode;
 	bool sig_freeze;
 	bool enable_training;
-	bool accum_signal;
 	
 	// Temp
 	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;

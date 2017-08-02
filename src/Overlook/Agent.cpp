@@ -11,9 +11,9 @@ Agent::Agent() {
 	
 	group_count = 0;
 	smooth_reward = 0.0;
-	accum_signal = false;
 	agent_input_width = 0;
 	agent_input_height = 0;
+	ACTIONCOUNT = 0;
 }
 
 Agent::~Agent() {
@@ -25,8 +25,10 @@ void Agent::RefreshTotalEpochs() {
 }
 
 void Agent::Create(int width, int height) {
+	ACTIONCOUNT = !group->accum_signal ? ACT_DECSIG+1 : ACT_SETMINUS+1;
+	
 	// Don't use ACT_RESETSIG if signal accumulation is not in use
-	dqn.Init(width, height, accum_signal ? ACTIONCOUNT : ACTIONCOUNT-1);
+	dqn.Init(width, height, ACTIONCOUNT);
 	dqn.Reset();
 	
 	ASSERT(!group->param_str.IsEmpty());
@@ -137,9 +139,11 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	else if (action == ACT_INCSIG) signal = +1;
 	else if (action == ACT_DECSIG) signal = -1;
 	else if (action == ACT_RESETSIG) {signal = 0; accum_buf = 0;}
+	else if (action == ACT_SETPLUS)  {signal = 0; accum_buf = +1;}
+	else if (action == ACT_SETMINUS) {signal = 0; accum_buf = -1;}
 	else Panic("Invalid action");
 	
-    if (accum_signal) {
+    if (group->accum_signal) {
 		accum_buf += signal;
 		if      (accum_buf > +20) accum_buf = +20;
 		else if (accum_buf < -20) accum_buf = -20;
@@ -153,7 +157,7 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	
 	
 	// Write latest average to the group values
-	double d = accum_signal ?
+	double d = group->accum_signal ?
 		accum_buf / 20.0 :
 		signal;
 	ASSERT(d >= -1.0 && d <= 1.0);
@@ -254,26 +258,6 @@ void Agent::Backward(double reward) {
 	iter++;
 }
 
-int Agent::GetAction(const Volume& fwd, int sym) const {
-	int pos = sym * ACTIONCOUNT;
-	int max_col = 0;
-	double max_val = fwd.Get(pos);
-	for(int i = 1; i < ACTIONCOUNT; i++) {
-		double val = fwd.Get(pos + i);
-		
-		// Skip action with invalid values
-		if (!IsFin(val))
-			return ACT_NOACT;
-		
-		
-		if (val > max_val) {
-			max_val = val;
-			max_col = i;
-		}
-	}
-	return max_col;
-}
-
 void Agent::SetAskBid(SimBroker& sb, int pos) {
 	if (tf != group->main_tf)
 		pos = group->sys->GetShiftTf(group->main_tf, tf, pos);
@@ -299,7 +283,7 @@ void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
 	s % dqn % sym_id % sym % proxy_sym
 	  % agent_input_width % agent_input_height
-	  % accum_signal;
+	  % ACTIONCOUNT;
 }
 
 }

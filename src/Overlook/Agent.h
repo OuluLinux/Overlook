@@ -28,7 +28,7 @@ protected:
 	ConvNet::DQNAgent dqn;
 	int agent_id, sym_id, sym, proxy_sym;
 	int agent_input_width, agent_input_height;
-	bool accum_signal;
+	int ACTIONCOUNT;
 	
 	
 	// Tmp vars
@@ -47,10 +47,8 @@ protected:
 	void RealAction();
 	void Main();
 	virtual void SetAskBid(SimBroker& sb, int pos);
-	int GetRandomAction() const {return Random(ACTIONCOUNT);}
-	int GetAction(const Volume& fwd, int sym) const;
 	
-	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG,     ACTIONCOUNT};
+	enum {ACT_NOACT, ACT_INCSIG, ACT_DECSIG, ACT_RESETSIG, ACT_SETPLUS, ACT_SETMINUS};
 	
 public:
 	typedef Agent CLASSNAME;

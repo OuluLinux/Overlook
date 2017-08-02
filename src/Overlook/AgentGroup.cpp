@@ -77,10 +77,6 @@ void AgentGroup::LoopAgentsToEnd() {
 	// Always 0 randomness in realtime
 	if (is_realtime)
 		SetEpsilon(0);
-	// Always relatively high random probability in optimization,
-	// because agents overfits to training data and reality is more random-like.
-	else
-		SetEpsilon(0.2);
 	
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
@@ -110,9 +106,6 @@ void AgentGroup::LoopAgentsForRandomness() {
 	StopAgents();
 	
 	is_looping = true;
-	double prev_epsilon = agents[0].dqn.GetEpsilon();
-	
-	SetEpsilon(0.2);
 	
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
@@ -123,7 +116,6 @@ void AgentGroup::LoopAgentsForRandomness() {
 		co & THISBACK1(LoopAgentToEnd, i);
 	}
 	co.Finish();
-	SetEpsilon(prev_epsilon);
 	is_looping = false;
 	
 	StartAgents(submode);

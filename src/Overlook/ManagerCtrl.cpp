@@ -68,6 +68,7 @@ void GroupOverview::Data() {
 		//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
 		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
 		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
+		infostr << "Accumulate signal: " << (group->accum_signal ? "True" : "False") << "\n";
 		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
 		infostr << "Created: " << Format("%", group->created) << "\n";
 		infostr << "Snapshot data-size: " << group->data_size << "\n";

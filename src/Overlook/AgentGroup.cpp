@@ -13,6 +13,8 @@ AgentGroup::AgentGroup() {
 	main_tf_pos = -1;
 	current_submode = -1;
 	symid_count = 0;
+	prev_least_results = 0;
+	random_loops = 0;
 	
 	limit_factor = 0.01;
 	fmlevel = 0.90;
@@ -98,6 +100,33 @@ void AgentGroup::LoopAgentToEnd(int i) {
 		agent.Main();
 	}
 	ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
+}
+
+void AgentGroup::LoopAgentsForRandomness() {
+	if (agents.IsEmpty()) return;
+	
+	random_loops++;
+	int submode = current_submode;
+	StopAgents();
+	
+	is_looping = true;
+	double prev_epsilon = agents[0].dqn.GetEpsilon();
+	
+	SetEpsilon(0.2);
+	
+	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
+	for(int i = 0; i < agents.GetCount(); i++) {
+		// Only refresh slower tfs
+		if (agents[i].tf_id >= submode)
+			continue;
+		co & THISBACK1(LoopAgentToEnd, i);
+	}
+	co.Finish();
+	SetEpsilon(prev_epsilon);
+	is_looping = false;
+	
+	StartAgents(submode);
 }
 
 void AgentGroup::Progress(int actual, int total, String desc) {
@@ -572,8 +601,21 @@ void AgentGroup::CheckAgentSubMode() {
 			current_submode = -1;
 			SetMode(0);
 		}
-		else
+		else {
+			
+			// Randomize signals sometimes
+			int least_results = INT_MAX;
+			for(int i = 0; i < agents.GetCount(); i++) {
+				if (agents[i].tf_id == submode)
+					least_results = Upp::min(least_results, agents[i].seq_results.GetCount());
+			}
+			if (least_results > prev_least_results+1) {
+				LoopAgentsForRandomness();
+				prev_least_results = least_results;
+			}
+			
 			watchdog.Set(1000, THISBACK(CheckAgentSubMode));
+		}
 	}
 }
 

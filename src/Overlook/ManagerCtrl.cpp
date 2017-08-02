@@ -79,6 +79,7 @@ void GroupOverview::Data() {
 		}
 		
 		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
+		infostr << "\nRandomization loops: " << group->random_loops << "\n\n";
 		
 		if (!group->agents.IsEmpty()) {
 			epsilon.SetData(group->agents[0].dqn.GetEpsilon());

@@ -43,6 +43,8 @@ public:
 	int current_submode;
 	int symid_count;
 	int fastest_period_mins, timeslots;
+	int prev_least_results;
+	int random_loops;
 	bool reset_optimizer;
 	bool is_realtime;
 	bool is_looping;
@@ -86,6 +88,7 @@ public:
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	void LoopAgentsToEnd();
 	void LoopAgentToEnd(int i);
+	void LoopAgentsForRandomness();
 	void SetTfLimit(int tf_id, double limit);
 	void CheckAgentSubMode();
 	

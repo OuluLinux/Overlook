@@ -2355,4 +2355,46 @@ enabling the freezing of signals might prevent that.&]
 [s0; I had to add feature for focusing on single timeframe at a time. 
 It switches tf processing from W1 to D1 to H4 etc. when drawdown 
 is small enough.&]
+[s3; 2.8.2017&]
+[s0; Today I started a serious training, which will take about week 
+to complete. Timeframes W1,D1,H4,M30,M5,M1 are trained for all 
+21 major pairs. Signals are freezed to avoid modifying orders 
+when unnecessary. I am hoping to achieve positive results with 
+M1 training data. It haven`'t worked alone without slower tfs. 
+Relatively high random action probability costs more with faster 
+tfs, because spreads costs more when continuous signal is disturbed.&]
+[s3; 3.8.2017&]
+[s0; Hmm... I am totally hitting a brick wall with the lack of processing 
+power. Faster than H12 is not feasible with this system. I will 
+do C`+`+ AMP GPU`-accelerated version later. I found out how 
+to implement that, but it`'s the complete opposite to the current 
+model, because deep containers are hard or impossible to move 
+GPU`-memory. So, basically the object size of Agent class should 
+contain everything, which can be made dynamic with templates. 
+Once done, it will be blazing fast. They run faster and there 
+can be much more of them. They will have limited inputs, however, 
+since they can`'t read every agent`'s previous output.&]
+[s0; Implementation`-wise, it`'s like a jump from steam train to 
+F1`-car. I very much dislike the standard c`+`+ conventions and 
+I prefer U`+`+ conventions over them every time. I think that 
+the standard conventions are utterly impractical, ugly and very 
+unintuitive for every non`-native English speaker. I could talk 
+about that topic for hours, and it would be very bitter`-sweet 
+talk, and I won`'t do it for fun. So, first I need to add some 
+very thin Ultimate`+`+ convention abstraction layer on top of 
+the C`+`+ AMP standard library. Then I need to port the ConvNet 
+library on top of that, and only after that I can start to port 
+Overlook to it. I would do only that for my day`-job if I could, 
+but unfortunately no`-one is paying for it, so it won`'t happen. 
+I am already behind schedule with the university work, so even 
+working on this at evenings will be a challenge. It`'s a very 
+unfortunate situation to do something what you dislike instead 
+of doing something worth of money just because no`-one is sponsoring 
+and surrounding environment is full of ignorant fools and leftist 
+liberals.&]
+[s0; I think I`'ll find some time next semester to work on this too, 
+but those timeslots are scarce. Until that, I`'ll run this with 
+W1,D1,H12 setup at background. I am satisified for that result, 
+also. It was my target. This is far from over, but I`'ll temporarily 
+suspend all work on this because of school work.&]
 [s0; ]]

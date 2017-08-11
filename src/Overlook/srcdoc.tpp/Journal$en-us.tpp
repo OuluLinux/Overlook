@@ -2411,6 +2411,6 @@ estimation.&]
 [s0; This system won`'t get much better by making it faster, but 
 I am testing the 6x faster setup for next week. The serialization 
 file will be huge.&]
-[s0; I tried to fix that weekend sensor fix... I guess it`'s good 
+[s0; I tried to fix that weekend sensor bug... I guess it`'s good 
 this time.&]
 [s0; ]]

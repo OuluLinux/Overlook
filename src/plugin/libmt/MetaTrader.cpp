@@ -752,7 +752,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			String b = sym.name.Mid(3,3);
 			currencies.GetAdd(a, 0)++;
 			currencies.GetAdd(b, 0)++;
-			if (a == account_currency || b == account_currency)
+			if (a == account_currency || b == account_currency || sym.currency_margin == account_currency)
 				sym.is_base_currency = true;
 		}
 		else {

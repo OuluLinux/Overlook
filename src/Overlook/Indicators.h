@@ -893,7 +893,7 @@ public:
 };
 
 //#define LARGE_SENSOR
-#define SMALL_COUNT 3
+#define SMALL_COUNT 4
 
 class Sensors : public Core {
 	Vector<double> means;

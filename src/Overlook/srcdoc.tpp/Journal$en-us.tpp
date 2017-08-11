@@ -2397,4 +2397,20 @@ but those timeslots are scarce. Until that, I`'ll run this with
 W1,D1,H12 setup at background. I am satisified for that result, 
 also. It was my target. This is far from over, but I`'ll temporarily 
 suspend all work on this because of school work.&]
+[s3; 11.8.2017&]
+[s0; Test results have been positive since wednesday. I found that 
+sensors were still incorrect at monday because of the weekend, 
+so that might explain negative results at monday and tuesday. 
+The total change per day increased steadily from monday to friday. 
+The week was positive in total. I noticed that this didn`'t take 
+much risk at all and the balance increase was `+4% for the whole 
+week. One must remember, that this is very short test period 
+for swing trading (in which the length of order is at least one 
+day), and these shouldn`'t be projected to long term performance 
+estimation.&]
+[s0; This system won`'t get much better by making it faster, but 
+I am testing the 6x faster setup for next week. The serialization 
+file will be huge.&]
+[s0; I tried to fix that weekend sensor fix... I guess it`'s good 
+this time.&]
 [s0; ]]

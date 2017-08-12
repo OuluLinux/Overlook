@@ -67,6 +67,7 @@ struct TraineeBase {
 	int tf_id, tf;
 	int group_id;
 	int iter;
+	bool is_training;
 	
 	// Temp
 	AgentGroup* group;

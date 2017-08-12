@@ -276,10 +276,10 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 			"{\n"
 			"\t\"update\":\"qlearn\",\n"
 			"\t\"gamma\":0.9,\n"
-			"\t\"epsilon\":0.2,\n"
+			"\t\"epsilon\":0.02,\n"
 			"\t\"alpha\":0.005,\n"
 			"\t\"experience_add_every\":5,\n"
-			"\t\"experience_size\":1000,\n"
+			"\t\"experience_size\":10000,\n"
 			"\t\"learning_steps_per_iteration\":5,\n"
 			"\t\"tderror_clamp\":1.0,\n"
 			"\t\"num_hidden_units\":100,\n"
@@ -288,7 +288,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.create <<= THISBACK(PostNewAgent);
 	newview.symlist <<= THISBACK(Data);
 	
-	
+	newview.freeze_sig.Set(true);
 	newview.symlist.AddColumn("");
 	newview.symlist.AddColumn("");
 	newview.symlist.NoHeader();

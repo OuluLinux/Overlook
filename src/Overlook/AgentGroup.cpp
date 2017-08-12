@@ -147,27 +147,42 @@ void AgentGroup::SetMode(int i) {
 	
 	// Stop previous mode
 	watchdog.Kill();
-	if      (mode == 0) {
+	if      (mode == MODE_AGENT) {
 		StopAgents();
 	}
-	else if (mode == 1) {
+	else if (mode == MODE_GROUP) {
 		StopGroup();
 	}
-	else if (mode == 2) {
+	else if (mode == MODE_REAL) {
 		is_realtime = false;
 	}
 	
 	// Start new mode
 	mode = i;
 	if (enable_training) {
-		if      (mode == 0) {
-			StartAgents(GetAgentSubMode());
-			watchdog.Set(1000, THISBACK(CheckAgentSubMode));
+		
+		// If modes cannot be started, they are ready
+		
+		if (mode == MODE_AGENT) {
+			int started = StartAgents(GetAgentSubMode());
+			if (!started) {
+				// Change to next mode
+				mode++;
+			}
+			else {
+				watchdog.Set(1000, THISBACK(CheckAgentSubMode));
+			}
 		}
-		else if (mode == 1) {
-			StartGroup();
+		
+		if (mode == MODE_GROUP) {
+			bool started = StartGroup();
+			if (!started) {
+				// Change to next mode
+				mode++;
+			}
 		}
-		else if (mode == 2) {
+		
+		if (mode == MODE_REAL) {
 			is_realtime = true;
 		}
 	}
@@ -222,7 +237,7 @@ void AgentGroup::Init() {
 	ASSERT(sys);
 	ASSERT(!tf_ids.IsEmpty());
 	
-	tf_limit.SetCount(tf_ids.GetCount(), 0.2);
+	tf_limit.SetCount(tf_ids.GetCount(), 0.05);
 	
 	symid_count = sym_ids.GetCount() *  tf_ids.GetCount();
 	
@@ -316,19 +331,45 @@ void AgentGroup::Start() {
 	SetMode(m);
 }
 
-void AgentGroup::StartGroup() {
-	if (main_id != -1) return;
+bool AgentGroup::StartGroup() {
+	if (main_id != -1)
+		return false;
+	
+	// Check if optimizer has reached maximum rounds
+	if (go.GetRound() >= go.GetMaxRounds())
+		return false;
+	
 	act_iter = 0;
 	main_id = sys->AddTaskBusy(THISBACK(Main));
+	return true;
 }
 
-void AgentGroup::StartAgents(int submode) {
+int AgentGroup::StartAgents(int submode) {
+	FreezeAgents(submode);
+	
+	int started = 0;
 	current_submode = submode;
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& a = agents[i];
 		ASSERT(a.group);
-		if (a.tf_id == submode)
+		if (a.tf_id == submode) {
 			a.Start();
+			started++;
+		}
+	}
+	return started;
+}
+
+void AgentGroup::FreezeAgents(int submode) {
+	// Reset agent experience until submode and disable their training
+	
+	for(int i = 0; i < agents.GetCount(); i++) {
+		Agent& a = agents[i];
+		ASSERT(a.group);
+		if (a.tf_id >= submode) continue;
+		
+		a.is_training = false;
+		a.dqn.ClearExperience();
 	}
 }
 
@@ -584,17 +625,20 @@ int AgentGroup::GetAgentSubMode() {
 }
 
 void AgentGroup::CheckAgentSubMode() {
-	if (mode == 0) {
+	if (mode == MODE_AGENT) {
+		
+		// Switch to train faster timeframe agents
 		int submode = GetAgentSubMode();
 		if (submode != current_submode) {
 			StopAgents();
+			StoreThis();
 			mode = -1;
 			current_submode = -1;
-			SetMode(0);
+			SetMode(MODE_AGENT);
 		}
+		
+		// Randomize signals sometimes during training to not overfit single iteration
 		else {
-			
-			// Randomize signals sometimes
 			int least_results = INT_MAX;
 			for(int i = 0; i < agents.GetCount(); i++) {
 				if (agents[i].tf_id == submode)

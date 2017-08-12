@@ -51,14 +51,17 @@ public:
 	Mutex work_lock;
 	TimeCallback watchdog;
 	
+	enum {MODE_AGENT, MODE_GROUP, MODE_REAL};
+	
 public:
 	typedef AgentGroup CLASSNAME;
 	AgentGroup();
 	~AgentGroup();
 	void Init();
 	void Start();
-	void StartGroup();
-	void StartAgents(int submode);
+	bool StartGroup();
+	int  StartAgents(int submode);
+	void FreezeAgents(int submode);
 	void Stop();
 	void StopGroup();
 	void StopAgents();

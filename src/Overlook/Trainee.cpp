@@ -20,6 +20,7 @@ TraineeBase::TraineeBase() {
 	save_epoch = true;
 	data_looped_once = false;
 	end_of_epoch = false;
+	is_training = true;
 }
 
 void TraineeBase::Init() {
@@ -120,7 +121,7 @@ void TraineeBase::SeekActive() {
 
 void TraineeBase::Serialize(Stream& s) {
 	s % seq_results % reward_average % loss_average % peak_value % best_result % training_time
-	  % last_drawdown % tf_id % tf % group_id % iter;
+	  % last_drawdown % tf_id % tf % group_id % iter % is_training;
 }
 
 }

@@ -225,7 +225,7 @@ void Agent::Backward(double reward) {
 	
 	
 	// pass to brain for learning
-	if (!group->is_looping)
+	if (!group->is_looping && is_training)
 		dqn.Learn(reward);
 	
 	smooth_reward += reward;

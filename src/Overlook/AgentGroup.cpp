@@ -237,7 +237,7 @@ void AgentGroup::Init() {
 	ASSERT(sys);
 	ASSERT(!tf_ids.IsEmpty());
 	
-	tf_limit.SetCount(tf_ids.GetCount(), 0.05);
+	tf_limit.SetCount(tf_ids.GetCount(), 0.07);
 	
 	symid_count = sym_ids.GetCount() *  tf_ids.GetCount();
 	
@@ -346,6 +346,7 @@ bool AgentGroup::StartGroup() {
 
 int AgentGroup::StartAgents(int submode) {
 	FreezeAgents(submode);
+	prev_least_results = -1;
 	
 	int started = 0;
 	current_submode = submode;

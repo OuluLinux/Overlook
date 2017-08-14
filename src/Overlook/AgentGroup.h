@@ -61,6 +61,7 @@ public:
 	void Start();
 	bool StartGroup();
 	int  StartAgents(int submode);
+	int  StartAgentsFast(int submode);
 	void FreezeAgents(int submode);
 	void Stop();
 	void StopGroup();
@@ -88,9 +89,9 @@ public:
 	void SetMode(int i);
 	bool PutLatest(Brokerage& broker);
 	virtual void SetAskBid(SimBroker& sb, int pos);
-	void LoopAgentsToEnd();
-	void LoopAgentToEnd(int i);
-	void LoopAgentsForRandomness();
+	void LoopAgentsToEnd(int submode);
+	void LoopAgentsToEndTf(int tf_id);
+	void LoopAgentsForRandomness(int submode);
 	void SetTfLimit(int tf_id, double limit);
 	void CheckAgentSubMode();
 	

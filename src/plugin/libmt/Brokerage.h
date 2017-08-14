@@ -6,7 +6,7 @@ namespace libmt {
 class Brokerage {
 	
 protected:
-	Array<Order> orders, history_orders;
+	Vector<Order> orders, history_orders;
 	Index<String> skipped_currencies;
 	Index<String> symbol_idx;
 	
@@ -71,8 +71,8 @@ public:
 	void Leave() {order_lock.Leave();}
 	void RefreshLimits();
 	
-	const Array<Order>&	GetOpenOrders() const {return orders;}
-	const Array<Order>&	GetHistoryOrders() const {return history_orders;}
+	const Vector<Order>&	GetOpenOrders() const {return orders;}
+	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}
 	const Vector<Symbol>&	GetSymbols() const {return symbols;}
 	const Vector<Price>&	GetAskBid() const {return askbid;}
 	const Vector<PriceTf>&	GetTickData() const {return pricetf;}

@@ -245,14 +245,18 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 		
 		// Close
 		if (lots == o.volume) {
-			Order& ho = history_orders.Add(orders.Detach(i));
-			ho.close = ho.type == OP_BUY ? askbid[ho.symbol].bid : askbid[ho.symbol].ask;
-			ho.profit = GetCloseProfit(ho, ho.volume);
-			ho.end = GetTime();
-			balance += ho.profit;
-			close_sum += ho.profit;
-			if (ho.profit >= 0) profit_sum += ho.profit;
-			else                loss_sum   -= ho.profit;
+			o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+			o.profit = GetCloseProfit(o, o.volume);
+			if (o.profit >= 0) profit_sum += o.profit;
+			else               loss_sum   -= o.profit;
+			balance += o.profit;
+			close_sum += o.profit;
+			
+			if (!lightweight) {
+				Order& ho = history_orders.Add(o);
+				ho.end = GetTime();
+			}
+			orders.Remove(i);
 		}
 		
 		// Reduce

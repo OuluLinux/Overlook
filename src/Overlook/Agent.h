@@ -60,6 +60,7 @@ public:
 	void Stop();
 	void SetBrokerageSignals(Brokerage& broker, int pos);
 	void RefreshTotalEpochs();
+	Callback MainCallback() {return Callback(THISBACK(Main));}
 	
 	Callback1<double> WhenRewardAverage;
 	

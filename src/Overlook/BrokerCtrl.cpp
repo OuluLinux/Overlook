@@ -112,7 +112,7 @@ void BrokerCtrl::Data() {
 	}
 	
 	
-	const Array<Order>& orders = b.GetOpenOrders();
+	const Vector<Order>& orders = b.GetOpenOrders();
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
 		String name =
@@ -158,7 +158,7 @@ void BrokerCtrl::Data() {
 	exposure.SetCount(assets.GetCount());
 	
 	
-	const Array<Order>& horders = b.GetHistoryOrders();
+	const Vector<Order>& horders = b.GetHistoryOrders();
 	for(int i = 0; i < horders.GetCount(); i++) {
 		const Order& o = horders[i];
 		if (o.symbol < 0 || o.symbol >= b.GetSymbolCount()) continue;

@@ -86,7 +86,7 @@ public:
 	String	_GetPricesRaw();
 	String	_GetHistoryOrdersRaw(int magic);
 	String	_GetOrdersRaw(int magic);
-	void LoadOrderFile(String content, Array<Order>& orders, bool is_open);
+	void LoadOrderFile(String content, Vector<Order>& orders, bool is_open);
 	const Vector<Symbol>&	_GetSymbols();
 	const Vector<Price>&	_GetAskBid();
 	const Vector<PriceTf>&	_GetTickData();

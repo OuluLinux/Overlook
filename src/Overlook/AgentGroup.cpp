@@ -45,7 +45,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	}
 	
 	WhenInfo("Looping agents until latest snapshot");
-	LoopAgentsToEnd();
+	LoopAgentsToEnd(tf_ids.GetCount());
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
 	
 	// Set probability for random actions to 0
@@ -68,7 +68,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	return true;
 }
 
-void AgentGroup::LoopAgentsToEnd() {
+void AgentGroup::LoopAgentsToEnd(int submode) {
 	if (agents.IsEmpty()) return;
 	is_looping = true;
 	double prev_epsilon = agents[0].dqn.GetEpsilon();
@@ -77,47 +77,58 @@ void AgentGroup::LoopAgentsToEnd() {
 	if (is_realtime)
 		SetEpsilon(0);
 	
-	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
-	for(int i = 0; i < agents.GetCount(); i++) {
-		co & THISBACK1(LoopAgentToEnd, i);
+	for(int i = 0; i <= submode && i < tf_ids.GetCount(); i++) {
+		LoopAgentsToEndTf(i);
 	}
-	co.Finish();
+	
 	SetEpsilon(prev_epsilon);
 	is_looping = false;
 }
 
-void AgentGroup::LoopAgentToEnd(int i) {
-	Agent& agent = agents[i];
-	agent.RefreshTotalEpochs();
-	agent.epoch_actual = 0;
-	while (agent.epoch_actual < agent.epoch_total) {
-		agent.Main();
+void AgentGroup::LoopAgentsToEndTf(int tf_id) {
+	Vector<Agent*> agent_ptrs;
+	for(int i = 0; i < agents.GetCount(); i++) {
+		Agent& agent = agents[i];
+		if (agent.tf_id == tf_id)
+			agent_ptrs.Add(&agent);
 	}
+	
+	if (agent_ptrs.IsEmpty()) return;
+	
+	Vector<Callback> mains;
+	for(int i = 0; i < agent_ptrs.GetCount(); i++) {
+		Agent& agent = *agent_ptrs[i];
+		agent.RefreshTotalEpochs();
+		agent.epoch_actual = 0;
+		mains.Add(agent.MainCallback());
+	}
+	
+	Agent& agent = *agent_ptrs[0];
+	CoWork co;
+	while (agent.epoch_actual < agent.epoch_total) {
+		for(int i = 0; i < agent_ptrs.GetCount(); i++)
+			co & mains[i];
+		co.Finish();
+	}
+	
 	ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
 }
 
-void AgentGroup::LoopAgentsForRandomness() {
+void AgentGroup::LoopAgentsForRandomness(int submode) {
 	if (agents.IsEmpty()) return;
 	
 	random_loops++;
-	int submode = current_submode;
 	StopAgents();
 	
 	is_looping = true;
 	
-	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
-	for(int i = 0; i < agents.GetCount(); i++) {
-		// Only refresh slower tfs
-		if (agents[i].tf_id >= submode)
-			continue;
-		co & THISBACK1(LoopAgentToEnd, i);
+	for(int i = 0; i <= submode && i < tf_ids.GetCount(); i++) {
+		LoopAgentsToEndTf(i);
 	}
-	co.Finish();
+	
 	is_looping = false;
 	
-	StartAgents(submode);
+	StartAgentsFast(submode);
 }
 
 void AgentGroup::Progress(int actual, int total, String desc) {
@@ -348,6 +359,12 @@ int AgentGroup::StartAgents(int submode) {
 	FreezeAgents(submode);
 	prev_least_results = -1;
 	
+	LoopAgentsToEnd(submode);
+	
+	return StartAgentsFast(submode);
+}
+
+int AgentGroup::StartAgentsFast(int submode) {
 	int started = 0;
 	current_submode = submode;
 	for(int i = 0; i < agents.GetCount(); i++) {
@@ -399,8 +416,9 @@ void AgentGroup::Data() {
 		return;
 	
 	MetaTrader& mt = GetMetaTrader();
-	Array<Order> orders;
+	Vector<Order> orders;
 	Vector<int> signals;
+	
 	orders <<= mt.GetOpenOrders();
 	signals <<= mt.GetSignals();
 	
@@ -448,7 +466,7 @@ void AgentGroup::Main() {
 				if (!agents[i].data_looped_once)
 					all_looped_once = false;
 			if (!all_looped_once)
-				LoopAgentsToEnd();
+				LoopAgentsToEnd(tf_ids.GetCount());
 			
 		}
 		prev_equity = broker.GetInitialBalance();
@@ -632,7 +650,12 @@ void AgentGroup::CheckAgentSubMode() {
 		int submode = GetAgentSubMode();
 		if (submode != current_submode) {
 			StopAgents();
+			
+			// Remove agent-experience and store file
+			FreezeAgents(submode);
+			mode = submode < tf_ids.GetCount() ? MODE_AGENT : MODE_GROUP;
 			StoreThis();
+			
 			mode = -1;
 			current_submode = -1;
 			SetMode(MODE_AGENT);
@@ -646,7 +669,7 @@ void AgentGroup::CheckAgentSubMode() {
 					least_results = Upp::min(least_results, agents[i].seq_results.GetCount());
 			}
 			if (least_results > prev_least_results+1) {
-				LoopAgentsForRandomness();
+				LoopAgentsForRandomness(submode);
 				prev_least_results = least_results;
 			}
 			

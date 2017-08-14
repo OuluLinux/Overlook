@@ -903,7 +903,7 @@ const Vector<Price>& MetaTrader::_GetAskBid() {
 #define GET_INT() StrInt(v[pos++])
 #define GET_DBL() StrDbl(v[pos++])
 
-void MetaTrader::LoadOrderFile(String content, Array<Order>& orders, bool is_open) {
+void MetaTrader::LoadOrderFile(String content, Vector<Order>& orders, bool is_open) {
 	ASSERT(!symbol_idx.IsEmpty());
 	
 	// Clear old data
@@ -967,7 +967,7 @@ void MetaTrader::_GetOrders(int magic, bool force_history) {
 	
 	
 	// Load Order from data
-	Array<Order> open_orders;
+	Vector<Order> open_orders;
 	LoadOrderFile(content, open_orders, true);
 	bool all_equal = open_orders.GetCount() == this->orders.GetCount();
 	if (all_equal) {
@@ -999,7 +999,7 @@ void MetaTrader::_GetOrders(int magic, bool force_history) {
 	
 	
 	// Load stored file
-	Array<Order> history_orders;
+	Vector<Order> history_orders;
 	LoadOrderFile(content, history_orders, false);
 	this->history_orders <<= history_orders;
 }

@@ -53,8 +53,8 @@ double Brokerage::GetMargin(int sym_id, double volume) {
 }
 
 void Brokerage::Clear() {
-	orders.Clear();
-	history_orders.Clear();
+	orders.SetCount(0);
+	history_orders.SetCount(0);
 	
 	for(int i = 0; i < signals.GetCount(); i++) signals[i] = 0;
 	for(int i = 0; i < signal_freezed.GetCount(); i++) signal_freezed[i] = 0;

@@ -533,6 +533,9 @@ void DataBridge::RefreshFromHistory() {
 	// Fill volume querytable
 	bool five_mins = GetMinutePeriod() < 5;
 	int steps = five_mins ? 5 : 1;
+	
+	// This is just too heavy in debug mode
+	#ifndef flagDEBUG
 	volume_qt.Reserve(count / steps);
 	for(int i = 0; i < count; i += steps) {
 		if ((count % 10) == 0) {
@@ -561,6 +564,7 @@ void DataBridge::RefreshFromHistory() {
 			}
 		}
 	}
+	#endif
 	
 	ForceSetCounted(count);
 	buffer_cursor = count-1;

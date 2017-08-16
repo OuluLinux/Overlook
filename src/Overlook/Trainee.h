@@ -78,7 +78,6 @@ struct TraineeBase {
 	int epoch_actual, epoch_total;
 	int main_id;
 	bool at_main, save_epoch;
-	bool data_looped_once;
 	bool end_of_epoch;
 	
 	TraineeBase();

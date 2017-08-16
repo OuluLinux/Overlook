@@ -34,8 +34,10 @@ AgentGroup::~AgentGroup() {
 bool AgentGroup::PutLatest(Brokerage& broker) {
 	if (!is_realtime) return false;
 	
+	
 	WhenInfo("Refreshing snapshots");
 	RefreshSnapshots();
+	
 	
 	Time time = GetMetaTrader().GetTime();
 	int shift = sys->GetShiftFromTimeTf(time, main_tf);
@@ -44,12 +46,28 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 		return false;
 	}
 	
+	
 	WhenInfo("Looping agents until latest snapshot");
 	LoopAgentsToEnd(tf_ids.GetCount());
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
 	
+	
+	// Reset signals
+	for(int i = 0; i < broker.GetSymbolCount(); i++)
+		broker.SetSignal(i, 0);
+	
+	
 	// Set probability for random actions to 0
 	Forward(shift_snap, broker);
+	
+	
+	String sigstr = "Signals ";
+	for(int i = 0; i < sym_ids.GetCount(); i++) {
+		if (i) sigstr << ",";
+		sigstr << broker.GetSignal(sym_ids[i]);
+	}
+	WhenInfo(sigstr);
+	
 	
 	WhenInfo("Refreshing broker data");
 	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
@@ -61,9 +79,11 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	}
 	broker.SetLimitFactor(limit_factor);
 	
+	
 	WhenInfo("Updating orders");
 	broker.SignalOrders(true);
 	broker.RefreshLimits();
+	
 	
 	return true;
 }
@@ -447,7 +467,6 @@ void AgentGroup::Main() {
 	at_main = true;
 	epoch_total = snaps.GetCount();
 	if (epoch_actual >= epoch_total) {
-		data_looped_once = true;
 		epoch_actual = 0;
 	}
 	
@@ -458,16 +477,8 @@ void AgentGroup::Main() {
 	}
 	
 	if (epoch_actual == 0) {
-		if (!is_realtime) {
-			
-			// Loop agents to the end if program boots directly to group optimizer.
-			bool all_looped_once = true;
-			for(int i = 0; i < agents.GetCount(); i++)
-				if (!agents[i].data_looped_once)
-					all_looped_once = false;
-			if (!all_looped_once)
-				LoopAgentsToEnd(tf_ids.GetCount());
-			
+		if (!is_realtime && !act_iter) {
+			LoopAgentsToEnd(tf_ids.GetCount());
 		}
 		prev_equity = broker.GetInitialBalance();
 		prev_reward = 0.0;
@@ -554,7 +565,7 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 				broker.SetSignal(sym, signal);
 				broker.SetSignalFreeze(sym, false);
 			} else {
-				broker.SetSignalFreeze(sym, true);
+				broker.SetSignalFreeze(sym, signal != 0);
 			}
 		}
     }
@@ -656,7 +667,7 @@ void AgentGroup::CheckAgentSubMode() {
 			mode = submode < tf_ids.GetCount() ? MODE_AGENT : MODE_GROUP;
 			StoreThis();
 			
-			mode = -1;
+			mode = MODE_AGENT;
 			current_submode = -1;
 			SetMode(MODE_AGENT);
 		}

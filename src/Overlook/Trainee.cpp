@@ -18,7 +18,6 @@ TraineeBase::TraineeBase() {
 	main_id = -1;
 	at_main = false;
 	save_epoch = true;
-	data_looped_once = false;
 	end_of_epoch = false;
 	is_training = true;
 }
@@ -101,7 +100,6 @@ void TraineeBase::Action() {
 		training_time += ts.Elapsed() / (1000.0 * 60.0 * 60.0);
 		ts.Reset();
 		last_drawdown = broker.GetDrawdown();
-		data_looped_once = true;
 		end_of_epoch = true;
 	} else {
 		end_of_epoch = false;

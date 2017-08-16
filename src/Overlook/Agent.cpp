@@ -176,7 +176,7 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 			broker.SetSignal(sym, signal);
 			broker.SetSignalFreeze(sym, false);
 		} else {
-			broker.SetSignalFreeze(sym, true);
+			broker.SetSignalFreeze(sym, signal != 0);
 		}
 	} else {
 		broker.SetSignal(sym, signal);

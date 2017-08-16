@@ -584,6 +584,9 @@ String GetProxy(const String& currency) {
 }
 
 const Vector<Symbol>& MetaTrader::_GetSymbols() {
+	Vector<Symbol> symbols;
+	Vector<int> indices;
+	
 	symbols.SetCount(0);
 	indices.SetCount(0);
 	symbol_idx.Clear();
@@ -859,6 +862,9 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			}
 		}
 	}
+	
+	Swap(symbols, this->symbols);
+	Swap(indices, this->indices);
 	
 	return symbols;
 }

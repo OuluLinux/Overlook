@@ -667,7 +667,7 @@ void AgentGroup::CheckAgentSubMode() {
 			mode = submode < tf_ids.GetCount() ? MODE_AGENT : MODE_GROUP;
 			StoreThis();
 			
-			mode = MODE_AGENT;
+			mode = -1;
 			current_submode = -1;
 			SetMode(MODE_AGENT);
 		}

@@ -25,6 +25,8 @@ public:
 	int GetPort() const {return port;}
 	void GetMarginPercentages();
 	void Data();
+	void DataEnter() {data_lock.Enter();}
+	void DataLeave() {data_lock.Leave();}
 	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and

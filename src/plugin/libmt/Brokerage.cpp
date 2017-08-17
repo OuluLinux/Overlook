@@ -470,12 +470,11 @@ void Brokerage::SignalOrders(bool debug_print) {
 	if (debug_print) {
 		DUMP(max_margin_sum);
 		DUMP(lot_multiplier);
-	}
-	if (lot_multiplier < 1.0) {
-		last_error = "Total margin is too much";
-		CloseAll();
-		Leave();
-		return;
+		
+		if (lot_multiplier < 1.0) {
+			last_error = "Total margin is too much";
+			WhenInfo(last_error);
+		}
 	}
 	
 	for(int i = 0; i < sym_count; i++) {

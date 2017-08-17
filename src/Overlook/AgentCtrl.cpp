@@ -457,6 +457,7 @@ DataCtrl::DataCtrl() :
 	last_pos = 0;
 	group = NULL;
 	
+	timeslider.MinMax(0,1);
 	timeslider <<= THISBACK(GuiData);
 	
 	Add(graph.HSizePos().TopPos(0,120));
@@ -512,8 +513,8 @@ void DataCtrl::GuiData() {
 	
 	data.SetLabel(Format("%", time) + Format(" Equity: %f Balance: %f", equity, balance));
 	
-	for(int i = 0; i < signals.GetCount(); i++) {
-		const Symbol& sym = mt.GetSymbol(group->sym_ids[i]);
+	for(int i = 0; i < signals.GetCount() && i < mt.GetSymbolCount(); i++) {
+		const Symbol& sym = mt.GetSymbol(i);
 		siglist.Set(i, 0, sym.name);
 		siglist.Set(i, 1, signals[i]);
 	}
@@ -569,7 +570,7 @@ void DataCtrl::Data() {
 		this->equity.Add(equity);
 	}
 	
-	timeslider.MinMax(0, poslist.GetCount()-1);
+	timeslider.MinMax(0, Upp::max(1, poslist.GetCount()-1));
 	
 	last_pos = fin.GetSize();
 	

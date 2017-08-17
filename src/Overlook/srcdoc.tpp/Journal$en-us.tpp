@@ -2413,4 +2413,17 @@ I am testing the 6x faster setup for next week. The serialization
 file will be huge.&]
 [s0; I tried to fix that weekend sensor bug... I guess it`'s good 
 this time.&]
+[s3; 17.8.2017&]
+[s0; I tested M15 instead of H4. It was a total failure. This technique 
+just doesn`'t work for that. However, the test was a nice technical 
+feat even with a negative result, because a group with W1,D1,H12,H4,H1,M15 
+took too much resources in the start and now it is possible. 
+The limit for period with this technique is at least between 
+H4 and H1, but H12 and H4 are not tested yet, so the limit might 
+get higher.&]
+[s0; The other technique for higher frequencies might be that one 
+would use only the fastest data and agents would have different 
+actions for different length of orders (with sl/tp limits). I 
+got that idea today and it seems very reasonable feature to me. 
+It is a small addition to current version...&]
 [s0; ]]

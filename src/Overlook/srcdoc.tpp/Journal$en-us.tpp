@@ -2466,7 +2466,7 @@ and uses it in training... You can forecast, but you can`'t peek.
 I meant to wrote those after when the reward is known...&]
 [s0; ...&]
 [s0; Whew... I added the timestep feature for smaller timeframes. 
-First time I could get positive results with M5 in training. 
+At first time I could get positive results with M5 in training. 
 It`'s far from stable, but there`'s a chance that it would just 
 work now.&]
 [s0; ]]

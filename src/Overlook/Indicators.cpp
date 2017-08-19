@@ -3929,13 +3929,15 @@ void Sensors::Start() {
 		for(int j = 0; j < SMALL_COUNT; j++) {
 			int k = i-shift;
 			
+			// k        -= 0 1 3 6 10 15
+			// prev_pos -= 1 2 3 4 5
 			for (int l = 1; l <= j; l++)
 				k -= l;
 			
 			if (k-1 < 0) break;
 			double open0 = src.Get(k);
 			
-			int prev_pos = k-1;
+			int prev_pos = k-1-j;
 			double open1 = src.Get(prev_pos);
 			while (open0 == open1 && prev_pos > 0) {
 				prev_pos--;

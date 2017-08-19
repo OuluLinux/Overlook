@@ -863,10 +863,16 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		}
 	}
 	
-	Swap(symbols, this->symbols);
-	Swap(indices, this->indices);
 	
-	return symbols;
+	this->symbols.SetCount(symbols.GetCount());
+	for(int i = 0; i < symbols.GetCount(); i++)
+		this->symbols[i] = symbols[i];
+	
+	this->indices.SetCount(indices.GetCount());
+	for(int i = 0; i < indices.GetCount(); i++)
+		this->indices[i] = indices[i];
+	
+	return this->symbols;
 }
 
 const Vector<Price>& MetaTrader::_GetAskBid() {

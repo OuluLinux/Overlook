@@ -3841,7 +3841,7 @@ void Sensors::Start() {
 	#endif
 		bufs.Add(&GetBuffer(i));
 	
-	int bars = GetBars() - 1;
+	int bars = Upp::min(src.GetCount(), GetBars()) - 1;
 	int counted = GetCounted();
 	
 	for(int i = counted; i < bars; i++) {
@@ -3927,7 +3927,11 @@ void Sensors::Start() {
 		#else
 		int shift = 0;
 		for(int j = 0; j < SMALL_COUNT; j++) {
-			int k = i-j-shift;
+			int k = i-shift;
+			
+			for (int l = 1; l <= j; l++)
+				k -= l;
+			
 			if (k-1 < 0) break;
 			double open0 = src.Get(k);
 			

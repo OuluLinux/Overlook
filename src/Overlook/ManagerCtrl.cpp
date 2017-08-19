@@ -67,10 +67,8 @@ void GroupOverview::Data() {
 		infostr << "Free-margin level: " << group->fmlevel << "\n";
 		//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
 		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
-		infostr << "Signal freeze: " << (group->sig_freeze ? "True" : "False") << "\n";
 		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
 		infostr << "Created: " << Format("%", group->created) << "\n";
-		infostr << "Snapshot data-size: " << group->data_size << "\n";
 		for(int i = 0; i < group->tf_ids.GetCount(); i++) {
 			infostr
 				<< "    tf" << i << ": " << group->tf_ids[i] << ", "
@@ -288,7 +286,6 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.create <<= THISBACK(PostNewAgent);
 	newview.symlist <<= THISBACK(Data);
 	
-	newview.freeze_sig.Set(true);
 	newview.symlist.AddColumn("");
 	newview.symlist.AddColumn("");
 	newview.symlist.NoHeader();
@@ -506,7 +503,6 @@ void ManagerCtrl::NewAgent() {
 	}
 		
 	
-	group.sig_freeze				= newview.freeze_sig.Get();
 	group.param_str					= newview.params.GetData();
 	
 	group.sys = sys;

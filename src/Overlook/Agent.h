@@ -28,16 +28,19 @@ protected:
 	ConvNet::DQNAgent dqn;
 	int agent_id, sym_id, sym, proxy_sym;
 	int agent_input_width, agent_input_height;
+	bool has_timesteps;
 	
 	
 	// Tmp vars
 	Vector<double> input_array;
-	Snapshot* cur_snap;
+	double posreward, negreward;
 	double smooth_reward;
 	double prev_equity;
 	int group_count;
 	int tf_step;
+	int timestep;
 	bool has_yeartime;
+	bool is_training_iteration;
 	
 	virtual void Create(int width, int height);
 	virtual void Forward(Snapshot& snap, SimBroker& broker);

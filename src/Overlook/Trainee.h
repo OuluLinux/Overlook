@@ -40,14 +40,18 @@ struct TfSymAverage {
 };
 
 struct Snapshot : Moveable<Snapshot> {
-	Vector<double> values;
-	Vector<int> time_values;
-	Vector<char> signals;
+	// Values used in training. Strictly double type for performance reasons.
+	double wday_timesensor, year_timesensor;
+	Vector<double> sensors;
+	Vector<double> signals, prev_signals;
+	Vector<double> prev_rewards;
+	
+	Vector<char> time_values;
 	Time time, added;
 	int shift, tfs_used, id;
 	uint16 tfmask;
 	
-	Snapshot() : shift(-1), id(-1), tfmask(0) {}
+	Snapshot() : shift(-1), id(-1), tfmask(0), wday_timesensor(0), year_timesensor(0) {}
 	
 	bool IsActive(int tf_id) const {return tfmask & (1 << tf_id);}
 	void SetActive(int tf_id) {tfmask |= (1 << tf_id);}

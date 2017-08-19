@@ -27,7 +27,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int tf_count		= group.tf_ids.GetCount();
 	int value_count		= group.buf_count;
 	
-	int rows = 1 + sym_count * tf_count + sym_count;
+	int rows = 2 + sym_count * tf_count * 3;
 	int cols = value_count;
 	int grid_w = sz.cx;
 	double xstep = (double)grid_w / (double)cols;
@@ -37,15 +37,27 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	// Time value
 	{
-		double value = 255.0 * Upp::max(0.0, Upp::min(1.0, snap.values[0]));
-		int clr = (int)Upp::min(255.0, value);
-		Color c(255 - clr, clr, 0);
+		double value;
+		int clr;
+		Color c;
+		
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, snap.year_timesensor));
+		clr = (int)Upp::min(255.0, value);
+		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, 0, sz.cx, (int)(ystep+1), c);
+		row++;
+		
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, snap.wday_timesensor));
+		clr = (int)Upp::min(255.0, value);
+		c = Color(255 - clr, clr, 0);
+		id.DrawRect(0, (int)ystep, sz.cx, (int)(ystep+1), c);
+		row++;
 	}
-	row++;
+	
 	
 	
 	// Data sensors
+	ASSERT(snap.sensors.GetCount() == (group.sym_ids.GetCount() * value_count * group.tf_ids.GetCount()));
 	for(int i = 0; i < tf_count; i++) {
 		for(int j = 0; j < sym_count; j++) {
 			int y = (int)(row * ystep);
@@ -56,7 +68,7 @@ void SnapshotDraw::Paint(Draw& w) {
 				int x = (int)(k * xstep);
 				int x2 = (int)((k + 1) * xstep);
 				int w = x2 - x;
-				double d = snap.values[1 + (i * group.sym_ids.GetCount() + j) * value_count + k];
+				double d = snap.sensors[(i * group.sym_ids.GetCount() + j) * value_count + k];
 				double min = 0.0;
 				double max = 1.0;
 				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -69,28 +81,59 @@ void SnapshotDraw::Paint(Draw& w) {
 		}
 	}
 	
-	// Sensor values
-	cols = 4;
+	// Rewards
+	cols = 2;
 	xstep = (double)grid_w / (double)cols;
-	for(int j = 0; j < sym_count; j++) {
-		int y = (int)(row * ystep);
-		int y2 = (int)((row + 1) * ystep);
-		int h = y2-y;
-		
-		for(int k = 0; k < cols; k++) {
-			int x = (int)(k * xstep);
-			int x2 = (int)((k + 1) * xstep);
-			int w = x2 - x;
-			double d = snap.values[group.data_size + j * cols + k];
-			double min = 0.0;
-			double max = 1.0;
-			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-			int clr = (int)Upp::min(255.0, value);
-			Color c(255 - clr, clr, 0);
-			id.DrawRect(x, y, w, h, c);
+	ASSERT(snap.prev_rewards.GetCount() == (cols * sym_count * tf_count));
+	for(int i = 0; i < tf_count; i++) {
+		for(int j = 0; j < sym_count; j++) {
+			int y = (int)(row * ystep);
+			int y2 = (int)((row + 1) * ystep);
+			int h = y2-y;
+			
+			for(int k = 0; k < cols; k++) {
+				int x = (int)(k * xstep);
+				int x2 = (int)((k + 1) * xstep);
+				int w = x2 - x;
+				double d = snap.prev_rewards[(i * group.sym_ids.GetCount() + j) * cols + k];
+				double min = 0.0;
+				double max = 1.0;
+				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
+				int clr = (int)Upp::min(255.0, value);
+				Color c(255 - clr, clr, 0);
+				id.DrawRect(x, y, w, h, c);
+			}
+			
+			row++;
 		}
-		
-		row++;
+	}
+	
+	
+	// Signals
+	cols = 2;
+	xstep = (double)grid_w / (double)cols;
+	ASSERT(snap.prev_signals.GetCount() == (cols * sym_count * tf_count));
+	for(int i = 0; i < tf_count; i++) {
+		for(int j = 0; j < sym_count; j++) {
+			int y = (int)(row * ystep);
+			int y2 = (int)((row + 1) * ystep);
+			int h = y2-y;
+			
+			for(int k = 0; k < cols; k++) {
+				int x = (int)(k * xstep);
+				int x2 = (int)((k + 1) * xstep);
+				int w = x2 - x;
+				double d = snap.prev_signals[(i * group.sym_ids.GetCount() + j) * cols + k];
+				double min = 0.0;
+				double max = 1.0;
+				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
+				int clr = (int)Upp::min(255.0, value);
+				Color c(255 - clr, clr, 0);
+				id.DrawRect(x, y, w, h, c);
+			}
+			
+			row++;
+		}
 	}
 	
 	

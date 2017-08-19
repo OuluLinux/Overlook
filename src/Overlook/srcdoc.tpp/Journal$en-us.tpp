@@ -7,7 +7,9 @@ topic "Journal";
 [s1; Journal&]
 [s0; I write this journal to keep myself focused on the end result: 
 the working product. This text is sort of an investment, which 
-loses value if I don`'t get the product work.&]
+loses value if I don`'t get the product work. In a group project, 
+I would happily use issue tracker etc., but because this is one 
+man`'s project, then I am going to take this more thrilling approach.&]
 [s0; I like to tell how original this application is and to communicate 
 the countless hours and the sweat what I did see for this. The 
 public release is merely a by`-product. The progress of this 
@@ -2426,4 +2428,45 @@ would use only the fastest data and agents would have different
 actions for different length of orders (with sl/tp limits). I 
 got that idea today and it seems very reasonable feature to me. 
 It is a small addition to current version...&]
+[s3; 18.8.2017&]
+[s0; I planned the other technique and found a bad bug in the current 
+version. While slower agents are training, they can only see 
+previous actions of other agents, but when faster agents are 
+training, they should see actions of slower agents in the same 
+timestap and not previous.&]
+[s3; 19.8.2017&]
+[s0; Today I have time to implement some of planned changes.&]
+[s0; I looked upon the code to estimate how much code could be improved 
+if I had much more spare time. I thought that I could do the 
+AMP C`+`+ accelerated DQN`-agent, but now it seems too difficult. 
+The ugly truth is that this program is glued together while programming 
+without known end result, and it`'s increasingly difficult to 
+modify it without planning. Also, I have had to be fast, which 
+haven`'t made the code more intuitive. The DQN`-agent barely 
+works correctly with the 1:1 JS`->C`+`+ conversion and with one 
+working and identical test. New major version with almost complete 
+rewrite would be needed, but only when this version has known 
+working final version. The nice feature of this version is that 
+it is completely cross`-platform supported on desktop computers: 
+Windows, Linux, OSX, FreeBSD. It just gets an better edge on 
+Windows with Visual C compiler.&]
+[s0; Hmm... more issues. I tested the `"reward for closing orders`"`-model, 
+and forgot to return it back to normal sustained increase model. 
+The question is, why the training seemed to work anyway? The 
+reward didn`'t go after the timestep but immediately after the 
+action, which closed or opened something.&]
+[s0; Hmm... and even more issues. This is the one I fear the most. 
+This is reoccuring problem and the reason why I added safety 
+limits to indicators. I accidentally wrote rewards to all snapshots 
+between previously forwarded snapshot, which gave correct reward 
+value for faster timeframes, like at tuesday you knew the reward 
+for the whole week. That`'s non`-realistic peeking and it ruins 
+everything. The neural network notices that short`-cut of course 
+and uses it in training... You can forecast, but you can`'t peek. 
+I meant to wrote those after when the reward is known...&]
+[s0; ...&]
+[s0; Whew... I added the timestep feature for smaller timeframes. 
+First time I could get positive results with M5 in training. 
+It`'s far from stable, but there`'s a chance that it would just 
+work now.&]
 [s0; ]]

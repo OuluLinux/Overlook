@@ -19,7 +19,6 @@ public:
 	double limit_factor;
 	int group_input_width, group_input_height;
 	int mode;
-	bool sig_freeze;
 	bool enable_training;
 	
 	// Temp
@@ -36,14 +35,16 @@ public:
 	double prev_equity;
 	double prev_reward;
 	int buf_count;
-	int data_size, signal_size, total_size;
+	int data_size, signal_size;
 	int act_iter;
 	int main_tf, main_tf_pos;
+	int timeslot_tf, timeslot_tf_pos;
 	int current_submode;
 	int symid_count;
-	int fastest_period_mins, timeslots;
+	int timeslot_minutes, timeslots;
 	int prev_least_results;
 	int random_loops;
+	int realtime_count;
 	bool reset_optimizer;
 	bool is_realtime;
 	bool is_looping;

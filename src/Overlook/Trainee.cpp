@@ -53,6 +53,7 @@ void TraineeBase::Action() {
 		}
 	}
 	
+	// Focus on nearest active snapshot
 	SeekActive();
 	
 	
@@ -73,6 +74,9 @@ void TraineeBase::Action() {
 	double diff = equity - broker.GetInitialBalance();
 	if (diff > peak_value) peak_value = diff;
 	
+	Backward(reward);
+	
+	
 	Snapshot& snap = group->snaps[epoch_actual];
 	ASSERT(snap.id == epoch_actual);
 	Forward(snap, broker);
@@ -82,15 +86,15 @@ void TraineeBase::Action() {
 	if (epoch_actual < group->snaps.GetCount()-1)	broker.Cycle();
 	else											broker.CloseAll();
 	
-	Backward(reward);
-	
 	
 	// Write some stats for plotter
 	thrd_equity[epoch_actual] = equity;
 	
 	
+	// Change to next active snapshot
 	epoch_actual++;
 	SeekActive();
+	
 	
 	if (epoch_actual >= epoch_total && !group->is_realtime && !group->is_looping) {
 		seq_results.Add(equity);

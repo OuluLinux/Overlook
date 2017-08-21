@@ -3938,6 +3938,8 @@ void Sensors::Start() {
 			double open0 = src.Get(k);
 			
 			int prev_pos = k-1-j;
+			if (prev_pos < 0) break;
+			
 			double open1 = src.Get(prev_pos);
 			while (open0 == open1 && prev_pos > 0) {
 				prev_pos--;

@@ -90,8 +90,8 @@ public:
 	void SetMode(int i);
 	bool PutLatest(Brokerage& broker);
 	virtual void SetAskBid(SimBroker& sb, int pos);
-	void LoopAgentsToEnd(int submode);
-	void LoopAgentsToEndTf(int tf_id);
+	void LoopAgentsToEnd(int submode, bool tail_only);
+	void LoopAgentsToEndTf(int tf_id, bool tail_only);
 	void LoopAgentsForRandomness(int submode);
 	void SetTfLimit(int tf_id, double limit);
 	void CheckAgentSubMode();

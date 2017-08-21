@@ -2469,4 +2469,36 @@ I meant to wrote those after when the reward is known...&]
 At first time I could get positive results with M5 in training. 
 It`'s far from stable, but there`'s a chance that it would just 
 work now.&]
-[s0; ]]
+[s3; 20.8.2017&]
+[s0; White supremacist have been a topic recently. I didn`'t know 
+any of those while living in the city, but when I had to go to 
+the mandatory military service, then I met more of them than 
+I could handle. In the military police training, I had to sleep 
+in the same house with guys, who said how them want to be a police 
+so they get to beat some non`-white people. They had friends 
+who were cops and they were generally good candidates to be polices 
+otherwise, which is scary. That was rather common thinking, and 
+none of non`-white people could get higher ranks. We had a lot 
+of boxers there, and there was a lot of casual violence everywhere 
+at free time. Many of those compared their penis sizes and yelled 
+to everyone about their length. The penis talk was common in 
+that sense. They were very visually thinking also, and not deep 
+thinkers. Together with enforced religious events, it was a brutal 
+and tribalistic place. There was some seriously evil `"tower 
+gossips`" also. Some guy gossiped me being a `"rapist`" and my 
+sister`'s house got sprayed with `"rapist`'s sister`" tag. That`'s 
+seriously evil... Since Finland`'s military is a complete copy 
+cat military from Russia, then I guess it`'s same there in bigger 
+scale.&]
+[s0; I had been reading psychology and a lot of Freud for fun before 
+going there, so I was just analyzing sub`-conscious stuff and 
+do they really have some father`-relations to their leader etc 
+(in very non`-serious and non`-professional way)... Apparently 
+that`'s a sweet spot for that kind of stuff, but I`'ll tell you, 
+it`'s dangerous. One thing for sure is that they have an eye 
+for courgeous women. The most beautiful women I`'ve met have 
+been daughters of some military leaders.&]
+[s0; ...&]
+[s0; Drawdowns have been realistically high after fixing that peeking 
+bug. M5 seems to be viable now, and I am testing W1,D1,H12,H4,M5 
+group this week.]]

@@ -140,7 +140,7 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 		
 		// Everything just breaks if you change this limit to tighter after it has proceeded
 		// to faster tf...
-		if (group.GetTfDrawdown(i) < group.tf_limit[i]) {
+		if (group.enable_training && group.GetTfDrawdown(i) < group.tf_limit[i]) {
 			edit.Disable();
 		} else {
 			edit <<= THISBACK1(SetTfLimit, i);

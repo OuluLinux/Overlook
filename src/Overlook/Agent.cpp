@@ -80,6 +80,8 @@ void Agent::Main() {
 	at_main = true;
 	is_training_iteration = !group->is_looping && is_training;
 	
+	int ret_epoch_actual = epoch_actual + 1;
+	
 	RefreshTotalEpochs();
 	if (epoch_total > 0) {
 		if (epoch_actual == 0) {
@@ -108,6 +110,15 @@ void Agent::Main() {
 				if (epoch_actual >= group->snaps.GetCount())
 					epoch_actual  = group->snaps.GetCount() - 1;
 			} else {
+				epoch_actual++;
+				skip_action = true;
+			}
+		}
+		
+		if (!skip_action && group->is_looping && epoch_actual < group->snaps.GetCount()) {
+			Snapshot& snap = group->snaps[epoch_actual];
+			if (!snap.IsActive(tf_id)) {
+				epoch_actual++;
 				skip_action = true;
 			}
 		}
@@ -120,6 +131,10 @@ void Agent::Main() {
 				epoch_actual = 0;
 		}
 	}
+	
+	if (group->is_looping)
+		epoch_actual = ret_epoch_actual;
+	
 	at_main = false;
 }
 

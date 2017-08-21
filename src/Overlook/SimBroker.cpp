@@ -284,10 +284,14 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 		volume *= o.open;
 	
 	if (sym.is_base_currency) {
-		if (o.type == OP_BUY)
+		if (o.type == OP_BUY) {
+			if (askbid[o.symbol].ask == o.open) return 0.0; // normal data changes, broken data not
 			return      volume * (askbid[o.symbol].bid / o.open - 1.0);
-		else if (o.type == OP_SELL)
+		}
+		else if (o.type == OP_SELL) {
+			if (askbid[o.symbol].bid == o.open) return 0.0; // normal data changes, broken data not
 			return -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
+		}
 		else Panic("Type handling not implemented");
 	}
 	else {
@@ -298,6 +302,7 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 		const Symbol& proxy = symbols[sym.proxy_id];
 		ASSERT(proxy.base_mul != 0);
 		if (o.type == OP_BUY) {
+			if (askbid[o.symbol].ask == o.open) return 0.0; // normal data changes, broken data not
 			double change = volume * (askbid[o.symbol].bid / o.open - 1.0);
 			if (proxy.base_mul == +1) {
 				change /= askbid[sym.proxy_id].bid;
@@ -309,6 +314,7 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 			return change;
 		}
 		else if (o.type == OP_SELL) {
+			if (askbid[o.symbol].bid == o.open) return 0.0; // normal data changes, broken data not
 			double change = -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
 			if (proxy.base_mul == +1) {
 				change /= askbid[sym.proxy_id].ask;

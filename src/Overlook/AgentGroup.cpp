@@ -60,7 +60,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	
 	
 	WhenInfo("Looping agents until latest snapshot");
-	LoopAgentsToEnd(tf_ids.GetCount());
+	LoopAgentsToEnd(tf_ids.GetCount(), true);
 	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
 	
 	
@@ -105,7 +105,7 @@ bool AgentGroup::PutLatest(Brokerage& broker) {
 	return true;
 }
 
-void AgentGroup::LoopAgentsToEnd(int submode) {
+void AgentGroup::LoopAgentsToEnd(int submode, bool tail_only) {
 	if (agents.IsEmpty()) return;
 	is_looping = true;
 	double prev_epsilon = agents[0].dqn.GetEpsilon();
@@ -115,14 +115,15 @@ void AgentGroup::LoopAgentsToEnd(int submode) {
 		SetEpsilon(0);
 	
 	for(int i = 0; i <= submode && i < tf_ids.GetCount(); i++) {
-		LoopAgentsToEndTf(i);
+		Progress(i, submode+1, "Looping agents...");
+		LoopAgentsToEndTf(i, tail_only);
 	}
 	
 	SetEpsilon(prev_epsilon);
 	is_looping = false;
 }
 
-void AgentGroup::LoopAgentsToEndTf(int tf_id) {
+void AgentGroup::LoopAgentsToEndTf(int tf_id, bool tail_only) {
 	Vector<Agent*> agent_ptrs;
 	for(int i = 0; i < agents.GetCount(); i++) {
 		Agent& agent = agents[i];
@@ -136,16 +137,28 @@ void AgentGroup::LoopAgentsToEndTf(int tf_id) {
 	for(int i = 0; i < agent_ptrs.GetCount(); i++) {
 		Agent& agent = *agent_ptrs[i];
 		agent.RefreshTotalEpochs();
-		agent.epoch_actual = 0;
+		if (!tail_only)
+			agent.epoch_actual = 0;
 		mains.Add(agent.MainCallback());
 	}
 	
 	Agent& agent = *agent_ptrs[0];
 	CoWork co;
 	while (agent.epoch_actual < agent.epoch_total) {
+		
+		a1 = epoch_actual;
+		t1 = agent.epoch_total;
+		if (agent.epoch_actual % 100 == 0) {
+			SubProgress(agent.epoch_actual, agent.epoch_total);
+		}
+		
 		for(int i = 0; i < agent_ptrs.GetCount(); i++)
 			co & mains[i];
 		co.Finish();
+		
+		for(int j = 1; j < agent_ptrs.GetCount(); j++) {
+			ASSERT(agent_ptrs[j]->epoch_actual == agent.epoch_actual);
+		}
 	}
 	
 	ASSERT(agent.epoch_actual == agent.epoch_total); // not epoch_actual==0 ...
@@ -160,7 +173,7 @@ void AgentGroup::LoopAgentsForRandomness(int submode) {
 	is_looping = true;
 	
 	for(int i = 0; i <= submode && i < tf_ids.GetCount(); i++) {
-		LoopAgentsToEndTf(i);
+		LoopAgentsToEndTf(i, false);
 	}
 	
 	is_looping = false;
@@ -406,7 +419,7 @@ int AgentGroup::StartAgents(int submode) {
 	FreezeAgents(submode);
 	prev_least_results = -1;
 	
-	LoopAgentsToEnd(submode);
+	LoopAgentsToEnd(submode, false);
 	
 	return StartAgentsFast(submode);
 }
@@ -505,7 +518,7 @@ void AgentGroup::Main() {
 	
 	if (epoch_actual == 0) {
 		if (!is_realtime && !act_iter) {
-			LoopAgentsToEnd(tf_ids.GetCount());
+			LoopAgentsToEnd(tf_ids.GetCount(), false);
 		}
 		prev_equity = broker.GetInitialBalance();
 		prev_reward = 0.0;
@@ -777,6 +790,7 @@ void AgentGroup::RefreshSnapshots() {
 		One<Snapshot> snap;
 		snap.Create();
 		
+		snap->id = i;
 		Seek(*snap, pos);
 		
 		// Remove those snapshots which aren't used at all for better perforfmance
@@ -786,7 +800,6 @@ void AgentGroup::RefreshSnapshots() {
 			continue;
 		}
 		
-		snap->id = i;
 		
 		snaps.Add(snap.Detach());
 	}
@@ -810,6 +823,16 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	snap.prev_signals	.SetCount(signal_size, 0.0);
 	snap.prev_rewards	.SetCount(signal_size, 0.0);
 	snap.time_values	.SetCount(5);
+	
+	
+	// Copy previous values
+	if (snap.id > 0) {
+		Snapshot& prev_snap = snaps[snap.id-1];
+		for(int i = 0; i < signal_size; i++) {
+			snap.prev_signals[i] = prev_snap.signals[i];
+			snap.prev_rewards[i] = prev_snap.prev_rewards[i];
+		}
+	}
 	
 	
 	// Check that shift is not too much

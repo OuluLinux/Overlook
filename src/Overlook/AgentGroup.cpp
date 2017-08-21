@@ -829,6 +829,7 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	if (snap.id > 0) {
 		Snapshot& prev_snap = snaps[snap.id-1];
 		for(int i = 0; i < signal_size; i++) {
+			snap.signals[i]      = prev_snap.signals[i];
 			snap.prev_signals[i] = prev_snap.signals[i];
 			snap.prev_rewards[i] = prev_snap.prev_rewards[i];
 		}

@@ -112,6 +112,10 @@ void Agent::Main() {
 			} else {
 				epoch_actual++;
 				skip_action = true;
+				
+				if (group->is_looping && epoch_actual > epoch_total - 10) {
+					LOG("Skip sym=" << sym << " tf=" << tf << " : " << timestep << " (" << epoch_actual << " / " << epoch_total << ")");
+				}
 			}
 		}
 		

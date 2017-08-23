@@ -27,20 +27,20 @@ Agent::~Agent() {
 	Stop();
 }
 
-void Agent::RefreshTotalEpochs() {
+/*void Agent::RefreshTotalEpochs() {
 	epoch_total = group->train_pos_all.GetCount();
-}
+}*/
 
 void Agent::Create(int width, int height) {
-	dqn.Init(width, height, !has_timesteps ? ACTIONCOUNT : 1+2*5);
+	//dqn.Init(width, height, !has_timesteps ? ACTIONCOUNT : 1+2*5);
 	dqn.Reset();
 	
-	ASSERT(!group->param_str.IsEmpty());
-	dqn.LoadInitJSON(group->param_str);
+	//ASSERT(!group->param_str.IsEmpty());
+	//dqn.LoadInitJSON(group->param_str);
 }
 
 void Agent::Init() {
-	ASSERT(agent_input_width != 0);
+	/*ASSERT(agent_input_width != 0);
 	
 	DataBridge* db = dynamic_cast<DataBridge*>(group->databridge_cores[sym][tf]);
 	// NO unique start, because early birds are trained with partly invalid data
@@ -58,12 +58,13 @@ void Agent::Init() {
 	int tf_mins = tf_period * group->sys->GetBasePeriod() / 60;
 	has_yeartime = tf_mins >= 7*24*60;
 	
-	broker.SetFixedVolume();
+	broker.SetFixedVolume();*/
 }
 
 void Agent::Start() {
 	if (main_id != -1) return;
-	epoch_actual = 0;
+	//epoch_actual = 0;
+	Panic("TODO");
 	main_id = group->sys->AddTaskBusy(THISBACK(Main));
 }
 
@@ -76,7 +77,7 @@ void Agent::Stop() {
 
 void Agent::Main() {
 	if (at_main) return;
-	
+	/*
 	at_main = true;
 	is_training_iteration = !group->is_looping && is_training;
 	
@@ -138,13 +139,13 @@ void Agent::Main() {
 	
 	if (group->is_looping)
 		epoch_actual = ret_epoch_actual;
-	
+	*/
 	at_main = false;
 }
 
 void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	ASSERT(group_id != -1);
-	
+	/*
 	// Input values
 	// - time_values
 	// - all data from snapshot
@@ -236,7 +237,7 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	int sigpos = (tf_id * group->sym_ids.GetCount() + sym_id) * 2;
 	snap.signals[sigpos + 0] = pos;
 	snap.signals[sigpos + 1] = neg;
-	snap.prev_rewards[sigpos + 0] = posreward;
+	/*snap.prev_rewards[sigpos + 0] = posreward;
 	snap.prev_rewards[sigpos + 1] = negreward;
 	
 	
@@ -269,6 +270,7 @@ void Agent::Forward(Snapshot& snap, SimBroker& broker) {
 	} else {
 		broker.SetSignalFreeze(sym, signal != 0);
 	}
+	*/
 }
 
 void Agent::Backward(double reward) {
@@ -308,7 +310,7 @@ void Agent::Backward(double reward) {
 }
 
 void Agent::SetAskBid(SimBroker& sb, int pos) {
-	if (tf != group->main_tf)
+	/*if (tf != group->main_tf)
 		pos = group->sys->GetShiftTf(group->main_tf, tf, pos);
 	
 	ASSERT(pos >= 0);
@@ -325,7 +327,7 @@ void Agent::SetAskBid(SimBroker& sb, int pos) {
 		ConstBuffer& open = core.GetBuffer(0);
 		sb.SetPrice(proxy_sym, open.Get(pos));
 	}
-	sb.SetTime(group->sys->GetTimeTf(tf, pos));
+	sb.SetTime(group->sys->GetTimeTf(tf, pos));*/
 }
 
 void Agent::Serialize(Stream& s) {

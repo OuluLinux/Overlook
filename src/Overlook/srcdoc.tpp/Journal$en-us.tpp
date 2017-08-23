@@ -2501,4 +2501,37 @@ been daughters of some military leaders.&]
 [s0; ...&]
 [s0; Drawdowns have been realistically high after fixing that peeking 
 bug. M5 seems to be viable now, and I am testing W1,D1,H12,H4,M5 
-group this week.]]
+group this week.&]
+[s3; 22.8.2017&]
+[s0; The performance have been ok, but the iterative real`-time version 
+is too complicated and it has some issues. Snapshots must be 
+splitted to parts and their state must be flagged and flags and 
+values must be matched before using. Simple stuff, but hard to 
+see from the direction in which I`'m coming. The top`-down method 
+instead of interative has always been more clear so far.&]
+[s0; Today, I got a new key idea to solve the remaining quality issues. 
+Again, simple stuff, but hard to come by. The group agent can 
+be a DQN`-agent. The problem is, that it can only give one action. 
+Somehow I missed the point, that it can have a variety of dumb 
+balancing functions and those can be triggered from actions. 
+It doesn`'t need to have full control of details, but it can 
+call those dumb functions in right time.&]
+[s3; 23.8.2017&]
+[s0; I decided to do remaining improvements, including making DQN 
+to run in GPGPU.&]
+[s0; I could go on an on how evil and stupid some of these faulty 
+products of socialists around me are, but that`'s not very important. 
+The people who go under radar to do something are the real problem, 
+and those can`'t usually communicate properly etc... One event; 
+some fighting sport fan son of owner of some McDonald restaurants 
+came to me with those insane gossips saying `"I`'ve been hearing 
+some things about you...`" and I thought he meant that bowl of 
+weed I smoked at some weekend, so I said `"ssshhh`", but he meant 
+some rapist gossips and took that as a reason to gossip even 
+more that insanity. Stupidity of people just gets new high scores... 
+Meth`-head fight`-clubber, and goes against educated, socially 
+and in rare events smoking ... other type of heads.&]
+[s0; ...&]
+[s0; Anyway, looks like DQN agent can run in a one big chunk of memory.&]
+[s0; I broke a lot of code today. I am doing all changes at once. 
+Very unprofessional, but fast...]]

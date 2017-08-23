@@ -3,8 +3,12 @@
 namespace Overlook {
 
 TraineeBase::TraineeBase() {
-	group = NULL;
-	group_id = -1;
+	group		= NULL;
+	tfgroup		= NULL;
+	sys			= NULL;
+	
+	
+	/*group_id = -1;
 	tf_id = -1;
 	tf = -1;
 	iter = 0;
@@ -19,22 +23,22 @@ TraineeBase::TraineeBase() {
 	at_main = false;
 	save_epoch = true;
 	end_of_epoch = false;
-	is_training = true;
+	is_training = true;*/
 }
 
 void TraineeBase::Init() {
 	ASSERT(group != NULL);
-	ASSERT(group->group_input_width != 0);
-	ASSERT(group->snaps.GetCount() != 0);
+	ASSERT(tfgroup->input_width != 0);
+	ASSERT(tfgroup->snaps.GetCount() != 0);
 	
-	thrd_equity.SetCount(group->snaps.GetCount(), 0);
+	thrd_equity.SetCount(tfgroup->snaps.GetCount(), 0);
 	
 	broker.Brokerage::operator=((Brokerage&)GetMetaTrader());
 	broker.InitLightweight();
 }
 
 void TraineeBase::Action() {
-	thrd_equity.SetCount(group->snaps.GetCount(), 0);
+	/*thrd_equity.SetCount(tfgroup->snaps.GetCount(), 0);
 	
 	if (epoch_actual == 0) {
 		broker.Clear();
@@ -108,22 +112,23 @@ void TraineeBase::Action() {
 	} else {
 		end_of_epoch = false;
 	}
+	*/
 }
 
 void TraineeBase::SeekActive() {
 	// Skip useless snapshots for this agent
-	for (; epoch_actual < group->snaps.GetCount(); epoch_actual++) {
-		Snapshot& snap = group->snaps[epoch_actual];
+	/*for (; epoch_actual < tfgroup->snaps.GetCount(); epoch_actual++) {
+		Snapshot& snap = tfgroup->snaps[epoch_actual];
 		if (snap.shift < data_begin)
 			continue;
 		if (snap.IsActive(tf_id))
 			break;
-	}
+	}*/
 }
 
 void TraineeBase::Serialize(Stream& s) {
-	s % seq_results % reward_average % loss_average % peak_value % best_result % training_time
-	  % last_drawdown % tf_id % tf % group_id % iter % is_training;
+	/*s % seq_results % reward_average % loss_average % peak_value % best_result % training_time
+	  % last_drawdown % tf_id % tf % group_id % iter % is_training;*/
 }
 
 }

@@ -3,8 +3,6 @@
 
 #include <Core/Core.h>
 #include <PlotCtrl/PlotCtrl.h>
-#include <ConvNet/ConvNet.h>
-#include <ConvNetCtrl/ConvNetCtrl.h>
 #include <CoreUtils/Optimizer.h>
 
 #undef ASSERTEXC

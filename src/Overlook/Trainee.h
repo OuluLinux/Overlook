@@ -43,8 +43,7 @@ struct Snapshot : Moveable<Snapshot> {
 	// Values used in training. Strictly double type for performance reasons.
 	double wday_timesensor, year_timesensor;
 	Vector<double> sensors;
-	Vector<double> signals, prev_signals;
-	Vector<double> prev_rewards;
+	Vector<double> signals;
 	
 	Vector<char> time_values;
 	Time time, added;
@@ -58,6 +57,8 @@ struct Snapshot : Moveable<Snapshot> {
 };
 
 class AgentGroup;
+class TfGroup;
+class System;
 
 struct TraineeBase {
 	// Persistent
@@ -75,11 +76,13 @@ struct TraineeBase {
 	
 	// Temp
 	AgentGroup* group;
+	TfGroup* tfgroup;
+	System* sys;
 	Vector<double> thrd_equity;
 	SimBroker broker;
 	TimeStop ts;
 	double begin_equity, prev_equity;
-	int epoch_actual, epoch_total;
+	//int epoch_actual, epoch_total;
 	int main_id;
 	bool at_main, save_epoch;
 	bool end_of_epoch;

@@ -46,7 +46,6 @@ public:
 	void SetGroup(AgentGroup& group);
 	void SetEnabled();
 	void SetLimitFactor();
-	void ResetGroupOptimizer();
 	void SetTfLimit(int tf_id);
 };
 
@@ -66,7 +65,7 @@ public:
 
 class ManagerCtrl : public ParentCtrl {
 	Splitter						hsplit, listsplit;
-	ArrayCtrl						alist, glist;
+	ArrayCtrl						alist, tfglist, glist;
 	ParentCtrl						ctrl;
 	ParentCtrl						mainview;
 	WithNewAgentGroup<ParentCtrl>	newview;

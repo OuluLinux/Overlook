@@ -1,11 +1,10 @@
 #ifndef _Overlook_Agent_h_
 #define _Overlook_Agent_h_
 
+#include "DQN.h"
+
 namespace Overlook {
 using namespace Upp;
-using ConvNet::DQNAgent;
-using ConvNet::Volume;
-using ConvNet::VolumePtr;
 
 typedef Tuple3<double, double, double> DoubleTrio;
 
@@ -25,7 +24,7 @@ protected:
 	
 	
 	// Persistent vars
-	ConvNet::DQNAgent dqn;
+	DQNAgent<1, 1, 1, 1> dqn;
 	int agent_id, sym_id, sym, proxy_sym;
 	int agent_input_width, agent_input_height;
 	bool has_timesteps;
@@ -62,7 +61,7 @@ public:
 	void Start();
 	void Stop();
 	void SetBrokerageSignals(Brokerage& broker, int pos);
-	void RefreshTotalEpochs();
+	//void RefreshTotalEpochs();
 	Callback MainCallback() {return Callback(THISBACK(Main));}
 	
 	Callback1<double> WhenRewardAverage;

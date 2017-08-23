@@ -2,8 +2,78 @@
 
 namespace Overlook {
 
+
 AgentGroup::AgentGroup() {
-	fmlevel = 0.90;
+	
+}
+
+AgentGroup::~AgentGroup() {
+	
+}
+
+void AgentGroup::Create(int width, int height) {
+	
+}
+
+void AgentGroup::Init() {
+	
+}
+
+void AgentGroup::Start() {
+	
+}
+
+void AgentGroup::Stop() {
+	
+}
+
+void AgentGroup::LoadThis() {
+	
+}
+
+void AgentGroup::StoreThis() {
+	
+}
+
+void AgentGroup::SetEpsilon(double d) {
+	
+}
+
+void AgentGroup::SetMode(int i) {
+	
+}
+
+void AgentGroup::Backward(double reward) {
+	
+}
+
+void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
+	
+}
+
+void AgentGroup::PutLatest(Brokerage& b) {
+	WhenInfo("Refreshing snapshots");
+	RefreshSnapshots();
+	
+	
+}
+
+void AgentGroup::RefreshSnapshots() {
+	
+}
+
+void AgentGroup::SetTfLimit(int tf_id, double limit) {
+	
+}
+
+void AgentGroup::SetAskBid(SimBroker& sb, int pos) {
+	
+}
+
+#if 0
+
+
+AgentGroup::AgentGroup() {
 	limit_factor = 0.01;
 	group_input_width = 0;
 	group_input_height = 0;
@@ -41,68 +111,6 @@ AgentGroup::AgentGroup() {
 AgentGroup::~AgentGroup() {
 	StopGroup();
 	StopAgents();
-}
-
-bool AgentGroup::PutLatest(Brokerage& broker) {
-	if (!is_realtime) return false;
-	
-	
-	WhenInfo("Refreshing snapshots");
-	RefreshSnapshots();
-	
-	
-	Time time = GetMetaTrader().GetTime();
-	int shift = sys->GetShiftFromTimeTf(time, main_tf);
-	if (shift != train_pos_all.Top()) {
-		WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, train_pos_all.Top()));
-		return false;
-	}
-	
-	
-	WhenInfo("Looping agents until latest snapshot");
-	LoopAgentsToEnd(tf_ids.GetCount(), true);
-	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
-	
-	
-	// Reset signals
-	if (is_realtime) {
-		if (realtime_count == 0) {
-			for(int i = 0; i < broker.GetSymbolCount(); i++)
-				broker.SetSignal(i, 0);
-		}
-		realtime_count++;
-	}
-	
-	
-	// Set probability for random actions to 0
-	Forward(shift_snap, broker);
-	
-	
-	String sigstr = "Signals ";
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
-		if (i) sigstr << ",";
-		sigstr << broker.GetSignal(sym_ids[i]);
-	}
-	WhenInfo(sigstr);
-	
-	
-	WhenInfo("Refreshing broker data");
-	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
-	if (mt) {
-		mt->Data();
-	} else {
-		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
-		sb->RefreshOrders();
-	}
-	broker.SetLimitFactor(limit_factor);
-	
-	
-	WhenInfo("Updating orders");
-	broker.SignalOrders(true);
-	broker.RefreshLimits();
-	
-	
-	return true;
 }
 
 void AgentGroup::LoopAgentsToEnd(int submode, bool tail_only) {
@@ -275,7 +283,7 @@ void AgentGroup::CreateAgents() {
 }
 
 void AgentGroup::Create(int width, int height) {
-	go.SetArrayCount(width);
+	/*go.SetArrayCount(width);
 	go.SetCount(height);
 	go.SetPopulation(100);
 	go.SetMaxGenerations(50);
@@ -292,7 +300,7 @@ void AgentGroup::Create(int width, int height) {
 	
 	
 	go.UseLimits();
-	go.Init();
+	go.Init();*/
 }
 
 void AgentGroup::Init() {
@@ -375,7 +383,7 @@ void AgentGroup::Init() {
 	RefreshSnapshots();
 	
 	Progress(4, 6, "Initializing group trainee");
-	group = this;
+	/*group = this;
 	if (go.GetCount() <= 0) {
 		Create(group_input_width, group_input_height);
 	}
@@ -391,7 +399,7 @@ void AgentGroup::Init() {
 		agents[i].Init();
 	}
 	
-	Progress(0, 1, "Complete");
+	Progress(0, 1, "Complete");*/
 	
 	save_epoch = false;
 }
@@ -407,8 +415,8 @@ bool AgentGroup::StartGroup() {
 		return false;
 	
 	// Check if optimizer has reached maximum rounds
-	if (go.GetRound() >= go.GetMaxRounds())
-		return false;
+	/*if (go.GetRound() >= go.GetMaxRounds())
+		return false;*/
 	
 	act_iter = 0;
 	main_id = sys->AddTaskBusy(THISBACK(Main));
@@ -447,7 +455,8 @@ void AgentGroup::FreezeAgents(int submode) {
 		if (a.tf_id >= submode) continue;
 		
 		a.is_training = false;
-		a.dqn.ClearExperience();
+		
+		//a.dqn.ClearExperience();
 	}
 }
 
@@ -515,7 +524,7 @@ void AgentGroup::Main() {
 		seq_results.Clear();
 		Create(group_input_width, group_input_height);
 	}
-	
+	/*
 	if (epoch_actual == 0) {
 		if (!is_realtime && !act_iter) {
 			LoopAgentsToEnd(tf_ids.GetCount(), false);
@@ -525,18 +534,18 @@ void AgentGroup::Main() {
 		
 		if (!is_realtime)
 			go.Start();
-	}
+	}*/
 	
 	
 	// Do some action
 	Action();
-	
+	/*
 	if (!is_realtime && (end_of_epoch || broker.AccountEquity() < 0.3 * begin_equity)) {
 		double energy = broker.AccountEquity() - broker.GetInitialBalance();
 		go.Stop(energy);
 		epoch_actual = 0;
 	}
-	
+	*/
 	
 	// Store sequences periodically
 	if ((act_iter % 1000) == 0 && last_store.Elapsed() > 60 * 60 * 1000) {
@@ -550,7 +559,7 @@ void AgentGroup::Main() {
 void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 	if (timeslot_minutes == -1)
 		return;
-	
+	/*
 	// (((wday - 1) * 24 + hour) * 60 + minute) / 'minutes in smallest period'
 	int timeslot = (((snap.time_values[2] - 1) * 24 + snap.time_values[3]) * 60 + snap.time_values[4]) / timeslot_minutes;
 	ASSERT(timeslot >= 0 && timeslot < timeslots);
@@ -606,7 +615,7 @@ void AgentGroup::Forward(Snapshot& snap, Brokerage& broker) {
 		} else {
 			broker.SetSignalFreeze(sym, signal != 0);
 		}
-    }
+    }*/
 }
 
 void AgentGroup::Backward(double reward) {
@@ -639,12 +648,12 @@ void AgentGroup::LoadThis() {
 }
 
 void AgentGroup::Serialize(Stream& s) {
-	TraineeBase::Serialize(s);
+	/*TraineeBase::Serialize(s);
 	s % go % agents % tf_limit % tf_ids % sym_ids % created % name % param_str
 	  % fmlevel % limit_factor
 	  % group_input_width % group_input_height
 	  % mode
-	  % enable_training;
+	  % enable_training;*/
 }
 
 void AgentGroup::SetTfLimit(int tf_id, double limit) {
@@ -820,20 +829,18 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	ASSERT(data_size > 0 && signal_size > 0);
 	snap.sensors		.SetCount(data_size, 0.0);
 	snap.signals		.SetCount(signal_size, 0.0);
-	snap.prev_signals	.SetCount(signal_size, 0.0);
-	snap.prev_rewards	.SetCount(signal_size, 0.0);
 	snap.time_values	.SetCount(5);
 	
 	
 	// Copy previous values
-	if (snap.id > 0) {
+	/*if (snap.id > 0) {
 		Snapshot& prev_snap = snaps[snap.id-1];
 		for(int i = 0; i < signal_size; i++) {
 			snap.signals[i]      = prev_snap.signals[i];
 			snap.prev_signals[i] = prev_snap.signals[i];
 			snap.prev_rewards[i] = prev_snap.prev_rewards[i];
 		}
-	}
+	}*/
 	
 	
 	// Check that shift is not too much
@@ -1045,5 +1052,15 @@ void AgentGroup::SetAskBid(SimBroker& sb, int pos) {
 	}
 	sb.SetTime(sys->GetTimeTf(main_tf, pos));
 }
+
+
+#endif
+
+
+
+
+
+
+
 
 }

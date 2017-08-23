@@ -3,10 +3,7 @@ description "The main time-series predictor application, with brokerage connecti
 uses
 	CtrlLib,
 	plugin/libmt,
-	plugin/tidy,
 	Painter,
-	ConvNet,
-	ConvNetCtrl,
 	CoreUtils;
 
 file
@@ -57,12 +54,17 @@ file
 	QtStats.cpp,
 	Manager.h,
 	Manager.cpp,
-	Trainee.h,
-	Trainee.cpp,
 	AgentGroup.h,
 	AgentGroup.cpp,
+	TfGroup.h,
+	TfGroup.cpp,
+	JoinerAgent.h,
+	JoinerAgent.cpp,
 	Agent.h,
-	Agent.cpp;
+	Agent.cpp,
+	Trainee.h,
+	Trainee.cpp,
+	DQN.h;
 
 mainconfig
 	"" = "GUI MT";

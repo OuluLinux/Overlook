@@ -95,7 +95,7 @@ class CustomCtrl;
 
 class System {
 	
-protected:
+public:
 
 	typedef Core*			(*CoreFactoryPtr)();
 	typedef CustomCtrl*		(*CtrlFactoryPtr)();

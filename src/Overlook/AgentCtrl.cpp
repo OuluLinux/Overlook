@@ -17,7 +17,8 @@ void SnapshotDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	
-	AgentGroup& group = *this->group;
+	/*AgentGroup& group = *this->group;
+	TfGroup& group = *this->tfgroup;
 	System& sys = *group.sys;
 	
 	if (snap_id < 0 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
@@ -81,38 +82,11 @@ void SnapshotDraw::Paint(Draw& w) {
 		}
 	}
 	
-	// Rewards
-	cols = 2;
-	xstep = (double)grid_w / (double)cols;
-	ASSERT(snap.prev_rewards.GetCount() == (cols * sym_count * tf_count));
-	for(int i = 0; i < tf_count; i++) {
-		for(int j = 0; j < sym_count; j++) {
-			int y = (int)(row * ystep);
-			int y2 = (int)((row + 1) * ystep);
-			int h = y2-y;
-			
-			for(int k = 0; k < cols; k++) {
-				int x = (int)(k * xstep);
-				int x2 = (int)((k + 1) * xstep);
-				int w = x2 - x;
-				double d = snap.prev_rewards[(i * group.sym_ids.GetCount() + j) * cols + k];
-				double min = 0.0;
-				double max = 1.0;
-				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-				int clr = (int)Upp::min(255.0, value);
-				Color c(255 - clr, clr, 0);
-				id.DrawRect(x, y, w, h, c);
-			}
-			
-			row++;
-		}
-	}
-	
 	
 	// Signals
 	cols = 2;
 	xstep = (double)grid_w / (double)cols;
-	ASSERT(snap.prev_signals.GetCount() == (cols * sym_count * tf_count));
+	ASSERT(snap.signals.GetCount() == (cols * sym_count * tf_count));
 	for(int i = 0; i < tf_count; i++) {
 		for(int j = 0; j < sym_count; j++) {
 			int y = (int)(row * ystep);
@@ -123,7 +97,7 @@ void SnapshotDraw::Paint(Draw& w) {
 				int x = (int)(k * xstep);
 				int x2 = (int)((k + 1) * xstep);
 				int w = x2 - x;
-				double d = snap.prev_signals[(i * group.sym_ids.GetCount() + j) * cols + k];
+				double d = snap.signals[(i * group.sym_ids.GetCount() + j) * cols + k];
 				double min = 0.0;
 				double max = 1.0;
 				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -135,7 +109,7 @@ void SnapshotDraw::Paint(Draw& w) {
 			row++;
 		}
 	}
-	
+	*/
 	
 	w.DrawImage(0,0,id);
 }
@@ -205,6 +179,38 @@ void ResultGraph::Paint(Draw& w) {
 	
 	w.DrawImage(0, 0, id);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HeatmapTimeView::HeatmapTimeView() {
+	
+}
+
+void HeatmapTimeView::Paint(Draw& d) {
+	if (fn) fn(&d);
+	else d.DrawRect(GetSize(), White());
+}
+
+
+
+
+
 
 
 
@@ -344,20 +350,20 @@ void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
 			hsplit.SetPos(2000, 0);
 			hsplit.SetPos(8000, 1);
 		}
-		timescroll.SetGraph(agent->dqn.GetGraph());
+		timescroll.SetAgent(agent->dqn);
 	}
 }
 
 void TrainingCtrl::Data() {
 	if (!trainee) return;
-	
+	/*
 	broker.Data();
 	draw.SetSnap(trainee->epoch_actual);
 	draw.Refresh();
 	timescroll.Refresh();
 	reward.Refresh();
 	stats.Refresh();
-	reward.Refresh();
+	reward.Refresh();*/
 }
 
 
@@ -389,7 +395,7 @@ SnapshotCtrl::SnapshotCtrl()
 
 void SnapshotCtrl::Data() {
 	if (!group) return;
-	
+	/*
 	AgentGroup& group = *this->group;
 	int cursor = list.GetCursor();
 	
@@ -404,7 +410,7 @@ void SnapshotCtrl::Data() {
 	
 	if (cursor >= 0 && cursor < group.snaps.GetCount())
 		draw.SetSnap(cursor);
-	
+	*/
 	draw.Refresh();
 }
 

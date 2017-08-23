@@ -57,7 +57,7 @@ void GroupOverview::SubProgress(int actual, int total) {
 }
 
 void GroupOverview::Data() {
-	if (group) {
+	/*if (group) {
 		lbl.SetLabel(Format("%s: %d/%d, %d/%d", group->prog_desc, group->a0, group->t0, group->a1, group->t1));
 		prog.Set(group->a0, group->t0);
 		sub.Set(group->a1, group->t1);
@@ -84,7 +84,7 @@ void GroupOverview::Data() {
 			limit_factor.SetData(group->limit_factor);
 		}
 		info.SetLabel(infostr);
-	}
+	}*/
 }
 
 
@@ -115,6 +115,7 @@ GroupTabCtrl::GroupTabCtrl() {
 }
 
 void GroupTabCtrl::SetGroup(AgentGroup& group) {
+	/*
 	this->group = &group;
 	
 	overview.enable.WhenAction.Clear();
@@ -151,6 +152,7 @@ void GroupTabCtrl::SetGroup(AgentGroup& group) {
 	trainingctrl.SetTrainee(group);
 	snapctrl	.SetGroup(group);
 	datactrl	.SetGroup(group);
+	*/
 }
 
 void GroupTabCtrl::SetTfLimit(int tf_id) {
@@ -177,9 +179,6 @@ void GroupTabCtrl::SetEnabled() {
 	else						group->Stop();
 }
 
-void GroupTabCtrl::ResetGroupOptimizer() {
-	group->reset_optimizer = true;
-}
 
 
 
@@ -270,7 +269,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	mainview.Add(agent_tabs.SizePos());
 	
 	
-	String t =
+	/*String t =
 			"{\n"
 			"\t\"update\":\"qlearn\",\n"
 			"\t\"gamma\":0.9,\n"
@@ -282,7 +281,7 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 			"\t\"tderror_clamp\":1.0,\n"
 			"\t\"num_hidden_units\":100,\n"
 			"}\n";
-	newview.params.SetData(t);
+	newview.params.SetData(t);*/
 	newview.create <<= THISBACK(PostNewAgent);
 	newview.symlist <<= THISBACK(Data);
 	
@@ -294,6 +293,10 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	newview.tflist.AddColumn("");
 	newview.tflist.NoHeader();
 	newview.tflist.ColumnWidths("3 1");
+	newview.indilist.AddColumn("");
+	newview.indilist.AddColumn("");
+	newview.indilist.NoHeader();
+	newview.indilist.ColumnWidths("3 1");
 	newview.all  <<= THISBACK(SelectAll);
 	newview.none <<= THISBACK(SelectNone);
 	newview.allbasefx  <<= THISBACK1(Select, 0);
@@ -311,13 +314,17 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	ctrl.Add(add_new.TopPos(0, 30).HSizePos());
 	ctrl.Add(listsplit.VSizePos(30).HSizePos());
 	listsplit.Vert();
-	listsplit << glist << alist;
+	listsplit << glist << tfglist << alist;
 	
 	glist.AddColumn("Name");
-	glist.AddColumn("Best result");
-	glist.AddColumn("Drawdown");
 	glist <<= THISBACK1(SetView, 1);
 	glist.WhenLeftClick << THISBACK1(SetView, 1);
+	
+	tfglist.AddColumn("Name");
+	tfglist.AddColumn("Best result");
+	tfglist.AddColumn("Drawdown");
+	tfglist <<= THISBACK1(SetView, 1);
+	tfglist.WhenLeftClick << THISBACK1(SetView, 1);
 	
 	alist.AddColumn("Symbol");
 	alist.AddColumn("Tf");
@@ -379,7 +386,7 @@ void ManagerCtrl::SetView(int view) {
 		}
 	}
 	else if (view == 2) {
-		int group_id = glist.GetCursor();
+		/*int group_id = glist.GetCursor();
 		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
 			AgentGroup& group = mgr.groups[group_id];
 			int agent_id = alist.GetCursor();
@@ -388,7 +395,7 @@ void ManagerCtrl::SetView(int view) {
 				agent_tabs.Show();
 				agent_tabs.SetFocus();
 			}
-		}
+		}*/
 	}
 	this->view = view;
 	Data();
@@ -401,8 +408,6 @@ void ManagerCtrl::Data() {
 		AgentGroup& g = mgr.groups[i];
 		
 		glist.Set(i, 0, g.name);
-		glist.Set(i, 1, g.best_result);
-		glist.Set(i, 2, g.last_drawdown);
 	}
 	glist.SetCount(mgr.groups.GetCount());
 	
@@ -411,7 +416,7 @@ void ManagerCtrl::Data() {
 	if (gcursor >= 0 && gcursor < mgr.groups.GetCount()) {
 		AgentGroup& g = mgr.groups[gcursor];
 		
-		for(int i = 0; i < g.agents.GetCount(); i++) {
+		/*for(int i = 0; i < g.agents.GetCount(); i++) {
 			Agent& a = g.agents[i];
 			
 			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
@@ -419,7 +424,7 @@ void ManagerCtrl::Data() {
 			alist.Set(i, 2, a.best_result);
 			alist.Set(i, 3, a.last_drawdown);
 		}
-		alist.SetCount(g.agents.GetCount());
+		alist.SetCount(g.agents.GetCount());*/
 	}
 	
 	if (view == 0) {
@@ -436,6 +441,15 @@ void ManagerCtrl::Data() {
 				newview.symlist.Set(i, 0, sys->GetSymbol(i));
 				newview.symlist.Set(i, 1, 0);
 				newview.symlist.SetCtrl(i, 1, new_opts.Add());
+			}
+		}
+		if (newview.indilist.GetCount() == 0) {
+			const Vector<System::CoreCtrlSystem>& facs = System::GetCtrlFactories();
+			for(int i = 0; i < facs.GetCount(); i++) {
+				String indistr = facs[i].a;
+				newview.indilist.Set(i, 0, indistr);
+				newview.indilist.Set(i, 1, 0);
+				newview.indilist.SetCtrl(i, 1, new_opts.Add());
 			}
 		}
 	}
@@ -503,7 +517,16 @@ void ManagerCtrl::NewAgent() {
 	}
 		
 	
-	group.param_str					= newview.params.GetData();
+	// Indicators
+	for(int i = 0; i < newview.indilist.GetCount(); i++) {
+		if (newview.indilist.Get(i, 1))
+			group.indi_ids.Add(i);
+	}
+	if (group.indi_ids.IsEmpty()) {
+		PromptOK(DeQtf("At least one indicator must be selected. Try clicking 'Sensors'."));
+		return;
+	}
+	
 	
 	group.sys = sys;
 	

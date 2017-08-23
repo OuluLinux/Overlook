@@ -3,8 +3,6 @@
 
 namespace Overlook {
 
-using namespace ConvNet;
-
 #define LAYOUTFILE <Overlook/BrokerCtrl.lay>
 #include <CtrlCore/lay.h>
 

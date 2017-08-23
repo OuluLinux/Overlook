@@ -3,36 +3,25 @@
 
 namespace Overlook {
 
-class AgentGroup : public TraineeBase {
+class AgentGroup {
 	
 public:
 	
 	// Persistent
-	CoreUtils::GeneticOptimizer go;
-	Array<Agent> agents;
-	Vector<double> tf_limit;
-	Index<int> tf_ids, sym_ids;
+	Index<int> tf_ids, sym_ids, indi_ids;
 	Time created;
 	String name;
-	String param_str;
-	double fmlevel;
 	double limit_factor;
-	int group_input_width, group_input_height;
-	int mode;
 	bool enable_training;
 	
+	
+	
+	
 	// Temp
-	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
-	Vector<Ptr<CoreItem> > work_queue, db_queue;
-	Vector<Vector<Core*> > databridge_cores;
-	Array<Snapshot> snaps;
-	Vector<int> train_pos_all;
-	Vector<int> symsignals;
-	Vector<int> data_begins;
-	Vector<int> tf_minperiods, tf_periods, tf_types;
-	Index<int> indi_ids;
 	TimeStop last_store, last_datagather;
-	double prev_equity;
+	int main_tf;
+	
+	/*double prev_equity;
 	double prev_reward;
 	int buf_count;
 	int data_size, signal_size;
@@ -47,10 +36,10 @@ public:
 	int realtime_count;
 	bool reset_optimizer;
 	bool is_realtime;
-	bool is_looping;
+	bool is_looping;*/
 	System* sys;
 	Mutex work_lock;
-	TimeCallback watchdog;
+	//TimeCallback watchdog;
 	
 	enum {MODE_AGENT, MODE_GROUP, MODE_REAL};
 	
@@ -58,6 +47,10 @@ public:
 	typedef AgentGroup CLASSNAME;
 	AgentGroup();
 	~AgentGroup();
+	
+	
+	void PutLatest(Brokerage& b);
+	
 	void Init();
 	void Start();
 	bool StartGroup();
@@ -79,16 +72,12 @@ public:
 	void RefreshSnapshots();
 	void ResetSnapshot(Snapshot& snap);
 	bool Seek(Snapshot& snap, int shift);
-	void RefreshWorkQueue();
-	void ProcessWorkQueue();
-	void ProcessDataBridgeQueue();
 	void ResetValueBuffers();
 	void CreateAgents();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
 	void SetEpsilon(double d);
 	void SetMode(int i);
-	bool PutLatest(Brokerage& broker);
 	virtual void SetAskBid(SimBroker& sb, int pos);
 	void LoopAgentsToEnd(int submode, bool tail_only);
 	void LoopAgentsToEndTf(int tf_id, bool tail_only);

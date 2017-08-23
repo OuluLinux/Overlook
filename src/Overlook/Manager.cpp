@@ -46,7 +46,7 @@ void Manager::Stop() {
 }
 
 void Manager::Main() {
-	MetaTrader& mt = GetMetaTrader();
+	/*MetaTrader& mt = GetMetaTrader();
 	Time time = mt.GetTime();
 	sys->SetEnd(time);
 	
@@ -100,13 +100,13 @@ void Manager::Main() {
 	} else {
 		prev_shift = -1;
 	}
-	prev_update = time;
+	prev_update = time;*/
 }
 
 AgentGroup* Manager::GetBestGroup() {
 	AgentGroup* group = NULL;
 	
-	for(int i = 0; i < groups.GetCount(); i++) {
+	/*for(int i = 0; i < groups.GetCount(); i++) {
 		AgentGroup& g = groups[i];
 		if (!g.is_realtime)
 			continue;
@@ -116,7 +116,7 @@ AgentGroup* Manager::GetBestGroup() {
 			if (group->best_result < g.best_result)
 				group = &g;
 		}
-	}
+	}*/
 	
 	return group;
 }

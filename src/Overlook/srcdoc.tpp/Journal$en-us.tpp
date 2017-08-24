@@ -30,11 +30,11 @@ searching for the best desigin via trial and error. Some ideas
 seemed good but turned out to be bad. All of the ideas were related 
 to the end result in some way, however.&]
 [s0; The result was good and the whole process went almost as expected. 
-Only the completion took longer than expected.&]
-[s0; The following phase took almost 3 months and work was done almost 
-every day. During that time, estimated 600`-800 hours was worked 
-on this directly. The count of hours was very well noted during 
-development, which did lead to a lot of off`-topic text.&]
+Only the completion took longer than expected. The following 
+phase took almost 3 months and work was done almost every day. 
+During that time, estimated 600`-800 hours was worked on this 
+directly. The count of hours was very well noted during development, 
+which did lead to a lot of off`-topic text.&]
 [s3; 26.4.2017&]
 [s0; Welcome to the first entry of this journal.&]
 [s0; Today, I am trying to get runner working. Slots should be processed 
@@ -2534,4 +2534,28 @@ and in rare events smoking ... other type of heads.&]
 [s0; ...&]
 [s0; Anyway, looks like DQN agent can run in a one big chunk of memory.&]
 [s0; I broke a lot of code today. I am doing all changes at once. 
-Very unprofessional, but fast...]]
+Very unprofessional, but fast...&]
+[s3; 24.8.2017&]
+[s0; I found many improvement ideas today while implementing other 
+new features.&]
+[s0; Now when fast timeframes works, only M1 is needed. Stochastic 
+oscillator and OsMA can be used with varying period to have longer 
+sensing. C`+`+ AMP can be used for processing, and multiple agent 
+group can be used simultaneously. Currently there is 21 instruments 
+in one group, so there can be many of those groups. One group 
+will have `"manager agent`", which modifies the lot amount and 
+then `"manager of managers`" can join the signal for exporting.&]
+[s0; I also found the reason why large experience size was preferred, 
+and it was due to the buggy leaking of reward value. It basically 
+allowed to remember all leaking values during training. That 
+can be reduced and now many agents can fit in GPGPU memory.&]
+[s0; The codebase is in extremely messy state currently, but it will 
+be in working state soon again.&]
+[s0; ..&]
+[s0; C`+`+ AMP code is incredibly easy to use compared to OpenCL 
+or Cuda. Just brilliant. I wrote my first few lines with only 
+generic C`+`+ experience.&]
+[s0; This is going to be fast... It`'s very nice too see this getting 
+simpler, but also I know that research relating to that stops. 
+These settings seems very stable, but it`'s always risky to make 
+the inflexible and optimized version.]]

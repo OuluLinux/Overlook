@@ -358,4 +358,45 @@ void System::CreateCore(CoreItem& ci) {
 	c.LoadCache();
 }
 
+Core* System::CreateSingle(int factory, int sym, int tf) {
+	
+	// Enable factory
+	Vector<int> path;
+	path.Add(factory);
+	
+	// Enable symbol
+	ASSERT(sym >= 0 && sym < symbols.GetCount());
+	Index<int> sym_ids;
+	sym_ids.Add(sym);
+	
+	// Enable timeframe
+	ASSERT(tf >= 0 && tf < periods.GetCount());
+	
+	// Get working queue
+	Vector<Ptr<CoreItem> > ci_queue;
+	GetCoreQueue(path, ci_queue, tf, sym_ids);
+	
+	// Process job-queue
+	for(int i = 0; i < ci_queue.GetCount(); i++) {
+		WhenProgress(i, ci_queue.GetCount());
+		Process(*ci_queue[i]);
+	}
+	
+	return &*ci_queue.Top()->core;
+}
+
+void System::Process(CoreItem& ci) {
+	
+	// Load dependencies to the scope
+	if (ci.core.IsEmpty())
+		CreateCore(ci);
+	
+	// Process core-object
+	ci.core->Refresh();
+	
+	// Store cache file
+	ci.core->StoreCache();
+	
+}
+
 }

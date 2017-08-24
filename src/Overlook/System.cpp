@@ -6,25 +6,20 @@ namespace Overlook {
 String arg_addr = "127.0.0.1";
 int arg_port = 42000;
 
-System::System() :
-	mgr(this)
-{
+System::System() {
 	timediff = 0;
 	base_period = 60;
 	end = GetSysTime();
 	
 	addr = arg_addr.IsEmpty() ?  "127.0.0.1" : arg_addr;
 	port = arg_port == 0 ? 42000 : arg_port;
-	running = false;
 	exploration = 0.2;
 	task_counter = 0;
-	nonstopped_workers = 0;
 	
 	source_symbol_count = 0;
 }
 
 System::~System() {
-	Stop();
 	data.Clear();
 }
 
@@ -90,7 +85,8 @@ void System::Init() {
 	
 	InitRegistry();
 	
-	mgr.Init();
+	ag.LoadThis();
+	ag.Init();
 }
 
 void System::AddPeriod(String nice_str, int period) {

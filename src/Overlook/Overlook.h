@@ -3,14 +3,14 @@
 
 #include "Common.h"
 #include "QueryTable.h"
+#include "DQN.h"
 
 #include "SimBroker.h"
 #include "Trainee.h"
 #include "Agent.h"
 #include "JoinerAgent.h"
 #include "AgentGroup.h"
-#include "TfGroup.h"
-#include "Manager.h"
+#include "SymGroup.h"
 #include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"
@@ -39,7 +39,6 @@ class Overlook : public TopWindow {
 	
 protected:
 	friend class PrioritizerCtrl;
-	System					sys;
 	
 	// Main view
 	TabCtrl					tabs;
@@ -61,7 +60,7 @@ protected:
 	ManagerCtrl				mgrctrl;
 	
 	
-	RealtimeCtrl				rtctrl;
+	RealtimeCtrl			rtctrl;
 	
 	
 	void SetView();
@@ -74,8 +73,6 @@ public:
 	~Overlook();
 	
 	void Init();
-	void Start();
-	void Deinit();
 	void Refresher();
 	void PostRefresher() {tc.Kill(); PostCallback(THISBACK(Refresher));}
 	

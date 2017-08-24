@@ -1,9 +1,19 @@
-#ifndef _Overlook_TfGroup_h_
-#define _Overlook_TfGroup_h_
+#if 0
+
+#ifndef _Overlook_SymGroup_h_
+#define _Overlook_SymGroup_h_
+
+#include <amp.h>
+using namespace concurrency;
 
 namespace Overlook {
 
-class TfGroup {
+
+
+class SymGroup {
+	AgentGroup* group;
+	System* sys;
+	Mutex work_lock;
 	
 public:
 	
@@ -24,10 +34,12 @@ public:
 	
 	
 	
-	typedef TfGroup CLASSNAME;
-	TfGroup();
+	typedef SymGroup CLASSNAME;
+	SymGroup();
 	
+	void SetEpsilon(double d);
 	
+	void Main(SnapshotView& snaps);
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
 	void ProcessDataBridgeQueue();
@@ -37,4 +49,5 @@ public:
 
 }
 
+#endif
 #endif

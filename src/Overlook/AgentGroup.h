@@ -1,17 +1,35 @@
 #ifndef _Overlook_AgentGroup_h_
 #define _Overlook_AgentGroup_h_
 
+#include <amp.h>
+using namespace concurrency;
+
 namespace Overlook {
 
+struct Snap {
+	float year_time, week_time;
+	float sensor[21];
+	float signal[21];
+	float open[21];
+};
+
 class AgentGroup {
+	
+	typedef DQNAgent<1,1,1,1> Agent;
+	typedef DQNAgent<1,1,1,1> Joiner;
+	typedef DQNAgent<1,1,1,1> Final;
 	
 public:
 	
 	// Persistent
+	std::vector<Agent> agents;
+	std::vector<Joiner> joiners;
+	Final fin;
 	Index<int> tf_ids, sym_ids, indi_ids;
 	Time created;
 	String name;
 	double limit_factor;
+	int phase;
 	bool enable_training;
 	
 	
@@ -20,28 +38,10 @@ public:
 	// Temp
 	TimeStop last_store, last_datagather;
 	int main_tf;
-	
-	/*double prev_equity;
-	double prev_reward;
-	int buf_count;
-	int data_size, signal_size;
-	int act_iter;
-	int main_tf, main_tf_pos;
-	int timeslot_tf, timeslot_tf_pos;
-	int current_submode;
-	int symid_count;
-	int timeslot_minutes, timeslots;
-	int prev_least_results;
-	int random_loops;
-	int realtime_count;
-	bool reset_optimizer;
-	bool is_realtime;
-	bool is_looping;*/
+	bool running, stopped;
 	System* sys;
-	Mutex work_lock;
-	//TimeCallback watchdog;
 	
-	enum {MODE_AGENT, MODE_GROUP, MODE_REAL};
+	enum {PHASE_SEEKSNAPS, PHASE_TRAINING, PHASE_WEIGHTS, PHASE_FINAL, PHASE_UPDATE, PHASE_REAL, PHASE_WAIT};
 	
 public:
 	typedef AgentGroup CLASSNAME;
@@ -49,47 +49,22 @@ public:
 	~AgentGroup();
 	
 	
-	void PutLatest(Brokerage& b);
-	
 	void Init();
 	void Start();
-	bool StartGroup();
-	int  StartAgents(int submode);
-	int  StartAgentsFast(int submode);
-	void FreezeAgents(int submode);
 	void Stop();
-	void StopGroup();
-	void StopAgents();
-	void Main();
-	void Data();
-	virtual void Create(int width, int height);
-	virtual void Forward(Snapshot& snap, SimBroker& broker) {Forward(snap, (Brokerage&)broker);}
-	virtual void Backward(double reward);
-	void Forward(Snapshot& snap, Brokerage& broker);
 	void StoreThis();
 	void LoadThis();
-	void Serialize(Stream& s);
-	void RefreshSnapshots();
-	void ResetSnapshot(Snapshot& snap);
-	bool Seek(Snapshot& snap, int shift);
-	void ResetValueBuffers();
-	void CreateAgents();
-	void Progress(int actual, int total, String desc);
-	void SubProgress(int actual, int total);
 	void SetEpsilon(double d);
 	void SetMode(int i);
-	virtual void SetAskBid(SimBroker& sb, int pos);
-	void LoopAgentsToEnd(int submode, bool tail_only);
-	void LoopAgentsToEndTf(int tf_id, bool tail_only);
-	void LoopAgentsForRandomness(int submode);
-	void SetTfLimit(int tf_id, double limit);
-	void CheckAgentSubMode();
+	void RefreshSnapshots();
+	void Progress(int actual, int total, String desc);
+	void SubProgress(int actual, int total);
+	void Serialize(Stream& s);
 	
-	int GetSignalBegin() const;
-	int GetSignalEnd() const;
-	int GetSignalPos(int group_id) const;
-	double GetTfDrawdown(int tf_id);
-	int GetAgentSubMode();
+	void Main();
+	
+	
+	
 	
 	Callback3<int, int, String> WhenProgress;
 	Callback2<int, int> WhenSubProgress;
@@ -98,6 +73,7 @@ public:
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;
+	
 };
 
 }

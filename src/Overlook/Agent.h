@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Agent_h_
 #define _Overlook_Agent_h_
 
@@ -24,7 +26,6 @@ protected:
 	
 	
 	// Persistent vars
-	DQNAgent<1, 1, 1, 1> dqn;
 	int agent_id, sym_id, sym, proxy_sym;
 	int agent_input_width, agent_input_height;
 	bool has_timesteps;
@@ -58,8 +59,8 @@ public:
 	
 	void Serialize(Stream& s);
 	void Init();
-	void Start();
-	void Stop();
+	//void Start();
+	//void Stop();
 	void SetBrokerageSignals(Brokerage& broker, int pos);
 	//void RefreshTotalEpochs();
 	Callback MainCallback() {return Callback(THISBACK(Main));}
@@ -70,4 +71,5 @@ public:
 
 }
 
+#endif
 #endif

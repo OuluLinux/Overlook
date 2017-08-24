@@ -356,7 +356,7 @@ void UpdateMat(MatType& m, double alpha) {
 
 
 
-template <int width, int height, int num_actions, int num_states, int num_hidden_units = 100, int experience_size=10000>
+template <int width, int height, int num_actions, int num_states, int num_hidden_units = 100, int experience_size=100>
 class DQNAgent {
 	
 public:
@@ -545,7 +545,7 @@ public:
 	
 	int GetExperienceWritePointer() const {return expi;}
 	double GetTDError() const {return tderror;}
-	double GetEpsilon() const {return epsilon;}
+	double GetEpsilon() const restrict(amp,cpu) {return epsilon;}
 	
 	int GetExperienceCount() const {return experience_size;}
 	

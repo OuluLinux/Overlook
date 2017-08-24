@@ -9,25 +9,6 @@ GroupOverview::GroupOverview()
 	prog.Set(0, 1);
 	sub.Set(0, 1);
 	
-	modelist.Add("Agent training");
-	modelist.Add("Group optimizing");
-	modelist.Add("Allow real-time trading");
-	modelist.SetIndex(0);
-	modelist <<= THISBACK(SetMode);
-	
-	epsilon <<= THISBACK(SetEpsilon);
-	limit_factor <<= THISBACK(SetLimitFactor);
-}
-
-void GroupOverview::SetMode() {
-	int i = modelist.GetIndex();
-	if (group)
-		group->SetMode(i);
-}
-
-void GroupOverview::SetLimitFactor() {
-	if (group)
-		group->limit_factor = limit_factor.GetData();
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
@@ -38,8 +19,6 @@ void GroupOverview::SetGroup(AgentGroup& group) {
 	this->group = &group;
 	this->group->WhenProgress = THISBACK(PostProgress);
 	this->group->WhenSubProgress = THISBACK(PostSubProgress);
-	
-	enable.Set(group.enable_training);
 	
 	Data();
 }
@@ -107,58 +86,15 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(datactrl);
 	Add(datactrl, "Recorded data");
 	
-	overview.tflimits.AddColumn("Tf");
-	overview.tflimits.AddColumn("Drawdown");
-	overview.tflimits.AddColumn("Limit");
-	
 	WhenSet << THISBACK(Data);
 }
 
 void GroupTabCtrl::SetGroup(AgentGroup& group) {
-	/*
 	this->group = &group;
 	
-	overview.enable.WhenAction.Clear();
-	overview.enable.Set(group.enable_training);
-	overview.enable <<= THISBACK(SetEnabled);
-	overview.reset_go <<= THISBACK(ResetGroupOptimizer);
-	overview.modelist.SetIndex(group.mode);
-	
-	overview.tflimits.Clear();
-	tflimitedit.Clear();
-	for(int i = 0; i < group.tf_ids.GetCount(); i++) {
-		overview.tflimits.Set(i, 0, group.sys->GetPeriodString(group.tf_ids[i]));
-		overview.tflimits.Set(i, 1, group.GetTfDrawdown(i));
-		overview.tflimits.Set(i, 2, group.tf_limit[i]);
-		
-		EditDoubleSpin& edit = tflimitedit.Add();
-		overview.tflimits.SetCtrl(i, 2, edit);
-		#ifdef flagDEBUG
-		edit.MinMax(0.01, 1.0);
-		#else
-		edit.MinMax(0.01, 0.5);
-		#endif
-		
-		// Everything just breaks if you change this limit to tighter after it has proceeded
-		// to faster tf...
-		if (group.enable_training && group.GetTfDrawdown(i) < group.tf_limit[i]) {
-			edit.Disable();
-		} else {
-			edit <<= THISBACK1(SetTfLimit, i);
-		}
-	}
-	
 	overview	.SetGroup(group);
-	trainingctrl.SetTrainee(group);
 	snapctrl	.SetGroup(group);
 	datactrl	.SetGroup(group);
-	*/
-}
-
-void GroupTabCtrl::SetTfLimit(int tf_id) {
-	if (!group) return;
-	double tflimit = tflimitedit[tf_id].GetData();
-	group->SetTfLimit(tf_id, tflimit);
 }
 
 void GroupTabCtrl::Data() {
@@ -173,12 +109,6 @@ void GroupTabCtrl::Data() {
 		datactrl.Data();
 }
 
-void GroupTabCtrl::SetEnabled() {
-	group->enable_training = overview.enable.Get();
-	if (group->enable_training)	group->Start();
-	else						group->Stop();
-}
-
 
 
 
@@ -191,7 +121,8 @@ void GroupTabCtrl::SetEnabled() {
 
 
 AgentTabCtrl::AgentTabCtrl() {
-	agent = NULL;
+	//agent = NULL;
+	
 	CtrlLayout(overview);
 	
 	Add(overview);
@@ -203,7 +134,7 @@ AgentTabCtrl::AgentTabCtrl() {
 }
 
 void AgentTabCtrl::Data() {
-	if (!agent) return;
+	/*if (!agent) return;
 	
 	int tab = Get();
 	
@@ -235,14 +166,15 @@ void AgentTabCtrl::Data() {
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
-	}
+	}*/
 }
-
+/*
 void AgentTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
 	trainingctrl.SetTrainee(agent);
 }
+*/
 
 
 
@@ -252,73 +184,24 @@ void AgentTabCtrl::SetAgent(Agent& agent) {
 
 
 
-
-ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
+ManagerCtrl::ManagerCtrl() {
 	view = -1;
-	
-	CtrlLayout(newview);
 	
 	Add(hsplit.SizePos());
 	
 	hsplit.Horz();
-	hsplit << ctrl << mainview;
+	hsplit << listsplit << mainview;
 	hsplit.SetPos(1500);
 	
-	mainview.Add(newview.SizePos());
 	mainview.Add(group_tabs.SizePos());
 	mainview.Add(agent_tabs.SizePos());
 	
-	
-	/*String t =
-			"{\n"
-			"\t\"update\":\"qlearn\",\n"
-			"\t\"gamma\":0.9,\n"
-			"\t\"epsilon\":0.02,\n"
-			"\t\"alpha\":0.005,\n"
-			"\t\"experience_add_every\":5,\n"
-			"\t\"experience_size\":10000,\n"
-			"\t\"learning_steps_per_iteration\":5,\n"
-			"\t\"tderror_clamp\":1.0,\n"
-			"\t\"num_hidden_units\":100,\n"
-			"}\n";
-	newview.params.SetData(t);*/
-	newview.create <<= THISBACK(PostNewAgent);
-	newview.symlist <<= THISBACK(Data);
-	
-	newview.symlist.AddColumn("");
-	newview.symlist.AddColumn("");
-	newview.symlist.NoHeader();
-	newview.symlist.ColumnWidths("3 1");
-	newview.tflist.AddColumn("");
-	newview.tflist.AddColumn("");
-	newview.tflist.NoHeader();
-	newview.tflist.ColumnWidths("3 1");
-	newview.indilist.AddColumn("");
-	newview.indilist.AddColumn("");
-	newview.indilist.NoHeader();
-	newview.indilist.ColumnWidths("3 1");
-	newview.all  <<= THISBACK(SelectAll);
-	newview.none <<= THISBACK(SelectNone);
-	newview.allbasefx  <<= THISBACK1(Select, 0);
-	newview.allbasecfd <<= THISBACK1(Select, 1);
-	newview.allfx      <<= THISBACK1(Select, 2);
-	newview.allcfd     <<= THISBACK1(Select, 3);
-	newview.allindices <<= THISBACK1(Select, 4);
-	newview.allfutures <<= THISBACK1(Select, 5);
-	
-	
-	add_new.SetLabel("New Group");
-	add_new   <<= THISBACK1(SetView, 0);
-	
-	
-	ctrl.Add(add_new.TopPos(0, 30).HSizePos());
-	ctrl.Add(listsplit.VSizePos(30).HSizePos());
 	listsplit.Vert();
 	listsplit << glist << tfglist << alist;
 	
 	glist.AddColumn("Name");
-	glist <<= THISBACK1(SetView, 1);
-	glist.WhenLeftClick << THISBACK1(SetView, 1);
+	glist <<= THISBACK1(SetView, 0);
+	glist.WhenLeftClick << THISBACK1(SetView, 0);
 	
 	tfglist.AddColumn("Name");
 	tfglist.AddColumn("Best result");
@@ -336,54 +219,22 @@ ManagerCtrl::ManagerCtrl(System& sys) : sys(&sys) {
 	SetView(0);
 }
 
-void ManagerCtrl::SelectAll() {
-	for(int i = 0; i < newview.symlist.GetCount(); i++) {
-		newview.symlist.Set(i, 1, true);
-	}
-}
-
-void ManagerCtrl::SelectNone() {
-	for(int i = 0; i < newview.symlist.GetCount(); i++) {
-		newview.symlist.Set(i, 1, false);
-	}
-}
-
-void ManagerCtrl::Select(int j) {
-	MetaTrader& mt = GetMetaTrader();
-	for(int i = 0; i < newview.symlist.GetCount(); i++) {
-		const Symbol& s = mt.GetSymbol(i);
-		bool sel = false;
-		switch (j) {
-			case 0: sel = s.IsForex() && s.is_base_currency; break;
-			case 1: sel = s.IsCFD()   && s.is_base_currency; break;
-			case 2: sel = s.IsForex(); break;
-			case 3: sel = s.IsCFD(); break;
-			case 4: sel = s.IsCFDIndex(); break;
-			case 5: sel = s.IsFuture(); break;
-		}
-		if (sel)
-			newview.symlist.Set(i, 1, true);
-	}
-}
-
 void ManagerCtrl::SetView(int view) {
-	Manager& mgr = sys->GetManager();
+	System& sys = GetSystem();
 	
-	newview.Hide();
 	agent_tabs.Hide();
 	group_tabs.Hide();
 	
 	if (view == 0) {
-		newview.Show();
-		newview.SetFocus();
+		
 	}
 	else if (view == 1) {
-		int group_id = glist.GetCursor();
+		/*int group_id = glist.GetCursor();
 		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
-			group_tabs.SetGroup(mgr.groups[group_id]);
+			group_tabs.SetGroup(sys.GetAgentGroup());
 			group_tabs.Show();
 			group_tabs.SetFocus();
-		}
+		}*/
 	}
 	else if (view == 2) {
 		/*int group_id = glist.GetCursor();
@@ -402,8 +253,9 @@ void ManagerCtrl::SetView(int view) {
 }
 
 void ManagerCtrl::Data() {
-	Manager& mgr = sys->GetManager();
+	System& sys = GetSystem();
 	
+	/*
 	for(int i = 0; i < mgr.groups.GetCount(); i++) {
 		AgentGroup& g = mgr.groups[i];
 		
@@ -416,7 +268,7 @@ void ManagerCtrl::Data() {
 	if (gcursor >= 0 && gcursor < mgr.groups.GetCount()) {
 		AgentGroup& g = mgr.groups[gcursor];
 		
-		/*for(int i = 0; i < g.agents.GetCount(); i++) {
+		for(int i = 0; i < g.agents.GetCount(); i++) {
 			Agent& a = g.agents[i];
 			
 			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
@@ -424,34 +276,12 @@ void ManagerCtrl::Data() {
 			alist.Set(i, 2, a.best_result);
 			alist.Set(i, 3, a.last_drawdown);
 		}
-		alist.SetCount(g.agents.GetCount());*/
+		alist.SetCount(g.agents.GetCount());
 	}
+	*/
 	
 	if (view == 0) {
-		// Set symbol and tf lists if empty
-		if (newview.tflist.GetCount() == 0) {
-			for(int i = 0; i < sys->GetPeriodCount(); i++) {
-				newview.tflist.Set(i, 0, sys->GetPeriodString(i));
-				newview.tflist.Set(i, 1, 0);
-				newview.tflist.SetCtrl(i, 1, new_opts.Add());
-			}
-		}
-		if (newview.symlist.GetCount() == 0) {
-			for(int i = 0; i < sys->GetBrokerSymbolCount(); i++) {
-				newview.symlist.Set(i, 0, sys->GetSymbol(i));
-				newview.symlist.Set(i, 1, 0);
-				newview.symlist.SetCtrl(i, 1, new_opts.Add());
-			}
-		}
-		if (newview.indilist.GetCount() == 0) {
-			const Vector<System::CoreCtrlSystem>& facs = System::GetCtrlFactories();
-			for(int i = 0; i < facs.GetCount(); i++) {
-				String indistr = facs[i].a;
-				newview.indilist.Set(i, 0, indistr);
-				newview.indilist.Set(i, 1, 0);
-				newview.indilist.SetCtrl(i, 1, new_opts.Add());
-			}
-		}
+		
 	}
 	else if (view == 1) {
 		group_tabs.Data();
@@ -461,8 +291,9 @@ void ManagerCtrl::Data() {
 	}
 }
 
+/*
 void ManagerCtrl::NewAgent() {
-	Manager& mgr = sys->GetManager();
+	System& sys = GetSystem();
 	
 	One<AgentGroup> group_;
 	group_.Create();
@@ -474,12 +305,14 @@ void ManagerCtrl::NewAgent() {
 		return;
 	}
 	
+	
 	for(int i = 0; i < mgr.groups.GetCount(); i++) {
 		if (group.name == mgr.groups[i].name) {
 			PromptOK(DeQtf("An agent with the name " + group.name + " exists already."));
 			return;
 		}
 	}
+	
 	
 	// Timeframes
 	Vector<int> tf_ids;
@@ -500,7 +333,7 @@ void ManagerCtrl::NewAgent() {
 		}
 	};
 	TfSorter sorter;
-	sorter.sys = sys;
+	sorter.sys = &sys;
 	Sort(tf_ids, sorter);
 	for(int i = 0; i < tf_ids.GetCount(); i++)
 		group.tf_ids.Add(tf_ids[i]);
@@ -528,7 +361,7 @@ void ManagerCtrl::NewAgent() {
 	}
 	
 	
-	group.sys = sys;
+	group.sys = &sys;
 	
 	mgr.groups.Add(group_.Detach());
 	
@@ -540,6 +373,7 @@ void ManagerCtrl::NewAgent() {
 	group.StoreThis();
 	group.Start();
 }
+*/
 
 
 
@@ -555,10 +389,9 @@ void ManagerCtrl::NewAgent() {
 
 
 
-
-RealtimeCtrl::RealtimeCtrl(System& sys) :
-	sys(&sys)
-{
+RealtimeCtrl::RealtimeCtrl() {
+	System& sys = GetSystem();
+	
 	Add(hsplit.SizePos());
 	hsplit.Horz();
 	hsplit << brokerctrl << journal;
@@ -605,12 +438,13 @@ void RealtimeCtrl::Data() {
 }
 
 void RealtimeCtrl::Init() {
+	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	mt.WhenInfo  << THISBACK(Info);
 	mt.WhenError << THISBACK(Error);
 	
-	sys->WhenInfo  << THISBACK(Info);
-	sys->WhenError << THISBACK(Error);
+	sys.WhenInfo  << THISBACK(Info);
+	sys.WhenError << THISBACK(Error);
 }
 
 }

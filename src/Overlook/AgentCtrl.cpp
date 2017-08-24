@@ -18,7 +18,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	
 	/*AgentGroup& group = *this->group;
-	TfGroup& group = *this->tfgroup;
+	SymGroup& group = *this->symgroup;
 	System& sys = *group.sys;
 	
 	if (snap_id < 0 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
@@ -129,12 +129,12 @@ void SnapshotDraw::Paint(Draw& w) {
 
 
 ResultGraph::ResultGraph() {
-	trainee = NULL;
+	//trainee = NULL;
 	
 }
 
 void ResultGraph::Paint(Draw& w) {
-	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
+	/*if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
@@ -177,7 +177,7 @@ void ResultGraph::Paint(Draw& w) {
 	}
 	
 	
-	w.DrawImage(0, 0, id);
+	w.DrawImage(0, 0, id);*/
 }
 
 
@@ -231,12 +231,12 @@ void HeatmapTimeView::Paint(Draw& d) {
 
 
 EquityGraph::EquityGraph() {
-	trainee = NULL;
+	//trainee = NULL;
 	clr = RainbowColor(Randomf());
 }
 
 void EquityGraph::Paint(Draw& w) {
-	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
+	/*if (!trainee) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz(GetSize());
 	ImageDraw id(sz);
@@ -300,7 +300,7 @@ void EquityGraph::Paint(Draw& w) {
 	}
 	
 	
-	w.DrawImage(0, 0, id);
+	w.DrawImage(0, 0, id);*/
 }
 
 
@@ -316,7 +316,7 @@ void EquityGraph::Paint(Draw& w) {
 
 TrainingCtrl::TrainingCtrl()
 {
-	trainee = NULL;
+	//trainee = NULL;
 	
 	Add(vsplit.SizePos());
 	
@@ -334,7 +334,7 @@ TrainingCtrl::TrainingCtrl()
 	bsplit << stats << reward;
 	
 }
-
+/*
 void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
 	this->trainee = &trainee;
 	
@@ -353,10 +353,10 @@ void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
 		timescroll.SetAgent(agent->dqn);
 	}
 }
-
+*/
 void TrainingCtrl::Data() {
-	if (!trainee) return;
 	/*
+	if (!trainee) return;
 	broker.Data();
 	draw.SetSnap(trainee->epoch_actual);
 	draw.Refresh();

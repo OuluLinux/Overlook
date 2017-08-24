@@ -157,7 +157,7 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
-	Manager			mgr;
+	AgentGroup		ag;
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		bars;
@@ -167,12 +167,9 @@ protected:
 	SpinLock		pl_queue_lock;
 	String			addr;
 	double			exploration;
-	Atomic			nonstopped_workers;
-	Atomic			busy_task;
 	int64			memory_limit;
 	int				port;
 	int				task_counter;
-	bool			running;
 	
 	
 protected:
@@ -186,7 +183,6 @@ protected:
 	int source_symbol_count;
 	
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
-	void Worker(int id);
 	void RefreshRealtime();
 	int  GetHash(const Vector<byte>& vec);
 	int  GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
@@ -211,10 +207,8 @@ public:
 	int GetShiftFromTimeTf(const Time& t, int tf);
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
-	Manager& GetManager() {return mgr;}
-	int  AddTaskBusy(Callback task);
-	void RemoveBusyTask(int main_id);
 	void SetEnd(const Time& t) {end = t;}
+	AgentGroup& GetAgentGroup() {return ag;}
 	
 public:
 	
@@ -239,9 +233,8 @@ public:
 	~System();
 	
 	void Init();
-	void Start();
-	void Stop();
-	void Main();
+	void Start()	{ag.Start();}
+	void Stop()		{ag.Stop();}
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;
@@ -249,6 +242,8 @@ public:
 	Callback1<String>  WhenError;
 	Callback           WhenRealtimeUpdate;
 };
+
+inline System& GetSystem() {return Single<System>();}
 
 }
 

@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Trainee_h_
 #define _Overlook_Trainee_h_
 
@@ -57,11 +59,13 @@ struct Snapshot : Moveable<Snapshot> {
 };
 
 class AgentGroup;
-class TfGroup;
+class SymGroup;
 class System;
 
 struct TraineeBase {
+	
 	// Persistent
+	DQNAgent<1, 1, 1, 1> dqn;
 	Vector<double> seq_results;
 	OnlineAverage1 reward_average, loss_average;
 	double peak_value;
@@ -76,7 +80,7 @@ struct TraineeBase {
 	
 	// Temp
 	AgentGroup* group;
-	TfGroup* tfgroup;
+	SymGroup* symgroup;
 	System* sys;
 	Vector<double> thrd_equity;
 	SimBroker broker;
@@ -97,9 +101,11 @@ struct TraineeBase {
 	virtual void Backward(double reward) = 0;
 	virtual void SetAskBid(SimBroker& sb, int pos) = 0;
 	const Vector<double>& GetSequenceResults() const {return seq_results;}
+	void SetEpsilon(double d) {dqn.SetEpsilon(d);}
 	
 };
 
 }
 
+#endif
 #endif

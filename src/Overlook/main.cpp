@@ -20,13 +20,15 @@ GUI_APP_MAIN {
 		}
 	}
 	
+	System& sys = GetSystem();
+	sys.Init();
+	sys.Start();
 	{
 		::Overlook::Overlook ol;
 		ol.Init();
-		ol.Start();
 		ol.Run();
-		ol.Deinit();
 	}
+	sys.Stop();
 	
 	Thread::ShutdownThreads();
 }

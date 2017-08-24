@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -12,15 +14,26 @@ Manager::Manager(System* sys) :
 
 void Manager::Init() {
 	FindFile ff(ConfigFile("*.agrp"));
+	Vector<String> paths;
 	while (ff) {
-		AgentGroup& ag = groups.Add();
-		ag.sys = sys;
-		ag.name = GetFileTitle(ff.GetName());
-		ag.LoadThis();
-		ag.Init();
-		if (ag.enable_training)
-			ag.Start();
+		paths.Add(ff.GetPath());
 		ff.Next();
+	}
+	
+	if (!paths.IsEmpty()) {
+		ManagerLoader loader;
+		loader.OpenMain();
+		for(int i = 0; i < paths.GetCount(); i++) {
+			AgentGroup& ag = groups.Add();
+			ag.sys = sys;
+			ag.name = GetFileTitle(paths[i]);
+			loader.PostProgress("Loading agent group: " + ag.name, i, paths.GetCount());
+			ag.LoadThis();
+			ag.Init();
+			if (ag.enable_training)
+				ag.Start();
+		}
+		loader.Close();
 	}
 	
 	AgentGroup* best_group = GetBestGroup();
@@ -122,3 +135,4 @@ AgentGroup* Manager::GetBestGroup() {
 }
 
 }
+#endif

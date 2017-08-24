@@ -6,6 +6,18 @@ namespace Overlook {
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
 #include <CtrlCore/lay.h>
 
+
+class ManagerLoader : public WithLoader<TopWindow> {
+	
+public:
+	typedef ManagerLoader CLASSNAME;
+	ManagerLoader() {CtrlLayout(*this); Title("Agent group loader");}
+	
+	void Progress(String status, int actual, int total) {this->status.SetLabel(status); prog.Set(actual, total);}
+	void PostProgress(String status, int actual, int total) {PostCallback(THISBACK3(Progress, status, actual, total));}
+	
+};
+
 class GroupOverview : public WithGroupOverview<ParentCtrl> {
 	
 protected:
@@ -20,9 +32,6 @@ public:
 	GroupOverview();
 	
 	void SetGroup(AgentGroup& group);
-	void SetEpsilon() {if (group) group->SetEpsilon(epsilon.GetData());}
-	void SetLimitFactor();
-	void SetMode();
 	
 	void Data();
 	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
@@ -44,13 +53,10 @@ public:
 	
 	void Data();
 	void SetGroup(AgentGroup& group);
-	void SetEnabled();
-	void SetLimitFactor();
-	void SetTfLimit(int tf_id);
 };
 
 class AgentTabCtrl : public TabCtrl {
-	Agent* agent;
+	//Agent* agent;
 	WithAgentOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
 	
@@ -59,48 +65,39 @@ public:
 	AgentTabCtrl();
 	
 	void Data();
-	void SetAgent(Agent& agent);
+	//void SetAgent(Agent& agent);
 	
 };
 
 class ManagerCtrl : public ParentCtrl {
 	Splitter						hsplit, listsplit;
 	ArrayCtrl						alist, tfglist, glist;
-	ParentCtrl						ctrl;
 	ParentCtrl						mainview;
-	WithNewAgentGroup<ParentCtrl>	newview;
 	Button							add_new;
 	Array<Option>					new_opts;
 	
 	GroupTabCtrl					group_tabs;
 	AgentTabCtrl					agent_tabs;
 	
-	System* sys;
 	int view;
 	
 public:
 	typedef ManagerCtrl CLASSNAME;
-	ManagerCtrl(System& sys);
+	ManagerCtrl();
 	
-	void SelectAll();
-	void SelectNone();
-	void Select(int i);
 	void Data();
 	void SetView(int i);
-	void NewAgent();
-	void PostNewAgent() {Thread::Start(THISBACK(NewAgent));}
-	void LastCursor() {glist.SetCursor(glist.GetCount()-1);}
+	
 };
 
 class RealtimeCtrl : public ParentCtrl {
 	Splitter				hsplit;
 	BrokerCtrl				brokerctrl;
 	ArrayCtrl				journal;
-	System*					sys;
 	
 public:
 	typedef RealtimeCtrl CLASSNAME;
-	RealtimeCtrl(System& sys);
+	RealtimeCtrl();
 	
 	void Data();
 	void Init();

@@ -18,7 +18,7 @@ public:
 class EquityGraph : public Ctrl {
 	
 protected:
-	TraineeBase* trainee;
+	//TraineeBase* trainee;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
@@ -29,12 +29,12 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
+	//void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
 	
 };
 
 class ResultGraph : public Ctrl {
-	TraineeBase* trainee;
+	//TraineeBase* trainee;
 	Vector<Point> polyline;
 	
 public:
@@ -43,7 +43,7 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
+	//void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
 	
 };
 
@@ -135,7 +135,7 @@ class TrainingCtrl : public ParentCtrl {
 	
 protected:
 	friend class SnapshotDraw;
-	TraineeBase* trainee;
+	//TraineeBase* trainee;
 	Splitter hsplit;
 	
 	Label epoch;
@@ -154,7 +154,7 @@ public:
 	
 	void Data();
 	void ApplySettings();
-	void SetTrainee(TraineeBase& trainee);
+	//void SetTrainee(TraineeBase& trainee);
 	
 };
 

@@ -1,9 +1,10 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
 
 JoinerAgent::JoinerAgent() {
-	group = NULL;
 	
 }
 
@@ -63,4 +64,17 @@ bool JoinerAgent::PutLatest(Brokerage& broker) {
 	return true;
 }
 
+void JoinerAgent::Create(int width, int height) {
+	
 }
+
+void JoinerAgent::Backward(double reward) {
+	
+}
+
+void JoinerAgent::Forward(Snapshot& snap, Brokerage& broker) {
+	
+}
+
+}
+#endif

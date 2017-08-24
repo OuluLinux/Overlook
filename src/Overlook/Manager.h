@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Manager_h_
 #define _Overlook_Manager_h_
 
@@ -24,4 +26,5 @@ public:
 
 }
 
+#endif
 #endif

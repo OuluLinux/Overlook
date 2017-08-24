@@ -3,8 +3,8 @@
 namespace Overlook {
 
 Overlook::Overlook() :
-	mgrctrl(sys),
-	rtctrl(sys)
+	mgrctrl(),
+	rtctrl()
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
@@ -73,7 +73,8 @@ void Overlook::Data(bool periodic) {
 }
 
 void Overlook::Init() {
-	sys.Init();
+	System& sys = GetSystem();
+	
 	rtctrl.Init();
 	exposurectrl.Init();
 	
@@ -92,15 +93,9 @@ void Overlook::Init() {
 	PostCallback(THISBACK(SetView));
 }
 
-void Overlook::Start() {
-	sys.Start();
-}
-
-void Overlook::Deinit() {
-	sys.Stop();
-}
-
 void Overlook::SetView() {
+	System& sys = GetSystem();
+	
 	int c = ctrllist.GetIndex();
 	int s = symlist.GetIndex();
 	int t = tflist.GetIndex();

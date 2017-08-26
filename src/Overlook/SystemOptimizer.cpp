@@ -27,7 +27,8 @@ void System::InitRegistry() {
 
 // This function is only a demonstration how to make work queues
 void System::GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue) {
-	Index<int> sym_ids, tf_ids, indi_ids;
+	Index<int> sym_ids, tf_ids;
+	Vector<FactoryDeclaration> indi_ids;
 	bool all = false;
 	
 	if (all) {
@@ -37,11 +38,11 @@ void System::GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue) {
 		for(int i = periods.GetCount()-1; i >= 0; i--)
 			tf_ids.Add(i);
 		
-		int indi_limit = Find<Sensors>();
+		int indi_limit = Find<PeriodicalChange>();
 		ASSERT(indi_limit != -1);
 		indi_limit++;
 		for(int i = 0; i < indi_limit; i++)
-			indi_ids.Add(i);
+			indi_ids.Add().Set(i);
 	} else {
 		for(int i = 0; i < symbols.GetCount(); i++)
 			sym_ids.Add(i);
@@ -52,15 +53,15 @@ void System::GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue) {
 		int indi_limit = Find<MovingAverage>() + 1;
 		ASSERT(indi_limit != 0);
 		for(int i = 0; i < indi_limit; i++)
-			indi_ids.Add(i);
+			indi_ids.Add().Set(i);
 	}
 	
 	GetCoreQueue(ci_queue, sym_ids, tf_ids, indi_ids);
 }
 
-int System::GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Index<int>& indi_ids) {
+int System::GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids) {
 	const int tf_count = GetPeriodCount();
-	Vector<int> path;
+	Vector<FactoryDeclaration> path;
 	int total = tf_ids.GetCount() * indi_ids.GetCount() + 2;
 	int actual = 0;
 	for (int i = 0; i < tf_ids.GetCount(); i++) {
@@ -108,8 +109,8 @@ int System::GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym
 	return 0;
 }
 
-int System::GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids) {
-	const int factory = path.Top();
+int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids) {
+	const int factory = path.Top().factory;
 	const int tf_count = GetPeriodCount();
 	const int sym_count = GetTotalSymbolCount();
 	const int factory_count = GetFactoryCount();
@@ -142,7 +143,7 @@ int System::GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, in
 		
 		int h = 0;
 		if (!sub_sym_ids.IsEmpty()) {
-			path.Add(input.factory);
+			path.Add().Set(input.factory);
 			h = GetCoreQueue(path, ci_queue, tf, sub_sym_ids);
 			path.Pop();
 		}
@@ -153,9 +154,17 @@ int System::GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, in
 	// Get the unique hash for core item
 	Vector<int> args;
 	CombineHash ch;
+	const FactoryDeclaration& factory_decl = path.Top();
 	for(int i = 0; i < reg.args.GetCount(); i++) {
 		const ArgType& arg = reg.args[i];
-		int value = arg.def;
+		int value;
+		ASSERT(factory_decl.arg_count >= 0 && factory_decl.arg_count <= 8);
+		if (i < factory_decl.arg_count) {
+			value = factory_decl.args[i];
+			ASSERT(value >= arg.min && value <= arg.max);
+		} else {
+			value = arg.def;
+		}
 		args.Add(value);
 		ch << value << 1;
 	}
@@ -361,8 +370,8 @@ void System::CreateCore(CoreItem& ci) {
 Core* System::CreateSingle(int factory, int sym, int tf) {
 	
 	// Enable factory
-	Vector<int> path;
-	path.Add(factory);
+	Vector<FactoryDeclaration> path;
+	path.Add().Set(factory);
 	
 	// Enable symbol
 	ASSERT(sym >= 0 && sym < symbols.GetCount());

@@ -1,8 +1,5 @@
 LAYOUT(GroupOverview, 612, 388)
-	ITEM(Label, info, SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HSizePosZ(4, 4).VSizePosZ(68, 4))
-	ITEM(ProgressIndicator, sub, HSizePosZ(4, 4).TopPosZ(48, 16))
-	ITEM(ProgressIndicator, prog, HSizePosZ(4, 4).TopPosZ(28, 16))
-	ITEM(Label, lbl, HSizePosZ(4, 4).TopPosZ(4, 20))
+	ITEM(Label, info, SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HSizePosZ(4, 4).VSizePosZ(4, 4))
 END_LAYOUT
 
 LAYOUT(AgentOverview, 772, 248)
@@ -28,8 +25,9 @@ LAYOUT(AgentOverview, 772, 248)
 	ITEM(Label, opentimes, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).LeftPosZ(144, 164).TopPosZ(64, 72))
 END_LAYOUT
 
-LAYOUT(Loader, 400, 64)
-	ITEM(Label, status, LeftPosZ(4, 392).TopPosZ(4, 20))
-	ITEM(ProgressIndicator, prog, LeftPosZ(4, 392).TopPosZ(28, 32))
+LAYOUT(Loader, 400, 76)
+	ITEM(Label, status, HSizePosZ(4, 4).VSizePosZ(4, 52))
+	ITEM(ProgressIndicator, subprog, HSizePosZ(4, 4).VSizePosZ(52, 4))
+	ITEM(ProgressIndicator, prog, HSizePosZ(4, 4).VSizePosZ(28, 28))
 END_LAYOUT
 

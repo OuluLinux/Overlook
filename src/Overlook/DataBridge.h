@@ -53,12 +53,13 @@ struct AskBid : Moveable<AskBid> {
 };
 
 class DataBridge : public BarData {
-	QueryTable spread_qt, volume_qt;
 	VectorMap<int,int> median_max_map, median_min_map;
 	VectorMap<int,int> symbols;
 	Vector<Vector<byte> > ext_data;
 	Vector<Vector<int> > sym_group_stats, sym_groups;
 	double point;
+	double spread_mean;
+	int spread_count;
 	int median_max, median_min;
 	int max_value, min_value;
 	int cursor, buffer_cursor;
@@ -78,10 +79,10 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(5, 3)
+			% Out(4, 3)
+			% Persistent(spread_mean) % Persistent(spread_count)
 			% Persistent(cursor) % Persistent(buffer_cursor)
 			% Persistent(data_begin)
-			% Persistent(spread_qt) % Persistent(volume_qt)
 			% Persistent(median_max_map) % Persistent(median_min_map)
 			% Persistent(symbols)
 			% Persistent(ext_data)
@@ -99,6 +100,7 @@ public:
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}
 	double GetMedianMin() const {return median_min * point;}
+	void AddSpread(double a);
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
 		// Add this timeframe

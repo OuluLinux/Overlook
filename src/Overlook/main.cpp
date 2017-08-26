@@ -9,6 +9,9 @@ using namespace Overlook;
 
 
 GUI_APP_MAIN {
+	LOG(GetAmpDevices());
+	//TestCompatAMP(); return;
+	
 	const Vector<String>& args = CommandLine();
 	for(int i = 1; i < args.GetCount(); i+=2) {
 		const String& s = args[i-1];

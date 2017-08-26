@@ -20,6 +20,7 @@ Agent::Agent() {
 	sym_id = -1;
 	sym = -1;
 	proxy_sym = -1;
+	group_id = -1;
 	agent_input_width = 0;
 	agent_input_height = 0;
 	has_timesteps = false;

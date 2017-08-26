@@ -7,9 +7,10 @@ topic "Journal";
 [s1; Journal&]
 [s0; I write this journal to keep myself focused on the end result: 
 the working product. This text is sort of an investment, which 
-loses value if I don`'t get the product work. In a group project, 
-I would happily use issue tracker etc., but because this is one 
-man`'s project, then I am going to take this more thrilling approach.&]
+loses value if I don`'t get the product work. Writing investment 
+code gets on to your nerve intensively and failing code means 
+losses. Keeping this program open and social helps me to cool 
+down from the stress of the `"real life losses`" part.&]
 [s0; I like to tell how original this application is and to communicate 
 the countless hours and the sweat what I did see for this. The 
 public release is merely a by`-product. The progress of this 

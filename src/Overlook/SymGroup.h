@@ -13,7 +13,6 @@ namespace Overlook {
 class SymGroup {
 	AgentGroup* group;
 	System* sys;
-	Mutex work_lock;
 	
 public:
 	
@@ -25,9 +24,6 @@ public:
 	
 	
 	// Temp
-	Vector<Vector<Vector<ConstBuffer*> > > value_buffers;
-	Vector<Ptr<CoreItem> > work_queue, db_queue;
-	Vector<Vector<Core*> > databridge_cores;
 	Array<Snapshot> snaps;
 	int tf, tf_minperiod, tf_period, tf_type;
 	int data_begin;
@@ -40,9 +36,6 @@ public:
 	void SetEpsilon(double d);
 	
 	void Main(SnapshotView& snaps);
-	void RefreshWorkQueue();
-	void ProcessWorkQueue();
-	void ProcessDataBridgeQueue();
 	
 	
 };

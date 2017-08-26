@@ -27,7 +27,7 @@ void Manager::Init() {
 			AgentGroup& ag = groups.Add();
 			ag.sys = sys;
 			ag.name = GetFileTitle(paths[i]);
-			loader.PostProgress("Loading agent group: " + ag.name, i, paths.GetCount());
+			Progress("Loading agent group: " + ag.name, i, paths.GetCount());
 			ag.LoadThis();
 			ag.Init();
 			if (ag.enable_training)

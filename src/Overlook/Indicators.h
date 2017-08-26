@@ -309,6 +309,10 @@ class OsMA : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
+	double value_mean;
+	double diff_mean;
+	int value_count;
+	int diff_count;
 	
 public:
 	OsMA();
@@ -318,10 +322,31 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(3, 1)
-			% Arg("fast_ema_period", fast_ema_period, 2, 127)
-			% Arg("slow_ema_period", slow_ema_period, 2, 127)
-			% Arg("signal_sma", signal_sma_period, 2, 127);
+			% Out(4, 2)
+			% Arg("fast_ema_period", fast_ema_period, 2, 10000)
+			% Arg("slow_ema_period", slow_ema_period, 2, 10000)
+			% Arg("signal_sma", signal_sma_period, 2, 10000)
+			% Persistent(value_mean) % Persistent(value_count)
+			% Persistent(diff_mean) % Persistent(diff_count);
+	}
+	
+	void AddValue(double a) {
+		if (value_count == 0) {
+			value_mean = a;
+		} else {
+			double delta = a - value_mean;
+			value_mean += delta / value_count;
+		}
+		value_count++;
+	}
+	void AddDiff(double a) {
+		if (diff_count == 0) {
+			diff_mean = a;
+		} else {
+			double delta = a - diff_mean;
+			diff_mean += delta / diff_count;
+		}
+		diff_count++;
 	}
 };
 
@@ -374,9 +399,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
-			% Arg("k_period", k_period, 2, 127)
-			% Arg("d_period", d_period, 2, 127)
-			% Arg("slowing", slowing, 2, 127);
+			% Arg("k_period", k_period, 2, 10000)
+			% Arg("d_period", d_period, 2, 10000)
+			% Arg("slowing", slowing, 2, 10000);
 	}
 };
 
@@ -895,7 +920,7 @@ public:
 //#define LARGE_SENSOR
 #define SMALL_COUNT 4
 
-class Sensors : public Core {
+/*class Sensors : public Core {
 	Vector<double> means;
 	Vector<int> counts;
 	double total_mean;
@@ -945,7 +970,7 @@ public:
 			% Persistent(total_mean)
 			% Persistent(total_count);
 	}
-};
+};*/
 
 
 

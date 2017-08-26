@@ -5,6 +5,9 @@
 #include <PlotCtrl/PlotCtrl.h>
 #include <CoreUtils/Optimizer.h>
 
+#include "CompatAMP.h"
+using namespace concurrency;
+
 #undef ASSERTEXC
 
 namespace Overlook {
@@ -57,6 +60,28 @@ struct ValueRegister {
 	
 	virtual void IO(const ValueBase& base) = 0;
 	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
+};
+
+struct FactoryDeclaration : Moveable<FactoryDeclaration> {
+	int args[8];
+	int factory;
+	int arg_count;
+	
+	FactoryDeclaration() {factory = -1; arg_count = 0;}
+	FactoryDeclaration(const FactoryDeclaration& src) {
+		factory = src.factory;
+		arg_count = src.arg_count;
+		for(int i = 0; i < 8; i++) args[i] = src.args[i];
+	}
+	FactoryDeclaration& Set(int i) {factory = i; return *this;}
+	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < 8); args[arg_count++] = i; return *this;}
+	unsigned GetHashValue() {
+		CombineHash ch;
+		ch << factory << 1;
+		for(int i = 0; i < arg_count; i++)
+			ch << args[i] << 1;
+		return ch;
+	}
 };
 
 struct DataExc : public Exc {

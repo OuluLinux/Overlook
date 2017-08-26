@@ -185,7 +185,7 @@ protected:
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
 	void RefreshRealtime();
 	int  GetHash(const Vector<byte>& vec);
-	int  GetCoreQueue(Vector<int>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
+	int  GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
 	void CreateCore(CoreItem& ci);
 	void InitRegistry();
 	void ConnectCore(CoreItem& ci);
@@ -195,7 +195,7 @@ protected:
 public:
 	
 	void Process(CoreItem& ci);
-	int GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Index<int>& indi_ids);
+	int GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
 	int GetCountTf(int tf_id) const;
 	Time GetTimeTf(int tf, int pos) const;// {return begin + base_period * period * pos;}
 	Time GetBegin(int tf) const {return begin[tf];}

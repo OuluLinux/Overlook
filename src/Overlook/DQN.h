@@ -545,7 +545,7 @@ public:
 	
 	int GetExperienceWritePointer() const {return expi;}
 	double GetTDError() const {return tderror;}
-	double GetEpsilon() const restrict(amp,cpu) {return epsilon;}
+	double GetEpsilon() const PARALLEL {return epsilon;}
 	
 	int GetExperienceCount() const {return experience_size;}
 	

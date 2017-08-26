@@ -6,7 +6,7 @@ namespace Overlook {
 String arg_addr = "127.0.0.1";
 int arg_port = 42000;
 
-System::System() {
+System::System() : ag(this) {
 	timediff = 0;
 	base_period = 60;
 	end = GetSysTime();

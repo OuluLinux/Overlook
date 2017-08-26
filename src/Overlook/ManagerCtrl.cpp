@@ -6,33 +6,11 @@ GroupOverview::GroupOverview()
 {
 	CtrlLayout(*this);
 	
-	prog.Set(0, 1);
-	sub.Set(0, 1);
-	
 }
 
 void GroupOverview::SetGroup(AgentGroup& group) {
-	if (this->group) {
-		this->group->WhenProgress.Clear();
-		this->group->WhenSubProgress.Clear();
-	}
 	this->group = &group;
-	this->group->WhenProgress = THISBACK(PostProgress);
-	this->group->WhenSubProgress = THISBACK(PostSubProgress);
-	
 	Data();
-}
-
-void GroupOverview::Progress(int actual, int total, String label) {
-	prog.Set(actual, total);
-	sub.Set(0, 1);
-	this->label = label;
-	lbl.SetLabel(Format("%s: %d/%d, %d/%d", label, actual, total, group->a1, group->t1));
-}
-
-void GroupOverview::SubProgress(int actual, int total) {
-	sub.Set(actual, total);
-	lbl.SetLabel(Format("%s: %d/%d, %d/%d", group->prog_desc, group->a0, group->t0, actual, total));
 }
 
 void GroupOverview::Data() {

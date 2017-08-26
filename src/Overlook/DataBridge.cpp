@@ -12,6 +12,8 @@ DataBridge::DataBridge()  {
 	median_max = 0;
 	median_min = 0;
 	point = 0.00001;
+	spread_mean = 0;
+	spread_count = 0;
 }
 
 DataBridge::~DataBridge()  {
@@ -19,26 +21,8 @@ DataBridge::~DataBridge()  {
 }
 
 void DataBridge::Init() {
-	spread_qt.AddColumn("Spread points", 4096);
-	spread_qt.EndTargets();
-	spread_qt.AddColumn("Wday",			7);
-	spread_qt.AddColumn("Hour",			24);
-	spread_qt.AddColumn("5-min",		12);
-	
-	volume_qt.AddColumn("Volume", 524288);
-	volume_qt.EndTargets();
-	
 	slow_volume = GetMinutePeriod() >= 1440;
 	day_volume = GetMinutePeriod() == 1440;
-	if (!slow_volume) {
-		volume_qt.AddColumn("Wday",			7);
-		volume_qt.AddColumn("Hour",			24);
-		volume_qt.AddColumn("5-min",		12);
-	} else {
-		if (day_volume)
-			volume_qt.AddColumn("Wday",			7);
-		volume_qt.AddColumn("1-change",		16);
-	}
 	
 	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
 		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
@@ -78,12 +62,21 @@ void DataBridge::Start() {
 	}
 }
 
+void DataBridge::AddSpread(double a) {
+	if (spread_count == 0) {
+		spread_mean = a;
+	} else {
+		double delta = a - spread_mean;
+		spread_mean += delta / spread_count;
+	}
+	spread_count++;
+}
+
 void DataBridge::RefreshFromAskBid(bool init_round) {
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
-	Buffer& spread_buf = GetBuffer(4);
 		
 	System& bs = GetSystem();
 	DataBridgeCommon& common = GetDataBridgeCommon();
@@ -121,7 +114,6 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	bool force_d0 = period >= 7*24*60;
 	
 	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
-	spread_qt.Reserve(data.GetCount());
 	
 	for(; cursor < data.GetCount(); cursor++) {
 		
@@ -130,6 +122,16 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		const Time& t = askbid.a;
 		const double& ask = askbid.b;
 		const double& bid = askbid.c;
+		
+		
+		// Find min/max
+		double diff = ask - bid;
+		int step = (int)(diff / point);
+		if (step >= 0) median_max_map.GetAdd(step, 0)++;
+		else median_min_map.GetAdd(step, 0)++;
+		if (step > max_value) max_value = step;
+		if (step < min_value) min_value = step;
+		AddSpread(step);
 		
 		
 		// Get shift in data from time
@@ -147,23 +149,6 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		if (shift >= bars) {
 			break;
 		}
-		
-		
-		// Add data row to spread querytable
-		int row = spread_qt.GetCount();
-		spread_qt.SetCount(row+1);
-		
-		double diff = ask - bid + half_point;
-		int diff_points = Upp::min(4095, (int)(diff / point));
-		int dow = DayOfWeek(t);
-		int hour = t.hour;
-		int minute = t.minute;
-		
-		int pos = 0;
-		spread_qt.Set(row, pos++, diff_points);
-		spread_qt.Set(row, pos++, dow);
-		spread_qt.Set(row, pos++, hour);
-		spread_qt.Set(row, pos++, minute / 5);
 		
 		
 		// Add value to the buffers
@@ -202,120 +187,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			high_buf.Set(i, prev_open);
 		}
 	}
-	/*
-	VectorMap<int, int> stats;
-	for(int i = 0; i < volume_qt.GetCount(); i++) {
-		int t = volume_qt.Get(i, 0);
-		stats.GetAdd(t,0)++;
-	}
-	DUMPM(stats);*/
 	
-	bool five_mins = GetMinutePeriod() < 5;
-	
-	
-	// Fill missing spread data. Set spread value based on querytable at the first refresh.
-	int step = 100;
-	if (init_round) {
-		double prev_spread = 0;
-		for(int i = 0; i < counted; i += step) {
-			Time t = bs.GetTimeTf(tf, i);
-			int dow = DayOfWeek(t);
-			int hour = t.hour;
-			int minute = t.minute;
-			
-			// Set spread value
-			spread_qt.ClearQuery();
-			int pos = 1;
-			spread_qt.SetQuery(pos++, dow);
-			spread_qt.SetQuery(pos++, hour);
-			spread_qt.SetQuery(pos++, minute / 5);
-			double average_diff_point = spread_qt.QueryAverage(0);
-			double diff = average_diff_point * point;
-			if (diff == 0)
-				diff = prev_spread;
-			else
-				prev_spread = diff;
-			spread_buf.Set(i, diff);
-			
-			
-			// Make it faster
-			int end = i + step;
-			SetSafetyLimit(end);
-			for(int j = i+1; j < end && j < bars; j++) {
-				spread_buf.Set(j, diff);
-			}
-		}
-	}
-	
-	// Fill spread and volume data based on query table (actual data would be better, though)
-	double prev_spread = 0;
-	int begin = counted;
-	if (init_round) // Fix unfinished volume bar at history -> askbid switching point
-		counted--;
-	if (counted < 1) counted = 1;
-	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double spread = 0;
-		
-		Time t = bs.GetTimeTf(tf, i);
-		int dow = DayOfWeek(t);
-		int hour = t.hour;
-		int minute = t.minute;
-		
-		
-		// Find min/max
-		double diff = i ? open_buf.Get(i) - open_buf.Get(i-1) : 0.0;
-		int step = (int)(diff / point);
-		if (step >= 0) median_max_map.GetAdd(step, 0)++;
-		else median_min_map.GetAdd(step, 0)++;
-		if (step > max_value) max_value = step;
-		if (step < min_value) min_value = step;
-		
-		
-		// Set volume value
-		int i0 = GetChangeStep(i, 16);
-		volume_qt.ClearQuery();
-		int pos = 1;
-		if (!slow_volume) {
-			volume_qt.SetQuery(pos++, dow);
-			volume_qt.SetQuery(pos++, hour);
-			volume_qt.SetQuery(pos++, minute / 5);
-		} else {
-			if (day_volume)
-				volume_qt.SetQuery(pos++, dow);
-			volume_qt.SetQuery(pos++, i0);
-		}
-		double average_volume = volume_qt.QueryAverage(0);
-		volume_buf.Set(i, average_volume);
-		
-		
-		// Set spread value
-		spread_qt.ClearQuery();
-		pos = 1;
-		spread_qt.SetQuery(pos++, dow);
-		spread_qt.SetQuery(pos++, hour);
-		spread_qt.SetQuery(pos++, minute / 5);
-		double average_diff_point = spread_qt.QueryAverage(0);
-		diff = average_diff_point * point;
-		if (diff == 0)
-			diff = prev_spread;
-		else
-			prev_spread = diff;
-		spread_buf.Set(i, diff);
-		
-		
-		// Make 1M tf faster
-		if (five_mins && (minute % 5) == 0) {
-			int end = i + 5;
-			SetSafetyLimit(end);
-			for(int j = i+1; j < end && j < bars; j++) {
-				spread_buf.Set(j, diff);
-				volume_buf.Set(j, average_volume);
-			}
-			i += 4;
-		}
-	}
 	
 	RefreshMedian();
 	ForceSetCounted(bars);
@@ -427,8 +299,6 @@ void DataBridge::RefreshFromHistory() {
 	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
 	src.Seek(cursor);
 	
-	volume_qt.Reserve(expected_count);
-	
 	while ((cursor + struct_size) <= data_size && count < bars) {
 		if ((count % 10) == 0) {
 			GetSystem().WhenSubProgress(count, bars*2);
@@ -523,7 +393,7 @@ void DataBridge::RefreshFromHistory() {
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
-		
+		AddSpread(step);
 		
 		//LOG(Format("%d: %d %f %f %f %f %d %d %d", cursor, (int)time, open, high, low, close, tick_volume, spread, real_volume));
 	}
@@ -677,6 +547,7 @@ void DataBridge::RefreshVirtualNode() {
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
+		AddSpread(step);
 	}
 	
 	RefreshMedian();

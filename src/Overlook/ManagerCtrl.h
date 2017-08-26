@@ -11,12 +11,17 @@ class ManagerLoader : public WithLoader<TopWindow> {
 	
 public:
 	typedef ManagerLoader CLASSNAME;
-	ManagerLoader() {CtrlLayout(*this); Title("Agent group loader");}
+	ManagerLoader() {CloseBoxRejects(); CtrlLayout(*this); Title("Agent group loader");}
 	
-	void Progress(String status, int actual, int total) {this->status.SetLabel(status); prog.Set(actual, total);}
-	void PostProgress(String status, int actual, int total) {PostCallback(THISBACK3(Progress, status, actual, total));}
+	void Progress(String status, int actual, int total) {this->status.SetLabel(status); prog.Set(actual, total); if (actual >= total) {Close(); Close();}}
+	void PostProgress(int actual, int total, String status) {PostCallback(THISBACK3(Progress, status, actual, total));}
+	
+	void SubProgress(int actual, int total) {subprog.Set(actual, total);}
+	void PostSubProgress(int actual, int total) {PostCallback(THISBACK2(SubProgress, actual, total));}
 	
 };
+
+inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
 
 class GroupOverview : public WithGroupOverview<ParentCtrl> {
 	
@@ -34,8 +39,6 @@ public:
 	void SetGroup(AgentGroup& group);
 	
 	void Data();
-	void PostProgress(int actual, int total, String label) {PostCallback(THISBACK3(Progress, actual, total, label));}
-	void PostSubProgress(int actual, int total) {PostCallback(THISBACK2(SubProgress, actual, total));}
 	
 };
 

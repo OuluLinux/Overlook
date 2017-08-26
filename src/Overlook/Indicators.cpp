@@ -1370,6 +1370,10 @@ OsMA::OsMA() {
 	fast_ema_period = 12;
 	slow_ema_period = 26;
 	signal_sma_period = 9;
+	value_mean = 0.0;
+	value_count = 0;
+	diff_mean = 0.0;
+	diff_count = 0;
 }
 
 void OsMA::Init() {
@@ -1377,8 +1381,11 @@ void OsMA::Init() {
 	
 	SetBufferColor(0, Silver);
 	SetBufferLineWidth(0, 2);
+	SetBufferColor(1, Red);
+	SetBufferLineWidth(1, 1);
 	
 	SetBufferStyle(0,DRAW_HISTOGRAM);
+	SetBufferStyle(1,DRAW_LINE);
 	
 	SetBufferBegin ( 0, signal_sma_period );
 
@@ -1391,8 +1398,9 @@ void OsMA::Init() {
 	
 void OsMA::Start() {
 	Buffer& osma_buffer = GetBuffer(0);
-	Buffer& buffer = GetBuffer(1);
-	Buffer& signal_buffer = GetBuffer(2);
+	Buffer& diff_buffer = GetBuffer(1);
+	Buffer& buffer = GetBuffer(2);
+	Buffer& signal_buffer = GetBuffer(3);
 	int bars = GetBars();
 	int counted = GetCounted();
 
@@ -1407,16 +1415,54 @@ void OsMA::Start() {
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		double ma1 = ma1_buf.Get(i);
-		double ma2 = ma2_buf.Get(i);
-		buffer.Set(i, ma1 - ma2);
+		double ma1 = ma1_buf.GetUnsafe(i);
+		double ma2 = ma2_buf.GetUnsafe(i);
+		double d = ma1 - ma2;
+		buffer.Set(i, d);
 	}
-
+	
 	SimpleMAOnBuffer( bars, counted, 0, signal_sma_period, buffer, signal_buffer );
 	
-	for (int i = counted; i < bars; i++)
-		osma_buffer.Set(i, buffer.Get(i) - signal_buffer.Get(i));
+	for (int i = counted; i < bars; i++) {
+		double d = buffer.Get(i) - signal_buffer.Get(i);
+		if (d != 0.0)
+			AddValue(fabs(d));
+		osma_buffer.Set(i, d);
+	}
+	
+	double value_mul = 1.0 / (value_mean * 3.0);
+	for (int i = counted; i < bars; i++) {
+		double d = osma_buffer.Get(i) * value_mul;
+		osma_buffer.Set(i, d);
+		if (i == 0) continue;
+		double prev = osma_buffer.Get(i-1);
+		double diff = d - prev;
+		if (diff != 0.0)
+			AddDiff(fabs(diff));
+		diff_buffer.Set(i, diff);
+	}
+	
+	double diff_mul = 1.0 / (diff_mean * 3.0);
+	for (int i = counted; i < bars; i++) {
+		double d = diff_buffer.Get(i) * diff_mul;
+		diff_buffer.Set(i, d);
+	}
+	
+	for (int i = counted; i < bars; i++) {
+		osma_buffer.Set(i, Upp::max(-1.0, Upp::min(+1.0, osma_buffer.Get(i))));
+		diff_buffer.Set(i, Upp::max(-1.0, Upp::min(+1.0, diff_buffer.Get(i))));
+	}
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1612,13 +1658,13 @@ StochasticOscillator::StochasticOscillator() {
 
 void StochasticOscillator::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-50); // normalized
-	SetCoreMaximum(50);  // normalized
+	SetCoreMinimum(-1.0); // normalized
+	SetCoreMaximum(+1.0);  // normalized
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1, Red);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 20.0 - 50); // normalized
-	SetCoreLevel(1, 80.0 - 50); // normalized
+	SetCoreLevel(0, -0.60); // normalized
+	SetCoreLevel(1, +0.60); // normalized
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -1657,19 +1703,39 @@ void StochasticOscillator::Start() {
 		}
 	}
 
-	
+	int low_length = k_period;
+	int high_length = k_period;
+	double dmin = 1000000.0;
+	double dmax = -1000000.0;
 	for (int i = start; i < bars; i++) {
 		SetSafetyLimit(i);
-		double dmin = 1000000.0;
-		double dmax = -1000000.0;
 
-		for (int k = i - k_period; k < i; k++) {
-			double low = Low( k );
-			double high = High( k );
-
+		if (low_length >= k_period) {
+			dmin = 1000000.0;
+			for (int k = i - k_period; k < i; k++) {
+				double low = Low( k );
+				if ( dmin > low )
+					dmin = low;
+			}
+			low_length = 0;
+		} else {
+			low_length++;
+			double low = Low( i - 1 );
 			if ( dmin > low )
 				dmin = low;
-
+		}
+		
+		if (high_length >= k_period) {
+			dmax = -1000000.0;
+			for (int k = i - k_period; k < i; k++) {
+				double high = High( k );
+				if ( dmax < high )
+					dmax = high;
+			}
+			high_length = 0;
+		} else {
+			high_length++;
+			double high = High( i - 1 );
 			if ( dmax < high )
 				dmax = high;
 		}
@@ -1688,22 +1754,43 @@ void StochasticOscillator::Start() {
 	}
 
 	//bars--;
+	double sumlow = 0.0;
+	double sumhigh = 0.0;
+	for(int i = start - slowing; i < start; i++) {
+		if (i <= 0) continue;
+		SetSafetyLimit(i);
+		double close = Open(i);
+		double low = Upp::min(close, low_buffer.Get(i));
+		double high = Upp::max(close, high_buffer.Get(i));
+		sumlow  += close - low;
+		sumhigh += high - low;
+	}
 	
 	for (int i = start; i < bars; i++) {
 		SetSafetyLimit(i);
-		double sumlow = 0.0;
-		double sumhigh = 0.0;
-
-		for (int k = ( i - slowing + 1 ); k <= i; k++) {
-			double close = Open( k );
-			sumlow += ( close - low_buffer.Get(k-1) );
-			sumhigh += ( high_buffer.Get(k) - low_buffer.Get(k-1) );
+		
+		
+		int j = i - slowing;
+		if (j > 0) {
+			double close = Open(j);
+			double low = Upp::min(close, low_buffer.Get(j));
+			double high = Upp::max(close, high_buffer.Get(j));
+			sumlow  -= close - low;
+			sumhigh -= high - low;
 		}
+		
+		
+		double close = Open(i);
+		double low = Upp::min(close, low_buffer.Get(i));
+		double high = Upp::max(close, high_buffer.Get(i));
+		sumlow  += close - low;
+		sumhigh += high - low;
+		
 
 		if ( sumhigh == 0.0 )
-			buffer.Set(i, 100.0 - 50); // normalized
+			buffer.Set(i, 1.0); // normalized
 		else
-			buffer.Set(i, sumlow / sumhigh * 100 - 50); // normalized
+			buffer.Set(i, sumlow / sumhigh * 2.0 - 1.0); // normalized
 	}
 
 	start = d_period - 1;
@@ -3798,7 +3885,7 @@ void PeriodicalChange::Start() {
 
 
 
-Sensors::Sensors() {
+/*Sensors::Sensors() {
 	
 	
 	
@@ -3961,6 +4048,6 @@ void Sensors::Start() {
 		}
 		#endif
 	}
-}
+}*/
 
 }

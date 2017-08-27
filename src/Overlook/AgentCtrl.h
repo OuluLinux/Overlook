@@ -4,7 +4,6 @@
 namespace Overlook {
 
 class SnapshotDraw : public Ctrl {
-	AgentGroup* group;
 	int snap_id;
 	
 public:
@@ -12,13 +11,12 @@ public:
 	
 	virtual void Paint(Draw& w);
 	void SetSnap(int i) {snap_id = i;}
-	void SetGroup(AgentGroup& group) {this->group = &group;}
 };
 
 class EquityGraph : public Ctrl {
 	
 protected:
-	//TraineeBase* trainee;
+	TraineeBase* trainee;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
@@ -29,12 +27,12 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	//void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
+	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
 	
 };
 
 class ResultGraph : public Ctrl {
-	//TraineeBase* trainee;
+	TraineeBase* trainee;
 	Vector<Point> polyline;
 	
 public:
@@ -43,7 +41,7 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	//void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
+	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
 	
 };
 
@@ -135,7 +133,7 @@ class TrainingCtrl : public ParentCtrl {
 	
 protected:
 	friend class SnapshotDraw;
-	//TraineeBase* trainee;
+	TraineeBase* trainee;
 	Splitter hsplit;
 	
 	Label epoch;
@@ -144,7 +142,7 @@ protected:
 	EquityGraph stats;
 	HeatmapTimeView timescroll;
 	
-	BrokerCtrl broker;
+	ArrayCtrl list;
 	
 	Splitter bsplit, vsplit;
 	
@@ -154,12 +152,11 @@ public:
 	
 	void Data();
 	void ApplySettings();
-	//void SetTrainee(TraineeBase& trainee);
+	void SetTrainee(TraineeBase& trainee);
 	
 };
 
 class SnapshotCtrl : public ParentCtrl {
-	AgentGroup* group;
 	Splitter hsplit;
 	ArrayCtrl list;
 	SnapshotDraw draw;
@@ -168,7 +165,6 @@ public:
 	typedef SnapshotCtrl CLASSNAME;
 	SnapshotCtrl();
 	
-	void SetGroup(AgentGroup& group) {this->group = &group; draw.SetGroup(group);}
 	void Data();
 };
 
@@ -196,7 +192,6 @@ class DataCtrl : public ParentCtrl {
 	SliderCtrl timeslider;
 	Splitter hsplit;
 	ArrayCtrl siglist, trade;
-	AgentGroup* group;
 	Vector<int> poslist;
 	int last_pos;
 	
@@ -206,7 +201,6 @@ public:
 	
 	void Data();
 	void GuiData();
-	void SetGroup(AgentGroup& group);
 	
 	
 	Vector<double> equity;

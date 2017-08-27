@@ -404,37 +404,6 @@ void DataBridge::RefreshFromHistory() {
 	bool five_mins = GetMinutePeriod() < 5;
 	int steps = five_mins ? 5 : 1;
 	
-	// This is just too heavy in debug mode
-	#ifndef flagDEBUG
-	volume_qt.Reserve(count / steps);
-	for(int i = 0; i < count; i += steps) {
-		if ((count % 10) == 0) {
-			GetSystem().WhenSubProgress(bars + count, bars*2);
-		}
-		
-		Time t = bs.GetTimeTf(tf, i);
-		int row = volume_qt.GetCount();
-		volume_qt.SetCount(row+1);
-		int dow = DayOfWeek(t);
-		int hour = t.hour;
-		int minute = t.minute;
-		int i0 = GetChangeStep(i, 16);
-		int pos = 0;
-		int tick_volume = (int)volume_buf.Get(i);
-		if (tick_volume > 0) {
-			volume_qt.Set(row, pos++, Upp::min(tick_volume, 524287));
-			if (!slow_volume) {
-				volume_qt.Set(row, pos++, dow);
-				volume_qt.Set(row, pos++, hour);
-				volume_qt.Set(row, pos++, minute / 5);
-			} else {
-				if (day_volume)
-					volume_qt.Set(row, pos++, dow);
-				volume_qt.Set(row, pos++, i0);
-			}
-		}
-	}
-	#endif
 	
 	ForceSetCounted(count);
 	buffer_cursor = count-1;

@@ -108,6 +108,7 @@ template <class T, int I> struct array_view {
 
 template <class T, class CB> void parallel_for_each(T* extent, CB cb) {
 	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
 	for(int i = 0; i < extent->count; i++) {
 		co & [=] {
 			cb(index<1>(i));

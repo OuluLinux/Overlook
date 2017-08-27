@@ -26,7 +26,6 @@ inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
 class GroupOverview : public WithGroupOverview<ParentCtrl> {
 	
 protected:
-	AgentGroup* group;
 	String label;
 	
 	void Progress(int actual, int total, String label);
@@ -36,14 +35,11 @@ public:
 	typedef GroupOverview CLASSNAME;
 	GroupOverview();
 	
-	void SetGroup(AgentGroup& group);
-	
 	void Data();
 	
 };
 
 class GroupTabCtrl : public TabCtrl {
-	AgentGroup*				group;
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
 	TrainingCtrl			trainingctrl;
@@ -55,11 +51,10 @@ public:
 	GroupTabCtrl();
 	
 	void Data();
-	void SetGroup(AgentGroup& group);
 };
 
 class AgentTabCtrl : public TabCtrl {
-	//Agent* agent;
+	Agent* agent;
 	WithAgentOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
 	
@@ -68,13 +63,13 @@ public:
 	AgentTabCtrl();
 	
 	void Data();
-	//void SetAgent(Agent& agent);
+	void SetAgent(Agent& agent);
 	
 };
 
 class ManagerCtrl : public ParentCtrl {
 	Splitter						hsplit, listsplit;
-	ArrayCtrl						alist, tfglist, glist;
+	ArrayCtrl						alist, glist;
 	ParentCtrl						mainview;
 	Button							add_new;
 	Array<Option>					new_opts;
@@ -89,6 +84,7 @@ public:
 	ManagerCtrl();
 	
 	void Data();
+	void SelectView();
 	void SetView(int i);
 	
 };

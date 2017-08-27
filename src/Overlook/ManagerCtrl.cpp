@@ -2,15 +2,9 @@
 
 namespace Overlook {
 
-GroupOverview::GroupOverview()
-{
+GroupOverview::GroupOverview() {
 	CtrlLayout(*this);
 	
-}
-
-void GroupOverview::SetGroup(AgentGroup& group) {
-	this->group = &group;
-	Data();
 }
 
 void GroupOverview::Data() {
@@ -53,8 +47,6 @@ void GroupOverview::Data() {
 
 
 GroupTabCtrl::GroupTabCtrl() {
-	group = NULL;
-	
 	Add(overview);
 	Add(overview, "Overview");
 	Add(trainingctrl);
@@ -65,14 +57,6 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(datactrl, "Recorded data");
 	
 	WhenSet << THISBACK(Data);
-}
-
-void GroupTabCtrl::SetGroup(AgentGroup& group) {
-	this->group = &group;
-	
-	overview	.SetGroup(group);
-	snapctrl	.SetGroup(group);
-	datactrl	.SetGroup(group);
 }
 
 void GroupTabCtrl::Data() {
@@ -99,7 +83,7 @@ void GroupTabCtrl::Data() {
 
 
 AgentTabCtrl::AgentTabCtrl() {
-	//agent = NULL;
+	agent = NULL;
 	
 	CtrlLayout(overview);
 	
@@ -112,12 +96,13 @@ AgentTabCtrl::AgentTabCtrl() {
 }
 
 void AgentTabCtrl::Data() {
-	/*if (!agent) return;
+	if (!agent) return;
 	
+	Agent& a = *agent;
 	int tab = Get();
 	
 	if (tab == 0) {
-		const Symbol& sym = GetMetaTrader().GetSymbol(agent->sym);
+		const Symbol& sym = GetMetaTrader().GetSymbol(a.sym__);
 		
 		String trading_hours;
 		for(int i = 0; i < 7; i++) {
@@ -131,28 +116,26 @@ void AgentTabCtrl::Data() {
 		overview.opentimes.SetLabel(trading_hours);
 		overview.margincur.SetLabel(sym.currency_margin);
 		overview.minvolume.SetLabel(DblStr(sym.volume_min));
-		overview.peakvalue.SetLabel(DblStr(agent->peak_value));
-		overview.bestresult.SetLabel(DblStr(agent->best_result));
-		overview.traintime.SetLabel(DblStr(agent->training_time));
-		overview.iters.SetLabel(IntStr(agent->iter));
-		overview.epsilon.SetLabel(DblStr(agent->dqn.GetEpsilon()));
-		overview.expcount.SetLabel(IntStr(agent->dqn.GetExperienceCount()));
+		overview.bestresult.SetLabel(DblStr(a.best_result));
+		overview.iters.SetLabel(IntStr(a.iter));
+		overview.epsilon.SetLabel(DblStr(a.dqn.GetEpsilon()));
+		overview.expcount.SetLabel(IntStr(a.dqn.GetExperienceCount()));
 		
 		
-		double minimum_margin = GetMetaTrader().GetMargin(agent->sym, sym.volume_min);
+		double minimum_margin = GetMetaTrader().GetMargin(a.sym__, sym.volume_min);
 		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
-	}*/
+	}
 }
-/*
+
 void AgentTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
 	trainingctrl.SetTrainee(agent);
 }
-*/
+
 
 
 
@@ -175,56 +158,51 @@ ManagerCtrl::ManagerCtrl() {
 	mainview.Add(agent_tabs.SizePos());
 	
 	listsplit.Vert();
-	listsplit << glist << tfglist << alist;
+	listsplit << glist << alist;
+	listsplit.SetPos(2000);
 	
 	glist.AddColumn("Name");
-	glist <<= THISBACK1(SetView, 0);
-	glist.WhenLeftClick << THISBACK1(SetView, 0);
-	
-	tfglist.AddColumn("Name");
-	tfglist.AddColumn("Best result");
-	tfglist.AddColumn("Drawdown");
-	tfglist <<= THISBACK1(SetView, 1);
-	tfglist.WhenLeftClick << THISBACK1(SetView, 1);
+	glist.Add("Overview");
+	glist.Add("Agents");
+	glist.Add("Joiners");
+	glist.Add("Joiners of joiners");
+	glist <<= THISBACK(SelectView);
 	
 	alist.AddColumn("Symbol");
-	alist.AddColumn("Tf");
+	alist.AddColumn("Group");
 	alist.AddColumn("Best result");
 	alist.AddColumn("Drawdown");
-	alist <<= THISBACK1(SetView, 2);
-	alist.WhenLeftClick << THISBACK1(SetView, 2);
+	alist <<= THISBACK(SelectView);
+	alist.WhenLeftClick << THISBACK(SelectView);
 	
 	SetView(0);
 }
 
+void ManagerCtrl::SelectView() {
+	SetView(glist.GetCursor());
+}
+
 void ManagerCtrl::SetView(int view) {
 	System& sys = GetSystem();
+	AgentGroup& group = sys.GetAgentGroup();
 	
 	agent_tabs.Hide();
 	group_tabs.Hide();
 	
 	if (view == 0) {
-		
+		group_tabs.Show();
+		//group_tabs.SetFocus();
 	}
 	else if (view == 1) {
-		/*int group_id = glist.GetCursor();
-		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
-			group_tabs.SetGroup(sys.GetAgentGroup());
-			group_tabs.Show();
-			group_tabs.SetFocus();
-		}*/
+		int agent_id = alist.GetCursor();
+		if (agent_id >= 0 && agent_id < group.agents.GetCount()) {
+			agent_tabs.SetAgent(group.agents[agent_id]);
+			agent_tabs.Show();
+			//agent_tabs.SetFocus();
+		}
 	}
 	else if (view == 2) {
-		/*int group_id = glist.GetCursor();
-		if (group_id >= 0 && group_id < mgr.groups.GetCount()) {
-			AgentGroup& group = mgr.groups[group_id];
-			int agent_id = alist.GetCursor();
-			if (agent_id >= 0 && agent_id < group.agents.GetCount()) {
-				agent_tabs.SetAgent(group.agents[agent_id]);
-				agent_tabs.Show();
-				agent_tabs.SetFocus();
-			}
-		}*/
+		/**/
 	}
 	this->view = view;
 	Data();
@@ -232,40 +210,31 @@ void ManagerCtrl::SetView(int view) {
 
 void ManagerCtrl::Data() {
 	System& sys = GetSystem();
-	
-	/*
-	for(int i = 0; i < mgr.groups.GetCount(); i++) {
-		AgentGroup& g = mgr.groups[i];
-		
-		glist.Set(i, 0, g.name);
-	}
-	glist.SetCount(mgr.groups.GetCount());
+	AgentGroup& ag = sys.GetAgentGroup();
 	
 	int gcursor = glist.GetCursor();
 	
-	if (gcursor >= 0 && gcursor < mgr.groups.GetCount()) {
-		AgentGroup& g = mgr.groups[gcursor];
-		
-		for(int i = 0; i < g.agents.GetCount(); i++) {
-			Agent& a = g.agents[i];
+	if (gcursor == 0) {
+		for(int i = 0; i < ag.agents.GetCount(); i++) {
+			Agent& a = ag.agents[i];
 			
-			alist.Set(i, 0, a.sym != -1 ? sys->GetSymbol(a.sym) : "");
-			alist.Set(i, 1, a.tf != -1 ? sys->GetPeriodString(a.tf) : "");
+			alist.Set(i, 0, a.sym__ != -1 ? sys.GetSymbol(a.sym__) : "");
+			alist.Set(i, 1, a.group_id);
 			alist.Set(i, 2, a.best_result);
 			alist.Set(i, 3, a.last_drawdown);
 		}
-		alist.SetCount(g.agents.GetCount());
+		alist.SetCount(ag.agents.GetCount());
 	}
-	*/
+	
 	
 	if (view == 0) {
-		
+		agent_tabs.Data();
 	}
 	else if (view == 1) {
 		group_tabs.Data();
 	}
 	else if (view == 2) {
-		agent_tabs.Data();
+		
 	}
 }
 

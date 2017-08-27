@@ -59,14 +59,14 @@ inline RandomGaussian& GetRandomGaussian(int length) {
 
 
 
-template <int width, int height>
-class Mat : Moveable<Mat<width, height> > {
+template <class T, int width, int height>
+class Mat : Moveable<Mat<T, width, height> > {
 	static const int length = width * height;
 	
-	double weight_gradients[length];
-	double weights[length];
+	T weight_gradients[length];
+	T weights[length];
 	
-	typedef Mat<width, height> MatType;
+	typedef Mat<T, width, height> MatType;
 	
 protected:
 	inline int GetPos(int x, int y) const {
@@ -82,47 +82,47 @@ public:
 
 	
 	Mat() {}
-	Mat(MatType& vol) {COPY(double, this->weights, vol.weights, length); ZERO(weight_gradients, length);}
-	Mat(const double weights[length]) {COPY(double, this->weights, weights, length); ZERO(weight_gradients, length);}
+	Mat(MatType& vol) {COPY(T, this->weights, vol.weights, length); ZERO(weight_gradients, length);}
+	Mat(const T weights[length]) {COPY(T, this->weights, weights, length); ZERO(weight_gradients, length);}
 	Mat(const MatType& o) {*this = o;}
-	Mat(double default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length);}
+	Mat(T default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length);}
 	Mat& Init() {RAND(weights, length); ZERO(weight_gradients, length); return *this;}
-	Mat& Init(const double weights[length]) {COPY(double, this->weights, weights, length); ZERO(weight_gradients, length); return *this;}
-	Mat& Init(double default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length); return *this;}
+	Mat& Init(const T weights[length]) {COPY(T, this->weights, weights, length); ZERO(weight_gradients, length); return *this;}
+	Mat& Init(T default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length); return *this;}
 	
 	void Serialize(Stream& s) {
 		if (s.IsStoring()) {
-			s.Put(weights,				sizeof(double) * length);
-			s.Put(weight_gradients,		sizeof(double) * length);
+			s.Put(weights,				sizeof(T) * length);
+			s.Put(weight_gradients,		sizeof(T) * length);
 		}
 		else if (s.IsLoading()) {
-			s.Get(weights,				sizeof(double) * length);
-			s.Get(weight_gradients,		sizeof(double) * length);
+			s.Get(weights,				sizeof(T) * length);
+			s.Get(weight_gradients,		sizeof(T) * length);
 		}
 	}
 	
-	Mat& operator=(const MatType& src) {COPY(double, this->weights, src.weights, length); COPY(double, this->weight_gradients, src.weight_gradients, length); return *this;}
+	Mat& operator=(const MatType& src) {COPY(T, this->weights, src.weights, length); COPY(T, this->weight_gradients, src.weight_gradients, length); return *this;}
 	
-	const double* GetWeights()   const {return weights;}
-	const double* GetGradients() const {return weight_gradients;}
+	const T* GetWeights()   const {return weights;}
+	const T* GetGradients() const {return weight_gradients;}
 	
-	void Add(int i, double v) {weights[Pos(i)] += v;}
-	void Add(int x, int y, double v) {weights[GetPos(x,y)] += v;}
+	void Add(int i, T v) {weights[Pos(i)] += v;}
+	void Add(int x, int y, T v) {weights[GetPos(x,y)] += v;}
 	void AddFrom(const MatType& volume) {for (int i = 0; i < length; i++) {weights[i] += volume.weights[i];}}
-	void AddFromScaled(const Mat& volume, double a) {for (int i = 0; i < length; i++) {weights[i] += a * volume.weights[i];}}
-	void AddGradient(int x, int y, double v) {weight_gradients[GetPos(x,y)] += v;}
-	void AddGradient(int i, double v) {weight_gradients[Pos(i)] += v;}
+	void AddFromScaled(const Mat& volume, T a) {for (int i = 0; i < length; i++) {weights[i] += a * volume.weights[i];}}
+	void AddGradient(int x, int y, T v) {weight_gradients[GetPos(x,y)] += v;}
+	void AddGradient(int i, T v) {weight_gradients[Pos(i)] += v;}
 	void AddGradientFrom(const Mat& volume) {for (int i = 0; i < length; i++) {weight_gradients[i] += volume.weight_gradients[i];}}
-	double Get(int x, int y) const {return weights[GetPos(x, y)];}
-	double GetGradient(int x, int y) const {return weight_gradients[GetPos(x, y)];}
-	void Set(int x, int y, double v) {weights[GetPos(x, y)] = v;}
-	void SetConst(double c) {for (int i = 0; i < length; i++) {weights[i] = c;}}
-	void SetConstGradient(double c) {for (int i = 0; i < length; i++) {weight_gradients[i] = c;}}
-	void SetGradient(int x, int y, double v) {weight_gradients[GetPos(x, y)] = v;}
-	double Get(int i) const {return weights[Pos(i)];}
-	void Set(int i, double v) {weights[Pos(i)] = v;}
-	double GetGradient(int i) const {return weight_gradients[Pos(i)];}
-	void SetGradient(int i, double v) {weight_gradients[Pos(i)] = v;}
+	T Get(int x, int y) const {return weights[GetPos(x, y)];}
+	T GetGradient(int x, int y) const {return weight_gradients[GetPos(x, y)];}
+	void Set(int x, int y, T v) {weights[GetPos(x, y)] = v;}
+	void SetConst(T c) {for (int i = 0; i < length; i++) {weights[i] = c;}}
+	void SetConstGradient(T c) {for (int i = 0; i < length; i++) {weight_gradients[i] = c;}}
+	void SetGradient(int x, int y, T v) {weight_gradients[GetPos(x, y)] = v;}
+	T Get(int i) const {return weights[Pos(i)];}
+	void Set(int i, T v) {weights[Pos(i)] = v;}
+	T GetGradient(int i) const {return weight_gradients[Pos(i)];}
+	void SetGradient(int i, T v) {weight_gradients[Pos(i)] = v;}
 	void ZeroGradients() {for (int i = 0; i < length; i++) {weight_gradients[i] = 0;}}
 	
 	int GetWidth() const {return width;}
@@ -130,10 +130,10 @@ public:
 	int GetLength() const {return length;}
 	
 	int GetMaxColumn() const {
-		double max = -DBL_MAX;
+		T max = -DBL_MAX;
 		int pos = -1;
 		for(int i = 0; i < length; i++) {
-			double d = weights[i];
+			T d = weights[i];
 			if (i == 0 || d > max) {
 				max = d;
 				pos = i;
@@ -145,8 +145,8 @@ public:
 	int GetSampledColumn() const {
 		// sample argmax from w, assuming w are
 		// probabilities that sum to one
-		double r = Randomf();
-		double x = 0.0;
+		T r = Randomf();
+		T x = 0.0;
 		for(int i = 0; i < length; i++) {
 			x += weights[i];
 			if (x > r) {
@@ -180,7 +180,7 @@ inline double sig(double x) {
 
 template <int WIDTH, int HEIGHT>
 struct RecurrentTanh {
-	typedef Mat<WIDTH, HEIGHT> MatType;
+	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	static const int length = WIDTH * HEIGHT;
 	MatType output;
 	
@@ -210,7 +210,7 @@ struct RecurrentTanh {
 
 template <int WIDTH, int HEIGHT>
 struct RecurrentMul {
-	typedef Mat<WIDTH, HEIGHT> MatType;
+	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	static const int length = WIDTH * HEIGHT;
 	MatType output;
 	
@@ -264,7 +264,7 @@ struct RecurrentMul {
 
 template <int WIDTH, int HEIGHT>
 struct RecurrentAdd {
-	typedef Mat<WIDTH, HEIGHT> MatType;
+	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	static const int length = WIDTH * HEIGHT;
 	MatType output;
 	
@@ -297,7 +297,7 @@ struct RecurrentAdd {
 
 template <int WIDTH, int HEIGHT>
 struct DQExperience : Moveable<DQExperience<WIDTH, HEIGHT> > {
-	typedef Mat<WIDTH, HEIGHT> MatType;
+	typedef Mat<float, WIDTH, HEIGHT> MatType;
 	MatType state0, state1;
 	int action0, action1;
 	double reward0;
@@ -319,16 +319,16 @@ struct DQExperience : Moveable<DQExperience<WIDTH, HEIGHT> > {
 // return Mat but filled with random numbers from gaussian
 template <class T>
 void RandMat(double mu, double std, T& m) {
-	/*m.Init(d, n, 0);
+	m.Init(0.0);
 	
 	std::default_random_engine generator;
 	std::normal_distribution<double> distribution(mu, std);
 	generator.seed(Random(INT_MAX));
 	
 	for (int i = 0; i < m.GetLength(); i++)
-		m.Set(i, distribution(generator));*/
-	Panic("TODO");
+		m.Set(i, distribution(generator));
 }
+
 /*
 int SampleWeighted(Vector<double>& p) {
 	ASSERT(!p.IsEmpty());
@@ -356,40 +356,39 @@ void UpdateMat(MatType& m, double alpha) {
 
 
 
-template <int width, int height, int num_actions, int num_states, int num_hidden_units = 100, int experience_size=100>
+template <int num_actions, int num_states, int num_hidden_units = 100, int experience_size=100>
 class DQNAgent {
 	
 public:
-	static const int length = width * height;
-	typedef Mat<width, height> MatType;
 	
-	Mat<num_states, num_hidden_units>		W1;
-	Mat<1, num_hidden_units>				b1;
-	Mat<num_hidden_units, num_actions>		W2;
-	Mat<1, num_actions>						b2;
+	typedef Mat<float, 1, num_states> MatType;
+	
+	Mat<double, num_states, num_hidden_units>			W1;
+	Mat<double, 1, num_hidden_units>					b1;
+	Mat<double, num_hidden_units, num_actions>			W2;
+	Mat<double, 1, num_actions>							b2;
 	
 	// width = agent-width * agent-height, height = W1.height
-	RecurrentMul<length, num_hidden_units>	mul1;
-	RecurrentAdd<length, num_hidden_units>	add1;
-	RecurrentTanh<length, num_hidden_units>	tanh;
+	RecurrentMul<1, num_hidden_units>					mul1;
+	RecurrentAdd<1, num_hidden_units>					add1;
+	RecurrentTanh<1, num_hidden_units>					tanh;
 	
 	// width = tanh.width, height = W2.height
-	RecurrentMul<length, num_actions>		mul2;
-	RecurrentAdd<length, num_actions>		add2;
+	RecurrentMul<1, num_actions>						mul2;
+	RecurrentAdd<1, num_actions>						add2;
 	
-	typedef  Mat<length, num_actions>		FwdOut;
+	typedef  Mat<double, 1, num_actions>				FwdOut;
+	typedef  DQExperience<1, num_states>				DQExp;
 	
 protected:
-	DQExperience<width, height> exp[experience_size]; // experience
+	DQExp exp[experience_size]; // experience
 	double gamma, epsilon, alpha, tderror_clamp;
 	double tderror;
 	int experience_add_every;
 	int learning_steps_per_iteration;
 	int expi;
-	int nh;
-	int ns;
-	int na;
 	int t;
+	int exp_count;
 	bool has_reward;
 	
 	MatType state;
@@ -416,6 +415,8 @@ public:
 		action1 = 0;
 		has_reward = false;
 		tderror = 0;
+		
+		exp_count = 0;
 	}
 	
 	void Reset() {
@@ -450,15 +451,24 @@ public:
 		return add2.output;
 	}
 	
-	int Act(const Vector<double>& slist) {
+	void Backward(MatType& input) {
+		add2.Backward(mul2.output,	b2);
+		mul2.Backward(W2,			tanh.output);
+		tanh.Backward(add1.output);
+		add1.Backward(mul1.output,	b1);
+		mul1.Backward(W1,			input);
+	}
+	
+	int Act(float slist[num_states]) {
 		
 		// convert to a Mat column vector
 		state.Init(slist);
 		
+		
 		// epsilon greedy policy
 		int action;
 		if (Randomf() < epsilon) {
-			action = Random(na);
+			action = Random(num_actions);
 		} else {
 			// greedy wrt Q function
 			//Mat& amat = ForwardQ(net, state);
@@ -466,18 +476,19 @@ public:
 			action = amat.GetMaxColumn(); // returns index of argmax action
 		}
 		
+		
 		// shift state memory
 		state0 = state1;
 		action0 = action1;
 		state1 = state;
 		action1 = action;
 		
+		
 		return action;
 	}
 	
 	void Learn(double reward1) {
-		Panic("TODO");
-		/*
+		
 		// perform an update on Q function
 		if (has_reward && alpha > 0 && state0.GetLength() > 0) {
 			
@@ -486,8 +497,8 @@ public:
 			
 			// decide if we should keep this experience in the replay
 			if (t % experience_add_every == 0) {
-				if (exp.GetCount() == expi)
-					exp.Add();
+				if (exp_count == expi)
+					exp_count++;
 				ASSERT(state1.GetLength() > 0);
 				exp[expi].Set(state0, action0, reward0, state1, action1);
 				expi += 1;
@@ -495,22 +506,21 @@ public:
 			}
 			t += 1;
 			
-			if (!exp.IsEmpty()) {
+			if (exp_count) {
 				// sample some additional experience from replay memory and learn from it
 				for (int k = 0; k < learning_steps_per_iteration; k++) {
-					int ri = Random(exp.GetCount()); // TODO: priority sweeps?
-					DQExperience& e = exp[ri];
+					int ri = Random(exp_count); // TODO: priority sweeps?
+					DQExp& e = exp[ri];
 					LearnFromTuple(e.state0, e.action0, e.reward0, e.state1, e.action1);
 				}
 			}
 		}
 		reward0 = reward1; // store for next update
-		has_reward = true;*/
+		has_reward = true;
 	}
 	
 	double LearnFromTuple(MatType& s0, int a0, double reward0, MatType& s1, int a1) {
-		Panic("TODO");
-		/*
+		
 		ASSERT(s0.GetLength() > 0);
 		ASSERT(s1.GetLength() > 0);
 		// want: Q(s,a) = r + gamma * max_a' Q(s',a')
@@ -531,7 +541,7 @@ public:
 				tderror = -clamp;
 		}
 		pred.SetGradient(a0, tderror);
-		G.Backward(); // compute gradients on net params
+		Backward(s0); // compute gradients on net params
 		
 		// update net
 		UpdateMat(W1, alpha);
@@ -540,7 +550,6 @@ public:
 		UpdateMat(b2, alpha);
 		
 		return tderror;
-		*/
 	}
 	
 	int GetExperienceWritePointer() const {return expi;}

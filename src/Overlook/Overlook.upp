@@ -55,21 +55,11 @@ file
 	QtStats.cpp,
 	AgentGroup.h,
 	AgentGroup.cpp,
-	DQN.h,
-	CompatAMP.h,
-	Trash readonly separator,
-	OldAgentGroup.h,
-	OldAgentGroup.cpp,
-	Manager.h,
-	Manager.cpp,
-	Trainee.h,
-	Trainee.cpp,
-	Agent.h,
+	FixedSimBroker.cpp,
 	Agent.cpp,
-	JoinerAgent.h,
-	JoinerAgent.cpp,
-	SymGroup.h,
-	SymGroup.cpp;
+	Joiner.cpp,
+	DQN.h,
+	CompatAMP.h;
 
 mainconfig
 	"Normal" = "GUI MT",

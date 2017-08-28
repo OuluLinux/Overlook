@@ -1,344 +1,199 @@
-#if 0
-
 #include "Overlook.h"
 
 namespace Overlook {
-using namespace Upp;
+
+TraineeBase::TraineeBase() {
+	
+}
+
+void TraineeBase::Create() {
+	for(int i = 0; i < AGENT_RESULT_COUNT; i++)
+		result[i] = 0.0f;
+	result_cursor = 0;
+}
+
+
+
+
+
+
 
 Agent::Agent() {
-	posreward = 0;
-	negreward = 0;
-	smooth_reward = 0;
-	prev_equity = 0;
-	group_count = 0;
-	tf_step = 0;
-	timestep = 0;
-	has_yeartime = 0;
-	is_training_iteration = 0;
 	
-	agent_id = -1;
-	sym_id = -1;
-	sym = -1;
-	proxy_sym = -1;
-	group_id = -1;
-	agent_input_width = 0;
-	agent_input_height = 0;
-	has_timesteps = false;
 }
 
-Agent::~Agent() {
-	//Stop();
-}
-
-void Agent::RefreshTotalEpochs() {
-	epoch_total = group->train_pos_all.GetCount();
-}
-
-void Agent::Create(int width, int height) {
-	//dqn.Init(width, height, !has_timesteps ? ACTIONCOUNT : 1+2*5);
+void Agent::Create() {
+	
 	dqn.Reset();
 	
-	//ASSERT(!group->param_str.IsEmpty());
-	//dqn.LoadInitJSON(group->param_str);
+	TraineeBase::Create();
+	
 }
 
 void Agent::Init() {
-	ASSERT(agent_input_width != 0);
 	
-	DataBridge* db = dynamic_cast<DataBridge*>(group->databridge_cores[sym][tf]);
-	// NO unique start, because early birds are trained with partly invalid data
-	//		data_begin = group->sys->GetShiftTf(tf, group->main_tf, db->GetDataBegin());
-	data_begin = group->sys->GetShiftTf(tf, group->main_tf, group->data_begins[tf_id]);
+	broker.sym_id = sym_id;
+	broker.begin_equity = begin_equity;
+	broker.spread_points = spread_points;
+	broker.proxy_id = proxy_id;
+	broker.proxy_base_mul = proxy_base_mul;
 	
-	int tf_period = group->sys->GetPeriod(tf);
-	int maintf_period = group->sys->GetPeriod(group->main_tf);
-	ASSERT(tf_period % maintf_period == 0);
-	tf_step = tf_period / maintf_period;
-	ASSERT(tf_step > 0);
+	ResetEpoch();
 	
-	TraineeBase::Init();
-	
-	int tf_mins = tf_period * group->sys->GetBasePeriod() / 60;
-	has_yeartime = tf_mins >= 7*24*60;
-	
-	broker.SetFixedVolume();*/
 }
 
-void Agent::Start() {
-	if (main_id != -1) return;
-	//epoch_actual = 0;
-	Panic("TODO");
-	//main_id = group->sys->AddTaskBusy(THISBACK(Main));
-}
-
-void Agent::Stop() {
-	if (main_id == -1) return;
-	group->sys->RemoveBusyTask(main_id);
-	main_id = -1;
-	while (at_main) Sleep(100);
-}
-
-void Agent::Main() {
-	if (at_main) return;
-	
-	at_main = true;
-	is_training_iteration = !group->is_looping && is_training;
-	
-	int ret_epoch_actual = epoch_actual + 1;
-	
-	RefreshTotalEpochs();
-	if (epoch_total > 0) {
-		if (epoch_actual == 0) {
-			prev_equity = broker.AccountEquity();
-			posreward = 0;
-			negreward = 0;
-			timestep = 0;
-		}
-		
-		timestep--;
-		bool skip_action = false;
-		
-		if (timestep > 0) {
-			if (is_training_iteration) {
-				double equity = broker.AccountEquity();
-				int epoch_begin = epoch_actual;
-				for(int i = 0; i < timestep; i++) {
-					epoch_actual++;
-					SeekActive();
-				}
-				timestep = 0;
-				
-				for(int i = epoch_begin; i <= epoch_actual && i < group->snaps.GetCount(); i++)
-					thrd_equity[i] = equity;
-				
-				if (epoch_actual >= group->snaps.GetCount())
-					epoch_actual  = group->snaps.GetCount() - 1;
-			} else {
-				epoch_actual++;
-				skip_action = true;
-				
-				if (group->is_looping && epoch_actual > epoch_total - 10) {
-					LOG("Skip sym=" << sym << " tf=" << tf << " : " << timestep << " (" << epoch_actual << " / " << epoch_total << ")");
-				}
-			}
-		}
-		
-		if (!skip_action && group->is_looping && epoch_actual < group->snaps.GetCount()) {
-			Snapshot& snap = group->snaps[epoch_actual];
-			if (!snap.IsActive(tf_id)) {
-				epoch_actual++;
-				skip_action = true;
-			}
-		}
-		
-		if (!skip_action) {
-			// Do some action
-			if (epoch_actual < group->snaps.GetCount())
-				Action();
-			else if (!group->is_looping)
-				epoch_actual = 0;
-		}
+void Agent::ResetEpoch() {
+	if (broker.order_count > 0) {
+		last_drawdown = broker.GetDrawdown();
+		if (broker.equity > best_result)
+			best_result = broker.equity;
+		result[result_cursor] = broker.equity;
+		result_cursor = (result_cursor + 1) % AGENT_RESULT_COUNT;
+		result_count++;
 	}
 	
-	if (group->is_looping)
-		epoch_actual = ret_epoch_actual;
+	broker.Reset();
 	
-	at_main = false;
+	prev_equity = broker.AccountEquity();
+	signal = 0;
+	timestep_actual = 0;
+	timestep_total = 1;
+	cursor = 1;
 }
 
-void Agent::Forward(Snapshot& snap, SimBroker& broker) {
-	ASSERT(group_id != -1);
+void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
+	if (timestep_actual <= 0) {
+		
+		broker.RefreshOrders(cur_snap);
+		double equity = broker.AccountEquity();
+		double reward = equity - prev_equity;
+		
+		
+		Backward(cur_snap, reward);
+		
+		
+		if (broker.equity < 0.25 * broker.begin_equity) broker.Reset();
+		prev_equity = broker.equity;
+		
+		
+		Forward(cur_snap, prev_snap);
+		
+	}
+	
+	// LOG("Agent " << id << ": " << cursor << ", " << signal << ", " << timestep_actual << "/" << timestep_total);
+	
+	WriteSignal(cur_snap);
+}
+
+void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
 	
 	// Input values
 	// - time_values
 	// - all data from snapshot
 	// - previous signal
 	// - account change sensor
-	input_array.SetCount(agent_input_height);
+	float input_array[AGENT_STATES];
 	int cursor = 0;
 	
 	
 	// time_values
-	input_array[cursor++] = snap.year_timesensor;
-	input_array[cursor++] = snap.wday_timesensor;
+	input_array[cursor++] = cur_snap.year_timesensor;
+	input_array[cursor++] = cur_snap.week_timesensor;
+	input_array[cursor++] = cur_snap.day_timesensor;
 	
 	
 	// sensor data for current tf
-	int block_size = group->sym_ids.GetCount() * group->buf_count;
-	int all_block_count = tf_id + 1;
-	int slower_block_count = tf_id;
-	int slow_size = block_size * slower_block_count;
-	memcpy(		input_array.Begin() + cursor,
-				snap.sensors.Begin() + slow_size,
-				block_size * sizeof(double));
-	cursor += block_size;
-	
-	
-	// all current signals from slower agents
-	block_size = group->sym_ids.GetCount() * 2;
-	slow_size = block_size * slower_block_count;
-	memcpy(		input_array.Begin() + cursor,
-				snap.signals.Begin(),
-				slow_size * sizeof(double));
-	cursor += slow_size;
+	for(int i = 0; i < SENSOR_SIZE; i++)
+		input_array[cursor++] = cur_snap.sensor[i];
 	
 	
 	// all previous signals from same tf agents
-	memcpy(		input_array.Begin() + cursor,
-				snap.prev_signals.Begin() + slow_size,
-				block_size * sizeof(double));
-	cursor += block_size;
+	for(int i = 0; i < SIGNAL_SIZE; i++)
+		input_array[cursor++] = prev_snap.signal[i];
+	
+	ASSERT(cursor == AGENT_STATES);
 	
 	
-	// all previous rewards from same tf agents
-	int all_size = block_size * all_block_count;
-	memcpy(		input_array.Begin() + cursor,
-				snap.prev_rewards.Begin(),
-				all_size * sizeof(double));
-	cursor += all_size;
-	
-	
-	ASSERT(cursor == agent_input_height);
 	int action = dqn.Act(input_array);
-	
+	ASSERT(action >= 0 && action < AGENT_ACTIONCOUNT);
+    
     
     // Convert action to simple signal
-    int signal;
-    timestep = 1;
-    if (!has_timesteps) {
-		if      (action == ACT_NOACT)  signal =  0;
-		else if (action == ACT_INCSIG) signal = +1;
-		else if (action == ACT_DECSIG) signal = -1;
-		else Panic("Invalid action");
-    } else {
-		if      (action == ACT_NOACT)  signal =  0;
-		else {
-			action--;
-			int exp = 2 + action / 2;
-			bool neg = exp % 2; // 0,+1,-1,-2,+2,+4,-4
-			bool dir = (action % 2) != neg;
-			signal = dir ? -1 : +1;
-			timestep = 1 << exp;
-		}
-    }
+    
+	// Long/Short
+	if (action < 14) {
+		int exp = 3 + action / 2;
+		bool neg = exp % 2; // 0,+1,-1,-2,+2,+4,-4 ...
+		bool dir = (action % 2) != neg;
+		signal = dir ? -1 : +1;
+		timestep_total = 1 << exp;
+	}
+	
+	// Idle
+	else {
+		action -= 14;
+		signal = 0;
+		timestep_total = 1 << action;
+	}
+	
+	timestep_actual = timestep_total;
+	
+	
+	// Set signal to broker
+	broker.Cycle(signal, cur_snap);
+	
+	
+}
+
+
+void Agent::WriteSignal(Snapshot& cur_snap) PARALLEL {
+	
+	if (timestep_actual < 0) timestep_actual = 0;
+	float timestep_sensor = 0.75 - 0.75 * timestep_actual / timestep_total;
 	
 	
 	// Write latest average to the group values
-	double pos, neg;
+	float pos, neg, idl;
 	if (signal == 0) {
 		pos = 1.0;
 		neg = 1.0;
+		idl = timestep_sensor;
 	}
 	else if (signal > 0) {
-		pos = 0.0;
+		pos = timestep_sensor;
 		neg = 1.0;
+		idl = 1.0;
 	}
 	else {
 		pos = 1.0;
-		neg = 0.0;
-	}
-	int sigpos = (tf_id * group->sym_ids.GetCount() + sym_id) * 2;
-	snap.signals[sigpos + 0] = pos;
-	snap.signals[sigpos + 1] = neg;
-	
-	snap.prev_rewards[sigpos + 0] = posreward;
-	snap.prev_rewards[sigpos + 1] = negreward;
-	
-	
-	// Value is copied from next snap to next new signal position.
-	// Also, reward value is copied from this, because current timestep reward is unknown.
-	int end = snap.shift + tf_step * timestep;
-	for(int i = snap.id + 1; i < group->snaps.GetCount(); i++) {
-		Snapshot& s = group->snaps[i];
-		if (s.shift >= end) {
-			if (s.shift == end) {
-				s.prev_signals[sigpos + 0] = pos;
-				s.prev_signals[sigpos + 1] = neg;
-			}
-			break;
-		}
-		s.signals[sigpos + 0] = pos;
-		s.signals[sigpos + 1] = neg;
-		s.prev_signals[sigpos + 0] = pos;
-		s.prev_signals[sigpos + 1] = neg;
-		s.prev_rewards[sigpos + 0] = posreward;
-		s.prev_rewards[sigpos + 1] = negreward;
+		neg = timestep_sensor;
+		idl = 1.0;
 	}
 	
 	
-	// Set signal to broker, but freeze it if it's same than previously.
-	int prev_signal = broker.GetSignal(sym);
-	if (signal != prev_signal) {
-		broker.SetSignal(sym, signal);
-		broker.SetSignalFreeze(sym, false);
-	} else {
-		broker.SetSignalFreeze(sym, signal != 0);
-	}
+	int group_begin = group_id * GROUP_SIGNAL_SIZE;
+	int sigpos = group_begin + sym_id * SIGNAL_SENSORS;
+	ASSERT(sigpos >= 0 && sigpos+2 < SIGNAL_SIZE);
+	cur_snap.signal[sigpos + 0] = pos;
+	cur_snap.signal[sigpos + 1] = neg;
+	cur_snap.signal[sigpos + 2] = idl;
+	
 }
 
-void Agent::Backward(double reward) {
-	
-	
-	// Get reward sensor values
-	int sigpos = (tf_id * group->sym_ids.GetCount() + sym_id) * 2;
-	
-	if (reward > 0.0) {
-		double max = reward_average.mean * 2.0;
-		posreward = 1.0 - Upp::max(0.0, Upp::min(1.0, reward / max));
-		negreward = 1.0;
-	}
-	else if (reward < 0.0) {
-		double max = loss_average.mean * 2.0;
-		posreward = 1.0;
-		negreward = 1.0 - Upp::max(0.0, Upp::min(1.0, -reward / max));
-	}
-	else {
-		posreward = 1.0;
-		negreward = 1.0;
-	}
-	
+void Agent::Backward(Snapshot& snap, double reward) PARALLEL {
 	
 	// pass to brain for learning
-	if (is_training_iteration)
+	if (is_training && cursor > 1)
 		dqn.Learn(reward);
 	
-	smooth_reward += reward;
+	reward_sum += reward;
 	
 	if (iter % 50 == 0) {
-		smooth_reward /= 50;
-		WhenRewardAverage(smooth_reward);
-		smooth_reward = 0;
+		average_reward = reward_sum / 50;
+		reward_sum = 0;
 	}
+	
 	iter++;
 }
 
-void Agent::SetAskBid(SimBroker& sb, int pos) {
-	if (tf != group->main_tf)
-		pos = group->sys->GetShiftTf(group->main_tf, tf, pos);
-	
-	ASSERT(pos >= 0);
-	ASSERT(sym != -1);
-	{
-		Core& core = *group->databridge_cores[sym][tf];
-		ConstBuffer& open = core.GetBuffer(0);
-		sb.SetPrice(sym, open.Get(pos));
-	}
-	if (proxy_sym != -1) {
-		Core* c = group->databridge_cores[proxy_sym][tf];
-		ASSERT(c);
-		Core& core = *c;
-		ConstBuffer& open = core.GetBuffer(0);
-		sb.SetPrice(proxy_sym, open.Get(pos));
-	}
-	sb.SetTime(group->sys->GetTimeTf(tf, pos));
 }
-
-void Agent::Serialize(Stream& s) {
-	TraineeBase::Serialize(s);
-	s % dqn % sym_id % sym % proxy_sym
-	  % agent_input_width % agent_input_height
-	  % has_timesteps;
-}
-
-}
-#endif

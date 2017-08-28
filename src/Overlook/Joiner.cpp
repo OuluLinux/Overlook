@@ -1,15 +1,37 @@
-#if 0
-
 #include "Overlook.h"
 
 namespace Overlook {
 
-JoinerAgent::JoinerAgent() {
+Joiner::Joiner() {
 	
 }
 
-bool JoinerAgent::PutLatest(Brokerage& broker) {
-	/*
+void Joiner::ResetEpoch() {
+	if (broker.order_count > 0) {
+		last_drawdown = broker.GetDrawdown();
+		if (broker.equity > best_result)
+			best_result = broker.equity;
+		result[result_cursor] = broker.equity;
+		result_cursor = (result_cursor + 1) % AGENT_RESULT_COUNT;
+		result_count++;
+	}
+	
+	broker.Reset();
+	
+	prev_equity = broker.AccountEquity();
+	signal = 0;
+	timestep_actual = 0;
+	timestep_total = 1;
+	cursor = 1;
+}
+
+void Joiner::Main(Snapshot& cur_snap, Snapshot& prev_snap) {
+	
+}
+
+/*
+bool Joiner::PutLatest(Brokerage& broker) {
+	
 	Time time = GetMetaTrader().GetTime();
 	int shift = sys->GetShiftFromTimeTf(time, main_tf);
 	if (shift != train_pos_all.Top()) {
@@ -59,22 +81,9 @@ bool JoinerAgent::PutLatest(Brokerage& broker) {
 	group->WhenInfo("Updating orders");
 	broker.SignalOrders(true);
 	broker.RefreshLimits();
-	*/
 	
 	return true;
 }
-
-void JoinerAgent::Create(int width, int height) {
-	
-}
-
-void JoinerAgent::Backward(double reward) {
-	
-}
-
-void JoinerAgent::Forward(Snapshot& snap, Brokerage& broker) {
-	
-}
+*/
 
 }
-#endif

@@ -8,34 +8,18 @@ GroupOverview::GroupOverview() {
 }
 
 void GroupOverview::Data() {
-	/*if (group) {
-		lbl.SetLabel(Format("%s: %d/%d, %d/%d", group->prog_desc, group->a0, group->t0, group->a1, group->t1));
-		prog.Set(group->a0, group->t0);
-		sub.Set(group->a1, group->t1);
-		
-		String infostr;
-		infostr << "Name: " << group->name << "\n";
-		infostr << "Free-margin level: " << group->fmlevel << "\n";
-		//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
-		infostr << "Reward period: " << group->group_input_width << "x" << group->group_input_height << "\n";
-		infostr << "Enable training: " << (group->enable_training ? "True" : "False") << "\n";
-		infostr << "Created: " << Format("%", group->created) << "\n";
-		for(int i = 0; i < group->tf_ids.GetCount(); i++) {
-			infostr
-				<< "    tf" << i << ": " << group->tf_ids[i] << ", "
-				<< group->sys->GetPeriodString(group->tf_ids[i]) << ", av_dd="
-				<< group->GetTfDrawdown(i) << "\n";
-		}
-		
-		infostr << "\nDQN-agent parameters:\n" << group->param_str << "\n\n";
-		infostr << "\nRandomization loops: " << group->random_loops << "\n\n";
-		
-		if (!group->agents.IsEmpty()) {
-			epsilon.SetData(group->agents[0].dqn.GetEpsilon());
-			limit_factor.SetData(group->limit_factor);
-		}
-		info.SetLabel(infostr);
-	}*/
+	AgentGroup& ag = GetSystem().GetAgentGroup();
+	
+	String infostr;
+	//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
+	infostr << "Agent input size: 1 * " << AGENT_STATES << "\n";
+	infostr << "Agent action count: " << AGENT_ACTIONCOUNT << "\n";
+	infostr << "Created: " << Format("%", ag.created) << "\n";
+	infostr << "Average drawdown: " << ag.GetAverageDrawdown() << "\n";
+	infostr << "Average iterations: " << ag.GetAverageIterations() << "\n";
+	infostr << "Random action probability: " << ag.GetEpsilon() << "\n";
+	
+	info.SetLabel(infostr);
 }
 
 
@@ -49,8 +33,6 @@ void GroupOverview::Data() {
 GroupTabCtrl::GroupTabCtrl() {
 	Add(overview);
 	Add(overview, "Overview");
-	Add(trainingctrl);
-	Add(trainingctrl, "Training");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
 	Add(datactrl);
@@ -64,10 +46,8 @@ void GroupTabCtrl::Data() {
 	if      (tab == 0)
 		overview.Data();
 	else if (tab == 1)
-		trainingctrl.Data();
-	else if (tab == 2)
 		snapctrl.Data();
-	else if (tab == 3)
+	else if (tab == 2)
 		datactrl.Data();
 }
 
@@ -133,7 +113,7 @@ void AgentTabCtrl::Data() {
 void AgentTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
-	trainingctrl.SetTrainee(agent);
+	trainingctrl.SetAgent(agent);
 }
 
 
@@ -161,36 +141,35 @@ ManagerCtrl::ManagerCtrl() {
 	listsplit << glist << alist;
 	listsplit.SetPos(2000);
 	
-	glist.AddColumn("Name");
+	glist.AddColumn("View");
 	glist.Add("Overview");
 	glist.Add("Agents");
-	glist.Add("Joiners");
-	glist.Add("Joiners of joiners");
-	glist <<= THISBACK(SelectView);
+	glist.Add("Joiner");
+	glist.Add("Realtime");
+	glist <<= THISBACK(SetView);
 	
 	alist.AddColumn("Symbol");
 	alist.AddColumn("Group");
 	alist.AddColumn("Best result");
 	alist.AddColumn("Drawdown");
-	alist <<= THISBACK(SelectView);
-	alist.WhenLeftClick << THISBACK(SelectView);
+	alist <<= THISBACK(SetView);
+	alist.WhenLeftClick << THISBACK(SetView);
 	
-	SetView(0);
+	SetView();
 }
 
-void ManagerCtrl::SelectView() {
-	SetView(glist.GetCursor());
-}
-
-void ManagerCtrl::SetView(int view) {
+void ManagerCtrl::SetView() {
 	System& sys = GetSystem();
 	AgentGroup& group = sys.GetAgentGroup();
 	
 	agent_tabs.Hide();
 	group_tabs.Hide();
 	
+	int view = glist.GetCursor();
+	
 	if (view == 0) {
 		group_tabs.Show();
+		alist.SetCount(0);
 		//group_tabs.SetFocus();
 	}
 	else if (view == 1) {
@@ -202,6 +181,7 @@ void ManagerCtrl::SetView(int view) {
 		}
 	}
 	else if (view == 2) {
+		alist.SetCount(0);
 		/**/
 	}
 	this->view = view;
@@ -212,9 +192,12 @@ void ManagerCtrl::Data() {
 	System& sys = GetSystem();
 	AgentGroup& ag = sys.GetAgentGroup();
 	
-	int gcursor = glist.GetCursor();
+	int view = glist.GetCursor();
 	
-	if (gcursor == 0) {
+	if (view == 0) {
+		group_tabs.Data();
+	}
+	else if (view == 1) {
 		for(int i = 0; i < ag.agents.GetCount(); i++) {
 			Agent& a = ag.agents[i];
 			
@@ -224,14 +207,8 @@ void ManagerCtrl::Data() {
 			alist.Set(i, 3, a.last_drawdown);
 		}
 		alist.SetCount(ag.agents.GetCount());
-	}
-	
-	
-	if (view == 0) {
+		
 		agent_tabs.Data();
-	}
-	else if (view == 1) {
-		group_tabs.Data();
 	}
 	else if (view == 2) {
 		

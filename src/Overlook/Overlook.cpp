@@ -19,7 +19,7 @@ Overlook::Overlook() :
 	tabs.Add(mgrctrl, "Agent Manager");
 	tabs.Add(rtctrl);
 	tabs.Add(rtctrl, "Real-Time Account");
-	tabs.WhenSet << THISBACK1(Data, false);
+	tabs.WhenSet << THISBACK(Data);
 	
 	
 	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
@@ -45,9 +45,9 @@ Overlook::~Overlook() {
 }
 
 void Overlook::Refresher() {
-	Data(true);
+	Data();
 	int tab = tabs.Get();
-	if (tab == 3) {
+	if (tab == 2) {
 		PostRefresher();
 	}
 	else {
@@ -55,7 +55,7 @@ void Overlook::Refresher() {
 	}
 }
 
-void Overlook::Data(bool periodic) {
+void Overlook::Data() {
 	int tab = tabs.Get();
 	if (tab == 0) {
 		if (prev_view)

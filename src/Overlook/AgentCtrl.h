@@ -142,7 +142,6 @@ protected:
 	EquityGraph stats;
 	HeatmapTimeView timescroll;
 	
-	ArrayCtrl list;
 	
 	Splitter bsplit, vsplit;
 	
@@ -152,7 +151,7 @@ public:
 	
 	void Data();
 	void ApplySettings();
-	void SetTrainee(TraineeBase& trainee);
+	void SetAgent(Agent& agent);
 	
 };
 

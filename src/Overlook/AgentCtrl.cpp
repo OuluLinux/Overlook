@@ -22,7 +22,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int agent_count		= GROUP_COUNT * SYM_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = 2 + SYM_COUNT;
+	int rows = TIME_SENSORS + SYM_COUNT;
 	#ifndef HAVE_SYSTEM_AMP
 	rows += SYM_COUNT * GROUP_COUNT;
 	#endif
@@ -49,10 +49,15 @@ void SnapshotDraw::Paint(Draw& w) {
 		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.week_timesensor));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
-		id.DrawRect(0, (int)ystep, sz.cx, (int)(ystep+1), c);
+		id.DrawRect(0, (int)ystep, sz.cx, (int)(ystep+2), c);
+		row++;
+		
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.day_timesensor));
+		clr = (int)Upp::min(255.0, value);
+		c = Color(255 - clr, clr, 0);
+		id.DrawRect(0, (int)(ystep*2), sz.cx, (int)(ystep+2), c);
 		row++;
 	}
-	
 	
 	
 	// Data sensors
@@ -326,30 +331,20 @@ TrainingCtrl::TrainingCtrl()
 	vsplit.Vert();
 	vsplit.SetPos(8000);
 	
-	hsplit << draw << list;
+	hsplit << draw << timescroll;
 	hsplit.Horz();
-	hsplit.SetPos(2000, 0);
 	
-	bsplit.Horz();
 	bsplit << stats << reward;
+	bsplit.Horz();
 	
 }
 
-void TrainingCtrl::SetTrainee(TraineeBase& trainee) {
-	this->trainee = &trainee;
+void TrainingCtrl::SetAgent(Agent& agent) {
+	this->trainee = &agent;
 	
-	stats.SetTrainee(trainee);
-	reward.SetTrainee(trainee);
-	
-	/*Agent* agent = dynamic_cast<Agent*>(&trainee);
-	if (agent) {
-		if (hsplit.GetCount() == 2) {
-			hsplit << timescroll;
-			hsplit.SetPos(2000, 0);
-			hsplit.SetPos(8000, 1);
-		}
-		timescroll.SetAgent(agent->dqn);
-	}*/
+	stats.SetTrainee(agent);
+	reward.SetTrainee(agent);
+	timescroll.SetAgent(agent.dqn);
 }
 
 void TrainingCtrl::Data() {

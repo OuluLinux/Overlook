@@ -79,7 +79,6 @@ protected:
 	}
 	
 public:
-
 	
 	Mat() {}
 	Mat(MatType& vol) {COPY(T, this->weights, vol.weights, length); ZERO(weight_gradients, length);}
@@ -155,6 +154,9 @@ public:
 		}
 		return length - 1;
 	}
+	
+	
+	
 };
 
 
@@ -206,6 +208,9 @@ struct RecurrentTanh {
 			input.AddGradient(i, d);
 		}
 	}
+	
+	void Serialize(Stream& s) {s % output;}
+	
 };
 
 template <int WIDTH, int HEIGHT>
@@ -260,6 +265,9 @@ struct RecurrentMul {
 			}
 		}
 	}
+	
+	void Serialize(Stream& s) {s % output;}
+	
 };
 
 template <int WIDTH, int HEIGHT>
@@ -288,6 +296,9 @@ struct RecurrentAdd {
 			input2.AddGradient(i, output.GetGradient(i));
 		}
 	}
+	
+	void Serialize(Stream& s) {s % output;}
+	
 };
 
 
@@ -389,8 +400,8 @@ protected:
 	int expi;
 	int t;
 	int exp_count;
-	bool has_reward;
 	
+	bool has_reward;
 	MatType state;
 	MatType state0, state1;
 	int action0, action1;
@@ -562,9 +573,11 @@ public:
 	
 	
 	void Serialize(Stream& s) {
+		s % W1 % b1 % W2 % b2 % mul1 % add1 % tanh % mul2 % add2;
 		for(int i = 0; i < experience_size; i++)
 			s % exp[i];
-		s % gamma % epsilon % alpha % tderror_clamp % tderror % expi % t;
+		s % gamma % epsilon % alpha % tderror_clamp % tderror % experience_add_every
+		  % learning_steps_per_iteration % expi % t % exp_count;
 	}
 };
 

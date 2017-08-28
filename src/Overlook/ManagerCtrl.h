@@ -11,7 +11,7 @@ class ManagerLoader : public WithLoader<TopWindow> {
 	
 public:
 	typedef ManagerLoader CLASSNAME;
-	ManagerLoader() {CloseBoxRejects(); CtrlLayout(*this); Title("Agent group loader");}
+	ManagerLoader() {CloseBoxRejects(); CtrlLayout(*this); Title("Loading agent group");}
 	
 	void Progress(String status, int actual, int total) {this->status.SetLabel(status); prog.Set(actual, total); if (actual >= total) {Close(); Close();}}
 	void PostProgress(int actual, int total, String status) {PostCallback(THISBACK3(Progress, status, actual, total));}
@@ -42,7 +42,6 @@ public:
 class GroupTabCtrl : public TabCtrl {
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
-	TrainingCtrl			trainingctrl;
 	DataCtrl				datactrl;
 	Array<EditDoubleSpin>	tflimitedit;
 	
@@ -84,8 +83,7 @@ public:
 	ManagerCtrl();
 	
 	void Data();
-	void SelectView();
-	void SetView(int i);
+	void SetView();
 	
 };
 

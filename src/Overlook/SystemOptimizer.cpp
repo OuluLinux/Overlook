@@ -355,8 +355,9 @@ void System::CreateCore(CoreItem& ci) {
 	ArgChanger arg;
 	arg.SetLoading();
 	c.IO(arg);
-	if (ci.args.GetCount() == arg.keys.GetCount()) {
-		for(int i = 0; i < arg.keys.GetCount(); i++)
+	if (ci.args.GetCount() > 0) {
+		ASSERT(ci.args.GetCount() <= arg.keys.GetCount());
+		for(int i = 0; i < ci.args.GetCount(); i++)
 			arg.args[i] = ci.args[i];
 		arg.SetStoring();
 		c.IO(arg);

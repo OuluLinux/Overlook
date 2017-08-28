@@ -33,6 +33,24 @@ GUI_APP_MAIN {
 	}
 	sys.Stop();
 	
+	{
+		TopWindow tw;
+		tw.Icon(OverlookImg::icon());
+		tw.Title("Saving agent group");
+		Label lbl;
+		lbl.SetLabel("Saving... please wait.");
+		lbl.SetAlign(ALIGN_CENTER);
+		tw.SetRect(0,0, 320, 60);
+		tw.Add(lbl.SizePos());
+		Thread::Start([&]() {
+			AgentGroup& ag = sys.GetAgentGroup();
+			ag.StoreThis();
+			PostCallback(callback(&tw, &TopWindow::Close));
+			PostCallback(callback(&tw, &TopWindow::Close));
+		});
+		tw.Run();
+	}
+	
 	Thread::ShutdownThreads();
 }
 

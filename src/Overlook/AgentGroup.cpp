@@ -2,376 +2,10 @@
 
 namespace Overlook {
 
-SingleFixedSimBroker::SingleFixedSimBroker() {
-	
-	
-	begin_equity = 10000;
-}
-
-void SingleFixedSimBroker::Reset() PARALLEL {
-	equity = begin_equity;
-	balance = begin_equity;
-	order.is_open = false;
-	order_count = 0;
-	profit_sum = 0.0;
-	loss_sum = 0.0;
-}
-
-float SingleFixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
-	return snap.open[sym_id] - spread_points;
-}
-
-float SingleFixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const PARALLEL {
-	return snap.open[sym_id];
-}
-
-void SingleFixedSimBroker::OrderSend(int type, float volume, float price) PARALLEL {
-	ASSERT(!order.is_open);
-	order.type = type;
-	order.volume = volume;
-	order.open = price;
-	order.is_open = true;
-	order_count++;
-}
-
-void SingleFixedSimBroker::OrderClose(const Snapshot& snap) PARALLEL {
-	ASSERT(order.is_open);
-	order.is_open = false;
-	double profit = GetCloseProfit(snap);
-	balance += profit;
-	equity = balance;
-	if (profit > 0) profit_sum += profit;
-	else            loss_sum   -= profit;
-}
-
-
-double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const PARALLEL {
-	const FixedOrder& o = order;
-	
-	// NOTE: only for forex. Check SimBroker for other symbols too
-	
-	double volume = 100000 * o.volume; // lotsize * volume
-	
-	float close;
-	if (o.type == OP_BUY)
-		close = RealtimeBid(snap, sym_id);
-	else if (o.type == OP_SELL)
-		close = RealtimeAsk(snap, sym_id);
-	else
-		return 0.0;
-	
-	// Some time ranges can be invalid, and they have same price constantly...
-	// Don't let them affect. This is the easiest and safest way to avoid that problem.
-	// In normal and meaningful environment, open and close price is never the same.
-	if (o.open == close)
-		return 0.0;
-	
-	
-	if (o.type == OP_BUY) {
-		double change = volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
-			change /= RealtimeBid(snap, proxy_id);
-		else //if (proxy_base_mul == -1)
-			change *= RealtimeAsk(snap, proxy_id);
-		return change;
-	}
-	else if (o.type == OP_SELL) {
-		double change = -1.0 * volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
-			change /= RealtimeAsk(snap, proxy_id);
-		else //if (proxy_base_mul == -1)
-			change *= RealtimeBid(snap, proxy_id);
-		return change;
-	}
-	else return 0.0;
-}
-
-void SingleFixedSimBroker::Cycle(int signal, const Snapshot& snap) PARALLEL {
-	ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
-	
-	FixedOrder& o = order;
-	
-	// Close order
-	if (o.is_open) {
-		if (o.type == OP_BUY) {
-			if (signal <= 0)
-				OrderClose(snap);
-			else
-				return;
-		}
-		else if (o.type == OP_SELL) {
-			if (signal >= 0)
-				OrderClose(snap);
-			else
-				return;
-		}
-	}
-	
-	
-	if      (signal > 0)
-		OrderSend(OP_BUY,  0.01f, RealtimeAsk(snap, sym_id));
-	else if (signal < 0)
-		OrderSend(OP_SELL, 0.01f, RealtimeBid(snap, sym_id));
-	
-}
-
-void SingleFixedSimBroker::RefreshOrders(const Snapshot& snap) PARALLEL {
-	FixedOrder& o = order;
-	
-	if (o.is_open) {
-		equity = balance + GetCloseProfit(snap);
-	} else {
-		equity = balance;
-	}
-}
-
-
-
-
-
-
-
-
-
-TraineeBase::TraineeBase() {
-	
-}
-
-void TraineeBase::Create() {
-	for(int i = 0; i < AGENT_RESULT_COUNT; i++)
-		result[i] = 0.0f;
-	result_cursor = 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Agent::Agent() {
-	
-}
-
-void Agent::Create() {
-	
-	dqn.Reset();
-	
-	TraineeBase::Create();
-	
-}
-
-void Agent::Init() {
-	
-	broker.sym_id = sym_id;
-	broker.begin_equity = begin_equity;
-	broker.spread_points = spread_points;
-	broker.proxy_id = proxy_id;
-	broker.proxy_base_mul = proxy_base_mul;
-	
-	ResetEpoch();
-	
-}
-
-void Agent::ResetEpoch() {
-	if (broker.order_count > 0) {
-		last_drawdown = broker.GetDrawdown();
-		if (broker.equity > best_result)
-			best_result = broker.equity;
-		result[result_cursor] = broker.equity;
-		result_cursor = (result_cursor + 1) % AGENT_RESULT_COUNT;
-		result_count++;
-	}
-	
-	broker.Reset();
-	
-	prev_equity = broker.AccountEquity();
-	signal = 0;
-	timestep_actual = 0;
-	timestep_total = 1;
-	cursor = 1;
-}
-
-void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
-	if (timestep_actual <= 0) {
-		
-		broker.RefreshOrders(cur_snap);
-		double equity = broker.AccountEquity();
-		double reward = equity - prev_equity;
-		
-		
-		Backward(cur_snap, reward);
-		
-		
-		if (broker.equity < 0.25 * broker.begin_equity) broker.Reset();
-		prev_equity = broker.equity;
-		
-		
-		Forward(cur_snap, prev_snap);
-		
-	}
-	
-	// LOG("Agent " << id << ": " << cursor << ", " << signal << ", " << timestep_actual << "/" << timestep_total);
-	
-	WriteSignal(cur_snap);
-}
-
-void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
-	
-	// Input values
-	// - time_values
-	// - all data from snapshot
-	// - previous signal
-	// - account change sensor
-	float input_array[AGENT_STATES];
-	int cursor = 0;
-	
-	
-	// time_values
-	input_array[cursor++] = cur_snap.year_timesensor;
-	input_array[cursor++] = cur_snap.week_timesensor;
-	
-	
-	// sensor data for current tf
-	int sensor_cursor = 0;
-	for(int i = 0; i < GROUP_SENSOR_SIZE; i++)
-		input_array[cursor++] = cur_snap.sensor[sensor_cursor++];
-	
-	
-	// all previous signals from same tf agents
-	int signal_cursor = group_id * GROUP_SIGNAL_SIZE;
-	if (!(signal_cursor >= 0 && signal_cursor + GROUP_SIGNAL_SIZE <= SIGNAL_SIZE)) {
-		LOG((signal_cursor + GROUP_SIGNAL_SIZE) << " <= " << SIGNAL_SIZE);
-	}
-	int as = AGENT_STATES;
-	int begin = signal_cursor;
-	int end = signal_cursor + GROUP_SIGNAL_SIZE;
-	int ssize = SIGNAL_SIZE;
-	ASSERT(signal_cursor >= 0 && signal_cursor + GROUP_SIGNAL_SIZE <= SIGNAL_SIZE);
-	for(int i = 0; i < GROUP_SIGNAL_SIZE; i++)
-		input_array[cursor++] = prev_snap.signal[signal_cursor++];
-	
-	
-	ASSERT(cursor == AGENT_STATES);
-	
-	
-	int action = dqn.Act(input_array);
-	ASSERT(action >= 0 && action < AGENT_ACTIONCOUNT);
-    
-    
-    // Convert action to simple signal
-    
-	// Long/Short
-	if (action < 20) {
-		int exp = action / 2;
-		bool neg = exp % 2; // 0,+1,-1,-2,+2,+4,-4 ...
-		bool dir = (action % 2) != neg;
-		signal = dir ? -1 : +1;
-		timestep_total = 1 << exp;
-	}
-	
-	// Idle
-	else {
-		action -= 20;
-		signal = 0;
-		timestep_total = 1 << action;
-	}
-	
-	timestep_actual = timestep_total;
-	
-	
-	// Set signal to broker
-	broker.Cycle(signal, cur_snap);
-	
-	
-}
-
-
-void Agent::WriteSignal(Snapshot& cur_snap) PARALLEL {
-	
-	if (timestep_actual < 0) timestep_actual = 0;
-	float timestep_sensor = 0.75 - 0.75 * timestep_actual / timestep_total;
-	
-	
-	// Write latest average to the group values
-	float pos, neg, idl;
-	if (signal == 0) {
-		pos = 1.0;
-		neg = 1.0;
-		idl = timestep_sensor;
-	}
-	else if (signal > 0) {
-		pos = timestep_sensor;
-		neg = 1.0;
-		idl = 1.0;
-	}
-	else {
-		pos = 1.0;
-		neg = timestep_sensor;
-		idl = 1.0;
-	}
-	
-	
-	int group_begin = group_id * GROUP_SIGNAL_SIZE;
-	int sigpos = group_begin + sym_id * SIGNAL_SENSORS;
-	ASSERT(sigpos >= 0 && sigpos+2 < SIGNAL_SIZE);
-	cur_snap.signal[sigpos + 0] = pos;
-	cur_snap.signal[sigpos + 1] = neg;
-	cur_snap.signal[sigpos + 2] = idl;
-	
-}
-
-void Agent::Backward(Snapshot& snap, double reward) PARALLEL {
-	
-	// pass to brain for learning
-	if (is_training && cursor > 1)
-		dqn.Learn(reward);
-	
-	reward_sum += reward;
-	
-	if (iter % 50 == 0) {
-		average_reward = reward_sum / 50;
-		reward_sum = 0;
-	}
-	
-	iter++;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-	group_count = 2;
+	group_count = GROUP_COUNT;
 	
 	allowed_symbols.Add("AUDCAD");
 	allowed_symbols.Add("AUDJPY");
@@ -399,11 +33,12 @@ AgentGroup::AgentGroup(System* sys) : sys(sys) {
 
 AgentGroup::~AgentGroup() {
 	Stop();
-	StoreThis();
 }
 
 void AgentGroup::Init() {
 	ASSERT(sys);
+	
+	epsilon = 0.02;
 	
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
@@ -416,10 +51,15 @@ void AgentGroup::Init() {
 void AgentGroup::InitThread() {
 	Progress(0, 6, "Refreshing work queue");
 	MetaTrader& mt = GetMetaTrader();
-	for(int i = 0; i < mt.GetSymbolCount(); i++) {
-		const Symbol& sym = mt.GetSymbol(i);
-		if (sym.IsForex() && allowed_symbols.Find(sym.name.Left(6)) != -1)
-			sym_ids.Add(i);
+	for(int j = 0; j < allowed_symbols.GetCount(); j++) {
+		const String& allowed_sym = allowed_symbols[j];
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+			const Symbol& sym = mt.GetSymbol(i);
+			if (sym.IsForex() && (sym.name.Left(6)) == allowed_sym) {
+				sym_ids.Add(i);
+				break;
+			}
+		}
 	}
 	sym_count = sym_ids.GetCount();
 	ASSERT(sym_count == SYM_COUNT);
@@ -482,8 +122,7 @@ void AgentGroup::InitThread() {
 		
 		a.Init();
 	}
-	
-	
+	ASSERT(agents.GetCount() == GROUP_COUNT * SYM_COUNT);
 	agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
 	int agent_equities_mem = agent_equities.GetCount() * sizeof(double);
 	
@@ -546,6 +185,8 @@ void AgentGroup::Main() {
 		else if (phase == PHASE_TRAINING) {
 			SetAgentsTraining(true);
 			
+			agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
+			RefreshEpsilon();
 			
 			int snap_count = snaps.GetCount();
 			int agent_count = agents.GetCount();
@@ -559,11 +200,11 @@ void AgentGroup::Main() {
 			for (int64 iter = 0; phase == PHASE_TRAINING && running; iter++) {
 				
 				// Change snapshot area, if needed, sometimes
-				if (iter & (1 << 14)) {
+				if (iter > 100) {
 					total_elapsed += ts.Elapsed();
 					ts.Reset();
 					iter = 0;
-					if (total_elapsed > 10*60*1000) {
+					if (total_elapsed > 5*60*1000) {
 						phase = PHASE_SEEKSNAPS;
 						break;
 					}
@@ -575,9 +216,10 @@ void AgentGroup::Main() {
 			        Agent& agent = agents_view[idx];
 			        int equities_begin = agent.id * snap_count;
 			        
-			        if (agent.cursor == 0)
-						agent.cursor++;
-			        
+			        // Check cursor
+			        if (agent.cursor <= 0 || agent.cursor >= snap_count)
+						agent.ResetEpoch();
+					
 			        for(int i = 0; i < 1000; i++) {
 			            Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 						Snapshot& prev_snap = snap_view[agent.cursor - 1];
@@ -605,17 +247,33 @@ void AgentGroup::Main() {
 			SetAgentsTraining(false);
 			
 		}
-		else if (phase == PHASE_WEIGHTS) {
+		else if (phase == PHASE_JOINER) {
 			
+			int snap_count = snaps.GetCount();
 			
-			// Weight single group (21 pairs)
+			joiner_equities.SetCount(snap_count, 0.0);
 			
-		}
-		else if (phase == PHASE_FINAL) {
+			// Check cursor
+	        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
+				joiner.ResetEpoch();
 			
-			
-			// Weight group joiners to final output
-			
+	        while (phase == PHASE_JOINER && running) {
+	            Snapshot& cur_snap  = snaps[joiner.cursor - 0];
+				Snapshot& prev_snap = snaps[joiner.cursor - 1];
+				
+				joiner.timestep_actual--;
+				
+				joiner.Main(cur_snap, prev_snap);
+				
+				// Get some diagnostic stats
+				joiner_equities[joiner.cursor] = joiner.broker.AccountEquity();
+				joiner.cursor++;
+				
+				// Close all order at the end
+				if (joiner.cursor >= snap_count) {
+					joiner.ResetEpoch();
+				}
+	        }
 		}
 		else if (phase == PHASE_UPDATE) {
 			
@@ -626,8 +284,53 @@ void AgentGroup::Main() {
 		}
 		else if (phase == PHASE_REAL) {
 			
+			/*
+			int wday = DayOfWeek(time);
+			int shift = sys->GetShiftFromTimeTf(time, best_group->main_tf);
+			if (prev_shift != shift) {
+				if (wday == 0 || wday == 6) {
+					// Do nothing
+					prev_shift = shift;
+				} else {
+					sys->WhenInfo("Shift changed");
+					
+					// Forced askbid data download
+					DataBridgeCommon& common = GetDataBridgeCommon();
+					common.DownloadAskBid();
+					common.RefreshAskBidData(true);
+					
+					// Refresh databridges
+					best_group->ProcessDataBridgeQueue();
+					
+					// Use best group to set broker signals
+					bool succ = best_group->PutLatest(mt);
+					
+					// Notify about successful signals
+					if (succ) {
+						prev_shift = shift;
+						
+						sys->WhenRealtimeUpdate();
+					}
+				}
+			}
 			
-			// Updates broker
+			// Check for market closing (weekend and holidays)
+			else {
+				Time after_hour = time + 60*60;
+				int wday_after_hour = DayOfWeek(after_hour);
+				if (wday == 5 && wday_after_hour == 6) {
+					sys->WhenInfo("Closing all orders before market break");
+					for(int i = 0; i < mt.GetSymbolCount(); i++) {
+						mt.SetSignal(i, 0);
+						mt.SetSignalFreeze(i, false);
+					}
+					mt.SignalOrders(true);
+				}
+				
+				if (wday != 0 && wday != 6)
+					best_group->Data();
+			}
+			*/
 			
 		}
 		else if (phase == PHASE_WAIT) {
@@ -661,12 +364,7 @@ void AgentGroup::StoreThis() {
 }
 
 void AgentGroup::Serialize(Stream& s) {
-	/*TraineeBase::Serialize(s);
-	s % go % agents % tf_limit % tf_ids % sym_ids % created % name % param_str
-	  % fmlevel % limit_factor
-	  % group_input_width % group_input_height
-	  % mode
-	  % enable_training;*/
+	s % agents % joiner % indi_ids % created % phase % group_count;
 }
 
 void AgentGroup::SetEpsilon(double d) {
@@ -681,11 +379,20 @@ void AgentGroup::RefreshSnapshots() {
 	TimeStop ts;
 	ProcessWorkQueue();
 	
-	int snap_count = sys->GetCountTf(main_tf) - data_begin;
-	ASSERT(snap_count > 0);
-	snaps.Reserve(snap_count + (60 - (snap_count % 60)));
-	for(int i = snaps.GetCount(); i < snap_count; i++)
-		Seek(snaps.Add(), i + data_begin);
+	int bars = sys->GetCountTf(main_tf) - data_begin;
+	ASSERT(bars > 0);
+	snaps.Reserve(bars + (60 - (bars % 60)));
+	for(; counted_bars < bars; counted_bars++) {
+		int shift = counted_bars + data_begin;
+		Time t = sys->GetTimeTf(main_tf, shift);
+		int wday = DayOfWeek(t);
+		
+		// Skip weekend
+		if (wday == 0 || wday == 6) continue;
+		
+		Seek(snaps.Add(), shift);
+	}
+	ASSERT(snaps.GetCount() > 0);
 	
 	LOG("Refreshing snapshots took " << ts.ToString());
 }
@@ -765,10 +472,31 @@ void AgentGroup::ResetValueBuffers() {
 		for(int j = decl.arg_count; j < reg.args.GetCount(); j++) decl.AddArg(reg.args[j].def);
 		unsigned hash = decl.GetHashValue();
 		
+		
+		// Check that args match to declaration
+		#ifdef flagDEBUG
+		ArgChanger ac;
+		ac.SetLoading();
+		ci.core->IO(ac);
+		ASSERT(ac.args.GetCount() >= ci.args.GetCount());
+		for(int i = 0; i < ci.args.GetCount(); i++) {
+			int a = ac.args[i];
+			int b = ci.args[i];
+			if (a != b) {
+				LOG(Format("%d != %d", a, b));
+			}
+			ASSERT(a == b);
+		}
+		#endif
+		
+		
 		int buf_begin_id = bufout_ids.Find(hash);
 		if (buf_begin_id == -1)
 			continue;
+		
 		int buf_begin = bufout_ids[buf_begin_id];
+		
+		//LOG(i << ": " << ci.factory << ", " << sym_id << ", " << (int64)hash << ", " << buf_begin);
 		
 		for (int l = 0; l < reg.out[0].visible; l++) {
 			int buf_pos = buf_begin + l;
@@ -843,6 +571,7 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	// Time sensor
 	snap.year_timesensor = (month * 31.0 + day) / 372.0;
 	snap.week_timesensor = ((wday * 24 + hour) * 60 + minute) / (7.0 * 24.0 * 60.0);
+	snap.day_timesensor  = (hour * 60 + minute) / (24.0 * 60.0);
 	
 	
 	// Refresh values (tf / sym / value)
@@ -854,11 +583,11 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 			double d = src.GetUnsafe(shift);
 			double pos, neg;
 			if (d > 0) {
-				pos = +d;
-				neg =  0;
+				pos = 1.0 - d;
+				neg = 1.0;
 			} else {
-				pos =  0;
-				neg = -d;
+				pos = 1.0;
+				neg = 1.0 + d;
 			}
 			snap.sensor[k++] = pos;
 			snap.sensor[k++] = neg;
@@ -868,10 +597,13 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 		double open = db.GetBuffer(0).GetUnsafe(shift);
 		snap.open[i] = open;
 	}
-	
-	
-	
 	ASSERT(k == SENSOR_SIZE);
+	
+	
+	// Reset signals
+	for(int i = 0; i < SIGNAL_SIZE; i++)
+		snap.signal[i] = 1.0;
+	
 	
 	return true;
 }
@@ -898,5 +630,66 @@ void AgentGroup::CreateAgents() {
 	ASSERT(j == agents.GetCount());
 }
 
+double AgentGroup::GetAverageDrawdown() {
+	double dd = 0;
+	for(int i = 0; i < agents.GetCount(); i++)
+		dd += agents[i].last_drawdown;
+	return dd / agents.GetCount();
 }
 
+double AgentGroup::GetAverageIterations() {
+	double dd = 0;
+	for(int i = 0; i < agents.GetCount(); i++)
+		dd += agents[i].iter;
+	return dd / agents.GetCount();
+}
+
+void AgentGroup::RefreshEpsilon() {
+	double iters = GetAverageIterations();
+	int level = iters / 10000;
+	if (level <= 0)
+		epsilon = 0.20;
+	else if (level == 1)
+		epsilon = 0.05;
+	else if (level == 2)
+		epsilon = 0.02;
+	else if (level >= 3)
+		epsilon = 0.01;
+	for(int i = 0; i < agents.GetCount(); i++)
+		agents[i].dqn.SetEpsilon(epsilon);
+}
+
+/*
+void AgentGroup::Data() {
+	if (last_datagather.Elapsed() < 5*60*1000)
+		return;
+
+	MetaTrader& mt = GetMetaTrader();
+	Vector<Order> orders;
+	Vector<int> signals;
+
+	orders <<= mt.GetOpenOrders();
+	signals <<= mt.GetSignals();
+
+	mt.Data();
+
+	int file_version = 1;
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	Time time = mt.GetTime();
+
+	FileAppend fout(ConfigFile(name + ".log"));
+	int64 begin_pos = fout.GetSize();
+	int size = 0;
+	fout.Put(&size, sizeof(int));
+	fout % file_version % balance % equity % time % signals % orders;
+	int64 end_pos = fout.GetSize();
+	size = end_pos - begin_pos - sizeof(int);
+	fout.Seek(begin_pos);
+	fout.Put(&size, sizeof(int));
+
+	last_datagather.Reset();
+}
+*/
+
+}

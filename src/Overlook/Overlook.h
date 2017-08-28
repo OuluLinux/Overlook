@@ -6,11 +6,7 @@
 #include "DQN.h"
 
 #include "SimBroker.h"
-#include "Trainee.h"
-#include "Agent.h"
-#include "JoinerAgent.h"
 #include "AgentGroup.h"
-#include "SymGroup.h"
 #include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"
@@ -65,7 +61,7 @@ protected:
 	
 	void SetView();
 	void Configure();
-	void Data(bool periodic);
+	void Data();
 	
 public:
 	typedef Overlook CLASSNAME;

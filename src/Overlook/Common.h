@@ -75,12 +75,23 @@ struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 	}
 	FactoryDeclaration& Set(int i) {factory = i; return *this;}
 	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < 8); args[arg_count++] = i; return *this;}
+	
 	unsigned GetHashValue() {
 		CombineHash ch;
 		ch << factory << 1;
 		for(int i = 0; i < arg_count; i++)
 			ch << args[i] << 1;
 		return ch;
+	}
+	
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) {
+			s.Get(args, sizeof(int) * 8);
+		}
+		else if (s.IsStoring()) {
+			s.Put(args, sizeof(int) * 8);
+		}
+		s % factory % arg_count;
 	}
 };
 

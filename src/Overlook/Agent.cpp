@@ -12,6 +12,15 @@ void TraineeBase::Create() {
 	result_cursor = 0;
 }
 
+void TraineeBase::ResetEpoch() {
+	
+	signal = 0;
+	timestep_actual = 0;
+	timestep_total = 1;
+	cursor = 1;
+	
+}
+
 
 
 
@@ -54,11 +63,8 @@ void Agent::ResetEpoch() {
 	
 	broker.Reset();
 	
+	TraineeBase::ResetEpoch();
 	prev_equity = broker.AccountEquity();
-	signal = 0;
-	timestep_actual = 0;
-	timestep_total = 1;
-	cursor = 1;
 }
 
 void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
@@ -69,7 +75,7 @@ void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
 		double reward = equity - prev_equity;
 		
 		
-		Backward(cur_snap, reward);
+		Backward(reward);
 		
 		
 		if (broker.equity < 0.25 * broker.begin_equity) broker.Reset();
@@ -89,9 +95,8 @@ void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL {
 	
 	// Input values
 	// - time_values
-	// - all data from snapshot
-	// - previous signal
-	// - account change sensor
+	// - input sensors
+	// - previous signals
 	float input_array[AGENT_STATES];
 	int cursor = 0;
 	
@@ -180,7 +185,7 @@ void Agent::WriteSignal(Snapshot& cur_snap) PARALLEL {
 	
 }
 
-void Agent::Backward(Snapshot& snap, double reward) PARALLEL {
+void Agent::Backward(double reward) PARALLEL {
 	
 	// pass to brain for learning
 	if (is_training && cursor > 1)

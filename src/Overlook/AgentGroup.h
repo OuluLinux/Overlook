@@ -3,35 +3,45 @@
 
 namespace Overlook {
 
-#define GROUP_COUNT			2
-#define SYM_COUNT			21
-#define TIME_SENSORS		3
-#define INPUT_SENSORS		(4 * 4 * 2)
-#define SIGNAL_SENSORS		3
-#define SENSOR_SIZE			(SYM_COUNT * INPUT_SENSORS)
-#define GROUP_SIGNAL_SIZE	(SYM_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_SIZE			GROUP_SIGNAL_SIZE * GROUP_COUNT
-#define AGENT_STATES		(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
-#define AGENT_ACTIONCOUNT	24
-#define AGENT_RESULT_COUNT	1000
-#define JOINER_STATES		AGENT_STATES
-#define JOINER_ACTIONCOUNT	1
+#define GROUP_COUNT				2 //TODO
+#define SYM_COUNT				21
+#define AGENT_COUNT				(GROUP_COUNT * SYM_COUNT)
+#define TIME_SENSORS			3
+#define INPUT_SENSORS			(4 * 4 * 2)
+#define SIGNAL_SENSORS			3
+#define SENSOR_SIZE				(SYM_COUNT * INPUT_SENSORS)
+#define GROUP_SIGNAL_SIZE		(SYM_COUNT * SIGNAL_SENSORS)
+#define SIGNAL_SIZE				(GROUP_SIGNAL_SIZE * GROUP_COUNT)
+#define AGENT_STATES			(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
+#define AGENT_ACTIONCOUNT		24
+#define AGENT_RESULT_COUNT		1000
+#define JOINER_COUNT			4 //TODO
+#define JOINERSIGNAL_SENSORS	5
+#define JOINER_RESULT_COUNT		1000
+#define JOINERSIGNAL_SIZE		(JOINER_COUNT * JOINERSIGNAL_SENSORS)
+#define JOINER_STATES			(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + JOINERSIGNAL_SIZE)
+#define JOINER_NORMALACTS		(3*3*3*3)
+#define JOINER_IDLEACTS			8
+#define JOINER_ACTIONCOUNT		(JOINER_NORMALACTS + JOINER_IDLEACTS)
 
 class AgentGroup;
 
 struct Snapshot : Moveable<Snapshot> {
-	float year_timesensor, week_timesensor, day_timesensor;
-	float sensor[SENSOR_SIZE];
-	float signal[SIGNAL_SIZE];
-	float open[SYM_COUNT];
+	float year_timesensor;
+	float week_timesensor;
+	float day_timesensor;
+	float sensor			[SENSOR_SIZE];
+	float signal			[SIGNAL_SIZE];
+	float open				[SYM_COUNT];
+	float joiner_signal		[JOINERSIGNAL_SIZE];
 };
 
 struct FixedOrder {
 	float open = 0.0;
 	float volume = 0.0;
 	float profit = 0.0;
-	char type = -1;
-	char is_open = 0;
+	int type = -1;
+	int is_open = 0;
 };
 
 struct SingleFixedSimBroker {
@@ -67,14 +77,9 @@ struct FixedSimBroker {
 	#define MAX_ORDERS			(ORDERS_PER_SYMBOL * SYM_COUNT)
 	
 	FixedOrder order[MAX_ORDERS];
-	double buy_lots[SYM_COUNT];
-	double sell_lots[SYM_COUNT];
-	int buy_signals[SYM_COUNT];
-	int sell_signals[SYM_COUNT];
 	int signal[SYM_COUNT];
 	int proxy_id[SYM_COUNT];
 	int proxy_base_mul[SYM_COUNT];
-	int proxy_factor[SYM_COUNT];
 	double balance = 0.0;
 	double equity = 0.0;
 	double begin_equity = 0.0;
@@ -91,7 +96,7 @@ struct FixedSimBroker {
 	void RefreshOrders(const Snapshot& snap) PARALLEL;
 	void Reset() PARALLEL;
 	void OrderSend(int sym_id, int type, float volume, float price) PARALLEL;
-	void OrderClose(int sym_id, const Snapshot& snap) PARALLEL;
+	//void OrderClose(int sym_id, const Snapshot& snap) PARALLEL;
 	void OrderClose(int sym_id, double lots, FixedOrder& order, const Snapshot& snap) PARALLEL;
 	void CloseAll(const Snapshot& snap) PARALLEL;
 	double GetMargin(const Snapshot& snap, int sym_id, double volume) PARALLEL;
@@ -110,6 +115,7 @@ struct TraineeBase {
 	float result[AGENT_RESULT_COUNT];
 	double best_result = 0.0;
 	double last_drawdown = 0.0;
+	long iter = 0;
 	int result_cursor = 0;
 	int result_count = 0;
 	int id = -1;
@@ -117,15 +123,19 @@ struct TraineeBase {
 	
 	
 	// Temporary
+	double reward_sum = 0;
+	double average_reward = 0;
 	float prev_equity = 0;
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
+	bool is_training = false;
 	
 	
 	
 	TraineeBase();
 	void Create();
+	void ResetEpoch();
 	
 	
 	void Serialize(Stream& s) {
@@ -135,7 +145,7 @@ struct TraineeBase {
 		else if (s.IsStoring()) {
 			s.Put(result, sizeof(float) * AGENT_RESULT_COUNT);
 		}
-		s % best_result % last_drawdown % result_cursor % result_count % id % cursor;
+		s % best_result % last_drawdown % iter % result_cursor % result_count % id % cursor;
 	}
 };
 
@@ -145,7 +155,6 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	DQNAgent<AGENT_ACTIONCOUNT, AGENT_STATES> dqn;
 	double begin_equity = 0.0;
 	float spread_points = 0;
-	int64 iter = 0;
 	int sym_id = -1;
 	int sym__ = -1;
 	int proxy_id = -1;
@@ -153,12 +162,8 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	int group_id = -1;
 	
 	
-	
 	// Temporary
 	SingleFixedSimBroker broker;
-	double average_reward = 0;
-	double reward_sum = 0;
-	bool is_training = false;
 	
 	
 	Agent();
@@ -167,12 +172,12 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	void ResetEpoch();
 	void Main(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL;
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap) PARALLEL;
-	void Backward(Snapshot& snap, double reward) PARALLEL;
+	void Backward(double reward) PARALLEL;
 	void WriteSignal(Snapshot& cur_snap) PARALLEL;
 	
 	void Serialize(Stream& s) {
 		TraineeBase::Serialize(s);
-		s % dqn % begin_equity % spread_points % iter % sym_id
+		s % dqn % begin_equity % spread_points % sym_id
 		  % sym__ % proxy_id % proxy_base_mul % group_id;
 	}
 };
@@ -180,20 +185,41 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 struct Joiner : Moveable<Joiner>, public TraineeBase {
 	
 	// Persistent
-	DQNAgent<JOINER_STATES, JOINER_STATES> dqn;
+	DQNAgent<JOINER_ACTIONCOUNT, JOINER_STATES> dqn;
+	double begin_equity = 0.0;
+	double leverage = 1000.0;
+	double spread_points[SYM_COUNT];
+	int proxy_id[SYM_COUNT];
+	int proxy_base_mul[SYM_COUNT];
 	
 	
 	// Temporary
 	FixedSimBroker broker;
+	double prev_signals[4];
 	
 	
 	Joiner();
+	void Create();
+	void Init();
 	void ResetEpoch();
-	void Main(Snapshot& cur_snap, Snapshot& prev_snap);
+	void Main(const array_view<Snapshot, 1>& snap_view) PARALLEL;
+	void Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL;
+	void Backward(double reward) PARALLEL;
+	void WriteSignal(Snapshot& cur_snap) PARALLEL;
 	
 	void Serialize(Stream& s) {
 		TraineeBase::Serialize(s);
-		s % dqn;
+		s % dqn % begin_equity % leverage;
+		if (s.IsLoading()) {
+			s.Get(spread_points, sizeof(double) * SYM_COUNT);
+			s.Get(proxy_id, sizeof(int) * SYM_COUNT);
+			s.Get(proxy_base_mul, sizeof(int) * SYM_COUNT);
+		}
+		if (s.IsStoring()) {
+			s.Put(spread_points, sizeof(double) * SYM_COUNT);
+			s.Put(proxy_id, sizeof(int) * SYM_COUNT);
+			s.Put(proxy_base_mul, sizeof(int) * SYM_COUNT);
+		}
 	}
 };
 
@@ -204,7 +230,7 @@ public:
 	
 	// Persistent
 	Vector<Agent> agents;
-	Joiner joiner;
+	Vector<Joiner> joiners;
 	Vector<FactoryDeclaration> indi_ids;
 	Time created;
 	int phase = 0;
@@ -242,6 +268,8 @@ public:
 	
 	void Init();
 	void InitThread();
+	void InitAgent(Agent& a);
+	void InitJoiner(Joiner& j);
 	void Start();
 	void Stop();
 	void StoreThis();
@@ -257,6 +285,7 @@ public:
 	void ProcessDataBridgeQueue();
 	bool Seek(Snapshot& snap, int shift);
 	void CreateAgents();
+	void CreateJoiners();
 	double GetAverageDrawdown();
 	double GetAverageIterations();
 	double GetEpsilon() {return epsilon;}

@@ -100,32 +100,21 @@ void AgentGroup::InitThread() {
 	Progress(5, 6, "Initializing agents and joiners");
 	if (agents.GetCount() == 0)
 		CreateAgents();
-	for(int i = 0; i < agents.GetCount(); i++) {
-		Agent& a = agents[i];
-		
-		const Price& askbid = mt.GetAskBid()[a.sym__];
-		double ask = askbid.ask;
-		double bid = askbid.bid;
-		const Symbol& symbol = mt.GetSymbol(a.sym__);
-		if (symbol.proxy_id != -1) {
-			int j = sym_ids.Find(symbol.proxy_id);
-			ASSERT(j != -1);
-			a.proxy_id = j;
-			a.proxy_base_mul = symbol.base_mul;
-		} else {
-			a.proxy_id = -1;
-			a.proxy_base_mul = 0;
-		}
-		a.begin_equity = mt.AccountEquity();
-		a.spread_points = ask - bid;
-		ASSERT(a.spread_points > 0.0);
-		
-		a.Init();
-	}
+	for(int i = 0; i < agents.GetCount(); i++)
+		InitAgent(agents[i]);
 	ASSERT(agents.GetCount() == GROUP_COUNT * SYM_COUNT);
-	agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
-	int agent_equities_mem = agent_equities.GetCount() * sizeof(double);
 	
+	if (joiners.GetCount() == 0)
+		CreateJoiners();
+	for(int i = 0; i < joiners.GetCount(); i++)
+		InitJoiner(joiners[i]);
+	ASSERT(joiners.GetCount() == JOINER_COUNT);
+	
+	
+	agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
+	joiner_equities.SetCount(joiners.GetCount() * snaps.GetCount(), 0.0);
+	
+	int agent_equities_mem = agent_equities.GetCount() * sizeof(double);
 	max_memory_size = GetAmpDeviceMemory();
 	agents_total_size = agents.GetCount() * sizeof(Agent);
 	memory_for_snapshots = max_memory_size - agents_total_size - agent_equities_mem;
@@ -208,6 +197,13 @@ void AgentGroup::Main() {
 						phase = PHASE_SEEKSNAPS;
 						break;
 					}
+					
+					// Just for debugging Joiner
+					if (GetAverageIterations() >= 2000) {
+						phase = PHASE_JOINER;
+						StoreThis();
+						break;
+					}
 				}
 				
 				parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL
@@ -248,32 +244,62 @@ void AgentGroup::Main() {
 			
 		}
 		else if (phase == PHASE_JOINER) {
+			SetAgentsTraining(false);
+			SetEpsilon(0.01);
+			
+			joiner_equities.SetCount(joiners.GetCount() * snaps.GetCount(), 0.0);
 			
 			int snap_count = snaps.GetCount();
+			int joiner_count = joiners.GetCount();
+			array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin());
+			array_view<Joiner, 1> joiners_view(joiner_count, joiners.Begin());
+			array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
 			
-			joiner_equities.SetCount(snap_count, 0.0);
 			
-			// Check cursor
-	        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
-				joiner.ResetEpoch();
-			
-	        while (phase == PHASE_JOINER && running) {
-	            Snapshot& cur_snap  = snaps[joiner.cursor - 0];
-				Snapshot& prev_snap = snaps[joiner.cursor - 1];
+			TimeStop ts;
+			int64 total_elapsed = 0;
+			for (int64 iter = 0; phase == PHASE_JOINER && running; iter++) {
 				
-				joiner.timestep_actual--;
-				
-				joiner.Main(cur_snap, prev_snap);
-				
-				// Get some diagnostic stats
-				joiner_equities[joiner.cursor] = joiner.broker.AccountEquity();
-				joiner.cursor++;
-				
-				// Close all order at the end
-				if (joiner.cursor >= snap_count) {
-					joiner.ResetEpoch();
+				// Change snapshot area, if needed, sometimes
+				if (iter > 100) {
+					total_elapsed += ts.Elapsed();
+					ts.Reset();
+					iter = 0;
+					if (total_elapsed > 5*60*1000) {
+						phase = PHASE_SEEKSNAPS;
+						break;
+					}
 				}
-	        }
+				
+				parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL
+			    {
+			        int joiner_id = idx[0];
+			        Joiner& joiner = joiners_view[idx];
+			        int equities_begin = joiner.id * snap_count;
+			        
+			        // Check cursor
+			        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
+						joiner.ResetEpoch();
+					
+			        for(int i = 0; i < 1000; i++) {
+						joiner.timestep_actual--;
+						
+						joiner.Main(snap_view);
+						
+						// Get some diagnostic stats
+						equities_view[equities_begin + joiner.cursor] = joiner.broker.AccountEquity();
+						joiner.cursor++;
+						
+						// Close all order at the end
+						if (joiner.cursor >= snap_count) {
+							joiner.ResetEpoch();
+						}
+			        }
+			    });
+			}
+			
+			joiners_view.synchronize();
+			equities_view.synchronize();
 		}
 		else if (phase == PHASE_UPDATE) {
 			
@@ -364,12 +390,7 @@ void AgentGroup::StoreThis() {
 }
 
 void AgentGroup::Serialize(Stream& s) {
-	s % agents % joiner % indi_ids % created % phase % group_count;
-}
-
-void AgentGroup::SetEpsilon(double d) {
-	for(int i = 0; i < agents.GetCount(); i++)
-		agents[i].dqn.SetEpsilon(d);
+	s % agents % joiners % indi_ids % created % phase % group_count;
 }
 
 void AgentGroup::RefreshSnapshots() {
@@ -630,6 +651,16 @@ void AgentGroup::CreateAgents() {
 	ASSERT(j == agents.GetCount());
 }
 
+void AgentGroup::CreateJoiners() {
+	MetaTrader& mt = GetMetaTrader();
+	joiners.SetCount(JOINER_COUNT);
+	for(int i = 0; i < joiners.GetCount(); i++) {
+		Joiner& j = joiners[i];
+		j.id = i;
+		j.Create();
+	}
+}
+
 double AgentGroup::GetAverageDrawdown() {
 	double dd = 0;
 	for(int i = 0; i < agents.GetCount(); i++)
@@ -655,8 +686,63 @@ void AgentGroup::RefreshEpsilon() {
 		epsilon = 0.02;
 	else if (level >= 3)
 		epsilon = 0.01;
+	SetEpsilon(epsilon);
+}
+
+void AgentGroup::SetEpsilon(double epsilon) {
+	this->epsilon = epsilon;
 	for(int i = 0; i < agents.GetCount(); i++)
 		agents[i].dqn.SetEpsilon(epsilon);
+}
+
+void AgentGroup::InitAgent(Agent& a) {
+	MetaTrader& mt = GetMetaTrader();
+	const Price& askbid = mt.GetAskBid()[a.sym__];
+	double ask = askbid.ask;
+	double bid = askbid.bid;
+	const Symbol& symbol = mt.GetSymbol(a.sym__);
+	if (symbol.proxy_id != -1) {
+		int j = sym_ids.Find(symbol.proxy_id);
+		ASSERT(j != -1);
+		a.proxy_id = j;
+		a.proxy_base_mul = symbol.base_mul;
+	} else {
+		a.proxy_id = -1;
+		a.proxy_base_mul = 0;
+	}
+	a.begin_equity = mt.AccountEquity();
+	a.spread_points = ask - bid;
+	ASSERT(a.spread_points > 0.0);
+	
+	a.Init();
+}
+
+void AgentGroup::InitJoiner(Joiner& j) {
+	MetaTrader& mt = GetMetaTrader();
+	
+	for(int i = 0; i < SYM_COUNT; i++) {
+		int sym = sym_ids[i];
+		const Price& askbid = mt.GetAskBid()[sym];
+		double ask = askbid.ask;
+		double bid = askbid.bid;
+		const Symbol& symbol = mt.GetSymbol(sym);
+		if (symbol.proxy_id != -1) {
+			int k = sym_ids.Find(symbol.proxy_id);
+			ASSERT(k != -1);
+			j.proxy_id[i] = k;
+			j.proxy_base_mul[i] = symbol.base_mul;
+		} else {
+			j.proxy_id[i] = -1;
+			j.proxy_base_mul[i] = 0;
+		}
+		j.spread_points[i] = ask - bid;
+		ASSERT(j.spread_points[i] > 0.0);
+	}
+	
+	j.begin_equity = mt.AccountEquity();
+	j.leverage = mt.AccountLeverage();
+	
+	j.Init();
 }
 
 /*

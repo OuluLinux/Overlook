@@ -9,6 +9,9 @@ SingleFixedSimBroker::SingleFixedSimBroker() {
 }
 
 void SingleFixedSimBroker::Reset() PARALLEL {
+	for(int i = 0; i < SYM_COUNT; i++) {
+		
+	}
 	equity = begin_equity;
 	balance = begin_equity;
 	order.is_open = false;
@@ -146,6 +149,33 @@ void SingleFixedSimBroker::RefreshOrders(const Snapshot& snap) PARALLEL {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 FixedSimBroker::FixedSimBroker() {
 	
 	
@@ -155,11 +185,14 @@ FixedSimBroker::FixedSimBroker() {
 void FixedSimBroker::Reset() PARALLEL {
 	equity = begin_equity;
 	balance = begin_equity;
-	for(int i = 0; i < MAX_ORDERS; i++)
-		order[i].is_open = false;
 	order_count = 0;
 	profit_sum = 0.0;
 	loss_sum = 0.0;
+	free_margin_level = 0.80;
+	for(int i = 0; i < SYM_COUNT; i++)
+		signal[i] = 0;
+	for(int i = 0; i < MAX_ORDERS; i++)
+		order[i].is_open = false;
 }
 
 float FixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
@@ -253,7 +286,7 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 		else            loss_sum   -= profit;
 	}
 }
-
+/*
 void FixedSimBroker::OrderClose(int sym_id, const Snapshot& snap) PARALLEL {
 	ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
 	int sym_orders_begin = sym_id * ORDERS_PER_SYMBOL;
@@ -269,7 +302,7 @@ void FixedSimBroker::OrderClose(int sym_id, const Snapshot& snap) PARALLEL {
 		else            loss_sum   -= profit;
 	}
 }
-
+*/
 void FixedSimBroker::CloseAll(const Snapshot& snap) PARALLEL {
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& order = this->order[i];
@@ -290,7 +323,7 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 	if (proxy_id[sym_id] == -1) {
 		used_margin = RealtimeAsk(snap, sym_id) * volume * 100000;
 	} else {
-		if (proxy_factor[sym_id] == -1)
+		if (proxy_base_mul[sym_id] == -1)
 			used_margin = RealtimeAsk(snap, proxy_id[sym_id]) * volume * 100000;
 		else
 			used_margin = (1.0 / RealtimeAsk(snap, proxy_id[sym_id])) * volume * 100000;
@@ -301,6 +334,10 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 }
 
 void FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
+	double buy_lots[SYM_COUNT];
+	double sell_lots[SYM_COUNT];
+	int buy_signals[SYM_COUNT];
+	int sell_signals[SYM_COUNT];
 	
 	// Get maximum margin sum
 	ASSERT(free_margin_level >= 0.60 && free_margin_level <= 1.0);

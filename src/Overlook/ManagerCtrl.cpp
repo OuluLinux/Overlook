@@ -35,8 +35,6 @@ GroupTabCtrl::GroupTabCtrl() {
 	Add(overview, "Overview");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
-	Add(datactrl);
-	Add(datactrl, "Recorded data");
 	
 	WhenSet << THISBACK(Data);
 }
@@ -47,8 +45,6 @@ void GroupTabCtrl::Data() {
 		overview.Data();
 	else if (tab == 1)
 		snapctrl.Data();
-	else if (tab == 2)
-		datactrl.Data();
 }
 
 
@@ -125,6 +121,61 @@ void AgentTabCtrl::SetAgent(Agent& agent) {
 
 
 
+
+JoinerTabCtrl::JoinerTabCtrl() {
+	joiner = NULL;
+	
+	CtrlLayout(overview);
+	
+	Add(overview);
+	Add(overview, "Overview");
+	Add(trainingctrl);
+	Add(trainingctrl, "Training");
+	
+	WhenSet << THISBACK(Data);
+}
+
+void JoinerTabCtrl::Data() {
+	if (!joiner) return;
+	
+	Joiner& j = *joiner;
+	int tab = Get();
+	
+	if (tab == 0) {
+		overview.bestresult.SetLabel(DblStr(j.best_result));
+		overview.iters.SetLabel(IntStr(j.iter));
+		overview.epsilon.SetLabel(DblStr(j.dqn.GetEpsilon()));
+		overview.expcount.SetLabel(IntStr(j.dqn.GetExperienceCount()));
+	}
+	else if (tab == 1) {
+		trainingctrl.Data();
+	}
+}
+
+void JoinerTabCtrl::SetJoiner(Joiner& joiner) {
+	this->joiner = &joiner;
+	
+	trainingctrl.SetJoiner(joiner);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ManagerCtrl::ManagerCtrl() {
 	view = -1;
 	
@@ -136,6 +187,8 @@ ManagerCtrl::ManagerCtrl() {
 	
 	mainview.Add(group_tabs.SizePos());
 	mainview.Add(agent_tabs.SizePos());
+	mainview.Add(joiner_tabs.SizePos());
+	mainview.Add(datactrl.SizePos());
 	
 	listsplit.Vert();
 	listsplit << glist << alist;
@@ -149,7 +202,6 @@ ManagerCtrl::ManagerCtrl() {
 	glist <<= THISBACK(SetView);
 	
 	alist.AddColumn("Symbol");
-	alist.AddColumn("Group");
 	alist.AddColumn("Best result");
 	alist.AddColumn("Drawdown");
 	alist <<= THISBACK(SetView);
@@ -164,28 +216,37 @@ void ManagerCtrl::SetView() {
 	
 	agent_tabs.Hide();
 	group_tabs.Hide();
+	joiner_tabs.Hide();
+	datactrl.Hide();
+	
+	Data();
+	
 	
 	int view = glist.GetCursor();
+	this->view = view;
 	
 	if (view == 0) {
 		group_tabs.Show();
 		alist.SetCount(0);
-		//group_tabs.SetFocus();
 	}
 	else if (view == 1) {
 		int agent_id = alist.GetCursor();
 		if (agent_id >= 0 && agent_id < group.agents.GetCount()) {
 			agent_tabs.SetAgent(group.agents[agent_id]);
 			agent_tabs.Show();
-			//agent_tabs.SetFocus();
 		}
 	}
 	else if (view == 2) {
-		alist.SetCount(0);
-		/**/
+		int joiner_id = alist.GetCursor();
+		if (joiner_id >= 0 && joiner_id < group.joiners.GetCount()) {
+			joiner_tabs.SetJoiner(group.joiners[joiner_id]);
+			joiner_tabs.Show();
+		}
 	}
-	this->view = view;
-	Data();
+	else if (view == 3) {
+		alist.SetCount(0);
+		datactrl.Show();
+	}
 }
 
 void ManagerCtrl::Data() {
@@ -201,18 +262,36 @@ void ManagerCtrl::Data() {
 		for(int i = 0; i < ag.agents.GetCount(); i++) {
 			Agent& a = ag.agents[i];
 			
-			alist.Set(i, 0, a.sym__ != -1 ? sys.GetSymbol(a.sym__) : "");
-			alist.Set(i, 1, a.group_id);
-			alist.Set(i, 2, a.best_result);
-			alist.Set(i, 3, a.last_drawdown);
+			alist.Set(i, 0, IntStr(a.group_id) + " " + (a.sym__ != -1 ? sys.GetSymbol(a.sym__) : ""));
+			alist.Set(i, 1, a.best_result);
+			alist.Set(i, 2, a.last_drawdown);
 		}
 		alist.SetCount(ag.agents.GetCount());
+		
+		if (this->view != view && alist.GetCount())
+			alist.SetCursor(0);
 		
 		agent_tabs.Data();
 	}
 	else if (view == 2) {
+		for(int i = 0; i < ag.joiners.GetCount(); i++) {
+			Joiner& j = ag.joiners[i];
+			
+			alist.Set(i, 0, i);
+			alist.Set(i, 1, j.best_result);
+			alist.Set(i, 2, j.last_drawdown);
+		}
+		alist.SetCount(ag.joiners.GetCount());
 		
+		if (this->view != view && alist.GetCount())
+			alist.SetCursor(0);
+		
+		joiner_tabs.Data();
 	}
+	else if (view == 3) {
+		datactrl.Data();
+	}
+	
 }
 
 /*

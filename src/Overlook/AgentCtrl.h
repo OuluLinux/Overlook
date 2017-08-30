@@ -141,6 +141,7 @@ protected:
 	ResultGraph reward;
 	EquityGraph stats;
 	HeatmapTimeView timescroll;
+	ArrayCtrl trade;
 	
 	
 	Splitter bsplit, vsplit;
@@ -152,6 +153,7 @@ public:
 	void Data();
 	void ApplySettings();
 	void SetAgent(Agent& agent);
+	void SetJoiner(Joiner& joiner);
 	
 };
 

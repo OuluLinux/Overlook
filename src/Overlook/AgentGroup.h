@@ -3,8 +3,8 @@
 
 namespace Overlook {
 
-#define GROUP_COUNT				2 //TODO
-#define SYM_COUNT				21
+#define GROUP_COUNT				4 //TODO
+#define SYM_COUNT				10
 #define AGENT_COUNT				(GROUP_COUNT * SYM_COUNT)
 #define TIME_SENSORS			3
 #define INPUT_SENSORS			(4 * 4 * 2)
@@ -38,6 +38,7 @@ struct Snapshot : Moveable<Snapshot> {
 
 struct FixedOrder {
 	float open = 0.0;
+	float close = 0.0;
 	float volume = 0.0;
 	float profit = 0.0;
 	int type = -1;
@@ -92,7 +93,7 @@ struct FixedSimBroker {
 	
 	
 	FixedSimBroker();
-	void Cycle(const Snapshot& snap) PARALLEL;
+	bool Cycle(const Snapshot& snap) PARALLEL;
 	void RefreshOrders(const Snapshot& snap) PARALLEL;
 	void Reset() PARALLEL;
 	void OrderSend(int sym_id, int type, float volume, float price) PARALLEL;
@@ -129,6 +130,7 @@ struct TraineeBase {
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
+	int type = -1;
 	bool is_training = false;
 	
 	
@@ -238,6 +240,7 @@ public:
 	
 	
 	// Temp
+	Vector<Snapshot> amp_snaps;
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Snapshot> snaps;
@@ -255,10 +258,11 @@ public:
 	int max_memory_size = 0, agents_total_size = 0, memory_for_snapshots = 0, snaps_per_phase = 0, snap_phase_count = 0;
 	int snap_phase_id = 0;
 	int counted_bars = 0;
+	int snap_begin = 0;
 	bool running = false, stopped = true;
 	Mutex work_lock;
 	
-	enum {PHASE_SEEKSNAPS, PHASE_TRAINING, PHASE_JOINER, PHASE_UPDATE, PHASE_REAL, PHASE_WAIT};
+	enum {PHASE_SEEKSNAPS, PHASE_TRAINING, PHASE_JOINER};
 	
 public:
 	typedef AgentGroup CLASSNAME;

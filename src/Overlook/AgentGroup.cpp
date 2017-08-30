@@ -7,24 +7,24 @@ AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	stopped = true;
 	group_count = GROUP_COUNT;
 	
-	allowed_symbols.Add("AUDCAD");
-	allowed_symbols.Add("AUDJPY");
-	allowed_symbols.Add("AUDNZD");
+	//allowed_symbols.Add("AUDCAD");
+	//allowed_symbols.Add("AUDJPY");
+	//allowed_symbols.Add("AUDNZD");
 	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("CADJPY");
+	//allowed_symbols.Add("CADJPY");
 	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("EURCAD");
+	//allowed_symbols.Add("EURCAD");
 	allowed_symbols.Add("EURGBP");
 	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("EURNZD");
+	//allowed_symbols.Add("EURNZD");
 	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPAUD");
-	allowed_symbols.Add("GBPCAD");
+	//allowed_symbols.Add("GBPAUD");
+	//allowed_symbols.Add("GBPCAD");
 	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("GBPNZD");
+	//allowed_symbols.Add("GBPNZD");
 	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDCAD");
-	allowed_symbols.Add("NZDJPY");
+	//allowed_symbols.Add("NZDCAD");
+	//allowed_symbols.Add("NZDJPY");
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
@@ -51,11 +51,16 @@ void AgentGroup::Init() {
 void AgentGroup::InitThread() {
 	Progress(0, 6, "Refreshing work queue");
 	MetaTrader& mt = GetMetaTrader();
+	const Vector<Price>& askbid = mt._GetAskBid();
 	for(int j = 0; j < allowed_symbols.GetCount(); j++) {
 		const String& allowed_sym = allowed_symbols[j];
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& sym = mt.GetSymbol(i);
 			if (sym.IsForex() && (sym.name.Left(6)) == allowed_sym) {
+				double base_spread = 1000.0 * (askbid[i].ask / askbid[i].bid - 1.0);
+				if (base_spread >= 0.5) {
+					LOG("Warning! Too much spread: " << sym.name << " (" << base_spread << ")");
+				}
 				sym_ids.Add(i);
 				break;
 			}
@@ -149,220 +154,26 @@ void AgentGroup::Main() {
 	
 	RefreshSnapshots();
 	
-	#ifdef HAVE_SYSTEM_AMP
-	Vector<Snapshot> snaps;
-	#endif
 	
 	while (running) {
-		if (phase == PHASE_SEEKSNAPS) {
-			#ifdef HAVE_SYSTEM_AMP
-			// Seek different snapshot dataset, because GPU memory is limited.
-			if (snap_phase_id >= snap_phase_count)
-				snap_phase_id = 0;
-			
-			int snap_begin = snap_phase_id * snaps_per_phase;
-			int snap_end = Upp::min(snap_begin + snaps_per_phase, this->snaps.GetCount());
-			int snap_count = snap_end - snap_begin;
-			ASSERT(snap_count > 0);
-			snaps.SetCount(snap_count);
-			memcpy(snaps.Begin(), this->snaps.Begin() + snap_begin, snap_count * sizeof(Snapshot));
-			snap_phase_id++;
-			#endif
+		/*if (phase == PHASE_SEEKSNAPS) {
+			UpdateAmpSnaps();
 			
 			phase = PHASE_TRAINING;
 		}
-		else if (phase == PHASE_TRAINING) {
-			SetAgentsTraining(true);
+		else */if (phase == PHASE_TRAINING) {
 			
-			agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
-			RefreshEpsilon();
-			
-			int snap_count = snaps.GetCount();
-			int agent_count = agents.GetCount();
-			array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin());
-			array_view<Agent, 1> agents_view(agent_count, agents.Begin());
-			array_view<double, 1> equities_view(agent_equities.GetCount(), agent_equities.Begin());
-			
-			
-			TimeStop ts;
-			int64 total_elapsed = 0;
-			for (int64 iter = 0; phase == PHASE_TRAINING && running; iter++) {
-				
-				// Change snapshot area, if needed, sometimes
-				if (iter > 100) {
-					total_elapsed += ts.Elapsed();
-					ts.Reset();
-					iter = 0;
-					if (total_elapsed > 5*60*1000) {
-						phase = PHASE_SEEKSNAPS;
-						break;
-					}
-					
-					// Just for debugging Joiner
-					if (GetAverageIterations() >= 2000) {
-						phase = PHASE_JOINER;
-						StoreThis();
-						break;
-					}
-				}
-				
-				parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL
-			    {
-			        int agent_id = idx[0];
-			        Agent& agent = agents_view[idx];
-			        int equities_begin = agent.id * snap_count;
-			        
-			        // Check cursor
-			        if (agent.cursor <= 0 || agent.cursor >= snap_count)
-						agent.ResetEpoch();
-					
-			        for(int i = 0; i < 1000; i++) {
-			            Snapshot& cur_snap  = snap_view[agent.cursor - 0];
-						Snapshot& prev_snap = snap_view[agent.cursor - 1];
-						
-						agent.timestep_actual--;
-						
-						agent.Main(cur_snap, prev_snap);
-						
-						// Get some diagnostic stats
-						equities_view[equities_begin + agent.cursor] = agent.broker.AccountEquity();
-						agent.cursor++;
-						
-						// Close all order at the end
-						if (agent.cursor >= snap_count) {
-							agent.ResetEpoch();
-						}
-			        }
-			    });
-			}
-			
-			agents_view.synchronize();
-			equities_view.synchronize();
-			
-			
-			SetAgentsTraining(false);
+			TrainAgents();
 			
 		}
 		else if (phase == PHASE_JOINER) {
-			SetAgentsTraining(false);
-			SetEpsilon(0.01);
 			
-			joiner_equities.SetCount(joiners.GetCount() * snaps.GetCount(), 0.0);
-			
-			int snap_count = snaps.GetCount();
-			int joiner_count = joiners.GetCount();
-			array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin());
-			array_view<Joiner, 1> joiners_view(joiner_count, joiners.Begin());
-			array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
-			
-			
-			TimeStop ts;
-			int64 total_elapsed = 0;
-			for (int64 iter = 0; phase == PHASE_JOINER && running; iter++) {
-				
-				// Change snapshot area, if needed, sometimes
-				if (iter > 100) {
-					total_elapsed += ts.Elapsed();
-					ts.Reset();
-					iter = 0;
-					if (total_elapsed > 5*60*1000) {
-						phase = PHASE_SEEKSNAPS;
-						break;
-					}
-				}
-				
-				parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL
-			    {
-			        int joiner_id = idx[0];
-			        Joiner& joiner = joiners_view[idx];
-			        int equities_begin = joiner.id * snap_count;
-			        
-			        // Check cursor
-			        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
-						joiner.ResetEpoch();
-					
-			        for(int i = 0; i < 1000; i++) {
-						joiner.timestep_actual--;
-						
-						joiner.Main(snap_view);
-						
-						// Get some diagnostic stats
-						equities_view[equities_begin + joiner.cursor] = joiner.broker.AccountEquity();
-						joiner.cursor++;
-						
-						// Close all order at the end
-						if (joiner.cursor >= snap_count) {
-							joiner.ResetEpoch();
-						}
-			        }
-			    });
-			}
-			
-			joiners_view.synchronize();
-			equities_view.synchronize();
-		}
-		else if (phase == PHASE_UPDATE) {
-			
-			RefreshSnapshots();
-			
-			// Updates latest snapshot signals
+			TrainJoiners();
 			
 		}
 		else if (phase == PHASE_REAL) {
 			
-			/*
-			int wday = DayOfWeek(time);
-			int shift = sys->GetShiftFromTimeTf(time, best_group->main_tf);
-			if (prev_shift != shift) {
-				if (wday == 0 || wday == 6) {
-					// Do nothing
-					prev_shift = shift;
-				} else {
-					sys->WhenInfo("Shift changed");
-					
-					// Forced askbid data download
-					DataBridgeCommon& common = GetDataBridgeCommon();
-					common.DownloadAskBid();
-					common.RefreshAskBidData(true);
-					
-					// Refresh databridges
-					best_group->ProcessDataBridgeQueue();
-					
-					// Use best group to set broker signals
-					bool succ = best_group->PutLatest(mt);
-					
-					// Notify about successful signals
-					if (succ) {
-						prev_shift = shift;
-						
-						sys->WhenRealtimeUpdate();
-					}
-				}
-			}
-			
-			// Check for market closing (weekend and holidays)
-			else {
-				Time after_hour = time + 60*60;
-				int wday_after_hour = DayOfWeek(after_hour);
-				if (wday == 5 && wday_after_hour == 6) {
-					sys->WhenInfo("Closing all orders before market break");
-					for(int i = 0; i < mt.GetSymbolCount(); i++) {
-						mt.SetSignal(i, 0);
-						mt.SetSignalFreeze(i, false);
-					}
-					mt.SignalOrders(true);
-				}
-				
-				if (wday != 0 && wday != 6)
-					best_group->Data();
-			}
-			*/
-			
-		}
-		else if (phase == PHASE_WAIT) {
-			
-			
-			// Changes to PHASE_UPDATE when time to update
+			MainReal();
 			
 		}
 		else Sleep(100);
@@ -370,6 +181,206 @@ void AgentGroup::Main() {
 	
 	
 	stopped = true;
+}
+
+void AgentGroup::UpdateAmpSnaps() {
+	// Seek different snapshot dataset, because GPU memory is limited.
+	if (snap_phase_id >= snap_phase_count)
+		snap_phase_id = 0;
+	
+	snap_begin = snap_phase_id * snaps_per_phase;
+	int snap_end = Upp::min(snap_begin + snaps_per_phase, this->snaps.GetCount());
+	int snap_count = snap_end - snap_begin;
+	ASSERT(snap_count > 0);
+	snaps.SetCount(snap_count);
+	memcpy(snaps.Begin(), this->snaps.Begin() + snap_begin, snap_count * sizeof(Snapshot));
+	snap_phase_id++;
+}
+
+void AgentGroup::TrainAgents() {
+	SetAgentsTraining(true);
+	
+	agent_equities.SetCount(agents.GetCount() * amp_snaps.GetCount(), 0.0);
+	RefreshEpsilon();
+	
+	int snap_count = amp_snaps.GetCount();
+	int agent_count = agents.GetCount();
+	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
+	array_view<Agent, 1> agents_view(agent_count, agents.Begin());
+	array_view<double, 1> equities_view(agent_equities.GetCount(), agent_equities.Begin());
+	
+	
+	TimeStop ts;
+	int64 total_elapsed = 0;
+	for (int64 iter = 0; phase == PHASE_TRAINING && running; iter++) {
+		
+		// Change snapshot area, if needed, sometimes
+		if (iter > 100) {
+			total_elapsed += ts.Elapsed();
+			ts.Reset();
+			iter = 0;
+			if (total_elapsed > 5*60*1000) {
+				phase = PHASE_SEEKSNAPS;
+				break;
+			}
+			
+			// Just for debugging Joiner
+			if (GetAverageIterations() >= 200000) {
+				phase = PHASE_JOINER;
+				StoreThis();
+				break;
+			}
+		}
+		
+		parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL
+	    {
+	        int agent_id = idx[0];
+	        Agent& agent = agents_view[idx];
+	        int equities_begin = agent.id * snap_count;
+	        
+	        // Check cursor
+	        if (agent.cursor <= 0 || agent.cursor >= snap_count)
+				agent.ResetEpoch();
+			
+	        for(int i = 0; i < 100; i++) {
+	            Snapshot& cur_snap  = snap_view[agent.cursor - 0];
+				Snapshot& prev_snap = snap_view[agent.cursor - 1];
+				
+				agent.timestep_actual--;
+				
+				agent.Main(cur_snap, prev_snap);
+				
+				// Get some diagnostic stats
+				equities_view[equities_begin + agent.cursor] = agent.broker.AccountEquity();
+				agent.cursor++;
+				
+				// Close all order at the end
+				if (agent.cursor >= snap_count) {
+					agent.ResetEpoch();
+				}
+	        }
+	    });
+	}
+	
+	agents_view.synchronize();
+	equities_view.synchronize();
+	
+	
+	SetAgentsTraining(false);
+}
+
+void AgentGroup::TrainJoiners() {
+	SetAgentsTraining(false);
+	SetEpsilon(0.01);
+	
+	joiner_equities.SetCount(joiners.GetCount() * amp_snaps.GetCount(), 0.0);
+	
+	int snap_count = amp_snaps.GetCount();
+	int joiner_count = joiners.GetCount();
+	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
+	array_view<Joiner, 1> joiners_view(joiner_count, joiners.Begin());
+	array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
+	
+	
+	TimeStop ts;
+	int64 total_elapsed = 0;
+	for (int64 iter = 0; phase == PHASE_JOINER && running; iter++) {
+		
+		// Change snapshot area, if needed, sometimes
+		if (iter > 100) {
+			total_elapsed += ts.Elapsed();
+			ts.Reset();
+			iter = 0;
+			if (total_elapsed > 5*60*1000) {
+				phase = PHASE_SEEKSNAPS;
+				break;
+			}
+		}
+		
+		parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL
+	    {
+	        int joiner_id = idx[0];
+	        Joiner& joiner = joiners_view[idx];
+	        int equities_begin = joiner.id * snap_count;
+	        
+	        // Check cursor
+	        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
+				joiner.ResetEpoch();
+			
+	        for(int i = 0; i < 1000; i++) {
+				joiner.timestep_actual--;
+				
+				joiner.Main(snap_view);
+				
+				// Get some diagnostic stats
+				equities_view[equities_begin + joiner.cursor] = joiner.broker.AccountEquity();
+				joiner.cursor++;
+				
+				// Close all order at the end
+				if (joiner.cursor >= snap_count) {
+					joiner.ResetEpoch();
+				}
+	        }
+	    });
+	}
+	
+	joiners_view.synchronize();
+	equities_view.synchronize();
+}
+
+void AgentGroup::MainReal() {
+	int wday = DayOfWeek(time);
+	int shift = sys->GetShiftFromTimeTf(time, best_group->main_tf);
+	if (prev_shift != shift) {
+		if (wday == 0 || wday == 6) {
+			// Do nothing
+			prev_shift = shift;
+		} else {
+			sys->WhenInfo("Shift changed");
+			
+
+			RefreshSnapshots();
+			
+			// Updates latest snapshot signals
+			LoopAgentSignals(false);
+			
+			
+			// Forced askbid data download
+			DataBridgeCommon& common = GetDataBridgeCommon();
+			common.DownloadAskBid();
+			common.RefreshAskBidData(true);
+			
+			// Refresh databridges
+			best_group->ProcessDataBridgeQueue();
+			
+			// Use best group to set broker signals
+			bool succ = best_group->PutLatest(mt);
+			
+			// Notify about successful signals
+			if (succ) {
+				prev_shift = shift;
+				
+				sys->WhenRealtimeUpdate();
+			}
+		}
+	}
+	
+	// Check for market closing (weekend and holidays)
+	else {
+		Time after_hour = time + 60*60;
+		int wday_after_hour = DayOfWeek(after_hour);
+		if (wday == 5 && wday_after_hour == 6) {
+			sys->WhenInfo("Closing all orders before market break");
+			for(int i = 0; i < mt.GetSymbolCount(); i++) {
+				mt.SetSignal(i, 0);
+				mt.SetSignalFreeze(i, false);
+			}
+			mt.SignalOrders(true);
+		}
+		
+		if (wday != 0 && wday != 6)
+			best_group->Data();
+	}
 }
 
 void AgentGroup::LoadThis() {

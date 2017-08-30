@@ -3,7 +3,7 @@
 namespace Overlook {
 
 Joiner::Joiner() {
-	
+	type = 1;
 }
 
 void Joiner::Create() {
@@ -57,7 +57,8 @@ void Joiner::Main(const array_view<Snapshot, 1>& snap_view) PARALLEL {
 		Backward(reward);
 		
 		
-		if (broker.equity < 0.25 * broker.begin_equity) broker.Reset();
+		if (broker.equity < 0.50 * broker.begin_equity)
+			broker.Reset();
 		prev_equity = broker.equity;
 		
 		
@@ -65,7 +66,7 @@ void Joiner::Main(const array_view<Snapshot, 1>& snap_view) PARALLEL {
 		
 	}
 	
-	LOG("Joiner " << id << ": " << cursor << ", " << signal << ", " << timestep_actual << "/" << timestep_total);
+	//LOG("Joiner " << id << ": " << cursor << ", " << signal << ", " << timestep_actual << "/" << timestep_total);
 	
 	WriteSignal(cur_snap);
 }
@@ -135,7 +136,7 @@ void Joiner::Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL {
 		prev_signals[2]		= 1.0 * timebwd_step  / timebwd_steps;
 		prev_signals[3]		= 1.0 * timefwd_step  / timefwd_steps;
 		
-		int maxscale		= 2 + maxscale_step * 4;		// 2, 6, 10
+		int maxscale		= 1 + maxscale_step * 2;		// 1, 3, 5
 		double fmlevel		= 0.75 + 0.1  * fmlevel_step;	// 0.75, 0.85, 0.95
 		int timebwd			= 1 << (timebwd_step * 3 + 1);	// 2, 16, 128
 		int timefwd			= 1 << (timefwd_step * 3 + 1);	// 2, 16, 128
@@ -170,7 +171,7 @@ void Joiner::Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL {
 			float neg = cur_snap.signal[sensor_begin + 1];
 			float idl = cur_snap.signal[sensor_begin + 2];
 			
-			if (idl < 1.0f) {
+			if (idl < 1.0f || (idl == pos && pos == neg)) {
 				change = 0;
 				signal = 0;
 			}
@@ -226,8 +227,10 @@ void Joiner::Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL {
     }
 	
 	
-	broker.Cycle(cur_snap);
+	bool succ = broker.Cycle(cur_snap);
 	
+	if (!succ)
+		broker.Reset();
 	
 	timestep_actual = timestep_total;
 	

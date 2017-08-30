@@ -42,7 +42,6 @@ public:
 class GroupTabCtrl : public TabCtrl {
 	GroupOverview			overview;
 	SnapshotCtrl			snapctrl;
-	DataCtrl				datactrl;
 	Array<EditDoubleSpin>	tflimitedit;
 	
 public:
@@ -66,6 +65,20 @@ public:
 	
 };
 
+class JoinerTabCtrl : public TabCtrl {
+	Joiner* joiner;
+	WithJoinerOverview<ParentCtrl>	overview;
+	TrainingCtrl					trainingctrl;
+	
+public:
+	typedef JoinerTabCtrl CLASSNAME;
+	JoinerTabCtrl();
+	
+	void Data();
+	void SetJoiner(Joiner& joiner);
+	
+};
+
 class ManagerCtrl : public ParentCtrl {
 	Splitter						hsplit, listsplit;
 	ArrayCtrl						alist, glist;
@@ -75,6 +88,8 @@ class ManagerCtrl : public ParentCtrl {
 	
 	GroupTabCtrl					group_tabs;
 	AgentTabCtrl					agent_tabs;
+	JoinerTabCtrl					joiner_tabs;
+	DataCtrl						datactrl;
 	
 	int view;
 	

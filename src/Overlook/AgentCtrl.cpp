@@ -252,7 +252,10 @@ void EquityGraph::Paint(Draw& w) {
 	double peak = 0.0;
 	
 	int max_steps = 0;
-	const Vector<double>& data = ag.agent_equities;
+	const Vector<double>& data =
+		trainee->type == 0 ?
+			ag.agent_equities :
+			ag.joiner_equities;
 	int count = ag.snaps.GetCount();
 	int data_begin = trainee->id * count;
 	ASSERT(data_begin >= 0 && data_begin + count <= data.GetCount());
@@ -331,12 +334,19 @@ TrainingCtrl::TrainingCtrl()
 	vsplit.Vert();
 	vsplit.SetPos(8000);
 	
-	hsplit << draw << timescroll;
 	hsplit.Horz();
 	
 	bsplit << stats << reward;
 	bsplit.Horz();
 	
+	trade.AddColumn("Order");
+	trade.AddColumn("Type");
+	trade.AddColumn("Size");
+	trade.AddColumn("Symbol");
+	trade.AddColumn("Price");
+	trade.AddColumn("Price");
+	trade.AddColumn("Profit");
+	trade.ColumnWidths("3 2 2 2 2 2 3");
 }
 
 void TrainingCtrl::SetAgent(Agent& agent) {
@@ -345,19 +355,60 @@ void TrainingCtrl::SetAgent(Agent& agent) {
 	stats.SetTrainee(agent);
 	reward.SetTrainee(agent);
 	timescroll.SetAgent(agent.dqn);
+	
+	hsplit << draw << timescroll;
+}
+
+void TrainingCtrl::SetJoiner(Joiner& joiner) {
+	this->trainee = &joiner;
+	
+	stats.SetTrainee(joiner);
+	reward.SetTrainee(joiner);
+	timescroll.SetAgent(joiner.dqn);
+	
+	hsplit << draw << trade << timescroll;
+	hsplit.SetPos(2000, 0);
+	hsplit.SetPos(8000, 1);
 }
 
 void TrainingCtrl::Data() {
 	if (!trainee) return;
 	
+	AgentGroup& ag = GetSystem().GetAgentGroup();
+	
 	// list
 	
-	draw.SetSnap(trainee->cursor);
+	draw.SetSnap(ag.snap_begin + trainee->cursor);
 	draw.Refresh();
 	timescroll.Refresh();
 	reward.Refresh();
 	stats.Refresh();
 	reward.Refresh();
+	
+	if (trainee->type == 1) {
+		Joiner& joiner = *static_cast<Joiner*>(trainee);
+		FixedSimBroker& b = joiner.broker;
+		MetaTrader& mt = GetMetaTrader();
+		
+		int j = 0;
+		for(int i = 0; i < MAX_ORDERS; i++) {
+			int symbol = i % ORDERS_PER_SYMBOL;
+			FixedOrder& o = b.order[i];
+			if (!o.is_open) continue;
+			
+			const Symbol& sym = mt.GetSymbol(ag.sym_ids[symbol]);
+			trade.Set(j, 0, i);
+			trade.Set(j, 1, o.type == 0 ? "Buy" : "Sell");
+			trade.Set(j, 2, o.volume);
+			trade.Set(j, 3, sym.name);
+			trade.Set(j, 4, o.open);
+			trade.Set(j, 5, o.close);
+			trade.Set(j, 6, o.profit);
+			
+			j++;
+		}
+		trade.SetCount(j);
+	}
 }
 
 

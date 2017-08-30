@@ -260,6 +260,8 @@ void FixedSimBroker::OrderSend(int sym_id, int type, float volume, float price) 
 		order.type = type;
 		order.volume = volume;
 		order.open = price;
+		order.close = price;
+		order.profit = 0.0f;
 		order.is_open = true;
 		order_count++;
 		break;
@@ -333,7 +335,7 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 	return used_margin;
 }
 
-void FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
+bool FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
 	double buy_lots[SYM_COUNT];
 	double sell_lots[SYM_COUNT];
 	int buy_signals[SYM_COUNT];
@@ -395,7 +397,7 @@ void FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
 	}
 	if (!sig_abs_total) {
 		CloseAll(snap);
-		return;
+		return true;
 	}
 	
 	
@@ -413,6 +415,8 @@ void FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
 	
 	
 	double lot_multiplier = max_margin_sum / minimum_margin_sum;
+	if (lot_multiplier < 1.0)
+		return false;
 	
 	
 	for(int i = 0; i < SYM_COUNT; i++) {
@@ -471,14 +475,20 @@ void FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
 		}
 	}
 	
+	return true;
 }
 
 void FixedSimBroker::RefreshOrders(const Snapshot& snap) PARALLEL {
 	double e = balance;
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& o = order[i];
-		if (o.is_open)
-			e += GetCloseProfit(i / ORDERS_PER_SYMBOL, o, snap);
+		if (o.is_open) {
+			int sym = i / ORDERS_PER_SYMBOL;
+			double p = GetCloseProfit(sym, o, snap);
+			o.close = snap.open[sym];
+			o.profit = p;
+			e += p;
+		}
 	}
 	equity = e;
 }

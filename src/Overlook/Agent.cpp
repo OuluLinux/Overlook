@@ -28,7 +28,7 @@ void TraineeBase::ResetEpoch() {
 
 
 Agent::Agent() {
-	
+	type = 0;
 }
 
 void Agent::Create() {

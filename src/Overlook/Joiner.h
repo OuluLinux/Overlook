@@ -133,7 +133,7 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 		
 		AMPASSERT(action >= 0 && action < JOINER_ACTIONCOUNT);
 	    
-	    if (action < JOINER_NORMALACTS) {
+	    /*if (action < JOINER_NORMALACTS) {
 			
 			const int maxscale_steps = 3;
 			const int fmlevel_steps = 3;
@@ -240,7 +240,46 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 			
 			for(int i = 0; i < SYM_COUNT; i++)
 				broker.SetSignal(i, 0);
-	    }
+	    }*/
+	    
+	    
+	    {
+	        if (action > 9) action = 9;
+	        
+			prev_signals[0]		= 1.0;
+			prev_signals[1]		= 1.0;
+			prev_signals[2]		= 1.0;
+			prev_signals[3]		= 1.0;
+	        
+	        timestep_total = 1 << action;
+	        
+			int symsignals[SYM_COUNT];
+			
+			for(int i = 0; i < SYM_COUNT; i++)
+				symsignals[i] = 0;
+			
+			for(int i = 0; i < AGENT_COUNT; i++) {
+				int sym = i % SYM_COUNT;
+				
+				int sensor_begin = i * SIGNAL_SENSORS;
+				float pos = cur_snap.signal[sensor_begin + 0];
+				float neg = cur_snap.signal[sensor_begin + 1];
+				float idl = cur_snap.signal[sensor_begin + 2];
+				
+				if (idl < 1.0f || (idl == pos && pos == neg))
+					signal = 0;
+				else if (pos < neg)
+					signal = +1;
+				else
+					signal = -1;
+				
+				symsignals[sym] += signal;
+			}
+			
+			for(int i = 0; i < SYM_COUNT; i++)
+				broker.SetSignal(i, symsignals[i]);
+		}
+	    
 		
 		
 		bool succ = broker.Cycle(cur_snap);

@@ -28,7 +28,8 @@ AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
-
+	
+	created = GetSysTime();
 }
 
 AgentGroup::~AgentGroup() {
@@ -112,6 +113,11 @@ void AgentGroup::InitThread() {
 	
 	if (joiners.GetCount() == 0)
 		CreateJoiners();
+		
+	phase = PHASE_JOINER;
+	for(int i = 0; i < joiners.GetCount(); i++)
+		joiners[i].iter = 0;
+	
 	for(int i = 0; i < joiners.GetCount(); i++)
 		InitJoiner(joiners[i]);
 	ASSERT(joiners.GetCount() == JOINER_COUNT);
@@ -154,7 +160,6 @@ void AgentGroup::Main() {
 	if (agents.GetCount() == 0 || sym_ids.IsEmpty() || indi_ids.IsEmpty()) return;
 	
 	RefreshSnapshots();
-	
 	
 	while (running) {
 		if (phase == PHASE_TRAINING) {
@@ -205,6 +210,7 @@ void AgentGroup::UpdateAmpSnaps(bool put_latest) {
 
 void AgentGroup::TrainAgents() {
 	SetAgentsTraining(true);
+	UpdateAmpSnaps(false);
 	
 	agent_equities.SetCount(agents.GetCount() * amp_snaps.GetCount(), 0.0);
 	RefreshAgentEpsilon();
@@ -250,7 +256,7 @@ void AgentGroup::TrainAgents() {
 	        if (agent.cursor <= 0 || agent.cursor >= snap_count)
 				agent.ResetEpoch();
 			
-	        for(int i = 0; i < 100; i++) {
+	        for(int i = 0; i < 10; i++) {
 	            Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 				Snapshot& prev_snap = snap_view[agent.cursor - 1];
 				
@@ -268,10 +274,10 @@ void AgentGroup::TrainAgents() {
 				}
 	        }
 	    });
+	    
+		agents_view.synchronize();
+		equities_view.synchronize();
 	}
-	
-	agents_view.synchronize();
-	equities_view.synchronize();
 	
 	
 	SetAgentsTraining(false);
@@ -331,6 +337,7 @@ void AgentGroup::LoopAgentSignals(bool from_begin) {
 
 void AgentGroup::TrainJoiners() {
 	SetAgentsTraining(false);
+	UpdateAmpSnaps(false);
 	RefreshAgentEpsilon();
 	RefreshJoinerEpsilon();
 	
@@ -404,10 +411,10 @@ void AgentGroup::TrainJoiners() {
 				}
 	        }
 	    });
+
+		joiners_view.synchronize();
+		equities_view.synchronize();
 	}
-	
-	joiners_view.synchronize();
-	equities_view.synchronize();
 }
 
 void AgentGroup::LoopJoinerSignals(bool from_begin) {

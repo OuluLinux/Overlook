@@ -392,7 +392,7 @@ void TrainingCtrl::Data() {
 		
 		int j = 0;
 		for(int i = 0; i < MAX_ORDERS; i++) {
-			int symbol = i % ORDERS_PER_SYMBOL;
+			int symbol = i / ORDERS_PER_SYMBOL;
 			FixedOrder& o = b.order[i];
 			if (!o.is_open) continue;
 			

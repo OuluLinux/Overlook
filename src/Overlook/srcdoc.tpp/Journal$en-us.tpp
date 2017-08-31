@@ -2588,4 +2588,15 @@ M1 data. Finally, I`'ll leave that Joiner class problem to solve
 itself at background. I am pretty satisfied, even though the 
 app won`'t be working yet. Now it`'s robust and fast and it only 
 has some troubles with the theory of the Joiner class.&]
+[s0; ...&]
+[s0; Yeah... the best of the day... the AMP version seems to work. 
+AMP debugging doesn`'t work in Ultimate`+`+ IDE, but I made that 
+thin `"CPU Only`" AMP wrapper, which works in Linux and FreeBSD, 
+and you can debug the app with that, and then it seems to run 
+in the GPGPU correctly.&]
+[s0; I had to import random number library for AMP. I tested it and 
+it seems to work properly, also. So no problems, except with 
+that Joiner class theory.&]
+[s0; &]
+[s0; &]
 [s0; ]]

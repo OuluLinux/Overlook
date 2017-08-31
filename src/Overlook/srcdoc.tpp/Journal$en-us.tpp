@@ -2559,4 +2559,33 @@ generic C`+`+ experience.&]
 [s0; This is going to be fast... It`'s very nice too see this getting 
 simpler, but also I know that research relating to that stops. 
 These settings seems very stable, but it`'s always risky to make 
-the inflexible and optimized version.]]
+the inflexible and optimized version.&]
+[s3; 31.8.2017&]
+[s0; The AMP port has been progressed steadily. Training of agents 
+works currently and it`'s much faster than previously. The amount 
+of rewriting has been high. Macros must be used to get AMP compatible 
+code and it`'s hard to get pretty. I got rid of slower tfs than 
+M1 and now I`'ll sensor slower periods with high period in OsMA 
+and stochastic oscillator. I think these all are huge improvements, 
+but I can`'t research more that previous multi`-tf stuff.&]
+[s0; I tested the new Joiner agent yesterday, which is expected to 
+be better solution than previous time`-slot differential solver 
+optimization, because it is more sensitive to real`-time operations. 
+It didn`'t work out well, yet. It was a first test of the first 
+prototype of the new concept, so it`'s not a unexpected problem. 
+It showed that instrument functions, that are provided to the 
+agent for action`-switch type usage, are not good... I`'ll temporarily 
+replace it with the most simplest algorithm and see, if there`'s 
+problem with the common wrapper code. Unfortuntaly, I might be 
+almost clueless about the correct instrument functions what should 
+be provided for the agent. This kind of code usually requires 
+much time to evolve into something usable, and I am just in the 
+beginning :( ...and I also must go to the next semester in the 
+university starting next week, so bye bye money code.&]
+[s0; I am basically finishing the porting today and after that I`'ll 
+improve user friendliness and add support for imported long`-term 
+M1 data. Finally, I`'ll leave that Joiner class problem to solve 
+itself at background. I am pretty satisfied, even though the 
+app won`'t be working yet. Now it`'s robust and fast and it only 
+has some troubles with the theory of the Joiner class.&]
+[s0; ]]

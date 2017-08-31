@@ -34,6 +34,7 @@ struct Snapshot : Moveable<Snapshot> {
 	float signal			[SIGNAL_SIZE];
 	float open				[SYM_COUNT];
 	float joiner_signal		[JOINERSIGNAL_SIZE];
+	int shift;
 };
 
 struct FixedOrder {
@@ -107,6 +108,7 @@ struct FixedSimBroker {
 	double AccountEquity() const PARALLEL {return equity;}
 	double GetDrawdown() const PARALLEL {double sum = profit_sum + loss_sum; return sum > 0.0 ? loss_sum / sum : 1.0;}
 	void SetSignal(int sym_id, int sig) {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); signal[sym_id] = sig;}
+	int GetSignal(int sym_id) const {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); return signal[sym_id];}
 };
 
 
@@ -208,6 +210,8 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 	void Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL;
 	void Backward(double reward) PARALLEL;
 	void WriteSignal(Snapshot& cur_snap) PARALLEL;
+	bool PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snapshot, 1>& snap_view);
+	void Data();
 	
 	void Serialize(Stream& s) {
 		TraineeBase::Serialize(s);
@@ -250,7 +254,7 @@ public:
 	Index<int> sym_ids;
 	TimeStop last_store, last_datagather;
 	System* sys;
-	double epsilon;
+	double agent_epsilon = 0.0, joiner_epsilon = 0.0;
 	int main_tf = -1;
 	int data_begin = 0;
 	int buf_count = 0;
@@ -259,10 +263,12 @@ public:
 	int snap_phase_id = 0;
 	int counted_bars = 0;
 	int snap_begin = 0;
+	int prev_shift = 0;
+	int realtime_count = 0;
 	bool running = false, stopped = true;
 	Mutex work_lock;
 	
-	enum {PHASE_SEEKSNAPS, PHASE_TRAINING, PHASE_JOINER};
+	enum {PHASE_TRAINING, PHASE_JOINER, PHASE_REAL};
 	
 public:
 	typedef AgentGroup CLASSNAME;
@@ -278,7 +284,8 @@ public:
 	void Stop();
 	void StoreThis();
 	void LoadThis();
-	void SetEpsilon(double d);
+	void SetAgentEpsilon(double d);
+	void SetJoinerEpsilon(double d);
 	void RefreshSnapshots();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
@@ -290,10 +297,21 @@ public:
 	bool Seek(Snapshot& snap, int shift);
 	void CreateAgents();
 	void CreateJoiners();
-	double GetAverageDrawdown();
-	double GetAverageIterations();
-	double GetEpsilon() {return epsilon;}
-	void RefreshEpsilon();
+	double GetAverageAgentDrawdown();
+	double GetAverageAgentIterations();
+	double GetAverageJoinerDrawdown();
+	double GetAverageJoinerIterations();
+	double GetAgentEpsilon()	{return agent_epsilon;}
+	double GetJoinerEpsilon()	{return joiner_epsilon;}
+	void RefreshAgentEpsilon();
+	void RefreshJoinerEpsilon();
+	void UpdateAmpSnaps(bool put_latest);
+	void TrainAgents();
+	void TrainJoiners();
+	void MainReal();
+	void LoopAgentSignals(bool from_begin);
+	void LoopJoinerSignals(bool from_begin);
+	Joiner* GetBestJoiner();
 	
 	void Main();
 	void SetAgentsTraining(bool b);

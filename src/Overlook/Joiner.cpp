@@ -192,9 +192,9 @@ void Joiner::Forward(const array_view<Snapshot, 1>& snap_view) PARALLEL {
 		
 		double range = max_change - min_change;
 		for(int i = 0; i < AGENT_COUNT; i++) {
-			double& change = changes_total[i];
-			if (change == 0.0)
+			if (signals_total[i] == 0)
 				continue;
+			double& change = changes_total[i];
 			change = ((change - min_change) / range) * (maxscale - 1) + 1.0;
 			ASSERT(change >= 1 && change <= maxscale);
 		}
@@ -270,61 +270,68 @@ void Joiner::Backward(double reward) PARALLEL {
 	iter++;
 }
 
-/*
-bool Joiner::PutLatest(Brokerage& broker) {
-	
-	Time time = GetMetaTrader().GetTime();
-	int shift = sys->GetShiftFromTimeTf(time, main_tf);
-	if (shift != train_pos_all.Top()) {
-		WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, train_pos_all.Top()));
-		return false;
-	}
-	
-	
-	group->WhenInfo("Looping agents until latest snapshot");
-	LoopAgentsToEnd(tf_ids.GetCount(), true);
-	Snapshot& shift_snap = snaps[train_pos_all.GetCount()-1];
-	
-	
-	// Reset signals
-	if (is_realtime) {
-		if (realtime_count == 0) {
-			for(int i = 0; i < broker.GetSymbolCount(); i++)
-				broker.SetSignal(i, 0);
-		}
-		realtime_count++;
-	}
-	
+
+bool Joiner::PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snapshot, 1>& snap_view) {
+	System& sys = GetSystem();
+		
 	
 	// Set probability for random actions to 0
-	Forward(shift_snap, broker);
+	cursor = snap_view.size() - 1;
+	Forward(snap_view);
 	
 	
-	String sigstr = "Signals ";
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
-		if (i) sigstr << ",";
-		sigstr << broker.GetSignal(sym_ids[i]);
-	}
-	group->WhenInfo(sigstr);
-	
-	
-	group->WhenInfo("Refreshing broker data");
 	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
 	if (mt) {
 		mt->Data();
+		broker.RefreshLimits();
 	} else {
 		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
 		sb->RefreshOrders();
 	}
-	broker.SetLimitFactor(limit_factor);
 	
 	
-	group->WhenInfo("Updating orders");
+	for(int i = 0; i < ag.sym_ids.GetCount(); i++) {
+		int sym = ag.sym_ids[i];
+		int sig = this->broker.GetSignal(i);
+		if (sig == broker.GetSignal(sym) && sig != 0)
+			broker.SetSignalFreeze(sym, true);
+		else {
+			broker.SetSignal(sym, sig);
+			broker.SetSignalFreeze(sym, false);
+		}
+	}
+	
+	
 	broker.SignalOrders(true);
-	broker.RefreshLimits();
+	
 	
 	return true;
 }
-*/
+
+void Joiner::Data() {
+	MetaTrader& mt = GetMetaTrader();
+	Vector<Order> orders;
+	Vector<int> signals;
+
+	orders <<= mt.GetOpenOrders();
+	signals <<= mt.GetSignals();
+
+	mt.Data();
+
+	int file_version = 1;
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	Time time = mt.GetTime();
+
+	FileAppend fout(ConfigFile("agentgroup.log"));
+	int64 begin_pos = fout.GetSize();
+	int size = 0;
+	fout.Put(&size, sizeof(int));
+	fout % file_version % balance % equity % time % signals % orders;
+	int64 end_pos = fout.GetSize();
+	size = end_pos - begin_pos - sizeof(int);
+	fout.Seek(begin_pos);
+	fout.Put(&size, sizeof(int));
+}
 
 }

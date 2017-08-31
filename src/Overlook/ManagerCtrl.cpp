@@ -12,12 +12,20 @@ void GroupOverview::Data() {
 	
 	String infostr;
 	//infostr << "Reward period: " << group->agent_input_width << "x" << group->agent_input_height << "\n";
+	infostr << "Created: " << Format("%", ag.created) << "\n";
+	infostr << "\n";
 	infostr << "Agent input size: 1 * " << AGENT_STATES << "\n";
 	infostr << "Agent action count: " << AGENT_ACTIONCOUNT << "\n";
-	infostr << "Created: " << Format("%", ag.created) << "\n";
-	infostr << "Average drawdown: " << ag.GetAverageDrawdown() << "\n";
-	infostr << "Average iterations: " << ag.GetAverageIterations() << "\n";
-	infostr << "Random action probability: " << ag.GetEpsilon() << "\n";
+	infostr << "Average agent drawdown: " << ag.GetAverageAgentDrawdown() << "\n";
+	infostr << "Average agent iterations: " << ag.GetAverageAgentIterations() << "\n";
+	infostr << "Agent random action probability: " << ag.GetAgentEpsilon() << "\n";
+	infostr << "\n";
+	infostr << "Joiner input size: 1 * " << JOINER_STATES << "\n";
+	infostr << "Joiner action count: " << JOINER_ACTIONCOUNT << "\n";
+	infostr << "Average joiner drawdown: " << ag.GetAverageJoinerDrawdown() << "\n";
+	infostr << "Average joiner iterations: " << ag.GetAverageJoinerIterations() << "\n";
+	infostr << "Joiner random action probability: " << ag.GetJoinerEpsilon() << "\n";
+	
 	
 	info.SetLabel(infostr);
 }

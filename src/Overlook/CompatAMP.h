@@ -101,6 +101,8 @@ template <class T, int I> struct array_view {
 		return data[i];
 	}
 	
+	int size() const {return count;}
+	
 	void synchronize() {}
 	
 	thiscls* extent;

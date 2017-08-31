@@ -54,12 +54,13 @@ file
 	QtStats.h,
 	QtStats.cpp,
 	AgentGroup.h,
-	FixedSimBroker.cpp,
 	AgentGroup.cpp,
-	Agent.cpp,
-	Joiner.cpp,
+	FixedSimBroker.h,
+	Agent.h,
+	Joiner.h,
 	DQN.h,
-	CompatAMP.h;
+	CompatAMP.h,
+	RandomAMP.h;
 
 mainconfig
 	"Normal" = "GUI MT",

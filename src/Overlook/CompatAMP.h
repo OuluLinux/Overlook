@@ -6,6 +6,14 @@
 	#define PARALLEL restrict(amp,cpu)
 	#define HAVE_SYSTEM_AMP
 	#include <amp.h>
+	#include <amp_math.h>
+	#include <cstdlib>
+
+#define AMPASSERT(x)
+#define AMPASSERT_(x, y)
+
+inline float AmpTanh(float d) PARALLEL {return ::concurrency::fast_math::tanh(d);}
+
 
 inline int GetAmpDeviceMemory() {
 	concurrency::accelerator defdev;
@@ -63,6 +71,9 @@ inline String GetAmpDevices() {
 #else
 	#define PARALLEL
 
+#define AMPASSERT(x) ASSERT(x)
+#define AMPASSERT_(x, y) ASSERT_(x, y)
+
 namespace concurrency {
 
 template <int I> struct index {
@@ -72,7 +83,18 @@ template <int I> struct index {
 	
 	index(int i) : i(i) {}
 	index(const idx& src) : i(src.i) {}
-	int operator[] (int i) {ASSERT(i == 0); return this->i;}
+	int operator[] (int i) const {AMPASSERT(i == 0); return this->i;}
+};
+
+template <int I> struct extent {
+	typedef extent<I> ext;
+	
+	int i;
+	
+	extent(int i) : i(i) {AMPASSERT(I == 1);}
+	extent(const ext& src) : i(src.i) {AMPASSERT(I == 1);}
+	int operator[] (int i) const {AMPASSERT(i == 0); return this->i;}
+	int size() const {return i;} // total size of elements
 };
 
 template <class T, int I> struct array_view {
@@ -80,14 +102,13 @@ template <class T, int I> struct array_view {
 	T* data;
 	int count;
 
-	array_view(int count, T* data) : data(data), count(count) {
-		extent = this;
+	array_view(int count, T* data) : data(data), count(count), extent(count) {
+		
 	}
 	
-	array_view(const thiscls& src) {
+	array_view(const thiscls& src) : extent(src.extent) {
 		data = src.data;
 		count = src.count;
-		extent = src.extent;
 	}
 	
 	T& operator[] (index<1> idx) const {
@@ -104,14 +125,15 @@ template <class T, int I> struct array_view {
 	int size() const {return count;}
 	
 	void synchronize() {}
+	void discard_data() {}
 	
-	thiscls* extent;
+	extent<I> extent;
 };
 
-template <class T, class CB> void parallel_for_each(T* extent, CB cb) {
+template <class T, class CB> void parallel_for_each(T extent, CB cb) {
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores() - 2));
-	for(int i = 0; i < extent->count; i++) {
+	for(int i = 0; i < extent.i; i++) {
 		co & [=] {
 			cb(index<1>(i));
 		};
@@ -133,6 +155,7 @@ inline void TestCompatAMP() {
 
 inline int GetAmpDeviceMemory() {return 1024*1000*1000;}
 inline String GetAmpDevices() {return "Fake AMP";}
+inline double AmpTanh(double d) PARALLEL {return tanh(d);}
 
 }
 

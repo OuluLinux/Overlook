@@ -2,6 +2,7 @@
 #define _Overlook_DQN_h_
 
 #include <random>
+#include "RandomAMP.h"
 
 namespace Overlook {
 
@@ -44,7 +45,23 @@ inline RandomGaussian& GetRandomGaussian(int length) {
 }
 
 
-#define COPY(type, dst, src, count) memcpy(dst, src, sizeof(type) * count)
+//speed up the memcpy process!
+template <class T>
+void copy_linear(T* write, const T* read, unsigned int size) PARALLEL {
+	int* w4 = (int*)write;
+	int* r4 = (int*)read;
+	unsigned int scan=0;
+	
+	AMPASSERT(size % sizeof(int) == 0);
+	
+	while (size >= 4) {
+		w4[scan] = r4[scan];
+		size -= 4;
+		scan++;
+	}
+}
+
+#define COPY(type, dst, src, count) copy_linear(dst, src, sizeof(type) * count)
 #define ZERO(dst, count) {for(int i = 0; i < count; i++) dst[i] = 0;}
 #define SET(dst, count, value) {for(int i = 0; i < count; i++) dst[i] = value;}
 #define RAND(dst, count) {RandomGaussian& rand = GetRandomGaussian(count);	for (int i = 0; i < count; i++) {dst.Set(i, rand);}}
@@ -69,12 +86,12 @@ class Mat : Moveable<Mat<T, width, height> > {
 	typedef Mat<T, width, height> MatType;
 	
 protected:
-	inline int GetPos(int x, int y) const {
-		ASSERT(x >= 0 && y >= 0 && x < width && y < height);
+	inline int GetPos(int x, int y) const PARALLEL {
+		AMPASSERT(x >= 0 && y >= 0 && x < width && y < height);
 		return (width * y) + x;
 	}
-	inline int Pos(int i) const {
-		ASSERT(i >= 0 && i < length);
+	inline int Pos(int i) const PARALLEL {
+		AMPASSERT(i >= 0 && i < length);
 		return i;
 	}
 	
@@ -85,9 +102,9 @@ public:
 	Mat(const T weights[length]) {COPY(T, this->weights, weights, length); ZERO(weight_gradients, length);}
 	Mat(const MatType& o) {*this = o;}
 	Mat(T default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length);}
-	Mat& Init() {RAND(weights, length); ZERO(weight_gradients, length); return *this;}
-	Mat& Init(const T weights[length]) {COPY(T, this->weights, weights, length); ZERO(weight_gradients, length); return *this;}
-	Mat& Init(T default_value) {SET(weights, length, default_value); ZERO(weight_gradients, length); return *this;}
+	Mat& Init() PARALLEL {RAND(weights, length); ZERO(weight_gradients, length); return *this;}
+	Mat& Init(const T weights[length]) PARALLEL {COPY(T, this->weights, weights, length); ZERO(weight_gradients, length); return *this;}
+	Mat& Init(T default_value) PARALLEL {SET(weights, length, default_value); ZERO(weight_gradients, length); return *this;}
 	
 	void Serialize(Stream& s) {
 		if (s.IsStoring()) {
@@ -100,35 +117,35 @@ public:
 		}
 	}
 	
-	Mat& operator=(const MatType& src) {COPY(T, this->weights, src.weights, length); COPY(T, this->weight_gradients, src.weight_gradients, length); return *this;}
+	Mat& operator=(const MatType& src) PARALLEL {COPY(T, this->weights, src.weights, length); COPY(T, this->weight_gradients, src.weight_gradients, length); return *this;}
 	
-	const T* GetWeights()   const {return weights;}
-	const T* GetGradients() const {return weight_gradients;}
+	const T* GetWeights()   const PARALLEL {return weights;}
+	const T* GetGradients() const PARALLEL {return weight_gradients;}
 	
-	void Add(int i, T v) {weights[Pos(i)] += v;}
-	void Add(int x, int y, T v) {weights[GetPos(x,y)] += v;}
-	void AddFrom(const MatType& volume) {for (int i = 0; i < length; i++) {weights[i] += volume.weights[i];}}
-	void AddFromScaled(const Mat& volume, T a) {for (int i = 0; i < length; i++) {weights[i] += a * volume.weights[i];}}
-	void AddGradient(int x, int y, T v) {weight_gradients[GetPos(x,y)] += v;}
-	void AddGradient(int i, T v) {weight_gradients[Pos(i)] += v;}
-	void AddGradientFrom(const Mat& volume) {for (int i = 0; i < length; i++) {weight_gradients[i] += volume.weight_gradients[i];}}
-	T Get(int x, int y) const {return weights[GetPos(x, y)];}
-	T GetGradient(int x, int y) const {return weight_gradients[GetPos(x, y)];}
-	void Set(int x, int y, T v) {weights[GetPos(x, y)] = v;}
-	void SetConst(T c) {for (int i = 0; i < length; i++) {weights[i] = c;}}
-	void SetConstGradient(T c) {for (int i = 0; i < length; i++) {weight_gradients[i] = c;}}
-	void SetGradient(int x, int y, T v) {weight_gradients[GetPos(x, y)] = v;}
-	T Get(int i) const {return weights[Pos(i)];}
-	void Set(int i, T v) {weights[Pos(i)] = v;}
-	T GetGradient(int i) const {return weight_gradients[Pos(i)];}
-	void SetGradient(int i, T v) {weight_gradients[Pos(i)] = v;}
-	void ZeroGradients() {for (int i = 0; i < length; i++) {weight_gradients[i] = 0;}}
+	void Add(int i, T v) PARALLEL {weights[Pos(i)] += v;}
+	void Add(int x, int y, T v) PARALLEL {weights[GetPos(x,y)] += v;}
+	void AddFrom(const MatType& volume) PARALLEL {for (int i = 0; i < length; i++) {weights[i] += volume.weights[i];}}
+	void AddFromScaled(const Mat& volume, T a) PARALLEL {for (int i = 0; i < length; i++) {weights[i] += a * volume.weights[i];}}
+	void AddGradient(int x, int y, T v) PARALLEL {weight_gradients[GetPos(x,y)] += v;}
+	void AddGradient(int i, T v) PARALLEL {weight_gradients[Pos(i)] += v;}
+	void AddGradientFrom(const Mat& volume) PARALLEL {for (int i = 0; i < length; i++) {weight_gradients[i] += volume.weight_gradients[i];}}
+	T Get(int x, int y) const PARALLEL {return weights[GetPos(x, y)];}
+	T GetGradient(int x, int y) const PARALLEL {return weight_gradients[GetPos(x, y)];}
+	void Set(int x, int y, T v) PARALLEL {weights[GetPos(x, y)] = v;}
+	void SetConst(T c) PARALLEL {for (int i = 0; i < length; i++) {weights[i] = c;}}
+	void SetConstGradient(T c) PARALLEL {for (int i = 0; i < length; i++) {weight_gradients[i] = c;}}
+	void SetGradient(int x, int y, T v) PARALLEL {weight_gradients[GetPos(x, y)] = v;}
+	T Get(int i) const PARALLEL {return weights[Pos(i)];}
+	void Set(int i, T v) PARALLEL {weights[Pos(i)] = v;}
+	T GetGradient(int i) const PARALLEL {return weight_gradients[Pos(i)];}
+	void SetGradient(int i, T v) PARALLEL {weight_gradients[Pos(i)] = v;}
+	void ZeroGradients() PARALLEL {for (int i = 0; i < length; i++) {weight_gradients[i] = 0;}}
 	
-	int GetWidth() const {return width;}
-	int GetHeight() const {return height;}
-	int GetLength() const {return length;}
+	int GetWidth() const PARALLEL {return width;}
+	int GetHeight() const PARALLEL {return height;}
+	int GetLength() const PARALLEL {return length;}
 	
-	int GetMaxColumn() const {
+	int GetMaxColumn() const PARALLEL {
 		T max = -DBL_MAX;
 		int pos = -1;
 		for(int i = 0; i < length; i++) {
@@ -141,7 +158,7 @@ public:
 		return pos;
 	}
 	
-	int GetSampledColumn() const {
+	int GetSampledColumn() const PARALLEL {
 		// sample argmax from w, assuming w are
 		// probabilities that sum to one
 		T r = Randomf();
@@ -187,20 +204,20 @@ struct RecurrentTanh {
 	MatType output;
 	
 	template <class T>
-	MatType& Forward(const T& input) {
-		ASSERT(input.GetWidth() == WIDTH && input.GetHeight() == HEIGHT);
+	MatType& Forward(const T& input) PARALLEL {
+		AMPASSERT(input.GetWidth() == WIDTH && input.GetHeight() == HEIGHT);
 		// tanh nonlinearity
 		output.Init(0.0);
 		for (int i = 0; i < length; i++) {
-			output.Set(i, tanh(input.Get(i)));
+			output.Set(i, AmpTanh(input.Get(i)));
 		}
 		
 		return output;
 	}
 	
 	template <class T>
-	void Backward(T& input) {
-		ASSERT(input.GetWidth() == WIDTH && input.GetHeight() == HEIGHT);
+	void Backward(T& input) PARALLEL {
+		AMPASSERT(input.GetWidth() == WIDTH && input.GetHeight() == HEIGHT);
 		for (int i = 0; i < length; i++) {
 			// grad for z = Tanh(x) is (1 - z^2)
 			double mwi = output.Get(i);
@@ -220,14 +237,14 @@ struct RecurrentMul {
 	MatType output;
 	
 	template <class T1, class T2>
-	MatType& Forward(const T1& input1, const T2& input2) {
+	MatType& Forward(const T1& input1, const T2& input2) PARALLEL {
 		
 		// multiply matrices input1 * input2
-		ASSERT_(input1.GetWidth() == input2.GetHeight(), "matmul dimensions misaligned");
+		AMPASSERT_(input1.GetWidth() == input2.GetHeight(), "matmul dimensions misaligned");
 		
 		int h = input1.GetHeight();
 		int w = input2.GetWidth();
-		ASSERT(WIDTH == w && HEIGHT == h);
+		AMPASSERT(WIDTH == w && HEIGHT == h);
 		output.Init(0.0);
 		
 		// loop over rows of input1
@@ -248,7 +265,7 @@ struct RecurrentMul {
 	}
 	
 	template <class T1, class T2>
-	void Backward(T1& input1, T2& input2) {
+	void Backward(T1& input1, T2& input2) PARALLEL {
 		
 		// loop over rows of m1
 		for (int i = 0; i < input1.GetHeight(); i++) {
@@ -277,9 +294,9 @@ struct RecurrentAdd {
 	MatType output;
 	
 	template <class T1, class T2>
-	MatType& Forward(const T1& input1, const T2& input2) {
-		ASSERT(input1.GetLength() == input2.GetLength());
-		ASSERT(output.GetWidth() == input1.GetWidth() && output.GetHeight() == input1.GetHeight());
+	MatType& Forward(const T1& input1, const T2& input2) PARALLEL {
+		AMPASSERT(input1.GetLength() == input2.GetLength());
+		AMPASSERT(output.GetWidth() == input1.GetWidth() && output.GetHeight() == input1.GetHeight());
 		
 		output.Init(0.0);
 		for (int i = 0; i < input1.GetLength(); i++) {
@@ -290,7 +307,7 @@ struct RecurrentAdd {
 	}
 	
 	template <class T1, class T2>
-	void Backward(T1& input1, T2& input2) {
+	void Backward(T1& input1, T2& input2) PARALLEL {
 		for (int i = 0; i < input1.GetLength(); i++) {
 			input1.AddGradient(i, output.GetGradient(i));
 			input2.AddGradient(i, output.GetGradient(i));
@@ -313,7 +330,7 @@ struct DQExperience : Moveable<DQExperience<WIDTH, HEIGHT> > {
 	int action0, action1;
 	double reward0;
 	
-	void Set(MatType& state0, int action0, double reward0, MatType& state1, int action1) {
+	void Set(MatType& state0, int action0, double reward0, MatType& state1, int action1) PARALLEL {
 		this->state0 = state0;
 		this->action0 = action0;
 		this->reward0 = reward0;
@@ -356,7 +373,7 @@ int SampleWeighted(Vector<double>& p) {
 
 
 template <class MatType>
-void UpdateMat(MatType& m, double alpha) {
+void UpdateMat(MatType& m, double alpha) PARALLEL {
 	// updates in place
 	for (int i = 0; i < m.GetLength(); i++) {
 		double d = m.GetGradient(i);
@@ -448,7 +465,7 @@ public:
 		tderror = 0; // for visualization only...
 	}
 	
-	FwdOut& Forward(MatType& input) {
+	FwdOut& Forward(MatType& input) PARALLEL {
 		// Original:
 		//		var a1mat = G.Add(G.Mul(net.W1, s), net.b1);
 		//		var h1mat = G.Tanh(a1mat);
@@ -462,7 +479,7 @@ public:
 		return add2.output;
 	}
 	
-	void Backward(MatType& input) {
+	void Backward(MatType& input) PARALLEL {
 		add2.Backward(mul2.output,	b2);
 		mul2.Backward(W2,			tanh.output);
 		tanh.Backward(add1.output);
@@ -470,7 +487,7 @@ public:
 		mul1.Backward(W1,			input);
 	}
 	
-	int Act(float slist[num_states]) {
+	int Act(float slist[num_states], tinymt& rand) PARALLEL {
 		
 		// convert to a Mat column vector
 		state.Init(slist);
@@ -478,8 +495,8 @@ public:
 		
 		// epsilon greedy policy
 		int action;
-		if (Randomf() < epsilon) {
-			action = Random(num_actions);
+		if (rand.next_single() < epsilon) {
+			action = rand.next_uint() % num_actions;
 		} else {
 			// greedy wrt Q function
 			//Mat& amat = ForwardQ(net, state);
@@ -498,7 +515,7 @@ public:
 		return action;
 	}
 	
-	void Learn(double reward1) {
+	void Learn(double reward1, tinymt& rand) PARALLEL {
 		
 		// perform an update on Q function
 		if (has_reward && alpha > 0 && state0.GetLength() > 0) {
@@ -510,7 +527,7 @@ public:
 			if (t % experience_add_every == 0) {
 				if (exp_count == expi)
 					exp_count++;
-				ASSERT(state1.GetLength() > 0);
+				AMPASSERT(state1.GetLength() > 0);
 				exp[expi].Set(state0, action0, reward0, state1, action1);
 				expi += 1;
 				if (expi >= experience_size) { expi = 0; } // roll over when we run out
@@ -520,7 +537,7 @@ public:
 			if (exp_count) {
 				// sample some additional experience from replay memory and learn from it
 				for (int k = 0; k < learning_steps_per_iteration; k++) {
-					int ri = Random(exp_count); // TODO: priority sweeps?
+					int ri = rand.next_uint() % exp_count; // TODO: priority sweeps?
 					DQExp& e = exp[ri];
 					LearnFromTuple(e.state0, e.action0, e.reward0, e.state1, e.action1);
 				}
@@ -530,10 +547,10 @@ public:
 		has_reward = true;
 	}
 	
-	double LearnFromTuple(MatType& s0, int a0, double reward0, MatType& s1, int a1) {
+	double LearnFromTuple(MatType& s0, int a0, double reward0, MatType& s1, int a1) PARALLEL {
 		
-		ASSERT(s0.GetLength() > 0);
-		ASSERT(s1.GetLength() > 0);
+		AMPASSERT(s0.GetLength() > 0);
+		AMPASSERT(s1.GetLength() > 0);
 		// want: Q(s,a) = r + gamma * max_a' Q(s',a')
 		
 		// compute the target Q value
@@ -545,7 +562,8 @@ public:
 		
 		double tderror = pred.Get(a0) - qmax;
 		double clamp = tderror_clamp;
-		if (fabs(tderror) > clamp) {  // huber loss to robustify
+		double abs_tderror = tderror >= 0.0 ? +tderror : -tderror;
+		if (abs_tderror > clamp) {  // huber loss to robustify
 			if (tderror > clamp)
 				tderror = +clamp;
 			else
@@ -563,11 +581,11 @@ public:
 		return tderror;
 	}
 	
-	int GetExperienceWritePointer() const {return expi;}
-	double GetTDError() const {return tderror;}
+	int GetExperienceWritePointer() const PARALLEL {return expi;}
+	double GetTDError() const PARALLEL {return tderror;}
 	double GetEpsilon() const PARALLEL {return epsilon;}
 	
-	int GetExperienceCount() const {return experience_size;}
+	int GetExperienceCount() const PARALLEL {return experience_size;}
 	
 	void SetEpsilon(double e) {epsilon = e;}
 	

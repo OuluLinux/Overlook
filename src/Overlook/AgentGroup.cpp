@@ -214,6 +214,7 @@ void AgentGroup::TrainAgents() {
 	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
 	array_view<Agent, 1> agents_view(agent_count, agents.Begin());
 	array_view<double, 1> equities_view(agent_equities.GetCount(), agent_equities.Begin());
+    tinymt_collection<1> rand_view(agents_view.extent, GetSysTime().Get() & 0xffffffff);
 	
 	TimeStop ts;
 	int64 total_elapsed = 0;
@@ -242,6 +243,7 @@ void AgentGroup::TrainAgents() {
 	    {
 	        int agent_id = idx[0];
 	        Agent& agent = agents_view[idx];
+	        tinymt& rand = rand_view[idx];
 	        int equities_begin = agent.id * snap_count;
 	        
 	        // Check cursor
@@ -254,7 +256,7 @@ void AgentGroup::TrainAgents() {
 				
 				agent.timestep_actual--;
 				
-				agent.Main(cur_snap, prev_snap);
+				agent.Main(cur_snap, prev_snap, rand);
 				
 				// Get some diagnostic stats
 				equities_view[equities_begin + agent.cursor] = agent.broker.AccountEquity();
@@ -278,6 +280,7 @@ void AgentGroup::TrainAgents() {
 void AgentGroup::LoopAgentSignals(bool from_begin) {
 	array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
 	array_view<Agent, 1> agents_view(agents.GetCount(), agents.Begin());
+    tinymt_collection<1> rand_view(agents_view.extent, GetSysTime().Get() & 0xffffffff);
 	
 	if (from_begin) {
 		for(int i = 0; i < agents.GetCount(); i++)
@@ -287,11 +290,12 @@ void AgentGroup::LoopAgentSignals(bool from_begin) {
 			parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL {
 		        int agent_id = idx[0];
 		        Agent& agent = agents_view[idx];
+	        tinymt& rand = rand_view[idx];
 		        Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 				Snapshot& prev_snap = snap_view[agent.cursor - 1];
 				
 				agent.timestep_actual--;
-				agent.Main(cur_snap, prev_snap);
+				agent.Main(cur_snap, prev_snap, rand);
 				agent.cursor++;
 		    });
 		}
@@ -311,13 +315,14 @@ void AgentGroup::LoopAgentSignals(bool from_begin) {
 			parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL {
 		        int agent_id = idx[0];
 		        Agent& agent = agents_view[idx];
-		        if (agent.cursor >= snaps.GetCount())
+				tinymt& rand = rand_view[idx];
+		        if (agent.cursor >= snap_view.extent[0])
 		            return;
 		        Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 				Snapshot& prev_snap = snap_view[agent.cursor - 1];
 				
 				agent.timestep_actual--;
-				agent.Main(cur_snap, prev_snap);
+				agent.Main(cur_snap, prev_snap, rand);
 				agent.cursor++;
 		    });
 		}
@@ -336,6 +341,7 @@ void AgentGroup::TrainJoiners() {
 	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
 	array_view<Joiner, 1> joiners_view(joiner_count, joiners.Begin());
 	array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
+    tinymt_collection<1> rand_view(joiners_view.extent, GetSysTime().Get() & 0xffffffff);
 	
 	double prev_aviter = GetAverageJoinerIterations();
 	
@@ -376,6 +382,7 @@ void AgentGroup::TrainJoiners() {
 	    {
 	        int joiner_id = idx[0];
 	        Joiner& joiner = joiners_view[idx];
+	        tinymt& rand = rand_view[idx];
 	        int equities_begin = joiner.id * snap_count;
 	        
 	        // Check cursor
@@ -385,7 +392,7 @@ void AgentGroup::TrainJoiners() {
 	        for(int i = 0; i < 1000; i++) {
 				joiner.timestep_actual--;
 				
-				joiner.Main(snap_view);
+				joiner.Main(snap_view, rand);
 				
 				// Get some diagnostic stats
 				equities_view[equities_begin + joiner.cursor] = joiner.broker.AccountEquity();
@@ -406,6 +413,7 @@ void AgentGroup::TrainJoiners() {
 void AgentGroup::LoopJoinerSignals(bool from_begin) {
 	array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
 	array_view<Joiner, 1> joiners_view(joiners.GetCount(), joiners.Begin());
+    tinymt_collection<1> rand_view(joiners_view.extent, GetSysTime().Get() & 0xffffffff);
 	
 	if (from_begin) {
 		for(int i = 0; i < joiners.GetCount(); i++)
@@ -415,11 +423,12 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 			parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL {
 		        int joiner_id = idx[0];
 		        Joiner& joiner = joiners_view[idx];
+				tinymt& rand = rand_view[idx];
 		        Snapshot& cur_snap  = snap_view[joiner.cursor - 0];
 				Snapshot& prev_snap = snap_view[joiner.cursor - 1];
 				
 				joiner.timestep_actual--;
-				joiner.Main(snap_view);
+				joiner.Main(snap_view, rand);
 				joiner.cursor++;
 		    });
 		}
@@ -439,13 +448,14 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 			parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL {
 		        int joiner_id = idx[0];
 		        Joiner& joiner = joiners_view[idx];
-		        if (joiner.cursor >= snaps.GetCount())
+				tinymt& rand = rand_view[idx];
+		        if (joiner.cursor >= snap_view.extent[0])
 		            return;
 		        Snapshot& cur_snap  = snap_view[joiner.cursor - 0];
 				Snapshot& prev_snap = snap_view[joiner.cursor - 1];
 				
 				joiner.timestep_actual--;
-				joiner.Main(snap_view);
+				joiner.Main(snap_view, rand);
 				joiner.cursor++;
 		    });
 		}
@@ -454,6 +464,7 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 
 void AgentGroup::MainReal() {
 	MetaTrader& mt = GetMetaTrader();
+    tinymt_collection<1> rand_view(extent<1>(1), GetSysTime().Get() & 0xffffffff);
 	Joiner* best_joiner = GetBestJoiner();
 	Time time = mt.GetTime();
 	int wday = DayOfWeek(time);
@@ -502,8 +513,9 @@ void AgentGroup::MainReal() {
 			
 			// Use best group to set broker signals
 			WhenInfo("Looping agents until latest snapshot");
+			tinymt& rand = rand_view[index<1>(0)];
 			array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
-			bool succ = best_joiner->PutLatest(*this, mt, snap_view);
+			bool succ = best_joiner->PutLatest(*this, mt, snap_view, rand);
 			
 			
 			// Print info
@@ -967,6 +979,58 @@ void AgentGroup::InitJoiner(Joiner& j) {
 	j.leverage = mt.AccountLeverage();
 	
 	j.Init();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bool Joiner::PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snapshot, 1>& snap_view, tinymt& rand) {
+	System& sys = GetSystem();
+		
+	
+	// Set probability for random actions to 0
+	cursor = snap_view.extent[0] - 1;
+	Forward(snap_view, rand);
+	
+	
+	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
+	if (mt) {
+		mt->Data();
+		broker.RefreshLimits();
+	} else {
+		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
+		sb->RefreshOrders();
+	}
+	
+	
+	for(int i = 0; i < ag.sym_ids.GetCount(); i++) {
+		int sym = ag.sym_ids[i];
+		int sig = this->broker.GetSignal(i);
+		if (sig == broker.GetSignal(sym) && sig != 0)
+			broker.SetSignalFreeze(sym, true);
+		else {
+			broker.SetSignal(sym, sig);
+			broker.SetSignalFreeze(sym, false);
+		}
+	}
+	
+	
+	broker.SignalOrders(true);
+	
+	
+	return true;
 }
 
 }

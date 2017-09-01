@@ -9,8 +9,11 @@ using namespace Overlook;
 
 
 GUI_APP_MAIN {
-	LOG(GetAmpDevices());
-	//TestCompatAMP(); return;
+	#ifdef HAVE_SYSTEM_AMP
+	FileOut amplog(ConfigFile("amp.log"));
+	amplog << GetAmpDevices();
+	amplog.Close();
+	#endif
 	
 	const Vector<String>& args = CommandLine();
 	for(int i = 1; i < args.GetCount(); i+=2) {

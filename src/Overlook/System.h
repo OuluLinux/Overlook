@@ -240,7 +240,9 @@ public:
 	Callback2<int,int> WhenSubProgress;
 	Callback1<String>  WhenInfo;
 	Callback1<String>  WhenError;
+	Callback1<String>  WhenPushTask;
 	Callback           WhenRealtimeUpdate;
+	Callback           WhenPopTask;
 };
 
 inline System& GetSystem() {return Single<System>();}

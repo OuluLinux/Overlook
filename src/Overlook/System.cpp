@@ -132,7 +132,7 @@ int System::GetCountTf(int tf_id) const {
 	int64 timediff = end.Get() - begin[tf_id].Get();
 	int div = base_period * periods[tf_id];
 	int count = (int)(timediff / div);
-	if (count % div != 0) count++;
+	if (timediff % div != 0) count++;
 	return count;
 }
 

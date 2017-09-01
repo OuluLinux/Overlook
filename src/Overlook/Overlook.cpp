@@ -10,6 +10,8 @@ Overlook::Overlook() :
 	Icon(OverlookImg::icon());
 	MinimizeBox().MaximizeBox().Sizeable();
 	
+	AddFrame(status);
+	
 	Add(tabs.SizePos());
 	tabs.Add(visins);
 	tabs.Add(visins, "Classic");
@@ -33,15 +35,43 @@ Overlook::Overlook() :
 	config.SetLabel("Configure");
 	config <<= THISBACK(Configure);
 	
+	System& sys = GetSystem();
+	sys.WhenPushTask << THISBACK(PostPushTask);
+	sys.WhenPopTask << THISBACK(PostPopTask);
+	
 	PostCallback(THISBACK(Refresher));
 }
 
 Overlook::~Overlook() {
+	System& sys = GetSystem();
+	sys.WhenPushTask.Clear();
+	sys.WhenPopTask.Clear();
 	if (prev_view) {
 		visins.RemoveChild(prev_view);
 		delete prev_view;
 		prev_view = NULL;
 	}
+}
+
+void Overlook::PushTask(String task) {
+	task_stack.Add(task);
+	RefreshTaskStatus();
+}
+
+void Overlook::PopTask() {
+	if (!task_stack.IsEmpty()) {
+		task_stack.Pop();
+		RefreshTaskStatus();
+	}
+}
+
+void Overlook::RefreshTaskStatus() {
+	String task_str;
+	for(int i = 0; i < task_stack.GetCount(); i++) {
+		if (i) task_str << " >> ";
+		task_str << task_stack[i];
+	}
+	status.Set(task_str);
 }
 
 void Overlook::Refresher() {
@@ -86,7 +116,7 @@ void Overlook::Init() {
 	for(int i = 0; i < System::GetCtrlFactories().GetCount(); i++)
 		ctrllist.Add(System::GetCtrlFactories()[i].a);
 	
-	tflist.SetIndex(tflist.GetCount()-2); // TODO: clear these development values
+	tflist.SetIndex(0);
 	symlist.SetIndex(0);
 	ctrllist.SetIndex(0);
 	

@@ -15,6 +15,8 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 	// Temporary
 	FixedSimBroker broker;
 	double prev_signals[4];
+	double free_margin_level = 0.95;
+	int symsignals[SYM_COUNT];
 	
 	
 	Joiner() {
@@ -133,7 +135,7 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 		
 		AMPASSERT(action >= 0 && action < JOINER_ACTIONCOUNT);
 	    
-	    /*if (action < JOINER_NORMALACTS) {
+	    if (action < JOINER_NORMALACTS) {
 			
 			const int maxscale_steps = 3;
 			const int fmlevel_steps = 3;
@@ -157,6 +159,7 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 			int timefwd			= 1 << (timefwd_step * 3 + 1);	// 2, 16, 128
 			
 			
+			free_margin_level = fmlevel;
 			broker.free_margin_level = fmlevel;
 			timestep_total = timefwd;
 			
@@ -166,7 +169,6 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 			Snapshot& begin_snap = snap_view[begin_snap_cursor];
 			
 			
-			int symsignals[SYM_COUNT];
 			double symchanges[SYM_COUNT];
 			double changes_total[AGENT_COUNT];
 			double signals_total[AGENT_COUNT];
@@ -207,12 +209,17 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 			}
 			
 			double range = max_change - min_change;
-			for(int i = 0; i < AGENT_COUNT; i++) {
-				if (signals_total[i] == 0)
-					continue;
-				double& change = changes_total[i];
-				change = ((change - min_change) / range) * (maxscale - 1) + 1.0;
-				AMPASSERT(change >= 1 && change <= maxscale);
+			if (range > 0.0) {
+				for(int i = 0; i < AGENT_COUNT; i++) {
+					if (signals_total[i] == 0)
+						continue;
+					double& change = changes_total[i];
+					change = ((change - min_change) / range) * (maxscale - 1) + 1.0;
+					AMPASSERT(change >= 1 && change <= maxscale);
+				}
+			} else {
+				for(int i = 0; i < AGENT_COUNT; i++)
+					changes_total[i] = 0.0;
 			}
 			
 			
@@ -223,64 +230,25 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 			for(int i = 0; i < AGENT_COUNT; i++)
 				symsignals[i % SYM_COUNT] += signals_total[i] * changes_total[i];
 			
-			
-			for(int i = 0; i < SYM_COUNT; i++)
-				broker.SetSignal(i, symsignals[i]);
 	    }
 	    
 	    else {
 	        action -= JOINER_NORMALACTS;
 	        
+	        free_margin_level = 0.95;
 	        timestep_total = 1 << action;
 	        
 			prev_signals[0]		= 1.0;
 			prev_signals[1]		= 1.0;
 			prev_signals[2]		= 1.0;
 			prev_signals[3]		= 1.0;
-			
-			for(int i = 0; i < SYM_COUNT; i++)
-				broker.SetSignal(i, 0);
-	    }*/
-	    
-	    
-	    {
-	        if (action > 9) action = 9;
-	        
-			prev_signals[0]		= 1.0;
-			prev_signals[1]		= 1.0;
-			prev_signals[2]		= 1.0;
-			prev_signals[3]		= 1.0;
-	        
-	        timestep_total = 1 << action;
-	        
-			int symsignals[SYM_COUNT];
 			
 			for(int i = 0; i < SYM_COUNT; i++)
 				symsignals[i] = 0;
-			
-			for(int i = 0; i < AGENT_COUNT; i++) {
-				int sym = i % SYM_COUNT;
-				
-				int sensor_begin = i * SIGNAL_SENSORS;
-				float pos = cur_snap.signal[sensor_begin + 0];
-				float neg = cur_snap.signal[sensor_begin + 1];
-				float idl = cur_snap.signal[sensor_begin + 2];
-				
-				if (idl < 1.0f || (idl == pos && pos == neg))
-					signal = 0;
-				else if (pos < neg)
-					signal = +1;
-				else
-					signal = -1;
-				
-				symsignals[sym] += signal;
-			}
-			
-			for(int i = 0; i < SYM_COUNT; i++)
-				broker.SetSignal(i, symsignals[i]);
-		}
+	    }
 	    
-		
+		for(int i = 0; i < SYM_COUNT; i++)
+			broker.SetSignal(i, symsignals[i]);
 		
 		bool succ = broker.Cycle(cur_snap);
 		

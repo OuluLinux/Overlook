@@ -4,7 +4,7 @@
 namespace Overlook {
 
 #define GROUP_COUNT				4 //TODO
-#define SYM_COUNT				10
+#define SYM_COUNT				21
 #define AGENT_COUNT				(GROUP_COUNT * SYM_COUNT)
 #define TIME_SENSORS			3
 #define INPUT_SENSORS			(4 * 4 * 2)
@@ -15,7 +15,7 @@ namespace Overlook {
 #define AGENT_STATES			(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
 #define AGENT_ACTIONCOUNT		24
 #define AGENT_RESULT_COUNT		1000
-#define JOINER_COUNT			4 //TODO
+#define JOINER_COUNT			10 //TODO
 #define JOINERSIGNAL_SENSORS	5
 #define JOINER_RESULT_COUNT		1000
 #define JOINERSIGNAL_SIZE		(JOINER_COUNT * JOINERSIGNAL_SENSORS)
@@ -23,6 +23,8 @@ namespace Overlook {
 #define JOINER_NORMALACTS		(3*3*3*3)
 #define JOINER_IDLEACTS			8
 #define JOINER_ACTIONCOUNT		(JOINER_NORMALACTS + JOINER_IDLEACTS)
+#define NEXT_PHASE_ITER_LIMIT	200000
+#define MAX_SNAPSHOTS			10000000
 
 class AgentGroup;
 
@@ -56,7 +58,6 @@ public:
 	
 	
 	// Temp
-	Vector<Snapshot> amp_snaps;
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Snapshot> snaps;
@@ -74,9 +75,11 @@ public:
 	int max_memory_size = 0, agents_total_size = 0, memory_for_snapshots = 0, snaps_per_phase = 0, snap_phase_count = 0;
 	int snap_phase_id = 0;
 	int counted_bars = 0;
-	int snap_begin = 0;
+	int snap_begin = 0, snap_count = 0, snap_end = 0;
 	int prev_shift = 0;
 	int realtime_count = 0;
+	int agent_equities_count = 0;
+	int joiner_equities_count = 0;
 	bool running = false, stopped = true;
 	Mutex work_lock;
 	
@@ -113,6 +116,7 @@ public:
 	double GetAverageAgentIterations();
 	double GetAverageJoinerDrawdown();
 	double GetAverageJoinerIterations();
+	double GetAverageJoinerEpochs();
 	double GetAgentEpsilon()	{return agent_epsilon;}
 	double GetJoinerEpsilon()	{return joiner_epsilon;}
 	void RefreshAgentEpsilon();
@@ -127,6 +131,7 @@ public:
 	
 	void Main();
 	void SetAgentsTraining(bool b);
+	void SetJoinersTraining(bool b);
 	
 	
 	

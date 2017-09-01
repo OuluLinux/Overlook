@@ -57,7 +57,7 @@ inline String GetAmpDevices() {
 		concurrency::accelerator& a = accls[i];
 		out << "  " << i << ": " << a.description.c_str() << " "
 			<< "\n       device_path                       = " << a.device_path.c_str()
-			<< "\n       dedicated_memory                  = " << DblStr((a.dedicated_memory) / (1024.0f * 1024.0f)) << " Mb"
+			<< "\n       dedicated_memory                  = " << DblStr((a.dedicated_memory) / (1024.0f * 1024.0f)) << " Gb"
 			<< "\n       has_display                       = " << (a.has_display ? "true" : "false")
 			<< "\n       is_debug                          = " << (a.is_debug ? "true" : "false")
 			<< "\n       is_emulated                       = " << (a.is_emulated ? "true" : "false")

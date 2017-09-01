@@ -2597,6 +2597,12 @@ in the GPGPU correctly.&]
 [s0; I had to import random number library for AMP. I tested it and 
 it seems to work properly, also. So no problems, except with 
 that Joiner class theory.&]
-[s0; &]
-[s0; &]
+[s3; 1.9.2017&]
+[s0; Joiner seems to work well now. I didn`'t change anything, but 
+I just forgot to enable training previously.&]
+[s0; The AMP porting and new functional features are now complete. 
+I haven`'t done the real training and testing yet, but it looks 
+promising in debugging too. I`'ll still add support for long 
+term external M1 data and do some user friendliness improvements 
+and the it`'s time for a new release again.&]
 [s0; ]]

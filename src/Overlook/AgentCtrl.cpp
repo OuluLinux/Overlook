@@ -22,10 +22,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int agent_count		= GROUP_COUNT * SYM_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = TIME_SENSORS + SYM_COUNT;
-	#ifndef HAVE_SYSTEM_AMP
-	rows += SYM_COUNT * GROUP_COUNT;
-	#endif
+	int rows = TIME_SENSORS + SYM_COUNT + SYM_COUNT * GROUP_COUNT + JOINER_COUNT;
 	
 	int cols = value_count;
 	int grid_w = sz.cx;
@@ -86,7 +83,6 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	
 	// Signals
-	#ifndef HAVE_SYSTEM_AMP
 	cols = SIGNAL_SENSORS;
 	xstep = (double)grid_w / (double)cols;
 	s = 0;
@@ -112,8 +108,37 @@ void SnapshotDraw::Paint(Draw& w) {
 		row++;
 	}
 	ASSERT(s == SIGNAL_SIZE);
+	
+	
+	// Joiner
+	cols = JOINERSIGNAL_SENSORS;
+	xstep = (double)grid_w / (double)cols;
+	s = 0;
+	int joiner_rows = JOINER_COUNT;
+	for(int j = 0; j < joiner_rows; j++) {
+		int y = (int)(row * ystep);
+		int y2 = (int)((row + 1) * ystep);
+		int h = y2-y;
+		
+		for(int k = 0; k < cols; k++) {
+			int x = (int)(k * xstep);
+			int x2 = (int)((k + 1) * xstep);
+			int w = x2 - x;
+			double d = snap.joiner_signal[s++];
+			double min = 0.0;
+			double max = 1.0;
+			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
+			int clr = (int)Upp::min(255.0, value);
+			Color c(255 - clr, clr, 0);
+			id.DrawRect(x, y, w, h, c);
+		}
+		
+		row++;
+	}
+	ASSERT(s == JOINERSIGNAL_SIZE);
+	
+	
 	ASSERT(row == rows);
-	#endif
 	
 	
 	w.DrawImage(0,0,id);
@@ -256,8 +281,13 @@ void EquityGraph::Paint(Draw& w) {
 		trainee->type == 0 ?
 			ag.agent_equities :
 			ag.joiner_equities;
-	int count = ag.snaps.GetCount();
+	int count =
+		trainee->type == 0 ?
+			ag.agent_equities_count :
+			ag.joiner_equities_count;
 	int data_begin = trainee->id * count;
+	if (!count) return;
+	
 	ASSERT(data_begin >= 0 && data_begin + count <= data.GetCount());
 	
 	
@@ -399,7 +429,7 @@ void TrainingCtrl::Data() {
 			const Symbol& sym = mt.GetSymbol(ag.sym_ids[symbol]);
 			trade.Set(j, 0, i);
 			trade.Set(j, 1, o.type == 0 ? "Buy" : "Sell");
-			trade.Set(j, 2, o.volume);
+			trade.Set(j, 2, Format("%2!n", o.volume));
 			trade.Set(j, 3, sym.name);
 			trade.Set(j, 4, o.open);
 			trade.Set(j, 5, o.close);
@@ -658,6 +688,9 @@ void DataCtrl::Data() {
 	}
 	
 	timeslider.MinMax(0, Upp::max(1, poslist.GetCount()-1));
+	int cursor = timeslider.GetData();
+	if (cursor < 0 || cursor >= poslist.GetCount())
+		timeslider.SetData(poslist.GetCount()-1);
 	
 	last_pos = fin.GetSize();
 	

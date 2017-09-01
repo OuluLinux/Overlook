@@ -57,7 +57,9 @@ protected:
 	
 	
 	RealtimeCtrl			rtctrl;
+	StatusBar				status;
 	
+	Vector<String>			task_stack;
 	
 	void SetView();
 	void Configure();
@@ -71,7 +73,11 @@ public:
 	void Init();
 	void Refresher();
 	void PostRefresher() {tc.Kill(); PostCallback(THISBACK(Refresher));}
-	
+	void PostPushTask(String task) {PostCallback(THISBACK1(PushTask, task));}
+	void PostPopTask() {PostCallback(THISBACK(PopTask));}
+	void PushTask(String task);
+	void PopTask();
+	void RefreshTaskStatus();
 };
 
 

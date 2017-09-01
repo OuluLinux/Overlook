@@ -32,9 +32,9 @@ struct SingleFixedSimBroker {
 	}
 	
 	inline void SingleFixedSimBroker::Reset() PARALLEL {
-		for(int i = 0; i < SYM_COUNT; i++) {
-			
-		}
+		
+		
+		
 		equity = begin_equity;
 		balance = begin_equity;
 		order.is_open = false;

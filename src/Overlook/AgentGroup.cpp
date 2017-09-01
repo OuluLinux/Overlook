@@ -7,28 +7,36 @@ AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	stopped = true;
 	group_count = GROUP_COUNT;
 	
-	//allowed_symbols.Add("AUDCAD");
-	//allowed_symbols.Add("AUDJPY");
-	//allowed_symbols.Add("AUDNZD");
+	allowed_symbols.Add("AUDCAD"); // --
+	allowed_symbols.Add("AUDJPY"); // --
+	allowed_symbols.Add("AUDNZD"); // -- --
 	allowed_symbols.Add("AUDUSD");
-	//allowed_symbols.Add("CADJPY");
+	allowed_symbols.Add("CADJPY"); // -- --
 	allowed_symbols.Add("EURAUD");
-	//allowed_symbols.Add("EURCAD");
-	allowed_symbols.Add("EURGBP");
+	allowed_symbols.Add("EURCAD"); // --
+	allowed_symbols.Add("EURGBP"); // --
 	allowed_symbols.Add("EURJPY");
-	//allowed_symbols.Add("EURNZD");
+	allowed_symbols.Add("EURNZD"); // --
 	allowed_symbols.Add("EURUSD");
-	//allowed_symbols.Add("GBPAUD");
-	//allowed_symbols.Add("GBPCAD");
+	allowed_symbols.Add("GBPAUD"); // --
+	allowed_symbols.Add("GBPCAD"); // --
 	allowed_symbols.Add("GBPJPY");
-	//allowed_symbols.Add("GBPNZD");
+	allowed_symbols.Add("GBPNZD"); // --
 	allowed_symbols.Add("GBPUSD");
-	//allowed_symbols.Add("NZDCAD");
-	//allowed_symbols.Add("NZDJPY");
+	allowed_symbols.Add("NZDCAD"); // -- --
+	allowed_symbols.Add("NZDJPY"); // -- --
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
 	
+	/*
+	allowed_symbols.Add("AUDUSD");
+	allowed_symbols.Add("EURUSD");
+	allowed_symbols.Add("GBPUSD");
+	allowed_symbols.Add("NZDUSD");
+	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("USDJPY");
+	*/
 	created = GetSysTime();
 }
 
@@ -113,10 +121,6 @@ void AgentGroup::InitThread() {
 	
 	if (joiners.GetCount() == 0)
 		CreateJoiners();
-		
-	phase = PHASE_JOINER;
-	for(int i = 0; i < joiners.GetCount(); i++)
-		joiners[i].iter = 0;
 	
 	for(int i = 0; i < joiners.GetCount(); i++)
 		InitJoiner(joiners[i]);
@@ -124,7 +128,9 @@ void AgentGroup::InitThread() {
 	
 	
 	agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
+	agent_equities_count = snaps.GetCount();
 	joiner_equities.SetCount(joiners.GetCount() * snaps.GetCount(), 0.0);
+	joiner_equities_count = snaps.GetCount();
 	
 	int agent_equities_mem = agent_equities.GetCount() * sizeof(double);
 	max_memory_size = GetAmpDeviceMemory();
@@ -156,8 +162,13 @@ void AgentGroup::SetAgentsTraining(bool b) {
 		agents[i].is_training = b;
 }
 
+void AgentGroup::SetJoinersTraining(bool b) {
+	for(int i = 0; i < joiners.GetCount(); i++)
+		joiners[i].is_training = b;
+}
+
 void AgentGroup::Main() {
-	if (agents.GetCount() == 0 || sym_ids.IsEmpty() || indi_ids.IsEmpty()) return;
+	if (agents.GetCount() == 0 || joiners.GetCount() == 0 || sym_ids.IsEmpty() || indi_ids.IsEmpty()) return;
 	
 	RefreshSnapshots();
 	
@@ -186,7 +197,6 @@ void AgentGroup::Main() {
 }
 
 void AgentGroup::UpdateAmpSnaps(bool put_latest) {
-	int snap_end, snap_count;
 	
 	// Seek different snapshot dataset, because GPU memory is limited.
 	
@@ -197,28 +207,29 @@ void AgentGroup::UpdateAmpSnaps(bool put_latest) {
 		snap_end = Upp::min(snap_begin + snaps_per_phase, this->snaps.GetCount());
 		snap_count = snap_end - snap_begin;
 	} else {
-		snap_end = this->snaps.GetCount();
+		snap_end = snaps.GetCount();
 		snap_begin = Upp::max(0, snap_end - Upp::max(10, snaps_per_phase));
 		snap_count = snap_end - snap_begin;
 	}
 	
 	ASSERT(snap_count > 0);
-	amp_snaps.SetCount(snap_count);
-	memcpy(amp_snaps.Begin(), this->snaps.Begin() + snap_begin, snap_count * sizeof(Snapshot));
 	snap_phase_id++;
 }
 
 void AgentGroup::TrainAgents() {
-	SetAgentsTraining(true);
+	sys->WhenPushTask("Agent training");
+	
 	UpdateAmpSnaps(false);
-	
-	agent_equities.SetCount(agents.GetCount() * amp_snaps.GetCount(), 0.0);
 	RefreshAgentEpsilon();
+	if (GetAverageAgentIterations() >= 1.0)
+		LoopAgentSignals(true);
+	SetAgentsTraining(true);
 	
-	int snap_count = amp_snaps.GetCount();
-	int agent_count = agents.GetCount();
-	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
-	array_view<Agent, 1> agents_view(agent_count, agents.Begin());
+	agent_equities.SetCount(agents.GetCount() * snap_count, 0.0);
+	agent_equities_count = snap_count;
+	
+	array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin() + snap_begin);
+	array_view<Agent, 1> agents_view(agents.GetCount(), agents.Begin());
 	array_view<double, 1> equities_view(agent_equities.GetCount(), agent_equities.Begin());
     tinymt_collection<1> rand_view(agents_view.extent, GetSysTime().Get() & 0xffffffff);
 	
@@ -233,12 +244,11 @@ void AgentGroup::TrainAgents() {
 			ts.Reset();
 			iter = 0;
 			if (total_elapsed > 5*60*1000) {
-				UpdateAmpSnaps(false);
-				total_elapsed = 0;
+				return; // call TrainAgents again to UpdateAmpSnaps safely
 			}
 			
 			// Change phase to joiner eventually
-			if (GetAverageAgentIterations() >= 200000) {
+			if (GetAverageAgentIterations() >= NEXT_PHASE_ITER_LIMIT) {
 				phase = PHASE_JOINER;
 				StoreThis();
 				break;
@@ -250,13 +260,14 @@ void AgentGroup::TrainAgents() {
 	        int agent_id = idx[0];
 	        Agent& agent = agents_view[idx];
 	        tinymt& rand = rand_view[idx];
+	        int snap_count = snap_view.extent[0];
 	        int equities_begin = agent.id * snap_count;
 	        
 	        // Check cursor
 	        if (agent.cursor <= 0 || agent.cursor >= snap_count)
 				agent.ResetEpoch();
 			
-	        for(int i = 0; i < 10; i++) {
+	        for(int i = 0; i < 100; i++) {
 	            Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 				Snapshot& prev_snap = snap_view[agent.cursor - 1];
 				
@@ -277,40 +288,51 @@ void AgentGroup::TrainAgents() {
 	    
 		agents_view.synchronize();
 		equities_view.synchronize();
+		snap_view.synchronize();
 	}
 	
-	
 	SetAgentsTraining(false);
+	
+	sys->WhenPopTask();
 }
 
 void AgentGroup::LoopAgentSignals(bool from_begin) {
-	array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
+	sys->WhenPushTask("Loop agent signals");
+	
+	agent_equities.SetCount(agents.GetCount() * snap_count, 0.0);
+	agent_equities_count = snap_count;
+	
+	array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin() + snap_begin);
 	array_view<Agent, 1> agents_view(agents.GetCount(), agents.Begin());
+	array_view<double, 1> equities_view(agent_equities.GetCount(), agent_equities.Begin());
     tinymt_collection<1> rand_view(agents_view.extent, GetSysTime().Get() & 0xffffffff);
+	
+	SetAgentsTraining(false);
 	
 	if (from_begin) {
 		for(int i = 0; i < agents.GetCount(); i++)
 			agents[i].ResetEpoch();
 		
-		for(int i = 1; i < snaps.GetCount(); i++) {
+		for(int i = 1; i < snap_count && running; i++) {
 			parallel_for_each(agents_view.extent, [=](index<1> idx) PARALLEL {
 		        int agent_id = idx[0];
 		        Agent& agent = agents_view[idx];
-	        tinymt& rand = rand_view[idx];
+				tinymt& rand = rand_view[idx];
 		        Snapshot& cur_snap  = snap_view[agent.cursor - 0];
 				Snapshot& prev_snap = snap_view[agent.cursor - 1];
 				
 				agent.timestep_actual--;
 				agent.Main(cur_snap, prev_snap, rand);
+				equities_view[agent.id * snap_view.extent[0] + agent.cursor] = agent.broker.AccountEquity();
 				agent.cursor++;
 		    });
 		}
 	}
 	else {
-		while (true) {
+		while (running) {
 			bool run_any = false;
 			for(int i = 0; i < agents.GetCount(); i++) {
-				if (agents[i].cursor < snaps.GetCount()) {
+				if (agents[i].cursor < snap_count) {
 					run_any = true;
 					break;
 				}
@@ -329,24 +351,35 @@ void AgentGroup::LoopAgentSignals(bool from_begin) {
 				
 				agent.timestep_actual--;
 				agent.Main(cur_snap, prev_snap, rand);
+				equities_view[agent.id * snap_view.extent[0] + agent.cursor] = agent.broker.AccountEquity();
 				agent.cursor++;
 		    });
 		}
 	}
+	
+	equities_view.synchronize();
+	snap_view.synchronize();
+	
+	sys->WhenPopTask();
 }
 
 void AgentGroup::TrainJoiners() {
-	SetAgentsTraining(false);
+	sys->WhenPushTask("Train joiners");
+	
 	UpdateAmpSnaps(false);
 	RefreshAgentEpsilon();
 	RefreshJoinerEpsilon();
+	LoopAgentSignals(true);
+	if (GetAverageJoinerIterations() >= 1.0)
+		LoopJoinerSignals(true);
+	SetAgentsTraining(false);
+	SetJoinersTraining(true);
 	
-	joiner_equities.SetCount(joiners.GetCount() * amp_snaps.GetCount(), 0.0);
+	joiner_equities.SetCount(joiners.GetCount() * snap_count, 0.0);
+	joiner_equities_count = snap_count;
 	
-	int snap_count = amp_snaps.GetCount();
-	int joiner_count = joiners.GetCount();
-	array_view<Snapshot, 1>  snap_view(snap_count, amp_snaps.Begin());
-	array_view<Joiner, 1> joiners_view(joiner_count, joiners.Begin());
+	array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin() + snap_begin);
+	array_view<Joiner, 1> joiners_view(joiners.GetCount(), joiners.Begin());
 	array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
     tinymt_collection<1> rand_view(joiners_view.extent, GetSysTime().Get() & 0xffffffff);
 	
@@ -358,9 +391,10 @@ void AgentGroup::TrainJoiners() {
 		
 		// Randomize input  values
 		double aviter = GetAverageJoinerIterations();
-		if (aviter >= prev_aviter + 2.0) {
+		if (aviter >= prev_aviter + 5000.0) {
 			LoopAgentSignals(true);
 			LoopJoinerSignals(true);
+			SetJoinersTraining(true);
 			prev_aviter = aviter;
 		}
 		
@@ -371,14 +405,11 @@ void AgentGroup::TrainJoiners() {
 			ts.Reset();
 			iter = 0;
 			if (total_elapsed > 5*60*1000) {
-				UpdateAmpSnaps(false);
-				LoopAgentSignals(true);
-				LoopJoinerSignals(true);
-				total_elapsed = 0;
+				return; // call TrainJoiners again to UpdateAmpSnaps safely
 			}
 			
 			// Change phase to real mode eventually
-			if (aviter >= 200000) {
+			if (aviter >= NEXT_PHASE_ITER_LIMIT) {
 				phase = PHASE_REAL;
 				StoreThis();
 				break;
@@ -390,13 +421,14 @@ void AgentGroup::TrainJoiners() {
 	        int joiner_id = idx[0];
 	        Joiner& joiner = joiners_view[idx];
 	        tinymt& rand = rand_view[idx];
+	        int snap_count = snap_view.extent[0];
 	        int equities_begin = joiner.id * snap_count;
 	        
 	        // Check cursor
 	        if (joiner.cursor <= 0 || joiner.cursor >= snap_count)
 				joiner.ResetEpoch();
 			
-	        for(int i = 0; i < 1000; i++) {
+	        for(int i = 0; i < 100; i++) {
 				joiner.timestep_actual--;
 				
 				joiner.Main(snap_view, rand);
@@ -414,19 +446,31 @@ void AgentGroup::TrainJoiners() {
 
 		joiners_view.synchronize();
 		equities_view.synchronize();
+		snap_view.synchronize();
 	}
+	
+	SetJoinersTraining(false);
+	
+	sys->WhenPopTask();
 }
 
 void AgentGroup::LoopJoinerSignals(bool from_begin) {
-	array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
+	sys->WhenPushTask("Loop joiner signals");
+	
+	joiner_equities.SetCount(joiners.GetCount() * snap_count, 0.0);
+	joiner_equities_count = snap_count;
+	SetJoinersTraining(false);
+	
+	array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin() + snap_begin);
 	array_view<Joiner, 1> joiners_view(joiners.GetCount(), joiners.Begin());
+    array_view<double, 1> equities_view(joiner_equities.GetCount(), joiner_equities.Begin());
     tinymt_collection<1> rand_view(joiners_view.extent, GetSysTime().Get() & 0xffffffff);
 	
 	if (from_begin) {
 		for(int i = 0; i < joiners.GetCount(); i++)
 			joiners[i].ResetEpoch();
 		
-		for(int i = 1; i < snaps.GetCount(); i++) {
+		for(int i = 1; i < snap_count && running; i++) {
 			parallel_for_each(joiners_view.extent, [=](index<1> idx) PARALLEL {
 		        int joiner_id = idx[0];
 		        Joiner& joiner = joiners_view[idx];
@@ -436,15 +480,19 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 				
 				joiner.timestep_actual--;
 				joiner.Main(snap_view, rand);
+				equities_view[joiner.id * snap_view.extent[0] + joiner.cursor] = joiner.broker.AccountEquity();
 				joiner.cursor++;
 		    });
+		    
+		    if (i % 100 == 0) equities_view.synchronize();
 		}
 	}
 	else {
-		while (true) {
+		
+		for (int iter = 0; running; iter++) {
 			bool run_any = false;
 			for(int i = 0; i < joiners.GetCount(); i++) {
-				if (joiners[i].cursor < snaps.GetCount()) {
+				if (joiners[i].cursor < snap_count) {
 					run_any = true;
 					break;
 				}
@@ -463,19 +511,40 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 				
 				joiner.timestep_actual--;
 				joiner.Main(snap_view, rand);
+				equities_view[joiner.id * snap_view.extent[0] + joiner.cursor] = joiner.broker.AccountEquity();
 				joiner.cursor++;
 		    });
+		    
+		    if (iter % 100 == 0) equities_view.synchronize();
 		}
 	}
+	
+	snap_view.synchronize();
+	equities_view.synchronize();
+	
+	sys->WhenPopTask();
 }
 
 void AgentGroup::MainReal() {
+	sys->WhenPushTask("Real");
+	
 	MetaTrader& mt = GetMetaTrader();
     tinymt_collection<1> rand_view(extent<1>(1), GetSysTime().Get() & 0xffffffff);
 	Joiner* best_joiner = GetBestJoiner();
 	Time time = mt.GetTime();
 	int wday = DayOfWeek(time);
 	int shift = sys->GetShiftFromTimeTf(time, main_tf);
+	
+	
+	// Loop agents and joiners without random events (epsilon = 0)
+	SetAgentEpsilon(0.0);
+	SetJoinerEpsilon(0.0);
+	if (prev_shift <= 0) {
+		LoopAgentSignals(true);
+		LoopJoinerSignals(true);
+	}
+	SetAgentsTraining(false);
+	SetJoinersTraining(false);
 	
 	
 	if (prev_shift != shift) {
@@ -487,15 +556,17 @@ void AgentGroup::MainReal() {
 			
 
 			// Updates latest snapshot and signals
+			sys->SetEnd(mt.GetTime());
 			RefreshSnapshots();
 			UpdateAmpSnaps(true);
+			ASSERT(snap_end == snaps.GetCount());
 			LoopAgentSignals(false);
 			LoopJoinerSignals(false);
 			
-			
-			int last_snap_shift = amp_snaps.Top().shift;
+			int last_snap_shift = snaps.Top().shift;
 			if (shift != last_snap_shift) {
 				WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, last_snap_shift));
+				sys->WhenPopTask();
 				return;
 			}
 			
@@ -521,7 +592,7 @@ void AgentGroup::MainReal() {
 			// Use best group to set broker signals
 			WhenInfo("Looping agents until latest snapshot");
 			tinymt& rand = rand_view[index<1>(0)];
-			array_view<Snapshot, 1>  snap_view(amp_snaps.GetCount(), amp_snaps.Begin());
+			array_view<Snapshot, 1>  snap_view(snap_count, snaps.Begin() + snap_begin);
 			bool succ = best_joiner->PutLatest(*this, mt, snap_view, rand);
 			
 			
@@ -556,11 +627,13 @@ void AgentGroup::MainReal() {
 			mt.SignalOrders(true);
 		}
 		
-		if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 5*60*1000) {
+		if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 1*60*1000) {
 			best_joiner->Data();
 			last_datagather.Reset();
 		}
 	}
+	
+	sys->WhenPopTask();
 }
 
 Joiner* AgentGroup::GetBestJoiner() {
@@ -599,13 +672,18 @@ void AgentGroup::Serialize(Stream& s) {
 }
 
 void AgentGroup::RefreshSnapshots() {
+	sys->WhenPushTask("Refreshing snapshots");
+	
 	ASSERT(buf_count != 0);
 	ASSERT(sym_ids.GetCount() != 0);
 	
 	TimeStop ts;
 	ProcessWorkQueue();
 	
-	int bars = sys->GetCountTf(main_tf) - data_begin;
+	int total_bars = sys->GetCountTf(main_tf);
+	int bars = total_bars - data_begin;
+	
+	
 	ASSERT(bars > 0);
 	snaps.Reserve(bars + (60 - (bars % 60)));
 	for(; counted_bars < bars; counted_bars++) {
@@ -621,12 +699,22 @@ void AgentGroup::RefreshSnapshots() {
 	ASSERT(snaps.GetCount() > 0);
 	
 	LOG("Refreshing snapshots took " << ts.ToString());
+	sys->WhenPopTask();
 }
 
 void AgentGroup::Progress(int actual, int total, String desc) {
 	ManagerLoader& loader = GetManagerLoader();
 	loader.PostProgress(actual, total, desc);
 	loader.PostSubProgress(0, 1);
+	
+	if (actual < total) {
+		if (actual > 0)
+			sys->WhenPopTask();
+		sys->WhenPushTask(desc);
+	}
+	else if (actual == total && actual > 0) {
+		sys->WhenPopTask();
+	}
 }
 
 void AgentGroup::SubProgress(int actual, int total) {
@@ -732,6 +820,7 @@ void AgentGroup::ResetValueBuffers() {
 			total_bufs++;
 		}
 	}
+	
 	int expected_total = sym_ids.GetCount() * buf_count;
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 }
@@ -757,6 +846,8 @@ void AgentGroup::RefreshWorkQueue() {
 }
 
 void AgentGroup::ProcessWorkQueue() {
+	sys->WhenPushTask("Processing work queue");
+	
 	work_lock.Enter();
 	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
@@ -765,9 +856,13 @@ void AgentGroup::ProcessWorkQueue() {
 	}
 	
 	work_lock.Leave();
+	
+	sys->WhenPopTask();
 }
 
 void AgentGroup::ProcessDataBridgeQueue() {
+	sys->WhenPushTask("Processing databridge work queue");
+	
 	work_lock.Enter();
 	
 	for(int i = 0; i < db_queue.GetCount(); i++) {
@@ -776,6 +871,8 @@ void AgentGroup::ProcessDataBridgeQueue() {
 	}
 	
 	work_lock.Leave();
+	
+	sys->WhenPopTask();
 }
 
 bool AgentGroup::Seek(Snapshot& snap, int shift) {
@@ -898,6 +995,13 @@ double AgentGroup::GetAverageJoinerIterations() {
 	return dd / joiners.GetCount();
 }
 
+double AgentGroup::GetAverageJoinerEpochs() {
+	double dd = 0;
+	for(int i = 0; i < joiners.GetCount(); i++)
+		dd += joiners[i].result_count;
+	return dd / joiners.GetCount();
+}
+
 void AgentGroup::RefreshAgentEpsilon() {
 	double iters = GetAverageAgentIterations();
 	int level = iters / 10000;
@@ -1005,6 +1109,7 @@ void AgentGroup::InitJoiner(Joiner& j) {
 
 bool Joiner::PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snapshot, 1>& snap_view, tinymt& rand) {
 	System& sys = GetSystem();
+	sys.WhenPushTask("Putting latest signals");
 		
 	
 	// Set probability for random actions to 0
@@ -1024,7 +1129,7 @@ bool Joiner::PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snaps
 	
 	for(int i = 0; i < ag.sym_ids.GetCount(); i++) {
 		int sym = ag.sym_ids[i];
-		int sig = this->broker.GetSignal(i);
+		int sig = symsignals[i];
 		if (sig == broker.GetSignal(sym) && sig != 0)
 			broker.SetSignalFreeze(sym, true);
 		else {
@@ -1033,9 +1138,10 @@ bool Joiner::PutLatest(AgentGroup& ag, Brokerage& broker, const array_view<Snaps
 		}
 	}
 	
-	
+	broker.SetFreeMarginLevel(free_margin_level);
 	broker.SignalOrders(true);
 	
+	sys.WhenPopTask();
 	
 	return true;
 }

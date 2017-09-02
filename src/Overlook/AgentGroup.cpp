@@ -276,7 +276,9 @@ void AgentGroup::TrainAgents() {
 				agent.Main(cur_snap, prev_snap, rand);
 				
 				// Get some diagnostic stats
-				equities_view[equities_begin + agent.cursor] = agent.broker.AccountEquity();
+				int j = equities_begin + agent.cursor;
+				if (j >= 0 && j < equities_view.extent[0])
+					equities_view[j] = agent.broker.AccountEquity();
 				agent.cursor++;
 				
 				// Close all order at the end

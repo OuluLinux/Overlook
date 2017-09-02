@@ -72,6 +72,7 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	
 	// Temporary
 	SingleFixedSimBroker broker;
+	float input_array[AGENT_STATES];
 	
 	
 	
@@ -145,7 +146,6 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 		// - time_values
 		// - input sensors
 		// - previous signals
-		float input_array[AGENT_STATES];
 		int cursor = 0;
 		
 		

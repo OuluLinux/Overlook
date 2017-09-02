@@ -24,7 +24,7 @@ namespace Overlook {
 #define JOINER_IDLEACTS			8
 #define JOINER_ACTIONCOUNT		(JOINER_NORMALACTS + JOINER_IDLEACTS)
 #define NEXT_PHASE_ITER_LIMIT	200000
-#define MAX_SNAPSHOTS			10000000
+
 
 class AgentGroup;
 

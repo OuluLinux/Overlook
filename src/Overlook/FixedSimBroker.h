@@ -25,13 +25,13 @@ struct SingleFixedSimBroker {
 	int proxy_base_mul = 0;
 	
 		
-	SingleFixedSimBroker::SingleFixedSimBroker() {
+	SingleFixedSimBroker() {
 		
 		
 		begin_equity = 10000;
 	}
 	
-	inline void SingleFixedSimBroker::Reset() PARALLEL {
+	inline void Reset() PARALLEL {
 		
 		
 		
@@ -43,15 +43,15 @@ struct SingleFixedSimBroker {
 		loss_sum = 0.0;
 	}
 	
-	inline float SingleFixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
+	inline float RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
 		return snap.open[sym_id] - spread_points;
 	}
 	
-	inline float SingleFixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const PARALLEL {
+	inline float RealtimeAsk(const Snapshot& snap, int sym_id) const PARALLEL {
 		return snap.open[sym_id];
 	}
 	
-	inline double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const PARALLEL {
+	inline double GetCloseProfit(const Snapshot& snap) const PARALLEL {
 		const FixedOrder& o = order;
 		
 		// NOTE: only for forex. Check SimBroker for other symbols too
@@ -96,7 +96,7 @@ struct SingleFixedSimBroker {
 		else return 0.0;
 	}
 	
-	inline void SingleFixedSimBroker::OrderSend(int type, float volume, float price) PARALLEL {
+	inline void OrderSend(int type, float volume, float price) PARALLEL {
 		AMPASSERT(!order.is_open);
 		order.type = type;
 		order.volume = volume;
@@ -105,7 +105,7 @@ struct SingleFixedSimBroker {
 		order_count++;
 	}
 	
-	inline void SingleFixedSimBroker::OrderClose(const Snapshot& snap) PARALLEL {
+	inline void OrderClose(const Snapshot& snap) PARALLEL {
 		AMPASSERT(order.is_open);
 		order.is_open = false;
 		double profit = GetCloseProfit(snap);
@@ -115,7 +115,7 @@ struct SingleFixedSimBroker {
 		else            loss_sum   -= profit;
 	}
 	
-	inline void SingleFixedSimBroker::Cycle(int signal, const Snapshot& snap) PARALLEL {
+	inline void Cycle(int signal, const Snapshot& snap) PARALLEL {
 		AMPASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
 		
 		FixedOrder& o = order;
@@ -144,7 +144,7 @@ struct SingleFixedSimBroker {
 		
 	}
 	
-	inline void SingleFixedSimBroker::RefreshOrders(const Snapshot& snap) PARALLEL {
+	inline void RefreshOrders(const Snapshot& snap) PARALLEL {
 		FixedOrder& o = order;
 		
 		if (o.is_open) {
@@ -164,6 +164,10 @@ struct FixedSimBroker {
 	#define MAX_ORDERS			(ORDERS_PER_SYMBOL * SYM_COUNT)
 	
 	FixedOrder order[MAX_ORDERS];
+	double buy_lots[SYM_COUNT];
+	double sell_lots[SYM_COUNT];
+	int buy_signals[SYM_COUNT];
+	int sell_signals[SYM_COUNT];
 	int signal[SYM_COUNT];
 	int proxy_id[SYM_COUNT];
 	int proxy_base_mul[SYM_COUNT];
@@ -179,13 +183,13 @@ struct FixedSimBroker {
 	
 	
 		
-	FixedSimBroker::FixedSimBroker() {
+	FixedSimBroker() {
 		
 		
 		begin_equity = 10000;
 	}
 	
-	inline void FixedSimBroker::Reset() PARALLEL {
+	inline void Reset() PARALLEL {
 		equity = begin_equity;
 		balance = begin_equity;
 		order_count = 0;
@@ -198,15 +202,15 @@ struct FixedSimBroker {
 			order[i].is_open = false;
 	}
 	
-	inline float FixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
+	inline float RealtimeBid(const Snapshot& snap, int sym_id) const PARALLEL {
 		return snap.open[sym_id] - spread_points[sym_id];
 	}
 	
-	inline float FixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const PARALLEL {
+	inline float RealtimeAsk(const Snapshot& snap, int sym_id) const PARALLEL {
 		return snap.open[sym_id];
 	}
 	
-	inline double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const PARALLEL {
+	inline double GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const PARALLEL {
 		
 		// NOTE: only for forex. Check SimBroker for other symbols too
 		
@@ -252,7 +256,7 @@ struct FixedSimBroker {
 		else return 0.0;
 	}
 	
-	inline void FixedSimBroker::OrderSend(int sym_id, int type, float volume, float price) PARALLEL {
+	inline void OrderSend(int sym_id, int type, float volume, float price) PARALLEL {
 		AMPASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
 		int sym_orders_begin = sym_id * ORDERS_PER_SYMBOL;
 		
@@ -271,7 +275,7 @@ struct FixedSimBroker {
 		}
 	}
 	
-	inline void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, const Snapshot& snap) PARALLEL {
+	inline void OrderClose(int sym_id, double lots, FixedOrder& order, const Snapshot& snap) PARALLEL {
 		if (!order.is_open)
 			return;
 		if (lots < order.volume) {
@@ -292,7 +296,7 @@ struct FixedSimBroker {
 		}
 	}
 	/*
-	inline void FixedSimBroker::OrderClose(int sym_id, const Snapshot& snap) PARALLEL {
+	inline void OrderClose(int sym_id, const Snapshot& snap) PARALLEL {
 		ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
 		int sym_orders_begin = sym_id * ORDERS_PER_SYMBOL;
 		
@@ -308,7 +312,7 @@ struct FixedSimBroker {
 		}
 	}
 	*/
-	inline void FixedSimBroker::CloseAll(const Snapshot& snap) PARALLEL {
+	inline void CloseAll(const Snapshot& snap) PARALLEL {
 		for(int i = 0; i < MAX_ORDERS; i++) {
 			FixedOrder& order = this->order[i];
 			if (!order.is_open)
@@ -322,7 +326,7 @@ struct FixedSimBroker {
 		}
 	}
 	
-	inline double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume) PARALLEL {
+	inline double GetMargin(const Snapshot& snap, int sym_id, double volume) PARALLEL {
 		AMPASSERT(leverage > 0);
 		double used_margin = 0.0;
 		if (proxy_id[sym_id] == -1) {
@@ -338,11 +342,7 @@ struct FixedSimBroker {
 		return used_margin;
 	}
 	
-	inline bool FixedSimBroker::Cycle(const Snapshot& snap) PARALLEL {
-		double buy_lots[SYM_COUNT];
-		double sell_lots[SYM_COUNT];
-		int buy_signals[SYM_COUNT];
-		int sell_signals[SYM_COUNT];
+	inline bool Cycle(const Snapshot& snap) PARALLEL {
 		
 		// Get maximum margin sum
 		AMPASSERT(free_margin_level >= 0.60 && free_margin_level <= 1.0);
@@ -481,7 +481,7 @@ struct FixedSimBroker {
 		return true;
 	}
 	
-	inline void FixedSimBroker::RefreshOrders(const Snapshot& snap) PARALLEL {
+	inline void RefreshOrders(const Snapshot& snap) PARALLEL {
 		double e = balance;
 		for(int i = 0; i < MAX_ORDERS; i++) {
 			FixedOrder& o = order[i];

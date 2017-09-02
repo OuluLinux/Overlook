@@ -16,6 +16,7 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 	FixedSimBroker broker;
 	double prev_signals[4];
 	double free_margin_level = 0.95;
+	float input_array[JOINER_STATES];
 	int symsignals[SYM_COUNT];
 	
 	
@@ -104,7 +105,6 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 		// - time_values
 		// - input sensors
 		// - previous signals
-		float input_array[JOINER_STATES];
 		int cursor = 0;
 		
 		

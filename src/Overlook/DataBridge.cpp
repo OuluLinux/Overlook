@@ -127,11 +127,11 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		// Find min/max
 		double diff = ask - bid;
 		int step = (int)(diff / point);
+		AddSpread(step);
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
-		AddSpread(step);
 		
 		
 		// Get shift in data from time
@@ -393,7 +393,6 @@ void DataBridge::RefreshFromHistory() {
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
-		AddSpread(step);
 		
 		//LOG(Format("%d: %d %f %f %f %f %d %d %d", cursor, (int)time, open, high, low, close, tick_volume, spread, real_volume));
 	}
@@ -516,7 +515,6 @@ void DataBridge::RefreshVirtualNode() {
 		else median_min_map.GetAdd(step, 0)++;
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
-		AddSpread(step);
 	}
 	
 	RefreshMedian();

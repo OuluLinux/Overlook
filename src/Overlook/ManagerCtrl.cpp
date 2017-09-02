@@ -104,6 +104,7 @@ void AgentTabCtrl::Data() {
 		overview.iters.SetLabel(IntStr(a.iter));
 		overview.epsilon.SetLabel(DblStr(a.dqn.GetEpsilon()));
 		overview.expcount.SetLabel(IntStr(a.dqn.GetExperienceCount()));
+		overview.spread_points.SetLabel(DblStr(a.spread_points));
 		
 		
 		double minimum_margin = GetMetaTrader().GetMargin(a.sym__, sym.volume_min);

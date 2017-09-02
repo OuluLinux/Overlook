@@ -231,7 +231,7 @@ void AgentGroup::TrainAgents() {
 	        if (agent.cursor <= 0 || agent.cursor >= snap_count)
 				agent.ResetEpoch();
 			
-	        for(int i = 0; i < 100; i++) {
+	        for(int k = 0; k < 100; k++) {
 	            Snapshot& cur_snap  = snaps[agent.cursor - 0];
 				Snapshot& prev_snap = snaps[agent.cursor - 1];
 				
@@ -978,9 +978,9 @@ void AgentGroup::SetJoinerEpsilon(double epsilon) {
 
 void AgentGroup::InitAgent(Agent& a) {
 	MetaTrader& mt = GetMetaTrader();
-	const Price& askbid = mt.GetAskBid()[a.sym__];
-	double ask = askbid.ask;
-	double bid = askbid.bid;
+	
+	DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[a.sym__]);
+	
 	const Symbol& symbol = mt.GetSymbol(a.sym__);
 	if (symbol.proxy_id != -1) {
 		int j = sym_ids.Find(symbol.proxy_id);
@@ -992,7 +992,9 @@ void AgentGroup::InitAgent(Agent& a) {
 		a.proxy_base_mul = 0;
 	}
 	a.begin_equity = mt.AccountEquity();
-	a.spread_points = ask - bid;
+	
+	
+	a.spread_points = db->GetAverageSpread() * db->GetPoint();
 	ASSERT(a.spread_points > 0.0);
 	
 	a.Init();
@@ -1003,9 +1005,9 @@ void AgentGroup::InitJoiner(Joiner& j) {
 	
 	for(int i = 0; i < SYM_COUNT; i++) {
 		int sym = sym_ids[i];
-		const Price& askbid = mt.GetAskBid()[sym];
-		double ask = askbid.ask;
-		double bid = askbid.bid;
+		
+		DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[sym]);
+		
 		const Symbol& symbol = mt.GetSymbol(sym);
 		if (symbol.proxy_id != -1) {
 			int k = sym_ids.Find(symbol.proxy_id);
@@ -1016,7 +1018,7 @@ void AgentGroup::InitJoiner(Joiner& j) {
 			j.proxy_id[i] = -1;
 			j.proxy_base_mul[i] = 0;
 		}
-		j.spread_points[i] = ask - bid;
+		j.spread_points[i] = db->GetAverageSpread() * db->GetPoint();
 		ASSERT(j.spread_points[i] > 0.0);
 	}
 	

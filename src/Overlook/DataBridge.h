@@ -57,7 +57,6 @@ class DataBridge : public BarData {
 	VectorMap<int,int> symbols;
 	Vector<Vector<byte> > ext_data;
 	Vector<Vector<int> > sym_group_stats, sym_groups;
-	double point;
 	double spread_mean;
 	int spread_count;
 	int median_max, median_min;
@@ -100,6 +99,7 @@ public:
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}
 	double GetMedianMin() const {return median_min * point;}
+	double GetAverageSpread() const {return spread_mean;}
 	void AddSpread(double a);
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {

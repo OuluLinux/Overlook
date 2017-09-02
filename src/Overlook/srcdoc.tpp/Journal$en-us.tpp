@@ -2605,4 +2605,57 @@ I haven`'t done the real training and testing yet, but it looks
 promising in debugging too. I`'ll still add support for long 
 term external M1 data and do some user friendliness improvements 
 and the it`'s time for a new release again.&]
+[s3; 2.9.2017&]
+[s0; Hmm... AMP version is not really working. It throws some exception 
+and I can`'t find out what it is without Visual Studio. Then 
+again, this is Ultimate`+`+ and I can`'t just open and compile 
+this in Visual Studio. Once again, the monopolistic attitude 
+of MS ruined everything. I`'ve noticed, that software, which 
+doesn`'t support Windows, Linux and FreeBSD tends to be crappy 
+in quality. AMP is definitely the way to go, but it`'s not very 
+well supported yet. I might get it working in Linux (https://github.com/RadeonOpen
+Compute/hcc) but I don`'t have time and mood for that kind of 
+tinkering right now. That probably will support FreeBSD later, 
+because it compiles to OpenCL and runs on Radeon GPUs, which 
+happens to work also in FreeBSD. So yeah, it will be the most 
+user friendliest, sanest and most compatible parallel computing 
+API, but it`'s just not there yet...&]
+[s0; I think Ultimate`+`+ is actually the higher standard. It has 
+very good and the most sane API, which scales through all libraries 
+well. Raising the bar on that level just doesn`'t allow you to 
+use much existing code. It is always a dispute between making 
+products fast and making a quality product which lasts. I really 
+don`'t understand why people doesn`'t see the huge problem with 
+`"Object`* o `= new Object();`" model, and why it is in almost 
+every most popular language. That works in C`+`+ too, but it`'s 
+just the most dicouraged way to used the language. Why Qt uses 
+that extensively? Beats me... That only shows, that old habits 
+sticks, and it doesn`'t look good for community afterwards.&]
+[s0; So, I am almost completely disappointed about my brief comeback 
+in Windoze systemz incorporated. While it tries very hard to 
+be all`-in`-one solution in IT, it tends to be the most insignificant 
+system for developers. Maybe that is why their phone sucked so 
+hard... M`$ is the reason why my PC hardware is so affordable, 
+but that`'s all.&]
+[s0; ...&]
+[s0; Hmm... maybe the program was just too big. There`'s no problem 
+if it runs only partially. AMP programs usually are very small, 
+and this is rather big.&]
+[s0; Damn. This actually should be programmed in C`-style, where 
+you get `"this`"`-pointer in the GPU memory. I mean, this is 
+currently better, but unsupported, but if I want to get this 
+work, then I should do that. Otherwise calls just take too much 
+resources.&]
+[s0; ...&]
+[s0; Damn. I tried hard but I couldn`'t save it. It just didn`'t 
+work out with AMP. The threading point was too close to the root, 
+and the processing limit exceeded easily. Midway threading would 
+have been good, but it would have had blocks and difficult if`-else 
+handling, so it would have been too ugly. The most close to leaf 
+`-threading did so much data`-transfering between CPU and GPU 
+that it did not speed up anything. So basically, OpenCL should 
+be used. It will actually work as`-is in FreeBSD too and no separate 
+GPU version will be needed. So that is now in the TODO list, 
+but I am helplessly out of time with this. New courses start 
+at next week :S&]
 [s0; ]]

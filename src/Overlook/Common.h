@@ -5,9 +5,6 @@
 #include <PlotCtrl/PlotCtrl.h>
 #include <CoreUtils/Optimizer.h>
 
-#include "CompatAMP.h"
-using namespace concurrency;
-
 #undef ASSERTEXC
 
 namespace Overlook {

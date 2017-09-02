@@ -72,10 +72,7 @@ public:
 	int data_begin = 0;
 	int buf_count = 0;
 	int sym_count = 0;
-	int max_memory_size = 0, agents_total_size = 0, memory_for_snapshots = 0, snaps_per_phase = 0, snap_phase_count = 0;
-	int snap_phase_id = 0;
 	int counted_bars = 0;
-	int snap_begin = 0, snap_count = 0, snap_end = 0;
 	int prev_shift = 0;
 	int realtime_count = 0;
 	int agent_equities_count = 0;
@@ -121,7 +118,6 @@ public:
 	double GetJoinerEpsilon()	{return joiner_epsilon;}
 	void RefreshAgentEpsilon();
 	void RefreshJoinerEpsilon();
-	void UpdateAmpSnaps(bool put_latest);
 	void TrainAgents();
 	void TrainJoiners();
 	void MainReal();

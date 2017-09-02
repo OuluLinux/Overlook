@@ -66,19 +66,19 @@ public:
 		Size sz = GetSize();
 		
 		int total_output = 0;
-		total_output += agent.mul1.output.GetLength();
-		total_output += agent.add1.output.GetLength();
-		total_output += agent.tanh.output.GetLength();
-		total_output += agent.mul2.output.GetLength();
-		total_output += agent.add2.output.GetLength();
+		total_output += agent.data.mul1.output.GetLength();
+		total_output += agent.data.add1.output.GetLength();
+		total_output += agent.data.tanh.output.GetLength();
+		total_output += agent.data.mul2.output.GetLength();
+		total_output += agent.data.add2.output.GetLength();
 		tmp.SetCount(total_output);
 		
 		int cur = 0;
-		for(int i = 0; i < agent.mul1.output.GetLength(); i++) tmp[cur++] = agent.mul1.output.Get(i);
-		for(int i = 0; i < agent.add1.output.GetLength(); i++) tmp[cur++] = agent.add1.output.Get(i);
-		for(int i = 0; i < agent.tanh.output.GetLength(); i++) tmp[cur++] = agent.tanh.output.Get(i);
-		for(int i = 0; i < agent.mul2.output.GetLength(); i++) tmp[cur++] = agent.mul2.output.Get(i);
-		for(int i = 0; i < agent.add2.output.GetLength(); i++) tmp[cur++] = agent.add2.output.Get(i);
+		for(int i = 0; i < agent.data.mul1.output.GetLength(); i++) tmp[cur++] = agent.data.mul1.output.Get(i);
+		for(int i = 0; i < agent.data.add1.output.GetLength(); i++) tmp[cur++] = agent.data.add1.output.Get(i);
+		for(int i = 0; i < agent.data.tanh.output.GetLength(); i++) tmp[cur++] = agent.data.tanh.output.Get(i);
+		for(int i = 0; i < agent.data.mul2.output.GetLength(); i++) tmp[cur++] = agent.data.mul2.output.Get(i);
+		for(int i = 0; i < agent.data.add2.output.GetLength(); i++) tmp[cur++] = agent.data.add2.output.Get(i);
 		
 		
 		ImageBuffer ib(total_output, 1);

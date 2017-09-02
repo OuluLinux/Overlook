@@ -408,7 +408,7 @@ void TrainingCtrl::Data() {
 	
 	// list
 	
-	draw.SetSnap(ag.snap_begin + trainee->cursor);
+	draw.SetSnap(trainee->cursor);
 	draw.Refresh();
 	timescroll.Refresh();
 	reward.Refresh();

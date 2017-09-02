@@ -56,13 +56,13 @@ file
 	AgentGroup.h,
 	AgentGroup.cpp,
 	FixedSimBroker.h,
+	FixedSimBroker.cpp,
 	Agent.h,
+	Agent.cpp,
 	Joiner.h,
-	DQN.h,
-	CompatAMP.h,
-	RandomAMP.h;
+	Joiner.cpp,
+	DQN.h;
 
 mainconfig
-	"Normal" = "GUI MT",
-	"CPU only parallel processing" = "GUI MT FORCE_COMPAT_AMP";
+	"" = "GUI MT";
 

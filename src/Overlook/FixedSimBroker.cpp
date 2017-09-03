@@ -316,7 +316,7 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	// Get maximum margin sum
-	ASSERT(free_margin_level >= 0.60 && free_margin_level <= 1.0);
+	ASSERT(free_margin_level >= 0.55 && free_margin_level <= 1.0);
 	if (free_margin_level == 1.0)
 		free_margin_level = 0.8;
 	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level);

@@ -5,7 +5,7 @@ namespace libmt {
 Brokerage::Brokerage() {
 	cur_begin = -1;
 	is_failed = false;
-	min_free_margin_level = 0.65;
+	min_free_margin_level = 0.55;
 	max_free_margin_level = 0.95;
 	free_margin_level = 0.98;
 	margin_call = 0.5;

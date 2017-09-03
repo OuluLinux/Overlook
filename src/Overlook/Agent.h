@@ -39,7 +39,7 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	double begin_equity = 0.0;
 	float spread_points = 0;
 	int sym_id = -1;
-	int sym__ = -1;
+	int sym = -1;
 	int proxy_id = -1;
 	int proxy_base_mul = 0;
 	int group_id = -1;

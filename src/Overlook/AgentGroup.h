@@ -4,7 +4,7 @@
 namespace Overlook {
 
 #define GROUP_COUNT				4 //TODO
-#define SYM_COUNT				21
+#define SYM_COUNT				10
 #define AGENT_COUNT				(GROUP_COUNT * SYM_COUNT)
 #define TIME_SENSORS			3
 #define INPUT_SENSORS			(4 * 4 * 2)
@@ -23,7 +23,10 @@ namespace Overlook {
 #define JOINER_NORMALACTS		(3*3*3*3)
 #define JOINER_IDLEACTS			8
 #define JOINER_ACTIONCOUNT		(JOINER_NORMALACTS + JOINER_IDLEACTS)
-#define NEXT_PHASE_ITER_LIMIT	200000
+#define AGENT_PHASE_ITER_LIMIT	400000
+#define AGENT_EPS_ITERS_STEP	10000
+#define JOINER_PHASE_ITER_LIMIT	1000000
+#define JOINER_EPS_ITERS_STEP	100000
 
 
 class AgentGroup;
@@ -42,6 +45,10 @@ struct Snapshot : Moveable<Snapshot> {
 #include "FixedSimBroker.h"
 #include "Agent.h"
 #include "Joiner.h"
+
+
+extern bool reset_agents;
+extern bool reset_joiners;
 
 class AgentGroup {
 	

@@ -7,11 +7,8 @@ Joiner::Joiner() {
 }
 
 void Joiner::Create() {
-	
 	dqn.Reset();
-	
 	TraineeBase::Create();
-	
 }
 
 void Joiner::Init() {
@@ -21,7 +18,7 @@ void Joiner::Init() {
 		broker.proxy_id[i] = proxy_id[i];
 		broker.proxy_base_mul[i] = proxy_base_mul[i];
 	}
-	broker.begin_equity = begin_equity;
+	broker.begin_equity = Upp::max(10000.0, begin_equity);
 	broker.leverage = leverage;
 	
 	ResetEpoch();
@@ -52,6 +49,10 @@ void Joiner::Main(Vector<Snapshot>& snaps) {
 		double equity = broker.AccountEquity();
 		double reward = equity - prev_equity;
 		
+		// exponential reward
+		reward *= 100.0;
+		if (reward >= 0)	reward = reward * reward;
+		else				reward = -(reward * reward);
 		
 		Backward(reward);
 		
@@ -134,10 +135,10 @@ void Joiner::Forward(Vector<Snapshot>& snaps) {
 		prev_signals[2]		= 1.0 * timebwd_step  / timebwd_steps;
 		prev_signals[3]		= 1.0 * timefwd_step  / timefwd_steps;
 		
-		int maxscale		= 1 + maxscale_step * 2;		// 1, 3, 5
-		double fmlevel		= 0.75 + 0.1  * fmlevel_step;	// 0.75, 0.85, 0.95
-		int timebwd			= 1 << (timebwd_step * 3 + 1);	// 2, 16, 128
-		int timefwd			= 1 << (timefwd_step * 3 + 1);	// 2, 16, 128
+		int maxscale		= 1 + maxscale_step * 2;
+		double fmlevel		= 0.55 + 0.1  * fmlevel_step;
+		int timebwd			= 1 << (timebwd_step * 2 + 2);
+		int timefwd			= 1 << (timefwd_step * 2 + 2);
 		
 		
 		free_margin_level = fmlevel;
@@ -195,8 +196,8 @@ void Joiner::Forward(Vector<Snapshot>& snaps) {
 				if (signals_total[i] == 0)
 					continue;
 				double& change = changes_total[i];
-				change = ((change - min_change) / range) * (maxscale - 1) + 1.0;
-				ASSERT(change >= 1 && change <= maxscale);
+				change = ((change - min_change) / range) * maxscale + 1;
+				ASSERT(change >= 1 && change <= maxscale + 1);
 			}
 		} else {
 			for(int i = 0; i < AGENT_COUNT; i++)

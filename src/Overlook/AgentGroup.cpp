@@ -2,41 +2,25 @@
 
 namespace Overlook {
 
+bool reset_agents;
+bool reset_joiners;
+
 AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
 	group_count = GROUP_COUNT;
 	
-	allowed_symbols.Add("AUDCAD"); // --
-	allowed_symbols.Add("AUDJPY"); // --
-	allowed_symbols.Add("AUDNZD"); // -- --
 	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("CADJPY"); // -- --
 	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("EURCAD"); // --
-	allowed_symbols.Add("EURGBP"); // --
+	allowed_symbols.Add("EURGBP");
 	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("EURNZD"); // --
 	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPAUD"); // --
-	allowed_symbols.Add("GBPCAD"); // --
 	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("GBPNZD"); // --
 	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDCAD"); // -- --
-	allowed_symbols.Add("NZDJPY"); // -- --
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
 	
-	/*
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("USDJPY");
-	*/
 	created = GetSysTime();
 }
 
@@ -115,12 +99,29 @@ void AgentGroup::InitThread() {
 	Progress(5, 6, "Initializing agents and joiners");
 	if (agents.GetCount() == 0)
 		CreateAgents();
+	else {
+		for(int i = 0; i < agents.GetCount(); i++) {
+			Agent& a = agents[i];
+			a.sym = sym_ids[a.sym_id];
+		}
+	}
+	if (reset_agents) {
+		phase = Upp::min(phase, (int)PHASE_TRAINING);
+		for(int i = 0; i < agents.GetCount(); i++)
+			agents[i].Create();
+	}
 	for(int i = 0; i < agents.GetCount(); i++)
 		InitAgent(agents[i]);
 	ASSERT(agents.GetCount() == GROUP_COUNT * SYM_COUNT);
 	
 	if (joiners.GetCount() == 0)
 		CreateJoiners();
+	
+	if (reset_joiners) {
+		phase = Upp::min(phase, (int)PHASE_JOINER);
+		for(int i = 0; i < joiners.GetCount(); i++)
+			joiners[i].Create();
+	}
 	
 	for(int i = 0; i < joiners.GetCount(); i++)
 		InitJoiner(joiners[i]);
@@ -211,11 +212,12 @@ void AgentGroup::TrainAgents() {
 			ts.Reset();
 			iter = 0;
 			if (total_elapsed > 5*60*1000) {
+				sys->WhenPopTask();
 				return; // call TrainAgents again to UpdateAmpSnaps safely
 			}
 			
 			// Change phase to joiner eventually
-			if (GetAverageAgentIterations() >= NEXT_PHASE_ITER_LIMIT) {
+			if (GetAverageAgentIterations() >= AGENT_PHASE_ITER_LIMIT) {
 				phase = PHASE_JOINER;
 				StoreThis();
 				break;
@@ -303,8 +305,10 @@ void AgentGroup::LoopAgentSignals(bool from_begin) {
 			CoWork co;
 			for(int i = 0; i < agents.GetCount(); i++) co & [=] {
 		        Agent& agent = agents[i];
-				if (agent.cursor >= snaps.GetCount())
+				if (agent.cursor >= snaps.GetCount()) {
+					sys->WhenPopTask();
 		            return;
+				}
 		        Snapshot& cur_snap  = snaps[agent.cursor - 0];
 				Snapshot& prev_snap = snaps[agent.cursor - 1];
 				
@@ -344,7 +348,7 @@ void AgentGroup::TrainJoiners() {
 		
 		// Randomize input  values
 		double aviter = GetAverageJoinerIterations();
-		if (aviter >= prev_aviter + 5000.0) {
+		if (aviter >= prev_aviter + 50000.0) {
 			LoopAgentSignals(true);
 			LoopJoinerSignals(true);
 			SetJoinersTraining(true);
@@ -358,11 +362,12 @@ void AgentGroup::TrainJoiners() {
 			ts.Reset();
 			iter = 0;
 			if (total_elapsed > 5*60*1000) {
+				sys->WhenPopTask();
 				return; // call TrainJoiners again to UpdateAmpSnaps safely
 			}
 			
 			// Change phase to real mode eventually
-			if (aviter >= NEXT_PHASE_ITER_LIMIT) {
+			if (aviter >= JOINER_PHASE_ITER_LIMIT) {
 				phase = PHASE_REAL;
 				StoreThis();
 				break;
@@ -447,8 +452,10 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 			CoWork co;
 			for(int i = 0; i < joiners.GetCount(); i++) co & [=] {
 		        Joiner& joiner = joiners[i];
-				if (joiner.cursor >= snaps.GetCount())
+				if (joiner.cursor >= snaps.GetCount()) {
+					sys->WhenPopTask();
 		            return;
+				}
 		        Snapshot& cur_snap  = snaps[joiner.cursor - 0];
 				Snapshot& prev_snap = snaps[joiner.cursor - 1];
 				
@@ -882,7 +889,7 @@ void AgentGroup::CreateAgents() {
 			Agent& a = agents[j];
 			a.id = j;
 			a.sym_id = i;
-			a.sym__ = sym_ids[i];
+			a.sym = sym_ids[i];
 			a.group_id = group_id;
 			a.Create();
 			j++;
@@ -938,7 +945,7 @@ double AgentGroup::GetAverageJoinerEpochs() {
 
 void AgentGroup::RefreshAgentEpsilon() {
 	double iters = GetAverageAgentIterations();
-	int level = iters / 10000;
+	int level = iters / AGENT_EPS_ITERS_STEP;
 	if (level <= 0)
 		agent_epsilon = 0.20;
 	else if (level == 1)
@@ -952,7 +959,7 @@ void AgentGroup::RefreshAgentEpsilon() {
 
 void AgentGroup::RefreshJoinerEpsilon() {
 	double iters = GetAverageJoinerIterations();
-	int level = iters / 10000;
+	int level = iters / JOINER_EPS_ITERS_STEP;
 	if (level <= 0)
 		joiner_epsilon = 0.20;
 	else if (level == 1)
@@ -979,9 +986,9 @@ void AgentGroup::SetJoinerEpsilon(double epsilon) {
 void AgentGroup::InitAgent(Agent& a) {
 	MetaTrader& mt = GetMetaTrader();
 	
-	DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[a.sym__]);
+	DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[a.sym]);
 	
-	const Symbol& symbol = mt.GetSymbol(a.sym__);
+	const Symbol& symbol = mt.GetSymbol(a.sym);
 	if (symbol.proxy_id != -1) {
 		int j = sym_ids.Find(symbol.proxy_id);
 		ASSERT(j != -1);

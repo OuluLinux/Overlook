@@ -10,6 +10,10 @@ void TraineeBase::Create() {
 	for(int i = 0; i < AGENT_RESULT_COUNT; i++)
 		result[i] = 0.0f;
 	result_cursor = 0;
+	iter = 0;
+	last_drawdown = 0.0;
+	best_result = 0.0;
+	result_count = 0;
 }
 
 void TraineeBase::ResetEpoch() {
@@ -62,7 +66,7 @@ void Agent::Create() {
 void Agent::Init() {
 	
 	broker.sym_id = sym_id;
-	broker.begin_equity = begin_equity;
+	broker.begin_equity = Upp::max(10000.0, begin_equity);
 	broker.spread_points = spread_points;
 	broker.proxy_id = proxy_id;
 	broker.proxy_base_mul = proxy_base_mul;
@@ -93,6 +97,11 @@ void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) {
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.AccountEquity();
 		double reward = equity - prev_equity;
+		
+		// exponential reward
+		reward *= 100.0;
+		if (reward >= 0)	reward = reward * reward;
+		else				reward = -(reward * reward);
 		
 		
 		Backward(reward);
@@ -223,7 +232,7 @@ void Agent::Backward(double reward) {
 void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
 	s % dqn % begin_equity % spread_points % sym_id
-	  % sym__ % proxy_id % proxy_base_mul % group_id;
+	  % sym % proxy_id % proxy_base_mul % group_id;
 }
 
 }

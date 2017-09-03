@@ -2658,4 +2658,242 @@ be used. It will actually work as`-is in FreeBSD too and no separate
 GPU version will be needed. So that is now in the TODO list, 
 but I am helplessly out of time with this. New courses start 
 at next week :S&]
-[s0; ]]
+[s3; 3.9.2017&]
+[s0; Looks like next release is coming... I think it`'s time for 
+my rant, or `"my life in short`" text.&]
+[s0; ...&]
+[s0; Seems like nobody is responsible. Clearly, electric universe 
+theory beats the Einsteinian world, where most of us lives. Climate 
+change is bullshit as described by electric universe theory, 
+but environmental damaging is real. History is completely falsified 
+as you can see from what power religious groups holds and what 
+kind of lies they can tell about 9/11. There are real conspiracies, 
+what have been exposed officially after tens of years, which 
+proves that they exists. There is speculation about current conspiracies. 
+Some of them might be true, we don`'t know, but we will know 
+later, at least some of them. What can be said certainly, is 
+that we live in the world of deceiving for profit.&]
+[s0; The real history is probably something as described by Fomenko 
+in the New Chronology. We are very close to repeating that research 
+with A.I and in socially acceptable way. Fomenko`'s research 
+clearly has some smell of being beyond the iron curtain. The 
+life on earth might be a shorter than currently official chronology, 
+which by the way have actually very real holes in it, even without 
+going to that how fucking insane some of those religious stories 
+are. The current state of our story is not in automatically verifiable 
+format, which is a very good sign that there is no real sanity 
+check for the description of our reality. That could be done 
+in very standardized way with neural networks etc. , but religious 
+leaders knows what holes their history holds and are against 
+doing it automatically.&]
+[s0; In Finland, we have people, who have had spoken history about 
+our country and it is offically ridiculed and thought as `"corrupted 
+by generations`". It is very different from official, but matches 
+to Fomenko`'s chronology more closely. Of course, spoken history 
+has very much data corruption, but if you check some relations 
+without taking into account claimed times, then it seems more 
+valid.&]
+[s0; Very few understand virtual neural networks and their potential 
+currently. People don`'t understand how they can be used to match 
+complicated sensor images. They are like probability functions, 
+but much more flexible. There is a great gap between `"pure mathematical 
+statistics`" and neural networks, but it shouldn`'t be like that. 
+Old school ways have much more accumulated investements now, 
+but it could change at some point.&]
+[s0; The best sign of the insanity is that religious stories can`'t 
+be ridiculed for their insane content, but everyone must fear 
+of hurting someone`'s feelings about stating the obvious. I don`'t 
+think this is good for religions in long`-term. It is just a 
+big elephant in the living room. They just should recuse themselfs 
+in dignity as the culture advances.&]
+[s0; [* The legacy of post`-war education is almost toxic waste.]&]
+[s0; I`'ll start from my own experience. I taught myself computers 
+and programming languages. I had actually no help from anyone 
+at all. Not even a little bit. Not even that much that anyone 
+could get an excuse. None. Okay, so I followed anonymously Internet 
+tutorials, so they helped, but in traditional sense: none. Having 
+military experience improved me to get grip of myself, but even 
+that wasn`'t critical.&]
+[s0; I have found, that best way to complete an assignment in honestly 
+teaching way is to have a collection of small blocks what you 
+can copy to your assignment. Then you add small changes and eventually 
+you get a new block to your collection, which also visualizes 
+your learning. I completed most of my university math and physics 
+courses in this way after getting helplessly stuck with their 
+version of learning. I don`'t even try to get courses passed 
+in their ways anymore. Now they are just more harmful than useful 
+for me. It is just shame that this takes more time for me than 
+for others, and I can`'t get other schoolfriends to work with 
+me.&]
+[s0; I think that problem is that traditional education institution 
+fears that collection of small usable blocks. They might think 
+that it gets too easy to pass courses, when in my experience, 
+is it just faster and more pleasant learning. The intuitive API 
+also plays a big role in it. Those blocks must actually fit to 
+other blocks without much effort. Ultimate`+`+ is a great example 
+for well fitting blocks and much of the old codebase can`'t be 
+used in that way, or they must at least be wrapped in more intuitive 
+API. Old codebase blocks are huge compared to these API blocks. 
+They see the application package as the target of polishing and 
+not actual code of classes. I am talking about much more fine 
+polishing of the API. Also, static types are important and no 
+weird one liners... Nice big chunks and with the additude that 
+nobody gets hurt by writing `";`" characters or types etc. Nothing 
+should be left to reader to imagine. Also, hungarian notation 
+is just insane brainfuck and people who use `"Object`* someObject 
+`= new Object();`" should just be locked up somewhere. Just kidding...&]
+[s0; The education should support individual learners more than those 
+who go in groups. Nowadays, you can connect people via Internet 
+and you don`'t need others to hold your hand. What you still 
+need is financial support for your education and a freeway for 
+your own personal learning without useless resistance. It`'s 
+currently opposite of that and having university degree is a 
+politized group learning experience, which it shouldn`'t be. 
+I don`'t even want to think what my `"political view`" should 
+be. There are different topics and I want to have my opinion 
+about evert topic separately without being labeled as some color 
+of `"believer`". Those who label themself usually have pre`-determined 
+opinion based on their cult and they haven`'t even bothered to 
+reason their opinion based on their own experience. Actually, 
+those political cults are so harmful, that they prevent you to 
+change your opinion easily and it`'s probably even force`-fed 
+to many people anyway. You don`'t need any politized illusion 
+about the world and your relation to that.&]
+[s0; Actually the problem lies exactly there. Half`-monkeys imitating 
+others and no`-one can reproduce the result alone. Religions 
+love to hate speaking about the relation to monkeys, and I love 
+to remind about the monkey humanity with big brains. That is 
+the part what I like most in the official chronology.&]
+[s0; What comes in to my life and experience in this settlement of 
+cold`-climate surviving religious factory half`-monkeys, it`'s 
+been a challenge. My childhood was very happy and we played a 
+lot in the park with girls and boys and many families had IBM 
+PCs and we played with MS`-DOS and Windows 3.11. Nobody had internet. 
+We were poor, however, and my single`-mother was very sick sometimes. 
+We did not have money for clothes and we got donated clothes 
+from neighbours. I was never bullied, but it wasn`'t far. I liked 
+to ski and my best medal was 2nd in the school`'s competition. 
+We were playing ice`-hockey at winter and rollerskating floorball 
+at summer. What I didn`'t like was these dancing events, were 
+I was almost forced to dance with girls. I was just very shy 
+and didn`'t feel like it. It was clearly what girls liked more. 
+I felt like my friends were stolen to that culture. It actually 
+did left very strong response to opposite sex to me, too, which 
+was common.  Our family moved, and my old friends left there 
+to continue that culture with teen`-age drinking and smoking 
+in home`-parties. The new place didn`'t have that girls`-and`-boys`-dancing`-toge
+ther culture, and I felt lucky. There was less competitive sports 
+and we had much stronger PC gaming culture there. I started to 
+make games with The Games Factory with one of my friends. We 
+moved again and I changed school, but my friends from that place 
+stayed for very long. I felt the lack of opposite sex at that 
+point really hard, when my oldest friends were at doing a lots 
+of home parties and drunken relationships. In my new place me 
+and my friends found sober kissing in a group via truth`-or`-dare, 
+which went to be epic dare thing... I can`'t even remember which 
+girl I kissed first. I`'ll never forget the talk with guys after 
+that. We were literally kissing same girls all evening. That 
+was once`-in`-a`-lifetime moment. Just beautiful.&]
+[s0; I think time around that was a peak social experience for me. 
+I was middle of very different social groups, and none of them 
+felt my own. Well, my first relationship started around there 
+too, and it sucked so hard... it was totally fucked up thing 
+from her side and it did left long`-term damaging effects to 
+me. She found me via facebook`-of`-the day. That was the closest 
+thing to facebook before facebook arrived here. I don`'t even 
+know what I was doing in that social service, but that was very 
+popular thing between my oldest friends. So we were very close 
+to the city center and very close to the dark stuff of the city 
+and she was a bad smoker and drinker. She was also very dumb. 
+Do I need to say more? It was also beautiful at the beginning, 
+but she started to be like friend`-for`-life and I was like friend`-for`-year, 
+and she was emotionally abusive and manipulative. She had some 
+weird diary which she didn`'t let me read, but it contained some 
+very non`-realistic descriptions of me. I had been watching porn 
+many many years before that and she literally went nuts about 
+me liking porn and she being ditched because I didn`'t want long 
+term relationship with her and just liked to watch porn sometimes. 
+Needless to say, me and my oldest friends were huge porn fans 
+together, so in my books she was the outsider. She actually found 
+the dark substances of the inner city in those times and at the 
+separation she actually had to be locked to the nut house. 2 
+weeks before that was hell... I had to forcily prevent her from 
+jumping from bridges and buildings, and last time she went to 
+frozen lake and I had to swim her out of it. Her parents were 
+alcoholic and didn`'t care, but at that point they finally took 
+responsibility, but only to be found by me that they completely 
+lied about the whole store. Basically I was the bad guy for them, 
+their friends and to doctors, I guess, too. It was already 100% 
+fucked up story at that point, but there was more to come, a 
+lot more. The correct solution would have been to call police 
+for her, but I was completely clueless at that point.&]
+[s0; She was at that point almost alcoholic like her father, and 
+she was drinking at the city centre, and sometimes me and my 
+friends were drinking there too. My and my friends had got some 
+mild warning messages that she is telling some very bad stuff 
+about me to people, but we didn`'t consider it to be nothing. 
+Well, first of May when everybody was at city centre, few guys 
+came behind of me and did hit me to face with beer bottle. I 
+got 15cm (5.9 inches) ragged scar to my face, but luckily escaped 
+by running. I didn`'t connect that event to that girl even at 
+that point, and nobody else too. It was very confusing... People 
+just accepted `"random violence`" story too easily. After year 
+or so, I had to go to mandatory military. There were a lot of 
+folks from our city, and few of them I recognized. There were 
+many who had connections to the inner city opioid and meth circles. 
+Some of my schoolfriends had been close to them too, so that 
+is how I knew. And I mean there was those who just didn`'t do 
+much else than laying in bed doing hard drugs and then circulating 
+them. Maybe something good can come out of it, like Red Hot Chili 
+Peppers, but I don`'t know... So, unfortunately, there was some 
+who recognized me as the ex of that girl, and then it got even 
+a lot worse... they planted some rumors that I have been raping 
+that girl and a lot of other evil stuff. Turned out that my leader 
+also heard those, and basically asked me in front of all my peers, 
+that was I in `"that place in that time`", and I accidentally 
+said yes, because I didn`'t understand and I didn`'t know the 
+context (they didn`'t tell me), and after that, everyone thought 
+that those rumours were true. My leader was actually those who 
+said many times that he would beat non`-white people if had a 
+chance, and air force actually hired him to train next rookies. 
+Yeah, pretty fucked up at this point, but wait, it gets worse. 
+So, I got off from military, and even at that point I didn`'t 
+actually know what those rumours were, because those fucked up 
+nazis were actually that fucked up, that they didn`'t tell me. 
+So, my sister`'s house get sprayed by `"rapist`'s sister`" tag 
+and my house with `"sick`" tag, and I still don`'t have clue. 
+Some of my ex`-girfriend`'s (the troublemaker) musician meth`-head 
+friends, which circulated a lot of drugs, and could have provided 
+me, if necessary, tried also to make me to make some orders from 
+tor`-network. I didn`'t have a clue even at that point. Only, 
+when finally, my ex started to `"settle down`" and her latest 
+`"big dick boyfriend with money`" came to `"get even`" with me 
+by giving death`-threats and threats about coming to my apartment 
+to beat me up, I got clue, that she was STILL insanely angry 
+to me... about me watching porn.&]
+[s0; And with that, I`'ll leave you to ponder, that what is really 
+fucked up in the world...&]
+[s0; Without that episode overlaying reality, I`'ve been just watching 
+porn and almost never getting laid, because girls are too difficult, 
+too not`-my`-type, too hard to find, or too religious, and nobody 
+is helping me to find anyone. That Tinder culture is not helping 
+either. What is actually more body shaming than that. What I 
+want to know, that what kind of positions you like, do you like 
+your pussy getting licked, do you take blow`-jobs, what is your 
+endurance, can you max 3 ours with foreplay and breaks if at 
+that mood, are you sensitive to accidentally disgusting stuff. 
+I mean, are you sad for life, or can you just enjoy spontaneous 
+romantic background music and snuggling between sheets for hours, 
+if felt like so, and how often you feel like so? That one face 
+picture judging all that is just an insult. I, as a long term 
+porn viewer know, that one should always separate the visual 
+part and the real thing... but it seems that many have hard times 
+doing that. I`'ve never succeeded in making something soft and 
+sensual from something hard as a rock, and I don`'t think I`'ve 
+ever will. Some sex tapes, like few of Lisa Ann, actually reminds 
+me of the real love making, but most of the porn is just cold 
+exercise. They are intersesting in non`-realistic ways.&]
+[s0; ...&]
+[s0; Back to the development... It was difficult to tune Joiner class 
+properly, but it might work now. If not, I have some other ideas 
+too.]]

@@ -86,7 +86,7 @@ void AgentTabCtrl::Data() {
 	int tab = Get();
 	
 	if (tab == 0) {
-		const Symbol& sym = GetMetaTrader().GetSymbol(a.sym__);
+		const Symbol& sym = GetMetaTrader().GetSymbol(a.sym);
 		
 		String trading_hours;
 		for(int i = 0; i < 7; i++) {
@@ -107,7 +107,7 @@ void AgentTabCtrl::Data() {
 		overview.spread_points.SetLabel(DblStr(a.spread_points));
 		
 		
-		double minimum_margin = GetMetaTrader().GetMargin(a.sym__, sym.volume_min);
+		double minimum_margin = GetMetaTrader().GetMargin(a.sym, sym.volume_min);
 		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));
 	}
 	else if (tab == 1) {
@@ -271,7 +271,7 @@ void ManagerCtrl::Data() {
 		for(int i = 0; i < ag.agents.GetCount(); i++) {
 			Agent& a = ag.agents[i];
 			
-			alist.Set(i, 0, IntStr(a.group_id) + " " + (a.sym__ != -1 ? sys.GetSymbol(a.sym__) : ""));
+			alist.Set(i, 0, IntStr(a.group_id) + " " + (a.sym != -1 ? sys.GetSymbol(a.sym) : ""));
 			alist.Set(i, 1, a.best_result);
 			alist.Set(i, 2, a.last_drawdown);
 		}

@@ -24,7 +24,14 @@ GUI_APP_MAIN {
 		else if (s == "-port") {
 			arg_port = ScanInt(args[i]);
 		}
+		else if (s == "-resetagents") {
+			reset_agents = ScanInt(args[i]);
+		}
+		else if (s == "-resetjoiners") {
+			reset_joiners = ScanInt(args[i]);
+		}
 	}
+	
 	
 	System& sys = GetSystem();
 	sys.Init();

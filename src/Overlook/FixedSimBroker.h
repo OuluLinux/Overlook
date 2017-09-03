@@ -41,7 +41,7 @@ struct SingleFixedSimBroker {
 
 
 struct FixedSimBroker {
-	#define ORDERS_PER_SYMBOL	3
+	#define ORDERS_PER_SYMBOL	10
 	#define MAX_ORDERS			(ORDERS_PER_SYMBOL * SYM_COUNT)
 	
 	FixedOrder order[MAX_ORDERS];

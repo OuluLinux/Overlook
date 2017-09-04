@@ -14,10 +14,12 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 	
 	// Temporary
 	FixedSimBroker broker;
-	double prev_signals[4];
+	double prev_signals[JOINER_SIGNAL_SENSORS];
 	double free_margin_level = 0.95;
-	float input_array[JOINER_STATES];
+	double input_array[JOINER_STATES];
 	int symsignals[SYM_COUNT];
+	int group_id = 0;
+	int signal = 0;
 	
 	
 	Joiner();
@@ -28,9 +30,8 @@ struct Joiner : Moveable<Joiner>, public TraineeBase {
 	void Forward(Vector<Snapshot>& snaps);
 	void WriteSignal(Snapshot& cur_snap);
 	void Backward(double reward);
-	bool PutLatest(AgentGroup& ag, Brokerage& broker, Vector<Snapshot>& snaps);
-	void Data();
 	void Serialize(Stream& s);
+	void SetFreeMarginLevel(double d) {free_margin_level = d; broker.free_margin_level = d;}
 };
 
 #endif

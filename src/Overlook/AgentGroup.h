@@ -3,28 +3,29 @@
 
 namespace Overlook {
 
-#define GROUP_COUNT				4 //TODO
 #define SYM_COUNT				10
-#define AGENT_COUNT				(GROUP_COUNT * SYM_COUNT)
+#define GROUP_COUNT				4
 #define TIME_SENSORS			3
-#define INPUT_SENSORS			(4 * 4 * 2)
-#define SIGNAL_SENSORS			3
+#define INPUT_SENSORS			(5 * 4 * 2)
 #define SENSOR_SIZE				(SYM_COUNT * INPUT_SENSORS)
-#define GROUP_SIGNAL_SIZE		(SYM_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_SIZE				(GROUP_SIGNAL_SIZE * GROUP_COUNT)
-#define AGENT_STATES			(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
-#define AGENT_ACTIONCOUNT		24
-#define AGENT_RESULT_COUNT		1000
-#define JOINER_COUNT			10 //TODO
-#define JOINERSIGNAL_SENSORS	5
-#define JOINER_RESULT_COUNT		1000
-#define JOINERSIGNAL_SIZE		(JOINER_COUNT * JOINERSIGNAL_SENSORS)
-#define JOINER_STATES			(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + JOINERSIGNAL_SIZE)
-#define JOINER_NORMALACTS		(3*3*3*3)
-#define JOINER_IDLEACTS			8
-#define JOINER_ACTIONCOUNT		(JOINER_NORMALACTS + JOINER_IDLEACTS)
+
+#define TRAINEE_RESULT_COUNT	1000
+#define TRAINEE_COUNT			(GROUP_COUNT * SYM_COUNT)
+
+#define AGENT_SIGNAL_SENSORS	3
+#define AGENT_GROUP_SIGNAL_SIZE	(SYM_COUNT * AGENT_SIGNAL_SENSORS)
+#define AGENT_SIGNAL_SIZE		(TRAINEE_COUNT * AGENT_SIGNAL_SENSORS)
+#define AGENT_STATES			(TIME_SENSORS + SENSOR_SIZE + AGENT_SIGNAL_SIZE)
+#define AGENT_NORMALACTS		14
+#define AGENT_IDLEACTS			8
+#define AGENT_ACTIONCOUNT		(AGENT_NORMALACTS + AGENT_IDLEACTS)
 #define AGENT_PHASE_ITER_LIMIT	400000
 #define AGENT_EPS_ITERS_STEP	10000
+
+#define JOINER_SIGNAL_SENSORS	3
+#define JOINER_SIGNAL_SIZE		(TRAINEE_COUNT * JOINER_SIGNAL_SENSORS)
+#define JOINER_STATES			(TIME_SENSORS + SENSOR_SIZE + AGENT_SIGNAL_SIZE + JOINER_SIGNAL_SIZE)
+#define JOINER_ACTIONCOUNT		(3*6)
 #define JOINER_PHASE_ITER_LIMIT	1000000
 #define JOINER_EPS_ITERS_STEP	100000
 
@@ -32,13 +33,15 @@ namespace Overlook {
 class AgentGroup;
 
 struct Snapshot : Moveable<Snapshot> {
-	float year_timesensor;
-	float week_timesensor;
-	float day_timesensor;
-	float sensor			[SENSOR_SIZE];
-	float signal			[SIGNAL_SIZE];
-	float open				[SYM_COUNT];
-	float joiner_signal		[JOINERSIGNAL_SIZE];
+	double year_timesensor;
+	double week_timesensor;
+	double day_timesensor;
+	double sensor				[SENSOR_SIZE];
+	double open					[SYM_COUNT];
+	double agent_signal			[AGENT_SIGNAL_SIZE];
+	double joiner_signal		[JOINER_SIGNAL_SIZE];
+	int agent_broker_signal		[TRAINEE_COUNT];
+	int joiner_broker_signal	[TRAINEE_COUNT];
 	int shift;
 };
 
@@ -61,7 +64,6 @@ public:
 	Vector<FactoryDeclaration> indi_ids;
 	Time created;
 	int phase = 0;
-	int group_count = 0;
 	
 	
 	// Temp
@@ -75,6 +77,7 @@ public:
 	TimeStop last_store, last_datagather;
 	System* sys;
 	double agent_epsilon = 0.0, joiner_epsilon = 0.0;
+	double joiner_fmlevel = 0.8;
 	int main_tf = -1;
 	int data_begin = 0;
 	int buf_count = 0;
@@ -105,6 +108,7 @@ public:
 	void LoadThis();
 	void SetAgentEpsilon(double d);
 	void SetJoinerEpsilon(double d);
+	void SetFreeMarginLevel(double d);
 	void RefreshSnapshots();
 	void Progress(int actual, int total, String desc);
 	void SubProgress(int actual, int total);
@@ -128,9 +132,11 @@ public:
 	void TrainAgents();
 	void TrainJoiners();
 	void MainReal();
+	void Data();
 	void LoopAgentSignals(bool from_begin);
 	void LoopJoinerSignals(bool from_begin);
-	Joiner* GetBestJoiner();
+	Joiner* GetBestJoiner(int sym_id);
+	bool PutLatest(Brokerage& broker, Vector<Snapshot>& snaps);
 	
 	void Main();
 	void SetAgentsTraining(bool b);

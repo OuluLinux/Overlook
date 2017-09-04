@@ -19,10 +19,10 @@ void SnapshotDraw::Paint(Draw& w) {
 	if (snap_id < 0 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
 	const Snapshot& snap = group.snaps[snap_id];
 	
-	int agent_count		= GROUP_COUNT * SYM_COUNT;
+	int agent_count		= TRAINEE_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = TIME_SENSORS + SYM_COUNT + SYM_COUNT * GROUP_COUNT + JOINER_COUNT;
+	int rows = TIME_SENSORS + SYM_COUNT + TRAINEE_COUNT + TRAINEE_COUNT;
 	
 	int cols = value_count;
 	int grid_w = sz.cx;
@@ -83,10 +83,10 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	
 	// Signals
-	cols = SIGNAL_SENSORS;
+	cols = AGENT_SIGNAL_SENSORS;
 	xstep = (double)grid_w / (double)cols;
 	s = 0;
-	int signal_rows = SYM_COUNT * GROUP_COUNT;
+	int signal_rows = TRAINEE_COUNT;
 	for(int j = 0; j < signal_rows; j++) {
 		int y = (int)(row * ystep);
 		int y2 = (int)((row + 1) * ystep);
@@ -96,7 +96,7 @@ void SnapshotDraw::Paint(Draw& w) {
 			int x = (int)(k * xstep);
 			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
-			double d = snap.signal[s++];
+			double d = snap.agent_signal[s++];
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -107,14 +107,14 @@ void SnapshotDraw::Paint(Draw& w) {
 		
 		row++;
 	}
-	ASSERT(s == SIGNAL_SIZE);
+	ASSERT(s == AGENT_SIGNAL_SIZE);
 	
 	
 	// Joiner
-	cols = JOINERSIGNAL_SENSORS;
+	cols = JOINER_SIGNAL_SENSORS;
 	xstep = (double)grid_w / (double)cols;
 	s = 0;
-	int joiner_rows = JOINER_COUNT;
+	int joiner_rows = TRAINEE_COUNT;
 	for(int j = 0; j < joiner_rows; j++) {
 		int y = (int)(row * ystep);
 		int y2 = (int)((row + 1) * ystep);
@@ -135,7 +135,7 @@ void SnapshotDraw::Paint(Draw& w) {
 		
 		row++;
 	}
-	ASSERT(s == JOINERSIGNAL_SIZE);
+	ASSERT(s == JOINER_SIGNAL_SIZE);
 	
 	
 	ASSERT(row == rows);
@@ -172,12 +172,12 @@ void ResultGraph::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	TraineeBase& trainee = *this->trainee;
-	float* data = trainee.result;
+	double* data = trainee.result;
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	
-	int count = Upp::min(trainee.result_count, AGENT_RESULT_COUNT);
+	int count = Upp::min(trainee.result_count, TRAINEE_RESULT_COUNT);
 	for(int j = 0; j < count; j++) {
 		double d = data[j];
 		if (d > max) max = d;

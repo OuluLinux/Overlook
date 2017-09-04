@@ -206,7 +206,7 @@ ManagerCtrl::ManagerCtrl() {
 	glist.AddColumn("View");
 	glist.Add("Overview");
 	glist.Add("Agents");
-	glist.Add("Joiner");
+	glist.Add("Joiners");
 	glist.Add("Realtime");
 	glist <<= THISBACK(SetView);
 	

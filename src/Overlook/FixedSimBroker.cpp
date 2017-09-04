@@ -20,11 +20,11 @@ void SingleFixedSimBroker::Reset() {
 	loss_sum = 0.0;
 }
 
-float SingleFixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
+double SingleFixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
 	return snap.open[sym_id] - spread_points;
 }
 
-float SingleFixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
+double SingleFixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
 	return snap.open[sym_id];
 }
 
@@ -35,7 +35,7 @@ double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
 	
 	double volume = 100000 * o.volume; // lotsize * volume
 	
-	float close;
+	double close;
 	if (o.type == OP_BUY)
 		close = RealtimeBid(snap, sym_id);
 	else if (o.type == OP_SELL)
@@ -73,7 +73,7 @@ double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
 	else return 0.0;
 }
 
-void SingleFixedSimBroker::OrderSend(int type, float volume, float price) {
+void SingleFixedSimBroker::OrderSend(int type, double volume, double price) {
 	ASSERT(!order.is_open);
 	order.type = type;
 	order.volume = volume;
@@ -163,6 +163,8 @@ FixedSimBroker::FixedSimBroker() {
 void FixedSimBroker::Reset() {
 	equity = begin_equity;
 	balance = begin_equity;
+	part_balance = 0.0;
+	part_equity = 0.0;
 	order_count = 0;
 	profit_sum = 0.0;
 	loss_sum = 0.0;
@@ -173,11 +175,11 @@ void FixedSimBroker::Reset() {
 		order[i].is_open = false;
 }
 
-float FixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
+double FixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
 	return snap.open[sym_id] - spread_points[sym_id];
 }
 
-float FixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
+double FixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
 	return snap.open[sym_id];
 }
 
@@ -187,7 +189,7 @@ double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Sna
 	
 	double volume = 100000 * o.volume; // lotsize * volume
 	
-	float close;
+	double close;
 	if (o.type == OP_BUY)
 		close = RealtimeBid(snap, sym_id);
 	else if (o.type == OP_SELL)
@@ -227,7 +229,7 @@ double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Sna
 	else return 0.0;
 }
 
-void FixedSimBroker::OrderSend(int sym_id, int type, float volume, float price) {
+void FixedSimBroker::OrderSend(int sym_id, int type, double volume, double price) {
 	ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
 	int sym_orders_begin = sym_id * ORDERS_PER_SYMBOL;
 	
@@ -258,12 +260,14 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 		balance += profit;
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
+		if (sym_id == part_sym_id) part_balance += profit;
 	} else {
 		order.is_open = false;
 		double profit = GetCloseProfit(sym_id, order, snap);
 		balance += profit;
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
+		if (sym_id == part_sym_id) part_balance += profit;
 	}
 }
 /*
@@ -454,6 +458,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 
 void FixedSimBroker::RefreshOrders(const Snapshot& snap) {
 	double e = balance;
+	double pe = part_balance;
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& o = order[i];
 		if (o.is_open) {
@@ -462,9 +467,11 @@ void FixedSimBroker::RefreshOrders(const Snapshot& snap) {
 			o.close = snap.open[sym];
 			o.profit = p;
 			e += p;
+			if (sym == part_sym_id) pe += p;
 		}
 	}
 	equity = e;
+	part_equity = pe;
 }
 
 }

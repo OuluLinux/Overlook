@@ -7,7 +7,7 @@ TraineeBase::TraineeBase() {
 }
 
 void TraineeBase::Create() {
-	for(int i = 0; i < AGENT_RESULT_COUNT; i++)
+	for(int i = 0; i < TRAINEE_RESULT_COUNT; i++)
 		result[i] = 0.0f;
 	result_cursor = 0;
 	iter = 0;
@@ -27,12 +27,13 @@ void TraineeBase::ResetEpoch() {
 
 void TraineeBase::Serialize(Stream& s) {
 	if (s.IsLoading()) {
-		s.Get(result, sizeof(float) * AGENT_RESULT_COUNT);
+		s.Get(result, sizeof(double) * TRAINEE_RESULT_COUNT);
 	}
 	else if (s.IsStoring()) {
-		s.Put(result, sizeof(float) * AGENT_RESULT_COUNT);
+		s.Put(result, sizeof(double) * TRAINEE_RESULT_COUNT);
 	}
-	s % best_result % last_drawdown % iter % result_cursor % result_count % id % cursor;
+	s % best_result % last_drawdown % iter % result_cursor % result_count % id % cursor
+	  % sym_id % sym % group_id;
 }
 
 
@@ -81,7 +82,7 @@ void Agent::ResetEpoch() {
 		if (broker.equity > best_result)
 			best_result = broker.equity;
 		result[result_cursor] = broker.equity;
-		result_cursor = (result_cursor + 1) % AGENT_RESULT_COUNT;
+		result_cursor = (result_cursor + 1) % TRAINEE_RESULT_COUNT;
 		result_count++;
 	}
 	
@@ -97,12 +98,12 @@ void Agent::Main(Snapshot& cur_snap, Snapshot& prev_snap) {
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.AccountEquity();
 		double reward = equity - prev_equity;
-		
+		/*
 		// exponential reward
-		reward *= 100.0;
+		reward *= 10000.0;
 		if (reward >= 0)	reward = reward * reward;
 		else				reward = -(reward * reward);
-		
+		*/
 		
 		Backward(reward);
 		
@@ -141,8 +142,8 @@ void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	// all previous signals from same tf agents
-	for(int i = 0; i < SIGNAL_SIZE; i++)
-		input_array[cursor++] = prev_snap.signal[i];
+	for(int i = 0; i < AGENT_SIGNAL_SIZE; i++)
+		input_array[cursor++] = prev_snap.agent_signal[i];
 	
 	ASSERT(cursor == AGENT_STATES);
 	
@@ -154,7 +155,7 @@ void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	// Convert action to simple signal
 	
 	// Long/Short
-	if (action < 14) {
+	if (action < AGENT_NORMALACTS) {
 		int exp = 3 + action / 2;
 		bool neg = exp % 2; // 0,+1,-1,-2,+2,+4,-4 ...
 		bool dir = (action % 2) != neg;
@@ -164,10 +165,12 @@ void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	// Idle
 	else {
-		action -= 14;
+		action -= AGENT_NORMALACTS;
 		signal = 0;
 		timestep_total = 1 << action;
 	}
+	
+	cur_snap.agent_broker_signal[id] = signal;
 	
 	timestep_actual = timestep_total;
 	
@@ -181,12 +184,13 @@ void Agent::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 
 void Agent::WriteSignal(Snapshot& cur_snap) {
 	
-	if (timestep_actual < 0) timestep_actual = 0;
-	float timestep_sensor = 0.75 - 0.75 * timestep_actual / timestep_total;
+	cur_snap.agent_broker_signal[id] = signal;
 	
+	if (timestep_actual < 0) timestep_actual = 0;
+	double timestep_sensor = 0.75 - 0.75 * timestep_actual / timestep_total;
 	
 	// Write latest average to the group values
-	float pos, neg, idl;
+	double pos, neg, idl;
 	if (signal == 0) {
 		pos = 1.0;
 		neg = 1.0;
@@ -204,12 +208,12 @@ void Agent::WriteSignal(Snapshot& cur_snap) {
 	}
 	
 	
-	int group_begin = group_id * GROUP_SIGNAL_SIZE;
-	int sigpos = group_begin + sym_id * SIGNAL_SENSORS;
-	ASSERT(sigpos >= 0 && sigpos+2 < SIGNAL_SIZE);
-	cur_snap.signal[sigpos + 0] = pos;
-	cur_snap.signal[sigpos + 1] = neg;
-	cur_snap.signal[sigpos + 2] = idl;
+	int cursor = id * AGENT_SIGNAL_SENSORS;
+	ASSERT(cursor >= 0 && cursor+2 <= AGENT_SIGNAL_SIZE);
+	
+	cur_snap.agent_signal[cursor++] = pos;
+	cur_snap.agent_signal[cursor++] = neg;
+	cur_snap.agent_signal[cursor++] = idl;
 	
 }
 
@@ -231,8 +235,7 @@ void Agent::Backward(double reward) {
 
 void Agent::Serialize(Stream& s) {
 	TraineeBase::Serialize(s);
-	s % dqn % begin_equity % spread_points % sym_id
-	  % sym % proxy_id % proxy_base_mul % group_id;
+	s % dqn % begin_equity % spread_points % proxy_id % proxy_base_mul;
 }
 
 }

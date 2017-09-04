@@ -8,7 +8,6 @@ bool reset_joiners;
 AgentGroup::AgentGroup(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-	group_count = GROUP_COUNT;
 	
 	allowed_symbols.Add("AUDUSD");
 	allowed_symbols.Add("EURAUD");
@@ -33,6 +32,7 @@ void AgentGroup::Init() {
 	
 	agent_epsilon = 0.02;
 	joiner_epsilon = 0.02;
+	joiner_fmlevel = 0.6;
 	
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
@@ -73,10 +73,12 @@ void AgentGroup::InitThread() {
 	indi_ids.Clear();
 	indi_ids.Add().Set(osma_id).AddArg(5).AddArg(5*2).AddArg(5);
 	indi_ids.Add().Set(osma_id).AddArg(15).AddArg(15*2).AddArg(15);
+	indi_ids.Add().Set(osma_id).AddArg(60).AddArg(60*2).AddArg(60);
 	indi_ids.Add().Set(osma_id).AddArg(240).AddArg(240*2).AddArg(240);
 	indi_ids.Add().Set(osma_id).AddArg(1440).AddArg(1440*2).AddArg(1440);
 	indi_ids.Add().Set(stoch_id).AddArg(5);
 	indi_ids.Add().Set(stoch_id).AddArg(15);
+	indi_ids.Add().Set(stoch_id).AddArg(60);
 	indi_ids.Add().Set(stoch_id).AddArg(240);
 	indi_ids.Add().Set(stoch_id).AddArg(1440);
 	
@@ -112,7 +114,7 @@ void AgentGroup::InitThread() {
 	}
 	for(int i = 0; i < agents.GetCount(); i++)
 		InitAgent(agents[i]);
-	ASSERT(agents.GetCount() == GROUP_COUNT * SYM_COUNT);
+	ASSERT(agents.GetCount() == TRAINEE_COUNT);
 	
 	if (joiners.GetCount() == 0)
 		CreateJoiners();
@@ -125,7 +127,7 @@ void AgentGroup::InitThread() {
 	
 	for(int i = 0; i < joiners.GetCount(); i++)
 		InitJoiner(joiners[i]);
-	ASSERT(joiners.GetCount() == JOINER_COUNT);
+	ASSERT(joiners.GetCount() == TRAINEE_COUNT);
 	
 	
 	agent_equities.SetCount(agents.GetCount() * snaps.GetCount(), 0.0);
@@ -133,6 +135,7 @@ void AgentGroup::InitThread() {
 	joiner_equities.SetCount(joiners.GetCount() * snaps.GetCount(), 0.0);
 	joiner_equities_count = snaps.GetCount();
 	
+	SetFreeMarginLevel(0.6);
 	
 	Progress(6, 6, "Complete");
 }
@@ -391,7 +394,7 @@ void AgentGroup::TrainJoiners() {
 		        joiner.Main(snaps);
 				
 				// Get some diagnostic stats
-				joiner_equities[equities_begin + joiner.cursor] = joiner.broker.AccountEquity();
+				joiner_equities[equities_begin + joiner.cursor] = joiner.broker.PartialEquity();
 				joiner.cursor++;
 				
 				// Close all order at the end
@@ -430,7 +433,7 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 				
 				joiner.timestep_actual--;
 				joiner.Main(snaps);
-				joiner_equities[joiner.id * snaps.GetCount() + joiner.cursor] = joiner.broker.AccountEquity();
+				joiner_equities[joiner.id * snaps.GetCount() + joiner.cursor] = joiner.broker.PartialEquity();
 				joiner.cursor++;
 		    };
 		    co.Finish();
@@ -461,7 +464,7 @@ void AgentGroup::LoopJoinerSignals(bool from_begin) {
 				
 				joiner.timestep_actual--;
 				joiner.Main(snaps);
-				joiner_equities[joiner.id * snaps.GetCount() + joiner.cursor] = joiner.broker.AccountEquity();
+				joiner_equities[joiner.id * snaps.GetCount() + joiner.cursor] = joiner.broker.PartialEquity();
 				joiner.cursor++;
 		    };
 		    co.Finish();
@@ -475,8 +478,7 @@ void AgentGroup::MainReal() {
 	sys->WhenPushTask("Real");
 	
 	MetaTrader& mt = GetMetaTrader();
-    Joiner* best_joiner = GetBestJoiner();
-	Time time = mt.GetTime();
+    Time time = mt.GetTime();
 	int wday = DayOfWeek(time);
 	int shift = sys->GetShiftFromTimeTf(time, main_tf);
 	
@@ -534,7 +536,7 @@ void AgentGroup::MainReal() {
 			
 			// Use best group to set broker signals
 			WhenInfo("Looping agents until latest snapshot");
-			bool succ = best_joiner->PutLatest(*this, mt, snaps);
+			bool succ = PutLatest(mt, snaps);
 			
 			
 			// Print info
@@ -569,7 +571,7 @@ void AgentGroup::MainReal() {
 		}
 		
 		if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 1*60*1000) {
-			best_joiner->Data();
+			Data();
 			last_datagather.Reset();
 		}
 	}
@@ -577,11 +579,13 @@ void AgentGroup::MainReal() {
 	sys->WhenPopTask();
 }
 
-Joiner* AgentGroup::GetBestJoiner() {
+Joiner* AgentGroup::GetBestJoiner(int sym_id) {
 	double best_dd = 100;
 	int best_i = 0;
 	for(int i = 0; i < joiners.GetCount(); i++) {
-		double dd = joiners[i].last_drawdown;
+		Joiner& j = joiners[i];
+		if (j.sym_id != sym_id) continue;
+		double dd = j.last_drawdown;
 		if (dd < best_dd) {
 			best_dd = dd;
 			best_i = i;
@@ -609,7 +613,7 @@ void AgentGroup::StoreThis() {
 }
 
 void AgentGroup::Serialize(Stream& s) {
-	s % agents % joiners % indi_ids % created % phase % group_count;
+	s % agents % joiners % indi_ids % created % phase;
 }
 
 void AgentGroup::RefreshSnapshots() {
@@ -869,9 +873,17 @@ bool AgentGroup::Seek(Snapshot& snap, int shift) {
 	
 	
 	// Reset signals
-	for(int i = 0; i < SIGNAL_SIZE; i++)
-		snap.signal[i] = 1.0;
+	for(int i = 0; i < AGENT_SIGNAL_SIZE; i++)
+		snap.agent_signal[i] = 1.0;
 	
+	for(int i = 0; i < JOINER_SIGNAL_SIZE; i++)
+		snap.joiner_signal[i] = 1.0;
+	
+	for(int i = 0; i < TRAINEE_COUNT; i++)
+		snap.agent_broker_signal[i] = 0;
+	
+	for(int i = 0; i < TRAINEE_COUNT; i++)
+		snap.joiner_broker_signal[i] = 0;
 	
 	return true;
 }
@@ -881,9 +893,9 @@ void AgentGroup::CreateAgents() {
 	ASSERT(sym_count > 0);
 	
 	MetaTrader& mt = GetMetaTrader();
-	agents.SetCount(sym_count * group_count);
+	agents.SetCount(TRAINEE_COUNT);
 	int j = 0;
-	for(int group_id = 0; group_id < group_count; group_id++) {
+	for(int group_id = 0; group_id < GROUP_COUNT; group_id++) {
 		for(int i = 0; i < sym_ids.GetCount(); i++) {
 			const Symbol& sym = mt.GetSymbol(sym_ids[i]);
 			Agent& a = agents[j];
@@ -899,13 +911,25 @@ void AgentGroup::CreateAgents() {
 }
 
 void AgentGroup::CreateJoiners() {
+	ASSERT(buf_count > 0);
+	ASSERT(sym_count > 0);
+	
 	MetaTrader& mt = GetMetaTrader();
-	joiners.SetCount(JOINER_COUNT);
-	for(int i = 0; i < joiners.GetCount(); i++) {
-		Joiner& j = joiners[i];
-		j.id = i;
-		j.Create();
+	joiners.SetCount(TRAINEE_COUNT);
+	int k = 0;
+	for(int group_id = 0; group_id < GROUP_COUNT; group_id++) {
+		for(int i = 0; i < sym_ids.GetCount(); i++) {
+			const Symbol& sym = mt.GetSymbol(sym_ids[i]);
+			Joiner& j = joiners[k];
+			j.id = k;
+			j.sym_id = i;
+			j.sym = sym_ids[i];
+			j.group_id = group_id;
+			j.Create();
+			k++;
+		}
 	}
+	ASSERT(k == joiners.GetCount());
 }
 
 double AgentGroup::GetAverageAgentDrawdown() {
@@ -983,6 +1007,12 @@ void AgentGroup::SetJoinerEpsilon(double epsilon) {
 		joiners[i].dqn.SetEpsilon(epsilon);
 }
 
+void AgentGroup::SetFreeMarginLevel(double fmlevel) {
+	this->joiner_fmlevel = fmlevel;
+	for(int i = 0; i < joiners.GetCount(); i++)
+		joiners[i].SetFreeMarginLevel(fmlevel);
+}
+
 void AgentGroup::InitAgent(Agent& a) {
 	MetaTrader& mt = GetMetaTrader();
 	
@@ -1030,9 +1060,73 @@ void AgentGroup::InitJoiner(Joiner& j) {
 	}
 	
 	j.begin_equity = mt.AccountEquity();
-	j.leverage = mt.AccountLeverage();
+	j.leverage = 1000;
 	
 	j.Init();
+}
+
+bool AgentGroup::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
+	System& sys = GetSystem();
+	sys.WhenPushTask("Putting latest signals");
+	
+	
+	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
+	if (mt) {
+		mt->Data();
+		broker.RefreshLimits();
+	} else {
+		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
+		sb->RefreshOrders();
+	}
+	
+	
+	for(int i = 0; i < sym_ids.GetCount(); i++) {
+		Joiner& j = *GetBestJoiner(i);
+		j.cursor = snaps.GetCount() - 1;
+		j.Forward(snaps);
+		int sym = sym_ids[i];
+		int sig = j.signal;
+		ASSERT(j.sym == sym);
+		if (sig == broker.GetSignal(sym) && sig != 0)
+			broker.SetSignalFreeze(sym, true);
+		else {
+			broker.SetSignal(sym, sig);
+			broker.SetSignalFreeze(sym, false);
+		}
+	}
+	
+	broker.SetFreeMarginLevel(joiner_fmlevel);
+	broker.SignalOrders(true);
+	
+	sys.WhenPopTask();
+	
+	return true;
+}
+
+void AgentGroup::Data() {
+	MetaTrader& mt = GetMetaTrader();
+	Vector<Order> orders;
+	Vector<int> signals;
+
+	orders <<= mt.GetOpenOrders();
+	signals <<= mt.GetSignals();
+
+	mt.Data();
+
+	int file_version = 1;
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	Time time = mt.GetTime();
+
+	FileAppend fout(ConfigFile("agentgroup.log"));
+	int64 begin_pos = fout.GetSize();
+	int size = 0;
+	fout.Put(&size, sizeof(int));
+	fout % file_version % balance % equity % time % signals % orders;
+	int64 end_pos = fout.GetSize();
+	size = end_pos - begin_pos - sizeof(int);
+	fout.Seek(begin_pos);
+	fout.Put(&size, sizeof(int));
 }
 
 }

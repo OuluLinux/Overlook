@@ -324,7 +324,7 @@ struct RecurrentAdd {
 
 template <int WIDTH, int HEIGHT>
 struct DQExperience : Moveable<DQExperience<WIDTH, HEIGHT> > {
-	typedef Mat<float, WIDTH, HEIGHT> MatType;
+	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	MatType state0, state1;
 	int action0, action1;
 	double reward0;
@@ -374,7 +374,7 @@ class DQNAgent {
 	
 public:
 	
-	typedef Mat<float, 1, num_states> MatType;
+	typedef Mat<double, 1, num_states> MatType;
 	
 	struct Data {
 	
@@ -477,7 +477,7 @@ public:
 		data.mul1.Backward(data.W1,				input);
 	}
 	
-	int Act(float slist[num_states]) {
+	int Act(double slist[num_states]) {
 		
 		// convert to a Mat column vector
 		state.Init(slist);

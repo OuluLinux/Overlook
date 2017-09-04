@@ -5,7 +5,7 @@
 struct TraineeBase {
 	
 	// Persistent
-	float result[AGENT_RESULT_COUNT];
+	double result[TRAINEE_RESULT_COUNT];
 	double best_result = 0.0;
 	double last_drawdown = 0.0;
 	long iter = 0;
@@ -13,12 +13,15 @@ struct TraineeBase {
 	int result_count = 0;
 	int id = -1;
 	int cursor = 0;
+	int sym_id = -1;
+	int sym = -1;
+	int group_id = -1;
 	
 	
 	// Temporary
 	double reward_sum = 0;
 	double average_reward = 0;
-	float prev_equity = 0;
+	double prev_equity = 0;
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
@@ -37,17 +40,14 @@ struct Agent : Moveable<Agent>, public TraineeBase {
 	// Persistent
 	DQNAgent<AGENT_ACTIONCOUNT, AGENT_STATES> dqn;
 	double begin_equity = 0.0;
-	float spread_points = 0;
-	int sym_id = -1;
-	int sym = -1;
+	double spread_points = 0;
 	int proxy_id = -1;
 	int proxy_base_mul = 0;
-	int group_id = -1;
 	
 	
 	// Temporary
 	SingleFixedSimBroker broker;
-	float input_array[AGENT_STATES];
+	double input_array[AGENT_STATES];
 	
 	
 	Agent();

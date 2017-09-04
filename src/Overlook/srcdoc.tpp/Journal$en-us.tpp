@@ -2896,4 +2896,14 @@ exercise. They are intersesting in non`-realistic ways.&]
 [s0; ...&]
 [s0; Back to the development... It was difficult to tune Joiner class 
 properly, but it might work now. If not, I have some other ideas 
-too.]]
+too.&]
+[s3; 5.9.2017&]
+[s0; I overslept the first day of the semester. I swear I did set 
+the alarm clock... I did wake to some positive results, however.&]
+[s0; Only Joiner was buggy. I tried to combine the signal (Agent) 
+and the amplifier (Joiner) parts, but it`'s not working at all. 
+After that I just improved the Joiner to do exactly the amplifying 
+function for corresponding agent.&]
+[s0; I need to fix the c`-array `[`] operators away. It`'s just dangerously 
+unsafe. I checked them all, but what about after next modifications?&]
+[s0; ]]

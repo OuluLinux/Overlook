@@ -6,7 +6,7 @@
 #include "DQN.h"
 
 #include "SimBroker.h"
-#include "AgentGroup.h"
+#include "AgentSystem.h"
 #include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"

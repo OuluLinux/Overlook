@@ -53,14 +53,14 @@ file
 	Indicators.cpp,
 	QtStats.h,
 	QtStats.cpp,
+	AgentSystem.h,
+	AgentSystem.cpp,
 	AgentGroup.h,
 	AgentGroup.cpp,
 	FixedSimBroker.h,
 	FixedSimBroker.cpp,
 	Agent.h,
 	Agent.cpp,
-	Joiner.h,
-	Joiner.cpp,
 	DQN.h;
 
 mainconfig

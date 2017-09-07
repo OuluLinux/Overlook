@@ -23,7 +23,7 @@ public:
 
 inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
 
-class GroupOverview : public WithGroupOverview<ParentCtrl> {
+class SystemOverview : public WithSystemOverview<ParentCtrl> {
 	
 protected:
 	String label;
@@ -32,50 +32,64 @@ protected:
 	void SubProgress(int actual, int total);
 	
 public:
-	typedef GroupOverview CLASSNAME;
-	GroupOverview();
+	typedef SystemOverview CLASSNAME;
+	SystemOverview();
 	
 	void Data();
 	
 };
 
-class GroupTabCtrl : public TabCtrl {
-	GroupOverview			overview;
+class SystemTabCtrl : public TabCtrl {
+	SystemOverview			overview;
 	SnapshotCtrl			snapctrl;
 	Array<EditDoubleSpin>	tflimitedit;
 	
 public:
-	typedef GroupTabCtrl CLASSNAME;
-	GroupTabCtrl();
+	typedef SystemTabCtrl CLASSNAME;
+	SystemTabCtrl();
 	
 	void Data();
 };
 
-class AgentTabCtrl : public TabCtrl {
+class SignalTabCtrl : public TabCtrl {
 	Agent* agent;
-	WithAgentOverview<ParentCtrl>	overview;
+	WithSignalOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
 	
 public:
-	typedef AgentTabCtrl CLASSNAME;
-	AgentTabCtrl();
+	typedef SignalTabCtrl CLASSNAME;
+	SignalTabCtrl();
 	
 	void Data();
 	void SetAgent(Agent& agent);
 	
 };
 
-class JoinerTabCtrl : public TabCtrl {
-	Joiner* joiner;
-	WithJoinerOverview<ParentCtrl>	overview;
+class AmpTabCtrl : public TabCtrl {
+	Agent* agent;
+	WithAmpOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
 	
 public:
-	typedef JoinerTabCtrl CLASSNAME;
-	JoinerTabCtrl();
+	typedef AmpTabCtrl CLASSNAME;
+	AmpTabCtrl();
 	
 	void Data();
-	void SetJoiner(Joiner& joiner);
+	void SetAgent(Agent& agent);
+	
+};
+
+class FuseTabCtrl : public TabCtrl {
+	Agent* agent;
+	WithFuseOverview<ParentCtrl>	overview;
+	TrainingCtrl					trainingctrl;
+	
+public:
+	typedef FuseTabCtrl CLASSNAME;
+	FuseTabCtrl();
+	
+	void Data();
+	void SetAgent(Agent& agent);
 	
 };
 
@@ -86,10 +100,11 @@ class ManagerCtrl : public ParentCtrl {
 	Button							add_new;
 	Array<Option>					new_opts;
 	
-	GroupTabCtrl					group_tabs;
-	AgentTabCtrl					agent_tabs;
-	JoinerTabCtrl					joiner_tabs;
-	DataCtrl						datactrl;
+	SystemTabCtrl					system_tabs;
+	SignalTabCtrl					signal_tabs;
+	AmpTabCtrl						amp_tabs;
+	FuseTabCtrl						fuse_tabs;
+	ExportCtrl						export_ctrl;
 	
 	int view;
 	

@@ -21,11 +21,11 @@ void SingleFixedSimBroker::Reset() {
 }
 
 double SingleFixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
-	return snap.open[sym_id] - spread_points;
+	return snap.GetOpen(sym_id) - spread_points;
 }
 
 double SingleFixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
-	return snap.open[sym_id];
+	return snap.GetOpen(sym_id);
 }
 
 double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
@@ -176,11 +176,11 @@ void FixedSimBroker::Reset() {
 }
 
 double FixedSimBroker::RealtimeBid(const Snapshot& snap, int sym_id) const {
-	return snap.open[sym_id] - spread_points[sym_id];
+	return snap.GetOpen(sym_id) - spread_points[sym_id];
 }
 
 double FixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
-	return snap.open[sym_id];
+	return snap.GetOpen(sym_id);
 }
 
 double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const {
@@ -462,12 +462,12 @@ void FixedSimBroker::RefreshOrders(const Snapshot& snap) {
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& o = order[i];
 		if (o.is_open) {
-			int sym = i / ORDERS_PER_SYMBOL;
-			double p = GetCloseProfit(sym, o, snap);
-			o.close = snap.open[sym];
+			int sym_id = i / ORDERS_PER_SYMBOL;
+			double p = GetCloseProfit(sym_id, o, snap);
+			o.close = snap.GetOpen(sym_id);
 			o.profit = p;
 			e += p;
-			if (sym == part_sym_id) pe += p;
+			if (sym_id == part_sym_id) pe += p;
 		}
 	}
 	equity = e;

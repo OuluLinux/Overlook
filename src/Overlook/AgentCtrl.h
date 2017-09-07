@@ -16,10 +16,11 @@ public:
 class EquityGraph : public Ctrl {
 	
 protected:
-	TraineeBase* trainee;
+	Agent* agent;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
+	int type;
 	
 public:
 	typedef EquityGraph CLASSNAME;
@@ -27,13 +28,14 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee; clr = RainbowColor(Randomf());}
+	void SetAgent(Agent& agent, int type) {this->agent = &agent; clr = Color(49, 28, 150); this->type = type;}
 	
 };
 
 class ResultGraph : public Ctrl {
-	TraineeBase* trainee;
+	Agent* agent;
 	Vector<Point> polyline;
+	int type = -1;
 	
 public:
 	typedef ResultGraph CLASSNAME;
@@ -41,7 +43,7 @@ public:
 	
 	virtual void Paint(Draw& w);
 	
-	void SetTrainee(TraineeBase& trainee) {this->trainee = &trainee;}
+	void SetAgent(Agent& agent, int type) {this->agent = &agent; this->type = type;}
 	
 };
 
@@ -93,7 +95,7 @@ public:
 		
 		for(int j = 0; j < tmp.GetCount(); j++) {
 			double d = tmp[j];
-			byte b = fabs(d) / max * 255;
+			byte b = (byte)(fabs(d) / max * 255);
 			if (d >= 0)	{
 				it->r = 0;
 				it->g = 0;
@@ -133,8 +135,9 @@ class TrainingCtrl : public ParentCtrl {
 	
 protected:
 	friend class SnapshotDraw;
-	TraineeBase* trainee;
+	Agent* agent;
 	Splitter hsplit;
+	int type;
 	
 	Label epoch;
 	SnapshotDraw draw;
@@ -152,8 +155,7 @@ public:
 	
 	void Data();
 	void ApplySettings();
-	void SetAgent(Agent& agent);
-	void SetJoiner(Joiner& joiner);
+	void SetAgent(Agent& agent, int type);
 	
 };
 
@@ -169,25 +171,25 @@ public:
 	void Data();
 };
 
-class DataCtrl;
+class ExportCtrl;
 
 class DataGraph : public Ctrl {
 	
 protected:
-	DataCtrl* dc;
+	ExportCtrl* dc;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
 	
 public:
 	typedef DataGraph CLASSNAME;
-	DataGraph(DataCtrl* dc);
+	DataGraph(ExportCtrl* dc);
 	
 	virtual void Paint(Draw& w);
 	
 };
 
-class DataCtrl : public ParentCtrl {
+class ExportCtrl : public ParentCtrl {
 	DataGraph graph;
 	Label data;
 	SliderCtrl timeslider;
@@ -197,8 +199,8 @@ class DataCtrl : public ParentCtrl {
 	int last_pos;
 	
 public:
-	typedef DataCtrl CLASSNAME;
-	DataCtrl();
+	typedef ExportCtrl CLASSNAME;
+	ExportCtrl();
 	
 	void Data();
 	void GuiData();

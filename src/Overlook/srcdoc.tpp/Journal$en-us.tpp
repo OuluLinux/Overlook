@@ -7,21 +7,20 @@ topic "Journal";
 [s1; Journal&]
 [s0; I write this journal to keep myself focused on the end result: 
 the working product. This text is sort of an investment, which 
-loses value if I don`'t get the product work. Writing investment 
+loses value, if I don`'t get the product to work. Writing investment 
 code gets on to your nerve intensively and failing code means 
 losses. Keeping this program open and social helps me to cool 
 down from the stress of the `"real life losses`" part.&]
 [s0; I like to tell how original this application is and to communicate 
 the countless hours and the sweat what I did see for this. The 
-public release is merely a by`-product. The progress of this 
-project is driven only by my curiosity. Please note that my native 
-language is not English, but Finnish. This journal is intended 
-for the audience who see some entertainment value in this. This 
-document is an artistic expression as whole without target audience. 
-This is only an opinion of the author and this is not checked 
-for wrong facts.&]
+progress of this project is driven only by my curiosity and basic 
+needs. Please note that my native language is not English, but 
+Finnish. This journal is intended for the audience who see some 
+entertainment value in this. This document is an artistic expression 
+as whole without target audience. This is only an opinion of 
+the author and this is not checked for wrong facts.&]
 [s0; This journal is mostly about very uninteresting stuff and this 
-is intented for those who would otherwise check the progress 
+is a good option for those who would otherwise check the progress 
 via git commit history. This text tells mostly about technical 
 problems in a difficult way, but it has some juicier off`-topic 
 sections.&]
@@ -772,40 +771,40 @@ did not tell me, but took part in the crazy gossip ring. It is
 important to emphasize the point, that second lieutenant military 
 policy took part into that gossip instead of solving and eliminating 
 it, effectively continuing the violence, which started in that 
-attack in the city centre. I was basically bullied by higher 
-ranking officials for 6 months, without knowing the reason, and 
-afterwards shockingly know that they had taken the side of those 
-attackers. I changed to sivil service afterwards, so now I don`'t 
-need to be in contact with those traitors of justice anymore. 
-After the service I was back in the city. Here the weird treating 
-of me continued, and I smelled the injustice, but couldn`'t quite 
-grasp it. Basically, her crazy group had got larger and those 
-tried to make me look bad and they somewhat succeeded in it, 
-but it doesn`'t really matter anymore. Last point was, when her 
-newest boyfriend sent text messages to me pretending to be her. 
-I met him instead of her, and he repeated death`-threats to me 
-and he threated to come into my apartment beating me to death. 
-I wasn`'t really in danger, because you know, I was trained to 
-be military police and he was skinny and alone, but he might 
-have knife or gun, so I did not take risks. Her friends are known 
-to have guns also, even though guns are highly regulated in our 
-country. Turns out, that bad guys get the guns anyway. The craziest 
-part was, that her parents had allowed that guy to go `"make 
-me man`" like that. They even insulted my mother, when she insisted 
-to be in contact with her parents, because my mother thought 
-that there was some sense in them left. Finally it was over. 
-I have enough material to make a report, but this is so big mess 
-now, that I am not sure will they take me seriously now. There 
-is a huge list of unlucky details for that story, but I think 
-this is enough now. This might even be too much to tell publicly, 
-but I don`'t think this text will reach people very fast. In 
-the end, I have heightened sense of injustice and sense of all 
-history falsification. I have still constant pain from that attack, 
-but luckily I kept my eyesight. I am now greatly tramatized, 
-but also I feel the peace with the world now more than ever. 
-It is going to be fine. That sad little people can`'t win in 
-the long run. Justice is like a weed, finding it`'s way trough 
-thoughest cracks in the pavement.&]
+attack in the city centre. I was basically &]
+[s0;%- ed by higher ranking officials for 6 months, without knowing 
+the reason, and afterwards shockingly know that they had taken 
+the side of those attackers. I changed to sivil service afterwards, 
+so now I don`'t need to be in contact with those traitors of 
+justice anymore. After the service I was back in the city. Here 
+the weird treating of me continued, and I smelled the injustice, 
+but couldn`'t quite grasp it. Basically, her crazy group had 
+got larger and those tried to make me look bad and they somewhat 
+succeeded in it, but it doesn`'t really matter anymore. Last 
+point was, when her newest boyfriend sent text messages to me 
+pretending to be her. I met him instead of her, and he repeated 
+death`-threats to me and he threated to come into my apartment 
+beating me to death. I wasn`'t really in danger, because you 
+know, I was trained to be military police and he was skinny and 
+alone, but he might have knife or gun, so I did not take risks. 
+Her friends are known to have guns also, even though guns are 
+highly regulated in our country. Turns out, that bad guys get 
+the guns anyway. The craziest part was, that her parents had 
+allowed that guy to go `"make me man`" like that. They even insulted 
+my mother, when she insisted to be in contact with her parents, 
+because my mother thought that there was some sense in them left. 
+Finally it was over. I have enough material to make a report, 
+but this is so big mess now, that I am not sure will they take 
+me seriously now. There is a huge list of unlucky details for 
+that story, but I think this is enough now. This might even be 
+too much to tell publicly, but I don`'t think this text will 
+reach people very fast. In the end, I have heightened sense of 
+injustice and sense of all history falsification. I have still 
+constant pain from that attack, but luckily I kept my eyesight. 
+I am now greatly tramatized, but also I feel the peace with the 
+world now more than ever. It is going to be fine. That sad little 
+people can`'t win in the long run. Justice is like a weed, finding 
+it`'s way trough thoughest cracks in the pavement.&]
 [s0;%- I could go on and on, but this was off`-topic, and I have 
 work to do, so let`'s focus on that, shall we?&]
 [s0;%- ...&]
@@ -2751,20 +2750,20 @@ currently opposite of that and having university degree is a
 politized group learning experience, which it shouldn`'t be. 
 I don`'t even want to think what my `"political view`" should 
 be. There are different topics and I want to have my opinion 
-about evert topic separately without being labeled as some color 
+about every topic separately without being labeled as some color 
 of `"believer`". Those who label themself usually have pre`-determined 
 opinion based on their cult and they haven`'t even bothered to 
 reason their opinion based on their own experience. Actually, 
 those political cults are so harmful, that they prevent you to 
 change your opinion easily and it`'s probably even force`-fed 
-to many people anyway. You don`'t need any politized illusion 
-about the world and your relation to that.&]
+to many anyway. You don`'t need any politized illusion about 
+the world.&]
 [s0; Actually the problem lies exactly there. Half`-monkeys imitating 
 others and no`-one can reproduce the result alone. Religions 
 love to hate speaking about the relation to monkeys, and I love 
 to remind about the monkey humanity with big brains. That is 
 the part what I like most in the official chronology.&]
-[s0; What comes in to my life and experience in this settlement of 
+[s0; What comes into my life and experience in this settlement of 
 cold`-climate surviving religious factory half`-monkeys, it`'s 
 been a challenge. My childhood was very happy and we played a 
 lot in the park with girls and boys and many families had IBM 
@@ -2777,7 +2776,7 @@ We were playing ice`-hockey at winter and rollerskating floorball
 at summer. What I didn`'t like was these dancing events, were 
 I was almost forced to dance with girls. I was just very shy 
 and didn`'t feel like it. It was clearly what girls liked more. 
-I felt like my friends were stolen to that culture. It actually 
+I felt like my friends were stolen to that culture, but it actually 
 did left very strong response to opposite sex to me, too, which 
 was common.  Our family moved, and my old friends left there 
 to continue that culture with teen`-age drinking and smoking 
@@ -2791,9 +2790,9 @@ point really hard, when my oldest friends were at doing a lots
 of home parties and drunken relationships. In my new place me 
 and my friends found sober kissing in a group via truth`-or`-dare, 
 which went to be epic dare thing... I can`'t even remember which 
-girl I kissed first. I`'ll never forget the talk with guys after 
-that. We were literally kissing same girls all evening. That 
-was once`-in`-a`-lifetime moment. Just beautiful.&]
+girl I kissed first in my life. I`'ll never forget the talk with 
+guys after that. We were literally kissing same girls all evening. 
+That was once`-in`-a`-lifetime moment. Just beautiful.&]
 [s0; I think time around that was a peak social experience for me. 
 I was middle of very different social groups, and none of them 
 felt my own. Well, my first relationship started around there 
@@ -2811,25 +2810,26 @@ and she was emotionally abusive and manipulative. She had some
 weird diary which she didn`'t let me read, but it contained some 
 very non`-realistic descriptions of me. I had been watching porn 
 many many years before that and she literally went nuts about 
-me liking porn and she being ditched because I didn`'t want long 
-term relationship with her and just liked to watch porn sometimes. 
-Needless to say, me and my oldest friends were huge porn fans 
-together, so in my books she was the outsider. She actually found 
-the dark substances of the inner city in those times and at the 
-separation she actually had to be locked to the nut house. 2 
-weeks before that was hell... I had to forcily prevent her from 
-jumping from bridges and buildings, and last time she went to 
-frozen lake and I had to swim her out of it. Her parents were 
-alcoholic and didn`'t care, but at that point they finally took 
-responsibility, but only to be found by me that they completely 
-lied about the whole store. Basically I was the bad guy for them, 
-their friends and to doctors, I guess, too. It was already 100% 
-fucked up story at that point, but there was more to come, a 
-lot more. The correct solution would have been to call police 
-for her, but I was completely clueless at that point.&]
+me liking porn and about she being ditched because I didn`'t 
+want long term relationship with her and just liked to watch 
+porn sometimes. Needless to say, me and my oldest friends were 
+huge porn fans together, so in my books she was the outsider. 
+She actually found the dark substances of the inner city in those 
+times and at the separation she actually had to be locked to 
+the nut house. 2 weeks before that was hell... I had to forcily 
+prevent her from jumping from bridges and buildings, and last 
+time she went to frozen lake and I had to swim her out of it. 
+Her parents were alcoholic and didn`'t care, but at that point 
+they finally took responsibility, but only to be found by me 
+that they completely lied about the whole story. Basically I 
+was the bad guy for them, for their friends and for doctors too. 
+It was already 100% fucked up story at that point, but there 
+was more to come, a lot more. The correct solution would have 
+been to call police for her, but I was completely clueless at 
+that point.&]
 [s0; She was at that point almost alcoholic like her father, and 
 she was drinking at the city centre, and sometimes me and my 
-friends were drinking there too. My and my friends had got some 
+friends were drinking there too. Me and my friends had got some 
 mild warning messages that she is telling some very bad stuff 
 about me to people, but we didn`'t consider it to be nothing. 
 Well, first of May when everybody was at city centre, few guys 
@@ -2844,55 +2844,56 @@ many who had connections to the inner city opioid and meth circles.
 Some of my schoolfriends had been close to them too, so that 
 is how I knew. And I mean there was those who just didn`'t do 
 much else than laying in bed doing hard drugs and then circulating 
-them. Maybe something good can come out of it, like Red Hot Chili 
-Peppers, but I don`'t know... So, unfortunately, there was some 
-who recognized me as the ex of that girl, and then it got even 
-a lot worse... they planted some rumors that I have been raping 
-that girl and a lot of other evil stuff. Turned out that my leader 
-also heard those, and basically asked me in front of all my peers, 
-that was I in `"that place in that time`", and I accidentally 
-said yes, because I didn`'t understand and I didn`'t know the 
-context (they didn`'t tell me), and after that, everyone thought 
-that those rumours were true. My leader was actually those who 
-said many times that he would beat non`-white people if had a 
-chance, and air force actually hired him to train next rookies. 
-Yeah, pretty fucked up at this point, but wait, it gets worse. 
-So, I got off from military, and even at that point I didn`'t 
-actually know what those rumours were, because those fucked up 
-nazis were actually that fucked up, that they didn`'t tell me. 
-So, my sister`'s house get sprayed by `"rapist`'s sister`" tag 
-and my house with `"sick`" tag, and I still don`'t have clue. 
-Some of my ex`-girfriend`'s (the troublemaker) musician meth`-head 
-friends, which circulated a lot of drugs, and could have provided 
-me, if necessary, tried also to make me to make some orders from 
-tor`-network. I didn`'t have a clue even at that point. Only, 
-when finally, my ex started to `"settle down`" and her latest 
-`"big dick boyfriend with money`" came to `"get even`" with me 
-by giving death`-threats and threats about coming to my apartment 
-to beat me up, I got clue, that she was STILL insanely angry 
-to me... about me watching porn.&]
+them. Maybe something good can come out of the living way like 
+that generally, like Red Hot Chili Peppers, but I don`'t know... 
+So, unfortunately, there was some who recognized me as the ex 
+of that girl, and then it got even a lot worse... they planted 
+some rumors that I have been raping that girl and a lot of other 
+evil stuff. Turned out that my leader also heard those, and basically 
+asked me in front of all my peers, that was I in `"that place 
+in that time`", and I accidentally said yes, because I didn`'t 
+understand and they didn`'t tell me the context, and after that, 
+everyone thought that those rumours were true. My leader was 
+actually those who said many times that he would beat non`-white 
+people if had a chance, and air force actually hired him to train 
+next rookies. Yeah, pretty fucked up at this point, but wait, 
+it gets worse. So, I got off from military, and even at that 
+point I didn`'t actually know what those rumours were, because 
+those fucked up nazis were actually that fucked up, that they 
+didn`'t tell me. So, my sister`'s house got sprayed by `"rapist`'s 
+sister`" tag and my house with `"sick`" tag, and I still didn`'t 
+have a clue. Some of my ex`-girfriend`'s (the troublemaker) musician 
+meth`-head friends, which circulated a lot of drugs, and could 
+have provided me, if necessary, tried also to make me to make 
+some orders from tor`-network. I didn`'t have a clue even at 
+that point. Only, when finally, my ex started to `"settle down`" 
+and her latest `"big dick boyfriend with money`" came to `"get 
+even`" with me by giving death`-threats and threats about coming 
+to my apartment to beat me up, I got clue, that she was STILL 
+insanely angry to me... about me watching porn.&]
 [s0; And with that, I`'ll leave you to ponder, that what is really 
 fucked up in the world...&]
-[s0; Without that episode overlaying reality, I`'ve been just watching 
-porn and almost never getting laid, because girls are too difficult, 
-too not`-my`-type, too hard to find, or too religious, and nobody 
-is helping me to find anyone. That Tinder culture is not helping 
-either. What is actually more body shaming than that. What I 
-want to know, that what kind of positions you like, do you like 
-your pussy getting licked, do you take blow`-jobs, what is your 
-endurance, can you max 3 ours with foreplay and breaks if at 
-that mood, are you sensitive to accidentally disgusting stuff. 
-I mean, are you sad for life, or can you just enjoy spontaneous 
-romantic background music and snuggling between sheets for hours, 
-if felt like so, and how often you feel like so? That one face 
-picture judging all that is just an insult. I, as a long term 
-porn viewer know, that one should always separate the visual 
-part and the real thing... but it seems that many have hard times 
-doing that. I`'ve never succeeded in making something soft and 
-sensual from something hard as a rock, and I don`'t think I`'ve 
-ever will. Some sex tapes, like few of Lisa Ann, actually reminds 
-me of the real love making, but most of the porn is just cold 
-exercise. They are intersesting in non`-realistic ways.&]
+[s0; Without that episode overlaying the reality, I`'ve been just 
+watching porn and almost never getting laid, because girls are 
+too difficult, too not`-my`-type, too hard to find, or too religious, 
+and nobody is helping me to find anyone. That Tinder culture 
+is not helping either. What is actually more body shaming than 
+that. What I want to know, that what kind of positions you like, 
+do you like your pussy getting licked, do you take blow`-jobs, 
+what is your endurance, can you max 3 ours with foreplay and 
+breaks if at that mood, are you sensitive to accidentally disgusting 
+stuff. Just kidding, again... I mean, are you sad for life, or 
+can you just enjoy spontaneous romantic background music and 
+snuggling between sheets for hours, if felt like so, and how 
+often you feel like so? That one face picture judging all that 
+is just an insult. I, as a long term porn viewer know, that one 
+should always separate the visual part and the real thing... 
+but it seems that many have hard times doing that. I`'ve never 
+succeeded in making something soft and sensual from something 
+hard as a rock, and I don`'t think I`'ll ever will. Some sex 
+tapes, like few of Lisa Ann, actually reminds me of the real 
+love making, but most of the porn is just cold exercise. They 
+are interesting in non`-realistic ways.&]
 [s0; ...&]
 [s0; Back to the development... It was difficult to tune Joiner class 
 properly, but it might work now. If not, I have some other ideas 
@@ -2906,4 +2907,44 @@ After that I just improved the Joiner to do exactly the amplifying
 function for corresponding agent.&]
 [s0; I need to fix the c`-array `[`] operators away. It`'s just dangerously 
 unsafe. I checked them all, but what about after next modifications?&]
+[s3; 7.9.2017&]
+[s0; I noticed, that some stopper agent would be usable. One for 
+every symbol and one for the whole group. That would only train 
+for stopping useless losses and it gets it`'s reward for that 
+how much it prevented losses. However, then one symbol in group 
+has 3 type of dqn`-agents and those should be joined together 
+for simplicity. Naming should be reconsidered, also. Current 
+names are just the legacy of the older code. I think, that I`'ll 
+use `"Signal`", `"Amp`" and `"Fuse`" terms, because they give 
+instant corresponding image for eletrical engineers at least. 
+The signal part gives `-1,0,`+1 outputs. The amp part amplifies 
+that signal with some integer multiplier. The fuse part switches 
+all off when a harmful current of value is recognized. Very corresponding.&]
+[s0; I`'ve seen some very positive results, but I noticed, that the 
+stopper or `"fuse`" might be critical to not allow the returning 
+negative trend, which actually comes in the latter part of the 
+lifetime of orders now. I can`'t emphasis enough, that this clearly 
+benefits greatly for separating the roles of agents instead of 
+doing one super agent.&]
+[s0; ...&]
+[s0; Seems like few other fixes got along with new changes. The return 
+value for DQN`-agent had to be, of course, average per smallest 
+time`-step. Otherwise the agent prefers the longest time`-step 
+always. I think I got enough assertions and cross`-checks that 
+it will work or crash, but not something in between, in pretty 
+good probability. I must still change the program to use try/catch, 
+so that user gets a friendly message if assertion fails. It`'s 
+bad, but less worse than no explanation.&]
+[s0; This took a while again, but school work didn`'t really start 
+this week yet... I am really looking for a cold beer and company 
+after this. I think I should meet some pretty freshmen girls... 
+Campus was so crowded this week... Oh, that pretty girl who always 
+slips away...&]
+[s0; &]
+[s0;= [/ It`'s more than a feeling, when I hear that old song they 
+used to play (more than a feeling)]&]
+[s0;= [/ I begin dreaming (more than a feeling)]&]
+[s0;= [/ `'Till I see Marianne walk away]&]
+[s0;= [/ I see my Marianne walkin`' away]&]
+[s0; &]
 [s0; ]]

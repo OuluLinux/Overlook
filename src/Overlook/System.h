@@ -157,7 +157,7 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
-	AgentGroup		ag;
+	AgentSystem		ag;
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		bars;
@@ -208,7 +208,7 @@ public:
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	void SetEnd(const Time& t) {end = t;}
-	AgentGroup& GetAgentGroup() {return ag;}
+	AgentSystem& GetAgentSystem() {return ag;}
 	
 public:
 	

@@ -14,7 +14,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	System& sys = GetSystem();
-	AgentGroup& group = sys.GetAgentGroup();
+	AgentSystem& group = sys.GetAgentSystem();
 	
 	if (snap_id < 0 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
 	const Snapshot& snap = group.snaps[snap_id];
@@ -22,7 +22,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int agent_count		= TRAINEE_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = TIME_SENSORS + SYM_COUNT + TRAINEE_COUNT + TRAINEE_COUNT;
+	int rows = TIME_SENSORS + SYM_COUNT + TRAINEE_COUNT + TRAINEE_COUNT + TRAINEE_COUNT;
 	
 	int cols = value_count;
 	int grid_w = sz.cx;
@@ -37,19 +37,19 @@ void SnapshotDraw::Paint(Draw& w) {
 		int clr;
 		Color c;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.year_timesensor));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetYearSensor()));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, 0, sz.cx, (int)(ystep+1), c);
 		row++;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.week_timesensor));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetWeekSensor()));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, (int)ystep, sz.cx, (int)(ystep+2), c);
 		row++;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.day_timesensor));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetDaySensor()));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, (int)(ystep*2), sz.cx, (int)(ystep+2), c);
@@ -58,7 +58,6 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	
 	// Data sensors
-	int s = 0;
 	for(int j = 0; j < SYM_COUNT; j++) {
 		int y = (int)(row * ystep);
 		int y2 = (int)((row + 1) * ystep);
@@ -68,7 +67,7 @@ void SnapshotDraw::Paint(Draw& w) {
 			int x = (int)(k * xstep);
 			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
-			double d = snap.sensor[s++];
+			double d = snap.GetSensor(j, k);
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -79,24 +78,20 @@ void SnapshotDraw::Paint(Draw& w) {
 		
 		row++;
 	}
-	ASSERT(s == SENSOR_SIZE);
 	
 	
 	// Signals
-	cols = AGENT_SIGNAL_SENSORS;
-	xstep = (double)grid_w / (double)cols;
-	s = 0;
-	int signal_rows = TRAINEE_COUNT;
-	for(int j = 0; j < signal_rows; j++) {
+	xstep = (double)grid_w / (double)SIGNAL_SENSORS;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
 		int y = (int)(row * ystep);
 		int y2 = (int)((row + 1) * ystep);
 		int h = y2-y;
 		
-		for(int k = 0; k < cols; k++) {
+		for(int k = 0; k < SIGNAL_SENSORS; k++) {
 			int x = (int)(k * xstep);
 			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
-			double d = snap.agent_signal[s++];
+			double d = snap.GetSignalSensor(i, j, k);
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -107,24 +102,20 @@ void SnapshotDraw::Paint(Draw& w) {
 		
 		row++;
 	}
-	ASSERT(s == AGENT_SIGNAL_SIZE);
 	
 	
-	// Joiner
-	cols = JOINER_SIGNAL_SENSORS;
-	xstep = (double)grid_w / (double)cols;
-	s = 0;
-	int joiner_rows = TRAINEE_COUNT;
-	for(int j = 0; j < joiner_rows; j++) {
+	// Amp
+	xstep = (double)grid_w / (double)AMP_SENSORS;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
 		int y = (int)(row * ystep);
 		int y2 = (int)((row + 1) * ystep);
 		int h = y2-y;
 		
-		for(int k = 0; k < cols; k++) {
+		for(int k = 0; k < AMP_SENSORS; k++) {
 			int x = (int)(k * xstep);
 			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
-			double d = snap.joiner_signal[s++];
+			double d = snap.GetAmpSensor(i, j, k);
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -135,7 +126,31 @@ void SnapshotDraw::Paint(Draw& w) {
 		
 		row++;
 	}
-	ASSERT(s == JOINER_SIGNAL_SIZE);
+	
+	
+	
+	// Amp
+	xstep = (double)grid_w / (double)FUSE_SENSORS;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
+		int y = (int)(row * ystep);
+		int y2 = (int)((row + 1) * ystep);
+		int h = y2-y;
+		
+		for(int k = 0; k < FUSE_SENSORS; k++) {
+			int x = (int)(k * xstep);
+			int x2 = (int)((k + 1) * xstep);
+			int w = x2 - x;
+			double d = snap.GetFuseSensor(i, j, k);
+			double min = 0.0;
+			double max = 1.0;
+			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
+			int clr = (int)Upp::min(255.0, value);
+			Color c(255 - clr, clr, 0);
+			id.DrawRect(x, y, w, h, c);
+		}
+		
+		row++;
+	}
 	
 	
 	ASSERT(row == rows);
@@ -159,27 +174,28 @@ void SnapshotDraw::Paint(Draw& w) {
 
 
 ResultGraph::ResultGraph() {
-	trainee = NULL;
+	agent = NULL;
 	
 }
 
 void ResultGraph::Paint(Draw& w) {
-	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
+	if (!agent) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
 	id.DrawRect(sz, White());
 	
-	TraineeBase& trainee = *this->trainee;
-	double* data = trainee.result;
+	Agent& agent = *this->agent;
+	const Vector<double>& equity_data = type == 0 ? agent.sig.result_equity : (type == 1 ? agent.amp.result_equity : agent.fuse.result_equity);
+	const Vector<double>& drawdown_data = type == 0 ? agent.sig.result_drawdown : (type == 1 ? agent.amp.result_drawdown : agent.fuse.result_drawdown);
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	
-	int count = Upp::min(trainee.result_count, TRAINEE_RESULT_COUNT);
+	int count = equity_data.GetCount();
 	for(int j = 0; j < count; j++) {
-		double d = data[j];
+		double d = equity_data[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
@@ -187,11 +203,10 @@ void ResultGraph::Paint(Draw& w) {
 	if (count >= 2 && max > min) {
 		double diff = max - min;
 		double xstep = (double)sz.cx / (count - 1);
-		Font fnt = Monospace(10);
 		
 		polyline.SetCount(count);
 		for(int j = 0; j < count; j++) {
-			double v = data[j];
+			double v = equity_data[j];
 			int y = (int)(sz.cy - (v - min) / diff * sz.cy);
 			int x = (int)(j * xstep);
 			polyline[j] = Point(x, y);
@@ -201,6 +216,31 @@ void ResultGraph::Paint(Draw& w) {
 			const Point& p = polyline[j];
 			id.DrawRect(p.x-1, p.y-1, 3, 3, Blue());
 		}
+	}
+	
+	
+	min = +DBL_MAX;
+	max = -DBL_MAX;
+	
+	count = drawdown_data.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = drawdown_data[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	
+	if (count >= 2 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (count - 1);
+		
+		polyline.SetCount(count);
+		for(int j = 0; j < count; j++) {
+			double v = drawdown_data[j];
+			int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+			int x = (int)(j * xstep);
+			polyline[j] = Point(x, y);
+		}
+		id.DrawPolyline(polyline, 1, Red());
 	}
 	
 	
@@ -258,13 +298,14 @@ void HeatmapTimeView::Paint(Draw& d) {
 
 
 EquityGraph::EquityGraph() {
-	trainee = NULL;
+	agent = NULL;
 	clr = RainbowColor(Randomf());
+	type = 0;
 }
 
 void EquityGraph::Paint(Draw& w) {
-	if (!trainee) {w.DrawRect(GetSize(), White()); return;}
-	AgentGroup& ag = GetSystem().GetAgentGroup();
+	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	
 	Size sz(GetSize());
@@ -277,22 +318,13 @@ void EquityGraph::Paint(Draw& w) {
 	double peak = 0.0;
 	
 	int max_steps = 0;
-	const Vector<double>& data =
-		trainee->type == 0 ?
-			ag.agent_equities :
-			ag.joiner_equities;
-	int count =
-		trainee->type == 0 ?
-			ag.agent_equities_count :
-			ag.joiner_equities_count;
-	int data_begin = trainee->id * count;
+	const Vector<double>& data = type == 0 ? agent->sig.equity : (type == 1 ?  agent->amp.equity : agent->fuse.equity);
+	int count = data.GetCount();
 	if (!count) return;
-	
-	ASSERT(data_begin >= 0 && data_begin + count <= data.GetCount());
 	
 	
 	for(int j = 0; j < count; j++) {
-		double d = data[data_begin + j];
+		double d = data[j];
 		if (d == 0.0) continue;
 		if (d > max) max = d;
 		if (d < min) min = d;
@@ -309,7 +341,7 @@ void EquityGraph::Paint(Draw& w) {
 		if (count >= 2) {
 			polyline.SetCount(0);
 			for(int j = 0; j < count; j++) {
-				double v = data[data_begin + j];
+				double v = data[j];
 				if (v == 0.0) continue;
 				last = v;
 				int x = (int)(j * xstep);
@@ -329,6 +361,7 @@ void EquityGraph::Paint(Draw& w) {
 			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
 			id.DrawText(16, y, str, fnt, Black());
 		}
+		
 		{
 			int y = 0;
 			String str = DblStr(last);
@@ -356,7 +389,8 @@ void EquityGraph::Paint(Draw& w) {
 
 TrainingCtrl::TrainingCtrl()
 {
-	trainee = NULL;
+	agent = NULL;
+	type = 0;
 	
 	Add(vsplit.SizePos());
 	
@@ -379,45 +413,49 @@ TrainingCtrl::TrainingCtrl()
 	trade.ColumnWidths("3 2 2 2 2 2 3");
 }
 
-void TrainingCtrl::SetAgent(Agent& agent) {
-	this->trainee = &agent;
+void TrainingCtrl::SetAgent(Agent& agent, int type) {
+	this->type = type;
+	this->agent = &agent;
 	
-	stats.SetTrainee(agent);
-	reward.SetTrainee(agent);
-	timescroll.SetAgent(agent.dqn);
+	stats.SetAgent(agent, type);
+	reward.SetAgent(agent, type);
+	if (type == 0) {
+		timescroll.SetAgent(agent.sig.dqn);
+	}
+	else if (type == 1) {
+		timescroll.SetAgent(agent.amp.dqn);
+	}
+	else if (type == 2) {
+		timescroll.SetAgent(agent.fuse.dqn);
+	}
 	
-	hsplit << draw << timescroll;
-}
-
-void TrainingCtrl::SetJoiner(Joiner& joiner) {
-	this->trainee = &joiner;
-	
-	stats.SetTrainee(joiner);
-	reward.SetTrainee(joiner);
-	timescroll.SetAgent(joiner.dqn);
-	
-	hsplit << draw << trade << timescroll;
-	hsplit.SetPos(2000, 0);
-	hsplit.SetPos(8000, 1);
+	hsplit.Clear();
+	if (type == 0) {
+		hsplit << draw << timescroll;
+	}
+	else {
+		hsplit << draw << trade << timescroll;
+		hsplit.SetPos(2000, 0);
+		hsplit.SetPos(8000, 1);
+	}
 }
 
 void TrainingCtrl::Data() {
-	if (!trainee) return;
+	if (!agent) return;
 	
-	AgentGroup& ag = GetSystem().GetAgentGroup();
+	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	// list
-	
-	draw.SetSnap(trainee->cursor);
+	int cursor = type == 0 ? agent->sig.cursor : (type == 1 ? agent->amp.cursor : agent->fuse.cursor);
+	draw.SetSnap(cursor);
 	draw.Refresh();
 	timescroll.Refresh();
 	reward.Refresh();
 	stats.Refresh();
 	reward.Refresh();
 	
-	if (trainee->type == 1) {
-		Joiner& joiner = *static_cast<Joiner*>(trainee);
-		FixedSimBroker& b = joiner.broker;
+	if (type >= 1) {
+		FixedSimBroker& b = type == 1 ? agent->amp.broker : agent->fuse.broker;
 		MetaTrader& mt = GetMetaTrader();
 		
 		int j = 0;
@@ -456,26 +494,19 @@ SnapshotCtrl::SnapshotCtrl() {
 	Add(hsplit.SizePos());
 	hsplit.Horz();
 	hsplit << draw << list;
-	hsplit.SetPos(2000);
 	
 	list.AddColumn("#");
-	list.AddColumn("Time");
-	list.AddColumn("Added");
-	list.AddColumn("Tfs");
 	
 	list <<= THISBACK(Data);
 }
 
 void SnapshotCtrl::Data() {
-	AgentGroup& group = GetSystem().GetAgentGroup();
+	AgentSystem& group = GetSystem().GetAgentSystem();
 	int cursor = list.GetCursor();
 	
 	for(int i = 0; i < group.snaps.GetCount(); i++) {
 		const Snapshot& snap = group.snaps[i];
-		list.Set(i, 0, i);/*
-		list.Set(i, 1, snap.time);
-		list.Set(i, 2, snap.added);
-		list.Set(i, 3, snap.tfs_used);*/
+		list.Set(i, 0, i);
 	}
 	list.SetCount(group.snaps.GetCount());
 	
@@ -500,7 +531,7 @@ void SnapshotCtrl::Data() {
 
 
 
-DataGraph::DataGraph(DataCtrl* dc) : dc(dc) {
+DataGraph::DataGraph(ExportCtrl* dc) : dc(dc) {
 	clr = Blue();
 }
 
@@ -519,7 +550,7 @@ void DataGraph::Paint(Draw& w) {
 	int count = data.GetCount();
 	for(int j = 0; j < count; j++) {
 		double d = data[j];
-		if (d == 0.0) continue;
+		if (d <= 100.0 || d >= 10000000.0) continue;
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
@@ -537,7 +568,7 @@ void DataGraph::Paint(Draw& w) {
 			polyline.SetCount(0);
 			for(int j = 0; j < count; j++) {
 				double v = data[j];
-				if (v == 0.0) continue;
+				if (v <= 100.0 || v >= 10000000.0) continue;
 				last = v;
 				int x = (int)(j * xstep);
 				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
@@ -571,7 +602,7 @@ void DataGraph::Paint(Draw& w) {
 }
 
 
-DataCtrl::DataCtrl() :
+ExportCtrl::ExportCtrl() :
 	graph(this)
 {
 	last_pos = 0;
@@ -606,7 +637,7 @@ DataCtrl::DataCtrl() :
 	trade.ColumnWidths("3 4 2 2 2 2 2 2 2 2 2 3");
 }
 
-void DataCtrl::GuiData() {
+void ExportCtrl::GuiData() {
 	
 	FileIn fin(ConfigFile("agentgroup.log"));
 	if (!fin.IsOpen())
@@ -661,7 +692,7 @@ void DataCtrl::GuiData() {
 	graph.Refresh();
 }
 
-void DataCtrl::Data() {
+void ExportCtrl::Data() {
 	
 	FileIn fin(ConfigFile("agentgroup.log"));
 	if (!fin.IsOpen())
@@ -696,16 +727,5 @@ void DataCtrl::Data() {
 	
 	GuiData();
 }
-
-/*void DataCtrl::SetGroup(AgentGroup& group) {
-	equity.Clear();
-	last_pos = 0;
-	poslist.Clear();
-	timeslider.MinMax(0,1);
-	timeslider.SetData(0);
-	
-	
-	Data();
-}*/
 
 }

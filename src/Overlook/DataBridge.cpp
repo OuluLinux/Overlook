@@ -1,6 +1,9 @@
 #include "Overlook.h"
+#include <plugin/zip/zip.h>
 
 namespace Overlook {
+
+bool use_internet_m1_data;
 
 DataBridge::DataBridge()  {
 	SetSkipAllocate();
@@ -263,6 +266,62 @@ void DataBridge::RefreshFromHistory() {
 		DUMP(local_history_file);
 		throw DataExc();
 	}
+	
+	bool old_filetype = false;
+	
+	if (use_internet_m1_data) {
+		System& sys = GetSystem();
+		String symbol = sys.GetSymbol(GetSymbol());
+		
+		String url = "http://tools.fxdd.com/tools/M1Data/" + symbol + ".zip";
+		
+		String data_dir = ConfigFile("m1data");
+		RealizeDirectory(data_dir);
+		
+		String local_zip = AppendFileName(data_dir, symbol + ".zip");
+		
+		if (!FileExists(local_zip)) {
+			LOG("Downloading " << url);
+			TimeStop ts;
+			
+			Downloader dl;
+			dl.url = url;
+			dl.path = local_zip;
+			dl.Perform();
+			
+			LOG("Downloading took " << ts.ToString());
+		}
+		
+		String local_hst = AppendFileName(data_dir, symbol + ".hst");
+		String exp_fname = symbol + ".hst";
+		
+		if (!FileExists(local_hst)) {
+			LOG("Opening zip " << local_zip);
+			FileUnZip unzip(local_zip);
+			bool found = false;
+			while(!(unzip.IsEof() || unzip.IsError())) {
+				String fname = GetFileName(unzip.GetPath());
+				LOG("Zip has file " << unzip.GetPath() << " (" << fname << ")");
+				if (fname == exp_fname) {
+					String dst = AppendFileName(data_dir, fname);
+					FileOut fout(dst);
+					fout << unzip.ReadFile();
+					local_history_file = dst;
+					old_filetype = true;
+					found = true;
+					LOG("Found file " << dst);
+					break;
+				}
+				else
+					unzip.SkipFile();
+			}
+			if (!found) {LOG("History file not found for " + symbol);}
+		} else {
+			local_history_file = local_hst;
+			old_filetype = true;
+		}
+	}
+	
 	FileIn src(local_history_file);
 	if (!src.IsOpen() || !src.GetSize())
 		return;
@@ -283,8 +342,9 @@ void DataBridge::RefreshFromHistory() {
 	double point = 1.0 / pow(10.0, digits);
 	common.points[GetSymbol()] = point;
 	int data_size = (int)src.GetSize();
-	const int struct_size = 8 + 4*8 + 8 + 4 + 8;
-	byte row[struct_size];
+	int struct_size = 8 + 4*8 + 8 + 4 + 8;
+	if (old_filetype) struct_size = 4 + 4*8 + 8;
+	byte row[0x100];
 	double prev_close;
 	double open = 0;
 	
@@ -313,14 +373,25 @@ void DataBridge::RefreshFromHistory() {
 		
 		//TODO: endian swap in big endian machines
 		
-		time  = *((uint64*)current);		current += 8;
-		open  = *((double*)current);		current += 8;
-		high  = *((double*)current);		current += 8;
-		low   = *((double*)current);		current += 8;
-		close = *((double*)current);		current += 8;
-		tick_volume  = *((int64*)current);		current += 8;
-		spread       = *((int32*)current);		current += 4;
-		real_volume  = *((int64*)current);		current += 8;
+		if (!old_filetype) {
+			time  = *((uint64*)current);		current += 8;
+			open  = *((double*)current);		current += 8;
+			high  = *((double*)current);		current += 8;
+			low   = *((double*)current);		current += 8;
+			close = *((double*)current);		current += 8;
+			tick_volume  = *((int64*)current);		current += 8;
+			spread       = *((int32*)current);		current += 4;
+			real_volume  = *((int64*)current);		current += 8;
+		} else {
+			time  = *((int64*)current);			current += 4;
+			open  = *((double*)current);		current += 8;
+			high  = *((double*)current);		current += 8;
+			low   = *((double*)current);		current += 8;
+			close = *((double*)current);		current += 8;
+			tick_volume  = *((double*)current);		current += 8;
+			spread       = 0;
+			real_volume  = 0;
+		}
 		
 		cursor += struct_size;
 		
@@ -328,15 +399,6 @@ void DataBridge::RefreshFromHistory() {
 		bool set_data_begin = count == 0;
 		if (set_data_begin) {
 			prev_close = close;
-			
-			// Check that value is in the range of 1*point - UINT16_MAX*point
-			double base_point = point;
-			while (close >= (UINT16_MAX*point)) {
-				// sacrifice a little bit of accuracy for optimal memory usage
-				point += base_point;
-			}
-			common.points[GetSymbol()] = point;
-			// TODO: check all data and don't rely on close
 		}
 		else {
 			if (join_bars) {
@@ -395,6 +457,11 @@ void DataBridge::RefreshFromHistory() {
 		if (step < min_value) min_value = step;
 		
 		//LOG(Format("%d: %d %f %f %f %f %d %d %d", cursor, (int)time, open, high, low, close, tick_volume, spread, real_volume));
+	}
+	
+	
+	if (data_begin > bars -10000) {
+		LOG("WARNING " << symbol);
 	}
 	
 	RefreshMedian();

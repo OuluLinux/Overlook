@@ -12,7 +12,7 @@ using namespace Upp;
 
 struct OnlineAverage2 : Moveable<OnlineAverage2> {
 	double mean_a, mean_b;
-	int count;
+	int64 count;
 	OnlineAverage2() : mean_a(0), mean_b(0), count(0) {}
 	void Add(double a, double b) {
 		if (count == 0) {
@@ -29,7 +29,7 @@ struct OnlineAverage2 : Moveable<OnlineAverage2> {
 
 struct OnlineAverage1 : Moveable<OnlineAverage1> {
 	double mean;
-	int count;
+	int64 count;
 	OnlineAverage1() : mean(0), count(0) {}
 	void Clear() {mean = 0.0; count = 0;}
 	void Add(double a) {
@@ -107,6 +107,16 @@ struct DataExc : public Exc {
 };
 #define ASSERTEXC(x) if (!(x)) throw ::Overlook::DataExc(#x);
 #define ASSERTEXC_(x, msg) if (!(x)) throw ::Overlook::DataExc(msg);
+
+
+struct UserExc : public Exc {
+	UserExc() {}
+	UserExc(String msg) : Exc(msg) {}
+};
+#define ASSERTUSER(x) if (!(x)) throw ::Overlook::UserExc(#x);
+#define ASSERTUSER_(x, msg) if (!(x)) throw ::Overlook::UserExc(msg);
+
+
 
 // Helper macros for indicator short names
 #define SHORTNAME0(x) x
@@ -306,6 +316,78 @@ public:
 	void SetInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
 	
 };
+
+
+
+
+
+
+
+
+
+
+
+struct Downloader {
+	HttpRequest http;
+	int64       loaded, prev_loaded;
+	String      url;
+	FileOut     out;
+	String      path;
+	
+	typedef Downloader CLASSNAME;
+	
+	
+	Downloader()
+	{
+		prev_loaded = 0;
+		http.MaxContentSize(INT_MAX);
+		http.WhenContent = THISBACK(Content);
+		http.WhenWait = http.WhenDo = THISBACK(ShowProgress);
+		http.WhenStart = THISBACK(Start);
+	}
+	
+	void Start()
+	{
+		if(out.IsOpen()) {
+			out.Close();
+			DeleteFile(path);
+		}
+		loaded = 0;
+	}
+	
+	void Perform()
+	{
+		http.New();
+		http.Url(url).Execute();
+		if(out.IsOpen())
+			out.Close();
+		if(!http.IsSuccess()) {
+			DeleteFile(path);
+			Exclamation("Download has failed.&\1" +
+			            (http.IsError() ? http.GetErrorDesc()
+			                            : AsString(http.GetStatusCode()) + ' ' + http.GetReasonPhrase()));
+		}
+	}
+	
+	void Content(const void *ptr, int size)
+	{
+		loaded += size;
+		if(!out.IsOpen()) {
+			RealizePath(path);
+			out.Open(path);
+		}
+		out.Put(ptr, size);
+	}
+	
+	void ShowProgress() {
+		if (loaded > prev_loaded + 1000000) {
+			LOG("Downloading " << (int)loaded << "/" << (int)http.GetContentLength());
+			prev_loaded = loaded;
+		}
+	}
+
+};
+
 
 }
 

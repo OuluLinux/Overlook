@@ -2924,8 +2924,8 @@ all off when a harmful current of value is recognized. Very corresponding.&]
 stopper or `"fuse`" might be critical to not allow the returning 
 negative trend, which actually comes in the latter part of the 
 lifetime of orders now. I can`'t emphasis enough, that this clearly 
-benefits greatly for separating the roles of agents instead of 
-doing one super agent.&]
+benefits greatly from separating the roles of agents instead 
+of doing one super agent.&]
 [s0; ...&]
 [s0; Seems like few other fixes got along with new changes. The return 
 value for DQN`-agent had to be, of course, average per smallest 
@@ -2937,7 +2937,7 @@ so that user gets a friendly message if assertion fails. It`'s
 bad, but less worse than no explanation.&]
 [s0; This took a while again, but school work didn`'t really start 
 this week yet... I am really looking for a cold beer and company 
-after this. I think I should meet some pretty freshmen girls... 
+after this. I think I should meet some pretty freshmen women... 
 Campus was so crowded this week... Oh, that pretty girl who always 
 slips away...&]
 [s0; &]
@@ -2947,4 +2947,41 @@ used to play (more than a feeling)]&]
 [s0;= [/ `'Till I see Marianne walk away]&]
 [s0;= [/ I see my Marianne walkin`' away]&]
 [s0; &]
-[s0; ]]
+[s3; 8.9.2017&]
+[s0; I am going to release v0.3 today and add this little text to 
+it as a PDF. I now it`'s silly, but I think it`'s like putting 
+a message to a bottle and throwing it from a ship. It doesn`'t 
+really matter to me, but might cause some interesting responses. 
+Who knows...&]
+[s0; It`'s been REALLY exciting to chase the profit with this. Almost 
+anyone here doesn`'t understand it, but one who might find this 
+software in the Internet, might actually understand that excitement. 
+I am not posting on forums, because people there only understand 
+classic MQL indicators, scripts and EAs, not something as Frankenstein 
+as the Overlook. This barely works and requires advanced user 
+to use. I read forums but don`'t really say anything there... 
+because I don`'t have anything good to say.&]
+[s0; ...&]
+[s0; I have still the last tasklist to do.&]
+[s0; One interesting detail: agents in one group could use the same 
+broker. Now they just repeat the same calculation by copying 
+signals of other agents to their own instance of the simulated 
+broker. There is just one expensive problem preventing them to 
+use the same broker instance: the threading point. We have rather 
+high costs in starting of new threads and we lower it by doing 
+more in thread at once. Threads could do only one timestep, and 
+the main thread could process the simbroker after that, but the 
+cost of syncing to the main thread and then restarting processing 
+in threads is just too much. So agents will do some repeating 
+calculations instead of the threading overhead. I haven`'t measured 
+the difference, but I have some experience about the threading 
+overhead, and I am pretty sure it`'s a lot cheaper in this way. 
+Also, I can avoid work before release and the repeating calcuation 
+might actually be very cheap.&]
+[s0; ...&]
+[s0; The app would be now in new beta version release state, but 
+I didn`'t have enough time to test this today. I added external 
+M1 data source and now Overlook has massive amount of training 
+data.&]
+[s0; Release works now again after finding hard`-to`-find bug. It`'s 
+amazingly fast.]]

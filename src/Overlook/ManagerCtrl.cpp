@@ -35,6 +35,49 @@ void SystemOverview::Data() {
 	infostr << "Fuse random action probability: " << ag.GetFuseEpsilon() << "\n";
 	infostr << "\n";
 	
+	
+	dword elapsed = ts.Elapsed();
+	
+	if (elapsed > 3000) {
+		double av_iters, iters_max;
+		if (ag.phase == AgentSystem::PHASE_SIGNAL_TRAINING) {
+			av_iters = ag.GetAverageSignalIterations();
+			iters_max = SIGNAL_PHASE_ITER_LIMIT;
+			phase_str = "Signal";
+		}
+		else if (ag.phase == AgentSystem::PHASE_AMP_TRAINING) {
+			av_iters = ag.GetAverageSignalIterations();
+			iters_max = AMP_PHASE_ITER_LIMIT;
+			phase_str = "Amp";
+		}
+		else if (ag.phase == AgentSystem::PHASE_FUSE_TRAINING) {
+			av_iters = ag.GetAverageSignalIterations();
+			iters_max = FUSE_PHASE_ITER_LIMIT;
+			phase_str = "Fuse";
+		}
+		
+		double iters_diff = av_iters - prev_av_iters;
+		double iters_per_sec = iters_diff / (elapsed / 1000.0);
+		double iters_left = iters_max - av_iters;
+		double sec_remaining = iters_left / iters_per_sec;
+		
+		sec  = ((int)sec_remaining) % 60;
+		min  = ((int)sec_remaining / 60) % 60;
+		hour = ((int)sec_remaining / 60 / 60);
+		
+		prev_av_iters = av_iters;
+		
+		ts.Reset();
+	}
+	
+	infostr << "Current phase: " << phase_str << "\n";
+	infostr << "Estimated ";
+	if (hour > 0) infostr << hour << " hours ";
+	if (min > 0) infostr << min << " minutes ";
+	infostr << "left in the current phase.\n";
+	
+	
+	
 	info.SetLabel(infostr);
 }
 
@@ -268,7 +311,7 @@ ManagerCtrl::ManagerCtrl() {
 	glist <<= THISBACK(SetView);
 	
 	alist.AddColumn("Symbol");
-	alist.AddColumn("Best result");
+	alist.AddColumn("Result");
 	alist.AddColumn("Drawdown");
 	alist <<= THISBACK(SetView);
 	alist.WhenLeftClick << THISBACK(SetView);

@@ -251,8 +251,11 @@ public:
 	
 	void InitAll();
 	template <class T> Core& AddSubCore()  {
-		ASSERT_(subcore_factories.Add(System::Find<T>()) != -1, "This class is not registered to the factory");
-		return subcores.Add(new T);}
+		int i = System::Find<T>();
+		ASSERT_(i != -1, "This class is not registered to the factory");
+		subcore_factories.Add(i);
+		return subcores.Add(new T);
+	}
 	Core& At(int i) {return subcores[i];}
 	Core& Set(String key, Value value);
 	

@@ -6,7 +6,8 @@ uses
 	CtrlLib,
 	plugin/libmt,
 	Painter,
-	CoreUtils;
+	CoreUtils,
+	plugin/zip;
 
 file
 	Copying,

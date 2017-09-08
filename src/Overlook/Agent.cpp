@@ -23,6 +23,10 @@ void AgentSignal::ResetEpoch() {
 	timestep_actual = 0;
 	timestep_total = -1;
 	cursor = 1;
+	
+	cursor_sigbegin = 0;
+	for(int i = 0; i < SIGSENS_COUNT; i++)
+		epoch_av[i].Clear();
 }
 
 void AgentSignal::Main(Vector<Snapshot>& snaps) {
@@ -40,7 +44,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 		prev_equity = broker.equity;
 		Forward(cur_snap, prev_snap);
 	}
-	Write(cur_snap);
+	Write(cur_snap, snaps);
 	equity[cursor] = broker.AccountEquity();
 	cursor++;
 }
@@ -68,8 +72,9 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	// all previous outputs from the same phase
-	for(int i = 0; i < SIGNAL_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(i);
+	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
+		input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(group_id, i);
+	
 	
 	ASSERT(cursor == SIGNAL_STATES);
 	
@@ -79,7 +84,7 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	// Convert action to simple signal
-	
+	int prev_signal = signal;
 	if (action < SIGNAL_POS_FWDSTEPS) {
 		signal = +1;
 		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
@@ -92,12 +97,14 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	else {
 		signal = 0;
 		action -= (SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS);
-		timestep_total = 1 << action;
+		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
 	}
 	
 	cur_snap.SetSignalOutput(group_id, sym_id, signal);
 	
 	timestep_actual = timestep_total;
+	if (prev_signal != signal)
+		cursor_sigbegin = cursor;
 	
 	
 	// Set signal to broker
@@ -106,7 +113,7 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 }
 
-void AgentSignal::Write(Snapshot& cur_snap) {
+void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	cur_snap.SetSignalOutput(group_id, sym_id, signal);
 	
@@ -129,6 +136,28 @@ void AgentSignal::Write(Snapshot& cur_snap) {
 		prev_signals[1] = 1.0;
 		prev_signals[2] = timestep_sensor;
 	}
+	
+	if (signal == 0 || cursor == cursor_sigbegin) {
+		for(int i = 0; i < SIGSENS_COUNT*2; i++)
+			prev_signals[3 + i] = 1.0;
+	} else {
+		const int periods[SIGSENS_COUNT] = SIGSENS_PERIODS;
+		for(int i = 0; i < SIGSENS_COUNT; i++) {
+			const Snapshot& snap  = snaps[Upp::max(cursor_sigbegin, cursor - periods[i])];
+			double change  = (cur_snap.GetOpen(sym_id) / snap.GetOpen(sym_id)  - 1.0) * (1.0 / periods[i]);
+			change *= signal;
+			epoch_av[i].Add(fabs(change));
+			double sensor = change / (epoch_av[i].mean * 3.0);
+			if (sensor >= 0.0) {
+				prev_signals[3 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
+				prev_signals[3 + i * 2 + 1] = 1.0;
+			} else {
+				prev_signals[3 + i * 2 + 0] = 1.0;
+				prev_signals[3 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
+			}
+		}
+	}
+	
 	
 	for(int i = 0; i < AMP_SENSORS; i++)
 		cur_snap.SetSignalSensor(group_id, sym_id, i, prev_signals[i]);
@@ -187,13 +216,17 @@ void AgentAmp::ResetEpoch() {
 	timestep_actual = 0;
 	timestep_total = -1;
 	cursor = 1;
+	
+	cursor_sigbegin = 0;
+	for(int i = 0; i < SIGSENS_COUNT; i++)
+		epoch_av[i].Clear();
 }
 
 void AgentAmp::Main(Vector<Snapshot>& snaps) {
-	Snapshot& cur_snap  = snaps[cursor - 0];
-	Snapshot& prev_snap = snaps[cursor - 1];
+	Snapshot& cur_snap = snaps[cursor - 0];
 	timestep_actual--;
-	if (timestep_actual <= 0) {
+	if (timestep_actual <= 0 || cur_snap.GetSignalOutput(agent->group_id, agent->sym_id) == 0) {
+		Snapshot& prev_snap = snaps[cursor - 1];
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.PartialEquity();
 		double reward = equity - prev_equity;
@@ -205,7 +238,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 		prev_equity = broker.PartialEquity();
 		Forward(cur_snap, prev_snap);
 	}
-	Write(cur_snap);
+	Write(cur_snap, snaps);
 	equity[cursor] = broker.PartialEquity();
 	cursor++;
 }
@@ -233,13 +266,13 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	// all current signals from same snapshot
-	for(int i = 0; i < SIGNAL_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(i);
+	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
+		input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(group_id, i);
 	
 	
 	// all previous outputs from the same phase
-	for(int i = 0; i < AMP_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(i);
+	for(int i = 0; i < AMP_GROUP_SIZE; i++)
+		input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(group_id, i);
 	
 	ASSERT(cursor == AMP_STATES);
 	
@@ -258,6 +291,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	prev_signals[0]		= 1.0 * maxscale_step / maxscale_steps;
 	prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 	
+	int prev_signal		= signal;
 	int maxscale		= 1 + maxscale_step * 2;
 	timestep_total		= 1 << (timefwd_step + AMP_FWDSTEP_BEGIN);
 	signal				= cur_snap.GetSignalOutput(group_id, sym_id);
@@ -272,6 +306,8 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	// Export value.
 	cur_snap.SetAmpOutput(group_id, sym_id, signal);
 	timestep_actual = timestep_total;
+	if (prev_signal * signal <= 0)
+		cursor_sigbegin = cursor;
 	
 	
 	// Following accepts previous iteration values.
@@ -290,12 +326,34 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		broker.Reset();
 }
 
-void AgentAmp::Write(Snapshot& cur_snap) {
+void AgentAmp::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	cur_snap.SetAmpOutput(group_id, sym_id, signal);
 	
 	if (timestep_actual < 0) timestep_actual = 0;
-	prev_signals[AMP_SENSORS-1] = 0.75 - 0.75 * timestep_actual / timestep_total;
+	prev_signals[2] = 0.75 - 0.75 * timestep_actual / timestep_total;
+	
+	if (signal == 0 || cursor == cursor_sigbegin) {
+		for(int i = 0; i < SIGSENS_COUNT*2; i++)
+			prev_signals[3 + i] = 1.0;
+	} else {
+		const int periods[SIGSENS_COUNT] = SIGSENS_PERIODS;
+		for(int i = 0; i < SIGSENS_COUNT; i++) {
+			const Snapshot& snap  = snaps[Upp::max(cursor_sigbegin, cursor - periods[i])];
+			double change  = (cur_snap.GetOpen(sym_id) / snap.GetOpen(sym_id)  - 1.0) * (1.0 / periods[i]);
+			change *= signal;
+			epoch_av[i].Add(fabs(change));
+			double sensor = change / (epoch_av[i].mean * 3.0);
+			if (sensor >= 0.0) {
+				prev_signals[3 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
+				prev_signals[3 + i * 2 + 1] = 1.0;
+			} else {
+				prev_signals[3 + i * 2 + 0] = 1.0;
+				prev_signals[3 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
+			}
+		}
+	}
+	
 	
 	for(int i = 0; i < AMP_SENSORS; i++)
 		cur_snap.SetAmpSensor(group_id, sym_id, i, prev_signals[i]);
@@ -357,10 +415,10 @@ void AgentFuse::ResetEpoch() {
 }
 
 void AgentFuse::Main(Vector<Snapshot>& snaps) {
-	Snapshot& cur_snap  = snaps[cursor - 0];
-	Snapshot& prev_snap = snaps[cursor - 1];
+	Snapshot& cur_snap = snaps[cursor - 0];
 	timestep_actual--;
-	if (timestep_actual <= 0) {
+	if (timestep_actual <= 0 || cur_snap.GetAmpOutput(agent->group_id, agent->sym_id) == 0) {
+		Snapshot& prev_snap = snaps[cursor - 1];
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.PartialEquity();
 		double reward = equity - prev_equity;
@@ -400,18 +458,18 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	// all current signals from same snapshot
-	for(int i = 0; i < SIGNAL_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(i);
+	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
+		input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(group_id, i);
 	
 	
 	// all current amp-signals from same snapshot
-	for(int i = 0; i < AMP_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetAmpSensorUnsafe(i);
+	for(int i = 0; i < AMP_GROUP_SIZE; i++)
+		input_array[cursor++] = cur_snap.GetAmpSensorUnsafe(group_id, i);
 	
 	
 	// all previous outputs from the same phase
-	for(int i = 0; i < FUSE_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetFuseSensorUnsafe(i);
+	for(int i = 0; i < FUSE_GROUP_SIZE; i++)
+		input_array[cursor++] = prev_snap.GetFuseSensorUnsafe(group_id, i);
 	
 	ASSERT(cursor == FUSE_STATES);
 	

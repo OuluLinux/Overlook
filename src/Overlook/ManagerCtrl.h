@@ -26,7 +26,10 @@ inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
 class SystemOverview : public WithSystemOverview<ParentCtrl> {
 	
 protected:
-	String label;
+	String label, phase_str;
+	TimeStop ts;
+	int sec = 0, min = 0, hour = 0;
+	double prev_av_iters = 0;
 	
 	void Progress(int actual, int total, String label);
 	void SubProgress(int actual, int total);

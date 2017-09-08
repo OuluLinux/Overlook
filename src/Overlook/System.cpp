@@ -33,7 +33,8 @@ void System::Init() {
 	try {
 		
 		// Init sym/tfs/time space
-		ASSERTEXC_(!mt.Init(addr, port), "Can't connect to MT4. Is MT4Connection script activated in MT4?");
+		bool connected = mt.Init(addr, port);
+		ASSERTUSER_(!connected, "Can't connect to MT4. Is MT4Connection script activated in MT4?");
 		
 		// Add symbols
 		source_symbol_count = mt.GetSymbolCount();
@@ -79,8 +80,11 @@ void System::Init() {
 			bars[i] = count;
 		}
 	}
+	catch (UserExc e) {
+		throw e;
+	}
 	catch (...) {
-		LOG("Load failed");
+		ASSERTUSER_(false, "Unknown error with MT4 connection.");
 	}
 	
 	InitRegistry();
@@ -103,9 +107,9 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	// TODO: some algorithm to calculate begins and ends, and persistently using it again
 	Time begin(2017,1,1);
-	if (period == 1)			begin = Time(2016,11,15);
-	else if (period == 5)		begin = Time(2016,5,1);
-	else if (period == 15)		begin = Time(2016,1,20);
+	if (period == 1)			begin = Time(2016,9,1);
+	else if (period == 5)		begin = Time(2016,9,1);
+	else if (period == 15)		begin = Time(2016,9,1);
 	else if (period == 30)		begin = Time(2015,11,9);
 	else if (period == 60)		begin = Time(2015,5,13);
 	else if (period == 240)		begin = Time(2009,12,21);

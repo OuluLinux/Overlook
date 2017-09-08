@@ -9,7 +9,7 @@ bool reset_fuses;
 AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-	
+	/*
 	allowed_symbols.Add("AUDCAD"); // --
 	allowed_symbols.Add("AUDJPY"); // --
 	allowed_symbols.Add("AUDNZD"); // -- --
@@ -31,8 +31,8 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
-
-	/*
+	*/
+	
 	allowed_symbols.Add("AUDUSD");
 	allowed_symbols.Add("EURAUD");
 	allowed_symbols.Add("EURGBP");
@@ -43,7 +43,8 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
-	*/
+	
+	ASSERT(allowed_symbols.GetCount() == SYM_COUNT);
 	
 	created = GetSysTime();
 }
@@ -84,7 +85,8 @@ void AgentSystem::InitThread() {
 		}
 	}
 	sym_count = sym_ids.GetCount();
-	ASSERT(sym_count == SYM_COUNT);
+	ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4.");
+	
 	main_tf = sys->FindPeriod(1);
 	ASSERT(main_tf != -1);
 	
@@ -231,7 +233,10 @@ void AgentSystem::RefreshSnapEquities() {
 }
 
 void AgentSystem::TrainAgents(int phase) {
-	sys->WhenPushTask("Agent training");
+	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : "fuse")) + " training");
+	
+	RefreshSnapshots();
+	RefreshSnapEquities();
 	
 	RefreshAgentEpsilon(phase);
 	if (GetAverageSignalIterations() >= 1.0) {
@@ -240,7 +245,6 @@ void AgentSystem::TrainAgents(int phase) {
 	}
 	SetAgentsTraining(true);
 	
-	RefreshSnapEquities();
 	
 	TimeStop ts;
 	int64 total_elapsed = 0;
@@ -256,12 +260,14 @@ void AgentSystem::TrainAgents(int phase) {
 			if (total_elapsed > 5*60*1000) {
 				StoreThis();
 				sys->WhenPopTask();
-				return; // call TrainAgents again to UpdateAmpSnaps safely
+				return; // call TrainAgents again to RefreshSnapshots safely
 			}
 			
-			// Change phase to joiner eventually
-			if (GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) {
-				phase = PHASE_AMP_TRAINING;
+			// Change to next phase eventually
+			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
+				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
+				(phase == PHASE_FUSE_TRAINING   && GetAverageFuseIterations()   >= FUSE_PHASE_ITER_LIMIT))   {
+				this->phase++;
 				StoreThis();
 				break;
 			}
@@ -511,8 +517,11 @@ void AgentSystem::RefreshSnapshots() {
 	int total_bars = sys->GetCountTf(main_tf);
 	int bars = total_bars - data_begin;
 	
+	if (bars == 0) {
+		data_begin = total_bars - 10000;
+		bars = total_bars - data_begin;
+	}
 	
-	ASSERT(bars > 0);
 	snaps.Reserve(bars + (60 - (bars % 60)));
 	for(; counted_bars < bars; counted_bars++) {
 		int shift = counted_bars + data_begin;
@@ -587,6 +596,7 @@ void AgentSystem::ResetValueBuffers() {
 	
 	
 	// Get output buffer pointer vector
+	int bars = sys->GetCountTf(main_tf);
 	int total_bufs = 0;
 	data_begin = 0;
 	for(int i = 0; i < work_queue.GetCount(); i++) {
@@ -602,7 +612,16 @@ void AgentSystem::ResetValueBuffers() {
 			continue;
 		
 		DataBridge* db = dynamic_cast<DataBridge*>(&*ci.core);
-		if (db) data_begin = Upp::max(data_begin, db->GetDataBegin());
+		if (db) {
+			int begin = db->GetDataBegin();
+			int limit = bars-10000;
+			bool enough = begin < limit;
+			ASSERTUSER_(enough, "Symbol " + GetMetaTrader().GetSymbol(ci.sym).name + " has no proper data.");
+			if (begin > data_begin) {
+				LOG("Limiting symbol " << GetMetaTrader().GetSymbol(ci.sym).name << " " << bars - begin);
+				data_begin = begin;
+			}
+		}
 		
 		Vector<ConstBuffer*>& indi_buffers = value_buffers[sym_id];
 		
@@ -909,7 +928,7 @@ void AgentSystem::InitBrokerValues() {
 		ASSERT(spread_points[i] > 0.0);
 	}
 	
-	begin_equity = mt.AccountEquity();
+	begin_equity = Upp::max(10000.0, mt.AccountEquity());
 	leverage = 1000;
 }
 

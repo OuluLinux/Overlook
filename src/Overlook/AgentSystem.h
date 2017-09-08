@@ -3,46 +3,51 @@
 
 namespace Overlook {
 
-#define SYM_COUNT					21
+#define SYM_COUNT					10
 #define GROUP_COUNT					4
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)
 #define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
+#define SIGSENS_COUNT				3
+#define SIGSENS_PERIODS				{5, 15, 60}
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
 
-#define SIGNAL_SENSORS				3
+#define SIGNAL_SENSORS				(3 + SIGSENS_COUNT * 2)
 #define SIGNAL_SIZE					(TRAINEE_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
+#define SIGNAL_GROUP_SIZE			(SYM_COUNT * SIGNAL_SENSORS)
+#define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE)
 #define SIGNAL_FWDSTEP_BEGIN		4
-#define SIGNAL_POS_FWDSTEPS			7
-#define SIGNAL_NEG_FWDSTEPS			7
-#define SIGNAL_IDLE_FWDSTEPS		5
+#define SIGNAL_POS_FWDSTEPS			3
+#define SIGNAL_NEG_FWDSTEPS			3
+#define SIGNAL_IDLE_FWDSTEPS		3
 #define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS + SIGNAL_IDLE_FWDSTEPS)
-#define SIGNAL_PHASE_ITER_LIMIT		400000
-#define SIGNAL_EPS_ITERS_STEP		10000
+#define SIGNAL_PHASE_ITER_LIMIT		700000
+#define SIGNAL_EPS_ITERS_STEP		20000
 
-#define AMP_SENSORS					3
+#define AMP_SENSORS					(3 + SIGSENS_COUNT * 2)
 #define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
-#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE)
+#define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
+#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE + AMP_GROUP_SIZE)
 #define AMP_FWDSTEP_BEGIN			4
-#define AMP_FWDSTEPS				7
+#define AMP_FWDSTEPS				3
 #define AMP_MAXSCALES				3
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
 #define AMP_PHASE_ITER_LIMIT		700000
-#define AMP_EPS_ITERS_STEP			100000
+#define AMP_EPS_ITERS_STEP			20000
 
 #define FUSE_SENSORS				3
 #define FUSE_SIZE					(TRAINEE_COUNT * FUSE_SENSORS)
-#define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE + FUSE_SIZE)
-#define FUSE_FWDSTEP_BEGIN			4
+#define FUSE_GROUP_SIZE				(SYM_COUNT * FUSE_SENSORS)
+#define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE + AMP_GROUP_SIZE + FUSE_GROUP_SIZE)
+#define FUSE_FWDSTEP_BEGIN			3
 #define FUSE_POS_FWDSTEPS			3
 #define FUSE_ZERO_FWDSTEPS			3
 #define FUSE_NEG_FWDSTEPS			3
 #define FUSE_ACTIONCOUNT			(FUSE_POS_FWDSTEPS + FUSE_ZERO_FWDSTEPS + FUSE_NEG_FWDSTEPS)
 #define FUSE_PHASE_ITER_LIMIT		700000
-#define FUSE_EPS_ITERS_STEP			100000
+#define FUSE_EPS_ITERS_STEP			20000
 
 
 
@@ -98,7 +103,7 @@ public:
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < SIGNAL_SENSORS);
 		signal_sensors[(group * SYM_COUNT + sym) * SIGNAL_SENSORS + sens] = d;
 	}
-	inline double GetSignalSensorUnsafe(int i) const {return signal_sensors[i];}
+	inline double GetSignalSensorUnsafe(int group_id, int i) const {return signal_sensors[(group_id * SYM_COUNT * SIGNAL_SENSORS) + i];}
 	
 	inline double GetAmpSensor(int group, int sym, int sens) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < AMP_SENSORS);
@@ -108,7 +113,7 @@ public:
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < AMP_SENSORS);
 		amp_sensors[(group * SYM_COUNT + sym) * AMP_SENSORS + sens] = d;
 	}
-	inline double GetAmpSensorUnsafe(int i) const {return amp_sensors[i];}
+	inline double GetAmpSensorUnsafe(int group_id, int i) const {return amp_sensors[(group_id * SYM_COUNT * AMP_SENSORS) + i];}
 	
 	inline double GetFuseSensor(int group, int sym, int sens) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < FUSE_SENSORS);
@@ -118,7 +123,7 @@ public:
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < FUSE_SENSORS);
 		fuse_sensors[(group * SYM_COUNT + sym) * FUSE_SENSORS + sens] = d;
 	}
-	inline double GetFuseSensorUnsafe(int i) const {return fuse_sensors[i];}
+	inline double GetFuseSensorUnsafe(int group_id, int i) const {return fuse_sensors[(group_id * SYM_COUNT * FUSE_SENSORS) + i];}
 	
 	inline int GetSignalOutput(int group, int sym) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);

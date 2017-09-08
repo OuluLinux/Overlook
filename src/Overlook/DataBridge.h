@@ -3,6 +3,9 @@
 
 namespace Overlook {
 
+extern bool use_internet_m1_data;
+
+
 class DataBridge;
 
 class DataBridgeCommon {
@@ -66,6 +69,7 @@ class DataBridge : public BarData {
 	bool slow_volume, day_volume;
 	
 	void RefreshFromHistory();
+	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshVirtualNode();
 	void RefreshCorrelation();

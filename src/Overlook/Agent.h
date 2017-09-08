@@ -15,6 +15,7 @@ struct AgentSignal {
 	
 	// Temporary
 	SingleFixedSimBroker broker;
+	OnlineAverage1 epoch_av[SIGSENS_COUNT];
 	Vector<double> equity;
 	double prev_equity = 0;
 	double reward_sum = 0;
@@ -23,6 +24,7 @@ struct AgentSignal {
 	int timestep_actual = 0;
 	int timestep_total = 1;
 	int cursor = 0;
+	int cursor_sigbegin = 0;
 	Agent* agent = NULL;
 	
 	
@@ -31,7 +33,7 @@ struct AgentSignal {
 	void ResetEpoch();
 	void Main(Vector<Snapshot>& snaps);
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
-	void Write(Snapshot& cur_snap);
+	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
 	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % iter;}
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
@@ -50,6 +52,7 @@ struct AgentAmp {
 	
 	// Temporary
 	FixedSimBroker broker;
+	OnlineAverage1 epoch_av[SIGSENS_COUNT];
 	Vector<double> equity;
 	double prev_signals[AMP_SENSORS];
 	double prev_equity = 0;
@@ -59,6 +62,7 @@ struct AgentAmp {
 	int timestep_actual = 0;
 	int timestep_total = 1;
 	int cursor = 0;
+	int cursor_sigbegin = 0;
 	Agent* agent = NULL;
 	
 	
@@ -67,7 +71,7 @@ struct AgentAmp {
 	void ResetEpoch();
 	void Main(Vector<Snapshot>& snaps);
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
-	void Write(Snapshot& cur_snap);
+	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
 	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % iter;}
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}

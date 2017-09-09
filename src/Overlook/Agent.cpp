@@ -89,14 +89,9 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		signal = +1;
 		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
 	}
-	else if (action < (SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)) {
+	else {
 		signal = -1;
 		action -= SIGNAL_POS_FWDSTEPS;
-		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
-	}
-	else {
-		signal = 0;
-		action -= (SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS);
 		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
 	}
 	
@@ -211,6 +206,7 @@ void AgentAmp::ResetEpoch() {
 	}
 	broker.Reset();
 	signal = 0;
+	prev_input_signal = 0;
 	prev_equity = broker.PartialEquity();
 	
 	timestep_actual = 0;
@@ -225,7 +221,7 @@ void AgentAmp::ResetEpoch() {
 void AgentAmp::Main(Vector<Snapshot>& snaps) {
 	Snapshot& cur_snap = snaps[cursor - 0];
 	timestep_actual--;
-	if (timestep_actual <= 0 || cur_snap.GetSignalOutput(agent->group_id, agent->sym_id) == 0) {
+	if (timestep_actual <= 0 || cur_snap.GetSignalOutput(agent->group_id, agent->sym_id) != prev_input_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.PartialEquity();
@@ -294,19 +290,20 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	int prev_signal		= signal;
 	int maxscale		= 1 + maxscale_step * 2;
 	timestep_total		= 1 << (timefwd_step + AMP_FWDSTEP_BEGIN);
-	signal				= cur_snap.GetSignalOutput(group_id, sym_id);
+	prev_input_signal	= cur_snap.GetSignalOutput(group_id, sym_id);
 	
-	if (signal == 0) {
+	if (prev_input_signal == 0) {
 		timestep_total = 1;
+		signal = 0;
 	}
 	else {
-		signal *= maxscale;
+		signal = prev_input_signal * maxscale;
 	}
 	
 	// Export value.
 	cur_snap.SetAmpOutput(group_id, sym_id, signal);
 	timestep_actual = timestep_total;
-	if (prev_signal * signal <= 0)
+	if (prev_signal != signal)
 		cursor_sigbegin = cursor;
 	
 	
@@ -407,6 +404,7 @@ void AgentFuse::ResetEpoch() {
 	}
 	broker.Reset();
 	signal = 0;
+	prev_input_signal = 0;
 	prev_equity = broker.AccountEquity();
 	
 	timestep_actual = 0;
@@ -417,7 +415,7 @@ void AgentFuse::ResetEpoch() {
 void AgentFuse::Main(Vector<Snapshot>& snaps) {
 	Snapshot& cur_snap = snaps[cursor - 0];
 	timestep_actual--;
-	if (timestep_actual <= 0 || cur_snap.GetAmpOutput(agent->group_id, agent->sym_id) == 0) {
+	if (timestep_actual <= 0 || cur_snap.GetAmpOutput(agent->group_id, agent->sym_id) != prev_input_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
 		broker.RefreshOrders(cur_snap);
 		double equity = broker.PartialEquity();
@@ -494,13 +492,14 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	
 	timestep_total		= 1 << (timefwd_step + FUSE_FWDSTEP_BEGIN);
-	signal				= cur_snap.GetAmpOutput(group_id, sym_id);
+	prev_input_signal	= cur_snap.GetAmpOutput(group_id, sym_id);
 	
-	if (signal == 0) {
+	if (prev_input_signal == 0) {
 		timestep_total = 1;
+		signal = 0;
 	}
 	else {
-		signal *= sig_mul;
+		signal = prev_input_signal * sig_mul;
 	}
 	
 	// Export value.

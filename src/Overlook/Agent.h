@@ -63,6 +63,7 @@ struct AgentAmp {
 	int timestep_total = 1;
 	int cursor = 0;
 	int cursor_sigbegin = 0;
+	int prev_input_signal = 0;
 	Agent* agent = NULL;
 	
 	
@@ -98,6 +99,7 @@ struct AgentFuse {
 	int timestep_actual = 0;
 	int timestep_total = 1;
 	int cursor = 0;
+	int prev_input_signal = 0;
 	Agent* agent = NULL;
 	
 	

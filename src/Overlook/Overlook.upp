@@ -10,6 +10,7 @@ uses
 	plugin/zip;
 
 file
+	Journal.qtf,
 	Copying,
 	main.cpp,
 	Overlook.rc,
@@ -17,7 +18,6 @@ file
 	Overlook.cpp,
 	Ovelook.icpp,
 	Overlook.iml,
-	srcdoc.tpp,
 	Ctrl readonly separator,
 	CustomCtrl.h,
 	GraphGroupCtrl.h,

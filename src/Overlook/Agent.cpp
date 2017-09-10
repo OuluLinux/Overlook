@@ -48,13 +48,13 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 		Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
 		Snapshot& prev_snap = snaps[cursor - 1];	// Previous snapshot is used as input also. Next is unknown.
 		double reward;
+		double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
+		change /= timestep_total;				// Get average change per timestep
+		change_av.Add(change);					// Get online average of change of value
 		if (signal == 0) {
 			reward = 0.0;
 		} else {
-			double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
-			change /= timestep_total;					// Get average change per timestep
-			change_av.Add(change);						// Get online average of change of value
-			double reward_change = (change - change_av.mean) * 1000.0;
+			double reward_change = (change - change_av.mean * 0.9) * 1000.0;
 			reward = reward_change;
 			if (reward_change >= 0)
 				pos_reward_sum += reward_change;
@@ -68,7 +68,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 	}
 	Write(cur_snap);								// Always write sensors to the common table
 	
-	equity[cursor] = reward_sum;		// Get some equity data for visualization
+	equity[cursor] = reward_sum;					// Get some equity data for visualization
 	
 	cursor++;										// Move 1 time-step forward also with data reading cursor
 }

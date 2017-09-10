@@ -14,67 +14,75 @@ void SystemOverview::Data() {
 	
 	infostr << "Created: " << Format("%", ag.created) << "\n";
 	infostr << "\n";
-	infostr << "Signal input size: 1 * " << SIGNAL_STATES << "\n";
-	infostr << "Signal action count: " << SIGNAL_ACTIONCOUNT << "\n";
-	infostr << "Average signal drawdown: " << ag.GetAverageSignalDrawdown() << "\n";
-	infostr << "Average signal iterations: " << (int)ag.GetAverageSignalIterations() << "\n";
-	infostr << "Signal random action probability: " << ag.GetSignalEpsilon() << "\n";
-	infostr << "\n";
 	
-	infostr << "Amp input size: 1 * " << AMP_STATES << "\n";
-	infostr << "Amp action count: " << AMP_ACTIONCOUNT << "\n";
-	infostr << "Average amp drawdown: " << ag.GetAverageAmpDrawdown() << "\n";
-	infostr << "Average amp iterations: " << (int)ag.GetAverageAmpIterations() << "\n";
-	infostr << "Amp random action probability: " << ag.GetAmpEpsilon() << "\n";
-	infostr << "\n";
-	
-	infostr << "Fuse input size: 1 * " << FUSE_STATES << "\n";
-	infostr << "Fuse action count: " << FUSE_ACTIONCOUNT << "\n";
-	infostr << "Average fuse drawdown: " << ag.GetAverageFuseDrawdown() << "\n";
-	infostr << "Average fuse iterations: " << (int)ag.GetAverageFuseIterations() << "\n";
-	infostr << "Fuse random action probability: " << ag.GetFuseEpsilon() << "\n";
-	infostr << "\n";
-	
-	
-	dword elapsed = ts.Elapsed();
-	
-	if (elapsed > 3000) {
-		double av_iters, iters_max;
-		if (ag.phase == AgentSystem::PHASE_SIGNAL_TRAINING) {
-			av_iters = ag.GetAverageSignalIterations();
-			iters_max = SIGNAL_PHASE_ITER_LIMIT;
-			phase_str = "Signal";
-		}
-		else if (ag.phase == AgentSystem::PHASE_AMP_TRAINING) {
-			av_iters = ag.GetAverageSignalIterations();
-			iters_max = AMP_PHASE_ITER_LIMIT;
-			phase_str = "Amp";
-		}
-		else if (ag.phase == AgentSystem::PHASE_FUSE_TRAINING) {
-			av_iters = ag.GetAverageSignalIterations();
-			iters_max = FUSE_PHASE_ITER_LIMIT;
-			phase_str = "Fuse";
-		}
-		
-		double iters_diff = av_iters - prev_av_iters;
-		double iters_per_sec = iters_diff / (elapsed / 1000.0);
-		double iters_left = iters_max - av_iters;
-		double sec_remaining = iters_left / iters_per_sec;
-		
-		sec  = ((int)sec_remaining) % 60;
-		min  = ((int)sec_remaining / 60) % 60;
-		hour = ((int)sec_remaining / 60 / 60);
-		
-		prev_av_iters = av_iters;
-		
-		ts.Reset();
+	for(int i = 0; i < FILTER_COUNT; i++) {
+		infostr << "Filter " << i << "\n";
+		infostr << "\tInput size: 1 * " << FILTER_STATES << "\n";
+		infostr << "\tAction count: " << FILTER_ACTIONCOUNT << "\n";
+		infostr << "\tAverage drawdown: " << ag.GetAverageFilterDrawdown(i) << "\n";
+		infostr << "\tAverage filter " << i << " iterations: " << (int)ag.GetAverageFilterIterations(i) << "\n";
+		infostr << "\tRandom action probability: " << ag.GetFilterEpsilon(i) << "\n";
+		infostr << "\n";
 	}
 	
-	infostr << "Current phase: " << phase_str << "\n";
-	infostr << "Estimated ";
-	if (hour > 0) infostr << hour << " hours ";
-	if (min > 0) infostr << min << " minutes ";
-	infostr << "left in the current phase.\n";
+	infostr << "Signal\n";
+	infostr << "\tInput size: 1 * " << SIGNAL_STATES << "\n";
+	infostr << "\tAction count: " << SIGNAL_ACTIONCOUNT << "\n";
+	infostr << "\tAverage drawdown: " << ag.GetAverageSignalDrawdown() << "\n";
+	infostr << "\tAverage iterations: " << (int)ag.GetAverageSignalIterations() << "\n";
+	infostr << "\tRandom action probability: " << ag.GetSignalEpsilon() << "\n";
+	infostr << "\n";
+	
+	infostr << "Amp\n";
+	infostr << "\tInput size: 1 * " << AMP_STATES << "\n";
+	infostr << "\tAction count: " << AMP_ACTIONCOUNT << "\n";
+	infostr << "\tAverage drawdown: " << ag.GetAverageAmpDrawdown() << "\n";
+	infostr << "\tAverage iterations: " << (int)ag.GetAverageAmpIterations() << "\n";
+	infostr << "\tRandom action probability: " << ag.GetAmpEpsilon() << "\n";
+	infostr << "\n";
+	
+	
+	if (ag.phase < PHASE_REAL) {
+		dword elapsed = ts.Elapsed();
+		
+		if (elapsed > 3000) {
+			double av_iters, iters_max;
+			if (ag.phase == PHASE_SIGNAL_TRAINING) {
+				av_iters = ag.GetAverageSignalIterations();
+				iters_max = SIGNAL_PHASE_ITER_LIMIT;
+				phase_str = "Signal";
+			}
+			else if (ag.phase == PHASE_AMP_TRAINING) {
+				av_iters = ag.GetAverageAmpIterations();
+				iters_max = AMP_PHASE_ITER_LIMIT;
+				phase_str = "Amp";
+			}
+			else if (ag.phase < PHASE_SIGNAL_TRAINING) {
+				av_iters = ag.GetAverageFilterIterations(ag.phase);
+				iters_max = FILTER_PHASE_ITER_LIMIT;
+				phase_str = "Filter " + IntStr(ag.phase);
+			}
+			
+			double iters_diff = av_iters - prev_av_iters;
+			double iters_per_sec = iters_diff / (elapsed / 1000.0);
+			double iters_left = iters_max - av_iters;
+			double sec_remaining = iters_left / iters_per_sec;
+			
+			sec  = ((int)sec_remaining) % 60;
+			min  = ((int)sec_remaining / 60) % 60;
+			hour = ((int)sec_remaining / 60 / 60);
+			
+			prev_av_iters = av_iters;
+			
+			ts.Reset();
+		}
+		
+		infostr << "Current phase: " << phase_str << "\n";
+		if (hour > 0) infostr << hour << " hours ";
+		if (min > 0) infostr << min << " minutes ";
+		if (hour == 0 && min == 0) infostr << sec << " seconds ";
+		infostr << "left in the current phase.\n";
+	}
 	
 	
 	
@@ -172,7 +180,7 @@ void SignalTabCtrl::Data() {
 void SignalTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
-	trainingctrl.SetAgent(agent, 0);
+	trainingctrl.SetAgent(agent, PHASE_SIGNAL_TRAINING);
 }
 
 
@@ -218,7 +226,7 @@ void AmpTabCtrl::Data() {
 void AmpTabCtrl::SetAgent(Agent& agent) {
 	this->agent = &agent;
 	
-	trainingctrl.SetAgent(agent, 1);
+	trainingctrl.SetAgent(agent, PHASE_AMP_TRAINING);
 }
 
 
@@ -239,7 +247,7 @@ void AmpTabCtrl::SetAgent(Agent& agent) {
 
 
 
-FuseTabCtrl::FuseTabCtrl() {
+FilterTabCtrl::FilterTabCtrl() {
 	agent = NULL;
 	
 	CtrlLayout(overview);
@@ -252,27 +260,29 @@ FuseTabCtrl::FuseTabCtrl() {
 	WhenSet << THISBACK(Data);
 }
 
-void FuseTabCtrl::Data() {
+void FilterTabCtrl::Data() {
 	if (!agent) return;
 	
 	Agent& a = *agent;
 	int tab = Get();
 	
 	if (tab == 0) {
-		overview.bestresult.SetLabel(DblStr(!a.fuse.result_equity.IsEmpty() ? a.fuse.result_equity.Top() : 0.0));
-		overview.iters.SetLabel(IntStr(a.fuse.iter));
-		overview.epsilon.SetLabel(DblStr(a.fuse.dqn.GetEpsilon()));
-		overview.expcount.SetLabel(IntStr(a.fuse.dqn.GetExperienceCount()));
+		overview.bestresult.SetLabel(DblStr(!a.filter[level].result_equity.IsEmpty() ? a.filter[level].result_equity.Top() : 0.0));
+		overview.iters.SetLabel(IntStr(a.filter[level].iter));
+		overview.epsilon.SetLabel(DblStr(a.filter[level].dqn.GetEpsilon()));
+		overview.expcount.SetLabel(IntStr(a.filter[level].dqn.GetExperienceCount()));
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
 	}
 }
 
-void FuseTabCtrl::SetAgent(Agent& agent) {
+void FilterTabCtrl::SetAgent(Agent& agent, int level) {
 	this->agent = &agent;
+	this->level = level;
+	ASSERT(level >= 0 && level < FILTER_COUNT);
 	
-	trainingctrl.SetAgent(agent, 2);
+	trainingctrl.SetAgent(agent, level);
 }
 
 
@@ -295,7 +305,7 @@ ManagerCtrl::ManagerCtrl() {
 	mainview.Add(system_tabs.SizePos());
 	mainview.Add(signal_tabs.SizePos());
 	mainview.Add(amp_tabs.SizePos());
-	mainview.Add(fuse_tabs.SizePos());
+	mainview.Add(filter_tabs.SizePos());
 	mainview.Add(export_ctrl.SizePos());
 	
 	listsplit.Vert();
@@ -304,9 +314,11 @@ ManagerCtrl::ManagerCtrl() {
 	
 	glist.AddColumn("View");
 	glist.Add("Overview");
+	glist.Add("Filter 1");
+	glist.Add("Filter 2");
+	glist.Add("Filter 3");
 	glist.Add("Signal");
 	glist.Add("Amp");
-	glist.Add("Fuse");
 	glist.Add("Realtime");
 	glist <<= THISBACK(SetView);
 	
@@ -326,7 +338,7 @@ void ManagerCtrl::SetView() {
 	signal_tabs.Hide();
 	system_tabs.Hide();
 	amp_tabs.Hide();
-	fuse_tabs.Hide();
+	filter_tabs.Hide();
 	export_ctrl.Hide();
 	
 	Data();
@@ -339,28 +351,28 @@ void ManagerCtrl::SetView() {
 		system_tabs.Show();
 		alist.SetCount(0);
 	}
-	else if (view == 1) {
+	else if (view >= 1 && view <= 3) {
+		int agent_id = alist.GetCursor();
+		int group_id = agent_id / SYM_COUNT;
+		agent_id = agent_id % SYM_COUNT;
+		filter_tabs.SetAgent(asys.groups[group_id].agents[agent_id], view - 1);
+		filter_tabs.Show();
+	}
+	else if (view == 4) {
 		int agent_id = alist.GetCursor();
 		int group_id = agent_id / SYM_COUNT;
 		agent_id = agent_id % SYM_COUNT;
 		signal_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
 		signal_tabs.Show();
 	}
-	else if (view == 2) {
+	else if (view == 5) {
 		int agent_id = alist.GetCursor();
 		int group_id = agent_id / SYM_COUNT;
 		agent_id = agent_id % SYM_COUNT;
 		amp_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
 		amp_tabs.Show();
 	}
-	else if (view == 3) {
-		int agent_id = alist.GetCursor();
-		int group_id = agent_id / SYM_COUNT;
-		agent_id = agent_id % SYM_COUNT;
-		fuse_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
-		fuse_tabs.Show();
-	}
-	else if (view == 4) {
+	else if (view == 6) {
 		alist.SetCount(0);
 		export_ctrl.Show();
 	}
@@ -375,7 +387,7 @@ void ManagerCtrl::Data() {
 	if (view == 0) {
 		system_tabs.Data();
 	}
-	else if (view >= 1 && view <= 3) {
+	else if (view >= 1 && view <= 5) {
 		int acount = 0;
 		for(int i = 0; i < ag.groups.GetCount(); i++)
 		for(int j = 0; j < ag.groups[i].agents.GetCount(); j++) {
@@ -391,9 +403,9 @@ void ManagerCtrl::Data() {
 		if (this->view != view && alist.GetCount())
 			alist.SetCursor(0);
 		
-		if      (view == 1) signal_tabs.Data();
-		else if (view == 2) amp_tabs.Data();
-		else if (view == 3) fuse_tabs.Data();
+		if      (view == 4) signal_tabs.Data();
+		else if (view == 5)	amp_tabs.Data();
+		else				filter_tabs.Data();
 	}
 	else if (view == 3) {
 		export_ctrl.Data();

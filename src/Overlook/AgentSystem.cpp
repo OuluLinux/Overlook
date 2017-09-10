@@ -4,7 +4,7 @@ namespace Overlook {
 
 bool reset_signals;
 bool reset_amps;
-bool reset_fuses;
+bool reset_filters;
 
 AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
@@ -145,9 +145,12 @@ void AgentSystem::InitThread() {
 		phase = Upp::min(phase, (int)PHASE_AMP_TRAINING);
 		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.Create();
 	}
-	if (reset_fuses) {
-		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].fuse.Create();
+	if (reset_filters) {
+		phase = Upp::min(phase, (int)PHASE_PREFUSE1_TRAINING);
+		for(int i = 0; i < groups.GetCount(); i++)
+			for(int j = 0; j < sym_ids.GetCount(); j++)
+				for(int k = 0; k < FILTER_COUNT; k++)
+					groups[i].agents[j].filter[k].Create();
 	}
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
@@ -233,7 +236,7 @@ void AgentSystem::RefreshSnapEquities() {
 }
 
 void AgentSystem::TrainAgents(int phase) {
-	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : "fuse")) + " training");
+	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : "filter " + IntStr(phase))) + " training");
 	
 	RefreshSnapshots();
 	RefreshSnapEquities();
@@ -266,7 +269,7 @@ void AgentSystem::TrainAgents(int phase) {
 			// Change to next phase eventually
 			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
 				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
-				(phase == PHASE_FUSE_TRAINING   && GetAverageFuseIterations()   >= FUSE_PHASE_ITER_LIMIT))   {
+				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase)   >= FILTER_PHASE_ITER_LIMIT))   {
 				this->phase++;
 				StoreThis();
 				break;
@@ -474,7 +477,7 @@ int AgentSystem::FindBestAgent(int sym_id) {
 	int best_i = 0;
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		Agent& a = groups[i].agents[sym_id];
-		double dd = a.fuse.broker.GetDrawdown();
+		double dd = a.amp.broker.GetDrawdown();
 		if (dd < best_dd) {
 			best_dd = dd;
 			best_i = i;
@@ -834,22 +837,24 @@ double AgentSystem::GetAverageAmpEpochs() {
 	return s / TRAINEE_COUNT;
 }
 
-double AgentSystem::GetAverageFuseDrawdown() {
+double AgentSystem::GetAverageFilterDrawdown(int level) {
+	ASSERT(level >= 0 && level < FILTER_COUNT);
 	double s = 0;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].fuse.GetLastDrawdown();
+		s += groups[i].agents[j].filter[level].GetLastDrawdown();
 	return s / TRAINEE_COUNT;
 }
 
-double AgentSystem::GetAverageFuseIterations() {
+double AgentSystem::GetAverageFilterIterations(int level) {
+	ASSERT(level >= 0 && level < FILTER_COUNT);
 	double s = 0;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].fuse.iter;
+		s += groups[i].agents[j].filter[level].iter;
 	return s / TRAINEE_COUNT;
 }
 
 void AgentSystem::RefreshAgentEpsilon(int phase) {
-	if (phase == 0) {
+	if (phase == PHASE_SIGNAL_TRAINING) {
 		double iters = GetAverageSignalIterations();
 		int level = iters / SIGNAL_EPS_ITERS_STEP;
 		if (level <= 0)			signal_epsilon = 0.20;
@@ -858,7 +863,7 @@ void AgentSystem::RefreshAgentEpsilon(int phase) {
 		else if (level >= 3)	signal_epsilon = 0.01;
 		SetSignalEpsilon(signal_epsilon);
 	}
-	else if (phase == 1) {
+	else if (phase == PHASE_AMP_TRAINING) {
 		double iters = GetAverageAmpIterations();
 		int level = iters / AMP_EPS_ITERS_STEP;
 		if (level <= 0)			amp_epsilon = 0.20;
@@ -867,14 +872,14 @@ void AgentSystem::RefreshAgentEpsilon(int phase) {
 		else if (level >= 3)	amp_epsilon = 0.01;
 		SetAmpEpsilon(amp_epsilon);
 	}
-	else if (phase == 2) {
-		double iters = GetAverageFuseIterations();
-		int level = iters / FUSE_EPS_ITERS_STEP;
-		if (level <= 0)			fuse_epsilon = 0.20;
-		else if (level == 1)	fuse_epsilon = 0.05;
-		else if (level == 2)	fuse_epsilon = 0.02;
-		else if (level >= 3)	fuse_epsilon = 0.01;
-		SetFuseEpsilon(fuse_epsilon);
+	else if (phase < PHASE_SIGNAL_TRAINING) {
+		double iters = GetAverageFilterIterations(phase);
+		int level = iters / FILTER_EPS_ITERS_STEP;
+		if (level <= 0)			filter_epsilon[phase] = 0.20;
+		else if (level == 1)	filter_epsilon[phase] = 0.05;
+		else if (level == 2)	filter_epsilon[phase] = 0.02;
+		else if (level >= 3)	filter_epsilon[phase] = 0.01;
+		SetFilterEpsilon(phase, filter_epsilon[phase]);
 	}
 }
 
@@ -890,10 +895,11 @@ void AgentSystem::SetAmpEpsilon(double epsilon) {
 		groups[i].agents[j].amp.dqn.SetEpsilon(epsilon);
 }
 
-void AgentSystem::SetFuseEpsilon(double epsilon) {
-	this->fuse_epsilon = epsilon;
+void AgentSystem::SetFilterEpsilon(int level, double epsilon) {
+	ASSERT(level >= 0 && level < FILTER_COUNT);
+	this->filter_epsilon[phase] = epsilon;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].fuse.dqn.SetEpsilon(epsilon);
+		groups[i].agents[j].filter[level].dqn.SetEpsilon(epsilon);
 }
 
 void AgentSystem::SetFreeMarginLevel(double fmlevel) {
@@ -953,7 +959,7 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 		int group_id = FindBestAgent(i);
 		ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 		ASSERT(groups[group_id].agents[i].sym == sym);
-		int sig = cur_snap.GetFuseOutput(group_id, i);
+		int sig = cur_snap.GetAmpOutput(group_id, i);
 		if (sig == broker.GetSignal(sym) && sig != 0)
 			broker.SetSignalFreeze(sym, true);
 		else {

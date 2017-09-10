@@ -15,38 +15,39 @@ namespace Overlook {
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
 
+#define FILTER_COUNT				3
+#define FILTER_SENSORS				2
+#define FILTER_SIZE					(TRAINEE_COUNT * FILTER_SENSORS * FILTER_COUNT)
+#define FILTER_GROUP_SIZE			(SYM_COUNT * FILTER_SENSORS)
+#define FILTER_STATES				(TIME_SENSORS + SENSOR_SIZE + FILTER_GROUP_SIZE)
+#define FILTER_FWDSTEP_BEGIN		(5+FILTER_COUNT-1)
+#define FILTER_POS_FWDSTEPS			3
+#define FILTER_ZERO_FWDSTEPS		1
+#define FILTER_ACTIONCOUNT			(FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS)
+#define FILTER_PHASE_ITER_LIMIT		7000
+#define FILTER_EPS_ITERS_STEP		20000
+
 #define SIGNAL_SENSORS				(2 + SIGSENS_COUNT * 2)
 #define SIGNAL_SIZE					(TRAINEE_COUNT * SIGNAL_SENSORS)
 #define SIGNAL_GROUP_SIZE			(SYM_COUNT * SIGNAL_SENSORS)
 #define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE)
-#define SIGNAL_FWDSTEP_BEGIN		8
+#define SIGNAL_FWDSTEP_BEGIN		5
 #define SIGNAL_POS_FWDSTEPS			3
 #define SIGNAL_NEG_FWDSTEPS			3
 #define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)
-#define SIGNAL_PHASE_ITER_LIMIT		700000
+#define SIGNAL_PHASE_ITER_LIMIT		7000
 #define SIGNAL_EPS_ITERS_STEP		20000
 
 #define AMP_SENSORS					(3 + SIGSENS_COUNT * 2)
 #define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
 #define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
 #define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE + AMP_GROUP_SIZE)
-#define AMP_FWDSTEP_BEGIN			6
-#define AMP_FWDSTEPS				5
+#define AMP_FWDSTEP_BEGIN			5
+#define AMP_FWDSTEPS				3
 #define AMP_MAXSCALES				3
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
-#define AMP_PHASE_ITER_LIMIT		700000
+#define AMP_PHASE_ITER_LIMIT		7000
 #define AMP_EPS_ITERS_STEP			20000
-
-#define FUSE_SENSORS				2
-#define FUSE_SIZE					(TRAINEE_COUNT * FUSE_SENSORS)
-#define FUSE_GROUP_SIZE				(SYM_COUNT * FUSE_SENSORS)
-#define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE + AMP_GROUP_SIZE + FUSE_GROUP_SIZE)
-#define FUSE_FWDSTEP_BEGIN			5
-#define FUSE_POS_FWDSTEPS			3
-#define FUSE_ZERO_FWDSTEPS			1
-#define FUSE_ACTIONCOUNT			(FUSE_POS_FWDSTEPS + FUSE_ZERO_FWDSTEPS)
-#define FUSE_PHASE_ITER_LIMIT		700000
-#define FUSE_EPS_ITERS_STEP			20000
 
 
 
@@ -62,21 +63,29 @@ private:
 	double open					[SYM_COUNT];
 	double signal_sensors		[SIGNAL_SIZE];
 	double amp_sensors			[AMP_SIZE];
-	double fuse_sensors			[FUSE_SIZE];
+	double filter_sensors			[FILTER_SIZE];
 	int signal_broker_symsig	[TRAINEE_COUNT];
 	int amp_broker_symsig		[TRAINEE_COUNT];
-	int fuse_broker_symsig		[TRAINEE_COUNT];
+	int filter_broker_symsig		[TRAINEE_COUNT * FILTER_COUNT];
 	int shift;
+	
+	inline int GetSignalOutput(int i) const {ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
+	inline void SetSignalOutput(int i, int j) {ASSERT(i >= 0 && i < TRAINEE_COUNT); amp_broker_symsig[i] = j;}
+	inline int GetAmpOutput(int i) const {ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
+	inline void SetAmpOutput(int i, int j) {ASSERT(i >= 0 && i < TRAINEE_COUNT); amp_broker_symsig[i] = j;}
+	inline int GetFilterOutput(int i) const {ASSERT(i >= 0 && i < (TRAINEE_COUNT * FILTER_COUNT)); return filter_broker_symsig[i];}
+	inline void SetFilterOutput(int i, int j) {ASSERT(i >= 0 && i < (TRAINEE_COUNT * FILTER_COUNT)); filter_broker_symsig[i] = j;}
 	
 public:
 	
 	void Reset() {
 		for(int i = 0; i < SIGNAL_SIZE; i++)	signal_sensors[i]			= 1.0;
 		for(int i = 0; i < AMP_SIZE; i++)		amp_sensors[i]				= 1.0;
-		for(int i = 0; i < FUSE_SIZE; i++)		fuse_sensors[i]				= 1.0;
+		for(int i = 0; i < FILTER_SIZE; i++)		filter_sensors[i]				= 1.0;
 		for(int i = 0; i < TRAINEE_COUNT; i++)	signal_broker_symsig[i]		= 0;
 		for(int i = 0; i < TRAINEE_COUNT; i++)	amp_broker_symsig[i]		= 0;
-		for(int i = 0; i < TRAINEE_COUNT; i++)	fuse_broker_symsig[i]		= 0;
+		for(int i = 0; i < (TRAINEE_COUNT * FILTER_COUNT); i++)
+												filter_broker_symsig[i]		= 0;
 	}
 	
 	double GetYearSensor() const {return year_timesensor;}
@@ -114,41 +123,41 @@ public:
 	}
 	inline double GetAmpSensorUnsafe(int group_id, int i) const {return amp_sensors[(group_id * SYM_COUNT * AMP_SENSORS) + i];}
 	
-	inline double GetFuseSensor(int group, int sym, int sens) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < FUSE_SENSORS);
-		return fuse_sensors[(group * SYM_COUNT + sym) * FUSE_SENSORS + sens];
+	inline double GetFilterSensor(int group, int level, int sym, int sens) const {
+		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(level >= 0 && level < FILTER_COUNT); ASSERT(sens >= 0 && sens < FILTER_SENSORS);
+		return filter_sensors[((group * FILTER_COUNT + level) * SYM_COUNT + sym) * FILTER_SENSORS + sens];
 	}
-	inline void   SetFuseSensor(int group, int sym, int sens, double d) {
-		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < FUSE_SENSORS);
-		fuse_sensors[(group * SYM_COUNT + sym) * FUSE_SENSORS + sens] = d;
+	inline void   SetFilterSensor(int group, int level, int sym, int sens, double d) {
+		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(level >= 0 && level < FILTER_COUNT); ASSERT(sens >= 0 && sens < FILTER_SENSORS);
+		filter_sensors[((group * FILTER_COUNT + level) * SYM_COUNT + sym) * FILTER_SENSORS + sens] = d;
 	}
-	inline double GetFuseSensorUnsafe(int group_id, int i) const {return fuse_sensors[(group_id * SYM_COUNT * FUSE_SENSORS) + i];}
+	inline double GetFilterSensorUnsafe(int group_id, int level, int i) const {return filter_sensors[((group_id * FILTER_COUNT + level) * SYM_COUNT * FILTER_SENSORS) + i];}
 	
 	inline int GetSignalOutput(int group, int sym) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return signal_broker_symsig[group * SYM_COUNT + sym];
+		return GetSignalOutput(group * SYM_COUNT + sym);
 	}
 	inline void SetSignalOutput(int group, int sym, int i) {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		signal_broker_symsig[group * SYM_COUNT + sym] = i;
+		SetSignalOutput(group * SYM_COUNT + sym, i);
 	}
 	
 	inline int GetAmpOutput(int group, int sym) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return amp_broker_symsig[group * SYM_COUNT + sym];
+		return GetAmpOutput(group * SYM_COUNT + sym);
 	}
 	inline void SetAmpOutput(int group, int sym, int i) {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		amp_broker_symsig[group * SYM_COUNT + sym] = i;
+		SetAmpOutput(group * SYM_COUNT + sym, i);
 	}
 	
-	inline int GetFuseOutput(int group, int sym) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return fuse_broker_symsig[group * SYM_COUNT + sym];
+	inline int GetFilterOutput(int group, int level, int sym) const {
+		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(level >= 0 && level < FILTER_COUNT);
+		return GetFilterOutput((group * FILTER_COUNT + level) * SYM_COUNT + sym);
 	}
-	inline void SetFuseOutput(int group, int sym, int i) {
-		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT);
-		fuse_broker_symsig[group * SYM_COUNT + sym] = i;
+	inline void SetFilterOutput(int group, int level, int sym, int i) {
+		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(level >= 0 && level < FILTER_COUNT);
+		SetFilterOutput((group * FILTER_COUNT + level) * SYM_COUNT + sym, i);
 	}
 	
 	int GetShift() const {return shift;}
@@ -160,7 +169,7 @@ public:
 
 extern bool reset_signals;
 extern bool reset_amps;
-extern bool reset_fuses;
+extern bool reset_filters;
 
 class AgentSystem {
 	
@@ -185,7 +194,7 @@ public:
 	Index<int> sym_ids;
 	TimeStop last_store, last_datagather;
 	System* sys;
-	double signal_epsilon = 0.0, amp_epsilon = 0.0, fuse_epsilon = 0.0;
+	double signal_epsilon = 0.0, amp_epsilon = 0.0, filter_epsilon[FILTER_COUNT];
 	double begin_equity = 10000.0;
 	double leverage = 1000.0;
 	double free_margin_level = 0.60;
@@ -199,7 +208,6 @@ public:
 	bool running = false, stopped = true;
 	Mutex work_lock;
 	
-	enum {PHASE_SIGNAL_TRAINING, PHASE_AMP_TRAINING, PHASE_FUSE_TRAINING, PHASE_REAL};
 	
 public:
 	typedef AgentSystem CLASSNAME;
@@ -216,7 +224,7 @@ public:
 	void LoadThis();
 	void SetSignalEpsilon(double d);
 	void SetAmpEpsilon(double d);
-	void SetFuseEpsilon(double d);
+	void SetFilterEpsilon(int level, double d);
 	void SetFreeMarginLevel(double d);
 	void RefreshSnapshots();
 	void Progress(int actual, int total, String desc);
@@ -233,11 +241,11 @@ public:
 	double GetAverageAmpDrawdown();
 	double GetAverageAmpIterations();
 	double GetAverageAmpEpochs();
-	double GetAverageFuseDrawdown();
-	double GetAverageFuseIterations();
+	double GetAverageFilterDrawdown(int level);
+	double GetAverageFilterIterations(int level);
 	double GetSignalEpsilon() const			{return signal_epsilon;}
 	double GetAmpEpsilon() const			{return amp_epsilon;}
-	double GetFuseEpsilon() const			{return fuse_epsilon;}
+	double GetFilterEpsilon(int level) const	{return filter_epsilon[level];}
 	void RefreshAgentEpsilon(int phase);
 	void TrainAgents(int phase);
 	void MainReal();

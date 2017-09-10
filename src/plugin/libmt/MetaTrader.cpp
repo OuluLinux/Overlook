@@ -606,7 +606,8 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	Vector<String> lines = Split(s, ";");
 	
 	String account_currency = _AccountCurrency();
-	ASSERT(!account_currency.IsEmpty());
+	if (account_currency.IsEmpty())
+		throw Exc("The MT4 is probably not logged in. The account currency string was empty.");
 	if (!account_currency.GetCount())
 		account_currency = "USD";
 	

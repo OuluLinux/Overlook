@@ -24,8 +24,8 @@ GUI_APP_MAIN {
 		else if (s == "-resetamps") {
 			reset_amps = ScanInt(args[i]);
 		}
-		else if (s == "-resetfuses") {
-			reset_fuses = ScanInt(args[i]);
+		else if (s == "-resetfilters") {
+			reset_filters = ScanInt(args[i]);
 		}
 		else if (s == "-internetdata") {
 			use_internet_m1_data = ScanInt(args[i]);
@@ -67,10 +67,10 @@ GUI_APP_MAIN {
 		PromptOK(e);
 	}
 	catch (Exc e) {
-		PromptOK("Error: " + e);
+		PromptOK(e);
 	}
 	catch (ConnectionError e) {
-		PromptOK("Connection error: " + e);
+		PromptOK(e);
 	}
 	catch (...) {
 		PromptOK("Unknown error");

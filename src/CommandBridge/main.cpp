@@ -43,7 +43,7 @@ GUI_APP_MAIN {
 	#endif
 	
 	bool is_exit = false;
-	while (!is_exit) {
+	while (!is_exit && !Thread::IsShutdownThreads()) {
 		if (is_tray) {
 			TrayApp tray;
 			last_tray = &tray;

@@ -82,17 +82,18 @@ public:
 	
 };
 
-class FuseTabCtrl : public TabCtrl {
+class FilterTabCtrl : public TabCtrl {
 	Agent* agent;
-	WithFuseOverview<ParentCtrl>	overview;
+	WithFilterOverview<ParentCtrl>	overview;
 	TrainingCtrl					trainingctrl;
+	int level = -1;
 	
 public:
-	typedef FuseTabCtrl CLASSNAME;
-	FuseTabCtrl();
+	typedef FilterTabCtrl CLASSNAME;
+	FilterTabCtrl();
 	
 	void Data();
-	void SetAgent(Agent& agent);
+	void SetAgent(Agent& agent, int level);
 	
 };
 
@@ -106,7 +107,7 @@ class ManagerCtrl : public ParentCtrl {
 	SystemTabCtrl					system_tabs;
 	SignalTabCtrl					signal_tabs;
 	AmpTabCtrl						amp_tabs;
-	FuseTabCtrl						fuse_tabs;
+	FilterTabCtrl						filter_tabs;
 	ExportCtrl						export_ctrl;
 	
 	int view;

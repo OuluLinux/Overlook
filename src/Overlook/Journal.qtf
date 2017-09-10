@@ -3086,7 +3086,20 @@ to the current model is that you would give the absolute value
 of the current reward as the reward. So few levels would limit 
 that absolute`-value`-reward to the maximum and then the last 
 would only decide that will it do long or short.&]
-[s0; So yeah, I have currently nicely working slow model, but I`'ll 
+[s0; So yeah, I have currently a nicely working slow model, but I`'ll 
 exchange it immediately to this new idea to avoid losing time. 
 Just minimizing the response time to the priceless...&]
+[s0; Wait... I still need the amp and fuse part after that, so those 
+time slot agents go before current parts. Ok, so it`'s not about 
+exchanging anything, but about adding something...&]
+[s0; Hmm... it`'s like the current `"fuse`" part needs to be BEFORE 
+signal, and not after amp, and there should be many pre`-fuse 
+parts. By the way, those stop`-loss/take`-profit mechanisms should 
+be the real `"fuse`".&]
+[s0; ...&]
+[s0; I found bad bug again. Obviously agent is not allowed to train, 
+if it exports 0 signal because input signal is 0.&]
+[s0; ...&]
+[s0; Hmm... I didn`'t expect to find so many bugs today... They were 
+very hard to notice.&]
 [s0; ]]

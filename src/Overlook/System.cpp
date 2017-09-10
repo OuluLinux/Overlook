@@ -83,6 +83,9 @@ void System::Init() {
 	catch (UserExc e) {
 		throw e;
 	}
+	catch (Exc e) {
+		throw e;
+	}
 	catch (...) {
 		ASSERTUSER_(false, "Unknown error with MT4 connection.");
 	}

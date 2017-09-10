@@ -94,6 +94,8 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		action -= SIGNAL_POS_FWDSTEPS;
 		timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
 	}
+	if (agent->is_training)
+		timestep_total += Random(RANDOM_TIMESTEPS);
 	
 	cur_snap.SetSignalOutput(group_id, sym_id, signal);
 	
@@ -114,27 +116,24 @@ void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	
 	if (timestep_actual < 0) timestep_actual = 0;
 	double timestep_sensor = 0.75 - 0.75 * timestep_actual / timestep_total;
-	double prev_signals[AMP_SENSORS];
+	double prev_signals[SIGNAL_SENSORS];
 	
 	if (signal == 0) {
-		prev_signals[0] = timestep_sensor;
+		prev_signals[0] = 1.0;
 		prev_signals[1] = 1.0;
-		prev_signals[2] = 1.0;
 	}
 	else if (signal > 0) {
-		prev_signals[0] = 1.0;
-		prev_signals[1] = timestep_sensor;
-		prev_signals[2] = 1.0;
+		prev_signals[0] = timestep_sensor;
+		prev_signals[1] = 1.0;
 	}
 	else {
 		prev_signals[0] = 1.0;
-		prev_signals[1] = 1.0;
-		prev_signals[2] = timestep_sensor;
+		prev_signals[1] = timestep_sensor;
 	}
 	
 	if (signal == 0 || cursor == cursor_sigbegin) {
 		for(int i = 0; i < SIGSENS_COUNT*2; i++)
-			prev_signals[3 + i] = 1.0;
+			prev_signals[2 + i] = 1.0;
 	} else {
 		const int periods[SIGSENS_COUNT] = SIGSENS_PERIODS;
 		for(int i = 0; i < SIGSENS_COUNT; i++) {
@@ -144,17 +143,17 @@ void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 			epoch_av[i].Add(fabs(change));
 			double sensor = change / (epoch_av[i].mean * 3.0);
 			if (sensor >= 0.0) {
-				prev_signals[3 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
-				prev_signals[3 + i * 2 + 1] = 1.0;
+				prev_signals[2 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
+				prev_signals[2 + i * 2 + 1] = 1.0;
 			} else {
-				prev_signals[3 + i * 2 + 0] = 1.0;
-				prev_signals[3 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
+				prev_signals[2 + i * 2 + 0] = 1.0;
+				prev_signals[2 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
 			}
 		}
 	}
 	
 	
-	for(int i = 0; i < AMP_SENSORS; i++)
+	for(int i = 0; i < SIGNAL_SENSORS; i++)
 		cur_snap.SetSignalSensor(group_id, sym_id, i, prev_signals[i]);
 }
 
@@ -297,6 +296,8 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		signal = 0;
 	}
 	else {
+		if (agent->is_training)
+			timestep_total += Random(RANDOM_TIMESTEPS);
 		signal = prev_input_signal * maxscale;
 	}
 	
@@ -481,13 +482,9 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		timefwd_step = action;
 		sig_mul = +1;
 	}
-	else if (action < (FUSE_POS_FWDSTEPS + FUSE_ZERO_FWDSTEPS)) {
+	else {
 		timefwd_step = action - FUSE_POS_FWDSTEPS;
 		sig_mul = 0;
-	}
-	else {
-		timefwd_step = action - (FUSE_POS_FWDSTEPS + FUSE_ZERO_FWDSTEPS);
-		sig_mul = -1;
 	}
 	
 	
@@ -499,6 +496,8 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		signal = 0;
 	}
 	else {
+		if (agent->is_training)
+			timestep_total += Random(RANDOM_TIMESTEPS);
 		signal = prev_input_signal * sig_mul;
 	}
 	
@@ -534,17 +533,10 @@ void AgentFuse::Write(Snapshot& cur_snap) {
 	if (sig_mul == 0) {
 		prev_signals[0] = timestep_sensor;
 		prev_signals[1] = 1.0;
-		prev_signals[2] = 1.0;
-	}
-	else if (sig_mul == 1) {
-		prev_signals[0] = 1.0;
-		prev_signals[1] = timestep_sensor;
-		prev_signals[2] = 1.0;
 	}
 	else {
 		prev_signals[0] = 1.0;
-		prev_signals[1] = 1.0;
-		prev_signals[2] = timestep_sensor;
+		prev_signals[1] = timestep_sensor;
 	}
 	
 	for(int i = 0; i < FUSE_SENSORS; i++)

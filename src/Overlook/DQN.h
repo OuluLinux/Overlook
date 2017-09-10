@@ -369,7 +369,7 @@ void UpdateMat(MatType& m, double alpha) {
 
 
 
-template <int num_actions, int num_states, int num_hidden_units = 100, int experience_size=100>
+template <int num_actions, int num_states, int num_hidden_units = 300, int experience_size=10000>
 class DQNAgent {
 	
 public:

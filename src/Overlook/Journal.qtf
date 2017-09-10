@@ -3052,4 +3052,41 @@ I didn`'t have enough time to test this today. I added external
 M1 data source and now Overlook has massive amount of training 
 data.&]
 [s0; Release works now again after finding hard`-to`-find bug. It`'s 
-amazingly fast.]]
+amazingly fast.&]
+[s3; 10.9.2017&]
+[s0; I trained the full signal/amp/fuse stack, but encountered some 
+problems. Before this I removed 0`-signal from signal and amp 
+parts, so that fuse part can only zero the signal. This prevented 
+training to do only idling in some difficult cases. The problem 
+was, however, that I tried to exploit the accurate model to make 
+the system faster, instead of adding randomness in the sampling 
+to allow little differences in the data, which is researched 
+to increase the quality of the result in image recognition applications. 
+ConvNet examples can show that by doing `"image augmentation`", 
+which takes random smaller part of the image. This improvement 
+is extremely small part of the code, but makes a huge difference 
+to the result.&]
+[s0; Almost all improvements currently are like very small details 
+in some large mathematical equation. They mean a lot but are 
+difficult to find.&]
+[s0; So, I reduced the number of symbol groups to one, but increased 
+(3x times) the amount of hidden neurons. The estimated computing 
+time stayed same or increase a little. I limited signal periods 
+to those, which worked well in the previous model (around H4, 
+H8, D1) and then a little more sensitive amp periods (around 
+H1, H2, H4, H8, D1) and then even more sensitive fuse (M30, H1, 
+H2). This is still far from high frequency stuff, and I haven`'t 
+had a single clue how this could work in the faster than1 hour 
+trading.&]
+[s0; One idea for scalping trading would be that you would limit 
+the potential area with the first agent`-level, and then the 
+second level would limit that even more, and the third level 
+would make the decision to trade that or not. The difference 
+to the current model is that you would give the absolute value 
+of the current reward as the reward. So few levels would limit 
+that absolute`-value`-reward to the maximum and then the last 
+would only decide that will it do long or short.&]
+[s0; So yeah, I have currently nicely working slow model, but I`'ll 
+exchange it immediately to this new idea to avoid losing time. 
+Just minimizing the response time to the priceless...&]
+[s0; ]]

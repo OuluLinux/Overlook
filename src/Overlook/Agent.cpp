@@ -11,6 +11,8 @@ AgentFilter::AgentFilter() {
 void AgentFilter::Create() {
 	dqn.Reset();
 	iter = 0;
+	result_equity.Clear();
+	result_drawdown.Clear();
 }
 
 void AgentFilter::ResetEpoch() {
@@ -48,19 +50,30 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 		Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
 		Snapshot& prev_snap = snaps[cursor - 1];	// Previous snapshot is used as input also. Next is unknown.
 		double reward;
-		double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
-		change /= timestep_total;				// Get average change per timestep
-		change_av.Add(change);					// Get online average of change of value
-		if (signal == 0) {
+		if (skip_learn) {
 			reward = 0.0;
 		} else {
-			double reward_change = (change - change_av.mean * 0.9) * 1000.0;
-			reward = reward_change;
-			if (reward_change >= 0)
-				pos_reward_sum += reward_change;
-			else
-				neg_reward_sum -= reward_change;
-			reward_sum += reward;
+			double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
+			change /= timestep_total;				// Get average change per timestep
+			change_av.Add(change);					// Get online average of change of value
+			if (signal == 0) {
+				reward = 0.0;
+			} else {
+				// With group 0, activate always higher part
+				// With group 1, activate first lower part
+				// With group 2, activate first higher part and then lower part
+				bool active_higher_bit = !(agent->group_id & (1 << level));
+				double reward_change =
+					active_higher_bit ?
+						(change - change_av.mean * 0.9) * +1000.0 :
+						(change - change_av.mean * 1.1) * -1000.0;
+				reward = reward_change;
+				if (reward_change >= 0)
+					pos_reward_sum += reward_change;
+				else
+					neg_reward_sum -= reward_change;
+				reward_sum += reward;
+			}
 		}
 		Backward(reward);							// Learn the reward
 		Forward(cur_snap, prev_snap);				// Do new actions
@@ -123,7 +136,7 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 			sig_mul = 0;
 		}
 		
-		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step - level);
+		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + group_id + (FILTER_COUNT-1-level));
 		if (agent->is_training)
 			timestep_total += Random(RANDOM_TIMESTEPS);
 		signal = sig_mul;
@@ -189,6 +202,8 @@ AgentSignal::AgentSignal() {
 void AgentSignal::Create() {
 	dqn.Reset();
 	iter = 0;
+	result_equity.Clear();
+	result_drawdown.Clear();
 }
 
 void AgentSignal::ResetEpoch() {
@@ -381,6 +396,8 @@ AgentAmp::AgentAmp() {
 void AgentAmp::Create() {
 	dqn.Reset();
 	iter = 0;
+	result_equity.Clear();
+	result_drawdown.Clear();
 }
 
 void AgentAmp::ResetEpoch() {

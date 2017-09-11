@@ -3,8 +3,9 @@
 
 namespace Overlook {
 
+#define FMLEVEL						0.80
 #define SYM_COUNT					10
-#define GROUP_COUNT					1
+#define GROUP_COUNT					4
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)
 #define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
@@ -20,11 +21,11 @@ namespace Overlook {
 #define FILTER_SIZE					(TRAINEE_COUNT * FILTER_SENSORS * FILTER_COUNT)
 #define FILTER_GROUP_SIZE			(SYM_COUNT * FILTER_SENSORS)
 #define FILTER_STATES				(TIME_SENSORS + SENSOR_SIZE + FILTER_GROUP_SIZE)
-#define FILTER_FWDSTEP_BEGIN		(5+FILTER_COUNT-1)
+#define FILTER_FWDSTEP_BEGIN		5
 #define FILTER_POS_FWDSTEPS			3
 #define FILTER_ZERO_FWDSTEPS		1
 #define FILTER_ACTIONCOUNT			(FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS)
-#define FILTER_PHASE_ITER_LIMIT		700000
+#define FILTER_PHASE_ITER_LIMIT		400000
 #define FILTER_EPS_ITERS_STEP		20000
 
 #define SIGNAL_SENSORS				(2 + SIGSENS_COUNT * 2)
@@ -35,7 +36,7 @@ namespace Overlook {
 #define SIGNAL_POS_FWDSTEPS			3
 #define SIGNAL_NEG_FWDSTEPS			3
 #define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)
-#define SIGNAL_PHASE_ITER_LIMIT		700000
+#define SIGNAL_PHASE_ITER_LIMIT		400000
 #define SIGNAL_EPS_ITERS_STEP		20000
 
 #define AMP_SENSORS					(3 + SIGSENS_COUNT * 2)
@@ -46,7 +47,7 @@ namespace Overlook {
 #define AMP_FWDSTEPS				3
 #define AMP_MAXSCALES				3
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
-#define AMP_PHASE_ITER_LIMIT		700000
+#define AMP_PHASE_ITER_LIMIT		400000
 #define AMP_EPS_ITERS_STEP			20000
 
 
@@ -197,7 +198,7 @@ public:
 	double signal_epsilon = 0.0, amp_epsilon = 0.0, filter_epsilon[FILTER_COUNT];
 	double begin_equity = 10000.0;
 	double leverage = 1000.0;
-	double free_margin_level = 0.60;
+	double free_margin_level = FMLEVEL;
 	int main_tf = -1;
 	int data_begin = 0;
 	int buf_count = 0;
@@ -246,6 +247,7 @@ public:
 	double GetSignalEpsilon() const			{return signal_epsilon;}
 	double GetAmpEpsilon() const			{return amp_epsilon;}
 	double GetFilterEpsilon(int level) const	{return filter_epsilon[level];}
+	double GetPhaseIters(int phase);
 	void RefreshAgentEpsilon(int phase);
 	void TrainAgents(int phase);
 	void MainReal();
@@ -253,7 +255,7 @@ public:
 	void RefreshSnapEquities();
 	void LoopAgentSignals(int phase);
 	void LoopAgentSignalsAll(bool from_begin);
-	int FindBestAgent(int sym_id);
+	int FindActiveGroup();
 	bool PutLatest(Brokerage& broker, Vector<Snapshot>& snaps);
 	void Main();
 	void SetAgentsTraining(bool b);

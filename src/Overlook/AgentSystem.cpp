@@ -56,7 +56,7 @@ AgentSystem::~AgentSystem() {
 void AgentSystem::Init() {
 	ASSERT(sys);
 	
-	free_margin_level = 0.6;
+	free_margin_level = FMLEVEL;
 	
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
@@ -162,7 +162,7 @@ void AgentSystem::InitThread() {
 		}
 	}
 	
-	SetFreeMarginLevel(0.6);
+	SetFreeMarginLevel(FMLEVEL);
 	
 	Progress(6, 6, "Complete");
 }
@@ -235,6 +235,16 @@ void AgentSystem::RefreshSnapEquities() {
 			groups[i].agents[j].RefreshSnapEquities();
 }
 
+double AgentSystem::GetPhaseIters(int phase) {
+	if (phase == PHASE_SIGNAL_TRAINING)
+		return GetAverageSignalIterations();
+	if (phase == PHASE_AMP_TRAINING)
+		return GetAverageAmpIterations();
+	if (phase >= 0 && phase < PHASE_SIGNAL_TRAINING)
+		return GetAverageFilterIterations(phase);
+	return 0;
+}
+
 void AgentSystem::TrainAgents(int phase) {
 	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : "filter " + IntStr(phase))) + " training");
 	
@@ -242,10 +252,10 @@ void AgentSystem::TrainAgents(int phase) {
 	RefreshSnapEquities();
 	
 	RefreshAgentEpsilon(phase);
-	if (GetAverageSignalIterations() >= 1.0) {
-		for(int i = 0; i <= phase; i++)
-			LoopAgentSignals(i);
-	}
+	for(int i = 0; i < phase; i++)
+		LoopAgentSignals(i);
+	if (GetPhaseIters(phase) >= 1.0)
+		LoopAgentSignals(phase);
 	SetAgentsTraining(true);
 	
 	
@@ -269,7 +279,7 @@ void AgentSystem::TrainAgents(int phase) {
 			// Change to next phase eventually
 			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
 				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
-				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase)   >= FILTER_PHASE_ITER_LIMIT))   {
+				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
 				this->phase++;
 				StoreThis();
 				break;
@@ -472,18 +482,18 @@ void AgentSystem::MainReal() {
 	sys->WhenPopTask();
 }
 
-int AgentSystem::FindBestAgent(int sym_id) {
-	double best_dd = 100;
-	int best_i = 0;
+int AgentSystem::FindActiveGroup() {
+	// Return first group which has open signals
+	Snapshot& cur_snap = snaps.Top();
 	for(int i = 0; i < GROUP_COUNT; i++) {
-		Agent& a = groups[i].agents[sym_id];
-		double dd = a.amp.broker.GetDrawdown();
-		if (dd < best_dd) {
-			best_dd = dd;
-			best_i = i;
+		AgentGroup& ag = groups[i];
+		for(int j = 0; j < ag.agents.GetCount(); j++) {
+			int signal = cur_snap.GetAmpOutput(i, j);
+			if (signal)
+				return i;
 		}
 	}
-	return best_i;
+	return GROUP_COUNT-1;
 }
 
 void AgentSystem::LoadThis() {
@@ -954,10 +964,11 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	
 	Snapshot& cur_snap = snaps.Top();
 	
+	int group_id = FindActiveGroup();
+	ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
+	
 	for(int i = 0; i < sym_ids.GetCount(); i++) {
 		int sym = sym_ids[i];
-		int group_id = FindBestAgent(i);
-		ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 		ASSERT(groups[group_id].agents[i].sym == sym);
 		int sig = cur_snap.GetAmpOutput(group_id, i);
 		if (sig == broker.GetSignal(sym) && sig != 0)

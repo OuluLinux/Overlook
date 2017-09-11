@@ -87,6 +87,7 @@ void SingleFixedSimBroker::OrderClose(const Snapshot& snap) {
 	order.is_open = false;
 	double profit = GetCloseProfit(snap);
 	balance += profit;
+	if (balance < 0.0) balance = 0.0;
 	equity = balance;
 	if (profit > 0) profit_sum += profit;
 	else            loss_sum   -= profit;
@@ -158,6 +159,7 @@ FixedSimBroker::FixedSimBroker() {
 	
 	
 	begin_equity = 10000;
+	min_active_symbols = 4;
 }
 
 void FixedSimBroker::Reset() {
@@ -269,24 +271,9 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 		else            loss_sum   -= profit;
 		if (sym_id == part_sym_id) part_balance += profit;
 	}
+	if (balance < 0.0) balance = 0.0;
 }
-/*
-void FixedSimBroker::OrderClose(int sym_id, const Snapshot& snap) {
-	ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
-	int sym_orders_begin = sym_id * ORDERS_PER_SYMBOL;
-	
-	for(int i = 0; i < ORDERS_PER_SYMBOL; i++) {
-		FixedOrder& order = this->order[sym_orders_begin + i];
-		if (!order.is_open)
-			continue;
-		order.is_open = false;
-		double profit = GetCloseProfit(sym_id, order, snap);
-		balance += profit;
-		if (profit > 0) profit_sum += profit;
-		else            loss_sum   -= profit;
-	}
-}
-*/
+
 void FixedSimBroker::CloseAll(const Snapshot& snap) {
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& order = this->order[i];
@@ -299,6 +286,7 @@ void FixedSimBroker::CloseAll(const Snapshot& snap) {
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
 	}
+	if (balance < 0.0) balance = 0.0;
 }
 
 double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume) {
@@ -380,6 +368,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	
 	double minimum_margin_sum = 0;
+	int active_symbols = 0;
 	for(int i = 0; i < SYM_COUNT; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0)
 			continue;
@@ -389,6 +378,10 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 		double sell_used_margin = GetMargin(snap, i, sell_lots);
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
+		active_symbols++;
+	}
+	if (active_symbols < min_active_symbols) {
+		minimum_margin_sum *= (double)min_active_symbols / (double)active_symbols;
 	}
 	
 	

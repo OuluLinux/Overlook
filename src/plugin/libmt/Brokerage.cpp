@@ -16,6 +16,7 @@ Brokerage::Brokerage() {
 	leverage = 1000;
 	limit_factor = 0.01;
 	fixed_volume = false;
+	min_active_symbols = 4;
 }
 
 double Brokerage::GetMargin(int sym_id, double volume) {
@@ -444,6 +445,7 @@ void Brokerage::SignalOrders(bool debug_print) {
 	
 	ASSERT(IsFin(leverage));
 	double minimum_margin_sum = 0;
+	int active_symbols = 0;
 	for(int i = 0; i < sym_count; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
@@ -460,6 +462,10 @@ void Brokerage::SignalOrders(bool debug_print) {
 		double sell_used_margin = GetMargin(i, sell_lots);
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
+		active_symbols++;
+	}
+	if (active_symbols < min_active_symbols) {
+		minimum_margin_sum *= (double)min_active_symbols / (double)active_symbols;
 	}
 	if (debug_print) {
 		DUMP(min_sig);

@@ -21,6 +21,7 @@ protected:
 	int account_id;
 	int selected;
 	int min_active_symbols;
+	int fmscale;
 	bool demo, connected, simulation;
 	bool init_success;
 	bool is_failed;
@@ -60,6 +61,7 @@ public:
 	void ForwardExposure();
 	void SignalOrders(bool debug_print=false);
 	void SetFreeMarginLevel(double d);
+	void SetFreeMarginScale(int s) {fmscale = s;}
 	void SetOrderSignals();
 	int  GetSignal(int sym) const {if (signals.IsEmpty()) return 0; return signals[sym];}
 	void PutSignal(int sym, int signal);

@@ -17,6 +17,7 @@ Brokerage::Brokerage() {
 	limit_factor = 0.01;
 	fixed_volume = false;
 	min_active_symbols = 4;
+	fmscale = 0;
 }
 
 double Brokerage::GetMargin(int sym_id, double volume) {
@@ -379,7 +380,6 @@ void Brokerage::SignalOrders(bool debug_print) {
 	ASSERT(free_margin_level >= 0.20 && free_margin_level <= 1.0);
 	if (free_margin_level == 1.0)
 		free_margin_level = 0.8;
-	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level);
 	
 	
 	// Get long/short signals
@@ -393,15 +393,20 @@ void Brokerage::SignalOrders(bool debug_print) {
 	buy_lots.SetCount(signals.GetCount(), 0);
 	sell_lots.SetCount(0);
 	sell_lots.SetCount(signals.GetCount(), 0);
+	
+	int signal_sum = 0;
+	
 	for(int i = 0; i < sym_count; i++) {
 		const Symbol& sym = symbols[i];
 		int signal = signals[i];
 		if (!signal) continue;
 		if (signal > 0) {
 			buy_signals[i] += signal;
+			signal_sum += signal;
 		}
 		else {
 			sell_signals[i] -= signal;
+			signal_sum -= signal;
 		}
 	}
 	if (debug_print) {
@@ -471,6 +476,10 @@ void Brokerage::SignalOrders(bool debug_print) {
 		DUMP(min_sig);
 		DUMP(minimum_margin_sum);
 	}
+	
+	if (fmscale == 0) fmscale = symbols.GetCount();
+	if (signal_sum > fmscale) signal_sum = fmscale;
+	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level) * ((double)signal_sum / (double)fmscale);
 	
 	double lot_multiplier = fixed_volume ? 1.0 : max_margin_sum / minimum_margin_sum;
 	if (debug_print) {

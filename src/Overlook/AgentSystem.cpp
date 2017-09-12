@@ -270,10 +270,9 @@ void AgentSystem::TrainAgents(int phase) {
 			total_elapsed += ts.Elapsed();
 			ts.Reset();
 			iter = 0;
-			if (total_elapsed > 5*60*1000) {
+			if (total_elapsed > 15*60*1000) {
 				StoreThis();
-				sys->WhenPopTask();
-				return; // call TrainAgents again to RefreshSnapshots safely
+				break; // call TrainAgents again to RefreshSnapshots safely
 			}
 			
 			// Change to next phase eventually
@@ -980,6 +979,7 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	}
 	
 	broker.SetFreeMarginLevel(free_margin_level);
+	broker.SetFreeMarginScale((AMP_MAXSCALES-1)*AMP_MAXSCALE_MUL * SYM_COUNT);
 	broker.SignalOrders(true);
 	
 	sys.WhenPopTask();

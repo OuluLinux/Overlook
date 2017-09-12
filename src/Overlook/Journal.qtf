@@ -13,12 +13,14 @@
 [s1;N; &]
 [s1;N; &]
 [s1;N; &]
+[s1;N; &]
+[s1;N; &]
+[s1;N; &]
 [s1;N; [2 In the making of the Overlook]&]
 [s1;N; [+217 JOURNAL]&]
 [s1;N;3 &]
-[s1;N; [3 Raw,]&]
-[s1;N; [3 Uncencored,]&]
-[s1;N; [3 Clueless.]&]
+[s1;N;3 &]
+[s1;N; [3 Everything is obvious afterwards]&]
 [s1;N; &]
 [s1;N; &]
 [s1;N; &]
@@ -31,17 +33,16 @@
 [s1;N; &]
 [s1;N; &]
 [s1;N; &]
-[s1;N; &]
-[s1;N; &]
-[s1;N; &]
-[s1;N; [2 By yours greedy `& slimy bastard]&]
+[s1;N;2 &]
+[s1;N;2 &]
+[s1;N; [2 by]&]
 [s1;N; Seppo Pakonen&]
 [s1; Introduction&]
 [s0; I write this journal to keep myself focused on the end result: 
 the working product. This text is sort of an investment, which 
-loses value, if I don`'t get the product to work. Writing investment 
+loses value, if I don`'t get the product finished. Writing investment 
 code gets on to your nerve intensively and failing code means 
-losses. Keeping this program open and social helps me to cool 
+losses. Keeping this program open and social helps one to cool 
 down from the stress of the `"real life losses`" part.&]
 [s0; I like to tell how original this application is and to communicate 
 the countless hours and the sweat what I did see for this. The 
@@ -3118,7 +3119,7 @@ fever and no bail out. It was sort of fun, though, in some not`-completely`-sane
 way. Well, I told you already, that many men were against me, 
 because those insane rumours were circulating. I was extremely 
 exhausted at the point when it was ending, and just before we 
-get finally to shower and bed, we got some unexpected check, 
+got finally to shower and bed, we got some unexpected check, 
 where you had to show all your belongings. We never had those 
 before, and it was suspicious. Well, I knew I didn`'t have a 
 problem, expect that I did. Somehow, I found unopened box of 
@@ -3140,5 +3141,48 @@ activity now. The remaining time should be used too. I guess
 that many groups could be used with the higher priority for faster 
 group. &]
 [s0; ...&]
-[s0; I did the changes, but the amp is still behaving in weird way. 
-]]
+[s0; I did the changes, but the amp is still behaving in a weird 
+way. &]
+[s3; 12.9.2017&]
+[s0; It`'s difficult to find a solution for that weird amp problem. 
+It`'s incredibly weird... the epoch result graph has some weird 
+oscillation for some unknown reason. It might be because of some 
+standing wave `-like effect what the relatively small experience 
+buffer causes. It`'s like a very low frequency square wave, where 
+it have phases of failing and succeeding after each other. It`'s 
+the weirdest bug I`'ve seen so far. It happens after resetting 
+again always. Well, it`'s not exactly failing, but a lot worse 
+performance.&]
+[s0; I got an idea for an improvement, in that the`-last`-piece`-that`-fits`-the`-puz
+zle way. Let the amp multiplier acquire some fixed portion of 
+the available margin and it doesn`'t matter if other instruments 
+are present in the training... because they will get that same 
+portion in the real operating mode. How obvious is that... but 
+only after you got it.&]
+[s0; Ah, it`'s might be just that randomization for time`-steps, 
+which creates short losing periods to amp because of mis`-alignment 
+in time. Only filter can have that randomization and the signal 
+and the amp parts must have the same alignment. Yes, that mostly 
+fixed it. Also, I forgot to clear orders when signal is zeroed, 
+and now the signal and the amp parts must be re`-trained again.&]
+[s0; ...&]
+[s0; No it wasn`'t fixed... fuck... it was a stupid technical limitation, 
+which caused the agent to learn a no`-reward state in the high`-end.&]
+[s0; ...&]
+[s0; Still no luck. This is a total [/ what the fuck] situation. The 
+oscillation ended: it has the first successfull cycle and then 
+the failing part never ends. It`'s total opposite of learning 
+the reward. I have no clue what causes that... Filter and signal 
+parts works fine, but the amp is just freaking out.&]
+[s0; I just need moar diagnostics.&]
+[s0; ...&]
+[s0; A`-ha. Finally? That fucking bug was in every fucking layer 
+except the first. The zero`-signal did cut some periods to shorter 
+and the reward was divided by estimated timestep, not actual.&]
+[s0; And yes, I have to start the whole fucking training all over 
+again. [/ `*sigh`*]&]
+[s0; [/ ...]&]
+[s0; I`'m not sure is that fixed now. These fixes certainly affect 
+the whole stack and that failing might actually be training glitch.&]
+[s0; &]
+[s0; ]]

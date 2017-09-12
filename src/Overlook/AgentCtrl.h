@@ -131,6 +131,21 @@ public:
 	
 };
 
+class RewardGraph : public Ctrl {
+	Agent* agent = NULL;
+	Color clr;
+	Vector<Point> polyline;
+	
+public:
+	typedef RewardGraph CLASSNAME;
+	RewardGraph();
+	
+	virtual void Paint(Draw& d);
+	
+	void SetAgent(Agent& agent, int type);
+	
+};
+
 class TrainingCtrl : public ParentCtrl {
 	
 protected:
@@ -141,8 +156,9 @@ protected:
 	
 	Label epoch;
 	SnapshotDraw draw;
-	ResultGraph reward;
+	ResultGraph result;
 	EquityGraph stats;
+	RewardGraph reward;
 	HeatmapTimeView timescroll;
 	ArrayCtrl trade;
 	

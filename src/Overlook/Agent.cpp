@@ -28,7 +28,7 @@ void AgentFilter::ResetEpoch() {
 	
 	timestep_actual = 0;
 	timestep_total = -1;
-	fwd_cursor = 1;
+	fwd_cursor = 0;
 	cursor = 1;
 	skip_learn = true;
 	
@@ -54,7 +54,8 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 			reward = 0.0;
 		} else {
 			double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
-			change /= timestep_total;				// Get average change per timestep
+			int timesteps = cursor - fwd_cursor;
+			change /= timesteps;				// Get average change per timestep
 			change_av.Add(change);					// Get online average of change of value
 			if (signal == 0) {
 				reward = 0.0;
@@ -137,9 +138,14 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		}
 		
 		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + group_id + (FILTER_COUNT-1-level));
-		if (agent->is_training)
-			timestep_total += Random(RANDOM_TIMESTEPS);
 		signal = sig_mul;
+		
+		// Important: only 0-signal can have a random timestep. +/- signal requires alignment.
+		// Reason: Signal and amp gives too short spikes because of mis-alignment.
+		//         Filter +1 9-steps, at 8-step amp puts 10x, and at 9-step it's zeroed. Huge loss.
+		if (agent->is_training && signal == 0)
+			timestep_total += Random(RANDOM_TIMESTEPS);
+		
 	}
 	
 	// Export value.
@@ -218,6 +224,7 @@ void AgentSignal::ResetEpoch() {
 	timestep_actual = 0;
 	timestep_total = -1;
 	cursor = 1;
+	prev_equity_cursor = 0;
 	skip_learn = true;
 	
 	cursor_sigbegin = 0;
@@ -232,13 +239,14 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	lower_output_signal = cur_snap.GetFilterOutput(agent->group_id, FILTER_COUNT-1, agent->sym_id);
 	if (timestep_actual <= 0 || lower_output_signal == 0) {
 		broker.RefreshOrders(cur_snap);
-		double equity = broker.AccountEquity();
-		double reward = equity - prev_equity;
-		reward /= timestep_total;
+		long double equity = broker.AccountEquity();
+		int timesteps = cursor - prev_equity_cursor;
+		long double reward = (equity / prev_equity - 1.0) / timesteps;
 		Backward(reward);
 		if (broker.equity < 0.25 * broker.begin_equity)
 			broker.Reset();
 		prev_equity = broker.equity;
+		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
 	}
 	Write(cur_snap, snaps);
@@ -291,16 +299,13 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_id);
 		}
 		else {
 			signal = -1;
 			action -= SIGNAL_POS_FWDSTEPS;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_id);
 		}
-
-		if (agent->is_training)
-			timestep_total += Random(RANDOM_TIMESTEPS);
 	}
 	
 	
@@ -398,6 +403,7 @@ void AgentAmp::Create() {
 	iter = 0;
 	result_equity.Clear();
 	result_drawdown.Clear();
+	rewards.Clear();
 }
 
 void AgentAmp::ResetEpoch() {
@@ -409,11 +415,12 @@ void AgentAmp::ResetEpoch() {
 	signal = 0;
 	lower_output_signal = 0;
 	prev_lower_output_signal = 0;
-	prev_equity = broker.PartialEquity();
+	prev_equity = broker.AccountEquity();
 	
 	timestep_actual = 0;
 	timestep_total = -1;
 	cursor = 1;
+	prev_equity_cursor = 0;
 	skip_learn = true;
 	
 	cursor_sigbegin = 0;
@@ -428,19 +435,19 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 	if (timestep_actual <= 0 || lower_output_signal != prev_lower_output_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
 		broker.RefreshOrders(cur_snap);
-		double equity = broker.PartialEquity();
-		double reward = equity - prev_equity;
-		reward /= timestep_total;
-		reward /= broker.equity / broker.begin_equity;
+		long double equity = broker.AccountEquity();
+		int timesteps = cursor - prev_equity_cursor;
+		long double reward = (equity / prev_equity - 1.0) / timesteps;
 		Backward(reward);
-		if (broker.equity < 0.25 * broker.begin_equity)
+		if (equity < 0.25 * broker.begin_equity)
 			broker.Reset();
-		prev_equity = broker.PartialEquity();
+		prev_equity = broker.AccountEquity();
+		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
 	}
 	Write(cur_snap, snaps);
 	prev_lower_output_signal = lower_output_signal;
-	equity[cursor] = broker.PartialEquity();
+	equity[cursor] = broker.AccountEquity();
 	cursor++;
 }
 
@@ -502,11 +509,9 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		prev_signals[0]		= 1.0 * maxscale_step / maxscale_steps;
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 		
-		int maxscale		= 1 + maxscale_step * 2;
-		timestep_total		= 1 << (timefwd_step + AMP_FWDSTEP_BEGIN);
+		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
+		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_id);
 		
-		if (agent->is_training)
-			timestep_total += Random(RANDOM_TIMESTEPS);
 		signal = lower_output_signal * maxscale;
 	}
 	
@@ -524,8 +529,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	// This is not skipped in the forward-only mode, because the equity graph is being drawn for visualization.
 	// Broker signals may NOT be read in realtime, because it can be reseted in a unsuccessful try.
 	
-	for(int i = 0; i < SYM_COUNT; i++)
-		broker.SetSignal(i, cur_snap.GetAmpOutput(group_id, i));
+	broker.SetSignal(sym_id, signal);
 	
 	bool succ = broker.Cycle(cur_snap);
 	
@@ -572,6 +576,15 @@ void AgentAmp::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		
+		reward_sum += reward;
+		reward_count++;
+		
+		if (reward_count > REWARD_AV_PERIOD) {
+			rewards.Add(reward_sum / reward_count);
+			reward_count = 0;
+			reward_sum = 0.0;
+		}
 	}
 }
 

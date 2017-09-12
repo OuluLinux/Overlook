@@ -318,7 +318,6 @@ void EquityGraph::Paint(Draw& w) {
 	double last = 0.0;
 	double peak = 0.0;
 	
-	int max_steps = 0;
 	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : (type == PHASE_AMP_TRAINING ?  agent->amp.equity : agent->filter[type].equity);
 	int count = data.GetCount();
 	if (!count) return;
@@ -330,13 +329,11 @@ void EquityGraph::Paint(Draw& w) {
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
-	if (count > max_steps)
-		max_steps = count;
 	
 	
-	if (max_steps > 1 && max > min) {
+	if (count > 1 && max > min) {
 		double diff = max - min;
-		double xstep = (double)sz.cx / (max_steps - 1);
+		double xstep = (double)sz.cx / (count - 1);
 		Font fnt = Monospace(10);
 		
 		if (count >= 2) {
@@ -386,6 +383,94 @@ void EquityGraph::Paint(Draw& w) {
 
 
 
+RewardGraph::RewardGraph() {
+	clr = Color(255, 105, 0);
+}
+	
+void RewardGraph::Paint(Draw& d) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	if (agent) {
+		AgentAmp& amp = agent->amp;
+		double min = +DBL_MAX;
+		double max = -DBL_MAX;
+		double last = 0.0;
+		double peak = 0.0;
+		
+		const Vector<double>& data = amp.rewards;
+		int count = data.GetCount();
+		
+		for(int j = 0; j < count; j++) {
+			double d = data[j];
+			if (d == 0.0) continue;
+			if (d > max) max = d;
+			if (d < min) min = d;
+		}
+		
+		
+		if (count > 1 && max > min) {
+			double diff = max - min;
+			double xstep = (double)sz.cx / (count - 1);
+			Font fnt = Monospace(10);
+			
+			if (count >= 2) {
+				polyline.SetCount(0);
+				for(int j = 0; j < count; j++) {
+					double v = data[j];
+					if (v == 0.0) continue;
+					last = v;
+					int x = (int)(j * xstep);
+					int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+					polyline.Add(Point(x, y));
+					if (v > peak) peak = v;
+				}
+				if (polyline.GetCount() >= 2)
+					id.DrawPolyline(polyline, 1, clr);
+			}
+			
+			{
+				int y = 0;
+				String str = DblStr(peak);
+				Size str_sz = GetTextSize(str, fnt);
+				id.DrawRect(3, y, 13, 13, clr);
+				id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+				id.DrawText(16, y, str, fnt, Black());
+			}
+			
+			{
+				int y = 0;
+				String str = DblStr(last);
+				Size str_sz = GetTextSize(str, fnt);
+				id.DrawRect(sz.cx - 3  - str_sz.cx, y, 13, 13, clr);
+				id.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
+				id.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
+			}
+		} else {
+			id.DrawText(3, 3, "No data in agent (" + IntStr(count) + "/2): "
+				+ IntStr(amp.reward_count) + "/"
+				+ IntStr(REWARD_AV_PERIOD), Monospace(10));
+		}
+	} else {
+		id.DrawText(3, 3, "No agent set", Monospace(10));
+	}
+	
+	d.DrawImage(0, 0, id);
+}
+
+void RewardGraph::SetAgent(Agent& agent, int type) {
+	if (type != PHASE_AMP_TRAINING) return;
+	
+	this->agent = &agent;
+}
+
+
+
+
+
+
+
 
 
 TrainingCtrl::TrainingCtrl()
@@ -401,7 +486,7 @@ TrainingCtrl::TrainingCtrl()
 	
 	hsplit.Horz();
 	
-	bsplit << stats << reward;
+	bsplit << stats << result;
 	bsplit.Horz();
 	
 	trade.AddColumn("Order");
@@ -419,12 +504,15 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	this->agent = &agent;
 	
 	stats.SetAgent(agent, type);
-	reward.SetAgent(agent, type);
+	result.SetAgent(agent, type);
 	if (type == PHASE_SIGNAL_TRAINING) {
 		timescroll.SetAgent(agent.sig.dqn);
 	}
 	else if (type == PHASE_AMP_TRAINING) {
 		timescroll.SetAgent(agent.amp.dqn);
+		bsplit.Clear();
+		bsplit << reward << stats << result;
+		reward.SetAgent(agent, type);
 	}
 	else {
 		ASSERT(type >= 0 && type < PHASE_SIGNAL_TRAINING);
@@ -452,9 +540,9 @@ void TrainingCtrl::Data() {
 	draw.SetSnap(cursor);
 	draw.Refresh();
 	timescroll.Refresh();
-	reward.Refresh();
+	result.Refresh();
 	stats.Refresh();
-	reward.Refresh();
+	result.Refresh();
 	
 	if (type == PHASE_AMP_TRAINING) {
 		FixedSimBroker& b = agent->amp.broker;
@@ -478,6 +566,8 @@ void TrainingCtrl::Data() {
 			j++;
 		}
 		trade.SetCount(j);
+		
+		reward.Refresh();
 	}
 }
 

@@ -64,11 +64,12 @@ struct AgentSignal {
 	SingleFixedSimBroker broker;
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
 	Vector<double> equity;
-	double prev_equity = 0;
+	long double prev_equity = 0;
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
 	int cursor = 0;
+	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int cursor_sigbegin = 0;
 	bool skip_learn = true;
@@ -102,16 +103,23 @@ struct AgentAmp {
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
 	Vector<double> equity;
 	double prev_signals[AMP_SENSORS];
-	double prev_equity = 0;
+	long double prev_equity = 0;
+	double reward_sum = 0;
+	int reward_count = 0;
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
 	int cursor = 0;
 	int cursor_sigbegin = 0;
+	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int prev_lower_output_signal = 0;
 	bool skip_learn = true;
 	Agent* agent = NULL;
+	
+	
+	// Temporarily not persistent
+	Vector<double> rewards;
 	
 	
 	AgentAmp();

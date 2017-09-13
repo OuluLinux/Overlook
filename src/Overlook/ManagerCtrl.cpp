@@ -449,6 +449,7 @@ RealtimeCtrl::RealtimeCtrl() {
 }
 
 void RealtimeCtrl::AddMessage(String time, String level, String msg) {
+	if (Thread::IsShutdownThreads()) return;
 	journal.Insert(0);
 	journal.Set(0, 0, time);
 	journal.Set(0, 1, level);

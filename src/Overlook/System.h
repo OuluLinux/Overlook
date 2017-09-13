@@ -1,11 +1,15 @@
 #ifndef _Overlook_System_h_
 #define _Overlook_System_h_
 
+namespace Config {
+extern IniString arg_addr;
+extern IniInt arg_port;
+}
+
 namespace Overlook {
 using namespace Upp;
 
-extern String arg_addr;
-extern int arg_port;
+
 
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
 

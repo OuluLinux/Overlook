@@ -247,8 +247,9 @@ int MetaTrader::Init(String addr, int port) {
 			return 1;
 		}
 		
+		init_success = true; // required temporarily
+		
 		// Refresh symbols
-		init_success = true; // GetSymbols requires this temporarily
 		
 		account_name = _AccountName();
 		account_server = _AccountServer();

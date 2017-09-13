@@ -393,13 +393,13 @@ void RewardGraph::Paint(Draw& d) {
 	id.DrawRect(sz, White());
 	
 	if (agent) {
-		AgentAmp& amp = agent->amp;
 		double min = +DBL_MAX;
 		double max = -DBL_MAX;
 		double last = 0.0;
 		double peak = 0.0;
 		
-		const Vector<double>& data = amp.rewards;
+		int reward_count = type == PHASE_SIGNAL_TRAINING ? agent->sig.reward_count : (type == PHASE_AMP_TRAINING ? agent->amp.reward_count : agent->filter[type].reward_count);
+		const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.rewards : (type == PHASE_AMP_TRAINING ? agent->amp.rewards : agent->filter[type].rewards);
 		int count = data.GetCount();
 		
 		for(int j = 0; j < count; j++) {
@@ -449,7 +449,7 @@ void RewardGraph::Paint(Draw& d) {
 			}
 		} else {
 			id.DrawText(3, 3, "No data in agent (" + IntStr(count) + "/2): "
-				+ IntStr(amp.reward_count) + "/"
+				+ IntStr(reward_count) + "/"
 				+ IntStr(REWARD_AV_PERIOD), Monospace(10));
 		}
 	} else {
@@ -460,8 +460,7 @@ void RewardGraph::Paint(Draw& d) {
 }
 
 void RewardGraph::SetAgent(Agent& agent, int type) {
-	if (type != PHASE_AMP_TRAINING) return;
-	
+	this->type = type;
 	this->agent = &agent;
 }
 
@@ -486,7 +485,7 @@ TrainingCtrl::TrainingCtrl()
 	
 	hsplit.Horz();
 	
-	bsplit << stats << result;
+	bsplit << reward << stats << result;
 	bsplit.Horz();
 	
 	trade.AddColumn("Order");
@@ -503,16 +502,15 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	this->type = type;
 	this->agent = &agent;
 	
+	reward.SetAgent(agent, type);
 	stats.SetAgent(agent, type);
 	result.SetAgent(agent, type);
+	
 	if (type == PHASE_SIGNAL_TRAINING) {
 		timescroll.SetAgent(agent.sig.dqn);
 	}
 	else if (type == PHASE_AMP_TRAINING) {
 		timescroll.SetAgent(agent.amp.dqn);
-		bsplit.Clear();
-		bsplit << reward << stats << result;
-		reward.SetAgent(agent, type);
 	}
 	else {
 		ASSERT(type >= 0 && type < PHASE_SIGNAL_TRAINING);
@@ -541,6 +539,7 @@ void TrainingCtrl::Data() {
 	draw.Refresh();
 	timescroll.Refresh();
 	result.Refresh();
+	reward.Refresh();
 	stats.Refresh();
 	result.Refresh();
 	
@@ -566,8 +565,6 @@ void TrainingCtrl::Data() {
 			j++;
 		}
 		trade.SetCount(j);
-		
-		reward.Refresh();
 	}
 }
 

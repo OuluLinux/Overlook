@@ -19,14 +19,16 @@ struct AgentFilter {
 	
 	// Persistent
 	DQNAgent<FILTER_ACTIONCOUNT, FILTER_STATES> dqn;
-	Vector<double> result_equity, result_drawdown;
+	Vector<double> result_equity, result_drawdown, rewards;
 	int64 iter = 0;
 	
 	
 	// Temporary
 	OnlineAverage1 change_av;
 	Vector<double> equity;
-	double reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
+	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
+	double reward_sum = 0;
+	int reward_count = 0;
 	int signal = 0, sig_mul = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
@@ -45,7 +47,7 @@ struct AgentFilter {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % iter;}
+	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -56,7 +58,7 @@ struct AgentSignal {
 	
 	// Persistent
 	DQNAgent<SIGNAL_ACTIONCOUNT, SIGNAL_STATES> dqn;
-	Vector<double> result_equity, result_drawdown;
+	Vector<double> result_equity, result_drawdown, rewards;
 	int64 iter = 0;
 	
 	
@@ -64,7 +66,9 @@ struct AgentSignal {
 	SingleFixedSimBroker broker;
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
 	Vector<double> equity;
-	long double prev_equity = 0;
+	double prev_equity = 0;
+	double reward_sum = 0;
+	int reward_count = 0;
 	int signal = 0;
 	int timestep_actual = 0;
 	int timestep_total = 1;
@@ -83,7 +87,7 @@ struct AgentSignal {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % iter;}
+	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -94,7 +98,7 @@ struct AgentAmp {
 	
 	// Persistent
 	DQNAgent<AMP_ACTIONCOUNT, AMP_STATES> dqn;
-	Vector<double> result_equity, result_drawdown;
+	Vector<double> result_equity, result_drawdown, rewards;
 	int64 iter = 0;
 	
 	
@@ -118,9 +122,6 @@ struct AgentAmp {
 	Agent* agent = NULL;
 	
 	
-	// Temporarily not persistent
-	Vector<double> rewards;
-	
 	
 	AgentAmp();
 	void Create();
@@ -129,7 +130,7 @@ struct AgentAmp {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % iter;}
+	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -168,6 +169,7 @@ public:
 	int GetCursor(int phase) const;
 	double GetLastDrawdown(int phase) const;
 	double GetLastResult(int phase) const;
+	int64 GetIter(int phase) const;
 };
 
 

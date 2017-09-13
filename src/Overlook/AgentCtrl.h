@@ -133,6 +133,7 @@ public:
 
 class RewardGraph : public Ctrl {
 	Agent* agent = NULL;
+	int type = -1;
 	Color clr;
 	Vector<Point> polyline;
 	

@@ -264,25 +264,23 @@ void AgentSystem::TrainAgents(int phase) {
 	for (int64 iter = 0; running; iter++) {
 		
 		// Change snapshot area, if needed, sometimes
-		if (iter > 100) {
-			RefreshAgentEpsilon(phase);
-			
-			total_elapsed += ts.Elapsed();
-			ts.Reset();
-			iter = 0;
-			if (total_elapsed > 15*60*1000) {
-				StoreThis();
-				break; // call TrainAgents again to RefreshSnapshots safely
-			}
-			
-			// Change to next phase eventually
-			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
-				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
-				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
-				this->phase++;
-				StoreThis();
-				break;
-			}
+		RefreshAgentEpsilon(phase);
+		
+		total_elapsed += ts.Elapsed();
+		ts.Reset();
+		iter = 0;
+		if (total_elapsed > 15*60*1000) {
+			StoreThis();
+			break; // call TrainAgents again to RefreshSnapshots safely
+		}
+		
+		// Change to next phase eventually
+		if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
+			(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
+			(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
+			this->phase++;
+			StoreThis();
+			break;
 		}
 		
 		CoWork co;
@@ -295,7 +293,8 @@ void AgentSystem::TrainAgents(int phase) {
 	        if (cursor <= 0 || cursor >= snaps.GetCount())
 				agent.ResetEpoch(phase);
 			
-	        for(int k = 0; k < 100; k++) {
+			int64 end = agent.GetIter(phase) + 100;
+			while (agent.GetIter(phase) < end) {
 				agent.Main(phase, snaps);
 				
 				// Close all order at the end
@@ -392,8 +391,10 @@ void AgentSystem::MainReal() {
 	// Loop agents and joiners without random events (epsilon = 0)
 	SetSignalEpsilon(0.0);
 	SetAmpEpsilon(0.0);
-	if (prev_shift <= 0)
+	if (prev_shift <= 0) {
 		LoopAgentSignalsAll(true);
+		prev_shift++; // never again
+	}
 	SetAgentsTraining(false);
 	
 	

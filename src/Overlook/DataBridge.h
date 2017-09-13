@@ -1,9 +1,11 @@
 #ifndef _Overlook_DataBridge_h_
 #define _Overlook_DataBridge_h_
 
-namespace Overlook {
+namespace Config {
+extern IniBool use_internet_m1_data;
+}
 
-extern bool use_internet_m1_data;
+namespace Overlook {
 
 
 class DataBridge;

@@ -5,9 +5,11 @@
 #include <Draw/iml_source.h>
 
 bool is_tray;
+bool is_cons_toggled;
 TrayApp* last_tray;
 
 void ToggleWindow(CommandBridge* cons) {
+	is_cons_toggled = true;
 	if (is_tray)
 		last_tray->Close();
 	else
@@ -43,7 +45,12 @@ GUI_APP_MAIN {
 	#endif
 	
 	bool is_exit = false;
+	is_cons_toggled = true;
 	while (!is_exit && !Thread::IsShutdownThreads()) {
+		if (!is_cons_toggled)
+			break;
+		is_cons_toggled = false;
+		
 		if (is_tray) {
 			TrayApp tray;
 			last_tray = &tray;

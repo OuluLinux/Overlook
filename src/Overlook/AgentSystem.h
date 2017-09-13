@@ -12,7 +12,7 @@ namespace Overlook {
 #define SIGSENS_COUNT				3
 #define SIGSENS_PERIODS				{5, 15, 60}
 #define RANDOM_TIMESTEPS			8
-#define REWARD_AV_PERIOD			100
+#define REWARD_AV_PERIOD			400
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
@@ -20,37 +20,38 @@ namespace Overlook {
 #define FILTER_COUNT				3
 #define FILTER_SENSORS				2
 #define FILTER_SIZE					(TRAINEE_COUNT * FILTER_SENSORS * FILTER_COUNT)
+#define FILTER_LEVEL_SIZE			(TRAINEE_COUNT * FILTER_SENSORS)
 #define FILTER_GROUP_SIZE			(SYM_COUNT * FILTER_SENSORS)
-#define FILTER_STATES				(TIME_SENSORS + SENSOR_SIZE + FILTER_GROUP_SIZE)
+#define FILTER_STATES				(TIME_SENSORS + SENSOR_SIZE + FILTER_LEVEL_SIZE)
 #define FILTER_FWDSTEP_BEGIN		5
 #define FILTER_POS_FWDSTEPS			3
 #define FILTER_ZERO_FWDSTEPS		1
 #define FILTER_ACTIONCOUNT			(FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS)
-#define FILTER_PHASE_ITER_LIMIT		400000
-#define FILTER_EPS_ITERS_STEP		20000
+#define FILTER_PHASE_ITER_LIMIT		200000
+#define FILTER_EPS_ITERS_STEP		10000
 
 #define SIGNAL_SENSORS				(2 + SIGSENS_COUNT * 2)
 #define SIGNAL_SIZE					(TRAINEE_COUNT * SIGNAL_SENSORS)
 #define SIGNAL_GROUP_SIZE			(SYM_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE)
+#define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
 #define SIGNAL_FWDSTEP_BEGIN		5
 #define SIGNAL_POS_FWDSTEPS			3
 #define SIGNAL_NEG_FWDSTEPS			3
 #define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)
 #define SIGNAL_PHASE_ITER_LIMIT		200000
-#define SIGNAL_EPS_ITERS_STEP		20000
+#define SIGNAL_EPS_ITERS_STEP		10000
 
 #define AMP_SENSORS					(3 + SIGSENS_COUNT * 2)
 #define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
 #define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
-#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_GROUP_SIZE + AMP_GROUP_SIZE)
+#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE)
 #define AMP_FWDSTEP_BEGIN			7
 #define AMP_FWDSTEPS				3
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
-#define AMP_PHASE_ITER_LIMIT		100000
-#define AMP_EPS_ITERS_STEP			20000
+#define AMP_PHASE_ITER_LIMIT		200000
+#define AMP_EPS_ITERS_STEP			10000
 
 
 
@@ -66,10 +67,10 @@ private:
 	double open					[SYM_COUNT];
 	double signal_sensors		[SIGNAL_SIZE];
 	double amp_sensors			[AMP_SIZE];
-	double filter_sensors			[FILTER_SIZE];
+	double filter_sensors		[FILTER_SIZE];
 	int signal_broker_symsig	[TRAINEE_COUNT];
 	int amp_broker_symsig		[TRAINEE_COUNT];
-	int filter_broker_symsig		[TRAINEE_COUNT * FILTER_COUNT];
+	int filter_broker_symsig	[TRAINEE_COUNT * FILTER_COUNT];
 	int shift;
 	
 	inline int GetSignalOutput(int i) const {ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
@@ -169,6 +170,7 @@ public:
 };
 
 #include "AgentGroup.h"
+
 
 extern bool reset_signals;
 extern bool reset_amps;

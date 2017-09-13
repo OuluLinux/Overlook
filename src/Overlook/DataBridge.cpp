@@ -3,8 +3,6 @@
 
 namespace Overlook {
 
-bool use_internet_m1_data;
-
 DataBridge::DataBridge()  {
 	SetSkipAllocate();
 	cursor = 0;
@@ -269,7 +267,7 @@ void DataBridge::RefreshFromHistory() {
 	
 	bool old_filetype = false;
 	
-	if (use_internet_m1_data) {
+	if (Config::use_internet_m1_data) {
 		System& sys = GetSystem();
 		String symbol = sys.GetSymbol(GetSymbol());
 		

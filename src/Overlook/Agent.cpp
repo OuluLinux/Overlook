@@ -17,7 +17,7 @@ void AgentFilter::Create() {
 
 void AgentFilter::ResetEpoch() {
 	if (cursor > 1) {
-		result_equity.Add(reward_sum);
+		result_equity.Add(all_reward_sum);
 		double posneg_sum = pos_reward_sum + neg_reward_sum;
 		double dd = posneg_sum > 0.0 ? (neg_reward_sum / posneg_sum * 100.0) : 100.0;
 		result_drawdown.Add(dd);
@@ -32,7 +32,7 @@ void AgentFilter::ResetEpoch() {
 	cursor = 1;
 	skip_learn = true;
 	
-	reward_sum = 0;
+	all_reward_sum = 0;
 	pos_reward_sum = 0;
 	neg_reward_sum = 0;
 	
@@ -55,7 +55,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 		} else {
 			double change = fabs(cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
 			int timesteps = cursor - fwd_cursor;
-			change /= timesteps;				// Get average change per timestep
+			change /= timesteps;					// Get average change per timestep
 			change_av.Add(change);					// Get online average of change of value
 			if (signal == 0) {
 				reward = 0.0;
@@ -66,14 +66,14 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 				bool active_higher_bit = !(agent->group_id & (1 << level));
 				double reward_change =
 					active_higher_bit ?
-						(change - change_av.mean * 0.9) * +1000.0 :
-						(change - change_av.mean * 1.1) * -1000.0;
+						(change - change_av.mean) * +1000.0 :
+						(change - change_av.mean) * -1000.0;
 				reward = reward_change;
 				if (reward_change >= 0)
 					pos_reward_sum += reward_change;
 				else
 					neg_reward_sum -= reward_change;
-				reward_sum += reward;
+				all_reward_sum += reward;
 			}
 		}
 		Backward(reward);							// Learn the reward
@@ -82,7 +82,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 	}
 	Write(cur_snap);								// Always write sensors to the common table
 	
-	equity[cursor] = reward_sum;					// Get some equity data for visualization
+	equity[cursor] = all_reward_sum;				// Get some equity data for visualization
 	
 	cursor++;										// Move 1 time-step forward also with data reading cursor
 }
@@ -111,7 +111,8 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	// all previous outputs from the same phase
 	for(int i = 0; i < FILTER_GROUP_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetFilterSensorUnsafe(group_id, level, i);
+		for(int j = 0; j < GROUP_COUNT; j++)
+			input_array[cursor++] = prev_snap.GetFilterSensorUnsafe(j, level, i);
 	
 	ASSERT(cursor == FILTER_STATES);
 	
@@ -182,6 +183,15 @@ void AgentFilter::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		
+		reward_sum += reward;
+		reward_count++;
+		
+		if (reward_count > REWARD_AV_PERIOD) {
+			rewards.Add(reward_sum / reward_count);
+			reward_count = 0;
+			reward_sum = 0.0;
+		}
 	}
 }
 
@@ -215,7 +225,7 @@ void AgentSignal::Create() {
 void AgentSignal::ResetEpoch() {
 	if (broker.order_count > 0) {
 		result_equity.Add(broker.equity);
-		result_drawdown.Add(broker.GetDrawdown());
+		result_drawdown.Add(broker.GetDrawdown() * 100.0);
 	}
 	broker.Reset();
 	signal = 0;
@@ -239,13 +249,13 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	lower_output_signal = cur_snap.GetFilterOutput(agent->group_id, FILTER_COUNT-1, agent->sym_id);
 	if (timestep_actual <= 0 || lower_output_signal == 0) {
 		broker.RefreshOrders(cur_snap);
-		long double equity = broker.AccountEquity();
+		double equity = broker.AccountEquity();
 		int timesteps = cursor - prev_equity_cursor;
-		long double reward = (equity / prev_equity - 1.0) / timesteps;
+		double reward = (equity - prev_equity) / timesteps;
 		Backward(reward);
 		if (broker.equity < 0.25 * broker.begin_equity)
 			broker.Reset();
-		prev_equity = broker.equity;
+		prev_equity = broker.AccountEquity();
 		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
 	}
@@ -278,7 +288,8 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	// all previous outputs from the same phase
 	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(group_id, i);
+		for(int j = 0; j < GROUP_COUNT; j++)
+			input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(j, i);
 	
 	
 	ASSERT(cursor == SIGNAL_STATES);
@@ -375,6 +386,15 @@ void AgentSignal::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		
+		reward_sum += reward;
+		reward_count++;
+		
+		if (reward_count > REWARD_AV_PERIOD) {
+			rewards.Add(reward_sum / reward_count);
+			reward_count = 0;
+			reward_sum = 0.0;
+		}
 	}
 }
 
@@ -409,7 +429,7 @@ void AgentAmp::Create() {
 void AgentAmp::ResetEpoch() {
 	if (broker.order_count > 0) {
 		result_equity.Add(broker.equity);
-		result_drawdown.Add(broker.GetDrawdown());
+		result_drawdown.Add(broker.GetDrawdown() * 100.0);
 	}
 	broker.Reset();
 	signal = 0;
@@ -437,7 +457,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 		broker.RefreshOrders(cur_snap);
 		long double equity = broker.AccountEquity();
 		int timesteps = cursor - prev_equity_cursor;
-		long double reward = (equity / prev_equity - 1.0) / timesteps;
+		long double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
 		Backward(reward);
 		if (equity < 0.25 * broker.begin_equity)
 			broker.Reset();
@@ -475,12 +495,14 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	// all current signals from same snapshot
 	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(group_id, i);
+		for(int j = 0; j < GROUP_COUNT; j++)
+			input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
 	
 	
 	// all previous outputs from the same phase
 	for(int i = 0; i < AMP_GROUP_SIZE; i++)
-		input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(group_id, i);
+		for(int j = 0; j < GROUP_COUNT; j++)
+			input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(j, i);
 	
 	ASSERT(cursor == AMP_STATES);
 	
@@ -694,6 +716,15 @@ double Agent::GetLastResult(int phase) const {
 		case PHASE_SIGNAL_TRAINING: return sig.GetLastResult();
 		case PHASE_AMP_TRAINING: return amp.GetLastResult();
 		default: return filter[phase].GetLastResult();
+	}
+	return 0;
+}
+
+int64 Agent::GetIter(int phase) const {
+	switch (phase) {
+		case PHASE_SIGNAL_TRAINING: return sig.iter;
+		case PHASE_AMP_TRAINING: return amp.iter;
+		default: return filter[phase].iter;
 	}
 	return 0;
 }

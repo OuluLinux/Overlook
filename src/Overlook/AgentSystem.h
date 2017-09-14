@@ -3,7 +3,7 @@
 
 namespace Overlook {
 
-#define FMLEVEL						0.60
+#define FMLEVEL						0.6
 #define SYM_COUNT					10
 #define GROUP_COUNT					4
 #define TIME_SENSORS				3
@@ -16,6 +16,7 @@ namespace Overlook {
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
+#define FILTER_TRAINEE_COUNT		(TRAINEE_COUNT * FILTER_COUNT)
 
 #define FILTER_COUNT				3
 #define FILTER_SENSORS				2
@@ -45,7 +46,7 @@ namespace Overlook {
 #define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
 #define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
 #define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE)
-#define AMP_FWDSTEP_BEGIN			7
+#define AMP_FWDSTEP_BEGIN			5
 #define AMP_FWDSTEPS				3
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
@@ -70,26 +71,25 @@ private:
 	double filter_sensors		[FILTER_SIZE];
 	int signal_broker_symsig	[TRAINEE_COUNT];
 	int amp_broker_symsig		[TRAINEE_COUNT];
-	int filter_broker_symsig	[TRAINEE_COUNT * FILTER_COUNT];
+	int filter_broker_symsig	[FILTER_TRAINEE_COUNT];
 	int shift;
 	
-	inline int GetSignalOutput(int i) const {ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
-	inline void SetSignalOutput(int i, int j) {ASSERT(i >= 0 && i < TRAINEE_COUNT); amp_broker_symsig[i] = j;}
-	inline int GetAmpOutput(int i) const {ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
-	inline void SetAmpOutput(int i, int j) {ASSERT(i >= 0 && i < TRAINEE_COUNT); amp_broker_symsig[i] = j;}
-	inline int GetFilterOutput(int i) const {ASSERT(i >= 0 && i < (TRAINEE_COUNT * FILTER_COUNT)); return filter_broker_symsig[i];}
-	inline void SetFilterOutput(int i, int j) {ASSERT(i >= 0 && i < (TRAINEE_COUNT * FILTER_COUNT)); filter_broker_symsig[i] = j;}
+	inline int GetSignalOutput(int i) const		{ASSERT(i >= 0 && i < TRAINEE_COUNT); return signal_broker_symsig[i];}
+	inline void SetSignalOutput(int i, int j)	{ASSERT(i >= 0 && i < TRAINEE_COUNT); signal_broker_symsig[i] = j;}
+	inline int GetAmpOutput(int i) const		{ASSERT(i >= 0 && i < TRAINEE_COUNT); return amp_broker_symsig[i];}
+	inline void SetAmpOutput(int i, int j)		{ASSERT(i >= 0 && i < TRAINEE_COUNT); amp_broker_symsig[i] = j;}
+	inline int GetFilterOutput(int i) const		{ASSERT(i >= 0 && i < FILTER_TRAINEE_COUNT); return filter_broker_symsig[i];}
+	inline void SetFilterOutput(int i, int j)	{ASSERT(i >= 0 && i < FILTER_TRAINEE_COUNT); filter_broker_symsig[i] = j;}
 	
 public:
 	
 	void Reset() {
-		for(int i = 0; i < SIGNAL_SIZE; i++)	signal_sensors[i]			= 1.0;
-		for(int i = 0; i < AMP_SIZE; i++)		amp_sensors[i]				= 1.0;
-		for(int i = 0; i < FILTER_SIZE; i++)		filter_sensors[i]				= 1.0;
-		for(int i = 0; i < TRAINEE_COUNT; i++)	signal_broker_symsig[i]		= 0;
-		for(int i = 0; i < TRAINEE_COUNT; i++)	amp_broker_symsig[i]		= 0;
-		for(int i = 0; i < (TRAINEE_COUNT * FILTER_COUNT); i++)
-												filter_broker_symsig[i]		= 0;
+		for(int i = 0; i < SIGNAL_SIZE; i++)			signal_sensors[i]			= 1.0;
+		for(int i = 0; i < AMP_SIZE; i++)				amp_sensors[i]				= 1.0;
+		for(int i = 0; i < FILTER_SIZE; i++)			filter_sensors[i]			= 1.0;
+		for(int i = 0; i < TRAINEE_COUNT; i++)			signal_broker_symsig[i]		= 0;
+		for(int i = 0; i < TRAINEE_COUNT; i++)			amp_broker_symsig[i]		= 0;
+		for(int i = 0; i < FILTER_TRAINEE_COUNT; i++)	filter_broker_symsig[i]		= 0;
 	}
 	
 	double GetYearSensor() const {return year_timesensor;}
@@ -253,6 +253,7 @@ public:
 	double GetFilterEpsilon(int level) const	{return filter_epsilon[level];}
 	double GetPhaseIters(int phase);
 	void RefreshAgentEpsilon(int phase);
+	void RefreshLearningRate(int phase);
 	void TrainAgents(int phase);
 	void MainReal();
 	void Data();

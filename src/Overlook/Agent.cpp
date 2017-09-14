@@ -13,6 +13,7 @@ void AgentFilter::Create() {
 	iter = 0;
 	result_equity.Clear();
 	result_drawdown.Clear();
+	rewards.Clear();
 }
 
 void AgentFilter::ResetEpoch() {
@@ -37,6 +38,14 @@ void AgentFilter::ResetEpoch() {
 	neg_reward_sum = 0;
 	
 	change_av.Clear();
+	
+	// Reduce trainer sampling interval in case of very large data to get uniform sampling.
+	if (prev_reset_iter > 0) {
+		int iters = iter - prev_reset_iter;
+		int add_exp_every = Upp::max(5, iters / dqn.exp_size);
+		dqn.SetExperienceAddEvery(add_exp_every);
+	}
+	prev_reset_iter = iter;
 }
 
 void AgentFilter::Main(Vector<Snapshot>& snaps) {
@@ -91,30 +100,6 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	ASSERT(level >= 0 && level < FILTER_COUNT);
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	
-	// Input values
-	// - time_values
-	// - input sensors
-	// - previous signals
-	int cursor = 0;
-	double input_array[FILTER_STATES];
-	
-	
-	// time_values
-	input_array[cursor++] = cur_snap.GetYearSensor();
-	input_array[cursor++] = cur_snap.GetWeekSensor();
-	input_array[cursor++] = cur_snap.GetDaySensor();
-	
-	
-	// sensors of value of current
-	for(int i = 0; i < SENSOR_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-	
-	// all previous outputs from the same phase
-	for(int i = 0; i < FILTER_GROUP_SIZE; i++)
-		for(int j = 0; j < GROUP_COUNT; j++)
-			input_array[cursor++] = prev_snap.GetFilterSensorUnsafe(j, level, i);
-	
-	ASSERT(cursor == FILTER_STATES);
 	
 	if (lower_output_signal == 0) {
 		skip_learn = true;
@@ -124,6 +109,32 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	else {
 		skip_learn = false;
 
+		// Input values
+		// - time_values
+		// - input sensors
+		// - previous signals
+		int cursor = 0;
+		double input_array[FILTER_STATES];
+		
+		
+		// time_values
+		input_array[cursor++] = cur_snap.GetYearSensor();
+		input_array[cursor++] = cur_snap.GetWeekSensor();
+		input_array[cursor++] = cur_snap.GetDaySensor();
+		
+		
+		// sensors of value of current
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
+		
+		// all previous outputs from the same phase
+		for(int i = 0; i < FILTER_GROUP_SIZE; i++)
+			for(int j = 0; j < GROUP_COUNT; j++)
+				input_array[cursor++] = prev_snap.GetFilterSensorUnsafe(j, level, i);
+		
+		ASSERT(cursor == FILTER_STATES);
+		
+		
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < FILTER_ACTIONCOUNT);
 		ASSERT(FILTER_ACTIONCOUNT == (FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS));
@@ -149,15 +160,12 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 	}
 	
-	// Export value.
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	cur_snap.SetFilterOutput(group_id, level, sym_id, signal);
 	timestep_actual = timestep_total;
-	
 }
 
 void AgentFilter::Write(Snapshot& cur_snap) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
+	ASSERT(level >= 0 && level < FILTER_COUNT);
 	cur_snap.SetFilterOutput(group_id, level, sym_id, signal);
 	
 	if (timestep_actual < 0) timestep_actual = 0;
@@ -220,6 +228,7 @@ void AgentSignal::Create() {
 	iter = 0;
 	result_equity.Clear();
 	result_drawdown.Clear();
+	rewards.Clear();
 }
 
 void AgentSignal::ResetEpoch() {
@@ -240,6 +249,13 @@ void AgentSignal::ResetEpoch() {
 	cursor_sigbegin = 0;
 	for(int i = 0; i < SIGSENS_COUNT; i++)
 		epoch_av[i].Clear();
+	
+	if (prev_reset_iter > 0) {
+		int iters = iter - prev_reset_iter;
+		int add_exp_every = Upp::max(5, iters / dqn.exp_size);
+		dqn.SetExperienceAddEvery(add_exp_every);
+	}
+	prev_reset_iter = iter;
 }
 
 void AgentSignal::Main(Vector<Snapshot>& snaps) {
@@ -266,35 +282,6 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 
 void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
-	
-	// Input values
-	// - time_values
-	// - input sensors
-	// - previous signals
-	int cursor = 0;
-	double input_array[SIGNAL_STATES];
-	
-	
-	// time_values
-	input_array[cursor++] = cur_snap.GetYearSensor();
-	input_array[cursor++] = cur_snap.GetWeekSensor();
-	input_array[cursor++] = cur_snap.GetDaySensor();
-	
-	
-	// sensors of value of current
-	for(int i = 0; i < SENSOR_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-	
-	
-	// all previous outputs from the same phase
-	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-		for(int j = 0; j < GROUP_COUNT; j++)
-			input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(j, i);
-	
-	
-	ASSERT(cursor == SIGNAL_STATES);
-	
-	
 	int prev_signal = signal;
 	
 	
@@ -304,6 +291,34 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		signal = 0;
 	} else {
 		skip_learn = false;
+		
+		// Input values
+		// - time_values
+		// - input sensors
+		// - previous signals
+		int cursor = 0;
+		double input_array[SIGNAL_STATES];
+		
+		
+		// time_values
+		input_array[cursor++] = cur_snap.GetYearSensor();
+		input_array[cursor++] = cur_snap.GetWeekSensor();
+		input_array[cursor++] = cur_snap.GetDaySensor();
+		
+		
+		// sensors of value of current
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
+		
+		
+		// all previous outputs from the same phase
+		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
+			for(int j = 0; j < GROUP_COUNT; j++)
+				input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(j, i);
+		
+		
+		ASSERT(cursor == SIGNAL_STATES);
+		
 		
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < SIGNAL_ACTIONCOUNT);
@@ -320,8 +335,6 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	}
 	
 	
-	// Export value
-	cur_snap.SetSignalOutput(group_id, sym_id, signal);
 	timestep_actual = timestep_total;
 	if (prev_signal != signal)
 		cursor_sigbegin = cursor;
@@ -446,6 +459,13 @@ void AgentAmp::ResetEpoch() {
 	cursor_sigbegin = 0;
 	for(int i = 0; i < SIGSENS_COUNT; i++)
 		epoch_av[i].Clear();
+	
+	if (prev_reset_iter > 0) {
+		int iters = iter - prev_reset_iter;
+		int add_exp_every = Upp::max(5, iters / dqn.exp_size);
+		dqn.SetExperienceAddEvery(add_exp_every);
+	}
+	prev_reset_iter = iter;
 }
 
 void AgentAmp::Main(Vector<Snapshot>& snaps) {
@@ -464,48 +484,15 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 		prev_equity = broker.AccountEquity();
 		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
+		prev_lower_output_signal = lower_output_signal;
 	}
 	Write(cur_snap, snaps);
-	prev_lower_output_signal = lower_output_signal;
 	equity[cursor] = broker.AccountEquity();
 	cursor++;
 }
 
 void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
-	
-	// Input values
-	// - time_values
-	// - input sensors
-	// - previous signals
-	int cursor = 0;
-	double input_array[AMP_STATES];
-	
-	
-	// time_values
-	input_array[cursor++] = cur_snap.GetYearSensor();
-	input_array[cursor++] = cur_snap.GetWeekSensor();
-	input_array[cursor++] = cur_snap.GetDaySensor();
-	
-	
-	// sensors of value of current
-	for(int i = 0; i < SENSOR_SIZE; i++)
-		input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-	
-	
-	// all current signals from same snapshot
-	for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-		for(int j = 0; j < GROUP_COUNT; j++)
-			input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
-	
-	
-	// all previous outputs from the same phase
-	for(int i = 0; i < AMP_GROUP_SIZE; i++)
-		for(int j = 0; j < GROUP_COUNT; j++)
-			input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(j, i);
-	
-	ASSERT(cursor == AMP_STATES);
-	
 	int prev_signal = signal;
 	
 	if (lower_output_signal == 0) {
@@ -517,6 +504,39 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	}
 	else {
 		skip_learn = false;
+		
+		// Input values
+		// - time_values
+		// - input sensors
+		// - previous signals
+		int cursor = 0;
+		double input_array[AMP_STATES];
+		
+		
+		// time_values
+		input_array[cursor++] = cur_snap.GetYearSensor();
+		input_array[cursor++] = cur_snap.GetWeekSensor();
+		input_array[cursor++] = cur_snap.GetDaySensor();
+		
+		
+		// sensors of value of current
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
+		
+		
+		// all current signals from same snapshot
+		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
+			for(int j = 0; j < GROUP_COUNT; j++)
+				input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
+		
+		
+		// all previous outputs from the same phase
+		for(int i = 0; i < AMP_GROUP_SIZE; i++)
+			for(int j = 0; j < GROUP_COUNT; j++)
+				input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(j, i);
+		
+		ASSERT(cursor == AMP_STATES);
+		
 
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < AMP_ACTIONCOUNT);
@@ -525,8 +545,8 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		const int timefwd_steps = AMP_FWDSTEPS;
 		ASSERT(AMP_ACTIONCOUNT == (maxscale_steps * timefwd_steps));
 		
-		int maxscale_step	= action % maxscale_steps;			action /= maxscale_steps;
-		int timefwd_step	= action % timefwd_steps;			action /= timefwd_steps;
+		int maxscale_step	= action % maxscale_steps;
+		int timefwd_step	= action / maxscale_steps;
 		
 		prev_signals[0]		= 1.0 * maxscale_step / maxscale_steps;
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
@@ -538,7 +558,6 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	}
 	
 	// Export value.
-	cur_snap.SetAmpOutput(group_id, sym_id, signal);
 	timestep_actual = timestep_total;
 	if (prev_signal != signal)
 		cursor_sigbegin = cursor;
@@ -552,7 +571,6 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	// Broker signals may NOT be read in realtime, because it can be reseted in a unsuccessful try.
 	
 	broker.SetSignal(sym_id, signal);
-	
 	bool succ = broker.Cycle(cur_snap);
 	
 	if (!succ)

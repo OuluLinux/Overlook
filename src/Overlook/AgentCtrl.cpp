@@ -398,8 +398,10 @@ void RewardGraph::Paint(Draw& d) {
 		double last = 0.0;
 		double peak = 0.0;
 		
-		int reward_count = type == PHASE_SIGNAL_TRAINING ? agent->sig.reward_count : (type == PHASE_AMP_TRAINING ? agent->amp.reward_count : agent->filter[type].reward_count);
-		const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.rewards : (type == PHASE_AMP_TRAINING ? agent->amp.rewards : agent->filter[type].rewards);
+		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : (type == PHASE_AMP_TRAINING ? agent->amp.x : agent->filter[type].x)
+		int reward_count = SRC(reward_count);
+		const Vector<double>& data = SRC(rewards);
+		int experience_add_every = SRC(dqn.GetExperienceAddEvery());
 		int count = data.GetCount();
 		
 		for(int j = 0; j < count; j++) {
@@ -433,6 +435,15 @@ void RewardGraph::Paint(Draw& d) {
 			{
 				int y = 0;
 				String str = DblStr(peak);
+				Size str_sz = GetTextSize(str, fnt);
+				id.DrawRect(3, y, 13, 13, clr);
+				id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+				id.DrawText(16, y, str, fnt, Black());
+			}
+			
+			{
+				int y = 13;
+				String str = "Exp add every: " + IntStr(experience_add_every);
 				Size str_sz = GetTextSize(str, fnt);
 				id.DrawRect(3, y, 13, 13, clr);
 				id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());

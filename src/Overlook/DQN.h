@@ -398,6 +398,8 @@ public:
 	typedef  Mat<double, 1, num_actions>				FwdOut;
 	typedef  DQExperience<1, num_states>				DQExp;
 	
+	const int exp_size = experience_size;
+	
 protected:
 	DQExp exp[experience_size]; // experience
 	double gamma, epsilon, alpha, tderror_clamp;
@@ -436,6 +438,12 @@ public:
 		
 		exp_count = 0;
 	}
+	
+	void SetExperienceAddEvery(int i) {experience_add_every = i;}
+	int  GetExperienceAddEvery() const {return experience_add_every;}
+	
+	void SetLearningRate(double r) {alpha = r;}
+	int  GetLearningRate() const {return alpha;}
 	
 	void Reset() {
 		RandMat(0, 0.01, data.W1);

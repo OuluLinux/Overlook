@@ -252,6 +252,7 @@ void AgentSystem::TrainAgents(int phase) {
 	RefreshSnapEquities();
 	
 	RefreshAgentEpsilon(phase);
+	RefreshLearningRate(phase);
 	for(int i = 0; i < phase; i++)
 		LoopAgentSignals(i);
 	if (GetPhaseIters(phase) >= 1.0)
@@ -263,24 +264,27 @@ void AgentSystem::TrainAgents(int phase) {
 	int64 total_elapsed = 0;
 	for (int64 iter = 0; running; iter++) {
 		
-		// Change snapshot area, if needed, sometimes
-		RefreshAgentEpsilon(phase);
-		
-		total_elapsed += ts.Elapsed();
-		ts.Reset();
-		iter = 0;
-		if (total_elapsed > 15*60*1000) {
-			StoreThis();
-			break; // call TrainAgents again to RefreshSnapshots safely
-		}
-		
-		// Change to next phase eventually
-		if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
-			(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
-			(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
-			this->phase++;
-			StoreThis();
-			break;
+		if (iter % 30 == 0) {
+			// Change snapshot area, if needed, sometimes
+			RefreshAgentEpsilon(phase);
+			RefreshLearningRate(phase);
+			
+			total_elapsed += ts.Elapsed();
+			ts.Reset();
+			iter = 0;
+			if (total_elapsed > 15*60*1000) {
+				StoreThis();
+				break; // call TrainAgents again to RefreshSnapshots safely
+			}
+			
+			// Change to next phase eventually
+			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
+				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
+				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
+				this->phase++;
+				StoreThis();
+				break;
+			}
 		}
 		
 		CoWork co;
@@ -890,6 +894,37 @@ void AgentSystem::RefreshAgentEpsilon(int phase) {
 		else if (level == 2)	filter_epsilon[phase] = 0.02;
 		else if (level >= 3)	filter_epsilon[phase] = 0.01;
 		SetFilterEpsilon(phase, filter_epsilon[phase]);
+	}
+}
+
+void AgentSystem::RefreshLearningRate(int phase) {
+	double max_lrate = 0.005;
+	double min_lrate = 0.00005;
+	double range = max_lrate - min_lrate;
+	
+	if (phase == PHASE_SIGNAL_TRAINING) {
+		double iters = GetAverageSignalIterations();
+		double prog = iters / FILTER_PHASE_ITER_LIMIT;
+		double lrate = (1.0 - prog) * range + min_lrate;
+		for(int i = 0; i < GROUP_COUNT; i++)
+			for(int j = 0; j < SYM_COUNT; j++)
+				groups[i].agents[j].sig.dqn.SetLearningRate(lrate);
+	}
+	else if (phase == PHASE_AMP_TRAINING) {
+		double iters = GetAverageAmpIterations();
+		double prog = iters / AMP_PHASE_ITER_LIMIT;
+		double lrate = (1.0 - prog) * range + min_lrate;
+		for(int i = 0; i < GROUP_COUNT; i++)
+			for(int j = 0; j < SYM_COUNT; j++)
+				groups[i].agents[j].amp.dqn.SetLearningRate(lrate);
+	}
+	else if (phase < PHASE_SIGNAL_TRAINING) {
+		double iters = GetAverageFilterIterations(phase);
+		double prog = iters / SIGNAL_PHASE_ITER_LIMIT;
+		double lrate = (1.0 - prog) * range + min_lrate;
+		for(int i = 0; i < GROUP_COUNT; i++)
+			for(int j = 0; j < SYM_COUNT; j++)
+				groups[i].agents[j].filter[phase].dqn.SetLearningRate(lrate);
 	}
 }
 

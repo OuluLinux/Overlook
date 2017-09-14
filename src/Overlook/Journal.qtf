@@ -3185,4 +3185,91 @@ again. [/ `*sigh`*]&]
 [s0; I`'m not sure is that fixed now. These fixes certainly affect 
 the whole stack and that failing might actually be training glitch.&]
 [s0; &]
+[s3; 13.9.2017&]
+[s0; Hmm... one possible explanation that previously mentioned weird 
+oscillation could be, that the experience buffer for training 
+is too small and it`'s filled in non`-uniform way causing training 
+to wobble from one sample`-area to another. The fix for that 
+would be to fill the training buffer evenly from the larger sample.&]
+[s0; I did some calculations and it seems that non`-uniform sampling 
+did happen. In some cases, the learning was greatly biased to 
+local data instead of whole data. We`'ll see if that weird oscillation 
+is fixed... but then I can`'t say what fixed it :)&]
+[s0; &]
+[s3; 14.9.20&]
+[s0; Still no luck. So, in amp`-phase training reward graph and epoch`-result 
+graph shows this weird oscillation, where failing and succeeding 
+phases takes 3`-10 minutes. It happens in every agent. They all 
+have it at exactly same time (same frequency and phase). It reminded 
+me to reduce the learning rate linearly as getting closer to 
+the end of the training, but even that won`'t solve the problem.&]
+[s0; I just must test to tweak some settings. This is going to be 
+expensive...&]
+[s0;i150;O0; 1. test: the free`-margin`-level doesn`'t affect it.&]
+[s0;i150;O0; 2. test: it happens even with fixed `+1/`-1/0 signal, 
+like in the signal`-part...&]
+[s0;i150;O0; 3. test: it happens even with seemingly identical agent 
+to SignalAgent&]
+[s0;i150;O0; 4. test: it happens even when FixedSimBroker is changed 
+to SingleFixedSimBroker&]
+[s0;i150;O0; 5. it does NOT happen, when SignalAgent is cloned to 
+replace AmpAgent&]
+[s0;i150;O0; 6. it DOES happen, when SignalAgent clone uses Amp actions&]
+[s0; So yeah, the problem of oscillation is limited to this piece 
+of code:&]
+[s0; [C0 -|-|const int maxscale`_steps `= AMP`_MAXSCALES;]&]
+[s0; [C0 -|-|const int timefwd`_steps `= AMP`_FWDSTEPS;]&]
+[s0; [C0 -|-|ASSERT(AMP`_ACTIONCOUNT `=`= (maxscale`_steps `* timefwd`_steps));]&]
+[s0; [C0 -|-|]&]
+[s0; [C0 -|-|int maxscale`_step-|`= action % maxscale`_steps;]&]
+[s0; [C0 -|-|int timefwd`_step-|`= action / maxscale`_steps;]&]
+[s0; [C0 -|-|]&]
+[s0; [C0 -|-|prev`_signals`[0`]-|-|`= 1.0 `* maxscale`_step / maxscale`_steps;]&]
+[s0; [C0 -|-|prev`_signals`[1`]-|-|`= 1.0 `* timefwd`_step  / timefwd`_steps;]&]
+[s0; [C0 -|-|]&]
+[s0; [C0 -|-|int maxscale   `= 1 `+ maxscale`_step `* AMP`_MAXSCALE`_MUL;]&]
+[s0; [C0 -|-|timestep`_total `= 1 << (AMP`_FWDSTEP`_BEGIN `+ timefwd`_step 
+`+ group`_id);]&]
+[s0; [C0 -|-|]&]
+[s0; [C0 -|-|signal `= lower`_output`_signal `* maxscale;]&]
+[s0; I don`'t have a clue why that code causes that slow oscillation 
+in every agent.&]
+[s0; I try to set only constant 1.0 to that prev`_signals sensor... 
+that`'s the only part which transmits output data to input of 
+next time position. Pretty reasonable...&]
+[s0; Nope. It still occurs. Let`'s do a sanity check. Let`'s copy 
+the signal actions back overwriting that previously mentioned. 
+Yes, everything is normal with that. I really need to start to 
+speculate the problem exactly in that code position. So, maxscale 
+shouldn`'t affect anything, because SingleFixedSimBroker checks 
+only >0 and <0.&]
+[s0; ...&]
+[s0; Finally, the point of sanity. The amp`-module, which was cloned 
+from signal`-module, is giving the identical output with constant 
+1x multiplier. Obviously, I would start working on this in this 
+way if I ever had to do this again.&]
+[s0; Hmm... except that it turned immediately to the point of chaos. 
+It start with identical signal, and then the weird oscillating 
+problem starts again. This is just madness. This definitely should 
+give only the identical graph to the signal module now. I definitely 
+got the clearest view of the problem so far.&]
+[s0; So the problem is now to get the amp`-module produce the identical 
+output to input with 1x multiplier.&]
+[s0; I had to repeat this test few times to by sure, but that `"`* 
+maxscale`" is that what causes the oscillation. I can`'t find 
+the leak where that is meaningful... &]
+[s0; ...&]
+[s0; And it is solved. It was a fucking expensive typo. That doesn`'t 
+really surprise me.&]
+[s0; This is sort of embarrasing, but I managed to fix some bugs 
+on the way, so it wasn`'t a total loss. This is also a good reminder 
+how expensive these bugs can be. This kind of problem could be 
+avoided with the team work and peer`-reviewed commits, but unfortunately 
+I am far from those with this project. One improvement was especially 
+good: reducing the learning rate increases the quality as you 
+can in see the ConvNet painter example. That improvement might 
+directly reduce lossess now.&]
+[s0; The [C maxscale ]multiplier trigged the problem, because amp and 
+signal was using the same memory slot and the value was identical 
+as long as multiplier was 1. That`'s so obvious afterwards...&]
 [s0; ]]

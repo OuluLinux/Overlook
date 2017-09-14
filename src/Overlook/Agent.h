@@ -35,6 +35,7 @@ struct AgentFilter {
 	int cursor = 0;
 	int fwd_cursor = 0;
 	int lower_output_signal = 0;
+	int prev_reset_iter = 0;
 	int level = -1;
 	bool skip_learn = true;
 	Agent* agent = NULL;
@@ -76,6 +77,7 @@ struct AgentSignal {
 	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int cursor_sigbegin = 0;
+	int prev_reset_iter = 0;
 	bool skip_learn = true;
 	Agent* agent = NULL;
 	
@@ -118,6 +120,7 @@ struct AgentAmp {
 	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int prev_lower_output_signal = 0;
+	int prev_reset_iter = 0;
 	bool skip_learn = true;
 	Agent* agent = NULL;
 	

@@ -116,9 +116,9 @@ void SingleFixedSimBroker::Cycle(int signal, const Snapshot& snap) {
 	
 	
 	if      (signal > 0)
-		OrderSend(OP_BUY,  0.01f, RealtimeAsk(snap, sym_id));
+		OrderSend(OP_BUY,  0.01, RealtimeAsk(snap, sym_id));
 	else if (signal < 0)
-		OrderSend(OP_SELL, 0.01f, RealtimeBid(snap, sym_id));
+		OrderSend(OP_SELL, 0.01, RealtimeBid(snap, sym_id));
 	
 }
 
@@ -357,6 +357,16 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	int sell_signals[SYM_COUNT];
 	
 	
+	int loop_begin, loop_end;
+	if (part_sym_id != -1) {
+		loop_begin = part_sym_id;
+		loop_end = part_sym_id + 1;
+	} else {
+		loop_begin = 0;
+		loop_end = SYM_COUNT;
+	}
+	
+	
 	// Get maximum margin sum
 	ASSERT(free_margin_level >= 0.55 && free_margin_level <= 1.0);
 	if (free_margin_level >= 1.0)
@@ -366,7 +376,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	// Get long/short signals
 	// Shortcomings:
 	//  - volumes should match, signals might not have correct value
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		buy_signals[i] = 0;
 		sell_signals[i] = 0;
 		buy_lots[i] = 0.0;
@@ -374,7 +384,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	}
 	
 	int signal_sum = 0;
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		int signal = this->signal[i];
 		if (!signal) continue;
 		if (signal > 0) {
@@ -388,7 +398,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	
 	// Balance signals
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		int& buy  =  buy_signals[i];
 		int& sell = sell_signals[i];
 		if (buy == 0 || sell == 0) continue;
@@ -405,7 +415,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	int sig_abs_total = 0;
 	int min_sig = INT_MAX;
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		int buy = buy_signals[i];
 		int sell = sell_signals[i];
 		if (buy  > 0 && buy < min_sig)
@@ -422,7 +432,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	long double minimum_margin_sum = 0;
 	int active_symbols = 0;
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0)
 			continue;
 		long double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
@@ -448,7 +458,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 		return false;
 	
 	
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0)
 			continue;
 		long double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01 * lot_multiplier;
@@ -488,7 +498,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	}
 	
 	
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01)
 			continue;
 		long double sym_buy_lots = buy_lots[i];

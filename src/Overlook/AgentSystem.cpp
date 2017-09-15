@@ -211,6 +211,8 @@ void AgentSystem::Main() {
 	RefreshSnapshots();
 	
 	while (running) {
+		ReduceExperienceMemory(phase);
+		
 		if (phase < PHASE_REAL) {
 			
 			TrainAgents(phase);
@@ -227,6 +229,26 @@ void AgentSystem::Main() {
 	
 	
 	stopped = true;
+}
+
+void AgentSystem::ReduceExperienceMemory(int phase) {
+	for(int p = 0; p < phase; p++) {
+		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
+			switch (p) {
+				case PHASE_SIGNAL_TRAINING:
+					groups[i].agents[j].sig.dqn.ClearExperience();
+					break;
+				case PHASE_AMP_TRAINING:
+					groups[i].agents[j].amp.dqn.ClearExperience();
+					break;
+				case PHASE_REAL:
+					break;
+				default:
+					groups[i].agents[j].filter[p].dqn.ClearExperience();
+					break;
+			}
+		}
+	}
 }
 
 void AgentSystem::RefreshSnapEquities() {
@@ -486,16 +508,14 @@ void AgentSystem::MainReal() {
 	sys->WhenPopTask();
 }
 
-int AgentSystem::FindActiveGroup() {
+int AgentSystem::FindActiveGroup(int sym_id) {
 	// Return first group which has open signals
 	Snapshot& cur_snap = snaps.Top();
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
-		for(int j = 0; j < ag.agents.GetCount(); j++) {
-			int signal = cur_snap.GetAmpOutput(i, j);
-			if (signal)
-				return i;
-		}
+		int signal = cur_snap.GetAmpOutput(i, sym_id);
+		if (signal)
+			return i;
 	}
 	return GROUP_COUNT-1;
 }
@@ -999,10 +1019,10 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	
 	Snapshot& cur_snap = snaps.Top();
 	
-	int group_id = FindActiveGroup();
-	ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 	
 	for(int i = 0; i < sym_ids.GetCount(); i++) {
+		int group_id = FindActiveGroup(i);
+		ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 		int sym = sym_ids[i];
 		ASSERT(groups[group_id].agents[i].sym == sym);
 		int sig = cur_snap.GetAmpOutput(group_id, i);

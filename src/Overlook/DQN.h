@@ -401,14 +401,13 @@ public:
 	const int exp_size = experience_size;
 	
 protected:
-	DQExp exp[experience_size]; // experience
+	Vector<DQExp> exp; // experience
 	double gamma, epsilon, alpha, tderror_clamp;
 	double tderror;
 	int experience_add_every;
 	int learning_steps_per_iteration;
 	int expi;
 	int t;
-	int exp_count;
 	
 	bool has_reward;
 	MatType state;
@@ -435,8 +434,6 @@ public:
 		action1 = 0;
 		has_reward = false;
 		tderror = 0;
-		
-		exp_count = 0;
 	}
 	
 	void SetExperienceAddEvery(int i) {experience_add_every = i;}
@@ -523,8 +520,8 @@ public:
 			
 			// decide if we should keep this experience in the replay
 			if (t % experience_add_every == 0) {
-				if (exp_count == expi)
-					exp_count++;
+				if (exp.GetCount() == expi)
+					exp.Add();
 				ASSERT(state1.GetLength() > 0);
 				exp[expi].Set(state0, action0, reward0, state1, action1);
 				expi += 1;
@@ -532,10 +529,10 @@ public:
 			}
 			t += 1;
 			
-			if (exp_count) {
+			if (!exp.IsEmpty()) {
 				// sample some additional experience from replay memory and learn from it
 				for (int k = 0; k < learning_steps_per_iteration; k++) {
-					int ri = Random(exp_count); // TODO: priority sweeps?
+					int ri = Random(exp.GetCount()); // TODO: priority sweeps?
 					DQExp& e = exp[ri];
 					LearnFromTuple(e.state0, e.action0, e.reward0, e.state1, e.action1);
 				}
@@ -587,13 +584,13 @@ public:
 	
 	void SetEpsilon(double e) {epsilon = e;}
 	
+	void ClearExperience() {exp.Clear();}
+	
 	
 	void Serialize(Stream& s) {
-		s % data.W1 % data.b1 % data.W2 % data.b2 % data.mul1 % data.add1 % data.tanh % data.mul2 % data.add2;
-		for(int i = 0; i < experience_size; i++)
-			s % exp[i];
-		s % gamma % epsilon % alpha % tderror_clamp % tderror % experience_add_every
-		  % learning_steps_per_iteration % expi % t % exp_count;
+		s % data.W1 % data.b1 % data.W2 % data.b2 % data.mul1 % data.add1 % data.tanh % data.mul2 % data.add2
+		  % gamma % epsilon % alpha % tderror_clamp % tderror % experience_add_every
+		  % learning_steps_per_iteration % expi % t % exp;
 	}
 };
 

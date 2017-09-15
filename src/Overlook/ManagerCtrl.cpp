@@ -407,7 +407,7 @@ void ManagerCtrl::Data() {
 		else if (view == 5)	amp_tabs.Data();
 		else				filter_tabs.Data();
 	}
-	else if (view == 3) {
+	else if (view == 6) {
 		export_ctrl.Data();
 	}
 	
@@ -449,7 +449,7 @@ RealtimeCtrl::RealtimeCtrl() {
 }
 
 void RealtimeCtrl::AddMessage(String time, String level, String msg) {
-	if (Thread::IsShutdownThreads()) return;
+	if (Thread::IsShutdownThreads() || !GetSystem().GetAgentSystem().running) return;
 	journal.Insert(0);
 	journal.Set(0, 0, time);
 	journal.Set(0, 1, level);

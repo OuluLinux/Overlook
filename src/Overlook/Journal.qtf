@@ -3260,7 +3260,7 @@ maxscale`" is that what causes the oscillation. I can`'t find
 the leak where that is meaningful... &]
 [s0; ...&]
 [s0; And it is solved. It was a fucking expensive typo. That doesn`'t 
-really surprise me.&]
+really surprise me or anyone.&]
 [s0; This is sort of embarrasing, but I managed to fix some bugs 
 on the way, so it wasn`'t a total loss. This is also a good reminder 
 how expensive these bugs can be. This kind of problem could be 
@@ -3272,4 +3272,19 @@ directly reduce lossess now.&]
 [s0; The [C maxscale ]multiplier trigged the problem, because amp and 
 signal was using the same memory slot and the value was identical 
 as long as multiplier was 1. That`'s so obvious afterwards...&]
+[s0; ...&]
+[s0; I think I`'ll write a rant about over`-simplifying yellow lightbulb`-heads. 
+About those who use a lot of words `'believing`' and `'forgiving`' 
+and like to watch sports and have a fight club attitude against 
+everything, even when their new claim is contradicting their 
+previous claim. Those who trust simple visual symbolism and has 
+empty feeling without different substances... Those who live 
+in a read`-only mode from the happiness of the youngness to the 
+bitterness of the oldness. Those who think that oldest economic 
+models or new cryptocurrencies works... It`'s not a specific 
+group, but a collection of traits what we all have. In a old 
+and mysterious voice: [/ during your lifetime, there`'s nothing 
+more valuable than breaking the yellow illusion...]&]
+[s0; [/ ...]&]
+[s0; What a fucking fat`-finger I was at this week.&]
 [s0; ]]

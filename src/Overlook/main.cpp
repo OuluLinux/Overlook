@@ -31,6 +31,9 @@ GUI_APP_MAIN {
 		else if (s == "-resetamps") {
 			reset_amps = ScanInt(args[i]);
 		}
+		else if (s == "-resetfuses") {
+			reset_fuses = ScanInt(args[i]);
+		}
 		else if (s == "-resetfilters") {
 			reset_filters = ScanInt(args[i]);
 		}

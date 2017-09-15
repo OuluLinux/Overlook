@@ -369,7 +369,7 @@ void UpdateMat(MatType& m, double alpha) {
 
 
 
-template <int num_actions, int num_states, int num_hidden_units = 100, int experience_size=2000>
+template <int num_actions, int num_states, int num_hidden_units = 100>
 class DQNAgent {
 	
 public:
@@ -398,7 +398,6 @@ public:
 	typedef  Mat<double, 1, num_actions>				FwdOut;
 	typedef  DQExperience<1, num_states>				DQExp;
 	
-	const int exp_size = experience_size;
 	
 protected:
 	Vector<DQExp> exp; // experience
@@ -408,6 +407,7 @@ protected:
 	int learning_steps_per_iteration;
 	int expi;
 	int t;
+	int exp_size;
 	
 	bool has_reward;
 	MatType state;
@@ -434,7 +434,10 @@ public:
 		action1 = 0;
 		has_reward = false;
 		tderror = 0;
+		exp_size = 1000;
 	}
+	
+	int GetExperienceCountMax() const {return exp_size;}
 	
 	void SetExperienceAddEvery(int i) {experience_add_every = i;}
 	int  GetExperienceAddEvery() const {return experience_add_every;}
@@ -525,7 +528,7 @@ public:
 				ASSERT(state1.GetLength() > 0);
 				exp[expi].Set(state0, action0, reward0, state1, action1);
 				expi += 1;
-				if (expi >= experience_size) { expi = 0; } // roll over when we run out
+				if (expi >= exp_size) { expi = 0; } // roll over when we run out
 			}
 			t += 1;
 			
@@ -580,7 +583,7 @@ public:
 	double GetTDError() const {return tderror;}
 	double GetEpsilon() const {return epsilon;}
 	
-	int GetExperienceCount() const {return experience_size;}
+	int GetExperienceCount() const {return exp.GetCount();}
 	
 	void SetEpsilon(double e) {epsilon = e;}
 	

@@ -185,11 +185,11 @@ double FixedSimBroker::RealtimeAsk(const Snapshot& snap, int sym_id) const {
 	return snap.GetOpen(sym_id);
 }
 
-long double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const {
+double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const {
 	
 	// NOTE: only for forex. Check SimBroker for other symbols too
 	
-	long double volume = 100000 * o.volume; // lotsize * volume
+	double volume = 100000 * o.volume; // lotsize * volume
 	
 	double close;
 	if (o.type == OP_BUY)
@@ -209,7 +209,7 @@ long double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, cons
 	int proxy_base_mul = this->proxy_base_mul[sym_id];
 	
 	if (o.type == OP_BUY) {
-		long double change = volume * (close / o.open - 1.0);
+		double change = volume * (close / o.open - 1.0);
 		if (proxy_base_mul == 0) return change;
 		
 		if      (proxy_base_mul == +1)
@@ -219,7 +219,7 @@ long double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, cons
 		return change;
 	}
 	else if (o.type == OP_SELL) {
-		long double change = -1.0 * volume * (close / o.open - 1.0);
+		double change = -1.0 * volume * (close / o.open - 1.0);
 		if (proxy_base_mul == 0) return change;
 		
 		if      (proxy_base_mul == +1)
@@ -285,7 +285,7 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 	if (lots < order.volume) {
 		double remain = order.volume - lots;
 		order.volume = lots; // hackish... switch volume for calculation
-		long double profit = GetCloseProfit(sym_id, order, snap);
+		double profit = GetCloseProfit(sym_id, order, snap);
 		order.volume = remain;
 		order.is_open = remain >= 0.01;
 		balance += profit;
@@ -294,7 +294,7 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 		if (sym_id == part_sym_id) part_balance += profit;
 	} else {
 		order.is_open = false;
-		long double profit = GetCloseProfit(sym_id, order, snap);
+		double profit = GetCloseProfit(sym_id, order, snap);
 		balance += profit;
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
@@ -310,7 +310,7 @@ void FixedSimBroker::CloseAll(const Snapshot& snap) {
 			continue;
 		int sym_id = i / ORDERS_PER_SYMBOL;
 		order.is_open = false;
-		long double profit = GetCloseProfit(sym_id, order, snap);
+		double profit = GetCloseProfit(sym_id, order, snap);
 		balance += profit;
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
@@ -320,7 +320,7 @@ void FixedSimBroker::CloseAll(const Snapshot& snap) {
 
 double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume) {
 	ASSERT(leverage > 0);
-	long double used_margin = 0.0;
+	double used_margin = 0.0;
 	if (proxy_id[sym_id] == -1) {
 		used_margin = RealtimeAsk(snap, sym_id) * volume * 100000;
 	} else {
@@ -351,8 +351,8 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 }
 
 bool FixedSimBroker::Cycle(const Snapshot& snap) {
-	long double buy_lots[SYM_COUNT];
-	long double sell_lots[SYM_COUNT];
+	double buy_lots[SYM_COUNT];
+	double sell_lots[SYM_COUNT];
 	int buy_signals[SYM_COUNT];
 	int sell_signals[SYM_COUNT];
 	
@@ -430,15 +430,15 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	}
 	
 	
-	long double minimum_margin_sum = 0;
+	double minimum_margin_sum = 0;
 	int active_symbols = 0;
 	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0)
 			continue;
-		long double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
-		long double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
-		long double buy_used_margin = GetMargin(snap, i, buy_lots);
-		long double sell_used_margin = GetMargin(snap, i, sell_lots);
+		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01;
+		double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
+		double buy_used_margin = GetMargin(snap, i, buy_lots);
+		double sell_used_margin = GetMargin(snap, i, sell_lots);
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
 		active_symbols++;
@@ -450,10 +450,10 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	const int fmscale = (AMP_MAXSCALES-1) * AMP_MAXSCALE_MUL * SYM_COUNT;
 	if (signal_sum > fmscale) signal_sum = fmscale;
-	long double max_margin_sum = AccountEquity() * (1.0 - free_margin_level) * ((double)signal_sum / (double)fmscale);
+	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level) * ((double)signal_sum / (double)fmscale);
 	
 	
-	long double lot_multiplier = max_margin_sum / minimum_margin_sum;
+	double lot_multiplier = max_margin_sum / minimum_margin_sum;
 	if (lot_multiplier < 1.0)
 		return false;
 	
@@ -461,8 +461,8 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0)
 			continue;
-		long double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01 * lot_multiplier;
-		long double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01 * lot_multiplier;
+		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * 0.01 * lot_multiplier;
+		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01 * lot_multiplier;
 		buy_lots[i]  = ((long)(sym_buy_lots  / 0.01)) * 0.01;
 		sell_lots[i] = ((long)(sym_sell_lots / 0.01)) * 0.01;
 	}
@@ -476,21 +476,21 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 		int symbol = i / ORDERS_PER_SYMBOL;
 		
 		if (o.type == OP_BUY) {
-			long double& lots = buy_lots[symbol];
+			double& lots = buy_lots[symbol];
 			if (o.volume <= lots) {
 				lots -= o.volume;
 			} else {
-				long double reduce = o.volume - lots;
+				double reduce = o.volume - lots;
 				OrderClose(symbol, reduce, o, snap);
 				lots = 0;
 			}
 		}
 		else if (o.type == OP_SELL) {
-			long double& lots = sell_lots[symbol];
+			double& lots = sell_lots[symbol];
 			if (o.volume <= lots) {
 				lots -= o.volume;
 			} else {
-				long double reduce = o.volume - lots;
+				double reduce = o.volume - lots;
 				OrderClose(symbol, reduce, o, snap);
 				lots = 0;
 			}
@@ -501,8 +501,8 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	for(int i = loop_begin; i < loop_end; i++) {
 		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01)
 			continue;
-		long double sym_buy_lots = buy_lots[i];
-		long double sym_sell_lots = sell_lots[i];
+		double sym_buy_lots = buy_lots[i];
+		double sym_sell_lots = sell_lots[i];
 		
 		if (sym_buy_lots > 0.0) {
 			double price = RealtimeAsk(snap, i);
@@ -518,13 +518,13 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 }
 
 void FixedSimBroker::RefreshOrders(const Snapshot& snap) {
-	long double e = balance;
-	long double pe = part_balance;
+	double e = balance;
+	double pe = part_balance;
 	for(int i = 0; i < MAX_ORDERS; i++) {
 		FixedOrder& o = order[i];
 		if (o.is_open) {
 			int sym_id = i / ORDERS_PER_SYMBOL;
-			long double p = GetCloseProfit(sym_id, o, snap);
+			double p = GetCloseProfit(sym_id, o, snap);
 			o.close = snap.GetOpen(sym_id);
 			o.profit = p;
 			e += p;

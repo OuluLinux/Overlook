@@ -41,6 +41,14 @@ void SystemOverview::Data() {
 	infostr << "\tRandom action probability: " << ag.GetAmpEpsilon() << "\n";
 	infostr << "\n";
 	
+	infostr << "Fuse\n";
+	infostr << "\tInput size: 1 * " << FUSE_STATES << "\n";
+	infostr << "\tAction count: " << FUSE_ACTIONCOUNT << "\n";
+	infostr << "\tAverage drawdown: " << ag.GetAverageFuseDrawdown() << "\n";
+	infostr << "\tAverage iterations: " << (int)ag.GetAverageFuseIterations() << "\n";
+	infostr << "\tRandom action probability: " << ag.GetFuseEpsilon() << "\n";
+	infostr << "\n";
+	
 	
 	if (ag.phase < PHASE_REAL) {
 		dword elapsed = ts.Elapsed();
@@ -56,6 +64,11 @@ void SystemOverview::Data() {
 				av_iters = ag.GetAverageAmpIterations();
 				iters_max = AMP_PHASE_ITER_LIMIT;
 				phase_str = "Amp";
+			}
+			else if (ag.phase == PHASE_FUSE_TRAINING) {
+				av_iters = ag.GetAverageFuseIterations();
+				iters_max = FUSE_PHASE_ITER_LIMIT;
+				phase_str = "Fuse";
 			}
 			else if (ag.phase < PHASE_SIGNAL_TRAINING) {
 				av_iters = ag.GetAverageFilterIterations(ag.phase);
@@ -247,6 +260,61 @@ void AmpTabCtrl::SetAgent(Agent& agent) {
 
 
 
+
+FuseTabCtrl::FuseTabCtrl() {
+	agent = NULL;
+	
+	CtrlLayout(overview);
+	
+	Add(overview);
+	Add(overview, "Overview");
+	Add(trainingctrl);
+	Add(trainingctrl, "Training");
+	
+	WhenSet << THISBACK(Data);
+}
+
+void FuseTabCtrl::Data() {
+	if (!agent) return;
+	
+	Agent& a = *agent;
+	int tab = Get();
+	
+	if (tab == 0) {
+		overview.bestresult.SetLabel(DblStr(!a.fuse.result_equity.IsEmpty() ? a.fuse.result_equity.Top() : 0.0));
+		overview.iters.SetLabel(IntStr(a.fuse.iter));
+		overview.epsilon.SetLabel(DblStr(a.fuse.dqn.GetEpsilon()));
+		overview.expcount.SetLabel(IntStr(a.fuse.dqn.GetExperienceCount()));
+	}
+	else if (tab == 1) {
+		trainingctrl.Data();
+	}
+}
+
+void FuseTabCtrl::SetAgent(Agent& agent) {
+	this->agent = &agent;
+	
+	trainingctrl.SetAgent(agent, PHASE_FUSE_TRAINING);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 FilterTabCtrl::FilterTabCtrl() {
 	agent = NULL;
 	
@@ -305,6 +373,7 @@ ManagerCtrl::ManagerCtrl() {
 	mainview.Add(system_tabs.SizePos());
 	mainview.Add(signal_tabs.SizePos());
 	mainview.Add(amp_tabs.SizePos());
+	mainview.Add(fuse_tabs.SizePos());
 	mainview.Add(filter_tabs.SizePos());
 	mainview.Add(export_ctrl.SizePos());
 	
@@ -319,6 +388,7 @@ ManagerCtrl::ManagerCtrl() {
 	glist.Add("Filter 3");
 	glist.Add("Signal");
 	glist.Add("Amp");
+	glist.Add("Fuse");
 	glist.Add("Realtime");
 	glist <<= THISBACK(SetView);
 	
@@ -338,6 +408,7 @@ void ManagerCtrl::SetView() {
 	signal_tabs.Hide();
 	system_tabs.Hide();
 	amp_tabs.Hide();
+	fuse_tabs.Hide();
 	filter_tabs.Hide();
 	export_ctrl.Hide();
 	
@@ -373,6 +444,13 @@ void ManagerCtrl::SetView() {
 		amp_tabs.Show();
 	}
 	else if (view == 6) {
+		int agent_id = alist.GetCursor();
+		int group_id = agent_id / SYM_COUNT;
+		agent_id = agent_id % SYM_COUNT;
+		fuse_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
+		fuse_tabs.Show();
+	}
+	else if (view == 7) {
 		alist.SetCount(0);
 		export_ctrl.Show();
 	}
@@ -387,7 +465,7 @@ void ManagerCtrl::Data() {
 	if (view == 0) {
 		system_tabs.Data();
 	}
-	else if (view >= 1 && view <= 5) {
+	else if (view >= 1 && view <= 6) {
 		int acount = 0;
 		for(int i = 0; i < ag.groups.GetCount(); i++)
 		for(int j = 0; j < ag.groups[i].agents.GetCount(); j++) {
@@ -405,9 +483,10 @@ void ManagerCtrl::Data() {
 		
 		if      (view == 4) signal_tabs.Data();
 		else if (view == 5)	amp_tabs.Data();
+		else if (view == 6)	fuse_tabs.Data();
 		else				filter_tabs.Data();
 	}
-	else if (view == 6) {
+	else if (view == 7) {
 		export_ctrl.Data();
 	}
 	

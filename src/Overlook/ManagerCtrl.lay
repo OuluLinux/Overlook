@@ -34,6 +34,17 @@ LAYOUT(AmpOverview, 628, 56)
 	ITEM(Label, epsilon, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, 224).VCenterPosZ(20, 14))
 END_LAYOUT
 
+LAYOUT(FuseOverview, 628, 56)
+	ITEM(Label, dv___0, SetLabel(t_("Last result:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(136, -242).VCenterPosZ(19, -14))
+	ITEM(Label, bestresult, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, -88).VCenterPosZ(20, -14))
+	ITEM(Label, dv___2, SetLabel(t_("DQN experience count:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(136, -242).VCenterPosZ(19, 14))
+	ITEM(Label, dv___3, SetLabel(t_("DQN total random prob:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(136, 70).VCenterPosZ(19, 14))
+	ITEM(Label, dv___4, SetLabel(t_("Iterations:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(136, 70).VCenterPosZ(19, -14))
+	ITEM(Label, iters, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, 224).VCenterPosZ(20, -14))
+	ITEM(Label, expcount, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, -88).VCenterPosZ(20, 14))
+	ITEM(Label, epsilon, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, 224).VCenterPosZ(20, 14))
+END_LAYOUT
+
 LAYOUT(FilterOverview, 628, 56)
 	ITEM(Label, dv___0, SetLabel(t_("Last result:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(136, -242).VCenterPosZ(19, -14))
 	ITEM(Label, bestresult, SetAlign(ALIGN_CENTER).SetInk(Color(28, 85, 0)).SetFrame(ThinInsetFrame()).HCenterPosZ(164, -88).VCenterPosZ(20, -14))

@@ -154,6 +154,7 @@ void SnapshotDraw::Paint(Draw& w) {
 		row++;
 	}
 	
+	
 	ASSERT(row == rows);
 	
 	
@@ -188,8 +189,8 @@ void ResultGraph::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	Agent& agent = *this->agent;
-	const Vector<double>& equity_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_equity : (type == PHASE_AMP_TRAINING ? agent.amp.result_equity : agent.filter[type].result_equity);
-	const Vector<double>& drawdown_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_drawdown : (type == PHASE_AMP_TRAINING ? agent.amp.result_drawdown : agent.filter[type].result_drawdown);
+	const Vector<double>& equity_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_equity : (type == PHASE_AMP_TRAINING ? agent.amp.result_equity : (type == PHASE_FUSE_TRAINING ? agent.fuse.result_equity : agent.filter[type].result_equity));
+	const Vector<double>& drawdown_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_drawdown : (type == PHASE_AMP_TRAINING ? agent.amp.result_drawdown :(type == PHASE_FUSE_TRAINING ? agent.fuse.result_drawdown : agent.filter[type].result_drawdown));
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
@@ -318,7 +319,7 @@ void EquityGraph::Paint(Draw& w) {
 	double last = 0.0;
 	double peak = 0.0;
 	
-	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : (type == PHASE_AMP_TRAINING ?  agent->amp.equity : agent->filter[type].equity);
+	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : (type == PHASE_AMP_TRAINING ?  agent->amp.equity : (type == PHASE_FUSE_TRAINING ? agent->fuse.equity : agent->filter[type].equity));
 	int count = data.GetCount();
 	if (!count) return;
 	
@@ -398,7 +399,7 @@ void RewardGraph::Paint(Draw& d) {
 		double last = 0.0;
 		double peak = 0.0;
 		
-		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : (type == PHASE_AMP_TRAINING ? agent->amp.x : agent->filter[type].x)
+		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : (type == PHASE_AMP_TRAINING ? agent->amp.x : (type == PHASE_FUSE_TRAINING ? agent->fuse.x : agent->filter[type].x))
 		int reward_count = SRC(reward_count);
 		const Vector<double>& data = SRC(rewards);
 		int experience_add_every = SRC(dqn.GetExperienceAddEvery());
@@ -523,13 +524,16 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	else if (type == PHASE_AMP_TRAINING) {
 		timescroll.SetAgent(agent.amp.dqn);
 	}
+	else if (type == PHASE_FUSE_TRAINING) {
+		timescroll.SetAgent(agent.fuse.dqn);
+	}
 	else {
 		ASSERT(type >= 0 && type < PHASE_SIGNAL_TRAINING);
 		timescroll.SetAgent(agent.filter[type].dqn);
 	}
 	
 	hsplit.Clear();
-	if (type == PHASE_AMP_TRAINING) {
+	if (type == PHASE_AMP_TRAINING || type == PHASE_FUSE_TRAINING) {
 		hsplit << draw << trade << timescroll;
 		hsplit.SetPos(2000, 0);
 		hsplit.SetPos(8000, 1);
@@ -545,7 +549,7 @@ void TrainingCtrl::Data() {
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	// list
-	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : (type == PHASE_AMP_TRAINING ? agent->amp.cursor : agent->filter[type].cursor);
+	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : (type == PHASE_AMP_TRAINING ? agent->amp.cursor : (type == PHASE_FUSE_TRAINING ? agent->fuse.cursor : agent->filter[type].cursor));
 	draw.SetSnap(cursor);
 	draw.Refresh();
 	timescroll.Refresh();
@@ -554,8 +558,8 @@ void TrainingCtrl::Data() {
 	stats.Refresh();
 	result.Refresh();
 	
-	if (type == PHASE_AMP_TRAINING) {
-		FixedSimBroker& b = agent->amp.broker;
+	if (type == PHASE_AMP_TRAINING || type == PHASE_FUSE_TRAINING) {
+		FixedSimBroker& b = type == PHASE_AMP_TRAINING ? agent->amp.broker : agent->fuse.broker;
 		MetaTrader& mt = GetMetaTrader();
 		
 		int j = 0;

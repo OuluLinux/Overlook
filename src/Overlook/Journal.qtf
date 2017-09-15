@@ -3287,4 +3287,21 @@ and mysterious voice: [/ during your lifetime, there`'s nothing
 more valuable than breaking the yellow illusion...]&]
 [s0; [/ ...]&]
 [s0; What a fucking fat`-finger I was at this week.&]
+[s0; &]
+[s3; 15.9.2017&]
+[s0; I finally got the whole stack up and running in realtime today. 
+The performance was positive, but there was some faults. I noticed 
+again the lack of `"fuse`" part. I really don`'t now better naming 
+for that. The pre`-filtering of time ranges doesn`'t really fix 
+that at all, even though that was derived from the previous `"fuse`" 
+effort.&]
+[s0; It`'s difficult to get that fuse`-part right. It can`'t have 
+the same reward function as the signal or the amp. My current 
+suggestion is to follow a drawdown of short changes during the 
+action. The reward could be the change of the drawdown, because 
+that shows the accumulation of losses in relation to gains, which 
+is what we want to prevent. It must also be sensitive, so pre`-determined 
+timesteps can`'t be used. Instead of timesteps, ranges of the 
+drawdown can be used. When the drawdown indicator breaks the 
+channel range to up or down, then the action ends.&]
 [s0; ]]

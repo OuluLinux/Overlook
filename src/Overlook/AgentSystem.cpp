@@ -10,40 +10,17 @@ bool reset_filters;
 AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-	/*
-	allowed_symbols.Add("AUDCAD"); // --
-	allowed_symbols.Add("AUDJPY"); // --
-	allowed_symbols.Add("AUDNZD"); // -- --
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("CADJPY"); // -- --
-	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("EURCAD"); // --
-	allowed_symbols.Add("EURGBP"); // --
-	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("EURNZD"); // --
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPAUD"); // --
-	allowed_symbols.Add("GBPCAD"); // --
-	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("GBPNZD"); // --
-	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDCAD"); // -- --
-	allowed_symbols.Add("NZDJPY"); // -- --
-	allowed_symbols.Add("NZDUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("USDJPY");
-	*/
 	
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("EURGBP");
-	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("EURUSD");
+	
 	allowed_symbols.Add("GBPJPY");
+	allowed_symbols.Add("EURUSD");
+	allowed_symbols.Add("EURJPY");
 	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("EURGBP");
+	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("USDJPY");
+	
 	
 	ASSERT(allowed_symbols.GetCount() == SYM_COUNT);
 	
@@ -291,9 +268,7 @@ void AgentSystem::TrainAgents(int phase) {
 		LoopAgentSignals(phase);
 	SetAgentsTraining(true);
 	
-	
-	TimeStop ts;
-	int64 total_elapsed = 0;
+	int prev_av_iters = GetAverageIterations(phase);
 	for (int64 iter = 0; running; iter++) {
 		
 		if (iter % 30 == 0) {
@@ -301,19 +276,17 @@ void AgentSystem::TrainAgents(int phase) {
 			RefreshAgentEpsilon(phase);
 			RefreshLearningRate(phase);
 			
-			total_elapsed += ts.Elapsed();
-			ts.Reset();
-			iter = 0;
-			if (total_elapsed > 15*60*1000) {
+			int av_iters = GetAverageIterations(phase);
+			if (av_iters - prev_av_iters >= 20000) {
 				StoreThis();
 				break; // call TrainAgents again to RefreshSnapshots safely
 			}
 			
 			// Change to next phase eventually
-			if ((phase == PHASE_SIGNAL_TRAINING && GetAverageSignalIterations() >= SIGNAL_PHASE_ITER_LIMIT) ||
-				(phase == PHASE_AMP_TRAINING    && GetAverageAmpIterations()    >= AMP_PHASE_ITER_LIMIT)    ||
-				(phase == PHASE_FUSE_TRAINING   && GetAverageFuseIterations()    >= FUSE_PHASE_ITER_LIMIT)    ||
-				(phase <  PHASE_SIGNAL_TRAINING && GetAverageFilterIterations(phase) >= FILTER_PHASE_ITER_LIMIT)) {
+			if ((phase == PHASE_SIGNAL_TRAINING && av_iters >= SIGNAL_PHASE_ITER_LIMIT) ||
+				(phase == PHASE_AMP_TRAINING    && av_iters >= AMP_PHASE_ITER_LIMIT)    ||
+				(phase == PHASE_FUSE_TRAINING   && av_iters >= FUSE_PHASE_ITER_LIMIT)   ||
+				(phase <  PHASE_SIGNAL_TRAINING && av_iters >= FILTER_PHASE_ITER_LIMIT)) {
 				this->phase++;
 				StoreThis();
 				break;
@@ -913,6 +886,15 @@ double AgentSystem::GetAverageFilterIterations(int level) {
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 		s += groups[i].agents[j].filter[level].iter;
 	return s / TRAINEE_COUNT;
+}
+
+double AgentSystem::GetAverageIterations(int phase) {
+	switch (phase) {
+		case PHASE_SIGNAL_TRAINING:		return GetAverageSignalIterations(); break;
+		case PHASE_AMP_TRAINING:		return GetAverageAmpIterations(); break;
+		case PHASE_FUSE_TRAINING:		return GetAverageFuseIterations(); break;
+		default:						return GetAverageFilterIterations(phase);
+	}
 }
 
 void AgentSystem::RefreshAgentEpsilon(int phase) {

@@ -192,9 +192,11 @@ public:
 	AgentSignal sig;
 	AgentAmp amp;
 	AgentFuse fuse;
+	bool group_active_lower[3];
 	int sym_id = -1;
 	int sym = -1;
 	int group_id = -1;
+	int group_step = 0;
 	
 	
 	// Temporary
@@ -218,6 +220,7 @@ public:
 	double GetLastDrawdown(int phase) const;
 	double GetLastResult(int phase) const;
 	int64 GetIter(int phase) const;
+	void RefreshGroupSettings();
 };
 
 

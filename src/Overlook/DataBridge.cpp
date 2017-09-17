@@ -267,7 +267,7 @@ void DataBridge::RefreshFromHistory() {
 	
 	bool old_filetype = false;
 	
-	if (Config::use_internet_m1_data) {
+	if (Config::use_internet_m1_data && mt_period == 1) {
 		System& sys = GetSystem();
 		String symbol = sys.GetSymbol(GetSymbol());
 		

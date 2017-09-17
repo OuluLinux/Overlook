@@ -4,8 +4,8 @@
 namespace Overlook {
 
 #define FMLEVEL						0.6
-#define SYM_COUNT					10
-#define GROUP_COUNT					4
+#define SYM_COUNT					8
+#define GROUP_COUNT					8
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)
 #define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
@@ -285,6 +285,7 @@ public:
 	double GetAverageFuseIterations();
 	double GetAverageFilterDrawdown(int level);
 	double GetAverageFilterIterations(int level);
+	double GetAverageIterations(int phase);
 	double GetSignalEpsilon() const			{return signal_epsilon;}
 	double GetAmpEpsilon() const			{return amp_epsilon;}
 	double GetFuseEpsilon() const			{return fuse_epsilon;}

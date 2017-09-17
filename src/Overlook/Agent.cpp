@@ -69,19 +69,15 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 			if (signal == 0) {
 				reward = 0.0;
 			} else {
-				// With group 0, activate always higher part
-				// With group 1, activate first lower part
-				// With group 2, activate first higher part and then lower part
-				bool active_higher_bit = !(agent->group_id & (1 << level));
-				double reward_change =
-					active_higher_bit ?
+				// Give reward for higher or lower than average.
+				bool active_lower = agent->group_active_lower[level];
+				reward = !active_lower ?
 						(change - change_av.mean) * +1000.0 :
 						(change - change_av.mean) * -1000.0;
-				reward = reward_change;
-				if (reward_change >= 0)
-					pos_reward_sum += reward_change;
+				if (reward >= 0)
+					pos_reward_sum += reward;
 				else
-					neg_reward_sum -= reward_change;
+					neg_reward_sum -= reward;
 				all_reward_sum += reward;
 			}
 		}
@@ -98,7 +94,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 
 void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	ASSERT(level >= 0 && level < FILTER_COUNT);
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	
 	
 	if (lower_output_signal == 0) {
@@ -149,7 +145,7 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 			sig_mul = 0;
 		}
 		
-		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + group_id + (FILTER_COUNT-1-level));
+		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + group_step + (FILTER_COUNT-1-level));
 		signal = sig_mul;
 		
 		// Important: only 0-signal can have a random timestep. +/- signal requires alignment.
@@ -264,13 +260,15 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	timestep_actual--;
 	lower_output_signal = cur_snap.GetFilterOutput(agent->group_id, FILTER_COUNT-1, agent->sym_id);
 	if (timestep_actual <= 0 || lower_output_signal == 0) {
-		broker.RefreshOrders(cur_snap);
-		double equity = broker.AccountEquity();
-		int timesteps = cursor - prev_equity_cursor;
-		double reward = (equity - prev_equity) / timesteps;
-		Backward(reward);
-		if (broker.equity < 0.25 * broker.begin_equity)
-			broker.Reset();
+		if (!skip_learn) {
+			broker.RefreshOrders(cur_snap);
+			double equity = broker.AccountEquity();
+			int timesteps = cursor - prev_equity_cursor;
+			double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
+			Backward(reward);
+			if (broker.equity < 0.25 * broker.begin_equity)
+				broker.Reset();
+		}
 		prev_equity = broker.AccountEquity();
 		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
@@ -281,7 +279,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	int prev_signal = signal;
 	
 	
@@ -325,12 +323,12 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_id);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step);
 		}
 		else {
 			signal = -1;
 			action -= SIGNAL_POS_FWDSTEPS;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_id);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step);
 		}
 	}
 	
@@ -474,13 +472,15 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 	lower_output_signal = cur_snap.GetSignalOutput(agent->group_id, agent->sym_id);
 	if (timestep_actual <= 0 || lower_output_signal != prev_lower_output_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
-		broker.RefreshOrders(cur_snap);
-		double equity = broker.AccountEquity();
-		int timesteps = cursor - prev_equity_cursor;
-		double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
-		Backward(reward);
-		if (equity < 0.25 * broker.begin_equity)
-			broker.Reset();
+		if (!skip_learn) {
+			broker.RefreshOrders(cur_snap);
+			double equity = broker.AccountEquity();
+			int timesteps = cursor - prev_equity_cursor;
+			double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
+			Backward(reward);
+			if (equity < 0.25 * broker.begin_equity)
+				broker.Reset();
+		}
 		prev_equity = broker.AccountEquity();
 		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
@@ -492,7 +492,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	int prev_signal = signal;
 	
 	if (lower_output_signal == 0) {
@@ -552,7 +552,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 		
 		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
-		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_id);
+		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_step);
 		
 		signal = lower_output_signal * maxscale;
 	}
@@ -915,7 +915,7 @@ void Agent::Init() {
 	group->sys->SetFixedBroker(sym_id,			fuse.test_broker);
 	
 	RefreshSnapEquities();
-	
+	RefreshGroupSettings();
 	ResetEpochAll();
 }
 
@@ -1005,6 +1005,67 @@ void Agent::Serialize(Stream& s) {
 	for(int i = 0; i < FILTER_COUNT; i++)
 		s % filter[i];
 	s % sig % amp % fuse % sym_id % sym % group_id;
+}
+
+void Agent::RefreshGroupSettings() {
+	ASSERT(group_id != -1);
+	// Lower group id has higher priority.
+	// Filter splits the time range to half. The higher priority takes to more volatile half.
+	// E.g. At group 0 & level 2: time range is 6 hours of 24 hours.
+	//      It takes the higher than average part in every level (and not lower, thus false).
+	// E.g. At group 3 & level 1: time range is 12 hours of 24 hours.
+	//      It takes the better 12 hours at first split and worse 6 hours in the second split.
+	//		It uses one step slower timesteps, because the worse part has less volatility.
+	switch (group_id) {
+		case 0:
+			group_step = 0;
+			group_active_lower[0] = false;
+			group_active_lower[1] = false;
+			group_active_lower[2] = false;
+			break;
+		case 1:
+			group_step = 0;
+			group_active_lower[0] = false;
+			group_active_lower[1] = false;
+			group_active_lower[2] = true;
+			break;
+		case 2:
+			group_step = 1;
+			group_active_lower[0] = false;
+			group_active_lower[1] = true;
+			group_active_lower[2] = false;
+			break;
+		case 3:
+			group_step = 1;
+			group_active_lower[0] = false;
+			group_active_lower[1] = true;
+			group_active_lower[2] = true;
+			break;
+		case 4:
+			group_step = 2;
+			group_active_lower[0] = true;
+			group_active_lower[1] = false;
+			group_active_lower[2] = false;
+			break;
+		case 5:
+			group_step = 2;
+			group_active_lower[0] = true;
+			group_active_lower[1] = false;
+			group_active_lower[2] = true;
+			break;
+		case 6:
+			group_step = 3;
+			group_active_lower[0] = true;
+			group_active_lower[1] = true;
+			group_active_lower[2] = false;
+			break;
+		case 7:
+			group_step = 3;
+			group_active_lower[0] = true;
+			group_active_lower[1] = true;
+			group_active_lower[2] = true;
+			break;
+	}
 }
 
 }

@@ -706,8 +706,88 @@ void DataGraph::Paint(Draw& w) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+SignalGraph::SignalGraph(ExportCtrl* dc) : dc(dc) {
+	
+}
+
+void SignalGraph::Paint(Draw& w) {
+	Size sz(GetSize());
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	AgentSystem& sys = GetSystem().GetAgentSystem();
+	double ydiv = ((double)sz.cy) / ((double)(SYM_COUNT));
+	
+	int snap_end = sys.snaps.GetCount();
+	int snap_begin = Upp::max(0, snap_end - 5 * 24 * 60);
+	
+	for (int k = snap_begin; k < snap_end; k++) {
+		Snapshot& snap1 = sys.snaps[k];
+		int x1 = snap1.GetWeekSensor() * sz.cx;
+		Snapshot& snap2 = sys.snaps[k < snap_end-1 ? k+1 : snap_begin];
+		int x2 = snap2.GetWeekSensor() * sz.cx;
+		if (x2 < x1) Swap(x1, x2);
+		int w = x2 - x1;
+		
+		for(int j = 0; j < SYM_COUNT; j++) {
+			int y1 = (j + 0) * ydiv;
+			int y2 = (j + 1) * ydiv;
+			int h = y2 - y1;
+			
+			Color clr;
+			if (mode == MODE_FILTER) {
+				int active_group = 0;
+				for(int i = 0; i < GROUP_COUNT; i++) {
+					if (snap1.GetFilterOutput(i, FILTER_COUNT-1, j))
+						break;
+					active_group++;
+				}
+				clr = GrayColor(active_group * 255 / GROUP_COUNT);
+			} else {
+				int active_group = 0, signal = 0;
+				for(int i = 0; i < GROUP_COUNT; i++) {
+					signal = snap1.GetSignalOutput(i, j);
+					if (signal)
+						break;
+					active_group++;
+				}
+				int gray = active_group * 255 / GROUP_COUNT;
+				if (signal >= 0)
+					clr = Color(gray, gray, 255);
+				else
+					clr = Color(255, gray, gray);
+			}
+			id.DrawRect(x1, y1, w, h, clr);
+		}
+	}
+	
+	Snapshot& snap1 = sys.snaps.Top();
+	int x = snap1.GetWeekSensor() * sz.cx;
+	id.DrawLine(x,   0,   x, sz.cy, 1, White());
+	id.DrawLine(x+1, 0, x+1, sz.cy, 1, Black());
+	
+	id.DrawText(2, 2, "Click this", Monospace(8), White());
+	id.DrawText(3, 3, "Click this", Monospace(8), Black());
+	
+	w.DrawImage(0, 0, id);
+}
+
+
 ExportCtrl::ExportCtrl() :
-	graph(this)
+	graph(this),
+	siggraph(this)
 {
 	last_pos = 0;
 	
@@ -717,7 +797,8 @@ ExportCtrl::ExportCtrl() :
 	Add(graph.HSizePos().TopPos(0,120));
 	Add(timeslider.TopPos(120,30).LeftPos(0, 200-2));
 	Add(data.TopPos(120,30).HSizePos(200));
-	Add(hsplit.VSizePos(150).HSizePos());
+	Add(hsplit.VSizePos(150, 120).HSizePos());
+	Add(siggraph.HSizePos().BottomPos(0,120));
 	
 	hsplit.Horz();
 	hsplit << siglist << trade;

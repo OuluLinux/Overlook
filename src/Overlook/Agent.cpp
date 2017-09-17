@@ -243,8 +243,11 @@ void AgentSignal::ResetEpoch() {
 	skip_learn = true;
 	
 	cursor_sigbegin = 0;
+	
+	#ifdef flagHAVE_SIGSENS
 	for(int i = 0; i < SIGSENS_COUNT; i++)
 		epoch_av[i].Clear();
+	#endif
 	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
@@ -365,6 +368,7 @@ void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 		prev_signals[1] = timestep_sensor;
 	}
 	
+	#ifdef flagHAVE_SIGSENS
 	if (signal == 0 || cursor == cursor_sigbegin) {
 		for(int i = 0; i < SIGSENS_COUNT*2; i++)
 			prev_signals[2 + i] = 1.0;
@@ -385,7 +389,7 @@ void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 			}
 		}
 	}
-	
+	#endif
 	
 	for(int i = 0; i < SIGNAL_SENSORS; i++)
 		cur_snap.SetSignalSensor(group_id, sym_id, i, prev_signals[i]);
@@ -455,8 +459,11 @@ void AgentAmp::ResetEpoch() {
 	skip_learn = true;
 	
 	cursor_sigbegin = 0;
+	
+	#ifdef flagHAVE_SIGSENS
 	for(int i = 0; i < SIGSENS_COUNT; i++)
 		epoch_av[i].Clear();
+	#endif
 	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
@@ -584,6 +591,7 @@ void AgentAmp::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	if (timestep_actual < 0) timestep_actual = 0;
 	prev_signals[2] = 0.75 - 0.75 * timestep_actual / timestep_total;
 	
+	#ifdef flagHAVE_SIGSENS
 	if (signal == 0 || cursor == cursor_sigbegin) {
 		for(int i = 0; i < SIGSENS_COUNT*2; i++)
 			prev_signals[3 + i] = 1.0;
@@ -604,7 +612,7 @@ void AgentAmp::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 			}
 		}
 	}
-	
+	#endif
 	
 	for(int i = 0; i < AMP_SENSORS; i++)
 		cur_snap.SetAmpSensor(group_id, sym_id, i, prev_signals[i]);
@@ -678,8 +686,10 @@ void AgentFuse::ResetEpoch() {
 	dd = 1.0;
 	begin_dd = 1.0;
 	
+	#ifdef flagHAVE_SIGSENS
 	for(int i = 0; i < SIGSENS_COUNT; i++)
 		epoch_av[i].Clear();
+	#endif
 	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;

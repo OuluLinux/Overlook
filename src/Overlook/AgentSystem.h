@@ -9,11 +9,16 @@ namespace Overlook {
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)
 #define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
-#define SIGSENS_COUNT				3
-#define SIGSENS_PERIODS				{5, 15, 60}
 #define RANDOM_TIMESTEPS			8
 #define REWARD_AV_PERIOD			400
 #define BASE_FWDSTEP_BEGIN			3
+
+#ifdef flagHAVE_SIGSENS
+	#define SIGSENS_COUNT			3
+	#define SIGSENS_PERIODS			{5, 15, 60}
+#else
+	#define SIGSENS_COUNT			0
+#endif
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)

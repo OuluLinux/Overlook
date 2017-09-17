@@ -65,8 +65,10 @@ struct AgentSignal {
 	
 	
 	// Temporary
-	SingleFixedSimBroker broker;
+	#ifdef flagHAVE_SIGSENS
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
+	#endif
+	SingleFixedSimBroker broker;
 	Vector<double> equity;
 	double prev_equity = 0;
 	double reward_sum = 0;
@@ -106,8 +108,10 @@ struct AgentAmp {
 	
 	
 	// Temporary
-	FixedSimBroker broker;
+	#ifdef flagHAVE_SIGSENS
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
+	#endif
+	FixedSimBroker broker;
 	Vector<double> equity;
 	double prev_signals[AMP_SENSORS];
 	double prev_equity = 0;
@@ -149,8 +153,10 @@ struct AgentFuse {
 	
 	
 	// Temporary
-	FixedSimBroker test_broker, broker;
+	#ifdef flagHAVE_SIGSENS
 	OnlineAverage1 epoch_av[SIGSENS_COUNT];
+	#endif
+	FixedSimBroker test_broker, broker;
 	Vector<double> equity;
 	double prev_equity = 0;
 	double reward_sum = 0;

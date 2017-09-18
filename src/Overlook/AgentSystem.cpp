@@ -269,6 +269,8 @@ void AgentSystem::TrainAgents(int phase) {
 	SetAgentsTraining(true);
 	
 	int prev_av_iters = GetAverageIterations(phase);
+	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 	for (int64 iter = 0; running; iter++) {
 		
 		if (iter % 30 == 0) {
@@ -293,8 +295,6 @@ void AgentSystem::TrainAgents(int phase) {
 			}
 		}
 		
-		CoWork co;
-		co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) co & [=] {
 			Agent& agent = groups[i].agents[j];
 	        
@@ -330,8 +330,9 @@ void AgentSystem::LoopAgentSignals(int phase) {
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 		groups[i].agents[j].ResetEpoch(phase);
 	
+	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 	for(int i = 1; i < snaps.GetCount() && running; i++) {
-		CoWork co;
 		for(int j = 0; j < GROUP_COUNT; j++) for(int k = 0; k < SYM_COUNT; k++) co & [=] {
 	        groups[j].agents[k].Main(phase, snaps);
 	    };
@@ -349,6 +350,7 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 	SetAgentsTraining(false);
 	
 	CoWork co;
+	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 	
 	if (from_begin) {
 		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)

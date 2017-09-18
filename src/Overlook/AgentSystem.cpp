@@ -510,7 +510,10 @@ int AgentSystem::FindActiveGroup(int sym_id) {
 }
 
 void AgentSystem::LoadThis() {
-	LoadFromFile(*this,	ConfigFile("agentgroup.bin"));
+	if (FileExists(ConfigFile("agentgroup.bin.bak")))
+		LoadFromFile(*this,	ConfigFile("agentgroup.bin.bak"));
+	else
+		LoadFromFile(*this,	ConfigFile("agentgroup.bin"));
 }
 
 void AgentSystem::StoreThis() {
@@ -939,8 +942,8 @@ void AgentSystem::RefreshAgentEpsilon(int phase) {
 }
 
 void AgentSystem::RefreshLearningRate(int phase) {
-	double max_lrate = 0.005;
-	double min_lrate = 0.00005;
+	double max_lrate = MAX_LEARNING_RATE;
+	double min_lrate = MIN_LEARNING_RATE;
 	double range = max_lrate - min_lrate;
 	
 	if (phase == PHASE_SIGNAL_TRAINING) {

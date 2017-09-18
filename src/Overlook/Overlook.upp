@@ -65,6 +65,6 @@ file
 	DQN.h;
 
 mainconfig
-	"Normal" = "GUI MT",
-	"Have some additional sensors" = "GUI MT HAVE_SIGSENS";
+	"Working" = "GUI MT HAVE_SIGSENS",
+	"Lightweight" = "GUI MT";
 

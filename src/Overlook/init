@@ -1,9 +1,11 @@
-#ifndef _InstanceEditor_icpp_init_stub
-#define _InstanceEditor_icpp_init_stub
+#ifndef _Overlook_icpp_init_stub
+#define _Overlook_icpp_init_stub
 #include "CtrlLib/init"
+#include "plugin/libmt/init"
+#include "Painter/init"
 #include "CoreUtils/init"
-#include "CtrlUtils/init"
-#include "DataCtrl/init"
-#include "RefCore/init"
-#include "plugin/tidy/init"
+#include "plugin/zip/init"
+#define BLITZ_INDEX__ Fb7e03b17f38d89d4ed73d6cbf5e7c2cb
+#include "Ovelook.icpp"
+#undef BLITZ_INDEX__
 #endif

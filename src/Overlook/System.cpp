@@ -108,17 +108,17 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	// TODO: some algorithm to calculate begins and ends, and persistently using it again
 	Time begin(2017,1,1);
-	if (period == 1)			begin = Time(2016,9,1);
-	else if (period == 5)		begin = Time(2016,9,1);
-	else if (period == 15)		begin = Time(2016,9,1);
-	else if (period == 30)		begin = Time(2015,11,9);
-	else if (period == 60)		begin = Time(2015,5,13);
+	if (period == 1)			begin = Time(2016,9,5);
+	else if (period == 5)		begin = Time(2016,9,5);
+	else if (period == 15)		begin = Time(2016,9,5);
+	else if (period == 30)		begin = Time(2015,11,2);
+	else if (period == 60)		begin = Time(2015,5,4);
 	else if (period == 240)		begin = Time(2009,12,21);
 	else if (period == 480)		begin = Time(2009,12,21);
 	else if (period == 720)		begin = Time(2009,12,21);
-	else if (period == 1440)	begin = Time(2000,5,3);
-	else if (period == 10080)	begin = Time(1996,6,23);
-	else if (period == 43200)	begin = Time(1995,1,1);
+	else if (period == 1440)	begin = Time(2000,5,1);
+	else if (period == 10080)	begin = Time(1996,6,24);
+	else if (period == 43200)	begin = Time(1995,1,2);
 	else Panic("Invalid period: " + IntStr(period));
 	this->begin.Add(begin);
 	this->begin_ts.Add((int)(begin.Get() - Time(1970,1,1).Get()));
@@ -130,11 +130,16 @@ void System::AddSymbol(String sym) {
 }
 
 Time System::GetTimeTf(int tf, int pos) const {
-	return begin[tf] + periods[tf] * pos * base_period;
+	int64 seconds = periods[tf] * pos * base_period;
+	int64 weeks = seconds / (5*24*60*60);
+	seconds += weeks * 2*24*60*60; // add weekends
+	return begin[tf] + seconds;
 }
 
 int System::GetCountTf(int tf_id) const {
 	int64 timediff = end.Get() - begin[tf_id].Get();
+	int64 weeks = timediff / (7*24*60*60);
+	timediff -= weeks * 2*24*60*60; // subtract weekends
 	int div = base_period * periods[tf_id];
 	int count = (int)(timediff / div);
 	if (timediff % div != 0) count++;
@@ -146,7 +151,11 @@ int System::GetShiftTf(int src_tf, int dst_tf, int shift) {
 	int64 src_period = periods[src_tf];
 	int64 dst_period = periods[dst_tf];
 	int64 timediff = shift * src_period * base_period;
+	int64 weeks = timediff / (5*24*60*60); // shift has no weekends
+	timediff += weeks * 2*24*60*60; // add weekends
 	timediff -= begin_ts[dst_tf] - begin_ts[src_tf];
+	weeks = timediff / (7*24*60*60);
+	timediff -= weeks * 2*24*60*60; // subtract weekends
 	int64 dst_shift = timediff / base_period / dst_period;
 	
 	#if 0
@@ -167,11 +176,15 @@ int System::GetShiftTf(int src_tf, int dst_tf, int shift) {
 
 int System::GetShiftFromTimeTf(int timestamp, int tf) {
 	int64 timediff = timestamp - begin_ts[tf];
+	int64 weeks = timediff / (7*24*60*60);
+	timediff -= weeks * 2*24*60*60; // subtract weekends
 	return (int)(timediff / periods[tf] / base_period);
 }
 
 int System::GetShiftFromTimeTf(const Time& t, int tf) {
 	int64 timediff = t.Get() - begin[tf].Get();
+	int64 weeks = timediff / (7*24*60*60);
+	timediff -= weeks * 2*24*60*60; // subtract weekends
 	return (int)(timediff / periods[tf] / base_period);
 }
 

@@ -1,7 +1,5 @@
 description "The main time-series predictor application, with brokerage connection.\377B220,205,0";
 
-flags(LINUX|BSD) FORCE_COMPAT_AMP;
-
 uses
 	CtrlLib,
 	plugin/libmt,

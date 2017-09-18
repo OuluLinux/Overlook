@@ -324,13 +324,6 @@ void DataBridge::RefreshFromHistory() {
 	if (!src.IsOpen() || !src.GetSize())
 		return;
 	
-	
-	// Init destination time vector settings
-	int begin = bs.GetBeginTS(tf);
-	int step = bs.GetBasePeriod() * period;
-	int cur = begin;
-	bool inc_month = period == 43200 && bs.GetBasePeriod() == 60;
-	
 	// Read the history file
 	int digits;
 	src.Seek(4+64+12+4);
@@ -392,6 +385,9 @@ void DataBridge::RefreshFromHistory() {
 		}
 		
 		cursor += struct_size;
+		int shift = bs.GetShiftFromTimeTf(time, tf);
+		if (shift < 0) continue;
+		if (shift >= bars) break;
 		
 		// At first value
 		bool set_data_begin = count == 0;
@@ -400,7 +396,7 @@ void DataBridge::RefreshFromHistory() {
 		}
 		else {
 			if (join_bars) {
-				if (time < cur) {
+				if (shift < count) {
 					double prev_low = low_buf.Get(count-1);
 					if (low < prev_low) low_buf.Set(count-1, low);
 					
@@ -411,19 +407,17 @@ void DataBridge::RefreshFromHistory() {
 					continue;
 				}
 			} else {
-				if (time < cur)
+				if (shift < count)
 					continue;
 			}
 		}
 		
-		while (cur < time && count < bars) {
+		while (count < shift && count < bars) {
 			SetSafetyLimit(count);
 			open_buf.Set(count, prev_close);
 			low_buf.Set(count, prev_close);
 			high_buf.Set(count, prev_close);
 			volume_buf.Set(count, 0);
-			if (!inc_month)		cur += step;
-			else				cur = IncreaseMonthTS(cur);
 			count++;
 		}
 		
@@ -433,15 +427,13 @@ void DataBridge::RefreshFromHistory() {
 		
 		prev_close = close;
 		
-		if (count < bars && time == cur) {
+		if (count < bars && shift == count) {
 			SetSafetyLimit(count);
 			//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
 			open_buf.Set(count, open);
 			low_buf.Set(count, low);
 			high_buf.Set(count, high);
 			volume_buf.Set(count, tick_volume);
-			if (!inc_month)		cur += step;
-			else				cur = IncreaseMonthTS(cur);
 			count++;
 		}
 		
@@ -479,8 +471,6 @@ void DataBridge::RefreshFromHistory() {
 		low_buf.Set(count, open);
 		high_buf.Set(count, open);
 		volume_buf.Set(count, 0);
-		if (!inc_month)		cur += step;
-		else				cur = IncreaseMonthTS(cur);
 		count++;
 	}
 	

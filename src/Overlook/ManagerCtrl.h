@@ -11,7 +11,7 @@ class ManagerLoader : public WithLoader<TopWindow> {
 	
 public:
 	typedef ManagerLoader CLASSNAME;
-	ManagerLoader() {CloseBoxRejects(); CtrlLayout(*this); Title("Loading agent group");}
+	ManagerLoader() {Icon(OverlookImg::icon()); CloseBoxRejects(); CtrlLayout(*this); Title("Loading agent group");}
 	
 	void Progress(String status, int actual, int total) {this->status.SetLabel(status); prog.Set(actual, total); if (actual >= total) {Close(); Close();}}
 	void PostProgress(int actual, int total, String status) {PostCallback(THISBACK3(Progress, status, actual, total));}

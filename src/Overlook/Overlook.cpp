@@ -8,7 +8,8 @@ Overlook::Overlook() :
 {
 	Title("Overlook");
 	Icon(OverlookImg::icon());
-	MinimizeBox().MaximizeBox().Sizeable();
+	MinimizeBox().MaximizeBox();
+	Sizeable().Zoomable();
 	
 	AddFrame(status);
 	

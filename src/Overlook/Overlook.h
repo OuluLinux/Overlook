@@ -24,10 +24,6 @@
 
 #include "BrokerCtrl.h"
 
-#define IMAGECLASS OverlookImg
-#define IMAGEFILE <Overlook/Overlook.iml>
-#include <Draw/iml_header.h>
-
 namespace Overlook {
 
 

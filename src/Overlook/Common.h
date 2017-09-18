@@ -1,14 +1,17 @@
 #ifndef _Overlook_Common_h_
 #define _Overlook_Common_h_
 
-#include <Core/Core.h>
-#include <PlotCtrl/PlotCtrl.h>
+#include <CtrlLib/CtrlLib.h>
 #include <CoreUtils/Optimizer.h>
 
 #undef ASSERTEXC
 
 namespace Overlook {
 using namespace Upp;
+
+#define IMAGECLASS OverlookImg
+#define IMAGEFILE <Overlook/Overlook.iml>
+#include <Draw/iml_header.h>
 
 struct OnlineAverage2 : Moveable<OnlineAverage2> {
 	double mean_a, mean_b;
@@ -363,7 +366,7 @@ struct Downloader {
 			out.Close();
 		if(!http.IsSuccess()) {
 			DeleteFile(path);
-			Exclamation("Download has failed.&\1" +
+			LOG("Download has failed.&\1" +
 			            (http.IsError() ? http.GetErrorDesc()
 			                            : AsString(http.GetStatusCode()) + ' ' + http.GetReasonPhrase()));
 		}

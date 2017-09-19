@@ -126,12 +126,12 @@ void AgentSystem::InitThread() {
 	}
 	if (reset_signals) {
 		phase = Upp::min(phase, (int)PHASE_SIGNAL_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].sig.Create();
+		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].sig.DeepCreate();
 		reset_amps = true;
 	}
 	if (reset_amps) {
 		phase = Upp::min(phase, (int)PHASE_AMP_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.Create();
+		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.DeepCreate();
 		reset_fuses = true;
 	}
 	if (reset_fuses) {
@@ -1028,7 +1028,7 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 			}
 			if (min_dd >= 40.) {
 				a.sig.Create();
-				a.sig.extra_timesteps = Upp::min(6, (int)a.sig.iter / 20000);
+				a.sig.extra_timesteps = Upp::min(6, (int)a.sig.deep_iter / 20000);
 			}
 		}
 		else if (phase == PHASE_AMP_TRAINING) {
@@ -1039,7 +1039,7 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 			}
 			if (min_dd >= 40.) {
 				a.amp.Create();
-				a.amp.extra_timesteps = Upp::min(6, (int)a.amp.iter / 20000);
+				a.amp.extra_timesteps = Upp::min(6, (int)a.amp.deep_iter / 20000);
 			}
 		}
 	}

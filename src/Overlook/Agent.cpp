@@ -224,7 +224,12 @@ AgentSignal::AgentSignal() {
 }
 
 void AgentSignal::Serialize(Stream& s) {
-	s % dqn % result_equity % result_drawdown % rewards % iter % extra_timesteps;
+	s % dqn % result_equity % result_drawdown % rewards % iter % deep_iter % extra_timesteps;
+}
+
+void AgentSignal::DeepCreate() {
+	deep_iter = 0;
+	Create();
 }
 
 void AgentSignal::Create() {
@@ -409,6 +414,7 @@ void AgentSignal::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		deep_iter++;
 		
 		reward_sum += reward;
 		reward_count++;
@@ -442,7 +448,12 @@ AgentAmp::AgentAmp() {
 }
 
 void AgentAmp::Serialize(Stream& s) {
-	s % dqn % result_equity % result_drawdown % rewards % iter % extra_timesteps;
+	s % dqn % result_equity % result_drawdown % rewards % iter % deep_iter % extra_timesteps;
+}
+
+void AgentAmp::DeepCreate() {
+	deep_iter = 0;
+	Create();
 }
 
 void AgentAmp::Create() {
@@ -636,6 +647,7 @@ void AgentAmp::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		deep_iter++;
 		
 		reward_sum += reward;
 		reward_count++;

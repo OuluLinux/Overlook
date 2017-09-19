@@ -61,7 +61,7 @@ struct AgentSignal {
 	// Persistent
 	DQNAgent<SIGNAL_ACTIONCOUNT, SIGNAL_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
-	int64 iter = 0;
+	int64 iter = 0, deep_iter = 0;
 	int64 extra_timesteps = 0;
 	
 	
@@ -88,6 +88,7 @@ struct AgentSignal {
 	
 	AgentSignal();
 	void Create();
+	void DeepCreate();
 	void ResetEpoch();
 	void Main(Vector<Snapshot>& snaps);
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
@@ -105,7 +106,7 @@ struct AgentAmp {
 	// Persistent
 	DQNAgent<AMP_ACTIONCOUNT, AMP_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
-	int64 iter = 0;
+	int64 iter = 0, deep_iter = 0;
 	int64 extra_timesteps = 0;
 	
 	
@@ -135,6 +136,7 @@ struct AgentAmp {
 	
 	AgentAmp();
 	void Create();
+	void DeepCreate();
 	void ResetEpoch();
 	void Main(Vector<Snapshot>& snaps);
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);

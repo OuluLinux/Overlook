@@ -313,6 +313,7 @@ public:
 	void SetSingleFixedBroker(int sym_id, SingleFixedSimBroker& broker);
 	void SetFixedBroker(int sym_id, FixedSimBroker& broker);
 	void ReduceExperienceMemory(int phase);
+	void RefreshExtraTimesteps(int phase);
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;

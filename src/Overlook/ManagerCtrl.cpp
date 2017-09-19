@@ -176,6 +176,7 @@ void SignalTabCtrl::Data() {
 		overview.iters.SetLabel(IntStr(a.sig.iter));
 		overview.epsilon.SetLabel(DblStr(a.sig.dqn.GetEpsilon()));
 		overview.expcount.SetLabel(IntStr(a.sig.dqn.GetExperienceCount()));
+		overview.extra_timesteps.SetLabel(IntStr(a.sig.extra_timesteps));
 		
 		const Vector<Price>& askbids = GetMetaTrader().GetAskBid();
 		const Price& ab = askbids[a.sym];
@@ -230,6 +231,7 @@ void AmpTabCtrl::Data() {
 		overview.iters.SetLabel(IntStr(a.amp.iter));
 		overview.epsilon.SetLabel(DblStr(a.amp.dqn.GetEpsilon()));
 		overview.expcount.SetLabel(IntStr(a.amp.dqn.GetExperienceCount()));
+		overview.extra_timesteps.SetLabel(IntStr(a.amp.extra_timesteps));
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();

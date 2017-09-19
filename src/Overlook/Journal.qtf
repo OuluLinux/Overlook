@@ -3304,4 +3304,13 @@ is what we want to prevent. It must also be sensitive, so pre`-determined
 timesteps can`'t be used. Instead of timesteps, ranges of the 
 drawdown can be used. When the drawdown indicator breaks the 
 channel range to up or down, then the action ends.&]
+[s0; &]
+[s3; 19.9.2017&]
+[s0; The result changed much and I don`'t know what caused it. It 
+must have been some small change. It might be because of longer 
+timesteps in that previous invalid setup. I guess you should 
+increase timesteps if drawdown is too much. In that way the system 
+optimizes itself to less volatile periods. For busy times the 
+current configuration seems to work.&]
+[s0; This is just a pain in the ass to train all over again...&]
 [s0; ]]

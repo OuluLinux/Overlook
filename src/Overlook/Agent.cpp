@@ -8,6 +8,10 @@ AgentFilter::AgentFilter() {
 	
 }
 
+void AgentFilter::Serialize(Stream& s) {
+	s % dqn % result_equity % result_drawdown % rewards % iter;
+}
+
 void AgentFilter::Create() {
 	dqn.Reset();
 	iter = 0;
@@ -219,6 +223,10 @@ AgentSignal::AgentSignal() {
 	
 }
 
+void AgentSignal::Serialize(Stream& s) {
+	s % dqn % result_equity % result_drawdown % rewards % iter % extra_timesteps;
+}
+
 void AgentSignal::Create() {
 	dqn.Reset();
 	iter = 0;
@@ -326,12 +334,12 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step + extra_timesteps);
 		}
 		else {
 			signal = -1;
 			action -= SIGNAL_POS_FWDSTEPS;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step + extra_timesteps);
 		}
 	}
 	
@@ -431,6 +439,10 @@ void AgentSignal::Backward(double reward) {
 
 AgentAmp::AgentAmp() {
 	
+}
+
+void AgentAmp::Serialize(Stream& s) {
+	s % dqn % result_equity % result_drawdown % rewards % iter % extra_timesteps;
 }
 
 void AgentAmp::Create() {
@@ -559,7 +571,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 		
 		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
-		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_step);
+		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_step + extra_timesteps);
 		
 		signal = lower_output_signal * maxscale;
 	}

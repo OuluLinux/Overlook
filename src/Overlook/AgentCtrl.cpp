@@ -735,10 +735,10 @@ void SignalGraph::Paint(Draw& w) {
 	
 	for (int k = snap_begin; k < snap_end; k++) {
 		Snapshot& snap1 = sys.snaps[k];
-		int x1 = snap1.GetWeekSensor() * sz.cx;
+		int x1 = (snap1.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
 		Snapshot& snap2 = sys.snaps[k < snap_end-1 ? k+1 : snap_begin];
-		int x2 = snap2.GetWeekSensor() * sz.cx;
-		if (x2 < x1) Swap(x1, x2);
+		int x2 = (snap2.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
+		if (x2 < x1) x2 = sz.cx;
 		int w = x2 - x1;
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
@@ -774,7 +774,7 @@ void SignalGraph::Paint(Draw& w) {
 	}
 	
 	Snapshot& snap1 = sys.snaps.Top();
-	int x = snap1.GetWeekSensor() * sz.cx;
+	int x = (snap1.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
 	id.DrawLine(x,   0,   x, sz.cy, 1, White());
 	id.DrawLine(x+1, 0, x+1, sz.cy, 1, Black());
 	

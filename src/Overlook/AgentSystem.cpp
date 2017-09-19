@@ -115,25 +115,30 @@ void AgentSystem::InitThread() {
 				ag.agents[j].sym = sym_ids[ag.agents[j].sym_id];
 		}
 	}
-	if (reset_signals) {
-		phase = Upp::min(phase, (int)PHASE_SIGNAL_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].sig.Create();
-	}
-	if (reset_amps) {
-		phase = Upp::min(phase, (int)PHASE_AMP_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.Create();
-	}
-	if (reset_fuses) {
-		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].fuse.Create();
-	}
+	
 	if (reset_filters) {
 		phase = Upp::min(phase, (int)PHASE_PREFUSE1_TRAINING);
 		for(int i = 0; i < groups.GetCount(); i++)
 			for(int j = 0; j < sym_ids.GetCount(); j++)
 				for(int k = 0; k < FILTER_COUNT; k++)
 					groups[i].agents[j].filter[k].Create();
+		reset_signals = true;
 	}
+	if (reset_signals) {
+		phase = Upp::min(phase, (int)PHASE_SIGNAL_TRAINING);
+		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].sig.Create();
+		reset_amps = true;
+	}
+	if (reset_amps) {
+		phase = Upp::min(phase, (int)PHASE_AMP_TRAINING);
+		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.Create();
+		reset_fuses = true;
+	}
+	if (reset_fuses) {
+		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
+		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].fuse.Create();
+	}
+	
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
 		ag.sys = this;
@@ -260,6 +265,7 @@ void AgentSystem::TrainAgents(int phase) {
 	RefreshSnapshots();
 	RefreshSnapEquities();
 	
+	RefreshExtraTimesteps(phase);
 	RefreshAgentEpsilon(phase);
 	RefreshLearningRate(phase);
 	for(int i = 0; i < phase; i++)
@@ -1009,6 +1015,36 @@ void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 	this->free_margin_level = fmlevel;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 		groups[i].agents[j].SetFreeMarginLevel(fmlevel);
+}
+
+void AgentSystem::RefreshExtraTimesteps(int phase) {
+	
+	// Increase timesteps when drawdown is >= 50%.
+	// Drawdown typically decreases when the minimum period is longer.
+	// In less volatile times trends are weak and long and their targets are further away.
+	
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
+		Agent& a = groups[i].agents[j];
+		
+		if (phase == PHASE_SIGNAL_TRAINING) {
+			double min_dd = 100.;
+			for(int k = 0; k < a.sig.result_drawdown.GetCount(); k++) {
+				double dd = a.sig.result_drawdown[k];
+				if (dd < min_dd) min_dd = dd;
+			}
+			if (min_dd >= 50.)
+				a.sig.extra_timesteps = Upp::min(6, (int)a.sig.iter / 20000);
+		}
+		else if (phase == PHASE_AMP_TRAINING) {
+			double min_dd = 100.;
+			for(int k = 0; k < a.amp.result_drawdown.GetCount(); k++) {
+				double dd = a.amp.result_drawdown[k];
+				if (dd < min_dd) min_dd = dd;
+			}
+			if (min_dd >= 50.)
+				a.amp.extra_timesteps = Upp::min(6, (int)a.amp.iter / 20000);
+		}
+	}
 }
 
 void AgentSystem::InitBrokerValues() {

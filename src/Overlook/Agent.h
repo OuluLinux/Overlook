@@ -49,7 +49,7 @@ struct AgentFilter {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
+	void Serialize(Stream& s);
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -62,6 +62,7 @@ struct AgentSignal {
 	DQNAgent<SIGNAL_ACTIONCOUNT, SIGNAL_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
 	int64 iter = 0;
+	int64 extra_timesteps = 0;
 	
 	
 	// Temporary
@@ -92,7 +93,7 @@ struct AgentSignal {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
+	void Serialize(Stream& s);
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -105,6 +106,7 @@ struct AgentAmp {
 	DQNAgent<AMP_ACTIONCOUNT, AMP_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
 	int64 iter = 0;
+	int64 extra_timesteps = 0;
 	
 	
 	// Temporary
@@ -138,7 +140,7 @@ struct AgentAmp {
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
+	void Serialize(Stream& s);
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };

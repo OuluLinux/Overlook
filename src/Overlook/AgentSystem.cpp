@@ -909,41 +909,42 @@ double AgentSystem::GetAverageIterations(int phase) {
 }
 
 void AgentSystem::RefreshAgentEpsilon(int phase) {
-	if (phase == PHASE_SIGNAL_TRAINING) {
-		double iters = GetAverageSignalIterations();
-		int level = iters / SIGNAL_EPS_ITERS_STEP;
-		if (level <= 0)			signal_epsilon = 0.20;
-		else if (level == 1)	signal_epsilon = 0.05;
-		else if (level == 2)	signal_epsilon = 0.02;
-		else if (level >= 3)	signal_epsilon = 0.01;
-		SetSignalEpsilon(signal_epsilon);
-	}
-	else if (phase == PHASE_AMP_TRAINING) {
-		double iters = GetAverageAmpIterations();
-		int level = iters / AMP_EPS_ITERS_STEP;
-		if (level <= 0)			amp_epsilon = 0.20;
-		else if (level == 1)	amp_epsilon = 0.05;
-		else if (level == 2)	amp_epsilon = 0.02;
-		else if (level >= 3)	amp_epsilon = 0.01;
-		SetAmpEpsilon(amp_epsilon);
-	}
-	else if (phase == PHASE_FUSE_TRAINING) {
-		double iters = GetAverageFuseIterations();
-		int level = iters / FUSE_EPS_ITERS_STEP;
-		if (level <= 0)			fuse_epsilon = 0.20;
-		else if (level == 1)	fuse_epsilon = 0.05;
-		else if (level == 2)	fuse_epsilon = 0.02;
-		else if (level >= 3)	fuse_epsilon = 0.01;
-		SetFuseEpsilon(fuse_epsilon);
-	}
-	else if (phase < PHASE_SIGNAL_TRAINING) {
-		double iters = GetAverageFilterIterations(phase);
-		int level = iters / FILTER_EPS_ITERS_STEP;
-		if (level <= 0)			filter_epsilon[phase] = 0.20;
-		else if (level == 1)	filter_epsilon[phase] = 0.05;
-		else if (level == 2)	filter_epsilon[phase] = 0.02;
-		else if (level >= 3)	filter_epsilon[phase] = 0.01;
-		SetFilterEpsilon(phase, filter_epsilon[phase]);
+	for(int i = 0; i < GROUP_COUNT; i++) {
+		for(int j = 0; j < SYM_COUNT; j++) {
+			Agent& a = groups[i].agents[j];
+			if (phase == PHASE_SIGNAL_TRAINING) {
+				int level = a.sig.iter / SIGNAL_EPS_ITERS_STEP;
+				if (level <= 0)			signal_epsilon = 0.20;
+				else if (level == 1)	signal_epsilon = 0.05;
+				else if (level == 2)	signal_epsilon = 0.02;
+				else if (level >= 3)	signal_epsilon = 0.01;
+				a.sig.dqn.SetEpsilon(signal_epsilon);
+			}
+			else if (phase == PHASE_AMP_TRAINING) {
+				int level = a.amp.iter / AMP_EPS_ITERS_STEP;
+				if (level <= 0)			amp_epsilon = 0.20;
+				else if (level == 1)	amp_epsilon = 0.05;
+				else if (level == 2)	amp_epsilon = 0.02;
+				else if (level >= 3)	amp_epsilon = 0.01;
+				a.amp.dqn.SetEpsilon(amp_epsilon);
+			}
+			else if (phase == PHASE_FUSE_TRAINING) {
+				int level = a.fuse.iter / FUSE_EPS_ITERS_STEP;
+				if (level <= 0)			fuse_epsilon = 0.20;
+				else if (level == 1)	fuse_epsilon = 0.05;
+				else if (level == 2)	fuse_epsilon = 0.02;
+				else if (level >= 3)	fuse_epsilon = 0.01;
+				a.fuse.dqn.SetEpsilon(fuse_epsilon);
+			}
+			else if (phase < PHASE_SIGNAL_TRAINING) {
+				int level = a.filter[phase].iter / FILTER_EPS_ITERS_STEP;
+				if (level <= 0)			filter_epsilon[phase] = 0.20;
+				else if (level == 1)	filter_epsilon[phase] = 0.05;
+				else if (level == 2)	filter_epsilon[phase] = 0.02;
+				else if (level >= 3)	filter_epsilon[phase] = 0.01;
+				a.filter[phase].dqn.SetEpsilon(filter_epsilon[phase]);
+			}
+		}
 	}
 }
 
@@ -952,37 +953,30 @@ void AgentSystem::RefreshLearningRate(int phase) {
 	double min_lrate = MIN_LEARNING_RATE;
 	double range = max_lrate - min_lrate;
 	
-	if (phase == PHASE_SIGNAL_TRAINING) {
-		double iters = GetAverageSignalIterations();
-		double prog = iters / FILTER_PHASE_ITER_LIMIT;
-		double lrate = (1.0 - prog) * range + min_lrate;
-		for(int i = 0; i < GROUP_COUNT; i++)
-			for(int j = 0; j < SYM_COUNT; j++)
-				groups[i].agents[j].sig.dqn.SetLearningRate(lrate);
-	}
-	else if (phase == PHASE_AMP_TRAINING) {
-		double iters = GetAverageAmpIterations();
-		double prog = iters / AMP_PHASE_ITER_LIMIT;
-		double lrate = (1.0 - prog) * range + min_lrate;
-		for(int i = 0; i < GROUP_COUNT; i++)
-			for(int j = 0; j < SYM_COUNT; j++)
-				groups[i].agents[j].amp.dqn.SetLearningRate(lrate);
-	}
-	else if (phase == PHASE_FUSE_TRAINING) {
-		double iters = GetAverageFuseIterations();
-		double prog = iters / FUSE_PHASE_ITER_LIMIT;
-		double lrate = (1.0 - prog) * range + min_lrate;
-		for(int i = 0; i < GROUP_COUNT; i++)
-			for(int j = 0; j < SYM_COUNT; j++)
-				groups[i].agents[j].fuse.dqn.SetLearningRate(lrate);
-	}
-	else if (phase < PHASE_SIGNAL_TRAINING) {
-		double iters = GetAverageFilterIterations(phase);
-		double prog = iters / SIGNAL_PHASE_ITER_LIMIT;
-		double lrate = (1.0 - prog) * range + min_lrate;
-		for(int i = 0; i < GROUP_COUNT; i++)
-			for(int j = 0; j < SYM_COUNT; j++)
-				groups[i].agents[j].filter[phase].dqn.SetLearningRate(lrate);
+	for(int i = 0; i < GROUP_COUNT; i++) {
+		for(int j = 0; j < SYM_COUNT; j++) {
+			Agent& a = groups[i].agents[j];
+			if (phase == PHASE_SIGNAL_TRAINING) {
+				double prog = (double)a.sig.iter / (double)FILTER_PHASE_ITER_LIMIT;
+				double lrate = (1.0 - prog) * range + min_lrate;
+				a.sig.dqn.SetLearningRate(lrate);
+			}
+			else if (phase == PHASE_AMP_TRAINING) {
+				double prog = (double)a.amp.iter / (double)AMP_PHASE_ITER_LIMIT;
+				double lrate = (1.0 - prog) * range + min_lrate;
+				a.amp.dqn.SetLearningRate(lrate);
+			}
+			else if (phase == PHASE_FUSE_TRAINING) {
+				double prog = (double)a.fuse.iter / (double)FUSE_PHASE_ITER_LIMIT;
+				double lrate = (1.0 - prog) * range + min_lrate;
+				a.fuse.dqn.SetLearningRate(lrate);
+			}
+			else if (phase < PHASE_SIGNAL_TRAINING) {
+				double prog = (double)a.filter[phase].iter / (double)SIGNAL_PHASE_ITER_LIMIT;
+				double lrate = (1.0 - prog) * range + min_lrate;
+				a.filter[phase].dqn.SetLearningRate(lrate);
+			}
+		}
 	}
 }
 
@@ -1019,7 +1013,7 @@ void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 
 void AgentSystem::RefreshExtraTimesteps(int phase) {
 	
-	// Increase timesteps when drawdown is >= 50%.
+	// Increase timesteps when drawdown is >= 40%.
 	// Drawdown typically decreases when the minimum period is longer.
 	// In less volatile times trends are weak and long and their targets are further away.
 	
@@ -1032,8 +1026,10 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.sig.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			if (min_dd >= 50.)
+			if (min_dd >= 40.) {
+				a.sig.Create();
 				a.sig.extra_timesteps = Upp::min(6, (int)a.sig.iter / 20000);
+			}
 		}
 		else if (phase == PHASE_AMP_TRAINING) {
 			double min_dd = 100.;
@@ -1041,8 +1037,10 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.amp.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			if (min_dd >= 50.)
+			if (min_dd >= 40.) {
+				a.amp.Create();
 				a.amp.extra_timesteps = Upp::min(6, (int)a.amp.iter / 20000);
+			}
 		}
 	}
 }

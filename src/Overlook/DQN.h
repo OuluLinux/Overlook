@@ -452,6 +452,7 @@ public:
 		data.b2.Init(0.0);
 		
 		expi = 0; // where to insert
+		exp.Clear();
 		
 		t = 0;
 		

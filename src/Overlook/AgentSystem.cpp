@@ -848,6 +848,13 @@ double AgentSystem::GetAverageSignalIterations() {
 	return s / TRAINEE_COUNT;
 }
 
+double AgentSystem::GetAverageSignalDeepIterations() {
+	double s = 0;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
+		s += groups[i].agents[j].sig.deep_iter;
+	return s / TRAINEE_COUNT;
+}
+
 double AgentSystem::GetAverageAmpDrawdown() {
 	double s = 0;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
@@ -859,6 +866,13 @@ double AgentSystem::GetAverageAmpIterations() {
 	double s = 0;
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 		s += groups[i].agents[j].amp.iter;
+	return s / TRAINEE_COUNT;
+}
+
+double AgentSystem::GetAverageAmpDeepIterations() {
+	double s = 0;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
+		s += groups[i].agents[j].amp.deep_iter;
 	return s / TRAINEE_COUNT;
 }
 
@@ -905,6 +919,14 @@ double AgentSystem::GetAverageIterations(int phase) {
 		case PHASE_AMP_TRAINING:		return GetAverageAmpIterations(); break;
 		case PHASE_FUSE_TRAINING:		return GetAverageFuseIterations(); break;
 		default:						return GetAverageFilterIterations(phase);
+	}
+}
+
+double AgentSystem::GetAverageDeepIterations(int phase) {
+	switch (phase) {
+		case PHASE_SIGNAL_TRAINING:		return GetAverageSignalDeepIterations(); break;
+		case PHASE_AMP_TRAINING:		return GetAverageAmpDeepIterations(); break;
+		default:						return 0;
 	}
 }
 
@@ -1017,6 +1039,10 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 	// Drawdown typically decreases when the minimum period is longer.
 	// In less volatile times trends are weak and long and their targets are further away.
 	
+	double av_deep_iters = GetAverageDeepIterations(phase);
+	int steps = (av_deep_iters + BREAK_INTERVAL_ITERS * 0.5) / BREAK_INTERVAL_ITERS;
+	if (steps >= 7) return;
+	
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
 		Agent& a = groups[i].agents[j];
 		
@@ -1026,8 +1052,7 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.sig.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			int steps = (int)a.sig.deep_iter / EXTRASTEP_ITER_STEP;
-			if (min_dd >= 40. && steps < 7) {
+			if (min_dd >= 40.) {
 				a.sig.Create();
 				a.sig.extra_timesteps = steps;
 			}
@@ -1038,8 +1063,7 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.amp.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			int steps = (int)a.amp.deep_iter / EXTRASTEP_ITER_STEP;
-			if (min_dd >= 40. && steps < 7) {
+			if (min_dd >= 40.) {
 				a.amp.Create();
 				a.amp.extra_timesteps = steps;
 			}

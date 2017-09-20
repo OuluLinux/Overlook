@@ -14,8 +14,7 @@ namespace Overlook {
 #define BASE_FWDSTEP_BEGIN			3
 #define MAX_LEARNING_RATE			0.0100
 #define MIN_LEARNING_RATE			0.0025
-#define EXTRASTEP_ITER_STEP			40000
-#define BREAK_INTERVAL_ITERS		20000
+#define BREAK_INTERVAL_ITERS		40000
 
 #ifdef flagHAVE_SIGSENS
 	#define SIGSENS_COUNT			3
@@ -287,14 +286,17 @@ public:
 	void CreateAgents();
 	double GetAverageSignalDrawdown();
 	double GetAverageSignalIterations();
+	double GetAverageSignalDeepIterations();
 	double GetAverageAmpDrawdown();
 	double GetAverageAmpIterations();
+	double GetAverageAmpDeepIterations();
 	double GetAverageAmpEpochs();
 	double GetAverageFuseDrawdown();
 	double GetAverageFuseIterations();
 	double GetAverageFilterDrawdown(int level);
 	double GetAverageFilterIterations(int level);
 	double GetAverageIterations(int phase);
+	double GetAverageDeepIterations(int phase);
 	double GetSignalEpsilon() const			{return signal_epsilon;}
 	double GetAmpEpsilon() const			{return amp_epsilon;}
 	double GetFuseEpsilon() const			{return fuse_epsilon;}

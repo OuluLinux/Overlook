@@ -285,7 +285,7 @@ void AgentSystem::TrainAgents(int phase) {
 			RefreshLearningRate(phase);
 			
 			int av_iters = GetAverageIterations(phase);
-			if (av_iters - prev_av_iters >= 20000) {
+			if (av_iters - prev_av_iters >= BREAK_INTERVAL_ITERS) {
 				StoreThis();
 				break; // call TrainAgents again to RefreshSnapshots safely
 			}
@@ -1026,9 +1026,10 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.sig.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			if (min_dd >= 40.) {
+			int steps = (int)a.sig.deep_iter / EXTRASTEP_ITER_STEP;
+			if (min_dd >= 40. && steps < 7) {
 				a.sig.Create();
-				a.sig.extra_timesteps = Upp::min(6, (int)a.sig.deep_iter / 20000);
+				a.sig.extra_timesteps = steps;
 			}
 		}
 		else if (phase == PHASE_AMP_TRAINING) {
@@ -1037,9 +1038,10 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 				double dd = a.amp.result_drawdown[k];
 				if (dd < min_dd) min_dd = dd;
 			}
-			if (min_dd >= 40.) {
+			int steps = (int)a.amp.deep_iter / EXTRASTEP_ITER_STEP;
+			if (min_dd >= 40. && steps < 7) {
 				a.amp.Create();
-				a.amp.extra_timesteps = Upp::min(6, (int)a.amp.deep_iter / 20000);
+				a.amp.extra_timesteps = steps;
 			}
 		}
 	}

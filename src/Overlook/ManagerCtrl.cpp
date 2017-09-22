@@ -30,6 +30,7 @@ void SystemOverview::Data() {
 	infostr << "\tAction count: " << SIGNAL_ACTIONCOUNT << "\n";
 	infostr << "\tAverage drawdown: " << ag.GetAverageSignalDrawdown() << "\n";
 	infostr << "\tAverage iterations: " << (int)ag.GetAverageSignalIterations() << "\n";
+	infostr << "\tAverage deep iterations: " << (int)ag.GetAverageSignalDeepIterations() << "\n";
 	infostr << "\tRandom action probability: " << ag.GetSignalEpsilon() << "\n";
 	infostr << "\n";
 	
@@ -38,6 +39,7 @@ void SystemOverview::Data() {
 	infostr << "\tAction count: " << AMP_ACTIONCOUNT << "\n";
 	infostr << "\tAverage drawdown: " << ag.GetAverageAmpDrawdown() << "\n";
 	infostr << "\tAverage iterations: " << (int)ag.GetAverageAmpIterations() << "\n";
+	infostr << "\tAverage deep iterations: " << (int)ag.GetAverageAmpDeepIterations() << "\n";
 	infostr << "\tRandom action probability: " << ag.GetAmpEpsilon() << "\n";
 	infostr << "\n";
 	

@@ -4,7 +4,7 @@
 namespace Overlook {
 
 #define FMLEVEL						0.6
-#define SYM_COUNT					8
+#define SYM_COUNT					10
 #define GROUP_COUNT					8
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)
@@ -60,7 +60,7 @@ namespace Overlook {
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
-#define AMP_PHASE_ITER_LIMIT		200000
+#define AMP_PHASE_ITER_LIMIT		300000
 #define AMP_EPS_ITERS_STEP			10000
 
 #define FUSE_SENSORS				1
@@ -68,7 +68,7 @@ namespace Overlook {
 #define FUSE_GROUP_SIZE				(SYM_COUNT * FUSE_SENSORS)
 #define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE + FUSE_SIZE)
 #define FUSE_ACTIONCOUNT			2
-#define FUSE_PHASE_ITER_LIMIT		200000
+#define FUSE_PHASE_ITER_LIMIT		300000
 #define FUSE_EPS_ITERS_STEP			10000
 #define FUSE_DD_MINCOUNT			5
 #define FUSE_DD_MINCHANGE			0.1

@@ -1102,4 +1102,15 @@ void Agent::RefreshGroupSettings() {
 	}
 }
 
+bool Agent::IsTrained(int phase) const {
+	if (phase < 0) return false;
+	if ((phase == PHASE_SIGNAL_TRAINING && sig.iter >= SIGNAL_PHASE_ITER_LIMIT) ||
+		(phase == PHASE_AMP_TRAINING    && amp.iter >= AMP_PHASE_ITER_LIMIT)    ||
+		(phase == PHASE_FUSE_TRAINING   && fuse.iter >= FUSE_PHASE_ITER_LIMIT)   ||
+		(phase <  PHASE_SIGNAL_TRAINING && filter[phase].iter >= FILTER_PHASE_ITER_LIMIT)) {
+		return true;
+	}
+	return false;
+}
+
 }

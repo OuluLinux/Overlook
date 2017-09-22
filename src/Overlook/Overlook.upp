@@ -63,6 +63,6 @@ file
 	DQN.h;
 
 mainconfig
-	"Working" = "GUI MT HAVE_SIGSENS X11",
-	"Lightweight" = "GUI MT";
+	"Working" = "GUI MT X11",
+	"Have extra symbols" = "GUI MT HAVE_SIGSENS X11";
 

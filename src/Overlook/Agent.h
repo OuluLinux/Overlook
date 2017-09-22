@@ -231,6 +231,7 @@ public:
 	double GetLastResult(int phase) const;
 	int64 GetIter(int phase) const;
 	void RefreshGroupSettings();
+	bool IsTrained(int phase) const;
 };
 
 

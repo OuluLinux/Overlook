@@ -11,17 +11,17 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
 	
-	
-	allowed_symbols.Add("GBPJPY");
+	allowed_symbols.Add("AUDJPY");
+	allowed_symbols.Add("AUDUSD");
+	allowed_symbols.Add("EURAUD");
+	allowed_symbols.Add("EURCAD");
 	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("EURJPY");
+	allowed_symbols.Add("GBPJPY");
 	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("EURGBP");
 	allowed_symbols.Add("NZDUSD");
+	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDJPY");
-	
-	
+
 	ASSERT(allowed_symbols.GetCount() == SYM_COUNT);
 	
 	created = GetSysTime();
@@ -55,15 +55,22 @@ void AgentSystem::InitThread() {
 			if (sym.IsForex() && (sym.name.Left(6)) == allowed_sym) {
 				double base_spread = 1000.0 * (askbid[i].ask / askbid[i].bid - 1.0);
 				if (base_spread >= 0.5) {
-					LOG("Warning! Too much spread: " << sym.name << " (" << base_spread << ")");
+					Cout() << "Warning! Too much spread: " << sym.name << " (" << base_spread << ")" << "\n";
 				}
 				sym_ids.Add(i);
 				break;
 			}
 		}
 	}
-	sym_count = sym_ids.GetCount();
-	ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4.");
+	
+	{
+		String not_found;
+		for(int i = 0; i < SYM_COUNT; i++)
+			if (sym_ids.Find(i) == -1)
+				not_found << mt.GetSymbol(i).name << " ";
+		sym_count = sym_ids.GetCount();
+		ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4: " + not_found);
+	}
 	
 	main_tf = sys->FindPeriod(1);
 	ASSERT(main_tf != -1);
@@ -103,7 +110,7 @@ void AgentSystem::InitThread() {
 	RefreshSnapshots();
 	
 	
-	Progress(5, 6, "Initializing agents and joiners");
+	Progress(5, 6, "Initializing agents");
 	InitBrokerValues();
 	if (groups.GetCount() == 0)
 		CreateAgents();
@@ -138,6 +145,7 @@ void AgentSystem::InitThread() {
 		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
 		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].fuse.Create();
 	}
+	
 	
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
@@ -262,9 +270,9 @@ double AgentSystem::GetPhaseIters(int phase) {
 void AgentSystem::TrainAgents(int phase) {
 	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : (phase == PHASE_FUSE_TRAINING ? "fuse" : "filter " + IntStr(phase)))) + " training");
 	
+	// Update configurations
 	RefreshSnapshots();
 	RefreshSnapEquities();
-	
 	RefreshExtraTimesteps(phase);
 	RefreshAgentEpsilon(phase);
 	RefreshLearningRate(phase);
@@ -274,50 +282,83 @@ void AgentSystem::TrainAgents(int phase) {
 		LoopAgentSignals(phase);
 	SetAgentsTraining(true);
 	
+	
+	// Create processing loop to ensure that every agent gets enough training
+	typedef Tuple2<int, int> AgentPos;
+	Vector<AgentPos> proc_agents;
+	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
+		Agent& agent = groups[i].agents[j];
+		if (!agent.IsTrained(phase))
+			proc_agents.Add(AgentPos(i, j));
+	}
+	
+	
+	// Main loop
 	int prev_av_iters = GetAverageIterations(phase);
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 	for (int64 iter = 0; running; iter++) {
 		
 		if (iter % 30 == 0) {
-			// Change snapshot area, if needed, sometimes
+			
+			// Update some attributes as times go by
 			RefreshAgentEpsilon(phase);
 			RefreshLearningRate(phase);
 			
+			
+			// Change snapshot area, if needed, sometimes
 			int av_iters = GetAverageIterations(phase);
 			if (av_iters - prev_av_iters >= BREAK_INTERVAL_ITERS) {
 				StoreThis();
 				break; // call TrainAgents again to RefreshSnapshots safely
 			}
 			
-			// Change to next phase eventually
-			if ((phase == PHASE_SIGNAL_TRAINING && av_iters >= SIGNAL_PHASE_ITER_LIMIT) ||
-				(phase == PHASE_AMP_TRAINING    && av_iters >= AMP_PHASE_ITER_LIMIT)    ||
-				(phase == PHASE_FUSE_TRAINING   && av_iters >= FUSE_PHASE_ITER_LIMIT)   ||
-				(phase <  PHASE_SIGNAL_TRAINING && av_iters >= FILTER_PHASE_ITER_LIMIT)) {
+			
+			// Change to the next phase eventually
+			for(int i = 0; i < proc_agents.GetCount(); i++) {
+				const AgentPos& apos = proc_agents[i];
+				Agent& agent = groups[apos.a].agents[apos.b];
+				if (agent.IsTrained(phase)) {
+					proc_agents.Remove(i);
+					i--;
+				}
+			}
+			if (proc_agents.IsEmpty()) {
 				this->phase++;
 				StoreThis();
 				break;
 			}
+			
 		}
 		
-		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) co & [=] {
-			Agent& agent = groups[i].agents[j];
-	        
-	        // Check cursor
-	        int cursor = agent.GetCursor(phase);
-	        if (cursor <= 0 || cursor >= snaps.GetCount())
-				agent.ResetEpoch(phase);
+		
+		// Run agents in CoWork threads
+		// This is the main point of threading in the Overlook.
+		// If GPGPU cannot be used without big changes at this point, it won't be used.
+		// C++ AMP almost worked, but threads took too much time...
+		for(int i = 0; i < proc_agents.GetCount(); i++) {
+			const AgentPos& apos = proc_agents[i];
+			int gid = apos.a;
+			int aid = apos.b;
 			
-			int64 end = agent.GetIter(phase) + 100;
-			while (agent.GetIter(phase) < end) {
-				agent.Main(phase, snaps);
+			co & [=] {
+				Agent& agent = groups[gid].agents[aid];
 				
-				// Close all order at the end
-				if (agent.GetCursor(phase) >= snaps.GetCount())
+		        // Check cursor
+		        int cursor = agent.GetCursor(phase);
+		        if (cursor <= 0 || cursor >= snaps.GetCount())
 					agent.ResetEpoch(phase);
-	        }
-	    };
+				
+				int64 end = agent.GetIter(phase) + 100;
+				while (agent.GetIter(phase) < end) {
+					agent.Main(phase, snaps);
+					
+					// Close all order at the end
+					if (agent.GetCursor(phase) >= snaps.GetCount())
+						agent.ResetEpoch(phase);
+		        }
+			};
+	    }
 	    co.Finish();
 	}
 	
@@ -329,13 +370,13 @@ void AgentSystem::TrainAgents(int phase) {
 void AgentSystem::LoopAgentSignals(int phase) {
 	sys->WhenPushTask("Loop agent signals, phase " + IntStr(phase));
 	
+	// Prepare loop without training
 	RefreshSnapEquities();
-	
 	SetAgentsTraining(false);
-	
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 		groups[i].agents[j].ResetEpoch(phase);
 	
+	// Process Agent::Main in CoWork threads
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
 	for(int i = 1; i < snaps.GetCount() && running; i++) {
@@ -351,13 +392,13 @@ void AgentSystem::LoopAgentSignals(int phase) {
 void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 	sys->WhenPushTask("Loop agent signals");
 	
+	// Prepare loop without training
 	RefreshSnapEquities();
-	
 	SetAgentsTraining(false);
 	
+	// Process Agent::Main in CoWork threads
 	CoWork co;
 	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
-	
 	if (from_begin) {
 		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 			groups[i].agents[j].ResetEpochAll();

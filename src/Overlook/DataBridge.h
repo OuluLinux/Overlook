@@ -70,7 +70,7 @@ class DataBridge : public BarData {
 	int data_begin;
 	bool slow_volume, day_volume;
 	
-	void RefreshFromHistory();
+	void RefreshFromHistory(bool use_internet_data, bool update_only=false);
 	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshVirtualNode();

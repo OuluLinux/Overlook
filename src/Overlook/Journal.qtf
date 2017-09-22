@@ -3307,10 +3307,41 @@ channel range to up or down, then the action ends.&]
 [s0; &]
 [s3; 19.9.2017&]
 [s0; The result changed much and I don`'t know what caused it. It 
-must have been some small change. It might be because of longer 
-timesteps in that previous invalid setup. I guess you should 
-increase timesteps if drawdown is too much. In that way the system 
-optimizes itself to less volatile periods. For busy times the 
-current configuration seems to work.&]
+must have been because of some small change. The reason might 
+be longer timesteps in that previous invalid setup. I guess you 
+should increase timesteps if drawdown is too much. In that way 
+the system optimizes itself to less volatile periods. For busy 
+times the current configuration seems to work.&]
 [s0; This is just a pain in the ass to train all over again...&]
+[s0; &]
+[s3; 22.9.2017&]
+[s0; So much small details...&]
+[s0; I didn`'t get the training to pass, because something had to 
+be changedd constantly, which required restarting the training. 
+Last that kind of change was, that those agents which had slow 
+dynamic timestep didn`'t get enough training. I just fixed it 
+and restarted training.&]
+[s0; I didn`'t get this running in the whole week even once without 
+pending restart. Week ago I started and thought that I would 
+get this running at monday, but no...&]
+[s0; I tested, that extra sensors actually gave worse result. Without 
+sensors, 15 worked with less than 3 extra timesteps, and with 
+sensors, only 8 worked in the same limit. Extra timesteps are 
+bad, and it`'s a big measurement number. One timestep increase 
+requires 40000 iterations with failed result. That was also a 
+huge processing time consumer, so luckily that can be avoided.&]
+[s0; Allowed forex pairs are hardcoded to the program. We all have 
+those same pairs in use, and with other pairs you get problems, 
+like not getting long`-term data or costs are too high. One could 
+limit that group even more, if broker has too much spread in 
+some of those instruments, but agents actually has sensors for 
+other instruments, so they can be used in that way also. Those 
+costly pairs are affecting each other in the real world, so it`'s 
+still a sensible feature.&]
+[s0; The new graph, which shows how different filters were activated 
+during last week, is very cool. It can also show red/blue colored 
+signals, if you click it. You can see, that the busiest filter 
+activated with different agents in the same time often.&]
+[s0; This is in the release state currently. I think I`'ll upload 
+the v0.3 release later this evening.&]
 [s0; ]]

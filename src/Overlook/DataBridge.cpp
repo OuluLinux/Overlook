@@ -45,8 +45,16 @@ void DataBridge::Start() {
 	// Regular symbols
 	if (sym < sym_count) {
 		bool init_round = GetCounted() == 0;
-		if (init_round)
-			RefreshFromHistory();
+		if (init_round) {
+			int mt_period = GetPeriod() * GetSystem().GetBasePeriod() / 60;
+			bool use_internet_data = Config::use_internet_m1_data && mt_period == 1;
+			if (use_internet_data) {
+				RefreshFromHistory(true);
+				RefreshFromHistory(false, true);
+			} else {
+				RefreshFromHistory(false);
+			}
+		}
 		RefreshFromAskBid(init_round);
 	}
 	
@@ -180,8 +188,8 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	
 	// Clone the last value to the end of the vector
 	if (buffer_cursor) {
-		double prev_open = open_buf.Get(buffer_cursor-1);
 		SetSafetyLimit(bars);
+		double prev_open = open_buf.Get(buffer_cursor-1);
 		for(int i = buffer_cursor+1; i < bars; i++) {
 			open_buf.Set(i, prev_open);
 			low_buf.Set(i, prev_open);
@@ -228,7 +236,9 @@ void DataBridge::RefreshMedian() {
 	}
 }
 
-void DataBridge::RefreshFromHistory() {
+void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
+	Time now = GetSysTime();
+	
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
 	MetaTrader& mt = GetMetaTrader();
@@ -267,7 +277,7 @@ void DataBridge::RefreshFromHistory() {
 	
 	bool old_filetype = false;
 	
-	if (Config::use_internet_m1_data && mt_period == 1) {
+	if (use_internet_data) {
 		System& sys = GetSystem();
 		String symbol = sys.GetSymbol(GetSymbol());
 		
@@ -350,6 +360,9 @@ void DataBridge::RefreshFromHistory() {
 	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
 	src.Seek(cursor);
 	
+	bool overwrite = false;
+	double prev_open = 0.0;
+	
 	while ((cursor + struct_size) <= data_size && count < bars) {
 		if ((count % 10) == 0) {
 			GetSystem().WhenSubProgress(count, bars*2);
@@ -390,7 +403,7 @@ void DataBridge::RefreshFromHistory() {
 		if (shift >= bars) break;
 		
 		// At first value
-		bool set_data_begin = count == 0;
+		bool set_data_begin = count == 0 && !update_only;
 		if (set_data_begin) {
 			prev_close = close;
 		}
@@ -413,11 +426,13 @@ void DataBridge::RefreshFromHistory() {
 		}
 		
 		while (count < shift && count < bars) {
-			SetSafetyLimit(count);
-			open_buf.Set(count, prev_close);
-			low_buf.Set(count, prev_close);
-			high_buf.Set(count, prev_close);
-			volume_buf.Set(count, 0);
+			if (!update_only || overwrite) {
+				SetSafetyLimit(count);
+				open_buf.Set(count, prev_close);
+				low_buf.Set(count, prev_close);
+				high_buf.Set(count, prev_close);
+				volume_buf.Set(count, 0);
+			}
 			count++;
 		}
 		
@@ -427,24 +442,40 @@ void DataBridge::RefreshFromHistory() {
 		
 		prev_close = close;
 		
+		double cur_open = open_buf.Get(count);
+		
+		bool updated_bar = false;
 		if (count < bars && shift == count) {
 			SetSafetyLimit(count);
-			//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
-			open_buf.Set(count, open);
-			low_buf.Set(count, low);
-			high_buf.Set(count, high);
-			volume_buf.Set(count, tick_volume);
+			if (update_only && count) {
+				if (open_buf.Get(count) == prev_open &&
+					open != prev_open &&
+					TimeFromTimestamp(time) > (now - 2*7*24*60*60))
+					overwrite = true;
+			}
+			if (!update_only || overwrite) {
+				//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
+				open_buf.Set(count, open);
+				low_buf.Set(count, low);
+				high_buf.Set(count, high);
+				volume_buf.Set(count, tick_volume);
+				updated_bar = true;
+			}
 			count++;
 		}
 		
+		prev_open = cur_open;
+		
 		
 		// Find min/max
-		double diff = count >= 2 ? open_buf.Get(count-1) - open_buf.Get(count-2) : 0.0;
-		int step = (int)(diff / point);
-		if (step >= 0) median_max_map.GetAdd(step, 0)++;
-		else median_min_map.GetAdd(step, 0)++;
-		if (step > max_value) max_value = step;
-		if (step < min_value) min_value = step;
+		if (updated_bar) {
+			double diff = count >= 2 ? open_buf.Get(count-1) - open_buf.Get(count-2) : 0.0;
+			int step = (int)(diff / point);
+			if (step >= 0) median_max_map.GetAdd(step, 0)++;
+			else median_min_map.GetAdd(step, 0)++;
+			if (step > max_value) max_value = step;
+			if (step < min_value) min_value = step;
+		}
 		
 		//LOG(Format("%d: %d %f %f %f %f %d %d %d", cursor, (int)time, open, high, low, close, tick_volume, spread, real_volume));
 	}
@@ -473,7 +504,6 @@ void DataBridge::RefreshFromHistory() {
 		volume_buf.Set(count, 0);
 		count++;
 	}
-	
 }
 
 void DataBridge::RefreshVirtualNode() {

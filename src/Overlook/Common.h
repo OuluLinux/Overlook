@@ -391,6 +391,16 @@ struct Downloader {
 
 };
 
+inline int GetUsedCpuCores() {
+	static int cores;
+	if (!cores) cores = CPU_Cores();
+	#ifndef flagHAVE_ALLSYM
+	return Upp::max(1, cores - 2); // Leave a little for the system
+	#else
+	// Don't even try this as primary mode... without GPGPU acceleration...
+	return Upp::max(1, cores / 2); // Leave at least a half for the system
+	#endif
+}
 
 }
 

@@ -4,7 +4,11 @@
 namespace Overlook {
 
 #define FMLEVEL						0.6
-#define SYM_COUNT					10
+#ifndef flagHAVE_ALLSYM
+	#define SYM_COUNT				10
+#else
+	#define SYM_COUNT				23
+#endif
 #define GROUP_COUNT					8
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(5 * 4 * 2)

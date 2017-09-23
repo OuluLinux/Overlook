@@ -183,8 +183,10 @@ void SignalTabCtrl::Data() {
 		
 		const Vector<Price>& askbids = GetMetaTrader().GetAskBid();
 		const Price& ab = askbids[a.sym];
-		double factor = (ab.ask / ab.bid - 1.0) * 1000.0;
+		double spread_point = a.sig.broker.spread_points;
+		double factor = ((ab.bid + spread_point) / ab.bid - 1.0) * 1000.0;
 		overview.spread_factor.SetLabel(Format("%2!,n", factor));
+		overview.spread_points.SetLabel(DblStr(spread_point));
 		
 		double minimum_margin = GetMetaTrader().GetMargin(a.sym, sym.volume_min);
 		overview.minbasemargin.SetLabel(Format("%2!,n %s", minimum_margin, GetMetaTrader().AccountCurrency()));

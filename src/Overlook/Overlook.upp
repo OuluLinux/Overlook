@@ -64,5 +64,6 @@ file
 
 mainconfig
 	"Working" = "GUI MT X11",
-	"Have extra symbols" = "GUI MT HAVE_SIGSENS X11";
+	"Have extra sensors" = "GUI MT X11 HAVE_SIGSENS ",
+	"Have extra instruments" = "GUI MT X11 HAVE_ALLSYM";
 

@@ -22,7 +22,9 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("EURJPY", 3);
 	allowed_symbols.Add("EURCHF", 3);
 	allowed_symbols.Add("EURGBP", 3);
-	/*allowed_symbols.Add("AUDCAD", 10);
+	
+	#ifdef flagHAVE_ALLSYM
+	allowed_symbols.Add("AUDCAD", 10);
 	allowed_symbols.Add("AUDJPY", 10);
 	allowed_symbols.Add("CADJPY", 10);
 	allowed_symbols.Add("CHFJPY", 10);
@@ -34,7 +36,8 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("EURCAD", 12);
 	allowed_symbols.Add("GBPAUD", 12);
 	allowed_symbols.Add("GBPCAD", 12);
-	allowed_symbols.Add("GBPNZD", 12);*/
+	allowed_symbols.Add("GBPNZD", 12);
+	#endif
 	
 	// SKIP because of no long-term data available:
 	//  - AUDCHF
@@ -81,7 +84,7 @@ void AgentSystem::InitThread() {
 					Cout() << "Warning! Too much spread: " << sym.name << " (" << base_spread << ")" << "\n";
 				}
 				sym_ids.Add(i);
-				spread_points.Add(allowed_symbols[j]);
+				spread_points.Add(allowed_symbols[j] * sym.point);
 				found = true;
 				break;
 			}
@@ -316,7 +319,7 @@ void AgentSystem::TrainAgents(int phase) {
 	// Main loop
 	int prev_av_iters = GetAverageIterations(phase);
 	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
+	co.SetPoolSize(GetUsedCpuCores());
 	for (int64 iter = 0; running; iter++) {
 		
 		if (iter % 30 == 0) {
@@ -398,7 +401,7 @@ void AgentSystem::LoopAgentSignals(int phase) {
 	
 	// Process Agent::Main in CoWork threads
 	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
+	co.SetPoolSize(GetUsedCpuCores());
 	for(int i = 1; i < snaps.GetCount() && running; i++) {
 		for(int j = 0; j < GROUP_COUNT; j++) for(int k = 0; k < SYM_COUNT; k++) co & [=] {
 	        groups[j].agents[k].Main(phase, snaps);
@@ -418,7 +421,7 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 	
 	// Process Agent::Main in CoWork threads
 	CoWork co;
-	co.SetPoolSize(Upp::max(1, CPU_Cores()-2));
+	co.SetPoolSize(GetUsedCpuCores());
 	if (from_begin) {
 		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
 			groups[i].agents[j].ResetEpochAll();

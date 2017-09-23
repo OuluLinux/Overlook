@@ -773,8 +773,10 @@ void SignalGraph::Paint(Draw& w) {
 		}
 	}
 	
-	Snapshot& snap1 = sys.snaps.Top();
-	int x = (snap1.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
+	Time now = GetSysTime();
+	int wday = DayOfWeek(now) - 1;
+	double now_sensor = ((wday * 24 + now.hour) * 60 + now.minute) / (5.0 * 24.0 * 60.0);
+	int x = now_sensor * sz.cx;
 	id.DrawLine(x,   0,   x, sz.cy, 1, White());
 	id.DrawLine(x+1, 0, x+1, sz.cy, 1, Black());
 	

@@ -237,7 +237,7 @@ public:
 	Vector<Core*> databridge_cores;
 	Vector<double> spread_points;
 	Vector<int> proxy_id, proxy_base_mul;
-	Index<String> allowed_symbols;
+	VectorMap<String, int> allowed_symbols;
 	Index<int> sym_ids;
 	TimeStop last_store, last_datagather;
 	System* sys;

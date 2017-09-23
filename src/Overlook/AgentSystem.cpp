@@ -11,17 +11,38 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
 	
-	allowed_symbols.Add("AUDJPY");
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("EURCAD");
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("NZDUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("USDJPY");
-
+	// Instrument, spread pips
+	allowed_symbols.Add("EURUSD", 3);
+	allowed_symbols.Add("GBPUSD", 3);
+	allowed_symbols.Add("USDJPY", 3);
+	allowed_symbols.Add("USDCHF", 3);
+	allowed_symbols.Add("USDCAD", 3);
+	allowed_symbols.Add("AUDUSD", 3);
+	allowed_symbols.Add("NZDUSD", 3);
+	allowed_symbols.Add("EURJPY", 3);
+	allowed_symbols.Add("EURCHF", 3);
+	allowed_symbols.Add("EURGBP", 3);
+	/*allowed_symbols.Add("AUDCAD", 10);
+	allowed_symbols.Add("AUDJPY", 10);
+	allowed_symbols.Add("CADJPY", 10);
+	allowed_symbols.Add("CHFJPY", 10);
+	allowed_symbols.Add("NZDCAD", 10);
+	allowed_symbols.Add("NZDCHF", 10);
+	allowed_symbols.Add("EURAUD", 7);
+	allowed_symbols.Add("GBPCHF", 7);
+	allowed_symbols.Add("AUDNZD", 12);
+	allowed_symbols.Add("EURCAD", 12);
+	allowed_symbols.Add("GBPAUD", 12);
+	allowed_symbols.Add("GBPCAD", 12);
+	allowed_symbols.Add("GBPNZD", 12);*/
+	
+	// SKIP because of no long-term data available:
+	//  - AUDCHF
+	//  - CADCHF
+	//  - EURNZD
+	//  - GBPJPY
+	//  - NZDJPY
+	
 	ASSERT(allowed_symbols.GetCount() == SYM_COUNT);
 	
 	created = GetSysTime();
@@ -48,8 +69,10 @@ void AgentSystem::InitThread() {
 	Progress(0, 6, "Refreshing work queue");
 	MetaTrader& mt = GetMetaTrader();
 	const Vector<Price>& askbid = mt._GetAskBid();
+	String not_found;
 	for(int j = 0; j < allowed_symbols.GetCount(); j++) {
-		const String& allowed_sym = allowed_symbols[j];
+		const String& allowed_sym = allowed_symbols.GetKey(j);
+		bool found = false;
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& sym = mt.GetSymbol(i);
 			if (sym.IsForex() && (sym.name.Left(6)) == allowed_sym) {
@@ -58,19 +81,16 @@ void AgentSystem::InitThread() {
 					Cout() << "Warning! Too much spread: " << sym.name << " (" << base_spread << ")" << "\n";
 				}
 				sym_ids.Add(i);
+				spread_points.Add(allowed_symbols[j]);
+				found = true;
 				break;
 			}
 		}
+		if (!found)
+			not_found << allowed_sym << " ";
 	}
-	
-	{
-		String not_found;
-		for(int i = 0; i < SYM_COUNT; i++)
-			if (sym_ids.Find(i) == -1)
-				not_found << mt.GetSymbol(i).name << " ";
-		sym_count = sym_ids.GetCount();
-		ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4: " + not_found);
-	}
+	sym_count = sym_ids.GetCount();
+	ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4: " + not_found);
 	
 	main_tf = sys->FindPeriod(1);
 	ASSERT(main_tf != -1);
@@ -1117,7 +1137,7 @@ void AgentSystem::InitBrokerValues() {
 	
 	proxy_id.SetCount(SYM_COUNT, 0);
 	proxy_base_mul.SetCount(SYM_COUNT, 0);
-	spread_points.SetCount(SYM_COUNT, 0);
+	//spread_points.SetCount(SYM_COUNT, 0);
 	
 	for(int i = 0; i < SYM_COUNT; i++) {
 		int sym = sym_ids[i];
@@ -1134,8 +1154,8 @@ void AgentSystem::InitBrokerValues() {
 			proxy_id[i] = -1;
 			proxy_base_mul[i] = 0;
 		}
-		spread_points[i] = db->GetAverageSpread() * db->GetPoint();
-		ASSERT(spread_points[i] > 0.0);
+		//spread_points[i] = db->GetAverageSpread() * db->GetPoint();
+		//ASSERT(spread_points[i] > 0.0);
 	}
 	
 	begin_equity = Upp::max(10000.0, mt.AccountEquity());

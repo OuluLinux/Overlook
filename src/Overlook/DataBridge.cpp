@@ -442,6 +442,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
 		
 		prev_close = close;
 		
+		SetSafetyLimit(count);
 		double cur_open = open_buf.Get(count);
 		
 		bool updated_bar = false;

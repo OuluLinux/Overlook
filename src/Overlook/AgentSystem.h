@@ -6,8 +6,10 @@ namespace Overlook {
 #define FMLEVEL						0.6
 #ifndef flagHAVE_ALLSYM
 	#define SYM_COUNT				10
+	#define BASE_FWDSTEP_BEGIN		3
 #else
-	#define SYM_COUNT				23
+	#define SYM_COUNT				24
+	#define BASE_FWDSTEP_BEGIN		5
 #endif
 #define GROUP_COUNT					8
 #define TIME_SENSORS				3
@@ -15,7 +17,6 @@ namespace Overlook {
 #define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
 #define RANDOM_TIMESTEPS			8
 #define REWARD_AV_PERIOD			400
-#define BASE_FWDSTEP_BEGIN			3
 #define MAX_LEARNING_RATE			0.0100
 #define MIN_LEARNING_RATE			0.0025
 #define BREAK_INTERVAL_ITERS		40000

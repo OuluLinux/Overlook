@@ -6,7 +6,7 @@ namespace Overlook {
 System::System() : ag(this) {
 	timediff = 0;
 	base_period = 60;
-	end = GetSysTime();
+	SetEnd(GetSysTime());
 	
 	addr = Config::arg_addr;
 	port = Config::arg_port;
@@ -190,6 +190,17 @@ int System::GetShiftFromTimeTf(const Time& t, int tf) {
 
 void System::AddCustomCtrl(const String& name, CoreFactoryPtr f, CtrlFactoryPtr c) {
 	CtrlFactories().Add(CoreCtrlSystem(name, f, c));
+}
+
+void System::SetEnd(const Time& t) {
+	end = t;
+	int dow = DayOfWeek(end);
+	if (dow >= 1 && dow <= 5) return;
+	if (dow == 0) end -= 24 * 60 * 60;
+	end.hour = 0;
+	end.minute = 0;
+	end.second = 0;
+	end -= 60;
 }
 
 }

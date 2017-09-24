@@ -1412,6 +1412,8 @@ void OsMA::Start() {
 	
 	ConstBuffer& ma1_buf = At(0).GetBuffer(0);
 	ConstBuffer& ma2_buf = At(1).GetBuffer(0);
+	ASSERT(ma1_buf.GetCount() >= bars);
+	ASSERT(ma2_buf.GetCount() >= bars);
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);

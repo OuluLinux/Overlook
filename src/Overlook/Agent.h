@@ -130,6 +130,7 @@ struct AgentAmp {
 	int prev_lower_output_signal = 0;
 	int prev_reset_iter = 0;
 	bool skip_learn = true;
+	bool clean_epoch = true;
 	Agent* agent = NULL;
 	
 	
@@ -176,6 +177,7 @@ struct AgentFuse {
 	int prev_lower_output_signal = 0;
 	int prev_reset_iter = 0;
 	bool skip_learn = true;
+	bool clean_epoch = true;
 	Agent* agent = NULL;
 	
 	

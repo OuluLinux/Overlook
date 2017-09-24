@@ -43,18 +43,11 @@ double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
 	else
 		return 0.0;
 	
-	// Some time ranges can be invalid, and they have same price constantly...
-	// Don't let them affect. This is the easiest and safest way to avoid that problem.
-	// In normal and meaningful environment, open and close price is never the same.
-	if (o.open == close)
-		return 0.0;
-	
-	
 	if (o.type == OP_BUY) {
 		double change = volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
+		if (proxy_base_mul == 0)
+			;
+		else if (proxy_base_mul == +1)
 			change /= RealtimeBid(snap, proxy_id);
 		else //if (proxy_base_mul == -1)
 			change *= RealtimeAsk(snap, proxy_id);
@@ -62,9 +55,9 @@ double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
 	}
 	else if (o.type == OP_SELL) {
 		double change = -1.0 * volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
+		if (proxy_base_mul == 0)
+			;
+		else if (proxy_base_mul == +1)
 			change /= RealtimeAsk(snap, proxy_id);
 		else //if (proxy_base_mul == -1)
 			change *= RealtimeBid(snap, proxy_id);
@@ -159,7 +152,6 @@ FixedSimBroker::FixedSimBroker() {
 	
 	
 	begin_equity = 10000;
-	min_active_symbols = 4;
 }
 
 void FixedSimBroker::Reset() {
@@ -199,36 +191,43 @@ double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Sna
 	else
 		return 0.0;
 	
-	// Some time ranges can be invalid, and they have same price constantly...
-	// Don't let them affect. This is the easiest and safest way to avoid that problem.
-	// In normal and meaningful environment, open and close price is never the same.
-	if (o.open == close)
-		return 0.0;
-	
 	int proxy_id = this->proxy_id[sym_id];
 	int proxy_base_mul = this->proxy_base_mul[sym_id];
 	
 	if (o.type == OP_BUY) {
 		double change = volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
+		if (proxy_base_mul == 0)
+			;
+		else if (proxy_base_mul == +1)
 			change /= RealtimeBid(snap, proxy_id);
 		else //if (proxy_base_mul == -1)
 			change *= RealtimeAsk(snap, proxy_id);
+		
+		/*if (sym_id == 2)
+			Cout() << Format("proxy_id=%d pbm=%d change=%f open=%f close=%f vol=%f sp=%f\n",
+				proxy_id, proxy_base_mul, change, o.open, close, volume, spread_points[sym_id]);*/
+		
 		return change;
 	}
 	else if (o.type == OP_SELL) {
 		double change = -1.0 * volume * (close / o.open - 1.0);
-		if (proxy_base_mul == 0) return change;
-		
-		if      (proxy_base_mul == +1)
+		if (proxy_base_mul == 0)
+			;
+		else if (proxy_base_mul == +1)
 			change /= RealtimeAsk(snap, proxy_id);
 		else //if (proxy_base_mul == -1)
 			change *= RealtimeBid(snap, proxy_id);
+		
+		/*if (sym_id == 2)
+			Cout() << Format("proxy_id=%d pbm=%d change=%f open=%f close=%f vol=%f sp=%f\n",
+				proxy_id, proxy_base_mul, change, o.open, close, volume, spread_points[sym_id]);*/
+		
 		return change;
 	}
-	else return 0.0;
+	else {
+		Panic("Invalid type");
+		return 0.0;
+	}
 }
 
 void FixedSimBroker::OrderSend(int sym_id, int type, double volume, double price, const Snapshot& snap) {
@@ -282,10 +281,11 @@ void FixedSimBroker::OrderSend(int sym_id, int type, double volume, double price
 void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, const Snapshot& snap) {
 	if (!order.is_open)
 		return;
+	double profit;
 	if (lots < order.volume) {
 		double remain = order.volume - lots;
 		order.volume = lots; // hackish... switch volume for calculation
-		double profit = GetCloseProfit(sym_id, order, snap);
+		profit = GetCloseProfit(sym_id, order, snap);
 		order.volume = remain;
 		order.is_open = remain >= 0.01;
 		balance += profit;
@@ -294,12 +294,14 @@ void FixedSimBroker::OrderClose(int sym_id, double lots, FixedOrder& order, cons
 		if (sym_id == part_sym_id) part_balance += profit;
 	} else {
 		order.is_open = false;
-		double profit = GetCloseProfit(sym_id, order, snap);
+		profit = GetCloseProfit(sym_id, order, snap);
 		balance += profit;
 		if (profit > 0) profit_sum += profit;
 		else            loss_sum   -= profit;
 		if (sym_id == part_sym_id) part_balance += profit;
 	}
+	/*if (sym_id == 2)
+		Cout() << Format("closed profit=%f balance=%f\n", profit, balance);*/
 	if (balance < 0.0) balance = 0.0;
 }
 
@@ -321,8 +323,8 @@ void FixedSimBroker::CloseAll(const Snapshot& snap) {
 double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume) {
 	ASSERT(leverage > 0);
 	double used_margin = 0.0;
-	if (proxy_id[sym_id] == -1) {
-		used_margin = RealtimeAsk(snap, sym_id) * volume * 100000;
+	if (proxy_id[sym_id] < 0) {
+		used_margin = /*RealtimeAsk(snap, sym_id) **/ volume * 100000;
 	} else {
 		if (proxy_base_mul[sym_id] == -1)
 			used_margin = RealtimeAsk(snap, proxy_id[sym_id]) * volume * 100000;
@@ -358,12 +360,17 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	
 	int loop_begin, loop_end;
+	int orderloop_begin, orderloop_end;
 	if (part_sym_id != -1) {
 		loop_begin = part_sym_id;
 		loop_end = part_sym_id + 1;
+		orderloop_begin = part_sym_id * ORDERS_PER_SYMBOL;
+		orderloop_end = (part_sym_id + 1) * ORDERS_PER_SYMBOL;
 	} else {
 		loop_begin = 0;
 		loop_end = SYM_COUNT;
+		orderloop_begin = 0;
+		orderloop_end = MAX_ORDERS;
 	}
 	
 	
@@ -443,9 +450,6 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 		minimum_margin_sum += sell_used_margin;
 		active_symbols++;
 	}
-	if (active_symbols < min_active_symbols) {
-		minimum_margin_sum *= (double)min_active_symbols / (double)active_symbols;
-	}
 	
 	
 	const int fmscale = (AMP_MAXSCALES-1) * AMP_MAXSCALE_MUL * SYM_COUNT;
@@ -468,7 +472,7 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	}
 	
 	
-	for(int i = 0; i < MAX_ORDERS; i++) {
+	for(int i = orderloop_begin; i < orderloop_end; i++) {
 		FixedOrder& o = order[i];
 		if (!o.is_open)
 			continue;
@@ -520,7 +524,15 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 void FixedSimBroker::RefreshOrders(const Snapshot& snap) {
 	double e = balance;
 	double pe = part_balance;
-	for(int i = 0; i < MAX_ORDERS; i++) {
+	int orderloop_begin, orderloop_end;
+	if (part_sym_id != -1) {
+		orderloop_begin = part_sym_id * ORDERS_PER_SYMBOL;
+		orderloop_end = (part_sym_id + 1) * ORDERS_PER_SYMBOL;
+	} else {
+		orderloop_begin = 0;
+		orderloop_end = MAX_ORDERS;
+	}
+	for(int i = orderloop_begin; i < orderloop_end; i++) {
 		FixedOrder& o = order[i];
 		if (o.is_open) {
 			int sym_id = i / ORDERS_PER_SYMBOL;

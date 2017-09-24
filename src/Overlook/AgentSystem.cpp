@@ -32,6 +32,7 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("NZDCHF", 10);
 	allowed_symbols.Add("EURAUD", 7);
 	allowed_symbols.Add("GBPCHF", 7);
+	allowed_symbols.Add("GBPJPY", 7);
 	allowed_symbols.Add("AUDNZD", 12);
 	allowed_symbols.Add("EURCAD", 12);
 	allowed_symbols.Add("GBPAUD", 12);

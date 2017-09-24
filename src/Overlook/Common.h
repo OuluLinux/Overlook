@@ -397,7 +397,7 @@ inline int GetUsedCpuCores() {
 	#ifndef flagHAVE_ALLSYM
 	return Upp::max(1, cores - 2); // Leave a little for the system
 	#else
-	// Don't even try this as primary mode... without GPGPU acceleration...
+	// Don't even try this as primary mode... when without GPGPU acceleration...
 	return Upp::max(1, cores / 2); // Leave at least a half for the system
 	#endif
 }

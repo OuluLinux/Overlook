@@ -47,7 +47,11 @@ void DataBridge::Start() {
 		bool init_round = GetCounted() == 0;
 		if (init_round) {
 			int mt_period = GetPeriod() * GetSystem().GetBasePeriod() / 60;
-			bool use_internet_data = Config::use_internet_m1_data && mt_period == 1;
+			const Symbol& mtsym = mt.GetSymbol(sym);
+			bool use_internet_data =
+				Config::use_internet_m1_data &&
+				mt_period == 1 &&
+				mtsym.IsForex();
 			if (use_internet_data) {
 				RefreshFromHistory(true);
 				RefreshFromHistory(false, true);

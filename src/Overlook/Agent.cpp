@@ -467,7 +467,9 @@ void AgentAmp::Create() {
 void AgentAmp::ResetEpoch() {
 	if (broker.order_count > 0) {
 		result_equity.Add(broker.equity);
-		result_drawdown.Add(broker.GetDrawdown() * 100.0);
+		double dd = broker.GetDrawdown() * 100.0;
+		if (!clean_epoch) dd = 100.0;
+		result_drawdown.Add(dd);
 	}
 	broker.Reset();
 	signal = 0;
@@ -480,6 +482,7 @@ void AgentAmp::ResetEpoch() {
 	cursor = 1;
 	prev_equity_cursor = 0;
 	skip_learn = true;
+	clean_epoch = true;
 	
 	cursor_sigbegin = 0;
 	
@@ -508,8 +511,10 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 			int timesteps = cursor - prev_equity_cursor;
 			double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
 			Backward(reward);
-			if (equity < 0.25 * broker.begin_equity)
+			if (equity < 0.25 * broker.begin_equity) {
+				clean_epoch = false;
 				broker.Reset();
+			}
 		}
 		prev_equity = broker.AccountEquity();
 		prev_equity_cursor = cursor;
@@ -691,7 +696,9 @@ void AgentFuse::Create() {
 void AgentFuse::ResetEpoch() {
 	if (broker.order_count > 0) {
 		result_equity.Add(broker.equity);
-		result_drawdown.Add(broker.GetDrawdown() * 100.0);
+		double dd = broker.GetDrawdown() * 100.0;
+		if (!clean_epoch) dd = 100.0;
+		result_drawdown.Add(dd);
 	}
 	broker.Reset();
 	test_broker.Reset();
@@ -703,6 +710,7 @@ void AgentFuse::ResetEpoch() {
 	
 	cursor = 1;
 	skip_learn = true;
+	clean_epoch = true;
 	
 	pos_dd_sum = 0;
 	neg_dd_sum = 0;
@@ -780,8 +788,10 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 			Backward(reward);
 		}
 		
-		if (test_broker.equity < 0.25 * test_broker.begin_equity)
+		if (test_broker.equity < 0.25 * test_broker.begin_equity) {
+			clean_epoch = false;
 			test_broker.Reset();
+		}
 		
 		Forward(cur_snap, prev_snap);
 		

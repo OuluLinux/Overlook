@@ -60,7 +60,6 @@ struct FixedSimBroker {
 	double leverage = 1000.0;
 	int order_count = 0;
 	int part_sym_id = -1;
-	int min_active_symbols = 4;
 	
 		
 	FixedSimBroker();

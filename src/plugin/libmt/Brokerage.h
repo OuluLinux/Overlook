@@ -20,7 +20,6 @@ protected:
 	int account_currency_id;
 	int account_id;
 	int selected;
-	int min_active_symbols;
 	int fmscale;
 	bool demo, connected, simulation;
 	bool init_success;

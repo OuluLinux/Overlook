@@ -211,7 +211,7 @@ public:
 	int GetShiftFromTimeTf(const Time& t, int tf);
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
-	void SetEnd(const Time& t) {end = t;}
+	void SetEnd(const Time& t);
 	AgentSystem& GetAgentSystem() {return ag;}
 	
 public:

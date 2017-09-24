@@ -98,7 +98,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 
 void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	ASSERT(level >= 0 && level < FILTER_COUNT);
-	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
+	int group_id = agent->group_id, sym_id = agent->sym_id;
 	
 	
 	if (lower_output_signal == 0) {
@@ -149,7 +149,7 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 			sig_mul = 0;
 		}
 		
-		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + group_step + (FILTER_COUNT-1-level));
+		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + (FILTER_COUNT-1-level));
 		signal = sig_mul;
 		
 		// Important: only 0-signal can have a random timestep. +/- signal requires alignment.
@@ -295,7 +295,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
+	int group_id = agent->group_id, sym_id = agent->sym_id;
 	int prev_signal = signal;
 	
 	
@@ -339,12 +339,12 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step + extra_timesteps);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + extra_timesteps);
 		}
 		else {
 			signal = -1;
 			action -= SIGNAL_POS_FWDSTEPS;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + group_step + extra_timesteps);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + extra_timesteps);
 		}
 	}
 	
@@ -527,7 +527,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
+	int group_id = agent->group_id, sym_id = agent->sym_id;
 	int prev_signal = signal;
 	
 	if (lower_output_signal == 0) {
@@ -587,7 +587,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 		
 		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
-		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + group_step + extra_timesteps);
+		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + extra_timesteps);
 		
 		signal = lower_output_signal * maxscale;
 	}
@@ -1062,49 +1062,41 @@ void Agent::RefreshGroupSettings() {
 	//		It uses one step slower timesteps, because the worse part has less volatility.
 	switch (group_id) {
 		case 0:
-			group_step = 0;
 			group_active_lower[0] = false;
 			group_active_lower[1] = false;
 			group_active_lower[2] = false;
 			break;
 		case 1:
-			group_step = 0;
 			group_active_lower[0] = false;
 			group_active_lower[1] = false;
 			group_active_lower[2] = true;
 			break;
 		case 2:
-			group_step = 1;
 			group_active_lower[0] = false;
 			group_active_lower[1] = true;
 			group_active_lower[2] = false;
 			break;
 		case 3:
-			group_step = 1;
 			group_active_lower[0] = false;
 			group_active_lower[1] = true;
 			group_active_lower[2] = true;
 			break;
 		case 4:
-			group_step = 2;
 			group_active_lower[0] = true;
 			group_active_lower[1] = false;
 			group_active_lower[2] = false;
 			break;
 		case 5:
-			group_step = 2;
 			group_active_lower[0] = true;
 			group_active_lower[1] = false;
 			group_active_lower[2] = true;
 			break;
 		case 6:
-			group_step = 3;
 			group_active_lower[0] = true;
 			group_active_lower[1] = true;
 			group_active_lower[2] = false;
 			break;
 		case 7:
-			group_step = 3;
 			group_active_lower[0] = true;
 			group_active_lower[1] = true;
 			group_active_lower[2] = true;

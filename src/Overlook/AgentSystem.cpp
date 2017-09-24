@@ -12,6 +12,24 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	stopped = true;
 	
 	// Instrument, spread pips
+	
+	#ifndef flagHAVE_ALLSYM
+	
+	// USD,EUR,GBP,JPY,CAD
+	allowed_symbols.Add("EURUSD", 3);
+	allowed_symbols.Add("GBPUSD", 3);
+	allowed_symbols.Add("USDJPY", 3);
+	allowed_symbols.Add("USDCAD", 3);
+	allowed_symbols.Add("EURJPY", 3);
+	allowed_symbols.Add("EURGBP", 3);
+	allowed_symbols.Add("CADJPY", 10);
+	allowed_symbols.Add("GBPJPY", 7);
+	allowed_symbols.Add("EURCAD", 12);
+	allowed_symbols.Add("GBPCAD", 12);
+	
+	#else
+	
+	// also AUD,NZD,CHF included
 	allowed_symbols.Add("EURUSD", 3);
 	allowed_symbols.Add("GBPUSD", 3);
 	allowed_symbols.Add("USDJPY", 3);
@@ -22,8 +40,6 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("EURJPY", 3);
 	allowed_symbols.Add("EURCHF", 3);
 	allowed_symbols.Add("EURGBP", 3);
-	
-	#ifdef flagHAVE_ALLSYM
 	allowed_symbols.Add("AUDCAD", 10);
 	allowed_symbols.Add("AUDJPY", 10);
 	allowed_symbols.Add("CADJPY", 10);
@@ -38,7 +54,9 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("GBPAUD", 12);
 	allowed_symbols.Add("GBPCAD", 12);
 	allowed_symbols.Add("GBPNZD", 12);
+	
 	#endif
+	
 	
 	// SKIP because of no long-term data available:
 	//  - AUDCHF
@@ -1106,7 +1124,7 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 	
 	double av_deep_iters = GetAverageDeepIterations(phase);
 	int steps = (av_deep_iters + BREAK_INTERVAL_ITERS * 0.5) / BREAK_INTERVAL_ITERS;
-	if (steps >= 7) return;
+	if (steps >= MAX_EXTRA_TIMESTEPS + 1) return;
 	
 	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
 		Agent& a = groups[i].agents[j];

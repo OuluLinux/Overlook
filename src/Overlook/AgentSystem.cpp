@@ -15,17 +15,16 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	
 	#ifndef flagHAVE_ALLSYM
 	
-	// USD,EUR,GBP,JPY,CAD
 	allowed_symbols.Add("EURUSD", 3);
 	allowed_symbols.Add("GBPUSD", 3);
 	allowed_symbols.Add("USDJPY", 3);
-	allowed_symbols.Add("USDCAD", 3);
 	allowed_symbols.Add("EURJPY", 3);
 	allowed_symbols.Add("EURGBP", 3);
-	allowed_symbols.Add("CADJPY", 10);
 	allowed_symbols.Add("GBPJPY", 7);
+	allowed_symbols.Add("USDCAD", 3);
 	allowed_symbols.Add("EURCAD", 12);
-	allowed_symbols.Add("GBPCAD", 12);
+	allowed_symbols.Add("AUDUSD", 3);
+	allowed_symbols.Add("NZDUSD", 3);
 	
 	#else
 	

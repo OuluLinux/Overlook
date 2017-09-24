@@ -21,10 +21,6 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	allowed_symbols.Add("EURJPY", 3);
 	allowed_symbols.Add("EURGBP", 3);
 	allowed_symbols.Add("GBPJPY", 7);
-	allowed_symbols.Add("USDCAD", 3);
-	allowed_symbols.Add("EURCAD", 12);
-	allowed_symbols.Add("AUDUSD", 3);
-	allowed_symbols.Add("NZDUSD", 3);
 	
 	#else
 	

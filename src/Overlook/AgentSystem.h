@@ -4,7 +4,7 @@
 namespace Overlook {
 
 #ifndef flagHAVE_ALLSYM
-	#define SYM_COUNT				10
+	#define SYM_COUNT				6
 #else
 	#define SYM_COUNT				24
 #endif

@@ -3885,6 +3885,109 @@ void PeriodicalChange::Start() {
 
 
 
+VolatilityAverage::VolatilityAverage() {
+	periods.Add(1 << 3);
+	periods.Add(1 << 5);
+	periods.Add(1 << 7);
+	periods.Add(1 << 9);
+	stats.SetCount(periods.GetCount());
+}
+
+void VolatilityAverage::Init() {
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-1.0);
+	SetCoreMaximum(+1.0);
+	int c = periods.GetCount();
+	for(int i = 0; i < c; i++) {
+		SetBufferColor(i, Color(28 * i / c, 212 * i / c, 255 * i / c));
+		SetBufferLineWidth(i, 1+i);
+	}
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, +0.5);
+	SetCoreLevel(1, -0.5);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
+}
+
+void VolatilityAverage::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (counted == bars) return;
+	if (!counted) counted++;
+	
+	Vector<double> stats_limit;
+	
+	for (int p = 0; p < periods.GetCount(); p++) {
+		int period = periods[p];
+		Buffer& dst = GetBuffer(p);
+		VectorMap<int,int>& stats = this->stats[p];
+		
+		double sum = 0.0;
+		SetSafetyLimit(counted);
+		for(int i = Upp::max(1, counted - period); i < counted; i++) {
+			double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+			sum += change;
+		}
+		
+		for(int i = counted; i < bars; i++) {
+			SetSafetyLimit(i+1);
+			
+			// Add current
+			double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+			sum += change;
+			
+			// Subtract
+			int j = i - period;
+			if (j > 0) {
+				double prev_change = fabs(src.Get(j) / src.Get(j-1) - 1.0);
+				sum -= prev_change;
+			}
+			
+			double average = sum / period;
+			
+			int av = average * 100000;
+			stats.GetAdd(av,0)++;
+			
+			dst.Set(i, average);
+		}
+		
+		SortByKey(stats, StdLess<int>());
+		
+		stats_limit.SetCount(stats.GetCount());
+		int64 total = 0;
+		for(int i = 0; i < stats.GetCount(); i++) {
+			stats_limit[i] = total;
+			total += stats[i];
+		}
+		
+		for(int i = counted; i < bars; i++) {
+			SetSafetyLimit(i+1);
+			
+			double average = dst.Get(i);
+			int av = average * 100000;
+			double j = stats_limit[stats.Find(av)];
+			double sens = j / total * 2.0 - 1.0;
+			dst.Set(i, sens);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*Sensors::Sensors() {

@@ -154,9 +154,11 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			d = 0;
 			dh = 0;
 		} else {
+			int wday = DayOfWeek(t);
 			h = (t.minute + t.hour * 60) / period;
-			d = DayOfWeek(t) - 1;
+			d = wday - 1;
 			dh = h + d * h_count;
+			if (wday == 0 || wday == 6) continue;
 		}
 		int shift = bs.GetShiftFromTimeTf(t, tf);
 		if (shift >= bars) {
@@ -402,7 +404,10 @@ void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
 		}
 		
 		cursor += struct_size;
-		int shift = bs.GetShiftFromTimeTf(time, tf);
+		Time time2 = TimeFromTimestamp(time);
+		int wday = DayOfWeek(time2);
+		if (wday == 0 || wday == 6) continue;
+		int shift = bs.GetShiftFromTimeTf(time2, tf);
 		if (shift < 0) continue;
 		if (shift >= bars) break;
 		

@@ -917,6 +917,28 @@ public:
 	}
 };
 
+
+
+class VolatilityAverage : public Core {
+	Vector<int> periods;
+	Vector<VectorMap<int, int> > stats;
+	
+protected:
+	virtual void Start();
+	
+public:
+	VolatilityAverage();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 4)
+			% Arg("period", period, 2, 20000)
+			% Persistent(stats);
+	}
+};
+
 //#define LARGE_SENSOR
 #define SMALL_COUNT 4
 

@@ -52,7 +52,7 @@ struct ValueBase {
 	const char* s0;
 	void* data;
 	ValueBase() {count=0; visible=0; s0=0; data=0; data_type = -1; min = -1; max = -1; factory = -1;}
-	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTVEC_, PERS_DBLVEC_, PERS_INTMAP_, PERS_QUERYTABLE_, PERS_BYTEGRID_, PERS_INTGRID_};
+	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTVEC_, PERS_DBLVEC_, PERS_INTMAP_, PERS_QUERYTABLE_, PERS_BYTEGRID_, PERS_INTGRID_, PERS_INTMAPGRID_};
 };
 
 struct ValueRegister {
@@ -343,6 +343,7 @@ struct Downloader {
 	Downloader()
 	{
 		prev_loaded = 0;
+		http.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36");
 		http.MaxContentSize(INT_MAX);
 		http.WhenContent = THISBACK(Content);
 		http.WhenWait = http.WhenDo = THISBACK(ShowProgress);

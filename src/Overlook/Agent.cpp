@@ -98,7 +98,7 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 
 void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	ASSERT(level >= 0 && level < FILTER_COUNT);
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	
 	
 	if (lower_output_signal == 0) {
@@ -149,7 +149,7 @@ void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 			sig_mul = 0;
 		}
 		
-		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + timefwd_step + (FILTER_COUNT-1-level));
+		timestep_total = 1 << (FILTER_FWDSTEP_BEGIN + group_step + timefwd_step + (FILTER_COUNT-1-level));
 		signal = sig_mul;
 		
 		// Important: only 0-signal can have a random timestep. +/- signal requires alignment.
@@ -257,11 +257,6 @@ void AgentSignal::ResetEpoch() {
 	
 	cursor_sigbegin = 0;
 	
-	#ifdef flagHAVE_SIGSENS
-	for(int i = 0; i < SIGSENS_COUNT; i++)
-		epoch_av[i].Clear();
-	#endif
-	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
 		int add_exp_every = Upp::max(5, iters / dqn.GetExperienceCountMax());
@@ -295,7 +290,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	int prev_signal = signal;
 	
 	
@@ -339,12 +334,12 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + extra_timesteps);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + group_step + action + extra_timesteps);
 		}
 		else {
 			signal = -1;
 			action -= SIGNAL_POS_FWDSTEPS;
-			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + action + extra_timesteps);
+			timestep_total = 1 << (SIGNAL_FWDSTEP_BEGIN + group_step + action + extra_timesteps);
 		}
 	}
 	
@@ -380,29 +375,6 @@ void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 		prev_signals[0] = 1.0;
 		prev_signals[1] = timestep_sensor;
 	}
-	
-	#ifdef flagHAVE_SIGSENS
-	if (signal == 0 || cursor == cursor_sigbegin) {
-		for(int i = 0; i < SIGSENS_COUNT*2; i++)
-			prev_signals[2 + i] = 1.0;
-	} else {
-		const int periods[SIGSENS_COUNT] = SIGSENS_PERIODS;
-		for(int i = 0; i < SIGSENS_COUNT; i++) {
-			const Snapshot& snap  = snaps[Upp::max(cursor_sigbegin, cursor - periods[i])];
-			double change  = (cur_snap.GetOpen(sym_id) / snap.GetOpen(sym_id)  - 1.0) * (1.0 / periods[i]);
-			change *= signal;
-			epoch_av[i].Add(fabs(change));
-			double sensor = change / (epoch_av[i].mean * 3.0);
-			if (sensor >= 0.0) {
-				prev_signals[2 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
-				prev_signals[2 + i * 2 + 1] = 1.0;
-			} else {
-				prev_signals[2 + i * 2 + 0] = 1.0;
-				prev_signals[2 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
-			}
-		}
-	}
-	#endif
 	
 	for(int i = 0; i < SIGNAL_SENSORS; i++)
 		cur_snap.SetSignalSensor(group_id, sym_id, i, prev_signals[i]);
@@ -486,11 +458,6 @@ void AgentAmp::ResetEpoch() {
 	
 	cursor_sigbegin = 0;
 	
-	#ifdef flagHAVE_SIGSENS
-	for(int i = 0; i < SIGSENS_COUNT; i++)
-		epoch_av[i].Clear();
-	#endif
-	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
 		int add_exp_every = Upp::max(5, iters / dqn.GetExperienceCountMax());
@@ -527,7 +494,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 }
 
 void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	int prev_signal = signal;
 	
 	if (lower_output_signal == 0) {
@@ -587,7 +554,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
 		
 		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
-		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + timefwd_step + extra_timesteps);
+		timestep_total = 1 << (AMP_FWDSTEP_BEGIN + group_step + timefwd_step + extra_timesteps);
 		
 		signal = lower_output_signal * maxscale;
 	}
@@ -618,29 +585,6 @@ void AgentAmp::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	
 	if (timestep_actual < 0) timestep_actual = 0;
 	prev_signals[2] = 0.75 - 0.75 * timestep_actual / timestep_total;
-	
-	#ifdef flagHAVE_SIGSENS
-	if (signal == 0 || cursor == cursor_sigbegin) {
-		for(int i = 0; i < SIGSENS_COUNT*2; i++)
-			prev_signals[3 + i] = 1.0;
-	} else {
-		const int periods[SIGSENS_COUNT] = SIGSENS_PERIODS;
-		for(int i = 0; i < SIGSENS_COUNT; i++) {
-			const Snapshot& snap  = snaps[Upp::max(cursor_sigbegin, cursor - periods[i])];
-			double change  = (cur_snap.GetOpen(sym_id) / snap.GetOpen(sym_id)  - 1.0) * (1.0 / periods[i]);
-			change *= signal;
-			epoch_av[i].Add(fabs(change));
-			double sensor = change / (epoch_av[i].mean * 3.0);
-			if (sensor >= 0.0) {
-				prev_signals[3 + i * 2 + 0] = 1.0 - Upp::max(0.0, Upp::min(+1.0, +sensor));
-				prev_signals[3 + i * 2 + 1] = 1.0;
-			} else {
-				prev_signals[3 + i * 2 + 0] = 1.0;
-				prev_signals[3 + i * 2 + 1] = 1.0 - Upp::max(0.0, Upp::min(+1.0, -sensor));
-			}
-		}
-	}
-	#endif
 	
 	for(int i = 0; i < AMP_SENSORS; i++)
 		cur_snap.SetAmpSensor(group_id, sym_id, i, prev_signals[i]);
@@ -685,6 +629,15 @@ AgentFuse::AgentFuse() {
 	
 }
 
+void AgentFuse::Serialize(Stream& s) {
+	s % dqn % result_equity % result_drawdown % rewards % iter % deep_iter % extra_timesteps;
+}
+
+void AgentFuse::DeepCreate() {
+	deep_iter = 0;
+	Create();
+}
+
 void AgentFuse::Create() {
 	dqn.Reset();
 	iter = 0;
@@ -701,27 +654,19 @@ void AgentFuse::ResetEpoch() {
 		result_drawdown.Add(dd);
 	}
 	broker.Reset();
-	test_broker.Reset();
 	signal = 0;
 	lower_output_signal = 0;
 	prev_lower_output_signal = 0;
-	prev_equity = test_broker.AccountEquity();
-	begin_equity = test_broker.AccountEquity();
+	prev_equity = broker.AccountEquity();
 	
+	timestep_actual = 0;
+	timestep_total = -1;
 	cursor = 1;
+	prev_equity_cursor = 0;
 	skip_learn = true;
 	clean_epoch = true;
 	
-	pos_dd_sum = 0;
-	neg_dd_sum = 0;
-	dd_count = 0;
-	dd = 1.0;
-	begin_dd = 1.0;
-	
-	#ifdef flagHAVE_SIGSENS
-	for(int i = 0; i < SIGSENS_COUNT; i++)
-		epoch_av[i].Clear();
-	#endif
+	cursor_sigbegin = 0;
 	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
@@ -733,93 +678,38 @@ void AgentFuse::ResetEpoch() {
 
 void AgentFuse::Main(Vector<Snapshot>& snaps) {
 	Snapshot& cur_snap = snaps[cursor - 0];
-	
+	timestep_actual--;
 	lower_output_signal = cur_snap.GetAmpOutput(agent->group_id, agent->sym_id);
-	
-	bool learn_trigger = false;
-	bool nonzero_prev_trigger = prev_lower_output_signal != 0;
-	bool inv_input_trigger = lower_output_signal * prev_lower_output_signal < 0;
-	bool input_trigger = inv_input_trigger || (prev_lower_output_signal == 0 && lower_output_signal != 0);
-	
-	
-	// DD collection, when nonzero_prev_trigger
-	double dd_change;
-	if (nonzero_prev_trigger) {
-		test_broker.RefreshOrders(cur_snap);
-		broker.RefreshOrders(cur_snap);
-		
-		double equity = test_broker.equity;
-		double change = equity - prev_equity;
-		if (change > 0)	pos_dd_sum += change;
-		else			neg_dd_sum -= change;
-		dd_count++;
-		double dd_sum = pos_dd_sum + neg_dd_sum;
-		if (dd_sum > 0.0)	dd = neg_dd_sum / dd_sum;
-		else				dd = 1.0;
-		
-		if (dd_count == FUSE_DD_MINCOUNT) {
-			begin_dd = dd;
-		}
-		else if (dd_count > FUSE_DD_MINCOUNT) {
-			dd_change = dd - begin_dd;
-			
-			if (fabs(dd_change) >= FUSE_DD_MINCHANGE) {
-				learn_trigger = true;
-			}
-			else if (lower_output_signal == 0 || inv_input_trigger) {
-				learn_trigger = true;
-			}
-		}
-	}
-	else dd = 1.0;
-	
-	prev_equity = test_broker.equity;
-	
-	
-	// Signal change
-	if (learn_trigger || input_trigger) {
+	if (timestep_actual <= 0 || lower_output_signal != prev_lower_output_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
-		
-		if (learn_trigger) {
-			double reward;
-			double eq_change = (test_broker.equity / begin_equity - 1.0) * 1000.0;
-			if (signal == 0)	reward = -eq_change;
-			else				reward = +eq_change;
+		if (!skip_learn) {
+			broker.RefreshOrders(cur_snap);
+			double equity = broker.AccountEquity();
+			int timesteps = cursor - prev_equity_cursor;
+			double reward = (equity / prev_equity - 1.0) * 1000.0 / timesteps;
 			Backward(reward);
+			if (equity < 0.25 * broker.begin_equity) {
+				clean_epoch = false;
+				broker.Reset();
+			}
 		}
-		
-		if (test_broker.equity < 0.25 * test_broker.begin_equity) {
-			clean_epoch = false;
-			test_broker.Reset();
-		}
-		
+		prev_equity = broker.AccountEquity();
+		prev_equity_cursor = cursor;
 		Forward(cur_snap, prev_snap);
-		
-		// Reset is done by input, not by own signal
-		if (input_trigger) {
-			pos_dd_sum = 0.0;
-			neg_dd_sum = 0.0;
-			dd_count = 0;
-		}
-		
-		begin_equity = test_broker.equity;
-		begin_dd = dd;
+		prev_lower_output_signal = lower_output_signal;
 	}
-	
-	prev_lower_output_signal = lower_output_signal;
-	
-	
 	Write(cur_snap, snaps);
 	equity[cursor] = broker.AccountEquity();
 	cursor++;
 }
 
 void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
+	int group_id = agent->group_id, sym_id = agent->sym_id, group_step = agent->group_step;
 	int prev_signal = signal;
 	
 	if (lower_output_signal == 0) {
 		skip_learn = true;
+		timestep_total = 1;
 		signal = 0;
 	}
 	else {
@@ -863,15 +753,26 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		
 		ASSERT(cursor == FUSE_STATES);
 		
-
+		const int timefwd_steps = AMP_FWDSTEPS;
+		
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < FUSE_ACTIONCOUNT);
 		
-		if (!action)
-			signal = 0;
-		else
+		int is_enabled		= action % 2;
+		int timefwd_step	= action / 2;
+		
+		timestep_total = 1 << (FUSE_FWDSTEP_BEGIN + group_step - 2 + timefwd_step + extra_timesteps);
+		
+		if (is_enabled)
 			signal = lower_output_signal;
+		else
+			signal = 0;
 	}
+	
+	// Export value.
+	timestep_actual = timestep_total;
+	if (prev_signal != signal)
+		cursor_sigbegin = cursor;
 	
 	
 	// Following accepts previous iteration values.
@@ -881,20 +782,22 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	// This is not skipped in the forward-only mode, because the equity graph is being drawn for visualization.
 	// Broker signals may NOT be read in realtime, because it can be reseted in a unsuccessful try.
 	
-	test_broker.SetSignal(sym_id, lower_output_signal); // lower signal, not own
-	bool succ = test_broker.Cycle(cur_snap);
+	broker.SetSignal(sym_id, signal);
+	bool succ = broker.Cycle(cur_snap);
 	
 	if (!succ)
-		test_broker.Reset();
-	
-	broker.SetSignal(sym_id, signal);
-	broker.Cycle(cur_snap);
+		broker.Reset();
 }
 
 void AgentFuse::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	cur_snap.SetFuseOutput(group_id, sym_id, signal);
-	cur_snap.SetFuseSensor(group_id, sym_id, 0, dd);
+	
+	if (timestep_actual < 0) timestep_actual = 0;
+	prev_signals[0] = 0.75 - 0.75 * timestep_actual / timestep_total;
+	
+	for(int i = 0; i < FUSE_SENSORS; i++)
+		cur_snap.SetFuseSensor(group_id, sym_id, i, prev_signals[i]);
 }
 
 void AgentFuse::Backward(double reward) {
@@ -903,6 +806,7 @@ void AgentFuse::Backward(double reward) {
 	if (agent->is_training && !skip_learn) {
 		dqn.Learn(reward);
 		iter++;
+		deep_iter++;
 		
 		reward_sum += reward;
 		reward_count++;
@@ -956,11 +860,12 @@ void Agent::Init() {
 	group->sys->SetSingleFixedBroker(sym_id,	sig.broker);
 	group->sys->SetFixedBroker(sym_id,			amp.broker);
 	group->sys->SetFixedBroker(sym_id,			fuse.broker);
-	group->sys->SetFixedBroker(sym_id,			fuse.test_broker);
 	
 	RefreshSnapEquities();
 	RefreshGroupSettings();
 	ResetEpochAll();
+	
+	
 }
 
 void Agent::RefreshSnapEquities() {
@@ -1065,41 +970,49 @@ void Agent::RefreshGroupSettings() {
 			group_active_lower[0] = false;
 			group_active_lower[1] = false;
 			group_active_lower[2] = false;
+			group_step = 0;
 			break;
 		case 1:
 			group_active_lower[0] = false;
 			group_active_lower[1] = false;
 			group_active_lower[2] = true;
+			group_step = 0;
 			break;
 		case 2:
 			group_active_lower[0] = false;
 			group_active_lower[1] = true;
 			group_active_lower[2] = false;
+			group_step = 1;
 			break;
 		case 3:
 			group_active_lower[0] = false;
 			group_active_lower[1] = true;
 			group_active_lower[2] = true;
+			group_step = 1;
 			break;
 		case 4:
 			group_active_lower[0] = true;
 			group_active_lower[1] = false;
 			group_active_lower[2] = false;
+			group_step = 1;
 			break;
 		case 5:
 			group_active_lower[0] = true;
 			group_active_lower[1] = false;
 			group_active_lower[2] = true;
+			group_step = 1;
 			break;
 		case 6:
 			group_active_lower[0] = true;
 			group_active_lower[1] = true;
 			group_active_lower[2] = false;
+			group_step = 2;
 			break;
 		case 7:
 			group_active_lower[0] = true;
 			group_active_lower[1] = true;
 			group_active_lower[2] = true;
+			group_step = 2;
 			break;
 	}
 }

@@ -66,9 +66,6 @@ struct AgentSignal {
 	
 	
 	// Temporary
-	#ifdef flagHAVE_SIGSENS
-	OnlineAverage1 epoch_av[SIGSENS_COUNT];
-	#endif
 	SingleFixedSimBroker broker;
 	Vector<double> equity;
 	double prev_equity = 0;
@@ -111,9 +108,6 @@ struct AgentAmp {
 	
 	
 	// Temporary
-	#ifdef flagHAVE_SIGSENS
-	OnlineAverage1 epoch_av[SIGSENS_COUNT];
-	#endif
 	FixedSimBroker broker;
 	Vector<double> equity;
 	double prev_signals[AMP_SENSORS];
@@ -148,31 +142,31 @@ struct AgentAmp {
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
 
+
+
 struct AgentFuse {
 	
 	
 	// Persistent
 	DQNAgent<FUSE_ACTIONCOUNT, FUSE_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
-	int64 iter = 0;
+	int64 iter = 0, deep_iter = 0;
+	int64 extra_timesteps = 0;
 	
 	
 	// Temporary
-	#ifdef flagHAVE_SIGSENS
-	OnlineAverage1 epoch_av[SIGSENS_COUNT];
-	#endif
-	FixedSimBroker test_broker, broker;
+	FixedSimBroker broker;
 	Vector<double> equity;
+	double prev_signals[FUSE_SENSORS];
 	double prev_equity = 0;
 	double reward_sum = 0;
-	double pos_dd_sum = 0;
-	double neg_dd_sum = 0;
-	double begin_equity = 0;
-	double dd, begin_dd;
-	int dd_count;
 	int reward_count = 0;
 	int signal = 0;
+	int timestep_actual = 0;
+	int timestep_total = 1;
 	int cursor = 0;
+	int cursor_sigbegin = 0;
+	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int prev_lower_output_signal = 0;
 	int prev_reset_iter = 0;
@@ -184,12 +178,13 @@ struct AgentFuse {
 	
 	AgentFuse();
 	void Create();
+	void DeepCreate();
 	void ResetEpoch();
 	void Main(Vector<Snapshot>& snaps);
 	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
 	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
 	void Backward(double reward);
-	void Serialize(Stream& s) {s % dqn % result_equity % result_drawdown % rewards % iter;}
+	void Serialize(Stream& s);
 	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
 	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
 };
@@ -211,6 +206,7 @@ public:
 	
 	
 	// Temporary
+	int group_step = 0;
 	bool is_training = false;
 	AgentGroup* group = NULL;
 	
@@ -226,7 +222,7 @@ public:
 	void ResetEpoch(int phase);
 	void Main(int phase, Vector<Snapshot>& snaps);
 	void Serialize(Stream& s);
-	void SetFreeMarginLevel(double d) {amp.broker.free_margin_level = d; fuse.test_broker.free_margin_level = d; fuse.broker.free_margin_level = d;}
+	void SetFreeMarginLevel(double d) {amp.broker.free_margin_level = d; fuse.broker.free_margin_level = d;}
 	int GetCursor(int phase) const;
 	double GetLastDrawdown(int phase) const;
 	double GetLastResult(int phase) const;

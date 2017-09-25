@@ -116,10 +116,13 @@ void AgentSystem::InitThread() {
 	
 	int stoch_id = sys->Find<StochasticOscillator>();
 	int osma_id = sys->Find<OsMA>();
+	int volav_id = sys->Find<VolatilityAverage>();
 	ASSERT(stoch_id != -1);
 	ASSERT(osma_id != -1);
+	ASSERT(volav_id != -1);
 	
 	indi_ids.Clear();
+	indi_ids.Add().Set(volav_id);
 	indi_ids.Add().Set(osma_id).AddArg(5).AddArg(5*2).AddArg(5);
 	indi_ids.Add().Set(osma_id).AddArg(15).AddArg(15*2).AddArg(15);
 	indi_ids.Add().Set(osma_id).AddArg(60).AddArg(60*2).AddArg(60);
@@ -868,16 +871,8 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 		for(int j = 0; j < buf_count; j++) {
 			ConstBuffer& src = *indi_buffers[j];
 			double d = src.GetUnsafe(shift);
-			double pos, neg;
-			if (d > 0) {
-				pos = 1.0 - d;
-				neg = 1.0;
-			} else {
-				pos = 1.0;
-				neg = 1.0 + d;
-			}
-			snap.SetSensor(i, j * 2 + 0, pos);
-			snap.SetSensor(i, j * 2 + 1, neg);
+			d = (d + 1.0) / 2.0;
+			snap.SetSensor(i, j, d);
 		}
 		
 		DataBridge& db = *dynamic_cast<DataBridge*>(databridge_cores[sym_ids[i]]);
@@ -1057,7 +1052,7 @@ void AgentSystem::RefreshLearningRate(int phase) {
 		for(int j = 0; j < SYM_COUNT; j++) {
 			Agent& a = groups[i].agents[j];
 			if (phase == PHASE_SIGNAL_TRAINING) {
-				double prog = (double)a.sig.iter / (double)FILTER_PHASE_ITER_LIMIT;
+				double prog = (double)a.sig.iter / (double)SIGNAL_PHASE_ITER_LIMIT;
 				double lrate = (1.0 - prog) * range + min_lrate;
 				a.sig.dqn.SetLearningRate(lrate);
 			}
@@ -1144,6 +1139,17 @@ void AgentSystem::RefreshExtraTimesteps(int phase) {
 			if (min_dd >= 40.) {
 				a.amp.Create();
 				a.amp.extra_timesteps = steps;
+			}
+		}
+		else if (phase == PHASE_FUSE_TRAINING) {
+			double min_dd = 100.;
+			for(int k = 0; k < a.fuse.result_drawdown.GetCount(); k++) {
+				double dd = a.fuse.result_drawdown[k];
+				if (dd < min_dd) min_dd = dd;
+			}
+			if (min_dd >= 40.) {
+				a.fuse.Create();
+				a.fuse.extra_timesteps = steps;
 			}
 		}
 	}

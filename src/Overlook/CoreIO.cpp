@@ -161,6 +161,10 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
 			out % v;
 		}
+		else if (p.data_type == ValueBase::PERS_INTMAPGRID_) {
+			Vector<VectorMap<int, int> >& v = *(Vector<VectorMap<int, int> >*)p.data;
+			out % v;
+		}
 		else Panic("Invalid datatype");
 	}
 	
@@ -260,6 +264,10 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 		}
 		else if (p.data_type == ValueBase::PERS_INTGRID_) {
 			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
+			in % v;
+		}
+		else if (p.data_type == ValueBase::PERS_INTMAPGRID_) {
+			Vector<VectorMap<int, int> >& v = *(Vector<VectorMap<int, int> >*)p.data;
 			in % v;
 		}
 		else Panic("Invalid datatype");

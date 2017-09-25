@@ -3344,4 +3344,49 @@ signals, if you click it. You can see, that the busiest filter
 activated with different agents in the same time often.&]
 [s0; This is in the release state currently. I think I`'ll upload 
 the v0.3 release later this evening.&]
+[s0; &]
+[s3; 25.9.2017&]
+[s0; The `"fuse`" agent did not work well. It did reduce drawdown 
+with some instruments, but the cost was too high and average 
+drawdown was higher. Seems like copying the `"amp`" agent and 
+changing multiplier to on/off switch might be more reliable. 
+After that change, all agent parts are very similar and should 
+be combined to one class to avoid small bugs. It reduces the 
+size of the code overall and makes the porting to OpenCL version 
+easier.&]
+[s0; Yesterday, I removed the group`_step variable, but the need 
+for it occured again after training. It was used to give `"more 
+patience`" to less volatile times. Setting it by hand is not 
+good, but automatical adjustment is difficult.&]
+[s0; ...&]
+[s0; I tried to simplify the theory behind the current implementation, 
+because it actually changed with new additions to the code.&]
+[s0; So, the idea in the system before the amp part is to train the 
+agent to be active when it sees it`'s assigned volatility and 
+signal in front of it. Currently, the implementation is a mess, 
+when considering that theory. Currently, the system filters the 
+time to volatility ranges and then tries to guess the direction.&]
+[s0; But when you try to implement that revised theory, things get 
+complicated. This takes too much resources, if every agent is 
+forwarded every minute to check if it`'s channel is activated. 
+The current implementation might actually be close to it anyway.&]
+[s0; ...&]
+[s0; Oh, obviously filter parts can now be replaced with very efficient 
+indicators. The filtered step is to move from slower and less 
+volatile time to faster and more volatile and vice versa. Different 
+directions (long/short) can be filtered separately. Minimum change 
+of value can be required, which can be rewarded with a constant 
+value. Timestep is balanced to volatility in hard coded way, 
+which requires different training and testing.&]
+[s0; ...&]
+[s0; Damn. Everything broke when I tried to replace those filter 
+DQN:s. I don`'t like this. I had to revert changes and take the 
+more conservative approach with less changes. I am not sure why 
+this works currently in the training so well. When I go into 
+details then I lose the working version. I guess I should make 
+some clear blueprints and refine the theory. I knew already that 
+this method has apparent flaws.&]
+[s0; In the end, I only added some small changes to tune down drawdowns 
+and to make processing a little faster. I simplified the fuse 
+part to be more robust also.&]
 [s0; ]]

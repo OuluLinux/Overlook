@@ -10,7 +10,7 @@ namespace Overlook {
 #endif
 
 #define FMLEVEL						0.6
-#define BASE_FWDSTEP_BEGIN			5
+#define BASE_FWDSTEP_BEGIN			3
 #define GROUP_COUNT					8
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(6 * 4)
@@ -32,9 +32,8 @@ namespace Overlook {
 #define FILTER_LEVEL_SIZE			(TRAINEE_COUNT * FILTER_SENSORS)
 #define FILTER_GROUP_SIZE			(SYM_COUNT * FILTER_SENSORS)
 #define FILTER_STATES				(TIME_SENSORS + SENSOR_SIZE + FILTER_LEVEL_SIZE)
-#define FILTER_FWDSTEP_BEGIN		BASE_FWDSTEP_BEGIN
-#define FILTER_POS_FWDSTEPS			3
-#define FILTER_ZERO_FWDSTEPS		1
+#define FILTER_POS_FWDSTEPS			5
+#define FILTER_ZERO_FWDSTEPS		5
 #define FILTER_ACTIONCOUNT			(FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS)
 #define FILTER_PHASE_ITER_LIMIT		200000
 #define FILTER_EPS_ITERS_STEP		10000
@@ -43,35 +42,32 @@ namespace Overlook {
 #define SIGNAL_SIZE					(TRAINEE_COUNT * SIGNAL_SENSORS)
 #define SIGNAL_GROUP_SIZE			(SYM_COUNT * SIGNAL_SENSORS)
 #define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
-#define SIGNAL_FWDSTEP_BEGIN		BASE_FWDSTEP_BEGIN
 #define SIGNAL_POS_FWDSTEPS			3
 #define SIGNAL_NEG_FWDSTEPS			3
 #define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)
 #define SIGNAL_PHASE_ITER_LIMIT		300000
 #define SIGNAL_EPS_ITERS_STEP		10000
 
+#define FUSE_SENSORS				2
+#define FUSE_SIZE					(TRAINEE_COUNT * FUSE_SENSORS)
+#define FUSE_GROUP_SIZE				(SYM_COUNT * FUSE_SENSORS)
+#define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + FUSE_SIZE)
+#define FUSE_FWDSTEPS				5
+#define FUSE_ACTIONCOUNT			(2 * FUSE_FWDSTEPS)
+#define FUSE_PHASE_ITER_LIMIT		300000
+#define FUSE_EPS_ITERS_STEP			10000
+
 #define AMP_SENSORS					3
 #define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
 #define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
-#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE)
+#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + FUSE_SIZE + AMP_SIZE)
 #define AMP_FWDSTEP_BEGIN			BASE_FWDSTEP_BEGIN
-#define AMP_FWDSTEPS				3
+#define AMP_FWDSTEPS				5
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
 #define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
 #define AMP_PHASE_ITER_LIMIT		300000
 #define AMP_EPS_ITERS_STEP			10000
-
-#define FUSE_SENSORS				1
-#define FUSE_SIZE					(TRAINEE_COUNT * FUSE_SENSORS)
-#define FUSE_GROUP_SIZE				(SYM_COUNT * FUSE_SENSORS)
-#define FUSE_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE + FUSE_SIZE)
-#define FUSE_FWDSTEP_BEGIN			BASE_FWDSTEP_BEGIN
-#define FUSE_ACTIONCOUNT			(2 * AMP_FWDSTEPS)
-#define FUSE_PHASE_ITER_LIMIT		300000
-#define FUSE_EPS_ITERS_STEP			10000
-#define FUSE_DD_MINCOUNT			5
-#define FUSE_DD_MINCHANGE			0.1
 
 class AgentSystem;
 
@@ -83,6 +79,7 @@ private:
 	double day_timesensor;
 	double sensors				[SENSOR_SIZE];
 	double open					[SYM_COUNT];
+	double change				[SYM_COUNT];
 	double signal_sensors		[SIGNAL_SIZE];
 	double amp_sensors			[AMP_SIZE];
 	double fuse_sensors			[FUSE_SIZE];
@@ -128,6 +125,9 @@ public:
 	
 	inline double GetOpen(int sym) const {ASSERT(sym >= 0 && sym < SYM_COUNT); return open[sym];}
 	inline void   SetOpen(int sym, double d) {ASSERT(sym >= 0 && sym < SYM_COUNT); open[sym] = d;}
+	
+	inline double GetChange(int sym) const {ASSERT(sym >= 0 && sym < SYM_COUNT); return change[sym];}
+	inline void   SetChange(int sym, double d) {ASSERT(sym >= 0 && sym < SYM_COUNT); change[sym] = d;}
 	
 	inline double GetSignalSensor(int group, int sym, int sens) const {
 		ASSERT(group >= 0 && group < GROUP_COUNT); ASSERT(sym >= 0 && sym < SYM_COUNT); ASSERT(sens >= 0 && sens < SIGNAL_SENSORS);
@@ -317,7 +317,6 @@ public:
 	void SetSingleFixedBroker(int sym_id, SingleFixedSimBroker& broker);
 	void SetFixedBroker(int sym_id, FixedSimBroker& broker);
 	void ReduceExperienceMemory(int phase);
-	void RefreshExtraTimesteps(int phase);
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;

@@ -313,7 +313,6 @@ void AgentSystem::TrainAgents(int phase) {
 	// Update configurations
 	RefreshSnapshots();
 	RefreshSnapEquities();
-	RefreshExtraTimesteps(phase);
 	RefreshAgentEpsilon(phase);
 	RefreshLearningRate(phase);
 	for(int i = 0; i < phase; i++)
@@ -585,15 +584,21 @@ void AgentSystem::MainReal() {
 }
 
 int AgentSystem::FindActiveGroup(int sym_id) {
-	// Return first group which has open signals
 	Snapshot& cur_snap = snaps.Top();
+	double max_res = 0.0;
+	int group_id = -1;
 	for(int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
-		int signal = cur_snap.GetAmpOutput(i, sym_id); // never from fuse, always from amp
-		if (signal)
-			return i;
+		Agent& agent = ag.agents[sym_id];
+		int signal = cur_snap.GetSignalOutput(i, sym_id);
+		double res = agent.amp.GetLastResult();
+		double dd = agent.amp.GetLastDrawdown();
+		if (signal && res > max_res && dd < 50.0) {
+			max_res = res;
+			group_id = i;
+		}
 	}
-	return GROUP_COUNT-1;
+	return group_id;
 }
 
 void AgentSystem::LoadThis() {
@@ -877,7 +882,15 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 		
 		DataBridge& db = *dynamic_cast<DataBridge*>(databridge_cores[sym_ids[i]]);
 		double open = db.GetBuffer(0).GetUnsafe(shift);
+		
 		snap.SetOpen(i, open);
+		if (shift > 0) {
+			double prev = db.GetBuffer(0).GetUnsafe(shift - 1);
+			double change = open / prev - 1.0;
+			snap.SetChange(i, change);
+		} else {
+			snap.SetChange(i, 0.0);
+		}
 	}
 	
 	
@@ -1106,55 +1119,6 @@ void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 		groups[i].agents[j].SetFreeMarginLevel(fmlevel);
 }
 
-void AgentSystem::RefreshExtraTimesteps(int phase) {
-	
-	// Increase timesteps when drawdown is >= 40%.
-	// Drawdown typically decreases when the minimum period is longer.
-	// In less volatile times trends are weak and long and their targets are further away.
-	
-	double av_deep_iters = GetAverageDeepIterations(phase);
-	int steps = (av_deep_iters + BREAK_INTERVAL_ITERS * 0.5) / BREAK_INTERVAL_ITERS;
-	if (steps >= MAX_EXTRA_TIMESTEPS + 1) return;
-	
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-		Agent& a = groups[i].agents[j];
-		
-		if (phase == PHASE_SIGNAL_TRAINING) {
-			double min_dd = 100.;
-			for(int k = 0; k < a.sig.result_drawdown.GetCount(); k++) {
-				double dd = a.sig.result_drawdown[k];
-				if (dd < min_dd) min_dd = dd;
-			}
-			if (min_dd >= 40.) {
-				a.sig.Create();
-				a.sig.extra_timesteps = steps;
-			}
-		}
-		else if (phase == PHASE_AMP_TRAINING) {
-			double min_dd = 100.;
-			for(int k = 0; k < a.amp.result_drawdown.GetCount(); k++) {
-				double dd = a.amp.result_drawdown[k];
-				if (dd < min_dd) min_dd = dd;
-			}
-			if (min_dd >= 40.) {
-				a.amp.Create();
-				a.amp.extra_timesteps = steps;
-			}
-		}
-		else if (phase == PHASE_FUSE_TRAINING) {
-			double min_dd = 100.;
-			for(int k = 0; k < a.fuse.result_drawdown.GetCount(); k++) {
-				double dd = a.fuse.result_drawdown[k];
-				if (dd < min_dd) min_dd = dd;
-			}
-			if (min_dd >= 40.) {
-				a.fuse.Create();
-				a.fuse.extra_timesteps = steps;
-			}
-		}
-	}
-}
-
 void AgentSystem::InitBrokerValues() {
 	MetaTrader& mt = GetMetaTrader();
 	
@@ -1204,10 +1168,13 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	
 	for(int i = 0; i < sym_ids.GetCount(); i++) {
 		int group_id = FindActiveGroup(i);
-		ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 		int sym = sym_ids[i];
-		ASSERT(groups[group_id].agents[i].sym == sym);
-		int sig = cur_snap.GetFuseOutput(group_id, i);
+		int sig = 0;
+		if (group_id != -1) {
+			ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
+			ASSERT(groups[group_id].agents[i].sym == sym);
+			sig = cur_snap.GetAmpOutput(group_id, i);
+		}
 		if (sig == broker.GetSignal(sym) && sig != 0)
 			broker.SetSignalFreeze(sym, true);
 		else {

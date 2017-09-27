@@ -3389,4 +3389,8 @@ this method has apparent flaws.&]
 [s0; In the end, I only added some small changes to tune down drawdowns 
 and to make processing a little faster. I simplified the fuse 
 part to be more robust also.&]
+[s0; &]
+[s3; 27.9.2017&]
+[s0; Ah, the volatility sum should be used as counter instead of 
+the time. Enough said.&]
 [s0; ]]

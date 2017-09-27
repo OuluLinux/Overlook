@@ -3,9 +3,20 @@
 
 namespace Overlook {
 
+class ActionCountGraph : public Ctrl {
+	int phase = -1;
+	Agent* a = NULL;
+	
+public:
+	
+	virtual void Paint(Draw& w);
+	const Vector<int64>& GetStats();
+	void SetAgent(Agent& a, int phase) {this->a = &a; this->phase = phase;}
+	
+};
+
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
 #include <CtrlCore/lay.h>
-
 
 class ManagerLoader : public WithLoader<TopWindow> {
 	

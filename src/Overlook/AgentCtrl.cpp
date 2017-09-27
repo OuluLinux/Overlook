@@ -533,7 +533,7 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	}
 	
 	hsplit.Clear();
-	if (type == PHASE_AMP_TRAINING || type == PHASE_FUSE_TRAINING) {
+	if (type == PHASE_AMP_TRAINING) {
 		hsplit << draw << trade << timescroll;
 		hsplit.SetPos(2000, 0);
 		hsplit.SetPos(8000, 1);
@@ -558,8 +558,8 @@ void TrainingCtrl::Data() {
 	stats.Refresh();
 	result.Refresh();
 	
-	if (type == PHASE_AMP_TRAINING || type == PHASE_FUSE_TRAINING) {
-		FixedSimBroker& b = type == PHASE_AMP_TRAINING ? agent->amp.broker : agent->fuse.broker;
+	if (type == PHASE_AMP_TRAINING) {
+		FixedSimBroker& b = agent->amp.broker;
 		MetaTrader& mt = GetMetaTrader();
 		
 		int j = 0;

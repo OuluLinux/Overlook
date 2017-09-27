@@ -9,8 +9,8 @@ enum {
 	PHASE_PREFUSE2_TRAINING,
 	PHASE_PREFUSE3_TRAINING,
 	PHASE_SIGNAL_TRAINING,
-	PHASE_AMP_TRAINING,
 	PHASE_FUSE_TRAINING,
+	PHASE_AMP_TRAINING,
 	PHASE_REAL
 };
 
@@ -21,18 +21,19 @@ struct AgentFilter {
 	// Persistent
 	DQNAgent<FILTER_ACTIONCOUNT, FILTER_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
+	Vector<int64> action_counts;
 	int64 iter = 0;
 	
 	
 	// Temporary
-	OnlineAverage1 change_av;
+	OnlineAverage1 volat_av;
 	Vector<double> equity;
 	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
 	double reward_sum = 0;
+	double change_sum = 0, change_sum_limit = 0;
+	int change_count = 0;
 	int reward_count = 0;
 	int signal = 0, sig_mul = 0;
-	int timestep_actual = 0;
-	int timestep_total = 1;
 	int cursor = 0;
 	int fwd_cursor = 0;
 	int lower_output_signal = 0;
@@ -61,23 +62,21 @@ struct AgentSignal {
 	// Persistent
 	DQNAgent<SIGNAL_ACTIONCOUNT, SIGNAL_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
+	Vector<int64> action_counts;
 	int64 iter = 0, deep_iter = 0;
-	int64 extra_timesteps = 0;
 	
 	
 	// Temporary
-	SingleFixedSimBroker broker;
 	Vector<double> equity;
-	double prev_equity = 0;
+	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
 	double reward_sum = 0;
+	double change_sum = 0, change_sum_limit = 0;
+	int change_count = 0;
 	int reward_count = 0;
 	int signal = 0;
-	int timestep_actual = 0;
-	int timestep_total = 1;
 	int cursor = 0;
-	int prev_equity_cursor = 0;
+	int fwd_cursor = 0;
 	int lower_output_signal = 0;
-	int cursor_sigbegin = 0;
 	int prev_reset_iter = 0;
 	bool skip_learn = true;
 	Agent* agent = NULL;
@@ -97,14 +96,58 @@ struct AgentSignal {
 };
 
 
+struct AgentFuse {
+	
+	
+	// Persistent
+	DQNAgent<FUSE_ACTIONCOUNT, FUSE_STATES> dqn;
+	Vector<double> result_equity, result_drawdown, rewards;
+	Vector<int64> action_counts;
+	int64 iter = 0, deep_iter = 0;
+	
+	
+	// Temporary
+	Vector<double> equity;
+	double prev_signals[FUSE_SENSORS];
+	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
+	double reward_sum = 0;
+	double change_sum = 0, change_sum_limit = 0;
+	int change_count = 0;
+	int reward_count = 0;
+	int signal = 0, prev_signal = 0;
+	int cursor = 0;
+	int fwd_cursor = 0;
+	int lower_output_signal = 0;
+	int prev_lower_output_signal = 0;
+	int prev_reset_iter = 0;
+	bool skip_learn = true;
+	bool clean_epoch = true;
+	Agent* agent = NULL;
+	
+	
+	
+	AgentFuse();
+	void Create();
+	void DeepCreate();
+	void ResetEpoch();
+	void Main(Vector<Snapshot>& snaps);
+	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
+	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
+	void Backward(double reward);
+	void Serialize(Stream& s);
+	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
+	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
+};
+
+
 struct AgentAmp {
 	
 	
 	// Persistent
 	DQNAgent<AMP_ACTIONCOUNT, AMP_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
+	Vector<int64> action_counts;
 	int64 iter = 0, deep_iter = 0;
-	int64 extra_timesteps = 0;
 	
 	
 	// Temporary
@@ -113,13 +156,11 @@ struct AgentAmp {
 	double prev_signals[AMP_SENSORS];
 	double prev_equity = 0;
 	double reward_sum = 0;
+	double change_sum = 0, change_sum_limit = 0;
+	int change_count = 0;
 	int reward_count = 0;
 	int signal = 0;
-	int timestep_actual = 0;
-	int timestep_total = 1;
 	int cursor = 0;
-	int cursor_sigbegin = 0;
-	int prev_equity_cursor = 0;
 	int lower_output_signal = 0;
 	int prev_lower_output_signal = 0;
 	int prev_reset_iter = 0;
@@ -144,52 +185,6 @@ struct AgentAmp {
 
 
 
-struct AgentFuse {
-	
-	
-	// Persistent
-	DQNAgent<FUSE_ACTIONCOUNT, FUSE_STATES> dqn;
-	Vector<double> result_equity, result_drawdown, rewards;
-	int64 iter = 0, deep_iter = 0;
-	int64 extra_timesteps = 0;
-	
-	
-	// Temporary
-	FixedSimBroker broker;
-	Vector<double> equity;
-	double prev_signals[FUSE_SENSORS];
-	double prev_equity = 0;
-	double reward_sum = 0;
-	int reward_count = 0;
-	int signal = 0;
-	int timestep_actual = 0;
-	int timestep_total = 1;
-	int cursor = 0;
-	int cursor_sigbegin = 0;
-	int prev_equity_cursor = 0;
-	int lower_output_signal = 0;
-	int prev_lower_output_signal = 0;
-	int prev_reset_iter = 0;
-	bool skip_learn = true;
-	bool clean_epoch = true;
-	Agent* agent = NULL;
-	
-	
-	
-	AgentFuse();
-	void Create();
-	void DeepCreate();
-	void ResetEpoch();
-	void Main(Vector<Snapshot>& snaps);
-	void Forward(Snapshot& cur_snap, Snapshot& prev_snap);
-	void Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps);
-	void Backward(double reward);
-	void Serialize(Stream& s);
-	inline double GetLastDrawdown() const {return result_drawdown.IsEmpty() ? 100.0 : result_drawdown.Top();}
-	inline double GetLastResult() const {return result_equity.IsEmpty() ? 0.0 : result_equity.Top();}
-};
-
-
 class Agent : Moveable<Agent> {
 	
 public:
@@ -206,8 +201,8 @@ public:
 	
 	
 	// Temporary
-	int group_step = 0;
 	bool is_training = false;
+	double spread_points = 0.0;
 	AgentGroup* group = NULL;
 	
 	
@@ -222,7 +217,7 @@ public:
 	void ResetEpoch(int phase);
 	void Main(int phase, Vector<Snapshot>& snaps);
 	void Serialize(Stream& s);
-	void SetFreeMarginLevel(double d) {amp.broker.free_margin_level = d; fuse.broker.free_margin_level = d;}
+	void SetFreeMarginLevel(double d) {amp.broker.free_margin_level = d;}
 	int GetCursor(int phase) const;
 	double GetLastDrawdown(int phase) const;
 	double GetLastResult(int phase) const;

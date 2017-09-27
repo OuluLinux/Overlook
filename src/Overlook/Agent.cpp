@@ -75,18 +75,14 @@ void AgentFilter::Main(Vector<Snapshot>& snaps) {
 		} else {
 			double volat = change_sum / change_count;
 			volat_av.Add(volat);
-			if (signal == 0) {
-				reward = 0.0;
-			} else {
-				// Give reward for higher or lower than average.
-				bool active_lower = agent->group_active_lower[level];
-				reward = !active_lower ?
-						(volat - volat_av.mean) * -100 :
-						(volat - volat_av.mean) * +100;
-				if (reward >= 0)	pos_reward_sum += reward;
-				else				neg_reward_sum -= reward;
-				all_reward_sum += reward;
-			}
+			bool active_lower = agent->group_active_lower[level];
+			if (signal == 0) active_lower = !active_lower;
+			reward = !active_lower ?
+					(volat - volat_av.mean) * +100 :
+					(volat - volat_av.mean) * -100;
+			if (reward >= 0)	pos_reward_sum += reward;
+			else				neg_reward_sum -= reward;
+			all_reward_sum += reward;
 		}
 		Backward(reward);							// Learn the reward
 		Forward(cur_snap, prev_snap);				// Do new actions
@@ -281,8 +277,8 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	if (change_sum >= change_sum_limit || lower_output_signal == 0) {
 		if (!skip_learn) {
 			Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
-			double reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0) * 1000.0;
-			reward /= change_count;
+			double reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
+			reward /= change_sum;
 			if (reward >= 0)	pos_reward_sum += reward;
 			else				neg_reward_sum -= reward;
 			all_reward_sum += reward;
@@ -502,7 +498,7 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 						reward = (cur_snap.GetOpen(sym_id) / (fwd_snap.GetOpen(sym_id) - agent->spread_points) - 1.0) * -1000.0;
 				}
 			}
-			reward /= change_count;
+			reward /= change_sum;
 			if (reward >= 0)	pos_reward_sum += reward;
 			else				neg_reward_sum -= reward;
 			all_reward_sum += reward;
@@ -701,7 +697,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 			broker.RefreshOrders(cur_snap);
 			double equity = broker.AccountEquity();
 			double reward = (equity / prev_equity - 1.0) * 1000.0;
-			reward /= change_count;
+			reward /= change_sum;
 			Backward(reward);
 			if (equity < 0.25 * broker.begin_equity) {
 				clean_epoch = false;

@@ -10,7 +10,7 @@ namespace Overlook {
 #endif
 
 #define FMLEVEL						0.6
-#define BASE_FWDSTEP_BEGIN			3
+#define BASE_FWDSTEP_BEGIN			5
 #define GROUP_COUNT					8
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(6 * 4)

@@ -22,7 +22,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int agent_count		= TRAINEE_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = TIME_SENSORS + SYM_COUNT + TRAINEE_COUNT + TRAINEE_COUNT + TRAINEE_COUNT;
+	int rows = TIME_SENSORS + SYM_COUNT + 2 * TRAINEE_COUNT;
 	
 	int cols = value_count;
 	int grid_w = sz.cx;
@@ -74,33 +74,6 @@ void SnapshotDraw::Paint(Draw& w) {
 			int clr = (int)Upp::min(255.0, value);
 			Color c(255 - clr, clr, 0);
 			id.DrawRect(x, y, w, h, c);
-		}
-		
-		row++;
-	}
-	
-	
-	// Filter
-	xstep = (double)grid_w / (double)(FILTER_SENSORS * FILTER_COUNT);
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-		int y = (int)(row * ystep);
-		int y2 = (int)((row + 1) * ystep);
-		int h = y2-y;
-		
-		for(int l = 0; l < FILTER_COUNT; l++) {
-			for(int k = 0; k < FILTER_SENSORS; k++) {
-				int a = l * FILTER_SENSORS + k;
-				int x = (int)(a * xstep);
-				int x2 = (int)((a + 1) * xstep);
-				int w = x2 - x;
-				double d = snap.GetFilterSensor(i, l, j, k);
-				double min = 0.0;
-				double max = 1.0;
-				double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-				int clr = (int)Upp::min(255.0, value);
-				Color c(255 - clr, clr, 0);
-				id.DrawRect(x, y, w, h, c);
-			}
 		}
 		
 		row++;
@@ -189,8 +162,8 @@ void ResultGraph::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	Agent& agent = *this->agent;
-	const Vector<double>& equity_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_equity : (type == PHASE_AMP_TRAINING ? agent.amp.result_equity : (type == PHASE_FUSE_TRAINING ? agent.fuse.result_equity : agent.filter[type].result_equity));
-	const Vector<double>& drawdown_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_drawdown : (type == PHASE_AMP_TRAINING ? agent.amp.result_drawdown :(type == PHASE_FUSE_TRAINING ? agent.fuse.result_drawdown : agent.filter[type].result_drawdown));
+	const Vector<double>& equity_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_equity : agent.amp.result_equity;
+	const Vector<double>& drawdown_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_drawdown : agent.amp.result_drawdown;
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
@@ -319,7 +292,7 @@ void EquityGraph::Paint(Draw& w) {
 	double last = 0.0;
 	double peak = 0.0;
 	
-	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : (type == PHASE_AMP_TRAINING ?  agent->amp.equity : (type == PHASE_FUSE_TRAINING ? agent->fuse.equity : agent->filter[type].equity));
+	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : agent->amp.equity;
 	int count = data.GetCount();
 	if (!count) return;
 	
@@ -399,7 +372,7 @@ void RewardGraph::Paint(Draw& d) {
 		double last = 0.0;
 		double peak = 0.0;
 		
-		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : (type == PHASE_AMP_TRAINING ? agent->amp.x : (type == PHASE_FUSE_TRAINING ? agent->fuse.x : agent->filter[type].x))
+		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : agent->amp.x
 		int reward_count = SRC(reward_count);
 		const Vector<double>& data = SRC(rewards);
 		int experience_add_every = SRC(dqn.GetExperienceAddEvery());
@@ -524,13 +497,6 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	else if (type == PHASE_AMP_TRAINING) {
 		timescroll.SetAgent(agent.amp.dqn);
 	}
-	else if (type == PHASE_FUSE_TRAINING) {
-		timescroll.SetAgent(agent.fuse.dqn);
-	}
-	else {
-		ASSERT(type >= 0 && type < PHASE_SIGNAL_TRAINING);
-		timescroll.SetAgent(agent.filter[type].dqn);
-	}
 	
 	hsplit.Clear();
 	if (type == PHASE_AMP_TRAINING) {
@@ -549,7 +515,7 @@ void TrainingCtrl::Data() {
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	// list
-	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : (type == PHASE_AMP_TRAINING ? agent->amp.cursor : (type == PHASE_FUSE_TRAINING ? agent->fuse.cursor : agent->filter[type].cursor));
+	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : agent->amp.cursor;
 	draw.SetSnap(cursor);
 	draw.Refresh();
 	timescroll.Refresh();
@@ -750,7 +716,7 @@ void SignalGraph::Paint(Draw& w) {
 			if (mode == MODE_FILTER) {
 				int active_group = 0;
 				for(int i = 0; i < GROUP_COUNT; i++) {
-					if (snap1.GetFilterOutput(i, FILTER_COUNT-1, j))
+					if (snap1.GetSignalOutput(i, j))
 						break;
 					active_group++;
 				}

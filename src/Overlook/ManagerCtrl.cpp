@@ -5,11 +5,10 @@ namespace Overlook {
 const Vector<int64>& ActionCountGraph::GetStats() {
 	if (phase == PHASE_SIGNAL_TRAINING)
 		return a->sig.action_counts;
-	if (phase == PHASE_FUSE_TRAINING)
-		return a->fuse.action_counts;
 	if (phase == PHASE_AMP_TRAINING)
 		return a->amp.action_counts;
-	return a->filter[phase].action_counts;
+	Panic("NEVER");
+	return Vector<int64>();
 }
 
 void ActionCountGraph::Paint(Draw& w) {
@@ -64,16 +63,6 @@ void SystemOverview::Data() {
 	infostr << "Created: " << Format("%", ag.created) << "\n";
 	infostr << "\n";
 	
-	for(int i = 0; i < FILTER_COUNT; i++) {
-		infostr << "Filter " << i << "\n";
-		infostr << "\tInput size: 1 * " << FILTER_STATES << "\n";
-		infostr << "\tAction count: " << FILTER_ACTIONCOUNT << "\n";
-		infostr << "\tAverage drawdown: " << ag.GetAverageFilterDrawdown(i) << "\n";
-		infostr << "\tAverage filter " << i << " iterations: " << (int)ag.GetAverageFilterIterations(i) << "\n";
-		infostr << "\tRandom action probability: " << ag.GetFilterEpsilon(i) << "\n";
-		infostr << "\n";
-	}
-	
 	infostr << "Signal\n";
 	infostr << "\tInput size: 1 * " << SIGNAL_STATES << "\n";
 	infostr << "\tAction count: " << SIGNAL_ACTIONCOUNT << "\n";
@@ -81,14 +70,6 @@ void SystemOverview::Data() {
 	infostr << "\tAverage iterations: " << (int)ag.GetAverageSignalIterations() << "\n";
 	infostr << "\tAverage deep iterations: " << (int)ag.GetAverageSignalDeepIterations() << "\n";
 	infostr << "\tRandom action probability: " << ag.GetSignalEpsilon() << "\n";
-	infostr << "\n";
-	
-	infostr << "Fuse\n";
-	infostr << "\tInput size: 1 * " << FUSE_STATES << "\n";
-	infostr << "\tAction count: " << FUSE_ACTIONCOUNT << "\n";
-	infostr << "\tAverage drawdown: " << ag.GetAverageFuseDrawdown() << "\n";
-	infostr << "\tAverage iterations: " << (int)ag.GetAverageFuseIterations() << "\n";
-	infostr << "\tRandom action probability: " << ag.GetFuseEpsilon() << "\n";
 	infostr << "\n";
 	
 	infostr << "Amp\n";
@@ -115,16 +96,6 @@ void SystemOverview::Data() {
 				av_iters = ag.GetAverageAmpIterations();
 				iters_max = AMP_PHASE_ITER_LIMIT;
 				phase_str = "Amp";
-			}
-			else if (ag.phase == PHASE_FUSE_TRAINING) {
-				av_iters = ag.GetAverageFuseIterations();
-				iters_max = FUSE_PHASE_ITER_LIMIT;
-				phase_str = "Fuse";
-			}
-			else if (ag.phase < PHASE_SIGNAL_TRAINING) {
-				av_iters = ag.GetAverageFilterIterations(ag.phase);
-				iters_max = FILTER_PHASE_ITER_LIMIT;
-				phase_str = "Filter " + IntStr(ag.phase);
 			}
 			
 			double iters_diff = av_iters - prev_av_iters;
@@ -321,105 +292,6 @@ void AmpTabCtrl::SetAgent(Agent& agent) {
 
 
 
-FuseTabCtrl::FuseTabCtrl() {
-	agent = NULL;
-	
-	CtrlLayout(overview);
-	
-	Add(overview);
-	Add(overview, "Overview");
-	Add(trainingctrl);
-	Add(trainingctrl, "Training");
-	
-	WhenSet << THISBACK(Data);
-}
-
-void FuseTabCtrl::Data() {
-	if (!agent) return;
-	
-	Agent& a = *agent;
-	int tab = Get();
-	
-	if (tab == 0) {
-		overview.bestresult.SetLabel(DblStr(!a.fuse.result_equity.IsEmpty() ? a.fuse.result_equity.Top() : 0.0));
-		overview.iters.SetLabel(IntStr(a.fuse.iter));
-		overview.epsilon.SetLabel(DblStr(a.fuse.dqn.GetEpsilon()));
-		overview.expcount.SetLabel(IntStr(a.fuse.dqn.GetExperienceCount()));
-		overview.act_graph.Refresh();
-	}
-	else if (tab == 1) {
-		trainingctrl.Data();
-	}
-}
-
-void FuseTabCtrl::SetAgent(Agent& agent) {
-	this->agent = &agent;
-	
-	overview.act_graph.SetAgent(agent, PHASE_FUSE_TRAINING);
-	trainingctrl.SetAgent(agent, PHASE_FUSE_TRAINING);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-FilterTabCtrl::FilterTabCtrl() {
-	agent = NULL;
-	
-	CtrlLayout(overview);
-	
-	Add(overview);
-	Add(overview, "Overview");
-	Add(trainingctrl);
-	Add(trainingctrl, "Training");
-	
-	WhenSet << THISBACK(Data);
-}
-
-void FilterTabCtrl::Data() {
-	if (!agent) return;
-	
-	Agent& a = *agent;
-	int tab = Get();
-	
-	if (tab == 0) {
-		overview.bestresult.SetLabel(DblStr(!a.filter[level].result_equity.IsEmpty() ? a.filter[level].result_equity.Top() : 0.0));
-		overview.iters.SetLabel(IntStr(a.filter[level].iter));
-		overview.epsilon.SetLabel(DblStr(a.filter[level].dqn.GetEpsilon()));
-		overview.expcount.SetLabel(IntStr(a.filter[level].dqn.GetExperienceCount()));
-		overview.act_graph.Refresh();
-	}
-	else if (tab == 1) {
-		trainingctrl.Data();
-	}
-}
-
-void FilterTabCtrl::SetAgent(Agent& agent, int level) {
-	this->agent = &agent;
-	this->level = level;
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	
-	overview.act_graph.SetAgent(agent, level);
-	trainingctrl.SetAgent(agent, level);
-}
-
-
-
-
 
 
 
@@ -437,8 +309,6 @@ ManagerCtrl::ManagerCtrl() {
 	mainview.Add(system_tabs.SizePos());
 	mainview.Add(signal_tabs.SizePos());
 	mainview.Add(amp_tabs.SizePos());
-	mainview.Add(fuse_tabs.SizePos());
-	mainview.Add(filter_tabs.SizePos());
 	mainview.Add(export_ctrl.SizePos());
 	
 	listsplit.Vert();
@@ -447,11 +317,7 @@ ManagerCtrl::ManagerCtrl() {
 	
 	glist.AddColumn("View");
 	glist.Add("Overview");
-	glist.Add("Filter 1");
-	glist.Add("Filter 2");
-	glist.Add("Filter 3");
 	glist.Add("Signal");
-	glist.Add("Fuse");
 	glist.Add("Amp");
 	glist.Add("Realtime");
 	glist <<= THISBACK(SetView);
@@ -472,8 +338,6 @@ void ManagerCtrl::SetView() {
 	signal_tabs.Hide();
 	system_tabs.Hide();
 	amp_tabs.Hide();
-	fuse_tabs.Hide();
-	filter_tabs.Hide();
 	export_ctrl.Hide();
 	
 	Data();
@@ -486,35 +350,21 @@ void ManagerCtrl::SetView() {
 		system_tabs.Show();
 		alist.SetCount(0);
 	}
-	else if (view >= 1 && view <= 3) {
-		int agent_id = alist.GetCursor();
-		int group_id = agent_id / SYM_COUNT;
-		agent_id = agent_id % SYM_COUNT;
-		filter_tabs.SetAgent(asys.groups[group_id].agents[agent_id], view - 1);
-		filter_tabs.Show();
-	}
-	else if (view == 4) {
+	else if (view == 1) {
 		int agent_id = alist.GetCursor();
 		int group_id = agent_id / SYM_COUNT;
 		agent_id = agent_id % SYM_COUNT;
 		signal_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
 		signal_tabs.Show();
 	}
-	else if (view == 5) {
-		int agent_id = alist.GetCursor();
-		int group_id = agent_id / SYM_COUNT;
-		agent_id = agent_id % SYM_COUNT;
-		fuse_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
-		fuse_tabs.Show();
-	}
-	else if (view == 6) {
+	else if (view == 2) {
 		int agent_id = alist.GetCursor();
 		int group_id = agent_id / SYM_COUNT;
 		agent_id = agent_id % SYM_COUNT;
 		amp_tabs.SetAgent(asys.groups[group_id].agents[agent_id]);
 		amp_tabs.Show();
 	}
-	else if (view == 7) {
+	else if (view == 3) {
 		alist.SetCount(0);
 		export_ctrl.Show();
 	}
@@ -529,7 +379,7 @@ void ManagerCtrl::Data() {
 	if (view == 0) {
 		system_tabs.Data();
 	}
-	else if (view >= 1 && view <= 6) {
+	else if (view >= 1 && view <= 2) {
 		int acount = 0;
 		for(int i = 0; i < ag.groups.GetCount(); i++)
 		for(int j = 0; j < ag.groups[i].agents.GetCount(); j++) {
@@ -545,12 +395,10 @@ void ManagerCtrl::Data() {
 		if (this->view != view && alist.GetCount())
 			alist.SetCursor(0);
 		
-		if      (view == 4) signal_tabs.Data();
-		else if (view == 5)	fuse_tabs.Data();
-		else if (view == 6)	amp_tabs.Data();
-		else				filter_tabs.Data();
+		if      (view == 1) signal_tabs.Data();
+		else if (view == 2)	amp_tabs.Data();
 	}
-	else if (view == 7) {
+	else if (view == 3) {
 		export_ctrl.Data();
 	}
 	

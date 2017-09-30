@@ -3439,7 +3439,6 @@ void Psychological::Start() {
 
 CorrelationOscillator::CorrelationOscillator() {
 	period = 10;
-	sym_count = -1;
 	this_open = NULL;
 }
 
@@ -3449,30 +3448,35 @@ void CorrelationOscillator::Init() {
 	
 	MetaTrader& mt = GetMetaTrader();
 	
-	ASSERT(sym_count != -1);
-	major_sym.SetCount(sym_count, -1);
+	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
-	// Add most important currencies
-	for(int i = 0, j = mt.GetSymbolCount(); i < 4; i++, j++)
-		major_sym[i] = j;
-	
-	// Add most important indices
-	for(int i = 0; i < mt.GetIndexCount(); i++)
-		major_sym[4+i] = mt.GetIndexId(i);
+	AgentSystem& as = GetSystem().GetAgentSystem();
+	if (as.sym_ids.GetCount() == 0)
+		Panic("AgentSystem is not yet initialized.");
+	int sym_shift = 0;
+	for(int i = 0; i < SYM_COUNT-1; i++) {
+		int as_id = as.sym_ids[i + sym_shift];
+		if (sym_shift == 0 && as_id == id) {
+			sym_shift++;
+			i--;
+			continue;
+		}
+		sym_ids[i] = as_id;
+	}
 	
 	SetCoreMaximum(+1.0);
 	SetCoreMinimum(-1.0);
 	SetCoreSeparateWindow();
 	SetBufferBegin(0, period);
 	
-	for(int i = 0; i < sym_count-1; i++) {
-		SetBufferColor(i, RainbowColor((double)i / sym_count));
+	for(int i = 0; i < SYM_COUNT-1-1; i++) {
+		SetBufferColor(i, RainbowColor((double)i / (SYM_COUNT-1)));
 	}
 	
-	opens.SetCount(sym_count, 0);
-	averages.SetCount(sym_count);
-	for(int i = 0; i < sym_count; i++) {
-		ConstBuffer& open = GetInputBuffer(0, major_sym[i], GetTimeframe(), 0);
+	opens.SetCount(SYM_COUNT-1, 0);
+	averages.SetCount(SYM_COUNT-1);
+	for(int i = 0; i < SYM_COUNT-1; i++) {
+		ConstBuffer& open = GetInputBuffer(0, sym_ids[i], GetTimeframe(), 0);
 		opens[i] = &open;
 	}
 	this_open = &GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0);
@@ -3557,8 +3561,8 @@ void CorrelationOscillator::Start() {
 	
 	if (counted > 0) counted = Upp::max(counted - period, 0);
 	
-	for(int i = 0; i < major_sym.GetCount(); i++) {
-		Process(major_sym[i], i);
+	for(int i = 0; i < sym_ids.GetCount(); i++) {
+		Process(sym_ids[i], i);
 	}
 }
 
@@ -3886,22 +3890,15 @@ void PeriodicalChange::Start() {
 
 
 VolatilityAverage::VolatilityAverage() {
-	periods.Add(1 << 3);
-	periods.Add(1 << 5);
-	periods.Add(1 << 7);
-	periods.Add(1 << 9);
-	stats.SetCount(periods.GetCount());
+	period = 60;
 }
 
 void VolatilityAverage::Init() {
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-1.0);
 	SetCoreMaximum(+1.0);
-	int c = periods.GetCount();
-	for(int i = 0; i < c; i++) {
-		SetBufferColor(i, Color(28 * i / c, 212 * i / c, 255 * i / c));
-		SetBufferLineWidth(i, 1+i);
-	}
+	SetBufferColor(0, Color(85, 255, 150));
+	SetBufferLineWidth(0, 2);
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, +0.5);
 	SetCoreLevel(1, -0.5);
@@ -3918,241 +3915,55 @@ void VolatilityAverage::Start() {
 	if (counted == bars) return;
 	if (!counted) counted++;
 	
-	Vector<double> stats_limit;
+	Buffer& dst = GetBuffer(0);
 	
-	for (int p = 0; p < periods.GetCount(); p++) {
-		int period = periods[p];
-		Buffer& dst = GetBuffer(p);
-		VectorMap<int,int>& stats = this->stats[p];
-		
-		double sum = 0.0;
-		SetSafetyLimit(counted);
-		for(int i = Upp::max(1, counted - period); i < counted; i++) {
-			double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
-			sum += change;
-		}
-		
-		for(int i = counted; i < bars; i++) {
-			SetSafetyLimit(i+1);
-			
-			// Add current
-			double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
-			sum += change;
-			
-			// Subtract
-			int j = i - period;
-			if (j > 0) {
-				double prev_change = fabs(src.Get(j) / src.Get(j-1) - 1.0);
-				sum -= prev_change;
-			}
-			
-			double average = sum / period;
-			
-			int av = average * 100000;
-			stats.GetAdd(av,0)++;
-			
-			dst.Set(i, average);
-		}
-		
-		SortByKey(stats, StdLess<int>());
-		
-		stats_limit.SetCount(stats.GetCount());
-		int64 total = 0;
-		for(int i = 0; i < stats.GetCount(); i++) {
-			stats_limit[i] = total;
-			total += stats[i];
-		}
-		
-		for(int i = counted; i < bars; i++) {
-			SetSafetyLimit(i+1);
-			
-			double average = dst.Get(i);
-			int av = average * 100000;
-			double j = stats_limit[stats.Find(av)];
-			double sens = j / total * 2.0 - 1.0;
-			dst.Set(i, sens);
-		}
+	double sum = 0.0;
+	SetSafetyLimit(counted);
+	for(int i = Upp::max(1, counted - period); i < counted; i++) {
+		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		sum += change;
 	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*Sensors::Sensors() {
-	
-	
-	
-}
-
-void Sensors::Init() {
-	SetCoreSeparateWindow();
-	
-	#ifdef LARGE_SENSOR
-	for(int i = 0; i < 10; i++)
-		SetBufferColor(i, RainbowColor((double)i / 10.0));
-	#else
-	for(int i = 0; i < SMALL_COUNT*2; i++)
-		SetBufferColor(i, RainbowColor((double)i / 4.0));
-	#endif
-	
-	tfmin = GetMinutePeriod();
-	int w1 = 7 * 24 * 60;
-	int count = 0;
-	
-	split_type = 0;
-	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
-	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
-	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
-	
-	total_mean = 0.0;
-	total_count = 0;
-	means.SetCount(count, 0.0);
-	counts.SetCount(count, 0);
-}
-
-void Sensors::Start() {
-	System& sys = GetSystem();
-	ConstBuffer& src = GetInputBuffer(0, 0);
-	Vector<Buffer*> bufs;
-	#ifdef LARGE_SENSOR
-	for(int i = 0; i < 10; i++)
-	#else
-	for(int i = 0; i < SMALL_COUNT*2; i++)
-	#endif
-		bufs.Add(&GetBuffer(i));
-	
-	int bars = Upp::min(src.GetCount(), GetBars()) - 1;
-	int counted = GetCounted();
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i+1);
 		
-		double prev = src.Get(i);
-		if (prev == 0.0)
-			continue;
-		double change = src.Get(i+1) / prev - 1.0;
-		if (!IsFin(change))
-			continue;
+		// Add current
+		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		sum += change;
 		
-		Time t = sys.GetTimeTf(GetTf(), i);
+		// Subtract
+		int j = i - period;
+		if (j > 0) {
+			double prev_change = fabs(src.Get(j) / src.Get(j-1) - 1.0);
+			sum -= prev_change;
+		}
 		
-		if (split_type == 0) {
-			int wday = DayOfWeek(t);
-			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
-			int avpos = wdaymin / tfmin;
-			Add(avpos, change);
-		}
-		else if (split_type == 1) {
-			int wday = DayOfWeek(t);
-			Add(wday, change);
-		}
-		else {
-			int pos = (DayOfYear(t) % (7 * 4)) / 7;
-			Add(pos, change);
-		}
+		double average = sum / period;
+		
+		int av = average * 100000;
+		stats.GetAdd(av,0)++;
+		
+		dst.Set(i, average);
 	}
 	
+	SortByKey(stats, StdLess<int>());
 	
-	if (counted) counted--;
-	bars++;
-	
-	double range_max = total_mean * 3.0;
+	stats_limit.SetCount(stats.GetCount());
+	int64 total = 0;
+	for(int i = 0; i < stats.GetCount(); i++) {
+		stats_limit[i] = total;
+		total += stats[i];
+	}
 	
 	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+		SetSafetyLimit(i+1);
 		
-		#ifdef LARGE_SENSOR
-		
-		double changes[5];
-		for(int j = 0; j < 3; j++) {
-			Time t = sys.GetTimeTf(GetTf(), i+j);
-			if (split_type == 0) {
-				int wday = DayOfWeek(t);
-				int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
-				int avpos = wdaymin / tfmin;
-				changes[2+j] = means[avpos];
-			}
-			else if (split_type == 1) {
-				int wday = DayOfWeek(t);
-				changes[2+j] = means[wday];
-			}
-			else {
-				int pos = (DayOfYear(t) % (7 * 4)) / 7;
-				changes[2+j] = means[pos];
-			}
-		}
-		
-		double open0 = src.Get(i);
-		double open1 = i > 0 ? src.Get(i-1) : 0.0;
-		double open2 = i > 1 ? src.Get(i-2) : 0.0;
-		
-		changes[1] = i > 0 ? (open0 / open1 - 1.0) : 0.0;
-		changes[0] = i > 1 ? (open1 / open2 - 1.0) : 0.0;
-		
-		
-		for(int j = 0; j < 5; j++) {
-			double d = changes[j];
-			double pos, neg;
-			if (d >= 0) {
-				pos = Upp::max(0.0, range_max - d) / range_max;
-				neg = 1.0;
-			} else {
-				pos = 1.0;
-				neg = Upp::max(0.0, range_max + d) / range_max;
-			}
-			bufs[j * 2 + 0]->Set(i, pos);
-			bufs[j * 2 + 1]->Set(i, neg);
-		}
-		
-		#else
-		int shift = 0;
-		for(int j = 0; j < SMALL_COUNT; j++) {
-			int k = i-shift;
-			
-			// k        -= 0 1 3 6 10 15
-			// prev_pos -= 1 2 3 4 5
-			for (int l = 1; l <= j; l++)
-				k -= l;
-			
-			if (k-1 < 0) break;
-			double open0 = src.Get(k);
-			
-			int prev_pos = k-1-j;
-			if (prev_pos < 0) break;
-			
-			double open1 = src.Get(prev_pos);
-			while (open0 == open1 && prev_pos > 0) {
-				prev_pos--;
-				shift++;
-				open1 = src.Get(prev_pos);
-			}
-			
-			double d = i > 0 ? (open0 / open1 - 1.0) : 0.0;
-			double pos, neg;
-			if (d >= 0) {
-				pos = Upp::max(0.0, range_max - d) / range_max;
-				neg = 1.0;
-			} else {
-				pos = 1.0;
-				neg = Upp::max(0.0, range_max + d) / range_max;
-			}
-			bufs[j*2 + 0]->Set(i, pos);
-			bufs[j*2 + 1]->Set(i, neg);
-		}
-		#endif
+		double average = dst.Get(i);
+		int av = average * 100000;
+		double j = stats_limit[stats.Find(av)];
+		double sens = j / total * 2.0 - 1.0;
+		dst.Set(i, sens);
 	}
-}*/
+}
 
 }

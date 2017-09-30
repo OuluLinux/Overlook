@@ -777,9 +777,8 @@ protected:
 	typedef const Vector<double> ConstVector;
 	
 	int period;
-	int sym_count;
 	ConstBuffer* this_open;
-	Vector<int> major_sym;
+	Vector<int> sym_ids;
 	Vector<ConstBuffer*> opens;
 	Vector<OnlineAverage2> averages;
 	
@@ -792,32 +791,27 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		if (sym_count == -1)
-			sym_count = 4 + GetMetaTrader().GetIndexCount();
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(sym_count, sym_count)
+			% Out(SYM_COUNT-1, SYM_COUNT-1)
 			% Arg("period", period, 2, 16);
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		static Index<int> major_sym;
-		if (major_sym.IsEmpty()) {
-			MetaTrader& mt = GetMetaTrader();
-			
-			// Add most important currencies
-			for(int i = 0, j = mt.GetSymbolCount(); i < 4; i++, j++)
-				major_sym.Add(j);
-			
-			// Add most important indices
-			for(int i = 0; i < mt.GetIndexCount(); i++)
-				major_sym.Add(mt.GetIndexId(i));
+		AgentSystem& as = ::Overlook::GetSystem().GetAgentSystem();
+		if (as.sym_ids.GetCount() == 0)
+			Panic("AgentSystem is not yet initialized.");
+		
+		static Index<int> sym_ids;
+		if (sym_ids.IsEmpty()) {
+			for(int i = 0; i < as.sym_ids.GetCount(); i++)
+				sym_ids.Add(as.sym_ids[i]);
 		}
 		
 		// Accept all symbols in the same timeframe
 		if (in_sym == -1)
 			return in_tf == out_tf;
 		
-		if (major_sym.Find(out_sym) != -1 || out_sym == in_sym)
+		if (sym_ids.Find(out_sym) != -1 || out_sym == in_sym)
 			return true;
 		return false;
 	}
@@ -920,8 +914,9 @@ public:
 
 
 class VolatilityAverage : public Core {
-	Vector<int> periods;
-	Vector<VectorMap<int, int> > stats;
+	int period;
+	VectorMap<int, int> stats;
+	Vector<double> stats_limit;
 	
 protected:
 	virtual void Start();
@@ -933,66 +928,12 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(4, 4)
+			% Out(1, 1)
 			% Arg("period", period, 2, 20000)
 			% Persistent(stats);
 	}
 };
 
-//#define LARGE_SENSOR
-#define SMALL_COUNT 4
-
-/*class Sensors : public Core {
-	Vector<double> means;
-	Vector<int> counts;
-	double total_mean;
-	int total_count;
-	int split_type, tfmin;
-	
-protected:
-	virtual void Start();
-	
-	void Add(int i, double d) {
-		double& mean = means[i];
-		int& count = counts[i];
-		if (!count) {
-			mean = d;
-			count = 1;
-		} else {
-			double delta = d - mean;
-			mean += delta / count;
-			count++;
-		}
-		
-		if (!total_count) {
-			total_mean = fabs(d);
-			total_count = 1;
-		} else {
-			double delta = fabs(d) - total_mean;
-			total_mean += delta / total_count;
-			total_count++;
-		}
-	}
-	double Get(int i) {return means[i];}
-	
-public:
-	Sensors();
-	
-	virtual void Init();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-		#ifdef LARGE_SENSOR
-			% Out(10, 10)
-		#else
-			% Out(SMALL_COUNT*2, SMALL_COUNT*2)
-		#endif
-			% Persistent(means)
-			% Persistent(counts)
-			% Persistent(total_mean)
-			% Persistent(total_count);
-	}
-};*/
 
 
 

@@ -2,9 +2,13 @@
 #define _Overlook_Common_h_
 
 #include <CtrlLib/CtrlLib.h>
+#include <CoreUtils/CoreUtils.h>
 #include <CoreUtils/Optimizer.h>
 
 #undef ASSERTEXC
+
+#undef DLOG
+#define DLOG(x)
 
 namespace Overlook {
 using namespace Upp;

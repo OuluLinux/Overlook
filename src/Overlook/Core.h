@@ -1,8 +1,6 @@
 #ifndef _Overlook_Core_h_
 #define _Overlook_Core_h_
 
-#include <CtrlUtils/CtrlUtils.h>
-#include <CoreUtils/CoreUtils.h>
 
 namespace Overlook {
 using namespace Upp;

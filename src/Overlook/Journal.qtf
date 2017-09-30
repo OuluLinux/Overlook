@@ -3393,4 +3393,104 @@ part to be more robust also.&]
 [s3; 27.9.2017&]
 [s0; Ah, the volatility sum should be used as counter instead of 
 the time. Enough said.&]
+[s0; &]
+[s3; 28.9.2017&]
+[s0; Ah, both the time and the volatility sum should be used as counter. 
+Target values should be known and euclidean distance to it should 
+be calculated. Getting target values needs some statistics and 
+k`-means etc. It will be similar to the current setup. The whole 
+configuration of agents can be done in more intelligent way at 
+the same time.&]
+[s0; ...&]
+[s0; Hmm... I am repeating that completely failing idea all the time. 
+I must say `"no`" to myself. This must follow the current setup 
+which works. Closest thing to the current is to sample some important 
+reward correlating values, then find 2 cluster centers with k`-mean. 
+Repeat that around found centers to zoom. In that way, filter`-dqn 
+agents learns to tell which cluster center is closer. It`'s a 
+repeating mistake to not fill the whole time with at least one 
+binary classification.&]
+[s0; I took a dump and thought, that maybe both reward and action 
+should be only about which cluster center is closer. You could 
+actually get continuous `"zooming`" to all binary or short integer 
+variables. That`'s just an idea, but it`'s interesting. Zooming 
+would happen always, when backward a.k.a learning is unnecessary.&]
+[s0; In that `"zooming`", idea is, that the previous `"zoom`-level`" 
+has given correct answer. Currently, it is done by training the 
+previous phase completely, but it also can be done in a way, 
+that you use the correct action, instead of the agent`'s action. 
+That would allow simultaneous training of all levels.&]
+[s0; We are approaching the version, where the duplicate code of 
+agent`-parts can be discarded... There is a lot of small improvements 
+that couldn`'t be implemented to the current version. Now, even 
+the theory part begins to match.&]
+[s0; ...&]
+[s0; Yeah... this pretty much requires clearing most of the current 
+Agent code. That zooming part requires complete agent system 
+overhaul and nothing new fits existing. It just screams a fresh 
+start.&]
+[s0; &]
+[s3; 29.9.2017&]
+[s0; So much going on in planning. If you use agent just to decide 
+which pole is closer from inputs, then you can use past values 
+directly and calculate distance to average cluster center inputs 
+values. You can even use linear bit values (1 `-> 1 bit true, 
+4 `-> 4 bits true) and Hamming distance to make the processing 
+insanely fast.&]
+[s0; ...&]
+[s0; Much rewriting has to be done. Seems like DQN`-agent is unncesessary 
+now. At least I`'ll try first cheaper algorithm. I follow previous 
+version very closely, but even then huge changes must be done.&]
+[s0; Currently, filter agents splits the data to sectors, but that 
+will be improved by making cluster tree hiearchy with K`-mean 
+algorithm. It will follow the current `"splitting into two`" 
+method, and that creates sort of a `"zoom`" by selecting which 
+cluster is closer to data position inputs. Basically, data position 
+inputs are matched to output result space by seeking to poles 
+which are closer to inputs. That is sort of a forward propagation. 
+Some sort of `"learning`" or `"backward propagation`" is done 
+by collecting statistics that which input gives correct next 
+pole and which doesn`'t. That next zoom node selecting in nodes 
+can be done with DQN`-agents and that is how it is being done 
+in the latest version. Both techniques can be used (selecting 
+the next zoom node by statistics or by DQN`-agent) and both can 
+and will be tested with a separate testing data.&]
+[s0; It`'s very early to tell about this yet. I am still confused 
+about this method and about making DQN`-agents secondary. I`'ve 
+checked many times, that these planned features should be an 
+improvement to the current version.&]
+[s0; The main strength of these planned features is that a K`-mean 
+cluster tree with two`-branch nodes could accurately tell if 
+currently identified cluster has e.g. likely long opportunity. 
+It could be a fast way to find matching past data and to recognize 
+opportunities of very probable outcomes. It is not a flexible 
+solution to a unknown situation, but a fast and efficient method 
+for recognizing certain outcomes as they come up.&]
+[s0; To simplify to the maximum: known output (result) space clusters 
+are approached step`-by`-step by comparing current inputs to 
+average inputs of next 2 clusters. The found cluster is analyzed 
+for opportunities. Also, the 2 cluster splitting could be used 
+to recognize the right momentum (dynamic pending order) and to 
+recognize the end position (dynamic tp/sl).&]
+[s0; In the end, the DQN`-agent was just making a binary decision 
+from input values and in this use case, ambiguous inputs can 
+be ignored. The app should be playing only the safest option 
+anyway... I guess, that if a pipeline can be implemented using 
+only binary options, there is no need for any `"black box AI`".&]
+[s0; &]
+[s3; 30.9.2017&]
+[s0; Things seems to get out of hand in a Rick `& Morty level mindfuck. 
+That clustering can be done in many ways and with different count 
+of branching (or just 1 level and many branches) and that data 
+position can be thought to be in many different level of depth 
+nodes at the same time. Also, data is considered to get closer 
+to next branch center or to jump out of branch like a computer 
+program. So the forecaster has huge amount of next possible paths 
+from those matching branches, and those paths can be handled 
+with simple probability calculations.&]
+[s0; However, this whole plan can be simplified to a lightweight 
+version, which is much less exciting.&]
+[s0; ..&]
+[s0; Whew... a lot of confusing journal text lately, but I finally 
+found the most simplified plan and started implementing it.&]
 [s0; ]]

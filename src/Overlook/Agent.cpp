@@ -2,216 +2,6 @@
 
 namespace Overlook {
 
-
-
-AgentFilter::AgentFilter() {
-	action_counts.SetCount(FILTER_ACTIONCOUNT, 0);
-}
-
-void AgentFilter::Serialize(Stream& s) {
-	s % dqn % result_equity % result_drawdown % rewards % action_counts % iter;
-}
-
-void AgentFilter::Create() {
-	dqn.Reset();
-	iter = 0;
-	result_equity.Clear();
-	result_drawdown.Clear();
-	rewards.Clear();
-	for(int i = 0; i < action_counts.GetCount(); i++)
-		action_counts[i] = 0;
-}
-
-void AgentFilter::ResetEpoch() {
-	if (cursor > 1) {
-		result_equity.Add(all_reward_sum);
-		double posneg_sum = pos_reward_sum + neg_reward_sum;
-		double dd = posneg_sum > 0.0 ? (neg_reward_sum / posneg_sum * 100.0) : 100.0;
-		result_drawdown.Add(dd);
-	}
-	
-	signal = 0;
-	lower_output_signal = 0;
-	
-	change_sum = 0;
-	change_sum_limit = 0;
-	change_count = 0;
-	
-	fwd_cursor = 0;
-	cursor = 1;
-	skip_learn = true;
-	
-	all_reward_sum = 0;
-	pos_reward_sum = 0;
-	neg_reward_sum = 0;
-	
-	volat_av.Clear();
-	
-	// Reduce trainer sampling interval in case of very large data to get uniform sampling.
-	if (prev_reset_iter > 0) {
-		int iters = iter - prev_reset_iter;
-		int add_exp_every = Upp::max(5, iters / dqn.GetExperienceCountMax());
-		dqn.SetExperienceAddEvery(add_exp_every);
-	}
-	prev_reset_iter = iter;
-}
-
-void AgentFilter::Main(Vector<Snapshot>& snaps) {
-	int sym_id = agent->sym_id;
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	Snapshot& cur_snap = snaps[cursor - 0];			// Get the snapshot in current data reading position
-	
-	lower_output_signal = level == 0 ? 1 : cur_snap.GetFilterOutput(agent->group_id, level-1, agent->sym_id);
-	change_sum += fabs(cur_snap.GetChange(sym_id));
-	change_count++;
-	
-	// Do new actions when timestep_total has been moved, or when source input has zeroed.
-	if (change_sum >= change_sum_limit || lower_output_signal == 0) {
-		Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
-		Snapshot& prev_snap = snaps[cursor - 1];	// Previous snapshot is used as input also. Next is unknown.
-		double reward;
-		if (skip_learn) {
-			reward = 0.0;
-		} else {
-			double volat = change_sum / change_count;
-			volat_av.Add(volat);
-			bool active_lower = agent->group_active_lower[level];
-			if (signal == 0) active_lower = !active_lower;
-			reward = !active_lower ?
-					(volat - volat_av.mean) * +100 :
-					(volat - volat_av.mean) * -100;
-			if (reward >= 0)	pos_reward_sum += reward;
-			else				neg_reward_sum -= reward;
-			all_reward_sum += reward;
-		}
-		Backward(reward);							// Learn the reward
-		Forward(cur_snap, prev_snap);				// Do new actions
-		fwd_cursor = cursor;
-	}
-	Write(cur_snap);								// Always write sensors to the common table
-	
-	equity[cursor] = all_reward_sum;				// Get some equity data for visualization
-	
-	cursor++;										// Move 1 time-step forward also with data reading cursor
-}
-
-void AgentFilter::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	int group_id = agent->group_id, sym_id = agent->sym_id;
-	
-	
-	if (lower_output_signal == 0) {
-		skip_learn = true;
-		change_sum_limit = 0.0;
-		signal = 0;
-	}
-	else {
-		skip_learn = false;
-
-		// Input values
-		// - time_values
-		// - input sensors
-		// - previous signals
-		int cursor = 0;
-		double input_array[FILTER_STATES];
-		
-		
-		// time_values
-		input_array[cursor++] = cur_snap.GetYearSensor();
-		input_array[cursor++] = cur_snap.GetWeekSensor();
-		input_array[cursor++] = cur_snap.GetDaySensor();
-		
-		
-		// sensors of value of current
-		for(int i = 0; i < SENSOR_SIZE; i++)
-			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-		
-		// all previous outputs from the same phase
-		for(int i = 0; i < FILTER_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = prev_snap.GetFilterSensorUnsafe(j, level, i);
-		
-		ASSERT(cursor == FILTER_STATES);
-		
-		
-		int action = dqn.Act(input_array);
-		action_counts[action]++;
-		ASSERT(action >= 0 && action < FILTER_ACTIONCOUNT);
-		ASSERT(FILTER_ACTIONCOUNT == (FILTER_POS_FWDSTEPS + FILTER_ZERO_FWDSTEPS));
-		
-		int timefwd_step;
-		if (action < FILTER_POS_FWDSTEPS) {
-			timefwd_step = action;
-			sig_mul = +1;
-		}
-		else {
-			timefwd_step = action - FILTER_POS_FWDSTEPS;
-			sig_mul = 0;
-		}
-		
-		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step + (FILTER_COUNT-1-level)));
-		signal = sig_mul;
-	}
-	
-	change_sum = 0.0;
-	change_count = 0;
-}
-
-void AgentFilter::Write(Snapshot& cur_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	cur_snap.SetFilterOutput(group_id, level, sym_id, signal);
-	
-	double timestep_sensor = 0.75 - 0.75 * change_sum / change_sum_limit;
-	double prev_signals[FILTER_SENSORS];
-	
-	if (sig_mul == 0) {
-		prev_signals[0] = timestep_sensor;
-		prev_signals[1] = 1.0;
-	}
-	else {
-		prev_signals[0] = 1.0;
-		prev_signals[1] = timestep_sensor;
-	}
-	
-	for(int i = 0; i < FILTER_SENSORS; i++)
-		cur_snap.SetFilterSensor(group_id, level, sym_id, i, prev_signals[i]);
-}
-
-void AgentFilter::Backward(double reward) {
-	
-	// pass to brain for learning
-	if (agent->is_training && !skip_learn) {
-		dqn.Learn(reward);
-		iter++;
-		
-		reward_sum += reward;
-		reward_count++;
-		
-		if (reward_count > REWARD_AV_PERIOD) {
-			rewards.Add(reward_sum / reward_count);
-			reward_count = 0;
-			reward_sum = 0.0;
-		}
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 AgentSignal::AgentSignal() {
 	action_counts.SetCount(SIGNAL_ACTIONCOUNT, 0);
 }
@@ -270,7 +60,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	Snapshot& cur_snap  = snaps[cursor - 0];
 	Snapshot& prev_snap = snaps[cursor - 1];
 	
-	lower_output_signal = cur_snap.GetFilterOutput(group_id, FILTER_COUNT-1, sym_id);
+	lower_output_signal = 0; //cur_snap.GetFilterOutput(group_id, FILTER_COUNT-1, sym_id);
 	change_sum += fabs(cur_snap.GetChange(sym_id));
 	change_count++;
 	
@@ -415,213 +205,6 @@ void AgentSignal::Backward(double reward) {
 
 
 
-AgentFuse::AgentFuse() {
-	action_counts.SetCount(FUSE_ACTIONCOUNT, 0);
-}
-
-void AgentFuse::Serialize(Stream& s) {
-	s % dqn % result_equity % result_drawdown % rewards % action_counts % iter % deep_iter;
-}
-
-void AgentFuse::DeepCreate() {
-	deep_iter = 0;
-	Create();
-}
-
-void AgentFuse::Create() {
-	dqn.Reset();
-	iter = 0;
-	result_equity.Clear();
-	result_drawdown.Clear();
-	rewards.Clear();
-	for(int i = 0; i < action_counts.GetCount(); i++)
-		action_counts[i] = 0;
-}
-
-void AgentFuse::ResetEpoch() {
-	if (cursor > 1) {
-		result_equity.Add(all_reward_sum);
-		double posneg_sum = pos_reward_sum + neg_reward_sum;
-		double dd = posneg_sum > 0.0 ? (neg_reward_sum / posneg_sum * 100.0) : 100.0;
-		result_drawdown.Add(dd);
-	}
-	
-	signal = 0;
-	prev_signal = 0;
-	lower_output_signal = 0;
-	prev_lower_output_signal = 0;
-	
-	change_sum = 0;
-	change_sum_limit = 0;
-	change_count = 0;
-	
-	fwd_cursor = 0;
-	cursor = 1;
-	skip_learn = true;
-	clean_epoch = true;
-	
-	all_reward_sum = 0;
-	pos_reward_sum = 0;
-	neg_reward_sum = 0;
-	
-	if (prev_reset_iter > 0) {
-		int iters = iter - prev_reset_iter;
-		int add_exp_every = Upp::max(5, iters / dqn.GetExperienceCountMax());
-		dqn.SetExperienceAddEvery(add_exp_every);
-	}
-	prev_reset_iter = iter;
-}
-
-void AgentFuse::Main(Vector<Snapshot>& snaps) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
-	Snapshot& cur_snap = snaps[cursor - 0];
-	
-	lower_output_signal = cur_snap.GetSignalOutput(group_id, sym_id);
-	change_sum += fabs(cur_snap.GetChange(sym_id));
-	change_count++;
-	
-	if (change_sum >= change_sum_limit || lower_output_signal != prev_lower_output_signal) {
-		Snapshot& prev_snap = snaps[cursor - 1];
-		if (!skip_learn) {
-			Snapshot& fwd_snap = snaps[fwd_cursor]; // Snapshot of previous Forward call
-			double reward = 0.0;
-			if (signal == 0) {
-				reward = -1.0 * lower_output_signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0) * 1000.0;
-			}
-			else {
-				if (signal == prev_signal) {
-					reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0) * 1000.0;
-				} else {
-					if (signal == 1)
-						reward = ((cur_snap.GetOpen(sym_id) - agent->spread_points) / fwd_snap.GetOpen(sym_id) - 1.0) * +1000.0;
-					else
-						reward = (cur_snap.GetOpen(sym_id) / (fwd_snap.GetOpen(sym_id) - agent->spread_points) - 1.0) * -1000.0;
-				}
-			}
-			reward /= change_sum;
-			if (reward >= 0)	pos_reward_sum += reward;
-			else				neg_reward_sum -= reward;
-			all_reward_sum += reward;
-			
-			Backward(reward);
-		}
-		prev_signal = signal;
-		Forward(cur_snap, prev_snap);
-		prev_lower_output_signal = lower_output_signal;
-		fwd_cursor = cursor;
-	}
-	
-	Write(cur_snap, snaps);
-	
-	equity[cursor] = all_reward_sum;
-	
-	cursor++;
-}
-
-void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
-	int prev_signal = signal;
-	
-	if (lower_output_signal == 0) {
-		skip_learn = true;
-		change_sum_limit = 0.0;
-		prev_signals[0] = 1.0;
-		signal = 0;
-	}
-	else {
-		skip_learn = false;
-		
-		// Input values
-		// - time_values
-		// - input sensors
-		// - previous signals
-		int cursor = 0;
-		double input_array[FUSE_STATES];
-		
-		
-		// time_values
-		input_array[cursor++] = cur_snap.GetYearSensor();
-		input_array[cursor++] = cur_snap.GetWeekSensor();
-		input_array[cursor++] = cur_snap.GetDaySensor();
-		
-		
-		// sensors of value of current
-		for(int i = 0; i < SENSOR_SIZE; i++)
-			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-		
-		
-		// all current signals from same snapshot
-		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
-		
-		
-		// all previous outputs from the same phase
-		for(int i = 0; i < FUSE_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = prev_snap.GetFuseSensorUnsafe(j, i);
-		
-		ASSERT(cursor == FUSE_STATES);
-		
-		const int timefwd_steps = AMP_FWDSTEPS;
-		
-		int action = dqn.Act(input_array);
-		ASSERT(action >= 0 && action < FUSE_ACTIONCOUNT);
-		action_counts[action]++;
-		
-		int is_enabled		= action % 2;
-		int timefwd_step	= action / 2;
-		
-		prev_signals[0]		= 1.0 * timefwd_step  / timefwd_steps;
-		
-		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));
-		
-		if (is_enabled)
-			signal = lower_output_signal;
-		else
-			signal = 0;
-	}
-	
-	change_sum = 0.0;
-	change_count = 0;
-}
-
-void AgentFuse::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
-	int group_id = agent->group_id, sym_id = agent->sym_id;
-	cur_snap.SetFuseOutput(group_id, sym_id, signal);
-	
-	prev_signals[1] = 0.75 - 0.75 * change_sum / change_sum_limit;
-	
-	for(int i = 0; i < FUSE_SENSORS; i++)
-		cur_snap.SetFuseSensor(group_id, sym_id, i, prev_signals[i]);
-}
-
-void AgentFuse::Backward(double reward) {
-	
-	// pass to brain for learning
-	if (agent->is_training && !skip_learn) {
-		dqn.Learn(reward);
-		iter++;
-		deep_iter++;
-		
-		reward_sum += reward;
-		reward_count++;
-		
-		if (reward_count > REWARD_AV_PERIOD) {
-			rewards.Add(reward_sum / reward_count);
-			reward_count = 0;
-			reward_sum = 0.0;
-		}
-	}
-}
-
-
-
-
-
-
-
-
 
 
 
@@ -687,7 +270,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	Snapshot& cur_snap = snaps[cursor - 0];
 	
-	lower_output_signal = cur_snap.GetFuseOutput(group_id, sym_id);
+	lower_output_signal = cur_snap.GetSignalOutput(group_id, sym_id);
 	change_sum += fabs(cur_snap.GetChange(sym_id));
 	change_count++;
 	
@@ -750,12 +333,6 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
 			for(int j = 0; j < GROUP_COUNT; j++)
 				input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
-		
-		
-		// all current fuse signals from same snapshot
-		for(int i = 0; i < FUSE_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = cur_snap.GetFuseSensorUnsafe(j, i);
 		
 		
 		// all previous outputs from the same phase
@@ -852,22 +429,13 @@ void AgentAmp::Backward(double reward) {
 
 Agent::Agent()
 {
-	for(int i = 0; i < FILTER_COUNT; i++) {
-		filter[i].level = i;
-		filter[i].agent = this;
-	}
 	sig.agent	= this;
 	amp.agent	= this;
-	fuse.agent	= this;
 }
 
 void Agent::CreateAll() {
-	for(int i = 0; i < FILTER_COUNT; i++) {
-		filter[i].Create();
-	}
 	sig.Create();
 	amp.Create();
-	fuse.Create();
 }
 
 
@@ -885,21 +453,13 @@ void Agent::Init() {
 
 void Agent::RefreshSnapEquities() {
 	int snap_count = group->sys->snaps.GetCount();
-	for(int i = 0; i < FILTER_COUNT; i++) {
-		filter[i].equity.SetCount(snap_count, 0);
-	}
 	sig.equity.SetCount(snap_count, 0);
 	amp.equity.SetCount(snap_count, 0);
-	fuse.equity.SetCount(snap_count, 0);
 }
 
 void Agent::ResetEpochAll() {
-	for(int i = 0; i < FILTER_COUNT; i++) {
-		filter[i].ResetEpoch();
-	}
 	sig.ResetEpoch();
 	amp.ResetEpoch();
-	fuse.ResetEpoch();
 }
 
 void Agent::ResetEpoch(int phase) {
@@ -907,8 +467,6 @@ void Agent::ResetEpoch(int phase) {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		sig.ResetEpoch(); break;
 		case PHASE_AMP_TRAINING:		amp.ResetEpoch(); break;
-		case PHASE_FUSE_TRAINING:		fuse.ResetEpoch(); break;
-		default:						filter[phase].ResetEpoch(); break;
 	}
 }
 
@@ -917,8 +475,6 @@ void Agent::Main(int phase, Vector<Snapshot>& snaps) {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		sig.Main(snaps); break;
 		case PHASE_AMP_TRAINING:		amp.Main(snaps); break;
-		case PHASE_FUSE_TRAINING:		fuse.Main(snaps); break;
-		default:						filter[phase].Main(snaps); break;
 	}
 }
 
@@ -927,8 +483,6 @@ int Agent::GetCursor(int phase) const {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		return sig.cursor;
 		case PHASE_AMP_TRAINING:		return amp.cursor;
-		case PHASE_FUSE_TRAINING:		return fuse.cursor;
-		default:						return filter[phase].cursor;
 	}
 	return 0;
 }
@@ -938,8 +492,6 @@ double Agent::GetLastDrawdown(int phase) const {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		return sig.GetLastDrawdown();
 		case PHASE_AMP_TRAINING:		return amp.GetLastDrawdown();
-		case PHASE_FUSE_TRAINING:		return fuse.GetLastDrawdown();
-		default:						return filter[phase].GetLastDrawdown();
 	}
 	return 0;
 }
@@ -949,8 +501,6 @@ double Agent::GetLastResult(int phase) const {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		return sig.GetLastResult();
 		case PHASE_AMP_TRAINING:		return amp.GetLastResult();
-		case PHASE_FUSE_TRAINING:		return fuse.GetLastResult();
-		default: return filter[phase].GetLastResult();
 	}
 	return 0;
 }
@@ -959,16 +509,12 @@ int64 Agent::GetIter(int phase) const {
 	switch (phase) {
 		case PHASE_SIGNAL_TRAINING:		return sig.iter;
 		case PHASE_AMP_TRAINING:		return amp.iter;
-		case PHASE_FUSE_TRAINING:		return fuse.iter;
-		default:						return filter[phase].iter;
 	}
 	return 0;
 }
 
 void Agent::Serialize(Stream& s) {
-	for(int i = 0; i < FILTER_COUNT; i++)
-		s % filter[i];
-	s % sig % amp % fuse % sym_id % sym % group_id;
+	s % sig % amp % sym_id % sym % group_id;
 }
 
 void Agent::RefreshGroupSettings() {
@@ -1027,9 +573,7 @@ void Agent::RefreshGroupSettings() {
 bool Agent::IsTrained(int phase) const {
 	if (phase < 0) return false;
 	if ((phase == PHASE_SIGNAL_TRAINING && sig.iter >= SIGNAL_PHASE_ITER_LIMIT) ||
-		(phase == PHASE_AMP_TRAINING    && amp.iter >= AMP_PHASE_ITER_LIMIT)    ||
-		(phase == PHASE_FUSE_TRAINING   && fuse.iter >= FUSE_PHASE_ITER_LIMIT)   ||
-		(phase <  PHASE_SIGNAL_TRAINING && filter[phase].iter >= FILTER_PHASE_ITER_LIMIT)) {
+		(phase == PHASE_AMP_TRAINING    && amp.iter >= AMP_PHASE_ITER_LIMIT)) {
 		return true;
 	}
 	return false;

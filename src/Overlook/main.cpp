@@ -31,12 +31,6 @@ GUI_APP_MAIN {
 		else if (s == "-resetamps") {
 			reset_amps = ScanInt(args[i]);
 		}
-		else if (s == "-resetfuses") {
-			reset_fuses = ScanInt(args[i]);
-		}
-		else if (s == "-resetfilters") {
-			reset_filters = ScanInt(args[i]);
-		}
 		else if (s == "-internetdata") {
 			Config::use_internet_m1_data = ScanInt(args[i]);
 		}

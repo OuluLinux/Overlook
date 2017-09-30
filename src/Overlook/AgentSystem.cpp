@@ -4,64 +4,62 @@ namespace Overlook {
 
 bool reset_signals;
 bool reset_amps;
-bool reset_fuses;
-bool reset_filters;
 
 AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-	
+
 	// Instrument, spread pips
-	
-	#ifndef flagHAVE_ALLSYM
-	
+
+#ifndef flagHAVE_ALLSYM
+
 	allowed_symbols.Add("EURUSD", 3);
 	allowed_symbols.Add("GBPUSD", 3);
 	allowed_symbols.Add("USDJPY", 3);
 	allowed_symbols.Add("EURJPY", 3);
 	allowed_symbols.Add("EURGBP", 3);
 	allowed_symbols.Add("GBPJPY", 7);
-	
-	#else
-	
+
+#else
+
 	// also AUD,NZD,CHF included
-	allowed_symbols.Add("EURUSD", 3);
-	allowed_symbols.Add("GBPUSD", 3);
-	allowed_symbols.Add("USDJPY", 3);
-	allowed_symbols.Add("USDCHF", 3);
-	allowed_symbols.Add("USDCAD", 3);
-	allowed_symbols.Add("AUDUSD", 3);
-	allowed_symbols.Add("NZDUSD", 3);
-	allowed_symbols.Add("EURJPY", 3);
-	allowed_symbols.Add("EURCHF", 3);
-	allowed_symbols.Add("EURGBP", 3);
-	allowed_symbols.Add("AUDCAD", 10);
-	allowed_symbols.Add("AUDJPY", 10);
-	allowed_symbols.Add("CADJPY", 10);
-	allowed_symbols.Add("CHFJPY", 10);
-	allowed_symbols.Add("NZDCAD", 10);
-	allowed_symbols.Add("NZDCHF", 10);
-	allowed_symbols.Add("EURAUD", 7);
-	allowed_symbols.Add("GBPCHF", 7);
-	allowed_symbols.Add("GBPJPY", 7);
-	allowed_symbols.Add("AUDNZD", 12);
-	allowed_symbols.Add("EURCAD", 12);
-	allowed_symbols.Add("GBPAUD", 12);
-	allowed_symbols.Add("GBPCAD", 12);
-	allowed_symbols.Add("GBPNZD", 12);
-	
-	#endif
-	
-	
+	allowed_symbols.Add("EURUSD",  3); // lts
+	allowed_symbols.Add("GBPUSD",  3); // lts
+	allowed_symbols.Add("USDJPY",  3); // lts
+	allowed_symbols.Add("USDCHF",  3); // lts
+	allowed_symbols.Add("USDCAD",  3); // lts
+	allowed_symbols.Add("AUDUSD",  3); // lts
+	allowed_symbols.Add("NZDUSD",  3); // lts
+	allowed_symbols.Add("EURJPY",  3); // lts
+	allowed_symbols.Add("EURCHF",  3); // lts
+	allowed_symbols.Add("EURGBP",  3); // lts
+	allowed_symbols.Add("AUDCAD", 10); // lts
+	allowed_symbols.Add("AUDJPY", 10); // lts
+	allowed_symbols.Add("CADJPY", 10); // lts
+	allowed_symbols.Add("CHFJPY", 10); // lts
+	//allowed_symbols.Add("NZDCAD", 10);
+	//allowed_symbols.Add("NZDCHF", 10);
+	allowed_symbols.Add("EURAUD",  7); // lts
+	allowed_symbols.Add("GBPCHF",  7); // lts
+	allowed_symbols.Add("GBPJPY",  7); // lts
+	allowed_symbols.Add("AUDNZD", 12); // lts
+	allowed_symbols.Add("EURCAD", 12); // lts
+	//allowed_symbols.Add("GBPAUD", 12);
+	//allowed_symbols.Add("GBPCAD", 12);
+	//allowed_symbols.Add("GBPNZD", 12);
+
+#endif
+
+
 	// SKIP because of no long-term data available:
 	//  - AUDCHF
 	//  - CADCHF
 	//  - EURNZD
 	//  - GBPJPY
 	//  - NZDJPY
-	
+
 	ASSERT(allowed_symbols.GetCount() == SYM_COUNT);
-	
+
 	created = GetSysTime();
 }
 
@@ -71,12 +69,12 @@ AgentSystem::~AgentSystem() {
 
 void AgentSystem::Init() {
 	ASSERT(sys);
-	
+
 	free_margin_level = FMLEVEL;
-	
+
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
-	
+
 	ManagerLoader& loader = GetManagerLoader();
 	Thread::Start(THISBACK(InitThread));
 	loader.Run();
@@ -87,42 +85,55 @@ void AgentSystem::InitThread() {
 	MetaTrader& mt = GetMetaTrader();
 	const Vector<Price>& askbid = mt._GetAskBid();
 	String not_found;
-	for(int j = 0; j < allowed_symbols.GetCount(); j++) {
+
+	for (int j = 0; j < allowed_symbols.GetCount(); j++) {
 		const String& allowed_sym = allowed_symbols.GetKey(j);
 		bool found = false;
-		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+
+		for (int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& sym = mt.GetSymbol(i);
+
 			if (sym.IsForex() && (sym.name.Left(6)) == allowed_sym) {
 				double base_spread = 1000.0 * (askbid[i].ask / askbid[i].bid - 1.0);
+
 				if (base_spread >= 0.5) {
 					Cout() << "Warning! Too much spread: " << sym.name << " (" << base_spread << ")" << "\n";
 				}
+
 				sym_ids.Add(i);
+
 				spread_points.Add(allowed_symbols[j] * sym.point);
 				found = true;
 				break;
 			}
 		}
+
 		if (!found)
 			not_found << allowed_sym << " ";
 	}
+
 	sym_count = sym_ids.GetCount();
+
 	ASSERTUSER_(sym_count == SYM_COUNT, "All required forex instruments weren't shown in the mt4: " + not_found);
-	
+
 	main_tf = sys->FindPeriod(1);
 	ASSERT(main_tf != -1);
-	
+
 	begin_equity = mt.AccountEquity();
-	
+
 	int stoch_id = sys->Find<StochasticOscillator>();
 	int osma_id = sys->Find<OsMA>();
 	int volav_id = sys->Find<VolatilityAverage>();
 	ASSERT(stoch_id != -1);
 	ASSERT(osma_id != -1);
 	ASSERT(volav_id != -1);
-	
+
 	indi_ids.Clear();
-	indi_ids.Add().Set(volav_id);
+	indi_ids.Add().Set(volav_id).AddArg(5);
+	indi_ids.Add().Set(volav_id).AddArg(15);
+	indi_ids.Add().Set(volav_id).AddArg(60);
+	indi_ids.Add().Set(volav_id).AddArg(240);
+	indi_ids.Add().Set(volav_id).AddArg(1440);
 	indi_ids.Add().Set(osma_id).AddArg(5).AddArg(5*2).AddArg(5);
 	indi_ids.Add().Set(osma_id).AddArg(15).AddArg(15*2).AddArg(15);
 	indi_ids.Add().Set(osma_id).AddArg(60).AddArg(60*2).AddArg(60);
@@ -133,72 +144,70 @@ void AgentSystem::InitThread() {
 	indi_ids.Add().Set(stoch_id).AddArg(60);
 	indi_ids.Add().Set(stoch_id).AddArg(240);
 	indi_ids.Add().Set(stoch_id).AddArg(1440);
-	
+
 	RefreshWorkQueue();
-	
-	
+
+
 	Progress(1, 6, "Refreshing data source and indicators");
 	ProcessWorkQueue();
 	ProcessDataBridgeQueue();
-	
-	
+
+
 	Progress(2, 6, "Refreshing pointers of data sources");
 	ResetValueBuffers();
-	
-	
+
+
 	Progress(3, 6, "Reseting snapshots");
 	RefreshSnapshots();
-	
-	
+
+
 	Progress(5, 6, "Initializing agents");
 	InitBrokerValues();
+
 	if (groups.GetCount() == 0)
 		CreateAgents();
 	else {
-		for(int i = 0; i < groups.GetCount(); i++) {
+		for (int i = 0; i < groups.GetCount(); i++) {
 			AgentGroup& ag = groups[i];
 			ASSERT(ag.agents.GetCount() == SYM_COUNT);
-			for(int j = 0; j < sym_ids.GetCount(); j++)
+
+			for (int j = 0; j < sym_ids.GetCount(); j++)
 				ag.agents[j].sym = sym_ids[ag.agents[j].sym_id];
 		}
 	}
-	
-	if (reset_filters) {
-		phase = Upp::min(phase, (int)PHASE_PREFUSE1_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++)
-			for(int j = 0; j < sym_ids.GetCount(); j++)
-				for(int k = 0; k < FILTER_COUNT; k++)
-					groups[i].agents[j].filter[k].Create();
-		reset_signals = true;
-	}
+
 	if (reset_signals) {
 		phase = Upp::min(phase, (int)PHASE_SIGNAL_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].sig.DeepCreate();
+
+		for (int i = 0; i < groups.GetCount(); i++)
+			for (int j = 0; j < sym_ids.GetCount(); j++)
+				groups[i].agents[j].sig.DeepCreate();
+
 		reset_amps = true;
 	}
+
 	if (reset_amps) {
 		phase = Upp::min(phase, (int)PHASE_AMP_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].amp.DeepCreate();
-		reset_fuses = true;
+
+		for (int i = 0; i < groups.GetCount(); i++)
+			for (int j = 0; j < sym_ids.GetCount(); j++)
+				groups[i].agents[j].amp.DeepCreate();
 	}
-	if (reset_fuses) {
-		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
-		for(int i = 0; i < groups.GetCount(); i++) for(int j = 0; j < sym_ids.GetCount(); j++) groups[i].agents[j].fuse.Create();
-	}
-	
-	
-	for(int i = 0; i < GROUP_COUNT; i++) {
+
+
+	for (int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
 		ag.sys = this;
-		for(int j = 0; j < SYM_COUNT; j++) {
+
+		for (int j = 0; j < SYM_COUNT; j++) {
 			Agent& a = ag.agents[j];
 			a.group = &ag;
 			a.Init();
 		}
 	}
-	
+
 	SetFreeMarginLevel(FMLEVEL);
-	
+
 	Progress(6, 6, "Complete");
 }
 
@@ -211,12 +220,14 @@ void AgentSystem::Start() {
 
 void AgentSystem::Stop() {
 	running = false;
-	while (stopped != true) Sleep(100);
+
+	while (stopped != true)
+		Sleep(100);
 }
 
 void AgentSystem::SetAgentsTraining(bool b) {
-	for(int i = 0; i < groups.GetCount(); i++)
-		for(int j = 0; j < groups[i].agents.GetCount(); j++)
+	for (int i = 0; i < groups.GetCount(); i++)
+		for (int j = 0; j < groups[i].agents.GetCount(); j++)
 			groups[i].agents[j].is_training = b;
 }
 
@@ -229,11 +240,12 @@ void AgentSystem::SetSingleFixedBroker(int sym_id, SingleFixedSimBroker& broker)
 }
 
 void AgentSystem::SetFixedBroker(int sym_id, FixedSimBroker& broker) {
-	for(int i = 0; i < SYM_COUNT; i++) {
+	for (int i = 0; i < SYM_COUNT; i++) {
 		broker.spread_points[i] = spread_points[i];
 		broker.proxy_id[i] = proxy_id[i];
 		broker.proxy_base_mul[i] = proxy_base_mul[i];
 	}
+
 	broker.begin_equity = Upp::max(10000.0, begin_equity);
 	broker.leverage = leverage;
 	broker.free_margin_level = free_margin_level;
@@ -241,345 +253,395 @@ void AgentSystem::SetFixedBroker(int sym_id, FixedSimBroker& broker) {
 }
 
 void AgentSystem::Main() {
-	if (groups.GetCount() == 0 || sym_ids.IsEmpty() || indi_ids.IsEmpty()) return;
-	
+	if (groups.GetCount() == 0 || sym_ids.IsEmpty() || indi_ids.IsEmpty())
+		return;
+
 	RefreshSnapshots();
-	
+
 	while (running) {
 		ReduceExperienceMemory(phase);
-		
+
 		if (phase < PHASE_REAL) {
-			
 			TrainAgents(phase);
-			
 		}
-		else if (phase == PHASE_REAL) {
-			
+		else
+		if (phase == PHASE_REAL) {
 			MainReal();
 			Sleep(1000);
-			
 		}
-		else Sleep(100);
+		else
+			Sleep(100);
 	}
-	
-	
+
+
 	stopped = true;
 }
 
 void AgentSystem::ReduceExperienceMemory(int phase) {
-	for(int p = 0; p < phase; p++) {
-		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-			switch (p) {
+	for (int p = 0; p < phase; p++) {
+		for (int i = 0; i < GROUP_COUNT; i++) {
+			for (int j = 0; j < SYM_COUNT; j++) {
+				switch (p) {
+
 				case PHASE_SIGNAL_TRAINING:
 					groups[i].agents[j].sig.dqn.ClearExperience();
 					break;
+
 				case PHASE_AMP_TRAINING:
 					groups[i].agents[j].amp.dqn.ClearExperience();
 					break;
-				case PHASE_FUSE_TRAINING:
-					groups[i].agents[j].fuse.dqn.ClearExperience();
-					break;
+
 				case PHASE_REAL:
 					break;
-				default:
-					groups[i].agents[j].filter[p].dqn.ClearExperience();
-					break;
+				}
 			}
 		}
 	}
 }
 
 void AgentSystem::RefreshSnapEquities() {
-	for(int i = 0; i < groups.GetCount(); i++)
-		for(int j = 0; j < groups[i].agents.GetCount(); j++)
+	for (int i = 0; i < groups.GetCount(); i++)
+		for (int j = 0; j < groups[i].agents.GetCount(); j++)
 			groups[i].agents[j].RefreshSnapEquities();
 }
 
 double AgentSystem::GetPhaseIters(int phase) {
 	if (phase == PHASE_SIGNAL_TRAINING)
 		return GetAverageSignalIterations();
+
 	if (phase == PHASE_AMP_TRAINING)
 		return GetAverageAmpIterations();
-	if (phase == PHASE_FUSE_TRAINING)
-		return GetAverageFuseIterations();
-	if (phase >= 0 && phase < PHASE_SIGNAL_TRAINING)
-		return GetAverageFilterIterations(phase);
+
 	return 0;
 }
 
 void AgentSystem::TrainAgents(int phase) {
-	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : (phase == PHASE_AMP_TRAINING ? "amp" : (phase == PHASE_FUSE_TRAINING ? "fuse" : "filter " + IntStr(phase)))) + " training");
-	
+	sys->WhenPushTask("Agent " + String(phase == PHASE_SIGNAL_TRAINING ? "signal" : "amp"));
+
 	// Update configurations
 	RefreshSnapshots();
 	RefreshSnapEquities();
 	RefreshAgentEpsilon(phase);
 	RefreshLearningRate(phase);
-	for(int i = 0; i < phase; i++)
+
+	for (int i = 0; i < phase; i++)
 		LoopAgentSignals(i);
+
 	if (GetPhaseIters(phase) >= 1.0)
 		LoopAgentSignals(phase);
+
 	SetAgentsTraining(true);
-	
-	
+
+
 	// Create processing loop to ensure that every agent gets enough training
 	typedef Tuple2<int, int> AgentPos;
+
 	Vector<AgentPos> proc_agents;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-		Agent& agent = groups[i].agents[j];
-		if (!agent.IsTrained(phase))
-			proc_agents.Add(AgentPos(i, j));
+
+	for (int i = 0; i < GROUP_COUNT; i++) {
+		for (int j = 0; j < SYM_COUNT; j++) {
+			Agent& agent = groups[i].agents[j];
+
+			if (!agent.IsTrained(phase))
+				proc_agents.Add(AgentPos(i, j));
+		}
 	}
-	
-	
+
+
 	// Main loop
 	int prev_av_iters = GetAverageIterations(phase);
 	CoWork co;
 	co.SetPoolSize(GetUsedCpuCores());
+
 	for (int64 iter = 0; running; iter++) {
-		
+
 		if (iter % 30 == 0) {
-			
+
 			// Update some attributes as times go by
 			RefreshAgentEpsilon(phase);
 			RefreshLearningRate(phase);
-			
-			
+
+
 			// Change snapshot area, if needed, sometimes
 			int av_iters = GetAverageIterations(phase);
+
 			if (av_iters - prev_av_iters >= BREAK_INTERVAL_ITERS) {
 				StoreThis();
 				break; // call TrainAgents again to RefreshSnapshots safely
 			}
-			
-			
+
+
 			// Change to the next phase eventually
-			for(int i = 0; i < proc_agents.GetCount(); i++) {
+			for (int i = 0; i < proc_agents.GetCount(); i++) {
 				const AgentPos& apos = proc_agents[i];
 				Agent& agent = groups[apos.a].agents[apos.b];
+
 				if (agent.IsTrained(phase)) {
 					proc_agents.Remove(i);
 					i--;
 				}
 			}
+
 			if (proc_agents.IsEmpty()) {
 				this->phase++;
 				StoreThis();
 				break;
 			}
-			
+
 		}
-		
-		
+
+
 		// Run agents in CoWork threads
 		// This is the main point of threading in the Overlook.
 		// If GPGPU cannot be used without big changes at this point, it won't be used.
 		// C++ AMP almost worked, but threads took too much time...
-		for(int i = 0; i < proc_agents.GetCount(); i++) {
+
+		for (int i = 0; i < proc_agents.GetCount(); i++) {
 			const AgentPos& apos = proc_agents[i];
 			int gid = apos.a;
 			int aid = apos.b;
-			
+
 			co & [=] {
 				Agent& agent = groups[gid].agents[aid];
-				
-		        // Check cursor
-		        int cursor = agent.GetCursor(phase);
-		        if (cursor <= 0 || cursor >= snaps.GetCount())
+
+				// Check cursor
+				int cursor = agent.GetCursor(phase);
+
+				if (cursor <= 0 || cursor >= snaps.GetCount())
 					agent.ResetEpoch(phase);
-				
+
 				int64 end = agent.GetIter(phase) + 100;
-				while (agent.GetIter(phase) < end) {
+
+				while (agent.GetIter(phase) < end && running) {
 					agent.Main(phase, snaps);
-					
+
 					// Close all order at the end
+
 					if (agent.GetCursor(phase) >= snaps.GetCount())
 						agent.ResetEpoch(phase);
-		        }
+				}
 			};
-	    }
-	    co.Finish();
+		}
+
+		co.Finish();
 	}
-	
+
 	SetAgentsTraining(false);
-	
+
 	sys->WhenPopTask();
 }
 
 void AgentSystem::LoopAgentSignals(int phase) {
 	sys->WhenPushTask("Loop agent signals, phase " + IntStr(phase));
-	
+
 	// Prepare loop without training
 	RefreshSnapEquities();
 	SetAgentsTraining(false);
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].ResetEpoch(phase);
-	
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			groups[i].agents[j].ResetEpoch(phase);
+
 	// Process Agent::Main in CoWork threads
 	CoWork co;
+
 	co.SetPoolSize(GetUsedCpuCores());
-	for(int i = 1; i < snaps.GetCount() && running; i++) {
-		for(int j = 0; j < GROUP_COUNT; j++) for(int k = 0; k < SYM_COUNT; k++) co & [=] {
-	        groups[j].agents[k].Main(phase, snaps);
-	    };
-	    co.Finish();
+
+	for (int i = 1; i < snaps.GetCount() && running; i++) {
+		for (int j = 0; j < GROUP_COUNT; j++) {
+			for (int k = 0; k < SYM_COUNT; k++) {
+				co & [=] {
+					groups[j].agents[k].Main(phase, snaps);
+				};
+			}
+		}
+
+		co.Finish();
 	}
-	
+
 	sys->WhenPopTask();
 }
 
 void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 	sys->WhenPushTask("Loop agent signals");
-	
+
 	// Prepare loop without training
 	RefreshSnapEquities();
 	SetAgentsTraining(false);
-	
+
 	// Process Agent::Main in CoWork threads
 	CoWork co;
 	co.SetPoolSize(GetUsedCpuCores());
+
 	if (from_begin) {
-		for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-			groups[i].agents[j].ResetEpochAll();
-		
-		for(int i = 1; i < snaps.GetCount() && running; i++) {
+		for (int i = 0; i < GROUP_COUNT; i++)
+			for (int j = 0; j < SYM_COUNT; j++)
+				groups[i].agents[j].ResetEpochAll();
+
+		for (int i = 1; i < snaps.GetCount() && running; i++) {
 			for (int phase = 0; phase < PHASE_REAL; phase++) {
-				for(int j = 0; j < GROUP_COUNT; j++) for(int k = 0; k < SYM_COUNT; k++) co & [=] {
-			        groups[j].agents[k].Main(phase, snaps);
-			    };
-			    co.Finish();
+				for (int j = 0; j < GROUP_COUNT; j++) {
+					for (int k = 0; k < SYM_COUNT; k++) {
+						co & [=] {
+							groups[j].agents[k].Main(phase, snaps);
+						};
+					}
+				}
+
+				co.Finish();
 			}
 		}
 	}
+
 	else {
 		for (int phase = 0; phase < PHASE_REAL; phase++) {
 			while (running) {
 				bool run_any = false;
-				for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-					if (groups[i].agents[j].GetCursor(phase) < snaps.GetCount()) {
-						run_any = true;
-						break;
+
+				for (int i = 0; i < GROUP_COUNT; i++) {
+					for (int j = 0; j < SYM_COUNT; j++) {
+						if (groups[i].agents[j].GetCursor(phase) < snaps.GetCount()) {
+							run_any = true;
+							break;
+						}
 					}
 				}
+
 				if (!run_any)
 					break;
-					
-				for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) co & [=] {
-			        Agent& agent = groups[i].agents[j];
-					if (agent.GetCursor(phase) < snaps.GetCount())
-						agent.Main(phase, snaps);
-			    };
-			    co.Finish();
+
+				for (int i = 0; i < GROUP_COUNT; i++) {
+					for (int j = 0; j < SYM_COUNT; j++) {
+						co & [=] {
+							Agent& agent = groups[i].agents[j];
+	
+							if (agent.GetCursor(phase) < snaps.GetCount())
+								agent.Main(phase, snaps);
+						};
+					}
+				}
+
+				co.Finish();
 			}
 		}
 	}
-	
+
 	sys->WhenPopTask();
 }
 
 void AgentSystem::MainReal() {
 	sys->WhenPushTask("Real");
-	
+
 	MetaTrader& mt = GetMetaTrader();
-    Time time = mt.GetTime();
+	Time time = mt.GetTime();
 	int wday = DayOfWeek(time);
 	int shift = sys->GetShiftFromTimeTf(time, main_tf);
-	
-	
+
+
 	// Loop agents and joiners without random events (epsilon = 0)
-	for(int i = 0; i < FILTER_COUNT; i++)
-		SetFilterEpsilon(i, 0.0);
 	SetSignalEpsilon(0.0);
 	SetAmpEpsilon(0.0);
-	SetFuseEpsilon(0.0);
+
 	if (prev_shift <= 0) {
 		LoopAgentSignalsAll(true);
 		prev_shift++; // never again
 	}
+
 	SetAgentsTraining(false);
-	
-	
+
+
 	if (prev_shift != shift) {
 		if (wday == 0 || wday == 6) {
 			// Do nothing
 			prev_shift = shift;
-		} else {
+		}
+
+		else {
 			sys->WhenInfo("Shift changed");
-			
+
 
 			// Updates latest snapshot and signals
 			sys->SetEnd(mt.GetTime());
 			RefreshSnapshots();
 			LoopAgentSignalsAll(false);
-			
+
 			int last_snap_shift = snaps.Top().GetShift();
+
 			if (shift != last_snap_shift) {
 				WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, last_snap_shift));
 				sys->WhenPopTask();
 				return;
 			}
-			
-			
+
+
 			// Forced askbid data download
 			DataBridgeCommon& common = GetDataBridgeCommon();
 			common.DownloadAskBid();
 			common.RefreshAskBidData(true);
-			
-			
+
+
 			// Refresh databridges
 			ProcessDataBridgeQueue();
-			
-			
+
+
 			// Reset signals
 			if (realtime_count == 0) {
-				for(int i = 0; i < mt.GetSymbolCount(); i++)
+				for (int i = 0; i < mt.GetSymbolCount(); i++)
 					mt.SetSignal(i, 0);
 			}
 			realtime_count++;
-			
-			
+
+
 			// Use best group to set broker signals
 			WhenInfo("Looping agents until latest snapshot");
 			bool succ = PutLatest(mt, snaps);
-			
-			
+
+
 			// Print info
 			String sigstr = "Signals ";
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
-				if (i) sigstr << ",";
+
+			for (int i = 0; i < sym_ids.GetCount(); i++) {
+				if (i)
+					sigstr << ",";
+
 				sigstr << mt.GetSignal(sym_ids[i]);
 			}
+
 			WhenInfo(sigstr);
-			
-			
+
+
 			// Notify about successful signals
 			if (succ) {
 				prev_shift = shift;
-				
+
 				sys->WhenRealtimeUpdate();
 			}
 		}
 	}
-	
+
 	// Check for market closing (weekend and holidays)
+
 	else {
-		Time after_hour = time + 60*60;
+		Time after_hour = time + 60 * 60;
 		int wday_after_hour = DayOfWeek(after_hour);
+
 		if (wday == 5 && wday_after_hour == 6) {
 			sys->WhenInfo("Closing all orders before market break");
-			for(int i = 0; i < mt.GetSymbolCount(); i++) {
+
+			for (int i = 0; i < mt.GetSymbolCount(); i++) {
 				mt.SetSignal(i, 0);
 				mt.SetSignalFreeze(i, false);
 			}
+
 			mt.SignalOrders(true);
 		}
-		
+
 		if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 1*60*1000) {
 			Data();
 			last_datagather.Reset();
 		}
 	}
-	
+
 	sys->WhenPopTask();
 }
 
@@ -587,17 +649,20 @@ int AgentSystem::FindActiveGroup(int sym_id) {
 	Snapshot& cur_snap = snaps.Top();
 	double max_res = 0.0;
 	int group_id = -1;
-	for(int i = 0; i < GROUP_COUNT; i++) {
+
+	for (int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
 		Agent& agent = ag.agents[sym_id];
 		int signal = cur_snap.GetSignalOutput(i, sym_id);
 		double res = agent.amp.GetLastResult();
 		double dd = agent.amp.GetLastDrawdown();
+
 		if (signal && res > max_res && dd < 50.0) {
 			max_res = res;
 			group_id = i;
 		}
 	}
+
 	return group_id;
 }
 
@@ -612,13 +677,17 @@ void AgentSystem::StoreThis() {
 	Time t = GetSysTime();
 	String file = ConfigFile("agentgroup.bin");
 	bool rem_bak = false;
+
 	if (FileExists(file)) {
 		FileMove(file, file + ".bak");
 		rem_bak = true;
 	}
+
 	StoreToFile(*this,	file);
+
 	if (rem_bak)
 		DeleteFile(file + ".bak");
+
 	last_store.Reset();
 }
 
@@ -628,34 +697,42 @@ void AgentSystem::Serialize(Stream& s) {
 
 void AgentSystem::RefreshSnapshots() {
 	sys->WhenPushTask("Refreshing snapshots");
-	
+
 	ASSERT(buf_count != 0);
 	ASSERT(sym_ids.GetCount() != 0);
-	
+
 	TimeStop ts;
 	ProcessWorkQueue();
-	
+
 	int total_bars = sys->GetCountTf(main_tf);
 	int bars = total_bars - data_begin;
-	
+
 	if (bars == 0) {
 		data_begin = total_bars - 10000;
 		bars = total_bars - data_begin;
 	}
-	
+
 	snaps.Reserve(bars + (60 - (bars % 60)));
-	for(; counted_bars < bars; counted_bars++) {
+
+	for (; counted_bars < bars; counted_bars++) {
 		int shift = counted_bars + data_begin;
 		Time t = sys->GetTimeTf(main_tf, shift);
 		int wday = DayOfWeek(t);
-		
+
 		// Skip weekend
-		if (wday == 0 || wday == 6) continue;
-		
+
+		if (wday == 0 || wday == 6)
+			continue;
+
 		Seek(snaps.Add(), shift);
 	}
+
 	ASSERT(snaps.GetCount() > 0);
-	
+
+
+	RefreshClusters();
+
+
 	LOG("Refreshing snapshots took " << ts.ToString());
 	sys->WhenPopTask();
 }
@@ -664,13 +741,16 @@ void AgentSystem::Progress(int actual, int total, String desc) {
 	ManagerLoader& loader = GetManagerLoader();
 	loader.PostProgress(actual, total, desc);
 	loader.PostSubProgress(0, 1);
-	
+
 	if (actual < total) {
 		if (actual > 0)
 			sys->WhenPopTask();
+
 		sys->WhenPushTask(desc);
 	}
-	else if (actual == total && actual > 0) {
+
+	else
+	if (actual == total && actual > 0) {
 		sys->WhenPopTask();
 	}
 }
@@ -681,105 +761,134 @@ void AgentSystem::SubProgress(int actual, int total) {
 }
 
 void AgentSystem::ResetValueBuffers() {
-	
+
 	// Get total count of output buffers in the indicator list
 	VectorMap<unsigned, int> bufout_ids;
 	int buf_id = 0;
-	for(int i = 0; i < indi_ids.GetCount(); i++) {
+
+	for (int i = 0; i < indi_ids.GetCount(); i++) {
 		FactoryDeclaration& decl = indi_ids[i];
 		const FactoryRegister& reg = sys->GetRegs()[decl.factory];
-		for(int j = decl.arg_count; j < reg.args.GetCount(); j++)
+
+		for (int j = decl.arg_count; j < reg.args.GetCount(); j++)
 			decl.AddArg(reg.args[j].def);
+
 		bufout_ids.Add(decl.GetHashValue(), buf_id);
+
 		buf_id += reg.out[0].visible;
 	}
+
 	buf_count = buf_id;
+
 	ASSERT(buf_count);
-	
-	
+
+
 	// Get DataBridge core pointer for easy reading
 	databridge_cores.SetCount(0);
 	databridge_cores.SetCount(sys->GetSymbolCount(), NULL);
 	int factory = sys->Find<DataBridge>();
-	for(int i = 0; i < db_queue.GetCount(); i++) {
+
+	for (int i = 0; i < db_queue.GetCount(); i++) {
 		CoreItem& ci = *db_queue[i];
+
 		if (ci.factory != factory)
 			continue;
+
 		databridge_cores[ci.sym] = &*ci.core;
 	}
-	
-	
+
+
 	// Reserve zeroed memory for output buffer pointer vector
 	value_buffers.Clear();
+
 	value_buffers.SetCount(sym_ids.GetCount());
-	for(int i = 0; i < sym_ids.GetCount(); i++)
+
+	for (int i = 0; i < sym_ids.GetCount(); i++)
 		value_buffers[i].SetCount(buf_count, NULL);
-	
-	
+
+
 	// Get output buffer pointer vector
 	int bars = sys->GetCountTf(main_tf);
 	int total_bufs = 0;
 	data_begin = 0;
-	for(int i = 0; i < work_queue.GetCount(); i++) {
+
+	for (int i = 0; i < work_queue.GetCount(); i++) {
 		CoreItem& ci = *work_queue[i];
 		ASSERT(!ci.core.IsEmpty());
 		const Core& core = *ci.core;
 		const Output& output = core.GetOutput(0);
-		
+
 		int sym_id = sym_ids.Find(ci.sym);
+
 		if (sym_id == -1)
 			continue;
+
 		if (ci.tf != main_tf)
 			continue;
-		
+
 		DataBridge* db = dynamic_cast<DataBridge*>(&*ci.core);
+
 		if (db) {
 			int begin = db->GetDataBegin();
-			int limit = bars-10000;
+			int limit = bars - 10000;
 			bool enough = begin < limit;
 			ASSERTUSER_(enough, "Symbol " + GetMetaTrader().GetSymbol(ci.sym).name + " has no proper data.");
+
 			if (begin > data_begin) {
 				LOG("Limiting symbol " << GetMetaTrader().GetSymbol(ci.sym).name << " " << bars - begin);
 				data_begin = begin;
 			}
 		}
-		
+
 		Vector<ConstBuffer*>& indi_buffers = value_buffers[sym_id];
-		
+
 		const FactoryRegister& reg = sys->GetRegs()[ci.factory];
-		
+
 		FactoryDeclaration decl;
 		decl.Set(ci.factory);
-		for(int j = 0; j < ci.args.GetCount(); j++) decl.AddArg(ci.args[j]);
-		for(int j = decl.arg_count; j < reg.args.GetCount(); j++) decl.AddArg(reg.args[j].def);
+
+		for (int j = 0; j < ci.args.GetCount(); j++)
+			decl.AddArg(ci.args[j]);
+
+		for (int j = decl.arg_count; j < reg.args.GetCount(); j++)
+			decl.AddArg(reg.args[j].def);
+
 		unsigned hash = decl.GetHashValue();
-		
-		
+
+
 		// Check that args match to declaration
-		#ifdef flagDEBUG
+#ifdef flagDEBUG
 		ArgChanger ac;
+
 		ac.SetLoading();
+
 		ci.core->IO(ac);
+
 		ASSERT(ac.args.GetCount() >= ci.args.GetCount());
-		for(int i = 0; i < ci.args.GetCount(); i++) {
+
+		for (int i = 0; i < ci.args.GetCount(); i++) {
 			int a = ac.args[i];
 			int b = ci.args[i];
+
 			if (a != b) {
 				LOG(Format("%d != %d", a, b));
 			}
+
 			ASSERT(a == b);
 		}
-		#endif
-		
-		
+
+#endif
+
+
 		int buf_begin_id = bufout_ids.Find(hash);
+
 		if (buf_begin_id == -1)
 			continue;
-		
+
 		int buf_begin = bufout_ids[buf_begin_id];
-		
+
 		//LOG(i << ": " << ci.factory << ", " << sym_id << ", " << (int64)hash << ", " << buf_begin);
-		
+
 		for (int l = 0; l < reg.out[0].visible; l++) {
 			int buf_pos = buf_begin + l;
 			ConstBuffer*& bufptr = indi_buffers[buf_pos];
@@ -788,25 +897,31 @@ void AgentSystem::ResetValueBuffers() {
 			total_bufs++;
 		}
 	}
-	
+
 	int expected_total = sym_ids.GetCount() * buf_count;
+
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 }
 
 void AgentSystem::RefreshWorkQueue() {
-	
+
 	// Add proxy symbols to the queue if any
 	Index<int> tf_ids, sym_ids;
 	tf_ids.Add(main_tf);
 	sym_ids <<= this->sym_ids;
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
+
+	for (int i = 0; i < sym_ids.GetCount(); i++) {
 		const Symbol& sym = GetMetaTrader().GetSymbol(sym_ids[i]);
-		if (sym.proxy_id == -1) continue;
+
+		if (sym.proxy_id == -1)
+			continue;
+
 		sym_ids.FindAdd(sym.proxy_id);
 	}
+
 	sys->GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	
-	
+
+
 	// Get DataBridge work queue
 	Vector<FactoryDeclaration> db_indi_ids;
 	db_indi_ids.Add().Set(sys->Find<DataBridge>());
@@ -815,101 +930,135 @@ void AgentSystem::RefreshWorkQueue() {
 
 void AgentSystem::ProcessWorkQueue() {
 	sys->WhenPushTask("Processing work queue");
-	
+
 	work_lock.Enter();
-	
-	for(int i = 0; i < work_queue.GetCount(); i++) {
+
+	for (int i = 0; i < work_queue.GetCount(); i++) {
 		SubProgress(i, work_queue.GetCount());
 		sys->Process(*work_queue[i]);
 	}
-	
+
 	work_lock.Leave();
-	
+
 	sys->WhenPopTask();
 }
 
 void AgentSystem::ProcessDataBridgeQueue() {
 	sys->WhenPushTask("Processing databridge work queue");
-	
+
 	work_lock.Enter();
-	
-	for(int i = 0; i < db_queue.GetCount(); i++) {
+
+	for (int i = 0; i < db_queue.GetCount(); i++) {
 		SubProgress(i, db_queue.GetCount());
 		sys->Process(*db_queue[i]);
 	}
-	
+
 	work_lock.Leave();
-	
+
 	sys->WhenPopTask();
 }
 
 bool AgentSystem::Seek(Snapshot& snap, int shift) {
-	
+
 	// Check that shift is not too much
 	ASSERT_(shift >= 0 && shift < sys->GetCountTf(main_tf), "Data position is not in data range");
 	ASSERT_(shift >= data_begin, "Data position is before common starting point");
-	
-	
+
+
 	// Get some time values in binary format (starts from 0)
 	Time t = sys->GetTimeTf(main_tf, shift);
-	int month = t.month-1;
-	int day = t.day-1;
+	int month = t.month - 1;
+	int day = t.day - 1;
 	int hour = t.hour;
 	int minute = t.minute;
 	int wday = DayOfWeek(t);
-	
-	
+
+
 	// Shift
 	snap.SetShift(shift);
-	
-	
+
+
 	// Time sensor
-	snap.SetYearSensor( (month * 31.0 + day) / 372.0 );
-	snap.SetWeekSensor( ((wday * 24 + hour) * 60 + minute) / (7.0 * 24.0 * 60.0) );
-	snap.SetDaySensor( (hour * 60 + minute) / (24.0 * 60.0) );
-	
-	
+	snap.SetYearSensor((month * 31.0 + day) / 372.0);
+	snap.SetWeekSensor(((wday * 24 + hour) * 60 + minute) / (7.0 * 24.0 * 60.0));
+	snap.SetDaySensor((hour * 60 + minute) / (24.0 * 60.0));
+
+
 	// Refresh values (tf / sym / value)
 	int k = 0;
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
+
+	for (int i = 0; i < sym_ids.GetCount(); i++) {
 		Vector<ConstBuffer*>& indi_buffers = value_buffers[i];
-		for(int j = 0; j < buf_count; j++) {
+
+		for (int j = 0; j < buf_count; j++) {
 			ConstBuffer& src = *indi_buffers[j];
 			double d = src.GetUnsafe(shift);
 			d = (d + 1.0) / 2.0;
 			snap.SetSensor(i, j, d);
 		}
-		
+
 		DataBridge& db = *dynamic_cast<DataBridge*>(databridge_cores[sym_ids[i]]);
-		double open = db.GetBuffer(0).GetUnsafe(shift);
-		
+
+		ConstBuffer& buf = db.GetBuffer(0);
+		double open = buf.GetUnsafe(shift);
+
 		snap.SetOpen(i, open);
+
 		if (shift > 0) {
-			double prev = db.GetBuffer(0).GetUnsafe(shift - 1);
+			double prev = buf.GetUnsafe(shift - 1);
 			double change = open / prev - 1.0;
 			snap.SetChange(i, change);
-		} else {
+		}
+		else {
 			snap.SetChange(i, 0.0);
 		}
+
+		for (int j = 0; j < MEASURE_PERIODCOUNT; j++) {
+			int period = 1 << (3 + j);
+			double d1, d2;
+			double volat_sum = 0.0;
+			d1 = open;
+
+			for (int k = 1; k < period && k <= shift; k++) {
+				d2 = buf.GetUnsafe(shift - k);
+				double change = d1 / d2 - 1.0;
+				d1 = d2;
+				volat_sum += fabs(change);
+			}
+
+			double change = open / d1 - 1.0;
+
+			snap.SetPeriodChange(i, j, change);
+			snap.SetPeriodVolatility(i, j, volat_sum);
+
+			int volat_int = volat_sum / VOLAT_DIV;
+			int change_int = change / CHANGE_DIV;
+			//CombineHash ch;
+			//ch << volat_int << 1 << change_int << 1;
+
+			result_stats.GetAdd(Tuple2<int, int>(volat_int, change_int), 0)++;
+		}
 	}
-	
-	
+
+
 	// Reset signals
 	snap.Reset();
-	
-	
+
+
 	return true;
 }
 
 void AgentSystem::CreateAgents() {
 	ASSERT(buf_count > 0);
 	ASSERT(sym_count > 0);
-	
+
 	MetaTrader& mt = GetMetaTrader();
 	groups.SetCount(GROUP_COUNT);
-	for(int i = 0; i < GROUP_COUNT; i++) {
+
+	for (int i = 0; i < GROUP_COUNT; i++) {
 		groups[i].agents.SetCount(SYM_COUNT);
-		for(int j = 0; j < sym_ids.GetCount(); j++) {
+
+		for (int j = 0; j < sym_ids.GetCount(); j++) {
 			const Symbol& sym = mt.GetSymbol(sym_ids[j]);
 			Agent& a = groups[i].agents[j];
 			a.group_id = i;
@@ -922,135 +1071,143 @@ void AgentSystem::CreateAgents() {
 
 double AgentSystem::GetAverageSignalDrawdown() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].sig.GetLastDrawdown();
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].sig.GetLastDrawdown();
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageSignalIterations() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].sig.iter;
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].sig.iter;
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageSignalDeepIterations() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].sig.deep_iter;
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].sig.deep_iter;
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageAmpDrawdown() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].amp.GetLastDrawdown();
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].amp.GetLastDrawdown();
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageAmpIterations() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].amp.iter;
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].amp.iter;
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageAmpDeepIterations() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].amp.deep_iter;
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].amp.deep_iter;
+
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageAmpEpochs() {
 	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].amp.result_equity.GetCount();
-	return s / TRAINEE_COUNT;
-}
 
-double AgentSystem::GetAverageFuseDrawdown() {
-	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].fuse.GetLastDrawdown();
-	return s / TRAINEE_COUNT;
-}
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			s += groups[i].agents[j].amp.result_equity.GetCount();
 
-double AgentSystem::GetAverageFuseIterations() {
-	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].fuse.iter;
-	return s / TRAINEE_COUNT;
-}
-
-double AgentSystem::GetAverageFilterDrawdown(int level) {
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].filter[level].GetLastDrawdown();
-	return s / TRAINEE_COUNT;
-}
-
-double AgentSystem::GetAverageFilterIterations(int level) {
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	double s = 0;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		s += groups[i].agents[j].filter[level].iter;
 	return s / TRAINEE_COUNT;
 }
 
 double AgentSystem::GetAverageIterations(int phase) {
 	switch (phase) {
-		case PHASE_SIGNAL_TRAINING:		return GetAverageSignalIterations(); break;
-		case PHASE_AMP_TRAINING:		return GetAverageAmpIterations(); break;
-		case PHASE_FUSE_TRAINING:		return GetAverageFuseIterations(); break;
-		default:						return GetAverageFilterIterations(phase);
+
+	case PHASE_SIGNAL_TRAINING:
+		return GetAverageSignalIterations();
+		break;
+
+	case PHASE_AMP_TRAINING:
+		return GetAverageAmpIterations();
+		break;
 	}
 }
 
 double AgentSystem::GetAverageDeepIterations(int phase) {
 	switch (phase) {
-		case PHASE_SIGNAL_TRAINING:		return GetAverageSignalDeepIterations(); break;
-		case PHASE_AMP_TRAINING:		return GetAverageAmpDeepIterations(); break;
-		default:						return 0;
+
+	case PHASE_SIGNAL_TRAINING:
+		return GetAverageSignalDeepIterations();
+		break;
+
+	case PHASE_AMP_TRAINING:
+		return GetAverageAmpDeepIterations();
+		break;
+
+	default:
+		return 0;
 	}
 }
 
 void AgentSystem::RefreshAgentEpsilon(int phase) {
-	for(int i = 0; i < GROUP_COUNT; i++) {
-		for(int j = 0; j < SYM_COUNT; j++) {
+	for (int i = 0; i < GROUP_COUNT; i++) {
+		for (int j = 0; j < SYM_COUNT; j++) {
 			Agent& a = groups[i].agents[j];
+
 			if (phase == PHASE_SIGNAL_TRAINING) {
 				int level = a.sig.iter / SIGNAL_EPS_ITERS_STEP;
-				if (level <= 0)			signal_epsilon = 0.20;
-				else if (level == 1)	signal_epsilon = 0.05;
-				else if (level == 2)	signal_epsilon = 0.02;
-				else if (level >= 3)	signal_epsilon = 0.01;
+
+				if (level <= 0)
+					signal_epsilon = 0.20;
+				else
+				if (level == 1)
+					signal_epsilon = 0.05;
+				else
+				if (level == 2)
+					signal_epsilon = 0.02;
+				else
+				if (level >= 3)
+					signal_epsilon = 0.01;
+
 				a.sig.dqn.SetEpsilon(signal_epsilon);
 			}
-			else if (phase == PHASE_AMP_TRAINING) {
+
+			else
+			if (phase == PHASE_AMP_TRAINING) {
 				int level = a.amp.iter / AMP_EPS_ITERS_STEP;
-				if (level <= 0)			amp_epsilon = 0.20;
-				else if (level == 1)	amp_epsilon = 0.05;
-				else if (level == 2)	amp_epsilon = 0.02;
-				else if (level >= 3)	amp_epsilon = 0.01;
+
+				if (level <= 0)
+					amp_epsilon = 0.20;
+				else
+				if (level == 1)
+					amp_epsilon = 0.05;
+				else
+				if (level == 2)
+					amp_epsilon = 0.02;
+				else
+				if (level >= 3)
+					amp_epsilon = 0.01;
+
 				a.amp.dqn.SetEpsilon(amp_epsilon);
-			}
-			else if (phase == PHASE_FUSE_TRAINING) {
-				int level = a.fuse.iter / FUSE_EPS_ITERS_STEP;
-				if (level <= 0)			fuse_epsilon = 0.20;
-				else if (level == 1)	fuse_epsilon = 0.05;
-				else if (level == 2)	fuse_epsilon = 0.02;
-				else if (level >= 3)	fuse_epsilon = 0.01;
-				a.fuse.dqn.SetEpsilon(fuse_epsilon);
-			}
-			else if (phase < PHASE_SIGNAL_TRAINING) {
-				int level = a.filter[phase].iter / FILTER_EPS_ITERS_STEP;
-				if (level <= 0)			filter_epsilon[phase] = 0.20;
-				else if (level == 1)	filter_epsilon[phase] = 0.05;
-				else if (level == 2)	filter_epsilon[phase] = 0.02;
-				else if (level >= 3)	filter_epsilon[phase] = 0.01;
-				a.filter[phase].dqn.SetEpsilon(filter_epsilon[phase]);
 			}
 		}
 	}
@@ -1060,29 +1217,22 @@ void AgentSystem::RefreshLearningRate(int phase) {
 	double max_lrate = MAX_LEARNING_RATE;
 	double min_lrate = MIN_LEARNING_RATE;
 	double range = max_lrate - min_lrate;
-	
-	for(int i = 0; i < GROUP_COUNT; i++) {
-		for(int j = 0; j < SYM_COUNT; j++) {
+
+	for (int i = 0; i < GROUP_COUNT; i++) {
+		for (int j = 0; j < SYM_COUNT; j++) {
 			Agent& a = groups[i].agents[j];
+
 			if (phase == PHASE_SIGNAL_TRAINING) {
 				double prog = (double)a.sig.iter / (double)SIGNAL_PHASE_ITER_LIMIT;
 				double lrate = (1.0 - prog) * range + min_lrate;
 				a.sig.dqn.SetLearningRate(lrate);
 			}
-			else if (phase == PHASE_AMP_TRAINING) {
+
+			else
+			if (phase == PHASE_AMP_TRAINING) {
 				double prog = (double)a.amp.iter / (double)AMP_PHASE_ITER_LIMIT;
 				double lrate = (1.0 - prog) * range + min_lrate;
 				a.amp.dqn.SetLearningRate(lrate);
-			}
-			else if (phase == PHASE_FUSE_TRAINING) {
-				double prog = (double)a.fuse.iter / (double)FUSE_PHASE_ITER_LIMIT;
-				double lrate = (1.0 - prog) * range + min_lrate;
-				a.fuse.dqn.SetLearningRate(lrate);
-			}
-			else if (phase < PHASE_SIGNAL_TRAINING) {
-				double prog = (double)a.filter[phase].iter / (double)SIGNAL_PHASE_ITER_LIMIT;
-				double lrate = (1.0 - prog) * range + min_lrate;
-				a.filter[phase].dqn.SetLearningRate(lrate);
 			}
 		}
 	}
@@ -1090,91 +1240,94 @@ void AgentSystem::RefreshLearningRate(int phase) {
 
 void AgentSystem::SetSignalEpsilon(double epsilon) {
 	this->signal_epsilon = epsilon;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].sig.dqn.SetEpsilon(epsilon);
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			groups[i].agents[j].sig.dqn.SetEpsilon(epsilon);
 }
 
 void AgentSystem::SetAmpEpsilon(double epsilon) {
 	this->amp_epsilon = epsilon;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].amp.dqn.SetEpsilon(epsilon);
-}
 
-void AgentSystem::SetFuseEpsilon(double epsilon) {
-	this->fuse_epsilon = epsilon;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].fuse.dqn.SetEpsilon(epsilon);
-}
-
-void AgentSystem::SetFilterEpsilon(int level, double epsilon) {
-	ASSERT(level >= 0 && level < FILTER_COUNT);
-	this->filter_epsilon[phase] = epsilon;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].filter[level].dqn.SetEpsilon(epsilon);
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			groups[i].agents[j].amp.dqn.SetEpsilon(epsilon);
 }
 
 void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 	this->free_margin_level = fmlevel;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++)
-		groups[i].agents[j].SetFreeMarginLevel(fmlevel);
+
+	for (int i = 0; i < GROUP_COUNT; i++)
+		for (int j = 0; j < SYM_COUNT; j++)
+			groups[i].agents[j].SetFreeMarginLevel(fmlevel);
 }
 
 void AgentSystem::InitBrokerValues() {
 	MetaTrader& mt = GetMetaTrader();
-	
+
 	proxy_id.SetCount(SYM_COUNT, 0);
 	proxy_base_mul.SetCount(SYM_COUNT, 0);
 	//spread_points.SetCount(SYM_COUNT, 0);
-	
-	for(int i = 0; i < SYM_COUNT; i++) {
+
+	for (int i = 0; i < SYM_COUNT; i++) {
 		int sym = sym_ids[i];
-		
+
 		DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[sym]);
-		
+
 		const Symbol& symbol = mt.GetSymbol(sym);
+
 		if (symbol.proxy_id != -1) {
 			int k = sym_ids.Find(symbol.proxy_id);
 			ASSERT(k != -1);
 			proxy_id[i] = k;
 			proxy_base_mul[i] = symbol.base_mul;
-		} else {
+		}
+
+		else {
 			proxy_id[i] = -1;
 			proxy_base_mul[i] = 0;
 		}
+
 		//spread_points[i] = db->GetAverageSpread() * db->GetPoint();
 		//ASSERT(spread_points[i] > 0.0);
 	}
-	
+
 	begin_equity = Upp::max(10000.0, mt.AccountEquity());
+
 	leverage = 1000;
 }
 
 bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	System& sys = GetSystem();
 	sys.WhenPushTask("Putting latest signals");
-	
-	
+
+
 	MetaTrader* mt = dynamic_cast<MetaTrader*>(&broker);
+
 	if (mt) {
 		mt->Data();
 		broker.RefreshLimits();
-	} else {
+	}
+
+	else {
 		SimBroker* sb = dynamic_cast<SimBroker*>(&broker);
 		sb->RefreshOrders();
 	}
-	
+
 	Snapshot& cur_snap = snaps.Top();
-	
-	
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
+
+
+	for (int i = 0; i < sym_ids.GetCount(); i++) {
 		int group_id = FindActiveGroup(i);
 		int sym = sym_ids[i];
 		int sig = 0;
+
 		if (group_id != -1) {
 			ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
 			ASSERT(groups[group_id].agents[i].sym == sym);
 			sig = cur_snap.GetAmpOutput(group_id, i);
 		}
+
 		if (sig == broker.GetSignal(sym) && sig != 0)
 			broker.SetSignalFreeze(sym, true);
 		else {
@@ -1182,13 +1335,14 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 			broker.SetSignalFreeze(sym, false);
 		}
 	}
-	
+
 	broker.SetFreeMarginLevel(free_margin_level);
-	broker.SetFreeMarginScale((AMP_MAXSCALES-1)*AMP_MAXSCALE_MUL * SYM_COUNT);
+
+	broker.SetFreeMarginScale((AMP_MAXSCALES - 1)*AMP_MAXSCALE_MUL * SYM_COUNT);
 	broker.SignalOrders(true);
-	
+
 	sys.WhenPopTask();
-	
+
 	return true;
 }
 
@@ -1216,6 +1370,233 @@ void AgentSystem::Data() {
 	size = end_pos - begin_pos - sizeof(int);
 	fout.Seek(begin_pos);
 	fout.Put(&size, sizeof(int));
+}
+
+
+// Nice tutorial for writing this function: http://mnemstudio.org/clustering-k-means-example-1.htm
+
+unsigned int root(unsigned int x) {
+	unsigned int a, b;
+	b     = x;
+	a = x = 0x3f;
+	x     = b / x;
+	a = x = (x + a) >> 1;
+	x     = b / x;
+	a = x = (x + a) >> 1;
+	x     = b / x;
+	x     = (x + a) >> 1;
+	return x;
+}
+
+void AgentSystem::RefreshClusters() {
+	
+	if (initial_clustering) {
+		SortByKey(result_stats, StdLess<Tuple2<int, int> >());
+		for (int i = 0; i < result_stats.GetCount(); i++) {
+			const Tuple2<int, int>& t = result_stats.GetKey(i);
+			DLOG(Format("%d x %d, %d", t.a, t.b, result_stats[i]));
+		}
+		
+		int cols = sqrt(GROUP_COUNT);
+		int rows = GROUP_COUNT / cols;
+		ASSERT(cols * rows == GROUP_COUNT);
+		
+		int max_x = result_stats.TopKey().a;
+		int xstep = max_x / cols;
+		int cur = 0;
+		
+		for(int i = 0; i < cols; i++) {
+			int x = xstep / 2 + i * xstep;
+			int x1 = i * xstep;
+			int x2 = (i + 1) * xstep;
+			
+			int min_y = INT_MAX;
+			int max_y = INT_MIN;
+			while (cur < result_stats.GetCount()) {
+				const Tuple2<int, int>& t = result_stats.GetKey(cur++);
+				if (t.a >= x2) break;
+				if (t.b < min_y) min_y = t.b;
+				if (t.b > max_y) max_y = t.b;
+			}
+			
+			int range_y = max_y - min_y;
+			int ystep = range_y / rows;
+			
+			for(int j = 0; j < rows; j++) {
+				int y = min_y + ystep / 2 + j * ystep;
+				centroids.Add(Tuple2<int, int>(x, y));
+			}
+		}
+		
+
+		for(int i = 0; i < centroids.GetCount(); i++) {
+			const Tuple2<int, int>& ctr = centroids[i];
+			double v = ctr.a * VOLAT_DIV;
+			double c = ctr.b * CHANGE_DIV * 1000;
+			DLOG("Center " << i << ": " << v << " x " << c);
+		}
+		
+		Vector<Vector<Tuple3<int, int, int> > > pts;
+		pts.SetCount(centroids.GetCount());
+		
+		for (int i = 0; i < result_stats.GetCount(); i++) {
+			const Tuple2<int, int>& t = result_stats.GetKey(i);
+			int t_count = result_stats[i];
+			
+			// Find closest centroid to the point
+			int c_id = -1;
+			int min_dist = INT_MAX;
+			for(int j = 0; j < centroids.GetCount(); j++) {
+				const Tuple2<int, int>& ctr = centroids[j];
+				
+				// Calculate Euclidean distance
+				int vd = (ctr.a - t.a) * VOLINTMUL;
+				int cd = ctr.b - t.b;
+				int dist = root(vd * vd + cd * cd);
+				if (dist < min_dist) {
+					min_dist = dist;
+					c_id = j;
+				}
+			}
+			
+			// Add point to centroid's point vector and update mean average
+			Vector<Tuple3<int, int, int> >& c_pts = pts[c_id];
+			c_pts.Add(Tuple3<int, int, int>(t.a, t.b, t_count));
+		}
+		
+		for(int i = 0; i < centroids.GetCount(); i++) {
+			Vector<Tuple3<int, int, int> >& c_pts = pts[i];
+			if (c_pts.IsEmpty()) {
+				for (int j = 1; j < centroids.GetCount(); j++) {
+					int k = (i + j) % centroids.GetCount();
+					Vector<Tuple3<int, int, int> >& c_pts2 = pts[k];
+					if (!c_pts2.IsEmpty()) {
+						c_pts.Add(c_pts2.Pop());
+						break;
+					}
+				}
+			}
+				
+			Tuple2<int, int> av_pt(0,0);
+			int64 total = 0;
+			for(int l = 0; l < c_pts.GetCount(); l++) {
+				Tuple3<int, int, int>& c_pt = c_pts[l];
+				av_pt.a += c_pt.a * c_pt.c;
+				av_pt.b += c_pt.b * c_pt.c;
+				total += c_pt.c;
+			}
+			av_pt.a /= total;
+			av_pt.b /= total;
+			centroids[i] = av_pt;
+		}
+		for(int j = 0; j < centroids.GetCount(); j++) {
+			const Tuple2<int, int>& ctr = centroids[j];
+			double v = ctr.a * VOLAT_DIV;
+			double c = ctr.b * CHANGE_DIV * 1000;
+			DLOG("After first loop, center " << j << ": " << v << " x " << c);
+		}
+		DLOG("");
+		
+		// Recheck closest centroids
+		bool changes = true;
+		for(int i = 0; i < 100 && changes; i++) {
+			
+			changes = false;
+			for(int j = 0; j < pts.GetCount(); j++) {
+				Vector<Tuple3<int, int, int> >& c1_pts = pts[j];
+				
+				for(int k = 0; k < c1_pts.GetCount() && c1_pts.GetCount() > 1; k++) {
+					const Tuple3<int, int, int>& t = c1_pts[k];
+					
+					// Find closest centroid to the point
+					int c_id = -1;
+					int min_dist = INT_MAX;
+					for(int l = 0; l < centroids.GetCount(); l++) {
+						const Tuple2<int, int>& ctr = centroids[l];
+						
+						// Calculate Euclidean distance
+						int vd = (ctr.a - t.a) * VOLINTMUL;
+						int cd = ctr.b - t.b;
+						int dist = root(vd * vd + cd * cd);
+						if (dist < min_dist) {
+							min_dist = dist;
+							c_id = l;
+						}
+					}
+					
+					// Continue if the closest centroid is same
+					if (c_id == j) continue;
+					changes = true;
+					
+					// Move point to centroid's point vector and update mean average
+					Vector<Tuple3<int, int, int> >& c2_pts = pts[c_id];
+					c2_pts.Add(t);
+					c1_pts.Remove(k--);
+				}
+			}
+			
+			for(int j = 0; j < pts.GetCount(); j++) {
+				Vector<Tuple3<int, int, int> >& c_pts = pts[j];
+				Tuple2<int, int> av_pt(0,0);
+				int64 total = 0;
+				for(int l = 0; l < c_pts.GetCount(); l++) {
+					Tuple3<int, int, int>& c_pt = c_pts[l];
+					av_pt.a += c_pt.a * c_pt.c;
+					av_pt.b += c_pt.b * c_pt.c;
+					total += c_pt.c;
+				}
+				av_pt.a /= total;
+				av_pt.b /= total;
+				centroids[j] = av_pt;
+			}
+			
+			for(int j = 0; j < centroids.GetCount(); j++) {
+				const Tuple2<int, int>& ctr = centroids[j];
+				double v = ctr.a * VOLAT_DIV;
+				double c = ctr.b * CHANGE_DIV * 1000;
+				DLOG("Iter " << i << ": Center " << j << ": " << v << " x " << c);
+			}
+			DLOG("");
+		}
+		
+		initial_clustering = false;
+	}
+	
+	TimeStop ts;
+	
+	// Write clusters to snapshots
+	for (; cluster_counter < snaps.GetCount(); cluster_counter++) {
+		Snapshot& snap = snaps[cluster_counter];
+		
+		for(int i = 0; i < SYM_COUNT; i++) {
+			for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
+				int v = snap.GetPeriodVolatilityInt(i, j);
+				int c = snap.GetPeriodChangeInt(i, j);
+				
+				// Find closest centroid to the point
+				int c_id = -1;
+				int min_dist = INT_MAX;
+				for(int l = 0; l < centroids.GetCount(); l++) {
+					const Tuple2<int, int>& ctr = centroids[l];
+					
+					// Calculate Euclidean distance
+					int vd = (ctr.a - v) * VOLINTMUL;
+					int cd = ctr.b - c;
+					int dist = root(vd * vd + cd * cd);
+					if (dist < min_dist) {
+						min_dist = dist;
+						c_id = l;
+					}
+				}
+				
+				//LOG(cluster_counter << "\t" << i << "\t" << j << "\t" << c_id);
+				snap.SetCluster(i, j, c_id);
+			}
+		}
+	}
+
+	LOG("Cluster ids written in " << ts.ToString());
+	
 }
 
 }

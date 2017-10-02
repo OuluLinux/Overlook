@@ -12,9 +12,10 @@ namespace Overlook {
 #define FMLEVEL						0.6
 #define BASE_FWDSTEP_BEGIN			5
 #define GROUP_COUNT					24
+#define INPUT_COUNT					(GROUP_COUNT * 5)
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(3 * 5 * 2)
-#define SENSOR_SIZE					(SYM_COUNT * INPUT_SENSORS)
+#define SENSOR_SIZE					(TIME_SENSORS + SYM_COUNT * INPUT_SENSORS)
 #define RANDOM_TIMESTEPS			8
 #define REWARD_AV_PERIOD			400
 #define MAX_LEARNING_RATE			0.0100
@@ -31,45 +32,123 @@ namespace Overlook {
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
 
-#define SIGNAL_SENSORS				2
-#define SIGNAL_SIZE					(TRAINEE_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_GROUP_SIZE			(SYM_COUNT * SIGNAL_SENSORS)
-#define SIGNAL_STATES				(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE)
-#define SIGNAL_POS_FWDSTEPS			3
-#define SIGNAL_NEG_FWDSTEPS			3
-#define SIGNAL_ACTIONCOUNT			(SIGNAL_POS_FWDSTEPS + SIGNAL_NEG_FWDSTEPS)
+#define SIGNAL_STATES				SENSOR_SIZE
+#define SIGNAL_ACTIONCOUNT			2
 #define SIGNAL_PHASE_ITER_LIMIT		300000
 #define SIGNAL_EPS_ITERS_STEP		10000
 
-#define AMP_SENSORS					3
-#define AMP_SIZE					(TRAINEE_COUNT * AMP_SENSORS)
-#define AMP_GROUP_SIZE				(SYM_COUNT * AMP_SENSORS)
-#define AMP_STATES					(TIME_SENSORS + SENSOR_SIZE + SIGNAL_SIZE + AMP_SIZE)
-#define AMP_FWDSTEP_BEGIN			BASE_FWDSTEP_BEGIN
-#define AMP_FWDSTEPS				5
+#define AMP_STATES					SENSOR_SIZE
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
-#define AMP_ACTIONCOUNT				(AMP_MAXSCALES * AMP_FWDSTEPS)
+#define AMP_ACTIONCOUNT				2
 #define AMP_PHASE_ITER_LIMIT		300000
 #define AMP_EPS_ITERS_STEP			10000
 
 class AgentSystem;
 
+struct ResultTuple : Moveable<ResultTuple> {
+	int16 change, volat;
+	
+	ResultTuple() : change(0), volat(0) {}
+	ResultTuple(int16 c, int16 v) : change(c), volat(v) {}
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		ch << change << 1 << volat << 1;
+		return ch;
+	}
+	
+	bool operator == (const ResultTuple& b) const {return b.change == change && b.volat == volat;}
+	bool operator < (const ResultTuple& b) const {return volat < b.volat || (volat == b.volat && change < b.change);}
+	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return a.volat < b.volat;}
+};
+
+struct ResultTupleCounter : Moveable<ResultTupleCounter> {
+	int16 change, volat;
+	int count;
+	
+	ResultTupleCounter() : change(0), volat(0), count(0) {}
+	ResultTupleCounter(const ResultTuple& t, int count) : change(t.change), volat(t.volat), count(count) {}
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		ch << change << 1 << volat << 1 << count << 1;
+		return ch;
+	}
+};
+
+
+struct IndicatorTuple : Moveable<IndicatorTuple> {
+	uint8 values				[SENSOR_SIZE];
+	
+	IndicatorTuple() {
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			values[i] = 0;
+	}
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			 ch << values[i] << 1;
+		return ch;
+	}
+	String ToString() const {
+		String s;
+		for(int i = 0; i < SENSOR_SIZE; i++) {
+			if (i) s << ", ";
+			s << values[i] / 255.0;
+		}
+		return s;
+	}
+	
+	uint32 GetDistance(const IndicatorTuple& it) const {
+		uint32 sqr_sum = 0;
+		for(int i = 0; i < SENSOR_SIZE; i++) {
+			int dist = values[i] - it.values[i];
+			sqr_sum += dist * dist;
+		}
+		return root(sqr_sum);
+	}
+};
+
+
+/*struct IndicatorTupleCounter : Moveable<IndicatorTupleCounter> {
+	uint8 values				[SENSOR_SIZE];
+	int count;
+	
+	IndicatorTupleCounter() {
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			values[i] = 0;
+		count = 0;
+	}
+	IndicatorTupleCounter(IndicatorTuple& t, int count) {
+		memcpy(values, t.value, SENSOR_SIZE);
+		this->count = count;
+	}
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		for(int i = 0; i < SENSOR_SIZE; i++)
+			 ch << values[i] << 1;
+		return ch;
+	}
+	String ToString() const {
+		String s;
+		for(int i = 0; i < SENSOR_SIZE; i++) {
+			if (i) s << ", ";
+			s << values[i] / 255.0;
+		}
+		return s;
+	}
+};*/
+
 class Snapshot : Moveable<Snapshot> {
 
 private:
-	int16 change_bwd			[MEASURE_SIZE];
-	int16 volat_bwd				[MEASURE_SIZE];
-	uint8 cluster_id			[MEASURE_SIZE];
-
-	double year_timesensor;
-	double week_timesensor;
-	double day_timesensor;
-	double sensors				[SENSOR_SIZE];
+	IndicatorTuple sensors;
+	ResultTuple result_bwd		[MEASURE_SIZE];
+	uint8 result_cluster_id		[MEASURE_SIZE];
+	uint8 indi_cluster_id;
+	
 	double open					[SYM_COUNT];
 	double change				[SYM_COUNT];
-	double signal_sensors		[SIGNAL_SIZE];
-	double amp_sensors			[AMP_SIZE];
+	
 	int signal_broker_symsig	[TRAINEE_COUNT];
 	int amp_broker_symsig		[TRAINEE_COUNT];
 	int shift;
@@ -95,103 +174,106 @@ private:
 	}
 
 public:
-
 	void Reset() {
-		for (int i = 0; i < SIGNAL_SIZE; i++)
-			signal_sensors[i]			= 1.0;
-
-		for (int i = 0; i < AMP_SIZE; i++)
-			amp_sensors[i]				= 1.0;
-
 		for (int i = 0; i < TRAINEE_COUNT; i++)
 			signal_broker_symsig[i]		= 0;
 
 		for (int i = 0; i < TRAINEE_COUNT; i++)
 			amp_broker_symsig[i]		= 0;
 	}
-
-	void   SetCluster(int sym, int tf, int cl) {
+	
+	int GetResultCluster(int sym, int tf) {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		cluster_id	[sym * MEASURE_PERIODCOUNT + tf] = cl;
+		return result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf];
 	}
-
+	
+	void SetResultCluster(int sym, int tf, int cl) {
+		ASSERT(sym >= 0 && sym < SYM_COUNT);
+		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
+		result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf] = cl;
+	}
+	
+	int GetIndicatorCluster() {
+		return indi_cluster_id;
+	}
+	
+	void SetIndicatorCluster(int cl) {
+		indi_cluster_id = cl;
+	}
+	
+	const ResultTuple& GetResultTuple(int sym, int tf) const {
+		ASSERT(sym >= 0 && sym < SYM_COUNT);
+		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
+		return result_bwd[sym * MEASURE_PERIODCOUNT + tf];
+	}
+	
+	const IndicatorTuple& GetIndicatorTuple() const {
+		return sensors;
+	}
+	
 	void   SetPeriodChange(int sym, int tf, double d) {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		change_bwd	[sym * MEASURE_PERIODCOUNT + tf] = d / CHANGE_DIV;
+		result_bwd[sym * MEASURE_PERIODCOUNT + tf].change = d / CHANGE_DIV;
 	}
 
 	double GetPeriodChange(int sym, int tf) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return change_bwd	[sym * MEASURE_PERIODCOUNT + tf] * CHANGE_DIV;
+		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].change * CHANGE_DIV;
 	}
 
 	int    GetPeriodChangeInt(int sym, int tf) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return change_bwd	[sym * MEASURE_PERIODCOUNT + tf];
+		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].change;
 	}
 
 	void   SetPeriodVolatility(int sym, int tf, double d) {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		volat_bwd	[sym * MEASURE_PERIODCOUNT + tf] = d / VOLAT_DIV;
+		result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat = d / VOLAT_DIV;
 	}
 
 	double GetPeriodVolatility(int sym, int tf) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return volat_bwd	[sym * MEASURE_PERIODCOUNT + tf] * VOLAT_DIV;
+		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat * VOLAT_DIV;
 	}
 
 	int    GetPeriodVolatilityInt(int sym, int tf) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return volat_bwd	[sym * MEASURE_PERIODCOUNT + tf];
+		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat;
 	}
-
-	double GetYearSensor() const {
-		return year_timesensor;
-	}
-
-	double GetWeekSensor() const {
-		return week_timesensor;
-	}
-
-	double GetDaySensor()  const {
-		return day_timesensor;
-	}
-
-	void SetYearSensor(double d) {
-		year_timesensor = d;
-	}
-
-	void SetWeekSensor(double d) {
-		week_timesensor = d;
-	}
-
-	void SetDaySensor(double d) {
-		day_timesensor = d;
-	}
-
+	
 	inline double GetSensor(int sym, int in) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(in >= 0 && in < INPUT_SENSORS);
-		return sensors[sym * INPUT_SENSORS + in];
+		return sensors.values[TIME_SENSORS + sym * INPUT_SENSORS + in] / 255.0;
 	}
 
-	inline void   SetSensor(int sym, int in, double d) {
+	inline void SetSensor(int sym, int in, double d) {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(in >= 0 && in < INPUT_SENSORS);
-		sensors[sym * INPUT_SENSORS + in] = d;
+		sensors.values[TIME_SENSORS + sym * INPUT_SENSORS + in] = Upp::max(0, Upp::min(255, (int)(d * 255.0)));
 	}
 
 	inline double GetSensorUnsafe(int i) const {
-		return sensors[i];
+		return sensors.values[i] / 255.0;
 	}
 
+	inline double GetTimeSensor(int i) const {
+		ASSERT(i >= 0 && i < TIME_SENSORS);
+		return sensors.values[i] / 255.0;
+	}
+	
+	inline void SetTimeSensor(int i, double d) {
+		ASSERT(i >= 0 && i < TIME_SENSORS);
+		sensors.values[i] = Upp::max(0, Upp::min(255, (int)(d * 255.0)));
+	}
+	
 	inline double GetOpen(int sym) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		return open[sym];
@@ -211,44 +293,6 @@ public:
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		change[sym] = d;
 	}
-
-	inline double GetSignalSensor(int group, int sym, int sens) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(sens >= 0 && sens < SIGNAL_SENSORS);
-		return signal_sensors[(group * SYM_COUNT + sym) * SIGNAL_SENSORS + sens];
-	}
-
-	inline void   SetSignalSensor(int group, int sym, int sens, double d) {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(sens >= 0 && sens < SIGNAL_SENSORS);
-		signal_sensors[(group * SYM_COUNT + sym) * SIGNAL_SENSORS + sens] = d;
-	}
-
-	inline double GetSignalSensorUnsafe(int group_id, int i) const {
-		return signal_sensors[(group_id * SYM_COUNT * SIGNAL_SENSORS) + i];
-	}
-
-	inline double GetAmpSensor(int group, int sym, int sens) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(sens >= 0 && sens < AMP_SENSORS);
-		return amp_sensors[(group * SYM_COUNT + sym) * AMP_SENSORS + sens];
-	}
-
-	inline void   SetAmpSensor(int group, int sym, int sens, double d) {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(sens >= 0 && sens < AMP_SENSORS);
-		amp_sensors[(group * SYM_COUNT + sym) * AMP_SENSORS + sens] = d;
-	}
-
-	inline double GetAmpSensorUnsafe(int group_id, int i) const {
-		return amp_sensors[(group_id * SYM_COUNT * AMP_SENSORS) + i];
-	}
-
-
 
 
 	inline int GetSignalOutput(int group, int sym) const {
@@ -306,8 +350,8 @@ public:
 
 
 	// Temp
-	VectorMap<Tuple2<int, int>, int> result_stats;
-	Vector<Tuple2<int, int> > centroids;
+	Vector<ResultTuple > result_centroids;
+	Vector<IndicatorTuple> indi_centroids;
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Snapshot> snaps;
@@ -329,9 +373,11 @@ public:
 	int counted_bars = 0;
 	int prev_shift = 0;
 	int realtime_count = 0;
-	int cluster_counter = 0;
+	int result_cluster_counter = 0;
+	int indi_cluster_counter = 0;
 	bool running = false, stopped = true;
-	bool initial_clustering = true;
+	bool initial_result_clustering = true;
+	bool initial_indicator_clustering = true;
 	Mutex work_lock;
 
 
@@ -396,11 +442,13 @@ public:
 	void SetFixedBroker(int sym_id, FixedSimBroker& broker);
 	void ReduceExperienceMemory(int phase);
 	void RefreshClusters();
-
+	void RefreshResultClusters();
+	void RefreshIndicatorClusters();
+	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;
-
-
+	
+	
 };
 
 }

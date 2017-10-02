@@ -3493,4 +3493,13 @@ version, which is much less exciting.&]
 [s0; ..&]
 [s0; Whew... a lot of confusing journal text lately, but I finally 
 found the most simplified plan and started implementing it.&]
+[s0; &]
+[s3; 1.10.2017&]
+[s0; I ended up with much less exciting improvements. Filters are 
+replaced with input cluster to output cluster matching and pending 
+orders and tp/sl are done in a similar way. Surprisingly, VOR`-to`-VOR 
+flying was a huge inspiration, as this kinda will have a distance 
+calculation from pending`-pole to TP`-pole. The sending of an 
+order is triggered while moving closer to TP`-pole from pending`-pole. 
+It`'s sounds crazy, I know.&]
 [s0; ]]

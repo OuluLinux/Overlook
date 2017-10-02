@@ -54,6 +54,7 @@ file
 	QtStats.cpp,
 	AgentSystem.h,
 	AgentSystem.cpp,
+	AgentSectors.cpp,
 	AgentGroup.h,
 	AgentGroup.cpp,
 	FixedSimBroker.h,

@@ -64,7 +64,6 @@ struct AgentAmp {
 	// Temporary
 	FixedSimBroker broker;
 	Vector<double> equity;
-	double prev_signals[AMP_SENSORS];
 	double prev_equity = 0;
 	double reward_sum = 0;
 	double change_sum = 0, change_sum_limit = 0;

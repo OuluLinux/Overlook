@@ -22,7 +22,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	int agent_count		= TRAINEE_COUNT;
 	int value_count		= group.buf_count;
 	
-	int rows = TIME_SENSORS + SYM_COUNT + 2 * TRAINEE_COUNT;
+	int rows = TIME_SENSORS + SYM_COUNT;
 	
 	int cols = value_count;
 	int grid_w = sz.cx;
@@ -37,19 +37,19 @@ void SnapshotDraw::Paint(Draw& w) {
 		int clr;
 		Color c;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetYearSensor()));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetTimeSensor(0)));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, 0, sz.cx, (int)(ystep+1), c);
 		row++;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetWeekSensor()));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetTimeSensor(1)));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, (int)ystep, sz.cx, (int)(ystep+2), c);
 		row++;
 		
-		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetDaySensor()));
+		value = 255.0 * Upp::max(0.0, Upp::min(1.0, (double)snap.GetTimeSensor(2)));
 		clr = (int)Upp::min(255.0, value);
 		c = Color(255 - clr, clr, 0);
 		id.DrawRect(0, (int)(ystep*2), sz.cx, (int)(ystep+2), c);
@@ -68,54 +68,6 @@ void SnapshotDraw::Paint(Draw& w) {
 			int x2 = (int)((k + 1) * xstep);
 			int w = x2 - x;
 			double d = snap.GetSensor(j, k);
-			double min = 0.0;
-			double max = 1.0;
-			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-			int clr = (int)Upp::min(255.0, value);
-			Color c(255 - clr, clr, 0);
-			id.DrawRect(x, y, w, h, c);
-		}
-		
-		row++;
-	}
-	
-	
-	// Signals
-	xstep = (double)grid_w / (double)SIGNAL_SENSORS;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-		int y = (int)(row * ystep);
-		int y2 = (int)((row + 1) * ystep);
-		int h = y2-y;
-		
-		for(int k = 0; k < SIGNAL_SENSORS; k++) {
-			int x = (int)(k * xstep);
-			int x2 = (int)((k + 1) * xstep);
-			int w = x2 - x;
-			double d = snap.GetSignalSensor(i, j, k);
-			double min = 0.0;
-			double max = 1.0;
-			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
-			int clr = (int)Upp::min(255.0, value);
-			Color c(255 - clr, clr, 0);
-			id.DrawRect(x, y, w, h, c);
-		}
-		
-		row++;
-	}
-	
-	
-	// Amp
-	xstep = (double)grid_w / (double)AMP_SENSORS;
-	for(int i = 0; i < GROUP_COUNT; i++) for(int j = 0; j < SYM_COUNT; j++) {
-		int y = (int)(row * ystep);
-		int y2 = (int)((row + 1) * ystep);
-		int h = y2-y;
-		
-		for(int k = 0; k < AMP_SENSORS; k++) {
-			int x = (int)(k * xstep);
-			int x2 = (int)((k + 1) * xstep);
-			int w = x2 - x;
-			double d = snap.GetAmpSensor(i, j, k);
 			double min = 0.0;
 			double max = 1.0;
 			double value = 255.0 * Upp::max(0.0, Upp::min(1.0, d));
@@ -701,9 +653,9 @@ void SignalGraph::Paint(Draw& w) {
 	
 	for (int k = snap_begin; k < snap_end; k++) {
 		Snapshot& snap1 = sys.snaps[k];
-		int x1 = (snap1.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
+		int x1 = (snap1.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
 		Snapshot& snap2 = sys.snaps[k < snap_end-1 ? k+1 : snap_begin];
-		int x2 = (snap2.GetWeekSensor() * 7.0 - 1.0) / 5.0 * sz.cx;
+		int x2 = (snap2.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
 		if (x2 < x1) x2 = sz.cx;
 		int w = x2 - x1;
 		

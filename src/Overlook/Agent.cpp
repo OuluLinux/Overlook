@@ -105,23 +105,9 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		int cursor = 0;
 		double input_array[SIGNAL_STATES];
 		
-		
-		// time_values
-		input_array[cursor++] = cur_snap.GetYearSensor();
-		input_array[cursor++] = cur_snap.GetWeekSensor();
-		input_array[cursor++] = cur_snap.GetDaySensor();
-		
-		
 		// sensors of value of current
 		for(int i = 0; i < SENSOR_SIZE; i++)
 			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-		
-		
-		// all previous outputs from the same phase
-		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = prev_snap.GetSignalSensorUnsafe(j, i);
-		
 		
 		ASSERT(cursor == SIGNAL_STATES);
 		
@@ -130,7 +116,7 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		ASSERT(action >= 0 && action < SIGNAL_ACTIONCOUNT);
 		action_counts[action]++;
 		
-		int timefwd_step;
+		/*int timefwd_step;
 		if (action < SIGNAL_POS_FWDSTEPS) {
 			signal = +1;
 			timefwd_step = action;
@@ -140,7 +126,7 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 			timefwd_step = action - SIGNAL_POS_FWDSTEPS;
 		}
 		
-		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));
+		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));*/
 	}
 	
 	change_sum = 0.0;
@@ -150,25 +136,6 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 void AgentSignal::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	cur_snap.SetSignalOutput(group_id, sym_id, signal);
-	
-	double timestep_sensor = 0.75 - 0.75 * change_sum / change_sum_limit;
-	double prev_signals[SIGNAL_SENSORS];
-	
-	if (signal == 0) {
-		prev_signals[0] = 1.0;
-		prev_signals[1] = 1.0;
-	}
-	else if (signal > 0) {
-		prev_signals[0] = timestep_sensor;
-		prev_signals[1] = 1.0;
-	}
-	else {
-		prev_signals[0] = 1.0;
-		prev_signals[1] = timestep_sensor;
-	}
-	
-	for(int i = 0; i < SIGNAL_SENSORS; i++)
-		cur_snap.SetSignalSensor(group_id, sym_id, i, prev_signals[i]);
 }
 
 void AgentSignal::Backward(double reward) {
@@ -302,8 +269,6 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	if (lower_output_signal == 0) {
 		skip_learn = true;
-		prev_signals[0]		= 1.0;
-		prev_signals[1]		= 1.0;
 		change_sum_limit = 0.0;
 		signal = 0;
 	}
@@ -317,28 +282,9 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		int cursor = 0;
 		double input_array[AMP_STATES];
 		
-		
-		// time_values
-		input_array[cursor++] = cur_snap.GetYearSensor();
-		input_array[cursor++] = cur_snap.GetWeekSensor();
-		input_array[cursor++] = cur_snap.GetDaySensor();
-		
-		
 		// sensors of value of current
 		for(int i = 0; i < SENSOR_SIZE; i++)
 			input_array[cursor++] = cur_snap.GetSensorUnsafe(i);
-		
-		
-		// all current signals from same snapshot
-		for(int i = 0; i < SIGNAL_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = cur_snap.GetSignalSensorUnsafe(j, i);
-		
-		
-		// all previous outputs from the same phase
-		for(int i = 0; i < AMP_GROUP_SIZE; i++)
-			for(int j = 0; j < GROUP_COUNT; j++)
-				input_array[cursor++] = prev_snap.GetAmpSensorUnsafe(j, i);
 		
 		ASSERT(cursor == AMP_STATES);
 		
@@ -346,7 +292,7 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < AMP_ACTIONCOUNT);
 		action_counts[action]++;
-		
+		/*
 		const int maxscale_steps = AMP_MAXSCALES;
 		const int timefwd_steps = AMP_FWDSTEPS;
 		ASSERT(AMP_ACTIONCOUNT == (maxscale_steps * timefwd_steps));
@@ -354,13 +300,10 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		int maxscale_step	= action % maxscale_steps;
 		int timefwd_step	= action / maxscale_steps;
 		
-		prev_signals[0]		= 1.0 * maxscale_step / maxscale_steps;
-		prev_signals[1]		= 1.0 * timefwd_step  / timefwd_steps;
-		
 		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
 		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));
 		
-		signal = lower_output_signal * maxscale;
+		signal = lower_output_signal * maxscale;*/
 	}
 	
 	change_sum = 0.0;
@@ -384,11 +327,6 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 void AgentAmp::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
 	int group_id = agent->group_id, sym_id = agent->sym_id;
 	cur_snap.SetAmpOutput(group_id, sym_id, signal);
-	
-	prev_signals[2] = 0.75 - 0.75 * change_sum / change_sum_limit;
-	
-	for(int i = 0; i < AMP_SENSORS; i++)
-		cur_snap.SetAmpSensor(group_id, sym_id, i, prev_signals[i]);
 }
 
 void AgentAmp::Backward(double reward) {

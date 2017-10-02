@@ -979,9 +979,9 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 
 
 	// Time sensor
-	snap.SetYearSensor((month * 31.0 + day) / 372.0);
-	snap.SetWeekSensor(((wday * 24 + hour) * 60 + minute) / (7.0 * 24.0 * 60.0));
-	snap.SetDaySensor((hour * 60 + minute) / (24.0 * 60.0));
+	snap.SetTimeSensor(0, (month * 31.0 + day) / 372.0);
+	snap.SetTimeSensor(1, ((wday * 24 + hour) * 60 + minute) / (7.0 * 24.0 * 60.0));
+	snap.SetTimeSensor(2, (hour * 60 + minute) / (24.0 * 60.0));
 
 
 	// Refresh values (tf / sym / value)
@@ -1012,7 +1012,7 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 		else {
 			snap.SetChange(i, 0.0);
 		}
-
+		
 		for (int j = 0; j < MEASURE_PERIODCOUNT; j++) {
 			int period = 1 << (3 + j);
 			double d1, d2;
@@ -1030,13 +1030,11 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 
 			snap.SetPeriodChange(i, j, change);
 			snap.SetPeriodVolatility(i, j, volat_sum);
-
+			
 			int volat_int = volat_sum / VOLAT_DIV;
 			int change_int = change / CHANGE_DIV;
 			//CombineHash ch;
 			//ch << volat_int << 1 << change_int << 1;
-
-			result_stats.GetAdd(Tuple2<int, int>(volat_int, change_int), 0)++;
 		}
 	}
 
@@ -1370,233 +1368,6 @@ void AgentSystem::Data() {
 	size = end_pos - begin_pos - sizeof(int);
 	fout.Seek(begin_pos);
 	fout.Put(&size, sizeof(int));
-}
-
-
-// Nice tutorial for writing this function: http://mnemstudio.org/clustering-k-means-example-1.htm
-
-unsigned int root(unsigned int x) {
-	unsigned int a, b;
-	b     = x;
-	a = x = 0x3f;
-	x     = b / x;
-	a = x = (x + a) >> 1;
-	x     = b / x;
-	a = x = (x + a) >> 1;
-	x     = b / x;
-	x     = (x + a) >> 1;
-	return x;
-}
-
-void AgentSystem::RefreshClusters() {
-	
-	if (initial_clustering) {
-		SortByKey(result_stats, StdLess<Tuple2<int, int> >());
-		for (int i = 0; i < result_stats.GetCount(); i++) {
-			const Tuple2<int, int>& t = result_stats.GetKey(i);
-			DLOG(Format("%d x %d, %d", t.a, t.b, result_stats[i]));
-		}
-		
-		int cols = sqrt(GROUP_COUNT);
-		int rows = GROUP_COUNT / cols;
-		ASSERT(cols * rows == GROUP_COUNT);
-		
-		int max_x = result_stats.TopKey().a;
-		int xstep = max_x / cols;
-		int cur = 0;
-		
-		for(int i = 0; i < cols; i++) {
-			int x = xstep / 2 + i * xstep;
-			int x1 = i * xstep;
-			int x2 = (i + 1) * xstep;
-			
-			int min_y = INT_MAX;
-			int max_y = INT_MIN;
-			while (cur < result_stats.GetCount()) {
-				const Tuple2<int, int>& t = result_stats.GetKey(cur++);
-				if (t.a >= x2) break;
-				if (t.b < min_y) min_y = t.b;
-				if (t.b > max_y) max_y = t.b;
-			}
-			
-			int range_y = max_y - min_y;
-			int ystep = range_y / rows;
-			
-			for(int j = 0; j < rows; j++) {
-				int y = min_y + ystep / 2 + j * ystep;
-				centroids.Add(Tuple2<int, int>(x, y));
-			}
-		}
-		
-
-		for(int i = 0; i < centroids.GetCount(); i++) {
-			const Tuple2<int, int>& ctr = centroids[i];
-			double v = ctr.a * VOLAT_DIV;
-			double c = ctr.b * CHANGE_DIV * 1000;
-			DLOG("Center " << i << ": " << v << " x " << c);
-		}
-		
-		Vector<Vector<Tuple3<int, int, int> > > pts;
-		pts.SetCount(centroids.GetCount());
-		
-		for (int i = 0; i < result_stats.GetCount(); i++) {
-			const Tuple2<int, int>& t = result_stats.GetKey(i);
-			int t_count = result_stats[i];
-			
-			// Find closest centroid to the point
-			int c_id = -1;
-			int min_dist = INT_MAX;
-			for(int j = 0; j < centroids.GetCount(); j++) {
-				const Tuple2<int, int>& ctr = centroids[j];
-				
-				// Calculate Euclidean distance
-				int vd = (ctr.a - t.a) * VOLINTMUL;
-				int cd = ctr.b - t.b;
-				int dist = root(vd * vd + cd * cd);
-				if (dist < min_dist) {
-					min_dist = dist;
-					c_id = j;
-				}
-			}
-			
-			// Add point to centroid's point vector and update mean average
-			Vector<Tuple3<int, int, int> >& c_pts = pts[c_id];
-			c_pts.Add(Tuple3<int, int, int>(t.a, t.b, t_count));
-		}
-		
-		for(int i = 0; i < centroids.GetCount(); i++) {
-			Vector<Tuple3<int, int, int> >& c_pts = pts[i];
-			if (c_pts.IsEmpty()) {
-				for (int j = 1; j < centroids.GetCount(); j++) {
-					int k = (i + j) % centroids.GetCount();
-					Vector<Tuple3<int, int, int> >& c_pts2 = pts[k];
-					if (!c_pts2.IsEmpty()) {
-						c_pts.Add(c_pts2.Pop());
-						break;
-					}
-				}
-			}
-				
-			Tuple2<int, int> av_pt(0,0);
-			int64 total = 0;
-			for(int l = 0; l < c_pts.GetCount(); l++) {
-				Tuple3<int, int, int>& c_pt = c_pts[l];
-				av_pt.a += c_pt.a * c_pt.c;
-				av_pt.b += c_pt.b * c_pt.c;
-				total += c_pt.c;
-			}
-			av_pt.a /= total;
-			av_pt.b /= total;
-			centroids[i] = av_pt;
-		}
-		for(int j = 0; j < centroids.GetCount(); j++) {
-			const Tuple2<int, int>& ctr = centroids[j];
-			double v = ctr.a * VOLAT_DIV;
-			double c = ctr.b * CHANGE_DIV * 1000;
-			DLOG("After first loop, center " << j << ": " << v << " x " << c);
-		}
-		DLOG("");
-		
-		// Recheck closest centroids
-		bool changes = true;
-		for(int i = 0; i < 100 && changes; i++) {
-			
-			changes = false;
-			for(int j = 0; j < pts.GetCount(); j++) {
-				Vector<Tuple3<int, int, int> >& c1_pts = pts[j];
-				
-				for(int k = 0; k < c1_pts.GetCount() && c1_pts.GetCount() > 1; k++) {
-					const Tuple3<int, int, int>& t = c1_pts[k];
-					
-					// Find closest centroid to the point
-					int c_id = -1;
-					int min_dist = INT_MAX;
-					for(int l = 0; l < centroids.GetCount(); l++) {
-						const Tuple2<int, int>& ctr = centroids[l];
-						
-						// Calculate Euclidean distance
-						int vd = (ctr.a - t.a) * VOLINTMUL;
-						int cd = ctr.b - t.b;
-						int dist = root(vd * vd + cd * cd);
-						if (dist < min_dist) {
-							min_dist = dist;
-							c_id = l;
-						}
-					}
-					
-					// Continue if the closest centroid is same
-					if (c_id == j) continue;
-					changes = true;
-					
-					// Move point to centroid's point vector and update mean average
-					Vector<Tuple3<int, int, int> >& c2_pts = pts[c_id];
-					c2_pts.Add(t);
-					c1_pts.Remove(k--);
-				}
-			}
-			
-			for(int j = 0; j < pts.GetCount(); j++) {
-				Vector<Tuple3<int, int, int> >& c_pts = pts[j];
-				Tuple2<int, int> av_pt(0,0);
-				int64 total = 0;
-				for(int l = 0; l < c_pts.GetCount(); l++) {
-					Tuple3<int, int, int>& c_pt = c_pts[l];
-					av_pt.a += c_pt.a * c_pt.c;
-					av_pt.b += c_pt.b * c_pt.c;
-					total += c_pt.c;
-				}
-				av_pt.a /= total;
-				av_pt.b /= total;
-				centroids[j] = av_pt;
-			}
-			
-			for(int j = 0; j < centroids.GetCount(); j++) {
-				const Tuple2<int, int>& ctr = centroids[j];
-				double v = ctr.a * VOLAT_DIV;
-				double c = ctr.b * CHANGE_DIV * 1000;
-				DLOG("Iter " << i << ": Center " << j << ": " << v << " x " << c);
-			}
-			DLOG("");
-		}
-		
-		initial_clustering = false;
-	}
-	
-	TimeStop ts;
-	
-	// Write clusters to snapshots
-	for (; cluster_counter < snaps.GetCount(); cluster_counter++) {
-		Snapshot& snap = snaps[cluster_counter];
-		
-		for(int i = 0; i < SYM_COUNT; i++) {
-			for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
-				int v = snap.GetPeriodVolatilityInt(i, j);
-				int c = snap.GetPeriodChangeInt(i, j);
-				
-				// Find closest centroid to the point
-				int c_id = -1;
-				int min_dist = INT_MAX;
-				for(int l = 0; l < centroids.GetCount(); l++) {
-					const Tuple2<int, int>& ctr = centroids[l];
-					
-					// Calculate Euclidean distance
-					int vd = (ctr.a - v) * VOLINTMUL;
-					int cd = ctr.b - c;
-					int dist = root(vd * vd + cd * cd);
-					if (dist < min_dist) {
-						min_dist = dist;
-						c_id = l;
-					}
-				}
-				
-				//LOG(cluster_counter << "\t" << i << "\t" << j << "\t" << c_id);
-				snap.SetCluster(i, j, c_id);
-			}
-		}
-	}
-
-	LOG("Cluster ids written in " << ts.ToString());
-	
 }
 
 }

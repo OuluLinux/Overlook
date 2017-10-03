@@ -52,6 +52,7 @@ file
 	Indicators.cpp,
 	QtStats.h,
 	QtStats.cpp,
+	Snapshot.h,
 	AgentSystem.h,
 	AgentSystem.cpp,
 	AgentSectors.cpp,

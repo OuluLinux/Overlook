@@ -692,7 +692,10 @@ void AgentSystem::StoreThis() {
 }
 
 void AgentSystem::Serialize(Stream& s) {
-	s % groups % indi_ids % created % phase;
+	s % groups % indi_ids % result_centroids % indi_centroids
+	  % result_sectors % indi_sectors
+	  % created % phase
+	  % initial_result_clustering % initial_indicator_clustering;
 }
 
 void AgentSystem::RefreshSnapshots() {
@@ -1014,7 +1017,7 @@ bool AgentSystem::Seek(Snapshot& snap, int shift) {
 		}
 		
 		for (int j = 0; j < MEASURE_PERIODCOUNT; j++) {
-			int period = 1 << (3 + j);
+			int period = MEASURE_PERIOD(j);
 			double d1, d2;
 			double volat_sum = 0.0;
 			d1 = open;

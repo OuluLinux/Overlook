@@ -51,6 +51,15 @@ struct OnlineAverage1 : Moveable<OnlineAverage1> {
 	void Serialize(Stream& s) {s % mean % count;}
 };
 
+struct AveragePoint : Moveable<OnlineAverage1> {
+	OnlineAverage1 x, y;
+	int x_mean_int = 0, y_mean_int = 0;
+	
+	void Clear() {x.Clear(); y.Clear();}
+	void Add(double x, double y) {this->x.Add(x); this->y.Add(y); x_mean_int = this->x.mean; y_mean_int = this->y.mean;}
+	void Serialize(Stream& s) {s % x % y % x_mean_int % y_mean_int;}
+};
+
 struct ValueBase {
 	int count, visible, data_type, min, max, factory;
 	const char* s0;

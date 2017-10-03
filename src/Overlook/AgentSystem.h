@@ -12,7 +12,8 @@ namespace Overlook {
 #define FMLEVEL						0.6
 #define BASE_FWDSTEP_BEGIN			5
 #define GROUP_COUNT					24
-#define INPUT_COUNT					(GROUP_COUNT * 5)
+#define OUTPUT_COUNT				(GROUP_COUNT)
+#define INPUT_COUNT					(OUTPUT_COUNT * 5)
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(3 * 5 * 2)
 #define SENSOR_SIZE					(TIME_SENSORS + SYM_COUNT * INPUT_SENSORS)
@@ -28,6 +29,9 @@ namespace Overlook {
 
 #define MEASURE_PERIODCOUNT			6
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
+#define MEASURE_PERIOD(j)			(1 << (3 + j))
+#define RESULT_SIZE					(SYM_COUNT * OUTPUT_COUNT)
+#define RESULT_BYTES				(RESULT_SIZE / 8 + 1)
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
@@ -57,6 +61,7 @@ struct ResultTuple : Moveable<ResultTuple> {
 		return ch;
 	}
 	
+	void Serialize(Stream& s) {s % change % volat;}
 	bool operator == (const ResultTuple& b) const {return b.change == change && b.volat == volat;}
 	bool operator < (const ResultTuple& b) const {return volat < b.volat || (volat == b.volat && change < b.change);}
 	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return a.volat < b.volat;}
@@ -68,6 +73,7 @@ struct ResultTupleCounter : Moveable<ResultTupleCounter> {
 	
 	ResultTupleCounter() : change(0), volat(0), count(0) {}
 	ResultTupleCounter(const ResultTuple& t, int count) : change(t.change), volat(t.volat), count(count) {}
+	void Serialize(Stream& s) {s % change % volat % count;}
 	uint32 GetHashValue() const {
 		CombineHash ch;
 		ch << change << 1 << volat << 1 << count << 1;
@@ -82,6 +88,14 @@ struct IndicatorTuple : Moveable<IndicatorTuple> {
 	IndicatorTuple() {
 		for(int i = 0; i < SENSOR_SIZE; i++)
 			values[i] = 0;
+	}
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) {
+			s.Get(values, SENSOR_SIZE);
+		}
+		else if (s.IsStoring()) {
+			s.Put(values, SENSOR_SIZE);
+		}
 	}
 	uint32 GetHashValue() const {
 		CombineHash ch;
@@ -138,198 +152,59 @@ struct IndicatorTuple : Moveable<IndicatorTuple> {
 	}
 };*/
 
-class Snapshot : Moveable<Snapshot> {
+#include "Snapshot.h"
 
-private:
-	IndicatorTuple sensors;
-	ResultTuple result_bwd		[MEASURE_SIZE];
-	uint8 result_cluster_id		[MEASURE_SIZE];
-	uint8 indi_cluster_id;
+struct SectorConnection : Moveable<SectorConnection> {
+	int sym_id;
+	int tf_id;
+	int c_id;
 	
-	double open					[SYM_COUNT];
-	double change				[SYM_COUNT];
-	
-	int signal_broker_symsig	[TRAINEE_COUNT];
-	int amp_broker_symsig		[TRAINEE_COUNT];
-	int shift;
-
-	inline int GetSignalOutput(int i) const {
-		ASSERT(i >= 0 && i < TRAINEE_COUNT);
-		return signal_broker_symsig[i];
-	}
-
-	inline void SetSignalOutput(int i, int j) {
-		ASSERT(i >= 0 && i < TRAINEE_COUNT);
-		signal_broker_symsig[i] = j;
-	}
-
-	inline int GetAmpOutput(int i) const {
-		ASSERT(i >= 0 && i < TRAINEE_COUNT);
-		return amp_broker_symsig[i];
-	}
-
-	inline void SetAmpOutput(int i, int j) {
-		ASSERT(i >= 0 && i < TRAINEE_COUNT);
-		amp_broker_symsig[i] = j;
-	}
-
-public:
-	void Reset() {
-		for (int i = 0; i < TRAINEE_COUNT; i++)
-			signal_broker_symsig[i]		= 0;
-
-		for (int i = 0; i < TRAINEE_COUNT; i++)
-			amp_broker_symsig[i]		= 0;
+	SectorConnection() : sym_id(0), tf_id(0), c_id(0) {}
+	SectorConnection(int sym_id, int tf_id, int c_id) : sym_id(sym_id), tf_id(tf_id), c_id(c_id) {}
+	void Serialize(Stream& s) {s % sym_id % tf_id % c_id;}
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		ch << sym_id << 1 << tf_id << 1 << c_id << 1;
+		return ch;
 	}
 	
-	int GetResultCluster(int sym, int tf) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf];
-	}
-	
-	void SetResultCluster(int sym, int tf, int cl) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf] = cl;
-	}
-	
-	int GetIndicatorCluster() {
-		return indi_cluster_id;
-	}
-	
-	void SetIndicatorCluster(int cl) {
-		indi_cluster_id = cl;
-	}
-	
-	const ResultTuple& GetResultTuple(int sym, int tf) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_bwd[sym * MEASURE_PERIODCOUNT + tf];
-	}
-	
-	const IndicatorTuple& GetIndicatorTuple() const {
-		return sensors;
-	}
-	
-	void   SetPeriodChange(int sym, int tf, double d) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		result_bwd[sym * MEASURE_PERIODCOUNT + tf].change = d / CHANGE_DIV;
-	}
-
-	double GetPeriodChange(int sym, int tf) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].change * CHANGE_DIV;
-	}
-
-	int    GetPeriodChangeInt(int sym, int tf) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].change;
-	}
-
-	void   SetPeriodVolatility(int sym, int tf, double d) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat = d / VOLAT_DIV;
-	}
-
-	double GetPeriodVolatility(int sym, int tf) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat * VOLAT_DIV;
-	}
-
-	int    GetPeriodVolatilityInt(int sym, int tf) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
-		return result_bwd[sym * MEASURE_PERIODCOUNT + tf].volat;
-	}
-	
-	inline double GetSensor(int sym, int in) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(in >= 0 && in < INPUT_SENSORS);
-		return sensors.values[TIME_SENSORS + sym * INPUT_SENSORS + in] / 255.0;
-	}
-
-	inline void SetSensor(int sym, int in, double d) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(in >= 0 && in < INPUT_SENSORS);
-		sensors.values[TIME_SENSORS + sym * INPUT_SENSORS + in] = Upp::max(0, Upp::min(255, (int)(d * 255.0)));
-	}
-
-	inline double GetSensorUnsafe(int i) const {
-		return sensors.values[i] / 255.0;
-	}
-
-	inline double GetTimeSensor(int i) const {
-		ASSERT(i >= 0 && i < TIME_SENSORS);
-		return sensors.values[i] / 255.0;
-	}
-	
-	inline void SetTimeSensor(int i, double d) {
-		ASSERT(i >= 0 && i < TIME_SENSORS);
-		sensors.values[i] = Upp::max(0, Upp::min(255, (int)(d * 255.0)));
-	}
-	
-	inline double GetOpen(int sym) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return open[sym];
-	}
-
-	inline void   SetOpen(int sym, double d) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		open[sym] = d;
-	}
-
-	inline double GetChange(int sym) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return change[sym];
-	}
-
-	inline void   SetChange(int sym, double d) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		change[sym] = d;
-	}
-
-
-	inline int GetSignalOutput(int group, int sym) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return GetSignalOutput(group * SYM_COUNT + sym);
-	}
-
-	inline void SetSignalOutput(int group, int sym, int i) {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		SetSignalOutput(group * SYM_COUNT + sym, i);
-	}
-
-	inline int GetAmpOutput(int group, int sym) const {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		return GetAmpOutput(group * SYM_COUNT + sym);
-	}
-
-	inline void SetAmpOutput(int group, int sym, int i) {
-		ASSERT(group >= 0 && group < GROUP_COUNT);
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		SetAmpOutput(group * SYM_COUNT + sym, i);
-	}
-
-
-	int GetShift() const {
-		return shift;
-	}
-
-	void SetShift(int shift) {
-		this->shift = shift;
-	}
-
+	bool operator == (const SectorConnection& b) const {return b.sym_id == sym_id && b.tf_id == tf_id && b.c_id == c_id;}
+	bool operator < (const SectorConnection& b) const {return sym_id < b.sym_id || (sym_id == b.sym_id && tf_id < b.tf_id) || (sym_id == b.sym_id && tf_id == b.tf_id && c_id < b.c_id);}
+	bool operator()(const SectorConnection& a, const SectorConnection& b) const {return *this < b;}
 };
 
+struct ResultSector : Moveable<ResultSector> {
+	VectorMap<SectorConnection, int> src_conns;
+	VectorMap<int, int> sector_conn_counts;
+	AveragePoint pos, neg, pnd;
+	
+	
+	ResultSector() {}
+	void Serialize(Stream& s) {s % src_conns % sector_conn_counts % pos % neg % pnd;}
+	void AddSource(int sym_id, int tf_id, int indi_c_id) {
+		src_conns.GetAdd(SectorConnection(sym_id, tf_id, indi_c_id), 0)++;
+		sector_conn_counts.GetAdd(indi_c_id, 0)++;
+	}
+	void Sort() {SortByValue(sector_conn_counts, StdGreater<int>());}
+};
+
+struct IndicatorSector : Moveable<IndicatorSector> {
+	VectorMap<SectorConnection, int> dst_conns;
+	VectorMap<int, int> sector_conn_counts;
+	int conn_total = 0;
+	
+	
+	IndicatorSector() {}
+	void Serialize(Stream& s) {s % dst_conns % sector_conn_counts % conn_total;}
+	void AddDestination(int sym_id, int tf_id, int result_c_id) {
+		dst_conns.GetAdd(SectorConnection(sym_id, tf_id, result_c_id), 0)++;
+		sector_conn_counts.GetAdd(result_c_id, 0)++;
+		conn_total++;
+	}
+	void Sort() {SortByValue(sector_conn_counts, StdGreater<int>());}
+	int GetResultSector() const {return sector_conn_counts.GetKey(0);}
+	double GetResultProbability() const {return (double)sector_conn_counts[0] / conn_total;}
+};
 
 #include "AgentGroup.h"
 
@@ -343,15 +218,19 @@ class AgentSystem {
 public:
 
 	// Persistent
-	Vector<AgentGroup> groups;
-	Vector<FactoryDeclaration> indi_ids;
+	Vector<AgentGroup>			groups;
+	Vector<FactoryDeclaration>	indi_ids;
+	Vector<ResultTuple>			result_centroids;
+	Vector<IndicatorTuple>		indi_centroids;
+	Vector<ResultSector>		result_sectors;
+	Vector<IndicatorSector>		indi_sectors;
 	Time created;
 	int phase = 0;
+	bool initial_result_clustering = true;
+	bool initial_indicator_clustering = true;
 
 
 	// Temp
-	Vector<ResultTuple > result_centroids;
-	Vector<IndicatorTuple> indi_centroids;
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue;
 	Vector<Snapshot> snaps;
@@ -375,12 +254,12 @@ public:
 	int realtime_count = 0;
 	int result_cluster_counter = 0;
 	int indi_cluster_counter = 0;
+	int cluster_nav_counter = 0;
+	int cluster_connection_counter = 0;
 	bool running = false, stopped = true;
-	bool initial_result_clustering = true;
-	bool initial_indicator_clustering = true;
 	Mutex work_lock;
-
-
+	
+	
 public:
 	typedef AgentSystem CLASSNAME;
 	AgentSystem(System* sys);
@@ -444,6 +323,9 @@ public:
 	void RefreshClusters();
 	void RefreshResultClusters();
 	void RefreshIndicatorClusters();
+	void RefreshClusterConnections();
+	void RefreshPoleNavigation();
+	void AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, int result_c_id);
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;

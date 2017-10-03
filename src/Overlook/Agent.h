@@ -33,6 +33,7 @@ struct AgentSignal {
 	int fwd_cursor = 0;
 	int lower_output_signal = 0;
 	int prev_reset_iter = 0;
+	int group_signal = 0;
 	bool skip_learn = true;
 	Agent* agent = NULL;
 	

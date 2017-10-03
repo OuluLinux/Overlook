@@ -61,6 +61,10 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	Snapshot& prev_snap = snaps[cursor - 1];
 	
 	lower_output_signal = 0; //cur_snap.GetFilterOutput(group_id, FILTER_COUNT-1, sym_id);
+	if (cur_snap.IsResultClusterPredictedTarget(sym_id, group_id))
+		lower_output_signal = group_signal;
+	ASSERT(group_signal != 0);
+		
 	change_sum += fabs(cur_snap.GetChange(sym_id));
 	change_count++;
 	
@@ -383,6 +387,8 @@ void Agent::Init() {
 	group->sys->SetFixedBroker(sym_id,			amp.broker);
 	
 	spread_points = group->sys->spread_points[sym_id];
+	
+	sig.group_signal = group->sys->result_centroids[group_id].change > 0 ? +1 : -1;
 	
 	RefreshSnapEquities();
 	RefreshGroupSettings();

@@ -411,14 +411,18 @@ void AgentSystem::TrainAgents(int phase) {
 					agent.ResetEpoch(phase);
 
 				int64 end = agent.GetIter(phase) + 100;
-
+				
+				int begin_iter = agent.GetIter(phase);
 				while (agent.GetIter(phase) < end && running) {
 					agent.Main(phase, snaps);
 
 					// Close all order at the end
 
-					if (agent.GetCursor(phase) >= snaps.GetCount())
+					if (agent.GetCursor(phase) >= snaps.GetCount()) {
 						agent.ResetEpoch(phase);
+						if (begin_iter == agent.GetIter(phase))
+							break;
+					}
 				}
 			};
 		}
@@ -657,7 +661,7 @@ int AgentSystem::FindActiveGroup(int sym_id) {
 		double res = agent.amp.GetLastResult();
 		double dd = agent.amp.GetLastDrawdown();
 
-		if (signal && res > max_res && dd < 50.0) {
+		if (signal && res > max_res && dd < 40.0) {
 			max_res = res;
 			group_id = i;
 		}
@@ -741,6 +745,7 @@ void AgentSystem::RefreshSnapshots() {
 }
 
 void AgentSystem::Progress(int actual, int total, String desc) {
+	Cout() << "\t" << actual << "/" << total << "\t" << desc << EOL;
 	ManagerLoader& loader = GetManagerLoader();
 	loader.PostProgress(actual, total, desc);
 	loader.PostSubProgress(0, 1);
@@ -761,6 +766,7 @@ void AgentSystem::Progress(int actual, int total, String desc) {
 void AgentSystem::SubProgress(int actual, int total) {
 	ManagerLoader& loader = GetManagerLoader();
 	loader.PostSubProgress(actual, total);
+	Cout() << "\t\t" << actual << "/" << total << EOL;
 }
 
 void AgentSystem::ResetValueBuffers() {

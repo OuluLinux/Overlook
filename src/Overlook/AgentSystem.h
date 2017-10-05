@@ -6,14 +6,14 @@ namespace Overlook {
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT					6
 #else
-#define SYM_COUNT					24
+#define SYM_COUNT					19
 #endif
 
 #define FMLEVEL						0.6
 #define BASE_FWDSTEP_BEGIN			5
-#define GROUP_COUNT					24
+#define GROUP_COUNT					6
 #define OUTPUT_COUNT				(GROUP_COUNT)
-#define INPUT_COUNT					(OUTPUT_COUNT * 25)
+#define INPUT_COUNT					(150)
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(3 * 5 * 2)
 #define SENSOR_SIZE					(TIME_SENSORS + SYM_COUNT * INPUT_SENSORS)
@@ -27,25 +27,26 @@ namespace Overlook {
 #define CHANGE_DIV					0.0001
 #define VOLINTMUL					10 // = VOLAT_DIV / CHANGE_DIV
 
-#define MEASURE_PERIODCOUNT			3
+#define MEASURE_PERIODCOUNT			1
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
-#define MEASURE_PERIOD(j)			(1 << (4 + j))
+#define MEASURE_PERIOD(j)			(1 << (6 + j))
 #define RESULT_SIZE					(SYM_COUNT * OUTPUT_COUNT)
 #define RESULT_BYTES				(RESULT_SIZE / 8 + 1)
+#define RESULT_EXTRACENTERS			(GROUP_COUNT / 2)
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
 
 #define SIGNAL_STATES				SENSOR_SIZE
 #define SIGNAL_ACTIONCOUNT			2
-#define SIGNAL_PHASE_ITER_LIMIT		300000
+#define SIGNAL_PHASE_ITER_LIMIT		50000
 #define SIGNAL_EPS_ITERS_STEP		10000
 
 #define AMP_STATES					SENSOR_SIZE
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
 #define AMP_ACTIONCOUNT				AMP_MAXSCALES
-#define AMP_PHASE_ITER_LIMIT		300000
+#define AMP_PHASE_ITER_LIMIT		50000
 #define AMP_EPS_ITERS_STEP			10000
 
 class AgentSystem;
@@ -63,8 +64,10 @@ struct ResultTuple : Moveable<ResultTuple> {
 	
 	void Serialize(Stream& s) {s % change % volat;}
 	bool operator == (const ResultTuple& b) const {return b.change == change && b.volat == volat;}
-	bool operator < (const ResultTuple& b) const {return abs(change) < abs(b.change) || (volat > b.volat && change == b.change);}
-	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return abs(a.change) < abs(b.change);}
+	bool operator < (const ResultTuple& b) const {return abs(change) > abs(b.change) || (volat < b.volat && change == b.change);}
+	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return abs(a.change) > abs(b.change);}
+	//bool operator < (const ResultTuple& b) const {return volat < b.volat || (abs(change) > abs(b.change) && volat == b.volat);}
+	//bool operator()(const ResultTuple& a, const ResultTuple& b) const {return volat < b.volat || (abs(change) > abs(b.change) && volat == b.volat);}
 };
 
 struct ResultTupleCounter : Moveable<ResultTupleCounter> {

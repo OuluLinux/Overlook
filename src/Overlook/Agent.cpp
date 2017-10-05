@@ -73,9 +73,10 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 		if (!skip_learn) {
 			Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
 			double reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
-			reward /= change_sum;
-			if (reward >= 0)	pos_reward_sum += reward;
-			else				neg_reward_sum -= reward;
+			if (change_sum > 0.0)	reward /= change_sum;
+			else					reward = 0.0;
+			if (reward >= 0)		pos_reward_sum += reward;
+			else					neg_reward_sum -= reward;
 			all_reward_sum += reward;
 			
 			Backward(reward);
@@ -241,7 +242,8 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 			broker.RefreshOrders(cur_snap);
 			double equity = broker.AccountEquity();
 			double reward = (equity / prev_equity - 1.0) * 1000.0;
-			reward /= change_sum;
+			if (change_sum > 0.0)	reward /= change_sum;
+			else					reward = 0.0;
 			Backward(reward);
 			if (equity < 0.25 * broker.begin_equity) {
 				clean_epoch = false;

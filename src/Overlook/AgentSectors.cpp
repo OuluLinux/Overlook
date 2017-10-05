@@ -45,7 +45,7 @@ void AgentSystem::RefreshResultClusters() {
 		
 		
 		// Add initial centroids uniformily
-		const int extra_centers = 10; // add some room for worst centers
+		const int extra_centers = RESULT_EXTRACENTERS; // add some room for worst centers
 		const int max_centroids = GROUP_COUNT + extra_centers;
 		int cols = sqrt(max_centroids);
 		int rows = max_centroids / cols;
@@ -271,7 +271,7 @@ void AgentSystem::RefreshResultClusters() {
 		
 		
 		// Remove smallest centers
-		result_centroids.Remove(0, result_centroids.GetCount() - GROUP_COUNT);
+		result_centroids.Remove(GROUP_COUNT, result_centroids.GetCount() - GROUP_COUNT);
 		if (result_centroids.GetCount() != OUTPUT_COUNT)
 			Panic("Result centroids mismatch.");
 		
@@ -611,8 +611,11 @@ void AgentSystem::RefreshClusterConnections() {
 		for(auto& ri : indi_sectors)	ri.Sort();
 		
 		
+		
 		// Connect inputs to outputs in uniform way.
 		// Todo: should weight maximum per output with connection count
+		
+		// Sort in -> out connections by their probabilities. Use most probable first.
 		Vector<VectorMap<int, double> > in_out;
 		in_out.SetCount(OUTPUT_COUNT);
 		for(int i = 0; i < indi_sectors.GetCount(); i++) {
@@ -626,15 +629,36 @@ void AgentSystem::RefreshClusterConnections() {
 		}
 		for(int i = 0; i < in_out.GetCount(); i++)
 			 SortByValue(in_out[i], StdGreater<double>());
-		int per_output = INPUT_COUNT / OUTPUT_COUNT;
-		if (INPUT_COUNT % OUTPUT_COUNT) per_output++;
+		
+		// Limit _predicted_ connection count by _known_ connection count
+		Vector<int> per_output;
+		per_output.SetCount(OUTPUT_COUNT, 0);
+		int64 total_connections = 0;
+		for (const auto& rs : result_sectors) total_connections += rs.conn_total;
+		int64 total_connected = 0;
+		for(int i = 0; i < per_output.GetCount(); i++) {
+			int& out = per_output[i];
+			out = INPUT_COUNT * result_sectors[i].conn_total / total_connections;
+			total_connected += out;
+		}
+		while (total_connected < INPUT_COUNT) {
+			for(int i = 0; i < per_output.GetCount() && total_connected < INPUT_COUNT; i++) {
+				per_output[i]++;
+				total_connected++;
+			}
+		}
+		
+		// Process per most probable connection, but in limits.
+		// Usually, one single output is preferred by all, so don't let it accumulate.
 		Vector<Vector<int> > out_in;
 		out_in.SetCount(OUTPUT_COUNT);
+		total_connected = 0;
+		Index<int> connected_inputs;
 		while (true) {
 			int max_prob_i = -1;
 			double max_prob = -DBL_MAX;
 			for(int i = 0; i < in_out.GetCount(); i++) {
-				if (out_in[i].GetCount() >= per_output)
+				if (out_in[i].GetCount() >= per_output[i] || in_out[i].IsEmpty())
 					continue;
 				double prob = in_out[i][0];
 				if (prob > max_prob) {
@@ -642,27 +666,42 @@ void AgentSystem::RefreshClusterConnections() {
 					max_prob = prob;
 				}
 			}
-			if (max_prob_i == -1)
+			if (max_prob_i == -1) {
+				LOG("Connected " << total_connected << "/" << indi_sectors.GetCount());
+				ASSERT(total_connected == INPUT_COUNT);
 				break;
+			}
 			int in = in_out[max_prob_i].GetKey(0);
 			in_out[max_prob_i].Remove(0);
-			out_in[max_prob_i].Add(in);
+			if (connected_inputs.Find(in) == -1) {
+				out_in[max_prob_i].Add(in);
+				total_connected++;
+				connected_inputs.Add(in);
+			}
 		}
 		for(int i = 0; i < out_in.GetCount(); i++) {
 			for(int j = 0; j < out_in[i].GetCount(); j++) {
 				DLOG(i << ", " << j << ": " << out_in[i][j]);
-				indi_sectors[out_in[i][j]].result_id = i;
+				IndicatorSector& is = indi_sectors[out_in[i][j]];
+				ASSERT(is.result_id == -1);
+				is.result_id = i;
 			}
 		}
-		for (auto& is : indi_sectors)
-			if (is.result_id == -1)
-				is.result_id = is.sector_conn_counts.GetKey(0);
+		// This shouldn't happen in correct implementation
+		int fail = 0;
+		for (auto& is : indi_sectors) {
+			//ASSERT(is.result_id != -1);
+			if (is.result_id != -1) continue;
+			is.result_id = is.sector_conn_counts.GetKey(0);
+			fail++;
+		}
+		LOG("fails " << fail << "/" << indi_sectors.GetCount());
 		
 		
 		#ifdef flagDEBUG
 		for(int i = 0; i < indi_sectors.GetCount(); i++) {
 			IndicatorSector& is = indi_sectors[i];
-			LOG("Indisec\t" << i << "\t-->\t" << is.GetResultSector() << "\t" << is.GetResultProbability());
+			LOG("Indisec\t" << i << "\t-->\t" << is.GetResultSector() << "\t" << is.GetResultProbability() << "\t" << is.result_id);
 		}
 		#endif
 	}
@@ -678,22 +717,24 @@ void AgentSystem::RefreshClusterConnections() {
 		Snapshot& snap = snaps[s];
 		const Snapshot& prev_snap = snaps[s-1];
 		
+		int indi_c_id = snap.GetIndicatorCluster();
+		const IndicatorSector& is = indi_sectors[indi_c_id];
+		
+		int result_c_id = is.result_id;
+		ASSERT(result_c_id != -1);
+		const ResultTuple& it = result_centroids[result_c_id];
+		double volat_limit = it.volat * VOLAT_DIV * 1.3;
+		
 		for(int i = 0; i < SYM_COUNT; i++) {
-			for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
-				int shift_diff = MEASURE_PERIOD(j);
-				int indi_c_id = snap.GetIndicatorCluster();
-				IndicatorSector& is = indi_sectors[indi_c_id];
-				
-				int result_c_id = is.result_id;
-				ASSERT(result_c_id != -1);
-				
-				for(int k = 0; k < shift_diff; k++) {
-					int pos = s + k;
-					if (pos >= snaps.GetCount()) break;
-					
-					Snapshot& pred_snap = snaps[pos];
-					pred_snap.SetResultClusterPredicted(i, result_c_id);
-				}
+			double volat_sum = 0.0;
+			bool skip_once = true;
+			for(int pos = s; pos < snaps.GetCount() && volat_sum <= volat_limit; pos++) {
+				Snapshot& pred_snap = snaps[pos];
+				pred_snap.SetResultClusterPredicted(i, result_c_id);
+				if (!skip_once)
+					volat_sum += fabs(pred_snap.GetChange(i));
+				else
+					skip_once = false;
 			}
 		}
 		
@@ -708,9 +749,18 @@ void AgentSystem::RefreshClusterConnections() {
 					pred_sector_volatsum[k] = 0;
 				}
 				else if (!enabled_now && enabled_prev &&
-					pred_sector_begins[k] > 0 && s >= cluster_connection_counter) {
+					pred_sector_begins[k] > 0 &&
+					s >= cluster_connection_counter) {
 					AnalyzeSectorPoles(pred_sector_begins[k], s, i, j);
 					pred_sector_begins[k] = 0;
+				}
+				else if (enabled_now && enabled_prev &&
+					pred_sector_begins[k] > 0 &&
+					pred_sector_volatsum[k] > result_centroids[j].volat * VOLAT_DIV) {
+					AnalyzeSectorPoles(pred_sector_begins[k], s, i, j);
+					pred_sector_begins[k] = s;
+					pred_sector_open[k] = snap.GetOpen(i);
+					pred_sector_volatsum[k] = 0;
 				}
 				
 				
@@ -739,22 +789,28 @@ void AgentSystem::RefreshClusterConnections() {
 
 void AgentSystem::AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, int result_c_id) {
 	ASSERT(snap_begin > 0);
+	int len = snap_end - snap_begin;
+	if (len < 16) return;
+	
 	const ResultTuple& rt = result_centroids[result_c_id];
 	bool down = rt.change < 0; // long=0, short=1
 	
 	double begin_open = snaps[snap_begin].GetOpen(sym_id);
 	double volatsum;
+	int snap_half = (snap_begin + snap_end) / 2;
+	double half_volatsum = 0;
+	for(int i = snap_begin + 1; i < snap_half; i++)
+		half_volatsum += fabs(snaps[i].GetChange(sym_id));
 	
 	// Find +target point
-	volatsum = 0;
+	volatsum = half_volatsum;
 	int pos_target_i = -1;
 	double pos_target = down == false ? -DBL_MAX : +DBL_MAX;
 	double pos_volatsum = 0;
-	for(int i = snap_begin; i < snap_end; i++) {
+	for(int i = snap_half; i < snap_end; i++) {
 		const Snapshot& snap = snaps[i];
 		double open = snap.GetOpen(sym_id);
-		if (i > snap_begin)
-			volatsum += fabs(snap.GetChange(sym_id));
+		volatsum += fabs(snap.GetChange(sym_id));
 		if (down == false) {
 			if (open > pos_target) {
 				pos_target = open;
@@ -777,11 +833,10 @@ void AgentSystem::AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, i
 	int pnd_target_i = -1;
 	double pnd_target = down == false ? +DBL_MAX : -DBL_MAX;
 	double pnd_volatsum = 0;
-	for(int i = snap_begin; i < pos_target_i; i++) {
+	for(int i = snap_begin + 1; i < snap_half; i++) {
 		const Snapshot& snap = snaps[i];
 		double open = snap.GetOpen(sym_id);
-		if (i > snap_begin)
-			volatsum += fabs(snap.GetChange(sym_id));
+		volatsum += fabs(snap.GetChange(sym_id));
 		if (down == false) {
 			if (open < pnd_target) {
 				pnd_target = open;
@@ -800,16 +855,14 @@ void AgentSystem::AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, i
 	
 	
 	// Find -target point
-	// Don't reset because continuing pos_target_i:
-	//		volatsum = 0;
+	volatsum = half_volatsum;
 	int neg_target_i = -1;
 	double neg_target = down == false ? +DBL_MAX : -DBL_MAX;
 	double neg_volatsum = 0;
-	for(int i = pos_target_i; i < snap_end; i++) {
+	for(int i = snap_half; i < snap_end; i++) {
 		const Snapshot& snap = snaps[i];
 		double open = snap.GetOpen(sym_id);
-		if (i > snap_begin)
-			volatsum += fabs(snap.GetChange(sym_id));
+		volatsum += fabs(snap.GetChange(sym_id));
 		if (down == false) {
 			if (open < neg_target) {
 				neg_target = open;
@@ -828,13 +881,13 @@ void AgentSystem::AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, i
 	
 	
 	// Add point to averages
+	ASSERT(pos_target_i != -1);
+	ASSERT(neg_target_i != -1);
+	ASSERT(pnd_target_i != -1);
 	ResultSector& rs = result_sectors[result_c_id];
-	if (pos_target_i >= 0)
-		rs.pos.Add(pos_volatsum / VOLAT_DIV, pos_change / CHANGE_DIV);
-	if (neg_target_i >= 0)
-		rs.neg.Add(neg_volatsum / VOLAT_DIV, neg_change / CHANGE_DIV);
-	if (pnd_target_i >= 0)
-		rs.pnd.Add(pnd_volatsum / VOLAT_DIV, pnd_change / CHANGE_DIV);
+	rs.pos.Add(pos_volatsum / VOLAT_DIV, pos_change / CHANGE_DIV);
+	rs.neg.Add(neg_volatsum / VOLAT_DIV, neg_change / CHANGE_DIV);
+	rs.pnd.Add(pnd_volatsum / VOLAT_DIV, pnd_change / CHANGE_DIV);
 	
 }
 
@@ -926,7 +979,7 @@ void AgentSystem::RefreshPoleNavigation() {
 							
 							// If distance to positive pole is increasing and negative pole is
 							// getting closer
-							if (pos_diff > 0 || neg_diff < pos_diff) {
+							if (pos_dist > prev_pos_dist && neg_dist < prev_neg_dist) {
 								k_phase_state = STATE_WAITING;
 							}
 							// Don't write before new snapshots
@@ -935,6 +988,9 @@ void AgentSystem::RefreshPoleNavigation() {
 							}
 						}
 					}
+					
+					// Uncomment to not use pole triggers:
+					//snap.SetResultClusterPredictedTarget(i, j);
 				}
 				
 				k++;

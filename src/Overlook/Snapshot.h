@@ -56,6 +56,12 @@ public:
 		
 		for (int i = 0; i < RESULT_BYTES; i++)
 			result_predicted[i] = 0;
+		for (int i = 0; i < RESULT_BYTES; i++)
+			result_predicted_targeting[i] = 0;
+		for (int i = 0; i < RESULT_SIZE; i++)
+			result_predicted_volat[i] = 0;
+		for (int i = 0; i < RESULT_SIZE; i++)
+			result_predicted_changed[i] = 0;
 	}
 	
 	int GetResultCluster(int sym, int tf) {

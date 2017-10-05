@@ -53,8 +53,25 @@ public:
 	
 };
 
+class SectorOverview : public ParentCtrl {
+	Splitter split, vsplit;
+	ArrayCtrl in;
+	ArrayCtrl out;
+	ArrayCtrl in_conn;
+	ArrayCtrl out_conn;
+	ArrayCtrl out_poles;
+	
+public:
+	typedef SectorOverview CLASSNAME;
+	SectorOverview();
+	
+	void Data();
+	
+};
+
 class SystemTabCtrl : public TabCtrl {
 	SystemOverview			overview;
+	SectorOverview			sectors;
 	SnapshotCtrl			snapctrl;
 	Array<EditDoubleSpin>	tflimitedit;
 	
@@ -81,7 +98,7 @@ public:
 
 class AmpTabCtrl : public TabCtrl {
 	Agent* agent;
-	WithAmpOverview<ParentCtrl>	overview;
+	WithAmpOverview<ParentCtrl>		overview;
 	TrainingCtrl					trainingctrl;
 	
 public:

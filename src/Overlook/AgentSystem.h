@@ -13,7 +13,7 @@ namespace Overlook {
 #define BASE_FWDSTEP_BEGIN			5
 #define GROUP_COUNT					24
 #define OUTPUT_COUNT				(GROUP_COUNT)
-#define INPUT_COUNT					(OUTPUT_COUNT * 5)
+#define INPUT_COUNT					(OUTPUT_COUNT * 25)
 #define TIME_SENSORS				3
 #define INPUT_SENSORS				(3 * 5 * 2)
 #define SENSOR_SIZE					(TIME_SENSORS + SYM_COUNT * INPUT_SENSORS)
@@ -27,9 +27,9 @@ namespace Overlook {
 #define CHANGE_DIV					0.0001
 #define VOLINTMUL					10 // = VOLAT_DIV / CHANGE_DIV
 
-#define MEASURE_PERIODCOUNT			6
+#define MEASURE_PERIODCOUNT			3
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
-#define MEASURE_PERIOD(j)			(1 << (3 + j))
+#define MEASURE_PERIOD(j)			(1 << (4 + j))
 #define RESULT_SIZE					(SYM_COUNT * OUTPUT_COUNT)
 #define RESULT_BYTES				(RESULT_SIZE / 8 + 1)
 
@@ -44,7 +44,7 @@ namespace Overlook {
 #define AMP_STATES					SENSOR_SIZE
 #define AMP_MAXSCALES				3
 #define AMP_MAXSCALE_MUL			2
-#define AMP_ACTIONCOUNT				2
+#define AMP_ACTIONCOUNT				AMP_MAXSCALES
 #define AMP_PHASE_ITER_LIMIT		300000
 #define AMP_EPS_ITERS_STEP			10000
 
@@ -63,8 +63,8 @@ struct ResultTuple : Moveable<ResultTuple> {
 	
 	void Serialize(Stream& s) {s % change % volat;}
 	bool operator == (const ResultTuple& b) const {return b.change == change && b.volat == volat;}
-	bool operator < (const ResultTuple& b) const {return volat < b.volat || (volat == b.volat && change < b.change);}
-	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return a.volat < b.volat;}
+	bool operator < (const ResultTuple& b) const {return abs(change) < abs(b.change) || (volat > b.volat && change == b.change);}
+	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return abs(a.change) < abs(b.change);}
 };
 
 struct ResultTupleCounter : Moveable<ResultTupleCounter> {
@@ -111,7 +111,6 @@ struct IndicatorTuple : Moveable<IndicatorTuple> {
 		}
 		return s;
 	}
-	
 	uint32 GetDistance(const IndicatorTuple& it) const {
 		uint32 sqr_sum = 0;
 		for(int i = 0; i < SENSOR_SIZE; i++) {
@@ -121,36 +120,6 @@ struct IndicatorTuple : Moveable<IndicatorTuple> {
 		return root(sqr_sum);
 	}
 };
-
-
-/*struct IndicatorTupleCounter : Moveable<IndicatorTupleCounter> {
-	uint8 values				[SENSOR_SIZE];
-	int count;
-	
-	IndicatorTupleCounter() {
-		for(int i = 0; i < SENSOR_SIZE; i++)
-			values[i] = 0;
-		count = 0;
-	}
-	IndicatorTupleCounter(IndicatorTuple& t, int count) {
-		memcpy(values, t.value, SENSOR_SIZE);
-		this->count = count;
-	}
-	uint32 GetHashValue() const {
-		CombineHash ch;
-		for(int i = 0; i < SENSOR_SIZE; i++)
-			 ch << values[i] << 1;
-		return ch;
-	}
-	String ToString() const {
-		String s;
-		for(int i = 0; i < SENSOR_SIZE; i++) {
-			if (i) s << ", ";
-			s << values[i] / 255.0;
-		}
-		return s;
-	}
-};*/
 
 #include "Snapshot.h"
 
@@ -177,13 +146,15 @@ struct ResultSector : Moveable<ResultSector> {
 	VectorMap<SectorConnection, int> src_conns;
 	VectorMap<int, int> sector_conn_counts;
 	AveragePoint pos, neg, pnd;
+	int conn_total = 0;
 	
 	
 	ResultSector() {}
-	void Serialize(Stream& s) {s % src_conns % sector_conn_counts % pos % neg % pnd;}
+	void Serialize(Stream& s) {s % src_conns % sector_conn_counts % pos % neg % pnd % conn_total;}
 	void AddSource(int sym_id, int tf_id, int indi_c_id) {
 		src_conns.GetAdd(SectorConnection(sym_id, tf_id, indi_c_id), 0)++;
 		sector_conn_counts.GetAdd(indi_c_id, 0)++;
+		conn_total++;
 	}
 	void Sort() {SortByValue(sector_conn_counts, StdGreater<int>());}
 };
@@ -192,10 +163,11 @@ struct IndicatorSector : Moveable<IndicatorSector> {
 	VectorMap<SectorConnection, int> dst_conns;
 	VectorMap<int, int> sector_conn_counts;
 	int conn_total = 0;
+	int result_id = -1;
 	
 	
 	IndicatorSector() {}
-	void Serialize(Stream& s) {s % dst_conns % sector_conn_counts % conn_total;}
+	void Serialize(Stream& s) {s % dst_conns % sector_conn_counts % conn_total % result_id;}
 	void AddDestination(int sym_id, int tf_id, int result_c_id) {
 		dst_conns.GetAdd(SectorConnection(sym_id, tf_id, result_c_id), 0)++;
 		sector_conn_counts.GetAdd(result_c_id, 0)++;
@@ -204,6 +176,7 @@ struct IndicatorSector : Moveable<IndicatorSector> {
 	void Sort() {SortByValue(sector_conn_counts, StdGreater<int>());}
 	int GetResultSector() const {return sector_conn_counts.GetKey(0);}
 	double GetResultProbability() const {return (double)sector_conn_counts[0] / conn_total;}
+	bool IsEmpty() const {return sector_conn_counts.IsEmpty();}
 };
 
 #include "AgentGroup.h"

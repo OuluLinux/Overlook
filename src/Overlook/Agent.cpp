@@ -36,7 +36,6 @@ void AgentSignal::ResetEpoch() {
 	signal = 0;
 	
 	change_sum = 0;
-	change_sum_limit = 0;
 	change_count = 0;
 	
 	fwd_cursor = 0;
@@ -46,6 +45,8 @@ void AgentSignal::ResetEpoch() {
 	all_reward_sum = 0;
 	pos_reward_sum = 0;
 	neg_reward_sum = 0;
+	
+	prev_lower_output_signal = 0;
 	
 	if (prev_reset_iter > 0) {
 		int iters = iter - prev_reset_iter;
@@ -68,7 +69,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	change_sum += fabs(cur_snap.GetChange(sym_id));
 	change_count++;
 	
-	if (change_sum >= change_sum_limit || lower_output_signal == 0) {
+	if (lower_output_signal != prev_lower_output_signal) {
 		if (!skip_learn) {
 			Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
 			double reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
@@ -81,6 +82,8 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 		}
 		Forward(cur_snap, prev_snap);
 		fwd_cursor = cursor;
+		
+		prev_lower_output_signal = lower_output_signal;
 	}
 	
 	Write(cur_snap, snaps);
@@ -97,15 +100,10 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	if (lower_output_signal == 0) {
 		skip_learn = true;
-		change_sum_limit = 0.0;
 		signal = 0;
 	} else {
 		skip_learn = false;
 		
-		// Input values
-		// - time_values
-		// - input sensors
-		// - previous signals
 		int cursor = 0;
 		double input_array[SIGNAL_STATES];
 		
@@ -120,17 +118,10 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		ASSERT(action >= 0 && action < SIGNAL_ACTIONCOUNT);
 		action_counts[action]++;
 		
-		/*int timefwd_step;
-		if (action < SIGNAL_POS_FWDSTEPS) {
-			signal = +1;
-			timefwd_step = action;
-		}
-		else {
-			signal = -1;
-			timefwd_step = action - SIGNAL_POS_FWDSTEPS;
-		}
-		
-		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));*/
+		if (!action)
+			signal = 0;
+		else
+			signal = lower_output_signal;
 	}
 	
 	change_sum = 0.0;
@@ -222,7 +213,6 @@ void AgentAmp::ResetEpoch() {
 	prev_equity = broker.AccountEquity();
 	
 	change_sum = 0;
-	change_sum_limit = 0;
 	change_count = 0;
 	
 	cursor = 1;
@@ -245,7 +235,7 @@ void AgentAmp::Main(Vector<Snapshot>& snaps) {
 	change_sum += fabs(cur_snap.GetChange(sym_id));
 	change_count++;
 	
-	if (change_sum >= change_sum_limit || lower_output_signal != prev_lower_output_signal) {
+	if (lower_output_signal != prev_lower_output_signal) {
 		Snapshot& prev_snap = snaps[cursor - 1];
 		if (!skip_learn) {
 			broker.RefreshOrders(cur_snap);
@@ -273,16 +263,11 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	
 	if (lower_output_signal == 0) {
 		skip_learn = true;
-		change_sum_limit = 0.0;
 		signal = 0;
 	}
 	else {
 		skip_learn = false;
 		
-		// Input values
-		// - time_values
-		// - input sensors
-		// - previous signals
 		int cursor = 0;
 		double input_array[AMP_STATES];
 		
@@ -296,18 +281,12 @@ void AgentAmp::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		int action = dqn.Act(input_array);
 		ASSERT(action >= 0 && action < AMP_ACTIONCOUNT);
 		action_counts[action]++;
-		/*
+		
 		const int maxscale_steps = AMP_MAXSCALES;
-		const int timefwd_steps = AMP_FWDSTEPS;
-		ASSERT(AMP_ACTIONCOUNT == (maxscale_steps * timefwd_steps));
+		int maxscale_step = action % maxscale_steps;
+		int maxscale = 1 + maxscale_step * AMP_MAXSCALE_MUL;
 		
-		int maxscale_step	= action % maxscale_steps;
-		int timefwd_step	= action / maxscale_steps;
-		
-		int maxscale   = 1 + maxscale_step * AMP_MAXSCALE_MUL;
-		change_sum_limit = 0.0001 * (1 << (BASE_FWDSTEP_BEGIN + timefwd_step));
-		
-		signal = lower_output_signal * maxscale;*/
+		signal = lower_output_signal * maxscale;
 	}
 	
 	change_sum = 0.0;

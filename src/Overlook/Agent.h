@@ -25,13 +25,14 @@ struct AgentSignal {
 	Vector<double> equity;
 	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
 	double reward_sum = 0;
-	double change_sum = 0, change_sum_limit = 0;
+	double change_sum = 0;
 	int change_count = 0;
 	int reward_count = 0;
 	int signal = 0;
 	int cursor = 0;
 	int fwd_cursor = 0;
 	int lower_output_signal = 0;
+	int prev_lower_output_signal = 0;
 	int prev_reset_iter = 0;
 	int group_signal = 0;
 	bool skip_learn = true;
@@ -67,7 +68,7 @@ struct AgentAmp {
 	Vector<double> equity;
 	double prev_equity = 0;
 	double reward_sum = 0;
-	double change_sum = 0, change_sum_limit = 0;
+	double change_sum = 0;
 	int change_count = 0;
 	int reward_count = 0;
 	int signal = 0;

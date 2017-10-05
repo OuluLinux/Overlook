@@ -132,9 +132,134 @@ void SystemOverview::Data() {
 
 
 
+SectorOverview::SectorOverview() {
+	Add(vsplit.SizePos());
+	vsplit.Vert();
+	vsplit.SetPos(7500);
+	
+	in.AddColumn("Values");
+	in.AddColumn("Total");
+	
+	out.AddColumn("Volatility");
+	out.AddColumn("Change");
+	out.AddColumn("Total");
+	
+	in_conn.AddColumn("Out ID");
+	in_conn.AddColumn("Count");
+	in_conn.AddColumn("Total");
+	
+	out_conn.AddColumn("In ID");
+	out_conn.AddColumn("Count");
+	out_conn.AddColumn("Total");
+	
+	out_poles.AddColumn("? X");
+	out_poles.AddColumn("? Y");
+	out_poles.AddColumn("? Count");
+	out_poles.AddColumn("+ X");
+	out_poles.AddColumn("+ Y");
+	out_poles.AddColumn("+ Count");
+	out_poles.AddColumn("- X");
+	out_poles.AddColumn("- Y");
+	out_poles.AddColumn("- Count");
+	
+	split << in << out << in_conn << out_conn;
+	vsplit << split << out_poles;
+}
+
+void SectorOverview::Data() {
+	AgentSystem& as = GetSystem().GetAgentSystem();
+	
+	int indi_cursor		= in.GetCursor();
+	int result_cursor	= out.GetCursor();
+	
+	for(int i = 0; i < as.indi_centroids.GetCount(); i++) {
+		const IndicatorTuple& it = as.indi_centroids[i];
+		const IndicatorSector& is = as.indi_sectors[i];
+		
+		String s;
+		for(int j = 0; j < SENSOR_SIZE; j++) {
+			s << " " << (int)it.values[j];
+		}
+		
+		in.Set(i, 0, s);
+		in.Set(i, 1, is.conn_total);
+	}
+	
+	for(int i = 0; i < as.result_sectors.GetCount(); i++) {
+		const ResultTuple& rt = as.result_centroids[i];
+		const ResultSector& rs = as.result_sectors[i];
+		
+		out.Set(i, 0, rt.volat * VOLAT_DIV);
+		out.Set(i, 1, rt.change * CHANGE_DIV);
+		out.Set(i, 2, rs.conn_total);
+	}
+	
+	if (indi_cursor >= 0 && indi_cursor < as.indi_centroids.GetCount()) {
+		const IndicatorTuple& it = as.indi_centroids[indi_cursor];
+		const IndicatorSector& is = as.indi_sectors[indi_cursor];
+		
+		for(int i = 0; i < is.sector_conn_counts.GetCount(); i++) {
+			int c_id = is.sector_conn_counts.GetKey(i);
+			int count = is.sector_conn_counts[i];
+			double total = (double)count / is.conn_total;
+			
+			in_conn.Set(i, 0, c_id);
+			in_conn.Set(i, 1, count);
+			in_conn.Set(i, 2, total);
+		}
+		
+		in_conn.SetCount(is.sector_conn_counts.GetCount());
+	}
+	
+	if (result_cursor >= 0 && result_cursor < as.result_centroids.GetCount()) {
+		const ResultTuple& rt = as.result_centroids[result_cursor];
+		const ResultSector& rs = as.result_sectors[result_cursor];
+		
+		for(int i = 0; i < rs.sector_conn_counts.GetCount(); i++) {
+			int c_id = rs.sector_conn_counts.GetKey(i);
+			int count = rs.sector_conn_counts[i];
+			double total = (double)count / rs.conn_total;
+			
+			out_conn.Set(i, 0, c_id);
+			out_conn.Set(i, 1, count);
+			out_conn.Set(i, 2, total);
+		}
+		
+		out_conn.SetCount(rs.sector_conn_counts.GetCount());
+	}
+	
+	
+	for(int i = 0; i < as.result_sectors.GetCount(); i++) {
+		const ResultTuple& rt = as.result_centroids[i];
+		const ResultSector& rs = as.result_sectors[i];
+		
+		out_poles.Set(i, 0, rs.pnd.x_mean_int * VOLAT_DIV);
+		out_poles.Set(i, 1, rs.pnd.y_mean_int * CHANGE_DIV);
+		out_poles.Set(i, 2, rs.pnd.x.count);
+		out_poles.Set(i, 3, rs.pos.x_mean_int * VOLAT_DIV);
+		out_poles.Set(i, 4, rs.pos.y_mean_int * CHANGE_DIV);
+		out_poles.Set(i, 5, rs.pos.x.count);
+		out_poles.Set(i, 6, rs.neg.x_mean_int * VOLAT_DIV);
+		out_poles.Set(i, 7, rs.neg.y_mean_int * CHANGE_DIV);
+		out_poles.Set(i, 8, rs.neg.x.count);
+	}
+	
+	
+}
+
+
+
+
+
+
+
+
+
 SystemTabCtrl::SystemTabCtrl() {
 	Add(overview);
 	Add(overview, "Overview");
+	Add(sectors);
+	Add(sectors, "Sectors");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
 	
@@ -146,6 +271,8 @@ void SystemTabCtrl::Data() {
 	if      (tab == 0)
 		overview.Data();
 	else if (tab == 1)
+		sectors.Data();
+	else if (tab == 2)
 		snapctrl.Data();
 }
 

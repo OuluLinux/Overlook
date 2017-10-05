@@ -45,12 +45,15 @@ void AgentSystem::RefreshResultClusters() {
 		
 		
 		// Add initial centroids uniformily
-		int cols = sqrt(GROUP_COUNT);
-		int rows = GROUP_COUNT / cols;
+		const int extra_centers = 10; // add some room for worst centers
+		const int max_centroids = GROUP_COUNT + extra_centers;
+		int cols = sqrt(max_centroids);
+		int rows = max_centroids / cols;
+		int extrarow_cols = max_centroids - cols * rows;
 		int max_x = result_stats.TopKey().volat;
 		int xstep = max_x / cols;
 		int cur = 0;
-		ASSERT(cols * rows == GROUP_COUNT);
+		ASSERT(cols * rows + extrarow_cols == max_centroids);
 		
 		for(int i = 0; i < cols; i++) {
 			int x = xstep / 2 + i * xstep;
@@ -66,15 +69,16 @@ void AgentSystem::RefreshResultClusters() {
 				if (t.change > max_y) max_y = t.change;
 			}
 			
+			int this_rows = rows + (i < extrarow_cols ? 1 : 0);
 			int range_y = max_y - min_y;
-			int ystep = range_y / rows;
+			int ystep = range_y / this_rows;
 			
-			for(int j = 0; j < rows; j++) {
+			for(int j = 0; j < this_rows; j++) {
 				int y = min_y + ystep / 2 + j * ystep;
 				result_centroids.Add(ResultTuple(x, y));
 			}
 		}
-		ASSERT(result_centroids.GetCount() == OUTPUT_COUNT);
+		ASSERT(result_centroids.GetCount() == max_centroids);
 		
 		
 		// Debug print centroids
@@ -132,16 +136,18 @@ void AgentSystem::RefreshResultClusters() {
 				}
 			}
 				
-			ResultTuple av_pt;
+			int64 av_pt_volat = 0;
+			int64 av_pt_change = 0;
 			int64 total = 0;
 			for(int l = 0; l < c_pts.GetCount(); l++) {
 				ResultTupleCounter& c_pt = c_pts[l];
-				av_pt.volat += c_pt.volat * c_pt.count;
-				av_pt.change += c_pt.change * c_pt.count;
+				av_pt_volat += c_pt.volat * c_pt.count;
+				av_pt_change += c_pt.change * c_pt.count;
 				total += c_pt.count;
 			}
-			av_pt.volat /= total;
-			av_pt.change /= total;
+			ResultTuple av_pt;
+			av_pt.volat		= av_pt_volat / total;
+			av_pt.change	= av_pt_change / total;
 			result_centroids[i] = av_pt;
 		}
 		
@@ -201,18 +207,55 @@ void AgentSystem::RefreshResultClusters() {
 			// Recalculate centroids
 			for(int j = 0; j < pts.GetCount(); j++) {
 				Vector<ResultTupleCounter >& c_pts = pts[j];
-				ResultTuple av_pt;
+				int64 av_pt_volat = 0;
+				int64 av_pt_change = 0;
 				int64 total = 0;
 				for(int l = 0; l < c_pts.GetCount(); l++) {
 					ResultTupleCounter& c_pt = c_pts[l];
-					av_pt.volat += c_pt.volat * c_pt.count;
-					av_pt.change += c_pt.change * c_pt.count;
+					av_pt_volat += c_pt.volat * c_pt.count;
+					av_pt_change += c_pt.change * c_pt.count;
 					total += c_pt.count;
 				}
-				av_pt.volat /= total;
-				av_pt.change /= total;
+				ResultTuple av_pt;
+				av_pt.volat		= av_pt_volat / total;
+				av_pt.change	= av_pt_change / total;
 				result_centroids[j] = av_pt;
 			}
+			
+			Sort(result_centroids, StdLess<ResultTuple>());
+			for(int j = 0; j < result_centroids.GetCount(); j++) {
+				ResultTuple& rt1 = result_centroids[j];
+				for(int k = j+1; k < result_centroids.GetCount(); k++) {
+					ResultTuple& rt2 = result_centroids[k];
+					if (rt1 == rt2 || (rt2.volat == 0 && rt2.change == 0)) {
+						rt2.change+=k;
+						rt2.volat+=k;
+					}
+					else if (rt1.volat == 0 && rt1.change == 0) {
+						rt1.change+=k;
+						rt1.volat+=k;
+					}
+				}
+			}
+			
+			
+			// Remove too small groups
+			/*if (i > 90) {
+				for(int j = 0; j < pts.GetCount(); j++) {
+					Vector<ResultTupleCounter >& c_pts = pts[j];
+					int64 total = 0;
+					for(int l = 0; l < c_pts.GetCount(); l++) {
+						total += c_pts[l].count;
+					}
+					if (total < 10000) {
+						int j2 = (j + 1) % pts.GetCount();
+						pts[j2].Append(c_pts);
+						pts.Remove(j);
+						result_centroids.Remove(j);
+						j--;
+					}
+				}
+			}*/
 			
 			// Debug print
 			#ifdef flagDEBUG
@@ -225,6 +268,24 @@ void AgentSystem::RefreshResultClusters() {
 			DLOG("");
 			#endif
 		}
+		
+		
+		// Remove smallest centers
+		result_centroids.Remove(0, result_centroids.GetCount() - GROUP_COUNT);
+		if (result_centroids.GetCount() != OUTPUT_COUNT)
+			Panic("Result centroids mismatch.");
+		
+		// Debug print
+		#ifdef flagDEBUG
+		for(int j = 0; j < result_centroids.GetCount(); j++) {
+			const ResultTuple& ctr = result_centroids[j];
+			double v = ctr.volat * VOLAT_DIV;
+			double c = ctr.change * CHANGE_DIV * 1000;
+			DLOG("Final center " << j << ": " << v << " x " << c);
+		}
+		DLOG("");
+		#endif
+		
 		
 		initial_result_clustering = false;
 	}
@@ -507,40 +568,104 @@ void AgentSystem::RefreshIndicatorClusters() {
 }
 
 void AgentSystem::RefreshClusterConnections() {
-	result_sectors.SetCount(OUTPUT_COUNT);
-	indi_sectors.SetCount(INPUT_COUNT);
 	
-	for (int s = cluster_connection_counter; s < snaps.GetCount(); s++) {
-		Snapshot& snap = snaps[s];
+	// Run this function only at first time
+	if (result_sectors.IsEmpty()) {
+		ASSERT(result_centroids.GetCount() == OUTPUT_COUNT);
+		ASSERT(indi_centroids.GetCount() == INPUT_COUNT);
+		result_sectors.SetCount(OUTPUT_COUNT);
+		indi_sectors.SetCount(INPUT_COUNT);
 		
-		for(int i = 0; i < SYM_COUNT; i++) {
-			for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
-				int shift_diff = MEASURE_PERIOD(j);
-				int shift = s - shift_diff;
-				if (shift < 0) continue;
-				
-				Snapshot& prev_snap = snaps[shift];
-				int indi_c_id = prev_snap.GetIndicatorCluster();
-				IndicatorSector& is = indi_sectors[indi_c_id];
-				
-				int result_c_id = snap.GetResultCluster(i, j);
-				ResultSector& rs = result_sectors[result_c_id];
-				
-				rs.AddSource(i, j, indi_c_id);
-				is.AddDestination(i, j, result_c_id);
+		for (int s = cluster_connection_counter; s < snaps.GetCount(); s++) {
+			Snapshot& snap = snaps[s];
+			
+			for(int i = 0; i < SYM_COUNT; i++) {
+				for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
+					int shift_diff = MEASURE_PERIOD(j);
+					int shift = s - shift_diff;
+					if (shift < 0) continue;
+					
+					Snapshot& prev_snap = snaps[shift];
+					int indi_c_id = prev_snap.GetIndicatorCluster();
+					IndicatorSector& is = indi_sectors[indi_c_id];
+					
+					int result_c_id = snap.GetResultCluster(i, j);
+					ResultSector& rs = result_sectors[result_c_id];
+					
+					rs.AddSource(i, j, indi_c_id);
+					is.AddDestination(i, j, result_c_id);
+				}
 			}
 		}
+		
+		for(int i = 0; i < indi_sectors.GetCount(); i++) {
+			IndicatorSector& is = indi_sectors[i];
+			if (is.IsEmpty()) {
+				indi_sectors.Remove(i);
+				indi_centroids.Remove(i);
+				i--;
+			}
+		}
+		
+		for(auto& rs : result_sectors)	rs.Sort();
+		for(auto& ri : indi_sectors)	ri.Sort();
+		
+		
+		// Connect inputs to outputs in uniform way.
+		// Todo: should weight maximum per output with connection count
+		Vector<VectorMap<int, double> > in_out;
+		in_out.SetCount(OUTPUT_COUNT);
+		for(int i = 0; i < indi_sectors.GetCount(); i++) {
+			IndicatorSector& is = indi_sectors[i];
+			for(int j = 0; j < is.sector_conn_counts.GetCount(); j++) {
+				int out = is.sector_conn_counts.GetKey(j);
+				int count = is.sector_conn_counts[j];
+				double prob = (double)count / is.conn_total;
+				in_out[out].GetAdd(i, prob);
+			}
+		}
+		for(int i = 0; i < in_out.GetCount(); i++)
+			 SortByValue(in_out[i], StdGreater<double>());
+		int per_output = INPUT_COUNT / OUTPUT_COUNT;
+		if (INPUT_COUNT % OUTPUT_COUNT) per_output++;
+		Vector<Vector<int> > out_in;
+		out_in.SetCount(OUTPUT_COUNT);
+		while (true) {
+			int max_prob_i = -1;
+			double max_prob = -DBL_MAX;
+			for(int i = 0; i < in_out.GetCount(); i++) {
+				if (out_in[i].GetCount() >= per_output)
+					continue;
+				double prob = in_out[i][0];
+				if (prob > max_prob) {
+					max_prob_i = i;
+					max_prob = prob;
+				}
+			}
+			if (max_prob_i == -1)
+				break;
+			int in = in_out[max_prob_i].GetKey(0);
+			in_out[max_prob_i].Remove(0);
+			out_in[max_prob_i].Add(in);
+		}
+		for(int i = 0; i < out_in.GetCount(); i++) {
+			for(int j = 0; j < out_in[i].GetCount(); j++) {
+				DLOG(i << ", " << j << ": " << out_in[i][j]);
+				indi_sectors[out_in[i][j]].result_id = i;
+			}
+		}
+		for (auto& is : indi_sectors)
+			if (is.result_id == -1)
+				is.result_id = is.sector_conn_counts.GetKey(0);
+		
+		
+		#ifdef flagDEBUG
+		for(int i = 0; i < indi_sectors.GetCount(); i++) {
+			IndicatorSector& is = indi_sectors[i];
+			LOG("Indisec\t" << i << "\t-->\t" << is.GetResultSector() << "\t" << is.GetResultProbability());
+		}
+		#endif
 	}
-	
-	for(auto& rs : result_sectors)	rs.Sort();
-	for(auto& ri : indi_sectors)	ri.Sort();
-	
-	#ifdef flagDEBUG
-	for(int i = 0; i < indi_sectors.GetCount(); i++) {
-		IndicatorSector& is = indi_sectors[i];
-		LOG("Indisec\t" << i << "\t-->\t" << is.GetResultSector() << "\t" << is.GetResultProbability());
-	}
-	#endif
 	
 	int begin = Upp::max(1, cluster_connection_counter - MEASURE_PERIOD(MEASURE_PERIODCOUNT-1));
 	Vector<int> pred_sector_begins, pred_sector_indis;
@@ -559,7 +684,8 @@ void AgentSystem::RefreshClusterConnections() {
 				int indi_c_id = snap.GetIndicatorCluster();
 				IndicatorSector& is = indi_sectors[indi_c_id];
 				
-				int result_c_id = is.GetResultSector();
+				int result_c_id = is.result_id;
+				ASSERT(result_c_id != -1);
 				
 				for(int k = 0; k < shift_diff; k++) {
 					int pos = s + k;
@@ -605,6 +731,7 @@ void AgentSystem::RefreshClusterConnections() {
 			}
 		}
 	}
+	
 	
 	
 	cluster_connection_counter = snaps.GetCount();
@@ -702,9 +829,12 @@ void AgentSystem::AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, i
 	
 	// Add point to averages
 	ResultSector& rs = result_sectors[result_c_id];
-	rs.pos.Add(pos_volatsum / VOLAT_DIV, pos_change / CHANGE_DIV);
-	rs.neg.Add(neg_volatsum / VOLAT_DIV, neg_change / CHANGE_DIV);
-	rs.pnd.Add(pnd_volatsum / VOLAT_DIV, pnd_change / CHANGE_DIV);
+	if (pos_target_i >= 0)
+		rs.pos.Add(pos_volatsum / VOLAT_DIV, pos_change / CHANGE_DIV);
+	if (neg_target_i >= 0)
+		rs.neg.Add(neg_volatsum / VOLAT_DIV, neg_change / CHANGE_DIV);
+	if (pnd_target_i >= 0)
+		rs.pnd.Add(pnd_volatsum / VOLAT_DIV, pnd_change / CHANGE_DIV);
 	
 }
 
@@ -728,7 +858,7 @@ void AgentSystem::RefreshPoleNavigation() {
 	
 	for (int s = begin; s < snaps.GetCount(); s++) {
 		Snapshot& snap = snaps[s];
-		Snapshot& prev_snap = snaps[cluster_nav_counter - shift];
+		Snapshot& prev_snap = snaps[s - 1];
 		
 		int k = 0;
 		for(int i = 0; i < SYM_COUNT; i++) {
@@ -744,17 +874,25 @@ void AgentSystem::RefreshPoleNavigation() {
 				bool enabled_prev = prev_snap.IsResultClusterPredicted(i, j);
 				
 				if (enabled_now) {
-					bool targeting_prev = prev_snap.IsResultClusterPredictedTarget(i, j);
-					
 					const AveragePoint& pnd = result_sectors[j].pnd;
 					const AveragePoint& pos = result_sectors[j].pos;
 					const AveragePoint& neg = result_sectors[j].neg;
 					
 					int volatsum = snap.GetResultClusterPredictedVolatiledInt(i, j);
 					int change = snap.GetResultClusterPredictedChangedInt(i, j);
-					int vd = (volatsum - pnd.x_mean_int) * VOLINTMUL;
-					int cd = change - pnd.y_mean_int;
+					int vd, cd;
+					
+					vd = (volatsum - pnd.x_mean_int) * VOLINTMUL;
+					cd = change - pnd.y_mean_int;
 					pnd_dist = root(vd * vd + cd * cd);
+					
+					vd = (volatsum - pos.x_mean_int) * VOLINTMUL;
+					cd = change - pos.y_mean_int;
+					pos_dist = root(vd * vd + cd * cd);
+					
+					vd = (volatsum - neg.x_mean_int) * VOLINTMUL;
+					cd = change - neg.y_mean_int;
+					neg_dist = root(vd * vd + cd * cd);
 					
 					if (!enabled_prev) {
 						k_phase_begin = s;
@@ -770,7 +908,7 @@ void AgentSystem::RefreshPoleNavigation() {
 								int prev_shift_id = (s + 1) % shift; // yes, +1, because s - shift + 1
 								int& prev_pnd_dist = pnd_dist_buf[k * shift + prev_shift_id];
 								
-									
+								
 								// If distance from pending-pole is larger currently, activate targeting.
 								if (pnd_dist > prev_pnd_dist) {
 									k_phase_state = STATE_TARGETING;
@@ -788,21 +926,17 @@ void AgentSystem::RefreshPoleNavigation() {
 							
 							// If distance to positive pole is increasing and negative pole is
 							// getting closer
-							if (pos_diff > 0 && neg_diff < pos_diff) {
+							if (pos_diff > 0 || neg_diff < pos_diff) {
 								k_phase_state = STATE_WAITING;
 							}
-						}
-						
-						
-						// Don't write before new snapshots
-						if (s >= cluster_nav_counter) {
-							if (k_phase_state == STATE_TARGETING) {
+							// Don't write before new snapshots
+							else if (s >= cluster_nav_counter) {
 								snap.SetResultClusterPredictedTarget(i, j);
 							}
 						}
 					}
 				}
-					
+				
 				k++;
 			}
 		}

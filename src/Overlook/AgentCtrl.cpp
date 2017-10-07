@@ -512,31 +512,115 @@ void TrainingCtrl::Data() {
 
 
 
+
+
+
+
+
+
+
+
+
 SnapshotCtrl::SnapshotCtrl() {
-	Add(hsplit.SizePos());
+	Add(slider.HSizePos().TopPos(0, 30));
+	Add(hsplit.HSizePos().VSizePos(30));
+	
 	hsplit.Horz();
-	hsplit << draw << list;
+	hsplit << draw << symtf << symcl << sym << one;
 	
-	list.AddColumn("#");
+	symtf.AddColumn("Symbol");
+	symtf.AddColumn("Timeframe");
+	symtf.AddColumn("Result volatility");
+	symtf.AddColumn("Result change");
+	symtf.AddColumn("Result cluster");
 	
-	list <<= THISBACK(Data);
+	symcl.AddColumn("Symbol");
+	symcl.AddColumn("Result cluster");
+	symcl.AddColumn("Is predicted");
+	symcl.AddColumn("Target");
+	symcl.AddColumn("Volatiled");
+	symcl.AddColumn("Changed");
+	
+	sym.AddColumn("Symbol");
+	sym.AddColumn("Open");
+	sym.AddColumn("Change");
+	//for(int i = 0; i < SENSOR_SIZE; i++)
+	//	sym.AddColumn("S" + IntStr(i));
+	
+	one.AddColumn("Key");
+	one.AddColumn("Value");
+	
+	slider.SetData(0);
+	slider <<= THISBACK(Data);
 }
 
 void SnapshotCtrl::Data() {
-	AgentSystem& group = GetSystem().GetAgentSystem();
-	int cursor = list.GetCursor();
+	System& sys = GetSystem();
+	AgentSystem& group = sys.GetAgentSystem();
+	int cursor = slider.GetData();
 	
-	for(int i = 0; i < group.snaps.GetCount(); i++) {
-		const Snapshot& snap = group.snaps[i];
-		list.Set(i, 0, i);
-	}
-	list.SetCount(group.snaps.GetCount());
+	slider.MinMax(0, group.snaps.GetCount()-1);
 	
-	if (cursor >= 0 && cursor < group.snaps.GetCount())
+	if (cursor >= 0 && cursor < group.snaps.GetCount()) {
 		draw.SetSnap(cursor);
+		
+		const Snapshot& snap = group.snaps[cursor];
+		
+		int k = 0;
+		for(int i = 0; i < SYM_COUNT; i++) {
+			int sym_id = group.sym_ids[i];
+			for(int j = 0; j < MEASURE_PERIODCOUNT; j++) {
+				symtf.Set(k, 0, sys.GetSymbol(sym_id));
+				symtf.Set(k, 1, MEASURE_PERIOD(j));
+				symtf.Set(k, 2, snap.GetPeriodVolatility(i, j));
+				symtf.Set(k, 3, snap.GetPeriodChange(i, j));
+				symtf.Set(k, 4, snap.GetResultCluster(i, j));
+				k++;
+			}
+		}
+		
+		k = 0;
+		for(int i = 0; i < SYM_COUNT; i++) {
+			int sym_id = group.sym_ids[i];
+			for(int j = 0; j < OUTPUT_COUNT; j++) {
+				symcl.Set(k, 0, sys.GetSymbol(sym_id));
+				symcl.Set(k, 1, j);
+				symcl.Set(k, 2, snap.IsResultClusterPredicted(i, j));
+				symcl.Set(k, 3, snap.IsResultClusterPredictedTarget(i, j));
+				symcl.Set(k, 4, snap.GetResultClusterPredictedVolatiled(i, j));
+				symcl.Set(k, 5, snap.GetResultClusterPredictedChanged(i, j));
+				k++;
+			}
+		}
+		
+		k = 0;
+		for(int i = 0; i < SYM_COUNT; i++) {
+			int sym_id = group.sym_ids[i];
+			sym.Set(k, 0, sys.GetSymbol(sym_id));
+			sym.Set(k, 1, snap.GetOpen(i));
+			sym.Set(k, 2, snap.GetChange(i));
+			//for(int j = 0; j < SENSOR_SIZE; j++)
+			//	sym.Set(k, 3+j, snap.GetSensor(i, j));
+			k++;
+		}
+		
+		one.Set(0, 0, "Year sensor");
+		one.Set(0, 1, snap.GetTimeSensor(0));
+		one.Set(1, 0, "Week sensor");
+		one.Set(1, 1, snap.GetTimeSensor(1));
+		one.Set(2, 0, "Day sensor");
+		one.Set(2, 1, snap.GetTimeSensor(2));
+		one.Set(3, 0, "Indicator cluster");
+		one.Set(3, 1, snap.GetIndicatorCluster());
+		one.Set(4, 0, "Shift");
+		one.Set(4, 1, snap.GetShift());
+		
+	}
 	
 	draw.Refresh();
 }
+
+
 
 
 

@@ -61,7 +61,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	Snapshot& cur_snap  = snaps[cursor - 0];
 	Snapshot& prev_snap = snaps[cursor - 1];
 	
-	lower_output_signal = 0; //cur_snap.GetFilterOutput(group_id, FILTER_COUNT-1, sym_id);
+	lower_output_signal = 0;
 	if (cur_snap.IsResultClusterPredictedTarget(sym_id, group_id))
 		lower_output_signal = group_signal;
 	ASSERT(group_signal != 0);
@@ -72,7 +72,11 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	if (lower_output_signal != prev_lower_output_signal) {
 		if (!skip_learn) {
 			Snapshot& fwd_snap = snaps[fwd_cursor];		// Snapshot of previous Forward call
-			double reward = signal * (cur_snap.GetOpen(sym_id) / fwd_snap.GetOpen(sym_id) - 1.0);
+			double reward = 0.0;
+			if (signal == +1)
+				reward = +1.0 * ((cur_snap.GetOpen(sym_id) - agent->spread_points) / fwd_snap.GetOpen(sym_id) - 1.0);
+			else if (signal == -1)
+				reward = -1.0 * (cur_snap.GetOpen(sym_id) / (fwd_snap.GetOpen(sym_id) - agent->spread_points) - 1.0);
 			if (change_sum > 0.0)	reward /= change_sum;
 			else					reward = 0.0;
 			if (reward >= 0)		pos_reward_sum += reward;

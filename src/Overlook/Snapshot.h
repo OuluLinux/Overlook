@@ -64,7 +64,7 @@ public:
 			result_predicted_changed[i] = 0;
 	}
 	
-	int GetResultCluster(int sym, int tf) {
+	int GetResultCluster(int sym, int tf) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
 		return result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf];
@@ -76,13 +76,16 @@ public:
 		result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf] = cl;
 	}
 	
-	void SetResultClusterPredicted(int sym, int cl) {
+	void SetResultClusterPredicted(int sym, int cl, bool b=true) {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
 		int bit		= sym * OUTPUT_COUNT + cl;
 		int byt		= bit / 8;
 		bit			= bit % 8;
-		result_predicted[byt] |= 1 << bit;
+		if (b)
+			result_predicted[byt] |= 1 << bit;
+		else
+			result_predicted[byt] &= ~(1 << bit);
 	}
 	
 	bool IsResultClusterPredicted(int sym, int cl) const {
@@ -94,7 +97,7 @@ public:
 		return result_predicted[byt] & (1 << bit);
 	}
 	
-	int GetIndicatorCluster() {
+	int GetIndicatorCluster() const {
 		return indi_cluster_id;
 	}
 	
@@ -132,10 +135,22 @@ public:
 		result_predicted_changed[sym * OUTPUT_COUNT + cl] = change / CHANGE_DIV;
 	}
 	
+	double GetResultClusterPredictedVolatiled(int sym, int cl) const {
+		ASSERT(sym >= 0 && sym < SYM_COUNT);
+		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
+		return result_predicted_volat[sym * OUTPUT_COUNT + cl] * VOLAT_DIV;
+	}
+	
 	int GetResultClusterPredictedVolatiledInt(int sym, int cl) const {
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
 		return result_predicted_volat[sym * OUTPUT_COUNT + cl];
+	}
+	
+	double GetResultClusterPredictedChanged(int sym, int cl) const {
+		ASSERT(sym >= 0 && sym < SYM_COUNT);
+		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
+		return result_predicted_changed[sym * OUTPUT_COUNT + cl] * CHANGE_DIV;
 	}
 	
 	int GetResultClusterPredictedChangedInt(int sym, int cl) const {

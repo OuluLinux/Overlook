@@ -177,8 +177,9 @@ public:
 };
 
 class SnapshotCtrl : public ParentCtrl {
+	SliderCtrl slider;
 	Splitter hsplit;
-	ArrayCtrl list;
+	ArrayCtrl symtf, symcl, sym, one;
 	SnapshotDraw draw;
 	
 public:

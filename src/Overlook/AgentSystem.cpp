@@ -13,13 +13,13 @@ AgentSystem::AgentSystem(System* sys) : sys(sys) {
 
 #ifndef flagHAVE_ALLSYM
 
-	allowed_symbols.Add("EURUSD", 3);
-	allowed_symbols.Add("GBPUSD", 3);
-	allowed_symbols.Add("USDJPY", 3);
-	allowed_symbols.Add("EURJPY", 3);
-	allowed_symbols.Add("EURGBP", 3);
-	allowed_symbols.Add("GBPJPY", 7);
-
+	allowed_symbols.Add("EURUSD", 3); // 0.26
+	allowed_symbols.Add("GBPUSD", 3); // 0.23
+	allowed_symbols.Add("USDJPY", 3); // 0.27
+	allowed_symbols.Add("USDCAD", 3); // 0.24
+	allowed_symbols.Add("EURJPY", 3); // 0.23
+	allowed_symbols.Add("EURCHF", 3); // 0.26
+	
 #else
 
 	// also AUD,NZD,CHF included
@@ -645,7 +645,7 @@ void AgentSystem::MainReal() {
 			last_datagather.Reset();
 		}
 	}
-
+	
 	sys->WhenPopTask();
 }
 

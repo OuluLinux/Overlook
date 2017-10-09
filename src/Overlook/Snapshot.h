@@ -10,7 +10,7 @@ private:
 	uint8 result_cluster_id		[MEASURE_SIZE];
 	uint8 indi_cluster_id;
 	uint8 result_predicted				[RESULT_BYTES];
-	uint8 result_predicted_targeting	[RESULT_BYTES];
+	uint8 result_predicted_targeting	[TARGET_BYTES];
 	int16 result_predicted_volat		[RESULT_SIZE];
 	int16 result_predicted_changed		[RESULT_SIZE];
 	
@@ -56,7 +56,7 @@ public:
 		
 		for (int i = 0; i < RESULT_BYTES; i++)
 			result_predicted[i] = 0;
-		for (int i = 0; i < RESULT_BYTES; i++)
+		for (int i = 0; i < TARGET_BYTES; i++)
 			result_predicted_targeting[i] = 0;
 		for (int i = 0; i < RESULT_SIZE; i++)
 			result_predicted_volat[i] = 0;
@@ -74,6 +74,16 @@ public:
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		ASSERT(tf >= 0 && tf < MEASURE_PERIODCOUNT);
 		result_cluster_id	[sym * MEASURE_PERIODCOUNT + tf] = cl;
+	}
+	
+	void ClearResultClusterPredicted() {
+		for (int i = 0; i < RESULT_BYTES; i++)
+			result_predicted[i] = 0;
+	}
+	
+	void ClearResultClusterPredictedTarget() {
+		for (int i = 0; i < RESULT_BYTES; i++)
+			result_predicted_targeting[i] = 0;
 	}
 	
 	void SetResultClusterPredicted(int sym, int cl, bool b=true) {
@@ -105,19 +115,21 @@ public:
 		indi_cluster_id = cl;
 	}
 	
-	bool IsResultClusterPredictedTarget(int sym, int cl) const {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
-		int bit		= sym * OUTPUT_COUNT + cl;
+	bool IsResultClusterPredictedTarget(int sym, int cl, int target) const {
+		ASSERT(sym    >= 0 && sym    < SYM_COUNT);
+		ASSERT(cl     >= 0 && cl     < OUTPUT_COUNT);
+		ASSERT(target >= 0 && target < TARGET_COUNT);
+		int bit		= (sym * OUTPUT_COUNT + cl) * TARGET_COUNT + target;
 		int byt		= bit / 8;
 		bit			= bit % 8;
 		return result_predicted_targeting[byt] & (1 << bit);
 	}
 	
-	void SetResultClusterPredictedTarget(int sym, int cl) {
-		ASSERT(sym >= 0 && sym < SYM_COUNT);
-		ASSERT(cl  >= 0 && cl  < OUTPUT_COUNT);
-		int bit		= sym * OUTPUT_COUNT + cl;
+	void SetResultClusterPredictedTarget(int sym, int cl, int target) {
+		ASSERT(sym    >= 0 && sym    < SYM_COUNT);
+		ASSERT(cl     >= 0 && cl     < OUTPUT_COUNT);
+		ASSERT(target >= 0 && target < TARGET_COUNT);
+		int bit		= (sym * OUTPUT_COUNT + cl) * TARGET_COUNT + target;
 		int byt		= bit / 8;
 		bit			= bit % 8;
 		result_predicted_targeting[byt] |= (1 << bit);

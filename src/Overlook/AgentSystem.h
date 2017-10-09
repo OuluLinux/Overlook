@@ -9,6 +9,18 @@ namespace Overlook {
 #define SYM_COUNT					19
 #endif
 
+#ifndef flagSLOW
+#define MEASURE_PERIOD(j)			(1 << (8 + j))
+#else
+#define MEASURE_PERIOD(j)			(1 << (11 + j))
+#endif
+
+#ifdef flagSKIP_IDLEACT
+#define IDLEACT						0
+#else
+#define IDLEACT						1
+#endif
+
 #define FMLEVEL						0.6
 #define BASE_FWDSTEP_BEGIN			5
 #define GROUP_COUNT					22
@@ -29,16 +41,18 @@ namespace Overlook {
 
 #define MEASURE_PERIODCOUNT			3
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
-#define MEASURE_PERIOD(j)			(1 << (8 + j))
 #define RESULT_SIZE					(SYM_COUNT * OUTPUT_COUNT)
 #define RESULT_BYTES				(RESULT_SIZE / 8 + 1)
 #define RESULT_EXTRACENTERS			8
+#define TARGET_COUNT				3
+#define TARGET_SIZE					(SYM_COUNT * OUTPUT_COUNT * TARGET_COUNT)
+#define TARGET_BYTES				(TARGET_SIZE / 8 + 1)
 
 #define TRAINEE_RESULT_COUNT		1000
 #define TRAINEE_COUNT				(GROUP_COUNT * SYM_COUNT)
 
 #define SIGNAL_STATES				SENSOR_SIZE
-#define SIGNAL_ACTIONCOUNT			2
+#define SIGNAL_ACTIONCOUNT			(IDLEACT + TARGET_COUNT)
 #define SIGNAL_PHASE_ITER_LIMIT		100000
 #define SIGNAL_EPS_ITERS_STEP		10000
 
@@ -146,12 +160,17 @@ struct SectorConnection : Moveable<SectorConnection> {
 struct ResultSector : Moveable<ResultSector> {
 	VectorMap<SectorConnection, int> src_conns;
 	VectorMap<int, int> sector_conn_counts;
-	AveragePoint pos, neg, pnd;
+	AveragePoint pos[TARGET_COUNT];
+	AveragePoint neg[TARGET_COUNT];
+	AveragePoint pnd;
 	int conn_total = 0;
 	
 	
 	ResultSector() {}
-	void Serialize(Stream& s) {s % src_conns % sector_conn_counts % pos % neg % pnd % conn_total;}
+	void Serialize(Stream& s) {
+		for(int i = 0; i < TARGET_COUNT; i++) s % pos[i] % neg[i];
+		s % src_conns % sector_conn_counts % pnd % conn_total;
+	}
 	void AddSource(int sym_id, int tf_id, int indi_c_id) {
 		src_conns.GetAdd(SectorConnection(sym_id, tf_id, indi_c_id), 0)++;
 		sector_conn_counts.GetAdd(indi_c_id, 0)++;
@@ -228,8 +247,6 @@ public:
 	int realtime_count = 0;
 	int result_cluster_counter = 0;
 	int indi_cluster_counter = 0;
-	int cluster_nav_counter = 0;
-	int cluster_connection_counter = 0;
 	bool running = false, stopped = true;
 	Mutex work_lock;
 	

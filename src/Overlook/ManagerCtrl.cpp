@@ -155,12 +155,14 @@ SectorOverview::SectorOverview() {
 	out_poles.AddColumn("? X");
 	out_poles.AddColumn("? Y");
 	out_poles.AddColumn("? Count");
-	out_poles.AddColumn("+ X");
-	out_poles.AddColumn("+ Y");
-	out_poles.AddColumn("+ Count");
-	out_poles.AddColumn("- X");
-	out_poles.AddColumn("- Y");
-	out_poles.AddColumn("- Count");
+	for(int i = 0; i < TARGET_COUNT; i++) {
+		out_poles.AddColumn("+ X");
+		out_poles.AddColumn("+ Y");
+		out_poles.AddColumn("+ Count");
+		out_poles.AddColumn("- X");
+		out_poles.AddColumn("- Y");
+		out_poles.AddColumn("- Count");
+	}
 	
 	split << in << out << in_conn << out_conn;
 	vsplit << split << out_poles;
@@ -236,12 +238,16 @@ void SectorOverview::Data() {
 		out_poles.Set(i, 0, rs.pnd.x_mean_int * VOLAT_DIV);
 		out_poles.Set(i, 1, rs.pnd.y_mean_int * CHANGE_DIV);
 		out_poles.Set(i, 2, rs.pnd.x.count);
-		out_poles.Set(i, 3, rs.pos.x_mean_int * VOLAT_DIV);
-		out_poles.Set(i, 4, rs.pos.y_mean_int * CHANGE_DIV);
-		out_poles.Set(i, 5, rs.pos.x.count);
-		out_poles.Set(i, 6, rs.neg.x_mean_int * VOLAT_DIV);
-		out_poles.Set(i, 7, rs.neg.y_mean_int * CHANGE_DIV);
-		out_poles.Set(i, 8, rs.neg.x.count);
+		
+		int k = 3;
+		for(int j = 0; j < TARGET_COUNT; j++) {
+			out_poles.Set(i, k++, rs.pos[j].x_mean_int * VOLAT_DIV);
+			out_poles.Set(i, k++, rs.pos[j].y_mean_int * CHANGE_DIV);
+			out_poles.Set(i, k++, rs.pos[j].x.count);
+			out_poles.Set(i, k++, rs.neg[j].x_mean_int * VOLAT_DIV);
+			out_poles.Set(i, k++, rs.neg[j].y_mean_int * CHANGE_DIV);
+			out_poles.Set(i, k++, rs.neg[j].x.count);
+		}
 	}
 	
 	

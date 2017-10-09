@@ -41,6 +41,7 @@ void AgentSignal::ResetEpoch() {
 	fwd_cursor = 0;
 	cursor = 1;
 	skip_learn = true;
+	target_id = 0;
 	
 	all_reward_sum = 0;
 	pos_reward_sum = 0;
@@ -62,7 +63,7 @@ void AgentSignal::Main(Vector<Snapshot>& snaps) {
 	Snapshot& prev_snap = snaps[cursor - 1];
 	
 	lower_output_signal = 0;
-	if (cur_snap.IsResultClusterPredictedTarget(sym_id, group_id))
+	if (cur_snap.IsResultClusterPredictedTarget(sym_id, group_id, target_id))
 		lower_output_signal = group_signal;
 	ASSERT(group_signal != 0);
 		
@@ -123,10 +124,21 @@ void AgentSignal::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		ASSERT(action >= 0 && action < SIGNAL_ACTIONCOUNT);
 		action_counts[action]++;
 		
-		if (!action)
+		#ifdef flagSKIP_IDLEACT
+		signal = lower_output_signal;
+		target_id = action;
+		ASSERT(target_id >= 0 && target_id < TARGET_COUNT);
+		#else
+		if (!action) {
 			signal = 0;
-		else
+			target_id = 0;
+		}
+		else {
 			signal = lower_output_signal;
+			target_id = action - 1;
+			ASSERT(target_id >= 0 && target_id < TARGET_COUNT);
+		}
+		#endif
 	}
 	
 	change_sum = 0.0;

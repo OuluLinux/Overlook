@@ -540,6 +540,8 @@ SnapshotCtrl::SnapshotCtrl() {
 	symcl.AddColumn("Target");
 	symcl.AddColumn("Volatiled");
 	symcl.AddColumn("Changed");
+	symcl.AddColumn("Signal");
+	symcl.AddColumn("Amp");
 	
 	sym.AddColumn("Symbol");
 	sym.AddColumn("Open");
@@ -558,7 +560,7 @@ void SnapshotCtrl::Data() {
 	System& sys = GetSystem();
 	AgentSystem& group = sys.GetAgentSystem();
 	int cursor = slider.GetData();
-	
+	int min_tf = sys.FindPeriod(1);
 	slider.MinMax(0, group.snaps.GetCount()-1);
 	
 	if (cursor >= 0 && cursor < group.snaps.GetCount()) {
@@ -586,9 +588,16 @@ void SnapshotCtrl::Data() {
 				symcl.Set(k, 0, sys.GetSymbol(sym_id));
 				symcl.Set(k, 1, j);
 				symcl.Set(k, 2, snap.IsResultClusterPredicted(i, j));
-				symcl.Set(k, 3, snap.IsResultClusterPredictedTarget(i, j));
+				
+				String target_str;
+				for(int k = 0; k < TARGET_COUNT; k++)
+					target_str << (int)snap.IsResultClusterPredictedTarget(i, j, k) << " ";
+				symcl.Set(k, 3, target_str);
+				
 				symcl.Set(k, 4, snap.GetResultClusterPredictedVolatiled(i, j));
 				symcl.Set(k, 5, snap.GetResultClusterPredictedChanged(i, j));
+				symcl.Set(k, 6, snap.GetSignalOutput(j, i));
+				symcl.Set(k, 7, snap.GetAmpOutput(j, i));
 				k++;
 			}
 		}
@@ -614,7 +623,23 @@ void SnapshotCtrl::Data() {
 		one.Set(3, 1, snap.GetIndicatorCluster());
 		one.Set(4, 0, "Shift");
 		one.Set(4, 1, snap.GetShift());
+		one.Set(5, 0, "Time");
+		one.Set(5, 1, Format("%", sys.GetTimeTf(min_tf, snap.GetShift())));
 		
+		int nonzero_signals = 0;
+		for(int i = 0; i < GROUP_COUNT; i++)
+			for(int j = 0; j < SYM_COUNT; j++)
+				nonzero_signals += snap.GetSignalOutput(i, j) != 0 ? 1 : 0;
+		one.Set(6, 0, "Signals total");
+		one.Set(6, 1, nonzero_signals);
+		
+		int useful_nonzero_signals = 0;
+		for(int i = 0; i < GROUP_COUNT; i++)
+			for(int j = 0; j < SYM_COUNT; j++)
+				if (snap.GetSignalOutput(i, j) != 0 && group.groups[i].agents[j].amp.GetLastDrawdown() < 40.0)
+					useful_nonzero_signals += 1;
+		one.Set(7, 0, "Useful signals total");
+		one.Set(7, 1, useful_nonzero_signals);
 	}
 	
 	draw.Refresh();
@@ -738,8 +763,13 @@ void SignalGraph::Paint(Draw& w) {
 	for (int k = snap_begin; k < snap_end; k++) {
 		Snapshot& snap1 = sys.snaps[k];
 		int x1 = (snap1.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
-		Snapshot& snap2 = sys.snaps[k < snap_end-1 ? k+1 : snap_begin];
-		int x2 = (snap2.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
+		int x2;
+		if (k < snap_end-1) {
+			Snapshot& snap2 = sys.snaps[k+1];
+			x2 = (snap2.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
+		} else {
+			x2 = x1 + 1.0 / (5.0 * 24.0 * 60.0) * sz.cx;
+		}
 		if (x2 < x1) x2 = sz.cx;
 		int w = x2 - x1;
 		

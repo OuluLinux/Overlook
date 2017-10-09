@@ -129,6 +129,7 @@ void AgentSystem::InitThread() {
 	ASSERT(volav_id != -1);
 
 	indi_ids.Clear();
+	#ifndef flagSLOW
 	indi_ids.Add().Set(volav_id).AddArg(5);
 	indi_ids.Add().Set(volav_id).AddArg(15);
 	indi_ids.Add().Set(volav_id).AddArg(60);
@@ -144,6 +145,14 @@ void AgentSystem::InitThread() {
 	indi_ids.Add().Set(stoch_id).AddArg(60);
 	indi_ids.Add().Set(stoch_id).AddArg(240);
 	indi_ids.Add().Set(stoch_id).AddArg(1440);
+	#else
+	for(int i = 0; i < 5; i++) {
+		int period = MEASURE_PERIOD(i - 3);
+		indi_ids.Add().Set(volav_id).AddArg(period);
+		indi_ids.Add().Set(osma_id).AddArg(period).AddArg(period*2).AddArg(period);
+		indi_ids.Add().Set(stoch_id).AddArg(period);
+	}
+	#endif
 
 	RefreshWorkQueue();
 

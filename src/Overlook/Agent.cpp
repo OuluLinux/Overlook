@@ -514,9 +514,13 @@ void AgentFuse::Init() {
 	sys->SetFixedBroker(-1, test_broker);
 	RefreshSnapEquities();
 	ResetEpoch();
-	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
-		for(int j = 0; j < FUSE_AVCOUNT; j++)
-			triggers[i * FUSE_AVCOUNT + j].SetPeriod(MEASURE_PERIOD(-4 + j));
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		broker[i].free_margin_level = 0.90;
+		for(int j = 0; j < FUSE_AVCOUNT; j++) {
+			triggers[i * FUSE_AVCOUNT + j].SetPeriod(MEASURE_PERIOD(FUSE_TRIGGERPERIOD + j));
+		}
+	}
+	dqn.SetExperienceCountMax(10000);
 }
 
 void AgentFuse::RefreshSnapEquities() {
@@ -622,7 +626,8 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 	
 	
 	for(int ddlevel = 0; ddlevel < 4; ddlevel++) {
-		double ddlimit = 10.0 * (ddlevel + 1);
+		double ddlimit_begin = 10.0 * (ddlevel + 0);
+		double ddlimit_end   = 10.0 * (ddlevel + 1);
 		
 		for(int i = 0; i < SYM_COUNT; i++) {
 			double max_res = 0.0;
@@ -631,13 +636,13 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 			
 			for (int j = 0; j < GROUP_COUNT; j++) {
 				int signal = cur_snap.GetAmpOutput(j, i);
-				if (signal) {
+				if (signal || FUSE_ALLOWZEROSIGNAL) {
 					AgentGroup& ag = sys->groups[j];
 					Agent& agent = ag.agents[i];
 					double res = agent.amp.GetLastResult();
 					double dd = agent.amp.GetLastDrawdown();
 					
-					if (res > max_res && dd < ddlimit) {
+					if (res > max_res && dd >= ddlimit_begin && dd < ddlimit_end) {
 						max_res = res;
 						group_id = j;
 						group_signal = signal;
@@ -696,7 +701,7 @@ void AgentFuse::UpdateSignal(FixedSimBroker& broker, int sym_id, int signal) {
 }
 
 bool AgentFuse::IsTriggered() {
-	if ((cursor - prev_trigger_cursor) > (MEASURE_PERIOD(-4 + trigger_ma) / 3)) {
+	if ((cursor - prev_trigger_cursor) > (MEASURE_PERIOD(FUSE_TRIGGERPERIOD + trigger_ma) / 3)) {
 		int trigger_broker = Upp::max(0, active_broker);
 		if (triggers[trigger_broker * FUSE_AVCOUNT + trigger_ma].IsTriggered())
 			return true;
@@ -750,11 +755,11 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
 			double c = changes[i];
 			if (c >= 0) {
-				input_array[cursor++] = +c / max_change;
-				input_array[cursor++] = 0.0;
+				input_array[cursor++] = 1.0 - c / max_change;
+				input_array[cursor++] = 1.0;
 			} else {
-				input_array[cursor++] = 0.0;
-				input_array[cursor++] = -c / max_change;
+				input_array[cursor++] = 1.0;
+				input_array[cursor++] = 1.0 + c / max_change;
 			}
 		}
 	}

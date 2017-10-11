@@ -437,7 +437,8 @@ public:
 		exp_size = 1000;
 	}
 	
-	int GetExperienceCountMax() const {return exp_size;}
+	int  GetExperienceCountMax() const {return exp_size;}
+	void SetExperienceCountMax(int i) {exp_size = i;}
 	
 	void SetExperienceAddEvery(int i) {experience_add_every = i;}
 	int  GetExperienceAddEvery() const {return experience_add_every;}

@@ -1400,9 +1400,7 @@ void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 		for (int j = 0; j < SYM_COUNT; j++)
 			groups[i].agents[j].SetFreeMarginLevel(fmlevel);
 	
-	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
-		fuse.broker[i].free_margin_level = fmlevel;
-	
+	fuse.test_broker.free_margin_level = fmlevel;
 }
 
 void AgentSystem::InitBrokerValues() {

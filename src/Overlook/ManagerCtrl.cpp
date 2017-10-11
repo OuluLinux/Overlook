@@ -10,7 +10,7 @@ const Vector<int64>& ActionCountGraph::GetStats() {
 	if (phase == PHASE_FUSE_TRAINING)
 		return f->action_counts;
 	Panic("NEVER");
-	return Vector<int64>();
+	return Single<Vector<int64> >();
 }
 
 void ActionCountGraph::Paint(Draw& w) {

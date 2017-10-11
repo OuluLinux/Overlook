@@ -102,20 +102,36 @@ void SnapshotDraw::Paint(Draw& w) {
 
 ResultGraph::ResultGraph() {
 	agent = NULL;
+	fuse = NULL;
 	
 }
 
+const Vector<double>& ResultGraph::GetEquityData() {
+	if (type == PHASE_SIGNAL_TRAINING)
+		return agent->sig.result_equity;
+	if (type == PHASE_AMP_TRAINING)
+		return agent->amp.result_equity;
+	return fuse->result_equity;
+}
+
+const Vector<double>& ResultGraph::GetDrawdownData() {
+	if (type == PHASE_SIGNAL_TRAINING)
+		return agent->sig.result_drawdown;
+	if (type == PHASE_AMP_TRAINING)
+		return agent->amp.result_drawdown;
+	return fuse->result_drawdown;
+}
+
 void ResultGraph::Paint(Draw& w) {
-	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	if (!agent && !fuse) {w.DrawRect(GetSize(), White()); return;}
 	
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
 	id.DrawRect(sz, White());
 	
-	Agent& agent = *this->agent;
-	const Vector<double>& equity_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_equity : agent.amp.result_equity;
-	const Vector<double>& drawdown_data = type == PHASE_SIGNAL_TRAINING ? agent.sig.result_drawdown : agent.amp.result_drawdown;
+	const Vector<double>& equity_data = GetEquityData();
+	const Vector<double>& drawdown_data = GetDrawdownData();
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
@@ -226,12 +242,21 @@ void HeatmapTimeView::Paint(Draw& d) {
 
 EquityGraph::EquityGraph() {
 	agent = NULL;
+	fuse = NULL;
 	clr = RainbowColor(Randomf());
 	type = 0;
 }
 
+const Vector<double>& EquityGraph::GetEquityData() {
+	if (type == PHASE_SIGNAL_TRAINING)
+		return agent->sig.equity;
+	if (type == PHASE_AMP_TRAINING)
+		return agent->amp.equity;
+	return fuse->equity;
+}
+
 void EquityGraph::Paint(Draw& w) {
-	if (!agent) {w.DrawRect(GetSize(), White()); return;}
+	if (!agent && !fuse) {w.DrawRect(GetSize(), White()); return;}
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	
@@ -244,7 +269,7 @@ void EquityGraph::Paint(Draw& w) {
 	double last = 0.0;
 	double peak = 0.0;
 	
-	const Vector<double>& data = type == PHASE_SIGNAL_TRAINING ? agent->sig.equity : agent->amp.equity;
+	const Vector<double>& data = GetEquityData();
 	int count = data.GetCount();
 	if (!count) return;
 	
@@ -318,13 +343,13 @@ void RewardGraph::Paint(Draw& d) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (agent) {
+	if (agent || fuse) {
 		double min = +DBL_MAX;
 		double max = -DBL_MAX;
 		double last = 0.0;
 		double peak = 0.0;
 		
-		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : agent->amp.x
+		#define SRC(x) type == PHASE_SIGNAL_TRAINING ? agent->sig.x : (type == PHASE_AMP_TRAINING ? agent->amp.x : fuse->x)
 		int reward_count = SRC(reward_count);
 		const Vector<double>& data = SRC(rewards);
 		int experience_add_every = SRC(dqn.GetExperienceAddEvery());
@@ -401,6 +426,10 @@ void RewardGraph::SetAgent(Agent& agent, int type) {
 	this->agent = &agent;
 }
 
+void RewardGraph::SetFuse(AgentFuse& fuse) {
+	type = PHASE_FUSE_TRAINING;
+	this->fuse = &fuse;
+}
 
 
 
@@ -412,6 +441,7 @@ void RewardGraph::SetAgent(Agent& agent, int type) {
 TrainingCtrl::TrainingCtrl()
 {
 	agent = NULL;
+	fuse = NULL;
 	type = 0;
 	
 	Add(vsplit.SizePos());
@@ -461,13 +491,27 @@ void TrainingCtrl::SetAgent(Agent& agent, int type) {
 	}
 }
 
+void TrainingCtrl::SetFuse(AgentFuse& fuse) {
+	this->type = PHASE_FUSE_TRAINING;
+	this->fuse = &fuse;
+	
+	reward.SetFuse(fuse);
+	stats.SetFuse(fuse);
+	result.SetFuse(fuse);
+	
+	timescroll.SetAgent(fuse.dqn);
+	
+	hsplit.Clear();
+	hsplit << draw << timescroll;
+}
+
 void TrainingCtrl::Data() {
-	if (!agent) return;
+	if (!agent && !fuse) return;
 	
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	// list
-	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : agent->amp.cursor;
+	int cursor = type == PHASE_SIGNAL_TRAINING ? agent->sig.cursor : (type == PHASE_AMP_TRAINING ? agent->amp.cursor : fuse->cursor);
 	draw.SetSnap(cursor);
 	draw.Refresh();
 	timescroll.Refresh();
@@ -636,7 +680,7 @@ void SnapshotCtrl::Data() {
 		int useful_nonzero_signals = 0;
 		for(int i = 0; i < GROUP_COUNT; i++)
 			for(int j = 0; j < SYM_COUNT; j++)
-				if (snap.GetSignalOutput(i, j) != 0 && group.groups[i].agents[j].amp.GetLastDrawdown() < 40.0)
+				if (snap.GetSignalOutput(i, j) != 0 && group.groups[i].agents[j].amp.GetLastDrawdown() < DD_LIMIT)
 					useful_nonzero_signals += 1;
 		one.Set(7, 0, "Useful signals total");
 		one.Set(7, 1, useful_nonzero_signals);

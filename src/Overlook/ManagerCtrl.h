@@ -6,13 +6,13 @@ namespace Overlook {
 class ActionCountGraph : public Ctrl {
 	int phase = -1;
 	Agent* a = NULL;
-	
+	AgentFuse* f = NULL;
 public:
 	
 	virtual void Paint(Draw& w);
 	const Vector<int64>& GetStats();
 	void SetAgent(Agent& a, int phase) {this->a = &a; this->phase = phase;}
-	
+	void SetFuse(AgentFuse& fuse) {f = &fuse; phase = PHASE_FUSE_TRAINING;}
 };
 
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
@@ -110,6 +110,18 @@ public:
 	
 };
 
+class FuseTabCtrl : public TabCtrl {
+	WithFuseOverview<ParentCtrl>	overview;
+	TrainingCtrl					trainingctrl;
+	
+public:
+	typedef FuseTabCtrl CLASSNAME;
+	FuseTabCtrl();
+	
+	void Data();
+	
+};
+
 class ManagerCtrl : public ParentCtrl {
 	Splitter						hsplit, listsplit;
 	ArrayCtrl						alist, glist;
@@ -120,6 +132,7 @@ class ManagerCtrl : public ParentCtrl {
 	SystemTabCtrl					system_tabs;
 	SignalTabCtrl					signal_tabs;
 	AmpTabCtrl						amp_tabs;
+	FuseTabCtrl						fuse_tabs;
 	ExportCtrl						export_ctrl;
 	
 	int view;

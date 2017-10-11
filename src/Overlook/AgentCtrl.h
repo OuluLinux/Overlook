@@ -17,10 +17,13 @@ class EquityGraph : public Ctrl {
 	
 protected:
 	Agent* agent;
+	AgentFuse* fuse;
 	Color clr;
 	Vector<Point> polyline;
 	Vector<double> last;
 	int type;
+	
+	const Vector<double>& GetEquityData();
 	
 public:
 	typedef EquityGraph CLASSNAME;
@@ -29,13 +32,17 @@ public:
 	virtual void Paint(Draw& w);
 	
 	void SetAgent(Agent& agent, int type) {this->agent = &agent; clr = Color(49, 28, 150); this->type = type;}
-	
+	void SetFuse(AgentFuse& fuse) {this->fuse = &fuse; type = PHASE_FUSE_TRAINING;}
 };
 
 class ResultGraph : public Ctrl {
 	Agent* agent;
+	AgentFuse* fuse;
 	Vector<Point> polyline;
 	int type = -1;
+	
+	const Vector<double>& GetEquityData();
+	const Vector<double>& GetDrawdownData();
 	
 public:
 	typedef ResultGraph CLASSNAME;
@@ -44,7 +51,7 @@ public:
 	virtual void Paint(Draw& w);
 	
 	void SetAgent(Agent& agent, int type) {this->agent = &agent; this->type = type;}
-	
+	void SetFuse(AgentFuse& fuse) {this->fuse = &fuse; type = PHASE_FUSE_TRAINING;}
 };
 
 class HeatmapTimeView : public Ctrl {
@@ -133,6 +140,7 @@ public:
 
 class RewardGraph : public Ctrl {
 	Agent* agent = NULL;
+	AgentFuse* fuse = NULL;
 	int type = -1;
 	Color clr;
 	Vector<Point> polyline;
@@ -144,7 +152,7 @@ public:
 	virtual void Paint(Draw& d);
 	
 	void SetAgent(Agent& agent, int type);
-	
+	void SetFuse(AgentFuse& fuse);
 };
 
 class TrainingCtrl : public ParentCtrl {
@@ -152,6 +160,7 @@ class TrainingCtrl : public ParentCtrl {
 protected:
 	friend class SnapshotDraw;
 	Agent* agent;
+	AgentFuse* fuse;
 	Splitter hsplit;
 	int type;
 	
@@ -173,7 +182,7 @@ public:
 	void Data();
 	void ApplySettings();
 	void SetAgent(Agent& agent, int type);
-	
+	void SetFuse(AgentFuse& fuse);
 };
 
 class SnapshotCtrl : public ParentCtrl {

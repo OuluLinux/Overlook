@@ -4,11 +4,12 @@ namespace Overlook {
 
 bool reset_signals;
 bool reset_amps;
+bool reset_fuse;
 
 AgentSystem::AgentSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
-
+	
 	// Instrument, spread pips
 
 #ifndef flagHAVE_ALLSYM
@@ -173,8 +174,9 @@ void AgentSystem::InitThread() {
 	Progress(5, 6, "Initializing agents");
 	InitBrokerValues();
 
-	if (groups.GetCount() == 0)
+	if (groups.GetCount() == 0) {
 		CreateAgents();
+	}
 	else {
 		for (int i = 0; i < groups.GetCount(); i++) {
 			AgentGroup& ag = groups[i];
@@ -203,6 +205,11 @@ void AgentSystem::InitThread() {
 				groups[i].agents[j].amp.DeepCreate();
 	}
 
+	if (reset_fuse) {
+		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
+		fuse.DeepCreate();
+	}
+
 
 	for (int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
@@ -214,7 +221,9 @@ void AgentSystem::InitThread() {
 			a.Init();
 		}
 	}
-
+	fuse.sys = this;
+	fuse.Init();
+	
 	SetFreeMarginLevel(FMLEVEL);
 
 	Progress(6, 6, "Complete");
@@ -238,6 +247,7 @@ void AgentSystem::SetAgentsTraining(bool b) {
 	for (int i = 0; i < groups.GetCount(); i++)
 		for (int j = 0; j < groups[i].agents.GetCount(); j++)
 			groups[i].agents[j].is_training = b;
+	fuse.is_training = b;
 }
 
 void AgentSystem::SetSingleFixedBroker(int sym_id, SingleFixedSimBroker& broker) {
@@ -270,8 +280,12 @@ void AgentSystem::Main() {
 	while (running) {
 		ReduceExperienceMemory(phase);
 
-		if (phase < PHASE_REAL) {
+		if (phase < PHASE_FUSE_TRAINING) {
 			TrainAgents(phase);
+		}
+		else
+		if (phase == PHASE_FUSE_TRAINING) {
+			TrainFuse();
 		}
 		else
 		if (phase == PHASE_REAL) {
@@ -444,6 +458,75 @@ void AgentSystem::TrainAgents(int phase) {
 	sys->WhenPopTask();
 }
 
+void AgentSystem::TrainFuse() {
+	sys->WhenPushTask("Fuse training");
+	
+	
+	// Update configurations
+	RefreshSnapshots();
+	RefreshSnapEquities();
+	SetSignalEpsilon(0.01);
+	SetAmpEpsilon(0.01);
+
+	for (int i = 0; i < phase; i++)
+		LoopAgentSignals(i);
+
+	SetAgentsTraining(true);
+	
+	int prev_av_iters = GetAverageIterations(phase);
+
+	for (int64 iter = 0; running; iter++) {
+
+		if (iter % 300 == 0) {
+
+			// Update some attributes as times go by
+			RefreshAgentEpsilon(phase);
+			RefreshLearningRate(phase);
+			
+			
+			// Change snapshot area, if needed, sometimes
+			int av_iters = GetAverageIterations(phase);
+			if (av_iters - prev_av_iters >= BREAK_INTERVAL_ITERS) {
+				StoreThis();
+				break; // call TrainAgents again to RefreshSnapshots safely
+			}
+			
+			
+			if (fuse.IsTrained()) {
+				this->phase++;
+				StoreThis();
+				break;
+			}
+		}
+		
+
+		// Check cursor
+		int cursor = fuse.GetCursor();
+
+		if (cursor <= 0 || cursor >= snaps.GetCount())
+			fuse.ResetEpoch();
+
+		int64 end = fuse.GetIter() + 100;
+		
+		int begin_iter = fuse.GetIter();
+		while (fuse.GetIter() < end && running) {
+			fuse.Main(snaps);
+
+			// Close all order at the end
+			if (fuse.GetCursor() >= snaps.GetCount()) {
+				fuse.ResetEpoch();
+				if (begin_iter == fuse.GetIter())
+					break;
+			}
+		}
+		
+	}
+	
+	SetAgentsTraining(false);
+	
+	sys->WhenPopTask();
+}
+
 void AgentSystem::LoopAgentSignals(int phase) {
 	sys->WhenPushTask("Loop agent signals, phase " + IntStr(phase));
 
@@ -451,25 +534,31 @@ void AgentSystem::LoopAgentSignals(int phase) {
 	RefreshSnapEquities();
 	SetAgentsTraining(false);
 
-	for (int i = 0; i < GROUP_COUNT; i++)
-		for (int j = 0; j < SYM_COUNT; j++)
-			groups[i].agents[j].ResetEpoch(phase);
 
 	// Process Agent::Main in CoWork threads
-	CoWork co;
-
-	co.SetPoolSize(GetUsedCpuCores());
-
-	for (int i = 1; i < snaps.GetCount() && running; i++) {
-		for (int j = 0; j < GROUP_COUNT; j++) {
-			for (int k = 0; k < SYM_COUNT; k++) {
-				co & [=] {
-					groups[j].agents[k].Main(phase, snaps);
-				};
+	if (phase < PHASE_FUSE_TRAINING) {
+		for (int i = 0; i < GROUP_COUNT; i++)
+			for (int j = 0; j < SYM_COUNT; j++)
+				groups[i].agents[j].ResetEpoch(phase);
+		
+		CoWork co;
+		co.SetPoolSize(GetUsedCpuCores());
+		for (int i = 1; i < snaps.GetCount() && running; i++) {
+			for (int j = 0; j < GROUP_COUNT; j++) {
+				for (int k = 0; k < SYM_COUNT; k++) {
+					co & [=] {
+						groups[j].agents[k].Main(phase, snaps);
+					};
+				}
 			}
+	
+			co.Finish();
 		}
-
-		co.Finish();
+	}
+	else if (phase == PHASE_FUSE_TRAINING) {
+		fuse.ResetEpoch();
+		for (int i = 1; i < snaps.GetCount() && running; i++)
+			fuse.Main(snaps);
 	}
 
 	sys->WhenPopTask();
@@ -490,7 +579,8 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 		for (int i = 0; i < GROUP_COUNT; i++)
 			for (int j = 0; j < SYM_COUNT; j++)
 				groups[i].agents[j].ResetEpochAll();
-
+		fuse.ResetEpoch();
+		
 		for (int i = 1; i < snaps.GetCount() && running; i++) {
 			for (int phase = 0; phase < PHASE_REAL; phase++) {
 				for (int j = 0; j < GROUP_COUNT; j++) {
@@ -500,7 +590,10 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 						};
 					}
 				}
-
+				co & [=] {
+					fuse.Main(snaps);
+				};
+				
 				co.Finish();
 			}
 		}
@@ -508,33 +601,39 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 
 	else {
 		for (int phase = 0; phase < PHASE_REAL; phase++) {
-			while (running) {
-				bool run_any = false;
-
-				for (int i = 0; i < GROUP_COUNT; i++) {
-					for (int j = 0; j < SYM_COUNT; j++) {
-						if (groups[i].agents[j].GetCursor(phase) < snaps.GetCount()) {
-							run_any = true;
-							break;
+			if (phase < PHASE_FUSE_TRAINING) {
+				while (running) {
+					bool run_any = false;
+	
+					for (int i = 0; i < GROUP_COUNT; i++) {
+						for (int j = 0; j < SYM_COUNT; j++) {
+							if (groups[i].agents[j].GetCursor(phase) < snaps.GetCount()) {
+								run_any = true;
+								break;
+							}
 						}
 					}
-				}
-
-				if (!run_any)
-					break;
-
-				for (int i = 0; i < GROUP_COUNT; i++) {
-					for (int j = 0; j < SYM_COUNT; j++) {
-						co & [=] {
-							Agent& agent = groups[i].agents[j];
 	
-							if (agent.GetCursor(phase) < snaps.GetCount())
-								agent.Main(phase, snaps);
-						};
+					if (!run_any)
+						break;
+	
+					for (int i = 0; i < GROUP_COUNT; i++) {
+						for (int j = 0; j < SYM_COUNT; j++) {
+							co & [=] {
+								Agent& agent = groups[i].agents[j];
+		
+								if (agent.GetCursor(phase) < snaps.GetCount())
+									agent.Main(phase, snaps);
+							};
+						}
 					}
+	
+					co.Finish();
 				}
-
-				co.Finish();
+			}
+			else if (phase == PHASE_FUSE_TRAINING) {
+				while (fuse.GetCursor() < snaps.GetCount() && running)
+					fuse.Main(snaps);
 			}
 		}
 	}
@@ -554,6 +653,7 @@ void AgentSystem::MainReal() {
 	// Loop agents and joiners without random events (epsilon = 0)
 	SetSignalEpsilon(0.0);
 	SetAmpEpsilon(0.0);
+	SetFuseEpsilon(0.0);
 
 	if (prev_shift <= 0) {
 		LoopAgentSignalsAll(true);
@@ -658,27 +758,6 @@ void AgentSystem::MainReal() {
 	sys->WhenPopTask();
 }
 
-int AgentSystem::FindActiveGroup(int sym_id) {
-	Snapshot& cur_snap = snaps.Top();
-	double max_res = 0.0;
-	int group_id = -1;
-
-	for (int i = 0; i < GROUP_COUNT; i++) {
-		AgentGroup& ag = groups[i];
-		Agent& agent = ag.agents[sym_id];
-		int signal = cur_snap.GetSignalOutput(i, sym_id);
-		double res = agent.amp.GetLastResult();
-		double dd = agent.amp.GetLastDrawdown();
-
-		if (signal && res > max_res && dd < 40.0) {
-			max_res = res;
-			group_id = i;
-		}
-	}
-
-	return group_id;
-}
-
 void AgentSystem::LoadThis() {
 	if (FileExists(ConfigFile("agentgroup.bin.bak")))
 		LoadFromFile(*this,	ConfigFile("agentgroup.bin.bak"));
@@ -706,7 +785,7 @@ void AgentSystem::StoreThis() {
 
 void AgentSystem::Serialize(Stream& s) {
 	s % groups % indi_ids % result_centroids % indi_centroids
-	  % result_sectors % indi_sectors
+	  % result_sectors % indi_sectors % fuse
 	  % created % phase
 	  % initial_result_clustering % initial_indicator_clustering;
 }
@@ -1083,6 +1162,8 @@ void AgentSystem::CreateAgents() {
 			a.CreateAll();
 		}
 	}
+	
+	fuse.Create();
 }
 
 double AgentSystem::GetAverageSignalDrawdown() {
@@ -1165,7 +1246,12 @@ double AgentSystem::GetAverageIterations(int phase) {
 	case PHASE_AMP_TRAINING:
 		return GetAverageAmpIterations();
 		break;
+
+	case PHASE_FUSE_TRAINING:
+		return GetAverageFuseIterations();
+		break;
 	}
+	return 0;
 }
 
 double AgentSystem::GetAverageDeepIterations(int phase) {
@@ -1179,51 +1265,74 @@ double AgentSystem::GetAverageDeepIterations(int phase) {
 		return GetAverageAmpDeepIterations();
 		break;
 
+	case PHASE_FUSE_TRAINING:
+		return GetAverageFuseDeepIterations();
+		break;
+
 	default:
 		return 0;
 	}
 }
 
 void AgentSystem::RefreshAgentEpsilon(int phase) {
-	for (int i = 0; i < GROUP_COUNT; i++) {
-		for (int j = 0; j < SYM_COUNT; j++) {
-			Agent& a = groups[i].agents[j];
+	if (phase == PHASE_FUSE_TRAINING) {
+		int level = fuse.iter / FUSE_EPS_ITERS_STEP;
 
-			if (phase == PHASE_SIGNAL_TRAINING) {
-				int level = a.sig.iter / SIGNAL_EPS_ITERS_STEP;
+		if (level <= 0)
+			fuse_epsilon = 0.20;
+		else
+		if (level == 1)
+			fuse_epsilon = 0.05;
+		else
+		if (level == 2)
+			fuse_epsilon = 0.02;
+		else
+		if (level >= 3)
+			fuse_epsilon = 0.01;
 
-				if (level <= 0)
-					signal_epsilon = 0.20;
+		fuse.dqn.SetEpsilon(fuse_epsilon);
+	}
+	else {
+		for (int i = 0; i < GROUP_COUNT; i++) {
+			for (int j = 0; j < SYM_COUNT; j++) {
+				Agent& a = groups[i].agents[j];
+	
+				if (phase == PHASE_SIGNAL_TRAINING) {
+					int level = a.sig.iter / SIGNAL_EPS_ITERS_STEP;
+	
+					if (level <= 0)
+						signal_epsilon = 0.20;
+					else
+					if (level == 1)
+						signal_epsilon = 0.05;
+					else
+					if (level == 2)
+						signal_epsilon = 0.02;
+					else
+					if (level >= 3)
+						signal_epsilon = 0.01;
+	
+					a.sig.dqn.SetEpsilon(signal_epsilon);
+				}
+	
 				else
-				if (level == 1)
-					signal_epsilon = 0.05;
-				else
-				if (level == 2)
-					signal_epsilon = 0.02;
-				else
-				if (level >= 3)
-					signal_epsilon = 0.01;
-
-				a.sig.dqn.SetEpsilon(signal_epsilon);
-			}
-
-			else
-			if (phase == PHASE_AMP_TRAINING) {
-				int level = a.amp.iter / AMP_EPS_ITERS_STEP;
-
-				if (level <= 0)
-					amp_epsilon = 0.20;
-				else
-				if (level == 1)
-					amp_epsilon = 0.05;
-				else
-				if (level == 2)
-					amp_epsilon = 0.02;
-				else
-				if (level >= 3)
-					amp_epsilon = 0.01;
-
-				a.amp.dqn.SetEpsilon(amp_epsilon);
+				if (phase == PHASE_AMP_TRAINING) {
+					int level = a.amp.iter / AMP_EPS_ITERS_STEP;
+	
+					if (level <= 0)
+						amp_epsilon = 0.20;
+					else
+					if (level == 1)
+						amp_epsilon = 0.05;
+					else
+					if (level == 2)
+						amp_epsilon = 0.02;
+					else
+					if (level >= 3)
+						amp_epsilon = 0.01;
+	
+					a.amp.dqn.SetEpsilon(amp_epsilon);
+				}
 			}
 		}
 	}
@@ -1233,22 +1342,29 @@ void AgentSystem::RefreshLearningRate(int phase) {
 	double max_lrate = MAX_LEARNING_RATE;
 	double min_lrate = MIN_LEARNING_RATE;
 	double range = max_lrate - min_lrate;
-
-	for (int i = 0; i < GROUP_COUNT; i++) {
-		for (int j = 0; j < SYM_COUNT; j++) {
-			Agent& a = groups[i].agents[j];
-
-			if (phase == PHASE_SIGNAL_TRAINING) {
-				double prog = (double)a.sig.iter / (double)SIGNAL_PHASE_ITER_LIMIT;
-				double lrate = (1.0 - prog) * range + min_lrate;
-				a.sig.dqn.SetLearningRate(lrate);
-			}
-
-			else
-			if (phase == PHASE_AMP_TRAINING) {
-				double prog = (double)a.amp.iter / (double)AMP_PHASE_ITER_LIMIT;
-				double lrate = (1.0 - prog) * range + min_lrate;
-				a.amp.dqn.SetLearningRate(lrate);
+	
+	if (phase == PHASE_FUSE_TRAINING) {
+		double prog = (double)fuse.iter / (double)FUSE_PHASE_ITER_LIMIT;
+		double lrate = (1.0 - prog) * range + min_lrate;
+		fuse.dqn.SetLearningRate(lrate);
+	}
+	else {
+		for (int i = 0; i < GROUP_COUNT; i++) {
+			for (int j = 0; j < SYM_COUNT; j++) {
+				Agent& a = groups[i].agents[j];
+	
+				if (phase == PHASE_SIGNAL_TRAINING) {
+					double prog = (double)a.sig.iter / (double)SIGNAL_PHASE_ITER_LIMIT;
+					double lrate = (1.0 - prog) * range + min_lrate;
+					a.sig.dqn.SetLearningRate(lrate);
+				}
+	
+				else
+				if (phase == PHASE_AMP_TRAINING) {
+					double prog = (double)a.amp.iter / (double)AMP_PHASE_ITER_LIMIT;
+					double lrate = (1.0 - prog) * range + min_lrate;
+					a.amp.dqn.SetLearningRate(lrate);
+				}
 			}
 		}
 	}
@@ -1270,12 +1386,21 @@ void AgentSystem::SetAmpEpsilon(double epsilon) {
 			groups[i].agents[j].amp.dqn.SetEpsilon(epsilon);
 }
 
+void AgentSystem::SetFuseEpsilon(double epsilon) {
+	this->fuse_epsilon = epsilon;
+	fuse.dqn.SetEpsilon(epsilon);
+}
+
 void AgentSystem::SetFreeMarginLevel(double fmlevel) {
 	this->free_margin_level = fmlevel;
 
 	for (int i = 0; i < GROUP_COUNT; i++)
 		for (int j = 0; j < SYM_COUNT; j++)
 			groups[i].agents[j].SetFreeMarginLevel(fmlevel);
+	
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
+		fuse.broker[i].free_margin_level = fmlevel;
+	
 }
 
 void AgentSystem::InitBrokerValues() {
@@ -1331,18 +1456,9 @@ bool AgentSystem::PutLatest(Brokerage& broker, Vector<Snapshot>& snaps) {
 	}
 
 	Snapshot& cur_snap = snaps.Top();
-
-
 	for (int i = 0; i < sym_ids.GetCount(); i++) {
-		int group_id = FindActiveGroup(i);
 		int sym = sym_ids[i];
-		int sig = 0;
-
-		if (group_id != -1) {
-			ASSERT(group_id >= 0 && group_id < GROUP_COUNT);
-			ASSERT(groups[group_id].agents[i].sym == sym);
-			sig = cur_snap.GetAmpOutput(group_id, i);
-		}
+		int sig = cur_snap.GetFuseOutput(i);
 
 		if (sig == broker.GetSignal(sym) && sig != 0)
 			broker.SetSignalFreeze(sym, true);

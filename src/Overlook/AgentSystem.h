@@ -38,6 +38,7 @@ namespace Overlook {
 #define VOLAT_DIV					0.001
 #define CHANGE_DIV					0.0001
 #define VOLINTMUL					10 // = VOLAT_DIV / CHANGE_DIV
+#define DD_LIMIT					20.0
 
 #define MEASURE_PERIODCOUNT			3
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
@@ -62,6 +63,12 @@ namespace Overlook {
 #define AMP_ACTIONCOUNT				AMP_MAXSCALES
 #define AMP_PHASE_ITER_LIMIT		100000
 #define AMP_EPS_ITERS_STEP			10000
+
+#define FUSE_BROKERCOUNT			16
+#define FUSE_STATES					(2 * FUSE_BROKERCOUNT)
+#define FUSE_ACTIONCOUNT			(1 + FUSE_BROKERCOUNT)
+#define FUSE_PHASE_ITER_LIMIT		500000
+#define FUSE_EPS_ITERS_STEP			20000
 
 class AgentSystem;
 
@@ -204,6 +211,7 @@ struct IndicatorSector : Moveable<IndicatorSector> {
 
 extern bool reset_signals;
 extern bool reset_amps;
+extern bool reset_fuse;
 
 class AgentSystem {
 
@@ -217,6 +225,7 @@ public:
 	Vector<IndicatorTuple>		indi_centroids;
 	Vector<ResultSector>		result_sectors;
 	Vector<IndicatorSector>		indi_sectors;
+	AgentFuse					fuse;
 	Time created;
 	int phase = 0;
 	bool initial_result_clustering = true;
@@ -234,7 +243,7 @@ public:
 	Index<int> sym_ids;
 	TimeStop last_store, last_datagather;
 	System* sys;
-	double signal_epsilon = 0.0, amp_epsilon = 0.0;
+	double signal_epsilon = 0.0, amp_epsilon = 0.0, fuse_epsilon = 0.0;
 	double begin_equity = 10000.0;
 	double leverage = 1000.0;
 	double free_margin_level = FMLEVEL;
@@ -266,6 +275,7 @@ public:
 	void LoadThis();
 	void SetSignalEpsilon(double d);
 	void SetAmpEpsilon(double d);
+	void SetFuseEpsilon(double d);
 	void SetFreeMarginLevel(double d);
 	void RefreshSnapshots();
 	void Progress(int actual, int total, String desc);
@@ -284,21 +294,19 @@ public:
 	double GetAverageAmpIterations();
 	double GetAverageAmpDeepIterations();
 	double GetAverageAmpEpochs();
+	double GetAverageFuseDrawdown() {return fuse.GetLastDrawdown();}
+	double GetAverageFuseIterations() {return fuse.iter;}
+	double GetAverageFuseDeepIterations() {return fuse.deep_iter;}
 	double GetAverageIterations(int phase);
 	double GetAverageDeepIterations(int phase);
-
-	double GetSignalEpsilon() const {
-		return signal_epsilon;
-	}
-
-	double GetAmpEpsilon() const {
-		return amp_epsilon;
-	}
-
+	double GetSignalEpsilon() const {return signal_epsilon;}
+	double GetAmpEpsilon() const {return amp_epsilon;}
+	double GetFuseEpsilon() const {return fuse_epsilon;}
 	double GetPhaseIters(int phase);
 	void RefreshAgentEpsilon(int phase);
 	void RefreshLearningRate(int phase);
 	void TrainAgents(int phase);
+	void TrainFuse();
 	void MainReal();
 	void Data();
 	void RefreshSnapEquities();

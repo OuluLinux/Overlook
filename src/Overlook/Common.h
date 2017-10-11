@@ -60,6 +60,45 @@ struct AveragePoint : Moveable<OnlineAverage1> {
 	void Serialize(Stream& s) {s % x % y % x_mean_int % y_mean_int;}
 };
 
+template <int I>
+struct DerivZeroTrigger {
+	int count;
+	int16 read_pos0, read_pos1, read_pos2, write_pos;
+	OnlineAverage1 av[I+2];
+	
+	DerivZeroTrigger() {Clear();}
+	void Clear() {
+		count = 0;
+		read_pos2 = 3;
+		read_pos1 = 2;
+		read_pos0 = 1;
+		write_pos = 0;
+		for(int i = 0; i < I+2; i++)
+			av[i].Clear();
+	}
+	void Add(double d) {
+		write_pos = read_pos0;
+		read_pos0 = read_pos1;
+		read_pos1 = read_pos2;
+		read_pos2 = (read_pos2 + 1) % (I+2);
+		av[write_pos].Clear();
+		for(int i = 0; i < I; i++)
+			av[(read_pos2 + i) % (I+2)].Add(d);
+		count++;
+	}
+	bool IsTriggered() const {
+		if (count < I+2) return false;
+		const OnlineAverage1& av0 = av[read_pos0];
+		const OnlineAverage1& av1 = av[read_pos1];
+		const OnlineAverage1& av2 = av[read_pos2];
+		ASSERT(av0.count == av1.count);
+		ASSERT(av0.count == av2.count);
+		double diff0 = av0.mean - av1.mean;
+		double diff1 = av1.mean - av2.mean;
+		return diff0 * diff1 <= 0.0;
+	}
+};
+
 struct ValueBase {
 	int count, visible, data_type, min, max, factory;
 	const char* s0;

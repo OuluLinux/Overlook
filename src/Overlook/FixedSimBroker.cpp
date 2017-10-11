@@ -33,7 +33,7 @@ double SingleFixedSimBroker::GetCloseProfit(const Snapshot& snap) const {
 	
 	// NOTE: only for forex. Check SimBroker for other symbols too
 	
-	double volume = 100000 * o.volume; // lotsize * volume
+	double volume = 10000 * o.volume; // lotsize * volume
 	
 	double close;
 	if (o.type == OP_BUY)
@@ -181,7 +181,7 @@ double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, const Sna
 	
 	// NOTE: only for forex. Check SimBroker for other symbols too
 	
-	double volume = 100000 * o.volume; // lotsize * volume
+	double volume = 10000 * o.volume; // lotsize * volume
 	
 	double close;
 	if (o.type == OP_BUY)
@@ -324,12 +324,12 @@ double FixedSimBroker::GetMargin(const Snapshot& snap, int sym_id, double volume
 	ASSERT(leverage > 0);
 	double used_margin = 0.0;
 	if (proxy_id[sym_id] < 0) {
-		used_margin = /*RealtimeAsk(snap, sym_id) **/ volume * 100000;
+		used_margin = /*RealtimeAsk(snap, sym_id) **/ volume * 10000;
 	} else {
 		if (proxy_base_mul[sym_id] == -1)
-			used_margin = RealtimeAsk(snap, proxy_id[sym_id]) * volume * 100000;
+			used_margin = RealtimeAsk(snap, proxy_id[sym_id]) * volume * 10000;
 		else
-			used_margin = (1.0 / RealtimeAsk(snap, proxy_id[sym_id])) * volume * 100000;
+			used_margin = (1.0 / RealtimeAsk(snap, proxy_id[sym_id])) * volume * 10000;
 	}
 	
 	

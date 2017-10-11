@@ -17,8 +17,9 @@ private:
 	double open					[SYM_COUNT];
 	double change				[SYM_COUNT];
 	
-	int signal_broker_symsig	[TRAINEE_COUNT];
-	int amp_broker_symsig		[TRAINEE_COUNT];
+	int8 signal_broker_symsig	[TRAINEE_COUNT];
+	int8 amp_broker_symsig		[TRAINEE_COUNT];
+	int8 fuse_broker_symsig		[SYM_COUNT];
 	int shift;
 
 	inline int GetSignalOutput(int i) const {
@@ -40,7 +41,7 @@ private:
 		ASSERT(i >= 0 && i < TRAINEE_COUNT);
 		amp_broker_symsig[i] = j;
 	}
-
+	
 public:
 	void Reset() {
 		for (int i = 0; i < TRAINEE_COUNT; i++)
@@ -51,6 +52,9 @@ public:
 		
 		for (int i = 0; i < MEASURE_SIZE; i++)
 			result_cluster_id[i] = 0;
+		
+		for (int i = 0; i < SYM_COUNT; i++)
+			fuse_broker_symsig[i] = 0;
 		
 		indi_cluster_id = 0;
 		
@@ -287,7 +291,16 @@ public:
 		ASSERT(sym >= 0 && sym < SYM_COUNT);
 		SetAmpOutput(group * SYM_COUNT + sym, i);
 	}
-
+	
+	int GetFuseOutput(int sym_id) const {
+		ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
+		return fuse_broker_symsig[sym_id];
+	}
+	
+	void SetFuseOutput(int sym_id, int i) {
+		ASSERT(sym_id >= 0 && sym_id < SYM_COUNT);
+		fuse_broker_symsig[sym_id] = i;
+	}
 
 	int GetShift() const {
 		return shift;

@@ -381,14 +381,13 @@ void Agent::CreateAll() {
 void Agent::Init() {
 	ASSERT(sym_id >= 0);
 	
-	group->sys->SetFixedBroker(sym_id,			amp.broker);
+	group->sys->SetFixedBroker(sym_id, amp.broker);
 	
 	spread_points = group->sys->spread_points[sym_id];
 	
 	sig.group_signal = group->sys->result_centroids[group_id].change > 0 ? +1 : -1;
 	
 	RefreshSnapEquities();
-	RefreshGroupSettings();
 	ResetEpochAll();
 }
 
@@ -458,59 +457,6 @@ void Agent::Serialize(Stream& s) {
 	s % sig % amp % sym_id % sym % group_id;
 }
 
-void Agent::RefreshGroupSettings() {
-	ASSERT(group_id != -1);
-	// Lower group id has higher priority.
-	// Filter splits the time range to half. The higher priority takes to more volatile half.
-	// E.g. At group 0 & level 2: time range is 6 hours of 24 hours.
-	//      It takes the higher than average part in every level (and not lower, thus false).
-	// E.g. At group 3 & level 1: time range is 12 hours of 24 hours.
-	//      It takes the better 12 hours at first split and worse 6 hours in the second split.
-	//		It uses one step slower timesteps, because the worse part has less volatility.
-	switch (group_id) {
-		case 0:
-			group_active_lower[0] = false;
-			group_active_lower[1] = false;
-			group_active_lower[2] = false;
-			break;
-		case 1:
-			group_active_lower[0] = false;
-			group_active_lower[1] = false;
-			group_active_lower[2] = true;
-			break;
-		case 2:
-			group_active_lower[0] = false;
-			group_active_lower[1] = true;
-			group_active_lower[2] = false;
-			break;
-		case 3:
-			group_active_lower[0] = false;
-			group_active_lower[1] = true;
-			group_active_lower[2] = true;
-			break;
-		case 4:
-			group_active_lower[0] = true;
-			group_active_lower[1] = false;
-			group_active_lower[2] = false;
-			break;
-		case 5:
-			group_active_lower[0] = true;
-			group_active_lower[1] = false;
-			group_active_lower[2] = true;
-			break;
-		case 6:
-			group_active_lower[0] = true;
-			group_active_lower[1] = true;
-			group_active_lower[2] = false;
-			break;
-		case 7:
-			group_active_lower[0] = true;
-			group_active_lower[1] = true;
-			group_active_lower[2] = true;
-			break;
-	}
-}
-
 bool Agent::IsTrained(int phase) const {
 	if (phase < 0) return false;
 	if ((phase == PHASE_SIGNAL_TRAINING && sig.iter >= SIGNAL_PHASE_ITER_LIMIT) ||
@@ -518,6 +464,290 @@ bool Agent::IsTrained(int phase) const {
 		return true;
 	}
 	return false;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AgentFuse::AgentFuse() {
+	action_counts.SetCount(FUSE_ACTIONCOUNT, 0);
+}
+
+void AgentFuse::Serialize(Stream& s) {
+	s % dqn % result_equity % result_drawdown % rewards % action_counts % iter % deep_iter;
+}
+
+void AgentFuse::DeepCreate() {
+	deep_iter = 0;
+	Create();
+}
+
+void AgentFuse::Init() {
+	if (iter == 0) Create();
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
+		sys->SetFixedBroker(-1, broker[i]);
+	RefreshSnapEquities();
+	ResetEpoch();
+}
+
+void AgentFuse::RefreshSnapEquities() {
+	int snap_count = sys->snaps.GetCount();
+	equity.SetCount(snap_count, 0);
+}
+
+void AgentFuse::Create() {
+	dqn.Reset();
+	iter = 0;
+	result_equity.Clear();
+	result_drawdown.Clear();
+	rewards.Clear();
+	for(int i = 0; i < action_counts.GetCount(); i++)
+		action_counts[i] = 0;
+}
+
+void AgentFuse::ResetEpoch() {
+	action_counts.SetCount(FUSE_ACTIONCOUNT, 0);
+	
+	if (cursor > 1) {
+		result_equity.Add(all_reward_sum);
+		double posneg_sum = pos_reward_sum + neg_reward_sum;
+		double dd = posneg_sum > 0.0 ? (neg_reward_sum / posneg_sum * 100.0) : 100.0;
+		result_drawdown.Add(dd);
+	}
+	
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		broker[i].Reset();
+		prev_equity[i] = broker[i].AccountEquity();
+		triggers[i].Clear();
+	}
+	
+	cursor = 1;
+	skip_learn = true;
+	clean_epoch = true;
+	active_broker = 0;
+	
+	all_reward_sum = 0;
+	pos_reward_sum = 0;
+	neg_reward_sum = 0;
+	reward_count = 0;
+	reward_sum = 0.0;
+	
+	if (prev_reset_iter > 0) {
+		int iters = iter - prev_reset_iter;
+		int add_exp_every = Upp::max(5, iters / dqn.GetExperienceCountMax());
+		dqn.SetExperienceAddEvery(add_exp_every);
+	}
+	prev_reset_iter = iter;
+}
+
+void AgentFuse::Main(Vector<Snapshot>& snaps) {
+	Snapshot& cur_snap = snaps[cursor - 0];
+	
+	
+	for(int ddlevel = 0; ddlevel < 4; ddlevel++) {
+		double ddlimit = 0.1 * (ddlevel + 1);
+		
+		for(int i = 0; i < SYM_COUNT; i++) {
+			double max_res = 0.0;
+			int group_id = -1;
+			int group_signal = 0;
+		
+			for (int j = 0; j < GROUP_COUNT; j++) {
+				int signal = cur_snap.GetAmpOutput(j, i);
+				if (signal) {
+					AgentGroup& ag = sys->groups[j];
+					Agent& agent = ag.agents[i];
+					double res = agent.amp.GetLastResult();
+					double dd = agent.amp.GetLastDrawdown();
+			
+					if (res > max_res && dd < ddlimit) {
+						max_res = res;
+						group_id = j;
+						group_signal = signal;
+					}
+				}
+			}
+			
+			broker[ddlevel * 4 + 0].SetSignal(i, group_signal);
+			broker[ddlevel * 4 + 1].SetSignal(i, group_signal * -1);
+			if (group_signal) {
+				broker[ddlevel * 4 + 2].SetSignal(i, group_signal);
+				broker[ddlevel * 4 + 3].SetSignal(i, group_signal * -1);
+			}
+		}
+	}
+	
+	
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		bool succ = broker[i].Cycle(cur_snap);
+		if (!succ) {
+			broker[i].Reset();
+			triggers[i].Clear();
+		}
+		broker[i].RefreshOrders(cur_snap);
+		triggers[i].Add(broker[i].AccountEquity());
+	}
+	
+	
+	if (IsTriggered()) {
+		Snapshot& prev_snap = snaps[cursor - 1];
+		
+		if (!skip_learn) {
+			double reward = 0;
+			
+			if (active_broker >= 0) {
+				double equity = broker[active_broker].AccountEquity();
+				reward = (equity / prev_equity[active_broker] - 1.0) * 1000.0;
+				
+				if (reward >= 0)		pos_reward_sum += reward;
+				else					neg_reward_sum -= reward;
+				all_reward_sum += reward;
+			}
+			
+			Backward(reward);
+			
+			for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+				if (broker[i].AccountEquity() < 0.25 * broker[i].begin_equity) {
+					clean_epoch = false;
+					broker[i].Reset();
+				}
+			}
+		}
+		
+		Forward(cur_snap, prev_snap);
+	}
+	
+	
+	Write(cur_snap, snaps);
+	equity[cursor] = all_reward_sum;
+	cursor++;
+}
+
+bool AgentFuse::IsTriggered() {
+	int trigger_broker = Upp::max(0, active_broker);
+	if (triggers[trigger_broker].IsTriggered())
+		return true;
+	
+	
+	// Check for negative limit
+	if (active_broker >= 0) {
+		double change = broker[active_broker].AccountEquity() / prev_equity[active_broker] - 1.0;
+		if (change <= -0.02)
+			return true;
+	}
+	
+	return false;
+}
+
+void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
+	skip_learn = false;
+	
+	double equity[FUSE_BROKERCOUNT];
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
+		equity[i] = broker[i].AccountEquity();
+	
+	
+	double changes[FUSE_BROKERCOUNT];
+	double max_change = 0.00001;
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		double c = equity[i] / prev_equity[i] - 1.0;
+		double ac = fabs(c);
+		changes[i] = c;
+		if (ac > max_change) max_change = ac;
+	}
+	
+	
+	int cursor = 0;
+	double input_array[FUSE_STATES];
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		double c = changes[i];
+		if (c >= 0) {
+			input_array[cursor++] = c / max_change;
+			input_array[cursor++] = 0.0;
+		} else {
+			input_array[cursor++] = 0.0;
+			input_array[cursor++] = -c / max_change;
+		}
+	}
+	ASSERT(cursor == FUSE_STATES);
+	
+	
+	int action = dqn.Act(input_array);
+	ASSERT(action >= 0 && action < FUSE_ACTIONCOUNT);
+	action_counts[action]++;
+	
+	active_broker = action - 1;
+	
+	
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
+		prev_equity[i] = equity[i];
+}
+
+void AgentFuse::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
+	if (active_broker < 0) {
+		for(int i = 0; i < SYM_COUNT; i++)
+			cur_snap.SetFuseOutput(i, 0);
+	} else {
+		FixedSimBroker& broker = this->broker[active_broker];
+		for(int i = 0; i < SYM_COUNT; i++)
+			cur_snap.SetFuseOutput(i, broker.GetSignal(i));
+	}
+}
+
+void AgentFuse::Backward(double reward) {
+	
+	// pass to brain for learning
+	if (is_training && !skip_learn) {
+		dqn.Learn(reward);
+		iter++;
+		deep_iter++;
+		
+		reward_sum += reward;
+		reward_count++;
+		
+		if (reward_count > REWARD_AV_PERIOD) {
+			rewards.Add(reward_sum / reward_count);
+			reward_count = 0;
+			reward_sum = 0.0;
+		}
+	}
+}
+
+int AgentFuse::GetCursor() const {
+	return cursor;
+}
+
+int64 AgentFuse::GetIter() const {
+	return iter;
+}
+
+bool AgentFuse::IsTrained() const {
+	return iter >= FUSE_PHASE_ITER_LIMIT;
 }
 
 }

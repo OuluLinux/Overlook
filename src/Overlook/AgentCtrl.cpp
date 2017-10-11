@@ -801,18 +801,34 @@ void SignalGraph::Paint(Draw& w) {
 	AgentSystem& sys = GetSystem().GetAgentSystem();
 	double ydiv = ((double)sz.cy) / ((double)(SYM_COUNT));
 	
-	int snap_end = sys.snaps.GetCount();
-	int snap_begin = Upp::max(0, snap_end - 5 * 24 * 60);
+	Time now = GetSysTime();
+	int wday = DayOfWeek(now) - 1;
+	double now_sensor = ((wday * 24 + now.hour) * 60 + now.minute) / (5.0 * 24.0 * 60.0);
+	int now_x = now_sensor * sz.cx;
+	int now_switch_count = -1;
+	int prev_now_switch_dist = 0;
 	
-	for (int k = snap_begin; k < snap_end; k++) {
+	int snap_end = sys.snaps.GetCount();
+	int begin_x1 = 0;
+	bool right_side = false;
+	bool is_begin = true;
+	
+	for (int k = snap_end-1; k >= 0; k--) {
 		Snapshot& snap1 = sys.snaps[k];
 		int x1 = (snap1.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
 		int x2;
-		if (k < snap_end-1) {
+		if (!is_begin) {
 			Snapshot& snap2 = sys.snaps[k+1];
 			x2 = (snap2.GetTimeSensor(1) * 7.0 - 1.0) / 5.0 * sz.cx;
+			
+			if (!right_side && x1 > begin_x1)
+				right_side = true;
+			if (right_side && x1 <= begin_x1)
+				break;
 		} else {
 			x2 = x1 + 1.0 / (5.0 * 24.0 * 60.0) * sz.cx;
+			begin_x1 = x1;
+			is_begin = false;
 		}
 		if (x2 < x1) x2 = sz.cx;
 		int w = x2 - x1;
@@ -849,12 +865,8 @@ void SignalGraph::Paint(Draw& w) {
 		}
 	}
 	
-	Time now = GetSysTime();
-	int wday = DayOfWeek(now) - 1;
-	double now_sensor = ((wday * 24 + now.hour) * 60 + now.minute) / (5.0 * 24.0 * 60.0);
-	int x = now_sensor * sz.cx;
-	id.DrawLine(x,   0,   x, sz.cy, 1, White());
-	id.DrawLine(x+1, 0, x+1, sz.cy, 1, Black());
+	id.DrawLine(now_x,   0,   now_x, sz.cy, 1, White());
+	id.DrawLine(now_x+1, 0, now_x+1, sz.cy, 1, Black());
 	
 	id.DrawText(2, 2, "Click this", Monospace(8), White());
 	id.DrawText(3, 3, "Click this", Monospace(8), Black());

@@ -499,7 +499,7 @@ AgentFuse::AgentFuse() {
 }
 
 void AgentFuse::Serialize(Stream& s) {
-	s % dqn % result_equity % result_drawdown % rewards % action_counts % iter % deep_iter;
+	s % dqn % result_equity % result_drawdown % rewards % action_counts % av_trigger % iter % deep_iter;
 }
 
 void AgentFuse::DeepCreate() {
@@ -511,8 +511,12 @@ void AgentFuse::Init() {
 	if (iter == 0) Create();
 	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
 		sys->SetFixedBroker(-1, broker[i]);
+	sys->SetFixedBroker(-1, test_broker);
 	RefreshSnapEquities();
 	ResetEpoch();
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
+		for(int j = 0; j < FUSE_AVCOUNT; j++)
+			triggers[i * FUSE_AVCOUNT + j].SetPeriod(MEASURE_PERIOD(-4 + j));
 }
 
 void AgentFuse::RefreshSnapEquities() {
@@ -526,6 +530,7 @@ void AgentFuse::Create() {
 	result_equity.Clear();
 	result_drawdown.Clear();
 	rewards.Clear();
+	av_trigger.Clear();
 	for(int i = 0; i < action_counts.GetCount(); i++)
 		action_counts[i] = 0;
 }
@@ -533,16 +538,22 @@ void AgentFuse::Create() {
 void AgentFuse::ResetEpoch() {
 	action_counts.SetCount(FUSE_ACTIONCOUNT, 0);
 	
-	if (cursor > 1) {
-		result_equity.Add(all_reward_sum);
-		double posneg_sum = pos_reward_sum + neg_reward_sum;
-		double dd = posneg_sum > 0.0 ? (neg_reward_sum / posneg_sum * 100.0) : 100.0;
+	if (test_broker.order_count > 0) {
+		result_equity.Add(test_broker.equity);
+		double dd = test_broker.GetDrawdown() * 100.0;
+		if (!clean_epoch) dd = 100.0;
 		result_drawdown.Add(dd);
 	}
+	test_broker.Reset();
+	prev_test_equity = test_broker.AccountEquity();
+	
 	
 	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
 		broker[i].Reset();
 		prev_equity[i] = broker[i].AccountEquity();
+	}
+	
+	for(int i = 0; i < FUSE_TRIGGERCOUNT; i++) {
 		triggers[i].Clear();
 	}
 	
@@ -550,10 +561,9 @@ void AgentFuse::ResetEpoch() {
 	skip_learn = true;
 	clean_epoch = true;
 	active_broker = 0;
+	trigger_ma = 0;
+	prev_trigger_cursor = 0;
 	
-	all_reward_sum = 0;
-	pos_reward_sum = 0;
-	neg_reward_sum = 0;
 	reward_count = 0;
 	reward_sum = 0.0;
 	
@@ -566,17 +576,59 @@ void AgentFuse::ResetEpoch() {
 }
 
 void AgentFuse::Main(Vector<Snapshot>& snaps) {
+	if (cursor < 0 || cursor >= snaps.GetCount()) return;
+	
 	Snapshot& cur_snap = snaps[cursor - 0];
 	
 	
+	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+		FixedSimBroker& b = broker[i];
+		b.RefreshOrders(cur_snap);
+		double e = b.AccountEquity();
+		for(int j = 0; j < FUSE_AVCOUNT; j++)
+			triggers[i * FUSE_AVCOUNT + j].Add(e);
+	}
+	test_broker.RefreshOrders(cur_snap);
+	
+	
+	if (IsTriggered()) {
+		
+		// Collect some stats about how often this is triggered
+		if (cursor > prev_trigger_cursor)
+			av_trigger.Add(cursor - prev_trigger_cursor);
+		prev_trigger_cursor = cursor;
+		
+		
+		double equity = test_broker.AccountEquity();
+		if (!skip_learn) {
+			double reward = (equity / prev_test_equity - 1.0) * 1000.0;
+			
+			Backward(reward);
+			
+			for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+				if (equity < 0.25 * test_broker.begin_equity) {
+					clean_epoch = false;
+					test_broker.Reset();
+				}
+			}
+		}
+		
+		Snapshot& prev_snap = snaps[cursor - 1];
+		Forward(cur_snap, prev_snap);
+		
+		
+		prev_test_equity = equity;
+	}
+	
+	
 	for(int ddlevel = 0; ddlevel < 4; ddlevel++) {
-		double ddlimit = 0.1 * (ddlevel + 1);
+		double ddlimit = 10.0 * (ddlevel + 1);
 		
 		for(int i = 0; i < SYM_COUNT; i++) {
 			double max_res = 0.0;
 			int group_id = -1;
 			int group_signal = 0;
-		
+			
 			for (int j = 0; j < GROUP_COUNT; j++) {
 				int signal = cur_snap.GetAmpOutput(j, i);
 				if (signal) {
@@ -584,7 +636,7 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 					Agent& agent = ag.agents[i];
 					double res = agent.amp.GetLastResult();
 					double dd = agent.amp.GetLastDrawdown();
-			
+					
 					if (res > max_res && dd < ddlimit) {
 						max_res = res;
 						group_id = j;
@@ -593,71 +645,68 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 				}
 			}
 			
-			broker[ddlevel * 4 + 0].SetSignal(i, group_signal);
-			broker[ddlevel * 4 + 1].SetSignal(i, group_signal * -1);
+			UpdateSignal(broker[ddlevel * 4 + 0], i, group_signal);
+			UpdateSignal(broker[ddlevel * 4 + 1], i, group_signal * -1);
 			if (group_signal) {
-				broker[ddlevel * 4 + 2].SetSignal(i, group_signal);
-				broker[ddlevel * 4 + 3].SetSignal(i, group_signal * -1);
+				UpdateSignal(broker[ddlevel * 4 + 2], i, group_signal);
+				UpdateSignal(broker[ddlevel * 4 + 3], i, group_signal * -1);
 			}
 		}
 	}
 	
 	
 	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
-		bool succ = broker[i].Cycle(cur_snap);
+		FixedSimBroker& b = broker[i];
+		bool succ = b.Cycle(cur_snap);
 		if (!succ) {
-			broker[i].Reset();
-			triggers[i].Clear();
+			b.Reset();
+			for(int j = 0; j < FUSE_AVCOUNT; j++)
+				triggers[i * FUSE_AVCOUNT + j].Clear();
 		}
-		broker[i].RefreshOrders(cur_snap);
-		triggers[i].Add(broker[i].AccountEquity());
 	}
 	
 	
-	if (IsTriggered()) {
-		Snapshot& prev_snap = snaps[cursor - 1];
-		
-		if (!skip_learn) {
-			double reward = 0;
-			
-			if (active_broker >= 0) {
-				double equity = broker[active_broker].AccountEquity();
-				reward = (equity / prev_equity[active_broker] - 1.0) * 1000.0;
-				
-				if (reward >= 0)		pos_reward_sum += reward;
-				else					neg_reward_sum -= reward;
-				all_reward_sum += reward;
-			}
-			
-			Backward(reward);
-			
-			for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
-				if (broker[i].AccountEquity() < 0.25 * broker[i].begin_equity) {
-					clean_epoch = false;
-					broker[i].Reset();
-				}
-			}
-		}
-		
-		Forward(cur_snap, prev_snap);
+	if (active_broker >= 0) {
+		FixedSimBroker& src_broker = broker[active_broker];
+		for(int i = 0; i < SYM_COUNT; i++)
+			UpdateSignal(test_broker, i, src_broker.GetSignal(i));
+	} else {
+		for(int i = 0; i < SYM_COUNT; i++)
+			UpdateSignal(test_broker, i, 0);
+	}
+	bool succ = test_broker.Cycle(cur_snap);
+	if (!succ) {
+		test_broker.Reset();
+		skip_learn = true;
 	}
 	
 	
 	Write(cur_snap, snaps);
-	equity[cursor] = all_reward_sum;
+	equity[cursor] = test_broker.AccountEquity();
 	cursor++;
 }
 
+void AgentFuse::UpdateSignal(FixedSimBroker& broker, int sym_id, int signal) {
+	if (signal == broker.GetSignal(sym_id) && signal != 0)
+		broker.SetSignalFreeze(sym_id, true);
+	else {
+		broker.SetSignal(sym_id, signal);
+		broker.SetSignalFreeze(sym_id, false);
+	}
+}
+
 bool AgentFuse::IsTriggered() {
-	int trigger_broker = Upp::max(0, active_broker);
-	if (triggers[trigger_broker].IsTriggered())
-		return true;
+	if ((cursor - prev_trigger_cursor) > (MEASURE_PERIOD(-4 + trigger_ma) / 3)) {
+		int trigger_broker = Upp::max(0, active_broker);
+		if (triggers[trigger_broker * FUSE_AVCOUNT + trigger_ma].IsTriggered())
+			return true;
+	}
 	
 	
 	// Check for negative limit
-	if (active_broker >= 0) {
-		double change = broker[active_broker].AccountEquity() / prev_equity[active_broker] - 1.0;
-		if (change <= -0.02)
+	if (FUSE_TRIGGERLOSS && active_broker >= 0) {
+		double change = test_broker.AccountEquity() / prev_test_equity - 1.0;
+		if (change <= (-0.01 * FUSE_TRIGGERLOSS))
 			return true;
 	}
 	
@@ -672,28 +721,44 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 		equity[i] = broker[i].AccountEquity();
 	
 	
-	double changes[FUSE_BROKERCOUNT];
-	double max_change = 0.00001;
-	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
-		double c = equity[i] / prev_equity[i] - 1.0;
-		double ac = fabs(c);
-		changes[i] = c;
-		if (ac > max_change) max_change = ac;
-	}
-	
-	
 	int cursor = 0;
 	double input_array[FUSE_STATES];
-	for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
-		double c = changes[i];
-		if (c >= 0) {
-			input_array[cursor++] = c / max_change;
-			input_array[cursor++] = 0.0;
+	
+	
+	for(int j = 0; j < 1 + FUSE_AVCOUNT; j++) {
+		double changes[FUSE_BROKERCOUNT];
+		double max_change = 0.00001;
+		
+		
+		if (j == 0) {
+			for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+				double c = equity[i] / prev_equity[i] - 1.0;
+				double ac = fabs(c);
+				changes[i] = c;
+				if (ac > max_change) max_change = ac;
+			}
 		} else {
-			input_array[cursor++] = 0.0;
-			input_array[cursor++] = -c / max_change;
+			for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+				double c = triggers[i * FUSE_AVCOUNT + (j-1)].GetChange();
+				double ac = fabs(c);
+				changes[i] = c;
+				if (ac > max_change) max_change = ac;
+			}
+		}
+		
+		
+		for(int i = 0; i < FUSE_BROKERCOUNT; i++) {
+			double c = changes[i];
+			if (c >= 0) {
+				input_array[cursor++] = +c / max_change;
+				input_array[cursor++] = 0.0;
+			} else {
+				input_array[cursor++] = 0.0;
+				input_array[cursor++] = -c / max_change;
+			}
 		}
 	}
+	
 	ASSERT(cursor == FUSE_STATES);
 	
 	
@@ -701,22 +766,17 @@ void AgentFuse::Forward(Snapshot& cur_snap, Snapshot& prev_snap) {
 	ASSERT(action >= 0 && action < FUSE_ACTIONCOUNT);
 	action_counts[action]++;
 	
-	active_broker = action - 1;
-	
+	trigger_ma    = action % FUSE_AVCOUNT;
+	active_broker = action / FUSE_AVCOUNT;
+	active_broker--;
 	
 	for(int i = 0; i < FUSE_BROKERCOUNT; i++)
 		prev_equity[i] = equity[i];
 }
 
 void AgentFuse::Write(Snapshot& cur_snap, const Vector<Snapshot>& snaps) {
-	if (active_broker < 0) {
-		for(int i = 0; i < SYM_COUNT; i++)
-			cur_snap.SetFuseOutput(i, 0);
-	} else {
-		FixedSimBroker& broker = this->broker[active_broker];
-		for(int i = 0; i < SYM_COUNT; i++)
-			cur_snap.SetFuseOutput(i, broker.GetSignal(i));
-	}
+	for(int i = 0; i < SYM_COUNT; i++)
+		cur_snap.SetFuseOutput(i, test_broker.GetSignal(i));
 }
 
 void AgentFuse::Backward(double reward) {

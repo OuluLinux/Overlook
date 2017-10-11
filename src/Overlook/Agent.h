@@ -145,20 +145,24 @@ struct AgentFuse {
 	DQNAgent<FUSE_ACTIONCOUNT, FUSE_STATES> dqn;
 	Vector<double> result_equity, result_drawdown, rewards;
 	Vector<int64> action_counts;
+	OnlineAverage1 av_trigger;
 	int64 iter = 0, deep_iter = 0;
 	
 	
 	// Temporary
 	FixedSimBroker broker[FUSE_BROKERCOUNT];
-	DerivZeroTrigger<MEASURE_PERIOD(-4)> triggers[FUSE_BROKERCOUNT];
+	DerivZeroTrigger triggers[FUSE_TRIGGERCOUNT];
+	FixedSimBroker test_broker;
 	Vector<double> equity;
-	double all_reward_sum = 0, pos_reward_sum = 0, neg_reward_sum = 0;
 	double prev_equity[FUSE_BROKERCOUNT];
+	double prev_test_equity = 0;
 	double reward_sum = 0;
 	int reward_count = 0;
 	int cursor = 0;
 	int prev_reset_iter = 0;
 	int active_broker = 0;
+	int trigger_ma = 0;
+	int prev_trigger_cursor = 0;
 	bool skip_learn = true;
 	bool clean_epoch = true;
 	bool is_training = false;
@@ -184,6 +188,7 @@ public:
 	int64 GetIter() const;
 	bool IsTrained() const;
 	bool IsTriggered();
+	void UpdateSignal(FixedSimBroker& broker, int sym_id, int signal);
 };
 
 #endif

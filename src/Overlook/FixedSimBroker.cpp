@@ -163,8 +163,10 @@ void FixedSimBroker::Reset() {
 	profit_sum = 0.0;
 	loss_sum = 0.0;
 	free_margin_level = 0.80;
-	for(int i = 0; i < SYM_COUNT; i++)
+	for(int i = 0; i < SYM_COUNT; i++) {
 		signal[i] = 0;
+		signal_freezed[i] = false;
+	}
 	for(int i = 0; i < MAX_ORDERS; i++)
 		order[i].is_open = false;
 }
@@ -479,6 +481,9 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 		
 		int symbol = i / ORDERS_PER_SYMBOL;
 		
+		if (signal_freezed[symbol])
+			continue;
+		
 		if (o.type == OP_BUY) {
 			double& lots = buy_lots[symbol];
 			if (o.volume <= lots) {
@@ -503,6 +508,9 @@ bool FixedSimBroker::Cycle(const Snapshot& snap) {
 	
 	
 	for(int i = loop_begin; i < loop_end; i++) {
+		if (signal_freezed[i])
+			continue;
+		
 		if (buy_lots[i] < 0.01 && sell_lots[i] < 0.01)
 			continue;
 		double sym_buy_lots = buy_lots[i];

@@ -470,6 +470,7 @@ void FuseTabCtrl::Data() {
 		overview.epsilon.SetLabel(DblStr(fuse.dqn.GetEpsilon()));
 		overview.expcount.SetLabel(IntStr(fuse.dqn.GetExperienceCount()));
 		overview.deep_iters.SetLabel(IntStr(fuse.deep_iter));
+		overview.av_trigger.SetLabel(IntStr(fuse.av_trigger.mean));
 		overview.act_graph.Refresh();
 	}
 	else if (tab == 1) {

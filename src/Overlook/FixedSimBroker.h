@@ -48,6 +48,7 @@ struct FixedSimBroker {
 	int signal[SYM_COUNT];
 	int proxy_id[SYM_COUNT];
 	int proxy_base_mul[SYM_COUNT];
+	bool signal_freezed[SYM_COUNT];
 	double balance = 0.0;
 	double equity = 0.0;
 	double part_balance = 0.0;
@@ -78,6 +79,7 @@ struct FixedSimBroker {
 	double PartialEquity() const {return part_equity;}
 	double GetDrawdown() const {double sum = profit_sum + loss_sum; return sum > 0.0 ? loss_sum / sum : 1.0;}
 	void SetSignal(int sym_id, int sig) {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); signal[sym_id] = sig;}
+	void SetSignalFreeze(int sym_id, bool b) {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); signal_freezed[sym_id] = b;}
 	int GetSignal(int sym_id) const {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); return signal[sym_id];}
 };
 

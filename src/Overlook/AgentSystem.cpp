@@ -326,6 +326,7 @@ void AgentSystem::RefreshSnapEquities() {
 	for (int i = 0; i < groups.GetCount(); i++)
 		for (int j = 0; j < groups[i].agents.GetCount(); j++)
 			groups[i].agents[j].RefreshSnapEquities();
+	fuse.RefreshSnapEquities();
 }
 
 double AgentSystem::GetPhaseIters(int phase) {
@@ -583,18 +584,19 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 		
 		for (int i = 1; i < snaps.GetCount() && running; i++) {
 			for (int phase = 0; phase < PHASE_REAL; phase++) {
-				for (int j = 0; j < GROUP_COUNT; j++) {
-					for (int k = 0; k < SYM_COUNT; k++) {
-						co & [=] {
-							groups[j].agents[k].Main(phase, snaps);
-						};
+				if (phase < PHASE_FUSE_TRAINING) {
+					for (int j = 0; j < GROUP_COUNT; j++) {
+						for (int k = 0; k < SYM_COUNT; k++) {
+							co & [=] {
+								groups[j].agents[k].Main(phase, snaps);
+							};
+						}
 					}
+					co.Finish();
 				}
-				co & [=] {
+				else if (phase == PHASE_FUSE_TRAINING) {
 					fuse.Main(snaps);
-				};
-				
-				co.Finish();
+				}
 			}
 		}
 	}

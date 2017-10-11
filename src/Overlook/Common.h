@@ -60,23 +60,30 @@ struct AveragePoint : Moveable<OnlineAverage1> {
 	void Serialize(Stream& s) {s % x % y % x_mean_int % y_mean_int;}
 };
 
-template <int I>
 struct DerivZeroTrigger {
 	int count;
+	int16 I = 0;
 	int16 read_pos0, read_pos1, read_pos2, write_pos;
-	OnlineAverage1 av[I+2];
+	Vector<OnlineAverage1> av;
 	
 	DerivZeroTrigger() {Clear();}
+	void SetPeriod(int i) {
+		ASSERT(i > 0);
+		I = i;
+		Clear();
+	}
 	void Clear() {
 		count = 0;
 		read_pos2 = 3;
 		read_pos1 = 2;
 		read_pos0 = 1;
 		write_pos = 0;
+		av.SetCount(I+2);
 		for(int i = 0; i < I+2; i++)
 			av[i].Clear();
 	}
 	void Add(double d) {
+		ASSERT(I > 0);
 		write_pos = read_pos0;
 		read_pos0 = read_pos1;
 		read_pos1 = read_pos2;
@@ -96,6 +103,13 @@ struct DerivZeroTrigger {
 		double diff0 = av0.mean - av1.mean;
 		double diff1 = av1.mean - av2.mean;
 		return diff0 * diff1 <= 0.0;
+	}
+	double GetChange() const {
+		if (count < I+2) return 0.0;
+		const OnlineAverage1& av1 = av[read_pos1];
+		const OnlineAverage1& av2 = av[read_pos2];
+		ASSERT(av1.count == av2.count);
+		return av2.mean / av1.mean - 1.0;
 	}
 };
 

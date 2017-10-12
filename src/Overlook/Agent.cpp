@@ -625,9 +625,9 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 	}
 	
 	
-	for(int ddlevel = 0; ddlevel < 4; ddlevel++) {
-		double ddlimit_begin = 10.0 * (ddlevel + 0);
-		double ddlimit_end   = 10.0 * (ddlevel + 1);
+	for(int ddlevel = 0; ddlevel < 2; ddlevel++) {
+		double ddlimit_begin = 20.0 * (ddlevel + 0);
+		double ddlimit_end   = 20.0 * (ddlevel + 1);
 		
 		for(int i = 0; i < SYM_COUNT; i++) {
 			double max_res = 0.0;
@@ -650,11 +650,9 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 				}
 			}
 			
-			UpdateSignal(broker[ddlevel * 4 + 0], i, group_signal);
-			UpdateSignal(broker[ddlevel * 4 + 1], i, group_signal * -1);
+			UpdateSignal(broker[ddlevel * 2 + 0], i, group_signal);
 			if (group_signal) {
-				UpdateSignal(broker[ddlevel * 4 + 2], i, group_signal);
-				UpdateSignal(broker[ddlevel * 4 + 3], i, group_signal * -1);
+				UpdateSignal(broker[ddlevel * 2 + 1], i, group_signal);
 			}
 		}
 	}

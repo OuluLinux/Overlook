@@ -3706,4 +3706,37 @@ this time. Previous versions morphed out to be some parts in
 the clustering system. It checks the account equity and can learns 
 (hopefully) to skip failing periods.&]
 [s0; &]
+[s3; 12.10.2017&]
+[s0; The performance has been good today with current settings. If 
+this continues, the core feature is ready for use.&]
+[s0; The new fuse`-part seemed to catch the downward trend of balance 
+and turned it up. The training was good also and it did hit some 
+technical high limit of double floating point value. I skipped 
+the testing part with unknown data and I`'ll just run the testing 
+in real`-time with a demo account. In this case, the real testing 
+seems to be useful only for comparing stuff for scientific papers.&]
+[s0; So yeah, pretty stable state now. I could do a release. I`'ll 
+just clean this little fucker and let it go once again.&]
+[s0; ...&]
+[s0; There is many better algorithms, than the graph based DQN, which 
+is used in the Overlook. Those have many restrictions, however. 
+They are implemented with frameworks, which translates very badly 
+to Ultimate`+`+ conventions. I watched a deep`-boot`-camp lecture, 
+which told about C`-51 and others. I found some implementations 
+also, but the convention gap for translating is too large.&]
+[s0; The ConvNetCpp library, which I wrote by translating ConvNetJs 
+to Ultimate`+`+ conventions, would be a good framework for producing 
+professional products and standalone executables for all desktop 
+platforms. I just don`'t have a clue about how to attract users 
+and commiters. The social programming focus too much on typeless 
+script languages, which are close to familiar math, but has many 
+pitfalls in readability and error rate.&]
+[s0; I think the world should use reference memory based subset of 
+C`+`+ with type relaxations for scripting. Then you would only 
+need to learn the best language (C`+`+) and use it in web browsers 
+etc. The Hunagrian notation and standard conventions are pure 
+brainfuck, but with the C`+`+ grammar there is enough flexibility 
+for morphing conventions. One can`'t morph conventions with Java 
+or C# or JavaScript... and they are all using that fucking brainfuck 
+convention.&]
 [s0; ]]

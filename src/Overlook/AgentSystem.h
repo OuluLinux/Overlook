@@ -90,7 +90,7 @@ struct ResultTuple : Moveable<ResultTuple> {
 	
 	void Serialize(Stream& s) {s % change % volat;}
 	bool operator == (const ResultTuple& b) const {return b.change == change && b.volat == volat;}
-	bool operator < (const ResultTuple& b) const {return volat < b.volat || (abs(change) < abs(b.change) && change == b.change);}
+	bool operator < (const ResultTuple& b) const {return volat < b.volat || (abs((int)change) < abs((int)b.change) && change == b.change);}
 	bool operator()(const ResultTuple& a, const ResultTuple& b) const {return volat < b.volat;}
 };
 

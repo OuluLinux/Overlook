@@ -419,7 +419,7 @@ protected:
 public:
 
 	DQNAgent() {
-		gamma = 0.9;	// future reward discount factor
+		gamma = 0.05;	// future reward discount factor
 		epsilon = 0.02;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
 		

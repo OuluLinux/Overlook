@@ -678,7 +678,7 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 			UpdateSignal(test_broker, i, 0);
 	}
 	bool succ = test_broker.Cycle(cur_snap);
-	if (!succ) {
+	if (!succ || test_broker.AccountEquity() >= 1.0e18) {
 		test_broker.Reset();
 		skip_learn = true;
 	}

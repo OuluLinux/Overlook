@@ -3739,4 +3739,17 @@ brainfuck, but with the C`+`+ grammar there is enough flexibility
 for morphing conventions. One can`'t morph conventions with Java 
 or C# or JavaScript... and they are all using that fucking brainfuck 
 convention.&]
+[s0; ....&]
+[s0; Oops, that DQN discount factor was completely opposite all the 
+time. There is no future reward potential with the action in 
+this use case. I did the v0.3 release with the wrong value.&]
+[s0; &]
+[s3; 14.10.2017&]
+[s0; The performance has been good, but small improvements wouldn`'t 
+hurt.&]
+[s0; Faster operating modes requires more agent groups, because DQN`-agents 
+work optimally with certain amounts of data. Sectors and groups 
+must be set accordingly. More groups requires much more processing, 
+so the fast mode is not default. This could be done cleanly with 
+planning and more workforce, but I just hacked this together.&]
 [s0; ]]

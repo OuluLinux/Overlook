@@ -272,10 +272,14 @@ void AgentSystem::RefreshResultClusters() {
 		
 		
 		// Remove smallest centers
+		#ifndef flagVERY_FAST
 		int a = (result_centroids.GetCount() - GROUP_COUNT ) / 2;
 		int b = result_centroids.GetCount() - GROUP_COUNT - a;
 		result_centroids.Remove(0, a);
 		result_centroids.Remove(GROUP_COUNT, b);
+		#else
+		result_centroids.Remove(GROUP_COUNT, result_centroids.GetCount() - GROUP_COUNT);
+		#endif
 		if (result_centroids.GetCount() != OUTPUT_COUNT)
 			Panic("Result centroids mismatch.");
 		
@@ -995,6 +999,7 @@ void AgentSystem::RefreshPoleNavigation() {
 					bool enabled_prev = prev_snap.IsResultClusterPredicted(i, j);
 					
 					if (enabled_now) {
+						#if HAVE_POLES
 						const AveragePoint& pnd = result_sectors[j].pnd;
 						const AveragePoint& pos = result_sectors[j].pos[target];
 						const AveragePoint& neg = result_sectors[j].neg[target];
@@ -1056,6 +1061,11 @@ void AgentSystem::RefreshPoleNavigation() {
 								}
 							}
 						}
+						#else
+						
+						snap.SetResultClusterPredictedTarget(i, j, target);
+						
+						#endif
 					}
 					
 					k++;

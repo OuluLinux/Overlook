@@ -419,7 +419,7 @@ protected:
 public:
 
 	DQNAgent() {
-		gamma = 0.05;	// future reward discount factor
+		gamma = 0.0;	// future reward discount factor
 		epsilon = 0.02;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
 		
@@ -436,6 +436,9 @@ public:
 		tderror = 0;
 		exp_size = 1000;
 	}
+	
+	void   SetRewardDiscountFactor(double d) {gamma = d;}
+	double GetRewardDiscountFactor() const {return gamma;}
 	
 	int  GetExperienceCountMax() const {return exp_size;}
 	void SetExperienceCountMax(int i) {exp_size = i;}

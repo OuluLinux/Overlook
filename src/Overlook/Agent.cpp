@@ -626,8 +626,14 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 	
 	
 	for(int ddlevel = 0; ddlevel < 2; ddlevel++) {
-		double ddlimit_begin = 20.0 * (ddlevel + 0);
-		double ddlimit_end   = 20.0 * (ddlevel + 1);
+		double ddlimit_begin, ddlimit_end;
+		if (!ddlevel) {
+			ddlimit_begin = 0.0;
+			ddlimit_end   = 15.0;
+		} else {
+			ddlimit_begin = 15.0;
+			ddlimit_end   = 40.0;
+		}
 		
 		for(int i = 0; i < SYM_COUNT; i++) {
 			double max_res = 0.0;

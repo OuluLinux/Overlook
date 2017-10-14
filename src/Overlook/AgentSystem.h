@@ -9,10 +9,25 @@ namespace Overlook {
 #define SYM_COUNT					19
 #endif
 
-#ifndef flagSLOW
-#define MEASURE_PERIOD(j)			(1 << (8 + j))
+
+#if defined flagVERY_FAST
+#define MEASURE_PERIOD(j)			(1 << (4 + j))
+#define RESULT_EXTRACENTERS			8
+#define GROUP_COUNT					22
+#define HAVE_POLES					0
+#define FUSE_TRIGGERPERIOD			(+2)
+#elif defined flagFAST
+#define MEASURE_PERIOD(j)			(1 << (6 + j))
+#define RESULT_EXTRACENTERS			20
+#define GROUP_COUNT					55
+#define HAVE_POLES					1
+#define FUSE_TRIGGERPERIOD			(0)
 #else
-#define MEASURE_PERIOD(j)			(1 << (11 + j))
+#define MEASURE_PERIOD(j)			(1 << (8 + j))
+#define RESULT_EXTRACENTERS			8
+#define GROUP_COUNT					22
+#define HAVE_POLES					1
+#define FUSE_TRIGGERPERIOD			(-2)
 #endif
 
 #ifdef flagSKIP_IDLEACT
@@ -23,7 +38,6 @@ namespace Overlook {
 
 #define FMLEVEL						0.6
 #define BASE_FWDSTEP_BEGIN			5
-#define GROUP_COUNT					22
 #define OUTPUT_COUNT				GROUP_COUNT
 #define INPUT_COUNT					150
 #define TIME_SENSORS				3
@@ -44,7 +58,6 @@ namespace Overlook {
 #define MEASURE_SIZE				(MEASURE_PERIODCOUNT * SYM_COUNT)
 #define RESULT_SIZE					(SYM_COUNT * OUTPUT_COUNT)
 #define RESULT_BYTES				(RESULT_SIZE / 8 + 1)
-#define RESULT_EXTRACENTERS			8
 #define TARGET_COUNT				3
 #define TARGET_SIZE					(SYM_COUNT * OUTPUT_COUNT * TARGET_COUNT)
 #define TARGET_BYTES				(TARGET_SIZE / 8 + 1)
@@ -67,8 +80,7 @@ namespace Overlook {
 #define FUSE_BROKERCOUNT			4
 #define FUSE_AVCOUNT				2
 #define FUSE_TRIGGERCOUNT			(FUSE_BROKERCOUNT * FUSE_AVCOUNT)
-#define FUSE_TRIGGERLOSS			2
-#define FUSE_TRIGGERPERIOD			(-2)
+#define FUSE_TRIGGERLOSS			10
 #define FUSE_ALLOWZEROSIGNAL		false
 #define FUSE_STATES					(2 * FUSE_BROKERCOUNT * (1 + FUSE_AVCOUNT))
 #define FUSE_ACTIONCOUNT			((1 + FUSE_BROKERCOUNT) * FUSE_AVCOUNT)

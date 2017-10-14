@@ -67,5 +67,6 @@ file
 mainconfig
 	"Working" = "GUI MT X11",
 	"Have extra instruments" = "GUI MT X11 HAVE_ALLSYM",
-	"Slow" = "GUI MT X11 SLOW";
+	"Fast" = "GUI MT X11 FAST",
+	"Very Fast" = "GUI MT X11 VERY_FAST";
 

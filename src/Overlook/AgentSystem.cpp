@@ -130,7 +130,7 @@ void AgentSystem::InitThread() {
 	ASSERT(volav_id != -1);
 
 	indi_ids.Clear();
-	#ifndef flagSLOW
+	#ifndef flagFAST
 	indi_ids.Add().Set(volav_id).AddArg(5);
 	indi_ids.Add().Set(volav_id).AddArg(15);
 	indi_ids.Add().Set(volav_id).AddArg(60);
@@ -148,7 +148,8 @@ void AgentSystem::InitThread() {
 	indi_ids.Add().Set(stoch_id).AddArg(1440);
 	#else
 	for(int i = 0; i < 5; i++) {
-		int period = MEASURE_PERIOD(i - 3);
+		// tfs: 4, 8, 16, 32, 64
+		int period = MEASURE_PERIOD(i * 2 - 3);
 		indi_ids.Add().Set(volav_id).AddArg(period);
 		indi_ids.Add().Set(osma_id).AddArg(period).AddArg(period*2).AddArg(period);
 		indi_ids.Add().Set(stoch_id).AddArg(period);
@@ -350,28 +351,27 @@ void AgentSystem::TrainAgents(int phase) {
 
 	for (int i = 0; i < phase; i++)
 		LoopAgentSignals(i);
-
-	if (GetPhaseIters(phase) >= 1.0)
-		LoopAgentSignals(phase);
-
+	
 	SetAgentsTraining(true);
-
-
+	
+	
 	// Create processing loop to ensure that every agent gets enough training
 	typedef Tuple2<int, int> AgentPos;
-
 	Vector<AgentPos> proc_agents;
-
+	
 	for (int i = 0; i < GROUP_COUNT; i++) {
+		if (result_sectors[i].pnd.x.count == 0)
+			continue;
+		
 		for (int j = 0; j < SYM_COUNT; j++) {
 			Agent& agent = groups[i].agents[j];
-
+			
 			if (!agent.IsTrained(phase))
 				proc_agents.Add(AgentPos(i, j));
 		}
 	}
-
-
+	
+	
 	// Main loop
 	int prev_av_iters = GetAverageIterations(phase);
 	CoWork co;
@@ -646,10 +646,12 @@ void AgentSystem::LoopAgentSignalsAll(bool from_begin) {
 void AgentSystem::MainReal() {
 	sys->WhenPushTask("Real");
 
-	MetaTrader& mt = GetMetaTrader();
-	Time time = mt.GetTime();
-	int wday = DayOfWeek(time);
-	int shift = sys->GetShiftFromTimeTf(time, main_tf);
+	MetaTrader& mt		= GetMetaTrader();
+	Time time			= mt.GetTime();
+	int wday			= DayOfWeek(time);
+	int shift			= sys->GetShiftFromTimeTf(time, main_tf);
+	Time after_hour		= time + 60 * 60;
+	int wday_after_hour	= DayOfWeek(after_hour);
 
 
 	// Loop agents and joiners without random events (epsilon = 0)
@@ -663,99 +665,93 @@ void AgentSystem::MainReal() {
 	}
 
 	SetAgentsTraining(false);
-
-
-	if (prev_shift != shift) {
-		if (wday == 0 || wday == 6) {
-			// Do nothing
-			prev_shift = shift;
-		}
-
-		else {
-			sys->WhenInfo("Shift changed");
-
-
-			// Updates latest snapshot and signals
-			sys->SetEnd(mt.GetTime());
-			RefreshSnapshots();
-			LoopAgentSignalsAll(false);
-
-			int last_snap_shift = snaps.Top().GetShift();
-
-			if (shift != last_snap_shift) {
-				WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, last_snap_shift));
-				sys->WhenPopTask();
-				return;
-			}
-
-
-			// Forced askbid data download
-			DataBridgeCommon& common = GetDataBridgeCommon();
-			common.DownloadAskBid();
-			common.RefreshAskBidData(true);
-
-
-			// Refresh databridges
-			ProcessDataBridgeQueue();
-
-
-			// Reset signals
-			if (realtime_count == 0) {
-				for (int i = 0; i < mt.GetSymbolCount(); i++)
-					mt.SetSignal(i, 0);
-			}
-			realtime_count++;
-
-
-			// Use best group to set broker signals
-			WhenInfo("Looping agents until latest snapshot");
-			bool succ = PutLatest(mt, snaps);
-
-
-			// Print info
-			String sigstr = "Signals ";
-
-			for (int i = 0; i < sym_ids.GetCount(); i++) {
-				if (i)
-					sigstr << ",";
-
-				sigstr << mt.GetSignal(sym_ids[i]);
-			}
-
-			WhenInfo(sigstr);
-
-
-			// Notify about successful signals
-			if (succ) {
-				prev_shift = shift;
-
-				sys->WhenRealtimeUpdate();
-			}
-		}
+	
+	
+	if (wday == 0 || wday == 6) {
+		// Do nothing
+		prev_shift = shift;
 	}
-
+	
 	// Check for market closing (weekend and holidays)
+	else if (wday == 5 && wday_after_hour == 6) {
+		sys->WhenInfo("Closing all orders before market break");
 
-	else {
-		Time after_hour = time + 60 * 60;
-		int wday_after_hour = DayOfWeek(after_hour);
-
-		if (wday == 5 && wday_after_hour == 6) {
-			sys->WhenInfo("Closing all orders before market break");
-
-			for (int i = 0; i < mt.GetSymbolCount(); i++) {
-				mt.SetSignal(i, 0);
-				mt.SetSignalFreeze(i, false);
-			}
-
-			mt.SignalOrders(true);
+		for (int i = 0; i < mt.GetSymbolCount(); i++) {
+			mt.SetSignal(i, 0);
+			mt.SetSignalFreeze(i, false);
 		}
 
-		if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 1*60*1000) {
-			Data();
-			last_datagather.Reset();
+		mt.SignalOrders(true);
+	}
+	
+	else if (prev_shift != shift) {
+		sys->WhenInfo("Shift changed");
+
+
+		// Updates latest snapshot and signals
+		sys->SetEnd(mt.GetTime());
+		RefreshSnapshots();
+		LoopAgentSignalsAll(false);
+
+		int last_snap_shift = snaps.Top().GetShift();
+
+		if (shift != last_snap_shift) {
+			WhenError(Format("Current shift doesn't match the lastest snapshot shift (%d != %d)", shift, last_snap_shift));
+			sys->WhenPopTask();
+			return;
+		}
+
+
+		// Forced askbid data download
+		DataBridgeCommon& common = GetDataBridgeCommon();
+		common.DownloadAskBid();
+		common.RefreshAskBidData(true);
+
+
+		// Refresh databridges
+		ProcessDataBridgeQueue();
+
+
+		// Reset signals
+		if (realtime_count == 0) {
+			for (int i = 0; i < mt.GetSymbolCount(); i++)
+				mt.SetSignal(i, 0);
+		}
+		realtime_count++;
+
+
+		// Use best group to set broker signals
+		WhenInfo("Looping agents until latest snapshot");
+		bool succ = PutLatest(mt, snaps);
+
+
+		// Print info
+		String sigstr = "Signals ";
+
+		for (int i = 0; i < sym_ids.GetCount(); i++) {
+			if (i)
+				sigstr << ",";
+
+			sigstr << mt.GetSignal(sym_ids[i]);
+		}
+
+		WhenInfo(sigstr);
+
+
+		// Notify about successful signals
+		if (succ) {
+			prev_shift = shift;
+
+			sys->WhenRealtimeUpdate();
 		}
 	}
+	
+	
+	if (wday != 0 && wday != 6 && last_datagather.Elapsed() >= 1*60*1000) {
+		Data();
+		last_datagather.Reset();
+	}
+	
 	
 	sys->WhenPopTask();
 }

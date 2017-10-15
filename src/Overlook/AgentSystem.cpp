@@ -424,7 +424,7 @@ void AgentSystem::TrainAgents(int phase) {
 			const AgentPos& apos = proc_agents[i];
 			int gid = apos.a;
 			int aid = apos.b;
-
+			
 			co & [=] {
 				Agent& agent = groups[gid].agents[aid];
 
@@ -444,8 +444,10 @@ void AgentSystem::TrainAgents(int phase) {
 
 					if (agent.GetCursor(phase) >= snaps.GetCount()) {
 						agent.ResetEpoch(phase);
-						if (begin_iter == agent.GetIter(phase))
+						if (begin_iter == agent.GetIter(phase)) {
+							agent.is_fail = true;
 							break;
+						}
 					}
 				}
 			};
@@ -720,7 +722,7 @@ void AgentSystem::MainReal() {
 		realtime_count++;
 
 
-		// Use best group to set broker signals
+		// Set broker signals
 		WhenInfo("Looping agents until latest snapshot");
 		bool succ = PutLatest(mt, snaps);
 

@@ -21,7 +21,7 @@ namespace Overlook {
 #define RESULT_EXTRACENTERS			20
 #define GROUP_COUNT					55
 #define HAVE_POLES					1
-#define FUSE_TRIGGERPERIOD			(0)
+#define FUSE_TRIGGERPERIOD			(-1)
 #else
 #define MEASURE_PERIOD(j)			(1 << (8 + j))
 #define RESULT_EXTRACENTERS			8

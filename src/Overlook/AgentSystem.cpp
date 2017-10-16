@@ -669,7 +669,8 @@ void AgentSystem::MainReal() {
 	SetAgentsTraining(false);
 	
 	
-	if (wday == 0 || wday == 6) {
+	// Skip weekends and first hours of monday
+	if (wday == 0 || wday == 6 || (wday == 1 && time.hour < 4)) {
 		// Do nothing
 		prev_shift = shift;
 	}

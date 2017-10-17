@@ -823,7 +823,7 @@ void SignalGraph::Paint(Draw& w) {
 			
 			if (!right_side && x1 > begin_x1)
 				right_side = true;
-			if (right_side && x1 <= begin_x1)
+			if (right_side && x1 < begin_x1)
 				break;
 		} else {
 			x2 = x1 + 1.0 / (5.0 * 24.0 * 60.0) * sz.cx;
@@ -848,6 +848,15 @@ void SignalGraph::Paint(Draw& w) {
 				id.DrawRect(x1, y1, w, h, clr);
 			}
 		}
+	}
+	
+	
+	Font fnt = Monospace(ydiv - 2).Bold();
+	for(int j = 0; j < SYM_COUNT; j++) {
+		int y = j * ydiv;
+		String sym = GetSystem().GetSymbol(sys.sym_ids[j]);
+		id.DrawText(3, y + 1, sym, fnt, Black());
+		id.DrawText(4, y + 2, sym, fnt, GrayColor(128+64));
 	}
 	
 	id.DrawLine(now_x,   0,   now_x, sz.cy, 1, White());

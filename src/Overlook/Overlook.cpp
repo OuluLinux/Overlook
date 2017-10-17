@@ -77,13 +77,11 @@ void Overlook::RefreshTaskStatus() {
 
 void Overlook::Refresher() {
 	Data();
-	int tab = tabs.Get();
-	if (tab == 2 && !IsMinimized()) {
-		PostRefresher();
-	}
-	else {
-		tc.Set(1000, THISBACK(PostRefresher));
-	}
+	//int tab = tabs.Get();
+	//if (tab == 2 && !IsMinimized())
+	//	PostRefresher();
+	//else
+	tc.Set(1000, THISBACK(PostRefresher));
 }
 
 void Overlook::Data() {

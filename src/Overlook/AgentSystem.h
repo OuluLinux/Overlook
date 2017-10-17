@@ -274,6 +274,7 @@ public:
 	int result_cluster_counter = 0;
 	int indi_cluster_counter = 0;
 	bool running = false, stopped = true;
+	bool trigger_retrain = false;
 	Mutex work_lock;
 	
 	
@@ -341,6 +342,8 @@ public:
 	void RefreshIndicatorClusters();
 	void RefreshClusterConnections();
 	void RefreshPoleNavigation();
+	void ResetAgents();
+	void InitAgents();
 	void AnalyzeSectorPoles(int snap_begin, int snap_end, int sym_id, int result_c_id);
 	
 	Callback1<String> WhenInfo;

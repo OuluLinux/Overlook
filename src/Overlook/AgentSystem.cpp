@@ -210,8 +210,19 @@ void AgentSystem::InitThread() {
 		phase = Upp::min(phase, (int)PHASE_FUSE_TRAINING);
 		fuse.DeepCreate();
 	}
+	
+	InitAgents();
 
+	Progress(6, 6, "Complete");
+}
 
+void AgentSystem::ResetAgents() {
+	groups.Clear();
+	CreateAgents();
+	InitAgents();
+}
+
+void AgentSystem::InitAgents() {
 	for (int i = 0; i < GROUP_COUNT; i++) {
 		AgentGroup& ag = groups[i];
 		ag.sys = this;
@@ -226,8 +237,6 @@ void AgentSystem::InitThread() {
 	fuse.Init();
 	
 	SetFreeMarginLevel(FMLEVEL);
-
-	Progress(6, 6, "Complete");
 }
 
 void AgentSystem::Start() {
@@ -673,6 +682,13 @@ void AgentSystem::MainReal() {
 	if (wday == 0 || wday == 6 || (wday == 1 && time.hour < 4)) {
 		// Do nothing
 		prev_shift = shift;
+		
+		// Retrain agents at weekends
+		if (wday == 0 && trigger_retrain) {
+			trigger_retrain = false;
+			phase = 0;
+			ResetAgents();
+		}
 	}
 	
 	// Check for market closing (weekend and holidays)
@@ -689,7 +705,10 @@ void AgentSystem::MainReal() {
 	
 	else if (prev_shift != shift) {
 		sys->WhenInfo("Shift changed");
-
+		
+		// Train again at weekends
+		trigger_retrain = true;
+		
 
 		// Updates latest snapshot and signals
 		sys->SetEnd(mt.GetTime());

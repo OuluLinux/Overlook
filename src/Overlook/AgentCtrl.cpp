@@ -823,10 +823,10 @@ void SignalGraph::Paint(Draw& w) {
 			
 			if (!right_side && x1 > begin_x1)
 				right_side = true;
-			if (right_side && x1 < begin_x1)
+			if (right_side && x1 <= begin_x1)
 				break;
 		} else {
-			x2 = x1 + 1.0 / (5.0 * 24.0 * 60.0) * sz.cx;
+			x2 = x1 + sz.cx / 0x100;
 			begin_x1 = x1;
 			is_begin = false;
 		}

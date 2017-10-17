@@ -458,8 +458,6 @@ void Agent::Serialize(Stream& s) {
 }
 
 bool Agent::IsTrained(int phase) const {
-	if (is_fail)
-		return true;
 	if (phase < 0)
 		return false;
 	if ((phase == PHASE_SIGNAL_TRAINING && sig.iter >= SIGNAL_PHASE_ITER_LIMIT) ||

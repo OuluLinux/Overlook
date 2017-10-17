@@ -115,7 +115,6 @@ public:
 	bool is_training = false;
 	double spread_points = 0.0;
 	AgentGroup* group = NULL;
-	bool is_fail = false;
 	
 	
 	

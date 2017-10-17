@@ -204,6 +204,8 @@ void AgentSystem::InitThread() {
 		for (int i = 0; i < groups.GetCount(); i++)
 			for (int j = 0; j < sym_ids.GetCount(); j++)
 				groups[i].agents[j].amp.DeepCreate();
+		
+		reset_fuse = true;
 	}
 
 	if (reset_fuse) {
@@ -454,7 +456,6 @@ void AgentSystem::TrainAgents(int phase) {
 					if (agent.GetCursor(phase) >= snaps.GetCount()) {
 						agent.ResetEpoch(phase);
 						if (begin_iter == agent.GetIter(phase)) {
-							agent.is_fail = true;
 							break;
 						}
 					}
@@ -739,6 +740,7 @@ void AgentSystem::MainReal() {
 			for (int i = 0; i < mt.GetSymbolCount(); i++)
 				mt.SetSignal(i, 0);
 		}
+		mt.SetFreeMargin(FMLEVEL);
 		realtime_count++;
 
 

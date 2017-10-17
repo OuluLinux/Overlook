@@ -3752,4 +3752,16 @@ work optimally with certain amounts of data. Sectors and groups
 must be set accordingly. More groups requires much more processing, 
 so the fast mode is not default. This could be done cleanly with 
 planning and more workforce, but I just hacked this together.&]
-[s0; ]]
+[s0; &]
+[s3; 17.10.2017&]
+[s0; [/ The fog has cleared and a new summit can be seen...]&]
+[s0; Testing seems to be required for real. The training performance 
+is far from realtime performance. I`'ve been playing with the 
+preprocessor settings and there is many working configurations. 
+All those configurations should be available simultaneously and 
+best parts should be combined and combinations should be tested, 
+and the best combination should be tested even with a separate 
+data for verification.&]
+[s0; Changing preprocessor variables to dynamic is a very challenging 
+task. Planned changes might be the most unpleasant to implement 
+so far.]]

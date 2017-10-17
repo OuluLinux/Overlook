@@ -659,7 +659,9 @@ void AgentFuse::Main(Vector<Snapshot>& snaps) {
 			}
 			
 			UpdateSignal(broker[ddlevel * 2 + 0], i, group_signal);
-			UpdateSignal(broker[ddlevel * 2 + 1], i, -1 * group_signal);
+			if (group_signal) {
+				UpdateSignal(broker[ddlevel * 2 + 1], i, group_signal);
+			}
 		}
 	}
 	

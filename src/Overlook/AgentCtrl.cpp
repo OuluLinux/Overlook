@@ -839,37 +839,19 @@ void SignalGraph::Paint(Draw& w) {
 			int h = y2 - y1;
 			
 			Color clr;
-			if (mode == MODE_FILTER) {
-				int active_group = 0;
-				for(int i = 0; i < GROUP_COUNT; i++) {
-					if (snap1.GetSignalOutput(i, j))
-						break;
-					active_group++;
-				}
-				clr = GrayColor(active_group * 255 / GROUP_COUNT);
-			} else {
-				int active_group = 0, signal = 0;
-				for(int i = 0; i < GROUP_COUNT; i++) {
-					signal = snap1.GetSignalOutput(i, j);
-					if (signal)
-						break;
-					active_group++;
-				}
-				int gray = active_group * 255 / GROUP_COUNT;
-				if (signal >= 0)
-					clr = Color(gray, gray, 255);
-				else
-					clr = Color(255, gray, gray);
+			int signal = snap1.GetFuseOutput(j);
+			if (signal) {
+				if (signal > 0)
+					clr = Color(137, 209, 135);
+				else if (signal < 0)
+					clr = Color(134, 154, 213);
+				id.DrawRect(x1, y1, w, h, clr);
 			}
-			id.DrawRect(x1, y1, w, h, clr);
 		}
 	}
 	
 	id.DrawLine(now_x,   0,   now_x, sz.cy, 1, White());
 	id.DrawLine(now_x+1, 0, now_x+1, sz.cy, 1, Black());
-	
-	id.DrawText(2, 2, "Click this", Monospace(8), White());
-	id.DrawText(3, 3, "Click this", Monospace(8), Black());
 	
 	w.DrawImage(0, 0, id);
 }

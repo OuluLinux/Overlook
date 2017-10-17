@@ -218,16 +218,12 @@ public:
 
 class SignalGraph : public Ctrl {
 	ExportCtrl* dc;
-	bool mode = 0;
-	
-	enum {MODE_FILTER, MODE_SIGNAL};
 	
 public:
 	typedef SignalGraph CLASSNAME;
 	SignalGraph(ExportCtrl* dc);
 	
 	virtual void Paint(Draw& w);
-	virtual void LeftDown(Point p, dword keyflags) {mode = !mode; Refresh();}
 	
 };
 

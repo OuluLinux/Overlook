@@ -1,12 +1,15 @@
 #ifndef _Overlook_Overlook_h_
 #define _Overlook_Overlook_h_
 
+#include <Core/Core.h>
+#include <CtrlLib/CtrlLib.h>
+
 #include "Common.h"
 #include "QueryTable.h"
-#include "DQN.h"
 
 #include "SimBroker.h"
-#include "AgentSystem.h"
+#include "FixedSimBroker.h"
+#include "ExpertSystem.h"
 #include "System.h"
 #include "Core.h"
 #include "CustomCtrl.h"
@@ -23,6 +26,8 @@
 #include "GraphGroupCtrl.h"
 
 #include "BrokerCtrl.h"
+
+#include "RandomForestCtrl.h"
 
 namespace Overlook {
 
@@ -48,8 +53,10 @@ protected:
 	// Exposure tester
 	ExposureTester			exposurectrl;
 	
-	// Manager view
-	ManagerCtrl				mgrctrl;
+	// Expert System
+	SystemOverview			overview;
+	ExpertOptimizerCtrl		optimizer;
+	ExportCtrl				export_ctrl;
 	
 	
 	RealtimeCtrl			rtctrl;

@@ -3,7 +3,6 @@
 namespace Overlook {
 
 Overlook::Overlook() :
-	mgrctrl(),
 	rtctrl()
 {
 	Title("Overlook");
@@ -18,12 +17,15 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Classic");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(mgrctrl);
-	tabs.Add(mgrctrl, "Agent Manager");
+	tabs.Add(overview);
+	tabs.Add(overview, "Expert Overview");
+	tabs.Add(optimizer);
+	tabs.Add(optimizer, "Expert Optimizer");
+	tabs.Add(export_ctrl);
+	tabs.Add(export_ctrl, "Expert Real-Time");
 	tabs.Add(rtctrl);
 	tabs.Add(rtctrl, "Real-Time Account");
 	tabs.WhenSet << THISBACK(Data);
-	
 	
 	visins.Add(droplist_split.TopPos(2, 26).HSizePos(2, 2));
 	droplist_split << ctrllist << symlist << tflist << config;
@@ -91,12 +93,15 @@ void Overlook::Data() {
 			prev_view->Data();
 	}
 	else if (tab == 1) {
-		
+		overview.Data();
 	}
 	else if (tab == 2) {
-		mgrctrl.Data();
+		optimizer.Data();
 	}
 	else if (tab == 3) {
+		export_ctrl.Data();
+	}
+	else if (tab == 4) {
 		rtctrl.Data();
 	}
 }

@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Snapshot_h_
 #define _Overlook_Snapshot_h_
 
@@ -312,4 +314,5 @@ public:
 
 };
 
+#endif
 #endif

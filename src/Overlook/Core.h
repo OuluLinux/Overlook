@@ -50,7 +50,7 @@ struct Out : public ValueBase {
 
 struct Arg : public ValueBase {
 	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
-	Arg(const char* key, int& value, int min, int max) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
+	Arg(const char* key, int& value, int min, int max=10000) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
 };
 
 struct Persistent : public ValueBase, Moveable<Persistent> {

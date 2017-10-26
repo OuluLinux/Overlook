@@ -3,6 +3,7 @@
 namespace Overlook {
 using namespace Upp;
 
+/*
 SnapshotDraw::SnapshotDraw() {
 	snap_id = -1;
 }
@@ -14,7 +15,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	System& sys = GetSystem();
-	AgentSystem& group = sys.GetAgentSystem();
+	ExpertSystem& group = sys.GetExpertSystem();
 	
 	if (snap_id < 0 || snap_id >= group.snaps.GetCount()) {w.DrawRect(sz, White()); return;}
 	const Snapshot& snap = group.snaps[snap_id];
@@ -85,6 +86,7 @@ void SnapshotDraw::Paint(Draw& w) {
 	
 	w.DrawImage(0,0,id);
 }
+*/
 
 
 
@@ -98,8 +100,7 @@ void SnapshotDraw::Paint(Draw& w) {
 
 
 
-
-
+/*
 ResultGraph::ResultGraph() {
 	agent = NULL;
 	fuse = NULL;
@@ -430,14 +431,14 @@ void RewardGraph::SetFuse(AgentFuse& fuse) {
 	type = PHASE_FUSE_TRAINING;
 	this->fuse = &fuse;
 }
+*/
 
 
 
 
 
 
-
-
+/*
 TrainingCtrl::TrainingCtrl()
 {
 	agent = NULL;
@@ -544,6 +545,7 @@ void TrainingCtrl::Data() {
 		trade.SetCount(j);
 	}
 }
+*/
 
 
 
@@ -563,8 +565,7 @@ void TrainingCtrl::Data() {
 
 
 
-
-
+/*
 SnapshotCtrl::SnapshotCtrl() {
 	Add(slider.HSizePos().TopPos(0, 30));
 	Add(hsplit.HSizePos().VSizePos(30));
@@ -688,7 +689,7 @@ void SnapshotCtrl::Data() {
 	
 	draw.Refresh();
 }
-
+*/
 
 
 
@@ -798,7 +799,7 @@ void SignalGraph::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	AgentSystem& sys = GetSystem().GetAgentSystem();
+	/*AgentSystem& sys = GetSystem().GetAgentSystem();
 	double ydiv = ((double)sz.cy) / ((double)(SYM_COUNT));
 	
 	Time now = GetSysTime();
@@ -860,7 +861,7 @@ void SignalGraph::Paint(Draw& w) {
 	}
 	
 	id.DrawLine(now_x,   0,   now_x, sz.cy, 1, White());
-	id.DrawLine(now_x+1, 0, now_x+1, sz.cy, 1, Black());
+	id.DrawLine(now_x+1, 0, now_x+1, sz.cy, 1, Black());*/
 	
 	w.DrawImage(0, 0, id);
 }

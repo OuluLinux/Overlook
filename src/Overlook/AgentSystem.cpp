@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -162,6 +164,7 @@ void AgentSystem::InitThread() {
 	Progress(1, 6, "Refreshing data source and indicators");
 	ProcessWorkQueue();
 	ProcessDataBridgeQueue();
+	ProcessLabelQueue();
 
 
 	Progress(2, 6, "Refreshing pointers of data sources");
@@ -713,6 +716,9 @@ void AgentSystem::MainReal() {
 
 		// Updates latest snapshot and signals
 		sys->SetEnd(mt.GetTime());
+		ProcessWorkQueue();
+		ProcessDataBridgeQueue();
+		ProcessLabelQueue();
 		RefreshSnapshots();
 		LoopAgentSignalsAll(false);
 
@@ -731,10 +737,10 @@ void AgentSystem::MainReal() {
 		common.RefreshAskBidData(true);
 
 
-		// Refresh databridges
+		// Refresh databridges again
 		ProcessDataBridgeQueue();
-
-
+		
+		
 		// Reset signals
 		if (realtime_count == 0) {
 			for (int i = 0; i < mt.GetSymbolCount(); i++)
@@ -905,8 +911,9 @@ void AgentSystem::ResetValueBuffers() {
 	// Get DataBridge core pointer for easy reading
 	databridge_cores.SetCount(0);
 	databridge_cores.SetCount(sys->GetSymbolCount(), NULL);
+	open_buffers.SetCount(0);
+	open_buffers.SetCount(sys->GetSymbolCount(), NULL);
 	int factory = sys->Find<DataBridge>();
-
 	for (int i = 0; i < db_queue.GetCount(); i++) {
 		CoreItem& ci = *db_queue[i];
 
@@ -914,6 +921,7 @@ void AgentSystem::ResetValueBuffers() {
 			continue;
 
 		databridge_cores[ci.sym] = &*ci.core;
+		open_buffers[ci.sym] = &ci.core->GetBuffer(0);
 	}
 
 
@@ -1525,3 +1533,4 @@ void AgentSystem::Data() {
 }
 
 }
+#endif

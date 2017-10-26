@@ -1,6 +1,5 @@
 #include "Overlook.h"
 
-
 namespace Overlook {
 
 ExposureTester::ExposureTester() {

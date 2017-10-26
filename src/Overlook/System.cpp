@@ -2,8 +2,14 @@
 
 namespace Overlook {
 
+Index<int> System::true_indicators;
 
-System::System() : ag(this) {
+
+
+
+
+
+System::System() : es(this) {
 	timediff = 0;
 	base_period = 60;
 	SetEnd(GetSysTime());
@@ -90,8 +96,16 @@ void System::Init() {
 	
 	InitRegistry();
 	
-	ag.LoadThis();
-	ag.Init();
+	InitContent();
+	RefreshWorkQueue();
+	ProcessWorkQueue();
+	ProcessDataBridgeQueue();
+	ProcessLabelQueue();
+	ResetValueBuffers();
+	ResetLabelBuffers();
+	
+	es.LoadThis();
+	es.Init();
 }
 
 void System::AddPeriod(String nice_str, int period) {

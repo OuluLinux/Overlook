@@ -25,15 +25,6 @@ GUI_APP_MAIN {
 		else if (s == "-port") {
 			Config::arg_port = ScanInt(args[i]);
 		}
-		else if (s == "-resetsignals") {
-			reset_signals = ScanInt(args[i]);
-		}
-		else if (s == "-resetamps") {
-			reset_amps = ScanInt(args[i]);
-		}
-		else if (s == "-resetfuse") {
-			reset_fuse = ScanInt(args[i]);
-		}
 		else if (s == "-internetdata") {
 			Config::use_internet_m1_data = ScanInt(args[i]);
 		}
@@ -77,8 +68,8 @@ GUI_APP_MAIN {
 			tw.SetRect(0,0, 320, 60);
 			tw.Add(lbl.SizePos());
 			Thread::Start([&]() {
-				AgentSystem& ag = sys.GetAgentSystem();
-				ag.StoreThis();
+				ExpertSystem& es = sys.GetExpertSystem();
+				es.StoreThis();
 				PostCallback(callback(&tw, &TopWindow::Close));
 				PostCallback(callback(&tw, &TopWindow::Close));
 			});

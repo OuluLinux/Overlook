@@ -2,7 +2,7 @@
 #define _Overlook_DataBridge_h_
 
 namespace Config {
-extern IniBool use_internet_m1_data;
+extern Upp::IniBool use_internet_m1_data;
 }
 
 namespace Overlook {

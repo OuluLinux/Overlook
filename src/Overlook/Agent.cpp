@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -820,3 +822,4 @@ bool AgentFuse::IsTrained() const {
 }
 
 }
+#endif

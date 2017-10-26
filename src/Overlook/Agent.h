@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_Agent_h_
 #define _Overlook_Agent_h_
 
@@ -5,9 +7,7 @@ class AgentGroup;
 class Agent;
 
 enum {
-	PHASE_SIGNAL_TRAINING,
-	PHASE_AMP_TRAINING,
-	PHASE_FUSE_TRAINING,
+	PHASE_TRAINING,
 	PHASE_REAL
 };
 
@@ -191,4 +191,5 @@ public:
 	void UpdateSignal(FixedSimBroker& broker, int sym_id, int signal);
 };
 
+#endif
 #endif

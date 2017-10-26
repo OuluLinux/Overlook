@@ -2,8 +2,8 @@
 #define _Overlook_System_h_
 
 namespace Config {
-extern IniString arg_addr;
-extern IniInt arg_port;
+extern Upp::IniString arg_addr;
+extern Upp::IniInt arg_port;
 }
 
 namespace Overlook {
@@ -99,6 +99,8 @@ class CustomCtrl;
 
 class System {
 	
+	static Index<int> true_indicators;
+	
 public:
 
 	typedef Core*			(*CoreFactoryPtr)();
@@ -161,7 +163,7 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
-	AgentSystem		ag;
+	ExpertSystem	es;
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		bars;
@@ -212,7 +214,7 @@ public:
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	void SetEnd(const Time& t);
-	AgentSystem& GetAgentSystem() {return ag;}
+	ExpertSystem& GetExpertSystem() {return es;}
 	
 public:
 	
@@ -231,14 +233,50 @@ public:
 	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	
 public:
+	VectorMap<String, int> allowed_symbols;
+	Vector<Vector<ConstBuffer*> > value_buffers;
+	Vector<Vector<ConstVectorBool*> > label_value_buffers;
+	Vector<ConstBuffer*> open_buffers;
+	Vector<Ptr<CoreItem> > work_queue, db_queue, label_queue;
+	Vector<Core*> databridge_cores;
+	Vector<double> spread_points;
+	Vector<int> proxy_id, proxy_base_mul;
+	Vector<FactoryDeclaration> indi_ids, label_indi_ids;
+	Index<int> sym_ids;
+	int data_begin = 0;
+	int buf_count = 0;
+	int label_buf_count = 0;
+	int main_tf = -1;
+	Mutex work_lock;
+	
+	void InitContent();
+	void RefreshWorkQueue();
+	void ProcessWorkQueue();
+	void ProcessLabelQueue();
+	void ProcessDataBridgeQueue();
+	void ResetValueBuffers();
+	void ResetLabelBuffers();
+	
+	int GetTradingSymbolCount() const {return sym_ids.GetCount();}
+	int GetTrueIndicatorCount() const {return TRUEINDI_COUNT;}
+	int GetLabelIndicatorCount() const {return LABELINDI_COUNT;}
+	int GetCountMain() const {return GetCountTf(main_tf);}
+	ConstBuffer&		GetTrueIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<TRUEINDI_COUNT); return *value_buffers[sym][tf * TRUEINDI_COUNT + i];}
+	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
+	ConstBuffer&		GetOpenBuffer(int sym) {return *open_buffers[sym];}
+	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) {return *open_buffers[sym_ids[sym]];}
+	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
+	void SetFixedBroker(FixedSimBroker& broker, int sym_id=-1);
+	
+public:
 	
 	typedef System CLASSNAME;
 	System();
 	~System();
 	
 	void Init();
-	void Start()	{ag.Start();}
-	void Stop()		{ag.Stop();}
+	void Start()	{es.Start();}
+	void Stop()		{es.Stop();}
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;

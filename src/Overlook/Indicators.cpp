@@ -1316,6 +1316,7 @@ void ForceIndex::Start() {
 
 Momentum::Momentum() {
 	period = 14;
+	shift = 0;
 }
 
 void Momentum::Init() {
@@ -1326,7 +1327,8 @@ void Momentum::Init() {
 	if ( period <= 0 )
 		throw DataExc();
 
-	SetBufferBegin ( 0, period );
+	SetBufferBegin(0, period);
+	SetBufferShift(0, shift);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"Momentum");
@@ -3450,18 +3452,18 @@ void CorrelationOscillator::Init() {
 	
 	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
-	AgentSystem& as = GetSystem().GetAgentSystem();
-	if (as.sym_ids.GetCount() == 0)
-		Panic("AgentSystem is not yet initialized.");
+	ExpertSystem& es = GetSystem().GetExpertSystem();
+	if (es.sym_ids.GetCount() == 0)
+		Panic("ExpertSystem is not yet initialized.");
 	int sym_shift = 0;
 	for(int i = 0; i < SYM_COUNT-1; i++) {
-		int as_id = as.sym_ids[i + sym_shift];
-		if (sym_shift == 0 && as_id == id) {
+		int es_id = es.sym_ids[i + sym_shift];
+		if (sym_shift == 0 && es_id == id) {
 			sym_shift++;
 			i--;
 			continue;
 		}
-		sym_ids[i] = as_id;
+		sym_ids[i] = es_id;
 	}
 	
 	SetCoreMaximum(+1.0);

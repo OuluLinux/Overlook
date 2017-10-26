@@ -5,14 +5,14 @@ namespace Overlook {
 
 class ActionCountGraph : public Ctrl {
 	int phase = -1;
-	Agent* a = NULL;
-	AgentFuse* f = NULL;
+	//Agent* a = NULL;
+	//AgentFuse* f = NULL;
 public:
 	
 	virtual void Paint(Draw& w);
 	const Vector<int64>& GetStats();
-	void SetAgent(Agent& a, int phase) {this->a = &a; this->phase = phase;}
-	void SetFuse(AgentFuse& fuse) {f = &fuse; phase = PHASE_FUSE_TRAINING;}
+	//void SetAgent(Agent& a, int phase) {this->a = &a; this->phase = phase;}
+	//void SetFuse(AgentFuse& fuse) {f = &fuse; phase = PHASE_FUSE_TRAINING;}
 };
 
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
@@ -52,7 +52,7 @@ public:
 	void Data();
 	
 };
-
+/*
 class SectorOverview : public ParentCtrl {
 	Splitter split, vsplit;
 	ArrayCtrl in;
@@ -68,10 +68,21 @@ public:
 	void Data();
 	
 };
+*/
 
-class SystemTabCtrl : public TabCtrl {
+class ExpertOptimizerCtrl : public ParentCtrl {
+	
+public:
+	typedef ExpertOptimizerCtrl CLASSNAME;
+	ExpertOptimizerCtrl();
+	
+	void Data();
+	
+};
+
+
+/*class SystemTabCtrl : public TabCtrl {
 	SystemOverview			overview;
-	SectorOverview			sectors;
 	SnapshotCtrl			snapctrl;
 	Array<EditDoubleSpin>	tflimitedit;
 	
@@ -80,7 +91,7 @@ public:
 	SystemTabCtrl();
 	
 	void Data();
-};
+};*/
 
 class SignalTabCtrl : public TabCtrl {
 	Agent* agent;
@@ -122,9 +133,9 @@ public:
 	
 };
 
-class ManagerCtrl : public ParentCtrl {
-	Splitter						hsplit, listsplit;
-	ArrayCtrl						alist, glist;
+/*class ManagerCtrl : public ParentCtrl {
+	Splitter						hsplit;
+	ArrayCtrl						glist;
 	ParentCtrl						mainview;
 	Button							add_new;
 	Array<Option>					new_opts;
@@ -144,7 +155,7 @@ public:
 	void Data();
 	void SetView();
 	
-};
+};*/
 
 class RealtimeCtrl : public ParentCtrl {
 	Splitter				hsplit;

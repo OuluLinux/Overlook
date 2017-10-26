@@ -1,21 +1,45 @@
 #ifndef _Overlook_Common_h_
 #define _Overlook_Common_h_
 
-#include <CtrlLib/CtrlLib.h>
-#include <CoreUtils/CoreUtils.h>
-#include <CoreUtils/Optimizer.h>
-
 #undef ASSERTEXC
 
 #undef DLOG
 #define DLOG(x)
 
-namespace Overlook {
-using namespace Upp;
-
 #define IMAGECLASS OverlookImg
 #define IMAGEFILE <Overlook/Overlook.iml>
 #include <Draw/iml_header.h>
+
+namespace Overlook {
+using namespace Upp;
+
+// These values are constant in the working product.
+#define DECISION_DD_LEVEL		0.1
+#define SECTOR_2EXP				3
+#define SECTOR_COUNT			(1 << SECTOR_2EXP)
+#define CONST_TREE_INPUT		2
+#define FUSE_DEC_COUNT			4
+#define DECISION_LEVELS			6
+#define DECISION_INPUTS			(1 << DECISION_LEVELS)
+#define TF_COUNT				8
+#define TRUEINDI_COUNT			3
+#define LABELINDI_COUNT			3
+#define AMP_MAXSCALES			3
+#define AMP_MAXSCALE_MUL		2
+
+#ifndef flagHAVE_ALLSYM
+#define SYM_COUNT					6
+#else
+#define SYM_COUNT					19
+#endif
+
+class AgentGroup;
+class Agent;
+
+enum {
+	PHASE_TRAINING,
+	PHASE_REAL
+};
 
 struct OnlineAverage2 : Moveable<OnlineAverage2> {
 	double mean_a, mean_b;
@@ -60,6 +84,83 @@ struct AveragePoint : Moveable<OnlineAverage1> {
 	void Serialize(Stream& s) {s % x % y % x_mean_int % y_mean_int;}
 };
 
+inline double StandardNormalCDF(double x) {
+	double sum = x;
+	double value = x;
+	for (int i = 1; i < 100; i++) {
+		value = (value * x * x / (2 * i + 1));
+		sum += value;
+	}
+	return 0.5 + (sum / sqrt(2*M_PI)) * pow(M_E, -1* x*x / 2);
+}
+
+inline double NormalCDF(double value, double mean, double deviation) {
+	if (deviation == 0) {
+		if (value < mean) return 0;
+		else return 1;
+	}
+	double d = (value - mean) / deviation;
+	d = StandardNormalCDF(d);
+	if (!IsFin(d)) {
+		if (value < mean) return 0;
+		else return 1;
+	}
+	return d;
+}
+
+class OnlineVariance : Moveable<OnlineVariance> {
+	
+protected:
+
+	// Vars
+	int event_count;
+	double mean, M2;
+	
+public:
+	
+	// Ctors
+	OnlineVariance() : event_count(0), mean(0), M2(0) {}
+	OnlineVariance(const OnlineVariance& src) {*this = src;}
+	OnlineVariance& operator = (const OnlineVariance& src) {
+		event_count			= src.event_count;
+		mean				= src.mean;
+		M2					= src.M2;
+		return *this;
+	}
+	
+	// Main funcs
+	void AddResult(double value) {
+		event_count++;
+		double delta = value - mean;
+        mean += delta/event_count;
+        M2 += delta*(value - mean);
+	}
+	void Clear() {event_count = 0; mean = 0; M2 = 0;}
+	void Serialize(Stream& s) {s % event_count % mean % M2;}
+	
+	// Get funcs
+	int GetEventCount()		const {return event_count;}
+	double GetSum()			const {return mean * event_count;}
+	double GetMean()		const {return mean;}
+	double GetVariance()	const {if (event_count < 2) return 0; else return M2 / (event_count - 1);}
+	double GetDeviation()	const {return sqrt(GetVariance());}
+	double GetCDF() const {
+		if (!event_count) return 0;
+		return NormalCDF(0, GetMean(), GetDeviation());
+	}
+	double GetCDF(double limit, bool rside) const {
+		if (!event_count) return 0;
+		if (rside == 1)
+			return 1 - NormalCDF(limit, GetMean(), GetDeviation());
+		else
+			return     NormalCDF(limit, GetMean(), GetDeviation());
+	}
+	String ToString() const {
+		return Format("events=%d mean-av=%f stddev=%f cdf=%f", event_count, GetMean(), GetDeviation(), GetCDF());
+	}
+	
+};
+
 struct DerivZeroTrigger {
 	int count;
 	int16 I = 0;
@@ -67,6 +168,7 @@ struct DerivZeroTrigger {
 	Vector<OnlineAverage1> av;
 	
 	DerivZeroTrigger() {Clear();}
+	int GetPeriod() const {return I;}
 	void SetPeriod(int i) {
 		ASSERT(i > 0);
 		I = i;
@@ -317,11 +419,37 @@ public:
 	
 };
 
-typedef const Buffer ConstBuffer;
+typedef const uint64 ConstU64;
+
+class VectorBool : Moveable<VectorBool> {
+	Vector<uint64> data;
+	int count = 0;
+	
+public:
+	VectorBool() {}
+	VectorBool(const VectorBool& src) {*this = src;}
+	void operator=(const VectorBool& src);
+	
+	int GetCount() const;
+	int PopCount() const;
+	VectorBool& SetCount(int i);
+	VectorBool& Zero();
+	VectorBool& One();
+	
+	bool Get(int i) const;
+	void Set(int i, bool b);
+	
+	ConstU64* Begin() const;
+	ConstU64* End() const;
+};
+
+typedef const VectorBool	ConstVectorBool;
+typedef const Buffer		ConstBuffer;
 
 struct Output : Moveable<Output> {
 	Output() : visible(0) {}
 	Vector<Buffer> buffers;
+	VectorBool label;
 	int phase, type, visible;
 };
 
@@ -480,6 +608,71 @@ inline unsigned int root(unsigned int x) {
 	x     = b / x;
 	x     = (x + a) >> 1;
 	return x;
+}
+
+inline int StrPut(TcpSocket& out, void* data, int count) {
+	void* mem = MemoryAlloc(count);
+	byte* buf = (byte*)data;
+	byte* tmp = (byte*)mem;
+	buf += count-1;
+	for(int i = 0; i < count; i++) {
+		*tmp = *buf;
+		buf--; tmp++;
+	}
+	int res = out.Put(mem, count);
+	MemoryFree(mem);
+	return res;
+}
+inline int StrGet(TcpSocket& in, void* data, int count) {
+	void* mem = MemoryAlloc(count);
+	byte* buf = (byte*)data;
+	byte* tmp = (byte*)mem;
+	int res = in.Get(mem, count);
+	buf += res-1;
+	for(int i = 0; i < res; i++) {
+		*buf = *tmp;
+		buf--; tmp++;
+	}
+	MemoryFree(mem);
+	return res;
+}
+inline int StrPut(Stream& out, void* data, int count) {
+	void* mem = MemoryAlloc(count);
+	byte* buf = (byte*)data;
+	byte* tmp = (byte*)mem;
+	buf += count-1;
+	for(int i = 0; i < count; i++) {
+		*tmp = *buf;
+		buf--; tmp++;
+	}
+	out.Put(mem, count);
+	MemoryFree(mem);
+	return 0;
+}
+inline int StrGet(Stream& in, void* data, int count) {
+	void* mem = MemoryAlloc(count);
+	byte* buf = (byte*)data;
+	byte* tmp = (byte*)mem;
+	in.Get(mem, count);
+	buf += count-1;
+	for(int i = 0; i < count; i++) {
+		*buf = *tmp;
+		buf--; tmp++;
+	}
+	MemoryFree(mem);
+	return 0;
+}
+
+inline Time TimeFromTimestamp(int64 seconds) {
+	return Time(1970, 1, 1) + seconds;
+}
+
+inline int PopCount64(uint64 i) {
+	#ifdef flagMSC
+	return __popcnt64(i);
+	#else
+	return __builtin_popcountll(i);
+	#endif
 }
 
 }

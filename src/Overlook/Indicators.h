@@ -40,8 +40,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Arg("period", ma_period, 2, 127)
-			% Arg("offset", ma_shift, 0, 0)
+			% Arg("period", ma_period, 2)
+			% Arg("offset", ma_shift, 0)
 			% Arg("method", ma_method, 0, 3);
 	}
 };
@@ -289,7 +289,7 @@ public:
 
 
 class Momentum : public Core {
-	int period;
+	int period, shift;
 	
 public:
 	Momentum();
@@ -300,7 +300,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Arg("period", period, 2, 127);
+			% Arg("period", period, 2)
+			% Arg("shift", shift, 2);
 	}
 };
 
@@ -323,9 +324,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
-			% Arg("fast_ema_period", fast_ema_period, 2, 10000)
-			% Arg("slow_ema_period", slow_ema_period, 2, 10000)
-			% Arg("signal_sma", signal_sma_period, 2, 10000)
+			% Arg("fast_ema_period", fast_ema_period, 2)
+			% Arg("slow_ema_period", slow_ema_period, 2)
+			% Arg("signal_sma", signal_sma_period, 2)
 			% Persistent(value_mean) % Persistent(value_count)
 			% Persistent(diff_mean) % Persistent(diff_count);
 	}
@@ -399,9 +400,9 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
-			% Arg("k_period", k_period, 2, 10000)
-			% Arg("d_period", d_period, 2, 10000)
-			% Arg("slowing", slowing, 2, 10000);
+			% Arg("k_period", k_period, 2)
+			% Arg("d_period", d_period, 2)
+			% Arg("slowing", slowing, 2);
 	}
 };
 
@@ -657,8 +658,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
-			% Arg("depth", input_depth, 2, 16)
-			% Arg("deviation", input_depth, 2, 16)
+			% Arg("depth", input_depth, 2)
+			% Arg("deviation", input_depth, 2)
 			% Arg("backstep", input_backstep, 2, 16)
 			% Arg("level", extremum_level, 2, 16);
 	}
@@ -797,14 +798,14 @@ public:
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		AgentSystem& as = ::Overlook::GetSystem().GetAgentSystem();
-		if (as.sym_ids.GetCount() == 0)
-			Panic("AgentSystem is not yet initialized.");
+		ExpertSystem& es = ::Overlook::GetSystem().GetExpertSystem();
+		if (es.sym_ids.GetCount() == 0)
+			Panic("ExpertSystem is not yet initialized.");
 		
 		static Index<int> sym_ids;
 		if (sym_ids.IsEmpty()) {
-			for(int i = 0; i < as.sym_ids.GetCount(); i++)
-				sym_ids.Add(as.sym_ids[i]);
+			for(int i = 0; i < es.sym_ids.GetCount(); i++)
+				sym_ids.Add(es.sym_ids[i]);
 		}
 		
 		// Accept all symbols in the same timeframe
@@ -929,7 +930,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Arg("period", period, 2, 20000)
+			% Arg("period", period, 2)
 			% Persistent(stats);
 	}
 };

@@ -3,13 +3,13 @@
 namespace Overlook {
 
 const Vector<int64>& ActionCountGraph::GetStats() {
-	if (phase == PHASE_SIGNAL_TRAINING)
+	/*if (phase == PHASE_SIGNAL_TRAINING)
 		return a->sig.action_counts;
 	if (phase == PHASE_AMP_TRAINING)
 		return a->amp.action_counts;
 	if (phase == PHASE_FUSE_TRAINING)
 		return f->action_counts;
-	Panic("NEVER");
+	Panic("NEVER");*/
 	return Single<Vector<int64> >();
 }
 
@@ -18,24 +18,22 @@ void ActionCountGraph::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (a || f) {
-		const Vector<int64>& stats = GetStats();
+	const Vector<int64>& stats = GetStats();
+	
+	int64 max_count = 0;
+	for(int i = 0; i < stats.GetCount(); i++)
+		max_count = Upp::max(max_count, stats[i]);
+	
+	if (max_count > 0) {
+		double xstep = (double)sz.cx / stats.GetCount();
 		
-		int64 max_count = 0;
-		for(int i = 0; i < stats.GetCount(); i++)
-			max_count = Upp::max(max_count, stats[i]);
-		
-		if (max_count > 0) {
-			double xstep = (double)sz.cx / stats.GetCount();
-			
-			for(int i = 0; i < stats.GetCount(); i++) {
-				int x1 = i * xstep;
-				int x2 = (i + 1) * xstep;
-				int w = x2 - x1;
-				int h = sz.cy * stats[i] / max_count;
-				int y = sz.cy - h;
-				id.DrawRect(x1, y, w, h, Color(85, 127, 255));
-			}
+		for(int i = 0; i < stats.GetCount(); i++) {
+			int x1 = i * xstep;
+			int x2 = (i + 1) * xstep;
+			int w = x2 - x1;
+			int h = sz.cy * stats[i] / max_count;
+			int y = sz.cy - h;
+			id.DrawRect(x1, y, w, h, Color(85, 127, 255));
 		}
 	}
 	
@@ -58,6 +56,7 @@ SystemOverview::SystemOverview() {
 }
 
 void SystemOverview::Data() {
+	/*
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	String infostr;
@@ -137,7 +136,7 @@ void SystemOverview::Data() {
 	
 	
 	
-	info.SetLabel(infostr);
+	info.SetLabel(infostr);*/
 }
 
 
@@ -148,6 +147,14 @@ void SystemOverview::Data() {
 
 
 
+
+
+
+
+
+
+
+/*
 SectorOverview::SectorOverview() {
 	Add(vsplit.SizePos());
 	vsplit.Vert();
@@ -268,6 +275,7 @@ void SectorOverview::Data() {
 	
 	
 }
+*/
 
 
 
@@ -276,12 +284,9 @@ void SectorOverview::Data() {
 
 
 
-
-SystemTabCtrl::SystemTabCtrl() {
+/*SystemTabCtrl::SystemTabCtrl() {
 	Add(overview);
 	Add(overview, "Overview");
-	Add(sectors);
-	Add(sectors, "Sectors");
 	Add(snapctrl);
 	Add(snapctrl, "Snapshot list");
 	
@@ -292,16 +297,22 @@ void SystemTabCtrl::Data() {
 	int tab = Get();
 	if      (tab == 0)
 		overview.Data();
-	else if (tab == 1)
-		sectors.Data();
-	else if (tab == 2)
-		snapctrl.Data();
+	//else if (tab == 1)
+	//	snapctrl.Data();
+}*/
+
+
+
+
+
+
+ExpertOptimizerCtrl::ExpertOptimizerCtrl() {
+	
 }
 
-
-
-
-
+void ExpertOptimizerCtrl::Data() {
+	
+}
 
 
 
@@ -323,7 +334,7 @@ SignalTabCtrl::SignalTabCtrl() {
 }
 
 void SignalTabCtrl::Data() {
-	if (!agent) return;
+	/*if (!agent) return;
 	
 	Agent& a = *agent;
 	int tab = Get();
@@ -363,14 +374,14 @@ void SignalTabCtrl::Data() {
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
-	}
+	}*/
 }
 
 void SignalTabCtrl::SetAgent(Agent& agent) {
-	this->agent = &agent;
+	/*this->agent = &agent;
 	
 	overview.act_graph.SetAgent(agent, PHASE_SIGNAL_TRAINING);
-	trainingctrl.SetAgent(agent, PHASE_SIGNAL_TRAINING);
+	trainingctrl.SetAgent(agent, PHASE_SIGNAL_TRAINING);*/
 }
 
 
@@ -397,7 +408,7 @@ AmpTabCtrl::AmpTabCtrl() {
 }
 
 void AmpTabCtrl::Data() {
-	if (!agent) return;
+	/*if (!agent) return;
 	
 	Agent& a = *agent;
 	int tab = Get();
@@ -412,14 +423,14 @@ void AmpTabCtrl::Data() {
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
-	}
+	}*/
 }
 
 void AmpTabCtrl::SetAgent(Agent& agent) {
-	this->agent = &agent;
+	/*this->agent = &agent;
 	
 	overview.act_graph.SetAgent(agent, PHASE_AMP_TRAINING);
-	trainingctrl.SetAgent(agent, PHASE_AMP_TRAINING);
+	trainingctrl.SetAgent(agent, PHASE_AMP_TRAINING);*/
 }
 
 
@@ -455,13 +466,13 @@ FuseTabCtrl::FuseTabCtrl() {
 	
 	WhenSet << THISBACK(Data);
 	
-	AgentFuse& fuse = GetSystem().GetAgentSystem().fuse;
+	/*AgentFuse& fuse = GetSystem().GetAgentSystem().fuse;
 	overview.act_graph.SetFuse(fuse);
-	trainingctrl.SetFuse(fuse);
+	trainingctrl.SetFuse(fuse);*/
 }
 
 void FuseTabCtrl::Data() {
-	AgentFuse& fuse = GetSystem().GetAgentSystem().fuse;
+	/*AgentFuse& fuse = GetSystem().GetAgentSystem().fuse;
 	int tab = Get();
 	
 	if (tab == 0) {
@@ -475,7 +486,7 @@ void FuseTabCtrl::Data() {
 	}
 	else if (tab == 1) {
 		trainingctrl.Data();
-	}
+	}*/
 }
 
 
@@ -502,14 +513,14 @@ void FuseTabCtrl::Data() {
 
 
 
-
+/*
 ManagerCtrl::ManagerCtrl() {
 	view = -1;
 	
 	Add(hsplit.SizePos());
 	
 	hsplit.Horz();
-	hsplit << listsplit << mainview;
+	hsplit << glist << mainview;
 	hsplit.SetPos(1500);
 	
 	mainview.Add(system_tabs.SizePos());
@@ -518,30 +529,18 @@ ManagerCtrl::ManagerCtrl() {
 	mainview.Add(fuse_tabs.SizePos());
 	mainview.Add(export_ctrl.SizePos());
 	
-	listsplit.Vert();
-	listsplit << glist << alist;
-	listsplit.SetPos(2000);
-	
 	glist.AddColumn("View");
 	glist.Add("Overview");
-	glist.Add("Signal");
-	glist.Add("Amp");
-	glist.Add("Fuse");
+	glist.Add("Optimizer");
 	glist.Add("Realtime");
 	glist <<= THISBACK(SetView);
-	
-	alist.AddColumn("Symbol");
-	alist.AddColumn("Result");
-	alist.AddColumn("Drawdown");
-	alist <<= THISBACK(SetView);
-	alist.WhenLeftClick << THISBACK(SetView);
 	
 	SetView();
 }
 
 void ManagerCtrl::SetView() {
 	System& sys = GetSystem();
-	AgentSystem& asys = sys.GetAgentSystem();
+	//AgentSystem& asys = sys.GetAgentSystem();
 	
 	signal_tabs.Hide();
 	system_tabs.Hide();
@@ -556,7 +555,6 @@ void ManagerCtrl::SetView() {
 	this->view = view;
 	
 	if (view == 0) {
-		alist.SetCount(0);
 		system_tabs.Show();
 	}
 	else if (view == 1) {
@@ -577,15 +575,14 @@ void ManagerCtrl::SetView() {
 		alist.SetCount(0);
 		fuse_tabs.Show();
 	}
-	else if (view == 4) {
-		alist.SetCount(0);
+	else if (view == 2) {
 		export_ctrl.Show();
 	}
 }
 
 void ManagerCtrl::Data() {
 	System& sys = GetSystem();
-	AgentSystem& ag = sys.GetAgentSystem();
+	//AgentSystem& ag = sys.GetAgentSystem();
 	
 	int view = glist.GetCursor();
 	
@@ -614,13 +611,12 @@ void ManagerCtrl::Data() {
 	else if (view == 3) {
 		fuse_tabs.Data();
 	}
-	
-	else if (view == 4) {
+	else if (view == 2) {
 		export_ctrl.Data();
 	}
 	
 }
-
+*/
 
 
 
@@ -657,7 +653,6 @@ RealtimeCtrl::RealtimeCtrl() {
 }
 
 void RealtimeCtrl::AddMessage(String time, String level, String msg) {
-	if (Thread::IsShutdownThreads() || !GetSystem().GetAgentSystem().running) return;
 	journal.Insert(0);
 	journal.Set(0, 0, time);
 	journal.Set(0, 1, level);

@@ -3753,7 +3753,7 @@ must be set accordingly. More groups requires much more processing,
 so the fast mode is not default. This could be done cleanly with 
 planning and more workforce, but I just hacked this together.&]
 [s0; &]
-[s3; 17.10.2017&]
+[s3; 16.10.2017&]
 [s0; [/ The fog has cleared and a new summit can be seen...]&]
 [s0; Testing seems to be required for real. The training performance 
 is far from realtime performance. I`'ve been playing with the 
@@ -3764,4 +3764,156 @@ and the best combination should be tested even with a separate
 data for verification.&]
 [s0; Changing preprocessor variables to dynamic is a very challenging 
 task. Planned changes might be the most unpleasant to implement 
-so far.]]
+so far.&]
+[s0; &]
+[s3; 17.10.2017&]
+[s0; Oh damn. Seems like DQN is bad for this use case, because the 
+discount factor is 0. When DQN drives virtual car or does something, 
+where single action is rather meaningless alone (with many small 
+adjusting actions per timestep), then that is a good use case 
+for DQN. Now, with discount factor 0, faster and more precise 
+methods can be used, like SVM.&]
+[s0; ...&]
+[s0; By the way, one thing in the electric universe theory have been 
+very interesting for me. That is those alternative scientific 
+theories, which are constantly under witch hunt. So, at Mars, 
+many of those distinctive features can`'t be impact craters and 
+some are huge canyons. In short, the electric universe theory 
+is speculating, that there is electrical forces carving those 
+features, and [^https`:`/`/youtu`.be`/RPGRirezQlo`?t`=3m31s^ that 
+would be causing the imbalance between south and north hemisphere]. 
+So, Earth has that imbalance too. Could that be because of similar 
+reasons? Me asking these questions is the reason why I am such 
+an outsider at the campus.&]
+[s0; &]
+[s3; 18.10.2017&]
+[s0; Fuck this. I had to clean almost everything away again. All 
+agent and agentsystem code. Luckily, now this seems to integrate 
+a lot better to the existing code.&]
+[s0; &]
+[s3; 19.10.2017&]
+[s0; I wrote headers and stubs of the new ExpertSystem code. I searched 
+for ideas from scientific papers, but didn`'t find much existing 
+useful code. I thought, that SVM would be good choice, but then 
+I found comparison to random trees, which turned out to suit 
+better for my needs.&]
+[s0; Karpathy the AI leader have written forestjs library, which 
+I will use as I used ConvNetJS. Those libraries are just pure 
+gold and are worth translating to C`+`+. It has nice X,Y to true/false 
+example, which will be a nice GUI demo.&]
+[s0; One problem occured, however. The forestjs supports only binary 
+class and two input variables. First I thought, that it will 
+be a blocking problem. However, I had just read a scientific 
+paper about emotion classifiers, and had seen positive results 
+about decision`-level fusion. Those binary classifiers can be 
+combined with the tree structure to give sort of fusion of values... 
+because it can also give probability instead of binary only. 
+It`'s only remotely similar, but that`'s enough for me.&]
+[s0; &]
+[s3; 21.10.2017&]
+[s0; I am that kind of guy, who likes to watch [^https`:`/`/www`.youtube`.com`/watch`?v`=facDr2lTAUM`&t`=5529s^ t
+rain driver`'s view going through snow storm] and drink coffee 
+while listening to SPA radio channel at [^https`:`/`/www`.1`.fm^ 1.fm] 
+. My dream is that I can have VR glasses, which shows that driver`'s 
+view at background while the programming IDE floats slightly 
+transparently in front of it. It`'s definitely closer if you 
+use MS Windows... but I don`'t see it coming in a near future 
+anyway.&]
+[s0; Life will always be about mysterious black box neural machines 
+resisting the electric scalability and carving tunnels in time 
+by their senses. The observer, what we all feel, might be that 
+infinite gradient of flow. It`'s about being in a pattern, sensing 
+far and close, to past and future. Manipuling those senses in 
+exploitative manners is just the force of death.&]
+[s0; The Internet have brought up the best and the worst of the fast 
+communication based on visual content. The best feature is that 
+some hard`-to`-notice issues can now be persistently covered 
+first time ever. The worst feature is all the over simplified 
+click`-bait economics and politics, which gives a constant repulsive 
+feeling, but `"works statistically`".&]
+[s0; In Finnish, we have a popular song, which says `"sadness plays 
+with black keys of piano, even though it touched one a white 
+key`". I am in affective computing course, which tells how 7 
+basic emotions consist of 5 sad emotions, 1 neutral and 1 happy. 
+Sometimes I feel, that establishment is a saddest sad entity 
+which calls everyone to make them feel less sad. Why there isn`'t 
+5 different happiness and only 1 negative feeling? I know immediately 
+at least 5 happy feelings:&]
+[s0; 1. the bliss at weekend sunrise with hot cup of coffee&]
+[s0; 2. the happiness about relationship of two persons&]
+[s0; 3. euphoric feeling of fast profits, e.g. slot machine wins&]
+[s0; 4. affection from physical touch&]
+[s0; 5. visual excitement from beauty&]
+[s0; I am a huge fan of the visual excitement...&]
+[s0; &]
+[s3; 24.10.2017&]
+[s0; I`'ve been writing the new expert system with genetic optimizer 
+and random forest instead of DQN agents. This seems to be much 
+more logical solution, but I couldn`'t find this without steps 
+in`-between.&]
+[s0; So, zigzag indicator can give ideal labels with 2`^x periods, 
+and those can be used in learning sectors with random forests. 
+Shortest period sector is `"advisor`" and it learns the label 
+and it is usable. Advisors are fused together and trained for 
+sensitive idling in negative trends. Sectors, advisors and fusions 
+are optimized separately with DE solver. I don`'t know all optimized 
+variables yet, but at least random forest inputs are optimized. 
+The evolve function must take into account which variables are 
+floating point numbers and which are enumerators without sane 
+value between two values.&]
+[s0; This is very simple version in comparison to current DQN system. 
+It was difficult to upgrade it, however.&]
+[s0; ...&]
+[s0; It have been beautiful days lately. Frozen grass, trees and 
+roads with blue skies. Not snow yet... only 4 months since last 
+snowing ;)&]
+[s0; &]
+[s3; 25.10.2017&]
+[s0; There is some #metoo momentum going on. I understand, that it 
+is good to suppress the annoying behaviour of many men. Those 
+men goes to whores, sex tourism and actually see women accepting 
+sex always for some amount of money. I know there is a lot of 
+them out there... Those men are prone to harass women for real 
+and the campaign is addressing that problem. I get that.&]
+[s0; However, that campaign is harmful in some cases. Women many 
+times are very permissive and open to romantical encounters, 
+but they tend to `"forget`" it afterwards. They say that they 
+were drunk and didn`'t mean it, and then they pretend that they 
+are some innocent little girls. My experience has been exactly 
+that many times, especially because I am poor and unattractive 
+without women being drunk. Women have been romantically open 
+explicitly and when I don`'t respond immediately, but after a 
+while, then they are pretending that they weren`'t ever acting 
+like that. Some of those pretenders have gone probably along 
+with the #metoo campaign. They did not have the real problem, 
+they are pretending and some others have the real problem. They 
+can`'t ethically and honestly do that, but now they are encouraged 
+to.&]
+[s0; I had a partner once, which was narcissistic and very abusive 
+against me having women as friends and against me liking porn, 
+and in the end she exited the relationship as pretending that 
+I was sexually harassing her. She had wrote some innocent event 
+to her diary in a innocently delusional way, that could have 
+been interpreted as sexual harassment, and she found that diary 
+entry much later with her low IQ hard drug graffiti gang friends 
+and they decided to revenge to me and to my family. They owe 
+me big time. Yet, they seem to get more social support, which 
+is utterly insane and disgusting. Originally, that was some very 
+mild and playful drunken parody about her abusive effort to make 
+me stop watching porn, and she couldn`'t see it in that way, 
+because she was so narcissistic and manipulative. She insisted 
+coming over me, but she couldn`'t accept me liking porn. Shame 
+is entirely on her and her party. I am very sorry for myself 
+only and her party accumulated a huge unnecessary and painful 
+mess, which they don`'t seem to clean ever...&]
+[s0; It makes me wonder, how many narcissistic fake feminist women 
+are there using that #metoo campaign as weapon against normal 
+men. Those wouldn`'t be about equality between men and women, 
+but about social power hungriness.&]
+[s0; &]
+[s0; &]
+[s3; 26.10.2017&]
+[s0; I didn`'t have time for doing this, yet I`'m still implementing 
+this. I feel terrible about this time consuming... but this is 
+just very expensive to leave without running version.&]
+[s0; ]]

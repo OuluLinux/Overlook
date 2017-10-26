@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 #define DLOG(x) LOG(x)
@@ -1076,3 +1078,4 @@ void AgentSystem::RefreshPoleNavigation() {
 }
 
 }
+#endif

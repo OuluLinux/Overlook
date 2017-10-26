@@ -1,6 +1,7 @@
 #ifndef _Overlook_FixedSimBroker_h_
 #define _Overlook_FixedSimBroker_h_
 
+namespace Overlook {
 
 struct FixedOrder {
 	double open = 0.0;
@@ -10,7 +11,7 @@ struct FixedOrder {
 	int type = -1;
 	int is_open = 0;
 };
-
+/*
 struct SingleFixedSimBroker {
 	FixedOrder order;
 	double balance = 0.0;
@@ -37,7 +38,7 @@ struct SingleFixedSimBroker {
 	
 	double AccountEquity() const {return equity;}
 	double GetDrawdown() const {double sum = profit_sum + loss_sum; return sum > 0.0 ? loss_sum / sum : 1.0;}
-};
+};*/
 
 
 struct FixedSimBroker {
@@ -65,15 +66,15 @@ struct FixedSimBroker {
 		
 	FixedSimBroker();
 	void Reset();
-	double RealtimeBid(const Snapshot& snap, int sym_id) const;
-	double RealtimeAsk(const Snapshot& snap, int sym_id) const;
-	double GetCloseProfit(int sym_id, const FixedOrder& o, const Snapshot& snap) const;
-	void OrderSend(int sym_id, int type, double volume, double price, const Snapshot& snap);
-	void OrderClose(int sym_id, double lots, FixedOrder& order, const Snapshot& snap);
-	void CloseAll(const Snapshot& snap);
-	double GetMargin(const Snapshot& snap, int sym_id, double volume);
-	bool Cycle(const Snapshot& snap);
-	void RefreshOrders(const Snapshot& snap);
+	double RealtimeBid(int pos, int sym_id) const;
+	double RealtimeAsk(int pos, int sym_id) const;
+	double GetCloseProfit(int sym_id, const FixedOrder& o, int pos) const;
+	void OrderSend(int sym_id, int type, double volume, double price, int pos);
+	void OrderClose(int sym_id, double lots, FixedOrder& order, int pos);
+	void CloseAll(int pos);
+	double GetMargin(int pos, int sym_id, double volume);
+	bool Cycle(int pos);
+	void RefreshOrders(int pos);
 	
 	double AccountEquity() const {return equity;}
 	double PartialEquity() const {return part_equity;}
@@ -83,5 +84,6 @@ struct FixedSimBroker {
 	int GetSignal(int sym_id) const {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); return signal[sym_id];}
 };
 
+}
 
 #endif

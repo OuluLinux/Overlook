@@ -92,16 +92,16 @@ void Overlook::Data() {
 		if (prev_view)
 			prev_view->Data();
 	}
-	else if (tab == 1) {
+	else if (tab == 2) {
 		overview.Data();
 	}
-	else if (tab == 2) {
+	else if (tab == 3) {
 		optimizer.Data();
 	}
-	else if (tab == 3) {
+	else if (tab == 4) {
 		export_ctrl.Data();
 	}
-	else if (tab == 4) {
+	else if (tab == 5) {
 		rtctrl.Data();
 	}
 }

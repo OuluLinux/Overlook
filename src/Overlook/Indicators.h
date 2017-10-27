@@ -41,7 +41,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Arg("period", ma_period, 2)
-			% Arg("offset", ma_shift, 0)
+			% Arg("offset", ma_shift, -10000)
 			% Arg("method", ma_method, 0, 3);
 	}
 };
@@ -301,7 +301,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Arg("period", period, 2)
-			% Arg("shift", shift, 2);
+			% Arg("shift", shift, -10000);
 	}
 };
 

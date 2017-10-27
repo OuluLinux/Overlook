@@ -172,6 +172,9 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 		Output& output = outputs[i];
 		out % output.phase % output.type % output.visible;
 		
+		// VectorBool label is typically around 1-10K bytes and that's not too much.
+		out % output.label;
+		
 		for(int j = 0; j < output.buffers.GetCount(); j++) {
 			Buffer& buf = output.buffers[j];
 			
@@ -189,6 +192,7 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			}
 		}
 	}
+	
 }
 
 void CoreIO::LoadCache() {

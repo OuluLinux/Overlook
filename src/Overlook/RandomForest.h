@@ -169,11 +169,11 @@ struct BufferRandomForest {
 	RandomForest forest;
 	VectorBool predicted_label;
 	Option options;
-	double train_accuracy = 0.0, test_accuracy = 0.0;
+	double train_accuracy = 0.0, test0_accuracy = 0.0, test1_accuracy = 0.0;
 	
 	BufferRandomForest();
 	void SetInputCount(int i);
-	void Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_end, int test1_end);
+	void Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_begin, int test1_begin);
 	
 };
 

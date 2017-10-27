@@ -208,6 +208,17 @@ void MovingAverage::Start() {
 		case MODE_LINWEIGHT:
 			LinearlyWeighted();
 	}
+	
+	Buffer& buffer = GetBuffer(0);
+	VectorBool& label = outputs[0].label;
+	label.SetCount(bars);
+	double prev = ma_counted > 0 ? buffer.Get(ma_counted-1) : 0.0;
+	for(int i = ma_counted; i < bars; i++) {
+		double cur = buffer.Get(i);
+		bool label_value = cur < prev;
+		label.Set(i, label_value);
+		prev = cur;
+	}
 }
 
 void MovingAverage::Simple()
@@ -1353,11 +1364,20 @@ void Momentum::Start() {
 		counted--;
 	
 	//bars--;
+	VectorBool& label = outputs[0].label;
+	label.SetCount(bars);
+	SetSafetyLimit(counted-1);
+	double prev = counted > 0 ? buffer.Get(counted-1) : 0.0;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double close1 = Open( i );
 		double close2 = Open( i - period );
-		buffer.Set(i, close1 * 100 / close2 - 100);
+		double value = close1 * 100 / close2 - 100;
+		buffer.Set(i, value);
+		
+		bool label_value = value < prev;
+		label.Set(i, label_value);
+		prev = value;
 	}
 }
 
@@ -1425,6 +1445,7 @@ void OsMA::Start() {
 		buffer.Set(i, d);
 	}
 	
+	SetSafetyLimit(bars);
 	SimpleMAOnBuffer( bars, counted, 0, signal_sma_period, buffer, signal_buffer );
 	
 	for (int i = counted; i < bars; i++) {
@@ -2847,6 +2868,7 @@ void MarketFacilitationIndex::Start() {
 
 
 
+
 ZigZag::ZigZag()
 {
 	input_depth		= 12; // Depth
@@ -2880,7 +2902,10 @@ void ZigZag::Start() {
 	
 	int bars = GetBars();
 	int counted = GetCounted();
-
+	
+	VectorBool& label = outputs[0].label;
+	label.SetCount(bars);
+	
 	if ( bars < input_depth || input_backstep >= input_depth )
 		throw DataExc();
 
@@ -2928,13 +2953,26 @@ void ZigZag::Start() {
 		point = sym.point;
 	}
 	
+	ExtremumCache ec(input_depth);
+	int begin = Upp::max(0, counted - input_depth);
+	ec.pos = begin - 1;
+	for(int i = begin; i < counted; i++) {
+		SetSafetyLimit(i+1);
+		double low = Low(i);
+		double high = High(i);
+		ec.Add(low, high);
+	}
+	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i+1); // This indicator peeks anyway
 		
-		int lowest = LowestLow(input_depth, i);
-		extremum = Low(lowest);
 		double low = Low(i);
-
+		double high = High(i);
+		ec.Add(low, high);
+		
+		int lowest = ec.GetLowest();
+		extremum = Low(lowest);
+		
 		if ( extremum == lastlow )
 			extremum = 0.0;
 		else
@@ -2960,9 +2998,8 @@ void ZigZag::Start() {
 		else
 			low_buffer.Set(i, 0.0);
 
-		int highest = HighestHigh(input_depth, i);
+		int highest = ec.GetHighest();
 		extremum = High(highest);
-		double high = High(i);
 	
 		if ( extremum == lasthigh )
 			extremum = 0.0;
@@ -3010,7 +3047,8 @@ void ZigZag::Start() {
 		switch ( whatlookfor ) {
 			
 		case 0: // look for peak or lawn
-
+			label.Set(i, false);
+			
 			if ( lastlow == 0.0 && lasthigh == 0.0 ) {
 				if ( high_buffer.Get(i) != 0.0 ) {
 					lasthighpos = i;
@@ -3028,6 +3066,8 @@ void ZigZag::Start() {
 			break;
 
 		case 1: // look for peak
+			label.Set(i, false);
+			
 			if ( low_buffer.Get(i) != 0.0 && low_buffer.Get(i) < lastlow && high_buffer.Get(i) == 0.0 )
 			{
 				keypoint_buffer.Set(lastlowpos, 0.0);
@@ -3047,7 +3087,8 @@ void ZigZag::Start() {
 			break;
 
 		case - 1: // look for lawn
-
+			label.Set(i, true);
+			
 			if ( high_buffer.Get(i) != 0.0 && high_buffer.Get(i) > lasthigh && low_buffer.Get(i) == 0.0 )
 			{
 				keypoint_buffer.Set(lasthighpos, 0.0);
@@ -3914,7 +3955,7 @@ void VolatilityAverage::Start() {
 	
 	int bars = GetBars();
 	int counted = GetCounted();
-	if (counted == bars) return;
+	if (counted >= bars) return;
 	if (!counted) counted++;
 	
 	Buffer& dst = GetBuffer(0);

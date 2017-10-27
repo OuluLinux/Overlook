@@ -14,9 +14,6 @@ INI_INT(arg_port, 42000, "Host port");
 };
 
 GUI_APP_MAIN {
-	RandomForestTester().Run();
-	return;
-	
 	SetIniFile(ConfigFile("overlook.ini"));
 	
 	const Vector<String>& args = CommandLine();
@@ -33,6 +30,14 @@ GUI_APP_MAIN {
 		}
 		else if (s == "-waitmt4") {
 			Config::wait_mt4 = ScanInt(args[i]);
+		}
+		else if (s == "-foresttest") {
+			RandomForestTester().Run();
+			return;
+		}
+		else if (s == "-extremumtest") {
+			TestExtremumCache();
+			return;
 		}
 	}
 	

@@ -22,7 +22,11 @@ struct DecisionClassifierConf : Moveable<DecisionClassifierConf> {
 	
 	uint32 GetHashValue() const;
 	void Randomize();
+	String ToString() const;
 };
+
+bool operator == (const DecisionClassifierConf& a, const DecisionClassifierConf& b);
+inline bool operator != (const DecisionClassifierConf& a, const DecisionClassifierConf& b) {return !(a == b);}
 
 struct SectorConf : public ConfTestResults, Moveable<SectorConf> {
 	DecisionClassifierConf dec[SECTOR_2EXP];
@@ -36,6 +40,7 @@ struct SectorConf : public ConfTestResults, Moveable<SectorConf> {
 
 bool operator == (const SectorConf& a, const SectorConf& b);
 bool operator < (const SectorConf& a, const SectorConf& b);
+inline bool operator != (const SectorConf& a, const SectorConf& b) {return !(a == b);}
 
 class ExpertSectors : public Pte<ExpertSectors> {
 	
@@ -66,6 +71,7 @@ struct AdvisorConf : public ConfTestResults, Moveable<AdvisorConf> {
 
 bool operator == (const AdvisorConf& a, const AdvisorConf& b);
 bool operator < (const AdvisorConf& a, const AdvisorConf& b);
+inline bool operator != (const AdvisorConf& a, const AdvisorConf& b) {return !(a == b);}
 
 class ExpertAdvisor : public Pte<ExpertAdvisor> {
 	
@@ -99,6 +105,7 @@ struct FusionConf : public ConfTestResults, Moveable<FusionConf> {
 
 bool operator == (const FusionConf& a, const FusionConf& b);
 bool operator < (const FusionConf& a, const FusionConf& b);
+inline bool operator != (const FusionConf& a, const FusionConf& b) {return !(a == b);}
 
 class ExpertFusion : public Pte<ExpertFusion> {
 	
@@ -140,15 +147,16 @@ inline ExpertCache& GetExpertCache() {return Single<ExpertCache>();}
 
 class ExpertOptimizer {
 	
+public:
 	// Persistent
 	Vector<SectorConf>		sec_confs;
 	Vector<AdvisorConf>		adv_confs;
 	Vector<FusionConf>		fus_confs;
-	
+	Vector<double>			sector_results;
 	
 	// Temporary
 	const int pop_size = 100;
-	
+	SpinLock lock;
 	
 public:
 	typedef ExpertOptimizer CLASSNAME;

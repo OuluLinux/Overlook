@@ -70,15 +70,6 @@ public:
 };
 */
 
-class ExpertOptimizerCtrl : public ParentCtrl {
-	
-public:
-	typedef ExpertOptimizerCtrl CLASSNAME;
-	ExpertOptimizerCtrl();
-	
-	void Data();
-	
-};
 
 
 /*class SystemTabCtrl : public TabCtrl {

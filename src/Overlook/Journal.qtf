@@ -3916,4 +3916,16 @@ but about social power hungriness.&]
 [s0; I didn`'t have time for doing this, yet I`'m still implementing 
 this. I feel terrible about this time consuming... but this is 
 just very expensive to leave without running version.&]
+[s0; &]
+[s3; 27.10.2017&]
+[s0; New expert system has requirements for evolve functions done, 
+but many issues have came up.&]
+[s0; The random forest algorithm seems to be much more expensive 
+than I thought. I might cope with it anyway, because the differential 
+evolution solver might work with short samples too. Those can 
+be taken from different positions.&]
+[s0; I really don`'t have time for this from my school, but I`'ll 
+do it anyway. I`'m feeling guilty...&]
+[s0; Labels are invalid, but otherwise I completed today`'s tasks 
+o n time. They should be visually verfiable anyway.&]
 [s0; ]]

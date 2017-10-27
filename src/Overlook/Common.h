@@ -19,7 +19,7 @@ using namespace Upp;
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
-#define DECISION_LEVELS			6
+#define DECISION_LEVELS			2
 #define DECISION_INPUTS			(1 << DECISION_LEVELS)
 #define TF_COUNT				8
 #define TRUEINDI_COUNT			3
@@ -439,11 +439,15 @@ public:
 	
 	bool Get(int i) const;
 	void Set(int i, bool b);
+	void LimitLeft(int i);
+	void LimitRight(int i);
 	
 	ConstU64* Begin() const;
 	ConstU64* End() const;
 	uint64*   Begin();
 	uint64*   End();
+	
+	void Serialize(Stream& s) {s % data % count;}
 };
 
 typedef const VectorBool	ConstVectorBool;
@@ -677,6 +681,70 @@ inline int PopCount64(uint64 i) {
 	return __builtin_popcountll(i);
 	#endif
 }
+
+
+// Reduce complexity: e.g. for zigzag
+
+struct ExtremumCache {
+	Vector<double> max, min;
+	double max_value = -DBL_MAX, min_value = DBL_MAX;
+	int pos = -1, size = 0, max_left = 0, min_left = 0;
+	
+	ExtremumCache(int size) : size(size) {
+		max.SetCount(size, -DBL_MAX);
+		min.SetCount(size, DBL_MAX);
+	}
+	void Add(double low, double high) {
+		pos++;
+		int write_pos = pos % size;
+		
+		max_left--;
+		max[write_pos] = high;
+		if (max_left <= 0) {
+			max_value = -DBL_MAX;
+			for(int i = 0; i < size; i++) {
+				double d = max[i];
+				if (d > max_value) {
+					if (i <= write_pos)	max_left = size - (write_pos - i);
+					else				max_left = i - write_pos;
+					max_value = d;
+				}
+			}
+		}
+		else if (high >= max_value) {
+			max_left = size;
+			max_value = high;
+		}
+		
+		min_left--;
+		min[write_pos] = low;
+		if (min_left <= 0) {
+			min_value = DBL_MAX;
+			for(int i = 0; i < size; i++) {
+				double d = min[i];
+				if (d < min_value) {
+					if (i <= write_pos)	min_left = size - (write_pos - i);
+					else				min_left = i - write_pos;
+					min_value = d;
+				}
+			}
+		}
+		else if (low <= min_value) {
+			min_left = size;
+			min_value = low;
+		}
+	}
+	
+	int GetHighest() {
+		return pos - (size - max_left);
+	}
+	
+	int GetLowest() {
+		return pos - (size - min_left);
+	}
+};
+
+void TestExtremumCache();
 
 }
 

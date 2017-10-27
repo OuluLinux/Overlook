@@ -100,6 +100,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	int tf = GetTimeframe();
 	int bars = GetBars();
 	int counted = GetCounted();
+	if (counted > bars) counted = bars; // weird bug
 	ASSERTEXC(id >= 0);
 	double half_point = point * 0.5;
 	

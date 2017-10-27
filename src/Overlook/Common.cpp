@@ -54,6 +54,41 @@ void VectorBool::Set(int i, bool b) {
 	else	*it &= ~(1ULL << k);
 }
 
+void VectorBool::LimitLeft(int i) {
+	if (i < 0 || i >= count)
+		return;
+	int byt = i / 64;
+	int bit = i % 64;
+	uint64* it = data.Begin() + byt;
+	ASSERT(byt >= 0 && byt < data.GetCount());
+	if (bit > 0) {
+		for(int i = bit; i < 64; i++)
+			*it &= ~(1ULL << i);
+		it++;
+	}
+	ConstU64* end = data.End();
+	for (; it != end; it++)
+		*it = 0;
+}
+
+void VectorBool::LimitRight(int i) {
+	if (i < 0 || i >= count)
+		return;
+	int byt = i / 64;
+	int bit = i % 64;
+	uint64* begin = data.Begin();
+	uint64* it = begin + byt;
+	ASSERT(byt >= 0 && byt < data.GetCount());
+	if (bit > 0) {
+		for(int i = bit-1; i >= 0; i--)
+			*it &= ~(1ULL << i);
+	}
+	while (it != begin) {
+		it--;
+		*it = 0;
+	}
+}
+
 ConstU64* VectorBool::Begin() const {
 	return data.Begin();
 }
@@ -81,6 +116,52 @@ void VectorBool::operator=(const VectorBool& src) {
 		*ait = *bit;
 	
 	count = src.count;
+}
+
+
+
+
+void TestExtremumCache() {
+	
+	Vector<double> data;
+	
+	for(int i = 0; i < 100000; i++) {
+		data.Add(Randomf());
+	}
+	
+	int period = 100;
+	ExtremumCache ec(period);
+	for(int i = 0; i < data.GetCount(); i++) {
+		
+		// Less complex
+		ec.Add(data[i], data[i]);
+		int ec_highest = ec.GetHighest();
+		int ec_lowest = ec.GetLowest();
+		
+		// More complex
+		int highest = -1, lowest = -1;
+		double highestv = -DBL_MAX, lowestv = DBL_MAX;
+		for(int j = 0; j < period; j++) {
+			int pos = i - j;
+			if (pos < 0) break;
+			
+			double d = data[pos];
+			if (d < lowestv) {
+				lowest = pos;
+				lowestv = d;
+			}
+			if (d > highestv) {
+				highest = pos;
+				highestv = d;
+			}
+		}
+		
+		// Must match
+		LOG(Format("%d: %d != %d, %d != %d", i, highest, ec_highest, lowest, ec_lowest));
+		if (highest != ec_highest || lowest != ec_lowest)
+			Panic("Invalid value");
+	}
+	
 }
 
 }

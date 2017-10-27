@@ -4,9 +4,9 @@ namespace Overlook {
 
 int test0_begin = 0;
 int test1_begin = 0;
-int cls_tree_count	= 100;
+int cls_tree_count	= (DECISION_INPUTS * 3);
 int cls_max_depth	= 4;
-int cls_hypothesis	= 10;
+int cls_hypothesis	= 5;
 
 VectorBool full_mask;
 
@@ -29,59 +29,28 @@ void DecisionClassifierConf::Randomize() {
 	label_id = Random(GetSystem().GetLabelIndicatorCount());
 }
 
-
-
-
-
-
-/*
-DecisionClassifier::DecisionClassifier() {
-	
+String DecisionClassifierConf::ToString() const {
+	String s;
+	s << (int)label_id << " ";
+	for(int i = 0; i < DECISION_INPUTS; i++) {
+		s << "(" << (int)input[i].symbol << ", " << (int)input[i].indi << ") ";
+	}
+	return s;
 }
 
-void DecisionClassifier::Clear() {
-	data0.Clear();
-	data1.Clear();
-	dec_data.Clear();
-	train_labels.Clear();
-	test_labels.Clear();
-	predicted_labels.Clear();
-	train_pos.Clear();
-	test_pos.Clear();
+bool operator == (const DecisionClassifierConf& a, const DecisionClassifierConf& b) {
+	for(int i = 0; i < DECISION_INPUTS; i++) {
+		if (a.input[i].indi != b.input[i].indi) return false;
+		if (a.input[i].symbol != b.input[i].symbol) return false;
+	}
+	if (a.label_id != b.label_id) return false;
+	return true;
 }
 
-void DecisionClassifier::Refresh() {
-	
-}
 
-double DecisionClassifier::PredictOne(int data_pos) {
-	System& sys = GetSystem();
-	
-	// Get references
-	ConstBuffer& src0a = sys.GetTrueIndicator(conf.symbol0a, conf.indi0a);
-	ConstBuffer& src0b = sys.GetTrueIndicator(conf.symbol0b, conf.indi0b);
-	ConstBuffer& src1a = sys.GetTrueIndicator(conf.symbol1a, conf.indi1a);
-	ConstBuffer& src1b = sys.GetTrueIndicator(conf.symbol1b, conf.indi1b);
-	
-	// Fill training data
-	RandomForest::Pair data0, data1, dec_data;
-	data0[0] = src0a.Get(data_pos);
-	data0[1] = src0b.Get(data_pos);
-	data1[0] = src1a.Get(data_pos);
-	data1[1] = src1b.Get(data_pos);
-	
-	// Settings
-	options.tree_count	= cls_tree_count;
-	options.max_depth	= cls_max_depth;
-	options.tries_count	= cls_hypothesis;
-	
-	double p0 = tree0.PredictOne(data0);
-	double p1 = tree1.PredictOne(data1);
-	dec_data[0] = -1.0 + p0 * 2.0;
-	dec_data[1] = -1.0 + p1 * 2.0;
-	
-	return dec_tree.PredictOne(dec_data);
-}*/
+
+
+
 
 
 
@@ -107,7 +76,13 @@ void SectorConf::Randomize() {
 }
 
 bool operator == (const SectorConf& a, const SectorConf& b) {
-	
+	for(int i = 0; i < SECTOR_2EXP; i++)
+		if (a.dec[i] == b.dec[i])
+			return false;
+	if (a.symbol != b.symbol) return false;
+	if (a.period != b.period) return false;
+	if (a.minimum_prediction_len != b.minimum_prediction_len) return false;
+	return true;
 }
 
 bool operator < (const SectorConf& a, const SectorConf& b) {
@@ -136,6 +111,7 @@ void ExpertSectors::Refresh() {
 	ConstBufferSource bufs;
 	bufs.SetDepth(DECISION_INPUTS);
 	
+	double accuracy = 0.0;
 	for(int i = 0; i < SECTOR_2EXP; i++) {
 		int tf = conf.period + i;
 		
@@ -151,7 +127,9 @@ void ExpertSectors::Refresh() {
 		ConstVectorBool& real_label = sys.GetLabelIndicator(conf.symbol, tf, conf.dec[i].label_id);
 		ASSERT(real_label.GetCount() == data_count);
 		sectors[i].Process(bufs, real_label, full_mask, test0_begin, test1_begin);
+		accuracy += sectors[i].test0_accuracy;
 	}
+	accuracy /= SECTOR_2EXP;
 	
 	// Refresh sector_predicted vectors
 	int is_predicting[SECTOR_COUNT];
@@ -178,8 +156,7 @@ void ExpertSectors::Refresh() {
 	
 	
 	// Write testing accuracy to conf
-	// conf.
-	Panic("TODO");
+	conf.accuracy = accuracy;
 }
 
 
@@ -619,6 +596,9 @@ void ExpertOptimizer::EvolveAdvisor(AdvisorConf& conf) {
 		return;
 	}
 	
+	
+	conf.Randomize();
+	
 	// combine rows
 	// affecting variables:
 	//  - indicator matching (increasing prob.)
@@ -671,7 +651,17 @@ void ExpertOptimizer::EvolveFusion(FusionConf& conf) {
 }
 
 void ExpertOptimizer::AddTestResult(const SectorConf& conf) {
+	lock.Enter();
+	
 	sec_confs.Add(conf);
+	
+	int limit = 1000;
+	if (sec_confs.GetCount() > limit)
+		sec_confs.Remove(limit, sec_confs.GetCount() - limit);
+	
+	sector_results.Add(conf.accuracy);
+	
+	lock.Leave();
 }
 
 void ExpertOptimizer::AddTestResult(const AdvisorConf& conf) {
@@ -687,15 +677,15 @@ void ExpertOptimizer::ReduceMemory() {
 }
 
 bool ExpertOptimizer::IsSectorOptimizing() const {
-	Panic("TODO");
+	return true;
 }
 
 bool ExpertOptimizer::IsAdvisorOptimizing() const {
-	Panic("TODO");
+	return false;
 }
 
 bool ExpertOptimizer::IsFusionOptimizing() const {
-	Panic("TODO");
+	return false;
 }
 
 
@@ -841,11 +831,12 @@ void ExpertSystem::MainTraining() {
 	
 	full_mask.SetCount(data_count).One();
 	
-	//while (running && phase == PHASE_TRAINING)
+	while (running && phase == PHASE_TRAINING)
 	{
 		if (fusion.IsSectorOptimizing() && running) {
-			for(int i = 0; i < fusion.GetPopulationSize(); i++) {
-				co & [=] {
+			for(int i = 0; i < fusion.GetPopulationSize() && running; i++) {
+				//co & [=] 
+				{
 					ExpertCache& cache = GetExpertCache();
 					
 					
@@ -937,7 +928,7 @@ void ExpertSystem::MainTraining() {
 		fusion.ReduceMemory();
 	}
 	
-	
+	stopped = true;
 }
 
 void ExpertSystem::MainReal() {

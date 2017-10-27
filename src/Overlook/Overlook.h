@@ -27,6 +27,7 @@
 
 #include "BrokerCtrl.h"
 
+#include "ExpertCtrl.h"
 #include "RandomForestCtrl.h"
 
 namespace Overlook {

@@ -384,83 +384,65 @@ void BufferRandomForest::SetInputCount(int i) {
 	
 }
 
-void BufferRandomForest::Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_end, int test1_end) {
+void BufferRandomForest::Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_begin, int test1_begin) {
+	VectorBool train_mask(mask);
+	VectorBool test0_mask(mask);
+	VectorBool test1_mask(mask);
 	
-	//forest.
+	train_mask.LimitLeft(test0_begin);
+	test0_mask.LimitRight(test0_begin);
+	test0_mask.LimitLeft(test1_begin);
+	test1_mask.LimitRight(test1_begin);
 	
-	Panic("TODO test0_end");
+	TimeStop ts;
+	forest.Train(bufs, real_label, train_mask, options);
+	Cout () << "Took " << ts.ToString() << "\n";
 	
-	/*
-	// Fill training data
-	int count = train_pos.GetCount();
-	ASSERT(count > 0);
-	data0.SetCount(count);
-	data1.SetCount(count);
-	for(int i = 0; i < count; i++) {
-		int p = train_pos[i];
-		data0[i][0] = src0a.Get(p);
-		data0[i][1] = src0b.Get(p);
-		data1[i][0] = src1a.Get(p);
-		data1[i][1] = src1b.Get(p);
+	int label_count = real_label.GetCount();
+	predicted_label.SetCount(label_count).Zero();
+	ConstBufferSourceIter iter(bufs);
+	int train_correct_count = 0, train_total_count = 0;
+	int test0_correct_count = 0, test0_total_count = 0;
+	int test1_correct_count = 0, test1_total_count = 0;
+	
+	ConstU64* it = mask.Begin();
+	ConstU64* end = mask.End();
+	for(int64 pos = 0; it != end; it++, pos += 64) {
+		if (*it == 0)
+			continue;
+		int64 i = pos;
+		iter.Seek(i);
+		for(int j = 0; i < label_count && j < 64; i++, j++, iter++) {
+			if (!(*it & (1ULL < j)))
+				continue;
+			double prob = forest.PredictOne(iter);
+			bool label = prob > 0.5;
+			if (label)
+				predicted_label.Set(i, true);
+			
+			bool match = label == real_label.Get(i);
+			
+			if (i < test0_begin) {
+				if (match)
+					train_correct_count++;
+				train_total_count++;
+			}
+			else if (i < test1_begin) {
+				if (match)
+					test0_correct_count++;
+				test0_total_count++;
+			}
+			else {
+				if (match)
+					test1_correct_count++;
+				test1_total_count++;
+			}
+		}
 	}
 	
-	
-	// Train random forests
-	tree0.Train(data0, train_labels, options);
-	tree1.Train(data1, train_labels, options);
-	
-	// Fill training fusion data
-	dec_data.SetCount(count);
-	for(int i = 0; i < count; i++) {
-		double p0 = tree0.PredictOne(data0[i]);
-		double p1 = tree1.PredictOne(data1[i]);
-		dec_data[i][0] = -1.0 + p0 * 2.0;
-		dec_data[i][1] = -1.0 + p1 * 2.0;
-	}
-	
-	// Train fusion
-	dec_tree.Train(dec_data, train_labels, options);
-	
-	// Fill testing data
-	count = test_pos.GetCount();
-	ASSERT(count == test_labels.GetCount());
-	data0.SetCount(count);
-	data1.SetCount(count);
-	for(int i = 0; i < count; i++) {
-		int p = test_pos[i];
-		data0[i][0] = src0a.Get(p);
-		data0[i][1] = src0b.Get(p);
-		data1[i][0] = src1a.Get(p);
-		data1[i][1] = src1b.Get(p);
-	}
-	
-	// Fill testing fusion data
-	dec_data.SetCount(count);
-	for(int i = 0; i < count; i++) {
-		double p0 = tree0.PredictOne(data0[i]);
-		double p1 = tree1.PredictOne(data1[i]);
-		dec_data[i][0] = -1.0 + p0 * 2.0;
-		dec_data[i][1] = -1.0 + p1 * 2.0;
-	}
-	
-	// Get testing labels
-	test_total = 0, test_correct = 0;
-	predicted_labels.SetCount(count);
-	for(int i = 0; i < count; i++) {
-		double prob = dec_tree.PredictOne(dec_data[i]);
-		bool predicted_label = prob > 0.5;
-		if (predicted_label == test_labels[i])
-			test_correct++;
-		test_total++;
-		predicted_labels[i] = predicted_label;
-	}
-	
-	
-	// Reduce memory consumption
-	data0.Clear();
-	data1.Clear();
-	dec_data.Clear();
-	*/
+	train_accuracy = train_total_count > 0 ? (double)train_correct_count / train_total_count : 0.0;
+	test0_accuracy = test0_total_count > 0 ? (double)test0_correct_count / test0_total_count : 0.0;
+	test1_accuracy = test1_total_count > 0 ? (double)test1_correct_count / test1_total_count : 0.0;
 }
 
 }

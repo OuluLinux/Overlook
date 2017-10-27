@@ -306,13 +306,6 @@ void SystemTabCtrl::Data() {
 
 
 
-ExpertOptimizerCtrl::ExpertOptimizerCtrl() {
-	
-}
-
-void ExpertOptimizerCtrl::Data() {
-	
-}
 
 
 

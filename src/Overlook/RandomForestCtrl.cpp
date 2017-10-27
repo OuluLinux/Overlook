@@ -20,9 +20,9 @@ void RandomForestCtrl::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 
-	int depth = 2;
+	int depth = 5;
 	Vector<Buffer> buf;
-	buf.SetCount(2);
+	buf.SetCount(depth);
 	for(int i = 0; i < buf.GetCount(); i++)
 		buf[i].SetCount(1);
 	ConstBufferSource src;
@@ -30,6 +30,10 @@ void RandomForestCtrl::Paint(Draw& w) {
 	for(int i = 0; i < buf.GetCount(); i++)
 		src.SetSource(i, buf[i]);
 	ConstBufferSourceIter iter(src);
+	
+	buf[2].Set(0, d0);
+	buf[3].Set(0, d1);
+	buf[4].Set(0, d2);
 	
 	if (tree) {
 		// Draw decisions in the grid
@@ -72,10 +76,19 @@ void RandomForestCtrl::Paint(Draw& w) {
 			else
 				fill = Color(100, 200, 100);
 	
-			id.DrawEllipse(
-				data->src[0].Get(i) * ss + sz.cx / 2 - 3,
-				data->src[1].Get(i) * ss + sz.cy / 2 - 3,
-				6, 6, fill, 1, Color(0,0,0));
+			double x = data->src[0].Get(i);
+			double y = data->src[1].Get(i);
+			double s0 = data->src[2].Get(i);
+			double s1 = data->src[3].Get(i);
+			double s2 = data->src[4].Get(i);
+			if ((s0 >= d0 - 0.5 && s0 <= d0 + 0.5) &&
+				(s1 >= d1 - 0.5 && s1 <= d1 + 0.5) &&
+				(s2 >= d2 - 0.5 && s2 <= d2 + 0.5)) {
+				id.DrawEllipse(
+					x * ss + sz.cx / 2 - 3,
+					y * ss + sz.cy / 2 - 3,
+					6, 6, fill, 1, Color(0,0,0));
+			}
 		}
 	}
 
@@ -115,6 +128,16 @@ RandomForestTester::RandomForestTester() {
 	hypothesis.SetData(10);
 	hypothesis <<= THISBACK(Retrain);
 	
+	d0.MinMax(-5, +5);
+	d0.SetData(0);
+	d0 <<= THISBACK(DoRefresh);
+	d1.MinMax(-5, +5);
+	d1.SetData(0);
+	d1 <<= THISBACK(DoRefresh);
+	d2.MinMax(-5, +5);
+	d2.SetData(0);
+	d2 <<= THISBACK(DoRefresh);
+	
 	toggle_type <<= THISBACK(ToggleType);
 	toggle_drawing <<= THISBACK(ToggleDrawing);
 	
@@ -124,12 +147,11 @@ RandomForestTester::RandomForestTester() {
 }
 
 void RandomForestTester::Init() {
-	N = 10;
-	data.SetCount(N);
-	data.SetCount(N);
 	
 	data.options.type = 1;
 	
+	/*
+	data.SetCount(10);
 	data.SetXY(0, -0.4326,		1.1909,		1);
 	data.SetXY(1, 1.5,			3.0,		1);
 	data.SetXY(2, 0.1253,		-0.0376,	1);
@@ -139,7 +161,15 @@ void RandomForestTester::Init() {
 	data.SetXY(6, 2.7258,		3.0668,		0);
 	data.SetXY(7, 1.4117,		2.0593,		0);
 	data.SetXY(8, 4.1832,		1.9044,		0);
-	data.SetXY(9, 1.8636,		1.1677,		0);
+	data.SetXY(9, 1.8636,		1.1677,		0);*/
+	
+	data.SetDepth(5);
+	data.SetCount(100);
+	for(int i = 0; i < 100; i++) {
+		for(int j = 0; j < 5; j++)
+			data.Set(i, j, Randomf() * 10.0 - 5.0);
+		data.SetLabel(i, Random(2));
+	}
 	
 	rfctrl.SetData(data);
 	rfctrl.SetTree(tree);
@@ -155,11 +185,25 @@ void RandomForestTester::Retrain() {
 	full_mask.SetCount(data.labels.GetCount()).One();
 	tree.Train(data.data, data.labels, full_mask, data.options);
 	dirty = true;
+	DoRefresh();
+}
+
+void RandomForestTester::DoRefresh() {
+	rfctrl.d0 = d0.GetData();
+	rfctrl.d1 = d1.GetData();
+	rfctrl.d2 = d2.GetData();
 	rfctrl.Refresh();
 }
 
 void RandomForestTester::AddItem(double x, double y, bool value) {
-	data.AddXY(x, y, value);
+	int i = data.GetCount();
+	data.SetCount(i+1);
+	data.Set(i, 0, x);
+	data.Set(i, 1, y);
+	data.Set(i, 2, d0.GetData());
+	data.Set(i, 3, d1.GetData());
+	data.Set(i, 4, d2.GetData());
+	data.SetLabel(i, value);
 	Retrain();
 }
 

@@ -24,6 +24,8 @@ public:
 	
 	Callback3<double, double, bool> WhenItem;
 	
+	
+	double d0=0, d1=0, d2=0;
 };
 
 #define LAYOUTFILE <Overlook/RandomForestCtrl.lay>
@@ -47,6 +49,7 @@ public:
 	void AddItem(double x, double y, bool value);
 	void ToggleType();
 	void ToggleDrawing();
+	void DoRefresh();
 };
 
 }

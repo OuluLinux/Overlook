@@ -62,11 +62,24 @@ struct Data {
 		for(int i = 0; i < src.GetCount(); i++)
 			data.SetSource(i, src[i]);
 	}
+	void SetDepth(int i) {
+		src.SetCount(i);
+		data.SetDepth(i);
+		for(int i = 0; i < src.GetCount(); i++)
+			data.SetSource(i, src[i]);
+		SetCount(count);
+	}
 	void SetCount(int count) {
 		for(int i = 0; i < src.GetCount(); i++)
 			src[i].SetCount(count);
 		labels.SetCount(count);
 		this->count = count;
+	}
+	void Set(int i, int j, double d) {
+		src[j].Set(i, d);
+	}
+	void SetLabel(int i, bool label) {
+		labels.Set(i, label);
 	}
 	void SetXY(int i, double x, double y, bool label) {
 		src[0].Set(i, x);
@@ -80,6 +93,8 @@ struct Data {
 		labels.Set(count, label);
 		count++;
 	}
+	int GetCount() const {return count;}
+	
 };
 
 

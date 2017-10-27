@@ -178,7 +178,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 				if (i++ == id)
 					goto match;
 		match:
-		ASSERT(i <= data.GetDepth());
+		ASSERT(i <= sum);
 	}
 	
 	Model model;

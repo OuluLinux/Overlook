@@ -20,12 +20,24 @@ void RandomForestCtrl::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 
+	int depth = 2;
+	Vector<Buffer> buf;
+	buf.SetCount(2);
+	for(int i = 0; i < buf.GetCount(); i++)
+		buf[i].SetCount(1);
+	ConstBufferSource src;
+	src.SetDepth(depth);
+	for(int i = 0; i < buf.GetCount(); i++)
+		src.SetSource(i, buf[i]);
+	ConstBufferSourceIter iter(src);
+	
 	if (tree) {
 		// Draw decisions in the grid
 		for (double x = 0.0; x <= sz.cx; x += density) {
 			for (double y = 0.0; y <= sz.cy; y += density) {
-	
-				double dec = tree->PredictOne(Pair((x-sz.cx/2)/ss, (y-sz.cy/2)/ss));
+				buf[0].Set(0, (x-sz.cx/2)/ss);
+				buf[1].Set(0, (y-sz.cy/2)/ss);
+				double dec = tree->PredictOne(iter);
 				
 				Color fill;
 				if (!drawSoft) {
@@ -34,7 +46,7 @@ void RandomForestCtrl::Paint(Draw& w) {
 					else
 						fill = Color(150,250,150);
 				}
-	
+				
 				else {
 					int ri = Upp::min(255.0, Upp::max(0.0, 250 * (1 - dec) + 150 * dec));
 					int gi = Upp::min(255.0, Upp::max(0.0, 250 * dec + 150 * (1 - dec)));
@@ -53,16 +65,16 @@ void RandomForestCtrl::Paint(Draw& w) {
 	
 	if (data) {
 		// Draw datapoints
-		for (int i = 0; i < data->data.GetCount(); i++) {
+		for (int i = 0; i < data->count; i++) {
 			Color fill;
-			if (data->labels[i])
+			if (data->labels.Get(i))
 				fill = Color(100, 100, 200);
 			else
 				fill = Color(100, 200, 100);
 	
 			id.DrawEllipse(
-				data->data[i][0]*ss + sz.cx / 2 - 3,
-				data->data[i][1]*ss + sz.cy / 2 - 3,
+				data->src[0].Get(i) * ss + sz.cx / 2 - 3,
+				data->src[1].Get(i) * ss + sz.cy / 2 - 3,
 				6, 6, fill, 1, Color(0,0,0));
 		}
 	}
@@ -89,7 +101,7 @@ void RandomForestCtrl::Paint(Draw& w) {
 
 RandomForestTester::RandomForestTester() {
 	CtrlLayout(*this, "Random Forest Tester");
-	Icon(RandomForextImg::icon());
+	//Icon(Std ::icon());
 	
 	tree_count.MinMax(1, 200);
 	tree_count.SetData(100);
@@ -113,32 +125,21 @@ RandomForestTester::RandomForestTester() {
 
 void RandomForestTester::Init() {
 	N = 10;
-	data.data.SetCount(N);
-	data.labels.SetCount(N);
+	data.SetCount(N);
+	data.SetCount(N);
 	
 	data.options.type = 1;
 	
-	data.data[0] = Pair(-0.4326,	1.1909);
-	data.data[1] = Pair(1.5,		3.0);
-	data.data[2] = Pair(0.1253,		-0.0376);
-	data.data[3] = Pair(0.2877,		0.3273);
-	data.data[4] = Pair(-1.1465,	0.1746);
-	data.data[5] = Pair(1.8133,		2.1139);
-	data.data[6] = Pair(2.7258,		3.0668);
-	data.data[7] = Pair(1.4117,		2.0593);
-	data.data[8] = Pair(4.1832,		1.9044);
-	data.data[9] = Pair(1.8636,		1.1677);
-	
-	data.labels[0]= 1;
-	data.labels[1]= 1;
-	data.labels[2]= 1;
-	data.labels[3]= 1;
-	data.labels[4]= 1;
-	data.labels[5]= 0;
-	data.labels[6]= 0;
-	data.labels[7]= 0;
-	data.labels[8]= 0;
-	data.labels[9]= 0;
+	data.SetXY(0, -0.4326,		1.1909,		1);
+	data.SetXY(1, 1.5,			3.0,		1);
+	data.SetXY(2, 0.1253,		-0.0376,	1);
+	data.SetXY(3, 0.2877,		0.3273,		1);
+	data.SetXY(4, -1.1465,		0.1746,		1);
+	data.SetXY(5, 1.8133,		2.1139,		0);
+	data.SetXY(6, 2.7258,		3.0668,		0);
+	data.SetXY(7, 1.4117,		2.0593,		0);
+	data.SetXY(8, 4.1832,		1.9044,		0);
+	data.SetXY(9, 1.8636,		1.1677,		0);
 	
 	rfctrl.SetData(data);
 	rfctrl.SetTree(tree);
@@ -150,14 +151,15 @@ void RandomForestTester::Retrain() {
 	data.options.tree_count = tree_count.GetData();
 	data.options.max_depth = max_depth.GetData();
 	data.options.tries_count = hypothesis.GetData();
-	tree.Train(data.data, data.labels, data.options);
+	
+	full_mask.SetCount(data.labels.GetCount()).One();
+	tree.Train(data.data, data.labels, full_mask, data.options);
 	dirty = true;
 	rfctrl.Refresh();
 }
 
 void RandomForestTester::AddItem(double x, double y, bool value) {
-	data.data.Add(Pair(x, y));
-	data.labels.Add(value);
+	data.AddXY(x, y, value);
 	Retrain();
 }
 

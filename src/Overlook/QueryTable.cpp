@@ -93,8 +93,8 @@ void QueryTable::Set0(int col, int value, Vector<byte>& vec) {
 	byte* v = vec.Begin() + byt;
 	for(int i = 0; i < pred.size; i++) {
 		bool b = value & (1 << i);
-		if (!b)		*v &= ~(1 << bit);
-		else		*v |=  (1 << bit);
+		if (!b)		*v &= ~(1ULL << bit);
+		else		*v |=  (1ULL << bit);
 		bit++;
 		if (bit == 8) {
 			bit = 0;

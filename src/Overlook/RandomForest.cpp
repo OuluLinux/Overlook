@@ -6,7 +6,6 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	tree_count = options.tree_count;
 	
 	// initialize many trees and train them all independently
-	trees.SetCount(0);
 	trees.SetCount(tree_count);
 	
 	for (int i = 0; i < tree_count; i++) {
@@ -53,11 +52,22 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	// initialize various helper variables
 	int64 internal_count = (1 << max_depth) - 1;
 	int64 node_count = (1 << (max_depth + 1)) - 1;
-	
+	int label_count = labels.GetCount();
+	if (!label_count)
+		return;
 	ixs.SetCount(node_count + 1);
 	for (int i = 1; i < ixs.GetCount(); i++)
-		ixs[i].SetCount(labels.GetCount()).Zero();
+		ixs[i].SetCount(label_count).Zero();
 	ixs[0] = mask; // root node starts out with all nodes as relevant
+	
+	// Zero trailing mask
+	int label_mod = label_count % 64;
+	if (label_mod > 0) {
+		uint64* last = ixs[0].End()-1;
+		for(int i = label_mod; i < 64; i++)
+			*last = *last & (~(1ULL << i));
+	}
+	int N = ixs[0].PopCount();
 	
 	models.SetCount(internal_count);
 	
@@ -93,8 +103,9 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 			if (*it == 0)
 				continue;
 			for(uint64 k = 0; k < 64; k++) {
-				if (*it && (1 << k)) {
+				if (*it & (1ULL << k)) {
 					int pos = j + k;
+					ASSERT(pos < N);
 					iter.Seek(pos);
 					bool label = Decision2DStumpTest(iter, model);
 					if (label)
@@ -113,18 +124,20 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	
 	for (int n = internal_count; n < node_count; n++) {
 		VectorBool& ix = ixs[n];
-		int numones = 0;
 		
 		ASSERT(ix.GetCount() == labels.GetCount());
 		ConstU64 *it = ix.Begin(), *end = ix.End();
 		ConstU64 *lit = labels.Begin(), *lend = labels.End();
+		uint64 total = 0;
+		uint64 numones = 0;
 		for (; it != end; it++, lit++) {
 			uint64 l = *it & *lit;
 			numones += PopCount64(l);
+			total += PopCount64(*it);
 		}
 
 		leaf_positives[n] = numones;
-		leaf_negatives[n] = ix.GetCount() - numones;
+		leaf_negatives[n] = total - numones;
 	}
 }
 
@@ -177,8 +190,9 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 	double best_gain = 0;
 	double bestw1, bestw2, bestthr;
 	
-	dots.SetCount(0);
-	dots.SetCount(N, Dot(0, 0.0));
+	dots.Reserve(128);
+	dots.SetCount(N);
+	for(int i = 0; i < dots.GetCount(); i++) dots[i] = Dot(0, 0.0);
 
 	for (int i = 0; i < numtries; i++) {
 		
@@ -194,7 +208,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 			if (*it == 0)
 				continue;
 			for(uint64 k = 0; k < 64; k++) {
-				if (*it && (1 << k)) {
+				if (*it & (1ULL << k)) {
 					int pos = j + k;
 					dots[d++] = Dot(pos,
 						w1 * data.Get(pos, ri1) +

@@ -32,6 +32,7 @@ public:
 class RandomForestTester : public WithRandomForestLayout<TopWindow> {
 	
 public:
+	VectorBool full_mask;
 	RandomForest tree;
 	Data data;
 	int N = 10; // number of data points

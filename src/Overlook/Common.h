@@ -396,6 +396,7 @@ public:
 	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
 	void SetCount(int i) {value.SetCount(i, 0.0);}
+	void Add(double d) {value.Add(d);}
 	
 	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
 	int GetCount() const {return value.GetCount();}
@@ -405,7 +406,7 @@ public:
 	
 	// Some utility functions for checking that indicator values are strictly L-R
 	#ifdef flagDEBUG
-	CoreIO* check_cio;
+	CoreIO* check_cio = NULL;
 	void SafetyCheck(CoreIO* io) {check_cio = io;}
 	double Get(int i) const;
 	void Set(int i, double value);
@@ -441,6 +442,8 @@ public:
 	
 	ConstU64* Begin() const;
 	ConstU64* End() const;
+	uint64*   Begin();
+	uint64*   End();
 };
 
 typedef const VectorBool	ConstVectorBool;

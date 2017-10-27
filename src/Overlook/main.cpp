@@ -14,6 +14,9 @@ INI_INT(arg_port, 42000, "Host port");
 };
 
 GUI_APP_MAIN {
+	RandomForestTester().Run();
+	return;
+	
 	SetIniFile(ConfigFile("overlook.ini"));
 	
 	const Vector<String>& args = CommandLine();

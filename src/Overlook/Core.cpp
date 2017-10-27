@@ -4,18 +4,18 @@ namespace Overlook {
 	
 #ifdef flagDEBUG
 double Buffer::Get(int i) const {
-	check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyCheck(i);
 	return value[i];
 }
 
 void Buffer::Set(int i, double value) {
-	check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyCheck(i);
 	this->value[i] = value;
 	if (i < earliest_write) earliest_write = i;
 }
 
 void Buffer::Inc(int i, double value) {
-	check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyCheck(i);
 	this->value[i] += value;
 }
 #endif

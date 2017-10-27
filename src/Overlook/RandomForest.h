@@ -53,6 +53,33 @@ struct Data {
 	Option options;
 	ConstBufferSource data;
 	VectorBool labels;
+	Vector<Buffer> src;
+	int count = 0;
+	
+	Data() {
+		src.SetCount(2);
+		data.SetDepth(2);
+		for(int i = 0; i < src.GetCount(); i++)
+			data.SetSource(i, src[i]);
+	}
+	void SetCount(int count) {
+		for(int i = 0; i < src.GetCount(); i++)
+			src[i].SetCount(count);
+		labels.SetCount(count);
+		this->count = count;
+	}
+	void SetXY(int i, double x, double y, bool label) {
+		src[0].Set(i, x);
+		src[1].Set(i, y);
+		labels.Set(i, label);
+	}
+	void AddXY(double x, double y, bool label) {
+		src[0].Add(x);
+		src[1].Add(y);
+		labels.SetCount(labels.GetCount() + 1);
+		labels.Set(count, label);
+		count++;
+	}
 };
 
 

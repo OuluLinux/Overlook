@@ -190,7 +190,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 	double best_gain = 0;
 	double bestw1, bestw2, bestthr;
 	
-	dots.Reserve(128);
+	if (dots.GetAlloc() < 128) dots.Reserve(128);
 	dots.SetCount(N);
 	for(int i = 0; i < dots.GetCount(); i++) dots[i] = Dot(0, 0.0);
 

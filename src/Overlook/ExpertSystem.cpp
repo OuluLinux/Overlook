@@ -71,7 +71,7 @@ void SectorConf::Randomize() {
 	for(int i = 0; i < SECTOR_2EXP; i++)
 		dec[i].Randomize();
 	symbol = Random(GetSystem().GetTradingSymbolCount());
-	period = Random(TF_COUNT);
+	period = Random(TF_COUNT - SECTOR_2EXP);
 	minimum_prediction_len = Random(1 << (sizeof(minimum_prediction_len) * 8));
 }
 
@@ -134,7 +134,7 @@ void ExpertSectors::Refresh() {
 	// Refresh sector_predicted vectors
 	int is_predicting[SECTOR_COUNT];
 	for(int i = 0; i < SECTOR_COUNT; i++) {
-		sector_predicted[i].Zero();
+		sector_predicted[i].SetCount(data_count).Zero();
 		is_predicting[i] = 0;
 	}
 	int minimum_prediction_len = conf.minimum_prediction_len;
@@ -581,6 +581,14 @@ ExpertOptimizer::ExpertOptimizer() {
 
 void ExpertOptimizer::EvolveSector(SectorConf& conf) {
 	
+	if (sec_confs.GetCount() < pop_size) {
+		conf.Randomize();
+		return;
+	}
+	
+	
+	conf.Randomize();
+	
 	//  - symbol matching (increasing prob.)
 	//  - indicator matching (increasing prob.)
 	
@@ -651,6 +659,9 @@ void ExpertOptimizer::EvolveFusion(FusionConf& conf) {
 }
 
 void ExpertOptimizer::AddTestResult(const SectorConf& conf) {
+	
+	Panic("TODO accuracy limit");
+	
 	lock.Enter();
 	
 	sec_confs.Add(conf);
@@ -835,8 +846,9 @@ void ExpertSystem::MainTraining() {
 	{
 		if (fusion.IsSectorOptimizing() && running) {
 			for(int i = 0; i < fusion.GetPopulationSize() && running; i++) {
-				//co & [=] 
-				{
+				co & [=] {
+					if (!running) return;
+					
 					ExpertCache& cache = GetExpertCache();
 					
 					

@@ -414,6 +414,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	if (line_width == 0) draw_type = -1;
 	
 	int buf_count = cont.GetBars();
+	bool draw_label = cont.GetOutputCount() && cont.GetOutput(0).label.GetCount() == buf_count;
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -430,10 +431,19 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 				continue;
 	        
 	        double value = cont.GetBufferValue(buffer, pos);
+			int xi = (x+(i+0.5)*div);
+			
+			if (draw_label) {
+				bool label = cont.GetOutput(0).label.Get(pos);
+				if (label)	W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
+				else		W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
+			}
+			
 	        if (skip_zero && value == 0) continue;
+	        
 	        V = (1 - (value  - lo) / diff) * h;
 			
-			P << Point((int)(x+(i+0.5)*div), (int)(y+V));
+			P << Point((int)xi, (int)(y+V));
 		}
 		
 		if (line_style == STYLE_DASH)				line_width = PEN_DASH;

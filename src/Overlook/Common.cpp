@@ -42,6 +42,7 @@ VectorBool& VectorBool::One() {
 bool VectorBool::Get(int i) const {
 	int j = i / 64;
 	int k = i % 64;
+	ASSERT(j >= 0 && j < data.GetCount());
 	ConstU64* it = Begin() + j;
 	return *it & (1ULL << k);
 }
@@ -49,6 +50,7 @@ bool VectorBool::Get(int i) const {
 void VectorBool::Set(int i, bool b) {
 	int j = i / 64;
 	int k = i % 64;
+	ASSERT(j >= 0 && j < data.GetCount());
 	uint64* it = data.Begin() + j;
 	if (b)	*it |=  (1ULL << k);
 	else	*it &= ~(1ULL << k);

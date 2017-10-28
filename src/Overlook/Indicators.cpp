@@ -1327,7 +1327,7 @@ void ForceIndex::Start() {
 
 Momentum::Momentum() {
 	period = 14;
-	shift = 0;
+	shift = -7;
 }
 
 void Momentum::Init() {
@@ -1367,7 +1367,6 @@ void Momentum::Start() {
 	VectorBool& label = outputs[0].label;
 	label.SetCount(bars);
 	SetSafetyLimit(counted-1);
-	double prev = counted > 0 ? buffer.Get(counted-1) : 0.0;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double close1 = Open( i );
@@ -1375,9 +1374,8 @@ void Momentum::Start() {
 		double value = close1 * 100 / close2 - 100;
 		buffer.Set(i, value);
 		
-		bool label_value = value < prev;
+		bool label_value = value < 0.0;
 		label.Set(i, label_value);
-		prev = value;
 	}
 }
 
@@ -3047,7 +3045,6 @@ void ZigZag::Start() {
 		switch ( whatlookfor ) {
 			
 		case 0: // look for peak or lawn
-			label.Set(i, false);
 			
 			if ( lastlow == 0.0 && lasthigh == 0.0 ) {
 				if ( high_buffer.Get(i) != 0.0 ) {
@@ -3066,7 +3063,6 @@ void ZigZag::Start() {
 			break;
 
 		case 1: // look for peak
-			label.Set(i, false);
 			
 			if ( low_buffer.Get(i) != 0.0 && low_buffer.Get(i) < lastlow && high_buffer.Get(i) == 0.0 )
 			{
@@ -3087,7 +3083,6 @@ void ZigZag::Start() {
 			break;
 
 		case - 1: // look for lawn
-			label.Set(i, true);
 			
 			if ( high_buffer.Get(i) != 0.0 && high_buffer.Get(i) > lasthigh && low_buffer.Get(i) == 0.0 )
 			{
@@ -3106,6 +3101,21 @@ void ZigZag::Start() {
 			}
 
 			break;
+		}
+	}
+	
+	
+	bool current = false;
+	for (int i = counted-1; i >= 0; i--) {
+		if (keypoint_buffer.Get(i) != 0.0) {
+			current = high_buffer.Get(i) != 0.0; // going down after high
+			break;
+		}
+	}
+	for (int i = counted; i < bars; i++) {
+		label.Set(i, current);
+		if (keypoint_buffer.Get(i) != 0.0) {
+			current = high_buffer.Get(i) != 0.0; // going down after high
 		}
 	}
 }

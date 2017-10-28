@@ -9,6 +9,16 @@ namespace Overlook {
 
 struct ConfTestResults {
 	double accuracy = 0.0;
+	double test0_equity = 0.0, test0_dd = 1.0;
+	double test1_equity = 0.0, test1_dd = 1.0;
+	
+	void operator=(const ConfTestResults& src) {
+		accuracy = src.accuracy;
+		test0_equity	= src.test0_equity;
+		test0_dd		= src.test0_dd;
+		test1_equity	= src.test1_equity;
+		test1_dd		= src.test1_dd;
+	}
 };
 
 struct DecisionClassifierConf : Moveable<DecisionClassifierConf> {
@@ -42,7 +52,7 @@ bool operator == (const SectorConf& a, const SectorConf& b);
 bool operator < (const SectorConf& a, const SectorConf& b);
 inline bool operator != (const SectorConf& a, const SectorConf& b) {return !(a == b);}
 
-class ExpertSectors : public Pte<ExpertSectors> {
+class ExpertSectors {
 	
 public:
 	BufferRandomForest sectors[SECTOR_2EXP];
@@ -53,12 +63,13 @@ public:
 	typedef ExpertSectors CLASSNAME;
 	ExpertSectors();
 	
-	void Refresh();
+	void Refresh(const ForestArea& fa);
+	void Configure();
 	
 };
 
 struct AdvisorConf : public ConfTestResults, Moveable<AdvisorConf> {
-	SectorConf sec;
+	SectorConf sectors;
 	uint8 sector = 0;
 	uint8 amp = 0;
 	uint8 minimum_prediction_len = 0;
@@ -73,32 +84,33 @@ bool operator == (const AdvisorConf& a, const AdvisorConf& b);
 bool operator < (const AdvisorConf& a, const AdvisorConf& b);
 inline bool operator != (const AdvisorConf& a, const AdvisorConf& b) {return !(a == b);}
 
-class ExpertAdvisor : public Pte<ExpertAdvisor> {
+class ExpertAdvisor {
 	
 public:
 	BufferRandomForest label, signal[2];
 	AdvisorConf conf;
 	VectorBool predicted[2], signal_mask[2], signal_label[2]; // zigzag label
-	Ptr<ExpertSectors> sector;
+	ExpertSectors sectors;
 	
 public:
 	typedef ExpertAdvisor CLASSNAME;
 	ExpertAdvisor();
 	
-	void Refresh();
+	void Refresh(const ForestArea& fa);
+	void Configure();
 	void AnalyzeSectorPoles(int begin, int end);
 	
 };
 
 struct FusionConf : public ConfTestResults, Moveable<FusionConf> {
-	Vector<AdvisorConf> advs;
+	AdvisorConf advisors[ADVISOR_COUNT];
 	DecisionClassifierConf dec;
 	uint8 period = 0;
 	uint8 sector_period = 0;
 	
 	FusionConf() {}
 	FusionConf(const FusionConf& move) {*this = move;}
-	void operator=(const FusionConf& src) {advs <<= src.advs; dec = src.dec; period = src.period; sector_period = src.sector_period;}
+	void operator=(const FusionConf& src);
 	uint32 GetHashValue() const;
 	void Randomize();
 };
@@ -107,10 +119,10 @@ bool operator == (const FusionConf& a, const FusionConf& b);
 bool operator < (const FusionConf& a, const FusionConf& b);
 inline bool operator != (const FusionConf& a, const FusionConf& b) {return !(a == b);}
 
-class ExpertFusion : public Pte<ExpertFusion> {
+class ExpertFusion {
 	
 public:
-	Vector<Ptr<ExpertAdvisor> >		advisors;
+	ExpertAdvisor					advisors[ADVISOR_COUNT];
 	BufferRandomForest				dec[FUSE_DEC_COUNT];
 	VectorBool						mask[FUSE_DEC_COUNT];
 	VectorBool						label[FUSE_DEC_COUNT];
@@ -118,28 +130,28 @@ public:
 	FixedSimBroker					broker;
 	FusionConf						conf;
 	
+	// Temp
+	Vector<int> trigger_points;
+	Vector<double> equities;
+	
 public:
 	typedef ExpertFusion CLASSNAME;
 	ExpertFusion();
 	
-	void Refresh();
+	void Refresh(const ForestArea& fa);
+	void Configure();
 	
 };
 
 class ExpertCache {
-	ArrayMap<SectorConf,	ExpertSectors>	sectors;
-	ArrayMap<AdvisorConf,	ExpertAdvisor>	experts;
-	ArrayMap<FusionConf,	ExpertFusion>	fusions;
-	Mutex lock;
+	ArrayMap<int, ExpertFusion> fusions;
+	SpinLock lock;
 	
 public:
 	typedef ExpertCache CLASSNAME;
-	ExpertCache();
 	
 	
-	ExpertSectors& GetExpertSectors(const SectorConf& conf);
-	ExpertAdvisor& GetExpertAdvisor(const AdvisorConf& conf);
-	ExpertFusion& GetExpertFusion(const FusionConf& conf);
+	ExpertFusion& GetExpertFusion(int i) {lock.Enter(); ExpertFusion& ep = fusions.GetAdd(i); lock.Leave(); return ep;}
 	
 };
 
@@ -149,33 +161,24 @@ class ExpertOptimizer {
 	
 public:
 	// Persistent
-	Vector<SectorConf>		sec_confs;
-	Vector<AdvisorConf>		adv_confs;
 	Vector<FusionConf>		fus_confs;
-	Vector<double>			sector_results;
+	Vector<double>			fus_results;
 	
 	// Temporary
-	const int pop_size = 100;
+	int pop_size = 100;
+	int pop_limit = 500;
+	double accuracy_limit_factor = 0.8;
 	SpinLock lock;
 	
 public:
 	typedef ExpertOptimizer CLASSNAME;
 	ExpertOptimizer();
 	
-	void EvolveSector(SectorConf& conf);
-	void EvolveAdvisor(AdvisorConf& conf);
 	void EvolveFusion(FusionConf& conf);
-	void AddTestResult(const SectorConf& conf);
-	void AddTestResult(const AdvisorConf& conf);
 	void AddTestResult(const FusionConf& conf);
-	void SortSectors()	{::Upp::Sort(sec_confs);}
-	void SortAdvisors()	{::Upp::Sort(adv_confs);}
 	void SortFusions()	{::Upp::Sort(fus_confs);}
 	void ReduceMemory();
 	
-	bool IsSectorOptimizing() const;
-	bool IsAdvisorOptimizing() const;
-	bool IsFusionOptimizing() const;
 	int GetPopulationSize() const {return pop_size;}
 };
 

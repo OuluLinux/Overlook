@@ -99,13 +99,14 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 		VectorBool& ixright = ixs[n*2+2];
 		
 		ConstU64 *it = ix.Begin(), *end = ix.End();
+		int loop_label_count = 0;
 		for (uint64 j = 0; it != end; it++, j += 64) {
 			if (*it == 0)
 				continue;
 			for(uint64 k = 0; k < 64; k++) {
 				if (*it & (1ULL << k)) {
 					int pos = j + k;
-					ASSERT(pos < N);
+					ASSERT(loop_label_count++ < N);
 					iter.Seek(pos);
 					bool label = Decision2DStumpTest(iter, model);
 					if (label)
@@ -384,15 +385,19 @@ void BufferRandomForest::SetInputCount(int i) {
 	
 }
 
-void BufferRandomForest::Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_begin, int test1_begin) {
+void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
 	VectorBool train_mask(mask);
 	VectorBool test0_mask(mask);
 	VectorBool test1_mask(mask);
 	
-	train_mask.LimitLeft(test0_begin);
-	test0_mask.LimitRight(test0_begin);
-	test0_mask.LimitLeft(test1_begin);
-	test1_mask.LimitRight(test1_begin);
+	train_mask.LimitRight(area.train_begin);
+	train_mask.LimitLeft(area.train_end);
+	
+	test0_mask.LimitRight(area.test0_begin);
+	test0_mask.LimitLeft(area.test0_end);
+	
+	test1_mask.LimitRight(area.test1_begin);
+	test1_mask.LimitLeft(area.test1_end);
 	
 	TimeStop ts;
 	forest.Train(bufs, real_label, train_mask, options);
@@ -422,17 +427,17 @@ void BufferRandomForest::Process(const ConstBufferSource& bufs, const VectorBool
 			
 			bool match = label == real_label.Get(i);
 			
-			if (i < test0_begin) {
+			if (i >= area.train_begin && i < area.train_end) {
 				if (match)
 					train_correct_count++;
 				train_total_count++;
 			}
-			else if (i < test1_begin) {
+			else if (i >= area.test0_begin && i < area.test0_end) {
 				if (match)
 					test0_correct_count++;
 				test0_total_count++;
 			}
-			else {
+			else if (i >= area.test1_begin && i < area.test1_end) {
 				if (match)
 					test1_correct_count++;
 				test1_total_count++;

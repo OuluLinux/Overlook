@@ -10,14 +10,14 @@ void EvolutionGraph::Paint(Draw& w) {
 	System& sys = GetSystem();
 	ExpertSystem& esys = sys.GetExpertSystem();
 	
-	Vector<double>& sector_results = esys.fusion.sector_results;
+	Vector<double>& fus_results = esys.fusion.fus_results;
 	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	
-	int count = sector_results.GetCount();
+	int count = fus_results.GetCount();
 	for(int j = 0; j < count; j++) {
-		double d = sector_results[j];
+		double d = fus_results[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
@@ -28,7 +28,7 @@ void EvolutionGraph::Paint(Draw& w) {
 		
 		polyline.SetCount(count);
 		for(int j = 0; j < count; j++) {
-			double v = sector_results[j];
+			double v = fus_results[j];
 			int y = (int)(sz.cy - (v - min) / diff * sz.cy);
 			int x = (int)(j * xstep);
 			polyline[j] = Point(x, y);
@@ -58,11 +58,15 @@ ExpertSectorsCtrl::ExpertSectorsCtrl() {
 	hsplit.Horz();
 	
 	pop.AddColumn("Accuracy");
-	pop.AddColumn("Symbol");
+	pop.AddColumn("Test 0 equity");
+	pop.AddColumn("Test 0 dd");
+	pop.AddColumn("Test 1 equity");
+	pop.AddColumn("Test 1 dd");
+	/*pop.AddColumn("Symbol");
 	pop.AddColumn("Period");
 	pop.AddColumn("Prediction Length");
 	for(int i = 0; i < SECTOR_2EXP; i++)
-		pop.AddColumn("Decision");
+		pop.AddColumn("Decision");*/
 	
 }
 
@@ -70,23 +74,29 @@ void ExpertSectorsCtrl::Data() {
 	System& sys = GetSystem();
 	ExpertSystem& esys = sys.GetExpertSystem();
 	
-	const Vector<SectorConf>& sec_confs = esys.fusion.sec_confs;
+	const Vector<FusionConf>& fus_confs = esys.fusion.fus_confs;
 	
-	for(int i = 0; i < sec_confs.GetCount(); i++) {
-		const SectorConf& conf = sec_confs[i];
+	graph.Refresh();
+	
+	for(int i = 0; i < fus_confs.GetCount(); i++) {
+		const FusionConf& conf = fus_confs[i];
 		
 		pop.Set(i, 0, conf.accuracy);
-		pop.Set(i, 1, conf.symbol);
+		pop.Set(i, 1, conf.test0_equity);
+		pop.Set(i, 2, conf.test0_dd);
+		pop.Set(i, 3, conf.test1_equity);
+		pop.Set(i, 4, conf.test1_dd);
+		/*pop.Set(i, 1, conf.symbol);
 		pop.Set(i, 2, conf.period);
 		pop.Set(i, 3, conf.minimum_prediction_len);
 		for(int j = 0; j < SECTOR_2EXP; j++) {
 			pop.Set(i, 4+j, conf.dec[j].ToString());
-		}
+		}*/
 	}
 	
 	int cursor = pop.GetCursor();
-	if (cursor >= 0 && cursor < sec_confs.GetCount()) {
-		const SectorConf& conf = sec_confs[cursor];
+	if (cursor >= 0 && cursor < fus_confs.GetCount()) {
+		const FusionConf& conf = fus_confs[cursor];
 		
 		// ??? 
 		

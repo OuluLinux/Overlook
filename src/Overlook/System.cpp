@@ -103,6 +103,7 @@ void System::Init() {
 	ProcessLabelQueue();
 	ResetValueBuffers();
 	ResetLabelBuffers();
+	InitBrokerValues();
 	
 	es.LoadThis();
 	es.Init();

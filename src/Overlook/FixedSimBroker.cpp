@@ -173,11 +173,11 @@ void FixedSimBroker::Reset() {
 }
 
 double FixedSimBroker::RealtimeBid(int pos, int sym_id) const {
-	return GetSystem().GetTradingSymbolOpenBuffer(sym_id).Get(pos) - spread_points[sym_id];
+	return GetSystem().GetTradingSymbolOpenBuffer(sym_id).GetUnsafe(pos) - spread_points[sym_id];
 }
 
 double FixedSimBroker::RealtimeAsk(int pos, int sym_id) const {
-	return GetSystem().GetTradingSymbolOpenBuffer(sym_id).Get(pos);
+	return GetSystem().GetTradingSymbolOpenBuffer(sym_id).GetUnsafe(pos);
 }
 
 double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o, int pos) const {

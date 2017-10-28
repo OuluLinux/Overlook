@@ -165,6 +165,12 @@ double Entropy(const VectorBool& labels, const VectorBool& ix);
 
 
 
+struct ForestArea {
+	int train_begin = 0, train_end = 0;
+	int test0_begin = 0, test0_end = 0;
+	int test1_begin = 0, test1_end = 0;
+};
+
 struct BufferRandomForest {
 	RandomForest forest;
 	VectorBool predicted_label;
@@ -173,7 +179,7 @@ struct BufferRandomForest {
 	
 	BufferRandomForest();
 	void SetInputCount(int i);
-	void Process(const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask, int test0_begin, int test1_begin);
+	void Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);
 	
 };
 

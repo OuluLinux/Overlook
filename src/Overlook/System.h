@@ -256,6 +256,7 @@ public:
 	void ProcessDataBridgeQueue();
 	void ResetValueBuffers();
 	void ResetLabelBuffers();
+	void InitBrokerValues();
 	
 	int GetTradingSymbolCount() const {return sym_ids.GetCount();}
 	int GetTrueIndicatorCount() const {return TRUEINDI_COUNT;}

@@ -409,6 +409,33 @@ void System::ResetLabelBuffers() {
 	ASSERT_(total_bufs == expected_total, "Some items are missing in the work queue");
 }
 
+void System::InitBrokerValues() {
+	MetaTrader& mt = GetMetaTrader();
+
+	proxy_id.SetCount(SYM_COUNT, 0);
+	proxy_base_mul.SetCount(SYM_COUNT, 0);
+
+	for (int i = 0; i < SYM_COUNT; i++) {
+		int sym = sym_ids[i];
+
+		DataBridge* db = dynamic_cast<DataBridge*>(databridge_cores[sym]);
+
+		const Symbol& symbol = mt.GetSymbol(sym);
+
+		if (symbol.proxy_id != -1) {
+			int k = sym_ids.Find(symbol.proxy_id);
+			ASSERT(k != -1);
+			proxy_id[i] = k;
+			proxy_base_mul[i] = symbol.base_mul;
+		}
+
+		else {
+			proxy_id[i] = -1;
+			proxy_base_mul[i] = 0;
+		}
+	}
+}
+
 void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 	for (int i = 0; i < SYM_COUNT; i++) {
 		broker.spread_points[i]		= spread_points[i];

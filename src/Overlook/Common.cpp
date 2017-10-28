@@ -16,6 +16,7 @@ int VectorBool::PopCount() const {
 }
 
 VectorBool& VectorBool::SetCount(int i) {
+	if (count == i) return *this;
 	int c64 = i / 64;
 	if (i % 64 != 0) c64++;
 	count = i;

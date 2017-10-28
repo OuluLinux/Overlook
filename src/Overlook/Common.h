@@ -26,6 +26,7 @@ using namespace Upp;
 #define LABELINDI_COUNT			3
 #define AMP_MAXSCALES			3
 #define AMP_MAXSCALE_MUL		2
+#define ADVISOR_COUNT			2
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT					6

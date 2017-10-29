@@ -15,7 +15,7 @@ using namespace Upp;
 
 // These values are constant in the working product.
 #define DECISION_DD_LEVEL		0.1
-#define SECTOR_2EXP				3
+#define SECTOR_2EXP				1
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
@@ -27,6 +27,8 @@ using namespace Upp;
 #define AMP_MAXSCALES			3
 #define AMP_MAXSCALE_MUL		2
 #define ADVISOR_COUNT			2
+#define MINPRED_LEN				8
+#define AMP_MAX					3
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT					6

@@ -70,7 +70,7 @@ void SectorConf::Randomize() {
 		dec[i].Randomize();
 	symbol = Random(GetSystem().GetTradingSymbolCount());
 	period = Random(TF_COUNT - SECTOR_2EXP - 1) + 1;
-	minimum_prediction_len = Random(1 << (sizeof(minimum_prediction_len) * 8));
+	minimum_prediction_len = Random(MINPRED_LEN);
 }
 
 bool operator == (const SectorConf& a, const SectorConf& b) {
@@ -139,7 +139,7 @@ void ExpertSectors::Refresh(const ForestArea& area) {
 		sector_predicted[i].SetCount(data_count).Zero();
 		is_predicting[i] = 0;
 	}
-	int minimum_prediction_len = conf.minimum_prediction_len;
+	int minimum_prediction_len = 1 << conf.minimum_prediction_len;
 	for(int i = 0; i < data_count; i++) {
 		int active_sector = 0;
 		for(int j = 0; j < SECTOR_2EXP; j++)
@@ -170,10 +170,11 @@ void ExpertSectors::Refresh(const ForestArea& area) {
 
 void AdvisorConf::Randomize() {
 	sectors.Randomize();
-	sector = Random(SECTOR_COUNT);
 	label.Randomize();
 	signal.Randomize();
-	minimum_prediction_len = Random(1 << (sizeof(minimum_prediction_len) * 8));
+	sector = Random(SECTOR_COUNT);
+	amp = Random(AMP_MAX);
+	minimum_prediction_len = Random(MINPRED_LEN);
 }
 
 uint32 AdvisorConf::GetHashValue() const {
@@ -257,7 +258,7 @@ void ExpertAdvisor::Refresh(const ForestArea& area) {
 		is_predicting[i] = 0;
 		was_predicting[i] = false;
 	}
-	int minimum_prediction_len = conf.minimum_prediction_len;
+	int minimum_prediction_len = 1 << conf.minimum_prediction_len;
 	ConstBuffer& open_buf = sys.GetTradingSymbolOpenBuffer(conf.sectors.symbol);
 	double spread_point = sys.GetTradingSymbolSpreadPoint(conf.sectors.symbol);
 	for(int i = 0; i < data_count; i++) {
@@ -344,7 +345,7 @@ bool operator == (const FusionConf& a, const FusionConf& b) {
 }
 
 bool operator < (const FusionConf& a, const FusionConf& b) {
-	return a.accuracy > b.accuracy;
+	return a.test0_equity > b.test0_equity;
 }
 
 void FusionConf::operator=(const FusionConf& src) {
@@ -445,11 +446,11 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 				
 				if (up_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = +1;
+						sym_signals[sym] = +1 * (1 << adv.conf.amp);
 				}
 				if (down_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = -1;
+						sym_signals[sym] = -1 * (1 << adv.conf.amp);
 				}
 			}
 			
@@ -465,6 +466,7 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 			
 			broker.Cycle(i);
 		}
+		broker.CloseAll(end);
 	}
 	
 	
@@ -580,11 +582,11 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 				
 				if (up_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = +1;
+						sym_signals[sym] = +1 * (1 << adv.conf.amp);
 				}
 				if (down_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = -1;
+						sym_signals[sym] = -1 * (1 << adv.conf.amp);
 				}
 			}
 			
@@ -602,6 +604,7 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 			
 			broker.Cycle(i);
 		}
+		broker.CloseAll(end);
 		
 		
 		if (test_area == 0) {
@@ -652,90 +655,40 @@ ExpertOptimizer::ExpertOptimizer() {
 }
 
 void ExpertOptimizer::EvolveFusion(FusionConf& conf) {
-	
-	if (fus_confs.GetCount() < pop_size) {
+	if (fus_confs.GetCount() < pop_size ||
+		Randomf() <= rand_prob) {
 		conf.Randomize();
 		return;
 	}
 	
 	
-	conf.Randomize();
+	ConfEvolver evo;
 	
-	//  - symbol matching (increasing prob.)
-	//  - indicator matching (increasing prob.)
-	
-	// - symbol count
-	
-	
-	/*
 	int r1, r2;
-	int n;
-
-	SelectSamples(candidate,&r1,&r2);
-	n = (int)RandomUniform(0.0,(double)dimension);
-
-	Vector<double> *pop_ptr = &population[candidate];
-	int c1 = pop_ptr->GetCount();
-	trial_solution.SetCount(c1);
-	for(int i = 0; i < c1; i++ )
-		trial_solution[i] = (*pop_ptr)[i];
+	{r1 = 1 + Random(fus_confs.GetCount() - 1);}
+	do  {r2 = Random(fus_confs.GetCount());} while (r2 == r1);
 	
-	for (int i=0; (RandomUniform(0.0,1.0) < probability) && (i < dimension); i++) {
-		trial_solution[n] = best_solution[n]
-						   + scale * (Element(population,r1,n)
-									  - Element(population,r2,n));
-		n = (n + 1) % dimension;
+	lock.Enter();
+	
+	evo.osrc = &conf;
+	evo.best = &fus_confs[0];
+	evo.src1 = &fus_confs[r1];
+	evo.src2 = &fus_confs[r2];
+	
+	int loop = 0;
+	while (!evo.loop_finished) {
+		conf.Evolve(evo);
+		if (!evo.loop_type) {
+			evo.begin = Random(evo.total);
+			evo.loop_type = true; // first loop is counting...
+		}
+		ASSERT(loop++ < 5);
 	}
-	*/
 	
-	
-	// combine rows
-	// affecting variables:
-	//  - indicator matching (increasing prob.)
-	//  - symbol matching (increasing prob.)
-	//  - period matching (increasing prob.) ?????
-	//		- sector indi period should match sector +/- step period
-	//  Note:
-	//  DE solver, but break integers!
-	
-	
-	// Use function from DE solver
-	
-	// - small randomness in used sectors
-	// - big randomness in trigger ExpertAdvisor label and signals
-	
-	
-	// - 1-100 separate evolving threads to have different advisors for fuse
-	
-	// - random enumerators boolean, but also completely random
-	// - AdvisorConf::amp
-	
-	
-	
-	
-	
-	// Use function from DE solver
-	
-	// Fuse stage:
-	// - very small randomness in used sectors
-	// - gets best advisors and just slightly evolves them by combining
-	// - big randomness in trigger DecisionClassifier
-	// Final stage:
-	// - slightly evolves fusion by combining
-	
-	// Pick advisors, which matches conf values
-	
-	
-	// - dd-limit of advisors
-	// - set fmlevel 0.6
-	
-	// - advisor position affects, so it must be optimized
-	
+	lock.Leave();
 }
 
 void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
-	DUMP(conf.accuracy);
-	
 	lock.Enter();
 	
 	int replace_i = -1;
@@ -744,6 +697,7 @@ void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
 	if (fus_confs.GetCount() >= pop_limit) {
 		double lowest_accuracy = 1.0;
 		double av_accuracy = 0.0;
+		double lowest_result = DBL_MAX;
 		for(int i = 0; i < fus_confs.GetCount(); i++) {
 			const FusionConf& cf = fus_confs[i];
 			av_accuracy += cf.accuracy;
@@ -751,11 +705,14 @@ void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
 				lowest_accuracy = cf.accuracy;
 				replace_i = i;
 			}
+			if (cf.test0_equity < lowest_result)
+				lowest_result = cf.test0_equity;
 		}
 		av_accuracy /= fus_confs.GetCount();
 		
 		skip_add =	lowest_accuracy > conf.accuracy ||
-					av_accuracy * accuracy_limit_factor > conf.accuracy;
+					av_accuracy * accuracy_limit_factor > conf.accuracy ||
+					lowest_result > conf.test0_equity;
 	}
 	
 	if (!skip_add) {
@@ -763,6 +720,7 @@ void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
 			fus_confs.Add(conf);
 		else
 			fus_confs[replace_i] = conf;
+		SortFusions();
 	}
 	
 	fus_results.Add(conf.test0_equity);
@@ -956,7 +914,6 @@ void ExpertSystem::MainTraining() {
 		
 		co.Finish();
 		
-		fusion.SortFusions();
 		fusion.ReduceMemory();
 	}
 	

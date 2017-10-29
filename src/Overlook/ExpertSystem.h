@@ -7,6 +7,64 @@
 
 namespace Overlook {
 
+enum {REAL, ENUM};
+
+struct ConfEvolver {
+	void* osrc = NULL;
+	void* best = NULL;
+	void* src1 = NULL;
+	void* src2 = NULL;
+	double scale = 0.7;
+	double crossover_prob = 0.9;
+	
+	bool loop_type = false, loop_finished = false;
+	int total = 0;
+	
+	int counter = 0;
+	int begin = 0;
+	
+	template <class T>
+	inline ConfEvolver& operator () (T& o, int type, int min, int max) {
+		if (!loop_type) {total++; return *this;}
+		if (loop_finished) return *this;
+		
+		if (counter >= begin) {
+			if (Randomf() >= crossover_prob) {loop_finished = true; return *this;}
+			
+			uint64 diff = ((uint64)&o) - ((uint64)osrc);
+			const T& obest = *(T*)((uint64)best + diff);
+			const T& osrc1 = *(T*)((uint64)src1 + diff);
+			const T& osrc2 = *(T*)((uint64)src2 + diff);
+			o = obest + scale * (osrc1 - osrc2);
+			if (type == ENUM) {
+				// pick which is closest
+				int best_diff = abs(obest - o);
+				int src1_diff = abs(osrc1 - o);
+				int src2_diff = abs(osrc2 - o);
+				if (best_diff <= src1_diff) {
+					if (best_diff <= src2_diff)
+						o = obest;
+					else
+						o = osrc2;
+				} else {
+					if (src1_diff <= src2_diff)
+						o = osrc1;
+					else
+						o = osrc2;
+				}
+			}
+			if (o < min) o = min;
+			else if (o > (max-1)) o = max-1;
+			
+			total--;
+			if (total <= 0) {loop_finished = true;}
+		}
+		
+		counter++;
+		return *this;
+	}
+};
+
 struct ConfTestResults {
 	double accuracy = 0.0;
 	double test0_equity = 0.0, test0_dd = 1.0;
@@ -33,6 +91,12 @@ struct DecisionClassifierConf : Moveable<DecisionClassifierConf> {
 	uint32 GetHashValue() const;
 	void Randomize();
 	String ToString() const;
+	void Evolve(ConfEvolver& evo) {
+		for(int i = 0; i < DECISION_INPUTS; i++)
+			evo (input[i].indi, ENUM, 0, TRUEINDI_COUNT)
+				(input[i].symbol, ENUM, 0, SYM_COUNT);
+		evo (label_id, ENUM, 0, LABELINDI_COUNT);
+	}
 };
 
 bool operator == (const DecisionClassifierConf& a, const DecisionClassifierConf& b);
@@ -46,6 +110,13 @@ struct SectorConf : public ConfTestResults, Moveable<SectorConf> {
 	
 	uint32 GetHashValue() const;
 	void Randomize();
+	void Evolve(ConfEvolver& evo) {
+		for(int i = 0; i < SECTOR_2EXP; i++)
+			dec[i].Evolve(evo);
+		evo (symbol, ENUM, 0, SYM_COUNT)
+			(period, REAL, 1, TF_COUNT - SECTOR_2EXP)
+			(minimum_prediction_len, REAL, 0, MINPRED_LEN);
+	}
 };
 
 bool operator == (const SectorConf& a, const SectorConf& b);
@@ -78,6 +149,14 @@ struct AdvisorConf : public ConfTestResults, Moveable<AdvisorConf> {
 	
 	uint32 GetHashValue() const;
 	void Randomize();
+	void Evolve(ConfEvolver& evo) {
+		sectors.Evolve(evo);
+		evo (sector, ENUM, 0, SECTOR_COUNT)
+			(amp, REAL, 0, AMP_MAX)
+			(minimum_prediction_len, REAL, 0, MINPRED_LEN);
+		label.Evolve(evo);
+		signal.Evolve(evo);
+	}
 };
 
 bool operator == (const AdvisorConf& a, const AdvisorConf& b);
@@ -113,6 +192,13 @@ struct FusionConf : public ConfTestResults, Moveable<FusionConf> {
 	void operator=(const FusionConf& src);
 	uint32 GetHashValue() const;
 	void Randomize();
+	void Evolve(ConfEvolver& evo) {
+		for(int i = 0; i < ADVISOR_COUNT; i++)
+			advisors[i].Evolve(evo);
+		dec.Evolve(evo);
+		evo (period, REAL, 0, TF_COUNT)
+			(sector_period, REAL, 0, TF_COUNT);
+	}
 };
 
 bool operator == (const FusionConf& a, const FusionConf& b);
@@ -168,6 +254,7 @@ public:
 	int pop_size = 100;
 	int pop_limit = 500;
 	double accuracy_limit_factor = 0.8;
+	double rand_prob = 0.01;
 	SpinLock lock;
 	
 public:

@@ -177,6 +177,7 @@ public:
 	BufferRandomForest sectors[SECTOR_2EXP];
 	VectorBool sector_predicted[SECTOR_COUNT];
 	SectorConf conf;
+	ConstBufferSource bufs;
 	
 public:
 	typedef ExpertSectors CLASSNAME;
@@ -234,6 +235,7 @@ public:
 	AdvisorConf conf;
 	VectorBool predicted[2], signal_mask[2], signal_label[2]; // zigzag label
 	ExpertSectors sectors;
+	ConstBufferSource bufs;
 	
 public:
 	typedef ExpertAdvisor CLASSNAME;
@@ -302,10 +304,12 @@ public:
 	DerivZeroTrigger				triggers[FUSE_DEC_COUNT];
 	FixedSimBroker					broker;
 	FusionConf						conf;
+	ConstBufferSource				bufs;
 	
 	// Temp
 	Vector<int> trigger_points;
 	Vector<double> equities;
+	Atomic locked;
 	
 public:
 	typedef ExpertFusion CLASSNAME;
@@ -313,18 +317,33 @@ public:
 	
 	void Refresh(const ForestArea& fa);
 	void Configure();
+	void Leave() {locked--;}
 	
 };
 
 class ExpertCache {
-	ArrayMap<int, ExpertFusion> fusions;
+	Array<ExpertFusion> fusions;
 	SpinLock lock;
 	
 public:
 	typedef ExpertCache CLASSNAME;
 	
 	
-	ExpertFusion& GetExpertFusion(int i) {lock.Enter(); ExpertFusion& ep = fusions.GetAdd(i); lock.Leave(); return ep;}
+	ExpertFusion& GetExpertFusion() {
+		for(int i = 0; i < fusions.GetCount(); i++) {
+			ExpertFusion& ep = fusions[i];
+			if (++ep.locked == 1) {
+				return ep;
+			}
+			else --ep.locked;
+		}
+		lock.Enter();
+		ExpertFusion* ep = new ExpertFusion();
+		ep->locked = 1;
+		fusions.Add(ep);
+		lock.Leave();
+		return *ep;
+	}
 	
 };
 

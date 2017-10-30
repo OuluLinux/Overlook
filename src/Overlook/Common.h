@@ -26,7 +26,7 @@ using namespace Upp;
 #define LABELINDI_COUNT			3
 #define AMP_MAXSCALES			3
 #define AMP_MAXSCALE_MUL		2
-#define ADVISOR_COUNT			2
+#define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
 #define OPT_PHASE_ITERS			10000

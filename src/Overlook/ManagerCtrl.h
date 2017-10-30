@@ -3,18 +3,6 @@
 
 namespace Overlook {
 
-class ActionCountGraph : public Ctrl {
-	int phase = -1;
-	//Agent* a = NULL;
-	//AgentFuse* f = NULL;
-public:
-	
-	virtual void Paint(Draw& w);
-	const Vector<int64>& GetStats();
-	//void SetAgent(Agent& a, int phase) {this->a = &a; this->phase = phase;}
-	//void SetFuse(AgentFuse& fuse) {f = &fuse; phase = PHASE_FUSE_TRAINING;}
-};
-
 #define LAYOUTFILE <Overlook/ManagerCtrl.lay>
 #include <CtrlCore/lay.h>
 
@@ -33,120 +21,6 @@ public:
 };
 
 inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
-
-/*class SystemOverview : public WithSystemOverview<ParentCtrl> {
-	
-protected:
-	String label, phase_str;
-	TimeStop ts;
-	int sec = 0, min = 0, hour = 0;
-	double prev_av_iters = 0;
-	
-	void Progress(int actual, int total, String label);
-	void SubProgress(int actual, int total);
-	
-public:
-	typedef SystemOverview CLASSNAME;
-	SystemOverview();
-	
-	void Data();
-	
-};*/
-/*
-class SectorOverview : public ParentCtrl {
-	Splitter split, vsplit;
-	ArrayCtrl in;
-	ArrayCtrl out;
-	ArrayCtrl in_conn;
-	ArrayCtrl out_conn;
-	ArrayCtrl out_poles;
-	
-public:
-	typedef SectorOverview CLASSNAME;
-	SectorOverview();
-	
-	void Data();
-	
-};
-*/
-
-
-
-/*class SystemTabCtrl : public TabCtrl {
-	SystemOverview			overview;
-	SnapshotCtrl			snapctrl;
-	Array<EditDoubleSpin>	tflimitedit;
-	
-public:
-	typedef SystemTabCtrl CLASSNAME;
-	SystemTabCtrl();
-	
-	void Data();
-};*/
-
-class SignalTabCtrl : public TabCtrl {
-	Agent* agent;
-	WithSignalOverview<ParentCtrl>	overview;
-	TrainingCtrl					trainingctrl;
-	
-public:
-	typedef SignalTabCtrl CLASSNAME;
-	SignalTabCtrl();
-	
-	void Data();
-	void SetAgent(Agent& agent);
-	
-};
-
-class AmpTabCtrl : public TabCtrl {
-	Agent* agent;
-	WithAmpOverview<ParentCtrl>		overview;
-	TrainingCtrl					trainingctrl;
-	
-public:
-	typedef AmpTabCtrl CLASSNAME;
-	AmpTabCtrl();
-	
-	void Data();
-	void SetAgent(Agent& agent);
-	
-};
-
-class FuseTabCtrl : public TabCtrl {
-	WithFuseOverview<ParentCtrl>	overview;
-	TrainingCtrl					trainingctrl;
-	
-public:
-	typedef FuseTabCtrl CLASSNAME;
-	FuseTabCtrl();
-	
-	void Data();
-	
-};
-
-/*class ManagerCtrl : public ParentCtrl {
-	Splitter						hsplit;
-	ArrayCtrl						glist;
-	ParentCtrl						mainview;
-	Button							add_new;
-	Array<Option>					new_opts;
-	
-	SystemTabCtrl					system_tabs;
-	SignalTabCtrl					signal_tabs;
-	AmpTabCtrl						amp_tabs;
-	FuseTabCtrl						fuse_tabs;
-	ExportCtrl						export_ctrl;
-	
-	int view;
-	
-public:
-	typedef ManagerCtrl CLASSNAME;
-	ManagerCtrl();
-	
-	void Data();
-	void SetView();
-	
-};*/
 
 class RealtimeCtrl : public ParentCtrl {
 	typedef Tuple3<String, String, String> Msg;

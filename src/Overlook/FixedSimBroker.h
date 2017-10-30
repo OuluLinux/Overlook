@@ -11,34 +11,6 @@ struct FixedOrder {
 	int type = -1;
 	int is_open = 0;
 };
-/*
-struct SingleFixedSimBroker {
-	FixedOrder order;
-	double balance = 0.0;
-	double equity = 0.0;
-	double begin_equity = 0.0;
-	double spread_points = 0.001;
-	double profit_sum = 0.0;
-	double loss_sum = 0.0;
-	int order_count = 0;
-	int sym_id = -1;
-	int proxy_id = -1;
-	int proxy_base_mul = 0;
-	
-		
-	SingleFixedSimBroker();
-	void Reset();
-	double RealtimeBid(const Snapshot& snap, int sym_id) const;
-	double RealtimeAsk(const Snapshot& snap, int sym_id) const;
-	double GetCloseProfit(const Snapshot& snap) const;
-	void OrderSend(int type, double volume, double price);
-	void OrderClose(const Snapshot& snap);
-	void Cycle(int signal, const Snapshot& snap);
-	void RefreshOrders(const Snapshot& snap);
-	
-	double AccountEquity() const {return equity;}
-	double GetDrawdown() const {double sum = profit_sum + loss_sum; return sum > 0.0 ? loss_sum / sum : 1.0;}
-};*/
 
 
 struct FixedSimBroker {

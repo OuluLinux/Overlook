@@ -26,8 +26,8 @@ file
 	BrokerCtrl.lay,
 	ExposureTester.h,
 	ExposureTester.cpp,
-	AgentCtrl.h,
-	AgentCtrl.cpp,
+	ExportCtrl.h,
+	ExportCtrl.cpp,
 	ManagerCtrl.h,
 	ManagerCtrl.cpp,
 	ManagerCtrl.lay,
@@ -48,8 +48,6 @@ file
 	SystemContent.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
-	QueryTable.h,
-	QueryTable.cpp,
 	DataBridge.h,
 	DataBridgeCommon.cpp,
 	DataBridge.cpp,
@@ -61,27 +59,12 @@ file
 	ExpertSystem.h,
 	ExpertSystem.cpp,
 	RandomForest.h,
-	RandomForest.cpp,
-	Trash readonly separator,
-	QtStats.cpp,
-	QtStats.h,
-	DiffSolver.h,
-	DiffSolver.cpp,
-	Optimizer.h,
-	Optimizer.cpp,
-	AgentSystem.h,
-	AgentSystem.cpp,
-	AgentSectors.cpp,
-	AgentGroup.h,
-	AgentGroup.cpp,
-	DQN.h,
-	Agent.h,
-	Agent.cpp,
-	Snapshot.h;
+	RandomForest.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",
 	"Have extra instruments" = "GUI MT X11 HAVE_ALLSYM",
 	"Fast" = "GUI MT X11 FAST",
-	"Very Fast" = "GUI MT X11 VERY_FAST";
+	"Very Fast" = "GUI MT X11 VERY_FAST",
+	"Working, system malloc" = "GUI MT X11 USEMALLOC";
 

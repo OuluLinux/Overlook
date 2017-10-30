@@ -3950,4 +3950,20 @@ know, but the repeating stories of the human breeding centre
 gets old for some of us. One thing is certain: news, maps and 
 Internet makes the Earth feel way too small in comparison to 
 how large it is...&]
+[s0; &]
+[s3; 30.10.2017&]
+[s0; The monolithic version of the ExpertSystem genetic optimizer 
+runs, but it takes huge amount of memory (10`-20Gb) and crashes 
+because of that easily. It also does unnecessary work without 
+caching. It was the best waypoint, however, and splitting it 
+to parts before this would have been a bad choice, because I 
+would have done it wrong. The better performance is achieved 
+with VectorBool cache objects and random forest re`-using instead 
+of random forest caching.&]
+[s0; The ExpertSystem runs in realtime, and did show positive results 
+immediately. However, the quality is limited because of the monolithic 
+inefficiency.&]
+[s0; The current monolithic ExpertSystem must be splitted to small 
+pipeline parts for efficiency and better quality.&]
+[s0; This was a good time to clean all old agent system code away....&]
 [s0; ]]

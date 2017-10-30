@@ -906,7 +906,7 @@ ExportCtrl::ExportCtrl() :
 
 void ExportCtrl::GuiData() {
 	
-	FileIn fin(ConfigFile("agentgroup.log"));
+	FileIn fin(ConfigFile("expertsystem.log"));
 	if (!fin.IsOpen())
 		return;
 	
@@ -961,7 +961,7 @@ void ExportCtrl::GuiData() {
 
 void ExportCtrl::Data() {
 	
-	FileIn fin(ConfigFile("agentgroup.log"));
+	FileIn fin(ConfigFile("expertsystem.log"));
 	if (!fin.IsOpen())
 		return;
 	

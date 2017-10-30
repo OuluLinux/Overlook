@@ -247,6 +247,7 @@ public:
 	int buf_count = 0;
 	int label_buf_count = 0;
 	int main_tf = -1;
+	bool skip_storecache = false;
 	Mutex work_lock;
 	
 	void InitContent();

@@ -127,6 +127,7 @@ void ExpertSectors::Refresh(const ForestArea& area) {
 		
 		// Label from zigzag
 		ConstVectorBool& real_label = sys.GetLabelIndicator(conf.symbol, tf, conf.dec[i].label_id);
+		ASSERT(&real_label != NULL);
 		ASSERT(real_label.GetCount() == data_count);
 		sectors[i].Process(area, bufs, real_label, full_mask);
 		accuracy += sectors[i].test0_accuracy;
@@ -173,7 +174,7 @@ void AdvisorConf::Randomize() {
 	label.Randomize();
 	signal.Randomize();
 	sector = Random(SECTOR_COUNT);
-	amp = Random(AMP_MAX);
+	amp = Random(AMP_MAXSCALES);
 	minimum_prediction_len = Random(MINPRED_LEN);
 }
 
@@ -237,7 +238,7 @@ void ExpertAdvisor::Refresh(const ForestArea& area) {
 	
 	int data_count = sys.GetCountMain();
 	int tf = conf.sectors.period - 1;
-	ASSERT(tf >= 0);
+	if (tf < 0) tf = 0;
 	
 	ConstBufferSource bufs;
 	bufs.SetDepth(DECISION_INPUTS);
@@ -245,6 +246,7 @@ void ExpertAdvisor::Refresh(const ForestArea& area) {
 		bufs.SetSource(i, sys.GetTrueIndicator(conf.label.input[i].symbol, tf, conf.label.input[i].indi));
 	ConstVectorBool& mask = sectors.sector_predicted[conf.sector];
 	ConstVectorBool& real_label = sys.GetLabelIndicator(conf.sectors.symbol, tf, conf.label.label_id) ;
+	ASSERT(&real_label != NULL);
 	label.Process(area, bufs, real_label, mask);
 	
 	int is_predicting[2];
@@ -345,7 +347,7 @@ bool operator == (const FusionConf& a, const FusionConf& b) {
 }
 
 bool operator < (const FusionConf& a, const FusionConf& b) {
-	return a.test0_equity > b.test0_equity;
+	return (a.test0_equity + a.test1_equity) > (b.test0_equity + b.test1_equity);
 }
 
 void FusionConf::operator=(const FusionConf& src) {
@@ -354,6 +356,11 @@ void FusionConf::operator=(const FusionConf& src) {
 	dec = src.dec;
 	period = src.period;
 	sector_period = src.sector_period;
+	
+	test0_equity	= src.test0_equity;
+	test0_dd		= src.test0_dd;
+	test1_equity	= src.test1_equity;
+	test1_dd		= src.test1_dd;
 	
 	ConfTestResults::operator=(src);
 }
@@ -446,11 +453,11 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 				
 				if (up_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = +1 * (1 << adv.conf.amp);
+						sym_signals[sym] = +1 * (adv.conf.amp * AMP_MAXSCALE_MUL);
 				}
 				if (down_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = -1 * (1 << adv.conf.amp);
+						sym_signals[sym] = -1 * (adv.conf.amp * AMP_MAXSCALE_MUL);
 				}
 			}
 			
@@ -466,7 +473,7 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 			
 			broker.Cycle(i);
 		}
-		broker.CloseAll(end);
+		broker.CloseAll(end-1);
 	}
 	
 	
@@ -582,11 +589,11 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 				
 				if (up_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = +1 * (1 << adv.conf.amp);
+						sym_signals[sym] = +1 * (adv.conf.amp * AMP_MAXSCALE_MUL);
 				}
 				if (down_predicted) {
 					if (sym_signals[sym] == 0)
-						sym_signals[sym] = -1 * (1 << adv.conf.amp);
+						sym_signals[sym] = -1 * (adv.conf.amp * AMP_MAXSCALE_MUL);
 				}
 			}
 			
@@ -604,7 +611,7 @@ void ExpertFusion::Refresh(const ForestArea& area) {
 			
 			broker.Cycle(i);
 		}
-		broker.CloseAll(end);
+		broker.CloseAll(end-1);
 		
 		
 		if (test_area == 0) {
@@ -664,14 +671,15 @@ void ExpertOptimizer::EvolveFusion(FusionConf& conf) {
 	
 	ConfEvolver evo;
 	
-	int r1, r2;
+	int r_best, r1, r2;
+	r_best = Random(5); // switch between TOP 5
 	{r1 = 1 + Random(fus_confs.GetCount() - 1);}
 	do  {r2 = Random(fus_confs.GetCount());} while (r2 == r1);
 	
 	lock.Enter();
 	
 	evo.osrc = &conf;
-	evo.best = &fus_confs[0];
+	evo.best = &fus_confs[r_best];
 	evo.src1 = &fus_confs[r1];
 	evo.src2 = &fus_confs[r2];
 	
@@ -695,24 +703,17 @@ void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
 	bool skip_add = false;
 	
 	if (fus_confs.GetCount() >= pop_limit) {
-		double lowest_accuracy = 1.0;
-		double av_accuracy = 0.0;
 		double lowest_result = DBL_MAX;
 		for(int i = 0; i < fus_confs.GetCount(); i++) {
 			const FusionConf& cf = fus_confs[i];
-			av_accuracy += cf.accuracy;
-			if (lowest_accuracy > cf.accuracy) {
-				lowest_accuracy = cf.accuracy;
+			double eq = cf.test0_equity + cf.test1_equity;
+			if (lowest_result > eq) {
+				lowest_result = eq;
 				replace_i = i;
 			}
-			if (cf.test0_equity < lowest_result)
-				lowest_result = cf.test0_equity;
 		}
-		av_accuracy /= fus_confs.GetCount();
-		
-		skip_add =	lowest_accuracy > conf.accuracy ||
-					av_accuracy * accuracy_limit_factor > conf.accuracy ||
-					lowest_result > conf.test0_equity;
+		double confeq = conf.test0_equity + conf.test1_equity;
+		skip_add = lowest_result > confeq;
 	}
 	
 	if (!skip_add) {
@@ -723,7 +724,12 @@ void ExpertOptimizer::AddTestResult(const FusionConf& conf) {
 		SortFusions();
 	}
 	
+	int graph_limit = 10000;
+	if (fus_results.GetCount() > graph_limit)
+		fus_results.Remove(graph_limit, fus_results.GetCount() - graph_limit);
 	fus_results.Add(conf.test0_equity);
+	
+	pop_counter++;
 	
 	lock.Leave();
 }
@@ -749,7 +755,7 @@ ExpertSystem::ExpertSystem(System* sys) : sys(sys) {
 	running = false;
 	stopped = true;
 	
-
+	
 #ifndef flagHAVE_ALLSYM
 
 	allowed_symbols.Add("EURUSD", 3); // 0.26
@@ -807,26 +813,35 @@ void ExpertSystem::Init() {
 
 void ExpertSystem::Start() {
 	Stop();
+	
 	running = true;
 	stopped = false;
 	Thread::Start(THISBACK(Main));
+	
+	if (is_training) {
+		training_stopped = false;
+		training_running = true;
+		Thread::Start(THISBACK(MainTraining));
+	}
 }
 
 void ExpertSystem::Stop() {
 	running = false;
+	training_running = false;
+	while (stopped != true || training_stopped != true)
+		Sleep(100);
+}
 
-	while (stopped != true)
+void ExpertSystem::StopTraining() {
+	training_running = false;
+	while (training_stopped != true)
 		Sleep(100);
 }
 
 void ExpertSystem::Main() {
-
+	
 	while (running) {
-		if (phase == PHASE_TRAINING)
-			MainTraining();
-		
-		else if (phase == PHASE_REAL)
-			MainReal();
+		MainReal();
 		
 		Sleep(100);
 	}
@@ -836,8 +851,10 @@ void ExpertSystem::Main() {
 }
 
 void ExpertSystem::StoreThis() {
+	rt_lock.Enter();
+	
 	Time t = GetSysTime();
-	String file = ConfigFile("agentgroup.bin");
+	String file = ConfigFile("expertsystem.bin");
 	bool rem_bak = false;
 
 	if (FileExists(file)) {
@@ -851,89 +868,310 @@ void ExpertSystem::StoreThis() {
 		DeleteFile(file + ".bak");
 
 	last_store.Reset();
+	
+	rt_lock.Leave();
 }
 
 void ExpertSystem::LoadThis() {
-	if (FileExists(ConfigFile("agentgroup.bin.bak")))
-		LoadFromFile(*this,	ConfigFile("agentgroup.bin.bak"));
+	if (FileExists(ConfigFile("expertsystem.bin.bak")))
+		LoadFromFile(*this,	ConfigFile("expertsystem.bin.bak"));
 	else
-		LoadFromFile(*this,	ConfigFile("agentgroup.bin"));
+		LoadFromFile(*this,	ConfigFile("expertsystem.bin"));
 }
 
-void ExpertSystem::Serialize(Stream& s) {
-	
+
+void ForestArea::FillArea(int level, int data_count) {
+	int len;
+	switch (level) {
+		case 0: len = 1 * 5 * 24 * 60; break;
+		case 1: len = 2 * 5 * 24 * 60; break;
+		case 2: len = 4 * 5 * 24 * 60; break;
+		default: len = 8 * 5 * 24 * 60;
+	}
+	train_begin = Random(data_count - len);
+	train_end = train_begin + len;
+	do {
+		test0_begin = Random(data_count - len);
+		test0_end = test0_begin + len;
+	} while (abs(test0_begin - train_begin) < 2*len);
+	do {
+		test1_begin = Random(data_count - len);
+		test1_end = test1_begin + len;
+	}
+	while (abs(test0_begin - train_begin) < 2*len ||
+		   abs(test1_begin - train_begin) < 2*len);
 }
 
 void ExpertSystem::MainTraining() {
 	System& sys = GetSystem();
 	
-	sys.ProcessWorkQueue();
+	while (training_running && is_training && !Thread::IsShutdownThreads()) {
+		sys_lock.EnterWrite();
+		int data_count = sys.GetCountMain();
+		sys.ProcessWorkQueue();
+		sys.ProcessLabelQueue();
+		sys.ProcessDataBridgeQueue();
+		full_mask.SetCount(data_count).One();
+		sys_lock.LeaveWrite();
+		
+		
+		CoWork co;
+		co.SetPoolSize(GetUsedCpuCores());
+		
+		TimeStop ts_break;
+		int ts_break_interval = 10 * (60 * 1000); // 10 mins
+		
+		while (training_running && is_training && !Thread::IsShutdownThreads()) {
+			
+			if (ts_break.Elapsed() >= ts_break_interval) {
+				break;
+			}
+			
+			// If enough advisor optimizing, optimize fusions
+			for(int i = 0; i < fusion.GetPopulationSize() && training_running && !Thread::IsShutdownThreads(); i++) {
+				co & [=] {
+					if (!training_running || Thread::IsShutdownThreads()) return;
+					
+					ExpertFusion& fus = GetExpertCache().GetExpertFusion(CoWork::GetWorkerIndex());
+					
+					
+					// Load configuration
+					fusion.EvolveFusion(fus.conf);
+					fus.Configure();
+					
+					
+					// Refresh advisor
+					ForestArea area;
+					area.FillArea(fusion.level, data_count);
+					sys_lock.EnterRead();
+					fus.Refresh(area);
+					sys_lock.LeaveRead();
+					
+					// Return test result
+					fusion.AddTestResult(fus.conf);
+				};
+			}
+			
+			co.Finish();
+			
+			fusion.ReduceMemory();
+			
+			// Update results in controlled way when level changes
+			int level = fusion.pop_counter / OPT_PHASE_ITERS;
+			if (level > fusion.level) {
+				fusion.level = level;
+				
+				Vector<FusionConf>& confs = fusion.fus_confs;
+				ExpertFusion& fus = GetExpertCache().GetExpertFusion(0);
+				for(int i = 0; i < confs.GetCount(); i++) {
+					fus.conf = confs[i];
+					fus.Configure();
+					ForestArea area;
+					area.FillArea(fusion.level, data_count);
+					sys_lock.EnterRead();
+					fus.Refresh(area);
+					sys_lock.LeaveRead();
+					confs[i] = fus.conf;
+				}
+				
+				StoreThis();
+			}
+		}
+		
+		StoreThis();
+	}
+	
+	training_stopped = true;
+}
+
+void ExpertSystem::UpdateRealTimeConfs() {
+	
+	// Safely copy confs from optimizer
+	rt_lock.Enter();
+	fusion.lock.Enter();
+	rt_confs <<= fusion.fus_confs;
+	fusion.lock.Leave();
+	rt_lock.Leave();
+	
+	
+	System& sys = GetSystem();
+	int data_count = sys.GetCountMain();
+	full_mask.SetCount(data_count).One();
+	
+	int limit = 30;
+	if (rt_confs.GetCount() > limit)
+		rt_confs.Remove(limit, rt_confs.GetCount() - limit);
 	
 	CoWork co;
 	co.SetPoolSize(GetUsedCpuCores());
-	
-	int data_count = sys.GetCountMain();
-	
-	full_mask.SetCount(data_count).One();
-	
-	while (running && phase == PHASE_TRAINING && !Thread::IsShutdownThreads())
-	{
-		
-		// If enough advisor optimizing, optimize fusions
-		for(int i = 0; i < fusion.GetPopulationSize() && running && !Thread::IsShutdownThreads(); i++) {
-			co & [=] {
-				if (!running || Thread::IsShutdownThreads()) return;
-				
-				ExpertFusion& fus = GetExpertCache().GetExpertFusion(CoWork::GetWorkerIndex());
-				
-				// Load configuration
-				fusion.EvolveFusion(fus.conf);
-				fus.Configure();
-				
-				// Refresh advisor
-				ForestArea area;
-				int len = 1 * 5 * 24 * 60;
-				area.train_begin = Random(data_count - len);
-				area.train_end = area.train_begin + len;
-				do {
-					area.test0_begin = Random(data_count - len);
-					area.test0_end = area.test0_begin + len;
-				} while (abs(area.test0_begin - area.train_begin) < 2*len);
-				do {
-					area.test1_begin = Random(data_count - len);
-					area.test1_end = area.test1_begin + len;
-				}
-				while (abs(area.test0_begin - area.train_begin) < 2*len ||
-					   abs(area.test1_begin - area.train_begin) < 2*len);
-				fus.Refresh(area);
-				
-				// Return test result
-				fusion.AddTestResult(fus.conf);
-			};
-		}
-		
-		co.Finish();
-		
-		fusion.ReduceMemory();
+	for(int i = 0; i < rt_confs.GetCount() && running; i++) {
+		co & [=] {
+			ExpertFusion& fus = GetExpertCache().GetExpertFusion(CoWork::GetWorkerIndex() + 1000);
+			fus.conf = rt_confs[i];
+			fus.Configure();
+			ForestArea area;
+			area.train_begin	= 24*60;
+			area.train_end		= data_count * 2/3;
+			area.test0_begin	= area.train_end;
+			area.test0_end		= data_count - 1*5*24*60;
+			area.test1_begin	= area.test0_end;
+			area.test1_end		= data_count;
+			sys_lock.EnterRead();
+			fus.Refresh(area);
+			sys_lock.LeaveRead();
+			rt_confs[i] = fus.conf;
+		};
 	}
+	co.Finish();
 	
-	stopped = true;
+	Sort(rt_confs);
+	
+	last_update = GetSysTime();
+	
+	StoreThis();
 }
 
 void ExpertSystem::MainReal() {
+	Time now				= GetSysTime();
+	int wday				= DayOfWeek(now);
+	Time after_hour			= now + 60 * 60;
+	int wday_after_hour		= DayOfWeek(after_hour);
+	now.second				= 0;
+	MetaTrader& mt			= GetMetaTrader();
+	
+	
+	
+	if (rt_confs.IsEmpty() || last_update < (now - 4*60*60) || forced_update) {
+		UpdateRealTimeConfs();
+		if (rt_confs.IsEmpty())
+			return;
+	}
+	
+	if (!forced_update) {
+		
+		if (now == prev_update)
+			return;
+		
+		
+		// Skip weekends and first hours of monday
+		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+			return;
+		}
+		
+		
+		// Check for market closing (weekend and holidays)
+		else if (wday == 5 && wday_after_hour == 6) {
+			sys->WhenInfo("Closing all orders before market break");
+	
+			for (int i = 0; i < mt.GetSymbolCount(); i++) {
+				mt.SetSignal(i, 0);
+				mt.SetSignalFreeze(i, false);
+			}
+	
+			mt.SignalOrders(true);
+			return;
+		}
+	}
+	
+	forced_update = false;
+	prev_update = now;
+	sys->WhenInfo("Shift changed");
+	
+	if (prev_update.minute % 5 == 0)
+		Data();
+	
+	WhenInfo("Updating system content");
+	DataBridgeCommon& common = GetDataBridgeCommon();
+	common.DownloadAskBid();
+	common.RefreshAskBidData(true);
+	sys_lock.EnterWrite();
 	System& sys = GetSystem();
-	
+	sys.skip_storecache = true;
+	sys.SetEnd(mt.GetTime());
 	int data_count = sys.GetCountMain();
-	//test0_begin = data_count - 2;
-	//test1_begin = data_count - 1;
-	
+	sys.ProcessWorkQueue();
+	sys.ProcessLabelQueue(); // not needed, but without it things break
+	sys.ProcessDataBridgeQueue();
+	sys.skip_storecache = false;
 	full_mask.SetCount(data_count).One();
+	sys_lock.LeaveWrite();
+	
+	
+	WhenInfo("Updating ExpertFusion");
+	ExpertFusion fus;
+	fus.conf = rt_confs[0];
+	fus.Configure();
+	ForestArea area;
+	int week			= 1*5*24*60;
+	area.train_begin	= 24*60;
+	area.train_end		= data_count - 2 * week;
+	area.train_end		-= area.train_end % week;
+	area.test0_begin	= area.train_end;
+	area.test0_end		= area.test0_begin + week;
+	area.test1_begin	= area.test0_end;
+	area.test1_end		= data_count;
+	sys_lock.EnterRead();
+	fus.Refresh(area);
+	sys_lock.LeaveRead();
 	
 	
 	
-	// - set solver fmlevel
+	WhenInfo("Updating MetaTrader");
+	sys.WhenPushTask("Putting latest signals");
+	
+	// Reset signals
+	if (realtime_count == 0) {
+		for (int i = 0; i < mt.GetSymbolCount(); i++)
+			mt.SetSignal(i, 0);
+	}
+	realtime_count++;
+	
+	mt.Data();
+	mt.RefreshLimits();
+	for (int i = 0; i < sys.sym_ids.GetCount(); i++) {
+		int sym = sys.sym_ids[i];
+		int sig = fus.broker.GetSignal(i);
+
+		if (sig == mt.GetSignal(sym) && sig != 0)
+			mt.SetSignalFreeze(sym, true);
+		else {
+			mt.SetSignal(sym, sig);
+			mt.SetSignalFreeze(sym, false);
+		}
+	}
+	mt.SetFreeMarginLevel(FMLEVEL);
+	mt.SetFreeMarginScale((AMP_MAXSCALES - 1)*AMP_MAXSCALE_MUL * SYM_COUNT);
+	mt.SignalOrders(true);
 	
 	
+	sys.WhenRealtimeUpdate();
+	sys.WhenPopTask();
+}
+
+void ExpertSystem::Data() {
+	MetaTrader& mt = GetMetaTrader();
+	Vector<Order> orders;
+	Vector<int> signals;
+
+	orders <<= mt.GetOpenOrders();
+	signals <<= mt.GetSignals();
+
+	mt.Data();
+
+	int file_version = 1;
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	Time time = mt.GetTime();
+
+	FileAppend fout(ConfigFile("expertsystem.log"));
+	int64 begin_pos = fout.GetSize();
+	int size = 0;
+	fout.Put(&size, sizeof(int));
+	fout % file_version % balance % equity % time % signals % orders;
+	int64 end_pos = fout.GetSize();
+	size = end_pos - begin_pos - sizeof(int);
+	fout.Seek(begin_pos);
+	fout.Put(&size, sizeof(int));
 }
 
 }

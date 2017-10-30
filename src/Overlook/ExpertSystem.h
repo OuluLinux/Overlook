@@ -16,6 +16,7 @@ struct ConfEvolver {
 	void* src2 = NULL;
 	double scale = 0.7;
 	double crossover_prob = 0.9;
+	double rand_value_prob = 0.02;
 	
 	bool loop_type = false, loop_finished = false;
 	int total = 0;
@@ -31,30 +32,34 @@ struct ConfEvolver {
 		if (counter >= begin) {
 			if (Randomf() >= crossover_prob) {loop_finished = true; return *this;}
 			
-			uint64 diff = ((uint64)&o) - ((uint64)osrc);
-			const T& obest = *(T*)((uint64)best + diff);
-			const T& osrc1 = *(T*)((uint64)src1 + diff);
-			const T& osrc2 = *(T*)((uint64)src2 + diff);
-			o = obest + scale * (osrc1 - osrc2);
-			if (type == ENUM) {
-				// pick which is closest
-				int best_diff = abs(obest - o);
-				int src1_diff = abs(osrc1 - o);
-				int src2_diff = abs(osrc2 - o);
-				if (best_diff <= src1_diff) {
-					if (best_diff <= src2_diff)
-						o = obest;
-					else
-						o = osrc2;
-				} else {
-					if (src1_diff <= src2_diff)
-						o = osrc1;
-					else
-						o = osrc2;
+			if (Randomf() <= rand_value_prob) {
+				o = Random(max - min) + min;
+			} else {
+				uint64 diff = ((uint64)&o) - ((uint64)osrc);
+				const T& obest = *(T*)((uint64)best + diff);
+				const T& osrc1 = *(T*)((uint64)src1 + diff);
+				const T& osrc2 = *(T*)((uint64)src2 + diff);
+				o = obest + scale * (osrc1 - osrc2);
+				if (type == ENUM) {
+					// pick which is closest
+					int best_diff = abs(obest - o);
+					int src1_diff = abs(osrc1 - o);
+					int src2_diff = abs(osrc2 - o);
+					if (best_diff <= src1_diff) {
+						if (best_diff <= src2_diff)
+							o = obest;
+						else
+							o = osrc2;
+					} else {
+						if (src1_diff <= src2_diff)
+							o = osrc1;
+						else
+							o = osrc2;
+					}
 				}
+				if (o < min) o = min;
+				else if (o > (max-1)) o = max-1;
 			}
-			if (o < min) o = min;
-			else if (o > (max-1)) o = max-1;
 			
 			total--;
 			if (total <= 0) {loop_finished = true;}
@@ -65,28 +70,44 @@ struct ConfEvolver {
 	}
 };
 
+struct ArrayCtrlPrinter {
+	ArrayCtrl* list = NULL;
+	int i = 0;
+	
+	ArrayCtrlPrinter(ArrayCtrl& list) : list(&list) {}
+	
+	template <class T>
+	void Add(String key, T value) {
+		list->Set(i, 0, key);
+		list->Set(i, 1, AsString(value));
+		i++;
+	}
+	
+	void Title(String key) {
+		list->Set(i, 0, "");  list->Set(i, 1, ""); i++;
+		list->Set(i, 0, key); list->Set(i, 1, ""); i++;
+	}
+};
+
 struct ConfTestResults {
 	double accuracy = 0.0;
-	double test0_equity = 0.0, test0_dd = 1.0;
-	double test1_equity = 0.0, test1_dd = 1.0;
 	
 	void operator=(const ConfTestResults& src) {
 		accuracy = src.accuracy;
-		test0_equity	= src.test0_equity;
-		test0_dd		= src.test0_dd;
-		test1_equity	= src.test1_equity;
-		test1_dd		= src.test1_dd;
+	}
+	void Serialize(Stream& s) {
+		s % accuracy;
 	}
 };
 
 struct DecisionClassifierConf : Moveable<DecisionClassifierConf> {
 	struct DecisionInput {
-		uint8 indi = 0;
-		uint8 symbol = 0;
+		int indi = 0;
+		int symbol = 0;
 	};
 	
 	DecisionInput input[DECISION_INPUTS];
-	uint8 label_id = 0;
+	int label_id = 0;
 	
 	uint32 GetHashValue() const;
 	void Randomize();
@@ -97,6 +118,19 @@ struct DecisionClassifierConf : Moveable<DecisionClassifierConf> {
 				(input[i].symbol, ENUM, 0, SYM_COUNT);
 		evo (label_id, ENUM, 0, LABELINDI_COUNT);
 	}
+	void Serialize(Stream& s) {
+		for(int i = 0; i < DECISION_INPUTS; i++)
+			s % input[i].indi % input[i].symbol;
+		s % label_id;
+	}
+	void Print(ArrayCtrlPrinter& printer) const {
+		printer.Add("label_id", label_id);
+		for(int i = 0; i < DECISION_INPUTS; i++) {
+			String is = IntStr(i);
+			printer.Add(is + " indi", input[i].indi);
+			printer.Add(is + " symbol", input[i].symbol);
+		}
+	}
 };
 
 bool operator == (const DecisionClassifierConf& a, const DecisionClassifierConf& b);
@@ -104,9 +138,9 @@ inline bool operator != (const DecisionClassifierConf& a, const DecisionClassifi
 
 struct SectorConf : public ConfTestResults, Moveable<SectorConf> {
 	DecisionClassifierConf dec[SECTOR_2EXP];
-	uint8 symbol = 0; // symbol which is used for classes
-	uint8 period = 0; // base period for +/- change
-	uint8 minimum_prediction_len = 0;
+	int symbol = 0; // symbol which is used for classes
+	int period = 0; // base period for +/- change
+	int minimum_prediction_len = 0;
 	
 	uint32 GetHashValue() const;
 	void Randomize();
@@ -116,6 +150,20 @@ struct SectorConf : public ConfTestResults, Moveable<SectorConf> {
 		evo (symbol, ENUM, 0, SYM_COUNT)
 			(period, REAL, 1, TF_COUNT - SECTOR_2EXP)
 			(minimum_prediction_len, REAL, 0, MINPRED_LEN);
+	}
+	void Serialize(Stream& s) {
+		ConfTestResults::Serialize(s);
+		for(int i = 0; i < SECTOR_2EXP; i++)
+			s % dec[i];
+		s % symbol % period % minimum_prediction_len;
+	}
+	void Print(ArrayCtrlPrinter& printer) const {
+		for(int i = 0; i < SECTOR_2EXP; i++)
+			dec[i].Print(printer);
+		printer.Add("symbol", symbol);
+		printer.Add("period", period);
+		printer.Add("minimum_prediction_len", minimum_prediction_len);
+		printer.Add("accuracy", accuracy);
 	}
 };
 
@@ -141,9 +189,9 @@ public:
 
 struct AdvisorConf : public ConfTestResults, Moveable<AdvisorConf> {
 	SectorConf sectors;
-	uint8 sector = 0;
-	uint8 amp = 0;
-	uint8 minimum_prediction_len = 0;
+	int sector = 0;
+	int amp = 0;
+	int minimum_prediction_len = 0;
 	DecisionClassifierConf label, signal;
 	
 	
@@ -152,10 +200,26 @@ struct AdvisorConf : public ConfTestResults, Moveable<AdvisorConf> {
 	void Evolve(ConfEvolver& evo) {
 		sectors.Evolve(evo);
 		evo (sector, ENUM, 0, SECTOR_COUNT)
-			(amp, REAL, 0, AMP_MAX)
+			(amp, REAL, 0, AMP_MAXSCALES)
 			(minimum_prediction_len, REAL, 0, MINPRED_LEN);
 		label.Evolve(evo);
 		signal.Evolve(evo);
+	}
+	void Serialize(Stream& s) {
+		ConfTestResults::Serialize(s);
+		s % sectors % sector % amp % minimum_prediction_len % label % signal;
+	}
+	void Print(ArrayCtrlPrinter& printer) const {
+		printer.Title("Sectors");
+		sectors.Print(printer);
+		printer.Title("Label");
+		label.Print(printer);
+		printer.Title("Signal");
+		signal.Print(printer);
+		printer.Add("sector", sector);
+		printer.Add("amp", amp);
+		printer.Add("minimum_prediction_len", minimum_prediction_len);
+		printer.Add("accuracy", accuracy);
 	}
 };
 
@@ -184,8 +248,11 @@ public:
 struct FusionConf : public ConfTestResults, Moveable<FusionConf> {
 	AdvisorConf advisors[ADVISOR_COUNT];
 	DecisionClassifierConf dec;
-	uint8 period = 0;
-	uint8 sector_period = 0;
+	int period = 0;
+	int sector_period = 0;
+	
+	double test0_equity = 0.0, test0_dd = 1.0;
+	double test1_equity = 0.0, test1_dd = 1.0;
 	
 	FusionConf() {}
 	FusionConf(const FusionConf& move) {*this = move;}
@@ -198,6 +265,26 @@ struct FusionConf : public ConfTestResults, Moveable<FusionConf> {
 		dec.Evolve(evo);
 		evo (period, REAL, 0, TF_COUNT)
 			(sector_period, REAL, 0, TF_COUNT);
+	}
+	void Serialize(Stream& s) {
+		ConfTestResults::Serialize(s);
+		for(int i = 0; i < ADVISOR_COUNT; i++)
+			s % advisors[i];
+		s % dec % period % sector_period;
+		s % test0_equity % test0_dd % test1_equity % test1_dd;
+	}
+	void Print(ArrayCtrlPrinter& printer) const {
+		printer.Add("test0_equity", test0_equity);
+		printer.Add("test0_dd", test0_dd);
+		printer.Add("test1_equity", test1_equity);
+		printer.Add("test1_dd", test1_dd);
+		printer.Add("accuracy", accuracy);
+		printer.Title("Fusion trigger input");
+		dec.Print(printer);
+		for(int i = 0; i < ADVISOR_COUNT; i++) {
+			printer.Title("Advisor " + IntStr(i));
+			advisors[i].Print(printer);
+		}
 	}
 };
 
@@ -249,11 +336,12 @@ public:
 	// Persistent
 	Vector<FusionConf>		fus_confs;
 	Vector<double>			fus_results;
+	int						level = 0;
 	
 	// Temporary
 	int pop_size = 100;
-	int pop_limit = 500;
-	double accuracy_limit_factor = 0.8;
+	int pop_limit = 1000;
+	int64 pop_counter = 0;
 	double rand_prob = 0.01;
 	SpinLock lock;
 	
@@ -265,8 +353,8 @@ public:
 	void AddTestResult(const FusionConf& conf);
 	void SortFusions()	{::Upp::Sort(fus_confs);}
 	void ReduceMemory();
-	
 	int GetPopulationSize() const {return pop_size;}
+	void Serialize(Stream& s) {s % fus_confs % fus_results % level;}
 };
 
 class ExpertSystem {
@@ -275,16 +363,23 @@ public:
 	
 	// Persistent
 	ExpertOptimizer fusion;
-	Time created;
-	int phase = 0;
+	Vector<FusionConf> rt_confs;
+	Time created, last_update;
+	int is_training = true;
 	
 	
 	// Temp
 	VectorMap<String, int> allowed_symbols;
-	Index<int> sym_ids;
 	TimeStop last_store, last_datagather;
+	int realtime_count = 0;
+	bool training_running = false, training_stopped = true;
 	bool running = false, stopped = true;
+	bool forced_update = false;
+	RWMutex sys_lock;
+	Mutex rt_lock;
 	System* sys = NULL;
+	Time prev_update;
+	
 	
 public:
 	typedef ExpertSystem CLASSNAME;
@@ -294,12 +389,17 @@ public:
 	void Init();
 	void Start();
 	void Stop();
+	void StopTraining();
 	void StoreThis();
 	void LoadThis();
 	void Main();
 	void MainTraining();
 	void MainReal();
-	void Serialize(Stream& s);
+	void UpdateRealTimeConfs();
+	void Data();
+	void Serialize(Stream& s) {
+		s % fusion % rt_confs % created % last_update % is_training;
+	}
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;

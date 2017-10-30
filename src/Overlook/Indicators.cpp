@@ -3503,18 +3503,18 @@ void CorrelationOscillator::Init() {
 	
 	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
-	ExpertSystem& es = GetSystem().GetExpertSystem();
-	if (es.sym_ids.GetCount() == 0)
+	System& sys = GetSystem();
+	if (sys.sym_ids.GetCount() == 0)
 		Panic("ExpertSystem is not yet initialized.");
 	int sym_shift = 0;
 	for(int i = 0; i < SYM_COUNT-1; i++) {
-		int es_id = es.sym_ids[i + sym_shift];
-		if (sym_shift == 0 && es_id == id) {
+		int sys_id = sys.sym_ids[i + sym_shift];
+		if (sym_shift == 0 && sys_id == id) {
 			sym_shift++;
 			i--;
 			continue;
 		}
-		sym_ids[i] = es_id;
+		sym_ids[i] = sys_id;
 	}
 	
 	SetCoreMaximum(+1.0);

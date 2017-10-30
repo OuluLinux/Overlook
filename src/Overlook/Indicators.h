@@ -798,14 +798,14 @@ public:
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		ExpertSystem& es = ::Overlook::GetSystem().GetExpertSystem();
-		if (es.sym_ids.GetCount() == 0)
+		System& sys = ::Overlook::GetSystem();
+		if (sys.sym_ids.GetCount() == 0)
 			Panic("ExpertSystem is not yet initialized.");
 		
 		static Index<int> sym_ids;
 		if (sym_ids.IsEmpty()) {
-			for(int i = 0; i < es.sym_ids.GetCount(); i++)
-				sym_ids.Add(es.sym_ids[i]);
+			for(int i = 0; i < sys.sym_ids.GetCount(); i++)
+				sym_ids.Add(sys.sym_ids[i]);
 		}
 		
 		// Accept all symbols in the same timeframe

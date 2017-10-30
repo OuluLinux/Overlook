@@ -17,10 +17,10 @@ Overlook::Overlook() :
 	tabs.Add(visins, "Classic");
 	tabs.Add(exposurectrl);
 	tabs.Add(exposurectrl, "Exposure Tester");
-	tabs.Add(overview);
-	tabs.Add(overview, "Expert Overview");
 	tabs.Add(optimizer);
 	tabs.Add(optimizer, "Expert Optimizer");
+	tabs.Add(real);
+	tabs.Add(real, "Expert Real");
 	tabs.Add(export_ctrl);
 	tabs.Add(export_ctrl, "Expert Real-Time");
 	tabs.Add(rtctrl);
@@ -79,10 +79,6 @@ void Overlook::RefreshTaskStatus() {
 
 void Overlook::Refresher() {
 	Data();
-	//int tab = tabs.Get();
-	//if (tab == 2 && !IsMinimized())
-	//	PostRefresher();
-	//else
 	tc.Set(1000, THISBACK(PostRefresher));
 }
 
@@ -93,10 +89,10 @@ void Overlook::Data() {
 			prev_view->Data();
 	}
 	else if (tab == 2) {
-		overview.Data();
+		optimizer.Data();
 	}
 	else if (tab == 3) {
-		optimizer.Data();
+		real.Data();
 	}
 	else if (tab == 4) {
 		export_ctrl.Data();

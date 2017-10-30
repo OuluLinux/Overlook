@@ -47,7 +47,7 @@ void ActionCountGraph::Paint(Draw& w) {
 
 
 
-
+/*
 
 
 SystemOverview::SystemOverview() {
@@ -56,7 +56,7 @@ SystemOverview::SystemOverview() {
 }
 
 void SystemOverview::Data() {
-	/*
+	
 	AgentSystem& ag = GetSystem().GetAgentSystem();
 	
 	String infostr;
@@ -136,9 +136,9 @@ void SystemOverview::Data() {
 	
 	
 	
-	info.SetLabel(infostr);*/
+	info.SetLabel(infostr);
 }
-
+*/
 
 
 
@@ -646,24 +646,23 @@ RealtimeCtrl::RealtimeCtrl() {
 }
 
 void RealtimeCtrl::AddMessage(String time, String level, String msg) {
-	journal.Insert(0);
-	journal.Set(0, 0, time);
-	journal.Set(0, 1, level);
-	journal.Set(0, 2, msg);
+	lock.Enter();
+	messages.Add(Msg(time, level, msg));
+	lock.Leave();
 }
 
 void RealtimeCtrl::Info(String msg) {
-	PostCallback(THISBACK3(AddMessage,
+	AddMessage(
 		Format("%", GetSysTime()),
 		"Info",
-		msg));
+		msg);
 }
 
 void RealtimeCtrl::Error(String msg) {
-	PostCallback(THISBACK3(AddMessage,
+	AddMessage(
 		Format("%", GetSysTime()),
 		"Error",
-		msg));
+		msg);
 }
 
 void RealtimeCtrl::Data() {
@@ -671,6 +670,17 @@ void RealtimeCtrl::Data() {
 	mt.ForwardExposure();
 	
 	brokerctrl.Data();
+	
+	lock.Enter();
+	int count = Upp::min(messages.GetCount(), 20);
+	for(int i = 0; i < messages.GetCount(); i++) {
+		int j = messages.GetCount() - 1 - i;
+		const Msg& m = messages[j];
+		journal.Set(i, 0, m.a);
+		journal.Set(i, 1, m.b);
+		journal.Set(i, 2, m.c);
+	}
+	lock.Leave();
 }
 
 void RealtimeCtrl::Init() {

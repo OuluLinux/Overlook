@@ -126,7 +126,7 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	for (int n = internal_count; n < node_count; n++) {
 		VectorBool& ix = ixs[n];
 		
-		ASSERT(ix.GetCount() == labels.GetCount());
+		ASSERT(ix.GetCount() <= labels.GetCount());
 		ConstU64 *it = ix.Begin(), *end = ix.End();
 		ConstU64 *lit = labels.Begin(), *lend = labels.End();
 		uint64 total = 0;
@@ -290,7 +290,7 @@ bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const 
 
 // Misc utility functions
 double Entropy(const VectorBool& labels, const VectorBool& ix) {
-	ASSERT(ix.GetCount() == labels.GetCount());
+	ASSERT(ix.GetCount() <= labels.GetCount());
 	ConstU64 *it  = ix.Begin(), *end = ix.End();
 	ConstU64 *lit = labels.Begin(), *lend = labels.End();
 	int64 numones = 0;

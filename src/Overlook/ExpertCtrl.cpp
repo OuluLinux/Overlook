@@ -40,6 +40,8 @@ void EvolutionGraph::Paint(Draw& w) {
 		}
 	}
 	
+	id.DrawText(3, 3, IntStr(count), Monospace(15), Black());
+	
 	w.DrawImage(0, 0, id);
 }
 
@@ -47,7 +49,7 @@ void EvolutionGraph::Paint(Draw& w) {
 
 
 
-ExpertSectorsCtrl::ExpertSectorsCtrl() {
+ExpertOptimizerCtrl::ExpertOptimizerCtrl() {
 	Add(vsplit.SizePos());
 	
 	vsplit << graph << hsplit;
@@ -62,15 +64,12 @@ ExpertSectorsCtrl::ExpertSectorsCtrl() {
 	pop.AddColumn("Test 0 dd");
 	pop.AddColumn("Test 1 equity");
 	pop.AddColumn("Test 1 dd");
-	/*pop.AddColumn("Symbol");
-	pop.AddColumn("Period");
-	pop.AddColumn("Prediction Length");
-	for(int i = 0; i < SECTOR_2EXP; i++)
-		pop.AddColumn("Decision");*/
 	
+	unit.AddColumn("Key");
+	unit.AddColumn("Value");
 }
 
-void ExpertSectorsCtrl::Data() {
+void ExpertOptimizerCtrl::Data() {
 	System& sys = GetSystem();
 	ExpertSystem& esys = sys.GetExpertSystem();
 	
@@ -81,25 +80,18 @@ void ExpertSectorsCtrl::Data() {
 	for(int i = 0; i < fus_confs.GetCount(); i++) {
 		const FusionConf& conf = fus_confs[i];
 		
-		pop.Set(i, 0, conf.accuracy);
-		pop.Set(i, 1, conf.test0_equity);
-		pop.Set(i, 2, conf.test0_dd);
-		pop.Set(i, 3, conf.test1_equity);
-		pop.Set(i, 4, conf.test1_dd);
-		/*pop.Set(i, 1, conf.symbol);
-		pop.Set(i, 2, conf.period);
-		pop.Set(i, 3, conf.minimum_prediction_len);
-		for(int j = 0; j < SECTOR_2EXP; j++) {
-			pop.Set(i, 4+j, conf.dec[j].ToString());
-		}*/
+		pop.Set(i, 0, Format("%2!,n", conf.accuracy));
+		pop.Set(i, 1, Format("%2!,n", conf.test0_equity));
+		pop.Set(i, 2, Format("%2!,n", conf.test0_dd));
+		pop.Set(i, 3, Format("%2!,n", conf.test1_equity));
+		pop.Set(i, 4, Format("%2!,n", conf.test1_dd));
 	}
 	
 	int cursor = pop.GetCursor();
 	if (cursor >= 0 && cursor < fus_confs.GetCount()) {
 		const FusionConf& conf = fus_confs[cursor];
-		
-		// ??? 
-		
+		ArrayCtrlPrinter printer(unit);
+		conf.Print(printer);
 	}
 	else unit.Clear();
 }
@@ -109,19 +101,59 @@ void ExpertSectorsCtrl::Data() {
 
 
 
-
-ExpertOptimizerCtrl::ExpertOptimizerCtrl() {
-	TabCtrl::Add(sectors, "Sectors");
-	TabCtrl::Add(sectors);
+ExpertRealCtrl::ExpertRealCtrl() {
+	Add(refresh_now.LeftPos(2,96).TopPos(2,26));
+	Add(last_update.LeftPos(100,200).TopPos(2,26));
+	Add(hsplit.HSizePos().VSizePos(30));
 	
+	refresh_now.SetLabel("Refresh now");
+	refresh_now <<= THISBACK(RefreshNow);
+	last_update.SetLabel("Last update:");
+	
+	hsplit << pop << unit;
+	hsplit.Horz();
+	
+	pop.AddColumn("Accuracy");
+	pop.AddColumn("Test 0 equity");
+	pop.AddColumn("Test 0 dd");
+	pop.AddColumn("Test 1 equity");
+	pop.AddColumn("Test 1 dd");
+	
+	unit.AddColumn("Key");
+	unit.AddColumn("Value");
 }
 
-void ExpertOptimizerCtrl::Data() {
-	int tab = Get();
+void ExpertRealCtrl::RefreshNow() {
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
+	esys.forced_update = true;
+}
+
+void ExpertRealCtrl::Data() {
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
 	
-	if (tab == 0) {
-		sectors.Data();
+	last_update.SetLabel("Last update: " + Format("%", esys.last_update));
+	const Vector<FusionConf>& fus_confs = esys.rt_confs;
+	
+	for(int i = 0; i < fus_confs.GetCount(); i++) {
+		const FusionConf& conf = fus_confs[i];
+		
+		pop.Set(i, 0, Format("%2!,n", conf.accuracy));
+		pop.Set(i, 1, Format("%2!,n", conf.test0_equity));
+		pop.Set(i, 2, Format("%2!,n", conf.test0_dd));
+		pop.Set(i, 3, Format("%2!,n", conf.test1_equity));
+		pop.Set(i, 4, Format("%2!,n", conf.test1_dd));
 	}
+	pop.SetCount(fus_confs.GetCount());
+	
+	int cursor = pop.GetCursor();
+	if (cursor >= 0 && cursor < fus_confs.GetCount()) {
+		const FusionConf& conf = fus_confs[cursor];
+		ArrayCtrlPrinter printer(unit);
+		conf.Print(printer);
+	}
+	else unit.Clear();
 }
 
 }

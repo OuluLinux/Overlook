@@ -28,7 +28,8 @@ using namespace Upp;
 #define AMP_MAXSCALE_MUL		2
 #define ADVISOR_COUNT			2
 #define MINPRED_LEN				8
-#define AMP_MAX					3
+#define FMLEVEL					0.60
+#define OPT_PHASE_ITERS			10000
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT					6

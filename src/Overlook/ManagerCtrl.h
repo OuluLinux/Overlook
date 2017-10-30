@@ -34,7 +34,7 @@ public:
 
 inline ManagerLoader& GetManagerLoader() {return Single<ManagerLoader>();}
 
-class SystemOverview : public WithSystemOverview<ParentCtrl> {
+/*class SystemOverview : public WithSystemOverview<ParentCtrl> {
 	
 protected:
 	String label, phase_str;
@@ -51,7 +51,7 @@ public:
 	
 	void Data();
 	
-};
+};*/
 /*
 class SectorOverview : public ParentCtrl {
 	Splitter split, vsplit;
@@ -149,6 +149,9 @@ public:
 };*/
 
 class RealtimeCtrl : public ParentCtrl {
+	typedef Tuple3<String, String, String> Msg;
+	Vector<Msg>				messages;
+	Mutex					lock;
 	Splitter				hsplit;
 	BrokerCtrl				brokerctrl;
 	ArrayCtrl				journal;

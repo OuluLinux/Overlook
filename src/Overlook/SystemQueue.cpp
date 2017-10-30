@@ -405,7 +405,8 @@ void System::Process(CoreItem& ci) {
 	ci.core->Refresh();
 	
 	// Store cache file
-	ci.core->StoreCache();
+	if (!skip_storecache)
+		ci.core->StoreCache();
 	
 }
 

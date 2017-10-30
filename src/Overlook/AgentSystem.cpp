@@ -407,8 +407,8 @@ void AgentSystem::TrainAgents(int phase) {
 				StoreThis();
 				break; // call TrainAgents again to RefreshSnapshots safely
 			}
-
-
+			
+			
 			// Change to the next phase eventually
 			for (int i = 0; i < proc_agents.GetCount(); i++) {
 				const AgentPos& apos = proc_agents[i];

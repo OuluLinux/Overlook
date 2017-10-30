@@ -13,21 +13,10 @@ public:
 	
 };
 
-class ExpertSectorsCtrl : public ParentCtrl {
+class ExpertOptimizerCtrl : public ParentCtrl {
 	EvolutionGraph graph;
 	ArrayCtrl pop, unit;
 	Splitter vsplit, hsplit;
-	
-public:
-	typedef ExpertSectorsCtrl CLASSNAME;
-	ExpertSectorsCtrl();
-	
-	void Data();
-	
-};
-
-class ExpertOptimizerCtrl : public TabCtrl {
-	ExpertSectorsCtrl sectors;
 	
 public:
 	typedef ExpertOptimizerCtrl CLASSNAME;
@@ -36,6 +25,22 @@ public:
 	void Data();
 	
 };
+
+class ExpertRealCtrl : public ParentCtrl {
+	Label last_update;
+	Button refresh_now;
+	ArrayCtrl pop, unit;
+	Splitter hsplit;
+	
+public:
+	typedef ExpertRealCtrl CLASSNAME;
+	ExpertRealCtrl();
+	
+	void Data();
+	void RefreshNow();
+	
+};
+
 
 }
 

@@ -445,7 +445,7 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 
 	broker.begin_equity				= 10000.0;
 	broker.leverage					= 1000;
-	broker.free_margin_level		= 0.90;
+	broker.free_margin_level		= FMLEVEL;
 	broker.part_sym_id				= sym_id;
 }
 

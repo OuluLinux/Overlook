@@ -55,8 +55,8 @@ protected:
 	ExposureTester			exposurectrl;
 	
 	// Expert System
-	SystemOverview			overview;
 	ExpertOptimizerCtrl		optimizer;
+	ExpertRealCtrl			real;
 	ExportCtrl				export_ctrl;
 	
 	

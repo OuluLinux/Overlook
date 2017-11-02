@@ -47,6 +47,62 @@ void EvolutionGraph::Paint(Draw& w) {
 }
 
 
+void TestEquityGraph::Paint(Draw& w) {
+	Size sz(GetSize());
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
+	
+	
+	const Vector<double>& last_test_equity = esys.last_test_equity;
+	const Vector<double>& last_test_spreadcost = esys.last_test_spreadcost;
+	
+	double emin = +DBL_MAX;
+	double smin = +DBL_MAX;
+	double emax = -DBL_MAX;
+	double smax = -DBL_MAX;
+	
+	int count = Upp::min(last_test_equity.GetCount(), last_test_spreadcost.GetCount());
+	for(int j = 0; j < count; j++) {
+		double ed = last_test_equity[j];
+		if (ed > emax) emax = ed;
+		if (ed < emin) emin = ed;
+		double sd = last_test_spreadcost[j];
+		if (sd > smax) smax = sd;
+		if (sd < smin) smin = sd;
+	}
+	
+	if (count >= 2 && emax > emin) {
+		double ediff = emax - emin;
+		double sdiff = smax - smin;
+		double xstep = (double)sz.cx / (count - 1);
+		
+		polyline.SetCount(count);
+		for(int j = 0; j < count; j++) {
+			double v = last_test_equity[j];
+			int y = (int)(sz.cy - (v - emin) / ediff * sz.cy);
+			int x = (int)(j * xstep);
+			polyline[j] = Point(x, y);
+		}
+		id.DrawPolyline(polyline, 2, Color(28, 127, 150));
+		
+		polyline.SetCount(count);
+		for(int j = 0; j < count; j++) {
+			double v = last_test_spreadcost[j];
+			int y = (int)(sz.cy - (v - smin) / sdiff * sz.cy);
+			int x = (int)(j * xstep);
+			polyline[j] = Point(x, y);
+		}
+		id.DrawPolyline(polyline, 1, Color(198, 85, 0));
+	}
+	
+	if (count)
+		id.DrawText(3, 3, DblStr(last_test_equity.Top()), Monospace(15), Black());
+	
+	w.DrawImage(0, 0, id);
+}
 
 
 
@@ -131,7 +187,11 @@ void ExpertOptimizerCtrl::Data() {
 ExpertRealCtrl::ExpertRealCtrl() {
 	Add(refresh_now.LeftPos(2,96).TopPos(2,26));
 	Add(last_update.LeftPos(100,200).TopPos(2,26));
-	Add(hsplit.HSizePos().VSizePos(30));
+	Add(prog.HSizePos(300,3).TopPos(2,26));
+	Add(testequity.HSizePos().TopPos(30, 270));
+	Add(hsplit.HSizePos().VSizePos(300));
+	
+	prog.Set(0, 1);
 	
 	refresh_now.SetLabel("Refresh now");
 	refresh_now <<= THISBACK(RefreshNow);
@@ -175,6 +235,8 @@ void ExpertRealCtrl::Data() {
 	
 	last_update.SetLabel("Last update: " + Format("%", esys.last_update));
 	const Vector<AccuracyConf>& acc_list = esys.acc_list;
+	
+	prog.Set(esys.processed_used_conf, esys.used_conf.GetCount());
 	
 	for(int i = 0; i < esys.used_conf.GetCount(); i++) {
 		const AccuracyConf& conf = acc_list[esys.used_conf[i]];

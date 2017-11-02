@@ -222,10 +222,11 @@ struct BufferRandomForest {
 	
 	// Temporary
 	VectorBool predicted_label;
-	Atomic locked;
+	Mutex lock;
 	RandomForestStat stat;
 	int cache_id = 0;
 	bool use_cache = false;
+	bool is_processing = false;
 	
 	BufferRandomForest();
 	void Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);

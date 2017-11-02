@@ -193,6 +193,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 	
 	if (dots.GetAlloc() < 128) dots.Reserve(128);
 	dots.SetCount(N);
+	if (dots.GetCount() != N) throw Exc("Memory error");
 	for(int i = 0; i < dots.GetCount(); i++) dots[i] = Dot(0, 0.0);
 
 	for (int i = 0; i < numtries; i++) {
@@ -211,6 +212,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 			for(uint64 k = 0; k < 64; k++) {
 				if (*it & (1ULL << k)) {
 					int pos = j + k;
+					if (d >= N) break;
 					dots[d++] = Dot(pos,
 						w1 * data.Get(pos, ri1) +
 						w2 * data.Get(pos, ri2));
@@ -378,11 +380,13 @@ double ConstBufferSourceIter::operator[](int i) const {
 
 
 BufferRandomForest::BufferRandomForest() {
-	locked = 0;
 	
 }
 
 void BufferRandomForest::Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
+	if (is_processing) Panic("Already processing");
+	is_processing = true;
+	
 	VectorBool train_mask(mask);
 	VectorBool test0_mask(mask);
 	VectorBool test1_mask(mask);
@@ -402,8 +406,10 @@ void BufferRandomForest::Process(int part_id, const ForestArea& area, const Cons
 	String cache_path = AppendFileName(rfcache_dir, IntStr(fileid) + ".bin");
 	if (!use_cache || (use_cache && !FileExists(cache_path))) {
 		forest.Train(bufs, real_label, train_mask, options);
-		FileOut fout(cache_path);
-		fout % forest;
+		if (use_cache) {
+			FileOut fout(cache_path);
+			fout % forest;
+		}
 	}
 	else {
 		FileIn fin(cache_path);
@@ -460,6 +466,8 @@ void BufferRandomForest::Process(int part_id, const ForestArea& area, const Cons
 	stat.train_accuracy = train_total_count > 0 ? (double)train_correct_count / train_total_count : 0.0;
 	stat.test0_accuracy = test0_total_count > 0 ? (double)test0_correct_count / test0_total_count : 0.0;
 	stat.test1_accuracy = test1_total_count > 0 ? (double)test1_correct_count / test1_total_count : 0.0;
+	
+	is_processing = false;
 }
 
 }

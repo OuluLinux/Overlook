@@ -2,15 +2,15 @@
 
 namespace Overlook {
 
-#ifdef flagDEBUG
+/*#ifdef flagDEBUG
 int cls_tree_count	= 8;
 int cls_max_depth	= 4;
 int cls_hypothesis	= 4;
-#else
-int cls_tree_count	= 100;
+#else*/
+int cls_tree_count	= 50; // orig 100
 int cls_max_depth	= 4;
 int cls_hypothesis	= 10;
-#endif
+//#endif
 
 
 
@@ -21,7 +21,7 @@ int cls_hypothesis	= 10;
 
 
 
-//const int indi_input_comb = 1;
+
 const int label_count = LABELINDI_COUNT;
 const int sector_pred_dir_count = 2;
 const int sector_label_count = 2;
@@ -178,7 +178,7 @@ String expertsystem_bin() {
 }
 
 void ExpertSystem::StoreThis() {
-	rt_lock.Enter();
+	rt_lock.EnterWrite();
 	
 	Time t = GetSysTime();
 	String file = expertsystem_bin();
@@ -197,7 +197,7 @@ void ExpertSystem::StoreThis() {
 
 	last_store.Reset();
 	
-	rt_lock.Leave();
+	rt_lock.LeaveWrite();
 }
 
 void ExpertSystem::LoadThis() {
@@ -267,21 +267,38 @@ void ExpertSystem::MainTraining() {
 	}
 	
 	
+	// Split processing to chunks
+	int cpus = GetUsedCpuCores();
+	int block_size = cpus * 4;
+	int block_count = acc_list.GetCount() / block_size;
+	if (acc_list.GetCount() % block_size > 0) block_count++;
+	
+	
+	// Find the begin position for processing
+	int begin_pos = 0;
+	for(begin_pos = 0; begin_pos < acc_list.GetCount(); begin_pos++)
+		if (!acc_list[begin_pos].is_processed)
+			break;
+	
 	
 	CoWork co;
-	int block_size = CPU_Cores();
-	int block_count = acc_list.GetCount() / block_size;
-	for(int block = 0; block < block_count && training_running; block++) {
+	co.SetPoolSize(cpus);
+	for(int block = begin_pos / block_size; block < block_count && training_running; block++) {
 		int conf_begin = block * block_size;
 		int conf_end = Upp::min(acc_list.GetCount(), (block + 1) * block_size);
+		
+		rt_lock.EnterRead();
 		for(int conf_id = conf_begin; conf_id < conf_end && training_running; conf_id++) {
+			if (acc_list[conf_id].is_processed)
+				continue;
 			co & [=]
 			{
 				ProcessAccuracyConf(acc_list[conf_id], false);
 			};
 		}
-		
 		co.Finish();
+		rt_lock.LeaveRead();
+		
 		StoreThis();
 	}
 	
@@ -292,9 +309,12 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 	if (!realtime && !training_running)
 		return;
 	
+	if (!realtime && conf.is_processed)
+		return;
+	
 	TimeStop proc_ts;
 	
-	BufferRandomForest& rf = GetRandomForestCache().GetRandomForest(CoWork::GetWorkerIndex());
+	BufferRandomForest& rf = GetRandomForestCache().GetRandomForest();
 	rf.SetCacheId(conf.id);
 	rf.UseCache(realtime);
 	rf.options.tree_count	= cls_tree_count;
@@ -302,8 +322,6 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 	rf.options.tries_count	= cls_hypothesis;
 	
 	bool active_label = conf.label;
-	if (!realtime && conf.is_processed)
-		return;
 	
 	System& sys = GetSystem();
 	int data_count = sys.GetCountMain();
@@ -638,6 +656,9 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 		
 		conf.is_processed = true;
 	}
+	
+	
+	rf.lock.Leave();
 }
 
 void ExpertSystem::UpdateRealTimeConfs() {
@@ -692,7 +713,8 @@ void ExpertSystem::UpdateRealTimeConfs() {
 	
 	last_update = GetSysTime();
 	
-	StoreThis();
+	if (!training_running && training_stopped)
+		StoreThis();
 }
 
 void ExpertSystem::MainReal() {
@@ -704,9 +726,9 @@ void ExpertSystem::MainReal() {
 	MetaTrader& mt			= GetMetaTrader();
 	
 	
-	if (acc_list.IsEmpty() || last_update < (now - 4*60*60) || forced_update) {
+	if (used_conf.IsEmpty() || last_update < (now - 4*60*60) || forced_update) {
 		UpdateRealTimeConfs();
-		if (acc_list.IsEmpty())
+		if (used_conf.IsEmpty())
 			return;
 	}
 	
@@ -761,13 +783,18 @@ void ExpertSystem::MainReal() {
 	
 	WhenInfo("Refreshing used configurations");
 	CoWork co;
+	co.SetPoolSize(GetUsedCpuCores());
+	rt_lock.EnterRead();
+	processed_used_conf = 0;
 	for(int i = 0; i < used_conf.GetCount(); i++) {
 		int conf_id = used_conf[i];
 		co & [=] {
 			ProcessAccuracyConf(acc_list[conf_id], true);
+			processed_used_conf++;
 		};
 	}
 	co.Finish();
+	rt_lock.LeaveRead();
 	
 	
 	WhenInfo("Updating test broker");
@@ -808,11 +835,11 @@ void ExpertSystem::MainReal() {
 			
 			
 			// Put signal to simbroker
-			if (signal == test_broker.GetSignal(j) && signal != 0)
-				test_broker.SetSignalFreeze(j, true);
+			if (signal == test_broker.GetSignal(conf.symbol) && signal != 0)
+				test_broker.SetSignalFreeze(conf.symbol, true);
 			else {
-				test_broker.SetSignal(j, signal);
-				test_broker.SetSignalFreeze(j, false);
+				test_broker.SetSignal(conf.symbol, signal);
+				test_broker.SetSignalFreeze(conf.symbol, false);
 			}
 		}
 		

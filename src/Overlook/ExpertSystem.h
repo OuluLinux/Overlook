@@ -18,16 +18,24 @@ namespace Overlook {
 
 
 class RandomForestCache {
-	ArrayMap<int, BufferRandomForest> rflist;
+	Array<BufferRandomForest> rflist;
 	SpinLock lock;
 	
 public:
 	typedef RandomForest CLASSNAME;
 	
 	
-	BufferRandomForest& GetRandomForest(int i) {
+	BufferRandomForest& GetRandomForest() {
 		lock.Enter();
-		BufferRandomForest& rf = rflist.GetAdd(i);
+		for(int i = 0; i < rflist.GetCount(); i++) {
+			BufferRandomForest& rf = rflist[i];
+			if (rf.lock.TryEnter()) {
+				lock.Leave();
+				return rf;
+			}
+		}
+		BufferRandomForest& rf = rflist.Add();
+		rf.lock.Enter();
 		lock.Leave();
 		return rf;
 	}
@@ -39,7 +47,6 @@ inline RandomForestCache& GetRandomForestCache() {return Single<RandomForestCach
 struct AccuracyConf : Moveable<AccuracyConf> {
 	
 	// Distinctive attributes
-	
 	int id = 0;
 	int symbol = 0;
 	int label_id = 0;
@@ -226,11 +233,12 @@ public:
 	FixedSimBroker test_broker;
 	TimeStop last_store, last_datagather;
 	int realtime_count = 0;
+	int processed_used_conf = 0;
 	bool running = false, stopped = true;
 	bool training_running = false, training_stopped = true;
 	bool forced_update = false;
 	RWMutex sys_lock;
-	Mutex rt_lock;
+	RWMutex rt_lock;
 	System* sys = NULL;
 	Time prev_update;
 	

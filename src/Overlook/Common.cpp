@@ -41,7 +41,6 @@ VectorBool& VectorBool::One() {
 }
 
 VectorBool& VectorBool::InverseAnd(const VectorBool& b) {
-	ASSERT(data.GetCount() == b.data.GetCount());
 	uint64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();
 	ConstU64* end0 = data.End();
@@ -52,7 +51,6 @@ VectorBool& VectorBool::InverseAnd(const VectorBool& b) {
 }
 
 VectorBool& VectorBool::And(const VectorBool& b) {
-	ASSERT(data.GetCount() == b.data.GetCount());
 	uint64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();
 	ConstU64* end0 = data.End();
@@ -63,7 +61,6 @@ VectorBool& VectorBool::And(const VectorBool& b) {
 }
 
 VectorBool& VectorBool::Or(const VectorBool& b) {
-	ASSERT(data.GetCount() == b.data.GetCount());
 	uint64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();
 	ConstU64* end0 = data.End();
@@ -74,7 +71,6 @@ VectorBool& VectorBool::Or(const VectorBool& b) {
 }
 
 double VectorBool::GetOverlapFactor(const VectorBool& b) const {
-	ASSERT(data.GetCount() == b.data.GetCount());
 	ConstU64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();
 	ConstU64* end0 = data.End();

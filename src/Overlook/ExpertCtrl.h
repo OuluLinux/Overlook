@@ -13,6 +13,15 @@ public:
 	
 };
 
+class TestEquityGraph : public Ctrl {
+	Vector<Point> polyline;
+	
+public:
+	
+	virtual void Paint(Draw& w);
+	
+};
+
 class ExpertOptimizerCtrl : public ParentCtrl {
 	EvolutionGraph graph;
 	ArrayCtrl pop, unit;
@@ -31,6 +40,8 @@ class ExpertRealCtrl : public ParentCtrl {
 	Button refresh_now;
 	ArrayCtrl pop, unit;
 	Splitter hsplit;
+	ProgressIndicator prog;
+	TestEquityGraph testequity;
 	
 public:
 	typedef ExpertRealCtrl CLASSNAME;

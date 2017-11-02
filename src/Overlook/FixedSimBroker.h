@@ -47,6 +47,7 @@ struct FixedSimBroker {
 	double GetMargin(int pos, int sym_id, double volume);
 	bool Cycle(int pos);
 	void RefreshOrders(int pos);
+	double GetSpreadCost(int pos) const;
 	
 	double AccountEquity() const {return equity;}
 	double PartialEquity() const {return part_equity;}

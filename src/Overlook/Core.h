@@ -60,7 +60,6 @@ struct Persistent : public ValueBase, Moveable<Persistent> {
 	Persistent(Vector<int>& v)						{data = &v; data_type = PERS_INTVEC_;}
 	Persistent(Vector<double>& v)					{data = &v; data_type = PERS_DBLVEC_;}
 	Persistent(VectorMap<int,int>& m)				{data = &m; data_type = PERS_INTMAP_;}
-	Persistent(QueryTable& q)						{data = &q; data_type = PERS_QUERYTABLE_;}
 	Persistent(Vector<Vector<byte> > & v)			{data = &v; data_type = PERS_BYTEGRID_;}
 	Persistent(Vector<Vector<int> > & v)			{data = &v; data_type = PERS_INTGRID_;}
 	Persistent(Vector<VectorMap<int, int> > & v)	{data = &v; data_type = PERS_INTMAPGRID_;}

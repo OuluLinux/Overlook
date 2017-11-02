@@ -40,6 +40,10 @@ struct Model : Moveable<Model> {
 	double w1 = 0.0;
 	double w2 = 0.0;
 	double dotthr = 0.0;
+	
+	void Serialize(Stream& s) {
+		s % thr % ri1 % ri2 % w1 % w2 % dotthr;
+	}
 };
 
 struct Option : Moveable<Option> {
@@ -47,6 +51,10 @@ struct Option : Moveable<Option> {
 	bool type = false; // weaker type
 	int tries_count = 10;
 	int tree_count = 100;
+	
+	void Serialize(Stream& s) {
+		s % max_depth % type % tries_count % tree_count;
+	}
 };
 
 struct Data {
@@ -119,6 +127,10 @@ struct DecisionTree {
 
 	// Returns probability that example inst is 1.
 	double PredictOne(const ConstBufferSourceIter& iter);
+	
+	void Serialize(Stream& s) {
+		s % models % leaf_positives % leaf_negatives % dots % ixs % max_depth % id;
+	}
 };
 
 struct RandomForest {
@@ -136,10 +148,10 @@ struct RandomForest {
 	max_depth is the maximum depth of each tree in the forest (default = 4)
 	tries_count is the number of random hypotheses generated at each node during training (default = 10)
 	train_function is a function with signature "function myWeakTrain(data, labels, ix, options)". Here, ix is a list of
-	                 indeces into data of the instances that should be payed attention to. Everything not in the list
+	                 indices into data of the instances that should be payed attention to. Everything not in the list
 	                 should be ignored. This is done for efficiency. The function should return a model where you store
 	                 variables. (i.e. model = {}; model.myvar = 5;) This will be passed to test_function.
-	options.test_function is a function with signature "funtion myWeakTest(inst, model)" where inst is 1D array specifying an example,
+	options.test_function is a function with signature "function myWeakTest(inst, model)" where inst is 1D array specifying an example,
 	                 and model will be the same model that you return in options.train_function. For example, model.myvar will be 5.
 	                 see DecisionStumpTrain() and DecisionStumpTest() downstairs for example.
 	*/
@@ -156,7 +168,12 @@ struct RandomForest {
 	// convenience function. Here, data is NxD array.
 	// returns probabilities of being 1 for all data in an array.
 	void Predict(const ConstBufferSource& data, Vector<double>& probabilities);
-
+	
+	
+	void Serialize(Stream& s) {
+		s % probabilities % trees % tree_count % max_depth
+		  % tries_count % id;
+	}
 };
 
 
@@ -171,18 +188,52 @@ struct ForestArea {
 	int test1_begin = 0, test1_end = 0;
 	
 	void FillArea(int level, int data_count);
+	void FillArea(int level);
+};
+
+struct RandomForestStat {
+	double train_accuracy = 0.0, test0_accuracy = 0.0, test1_accuracy = 0.0;
+	int train_total_count = 0, test0_total_count = 0, test1_total_count = 0;
+	int train_correct_count = 0, test0_correct_count = 0, test1_correct_count = 0;
+	
+	void Serialize(Stream& s) {
+		s % train_accuracy % test0_accuracy % test1_accuracy
+		  % train_total_count % test0_total_count % test1_total_count
+		  % train_correct_count % test0_correct_count % test1_correct_count;
+	}
+	void Print(ArrayCtrlPrinter& printer) const {
+		printer.Add("train_total_count", train_total_count);
+		printer.Add("test0_total_count", test0_total_count);
+		printer.Add("test1_total_count", test1_total_count);
+		printer.Add("train_correct_count", train_correct_count);
+		printer.Add("test0_correct_count", test0_correct_count);
+		printer.Add("test1_correct_count", test1_correct_count);
+		printer.Add("train_accuracy", train_accuracy);
+		printer.Add("test0_accuracy", test0_accuracy);
+		printer.Add("test1_accuracy", test1_accuracy);
+	}
 };
 
 struct BufferRandomForest {
+	
+	// Persistent
 	RandomForest forest;
-	VectorBool predicted_label;
 	Option options;
-	double train_accuracy = 0.0, test0_accuracy = 0.0, test1_accuracy = 0.0;
+	
+	// Temporary
+	VectorBool predicted_label;
+	Atomic locked;
+	RandomForestStat stat;
+	int cache_id = 0;
+	bool use_cache = false;
 	
 	BufferRandomForest();
-	void SetInputCount(int i);
-	void Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);
-	
+	void Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);
+	void SetCacheId(int id) {cache_id = id;}
+	void UseCache(bool b) {use_cache = b;}
+	void Serialize(Stream& s) {
+		s % forest % options;
+	}
 };
 
 }

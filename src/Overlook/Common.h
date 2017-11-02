@@ -19,13 +19,14 @@ using namespace Upp;
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
-#define DECISION_LEVELS			2
-#define DECISION_INPUTS			(1 << DECISION_LEVELS)
+//#define DECISION_LEVELS			2
+//#define DECISION_INPUTS			(1 << DECISION_LEVELS)
 #define TF_COUNT				8
 #define TRUEINDI_COUNT			3
 #define LABELINDI_COUNT			3
-#define AMP_MAXSCALES			3
-#define AMP_MAXSCALE_MUL		2
+#define MULT_MAXSCALES			3
+#define MULT_MAXSCALE_MUL		2
+#define MULT_MAX					(MULT_MAXSCALES * MULT_MAXSCALE_MUL)
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
@@ -440,6 +441,10 @@ public:
 	VectorBool& SetCount(int i);
 	VectorBool& Zero();
 	VectorBool& One();
+	VectorBool& InverseAnd(const VectorBool& b);
+	VectorBool& And(const VectorBool& b);
+	VectorBool& Or(const VectorBool& b);
+	double GetOverlapFactor(const VectorBool& b) const;
 	
 	bool Get(int i) const;
 	void Set(int i, bool b);
@@ -458,10 +463,10 @@ typedef const VectorBool	ConstVectorBool;
 typedef const Buffer		ConstBuffer;
 
 struct Output : Moveable<Output> {
-	Output() : visible(0) {}
+	Output() {}
 	Vector<Buffer> buffers;
 	VectorBool label;
-	int phase, type, visible;
+	int phase = 0, type = 0, visible = 0;
 };
 
 class Core;
@@ -749,6 +754,26 @@ struct ExtremumCache {
 };
 
 void TestExtremumCache();
+
+
+struct ArrayCtrlPrinter {
+	ArrayCtrl* list = NULL;
+	int i = 0;
+
+	ArrayCtrlPrinter(ArrayCtrl& list) : list(&list) {}
+
+	template <class K, class T>
+	void Add(K key, T value) {
+		list->Set(i, 0, AsString(key));
+		list->Set(i, 1, AsString(value));
+		i++;
+	}
+
+	void Title(String key) {
+		list->Set(i, 0, "");  list->Set(i, 1, ""); i++;
+		list->Set(i, 0, key); list->Set(i, 1, ""); i++;
+	}
+};
 
 }
 

@@ -378,14 +378,11 @@ double ConstBufferSourceIter::operator[](int i) const {
 
 
 BufferRandomForest::BufferRandomForest() {
+	locked = 0;
 	
 }
 
-void BufferRandomForest::SetInputCount(int i) {
-	
-}
-
-void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
+void BufferRandomForest::Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
 	VectorBool train_mask(mask);
 	VectorBool test0_mask(mask);
 	VectorBool test1_mask(mask);
@@ -399,9 +396,19 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 	test1_mask.LimitRight(area.test1_begin);
 	test1_mask.LimitLeft(area.test1_end);
 	
-	TimeStop ts;
-	forest.Train(bufs, real_label, train_mask, options);
-	Cout () << "Took " << ts.ToString() << "\n";
+	String rfcache_dir = ConfigFile("rfcache");
+	RealizeDirectory(rfcache_dir);
+	int fileid = part_id * 1000000 + cache_id;
+	String cache_path = AppendFileName(rfcache_dir, IntStr(fileid) + ".bin");
+	if (!use_cache || (use_cache && !FileExists(cache_path))) {
+		forest.Train(bufs, real_label, train_mask, options);
+		FileOut fout(cache_path);
+		fout % forest;
+	}
+	else {
+		FileIn fin(cache_path);
+		fin % forest;
+	}
 	
 	int label_count = real_label.GetCount();
 	predicted_label.SetCount(label_count).Zero();
@@ -418,36 +425,41 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 		int64 i = pos;
 		iter.Seek(i);
 		for(int j = 0; i < label_count && j < 64; i++, j++, iter++) {
-			if (!(*it & (1ULL < j)))
-				continue;
 			double prob = forest.PredictOne(iter);
 			bool label = prob > 0.5;
 			if (label)
 				predicted_label.Set(i, true);
 			
-			bool match = label == real_label.Get(i);
-			
-			if (i >= area.train_begin && i < area.train_end) {
-				if (match)
-					train_correct_count++;
-				train_total_count++;
-			}
-			else if (i >= area.test0_begin && i < area.test0_end) {
-				if (match)
-					test0_correct_count++;
-				test0_total_count++;
-			}
-			else if (i >= area.test1_begin && i < area.test1_end) {
-				if (match)
-					test1_correct_count++;
-				test1_total_count++;
+			if (*it & (1ULL < j)) {
+				bool match = label == real_label.Get(i);
+				
+				if (i >= area.train_begin && i < area.train_end) {
+					if (match)
+						train_correct_count++;
+					train_total_count++;
+				}
+				else if (i >= area.test0_begin && i < area.test0_end) {
+					if (match)
+						test0_correct_count++;
+					test0_total_count++;
+				}
+				else if (i >= area.test1_begin && i < area.test1_end) {
+					if (match)
+						test1_correct_count++;
+					test1_total_count++;
+				}
 			}
 		}
 	}
-	
-	train_accuracy = train_total_count > 0 ? (double)train_correct_count / train_total_count : 0.0;
-	test0_accuracy = test0_total_count > 0 ? (double)test0_correct_count / test0_total_count : 0.0;
-	test1_accuracy = test1_total_count > 0 ? (double)test1_correct_count / test1_total_count : 0.0;
+	stat.train_total_count = train_total_count;
+	stat.test0_total_count = test0_total_count;
+	stat.test1_total_count = test1_total_count;
+	stat.train_correct_count = train_correct_count;
+	stat.test0_correct_count = test0_correct_count;
+	stat.test1_correct_count = test1_correct_count;
+	stat.train_accuracy = train_total_count > 0 ? (double)train_correct_count / train_total_count : 0.0;
+	stat.test0_accuracy = test0_total_count > 0 ? (double)test0_correct_count / test0_total_count : 0.0;
+	stat.test1_accuracy = test1_total_count > 0 ? (double)test1_correct_count / test1_total_count : 0.0;
 }
 
 }

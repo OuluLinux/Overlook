@@ -22,6 +22,17 @@ RealtimeCtrl::RealtimeCtrl() {
 	sys.WhenRealtimeUpdate << THISBACK(PostData);
 }
 
+RealtimeCtrl::~RealtimeCtrl() {
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	mt.WhenInfo.Clear();
+	mt.WhenError.Clear();
+	
+	sys.WhenInfo.Clear();
+	sys.WhenError.Clear();
+	sys.WhenRealtimeUpdate.Clear();
+}
+
 void RealtimeCtrl::AddMessage(String time, String level, String msg) {
 	lock.Enter();
 	messages.Add(Msg(time, level, msg));
@@ -43,8 +54,6 @@ void RealtimeCtrl::Error(String msg) {
 }
 
 void RealtimeCtrl::Data() {
-	if (Thread::IsShutdownThreads()) return;
-	
 	MetaTrader& mt = GetMetaTrader();
 	mt.ForwardExposure();
 	

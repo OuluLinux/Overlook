@@ -7,8 +7,8 @@ uses
 	plugin/zip;
 
 file
-	Journal.qtf,
 	Copying,
+	Journal.qtf,
 	main.cpp,
 	Overlook.rc,
 	Overlook.h,
@@ -56,10 +56,10 @@ file
 	Indicators.cpp,
 	FixedSimBroker.h,
 	FixedSimBroker.cpp,
-	ExpertSystem.h,
-	ExpertSystem.cpp,
 	RandomForest.h,
-	RandomForest.cpp;
+	RandomForest.cpp,
+	ExpertSystem.h,
+	ExpertSystem.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

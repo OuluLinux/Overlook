@@ -40,6 +40,51 @@ VectorBool& VectorBool::One() {
 	return *this;
 }
 
+VectorBool& VectorBool::InverseAnd(const VectorBool& b) {
+	ASSERT(data.GetCount() == b.data.GetCount());
+	uint64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		*it0 &= ~(*it1);
+	return *this;
+}
+
+VectorBool& VectorBool::And(const VectorBool& b) {
+	ASSERT(data.GetCount() == b.data.GetCount());
+	uint64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		*it0 &= *it1;
+	return *this;
+}
+
+VectorBool& VectorBool::Or(const VectorBool& b) {
+	ASSERT(data.GetCount() == b.data.GetCount());
+	uint64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		*it0 |= *it1;
+	return *this;
+}
+
+double VectorBool::GetOverlapFactor(const VectorBool& b) const {
+	ASSERT(data.GetCount() == b.data.GetCount());
+	ConstU64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	int pop_count = 0;
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		pop_count += PopCount64(*it0 & *it1);
+	return Upp::min(1.0, (double)pop_count / count);
+}
+
 bool VectorBool::Get(int i) const {
 	int j = i / 64;
 	int k = i % 64;

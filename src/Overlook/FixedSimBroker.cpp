@@ -166,6 +166,22 @@ void FixedSimBroker::CloseAll(int pos) {
 	if (balance < 0.0) balance = 0.0;
 }
 
+double FixedSimBroker::GetSpreadCost(int pos) const {
+	double spread_cost_sum = 0.0;
+	for(int i = 0; i < MAX_ORDERS; i++) {
+		const FixedOrder& order = this->order[i];
+		if (!order.is_open)
+			continue;
+		int sym_id = i / ORDERS_PER_SYMBOL;
+		// TODO solution for other than pairs
+		double volsum = order.volume * 10000;
+		double ask = RealtimeAsk(pos, sym_id);
+		double spread_factor = (spread_points[sym_id] + ask) / ask - 1.0;
+		spread_cost_sum += volsum * spread_factor;
+	}
+	return spread_cost_sum;
+}
+
 double FixedSimBroker::GetMargin(int pos, int sym_id, double volume) {
 	ASSERT(leverage > 0);
 	double used_margin = 0.0;
@@ -299,7 +315,7 @@ bool FixedSimBroker::Cycle(int pos) {
 	}
 	
 	
-	const int fmscale = (AMP_MAXSCALES-1) * AMP_MAXSCALE_MUL * SYM_COUNT;
+	const int fmscale = (MULT_MAXSCALES-1) * MULT_MAXSCALE_MUL * SYM_COUNT;
 	if (signal_sum > fmscale) signal_sum = fmscale;
 	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level) * ((double)signal_sum / (double)fmscale);
 	

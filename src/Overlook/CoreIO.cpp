@@ -149,10 +149,6 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
 			out % v;
 		}
-		else if (p.data_type == ValueBase::PERS_QUERYTABLE_) {
-			QueryTable& v = *(QueryTable*)p.data;
-			out % v;
-		}
 		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
 			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
 			out % v;
@@ -258,10 +254,6 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
 			in % v;
 		}
-		else if (p.data_type == ValueBase::PERS_QUERYTABLE_) {
-			QueryTable& v = *(QueryTable*)p.data;
-			in % v;
-		}
 		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
 			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
 			in % v;
@@ -282,6 +274,9 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 		in % phase % type % visible;
 		
 		Output& output = outputs[i];
+		
+		in % output.label;
+		
 		if (output.phase != phase || output.type != type || output.visible != visible) {
 			LOG("CoreIO::LoadCache: error: output type mismatch");
 			return;

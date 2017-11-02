@@ -33,6 +33,7 @@ class RealtimeCtrl : public ParentCtrl {
 public:
 	typedef RealtimeCtrl CLASSNAME;
 	RealtimeCtrl();
+	~RealtimeCtrl();
 	
 	void Data();
 	void Init();

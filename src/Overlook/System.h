@@ -265,8 +265,8 @@ public:
 	int GetCountMain() const {return GetCountTf(main_tf);}
 	ConstBuffer&		GetTrueIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<TRUEINDI_COUNT); return *value_buffers[sym][tf * TRUEINDI_COUNT + i];}
 	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
-	ConstBuffer&		GetOpenBuffer(int sym) {return *open_buffers[sym];}
-	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) {return *open_buffers[sym_ids[sym]];}
+	ConstBuffer&		GetOpenBuffer(int sym) const {return *open_buffers[sym];}
+	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) const {return *open_buffers[sym_ids[sym]];}
 	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
 	void SetFixedBroker(FixedSimBroker& broker, int sym_id=-1);
 	

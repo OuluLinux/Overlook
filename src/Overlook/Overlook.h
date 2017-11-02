@@ -5,7 +5,6 @@
 #include <CtrlLib/CtrlLib.h>
 
 #include "Common.h"
-#include "QueryTable.h"
 
 #include "SimBroker.h"
 #include "FixedSimBroker.h"
@@ -17,15 +16,14 @@
 
 #include "DataBridge.h"
 #include "Indicators.h"
-#include "QtStats.h"
 
-#include "AgentCtrl.h"
 #include "ManagerCtrl.h"
 
 #include "GraphCtrl.h"
 #include "GraphGroupCtrl.h"
 
 #include "BrokerCtrl.h"
+#include "ExportCtrl.h"
 
 #include "ExpertCtrl.h"
 #include "RandomForestCtrl.h"

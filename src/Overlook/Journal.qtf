@@ -3966,4 +3966,93 @@ inefficiency.&]
 [s0; The current monolithic ExpertSystem must be splitted to small 
 pipeline parts for efficiency and better quality.&]
 [s0; This was a good time to clean all old agent system code away....&]
+[s0; ...&]
+[s0; Hmm... there`'s actually very few possible combinations and 
+that local optimizer does more harm than good.&]
+[s0; Surprisingly, the expert system seems to collapse into some 
+super simplified version, because there is no need for local 
+optimizer. That means the end of the road, and I am just hoping 
+that it is not a final failure state.&]
+[s0; It`'s code erasing time again, but in the end, I always feel 
+good whatever I do with this project.&]
+[s0; ...&]
+[s0; Fucking rewriting... the hard of work of 5 days straight into 
+trash bin and only thing left is the list of fatal weaknesses 
+in that version.&]
+[s0; &]
+[s3; 31.10.2017&]
+[s0; It`'s the first good winter day here in Oulu, Finland. Sky is 
+blue, snow is everywhere, also on trees. It`'s brighter than 
+in summer at midday, but sun sets fast. It`'s one of the most 
+beautiful view here. It`'s difficult to say anything bad about 
+this country these days. Maybe it`'s a problem, that there is 
+weak economical interest in this place, but at least regular 
+citizen hardly notices that. The tap water is the cleanest and 
+tastes fresh, food is branded in the most modern ways and the 
+`"better quality`" doesn`'t need to be advertised separately, 
+because it`'s all pretty high quality. The roads are in good 
+and pretty condition, also green areas. Walking and going outside 
+at nights feels safe. A lot of sport exercise places exist and 
+the variety is good. There is a lot of cheap gyms and you fit 
+there at every time of day well. The education is good and you 
+have good options at any age of your life. The education is also 
+relatively forgiving, and you have a chance to correct one or 
+two bad career choices. After military, I was pretty clueless 
+about future planning, and had to change the university two times, 
+before I settled with the safest long`-term option in computer 
+science. Many women has effort for beauty and it`'s nice to look 
+faces everywhere. Over 50% of population is in social media, 
+so I guess that is counted as friendliness.&]
+[s0; &]
+[s0; I am feeling a little miserable about erasing the work of few 
+days and rewriting big part of expert system. Many parts and 
+details can be copied, so it`'s not a total loss. Also, the mistake 
+was clear, and this obviously should be brute`-forced through 
+at this point, because the argument space is so small. This way 
+of developing is also the right way, because this is a completely 
+original work with sort of difficult multi`-dimensional solving 
+problem, where you must gradually move to next version. `"[/ An 
+innovation faced with structural or ideological barriers cannot 
+diffuse. On the other hand, if a new idea or innovation has few 
+obstacles and acknowledges places where change is logical, movement 
+to it will occur.]`" I think I am getting closer to final configuration 
+fast. &]
+[s0; &]
+[s3; 1.11.2017&]
+[s0; The song `"Who `- Join Together`" is awesome, but if Hillary 
+tried to get that same euphoria in voters, then she failed miserably 
+with wrong note.&]
+[s0; The sexual harassment topic is hot as hell in Internet media, 
+but still no one is taking up the issue of narcissistic women 
+harrassing men who like to watch other beautiful women. That 
+popular topic is unbalanced.&]
+[s0; I am against all kind of harrassment, but sometimes someone 
+recognizes something as harrassment even though it isn`'t. In 
+my case, she took my explaining of her harrassment as harrassment... 
+It`'s typical narcissistic behaviour, but I couldn`'t know that 
+it would escalate in so evil ways. It`'s now full`-blown social 
+diffusion of her insane make`-beliefs without no`-one questioning 
+it or warning me about it. I did quit Facebook for that. Let 
+them have their soup of insanity alone. I am fine with my nerd 
+stuff only.&]
+[s0; ...&]
+[s0; But back to Overlook with more serious note.&]
+[s0; The current expert system resembles code what I must do at lab 
+exercises in university courses. It took way too many iterations 
+to accomplish that, but I think it`'s finally getting there. 
+With only small additions, I could get the data what I would 
+need for a scientific paper. The devil is in the details, once 
+again. Many of those choices had to be reasoned without existing 
+material. The existing material was pretty non`-existent. The 
+current expert system can even be described as simple, which 
+might be unbeliveable.&]
+[s0; This time, the expert system has separate testing areas, which 
+doesn`'t affect any stage of training. Many settings can be found, 
+which works with the testing data, but most of the setting space 
+is useless...&]
+[s0; ...&]
+[s0; Whew. This pretty much runs now and it uses only settings which 
+has proven to work with separate testing data. It`'s getting 
+closer to scientific accuracy, which makes me happy. I know I 
+am not very good in that area...&]
 [s0; ]]

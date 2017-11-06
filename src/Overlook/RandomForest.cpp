@@ -8,10 +8,27 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	// initialize many trees and train them all independently
 	trees.SetCount(tree_count);
 	
+	train_depth = data.GetDepth();
+	
+	train_success = true;
 	for (int i = 0; i < tree_count; i++) {
 		DecisionTree& tree = trees[i];
 		tree.id = i;
-		tree.Train(data, labels, mask, options);
+		train_success &= tree.Train(data, labels, mask, options);
+	}
+	
+	Chk();
+}
+
+void RandomForest::Chk() const {
+	for (int i = 0; i < tree_count; i++) {
+		const DecisionTree& tree = trees[i];
+		for(int j = 0; j < tree.models.GetCount(); j++) {
+			const Model& m = tree.models[j];
+			if (m.failed) continue;
+			if (m.ri1 < 0 || m.ri1 >= train_depth || m.ri2 < 0 || m.ri2 >= train_depth)
+				Panic("Invalid model");
+		}
 	}
 }
 
@@ -20,9 +37,15 @@ inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
 */
 double RandomForest::PredictOne(const ConstBufferSourceIter& iter) const {
+	if (!train_success)
+		Panic("Training has failed");
+	
+	if (iter.GetSource().GetDepth() != train_depth)
+		Panic("Training depth mismatch to iterator depth");
+	
 	// have each tree predict and average out all votes
 	double dec = 0;
-
+	
 	for (int i = 0; i < tree_count; i++) {
 		dec += trees[i].PredictOne(iter);
 	}
@@ -45,7 +68,7 @@ void RandomForest::Predict(const ConstBufferSource& data, Vector<double>& probab
 }
 
 
-void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options) {
+bool DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options) {
 	max_depth = options.max_depth;
 	bool weakType = options.type;
 	
@@ -53,9 +76,13 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	// initialize various helper variables
 	int64 internal_count = (1 << max_depth) - 1;
 	int64 node_count = (1 << (max_depth + 1)) - 1;
+	models.SetCount(internal_count);
+	for(int i = 0; i < models.GetCount(); i++)
+		models[i].failed = true;
 	int label_count = labels.GetCount();
-	if (!label_count)
-		return;
+	if (!label_count) {
+		return false;
+	}
 	ixs.SetCount(node_count + 1);
 	for (int i = 1; i < ixs.GetCount(); i++)
 		ixs[i].SetCount(label_count).Zero();
@@ -70,7 +97,6 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	}
 	int N = ixs[0].PopCount();
 	
-	models.SetCount(internal_count);
 	
 	// train
 	int cursor = 0;
@@ -83,11 +109,13 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 		int popcount = ix.PopCount();
 		
 		if (popcount == 0) {
+			models[n].failed = true;
 			continue;
 		}
 
 		if (popcount == 1) {
 			ixs[n*2+1] = ix;    // arbitrary send it down left
+			models[n].failed = true;
 			continue;
 		}
 
@@ -141,12 +169,14 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 		leaf_positives[n] = numones;
 		leaf_negatives[n] = total - numones;
 	}
+	
+	return true;
 }
 
 // returns probability that example inst is 1.
 double DecisionTree::PredictOne(const ConstBufferSourceIter& iter) const {
 	int n = 0;
-
+	
 	for (int i = 0; i < max_depth; i++) {
 		int dir = Decision2DStumpTest(iter, models[n]);
 
@@ -168,6 +198,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 	int ri1 = 0;
 	int ri2 = 1;
 	
+	ASSERT(data.GetDepth() >= 2);
 	if (data.GetDepth() > 2) {
 		int sum = 0;
 		for(int i = 1; i < data.GetDepth(); i++)
@@ -180,6 +211,8 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 				if (i++ == id)
 					goto match;
 		match:
+		ASSERT(ri1 >= 0 && ri1 < data.GetDepth());
+		ASSERT(ri2 >= 0 && ri2 < data.GetDepth());
 		ASSERT(i <= sum);
 	}
 	
@@ -194,7 +227,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 	
 	if (dots.GetAlloc() < 128) dots.Reserve(128);
 	dots.SetCount(N);
-	if (dots.GetCount() != N) throw Exc("Memory error");
+	if (dots.GetCount() != N) Panic("Memory error");
 	for(int i = 0; i < dots.GetCount(); i++) dots[i] = Dot(0, 0.0);
 
 	for (int i = 0; i < numtries; i++) {
@@ -288,6 +321,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 
 // returns label for a single data instance
 bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& model) const {
+	if (model.failed) return false;
 	return iter[model.ri1] * model.w1 + iter[model.ri2] * model.w2 < model.dotthr;
 }
 
@@ -361,7 +395,12 @@ ConstBufferSourceIter::ConstBufferSourceIter(const ConstBufferSource& src, Const
 }
 
 double ConstBufferSourceIter::operator[](int i) const {
-	return src->bufs[i]->Get(*cursor_ptr);
+	const Vector<ConstBuffer*>& bufs = src->bufs;
+	ASSERT(i >= 0 && i < bufs.GetCount());
+	ConstBuffer* buf = bufs[i];
+	ASSERT(buf != NULL);
+	int cursor = *cursor_ptr;
+	return buf->GetUnsafe(cursor);
 }
 
 

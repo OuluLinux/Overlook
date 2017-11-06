@@ -80,7 +80,7 @@ public:
 		result_max = 1;
 		trend_multiplier = 3;
 		single_source = true;
-		active_label = active_label;
+		this->active_label = active_label;
 	}
 	
 	void Serialize(Stream& s) {
@@ -113,7 +113,6 @@ public:
 		lock.Leave();
 		return rf;
 	}
-	
 };
 
 inline RandomForestCache& GetRandomForestCache() {return Single<RandomForestCache>();}
@@ -152,10 +151,11 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	AccuracyConf(const AccuracyConf& conf) {*this = conf;}
 	
 	int GetBaseTf(int i) const {
-		if (!ext_dir)
-			return period + i;
-		else
-			return period + ext-1 - i;
+		int tf = 0;
+		if (!ext_dir)	tf = period + i;
+		else			tf = period + ext-1 - i;
+		ASSERT(tf >= 0 && tf < TF_COUNT);
+		return tf;
 	}
 	
 	void Print(ArrayCtrlPrinter& printer) const {

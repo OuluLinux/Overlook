@@ -446,25 +446,29 @@ void ExpertSystem::MainOptimizing() {
 
 void ExpertSystem::DumpUsefulness() {
 	FileOut fout(ConfigFile("argstats.txt"));
-	VectorMap<int, int> symbol_stat_pos, label_id_stat_pos, period_stat_pos, ext_stat_pos, label_stat_pos, ext_dir_stat_pos;
-	VectorMap<int, int> symbol_stat_neg, label_id_stat_neg, period_stat_neg, ext_stat_neg, label_stat_neg, ext_dir_stat_neg;
+	VectorMap<int, int> symbol_stat_pos, label_id_stat_pos, period_stat_pos, ext_stat_pos, label_stat_pos, fastinput_stat_pos, labelpattern_stat_pos, ext_dir_stat_pos;
+	VectorMap<int, int> symbol_stat_neg, label_id_stat_neg, period_stat_neg, ext_stat_neg, label_stat_neg, fastinput_stat_neg, labelpattern_stat_neg, ext_dir_stat_neg;
 	for(int i = 0; i < acc_list.GetCount(); i++) {
 		const AccuracyConf& conf = acc_list[i];
 		
 		if (conf.test_valuehourfactor > 0) {
-			symbol_stat_pos		.GetAdd(conf.symbol,	0)++;
-			label_id_stat_pos	.GetAdd(conf.label_id,	0)++;
-			period_stat_pos		.GetAdd(conf.period,	0)++;
-			ext_stat_pos		.GetAdd(conf.ext,		0)++;
-			label_stat_pos		.GetAdd(conf.label,		0)++;
-			ext_dir_stat_pos	.GetAdd(conf.ext_dir,	0)++;
+			symbol_stat_pos			.GetAdd(conf.symbol,		0)++;
+			label_id_stat_pos		.GetAdd(conf.label_id,		0)++;
+			period_stat_pos			.GetAdd(conf.period,		0)++;
+			ext_stat_pos			.GetAdd(conf.ext,			0)++;
+			label_stat_pos			.GetAdd(conf.label,			0)++;
+			fastinput_stat_pos		.GetAdd(conf.fastinput,		0)++;
+			labelpattern_stat_pos	.GetAdd(conf.labelpattern,	0)++;
+			ext_dir_stat_pos		.GetAdd(conf.ext_dir,		0)++;
 		} else {
-			symbol_stat_neg		.GetAdd(conf.symbol,	0)++;
-			label_id_stat_neg	.GetAdd(conf.label_id,	0)++;
-			period_stat_neg		.GetAdd(conf.period,	0)++;
-			ext_stat_neg		.GetAdd(conf.ext,		0)++;
-			label_stat_neg		.GetAdd(conf.label,		0)++;
-			ext_dir_stat_neg	.GetAdd(conf.ext_dir,	0)++;
+			symbol_stat_neg			.GetAdd(conf.symbol,		0)++;
+			label_id_stat_neg		.GetAdd(conf.label_id,		0)++;
+			period_stat_neg			.GetAdd(conf.period,		0)++;
+			ext_stat_neg			.GetAdd(conf.ext,			0)++;
+			label_stat_neg			.GetAdd(conf.label,			0)++;
+			fastinput_stat_neg		.GetAdd(conf.fastinput,		0)++;
+			labelpattern_stat_neg	.GetAdd(conf.labelpattern,	0)++;
+			ext_dir_stat_neg		.GetAdd(conf.ext_dir,		0)++;
 		}
 	}
 	
@@ -482,22 +486,31 @@ void ExpertSystem::DumpUsefulness() {
 	PRINT(period_stat);
 	PRINT(ext_stat);
 	PRINT(label_stat);
+	PRINT(fastinput_stat);
+	PRINT(labelpattern_stat);
 	PRINT(ext_dir_stat);
 }
 
 void ExpertSystem::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs, int rel_tf) {
 	System& sys = GetSystem();
 	
-	bufs.SetDepth(TRUEINDI_COUNT * (conf.fastinput + 1) + 1);
+	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
+	bufs.SetDepth(depth);
+	ASSERT(depth >= 2);
 	
 	int tf = conf.GetBaseTf(0);
 	
 	int k = 0;
-	for(int i = 0; i < TRUEINDI_COUNT; i++)
-		for(int j = 0; j < conf.fastinput+1; j++)
-			bufs.SetSource(k++, sys.GetTrueIndicator(conf.symbol, tf-j, i));
-		
+	for(int i = 0; i < TRUEINDI_COUNT; i++) {
+		for(int j = 0; j < conf.fastinput+1; j++) {
+			ConstBuffer& buf = sys.GetTrueIndicator(conf.symbol, tf-j, i);
+			ASSERT(&buf != NULL);
+			bufs.SetSource(k++, buf);
+		}
+	}
 	bufs.SetSource(k++, sys.GetTimeBuffer(TIMEBUF_WEEKTIME));
+	
+	ASSERT(k == depth);
 }
 
 void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
@@ -533,7 +546,8 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 	area.FillArea(data_count);
 	
 	ASSERT(conf.ext > 0);
-	ConstBufferSource bufs;
+	One<ConstBufferSource> one_bufs;
+	ConstBufferSource& bufs = one_bufs.Create();
 	
 	VectorBool &real_mask = rf.real_mask;
 	real_mask.SetCount(data_count).One();
@@ -545,7 +559,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 	for(int sid = 0; sid < conf.ext; sid++) {
 		int tf = conf.GetBaseTf(sid);
 		ASSERT(tf - conf.fastinput >= 0);
-		bool sid_active_label = active_label_pattern & (1 << sid);
+		bool sid_active_label = active_label_pattern & (1 << (conf.ext - 1 - sid));
 		
 		FillBufferSource(conf, bufs, sid);
 		

@@ -4247,5 +4247,10 @@ than others. I truly disliked men the further it went there.
 It showed the worst of personalities. I guess that scales to 
 civil world too, but it`'s much more disguised. It taught me 
 to not be in a hurry to lose equality between peers ;)&]
+[s0; ...&]
+[s0; Worst fucking bug hunt. It took 3`-4 hours to hunt it down. 
+The fault was stupid `"continue`" in the original javascript 
+code, which made the random forest to use some data from previous 
+usage. The re`-using is done because of performance reasons.&]
 [s0; &]
 [s0; ]]

@@ -27,6 +27,7 @@ public:
 	
 	double operator[](int i) const;
 	
+	const ConstBufferSource& GetSource() const {return *src;}
 };
 
 struct Model : Moveable<Model> {
@@ -38,8 +39,20 @@ struct Model : Moveable<Model> {
 	double w2 = 0.0;
 	double dotthr = 0.0;
 	
+	bool failed = false;
+	
 	void Serialize(Stream& s) {
-		s % thr % ri1 % ri2 % w1 % w2 % dotthr;
+		s % thr % ri1 % ri2 % w1 % w2 % dotthr % failed;
+	}
+	
+	void operator=(const Model& m) {
+		thr    = m.thr;
+		ri1    = m.ri1;
+		ri2    = m.ri2;
+		w1     = m.w1;
+		w2     = m.w2;
+		dotthr = m.dotthr;
+		failed = m.failed;
 	}
 };
 
@@ -120,7 +133,7 @@ struct DecisionTree {
 	bool Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& mode) const;
 	
 	
-	void Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options);
+	bool Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options);
 
 	// Returns probability that example inst is 1.
 	double PredictOne(const ConstBufferSourceIter& iter) const;
@@ -136,7 +149,9 @@ struct RandomForest {
 	int tree_count = 100;
 	int max_depth = 4;
 	int tries_count = 10;
+	int train_depth = -1;
 	int id = 0;
+	bool train_success = false;
 	
 	/*
 	data is 2D array of size N x D of examples
@@ -166,10 +181,11 @@ struct RandomForest {
 	// returns probabilities of being 1 for all data in an array.
 	void Predict(const ConstBufferSource& data, Vector<double>& probabilities);
 	
+	void Chk() const;
 	
 	void Serialize(Stream& s) {
 		s % probabilities % trees % tree_count % max_depth
-		  % tries_count % id;
+		  % tries_count % train_depth % id % train_success;
 	}
 };
 

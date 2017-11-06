@@ -10,6 +10,10 @@ struct FixedOrder {
 	double profit = 0.0;
 	int type = -1;
 	int is_open = 0;
+	
+	void Serialize(Stream& s) {
+		s % open % close % volume % profit % type % is_open;
+	}
 };
 
 
@@ -18,6 +22,7 @@ struct FixedSimBroker {
 	#define MAX_ORDERS			(ORDERS_PER_SYMBOL * SYM_COUNT)
 	
 	FixedOrder order[MAX_ORDERS];
+	double spread_points[SYM_COUNT];
 	int signal[SYM_COUNT];
 	int proxy_id[SYM_COUNT];
 	int proxy_base_mul[SYM_COUNT];
@@ -29,11 +34,11 @@ struct FixedSimBroker {
 	double begin_equity = 0.0;
 	double profit_sum = 0.0;
 	double loss_sum = 0.0;
-	double spread_points[SYM_COUNT];
 	double free_margin_level = 0.80;
 	double leverage = 1000.0;
 	int order_count = 0;
 	int part_sym_id = -1;
+	bool init = false;
 	
 		
 	FixedSimBroker();
@@ -48,6 +53,16 @@ struct FixedSimBroker {
 	bool Cycle(int pos);
 	void RefreshOrders(int pos);
 	double GetSpreadCost(int pos) const;
+	void Serialize(Stream& s) {
+		for(int i = 0; i < MAX_ORDERS; i++) s % order[i];
+		for(int i = 0; i < SYM_COUNT; i++) s % spread_points[i];
+		for(int i = 0; i < SYM_COUNT; i++) s % signal[i];
+		for(int i = 0; i < SYM_COUNT; i++) s % proxy_id[i];
+		for(int i = 0; i < SYM_COUNT; i++) s % proxy_base_mul[i];
+		for(int i = 0; i < SYM_COUNT; i++) s % signal_freezed[i];
+		s % balance % equity % part_balance % part_equity % begin_equity %
+		    profit_sum % loss_sum % free_margin_level % leverage % order_count % part_sym_id;
+	}
 	
 	double AccountEquity() const {return equity;}
 	double PartialEquity() const {return part_equity;}

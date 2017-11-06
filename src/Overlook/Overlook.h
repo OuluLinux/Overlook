@@ -5,6 +5,7 @@
 #include <CtrlLib/CtrlLib.h>
 
 #include "Common.h"
+#include "Optimizer.h"
 
 #include "SimBroker.h"
 #include "FixedSimBroker.h"
@@ -28,6 +29,7 @@
 #include "ExpertCtrl.h"
 #include "RandomForestCtrl.h"
 
+
 namespace Overlook {
 
 
@@ -37,31 +39,32 @@ protected:
 	friend class PrioritizerCtrl;
 	
 	// Main view
-	TabCtrl					tabs;
+	TabCtrl						tabs;
 	
 	// Classic view
-	ParentCtrl				visins;
-	Splitter				droplist_split;
-	DropList				ctrllist, symlist, tflist;
-	Button					config;
-	VectorMap<String, Ctrl*> ctrls;
-	CustomCtrl*				prev_view;
-	Core*					prev_core;
-	TimeCallback			tc;
+	ParentCtrl					visins;
+	Splitter					droplist_split;
+	DropList					ctrllist, symlist, tflist;
+	Button						config;
+	VectorMap<String, Ctrl*>	ctrls;
+	CustomCtrl*					prev_view;
+	Core*						prev_core;
+	TimeCallback				tc;
 	
 	// Exposure tester
-	ExposureTester			exposurectrl;
+	ExposureTester				exposurectrl;
 	
 	// Expert System
-	ExpertOptimizerCtrl		optimizer;
-	ExpertRealCtrl			real;
-	ExportCtrl				export_ctrl;
+	ExpertOptimizerCtrl			optimizer;
+	ExpertGroupOptimizerCtrl	group_optimizer;
+	ExpertRealCtrl				real;
+	ExportCtrl					export_ctrl;
 	
 	
-	RealtimeCtrl			rtctrl;
-	StatusBar				status;
+	RealtimeCtrl				rtctrl;
+	StatusBar					status;
 	
-	Vector<String>			task_stack;
+	Vector<String>				task_stack;
 	
 	void SetView();
 	void Configure();

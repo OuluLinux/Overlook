@@ -54,12 +54,14 @@ file
 	ValueChange.cpp,
 	Indicators.h,
 	Indicators.cpp,
-	FixedSimBroker.h,
 	FixedSimBroker.cpp,
+	FixedSimBroker.h,
 	RandomForest.h,
 	RandomForest.cpp,
 	ExpertSystem.h,
-	ExpertSystem.cpp;
+	ExpertSystem.cpp,
+	Optimizer.h,
+	Optimizer.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

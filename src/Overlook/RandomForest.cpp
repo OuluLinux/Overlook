@@ -19,7 +19,7 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
 */
-double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
+double RandomForest::PredictOne(const ConstBufferSourceIter& iter) const {
 	// have each tree predict and average out all votes
 	double dec = 0;
 
@@ -143,7 +143,7 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 }
 
 // returns probability that example inst is 1.
-double DecisionTree::PredictOne(const ConstBufferSourceIter& iter) {
+double DecisionTree::PredictOne(const ConstBufferSourceIter& iter) const {
 	int n = 0;
 
 	for (int i = 0; i < max_depth; i++) {
@@ -286,7 +286,7 @@ Model DecisionTree::Decision2DStumpTrain(int id, const ConstBufferSource& data, 
 }
 
 // returns label for a single data instance
-bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& model) {
+bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& model) const {
 	return iter[model.ri1] * model.w1 + iter[model.ri2] * model.w2 < model.dotthr;
 }
 
@@ -383,10 +383,7 @@ BufferRandomForest::BufferRandomForest() {
 	
 }
 
-void BufferRandomForest::Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
-	if (is_processing) Panic("Already processing");
-	is_processing = true;
-	
+void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
 	VectorBool train_mask(mask);
 	VectorBool test0_mask(mask);
 	VectorBool test1_mask(mask);
@@ -400,21 +397,7 @@ void BufferRandomForest::Process(int part_id, const ForestArea& area, const Cons
 	test1_mask.LimitRight(area.test1_begin);
 	test1_mask.LimitLeft(area.test1_end);
 	
-	String rfcache_dir = ConfigFile("rfcache");
-	RealizeDirectory(rfcache_dir);
-	int fileid = part_id * 1000000 + cache_id;
-	String cache_path = AppendFileName(rfcache_dir, IntStr(fileid) + ".bin");
-	if (!use_cache || (use_cache && !FileExists(cache_path))) {
-		forest.Train(bufs, real_label, train_mask, options);
-		if (use_cache) {
-			FileOut fout(cache_path);
-			fout % forest;
-		}
-	}
-	else {
-		FileIn fin(cache_path);
-		fin % forest;
-	}
+	forest.Train(bufs, real_label, train_mask, options);
 	
 	int label_count = real_label.GetCount();
 	predicted_label.SetCount(label_count).Zero();
@@ -467,7 +450,6 @@ void BufferRandomForest::Process(int part_id, const ForestArea& area, const Cons
 	stat.test0_accuracy = test0_total_count > 0 ? (double)test0_correct_count / test0_total_count : 0.0;
 	stat.test1_accuracy = test1_total_count > 0 ? (double)test1_correct_count / test1_total_count : 0.0;
 	
-	is_processing = false;
 }
 
 }

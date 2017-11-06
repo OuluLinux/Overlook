@@ -147,7 +147,23 @@ void System::ProcessWorkQueue() {
 	}
 
 	work_lock.Leave();
-
+	
+	// Update time buffers also
+	int data_count = GetCountMain();
+	time_buffers.SetCount(TIMEBUF_COUNT);
+	for(int i = 0; i < time_buffers.GetCount(); i++) {
+		Buffer& buf = time_buffers[i];
+		buf.SetCount(data_count);
+		if (i == TIMEBUF_WEEKTIME) {
+			for(int j = 0; j < data_count; j++) {
+				Time t = GetTimeTf(main_tf, j);
+				int wday = DayOfWeek(t);
+				double d = (((wday-1) * 24 + t.hour) * 60 + t.minute) / (5.0 * 24.0 * 60.0);
+				buf.Set(j, d);
+			}
+		}
+	}
+	
 	WhenPopTask();
 }
 
@@ -447,6 +463,7 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 	broker.leverage					= 1000;
 	broker.free_margin_level		= FMLEVEL;
 	broker.part_sym_id				= sym_id;
+	broker.init						= true;
 }
 
 }

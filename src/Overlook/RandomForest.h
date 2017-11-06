@@ -10,7 +10,7 @@ public:
 	ConstBufferSource();
 	
 	void SetDepth(int i) {bufs.SetCount(i, NULL);}
-	void SetSource(int i, ConstBuffer& buf) {bufs[i] = &buf;}
+	void SetSource(int i, ConstBuffer& buf) {ASSERT(&buf); bufs[i] = &buf;}
 	int GetCount() const;
 	int GetDepth() const;
 	
@@ -120,13 +120,13 @@ struct DecisionTree {
 	Model Decision2DStumpTrain(int id, const ConstBufferSource& data, const VectorBool& labels, const VectorBool& ix, const Option& options);
 	
 	// returns label for a single data instance
-	bool Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& mode);
+	bool Decision2DStumpTest(const ConstBufferSourceIter& iter, const Model& mode) const;
 	
 	
 	void Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options);
 
 	// Returns probability that example inst is 1.
-	double PredictOne(const ConstBufferSourceIter& iter);
+	double PredictOne(const ConstBufferSourceIter& iter) const;
 	
 	void Serialize(Stream& s) {
 		s % models % leaf_positives % leaf_negatives % dots % ixs % max_depth % id;
@@ -163,7 +163,7 @@ struct RandomForest {
 	returns the probability of label 1, i.e. a number in range [0, 1]
 	*/
 
-	double PredictOne(const ConstBufferSourceIter& iter);
+	double PredictOne(const ConstBufferSourceIter& iter) const;
 
 	// convenience function. Here, data is NxD array.
 	// returns probabilities of being 1 for all data in an array.
@@ -222,16 +222,10 @@ struct BufferRandomForest {
 	
 	// Temporary
 	VectorBool predicted_label;
-	Mutex lock;
 	RandomForestStat stat;
-	int cache_id = 0;
-	bool use_cache = false;
-	bool is_processing = false;
 	
 	BufferRandomForest();
-	void Process(int part_id, const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);
-	void SetCacheId(int id) {cache_id = id;}
-	void UseCache(bool b) {use_cache = b;}
+	void Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask);
 	void Serialize(Stream& s) {
 		s % forest % options;
 	}

@@ -3984,7 +3984,7 @@ in that version.&]
 [s0; It`'s the first good winter day here in Oulu, Finland. Sky is 
 blue, snow is everywhere, also on trees. It`'s brighter than 
 in summer at midday, but sun sets fast. It`'s one of the most 
-beautiful view here. It`'s difficult to say anything bad about 
+beautiful views here. It`'s difficult to say anything bad about 
 this country these days. Maybe it`'s a problem, that there is 
 weak economical interest in this place, but at least regular 
 citizen hardly notices that. The tap water is the cleanest and 
@@ -4055,4 +4055,121 @@ is useless...&]
 has proven to work with separate testing data. It`'s getting 
 closer to scientific accuracy, which makes me happy. I know I 
 am not very good in that area...&]
+[s0; &]
+[s3; 3.11.2017&]
+[s0; The test area clearly shows positive results for some configurations, 
+which is my motivation to work with this currently. I didn`'t 
+do the separate testing in previous versions and I probably used 
+some configuration, which worked well in training, but not in 
+testing. Silly me. Only a matlab exercise in uni made me take 
+that problem seriously.&]
+[s0; It doesn`'t make sense stopping now. Joining single sources 
+to one is not working and it needs some work. As long as I find 
+problems like that, they should be done immediately. I should 
+only need to do some optimization anyway.&]
+[s0; &]
+[s3; 5.11.2017&]
+[s0; I am testing following configuration:&]
+[s0;i150;O0; Single symbol configurations (sources), which works 
+with separate testing data are used.&]
+[s0;i150;O0; Instead of taking the boolean value from >0.5 the random 
+forest probability is used.&]
+[s0;i150;O0; Separate parts of used sources are joined together with 
+genetic optimizer weights etc.&]
+[s0;i150;O0; Opposite poles (`+ and `- / up and down / long and short) 
+probabilities are used against each other in joining of parts. 
+This is highly non`-mathematical in terms of description of values, 
+but it makes technical sense.&]
+[s0;i150;O0; Training is being done strictly in the training area, 
+but some peeking of test values is being done to make processing 
+more efficient. I believe it doesn`'t affect the result much. 
+I wouldn`'t use that but technical processing limits are hard 
+limiter in this point.&]
+[s0; The processing is very demanding in this point and I had to 
+enable 30 Gb memory consumption limit for the application in 
+FreeBSD kernel variables. Usually, the memory usage can be reduced 
+at some point, but it takes some time to figure out which is 
+the correct way to do it.&]
+[s0; It so fun, because when I did use remote desktop connection 
+to Windows server, it just freezed while processing stuff like 
+this. Now, I am using the good ol`' xorg`-xvfb with x11vnc server 
+or direct X11 connection, and the quality is much better than 
+in da Windoze. A nerd just gets better quality with some manual 
+tinkering out of these boxes of bits. The fast response time 
+is the key, not user friendliness.&]
+[s0; Honestly, I didn`'t think that I would switch completely to 
+unix, but as you grow up, you are not tied to sugar coated software 
+that much. I enjoyed KDE 2 back in the day, but after that, Gnome 
+2 and MATE has been my favourite. I kept compiz and emerald as 
+effects for a long time, but even that is stripped away now.&]
+[s0; Guake is the most powerful tool I have along with Ultimate`+`+ 
+TheIDE. Guake is always there. You can keep notes and you never 
+lose track of what you were doing. When I lose my confidence 
+in front of huge task list, I just put it to notes and start 
+hacking each of them separately. It`'s always easier when you 
+work on small tasks and don`'t try to remember big decisions 
+while doing that.&]
+[s0; Usually, one has boss or someone to keep track of progress of 
+higher level goals, but if you have one man`'s project like Overlook, 
+you must also do the time management and such. There is many 
+levels of planning... from big goals to small details. It`'s 
+the most pleasant feeling of control to make all those different 
+level decisions by yourself. Especially, when there`'s a potential 
+of huge reward... like in Overlook.&]
+[s0; Linux has actually many drawbacks in comparison to FreeBSD. 
+Bash has bad history autocompletion and it asks the user to type 
+something again every time. That kind of `"rewriting`" and `"RTFM`" 
+philosophy separates it from FreeBSD. In FreeBSD, even with the 
+basesystem, you get a nice text editor ee, like nano, and not 
+something ankward and unintuitive like vi or vim. If an first 
+time user can`'t use it, why you put it to the base system as 
+default? It`'s just insane.&]
+[s0; Also, many de facto programming libraries in linux uses conventions, 
+what Bjarne Stroustrup itself discourages. The `"shared`_ptr<Object> 
+obj `= new Object();`" or similar is clearly against official 
+recommendations of C`+`+, but huge libraries, such as QT, are 
+made completely without caring those. They try to bring java 
+or javascript conventions to C`+`+, which is insane, because 
+there is almost never need for reference counting.&]
+[s0; One can always check the code comparison between U`+`+, QT and 
+Java. It clearly shows how extremely bad idea it is to go against 
+the most modern recommended conventions.&]
+[s0; ...&]
+[s0; If one would want to create a totally new killer smartphone 
+platfrom, he would take:&]
+[s0;i150;O0; FreeBSD kernel and base system&]
+[s0;i150;O0; Enlightenment GUI (with all touchscreen widgets and 
+webkit)&]
+[s0;i150;O0; AngelScript for user applications&]
+[s0;i150;O0; Tweak the AngelScript to U`+`+ conventions, which simplifies 
+programming and supports clean and short code.&]
+[s0; That would be like Ferrari in F1, but in smartphones. It would 
+be unique, familiar and that best programming experience would 
+generate a large application selection fast without fake and 
+crappy clones. That could honestly be recommended to the smart 
+people, who think that they can`'t program. You know, the miracle 
+of knowing how to program with only the intuition and one single 
+try... the feeling of control.&]
+[s0; It`'s hard sell, however. The target audience is men, who know 
+that they are smarter than everybody thinks and who don`'t like 
+to be treated like babys with their smartphones (referring to 
+Android and iOS). Those men go alone and they know that they 
+will always have the control. They know their product and want 
+to do changes what supports their cause, without going to a useless 
+programming class and shit. It`'s the ultimate `"Fuck `'em`" 
+phone... and I want to make it. LOL.&]
+[s0; [/ The empty desert... the hot sun and sand everywhere... next 
+to a pyramid... a man arrives... he goes inside a pyramid... 
+and there is the `"Fuck `'em`" phone with a bright screen... 
+the text in the screen is `"We were waiting someone like you`". 
+The man grabs the phone and walks into the desert horizon.]&]
+[s0; Sooooooo funny. I want a `"Fuck `'em`" phone right now.&]
+[s0; ...&]
+[s0; Testing works now with the SimCore, which is used also in the 
+local optimization. It was a mess, but now it does something. 
+There is a lot of bugs to be solved still...&]
+[s0; I was at this point few days ago with the older version.&]
+[s0; I still don`'t actually have time to do this...&]
+[s0; And this journal is ridiculous, I know.&]
+[s0; &]
 [s0; ]]

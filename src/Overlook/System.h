@@ -97,6 +97,8 @@ struct PipelineItem : Moveable<PipelineItem> {
 
 class CustomCtrl;
 
+enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
+
 class System {
 	
 	static Index<int> true_indicators;
@@ -237,6 +239,7 @@ public:
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Vector<ConstVectorBool*> > label_value_buffers;
 	Vector<ConstBuffer*> open_buffers;
+	Vector<Buffer> time_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue, label_queue;
 	Vector<Core*> databridge_cores;
 	Vector<double> spread_points;
@@ -267,6 +270,7 @@ public:
 	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
 	ConstBuffer&		GetOpenBuffer(int sym) const {return *open_buffers[sym];}
 	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) const {return *open_buffers[sym_ids[sym]];}
+	ConstBuffer&		GetTimeBuffer(int buf) const {return time_buffers[buf];}
 	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
 	void SetFixedBroker(FixedSimBroker& broker, int sym_id=-1);
 	
@@ -290,6 +294,7 @@ public:
 };
 
 inline System& GetSystem() {return Single<System>();}
+
 
 }
 

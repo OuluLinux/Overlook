@@ -19,6 +19,8 @@ Overlook::Overlook() :
 	tabs.Add(exposurectrl, "Exposure Tester");
 	tabs.Add(optimizer);
 	tabs.Add(optimizer, "Expert Optimizer");
+	tabs.Add(group_optimizer);
+	tabs.Add(group_optimizer, "Group Optimizer");
 	tabs.Add(real);
 	tabs.Add(real, "Expert Real");
 	tabs.Add(export_ctrl);
@@ -92,12 +94,15 @@ void Overlook::Data() {
 		optimizer.Data();
 	}
 	else if (tab == 3) {
-		real.Data();
+		group_optimizer.Data();
 	}
 	else if (tab == 4) {
-		export_ctrl.Data();
+		real.Data();
 	}
 	else if (tab == 5) {
+		export_ctrl.Data();
+	}
+	else if (tab == 6) {
 		rtctrl.Data();
 	}
 }

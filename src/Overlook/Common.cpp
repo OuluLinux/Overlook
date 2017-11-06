@@ -40,6 +40,17 @@ VectorBool& VectorBool::One() {
 	return *this;
 }
 
+VectorBool& VectorBool::SetInverse(const VectorBool& b) {
+	SetCount(b.GetCount());
+	uint64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		*it0 = ~(*it1);
+	return *this;
+}
+
 VectorBool& VectorBool::InverseAnd(const VectorBool& b) {
 	uint64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();

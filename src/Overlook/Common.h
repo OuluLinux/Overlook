@@ -19,18 +19,18 @@ using namespace Upp;
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
-//#define DECISION_LEVELS			2
-//#define DECISION_INPUTS			(1 << DECISION_LEVELS)
 #define TF_COUNT				8
 #define TRUEINDI_COUNT			3
 #define LABELINDI_COUNT			3
 #define MULT_MAXSCALES			3
 #define MULT_MAXSCALE_MUL		2
-#define MULT_MAX					(MULT_MAXSCALES * MULT_MAXSCALE_MUL)
+#define MULT_MAX				(MULT_MAXSCALES * MULT_MAXSCALE_MUL)
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
 #define OPT_PHASE_ITERS			10000
+#define	LOCALPROB_DEPTH			100
+#define	LOCALPROB_BUFSIZE		256
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT					6
@@ -441,6 +441,7 @@ public:
 	VectorBool& SetCount(int i);
 	VectorBool& Zero();
 	VectorBool& One();
+	VectorBool& SetInverse(const VectorBool& b);
 	VectorBool& InverseAnd(const VectorBool& b);
 	VectorBool& And(const VectorBool& b);
 	VectorBool& Or(const VectorBool& b);

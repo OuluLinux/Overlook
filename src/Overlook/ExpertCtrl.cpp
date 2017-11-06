@@ -18,7 +18,7 @@ void EvolutionGraph::Paint(Draw& w) {
 	
 	int count = acc_list.GetCount();
 	for(int j = 0; j < count; j++) {
-		double d = acc_list[j].test_mult_valuehourfactor;
+		double d = acc_list[j].test_valuehourfactor;
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
@@ -29,7 +29,7 @@ void EvolutionGraph::Paint(Draw& w) {
 		
 		polyline.SetCount(count);
 		for(int j = 0; j < count; j++) {
-			double v = acc_list[j].test_mult_valuehourfactor;
+			double v = acc_list[j].test_valuehourfactor;
 			int y = (int)(sz.cy - (v - min) / diff * sz.cy);
 			int x = (int)(j * xstep);
 			polyline[j] = Point(x, y);
@@ -56,8 +56,8 @@ void TestEquityGraph::Paint(Draw& w) {
 	ExpertSystem& esys = sys.GetExpertSystem();
 	
 	
-	const Vector<double>& last_test_equity = esys.last_test_equity;
-	const Vector<double>& last_test_spreadcost = esys.last_test_spreadcost;
+	const Vector<double>& last_test_equity = esys.simcore.last_test_equity;
+	const Vector<double>& last_test_spreadcost = esys.simcore.last_test_spreadcost;
 	
 	double emin = +DBL_MAX;
 	double smin = +DBL_MAX;
@@ -123,16 +123,12 @@ ExpertOptimizerCtrl::ExpertOptimizerCtrl() {
 	pop.AddColumn("period");
 	pop.AddColumn("ext");
 	pop.AddColumn("label");
+	pop.AddColumn("fastinput");
+	pop.AddColumn("labelpattern");
 	pop.AddColumn("ext_dir");
-	pop.AddColumn("mask_valuefactor");
-	pop.AddColumn("mask_valuehourfactor");
-	pop.AddColumn("mask_hourtotal");
-	pop.AddColumn("succ_valuefactor");
-	pop.AddColumn("succ_valuehourfactor");
-	pop.AddColumn("succ_hourtotal");
-	pop.AddColumn("mult_valuefactor");
-	pop.AddColumn("mult_valuehourfactor");
-	pop.AddColumn("mult_hourtotal");
+	pop.AddColumn("valuefactor");
+	pop.AddColumn("valuehourfactor");
+	pop.AddColumn("hourtotal");
 	pop.AddColumn("is_processed");
 	
 	unit.AddColumn("Key");
@@ -155,18 +151,14 @@ void ExpertOptimizerCtrl::Data() {
 		pop.Set(i, 2, conf.label_id);
 		pop.Set(i, 3, conf.period);
 		pop.Set(i, 4, conf.ext);
-		pop.Set(i, 5, conf.label ? "true" : "false");
-		pop.Set(i, 6, conf.ext_dir ? "true" : "false");
-		pop.Set(i, 7, Format("%2!,n", conf.test_mask_valuefactor));
-		pop.Set(i, 8, Format("%4!,n", conf.test_mask_valuehourfactor));
-		pop.Set(i, 9, Format("%2!,n", conf.test_mask_hourtotal));
-		pop.Set(i, 10, Format("%2!,n", conf.test_succ_valuefactor));
-		pop.Set(i, 11, Format("%4!,n", conf.test_succ_valuehourfactor));
-		pop.Set(i, 12, Format("%2!,n", conf.test_succ_hourtotal));
-		pop.Set(i, 13, Format("%2!,n", conf.test_mult_valuefactor));
-		pop.Set(i, 14, Format("%4!,n", conf.test_mult_valuehourfactor));
-		pop.Set(i, 15, Format("%2!,n", conf.test_mult_hourtotal));
-		pop.Set(i, 16, conf.is_processed ? "true" : "false");
+		pop.Set(i, 5, conf.label);
+		pop.Set(i, 6, conf.fastinput);
+		pop.Set(i, 7, conf.labelpattern);
+		pop.Set(i, 8, conf.ext_dir ? "true" : "false");
+		pop.Set(i, 9, Format("%2!,n", conf.test_valuefactor));
+		pop.Set(i, 10, Format("%4!,n", conf.test_valuehourfactor));
+		pop.Set(i, 11, Format("%2!,n", conf.test_hourtotal));
+		pop.Set(i, 12, conf.is_processed ? "true" : "false");
 	}
 	
 	int cursor = pop.GetCursor();
@@ -178,6 +170,30 @@ void ExpertOptimizerCtrl::Data() {
 	else unit.Clear();
 	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+ExpertGroupOptimizerCtrl::ExpertGroupOptimizerCtrl() {
+	
+}
+
+void ExpertGroupOptimizerCtrl::Data() {
+	
+}
+
+
+
+
+
 
 
 
@@ -207,6 +223,8 @@ ExpertRealCtrl::ExpertRealCtrl() {
 	pop.AddColumn("period");
 	pop.AddColumn("ext");
 	pop.AddColumn("label");
+	pop.AddColumn("fastinput");
+	pop.AddColumn("labelpattern");
 	pop.AddColumn("ext_dir");
 	pop.AddColumn("mask_valuefactor");
 	pop.AddColumn("mask_valuehourfactor");
@@ -235,39 +253,42 @@ void ExpertRealCtrl::Data() {
 	
 	last_update.SetLabel("Last update: " + Format("%", esys.last_update));
 	const Vector<AccuracyConf>& acc_list = esys.acc_list;
+	/*
+	prog.Set(esys.processed_used_conf, esys.simcore.used_conf.GetCount());
 	
-	prog.Set(esys.processed_used_conf, esys.used_conf.GetCount());
-	
-	for(int i = 0; i < esys.used_conf.GetCount(); i++) {
-		const AccuracyConf& conf = acc_list[esys.used_conf[i]];
+	for(int i = 0; i < esys.simcore.used_conf.GetCount(); i++) {
+		const AccuracyConf& conf = acc_list[esys.simcore.used_conf[i]];
 		
 		pop.Set(i, 0, conf.id);
 		pop.Set(i, 1, conf.symbol);
 		pop.Set(i, 2, conf.label_id);
 		pop.Set(i, 3, conf.period);
 		pop.Set(i, 4, conf.ext);
-		pop.Set(i, 5, conf.label ? "true" : "false");
-		pop.Set(i, 6, conf.ext_dir ? "true" : "false");
-		pop.Set(i, 7, Format("%2!,n", conf.test_mask_valuefactor));
-		pop.Set(i, 8, Format("%4!,n", conf.test_mask_valuehourfactor));
-		pop.Set(i, 9, Format("%2!,n", conf.test_mask_hourtotal));
-		pop.Set(i, 10, Format("%2!,n", conf.test_succ_valuefactor));
-		pop.Set(i, 11, Format("%4!,n", conf.test_succ_valuehourfactor));
-		pop.Set(i, 12, Format("%2!,n", conf.test_succ_hourtotal));
-		pop.Set(i, 13, Format("%2!,n", conf.test_mult_valuefactor));
-		pop.Set(i, 14, Format("%4!,n", conf.test_mult_valuehourfactor));
-		pop.Set(i, 15, Format("%2!,n", conf.test_mult_hourtotal));
-		pop.Set(i, 16, conf.is_processed ? "true" : "false");
+		pop.Set(i, 5, conf.label);
+		pop.Set(i, 6, conf.fastinput);
+		pop.Set(i, 7, conf.labelpattern);
+		pop.Set(i, 8, conf.ext_dir ? "true" : "false");
+		pop.Set(i, 9, Format("%2!,n", conf.test_mask_valuefactor));
+		pop.Set(i, 10, Format("%4!,n", conf.test_mask_valuehourfactor));
+		pop.Set(i, 11, Format("%2!,n", conf.test_mask_hourtotal));
+		pop.Set(i, 12, Format("%2!,n", conf.test_succ_valuefactor));
+		pop.Set(i, 13, Format("%4!,n", conf.test_succ_valuehourfactor));
+		pop.Set(i, 14, Format("%2!,n", conf.test_succ_hourtotal));
+		pop.Set(i, 15, Format("%2!,n", conf.test_mult_valuefactor));
+		pop.Set(i, 16, Format("%4!,n", conf.test_mult_valuehourfactor));
+		pop.Set(i, 17, Format("%2!,n", conf.test_mult_hourtotal));
+		pop.Set(i, 18, conf.is_processed ? "true" : "false");
 	}
 	pop.SetCount(acc_list.GetCount());
 	
 	int cursor = pop.GetCursor();
-	if (cursor >= 0 && cursor < esys.used_conf.GetCount()) {
-		const AccuracyConf& conf = acc_list[esys.used_conf[cursor]];
+	if (cursor >= 0 && cursor < esys.simcore.used_conf.GetCount()) {
+		const AccuracyConf& conf = acc_list[esys.simcore.used_conf[cursor]];
 		ArrayCtrlPrinter printer(unit);
 		conf.Print(printer);
 	}
 	else unit.Clear();
+	*/
 }
 
 }

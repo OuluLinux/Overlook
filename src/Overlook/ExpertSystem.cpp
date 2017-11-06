@@ -2,15 +2,15 @@
 
 namespace Overlook {
 
-/*#ifdef flagDEBUG
+#ifdef flagDEBUG
 int cls_tree_count	= 8;
 int cls_max_depth	= 4;
 int cls_hypothesis	= 4;
-#else*/
-int cls_tree_count	= 50; // orig 100
+#else
+int cls_tree_count	= 100;
 int cls_max_depth	= 4;
 int cls_hypothesis	= 10;
-//#endif
+#endif
 
 
 
@@ -24,15 +24,18 @@ int cls_hypothesis	= 10;
 
 const int label_count = LABELINDI_COUNT;
 const int sector_pred_dir_count = 2;
-const int sector_label_count = 2;
+const int sector_label_count = 4;
+const int period_begin = 5;
+const int fastinput_count = 3;
+const int labelpattern_count = 5;
 int sector_type_count;
 
 int GetConfCount() {
 	if (!sector_type_count) {
-		for(int i = 0; i < TF_COUNT; i++)
+		for(int i = period_begin; i < TF_COUNT; i++)
 			sector_type_count += (TF_COUNT - i);
 	}
-	return SYM_COUNT * label_count * sector_pred_dir_count * sector_label_count * sector_type_count;
+	return SYM_COUNT * label_count * sector_pred_dir_count * sector_label_count * fastinput_count * labelpattern_count * sector_type_count;
 }
 
 void GetConf(int i, AccuracyConf& conf) {
@@ -52,16 +55,22 @@ void GetConf(int i, AccuracyConf& conf) {
 	int sector_type = i % sector_type_count;
 	i = i / sector_type_count;
 	int j = 0;
-	for(conf.period = 0; conf.period < TF_COUNT; conf.period++)
+	for(conf.period = period_begin; conf.period < TF_COUNT; conf.period++)
 		for(conf.ext = 1; conf.ext <= (TF_COUNT - conf.period); conf.ext++)
 			if (j++ == sector_type)
 				goto found;
 	found:
-	ASSERT(conf.period >= 0 && conf.period < TF_COUNT);
+	ASSERT(conf.period >= period_begin && conf.period < TF_COUNT);
 	ASSERT(conf.ext > 0 && conf.ext <= TF_COUNT);
 	
 	conf.label = i % sector_label_count;
 	i = i / sector_label_count;
+	
+	conf.fastinput = i % fastinput_count;
+	i = i / fastinput_count;
+	
+	conf.labelpattern = i % labelpattern_count;
+	i = i / labelpattern_count;
 	
 	conf.ext_dir = i % sector_pred_dir_count;
 	i = i / sector_pred_dir_count;
@@ -83,15 +92,19 @@ struct InterestingAccuracyConfSorter {
 	}
 };
 
-SectorCacheObject& GetSectorCacheObject(int sym, int tf_begin, int tf_end, int label_id) {
-	typedef Tuple4<int,int,int,int> Key;
-	static Mutex lock;
-	static ArrayMap<Key, SectorCacheObject> objs;
-	lock.Enter();
-	SectorCacheObject& obj = objs.GetAdd(Key(sym, tf_begin, tf_end, label_id));
-	lock.Leave();
-	return obj;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -113,6 +126,7 @@ ExpertSystem::ExpertSystem(System* sys) : sys(sys) {
 	stopped = true;
 	
 	created = GetSysTime();
+	
 }
 
 ExpertSystem::~ExpertSystem() {
@@ -125,7 +139,7 @@ void ExpertSystem::Init() {
 	WhenInfo  << Proxy(sys->WhenInfo);
 	WhenError << Proxy(sys->WhenError);
 	
-	sys->SetFixedBroker(test_broker);
+	
 }
 
 void ExpertSystem::Start() {
@@ -136,31 +150,26 @@ void ExpertSystem::Start() {
 	running = true;
 	stopped = false;
 	Thread::Start(THISBACK(Main));
-	
-	if (is_training) {
-		training_stopped = false;
-		training_running = true;
-		Thread::Start(THISBACK(MainTraining));
-	}
 }
 
 void ExpertSystem::Stop() {
 	running = false;
-	training_running = false;
-	while (stopped != true || training_stopped != true)
-		Sleep(100);
-}
-
-void ExpertSystem::StopTraining() {
-	training_running = false;
-	while (training_stopped != true)
+	while (stopped != true)
 		Sleep(100);
 }
 
 void ExpertSystem::Main() {
 	
 	while (running) {
-		MainReal();
+		
+		if (phase == PHASE_TRAINING)
+			MainTraining();
+		
+		else if (phase == PHASE_OPTIMIZING)
+			MainOptimizing();
+		
+		else if (phase == PHASE_REAL)
+			MainReal();
 		
 		Sleep(100);
 	}
@@ -257,15 +266,6 @@ void ExpertSystem::MainTraining() {
 		}
 	}
 	
-	// Repair damaged loading
-	for(int i = 0; i < acc_list.GetCount(); i++) {
-		AccuracyConf& conf = acc_list[i];
-		if (conf.id < 0) {
-			GetConf(i, conf);
-			conf.is_processed = false;
-		}
-	}
-	
 	
 	// Split processing to chunks
 	int cpus = GetUsedCpuCores();
@@ -283,17 +283,17 @@ void ExpertSystem::MainTraining() {
 	
 	CoWork co;
 	co.SetPoolSize(cpus);
-	for(int block = begin_pos / block_size; block < block_count && training_running; block++) {
+	for(int block = begin_pos / block_size; block < block_count && running; block++) {
 		int conf_begin = block * block_size;
 		int conf_end = Upp::min(acc_list.GetCount(), (block + 1) * block_size);
 		
 		rt_lock.EnterRead();
-		for(int conf_id = conf_begin; conf_id < conf_end && training_running; conf_id++) {
+		for(int conf_id = conf_begin; conf_id < conf_end && running; conf_id++) {
 			if (acc_list[conf_id].is_processed)
 				continue;
 			co & [=]
 			{
-				ProcessAccuracyConf(acc_list[conf_id], false);
+				ProcessAccuracyConf(acc_list[conf_id]);
 			};
 		}
 		co.Finish();
@@ -302,26 +302,225 @@ void ExpertSystem::MainTraining() {
 		StoreThis();
 	}
 	
-	training_stopped = true;
+	
+	// Dump argument usefulness stats
+	DumpUsefulness();
+	
+	
+	// Check for change of phase
+	bool any_unprocessed = false;
+	for(int i = acc_list.GetCount()-1; i >= 0 && !any_unprocessed; i--)
+		if (!acc_list[i].is_processed)
+			any_unprocessed = true;
+	if (!any_unprocessed)
+		phase = PHASE_OPTIMIZING;
 }
 
-void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
-	if (!realtime && !training_running)
-		return;
+
+void ExpertSystem::MainOptimizing() {
 	
-	if (!realtime && conf.is_processed)
+	Panic("TODO");
+	
+	// Run local optimizer for realtime SimCore
+	if (optimizer.GetRound() == 0) {
+		
+		// Get usable sources
+		/*used_conf.SetCount(0);
+		
+		// Find useful sources for every symbol
+		// Skip source if it overlaps too much with already used sources
+		int conf_count = acc_list.GetCount();
+		for(int i = 0; i < SYM_COUNT; i++) {
+			VectorMap<int, double> useful_list;
+			for(int j = 0; j < conf_count; j++) {
+				const AccuracyConf& conf = acc_list[j];
+				if (conf.is_processed && conf.symbol == i &&
+					conf.test_valuehourfactor > 0)
+					useful_list.Add(j, conf.test_valuehourfactor);
+			}
+			
+			SortByValue(useful_list, StdGreater<double>());
+			
+			// Mask based method might give too little active sources
+			#if 0
+			VectorBool existing_mask;
+			for(int j = 0; j < useful_list.GetCount(); j++) {
+				int conf_id = useful_list.GetKey(j);
+				AccuracyConf& conf = acc_list[conf_id];
+				
+				VectorBool active_mask;
+				active_mask = conf.real_mask;
+				active_mask.SetCount(conf.real_succ.GetCount());
+				active_mask.And(conf.real_succ);
+				
+				if (existing_mask.GetCount() == 0) {
+					existing_mask = active_mask;
+					used_conf.Add(conf_id);
+				} else {
+					active_mask.SetCount(existing_mask.GetCount());
+					double overlap_factor = existing_mask.GetOverlapFactor(active_mask);
+					if (overlap_factor < 0.2) {
+						existing_mask.Or(active_mask);
+						used_conf.Add(conf_id);
+					}
+				}
+			}
+			#else
+			int max_count = 5;
+			if (useful_list.GetCount() > max_count)
+				useful_list.Remove(max_count, useful_list.GetCount() - max_count);
+			for(int j = 0; j < useful_list.GetCount(); j++)
+				used_conf.Add(useful_list.GetKey(j));
+			#endif
+		}*/
+		
+		last_update = GetSysTime();
+		
+		
+		
+		/*optimizer.SetArrayCount();
+		optimizer.SetCount(4);
+		optimizer.SetPopulation(1000);
+		optimizer.SetMaxGenerations(100);
+		optimizer.UseLimits();
+		optimizer.Set(0,	1,		MULT_MAX,	1,			"Amp fixed value");
+		optimizer.Set(1,	0.0,	1.0,		0.001,		"Amp fixed mix");
+		optimizer.Set(2,	0.0,	1.0,		0.001,		"Trigger prob limit");
+		optimizer.Set(3,	1,		64,			1,			"Trigger average period");
+		
+		optimizer.Init();*/
+		
+		StoreThis();
+	}
+	
+	
+	while (!optimizer.IsEnd() && running) {
+		optimizer.Start();
+		
+		
+		// Calculate energy
+		double energy = 0;
+		//for(int i = 0; i < acc_count; i++) {
+		//	AccuracyConf& conf = acc_list[i];
+			
+			
+			/*double factor = optimizer.Get(i, 0);
+			double offset = optimizer.Get(i, 1);
+			//double factor = optimizer.GetTrialSolution()[i];
+			for(int j = 0; j < vector_steps; j++) {
+				double p = offset + sin(j+i) * factor;
+				double e = p - points[j];
+				if (e < 0) e *= -1.0;
+				energy += e;
+				points.Add(p);
+			}*/
+		//}
+		
+		energy = fabs((double)energy)  * -1;
+		optimizer.Stop(energy);
+	}
+	/*String txt;
+	txt = "Best solution: ";
+	optimizer.Best();
+	double error = 0;
+	for(int i = 0; i < optimizer.GetArrayCount(); i++) {
+		double factor = optimizer.Get(i, 0);
+		double offset = optimizer.Get(i, 1);
+		txt << int(factor + 0.5) << " ";
+		txt << int(offset + 0.5) << " ";
+		error += fabs((double) factor - vector_factors[i] );
+		error += fabs((double) offset - vector_offsets[i] );
+	}
+	error /= vector_count * 2;
+	LOG(txt);*/
+	
+	
+	// Change of phase
+	if (optimizer.IsEnd())
+		phase = PHASE_REAL;
+}
+
+void ExpertSystem::DumpUsefulness() {
+	FileOut fout(ConfigFile("argstats.txt"));
+	VectorMap<int, int> symbol_stat_pos, label_id_stat_pos, period_stat_pos, ext_stat_pos, label_stat_pos, ext_dir_stat_pos;
+	VectorMap<int, int> symbol_stat_neg, label_id_stat_neg, period_stat_neg, ext_stat_neg, label_stat_neg, ext_dir_stat_neg;
+	for(int i = 0; i < acc_list.GetCount(); i++) {
+		const AccuracyConf& conf = acc_list[i];
+		
+		if (conf.test_valuehourfactor > 0) {
+			symbol_stat_pos		.GetAdd(conf.symbol,	0)++;
+			label_id_stat_pos	.GetAdd(conf.label_id,	0)++;
+			period_stat_pos		.GetAdd(conf.period,	0)++;
+			ext_stat_pos		.GetAdd(conf.ext,		0)++;
+			label_stat_pos		.GetAdd(conf.label,		0)++;
+			ext_dir_stat_pos	.GetAdd(conf.ext_dir,	0)++;
+		} else {
+			symbol_stat_neg		.GetAdd(conf.symbol,	0)++;
+			label_id_stat_neg	.GetAdd(conf.label_id,	0)++;
+			period_stat_neg		.GetAdd(conf.period,	0)++;
+			ext_stat_neg		.GetAdd(conf.ext,		0)++;
+			label_stat_neg		.GetAdd(conf.label,		0)++;
+			ext_dir_stat_neg	.GetAdd(conf.ext_dir,	0)++;
+		}
+	}
+	
+	#define PRINT(x) \
+		SortByKey(x##_pos, StdLess<int>()); \
+		SortByKey(x##_neg, StdLess<int>()); \
+		fout << #x "\n"; \
+		int x##count = Upp::max(x##_pos.TopKey(), x##_neg.TopKey()) + 1; \
+		for(int i = 0; i < x##count; i++) \
+			fout << i << "\t" << x##_pos .GetAdd(i, 0) << "\tvs\t" << x##_neg .GetAdd(i, 0) << "\n"; \
+		fout << "\n\n\n";
+	
+	PRINT(symbol_stat);
+	PRINT(label_id_stat);
+	PRINT(period_stat);
+	PRINT(ext_stat);
+	PRINT(label_stat);
+	PRINT(ext_dir_stat);
+}
+
+void ExpertSystem::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs, int rel_tf) {
+	System& sys = GetSystem();
+	
+	bufs.SetDepth(TRUEINDI_COUNT * (conf.fastinput + 1) + 1);
+	
+	int tf = conf.GetBaseTf(0);
+	
+	int k = 0;
+	for(int i = 0; i < TRUEINDI_COUNT; i++)
+		for(int j = 0; j < conf.fastinput+1; j++)
+			bufs.SetSource(k++, sys.GetTrueIndicator(conf.symbol, tf-j, i));
+		
+	bufs.SetSource(k++, sys.GetTimeBuffer(TIMEBUF_WEEKTIME));
+}
+
+void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
+	if (!running || conf.is_processed)
 		return;
 	
 	TimeStop proc_ts;
 	
-	BufferRandomForest& rf = GetRandomForestCache().GetRandomForest();
-	rf.SetCacheId(conf.id);
-	rf.UseCache(realtime);
-	rf.options.tree_count	= cls_tree_count;
-	rf.options.max_depth	= cls_max_depth;
-	rf.options.tries_count	= cls_hypothesis;
+	ConfProcessor& rf = GetRandomForestCache().GetRandomForest();
 	
-	bool active_label = conf.label;
+	if (rf.sector.GetCount() < conf.ext)
+		rf.sector.SetCount(conf.ext);
+	
+	Option options;
+	options.tree_count	= cls_tree_count;
+	options.max_depth	= cls_max_depth;
+	options.tries_count	= cls_hypothesis;
+	rf.SetOptions(options);
+	
+	uint64 active_label_pattern = 0;
+	switch (conf.label) {
+		case 0: active_label_pattern = 0; break;
+		case 1: active_label_pattern = ~(0ULL); break;
+		case 2: for(int i = 0; i < 64; i+=2) active_label_pattern |= 1 << i; break;
+		case 3: for(int i = 1; i < 64; i+=2) active_label_pattern |= 1 << i; break;
+	}
+	bool active_label = active_label_pattern & 1;
 	
 	System& sys = GetSystem();
 	int data_count = sys.GetCountMain();
@@ -331,151 +530,52 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 	
 	ASSERT(conf.ext > 0);
 	ConstBufferSource bufs;
-	bufs.SetDepth(TRUEINDI_COUNT);
-	VectorBool &real_mask = conf.real_mask, &pred_mask = conf.pred_mask;
+	
+	VectorBool &real_mask = rf.real_mask;
 	real_mask.SetCount(data_count).One();
-	pred_mask.SetCount(data_count).One();
+	
+	ConstBuffer& weektime = sys.GetTimeBuffer(TIMEBUF_WEEKTIME);
+	ASSERT(weektime.GetCount() == data_count);
 	
 	
-	// Looping direction affects predicted mask, but not real mask
-	int ext_begin = 0, ext_end = conf.ext-1, ext_step = +1;
-	if (conf.ext_dir) {
-		Swap(ext_begin, ext_end);
-		ext_step = -1;
-	}
-	for(int j = ext_begin, sid = 0; (!conf.ext_dir ? j <= ext_end : j >= ext_end); j += ext_step, sid++) {
-		int tf = conf.period + j;
+	for(int sid = 0; sid < conf.ext; sid++) {
+		int tf = conf.GetBaseTf(sid);
+		ASSERT(tf - conf.fastinput >= 0);
+		bool sid_active_label = active_label_pattern & (1 << sid);
 		
+		FillBufferSource(conf, bufs, sid);
 		
-		for(int i = 0; i < TRUEINDI_COUNT; i++)
-			bufs.SetSource(i, sys.GetTrueIndicator(conf.symbol, tf, i));
 		
 		sys_lock.EnterRead();
 		
-		ConstVectorBool& real_label = sys.GetLabelIndicator(conf.symbol, tf, conf.label_id) ;
-		
-		// many has same real mask and settings at this point, so cache it
-		// TODO: maybe remove this first cache?
-		if (!realtime) {
-			SectorCacheObject& sec_cache = GetSectorCacheObject(conf.symbol, conf.period + ext_begin, tf, conf.label_id);
-			sec_cache.lock.Enter();
-			if (sec_cache.pred_mask.GetCount() == 0) {
-				rf.Process(10 + sid, area, bufs, real_label, real_mask);
-				sec_cache.pred_mask = rf.predicted_label;
-				sec_cache.stat = rf.stat;
-			}
-			sec_cache.lock.Leave();
-			
-			if (!active_label) {
-				real_mask.InverseAnd(real_label);
-				pred_mask.InverseAnd(sec_cache.pred_mask);
-			} else {
-				real_mask.And(real_label);
-				pred_mask.And(sec_cache.pred_mask);
-			}
-			
-			conf.sector_accuracy[sid] = sec_cache.stat;
-		} else {
-			// This uses cache too, but it's different...
-			// The previous could use this, but not at first time
-			rf.Process(10 + sid, area, bufs, real_label, real_mask);
-
-			if (!active_label) {
-				real_mask.InverseAnd(real_label);
-				pred_mask.InverseAnd(rf.predicted_label);
-			} else {
-				real_mask.And(real_label);
-				pred_mask.And(rf.predicted_label);
-			}
-			
-			conf.sector_accuracy[sid] = rf.stat;
+		int label_id = 0;
+		switch (conf.label_id) {
+			case 0: label_id = conf.label_id; break;
+			case 1: label_id = conf.label_id - sid; break;
+			case 2: label_id = conf.label_id + sid; break;
+			case 3: label_id = conf.label_id - sid % 2; break;
+			case 4: label_id = conf.label_id + sid % 2; break;
 		}
+		while (label_id < 0)				label_id += LABELINDI_COUNT;
+		while (label_id >= LABELINDI_COUNT)	label_id -= LABELINDI_COUNT;
+		
+		ConstVectorBool& src_label = sys.GetLabelIndicator(conf.symbol, tf, label_id) ;
+		VectorBool train_label;
+		ConstVectorBool& real_label = (!sid_active_label ? train_label.SetInverse(src_label) : src_label);
+		
+		
+		rf.sector[sid].Process(area, bufs, real_label, real_mask);
+		
+		real_mask.And(real_label);
+		
+		conf.sector_accuracy[sid] = rf.sector[sid].stat;
+		
 		
 		sys_lock.LeaveRead();
 	}
 	
-	for(int i = 0; i < TRUEINDI_COUNT; i++)
-		bufs.SetSource(i, sys.GetTrueIndicator(conf.symbol, conf.period, i));
 	
-	
-	// Slightly lengthen predicted parts to fill too small holes
-	{
-		bool prev_active = false;
-		int tail_active_count = 0;
-		for(int i = 0; i < pred_mask.GetCount(); i++) {
-			if (pred_mask.Get(i)) {
-				if (!prev_active) {
-					prev_active = true;
-				}
-			} else {
-				if (prev_active) {
-					pred_mask.Set(i, true);
-					tail_active_count = 3;
-					prev_active = false;
-				}
-				else if (tail_active_count > 0) {
-					pred_mask.Set(i, true);
-					tail_active_count--;
-				}
-			}
-		}
-	}
-	
-	
-	// Gather stats about continuity in real and predicted mask
-	{
-		conf.real_hole_lengths.Clear();
-		conf.real_active_lengths.Clear();
-		conf.pred_hole_lengths.Clear();
-		conf.pred_active_lengths.Clear();
-		const int div = (1 << (3 + conf.period));
-		bool prev_active = false;
-		int prev_pos = 0;
-		for(int i = 0; i < real_mask.GetCount(); i++) {
-			if (real_mask.Get(i)) {
-				if (!prev_active) {
-					int len = i - prev_pos;
-					int divlen = len - len % div;
-					conf.real_hole_lengths.GetAdd(divlen, 0)++;
-					prev_active = true;
-					prev_pos = i;
-				}
-			} else {
-				if (prev_active) {
-					int len = i - prev_pos;
-					int divlen = len - len % div;
-					conf.real_active_lengths.GetAdd(divlen, 0)++;
-					prev_active = false;
-					prev_pos = i;
-				}
-			}
-		}
-		prev_active = false;
-		prev_pos = 0;
-		for(int i = 0; i < pred_mask.GetCount(); i++) {
-			if (pred_mask.Get(i)) {
-				if (!prev_active) {
-					int len = i - prev_pos;
-					int divlen = len - len % div;
-					conf.pred_hole_lengths.GetAdd(divlen, 0)++;
-					prev_active = true;
-					prev_pos = i;
-				}
-			} else {
-				if (prev_active) {
-					int len = i - prev_pos;
-					int divlen = len - len % div;
-					conf.pred_active_lengths.GetAdd(divlen, 0)++;
-					prev_active = false;
-					prev_pos = i;
-				}
-			}
-		}
-		SortByKey(conf.real_hole_lengths,	StdLess<int>());
-		SortByKey(conf.real_active_lengths,	StdLess<int>());
-		SortByKey(conf.pred_hole_lengths,	StdLess<int>());
-		SortByKey(conf.pred_active_lengths,	StdLess<int>());
-	}
+	FillBufferSource(conf, bufs, 0);
 	
 	
 	// Train signal usefulness and multiplier
@@ -483,10 +583,10 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 		ConstBuffer& open_buf = sys.GetTradingSymbolOpenBuffer(conf.symbol);
 		double spread_point = sys.GetTradingSymbolSpreadPoint(conf.symbol);
 		
-		VectorBool &real_succ = conf.real_succ;
-		VectorBool &real_mult = conf.real_mult;
-		real_succ.SetCount(conf.real_mask.GetCount());
-		real_mult.SetCount(conf.real_mask.GetCount());
+		VectorBool &real_succ = rf.real_succ;
+		VectorBool &real_mult = rf.real_mult;
+		real_succ.SetCount(real_mask.GetCount());
+		real_mult.SetCount(real_mask.GetCount());
 		int change_count = 0;
 		double av_change = 0.0;
 		int largemult_count = 0;
@@ -494,8 +594,8 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 			bool prev_active = false;
 			int prev_pos = 0;
 			double open = open_buf.GetUnsafe(0);
-			for(int i = 0; i < conf.real_mask.GetCount(); i++) {
-				if (conf.real_mask.Get(i)) {
+			for(int i = 0; i < real_mask.GetCount(); i++) {
+				if (real_mask.Get(i)) {
 					if (!prev_active) {
 						open = open_buf.GetUnsafe(i);
 						prev_active = true;
@@ -543,179 +643,51 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, bool realtime) {
 		}
 		
 		sys_lock.EnterRead();
-		rf.Process(1, area, bufs, real_succ, conf.real_mask);
+		rf.succ.Process(area, bufs, real_succ, real_mask);
 		sys_lock.LeaveRead();
-		conf.pred_succ = rf.predicted_label;
-		conf.label_stat = rf.stat;
+		
+		conf.label_stat = rf.succ.stat;
+		
 		
 		sys_lock.EnterRead();
-		rf.Process(2, area, bufs, real_mult, conf.real_mask);
-		conf.pred_mult = rf.predicted_label;
-		conf.mult_stat = rf.stat;
-		ConstBufferSourceIter iter(bufs);
-		conf.mult_prob.SetCount(data_count, 128);
-		for(int i = 0; i < data_count; i++, iter++) {
-			double prob = rf.forest.PredictOne(iter);
-			conf.mult_prob[i] = prob * 255;
-		}
+		rf.mult.Process(area, bufs, real_mult, real_mask);
 		sys_lock.LeaveRead();
+		
+		conf.mult_stat = rf.mult.stat;
+		
 	}
 	
 	
 	// Test
 	{
-		bool mask_prev_active = false;
-		bool succ_prev_active = false;
-		int mask_prev_pos = 0;
-		int succ_prev_pos = 0;
-		ConstBuffer& open_buf = sys.GetTradingSymbolOpenBuffer(conf.symbol);
-		double spread_point = sys.GetTradingSymbolSpreadPoint(conf.symbol);
-		double mask_open = open_buf.GetUnsafe(area.test0_begin);
-		double succ_open = mask_open;
-		double mask_hour_total = 0.0, mask_change_total = 1.0;
-		double succ_hour_total = 0.0, succ_change_total = 1.0;
-		double mult_change_total = 1.0;
-		double succ_mult_prob = 0.0;
-		for(int i = area.test0_begin; i < area.test0_end; i++) {
-			bool is_mask = conf.pred_mask.Get(i);
-			bool is_succ = conf.pred_succ.Get(i);
-			
-			if (is_mask) {
-				if (!mask_prev_active) {
-					mask_open = open_buf.GetUnsafe(i);
-					mask_prev_active = true;
-					mask_prev_pos = i;
-				}
-			} else {
-				if (mask_prev_active) {
-					double change, cur = open_buf.GetUnsafe(i);
-					int len = i - mask_prev_pos;
-					double hours = (double)len / 60.0;
-					mask_hour_total += hours;
-					if (!active_label)
-						change = cur / (mask_open + spread_point);
-					else
-						change = mask_open / (cur + spread_point);
-					mask_change_total *= change;
-					mask_prev_active = false;
-					mask_prev_pos = i;
-				}
-			}
-			
-			if (is_mask && is_succ) {
-				if (!succ_prev_active) {
-					succ_open = open_buf.GetUnsafe(i);
-					succ_prev_active = true;
-					succ_prev_pos = i;
-					succ_mult_prob = conf.mult_prob[i] / 255.0;
-				}
-			} else {
-				if (succ_prev_active) {
-					double change, cur = open_buf.GetUnsafe(i);
-					int len = i - succ_prev_pos;
-					double hours = (double)len / 60.0;
-					succ_hour_total += hours;
-					if (!active_label)
-						change = cur / (succ_open + spread_point);
-					else
-						change = succ_open / (cur + spread_point);
-					succ_change_total *= change;
-					double mult = succ_mult_prob * MULT_MAX;
-					change = (change - 1.0) * mult + 1.0;
-					if (change < 0.0) change = 0.0;
-					mult_change_total *= change;
-					succ_prev_active = false;
-					succ_prev_pos = i;
-				}
-			}
-		}
-		mask_change_total -= 1.0;
-		conf.test_mask_valuefactor = mask_change_total;
-		conf.test_mask_valuehourfactor = mask_hour_total > 0.0 ? mask_change_total / mask_hour_total : 0.0;
-		conf.test_mask_hourtotal = mask_hour_total;
+		SimCore sc;
+		sc.limit_begin		= area.test0_begin;
+		sc.limit_end		= area.test1_end;
+		sc.lightweight		= true;
+		sc.single_source	= conf.symbol;
+		sc.active_label		= active_label;
 		
-		succ_change_total -= 1.0;
-		conf.test_succ_valuefactor = succ_change_total;
-		conf.test_succ_valuehourfactor = succ_hour_total > 0.0 ? succ_change_total / succ_hour_total : 0.0;
-		conf.test_succ_hourtotal = succ_hour_total;
+		SimCore::PoleData& data = sc.data[active_label][conf.symbol];
+		data.used_conf.Clear();
+		data.used_conf.Add(&conf);
+		data.used_proc.Clear();
+		data.used_proc.Add(&rf);
 		
-		mult_change_total -= 1.0;
-		conf.test_mult_valuefactor = mult_change_total;
-		conf.test_mult_valuehourfactor = succ_hour_total > 0.0 ? mult_change_total / succ_hour_total : 0.0;
-		conf.test_mult_hourtotal = succ_hour_total;
+		sc.Process();
 		
-		#if 0
-		LOG("Processing took " << proc_ts.ToString());
-		DUMP(conf.test_mask_valuefactor);
-		DUMP(conf.test_mask_valuehourfactor);
-		DUMP(conf.test_mask_hourtotal);
-		DUMP(conf.test_succ_valuefactor);
-		DUMP(conf.test_succ_valuehourfactor);
-		DUMP(conf.test_succ_hourtotal);
-		#endif
+		data.used_conf.Detach(0);
+		data.used_proc.Detach(0);
 		
-		conf.is_processed = true;
+		conf.test_valuefactor		= sc.valuefactor;
+		conf.test_valuehourfactor	= sc.valuehourfactor;
+		conf.test_hourtotal			= sc.hourtotal;
 	}
 	
+	conf.is_processed = true;
 	
 	rf.lock.Leave();
 }
 
-void ExpertSystem::UpdateRealTimeConfs() {
-	used_conf.SetCount(0);
-	
-	// Find useful sources for every symbol
-	// Skip source if it overlaps too much with already used sources
-	int conf_count = acc_list.GetCount();
-	for(int i = 0; i < SYM_COUNT; i++) {
-		VectorMap<int, double> useful_list;
-		for(int j = 0; j < conf_count; j++) {
-			const AccuracyConf& conf = acc_list[j];
-			if (conf.is_processed && conf.symbol == i &&
-				conf.test_mult_valuehourfactor > 0)
-				useful_list.Add(j, conf.test_mult_valuehourfactor);
-		}
-		
-		SortByValue(useful_list, StdGreater<double>());
-		
-		// Mask based method might give too little active sources
-		#if 0
-		VectorBool existing_mask;
-		for(int j = 0; j < useful_list.GetCount(); j++) {
-			int conf_id = useful_list.GetKey(j);
-			AccuracyConf& conf = acc_list[conf_id];
-			
-			VectorBool active_mask;
-			active_mask = conf.real_mask;
-			active_mask.SetCount(conf.real_succ.GetCount());
-			active_mask.And(conf.real_succ);
-			
-			if (existing_mask.GetCount() == 0) {
-				existing_mask = active_mask;
-				used_conf.Add(conf_id);
-			} else {
-				active_mask.SetCount(existing_mask.GetCount());
-				double overlap_factor = existing_mask.GetOverlapFactor(active_mask);
-				if (overlap_factor < 0.2) {
-					existing_mask.Or(active_mask);
-					used_conf.Add(conf_id);
-				}
-			}
-		}
-		#else
-		int max_count = 5;
-		if (useful_list.GetCount() > max_count)
-			useful_list.Remove(max_count, useful_list.GetCount() - max_count);
-		for(int j = 0; j < useful_list.GetCount(); j++)
-			used_conf.Add(useful_list.GetKey(j));
-		#endif
-	}
-	
-	last_update = GetSysTime();
-	
-	if (!training_running && training_stopped)
-		StoreThis();
-}
 
 void ExpertSystem::MainReal() {
 	Time now				= GetSysTime();
@@ -725,12 +697,6 @@ void ExpertSystem::MainReal() {
 	now.second				= 0;
 	MetaTrader& mt			= GetMetaTrader();
 	
-	
-	if (used_conf.IsEmpty() || last_update < (now - 4*60*60) || forced_update) {
-		UpdateRealTimeConfs();
-		if (used_conf.IsEmpty())
-			return;
-	}
 	
 	if (!forced_update) {
 		
@@ -781,72 +747,8 @@ void ExpertSystem::MainReal() {
 	sys_lock.LeaveWrite();
 	
 	
-	WhenInfo("Refreshing used configurations");
-	CoWork co;
-	co.SetPoolSize(GetUsedCpuCores());
-	rt_lock.EnterRead();
-	processed_used_conf = 0;
-	for(int i = 0; i < used_conf.GetCount(); i++) {
-		int conf_id = used_conf[i];
-		co & [=] {
-			ProcessAccuracyConf(acc_list[conf_id], true);
-			processed_used_conf++;
-		};
-	}
-	co.Finish();
-	rt_lock.LeaveRead();
-	
-	
 	WhenInfo("Updating test broker");
-	last_test_equity.SetCount(data_count, 0);
-	last_test_spreadcost.SetCount(data_count, 0);
-	test_broker.Reset();
-	for(int i = 0; i < data_count; i++) {
-		test_broker.RefreshOrders(i);
-		
-		double equity = test_broker.AccountEquity();
-		double spread_cost = test_broker.GetSpreadCost(i);
-		last_test_equity[i] = equity;
-		last_test_spreadcost[i] = spread_cost;
-		
-		bool sym_used[SYM_COUNT];
-		for(int j = 0; j < SYM_COUNT; j++)
-			sym_used[j] = false;
-		
-		for(int j = 0; j < used_conf.GetCount(); j++) {
-			const AccuracyConf& conf = acc_list[used_conf[j]];
-			
-			// Use best source which is masked for using
-			if (sym_used[conf.symbol]) continue;
-			if (!conf.pred_mask.Get(i)) continue;
-			if (!conf.pred_succ.Get(i)) continue;
-			sym_used[conf.symbol] = true;
-			
-			
-			// Get signal
-			int signal;
-			/*if (!conf.pred_succ.Get(i))
-				signal = 0;
-			else */{
-				double succ_mult_prob = conf.mult_prob[i] / 255.0;
-				int mult = succ_mult_prob * MULT_MAX + 0.5;
-				signal = (conf.label == false ? +1 : -1) * mult;
-			}
-			
-			
-			// Put signal to simbroker
-			if (signal == test_broker.GetSignal(conf.symbol) && signal != 0)
-				test_broker.SetSignalFreeze(conf.symbol, true);
-			else {
-				test_broker.SetSignal(conf.symbol, signal);
-				test_broker.SetSignalFreeze(conf.symbol, false);
-			}
-		}
-		
-		test_broker.Cycle(i);
-	}
-	test_broker.CloseAll(data_count-1);
-	
+	simcore.Process();
 	
 	
 	WhenInfo("Updating MetaTrader");
@@ -864,7 +766,7 @@ void ExpertSystem::MainReal() {
 		mt.RefreshLimits();
 		for (int i = 0; i < sys.sym_ids.GetCount(); i++) {
 			int sym = sys.sym_ids[i];
-			int sig = test_broker.GetSignal(i);
+			int sig = simcore.test_broker.GetSignal(i);
 	
 			if (sig == mt.GetSignal(sym) && sig != 0)
 				mt.SetSignalFreeze(sym, true);
@@ -916,6 +818,331 @@ void ExpertSystem::Data() {
 	catch (...) {
 		
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SimCore::SimCore() {
+	Reset();
+}
+
+void SimCore::Reset() {
+	cursor = 0;
+	test_broker.Reset();
+	active_count = 0;
+	for(int i = 0; i < SYM_COUNT; i++) {
+		sector_logic[i].Reset();
+		succ_logic  [i].Reset();
+		mult_logic  [i].Reset();
+	}
+}
+
+void SimCore::Process() {
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
+	
+	bool only_single_source = single_source != -1;
+	if (only_single_source) {
+		ASSERT(single_source >= 0 && single_source < SYM_COUNT);
+		sector_logic[single_source].BasicConfiguration(active_label);
+		succ_logic  [single_source].BasicConfiguration(active_label);
+		mult_logic  [single_source].BasicConfiguration(active_label);
+		mult_logic  [single_source].result_max = MULT_MAX;
+		mult_logic  [single_source].average_period = 30;
+	} else {
+		/*for(int i = 0; i < SYM_COUNT; i++) {
+			
+		}*/
+		Panic("TODO");
+	}
+	
+	if (!test_broker.init) {
+		sys.SetFixedBroker(test_broker);
+		
+		for(int i = 0; i < 2; i++) {
+			if (only_single_source && i != active_label)
+				continue;
+			for(int j = 0; j < SYM_COUNT; j++) {
+				if (only_single_source && j != single_source)
+					continue;
+				
+				int count = data[i][j].used_proc.GetCount();
+				ASSERT(count == data[i][j].used_conf.GetCount());
+				bufs[i][j].SetCount(count);
+				for(int k = 0; k < count; k++) {
+					const AccuracyConf& conf = data[i][j].used_conf[k];
+					ConstBufferSource& buf = bufs[i][j][k];
+					
+					esys.FillBufferSource(conf, buf, 0);
+					
+					ConstBufferSourceIter& iter = iters[i][j].Add(new ConstBufferSourceIter(buf));
+					iter.Seek(cursor);
+				}
+			}
+		}
+	}
+	
+	int data_count = sys.GetCountMain();
+	
+	if (!lightweight) {
+		last_test_equity.SetCount(data_count, 0);
+		last_test_spreadcost.SetCount(data_count, 0);
+	}
+	
+	int sym_mult[SYM_COUNT];
+	for(int i = 0; i < SYM_COUNT; i++)
+		sym_mult[i] = 1;
+	
+	int cursor_end = data_count;
+	if (cursor < limit_begin)		cursor = limit_begin;
+	if (cursor_end > limit_end)		cursor_end = limit_end;
+	
+	for (int sym = 0; sym < SYM_COUNT; sym++) {
+		sector_logic	[sym].cursor = cursor;
+		succ_logic		[sym].cursor = cursor;
+		mult_logic		[sym].cursor = cursor;
+	}
+	
+	for (; cursor < cursor_end; cursor++) {
+		test_broker.RefreshOrders(cursor);
+		
+		if (!lightweight) {
+			double equity = test_broker.AccountEquity();
+			double spread_cost = test_broker.GetSpreadCost(cursor);
+			last_test_equity[cursor] = equity;
+			last_test_spreadcost[cursor] = spread_cost;
+		}
+		
+		
+		int active_symbols = 0;
+		
+		
+		for (int sym = 0; sym < SYM_COUNT; sym++) {
+			if (only_single_source && single_source != sym)
+				continue;
+			
+			LocalProbLogic& sector_logic	= this->sector_logic[sym];
+			LocalProbLogic& succ_logic		= this->succ_logic[sym];
+			LocalProbLogic& mult_logic		= this->mult_logic[sym];
+			
+			for (int p = 0; p < 2; p++) {
+				PoleData& data = this->data[p][sym];
+				ASSERT(data.used_proc.GetCount() <= LOCALPROB_DEPTH);
+				for(int i = 0; i < data.used_proc.GetCount(); i++) {
+					const ConfProcessor& proc		= data.used_proc[i];
+					const AccuracyConf& conf		= data.used_conf[i];
+					ConstBufferSourceIter& iter		= iters[p][sym][i];
+					
+					
+					double sector_prob_av = 0.0;
+					ASSERT(conf.ext > 0);
+					for(int j = 0; j < conf.ext; j++)
+						sector_prob_av += Upp::max(0.0, Upp::min(1.0, proc.sector[j].forest.PredictOne(iter)));
+					sector_prob_av /= conf.ext;
+					sector_logic.SetSource(p, i, sector_prob_av);
+					
+					
+					double succ_prob = Upp::max(0.0, Upp::min(1.0, proc.succ.forest.PredictOne(iter)));
+					succ_logic.SetSource(p, i, succ_prob);
+					
+					
+					double mult_prob = Upp::max(0.0, Upp::min(1.0, proc.mult.forest.PredictOne(iter)));
+					mult_logic.SetSource(p, i, mult_prob);
+				}
+			}
+			
+			ASSERT(sector_logic.cursor == cursor);
+			ASSERT(succ_logic.cursor == cursor);
+			ASSERT(mult_logic.cursor == cursor);
+			sector_logic.round_checked = true;
+			succ_logic.round_checked = true;
+			mult_logic.round_checked = true;
+			int active_sector	= sector_logic.GetResult();
+			int active_succ		= succ_logic.GetResult();
+			int active_mult		= mult_logic.GetResult();
+			
+			
+			int signal = 0;
+			if (active_sector && active_sector == active_succ) {
+				active_symbols++;
+				int mult;
+				if (active_sector > 0)	mult = +Upp::max(+1, active_mult);
+				else					mult = -Upp::min(-1, active_mult);
+				signal = active_sector * mult;
+			}
+			
+			
+			int prev_signal = test_broker.GetSignal(sym);
+			if (signal == prev_signal && signal != 0)
+				test_broker.SetSignalFreeze(sym, true);
+			else {
+				test_broker.SetSignal(sym, signal);
+				test_broker.SetSignalFreeze(sym, false);
+			}
+		}
+		
+		if (only_single_source) {
+			for(int i = 0; i < iters[active_label][single_source].GetCount(); i++)
+				iters[active_label][single_source][i]++;
+		} else {
+			for (int p = 0; p < 2; p++)
+				for (int sym = 0; sym < SYM_COUNT; sym++)
+					for(int i = 0; i < iters[p][sym].GetCount(); i++)
+						iters[p][sym][i]++;
+		}
+		
+		if (active_symbols > 0)
+			active_count++;
+		
+		test_broker.Cycle(cursor);
+	}
+	
+	
+	hourtotal = active_count / 60.0;
+	valuefactor = test_broker.AccountEquity() / test_broker.begin_equity;
+	valuehourfactor = valuefactor / hourtotal;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LocalProbLogic::LocalProbLogic() {
+	Reset();
+}
+
+void LocalProbLogic::SetSource(bool pole, int buf, double prob) {
+	ASSERT(buf >= 0 && buf < LOCALPROB_DEPTH);
+	ASSERT(prob >= 0.0 && prob <= 1.0);
+	src_buf[pole][buf] = prob;
+}
+
+int LocalProbLogic::GetResult() {
+	ASSERT(round_checked); // a safety measure
+	ASSERT(trend_period >= 0 && trend_period < (max_trend_period-1));
+	ASSERT(average_period >= 1 && average_period < max_average_period);
+	ASSERT(max_depth[0] > 0 || max_depth[1] > 0);
+	
+	double single_prob = 0;
+	
+	for (int p = 0; p < 2; p++) {
+		if (single_source && active_label != p) continue;
+		
+		double weightedprob_sum = 0.0, weight_sum = 0.0;
+		for(int i = 0; i < LOCALPROB_DEPTH && i < max_depth[p]; i++) {
+			double prob = src_buf[p][i];
+			double weight = src_weight[p][i];
+			double weightedprob = weight * prob;
+			weightedprob_sum += weightedprob;
+			weight_sum += weight;
+		}
+		double prob_av = weightedprob_sum / weight_sum;
+		
+		double val = p == 0 ? prob_av : 1.0 - prob_av;
+		if (!single_source)		single_prob += val * 0.5;
+		else					single_prob  = val;
+	}
+	
+	
+	// Add single value to the buffer
+	int buf_cursor = cursor % max_trend_period;
+	if (empty_buf) {
+		for(int i = 0; i < LOCALPROB_BUFSIZE; i++)
+			src_avbuf[i] = single_prob;
+		empty_buf = false;
+	} else {
+		src_avbuf[buf_cursor] = single_prob;
+	}
+	
+	
+	// Use average
+	double sector_prob;
+	if (average_period > 1) {
+		double prob_sum = 0;
+		for(int i = 0; i < average_period; i++) {
+			int buf_pos = buf_cursor - i;
+			if (buf_pos < 0) buf_pos += max_trend_period;
+			prob_sum += src_avbuf[buf_pos];
+		}
+		sector_prob = prob_sum / average_period;
+	} else {
+		sector_prob = single_prob;
+	}
+	
+	
+	// Use trend change
+	double trend_change_sum = 0;
+	if (trend_period) {
+		for(int i = 0; i < trend_period; i++) {
+			int buf_pos0 = buf_cursor - i;
+			if (buf_pos0 < 0) buf_pos0 += max_trend_period;
+			int buf_pos1 = buf_pos0 - 1;
+			if (buf_pos1 < 0) buf_pos1 += max_trend_period;
+			double change = src_avbuf[buf_pos0] - src_avbuf[buf_pos1];
+			trend_change_sum += change;
+		}
+		ASSERT(trend_multiplier > 0 && trend_multiplier < 100);
+		trend_change_sum = trend_change_sum / trend_period * trend_multiplier;
+		sector_prob += trend_change_sum;
+	}
+	
+	
+	// Use limits for activation
+	ASSERT(sector_limit >= 0.0 && sector_limit <= 0.50);
+	double part;
+	int mul;
+	if (sector_prob >= 0.50) {
+		mul = +1;
+		part = 1.0 - sector_prob;
+		if (single_source && active_label != false) mul = 0;
+	} else {
+		mul = -1;
+		part = sector_prob;
+		if (single_source && active_label != true)  mul = 0;
+	}
+	bool active_sector = part <= sector_limit;
+	
+	
+	// Result value
+	ASSERT(result_max >= 1);
+	int result = mul * active_sector * result_max;
+	
+	cursor++;
+	round_checked = false;
+	return result;
 }
 
 }

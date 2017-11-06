@@ -35,6 +35,16 @@ public:
 	
 };
 
+class ExpertGroupOptimizerCtrl : public ParentCtrl {
+	
+public:
+	typedef ExpertGroupOptimizerCtrl CLASSNAME;
+	ExpertGroupOptimizerCtrl();
+	
+	void Data();
+	
+};
+
 class ExpertRealCtrl : public ParentCtrl {
 	Label last_update;
 	Button refresh_now;

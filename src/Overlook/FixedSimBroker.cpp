@@ -23,6 +23,7 @@ void FixedSimBroker::Reset() {
 	}
 	for(int i = 0; i < MAX_ORDERS; i++)
 		order[i].is_open = false;
+	init = false;
 }
 
 double FixedSimBroker::RealtimeBid(int pos, int sym_id) const {
@@ -212,6 +213,7 @@ double FixedSimBroker::GetMargin(int pos, int sym_id, double volume) {
 	#endif
 	
 	ASSERT(volume == 0.0 || used_margin > 0.0);
+	ASSERT(IsFin(used_margin));
 	return used_margin;
 }
 
@@ -309,6 +311,8 @@ bool FixedSimBroker::Cycle(int pos) {
 		double sell_lots = (double)sell_signals[i] / (double)min_sig * 0.01;
 		double buy_used_margin = GetMargin(pos, i, buy_lots);
 		double sell_used_margin = GetMargin(pos, i, sell_lots);
+		ASSERT(IsFin(buy_used_margin));
+		ASSERT(IsFin(sell_used_margin));
 		minimum_margin_sum += buy_used_margin;
 		minimum_margin_sum += sell_used_margin;
 		active_symbols++;

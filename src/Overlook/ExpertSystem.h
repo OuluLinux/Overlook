@@ -27,6 +27,7 @@ struct ConfProcessor {
 	}
 };
 
+
 class LocalProbLogic {
 	
 public:
@@ -37,7 +38,6 @@ public:
 	int trend_period = 0;
 	int average_period = 0;
 	int result_max = 1;
-	int cursor = 0;
 	int trend_multiplier = 3;
 	bool single_source = false;
 	bool active_label = false;
@@ -51,6 +51,7 @@ public:
 	const int max_average_period = LOCALPROB_BUFSIZE;
 	bool round_checked = false;
 	bool empty_buf = true;
+	ConstInt* cursor_ptr = NULL;
 	
 public:
 	LocalProbLogic();
@@ -59,7 +60,6 @@ public:
 	void SetSource(bool pole, int buf, double prob);
 	
 	void Reset() {
-		cursor = 0;
 		empty_buf = true;
 		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
 			src_buf[0][i] = 0;
@@ -78,7 +78,6 @@ public:
 		trend_period = 0;
 		average_period = 5;
 		result_max = 1;
-		cursor = 0;
 		trend_multiplier = 3;
 		single_source = true;
 		active_label = active_label;
@@ -87,7 +86,7 @@ public:
 	void Serialize(Stream& s) {
 		s % sector_limit % max_depth[0] % max_depth[1]
 		  % trend_period % average_period % result_max
-		  % cursor % trend_multiplier % single_source % active_label;
+		  % trend_multiplier % single_source % active_label;
 	}
 	
 };
@@ -273,10 +272,15 @@ public:
 	LocalProbLogic					sector_logic[SYM_COUNT];
 	LocalProbLogic					succ_logic[SYM_COUNT];
 	LocalProbLogic					mult_logic[SYM_COUNT];
+	int								mult_freeze_remaining[SYM_COUNT];
+	int								mult_freeze_value[SYM_COUNT];
 	double hourtotal = 0.0, valuefactor = 0.0, valuehourfactor = 0.0;
+	double fixed_mult_factor = 0.0;
+	int fixed_mult = 1;
 	int limit_begin = INT_MIN, limit_end = INT_MAX;
 	int active_count = 0;
 	int single_source = -1;
+	int mult_freeze_period = INT_MAX;
 	bool active_label = false;
 	
 	// Temp
@@ -296,10 +300,10 @@ public:
 	void Process();
 	void Serialize(Stream& s) {
 		for(int i = 0; i < SYM_COUNT; i++) {
-			s %  data[0][i] %  data[1][i]
-			  % sector_logic[i] % succ_logic[i] % mult_logic[i];
+			s % data[0][i] % data[1][i]
+			  % sector_logic[i] % succ_logic[i] % mult_logic[i] % mult_freeze_remaining[i] % mult_freeze_value[i];
 		}
-		s % hourtotal % valuefactor % valuehourfactor
+		s % hourtotal % valuefactor % valuehourfactor % fixed_mult_factor % fixed_mult
 		  % limit_begin % limit_end % active_count % single_source % active_label;
 	}
 	

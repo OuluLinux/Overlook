@@ -212,8 +212,10 @@ void MovingAverage::Start() {
 	Buffer& buffer = GetBuffer(0);
 	VectorBool& label = outputs[0].label;
 	label.SetCount(bars);
+	SetSafetyLimit(ma_counted-1);
 	double prev = ma_counted > 0 ? buffer.Get(ma_counted-1) : 0.0;
 	for(int i = ma_counted; i < bars; i++) {
+		SetSafetyLimit(i);
 		double cur = buffer.Get(i);
 		bool label_value = cur < prev;
 		label.Set(i, label_value);

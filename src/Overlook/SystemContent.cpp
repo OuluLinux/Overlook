@@ -80,7 +80,7 @@ void System::InitContent() {
 	ASSERTUSER_(sym_ids.GetCount() == SYM_COUNT, "All required forex instruments weren't shown in the mt4: " + not_found);
 	
 	
-	main_tf = FindPeriod(1);
+	main_tf = FindPeriod(MAIN_PERIOD_MINUTES);
 	ASSERT(main_tf != -1);
 	
 	
@@ -91,13 +91,12 @@ void System::InitContent() {
 	int ma_id		= Find<MovingAverage>();
 	int mom_id		= Find<Momentum>();
 	for(int i = 0; i < TF_COUNT; i++) {
-		// tfs: 4, 8, 16, 32, 64
-		int period = (1 << (3 + i));
+		int period = (1 << (1 + i));
 		indi_ids.Add().Set(volav_id).AddArg(period);
 		indi_ids.Add().Set(osma_id).AddArg(period).AddArg(period*2).AddArg(period);
 		indi_ids.Add().Set(stoch_id).AddArg(period);
 		
-		label_indi_ids.Add().Set(zz_id).AddArg(period).AddArg(period);
+		label_indi_ids.Add().Set(zz_id).AddArg(period).AddArg(period).AddArg(Upp::max(1, period/2));
 		label_indi_ids.Add().Set(ma_id).AddArg(period).AddArg(-period/2);
 		label_indi_ids.Add().Set(mom_id).AddArg(period).AddArg(-period/2);
 	}
@@ -395,9 +394,9 @@ void System::ResetLabelBuffers() {
 		ac.SetLoading();
 		ci.core->IO(ac);
 		ASSERT(ac.args.GetCount() >= ci.args.GetCount());
-		for (int i = 0; i < ci.args.GetCount(); i++) {
-			int a = ac.args[i];
-			int b = ci.args[i];
+		for (int j = 0; j < ci.args.GetCount(); j++) {
+			int a = ac.args[j];
+			int b = ci.args[j];
 			if (a != b) {
 				LOG(Format("%d != %d", a, b));
 			}

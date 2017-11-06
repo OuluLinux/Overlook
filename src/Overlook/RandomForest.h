@@ -21,12 +21,9 @@ public:
 class ConstBufferSourceIter {
 	typedef const ConstBufferSource ConstConstBufferSource;
 	ConstConstBufferSource* src;
-	int cur = 0;
+	ConstInt* cursor_ptr = NULL;
 public:
-	ConstBufferSourceIter(const ConstBufferSource& src);
-	
-	void operator++(int i);
-	void Seek(int i);
+	ConstBufferSourceIter(const ConstBufferSource& src, ConstInt* cursor_ptr);
 	
 	double operator[](int i) const;
 	

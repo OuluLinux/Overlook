@@ -14,12 +14,14 @@ namespace Overlook {
 using namespace Upp;
 
 // These values are constant in the working product.
+#define MAIN_PERIOD_MINUTES		15
+#define ONLY_M1_SOURCE			1
 #define DECISION_DD_LEVEL		0.1
 #define SECTOR_2EXP				1
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
-#define TF_COUNT				8
+#define TF_COUNT				6
 #define TRUEINDI_COUNT			3
 #define LABELINDI_COUNT			3
 #define MULT_MAXSCALES			3
@@ -40,6 +42,8 @@ using namespace Upp;
 
 class AgentGroup;
 class Agent;
+
+typedef const int ConstInt;
 
 enum {
 	PHASE_TRAINING,

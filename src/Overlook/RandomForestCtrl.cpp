@@ -29,7 +29,8 @@ void RandomForestCtrl::Paint(Draw& w) {
 	src.SetDepth(depth);
 	for(int i = 0; i < buf.GetCount(); i++)
 		src.SetSource(i, buf[i]);
-	ConstBufferSourceIter iter(src);
+	int cursor = 0;
+	ConstBufferSourceIter iter(src, &cursor);
 	
 	buf[2].Set(0, d0);
 	buf[3].Set(0, d1);

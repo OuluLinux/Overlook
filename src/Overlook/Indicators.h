@@ -658,10 +658,10 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
-			% Arg("depth", input_depth, 2)
-			% Arg("deviation", input_depth, 2)
-			% Arg("backstep", input_backstep, 2, 16)
-			% Arg("level", extremum_level, 2, 16);
+			% Arg("depth", input_depth, 1)
+			% Arg("deviation", input_depth, 1)
+			% Arg("backstep", input_backstep, 1)
+			% Arg("level", extremum_level, 2);
 	}
 };
 

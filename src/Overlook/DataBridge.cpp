@@ -41,12 +41,18 @@ void DataBridge::Start() {
 	int cur_count = mt.GetCurrencyCount();
 	int sym = GetSymbol();
 	int cur = sym - sym_count;
+	int mt_period = GetPeriod() * GetSystem().GetBasePeriod() / 60;
 	
 	// Regular symbols
+	#if ONLY_M1_SOURCE
+	if (mt_period > 1) {
+		RefreshFromFaster();
+	} else
+	#endif
+
 	if (sym < sym_count) {
 		bool init_round = GetCounted() == 0;
 		if (init_round) {
-			int mt_period = GetPeriod() * GetSystem().GetBasePeriod() / 60;
 			const Symbol& mtsym = mt.GetSymbol(sym);
 			bool use_internet_data =
 				Config::use_internet_m1_data &&
@@ -385,20 +391,20 @@ void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
 		//TODO: endian swap in big endian machines
 		
 		if (!old_filetype) {
-			time  = *((uint64*)current);		current += 8;
-			open  = *((double*)current);		current += 8;
-			high  = *((double*)current);		current += 8;
-			low   = *((double*)current);		current += 8;
-			close = *((double*)current);		current += 8;
+			time  = *((uint64*)current);			current += 8;
+			open  = *((double*)current);			current += 8;
+			high  = *((double*)current);			current += 8;
+			low   = *((double*)current);			current += 8;
+			close = *((double*)current);			current += 8;
 			tick_volume  = *((int64*)current);		current += 8;
 			spread       = *((int32*)current);		current += 4;
 			real_volume  = *((int64*)current);		current += 8;
 		} else {
-			time  = *((int64*)current);			current += 4;
-			open  = *((double*)current);		current += 8;
-			high  = *((double*)current);		current += 8;
-			low   = *((double*)current);		current += 8;
-			close = *((double*)current);		current += 8;
+			time  = *((int64*)current);				current += 4;
+			open  = *((double*)current);			current += 8;
+			high  = *((double*)current);			current += 8;
+			low   = *((double*)current);			current += 8;
+			close = *((double*)current);			current += 8;
 			tick_volume  = *((double*)current);		current += 8;
 			spread       = 0;
 			real_volume  = 0;
@@ -879,7 +885,6 @@ void DataBridge::RefreshBasket() {
 	Buffer& low    = GetBuffer(1);
 	Buffer& high   = GetBuffer(2);
 	Buffer& volume = GetBuffer(3);
-	Buffer& spread = GetBuffer(4);
 	
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
@@ -929,7 +934,7 @@ void DataBridge::RefreshBasket() {
 		int day_of_week = DayOfWeek(t);
 		
 		// Continue from previous value
-		double value = 1.0, low_value = 1.0, high_value = 1.0, volume_value = 0.0, spread_value = 0.0;
+		double value = 1.0, low_value = 1.0, high_value = 1.0, volume_value = 0.0;
 		if (i > 1) {
 			
 			// Get changes from every symbol in the timeslot
@@ -948,14 +953,11 @@ void DataBridge::RefreshBasket() {
 				low_mul += src_low.Get(i-1) / src_open.Get(i-1) - 1.0;
 				high_mul += src_high.Get(i-1) / src_open.Get(i-1) - 1.0;
 				volume_value += src_vol.Get(i);
-				double spread_value = src_sprd.Get(i);
-				spread_mul += (open_value + spread_value) / open_value - 1.0;
 			}
 			// Get average
 			mul /= symbols.GetCount();
 			low_mul /= symbols.GetCount();
 			high_mul /= symbols.GetCount();
-			spread_mul /= symbols.GetCount();
 			
 			// Calculate new values
 			value = prev * (1.0 + mul);
@@ -963,15 +965,76 @@ void DataBridge::RefreshBasket() {
 			high_value = prev * (1.0 + high_mul);
 			low.Set(prev_pos, low_value);
 			high.Set(prev_pos, high_value);
-			spread_value = (value * (spread_mul + 1.0)) - value;
-			if (spread_value < 0.0) spread_value = 0.0; // Some very small rounding errors
 			ASSERT(value > 0.0);
 		}
 		open.Set(i, value);
 		low.Set(i, value);
 		high.Set(i, value);
 		volume.Set(i, volume_value);
-		spread.Set(i, spread_value);
+	}
+}
+
+void DataBridge::RefreshFromFaster() {
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	int sym = GetSymbol();
+	int tf = GetTf();
+	ASSERT(tf > 0);
+	
+	DataBridge& m1_db = dynamic_cast<DataBridge&>(*GetInputCore(0, sym, 0));
+	ConstBuffer& src_open = m1_db.GetBuffer(0);
+	ConstBuffer& src_low  = m1_db.GetBuffer(1);
+	ConstBuffer& src_high = m1_db.GetBuffer(2);
+	ConstBuffer& src_vol  = m1_db.GetBuffer(3);
+	int src_count = src_open.GetCount();
+
+	
+	// Allocate memory
+	ASSERT(bars > 0);
+	SetSafetyLimit(bars);
+	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
+		outputs[0].buffers[i].SetCount(bars);
+	double prev_open = counted ? open.Get(counted-1) : src_open.Get(0);
+	for(int i = counted; i < bars; i++) {
+		open.Set(i, prev_open);
+		low.Set(i, prev_open);
+		high.Set(i, prev_open);
+	}
+	
+	
+	for(int i = counted; i < bars; i++) {
+		int pos = sys.GetShiftTf(tf, 0, i);
+		int nextpos = sys.GetShiftTf(tf, 0, i+1);
+		
+		if ((i % 10) == 0) {
+			sys.WhenSubProgress(i, bars);
+		}
+		
+		SetSafetyLimit(i);
+		
+		double open_value = src_open.Get(pos);
+		double low_value = src_low.Get(pos);
+		double high_value = src_high.Get(pos);
+		double volume_sum = src_vol.Get(pos);
+		
+		for(int j = pos+1; j < nextpos && j < src_count; j++) {
+			low_value  = Upp::min(low_value,  src_low.Get(j));
+			high_value = Upp::max(high_value, src_high.Get(j));
+			volume_sum += src_vol.Get(j);
+		}
+		
+		open.Set(i, open_value);
+		low.Set(i, low_value);
+		high.Set(i, high_value);
+		volume.Set(i, volume_sum);
 	}
 }
 

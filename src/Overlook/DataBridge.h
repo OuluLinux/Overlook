@@ -107,11 +107,22 @@ public:
 	double GetMedianMin() const {return median_min * point;}
 	double GetAverageSpread() const {return spread_mean;}
 	void AddSpread(double a);
+	void RefreshFromFaster();
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		// Add this timeframe
+		
+		// NOTE: breaks a lot of stuff
+		#if ONLY_M1_SOURCE
 		if (in_sym == -1)
+			return in_tf > 0 && out_tf == 0;
+		return in_sym == out_sym;
+		#endif
+		
+		
+		// Add this timeframe
+		if (in_sym == -1) {
 			return in_tf == out_tf;
+		}
 		
 		// Never for regular symbols
 		MetaTrader& mt = GetMetaTrader();

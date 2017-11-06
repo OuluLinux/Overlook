@@ -129,23 +129,39 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 		const RegisterInput& input = reg.in[l];
 		ASSERT(input.factory >= 0);
 		FilterFunction fn = (FilterFunction)input.data;
+		int h = 0;
 		
-		// Get all symbols what input requires
-		sub_sym_ids.Clear();
-		for(int i = 0; i < sym_ids.GetCount(); i++) {
-			int in_sym = sym_ids[i];
-			
-			for(int j = 0; j < GetTotalSymbolCount(); j++) {
-				if (fn(this, in_sym, -1, j, -1))
-					sub_sym_ids.FindAdd(j);
+		// If equal timeframe is accepted as input
+		int used_tf = -1;
+		if (fn(this, -1, tf, -1, tf))
+			used_tf = tf;
+		else {
+			for(int i = 0; i < tf; i++) {
+				if (fn(this, -1, tf, -1, i)) {
+					used_tf = i;
+					break;
+				}
 			}
 		}
 		
-		int h = 0;
-		if (!sub_sym_ids.IsEmpty()) {
-			path.Add().Set(input.factory);
-			h = GetCoreQueue(path, ci_queue, tf, sub_sym_ids);
-			path.Pop();
+		if (used_tf != -1) {
+			
+			// Get all symbols what input requires
+			sub_sym_ids.Clear();
+			for(int i = 0; i < sym_ids.GetCount(); i++) {
+				int in_sym = sym_ids[i];
+				
+				for(int j = 0; j < GetTotalSymbolCount(); j++) {
+					if (fn(this, in_sym, -1, j, -1))
+						sub_sym_ids.FindAdd(j);
+				}
+			}
+			
+			if (!sub_sym_ids.IsEmpty()) {
+				path.Add().Set(input.factory);
+				h = GetCoreQueue(path, ci_queue, used_tf, sub_sym_ids);
+				path.Pop();
+			}
 		}
 		
 		input_hashes.Add(FactoryHash(input.factory, h));
@@ -185,8 +201,8 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 			ci.tf = tf;
 			ci.priority = // lower value is more important
 				
-				// Slowest tf is most important in this system.
-				((tf_count-1-tf) * factory_count +
+				// Faster tf is most important in this system.
+				(tf * factory_count +
 				
 				// Factory might require all symbols, so it is more important than symbol.
 				factory) * sym_count +
@@ -275,7 +291,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 	if (fn) {
 		
 		// Filter timeframes
-		for(int i = tf_count-1; i >= ci.tf; i--) {
+		for(int i = 0; i <= ci.tf; i++) {
 			if (fn(this, -1, ci.tf, -1, i)) {
 				tflist.Add(i);
 			}
@@ -300,12 +316,9 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 		for(int j = 0; j < tflist.GetCount(); j++) {
 			int tf = tflist[j];
 			
-			
 			CoreItem& src_ci = data[sym][tf][factory].GetAdd(hash);
 			ASSERT_(src_ci.sym != -1, "Source CoreItem was not yet initialized");
-			
 			ASSERT_(src_ci.priority <= ci.priority, "Source didn't have higher priority than current");
-			
 			
 			// Source found
 			ci.SetInput(input_id, src_ci.sym, src_ci.tf, src_ci, output_id);

@@ -25,7 +25,7 @@ int cls_hypothesis	= 10;
 const int label_count = LABELINDI_COUNT;
 const int sector_pred_dir_count = 2;
 const int sector_label_count = 4;
-const int period_begin = 5;
+const int period_begin = 3;
 const int fastinput_count = 3;
 const int labelpattern_count = 5;
 int sector_type_count;
@@ -221,10 +221,10 @@ void ExpertSystem::LoadThis() {
 void ForestArea::FillArea(int level, int data_count) {
 	int len;
 	switch (level) {
-		case 0: len = 1 * 5 * 24 * 60; break;
-		case 1: len = 2 * 5 * 24 * 60; break;
-		case 2: len = 4 * 5 * 24 * 60; break;
-		default: len = 8 * 5 * 24 * 60;
+		case 0: len = 1 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		case 1: len = 2 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		case 2: len = 4 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		default: len = 8 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES;
 	}
 	train_begin = Random(data_count - len);
 	train_end = train_begin + len;
@@ -241,10 +241,10 @@ void ForestArea::FillArea(int level, int data_count) {
 }
 
 void ForestArea::FillArea(int data_count) {
-	train_begin		= 24*60;
+	train_begin		= 24*60 / MAIN_PERIOD_MINUTES;
 	train_end		= data_count * 2/3;
 	test0_begin		= train_end;
-	test0_end		= data_count - 1*5*24*60;
+	test0_end		= data_count - 1*5*24*60 / MAIN_PERIOD_MINUTES;
 	test1_begin		= test0_end;
 	test1_end		= data_count;
 }
@@ -320,6 +320,10 @@ void ExpertSystem::MainTraining() {
 void ExpertSystem::MainOptimizing() {
 	
 	Panic("TODO");
+	
+	
+	// - minimum freeze time
+	// - fixed_mult_factor, fixed_mult
 	
 	// Run local optimizer for realtime SimCore
 	if (optimizer.GetRound() == 0) {
@@ -621,7 +625,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 							else
 								change = 1.0 - (cur + spread_point) / open;
 							//bool is_largemult = (change / len) >= (av_change * 1.333);
-							bool is_largemult = (change * 60 / len) >= 0.001;
+							bool is_largemult = (change * (60.0 / MAIN_PERIOD_MINUTES) / len) >= 0.001;
 							if (is_largemult)
 								largemult_count += len;
 							for(int j = prev_pos; j < i; j++)
@@ -635,7 +639,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 			
 			if (part == 0) {
 				av_change /= change_count;
-				conf.av_hour_change = av_change * 60;
+				conf.av_hour_change = av_change * 60 / MAIN_PERIOD_MINUTES;
 			} else {
 				conf.largemult_count = largemult_count;
 				conf.largemult_frac = (double)largemult_count / change_count;
@@ -872,7 +876,7 @@ void SimCore::Process() {
 	}
 	
 	if (!test_broker.init) {
-		sys.SetFixedBroker(test_broker);
+		sys.SetFixedBroker(test_broker, single_source);
 		
 		for(int i = 0; i < 2; i++) {
 			if (only_single_source && i != active_label)
@@ -890,8 +894,7 @@ void SimCore::Process() {
 					
 					esys.FillBufferSource(conf, buf, 0);
 					
-					ConstBufferSourceIter& iter = iters[i][j].Add(new ConstBufferSourceIter(buf));
-					iter.Seek(cursor);
+					ConstBufferSourceIter& iter = iters[i][j].Add(new ConstBufferSourceIter(buf, &cursor));
 				}
 			}
 		}
@@ -904,18 +907,19 @@ void SimCore::Process() {
 		last_test_spreadcost.SetCount(data_count, 0);
 	}
 	
-	int sym_mult[SYM_COUNT];
-	for(int i = 0; i < SYM_COUNT; i++)
-		sym_mult[i] = 1;
+	for(int i = 0; i < SYM_COUNT; i++) {
+		mult_freeze_remaining[i]	= 0;
+		mult_freeze_value[i]		= 0;
+	}
 	
 	int cursor_end = data_count;
 	if (cursor < limit_begin)		cursor = limit_begin;
 	if (cursor_end > limit_end)		cursor_end = limit_end;
 	
 	for (int sym = 0; sym < SYM_COUNT; sym++) {
-		sector_logic	[sym].cursor = cursor;
-		succ_logic		[sym].cursor = cursor;
-		mult_logic		[sym].cursor = cursor;
+		sector_logic	[sym].cursor_ptr = &cursor;
+		succ_logic		[sym].cursor_ptr = &cursor;
+		mult_logic		[sym].cursor_ptr = &cursor;
 	}
 	
 	for (; cursor < cursor_end; cursor++) {
@@ -939,6 +943,8 @@ void SimCore::Process() {
 			LocalProbLogic& sector_logic	= this->sector_logic[sym];
 			LocalProbLogic& succ_logic		= this->succ_logic[sym];
 			LocalProbLogic& mult_logic		= this->mult_logic[sym];
+			int& mult_remaining				= this->mult_freeze_remaining[sym];
+			int& mult_value					= this->mult_freeze_value[sym];
 			
 			for (int p = 0; p < 2; p++) {
 				PoleData& data = this->data[p][sym];
@@ -966,24 +972,28 @@ void SimCore::Process() {
 				}
 			}
 			
-			ASSERT(sector_logic.cursor == cursor);
-			ASSERT(succ_logic.cursor == cursor);
-			ASSERT(mult_logic.cursor == cursor);
-			sector_logic.round_checked = true;
-			succ_logic.round_checked = true;
-			mult_logic.round_checked = true;
-			int active_sector	= sector_logic.GetResult();
-			int active_succ		= succ_logic.GetResult();
-			int active_mult		= mult_logic.GetResult();
+			sector_logic.round_checked			= true;
+			succ_logic.round_checked			= true;
+			mult_logic.round_checked			= true;
+			int active_sector					= sector_logic.GetResult();
+			int active_succ						= succ_logic.GetResult();
+			int active_mult						= mult_logic.GetResult();
 			
 			
 			int signal = 0;
 			if (active_sector && active_sector == active_succ) {
 				active_symbols++;
-				int mult;
-				if (active_sector > 0)	mult = +Upp::max(+1, active_mult);
-				else					mult = -Upp::min(-1, active_mult);
-				signal = active_sector * mult;
+				if (mult_remaining <= 0) {
+					if (active_sector > 0)	mult_value = +Upp::max(+1, active_mult);
+					else					mult_value = -Upp::min(-1, active_mult);
+					mult_value = fixed_mult_factor * fixed_mult + (1.0 - fixed_mult_factor) * mult_value;
+					mult_remaining = mult_freeze_period;
+				} else {
+					mult_remaining--;
+				}
+				signal = active_sector * mult_value;
+			} else {
+				mult_remaining = 0;
 			}
 			
 			
@@ -996,26 +1006,18 @@ void SimCore::Process() {
 			}
 		}
 		
-		if (only_single_source) {
-			for(int i = 0; i < iters[active_label][single_source].GetCount(); i++)
-				iters[active_label][single_source][i]++;
-		} else {
-			for (int p = 0; p < 2; p++)
-				for (int sym = 0; sym < SYM_COUNT; sym++)
-					for(int i = 0; i < iters[p][sym].GetCount(); i++)
-						iters[p][sym][i]++;
-		}
 		
 		if (active_symbols > 0)
 			active_count++;
+		
 		
 		test_broker.Cycle(cursor);
 	}
 	
 	
-	hourtotal = active_count / 60.0;
+	hourtotal = active_count * MAIN_PERIOD_MINUTES / 60.0;
 	valuefactor = test_broker.AccountEquity() / test_broker.begin_equity;
-	valuehourfactor = valuefactor / hourtotal;
+	valuehourfactor = hourtotal > 0.0 ? valuefactor / hourtotal : 0.0;
 }
 
 
@@ -1078,7 +1080,7 @@ int LocalProbLogic::GetResult() {
 	
 	
 	// Add single value to the buffer
-	int buf_cursor = cursor % max_trend_period;
+	int buf_cursor = *cursor_ptr % max_trend_period;
 	if (empty_buf) {
 		for(int i = 0; i < LOCALPROB_BUFSIZE; i++)
 			src_avbuf[i] = single_prob;
@@ -1140,7 +1142,6 @@ int LocalProbLogic::GetResult() {
 	ASSERT(result_max >= 1);
 	int result = mul * active_sector * result_max;
 	
-	cursor++;
 	round_checked = false;
 	return result;
 }

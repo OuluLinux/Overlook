@@ -37,9 +37,10 @@ double RandomForest::PredictOne(const ConstBufferSourceIter& iter) const {
 void RandomForest::Predict(const ConstBufferSource& data, Vector<double>& probabilities) {
 	probabilities.SetCount(data.GetCount());
 	
-	ConstBufferSourceIter iter(data);
-	for (int i = 0; i < data.GetCount(); i++, iter++) {
-		probabilities[i] = PredictOne(iter);
+	int cursor = 0;
+	ConstBufferSourceIter iter(data, &cursor);
+	for (; cursor < data.GetCount(); cursor++) {
+		probabilities[cursor] = PredictOne(iter);
 	}
 }
 
@@ -72,7 +73,8 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	models.SetCount(internal_count);
 	
 	// train
-	ConstBufferSourceIter iter(data);
+	int cursor = 0;
+	ConstBufferSourceIter iter(data, &cursor);
 	for (int n = 0; n < internal_count; n++) {
 
 		// few base cases
@@ -105,14 +107,13 @@ void DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 				continue;
 			for(uint64 k = 0; k < 64; k++) {
 				if (*it & (1ULL << k)) {
-					int pos = j + k;
+					cursor = j + k;
 					ASSERT(loop_label_count++ < N);
-					iter.Seek(pos);
 					bool label = Decision2DStumpTest(iter, model);
 					if (label)
-						ixleft.Set(pos, true);
+						ixleft.Set(cursor, true);
 					else
-						ixright.Set(pos, true);
+						ixright.Set(cursor, true);
 				}
 			}
 		}
@@ -353,22 +354,14 @@ double ConstBufferSource::Get(int pos, int depth) const {
 
 
 
-ConstBufferSourceIter::ConstBufferSourceIter(const ConstBufferSource& src) :
-	src(&src)
+ConstBufferSourceIter::ConstBufferSourceIter(const ConstBufferSource& src, ConstInt* cursor_ptr) :
+	src(&src), cursor_ptr(cursor_ptr)
 {
 	
 }
 
-void ConstBufferSourceIter::operator++(int i) {
-	cur++;
-}
-
-void ConstBufferSourceIter::Seek(int i) {
-	cur = i;
-}
-
 double ConstBufferSourceIter::operator[](int i) const {
-	return src->bufs[i]->Get(cur);
+	return src->bufs[i]->Get(*cursor_ptr);
 }
 
 
@@ -401,7 +394,10 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 	
 	int label_count = real_label.GetCount();
 	predicted_label.SetCount(label_count).Zero();
-	ConstBufferSourceIter iter(bufs);
+	
+	int cursor = 0;
+	ConstBufferSourceIter iter(bufs, &cursor);
+	
 	int train_correct_count = 0, train_total_count = 0;
 	int test0_correct_count = 0, test0_total_count = 0;
 	int test1_correct_count = 0, test1_total_count = 0;
@@ -411,28 +407,27 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 	for(int64 pos = 0; it != end; it++, pos += 64) {
 		if (*it == 0)
 			continue;
-		int64 i = pos;
-		iter.Seek(i);
-		for(int j = 0; i < label_count && j < 64; i++, j++, iter++) {
+		cursor = pos;
+		for(int j = 0; cursor < label_count && j < 64; cursor++, j++) {
 			double prob = forest.PredictOne(iter);
 			bool label = prob > 0.5;
 			if (label)
-				predicted_label.Set(i, true);
+				predicted_label.Set(cursor, true);
 			
 			if (*it & (1ULL < j)) {
-				bool match = label == real_label.Get(i);
+				bool match = label == real_label.Get(cursor);
 				
-				if (i >= area.train_begin && i < area.train_end) {
+				if (cursor >= area.train_begin && cursor < area.train_end) {
 					if (match)
 						train_correct_count++;
 					train_total_count++;
 				}
-				else if (i >= area.test0_begin && i < area.test0_end) {
+				else if (cursor >= area.test0_begin && cursor < area.test0_end) {
 					if (match)
 						test0_correct_count++;
 					test0_total_count++;
 				}
-				else if (i >= area.test1_begin && i < area.test1_end) {
+				else if (cursor >= area.test1_begin && cursor < area.test1_end) {
 					if (match)
 						test1_correct_count++;
 					test1_total_count++;

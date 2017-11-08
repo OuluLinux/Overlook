@@ -35,9 +35,9 @@ using namespace Upp;
 #define	LOCALPROB_BUFSIZE		256
 
 #ifndef flagHAVE_ALLSYM
-#define SYM_COUNT					6
+#define SYM_COUNT				6
 #else
-#define SYM_COUNT					19
+#define SYM_COUNT				19
 #endif
 
 class AgentGroup;

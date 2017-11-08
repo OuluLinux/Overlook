@@ -4,6 +4,20 @@
 
 namespace Overlook {
 
+
+enum {
+	StrategyBest1Exp,
+	StrategyRandom1Exp,
+	StrategyRandToBest1Exp,
+	StrategyBest2Exp,
+	StrategyRandom2Exp,
+	StrategyBest1Bin,
+	StrategyRandom1Bin,
+	StrategyRandToBest1Bin,
+	StrategyBest2Bin,
+	StrategyRandom2Bin
+};
+
 class DiffSolver {
 	typedef DiffSolver CLASSNAME;
 	
@@ -96,7 +110,7 @@ public:
 		  % min_ % max_ % div_ % desc_ % use_limits;
 	}
 	
-	void Init();
+	void Init(int strategy=StrategyBest1Exp);
 	void SetArrayCount(int i) {arraycount = i; }
 	void SetCount(int i) {count = i; }
 	void Set(int i, double minv, double maxv, double divider = 0, String desc = "" ) {
@@ -116,6 +130,8 @@ public:
 	
 	const Vector<double>& GetTrialSolution() {return trial_solution;}
 	const Vector<double>& GetBestSolution() {return best_solution;}
+	void GetLimitedTrialSolution(Vector<double>& solution);
+	void GetLimitedBestSolution(Vector<double>& solution);
 	
 	int GetMaxRounds() const {return max_rounds;}
 	int GetMaxGenerations() const {return max_gens;}

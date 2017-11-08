@@ -6,16 +6,6 @@ namespace Overlook {
 #define Element(a,b,c)  a[b][c]
 #define RowVector(a,b)  a[b]
 #define CopyVector(a,b) a <<= b
-#define StrategyBest1Exp			0
-#define StrategyRandom1Exp			1
-#define StrategyRandToBest1Exp		2
-#define StrategyBest2Exp			3
-#define StrategyRandom2Exp			4
-#define StrategyBest1Bin			5
-#define StrategyRandom1Bin			6
-#define StrategyRandToBest1Bin		7
-#define StrategyBest2Bin			8
-#define StrategyRandom2Bin			9
 
 DiffSolver::DiffSolver() :
 	generations(0), strategy(StrategyBest1Exp),
@@ -384,7 +374,7 @@ GeneticOptimizer::GeneticOptimizer() {
 	random_type = DiffSolver::RAND_UNIFORM;
 }
 
-void GeneticOptimizer::Init() {
+void GeneticOptimizer::Init(int strategy) {
 	ASSERT(arraycount > 0);
 	ASSERT(count > 0);
 	ASSERT(pop > 0);
@@ -401,7 +391,7 @@ void GeneticOptimizer::Init() {
 			div_[i * count + j] = div_[j];
 		}
 	}
-	Setup(dim, pop, min_, max_, 0, 0.7, 1, random_type);
+	Setup(dim, pop, min_, max_, strategy, 0.7, 1, random_type);
 	SolveStart(max_gens);
 	round = 0;
 }
@@ -469,6 +459,32 @@ Vector<String> GeneticOptimizer::GetLabels() {
 	for(int i = 0; i < count; i++ )
 		out.Add( desc_[i] );
 	return out;
+}
+
+void GeneticOptimizer::GetLimitedTrialSolution(Vector<double>& solution) {
+	solution.SetCount(trial_solution.GetCount());
+	
+	for(int i = 0; i < solution.GetCount(); i++) {
+		double value = trial_solution[i];
+		
+		if (value < min_[i]) value = min_[i];
+		else if (value >= max_[i]) value = max_[i];
+		
+		solution[i] = value;
+	}
+}
+
+void GeneticOptimizer::GetLimitedBestSolution(Vector<double>& solution) {
+	solution.SetCount(best_solution.GetCount());
+	
+	for(int i = 0; i < solution.GetCount(); i++) {
+		double value = best_solution[i];
+		
+		if (value < min_[i]) value = min_[i];
+		else if (value >= max_[i]) value = max_[i];
+		
+		solution[i] = value;
+	}
 }
 
 }

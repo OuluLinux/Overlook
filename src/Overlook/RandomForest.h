@@ -28,6 +28,8 @@ public:
 	double operator[](int i) const;
 	
 	const ConstBufferSource& GetSource() const {return *src;}
+	int GetCursor() const {return *cursor_ptr;}
+	
 };
 
 struct Model : Moveable<Model> {
@@ -153,6 +155,9 @@ struct RandomForest {
 	int id = 0;
 	bool train_success = false;
 	
+	// Temporary
+	Vector<double> cache;
+	
 	/*
 	data is 2D array of size N x D of examples
 	labels is a 1D array of labels (only -1 or 1 for now). In future will support multiclass or maybe even regression
@@ -175,7 +180,7 @@ struct RandomForest {
 	returns the probability of label 1, i.e. a number in range [0, 1]
 	*/
 
-	double PredictOne(const ConstBufferSourceIter& iter) const;
+	double PredictOne(const ConstBufferSourceIter& iter);
 
 	// convenience function. Here, data is NxD array.
 	// returns probabilities of being 1 for all data in an array.

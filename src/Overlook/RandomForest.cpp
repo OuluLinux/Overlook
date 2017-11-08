@@ -10,6 +10,8 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	
 	train_depth = data.GetDepth();
 	
+	cache.SetCount(0);
+	
 	train_success = true;
 	for (int i = 0; i < tree_count; i++) {
 		DecisionTree& tree = trees[i];
@@ -36,23 +38,39 @@ void RandomForest::Chk() const {
 inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
 */
-double RandomForest::PredictOne(const ConstBufferSourceIter& iter) const {
-	if (!train_success)
-		Panic("Training has failed");
-	
-	if (iter.GetSource().GetDepth() != train_depth)
-		Panic("Training depth mismatch to iterator depth");
-	
-	// have each tree predict and average out all votes
-	double dec = 0;
-	
-	for (int i = 0; i < tree_count; i++) {
-		dec += trees[i].PredictOne(iter);
+double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
+	int cursor = iter.GetCursor();
+	if (cursor >= cache.GetCount()) {
+		if (!train_success)
+			Panic("Training has failed");
+		
+		if (iter.GetSource().GetDepth() != train_depth)
+			Panic("Training depth mismatch to iterator depth");
+		
+		if (cache.GetAlloc() == 0)
+			cache.Reserve(GetSystem().GetCountMain());
+		
+		int tmp_cursor = cache.GetCount();
+		if (cursor >= cache.GetCount())
+			cache.SetCount(cursor + 1, 0.0);
+		
+		ConstBufferSourceIter tmp_iter(iter.GetSource(), &tmp_cursor);
+		
+		for(; tmp_cursor <= cursor; tmp_cursor++) {
+			// have each tree predict and average out all votes
+			double dec = 0;
+			
+			for (int i = 0; i < tree_count; i++) {
+				dec += trees[i].PredictOne(iter);
+			}
+		
+			dec /= tree_count;
+			
+			cache[tmp_cursor] = dec;
+		}
 	}
-
-	dec /= tree_count;
-
-	return dec;
+	
+	return cache[cursor];
 }
 
 // convenience function. Here, data is NxD array.

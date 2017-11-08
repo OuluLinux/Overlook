@@ -2,7 +2,7 @@
 
 namespace Overlook {
 
-void EvolutionGraph::Paint(Draw& w) {
+void SourceProcessingGraph::Paint(Draw& w) {
 	Size sz(GetSize());
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
@@ -47,7 +47,7 @@ void EvolutionGraph::Paint(Draw& w) {
 }
 
 
-void TestEquityGraph::Paint(Draw& w) {
+void SourceEquityGraph::Paint(Draw& w) {
 	Size sz(GetSize());
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
@@ -182,12 +182,131 @@ void ExpertOptimizerCtrl::Data() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+void OptimizationGraph::Paint(Draw& w) {
+	Size sz(GetSize());
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
+	
+	
+	const Vector<double>& opt_results = esys.opt_results;
+	
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	
+	int count = opt_results.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = opt_results[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	
+	if (count >= 2 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (count - 1);
+		
+		polyline.SetCount(count);
+		for(int j = 0; j < count; j++) {
+			double v = opt_results[j];
+			int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+			int x = (int)(j * xstep);
+			polyline[j] = Point(x, y);
+		}
+		id.DrawPolyline(polyline, 1, Color(193, 255, 255));
+		for(int j = 0; j < polyline.GetCount(); j++) {
+			const Point& p = polyline[j];
+			id.DrawRect(p.x-1, p.y-1, 3, 3, Blue());
+		}
+	}
+	
+	id.DrawText(3, 3, IntStr(count), Monospace(15), Black());
+	
+	w.DrawImage(0, 0, id);
+}
+
+
+void OptimizationEquityGraph::Paint(Draw& w) {
+	Size sz(GetSize());
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
+	
+	
+	const Vector<double>& best_test_equity = esys.best_test_equity;
+	
+	double emin = +DBL_MAX;
+	double emax = -DBL_MAX;
+	
+	int count = best_test_equity.GetCount();
+	for(int j = 0; j < count; j++) {
+		double ed = best_test_equity[j];
+		if (ed > emax) emax = ed;
+		if (ed < emin) emin = ed;
+	}
+	
+	if (count >= 2 && emax > emin) {
+		double ediff = emax - emin;
+		double xstep = (double)sz.cx / (count - 1);
+		
+		polyline.SetCount(count);
+		for(int j = 0; j < count; j++) {
+			double v = best_test_equity[j];
+			int y = (int)(sz.cy - (v - emin) / ediff * sz.cy);
+			int x = (int)(j * xstep);
+			polyline[j] = Point(x, y);
+		}
+		id.DrawPolyline(polyline, 2, Color(28, 127, 150));
+	}
+	
+	if (count)
+		id.DrawText(3, 3, DblStr(best_test_equity.Top()), Monospace(15), Black());
+	
+	w.DrawImage(0, 0, id);
+}
+
 ExpertGroupOptimizerCtrl::ExpertGroupOptimizerCtrl() {
+	Add(status.TopPos(0,30).LeftPos(0,200));
+	Add(prog.HSizePos(200).TopPos(0,30));
+	Add(vsplit.HSizePos().VSizePos(30));
+	
+	prog.Set(0, 1);
+	
+	vsplit.Vert();
+	vsplit << opt << equity;
 	
 }
 
 void ExpertGroupOptimizerCtrl::Data() {
+	System& sys = GetSystem();
+	ExpertSystem& esys = sys.GetExpertSystem();
 	
+	if (esys.phase == ExpertSystem::PHASE_OPTIMIZING) {
+		status.SetLabel(esys.opt_status);
+		prog.Set(esys.opt_actual, esys.opt_total);
+	} else {
+		status.SetLabel("Idle");
+		prog.Set(esys.optimizer.GetRound(), esys.optimizer.GetMaxRounds());
+	}
+	
+	
+	opt.Refresh();
+	equity.Refresh();
 }
 
 

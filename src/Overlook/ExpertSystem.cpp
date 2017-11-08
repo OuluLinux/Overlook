@@ -2,15 +2,10 @@
 
 namespace Overlook {
 
-#ifdef flagDEBUG
-int cls_tree_count	= 8;
-int cls_max_depth	= 4;
-int cls_hypothesis	= 4;
-#else
-int cls_tree_count	= 100;
+
+int cls_tree_count	= 10;
 int cls_max_depth	= 4;
 int cls_hypothesis	= 10;
-#endif
 
 
 
@@ -174,7 +169,8 @@ void ExpertSystem::Main() {
 		Sleep(100);
 	}
 
-
+	StoreThis();
+	
 	stopped = true;
 }
 
@@ -249,6 +245,111 @@ void ForestArea::FillArea(int data_count) {
 	test1_end		= data_count;
 }
 
+void ExpertSystem::ProcessAllConfs() {
+	// Split processing to chunks
+	int cpus = GetUsedCpuCores();
+	int block_size = cpus * 4 * 4;
+	int block_count = acc_list.GetCount() / block_size;
+	if (acc_list.GetCount() % block_size > 0) block_count++;
+	
+	
+	// Find the begin position for processing
+	int begin_pos = 0;
+	for(begin_pos = 0; begin_pos < acc_list.GetCount(); begin_pos++)
+		if (!acc_list[begin_pos].is_processed)
+			break;
+	
+	CoWork co;
+	co.SetPoolSize(cpus);
+	TimeStop ts;
+	for(int block = begin_pos / block_size; block < block_count && running; block++) {
+		int conf_begin = block * block_size;
+		int conf_end = Upp::min(acc_list.GetCount(), (block + 1) * block_size);
+		
+		rt_lock.EnterRead();
+		for(int conf_id = conf_begin; conf_id < conf_end && running; conf_id++) {
+			if (acc_list[conf_id].is_processed)
+				continue;
+			co & [=]
+			{
+				AccuracyConf& conf = acc_list[conf_id];
+				ConfProcessor& proc = GetRandomForestCache().GetRandomForest();
+				if (running && !conf.is_processed) {
+					ProcessAccuracyConf(conf, proc);
+				
+					// Store best cache
+					cache_lock.Enter();
+					proc.test_valuefactor = conf.test_valuefactor;
+					ArrayMap<uint32, ConfProcessor>& proc_cache = this->proc_cache.GetAdd(conf.symbol);
+					if (proc_cache.IsEmpty() || proc.test_valuefactor > proc_cache.Top().test_valuefactor) {
+						uint32 conf_hash = conf.GetHashValue();
+						GetRandomForestCache().Detach(proc);
+						proc_cache.Add(conf_hash, &proc);
+						SortByValue(proc_cache);
+						int excess = proc_cache.GetCount() - LOCALPROB_DEPTH;
+						if (excess > 0)
+							proc_cache.Remove(LOCALPROB_DEPTH, excess);
+					}
+					cache_lock.Leave();
+				}
+			};
+		}
+		co.Finish();
+		rt_lock.LeaveRead();
+		
+		if (ts.Elapsed() >= 10*60*1000) {
+			StoreThis();
+			ts.Reset();
+		}
+	}
+	
+	StoreThis();
+}
+
+void ExpertSystem::ProcessUsedConfs() {
+	CoWork co;
+	co.SetPoolSize(GetUsedCpuCores());
+	opt_actual = 0;
+	opt_total = 2 * SYM_COUNT * LOCALPROB_DEPTH;
+	for (int p = 0; p < 2; p++) {
+		for(int i = 0; i < SYM_COUNT; i++) {
+			int count = simcore.data[p][i].used_conf.GetCount();
+			simcore.data[p][i].used_proc.SetCount(count);
+			for(int j = 0; j < count; j++) {
+				co & [=] {
+					AccuracyConf& conf = simcore.data[p][i].used_conf[j];
+					ConfProcessor& proc = simcore.data[p][i].used_proc[j];
+					
+					// Load best cache
+					cache_lock.Enter();
+					uint32 conf_hash = conf.GetHashValue();
+					ArrayMap<uint32, ConfProcessor>& proc_cache = this->proc_cache.GetAdd(conf.symbol);
+					int k = proc_cache.Find(conf_hash);
+					if (k != -1) {
+						simcore.data[p][i].used_proc.Remove(j);
+						simcore.data[p][i].used_proc.Insert(j, proc_cache.Detach(k));
+						conf.is_processed = true;
+					}
+					cache_lock.Leave();
+					
+					if (k == -1 && running && conf.is_processed == false) {
+						ProcessAccuracyConf(conf, proc);
+					}
+					opt_actual++;
+				};
+			}
+		}
+	}
+	co.Finish();
+}
+
+void ExpertSystem::ResetUsedProcessed() {
+	for (int p = 0; p < 2; p++)
+		for(int i = 0; i < SYM_COUNT; i++)
+			for(int j = 0; j < simcore.data[p][i].used_conf.GetCount(); j++)
+				simcore.data[p][i].used_conf[j].is_processed = false;
+}
+
 void ExpertSystem::MainTraining() {
 	
 	int acc_count = GetConfCount();
@@ -267,40 +368,7 @@ void ExpertSystem::MainTraining() {
 	}
 	
 	
-	// Split processing to chunks
-	int cpus = GetUsedCpuCores();
-	int block_size = cpus * 4;
-	int block_count = acc_list.GetCount() / block_size;
-	if (acc_list.GetCount() % block_size > 0) block_count++;
-	
-	
-	// Find the begin position for processing
-	int begin_pos = 0;
-	for(begin_pos = 0; begin_pos < acc_list.GetCount(); begin_pos++)
-		if (!acc_list[begin_pos].is_processed)
-			break;
-	
-	
-	CoWork co;
-	co.SetPoolSize(cpus);
-	for(int block = begin_pos / block_size; block < block_count && running; block++) {
-		int conf_begin = block * block_size;
-		int conf_end = Upp::min(acc_list.GetCount(), (block + 1) * block_size);
-		
-		rt_lock.EnterRead();
-		for(int conf_id = conf_begin; conf_id < conf_end && running; conf_id++) {
-			if (acc_list[conf_id].is_processed)
-				continue;
-			co & [=]
-			{
-				ProcessAccuracyConf(acc_list[conf_id]);
-			};
-		}
-		co.Finish();
-		rt_lock.LeaveRead();
-		
-		StoreThis();
-	}
+	ProcessAllConfs();
 	
 	
 	// Dump argument usefulness stats
@@ -319,129 +387,165 @@ void ExpertSystem::MainTraining() {
 
 void ExpertSystem::MainOptimizing() {
 	
-	Panic("TODO");
-	
-	
-	// - minimum freeze time
-	// - fixed_mult_factor, fixed_mult
 	
 	// Run local optimizer for realtime SimCore
-	if (optimizer.GetRound() == 0) {
+	if (optimizer.GetCount() == 0) {
 		
 		// Get usable sources
-		/*used_conf.SetCount(0);
-		
-		// Find useful sources for every symbol
-		// Skip source if it overlaps too much with already used sources
+		opt_status = "Getting usable sources";
 		int conf_count = acc_list.GetCount();
-		for(int i = 0; i < SYM_COUNT; i++) {
-			VectorMap<int, double> useful_list;
-			for(int j = 0; j < conf_count; j++) {
-				const AccuracyConf& conf = acc_list[j];
-				if (conf.is_processed && conf.symbol == i &&
-					conf.test_valuehourfactor > 0)
-					useful_list.Add(j, conf.test_valuehourfactor);
-			}
+		
+		for (int p = 0; p < 2; p++) {
 			
-			SortByValue(useful_list, StdGreater<double>());
-			
-			// Mask based method might give too little active sources
-			#if 0
-			VectorBool existing_mask;
-			for(int j = 0; j < useful_list.GetCount(); j++) {
-				int conf_id = useful_list.GetKey(j);
-				AccuracyConf& conf = acc_list[conf_id];
+			// Find useful sources for every symbol
+			// Skip source if it overlaps too much with already used sources
+			for(int i = 0; i < SYM_COUNT; i++) {
+				VectorMap<int, double> useful_list;
 				
-				VectorBool active_mask;
-				active_mask = conf.real_mask;
-				active_mask.SetCount(conf.real_succ.GetCount());
-				active_mask.And(conf.real_succ);
+				for(int j = 0; j < conf_count; j++) {
+					const AccuracyConf& conf = acc_list[j];
+					if (conf.is_processed && conf.symbol == i &&
+						conf.test_valuehourfactor > 0)
+						useful_list.Add(j, conf.test_valuehourfactor);
+				}
 				
-				if (existing_mask.GetCount() == 0) {
-					existing_mask = active_mask;
-					used_conf.Add(conf_id);
-				} else {
-					active_mask.SetCount(existing_mask.GetCount());
-					double overlap_factor = existing_mask.GetOverlapFactor(active_mask);
-					if (overlap_factor < 0.2) {
-						existing_mask.Or(active_mask);
-						used_conf.Add(conf_id);
-					}
+				SortByValue(useful_list, StdGreater<double>());
+				
+				int max_count = LOCALPROB_DEPTH;
+				if (useful_list.GetCount() > max_count)
+					useful_list.Remove(max_count, useful_list.GetCount() - max_count);
+				
+				simcore.data[p][i].used_conf.SetCount(useful_list.GetCount());
+				for(int j = 0; j < useful_list.GetCount(); j++) {
+					AccuracyConf& conf = simcore.data[p][i].used_conf[j];
+					conf = acc_list[useful_list.GetKey(j)];
+					conf.is_processed = false;
 				}
 			}
-			#else
-			int max_count = 5;
-			if (useful_list.GetCount() > max_count)
-				useful_list.Remove(max_count, useful_list.GetCount() - max_count);
-			for(int j = 0; j < useful_list.GetCount(); j++)
-				used_conf.Add(useful_list.GetKey(j));
-			#endif
-		}*/
-		
-		last_update = GetSysTime();
+		}
+		ResetUsedProcessed();
 		
 		
-		
-		/*optimizer.SetArrayCount();
-		optimizer.SetCount(4);
+		opt_status = "Initializing optimizer";
+		int cols = SYM_COUNT * 3 * (4 + 2 * LOCALPROB_DEPTH) + 3;
+		optimizer.SetArrayCount(1);
+		optimizer.SetCount(cols);
 		optimizer.SetPopulation(1000);
 		optimizer.SetMaxGenerations(100);
 		optimizer.UseLimits();
-		optimizer.Set(0,	1,		MULT_MAX,	1,			"Amp fixed value");
-		optimizer.Set(1,	0.0,	1.0,		0.001,		"Amp fixed mix");
-		optimizer.Set(2,	0.0,	1.0,		0.001,		"Trigger prob limit");
-		optimizer.Set(3,	1,		64,			1,			"Trigger average period");
 		
-		optimizer.Init();*/
+		int col = 0;
+		for(int i = 0; i < SYM_COUNT; i++) {
+			for(int j = 0; j < 3; j++) {
+				String s; s << i << ", " << j << ", ";
+				optimizer.Set(col++, 0.0, 0.5, 0.01, s + "sector_limit");
+				optimizer.Set(col++, 0, LOCALPROB_BUFSIZE-2, 1, s + "trend_period");
+				optimizer.Set(col++, 1, LOCALPROB_BUFSIZE-1, 1, s + "average_period");
+				optimizer.Set(col++, 1, 100-1, 1, s + "trend_multiplier");
+				for (int p = 0; p < 2; p++)
+					for(int k = 0; k < LOCALPROB_DEPTH; k++)
+						optimizer.Set(col++, 0.1, 2.0, 0.1, s + IntStr(p) + ", " + IntStr(k));
+			}
+		}
+		optimizer.Set(col++, 0, 4*24, 1, "mult_freeze_period");
+		optimizer.Set(col++, 0.0, 1.0, 0.01, "fixed_mult_factor");
+		optimizer.Set(col++, 1, MULT_MAX, 1, "fixed_mult");
+		ASSERT(col == cols);
+		
+		optimizer.Init(StrategyRandom2Bin);
 		
 		StoreThis();
 	}
 	
 	
+	// Retrain used confs with training data (and reuse random forests from training exists)
+	opt_status = "Training for optimization";
+	System& sys = GetSystem();
+	int data_count = sys.GetCountMain();
+	ProcessUsedConfs();
+	proc_cache.Clear();
+	StoreThis();
+	ForestArea area;
+	area.FillArea(data_count);
+	simcore.limit_begin = area.train_begin;
+	simcore.limit_end = area.train_end;
+	ASSERT(simcore.single_source == -1);
+	
+	
+	double max_result = -DBL_MAX;
+	for(int i = 0; i < opt_results.GetCount(); i++) {
+		if (opt_results[i] > max_result)
+			max_result = opt_results[i];
+	}
+	
+	opt_status = "Optimizing";
+	Vector<double> trial;
+	opt_total = optimizer.GetMaxRounds();
+	TimeStop ts;
 	while (!optimizer.IsEnd() && running) {
+		opt_actual = optimizer.GetRound();
+		
 		optimizer.Start();
 		
 		
-		// Calculate energy
-		double energy = 0;
-		//for(int i = 0; i < acc_count; i++) {
-		//	AccuracyConf& conf = acc_list[i];
-			
-			
-			/*double factor = optimizer.Get(i, 0);
-			double offset = optimizer.Get(i, 1);
-			//double factor = optimizer.GetTrialSolution()[i];
-			for(int j = 0; j < vector_steps; j++) {
-				double p = offset + sin(j+i) * factor;
-				double e = p - points[j];
-				if (e < 0) e *= -1.0;
-				energy += e;
-				points.Add(p);
-			}*/
-		//}
+		// Copy trial solution to simcore
+		optimizer.GetLimitedTrialSolution(trial);
+		simcore.LoadConfiguration(trial);
 		
-		energy = fabs((double)energy)  * -1;
-		optimizer.Stop(energy);
+		
+		// Completely reprocess simcore
+		simcore.Reset();
+		simcore.Process();
+		
+		
+		// Return simcore equity to optimizer
+		double eq = simcore.test_broker.AccountEquity();
+		optimizer.Stop(eq);
+		
+		opt_results.Add(eq);
+		
+		if (eq > max_result) {
+			max_result = eq;
+			best_test_equity <<= simcore.last_test_equity;
+		}
+		
+		if (ts.Elapsed() >= 15*60*1000) {
+			StoreThis();
+			ts.Reset();
+		}
 	}
-	/*String txt;
-	txt = "Best solution: ";
-	optimizer.Best();
-	double error = 0;
-	for(int i = 0; i < optimizer.GetArrayCount(); i++) {
-		double factor = optimizer.Get(i, 0);
-		double offset = optimizer.Get(i, 1);
-		txt << int(factor + 0.5) << " ";
-		txt << int(offset + 0.5) << " ";
-		error += fabs((double) factor - vector_factors[i] );
-		error += fabs((double) offset - vector_offsets[i] );
-	}
-	error /= vector_count * 2;
-	LOG(txt);*/
 	
 	
-	// Change of phase
-	if (optimizer.IsEnd())
+	// Post-optimization
+	if (running && optimizer.IsEnd()) {
+		
+		// Retrain used confs with full past data
+		opt_status = "Training for final";
+		post_optimization_process = true;
+		ResetUsedProcessed();
+		ProcessUsedConfs();
+		post_optimization_process = false;
+		
+		
+		// Put best solution to simcore
+		opt_status = "Processing simcore";
+		optimizer.GetLimitedBestSolution(trial);
+		simcore.LoadConfiguration(trial);
+		
+		
+		// Completely reprocess simcore
+		simcore.limit_begin = 1*5*24*60 / MAIN_PERIOD_MINUTES;
+		simcore.limit_end = data_count;
+		simcore.Reset();
+		simcore.Process();
+		
+		
+		// Change of phase
+		last_update = GetSysTime();
+		opt_status = "Saving...";
 		phase = PHASE_REAL;
+		StoreThis();
+	}
 }
 
 void ExpertSystem::DumpUsefulness() {
@@ -513,22 +617,18 @@ void ExpertSystem::FillBufferSource(const AccuracyConf& conf, ConstBufferSource&
 	ASSERT(k == depth);
 }
 
-void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
-	if (!running || conf.is_processed)
-		return;
-	
+void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, ConfProcessor& proc) {
 	TimeStop proc_ts;
 	
-	ConfProcessor& rf = GetRandomForestCache().GetRandomForest();
 	
-	if (rf.sector.GetCount() < conf.ext)
-		rf.sector.SetCount(conf.ext);
+	if (proc.sector.GetCount() < conf.ext)
+		proc.sector.SetCount(conf.ext);
 	
 	Option options;
 	options.tree_count	= cls_tree_count;
 	options.max_depth	= cls_max_depth;
 	options.tries_count	= cls_hypothesis;
-	rf.SetOptions(options);
+	proc.SetOptions(options);
 	
 	uint64 active_label_pattern = 0;
 	switch (conf.label) {
@@ -543,13 +643,22 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 	int data_count = sys.GetCountMain();
 	
 	ForestArea area;
-	area.FillArea(data_count);
+	if (!post_optimization_process)
+		area.FillArea(data_count);
+	else {
+		area.train_begin	= 1*5*24*60 / MAIN_PERIOD_MINUTES;
+		area.train_end		= data_count - 2*5*24*60 / MAIN_PERIOD_MINUTES;
+		area.test0_begin	= area.train_end;
+		area.test0_end		= data_count;
+		area.test1_begin	= data_count - 1*5*24*60 / MAIN_PERIOD_MINUTES;
+		area.test1_end		= data_count;
+	}
 	
 	ASSERT(conf.ext > 0);
 	One<ConstBufferSource> one_bufs;
 	ConstBufferSource& bufs = one_bufs.Create();
 	
-	VectorBool &real_mask = rf.real_mask;
+	VectorBool &real_mask = proc.real_mask;
 	real_mask.SetCount(data_count).One();
 	
 	ConstBuffer& weektime = sys.GetTimeBuffer(TIMEBUF_WEEKTIME);
@@ -582,11 +691,11 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 		ConstVectorBool& real_label = (!sid_active_label ? train_label.SetInverse(src_label) : src_label);
 		
 		
-		rf.sector[sid].Process(area, bufs, real_label, real_mask);
+		proc.sector[sid].Process(area, bufs, real_label, real_mask);
 		
 		real_mask.And(real_label);
 		
-		conf.sector_accuracy[sid] = rf.sector[sid].stat;
+		conf.sector_accuracy[sid] = proc.sector[sid].stat;
 		
 		
 		sys_lock.LeaveRead();
@@ -601,8 +710,8 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 		ConstBuffer& open_buf = sys.GetTradingSymbolOpenBuffer(conf.symbol);
 		double spread_point = sys.GetTradingSymbolSpreadPoint(conf.symbol);
 		
-		VectorBool &real_succ = rf.real_succ;
-		VectorBool &real_mult = rf.real_mult;
+		VectorBool &real_succ = proc.real_succ;
+		VectorBool &real_mult = proc.real_mult;
 		real_succ.SetCount(real_mask.GetCount());
 		real_mult.SetCount(real_mask.GetCount());
 		int change_count = 0;
@@ -661,17 +770,17 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 		}
 		
 		sys_lock.EnterRead();
-		rf.succ.Process(area, bufs, real_succ, real_mask);
+		proc.succ.Process(area, bufs, real_succ, real_mask);
 		sys_lock.LeaveRead();
 		
-		conf.label_stat = rf.succ.stat;
+		conf.label_stat = proc.succ.stat;
 		
 		
 		sys_lock.EnterRead();
-		rf.mult.Process(area, bufs, real_mult, real_mask);
+		proc.mult.Process(area, bufs, real_mult, real_mask);
 		sys_lock.LeaveRead();
 		
-		conf.mult_stat = rf.mult.stat;
+		conf.mult_stat = proc.mult.stat;
 		
 	}
 	
@@ -689,7 +798,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 		data.used_conf.Clear();
 		data.used_conf.Add(&conf);
 		data.used_proc.Clear();
-		data.used_proc.Add(&rf);
+		data.used_proc.Add(&proc);
 		
 		sc.Process();
 		
@@ -702,8 +811,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf) {
 	}
 	
 	conf.is_processed = true;
-	
-	rf.lock.Leave();
+	proc.lock.Leave();
 }
 
 
@@ -766,7 +874,10 @@ void ExpertSystem::MainReal() {
 	
 	
 	WhenInfo("Updating test broker");
+	simcore.limit_begin = 1*5*24*60 / MAIN_PERIOD_MINUTES;
+	simcore.limit_end = data_count;
 	simcore.Process();
+	ASSERT(simcore.cursor == data_count);
 	
 	
 	WhenInfo("Updating MetaTrader");
@@ -867,7 +978,35 @@ void SimCore::Reset() {
 		sector_logic[i].Reset();
 		succ_logic  [i].Reset();
 		mult_logic  [i].Reset();
+		sector_logic[i].result_max = 1;
+		succ_logic  [i].result_max = 1;
+		mult_logic  [i].result_max = MULT_MAX;
 	}
+	/*
+	Not resetting:
+		- limit_begin, limit_end
+		- single_source
+	*/
+}
+
+void SimCore::LoadConfiguration(const Vector<double>& solution) {
+	int col = 0;
+	for(int i = 0; i < SYM_COUNT; i++) {
+		for(int j = 0; j < 3; j++) {
+			LocalProbLogic& log = j == 0 ? sector_logic[i] : (j == 1 ? succ_logic[i] : mult_logic[i]);
+			log.sector_limit		= solution[col++];
+			log.trend_period		= solution[col++];
+			log.average_period		= solution[col++];
+			log.trend_multiplier	= solution[col++];
+			for(int p = 0; p < 2; p++)
+				for(int k = 0; k < LOCALPROB_DEPTH; k++)
+					log.src_weight[p][k] = solution[col++];
+		}
+	}
+	mult_freeze_period		= solution[col++];
+	fixed_mult_factor		= solution[col++];
+	fixed_mult				= solution[col++];
+	ASSERT(col == solution.GetCount());
 }
 
 void SimCore::Process() {
@@ -882,11 +1021,6 @@ void SimCore::Process() {
 		mult_logic  [single_source].BasicConfiguration(active_label);
 		mult_logic  [single_source].result_max = MULT_MAX;
 		mult_logic  [single_source].average_period = 30;
-	} else {
-		/*for(int i = 0; i < SYM_COUNT; i++) {
-			
-		}*/
-		Panic("TODO");
 	}
 	
 	if (!test_broker.init) {
@@ -901,6 +1035,12 @@ void SimCore::Process() {
 				
 				int count = data[i][j].used_proc.GetCount();
 				ASSERT(count == data[i][j].used_conf.GetCount());
+				ASSERT(count <= LOCALPROB_DEPTH);
+				
+				sector_logic	[j].max_depth[i] = count;
+				succ_logic		[j].max_depth[i] = count;
+				mult_logic		[j].max_depth[i] = count;
+				
 				bufs[i][j].SetCount(count);
 				for(int k = 0; k < count; k++) {
 					const AccuracyConf& conf = data[i][j].used_conf[k];
@@ -964,7 +1104,7 @@ void SimCore::Process() {
 				PoleData& data = this->data[p][sym];
 				ASSERT(data.used_proc.GetCount() <= LOCALPROB_DEPTH);
 				for(int i = 0; i < data.used_proc.GetCount(); i++) {
-					const ConfProcessor& proc		= data.used_proc[i];
+					ConfProcessor& proc				= data.used_proc[i];
 					const AccuracyConf& conf		= data.used_conf[i];
 					ConstBufferSourceIter& iter		= iters[p][sym][i];
 					

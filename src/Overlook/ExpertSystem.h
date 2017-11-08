@@ -8,11 +8,15 @@
 namespace Overlook {
 
 struct ConfProcessor {
+	
+	// Persistent
 	Array<BufferRandomForest> sector;
 	BufferRandomForest succ, mult;
 	Vector<Vector<byte> > rf_prob;
 	double sector_weight = 0.0, succ_weight = 0.0, mult_weight = 0.0;
+	double test_valuefactor = 0.0;
 	
+	// Temporary
 	VectorBool real_mask, real_mult, real_succ;
 	Mutex lock;
 	
@@ -23,16 +27,21 @@ struct ConfProcessor {
 		mult.options = options;
 	}
 	void Serialize(Stream& s) {
-		s % sector % succ % mult % rf_prob % sector_weight % succ_weight % mult_weight;
+		s % sector % succ % mult % rf_prob % sector_weight % succ_weight % mult_weight % test_valuefactor;
 	}
+	
 };
 
+inline bool operator <(const ConfProcessor& a, const ConfProcessor& b) {
+	return a.test_valuefactor > b.test_valuefactor;
+};
 
 class LocalProbLogic {
 	
 public:
 	
 	// Persistent
+	double src_weight[2][LOCALPROB_DEPTH];
 	double sector_limit = -1.0;
 	int max_depth[2] = {0,0};
 	int trend_period = 0;
@@ -45,7 +54,6 @@ public:
 	
 	// Temp
 	double src_buf[2][LOCALPROB_DEPTH];
-	double src_weight[2][LOCALPROB_DEPTH];
 	double src_avbuf[LOCALPROB_BUFSIZE];
 	const int max_trend_period = LOCALPROB_BUFSIZE;
 	const int max_average_period = LOCALPROB_BUFSIZE;
@@ -64,14 +72,16 @@ public:
 		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
 			src_buf[0][i] = 0;
 			src_buf[1][i] = 0;
-			src_weight[0][i] = 1.0;
-			src_weight[1][i] = 1.0;
 			src_avbuf[i] = 0;
 		}
 	}
 	
 	void BasicConfiguration(bool active_label) {
 		Reset();
+		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
+			src_weight[0][i] = 1.0;
+			src_weight[1][i] = 1.0;
+		}
 		sector_limit = 0.50;
 		max_depth[ active_label] = 1;
 		max_depth[!active_label] = 0;
@@ -84,6 +94,8 @@ public:
 	}
 	
 	void Serialize(Stream& s) {
+		for(int i = 0; i < LOCALPROB_DEPTH; i++)
+			s % src_weight[0][i] % src_weight[1][i];
 		s % sector_limit % max_depth[0] % max_depth[1]
 		  % trend_period % average_period % result_max
 		  % trend_multiplier % single_source % active_label;
@@ -113,6 +125,18 @@ public:
 		lock.Leave();
 		return rf;
 	}
+	
+	void Detach(ConfProcessor& proc) {
+		lock.Enter();
+		for(int i = 0; i < rflist.GetCount(); i++) {
+			if (&rflist[i] == &proc) {
+				rflist.Detach(i);
+				lock.Leave();
+				return;
+			}
+		}
+		Panic("Didn't find ConfProcessor");
+	}
 };
 
 inline RandomForestCache& GetRandomForestCache() {return Single<RandomForestCache>();}
@@ -133,22 +157,21 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	// Training stats
 	RandomForestStat sector_accuracy[TF_COUNT];
 	RandomForestStat label_stat, mult_stat;
-	/*VectorBool real_mask, pred_mask;
-	VectorBool real_succ, pred_succ;
-	VectorBool real_mult, pred_mult;*/
-	//Vector<byte> mult_prob;
 	double test_valuefactor = 0.0, test_valuehourfactor = 0.0, test_hourtotal = 0.0;
 	double av_hour_change = 0.0;
 	double largemult_count = 0.0, largemult_frac = 0.0;
 	bool is_processed = false;
-	//VectorMap<int, int> real_active_lengths, real_hole_lengths;
-	//VectorMap<int, int> pred_active_lengths, pred_hole_lengths;
-	
-	
 	
 	
 	AccuracyConf() {}
 	AccuracyConf(const AccuracyConf& conf) {*this = conf;}
+	
+	uint32 GetHashValue() const {
+		CombineHash ch;
+		ch << id << 1 << symbol << 1 << label_id << 1 << period << 1
+		   << ext << 1 << label << 1 << fastinput << 1 << labelpattern << 1 << (int)ext_dir << 1;
+		return ch;
+	}
 	
 	int GetBaseTf(int i) const {
 		int tf = 0;
@@ -172,22 +195,6 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 		printer.Add("largemult_count", largemult_count);
 		printer.Add("largemult_frac", largemult_frac);
 		mult_stat.Print(printer);
-		
-		/*printer.Title("real_active_lengths");
-		for(int i = 0; i < real_active_lengths.GetCount(); i++)
-			printer.Add(real_active_lengths.GetKey(i), real_active_lengths[i]);
-		
-		printer.Title("real_hole_lengths");
-		for(int i = 0; i < real_hole_lengths.GetCount(); i++)
-			printer.Add(real_hole_lengths.GetKey(i), real_hole_lengths[i]);
-		
-		printer.Title("pred_active_lengths");
-		for(int i = 0; i < pred_active_lengths.GetCount(); i++)
-			printer.Add(pred_active_lengths.GetKey(i), pred_active_lengths[i]);
-		
-		printer.Title("pred_hole_lengths");
-		for(int i = 0; i < pred_hole_lengths.GetCount(); i++)
-			printer.Add(pred_hole_lengths.GetKey(i), pred_hole_lengths[i]);*/
 	}
 	
 	bool operator==(const AccuracyConf& src) const {
@@ -251,7 +258,7 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 };
 
 inline bool operator < (const AccuracyConf& a, const AccuracyConf& b) {
-	return a.test_valuehourfactor < b.test_valuehourfactor;
+	return a.test_valuefactor < b.test_valuefactor;
 }
 
 
@@ -263,7 +270,7 @@ public:
 	struct PoleData {
 		Array<ConfProcessor>	used_proc;
 		Array<AccuracyConf>		used_conf;
-		void Serialize(Stream& s) {s % used_conf % used_conf;}
+		void Serialize(Stream& s) {s % used_proc % used_conf;}
 	};
 	
 	
@@ -284,10 +291,11 @@ public:
 	bool active_label = false;
 	
 	// Temp
-	Array<ConstBufferSource>		bufs[2][SYM_COUNT];
-	Array<ConstBufferSourceIter>	iters[2][SYM_COUNT];
-	Vector<double> last_test_equity, last_test_spreadcost;
-	FixedSimBroker					test_broker;
+	Array<ConstBufferSource>					bufs[2][SYM_COUNT];
+	Array<ConstBufferSourceIter>				iters[2][SYM_COUNT];
+	Vector<double>								last_test_equity;
+	Vector<double>								last_test_spreadcost;
+	FixedSimBroker								test_broker;
 	int cursor = 0;
 	bool lightweight = false;
 	
@@ -306,7 +314,7 @@ public:
 		s % hourtotal % valuefactor % valuehourfactor % fixed_mult_factor % fixed_mult
 		  % limit_begin % limit_end % active_count % single_source % active_label;
 	}
-	
+	void LoadConfiguration(const Vector<double>& solution);
 };
 
 
@@ -319,6 +327,8 @@ public:
 	enum {PHASE_TRAINING, PHASE_OPTIMIZING, PHASE_REAL};
 	
 	// Persistent
+	VectorMap<int, ArrayMap<uint32, ConfProcessor> > proc_cache;
+	Vector<double> opt_results, best_test_equity;
 	Vector<AccuracyConf> acc_list;
 	GeneticOptimizer optimizer;
 	SimCore simcore;
@@ -330,12 +340,16 @@ public:
 	TimeStop last_store, last_datagather;
 	int realtime_count = 0;
 	int processed_used_conf = 0;
+	int opt_total = 1, opt_actual = 0;
 	bool running = false, stopped = true;
 	bool forced_update = false;
+	bool post_optimization_process = false;
 	RWMutex sys_lock;
 	RWMutex rt_lock;
 	System* sys = NULL;
+	String opt_status;
 	Time prev_update;
+	Mutex cache_lock;
 	
 	
 public:
@@ -355,10 +369,13 @@ public:
 	void UpdateRealTimeConfs();
 	void Data();
 	void DumpUsefulness();
+	void ProcessAllConfs();
+	void ProcessUsedConfs();
+	void ResetUsedProcessed();
 	void Serialize(Stream& s) {
-		s % acc_list % optimizer % simcore % created % last_update % phase;
+		s % proc_cache % opt_results % best_test_equity % acc_list % optimizer % simcore % created % last_update % phase;
 	}
-	void ProcessAccuracyConf(AccuracyConf& conf);
+	void ProcessAccuracyConf(AccuracyConf& conf, ConfProcessor& proc);
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs, int rel_tf);
 	
 	Callback1<String> WhenInfo;

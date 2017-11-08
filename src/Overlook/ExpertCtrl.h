@@ -4,7 +4,7 @@
 namespace Overlook {
 
 
-class EvolutionGraph : public Ctrl {
+class SourceProcessingGraph : public Ctrl {
 	Vector<Point> polyline;
 	
 public:
@@ -13,7 +13,7 @@ public:
 	
 };
 
-class TestEquityGraph : public Ctrl {
+class SourceEquityGraph : public Ctrl {
 	Vector<Point> polyline;
 	
 public:
@@ -23,7 +23,7 @@ public:
 };
 
 class ExpertOptimizerCtrl : public ParentCtrl {
-	EvolutionGraph graph;
+	SourceProcessingGraph graph;
 	ArrayCtrl pop, unit;
 	Splitter vsplit, hsplit;
 	
@@ -35,7 +35,32 @@ public:
 	
 };
 
+
+
+class OptimizationGraph : public Ctrl {
+	Vector<Point> polyline;
+	
+public:
+	
+	virtual void Paint(Draw& w);
+	
+};
+
+class OptimizationEquityGraph : public Ctrl {
+	Vector<Point> polyline;
+	
+public:
+	
+	virtual void Paint(Draw& w);
+	
+};
+
 class ExpertGroupOptimizerCtrl : public ParentCtrl {
+	OptimizationGraph opt;
+	OptimizationEquityGraph equity;
+	Splitter vsplit;
+	Label status;
+	ProgressIndicator prog;
 	
 public:
 	typedef ExpertGroupOptimizerCtrl CLASSNAME;
@@ -51,7 +76,7 @@ class ExpertRealCtrl : public ParentCtrl {
 	ArrayCtrl pop, unit;
 	Splitter hsplit;
 	ProgressIndicator prog;
-	TestEquityGraph testequity;
+	SourceEquityGraph testequity;
 	
 public:
 	typedef ExpertRealCtrl CLASSNAME;

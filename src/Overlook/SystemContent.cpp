@@ -105,6 +105,12 @@ void System::InitContent() {
 	ASSERT(label_indi_ids.GetCount() == LABELINDI_COUNT * TF_COUNT);
 }
 
+
+
+
+
+#if 0
+
 void System::RefreshWorkQueue() {
 
 	// Add proxy symbols to the queue if any
@@ -464,5 +470,7 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 	broker.part_sym_id				= sym_id;
 	broker.init						= true;
 }
+
+#endif
 
 }

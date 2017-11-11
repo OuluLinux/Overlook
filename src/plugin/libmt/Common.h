@@ -336,11 +336,6 @@ struct Currency : Moveable<Currency> {
 	}
 };
 
-struct Asset : Moveable<Asset> {
-	int sym;
-	double volume, rate, base_value;
-};
-	
 struct DbgDouble {
 	double value;
 	Vector<double> past_values;

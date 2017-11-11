@@ -1,12 +1,14 @@
 #ifndef _Overlook_DataBridge_h_
 #define _Overlook_DataBridge_h_
 
+#include <plugin/libmt/libmt.h>
+
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 }
 
 namespace Overlook {
-
+using namespace libmt;
 
 class DataBridge;
 

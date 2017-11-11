@@ -592,6 +592,7 @@ void GraphCtrl::LeftUp(Point p, dword keyflags) {
 
 void GraphCtrl::RightDown(Point, dword) {
 	SetFocus();
+	group->OpenContextMenu();
 }
 
 void GraphCtrl::MiddleDown(Point p, dword keyflags) {

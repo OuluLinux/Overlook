@@ -14,7 +14,7 @@ namespace Overlook {
 using namespace Upp;
 
 // These values are constant in the working product.
-#define MAIN_PERIOD_MINUTES		15
+#define MAIN_PERIOD_MINUTES		60
 #define ONLY_M1_SOURCE			1
 #define DECISION_DD_LEVEL		0.1
 #define SECTOR_2EXP				1
@@ -33,6 +33,7 @@ using namespace Upp;
 #define OPT_PHASE_ITERS			10000
 #define	LOCALPROB_DEPTH			100
 #define	LOCALPROB_BUFSIZE		256
+#define USE_PROC_CACHE			0
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6
@@ -779,6 +780,21 @@ struct ArrayCtrlPrinter {
 		list->Set(i, 0, key); list->Set(i, 1, ""); i++;
 	}
 };
+
+
+
+template <class T>
+class CtrlCallbacks : public T {
+
+public:
+
+        virtual void LeftDown(Point pt, dword v) {T::LeftDown(pt, v); WhenLeftDown(pt, v);}
+        virtual void RightDown(Point pt, dword v) {T::RightDown(pt, v); WhenRightDown(pt, v);}
+
+        Callback2<Point, dword> WhenRightDown, WhenLeftDown;
+        // TODO other callbacks
+};
+
 
 }
 

@@ -1,6 +1,0 @@
-LAYOUT(Loader, 400, 76)
-	ITEM(Label, status, HSizePosZ(4, 4).VSizePosZ(4, 52))
-	ITEM(ProgressIndicator, subprog, HSizePosZ(4, 4).VSizePosZ(52, 4))
-	ITEM(ProgressIndicator, prog, HSizePosZ(4, 4).VSizePosZ(28, 28))
-END_LAYOUT
-

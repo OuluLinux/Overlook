@@ -505,21 +505,6 @@ public:
 };
 
 
-class Spreads : public Core {
-	
-public:
-	Spreads();
-	
-	virtual void Init();
-	virtual void Start();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(1, 1);
-	}
-};
-
-
 class AcceleratorOscillator : public Core {
 	
 public:

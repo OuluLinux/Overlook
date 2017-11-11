@@ -7,6 +7,47 @@ enum {GRAPH_PRICE_NONE, GRAPH_PRICE_BAR, GRAPH_PRICE_CANDLESTICKS, GRAPH_PRICE_L
 
 class GraphGroupCtrl;
 
+
+// Class for different visual settings of a graph
+class GraphSettings : public Moveable<GraphSettings> {
+	
+	
+	// Vars
+	//Vector<double> settings;
+	int type;
+	
+	
+public:
+	
+	//IndiSettingNode node;
+	
+	
+	
+	// Ctors
+	GraphSettings() {type = -1;}
+	GraphSettings(const GraphSettings& gs) {*this = gs;}
+	
+	
+	// Main funcs
+	GraphSettings& operator= (const GraphSettings& gs) {
+		//node = gs.node;
+		type = gs.type;
+		return *this;
+	}
+	/*GraphSettings& operator= (const IndiSettingNode& in) {
+		node = in;
+		return *this;
+	}*/
+	
+	
+	// Get funcs
+	int GetType() const {return type;}
+	
+	// Set funcs
+	void SetType(int i) {type = i;}
+	
+};
+
 class GraphCtrl : public Ctrl {
 	Vector<Core*> src;
 	GraphGroupCtrl* group;

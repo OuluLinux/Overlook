@@ -31,10 +31,10 @@ GUI_APP_MAIN {
 		else if (s == "-waitmt4") {
 			Config::wait_mt4 = ScanInt(args[i]);
 		}
-		else if (s == "-foresttest") {
+		/*else if (s == "-foresttest") {
 			RandomForestTester().Run();
 			return;
-		}
+		}*/
 		else if (s == "-extremumtest") {
 			TestExtremumCache();
 			return;
@@ -58,30 +58,10 @@ GUI_APP_MAIN {
 	try {
 		System& sys = GetSystem();
 		sys.Init();
-		sys.Start();
-		{
-			::Overlook::Overlook ol;
-			ol.Init();
-			ol.Run();
-		}
-		sys.Stop();
 		
 		{
-			TopWindow tw;
-			tw.Icon(OverlookImg::icon());
-			tw.Title("Saving agent group");
-			Label lbl;
-			lbl.SetLabel("Saving... please wait.");
-			lbl.SetAlign(ALIGN_CENTER);
-			tw.SetRect(0,0, 320, 60);
-			tw.Add(lbl.SizePos());
-			Thread::Start([&]() {
-				ExpertSystem& es = sys.GetExpertSystem();
-				es.StoreThis();
-				PostCallback(callback(&tw, &TopWindow::Close));
-				PostCallback(callback(&tw, &TopWindow::Close));
-			});
-			tw.Run();
+			::Overlook::Overlook ol;
+			ol.Run();
 		}
 		
 		Thread::ShutdownThreads();

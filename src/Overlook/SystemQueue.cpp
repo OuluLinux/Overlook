@@ -116,7 +116,6 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 	const int factory_count = GetFactoryCount();
 	
 	
-	// QtStats objects
 	Vector<FactoryHash> input_hashes;
 	
 	// Loop inputs of the factory

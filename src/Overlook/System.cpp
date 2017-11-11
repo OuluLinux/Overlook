@@ -9,7 +9,7 @@ Index<int> System::true_indicators;
 
 
 
-System::System() : es(this) {
+System::System() {
 	timediff = 0;
 	base_period = 60;
 	SetEnd(GetSysTime());
@@ -97,16 +97,13 @@ void System::Init() {
 	InitRegistry();
 	
 	InitContent();
-	RefreshWorkQueue();
+	/*RefreshWorkQueue();
 	ProcessWorkQueue();
 	ProcessDataBridgeQueue();
 	ProcessLabelQueue();
 	ResetValueBuffers();
 	ResetLabelBuffers();
-	InitBrokerValues();
-	
-	es.LoadThis();
-	es.Init();
+	InitBrokerValues();*/
 }
 
 void System::AddPeriod(String nice_str, int period) {
@@ -208,8 +205,8 @@ int System::GetShiftFromTimeTf(const Time& t, int tf) {
 	return (int)(timediff / periods[tf] / base_period);
 }
 
-void System::AddCustomCtrl(const String& name, CoreFactoryPtr f, CtrlFactoryPtr c) {
-	CtrlFactories().Add(CoreCtrlSystem(name, f, c));
+void System::AddCustomCtrl(const String& name, CoreFactoryPtr f) {
+	CtrlFactories().Add(CoreSystem(name, f));
 }
 
 void System::SetEnd(const Time& t) {

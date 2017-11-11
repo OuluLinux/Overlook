@@ -1,0 +1,15 @@
+description "Floating window manager inside a Ctrl.\3770,0,128";
+
+uses
+	CtrlLib;
+
+file
+	SubWindowCtrl.h,
+	SubWindows.cpp,
+	SubWindow.cpp,
+	SubMenuFrame.cpp,
+	SubWindows.iml;
+
+mainconfig
+	"" = "GUI MT";
+

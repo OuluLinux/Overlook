@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_RandomForest_h_
 #define _Overlook_RandomForest_h_
 
@@ -251,4 +253,5 @@ struct BufferRandomForest {
 
 }
 
+#endif
 #endif

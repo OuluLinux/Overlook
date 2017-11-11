@@ -3938,7 +3938,7 @@ doctor, who did the autopsy, wrote that there was obviously second
 shooter and now that conspiracy theory became conspiracy fact. 
 We could go on and on from this topic to all other topics, like 
 termite and cruise missiles at skyscrapers, chemtrails everywhere 
-for wheather control, intentional fluoride poisoning, nuclear 
+for weather control, intentional fluoride poisoning, nuclear 
 tsunamis, fake history chronology with cement pyramids, lizard 
 people as neighbours, controlled class differences, the new spy 
 industry, crop circles, little alien book... who knows? It`'s 
@@ -4254,5 +4254,105 @@ code, which made the random forest to use some data from previous
 usage. The re`-using is done because of performance reasons.&]
 [s0; &]
 [s3; 7.11.2017&]
+[s0; The new expert system runs. The optimizer is slow, but I can 
+still add multi`-threading to improve it. There is some other 
+options always too, but which I can`'t think right now. I am 
+tired as hell.&]
+[s0; &]
+[s3; 8.11.2017&]
+[s0; The differential evolution local optimizer is just miserably 
+slow in this way. Getting probabilities from random forests takes 
+2 seconds in total per one optimizer iteration. Processing them 
+takes around 100 ms. This is infeasible and some smart moves 
+is required.&]
+[s0; ...&]
+[s0; For fuck sakes, this whole expert system etc must be brought 
+down now. That random forest source and expert advisors must 
+be done like they are in the MT4, or at least almost like it.&]
+[s0; ...&]
+[s0; Oh, now I figured it out... the differential evolution can be 
+replaced by `"mixer`" optimization in this case. I don`'t know 
+the real name, but it`'s like sound mixer, where you start all 
+channels (weights) zeroed, and then you start increasing which 
+gives the best result. It can also be used in MM optimization, 
+by adjusting relative maximum volume per timeslot...&]
+[s0; I am still searching for the simplest solution, which can be 
+extended afterwards with more specialized solutions. Currently, 
+the simplest is:&]
+[s0;i150;O0; Random forests trained with symmetric MA or momentum 
+label and the probability is exported as oscillator (like stochastic 
+oscillator). The value over 0.5 is matching area. One channel 
+is dedicated to short or long (`+ / `-). The exported value can 
+be also average or change of the probability.&]
+[s0;i150;O0; Channels are `"mixed`" together by increasing the weight 
+of the channel, which improves the result most. Only single channel 
+is modified per single iteration.&]
+[s0;i150;O0; The result is improved further by splitting week into 
+timeslots (e.g. hour of week) and increasing used volume for 
+the slot which increases the output most. Only single timeslot 
+is modified per single iteration.&]
+[s0; &]
+[s3; 9.11.2017&]
+[s0; I found my old MT4`-like GUI code and I`'m importing it to this 
+project. Then plan for final random forest expert advisor is 
+coming together now. I am trying to implement it in the most 
+robust way by using Core classes, which Indicator classes uses 
+too.&]
+[s0; The outdated mainstream is already proven to be wrong and insane, 
+but yet they want to play mom and pops all`-knowing auth. The 
+soldiers of religion disguised as skepticism will always be there 
+to attack the messenger. They won`'t feel the shame because they 
+are messengers of the god, eh official authority... They just 
+hit mercilessly until no question is asked. Turns out karma has 
+no power after all.&]
+[s0; Who punishes the punisher ape?&]
+[s0; &]
+[s3; 10.11.2017&]
+[s0; The little guy inside me, who did sing loud and proud our national 
+song since the early age, cannot be silent for one thing...&]
+[s0; Collusion from US to Finland should be investigated, as US have 
+monopoly in educational material and their publishers are discrediting 
+anti`-corruption history research with invalid arguments. The 
+cause is frightening, as it allows manipuling our people to allow 
+more tensions between east and west via our land. It also shows, 
+that the west is not playing the fair game, but the hidden part 
+of their act is to whitewash illegal land`-grabs as in the middle`-east. 
+Also, physics education is stalled to 40s level and it teaches 
+already rejected theories, but which allows the monopoly of the 
+stupid energy production with the stupidest version nuclear energy 
+and the stupidest `"green`" energy. The real solutions are being 
+discredited for greedy reasons. I thought a long time, that the 
+reason for that was that people wasn`'t ready, but it is because 
+greedy stock owners are not ready lose their monopoly.&]
+[s0; I believe that the collusion from US against Finland is real 
+and that it will not be forgotten, even though it doesn`'t get 
+attention currently. Now we have information systems, which won`'t 
+allow manipuling afterwards, which was the security hole what 
+has been exploited. As we know, the spying social media connected 
+with ads and covert agents writing articles to mainstream media 
+are attacking the people constantly, but that is not the weak 
+spot. It`'s more like tickling... The weak spot is in the educational 
+system, which is well protected, but there is still a lot to 
+improve.&]
+[s0; The east is stubborn extreme of patriarchy for some ancient 
+reasons, but there is a limited amount of negativity what can 
+be expressed against the permanent issue. That limit is overtly 
+exceeded now. Finland should stay neutral in modern tensions.&]
+[s0; We have huge demand for cheap tourism, which is what the Russia 
+could easily supply, but that is artifically blocked for cultural 
+and political reasons. We are suffering from the loss of a trading 
+partner and we would benefit economically more from open eastern 
+border, but only cultural and political reasons prevents that. 
+The fault is also suspected to be in the worst corruption bombs 
+of modern times... So big, that people have hard time grasping 
+it, which is exactly the reason why nobody haven`'t blown that 
+whistle yet.&]
+[s0; I hope that I am not saying too political statements here... 
+that is not the reason for this journal.&]
+[s0; ...&]
+[s0; Whew, I just imported the MT4`-like gui. I hope I don`'t break 
+any rules. I`'ll modify it to look more unique, if I did some 
+mistake. For now, I`'ll just enjoy how similar it is.&]
+[s0; &]
 [s0; &]
 [s0; ]]

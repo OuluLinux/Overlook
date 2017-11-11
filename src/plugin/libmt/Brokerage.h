@@ -34,7 +34,6 @@ protected:
 	Vector<int> indices;
 	Vector<int> signals;
 	Vector<bool> signal_freezed;
-	Vector<Asset> assets;
 	Mutex current_price_lock, order_lock;
 	
 	ArrayMap<int, String> periodstr;
@@ -57,7 +56,6 @@ public:
 	virtual void Clear();
 	virtual void CollectOnce(double d) {}
 	
-	void ForwardExposure();
 	void SignalOrders(bool debug_print=false);
 	void SetFreeMarginLevel(double d);
 	void SetFreeMarginScale(int s) {fmscale = s;}
@@ -78,7 +76,6 @@ public:
 	const Vector<Symbol>&	GetSymbols() const {return symbols;}
 	const Vector<Price>&	GetAskBid() const {return askbid;}
 	const Vector<PriceTf>&	GetTickData() const {return pricetf;}
-	const Vector<Asset>&	GetAssets() const {return assets;}
 	const Vector<int>&		GetSignals() const {return signals;}
 	const Symbol& GetSymbol(int i) const {return symbols[i];}
 	int GetTimeframe(int i) {return periodstr.GetKey(i);}

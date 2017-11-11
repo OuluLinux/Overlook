@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -505,3 +507,4 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 }
 
 }
+#endif

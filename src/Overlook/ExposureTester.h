@@ -1,7 +1,7 @@
+#if 0
+
 #ifndef _Overlook_ExposureTester_h_
 #define _Overlook_ExposureTester_h_
-
-#include "BrokerCtrl.h"
 
 namespace Overlook {
 
@@ -24,4 +24,5 @@ public:
 
 }
 
+#endif
 #endif

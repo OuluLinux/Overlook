@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_RandomForestCtrl_h_
 #define _Overlook_RandomForestCtrl_h_
 
@@ -54,4 +56,5 @@ public:
 
 }
 
+#endif
 #endif

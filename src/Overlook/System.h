@@ -106,19 +106,20 @@ class System {
 public:
 
 	typedef Core*			(*CoreFactoryPtr)();
-	typedef CustomCtrl*		(*CtrlFactoryPtr)();
-	typedef Tuple3<String, CoreFactoryPtr, CtrlFactoryPtr> CoreCtrlSystem;
+	typedef Tuple2<String, CoreFactoryPtr> CoreSystem;
 	
-	static void AddCustomCtrl(const String& name, CoreFactoryPtr f, CtrlFactoryPtr c);
+	static void AddCustomCtrl(const String& name, CoreFactoryPtr f);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static CustomCtrl*	CtrlSystemFn() { return new T; }
-	inline static Vector<CoreCtrlSystem>&	CtrlFactories() {return Single<Vector<CoreCtrlSystem> >();}
+	inline static Vector<CoreSystem>&	CtrlFactories() {static Vector<CoreSystem> list; return list;}
+	inline static Vector<int>&	ExpertAdvisorFactories() {static Vector<int> list; return list;}
+	inline static Vector<int>&	Indicators() {static Vector<int> list; return list;}
 	
 public:
 	
-	template <class CoreT, class CtrlT> static void Register(String name) {
+	template <class CoreT> static void Register(String name) {
 		GetId<CoreT>();
-		AddCustomCtrl(name, &System::CoreSystemFn<CoreT>, &System::CtrlSystemFn<CtrlT>);
+		AddCustomCtrl(name, &System::CoreSystemFn<CoreT>);
 	}
 	
 	template <class CoreT> static CoreT& GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
@@ -132,12 +133,12 @@ public:
 		return id;
 	}
 	
-	inline static const Vector<CoreCtrlSystem>& GetCtrlFactories() {return CtrlFactories();}
+	inline static const Vector<CoreSystem>& GetCtrlFactories() {return CtrlFactories();}
 	static int GetCtrlSystemCount() {return GetCtrlFactories().GetCount();}
 	
 	template <class CoreT> static int Find() {
 		CoreFactoryPtr System_fn = &System::CoreSystemFn<CoreT>;
-		const Vector<CoreCtrlSystem>& facs = CtrlFactories();
+		const Vector<CoreSystem>& facs = CtrlFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
 			if (facs[i].b == System_fn)
 				return i;
@@ -165,7 +166,6 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
-	ExpertSystem	es;
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		bars;
@@ -216,7 +216,6 @@ public:
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	void SetEnd(const Time& t);
-	ExpertSystem& GetExpertSystem() {return es;}
 	
 public:
 	
@@ -272,7 +271,6 @@ public:
 	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) const {return *open_buffers[sym_ids[sym]];}
 	ConstBuffer&		GetTimeBuffer(int buf) const {return time_buffers[buf];}
 	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
-	void SetFixedBroker(FixedSimBroker& broker, int sym_id=-1);
 	
 public:
 	
@@ -281,8 +279,6 @@ public:
 	~System();
 	
 	void Init();
-	void Start()	{es.Start();}
-	void Stop()		{es.Stop();}
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;

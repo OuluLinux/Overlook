@@ -2149,40 +2149,6 @@ void Volumes::Start() {
 
 
 
-
-
-Spreads::Spreads() {
-	
-}
-
-void Spreads::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Green);
-	SetBufferStyle(0, DRAW_HISTOGRAM);
-	SetBufferLabel(0,"Spread");
-}
-
-void Spreads::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (!counted) counted++;
-	else counted--;
-	ConstBuffer& spread_buf = GetInputBuffer(0, 4);
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		buffer.Set(i, spread_buf.Get(i));
-	}
-}
-
-
-
-
-
-
-
-
-
 #define PERIOD_FAST  5
 #define PERIOD_SLOW 34
 #undef DATA_LIMIT

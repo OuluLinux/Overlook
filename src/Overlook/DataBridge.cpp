@@ -3,7 +3,7 @@
 
 namespace Overlook {
 
-DataBridge::DataBridge()  {
+DataBridge::DataBridge() {
 	SetSkipAllocate();
 	cursor = 0;
 	buffer_cursor = 0;
@@ -17,7 +17,7 @@ DataBridge::DataBridge()  {
 	spread_count = 0;
 }
 
-DataBridge::~DataBridge()  {
+DataBridge::~DataBridge() {
 	
 }
 

@@ -1,9 +1,11 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
 
 
-int cls_tree_count	= 10;
+int cls_tree_count	= 20;
 int cls_max_depth	= 4;
 int cls_hypothesis	= 10;
 
@@ -154,6 +156,7 @@ void ExpertSystem::Stop() {
 }
 
 void ExpertSystem::Main() {
+	optimizer.SetCount(0);
 	
 	while (running) {
 		
@@ -276,7 +279,8 @@ void ExpertSystem::ProcessAllConfs() {
 				ConfProcessor& proc = GetRandomForestCache().GetRandomForest();
 				if (running && !conf.is_processed) {
 					ProcessAccuracyConf(conf, proc);
-				
+					
+					#if USE_PROC_CACHE
 					// Store best cache
 					cache_lock.Enter();
 					proc.test_valuefactor = conf.test_valuefactor;
@@ -291,6 +295,7 @@ void ExpertSystem::ProcessAllConfs() {
 							proc_cache.Remove(LOCALPROB_DEPTH, excess);
 					}
 					cache_lock.Leave();
+					#endif
 				}
 			};
 		}
@@ -320,6 +325,7 @@ void ExpertSystem::ProcessUsedConfs() {
 					AccuracyConf& conf = simcore.data[p][i].used_conf[j];
 					ConfProcessor& proc = simcore.data[p][i].used_proc[j];
 					
+					#if USE_PROC_CACHE
 					// Load best cache
 					cache_lock.Enter();
 					uint32 conf_hash = conf.GetHashValue();
@@ -331,6 +337,9 @@ void ExpertSystem::ProcessUsedConfs() {
 						conf.is_processed = true;
 					}
 					cache_lock.Leave();
+					#else
+					int k = -1;
+					#endif
 					
 					if (k == -1 && running && conf.is_processed == false) {
 						ProcessAccuracyConf(conf, proc);
@@ -464,12 +473,14 @@ void ExpertSystem::MainOptimizing() {
 	int data_count = sys.GetCountMain();
 	ProcessUsedConfs();
 	proc_cache.Clear();
-	StoreThis();
 	ForestArea area;
 	area.FillArea(data_count);
 	simcore.limit_begin = area.train_begin;
 	simcore.limit_end = area.train_end;
 	ASSERT(simcore.single_source == -1);
+	
+	opt_status = "Saving";
+	StoreThis();
 	
 	
 	double max_result = -DBL_MAX;
@@ -510,7 +521,9 @@ void ExpertSystem::MainOptimizing() {
 		}
 		
 		if (ts.Elapsed() >= 15*60*1000) {
+			opt_status = "Saving";
 			StoreThis();
+			opt_status = "Optimizing";
 			ts.Reset();
 		}
 	}
@@ -530,6 +543,10 @@ void ExpertSystem::MainOptimizing() {
 		// Put best solution to simcore
 		opt_status = "Processing simcore";
 		optimizer.GetLimitedBestSolution(trial);
+		if (trial.IsEmpty()) {
+			opt_status = "Fail";
+			return;
+		}
 		simcore.LoadConfiguration(trial);
 		
 		
@@ -1076,6 +1093,9 @@ void SimCore::Process() {
 		mult_logic		[sym].cursor_ptr = &cursor;
 	}
 	
+	int t0 = 0, t1 = 0, t2 = 0;
+	TimeStop ts;
+	
 	for (; cursor < cursor_end; cursor++) {
 		test_broker.RefreshOrders(cursor);
 		
@@ -1099,6 +1119,8 @@ void SimCore::Process() {
 			LocalProbLogic& mult_logic		= this->mult_logic[sym];
 			int& mult_remaining				= this->mult_freeze_remaining[sym];
 			int& mult_value					= this->mult_freeze_value[sym];
+			
+			ts.Reset();
 			
 			for (int p = 0; p < 2; p++) {
 				PoleData& data = this->data[p][sym];
@@ -1126,6 +1148,9 @@ void SimCore::Process() {
 				}
 			}
 			
+			t0 += ts.Elapsed();
+			ts.Reset();
+			
 			sector_logic.round_checked			= true;
 			succ_logic.round_checked			= true;
 			mult_logic.round_checked			= true;
@@ -1150,6 +1175,8 @@ void SimCore::Process() {
 				mult_remaining = 0;
 			}
 			
+			t1 += ts.Elapsed();
+			ts.Reset();
 			
 			int prev_signal = test_broker.GetSignal(sym);
 			if (signal == prev_signal && signal != 0)
@@ -1164,10 +1191,18 @@ void SimCore::Process() {
 		if (active_symbols > 0)
 			active_count++;
 		
+		ts.Reset();
 		
 		test_broker.Cycle(cursor);
+		
+		
+		t2 += ts.Elapsed();
+		ts.Reset();
 	}
 	
+	DUMP(t0);
+	DUMP(t1);
+	DUMP(t2);
 	
 	hourtotal = active_count * MAIN_PERIOD_MINUTES / 60.0;
 	valuefactor = test_broker.AccountEquity() / test_broker.begin_equity;
@@ -1301,3 +1336,4 @@ int LocalProbLogic::GetResult() {
 }
 
 }
+#endif

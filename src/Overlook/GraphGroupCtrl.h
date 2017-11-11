@@ -1,21 +1,26 @@
 #ifndef _Overlook_GraphGroupCtrl_h_
 #define _Overlook_GraphGroupCtrl_h_
 
+#include <SubWindowCtrl/SubWindowCtrl.h>
+
 namespace Overlook {
 
-class GraphGroupCtrl;
+class ChartManager;
 
-class GraphGroupCtrl : public CustomCtrl {
+class GraphGroupCtrl : public SubWindowCtrl {
 	
 protected:
+	friend class Overlook;
 	
-	BarData* bardata;
+	Core* core = NULL;
+	BarData* bardata = NULL;
 	Array<GraphCtrl> graphs;
 	Splitter split;
 	
-	int tf;
+	String title;
 	int div;
 	int shift;
+	int indi = 0, symbol = 0, tf = 0;
 	bool right_offset, keep_at_end;
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);
@@ -35,10 +40,14 @@ public:
 	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
-		
+	void Settings();
+	void OpenContextMenu() {MenuBar::Execute(THISBACK(ContextMenu));}
+	void ContextMenu(Bar& bar);
+	
 	virtual void Init(Core* src);
 	virtual void Start();
 	virtual void Data();
+	virtual String GetTitle();
 	
 	Core& GetCore() {return *bardata;}
 	Color GetBackground() {return White();}
@@ -50,8 +59,11 @@ public:
 	bool GetKeepAtEnd() {return keep_at_end;}
 	
 	GraphGroupCtrl& SetTimeframe(int tf_id);
+	GraphGroupCtrl& SetIndicator(int indi);
 	
 };
+
+
 
 }
 

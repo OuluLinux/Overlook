@@ -1,5 +1,7 @@
 # Overlook
-Random forest and differential evolution solver based expert advisor for MT4 in external environment.
+MT4 clone. It requires original MT4 running a connection script, however. No direct server connection planned.
+
+This is for those who want to do more complex programming, than MQL scripts allow.
 
 
 Classic view

@@ -14,15 +14,16 @@ SubMenuFrame::SubMenuFrame(SubWindows* wins) : wins(wins) {
 }
 
 void SubMenuFrame::Paint(Draw& w) {
-	//w.DrawRect(r.left, r.bottom - height, r.Width(), height, clr_bg);
+	ImageDraw id(GetSize());
+	
 	Rect r = GetRect();
 	
 	int width = r.Width();
-	w.DrawRect(0, 0, width, height, clr_bg);
+	id.DrawRect(0, 0, width, height, clr_bg);
 	
 	Size menu_sz(r.GetSize());
 	
-	w.DrawLine(0, 0, menu_sz.cx-1, 0, 1, clr_tr);
+	id.DrawLine(0, 0, menu_sz.cx-1, 0, 1, clr_tr);
 	
 	Font fnt = StdFont(15);
 	
@@ -38,7 +39,7 @@ void SubMenuFrame::Paint(Draw& w) {
 		
 		x += 5;
 		if (i) {
-			w.DrawLine(x, 3, x, height-2, 1, GrayColor());
+			id.DrawLine(x, 3, x, height-2, 1, GrayColor());
 			x += 5;
 		}
 		SubWindow& sub = (*wins)[i];
@@ -51,9 +52,9 @@ void SubMenuFrame::Paint(Draw& w) {
 			draw_right_arrow = true;
 		
 		if (active)
-			w.DrawRect(x-5+1, 0, sz.cx+10-1, sz.cy, GrayColor(128+64+32));
+			id.DrawRect(x-5+1, 0, sz.cx+10-1, sz.cy, GrayColor(128+64+32));
 		
-		w.DrawText(x, 0, title, fnt, Black());
+		id.DrawText(x, 0, title, fnt, Black());
 		
 		x += sz.cx;
 		
@@ -62,21 +63,23 @@ void SubMenuFrame::Paint(Draw& w) {
 	
 	// The last line at the right end
 	if (count)
-		w.DrawLine(x+5, 3, x+5, height-2, 1, GrayColor());
+		id.DrawLine(x+5, 3, x+5, height-2, 1, GrayColor());
 	
 	// Draw shift arrows
 	left_arrow = false;
 	right_arrow = false;
 	if (shift) {
-		w.DrawRect(0, 0, arrow_border, menu_sz.cy, clr_bg);
-		w.DrawText(0, 0, "<", fnt, Black());
+		id.DrawRect(0, 0, arrow_border, menu_sz.cy, clr_bg);
+		id.DrawText(0, 0, "<", fnt, Black());
 		left_arrow = true;
 	}
 	if (draw_right_arrow) {
-		w.DrawRect(menu_sz.cx - arrow_border, 0, arrow_border, menu_sz.cy, clr_bg);
-		w.DrawText(menu_sz.cx - arrow_border, 0, ">", fnt, Black());
+		id.DrawRect(menu_sz.cx - arrow_border, 0, arrow_border, menu_sz.cy, clr_bg);
+		id.DrawText(menu_sz.cx - arrow_border, 0, ">", fnt, Black());
 		right_arrow = true;
 	}
+	
+	w.DrawImage(0, 0, id);
 }
 
 

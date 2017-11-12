@@ -19,7 +19,7 @@ static Font gridfont = Arial(fonth);
 
 
 GraphCtrl::GraphCtrl() {
-	group = 0;
+	chart = 0;
 	count = 0;
 	shift = 0;
 	base = NULL;
@@ -94,11 +94,11 @@ void GraphCtrl::Paint(Draw& draw) {
 	Size sz(GetSize());
 	ImageDraw w(sz);
 	
-	w.DrawRect(sz, group->GetBackground());
+	w.DrawRect(sz, chart->GetBackground());
 	
 	
-	div = group->GetWidthDivider();
-	shift = group->GetShift();
+	div = chart->GetWidthDivider();
+	shift = chart->GetShift();
 	
 	// Enable offset
 	int max_future_bars = 0;
@@ -132,7 +132,7 @@ void GraphCtrl::Paint(Draw& draw) {
     if (max_shift < 0) max_shift = 0;
     if (shift > max_shift) {
 		shift = max_shift;
-		group->SetShift(shift);
+		chart->SetShift(shift);
     }
     
 	hi = -DBL_MAX;
@@ -143,7 +143,7 @@ void GraphCtrl::Paint(Draw& draw) {
 		if (!cont_) {draw.DrawImage(0,0,w); return;} // just bail out
 		
 		Core& cont = *cont_;
-		cont.Refresh();
+		// cont.Refresh();
 		
 		if (dynamic_cast<BarData*>(&cont)) {
 		    GetDataRange(cont, 1); // low
@@ -207,9 +207,9 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	int gridw, gridh, w, h, y, pos, c;
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
-	Color gridcolor = group->GetGridColor();
-	Core& pb = group->GetCore();
-    int tf = group->GetTf();
+	Color gridcolor = chart->GetGridColor();
+	Core& pb = chart->GetCore();
+    int tf = chart->GetTf();
     if (tf == -1) return;
     
 	y = r.top;
@@ -270,7 +270,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 }
 
 void GraphCtrl::DrawBorder(Draw& W) {
-	Color gridcolor = group->GetGridColor();
+	Color gridcolor = chart->GetGridColor();
 	Rect r(GetGraphCtrlRect());
     int x, y, w, h;
     
@@ -296,14 +296,14 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	System& bs = group->GetCore().GetSystem();
+	System& bs = chart->GetCore().GetSystem();
 	
 	DrawGrid(W, true);
     
 	int f, pos, x, y, h, c, w;
 	double diff;
     Rect r(GetGraphCtrlRect());
-    int tf = group->GetTf();
+    int tf = chart->GetTf();
     
     f = 2;
     x = border;
@@ -373,7 +373,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
     Rect r(GetGraphCtrlRect());
     bool skip_zero;
     Color value_color = cont.GetBufferColor(buffer);
-    int tf = group->GetTf();
+    int tf = chart->GetTf();
     
     x = border;
 	y = r.top;
@@ -506,7 +506,7 @@ void GraphCtrl::DrawLines(Draw& d, Core& cont) {
 		double diff = hi - lo;
 		int h = r.GetHeight();
 		int w = r.GetWidth();
-		Color grid_color = group->GetGridColor();
+		Color grid_color = chart->GetGridColor();
 		String text;
 		for(int i = 0; i < cont.GetCoreLevelCount(); i++) {
 			double value = cont.GetCoreLevelValue(i);
@@ -592,7 +592,7 @@ void GraphCtrl::LeftUp(Point p, dword keyflags) {
 
 void GraphCtrl::RightDown(Point, dword) {
 	SetFocus();
-	group->OpenContextMenu();
+	chart->OpenContextMenu();
 }
 
 void GraphCtrl::MiddleDown(Point p, dword keyflags) {
@@ -601,19 +601,19 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 }
 
 int GraphCtrl::GetCount() {
-	if (!group) return 0;
-	int c = group->GetCore().GetBars();
+	if (!chart) return 0;
+	int c = chart->GetCore().GetBars();
     return c;
 }
 
 int GraphCtrl::GetPos() {
-	return group->GetShift();
+	return chart->GetShift();
 }
 
 void GraphCtrl::Seek(int pos) {
 	pos = Upp::max(0, Upp::min(GetCount()-1, pos));
-	group->SetShift(pos);
-	group->Refresh();
+	chart->SetShift(pos);
+	chart->Refresh();
 }
 
 void GraphCtrl::GotMouseMove(Point p, GraphCtrl* g) {

@@ -13,9 +13,6 @@ namespace Overlook {
 class ChartManager : public SubWindows {
 	friend class Chart;
 	
-	// Vars
-	bool backtest_broker;
-	
 public:
 
 	// Ctors
@@ -25,18 +22,16 @@ public:
 	
 	// Main funcs
 	void Init();
-	GraphGroupCtrl& AddChart();
+	Chart& AddChart();
 	void CloseBacktestWindows(bool exclude_indicators=true);
-	void RefreshBacktestWindows();
-	void PostRefreshBacktestWindows() {PostCallback(THISBACK(RefreshBacktestWindows));}
-	
+	void RefreshWindows();
 	
 	// Get funcs
-	GraphGroupCtrl* GetVisibleChart() {return dynamic_cast<GraphGroupCtrl*>(GetVisibleSubWindowCtrl());}
+	Chart* GetVisibleChart() {return dynamic_cast<Chart*>(GetVisibleSubWindowCtrl());}
+	Chart* GetGroup(int i) {return dynamic_cast<Chart*>(SubWindows::Get(i).GetSubWindowCtrl());}
+	int GetGroupCount() const {return SubWindows::GetCount();}
 	
 	
-	// Set funcs
-	void UseBacktestBroker(bool b=true) {backtest_broker = b;}
 	
 };
 

@@ -242,17 +242,19 @@ struct ValueRegister {
 
 struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 	int args[8];
-	int factory;
-	int arg_count;
+	int factory = -1;
+	int arg_count = 0;
 	
-	FactoryDeclaration() {factory = -1; arg_count = 0;}
-	FactoryDeclaration(const FactoryDeclaration& src) {
+	FactoryDeclaration() {}
+	FactoryDeclaration(const FactoryDeclaration& src) {*this = src;}
+	FactoryDeclaration& Set(int i) {factory = i; return *this;}
+	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < 8); args[arg_count++] = i; return *this;}
+	FactoryDeclaration& operator=(const FactoryDeclaration& src) {
 		factory = src.factory;
 		arg_count = src.arg_count;
 		for(int i = 0; i < 8; i++) args[i] = src.args[i];
+		return *this;
 	}
-	FactoryDeclaration& Set(int i) {factory = i; return *this;}
-	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < 8); args[arg_count++] = i; return *this;}
 	
 	unsigned GetHashValue() {
 		CombineHash ch;

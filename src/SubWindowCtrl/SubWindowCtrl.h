@@ -50,6 +50,7 @@ public:
 	virtual ~SubWindowCtrl() {}
 	void Init(SubWindows* wm, int id);
 	
+	virtual void Start() {}
 	virtual void CloseWindow() {}
 	virtual String GetTitle() {return "";}
 	virtual void RefreshData() {};
@@ -62,7 +63,7 @@ public:
 class SubWindow : public ParentCtrl {
 	SubWindowDecoration decor;
 	Button minimize, maximize, close;
-	SubWindowCtrl* ctrl;
+	SubWindowCtrl* ctrl = NULL;
 	Rect stored_rect;
 	
 protected:
@@ -71,8 +72,6 @@ protected:
 	
 	bool maximized;
 	
-	void Maximize() {WhenMaximize(); FocusEvent();}
-	void FocusEvent() {WhenFocus(); ctrl->FocusEvent();}
 public:
 	typedef SubWindow CLASSNAME;
 	SubWindow();
@@ -80,12 +79,15 @@ public:
 	void Title(String label) {decor.SetLabel(label);}
 	void StoreRect() {stored_rect = GetRect();}
 	void LoadRect() {ASSERT(stored_rect.bottom && stored_rect.right); SetRect(stored_rect);}
+	void SetStoredRect(Rect r) {stored_rect = r;}
 	
+	Rect GetStoredRect() const {return stored_rect;}
 	String GetTitle() const {return decor.GetLabel();}
 	SubWindowCtrl* GetSubWindowCtrl() {return ctrl;}
-	SubWindowCtrl& GetSubWindowCtrlRef() {return *ctrl;}
 	bool IsMaximized() const {return maximized;}
 	bool IsActive() const {bool b = false; WhenIsActive(&b); return b;}
+	void Maximize() {WhenMaximize(); FocusEvent();}
+	void FocusEvent() {WhenFocus(); ctrl->FocusEvent();}
 	
 	virtual void LeftDown(Point p, dword keyflags);
 	virtual void ChildGotFocus();
@@ -159,7 +161,6 @@ protected:
 	
 	void FocusPrevious();
 	void SetTitle(int win_id, const String& title);
-	void CloseAll();
 	void CloseOthers(int win_id);
 	
 	void LoadRectAll();
@@ -195,13 +196,15 @@ public:
 	
 	void FocusSubWindow(SubWindowCtrl* ctrl);
 	void OrderTileWindows();
+	void CloseAll();
 	
 	virtual bool Key(dword key, int count);
 	virtual void LeftDown(Point p, dword keyflags);
 	virtual void Layout();
 	
-	int GetCount() {return wins.GetCount();}
+	int GetCount() const {return wins.GetCount();}
 	SubWindow& operator[] (int i) {return wins[i];}
+	SubWindow& Get(int i) {return wins[i];}
 	
 	SubWindowCtrl* GetVisibleSubWindowCtrl();
 	SubWindowCtrl& GetVisibleSubWindowCtrlRef() {return *GetVisibleSubWindowCtrl();}

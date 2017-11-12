@@ -18,13 +18,12 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
-#include "GraphGroupCtrl.h"
+#include "Chart.h"
 #include "ExportCtrl.h"
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "Backtest.h"
 
 
 namespace Overlook {
@@ -45,19 +44,34 @@ public:
 	
 };
 
+
+struct ProfileGroup : Moveable<ProfileGroup> {
+	FactoryDeclaration decl;
+	Rect rect;
+	int shift = 0, symbol = 0, tf = 0;
+	bool right_offset = 0, keep_at_end = 0, is_maximized = 0;
+	
+	void Serialize(Stream& s) {s % decl % rect % shift % symbol % tf % right_offset % keep_at_end % is_maximized;}
+};
+
+struct Profile : Moveable<Profile> {
+	Vector<ProfileGroup>	charts;
+	
+	void Serialize(Stream& s) {s % charts;}
+};
+
 // Class for main gui of forex
 class Overlook : public DockWindow {
 	
 	
 protected:
-	friend class BacktestCtrl;
 	
 	// Vars
+	Profile current_profile;
 	VectorMap<String, Vector<int> > symbol_menu_items;
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	BacktestCtrl backtest;
 	CtrlCallbacks<ArrayCtrl>  trade, trade_history, exposure;
 	StatusBar status;
 	InfoCtrl account, network;
@@ -118,7 +132,8 @@ public:
 	void RefreshData();
 	void PostRefreshData() {PostCallback(THISBACK(RefreshData));}
 	void Data();
-	void OpenChart(int id);
+	Chart& OpenChart(int symbol, int indi=0, int tf=-1);
+	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetIndicator(int indi);
 	void SetTimeframe(int tf_id);
@@ -129,6 +144,13 @@ public:
 	void MenuCloseOrder();
 	void MenuModifyOrder();
 	void ToggleFullScreen() {TopWindow::FullScreen(!IsFullScreen());}
+	void LoadPreviousProfile();
+	void StorePreviousProfile();
+	void LoadProfile(Profile& profile);
+	void StoreProfile(Profile& profile);
+	void LoadProfileFromFile(Profile& profile, String path);
+	void StoreProfileToFile(Profile& profile, String path);
+	void OpenChartBars(int symbol) {OpenChart(symbol);}
 	
 	// Public vars
 	Callback WhenExit;

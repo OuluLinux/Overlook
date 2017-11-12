@@ -7,13 +7,10 @@ namespace Overlook {
 #include <Core/topic_group.h>
 
 
-Overlook::Overlook() : watch(this), backtest(this) {
+Overlook::Overlook() : watch(this) {
 	MaximizeBox().MinimizeBox().Sizeable();
 	Icon(OverlookImg::icon());
 	Title("Overlook");
-	
-	RealizeDirectory(ConfigFile("Advisors"));
-	RealizeDirectory(ConfigFile("Scripts"));
 	
 	Add(cman.SizePos());
 	
@@ -35,7 +32,7 @@ Overlook::Overlook() : watch(this), backtest(this) {
 	
 	cman.WhenActiveWindowChanges = THISBACK(ActiveWindowChanged);
 	
-	watch.WhenOpenChart = THISBACK(OpenChart);
+	watch.WhenOpenChart = THISBACK(OpenChartBars);
 	
 	NewOrderWindow::WhenOrdersChanged = THISBACK(Data);
 	
@@ -88,22 +85,23 @@ Overlook::Overlook() : watch(this), backtest(this) {
 	nav.Init();
 	nav.WhenIndicator = THISBACK(SetIndicator);
 	
+	
+	LoadPreviousProfile();
 	PostRefreshData();
 }
 
 Overlook::~Overlook() {
-	
+	StorePreviousProfile();
 }
 
 void Overlook::DockInit() {
 	DockLeft(Dockable(watch, "Market Watch").SizeHint(Size(300, 200)));
 	DockLeft(Dockable(nav, "Navigator").SizeHint(Size(300, 200)));
 	
-	DockableCtrl& bt = Dockable(backtest, "Backtest").SizeHint(Size(300, 200));
-	DockBottom(bt);
-	Tabify(bt, Dockable(trade_history, "Account History").SizeHint(Size(300, 200)));
-	Tabify(bt, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
-	Tabify(bt, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
+	DockableCtrl& last = Dockable(trade_history, "Account History").SizeHint(Size(300, 200));
+	DockBottom(last);
+	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -269,7 +267,7 @@ void Overlook::HistoryCenter() {
 	if (cursor != -1)
 		sym = cursor;
 	
-	GraphGroupCtrl* chart = cman.GetVisibleChart();
+	Chart* chart = cman.GetVisibleChart();
 	int tf = 0;
 	if (chart) tf = chart->GetTf();
 	
@@ -277,35 +275,6 @@ void Overlook::HistoryCenter() {
 	hc.Init(sym, tf);
 	hc.Run();
 }
-
-/*void Overlook::AnalyzeIndicator() {
-	GraphGroupCtrl* chart = cman.GetVisibleChart();
-	IndicatorAnalyzer& ia = cman.AddSubWindow<IndicatorAnalyzer>();
-	ia.Init(&core);
-	if (chart) {
-		ia.Set(chart->GetIndicatorId(), chart->GetId(), chart->GetTf());
-	}
-	ia.RefreshData();
-	//ia.Run();
-	
-}*/
-
-/*void Overlook::SearchIndicatorComb() {
-	GraphGroupCtrl* chart = cman.GetVisibleChart();
-	StatisticalEventPickerCtrl& ics = cman.AddSubWindow<StatisticalEventPickerCtrl>();
-	ics.Init(&core);
-	if (chart) {
-		ics.Set(chart->GetIndicatorId(), chart->GetId(), chart->GetTf());
-	}
-	ics.RunSearch();
-	//ics.Run();
-	
-}*/
-
-/*void Overlook::OrderDebugger() {
-	OrderCtrl& oc = cman.AddSubWindow<OrderCtrl>();
-	oc.Init();
-}*/
 
 void Overlook::Options() {
 	OptionWindow opt;
@@ -357,32 +326,30 @@ void Overlook::SymbolMenu(Bar& bar) {
 			const Vector<int>& list = symbol_menu_items[i];
 			for(int j = 0; j < list.GetCount(); j++) {
 				int id = list[j];
-				bar.Add(mt.GetSymbol(id).name, THISBACK1(OpenChart, id));
+				bar.Add(mt.GetSymbol(id).name, THISBACK1(OpenChartBars, id));
 			}
 		});
 	}
 }
 
-void Overlook::OpenChart(int id) {
-	System& sys = GetSystem();
+Chart& Overlook::OpenChart(int symbol, int indi, int tf) {
+	FactoryDeclaration decl;
+	decl.factory = indi;
+	decl.arg_count = 0;
+	return OpenChart(symbol, decl, tf);
+}
+
+Chart& Overlook::OpenChart(int symbol, const FactoryDeclaration& decl, int tf) {
+	ASSERT(symbol >= 0);
+	if (tf == -1) tf = GetTimeframeIndex();
 	
-	if (id < 0 || id >= sys.GetSymbolCount()) return;
-	
-	GraphGroupCtrl& view = cman.AddChart();
-	
-	view.indi = 0;
-	view.symbol = id;
-	view.tf = GetTimeframeIndex();
-	
-	Core* core = sys.CreateSingle(view.indi, view.symbol, view.tf);
-	ASSERT(core);
-	
-	view.Init(core);
-	view.Data();
+	Chart& view = cman.AddChart();
+	view.Init(symbol, decl, tf);
+	return view;
 }
 
 void Overlook::SetIndicator(int indi) {
-	GraphGroupCtrl* c = cman.GetVisibleChart();
+	Chart* c = cman.GetVisibleChart();
 	if (c)
 		c->SetIndicator(indi);
 }
@@ -394,7 +361,7 @@ void Overlook::SetTimeframe(int tf_id) {
 		tf_buttons[i].Set(false);
 	}
 	
-	GraphGroupCtrl* c = cman.GetVisibleChart();
+	Chart* c = cman.GetVisibleChart();
 	if (c) {
 		c->SetTimeframe(tf_id);
 		Refresh();
@@ -429,9 +396,11 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
-	RefreshTrades();
-	RefreshExposure();
-	RefreshTradesHistory();
+	cman.RefreshWindows();
+	
+	if (trade.IsVisible())			RefreshTrades();
+	if (exposure.IsVisible())		RefreshExposure();
+	if (trade_history.IsVisible())	RefreshTradesHistory();
 }
 
 void Overlook::RefreshTrades() {
@@ -447,7 +416,7 @@ void Overlook::RefreshTrades() {
 		trade.Set(i, 1, o.begin);
 		trade.Set(i, 2, o.GetTypeString());
 		trade.Set(i, 3, o.volume);
-		trade.Set(i, 4, o.symbol);
+		trade.Set(i, 4, mt.GetSymbol(o.symbol).name);
 		trade.Set(i, 5, o.open);
 		trade.Set(i, 6, o.stoploss);
 		trade.Set(i, 7, o.takeprofit);
@@ -455,7 +424,6 @@ void Overlook::RefreshTrades() {
 		trade.Set(i, 9, o.commission);
 		trade.Set(i, 10, o.swap);
 		trade.Set(i, 11, o.profit);
-		trade.Set(i, 12, mt.GetSymbol(o.symbol).name);
 	}
 	trade.SetCount(count);
 	
@@ -510,7 +478,7 @@ void Overlook::RefreshExposure() {
 			}
 			else {
 				// Find proxy symbol
-				//for (int side = 0; side < 2 && !found; side++) 
+				//for (int side = 0; side < 2 && !found; side++)
 				for(int k = 0; k < sym_count; k++) {
 					String s = mt.GetSymbol(k).name;
 					if ( (s.Left(3)  == base && (s.Right(3) == a || s.Right(3) == b)) ||
@@ -694,7 +662,7 @@ void Overlook::RefreshTradesHistory() {
 		trade_history.Set(i, 1, bo.begin);
 		trade_history.Set(i, 2, bo.GetTypeString());
 		trade_history.Set(i, 3, bo.volume);
-		trade_history.Set(i, 4, bo.symbol);
+		trade_history.Set(i, 4, mt.GetSymbol(bo.symbol).name);
 		trade_history.Set(i, 5, bo.open);
 		trade_history.Set(i, 6, bo.stoploss);
 		trade_history.Set(i, 7, bo.takeprofit);
@@ -709,7 +677,7 @@ void Overlook::RefreshTradesHistory() {
 
 void Overlook::ToggleRightOffset() {
 	bool b = right_offset.Get();
-	GraphGroupCtrl* c = cman.GetVisibleChart();
+	Chart* c = cman.GetVisibleChart();
 	if (c) {
 		c->SetRightOffset(b);
 	}
@@ -717,14 +685,14 @@ void Overlook::ToggleRightOffset() {
 
 void Overlook::ToggleKeepAtEnd() {
 	bool b = keep_at_end.Get();
-	GraphGroupCtrl* c = cman.GetVisibleChart();
+	Chart* c = cman.GetVisibleChart();
 	if (c) {
 		c->SetKeepAtEnd(b);
 	}
 }
 
 void Overlook::ActiveWindowChanged() {
-	GraphGroupCtrl* c = cman.GetVisibleChart();
+	Chart* c = cman.GetVisibleChart();
 	if (c) {
 		bool b = c->GetRightOffset();
 		right_offset.Set(b);
@@ -738,6 +706,80 @@ void Overlook::ActiveWindowChanged() {
 		keep_at_end.Set(b);
 	}
 }
+
+void Overlook::LoadPreviousProfile() {
+	LoadProfileFromFile(current_profile, ConfigFile("current_profile.bin"));
+	LoadProfile(current_profile);
+}
+
+void Overlook::StorePreviousProfile() {
+	StoreProfile(current_profile);
+	StoreProfileToFile(current_profile, ConfigFile("current_profile.bin"));
+}
+
+void Overlook::LoadProfile(Profile& profile) {
+	System& sys = GetSystem();
+	cman.CloseAll();
+	
+	for(int i = 0; i < profile.charts.GetCount(); i++) {
+		const ProfileGroup& pchart	= profile.charts[i];
+		if (pchart.symbol < 0 || pchart.tf < 0) continue;
+		if (pchart.symbol >= sys.GetSymbolCount() || pchart.tf >= sys.GetPeriodCount()) continue;
+		Chart& chart				= OpenChart(pchart.symbol, pchart.decl, pchart.tf);
+		chart.shift					= pchart.shift;
+		chart.right_offset			= pchart.right_offset;
+		chart.keep_at_end			= pchart.keep_at_end;
+		
+		SubWindow& swin = cman.GetWindow(chart);
+		if (pchart.is_maximized) {
+			swin.SetStoredRect(pchart.rect);
+			if (!swin.IsMaximized()) swin.Maximize();
+		} else {
+			if (swin.IsMaximized()) swin.Maximize();
+			swin.SetRect(pchart.rect);
+		}
+	}
+}
+
+void Overlook::StoreProfile(Profile& profile) {
+	profile.charts.Clear();
+	
+	for(int i = 0; i < cman.GetGroupCount(); i++) {
+		Chart* chart_ptr	= cman.GetGroup(i);
+		if (!chart_ptr) continue;
+		Chart& chart = *chart_ptr;
+		
+		ProfileGroup& pchart		= profile.charts.Add();
+		pchart.decl					= chart.decl;
+		pchart.symbol				= chart.symbol;
+		pchart.tf					= chart.tf;
+		pchart.shift				= chart.shift;
+		pchart.right_offset			= chart.right_offset;
+		pchart.keep_at_end			= chart.keep_at_end;
+		
+		SubWindow& swin = cman.GetWindow(chart);
+		if (swin.IsMaximized()) {
+			pchart.is_maximized = true;
+			pchart.rect = swin.GetStoredRect();
+		} else {
+			pchart.is_maximized = false;
+			pchart.rect = swin.GetRect();
+		}
+	}
+}
+
+void Overlook::LoadProfileFromFile(Profile& profile, String path) {
+	FileIn in(path);
+	if (!in.IsOpen()) return;
+	in % profile;
+}
+
+void Overlook::StoreProfileToFile(Profile& profile, String path) {
+	FileOut out(path);
+	if (!out.IsOpen()) return;
+	out % profile;
+}
+
 
 
 

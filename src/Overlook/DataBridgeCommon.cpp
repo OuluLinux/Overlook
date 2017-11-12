@@ -76,9 +76,6 @@ void DataBridgeCommon::Init(DataBridge* db) {
 }
 
 void DataBridgeCommon::DownloadRemoteData() {
-	LOG("DataBridgeCommon::DownloadRemoteData");
-	DUMPC(tfs);
-	
 	const Vector<Symbol>& symbols = GetMetaTrader().GetSymbols();
 	int actual = 0;
 	int total = symbols.GetCount() * tfs.GetCount();
@@ -86,7 +83,6 @@ void DataBridgeCommon::DownloadRemoteData() {
 		actual = i * tfs.GetCount();
 		for(int j = 0; j < tfs.GetCount(); j++) {
 			double perc = (double)actual / total * 100;
-			LOG(Format("%2!,n done", perc));
 			if (DownloadHistory(symbols[i], tfs[j])) break;
 			actual++;
 		}

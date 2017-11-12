@@ -1,5 +1,5 @@
-#ifndef _Overlook_GraphGroupCtrl_h_
-#define _Overlook_GraphGroupCtrl_h_
+#ifndef _Overlook_Chart_h_
+#define _Overlook_Chart_h_
 
 #include <SubWindowCtrl/SubWindowCtrl.h>
 
@@ -7,21 +7,23 @@ namespace Overlook {
 
 class ChartManager;
 
-class GraphGroupCtrl : public SubWindowCtrl {
+class Chart : public SubWindowCtrl {
 	
 protected:
 	friend class Overlook;
 	
-	Core* core = NULL;
-	BarData* bardata = NULL;
+	Vector<Ptr<CoreItem> > work_queue;
 	Array<GraphCtrl> graphs;
 	Splitter split;
-	
+	FactoryDeclaration decl;
 	String title;
-	int div;
-	int shift;
-	int indi = 0, symbol = 0, tf = 0;
-	bool right_offset, keep_at_end;
+	int div = 0;
+	int shift = 0;
+	int symbol = 0, tf = 0;
+	bool right_offset = 0, keep_at_end = 0;
+	Core* core = NULL;
+	BarData* bardata = NULL;
+	
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);
 	void AddValueCore(int id, const Vector<double>& settings);
@@ -30,8 +32,8 @@ protected:
 	void Refresh0() {ParentCtrl::Refresh();}
 	
 public:
-	typedef GraphGroupCtrl CLASSNAME;
-	GraphGroupCtrl();
+	typedef Chart CLASSNAME;
+	Chart();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
 	void ClearCores();
@@ -41,10 +43,12 @@ public:
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
 	void Settings();
+	void RefreshCore();
+	void RefreshCoreData();
 	void OpenContextMenu() {MenuBar::Execute(THISBACK(ContextMenu));}
 	void ContextMenu(Bar& bar);
 	
-	virtual void Init(Core* src);
+	void Init(int symbol, const FactoryDeclaration& decl, int tf);
 	virtual void Start();
 	virtual void Data();
 	virtual String GetTitle();
@@ -57,9 +61,12 @@ public:
 	int GetShift() {return shift;}
 	bool GetRightOffset() {return right_offset;}
 	bool GetKeepAtEnd() {return keep_at_end;}
+	int GetGraphCount() const {return graphs.GetCount();}
+	const GraphCtrl& GetGraph(int i) const {return graphs[i];}
+	GraphCtrl& GetGraph(int i) {return graphs[i];}
 	
-	GraphGroupCtrl& SetTimeframe(int tf_id);
-	GraphGroupCtrl& SetIndicator(int indi);
+	Chart& SetTimeframe(int tf_id);
+	Chart& SetIndicator(int indi);
 	
 };
 

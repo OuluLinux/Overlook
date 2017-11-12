@@ -5,7 +5,7 @@ namespace Overlook {
 
 enum {GRAPH_PRICE_NONE, GRAPH_PRICE_BAR, GRAPH_PRICE_CANDLESTICKS, GRAPH_PRICE_LINE};
 
-class GraphGroupCtrl;
+class Chart;
 
 
 // Class for different visual settings of a graph
@@ -50,8 +50,7 @@ public:
 
 class GraphCtrl : public Ctrl {
 	Vector<Core*> src;
-	GraphGroupCtrl* group;
-	System* base;
+	System* base = NULL;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;
@@ -62,7 +61,9 @@ class GraphCtrl : public Ctrl {
 	bool right_offset;
 	
 protected:
-	friend class GraphGroupCtrl;
+	friend class Chart;
+	
+	Chart* chart = NULL;
 	
 	
 	void ShowTimeValueTool(bool b) {show_timevalue_tool = b;}
@@ -98,7 +99,6 @@ public:
 	int GetPos();
 	
 	void Seek(int pos);
-	GraphCtrl& SetGraphGroupCtrl(GraphGroupCtrl& group) {this->group = &group; return *this;}
 	
 	Callback2<Point, GraphCtrl*> WhenMouseMove;
 	Callback1<bool> WhenTimeValueTool;

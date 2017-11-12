@@ -75,15 +75,17 @@ SubWindowDecoration::SubWindowDecoration() {
 }
 	
 void SubWindowDecoration::Paint(Draw& draw) {
+	ImageDraw id(GetSize());
+	
 	Color border_tl = GrayColor(128+64);
 	Color border_br = GrayColor(128);
 	
 	Size sz(GetSize());
-	draw.DrawRect(sz, White());
-	draw.DrawLine(0,0, 0, sz.cy-1, 1, border_tl);
-	draw.DrawLine(0,0, sz.cx-1, 0, 1, border_tl);
-	draw.DrawLine(sz.cx-1,0, sz.cx-1, sz.cy-1, 1, border_br);
-	draw.DrawLine(0,sz.cy-1, sz.cx-1, sz.cy-1, 1, border_br);
+	id.DrawRect(sz, White());
+	id.DrawLine(0,0, 0, sz.cy-1, 1, border_tl);
+	id.DrawLine(0,0, sz.cx-1, 0, 1, border_tl);
+	id.DrawLine(sz.cx-1,0, sz.cx-1, sz.cy-1, 1, border_br);
+	id.DrawLine(0,sz.cy-1, sz.cx-1, sz.cy-1, 1, border_br);
 	
 	Color left, right;
 	if (dynamic_cast<SubWindow*>(GetParent())->IsActive()) {
@@ -97,20 +99,21 @@ void SubWindowDecoration::Paint(Draw& draw) {
 		int x = i;
 		int alpha = 255 * i / (sz.cx -2);
 		Color clr = Blend(left, right, alpha);
-		draw.DrawLine(i, 0, i, 23, 1, clr);
+		id.DrawLine(i, 0, i, 23, 1, clr);
 	}
 	
-	draw.DrawText(7, 4, label, StdFont(15), Black());
-	draw.DrawText(6, 3, label, StdFont(15), White());
+	id.DrawText(7, 4, label, StdFont(15), Black());
+	id.DrawText(6, 3, label, StdFont(15), White());
 	
 	Color tl = GrayColor(128+64+32);
 	Color br = GrayColor(128-64-32);
 	
-	draw.DrawLine(0,0, sz.cx-1, 0, 1, tl);
-	draw.DrawLine(0,0, 0, sz.cy-1, 1, tl);
-	draw.DrawLine(sz.cx-1, sz.cy-1, sz.cx-1, 0, 1, br);
-	draw.DrawLine(sz.cx-1, sz.cy-1, 0, sz.cy-1, 1, br);
+	id.DrawLine(0,0, sz.cx-1, 0, 1, tl);
+	id.DrawLine(0,0, 0, sz.cy-1, 1, tl);
+	id.DrawLine(sz.cx-1, sz.cy-1, sz.cx-1, 0, 1, br);
+	id.DrawLine(sz.cx-1, sz.cy-1, 0, sz.cy-1, 1, br);
 	
+	draw.DrawImage(0, 0, id);
 }
 
 void SubWindowDecoration::LeftDown(Point p, dword keyflags) {

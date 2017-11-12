@@ -66,6 +66,7 @@ int System::GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym
 	int actual = 0;
 	for (int i = 0; i < tf_ids.GetCount(); i++) {
 		int tf = tf_ids[i];
+		ASSERT(tf >= 0 && tf < tf_count);
 		for(int j = 0; j < indi_ids.GetCount(); j++) {
 			path.Add(indi_ids[j]);
 			GetCoreQueue(path, ci_queue, tf, sym_ids);

@@ -2,7 +2,7 @@
 
 namespace Overlook {
 
-GraphGroupCtrl::GraphGroupCtrl() {
+Chart::Chart() {
 	right_offset = false;
 	keep_at_end = true;
 	tf = -1;
@@ -15,64 +15,91 @@ GraphGroupCtrl::GraphGroupCtrl() {
 	shift = 0;
 }
 
-void GraphGroupCtrl::Init(Core* src) {
+void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
+	this->decl = decl;
+	this->symbol = symbol;
+	this->tf = tf;
+	
+	RefreshCore();
+}
+
+void Chart::RefreshCore() {
+	System& sys = GetSystem();
+	
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	ASSERT(tf >= 0 && tf < sys.GetPeriodCount());
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	indi_ids.Add(decl);
+	tf_ids.Add(tf);
+	sym_ids.Add(symbol);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	
+	RefreshCoreData();
+	
+	Core* src = &*work_queue.Top()->core;
 	if (!src) return;
 	
 	core = src;
 	bardata = 0;
-	tf = -1;
 	
-	System& sys = GetSystem();
-	title = sys.GetSymbol(src->GetSymbol()) + ", " + sys.GetPeriodString(src->GetTf());
+	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
 	Title(title);
 	
 	SetGraph(src);
+	Data();
 }
 
-void GraphGroupCtrl::ContextMenu(Bar& bar) {
+void Chart::RefreshCoreData() {
+	System& sys = GetSystem();
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i]);
+}
+
+void Chart::ContextMenu(Bar& bar) {
 	bar.Add("Settings", THISBACK(Settings));
 }
 
-String GraphGroupCtrl::GetTitle() {
+String Chart::GetTitle() {
 	return title;
 }
 
-GraphGroupCtrl& GraphGroupCtrl::SetTimeframe(int tf_id) {
+Chart& Chart::SetTimeframe(int tf_id) {
 	this->tf = tf_id;
 	
-	Core* core = GetSystem().CreateSingle(indi, symbol, tf);
-	if (core)
-		Init(core);
+	RefreshCore();
 	
 	return *this;
 }
 
-GraphGroupCtrl& GraphGroupCtrl::SetIndicator(int indi) {
-	this->indi = indi;
+Chart& Chart::SetIndicator(int indi) {
+	this->decl.factory = indi;
+	this->decl.arg_count = 0;
 	
-	Core* core = GetSystem().CreateSingle(indi, symbol, tf);
-	if (core)
-		Init(core);
+	RefreshCore();
 	
 	return *this;
 }
 
-void GraphGroupCtrl::Start() {
-	
+void Chart::Start() {
+	if (keep_at_end) shift = 0;
+	RefreshCoreData();
+	Refresh();
 }
 
-GraphCtrl& GraphGroupCtrl::AddGraph(Core* src) {
+GraphCtrl& Chart::AddGraph(Core* src) {
 	GraphCtrl& g = graphs.Add();
 	g.WhenTimeValueTool = THISBACK(SetTimeValueTool);
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
 	g.SetRightOffset(right_offset);
-	g.SetGraphGroupCtrl(*this);
+	g.chart = this;
 	g.AddSource(src);
 	split << g;
 	return g;
 }
 
-void GraphGroupCtrl::SetGraph(Core* src) {
+void Chart::SetGraph(Core* src) {
 	ASSERT(src);
 	tf = src->GetTf();
 	System& bs = src->GetSystem();
@@ -94,18 +121,17 @@ void GraphGroupCtrl::SetGraph(Core* src) {
 	}
 }
 
-void GraphGroupCtrl::ClearCores() {
+void Chart::ClearCores() {
 	split.Clear();
 	graphs.Clear();
 }
 
-void GraphGroupCtrl::Data() {
-	if (keep_at_end)
-		shift = 0;
+void Chart::Data() {
+	if (keep_at_end) shift = 0;
 	Refresh();
 }
 
-void GraphGroupCtrl::SetTimeValueTool(bool enable) {
+void Chart::SetTimeValueTool(bool enable) {
 	for(int i = 0; i < graphs.GetCount(); i++) {
 		GraphCtrl& graph = graphs[i];
 		graph.ShowTimeValueTool(enable);
@@ -113,14 +139,14 @@ void GraphGroupCtrl::SetTimeValueTool(bool enable) {
 	Refresh();
 }
 
-void GraphGroupCtrl::GraphMouseMove(Point pt, GraphCtrl* g) {
+void Chart::GraphMouseMove(Point pt, GraphCtrl* g) {
 	for(int i = 0; i < graphs.GetCount(); i++) {
 		graphs[i].GotMouseMove(pt, g);
 	}
 	
 }
 
-void GraphGroupCtrl::SetRightOffset(bool enable) {
+void Chart::SetRightOffset(bool enable) {
 	right_offset = enable;
 	for(int i = 0; i < graphs.GetCount(); i++) {
 		GraphCtrl& graph = graphs[i];
@@ -129,11 +155,11 @@ void GraphGroupCtrl::SetRightOffset(bool enable) {
 	}
 }
 
-void GraphGroupCtrl::SetKeepAtEnd(bool enable) {
+void Chart::SetKeepAtEnd(bool enable) {
 	keep_at_end = enable;
 }
 
-void GraphGroupCtrl::Settings() {
+void Chart::Settings() {
 	if (!core) return;
 	
 	System& sys = GetSystem();
@@ -180,24 +206,10 @@ void GraphGroupCtrl::Settings() {
 	tw.Clear();
 	
 	if (save) {
-		Index<int> tf_ids, sym_ids;
-		Vector<Ptr<CoreItem> > work_queue;
-		Vector<FactoryDeclaration> indi_ids;
-		
-		FactoryDeclaration& decl = indi_ids.Add();
-		decl.factory = indi;
+		decl.arg_count = 0;
 		for(int i = 0; i < reg.args.GetCount(); i++)
 			decl.AddArg(edits[i].GetData());
-		tf_ids.Add(tf);
-		sym_ids.Add(symbol);
-		
-		sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-		
-		for (int i = 0; i < work_queue.GetCount(); i++)
-			sys.Process(*work_queue[i]);
-		
-		if (!work_queue.IsEmpty())
-			Init(&*work_queue.Top()->core);
+		Init(symbol, decl, tf);
 	}
 }
 

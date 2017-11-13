@@ -20,9 +20,9 @@ void DataBridgeCommon::CheckInit(DataBridge* db) {
 }
 
 void DataBridgeCommon::Init(DataBridge* db) {
-	System& bs = db->GetSystem();
-	addr = bs.addr;
-	port = bs.port;
+	System& sys = db->GetSystem();
+	addr = sys.addr;
+	port = sys.port;
 	
 	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
 	
@@ -36,7 +36,7 @@ void DataBridgeCommon::Init(DataBridge* db) {
 		sym_count = mt.GetSymbolCount();
 		
 		tfs.Clear();
-		int base_mtf = bs.GetBasePeriod() / 60;
+		int base_mtf = sys.GetBasePeriod() / 60;
 		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			int tf = mt.GetTimeframe(i);
 			if (tf >= base_mtf)
@@ -59,17 +59,17 @@ void DataBridgeCommon::Init(DataBridge* db) {
 	
 	// Check that symbol names match
 	for(int i = 0; i < sym_count; i++) {
-		ASSERTEXC(bs.GetSymbol(i) == mt.GetSymbol(i).name);
+		ASSERTEXC(sys.GetSymbol(i) == mt.GetSymbol(i).name);
 	}
 	
 	// Assert that first tf matches base period
-	if (bs.GetBasePeriod() != tfs[0] * 60) {
+	if (sys.GetBasePeriod() != tfs[0] * 60) {
 		throw DataExc("Resolver's base period differs from mt");
 	}
 	
 	points.SetCount(sym_count, 0.0001);
 	
-	int tf_count = bs.GetPeriodCount();
+	int tf_count = sys.GetPeriodCount();
 	loaded.SetCount(sym_count * tf_count, false);
 	
 	inited = true;

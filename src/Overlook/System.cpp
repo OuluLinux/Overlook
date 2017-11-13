@@ -52,6 +52,8 @@ void System::Init() {
 			AddSymbol(c.name);
 		}
 		
+		AddSymbol("Account");
+		
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);

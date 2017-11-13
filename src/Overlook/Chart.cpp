@@ -73,8 +73,8 @@ Chart& Chart::SetTimeframe(int tf_id) {
 	return *this;
 }
 
-Chart& Chart::SetIndicator(int indi) {
-	this->decl.factory = indi;
+Chart& Chart::SetFactory(int f) {
+	this->decl.factory = f;
 	this->decl.arg_count = 0;
 	
 	RefreshCore();

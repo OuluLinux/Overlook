@@ -98,6 +98,7 @@ struct PipelineItem : Moveable<PipelineItem> {
 class CustomCtrl;
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
+enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_ACCOUNTADVISOR, CORE_HIDDEN};
 
 class System {
 	
@@ -112,13 +113,18 @@ public:
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static CustomCtrl*	CtrlSystemFn() { return new T; }
 	inline static Vector<CoreSystem>&	CtrlFactories() {static Vector<CoreSystem> list; return list;}
-	inline static Vector<int>&	ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Vector<int>&	Indicators() {static Vector<int> list; return list;}
+	inline static Vector<int>&	ExpertAdvisorFactories() {static Vector<int> list; return list;}
+	inline static Vector<int>&	AccountAdvisorFactories() {static Vector<int> list; return list;}
+	
 	
 public:
 	
-	template <class CoreT> static void Register(String name) {
-		GetId<CoreT>();
+	template <class CoreT> static void Register(String name, int type=CORE_INDICATOR) {
+		int id = GetId<CoreT>();
+		if      (type == CORE_INDICATOR)		Indicators().Add(id);
+		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
+		else if (type == CORE_ACCOUNTADVISOR)	AccountAdvisorFactories().Add(id);
 		AddCustomCtrl(name, &System::CoreSystemFn<CoreT>);
 	}
 	
@@ -265,6 +271,7 @@ public:
 	int GetTrueIndicatorCount() const {return TRUEINDI_COUNT;}
 	int GetLabelIndicatorCount() const {return LABELINDI_COUNT;}
 	int GetCountMain() const {return GetCountTf(main_tf);}
+	int GetAccountSymbol() const {return symbols.GetCount()-1;}
 	ConstBuffer&		GetTrueIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<TRUEINDI_COUNT); return *value_buffers[sym][tf * TRUEINDI_COUNT + i];}
 	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
 	ConstBuffer&		GetOpenBuffer(int sym) const {return *open_buffers[sym];}

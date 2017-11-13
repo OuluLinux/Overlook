@@ -17,6 +17,8 @@ using namespace Upp;
 #include "ExposureTester.h"
 #include "DataBridge.h"
 #include "Indicators.h"
+#include "ExpertAdvisors.h"
+#include "AccountAdvisor.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
 #include "ExportCtrl.h"
@@ -135,7 +137,7 @@ public:
 	Chart& OpenChart(int symbol, int indi=0, int tf=-1);
 	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
-	void SetIndicator(int indi);
+	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshTrades();
 	void RefreshExposure();
@@ -146,8 +148,11 @@ public:
 	void ToggleFullScreen() {TopWindow::FullScreen(!IsFullScreen());}
 	void LoadPreviousProfile();
 	void StorePreviousProfile();
+	void SaveProfile();
+	void LoadDefaultEAs();
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
+	void SetProfileFromFile(String path);
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}

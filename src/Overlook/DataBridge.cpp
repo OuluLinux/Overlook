@@ -33,6 +33,7 @@ void DataBridge::Init() {
 }
 
 void DataBridge::Start() {
+	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	common.CheckInit(this);
@@ -43,9 +44,15 @@ void DataBridge::Start() {
 	int cur = sym - sym_count;
 	int mt_period = GetPeriod() * GetSystem().GetBasePeriod() / 60;
 	
+	// Account symbol
+	if (sym == sys.GetAccountSymbol()) {
+		
+	}
+	else
+	
 	// Regular symbols
 	#if ONLY_M1_SOURCE
-	if (mt_period > 1) {
+	if (mt_period > 1 && sym < sym_count) {
 		RefreshFromFaster();
 	} else
 	#endif
@@ -68,6 +75,9 @@ void DataBridge::Start() {
 		RefreshFromAskBid(init_round);
 	}
 	
+	#if ONLY_M1_SOURCE
+	return;
+	#else
 	// Generated symbols
 	else if (cur < cur_count) {
 		RefreshVirtualNode();
@@ -79,6 +89,7 @@ void DataBridge::Start() {
 		if (cur == cur_count) RefreshCorrelation();
 		RefreshBasket();
 	}
+	#endif
 }
 
 void DataBridge::AddSpread(double a) {
@@ -89,6 +100,30 @@ void DataBridge::AddSpread(double a) {
 		spread_mean += delta / spread_count;
 	}
 	spread_count++;
+}
+
+
+void DataBridge::RefreshAccount() {
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (counted > bars) counted = bars; // weird bug
+	
+	// Allocate memory
+	ASSERT(bars > 0);
+	SetSafetyLimit(bars);
+	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
+		outputs[0].buffers[i].SetCount(bars);
+	double prev_open = counted ? open_buf.Get(counted-1) : 0.0;
+	for(int i = counted; i < bars; i++) {
+		open_buf.Set(i, prev_open);
+		low_buf.Set(i, prev_open);
+		high_buf.Set(i, prev_open);
+	}
 }
 
 void DataBridge::RefreshFromAskBid(bool init_round) {
@@ -544,7 +579,7 @@ void DataBridge::RefreshVirtualNode() {
 			outputs[i].buffers[j].value.SetCount(bars, 0);
 		
 	const Currency& c = mt.GetCurrency(cur);
-	int tf = GetTimeframe();
+	int tf = GetTf();
 	
 	typedef Tuple3<ConstBuffer*,ConstBuffer*,bool> Source;
 	Vector<Source> sources;

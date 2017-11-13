@@ -83,7 +83,7 @@ Overlook::Overlook() : watch(this) {
 	cman.Init();
 	
 	nav.Init();
-	nav.WhenIndicator = THISBACK(SetIndicator);
+	nav.WhenFactory		= THISBACK(SetFactory);
 	
 	
 	LoadPreviousProfile();
@@ -126,7 +126,24 @@ void Overlook::MainMenu(Bar& bar) {
 }
 
 void Overlook::FileMenu(Bar& bar) {
-	
+	bar.Sub("Profiles", [=](Bar& bar) {
+		bar.Add("Save As", THISBACK(SaveProfile));
+		bar.Separator();
+		bar.Add("Load default EAs", THISBACK(LoadDefaultEAs));
+		bar.Separator();
+		
+		String profile_dir = ConfigFile("Profiles");
+		RealizeDirectory(profile_dir);
+		FindFile ff;
+		ff.Search(AppendFileName(profile_dir, "*"));
+		do {
+			String path = ff.GetPath();
+			String fname = GetFileTitle(path);
+			if (FileExists(path))
+				bar.Add(fname, THISBACK1(SetProfileFromFile, path));
+		} while (ff.Next());
+	});
+	bar.Separator();
 	bar.Add("Exit", Proxy(WhenExit));
 }
 
@@ -348,12 +365,11 @@ Chart& Overlook::OpenChart(int symbol, const FactoryDeclaration& decl, int tf) {
 	return view;
 }
 
-void Overlook::SetIndicator(int indi) {
+void Overlook::SetFactory(int f) {
 	Chart* c = cman.GetVisibleChart();
 	if (c)
-		c->SetIndicator(indi);
+		c->SetFactory(f);
 }
-
 
 void Overlook::SetTimeframe(int tf_id) {
 	for(int i = 0; i < tf_buttons.GetCount(); i++) {
@@ -707,6 +723,34 @@ void Overlook::ActiveWindowChanged() {
 	}
 }
 
+void Overlook::LoadDefaultEAs() {
+	System& sys = GetSystem();
+	Profile profile;
+	
+	int tf = sys.FindPeriod(60);
+	int rfa = System::Find<RandomForestAdvisor>();
+	int wsa = System::Find<WeekSlotAdvisor>();
+	
+	{
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = sys.GetAccountSymbol();
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.decl.factory = wsa;
+	}
+	
+	for(int i = 0; i < SYM_COUNT; i++) {
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = sys.sym_ids[i];
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.decl.factory = rfa;
+	}
+	
+	LoadProfile(profile);
+	TileWindow();
+}
+
 void Overlook::LoadPreviousProfile() {
 	LoadProfileFromFile(current_profile, ConfigFile("current_profile.bin"));
 	LoadProfile(current_profile);
@@ -715,6 +759,26 @@ void Overlook::LoadPreviousProfile() {
 void Overlook::StorePreviousProfile() {
 	StoreProfile(current_profile);
 	StoreProfileToFile(current_profile, ConfigFile("current_profile.bin"));
+}
+
+void Overlook::SaveProfile() {
+	WithEnterProfileName<TopWindow> tw;
+	CtrlLayout(tw);
+	bool save = false;
+	tw.ok				<< [&] {save = true; tw.Close();};
+	tw.name.WhenEnter	<< [&] {save = true; tw.Close();};
+	tw.cancel			<< [&] {tw.Close();};
+	tw.name.SetFocus();
+	tw.Run();
+	if (save) {
+		String profile_dir = ConfigFile("Profiles");
+		RealizeDirectory(profile_dir);
+		String fname = tw.name.GetData();
+		if (GetFileExt(fname) != ".bin") fname += ".bin";
+		String profile_file = AppendFileName(profile_dir, fname);
+		StoreProfile(current_profile);
+		StoreProfileToFile(current_profile, profile_file);
+	}
 }
 
 void Overlook::LoadProfile(Profile& profile) {
@@ -739,6 +803,8 @@ void Overlook::LoadProfile(Profile& profile) {
 			swin.SetRect(pchart.rect);
 		}
 	}
+	
+	ActiveWindowChanged();
 }
 
 void Overlook::StoreProfile(Profile& profile) {
@@ -766,6 +832,11 @@ void Overlook::StoreProfile(Profile& profile) {
 			pchart.rect = swin.GetRect();
 		}
 	}
+}
+
+void Overlook::SetProfileFromFile(String path) {
+	LoadProfileFromFile(current_profile, path);
+	LoadProfile(current_profile);
 }
 
 void Overlook::LoadProfileFromFile(Profile& profile, String path) {

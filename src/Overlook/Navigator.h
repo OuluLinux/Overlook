@@ -11,7 +11,7 @@ class Navigator : public ParentCtrl {
 	
 	// Vars
 	TreeCtrl tree;
-	int accounts, account_id, indicators, expertadvisors;
+	int accounts, account_id, indicators, expertadvisors, accountadvisors;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void FillTree(TreeCtrl &tree);
@@ -30,7 +30,7 @@ public:
 	
 	
 	// Public vars
-	Callback1<int> WhenIndicator, WhenExpertAdvisor;
+	Callback1<int> WhenFactory;
 	
 };
 

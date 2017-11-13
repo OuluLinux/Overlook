@@ -55,6 +55,8 @@ INITBLOCK {
 	System::Register<TrendChangeEdge>("TrendChangeEdge");
 	System::Register<PeriodicalChange>("PeriodicalChange");
 	System::Register<VolatilityAverage>("VolatilityAverage");
+	System::Register<RandomForestAdvisor>("RandomForestAdvisor", CORE_EXPERTADVISOR);
+	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	
 }
 

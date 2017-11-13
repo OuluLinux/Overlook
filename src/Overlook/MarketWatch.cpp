@@ -20,14 +20,17 @@ MarketWatch::MarketWatch(Overlook* olook) : olook(olook) {
 }
 
 void MarketWatch::Data() {
+	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
-	int count = mt.GetSymbolCount();
+	int count = sys.GetSymbolCount();
+	int mtcount = mt.GetSymbolCount();
 	for(int i = 0; i < count; i++) {
-		const Symbol& sym = mt.GetSymbol(i);
-		const Price& p = mt.GetAskBid()[i];
-		list.Set(i, 0, sym.name);
-		list.Set(i, 1, p.bid);
-		list.Set(i, 2, p.ask);
+		list.Set(i, 0, sys.GetSymbol(i));
+		if (i < mtcount) {
+			const Price& p = mt.GetAskBid()[i];
+			list.Set(i, 1, p.bid);
+			list.Set(i, 2, p.ask);
+		}
 		list.Set(i, 3, i);
 	}
 	//list.SetSortColumn(0);

@@ -66,7 +66,7 @@ public:
 	GraphCtrl& GetGraph(int i) {return graphs[i];}
 	
 	Chart& SetTimeframe(int tf_id);
-	Chart& SetIndicator(int indi);
+	Chart& SetFactory(int f);
 	
 };
 

@@ -79,6 +79,7 @@ class DataBridge : public BarData {
 	void RefreshCorrelation();
 	void RefreshBasket();
 	void RefreshMedian();
+	void RefreshAccount();
 public:
 	typedef DataBridge CLASSNAME;
 	DataBridge();

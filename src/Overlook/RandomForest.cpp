@@ -1,5 +1,3 @@
-#if 0
-
 #include "Overlook.h"
 
 namespace Overlook {
@@ -12,7 +10,9 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	
 	train_depth = data.GetDepth();
 	
-	cache.SetCount(0);
+	if (memory.IsEmpty()) memory.Create();
+	
+	memory->cache.SetCount(0);
 	
 	train_success = true;
 	for (int i = 0; i < tree_count; i++) {
@@ -27,12 +27,47 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 void RandomForest::Chk() const {
 	for (int i = 0; i < tree_count; i++) {
 		const DecisionTree& tree = trees[i];
-		for(int j = 0; j < tree.models.GetCount(); j++) {
-			const Model& m = tree.models[j];
+		const RandomForestMemoryTree& memtree = memory->trees[i];
+		for(int j = 0; j < memtree.models.GetCount(); j++) {
+			const Model& m = memtree.models[j];
 			if (m.failed) continue;
 			if (m.ri1 < 0 || m.ri1 >= train_depth || m.ri2 < 0 || m.ri2 >= train_depth)
 				Panic("Invalid model");
 		}
+	}
+}
+
+
+void RandomForest::PredictCache(const ConstBufferSourceIter& iter) {
+	if (!train_success)
+		Panic("Training has failed");
+	
+	if (iter.GetSource().GetDepth() != train_depth)
+		Panic("Training depth mismatch to iterator depth");
+	
+	Vector<double>& cache = memory->cache;
+	int data_count = GetSystem().GetCountMain();
+	
+	if (cache.GetAlloc() == 0)
+		cache.Reserve(data_count);
+	
+	if (data_count > cache.GetCount())
+		cache.SetCount(data_count, 0.0);
+	
+	int tmp_cursor = 0;
+	ConstBufferSourceIter tmp_iter(iter.GetSource(), &tmp_cursor);
+	
+	for(; tmp_cursor < data_count; tmp_cursor++) {
+		// have each tree predict and average out all votes
+		double dec = 0;
+		
+		for (int i = 0; i < tree_count; i++) {
+			dec += trees[i].PredictOne(iter);
+		}
+	
+		dec /= tree_count;
+		
+		cache[tmp_cursor] = dec;
 	}
 }
 
@@ -41,38 +76,16 @@ inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
 */
 double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
-	int cursor = iter.GetCursor();
-	if (cursor >= cache.GetCount()) {
-		if (!train_success)
-			Panic("Training has failed");
-		
-		if (iter.GetSource().GetDepth() != train_depth)
-			Panic("Training depth mismatch to iterator depth");
-		
-		if (cache.GetAlloc() == 0)
-			cache.Reserve(GetSystem().GetCountMain());
-		
-		int tmp_cursor = cache.GetCount();
-		if (cursor >= cache.GetCount())
-			cache.SetCount(cursor + 1, 0.0);
-		
-		ConstBufferSourceIter tmp_iter(iter.GetSource(), &tmp_cursor);
-		
-		for(; tmp_cursor <= cursor; tmp_cursor++) {
-			// have each tree predict and average out all votes
-			double dec = 0;
-			
-			for (int i = 0; i < tree_count; i++) {
-				dec += trees[i].PredictOne(iter);
-			}
-		
-			dec /= tree_count;
-			
-			cache[tmp_cursor] = dec;
-		}
-	}
+	// have each tree predict and average out all votes
+	double dec = 0;
 	
-	return cache[cursor];
+	for (int i = 0; i < tree_count; i++) {
+		dec += trees[i].PredictOne(iter);
+	}
+
+	dec /= tree_count;
+	
+	return dec;
 }
 
 // convenience function. Here, data is NxD array.
@@ -91,7 +104,10 @@ void RandomForest::Predict(const ConstBufferSource& data, Vector<double>& probab
 bool DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels, const VectorBool& mask, const Option& options) {
 	max_depth = options.max_depth;
 	bool weakType = options.type;
-	
+	RandomForestMemoryTree& mem = forest->memory->trees[id];
+	Vector<Model>& models		= mem.models;
+	Vector<int>& leaf_positives	= mem.leaf_positives;
+	Vector<int>& leaf_negatives	= mem.leaf_negatives;
 	
 	// initialize various helper variables
 	int64 internal_count = (1 << max_depth) - 1;
@@ -195,6 +211,11 @@ bool DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 
 // returns probability that example inst is 1.
 double DecisionTree::PredictOne(const ConstBufferSourceIter& iter) const {
+	RandomForestMemoryTree& mem = forest->memory->trees[id];
+	Vector<Model>& models		= mem.models;
+	Vector<int>& leaf_positives	= mem.leaf_positives;
+	Vector<int>& leaf_negatives	= mem.leaf_negatives;
+	
 	int n = 0;
 	
 	for (int i = 0; i < max_depth; i++) {
@@ -507,4 +528,3 @@ void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource
 }
 
 }
-#endif

@@ -1,9 +1,9 @@
-#if 0
-
 #ifndef _Overlook_RandomForest_h_
 #define _Overlook_RandomForest_h_
 
 namespace Overlook {
+
+struct RandomForest;
 
 struct ConstBufferSource {
 	Vector<ConstBuffer*> bufs;
@@ -123,12 +123,11 @@ struct Data {
 // Represents a single decision tree
 struct DecisionTree {
 	typedef Tuple2<int, double> Dot;
-	Vector<Model> models;
-	Vector<int> leaf_positives, leaf_negatives;
 	Vector<Dot> dots;
 	Vector<VectorBool> ixs;
 	int max_depth = 4;
 	int id = 0;
+	RandomForest* forest = NULL;
 	
 	// returns model. Code duplication with DecisionStumpTrain :(
 	Model Decision2DStumpTrain(int id, const ConstBufferSource& data, const VectorBool& labels, const VectorBool& ix, const Option& options);
@@ -143,22 +142,40 @@ struct DecisionTree {
 	double PredictOne(const ConstBufferSourceIter& iter) const;
 	
 	void Serialize(Stream& s) {
-		s % models % leaf_positives % leaf_negatives % dots % ixs % max_depth % id;
+		s % dots % ixs % max_depth % id;
+	}
+};
+
+struct RandomForestMemoryTree : Moveable<RandomForestMemoryTree> {
+	Vector<Model> models;
+	Vector<int> leaf_positives, leaf_negatives;
+	
+	void Serialize(Stream& s) {
+		s % models % leaf_positives % leaf_negatives;
+	}
+};
+
+struct RandomForestMemory {
+	Vector<RandomForestMemoryTree> trees;
+	Vector<double> cache;
+	
+	void Serialize(Stream& s) {
+		s % trees % cache;
 	}
 };
 
 struct RandomForest {
+	One<RandomForestMemory> memory;
 	Vector<double> probabilities;
 	Array<DecisionTree> trees;
 	int tree_count = 100;
 	int max_depth = 4;
 	int tries_count = 10;
 	int train_depth = -1;
-	int id = 0;
+	int id = -1;
 	bool train_success = false;
 	
 	// Temporary
-	Vector<double> cache;
 	
 	/*
 	data is 2D array of size N x D of examples
@@ -183,7 +200,8 @@ struct RandomForest {
 	*/
 
 	double PredictOne(const ConstBufferSourceIter& iter);
-
+	void PredictCache(const ConstBufferSourceIter& iter);
+	
 	// convenience function. Here, data is NxD array.
 	// returns probabilities of being 1 for all data in an array.
 	void Predict(const ConstBufferSource& data, Vector<double>& probabilities);
@@ -253,5 +271,4 @@ struct BufferRandomForest {
 
 }
 
-#endif
 #endif

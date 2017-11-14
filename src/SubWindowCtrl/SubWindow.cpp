@@ -26,8 +26,8 @@ SubWindow::SubWindow() : stored_rect(0,0,0,0) {
 	minimize.SetImage(SubWindowsImg::minimize());
 	
 	Add(close.TopPos(3, 19).RightPos(3, 19));
-	Add(maximize.TopPos(3, 19).RightPos(3+24, 19));
-	Add(minimize.TopPos(3, 19).RightPos(3+24*2, 19));
+	Add(maximize.TopPos(3, 19).RightPos(3+22, 19));
+	Add(minimize.TopPos(3, 19).RightPos(3+22+19, 19));
 	
 	decor.WhenWindowMove = Proxy(WhenWindowMove);
 	decor.WhenFocus = THISBACK(FocusEvent);

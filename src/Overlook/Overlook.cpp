@@ -384,7 +384,22 @@ void Overlook::SetTimeframe(int tf_id) {
 	}
 }
 
+void Overlook::DeepRefresh() {
+	MetaTrader& mt = GetMetaTrader();
+	mt.Data();
+	GetSystem().SetEnd(mt.GetTime());
+	DataBridgeCommon& common = GetDataBridgeCommon();
+	common.DownloadAskBid();
+	common.RefreshAskBidData(true);
+	cman.RefreshWindows();
+}
+
 void Overlook::RefreshData() {
+	if (mt_refresh.Elapsed() >= 10*1000) {
+		DeepRefresh();
+		mt_refresh.Reset();
+	}
+	
 	Data();
 	
 	if (!Thread::IsShutdownThreads())
@@ -411,8 +426,6 @@ void Overlook::Data() {
 	network.Set(ninfo);
 	
 	watch.Data();
-	
-	cman.RefreshWindows();
 	
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();

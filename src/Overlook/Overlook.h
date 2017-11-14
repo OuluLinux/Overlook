@@ -11,6 +11,7 @@ using namespace Upp;
 #include <CtrlCore/lay.h>
 
 #include "Common.h"
+#include "RandomForest.h"
 #include "SimBroker.h"
 #include "System.h"
 #include "Core.h"
@@ -84,6 +85,7 @@ protected:
 	Button add_symindi;
 	Vector<int> symindi_args;
 	MenuBar menu;
+	TimeStop mt_refresh;
 	Id sym;
 	
 	// Protected main functions to prevent direct (wrong) usage
@@ -94,6 +96,7 @@ protected:
 	void OpenSymbolMenu();
 	void SymbolMenu(Bar& bar);
 	int  GetTimeframeIndex();
+	void DeepRefresh();
 	
 public:
 	

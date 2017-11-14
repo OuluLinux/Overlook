@@ -19,81 +19,6 @@ int cls_hypothesis	= 10;
 
 
 
-const int label_count = LABELINDI_COUNT;
-const int sector_pred_dir_count = 2;
-const int sector_label_count = 4;
-const int period_begin = 3;
-const int fastinput_count = 3;
-const int labelpattern_count = 5;
-int sector_type_count;
-
-int GetConfCount() {
-	if (!sector_type_count) {
-		for(int i = period_begin; i < TF_COUNT; i++)
-			sector_type_count += (TF_COUNT - i);
-	}
-	return SYM_COUNT * label_count * sector_pred_dir_count * sector_label_count * fastinput_count * labelpattern_count * sector_type_count;
-}
-
-void GetConf(int i, AccuracyConf& conf) {
-	int count = GetConfCount();
-	ASSERT(i >= 0 && i < count);
-	
-	conf.id = i;
-	
-	conf.symbol = i % SYM_COUNT;
-	ASSERT(conf.symbol >= 0 && conf.symbol < SYM_COUNT);
-	i = i / SYM_COUNT;
-	
-	conf.label_id = i % label_count;
-	ASSERT(conf.label_id >= 0 && conf.label_id < label_count);
-	i = i / label_count;
-	
-	int sector_type = i % sector_type_count;
-	i = i / sector_type_count;
-	int j = 0;
-	for(conf.period = period_begin; conf.period < TF_COUNT; conf.period++)
-		for(conf.ext = 1; conf.ext <= (TF_COUNT - conf.period); conf.ext++)
-			if (j++ == sector_type)
-				goto found;
-	found:
-	ASSERT(conf.period >= period_begin && conf.period < TF_COUNT);
-	ASSERT(conf.ext > 0 && conf.ext <= TF_COUNT);
-	
-	conf.label = i % sector_label_count;
-	i = i / sector_label_count;
-	
-	conf.fastinput = i % fastinput_count;
-	i = i / fastinput_count;
-	
-	conf.labelpattern = i % labelpattern_count;
-	i = i / labelpattern_count;
-	
-	conf.ext_dir = i % sector_pred_dir_count;
-	i = i / sector_pred_dir_count;
-}
-
-struct InterestingAccuracyConfSorter {
-	bool operator() (const AccuracyConf& a, const AccuracyConf& b) const {
-		if (a.symbol < b.symbol) return true;
-		if (a.symbol > b.symbol) return false;
-		if (abs(a.period - 5) < abs(b.period - 5)) return true;
-		if (abs(a.period - 5) > abs(b.period - 5)) return false;
-		if (abs(a.ext - 3) < abs(b.ext - 3)) return true;
-		if (abs(a.ext - 3) > abs(b.ext - 3)) return false;
-		if (a.ext_dir) return true;
-		if (!a.ext_dir) return false;
-		if (!a.label) return true;
-		if (a.label) return false;
-		return false;
-	}
-};
-
-
-
-
-
-
 
 
 
@@ -651,8 +576,8 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, ConfProcessor& proc) 
 	switch (conf.label) {
 		case 0: active_label_pattern = 0; break;
 		case 1: active_label_pattern = ~(0ULL); break;
-		case 2: for(int i = 0; i < 64; i+=2) active_label_pattern |= 1 << i; break;
-		case 3: for(int i = 1; i < 64; i+=2) active_label_pattern |= 1 << i; break;
+		case 2: for(int i = 1; i < 64; i+=2) active_label_pattern |= 1 << i; break;
+		case 3: for(int i = 0; i < 64; i+=2) active_label_pattern |= 1 << i; break;
 	}
 	bool active_label = active_label_pattern & 1;
 	
@@ -693,7 +618,7 @@ void ExpertSystem::ProcessAccuracyConf(AccuracyConf& conf, ConfProcessor& proc) 
 		sys_lock.EnterRead();
 		
 		int label_id = 0;
-		switch (conf.label_id) {
+		switch (conf.labelpattern) {
 			case 0: label_id = conf.label_id; break;
 			case 1: label_id = conf.label_id - sid; break;
 			case 2: label_id = conf.label_id + sid; break;

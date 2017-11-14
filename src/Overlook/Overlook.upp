@@ -9,7 +9,6 @@ uses
 	SubWindowCtrl;
 
 file
-	Journal.qtf,
 	Copying,
 	app.tpp,
 	main.cpp,

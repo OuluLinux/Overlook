@@ -1,9 +1,0 @@
-LAYOUT(EarwormLayout, 516, 308)
-	ITEM(ArrayCtrl, songs, LeftPosZ(192, 320).TopPosZ(4, 276))
-	ITEM(ArrayCtrl, lists, LeftPosZ(4, 184).TopPosZ(4, 276))
-	ITEM(ButtonOption, play, LeftPosZ(400, 112).TopPosZ(284, 19))
-	ITEM(Option, random_song, SetLabel(t_("Randomize songs")).LeftPosZ(192, 116).TopPosZ(284, 16))
-	ITEM(Option, random_foundlist, SetLabel(t_("and found list")).LeftPosZ(308, 88).TopPosZ(284, 16))
-	ITEM(Option, random_list, SetLabel(t_("Randomize list")).LeftPosZ(4, 176).TopPosZ(284, 16))
-END_LAYOUT
-

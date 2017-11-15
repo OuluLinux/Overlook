@@ -34,6 +34,13 @@ inline bool SymTfFilter(void* basesystem, int in_sym, int in_tf, int out_sym, in
 		return in_sym == out_sym;
 }
 
+inline bool AnyTf(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+	if (in_sym == -1)
+		return true;
+	else
+		return in_sym == out_sym;
+}
+
 // Classes for IO arguments
 template <class T>
 struct In : public ValueBase {
@@ -162,7 +169,8 @@ public:
 	
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(sym * 100 + tf).output->buffers[buffer]);}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(sym * 1000 + tf).output->buffers[buffer]);}
+	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const {return inputs[input].Get(sym * 1000 + tf).output->label;}
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
@@ -224,7 +232,7 @@ protected:
 	Color levels_clr;
 	RWMutex lock;
 	double minimum, maximum;
-	double point;
+	double point = 0.0;
 	int levels_style;
 	int window_type;
 	int next_count;

@@ -16,6 +16,7 @@ INITBLOCK {
 	System::Register<StandardDeviation>("Standard Deviation");
 	System::Register<AverageTrueRange>("Average True Range");
 	
+	
 	System::Register<BearsPower>("Bears Power");
 	System::Register<BullsPower>("Bulls Power");
 	System::Register<CommodityChannelIndex>("Commodity Channel Index");
@@ -27,6 +28,7 @@ INITBLOCK {
 	System::Register<RelativeStrengthIndex>("Relative Strength Index");
 	System::Register<RelativeVigorIndex>("Relative Vigor Index");
 	System::Register<StochasticOscillator>("Stochastic Oscillator");
+	
 	
 	System::Register<WilliamsPercentRange>("Williams Percent Range");
 	System::Register<AccumulationDistribution>("Accumulation Distribution");
@@ -40,22 +42,26 @@ INITBLOCK {
 	System::Register<AwesomeOscillator>("Awesome Oscillator");
 	System::Register<Fractals>("Fractals");
 	
+	
 	System::Register<FractalOsc>("FractalOsc");
 	System::Register<MarketFacilitationIndex>("Market Facilitation Index");
 	System::Register<LinearTimeFrames>("Linear TimeFrames");
+	System::Register<LinearWeekTime>("Linear WeekTime");
 	System::Register<SupportResistance>("Support/Resistance");
-	System::Register<SupportResistanceOscillator>("Support/Resistance Oscillator");
 	
+	System::Register<SupportResistanceOscillator>("Support/Resistance Oscillator");
 	System::Register<Psychological>("Psychological Oscillator");
 	System::Register<CorrelationOscillator>("Correlation Oscillator");
 	System::Register<ZigZag>("Zig-Zag");
 	System::Register<ZigZagOsc>("Zig-Zag Oscillator");
-	System::Register<TrendChange>("TrendChange");
 	
+	
+	System::Register<TrendChange>("TrendChange");
 	System::Register<TrendChangeEdge>("TrendChangeEdge");
 	System::Register<PeriodicalChange>("PeriodicalChange");
 	System::Register<VolatilityAverage>("VolatilityAverage");
 	System::Register<RandomForestAdvisor>("RandomForestAdvisor", CORE_EXPERTADVISOR);
+	
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	
 }

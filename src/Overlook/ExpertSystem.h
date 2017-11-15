@@ -147,7 +147,6 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	
 	// Distinctive attributes
 	int id = 0;
-	int symbol = 0;
 	int label_id = 0;
 	int period = 0;
 	int ext = 0;

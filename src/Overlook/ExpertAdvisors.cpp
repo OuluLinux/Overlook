@@ -21,7 +21,7 @@ int GetConfCount() {
 		for(int i = period_begin; i < TF_COUNT; i++)
 			sector_type_count += (TF_COUNT - i);
 	}
-	return SYM_COUNT * label_count * sector_pred_dir_count * sector_label_count * fastinput_count * labelpattern_count * sector_type_count;
+	return label_count * sector_pred_dir_count * sector_label_count * fastinput_count * labelpattern_count * sector_type_count;
 }
 
 void GetConf(int i, AccuracyConf& conf) {
@@ -29,10 +29,6 @@ void GetConf(int i, AccuracyConf& conf) {
 	ASSERT(i >= 0 && i < count);
 	
 	conf.id = i;
-	
-	conf.symbol = i % SYM_COUNT;
-	ASSERT(conf.symbol >= 0 && conf.symbol < SYM_COUNT);
-	i = i / SYM_COUNT;
 	
 	conf.label_id = i % label_count;
 	ASSERT(conf.label_id >= 0 && conf.label_id < label_count);
@@ -62,43 +58,55 @@ void GetConf(int i, AccuracyConf& conf) {
 	i = i / sector_pred_dir_count;
 }
 
-struct InterestingAccuracyConfSorter {
-	bool operator() (const AccuracyConf& a, const AccuracyConf& b) const {
-		if (a.symbol < b.symbol) return true;
-		if (a.symbol > b.symbol) return false;
-		if (abs(a.period - 5) < abs(b.period - 5)) return true;
-		if (abs(a.period - 5) > abs(b.period - 5)) return false;
-		if (abs(a.ext - 3) < abs(b.ext - 3)) return true;
-		if (abs(a.ext - 3) > abs(b.ext - 3)) return false;
-		if (a.ext_dir) return true;
-		if (!a.ext_dir) return false;
-		if (!a.label) return true;
-		if (a.label) return false;
-		return false;
-	}
-};
 
-void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs, int rel_tf) {
-	System& sys = GetSystem();
-	
-	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
-	bufs.SetDepth(depth);
-	ASSERT(depth >= 2);
-	
-	int tf = conf.GetBaseTf(0);
-	
-	int k = 0;
-	for(int i = 0; i < TRUEINDI_COUNT; i++) {
-		for(int j = 0; j < conf.fastinput+1; j++) {
-			ConstBuffer& buf = sys.GetTrueIndicator(conf.symbol, tf-j, i);
-			ASSERT(&buf != NULL);
-			bufs.SetSource(k++, buf);
-		}
+
+
+
+
+
+
+
+
+
+
+
+void ForestArea::FillArea(int level, int data_count) {
+	int len;
+	switch (level) {
+		case 0: len = 1 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		case 1: len = 2 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		case 2: len = 4 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES; break;
+		default: len = 8 * 5 * 24 * 60 / MAIN_PERIOD_MINUTES;
 	}
-	bufs.SetSource(k++, sys.GetTimeBuffer(TIMEBUF_WEEKTIME));
-	
-	ASSERT(k == depth);
+	train_begin = Random(data_count - len);
+	train_end = train_begin + len;
+	do {
+		test0_begin = Random(data_count - len);
+		test0_end = test0_begin + len;
+	} while (abs(test0_begin - train_begin) < 2*len);
+	do {
+		test1_begin = Random(data_count - len);
+		test1_end = test1_begin + len;
+	}
+	while (abs(test0_begin - train_begin) < 2*len ||
+		   abs(test1_begin - train_begin) < 2*len);
 }
+
+void ForestArea::FillArea(int data_count) {
+	train_begin		= 24*60 / MAIN_PERIOD_MINUTES;
+	train_end		= data_count * 2/3;
+	test0_begin		= train_end;
+	test0_end		= data_count - 1*5*24*60 / MAIN_PERIOD_MINUTES;
+	test1_begin		= test0_end;
+	test1_end		= data_count;
+}
+
+
+
+
+
+
+
 
 
 
@@ -117,6 +125,25 @@ void RandomForestAdvisor::Init() {
 	
 	// Last or first? The sum is bolder
 	
+	rf_trainer.options.tree_count	= 100;
+	rf_trainer.options.max_depth	= 4;
+	rf_trainer.options.tries_count	= 10;
+	
+	
+	
+	for(int i = 0; i < TF_COUNT; i++) {
+		int period = (1 << (1 + i));
+		AddSubCore<VolatilityAverage>()	.Set("period", period);
+		AddSubCore<OsMA>().Set("fast_ema_period", period).Set("slow_ema_period", period*2).Set("signal_sma", period);
+		AddSubCore<StochasticOscillator>().Set("k_period", period);
+		
+		AddSubCore<ZigZag>().Set("depth", period).Set("deviation", period).Set("backstep", Upp::max(1, period/2));
+		AddSubCore<MovingAverage>().Set("period", period).Set("offset", -period/2);
+		AddSubCore<Momentum>().Set("period", period).Set("shift", -period/2);
+	}
+	
+	AddSubCore<LinearWeekTime>();
+	
 }
 
 void RandomForestAdvisor::Start() {
@@ -124,7 +151,7 @@ void RandomForestAdvisor::Start() {
 	
 	
 	if (phase == RF_IDLE) {
-		phase = RF_OPTIMIZING;
+		phase = RF_TRAINING;
 		Thread::Start(THISBACK(Optimize));
 	}
 	
@@ -134,44 +161,86 @@ void RandomForestAdvisor::Start() {
 	}
 }
 
-void RandomForestAdvisor::Optimize() {
-	#if 0
+void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs) {
+	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
+	bufs.SetDepth(depth);
+	ASSERT(depth >= 2);
+	
+	
+	int k = 0;
+	int symbol = GetSymbol();
+	int tf = conf.GetBaseTf(0);
+	
+	ASSERT(TRUEINDI_COUNT == indi_count);
+	for(int i = 0; i < TRUEINDI_COUNT; i++) {
+		for(int j = 0; j < conf.fastinput+1; j++) {
+			int l = tf-j;
+			ASSERT(l >= 0 && l < TF_COUNT);
+			ConstBuffer& buf = At(i + l * (indi_count + label_count)).GetOutput(0).buffers[0];
+			ASSERT(&buf != NULL);
+			bufs.SetSource(k++, buf);
+		}
+	}
+	bufs.SetSource(k++, At(TF_COUNT * (indi_count + label_count)).GetOutput(0).buffers[0]);
+	
+	
+	ASSERT(k == depth);
+}
+
+void RandomForestAdvisor::Training() {
+	System& sys = GetSystem();
+	
+	// Prepare training functions and output variables
 	rflist_pos.SetCount(LOCALPROB_DEPTH);
 	rflist_neg.SetCount(LOCALPROB_DEPTH);
 	
 	
+	int symbol = GetSymbol();
 	int count = GetConfCount();
-	
-	
-	System& sys = GetSystem();
-	int data_count = sys.GetCountMain();
+	int tf = GetTf();
+	int data_count = sys.GetCountTf(tf);
 	ForestArea area;
 	area.FillArea(data_count);
 	
 	One<RF> training_rf;
 	training_rf.Create();
 	
+	VectorBool full_mask;
+	full_mask.SetCount(data_count).One();
+	
+	
+	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double spread_point = db->GetPoint();
+	ASSERT(spread_point > 0.0);
+	
+	
+	// Iterate trough configuration combinations, and keep the best confs
 		
 	for(; opt_counter < count && !Thread::IsShutdownThreads(); opt_counter++) {
 		
+		// Use common trainer for performance reasons
 		RF& rf = *training_rf;
-		
-		AccuracyConf& conf = rf.a;
-		
-		// Skip duplicate combinations
-		// This is the easiest way... the hard way is really hard.
-		if (conf.ext == 1) {
-			if (conf.label >= 2 || conf.labelpattern > 0 || conf.ext_dir) continue;
-		}
 		
 		
 		// Get configuration
+		AccuracyConf& conf = rf.a;
 		GetConf(opt_counter, conf);
-		
-		ASSERT(conf.ext > 0);
-		ConstBufferSource bufs;
-		VectorBool& real_mask = proc.real_mask;
+		VectorBool& real_mask = rf.c;
 		real_mask.SetCount(data_count).One();
+		
+		
+		// Skip duplicate combinations
+		// This is the easiest way... the harder way would be to not count duplicates.
+		if (conf.ext == 1) {
+			if (conf.label >= 2 || conf.labelpattern > 0 || conf.ext_dir)
+				continue;
+		}
+		
+		
+		// Refresh masks
+		ConstBufferSource bufs;
+		
 		
 		
 		// Get active label
@@ -179,17 +248,19 @@ void RandomForestAdvisor::Optimize() {
 		switch (conf.label) {
 			case 0: active_label_pattern = 0; break;
 			case 1: active_label_pattern = ~(0ULL); break;
-			case 2: for(int i = 1; i < 64; i+=2) active_label_pattern |= 1 << i; break;
-			case 3: for(int i = 0; i < 64; i+=2) active_label_pattern |= 1 << i; break;
+			case 2: for (int i = 1; i < 64; i += 2) active_label_pattern |= 1 << i; break;
+			case 3: for (int i = 0; i < 64; i += 2) active_label_pattern |= 1 << i; break;
 		}
 		bool active_label = active_label_pattern & 1;
 		Array<RF>& rflist = active_label == false ? rflist_pos : rflist_neg;
 		
 		
-		for(int sid = 0; sid < conf.ext; sid++) {
+		// Get label indicator. Do AND operation for all layers.
+		int layer_count = conf.ext;
+		ASSERT(layer_count > 0);
+		for(int sid = 0; sid < layer_count; sid++) {
 			int tf = conf.GetBaseTf(sid);
-			ASSERT(tf - conf.fastinput >= 0);
-			bool sid_active_label = active_label_pattern & (1 << (conf.ext - 1 - sid));
+			bool sid_active_label = active_label_pattern & (1 << (layer_count - 1 - sid));
 			
 			// Get label id
 			int label_id = 0;
@@ -205,35 +276,29 @@ void RandomForestAdvisor::Optimize() {
 			
 			
 			// Get filter label
-			ConstVectorBool& src_label = sys.GetLabelIndicator(conf.symbol, tf, label_id) ;
-			
+			ConstVectorBool& src_label = At(indi_count + label_id + tf * (indi_count + label_count)).GetOutput(0).label;
+			int count0 = real_mask.GetCount();
+			int count1 = src_label.GetCount();
 			if (sid_active_label)	real_mask.And(src_label);
 			else					real_mask.InverseAnd(src_label);
-			
 		}
 		
 		
-		// Train
-		FillBufferSource(conf, bufs, 0);
-		rf_trainer.Process(area, bufs, real_label, real_mask);
-		
-		
 		// Test
-		bool mask_prev_active = false;
-		int mask_prev_pos = 0;
-		ConstBuffer& open_buf = sys.GetTradingSymbolOpenBuffer(conf.symbol);
-		double spread_point = sys.GetTradingSymbolSpreadPoint(conf.symbol);
-		double mask_open = open_buf.GetUnsafe(area.test0_begin);
-		double mask_hour_total = 0.0, mask_change_total = 1.0;
-		double mult_change_total = 1.0;
-		for(int i = area.test0_begin; i < area.test0_end; i++) {
-			bool is_mask = conf.pred_mask.Get(i);
+		bool mask_prev_active		= false;
+		int mask_prev_pos			= 0;
+		double mask_open			= open_buf.GetUnsafe(area.train_begin);
+		double mask_hour_total		= 0.0;
+		double mask_change_total	= 1.0;
+		double mult_change_total	= 1.0;
+		for(int i = area.train_begin; i < area.train_end; i++) {
+			bool is_mask =  real_mask.Get(i);
 			
 			if (is_mask) {
 				if (!mask_prev_active) {
-					mask_open = open_buf.GetUnsafe(i);
-					mask_prev_active = true;
-					mask_prev_pos = i;
+					mask_open			= open_buf.GetUnsafe(i);
+					mask_prev_active	= true;
+					mask_prev_pos		= i;
 				}
 			} else {
 				if (mask_prev_active) {
@@ -255,58 +320,98 @@ void RandomForestAdvisor::Optimize() {
 		conf.test_valuefactor = mask_change_total;
 		conf.test_valuehourfactor = mask_hour_total > 0.0 ? mask_change_total / mask_hour_total : 0.0;
 		conf.test_hourtotal = mask_hour_total;
-		
 		conf.is_processed = true;
 		
 		
-		rf.c = conf.test_valuefactor;
-		
+		if (conf.test_valuehourfactor > 0.0) {
+			LOG(symbol << ": " << conf.test_valuehourfactor);
+		}
 		
 		// Sort list
 		rflist.Add(training_rf.Detach());
-		Sort(rflist);
+		Sort(rflist, RFSorter());
 		training_rf.Attach(rflist.Detach(rflist.GetCount()-1));
-		
-		
-		// Refresh the graph object in the indicator
-		
 		
 	}
 	
-	if (opt_counter >= count) {
+	
+	ConstBufferSource bufs;
+	
+	for (int p = 0; p < 2; p++) {
+		Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
 		
-		
-		// Init genetic optimizer
-		
-		while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
-			
-			// Get weights
-			
-			
-			// Normalize weights, so that sum is 1.0
+		// Actually train random forests
+		for(int i = 0; i < rflist.GetCount() && !Thread::IsShutdownThreads(); i++) {
+			RF& rf = rflist[i];
+			AccuracyConf& conf = rf.a;
+			VectorBool& real_mask = rf.c;
+			LOG(symbol << ": " << i << ": " << p << ": test_valuehourfactor: " << conf.test_valuehourfactor);
 			
 			
-			// Add values to sum with weight. Vector at once to get better optimization.
+			rf_trainer.forest.memory.Attach(&rf.b);
 			
 			
-			// Test with training data and with testing data
+			FillBufferSource(conf, bufs);
+			rf_trainer.Process(area, bufs, real_mask, full_mask);
 			
+			conf.stat = rf_trainer.stat;
+			LOG(symbol << ": " << i << ": " << p << ": train_accuracy: " << conf.stat.train_accuracy << " test_accuracy: " << conf.stat.test0_accuracy);
 			
-			// Return training value with less than 10% of testing value.
-			// Testing value should slightly direct away from weird locality...
-			
-			
-			
-			// Refresh the graph object in the indicator
-		
-		
+			rf_trainer.forest.memory.Detach();
 		}
-		
-		
-		if (optimizer.IsEnd())
-			phase = RF_IDLEREAL;
 	}
-	#endif
+	
+	if (!Thread::IsShutdownThreads())
+		phase = RF_OPTIMIZING;
+}
+
+void RandomForestAdvisor::Optimizing() {
+	
+	
+	// Init genetic optimizer
+	
+	//while (!optimizer.IsEnd() && !Thread::IsShutdownThreads())
+	{
+		
+		// Get weights
+		
+		
+		// Normalize weights, so that sum is 1.0
+		
+		
+		// Add values to sum with weight. Vector at once to get better optimization.
+		
+		
+		// Test with training data and with testing data
+		
+		
+		// Return training value with less than 10% of testing value.
+		// Testing value should slightly direct away from weird locality...
+		
+		
+		
+		// Refresh the graph object in the indicator
+	
+	
+	}
+	
+	
+	if (optimizer.IsEnd())
+		phase = RF_IDLEREAL;
+}
+
+void RandomForestAdvisor::Optimize() {
+	System& sys = GetSystem();
+	
+	
+	if (phase == RF_TRAINING)
+		Training();
+	
+	if (phase == RF_OPTIMIZING)
+		Optimizing();
+	
+	if (!Thread::IsShutdownThreads())
+		StoreCache();
 }
 
 void RandomForestAdvisor::TrainReal() {

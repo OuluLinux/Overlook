@@ -390,7 +390,7 @@ class StochasticOscillator : public Core {
 	int k_period;
 	int d_period;
 	int slowing;
-		
+	
 public:
 	StochasticOscillator();
 	
@@ -689,6 +689,25 @@ public:
 };
 
 
+
+
+class LinearWeekTime : public Core {
+	
+public:
+	LinearWeekTime();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1);
+	}
+};
+
+
+
+
 class SupportResistance : public Core {
 	int period, max_crosses, max_radius;
 	
@@ -783,7 +802,7 @@ public:
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		System& sys = ::Overlook::GetSystem();
+		/*System& sys = ::Overlook::GetSystem();
 		if (sys.sym_ids.GetCount() == 0)
 			Panic("ExpertSystem is not yet initialized.");
 		
@@ -799,7 +818,8 @@ public:
 		
 		if (sym_ids.Find(out_sym) != -1 || out_sym == in_sym)
 			return true;
-		return false;
+		return false;*/
+		return out_sym >= 0 && out_sym < SYM_COUNT;
 	}
 };
 

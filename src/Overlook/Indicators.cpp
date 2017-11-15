@@ -3177,6 +3177,11 @@ void ZigZagOsc::Start() {
 
 
 
+
+
+
+
+
 LinearTimeFrames::LinearTimeFrames() {
 	
 }
@@ -3218,6 +3223,43 @@ void LinearTimeFrames::Start() {
 		double m = t.month + t2;
 		double t3 = m / 12.0;
 		year.Set(i, t3);
+	}
+}
+
+
+
+
+
+
+
+
+
+LinearWeekTime::LinearWeekTime() {
+	
+}
+
+void LinearWeekTime::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetBufferLineWidth(0, 3);
+	SetCoreMinimum(-1);
+	SetCoreMaximum(+1);
+}
+
+void LinearWeekTime::Start() {
+	Buffer& week = GetBuffer(0);
+	int bars = GetBars();
+	int counted =  GetCounted();
+	System& base = GetSystem();
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		Time t = base.GetTimeTf(GetTf(), i);
+		double h = t.hour;
+		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
+		double days = GetDaysOfMonth(t.month, t.year);
+		double wday = (DayOfWeek(t) + t1) / 7.0;
+		week.Set(i, wday);
 	}
 }
 
@@ -3472,17 +3514,18 @@ void CorrelationOscillator::Init() {
 	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
 	System& sys = GetSystem();
-	if (sys.sym_ids.GetCount() == 0)
-		Panic("ExpertSystem is not yet initialized.");
+	//if (sys.sym_ids.GetCount() == 0)
+	//	Panic("ExpertSystem is not yet initialized.");
 	int sym_shift = 0;
 	for(int i = 0; i < SYM_COUNT-1; i++) {
-		int sys_id = sys.sym_ids[i + sym_shift];
+		/*int sys_id = sys.sym_ids[i + sym_shift];
 		if (sym_shift == 0 && sys_id == id) {
 			sym_shift++;
 			i--;
 			continue;
 		}
-		sym_ids[i] = sys_id;
+		sym_ids[i] = sys_id;*/
+		sym_ids[i] = i;
 	}
 	
 	SetCoreMaximum(+1.0);

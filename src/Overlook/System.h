@@ -237,9 +237,11 @@ public:
 	int GetPeriod(int i) const {return periods[i];}
 	int GetPeriodCount() const {return periods.GetCount();}
 	int FindPeriod(int period) const {return periods.Find(period);}
+	int FindSymbol(const String& s) const {return symbols.Find(s);}
 	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	
 public:
+	/*
 	VectorMap<String, int> allowed_symbols;
 	Vector<Vector<ConstBuffer*> > value_buffers;
 	Vector<Vector<ConstVectorBool*> > label_value_buffers;
@@ -258,6 +260,7 @@ public:
 	bool skip_storecache = false;
 	Mutex work_lock;
 	
+	
 	void InitContent();
 	void RefreshWorkQueue();
 	void ProcessWorkQueue();
@@ -267,17 +270,20 @@ public:
 	void ResetLabelBuffers();
 	void InitBrokerValues();
 	
+	
 	int GetTradingSymbolCount() const {return sym_ids.GetCount();}
 	int GetTrueIndicatorCount() const {return TRUEINDI_COUNT;}
 	int GetLabelIndicatorCount() const {return LABELINDI_COUNT;}
 	int GetCountMain() const {return GetCountTf(main_tf);}
-	int GetAccountSymbol() const {return symbols.GetCount()-1;}
 	ConstBuffer&		GetTrueIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<TRUEINDI_COUNT); return *value_buffers[sym][tf * TRUEINDI_COUNT + i];}
 	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
 	ConstBuffer&		GetOpenBuffer(int sym) const {return *open_buffers[sym];}
 	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) const {return *open_buffers[sym_ids[sym]];}
 	ConstBuffer&		GetTimeBuffer(int buf) const {return time_buffers[buf];}
 	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
+	*/
+	
+	int GetAccountSymbol() const {return symbols.GetCount()-1;}
 	
 public:
 	

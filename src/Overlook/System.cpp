@@ -98,8 +98,8 @@ void System::Init() {
 	
 	InitRegistry();
 	
-	InitContent();
-	/*RefreshWorkQueue();
+	/*InitContent();
+	RefreshWorkQueue();
 	ProcessWorkQueue();
 	ProcessDataBridgeQueue();
 	ProcessLabelQueue();

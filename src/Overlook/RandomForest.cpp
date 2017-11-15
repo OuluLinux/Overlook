@@ -13,10 +13,12 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	if (memory.IsEmpty()) memory.Create();
 	
 	memory->cache.SetCount(0);
+	memory->trees.SetCount(tree_count);
 	
 	train_success = true;
 	for (int i = 0; i < tree_count; i++) {
 		DecisionTree& tree = trees[i];
+		tree.forest = this;
 		tree.id = i;
 		train_success &= tree.Train(data, labels, mask, options);
 	}
@@ -38,7 +40,7 @@ void RandomForest::Chk() const {
 }
 
 
-void RandomForest::PredictCache(const ConstBufferSourceIter& iter) {
+/*void RandomForest::PredictCache(const ConstBufferSourceIter& iter) {
 	if (!train_success)
 		Panic("Training has failed");
 	
@@ -69,7 +71,7 @@ void RandomForest::PredictCache(const ConstBufferSourceIter& iter) {
 		
 		cache[tmp_cursor] = dec;
 	}
-}
+}*/
 
 /*
 inst is a 1D array of length D of an example.
@@ -413,7 +415,7 @@ int ConstBufferSource::GetDepth() const {
 }
 
 double ConstBufferSource::Get(int pos, int depth) const {
-	return bufs[depth]->Get(pos);
+	return bufs[depth]->GetUnsafe(pos);
 }
 
 

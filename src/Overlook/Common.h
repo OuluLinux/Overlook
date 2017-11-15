@@ -527,7 +527,7 @@ public:
 	int sym, tf, priority, factory, hash;
 	Vector<VectorMap<int, SourceDef> > inputs;
 	Vector<int> args;
-	Vector<FactoryHash> input_hashes;
+	Vector<Vector<FactoryHash> > input_hashes;
 	
 public:
 	typedef CoreItem CLASSNAME;
@@ -797,6 +797,19 @@ public:
         // TODO other callbacks
 };
 
+
+
+class MixerOptimizer {
+	int round = 0;
+	const int max_rounds = 10000000;
+	
+public:
+	typedef MixerOptimizer CLASSNAME;
+	MixerOptimizer() {}
+	
+	bool IsEnd() const {return round >= max_rounds;}
+	
+};
 
 }
 

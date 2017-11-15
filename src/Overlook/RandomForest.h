@@ -162,6 +162,12 @@ struct RandomForestMemory {
 	void Serialize(Stream& s) {
 		s % trees % cache;
 	}
+	
+	int Compare(const RandomForestMemory& conf) const {
+		Panic("TODO");
+		return 0;
+	}
+	
 };
 
 struct RandomForest {

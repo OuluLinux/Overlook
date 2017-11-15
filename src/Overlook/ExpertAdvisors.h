@@ -9,7 +9,6 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	
 	// Distinctive attributes
 	int id = 0;
-	int symbol = 0;
 	int label_id = 0;
 	int period = 0;
 	int ext = 0;
@@ -31,7 +30,7 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	
 	uint32 GetHashValue() const {
 		CombineHash ch;
-		ch << id << 1 << symbol << 1 << label_id << 1 << period << 1
+		ch << id << 1 << label_id << 1 << period << 1
 		   << ext << 1 << label << 1 << fastinput << 1 << labelpattern << 1 << (int)ext_dir << 1;
 		return ch;
 	}
@@ -54,9 +53,13 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 		printer.Add("largemult_frac", largemult_frac);
 	}
 	
+	int Compare(const AccuracyConf& conf) const {
+		Panic("TODO");
+		return 0;
+	}
+	
 	bool operator==(const AccuracyConf& src) const {
 		return	id				== src.id &&
-				symbol			== src.symbol &&
 				label_id		== src.label_id &&
 				period			== src.period &&
 				ext				== src.ext &&
@@ -68,7 +71,6 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	
 	void operator=(const AccuracyConf& src) {
 		id				= src.id;
-		symbol			= src.symbol;
 		label_id		= src.label_id;
 		period			= src.period;
 		ext				= src.ext;
@@ -88,7 +90,6 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 	}
 	void Serialize(Stream& s) {
 		s % id
-		  % symbol
 		  % label_id
 		  % period
 		  % ext
@@ -111,22 +112,29 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 
 class RandomForestAdvisor : public Core {
 	
-	typedef Tuple<AccuracyConf, RandomForestMemory, double> RF;
-	enum {RF_IDLE, RF_OPTIMIZING, RF_IDLEREAL, RF_TRAINREAL, RF_REAL};
+	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
+	enum {RF_IDLE, RF_TRAINING, RF_OPTIMIZING, RF_IDLEREAL, RF_TRAINREAL, RF_REAL};
+	struct RFSorter {bool operator()(const RF& a, const RF& b) const {return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
+	MixerOptimizer optimizer;
 	int opt_counter = 0;
 	int phase = RF_IDLE;
 	
 protected:
 	virtual void Start();
 	
+	void Training();
+	void Optimizing();
+	
 public:
 	typedef RandomForestAdvisor CLASSNAME;
 	RandomForestAdvisor();
 	
 	virtual void Init();
+	
+	const int indi_count = 3, label_count = 3;
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(LOCALPROB_DEPTH*2+1, LOCALPROB_DEPTH*2+1);
@@ -134,7 +142,7 @@ public:
 	
 	void Optimize();
 	void TrainReal();
-	
+	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
 	
 };
 

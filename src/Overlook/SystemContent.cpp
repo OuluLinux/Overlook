@@ -2,6 +2,8 @@
 
 namespace Overlook {
 
+#if 0
+
 void System::InitContent() {
 	ASSERT(allowed_symbols.IsEmpty());
 	
@@ -20,12 +22,12 @@ void System::InitContent() {
 	allowed_symbols.Add("EURUSD",  3); // lts
 	allowed_symbols.Add("GBPUSD",  3); // lts
 	allowed_symbols.Add("USDJPY",  3); // lts
-	allowed_symbols.Add("USDCHF",  3); // lts
 	allowed_symbols.Add("USDCAD",  3); // lts
-	allowed_symbols.Add("AUDUSD",  3); // lts
-	allowed_symbols.Add("NZDUSD",  3); // lts
 	allowed_symbols.Add("EURJPY",  3); // lts
 	allowed_symbols.Add("EURCHF",  3); // lts
+	allowed_symbols.Add("USDCHF",  3); // lts
+	allowed_symbols.Add("AUDUSD",  3); // lts
+	allowed_symbols.Add("NZDUSD",  3); // lts
 	allowed_symbols.Add("EURGBP",  3); // lts
 	allowed_symbols.Add("AUDCAD", 10); // lts
 	allowed_symbols.Add("AUDJPY", 10); // lts
@@ -109,7 +111,6 @@ void System::InitContent() {
 
 
 
-#if 0
 
 void System::RefreshWorkQueue() {
 

@@ -104,7 +104,7 @@ int System::GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym
 	
 	for(int i = 0; i < ci_queue.GetCount(); i++) {
 		CoreItem& ci = *ci_queue[i];
-		LOG(Format("%d: sym=%d tf=%d factory=%d hash=%d", i, ci.sym, ci.tf, ci.factory, ci.hash));
+		//LOG(Format("%d: sym=%d tf=%d factory=%d hash=%d", i, ci.sym, ci.tf, ci.factory, ci.hash));
 	}
 	
 	return 0;
@@ -117,54 +117,53 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 	const int factory_count = GetFactoryCount();
 	
 	
-	Vector<FactoryHash> input_hashes;
-	
 	// Loop inputs of the factory
 	const FactoryRegister& reg = regs[factory];
 	
+	
+	Vector<Vector<FactoryHash> > input_hashes;
+	input_hashes.SetCount(reg.in.GetCount());
+	
+	
 	// Connect input sources
 	// Loop all inputs of the custom core-class
-	Index<int> sub_sym_ids;
-	for (int l = input_hashes.GetCount(); l < reg.in.GetCount(); l++) {
+	Index<int> sub_sym_ids, sub_tf_ids;
+	for (int l = 0; l < reg.in.GetCount(); l++) {
 		const RegisterInput& input = reg.in[l];
 		ASSERT(input.factory >= 0);
 		FilterFunction fn = (FilterFunction)input.data;
-		int h = 0;
 		
 		// If equal timeframe is accepted as input
-		int used_tf = -1;
-		if (fn(this, -1, tf, -1, tf))
-			used_tf = tf;
-		else {
-			for(int i = 0; i < tf; i++) {
-				if (fn(this, -1, tf, -1, i)) {
-					used_tf = i;
-					break;
-				}
+		for(int i = 0; i < tf_count; i++) {
+			if (fn(this, -1, tf, -1, i)) {
+				sub_tf_ids.Add(i);
 			}
 		}
 		
-		if (used_tf != -1) {
-			
-			// Get all symbols what input requires
-			sub_sym_ids.Clear();
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
-				int in_sym = sym_ids[i];
+		if (!sub_tf_ids.IsEmpty()) {
+			for(int k = 0; k < sub_tf_ids.GetCount(); k++) {
+				int used_tf = sub_tf_ids[k];
 				
-				for(int j = 0; j < GetTotalSymbolCount(); j++) {
-					if (fn(this, in_sym, -1, j, -1))
-						sub_sym_ids.FindAdd(j);
+				// Get all symbols what input requires
+				sub_sym_ids.Clear();
+				for(int i = 0; i < sym_ids.GetCount(); i++) {
+					int in_sym = sym_ids[i];
+					
+					for(int j = 0; j < GetTotalSymbolCount(); j++) {
+						if (fn(this, in_sym, -1, j, -1))
+							sub_sym_ids.FindAdd(j);
+					}
+				}
+				
+				if (!sub_sym_ids.IsEmpty()) {
+					path.Add().Set(input.factory);
+					int h = GetCoreQueue(path, ci_queue, used_tf, sub_sym_ids);
+					path.Pop();
+					
+					input_hashes[l].Add(FactoryHash(input.factory, h));
 				}
 			}
-			
-			if (!sub_sym_ids.IsEmpty()) {
-				path.Add().Set(input.factory);
-				h = GetCoreQueue(path, ci_queue, used_tf, sub_sym_ids);
-				path.Pop();
-			}
 		}
-		
-		input_hashes.Add(FactoryHash(input.factory, h));
 	}
 	
 	// Get the unique hash for core item
@@ -197,24 +196,13 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 		if (ci.sym == -1) {
 			int path_priority = 0;//GetPathPriority(path);
 			
-			ci.sym = sym;
-			ci.tf = tf;
-			ci.priority = // lower value is more important
-				
-				// Faster tf is most important in this system.
-				(tf * factory_count +
-				
-				// Factory might require all symbols, so it is more important than symbol.
-				factory) * sym_count +
-				
-				// Lower symbols must be processed before higher, because cores are allowed to
-				// require lower id symbols in the same timeframe and same structural column.
-				sym;
-			
-			ci.factory = factory;
-			ci.hash = hash;
-			ci.input_hashes <<= input_hashes;
-			ci.args <<= args;
+			ci.sym			= sym;
+			ci.tf			= tf;
+			ci.priority		= (factory * tf_count + tf) * sym_count + sym;
+			ci.factory		= factory;
+			ci.hash			= hash;
+			ci.input_hashes	<<= input_hashes;
+			ci.args			<<= args;
 			//LOG(Format("%X\tfac=%d\tpath_priority=%d\tprio=%d", (int64)&ci, ci.factory, path_priority, ci.priority));
 			//DUMPC(args);
 			
@@ -259,24 +247,27 @@ void System::ConnectCore(CoreItem& ci) {
 	ASSERT(ci.input_hashes.GetCount() == part.in.GetCount());
 	for (int l = 0; l < part.in.GetCount(); l++) {
 		const RegisterInput& input = part.in[l];
-		int factory = ci.input_hashes[l].a;
-		int hash = ci.input_hashes[l].b;
 		
-		// Regular inputs
-		if (input.input_type == REGIN_NORMAL) {
-			ASSERT(input.factory == factory);
-			ConnectInput(l, 0, ci, input.factory, hash);
-		}
-		
-		// Optional factory inputs
-		else if (input.input_type == REGIN_OPTIONAL) {
-			// Skip disabled
-			if (factory == -1)
-				continue;
+		for(int k = 0; k < ci.input_hashes[l].GetCount(); k++) {
+			int factory = ci.input_hashes[l][k].a;
+			int hash = ci.input_hashes[l][k].b;
 			
-			ConnectInput(l, 0, ci, factory, hash);
+			// Regular inputs
+			if (input.input_type == REGIN_NORMAL) {
+				ASSERT(input.factory == factory);
+				ConnectInput(l, 0, ci, input.factory, hash);
+			}
+			
+			// Optional factory inputs
+			else if (input.input_type == REGIN_OPTIONAL) {
+				// Skip disabled
+				if (factory == -1)
+					continue;
+				
+				ConnectInput(l, 0, ci, factory, hash);
+			}
+			else Panic("Invalid input type");
 		}
-		else Panic("Invalid input type");
 	}
 }
 
@@ -291,7 +282,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 	if (fn) {
 		
 		// Filter timeframes
-		for(int i = 0; i <= ci.tf; i++) {
+		for(int i = 0; i < tf_count; i++) {
 			if (fn(this, -1, ci.tf, -1, i)) {
 				tflist.Add(i);
 			}
@@ -418,8 +409,7 @@ void System::Process(CoreItem& ci) {
 	ci.core->Refresh();
 	
 	// Store cache file
-	if (!skip_storecache)
-		ci.core->StoreCache();
+	ci.core->StoreCache();
 	
 }
 

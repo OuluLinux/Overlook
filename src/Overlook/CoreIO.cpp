@@ -5,7 +5,7 @@ namespace Overlook {
 
 void CoreItem::SetInput(int input_id, int sym_id, int tf_id, CoreItem& core, int output_id) {
 	InputDef& in = inputs[input_id];
-	in.Add(sym_id * 100 + tf_id, SourceDef(&core, output_id, sym_id, tf_id));
+	in.Add(sym_id * 1000 + tf_id, SourceDef(&core, output_id, sym_id, tf_id));
 }
 
 
@@ -60,18 +60,18 @@ void CoreIO::RefreshBuffers() {
 void CoreIO::SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 	Input& in = inputs[input_id];
 	if (core.GetOutputCount()) {
-		in.Add(sym_id * 100 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
+		in.Add(sym_id * 1000 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
 	} else {
-		in.Add(sym_id * 100 + tf_id, Source(&core, NULL, sym_id, tf_id));
+		in.Add(sym_id * 1000 + tf_id, Source(&core, NULL, sym_id, tf_id));
 	}
 }
 
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
-	return inputs[input].Get(sym * 100 + tf).core;
+	return inputs[input].Get(sym * 1000 + tf).core;
 }
 
 const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
-	return *inputs[input].Get(sym * 100 + tf).core;
+	return *inputs[input].Get(sym * 1000 + tf).core;
 }
 
 String CoreIO::GetCacheDirectory() {

@@ -45,8 +45,8 @@ void CoreIO::IO(const ValueBase& base) {
 		for(int i = 0; i < out.buffers.GetCount(); i++)
 			buffers.Add(&out.buffers[i]);
 	}
-	else if (base.data_type >= ValueBase::PERS_BOOL_) {
-		persistents.Add((const Persistent&)base);
+	else if (base.data_type >= ValueBase::PERS_) {
+		persistents.Add(dynamic_cast<const Persistent&>(base));
 	}
 }
 
@@ -105,6 +105,8 @@ void CoreIO::StoreCache() {
 	
 	String dir = GetCacheDirectory();
 	
+	GetSystem().core_lock.Enter();
+	
 	String file = AppendFileName(dir, "core.bin");
 	FileOut out(file);
 	if (!out.IsOpen())
@@ -116,6 +118,8 @@ void CoreIO::StoreCache() {
 		for(int i = 0; i < c->subcores.GetCount(); i++)
 			c->subcores[i].Put(out, dir, 1+i);
 	}
+	
+	GetSystem().core_lock.Leave();
 }
 
 void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
@@ -125,43 +129,7 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 	
 	for(int i = 0; i < persistents.GetCount(); i++) {
 		Persistent& p = persistents[i];
-		if (p.data_type == ValueBase::PERS_BOOL_) {
-			bool v = *(bool*)p.data;
-			out.Put(&v, sizeof(bool));
-		}
-		else if (p.data_type == ValueBase::PERS_INT_) {
-			int v = *(int*)p.data;
-			out.Put(&v, sizeof(int));
-		}
-		else if (p.data_type == ValueBase::PERS_DOUBLE_) {
-			double v = *(double*)p.data;
-			out.Put(&v, sizeof(double));
-		}
-		else if (p.data_type == ValueBase::PERS_INTVEC_) {
-			Vector<int>& v = *(Vector<int>*)p.data;
-			out % v;
-		}
-		else if (p.data_type == ValueBase::PERS_DBLVEC_) {
-			Vector<double>& v = *(Vector<double>*)p.data;
-			out % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTMAP_) {
-			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
-			out % v;
-		}
-		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
-			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
-			out % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTGRID_) {
-			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
-			out % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTMAPGRID_) {
-			Vector<VectorMap<int, int> >& v = *(Vector<VectorMap<int, int> >*)p.data;
-			out % v;
-		}
-		else Panic("Invalid datatype");
+		p.Serialize(out);
 	}
 	
 	for(int i = 0; i < outputs.GetCount(); i++) {
@@ -230,43 +198,7 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	
 	for(int i = 0; i < persistents.GetCount(); i++) {
 		Persistent& p = persistents[i];
-		if (p.data_type == ValueBase::PERS_BOOL_) {
-			bool* v = (bool*)p.data;
-			in.Get(v, sizeof(bool));
-		}
-		else if (p.data_type == ValueBase::PERS_INT_) {
-			int* v = (int*)p.data;
-			in.Get(v, sizeof(int));
-		}
-		else if (p.data_type == ValueBase::PERS_DOUBLE_) {
-			double* v = (double*)p.data;
-			in.Get(v, sizeof(double));
-		}
-		else if (p.data_type == ValueBase::PERS_INTVEC_) {
-			Vector<int>& v = *(Vector<int>*)p.data;
-			in % v;
-		}
-		else if (p.data_type == ValueBase::PERS_DBLVEC_) {
-			Vector<double>& v = *(Vector<double>*)p.data;
-			in % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTMAP_) {
-			VectorMap<int,int>& v = *(VectorMap<int,int>*)p.data;
-			in % v;
-		}
-		else if (p.data_type == ValueBase::PERS_BYTEGRID_) {
-			Vector<Vector<byte> >& v = *(Vector<Vector<byte> >*)p.data;
-			in % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTGRID_) {
-			Vector<Vector<int> >& v = *(Vector<Vector<int> >*)p.data;
-			in % v;
-		}
-		else if (p.data_type == ValueBase::PERS_INTMAPGRID_) {
-			Vector<VectorMap<int, int> >& v = *(Vector<VectorMap<int, int> >*)p.data;
-			in % v;
-		}
-		else Panic("Invalid datatype");
+		p.Serialize(in);
 	}
 	
 	for(int i = 0; i < outputs.GetCount(); i++) {

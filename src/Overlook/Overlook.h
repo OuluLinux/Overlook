@@ -11,6 +11,7 @@ using namespace Upp;
 #include <CtrlCore/lay.h>
 
 #include "Common.h"
+#include "Optimizer.h"
 #include "RandomForest.h"
 #include "SimBroker.h"
 #include "System.h"

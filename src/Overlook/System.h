@@ -14,11 +14,11 @@ using namespace Upp;
 void MaskBits(Vector<byte>& vec, int bit_begin, int bit_count);
 
 struct RegisterInput : Moveable<RegisterInput> {
-	int factory, input_type;
-	void* data;
-	RegisterInput(int fac, int intype, void* filter_fn) {factory=fac; input_type=intype; data=filter_fn;}
-	RegisterInput(const RegisterInput& o) {factory=o.factory; input_type=o.input_type; data=o.data;}
-	String ToString() const {return Format(" factory=%d input_type=%d data=%X", factory, input_type, (int64)data);}
+	int factory = -1, input_type = -1;
+	void* data = NULL, *data2 = NULL;
+	RegisterInput(int fac, int intype, void* filter_fn, void* args_fn) {factory=fac; input_type=intype; data=filter_fn; data2=args_fn;}
+	RegisterInput(const RegisterInput& o) {factory=o.factory; input_type=o.input_type; data=o.data; data2=o.data2;}
+	String ToString() const {return Format(" factory=%d input_type=%d data=%X data2=%X", factory, input_type, (int64)data, (int64)data2);}
 };
 
 enum {REGIN_NORMAL, REGIN_OPTIONAL};
@@ -69,10 +69,10 @@ struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
 	
 	virtual void IO(const ValueBase& base) {
 		if (base.data_type == ValueBase::IN_) {
-			in.Add(RegisterInput(base.factory, REGIN_NORMAL, base.data));
+			in.Add(RegisterInput(base.factory, REGIN_NORMAL, base.data, base.data2));
 		}
 		else if (base.data_type == ValueBase::INOPT_) {
-			in.Add(RegisterInput(base.factory, REGIN_OPTIONAL, base.data));
+			in.Add(RegisterInput(base.factory, REGIN_OPTIONAL, base.data, base.data2));
 		}
 		else if (base.data_type == ValueBase::OUT_) {
 			out.Add(OutputType(base.count, base.visible));
@@ -95,7 +95,6 @@ struct PipelineItem : Moveable<PipelineItem> {
 	int sym;
 };
 
-class CustomCtrl;
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_ACCOUNTADVISOR, CORE_HIDDEN};
@@ -107,12 +106,12 @@ class System {
 public:
 
 	typedef Core*			(*CoreFactoryPtr)();
-	typedef Tuple2<String, CoreFactoryPtr> CoreSystem;
+	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
 	
-	static void AddCustomCtrl(const String& name, CoreFactoryPtr f);
+	static void AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
-	template <class T> static CustomCtrl*	CtrlSystemFn() { return new T; }
-	inline static Vector<CoreSystem>&	CtrlFactories() {static Vector<CoreSystem> list; return list;}
+	template <class T> static Core*			CoreSystemSingleFn() { return &Single<T>(); }
+	inline static Vector<CoreSystem>&	CoreFactories() {static Vector<CoreSystem> list; return list;}
 	inline static Vector<int>&	Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&	ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Vector<int>&	AccountAdvisorFactories() {static Vector<int> list; return list;}
@@ -125,7 +124,7 @@ public:
 		if      (type == CORE_INDICATOR)		Indicators().Add(id);
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
 		else if (type == CORE_ACCOUNTADVISOR)	AccountAdvisorFactories().Add(id);
-		AddCustomCtrl(name, &System::CoreSystemFn<CoreT>);
+		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
 	}
 	
 	template <class CoreT> static CoreT& GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
@@ -133,18 +132,17 @@ public:
 		static bool inited;
 		static int id;
 		if (!inited) {
-			id = CtrlFactories().GetCount();
+			id = CoreFactories().GetCount();
 			inited = true;
 		}
 		return id;
 	}
 	
-	inline static const Vector<CoreSystem>& GetCtrlFactories() {return CtrlFactories();}
-	static int GetCtrlSystemCount() {return GetCtrlFactories().GetCount();}
+	inline static const Vector<CoreSystem>& GetCoreFactories() {return CoreFactories();}
 	
 	template <class CoreT> static int Find() {
 		CoreFactoryPtr System_fn = &System::CoreSystemFn<CoreT>;
-		const Vector<CoreSystem>& facs = CtrlFactories();
+		const Vector<CoreSystem>& facs = CoreFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
 			if (facs[i].b == System_fn)
 				return i;
@@ -169,6 +167,7 @@ protected:
 	friend class DataBridgeCommon;
 	friend class DataBridge;
 	friend class SimBroker;
+	friend class CoreIO;
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
@@ -179,6 +178,7 @@ protected:
 	Index<int>		periods;
 	SpinLock		task_lock;
 	SpinLock		pl_queue_lock;
+	Mutex			core_lock;
 	String			addr;
 	double			exploration;
 	int64			memory_limit;

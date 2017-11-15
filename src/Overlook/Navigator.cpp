@@ -42,7 +42,7 @@ void Navigator::Data() {
 	int count = System::Indicators().GetCount();
 	for(int i = 0; i < count; i++) {
 		int id = System::Indicators()[i];
-		tree.Add(indicators, OverlookImg::indicator(), System::CtrlFactories()[id].a);
+		tree.Add(indicators, OverlookImg::indicator(), System::CoreFactories()[id].a);
 	}
 	
 	
@@ -50,7 +50,7 @@ void Navigator::Data() {
 	count = System::ExpertAdvisorFactories().GetCount();
 	for(int i = 0; i < count; i++) {
 		int id = System::ExpertAdvisorFactories()[i];
-		tree.Add(expertadvisors, OverlookImg::expertadvisors(), System::CtrlFactories()[id].a);
+		tree.Add(expertadvisors, OverlookImg::expertadvisors(), System::CoreFactories()[id].a);
 	}
 	
 	
@@ -58,7 +58,7 @@ void Navigator::Data() {
 	count = System::AccountAdvisorFactories().GetCount();
 	for(int i = 0; i < count; i++) {
 		int id = System::AccountAdvisorFactories()[i];
-		tree.Add(accountadvisors, OverlookImg::accountadvisors(), System::CtrlFactories()[id].a);
+		tree.Add(accountadvisors, OverlookImg::accountadvisors(), System::CoreFactories()[id].a);
 	}
 	
 	

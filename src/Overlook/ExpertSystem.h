@@ -11,7 +11,7 @@ namespace Overlook {
 
 struct ConfProcessor {
 	
-	// Persistent
+	// Mem
 	Array<BufferRandomForest> sector;
 	BufferRandomForest succ, mult;
 	Vector<Vector<byte> > rf_prob;
@@ -42,7 +42,7 @@ class LocalProbLogic {
 	
 public:
 	
-	// Persistent
+	// Mem
 	double src_weight[2][LOCALPROB_DEPTH];
 	double sector_limit = -1.0;
 	int max_depth[2] = {0,0};
@@ -275,7 +275,7 @@ public:
 	};
 	
 	
-	// Persistent
+	// Mem
 	PoleData						data[2][SYM_COUNT];
 	LocalProbLogic					sector_logic[SYM_COUNT];
 	LocalProbLogic					succ_logic[SYM_COUNT];
@@ -327,7 +327,7 @@ class ExpertSystem {
 public:
 	enum {PHASE_TRAINING, PHASE_OPTIMIZING, PHASE_REAL};
 	
-	// Persistent
+	// Mem
 	VectorMap<int, ArrayMap<uint32, ConfProcessor> > proc_cache;
 	Vector<double> opt_results, best_test_equity;
 	Vector<AccuracyConf> acc_list;

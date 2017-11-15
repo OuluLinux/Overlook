@@ -119,7 +119,6 @@ class RandomForestAdvisor : public Core {
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
 	MixerOptimizer optimizer;
-	int opt_counter = 0;
 	int phase = RF_IDLE;
 	
 protected:
@@ -136,8 +135,57 @@ public:
 	
 	const int indi_count = 3, label_count = 3;
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(LOCALPROB_DEPTH*2+1, LOCALPROB_DEPTH*2+1);
+		reg % In<DataBridge>();
+		
+		for(int i = 0; i < TF_COUNT; i++) {
+			reg % In<VolatilityAverage>(&Args)
+				% In<OsMA>(&Args)
+				% In<StochasticOscillator>(&Args)
+			
+				% In<ZigZag>(&Args)
+				% In<MovingAverage>(&Args)
+				% In<Momentum>(&Args);
+		}
+		
+		reg % In<LinearWeekTime>()
+			% Out(LOCALPROB_DEPTH*2+1, LOCALPROB_DEPTH*2+1)
+			% Mem(rflist_pos)
+			% Mem(rflist_neg)
+			% Mem(rf_trainer)
+			% Mem(optimizer)
+			% Mem(phase);
+	}
+	
+	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		int pshift = (input - 1) / TF_COUNT;
+		int type   = (input - 1) % TF_COUNT;
+		int period = (1 << (1 + pshift));
+		
+		// Check IO: VolatilityAverage etc...
+		if      (type == 0) {
+			decl.AddArg(period);
+		}
+		else if (type == 1) {
+			decl.AddArg(period);
+			decl.AddArg(period*2);
+			decl.AddArg(period);
+		}
+		else if (type == 2) {
+			decl.AddArg(period);
+		}
+		else if (type == 3) {
+			decl.AddArg(period);
+			decl.AddArg(period);
+			decl.AddArg(Upp::max(1, period/2));
+		}
+		else if (type == 4) {
+			decl.AddArg(period);
+			decl.AddArg(-period/2);
+		}
+		else if (type == 5) {
+			decl.AddArg(period);
+			decl.AddArg(-period/2);
+		}
 	}
 	
 	void Optimize();

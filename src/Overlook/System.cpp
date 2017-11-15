@@ -207,8 +207,8 @@ int System::GetShiftFromTimeTf(const Time& t, int tf) {
 	return (int)(timediff / periods[tf] / base_period);
 }
 
-void System::AddCustomCtrl(const String& name, CoreFactoryPtr f) {
-	CtrlFactories().Add(CoreSystem(name, f));
+void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {
+	CoreFactories().Add(CoreSystem(name, f, singlef));
 }
 
 void System::SetEnd(const Time& t) {

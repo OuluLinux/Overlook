@@ -166,7 +166,7 @@ void GraphCtrl::Paint(Draw& draw) {
 		} else {
 			if (graph_label.GetCount()) graph_label += ", ";
 			
-			graph_label += System::GetCtrlFactories()[cont.GetFactory()].a;
+			graph_label += System::GetCoreFactories()[cont.GetFactory()].a;
 			
 			int bufs = cont.GetVisibleCount();
 			for(int j = 0; j < bufs; j++) {

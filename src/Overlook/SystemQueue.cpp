@@ -4,12 +4,12 @@ namespace Overlook {
 
 void System::InitRegistry() {
 	ASSERT(regs.IsEmpty());
-	ASSERT_(System::GetCtrlFactories().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
+	ASSERT_(System::GetCoreFactories().GetCount() > 0, "Recompile Overlook.icpp to fix this stupid and weird problem");
 	
 	// Register factories
-	for(int i = 0; i < System::GetCtrlFactories().GetCount(); i++) {
+	for(int i = 0; i < System::GetCoreFactories().GetCount(); i++) {
 		// unfortunately one object must be created, because IO can't be static and virtual at the same time and it is cleaner to use virtual.
-		One<Core> core = System::GetCtrlFactories()[i].b();
+		Ptr<Core> core = System::GetCoreFactories()[i].c();
 		core->base = this;
 		FactoryRegister& reg = regs.Add();
 		core->IO(reg);
@@ -125,6 +125,26 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 	input_hashes.SetCount(reg.in.GetCount());
 	
 	
+	// Get the unique hash for core item
+	Vector<int> args;
+	CombineHash ch;
+	const FactoryDeclaration& factory_decl = path.Top();
+	for(int i = 0; i < reg.args.GetCount(); i++) {
+		const ArgType& arg = reg.args[i];
+		int value;
+		ASSERT(factory_decl.arg_count >= 0 && factory_decl.arg_count <= 8);
+		if (i < factory_decl.arg_count) {
+			value = factory_decl.args[i];
+			ASSERT(value >= arg.min && value <= arg.max);
+		} else {
+			value = arg.def;
+		}
+		args.Add(value);
+		ch << value << 1;
+	}
+	int hash = ch;
+	
+	
 	// Connect input sources
 	// Loop all inputs of the custom core-class
 	Index<int> sub_sym_ids, sub_tf_ids;
@@ -156,7 +176,13 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 				}
 				
 				if (!sub_sym_ids.IsEmpty()) {
-					path.Add().Set(input.factory);
+					FactoryDeclaration& decl = path.Add();
+					
+					// Optional: add arguments by calling defined function
+					decl.Set(input.factory);
+					if (input.data2)
+						((ArgsFn)input.data2)(l, decl, args);
+					
 					int h = GetCoreQueue(path, ci_queue, used_tf, sub_sym_ids);
 					path.Pop();
 					
@@ -165,25 +191,6 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 			}
 		}
 	}
-	
-	// Get the unique hash for core item
-	Vector<int> args;
-	CombineHash ch;
-	const FactoryDeclaration& factory_decl = path.Top();
-	for(int i = 0; i < reg.args.GetCount(); i++) {
-		const ArgType& arg = reg.args[i];
-		int value;
-		ASSERT(factory_decl.arg_count >= 0 && factory_decl.arg_count <= 8);
-		if (i < factory_decl.arg_count) {
-			value = factory_decl.args[i];
-			ASSERT(value >= arg.min && value <= arg.max);
-		} else {
-			value = arg.def;
-		}
-		args.Add(value);
-		ch << value << 1;
-	}
-	int hash = ch;
 	
 	
 	for (int i = 0; i < sym_ids.GetCount(); i++) {
@@ -321,7 +328,7 @@ void System::CreateCore(CoreItem& ci) {
 	ASSERT(ci.core.IsEmpty());
 	
 	// Create core-object
-	ci.core = System::GetCtrlFactories()[ci.factory].b();
+	ci.core = System::GetCoreFactories()[ci.factory].b();
 	Core& c = *ci.core;
 	
 	// Set attributes

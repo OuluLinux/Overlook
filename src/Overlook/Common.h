@@ -226,11 +226,24 @@ struct DerivZeroTrigger {
 };
 
 struct ValueBase {
-	int count, visible, data_type, min, max, factory;
-	const char* s0;
-	void* data;
-	ValueBase() {count=0; visible=0; s0=0; data=0; data_type = -1; min = -1; max = -1; factory = -1;}
-	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_BOOL_, PERS_INT_, PERS_DOUBLE_, PERS_INTVEC_, PERS_DBLVEC_, PERS_INTMAP_, PERS_QUERYTABLE_, PERS_BYTEGRID_, PERS_INTGRID_, PERS_INTMAPGRID_};
+	int count=0, visible=0, data_type=-1, min=-1, max=-1, factory=-1;
+	const char* s0 = "";
+	void* data = NULL;
+	void* data2 = NULL;
+	ValueBase() {}
+	virtual ~ValueBase() {}
+	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_};
+	void operator = (const ValueBase& vb) {
+		count		= vb.count;
+		visible		= vb.visible;
+		data_type	= vb.data_type;
+		min			= vb.min;
+		max			= vb.max;
+		factory		= vb.factory;
+		s0			= vb.s0;
+		data		= vb.data;
+		data2		= vb.data2;
+	}
 };
 
 struct ValueRegister {
@@ -789,27 +802,17 @@ template <class T>
 class CtrlCallbacks : public T {
 
 public:
+	
+    virtual void LeftDown(Point pt, dword v) {T::LeftDown(pt, v); WhenLeftDown(pt, v);}
+    virtual void RightDown(Point pt, dword v) {T::RightDown(pt, v); WhenRightDown(pt, v);}
 
-        virtual void LeftDown(Point pt, dword v) {T::LeftDown(pt, v); WhenLeftDown(pt, v);}
-        virtual void RightDown(Point pt, dword v) {T::RightDown(pt, v); WhenRightDown(pt, v);}
-
-        Callback2<Point, dword> WhenRightDown, WhenLeftDown;
-        // TODO other callbacks
+    Callback2<Point, dword> WhenRightDown, WhenLeftDown;
+    // TODO other callbacks
 };
 
 
+typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& args);
 
-class MixerOptimizer {
-	int round = 0;
-	const int max_rounds = 10000000;
-	
-public:
-	typedef MixerOptimizer CLASSNAME;
-	MixerOptimizer() {}
-	
-	bool IsEnd() const {return round >= max_rounds;}
-	
-};
 
 }
 

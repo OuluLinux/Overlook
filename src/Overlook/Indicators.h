@@ -1,6 +1,11 @@
 #ifndef _Overlook_Indicators_h_
 #define _Overlook_Indicators_h_
 
+/*
+	Check OsMA to see how SubCores and inputs with custom arguments compares.
+	It has custom argument implementation, with SubCore implementation as commented.
+*/
+
 namespace Overlook {
 using namespace Upp;
 
@@ -156,8 +161,8 @@ public:
 			% Out(3, 1)
 			% Arg("step", step, 2, 127)
 			% Arg("maximum", maximum, 2, 127)
-			% Persistent(last_rev_pos)
-			% Persistent(direction_long);
+			% Mem(last_rev_pos)
+			% Mem(direction_long);
 	}
 };
 
@@ -323,12 +328,31 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
+			% In<MovingAverage>(&Args) // fast
+			% In<MovingAverage>(&Args) // slow
 			% Out(4, 2)
 			% Arg("fast_ema_period", fast_ema_period, 2)
 			% Arg("slow_ema_period", slow_ema_period, 2)
 			% Arg("signal_sma", signal_sma_period, 2)
-			% Persistent(value_mean) % Persistent(value_count)
-			% Persistent(diff_mean) % Persistent(diff_count);
+			% Mem(value_mean) % Mem(value_count)
+			% Mem(diff_mean) % Mem(diff_count);
+	}
+	
+	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		// Note: in case you need to fill some values in between some custom values,
+		// default arguments can be read from here:
+		// const FactoryRegister& reg = System::GetRegs()[decl.factory];
+		// const ArgType& arg = reg.args[i];
+		// int default_value = arg.def;
+		
+		int fast_ema_period =	args[0];
+		int slow_ema_period =	args[1];
+		int signal_sma =		args[2];
+		if		(input == 1)	decl.AddArg(fast_ema_period);
+		else if	(input == 2)	decl.AddArg(slow_ema_period);
+		else Panic("Unexpected input");
+		decl.AddArg(0);
+		decl.AddArg(MODE_EMA);
 	}
 	
 	void AddValue(double a) {
@@ -912,8 +936,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Persistent(means)
-			% Persistent(counts);
+			% Mem(means)
+			% Mem(counts);
 	}
 };
 
@@ -936,7 +960,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Arg("period", period, 2)
-			% Persistent(stats);
+			% Mem(stats);
 	}
 };
 

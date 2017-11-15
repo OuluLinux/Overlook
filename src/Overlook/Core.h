@@ -44,7 +44,9 @@ inline bool AnyTf(void* basesystem, int in_sym, int in_tf, int out_sym, int out_
 // Classes for IO arguments
 template <class T>
 struct In : public ValueBase {
-	In(FilterFunction fn=SymTfFilter) {data_type = IN_; data = (void*)fn; factory = System::GetId<T>();}
+	In(FilterFunction fn, ArgsFn args=NULL)	{data_type = IN_; data = (void*)fn;			 factory = System::GetId<T>(); data2 = (void*)args;}
+	In(ArgsFn args)							{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = (void*)args;}
+	In()									{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = NULL;}
 };
 
 struct InOptional : public ValueBase {
@@ -60,17 +62,43 @@ struct Arg : public ValueBase {
 	Arg(const char* key, int& value, int min, int max=10000) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
 };
 
-struct Persistent : public ValueBase, Moveable<Persistent> {
-	Persistent(bool& b)								{data = &b; data_type = PERS_BOOL_;}
-	Persistent(int& i)								{data = &i; data_type = PERS_INT_;}
-	Persistent(double& d)							{data = &d; data_type = PERS_DOUBLE_;}
-	Persistent(Vector<int>& v)						{data = &v; data_type = PERS_INTVEC_;}
-	Persistent(Vector<double>& v)					{data = &v; data_type = PERS_DBLVEC_;}
-	Persistent(VectorMap<int,int>& m)				{data = &m; data_type = PERS_INTMAP_;}
-	Persistent(Vector<Vector<byte> > & v)			{data = &v; data_type = PERS_BYTEGRID_;}
-	Persistent(Vector<Vector<int> > & v)			{data = &v; data_type = PERS_INTGRID_;}
-	Persistent(Vector<VectorMap<int, int> > & v)	{data = &v; data_type = PERS_INTMAPGRID_;}
+struct Persistent : public ValueBase {
+	Callback1<Stream&> serialize;
+	
+protected:
+	Persistent() {data_type = PERS_;}
+	
+public:
+	Persistent(Callback1<Stream&> serialize) : serialize(serialize) {}
+	Persistent(const Persistent& src) {*this = src;}
+	virtual ~Persistent() {}
+	
+	void operator = (const Persistent& base) {
+		serialize = base.serialize;
+		ValueBase::operator=(base);
+	}
+	
+	virtual void Serialize(Stream& s) {serialize(s);}
 };
+
+
+// The "easy" method for callbacks with partially template arguments and partly with constant
+// arguments. It requires one single global object, but that's not too much to ask.
+// Some purist would go with some static function method, but I don't have a clue what it is.
+struct StreamSerializer {
+	typedef StreamSerializer CLASSNAME;
+	template <class T> void ItemSerialize(Stream& s, T* obj) {s % *obj;}
+	template <class T> Callback1<Stream&> GetSerializer(T& obj) {
+		return THISBACK1(ItemSerialize<T>, &obj);
+	}
+};
+
+inline StreamSerializer& GetStreamSerializer() {return Single<StreamSerializer>();}
+
+template <class T> inline Persistent Mem(T& t) {
+	return Persistent(GetStreamSerializer().GetSerializer(t));
+}
+
 
 // Utility function for changing class arguments
 struct ArgChanger : public ValueRegister {
@@ -112,7 +140,7 @@ protected:
 	Vector<Input> inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
-	Vector<Persistent> persistents;
+	Array<Persistent> persistents;
 	System* base;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
@@ -291,6 +319,7 @@ public:
 	int GetFutureBars() const {return future_bars;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
+	inline ConstVectorBool& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
 	BarData* GetBarData();
 	
 	

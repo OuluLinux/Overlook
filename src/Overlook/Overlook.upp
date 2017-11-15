@@ -61,6 +61,8 @@ file
 	AccountAdvisor.cpp,
 	RandomForest.h,
 	RandomForest.cpp,
+	Optimizer.h,
+	Optimizer.cpp,
 	Trash readonly separator,
 	FixedSimBroker.h,
 	FixedSimBroker.cpp,

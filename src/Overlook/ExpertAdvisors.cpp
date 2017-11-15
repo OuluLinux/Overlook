@@ -129,21 +129,6 @@ void RandomForestAdvisor::Init() {
 	rf_trainer.options.max_depth	= 4;
 	rf_trainer.options.tries_count	= 10;
 	
-	
-	
-	for(int i = 0; i < TF_COUNT; i++) {
-		int period = (1 << (1 + i));
-		AddSubCore<VolatilityAverage>()	.Set("period", period);
-		AddSubCore<OsMA>().Set("fast_ema_period", period).Set("slow_ema_period", period*2).Set("signal_sma", period);
-		AddSubCore<StochasticOscillator>().Set("k_period", period);
-		
-		AddSubCore<ZigZag>().Set("depth", period).Set("deviation", period).Set("backstep", Upp::max(1, period/2));
-		AddSubCore<MovingAverage>().Set("period", period).Set("offset", -period/2);
-		AddSubCore<Momentum>().Set("period", period).Set("shift", -period/2);
-	}
-	
-	AddSubCore<LinearWeekTime>();
-	
 }
 
 void RandomForestAdvisor::Start() {
@@ -176,12 +161,12 @@ void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBuffer
 		for(int j = 0; j < conf.fastinput+1; j++) {
 			int l = tf-j;
 			ASSERT(l >= 0 && l < TF_COUNT);
-			ConstBuffer& buf = At(i + l * (indi_count + label_count)).GetOutput(0).buffers[0];
+			ConstBuffer& buf = GetInputBuffer(1 + i + l * (indi_count + label_count), 0);
 			ASSERT(&buf != NULL);
 			bufs.SetSource(k++, buf);
 		}
 	}
-	bufs.SetSource(k++, At(TF_COUNT * (indi_count + label_count)).GetOutput(0).buffers[0]);
+	bufs.SetSource(k++, GetInputBuffer(1 + TF_COUNT * (indi_count + label_count), 0));
 	
 	
 	ASSERT(k == depth);
@@ -216,8 +201,7 @@ void RandomForestAdvisor::Training() {
 	
 	
 	// Iterate trough configuration combinations, and keep the best confs
-		
-	for(; opt_counter < count && !Thread::IsShutdownThreads(); opt_counter++) {
+	for(int opt_counter = 0; opt_counter < count && !Thread::IsShutdownThreads(); opt_counter++) {
 		
 		// Use common trainer for performance reasons
 		RF& rf = *training_rf;
@@ -240,7 +224,6 @@ void RandomForestAdvisor::Training() {
 		
 		// Refresh masks
 		ConstBufferSource bufs;
-		
 		
 		
 		// Get active label
@@ -276,7 +259,7 @@ void RandomForestAdvisor::Training() {
 			
 			
 			// Get filter label
-			ConstVectorBool& src_label = At(indi_count + label_id + tf * (indi_count + label_count)).GetOutput(0).label;
+			ConstVectorBool& src_label = GetInputLabel(1 + indi_count + label_id + tf * (indi_count + label_count));
 			int count0 = real_mask.GetCount();
 			int count1 = src_label.GetCount();
 			if (sid_active_label)	real_mask.And(src_label);
@@ -361,16 +344,29 @@ void RandomForestAdvisor::Training() {
 		}
 	}
 	
-	if (!Thread::IsShutdownThreads())
+	if (!Thread::IsShutdownThreads()) {
 		phase = RF_OPTIMIZING;
+		StoreCache();
+	}
 }
 
 void RandomForestAdvisor::Optimizing() {
 	
-	
+	// - randomforest cache ei päivity jos se vektori on jo iso... jää välistä uudelleenkäytöst
+	 
 	// Init genetic optimizer
+	//int cols = SYM_COUNT * 3 * (4 + 2 * LOCALPROB_DEPTH) + 3;
+/*	optimizer.SetArrayCount(1);
+	optimizer.SetCount(cols);
+	optimizer.SetPopulation(1000);
+	optimizer.SetMaxGenerations(100);
+	optimizer.UseLimits();
 	
-	//while (!optimizer.IsEnd() && !Thread::IsShutdownThreads())
+	optimizer.Set(col++, 1, MULT_MAX, 1, "fixed_mult");
+	ASSERT(col == cols);
+	optimizer.Init(StrategyRandom2Bin);
+	*/
+	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads())
 	{
 		
 		// Get weights
@@ -396,8 +392,10 @@ void RandomForestAdvisor::Optimizing() {
 	}
 	
 	
-	if (optimizer.IsEnd())
+	if (optimizer.IsEnd()) {
 		phase = RF_IDLEREAL;
+		StoreCache();
+	};
 }
 
 void RandomForestAdvisor::Optimize() {
@@ -409,9 +407,6 @@ void RandomForestAdvisor::Optimize() {
 	
 	if (phase == RF_OPTIMIZING)
 		Optimizing();
-	
-	if (!Thread::IsShutdownThreads())
-		StoreCache();
 }
 
 void RandomForestAdvisor::TrainReal() {

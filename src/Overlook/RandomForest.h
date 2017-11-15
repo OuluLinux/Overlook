@@ -260,7 +260,7 @@ struct RandomForestStat {
 
 struct BufferRandomForest {
 	
-	// Persistent
+	// Mem
 	RandomForest forest;
 	Option options;
 	

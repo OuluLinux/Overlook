@@ -88,15 +88,15 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(4, 3)
-			% Persistent(spread_mean) % Persistent(spread_count)
-			% Persistent(cursor) % Persistent(buffer_cursor)
-			% Persistent(data_begin)
-			% Persistent(median_max_map) % Persistent(median_min_map)
-			% Persistent(symbols)
-			% Persistent(ext_data)
-			% Persistent(sym_group_stats) % Persistent(sym_groups)
-			% Persistent(median_max) % Persistent(median_min)
-			% Persistent(max_value) % Persistent(min_value);
+			% Mem(spread_mean) % Mem(spread_count)
+			% Mem(cursor) % Mem(buffer_cursor)
+			% Mem(data_begin)
+			% Mem(median_max_map) % Mem(median_min_map)
+			% Mem(symbols)
+			% Mem(ext_data)
+			% Mem(sym_group_stats) % Mem(sym_groups)
+			% Mem(median_max) % Mem(median_min)
+			% Mem(max_value) % Mem(min_value);
 	}
 	
 	virtual void Init();

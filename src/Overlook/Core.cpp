@@ -138,7 +138,6 @@ void Core::Refresh() {
 		subcores[i].Refresh();
 	
 	
-	lock.EnterWrite();
 	
 	// Some indicators might want to set the size by themselves
 	if (!skip_setcount) {
@@ -158,7 +157,6 @@ void Core::Refresh() {
 	Start();
 	
 	counted = next_count;
-	lock.LeaveWrite();
 }
 
 

@@ -161,6 +161,9 @@ public:
 		return list;
 	}
 	
+	
+	
+	
 protected:
 	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
 	
@@ -178,7 +181,6 @@ protected:
 	Index<int>		periods;
 	SpinLock		task_lock;
 	SpinLock		pl_queue_lock;
-	Mutex			core_lock;
 	String			addr;
 	double			exploration;
 	int64			memory_limit;

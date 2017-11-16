@@ -12,7 +12,6 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 	
 	if (memory.IsEmpty()) memory.Create();
 	
-	memory->cache.SetCount(0);
 	memory->trees.SetCount(tree_count);
 	
 	train_success = true;
@@ -40,39 +39,6 @@ void RandomForest::Chk() const {
 }
 
 
-/*void RandomForest::PredictCache(const ConstBufferSourceIter& iter) {
-	if (!train_success)
-		Panic("Training has failed");
-	
-	if (iter.GetSource().GetDepth() != train_depth)
-		Panic("Training depth mismatch to iterator depth");
-	
-	Vector<double>& cache = memory->cache;
-	int data_count = GetSystem().GetCountMain();
-	
-	if (cache.GetAlloc() == 0)
-		cache.Reserve(data_count);
-	
-	if (data_count > cache.GetCount())
-		cache.SetCount(data_count, 0.0);
-	
-	int tmp_cursor = 0;
-	ConstBufferSourceIter tmp_iter(iter.GetSource(), &tmp_cursor);
-	
-	for(; tmp_cursor < data_count; tmp_cursor++) {
-		// have each tree predict and average out all votes
-		double dec = 0;
-		
-		for (int i = 0; i < tree_count; i++) {
-			dec += trees[i].PredictOne(iter);
-		}
-	
-		dec /= tree_count;
-		
-		cache[tmp_cursor] = dec;
-	}
-}*/
-
 /*
 inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
@@ -82,7 +48,10 @@ double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
 	double dec = 0;
 	
 	for (int i = 0; i < tree_count; i++) {
-		dec += trees[i].PredictOne(iter);
+		DecisionTree& tree = trees[i];
+		tree.forest = this;
+		tree.id = i;
+		dec += tree.PredictOne(iter);
 	}
 
 	dec /= tree_count;

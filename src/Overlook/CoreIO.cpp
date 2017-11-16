@@ -45,7 +45,7 @@ void CoreIO::IO(const ValueBase& base) {
 		for(int i = 0; i < out.buffers.GetCount(); i++)
 			buffers.Add(&out.buffers[i]);
 	}
-	else if (base.data_type >= ValueBase::PERS_) {
+	else if (base.data_type == ValueBase::PERS_) {
 		persistents.Add(dynamic_cast<const Persistent&>(base));
 	}
 }
@@ -105,21 +105,21 @@ void CoreIO::StoreCache() {
 	
 	String dir = GetCacheDirectory();
 	
-	GetSystem().core_lock.Enter();
-	
-	String file = AppendFileName(dir, "core.bin");
-	FileOut out(file);
-	if (!out.IsOpen())
-		Panic("Couldn't open file: " + file);
-	
-	Put(out, dir, 0);
-	Core* c = dynamic_cast<Core*>(this);
-	if (c) {
-		for(int i = 0; i < c->subcores.GetCount(); i++)
-			c->subcores[i].Put(out, dir, 1+i);
+	if (serializer_lock.TryEnter()) {
+		String file = AppendFileName(dir, "core.bin");
+		FileOut out(file);
+		if (!out.IsOpen())
+			Panic("Couldn't open file: " + file);
+		
+		Put(out, dir, 0);
+		Core* c = dynamic_cast<Core*>(this);
+		if (c) {
+			for(int i = 0; i < c->subcores.GetCount(); i++)
+				c->subcores[i].Put(out, dir, 1+i);
+		}
+		
+		serializer_lock.Leave();
 	}
-	
-	GetSystem().core_lock.Leave();
 }
 
 void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {

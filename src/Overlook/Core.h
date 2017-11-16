@@ -69,7 +69,7 @@ protected:
 	Persistent() {data_type = PERS_;}
 	
 public:
-	Persistent(Callback1<Stream&> serialize) : serialize(serialize) {}
+	Persistent(Callback1<Stream&> serialize) : serialize(serialize) {data_type = PERS_;}
 	Persistent(const Persistent& src) {*this = src;}
 	virtual ~Persistent() {}
 	
@@ -146,6 +146,7 @@ protected:
 	int counted, bars;
 	int db_src;
 	bool serialized;
+	Mutex serializer_lock;
 	
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
@@ -258,7 +259,6 @@ protected:
 	Vector<int> subcore_factories;
 	Vector<DataLevel> levels;
 	Color levels_clr;
-	RWMutex lock;
 	double minimum, maximum;
 	double point = 0.0;
 	int levels_style;

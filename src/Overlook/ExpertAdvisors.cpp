@@ -122,27 +122,103 @@ RandomForestAdvisor::RandomForestAdvisor() {
 
 void RandomForestAdvisor::Init() {
 	SetCoreSeparateWindow();
+	SetCoreMinimum(0.0);  // normalized
+	SetCoreMaximum(1.0);   // normalized
 	
-	// Last or first? The sum is bolder
+	SetBufferColor(0, Green);
+	SetBufferLineWidth(0, 3);
+	for(int i = 0; i < LOCALPROB_DEPTH; i++) {
+		Color clr = GrayColor(i * 100 / LOCALPROB_DEPTH);
+		SetBufferColor(1 + i, clr);
+		SetBufferColor(1 + LOCALPROB_DEPTH + i, clr);
+	}
 	
 	rf_trainer.options.tree_count	= 100;
 	rf_trainer.options.max_depth	= 4;
 	rf_trainer.options.tries_count	= 10;
 	
+	
+	ForceSetCounted(0);
 }
 
 void RandomForestAdvisor::Start() {
 	LOG("RandomForestAdvisor::Start");
 	
 	
-	if (phase == RF_IDLE) {
-		phase = RF_TRAINING;
-		Thread::Start(THISBACK(Optimize));
+	if (!running) {
+		int bars = GetBars();
+		Output& out = GetOutput(0);
+		for(int i = 0; i < out.buffers.GetCount(); i++)
+			out.buffers[i].SetCount(bars);
+		
+		if (phase == RF_IDLE || phase == RF_TRAINING) {
+			ForceSetCounted(0);
+			phase = RF_TRAINING;
+			running = true;
+			Thread::Start(THISBACK(Training));
+		}
+		
+		else if (phase == RF_OPTIMIZING) {
+			return;
+			
+			ForceSetCounted(0);
+			running = true;
+			Thread::Start(THISBACK(Optimizing));
+		}
+		
+		else if (phase == RF_IDLEREAL || phase == RF_TRAINREAL) {
+			phase = RF_TRAINREAL;
+			running = true;
+			Thread::Start(THISBACK(TrainReal));
+		}
 	}
 	
-	if (phase == RF_IDLEREAL) {
-		phase = RF_TRAINREAL;
-		Thread::Start(THISBACK(TrainReal));
+	if (!running) {
+		int counted = GetCounted();
+		int bars = GetBars();
+		if (counted < bars) {
+			RefreshOutputBuffers();
+		}
+	}
+}
+
+void RandomForestAdvisor::RefreshOutputBuffers() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	VectorBool full_mask;
+	full_mask.SetCount(bars).One();
+	
+	ConstBufferSource bufs;
+	
+	for (int p = 0; p < 2; p++) {
+		Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
+		
+		for(int i = 0; i < rflist.GetCount(); i++) {
+			RF& rf = rflist[i];
+			AccuracyConf& conf = rf.a;
+			VectorBool& real_mask = rf.c;
+			
+			if (!conf.is_processed || conf.id == -1) continue;
+			
+			
+			rf_trainer.forest.memory.Attach(&rf.b);
+			FillBufferSource(conf, bufs);
+			
+			int cursor = counted;
+			ConstBufferSourceIter iter(bufs, &cursor);
+			
+			Buffer& buf = GetBuffer(1 + p * LOCALPROB_DEPTH + i);
+			
+			for(; cursor < bars; cursor++) {
+				SetSafetyLimit(cursor);
+				double d = rf_trainer.forest.PredictOne(iter);
+				if (d > 1.0) d = 1.0;
+				if (d < 0.0) d = 0.0;
+				buf.Set(cursor, d);
+			}
+			rf_trainer.forest.memory.Detach();
+		}
 	}
 }
 
@@ -173,6 +249,9 @@ void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBuffer
 }
 
 void RandomForestAdvisor::Training() {
+	running = true;
+	serializer_lock.Enter();
+	
 	System& sys = GetSystem();
 	
 	// Prepare training functions and output variables
@@ -344,41 +423,114 @@ void RandomForestAdvisor::Training() {
 		}
 	}
 	
+	serializer_lock.Leave(); // leave before StoreCache
+	
 	if (!Thread::IsShutdownThreads()) {
+		RefreshOutputBuffers();
 		phase = RF_OPTIMIZING;
 		StoreCache();
 	}
+	
+	running = false;
 }
 
+
+
 void RandomForestAdvisor::Optimizing() {
+	running = true;
+	serializer_lock.Enter();
+	
+	
+	for(int i = 0; i < rflist_pos.GetCount(); i++) {
+		AccuracyConf& conf = rflist_pos[i].a;
+		if (!conf.is_processed || conf.id == -1)
+			rflist_pos.Remove(i--);
+	}
+	
+	for(int i = 0; i < rflist_neg.GetCount(); i++) {
+		AccuracyConf& conf = rflist_neg[i].a;
+		if (!conf.is_processed || conf.id == -1)
+			rflist_neg.Remove(i--);
+	}
 	
 	// - randomforest cache ei päivity jos se vektori on jo iso... jää välistä uudelleenkäytöst
 	 
 	// Init genetic optimizer
-	//int cols = SYM_COUNT * 3 * (4 + 2 * LOCALPROB_DEPTH) + 3;
-/*	optimizer.SetArrayCount(1);
+	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2 + 2;
+	optimizer.SetArrayCount(1);
 	optimizer.SetCount(cols);
 	optimizer.SetPopulation(1000);
 	optimizer.SetMaxGenerations(100);
 	optimizer.UseLimits();
 	
-	optimizer.Set(col++, 1, MULT_MAX, 1, "fixed_mult");
+	
+	Vector<int> weight_pos;
+	
+	int col = 0;
+	for(int i = 0; i < rflist_pos.GetCount(); i++) {
+		weight_pos.Add(col);
+		optimizer.Set(col++,  0.0, 1.0, 0.01, "pos mul");
+		optimizer.Set(col++, -1.0, 1.0, 0.01, "pos off");
+	}
+	for(int i = 0; i < rflist_neg.GetCount(); i++) {
+		weight_pos.Add(col);
+		optimizer.Set(col++,  0.0, 1.0, 0.01, "neg mul");
+		optimizer.Set(col++, -1.0, 1.0, 0.01, "neg off");
+	}
+	optimizer.Set(col++, 0.0, 1.0, 0.01, "trigger limit");
+	optimizer.Set(col++, 0.0, 1.0, 0.01, "+ - balance");
 	ASSERT(col == cols);
-	optimizer.Init(StrategyRandom2Bin);
-	*/
-	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads())
-	{
+	
+	
+	optimizer.Init();
+	
+	Vector<double> trial;
+	Vector<Vector<double> > buffers;
+	buffers.SetCount(rflist_pos.GetCount() + rflist_neg.GetCount());
+	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
 		
 		// Get weights
+		optimizer.GetLimitedTrialSolution(trial);
+		Panic("TODO");
 		
 		
 		// Normalize weights, so that sum is 1.0
+		double sum = 0.0;
+		for(int i = 0; i < weight_pos.GetCount(); i++)
+			sum += trial[weight_pos[i]];
+		double mul = 1.0 / sum;
+		for (int i = 0; i < weight_pos.GetCount(); i++)
+			trial[weight_pos[i]] *= mul;
 		
 		
 		// Add values to sum with weight. Vector at once to get better optimization.
+		int col = 0;
+		for(int i = 0; i < rflist_pos.GetCount(); i++) {
+			double pos_mul = trial[col++];
+			double pos_off = trial[col++];
+			const Buffer& src = GetBuffer(1 + i);
+			Vector<double>& dst = buffers[col];
+			dst.SetCount(src.GetCount(), 0.0);
+			for(int j = 0; j < src.GetCount(); j++)
+				dst[j] = src.Get(j) * pos_mul + pos_off;
+		}
+		for(int i = 0; i < rflist_neg.GetCount(); i++) {
+			double neg_mul = trial[col++];
+			double neg_off = trial[col++];
+			const Buffer& src = GetBuffer(1 + LOCALPROB_DEPTH + i);
+			Vector<double>& dst = buffers[col];
+			dst.SetCount(src.GetCount(), 0.0);
+			for(int j = 0; j < src.GetCount(); j++)
+				dst[j] = src.Get(j) * neg_mul + neg_off;
+		}
+		double trigger_limit = trial[col++];
+		double posneg_balance = trial[col++];
+		ASSERT(col == cols);
 		
 		
 		// Test with training data and with testing data
+		Panic("TODO");
+		//simcore.LoadConfiguration(trial);
 		
 		
 		// Return training value with less than 10% of testing value.
@@ -393,24 +545,23 @@ void RandomForestAdvisor::Optimizing() {
 	
 	
 	if (optimizer.IsEnd()) {
+		RefreshOutputBuffers();
 		phase = RF_IDLEREAL;
 		StoreCache();
-	};
-}
-
-void RandomForestAdvisor::Optimize() {
-	System& sys = GetSystem();
+	}
 	
-	
-	if (phase == RF_TRAINING)
-		Training();
-	
-	if (phase == RF_OPTIMIZING)
-		Optimizing();
+	serializer_lock.Leave();
+	running = false;
 }
 
 void RandomForestAdvisor::TrainReal() {
+	running = true;
 	
+	
+	
+	
+	
+	running = false;
 }
 
 }

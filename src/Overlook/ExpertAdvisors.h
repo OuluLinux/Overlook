@@ -96,9 +96,9 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 		  % label
 		  % fastinput
 		  % labelpattern
-		  % ext_dir;
+		  % ext_dir
 		
-		s % stat
+		  % stat
 		  % test_valuefactor
 		  % test_valuehourfactor
 		  % test_hourtotal
@@ -116,16 +116,23 @@ class RandomForestAdvisor : public Core {
 	enum {RF_IDLE, RF_TRAINING, RF_OPTIMIZING, RF_IDLEREAL, RF_TRAINREAL, RF_REAL};
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
+	// Persistent
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
 	MixerOptimizer optimizer;
 	int phase = RF_IDLE;
+	
+	
+	// Temp
+	//SimCore simcore;
+	bool running = false;
 	
 protected:
 	virtual void Start();
 	
 	void Training();
 	void Optimizing();
+	void RefreshOutputBuffers();
 	
 public:
 	typedef RandomForestAdvisor CLASSNAME;
@@ -188,7 +195,6 @@ public:
 		}
 	}
 	
-	void Optimize();
 	void TrainReal();
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
 	

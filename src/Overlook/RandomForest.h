@@ -157,10 +157,9 @@ struct RandomForestMemoryTree : Moveable<RandomForestMemoryTree> {
 
 struct RandomForestMemory {
 	Vector<RandomForestMemoryTree> trees;
-	Vector<double> cache;
 	
 	void Serialize(Stream& s) {
-		s % trees % cache;
+		s % trees;
 	}
 	
 	int Compare(const RandomForestMemory& conf) const {
@@ -206,7 +205,6 @@ struct RandomForest {
 	*/
 
 	double PredictOne(const ConstBufferSourceIter& iter);
-	void PredictCache(const ConstBufferSourceIter& iter);
 	
 	// convenience function. Here, data is NxD array.
 	// returns probabilities of being 1 for all data in an array.

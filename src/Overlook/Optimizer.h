@@ -17,12 +17,14 @@ public:
 	
 	bool IsEnd() const {return round >= max_rounds;}
 	
+	void Init();
+	void UseLimits();
 	void SetArrayCount(int i);
 	void SetCount(int i);
 	void SetPopulation(int i);
 	void SetMaxGenerations(int i);
-	void UseLimits();
 	void Set(int col, double min, double max, double step, const char* desc);
+	void GetLimitedTrialSolution(Vector<double>& trial);
 	
 	void Serialize(Stream& s) {
 		s % round % arraycount % count % population % generations % max_rounds;

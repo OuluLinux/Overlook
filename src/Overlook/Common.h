@@ -407,6 +407,9 @@ inline int IncreaseMonthTS(int ts) {
 
 class CoreIO;
 
+typedef const double ConstDouble;
+
+
 // Class for default visual settings for a single visible line of an indicator
 class Buffer : public Moveable<Buffer> {
 	
@@ -428,6 +431,10 @@ public:
 	bool IsEmpty() const {return value.IsEmpty();}
 	double GetUnsafe(int i) const {return value[i];}
 	
+	ConstDouble* Begin() const {return value.Begin();}
+	ConstDouble* End()   const {return value.End();}
+	double* Begin() {return value.Begin();}
+	double* End()   {return value.End();}
 	
 	// Some utility functions for checking that indicator values are strictly L-R
 	#ifdef flagDEBUG

@@ -169,7 +169,7 @@ void GraphCtrl::Paint(Draw& draw) {
 			graph_label += System::GetCoreFactories()[cont.GetFactory()].a;
 			
 			int bufs = cont.GetVisibleCount();
-			for(int j = 0; j < bufs; j++) {
+			for(int j = bufs-1; j >= 0; j--) {
 				PaintCoreLine(w, cont, shift, i==0, j);
 			}
 		}
@@ -415,6 +415,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	
 	int buf_count = cont.GetBars();
 	bool draw_label = cont.GetOutputCount() && cont.GetOutput(0).label.GetCount() == buf_count;
+	bool draw_label_enabled = cont.GetOutputCount() > 1;
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -435,8 +436,13 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 			
 			if (draw_label) {
 				bool label = cont.GetOutput(0).label.Get(pos);
-				if (label)	W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
-				else		W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
+				bool enabled = true;
+				if (draw_label_enabled)
+					enabled = cont.GetOutput(1).label.Get(pos);
+				if (enabled) {
+					if (label)	W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
+					else		W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
+				}
 			}
 			
 	        if (skip_zero && value == 0) continue;

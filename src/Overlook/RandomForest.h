@@ -230,7 +230,7 @@ struct ForestArea {
 	int test1_begin = 0, test1_end = 0;
 	
 	void FillArea(int level, int data_count);
-	void FillArea(int level);
+	void FillArea(int data_count);
 };
 
 struct RandomForestStat {

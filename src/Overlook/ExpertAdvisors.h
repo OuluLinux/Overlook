@@ -119,13 +119,17 @@ class RandomForestAdvisor : public Core {
 	// Persistent
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
-	MixerOptimizer optimizer;
+	GeneticOptimizer optimizer;
 	int phase = RF_IDLE;
 	
 	
 	// Temp
-	//SimCore simcore;
+	Vector<int> pos_weight_i, neg_weight_i;
+	Vector<double> trial;
+	ForestArea area;
+	double area_change_total[3];
 	bool running = false;
+	bool once = true;
 	
 protected:
 	virtual void Start();
@@ -140,6 +144,7 @@ public:
 	
 	virtual void Init();
 	
+	const int main_graphs = 3;
 	const int indi_count = 3, label_count = 3;
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>();
@@ -155,7 +160,8 @@ public:
 		}
 		
 		reg % In<LinearWeekTime>()
-			% Out(LOCALPROB_DEPTH*2+1, LOCALPROB_DEPTH*2+1)
+			% Out(main_graphs + LOCALPROB_DEPTH*2, main_graphs + LOCALPROB_DEPTH*2)
+			% Out(0, 0) // label enabled
 			% Mem(rflist_pos)
 			% Mem(rflist_neg)
 			% Mem(rf_trainer)
@@ -195,7 +201,9 @@ public:
 		}
 	}
 	
+	void TrainRF();
 	void TrainReal();
+	void RunMain();
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
 	
 };

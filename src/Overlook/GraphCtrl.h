@@ -60,6 +60,12 @@ class GraphCtrl : public Ctrl {
 	bool mouse_left_is_down, show_timevalue_tool;
 	bool right_offset;
 	
+	
+	Rect r;
+    double diff;
+    int pos, x, y, h, c, data_shift, data_begin, data_count, draw_type, style, line_width, line_style;
+	int buf_count;
+	
 protected:
 	friend class Chart;
 	
@@ -71,7 +77,8 @@ protected:
 	void DrawBorder(Draw& W);
 	void DrawGrid(Draw& W, bool draw_vert_grid);
 	void DrawLines(Draw& d, Core& cont);
-	void PaintCoreLine(Draw& d, Core& cont, int shift, bool draw_border, int buffer);
+	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
+	void DrawBorders(Draw& d, Core& cont);
 	Rect GetGraphCtrlRect();
 	
 	

@@ -22,7 +22,7 @@ CoreIO::CoreIO() {
 	tf_id = -1;
 	factory = -1;
 	hash = -1;
-	#ifdef flagDEBUG
+	#if defined flagDEBUG && defined flagSAFETYLIMITS
 	read_safety_limit = 0;
 	#endif
 }

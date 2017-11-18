@@ -120,22 +120,23 @@ class RandomForestAdvisor : public Core {
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
 	GeneticOptimizer optimizer;
+	int prev_counted = 0;
 	int phase = RF_IDLE;
 	
 	
 	// Temp
-	Vector<int> pos_weight_i, neg_weight_i;
 	Vector<double> trial;
 	ForestArea area;
 	double area_change_total[3];
 	bool running = false;
 	bool once = true;
 	
+	
 protected:
 	virtual void Start();
 	
-	void Training();
-	void Optimizing();
+	void SourceTraining();
+	void MainTraining();
 	void RefreshOutputBuffers();
 	
 public:
@@ -144,7 +145,7 @@ public:
 	
 	virtual void Init();
 	
-	const int main_graphs = 3;
+	const int main_graphs = 1;
 	const int indi_count = 3, label_count = 3;
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>();
@@ -160,12 +161,13 @@ public:
 		}
 		
 		reg % In<LinearWeekTime>()
+			% In<MinimalLabel>()
 			% Out(main_graphs + LOCALPROB_DEPTH*2, main_graphs + LOCALPROB_DEPTH*2)
-			% Out(0, 0) // label enabled
 			% Mem(rflist_pos)
 			% Mem(rflist_neg)
 			% Mem(rf_trainer)
 			% Mem(optimizer)
+			% Mem(prev_counted)
 			% Mem(phase);
 	}
 	
@@ -193,7 +195,7 @@ public:
 		}
 		else if (type == 4) {
 			decl.AddArg(period);
-			decl.AddArg(-period/2);
+			decl.AddArg(-period/2 - 1);
 		}
 		else if (type == 5) {
 			decl.AddArg(period);
@@ -201,10 +203,18 @@ public:
 		}
 	}
 	
+	void SearchSources();
 	void TrainRF();
-	void TrainReal();
+	void TrainMainRF();
+	void RealTraining();
 	void RunMain();
+	void RunMainReal();
+	void SetTrainingArea();
+	void SetRealArea();
+	void RefreshMainBuffer(bool forced);
+	void RefreshMain();
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
+	void FillMainBufferSource(ConstBufferSource& bufs);
 	
 };
 

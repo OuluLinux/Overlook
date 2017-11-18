@@ -157,6 +157,8 @@ void GraphCtrl::Paint(Draw& draw) {
 		}
 	}
 	
+	DrawGrid(w, false);
+	
 	String graph_label;
 	for(int i = 0; i < src.GetCount(); i++) {
 		Core& cont = *src[i];
@@ -170,10 +172,14 @@ void GraphCtrl::Paint(Draw& draw) {
 			
 			int bufs = cont.GetVisibleCount();
 			for(int j = bufs-1; j >= 0; j--) {
-				PaintCoreLine(w, cont, shift, i==0, j);
+				PaintCoreLine(w, cont, shift,j);
 			}
 		}
 	}
+	
+	DrawBorders(w, *src.Top());
+	DrawBorder(w);
+	DrawLines(w, *src.Top());
 	
 	w.DrawText(5,5, graph_label, StdFont(10), GrayColor());
 	
@@ -360,17 +366,14 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
     W.DrawRect(shift_x, 0, width_x, 3, Blue());
 }
 
-void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, int buffer) {
+void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 	ASSERT(base);
 	System& bs = *base;
 	
-	if (draw_border) {
-		DrawGrid(W, false);
-	}
 	
-	int pos, x, y, h, c, data_shift, data_begin, data_count, draw_type, style, line_width, line_style;
-	double diff;
-    Rect r(GetGraphCtrlRect());
+	
+	r = GetGraphCtrlRect();
+    
     bool skip_zero;
     Color value_color = cont.GetBufferColor(buffer);
     int tf = chart->GetTf();
@@ -413,9 +416,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	
 	if (line_width == 0) draw_type = -1;
 	
-	int buf_count = cont.GetBars();
-	bool draw_label = cont.GetOutputCount() && cont.GetOutput(0).label.GetCount() == buf_count;
-	bool draw_label_enabled = cont.GetOutputCount() > 1;
+	buf_count = cont.GetBars();
 	
 	if (draw_type == 0) {
 		Vector<Point> P;
@@ -433,17 +434,6 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	        
 	        double value = cont.GetBufferValue(buffer, pos);
 			int xi = (x+(i+0.5)*div);
-			
-			if (draw_label) {
-				bool label = cont.GetOutput(0).label.Get(pos);
-				bool enabled = true;
-				if (draw_label_enabled)
-					enabled = cont.GetOutput(1).label.Get(pos);
-				if (enabled) {
-					if (label)	W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
-					else		W.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
-				}
-			}
 			
 	        if (skip_zero && value == 0) continue;
 	        
@@ -499,10 +489,39 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, bool draw_border, 
 	        W.DrawText((int)(x+(i+0.5)*div), (int)(y+V), str, StdFont(), value_color);
 		}
 	}
-	
-	if (draw_border) {
-		DrawBorder(W);
-		DrawLines(W, cont);
+}
+
+void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
+	bool draw_label = cont.GetOutputCount() > 0;
+	bool draw_label_enabled = cont.GetOutputCount() > 1;
+	if (draw_label) {
+		int label_data_count = cont.GetOutput(0).label.GetCount();
+		int begin = 0;
+		int end = real_screen_count;
+		VectorBool* labelvec = &cont.GetOutput(0).label;
+		VectorBool* enabledvec = NULL;
+		if (draw_label_enabled) {
+			enabledvec = &cont.GetOutput(1).label;
+			label_data_count = Upp::min(label_data_count, cont.GetOutput(0).label.GetCount());
+		}
+		for(int i = begin; i < end; i++) {
+	        int pos = c - (count + shift - i + data_shift);
+	        if (pos >= label_data_count || pos < data_begin || pos >= buf_count)
+				continue;
+	        
+	        int xi = (x+(i+0.5)*div);
+			
+			if (draw_label) {
+				bool label = labelvec->Get(pos);
+				bool enabled = true;
+				if (draw_label_enabled)
+					enabled = enabledvec->Get(pos);
+				if (enabled) {
+					if (label)	d.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
+					else		d.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
+				}
+			}
+		}
 	}
 }
 

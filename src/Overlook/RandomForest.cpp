@@ -44,9 +44,12 @@ inst is a 1D array of length D of an example.
 returns the probability of label 1, i.e. a number in range [0, 1]
 */
 double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
+	
 	// have each tree predict and average out all votes
 	double dec = 0;
 	
+	ASSERT(memory->trees.GetCount() == tree_count);
+	trees.SetCount(tree_count);
 	for (int i = 0; i < tree_count; i++) {
 		DecisionTree& tree = trees[i];
 		tree.forest = this;

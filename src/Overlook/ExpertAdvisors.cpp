@@ -117,37 +117,35 @@ void ForestArea::FillArea(int data_count) {
 
 
 RandomForestAdvisor::RandomForestAdvisor() {
-	
+	rf_trainer.options.tree_count		= 100;
+	rf_trainer.options.max_depth		= 4;
+	rf_trainer.options.tries_count		= 10;
 }
 
 void RandomForestAdvisor::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(0.0);  // normalized
-	SetCoreMaximum(1.0);   // normalized
+	SetCoreMinimum(-1.0);  // normalized
+	SetCoreMaximum(+1.0);   // normalized
 	
-	SetBufferColor(0, Color(28, 255, 150));
-	SetBufferColor(1, Color(28, 127, 255));
-	SetBufferColor(2, Color(255, 94, 78));
-	SetBufferLineWidth(0, 3);
+	SetBufferColor(0, Color(28, 127, 255));
+	SetBufferColor(1, Color(255, 94, 78));
+	SetBufferLineWidth(0, 2);
 	SetBufferLineWidth(1, 2);
-	SetBufferLineWidth(2, 2);
 	for(int i = 0; i < LOCALPROB_DEPTH; i++) {
-		Color clr = GrayColor(i * 100 / LOCALPROB_DEPTH);
-		SetBufferColor(main_graphs + i, clr);
-		SetBufferColor(main_graphs + LOCALPROB_DEPTH + i, clr);
+		RGBA gray_clr = GrayColor(100 + i * 100 / LOCALPROB_DEPTH);
+		RGBA red_tint(gray_clr), green_tint(gray_clr);
+		red_tint.r		+= 30;
+		green_tint.g	+= 30;
+		SetBufferColor(main_graphs + i * 2 + 0, green_tint);
+		SetBufferColor(main_graphs + i * 2 + 1, red_tint);
 	}
-	
-	rf_trainer.options.tree_count	= 100;
-	rf_trainer.options.max_depth	= 4;
-	rf_trainer.options.tries_count	= 10;
-	
 }
 
 void RandomForestAdvisor::Start() {
 	LOG("RandomForestAdvisor::Start");
 	
-	/*
-	if (once) {
+	
+	/*if (once) {
 		ForceSetCounted(0);
 		RefreshOutputBuffers();
 		once = false;
@@ -162,12 +160,12 @@ void RandomForestAdvisor::Start() {
 		if (phase == RF_IDLE || phase == RF_TRAINING) {
 			phase = RF_TRAINING;
 			running = true;
-			Thread::Start(THISBACK(Training));
+			Thread::Start(THISBACK(SourceTraining));
 		}
 		
 		else if (phase == RF_OPTIMIZING) {
 			running = true;
-			Thread::Start(THISBACK(Optimizing));
+			Thread::Start(THISBACK(MainTraining));
 		}
 		
 		
@@ -176,103 +174,107 @@ void RandomForestAdvisor::Start() {
 		else if (phase == RF_TRAINREAL) {
 			phase = RF_TRAINREAL;
 			running = true;
-			Thread::Start(THISBACK(TrainReal));
+			Thread::Start(THISBACK(RealTraining));
 		}
 	}
 	
 	if (!running) {
-		int counted = GetCounted();
 		int bars = GetBars();
-		if (counted < bars) {
+		if (prev_counted < bars) {
+			TimeStop ts;
+			
 			RefreshOutputBuffers();
+			LOG("RandomForestAdvisor::Start ... RefreshOutputBuffers " << ts.ToString());
+			ts.Reset();
+			
+			RefreshMain();
+			LOG("RandomForestAdvisor::Start ... RefreshMain " << ts.ToString());
+			
+			prev_counted = bars;
 		}
 	}
 }
 
-void RandomForestAdvisor::RefreshOutputBuffers() {
-	int counted = GetCounted();
-	int bars = GetBars();
-	
-	VectorBool full_mask;
-	full_mask.SetCount(bars).One();
-	
-	SetSafetyLimit(bars);
-	
-	ConstBufferSource bufs;
-	
-	for (int p = 0; p < 2; p++) {
-		Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
-		
-		for(int i = 0; i < rflist.GetCount(); i++) {
-			RF& rf = rflist[i];
-			AccuracyConf& conf = rf.a;
-			VectorBool& real_mask = rf.c;
-			
-			if (!conf.is_processed || conf.id == -1) continue;
-			
-			
-			rf_trainer.forest.memory.Attach(&rf.b);
-			FillBufferSource(conf, bufs);
-			
-			int cursor = counted;
-			ConstBufferSourceIter iter(bufs, &cursor);
-			
-			Buffer& buf = GetBuffer(main_graphs + p * LOCALPROB_DEPTH + i);
-			
-			for(; cursor < bars; cursor++) {
-				SetSafetyLimit(cursor);
-				double d = rf_trainer.forest.PredictOne(iter);
-				if (d > 1.0) d = 1.0;
-				if (d < 0.0) d = 0.0;
-				buf.Set(cursor, d);
-			}
-			rf_trainer.forest.memory.Detach();
-		}
-	}
-}
-
-void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs) {
-	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
-	bufs.SetDepth(depth);
-	ASSERT(depth >= 2);
-	
-	
-	int k = 0;
-	int symbol = GetSymbol();
-	int tf = conf.GetBaseTf(0);
-	
-	ASSERT(TRUEINDI_COUNT == indi_count);
-	for(int i = 0; i < TRUEINDI_COUNT; i++) {
-		for(int j = 0; j < conf.fastinput+1; j++) {
-			int l = tf-j;
-			ASSERT(l >= 0 && l < TF_COUNT);
-			ConstBuffer& buf = GetInputBuffer(1 + i + l * (indi_count + label_count), 0);
-			ASSERT(&buf != NULL);
-			bufs.SetSource(k++, buf);
-		}
-	}
-	bufs.SetSource(k++, GetInputBuffer(1 + TF_COUNT * (indi_count + label_count), 0));
-	
-	
-	ASSERT(k == depth);
-}
-
-void RandomForestAdvisor::Training() {
+void RandomForestAdvisor::SourceTraining() {
 	running = true;
 	serializer_lock.Enter();
 	
-	System& sys = GetSystem();
+	SetTrainingArea();
+	SearchSources();
+	TrainRF();
+	
+	serializer_lock.Leave(); // leave before StoreCache
+	
+	if (!Thread::IsShutdownThreads()) {
+		ForceSetCounted(0);
+		RefreshOutputBuffers();
+		phase = RF_OPTIMIZING;
+		StoreCache();
+	}
+	
+	running = false;
+}
+
+void RandomForestAdvisor::MainTraining() {
+	running = true;
+	serializer_lock.Enter();
+	
+	SetTrainingArea();
+	TrainMainRF();
+	
+	serializer_lock.Leave(); // leave before StoreCache
+	
+	StoreCache();
+	
+	if (optimizer.IsEnd()) {
+		optimizer.GetLimitedBestSolution(trial);
+
+		ForceSetCounted(0);
+		RefreshOutputBuffers();
+		RunMain();
+
+		phase = RF_IDLEREAL;
+		StoreCache();
+	}
+	
+	
+	
+	running = false;
+}
+
+void RandomForestAdvisor::RealTraining() {
+	running = true;
+	serializer_lock.Enter();
+	
+	SetRealArea();
+	TrainRF();
+	TrainMainRF();
+	
+	serializer_lock.Leave(); // leave before StoreCache
+	
+	if (!Thread::IsShutdownThreads()) {
+		ForceSetCounted(0);
+		RefreshOutputBuffers();
+		RefreshMain();
+		phase = RF_REAL;
+		StoreCache();
+	}
+	
+	running = false;
+}
+
+void RandomForestAdvisor::SearchSources() {
 	
 	// Prepare training functions and output variables
 	rflist_pos.SetCount(LOCALPROB_DEPTH);
 	rflist_neg.SetCount(LOCALPROB_DEPTH);
 	
 	
+	System& sys = GetSystem();
 	int symbol = GetSymbol();
 	int count = GetConfCount();
 	int tf = GetTf();
 	int data_count = sys.GetCountTf(tf);
-	area.FillArea(data_count);
 	
 	One<RF> training_rf;
 	training_rf.Create();
@@ -403,19 +405,6 @@ void RandomForestAdvisor::Training() {
 		training_rf.Attach(rflist.Detach(rflist.GetCount()-1));
 		
 	}
-	
-	TrainRF();
-	
-	serializer_lock.Leave(); // leave before StoreCache
-	
-	if (!Thread::IsShutdownThreads()) {
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
-		phase = RF_OPTIMIZING;
-		StoreCache();
-	}
-	
-	running = false;
 }
 
 void RandomForestAdvisor::TrainRF() {
@@ -448,73 +437,50 @@ void RandomForestAdvisor::TrainRF() {
 			rf_trainer.Process(area, bufs, real_mask, full_mask);
 			
 			conf.stat = rf_trainer.stat;
-			LOG(symbol << ": " << i << ": " << p << ": train_accuracy: " << conf.stat.train_accuracy << " test_accuracy: " << conf.stat.test0_accuracy);
+			LOG(symbol << ": SOURCE " << i << ": " << p << ": train_accuracy: " << conf.stat.train_accuracy << " test_accuracy: " << conf.stat.test0_accuracy);
 			
 			rf_trainer.forest.memory.Detach();
 		}
 	}
 }
 
-void RandomForestAdvisor::Optimizing() {
-	running = true;
-	serializer_lock.Enter();
-	
-	
-	// Remove invalid sources
-	for(int i = 0; i < rflist_pos.GetCount(); i++) {
-		AccuracyConf& conf = rflist_pos[i].a;
-		if (!conf.is_processed || conf.id == -1)
-			rflist_pos.Remove(i--);
-	}
-	
-	for(int i = 0; i < rflist_neg.GetCount(); i++) {
-		AccuracyConf& conf = rflist_neg[i].a;
-		if (!conf.is_processed || conf.id == -1)
-			rflist_neg.Remove(i--);
-	}
-	
+void RandomForestAdvisor::TrainMainRF() {
 	
 	// Init genetic optimizer
-	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2 + 2;
+	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2;
 	if (optimizer.GetRound() == 0) {
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
 		optimizer.SetPopulation(1000);
-		optimizer.SetMaxGenerations(100);
+		optimizer.SetMaxGenerations(1000);
 		optimizer.UseLimits();
-		
-		
+
+
 		// Set optimizer column value ranges
 		int col = 0;
-		for(int i = 0; i < rflist_pos.GetCount(); i++) {
-			optimizer.Set(col++,  0.0, 1.0, 0.01, "pos mul");
-			optimizer.Set(col++, -1.0, 1.0, 0.01, "pos off");
+		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
+			optimizer.Set(col++,   -1.0,  +1.0, 0.01, "pos mul");
+			optimizer.Set(col++,  -10.0, +10.0, 0.10, "pos step mul");
 		}
-		for(int i = 0; i < rflist_neg.GetCount(); i++) {
-			optimizer.Set(col++,  0.0, 1.0, 0.01, "neg mul");
-			optimizer.Set(col++, -1.0, 1.0, 0.01, "neg off");
+		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
+			optimizer.Set(col++,   -1.0,  +1.0, 0.01, "neg mul");
+			optimizer.Set(col++,  -10.0, +10.0, 0.10, "neg step mul");
 		}
-		optimizer.Set(col++, 0.0, 1.0, 0.01, "trigger limit");
-		optimizer.Set(col++, 0.0, 1.0, 0.01, "+ - balance");
 		ASSERT(col == cols);
 		optimizer.Init(StrategyRandom2Bin);
 	}
-	int col = 0;
-	pos_weight_i.Clear(); neg_weight_i.Clear();
-	for(int i = 0; i < rflist_pos.GetCount(); i++) {pos_weight_i.Add(col); col += 2;}
-	for(int i = 0; i < rflist_neg.GetCount(); i++) {neg_weight_i.Add(col); col += 2;}
-	
 	
 	
 	// Optimize
 	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
-		
+
 		// Get weights
 		optimizer.Start();
 		optimizer.GetLimitedTrialSolution(trial);
-		
+
+		RefreshMainBuffer(true);
 		RunMain();
-		
+
 		// Return training value with less than 10% of testing value.
 		// Testing value should slightly direct away from weird locality...
 		double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
@@ -524,188 +490,176 @@ void RandomForestAdvisor::Optimizing() {
 			<<  " t1=" << area_change_total[2]);
 		optimizer.Stop(change_total);
 	}
+}
+
+void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
+	if (!forced && trial.IsEmpty()) return;
 	
-	serializer_lock.Leave(); // leave before StoreCache
+	System& sys = GetSystem();
+	int begin = !forced ? prev_counted : 0;
+	int tf = GetTf();
+	int data_count = sys.GetCountTf(tf);
 	
-	if (optimizer.IsEnd()) {
-		optimizer.GetLimitedBestSolution(trial);
+	Buffer& main_buf = GetBuffer(0);
+	main_buf.SetCount(data_count);
+	
+	for(int i = begin; i < data_count; i++) {
 		
-		RunMain();
+		double main = 0.0;
 		
-		phase = RF_IDLEREAL;
-		StoreCache();
+		for(int j = 0; j < LOCALPROB_DEPTH*2; j++) {
+			ConstBuffer& buf = GetBuffer(main_graphs + j);
+			double curr = buf.Get(i);
+			double prev = i > 0 ? buf.Get(i - 1) : curr;
+			double chng = curr - prev;
+			
+			double mult_value = curr * trial[j * 2];
+			double chng_value = chng * trial[j * 2 + 1];
+			
+			main += mult_value + chng_value;
+		}
+		
+		main /= LOCALPROB_DEPTH*2;
+		
+		main_buf.Set(i, main);
 	}
-	
-	running = false;
 }
 
 void RandomForestAdvisor::RunMain() {
 	
 	// Prepare variables
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	int symbol = GetSymbol();
-	int tf = GetTf();
-	int data_count = GetBuffer(main_graphs).GetCount();
-	ASSERT(data_count > 0);
-	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
-	double spread_point = db->GetPoint();
-	ASSERT(spread_point > 0.0);
-	ForestArea area;
-	area.FillArea(data_count);
-	Buffer& pos_buf = GetBuffer(1);
-	Buffer& neg_buf = GetBuffer(2);
-	
-	SetSafetyLimit(data_count);
-	
-	
-	for (int p = 0; p < 2; p++) {
-		const Vector<int>& weight_i = p == 0 ? pos_weight_i : neg_weight_i;
-		
-		
-		Buffer& dst = p == 0 ? pos_buf : neg_buf;
-		dst.SetCount(data_count);
-		for(int i = 0; i < dst.GetCount(); i++)
-			dst.Set(i, 0.0);
-		
-		
-		// Normalize weights, so that sum is 1.0
-		double sum = 0.0;
-		for(int i = 0; i < weight_i.GetCount(); i++)
-			sum += trial[weight_i[i]];
-		double mul = 1.0 / sum;
-		for (int i = 0; i < weight_i.GetCount(); i++)
-			trial[weight_i[i]] *= mul;
-		
-		
-		// Add values to sum with weight. Vector at once to get better optimization.
-		for(int i = 0; i < weight_i.GetCount(); i++) {
-			int col					= weight_i[i];
-			double mul				= trial[col++];
-			double off				= trial[col++];
-			const Buffer& src		= GetBuffer(main_graphs + p * LOCALPROB_DEPTH + i);
-			ASSERT(src.GetCount() == dst.GetCount());
-			ConstDouble *src_cursor	= src.Begin(), *src_end = src.End();
-			double      *dst_cursor	= dst.Begin(), *dst_end = dst.End();
-			for (; dst_cursor != dst_end; dst_cursor++, src_cursor++)
-				*dst_cursor += (*src_cursor + off) * mul;
-		}
-	}
-	
-	int col = trial.GetCount() - 2;
-	double trigger_limit = trial[col++];
-	double posneg_balance = trial[col++];
-	VectorBool& signal_label  = GetOutput(0).label;
-	VectorBool& enabled_label = GetOutput(1).label;
-	signal_label.SetCount(data_count);
-	enabled_label.SetCount(data_count);
+	ConstBuffer& main_buf = GetBuffer(0);
 	
 	for (int a = 0; a < 3; a++) {
 		int begin = a == 0 ? area.train_begin : (a == 1 ? area.test0_begin : area.test1_begin);
 		int end   = a == 0 ? area.train_end   : (a == 1 ? area.test0_end   : area.test1_end);
+		end--;
 		
 		// Test with training data and with testing data
-		bool is_prev_active		= false;
-		bool prev_signal		= false;
-		int prev_pos			= 0;
-		double open				= open_buf.GetUnsafe(begin);
-		double hour_total		= 0.0;
-		double change_total		= 1.0;
+		double open			= open_buf.GetUnsafe(begin > 0 ? begin - 1 : begin);
+		double change_total	= 0.0;
 		
 		
 		for(int i = begin; i < end; i++) {
-			double pos = pos_buf.Get(i);
-			double neg = neg_buf.Get(i);
+			bool signal		= main_buf.Get(i) < 0.0;
+			double curr		= open_buf.GetUnsafe(i);
+			double next		= open_buf.GetUnsafe(i + 1);
+			double change	= next / curr - 1.0;
 			
+			if (signal) change *= -1.0;
 			
-			bool is_pos = pos >= trigger_limit;
-			bool is_neg = neg >= trigger_limit;
-			
-			
-			bool is_active, signal;
-			if (is_pos && is_neg) {
-				is_active			= true;
-				double pos_factor	= pos * (1.0 - posneg_balance);
-				double neg_factor	= neg *        posneg_balance;
-				signal				= neg_factor > pos_factor;
-			}
-			else if (is_pos) {
-				is_active			= true;
-				signal				= false;
-			}
-			else if (is_neg) {
-				is_active			= true;
-				signal				= true;
-			}
-			else {
-				is_active			= false;
-			}
-			
-			signal_label.Set(i, signal);
-			enabled_label.Set(i, is_active);
-			
-			bool signal_activate	= !is_active &&  is_prev_active;
-			bool signal_deactivate	=  is_active && !is_prev_active;
-			bool signal_switch		=  is_active &&  is_prev_active && prev_signal != signal;
-			
-			
-			if (signal_activate || signal_switch) {
-				double change;
-				double cur			 = open_buf.GetUnsafe(i);
-				int len				 = i - prev_pos;
-				double hours		 = (double)len / 60.0;
-				hour_total			+= hours;
-				if (!prev_signal)
-					change			 = cur / (open + spread_point);
-				else
-					change			 = open / (cur + spread_point);
-				change_total		*= change;
-				prev_pos			 = i;
-			}
-			
-		
-			if (signal_deactivate || signal_switch) {
-				open				= open_buf.GetUnsafe(i);
-				prev_pos			= i;
-			}
-			
-			
-			is_prev_active			= is_active;
-			prev_signal				= signal;
+			change_total	+= change;
 		}
-		
-		change_total -= 1.0;
-		
+				
 		area_change_total[a] = change_total;
+		LOG("RandomForestAdvisor::TestMain " << GetSymbol() << " a" << a << ": change_total=" << change_total);
 	}
-
 }
 
-void RandomForestAdvisor::TrainReal() {
-	running = true;
-	
-	serializer_lock.Enter();
-	
+void RandomForestAdvisor::SetTrainingArea() {
+	int tf = GetTf();
+	int data_count = GetSystem().GetCountTf(tf);
+	area.FillArea(data_count);
+}
+
+void RandomForestAdvisor::SetRealArea() {
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	int data_count			= open_buf.GetCount();
 	area.train_begin		= 1*5*24*60 / MAIN_PERIOD_MINUTES;
-	area.train_end			= data_count - 2*5*24*60 / MAIN_PERIOD_MINUTES;
-	area.test0_begin		= area.train_end;
+	area.train_end			= data_count;
+	area.test0_begin		= data_count;
 	area.test0_end			= data_count;
-	area.test1_begin		= data_count - 1*5*24*60 / MAIN_PERIOD_MINUTES;
+	area.test1_begin		= data_count;
 	area.test1_end			= data_count;
+}
+
+void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs) {
+	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
+	bufs.SetDepth(depth);
+	ASSERT(depth >= 2);
 	
-	TrainRF();
 	
-	serializer_lock.Leave(); // leave before StoreCache
+	int k = 0;
+	int symbol = GetSymbol();
+	int tf = conf.GetBaseTf(0);
 	
-	if (!Thread::IsShutdownThreads()) {
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
-		phase = RF_REAL;
-		StoreCache();
+	ASSERT(TRUEINDI_COUNT == indi_count);
+	for(int i = 0; i < TRUEINDI_COUNT; i++) {
+		for(int j = 0; j < conf.fastinput+1; j++) {
+			int l = tf-j;
+			ASSERT(l >= 0 && l < TF_COUNT);
+			ConstBuffer& buf = GetInputBuffer(1 + i + l * (indi_count + label_count), 0);
+			ASSERT(&buf != NULL);
+			bufs.SetSource(k++, buf);
+		}
+	}
+	bufs.SetSource(k++, GetInputBuffer(1 + TF_COUNT * (indi_count + label_count), 0));
+	
+	
+	ASSERT(k == depth);
+}
+
+void RandomForestAdvisor::FillMainBufferSource(ConstBufferSource& bufs) {
+	bufs.SetDepth(rflist_pos.GetCount() + rflist_neg.GetCount());
+	int j = 0;
+	for(int i = 0; i < rflist_pos.GetCount(); i++)
+		bufs.SetSource(j++, GetBuffer(main_graphs + i * 2 + 0));
+	for(int i = 0; i < rflist_neg.GetCount(); i++)
+		bufs.SetSource(j++, GetBuffer(main_graphs + i * 2 + 1));
+	ASSERT(j == bufs.GetDepth());
+}
+
+void RandomForestAdvisor::RefreshOutputBuffers() {
+	int bars = GetBars();
+	
+	VectorBool full_mask;
+	full_mask.SetCount(bars).One();
+	
+	SetSafetyLimit(bars);
+	
+	ConstBufferSource bufs;
+	
+	for (int p = 0; p < 2; p++) {
+		double mul = p == 0 ? +1.0 : -1.0;
+		
+		Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
+		
+		for(int i = 0; i < rflist.GetCount(); i++) {
+			RF& rf = rflist[i];
+			AccuracyConf& conf = rf.a;
+			VectorBool& real_mask = rf.c;
+			
+			if (!conf.is_processed || conf.id == -1) continue;
+			
+			
+			rf_trainer.forest.memory.Attach(&rf.b);
+			FillBufferSource(conf, bufs);
+			
+			int cursor = prev_counted;
+			ConstBufferSourceIter iter(bufs, &cursor);
+			
+			Buffer& buf = GetBuffer(main_graphs + p + i * 2);
+			
+			for(; cursor < bars; cursor++) {
+				SetSafetyLimit(cursor);
+				double d = mul * (rf_trainer.forest.PredictOne(iter) * 2.0 - 1.0);
+				if (d > +1.0) d = +1.0;
+				if (d < -1.0) d = -1.0;
+				buf.Set(cursor, d);
+			}
+			rf_trainer.forest.memory.Detach();
+		}
 	}
 	
-	running = false;
+	RefreshMainBuffer(false);
+}
+
+void RandomForestAdvisor::RefreshMain() {
+	SetRealArea();
+	optimizer.GetLimitedBestSolution(trial);
+	RefreshMainBuffer(true);
+	RunMain();
 }
 
 }

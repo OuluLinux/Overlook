@@ -152,13 +152,15 @@ protected:
 	typedef const Input  ConstInput;
 	
 	// Some utility functions for checking that indicator values are strictly L-R
-	#ifdef flagDEBUG
+	#if defined flagDEBUG && defined flagSAFETYLIMITS
+	#define SAFETYASSERT(x) ASSERT(x)
 	int read_safety_limit;
 	void SafetyCheck(int i) {ASSERT(i <= read_safety_limit);}
 	void SetSafetyLimit(int i) {read_safety_limit = i;}
 	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {Buffer& b = (Buffer&)cb; b.SafetyCheck((CoreIO*)this); return cb;}
 	Buffer& SafetyBuffer(Buffer& b) {b.SafetyCheck((CoreIO*)this); return b;}
 	#else
+	#define SAFETYASSERT(x)
 	void SafetyCheck(int i) const {}
 	void SetSafetyLimit(int i) const {}
 	Buffer& SafetyBuffer(Buffer& cb) const {return cb;}

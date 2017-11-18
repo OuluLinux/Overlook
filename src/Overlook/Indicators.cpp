@@ -1785,7 +1785,7 @@ void StochasticOscillator::Start() {
 	double sumhigh = 0.0;
 	for(int i = start - slowing; i < start; i++) {
 		if (i <= 0) continue;
-		SetSafetyLimit(i);
+			SetSafetyLimit(i);
 		double close = Open(i);
 		double low = Upp::min(close, low_buffer.Get(i));
 		double high = Upp::max(close, high_buffer.Get(i));
@@ -3082,8 +3082,9 @@ void ZigZag::Start() {
 			break;
 		}
 	}
+	if (!counted) counted++;
 	for (int i = counted; i < bars; i++) {
-		label.Set(i, current);
+		label.Set(i-1, current);
 		if (keypoint_buffer.Get(i) != 0.0) {
 			current = high_buffer.Get(i) != 0.0; // going down after high
 		}
@@ -4029,6 +4030,101 @@ void VolatilityAverage::Start() {
 		double j = stats_limit[stats.Find(av)];
 		double sens = j / total * 2.0 - 1.0;
 		dst.Set(i, sens);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MinimalLabel::MinimalLabel() {
+	
+}
+
+void MinimalLabel::Init() {
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-1.0);
+	SetCoreMaximum(+1.0);
+	SetBufferColor(0, Color(85, 255, 150));
+	SetBufferLineWidth(0, 2);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, +0.5);
+	SetCoreLevel(1, -0.5);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
+}
+
+void MinimalLabel::Start() {
+	int bars = GetBars();
+	int symbol = GetSymbol();
+	int tf = GetTf();
+	
+	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
+	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
+	double spread_point		= db->GetPoint();
+	ASSERT(spread_point > 0.0);
+	
+	VectorBool& labelvec = GetOutput(0).label;
+	labelvec.SetCount(bars);
+	
+	Buffer& buf = GetBuffer(0);
+	
+	for(int i = prev_counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double open = open_buf.GetUnsafe(i);
+		double close = open;
+		int j = i + 1;
+		bool can_break = false;
+		bool break_label;
+		double prev = open;
+		bool clean_break = false;
+		for(; j < bars; j++) {
+			close = open_buf.GetUnsafe(j);
+			if (!can_break) {
+				double abs_diff = fabs(close - open);
+				if (abs_diff >= spread_point) {
+					break_label = close < open;
+					can_break = true;
+				}
+			} else {
+				bool change_label = close < prev;
+				if (change_label != break_label) {
+					clean_break = true;
+					j--;
+					break;
+				}
+			}
+			prev = close;
+		}
+		
+		bool label = close < open;
+		
+		for(int k = i; k < j; k++) {
+			SetSafetyLimit(k);
+			labelvec.Set(k, label);
+			if (label)		buf.Set(k, -0.75);
+			else			buf.Set(k, +0.75);
+		}
+		
+		if (clean_break)
+			prev_counted = i;
+		i = j - 1;
 	}
 }
 

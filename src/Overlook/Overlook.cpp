@@ -752,34 +752,14 @@ void Overlook::LoadDefaultEAs() {
 		pgroup.decl.factory = wsa;
 	}
 	
-	for(int i = 0; i < SYM_COUNT; i++) {
-		String symstr;
-		switch (i) {
-			case 0: symstr = "EURUSD"; break;
-			case 1: symstr = "GBPUSD"; break;
-			case 2: symstr = "USDJPY"; break;
-			case 3: symstr = "USDCAD"; break;
-			case 4: symstr = "EURJPY"; break;
-			case 5: symstr = "EURCHF"; break;
-			case 6: symstr = "USDCHF"; break;
-			case 7: symstr = "AUDUSD"; break;
-			case 8: symstr = "NZDUSD"; break;
-			case 9: symstr = "EURGBP"; break;
-			case 10: symstr = "AUDCAD"; break;
-			case 11: symstr = "AUDJPY"; break;
-			case 12: symstr = "CADJPY"; break;
-			case 13: symstr = "CHFJPY"; break;
-			case 14: symstr = "EURAUD"; break;
-			case 15: symstr = "GBPCHF"; break;
-			case 16: symstr = "GBPJPY"; break;
-			case 17: symstr = "AUDNZD"; break;
-			case 18: symstr = "EURCAD"; break;
-		};
-		int sym_id = sys.FindSymbol(symstr);
-		if (sym_id == -1) continue;
+	for(int i = 0; i < sys.GetSymbolCount(); i++) {
+		
+		int prio = sys.GetSymbolPriority(i);
+		if (prio >= SYM_COUNT) continue;
+		
 		
 		ProfileGroup& pgroup = profile.charts.Add();
-		pgroup.symbol = sym_id;
+		pgroup.symbol = i;
 		pgroup.tf = tf;
 		pgroup.keep_at_end = true;
 		pgroup.decl.factory = rfa;

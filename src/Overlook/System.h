@@ -177,6 +177,7 @@ protected:
 	Data			data;
 	Vector<String>	period_strings;
 	Vector<int>		bars;
+	Vector<int>		priority;
 	Index<String>	symbols;
 	Index<int>		periods;
 	SpinLock		task_lock;
@@ -232,6 +233,7 @@ public:
 	
 	String GetSymbol(int i) const {return symbols[i];}
 	String GetPeriodString(int i) const {return period_strings[i];}
+	int GetSymbolPriority(int i) const {return priority[i];}
 	int GetFactoryCount() const {return GetRegs().GetCount();}
 	int GetBrokerSymbolCount() const {return source_symbol_count;}
 	int GetTotalSymbolCount() const {return symbols.GetCount();}

@@ -965,6 +965,27 @@ public:
 };
 
 
+class MinimalLabel : public Core {
+	int prev_counted = 0;
+	
+	
+protected:
+	virtual void Start();
+	
+public:
+	MinimalLabel();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(prev_counted);
+	}
+};
+
+
+
 
 
 }

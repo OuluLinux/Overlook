@@ -1,8 +1,7 @@
 # Overlook
-MT4 clone. It requires original MT4 running a connection script, however. No direct server connection planned.
+MT4 clone, which requires the MT4 running a connection script at background.
 
-This is for those who want to do more complex programming, than MQL scripts allow.
-
+[Development blog](https://makingoverlook.blogspot.fi/)
 
 Classic view
 ![Classic view](https://github.com/sppp/Overlook/raw/master/docs/classic.jpg)

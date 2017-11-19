@@ -420,4 +420,18 @@ void System::Process(CoreItem& ci) {
 	
 }
 
+void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
+	for (int i = 0; i < SYM_COUNT; i++) {
+		broker.spread_points[i]		= spread_points[i];
+		broker.proxy_id[i]			= proxy_id[i];
+		broker.proxy_base_mul[i]	= proxy_base_mul[i];
+	}
+
+	broker.begin_equity				= 10000.0;
+	broker.leverage					= 1000;
+	broker.free_margin_level		= FMLEVEL;
+	broker.part_sym_id				= sym_id;
+	broker.init						= true;
+}
+
 }

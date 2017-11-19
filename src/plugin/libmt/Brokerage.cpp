@@ -203,8 +203,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 		}
 	}
 	if (debug_print) {
-		DUMPC(sell_signals);
-		DUMPC(buy_signals);
+		//DUMPC(sell_signals);
+		//DUMPC(buy_signals);
 	}
 	
 	// Balance signals
@@ -290,8 +290,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 		sell_lots[i] = ((int64)(sym_sell_lots / sym.volume_min)) * sym.volume_min;
 	}
 	if (debug_print) {
-		DUMPC(buy_lots);
-		DUMPC(sell_lots);
+		//DUMPC(buy_lots);
+		//DUMPC(sell_lots);
 	}
 	
 	for(int i = 0; i < orders.GetCount(); i++) {

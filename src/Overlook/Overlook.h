@@ -14,6 +14,7 @@ using namespace Upp;
 #include "Optimizer.h"
 #include "RandomForest.h"
 #include "SimBroker.h"
+#include "FixedSimBroker.h"
 #include "System.h"
 #include "Core.h"
 #include "ExposureTester.h"

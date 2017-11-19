@@ -151,6 +151,10 @@ void RandomForestAdvisor::Start() {
 		once = false;
 	}*/
 	
+	
+	//optimizer.SetMaxRounds(2000);
+	
+	
 	if (!running) {
 		int bars = GetBars();
 		Output& out = GetOutput(0);
@@ -167,18 +171,9 @@ void RandomForestAdvisor::Start() {
 			running = true;
 			Thread::Start(THISBACK(MainTraining));
 		}
-		
-		
-		// AccountAdvisor switches from RF_IDLEREAL to RF_TRAINREAL
-		
-		else if (phase == RF_TRAINREAL) {
-			phase = RF_TRAINREAL;
-			running = true;
-			Thread::Start(THISBACK(RealTraining));
-		}
 	}
 	
-	if (!running) {
+	if (!running && phase == RF_REAL) {
 		int bars = GetBars();
 		if (prev_counted < bars) {
 			TimeStop ts;
@@ -201,13 +196,10 @@ void RandomForestAdvisor::SourceTraining() {
 	
 	SetTrainingArea();
 	SearchSources();
-	TrainRF();
 	
 	serializer_lock.Leave(); // leave before StoreCache
 	
 	if (!Thread::IsShutdownThreads()) {
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
 		phase = RF_OPTIMIZING;
 		StoreCache();
 	}
@@ -219,8 +211,12 @@ void RandomForestAdvisor::MainTraining() {
 	running = true;
 	serializer_lock.Enter();
 	
-	SetTrainingArea();
-	TrainMainRF();
+	SetRealArea();
+	TrainRF();
+	ForceSetCounted(0);
+	RefreshOutputBuffers();
+	
+	MainOptimizer();
 	
 	serializer_lock.Leave(); // leave before StoreCache
 	
@@ -228,37 +224,13 @@ void RandomForestAdvisor::MainTraining() {
 	
 	if (optimizer.IsEnd()) {
 		optimizer.GetLimitedBestSolution(trial);
-
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
-		RunMain();
-
-		phase = RF_IDLEREAL;
-		StoreCache();
-	}
-	
-	
-	
-	running = false;
-}
-
-void RandomForestAdvisor::RealTraining() {
-	running = true;
-	serializer_lock.Enter();
-	
-	SetRealArea();
-	TrainRF();
-	TrainMainRF();
-	
-	serializer_lock.Leave(); // leave before StoreCache
-	
-	if (!Thread::IsShutdownThreads()) {
 		ForceSetCounted(0);
 		RefreshOutputBuffers();
 		RefreshMain();
 		phase = RF_REAL;
 		StoreCache();
 	}
+	
 	
 	running = false;
 }
@@ -444,14 +416,14 @@ void RandomForestAdvisor::TrainRF() {
 	}
 }
 
-void RandomForestAdvisor::TrainMainRF() {
+void RandomForestAdvisor::MainOptimizer() {
 	
 	// Init genetic optimizer
 	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2;
 	if (optimizer.GetRound() == 0) {
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
-		optimizer.SetPopulation(1000);
+		optimizer.SetPopulation(100);
 		optimizer.SetMaxGenerations(1000);
 		optimizer.UseLimits();
 
@@ -473,7 +445,14 @@ void RandomForestAdvisor::TrainMainRF() {
 	
 	// Optimize
 	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
-
+		
+		// Do some backup storing
+		if (optimizer.GetRound() % 10000 == 9999) {
+			serializer_lock.Leave();
+			StoreCache();
+			serializer_lock.Enter();
+		}
+		
 		// Get weights
 		optimizer.Start();
 		optimizer.GetLimitedTrialSolution(trial);
@@ -536,16 +515,14 @@ void RandomForestAdvisor::RunMain() {
 		int end   = a == 0 ? area.train_end   : (a == 1 ? area.test0_end   : area.test1_end);
 		end--;
 		
-		// Test with training data and with testing data
-		double open			= open_buf.GetUnsafe(begin > 0 ? begin - 1 : begin);
 		double change_total	= 0.0;
-		
 		
 		for(int i = begin; i < end; i++) {
 			bool signal		= main_buf.Get(i) < 0.0;
 			double curr		= open_buf.GetUnsafe(i);
 			double next		= open_buf.GetUnsafe(i + 1);
 			double change	= next / curr - 1.0;
+			ASSERT(curr > 0.0);
 			
 			if (signal) change *= -1.0;
 			

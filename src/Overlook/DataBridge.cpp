@@ -46,7 +46,7 @@ void DataBridge::Start() {
 	
 	// Account symbol
 	if (sym == sys.GetAccountSymbol()) {
-		
+		RefreshAccount();
 	}
 	else
 	

@@ -232,6 +232,7 @@ public:
 	void SetTimeframe(int i) {tf_id = i;}
 	void SetFactory(int i) {factory = i;}
 	void SetHash(int i) {hash = i;}
+	void ForceCount(int data_count);
 	
 };
 

@@ -70,6 +70,7 @@ public:
 	void Enter() {order_lock.Enter();}
 	void Leave() {order_lock.Leave();}
 	void RefreshLimits();
+	void SetInitialBalance(double d) {initial_balance = d;}
 	
 	const Vector<Order>&	GetOpenOrders() const {return orders;}
 	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}

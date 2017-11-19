@@ -110,10 +110,11 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 };
 
 
+enum {RF_IDLE, RF_TRAINING, RF_OPTIMIZING, RF_REAL};
+
 class RandomForestAdvisor : public Core {
 	
 	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
-	enum {RF_IDLE, RF_TRAINING, RF_OPTIMIZING, RF_IDLEREAL, RF_TRAINREAL, RF_REAL};
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
 	// Persistent
@@ -205,10 +206,8 @@ public:
 	
 	void SearchSources();
 	void TrainRF();
-	void TrainMainRF();
-	void RealTraining();
+	void MainOptimizer();
 	void RunMain();
-	void RunMainReal();
 	void SetTrainingArea();
 	void SetRealArea();
 	void RefreshMainBuffer(bool forced);
@@ -216,6 +215,8 @@ public:
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
 	void FillMainBufferSource(ConstBufferSource& bufs);
 	
+	int GetPhase() const {return phase;}
+	void SetPhaseAtLeast(int i) {if (phase < i) phase = i;}
 };
 
 

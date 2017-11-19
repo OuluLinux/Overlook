@@ -178,6 +178,7 @@ protected:
 	Vector<String>	period_strings;
 	Vector<int>		bars;
 	Vector<int>		priority;
+	Vector<int>		sym_priority;
 	Index<String>	symbols;
 	Index<int>		periods;
 	SpinLock		task_lock;
@@ -234,6 +235,7 @@ public:
 	String GetSymbol(int i) const {return symbols[i];}
 	String GetPeriodString(int i) const {return period_strings[i];}
 	int GetSymbolPriority(int i) const {return priority[i];}
+	int GetPrioritySymbol(int i) const {return sym_priority[i];}
 	int GetFactoryCount() const {return GetRegs().GetCount();}
 	int GetBrokerSymbolCount() const {return source_symbol_count;}
 	int GetTotalSymbolCount() const {return symbols.GetCount();}
@@ -243,8 +245,13 @@ public:
 	int FindPeriod(int period) const {return periods.Find(period);}
 	int FindSymbol(const String& s) const {return symbols.Find(s);}
 	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
+	void SetFixedBroker(FixedSimBroker& broker, int sym_id);
 	
 public:
+	
+	Vector<double> spread_points;
+	Vector<int> proxy_id, proxy_base_mul;
+	
 	/*
 	VectorMap<String, int> allowed_symbols;
 	Vector<Vector<ConstBuffer*> > value_buffers;
@@ -253,8 +260,6 @@ public:
 	Vector<Buffer> time_buffers;
 	Vector<Ptr<CoreItem> > work_queue, db_queue, label_queue;
 	Vector<Core*> databridge_cores;
-	Vector<double> spread_points;
-	Vector<int> proxy_id, proxy_base_mul;
 	Vector<FactoryDeclaration> indi_ids, label_indi_ids;
 	Index<int> sym_ids;
 	int data_begin = 0;

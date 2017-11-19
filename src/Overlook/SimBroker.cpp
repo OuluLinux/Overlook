@@ -66,10 +66,14 @@ void SimBroker::Clear() {
 	collected = 0.0;
 	
 	
+	signals.SetCount(symbols.GetCount(), 0);
+	signal_freezed.SetCount(symbols.GetCount(), 0);
 	symbol_profits.SetCount(symbols.GetCount(), 0);
 	prev_symbol_profits.SetCount(symbols.GetCount(), 0);
 	symbol_profit_diffs.SetCount(symbols.GetCount(), 0);
 	for(int i = 0; i < symbols.GetCount(); i++) {
+		signals[i] = 0;
+		signal_freezed[i] = 0;
 		symbol_profits[i] = 0;
 		prev_symbol_profits[i] = 0;
 		symbol_profit_diffs[i] = 0;

@@ -96,33 +96,59 @@ void System::Init() {
 		ASSERTUSER_(false, "Unknown error with MT4 connection.");
 	}
 	
+	const int priosym_count = 19;
+	
+	spread_points.SetCount(priosym_count, 0);
+	proxy_id.SetCount(priosym_count, 0);
+	proxy_base_mul.SetCount(priosym_count, 0);
+
 	int prio = 0;
-	for(int i = 0; i < 19; i++) {
+	int spread_point = 0;
+	sym_priority.SetCount(priosym_count, 100000);
+	for(int i = 0; i < priosym_count; i++) {
 		String symstr;
 		switch (i) {
-			case 0: symstr = "EURUSD"; break;
-			case 1: symstr = "GBPUSD"; break;
-			case 2: symstr = "USDJPY"; break;
-			case 3: symstr = "USDCAD"; break;
-			case 4: symstr = "EURJPY"; break;
-			case 5: symstr = "EURCHF"; break;
-			case 6: symstr = "USDCHF"; break;
-			case 7: symstr = "AUDUSD"; break;
-			case 8: symstr = "NZDUSD"; break;
-			case 9: symstr = "EURGBP"; break;
-			case 10: symstr = "AUDCAD"; break;
-			case 11: symstr = "AUDJPY"; break;
-			case 12: symstr = "CADJPY"; break;
-			case 13: symstr = "CHFJPY"; break;
-			case 14: symstr = "EURAUD"; break;
-			case 15: symstr = "GBPCHF"; break;
-			case 16: symstr = "GBPJPY"; break;
-			case 17: symstr = "AUDNZD"; break;
-			case 18: symstr = "EURCAD"; break;
+			case 0: symstr = "EURUSD";	spread_point = 3;  break;
+			case 1: symstr = "GBPUSD";	spread_point = 3;  break;
+			case 2: symstr = "USDJPY";	spread_point = 3;  break;
+			case 3: symstr = "USDCAD";	spread_point = 3;  break;
+			case 4: symstr = "EURJPY";	spread_point = 3;  break;
+			case 5: symstr = "EURCHF";	spread_point = 3;  break;
+			case 6: symstr = "USDCHF";	spread_point = 3;  break;
+			case 7: symstr = "AUDUSD";	spread_point = 3;  break;
+			case 8: symstr = "NZDUSD";	spread_point = 3;  break;
+			case 9: symstr = "EURGBP";	spread_point = 3;  break;
+			case 10: symstr = "AUDCAD";	spread_point = 10; break;
+			case 11: symstr = "AUDJPY";	spread_point = 10; break;
+			case 12: symstr = "CADJPY";	spread_point = 10; break;
+			case 13: symstr = "CHFJPY";	spread_point = 10; break;
+			case 14: symstr = "EURAUD";	spread_point = 7;  break;
+			case 15: symstr = "GBPCHF";	spread_point = 7;  break;
+			case 16: symstr = "GBPJPY";	spread_point = 7;  break;
+			case 17: symstr = "AUDNZD";	spread_point = 12; break;
+			case 18: symstr = "EURCAD";	spread_point = 12; break;
+			default: Panic("Broken");
 		};
 		
-		int sym_id = this->symbols.Find(symstr);
-		priority[sym_id] = prio++;
+		int sym = this->symbols.Find(symstr);
+		sym_priority[prio] = sym;
+		priority[sym] = prio++;
+	}
+	
+	for(int i = 0; i < prio; i++) {
+		const Symbol& symbol = mt.GetSymbol(sym_priority[i]);
+		if (symbol.proxy_id != -1) {
+			int k = GetSymbolPriority(symbol.proxy_id);
+			ASSERT(k < prio);
+			proxy_id[i] = k;
+			proxy_base_mul[i] = symbol.base_mul;
+		}
+		else {
+			proxy_id[i] = -1;
+			proxy_base_mul[i] = 0;
+		}
+		
+		spread_points[i] = spread_point * symbol.point;
 	}
 	
 	

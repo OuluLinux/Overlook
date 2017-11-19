@@ -1,5 +1,3 @@
-#if 0
-
 #ifndef _Overlook_FixedSimBroker_h_
 #define _Overlook_FixedSimBroker_h_
 
@@ -20,10 +18,11 @@ struct FixedOrder {
 
 
 struct FixedSimBroker {
-	#define ORDERS_PER_SYMBOL	7
+	#define ORDERS_PER_SYMBOL	15
 	#define MAX_ORDERS			(ORDERS_PER_SYMBOL * SYM_COUNT)
 	
 	FixedOrder order[MAX_ORDERS];
+	double price[SYM_COUNT];
 	double spread_points[SYM_COUNT];
 	int signal[SYM_COUNT];
 	int proxy_id[SYM_COUNT];
@@ -45,16 +44,16 @@ struct FixedSimBroker {
 		
 	FixedSimBroker();
 	void Reset();
-	double RealtimeBid(int pos, int sym_id) const;
-	double RealtimeAsk(int pos, int sym_id) const;
-	double GetCloseProfit(int sym_id, const FixedOrder& o, int pos) const;
-	void OrderSend(int sym_id, int type, double volume, double price, int pos);
-	void OrderClose(int sym_id, double lots, FixedOrder& order, int pos);
-	void CloseAll(int pos);
-	double GetMargin(int pos, int sym_id, double volume);
-	bool Cycle(int pos);
-	void RefreshOrders(int pos);
-	double GetSpreadCost(int pos) const;
+	double RealtimeBid(int sym_id) const;
+	double RealtimeAsk(int sym_id) const;
+	double GetCloseProfit(int sym_id, const FixedOrder& o) const;
+	void OrderSend(int sym_id, int type, double volume, double price);
+	void OrderClose(int sym_id, double lots, FixedOrder& order);
+	void CloseAll();
+	double GetMargin(int sym_id, double volume);
+	bool Cycle();
+	void RefreshOrders();
+	double GetSpreadCost() const;
 	void Serialize(Stream& s) {
 		for(int i = 0; i < MAX_ORDERS; i++) s % order[i];
 		for(int i = 0; i < SYM_COUNT; i++) s % spread_points[i];
@@ -69,6 +68,7 @@ struct FixedSimBroker {
 	double AccountEquity() const {return equity;}
 	double PartialEquity() const {return part_equity;}
 	double GetDrawdown() const {double sum = profit_sum + loss_sum; return sum > 0.0 ? loss_sum / sum : 1.0;}
+	void SetPrice(int sym_id, double d) {price[sym_id] = d;}
 	void SetSignal(int sym_id, int sig) {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); signal[sym_id] = sig;}
 	void SetSignalFreeze(int sym_id, bool b) {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); signal_freezed[sym_id] = b;}
 	int GetSignal(int sym_id) const {ASSERT(sym_id >= 0 && sym_id < SYM_COUNT); return signal[sym_id];}
@@ -76,5 +76,4 @@ struct FixedSimBroker {
 
 }
 
-#endif
 #endif

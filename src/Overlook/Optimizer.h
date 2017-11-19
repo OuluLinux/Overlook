@@ -123,6 +123,7 @@ public:
 	void UseLimits(bool b=true) {use_limits = b;}
 	void SetRandomTypeUniform() {random_type = DiffSolver::RAND_UNIFORM;}
 	void SetRandomTypeNormDist() {random_type = DiffSolver::RAND_NORMDIST;}
+	void SetMaxRounds(int i) {max_rounds = i;}
 	
 	void Start();
 	void Stop(double energy);

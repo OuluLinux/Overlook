@@ -237,4 +237,10 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	this->bars = bars;
 }
 
+void CoreIO::ForceCount(int data_count) {
+	SetSafetyLimit(data_count);
+	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
+		outputs[0].buffers[i].SetCount(data_count);
+}
+
 }

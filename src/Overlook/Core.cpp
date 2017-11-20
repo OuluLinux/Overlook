@@ -4,18 +4,18 @@ namespace Overlook {
 	
 #ifdef flagDEBUG
 double Buffer::Get(int i) const {
-	if (check_cio) check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyInspect(i);
 	return value[i];
 }
 
 void Buffer::Set(int i, double value) {
-	if (check_cio) check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyInspect(i);
 	this->value[i] = value;
 	if (i < earliest_write) earliest_write = i;
 }
 
 void Buffer::Inc(int i, double value) {
-	if (check_cio) check_cio->SafetyCheck(i);
+	if (check_cio) check_cio->SafetyInspect(i);
 	this->value[i] += value;
 }
 #endif
@@ -71,6 +71,8 @@ void Core::ClearContent() {
 }
 
 void Core::InitAll() {
+	System& sys = GetSystem();
+	
 	
 	// Find DataBridge input if it exists
 	db_src = -1;
@@ -94,8 +96,20 @@ void Core::InitAll() {
 	Init();
 	
 	
+	// Register jobs
+	sys.job_lock.Enter();
+	for(int i = 0; i < jobs.GetCount(); i++) {
+		Job& job = jobs[i];
+		Core* core = job.core;
+		if (core == NULL)
+			Panic("You haven't called SetJob for all jobs or SetJobCount has wrong count.");
+		sys.jobs.Add(&job);
+	}
+	sys.job_lock.Leave();
+	
+	
 	// Initialize sub-cores
-	const FactoryRegister& src_reg = GetSystem().regs[factory];
+	const FactoryRegister& src_reg = sys.regs[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
 		Core& core = subcores[i];
 		core.base = base;
@@ -104,7 +118,7 @@ void Core::InitAll() {
 		core.SetSymbol(GetSymbol());
 		core.SetTimeframe(GetTimeframe(), GetPeriod());
 		
-		const FactoryRegister& reg = GetSystem().regs[core.factory];
+		const FactoryRegister& reg = sys.regs[core.factory];
 		
 		// Loop all inputs of the sub-core-object to be connected
 		ASSERT(core.inputs.GetCount() == reg.in.GetCount());
@@ -131,6 +145,9 @@ void Core::InitAll() {
 		
 		core.InitAll();
 	}
+	
+	
+	is_init = true;
 }
 
 void Core::Refresh() {
@@ -304,6 +321,33 @@ double Core::GetAppliedValue ( int applied_value, int i ) {
 			dValue = 0.0;
 	}
 	return ( dValue );
+}
+
+bool Core::IsJobsFinished() const {
+	bool all_done = true;
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		const Input& input = inputs[i];
+		for(int j = 0; j < input.GetCount(); j++)
+			all_done &= dynamic_cast<Core*>(input[j].core)->IsJobsFinished();
+	}
+	for(int i = 0; i < jobs.GetCount(); i++)
+		all_done &= jobs[i].IsFinished();
+	return all_done;
+}
+
+Job& Core::SetJob(int i, String job_title) {
+	Job& job	= jobs[i];
+	job.title	= job_title;
+	job.core	= this;
+	
+	return job;
+}
+
+void Core::SetJobFinished(bool b) {
+	if (!current_job)
+		Panic("No job set currently");
+	current_job->actual		= 1;
+	current_job->total		= 1;
 }
 
 }

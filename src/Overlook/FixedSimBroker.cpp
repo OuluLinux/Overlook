@@ -36,7 +36,7 @@ double FixedSimBroker::RealtimeAsk(int sym_id) const {
 
 double FixedSimBroker::GetCloseProfit(int sym_id, const FixedOrder& o) const {
 	
-	// NOTE: only for forex. Check SimBroker for other symbols too
+	// NOTE: only for forex. Inspect SimBroker for other symbols too
 	
 	double volume = 10000 * o.volume; // lotsize * volume
 	

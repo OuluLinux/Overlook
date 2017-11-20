@@ -110,9 +110,22 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 };
 
 
-enum {RF_IDLE, RF_TRAINING, RF_OPTIMIZING, RF_REAL};
 
 class RandomForestAdvisor : public Core {
+	
+	struct SourceSearchCtrl : public JobCtrl {
+		virtual void Paint(Draw& w);
+	};
+	
+	struct SourceTrainingCtrl : public JobCtrl {
+		virtual void Paint(Draw& w);
+	};
+	
+	struct MainOptimizationCtrl : public JobCtrl {
+		Vector<Point> polyline;
+		virtual void Paint(Draw& w);
+	};
+	
 	
 	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
@@ -121,24 +134,46 @@ class RandomForestAdvisor : public Core {
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
 	GeneticOptimizer optimizer;
+	Vector<double> search_pts, training_pts, optimization_pts;
 	int prev_counted = 0;
-	int phase = RF_IDLE;
+	int opt_counter = 0;
+	int p = 0, rflist_iter = 0;
 	
 	
 	// Temp
 	Vector<double> trial;
+	One<RF> training_rf;
 	ForestArea area;
+	VectorBool full_mask;
+	ConstBuffer* open_buf = NULL;
+	double spread_point = 0.0;
 	double area_change_total[3];
-	bool running = false;
-	bool once = true;
+	int conf_count = 0;
+	int data_count = 0;
 	
 	
 protected:
 	virtual void Start();
 	
-	void SourceTraining();
-	void MainTraining();
+	bool SourceSearchBegin();
+	bool SourceSearchIterator();
+	bool SourceSearchInspect();
+	bool MainTrainingBegin();
+	bool MainTrainingIterator();
+	bool MainTrainingEnd();
+	bool MainTrainingInspect();
+	bool MainOptimizationBegin();
+	bool MainOptimizationIterator();
+	bool MainOptimizationEnd();
+	bool MainOptimizationInspect();
+	void RefreshMainBuffer(bool forced);
+	void RunMain();
+	void SetTrainingArea();
+	void SetRealArea();
+	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
+	void FillMainBufferSource(ConstBufferSource& bufs);
 	void RefreshOutputBuffers();
+	void RefreshMain();
 	
 public:
 	typedef RandomForestAdvisor CLASSNAME;
@@ -168,8 +203,13 @@ public:
 			% Mem(rflist_neg)
 			% Mem(rf_trainer)
 			% Mem(optimizer)
+			% Mem(search_pts)
+			% Mem(training_pts)
+			% Mem(optimization_pts)
 			% Mem(prev_counted)
-			% Mem(phase);
+			% Mem(opt_counter)
+			% Mem(p)
+			% Mem(rflist_iter);
 	}
 	
 	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
@@ -177,7 +217,7 @@ public:
 		int type   = (input - 1) % TF_COUNT;
 		int period = (1 << (1 + pshift));
 		
-		// Check IO: VolatilityAverage etc...
+		// Inspect IO: VolatilityAverage etc...
 		if      (type == 0) {
 			decl.AddArg(period);
 		}
@@ -204,19 +244,7 @@ public:
 		}
 	}
 	
-	void SearchSources();
-	void TrainRF();
-	void MainOptimizer();
-	void RunMain();
-	void SetTrainingArea();
-	void SetRealArea();
-	void RefreshMainBuffer(bool forced);
-	void RefreshMain();
-	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
-	void FillMainBufferSource(ConstBufferSource& bufs);
 	
-	int GetPhase() const {return phase;}
-	void SetPhaseAtLeast(int i) {if (phase < i) phase = i;}
 };
 
 

@@ -85,6 +85,20 @@ Overlook::Overlook() : watch(this) {
 	nav.Init();
 	nav.WhenFactory		= THISBACK(SetFactory);
 	
+	jobs_hsplit.Horz();
+	jobs_hsplit << joblist << job_ctrl;
+	jobs_hsplit.SetPos(2500);
+	joblist.AddColumn("Symbol");
+	joblist.AddColumn("Tf");
+	joblist.AddColumn("Title");
+	joblist.AddColumn("Phase");
+	joblist.AddColumn("Progress");
+	joblist.ColumnWidths("3 1 5 2 5");
+	
+	debuglist.AddColumn("File");
+	debuglist.AddColumn("Line");
+	debuglist.AddColumn("Source line");
+	debuglist.ColumnWidths("6 1 24");
 	
 	LoadPreviousProfile();
 	PostRefreshData();
@@ -98,8 +112,10 @@ void Overlook::DockInit() {
 	DockLeft(Dockable(watch, "Market Watch").SizeHint(Size(300, 200)));
 	DockLeft(Dockable(nav, "Navigator").SizeHint(Size(300, 200)));
 	
-	DockableCtrl& last = Dockable(trade_history, "Account History").SizeHint(Size(300, 200));
+	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
+	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
 }
@@ -430,6 +446,8 @@ void Overlook::Data() {
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
+	if (jobs_hsplit.IsVisible())	RefreshJobs();
+	if (debuglist.IsVisible())		RefreshDebug();
 }
 
 void Overlook::RefreshTrades() {
@@ -703,6 +721,55 @@ void Overlook::RefreshTradesHistory() {
 	trade_history.SetSortColumn(8, true);
 }
 
+struct JobProgressDislay : public Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
+		w.DrawRect(r, paper);
+		Rect g = r;
+		g.top += 1;
+		g.bottom -= 1;
+		int perc = q;
+		g.right -= g.Width() * (100 - perc) / 100;
+		Color clr = Color(72, 213, 119);
+		w.DrawRect(g, clr);
+		Font fnt = SansSerif(g.Height()-1);
+		String perc_str = ((perc >= 0 && perc <= 100) ? IntStr(perc) : String("0")) + "%";
+		Size str_sz = GetTextSize(perc_str, fnt);
+		Point pt = r.CenterPos(str_sz);
+		w.DrawText(pt.x, pt.y, perc_str, fnt, Black());
+		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, White());
+	}
+};
+
+void Overlook::RefreshJobs() {
+	System& sys = GetSystem();
+	
+	for(int i = 0; i < sys.GetJobCount(); i++) {
+		const Job& job = sys.GetJob(i);
+		const Core& core = *job.core;
+		joblist.Set(i, 0, sys.GetSymbol(core.GetSymbol()));
+		joblist.Set(i, 1, sys.GetPeriodString(core.GetTf()));
+		joblist.Set(i, 2, job.title);
+		joblist.Set(i, 3, job.GetStateString());
+		joblist.Set(i, 4, job.total > 0 ? job.actual * 100 / job.total : 0);
+		joblist.SetDisplay(i, 4, Single<JobProgressDislay>());
+	}
+	
+	int cursor = joblist.GetCursor();
+	if (cursor >= 0 && cursor < sys.GetJobCount()) {
+		Job& job = sys.GetJob(cursor);
+		Ctrl* ctrl = &*job.ctrl;
+		if (prev_job_ctrl != ctrl) {
+			if (prev_job_ctrl)
+				job_ctrl.RemoveChild(prev_job_ctrl);
+			job_ctrl.Add(ctrl->SizePos());
+			prev_job_ctrl = ctrl;
+		}
+	}
+}
+
+void Overlook::RefreshDebug() {
+	
+}
 
 void Overlook::ToggleRightOffset() {
 	bool b = right_offset.Get();

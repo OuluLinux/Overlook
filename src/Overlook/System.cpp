@@ -24,6 +24,7 @@ System::System() {
 }
 
 System::~System() {
+	StopJobs();
 	data.Clear();
 }
 
@@ -154,14 +155,15 @@ void System::Init() {
 	
 	InitRegistry();
 	
-	/*InitContent();
-	RefreshWorkQueue();
-	ProcessWorkQueue();
-	ProcessDataBridgeQueue();
-	ProcessLabelQueue();
-	ResetValueBuffers();
-	ResetLabelBuffers();
-	InitBrokerValues();*/
+	
+	#ifdef flagGUITASK
+	jobs_tc.Set(10, THISBACK(PostProcessJobs));
+	#else
+	jobs_running = true;
+	jobs_stopped = false;
+	Thread::Start(THISBACK(ProcessJobs));
+	#endif
+	
 }
 
 void System::AddPeriod(String nice_str, int period) {

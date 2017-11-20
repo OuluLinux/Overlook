@@ -2,7 +2,7 @@
 #define _Overlook_Indicators_h_
 
 /*
-	Check OsMA to see how SubCores and inputs with custom arguments compares.
+	Inspect OsMA to see how SubCores and inputs with custom arguments compares.
 	It has custom argument implementation, with SubCore implementation as commented.
 */
 

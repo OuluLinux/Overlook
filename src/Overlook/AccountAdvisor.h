@@ -7,14 +7,15 @@ using namespace Upp;
 
 class WeekSlotAdvisor : public Core {
 	
-	enum {WS_IDLE, WS_TRAINING, WS_REAL};
-	
+	struct MainOptimizationCtrl : public JobCtrl {
+		Vector<Point> polyline;
+		virtual void Paint(Draw& w);
+	};
 	
 	// Persistent
 	GeneticOptimizer optimizer;
+	Vector<double> optimization_pts;
 	int prev_counted = 0;
-	int phase = WS_IDLE;
-	int weekslots = 0;
 	
 	
 	// Temp
@@ -24,14 +25,27 @@ class WeekSlotAdvisor : public Core {
 	FixedSimBroker sb;
 	double area_change_total[3];
 	int realtime_count = 0;
-	bool running = false;
+	int tfmins = 0, slotmins = 0;
+	int weekslots = 0;
+	int cols = 0;
 	bool forced_optimizer_reset = false;
 	
 	
 protected:
 	virtual void Start();
 	
-	void MainTraining();
+	bool MainOptimizationBegin();
+	bool MainOptimizationIterator();
+	bool MainOptimizationEnd();
+	bool MainOptimizationInspect();
+	void NormalizeTrial();
+	void RefreshMainBuffer(bool forced);
+	void RefreshInputs();
+	void RunMain();
+	void SetTrainingArea();
+	void SetRealArea();
+	void RefreshMain();
+	void MainReal();
 	
 public:
 	typedef WeekSlotAdvisor CLASSNAME;
@@ -44,8 +58,8 @@ public:
 			% In<RandomForestAdvisor>(&FilterFunction1)
 			% Out(SYM_COUNT, SYM_COUNT)
 			% Mem(optimizer)
-			% Mem(phase)
-			% Mem(weekslots);
+			% Mem(optimization_pts)
+			% Mem(prev_counted);
 	}
 	
 	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
@@ -64,17 +78,6 @@ public:
 		
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
-	
-	void SearchSources();
-	void MainOptimizer();
-	void RunMain();
-	void SetTrainingArea();
-	void SetRealArea();
-	void RefreshMainBuffer(bool forced);
-	void RefreshMain();
-	void NormalizeTrial();
-	void RefreshInputs();
-	void MainReal();
 	
 };
 

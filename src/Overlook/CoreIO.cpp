@@ -97,6 +97,11 @@ String CoreIO::GetCacheDirectory() {
 }
 
 void CoreIO::StoreCache() {
+	if (!is_init) {
+		LOG("warning: CoreIO::StoreCache not storing without init");
+		return;
+	}
+	
 	if (!serialized)
 		return;
 	
@@ -104,28 +109,29 @@ void CoreIO::StoreCache() {
 		return;
 	
 	String dir = GetCacheDirectory();
+	String file = AppendFileName(dir, "core.bin");
+	FileOut out(file);
+	if (!out.IsOpen())
+		Panic("Couldn't open file: " + file);
 	
-	if (serializer_lock.TryEnter()) {
-		String file = AppendFileName(dir, "core.bin");
-		FileOut out(file);
-		if (!out.IsOpen())
-			Panic("Couldn't open file: " + file);
-		
-		Put(out, dir, 0);
-		Core* c = dynamic_cast<Core*>(this);
-		if (c) {
-			for(int i = 0; i < c->subcores.GetCount(); i++)
-				c->subcores[i].Put(out, dir, 1+i);
-		}
-		
-		serializer_lock.Leave();
+	Put(out, dir, 0);
+	Core* c = dynamic_cast<Core*>(this);
+	if (c) {
+		for(int i = 0; i < c->subcores.GetCount(); i++)
+			c->subcores[i].Put(out, dir, 1+i);
 	}
 }
 
 void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 	int output_count = outputs.GetCount();
 	int persistent_count = persistents.GetCount();
+	int job_count = jobs.GetCount();
+	
 	out % output_count % persistent_count % counted % bars;
+	
+	out % job_count;
+	for(int i = 0; i < jobs.GetCount(); i++)
+		out % jobs[i];
 	
 	for(int i = 0; i < persistents.GetCount(); i++) {
 		Persistent& p = persistents[i];
@@ -195,6 +201,15 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	
 	int counted, bars;
 	in % counted % bars;
+	
+	int job_count;
+	in % job_count;
+	if (job_count != jobs.GetCount()) {
+		LOG("CoreIO::LoadCache: error: persistent variable count mismatch");
+		return;
+	}
+	for(int i = 0; i < jobs.GetCount(); i++)
+		in % jobs[i];
 	
 	for(int i = 0; i < persistents.GetCount(); i++) {
 		Persistent& p = persistents[i];

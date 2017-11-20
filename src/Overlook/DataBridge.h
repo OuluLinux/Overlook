@@ -36,7 +36,7 @@ protected:
 	void Init(DataBridge* db);
 public:
 	DataBridgeCommon();
-	void CheckInit(DataBridge* db);
+	void InspectInit(DataBridge* db);
 	
 	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
 	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}

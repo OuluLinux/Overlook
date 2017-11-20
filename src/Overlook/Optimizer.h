@@ -34,7 +34,7 @@ public:
 	void	FactorBestEnergy(double f) {best_energy *= f;}
 	int		Generations() {return generations;}
 	void	SolveStart(int max_generations);
-	bool	SolveCheck();
+	bool	SolveInspect();
 	void	SolveNext();
 	void	SetTrialEnergy(double energy);
 	

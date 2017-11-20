@@ -9,7 +9,7 @@ DataBridgeCommon::DataBridgeCommon() {
 	cursor = 0;
 }
 
-void DataBridgeCommon::CheckInit(DataBridge* db) {
+void DataBridgeCommon::InspectInit(DataBridge* db) {
 	if (!IsInited()) {
 		lock.Enter();
 		if (!IsInited()) {
@@ -57,7 +57,7 @@ void DataBridgeCommon::Init(DataBridge* db) {
 		throw DataExc("DataBridge::Init: unknown error");
 	}
 	
-	// Check that symbol names match
+	// Inspect that symbol names match
 	for(int i = 0; i < sym_count; i++) {
 		ASSERTEXC(sys.GetSymbol(i) == mt.GetSymbol(i).name);
 	}

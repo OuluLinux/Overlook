@@ -140,13 +140,15 @@ protected:
 	Vector<Input> inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
+	Array<Job> jobs;
 	Array<Persistent> persistents;
 	System* base;
+	Job* current_job = NULL;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
 	int db_src;
 	bool serialized;
-	Mutex serializer_lock;
+	bool is_init = false;
 	
 	typedef const Output ConstOutput;
 	typedef const Input  ConstInput;
@@ -155,13 +157,13 @@ protected:
 	#if defined flagDEBUG && defined flagSAFETYLIMITS
 	#define SAFETYASSERT(x) ASSERT(x)
 	int read_safety_limit;
-	void SafetyCheck(int i) {ASSERT(i <= read_safety_limit);}
+	void SafetyInspect(int i) {ASSERT(i <= read_safety_limit);}
 	void SetSafetyLimit(int i) {read_safety_limit = i;}
-	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {Buffer& b = (Buffer&)cb; b.SafetyCheck((CoreIO*)this); return cb;}
-	Buffer& SafetyBuffer(Buffer& b) {b.SafetyCheck((CoreIO*)this); return b;}
+	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {Buffer& b = (Buffer&)cb; b.SafetyInspect((CoreIO*)this); return cb;}
+	Buffer& SafetyBuffer(Buffer& b) {b.SafetyInspect((CoreIO*)this); return b;}
 	#else
 	#define SAFETYASSERT(x)
-	void SafetyCheck(int i) const {}
+	void SafetyInspect(int i) const {}
 	void SetSafetyLimit(int i) const {}
 	Buffer& SafetyBuffer(Buffer& cb) const {return cb;}
 	ConstBuffer& SafetyBuffer(ConstBuffer& cb) const {return cb;}
@@ -219,6 +221,7 @@ public:
 	int GetBufferCount() {return buffers.GetCount();}
 	int GetOutputCount() const {return outputs.GetCount();}
 	int GetFactory() const {return factory;}
+	bool IsInitialized() const {return is_init;}
 	
 	void SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
 	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
@@ -324,6 +327,8 @@ public:
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
 	inline ConstVectorBool& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
 	BarData* GetBarData();
+	bool IsJobsFinished() const;
+	Job& GetCurrentJob() {return *current_job;}
 	
 	
 	// Set settings
@@ -346,6 +351,11 @@ public:
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
 	void SetFutureBars(int i) {future_bars = i;}
+	Job& SetJob(int i, String job_title);
+	void SetJobFinished(bool b=true);
+	void SetJobCount(int i) {jobs.SetCount(i);}
+	void SetCurrentJob(Job* job) {current_job = job;}
+	
 	
 	// Visible main functions
 	void Refresh();

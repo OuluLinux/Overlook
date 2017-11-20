@@ -86,15 +86,49 @@ struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
 	}
 };
 
-struct PipelineItem : Moveable<PipelineItem> {
-	typedef PipelineItem CLASSNAME;
-	PipelineItem() {priority = INT_MAX; sym = -1;}
-	
-	Vector<byte> value;
-	int priority;
-	int sym;
+struct Job;
+
+struct JobCtrl : public ParentCtrl {
+	Job* job = NULL;
 };
 
+struct Job {
+	typedef Job CLASSNAME;
+	Job() {}
+	
+	enum {INIT, RUNNING, STOPPING, INSPECTING, STOPPED};
+	
+	void Process();
+	bool IsFinished() const				{return state == STOPPED;}
+	Job& SetBegin(Gate0 fn)				{begin   = fn; return *this;}
+	Job& SetIterator(Gate0 fn)			{iter    = fn; return *this;}
+	Job& SetEnd(Gate0 fn)				{end     = fn; return *this;}
+	Job& SetInspect(Gate0 fn)			{inspect = fn; return *this;}
+	template <class T> Job& SetCtrl()	{ctrl = new T(); ctrl->job = this; return *this;}
+	void SetProgress(int actual, int total) {this->actual = actual; this->total = total;}
+	String GetStateString() const;
+	
+	void Serialize(Stream& s) {
+		s % title % actual % total % state;
+		
+		// The begin function is called always after loading, so switch state back to init.
+		if (s.IsLoading() && state == RUNNING)
+			state = INIT;
+	}
+	
+	
+	// Persistent
+	String title;
+	int actual = 0, total = 0;
+	int state = INIT;
+	
+	
+	// Temp
+	Gate0 begin, iter, end, inspect;
+	Ptr<Core> core;
+	One<JobCtrl> ctrl;
+	TimeStop ts;
+};
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_ACCOUNTADVISOR, CORE_HIDDEN};
@@ -179,10 +213,12 @@ protected:
 	Vector<int>		bars;
 	Vector<int>		priority;
 	Vector<int>		sym_priority;
+	Vector<Job*>	jobs;
 	Index<String>	symbols;
 	Index<int>		periods;
 	SpinLock		task_lock;
 	SpinLock		pl_queue_lock;
+	SpinLock		job_lock;
 	String			addr;
 	double			exploration;
 	int64			memory_limit;
@@ -196,9 +232,12 @@ protected:
 	Vector<Time> begin;
 	Vector<int> begin_ts;
 	Time end;
+	TimeCallback jobs_tc;
 	int timediff;
 	int base_period;
 	int source_symbol_count;
+	int job_iter = 0;
+	bool jobs_running = false, jobs_stopped = true;
 	
 	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
 	void RefreshRealtime();
@@ -209,6 +248,10 @@ protected:
 	void ConnectCore(CoreItem& ci);
 	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
 	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
+	void ProcessJobs();
+	bool ProcessJob();
+	void PostProcessJobs() {jobs_tc.Kill(); PostCallback(THISBACK(ProcessJobs));}
+	void StopJobs();
 	
 public:
 	
@@ -226,6 +269,7 @@ public:
 	Core* CreateSingle(int factory, int sym, int tf);
 	const Vector<FactoryRegister>& GetRegs() const {return regs;}
 	void SetEnd(const Time& t);
+	
 	
 public:
 	
@@ -246,51 +290,14 @@ public:
 	int FindSymbol(const String& s) const {return symbols.Find(s);}
 	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	void SetFixedBroker(FixedSimBroker& broker, int sym_id);
+	int GetJobCount() const {return jobs.GetCount();}
+	const Job& GetJob(int i) const {return *jobs[i];}
+	Job& GetJob(int i) {return *jobs[i];}
 	
 public:
 	
 	Vector<double> spread_points;
 	Vector<int> proxy_id, proxy_base_mul;
-	
-	/*
-	VectorMap<String, int> allowed_symbols;
-	Vector<Vector<ConstBuffer*> > value_buffers;
-	Vector<Vector<ConstVectorBool*> > label_value_buffers;
-	Vector<ConstBuffer*> open_buffers;
-	Vector<Buffer> time_buffers;
-	Vector<Ptr<CoreItem> > work_queue, db_queue, label_queue;
-	Vector<Core*> databridge_cores;
-	Vector<FactoryDeclaration> indi_ids, label_indi_ids;
-	Index<int> sym_ids;
-	int data_begin = 0;
-	int buf_count = 0;
-	int label_buf_count = 0;
-	int main_tf = -1;
-	bool skip_storecache = false;
-	Mutex work_lock;
-	
-	
-	void InitContent();
-	void RefreshWorkQueue();
-	void ProcessWorkQueue();
-	void ProcessLabelQueue();
-	void ProcessDataBridgeQueue();
-	void ResetValueBuffers();
-	void ResetLabelBuffers();
-	void InitBrokerValues();
-	
-	
-	int GetTradingSymbolCount() const {return sym_ids.GetCount();}
-	int GetTrueIndicatorCount() const {return TRUEINDI_COUNT;}
-	int GetLabelIndicatorCount() const {return LABELINDI_COUNT;}
-	int GetCountMain() const {return GetCountTf(main_tf);}
-	ConstBuffer&		GetTrueIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<TRUEINDI_COUNT); return *value_buffers[sym][tf * TRUEINDI_COUNT + i];}
-	ConstVectorBool&	GetLabelIndicator(int sym, int tf, int i) const {ASSERT(tf>=0&&tf<TF_COUNT&&i>=0&&i<LABELINDI_COUNT); return *label_value_buffers[sym][tf * LABELINDI_COUNT + i];}
-	ConstBuffer&		GetOpenBuffer(int sym) const {return *open_buffers[sym];}
-	ConstBuffer&		GetTradingSymbolOpenBuffer(int sym) const {return *open_buffers[sym_ids[sym]];}
-	ConstBuffer&		GetTimeBuffer(int buf) const {return time_buffers[buf];}
-	double GetTradingSymbolSpreadPoint(int sym) const {return spread_points[sym];}
-	*/
 	
 	int GetAccountSymbol() const {return symbols.GetCount()-1;}
 	

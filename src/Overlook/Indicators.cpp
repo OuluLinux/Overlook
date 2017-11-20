@@ -1154,10 +1154,10 @@ void CommodityChannelIndex::Start() {
 		SetSafetyLimit(i);
 		sum = 0.0;
 		k = i + 1 - period;
-		SafetyCheck(k);
+		SafetyInspect(k);
 		
 		while ( k <= i ) {
-			SafetyCheck(k);
+			SafetyInspect(k);
 			sum += fabs ( value_buffer.Get(k) - mov_buffer.Get(i) );
 			k++;
 		}

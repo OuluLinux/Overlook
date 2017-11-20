@@ -36,7 +36,7 @@ void DataBridge::Start() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
-	common.CheckInit(this);
+	common.InspectInit(this);
 	
 	int sym_count = common.GetSymbolCount();
 	int cur_count = mt.GetCurrencyCount();

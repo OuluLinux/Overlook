@@ -139,41 +139,48 @@ void RandomForestAdvisor::Init() {
 		SetBufferColor(main_graphs + i * 2 + 0, green_tint);
 		SetBufferColor(main_graphs + i * 2 + 1, red_tint);
 	}
+	
+	conf_count = GetConfCount();
+	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+	open_buf = &GetInputBuffer(0, 0);
+	spread_point = db->GetPoint();
+	ASSERT(spread_point > 0.0);
+	
+	SetJobCount(3);
+	SetJob(0, "Source Search")
+		.SetBegin		(THISBACK(SourceSearchBegin))
+		.SetIterator	(THISBACK(SourceSearchIterator))
+		.SetInspect		(THISBACK(SourceSearchInspect))
+		.SetCtrl		<SourceSearchCtrl>();
+	
+	
+	SetJob(1, "Source Training")
+		.SetBegin		(THISBACK(MainTrainingBegin))
+		.SetIterator	(THISBACK(MainTrainingIterator))
+		.SetEnd			(THISBACK(MainTrainingEnd))
+		.SetInspect		(THISBACK(MainTrainingInspect))
+		.SetCtrl		<SourceTrainingCtrl>();
+	
+	
+	SetJob(2, "Main optimization")
+		.SetBegin		(THISBACK(MainOptimizationBegin))
+		.SetIterator	(THISBACK(MainOptimizationIterator))
+		.SetEnd			(THISBACK(MainOptimizationEnd))
+		.SetInspect		(THISBACK(MainOptimizationInspect))
+		.SetCtrl		<MainOptimizationCtrl>();
+	
 }
 
 void RandomForestAdvisor::Start() {
 	LOG("RandomForestAdvisor::Start");
 	
-	
-	/*if (once) {
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
-		once = false;
-	}*/
-	
-	
-	//optimizer.SetMaxRounds(2000);
-	
-	
-	if (!running) {
-		int bars = GetBars();
-		Output& out = GetOutput(0);
-		for(int i = 0; i < out.buffers.GetCount(); i++)
-			out.buffers[i].SetCount(bars);
-		
-		if (phase == RF_IDLE || phase == RF_TRAINING) {
-			phase = RF_TRAINING;
-			running = true;
-			Thread::Start(THISBACK(SourceTraining));
-		}
-		
-		else if (phase == RF_OPTIMIZING) {
-			running = true;
-			Thread::Start(THISBACK(MainTraining));
-		}
+	int bars = GetBars();
+	Output& out = GetOutput(0);
+	for(int i = 0; i < out.buffers.GetCount(); i++) {
+		ASSERT(bars == out.buffers[i].GetCount());
 	}
 	
-	if (!running && phase == RF_REAL) {
+	if (IsJobsFinished()) {
 		int bars = GetBars();
 		if (prev_counted < bars) {
 			TimeStop ts;
@@ -190,52 +197,11 @@ void RandomForestAdvisor::Start() {
 	}
 }
 
-void RandomForestAdvisor::SourceTraining() {
-	running = true;
-	serializer_lock.Enter();
-	
+
+
+bool RandomForestAdvisor::SourceSearchBegin() {
 	SetTrainingArea();
-	SearchSources();
 	
-	serializer_lock.Leave(); // leave before StoreCache
-	
-	if (!Thread::IsShutdownThreads()) {
-		phase = RF_OPTIMIZING;
-		StoreCache();
-	}
-	
-	running = false;
-}
-
-void RandomForestAdvisor::MainTraining() {
-	running = true;
-	serializer_lock.Enter();
-	
-	SetRealArea();
-	TrainRF();
-	ForceSetCounted(0);
-	RefreshOutputBuffers();
-	
-	MainOptimizer();
-	
-	serializer_lock.Leave(); // leave before StoreCache
-	
-	StoreCache();
-	
-	if (optimizer.IsEnd()) {
-		optimizer.GetLimitedBestSolution(trial);
-		ForceSetCounted(0);
-		RefreshOutputBuffers();
-		RefreshMain();
-		phase = RF_REAL;
-		StoreCache();
-	}
-	
-	
-	running = false;
-}
-
-void RandomForestAdvisor::SearchSources() {
 	
 	// Prepare training functions and output variables
 	rflist_pos.SetCount(LOCALPROB_DEPTH);
@@ -244,179 +210,226 @@ void RandomForestAdvisor::SearchSources() {
 	
 	System& sys = GetSystem();
 	int symbol = GetSymbol();
-	int count = GetConfCount();
 	int tf = GetTf();
-	int data_count = sys.GetCountTf(tf);
+	data_count = sys.GetCountTf(tf);
 	
-	One<RF> training_rf;
 	training_rf.Create();
 	
-	VectorBool full_mask;
 	full_mask.SetCount(data_count).One();
 	
+	search_pts.SetCount(conf_count, 0.0);
 	
-	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	double spread_point = db->GetPoint();
-	ASSERT(spread_point > 0.0);
-	
-	
-	// Iterate trough configuration combinations, and keep the best confs
-	for(int opt_counter = 0; opt_counter < count && !Thread::IsShutdownThreads(); opt_counter++) {
-		
-		// Use common trainer for performance reasons
-		RF& rf = *training_rf;
-		
-		
-		// Get configuration
-		AccuracyConf& conf = rf.a;
-		GetConf(opt_counter, conf);
-		VectorBool& real_mask = rf.c;
-		real_mask.SetCount(data_count).One();
-		
-		
-		// Skip duplicate combinations
-		// This is the easiest way... the harder way would be to not count duplicates.
-		if (conf.ext == 1) {
-			if (conf.label >= 2 || conf.labelpattern > 0 || conf.ext_dir)
-				continue;
-		}
-		
-		
-		// Refresh masks
-		ConstBufferSource bufs;
-		
-		
-		// Get active label
-		uint64 active_label_pattern = 0;
-		switch (conf.label) {
-			case 0: active_label_pattern = 0; break;
-			case 1: active_label_pattern = ~(0ULL); break;
-			case 2: for (int i = 1; i < 64; i += 2) active_label_pattern |= 1 << i; break;
-			case 3: for (int i = 0; i < 64; i += 2) active_label_pattern |= 1 << i; break;
-		}
-		bool active_label = active_label_pattern & 1;
-		Array<RF>& rflist = active_label == false ? rflist_pos : rflist_neg;
-		
-		
-		// Get label indicator. Do AND operation for all layers.
-		int layer_count = conf.ext;
-		ASSERT(layer_count > 0);
-		for(int sid = 0; sid < layer_count; sid++) {
-			int tf = conf.GetBaseTf(sid);
-			bool sid_active_label = active_label_pattern & (1 << (layer_count - 1 - sid));
-			
-			// Get label id
-			int label_id = 0;
-			switch (conf.labelpattern) {
-				case 0: label_id = conf.label_id; break;
-				case 1: label_id = conf.label_id - sid; break;
-				case 2: label_id = conf.label_id + sid; break;
-				case 3: label_id = conf.label_id - sid % 2; break;
-				case 4: label_id = conf.label_id + sid % 2; break;
-			}
-			while (label_id < 0)				label_id += LABELINDI_COUNT;
-			while (label_id >= LABELINDI_COUNT)	label_id -= LABELINDI_COUNT;
-			
-			
-			// Get filter label
-			ConstVectorBool& src_label = GetInputLabel(1 + indi_count + label_id + tf * (indi_count + label_count));
-			int count0 = real_mask.GetCount();
-			int count1 = src_label.GetCount();
-			if (sid_active_label)	real_mask.And(src_label);
-			else					real_mask.InverseAnd(src_label);
-		}
-		
-		
-		// Test
-		bool mask_prev_active		= false;
-		int mask_prev_pos			= 0;
-		double mask_open			= open_buf.GetUnsafe(area.train_begin);
-		double mask_hour_total		= 0.0;
-		double mask_change_total	= 1.0;
-		double mult_change_total	= 1.0;
-		for(int i = area.train_begin; i < area.train_end; i++) {
-			bool is_mask =  real_mask.Get(i);
-			
-			if (is_mask) {
-				if (!mask_prev_active) {
-					mask_open			= open_buf.GetUnsafe(i);
-					mask_prev_active	= true;
-					mask_prev_pos		= i;
-				}
-			} else {
-				if (mask_prev_active) {
-					double change, cur = open_buf.GetUnsafe(i);
-					int len = i - mask_prev_pos;
-					double hours = (double)len / 60.0;
-					mask_hour_total += hours;
-					if (!active_label)
-						change = cur / (mask_open + spread_point);
-					else
-						change = mask_open / (cur + spread_point);
-					mask_change_total *= change;
-					mask_prev_active = false;
-					mask_prev_pos = i;
-				}
-			}
-		}
-		mask_change_total -= 1.0;
-		conf.test_valuefactor = mask_change_total;
-		conf.test_valuehourfactor = mask_hour_total > 0.0 ? mask_change_total / mask_hour_total : 0.0;
-		conf.test_hourtotal = mask_hour_total;
-		conf.is_processed = true;
-		
-		
-		if (conf.test_valuehourfactor > 0.0) {
-			LOG(symbol << ": " << conf.test_valuehourfactor);
-		}
-		
-		// Sort list
-		rflist.Add(training_rf.Detach());
-		Sort(rflist, RFSorter());
-		training_rf.Attach(rflist.Detach(rflist.GetCount()-1));
-		
-	}
+	return true;
 }
 
-void RandomForestAdvisor::TrainRF() {
+bool RandomForestAdvisor::SourceSearchIterator() {
+	GetCurrentJob().SetProgress(opt_counter, conf_count);
+	if (opt_counter >= conf_count) {
+		SetJobFinished();
+		return true;
+	}
+	
+	
+	// Use common trainer for performance reasons
+	RF& rf = *training_rf;
+	
+	
+	// Get configuration
+	AccuracyConf& conf = rf.a;
+	GetConf(opt_counter, conf);
+	VectorBool& real_mask = rf.c;
+	real_mask.SetCount(data_count).One();
+	
+	
+	// Skip duplicate combinations
+	// This is the easiest way... the harder way would be to not count duplicates.
+	if (conf.ext == 1) {
+		if (conf.label >= 2 || conf.labelpattern > 0 || conf.ext_dir) {
+			// Iterate next recursively. The next non-duplicate shouldn't be far.
+			opt_counter++;
+			return SourceSearchIterator();
+		}
+	}
+	
+	
+	// Refresh masks
+	ConstBufferSource bufs;
+	
+	
+	// Get active label
+	uint64 active_label_pattern = 0;
+	switch (conf.label) {
+		case 0: active_label_pattern = 0; break;
+		case 1: active_label_pattern = ~(0ULL); break;
+		case 2: for (int i = 1; i < 64; i += 2) active_label_pattern |= 1 << i; break;
+		case 3: for (int i = 0; i < 64; i += 2) active_label_pattern |= 1 << i; break;
+	}
+	bool active_label = active_label_pattern & 1;
+	Array<RF>& rflist = active_label == false ? rflist_pos : rflist_neg;
+	
+	
+	// Get label indicator. Do AND operation for all layers.
+	int layer_count = conf.ext;
+	ASSERT(layer_count > 0);
+	for(int sid = 0; sid < layer_count; sid++) {
+		int tf = conf.GetBaseTf(sid);
+		bool sid_active_label = active_label_pattern & (1 << (layer_count - 1 - sid));
+		
+		// Get label id
+		int label_id = 0;
+		switch (conf.labelpattern) {
+			case 0: label_id = conf.label_id; break;
+			case 1: label_id = conf.label_id - sid; break;
+			case 2: label_id = conf.label_id + sid; break;
+			case 3: label_id = conf.label_id - sid % 2; break;
+			case 4: label_id = conf.label_id + sid % 2; break;
+		}
+		while (label_id < 0)				label_id += LABELINDI_COUNT;
+		while (label_id >= LABELINDI_COUNT)	label_id -= LABELINDI_COUNT;
+		
+		
+		// Get filter label
+		ConstVectorBool& src_label = GetInputLabel(1 + indi_count + label_id + tf * (indi_count + label_count));
+		int count0 = real_mask.GetCount();
+		int count1 = src_label.GetCount();
+		if (sid_active_label)	real_mask.And(src_label);
+		else					real_mask.InverseAnd(src_label);
+	}
+	
+	
+	// Test
+	bool mask_prev_active		= false;
+	int mask_prev_pos			= 0;
+	double mask_open			= open_buf->GetUnsafe(area.train_begin);
+	double mask_hour_total		= 0.0;
+	double mask_change_total	= 1.0;
+	double mult_change_total	= 1.0;
+	for(int i = area.train_begin; i < area.train_end; i++) {
+		bool is_mask =  real_mask.Get(i);
+		
+		if (is_mask) {
+			if (!mask_prev_active) {
+				mask_open			= open_buf->GetUnsafe(i);
+				mask_prev_active	= true;
+				mask_prev_pos		= i;
+			}
+		} else {
+			if (mask_prev_active) {
+				double change, cur = open_buf->GetUnsafe(i);
+				int len = i - mask_prev_pos;
+				double hours = (double)len / 60.0;
+				mask_hour_total += hours;
+				if (!active_label)
+					change = cur / (mask_open + spread_point);
+				else
+					change = mask_open / (cur + spread_point);
+				mask_change_total *= change;
+				mask_prev_active = false;
+				mask_prev_pos = i;
+			}
+		}
+	}
+	mask_change_total -= 1.0;
+	conf.test_valuefactor = mask_change_total;
+	conf.test_valuehourfactor = mask_hour_total > 0.0 ? mask_change_total / mask_hour_total : 0.0;
+	conf.test_hourtotal = mask_hour_total;
+	conf.is_processed = true;
+	
+	
+	if (conf.test_valuehourfactor > 0.0) {
+		LOG(GetSymbol() << ": " << conf.test_valuehourfactor);
+	}
+	
+	// Sort list
+	rflist.Add(training_rf.Detach());
+	Sort(rflist, RFSorter());
+	training_rf.Attach(rflist.Detach(rflist.GetCount()-1));
+	
+	
+	search_pts[opt_counter] = conf.test_valuehourfactor;
+	
+	opt_counter++;
+	return true;
+}
+
+bool RandomForestAdvisor::SourceSearchInspect() {
+	
+	return true;
+}
+
+bool RandomForestAdvisor::MainTrainingBegin() {
+	SetRealArea();
+	
 	System& sys = GetSystem();
 	
 	int tf = GetTf();
-	int symbol = GetSymbol();
 	int data_count = sys.GetCountTf(tf);
 	
 	VectorBool full_mask;
 	full_mask.SetCount(data_count).One();
 	
-	ConstBufferSource bufs;
+	training_pts.SetCount(2*LOCALPROB_DEPTH, 0.0);
 	
-	for (int p = 0; p < 2; p++) {
-		Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
-		
-		// Actually train random forests
-		for(int i = 0; i < rflist.GetCount() && !Thread::IsShutdownThreads(); i++) {
-			RF& rf = rflist[i];
-			AccuracyConf& conf = rf.a;
-			VectorBool& real_mask = rf.c;
-			LOG(symbol << ": " << i << ": " << p << ": test_valuehourfactor: " << conf.test_valuehourfactor);
-			
-			
-			rf_trainer.forest.memory.Attach(&rf.b);
-			
-			
-			FillBufferSource(conf, bufs);
-			rf_trainer.Process(area, bufs, real_mask, full_mask);
-			
-			conf.stat = rf_trainer.stat;
-			LOG(symbol << ": SOURCE " << i << ": " << p << ": train_accuracy: " << conf.stat.train_accuracy << " test_accuracy: " << conf.stat.test0_accuracy);
-			
-			rf_trainer.forest.memory.Detach();
-		}
-	}
+	return true;
 }
 
-void RandomForestAdvisor::MainOptimizer() {
+bool RandomForestAdvisor::MainTrainingIterator() {
+	int a = 0, t = 1;
+	if (p == 0)	{a = rflist_iter; t = rflist_pos.GetCount() + rflist_neg.GetCount();}
+	else		{a = rflist_pos.GetCount() + rflist_iter; t = rflist_pos.GetCount() + rflist_neg.GetCount();}
+	GetCurrentJob().SetProgress(a, t);
+	
+	
+	ConstBufferSource bufs;
+	
+	Array<RF>& rflist = p == 0 ? rflist_pos : rflist_neg;
+	
+	RF& rf = rflist[rflist_iter];
+	AccuracyConf& conf = rf.a;
+	VectorBool& real_mask = rf.c;
+	LOG(GetSymbol() << ": " << rflist_iter << ": " << p << ": test_valuehourfactor: " << conf.test_valuehourfactor);
+	
+	
+	
+	rf_trainer.forest.memory.Attach(&rf.b);
+	
+	FillBufferSource(conf, bufs);
+	rf_trainer.Process(area, bufs, real_mask, full_mask);
+	
+	conf.stat = rf_trainer.stat;
+	LOG(GetSymbol() << ": SOURCE " << rflist_iter << ": " << p << ": train_accuracy: " << conf.stat.train_accuracy << " test_accuracy: " << conf.stat.test0_accuracy);
+	
+	rf_trainer.forest.memory.Detach();
+	
+	
+	training_pts[rflist_iter] = conf.test_valuehourfactor;
+	
+	
+	rflist_iter++;
+	if (rflist_iter >= rflist.GetCount()) {
+		p++;
+		rflist_iter = 0;
+		if (p >= 2)
+			SetJobFinished();
+	}
+	return true;
+}
+
+bool RandomForestAdvisor::MainTrainingEnd() {
+	ForceSetCounted(0);
+	RefreshOutputBuffers();
+	return true;
+}
+
+bool RandomForestAdvisor::MainTrainingInspect() {
+	
+	return true;
+}
+
+
+
+bool RandomForestAdvisor::MainOptimizationBegin() {
+	SetRealArea();
 	
 	// Init genetic optimizer
 	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2;
@@ -442,34 +455,60 @@ void RandomForestAdvisor::MainOptimizer() {
 		optimizer.Init(StrategyRandom2Bin);
 	}
 	
+	optimization_pts.SetCount(10000, 0.0);
 	
-	// Optimize
-	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
-		
-		// Do some backup storing
-		if (optimizer.GetRound() % 10000 == 9999) {
-			serializer_lock.Leave();
-			StoreCache();
-			serializer_lock.Enter();
-		}
-		
-		// Get weights
-		optimizer.Start();
-		optimizer.GetLimitedTrialSolution(trial);
-
-		RefreshMainBuffer(true);
-		RunMain();
-
-		// Return training value with less than 10% of testing value.
-		// Testing value should slightly direct away from weird locality...
-		double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
-		LOG(GetSymbol() << " round " << optimizer.GetRound()
-			<< ": tr=" << area_change_total[0]
-			<<  " t0=" << area_change_total[1]
-			<<  " t1=" << area_change_total[2]);
-		optimizer.Stop(change_total);
-	}
+	return true;
 }
+
+bool RandomForestAdvisor::MainOptimizationIterator() {
+	GetCurrentJob().SetProgress(optimizer.GetRound(), optimizer.GetMaxRounds());
+	
+	
+	// Get weights
+	optimizer.Start();
+	optimizer.GetLimitedTrialSolution(trial);
+
+	RefreshMainBuffer(true);
+	RunMain();
+
+	// Return training value with less than 10% of testing value.
+	// Testing value should slightly direct away from weird locality...
+	double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
+	LOG(GetSymbol() << " round " << optimizer.GetRound()
+		<< ": tr=" << area_change_total[0]
+		<<  " t0=" << area_change_total[1]
+		<<  " t1=" << area_change_total[2]);
+	optimizer.Stop(change_total);
+	
+	
+	if (optimizer.IsEnd())
+		SetJobFinished();
+	
+	optimization_pts[optimizer.GetRound() % optimization_pts.GetCount()] = area_change_total[0];
+	
+	return true;
+}
+
+bool RandomForestAdvisor::MainOptimizationEnd() {
+	ASSERT(optimizer.IsEnd());
+	optimizer.GetLimitedBestSolution(trial);
+	ForceSetCounted(0);
+	RefreshOutputBuffers();
+	RefreshMain();
+	return true;
+}
+
+bool RandomForestAdvisor::MainOptimizationInspect() {
+	
+	return true;
+}
+
+
+
+
+
+
+
 
 void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
 	if (!forced && trial.IsEmpty()) return;
@@ -507,7 +546,6 @@ void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
 void RandomForestAdvisor::RunMain() {
 	
 	// Prepare variables
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& main_buf = GetBuffer(0);
 	
 	for (int a = 0; a < 3; a++) {
@@ -519,8 +557,8 @@ void RandomForestAdvisor::RunMain() {
 		
 		for(int i = begin; i < end; i++) {
 			bool signal		= main_buf.Get(i) < 0.0;
-			double curr		= open_buf.GetUnsafe(i);
-			double next		= open_buf.GetUnsafe(i + 1);
+			double curr		= open_buf->GetUnsafe(i);
+			double next		= open_buf->GetUnsafe(i + 1);
 			double change	= next / curr - 1.0;
 			ASSERT(curr > 0.0);
 			
@@ -541,8 +579,7 @@ void RandomForestAdvisor::SetTrainingArea() {
 }
 
 void RandomForestAdvisor::SetRealArea() {
-	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
-	int data_count			= open_buf.GetCount();
+	int data_count			= open_buf->GetCount();
 	area.train_begin		= 1*5*24*60 / MAIN_PERIOD_MINUTES;
 	area.train_end			= data_count;
 	area.test0_begin		= data_count;
@@ -638,5 +675,43 @@ void RandomForestAdvisor::RefreshMain() {
 	RefreshMainBuffer(true);
 	RunMain();
 }
+
+
+void RandomForestAdvisor::SourceSearchCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	ASSERT(rfa);
+	DrawVectorPoints(id, sz, rfa->search_pts);
+	
+	w.DrawImage(0, 0, id);
+}
+
+void RandomForestAdvisor::SourceTrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	ASSERT(rfa);
+	DrawVectorPoints(id, sz, rfa->training_pts);
+	
+	w.DrawImage(0, 0, id);
+}
+
+void RandomForestAdvisor::MainOptimizationCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	ASSERT(rfa);
+	DrawVectorPolyline(id, sz, rfa->optimization_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
+
 
 }

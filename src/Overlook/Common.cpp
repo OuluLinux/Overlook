@@ -219,4 +219,97 @@ void TestExtremumCache() {
 	
 }
 
+
+
+
+
+
+
+void DrawVectorPoints(Draw& id, Size sz, const Vector<double>& data) {
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	
+	int max_steps = 0;
+	int count = data.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = data[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	if (count > max_steps)
+		max_steps = count;
+	
+	
+	if (max_steps > 1 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (max_steps - 1);
+		Font fnt = Monospace(10);
+		
+		int count = data.GetCount();
+		if (count >= 2) {
+			for(int j = 0; j < count; j++) {
+				double v = data[j];
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				id.DrawRect(x, y, 2, 2, Color(88, 114, 210));
+			}
+		}
+	}
+}
+
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline) {
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	double last = 0.0;
+	double peak = 0.0;
+	
+	int max_steps = 0;
+	int count = data.GetCount();
+	for(int j = 0; j < count; j++) {
+		double d = data[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	if (count > max_steps)
+		max_steps = count;
+	
+	
+	if (max_steps > 1 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (max_steps - 1);
+		Font fnt = Monospace(10);
+		
+		int count = data.GetCount();
+		if (count >= 2) {
+			polyline.SetCount(0);
+			for(int j = 0; j < count; j++) {
+				double v = data[j];
+				last = v;
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+				if (v > peak) peak = v;
+			}
+			if (polyline.GetCount() >= 2)
+				id.DrawPolyline(polyline, 1, Color(81, 145, 137));
+		}
+		
+		{
+			int y = 0;
+			String str = DblStr(peak);
+			Size str_sz = GetTextSize(str, fnt);
+			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+			id.DrawText(16, y, str, fnt, Black());
+		}
+		{
+			int y = 0;
+			String str = DblStr(last);
+			Size str_sz = GetTextSize(str, fnt);
+			id.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
+			id.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
+		}
+	}
+}
+
+
 }

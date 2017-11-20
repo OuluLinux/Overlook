@@ -73,7 +73,7 @@ void DiffSolver::SolveStart(int max_generations) {
 	this->max_generations = max_generations;
 }
 
-bool DiffSolver::SolveCheck() {
+bool DiffSolver::SolveInspect() {
 	if (generation < max_generations) return 1;
 	generations = generation;
 	return 0;
@@ -115,7 +115,7 @@ void DiffSolver::SetTrialEnergy(double energy) {
 		for (i1 = vec->Begin(), i2 = trial_solution.Begin(); i2 != trial_solution.End(); i1++, i2++)
 			*i1 = *i2;
 
-		// Check if all-time low
+		// Inspect if all-time low
 		if (trial_energy <= best_energy) {
 			best_energy = trial_energy;
 			CopyVector(best_solution,trial_solution);

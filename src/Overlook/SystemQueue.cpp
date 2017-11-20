@@ -434,4 +434,103 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 	broker.init						= true;
 }
 
+#ifndef flagGUITASK
+
+void System::ProcessJobs() {
+	jobs_stopped = false;
+	
+	do {
+		if (jobs.IsEmpty())
+			{Sleep(100); if (jobs_running) continue; else break;}
+		
+		if (ProcessJob())
+			Sleep(100);
+	}
+	while (jobs_running);
+	
+	jobs_stopped = true;
+}
+
+#else
+
+void System::ProcessJobs() {
+	jobs_stopped = false;
+	bool break_loop = false;
+	
+	TimeStop ts;
+	do {
+		if (jobs.IsEmpty())
+			break;
+		
+		break_loop = ProcessJob();
+	}
+	while (ts.Elapsed() < 200 && !break_loop);
+	
+	jobs_stopped = true;
+	jobs_tc.Set(10, THISBACK(PostProcessJobs));
+}
+
+#endif
+
+bool System::ProcessJob() {
+	bool r = false;
+	
+	job_lock.Enter();
+	
+	Job& job = *jobs[job_iter];
+	
+	if (job.IsFinished()) {
+		job_iter++;
+		if (job_iter >= jobs.GetCount()) {
+			job_iter = 0;
+			r = true;
+		}
+	}
+	else {
+		if (job.core->IsInitialized()) {
+			job.core->SetCurrentJob(&job);
+			job.Process();
+			job.core->SetCurrentJob(NULL);
+		}
+	}
+	
+	job_lock.Leave();
+	return r;
+}
+
+void System::StopJobs() {
+	#ifndef flagGUITASK
+	jobs_running = false;
+	while (!jobs_stopped) Sleep(100);
+	#endif
+}
+
+void Job::Process() {
+	int begin_state = state;
+	switch (state) {
+		case INIT:			if (begin() || !begin) state++; break;
+		case RUNNING:		if (iter() && actual >= total || !iter) state++; break;
+		case STOPPING:		if (end() || !end) state++; break;
+		case INSPECTING:	if (inspect() || !inspect) state++; break;
+		
+		default:
+			return;
+	}
+	if (begin_state < state || ts.Elapsed() >= 5 * 60 * 1000) {
+		core->StoreCache();
+		ts.Reset();
+	}
+}
+
+String Job::GetStateString() const {
+	switch (state) {
+		case INIT: return "Init";
+		case RUNNING: return "Running";
+		case STOPPING: return "Stopping";
+		case INSPECTING: return "Inspecting";
+		case STOPPED: return "Finished";
+	}
+	return "";
+}
+
 }

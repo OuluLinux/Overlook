@@ -439,7 +439,7 @@ public:
 	// Some utility functions for checking that indicator values are strictly L-R
 	#ifdef flagDEBUG
 	CoreIO* check_cio = NULL;
-	void SafetyCheck(CoreIO* io) {check_cio = io;}
+	void SafetyInspect(CoreIO* io) {check_cio = io;}
 	double Get(int i) const;
 	void Set(int i, double value);
 	void Inc(int i, double value);
@@ -504,7 +504,7 @@ class CoreItem;
 class Source : Moveable<Source> {
 	
 public:
-	Source() : core(NULL), output(NULL), sym(-1), tf(-1) {}
+	Source() {}
 	Source(CoreIO* c, Output* out, int s, int t) : core(c), output(out), sym(s), tf(t) {}
 	Source(const Source& src) {*this = src;}
 	void operator=(const Source& src) {
@@ -514,15 +514,15 @@ public:
 		tf = src.tf;
 	}
 	
-	CoreIO* core;
-	Output* output;
-	int sym, tf;
+	CoreIO* core = NULL;
+	Output* output = NULL;
+	int sym = -1, tf = -1;
 };
 
 class SourceDef : Moveable<SourceDef> {
 	
 public:
-	SourceDef() : coreitem(NULL), output(-1), sym(-1), tf(-1) {}
+	SourceDef() {}
 	SourceDef(CoreItem* ci, int out, int s, int t) : coreitem(ci), output(out), sym(s), tf(t) {}
 	SourceDef(const Source& src) {*this = src;}
 	void operator=(const SourceDef& src) {
@@ -532,8 +532,8 @@ public:
 		tf = src.tf;
 	}
 	
-	CoreItem* coreitem;
-	int output, sym, tf;
+	CoreItem* coreitem = NULL;
+	int output = -1, sym = -1, tf = -1;
 };
 
 typedef VectorMap<int, Source>		Input;
@@ -804,7 +804,9 @@ struct ArrayCtrlPrinter {
 };
 
 
-
+// Many Ctrl classes don't have hook for right click context menu, which is added here.
+// The situation is confusing...
+// TODO: find a supported way
 template <class T>
 class CtrlCallbacks : public T {
 
@@ -814,12 +816,14 @@ public:
     virtual void RightDown(Point pt, dword v) {T::RightDown(pt, v); WhenRightDown(pt, v);}
 
     Callback2<Point, dword> WhenRightDown, WhenLeftDown;
-    // TODO other callbacks
 };
 
 
 typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& args);
 
+
+void DrawVectorPoints(Draw& d, Size sz, const Vector<double>& pts);
+void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache);
 
 }
 

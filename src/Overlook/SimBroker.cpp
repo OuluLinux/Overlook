@@ -231,7 +231,7 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 		
 		double close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 		
-		// Check slippage
+		// Inspect slippage
 		double slippage_points = sym.point * slippage;
 		double close_max = close + slippage_points * 0.5;
 		double close_min = close - slippage_points * 0.5;

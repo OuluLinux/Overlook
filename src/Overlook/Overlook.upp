@@ -46,7 +46,6 @@ file
 	System.h,
 	System.cpp,
 	SystemQueue.cpp,
-	SystemContent.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,
@@ -64,10 +63,7 @@ file
 	Optimizer.h,
 	Optimizer.cpp,
 	FixedSimBroker.h,
-	FixedSimBroker.cpp,
-	Trash readonly separator,
-	ExpertSystem.h,
-	ExpertSystem.cpp;
+	FixedSimBroker.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",
@@ -75,5 +71,5 @@ mainconfig
 	"Fast" = "GUI MT X11 FAST",
 	"Very Fast" = "GUI MT X11 VERY_FAST",
 	"Working, system malloc" = "GUI MT X11 USEMALLOC",
-	"Working, single thread" = "GUI X11";
+	"Working, single thread" = "GUI X11 GUITASK";
 

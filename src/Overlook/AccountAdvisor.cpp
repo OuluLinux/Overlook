@@ -15,48 +15,27 @@ void WeekSlotAdvisor::Init() {
 	SetCoreMaximum(+1.0);   // normalized
 	
 	for(int i = 0; i < SYM_COUNT; i++) {
-		SetBufferColor(i, RainbowColor((double)i / SYM_COUNT));
+		SetBufferColor(i, Blend(GrayColor(), RainbowColor((double)i / SYM_COUNT)));
 		SetBufferLineWidth(i, 2);
 	}
+	
+	tfmins		= GetMinutePeriod();
+	slotmins	= tfmins < 60 ? 60 : tfmins;
+	weekslots	= 5 * 24 * 60 / slotmins;
+	cols		= weekslots * SYM_COUNT;
+	
+	
+	SetJobCount(1);
+	SetJob(0, "Main optimization")
+		.SetBegin		(THISBACK(MainOptimizationBegin))
+		.SetIterator	(THISBACK(MainOptimizationIterator))
+		.SetEnd			(THISBACK(MainOptimizationEnd))
+		.SetInspect		(THISBACK(MainOptimizationInspect))
+		.SetCtrl		<MainOptimizationCtrl>();
 }
 
 void WeekSlotAdvisor::Start() {
-	System& sys = GetSystem();
-	int tf = GetTf();
-	
-	
-	//optimizer.SetMaxRounds(2000);
-	
-	
-	if (!running) {
-		int bars = GetBars();
-		Output& out = GetOutput(0);
-		for(int i = 0; i < out.buffers.GetCount(); i++)
-			out.buffers[i].SetCount(bars);
-		
-		// Wait until sources have RF_IDLEREAL
-		if (phase == WS_IDLE) {
-			bool all_ready = true;
-			for(int i = 0; i < SYM_COUNT; i++) {
-				int symbol = sys.GetPrioritySymbol(i);
-				CoreIO* core = GetInputCore(1, symbol, tf);
-				ASSERT(core);
-				RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(core);
-				ASSERT(rfa);
-				all_ready &= rfa->GetPhase() == RF_REAL;
-			}
-			if (all_ready)
-				phase = WS_TRAINING;
-		}
-		
-		if (phase == WS_TRAINING) {
-			running = true;
-			Thread::Start(THISBACK(MainTraining));
-		}
-	}
-	
-	
-	if (!running && phase == WS_REAL) {
+	if (IsJobsFinished()) {
 		int bars = GetBars();
 		if (prev_counted < bars) {
 			RefreshMain();
@@ -65,43 +44,11 @@ void WeekSlotAdvisor::Start() {
 	}
 }
 
-void WeekSlotAdvisor::MainTraining() {
-	running = true;
-	serializer_lock.Enter();
-	
+bool WeekSlotAdvisor::MainOptimizationBegin() {
 	SetRealArea();
-	MainOptimizer();
-	
-	serializer_lock.Leave(); // leave before StoreCache
-	
-	StoreCache();
-	
-	if (optimizer.IsEnd()) {
-		LOG("WeekSlotAdvisor::MainTraining finished");
-		optimizer.GetLimitedBestSolution(trial);
-		NormalizeTrial();
-		
-		ForceSetCounted(0);
-		RefreshMainBuffer(false);
-		RunMain();
-
-		phase = WS_REAL;
-		StoreCache();
-	}
-	
-	running = false;
-}
-
-void WeekSlotAdvisor::MainOptimizer() {
 	
 	// Init genetic optimizer
-	int tfmins		= GetMinutePeriod();
-	int slotmins	= tfmins < 60 ? 60 : tfmins;
-		weekslots	= 5 * 24 * 60 / slotmins;
-	int cols		= weekslots * SYM_COUNT;
-	if (optimizer.GetRound() == 0 || forced_optimizer_reset) {
-		forced_optimizer_reset = false;
-		
+	if (optimizer.GetRound() == 0) {
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
 		optimizer.SetPopulation(100);
@@ -136,105 +83,60 @@ void WeekSlotAdvisor::MainOptimizer() {
 		optimizer.Init(StrategyRandom2Bin);
 	}
 	
+	optimization_pts.SetCount(10000, 0.0);
 	
-	// Optimize
-	while (!optimizer.IsEnd() && !Thread::IsShutdownThreads()) {
-		
-		// Do some backup storing
-		if (optimizer.GetRound() % 10000 == 9999) {
-			serializer_lock.Leave();
-			StoreCache();
-			serializer_lock.Enter();
-		}
-		
-		
-		// Refresh databridge candlesticks sometimes
-		/*if (optimizer.GetRound() % 1000 == 999)
-			RunSimBroker();*/
-		
-		
-		// Get weights
-		optimizer.Start();
-		optimizer.GetLimitedTrialSolution(trial);
-		NormalizeTrial();
-
-		RefreshMainBuffer(true);
-		RunMain();
-
-		// Return training value with less than 10% of testing value.
-		// Testing value should slightly direct away from weird locality...
-		double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
-		LOG(GetSymbol() << " round " << optimizer.GetRound()
-			<< ": tr=" << area_change_total[0]
-			<<  " t0=" << area_change_total[1]
-			<<  " t1=" << area_change_total[2]);
-		optimizer.Stop(change_total);
-	}
+	return true;
 }
-/*
-void WeekSlotAdvisor::RunSimBroker() {
-	System& sys = GetSystem();
-	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+
+bool WeekSlotAdvisor::MainOptimizationIterator() {
+	GetCurrentJob().SetProgress(optimizer.GetRound(), optimizer.GetMaxRounds());
 	
-	Buffer& open_buf	= db->GetBuffer(0);
-	Buffer& low_buf		= db->GetBuffer(1);
-	Buffer& high_buf	= db->GetBuffer(2);
-	Buffer& volume_buf	= db->GetBuffer(3);
 	
-	int tf = GetTf();
-	int data_count = sys.GetCountTf(tf);
-	db->ForceCount(data_count);
+	// Get weights
+	optimizer.Start();
+	optimizer.GetLimitedTrialSolution(trial);
+	NormalizeTrial();
+
+	RefreshMainBuffer(true);
+	RunMain();
+
+	// Return training value with less than 10% of testing value.
+	// Testing value should slightly direct away from weird locality...
+	double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
+	LOG(GetSymbol() << " round " << optimizer.GetRound()
+		<< ": tr=" << area_change_total[0]
+		<<  " t0=" << area_change_total[1]
+		<<  " t1=" << area_change_total[2]);
+	optimizer.Stop(change_total);
 	
+	
+	if (optimizer.IsEnd())
+		SetJobFinished();
+	
+	optimization_pts[optimizer.GetRound() % optimization_pts.GetCount()] = area_change_total[0];
+	
+	return true;
+}
+
+bool WeekSlotAdvisor::MainOptimizationEnd() {
+	ASSERT(optimizer.IsEnd());
+	LOG("WeekSlotAdvisor::MainOptimization finished");
 	optimizer.GetLimitedBestSolution(trial);
 	NormalizeTrial();
-	RefreshMainBuffer(true);
 	
-	SimBroker sb;
-	sb.Brokerage::operator=(GetMetaTrader());
-	sb.SetInitialBalance(10000);
-	sb.Init();
-	sb.SetFreeMarginLevel(FMLEVEL);
-	sb.SetFreeMarginScale((MULT_MAXSCALES - 1) * MULT_MAXSCALE_MUL * SYM_COUNT);
+	ForceSetCounted(0);
+	RefreshMainBuffer(false);
+	RunMain();
 	
-	RefreshInputs();
-	
-	for(int i = 0; i < data_count; i++) {
-		
-		for(int j = 0; j < SYM_COUNT; j++) {
-			ConstBuffer& open_buf = *inputs[j];
-			double curr = open_buf.GetUnsafe(i);
-			int symbol = sys.GetPrioritySymbol(j);
-			sb.SetPrice(symbol, curr);
-		}
-		sb.RefreshOrders();
-		
-		
-		for(int j = 0; j < SYM_COUNT; j++) {
-			int dir		= signals[j]->Get(i) < 0.0 ? -1 : +1;
-			int mult	= weights[j]->Get(i) * MULT_MAX;
-			int sig		= dir * mult;
-			int sym		= sys.GetPrioritySymbol(j);
-			ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
-			
-			if (sig == sb.GetSignal(sym) && sig != 0)
-				sb.SetSignalFreeze(sym, true);
-			else {
-				sb.SetSignal(sym, sig);
-				sb.SetSignalFreeze(sym, false);
-			}
-		}
-		
-		
-		sb.SignalOrders(true);
-		
-		
-		double value = sb.AccountEquity();
-		open_buf.Set(i, value);
-		low_buf.Set(i, value);
-		high_buf.Set(i, value);
-	}
+	return true;
 }
-*/
+
+bool WeekSlotAdvisor::MainOptimizationInspect() {
+	
+	
+	return true;
+}
+
 void WeekSlotAdvisor::NormalizeTrial() {
 	int i = 0;
 	while (i < trial.GetCount()) {
@@ -428,7 +330,7 @@ void WeekSlotAdvisor::MainReal() {
 	}
 	
 	
-	// Check for market closing (weekend and holidays)
+	// Inspect for market closing (weekend and holidays)
 	else if (wday == 5 && wday_after_hour == 6) {
 		sys.WhenInfo("Closing all orders before market break");
 
@@ -480,4 +382,85 @@ void WeekSlotAdvisor::MainReal() {
 	sys.WhenPopTask();
 }
 
+void WeekSlotAdvisor::MainOptimizationCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	WeekSlotAdvisor* wsa = dynamic_cast<WeekSlotAdvisor*>(&*job->core);
+	ASSERT(wsa);
+	DrawVectorPolyline(id, sz, wsa->optimization_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
 }
+
+
+}
+
+
+
+
+/*
+void WeekSlotAdvisor::RunSimBroker() {
+	System& sys = GetSystem();
+	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+	
+	Buffer& open_buf	= db->GetBuffer(0);
+	Buffer& low_buf		= db->GetBuffer(1);
+	Buffer& high_buf	= db->GetBuffer(2);
+	Buffer& volume_buf	= db->GetBuffer(3);
+	
+	int tf = GetTf();
+	int data_count = sys.GetCountTf(tf);
+	db->ForceCount(data_count);
+	
+	optimizer.GetLimitedBestSolution(trial);
+	NormalizeTrial();
+	RefreshMainBuffer(true);
+	
+	SimBroker sb;
+	sb.Brokerage::operator=(GetMetaTrader());
+	sb.SetInitialBalance(10000);
+	sb.Init();
+	sb.SetFreeMarginLevel(FMLEVEL);
+	sb.SetFreeMarginScale((MULT_MAXSCALES - 1) * MULT_MAXSCALE_MUL * SYM_COUNT);
+	
+	RefreshInputs();
+	
+	for(int i = 0; i < data_count; i++) {
+		
+		for(int j = 0; j < SYM_COUNT; j++) {
+			ConstBuffer& open_buf = *inputs[j];
+			double curr = open_buf.GetUnsafe(i);
+			int symbol = sys.GetPrioritySymbol(j);
+			sb.SetPrice(symbol, curr);
+		}
+		sb.RefreshOrders();
+		
+		
+		for(int j = 0; j < SYM_COUNT; j++) {
+			int dir		= signals[j]->Get(i) < 0.0 ? -1 : +1;
+			int mult	= weights[j]->Get(i) * MULT_MAX;
+			int sig		= dir * mult;
+			int sym		= sys.GetPrioritySymbol(j);
+			ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
+			
+			if (sig == sb.GetSignal(sym) && sig != 0)
+				sb.SetSignalFreeze(sym, true);
+			else {
+				sb.SetSignal(sym, sig);
+				sb.SetSignalFreeze(sym, false);
+			}
+		}
+		
+		
+		sb.SignalOrders(true);
+		
+		
+		double value = sb.AccountEquity();
+		open_buf.Set(i, value);
+		low_buf.Set(i, value);
+		high_buf.Set(i, value);
+	}
+}
+*/

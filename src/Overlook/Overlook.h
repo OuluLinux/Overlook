@@ -77,7 +77,10 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl>  trade, trade_history, exposure;
+	CtrlCallbacks<ArrayCtrl>  trade, trade_history, exposure, joblist, debuglist;
+	Splitter jobs_hsplit;
+	ParentCtrl job_ctrl;
+	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
 	InfoCtrl account, network;
 	ToolBar tool;
@@ -147,6 +150,8 @@ public:
 	void RefreshTrades();
 	void RefreshExposure();
 	void RefreshTradesHistory();
+	void RefreshJobs();
+	void RefreshDebug();
 	void MenuNewOrder();
 	void MenuCloseOrder();
 	void MenuModifyOrder();

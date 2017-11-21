@@ -151,6 +151,7 @@ class RandomForestAdvisor : public Core {
 	double spread_point = 0.0;
 	int conf_count = 0;
 	int data_count = 0;
+	bool once = true;
 	
 	
 protected:

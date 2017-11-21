@@ -63,6 +63,7 @@ file
 	Optimizer.h,
 	Optimizer.cpp,
 	FixedSimBroker.h,
+	DQN.h,
 	FixedSimBroker.cpp;
 
 mainconfig

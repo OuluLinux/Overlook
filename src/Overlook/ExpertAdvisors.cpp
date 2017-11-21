@@ -175,6 +175,11 @@ void RandomForestAdvisor::Init() {
 void RandomForestAdvisor::Start() {
 	LOG("RandomForestAdvisor::Start");
 	
+	if (once) {
+		prev_counted = 0;
+		once = false;
+	}
+	
 	int bars = GetBars();
 	Output& out = GetOutput(0);
 	for(int i = 0; i < out.buffers.GetCount(); i++) {
@@ -529,9 +534,9 @@ bool RandomForestAdvisor::MainOptimizationEnd() {
 bool RandomForestAdvisor::MainOptimizationInspect() {
 	bool succ = area_change_total[1] > 0.0;
 	
-	INSPECT(succ, "error: negative result");
+	INSPECT(succ, "warning: negative result");
 	
-	return succ;
+	return true;
 }
 
 
@@ -551,7 +556,8 @@ void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
 	
 	Buffer& main_buf = GetBuffer(0);
 	main_buf.SetCount(data_count);
-	
+	VectorBool& label = GetOutput(0).label;
+	label.SetCount(data_count);
 	for(int i = begin; i < data_count; i++) {
 		
 		double main = 0.0;
@@ -571,6 +577,7 @@ void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
 		main /= LOCALPROB_DEPTH*2;
 		
 		main_buf.Set(i, main);
+		label.Set(i, main < 0.0);
 	}
 }
 
@@ -593,11 +600,19 @@ void RandomForestAdvisor::RunMain() {
 			double change	= next / curr - 1.0;
 			ASSERT(curr > 0.0);
 			
+			#if 0
 			if (signal) change *= -1.0;
-			
 			change_total	+= change;
+			#else
+			bool correct_signal = change < 1.0;
+			if (signal == correct_signal)
+				change_total += +1.0;
+			#endif
 		}
-				
+		
+		if (end > begin)
+			change_total /= end-begin;
+		
 		area_change_total[a] = change_total;
 		LOG("RandomForestAdvisor::TestMain " << GetSymbol() << " a" << a << ": change_total=" << change_total);
 	}

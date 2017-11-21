@@ -713,8 +713,9 @@ void Overlook::RefreshExposure() {
 void Overlook::RefreshTradesHistory() {
 	MetaTrader& mt = GetMetaTrader();
 	const Vector<Order>& orders = mt.GetHistoryOrders();
-	for(int i = 0; i < orders.GetCount(); i++) {
-		const libmt::Order& bo = orders[i];
+	int count = orders.GetCount();
+	for(int i = 0; i < count; i++) {
+		const libmt::Order& bo = orders[count - 1 - i];
 		if (bo.is_open) continue;
 		trade_history.Set(i, 0, bo.ticket);
 		trade_history.Set(i, 1, bo.begin);
@@ -729,7 +730,6 @@ void Overlook::RefreshTradesHistory() {
 		trade_history.Set(i, 10, bo.swap);
 		trade_history.Set(i, 11, bo.profit);
 	}
-	trade_history.SetSortColumn(8, true);
 }
 
 struct JobProgressDislay : public Display {

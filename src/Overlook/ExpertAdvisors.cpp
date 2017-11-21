@@ -370,7 +370,7 @@ bool RandomForestAdvisor::SourceSearchInspect() {
 		INSPECT(0, "error: Didn't found sources properly");
 		return false;
 	}
-	INSPECT(0, "ok: source search seems to be successful");
+	//INSPECT(0, "ok: source search seems to be successful");
 	
 	return true;
 }

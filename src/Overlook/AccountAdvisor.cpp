@@ -151,7 +151,7 @@ bool WeekSlotAdvisor::MainOptimizationInspect() {
 	bool succ = area_change_total[1] > 0.0;
 	
 	INSPECT( succ, "error: negative result (" + DblStr(succ) + ")");
-	INSPECT(!succ, "ok: nice result (" + DblStr(succ) + ")");
+	//INSPECT(!succ, "ok: nice result (" + DblStr(succ) + ")");
 	
 	return succ;
 }

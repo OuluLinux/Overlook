@@ -147,6 +147,7 @@ void RandomForestAdvisor::Init() {
 	ASSERT(spread_point > 0.0);
 	
 	SetJobCount(3);
+	
 	SetJob(0, "Source Search")
 		.SetBegin		(THISBACK(SourceSearchBegin))
 		.SetIterator	(THISBACK(SourceSearchIterator))
@@ -182,22 +183,23 @@ void RandomForestAdvisor::Start() {
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
-		if (prev_counted < bars) {
-			TimeStop ts;
-			
-			RefreshOutputBuffers();
-			LOG("RandomForestAdvisor::Start ... RefreshOutputBuffers " << ts.ToString());
-			ts.Reset();
-			
-			RefreshMain();
-			LOG("RandomForestAdvisor::Start ... RefreshMain " << ts.ToString());
-			
-			prev_counted = bars;
-		}
+		if (prev_counted < bars)
+			RefreshAll();
 	}
 }
 
-
+void RandomForestAdvisor::RefreshAll() {
+	TimeStop ts;
+	
+	RefreshOutputBuffers();
+	LOG("RandomForestAdvisor::Start ... RefreshOutputBuffers " << ts.ToString());
+	ts.Reset();
+	
+	RefreshMain();
+	LOG("RandomForestAdvisor::Start ... RefreshMain " << ts.ToString());
+	
+	prev_counted = GetBars();
+}
 
 bool RandomForestAdvisor::SourceSearchBegin() {
 	SetTrainingArea();
@@ -354,6 +356,22 @@ bool RandomForestAdvisor::SourceSearchIterator() {
 
 bool RandomForestAdvisor::SourceSearchInspect() {
 	
+	INSPECT(rflist_pos.GetCount() == LOCALPROB_DEPTH, "error: Unexpected count of sources");
+	INSPECT(rflist_neg.GetCount() == LOCALPROB_DEPTH, "error: Unexpected count of sources");
+	
+	int invalid_count = 0;
+	for(int i = 0; i < rflist_pos.GetCount(); i++)
+		if (rflist_pos[i].a.test_valuehourfactor <= 0.0)
+			invalid_count++;
+	for(int i = 0; i < rflist_neg.GetCount(); i++)
+		if (rflist_neg[i].a.test_valuehourfactor <= 0.0)
+			invalid_count++;
+	if (invalid_count != 0) {
+		INSPECT(0, "error: Didn't found sources properly");
+		return false;
+	}
+	INSPECT(0, "ok: source search seems to be successful");
+	
 	return true;
 }
 
@@ -365,7 +383,7 @@ bool RandomForestAdvisor::MainTrainingBegin() {
 	int tf = GetTf();
 	int data_count = sys.GetCountTf(tf);
 	
-	VectorBool full_mask;
+	
 	full_mask.SetCount(data_count).One();
 	
 	training_pts.SetCount(2*LOCALPROB_DEPTH, 0.0);
@@ -374,6 +392,8 @@ bool RandomForestAdvisor::MainTrainingBegin() {
 }
 
 bool RandomForestAdvisor::MainTrainingIterator() {
+	ASSERT(full_mask.GetCount() > 0 && rflist_iter >= 0);
+	
 	int a = 0, t = 1;
 	if (p == 0)	{a = rflist_iter; t = rflist_pos.GetCount() + rflist_neg.GetCount();}
 	else		{a = rflist_pos.GetCount() + rflist_iter; t = rflist_pos.GetCount() + rflist_neg.GetCount();}
@@ -402,7 +422,7 @@ bool RandomForestAdvisor::MainTrainingIterator() {
 	rf_trainer.forest.memory.Detach();
 	
 	
-	training_pts[rflist_iter] = conf.test_valuehourfactor;
+	training_pts[rflist_iter + p * LOCALPROB_DEPTH] = conf.stat.test0_accuracy;
 	
 	
 	rflist_iter++;
@@ -423,6 +443,15 @@ bool RandomForestAdvisor::MainTrainingEnd() {
 
 bool RandomForestAdvisor::MainTrainingInspect() {
 	
+	int invalid_count = 0;
+	for(int i = 0; i < rflist_pos.GetCount(); i++)
+		if (rflist_pos[i].a.stat.test0_accuracy <= 0.50)
+			invalid_count++;
+	for(int i = 0; i < rflist_neg.GetCount(); i++)
+		if (rflist_neg[i].a.stat.test0_accuracy <= 0.50)
+			invalid_count++;
+	INSPECT(invalid_count == 0, "warning: bad accuracy in " + IntStr(invalid_count) + " of " + IntStr(LOCALPROB_DEPTH*2));
+	
 	return true;
 }
 
@@ -437,7 +466,7 @@ bool RandomForestAdvisor::MainOptimizationBegin() {
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
 		optimizer.SetPopulation(100);
-		optimizer.SetMaxGenerations(1000);
+		optimizer.SetMaxGenerations(100);
 		optimizer.UseLimits();
 
 
@@ -452,7 +481,7 @@ bool RandomForestAdvisor::MainOptimizationBegin() {
 			optimizer.Set(col++,  -10.0, +10.0, 0.10, "neg step mul");
 		}
 		ASSERT(col == cols);
-		optimizer.Init(StrategyRandom2Bin);
+		optimizer.Init(StrategyBest1Exp);
 	}
 	
 	optimization_pts.SetCount(10000, 0.0);
@@ -493,14 +522,16 @@ bool RandomForestAdvisor::MainOptimizationEnd() {
 	ASSERT(optimizer.IsEnd());
 	optimizer.GetLimitedBestSolution(trial);
 	ForceSetCounted(0);
-	RefreshOutputBuffers();
-	RefreshMain();
+	RefreshAll();
 	return true;
 }
 
 bool RandomForestAdvisor::MainOptimizationInspect() {
+	bool succ = area_change_total[1] > 0.0;
 	
-	return true;
+	INSPECT(succ, "error: negative result");
+	
+	return succ;
 }
 
 
@@ -579,12 +610,13 @@ void RandomForestAdvisor::SetTrainingArea() {
 }
 
 void RandomForestAdvisor::SetRealArea() {
+	int week				= 1*5*24*60 / MAIN_PERIOD_MINUTES;
 	int data_count			= open_buf->GetCount();
-	area.train_begin		= 1*5*24*60 / MAIN_PERIOD_MINUTES;
-	area.train_end			= data_count;
-	area.test0_begin		= data_count;
-	area.test0_end			= data_count;
-	area.test1_begin		= data_count;
+	area.train_begin		= week;
+	area.train_end			= data_count - 2*week;
+	area.test0_begin		= data_count - 2*week;
+	area.test0_end			= data_count - 1*week;
+	area.test1_begin		= data_count - 1*week;
 	area.test1_end			= data_count;
 }
 
@@ -627,8 +659,8 @@ void RandomForestAdvisor::FillMainBufferSource(ConstBufferSource& bufs) {
 void RandomForestAdvisor::RefreshOutputBuffers() {
 	int bars = GetBars();
 	
-	VectorBool full_mask;
-	full_mask.SetCount(bars).One();
+	if (full_mask.GetCount() != bars)
+		full_mask.SetCount(bars).One();
 	
 	SetSafetyLimit(bars);
 	

@@ -97,6 +97,7 @@ bool DecisionTree::Train(const ConstBufferSource& data, const VectorBool& labels
 	for (int i = 1; i < ixs.GetCount(); i++)
 		ixs[i].SetCount(label_count).Zero();
 	ixs[0] = mask; // root node starts out with all nodes as relevant
+	ASSERT(mask.GetCount() > 0);
 	
 	// Zero trailing mask
 	int label_mod = label_count % 64;
@@ -431,6 +432,8 @@ BufferRandomForest::BufferRandomForest() {
 }
 
 void BufferRandomForest::Process(const ForestArea& area, const ConstBufferSource& bufs, const VectorBool& real_label, const VectorBool& mask) {
+	ASSERT(mask.GetCount() > 0);
+	
 	VectorBool train_mask(mask);
 	VectorBool test0_mask(mask);
 	VectorBool test1_mask(mask);

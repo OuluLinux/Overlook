@@ -5,7 +5,7 @@ namespace Overlook {
 
 void CoreItem::SetInput(int input_id, int sym_id, int tf_id, CoreItem& core, int output_id) {
 	InputDef& in = inputs[input_id];
-	in.Add(sym_id * 1000 + tf_id, SourceDef(&core, output_id, sym_id, tf_id));
+	in.Add(HashSymTf(sym_id, tf_id), SourceDef(&core, output_id, sym_id, tf_id));
 }
 
 
@@ -60,18 +60,18 @@ void CoreIO::RefreshBuffers() {
 void CoreIO::SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id) {
 	Input& in = inputs[input_id];
 	if (core.GetOutputCount()) {
-		in.Add(sym_id * 1000 + tf_id, Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
+		in.Add(HashSymTf(sym_id, tf_id), Source(&core, &core.GetOutput(output_id), sym_id, tf_id));
 	} else {
-		in.Add(sym_id * 1000 + tf_id, Source(&core, NULL, sym_id, tf_id));
+		in.Add(HashSymTf(sym_id, tf_id), Source(&core, NULL, sym_id, tf_id));
 	}
 }
 
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
-	return inputs[input].Get(sym * 1000 + tf).core;
+	return inputs[input].Get(HashSymTf(sym, tf)).core;
 }
 
 const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
-	return *inputs[input].Get(sym * 1000 + tf).core;
+	return *inputs[input].Get(HashSymTf(sym, tf)).core;
 }
 
 String CoreIO::GetCacheDirectory() {
@@ -108,17 +108,22 @@ void CoreIO::StoreCache() {
 	if (outputs.IsEmpty() || outputs.GetCount() == 1 && outputs[0].buffers.IsEmpty())
 		return;
 	
-	String dir = GetCacheDirectory();
-	String file = AppendFileName(dir, "core.bin");
-	FileOut out(file);
-	if (!out.IsOpen())
-		Panic("Couldn't open file: " + file);
-	
-	Put(out, dir, 0);
-	Core* c = dynamic_cast<Core*>(this);
-	if (c) {
-		for(int i = 0; i < c->subcores.GetCount(); i++)
-			c->subcores[i].Put(out, dir, 1+i);
+	if (serialization_lock.TryEnter()) {
+		
+		String dir = GetCacheDirectory();
+		String file = AppendFileName(dir, "core.bin");
+		FileOut out(file);
+		if (!out.IsOpen())
+			Panic("Couldn't open file: " + file);
+		
+		Put(out, dir, 0);
+		Core* c = dynamic_cast<Core*>(this);
+		if (c) {
+			for(int i = 0; i < c->subcores.GetCount(); i++)
+				c->subcores[i].Put(out, dir, 1+i);
+		}
+		
+		serialization_lock.Leave();
 	}
 }
 

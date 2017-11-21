@@ -128,13 +128,15 @@ class RandomForestAdvisor : public Core {
 	
 	
 	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
-	struct RFSorter {bool operator()(const RF& a, const RF& b) const {return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
+	struct RFSorter {bool operator()(const RF& a, const RF& b) const {if (a.c.GetCount() == 0) return false; else return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
+	
 	
 	// Persistent
 	Array<RF> rflist_pos, rflist_neg;
 	BufferRandomForest rf_trainer;
 	GeneticOptimizer optimizer;
 	Vector<double> search_pts, training_pts, optimization_pts;
+	double area_change_total[3];
 	int prev_counted = 0;
 	int opt_counter = 0;
 	int p = 0, rflist_iter = 0;
@@ -142,12 +144,11 @@ class RandomForestAdvisor : public Core {
 	
 	// Temp
 	Vector<double> trial;
+	VectorBool full_mask;
 	One<RF> training_rf;
 	ForestArea area;
-	VectorBool full_mask;
 	ConstBuffer* open_buf = NULL;
 	double spread_point = 0.0;
-	double area_change_total[3];
 	int conf_count = 0;
 	int data_count = 0;
 	
@@ -174,6 +175,7 @@ protected:
 	void FillMainBufferSource(ConstBufferSource& bufs);
 	void RefreshOutputBuffers();
 	void RefreshMain();
+	void RefreshAll();
 	
 public:
 	typedef RandomForestAdvisor CLASSNAME;
@@ -206,6 +208,7 @@ public:
 			% Mem(search_pts)
 			% Mem(training_pts)
 			% Mem(optimization_pts)
+			% Mem(area_change_total[0]) % Mem(area_change_total[1]) % Mem(area_change_total[2])
 			% Mem(prev_counted)
 			% Mem(opt_counter)
 			% Mem(p)

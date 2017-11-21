@@ -400,13 +400,13 @@ Core* System::CreateSingle(int factory, int sym, int tf) {
 	// Process job-queue
 	for(int i = 0; i < ci_queue.GetCount(); i++) {
 		WhenProgress(i, ci_queue.GetCount());
-		Process(*ci_queue[i]);
+		Process(*ci_queue[i], true);
 	}
 	
 	return &*ci_queue.Top()->core;
 }
 
-void System::Process(CoreItem& ci) {
+void System::Process(CoreItem& ci, bool store_cache) {
 	
 	// Load dependencies to the scope
 	if (ci.core.IsEmpty())
@@ -416,7 +416,8 @@ void System::Process(CoreItem& ci) {
 	ci.core->Refresh();
 	
 	// Store cache file
-	ci.core->StoreCache();
+	if (store_cache)
+		ci.core->StoreCache();
 	
 }
 
@@ -434,24 +435,7 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 	broker.init						= true;
 }
 
-#ifndef flagGUITASK
-
-void System::ProcessJobs() {
-	jobs_stopped = false;
-	
-	do {
-		if (jobs.IsEmpty())
-			{Sleep(100); if (jobs_running) continue; else break;}
-		
-		if (ProcessJob())
-			Sleep(100);
-	}
-	while (jobs_running);
-	
-	jobs_stopped = true;
-}
-
-#else
+#ifdef flagGUITASK
 
 void System::ProcessJobs() {
 	jobs_stopped = false;
@@ -459,10 +443,13 @@ void System::ProcessJobs() {
 	
 	TimeStop ts;
 	do {
-		if (jobs.IsEmpty())
+		if (job_threads.IsEmpty())
 			break;
 		
-		break_loop = ProcessJob();
+		break_loop = ProcessJob(gui_job_thread++);
+		
+		if (gui_job_thread >= job_threads.GetCount())
+			gui_job_thread = 0;
 	}
 	while (ts.Elapsed() < 200 && !break_loop);
 	
@@ -470,31 +457,64 @@ void System::ProcessJobs() {
 	jobs_tc.Set(10, THISBACK(PostProcessJobs));
 }
 
+#else
+
+void System::ProcessJobs() {
+	jobs_stopped = false;
+	
+	while (jobs_running && !Thread::IsShutdownThreads()) {
+		
+		// Look, I can use "auto" too! (Writing types makes reading easier usually)
+		LOCK(job_lock) {
+			for (auto& job : job_threads)
+				if (job.IsStopped())
+					job.Start();
+		}
+		
+		for(int i = 0; i < 10 && jobs_running; i++)
+			Sleep(100);
+	}
+	
+	LOCK(job_lock) {
+		for (auto& job : job_threads)	job.PutStop(); // Don't wait
+		for (auto& job : job_threads)	job.Stop();
+	}
+	
+	jobs_stopped = true;
+}
+
 #endif
 
-bool System::ProcessJob() {
-	bool r = false;
+bool System::ProcessJob(int job_thread) {
+	return job_threads[job_thread].ProcessJob();
+}
+
+bool JobThread::ProcessJob() {
+	bool r = true;
 	
-	job_lock.Enter();
-	
-	Job& job = *jobs[job_iter];
-	
-	if (job.IsFinished()) {
-		job_iter++;
-		if (job_iter >= jobs.GetCount()) {
-			job_iter = 0;
-			r = true;
+	READLOCK(job_lock) {
+		if (!jobs.IsEmpty()) {
+			Job& job = *jobs[job_iter];
+			
+			if (job.IsFinished()) {
+				job_iter++;
+				if (job_iter >= jobs.GetCount()) {
+					job_iter = 0;
+					r = false;
+				}
+			}
+			else {
+				if (job.core->IsInitialized()) {
+					job.core->EnterJob(&job);
+					bool succ = job.Process();
+					job.core->LeaveJob();
+					if (!succ) is_fail = true;
+				}
+			}
 		}
-	}
-	else {
-		if (job.core->IsInitialized()) {
-			job.core->SetCurrentJob(&job);
-			job.Process();
-			job.core->SetCurrentJob(NULL);
-		}
+		else r = false;
 	}
 	
-	job_lock.Leave();
 	return r;
 }
 
@@ -503,23 +523,45 @@ void System::StopJobs() {
 	jobs_running = false;
 	while (!jobs_stopped) Sleep(100);
 	#endif
+	
+	StoreJobCores();
 }
 
-void Job::Process() {
-	int begin_state = state;
-	switch (state) {
-		case INIT:			if (begin() || !begin) state++; break;
-		case RUNNING:		if (iter() && actual >= total || !iter) state++; break;
-		case STOPPING:		if (end() || !end) state++; break;
-		case INSPECTING:	if (inspect() || !inspect) state++; break;
-		
-		default:
-			return;
+void System::StoreJobCores() {
+	Index<Core*> job_cores;
+	for(int i = 0; i < job_threads.GetCount(); i++) {
+		JobThread& job_thrd = job_threads[i];
+		for(int j = 0; j < job_thrd.jobs.GetCount(); j++) {
+			Job& job = *job_thrd.jobs[j];
+			Core* core = job.core;
+			if (!core) continue;
+			job_cores.FindAdd(core);
+		}
 	}
+	for(int i = 0; i < job_cores.GetCount(); i++)
+		job_cores[i]->StoreCache();
+}
+
+bool Job::Process() {
+	bool r = true;
+	
+	int begin_state = state;
+	
+	core->serialization_lock.Enter();
+	switch (state) {
+		case INIT:			if ((r=begin())						|| !begin)		state++; break;
+		case RUNNING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
+		case STOPPING:		if ((r=end())						|| !end)		state++; break;
+		case INSPECTING:	if ((r=inspect())					|| !inspect)	state++; break;
+	}
+	core->serialization_lock.Leave();
+	
 	if (begin_state < state || ts.Elapsed() >= 5 * 60 * 1000) {
 		core->StoreCache();
 		ts.Reset();
 	}
+	
+	return r;
 }
 
 String Job::GetStateString() const {
@@ -531,6 +573,33 @@ String Job::GetStateString() const {
 		case STOPPED: return "Finished";
 	}
 	return "";
+}
+
+void System::InspectionFailed(const char* file, int line, int symbol, int tf, String msg) {
+	LOCK(inspection_lock) {
+		bool found = false;
+		
+		for(int i = 0; i < inspection_results.GetCount(); i++) {
+			InspectionResult& r = inspection_results[i];
+			if (r.file == file &&
+				r.line == line &&
+				r.symbol == symbol &&
+				r.tf == tf &&
+				r.msg == msg) {
+				found = true;
+				break;
+			}
+		}
+		
+		if (!found) {
+			InspectionResult& r = inspection_results.Add();
+			r.file		= file;
+			r.line		= line;
+			r.symbol	= symbol;
+			r.tf		= tf;
+			r.msg		= msg;
+		}
+	}
 }
 
 }

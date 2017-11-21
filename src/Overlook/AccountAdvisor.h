@@ -4,6 +4,7 @@
 namespace Overlook {
 using namespace Upp;
 
+#define ACCURACY
 
 class WeekSlotAdvisor : public Core {
 	
@@ -15,6 +16,7 @@ class WeekSlotAdvisor : public Core {
 	// Persistent
 	GeneticOptimizer optimizer;
 	Vector<double> optimization_pts;
+	double area_change_total[3];
 	int prev_counted = 0;
 	
 	
@@ -22,8 +24,6 @@ class WeekSlotAdvisor : public Core {
 	Vector<ConstBuffer*> inputs, signals, weights;
 	Vector<double> trial;
 	ForestArea area;
-	FixedSimBroker sb;
-	double area_change_total[3];
 	int realtime_count = 0;
 	int tfmins = 0, slotmins = 0;
 	int weekslots = 0;
@@ -47,6 +47,13 @@ protected:
 	void RefreshMain();
 	void MainReal();
 	
+	#ifdef ACCURACY
+	SimBroker sb;
+	void RunSimBroker();
+	#else
+	FixedSimBroker sb;
+	#endif
+	
 public:
 	typedef WeekSlotAdvisor CLASSNAME;
 	WeekSlotAdvisor();
@@ -59,6 +66,7 @@ public:
 			% Out(SYM_COUNT, SYM_COUNT)
 			% Mem(optimizer)
 			% Mem(optimization_pts)
+			% Mem(area_change_total[0]) % Mem(area_change_total[1]) % Mem(area_change_total[2])
 			% Mem(prev_counted);
 	}
 	

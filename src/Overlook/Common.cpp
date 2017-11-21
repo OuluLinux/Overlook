@@ -311,5 +311,20 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 	}
 }
 
+// Check LOCK() macro always for optimization break-ups
+void TestLockMacro() {
+	struct FakeLock {
+		bool is_locked = false, is_unlocked = false;
+		void Enter() {is_locked = true;}
+		void Leave() {if (is_locked) is_unlocked = true;}
+	};
+	FakeLock fake;
+	int count = 0;
+	LOCK(fake) {
+		count++;
+	}
+	if (!fake.is_locked || !fake.is_unlocked || count != 1)
+		Panic("Test failed: LOCK macro is broken in this build (because of optimization). TODO: create lock wrapper and use it in the macro.");
+}
 
 }

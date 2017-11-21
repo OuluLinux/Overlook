@@ -11,11 +11,11 @@ DataBridgeCommon::DataBridgeCommon() {
 
 void DataBridgeCommon::InspectInit(DataBridge* db) {
 	if (!IsInited()) {
-		lock.Enter();
-		if (!IsInited()) {
-			Init(db);
+		LOCK(lock) {
+			if (!IsInited()) {
+				Init(db);
+			}
 		}
-		lock.Leave();
 	}
 }
 

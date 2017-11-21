@@ -809,13 +809,15 @@ struct ArrayCtrlPrinter {
 // TODO: find a supported way
 template <class T>
 class CtrlCallbacks : public T {
-
+	bool visible = false;
 public:
 	
     virtual void LeftDown(Point pt, dword v) {T::LeftDown(pt, v); WhenLeftDown(pt, v);}
     virtual void RightDown(Point pt, dword v) {T::RightDown(pt, v); WhenRightDown(pt, v);}
-
+	virtual void Layout() {bool v = Ctrl::IsVisible(); if (v == true && visible == false) WhenVisible(); visible = v; T::Layout();}
+	
     Callback2<Point, dword> WhenRightDown, WhenLeftDown;
+    Callback WhenVisible;
 };
 
 
@@ -824,6 +826,19 @@ typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& a
 
 void DrawVectorPoints(Draw& d, Size sz, const Vector<double>& pts);
 void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache);
+
+
+
+inline int HashSymTf(int sym, int tf) {return sym * 1000 + tf;}
+
+#define LOCK(x) for(int i_l_ = 0; ([&]()->bool {if (!i_l_) x.Enter(); else x.Leave(); return false;})() || i_l_ < 1; i_l_++)
+#define READLOCK(x) for(int i_l_ = 0; ([&]()->bool {if (!i_l_) x.EnterRead(); else x.LeaveRead(); return false;})() || i_l_ < 1; i_l_++)
+#define WRITELOCK(x) for(int i_l_ = 0; ([&]()->bool {if (!i_l_) x.EnterWrite(); else x.LeaveWrite(); return false;})() || i_l_ < 1; i_l_++)
+#define TRYLOCK(x) for(int i_l_ = 0; ([&]()->bool {if (!i_l_) {if (!x.TryEnter()) i_l_++;} else x.Leave(); return false;})() || i_l_ < 1; i_l_++)
+void TestLockMacro();
+
+
+#define INSPECT(x, msg) if (!(x)) {GetSystem().InspectionFailed(__FILE__, __LINE__, GetSymbol(), GetTf(), msg);}
 
 }
 

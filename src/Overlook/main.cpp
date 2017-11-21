@@ -13,7 +13,63 @@ INI_STRING(arg_addr, "127.0.0.1", "Host address");
 INI_INT(arg_port, 42000, "Host port");
 };
 
+struct LoaderWindow : public TopWindow {
+	typedef LoaderWindow CLASSNAME;
+	ImageCtrl img;
+	bool fail = false, finished = false;
+	
+	LoaderWindow() {
+		Add(img.SizePos());
+		SetRect(0,0,640,400);
+		Title("Overlook Loader");
+		Icon(OverlookImg::icon());
+		img.SetImage(OverlookImg::overlook());
+	}
+	
+	void Start() {
+		Thread::Start([=] {
+			
+			if (Config::wait_mt4) {
+				MetaTrader& mt = GetMetaTrader();
+				while (true) {
+					try {
+						if (!mt.Init(Config::arg_addr, Config::arg_port))
+							break;
+					}
+					catch (...) {
+						Sleep(1000);
+					}
+				}
+			}
+			
+			try {
+				System& sys = GetSystem();
+				sys.Init();
+			}
+			catch (::Overlook::UserExc e) {
+				PromptOK(e);
+				fail = true;
+			}
+			catch (Exc e) {
+				PromptOK(e);
+				fail = true;
+			}
+			catch (...) {
+				PromptOK("Unknown error");
+				fail = true;
+			}
+			
+			finished = true;
+			PostCallback(THISBACK(Close0));
+		});
+	}
+	
+	void Close0() {Close();}
+};
+
 GUI_APP_MAIN {
+	TestLockMacro();
+	
 	SetIniFile(ConfigFile("overlook.ini"));
 	
 	const Vector<String>& args = CommandLine();
@@ -42,29 +98,18 @@ GUI_APP_MAIN {
 	}
 	
 	
-	if (Config::wait_mt4) {
-		MetaTrader& mt = GetMetaTrader();
-		while (true) {
-			try {
-				if (!mt.Init(Config::arg_addr, Config::arg_port))
-					break;
-			}
-			catch (...) {
-				Sleep(1000);
-			}
-		}
+	{
+		LoaderWindow loader;
+		loader.Start();
+		loader.Run();
+		while (!loader.finished) Sleep(100);
+		if (loader.fail) return;
 	}
 	
+	
 	try {
-		System& sys = GetSystem();
-		sys.Init();
-		
-		{
-			::Overlook::Overlook ol;
-			ol.Run();
-		}
-		
-		Thread::ShutdownThreads();
+		::Overlook::Overlook ol;
+		ol.Run();
 	}
 	catch (::Overlook::UserExc e) {
 		PromptOK(e);

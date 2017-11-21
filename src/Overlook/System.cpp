@@ -2,7 +2,6 @@
 
 namespace Overlook {
 
-Index<int> System::true_indicators;
 
 
 

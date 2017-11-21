@@ -331,6 +331,7 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 		}
 		else Panic("Type handling not implemented");
 	}
+	Panic("NEVER"); return 0;
 }
 
 double SimBroker::OrderClosePrice() {
@@ -419,6 +420,8 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 		else return false;
 	}
 	else return false;
+	
+	Panic("NEVER"); return 0;
 }
 
 int SimBroker::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {

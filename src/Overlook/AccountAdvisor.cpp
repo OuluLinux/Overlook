@@ -45,6 +45,22 @@ void WeekSlotAdvisor::Start() {
 }
 
 bool WeekSlotAdvisor::MainOptimizationBegin() {
+	System& sys = GetSystem();
+	
+	// Begin fails until sources are processed
+	bool all_ready = true;
+	for(int i = 0; i < SYM_COUNT; i++) {
+		int symbol = sys.GetPrioritySymbol(i);
+		CoreIO* core = GetInputCore(1, symbol, GetTf());
+		ASSERT(core);
+		RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(core);
+		ASSERT(rfa);
+		all_ready &= rfa->IsJobsFinished();
+	}
+	if (!all_ready)
+		return false;
+
+
 	SetRealArea();
 	
 	// Init genetic optimizer
@@ -52,7 +68,7 @@ bool WeekSlotAdvisor::MainOptimizationBegin() {
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
 		optimizer.SetPopulation(100);
-		optimizer.SetMaxGenerations(1000);
+		optimizer.SetMaxGenerations(100);
 		optimizer.UseLimits();
 
 
@@ -80,7 +96,7 @@ bool WeekSlotAdvisor::MainOptimizationBegin() {
 			weekmins += slotmins;
 		}
 		ASSERT(col == cols);
-		optimizer.Init(StrategyRandom2Bin);
+		optimizer.Init(StrategyBest1Exp);
 	}
 	
 	optimization_pts.SetCount(10000, 0.0);
@@ -132,9 +148,12 @@ bool WeekSlotAdvisor::MainOptimizationEnd() {
 }
 
 bool WeekSlotAdvisor::MainOptimizationInspect() {
+	bool succ = area_change_total[1] > 0.0;
 	
+	INSPECT( succ, "error: negative result (" + DblStr(succ) + ")");
+	INSPECT(!succ, "ok: nice result (" + DblStr(succ) + ")");
 	
-	return true;
+	return succ;
 }
 
 void WeekSlotAdvisor::NormalizeTrial() {
@@ -215,21 +234,28 @@ void WeekSlotAdvisor::RunMain() {
 	
 	RefreshInputs();
 	
+	#ifndef ACCURACY
 	if (!sb.init)
 		sys.SetFixedBroker(sb, -1);
+	#endif
 	
 	for (int a = 0; a < 3; a++) {
 		int begin = a == 0 ? area.train_begin : (a == 1 ? area.test0_begin : area.test1_begin);
 		int end   = a == 0 ? area.train_end   : (a == 1 ? area.test0_end   : area.test1_end);
 		
-		//end--;
-		//double change_total	= 0.0;
 		
+		#ifdef ACCURACY
+		end--;
+		double change_total	= 0.0;
+		#else
 		sb.Reset();
+		#endif
+		
 		
 		for(int i = begin; i < end; i++) {
 			
-			/*for(int j = 0; j < SYM_COUNT; j++) {
+			#ifdef ACCURACY
+			for(int j = 0; j < SYM_COUNT; j++) {
 				ConstBuffer& open_buf = *inputs[j];
 				bool signal		= signals[j]->Get(i) < 0.0;
 				double curr		= open_buf.GetUnsafe(i);
@@ -243,8 +269,12 @@ void WeekSlotAdvisor::RunMain() {
 				
 				ASSERT(IsFin(change));
 				change_total	+= change;
-			}*/
+			}
 			
+			open_buf.Set(i, change_total);
+			low_buf.Set(i, change_total);
+			high_buf.Set(i, change_total);
+			#else
 			for(int j = 0; j < SYM_COUNT; j++) {
 				ConstBuffer& open_buf = *inputs[j];
 				double curr = open_buf.GetUnsafe(i);
@@ -277,9 +307,14 @@ void WeekSlotAdvisor::RunMain() {
 			open_buf.Set(i, value);
 			low_buf.Set(i, value);
 			high_buf.Set(i, value);
+			#endif
 		}
 		
+		#ifdef ACCURACY
+		
+		#else
 		double change_total = sb.AccountEquity() / sb.begin_equity - 1.0;
+		#endif
 		
 		area_change_total[a] = change_total;
 		LOG("WeekSlotAdvisor::TestMain " << GetSymbol() << " a" << a << ": change_total=" << change_total);
@@ -293,13 +328,14 @@ void WeekSlotAdvisor::SetTrainingArea() {
 }
 
 void WeekSlotAdvisor::SetRealArea() {
+	int week				= 1*5*24*60 / MAIN_PERIOD_MINUTES;
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	int data_count			= open_buf.GetCount();
-	area.train_begin		= 1*5*24*60 / MAIN_PERIOD_MINUTES;
-	area.train_end			= data_count;
-	area.test0_begin		= data_count;
-	area.test0_end			= data_count;
-	area.test1_begin		= data_count;
+	area.train_begin		= week;
+	area.train_end			= data_count - 2*week;
+	area.test0_begin		= data_count - 2*week;
+	area.test0_end			= data_count - 1*week;
+	area.test1_begin		= data_count - 1*week;
 	area.test1_end			= data_count;
 }
 
@@ -355,13 +391,17 @@ void WeekSlotAdvisor::MainReal() {
 	}
 	realtime_count++;
 	
+	
+	#ifdef ACCURACY
+	RunSimBroker();
+	#endif
+	
 	try {
 		mt.Data();
 		mt.RefreshLimits();
 		for (int i = 0; i < SYM_COUNT; i++) {
 			int sym = sys.GetPrioritySymbol(i);
 			int sig = sb.GetSignal(i);
-	
 			if (sig == mt.GetSignal(sym) && sig != 0)
 				mt.SetSignalFreeze(sym, true);
 			else {
@@ -395,12 +435,7 @@ void WeekSlotAdvisor::MainOptimizationCtrl::Paint(Draw& w) {
 }
 
 
-}
-
-
-
-
-/*
+#ifdef ACCURACY
 void WeekSlotAdvisor::RunSimBroker() {
 	System& sys = GetSystem();
 	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
@@ -418,7 +453,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 	NormalizeTrial();
 	RefreshMainBuffer(true);
 	
-	SimBroker sb;
+	
 	sb.Brokerage::operator=(GetMetaTrader());
 	sb.SetInitialBalance(10000);
 	sb.Init();
@@ -463,4 +498,9 @@ void WeekSlotAdvisor::RunSimBroker() {
 		high_buf.Set(i, value);
 	}
 }
-*/
+#endif
+
+
+}
+
+

@@ -134,6 +134,7 @@ class CoreIO : public ValueRegister, public Pte<CoreIO> {
 protected:
 	friend class System;
 	friend class Buffer;
+	friend class Job;
 	
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
@@ -144,6 +145,7 @@ protected:
 	Array<Persistent> persistents;
 	System* base;
 	Job* current_job = NULL;
+	SpinLock serialization_lock;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
 	int db_src;
@@ -202,8 +204,8 @@ public:
 	
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(sym * 1000 + tf).output->buffers[buffer]);}
-	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const {return inputs[input].Get(sym * 1000 + tf).output->label;}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(HashSymTf(sym, tf)).output->buffers[buffer]);}
+	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const {return inputs[input].Get(HashSymTf(sym, tf)).output->label;}
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
@@ -354,8 +356,8 @@ public:
 	Job& SetJob(int i, String job_title);
 	void SetJobFinished(bool b=true);
 	void SetJobCount(int i) {jobs.SetCount(i);}
-	void SetCurrentJob(Job* job) {current_job = job;}
-	
+	void EnterJob(Job* job) {current_job = job;}
+	void LeaveJob() {current_job = NULL;}
 	
 	// Visible main functions
 	void Refresh();

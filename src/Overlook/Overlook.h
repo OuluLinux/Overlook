@@ -78,7 +78,7 @@ protected:
 	Navigator nav;
 	MarketWatch watch;
 	CtrlCallbacks<ArrayCtrl>  trade, trade_history, exposure, joblist, debuglist;
-	Splitter jobs_hsplit;
+	CtrlCallbacks<Splitter> jobs_hsplit;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -91,6 +91,7 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
+	Id thrd_id, thrd_job_id;
 	Id sym;
 	
 	// Protected main functions to prevent direct (wrong) usage

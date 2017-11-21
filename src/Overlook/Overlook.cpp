@@ -88,17 +88,22 @@ Overlook::Overlook() : watch(this) {
 	jobs_hsplit.Horz();
 	jobs_hsplit << joblist << job_ctrl;
 	jobs_hsplit.SetPos(2500);
+	joblist.AddIndex(thrd_id);
+	joblist.AddIndex(thrd_job_id);
 	joblist.AddColumn("Symbol");
 	joblist.AddColumn("Tf");
 	joblist.AddColumn("Title");
 	joblist.AddColumn("Phase");
 	joblist.AddColumn("Progress");
-	joblist.ColumnWidths("3 1 5 2 5");
+	joblist.ColumnWidths("3 1 5 3 4");
+	joblist << THISBACK(Data);
 	
 	debuglist.AddColumn("File");
 	debuglist.AddColumn("Line");
+	debuglist.AddColumn("Symbol");
+	debuglist.AddColumn("Timeframe");
 	debuglist.AddColumn("Source line");
-	debuglist.ColumnWidths("6 1 24");
+	debuglist.ColumnWidths("6 1 2 2 24");
 	
 	LoadPreviousProfile();
 	PostRefreshData();
@@ -118,6 +123,12 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
+	
+	debuglist		.WhenVisible << THISBACK(Data);
+	jobs_hsplit		.WhenVisible << THISBACK(Data);
+	trade_history	.WhenVisible << THISBACK(Data);
+	exposure		.WhenVisible << THISBACK(Data);
+	trade			.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -736,39 +747,105 @@ struct JobProgressDislay : public Display {
 		Size str_sz = GetTextSize(perc_str, fnt);
 		Point pt = r.CenterPos(str_sz);
 		w.DrawText(pt.x, pt.y, perc_str, fnt, Black());
-		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, White());
+		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, GrayColor(128+64));
 	}
 };
 
 void Overlook::RefreshJobs() {
 	System& sys = GetSystem();
 	
-	for(int i = 0; i < sys.GetJobCount(); i++) {
-		const Job& job = sys.GetJob(i);
-		const Core& core = *job.core;
-		joblist.Set(i, 0, sys.GetSymbol(core.GetSymbol()));
-		joblist.Set(i, 1, sys.GetPeriodString(core.GetTf()));
-		joblist.Set(i, 2, job.title);
-		joblist.Set(i, 3, job.GetStateString());
-		joblist.Set(i, 4, job.total > 0 ? job.actual * 100 / job.total : 0);
-		joblist.SetDisplay(i, 4, Single<JobProgressDislay>());
+	int row = 0;
+	for(int i = 0; i < sys.GetJobThreadCount(); i++) {
+		JobThread& thrd = sys.GetJobThread(i);
+		/*
+		// TODO: support thread overview
+		joblist.Set(row, 0, i);
+		joblist.Set(row, 1, -1);
+		joblist.Set(row, 2, sys.GetSymbol(thrd.symbol) + " job thread");
+		joblist.Set(row, 3, sys.GetPeriodString(thrd.tf));
+		joblist.Set(row, 4, "");
+		joblist.Set(row, 5, "");
+		joblist.Set(row, 6, "");
+		*/
+		
+		READLOCK(thrd.job_lock) {
+			for(int j = 0; j < thrd.jobs.GetCount(); j++) {
+				const Job& job = *thrd.jobs[j];
+				const Core& core = *job.core;
+				joblist.Set(row, 0, i);
+				joblist.Set(row, 1, j);
+				joblist.Set(row, 2, sys.GetSymbol(core.GetSymbol()));
+				joblist.Set(row, 3, sys.GetPeriodString(core.GetTf()));
+				joblist.Set(row, 4, job.title);
+				joblist.Set(row, 5, thrd.is_fail ? "FAIL" : job.GetStateString());
+				joblist.Set(row, 6, job.total > 0 ? job.actual * 100 / job.total : 0);
+				joblist.SetDisplay(row, 4, Single<JobProgressDislay>());
+				row++;
+			}
+		}
 	}
 	
 	int cursor = joblist.GetCursor();
-	if (cursor >= 0 && cursor < sys.GetJobCount()) {
-		Job& job = sys.GetJob(cursor);
-		Ctrl* ctrl = &*job.ctrl;
-		if (prev_job_ctrl != ctrl) {
-			if (prev_job_ctrl)
-				job_ctrl.RemoveChild(prev_job_ctrl);
-			job_ctrl.Add(ctrl->SizePos());
-			prev_job_ctrl = ctrl;
+	if (cursor >= 0 && cursor < joblist.GetCount()) {
+		int thrd_id = joblist.Get(cursor, 0);
+		int thrd_job_id = joblist.Get(cursor, 1);
+		JobThread& thrd = sys.GetJobThread(thrd_id);
+		if (thrd_job_id == -1) {
+			// TODO: support thread overview
+		} else {
+			Job& job = *thrd.jobs[thrd_job_id];
+			Ctrl* ctrl = &*job.ctrl;
+			if (prev_job_ctrl != ctrl) {
+				if (prev_job_ctrl)
+					job_ctrl.RemoveChild(prev_job_ctrl);
+				if (ctrl)
+					job_ctrl.Add(ctrl->SizePos());
+				prev_job_ctrl = ctrl;
+			}
+			ctrl->Refresh();
 		}
 	}
 }
 
+struct DebugMessageLine : public Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
+		String err = q;
+		int type = 0;
+		bool focuscursor = (style & (FOCUS|CURSOR)) == (FOCUS|CURSOR) || (style & SELECT);
+		if (err.Left(9) == "warning: ")	{
+			err = err.Mid(9);
+			if (!focuscursor) paper =  Color(255, 252, 192);
+		}
+		if (err.Left(7) == "error: ") {
+			err = err.Mid(7);
+			if (!focuscursor) paper = Color(255, 192, 192);
+		}
+		if (err.Left(4) == "ok: ") {
+			err = err.Mid(4);
+			if (!focuscursor) paper = Color(207, 255, 204);
+		}
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		w.DrawText(pt.x, pt.y+1, err, fnt, ink);
+	}
+};
+
 void Overlook::RefreshDebug() {
+	System& sys = GetSystem();
 	
+	LOCK(sys.inspection_lock) {
+		for(int i = 0; i < sys.inspection_results.GetCount(); i++) {
+			const InspectionResult& ir = sys.inspection_results[i];
+			
+			debuglist.Set(i, 0, GetFileName(ir.file));
+			debuglist.Set(i, 1, ir.line);
+			debuglist.Set(i, 2, sys.GetSymbol(ir.symbol));
+			debuglist.Set(i, 3, sys.GetPeriodString(ir.tf));
+			debuglist.Set(i, 4, ir.msg);
+			debuglist.SetDisplay(i, 4, Single<DebugMessageLine>());
+		}
+	}
 }
 
 void Overlook::ToggleRightOffset() {

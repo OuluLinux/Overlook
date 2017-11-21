@@ -98,7 +98,7 @@ struct Job {
 	
 	enum {INIT, RUNNING, STOPPING, INSPECTING, STOPPED};
 	
-	void Process();
+	bool Process();
 	bool IsFinished() const				{return state == STOPPED;}
 	Job& SetBegin(Gate0 fn)				{begin   = fn; return *this;}
 	Job& SetIterator(Gate0 fn)			{iter    = fn; return *this;}
@@ -108,13 +108,7 @@ struct Job {
 	void SetProgress(int actual, int total) {this->actual = actual; this->total = total;}
 	String GetStateString() const;
 	
-	void Serialize(Stream& s) {
-		s % title % actual % total % state;
-		
-		// The begin function is called always after loading, so switch state back to init.
-		if (s.IsLoading() && state == RUNNING)
-			state = INIT;
-	}
+	void Serialize(Stream& s) {s % title % actual % total % state;}
 	
 	
 	// Persistent
@@ -130,30 +124,81 @@ struct Job {
 	TimeStop ts;
 };
 
+struct JobThread : Moveable<JobThread> {
+	typedef JobThread CLASSNAME;
+	
+	Vector<Job*> jobs;
+	RWMutex job_lock;
+	int job_iter = 0;
+	int symbol = -1;
+	int tf = -1;
+	
+	bool ProcessJob();
+	
+	#ifndef flagGUITASK
+	bool running = false, stopped = true, is_fail = false;
+	void Start() {
+		Stop();
+		
+		if (is_fail)
+			return;
+		
+		// The begin function is called always after loading, so switch state back to init.
+		for(auto& job : jobs)
+			if (job->state == Job::RUNNING)
+				job->state = Job::INIT;
+		
+		running = true;
+		stopped = false;
+		Thread::Start(THISBACK(Run));
+	}
+	void Stop() {
+		running = false;
+		while (!stopped) Sleep(100);
+	}
+	void PutStop() {
+		running = false;
+	}
+	void Run() {
+		while (running) {
+			if (!ProcessJob()) {
+				running = false;
+			}
+		}
+		stopped = true;
+	}
+	bool IsStopped() const {return stopped;}
+	#endif
+};
+
+struct InspectionResult : Moveable<InspectionResult> {
+	const char* file = "";
+	int line = 0, symbol = 0, tf = 0;
+	String msg;
+};
+
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_ACCOUNTADVISOR, CORE_HIDDEN};
 
 class System {
 	
-	static Index<int> true_indicators;
-	
 public:
 
-	typedef Core*			(*CoreFactoryPtr)();
+	typedef Core* (*CoreFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
 	
-	static void AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
+	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static Core*			CoreSystemSingleFn() { return &Single<T>(); }
-	inline static Vector<CoreSystem>&	CoreFactories() {static Vector<CoreSystem> list; return list;}
-	inline static Vector<int>&	Indicators() {static Vector<int> list; return list;}
-	inline static Vector<int>&	ExpertAdvisorFactories() {static Vector<int> list; return list;}
-	inline static Vector<int>&	AccountAdvisorFactories() {static Vector<int> list; return list;}
+	inline static Vector<CoreSystem>&		CoreFactories() {static Vector<CoreSystem> list; return list;}
+	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
+	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
+	inline static Vector<int>&				AccountAdvisorFactories() {static Vector<int> list; return list;}
 	
 	
 public:
 	
-	template <class CoreT> static void Register(String name, int type=CORE_INDICATOR) {
+	template <class CoreT> static void		Register(String name, int type=CORE_INDICATOR) {
 		int id = GetId<CoreT>();
 		if      (type == CORE_INDICATOR)		Indicators().Add(id);
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
@@ -161,8 +206,8 @@ public:
 		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
 	}
 	
-	template <class CoreT> static CoreT& GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
-	template <class CoreT> static int GetId() {
+	template <class CoreT> static CoreT&	GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
+	template <class CoreT> static int		GetId() {
 		static bool inited;
 		static int id;
 		if (!inited) {
@@ -172,9 +217,9 @@ public:
 		return id;
 	}
 	
-	inline static const Vector<CoreSystem>& GetCoreFactories() {return CoreFactories();}
+	inline static const Vector<CoreSystem>&	GetCoreFactories() {return CoreFactories();}
 	
-	template <class CoreT> static int Find() {
+	template <class CoreT> static int		Find() {
 		CoreFactoryPtr System_fn = &System::CoreSystemFn<CoreT>;
 		const Vector<CoreSystem>& facs = CoreFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
@@ -185,12 +230,12 @@ public:
 	}
 	
 	template <class T>
-	inline static ArrayMap<int, T>& GetBusyTasklist() {
+	inline static ArrayMap<int, T>&			GetBusyTasklist() {
 		static ArrayMap<int, T> list;
 		return list;
 	}
 	template <class T>
-	inline static Vector<T>& GetBusyRunning() {
+	inline static Vector<T>&				GetBusyRunning() {
 		static Vector<T> list;
 		return list;
 	}
@@ -208,98 +253,120 @@ protected:
 	friend class Core;
 	
 	Vector<FactoryRegister>		regs;
-	Data			data;
-	Vector<String>	period_strings;
-	Vector<int>		bars;
-	Vector<int>		priority;
-	Vector<int>		sym_priority;
-	Vector<Job*>	jobs;
-	Index<String>	symbols;
-	Index<int>		periods;
-	SpinLock		task_lock;
-	SpinLock		pl_queue_lock;
-	SpinLock		job_lock;
-	String			addr;
-	double			exploration;
-	int64			memory_limit;
-	int				port;
-	int				task_counter;
+	Vector<String>				period_strings;
+	Vector<int>					bars;
+	Vector<int>					priority;
+	Vector<int>					sym_priority;
+	Index<String>				symbols;
+	Index<int>					periods;
+	Data						data;
+	SpinLock					task_lock;
+	SpinLock					pl_queue_lock;
+	String						addr;
+	double						exploration;
+	int64						memory_limit;
+	int							port;
+	int							task_counter;
 	
 	
 protected:
 	
 	// Time
-	Vector<Time> begin;
-	Vector<int> begin_ts;
-	Time end;
-	TimeCallback jobs_tc;
-	int timediff;
-	int base_period;
-	int source_symbol_count;
-	int job_iter = 0;
-	bool jobs_running = false, jobs_stopped = true;
+	Vector<Time>	begin;
+	Vector<int>		begin_ts;
+	Time			end;
+	int				timediff;
+	int				base_period;
+	int				source_symbol_count;
 	
-	void Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
-	void RefreshRealtime();
-	int  GetHash(const Vector<byte>& vec);
-	int  GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
-	void CreateCore(CoreItem& ci);
-	void InitRegistry();
-	void ConnectCore(CoreItem& ci);
-	void ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
-	void MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
-	void ProcessJobs();
-	bool ProcessJob();
-	void PostProcessJobs() {jobs_tc.Kill(); PostCallback(THISBACK(ProcessJobs));}
-	void StopJobs();
+	void	Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
+	void	RefreshRealtime();
+	int		GetHash(const Vector<byte>& vec);
+	int		GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
+	void	CreateCore(CoreItem& ci);
+	void	InitRegistry();
+	void	ConnectCore(CoreItem& ci);
+	void	ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
+	void	MaskPath(const Vector<byte>& src, const Vector<int>& path, Vector<byte>& dst) const;
 	
 public:
 	
-	void Process(CoreItem& ci);
-	int GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
-	int GetCountTf(int tf_id) const;
-	Time GetTimeTf(int tf, int pos) const;// {return begin + base_period * period * pos;}
-	Time GetBegin(int tf) const {return begin[tf];}
-	Time GetEnd() const {return end;}
-	int GetBeginTS(int tf) {return begin_ts[tf];}
-	int GetBasePeriod() const {return base_period;}
-	int GetShiftTf(int src_tf, int dst_tf, int shift);
-	int GetShiftFromTimeTf(int timestamp, int tf);
-	int GetShiftFromTimeTf(const Time& t, int tf);
-	Core* CreateSingle(int factory, int sym, int tf);
-	const Vector<FactoryRegister>& GetRegs() const {return regs;}
-	void SetEnd(const Time& t);
+	void	Process(CoreItem& ci, bool store_cache);
+	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
+	int		GetCountTf(int tf_id) const;
+	Time	GetTimeTf(int tf, int pos) const;
+	Time	GetBegin(int tf) const					{return begin[tf];}
+	Time	GetEnd() const							{return end;}
+	int		GetBeginTS(int tf)						{return begin_ts[tf];}
+	int		GetBasePeriod() const					{return base_period;}
+	int		GetShiftTf(int src_tf, int dst_tf, int shift);
+	int		GetShiftFromTimeTf(int timestamp, int tf);
+	int		GetShiftFromTimeTf(const Time& t, int tf);
+	Core*	CreateSingle(int factory, int sym, int tf);
+	void	SetEnd(const Time& t);
+	const Vector<FactoryRegister>& GetRegs() const	{return regs;}
 	
 	
 public:
 	
-	void AddPeriod(String nice_str, int period);
-	void AddSymbol(String sym);
+	void	AddPeriod(String nice_str, int period);
+	void	AddSymbol(String sym);
 	
-	String GetSymbol(int i) const {return symbols[i];}
-	String GetPeriodString(int i) const {return period_strings[i];}
-	int GetSymbolPriority(int i) const {return priority[i];}
-	int GetPrioritySymbol(int i) const {return sym_priority[i];}
-	int GetFactoryCount() const {return GetRegs().GetCount();}
-	int GetBrokerSymbolCount() const {return source_symbol_count;}
-	int GetTotalSymbolCount() const {return symbols.GetCount();}
-	int GetSymbolCount() const {return symbols.GetCount();}
-	int GetPeriod(int i) const {return periods[i];}
-	int GetPeriodCount() const {return periods.GetCount();}
-	int FindPeriod(int period) const {return periods.Find(period);}
-	int FindSymbol(const String& s) const {return symbols.Find(s);}
-	void GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
-	void SetFixedBroker(FixedSimBroker& broker, int sym_id);
-	int GetJobCount() const {return jobs.GetCount();}
-	const Job& GetJob(int i) const {return *jobs[i];}
-	Job& GetJob(int i) {return *jobs[i];}
+	String	GetSymbol(int i) const					{return symbols[i];}
+	String	GetPeriodString(int i) const			{return period_strings[i];}
+	int		GetSymbolPriority(int i) const			{return priority[i];}
+	int		GetPrioritySymbol(int i) const			{return sym_priority[i];}
+	int		GetFactoryCount() const					{return GetRegs().GetCount();}
+	int		GetBrokerSymbolCount() const			{return source_symbol_count;}
+	int		GetTotalSymbolCount() const				{return symbols.GetCount();}
+	int		GetSymbolCount() const					{return symbols.GetCount();}
+	int		GetPeriod(int i) const					{return periods[i];}
+	int		GetPeriodCount() const					{return periods.GetCount();}
+	int		FindPeriod(int period) const			{return periods.Find(period);}
+	int		FindSymbol(const String& s) const		{return symbols.Find(s);}
+	void	GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
+	void	SetFixedBroker(FixedSimBroker& broker, int sym_id);
 	
 public:
 	
-	Vector<double> spread_points;
-	Vector<int> proxy_id, proxy_base_mul;
+	// Job threads for symbol/timeframe cores.
+	// Both single-threaded and multi-threaded processing is supported for CLEANLINESS.
+	// All optimizations are done in jobs, which can contain the generic genetic local optimizer too.
+	// ExpertAdvisors are expected to contain their own optimization jobs, to automate usage.
 	
-	int GetAccountSymbol() const {return symbols.GetCount()-1;}
+	ArrayMap<int, JobThread>	job_threads;
+	Vector<InspectionResult>	inspection_results;
+	SpinLock					job_lock;
+	SpinLock					inspection_lock;
+	#ifdef flagGUITASK
+	TimeCallback				jobs_tc;
+	int							gui_job_thread = 0;
+	#else
+	bool						jobs_running = false;
+	bool						jobs_stopped = true;
+	#endif
+	
+	int		GetJobThreadCount() const				{return job_threads.GetCount();}
+	void	ProcessJobs();
+	bool	ProcessJob(int job_thread);
+	void	StopJobs();
+	void	StoreJobCores();
+	//const JobThread& GetJobThread(int i) const		{return job_threads[i];}
+	JobThread& GetJobThread(int i)					{JobThread* thrd; LOCK(job_lock) {thrd = &job_threads[i];} return *thrd;}
+	JobThread& GetJobThread(int sym, int tf)		{JobThread* thrd; LOCK(job_lock) {thrd = &job_threads.GetAdd(HashSymTf(sym, tf));} return *thrd;}
+	#ifdef flagGUITASK
+	void	PostProcessJobs() {jobs_tc.Kill(); PostCallback(THISBACK(ProcessJobs));}
+	#endif
+	void	InspectionFailed(const char* file, int line, int symbol, int tf, String msg);
+	
+	
+public:
+	
+	Vector<double>	spread_points;
+	Vector<int>		proxy_id;
+	Vector<int>		proxy_base_mul;
+	
+	int		GetAccountSymbol() const				{return symbols.GetCount()-1;}
 	
 public:
 	
@@ -318,7 +385,7 @@ public:
 	Callback           WhenPopTask;
 };
 
-inline System& GetSystem() {return Single<System>();}
+inline System& GetSystem()							{return Single<System>();}
 
 
 }

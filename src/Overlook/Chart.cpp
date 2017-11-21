@@ -36,7 +36,7 @@ void Chart::RefreshCore() {
 	work_queue.Clear();
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	
-	RefreshCoreData();
+	RefreshCoreData(true);
 	
 	Core* src = &*work_queue.Top()->core;
 	if (!src) return;
@@ -51,10 +51,10 @@ void Chart::RefreshCore() {
 	Data();
 }
 
-void Chart::RefreshCoreData() {
+void Chart::RefreshCoreData(bool store_cache) {
 	System& sys = GetSystem();
 	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i]);
+		sys.Process(*work_queue[i], store_cache);
 }
 
 void Chart::ContextMenu(Bar& bar) {
@@ -84,7 +84,7 @@ Chart& Chart::SetFactory(int f) {
 
 void Chart::Start() {
 	if (keep_at_end) shift = 0;
-	RefreshCoreData();
+	RefreshCoreData(false);
 	Refresh();
 }
 

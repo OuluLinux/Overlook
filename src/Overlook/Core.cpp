@@ -97,15 +97,16 @@ void Core::InitAll() {
 	
 	
 	// Register jobs
-	sys.job_lock.Enter();
-	for(int i = 0; i < jobs.GetCount(); i++) {
-		Job& job = jobs[i];
-		Core* core = job.core;
-		if (core == NULL)
-			Panic("You haven't called SetJob for all jobs or SetJobCount has wrong count.");
-		sys.jobs.Add(&job);
+	JobThread& thrd = sys.GetJobThread(sym_id, tf_id);
+	WRITELOCK(thrd.job_lock) {
+		for(int i = 0; i < jobs.GetCount(); i++) {
+			Job& job = jobs[i];
+			Core* core = job.core;
+			if (core == NULL)
+				Panic("You haven't called SetJob for all jobs or SetJobCount has invalid count.");
+			thrd.jobs.Add(&job);
+		}
 	}
-	sys.job_lock.Leave();
 	
 	
 	// Initialize sub-cores

@@ -438,7 +438,6 @@ void System::SetFixedBroker(FixedSimBroker& broker, int sym_id) {
 #ifdef flagGUITASK
 
 void System::ProcessJobs() {
-	jobs_stopped = false;
 	bool break_loop = false;
 	
 	TimeStop ts;
@@ -453,7 +452,6 @@ void System::ProcessJobs() {
 	}
 	while (ts.Elapsed() < 200 && !break_loop);
 	
-	jobs_stopped = true;
 	jobs_tc.Set(10, THISBACK(PostProcessJobs));
 }
 

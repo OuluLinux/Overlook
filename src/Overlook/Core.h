@@ -354,6 +354,7 @@ public:
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
 	void SetFutureBars(int i) {future_bars = i;}
 	Job& SetJob(int i, String job_title);
+	Job& GetJob(int i);
 	void SetJobFinished(bool b=true);
 	void SetJobCount(int i) {jobs.SetCount(i);}
 	void EnterJob(Job* job) {current_job = job;}

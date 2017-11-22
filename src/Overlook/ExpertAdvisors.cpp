@@ -116,21 +116,23 @@ void ForestArea::FillArea(int data_count) {
 
 
 
-RandomForestAdvisor::RandomForestAdvisor() {
+DqnAdvisor::DqnAdvisor() : dqn_trainer(&data) {
 	rf_trainer.options.tree_count		= 100;
 	rf_trainer.options.max_depth		= 4;
 	rf_trainer.options.tries_count		= 10;
 }
 
-void RandomForestAdvisor::Init() {
+void DqnAdvisor::Init() {
 	SetCoreSeparateWindow();
 	SetCoreMinimum(-1.0);  // normalized
 	SetCoreMaximum(+1.0);   // normalized
 	
-	SetBufferColor(0, Color(28, 127, 255));
-	SetBufferColor(1, Color(255, 94, 78));
+	SetBufferColor(0, Color(28, 42, 255));
+	SetBufferColor(1, Color(255, 42, 0));
 	SetBufferLineWidth(0, 2);
 	SetBufferLineWidth(1, 2);
+	
+	#if DEBUG_BUFFERS
 	for(int i = 0; i < LOCALPROB_DEPTH; i++) {
 		RGBA gray_clr = GrayColor(100 + i * 100 / LOCALPROB_DEPTH);
 		RGBA red_tint(gray_clr), green_tint(gray_clr);
@@ -139,6 +141,7 @@ void RandomForestAdvisor::Init() {
 		SetBufferColor(main_graphs + i * 2 + 0, green_tint);
 		SetBufferColor(main_graphs + i * 2 + 1, red_tint);
 	}
+	#endif
 	
 	conf_count = GetConfCount();
 	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
@@ -155,30 +158,33 @@ void RandomForestAdvisor::Init() {
 		.SetCtrl		<SourceSearchCtrl>();
 	
 	
-	SetJob(1, "Source Training")
-		.SetBegin		(THISBACK(MainTrainingBegin))
-		.SetIterator	(THISBACK(MainTrainingIterator))
-		.SetEnd			(THISBACK(MainTrainingEnd))
-		.SetInspect		(THISBACK(MainTrainingInspect))
-		.SetCtrl		<SourceTrainingCtrl>();
+	SetJob(1, "Random Forest Training")
+		.SetBegin		(THISBACK(TrainingRFBegin))
+		.SetIterator	(THISBACK(TrainingRFIterator))
+		.SetEnd			(THISBACK(TrainingRFEnd))
+		.SetInspect		(THISBACK(TrainingRFInspect))
+		.SetCtrl		<TrainingRFCtrl>();
 	
 	
-	SetJob(2, "Main optimization")
-		.SetBegin		(THISBACK(MainOptimizationBegin))
-		.SetIterator	(THISBACK(MainOptimizationIterator))
-		.SetEnd			(THISBACK(MainOptimizationEnd))
-		.SetInspect		(THISBACK(MainOptimizationInspect))
-		.SetCtrl		<MainOptimizationCtrl>();
+	SetJob(2, "DQN Training")
+		.SetBegin		(THISBACK(TrainingDQNBegin))
+		.SetIterator	(THISBACK(TrainingDQNIterator))
+		.SetEnd			(THISBACK(TrainingDQNEnd))
+		.SetInspect		(THISBACK(TrainingDQNInspect))
+		.SetCtrl		<TrainingDQNCtrl>();
 	
 }
 
-void RandomForestAdvisor::Start() {
-	LOG("RandomForestAdvisor::Start");
+void DqnAdvisor::Start() {
+	LOG("DqnAdvisor::Start");
 	
-	if (once) {
-		prev_counted = 0;
+	/*if (once) {
+		//prev_counted = 0;
+		Job& job = GetJob(2);
+		job.actual = 0;
+		job.state = 0;
 		once = false;
-	}
+	}*/
 	
 	int bars = GetBars();
 	Output& out = GetOutput(0);
@@ -193,20 +199,20 @@ void RandomForestAdvisor::Start() {
 	}
 }
 
-void RandomForestAdvisor::RefreshAll() {
+void DqnAdvisor::RefreshAll() {
 	TimeStop ts;
 	
 	RefreshOutputBuffers();
-	LOG("RandomForestAdvisor::Start ... RefreshOutputBuffers " << ts.ToString());
+	LOG("DqnAdvisor::Start ... RefreshOutputBuffers " << ts.ToString());
 	ts.Reset();
 	
 	RefreshMain();
-	LOG("RandomForestAdvisor::Start ... RefreshMain " << ts.ToString());
+	LOG("DqnAdvisor::Start ... RefreshMain " << ts.ToString());
 	
 	prev_counted = GetBars();
 }
 
-bool RandomForestAdvisor::SourceSearchBegin() {
+bool DqnAdvisor::SourceSearchBegin() {
 	SetTrainingArea();
 	
 	
@@ -229,7 +235,7 @@ bool RandomForestAdvisor::SourceSearchBegin() {
 	return true;
 }
 
-bool RandomForestAdvisor::SourceSearchIterator() {
+bool DqnAdvisor::SourceSearchIterator() {
 	GetCurrentJob().SetProgress(opt_counter, conf_count);
 	if (opt_counter >= conf_count) {
 		SetJobFinished();
@@ -359,7 +365,7 @@ bool RandomForestAdvisor::SourceSearchIterator() {
 	return true;
 }
 
-bool RandomForestAdvisor::SourceSearchInspect() {
+bool DqnAdvisor::SourceSearchInspect() {
 	
 	INSPECT(rflist_pos.GetCount() == LOCALPROB_DEPTH, "error: Unexpected count of sources");
 	INSPECT(rflist_neg.GetCount() == LOCALPROB_DEPTH, "error: Unexpected count of sources");
@@ -380,7 +386,7 @@ bool RandomForestAdvisor::SourceSearchInspect() {
 	return true;
 }
 
-bool RandomForestAdvisor::MainTrainingBegin() {
+bool DqnAdvisor::TrainingRFBegin() {
 	SetRealArea();
 	
 	System& sys = GetSystem();
@@ -396,7 +402,7 @@ bool RandomForestAdvisor::MainTrainingBegin() {
 	return true;
 }
 
-bool RandomForestAdvisor::MainTrainingIterator() {
+bool DqnAdvisor::TrainingRFIterator() {
 	ASSERT(full_mask.GetCount() > 0 && rflist_iter >= 0);
 	
 	int a = 0, t = 1;
@@ -440,13 +446,13 @@ bool RandomForestAdvisor::MainTrainingIterator() {
 	return true;
 }
 
-bool RandomForestAdvisor::MainTrainingEnd() {
+bool DqnAdvisor::TrainingRFEnd() {
 	ForceSetCounted(0);
 	RefreshOutputBuffers();
 	return true;
 }
 
-bool RandomForestAdvisor::MainTrainingInspect() {
+bool DqnAdvisor::TrainingRFInspect() {
 	
 	int invalid_count = 0;
 	for(int i = 0; i < rflist_pos.GetCount(); i++)
@@ -462,77 +468,87 @@ bool RandomForestAdvisor::MainTrainingInspect() {
 
 
 
-bool RandomForestAdvisor::MainOptimizationBegin() {
+bool DqnAdvisor::TrainingDQNBegin() {
 	SetRealArea();
 	
-	// Init genetic optimizer
-	int cols = (rflist_pos.GetCount() + rflist_neg.GetCount()) * 2;
-	if (optimizer.GetRound() == 0) {
-		optimizer.SetArrayCount(1);
-		optimizer.SetCount(cols);
-		optimizer.SetPopulation(100);
-		optimizer.SetMaxGenerations(100);
-		optimizer.UseLimits();
+	int bars = GetBars();
+	data.SetCount(bars);
+	GetOutput(0).label.SetCount(bars);
+	
+	RefreshOutputBuffers();
+	
+	dqntraining_pts.SetCount(bars, 0);
+	
+	return true;
+}
 
-
-		// Set optimizer column value ranges
-		int col = 0;
-		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
-			optimizer.Set(col++,   -1.0,  +1.0, 0.01, "pos mul");
-			optimizer.Set(col++,  -10.0, +10.0, 0.10, "pos step mul");
+bool DqnAdvisor::TrainingDQNIterator() {
+	GetCurrentJob().SetProgress(dqn_round, dqn_max_rounds);
+	
+	ASSERT(!data.IsEmpty());
+	
+	Buffer& sig0_dqnprob	= GetBuffer(0);
+	Buffer& sig1_dqnprob	= GetBuffer(1);
+	VectorBool& label		= GetOutput(0).label;
+	
+	double max_epsilon = 0.20;
+	double min_epsilon = 0.01;
+	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
+	dqn_trainer.SetEpsilon(epsilon);
+	
+	for(int i = 0; i < 10; i++) {
+		int pos = dqn_round % (data.GetCount() - 1);
+		
+		
+		double curr		= open_buf->GetUnsafe(pos);
+		double next		= open_buf->GetUnsafe(pos + 1);
+		
+		
+		DQN::DQItem& before = data[pos];
+		before.action = dqn_trainer.Act(before);
+		if (!before.action)		before.reward = next / (curr + spread_point) - 1.0;
+		else					before.reward = curr / (next + spread_point) - 1.0;
+		before.reward *= 10000;
+		
+		double p0 = dqn_trainer.data.add2.output.Get(0) * 0.2;
+		double p1 = dqn_trainer.data.add2.output.Get(1) * 0.2;
+		sig0_dqnprob.Set(pos, p0);
+		sig1_dqnprob.Set(pos, p1);
+		
+		label.Set(pos, before.action);
+		
+		LOG(GetSymbol() << ": Act " << dqn_round << " (" << pos << "): p0=" << p0 << " p1=" << p1 << ": " << next << " / " << curr << "   " << before.reward);
+		
+		if (dqn_round > 100) {
+			for(int j = 0; j < 5; j++)
+				dqn_trainer.LearnAny(dqn_round);
 		}
-		for(int i = 0; i < LOCALPROB_DEPTH; i++) {
-			optimizer.Set(col++,   -1.0,  +1.0, 0.01, "neg mul");
-			optimizer.Set(col++,  -10.0, +10.0, 0.10, "neg step mul");
-		}
-		ASSERT(col == cols);
-		optimizer.Init(StrategyBest1Exp);
+		
+		dqn_round++;
 	}
 	
-	optimization_pts.SetCount(10000, 0.0);
 	
-	return true;
-}
-
-bool RandomForestAdvisor::MainOptimizationIterator() {
-	GetCurrentJob().SetProgress(optimizer.GetRound(), optimizer.GetMaxRounds());
-	
-	
-	// Get weights
-	optimizer.Start();
-	optimizer.GetLimitedTrialSolution(trial);
-
-	RefreshMainBuffer(true);
+	// This is only for progress drawer...
 	RunMain();
-
-	// Return training value with less than 10% of testing value.
-	// Testing value should slightly direct away from weird locality...
-	double change_total = (area_change_total[0] + area_change_total[1] * 0.1) / 1.1;
-	LOG(GetSymbol() << " round " << optimizer.GetRound()
-		<< ": tr=" << area_change_total[0]
-		<<  " t0=" << area_change_total[1]
-		<<  " t1=" << area_change_total[2]);
-	optimizer.Stop(change_total);
 	
 	
-	if (optimizer.IsEnd())
+	// Stop eventually
+	if (dqn_round >= dqn_max_rounds) {
 		SetJobFinished();
+	}
 	
-	optimization_pts[optimizer.GetRound() % optimization_pts.GetCount()] = area_change_total[0];
 	
 	return true;
 }
 
-bool RandomForestAdvisor::MainOptimizationEnd() {
-	ASSERT(optimizer.IsEnd());
-	optimizer.GetLimitedBestSolution(trial);
+bool DqnAdvisor::TrainingDQNEnd() {
 	ForceSetCounted(0);
 	RefreshAll();
 	return true;
 }
 
-bool RandomForestAdvisor::MainOptimizationInspect() {
-	bool succ = area_change_total[1] > 0.0;
+bool DqnAdvisor::TrainingDQNInspect() {
+	bool succ = dqntraining_pts.Top() > 0.0;
 	
 	INSPECT(succ, "warning: negative result");
 	
@@ -546,85 +562,35 @@ bool RandomForestAdvisor::MainOptimizationInspect() {
 
 
 
-void RandomForestAdvisor::RefreshMainBuffer(bool forced) {
-	if (!forced && trial.IsEmpty()) return;
+void DqnAdvisor::RunMain() {
+	ConstVectorBool& label = GetOutput(0).label;
 	
-	System& sys = GetSystem();
-	int begin = !forced ? prev_counted : 0;
-	int tf = GetTf();
-	int data_count = sys.GetCountTf(tf);
+	int bars = GetBars() - 1;
 	
-	Buffer& main_buf = GetBuffer(0);
-	main_buf.SetCount(data_count);
-	VectorBool& label = GetOutput(0).label;
-	label.SetCount(data_count);
-	for(int i = begin; i < data_count; i++) {
+	double change_total	= 0.0;
+	
+	for(int i = 0; i < bars; i++) {
+		bool signal		= label.Get(i);
+		double curr		= open_buf->GetUnsafe(i);
+		double next		= open_buf->GetUnsafe(i + 1);
+		double change	= next / curr - 1.0;
+		ASSERT(curr > 0.0);
 		
-		double main = 0.0;
+		if (signal) change *= -1.0;
+		change_total	+= change;
 		
-		for(int j = 0; j < LOCALPROB_DEPTH*2; j++) {
-			ConstBuffer& buf = GetBuffer(main_graphs + j);
-			double curr = buf.Get(i);
-			double prev = i > 0 ? buf.Get(i - 1) : curr;
-			double chng = curr - prev;
-			
-			double mult_value = curr * trial[j * 2];
-			double chng_value = chng * trial[j * 2 + 1];
-			
-			main += mult_value + chng_value;
-		}
-		
-		main /= LOCALPROB_DEPTH*2;
-		
-		main_buf.Set(i, main);
-		label.Set(i, main < 0.0);
+		dqntraining_pts[i] = change_total;
 	}
+	dqntraining_pts[bars] = change_total;
 }
 
-void RandomForestAdvisor::RunMain() {
-	
-	// Prepare variables
-	ConstBuffer& main_buf = GetBuffer(0);
-	
-	for (int a = 0; a < 3; a++) {
-		int begin = a == 0 ? area.train_begin : (a == 1 ? area.test0_begin : area.test1_begin);
-		int end   = a == 0 ? area.train_end   : (a == 1 ? area.test0_end   : area.test1_end);
-		end--;
-		
-		double change_total	= 0.0;
-		
-		for(int i = begin; i < end; i++) {
-			bool signal		= main_buf.Get(i) < 0.0;
-			double curr		= open_buf->GetUnsafe(i);
-			double next		= open_buf->GetUnsafe(i + 1);
-			double change	= next / curr - 1.0;
-			ASSERT(curr > 0.0);
-			
-			#if 0
-			if (signal) change *= -1.0;
-			change_total	+= change;
-			#else
-			bool correct_signal = change < 1.0;
-			if (signal == correct_signal)
-				change_total += +1.0;
-			#endif
-		}
-		
-		if (end > begin)
-			change_total /= end-begin;
-		
-		area_change_total[a] = change_total;
-		LOG("RandomForestAdvisor::TestMain " << GetSymbol() << " a" << a << ": change_total=" << change_total);
-	}
-}
-
-void RandomForestAdvisor::SetTrainingArea() {
+void DqnAdvisor::SetTrainingArea() {
 	int tf = GetTf();
 	int data_count = GetSystem().GetCountTf(tf);
 	area.FillArea(data_count);
 }
 
-void RandomForestAdvisor::SetRealArea() {
+void DqnAdvisor::SetRealArea() {
 	int week				= 1*5*24*60 / MAIN_PERIOD_MINUTES;
 	int data_count			= open_buf->GetCount();
 	area.train_begin		= week;
@@ -635,7 +601,7 @@ void RandomForestAdvisor::SetRealArea() {
 	area.test1_end			= data_count;
 }
 
-void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs) {
+void DqnAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs) {
 	int depth = TRUEINDI_COUNT * (conf.fastinput + 1) + 1;
 	bufs.SetDepth(depth);
 	ASSERT(depth >= 2);
@@ -661,17 +627,7 @@ void RandomForestAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBuffer
 	ASSERT(k == depth);
 }
 
-void RandomForestAdvisor::FillMainBufferSource(ConstBufferSource& bufs) {
-	bufs.SetDepth(rflist_pos.GetCount() + rflist_neg.GetCount());
-	int j = 0;
-	for(int i = 0; i < rflist_pos.GetCount(); i++)
-		bufs.SetSource(j++, GetBuffer(main_graphs + i * 2 + 0));
-	for(int i = 0; i < rflist_neg.GetCount(); i++)
-		bufs.SetSource(j++, GetBuffer(main_graphs + i * 2 + 1));
-	ASSERT(j == bufs.GetDepth());
-}
-
-void RandomForestAdvisor::RefreshOutputBuffers() {
+void DqnAdvisor::RefreshOutputBuffers() {
 	int bars = GetBars();
 	
 	if (full_mask.GetCount() != bars)
@@ -679,7 +635,11 @@ void RandomForestAdvisor::RefreshOutputBuffers() {
 	
 	SetSafetyLimit(bars);
 	
+	data.SetCount(bars);
+	
 	ConstBufferSource bufs;
+	
+	rf_trainer.forest.tree_count = rf_trainer.options.tree_count;
 	
 	for (int p = 0; p < 2; p++) {
 		double mul = p == 0 ? +1.0 : -1.0;
@@ -700,62 +660,89 @@ void RandomForestAdvisor::RefreshOutputBuffers() {
 			int cursor = prev_counted;
 			ConstBufferSourceIter iter(bufs, &cursor);
 			
+			#if DEBUG_BUFFERS
 			Buffer& buf = GetBuffer(main_graphs + p + i * 2);
+			#endif
 			
 			for(; cursor < bars; cursor++) {
 				SetSafetyLimit(cursor);
-				double d = mul * (rf_trainer.forest.PredictOne(iter) * 2.0 - 1.0);
+				double prob = rf_trainer.forest.PredictOne(iter);
+				double d = mul * (prob * 2.0 - 1.0);
 				if (d > +1.0) d = +1.0;
 				if (d < -1.0) d = -1.0;
+				
+				DQN::DQItem& before = data[cursor];
+				int pos = p + i * 4;
+				before.state.Set(pos, prob);
+				if (cursor > 0) {
+					DQN::DQItem& before2 = data[cursor - 1];
+					double prev_prob = before2.state.Get(pos);
+					double prob_change = (prob - prev_prob) * 5.0;
+					before.state.Set(2 + p + i * 4, prob_change);
+				}
+				
+				#if DEBUG_BUFFERS
 				buf.Set(cursor, d);
+				#endif
 			}
 			rf_trainer.forest.memory.Detach();
 		}
 	}
 	
-	RefreshMainBuffer(false);
 }
 
-void RandomForestAdvisor::RefreshMain() {
-	SetRealArea();
-	optimizer.GetLimitedBestSolution(trial);
-	RefreshMainBuffer(true);
-	RunMain();
+void DqnAdvisor::RefreshMain() {
+	int bars = GetBars();
+	int cursor = prev_counted;
+	Buffer& sig0_dqnprob = GetBuffer(0);
+	Buffer& sig1_dqnprob = GetBuffer(1);
+	VectorBool& label = GetOutput(0).label;
+	
+	data.SetCount(bars);
+	
+	for(; cursor < bars; cursor++) {
+		SetSafetyLimit(cursor);
+		DQN::DQItem& before = data[cursor];
+		before.action = dqn_trainer.Act(before);
+		label.Set(cursor, before.action);
+		sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0) * 0.2);
+		sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1) * 0.2);
+	}
 }
 
 
-void RandomForestAdvisor::SourceSearchCtrl::Paint(Draw& w) {
+void DqnAdvisor::SourceSearchCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	DqnAdvisor* rfa = dynamic_cast<DqnAdvisor*>(&*job->core);
 	ASSERT(rfa);
 	DrawVectorPoints(id, sz, rfa->search_pts);
 	
 	w.DrawImage(0, 0, id);
 }
 
-void RandomForestAdvisor::SourceTrainingCtrl::Paint(Draw& w) {
+void DqnAdvisor::TrainingRFCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	DqnAdvisor* rfa = dynamic_cast<DqnAdvisor*>(&*job->core);
 	ASSERT(rfa);
-	DrawVectorPoints(id, sz, rfa->training_pts);
+	DrawVectorPolyline(id, sz, rfa->training_pts, polyline);
 	
 	w.DrawImage(0, 0, id);
 }
 
-void RandomForestAdvisor::MainOptimizationCtrl::Paint(Draw& w) {
+void DqnAdvisor::TrainingDQNCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(&*job->core);
+	DqnAdvisor* rfa = dynamic_cast<DqnAdvisor*>(&*job->core);
 	ASSERT(rfa);
-	DrawVectorPolyline(id, sz, rfa->optimization_pts, polyline);
+	DrawVectorPolyline(id, sz, rfa->dqntraining_pts, polyline);
 	
 	w.DrawImage(0, 0, id);
 }

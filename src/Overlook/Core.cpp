@@ -344,6 +344,10 @@ Job& Core::SetJob(int i, String job_title) {
 	return job;
 }
 
+Job& Core::GetJob(int i) {
+	return jobs[i];
+}
+
 void Core::SetJobFinished(bool b) {
 	if (!current_job)
 		Panic("No job set currently");

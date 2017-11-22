@@ -30,10 +30,7 @@ using namespace Upp;
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
-#define OPT_PHASE_ITERS			10000
-#define	LOCALPROB_DEPTH			100
-#define	LOCALPROB_BUFSIZE		256
-#define USE_PROC_CACHE			0
+#define	LOCALPROB_DEPTH			15
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6
@@ -839,6 +836,39 @@ void TestLockMacro();
 
 
 #define INSPECT(x, msg) if (!(x)) {GetSystem().InspectionFailed(__FILE__, __LINE__, GetSymbol(), GetTf(), msg);}
+
+
+
+
+
+struct ConstBufferSource {
+	Vector<ConstBuffer*> bufs;
+	
+public:
+	ConstBufferSource();
+	
+	void SetDepth(int i) {bufs.SetCount(i, NULL);}
+	void SetSource(int i, ConstBuffer& buf) {ASSERT(&buf); bufs[i] = &buf;}
+	int GetCount() const;
+	int GetDepth() const;
+	
+	double Get(int pos, int depth) const;
+	
+};
+
+class ConstBufferSourceIter {
+	typedef const ConstBufferSource ConstConstBufferSource;
+	ConstConstBufferSource* src;
+	ConstInt* cursor_ptr = NULL;
+public:
+	ConstBufferSourceIter(const ConstBufferSource& src, ConstInt* cursor_ptr);
+	
+	double operator[](int i) const;
+	
+	const ConstBufferSource& GetSource() const {return *src;}
+	int GetCursor() const {return *cursor_ptr;}
+	
+};
 
 }
 

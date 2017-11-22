@@ -13,6 +13,7 @@ using namespace Upp;
 #include "Common.h"
 #include "Optimizer.h"
 #include "RandomForest.h"
+#include "DQN.h"
 #include "SimBroker.h"
 #include "FixedSimBroker.h"
 #include "System.h"

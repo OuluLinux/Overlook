@@ -885,7 +885,7 @@ void Overlook::LoadDefaultEAs() {
 	Profile profile;
 	
 	int tf = sys.FindPeriod(60);
-	int rfa = System::Find<RandomForestAdvisor>();
+	int rfa = System::Find<DqnAdvisor>();
 	int wsa = System::Find<WeekSlotAdvisor>();
 	
 	{

@@ -37,6 +37,7 @@ void WeekSlotAdvisor::Init() {
 void WeekSlotAdvisor::Start() {
 	if (IsJobsFinished()) {
 		int bars = GetBars();
+		prev_counted--;
 		if (prev_counted < bars) {
 			RefreshMain();
 			prev_counted = bars;
@@ -53,7 +54,7 @@ bool WeekSlotAdvisor::MainOptimizationBegin() {
 		int symbol = sys.GetPrioritySymbol(i);
 		CoreIO* core = GetInputCore(1, symbol, GetTf());
 		ASSERT(core);
-		RandomForestAdvisor* rfa = dynamic_cast<RandomForestAdvisor*>(core);
+		DqnAdvisor* rfa = dynamic_cast<DqnAdvisor*>(core);
 		ASSERT(rfa);
 		all_ready &= rfa->IsJobsFinished();
 	}
@@ -401,13 +402,20 @@ void WeekSlotAdvisor::MainReal() {
 		mt.RefreshLimits();
 		for (int i = 0; i < SYM_COUNT; i++) {
 			int sym = sys.GetPrioritySymbol(i);
+			
+			#ifdef ACCURACY
+			int sig = sb.GetSignal(sym);
+			#else
 			int sig = sb.GetSignal(i);
+			#endif
+			
 			if (sig == mt.GetSignal(sym) && sig != 0)
 				mt.SetSignalFreeze(sym, true);
 			else {
 				mt.SetSignal(sym, sig);
 				mt.SetSignalFreeze(sym, false);
 			}
+			LOG("Real symbol " << sym << " signal " << sig);
 		}
 		mt.SetFreeMarginLevel(FMLEVEL);
 		mt.SetFreeMarginScale((MULT_MAXSCALES - 1)*MULT_MAXSCALE_MUL * SYM_COUNT);
@@ -446,8 +454,8 @@ void WeekSlotAdvisor::RunSimBroker() {
 	Buffer& volume_buf	= db->GetBuffer(3);
 	
 	int tf = GetTf();
-	int data_count = sys.GetCountTf(tf);
-	db->ForceCount(data_count);
+	int bars = GetBars();
+	db->ForceCount(bars);
 	
 	optimizer.GetLimitedBestSolution(trial);
 	NormalizeTrial();
@@ -462,7 +470,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 	
 	RefreshInputs();
 	
-	for(int i = 0; i < data_count; i++) {
+	for(int i = 0; i < bars; i++) {
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			ConstBuffer& open_buf = *inputs[j];
@@ -486,6 +494,10 @@ void WeekSlotAdvisor::RunSimBroker() {
 				sb.SetSignal(sym, sig);
 				sb.SetSignalFreeze(sym, false);
 			}
+			
+			if (i > bars-10) {
+				LOG("SB " << i << " symbol " << sym << " signal " << sig << " dir " << dir << " mult " << mult);
+			}
 		}
 		
 		
@@ -496,6 +508,8 @@ void WeekSlotAdvisor::RunSimBroker() {
 		open_buf.Set(i, value);
 		low_buf.Set(i, value);
 		high_buf.Set(i, value);
+		
+		LOG("SB " << i << " eq " << value);
 	}
 }
 #endif

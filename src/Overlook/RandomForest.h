@@ -5,35 +5,6 @@ namespace Overlook {
 
 struct RandomForest;
 
-struct ConstBufferSource {
-	Vector<ConstBuffer*> bufs;
-	
-public:
-	ConstBufferSource();
-	
-	void SetDepth(int i) {bufs.SetCount(i, NULL);}
-	void SetSource(int i, ConstBuffer& buf) {ASSERT(&buf); bufs[i] = &buf;}
-	int GetCount() const;
-	int GetDepth() const;
-	
-	double Get(int pos, int depth) const;
-	
-};
-
-class ConstBufferSourceIter {
-	typedef const ConstBufferSource ConstConstBufferSource;
-	ConstConstBufferSource* src;
-	ConstInt* cursor_ptr = NULL;
-public:
-	ConstBufferSourceIter(const ConstBufferSource& src, ConstInt* cursor_ptr);
-	
-	double operator[](int i) const;
-	
-	const ConstBufferSource& GetSource() const {return *src;}
-	int GetCursor() const {return *cursor_ptr;}
-	
-};
-
 struct Model : Moveable<Model> {
 	double thr = 0.0;
 	int ri1 = 0;

@@ -63,8 +63,8 @@ file
 	Optimizer.h,
 	Optimizer.cpp,
 	FixedSimBroker.h,
-	DQN.h,
-	FixedSimBroker.cpp;
+	FixedSimBroker.cpp,
+	DQN.h;
 
 mainconfig
 	"Working" = "GUI MT X11",

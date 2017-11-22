@@ -62,7 +62,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction0)
-			% In<RandomForestAdvisor>(&FilterFunction1)
+			% In<DqnAdvisor>(&FilterFunction1)
 			% Out(SYM_COUNT, SYM_COUNT)
 			% Mem(optimizer)
 			% Mem(optimization_pts)

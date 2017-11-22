@@ -132,11 +132,12 @@ struct JobThread : Moveable<JobThread> {
 	int job_iter = 0;
 	int symbol = -1;
 	int tf = -1;
+	bool is_fail = false;
 	
 	bool ProcessJob();
 	
 	#ifndef flagGUITASK
-	bool running = false, stopped = true, is_fail = false;
+	bool running = false, stopped = true;
 	void Start() {
 		Stop();
 		

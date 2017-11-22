@@ -111,17 +111,20 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 
 
 
-class RandomForestAdvisor : public Core {
+#define DEBUG_BUFFERS 1
+
+class DqnAdvisor : public Core {
 	
 	struct SourceSearchCtrl : public JobCtrl {
 		virtual void Paint(Draw& w);
 	};
 	
-	struct SourceTrainingCtrl : public JobCtrl {
+	struct TrainingRFCtrl : public JobCtrl {
+		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
 	};
 	
-	struct MainOptimizationCtrl : public JobCtrl {
+	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
 	};
@@ -130,28 +133,37 @@ class RandomForestAdvisor : public Core {
 	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {if (a.c.GetCount() == 0) return false; else return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
+	enum {ACTION_LONG, ACTION_SHORT, ACTION_COUNT};
+	typedef DQNTrainer<ACTION_COUNT, LOCALPROB_DEPTH * 2*2, 100> DQN;
+	
 	
 	// Persistent
-	Array<RF> rflist_pos, rflist_neg;
-	BufferRandomForest rf_trainer;
-	GeneticOptimizer optimizer;
-	Vector<double> search_pts, training_pts, optimization_pts;
-	double area_change_total[3];
-	int prev_counted = 0;
-	int opt_counter = 0;
-	int p = 0, rflist_iter = 0;
+	Array<RF>					rflist_pos;
+	Array<RF>					rflist_neg;
+	Vector<DQN::DQItem>			data;
+	BufferRandomForest			rf_trainer;
+	DQN							dqn_trainer;
+	Vector<double>				search_pts;
+	Vector<double>				training_pts;
+	Vector<double>				dqntraining_pts;
+	int							prev_counted	= 0;
+	int							opt_counter		= 0;
+	int							p				= 0;
+	int							rflist_iter		= 0;
+	int							dqn_round		= 0;
+	int							dqn_max_rounds	= 1000000;
+	int							dqn_pt_cursor	= 0;
 	
 	
 	// Temp
-	Vector<double> trial;
-	VectorBool full_mask;
-	One<RF> training_rf;
-	ForestArea area;
-	ConstBuffer* open_buf = NULL;
-	double spread_point = 0.0;
-	int conf_count = 0;
-	int data_count = 0;
-	bool once = true;
+	VectorBool					full_mask;
+	One<RF>						training_rf;
+	ForestArea					area;
+	ConstBuffer*				open_buf		= NULL;
+	double						spread_point	= 0.0;
+	int							conf_count		= 0;
+	int							data_count		= 0;
+	bool						once			= true;
 	
 	
 protected:
@@ -160,32 +172,37 @@ protected:
 	bool SourceSearchBegin();
 	bool SourceSearchIterator();
 	bool SourceSearchInspect();
-	bool MainTrainingBegin();
-	bool MainTrainingIterator();
-	bool MainTrainingEnd();
-	bool MainTrainingInspect();
-	bool MainOptimizationBegin();
-	bool MainOptimizationIterator();
-	bool MainOptimizationEnd();
-	bool MainOptimizationInspect();
-	void RefreshMainBuffer(bool forced);
+	bool TrainingRFBegin();
+	bool TrainingRFIterator();
+	bool TrainingRFEnd();
+	bool TrainingRFInspect();
+	bool TrainingDQNBegin();
+	bool TrainingDQNIterator();
+	bool TrainingDQNEnd();
+	bool TrainingDQNInspect();
 	void RunMain();
 	void SetTrainingArea();
 	void SetRealArea();
 	void FillBufferSource(const AccuracyConf& conf, ConstBufferSource& bufs);
-	void FillMainBufferSource(ConstBufferSource& bufs);
 	void RefreshOutputBuffers();
 	void RefreshMain();
 	void RefreshAll();
 	
 public:
-	typedef RandomForestAdvisor CLASSNAME;
-	RandomForestAdvisor();
+	typedef DqnAdvisor CLASSNAME;
+	DqnAdvisor();
 	
 	virtual void Init();
 	
-	const int main_graphs = 1;
+	const int main_graphs = 2;
 	const int indi_count = 3, label_count = 3;
+	
+	#if DEBUG_BUFFERS
+	const int buffer_count = main_graphs + LOCALPROB_DEPTH*2;
+	#else
+	const int buffer_count = main_graphs;
+	#endif
+	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>();
 		
@@ -201,19 +218,22 @@ public:
 		
 		reg % In<LinearWeekTime>()
 			% In<MinimalLabel>()
-			% Out(main_graphs + LOCALPROB_DEPTH*2, main_graphs + LOCALPROB_DEPTH*2)
+			% Out(buffer_count, buffer_count)
 			% Mem(rflist_pos)
 			% Mem(rflist_neg)
+			% Mem(data)
 			% Mem(rf_trainer)
-			% Mem(optimizer)
+			% Mem(dqn_trainer)
 			% Mem(search_pts)
 			% Mem(training_pts)
-			% Mem(optimization_pts)
-			% Mem(area_change_total[0]) % Mem(area_change_total[1]) % Mem(area_change_total[2])
+			% Mem(dqntraining_pts)
 			% Mem(prev_counted)
 			% Mem(opt_counter)
 			% Mem(p)
-			% Mem(rflist_iter);
+			% Mem(rflist_iter)
+			% Mem(dqn_round)
+			% Mem(dqn_max_rounds)
+			% Mem(dqn_pt_cursor);
 	}
 	
 	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {

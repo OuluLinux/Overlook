@@ -193,7 +193,7 @@ void WeekSlotAdvisor::RefreshMainBuffer(bool forced) {
 		int wday				= DayOfWeek(t);
 		if (wday == 0 || wday == 6)	continue;
 		int wdaymins			= ((wday - 1) * 24 + t.hour) * 60 + t.minute;
-		int weekslot			= wdaymins / weekslots;
+		int weekslot			= wdaymins / slotmins;
 		int trial_read_begin	= weekslot * SYM_COUNT;
 		
 		for(int j = 0; j < SYM_COUNT; j++) {

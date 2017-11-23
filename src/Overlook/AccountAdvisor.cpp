@@ -35,6 +35,11 @@ void WeekSlotAdvisor::Init() {
 }
 
 void WeekSlotAdvisor::Start() {
+	if (once) {
+		once = false;
+		//Reset(); // For developing
+	}
+	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
 		prev_counted--;
@@ -43,6 +48,14 @@ void WeekSlotAdvisor::Start() {
 			prev_counted = bars;
 		}
 	}
+}
+
+void WeekSlotAdvisor::Reset() {
+	forced_optimizer_reset = true;
+	Job& optjob = GetJob(0);
+	optjob.actual = 0;
+	optjob.total  = 1;
+	optjob.state  = 0;
 }
 
 bool WeekSlotAdvisor::MainOptimizationBegin() {
@@ -65,7 +78,9 @@ bool WeekSlotAdvisor::MainOptimizationBegin() {
 	SetRealArea();
 	
 	// Init genetic optimizer
-	if (optimizer.GetRound() == 0) {
+	if (optimizer.GetRound() == 0 || forced_optimizer_reset) {
+		forced_optimizer_reset = false;
+		
 		optimizer.SetArrayCount(1);
 		optimizer.SetCount(cols);
 		optimizer.SetPopulation(100);
@@ -213,13 +228,13 @@ void WeekSlotAdvisor::RefreshInputs() {
 		signals			.SetCount(SYM_COUNT, NULL);
 		weights			.SetCount(SYM_COUNT, NULL);
 		for(int i = 0; i < SYM_COUNT; i++) {
-			int symbol				= sys.GetPrioritySymbol(i);
-			ConstBuffer& open_buf	= GetInputBuffer(0, symbol, tf, 0);
-			ConstBuffer& sig_buf	= GetInputBuffer(1, symbol, tf, 0);
-			ConstBuffer& weight_buf	= GetBuffer(i);
-			inputs[i]				= &open_buf;
-			signals[i]				= &sig_buf;
-			weights[i]				= &weight_buf;
+			int symbol					= sys.GetPrioritySymbol(i);
+			ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
+			ConstBuffer& weight_buf		= GetBuffer(i);
+			ConstVectorBool& sig_buf	= CoreIO::GetInputLabel(1, symbol, tf);
+			inputs[i]					= &open_buf;
+			signals[i]					= &sig_buf;
+			weights[i]					= &weight_buf;
 		}
 	}
 }
@@ -258,7 +273,7 @@ void WeekSlotAdvisor::RunMain() {
 			#ifdef ACCURACY
 			for(int j = 0; j < SYM_COUNT; j++) {
 				ConstBuffer& open_buf = *inputs[j];
-				bool signal		= signals[j]->Get(i) < 0.0;
+				bool signal		= signals[j]->Get(i);
 				double curr		= open_buf.GetUnsafe(i);
 				double next		= open_buf.GetUnsafe(i + 1);
 				double change	= next / curr - 1.0;
@@ -287,7 +302,7 @@ void WeekSlotAdvisor::RunMain() {
 			
 			
 			for(int j = 0; j < SYM_COUNT; j++) {
-				int dir		= signals[j]->Get(i) < 0.0 ? -1 : +1;
+				int dir		= signals[j]->Get(i) ? -1 : +1;
 				int mult	= weights[j]->Get(i) * MULT_MAX;
 				int sig		= dir * mult;
 				ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
@@ -482,7 +497,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 		
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
-			int dir		= signals[j]->Get(i) < 0.0 ? -1 : +1;
+			int dir		= signals[j]->Get(i) ? -1 : +1;
 			int mult	= weights[j]->Get(i) * MULT_MAX;
 			int sig		= dir * mult;
 			int sym		= sys.GetPrioritySymbol(j);

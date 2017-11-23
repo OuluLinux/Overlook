@@ -21,7 +21,8 @@ class WeekSlotAdvisor : public Core {
 	
 	
 	// Temp
-	Vector<ConstBuffer*> inputs, signals, weights;
+	Vector<ConstBuffer*> inputs, weights;
+	Vector<ConstVectorBool*> signals;
 	Vector<double> trial;
 	ForestArea area;
 	int realtime_count = 0;
@@ -29,6 +30,7 @@ class WeekSlotAdvisor : public Core {
 	int weekslots = 0;
 	int cols = 0;
 	bool forced_optimizer_reset = false;
+	bool once = true;
 	
 	
 protected:
@@ -46,6 +48,7 @@ protected:
 	void SetRealArea();
 	void RefreshMain();
 	void MainReal();
+	void Reset();
 	
 	#ifdef ACCURACY
 	SimBroker sb;

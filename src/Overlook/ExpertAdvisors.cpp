@@ -193,6 +193,7 @@ void DqnAdvisor::Start() {
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
+		if (prev_counted) prev_counted--;
 		if (prev_counted < bars)
 			RefreshAll();
 	}
@@ -506,7 +507,7 @@ bool DqnAdvisor::TrainingDQNIterator() {
 		DQN::DQItem& before = data[pos];
 		before.action = dqn_trainer.Act(before);
 		if (!before.action)		before.reward = next / curr - 1.0;
-		else					before.reward = curr / next - 1.0;
+		else					before.reward = 1.0 - next / curr;
 		before.reward *= 10000;
 		
 		double p0 = Limit1(dqn_trainer.data.add2.output.Get(0) * 0.2);
@@ -700,6 +701,7 @@ void DqnAdvisor::RefreshMain() {
 	VectorBool& label = GetOutput(0).label;
 	
 	data.SetCount(bars);
+	label.SetCount(bars);
 	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);

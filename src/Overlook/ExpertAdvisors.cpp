@@ -5,6 +5,7 @@ namespace Overlook {
 using namespace Upp;
 
 
+inline double Limit1(double d) {if (d < -1.0) return -1.0; if (d > +1.0) return +1.0; return d;}
 
 
 
@@ -129,8 +130,6 @@ void DqnAdvisor::Init() {
 	
 	SetBufferColor(0, Color(28, 42, 255));
 	SetBufferColor(1, Color(255, 42, 0));
-	SetBufferLineWidth(0, 2);
-	SetBufferLineWidth(1, 2);
 	
 	#if DEBUG_BUFFERS
 	for(int i = 0; i < LOCALPROB_DEPTH; i++) {
@@ -506,12 +505,12 @@ bool DqnAdvisor::TrainingDQNIterator() {
 		
 		DQN::DQItem& before = data[pos];
 		before.action = dqn_trainer.Act(before);
-		if (!before.action)		before.reward = next / (curr + spread_point) - 1.0;
-		else					before.reward = curr / (next + spread_point) - 1.0;
+		if (!before.action)		before.reward = next / curr - 1.0;
+		else					before.reward = curr / next - 1.0;
 		before.reward *= 10000;
 		
-		double p0 = dqn_trainer.data.add2.output.Get(0) * 0.2;
-		double p1 = dqn_trainer.data.add2.output.Get(1) * 0.2;
+		double p0 = Limit1(dqn_trainer.data.add2.output.Get(0) * 0.2);
+		double p1 = Limit1(dqn_trainer.data.add2.output.Get(1) * 0.2);
 		sig0_dqnprob.Set(pos, p0);
 		sig1_dqnprob.Set(pos, p1);
 		
@@ -565,7 +564,9 @@ bool DqnAdvisor::TrainingDQNInspect() {
 void DqnAdvisor::RunMain() {
 	ConstVectorBool& label = GetOutput(0).label;
 	
-	int bars = GetBars() - 1;
+	int bars = GetBars();
+	dqntraining_pts.SetCount(bars, 0.0);
+	bars--;
 	
 	double change_total	= 0.0;
 	
@@ -705,8 +706,8 @@ void DqnAdvisor::RefreshMain() {
 		DQN::DQItem& before = data[cursor];
 		before.action = dqn_trainer.Act(before);
 		label.Set(cursor, before.action);
-		sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0) * 0.2);
-		sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1) * 0.2);
+		sig0_dqnprob.Set(cursor, Limit1(dqn_trainer.data.add2.output.Get(0) * 0.2));
+		sig1_dqnprob.Set(cursor, Limit1(dqn_trainer.data.add2.output.Get(1) * 0.2));
 	}
 }
 

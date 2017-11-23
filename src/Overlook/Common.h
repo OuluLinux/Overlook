@@ -30,7 +30,7 @@ using namespace Upp;
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
-#define	LOCALPROB_DEPTH			15
+#define	LOCALPROB_DEPTH			80
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6

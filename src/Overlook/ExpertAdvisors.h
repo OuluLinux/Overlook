@@ -151,7 +151,7 @@ class DqnAdvisor : public Core {
 	int							p				= 0;
 	int							rflist_iter		= 0;
 	int							dqn_round		= 0;
-	int							dqn_max_rounds	= 1000000;
+	int							dqn_max_rounds	= 5000000;
 	int							dqn_pt_cursor	= 0;
 	
 	

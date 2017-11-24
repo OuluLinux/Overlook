@@ -42,10 +42,14 @@ void WeekSlotAdvisor::Start() {
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
-		prev_counted--;
+		// TODO: find the cause of value drifting if you use this: if (prev_counted) prev_counted--;
 		if (prev_counted < bars) {
+			LOG("WeekSlotAdvisor::Start Refresh");
 			RefreshMain();
 			prev_counted = bars;
+		}
+		else {
+			// TODO: dynamic sl/tp stuff
 		}
 	}
 }

@@ -177,10 +177,7 @@ void DqnAdvisor::Init() {
 void DqnAdvisor::Start() {
 	
 	if (once) {
-		//prev_counted = 0;
-		/*Job& job = GetJob(2);
-		job.actual = 0;
-		job.state = 0;*/
+		if (prev_counted) prev_counted--;
 		once = false;
 	}
 	
@@ -192,7 +189,6 @@ void DqnAdvisor::Start() {
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
-		// TODO: find the cause of value drifting if you use this: if (prev_counted) prev_counted--;
 		if (prev_counted < bars) {
 			LOG("DqnAdvisor::Start Refresh");
 			RefreshAll();

@@ -1783,33 +1783,33 @@ void StochasticOscillator::Start() {
 	//bars--;
 	double sumlow = 0.0;
 	double sumhigh = 0.0;
-	for(int i = start - slowing; i < start; i++) {
+	for(int i = Upp::max(1, start - slowing); i < start; i++) {
 		if (i <= 0) continue;
 			SetSafetyLimit(i);
 		double close = Open(i);
-		double low = Upp::min(close, low_buffer.Get(i));
-		double high = Upp::max(close, high_buffer.Get(i));
+		double low = Upp::min(close, low_buffer.Get(i-1));
+		double high = Upp::max(close, high_buffer.Get(i-1));
 		sumlow  += close - low;
 		sumhigh += high - low;
 	}
 	
-	for (int i = start; i < bars; i++) {
+	for (int i = Upp::max(1, start); i < bars; i++) {
 		SetSafetyLimit(i);
 		
 		
 		int j = i - slowing;
 		if (j > 0) {
 			double close = Open(j);
-			double low = Upp::min(close, low_buffer.Get(j));
-			double high = Upp::max(close, high_buffer.Get(j));
+			double low = Upp::min(close, low_buffer.Get(j-1));
+			double high = Upp::max(close, high_buffer.Get(j-1));
 			sumlow  -= close - low;
 			sumhigh -= high - low;
 		}
 		
 		
 		double close = Open(i);
-		double low = Upp::min(close, low_buffer.Get(i));
-		double high = Upp::max(close, high_buffer.Get(i));
+		double low = Upp::min(close, low_buffer.Get(i-1));
+		double high = Upp::max(close, high_buffer.Get(i-1));
 		sumlow  += close - low;
 		sumhigh += high - low;
 		

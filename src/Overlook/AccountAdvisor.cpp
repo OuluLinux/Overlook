@@ -37,12 +37,12 @@ void WeekSlotAdvisor::Init() {
 void WeekSlotAdvisor::Start() {
 	if (once) {
 		once = false;
+		if (prev_counted) prev_counted--;
 		//Reset(); // For developing
 	}
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
-		// TODO: find the cause of value drifting if you use this: if (prev_counted) prev_counted--;
 		if (prev_counted < bars) {
 			LOG("WeekSlotAdvisor::Start Refresh");
 			RefreshMain();

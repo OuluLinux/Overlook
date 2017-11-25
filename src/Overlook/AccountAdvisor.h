@@ -22,8 +22,8 @@ class WeekSlotAdvisor : public Core {
 	
 	// Temp
 	Vector<ConstBuffer*> inputs, weights;
-	Vector<ConstVectorBool*> signals;
-	Vector<double> trial;
+	Vector<ConstVectorBool*> signals, enabled;
+	Vector<double> trial, spread_point;
 	ForestArea area;
 	int realtime_count = 0;
 	int tfmins = 0, slotmins = 0;

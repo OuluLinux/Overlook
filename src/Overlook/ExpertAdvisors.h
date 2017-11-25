@@ -133,7 +133,7 @@ class DqnAdvisor : public Core {
 	typedef Tuple<AccuracyConf, RandomForestMemory, VectorBool> RF;
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {if (a.c.GetCount() == 0) return false; else return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
-	enum {ACTION_LONG, ACTION_SHORT, ACTION_COUNT};
+	enum {ACTION_LONG, ACTION_SHORT, ACTION_IDLE, ACTION_COUNT};
 	typedef DQNTrainer<ACTION_COUNT, LOCALPROB_DEPTH * 2*2 + FEEDBACK_PERIOD*3, 100> DQN;
 	
 	
@@ -204,6 +204,8 @@ public:
 	const int buffer_count = main_graphs;
 	#endif
 	
+	double GetSpreadPoint() const {return spread_point;}
+	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>();
 		
@@ -220,6 +222,7 @@ public:
 		reg % In<LinearWeekTime>()
 			% In<MinimalLabel>()
 			% Out(buffer_count, buffer_count)
+			% Out(0, 0)
 			% Mem(rflist_pos)
 			% Mem(rflist_neg)
 			% Mem(data)

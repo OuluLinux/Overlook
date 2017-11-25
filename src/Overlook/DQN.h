@@ -395,12 +395,14 @@ protected:
 	Vector<DQItem>* exp = NULL;
 	double epsilon, alpha, tderror_clamp;
 	double tderror;
+	double gamma;
 	
 	
 	
 public:
 
 	DQNTrainer(Vector<DQItem>* exp) : exp(exp) {
+		gamma = 0.9;	// future reward discount factor
 		epsilon = 0.02;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
 		tderror_clamp = 1.0;
@@ -471,7 +473,7 @@ public:
 		
 		// compute the target Q value
 		FwdOut& tmat = Forward(s1);
-		double qmax = reward0;
+		double qmax = reward0 + gamma * tmat.Get(tmat.GetMaxColumn());
 		
 		// now predict
 		FwdOut& pred = Forward(s0);
@@ -506,7 +508,7 @@ public:
 	
 	void Serialize(Stream& s) {
 		s % data.W1 % data.b1 % data.W2 % data.b2 % data.mul1 % data.add1 % data.tanh % data.mul2 % data.add2
-		  % epsilon % alpha % tderror_clamp % tderror;
+		  % epsilon % alpha % tderror_clamp % gamma % tderror;
 	}
 };
 

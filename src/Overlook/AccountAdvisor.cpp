@@ -163,6 +163,9 @@ bool WeekSlotAdvisor::MainOptimizationEnd() {
 	ForceSetCounted(0);
 	RefreshMainBuffer(false);
 	RunMain();
+	#ifdef ACCURACY
+	RunSimBroker();
+	#endif
 	
 	return true;
 }
@@ -230,15 +233,21 @@ void WeekSlotAdvisor::RefreshInputs() {
 		int tf			= GetTf();
 		inputs			.SetCount(SYM_COUNT, NULL);
 		signals			.SetCount(SYM_COUNT, NULL);
+		enabled			.SetCount(SYM_COUNT, NULL);
 		weights			.SetCount(SYM_COUNT, NULL);
+		spread_point	.SetCount(SYM_COUNT, 0);
 		for(int i = 0; i < SYM_COUNT; i++) {
 			int symbol					= sys.GetPrioritySymbol(i);
 			ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
 			ConstBuffer& weight_buf		= GetBuffer(i);
-			ConstVectorBool& sig_buf	= CoreIO::GetInputLabel(1, symbol, tf);
+			CoreIO* core				= CoreIO::GetInputCore(1, symbol, tf);
+			ConstVectorBool& sig_buf	= core->GetOutput(0).label;
+			ConstVectorBool& ena_buf	= core->GetOutput(1).label;
 			inputs[i]					= &open_buf;
 			signals[i]					= &sig_buf;
+			enabled[i]					= &ena_buf;
 			weights[i]					= &weight_buf;
+			spread_point[i]				= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
 		}
 	}
 }
@@ -266,30 +275,51 @@ void WeekSlotAdvisor::RunMain() {
 		
 		#ifdef ACCURACY
 		end--;
-		double change_total	= 0.0;
+		double change_total	= 1.0;
 		#else
 		sb.Reset();
 		#endif
 		
+		if (!begin) begin++;
 		
 		for(int i = begin; i < end; i++) {
 			
 			#ifdef ACCURACY
+			double sym_change = 0;
 			for(int j = 0; j < SYM_COUNT; j++) {
-				ConstBuffer& open_buf = *inputs[j];
-				bool signal		= signals[j]->Get(i);
-				double curr		= open_buf.GetUnsafe(i);
-				double next		= open_buf.GetUnsafe(i + 1);
-				double change	= next / curr - 1.0;
-				double weight	= weights[j]->Get(i);
+				ConstBuffer& open_buf	= *inputs[j];
+				bool signal				= signals[j]->Get(i);
+				bool is_enabled			= enabled[j]->Get(i);
+				bool prev_signal		= signals[j]->Get(i - 1);
+				bool prev_is_enabled	= enabled[j]->Get(i - 1);
 				
-				if (signal) change *= -1.0;
-				
-				change			*= weight;
-				
-				ASSERT(IsFin(change));
-				change_total	+= change;
+				if (is_enabled) {
+					double curr		= open_buf.GetUnsafe(i);
+					double next		= open_buf.GetUnsafe(i + 1);
+					double spread_point = this->spread_point[j];
+					ASSERT(curr > 0.0);
+					double change;
+					
+					if (!prev_is_enabled || prev_signal != signal) {
+						if (!signal)	change = next / (curr + spread_point) - 1.0;
+						else			change = 1.0 - next / (curr - spread_point);
+					} else {
+						if (!signal)	change = next / curr - 1.0;
+						else			change = 1.0 - next / curr;
+					}
+					
+					double weight	= weights[j]->Get(i);
+					
+					if (signal) change *= -1.0;
+					
+					change			*= weight;
+					
+					ASSERT(IsFin(change));
+					sym_change		+= change;
+				}
 			}
+			change_total		*= 1.0 + sym_change;
+			if (change_total < 0.0) change_total = 0.0;
 			
 			open_buf.Set(i, change_total);
 			low_buf.Set(i, change_total);
@@ -306,10 +336,13 @@ void WeekSlotAdvisor::RunMain() {
 			
 			
 			for(int j = 0; j < SYM_COUNT; j++) {
-				int dir		= signals[j]->Get(i) ? -1 : +1;
-				int mult	= weights[j]->Get(i) * MULT_MAX;
-				int sig		= dir * mult;
-				ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
+				int sig = 0;
+				if (enabled[j]->Get(i)) {
+					int dir		= signals[j]->Get(i) ? -1 : +1;
+					int mult	= weights[j]->Get(i) * MULT_MAX;
+					sig			= dir * mult;
+					ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
+				}
 				
 				if (sig == sb.GetSignal(j) && sig != 0)
 					sb.SetSignalFreeze(j, true);
@@ -501,9 +534,12 @@ void WeekSlotAdvisor::RunSimBroker() {
 		
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
-			int dir		= signals[j]->Get(i) ? -1 : +1;
-			int mult	= weights[j]->Get(i) * MULT_MAX;
-			int sig		= dir * mult;
+			int sig = 0;
+			if (enabled[j]->Get(i)) {
+				int dir		= signals[j]->Get(i) ? -1 : +1;
+				int mult	= weights[j]->Get(i) * MULT_MAX;
+				sig			= dir * mult;
+			}
 			int sym		= sys.GetPrioritySymbol(j);
 			ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
 			
@@ -512,10 +548,6 @@ void WeekSlotAdvisor::RunSimBroker() {
 			else {
 				sb.SetSignal(sym, sig);
 				sb.SetSignalFreeze(sym, false);
-			}
-			
-			if (i > bars-10) {
-				LOG("SB " << i << " symbol " << sym << " signal " << sig << " dir " << dir << " mult " << mult);
 			}
 		}
 		

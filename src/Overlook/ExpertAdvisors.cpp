@@ -217,6 +217,7 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 		int pos = data_pos - 1 - j;
 		double sig0_sensor = 1.0;
 		double sig1_sensor = 1.0;
+		double succ_sensor = 0.5;
 		if (pos >= 0) {
 			double sig0 = sig0_dqnprob.Get(pos);
 			double sig1 = sig1_dqnprob.Get(pos);
@@ -226,10 +227,15 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 			} else {
 				sig1_sensor = Upp::min(1.0, Upp::max(0.0, 1.0 + sig_diff));
 			}
+			
+			DQN::DQItem& reward_in = data[data_pos];
+			if (reward_in.reward > 0.0)		succ_sensor = 0.0;
+			else							succ_sensor = 1.0;
 		}
-		int state_pos = state_begin + j * 2;
+		int state_pos = state_begin + j * 3;
 		current.state.Set(state_pos + 0, sig0_sensor);
 		current.state.Set(state_pos + 1, sig1_sensor);
+		current.state.Set(state_pos + 2, succ_sensor);
 	}
 }
 

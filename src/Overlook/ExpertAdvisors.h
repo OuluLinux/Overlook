@@ -134,7 +134,7 @@ class DqnAdvisor : public Core {
 	struct RFSorter {bool operator()(const RF& a, const RF& b) const {if (a.c.GetCount() == 0) return false; else return a.a.test_valuehourfactor > b.a.test_valuehourfactor;}};
 	
 	enum {ACTION_LONG, ACTION_SHORT, ACTION_COUNT};
-	typedef DQNTrainer<ACTION_COUNT, LOCALPROB_DEPTH * 2*2 + FEEDBACK_PERIOD*2, 100> DQN;
+	typedef DQNTrainer<ACTION_COUNT, LOCALPROB_DEPTH * 2*2 + FEEDBACK_PERIOD*3, 100> DQN;
 	
 	
 	// Persistent

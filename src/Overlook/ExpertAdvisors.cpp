@@ -228,7 +228,7 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 				sig1_sensor = Upp::min(1.0, Upp::max(0.0, 1.0 + sig_diff));
 			}
 			
-			DQN::DQItem& reward_in = data[data_pos];
+			DQN::DQItem& reward_in = data[pos];
 			if (reward_in.reward > 0.0)		succ_sensor = 0.0;
 			else							succ_sensor = 1.0;
 		}

@@ -5,7 +5,6 @@ namespace Overlook {
 using namespace Upp;
 
 
-inline double Limit1(double d) {if (d < -1.0) return -1.0; if (d > +1.0) return +1.0; return d;}
 
 
 
@@ -207,6 +206,31 @@ void DqnAdvisor::RefreshAll() {
 	LOG("DqnAdvisor::Start ... RefreshMain " << ts.ToString());
 	
 	prev_counted = GetBars();
+}
+
+void DqnAdvisor::RefreshFeedback(int data_pos) {
+	DQN::DQItem& current	= data[data_pos];
+	Buffer& sig0_dqnprob	= GetBuffer(0);
+	Buffer& sig1_dqnprob	= GetBuffer(1);
+	const int state_begin = LOCALPROB_DEPTH * 2*2;
+	for(int j = 0; j < FEEDBACK_PERIOD; j++) {
+		int pos = data_pos - 1 - j;
+		double sig0_sensor = 1.0;
+		double sig1_sensor = 1.0;
+		if (pos >= 0) {
+			double sig0 = sig0_dqnprob.Get(pos);
+			double sig1 = sig1_dqnprob.Get(pos);
+			double sig_diff = sig0 - sig1;
+			if (sig_diff >= 0.0) {
+				sig0_sensor = Upp::min(1.0, Upp::max(0.0, 1.0 - sig_diff));
+			} else {
+				sig1_sensor = Upp::min(1.0, Upp::max(0.0, 1.0 + sig_diff));
+			}
+		}
+		int state_pos = state_begin + j * 2;
+		current.state.Set(state_pos + 0, sig0_sensor);
+		current.state.Set(state_pos + 1, sig1_sensor);
+	}
 }
 
 bool DqnAdvisor::SourceSearchBegin() {
@@ -494,27 +518,30 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	dqn_trainer.SetEpsilon(epsilon);
 	
 	for(int i = 0; i < 10; i++) {
-		int pos = dqn_round % (data.GetCount() - 1);
+		int cursor = dqn_round % (data.GetCount() - 1);
 		
 		
-		double curr		= open_buf->GetUnsafe(pos);
-		double next		= open_buf->GetUnsafe(pos + 1);
+		double curr		= open_buf->GetUnsafe(cursor);
+		double next		= open_buf->GetUnsafe(cursor + 1);
 		
 		
-		DQN::DQItem& before = data[pos];
+		DQN::DQItem& before = data[cursor];
+		
+		RefreshFeedback(cursor);
 		before.action = dqn_trainer.Act(before);
+		
 		if (!before.action)		before.reward = next / curr - 1.0;
 		else					before.reward = 1.0 - next / curr;
 		before.reward *= 10000;
 		
-		double p0 = Limit1(dqn_trainer.data.add2.output.Get(0) * 0.2);
-		double p1 = Limit1(dqn_trainer.data.add2.output.Get(1) * 0.2);
-		sig0_dqnprob.Set(pos, p0);
-		sig1_dqnprob.Set(pos, p1);
+		double p0 = dqn_trainer.data.add2.output.Get(0);
+		double p1 = dqn_trainer.data.add2.output.Get(1);
+		sig0_dqnprob.Set(cursor, p0);
+		sig1_dqnprob.Set(cursor, p1);
 		
-		label.Set(pos, before.action);
+		label.Set(cursor, before.action);
 		
-		LOG(GetSymbol() << ": Act " << dqn_round << " (" << pos << "): p0=" << p0 << " p1=" << p1 << ": " << next << " / " << curr << "   " << before.reward);
+		LOG(GetSymbol() << ": Act " << dqn_round << " (" << cursor << "): p0=" << p0 << " p1=" << p1 << ": " << next << " / " << curr << "   " << before.reward);
 		
 		if (dqn_round > 100) {
 			for(int j = 0; j < 5; j++)
@@ -670,15 +697,16 @@ void DqnAdvisor::RefreshOutputBuffers() {
 				if (d > +1.0) d = +1.0;
 				if (d < -1.0) d = -1.0;
 				
-				DQN::DQItem& before = data[cursor];
+				DQN::DQItem& current = data[cursor];
 				int pos = p + i * 4;
-				before.state.Set(pos, prob);
+				current.state.Set(pos, prob);
 				if (cursor > 0) {
-					DQN::DQItem& before2 = data[cursor - 1];
-					double prev_prob = before2.state.Get(pos);
+					DQN::DQItem& before = data[cursor - 1];
+					double prev_prob = before.state.Get(pos);
 					double prob_change = (prob - prev_prob) * 5.0;
-					before.state.Set(2 + p + i * 4, prob_change);
+					current.state.Set(2 + p + i * 4, prob_change);
 				}
+				
 				
 				#if DEBUG_BUFFERS
 				buf.Set(cursor, d);
@@ -703,10 +731,13 @@ void DqnAdvisor::RefreshMain() {
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);
 		DQN::DQItem& before = data[cursor];
+		
+		RefreshFeedback(cursor);
 		before.action = dqn_trainer.Act(before);
+		
 		label.Set(cursor, before.action);
-		sig0_dqnprob.Set(cursor, Limit1(dqn_trainer.data.add2.output.Get(0) * 0.2));
-		sig1_dqnprob.Set(cursor, Limit1(dqn_trainer.data.add2.output.Get(1) * 0.2));
+		sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
+		sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
 	}
 }
 

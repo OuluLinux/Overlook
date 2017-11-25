@@ -433,6 +433,9 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 				continue;
 	        
 	        double value = cont.GetBufferValue(buffer, pos);
+	        if (value < lo) value = lo;
+	        if (value > hi) value = hi;
+	        
 			int xi = (x+(i+0.5)*div);
 			
 	        if (skip_zero && value == 0) continue;

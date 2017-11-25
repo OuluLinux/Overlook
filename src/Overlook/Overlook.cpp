@@ -884,7 +884,7 @@ void Overlook::LoadDefaultEAs() {
 	System& sys = GetSystem();
 	Profile profile;
 	
-	int tf = sys.FindPeriod(240);
+	int tf = sys.FindPeriod(15);
 	int rfa = System::Find<DqnAdvisor>();
 	int wsa = System::Find<WeekSlotAdvisor>();
 	

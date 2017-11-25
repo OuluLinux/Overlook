@@ -31,6 +31,7 @@ using namespace Upp;
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
 #define	LOCALPROB_DEPTH			80
+#define FEEDBACK_PERIOD			10
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6

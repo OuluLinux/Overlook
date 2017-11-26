@@ -141,6 +141,20 @@ void DqnAdvisor::Init() {
 	}
 	#endif
 	
+	int tf_mins = GetMinutePeriod();
+	if (tf_mins < 240) {
+		accum_signal = true;
+		
+		// Processing short periods is extremely demanding and difficult to configure
+		//  - it takes much more processing power and memory for the same time-range
+		//  - decreasing max_accum_signal improves result much takes more processing
+		//  - giving more zero signal wiggle room (zero_accum_signal) improves results, but
+		//    makes the changing of direction (+ / -) slower.
+		// Staying with M15 or slower is recommended.
+		max_accum_signal	= Upp::max(3, 240 / tf_mins);
+		zero_accum_signal	= max_accum_signal / 3;
+	}
+	
 	conf_count = GetConfCount();
 	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
 	open_buf = &GetInputBuffer(0, 0);
@@ -217,7 +231,7 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 		int pos = data_pos - 1 - j;
 		double sig0_sensor = 1.0;
 		double sig1_sensor = 1.0;
-		double succ_sensor = 0.5;
+		double xtra_sensor = 0.5;
 		if (pos >= 0) {
 			double sig0 = sig0_dqnprob.Get(pos);
 			double sig1 = sig1_dqnprob.Get(pos);
@@ -228,17 +242,106 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 				sig1_sensor = Upp::min(1.0, Upp::max(0.0, 1.0 + sig_diff));
 			}
 			
-			DQN::DQItem& reward_in = data[pos];
-			if (reward_in.action != ACTION_IDLE) {
-				if (reward_in.reward > 0.0)		succ_sensor = 0.0;
-				else							succ_sensor = 1.0;
+			DQN::DQItem& xtra_in = data[pos];
+			
+			if (!accum_signal) {
+				if (xtra_in.action != ACTION_IDLE) {
+					if (xtra_in.reward > 0.0)		xtra_sensor = 0.0;
+					else							xtra_sensor = 1.0;
+				}
+			} else {
+				xtra_sensor = (double)xtra_in.action_accum / (double)max_accum_signal;
 			}
 		}
 		int state_pos = state_begin + j * 3;
 		current.state.Set(state_pos + 0, sig0_sensor);
 		current.state.Set(state_pos + 1, sig1_sensor);
-		current.state.Set(state_pos + 2, succ_sensor);
+		current.state.Set(state_pos + 2, xtra_sensor);
 	}
+}
+
+void DqnAdvisor::RefreshAction(int cursor) {
+	DQN::DQItem& before		= data[cursor];
+	Buffer& sig0_dqnprob	= GetBuffer(0);
+	Buffer& sig1_dqnprob	= GetBuffer(1);
+	
+	before.action = dqn_trainer.Act(before);
+	sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
+	sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
+	
+	if (accum_signal) {
+		ASSERT(max_accum_signal > 0);
+		int prev_accum = cursor > 0 ? data[cursor-1].action_accum : 0;
+		int a = prev_accum;
+		if      (before.action == ACTION_LONG)	a = Upp::min(a + 1, +max_accum_signal);
+		else if (before.action == ACTION_SHORT)	a = Upp::max(a - 1, -max_accum_signal);
+		before.action_accum = a;
+	}
+}
+
+int DqnAdvisor::GetAction(DQN::DQItem& before) {
+	if (!accum_signal) {
+		return before.action;
+	} else {
+		int a = before.action_accum;
+		if      (a > +zero_accum_signal)	return ACTION_LONG;
+		else if (a < -zero_accum_signal)	return ACTION_SHORT;
+		else								return ACTION_IDLE;
+	}
+}
+
+void DqnAdvisor::RefreshReward(int cursor) {
+	DQN::DQItem& current	= data[cursor];
+	VectorBool& label		= GetOutput(0).label;
+	VectorBool& enabled		= GetOutput(1).label;
+	double curr				= open_buf->GetUnsafe(cursor);
+	double next				= open_buf->GetUnsafe(cursor + 1);
+	int action				= GetAction(current);
+	int prev_action			= cursor > 0 ? GetAction(data[cursor-1]) : ACTION_IDLE;
+	
+	
+	double change;
+	if (action != ACTION_IDLE) {
+		if (prev_action != action) {
+			if (!action)		change = next / (curr + spread_point) - 1.0;
+			else				change = 1.0 - next / (curr - spread_point);
+		} else {
+			if (!action)		change = next / curr - 1.0;
+			else				change = 1.0 - next / curr;
+		}
+	} else {
+		change = 0;
+	}
+	
+	
+	if (!accum_signal) {
+		current.reward = change;
+	} else {
+		current.reward_accum = change;
+		
+		if (prev_action != ACTION_IDLE && prev_action != action) {
+			int action_begin = cursor - 1;
+			for (; action_begin > 1; action_begin--) {
+				int rev_action = GetAction(data[action_begin]);
+				if (rev_action != prev_action) {action_begin++; break;}
+			}
+			double reward = 1.0;
+			for(int i = action_begin; i < cursor; i++) {
+				reward *= 1.0 + data[i].reward_accum;
+			}
+			// Can't add to current, because it would accumulate it again to next reward.
+			current.reward = reward - 1.0;
+		} else {
+			current.reward = 0;
+		}
+	}
+	
+	
+	current.reward *= 10000;
+	
+	
+	label.Set(cursor, action);
+	enabled.Set(cursor, action != ACTION_IDLE);
 }
 
 bool DqnAdvisor::SourceSearchBegin() {
@@ -509,6 +612,10 @@ bool DqnAdvisor::TrainingDQNBegin() {
 	
 	dqntraining_pts.SetCount(bars, 0);
 	
+	if (dqn_round < 0) {
+		dqn_round = 0;
+	}
+	
 	return true;
 }
 
@@ -517,51 +624,20 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	
 	ASSERT(!data.IsEmpty());
 	
-	Buffer& sig0_dqnprob	= GetBuffer(0);
-	Buffer& sig1_dqnprob	= GetBuffer(1);
-	VectorBool& label		= GetOutput(0).label;
-	VectorBool& enabled		= GetOutput(1).label;
-	
 	double max_epsilon = 0.20;
 	double min_epsilon = 0.01;
 	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
 	dqn_trainer.SetEpsilon(epsilon);
+	dqn_trainer.SetGamma(accum_signal ? 0.9 : 0.1);
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);
 		
-		
-		double curr		= open_buf->GetUnsafe(cursor);
-		double next		= open_buf->GetUnsafe(cursor + 1);
-		
-		
 		DQN::DQItem& before = data[cursor];
 		
 		RefreshFeedback(cursor);
-		before.action = dqn_trainer.Act(before);
-		
-		if (before.action != ACTION_IDLE) {
-			if (cursor > 0 && data[cursor-1].action != before.action) {
-				if (!before.action)		before.reward = next / (curr + spread_point) - 1.0;
-				else					before.reward = 1.0 - next / (curr - spread_point);
-			} else {
-				if (!before.action)		before.reward = next / curr - 1.0;
-				else					before.reward = 1.0 - next / curr;
-			}
-			before.reward *= 10000;
-		} else {
-			before.reward = 0;
-		}
-		
-		double p0 = dqn_trainer.data.add2.output.Get(0);
-		double p1 = dqn_trainer.data.add2.output.Get(1);
-		sig0_dqnprob.Set(cursor, p0);
-		sig1_dqnprob.Set(cursor, p1);
-		
-		label	.Set(cursor, before.action);
-		enabled	.Set(cursor, before.action != ACTION_IDLE);
-		
-		LOG(GetSymbol() << ": Act " << dqn_round << " (" << cursor << "): p0=" << p0 << " p1=" << p1 << ": " << next << " / " << curr << "   " << before.reward);
+		RefreshAction(cursor);
+		RefreshReward(cursor);
 		
 		if (dqn_round > 100) {
 			for(int j = 0; j < 5; j++)
@@ -757,26 +833,18 @@ void DqnAdvisor::RefreshOutputBuffers() {
 void DqnAdvisor::RefreshMain() {
 	int bars					= GetBars();
 	int cursor					= prev_counted;
-	Buffer& sig0_dqnprob		= GetBuffer(0);
-	Buffer& sig1_dqnprob		= GetBuffer(1);
-	VectorBool& label			= GetOutput(0).label;
-	VectorBool& enabled			= GetOutput(1).label;
 	
 	data.SetCount(bars);
-	label.SetCount(bars);
-	enabled.SetCount(bars);
+	GetOutput(0).label.SetCount(bars);
+	GetOutput(1).label.SetCount(bars);
 	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);
 		DQN::DQItem& before = data[cursor];
 		
 		RefreshFeedback(cursor);
-		before.action = dqn_trainer.Act(before);
-		
-		label.Set(cursor, before.action);
-		enabled.Set(cursor, before.action != ACTION_IDLE);
-		sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
-		sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
+		RefreshAction(cursor);
+		RefreshReward(cursor);
 	}
 }
 

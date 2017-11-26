@@ -397,7 +397,11 @@ void WeekSlotAdvisor::RefreshMain() {
 	optimizer.GetLimitedBestSolution(trial);
 	NormalizeTrial();
 	RefreshMainBuffer(true);
+	#ifdef ACCURACY
+	RunSimBroker();
+	#else
 	RunMain();
+	#endif
 	MainReal();
 }
 
@@ -444,10 +448,6 @@ void WeekSlotAdvisor::MainReal() {
 	}
 	realtime_count++;
 	
-	
-	#ifdef ACCURACY
-	RunSimBroker();
-	#endif
 	
 	try {
 		mt.Data();

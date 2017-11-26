@@ -325,11 +325,12 @@ struct RecurrentAdd {
 template <int WIDTH, int HEIGHT>
 struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	typedef Mat<double, WIDTH, HEIGHT> MatType;
-	MatType state;
-	double reward = 0.0;
-	int action = 0;
 	
-	void Serialize(Stream& s) {s % state % reward % state;}
+	MatType state;
+	double reward = 0.0, reward_accum = 0.0;
+	int action = 0, action_accum = 0;
+	
+	void Serialize(Stream& s) {s % state % reward % reward_accum % action % action_accum;}
 };
 
 
@@ -402,7 +403,7 @@ protected:
 public:
 
 	DQNTrainer(Vector<DQItem>* exp) : exp(exp) {
-		gamma = 0.9;	// future reward discount factor
+		gamma = 0.1;	// future reward discount factor
 		epsilon = 0.02;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
 		tderror_clamp = 1.0;
@@ -411,8 +412,11 @@ public:
 		Reset();
 	}
 	
-	void SetLearningRate(double r) {alpha = r;}
-	int  GetLearningRate() const {return alpha;}
+	void   SetLearningRate(double r) {alpha = r;}
+	int    GetLearningRate() const {return alpha;}
+	
+	void   SetGamma(double d) {gamma = d;}
+	double GetGamma() const {return gamma;}
 	
 	void Reset() {
 		RandMat(0, 0.01, data.W1);

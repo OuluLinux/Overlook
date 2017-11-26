@@ -159,12 +159,14 @@ class DqnAdvisor : public Core {
 	VectorBool					full_mask;
 	One<RF>						training_rf;
 	ForestArea					area;
-	ConstBuffer*				open_buf		= NULL;
-	double						spread_point	= 0.0;
-	int							conf_count		= 0;
-	int							data_count		= 0;
-	bool						once			= true;
-	
+	ConstBuffer*				open_buf			= NULL;
+	double						spread_point		= 0.0;
+	int							conf_count			= 0;
+	int							data_count			= 0;
+	int							max_accum_signal	= 0;
+	int							zero_accum_signal	= 0;
+	bool						once				= true;
+	bool						accum_signal		= false;
 	
 protected:
 	virtual void Start();
@@ -188,6 +190,9 @@ protected:
 	void RefreshMain();
 	void RefreshAll();
 	void RefreshFeedback(int data_pos);
+	void RefreshAction(int data_pos);
+	void RefreshReward(int data_pos);
+	int  GetAction(DQN::DQItem& before);
 	
 public:
 	typedef DqnAdvisor CLASSNAME;

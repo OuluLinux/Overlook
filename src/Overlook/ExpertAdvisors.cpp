@@ -150,7 +150,7 @@ void DqnAdvisor::Init() {
 		//  - decreasing max_accum_signal improves result much takes more processing
 		//  - giving more zero signal wiggle room (zero_accum_signal) improves results, but
 		//    makes the changing of direction (+ / -) slower.
-		// Staying with M15 or slower is recommended.
+		// Staying with H4 or slower is recommended.
 		max_accum_signal	= Upp::max(3, 240 / tf_mins);
 		zero_accum_signal	= max_accum_signal / 3;
 	}

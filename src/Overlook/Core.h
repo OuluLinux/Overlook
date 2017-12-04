@@ -145,7 +145,8 @@ protected:
 	Array<Persistent> persistents;
 	System* base;
 	Job* current_job = NULL;
-	SpinLock serialization_lock;
+	JobThread* current_thrd = NULL;
+	SpinLock serialization_lock, refresh_lock;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
 	int db_src;
@@ -292,6 +293,7 @@ public:
 	virtual void IO(ValueRegister& reg) = 0;
 	
 	void InitAll();
+	void AllowJobs();
 	template <class T> Core& AddSubCore()  {
 		int i = System::Find<T>();
 		ASSERT_(i != -1, "This class is not registered to the factory");
@@ -331,6 +333,7 @@ public:
 	BarData* GetBarData();
 	bool IsJobsFinished() const;
 	Job& GetCurrentJob() {return *current_job;}
+	JobThread& GetCurrentThread() {return *current_thrd;}
 	
 	
 	// Set settings
@@ -357,11 +360,12 @@ public:
 	Job& GetJob(int i);
 	void SetJobFinished(bool b=true);
 	void SetJobCount(int i) {jobs.SetCount(i);}
-	void EnterJob(Job* job) {current_job = job;}
-	void LeaveJob() {current_job = NULL;}
+	void EnterJob(Job* job, JobThread* thrd) {current_job = job; current_thrd = thrd;}
+	void LeaveJob() {current_job = NULL; current_thrd = NULL;}
 	
 	// Visible main functions
 	void Refresh();
+	void RefreshSources();
 	void ClearContent();
 	void RefreshIO() {IO(*this);}
 	

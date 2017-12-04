@@ -70,6 +70,11 @@ void Core::ClearContent() {
 	}
 }
 
+void Core::AllowJobs() {
+	for(int i = 0; i < jobs.GetCount(); i++)
+		jobs[i].allow_processing = true;
+}
+
 void Core::InitAll() {
 	System& sys = GetSystem();
 	
@@ -151,7 +156,25 @@ void Core::InitAll() {
 	is_init = true;
 }
 
+void Core::RefreshSources() {
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core)
+					core->Refresh();
+			}
+		}
+	}
+	
+	Refresh();
+}
+
 void Core::Refresh() {
+	refresh_lock.Enter();
+	
 	for(int i = 0; i < subcores.GetCount(); i++)
 		subcores[i].Refresh();
 	
@@ -175,6 +198,9 @@ void Core::Refresh() {
 	Start();
 	
 	counted = next_count;
+	
+	refresh_lock.Leave();
+	
 }
 
 

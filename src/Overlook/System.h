@@ -122,6 +122,7 @@ struct Job {
 	Ptr<Core> core;
 	One<JobCtrl> ctrl;
 	TimeStop ts;
+	bool allow_processing = false;
 };
 
 struct JobThread : Moveable<JobThread> {
@@ -134,6 +135,8 @@ struct JobThread : Moveable<JobThread> {
 	int tf = -1;
 	bool is_fail = false;
 	
+public:
+	void SetIter(int i) {job_iter = i;}
 	bool ProcessJob();
 	
 	#ifndef flagGUITASK

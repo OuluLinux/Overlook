@@ -117,9 +117,6 @@ void ForestArea::FillArea(int data_count) {
 
 
 DqnAdvisor::DqnAdvisor() : dqn_trainer(&data) {
-	rf_trainer.options.tree_count		= 100;
-	rf_trainer.options.max_depth		= 4;
-	rf_trainer.options.tries_count		= 10;
 }
 
 void DqnAdvisor::Init() {
@@ -203,7 +200,7 @@ void DqnAdvisor::Init() {
 void DqnAdvisor::Start() {
 	
 	if (once) {
-		if (prev_counted) prev_counted--;
+		if (prev_counted > 0) prev_counted--;
 		once = false;
 	}
 	
@@ -307,7 +304,7 @@ int DqnAdvisor::GetAction(DQN::DQItem& before, int cursor) {
 	}
 	else {
 		int a = before.action_accum;
-		if (a <= 0) return ACTION_IDLE;
+		if (a < 0) return ACTION_IDLE;
 		
 		int slow_cursor = cursor / slow_div;
 		if (slow_cursor >= this->slow_active->GetCount())
@@ -402,6 +399,8 @@ bool DqnAdvisor::SourceSearchBegin() {
 	
 	if (use_slower && !slow->IsJobsFinished())
 		return false;
+	
+	opt_counter = Upp::max(0, opt_counter);
 	
 	return true;
 }
@@ -563,12 +562,19 @@ bool DqnAdvisor::TrainingRFBegin() {
 	System& sys = GetSystem();
 	
 	int tf = GetTf();
-	int data_count = sys.GetCountTf(tf);
+	data_count = sys.GetCountTf(tf);
 	
 	
 	full_mask.SetCount(data_count).One();
 	
 	training_pts.SetCount(2*LOCALPROB_DEPTH, 0.0);
+	
+	rflist_iter = Upp::max(0, rflist_iter);
+	p = Upp::max(0, p);
+	
+	rf_trainer.options.tree_count		= 100;
+	rf_trainer.options.max_depth		= 4;
+	rf_trainer.options.tries_count		= 10;
 	
 	return true;
 }
@@ -640,9 +646,30 @@ bool DqnAdvisor::TrainingRFInspect() {
 
 
 bool DqnAdvisor::TrainingDQNBegin() {
+	
+	// This fail happens sometimes when the program crashes during saving.
+	bool fail = false;
+	for(int i = 0; i < rflist_pos.GetCount(); i++)
+		if (rflist_pos[i].b.trees.GetCount() != rf_trainer.options.tree_count)
+			fail = true;
+	for(int i = 0; i < rflist_neg.GetCount(); i++)
+		if (rflist_neg[i].b.trees.GetCount() != rf_trainer.options.tree_count)
+			fail = true;
+	if (fail) {
+		for(int i = 0; i < 3; i++) {
+			Job& job = GetJob(i);
+			job.state = 0;
+			job.actual = 0;
+		}
+		GetCurrentThread().SetIter(0);
+		return false;
+	}
+	
+	
 	SetRealArea();
 	
 	int bars = GetBars();
+	ASSERT(bars > 0);
 	data.SetCount(bars);
 	GetOutput(0).label.SetCount(bars);
 	GetOutput(1).label.SetCount(bars);
@@ -806,6 +833,8 @@ void DqnAdvisor::FillBufferSource(const AccuracyConf& conf, ConstBufferSource& b
 
 void DqnAdvisor::RefreshOutputBuffers() {
 	int bars = GetBars();
+	
+	if (prev_counted < 0) prev_counted = 0; // hotfix. probably useless in future
 	
 	if (full_mask.GetCount() != bars)
 		full_mask.SetCount(bars).One();

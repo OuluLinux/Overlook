@@ -382,6 +382,7 @@ void System::CreateCore(CoreItem& ci) {
 	// Initialize
 	c.InitAll();
 	c.LoadCache();
+	c.AllowJobs();
 }
 
 Core* System::CreateSingle(int factory, int sym, int tf) {
@@ -508,7 +509,7 @@ bool JobThread::ProcessJob() {
 			}
 			else {
 				if (job.core->IsInitialized()) {
-					job.core->EnterJob(&job);
+					job.core->EnterJob(&job, this);
 					bool succ = job.Process();
 					job.core->LeaveJob();
 					// FIXME: postponing returns false also if (!succ) is_fail = true;
@@ -546,13 +547,17 @@ void System::StoreJobCores() {
 }
 
 bool Job::Process() {
+	if (!allow_processing)
+		return false;
+	
 	bool r = true;
 	
 	int begin_state = state;
 	
 	core->serialization_lock.Enter();
 	switch (state) {
-		case INIT:			if ((r=begin())						|| !begin)		state++; break;
+		case INIT:			core->RefreshSources();
+							if ((r=begin())						|| !begin)		state++; break;
 		case RUNNING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
 		case STOPPING:		if ((r=end())						|| !end)		state++; break;
 		case INSPECTING:	if ((r=inspect())					|| !inspect)	state++; break;

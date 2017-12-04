@@ -1055,6 +1055,7 @@ void DataBridge::RefreshFromFaster() {
 		
 		SetSafetyLimit(i);
 		
+		pos = Upp::min(pos, src_open.GetCount() - 1);
 		double open_value = src_open.Get(pos);
 		double low_value = src_low.Get(pos);
 		double high_value = src_high.Get(pos);

@@ -48,7 +48,9 @@ double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
 	// have each tree predict and average out all votes
 	double dec = 0;
 	
+	if (tree_count == -1 && memory->trees.GetCount()) tree_count = memory->trees.GetCount();
 	ASSERT(memory->trees.GetCount() == tree_count);
+	
 	trees.SetCount(tree_count);
 	for (int i = 0; i < tree_count; i++) {
 		DecisionTree& tree = trees[i];
@@ -343,12 +345,13 @@ bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const 
 
 // Misc utility functions
 double Entropy(const VectorBool& labels, const VectorBool& ix) {
-	ASSERT(ix.GetCount() <= labels.GetCount());
+	ASSERT(labels.GetCount() > 0);
+	ASSERT(ix.GetCount() > 0);
 	ConstU64 *it  = ix.Begin(), *end = ix.End();
 	ConstU64 *lit = labels.Begin(), *lend = labels.End();
 	int64 numones = 0;
 	int64 N = 0;
-	for (; it != end; it++, lit++) {
+	for (; it != end && lit != lend; it++, lit++) {
 		uint64 l = *it & *lit;
 		numones	+= PopCount64(l);
 		N		+= PopCount64(*it);

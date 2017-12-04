@@ -195,7 +195,7 @@ public:
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Vector<int>&				AccountAdvisorFactories() {static Vector<int> list; return list;}
-	
+	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
 	
 public:
 	

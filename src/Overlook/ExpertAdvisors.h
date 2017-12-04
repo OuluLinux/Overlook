@@ -111,7 +111,7 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 
 
 
-#define DEBUG_BUFFERS 1
+#define DEBUG_BUFFERS 0
 
 class DqnAdvisor : public Core {
 	
@@ -151,8 +151,13 @@ class DqnAdvisor : public Core {
 	int							p				= 0;
 	int							rflist_iter		= 0;
 	int							dqn_round		= 0;
-	int							dqn_max_rounds	= 5000000;
 	int							dqn_pt_cursor	= 0;
+	
+	#ifdef flagDEBUG
+	int							dqn_max_rounds	= 50000;
+	#else
+	int							dqn_max_rounds	= 5000000;
+	#endif
 	
 	
 	// Temp
@@ -160,13 +165,18 @@ class DqnAdvisor : public Core {
 	One<RF>						training_rf;
 	ForestArea					area;
 	ConstBuffer*				open_buf			= NULL;
+	ConstVectorBool*			slow_action			= NULL;
+	ConstVectorBool*			slow_active			= NULL;
+	DqnAdvisor*					slow				= NULL;
 	double						spread_point		= 0.0;
 	int							conf_count			= 0;
 	int							data_count			= 0;
 	int							max_accum_signal	= 0;
 	int							zero_accum_signal	= 0;
+	int							slow_div			= 0;
 	bool						once				= true;
 	bool						accum_signal		= false;
+	bool						use_slower			= false;
 	
 protected:
 	virtual void Start();
@@ -192,7 +202,7 @@ protected:
 	void RefreshFeedback(int data_pos);
 	void RefreshAction(int data_pos);
 	void RefreshReward(int data_pos);
-	int  GetAction(DQN::DQItem& before);
+	int  GetAction(DQN::DQItem& before, int cursor);
 	
 public:
 	typedef DqnAdvisor CLASSNAME;
@@ -200,8 +210,8 @@ public:
 	
 	virtual void Init();
 	
-	const int main_graphs = 2;
-	const int indi_count = 3, label_count = 3;
+	static const int main_graphs = 2;
+	static const int indi_count = 3, label_count = 3;
 	
 	#if DEBUG_BUFFERS
 	const int buffer_count = main_graphs + LOCALPROB_DEPTH*2;
@@ -226,6 +236,7 @@ public:
 		
 		reg % In<LinearWeekTime>()
 			% In<MinimalLabel>()
+			% In<DqnAdvisor>(&FilterFunction)
 			% Out(buffer_count, buffer_count)
 			% Out(0, 0)
 			% Mem(rflist_pos)
@@ -246,8 +257,8 @@ public:
 	}
 	
 	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
-		int pshift = (input - 1) / TF_COUNT;
-		int type   = (input - 1) % TF_COUNT;
+		int pshift = (input - 1) / (indi_count + label_count);
+		int type   = (input - 1) % (indi_count + label_count);
 		int period = (1 << (1 + pshift));
 		
 		// Inspect IO: VolatilityAverage etc...
@@ -277,6 +288,24 @@ public:
 		}
 	}
 	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1) {
+			static int limit_tf;
+			if (limit_tf == 0) limit_tf = ::Overlook::GetSystem().FindPeriod(FASTAGENT_PERIODLIMIT);
+			
+			// No inputs with slow instance
+			if (in_tf >= limit_tf)
+				return false;
+			
+			// Otherwise accept the H1 source.
+			else if (out_tf == limit_tf)
+				return true;
+			
+			return false;
+		}
+		
+		return in_sym == out_sym;
+	}
 	
 };
 

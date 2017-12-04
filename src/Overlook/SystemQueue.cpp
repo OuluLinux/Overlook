@@ -147,8 +147,8 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 	
 	// Connect input sources
 	// Loop all inputs of the custom core-class
-	Index<int> sub_sym_ids, sub_tf_ids;
 	for (int l = 0; l < reg.in.GetCount(); l++) {
+		Index<int> sub_sym_ids, sub_tf_ids;
 		const RegisterInput& input = reg.in[l];
 		ASSERT(input.factory >= 0);
 		FilterFunction fn = (FilterFunction)input.data;
@@ -205,7 +205,12 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 			
 			ci.sym			= sym;
 			ci.tf			= tf;
-			ci.priority		= (factory * tf_count + tf) * sym_count + sym;
+			
+			if (System::PrioritySlowTf().Find(factory) == -1)
+				ci.priority		= (factory * tf_count + tf) * sym_count + sym;
+			else
+				ci.priority		= (factory * tf_count + (tf_count - 1 - tf)) * sym_count + sym;
+			
 			ci.factory		= factory;
 			ci.hash			= hash;
 			ci.input_hashes	<<= input_hashes;

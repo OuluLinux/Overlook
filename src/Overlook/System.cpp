@@ -103,35 +103,36 @@ void System::Init() {
 	proxy_base_mul.SetCount(priosym_count, 0);
 
 	int prio = 0;
-	int spread_point = 0;
 	sym_priority.SetCount(priosym_count, 100000);
 	for(int i = 0; i < priosym_count; i++) {
 		String symstr;
+		double spread_point = 0;
 		switch (i) {
-			case 0: symstr = "EURUSD";	spread_point = 3;  break;
-			case 1: symstr = "GBPUSD";	spread_point = 3;  break;
-			case 2: symstr = "USDJPY";	spread_point = 3;  break;
-			case 3: symstr = "USDCAD";	spread_point = 3;  break;
-			case 4: symstr = "EURJPY";	spread_point = 3;  break;
-			case 5: symstr = "EURCHF";	spread_point = 3;  break;
-			case 6: symstr = "USDCHF";	spread_point = 3;  break;
-			case 7: symstr = "AUDUSD";	spread_point = 3;  break;
-			case 8: symstr = "NZDUSD";	spread_point = 3;  break;
-			case 9: symstr = "EURGBP";	spread_point = 3;  break;
-			case 10: symstr = "AUDCAD";	spread_point = 10; break;
-			case 11: symstr = "AUDJPY";	spread_point = 10; break;
-			case 12: symstr = "CADJPY";	spread_point = 10; break;
-			case 13: symstr = "CHFJPY";	spread_point = 10; break;
-			case 14: symstr = "EURAUD";	spread_point = 7;  break;
-			case 15: symstr = "GBPCHF";	spread_point = 7;  break;
-			case 16: symstr = "GBPJPY";	spread_point = 7;  break;
-			case 17: symstr = "AUDNZD";	spread_point = 12; break;
-			case 18: symstr = "EURCAD";	spread_point = 12; break;
+			case 0: symstr = "EURUSD";	spread_point = 0.0003; break;
+			case 1: symstr = "GBPUSD";	spread_point = 0.0003; break;
+			case 2: symstr = "USDJPY";	spread_point = 0.03;   break;
+			case 3: symstr = "USDCAD";	spread_point = 0.0003; break;
+			case 4: symstr = "EURJPY";	spread_point = 0.03;   break;
+			case 5: symstr = "EURCHF";	spread_point = 0.0003; break;
+			case 6: symstr = "USDCHF";	spread_point = 0.0003; break;
+			case 7: symstr = "AUDUSD";	spread_point = 0.0003; break;
+			case 8: symstr = "NZDUSD";	spread_point = 0.0003; break;
+			case 9: symstr = "EURGBP";	spread_point = 0.0003; break;
+			case 10: symstr = "AUDCAD";	spread_point = 0.0010; break;
+			case 11: symstr = "AUDJPY";	spread_point = 0.10;   break;
+			case 12: symstr = "CADJPY";	spread_point = 0.10;   break;
+			case 13: symstr = "CHFJPY";	spread_point = 0.10;   break;
+			case 14: symstr = "EURAUD";	spread_point = 0.0007; break;
+			case 15: symstr = "GBPCHF";	spread_point = 0.0007; break;
+			case 16: symstr = "GBPJPY";	spread_point = 0.07;   break;
+			case 17: symstr = "AUDNZD";	spread_point = 0.0012; break;
+			case 18: symstr = "EURCAD";	spread_point = 0.0012; break;
 			default: Panic("Broken");
 		};
 		
 		int sym = this->symbols.Find(symstr);
 		sym_priority[prio] = sym;
+		spread_points[prio] = spread_point;
 		priority[sym] = prio++;
 	}
 	
@@ -148,7 +149,7 @@ void System::Init() {
 			proxy_base_mul[i] = 0;
 		}
 		
-		spread_points[i] = spread_point * symbol.point;
+		
 	}
 	
 	
@@ -179,7 +180,7 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	// TODO: some algorithm to calculate begins and ends, and persistently using it again
 	#if ONLY_M1_SOURCE
-	Time begin(2016,1,4);
+	Time begin(2016,6,1);
 	#else
 	Time begin(2017,1,1);
 	if (period == 1)			begin = Time(2016,9,5);
@@ -195,6 +196,8 @@ void System::AddPeriod(String nice_str, int period) {
 	else if (period == 43200)	begin = Time(1995,1,2);
 	else Panic("Invalid period: " + IntStr(period));
 	#endif
+	
+	while (DayOfWeek(begin) != 1) begin -= 24*60*60;
 	
 	this->begin.Add(begin);
 	this->begin_ts.Add((int)(begin.Get() - Time(1970,1,1).Get()));

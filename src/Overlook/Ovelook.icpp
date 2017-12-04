@@ -66,6 +66,9 @@ INITBLOCK {
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	
+	
+	System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
+	
 }
 
 END_UPP_NAMESPACE

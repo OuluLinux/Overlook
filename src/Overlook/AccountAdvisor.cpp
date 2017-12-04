@@ -308,11 +308,10 @@ void WeekSlotAdvisor::RunMain() {
 						else			change = 1.0 - next / curr;
 					}
 					
-					double weight	= weights[j]->Get(i);
-					
 					if (signal) change *= -1.0;
 					
-					change			*= weight;
+					int mult		= weights[j]->Get(i) * MULT_MAX;
+					change			*= mult;
 					
 					ASSERT(IsFin(change));
 					sym_change		+= change;

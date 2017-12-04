@@ -843,6 +843,8 @@ public:
 		if (sym_ids.Find(out_sym) != -1 || out_sym == in_sym)
 			return true;
 		return false;*/
+		if (in_sym == -1)
+			return in_tf == out_tf;
 		return out_sym >= 0 && out_sym < SYM_COUNT;
 	}
 };

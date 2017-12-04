@@ -142,17 +142,17 @@ void DqnAdvisor::Init() {
 	#endif
 	
 	int tf_mins = GetMinutePeriod();
-	if (tf_mins < 240) {
+	if (tf_mins < FASTAGENT_PERIODLIMIT) {
 		accum_signal = true;
-		
-		// Processing short periods is extremely demanding and difficult to configure
-		//  - it takes much more processing power and memory for the same time-range
-		//  - decreasing max_accum_signal improves result much takes more processing
-		//  - giving more zero signal wiggle room (zero_accum_signal) improves results, but
-		//    makes the changing of direction (+ / -) slower.
-		// Staying with H4 or slower is recommended.
-		max_accum_signal	= Upp::max(3, 240 / tf_mins);
-		zero_accum_signal	= max_accum_signal / 3;
+		slow_div = FASTAGENT_PERIODLIMIT / tf_mins;
+		if (0) {
+			max_accum_signal	= Upp::max(3, slow_div);
+			zero_accum_signal	= max_accum_signal / 3;
+		} else {
+			use_slower = true;
+			max_accum_signal	= Upp::max(3, slow_div);
+			zero_accum_signal	= 0;
+		}
 	}
 	
 	conf_count = GetConfCount();
@@ -161,16 +161,19 @@ void DqnAdvisor::Init() {
 	spread_point = db->GetPoint();
 	ASSERT(spread_point > 0.0);
 	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	
 	SetJobCount(3);
 	
-	SetJob(0, "Source Search")
+	SetJob(0, tf_str + "Source Search")
 		.SetBegin		(THISBACK(SourceSearchBegin))
 		.SetIterator	(THISBACK(SourceSearchIterator))
 		.SetInspect		(THISBACK(SourceSearchInspect))
 		.SetCtrl		<SourceSearchCtrl>();
 	
 	
-	SetJob(1, "Random Forest Training")
+	SetJob(1, tf_str + "Random Forest Training")
 		.SetBegin		(THISBACK(TrainingRFBegin))
 		.SetIterator	(THISBACK(TrainingRFIterator))
 		.SetEnd			(THISBACK(TrainingRFEnd))
@@ -178,13 +181,23 @@ void DqnAdvisor::Init() {
 		.SetCtrl		<TrainingRFCtrl>();
 	
 	
-	SetJob(2, "DQN Training")
+	SetJob(2, tf_str + "DQN Training")
 		.SetBegin		(THISBACK(TrainingDQNBegin))
 		.SetIterator	(THISBACK(TrainingDQNIterator))
 		.SetEnd			(THISBACK(TrainingDQNEnd))
 		.SetInspect		(THISBACK(TrainingDQNInspect))
 		.SetCtrl		<TrainingDQNCtrl>();
 	
+	if (use_slower) {
+		int slow_id = 1 + TF_COUNT * (indi_count + label_count) + 2;
+		int slow_tf = GetSystem().FindPeriod(FASTAGENT_PERIODLIMIT);
+		CoreIO* cio = GetInputCore(slow_id, GetSymbol(), slow_tf);
+		ASSERT(cio);
+		slow = dynamic_cast<DqnAdvisor*>(cio);
+		ASSERT(slow);
+		slow_action = &slow->GetOutput(0).label;
+		slow_active = &slow->GetOutput(1).label;
+	}
 }
 
 void DqnAdvisor::Start() {
@@ -271,22 +284,40 @@ void DqnAdvisor::RefreshAction(int cursor) {
 	
 	if (accum_signal) {
 		ASSERT(max_accum_signal > 0);
-		int prev_accum = cursor > 0 ? data[cursor-1].action_accum : 0;
-		int a = prev_accum;
+		int a;
+		if (use_slower && cursor / slow_div == 0)
+			a = 0;
+		else
+			a = cursor > 0 ? data[cursor-1].action_accum : 0;
 		if      (before.action == ACTION_LONG)	a = Upp::min(a + 1, +max_accum_signal);
 		else if (before.action == ACTION_SHORT)	a = Upp::max(a - 1, -max_accum_signal);
 		before.action_accum = a;
 	}
 }
 
-int DqnAdvisor::GetAction(DQN::DQItem& before) {
+int DqnAdvisor::GetAction(DQN::DQItem& before, int cursor) {
 	if (!accum_signal) {
 		return before.action;
-	} else {
+	}
+	else if (!use_slower) {
 		int a = before.action_accum;
 		if      (a > +zero_accum_signal)	return ACTION_LONG;
 		else if (a < -zero_accum_signal)	return ACTION_SHORT;
 		else								return ACTION_IDLE;
+	}
+	else {
+		int a = before.action_accum;
+		if (a <= 0) return ACTION_IDLE;
+		
+		int slow_cursor = cursor / slow_div;
+		if (slow_cursor >= this->slow_active->GetCount())
+			return ACTION_IDLE;
+		
+		bool slow_active = this->slow_active->Get(slow_cursor);
+		if (!slow_active) return ACTION_IDLE;
+		
+		bool slow_action = this->slow_action->Get(slow_cursor);
+		return slow_action == false ? ACTION_LONG : ACTION_SHORT;
 	}
 }
 
@@ -295,9 +326,9 @@ void DqnAdvisor::RefreshReward(int cursor) {
 	VectorBool& label		= GetOutput(0).label;
 	VectorBool& enabled		= GetOutput(1).label;
 	double curr				= open_buf->GetUnsafe(cursor);
-	double next				= open_buf->GetUnsafe(cursor + 1);
-	int action				= GetAction(current);
-	int prev_action			= cursor > 0 ? GetAction(data[cursor-1]) : ACTION_IDLE;
+	double next				= cursor + 1 >= open_buf->GetCount() ? curr : open_buf->GetUnsafe(cursor + 1);
+	int action				= GetAction(current, cursor);
+	int prev_action			= cursor > 0 ? GetAction(data[cursor-1], cursor-1) : ACTION_IDLE;
 	
 	
 	double change;
@@ -319,10 +350,14 @@ void DqnAdvisor::RefreshReward(int cursor) {
 	} else {
 		current.reward_accum = change;
 		
-		if (prev_action != ACTION_IDLE && prev_action != action) {
+		bool slow_change_break = false;
+		if (use_slower)
+			slow_change_break = (cursor % slow_div) == (slow_div - 1);
+		
+		if (prev_action != ACTION_IDLE && (prev_action != action || slow_change_break)) {
 			int action_begin = cursor - 1;
 			for (; action_begin > 1; action_begin--) {
-				int rev_action = GetAction(data[action_begin]);
+				int rev_action = GetAction(data[action_begin], action_begin);
 				if (rev_action != prev_action) {action_begin++; break;}
 			}
 			double reward = 1.0;
@@ -363,6 +398,10 @@ bool DqnAdvisor::SourceSearchBegin() {
 	full_mask.SetCount(data_count).One();
 	
 	search_pts.SetCount(conf_count, 0.0);
+	
+	
+	if (use_slower && !slow->IsJobsFinished())
+		return false;
 	
 	return true;
 }
@@ -628,7 +667,7 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	double min_epsilon = 0.01;
 	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
 	dqn_trainer.SetEpsilon(epsilon);
-	dqn_trainer.SetGamma(accum_signal ? 0.9 : 0.1);
+	dqn_trainer.SetGamma(accum_signal ? 0.1 : 0.01);
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);
@@ -668,7 +707,7 @@ bool DqnAdvisor::TrainingDQNEnd() {
 }
 
 bool DqnAdvisor::TrainingDQNInspect() {
-	bool succ = dqntraining_pts.Top() > 0.0;
+	bool succ = !dqntraining_pts.IsEmpty() && dqntraining_pts.Top() > 0.0;
 	
 	INSPECT(succ, "warning: negative result");
 	
@@ -777,8 +816,6 @@ void DqnAdvisor::RefreshOutputBuffers() {
 	
 	ConstBufferSource bufs;
 	
-	rf_trainer.forest.tree_count = rf_trainer.options.tree_count;
-	
 	for (int p = 0; p < 2; p++) {
 		double mul = p == 0 ? +1.0 : -1.0;
 		
@@ -832,7 +869,7 @@ void DqnAdvisor::RefreshOutputBuffers() {
 
 void DqnAdvisor::RefreshMain() {
 	int bars					= GetBars();
-	int cursor					= prev_counted;
+	int cursor					= Upp::max(0, prev_counted-1);
 	
 	data.SetCount(bars);
 	GetOutput(0).label.SetCount(bars);

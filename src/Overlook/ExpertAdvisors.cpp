@@ -694,7 +694,7 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	double min_epsilon = 0.01;
 	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
 	dqn_trainer.SetEpsilon(epsilon);
-	dqn_trainer.SetGamma(accum_signal ? 0.1 : 0.01);
+	dqn_trainer.SetGamma(accum_signal ? 0.9 : 0.01);
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);

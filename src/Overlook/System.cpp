@@ -108,10 +108,13 @@ void System::Init() {
 		String symstr;
 		double spread_point = 0;
 		switch (i) {
-			case 0: symstr = "EURUSD";	spread_point = 0.0003; break;
-			case 1: symstr = "GBPUSD";	spread_point = 0.0003; break;
-			case 2: symstr = "USDJPY";	spread_point = 0.03;   break;
-			case 3: symstr = "USDCAD";	spread_point = 0.0003; break;
+			
+			// Generic Low/Medium spread broker
+			#if 1
+			case 0: symstr = "GBPUSD";	spread_point = 0.0003; break;
+			case 1: symstr = "USDJPY";	spread_point = 0.02;   break;
+			case 2: symstr = "USDCAD";	spread_point = 0.0003; break;
+			case 3: symstr = "EURUSD";	spread_point = 0.0002; break;
 			case 4: symstr = "EURJPY";	spread_point = 0.03;   break;
 			case 5: symstr = "EURCHF";	spread_point = 0.0003; break;
 			case 6: symstr = "USDCHF";	spread_point = 0.0003; break;
@@ -127,6 +130,30 @@ void System::Init() {
 			case 16: symstr = "GBPJPY";	spread_point = 0.07;   break;
 			case 17: symstr = "AUDNZD";	spread_point = 0.0012; break;
 			case 18: symstr = "EURCAD";	spread_point = 0.0012; break;
+			
+			
+			// Generic NDD low spread broker, but commission is not included
+			#else
+			case 0: symstr = "EURUSD";	spread_point = 0.00002; break;
+			case 1: symstr = "USDJPY";	spread_point = 0.002;   break;
+			case 2: symstr = "GBPUSD";	spread_point = 0.00005; break;
+			case 3: symstr = "USDCAD";	spread_point = 0.00006; break;
+			case 4: symstr = "EURJPY";	spread_point = 0.005;   break;
+			case 5: symstr = "EURCHF";	spread_point = 0.00010; break;
+			case 6: symstr = "USDCHF";	spread_point = 0.00009; break;
+			case 7: symstr = "AUDUSD";	spread_point = 0.00005; break;
+			case 8: symstr = "NZDUSD";	spread_point = 0.00010; break;
+			case 9: symstr = "EURGBP";	spread_point = 0.00009; break;
+			case 10: symstr = "AUDCAD";	spread_point = 0.00012; break;
+			case 11: symstr = "AUDJPY";	spread_point = 0.007;   break;
+			case 12: symstr = "CADJPY";	spread_point = 0.010;   break;
+			case 13: symstr = "CHFJPY";	spread_point = 0.012;   break;
+			case 14: symstr = "EURAUD";	spread_point = 0.00007; break;
+			case 15: symstr = "GBPCHF";	spread_point = 0.00018; break;
+			case 16: symstr = "GBPJPY";	spread_point = 0.013;   break;
+			case 17: symstr = "AUDNZD";	spread_point = 0.00018; break;
+			case 18: symstr = "EURCAD";	spread_point = 0.00014; break;
+			#endif
 			default: Panic("Broken");
 		};
 		
@@ -180,7 +207,7 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	// TODO: some algorithm to calculate begins and ends, and persistently using it again
 	#if ONLY_M1_SOURCE
-	Time begin(2016,6,1);
+	Time begin(2016,1,1);
 	#else
 	Time begin(2017,1,1);
 	if (period == 1)			begin = Time(2016,9,5);

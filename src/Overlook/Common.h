@@ -32,10 +32,10 @@ using namespace Upp;
 #define FMLEVEL					0.60
 #define	LOCALPROB_DEPTH			80
 #define FEEDBACK_PERIOD			10
-#define FASTAGENT_PERIODLIMIT	60
+#define FASTAGENT_PERIODLIMIT	240
 
 #ifndef flagHAVE_ALLSYM
-#define SYM_COUNT				4
+#define SYM_COUNT				6
 #else
 #define SYM_COUNT				19
 #endif

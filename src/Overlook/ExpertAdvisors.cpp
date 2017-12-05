@@ -140,15 +140,43 @@ void DqnAdvisor::Init() {
 	
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < FASTAGENT_PERIODLIMIT) {
-		accum_signal = true;
 		slow_div = FASTAGENT_PERIODLIMIT / tf_mins;
+		
+		// Original DQN method. Like loose suspension...
+		// Cons: skips valueable time too much
+		// Pros: works with short periods (M1, M5) after tuning (probably)
+		// Dev-idea: use many instances (with small differences) and combine signal
 		if (0) {
+			use_accumsignal		= true;
 			max_accum_signal	= Upp::max(3, slow_div);
 			zero_accum_signal	= max_accum_signal / 3;
-		} else {
-			use_slower = true;
+		}
+		
+		// Original DQN method, with stiff slower signal...
+		// Cons: skips valueable time too much
+		else if (0) {
+			use_accumsignal		= true;
+			use_slower			= true;
 			max_accum_signal	= Upp::max(3, slow_div);
 			zero_accum_signal	= 0;
+		}
+		
+		// Opposite method to original: symmetric reward average instead of the end reward
+		// Cons: too much switching of signal with spread costs... the sweet spot is hard to find
+		// Pros: an effort to remove "loose suspension" from fast timeframes
+		else if (0) {
+			use_average = true;
+		}
+		
+		// Double agent with single time-step reward (stiff).
+		// H4 leads and picks the target signal. H1 mainly follows that, but can stop going
+		// against the trend.
+		// Cons: H1 is not very responsive follower
+		// Pros: the most stable solution with performance in mind
+		// Dev-idea: use faster follower (M15, M5) but split spread cost to many time-steps...
+		//           ...but there is also some predictability issues with faster timeframes.
+		else {
+			use_slower = true;
 		}
 	}
 	
@@ -254,13 +282,20 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 			
 			DQN::DQItem& xtra_in = data[pos];
 			
-			if (!accum_signal) {
+			if (use_accumsignal) {
+				xtra_sensor = (double)xtra_in.action_accum / (double)max_accum_signal;
+			}
+			else if (use_average) {
+				if (xtra_in.action != ACTION_IDLE) {
+					if (xtra_in.reward_accum > 0.0)	xtra_sensor = 0.0;
+					else							xtra_sensor = 1.0;
+				}
+			}
+			else {
 				if (xtra_in.action != ACTION_IDLE) {
 					if (xtra_in.reward > 0.0)		xtra_sensor = 0.0;
 					else							xtra_sensor = 1.0;
 				}
-			} else {
-				xtra_sensor = (double)xtra_in.action_accum / (double)max_accum_signal;
 			}
 		}
 		int state_pos = state_begin + j * 3;
@@ -279,7 +314,7 @@ void DqnAdvisor::RefreshAction(int cursor) {
 	sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
 	sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
 	
-	if (accum_signal) {
+	if (use_accumsignal) {
 		ASSERT(max_accum_signal > 0);
 		int a;
 		if (use_slower && cursor / slow_div == 0)
@@ -290,31 +325,61 @@ void DqnAdvisor::RefreshAction(int cursor) {
 		else if (before.action == ACTION_SHORT)	a = Upp::max(a - 1, -max_accum_signal);
 		before.action_accum = a;
 	}
+	else if (use_average) {
+		if (before.action == ACTION_IDLE) {
+			before.action_accum = cursor > 0 ? data[cursor-1].action_accum : ACTION_IDLE;
+		}
+		else {
+			before.action_accum = before.action;
+		}
+	}
 }
 
 int DqnAdvisor::GetAction(DQN::DQItem& before, int cursor) {
-	if (!accum_signal) {
-		return before.action;
+	if (use_slower) {
+		if (use_accumsignal) {
+			int a = before.action_accum;
+			if (a < 0) return ACTION_IDLE;
+			
+			int slow_cursor = cursor / slow_div;
+			if (slow_cursor >= this->slow_active->GetCount())
+				return ACTION_IDLE;
+			
+			bool slow_active = this->slow_active->Get(slow_cursor);
+			if (!slow_active) return ACTION_IDLE;
+			
+			bool slow_action = this->slow_action->Get(slow_cursor);
+			return slow_action == false ? ACTION_LONG : ACTION_SHORT;
+		}
+		else {
+			int a = use_average ? before.action_accum : before.action;
+			if (a == ACTION_IDLE) return ACTION_IDLE;
+			
+			int slow_cursor = cursor / slow_div;
+			if (slow_cursor >= this->slow_active->GetCount())
+				return ACTION_IDLE;
+			
+			bool slow_active = this->slow_active->Get(slow_cursor);
+			if (!slow_active) return ACTION_IDLE;
+			
+			bool slow_action = this->slow_action->Get(slow_cursor);
+			if (a == ACTION_LONG)
+				return slow_action == false ? ACTION_LONG : ACTION_SHORT;
+			else
+				return slow_action == true  ? ACTION_LONG : ACTION_SHORT;
+		}
 	}
-	else if (!use_slower) {
+	else if (use_accumsignal) {
 		int a = before.action_accum;
 		if      (a > +zero_accum_signal)	return ACTION_LONG;
 		else if (a < -zero_accum_signal)	return ACTION_SHORT;
 		else								return ACTION_IDLE;
 	}
+	else if (use_average) {
+		return before.action_accum;
+	}
 	else {
-		int a = before.action_accum;
-		if (a < 0) return ACTION_IDLE;
-		
-		int slow_cursor = cursor / slow_div;
-		if (slow_cursor >= this->slow_active->GetCount())
-			return ACTION_IDLE;
-		
-		bool slow_active = this->slow_active->Get(slow_cursor);
-		if (!slow_active) return ACTION_IDLE;
-		
-		bool slow_action = this->slow_action->Get(slow_cursor);
-		return slow_action == false ? ACTION_LONG : ACTION_SHORT;
+		return before.action;
 	}
 }
 
@@ -342,14 +407,12 @@ void DqnAdvisor::RefreshReward(int cursor) {
 	}
 	
 	
-	if (!accum_signal) {
-		current.reward = change;
-	} else {
+	if (use_accumsignal) {
 		current.reward_accum = change;
 		
 		bool slow_change_break = false;
 		if (use_slower)
-			slow_change_break = (cursor % slow_div) == (slow_div - 1);
+			slow_change_break = (cursor % slow_div) == 0;
 		
 		if (prev_action != ACTION_IDLE && (prev_action != action || slow_change_break)) {
 			int action_begin = cursor - 1;
@@ -366,10 +429,26 @@ void DqnAdvisor::RefreshReward(int cursor) {
 		} else {
 			current.reward = 0;
 		}
+		current.reward *= 10000;
 	}
-	
-	
-	current.reward *= 10000;
+	else if (use_average) {
+		current.reward_accum = change;
+		
+		int begin	= cursor - slow_div / 2;
+		int end		= begin + slow_div + 1;
+		begin		= Upp::max(0, begin);
+		end			= Upp::min(data.GetCount(), end);
+		double sum	= 0.0;
+		
+		for(int i = begin; i < end; i++) {
+			sum += data[i].reward_accum;
+		}
+		
+		current.reward = sum / (end - begin);
+	}
+	else {
+		current.reward = change * 10000;
+	}
 	
 	
 	label.Set(cursor, action);
@@ -486,7 +565,6 @@ bool DqnAdvisor::SourceSearchIterator() {
 	double mask_open			= open_buf->GetUnsafe(area.train_begin);
 	double mask_hour_total		= 0.0;
 	double mask_change_total	= 1.0;
-	double mult_change_total	= 1.0;
 	for(int i = area.train_begin; i < area.train_end; i++) {
 		bool is_mask =  real_mask.Get(i);
 		
@@ -691,10 +769,10 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	ASSERT(!data.IsEmpty());
 	
 	double max_epsilon = 0.20;
-	double min_epsilon = 0.01;
+	double min_epsilon = 0.00;
 	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
 	dqn_trainer.SetEpsilon(epsilon);
-	dqn_trainer.SetGamma(accum_signal ? 0.9 : 0.01);
+	dqn_trainer.SetGamma(use_accumsignal ? 0.9 : 0.01);
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);

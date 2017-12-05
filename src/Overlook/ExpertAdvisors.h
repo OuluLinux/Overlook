@@ -146,17 +146,16 @@ class DqnAdvisor : public Core {
 	Vector<double>				search_pts;
 	Vector<double>				training_pts;
 	Vector<double>				dqntraining_pts;
-	int							prev_counted	= 0;
-	int							opt_counter		= 0;
-	int							p				= 0;
-	int							rflist_iter		= 0;
-	int							dqn_round		= 0;
-	int							dqn_pt_cursor	= 0;
+	int							opt_counter			= 0;
+	int							p					= 0;
+	int							rflist_iter			= 0;
+	int							dqn_round			= 0;
+	int							dqn_pt_cursor		= 0;
 	
 	#ifdef flagDEBUG
-	int							dqn_max_rounds	= 50000;
+	int							dqn_max_rounds		= 50000;
 	#else
-	int							dqn_max_rounds	= 5000000;
+	int							dqn_max_rounds		= 5000000;
 	#endif
 	
 	
@@ -169,14 +168,16 @@ class DqnAdvisor : public Core {
 	ConstVectorBool*			slow_active			= NULL;
 	DqnAdvisor*					slow				= NULL;
 	double						spread_point		= 0.0;
+	int							prev_counted		= 0;
 	int							conf_count			= 0;
 	int							data_count			= 0;
 	int							max_accum_signal	= 0;
 	int							zero_accum_signal	= 0;
 	int							slow_div			= 0;
 	bool						once				= true;
-	bool						accum_signal		= false;
+	bool						use_accumsignal	= false;
 	bool						use_slower			= false;
+	bool						use_average			= false;
 	
 protected:
 	virtual void Start();
@@ -247,7 +248,6 @@ public:
 			% Mem(search_pts)
 			% Mem(training_pts)
 			% Mem(dqntraining_pts)
-			% Mem(prev_counted)
 			% Mem(opt_counter)
 			% Mem(p)
 			% Mem(rflist_iter)
@@ -292,18 +292,18 @@ public:
 		if (in_sym == -1) {
 			static int limit_tf;
 			if (limit_tf == 0) limit_tf = ::Overlook::GetSystem().FindPeriod(FASTAGENT_PERIODLIMIT);
-			
+
 			// No inputs with slow instance
 			if (in_tf >= limit_tf)
 				return false;
-			
+
 			// Otherwise accept the H1 source.
 			else if (out_tf == limit_tf)
 				return true;
-			
+
 			return false;
 		}
-		
+
 		return in_sym == out_sym;
 	}
 	

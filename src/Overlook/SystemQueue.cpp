@@ -514,10 +514,19 @@ bool JobThread::ProcessJob() {
 					job.core->LeaveJob();
 					// FIXME: postponing returns false also if (!succ) is_fail = true;
 				}
+				
+				// Resist useless fast loop here
+				else Sleep(100);
 			}
+			
+			// Resist useless fast loop here
+			if (job.state != Job::RUNNING) Sleep(100);
 		}
 		else r = false;
 	}
+	
+	// Resist useless fast loop here
+	if (r == false) Sleep(100);
 	
 	return r;
 }

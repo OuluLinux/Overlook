@@ -111,7 +111,7 @@ struct AccuracyConf : Moveable<AccuracyConf> {
 
 
 
-#define DEBUG_BUFFERS 0
+#define DEBUG_BUFFERS 1
 
 class DqnAdvisor : public Core {
 	

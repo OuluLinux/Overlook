@@ -44,6 +44,7 @@ public:
 	int GetTfCount() const {return tfs.GetCount();}
 	void DownloadRemoteData();
 	int  DownloadHistory(const Symbol& sym, int tf, bool force=false);
+	int  DownloadHistory(int sym, int tf, bool force=false);
 	int  DownloadAskBid();
 	int  DownloadRemoteFile(String remote_path, String local_path);
 	bool IsInited() const {return inited;}

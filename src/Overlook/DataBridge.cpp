@@ -288,6 +288,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
 	Time now = GetSysTime();
 	
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	common.DownloadHistory(GetSymbol(), GetTf(), false);
 	
 	MetaTrader& mt = GetMetaTrader();
 	System& bs = GetSystem();

@@ -51,7 +51,6 @@ void DataBridgeCommon::Init(DataBridge* db) {
 			short_ids.Add( sym.GetCount() > 6 ? sym.Left(6) : sym );
 		}
 		
-		DownloadRemoteData();
 	}
 	catch (...) {
 		throw DataExc("DataBridge::Init: unknown error");
@@ -89,6 +88,11 @@ void DataBridgeCommon::DownloadRemoteData() {
 	}
 	
 	DownloadAskBid();
+}
+
+int DataBridgeCommon::DownloadHistory(int sym, int tf, bool force) {
+	const Vector<Symbol>& symbols = GetMetaTrader().GetSymbols();
+	return DownloadHistory(symbols[sym], tfs[tf], force);
 }
 
 int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
@@ -197,6 +201,8 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 		
 	// Open askbid-file
 	String local_askbid_file = ConfigFile("askbid.bin");
+	if (!FileExists(local_askbid_file))
+		DownloadAskBid();
 	FileIn src(local_askbid_file);
 	ASSERTEXC(src.IsOpen() && src.GetSize());
 	int data_size = (int)src.GetSize(); // No >2Gt files expected

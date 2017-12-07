@@ -10,12 +10,16 @@
 #define IMAGEFILE <Overlook/Overlook.iml>
 #include <Draw/iml_header.h>
 
+#ifdef flagMSC
+#include <intrin.h>
+#endif
+
 namespace Overlook {
 using namespace Upp;
 
 // These values are constant in the working product.
 #define MAIN_PERIOD_MINUTES		60
-#define ONLY_M1_SOURCE			1
+#define ONLY_M1_SOURCE			0
 #define DECISION_DD_LEVEL		0.1
 #define SECTOR_2EXP				1
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
@@ -32,7 +36,7 @@ using namespace Upp;
 #define FMLEVEL					0.60
 #define	LOCALPROB_DEPTH			80
 #define FEEDBACK_PERIOD			10
-#define FASTAGENT_PERIODLIMIT	240
+#define FASTAGENT_PERIODLIMIT	1440
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6
@@ -712,7 +716,11 @@ inline Time TimeFromTimestamp(int64 seconds) {
 
 inline int PopCount64(uint64 i) {
 	#ifdef flagMSC
+	#if CPU_64
 	return __popcnt64(i);
+	#elif CPU_32
+	return __popcnt(i) + __popcnt(i >> 32);
+	#endif
 	#else
 	return __builtin_popcountll(i);
 	#endif

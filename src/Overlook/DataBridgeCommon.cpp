@@ -9,18 +9,18 @@ DataBridgeCommon::DataBridgeCommon() {
 	cursor = 0;
 }
 
-void DataBridgeCommon::InspectInit(DataBridge* db) {
+void DataBridgeCommon::InspectInit() {
 	if (!IsInited()) {
 		LOCK(lock) {
 			if (!IsInited()) {
-				Init(db);
+				Init();
 			}
 		}
 	}
 }
 
-void DataBridgeCommon::Init(DataBridge* db) {
-	System& sys = db->GetSystem();
+void DataBridgeCommon::Init() {
+	System& sys = GetSystem();
 	addr = sys.addr;
 	port = sys.port;
 	
@@ -125,8 +125,9 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	
 	FileAppend out(local_path);
 	if (!out.IsOpen()) return 1;
-	int offset = (int)out.GetSize(); // No >2Gt files expected
 	out.SeekEnd();
+	int offset = (int)out.GetPos(); // No >2Gt files expected
+	LOG("Existing size " << offset);
 	
 	// Get the MT4 remote file
 	
@@ -186,11 +187,15 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 		out.Put(buf, size);
 	}
 	
+	out.Close();
+	
 	LOG("DataBridgeCommon::DownloadRemoteFile: " << out.GetSize() << " bytes for " << remote_path << " took " << ts.ToString());
 	return 0;
 }
 
 void DataBridgeCommon::RefreshAskBidData(bool forced) {
+	InspectInit();
+	
 	lock.Enter();
 	
 	// 3 second update interval is enough...

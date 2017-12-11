@@ -205,26 +205,20 @@ void System::AddPeriod(String nice_str, int period) {
 	period_strings.Add(nice_str);
 	periods.Add(period);
 	
-	// TODO: some algorithm to calculate begins and ends, and persistently using it again
-	//#if ONLY_M1_SOURCE
-	Time begin(2014,1,6);
 	
-	// TODO: different tf beginnings is a mess... clean it
-	/*#else
 	Time begin(2017,1,1);
-	if (period == 1)			begin = Time(2016,9,5);
-	else if (period == 5)		begin = Time(2016,9,5);
+	if (period == 1)			begin = Time(2017,10,1);
+	else if (period == 5)		begin = Time(2017,1,1);
 	else if (period == 15)		begin = Time(2016,9,5);
 	else if (period == 30)		begin = Time(2015,11,2);
 	else if (period == 60)		begin = Time(2015,5,4);
-	else if (period == 240)		begin = Time(2009,12,21);
-	else if (period == 480)		begin = Time(2009,12,21);
-	else if (period == 720)		begin = Time(2009,12,21);
-	else if (period == 1440)	begin = Time(2000,5,1);
-	else if (period == 10080)	begin = Time(1996,6,24);
-	else if (period == 43200)	begin = Time(1995,1,2);
+	else if (period == 240)		begin = Time(2014,1,6);
+	else if (period == 480)		begin = Time(2014,1,6);
+	else if (period == 720)		begin = Time(2014,1,6);
+	else if (period == 1440)	begin = Time(2014,1,6);
+	else if (period == 10080)	begin = Time(2014,1,6);
+	else if (period == 43200)	begin = Time(2014,1,6);
 	else Panic("Invalid period: " + IntStr(period));
-	#endif*/
 	
 	
 	this->begin.Add(begin);

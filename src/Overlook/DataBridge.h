@@ -33,10 +33,10 @@ protected:
 	bool inited;
 	
 	
-	void Init(DataBridge* db);
+	void Init();
 public:
 	DataBridgeCommon();
-	void InspectInit(DataBridge* db);
+	void InspectInit();
 	
 	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
 	int GetSymbolCount() const {return GetMetaTrader().GetSymbolCount();}

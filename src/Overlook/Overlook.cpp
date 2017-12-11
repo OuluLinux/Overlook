@@ -416,6 +416,7 @@ void Overlook::DeepRefresh() {
 	mt.Data();
 	GetSystem().SetEnd(mt.GetTime());
 	DataBridgeCommon& common = GetDataBridgeCommon();
+	common.InspectInit();
 	common.DownloadAskBid();
 	common.RefreshAskBidData(true);
 	cman.RefreshWindows();

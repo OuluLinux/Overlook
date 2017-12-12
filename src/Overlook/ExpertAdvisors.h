@@ -152,11 +152,6 @@ class DqnAdvisor : public Core {
 	int							dqn_round			= 0;
 	int							dqn_pt_cursor		= 0;
 	
-	#ifdef flagDEBUG
-	int							dqn_max_rounds		= 50000;
-	#else
-	int							dqn_max_rounds		= 5000000;
-	#endif
 	
 	
 	// Temp
@@ -174,10 +169,16 @@ class DqnAdvisor : public Core {
 	int							max_accum_signal	= 0;
 	int							zero_accum_signal	= 0;
 	int							slow_div			= 0;
+	int							slow_tfi			= -1;
 	bool						once				= true;
-	bool						use_accumsignal	= false;
+	bool						use_accumsignal		= false;
 	bool						use_slower			= false;
 	bool						use_average			= false;
+	#ifdef flagDEBUG
+	int							dqn_max_rounds		= 5000;
+	#else
+	int							dqn_max_rounds		= 5000000;
+	#endif
 	
 protected:
 	virtual void Start();
@@ -252,7 +253,6 @@ public:
 			% Mem(p)
 			% Mem(rflist_iter)
 			% Mem(dqn_round)
-			% Mem(dqn_max_rounds)
 			% Mem(dqn_pt_cursor);
 	}
 	

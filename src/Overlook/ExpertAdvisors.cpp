@@ -141,6 +141,8 @@ void DqnAdvisor::Init() {
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < FASTAGENT_PERIODLIMIT) {
 		slow_div = FASTAGENT_PERIODLIMIT / tf_mins;
+		slow_tfi = GetSystem().FindPeriod(FASTAGENT_PERIODLIMIT);
+		ASSERT(slow_tfi != -1);
 		
 		// Original DQN method. Like loose suspension...
 		// Cons: skips valueable time too much
@@ -265,6 +267,18 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 	Buffer& sig0_dqnprob	= GetBuffer(0);
 	Buffer& sig1_dqnprob	= GetBuffer(1);
 	const int state_begin = LOCALPROB_DEPTH * 2*2;
+	
+	if (use_slower) {
+		int slow_cursor = GetSystem().GetShiftTf(GetTf(), slow_tfi, data_pos);
+		bool slow_active = this->slow_active->Get(slow_cursor);
+		if (!slow_active) {
+			current.action_accum = ACTION_IDLE;
+		} else {
+			bool slow_action = this->slow_action->Get(slow_cursor);
+			current.action_accum = slow_action == false ? ACTION_LONG : ACTION_SHORT;
+		}
+	}
+	
 	for(int j = 0; j < FEEDBACK_PERIOD; j++) {
 		int pos = data_pos - 1 - j;
 		double sig0_sensor = 1.0;
@@ -290,6 +304,11 @@ void DqnAdvisor::RefreshFeedback(int data_pos) {
 					if (xtra_in.reward_accum > 0.0)	xtra_sensor = 0.0;
 					else							xtra_sensor = 1.0;
 				}
+			}
+			else if (use_slower) {
+				if      (xtra_in.action_accum == ACTION_IDLE)	xtra_sensor = 0.5;
+				else if (xtra_in.action_accum == ACTION_LONG)	xtra_sensor = 0.0;
+				else if (xtra_in.action_accum == ACTION_SHORT)	xtra_sensor = 1.0;
 			}
 			else {
 				if (xtra_in.action != ACTION_IDLE) {
@@ -317,7 +336,7 @@ void DqnAdvisor::RefreshAction(int cursor) {
 	if (use_accumsignal) {
 		ASSERT(max_accum_signal > 0);
 		int a;
-		if (use_slower && cursor / slow_div == 0)
+		if (use_slower && cursor % slow_div == 0)
 			a = 0;
 		else
 			a = cursor > 0 ? data[cursor-1].action_accum : 0;
@@ -336,38 +355,22 @@ void DqnAdvisor::RefreshAction(int cursor) {
 }
 
 int DqnAdvisor::GetAction(DQN::DQItem& before, int cursor) {
-	if (use_slower) {
-		if (use_accumsignal) {
-			int a = before.action_accum;
-			if (a < 0) return ACTION_IDLE;
-			
-			int slow_cursor = cursor / slow_div;
-			if (slow_cursor >= this->slow_active->GetCount())
-				return ACTION_IDLE;
-			
-			bool slow_active = this->slow_active->Get(slow_cursor);
-			if (!slow_active) return ACTION_IDLE;
-			
-			bool slow_action = this->slow_action->Get(slow_cursor);
+	if (use_slower && use_accumsignal) {
+		int a = use_average ? before.action_accum : before.action;
+		if (a == ACTION_IDLE) return ACTION_IDLE;
+		
+		int slow_cursor = GetSystem().GetShiftTf(GetTf(), slow_tfi, cursor);
+		if (slow_cursor >= this->slow_active->GetCount())
+			return ACTION_IDLE;
+		
+		bool slow_active = this->slow_active->Get(slow_cursor);
+		if (!slow_active) return ACTION_IDLE;
+		
+		bool slow_action = this->slow_action->Get(slow_cursor);
+		if (a == ACTION_LONG)
 			return slow_action == false ? ACTION_LONG : ACTION_SHORT;
-		}
-		else {
-			int a = use_average ? before.action_accum : before.action;
-			if (a == ACTION_IDLE) return ACTION_IDLE;
-			
-			int slow_cursor = cursor / slow_div;
-			if (slow_cursor >= this->slow_active->GetCount())
-				return ACTION_IDLE;
-			
-			bool slow_active = this->slow_active->Get(slow_cursor);
-			if (!slow_active) return ACTION_IDLE;
-			
-			bool slow_action = this->slow_action->Get(slow_cursor);
-			if (a == ACTION_LONG)
-				return slow_action == false ? ACTION_LONG : ACTION_SHORT;
-			else
-				return slow_action == true  ? ACTION_LONG : ACTION_SHORT;
-		}
+		else
+			return slow_action == true  ? ACTION_LONG : ACTION_SHORT;
 	}
 	else if (use_accumsignal) {
 		int a = before.action_accum;

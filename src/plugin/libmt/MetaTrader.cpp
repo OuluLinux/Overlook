@@ -708,9 +708,11 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			int id = symbols.GetCount();
 			
 			// TODO: handle symbols like EURUSDm, EUR/USD, etc.
-			ASSERT_(	name.GetCount() == 6 ||
-						(name.GetCount() == 7 && name.Right(1) == "."),
-						"Only 'EURUSD', 'AUDJPYm', 'EURCHF.' format is allowed, not 'EUR/USD'. Hack this or change broker.");
+			if (!(	name.GetCount() == 6 || (name.GetCount() == 7 && name.Right(1) == "."))) {
+				// Only 'EURUSD', 'AUDJPYm', 'EURCHF.' format is allowed, not 'EUR/USD'. Hack this or change broker.
+				sym.is_skipping = true;
+				continue;
+			}
 			
 			// Count postfixes
 			if (name.GetCount() == 6)

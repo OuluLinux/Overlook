@@ -34,9 +34,14 @@ using namespace Upp;
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60
-#define	LOCALPROB_DEPTH			80
 #define FEEDBACK_PERIOD			10
-#define FASTAGENT_PERIODLIMIT	1440
+#define FASTAGENT_PERIODLIMIT	240
+
+#ifdef flagDEBUG
+#define	LOCALPROB_DEPTH			5
+#else
+#define	LOCALPROB_DEPTH			80
+#endif
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				6

@@ -177,7 +177,7 @@ class DqnAdvisor : public Core {
 	#ifdef flagDEBUG
 	int							dqn_max_rounds		= 5000;
 	#else
-	int							dqn_max_rounds		= 5000000;
+	int							dqn_max_rounds		= 500000;
 	#endif
 	
 protected:

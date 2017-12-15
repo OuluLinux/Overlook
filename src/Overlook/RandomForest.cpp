@@ -21,6 +21,7 @@ void RandomForest::Train(const ConstBufferSource& data, const VectorBool& labels
 		tree.id = i;
 		train_success &= tree.Train(data, labels, mask, options);
 	}
+	ASSERT(train_success);
 	
 	Chk();
 }
@@ -60,6 +61,7 @@ double RandomForest::PredictOne(const ConstBufferSourceIter& iter) {
 	}
 
 	dec /= tree_count;
+	dec -= 0.5;
 	
 	return dec;
 }
@@ -347,6 +349,7 @@ bool DecisionTree::Decision2DStumpTest(const ConstBufferSourceIter& iter, const 
 double Entropy(const VectorBool& labels, const VectorBool& ix) {
 	ASSERT(labels.GetCount() > 0);
 	ASSERT(ix.GetCount() > 0);
+	ASSERT(ix.GetCount() <= labels.GetCount());
 	ConstU64 *it  = ix.Begin(), *end = ix.End();
 	ConstU64 *lit = labels.Begin(), *lend = labels.End();
 	int64 numones = 0;
@@ -387,11 +390,19 @@ int ConstBufferSource::GetCount() const {
 }
 
 int ConstBufferSource::GetDepth() const {
-	return bufs.GetCount();
+	if (!serial_mode)
+		return bufs.GetCount();
+	else
+		return serial_depth;
 }
 
 double ConstBufferSource::Get(int pos, int depth) const {
-	return bufs[depth]->GetUnsafe(pos);
+	if (!serial_mode)
+		return bufs[depth]->GetUnsafe(pos);
+	else {
+		ASSERT(depth < serial_depth);
+		return bufs[0]->GetUnsafe(Upp::max(0, pos - depth));
+	}
 }
 
 
@@ -414,12 +425,7 @@ ConstBufferSourceIter::ConstBufferSourceIter(const ConstBufferSource& src, Const
 }
 
 double ConstBufferSourceIter::operator[](int i) const {
-	const Vector<ConstBuffer*>& bufs = src->bufs;
-	ASSERT(i >= 0 && i < bufs.GetCount());
-	ConstBuffer* buf = bufs[i];
-	ASSERT(buf != NULL);
-	int cursor = *cursor_ptr;
-	return buf->GetUnsafe(cursor);
+	return src->Get(*cursor_ptr, i);
 }
 
 

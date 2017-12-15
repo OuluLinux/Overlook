@@ -62,6 +62,9 @@ INITBLOCK {
 	System::Register<VolatilityAverage>("VolatilityAverage");
 	System::Register<MinimalLabel>("MinimalLabel");
 	
+	System::Register<VolatilitySlots>("VolatilitySlots");
+	
+	System::Register<StrongForce>("StrongForce");
 	System::Register<DqnAdvisor>("DqnAdvisor", CORE_EXPERTADVISOR);
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);

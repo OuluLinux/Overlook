@@ -858,12 +858,15 @@ void TestLockMacro();
 
 struct ConstBufferSource {
 	Vector<ConstBuffer*> bufs;
+	int serial_depth = 0;
+	bool serial_mode = false;
 	
 public:
 	ConstBufferSource();
 	
 	void SetDepth(int i) {bufs.SetCount(i, NULL);}
 	void SetSource(int i, ConstBuffer& buf) {ASSERT(&buf); bufs[i] = &buf;}
+	void SetSerialDepth(int i) {serial_mode = true; serial_depth = i; bufs.SetCount(1, NULL);}
 	int GetCount() const;
 	int GetDepth() const;
 	

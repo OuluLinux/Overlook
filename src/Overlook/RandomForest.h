@@ -133,11 +133,6 @@ struct RandomForestMemory {
 		s % trees;
 	}
 	
-	int Compare(const RandomForestMemory& conf) const {
-		Panic("TODO");
-		return 0;
-	}
-	
 };
 
 struct RandomForest {

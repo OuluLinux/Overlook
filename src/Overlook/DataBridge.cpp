@@ -22,6 +22,8 @@ DataBridge::~DataBridge() {
 }
 
 void DataBridge::Init() {
+	System& sys = GetSystem();
+	
 	slow_volume = GetMinutePeriod() >= 1440;
 	day_volume = GetMinutePeriod() == 1440;
 	
@@ -30,6 +32,27 @@ void DataBridge::Init() {
 		point = sym.point;
 	}
 	
+	// Correlation unit
+	if (GetSymbol() == sys.GetStrongSymbol()) {
+		if (corr.IsEmpty()) {
+			corr.Add();
+			
+			corr[0].sym_ids.SetCount(SYM_COUNT, -1);
+			for(int i = 0; i < SYM_COUNT; i++)
+				corr[0].sym_ids[i] = sys.GetPrioritySymbol(i);
+			
+			corr[0].averages.SetCount(SYM_COUNT-1);
+			corr[0].buffer.SetCount(SYM_COUNT-1);
+		}
+		
+		corr[0].period = 10;
+		
+		corr[0].opens.SetCount(SYM_COUNT, 0);
+		for(int i = 0; i < SYM_COUNT; i++) {
+			ConstBuffer& open = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 0);
+			corr[0].opens[i] = &open;
+		}
+	}
 }
 
 void DataBridge::Start() {
@@ -49,6 +72,9 @@ void DataBridge::Start() {
 	// Account symbol
 	if (sym == sys.GetAccountSymbol()) {
 		RefreshAccount();
+	}
+	else if (sym == sys.GetStrongSymbol()) {
+		RefreshStrong();
 	}
 	else
 	
@@ -77,21 +103,6 @@ void DataBridge::Start() {
 		RefreshFromAskBid(init_round);
 	}
 	
-	#if ONLY_M1_SOURCE
-	return;
-	#else
-	// Generated symbols
-	else if (cur < cur_count) {
-		RefreshVirtualNode();
-	}
-	
-	// Baskets
-	else if (cur >= cur_count) {
-		// Correlation for baskets
-		if (cur == cur_count) RefreshCorrelation();
-		RefreshBasket();
-	}
-	#endif
 }
 
 void DataBridge::AddSpread(double a) {
@@ -125,6 +136,141 @@ void DataBridge::RefreshAccount() {
 		open_buf.Set(i, prev_open);
 		low_buf.Set(i, prev_open);
 		high_buf.Set(i, prev_open);
+	}
+}
+
+void DataBridge::RefreshStrong() {
+	RefreshCorrelation();
+	
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	SetSafetyLimit(bars);
+	
+	open_buf.SetCount(bars);
+	low_buf.SetCount(bars);
+	high_buf.SetCount(bars);
+	volume_buf.SetCount(bars);
+	
+	if (!counted) {
+		open_buf.Set(0, 1.0);
+		low_buf.Set(0, 1.0);
+		high_buf.Set(0, 1.0);
+		counted++;
+	}
+	for(int i = counted; i < bars; i++) {
+		double chng_sum = 0.0;
+		for(int j = 0; j < SYM_COUNT; j++) {
+			ConstBuffer& buf = *corr[0].opens[j];
+			double prev = buf.Get(i-1);
+			double curr = buf.Get(i);
+			double chng = curr / prev - 1.0;
+			double corr = j > 0 ? this->corr[0].buffer[j-1].Get(i) : +1.0;
+			double valu = chng * corr;
+			chng_sum += valu;
+		}
+		
+		chng_sum /= SYM_COUNT;
+		
+		double prev		= open_buf.Get(i-1);
+		double value	= prev * (1.0 + chng_sum);
+		open_buf.Set(i, value);
+		low_buf.Set(i, value);
+		high_buf.Set(i, value);
+		
+		low_buf		.Set(i-1, Upp::min(value, prev));
+		high_buf	.Set(i-1, Upp::max(value, prev));
+	}
+}
+
+void DataBridge::ProcessCorrelation(int output) {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	ConstBuffer& a		= *corr[0].opens[0];
+	ConstBuffer& b		= *corr[0].opens[output+1];
+	Buffer& buf			=  corr[0].buffer[output];
+	OnlineAverage2& s	=  corr[0].averages[output];
+	
+	if (b.GetCount() == 0) {
+		LOG("CorrelationOscillator error: No data for output " << output);
+		return;
+	}
+	
+	int period = corr[0].period;
+	
+	if (counted < period) {
+		ASSERT(counted == 0);
+		s.mean_a = a.Get(0);
+		s.mean_b = b.Get(0);
+		s.count = 1;
+		for(int i = 1; i < period; i++) {
+			SetSafetyLimit(i);
+			s.Add(a.Get(i), b.Get(i));
+		}
+		counted = period;
+	}
+	SetSafetyLimit(counted);
+	
+	Vector<double> cache_a, cache_b;
+	cache_a.SetCount(period);
+	cache_b.SetCount(period);
+	
+	int cache_offset = 0;
+	for(int i = 1; i < period; i++) {
+		cache_a[i] = a.Get(counted - period + i);
+		cache_b[i] = b.Get(counted - period + i);
+	}
+	
+	buf.SetCount(bars);
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double da = a.Get(i);
+		double db = b.Get(i);
+		
+		s.Add(da, db);
+		cache_a[cache_offset] = da;
+		cache_b[cache_offset] = db;
+		cache_offset = (cache_offset + 1) % period;
+		
+		double avg1 = s.mean_a;
+		double avg2 = s.mean_b;
+		double sum1 = 0;
+	    double sumSqr1 = 0;
+	    double sumSqr2 = 0;
+		for(int j = 0; j < period; j++) {
+			double v1 = cache_a[j];
+			double v2 = cache_b[j];
+			sum1 += (v1 - avg1) * (v2 - avg2);
+			sumSqr1 += pow(v1 - avg1, 2.0);
+			sumSqr2 += pow(v2 - avg2, 2.0);
+		}
+    
+		double mul = sumSqr1 * sumSqr2;
+		double correlation_coef = mul != 0.0 ? sum1 / sqrt(mul) : 0;
+		
+		buf.Set(i, correlation_coef);
+	}
+}
+
+void DataBridge::RefreshCorrelation() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	if (counted == bars)
+		return;
+	
+	if (counted > 0) counted = Upp::max(counted - period, 0);
+	
+	int k = 0;
+	for(int i = 0; i < SYM_COUNT-1; i++) {
+		ProcessCorrelation(i);
 	}
 }
 
@@ -561,105 +707,6 @@ void DataBridge::RefreshFromHistory(bool use_internet_data, bool update_only) {
 	}
 }
 
-void DataBridge::RefreshVirtualNode() {
-	Buffer& open   = GetBuffer(0);
-	Buffer& low    = GetBuffer(1);
-	Buffer& high   = GetBuffer(2);
-	Buffer& volume = GetBuffer(3);
-	
-	System& bs = GetSystem();
-	MetaTrader& mt = GetMetaTrader();
-	int sym_count = mt.GetSymbolCount();
-	int cur = GetSymbol() - sym_count;
-	if (cur < 0)
-		return;
-	ASSERT(cur >= 0 && cur < mt.GetCurrencyCount());
-	
-	int bars = GetBars();
-	ASSERT(bars > 0);
-	for(int i = 0; i < outputs.GetCount(); i++)
-		for(int j = 0; j < outputs[i].buffers.GetCount(); j++)
-			outputs[i].buffers[j].value.SetCount(bars, 0);
-		
-	const Currency& c = mt.GetCurrency(cur);
-	int tf = GetTf();
-	
-	typedef Tuple3<ConstBuffer*,ConstBuffer*,bool> Source;
-	Vector<Source> sources;
-	for(int i = 0; i < c.pairs0.GetCount(); i++) {
-		int id = c.pairs0[i];
-		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
-		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
-		sources.Add(Source(&open_buf, &vol_buf, false));
-	}
-	for(int i = 0; i < c.pairs1.GetCount(); i++) {
-		int id = c.pairs1[i];
-		ConstBuffer& open_buf = GetInputBuffer(0,id,tf,0);
-		ConstBuffer& vol_buf  = GetInputBuffer(0,id,tf,3);
-		sources.Add(Source(&open_buf, &vol_buf, true));
-	}
-	
-	int counted = GetCounted();
-	if (!counted) {
-		open.Set(0, 1.0);
-		low.Set(0, 1.0);
-		high.Set(0, 1.0);
-		volume.Set(0, 0);
-		counted = 1;
-	}
-	else counted--;
-	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double change_sum = 0;
-		double volume_sum = 0;
-		
-		for(int j = 0; j < sources.GetCount(); j++) {
-			Source& s = sources[j];
-			ConstBuffer& open_buf = *s.a;
-			ConstBuffer& vol_buf  = *s.b;
-			bool inverse = s.c;
-			
-			double open   = open_buf.Get(i-1);
-			double close  = open_buf.Get(i);
-			double vol    = vol_buf.Get(i);
-			double change = open != 0.0 ? (close / open) - 1.0 : 0.0;
-			if (inverse) change *= -1.0;
-			
-			change_sum += change;
-			volume_sum += vol;
-		}
-		
-		double prev = open.Get(i-1);
-		double change = change_sum / sources.GetCount();
-		double value = prev * (1.0 + change);
-		double volume_av = volume_sum / sources.GetCount();
-		
-		open.Set(i, value);
-		low.Set(i, value);
-		high.Set(i, value);
-		volume.Set(i, volume_av);
-		
-		//LOG(Format("pos=%d open=%f volume=%f", i, value, volume_av));
-		
-		if (i) {
-			low		.Set(i-1, Upp::min(low		.Get(i-1), value));
-			high	.Set(i-1, Upp::max(high		.Get(i-1), value));
-		}
-		
-		
-		// Find min/max
-		double diff = i ? open.Get(i) - open.Get(i-1) : 0.0;
-		int step = (int)(diff / point);
-		if (step >= 0) median_max_map.GetAdd(step, 0)++;
-		else median_min_map.GetAdd(step, 0)++;
-		if (step > max_value) max_value = step;
-		if (step < min_value) min_value = step;
-	}
-	
-	RefreshMedian();
-}
-
 int DataBridge::GetChangeStep(int shift, int steps) {
 	int change = 0;
 	if (shift > 0) {
@@ -675,341 +722,6 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 	if (v < 0) v = 0;
 	if (v >= steps) v = steps -1;
 	return v;
-}
-
-void DataBridge::RefreshCorrelation() {
-	MetaTrader& mt = GetMetaTrader();
-	int sym_count = mt.GetSymbolCount();
-	int tf = GetTf();
-	
-	int counted = GetCounted();
-	int bars = GetBars();
-	
-	const int period = 16;
-	Vector<double> cache_a, cache_b;
-	cache_a.SetCount(period);
-	cache_b.SetCount(period);
-	
-	Vector<ConstBuffer*> bufs;
-	bufs.SetCount(sym_count);
-	for(int i = 0; i < sym_count; i++)
-		bufs[i] = &GetInputBuffer(0, i, tf, 0);
-	
-	Vector<double> values, tmp1, tmp2, coeffs;
-	Vector<bool> in_group;
-	values.SetCount(sym_count);
-	tmp1.SetCount(period);
-	tmp2.SetCount(period);
-	coeffs.SetCount(sym_count * (sym_count-1));
-	
-	bool initial = counted < period;
-	if (initial)
-		counted = period;
-	
-	// Allocate memory
-	int ext_data_count = bars / 2 + bars % 2;
-	ext_data.SetCount(sym_count);
-	sym_group_stats.SetCount(sym_count);
-	for(int i = 0; i < sym_count; i++) {
-		ext_data[i].SetCount(ext_data_count, 0);
-		sym_group_stats[i].SetCount(sym_count, 0);
-	}
-	
-	TimeStop ts;
-	for(int i = counted; i < bars; i++) {
-		if ((i % 10) == 0) {
-			GetSystem().WhenSubProgress(i, bars);
-		}
-		
-		// Calculate correlation values
-		SetSafetyLimit(i);
-		int l = 0;
-		for(int j = 0; j < sym_count-1; j++) {
-			ConstBuffer& a = *bufs[j];
-			
-			double avg1 = 0;
-		    double sumSqr1 = 0;
-			for(int j = 0; j < period; j++) {
-				int pos = i-j;
-				double v1 = a.Get(pos);
-				tmp1[j] = v1;
-				avg1 += v1;
-		    }
-		    avg1 /= period;
-		    
-			for(int j = 0; j < period; j++) {
-				double v1 = tmp1[j];
-				sumSqr1 += pow(v1 - avg1, 2.0);
-			}
-			
-			for(int k = j+1; k < sym_count; k++) {
-				ConstBuffer& b = *bufs[k];
-				
-				double avg2 = 0;
-				double sum1 = 0;
-			    double sumSqr2 = 0;
-			    for(int j = 0; j < period; j++) {
-					int pos = i-j;
-					double v2 = b.Get(pos);
-					tmp2[j] = v2;
-					avg2 += v2;
-			    }
-			    avg2 /= period;
-			    
-				for(int j = 0; j < period; j++) {
-					double v1 = tmp1[j];
-					double v2 = tmp2[j];
-					sum1 += (v1 - avg1) * (v2 - avg2);
-					sumSqr2 += pow(v2 - avg2, 2.0);
-				}
-		    
-				double mul = sumSqr1 * sumSqr2;
-				double correlation_coef = mul != 0.0 ? sum1 / sqrt(mul) : 0;
-				coeffs[l++] = correlation_coef;
-			}
-		}
-		
-		// Find groups
-		Vector<Index<int> > groups;
-		in_group.SetCount(0);
-		in_group.SetCount(sym_count, false);
-		int without_group = sym_count;
-		while (without_group > 0) {
-			Index<int>& group = groups.Add();
-			l = 0;
-			for(int j = 0; j < sym_count-1; j++) {
-				if ((!group.IsEmpty() && group.Find(j) == -1) || in_group[j]) {
-					l += j;
-					continue;
-				}
-				for(int k = j+1; k < sym_count; k++) {
-					if (in_group[k]) {l++; continue;}
-					double correlation_coef = coeffs[l++];
-					if (correlation_coef >= 0.75) {
-						if (group.IsEmpty()) {
-							in_group[j] = true;
-							group.Add(j);
-							without_group--;
-						}
-						in_group[k] = true;
-						group.Add(k);
-						without_group--;
-					}
-				}
-			}
-			if (group.IsEmpty())
-				break;
-		}
-		
-		
-		// Sort groups by descending size
-		struct Sorter {
-			bool operator()(const Index<int>& a, const Index<int>& b) const {
-				return a.GetCount() > b.GetCount();
-			}
-		};
-		Sort(groups, Sorter());
-		
-		
-		// Add groups in the result vector
-		if (groups.GetCount() > 0xF)
-			groups.SetCount(0xF);
-		int pos = i / 2;
-		int sub = i % 2;
-		for(int j = 0; j < groups.GetCount(); j++) {
-			const Index<int>& group = groups[j];
-			for(int k = 0; k < group.GetCount(); k++) {
-				int sym = group[k];
-				
-				byte& buf = ext_data[sym][pos];
-				if (sub == 0)
-					buf = (buf & 0xF0) | j;
-				else
-					buf = (buf & 0x0F) | (j << 4);
-			}
-			
-			// Count symbols in same group
-			for(int k0 = 0; k0 < group.GetCount(); k0++) {
-				int s0 = group[k0];
-				Vector<int>& stat = sym_group_stats[s0];
-				for(int k1 = 0; k1 < group.GetCount(); k1++) {
-					if (k0 == k1) continue;
-					int s1 = group[k1];
-					stat[s1]++;
-				}
-			}
-		}
-		
-		//LOG(i << "/" << bars << ": " << (100 * i / bars));
-	}
-	//LOG("Processing correlations for " << bars - counted << " bars took " << ts.ToString());
-	
-	
-	// Get strongest pairs
-	typedef Tuple2<int,int> Pair;
-	Vector<Pair> strongest_pairs;
-	for(int i = 0; i < sym_count; i++) {
-		int strongest_id = -1;
-		int strongest_count = 0;
-		const Vector<int>& counts = sym_group_stats[i];
-		for(int j = 0; j < sym_count; j++) {
-			if (i == j) continue;
-			int count = counts[j];
-			if (count > strongest_count) {
-				strongest_count = count;
-				strongest_id = j;
-			}
-		}
-		if (strongest_id != -1)
-			strongest_pairs.Add(Pair(i, strongest_id));
-	}
-	ASSERT(!strongest_pairs.IsEmpty());
-	//DUMPC(strongest_pairs);
-	
-	
-	// Create groups from pairs
-	Vector<Index<int> > groups;
-	for(int i = 0; i < strongest_pairs.GetCount(); i++) {
-		const Pair& p = strongest_pairs[i];
-		bool added = false;
-		for(int j = 0; j < groups.GetCount(); j++) {
-			Index<int>& group = groups[j];
-			// If A is in the group and B is not in the group, add B to the group
-			if (group.Find(p.a) != -1) {
-				if (group.Find(p.b) == -1) {
-					group.Add(p.b);
-					added = true;
-				}
-			}
-			else if (group.Find(p.b) != -1) {
-				if (group.Find(p.a) == -1) {
-					group.Add(p.a);
-					added = true;
-				}
-			}
-			if (added) break;
-		}
-		if (!added) {
-			Index<int>& group = groups.Add();
-			group.Add(p.a);
-			group.Add(p.b);
-		}
-	}
-	
-	
-	// Sort groups by their size descending
-	struct GroupSorter {
-		bool operator() (const Index<int>& a, const Index<int>& b) const {
-			return a.GetCount() > b.GetCount();
-		}
-	};
-	Sort(groups, GroupSorter());
-	//DUMPCC(groups);
-	
-	
-	// Copy group to compatible and persistent variable
-	sym_groups.SetCount(groups.GetCount());
-	for(int i = 0; i < groups.GetCount(); i++) {
-		const Index<int>& src = groups[i];
-		Vector<int>& dst = sym_groups[i];
-		dst.SetCount(src.GetCount());
-		for(int j = 0; j < src.GetCount(); j++)
-			dst[j] = src[j];
-	}
-}
-
-void DataBridge::RefreshBasket() {
-	Buffer& open   = GetBuffer(0);
-	Buffer& low    = GetBuffer(1);
-	Buffer& high   = GetBuffer(2);
-	Buffer& volume = GetBuffer(3);
-	
-	System& sys = GetSystem();
-	MetaTrader& mt = GetMetaTrader();
-	int counted = GetCounted();
-	int bars = GetBars();
-	int sym_count = mt.GetSymbolCount();
-	int cur_count = mt.GetCurrencyCount();
-	int corr_sym = sym_count + cur_count;
-	int sym = GetSymbol();
-	int tf = GetTf();
-	int basket_alltime_group = sym - corr_sym;
-	
-	DataBridge& corr_db = sym == corr_sym ? *this : dynamic_cast<DataBridge&>(*GetInputCore(0, corr_sym, tf));
-	
-	if (symbols.IsEmpty()) {
-		ASSERT_(basket_alltime_group < corr_db.sym_groups.GetCount(), "Somehow correlation groups have not been found enough");
-		const Vector<int>& group = corr_db.sym_groups[basket_alltime_group];
-		for(int j = 0; j < group.GetCount(); j++) {
-			int sym = group[j];
-			ASSERT(sym < sym_count);
-			symbols.Add(sym, +1); // add group member as positively correlating member
-		}
-		ASSERT(!symbols.IsEmpty());
-	}
-	
-	// Allocate memory
-	ASSERT(bars > 0);
-	SetSafetyLimit(bars);
-	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
-		outputs[0].buffers[i].SetCount(bars);
-	if (counted) {
-		double prev_open = open.Get(counted-1);
-		for(int i = counted; i < bars; i++) {
-			open.Set(i, prev_open);
-			low.Set(i, prev_open);
-			high.Set(i, prev_open);
-		}
-	}
-	
-	for(int i = counted; i < bars; i++) {
-		if ((i % 10) == 0) {
-			GetSystem().WhenSubProgress(i, bars);
-		}
-		
-		SetSafetyLimit(i);
-		Time t = sys.GetTimeTf(tf, i);
-		int day_of_week = DayOfWeek(t);
-		
-		// Continue from previous value
-		double value = 1.0, low_value = 1.0, high_value = 1.0, volume_value = 0.0;
-		if (i > 1) {
-			
-			// Get changes from every symbol in the timeslot
-			const int prev_pos = i-1;
-			double prev = open.Get(prev_pos);
-			double mul = 0.0, low_mul = 0.0, high_mul = 0.0, spread_mul = 0.0;
-			for(int j = 0; j < symbols.GetCount(); j++) {
-				int sym = symbols.GetKey(j);
-				ConstBuffer& src_open = GetInputBuffer(0, sym, tf, 0);
-				ConstBuffer& src_low  = GetInputBuffer(0, sym, tf, 1);
-				ConstBuffer& src_high = GetInputBuffer(0, sym, tf, 2);
-				ConstBuffer& src_vol  = GetInputBuffer(0, sym, tf, 3);
-				ConstBuffer& src_sprd = GetInputBuffer(0, sym, tf, 4);
-				double open_value = src_open.Get(i);
-				mul += open_value / src_open.Get(i-1) - 1.0;
-				low_mul += src_low.Get(i-1) / src_open.Get(i-1) - 1.0;
-				high_mul += src_high.Get(i-1) / src_open.Get(i-1) - 1.0;
-				volume_value += src_vol.Get(i);
-			}
-			// Get average
-			mul /= symbols.GetCount();
-			low_mul /= symbols.GetCount();
-			high_mul /= symbols.GetCount();
-			
-			// Calculate new values
-			value = prev * (1.0 + mul);
-			low_value = prev * (1.0 + low_mul);
-			high_value = prev * (1.0 + high_mul);
-			low.Set(prev_pos, low_value);
-			high.Set(prev_pos, high_value);
-			ASSERT(value > 0.0);
-		}
-		open.Set(i, value);
-		low.Set(i, value);
-		high.Set(i, value);
-		volume.Set(i, volume_value);
-	}
 }
 
 void DataBridge::RefreshFromFaster() {

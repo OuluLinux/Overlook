@@ -432,7 +432,7 @@ public:
 
 
 
-class WilliamsPercentRange : public Core {
+class WilliamsPercentRange : public AdvisorBase {
 	int period;
 	
 	bool CompareDouble(double Number1, double Number2);
@@ -444,9 +444,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(1, 1)
-			% Arg("period", period, 2, 127);
+		BaseIO(reg);
+		reg % Arg("period", period, 2, 127);
 	}
 };
 
@@ -826,26 +825,10 @@ public:
 	}
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		/*System& sys = ::Overlook::GetSystem();
-		if (sys.sym_ids.GetCount() == 0)
-			Panic("ExpertSystem is not yet initialized.");
-		
-		static Index<int> sym_ids;
-		if (sym_ids.IsEmpty()) {
-			for(int i = 0; i < sys.sym_ids.GetCount(); i++)
-				sym_ids.Add(sys.sym_ids[i]);
-		}
-		
-		// Accept all symbols in the same timeframe
 		if (in_sym == -1)
 			return in_tf == out_tf;
-		
-		if (sym_ids.Find(out_sym) != -1 || out_sym == in_sym)
-			return true;
-		return false;*/
-		if (in_sym == -1)
-			return in_tf == out_tf;
-		return out_sym >= 0 && out_sym < SYM_COUNT;
+		int sym_prio = ::Overlook::GetSystem().GetSymbolPriority(out_sym);
+		return (sym_prio >= 0 && sym_prio < SYM_COUNT) || out_sym == in_sym;
 	}
 };
 
@@ -984,6 +967,53 @@ public:
 			% Out(1, 1)
 			% Mem(prev_counted);
 	}
+};
+
+
+class StrongForce : public AdvisorBase {
+	
+public:
+	StrongForce();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		BaseIO(reg, &FilterFunction);
+	}
+	
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		
+		if (out_sym == in_sym) return true;
+		if (out_sym == ::Overlook::GetSystem().GetStrongSymbol()) return true;
+		
+		return false;
+	}
+};
+
+class VolatilitySlots : public Core {
+	Vector<OnlineAverage1> stats;
+	
+	int slot_count = 0;
+	
+	
+public:
+	VolatilitySlots();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(stats);
+	}
+	
 };
 
 

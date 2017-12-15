@@ -1844,25 +1844,37 @@ void StochasticOscillator::Start() {
 
 
 
-WilliamsPercentRange::WilliamsPercentRange() {
+WilliamsPercentRange::WilliamsPercentRange() :
+	AdvisorBase(2, 2) // buffers total, visible
+{
 	period = 14;
 }
 
 void WilliamsPercentRange::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-50); // normalized
-	SetCoreMaximum(50);  // normalized
+	SetCoreMinimum(-1); // normalized
+	SetCoreMaximum(+1);  // normalized
 	SetBufferColor(0, DodgerBlue);
+	SetBufferColor(1, Color(28, 255, 200));
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, -20 + 50); // normalized
 	SetCoreLevel(1, -80 + 50); // normalized
 	SetBufferBegin ( 0, period );
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"WPR");
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
 }
 
 void WilliamsPercentRange::Start() {
 	Buffer& buffer = GetBuffer(0);
+	Buffer& change_buf = GetBuffer(1);
 	int bars = GetBars();
 	int counted = GetCounted();
 
@@ -1882,8 +1894,17 @@ void WilliamsPercentRange::Start() {
 		double max_high = High( highest );
 		double min_low = Low( lowest );
 		double close = Open( i );
-		buffer.Set(i, -100 * ( max_high - close ) / ( max_high - min_low ) + 50); // normalized
+		double cur = -2 * ( max_high - close ) / ( max_high - min_low ) + 1;
+		buffer.Set(i, cur); // normalized
+		
+		double prev = buffer.Get(i-1);
+		double change = (cur - prev) * 10.0;
+		change_buf.Set(i, change);
 	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && counted < GetBars())
+		RefreshAll();
 }
 
 
@@ -3517,19 +3538,8 @@ void CorrelationOscillator::Init() {
 	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
 	System& sys = GetSystem();
-	//if (sys.sym_ids.GetCount() == 0)
-	//	Panic("ExpertSystem is not yet initialized.");
-	int sym_shift = 0;
-	for(int i = 0; i < SYM_COUNT-1; i++) {
-		/*int sys_id = sys.sym_ids[i + sym_shift];
-		if (sym_shift == 0 && sys_id == id) {
-			sym_shift++;
-			i--;
-			continue;
-		}
-		sym_ids[i] = sys_id;*/
-		sym_ids[i] = i;
-	}
+	for(int i = 0; i < SYM_COUNT-1; i++)
+		sym_ids[i] = GetSystem().GetPrioritySymbol(i);
 	
 	SetCoreMaximum(+1.0);
 	SetCoreMinimum(-1.0);
@@ -4125,6 +4135,150 @@ void MinimalLabel::Start() {
 		if (clean_break)
 			prev_counted = i;
 		i = j - 1;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+StrongForce::StrongForce() :
+	AdvisorBase(1, 1) // buffers total, visible
+{
+	
+}
+
+void StrongForce::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, DodgerBlue);
+	SetBufferStyle(0, DRAW_LINE);
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (GetSystem().GetSymbolPriority(GetSymbol()) < SYM_COUNT) {
+		EnableJobs();
+	}
+}
+
+void StrongForce::Start() {
+	Buffer& buffer = GetBuffer(0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	if (counted > 0)
+		counted--;
+	
+	if (counted == 0)
+		counted++;
+	
+	System& sys = GetSystem();
+	int strong_sym = sys.GetStrongSymbol();
+	int tf = GetTf();
+	int sym_priority = sys.GetSymbolPriority(GetSymbol());
+	if (sym_priority >= SYM_COUNT) return;
+	bool check_corr = sym_priority > 0;
+	
+	ConstBuffer& own_open = GetInputBuffer(0, 0);
+	ConstBuffer& strong_open = GetInputBuffer(0, strong_sym, tf, 0);
+	ConstBuffer* corr_buf = check_corr ? &dynamic_cast<DataBridge*>(GetInputCore(0, strong_sym, tf))->corr[0].buffer[sym_priority-1] : NULL;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double own_change = own_open.Get(i)		/ own_open.Get(i-1)		- 1.0;
+		bool inv = check_corr && corr_buf->Get(i) < 0.0;
+		double strong_change = strong_open.Get(i)	/ strong_open.Get(i-1)	- 1.0;
+		double diff;
+		if (!inv) {
+			diff		= own_change - strong_change;
+		} else {
+			own_change	*= -1.0;
+			diff		= own_change - strong_change;
+			diff		*= -1.0;
+		}
+		buffer.Set(i, diff);
+	}
+	
+	// AdvisorBase refresh conditional
+	if (IsJobsFinished() && counted < GetBars())
+		RefreshAll();
+}
+
+
+
+
+
+
+
+
+
+
+
+VolatilitySlots::VolatilitySlots() {
+	
+}
+
+void VolatilitySlots::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Color(113, 42, 150));
+	SetBufferStyle(0, DRAW_LINE);
+	
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 0.0002);
+	SetCoreLevel(1,  0.001);
+	SetCoreLevel(2,  0.010);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
+	
+	
+	int tf_mins = GetMinutePeriod();
+	if (tf_mins < 10080)
+		slot_count = (5 * 24 * 60 * 60) / tf_mins;
+	else
+		slot_count = 1;
+	
+	stats.SetCount(slot_count);
+}
+
+void VolatilitySlots::Start() {
+	Buffer& buffer = GetBuffer(0);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	if (counted > 0)
+		counted--;
+	
+	if (counted == 0)
+		counted++;
+	
+	int tf_mins = GetMinutePeriod();
+	
+	for(int i = counted; i < bars; i++) {
+		double cur  = open_buf.Get(i);
+		double prev = open_buf.Get(i-1);
+		double change = fabs(cur / prev - 1.0);
+		int slot_id = (i-1) % slot_count;
+		OnlineAverage1& av = stats[slot_id];
+		av.Add(change);
+	}
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		int slot_id = i % slot_count;
+		const OnlineAverage1& av = stats[slot_id];
+		
+		buffer.Set(i, av.mean);
 	}
 }
 

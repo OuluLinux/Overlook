@@ -19,6 +19,7 @@ using namespace Upp;
 #include "System.h"
 #include "Core.h"
 #include "ExposureTester.h"
+#include "AdvisorBase.h"
 #include "DataBridge.h"
 #include "Indicators.h"
 #include "ExpertAdvisors.h"

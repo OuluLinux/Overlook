@@ -47,11 +47,7 @@ void System::Init() {
 			AddSymbol(s.name);
 		}
 		
-		for(int i = 0; i < mt.GetCurrencyCount(); i++) {
-			const Currency& c = mt.GetCurrency(i);
-			AddSymbol(c.name);
-		}
-		
+		AddSymbol("Strong");
 		AddSymbol("Account");
 		
 		

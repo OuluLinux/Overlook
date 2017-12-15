@@ -48,6 +48,8 @@ file
 	System.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
+	AdvisorBase.h,
+	AdvisorBase.cpp,
 	DataBridge.h,
 	DataBridge.cpp,
 	DataBridgeCommon.cpp,

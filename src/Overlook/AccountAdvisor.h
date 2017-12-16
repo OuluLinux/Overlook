@@ -37,6 +37,7 @@ protected:
 	void SetRealArea();
 	void RefreshMain();
 	void MainReal();
+	void OptimizeLimit(double chg_limit, double slow_limit);
 	
 	SimBroker sb;
 	void RunSimBroker();

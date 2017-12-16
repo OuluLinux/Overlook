@@ -20,7 +20,8 @@ void WeekSlotAdvisor::Start() {
 	
 	if (once) {
 		once = false;
-		if (prev_counted) prev_counted--;
+		//if (prev_counted) prev_counted--;
+		prev_counted = false;
 		//Reset(); // For developing
 	}
 	
@@ -39,102 +40,54 @@ void WeekSlotAdvisor::Start() {
 		ASSERT(!tf_ids.IsEmpty());
 		
 		
-		time_slots.SetCount(SYM_COUNT);
-		for(int i = 0; i < time_slots.GetCount(); i++) {
-			Vector<int>& sym_slots = time_slots[i];
-			sym_slots.SetCount(weekslots, -1);
-			
-			int sym = sys.GetPrioritySymbol(i);
-			Vector<Vector<OnlineAverage1>*> stats;
-			
-			for(int j = 0; j < tf_ids.GetCount(); j++) {
-				int tf = tf_ids[j];
-				VolatilitySlots& vs = *dynamic_cast<VolatilitySlots*>(GetInputCore(1, sym, tf));
-				
-				int exp_vs_stats_count = weekslots / ratios[j];
-				ASSERT(exp_vs_stats_count == vs.stats.GetCount());
-				
-				stats.Add(&vs.stats);
-			}
-			
-			for(int j = 0; j < sym_slots.GetCount(); j++) {
-				
-				// try to zoom
-				int level = -1;
-				for(int k = 0; k < tf_ids.GetCount(); k++) {
-					int ratio = ratios[k];
-					int slow_slot = j / ratio;
-					double mean_chg = (*stats[k])[slow_slot].mean;
-					if (mean_chg < 0.0004)
-						break;
-					level = k;
-				}
-				
-				sym_slots[j] = level;
-			}
-			
-			
-			// Fill holes
-			for(int i = 4; i < sym_slots.GetCount(); i++) {
-				int buf[5];
-				for(int j = 0; j < 5; j++)
-					buf[j] = sym_slots[i-j];
-				bool changed = false;
-				// Fill 1 hole
-				if (buf[0] == buf[2] && buf[1] == buf[0]-1) {
-					buf[1] = buf[0];
-					changed = true;
-				}
-				// Fill 2 hole
-				else if (buf[0] == buf[3] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1) {
-					buf[1] = buf[0];
-					buf[2] = buf[0];
-					changed = true;
-				}
-				// Fill 3 hole
-				else if (buf[0] == buf[4] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1 && buf[3] == buf[0]-1) {
-					buf[1] = buf[0];
-					buf[2] = buf[0];
-					buf[3] = buf[0];
-					changed = true;
-				}
-				if (changed)
-					for(int j = 0; j < 5; j++)
-						sym_slots[i-j] = buf[j];
-			}
-			LOG("SYMBOL " << sym);
-			DUMP(sym_slots);
-			
-			
-			spread_point	.SetCount(SYM_COUNT, 0);
-			inputs			.SetCount(SYM_COUNT, NULL);
+		spread_point	.SetCount(SYM_COUNT, 0);
+		inputs			.SetCount(SYM_COUNT, NULL);
+		for(int i = 0; i < SYM_COUNT; i++) {
+			int symbol					= sys.GetPrioritySymbol(i);
+			int tf						= GetTf();
+			ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
+			inputs[i]					= &open_buf;
+		}
+		
+		
+		signals			.SetCount(tf_ids.GetCount());
+		enabled			.SetCount(tf_ids.GetCount());
+		for(int j = 0; j < tf_ids.GetCount(); j++) {
+			int tf = tf_ids[j];
+			signals[j]	.SetCount(SYM_COUNT, NULL);
+			enabled[j]	.SetCount(SYM_COUNT, NULL);
 			for(int i = 0; i < SYM_COUNT; i++) {
 				int symbol					= sys.GetPrioritySymbol(i);
-				int tf						= GetTf();
-				ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
-				inputs[i]					= &open_buf;
+				CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
+				ASSERT(core);
+				ConstVectorBool& sig_buf	= core->GetOutput(0).label;
+				ConstVectorBool& ena_buf	= core->GetOutput(1).label;
+				signals[j][i]				= &sig_buf;
+				enabled[j][i]				= &ena_buf;
+				
+				if (!j) spread_point[i]		= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
 			}
-			
-			
-			signals			.SetCount(tf_ids.GetCount());
-			enabled			.SetCount(tf_ids.GetCount());
-			for(int j = 0; j < tf_ids.GetCount(); j++) {
-				int tf = tf_ids[j];
-				signals[j]	.SetCount(SYM_COUNT, NULL);
-				enabled[j]	.SetCount(SYM_COUNT, NULL);
-				for(int i = 0; i < SYM_COUNT; i++) {
-					int symbol					= sys.GetPrioritySymbol(i);
-					CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
-					ASSERT(core);
-					ConstVectorBool& sig_buf	= core->GetOutput(0).label;
-					ConstVectorBool& ena_buf	= core->GetOutput(1).label;
-					signals[j][i]				= &sig_buf;
-					enabled[j][i]				= &ena_buf;
-					
-					if (!j) spread_point[i]		= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
+		}
+		
+		
+		int best_i = -1, best_j = -1;
+		double best_res = -DBL_MAX;
+		for(int i = 1; i < 15; i++) {
+			for(int j = 0; j < 10; j++) {
+				OptimizeLimit(0.0001 * i, 0.0001 * j);
+				RunSimBroker();
+				double e = sb.AccountEquity();
+				if (e > best_res) {
+					best_i = i;
+					best_j = j;
+					best_res = e;
 				}
 			}
 		}
+		
+		double limit1 = best_i != -1 ? 0.0001 * best_i : 0.001;
+		double limit2 = best_j != -1 ? 0.0001 * best_j : 0.001;
+		OptimizeLimit(limit1, limit2);
 	}
 	
 	bool sources_finished = true;
@@ -154,6 +107,74 @@ void WeekSlotAdvisor::Start() {
 		LOG("WeekSlotAdvisor::Start Refresh");
 		RefreshMain();
 		prev_counted = bars;
+	}
+}
+
+void WeekSlotAdvisor::OptimizeLimit(double chg_limit, double slow_limit) {
+	System& sys = GetSystem();
+	time_slots.SetCount(SYM_COUNT);
+	for(int i = 0; i < time_slots.GetCount(); i++) {
+		Vector<int>& sym_slots = time_slots[i];
+		sym_slots.SetCount(weekslots, -1);
+		
+		int sym = sys.GetPrioritySymbol(i);
+		Vector<Vector<OnlineAverage1>*> stats;
+		
+		for(int j = 0; j < tf_ids.GetCount(); j++) {
+			int tf = tf_ids[j];
+			VolatilitySlots& vs = *dynamic_cast<VolatilitySlots*>(GetInputCore(1, sym, tf));
+			
+			int exp_vs_stats_count = weekslots / ratios[j];
+			ASSERT(exp_vs_stats_count == vs.stats.GetCount());
+			
+			stats.Add(&vs.stats);
+		}
+		
+		for(int j = 0; j < sym_slots.GetCount(); j++) {
+			
+			// try to zoom
+			int level = -1;
+			for(int k = 0; k < tf_ids.GetCount(); k++) {
+				int ratio = ratios[k];
+				int slow_slot = j / ratio;
+				double mean_chg = (*stats[k])[slow_slot].mean;
+				if (mean_chg < chg_limit || (k == 0 && mean_chg < slow_limit))
+					break;
+				level = k;
+			}
+			
+			sym_slots[j] = level;
+		}
+		
+		
+		// Fill holes
+		for(int i = 4; i < sym_slots.GetCount(); i++) {
+			int buf[5];
+			for(int j = 0; j < 5; j++)
+				buf[j] = sym_slots[i-j];
+			bool changed = false;
+			// Fill 1 hole
+			if (buf[0] == buf[2] && buf[1] == buf[0]-1) {
+				buf[1] = buf[0];
+				changed = true;
+			}
+			// Fill 2 hole
+			else if (buf[0] == buf[3] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1) {
+				buf[1] = buf[0];
+				buf[2] = buf[0];
+				changed = true;
+			}
+			// Fill 3 hole
+			else if (buf[0] == buf[4] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1 && buf[3] == buf[0]-1) {
+				buf[1] = buf[0];
+				buf[2] = buf[0];
+				buf[3] = buf[0];
+				changed = true;
+			}
+			if (changed)
+				for(int j = 0; j < 5; j++)
+					sym_slots[i-j] = buf[j];
+		}
 	}
 }
 
@@ -273,11 +294,10 @@ void WeekSlotAdvisor::RunSimBroker() {
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int sig = 0;
 			int read_tf = time_slots[j][weekslot];
-			if (enabled[read_tf][j]->Get(i)) {
+			if (read_tf != -1 && enabled[read_tf][j]->Get(i)) {
 				sig		= signals[read_tf][j]->Get(i) ? -1 : +1;
 			}
 			int sym		= sys.GetPrioritySymbol(j);
-			ASSERT(sig >= -MULT_MAX && sig <= MULT_MAX);
 			
 			if (sig == sb.GetSignal(sym) && sig != 0)
 				sb.SetSignalFreeze(sym, true);

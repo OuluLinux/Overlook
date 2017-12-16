@@ -55,15 +55,8 @@ protected:
 	One<RF>						training_rf;
 	ForestArea					area;
 	ConstBuffer*				open_buf			= NULL;
-	ConstVectorBool*			slow_action			= NULL;
-	ConstVectorBool*			slow_active			= NULL;
 	int							prev_counted		= 0;
-	int							conf_count			= 0;
 	int							data_count			= 0;
-	int							max_accum_signal	= 0;
-	int							zero_accum_signal	= 0;
-	int							slow_div			= 0;
-	int							slow_tfi			= -1;
 	int							main_count			= 0;
 	int							main_visible		= 0;
 	bool						once				= true;

@@ -327,10 +327,10 @@ struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	
 	MatType state;
-	double reward = 0.0, reward_accum = 0.0;
-	int action = 0, action_accum = 0;
+	double reward = 0.0;
+	int action = 0;
 	
-	void Serialize(Stream& s) {s % state % reward % reward_accum % action % action_accum;}
+	void Serialize(Stream& s) {s % state % reward % action;}
 };
 
 

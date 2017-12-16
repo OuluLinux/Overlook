@@ -4,8 +4,6 @@
 namespace Overlook {
 using namespace Upp;
 
-#define ACCURACY
-
 class WeekSlotAdvisor : public Core {
 	
 	struct MainOptimizationCtrl : public JobCtrl {
@@ -14,19 +12,19 @@ class WeekSlotAdvisor : public Core {
 	};
 	
 	// Persistent
-	GeneticOptimizer optimizer;
-	Vector<double> optimization_pts;
-	double area_change_total[3];
 	int prev_counted = 0;
 	
 	
 	// Temp
-	Vector<ConstBuffer*> inputs, weights;
-	Vector<ConstVectorBool*> signals, enabled;
-	Vector<double> trial, spread_point;
+	Vector<Vector<ConstVectorBool*> > signals, enabled;
+	Vector<ConstBuffer*> inputs;
+	Vector<double> spread_point;
+	Vector<Vector<int> > time_slots;
+	Index<int> tf_ids;
+	Vector<int> ratios;
 	ForestArea area;
 	int realtime_count = 0;
-	int tfmins = 0, slotmins = 0;
+	int tfmins = 0;
 	int weekslots = 0;
 	int cols = 0;
 	bool forced_optimizer_reset = false;
@@ -36,26 +34,12 @@ class WeekSlotAdvisor : public Core {
 protected:
 	virtual void Start();
 	
-	bool MainOptimizationBegin();
-	bool MainOptimizationIterator();
-	bool MainOptimizationEnd();
-	bool MainOptimizationInspect();
-	void NormalizeTrial();
-	void RefreshMainBuffer(bool forced);
-	void RefreshInputs();
-	void RunMain();
-	void SetTrainingArea();
 	void SetRealArea();
 	void RefreshMain();
 	void MainReal();
-	void Reset();
 	
-	#ifdef ACCURACY
 	SimBroker sb;
 	void RunSimBroker();
-	#else
-	FixedSimBroker sb;
-	#endif
 	
 public:
 	typedef WeekSlotAdvisor CLASSNAME;
@@ -65,17 +49,15 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction0)
+			% In<VolatilitySlots>(&FilterFunction1)
 			% In<DqnAdvisor>(&FilterFunction1)
-			% Out(SYM_COUNT, SYM_COUNT)
-			% Mem(optimizer)
-			% Mem(optimization_pts)
-			% Mem(area_change_total[0]) % Mem(area_change_total[1]) % Mem(area_change_total[2])
+			% Out(1, 1)
 			% Mem(prev_counted);
 	}
 	
 	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
 		if (in_sym == -1)
-			return in_tf  == out_tf;
+			return in_tf  == out_tf || IsTfUsed(::Overlook::GetSystem().GetPeriod(out_tf));
 		
 		if (in_sym == out_sym)
 			return true;
@@ -83,9 +65,19 @@ public:
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
 	
+	static bool IsTfUsed(int tf_mins) {return tf_mins == 15 || tf_mins == 60 || tf_mins == 240;}
+	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf  == out_tf;
+		if (in_sym == -1) {
+			if (out_tf < in_tf)
+				return false;
+			
+			int tf_mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			if (IsTfUsed(tf_mins))
+				return true;
+			
+			return false;
+		}
 		
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}

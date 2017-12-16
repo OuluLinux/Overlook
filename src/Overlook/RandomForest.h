@@ -194,9 +194,6 @@ struct ForestArea {
 	int train_begin = 0, train_end = 0;
 	int test0_begin = 0, test0_end = 0;
 	int test1_begin = 0, test1_end = 0;
-	
-	void FillArea(int level, int data_count);
-	void FillArea(int data_count);
 };
 
 struct RandomForestStat {

@@ -56,6 +56,7 @@ public:
 	virtual void Clear();
 	virtual void CollectOnce(double d) {}
 	
+	void ZeroEquity() {balance = 0.0; equity = 0.0;}
 	void SignalOrders(bool debug_print=false);
 	void SetFreeMarginLevel(double d);
 	void SetFreeMarginScale(int s) {fmscale = s;}

@@ -67,7 +67,6 @@ INITBLOCK {
 	System::Register<StrongForce>("StrongForce");
 	System::Register<DqnAdvisor>("DqnAdvisor", CORE_EXPERTADVISOR);
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
-	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	
 	
 	System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());

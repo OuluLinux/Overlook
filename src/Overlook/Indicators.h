@@ -996,6 +996,9 @@ public:
 };
 
 class VolatilitySlots : public Core {
+	
+protected:
+	friend class WeekSlotAdvisor;
 	Vector<OnlineAverage1> stats;
 	
 	int slot_count = 0;

@@ -142,6 +142,9 @@ public:
 	#ifndef flagGUITASK
 	bool running = false, stopped = true;
 	void Start() {
+		if (jobs.IsEmpty())
+			return;
+		
 		Stop();
 		
 		if (is_fail)

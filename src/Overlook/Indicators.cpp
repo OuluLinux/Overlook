@@ -4242,7 +4242,7 @@ void VolatilitySlots::Init() {
 	
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < 10080)
-		slot_count = (5 * 24 * 60 * 60) / tf_mins;
+		slot_count = (5 * 24 * 60) / tf_mins;
 	else
 		slot_count = 1;
 	

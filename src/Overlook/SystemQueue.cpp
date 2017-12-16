@@ -470,9 +470,18 @@ void System::ProcessJobs() {
 		
 		// Look, I can use "auto" too! (Writing types makes reading easier usually)
 		LOCK(job_lock) {
-			for (auto& job : job_threads)
-				if (job.IsStopped())
+			int running = 0;
+			int max_running = GetUsedCpuCores();
+			for (auto& job : job_threads) {
+				if (job.IsStopped()) {
 					job.Start();
+					if (!job.IsStopped())
+						running++;
+				}
+				else running++;
+				if (running >= max_running)
+					break;
+			}
 		}
 		
 		for(int i = 0; i < 10 && jobs_running; i++)

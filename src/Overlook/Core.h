@@ -205,8 +205,8 @@ public:
 	
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
-	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return SafetyBuffer(inputs[input].Get(HashSymTf(sym, tf)).output->buffers[buffer]);}
-	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const {return inputs[input].Get(HashSymTf(sym, tf)).output->label;}
+	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const;
+	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}

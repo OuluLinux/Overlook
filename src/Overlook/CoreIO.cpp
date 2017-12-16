@@ -66,6 +66,16 @@ void CoreIO::SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int out
 	}
 }
 
+ConstBuffer& CoreIO::GetInputBuffer(int input, int sym, int tf, int buffer) const {
+	Output* out = inputs[input].Get(HashSymTf(sym, tf)).output;
+	if (buffer < 0) buffer += out->buffers.GetCount();
+	return SafetyBuffer(out->buffers[buffer]);
+}
+
+ConstVectorBool& CoreIO::GetInputLabel(int input, int sym, int tf) const {
+	return inputs[input].Get(HashSymTf(sym, tf)).output->label;
+}
+	
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
 	return inputs[input].Get(HashSymTf(sym, tf)).core;
 }

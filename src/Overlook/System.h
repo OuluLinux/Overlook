@@ -142,7 +142,7 @@ public:
 	#ifndef flagGUITASK
 	bool running = false, stopped = true;
 	void Start() {
-		if (jobs.IsEmpty())
+		if (jobs.IsEmpty() || !stopped)
 			return;
 		
 		Stop();
@@ -151,13 +151,18 @@ public:
 			return;
 		
 		// The begin function is called always after loading, so switch state back to init.
-		for(auto& job : jobs)
+		bool all_ready = true;
+		for(auto& job : jobs) {
 			if (job->state == Job::RUNNING)
 				job->state = Job::INIT;
+			all_ready &= job->state == Job::STOPPED;
+		}
 		
-		running = true;
-		stopped = false;
-		Thread::Start(THISBACK(Run));
+		if (!all_ready) {
+			running = true;
+			stopped = false;
+			Thread::Start(THISBACK(Run));
+		}
 	}
 	void Stop() {
 		running = false;

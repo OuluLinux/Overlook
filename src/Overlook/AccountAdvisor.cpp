@@ -25,7 +25,8 @@ void WeekSlotAdvisor::Start() {
 		//Reset(); // For developing
 	}
 	
-	if (time_slots.IsEmpty()) {
+	
+	if (tf_ids.GetCount() == 0) {
 		ASSERT(tf_ids.IsEmpty());
 		int this_tfmins = GetMinutePeriod();
 		for(int i = sys.GetPeriodCount()-1; i >= GetTf(); i--) {
@@ -37,60 +38,13 @@ void WeekSlotAdvisor::Start() {
 				ratios.Add(ratio);
 			}
 		}
-		ASSERT(!tf_ids.IsEmpty());
-		
-		
-		spread_point	.SetCount(SYM_COUNT, 0);
-		inputs			.SetCount(SYM_COUNT, NULL);
-		for(int i = 0; i < SYM_COUNT; i++) {
-			int symbol					= sys.GetPrioritySymbol(i);
-			int tf						= GetTf();
-			ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
-			inputs[i]					= &open_buf;
-		}
-		
-		
-		signals			.SetCount(tf_ids.GetCount());
-		enabled			.SetCount(tf_ids.GetCount());
-		for(int j = 0; j < tf_ids.GetCount(); j++) {
-			int tf = tf_ids[j];
-			signals[j]	.SetCount(SYM_COUNT, NULL);
-			enabled[j]	.SetCount(SYM_COUNT, NULL);
-			for(int i = 0; i < SYM_COUNT; i++) {
-				int symbol					= sys.GetPrioritySymbol(i);
-				CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
-				ASSERT(core);
-				ConstVectorBool& sig_buf	= core->GetOutput(0).label;
-				ConstVectorBool& ena_buf	= core->GetOutput(1).label;
-				signals[j][i]				= &sig_buf;
-				enabled[j][i]				= &ena_buf;
-				
-				if (!j) spread_point[i]		= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
-			}
-		}
-		
-		
-		int best_i = -1, best_j = -1;
-		double best_res = -DBL_MAX;
-		for(int i = 1; i < 15; i++) {
-			for(int j = 0; j < 10; j++) {
-				OptimizeLimit(0.0001 * i, 0.0001 * j);
-				RunSimBroker();
-				double e = sb.AccountEquity();
-				if (e > best_res) {
-					best_i = i;
-					best_j = j;
-					best_res = e;
-				}
-			}
-		}
-		
-		double limit1 = best_i != -1 ? 0.0001 * best_i : 0.001;
-		double limit2 = best_j != -1 ? 0.0001 * best_j : 0.001;
-		OptimizeLimit(limit1, limit2);
+		ASSERT(tf_ids.GetCount() == 0);
 	}
 	
+	
 	bool sources_finished = true;
+	int bars = GetBars();
+	int chk_count = 0;
 	for(int i = 0; i < SYM_COUNT; i++) {
 		int symbol						= sys.GetPrioritySymbol(i);
 		for(int j = 0; j < tf_ids.GetCount(); j++) {
@@ -98,12 +52,66 @@ void WeekSlotAdvisor::Start() {
 			CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
 			DqnAdvisor* adv				= dynamic_cast<DqnAdvisor*>(core);
 			ASSERT(adv);
-			sources_finished			&= adv->IsJobsFinished();
+			sources_finished			&= adv->IsJobsFinished()
+										&& adv->prev_counted == sys.GetCountTf(tf)
+										&& adv->GetOutput(0).label.GetCount() == sys.GetCountTf(tf)
+										&& adv->GetOutput(1).label.GetCount() == sys.GetCountTf(tf);
+			chk_count++;
 		}
 	}
 	
-	int bars = GetBars();
-	if (sources_finished && prev_counted < bars) {
+	if (sources_finished && prev_counted < bars && chk_count > 0) {
+		if (time_slots.IsEmpty()) {
+			spread_point	.SetCount(SYM_COUNT, 0);
+			inputs			.SetCount(SYM_COUNT, NULL);
+			for(int i = 0; i < SYM_COUNT; i++) {
+				int symbol					= sys.GetPrioritySymbol(i);
+				int tf						= GetTf();
+				ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
+				inputs[i]					= &open_buf;
+			}
+			
+			
+			signals			.SetCount(tf_ids.GetCount());
+			enabled			.SetCount(tf_ids.GetCount());
+			for(int j = 0; j < tf_ids.GetCount(); j++) {
+				int tf = tf_ids[j];
+				signals[j]	.SetCount(SYM_COUNT, NULL);
+				enabled[j]	.SetCount(SYM_COUNT, NULL);
+				for(int i = 0; i < SYM_COUNT; i++) {
+					int symbol					= sys.GetPrioritySymbol(i);
+					CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
+					ASSERT(core);
+					ConstVectorBool& sig_buf	= core->GetOutput(0).label;
+					ConstVectorBool& ena_buf	= core->GetOutput(1).label;
+					signals[j][i]				= &sig_buf;
+					enabled[j][i]				= &ena_buf;
+					
+					if (!j) spread_point[i]		= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
+				}
+			}
+			
+			
+			int best_i = -1, best_j = -1;
+			double best_res = -DBL_MAX;
+			for(int i = 1; i < 15; i++) {
+				for(int j = 0; j < 10; j++) {
+					OptimizeLimit(0.0001 * i, 0.0001 * j);
+					RunSimBroker();
+					double e = sb.AccountEquity();
+					if (e > best_res) {
+						best_i = i;
+						best_j = j;
+						best_res = e;
+					}
+				}
+			}
+			
+			double limit1 = best_i != -1 ? 0.0001 * best_i : 0.001;
+			double limit2 = best_j != -1 ? 0.0001 * best_j : 0.001;
+			OptimizeLimit(limit1, limit2);
+		}
+		
 		LOG("WeekSlotAdvisor::Start Refresh");
 		RefreshMain();
 		prev_counted = bars;

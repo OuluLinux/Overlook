@@ -8,6 +8,11 @@ using namespace Upp;
 
 class DqnAdvisor : public Core {
 	
+	
+protected:
+	friend class WeekSlotAdvisor;
+	
+	
 	static const int INPUT_PERIOD	= 5;
 	static const int INPUT_COUNT	= 4*4;
 	

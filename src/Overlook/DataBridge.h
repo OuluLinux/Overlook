@@ -177,23 +177,6 @@ public:
 	}
 };
 
-
-
-class ValueChange : public AdvisorBase {
-	
-public:
-	typedef ValueChange CLASSNAME;
-	ValueChange();
-	
-	virtual void IO(ValueRegister& reg) {
-		AdvisorBase::BaseIO(reg);
-	}
-	
-	virtual void Init();
-	virtual void Start();
-	
-};
-
 }
 
 #endif

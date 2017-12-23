@@ -326,11 +326,10 @@ template <int WIDTH, int HEIGHT>
 struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	
-	MatType state;
 	double reward = 0.0;
 	int action = 0;
 	
-	void Serialize(Stream& s) {s % state % reward % action;}
+	void Serialize(Stream& s) {s % reward % action;}
 };
 
 
@@ -393,7 +392,6 @@ public:
 	
 	
 protected:
-	Vector<DQItem>* exp = NULL;
 	double epsilon, alpha, tderror_clamp;
 	double tderror;
 	double gamma;
@@ -402,7 +400,7 @@ protected:
 	
 public:
 
-	DQNTrainer(Vector<DQItem>* exp) : exp(exp) {
+	DQNTrainer() {
 		gamma = 0.1;	// future reward discount factor
 		epsilon = 0.02;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
@@ -449,7 +447,7 @@ public:
 		data.mul1.Backward(data.W1,				input);
 	}
 	
-	int Act(DQItem& before) {
+	int Act(MatType& before_state) {
 		
 		// epsilon greedy policy
 		int action;
@@ -457,20 +455,15 @@ public:
 			action = Random(num_actions);
 		} else {
 			// greedy wrt Q function
-			FwdOut& amat = Forward(before.state);
+			FwdOut& amat = Forward(before_state);
 			action = amat.GetMaxColumn(); // returns index of argmax action
 		}
 		
 		return action;
 	}
 	
-	void LearnAny(int count) {
-		int pos = Random(Upp::min(count, exp->GetCount()-1));
-		
-		DQItem& before = (*exp)[pos];
-		DQItem& after  = (*exp)[pos+1];
-		
-		Learn(before.state, before.action, before.reward, after.state);
+	void LearnAny(MatType& before_state, int before_action, double before_reward, MatType& after_state) {
+		Learn(before_state, before_action, before_reward, after_state);
 	}
 	
 	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {

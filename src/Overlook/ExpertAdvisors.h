@@ -42,6 +42,8 @@ protected:
 	VectorBool					full_mask;
 	ForestArea					area;
 	ConstBuffer*				open_buf			= NULL;
+	DQN::MatType				tmp_before_state, tmp_after_state;
+	Vector<ConstBuffer*>		bufs;
 	int							prev_counted		= 0;
 	int							data_count			= 0;
 	int							main_count			= 0;
@@ -69,6 +71,7 @@ protected:
 	void RefreshAction(int data_pos);
 	void RefreshReward(int data_pos);
 	int  GetAction(DQN::DQItem& before, int cursor);
+	void LoadState(DQN::MatType& state, int cursor);
 	
 public:
 	typedef DqnAdvisor CLASSNAME;

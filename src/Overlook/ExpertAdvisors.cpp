@@ -4,7 +4,7 @@
 namespace Overlook {
 using namespace Upp;
 
-DqnAdvisor::DqnAdvisor() : dqn_trainer(&data) {
+DqnAdvisor::DqnAdvisor() {
 	
 }
 
@@ -76,7 +76,8 @@ void DqnAdvisor::RefreshAction(int cursor) {
 	Buffer& sig1_dqnprob	= GetBuffer(1);
 	Buffer& sig2_dqnprob	= GetBuffer(2);
 	
-	before.action = dqn_trainer.Act(before);
+	LoadState(tmp_before_state, cursor);
+	before.action = dqn_trainer.Act(tmp_before_state);
 	
 	sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
 	sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
@@ -152,15 +153,17 @@ bool DqnAdvisor::TrainingDQNIterator() {
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);
-		
-		DQN::DQItem& before = data[cursor];
-		
 		RefreshAction(cursor);
 		RefreshReward(cursor);
 		
 		if (dqn_round > 100) {
-			for(int j = 0; j < 5; j++)
-				dqn_trainer.LearnAny(dqn_round);
+			for(int j = 0; j < 5; j++) {
+				int pos = Random(Upp::min(data.GetCount(), dqn_round) - 1);
+				DQN::DQItem& before = data[pos];
+				LoadState(tmp_before_state, pos);
+				LoadState(tmp_after_state, pos+1);
+				dqn_trainer.LearnAny(tmp_before_state, before.action, before.reward, tmp_after_state);
+			}
 		}
 		
 		dqn_round++;
@@ -264,7 +267,7 @@ void DqnAdvisor::RefreshOutputBuffers() {
 	
 	data.SetCount(bars);
 	
-	Vector<ConstBuffer*> bufs;
+	bufs.SetCount(0);
 	bufs.Reserve(4*4);
 	for(int i = 1; i < 5; i++) {
 		int sym = i < 3 ? GetSymbol() : GetSystem().GetStrongSymbol();
@@ -273,23 +276,20 @@ void DqnAdvisor::RefreshOutputBuffers() {
 	}
 	ASSERT(INPUT_COUNT == bufs.GetCount());
 	
-	int cursor = prev_counted;
+}
+
+void DqnAdvisor::LoadState(DQN::MatType& state, int cursor) {
+	SetSafetyLimit(cursor);
 	
-	for(; cursor < bars; cursor++) {
-		SetSafetyLimit(cursor);
-		
-		DQN::DQItem& current = data[cursor];
-		
-		int col = 0;
-		for(int j = 0; j < bufs.GetCount(); j++) {
-			ConstBuffer& buf = *bufs[j];
-			for(int k = 0; k < INPUT_PERIOD; k++) {
-				double value = buf.Get(Upp::max(0, cursor - k));
-				current.state.Set(col++, value);
-			}
+	int col = 0;
+	for(int j = 0; j < bufs.GetCount(); j++) {
+		ConstBuffer& buf = *bufs[j];
+		for(int k = 0; k < INPUT_PERIOD; k++) {
+			double value = buf.Get(Upp::max(0, cursor - k));
+			state.Set(col++, value);
 		}
-		ASSERT(col == INPUT_COUNT * INPUT_PERIOD);
 	}
+	ASSERT(col == INPUT_COUNT * INPUT_PERIOD);
 }
 
 void DqnAdvisor::RefreshMain() {

@@ -3,7 +3,7 @@
 namespace Overlook {
 
 AdvisorBase::AdvisorBase(int main_count, int main_visible) :
-	main_count(main_count), main_visible(main_visible), dqn_trainer(&data) {
+	main_count(main_count), main_visible(main_visible) {
 	ASSERT(main_count > 0 && main_visible > 0 && main_visible <= main_count);
 }
 
@@ -167,26 +167,23 @@ void AdvisorBase::RefreshOutputBuffers() {
 		rf_trainer.forest.memory.Detach();
 	}
 	
-	{
-		data.SetCount(bars);
-		ConstBuffer& change_buf = GetBuffer(main_count - 1);
-		
-		for(int cursor = prev_counted; cursor < bars; cursor++) {
-			SetSafetyLimit(cursor);
-			
-			DQN::DQItem& current = data[cursor];
-			for(int j = 0; j < INPUT_PERIOD; j++) {
-				int pos = Upp::max(0, cursor - j);
-				double change = change_buf.Get(pos);
-				change = Upp::max(-1.0, Upp::min(+1.0, change));
-				if (change >= 0.0) {
-					current.state.Set(j * 2 + 0, change);
-					current.state.Set(j * 2 + 1, 0.0);
-				} else {
-					current.state.Set(j * 2 + 0, 0.0);
-					current.state.Set(j * 2 + 1, -change);
-				}
-			}
+	data.SetCount(bars);
+}
+
+void AdvisorBase::LoadState(DQN::MatType& state, int cursor) {
+	ConstBuffer& change_buf = GetBuffer(main_count - 1);
+	SetSafetyLimit(cursor);
+	
+	for(int j = 0; j < INPUT_PERIOD; j++) {
+		int pos = Upp::max(0, cursor - j);
+		double change = change_buf.Get(pos);
+		change = Upp::max(-1.0, Upp::min(+1.0, change));
+		if (change >= 0.0) {
+			state.Set(j * 2 + 0, change);
+			state.Set(j * 2 + 1, 0.0);
+		} else {
+			state.Set(j * 2 + 0, 0.0);
+			state.Set(j * 2 + 1, -change);
 		}
 	}
 }
@@ -231,15 +228,17 @@ bool AdvisorBase::TrainingDQNIterator() {
 	
 	for(int i = 0; i < 10; i++) {
 		int cursor = dqn_round % (data.GetCount() - 1);
-		
-		DQN::DQItem& before = data[cursor];
-		
 		RefreshAction(cursor);
 		RefreshReward(cursor);
 		
 		if (dqn_round > 100) {
-			for(int j = 0; j < 5; j++)
-				dqn_trainer.LearnAny(dqn_round);
+			for(int j = 0; j < 5; j++) {
+				int pos = Random(Upp::min(data.GetCount(), dqn_round) - 1);
+				DQN::DQItem& before = data[pos];
+				LoadState(tmp_before_state, pos);
+				LoadState(tmp_after_state, pos+1);
+				dqn_trainer.LearnAny(tmp_before_state, before.action, before.reward, tmp_after_state);
+			}
 		}
 		
 		dqn_round++;
@@ -261,7 +260,8 @@ bool AdvisorBase::TrainingDQNIterator() {
 
 void AdvisorBase::RefreshAction(int cursor) {
 	DQN::DQItem& before		= data[cursor];
-	before.action = dqn_trainer.Act(before);
+	LoadState(tmp_before_state, cursor);
+	before.action = dqn_trainer.Act(tmp_before_state);
 	
 	Buffer& sig0_dqnprob	= GetBuffer(main_count + RF_COUNT + 0);
 	Buffer& sig1_dqnprob	= GetBuffer(main_count + RF_COUNT + 1);

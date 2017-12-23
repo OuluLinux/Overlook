@@ -38,7 +38,7 @@ void WeekSlotAdvisor::Start() {
 				ratios.Add(ratio);
 			}
 		}
-		ASSERT(tf_ids.GetCount() == 0);
+		ASSERT(tf_ids.GetCount() > 0);
 	}
 	
 	
@@ -302,8 +302,11 @@ void WeekSlotAdvisor::RunSimBroker() {
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int sig = 0;
 			int read_tf = time_slots[j][weekslot];
-			if (read_tf != -1 && enabled[read_tf][j]->Get(i)) {
-				sig		= signals[read_tf][j]->Get(i) ? -1 : +1;
+			if (read_tf != -1) {
+				int read_pos = sys.GetShiftTf(tf, tf_ids[read_tf], i);
+				if (enabled[read_tf][j]->Get(read_pos)) {
+					sig		= signals[read_tf][j]->Get(read_pos) ? -1 : +1;
+				}
 			}
 			int sym		= sys.GetPrioritySymbol(j);
 			

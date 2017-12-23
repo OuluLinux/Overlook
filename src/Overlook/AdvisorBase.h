@@ -55,6 +55,7 @@ protected:
 	One<RF>						training_rf;
 	ForestArea					area;
 	ConstBuffer*				open_buf			= NULL;
+	DQN::MatType				tmp_before_state, tmp_after_state;
 	int							prev_counted		= 0;
 	int							data_count			= 0;
 	int							main_count			= 0;
@@ -85,6 +86,7 @@ protected:
 	void RunMainDQN();
 	void RefreshAll();
 	void RefreshMain();
+	void LoadState(DQN::MatType& state, int cursor);
 	
 	void BaseIO(ValueRegister& reg, FilterFunction filter_fn=SymTfFilter) {
 		

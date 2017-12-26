@@ -203,6 +203,7 @@ bool AdvisorBase::TrainingDQNBegin() {
 	int bars = GetBars();
 	ASSERT(bars > 0);
 	data.SetCount(bars);
+	GetOutput(0).label.SetCount(bars);
 	
 	RefreshOutputBuffers();
 	
@@ -269,6 +270,8 @@ void AdvisorBase::RefreshAction(int cursor) {
 	sig0_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(0));
 	sig1_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(1));
 	sig2_dqnprob.Set(cursor, dqn_trainer.data.add2.output.Get(2));
+		
+	GetOutput(0).label.Set(cursor, before.action);
 }
 
 int AdvisorBase::GetAction(DQN::DQItem& before, int cursor) {
@@ -381,6 +384,7 @@ void AdvisorBase::RefreshMain() {
 	int cursor					= Upp::max(0, prev_counted-1);
 	
 	data.SetCount(bars);
+	GetOutput(0).label.SetCount(bars);
 	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);

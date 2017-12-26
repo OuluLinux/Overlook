@@ -61,6 +61,8 @@ void WeekSlotAdvisor::Start() {
 	}
 	
 	if (sources_finished && prev_counted < bars && chk_count > 0) {
+		RefreshSourcesOnlyDeep();
+		
 		if (time_slots.IsEmpty()) {
 			spread_point	.SetCount(SYM_COUNT, 0);
 			inputs			.SetCount(SYM_COUNT, NULL);

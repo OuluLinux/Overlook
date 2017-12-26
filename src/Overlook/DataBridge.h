@@ -88,6 +88,7 @@ protected:
 	int cursor, buffer_cursor;
 	int data_begin;
 	bool slow_volume, day_volume;
+	bool once = true;
 	
 	void RefreshFromHistory(bool use_internet_data, bool update_only=false);
 	void RefreshFromInternet();

@@ -1903,7 +1903,7 @@ void WilliamsPercentRange::Start() {
 	}
 	
 	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && counted < GetBars())
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
 		RefreshAll();
 }
 
@@ -4208,7 +4208,7 @@ void StrongForce::Start() {
 	}
 	
 	// AdvisorBase refresh conditional
-	if (IsJobsFinished() && counted < GetBars())
+	if (IsJobsFinished() && GetCounted() < GetBars())
 		RefreshAll();
 }
 

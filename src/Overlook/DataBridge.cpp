@@ -32,36 +32,41 @@ void DataBridge::Init() {
 		point = sym.point;
 	}
 	
-	// Correlation unit
-	if (GetSymbol() == sys.GetStrongSymbol()) {
-		if (corr.IsEmpty()) {
-			corr.Add();
-			
-			corr[0].sym_ids.SetCount(SYM_COUNT, -1);
-			for(int i = 0; i < SYM_COUNT; i++)
-				corr[0].sym_ids[i] = sys.GetPrioritySymbol(i);
-			
-			corr[0].averages.SetCount(SYM_COUNT-1);
-			corr[0].buffer.SetCount(SYM_COUNT-1);
-		}
-		
-		corr[0].period = 10;
-		
-		corr[0].opens.SetCount(SYM_COUNT, 0);
-		for(int i = 0; i < SYM_COUNT; i++) {
-			ConstBuffer& open = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 0);
-			corr[0].opens[i] = &open;
-		}
-	}
 }
 
 void DataBridge::Start() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
-	common.InspectInit();
 	
 	
+	if (once) {
+		once = false;
+		
+		common.InspectInit();
+		
+		// Correlation unit setup
+		if (GetSymbol() == sys.GetStrongSymbol()) {
+			if (corr.IsEmpty()) {
+				corr.Add();
+				
+				corr[0].sym_ids.SetCount(SYM_COUNT, -1);
+				for(int i = 0; i < SYM_COUNT; i++)
+					corr[0].sym_ids[i] = sys.GetPrioritySymbol(i);
+				
+				corr[0].averages.SetCount(SYM_COUNT-1);
+				corr[0].buffer.SetCount(SYM_COUNT-1);
+			}
+			
+			corr[0].period = 10;
+			
+			corr[0].opens.SetCount(SYM_COUNT, 0);
+			for(int i = 0; i < SYM_COUNT; i++) {
+				ConstBuffer& open = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 0);
+				corr[0].opens[i] = &open;
+			}
+		}
+	}
 	
 	int sym_count = common.GetSymbolCount();
 	int cur_count = mt.GetCurrencyCount();

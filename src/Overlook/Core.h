@@ -366,6 +366,7 @@ public:
 	// Visible main functions
 	void Refresh();
 	void RefreshSources();
+	void RefreshSourcesOnlyDeep();
 	void ClearContent();
 	void RefreshIO() {IO(*this);}
 	

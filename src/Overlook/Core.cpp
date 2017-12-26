@@ -172,6 +172,22 @@ void Core::RefreshSources() {
 	Refresh();
 }
 
+void Core::RefreshSourcesOnlyDeep() {
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core) {
+					core->RefreshSourcesOnlyDeep();
+					core->Refresh();
+				}
+			}
+		}
+	}
+}
+
 void Core::Refresh() {
 	refresh_lock.Enter();
 	

@@ -8,13 +8,14 @@ using namespace Upp;
 
 class DqnAdvisor : public Core {
 	
-	
 protected:
 	friend class WeekSlotAdvisor;
 	
 	
-	static const int INPUT_PERIOD	= 5;
-	static const int INPUT_COUNT	= 4*4;
+	static const int PERIOD_COUNT	= 3;
+	static const int SRC_COUNT		= 4;
+	static const int INPUT_PERIOD	= 4;
+	static const int INPUT_COUNT	= 2 * SRC_COUNT * PERIOD_COUNT;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -85,12 +86,16 @@ public:
 	double GetSpreadPoint() const {return spread_point;}
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% In<StrongForce>()
-			% In<WilliamsPercentRange>()
-			% In<ValueChange>(&FilterFunction)
-			% In<WilliamsPercentRange>(&FilterFunction)
-			% Out(buffer_count, buffer_count)
+		reg % In<DataBridge>();
+		
+		for(int i = 0; i < PERIOD_COUNT; i++) {
+			reg % In<ScissorChannelOscillator>(&Args)
+				% In<WilliamsPercentRange>(&Args)
+				% In<ScissorChannelOscillator>(&FilterFunction, &Args)
+				% In<WilliamsPercentRange>(&FilterFunction, &Args);
+		}
+		
+		reg % Out(buffer_count, buffer_count)
 			% Out(0, 0)
 			% Mem(data)
 			% Mem(dqn_trainer)
@@ -110,6 +115,14 @@ public:
 		return out_sym == strong_sym;
 	}
 	
+	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		int pshift = (input - 1) / SRC_COUNT;
+		//int type   = (input - 1) % SRC_COUNT;
+		int period = (1 << (4 + pshift));
+
+		decl.AddArg(period);
+	}
+
 };
 
 

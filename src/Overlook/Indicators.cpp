@@ -3416,7 +3416,7 @@ void SupportResistance::Start() {
 
 
 
-SupportResistanceOscillator::SupportResistanceOscillator() {
+SupportResistanceOscillator::SupportResistanceOscillator() : AdvisorBase(2,2) {
 	period = 300;
 	max_crosses = 100;
 	max_radius = 100;
@@ -3425,23 +3425,30 @@ SupportResistanceOscillator::SupportResistanceOscillator() {
 
 void SupportResistanceOscillator::Init() {
 	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
-	SetBufferColor(1, Green);
+	SetBufferColor(0, Green);
+	SetBufferColor(1, Red);
 	SetCoreMinimum(-1);
 	SetCoreMaximum(1);
 	AddSubCore<SupportResistance>().Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
 }
 
 void SupportResistanceOscillator::Start() {
-	Buffer& osc = GetBuffer(0);
-	Buffer& osc_av = GetBuffer(1);
+	Buffer& osc_av = GetBuffer(0);
+	Buffer& osc = GetBuffer(1);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
 	ConstBuffer& ind1 = At(0).GetBuffer(0);
 	ConstBuffer& ind2 = At(0).GetBuffer(1);
 	
-	Vector<double> crosses;
 	int prev_pos = counted ? counted-1 : 0;
 	SetSafetyLimit(counted-1);
 	double prev_value = counted ? osc_av.Get(counted-1) : 0;
@@ -3461,7 +3468,162 @@ void SupportResistanceOscillator::Start() {
 		prev_pos = i;
 		prev_value = value;
 	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
+		RefreshAll();
 }
+
+
+
+
+
+ChannelOscillator::ChannelOscillator() : AdvisorBase(1, 1) {
+	period = 300;
+}
+
+void ChannelOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	SetCoreMinimum(-1);
+	SetCoreMaximum(1);
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
+}
+
+void ChannelOscillator::Start() {
+	Buffer& osc = GetBuffer(0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	ec.SetSize(period);
+	
+	SetSafetyLimit(counted-1);
+	for (int i = ec.pos+1; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double open = Open(i);
+		double low = i > 0 ? Low(i-1) : open;
+		double high = i > 0 ? High(i-1) : open;
+		double max = Upp::max(open, high);
+		double min = Upp::min(open, low);
+		ec.Add(max, min);
+		
+		double ch_high = High(ec.GetHighest());
+		double ch_low = Low(ec.GetLowest());
+		double ch_diff = ch_high - ch_low;
+		
+		double value = (open - ch_low) / ch_diff * 2.0 - 1.0;
+		osc.Set(i, value);
+	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
+		RefreshAll();
+}
+
+
+
+
+
+
+
+
+
+ScissorChannelOscillator::ScissorChannelOscillator() : AdvisorBase(1, 1) {
+	period = 30;
+}
+
+void ScissorChannelOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	SetCoreMinimum(-1);
+	SetCoreMaximum(1);
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
+}
+
+void ScissorChannelOscillator::Start() {
+	Buffer& osc = GetBuffer(0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	ec.SetSize(period);
+	
+	SetSafetyLimit(counted-1);
+	for (int i = ec.pos+1; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double open = Open(i);
+		double low = i > 0 ? Low(i-1) : open;
+		double high = i > 0 ? High(i-1) : open;
+		double max = Upp::max(open, high);
+		double min = Upp::min(open, low);
+		ec.Add(max, min);
+		
+		int high_pos = ec.GetHighest();
+		int low_pos = ec.GetLowest();
+		double ch_high = High(high_pos);
+		double ch_low = Low(low_pos);
+		double ch_diff = ch_high - ch_low;
+		
+		double highest_change = DBL_MAX;
+		int highest_change_pos = 0;
+		double lowest_change = DBL_MAX;
+		int lowest_change_pos = 0;
+		
+		for(int j = Upp::min(high_pos+1, low_pos+1); j <= i; j++) {
+			double open = Open(j);
+			
+			if (j >= high_pos) {
+				int dist = j - high_pos;
+				double change = ch_high - open;
+				double av_change = change / dist;
+				if (av_change < highest_change) {
+					highest_change = av_change;
+					highest_change_pos = j;
+				}
+			}
+			
+			if (j >= low_pos) {
+				int dist = j - low_pos;
+				double change = open - ch_low;
+				double av_change = change / dist;
+				if (av_change < lowest_change) {
+					lowest_change = av_change;
+					lowest_change_pos = j;
+				}
+			}
+		}
+		
+		int high_dist = i - high_pos;
+		double high_limit = ch_high - high_dist * highest_change;
+		int low_dist = i - low_pos;
+		double low_limit = ch_low + low_dist * lowest_change;
+		
+		double limit_diff = high_limit - low_limit;
+		double value = (open - low_limit) / limit_diff * 2.0 - 1.0;
+		if (!IsFin(value)) value = 0.0;
+		osc.Set(i, value);
+	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
+		RefreshAll();
+}
+
 
 
 
@@ -4204,7 +4366,12 @@ void StrongForce::Start() {
 			diff		= own_change - strong_change;
 			diff		*= -1.0;
 		}
+		max_diff = Upp::max(max_diff, fabs(diff));
 		buffer.Set(i, diff);
+	}
+	
+	for(int i = counted; i < bars; i++) {
+		buffer.Set(i, buffer.Get(i) / max_diff);
 	}
 	
 	// AdvisorBase refresh conditional

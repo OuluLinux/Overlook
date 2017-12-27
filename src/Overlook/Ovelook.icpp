@@ -63,6 +63,8 @@ INITBLOCK {
 	System::Register<MinimalLabel>("MinimalLabel");
 	
 	System::Register<VolatilitySlots>("VolatilitySlots");
+	System::Register<ChannelOscillator>("ChannelOscillator");
+	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	
 	System::Register<StrongForce>("StrongForce");
 	System::Register<DqnAdvisor>("DqnAdvisor", CORE_EXPERTADVISOR);

@@ -16,21 +16,21 @@ void AdvisorBase::BaseInit() {
 }
 
 void AdvisorBase::EnableJobs() {
-	SetJobCount(2);
+	SetJobCount(1);
 	
 	open_buf = &GetInputBuffer(0, 0);
 	
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
-	
+	/*
 	SetJob(0, tf_str + "Random Forest Training")
 		.SetBegin		(THISBACK(TrainingRFBegin))
 		.SetIterator	(THISBACK(TrainingRFIterator))
 		.SetEnd			(THISBACK(TrainingRFEnd))
 		.SetInspect		(THISBACK(TrainingRFInspect))
 		.SetCtrl		<TrainingRFCtrl>();
+	*/
 	
-	
-	SetJob(1, tf_str + "DQN Training")
+	SetJob(0, tf_str + "DQN Training")
 		.SetBegin		(THISBACK(TrainingDQNBegin))
 		.SetIterator	(THISBACK(TrainingDQNIterator))
 		.SetEnd			(THISBACK(TrainingDQNEnd))

@@ -750,7 +750,7 @@ public:
 };
 
 
-class SupportResistanceOscillator : public Core {
+class SupportResistanceOscillator : public AdvisorBase {
 	int period, max_crosses, max_radius, smoothing_period;
 	
 public:
@@ -761,12 +761,49 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(2, 2)
-			% Arg("period", period, 2, 127)
+		BaseIO(reg);
+		reg % Arg("period", period, 2, 127)
 			% Arg("max_crosses", max_crosses, 300, 300)
 			% Arg("max_radius", max_radius, 100, 100)
 			% Arg("smoothing", smoothing_period, 100, 100);
+	}
+};
+
+
+class ChannelOscillator : public AdvisorBase {
+	int period;
+	ExtremumCache ec;
+	
+public:
+	ChannelOscillator();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		BaseIO(reg);
+		reg % Arg("period", period, 2)
+			% Mem(ec);
+	}
+};
+
+
+class ScissorChannelOscillator : public AdvisorBase {
+	int period;
+	ExtremumCache ec;
+	
+public:
+	ScissorChannelOscillator();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		BaseIO(reg);
+		reg % Arg("period", period, 2)
+			% Mem(ec);
 	}
 };
 
@@ -971,6 +1008,7 @@ public:
 
 
 class StrongForce : public AdvisorBase {
+	double max_diff = 0.0;
 	
 public:
 	StrongForce();
@@ -981,6 +1019,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		BaseIO(reg, &FilterFunction);
+		reg % Mem(max_diff);
 	}
 	
 	

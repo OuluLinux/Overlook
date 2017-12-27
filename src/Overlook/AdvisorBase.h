@@ -33,7 +33,7 @@ class AdvisorBase : public Core {
 	
 protected:
 	
-	static const int RF_COUNT = 2;
+	static const int RF_COUNT = 0;
 	static const int DQN_SIG_COUNT = 3;
 	
 	// Persistent

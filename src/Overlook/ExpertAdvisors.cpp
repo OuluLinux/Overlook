@@ -269,13 +269,12 @@ void DqnAdvisor::RefreshOutputBuffers() {
 	
 	bufs.SetCount(0);
 	bufs.Reserve(4*4);
-	for(int i = 1; i < 5; i++) {
-		int sym = i < 3 ? GetSymbol() : GetSystem().GetStrongSymbol();
-		for(int j = 1; j < 5; j++)
-			bufs.Add(&GetInputBuffer(i, sym, GetTf(), -1 - j));
+	for(int i = 0; i < SRC_COUNT*PERIOD_COUNT; i++) {
+		int sym = (i % SRC_COUNT) < 2 ? GetSymbol() : GetSystem().GetStrongSymbol();
+		for(int j = 1; j < 3; j++)
+			bufs.Add(&GetInputBuffer(1 + i, sym, GetTf(), -1 - j));
 	}
 	ASSERT(INPUT_COUNT == bufs.GetCount());
-	
 }
 
 void DqnAdvisor::LoadState(DQN::MatType& state, int cursor) {

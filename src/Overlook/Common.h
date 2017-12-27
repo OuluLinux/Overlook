@@ -739,10 +739,20 @@ struct ExtremumCache {
 	double max_value = -DBL_MAX, min_value = DBL_MAX;
 	int pos = -1, size = 0, max_left = 0, min_left = 0;
 	
-	ExtremumCache(int size) : size(size) {
+	ExtremumCache(int size=0) {
+		SetSize(size);
+	}
+	
+	void SetSize(int size) {
+		this->size = size;
 		max.SetCount(size, -DBL_MAX);
 		min.SetCount(size, DBL_MAX);
 	}
+	
+	void Serialize(Stream& s) {
+		s % max % min % max_value % min_value % pos % size % max_left % min_left;
+	}
+	
 	void Add(double low, double high) {
 		pos++;
 		int write_pos = pos % size;

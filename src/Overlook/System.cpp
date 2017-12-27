@@ -111,11 +111,11 @@ void System::Init() {
 			case 1: symstr = "USDJPY";	spread_point = 0.02;   break;
 			case 2: symstr = "USDCAD";	spread_point = 0.0003; break;
 			case 3: symstr = "EURUSD";	spread_point = 0.0002; break;
-			case 4: symstr = "EURJPY";	spread_point = 0.03;   break;
-			case 5: symstr = "EURCHF";	spread_point = 0.0003; break;
-			case 6: symstr = "USDCHF";	spread_point = 0.0003; break;
-			case 7: symstr = "AUDUSD";	spread_point = 0.0003; break;
-			case 8: symstr = "NZDUSD";	spread_point = 0.0003; break;
+			case 4: symstr = "AUDUSD";	spread_point = 0.0003; break;
+			case 5: symstr = "NZDUSD";	spread_point = 0.0003; break;
+			case 6: symstr = "EURJPY";	spread_point = 0.03;   break;
+			case 7: symstr = "EURCHF";	spread_point = 0.0003; break;
+			case 8: symstr = "USDCHF";	spread_point = 0.0003; break;
 			case 9: symstr = "EURGBP";	spread_point = 0.0003; break;
 			case 10: symstr = "AUDCAD";	spread_point = 0.0010; break;
 			case 11: symstr = "AUDJPY";	spread_point = 0.10;   break;

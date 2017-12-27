@@ -31,9 +31,7 @@ protected:
 	Vector<DQN::DQItem>			data;
 	DQN							dqn_trainer;
 	Vector<double>				dqntraining_pts;
-	OnlineAverage1				change_av;
 	int							opt_counter			= 0;
-	int							rflist_iter			= 0;
 	int							dqn_round			= 0;
 	int							dqn_pt_cursor		= 0;
 	

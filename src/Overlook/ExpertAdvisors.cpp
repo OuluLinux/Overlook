@@ -58,6 +58,8 @@ void DqnAdvisor::Start() {
 }
 
 void DqnAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	
 	TimeStop ts;
 	
 	RefreshOutputBuffers();
@@ -285,6 +287,10 @@ void DqnAdvisor::LoadState(DQN::MatType& state, int cursor) {
 		ConstBuffer& buf = *bufs[j];
 		for(int k = 0; k < INPUT_PERIOD; k++) {
 			double value = buf.Get(Upp::max(0, cursor - k));
+			if (!IsFin(value)) {
+				LOG("warning: not finite " << j << " " << (cursor - k));
+				value = 0.0;
+			}
 			state.Set(col++, value);
 		}
 	}

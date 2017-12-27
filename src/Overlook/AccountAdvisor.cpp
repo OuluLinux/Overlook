@@ -321,7 +321,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 		}
 		
 		
-		sb.SignalOrders(true);
+		sb.SignalOrders(false);
 		
 		
 		double value = sb.AccountEquity();
@@ -333,7 +333,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 		low_buf.Set(i, value);
 		high_buf.Set(i, value);
 		
-		LOG("SB " << i << " eq " << value);
+		//LOG("SB " << i << " eq " << value);
 	}
 }
 

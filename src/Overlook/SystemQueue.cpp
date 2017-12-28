@@ -526,6 +526,8 @@ bool JobThread::ProcessJob() {
 					job.core->EnterJob(&job, this);
 					bool succ = job.Process();
 					job.core->LeaveJob();
+					if (!succ && job.state == Job::INIT)
+						r = false;
 					// FIXME: postponing returns false also if (!succ) is_fail = true;
 				}
 				

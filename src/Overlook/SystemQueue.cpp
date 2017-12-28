@@ -468,11 +468,15 @@ void System::ProcessJobs() {
 	
 	while (jobs_running && !Thread::IsShutdownThreads()) {
 		
-		// Look, I can use "auto" too! (Writing types makes reading easier usually)
 		LOCK(job_lock) {
 			int running = 0;
 			int max_running = GetUsedCpuCores();
-			for (auto& job : job_threads) {
+			for(int i = 0; i < job_threads.GetCount(); i++) {
+				if (job_thread_iter >= job_threads.GetCount())
+					job_thread_iter = 0;
+				
+				JobThread& job = job_threads[job_thread_iter++];
+				
 				if (job.IsStopped()) {
 					job.Start();
 					if (!job.IsStopped())

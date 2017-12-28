@@ -354,6 +354,7 @@ public:
 	TimeCallback				jobs_tc;
 	int							gui_job_thread = 0;
 	#else
+	int							job_thread_iter = 0;
 	bool						jobs_running = false;
 	bool						jobs_stopped = true;
 	#endif

@@ -293,7 +293,7 @@ public:
 };
 
 
-class Momentum : public Core {
+class Momentum : public AdvisorBase {
 	int period, shift;
 	
 public:
@@ -303,9 +303,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(1, 1)
-			% Arg("period", period, 2)
+		BaseIO(reg);
+		reg % Arg("period", period, 2)
 			% Arg("shift", shift, -10000);
 	}
 };
@@ -376,7 +375,7 @@ public:
 };
 
 
-class RelativeStrengthIndex : public Core {
+class RelativeStrengthIndex : public AdvisorBase {
 	int period;
 	
 public:
@@ -386,9 +385,8 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(3, 1)
-			% Arg("period", period, 2, 127);
+		BaseIO(reg);
+		reg % Arg("period", period, 2, 127);
 	}
 };
 

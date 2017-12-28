@@ -386,6 +386,8 @@ void AdvisorBase::RefreshMain() {
 	data.SetCount(bars);
 	GetOutput(0).label.SetCount(bars);
 	
+	dqn_trainer.SetEpsilon(0); // no random actions
+	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);
 		RefreshAction(cursor);

@@ -12,10 +12,11 @@ protected:
 	friend class WeekSlotAdvisor;
 	
 	
-	static const int PERIOD_COUNT	= 3;
-	static const int SRC_COUNT		= 4;
-	static const int INPUT_PERIOD	= 4;
-	static const int INPUT_COUNT	= 2 * SRC_COUNT * PERIOD_COUNT;
+	static const int PERIOD_COUNT		= 3;
+	static const int SRC_COUNT			= 8;
+	static const int STRONGSRC_COUNT	= 4;
+	static const int INPUT_PERIOD		= 1;
+	static const int INPUT_COUNT		= 2 * SRC_COUNT * PERIOD_COUNT;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -89,8 +90,12 @@ public:
 		for(int i = 0; i < PERIOD_COUNT; i++) {
 			reg % In<ScissorChannelOscillator>(&Args)
 				% In<WilliamsPercentRange>(&Args)
+				% In<Momentum>(&Args)
+				% In<RelativeStrengthIndex>(&Args)
 				% In<ScissorChannelOscillator>(&FilterFunction, &Args)
-				% In<WilliamsPercentRange>(&FilterFunction, &Args);
+				% In<WilliamsPercentRange>(&FilterFunction, &Args)
+				% In<Momentum>(&FilterFunction, &Args)
+				% In<RelativeStrengthIndex>(&FilterFunction, &Args);
 		}
 		
 		reg % Out(buffer_count, buffer_count)

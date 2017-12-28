@@ -1327,8 +1327,10 @@ void ForceIndex::Start() {
 
 
 
-Momentum::Momentum() {
-	period = 14;
+Momentum::Momentum() :
+	AdvisorBase(2, 2) // buffers total, visible
+{
+	period = 32;
 	shift = -7;
 }
 
@@ -1336,6 +1338,7 @@ void Momentum::Init() {
 	SetCoreSeparateWindow();
 	
 	SetBufferColor(0, DodgerBlue);
+	SetBufferColor(1, Color(28, 255, 200));
 	
 	if ( period <= 0 )
 		throw DataExc();
@@ -1345,10 +1348,19 @@ void Momentum::Init() {
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"Momentum");
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
 }
 
 void Momentum::Start() {
 	Buffer& buffer = GetBuffer(0);
+	Buffer& change_buf = GetBuffer(1);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -1365,9 +1377,6 @@ void Momentum::Start() {
 	else
 		counted--;
 	
-	//bars--;
-	VectorBool& label = outputs[0].label;
-	label.SetCount(bars);
 	SetSafetyLimit(counted-1);
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -1376,9 +1385,14 @@ void Momentum::Start() {
 		double value = close1 * 100 / close2 - 100;
 		buffer.Set(i, value);
 		
-		bool label_value = value < 0.0;
-		label.Set(i, label_value);
+		double prev = buffer.Get(i-1);
+		double change = (value - prev) * 10.0;
+		change_buf.Set(i, change);
 	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
+		RefreshAll();
 }
 
 
@@ -1494,19 +1508,24 @@ void OsMA::Start() {
 
 
 
-RelativeStrengthIndex::RelativeStrengthIndex() {
-	period = 14;
+RelativeStrengthIndex::RelativeStrengthIndex() :
+	AdvisorBase(4, 4) // buffers total, visible
+{
+	period = 32;
 }
 
 void RelativeStrengthIndex::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-50); // normalized
-	SetCoreMaximum(50);  // normalized
+	SetCoreMinimum(-1); // normalized
+	SetCoreMaximum(+1);  // normalized
 	
 	SetBufferColor(0, DodgerBlue);
+	SetBufferColor(1, White());
+	SetBufferColor(2, White());
+	SetBufferColor(3, Color(28, 255, 200));
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 30.0 - 50); // normalized
-	SetCoreLevel(1, 70.0 - 50); // normalized
+	SetCoreLevel(0, +0.4); // normalized
+	SetCoreLevel(1, -0.4); // normalized
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -1515,6 +1534,14 @@ void RelativeStrengthIndex::Init() {
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "RSI");
+	
+	// AdvisorBase init
+	BaseInit();
+	
+	// AdvisorBase jobs conditional
+	if (IsAdvisorBaseSymbol(GetSymbol())) {
+		EnableJobs();
+	}
 }
 
 
@@ -1522,6 +1549,7 @@ void RelativeStrengthIndex::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& pos_buffer = GetBuffer(1);
 	Buffer& neg_buffer = GetBuffer(2);
+	Buffer& change_buf = GetBuffer(3);
 	
 	double diff;
 	int bars = GetBars();
@@ -1563,7 +1591,7 @@ void RelativeStrengthIndex::Start() {
 
 		pos_buffer.Set(period, sum_p / period);
 		neg_buffer.Set(period, sum_n / period);
-		buffer.Set(period, 100.0 - ( 100.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) ));
+		buffer.Set(period, (1.0 - ( 1.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) )) * 2.0 - 1.0);
 		pos = period + 1;
 	}
 	
@@ -1576,10 +1604,18 @@ void RelativeStrengthIndex::Start() {
 		diff = value - prev_value;
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
 		neg_buffer.Set(i, ( neg_buffer.Get(i - 1) * ( period - 1 ) + ( diff < 0.0 ? -diff : 0.0 ) ) / period);
-		double rsi = 100.0 - 100.0 / ( 1 + pos_buffer.Get(i) / neg_buffer.Get(i) );
-		buffer.Set(i, rsi - 50); // normalized
+		double rsi = (1.0 - 1.0 / ( 1.0 + pos_buffer.Get(i) / neg_buffer.Get(i) )) * 2.0 - 1.0;
+		buffer.Set(i, rsi);
 		prev_value = value;
+		
+		double prev = buffer.Get(i-1);
+		double change = (rsi - prev) * 10.0;
+		change_buf.Set(i, change);
 	}
+	
+	// AdvisorBase refresh conditional
+	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
+		RefreshAll();
 }
 
 

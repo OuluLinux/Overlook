@@ -272,7 +272,7 @@ void DqnAdvisor::RefreshOutputBuffers() {
 	bufs.SetCount(0);
 	bufs.Reserve(4*4);
 	for(int i = 0; i < SRC_COUNT*PERIOD_COUNT; i++) {
-		int sym = (i % SRC_COUNT) < 2 ? GetSymbol() : GetSystem().GetStrongSymbol();
+		int sym = (i % SRC_COUNT) < STRONGSRC_COUNT ? GetSymbol() : GetSystem().GetStrongSymbol();
 		for(int j = 1; j < 3; j++)
 			bufs.Add(&GetInputBuffer(1 + i, sym, GetTf(), -1 - j));
 	}
@@ -304,6 +304,8 @@ void DqnAdvisor::RefreshMain() {
 	data.SetCount(bars);
 	GetOutput(0).label.SetCount(bars);
 	GetOutput(1).label.SetCount(bars);
+	
+	dqn_trainer.SetEpsilon(0); // no random actions
 	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);

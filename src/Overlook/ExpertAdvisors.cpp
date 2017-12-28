@@ -139,6 +139,18 @@ bool DqnAdvisor::TrainingDQNBegin() {
 		dqn_round = 0;
 	}
 	
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return false;
+			}
+		}
+	}
+	
 	return true;
 }
 

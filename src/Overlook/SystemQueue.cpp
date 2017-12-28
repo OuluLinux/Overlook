@@ -471,7 +471,11 @@ void System::ProcessJobs() {
 		LOCK(job_lock) {
 			int running = 0;
 			int max_running = GetUsedCpuCores();
-			for(int i = 0; i < job_threads.GetCount(); i++) {
+			for (auto& job : job_threads)
+				if (!job.IsStopped())
+					running++;
+			
+			for(int i = 0; i < job_threads.GetCount() && running < max_running; i++) {
 				if (job_thread_iter >= job_threads.GetCount())
 					job_thread_iter = 0;
 				
@@ -482,9 +486,6 @@ void System::ProcessJobs() {
 					if (!job.IsStopped())
 						running++;
 				}
-				else running++;
-				if (running >= max_running)
-					break;
 			}
 		}
 		

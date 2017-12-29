@@ -12,7 +12,7 @@ protected:
 	friend class WeekSlotAdvisor;
 	
 	
-	static const int PERIOD_COUNT		= 4;
+	static const int PERIOD_COUNT		= 8;
 	static const int SRC_COUNT			= 8;
 	static const int STRONGSRC_COUNT	= 4;
 	static const int INPUT_PERIOD		= 1;
@@ -121,7 +121,7 @@ public:
 	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
 		int pshift = (input - 1) / SRC_COUNT;
 		//int type   = (input - 1) % SRC_COUNT;
-		int period = (1 << (4 + pshift));
+		int period = (1 << (2 + pshift));
 
 		decl.AddArg(period);
 	}

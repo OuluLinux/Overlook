@@ -13,7 +13,7 @@ namespace Overlook {
 
 class AdvisorBase : public Core {
 	
-	static const int INPUT_PERIOD = 5;
+	static const int INPUT_PERIOD = 1;
 	
 	struct TrainingRFCtrl : public JobCtrl {
 		Vector<Point> polyline;

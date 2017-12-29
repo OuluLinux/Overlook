@@ -12,7 +12,7 @@ protected:
 	friend class WeekSlotAdvisor;
 	
 	
-	static const int PERIOD_COUNT		= 3;
+	static const int PERIOD_COUNT		= 4;
 	static const int SRC_COUNT			= 8;
 	static const int STRONGSRC_COUNT	= 4;
 	static const int INPUT_PERIOD		= 1;

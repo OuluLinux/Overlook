@@ -121,6 +121,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
+	virtual void Assist(AssistBase& ab, int cursor);
 	
 	int GetChangeStep(int shift, int steps);
 	int GetDataBegin() const {return data_begin;}

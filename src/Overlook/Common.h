@@ -17,7 +17,7 @@
 namespace Overlook {
 using namespace Upp;
 
-// These values are constant in the working product.
+#define ENABLE_TRAINING			1
 #define MAIN_PERIOD_MINUTES		60
 #define ONLY_M1_SOURCE			0
 #define DECISION_DD_LEVEL		0.1
@@ -36,6 +36,7 @@ using namespace Upp;
 #define FMLEVEL					0.60
 #define FEEDBACK_PERIOD			10
 #define FASTAGENT_PERIODLIMIT	240
+#define ADVISOR_PERIOD			20
 
 #ifdef flagDEBUG
 #define	LOCALPROB_DEPTH			5
@@ -897,6 +898,23 @@ public:
 	int GetCursor() const {return *cursor_ptr;}
 	
 };
+
+
+struct AssistItem : Moveable<AssistItem> {
+	String msg;
+	
+	
+	void Set(String msg) {this->msg = msg;}
+};
+
+struct AssistBase {
+	Vector<AssistItem> items;
+	
+	
+	void Add(String msg) {items.Add().Set(msg);}
+};
+
+int log2_64 (uint64 value);
 
 }
 

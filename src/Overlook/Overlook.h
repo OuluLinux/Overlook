@@ -23,6 +23,7 @@ using namespace Upp;
 #include "AdvisorBase.h"
 #include "Utils.h"
 #include "Indicators.h"
+#include "PatternAdvisor.h"
 #include "ExpertAdvisors.h"
 #include "AccountAdvisor.h"
 #include "GraphCtrl.h"
@@ -80,7 +81,7 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl>  trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
@@ -151,6 +152,7 @@ public:
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
+	void RefreshAssist();
 	void RefreshTrades();
 	void RefreshExposure();
 	void RefreshTradesHistory();

@@ -24,6 +24,7 @@ void DqnAdvisor::Init() {
 	
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
 	
+	#if ENABLE_TRAINING
 	SetJobCount(1);
 	
 	SetJob(0, tf_str + "DQN Training")
@@ -32,7 +33,7 @@ void DqnAdvisor::Init() {
 		.SetEnd			(THISBACK(TrainingDQNEnd))
 		.SetInspect		(THISBACK(TrainingDQNInspect))
 		.SetCtrl		<TrainingDQNCtrl>();
-	
+	#endif
 }
 
 void DqnAdvisor::Start() {
@@ -58,6 +59,7 @@ void DqnAdvisor::Start() {
 }
 
 void DqnAdvisor::RefreshAll() {
+	#if ENABLE_TRAINING
 	RefreshSourcesOnlyDeep();
 	
 	TimeStop ts;
@@ -70,6 +72,7 @@ void DqnAdvisor::RefreshAll() {
 	LOG("DqnAdvisor::Start ... RefreshMain " << ts.ToString());
 	
 	prev_counted = GetBars();
+	#endif
 }
 
 void DqnAdvisor::RefreshAction(int cursor) {
@@ -176,7 +179,7 @@ bool DqnAdvisor::TrainingDQNIterator() {
 				DQN::DQItem& before = data[pos];
 				LoadState(tmp_before_state, pos);
 				LoadState(tmp_after_state, pos+1);
-				dqn_trainer.LearnAny(tmp_before_state, before.action, before.reward, tmp_after_state);
+				dqn_trainer.Learn(tmp_before_state, before.action, before.reward, tmp_after_state);
 			}
 		}
 		

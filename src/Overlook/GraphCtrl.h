@@ -49,6 +49,10 @@ public:
 };
 
 class GraphCtrl : public Ctrl {
+	
+protected:
+	friend class Overlook;
+	
 	Vector<Core*> src;
 	System* base = NULL;
 	Point latest_left_down_pt, latest_mouse_move_pt;
@@ -57,6 +61,7 @@ class GraphCtrl : public Ctrl {
 	int div, count;
 	int datapos;
 	int real_screen_count, latest_screen_count;
+	int last_time_value_tool_pos = 0;
 	bool mouse_left_is_down, show_timevalue_tool;
 	bool right_offset;
 	
@@ -104,6 +109,7 @@ public:
 	void GetDataRange(Core& cont, int buffer);
 	int GetCount();
 	int GetPos();
+	bool IsTimeValueToolShown() const {return show_timevalue_tool;}
 	
 	void Seek(int pos);
 	

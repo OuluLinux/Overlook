@@ -190,6 +190,7 @@ void GraphCtrl::Paint(Draw& draw) {
         if (latest_mouse_move_pt.y >= 0) {
 	        int x = latest_mouse_move_pt.x;
 	        int pos = bs.GetCountTf(tf) - count + (x - border) / div - shift;
+	        last_time_value_tool_pos = pos;
 	        if (pos >= 0 && pos < data_count) {
 	            Time t = bs.GetTimeTf(tf, pos);
 	            String timestr = Format("%", t);

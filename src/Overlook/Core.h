@@ -182,6 +182,7 @@ public:
 	void Get(Stream& in, const String& dir, int subcore_id);
 	
 	virtual void IO(const ValueBase& base);
+	virtual void Assist(AssistBase& ab, int cursor) {}
 	void RefreshBuffers();
 	
 	template <class T> T* Get() {

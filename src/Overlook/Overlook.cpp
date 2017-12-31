@@ -36,6 +36,8 @@ Overlook::Overlook() : watch(this) {
 	
 	NewOrderWindow::WhenOrdersChanged = THISBACK(Data);
 	
+	assist.AddColumn("What");
+	
 	trade.AddColumn ( "Order" );
 	trade.AddColumn ( "Time" );
 	trade.AddColumn ( "Type" );
@@ -123,7 +125,9 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	
+	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
@@ -455,11 +459,42 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
+	if (assist.IsVisible())			RefreshAssist();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
+}
+
+void Overlook::RefreshAssist() {
+	Chart* chart = cman.GetVisibleChart();
+	if (!chart || chart->graphs.IsEmpty()) {
+		assist.Clear();
+		return;
+	}
+	
+	GraphCtrl& graph = chart->graphs[0];
+	if (!graph.IsTimeValueToolShown())
+		return;
+	int cursor = graph.last_time_value_tool_pos;
+	
+	AssistBase ab;
+	for(int i = chart->work_queue.GetCount()-1; i >= 0; i--) {
+		CoreItem& ci = *chart->work_queue[i];
+		if (ci.core.IsEmpty()) continue;
+		
+		Core& core = *ci.core;
+		core.Assist(ab, cursor);
+		if (!ab.items.IsEmpty())
+			break;
+	}
+	
+	for(int i = 0; i < ab.items.GetCount(); i++) {
+		const AssistItem& ai = ab.items[i];
+		assist.Set(i, 0, ai.msg);
+	}
+	assist.SetCount(ab.items.GetCount());
 }
 
 void Overlook::RefreshTrades() {

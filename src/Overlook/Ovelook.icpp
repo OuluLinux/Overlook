@@ -67,6 +67,7 @@ INITBLOCK {
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	
 	System::Register<StrongForce>("StrongForce");
+	System::Register<PatternAdvisor>("PatternAdvisor");
 	System::Register<DqnAdvisor>("DqnAdvisor", CORE_EXPERTADVISOR);
 	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
 	

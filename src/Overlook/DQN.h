@@ -332,6 +332,23 @@ struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	void Serialize(Stream& s) {s % reward % action;}
 };
 
+template <int ACTIONS>
+struct DQVector : Moveable<DQVector<ACTIONS> > {
+	double weight[ACTIONS];
+	double correct[ACTIONS];
+	
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) {
+			s.Get(weight,  sizeof(double) * ACTIONS);
+			s.Get(correct, sizeof(double) * ACTIONS);
+		}
+		else if (s.IsStoring()) {
+			s.Put(weight,  sizeof(double) * ACTIONS);
+			s.Put(correct, sizeof(double) * ACTIONS);
+		}
+	}
+};
+
 
 
 
@@ -389,6 +406,7 @@ public:
 	
 	typedef  Mat<double, 1, num_actions>				FwdOut;
 	typedef  DQItem<1, num_states>						DQItem;
+	typedef  DQVector<num_actions>						DQVector;
 	
 	
 protected:
@@ -462,15 +480,29 @@ public:
 		return action;
 	}
 	
-	void LearnAny(MatType& before_state, int before_action, double before_reward, MatType& after_state) {
-		Learn(before_state, before_action, before_reward, after_state);
+	void Evaluate(MatType& before_state, DQVector& out) {
+		
+		// greedy wrt Q function
+		FwdOut& amat = Forward(before_state);
+		
+		// epsilon greedy policy
+		if (epsilon > 0.0 && Randomf() < epsilon) {
+			for(int i = 0; i < num_actions; i++)
+				out.weight[i] = amat.Get(Random(num_actions));
+		} else {
+			for(int i = 0; i < num_actions; i++)
+				out.weight[i] = amat.Get(i);
+		}
 	}
 	
 	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {
 		
 		// compute the target Q value
-		FwdOut& tmat = Forward(s1);
-		double qmax = reward0 + gamma * tmat.Get(tmat.GetMaxColumn());
+		double qmax = reward0;
+		if (gamma > 0.0) {
+			FwdOut& tmat = Forward(s1);
+			qmax += gamma * tmat.Get(tmat.GetMaxColumn());
+		}
 		
 		// now predict
 		FwdOut& pred = Forward(s0);
@@ -486,6 +518,35 @@ public:
 				tderror = -clamp;
 		}
 		pred.SetGradient(a0, tderror);
+		Backward(s0); // compute gradients on net params
+		
+		// update net
+		UpdateMat(data.W1, alpha);
+		UpdateMat(data.b1, alpha);
+		UpdateMat(data.W2, alpha);
+		UpdateMat(data.b2, alpha);
+		
+		return tderror;
+	}
+	
+	double Learn(MatType& s0, const DQVector& vec, MatType& s1) {
+		
+		// now predict
+		FwdOut& pred = Forward(s0);
+		
+		for (int i = 0; i < num_actions; i++) {
+			double tderror = pred.Get(i) - vec.correct[i];
+			double clamp = tderror_clamp;
+			double abs_tderror = tderror >= 0.0 ? +tderror : -tderror;
+			if (abs_tderror > clamp) {
+				// huber loss to robustify
+				if (tderror > clamp)
+					tderror = +clamp;
+				else
+					tderror = -clamp;
+			}
+			pred.SetGradient(i, tderror);
+		}
 		Backward(s0); // compute gradients on net params
 		
 		// update net

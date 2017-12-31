@@ -794,4 +794,123 @@ void DataBridge::RefreshFromFaster() {
 	}
 }
 
+void DataBridge::Assist(AssistBase& ab, int cursor) {
+	if (cursor < 1 || cursor >= GetBars()) return;
+	
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	// Open/Close trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-1; i >= 0; i--) {
+			int idir = open.Get(i+1) > open.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			ab.Add(String(dir == +1 ? "Up " : "Down ") + "trend of " + IntStr(len));
+	}
+	
+	// High trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = high.Get(i+1) > high.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			ab.Add("High " + String(dir == +1 ? "up" : "down") + " trend of " + IntStr(len));
+	}
+	
+	// Low trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = low.Get(i+1) < low.Get(i) ? -1 : +1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			ab.Add("Low " + String(dir == +1 ? "up" : "down") + " trend of " + IntStr(len));
+	}
+	
+	// Sideways trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-1; i >= 0; i--) {
+			double lowhigh_av = 0.0;
+			for(int j = i; j < cursor; j++)
+				lowhigh_av += high.Get(j) - low.Get(j);
+			lowhigh_av /= cursor - i;
+			
+			double change = fabs(open.Get(cursor) - open.Get(i));
+			bool is_less = change <= lowhigh_av;
+			if (dir != 0 && !is_less) break;
+			dir = 1;
+			len++;
+		}
+		if (len > 1)
+			ab.Add("Sideways trend of " + IntStr(len));
+	}
+	
+	// High break
+	{
+		int dir = 0;
+		int len = 0;
+		double hi = high.Get(cursor-1);
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = hi > high.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != +1) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			ab.Add("High break of " + IntStr(len));
+	}
+	
+	// Low break
+	{
+		int dir = 0;
+		int len = 0;
+		double lo = low.Get(cursor-1);
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = lo < low.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != +1) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			ab.Add("Low break of " + IntStr(len));
+	}
+	
+	// Trend reversal
+	if (cursor >= 4) {
+		double t0_diff		= open.Get(cursor-0) - open.Get(cursor-1);
+		double t1_diff		= open.Get(cursor-1) - open.Get(cursor-2);
+		double t2_diff		= open.Get(cursor-2) - open.Get(cursor-3);
+		int t0 = t0_diff > 0 ? +1 : -1;
+		int t1 = t1_diff > 0 ? +1 : -1;
+		int t2 = t2_diff > 0 ? +1 : -1;
+		if (t0 * t1 == -1 && t1 * t2 == +1) {
+			double t0_hilodiff	= high.Get(cursor-1) - low.Get(cursor-1);
+			if (fabs(t0_hilodiff) >= fabs(t1_diff)) {
+				ab.Add("Trend reversal " + String(t0 == +1 ? "up" : "down"));
+			} else {
+				ab.Add("Trend stop, start sideways " + String(t0 == +1 ? "up" : "down"));
+			}
+		}
+	}
+}
+
 }

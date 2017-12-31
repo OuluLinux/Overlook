@@ -16,6 +16,7 @@ void WeekSlotAdvisor::Init() {
 }
 
 void WeekSlotAdvisor::Start() {
+	#if ENABLE_TRAINING
 	System& sys = GetSystem();
 	
 	if (once) {
@@ -118,6 +119,7 @@ void WeekSlotAdvisor::Start() {
 		RefreshMain();
 		prev_counted = bars;
 	}
+	#endif
 }
 
 void WeekSlotAdvisor::OptimizeLimit(double chg_limit, double slow_limit) {

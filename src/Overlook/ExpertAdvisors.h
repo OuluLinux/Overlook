@@ -32,7 +32,6 @@ protected:
 	Vector<DQN::DQItem>			data;
 	DQN							dqn_trainer;
 	Vector<double>				dqntraining_pts;
-	int							opt_counter			= 0;
 	int							dqn_round			= 0;
 	int							dqn_pt_cursor		= 0;
 	
@@ -103,7 +102,6 @@ public:
 			% Mem(data)
 			% Mem(dqn_trainer)
 			% Mem(dqntraining_pts)
-			% Mem(opt_counter)
 			% Mem(dqn_round)
 			% Mem(dqn_pt_cursor);
 	}

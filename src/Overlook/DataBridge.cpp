@@ -181,7 +181,8 @@ void DataBridge::RefreshStrong() {
 		}
 		
 		chng_sum /= SYM_COUNT;
-		
+		if (!IsFin(chng_sum) || fabs(chng_sum) > 0.1)
+			chng_sum = 0.0;
 		double prev		= open_buf.Get(i-1);
 		double value	= prev * (1.0 + chng_sum);
 		open_buf.Set(i, value);

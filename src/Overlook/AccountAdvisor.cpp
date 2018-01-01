@@ -5,18 +5,15 @@ namespace Overlook {
 using namespace Upp;
 
 
-WeekSlotAdvisor::WeekSlotAdvisor() {
+AccountAdvisor::AccountAdvisor() {
 	
 }
 
-void WeekSlotAdvisor::Init() {
-	tfmins		= GetMinutePeriod();
-	weekslots	= 5 * 24 * 60 / tfmins;
-	cols		= weekslots * SYM_COUNT;
+void AccountAdvisor::Init() {
+	
 }
 
-void WeekSlotAdvisor::Start() {
-	#if ENABLE_TRAINING
+void AccountAdvisor::Start() {
 	System& sys = GetSystem();
 	
 	if (once) {
@@ -27,44 +24,19 @@ void WeekSlotAdvisor::Start() {
 	}
 	
 	
-	if (tf_ids.GetCount() == 0) {
-		ASSERT(tf_ids.IsEmpty());
-		int this_tfmins = GetMinutePeriod();
-		for(int i = sys.GetPeriodCount()-1; i >= GetTf(); i--) {
-			int tf_mins = sys.GetPeriod(i);
-			if (IsTfUsed(tf_mins)) {
-				tf_ids.Add(i);
-				int ratio = tf_mins / this_tfmins;
-				ASSERT(ratio > 0);
-				ratios.Add(ratio);
-			}
-		}
-		ASSERT(tf_ids.GetCount() > 0);
-	}
+	int bars					= GetBars();
+	int tf						= GetTf();
+	CoreIO* core				= CoreIO::GetInputCore(1, GetSymbol(), tf);
+	MainAdvisor* ma				= dynamic_cast<MainAdvisor*>(core);
+	ASSERT(ma);
+	bool sources_finished		= ma->IsJobsFinished() && ma->prev_counted == sys.GetCountTf(tf);
 	
-	
-	bool sources_finished = true;
-	int bars = GetBars();
-	int chk_count = 0;
-	for(int i = 0; i < SYM_COUNT; i++) {
-		int symbol						= sys.GetPrioritySymbol(i);
-		for(int j = 0; j < tf_ids.GetCount(); j++) {
-			int tf = tf_ids[j];
-			CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
-			DqnAdvisor* adv				= dynamic_cast<DqnAdvisor*>(core);
-			ASSERT(adv);
-			sources_finished			&= adv->IsJobsFinished()
-										&& adv->prev_counted == sys.GetCountTf(tf)
-										&& adv->GetOutput(0).label.GetCount() == sys.GetCountTf(tf)
-										&& adv->GetOutput(1).label.GetCount() == sys.GetCountTf(tf);
-			chk_count++;
-		}
-	}
-	
-	if (sources_finished && prev_counted < bars && chk_count > 0) {
+	if (sources_finished && prev_counted < bars) {
 		RefreshSourcesOnlyDeep();
 		
-		if (time_slots.IsEmpty()) {
+		if (inputs.IsEmpty()) {
+			CoreIO* core				= CoreIO::GetInputCore(1, GetSymbol(), tf);
+			MainAdvisor* ma				= dynamic_cast<MainAdvisor*>(core);
 			spread_point	.SetCount(SYM_COUNT, 0);
 			inputs			.SetCount(SYM_COUNT, NULL);
 			for(int i = 0; i < SYM_COUNT; i++) {
@@ -72,34 +44,19 @@ void WeekSlotAdvisor::Start() {
 				int tf						= GetTf();
 				ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
 				inputs[i]					= &open_buf;
+				spread_point[i]				= ma->GetSpreadPoint(i);
 			}
-			
-			
-			signals			.SetCount(tf_ids.GetCount());
-			enabled			.SetCount(tf_ids.GetCount());
-			for(int j = 0; j < tf_ids.GetCount(); j++) {
-				int tf = tf_ids[j];
-				signals[j]	.SetCount(SYM_COUNT, NULL);
-				enabled[j]	.SetCount(SYM_COUNT, NULL);
-				for(int i = 0; i < SYM_COUNT; i++) {
-					int symbol					= sys.GetPrioritySymbol(i);
-					CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
-					ASSERT(core);
-					ConstVectorBool& sig_buf	= core->GetOutput(0).label;
-					ConstVectorBool& ena_buf	= core->GetOutput(1).label;
-					signals[j][i]				= &sig_buf;
-					enabled[j][i]				= &ena_buf;
-					
-					if (!j) spread_point[i]		= dynamic_cast<DqnAdvisor*>(core)->GetSpreadPoint();
-				}
-			}
-			
-			
-			int best_i = -1, best_j = -1;
+		}
+		
+		if (open_limit < 0) {
+			double best_i = -1, best_j = -1;
 			double best_res = -DBL_MAX;
-			for(int i = 1; i < 15; i++) {
-				for(int j = 0; j < 10; j++) {
-					OptimizeLimit(0.0001 * i, 0.0001 * j);
+			for(double i = 0.0; i < 0.20; i += 0.01) {
+				for(double j = 0.0; j < 0.20; j += 0.01) {
+					
+					open_limit = i;
+					keep_limit = j;
+					
 					RunSimBroker();
 					double e = sb.AccountEquity();
 					if (e > best_res) {
@@ -110,94 +67,25 @@ void WeekSlotAdvisor::Start() {
 				}
 			}
 			
-			double limit1 = best_i != -1 ? 0.0001 * best_i : 0.001;
-			double limit2 = best_j != -1 ? 0.0001 * best_j : 0.001;
-			OptimizeLimit(limit1, limit2);
+			open_limit = best_i;
+			keep_limit = best_j;
+			RunSimBroker();
 		}
 		
-		LOG("WeekSlotAdvisor::Start Refresh");
+		LOG("AccountAdvisor::Start Refresh");
 		RefreshMain();
 		prev_counted = bars;
 	}
-	#endif
 }
 
-void WeekSlotAdvisor::OptimizeLimit(double chg_limit, double slow_limit) {
-	System& sys = GetSystem();
-	time_slots.SetCount(SYM_COUNT);
-	for(int i = 0; i < time_slots.GetCount(); i++) {
-		Vector<int>& sym_slots = time_slots[i];
-		sym_slots.SetCount(weekslots, -1);
-		
-		int sym = sys.GetPrioritySymbol(i);
-		Vector<Vector<OnlineAverage1>*> stats;
-		
-		for(int j = 0; j < tf_ids.GetCount(); j++) {
-			int tf = tf_ids[j];
-			VolatilitySlots& vs = *dynamic_cast<VolatilitySlots*>(GetInputCore(1, sym, tf));
-			
-			int exp_vs_stats_count = weekslots / ratios[j];
-			ASSERT(exp_vs_stats_count == vs.stats.GetCount());
-			
-			stats.Add(&vs.stats);
-		}
-		
-		for(int j = 0; j < sym_slots.GetCount(); j++) {
-			
-			// try to zoom
-			int level = -1;
-			for(int k = 0; k < tf_ids.GetCount(); k++) {
-				int ratio = ratios[k];
-				int slow_slot = j / ratio;
-				double mean_chg = (*stats[k])[slow_slot].mean;
-				if (mean_chg < chg_limit || (k == 0 && mean_chg < slow_limit))
-					break;
-				level = k;
-			}
-			
-			sym_slots[j] = level;
-		}
-		
-		
-		// Fill holes
-		for(int i = 4; i < sym_slots.GetCount(); i++) {
-			int buf[5];
-			for(int j = 0; j < 5; j++)
-				buf[j] = sym_slots[i-j];
-			bool changed = false;
-			// Fill 1 hole
-			if (buf[0] == buf[2] && buf[1] == buf[0]-1) {
-				buf[1] = buf[0];
-				changed = true;
-			}
-			// Fill 2 hole
-			else if (buf[0] == buf[3] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1) {
-				buf[1] = buf[0];
-				buf[2] = buf[0];
-				changed = true;
-			}
-			// Fill 3 hole
-			else if (buf[0] == buf[4] && buf[1] == buf[0]-1 && buf[2] == buf[0]-1 && buf[3] == buf[0]-1) {
-				buf[1] = buf[0];
-				buf[2] = buf[0];
-				buf[3] = buf[0];
-				changed = true;
-			}
-			if (changed)
-				for(int j = 0; j < 5; j++)
-					sym_slots[i-j] = buf[j];
-		}
-	}
-}
-
-void WeekSlotAdvisor::RefreshMain() {
+void AccountAdvisor::RefreshMain() {
 	RunSimBroker();
 	
 	MainReal();
 }
 
 
-void WeekSlotAdvisor::MainReal() {
+void AccountAdvisor::MainReal() {
 	System&	sys				= GetSystem();
 	Time now				= GetSysTime();
 	int wday				= DayOfWeek(now);
@@ -270,9 +158,11 @@ void WeekSlotAdvisor::MainReal() {
 }
 
 
-void WeekSlotAdvisor::RunSimBroker() {
-	System& sys = GetSystem();
-	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+void AccountAdvisor::RunSimBroker() {
+	System& sys			= GetSystem();
+	DataBridge* db		= dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+	CoreIO* core		= CoreIO::GetInputCore(1, GetSymbol(), GetTf());
+	MainAdvisor* ma		= dynamic_cast<MainAdvisor*>(core);
 	
 	Buffer& open_buf	= db->GetBuffer(0);
 	Buffer& low_buf		= db->GetBuffer(1);
@@ -280,7 +170,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 	Buffer& volume_buf	= db->GetBuffer(3);
 	
 	int tf = GetTf();
-	int bars = GetBars();
+	int bars = Upp::min(GetBars(), ma->data.GetCount());
 	db->ForceCount(bars);
 	
 	
@@ -292,7 +182,8 @@ void WeekSlotAdvisor::RunSimBroker() {
 	
 	
 	for(int i = 0; i < bars; i++) {
-		int weekslot = i % weekslots;
+		const auto& current = ma->data[i];
+		
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			ConstBuffer& open_buf = *inputs[j];
@@ -304,15 +195,62 @@ void WeekSlotAdvisor::RunSimBroker() {
 		
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
+			int sym	= sys.GetPrioritySymbol(j);
 			int sig = 0;
-			int read_tf = time_slots[j][weekslot];
-			if (read_tf != -1) {
-				int read_pos = sys.GetShiftTf(tf, tf_ids[read_tf], i);
-				if (enabled[read_tf][j]->Get(read_pos)) {
-					sig		= signals[read_tf][j]->Get(read_pos) ? -1 : +1;
-				}
+			int prev_sig = sb.GetSignal(sym);
+			
+			int begin = j * ADVISOR_PERIOD;
+			int end = begin + ADVISOR_PERIOD;
+			double weight_sum = 0.0;
+			for(int k = begin; k < end; k++)
+				weight_sum += current.weight[k];
+			int strong_sig = weight_sum > 0 ? +1 : -1;
+			int next_sig = current.weight[0] > 0 ? +1 : -1;
+			
+			bool try_open = false;
+			bool try_keep = false;
+			
+			if (prev_sig == 0) {
+				
+				if (strong_sig == next_sig)
+					try_open = true;
+				
 			}
-			int sym		= sys.GetPrioritySymbol(j);
+			else {
+				
+				if (next_sig == prev_sig)
+					try_keep = true;
+				else {
+					try_open = true;
+					
+					double peak_neg = 0.0;
+					double neg_sum = 0.0;
+					for(int k = begin; k < end; k++) {
+						neg_sum += prev_sig * -1 * current.weight[k];
+						if (neg_sum < 0.0) break;
+						if (neg_sum > peak_neg) peak_neg = neg_sum;
+					}
+					if (neg_sum < 0.0 && peak_neg < keep_limit)
+						try_keep = true;
+				}
+				
+			}
+			
+			if (try_open) {
+				double peak_pos = 0.0;
+				double pos_sum = 0.0;
+				for(int k = begin; k < end; k++) {
+					pos_sum += next_sig * current.weight[k];
+					if (pos_sum > peak_pos) peak_pos = pos_sum;
+				}
+				if (peak_pos >= open_limit)
+					sig = next_sig;
+			}
+			
+			if (try_keep && sig == 0) {
+				sig = prev_sig;
+			}
+			
 			
 			if (sig == sb.GetSignal(sym) && sig != 0)
 				sb.SetSignalFreeze(sym, true);

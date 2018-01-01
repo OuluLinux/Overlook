@@ -36,7 +36,7 @@ using namespace Upp;
 #define FMLEVEL					0.60
 #define FEEDBACK_PERIOD			10
 #define FASTAGENT_PERIODLIMIT	240
-#define ADVISOR_PERIOD			20
+#define ADVISOR_PERIOD			10
 
 #ifdef flagDEBUG
 #define	LOCALPROB_DEPTH			5

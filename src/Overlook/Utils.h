@@ -3,14 +3,18 @@
 
 namespace Overlook {
 
-class ValueChange : public AdvisorBase {
+class ValueChange : public Core {
+	
+	OnlineAverage1 change_av;
 	
 public:
 	typedef ValueChange CLASSNAME;
 	ValueChange();
 	
 	virtual void IO(ValueRegister& reg) {
-		AdvisorBase::BaseIO(reg);
+		reg % In<DataBridge>()
+			% Out(3, 2)
+			% Mem(change_av);
 	}
 	
 	virtual void Init();

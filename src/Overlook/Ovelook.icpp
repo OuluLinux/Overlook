@@ -67,12 +67,12 @@ INITBLOCK {
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	
 	System::Register<StrongForce>("StrongForce");
-	System::Register<PatternAdvisor>("PatternAdvisor");
-	System::Register<DqnAdvisor>("DqnAdvisor", CORE_EXPERTADVISOR);
-	System::Register<WeekSlotAdvisor>("WeekSlotAdvisor", CORE_ACCOUNTADVISOR);
+	System::Register<PatternAdvisor>("PatternAdvisor", CORE_EXPERTADVISOR);
+	System::Register<MainAdvisor>("MainAdvisor", CORE_EXPERTADVISOR);
+	System::Register<AccountAdvisor>("AccountAdvisor", CORE_ACCOUNTADVISOR);
 	
 	
-	System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
+	//System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
 	
 }
 

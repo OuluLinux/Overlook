@@ -9,7 +9,7 @@ using namespace Upp;
 class PatternAdvisor : public Core {
 	
 protected:
-	friend class WeekSlotAdvisor;
+	friend class AccountAdvisor;
 	
 	
 	static const int trend_max = 4;

@@ -2,8 +2,7 @@
 
 namespace Overlook {
 
-ValueChange::ValueChange() :
-	AdvisorBase(3, 2) // buffers total, visible
+ValueChange::ValueChange()
 {
 	SetCoreSeparateWindow();
 }
@@ -15,12 +14,6 @@ void ValueChange::Init() {
 	SetBufferLineWidth(1, 2);
 	SetBufferColor(2, Color(0,0,128));
 	SetBufferLineWidth(2, 2);
-	
-	BaseInit();
-	
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void ValueChange::Start() {
@@ -60,10 +53,6 @@ void ValueChange::Start() {
 		low_change		.Set(i, low_change		.Get(i) / (3 * change_av.mean));
 		high_change		.Set(i, high_change		.Get(i) / (3 * change_av.mean));
 	}
-	
-	if (IsAdvisorBaseSymbol(GetSymbol()) &&
-		IsJobsFinished() && counted < GetBars())
-		RefreshAll();
 }
 
 

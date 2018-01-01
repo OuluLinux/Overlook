@@ -1327,8 +1327,7 @@ void ForceIndex::Start() {
 
 
 
-Momentum::Momentum() :
-	AdvisorBase(2, 2) // buffers total, visible
+Momentum::Momentum()
 {
 	period = 32;
 	shift = -7;
@@ -1348,14 +1347,6 @@ void Momentum::Init() {
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"Momentum");
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void Momentum::Start() {
@@ -1389,10 +1380,6 @@ void Momentum::Start() {
 		double change = (value - prev) * 10.0;
 		change_buf.Set(i, change);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
@@ -1508,8 +1495,7 @@ void OsMA::Start() {
 
 
 
-RelativeStrengthIndex::RelativeStrengthIndex() :
-	AdvisorBase(4, 4) // buffers total, visible
+RelativeStrengthIndex::RelativeStrengthIndex()
 {
 	period = 32;
 }
@@ -1534,14 +1520,6 @@ void RelativeStrengthIndex::Init() {
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "RSI");
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 
@@ -1612,10 +1590,6 @@ void RelativeStrengthIndex::Start() {
 		double change = (rsi - prev) * 10.0;
 		change_buf.Set(i, change);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
@@ -1880,8 +1854,7 @@ void StochasticOscillator::Start() {
 
 
 
-WilliamsPercentRange::WilliamsPercentRange() :
-	AdvisorBase(2, 2) // buffers total, visible
+WilliamsPercentRange::WilliamsPercentRange()
 {
 	period = 14;
 }
@@ -1898,14 +1871,6 @@ void WilliamsPercentRange::Init() {
 	SetBufferBegin ( 0, period );
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"WPR");
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void WilliamsPercentRange::Start() {
@@ -1937,10 +1902,6 @@ void WilliamsPercentRange::Start() {
 		double change = (cur - prev) * 10.0;
 		change_buf.Set(i, change);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
@@ -3452,7 +3413,8 @@ void SupportResistance::Start() {
 
 
 
-SupportResistanceOscillator::SupportResistanceOscillator() : AdvisorBase(2,2) {
+SupportResistanceOscillator::SupportResistanceOscillator()
+{
 	period = 300;
 	max_crosses = 100;
 	max_radius = 100;
@@ -3466,14 +3428,6 @@ void SupportResistanceOscillator::Init() {
 	SetCoreMinimum(-1);
 	SetCoreMaximum(1);
 	AddSubCore<SupportResistance>().Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void SupportResistanceOscillator::Start() {
@@ -3504,17 +3458,14 @@ void SupportResistanceOscillator::Start() {
 		prev_pos = i;
 		prev_value = value;
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
 
 
 
-ChannelOscillator::ChannelOscillator() : AdvisorBase(1, 1) {
+ChannelOscillator::ChannelOscillator()
+{
 	period = 300;
 }
 
@@ -3523,14 +3474,6 @@ void ChannelOscillator::Init() {
 	SetBufferColor(0, Red);
 	SetCoreMinimum(-1);
 	SetCoreMaximum(1);
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void ChannelOscillator::Start() {
@@ -3558,10 +3501,6 @@ void ChannelOscillator::Start() {
 		double value = (open - ch_low) / ch_diff * 2.0 - 1.0;
 		osc.Set(i, value);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
@@ -3572,7 +3511,8 @@ void ChannelOscillator::Start() {
 
 
 
-ScissorChannelOscillator::ScissorChannelOscillator() : AdvisorBase(1, 1) {
+ScissorChannelOscillator::ScissorChannelOscillator()
+{
 	period = 30;
 }
 
@@ -3581,14 +3521,6 @@ void ScissorChannelOscillator::Init() {
 	SetBufferColor(0, Red);
 	SetCoreMinimum(-1);
 	SetCoreMaximum(1);
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (IsAdvisorBaseSymbol(GetSymbol())) {
-		EnableJobs();
-	}
 }
 
 void ScissorChannelOscillator::Start() {
@@ -3654,10 +3586,6 @@ void ScissorChannelOscillator::Start() {
 		if (!IsFin(value)) value = 0.0;
 		osc.Set(i, value);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsAdvisorBaseSymbol(GetSymbol()) && IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 
@@ -4346,8 +4274,7 @@ void MinimalLabel::Start() {
 
 
 
-StrongForce::StrongForce() :
-	AdvisorBase(1, 1) // buffers total, visible
+StrongForce::StrongForce()
 {
 	
 }
@@ -4357,14 +4284,6 @@ void StrongForce::Init() {
 	
 	SetBufferColor(0, DodgerBlue);
 	SetBufferStyle(0, DRAW_LINE);
-	
-	// AdvisorBase init
-	BaseInit();
-	
-	// AdvisorBase jobs conditional
-	if (GetSystem().GetSymbolPriority(GetSymbol()) < SYM_COUNT) {
-		EnableJobs();
-	}
 }
 
 void StrongForce::Start() {
@@ -4409,10 +4328,6 @@ void StrongForce::Start() {
 	for(int i = counted; i < bars; i++) {
 		buffer.Set(i, buffer.Get(i) / max_diff);
 	}
-	
-	// AdvisorBase refresh conditional
-	if (IsJobsFinished() && GetCounted() < GetBars())
-		RefreshAll();
 }
 
 

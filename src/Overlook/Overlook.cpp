@@ -921,8 +921,8 @@ void Overlook::LoadDefaultEAs() {
 	Profile profile;
 	
 	int tf = sys.FindPeriod(15);
-	int rfa = System::Find<DqnAdvisor>();
-	int wsa = System::Find<WeekSlotAdvisor>();
+	int bb  = System::Find<BollingerBands>();
+	int wsa = System::Find<AccountAdvisor>();
 	
 	{
 		ProfileGroup& pgroup = profile.charts.Add();
@@ -932,17 +932,14 @@ void Overlook::LoadDefaultEAs() {
 		pgroup.decl.factory = wsa;
 	}
 	
-	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		
-		int prio = sys.GetSymbolPriority(i);
-		if (prio >= SYM_COUNT) continue;
-		
+	for(int i = 0; i < SYM_COUNT+1; i++) {
+		int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetStrongSymbol();
 		
 		ProfileGroup& pgroup = profile.charts.Add();
-		pgroup.symbol = i;
+		pgroup.symbol = sym;
 		pgroup.tf = tf;
 		pgroup.keep_at_end = true;
-		pgroup.decl.factory = rfa;
+		pgroup.decl.factory = bb;
 	}
 	
 	LoadProfile(profile);

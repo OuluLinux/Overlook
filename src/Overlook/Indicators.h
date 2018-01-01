@@ -293,7 +293,7 @@ public:
 };
 
 
-class Momentum : public AdvisorBase {
+class Momentum : public Core {
 	int period, shift;
 	
 public:
@@ -303,8 +303,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2)
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2)
 			% Arg("shift", shift, -10000);
 	}
 };
@@ -375,7 +376,7 @@ public:
 };
 
 
-class RelativeStrengthIndex : public AdvisorBase {
+class RelativeStrengthIndex : public Core {
 	int period;
 	
 public:
@@ -385,8 +386,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2, 127);
+		reg % In<DataBridge>()
+			% Out(4, 4)
+			% Arg("period", period, 2);
 	}
 };
 
@@ -430,7 +432,7 @@ public:
 
 
 
-class WilliamsPercentRange : public AdvisorBase {
+class WilliamsPercentRange : public Core {
 	int period;
 	
 	bool CompareDouble(double Number1, double Number2);
@@ -442,8 +444,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2, 127);
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2);
 	}
 };
 
@@ -748,7 +751,7 @@ public:
 };
 
 
-class SupportResistanceOscillator : public AdvisorBase {
+class SupportResistanceOscillator : public Core {
 	int period, max_crosses, max_radius, smoothing_period;
 	
 public:
@@ -759,8 +762,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2, 127)
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2, 127)
 			% Arg("max_crosses", max_crosses, 300, 300)
 			% Arg("max_radius", max_radius, 100, 100)
 			% Arg("smoothing", smoothing_period, 100, 100);
@@ -768,7 +772,7 @@ public:
 };
 
 
-class ChannelOscillator : public AdvisorBase {
+class ChannelOscillator : public Core {
 	int period;
 	ExtremumCache ec;
 	
@@ -780,14 +784,15 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2)
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2)
 			% Mem(ec);
 	}
 };
 
 
-class ScissorChannelOscillator : public AdvisorBase {
+class ScissorChannelOscillator : public Core {
 	int period;
 	ExtremumCache ec;
 	
@@ -799,8 +804,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg);
-		reg % Arg("period", period, 2)
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2)
 			% Mem(ec);
 	}
 };
@@ -1005,7 +1011,7 @@ public:
 };
 
 
-class StrongForce : public AdvisorBase {
+class StrongForce : public Core {
 	double max_diff = 0.0;
 	
 public:
@@ -1016,8 +1022,9 @@ public:
 	virtual void Start();
 	
 	virtual void IO(ValueRegister& reg) {
-		BaseIO(reg, &FilterFunction);
-		reg % Mem(max_diff);
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(1, 1)
+			% Mem(max_diff);
 	}
 	
 	
@@ -1035,7 +1042,7 @@ public:
 class VolatilitySlots : public Core {
 	
 protected:
-	friend class WeekSlotAdvisor;
+	friend class AccountAdvisor;
 	Vector<OnlineAverage1> stats;
 	
 	int slot_count = 0;

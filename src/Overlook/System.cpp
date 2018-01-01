@@ -204,7 +204,7 @@ void System::AddPeriod(String nice_str, int period) {
 	
 	Time begin(2017,1,1);
 	if (period == 1)			begin = Time(2017,10,1);
-	else if (period == 5)		begin = Time(2017,1,30);
+	else if (period == 5)		begin = Time(2017,6,5);
 	else if (period == 15)		begin = Time(2017,1,30);
 	else if (period == 30)		begin = Time(2016,10,3);
 	else if (period == 60)		begin = Time(2016,4,25);

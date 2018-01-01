@@ -20,7 +20,7 @@ void AccountAdvisor::Start() {
 		once = false;
 		//if (prev_counted) prev_counted--;
 		prev_counted = false;
-		//Reset(); // For developing
+		//open_limit = -1;
 	}
 	
 	
@@ -202,9 +202,13 @@ void AccountAdvisor::RunSimBroker() {
 			int begin = j * ADVISOR_PERIOD;
 			int end = begin + ADVISOR_PERIOD;
 			double weight_sum = 0.0;
-			for(int k = begin; k < end; k++)
+			double pos_peak = 0.0, neg_peak = 0.0;
+			for(int k = begin; k < end; k++) {
 				weight_sum += current.weight[k];
-			int strong_sig = weight_sum > 0 ? +1 : -1;
+				if (weight_sum > pos_peak) pos_peak = weight_sum;
+				if (weight_sum < neg_peak) neg_peak = weight_sum;
+			}
+			int strong_sig = +pos_peak > -neg_peak ? +1 : -1;
 			int next_sig = current.weight[0] > 0 ? +1 : -1;
 			
 			bool try_open = false;
@@ -241,7 +245,12 @@ void AccountAdvisor::RunSimBroker() {
 				double pos_sum = 0.0;
 				for(int k = begin; k < end; k++) {
 					pos_sum += next_sig * current.weight[k];
-					if (pos_sum > peak_pos) peak_pos = pos_sum;
+					if (+pos_sum > peak_pos)
+						peak_pos = pos_sum;
+					
+					// Don't use peaks after keep limit exceeded
+					if (peak_pos - pos_sum > keep_limit)
+						break;
 				}
 				if (peak_pos >= open_limit)
 					sig = next_sig;

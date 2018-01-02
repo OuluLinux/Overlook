@@ -920,7 +920,7 @@ void Overlook::LoadDefaultEAs() {
 	System& sys = GetSystem();
 	Profile profile;
 	
-	int tf = sys.FindPeriod(5);
+	int tf = sys.FindPeriod(60);
 	int bb  = System::Find<BollingerBands>();
 	int wsa = System::Find<AccountAdvisor>();
 	

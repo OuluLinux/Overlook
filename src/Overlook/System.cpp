@@ -107,16 +107,16 @@ void System::Init() {
 			
 			// Generic Low/Medium spread broker
 			#if 1
-			case 0: symstr = "GBPUSD";	spread_point = 0.0003; break;
-			case 1: symstr = "USDJPY";	spread_point = 0.02;   break;
-			case 2: symstr = "USDCAD";	spread_point = 0.0003; break;
-			case 3: symstr = "EURUSD";	spread_point = 0.0002; break;
-			case 4: symstr = "AUDUSD";	spread_point = 0.0003; break;
-			case 5: symstr = "NZDUSD";	spread_point = 0.0003; break;
-			case 6: symstr = "EURJPY";	spread_point = 0.03;   break;
-			case 7: symstr = "EURCHF";	spread_point = 0.0003; break;
-			case 8: symstr = "USDCHF";	spread_point = 0.0003; break;
-			case 9: symstr = "EURGBP";	spread_point = 0.0003; break;
+			case 0: symstr = "USDJPY";	spread_point = 0.02;   break;
+			case 1: symstr = "EURUSD";	spread_point = 0.0002; break;
+			case 2: symstr = "USDCHF";	spread_point = 0.0003; break;
+			case 3: symstr = "EURCHF";	spread_point = 0.0003; break;
+			case 4: symstr = "EURJPY";	spread_point = 0.03;   break;
+			case 5: symstr = "EURGBP";	spread_point = 0.0003; break;
+			case 6: symstr = "GBPUSD";	spread_point = 0.0003; break;
+			case 7: symstr = "USDCAD";	spread_point = 0.0003; break;
+			case 8: symstr = "AUDUSD";	spread_point = 0.0003; break;
+			case 9: symstr = "NZDUSD";	spread_point = 0.0003; break;
 			case 10: symstr = "AUDCAD";	spread_point = 0.0010; break;
 			case 11: symstr = "AUDJPY";	spread_point = 0.10;   break;
 			case 12: symstr = "CADJPY";	spread_point = 0.10;   break;
@@ -205,7 +205,7 @@ void System::AddPeriod(String nice_str, int period) {
 	Time begin(2017,1,1);
 	if (period == 1)			begin = Time(2017,10,1);
 	else if (period == 5)		begin = Time(2017,6,5);
-	else if (period == 15)		begin = Time(2017,1,30);
+	else if (period == 15)		begin = Time(2016,12,19);
 	else if (period == 30)		begin = Time(2016,10,3);
 	else if (period == 60)		begin = Time(2016,4,25);
 	else if (period == 240)		begin = Time(2007,6,4);

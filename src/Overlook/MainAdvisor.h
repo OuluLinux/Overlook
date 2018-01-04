@@ -12,13 +12,9 @@ protected:
 	friend class AccountAdvisor;
 	
 	
-	static const int PERIOD_COUNT		= 8;
-	static const int SRC_COUNT			= 4;
-	static const int SYMBOLBUF_COUNT	= SRC_COUNT * PERIOD_COUNT + 1;
-	static const int INPUTBUF_COUNT		= (SYM_COUNT+1) * SYMBOLBUF_COUNT;
-	static const int INPUT_PERIOD		= ADVISOR_PERIOD;
-	static const int INPUT_SIZE			= INPUT_PERIOD * INPUTBUF_COUNT + 2;
-	static const int OUTPUT_SIZE		= (SYM_COUNT + 1) * ADVISOR_PERIOD;
+	static const int INPUT_SIZE			= (SYM_COUNT+1) * ASSIST_COUNT;
+	static const int OUTPUT_SIZE		= (SYM_COUNT+1) * 2;
+	static const int CORE_COUNT			= 24;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -41,7 +37,8 @@ protected:
 	// Temp
 	ConstBuffer*				open_buf[SYM_COUNT+1];
 	DQN::MatType				tmp_before_state, tmp_after_state;
-	Vector<ConstBuffer*>		bufs;
+	Vector<CoreIO*>				cores;
+	VectorBool					tmp_assist;
 	int							prev_counted		= 0;
 	int							data_count			= 0;
 	int							main_count			= 0;
@@ -79,16 +76,32 @@ public:
 	double GetSpreadPoint(int i) const {return spread_point[i];}
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>(&FilterFunction2);
-		
-		for(int i = 0; i < PERIOD_COUNT; i++) {
-			reg % In<ScissorChannelOscillator>(&FilterFunction1, &Args)
-				% In<WilliamsPercentRange>(&FilterFunction1, &Args)
-				% In<Momentum>(&FilterFunction1, &Args)
-				% In<RelativeStrengthIndex>(&FilterFunction1, &Args);
-		}
-		
-		reg % In<ValueChange>(&FilterFunction1)
+		reg % In<DataBridge>(&FilterFunction2)
+			
+			% In<MovingAverage>(&FilterFunction1)
+			% In<MovingAverageConvergenceDivergence>(&FilterFunction1)
+			% In<BollingerBands>(&FilterFunction1)
+			% In<ParabolicSAR>(&FilterFunction1)
+			% In<StandardDeviation>(&FilterFunction1)
+			% In<AverageTrueRange>(&FilterFunction1)
+			% In<BearsPower>(&FilterFunction1)
+			% In<BullsPower>(&FilterFunction1)
+			% In<CommodityChannelIndex>(&FilterFunction1)
+			% In<DeMarker>(&FilterFunction1)
+			% In<ForceIndex>(&FilterFunction1)
+			% In<Momentum>(&FilterFunction1)
+			% In<RelativeStrengthIndex>(&FilterFunction1)
+			% In<RelativeVigorIndex>(&FilterFunction1)
+			% In<StochasticOscillator>(&FilterFunction1)
+			% In<AcceleratorOscillator>(&FilterFunction1)
+			% In<AwesomeOscillator>(&FilterFunction1)
+			% In<PeriodicalChange>(&FilterFunction1)
+			% In<VolatilityAverage>(&FilterFunction1)
+			% In<VolatilitySlots>(&FilterFunction1)
+			% In<ChannelOscillator>(&FilterFunction1)
+			% In<ScissorChannelOscillator>(&FilterFunction1)
+			% In<StrongForce>(&FilterFunction1)
+			
 			% Out(1, 1)
 			% Mem(data)
 			% Mem(dqn_trainer)
@@ -119,13 +132,6 @@ public:
 		return out_sym == strong_sym || ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
 	
-	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
-		int pshift = (input - 1) / SRC_COUNT;
-		//int type   = (input - 1) % SRC_COUNT;
-		int period = (1 << (2 + pshift));
-
-		decl.AddArg(period);
-	}
 
 };
 

@@ -12,8 +12,6 @@ class AccountAdvisor : public Core {
 	};
 	
 	// Persistent
-	double						open_limit			= -1;
-	double						keep_limit			= -1;
 	int							prev_counted		= 0;
 	
 	
@@ -45,8 +43,6 @@ public:
 		reg % In<DataBridge>(&FilterFunction0)
 			% In<MainAdvisor>(&FilterFunction1)
 			% Out(1, 1)
-			% Mem(open_limit)
-			% Mem(keep_limit)
 			% Mem(prev_counted);
 	}
 	

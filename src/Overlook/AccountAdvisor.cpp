@@ -20,7 +20,6 @@ void AccountAdvisor::Start() {
 		once = false;
 		//if (prev_counted) prev_counted--;
 		prev_counted = false;
-		//open_limit = -1;
 	}
 	
 	
@@ -46,30 +45,6 @@ void AccountAdvisor::Start() {
 				inputs[i]					= &open_buf;
 				spread_point[i]				= ma->GetSpreadPoint(i);
 			}
-		}
-		
-		if (open_limit < 0) {
-			double best_i = -1, best_j = -1;
-			double best_res = -DBL_MAX;
-			for(double i = 0.0; i < 0.20; i += 0.01) {
-				for(double j = 0.0; j < 0.20; j += 0.01) {
-					
-					open_limit = i;
-					keep_limit = j;
-					
-					RunSimBroker();
-					double e = sb.AccountEquity();
-					if (e > best_res) {
-						best_i = i;
-						best_j = j;
-						best_res = e;
-					}
-				}
-			}
-			
-			open_limit = best_i;
-			keep_limit = best_j;
-			RunSimBroker();
 		}
 		
 		LOG("AccountAdvisor::Start Refresh");
@@ -196,69 +171,7 @@ void AccountAdvisor::RunSimBroker() {
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int sym	= sys.GetPrioritySymbol(j);
-			int sig = 0;
-			int prev_sig = sb.GetSignal(sym);
-			
-			int begin = j * ADVISOR_PERIOD;
-			int end = begin + ADVISOR_PERIOD;
-			double weight_sum = 0.0;
-			double pos_peak = 0.0, neg_peak = 0.0;
-			for(int k = begin; k < end; k++) {
-				weight_sum += current.weight[k];
-				if (weight_sum > pos_peak) pos_peak = weight_sum;
-				if (weight_sum < neg_peak) neg_peak = weight_sum;
-			}
-			int strong_sig = +pos_peak > -neg_peak ? +1 : -1;
-			int next_sig = current.weight[0] > 0 ? +1 : -1;
-			
-			bool try_open = false;
-			bool try_keep = false;
-			
-			if (prev_sig == 0) {
-				
-				if (strong_sig == next_sig)
-					try_open = true;
-				
-			}
-			else {
-				
-				if (next_sig == prev_sig)
-					try_keep = true;
-				else {
-					try_open = true;
-					
-					double peak_neg = 0.0;
-					double neg_sum = 0.0;
-					for(int k = begin; k < end; k++) {
-						neg_sum += prev_sig * -1 * current.weight[k];
-						if (neg_sum < 0.0) break;
-						if (neg_sum > peak_neg) peak_neg = neg_sum;
-					}
-					if (neg_sum < 0.0 && peak_neg < keep_limit)
-						try_keep = true;
-				}
-				
-			}
-			
-			if (try_open) {
-				double peak_pos = 0.0;
-				double pos_sum = 0.0;
-				for(int k = begin; k < end; k++) {
-					pos_sum += next_sig * current.weight[k];
-					if (+pos_sum > peak_pos)
-						peak_pos = pos_sum;
-					
-					// Don't use peaks after keep limit exceeded
-					if (peak_pos - pos_sum > keep_limit)
-						break;
-				}
-				if (peak_pos >= open_limit)
-					sig = next_sig;
-			}
-			
-			if (try_keep && sig == 0) {
-				sig = prev_sig;
-			}
+			int sig = current.weight[j * 2 + 0] > current.weight[j * 2 + 1] ? -1 : +1;
 			
 			
 			if (sig == sb.GetSignal(sym) && sig != 0)

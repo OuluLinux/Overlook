@@ -795,13 +795,26 @@ void DataBridge::RefreshFromFaster() {
 	}
 }
 
-void DataBridge::Assist(AssistBase& ab, int cursor) {
-	if (cursor < 1 || cursor >= GetBars()) return;
+void DataBridge::Assist(int cursor, VectorBool& vec) {
+	if (cursor < 5 || cursor >= GetBars()) return;
 	
 	Buffer& open   = GetBuffer(0);
 	Buffer& low    = GetBuffer(1);
 	Buffer& high   = GetBuffer(2);
 	Buffer& volume = GetBuffer(3);
+	
+	// Open change
+	{
+		double cur = open.Get(cursor);
+		for(int i = 0; i < 5; i++) {
+			double prev = open.Get(cursor - i - 1);
+			if (prev < cur)
+				vec.Set(DB_UP1 + i, true);
+			else
+				vec.Set(DB_DOWN1 + i, true);
+		}
+	}
+	
 	
 	// Open/Close trend
 	{
@@ -813,8 +826,12 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			dir = idir;
 			len++;
 		}
-		if (len > 1)
-			ab.Add(String(dir == +1 ? "Up " : "Down ") + "trend of " + IntStr(len));
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_UPTREND, true);
+			else
+				vec.Set(DB_DOWNTREND, true);
+		}
 	}
 	
 	// High trend
@@ -827,8 +844,12 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			dir = idir;
 			len++;
 		}
-		if (len > 1)
-			ab.Add("High " + String(dir == +1 ? "up" : "down") + " trend of " + IntStr(len));
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_HIGHUPTREND, true);
+			else
+				vec.Set(DB_HIGHDOWNTREND, true);
+		}
 	}
 	
 	// Low trend
@@ -841,8 +862,12 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			dir = idir;
 			len++;
 		}
-		if (len > 1)
-			ab.Add("Low " + String(dir == +1 ? "up" : "down") + " trend of " + IntStr(len));
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_LOWUPTREND, true);
+			else
+				vec.Set(DB_LOWDOWNTREND, true);
+		}
 	}
 	
 	// Sideways trend
@@ -862,7 +887,7 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			len++;
 		}
 		if (len > 1)
-			ab.Add("Sideways trend of " + IntStr(len));
+			vec.Set(DB_SIDEWAYSTREND, true);
 	}
 	
 	// High break
@@ -877,7 +902,9 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			len++;
 		}
 		if (len > 1)
-			ab.Add("High break of " + IntStr(len));
+			vec.Set(DB_HIGHBREAK, true);
+		if (len > 32)
+			vec.Set(DB_LONGHIGHBREAK, true);
 	}
 	
 	// Low break
@@ -892,7 +919,9 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 			len++;
 		}
 		if (len > 1)
-			ab.Add("Low break of " + IntStr(len));
+			vec.Set(DB_LOWBREAK, true);
+		if (len > 32)
+			vec.Set(DB_LONGLOWBREAK, true);
 	}
 	
 	// Trend reversal
@@ -906,9 +935,15 @@ void DataBridge::Assist(AssistBase& ab, int cursor) {
 		if (t0 * t1 == -1 && t1 * t2 == +1) {
 			double t0_hilodiff	= high.Get(cursor-1) - low.Get(cursor-1);
 			if (fabs(t0_hilodiff) >= fabs(t1_diff)) {
-				ab.Add("Trend reversal " + String(t0 == +1 ? "up" : "down"));
+				if (t0 == +1)
+					vec.Set(DB_REVERSALUP, true);
+				else
+					vec.Set(DB_REVERSALDOWN, true);
 			} else {
-				ab.Add("Trend stop, start sideways " + String(t0 == +1 ? "up" : "down"));
+				if (t0 == +1)
+					vec.Set(DB_STOPUP, true);
+				else
+					vec.Set(DB_STOPDOWN, true);
 			}
 		}
 	}

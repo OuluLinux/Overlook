@@ -198,6 +198,8 @@ public:
 
 	typedef Core* (*CoreFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
+	typedef VectorMap<int, VectorMap<int, String> > FactoryAssistList;
+	typedef VectorMap<int, Tuple<int, String> > AssistList;
 	
 	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
@@ -207,6 +209,8 @@ public:
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Vector<int>&				AccountAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
+	inline static FactoryAssistList&		AssistantFactories() {static FactoryAssistList list; return list;}
+	inline static AssistList&				Assistants() {static AssistList list; return list;}
 	
 public:
 	
@@ -216,6 +220,13 @@ public:
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
 		else if (type == CORE_ACCOUNTADVISOR)	AccountAdvisorFactories().Add(id);
 		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
+	}
+	
+	template <class CoreT> static void		RegisterAssistant(String name, int type) {
+		int id = Find<CoreT>();
+		if (id == -1) Panic("Invalid assist: " + IntStr(type) + " " + name);
+		AssistantFactories().GetAdd(id).GetAdd(type, name);
+		Assistants().GetAdd(type) = Tuple<int, String>(id, CoreFactories()[id].a + " " + name);
 	}
 	
 	template <class CoreT> static CoreT&	GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}

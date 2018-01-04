@@ -479,22 +479,23 @@ void Overlook::RefreshAssist() {
 		return;
 	int cursor = graph.last_time_value_tool_pos;
 	
-	AssistBase ab;
+	VectorBool vec;
+	vec.SetCount(ASSIST_COUNT);
 	for(int i = chart->work_queue.GetCount()-1; i >= 0; i--) {
 		CoreItem& ci = *chart->work_queue[i];
 		if (ci.core.IsEmpty()) continue;
 		
 		Core& core = *ci.core;
-		core.Assist(ab, cursor);
-		if (!ab.items.IsEmpty())
-			break;
+		if (cursor >= core.GetBars()) break;
+		core.Assist(cursor, vec);
 	}
 	
-	for(int i = 0; i < ab.items.GetCount(); i++) {
-		const AssistItem& ai = ab.items[i];
-		assist.Set(i, 0, ai.msg);
+	int row = 0;
+	for(int i = 0; i < ASSIST_COUNT; i++) {
+		if (vec.Get(i))
+			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
-	assist.SetCount(ab.items.GetCount());
+	assist.SetCount(row);
 }
 
 void Overlook::RefreshTrades() {
@@ -920,8 +921,8 @@ void Overlook::LoadDefaultEAs() {
 	System& sys = GetSystem();
 	Profile profile;
 	
-	int tf = sys.FindPeriod(60);
-	int bb  = System::Find<BollingerBands>();
+	int tf = sys.FindPeriod(15);
+	int bb  = System::Find<DataBridge>();
 	int wsa = System::Find<AccountAdvisor>();
 	
 	{

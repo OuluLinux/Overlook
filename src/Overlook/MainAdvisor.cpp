@@ -95,12 +95,13 @@ void MainAdvisor::RefreshReward(int cursor) {
 	
 	int col = 0;
 	for(int i = 0; i < SYM_COUNT+1; i++) {
-		for(int j = 0; j < ADVISOR_PERIOD; j++) {
-			int pos = cursor + j;
-			if (pos > last)
-				current.correct[col++] = 0;
-			else
-				current.correct[col++] = (open_buf[i]->GetUnsafe(pos+1) / open_buf[i]->GetUnsafe(pos) - 1.0) * 100.0;
+		if (cursor > last) {
+			current.correct[col++] = 0.5;
+			current.correct[col++] = 0.5;
+		} else {
+			bool action = open_buf[i]->GetUnsafe(cursor+1) < open_buf[i]->GetUnsafe(cursor);
+			current.correct[col++] = !action ? 0.0 : 1.0;
+			current.correct[col++] =  action ? 0.0 : 1.0;
 		}
 	}
 	ASSERT(col == OUTPUT_SIZE);
@@ -148,6 +149,8 @@ bool MainAdvisor::TrainingDQNIterator() {
 	
 	ASSERT(!data.IsEmpty());
 	
+	const int min_pos = 100;
+	
 	double max_epsilon = 0.20;
 	double min_epsilon = 0.00;
 	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
@@ -160,9 +163,9 @@ bool MainAdvisor::TrainingDQNIterator() {
 		RefreshReward(cursor);
 		
 		for(int j = 0; j < 5; j++) {
-			int count = Upp::min(data.GetCount() - ADVISOR_PERIOD*3, dqn_round-ADVISOR_PERIOD*2) - 1;
+			int count = Upp::min(data.GetCount() - 1, dqn_round) - min_pos - 1;
 			if (count < 1) break;
-			int pos = 2*ADVISOR_PERIOD + Random(count);
+			int pos = min_pos + Random(count);
 			if (pos < 0 || pos >= data.GetCount()) continue;
 			DQN::DQVector& before = data[pos];
 			LoadState(tmp_before_state, pos);
@@ -215,8 +218,6 @@ void MainAdvisor::RunMain() {
 	
 	double change_total = 1.0;
 	
-	const int peek_period = Upp::min(ADVISOR_PERIOD-1, 15);
-	
 	bool prev_signal[SYM_COUNT];
 	for(int i = 0; i < SYM_COUNT; i++) prev_signal[i] = 0;
 	
@@ -224,12 +225,7 @@ void MainAdvisor::RunMain() {
 		DQN::DQVector& current = data[i];
 		double change_sum = 0.0;
 		for (int j = 0; j < SYM_COUNT; j++) {
-			int begin = j * ADVISOR_PERIOD;
-			int end = begin + peek_period;
-			double weight_sum = 0.0;
-			for(int k = begin; k < end; k++)
-				weight_sum += current.weight[k];
-			bool signal = weight_sum < 0.0;
+			bool signal = current.weight[j * 2 + 0] > current.weight[j * 2 + 1];
 			double curr		= open_buf[j]->GetUnsafe(i);
 			double next		= open_buf[j]->GetUnsafe(i + 1);
 			ASSERT(curr > 0.0);
@@ -261,16 +257,15 @@ void MainAdvisor::RefreshOutputBuffers() {
 	
 	data.SetCount(bars);
 	
-	bufs.SetCount(0);
-	bufs.Reserve(INPUTBUF_COUNT + 2);
+	cores.SetCount(0);
+	cores.Reserve((SYM_COUNT*1) + CORE_COUNT);
 	int tf = GetTf();
 	for(int i = 0; i < SYM_COUNT+1; i++) {
 		int sym = i < SYM_COUNT ? GetSystem().GetPrioritySymbol(i) : GetSystem().GetStrongSymbol();
-		for(int j = 0; j < SYMBOLBUF_COUNT; j++) {
-			bufs.Add(&GetInputBuffer(1 + j, sym, tf, -1));
+		for(int j = 0; j < CORE_COUNT; j++) {
+			cores.Add(GetInputCore(j, sym, tf));
 		}
 	}
-	ASSERT(INPUTBUF_COUNT == bufs.GetCount());
 }
 
 void MainAdvisor::LoadState(DQN::MatType& state, int cursor) {
@@ -278,23 +273,17 @@ void MainAdvisor::LoadState(DQN::MatType& state, int cursor) {
 	
 	int col = 0;
 	
-	// Time of week
-	Time t = GetSystem().GetTimeTf(GetTf(), cursor);
-	int wday = DayOfWeek(t) - 1;
-	double hour = (t.hour * 60 + t.minute) / (24.0 * 60.0);
-	double week = ((wday * 24 + t.hour) * 60 + t.minute) / (5.0 * 24.0 * 60.0);
-	ASSERT(week >= 0.0 && week < 1.0);
-	state.Set(col++, hour);
-	state.Set(col++, week);
+	tmp_assist.SetCount(ASSIST_COUNT);
 	
-	for(int j = 0; j < bufs.GetCount(); j++) {
-		ConstBuffer& buf = *bufs[j];
-		for(int k = 0; k < INPUT_PERIOD; k++) {
-			double value = buf.GetUnsafe(Upp::max(0, cursor - k));
-			if (!IsFin(value)) {
-				LOG("warning: not finite " << j << " " << (cursor - k));
-				value = 0.0;
-			}
+	int c = 0;
+	for(int i = 0; i < SYM_COUNT+1; i++) {
+		tmp_assist.Zero();
+		for(int j = 0; j < CORE_COUNT; j++) {
+			CoreIO& cio = *cores[c++];
+			cio.Assist(cursor, tmp_assist);
+		}
+		for(int k = 0; k < ASSIST_COUNT; k++) {
+			double value = tmp_assist.Get(k) ? 0.0 : 1.0;
 			state.Set(col++, value);
 		}
 	}

@@ -11,7 +11,7 @@ class PatternAdvisor : public Core {
 protected:
 	friend class AccountAdvisor;
 	
-	
+	static const int ADVISOR_PERIOD = 1;
 	static const int trend_max = 4;
 	static const int break_max = 8;
 	static const int row_size = (2 * 3 * trend_max) + trend_max + 2 * break_max + 4;

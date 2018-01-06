@@ -4616,6 +4616,7 @@ void VolatilitySlots::Start() {
 		int slot_id = (i-1) % slot_count;
 		OnlineAverage1& av = stats[slot_id];
 		av.Add(change);
+		total.Add(change);
 	}
 	
 	for(int i = counted; i < bars; i++) {
@@ -4630,13 +4631,97 @@ void VolatilitySlots::Start() {
 
 void VolatilitySlots::Assist(int cursor, VectorBool& vec) {
 	double value0 = GetBuffer(0).Get(cursor);
-	if      (value0 > +0.0010)		vec.Set(VOLSL_HIGH, true);
-	else if (value0 > +0.0005)		vec.Set(VOLSL_MED, true);
-	else							vec.Set(VOLSL_LOW, true);
+	if      (value0 > total.mean * 2.000)		vec.Set(VOLSL_VERYHIGH, true);
+	else if (value0 > total.mean * 1.333)		vec.Set(VOLSL_HIGH, true);
+	else if (value0 > total.mean * 0.666)		vec.Set(VOLSL_MED, true);
+	else										vec.Set(VOLSL_LOW, true);
 	if (cursor > 0) {
 		double value1 = GetBuffer(0).Get(cursor - 1);
 		if (value0 > value1)		vec.Set(VOLSL_INC, true);
 		else						vec.Set(VOLSL_DEC, true);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+VolumeSlots::VolumeSlots() {
+	
+}
+
+void VolumeSlots::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Color(113, 42, 150));
+	SetBufferStyle(0, DRAW_LINE);
+	
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 0.0002);
+	SetCoreLevel(1,  0.001);
+	SetCoreLevel(2,  0.010);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
+	
+	
+	int tf_mins = GetMinutePeriod();
+	if (tf_mins < 10080)
+		slot_count = (5 * 24 * 60) / tf_mins;
+	else
+		slot_count = 1;
+	
+	stats.SetCount(slot_count);
+}
+
+void VolumeSlots::Start() {
+	Buffer& buffer = GetBuffer(0);
+	ConstBuffer& vol_buf = GetInputBuffer(0, 3);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	if (counted > 0)
+		counted--;
+	
+	if (counted == 0)
+		counted++;
+	
+	int tf_mins = GetMinutePeriod();
+	
+	for(int i = counted; i < bars; i++) {
+		double vol  = vol_buf.Get(i);
+		if (vol == 0.0) continue;
+		int slot_id = (i-1) % slot_count;
+		OnlineAverage1& av = stats[slot_id];
+		av.Add(vol);
+		total.Add(vol);
+	}
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		int slot_id = i % slot_count;
+		const OnlineAverage1& av = stats[slot_id];
+		
+		buffer.Set(i, av.mean);
+	}
+}
+
+void VolumeSlots::Assist(int cursor, VectorBool& vec) {
+	double value0 = GetBuffer(0).Get(cursor);
+	if      (value0 > total.mean * 2.000)		vec.Set(VOLUME_VERYHIGH, true);
+	else if (value0 > total.mean * 1.333)		vec.Set(VOLUME_HIGH, true);
+	else if (value0 > total.mean * 0.666)		vec.Set(VOLUME_MED, true);
+	else										vec.Set(VOLUME_LOW, true);
+	if (cursor > 0) {
+		double value1 = GetBuffer(0).Get(cursor - 1);
+		if (value0 > value1)		vec.Set(VOLUME_INC, true);
+		else						vec.Set(VOLUME_DEC, true);
 	}
 }
 

@@ -1066,6 +1066,7 @@ class VolatilitySlots : public Core {
 protected:
 	friend class AccountAdvisor;
 	Vector<OnlineAverage1> stats;
+	OnlineAverage1 total;
 	
 	int slot_count = 0;
 	
@@ -1081,7 +1082,36 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Mem(stats);
+			% Mem(stats)
+			% Mem(total);
+	}
+	
+};
+
+
+class VolumeSlots : public Core {
+	
+protected:
+	friend class AccountAdvisor;
+	Vector<OnlineAverage1> stats;
+	OnlineAverage1 total;
+	
+	int slot_count = 0;
+	
+	
+public:
+	VolumeSlots();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(stats)
+			% Mem(total);
 	}
 	
 };

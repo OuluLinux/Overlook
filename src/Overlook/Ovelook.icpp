@@ -63,11 +63,12 @@ INITBLOCK {
 	System::Register<MinimalLabel>("MinimalLabel");
 	
 	System::Register<VolatilitySlots>("VolatilitySlots");
+	System::Register<VolumeSlots>("VolumeSlots");
 	System::Register<ChannelOscillator>("ChannelOscillator");
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	System::Register<StrongForce>("StrongForce");
-	System::Register<PatternAdvisor>("PatternAdvisor", CORE_EXPERTADVISOR);
 	
+	System::Register<PatternAdvisor>("PatternAdvisor", CORE_EXPERTADVISOR);
 	System::Register<MainAdvisor>("MainAdvisor", CORE_EXPERTADVISOR);
 	System::Register<AccountAdvisor>("AccountAdvisor", CORE_ACCOUNTADVISOR);
 	
@@ -175,6 +176,11 @@ INITBLOCK {
     System::RegisterAssistant<VolatilitySlots>("High", VOLSL_HIGH);
     System::RegisterAssistant<VolatilitySlots>("Increasing", VOLSL_INC);
     System::RegisterAssistant<VolatilitySlots>("Decreasing", VOLSL_DEC);
+    System::RegisterAssistant<VolumeSlots>("Low", VOLUME_LOW);
+    System::RegisterAssistant<VolumeSlots>("Medium", VOLUME_MED);
+    System::RegisterAssistant<VolumeSlots>("High", VOLUME_HIGH);
+    System::RegisterAssistant<VolumeSlots>("Increasing", VOLUME_INC);
+    System::RegisterAssistant<VolumeSlots>("Decreasing", VOLUME_DEC);
     System::RegisterAssistant<ChannelOscillator>("Lowest", CHOSC_LOWEST);
     System::RegisterAssistant<ChannelOscillator>("Low", CHOSC_LOW);
     System::RegisterAssistant<ChannelOscillator>("High", CHOSC_HIGH);

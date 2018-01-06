@@ -14,7 +14,7 @@ protected:
 	
 	static const int INPUT_SIZE			= (SYM_COUNT+1) * ASSIST_COUNT;
 	static const int OUTPUT_SIZE		= (SYM_COUNT+1) * 2;
-	static const int CORE_COUNT			= 24;
+	static const int CORE_COUNT			= 25;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -40,13 +40,10 @@ protected:
 	Vector<CoreIO*>				cores;
 	VectorBool					tmp_assist;
 	int							prev_counted		= 0;
-	int							data_count			= 0;
-	int							main_count			= 0;
-	int							main_visible		= 0;
 	double						spread_point[SYM_COUNT];
 	bool						once				= true;
 	#ifdef flagDEBUG
-	int							dqn_max_rounds		= 5000;
+	int							dqn_max_rounds		= 500;
 	#else
 	int							dqn_max_rounds		= 1000000;
 	#endif
@@ -98,6 +95,7 @@ public:
 			% In<PeriodicalChange>(&FilterFunction1)
 			% In<VolatilityAverage>(&FilterFunction1)
 			% In<VolatilitySlots>(&FilterFunction1)
+			% In<VolumeSlots>(&FilterFunction1)
 			% In<ChannelOscillator>(&FilterFunction1)
 			% In<ScissorChannelOscillator>(&FilterFunction1)
 			% In<StrongForce>(&FilterFunction1)

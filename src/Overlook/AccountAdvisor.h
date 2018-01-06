@@ -6,29 +6,65 @@ using namespace Upp;
 
 class AccountAdvisor : public Core {
 	
-	struct MainOptimizationCtrl : public JobCtrl {
+	static const int tf_count			= 3;
+	static const int TIME_BITS			= 5 + 24 + 12;
+	static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * tf_count;
+	static const int OUTPUT_SIZE		= SYM_COUNT * (tf_count + 1);
+	static const int CORE_COUNT			= 25;
+	
+	
+	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
 	};
 	
+	
+	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+	
+	
 	// Persistent
-	int							prev_counted		= 0;
+	Vector<DQN::DQVector>		data;
+	DQN							dqn_trainer;
+	Vector<double>				dqntraining_pts;
+	int							dqn_round			= 0;
+	int							dqn_pt_cursor		= 0;
 	
 	
 	// Temp
-	Vector<ConstBuffer*> inputs;
-	Vector<double> spread_point;
-	int realtime_count = 0;
-	bool forced_optimizer_reset = false;
-	bool once = true;
+	ConstBuffer*				open_buf[SYM_COUNT * tf_count];
+	DQN::MatType				tmp_before_state, tmp_after_state;
+	MainAdvisor*				ma[tf_count];
+	Vector<CoreIO*>				cores;
+	VectorBool					tmp_assist;
+	int							tf_ids[tf_count];
+	int							tf_step[tf_count];
+	int							tf_div[tf_count];
+	int							prev_counted		= 0;
+	int							realtime_count		= 0;
+	double						spread_point[SYM_COUNT];
+	bool						once				= true;
+	#ifdef flagDEBUG
+	int							dqn_max_rounds		= 5000;
+	#else
+	int							dqn_max_rounds		= 1000000;
+	#endif
 	
 	
 protected:
 	virtual void Start();
 	
-	void SetRealArea();
+	bool TrainingDQNBegin();
+	bool TrainingDQNIterator();
+	bool TrainingDQNEnd();
+	bool TrainingDQNInspect();
 	void RefreshMain();
 	void MainReal();
+	void RefreshAll();
+	void RefreshOutputBuffers();
+	void RunMain();
+	void RefreshAction(int data_pos);
+	void RefreshReward(int data_pos);
+	void LoadState(DQN::MatType& state, int cursor);
 	
 	SimBroker sb;
 	void RunSimBroker();
@@ -40,27 +76,76 @@ public:
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>(&FilterFunction0)
-			% In<MainAdvisor>(&FilterFunction1)
+		reg % In<DataBridge>(&FilterFunction2)
+			
+			% In<MovingAverage>(&FilterFunction1)
+			% In<MovingAverageConvergenceDivergence>(&FilterFunction1)
+			% In<BollingerBands>(&FilterFunction1)
+			% In<ParabolicSAR>(&FilterFunction1)
+			% In<StandardDeviation>(&FilterFunction1)
+			% In<AverageTrueRange>(&FilterFunction1)
+			% In<BearsPower>(&FilterFunction1)
+			% In<BullsPower>(&FilterFunction1)
+			% In<CommodityChannelIndex>(&FilterFunction1)
+			% In<DeMarker>(&FilterFunction1)
+			% In<ForceIndex>(&FilterFunction1)
+			% In<Momentum>(&FilterFunction1)
+			% In<RelativeStrengthIndex>(&FilterFunction1)
+			% In<RelativeVigorIndex>(&FilterFunction1)
+			% In<StochasticOscillator>(&FilterFunction1)
+			% In<AcceleratorOscillator>(&FilterFunction1)
+			% In<AwesomeOscillator>(&FilterFunction1)
+			% In<PeriodicalChange>(&FilterFunction1)
+			% In<VolatilityAverage>(&FilterFunction1)
+			% In<VolatilitySlots>(&FilterFunction1)
+			% In<VolumeSlots>(&FilterFunction1)
+			% In<ChannelOscillator>(&FilterFunction1)
+			% In<ScissorChannelOscillator>(&FilterFunction1)
+			% In<StrongForce>(&FilterFunction1)
+			
+			% In<MainAdvisor>(&FilterFunction0)
 			% Out(1, 1)
-			% Mem(prev_counted);
+			% Mem(data)
+			% Mem(dqn_trainer)
+			% Mem(dqntraining_pts)
+			% Mem(dqn_round)
+			% Mem(dqn_pt_cursor);
 	}
 	
+	
 	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf  == out_tf;
+		if (in_sym == -1) {
+			int mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			return mins == 15 || mins == 60 || mins == 240;
+		}
 		
-		if (in_sym == out_sym)
-			return true;
-		
-		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
+		if (in_sym == out_sym) return true;
 	}
 	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf  == out_tf;
+		if (in_sym == -1) {
+			int mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			return mins == 15 || mins == 60 || mins == 240;
+		}
+
+		static int strong_sym;
+		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetStrongSymbol();
 		
-		return in_sym == out_sym;
+		return out_sym == strong_sym || ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
+	}
+	
+	static bool FilterFunction2(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1) {
+			int mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			return mins == 15 || mins == 60 || mins == 240;
+		}
+		
+		if (in_sym == out_sym) return true;
+		
+		static int strong_sym;
+		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetStrongSymbol();
+		
+		return out_sym == strong_sym || ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
 	
 };

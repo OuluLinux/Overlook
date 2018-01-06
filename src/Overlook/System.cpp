@@ -107,11 +107,11 @@ void System::Init() {
 			
 			// Generic Low/Medium spread broker
 			#if 1
-			case 0: symstr = "USDJPY";	spread_point = 0.02;   break;
-			case 1: symstr = "EURUSD";	spread_point = 0.0002; break;
+			case 0: symstr = "EURUSD";	spread_point = 0.0002; break;
+			case 1: symstr = "EURJPY";	spread_point = 0.03;   break;
 			case 2: symstr = "USDCHF";	spread_point = 0.0003; break;
-			case 3: symstr = "EURCHF";	spread_point = 0.0003; break;
-			case 4: symstr = "EURJPY";	spread_point = 0.03;   break;
+			case 3: symstr = "USDJPY";	spread_point = 0.02;   break;
+			case 4: symstr = "EURCHF";	spread_point = 0.0003; break;
 			case 5: symstr = "EURGBP";	spread_point = 0.0003; break;
 			case 6: symstr = "GBPUSD";	spread_point = 0.0003; break;
 			case 7: symstr = "USDCAD";	spread_point = 0.0003; break;
@@ -207,8 +207,8 @@ void System::AddPeriod(String nice_str, int period) {
 	else if (period == 5)		begin = Time(2017,6,5);
 	else if (period == 15)		begin = Time(2016,12,19);
 	else if (period == 30)		begin = Time(2016,10,3);
-	else if (period == 60)		begin = Time(2016,4,25);
-	else if (period == 240)		begin = Time(2007,6,4);
+	else if (period == 60)		begin = Time(2016,5,2);
+	else if (period == 240)		begin = Time(2010,1,4);
 	else if (period == 480)		begin = Time(2014,1,6);
 	else if (period == 720)		begin = Time(2014,1,6);
 	else if (period == 1440)	begin = Time(2014,1,6);

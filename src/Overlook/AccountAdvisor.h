@@ -119,7 +119,7 @@ public:
 			return mins == 15 || mins == 60 || mins == 240;
 		}
 		
-		if (in_sym == out_sym) return true;
+		return in_sym == out_sym;
 	}
 	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
@@ -216,7 +216,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction0)
 			% In<VolatilitySlots>(&FilterFunction1)
-			% In<MainAdvisor>(&FilterFunction1)
+			% In<MainAdvisor>(&FilterFunction2)
 			% Out(1, 1)
 			% Mem(prev_counted)
 			% Mem(chg_limit)
@@ -224,8 +224,11 @@ public:
 	}
 	
 	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
+		if (in_sym == -1) {
+			if (out_tf < in_tf)
+				return false;
 			return in_tf  == out_tf || IsTfUsed(::Overlook::GetSystem().GetPeriod(out_tf));
+		}
 		
 		if (in_sym == out_sym)
 			return true;
@@ -248,6 +251,18 @@ public:
 		}
 		
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
+	}
+	
+	static bool FilterFunction2(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1) {
+			int tf_mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			if (IsTfUsed(tf_mins))
+				return true;
+			
+			return false;
+		}
+		
+		return in_sym == out_sym;
 	}
 	
 };

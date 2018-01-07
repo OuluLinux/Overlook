@@ -72,6 +72,7 @@ void AccountAdvisor::Start() {
 	if (once) {
 		if (prev_counted > 0) prev_counted--;
 		once = false;
+		RefreshSourcesOnlyDeep();
 	}
 	
 	
@@ -287,7 +288,7 @@ void AccountAdvisor::RunMain() {
 	System& sys = GetSystem();
 	int bars = Upp::min(data.GetCount(), GetBars());
 	dqntraining_pts.SetCount(bars, 0.0);
-	bars -= tf_step[3];
+	bars -= tf_step[tf_count-1];
 	
 	double change_total = 1.0;
 	
@@ -644,6 +645,7 @@ void WeekSlotAdvisor::Start() {
 		once = false;
 		//if (prev_counted) prev_counted--;
 		prev_counted = false;
+		RefreshSourcesOnlyDeep();
 	}
 	
 	
@@ -666,20 +668,16 @@ void WeekSlotAdvisor::Start() {
 	bool sources_finished = true;
 	int bars = GetBars();
 	int chk_count = 0;
-	for(int i = 0; i < SYM_COUNT; i++) {
-		int symbol						= sys.GetPrioritySymbol(i);
-		for(int j = 0; j < tf_ids.GetCount(); j++) {
-			int tf = tf_ids[j];
-			CoreIO* core				= CoreIO::GetInputCore(2, symbol, tf);
-			MainAdvisor* adv			= dynamic_cast<MainAdvisor*>(core);
-			ASSERT(adv);
-			sources_finished			&= adv->IsJobsFinished()
-										&& adv->prev_counted == sys.GetCountTf(tf)
-										&& adv->GetOutput(0).label.GetCount() == sys.GetCountTf(tf)
-										&& adv->GetOutput(1).label.GetCount() == sys.GetCountTf(tf);
-			chk_count++;
-		}
+	for(int j = 0; j < tf_ids.GetCount(); j++) {
+		int tf = tf_ids[j];
+		CoreIO* core				= CoreIO::GetInputCore(2, GetSymbol(), tf);
+		MainAdvisor* adv			= dynamic_cast<MainAdvisor*>(core);
+		ASSERT(adv);
+		sources_finished			&= adv->IsJobsFinished()
+									&& adv->prev_counted == sys.GetCountTf(tf);
+		chk_count++;
 	}
+	
 	
 	if (sources_finished && prev_counted < bars && chk_count > 0) {
 		RefreshSourcesOnlyDeep();

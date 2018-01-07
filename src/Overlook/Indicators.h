@@ -1064,7 +1064,7 @@ public:
 class VolatilitySlots : public Core {
 	
 protected:
-	friend class AccountAdvisor;
+	friend class WeekSlotAdvisor;
 	Vector<OnlineAverage1> stats;
 	OnlineAverage1 total;
 	
@@ -1092,7 +1092,6 @@ public:
 class VolumeSlots : public Core {
 	
 protected:
-	friend class AccountAdvisor;
 	Vector<OnlineAverage1> stats;
 	OnlineAverage1 total;
 	

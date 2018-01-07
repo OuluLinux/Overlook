@@ -10,6 +10,7 @@ class MainAdvisor : public Core {
 	
 protected:
 	friend class AccountAdvisor;
+	friend class WeekSlotAdvisor;
 	
 	
 	static const int INPUT_SIZE			= (SYM_COUNT+1) * ASSIST_COUNT;

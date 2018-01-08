@@ -319,7 +319,7 @@ bool FixedSimBroker::Cycle() {
 	}
 	
 	
-	const int fmscale = (MULT_MAXSCALES-1) * MULT_MAXSCALE_MUL * SYM_COUNT;
+	const int fmscale = SYM_COUNT;
 	if (signal_sum > fmscale) signal_sum = fmscale;
 	double max_margin_sum = AccountEquity() * (1.0 - free_margin_level) * ((double)signal_sum / (double)fmscale);
 	

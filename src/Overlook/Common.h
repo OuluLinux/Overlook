@@ -28,9 +28,6 @@ using namespace Upp;
 #define TF_COUNT				6
 #define TRUEINDI_COUNT			3
 #define LABELINDI_COUNT			3
-#define MULT_MAXSCALES			3
-#define MULT_MAXSCALE_MUL		2
-#define MULT_MAX				(MULT_MAXSCALES * MULT_MAXSCALE_MUL)
 #define ADVISOR_COUNT			4
 #define MINPRED_LEN				8
 #define FMLEVEL					0.60

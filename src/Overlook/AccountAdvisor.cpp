@@ -483,7 +483,7 @@ void AccountAdvisor::MainReal() {
 			LOG("Real symbol " << sym << " signal " << sig);
 		}
 		mt.SetFreeMarginLevel(FMLEVEL);
-		mt.SetFreeMarginScale((MULT_MAXSCALES - 1)*MULT_MAXSCALE_MUL * SYM_COUNT);
+		mt.SetFreeMarginScale(SYM_COUNT);
 		mt.SignalOrders(true);
 	}
 	catch (...) {
@@ -631,9 +631,7 @@ WeekSlotAdvisor::WeekSlotAdvisor() {
 }
 
 void WeekSlotAdvisor::Init() {
-	tfmins		= GetMinutePeriod();
-	weekslots	= 5 * 24 * 60 / tfmins;
-	cols		= weekslots * SYM_COUNT;
+	
 }
 
 void WeekSlotAdvisor::Start() {
@@ -649,28 +647,17 @@ void WeekSlotAdvisor::Start() {
 	}
 	
 	
-	if (tf_ids.GetCount() == 0) {
-		tf_ids.Add(sys.FindPeriod(15));
-		tf_ids.Add(sys.FindPeriod(60));
-		tf_ids.Add(sys.FindPeriod(240));
-	}
 	
-	
-	bool sources_finished = true;
 	int bars = GetBars();
-	int chk_count = 0;
-	for(int j = 0; j < tf_ids.GetCount(); j++) {
-		int tf = tf_ids[j];
-		CoreIO* core				= CoreIO::GetInputCore(2, GetSymbol(), tf);
-		MainAdvisor* adv			= dynamic_cast<MainAdvisor*>(core);
-		ASSERT(adv);
-		sources_finished			&= adv->IsJobsFinished()
-									&& adv->prev_counted == sys.GetCountTf(tf);
-		chk_count++;
-	}
+	int tf = GetTf();
+	CoreIO* core				= CoreIO::GetInputCore(2, GetSymbol(), tf);
+	MainAdvisor* adv			= dynamic_cast<MainAdvisor*>(core);
+	ASSERT(adv);
+	bool sources_finished		= adv->IsJobsFinished()
+								&& adv->prev_counted == sys.GetCountTf(tf);
 	
 	
-	if (sources_finished && prev_counted < bars && chk_count > 0) {
+	if (sources_finished && prev_counted < bars) {
 		RefreshSourcesOnlyDeep();
 		
 		if (spread_point.IsEmpty()) {
@@ -678,29 +665,21 @@ void WeekSlotAdvisor::Start() {
 			inputs			.SetCount(SYM_COUNT, NULL);
 			for(int i = 0; i < SYM_COUNT; i++) {
 				int symbol					= sys.GetPrioritySymbol(i);
-				int tf						= GetTf();
 				ConstBuffer& open_buf		= GetInputBuffer(0, symbol, tf, 0);
 				inputs[i]					= &open_buf;
 			}
 			
 			
-			mains			.SetCount(tf_ids.GetCount());
-			for(int j = 0; j < tf_ids.GetCount(); j++) {
-				int tf = tf_ids[j];
-				CoreIO* core				= CoreIO::GetInputCore(2, GetSymbol(), tf);
-				ASSERT(core);
-				MainAdvisor* ma				= dynamic_cast<MainAdvisor*>(core);
-				ASSERT(ma);
-				mains[j]					= ma;
-				
-				if (!j) {
-					for(int i = 0; i < SYM_COUNT; i++) {
-						int symbol			= sys.GetPrioritySymbol(i);
-						spread_point[i]		= mains[j]->GetSpreadPoint(i);
-					}
-				}
-			}
+			CoreIO* core				= CoreIO::GetInputCore(2, GetSymbol(), tf);
+			ASSERT(core);
+			MainAdvisor* ma				= dynamic_cast<MainAdvisor*>(core);
+			ASSERT(ma);
+			main						= ma;
 			
+			for(int i = 0; i < SYM_COUNT; i++) {
+				int symbol			= sys.GetPrioritySymbol(i);
+				spread_point[i]		= main->GetSpreadPoint(i);
+			}
 		}
 		
 		LOG("WeekSlotAdvisor::Start Refresh");
@@ -779,7 +758,7 @@ void WeekSlotAdvisor::MainReal() {
 			LOG("Real symbol " << sym << " signal " << sig);
 		}
 		mt.SetFreeMarginLevel(FMLEVEL);
-		mt.SetFreeMarginScale((MULT_MAXSCALES - 1)*MULT_MAXSCALE_MUL * (open_count ? open_count : 1));
+		mt.SetFreeMarginScale(open_count ? open_count : 1);
 		mt.SignalOrders(true);
 	}
 	catch (...) {
@@ -813,7 +792,6 @@ void WeekSlotAdvisor::RunSimBroker() {
 	
 	
 	for(int i = 0; i < bars; i++) {
-		int weekslot = i % weekslots;
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			ConstBuffer& open_buf = *inputs[j];
@@ -834,34 +812,25 @@ void WeekSlotAdvisor::RunSimBroker() {
 			switch (j) {
 				case 0: // EURUSD
 					if      (t >=  745 && t < 1630) read_tf = 0;
-					//else if (t >= 1630 && t < 2000) read_tf = 1;
-					//else read_tf = 2;
 					break;
 					
 				case 1: // EURJPY
 					if      (t >=  330 && t <  800) read_tf = 0;
-					else if (t >= 1330 && t < 1800) read_tf = 0;
-					//else if (t >=  800 && t < 1330) read_tf = 1;
-					//else read_tf = 2;
+					else if (t >= 1300 && t < 1800) read_tf = 0;
 					break;
 					
 				case 2: // USDCHF
 					if      (t >=  645 && t < 1045) read_tf = 0;
 					else if (t >= 1300 && t < 1630) read_tf = 0;
-					//else if (t >= 1045 && t < 1300) read_tf = 1;
-					//else read_tf = 2;
 					break;
 				
 				case 3: // USDJPY
 					if      (t >=  515 && t < 1200) read_tf = 0;
 					else if (t >= 1600 && t < 1630) read_tf = 0;
-					//else if (t >= 1200 && t < 1600) read_tf = 1;
-					//else read_tf = 2;
 					break;
 			}
 			if (read_tf != -1) {
-				int read_pos = sys.GetShiftTf(tf, tf_ids[read_tf], i);
-				const auto& current = mains[read_tf]->data[read_pos];
+				const auto& current = main->data[i];
 				bool signal = current.weight[j * 2 + 0] > current.weight[j * 2 + 1];
 				
 				sig		= signal ? -1 : +1;

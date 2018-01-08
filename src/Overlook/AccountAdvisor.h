@@ -176,20 +176,15 @@ class WeekSlotAdvisor : public Core {
 	};
 	
 	// Persistent
-	double chg_limit = -1, slow_limit = -1;
 	int prev_counted = 0;
 	
 	
 	// Temp
-	Vector<MainAdvisor*> mains;
 	Vector<ConstBuffer*> inputs;
 	Vector<double> spread_point;
-	Index<int> tf_ids;
+	MainAdvisor* main = NULL;
 	ForestArea area;
 	int realtime_count = 0;
-	int tfmins = 0;
-	int weekslots = 0;
-	int cols = 0;
 	bool forced_optimizer_reset = false;
 	bool once = true;
 	
@@ -216,17 +211,12 @@ public:
 			% In<VolatilitySlots>(&FilterFunction1)
 			% In<MainAdvisor>(&FilterFunction2)
 			% Out(1, 1)
-			% Mem(prev_counted)
-			% Mem(chg_limit)
-			% Mem(slow_limit);
+			% Mem(prev_counted);
 	}
 	
 	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1) {
-			if (out_tf < in_tf)
-				return false;
-			return in_tf  == out_tf || IsTfUsed(::Overlook::GetSystem().GetPeriod(out_tf));
-		}
+		if (in_sym == -1)
+			return in_tf  == out_tf;
 		
 		if (in_sym == out_sym)
 			return true;
@@ -234,31 +224,18 @@ public:
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
 	
-	static bool IsTfUsed(int tf_mins) {return tf_mins == 15 || tf_mins == 60 || tf_mins == 240;}
+	static bool IsTfUsed(int tf_mins) {return tf_mins == 15/* || tf_mins == 60 || tf_mins == 240*/;}
 	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1) {
-			if (out_tf < in_tf)
-				return false;
-			
-			int tf_mins = ::Overlook::GetSystem().GetPeriod(out_tf);
-			if (IsTfUsed(tf_mins))
-				return true;
-			
-			return false;
-		}
+		if (in_sym == -1)
+			return out_tf == in_tf;
 		
 		return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
 	
 	static bool FilterFunction2(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1) {
-			int tf_mins = ::Overlook::GetSystem().GetPeriod(out_tf);
-			if (IsTfUsed(tf_mins))
-				return true;
-			
-			return false;
-		}
+		if (in_sym == -1)
+			return out_tf == in_tf;
 		
 		return in_sym == out_sym;
 	}

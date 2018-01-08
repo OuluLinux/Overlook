@@ -46,7 +46,7 @@ protected:
 	#ifdef flagDEBUG
 	int							dqn_max_rounds		= 500;
 	#else
-	int							dqn_max_rounds		= 1000000;
+	int							dqn_max_rounds		= 5000000;
 	#endif
 	
 protected:

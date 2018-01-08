@@ -43,7 +43,7 @@ using namespace Upp;
 #define	LOCALPROB_DEPTH			80
 #endif
 
-#define MAX_SYMOPEN				6
+#define MAX_SYMOPEN				4
 
 #ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				4

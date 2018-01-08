@@ -923,7 +923,7 @@ void Overlook::LoadDefaultEAs() {
 	
 	int tf = sys.FindPeriod(15);
 	int bb  = System::Find<DataBridge>();
-	int wsa = System::Find<AccountAdvisor>();
+	int wsa = System::Find<WeekSlotAdvisor>();
 	
 	{
 		ProfileGroup& pgroup = profile.charts.Add();

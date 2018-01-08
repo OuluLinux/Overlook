@@ -184,9 +184,7 @@ class WeekSlotAdvisor : public Core {
 	Vector<MainAdvisor*> mains;
 	Vector<ConstBuffer*> inputs;
 	Vector<double> spread_point;
-	Vector<Vector<int> > time_slots;
 	Index<int> tf_ids;
-	Vector<int> ratios;
 	ForestArea area;
 	int realtime_count = 0;
 	int tfmins = 0;

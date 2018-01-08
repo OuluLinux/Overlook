@@ -857,7 +857,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 				
 				case 3: // USDJPY
 					if      (t >=  515 && t < 1200) read_tf = 0;
-					else if (t >= 1600 && t < 1615) read_tf = 0;
+					else if (t >= 1600 && t < 1630) read_tf = 0;
 					else if (t >= 1200 && t < 1600) read_tf = 1;
 					else read_tf = 2;
 					break;

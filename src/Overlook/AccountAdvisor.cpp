@@ -650,15 +650,9 @@ void WeekSlotAdvisor::Start() {
 	
 	
 	if (tf_ids.GetCount() == 0) {
-		ASSERT(tf_ids.IsEmpty());
-		int this_tfmins = GetMinutePeriod();
-		for(int i = sys.GetPeriodCount()-1; i >= GetTf(); i--) {
-			int tf_mins = sys.GetPeriod(i);
-			if (IsTfUsed(tf_mins)) {
-				tf_ids.Add(i);
-			}
-		}
-		ASSERT(tf_ids.GetCount() > 0);
+		tf_ids.Add(sys.FindPeriod(15));
+		tf_ids.Add(sys.FindPeriod(60));
+		tf_ids.Add(sys.FindPeriod(240));
 	}
 	
 	
@@ -768,10 +762,13 @@ void WeekSlotAdvisor::MainReal() {
 	try {
 		mt.Data();
 		mt.RefreshLimits();
+		int open_count = 0;
 		for (int i = 0; i < SYM_COUNT; i++) {
 			int sym = sys.GetPrioritySymbol(i);
 			
 			int sig = sb.GetSignal(sym);
+			
+			if (sig != 0) open_count++;
 			
 			if (sig == mt.GetSignal(sym) && sig != 0)
 				mt.SetSignalFreeze(sym, true);
@@ -782,7 +779,7 @@ void WeekSlotAdvisor::MainReal() {
 			LOG("Real symbol " << sym << " signal " << sig);
 		}
 		mt.SetFreeMarginLevel(FMLEVEL);
-		mt.SetFreeMarginScale((MULT_MAXSCALES - 1)*MULT_MAXSCALE_MUL * SYM_COUNT);
+		mt.SetFreeMarginScale((MULT_MAXSCALES - 1)*MULT_MAXSCALE_MUL * (open_count ? open_count : 1));
 		mt.SignalOrders(true);
 	}
 	catch (...) {
@@ -813,7 +810,6 @@ void WeekSlotAdvisor::RunSimBroker() {
 	sb.SetInitialBalance(10000);
 	sb.Init();
 	sb.SetFreeMarginLevel(FMLEVEL);
-	sb.SetFreeMarginScale(SYM_COUNT);
 	
 	
 	for(int i = 0; i < bars; i++) {
@@ -829,37 +825,38 @@ void WeekSlotAdvisor::RunSimBroker() {
 		
 		Time time = sys.GetTimeTf(tf, i);
 		int t = time.hour * 100 + time.minute;
+		int open_count = 0;
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int sig = 0;
 			
-			int read_tf;
+			int read_tf = -1;
 			switch (j) {
 				case 0: // EURUSD
 					if      (t >=  745 && t < 1630) read_tf = 0;
-					else if (t >= 1630 && t < 2000) read_tf = 1;
-					else read_tf = 2;
+					//else if (t >= 1630 && t < 2000) read_tf = 1;
+					//else read_tf = 2;
 					break;
 					
 				case 1: // EURJPY
 					if      (t >=  330 && t <  800) read_tf = 0;
 					else if (t >= 1330 && t < 1800) read_tf = 0;
-					else if (t >=  800 && t < 1330) read_tf = 1;
-					else read_tf = 2;
+					//else if (t >=  800 && t < 1330) read_tf = 1;
+					//else read_tf = 2;
 					break;
 					
 				case 2: // USDCHF
 					if      (t >=  645 && t < 1045) read_tf = 0;
 					else if (t >= 1300 && t < 1630) read_tf = 0;
-					else if (t >= 1045 && t < 1300) read_tf = 1;
-					else read_tf = 2;
+					//else if (t >= 1045 && t < 1300) read_tf = 1;
+					//else read_tf = 2;
 					break;
 				
 				case 3: // USDJPY
 					if      (t >=  515 && t < 1200) read_tf = 0;
 					else if (t >= 1600 && t < 1630) read_tf = 0;
-					else if (t >= 1200 && t < 1600) read_tf = 1;
-					else read_tf = 2;
+					//else if (t >= 1200 && t < 1600) read_tf = 1;
+					//else read_tf = 2;
 					break;
 			}
 			if (read_tf != -1) {
@@ -868,6 +865,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 				bool signal = current.weight[j * 2 + 0] > current.weight[j * 2 + 1];
 				
 				sig		= signal ? -1 : +1;
+				open_count++;
 			}
 			
 			int sym		= sys.GetPrioritySymbol(j);
@@ -880,6 +878,7 @@ void WeekSlotAdvisor::RunSimBroker() {
 			}
 		}
 		
+		sb.SetFreeMarginScale(open_count ? open_count : 1);
 		
 		sb.SignalOrders(false);
 		

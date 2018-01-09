@@ -47,7 +47,7 @@ void System::Init() {
 			AddSymbol(s.name);
 		}
 		
-		AddSymbol("Strong");
+		AddSymbol("Common");
 		AddSymbol("Account");
 		
 		

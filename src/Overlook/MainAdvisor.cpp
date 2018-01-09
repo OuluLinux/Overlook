@@ -65,7 +65,7 @@ void MainAdvisor::Init() {
 		
 		int tf = tf_ids[j];
 		for (int i = 0; i < SYM_COUNT+1; i++) {
-			int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetStrongSymbol();
+			int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetCommonSymbol();
 			open_buf[buf] = &GetInputBuffer(0, sym, tf, 0);
 			ASSERT(open_buf[buf] != NULL);
 			buf++;
@@ -233,8 +233,8 @@ bool MainAdvisor::TrainingDQNIterator() {
 	
 	double max_epsilon = 0.20;
 	double min_epsilon = 0.00;
-	double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
-	dqn_trainer.SetEpsilon(epsilon);
+	//double epsilon = (max_epsilon - min_epsilon) * (dqn_max_rounds - dqn_round) / dqn_max_rounds + min_epsilon;
+	dqn_trainer.SetEpsilon(0);//epsilon);
 	dqn_trainer.SetGamma(0.01);
 	
 	for(int i = 0; i < 10; i++) {
@@ -317,9 +317,9 @@ void MainAdvisor::RunMain() {
 			bool exceptional_value = current.weight[j * SYM_BITS + 3] < 0.5;
 			bool try_continue = prev_enabled[j] && signal == prev_signal[j];
 			bool is_priority = priority_bits[j * week_bits + (i % week_bits)];
-			bool is_enabled = !too_weak_signal &&
-				((is_priority && (exceeds_spreads || try_continue)) ||
-				(!is_priority && (exceptional_value || try_continue)));
+			bool is_enabled = !too_weak_signal && (try_continue ||
+				(is_priority && (exceeds_spreads)) ||
+				(!is_priority && (exceptional_value)));
 			
 			if (is_enabled) {
 				open_count++;
@@ -367,7 +367,7 @@ void MainAdvisor::RefreshOutputBuffers() {
 	for (int l = 0; l < tf_count; l++) {
 		int tf = tf_ids[l];
 		for(int i = 0; i < SYM_COUNT+1; i++) {
-			int sym = i < SYM_COUNT ? GetSystem().GetPrioritySymbol(i) : GetSystem().GetStrongSymbol();
+			int sym = i < SYM_COUNT ? GetSystem().GetPrioritySymbol(i) : GetSystem().GetCommonSymbol();
 			for(int j = 0; j < CORE_COUNT; j++) {
 				CoreIO* c = GetInputCore(j, sym, tf);
 				ASSERT(c);
@@ -574,9 +574,9 @@ void MainAdvisor::RunSimBroker() {
 			bool exceptional_value = current.weight[j * SYM_BITS + 3] < 0.5;
 			bool try_continue = prev_enabled && signal == prev_signal;
 			bool is_priority = priority_bits[j * week_bits + (i % week_bits)];
-			bool is_enabled = !too_weak_signal &&
-				((is_priority && (exceeds_spreads || try_continue)) ||
-				(!is_priority && (exceptional_value || try_continue)));
+			bool is_enabled = !too_weak_signal && (try_continue ||
+				(is_priority && (exceeds_spreads)) ||
+				(!is_priority && (exceptional_value)));
 			
 			int sig = 0;
 			

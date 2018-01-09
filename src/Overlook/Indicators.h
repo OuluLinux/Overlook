@@ -1032,11 +1032,11 @@ public:
 };
 
 
-class StrongForce : public Core {
+class CommonForce : public Core {
 	double max_diff = 0.0;
 	
 public:
-	StrongForce();
+	CommonForce();
 	
 	
 	virtual void Init();
@@ -1055,7 +1055,7 @@ public:
 			return in_tf == out_tf;
 		
 		if (out_sym == in_sym) return true;
-		if (out_sym == ::Overlook::GetSystem().GetStrongSymbol()) return true;
+		if (out_sym == ::Overlook::GetSystem().GetCommonSymbol()) return true;
 		
 		return false;
 	}

@@ -74,7 +74,7 @@ struct CorrelationUnit : Moveable<CorrelationUnit> {
 class DataBridge : public BarData {
 	
 protected:
-	friend class StrongForce;
+	friend class CommonForce;
 	
 	VectorMap<int,int> median_max_map, median_min_map;
 	VectorMap<int,int> symbols;
@@ -95,7 +95,7 @@ protected:
 	void RefreshFromAskBid(bool init_round);
 	void RefreshMedian();
 	void RefreshAccount();
-	void RefreshStrong();
+	void RefreshCommon();
 	void RefreshCorrelation();
 	void ProcessCorrelation(int output);
 	
@@ -148,7 +148,7 @@ public:
 			return in_tf == out_tf;
 		}
 		
-		if (in_sym == ::Overlook::GetSystem().GetStrongSymbol())
+		if (in_sym == ::Overlook::GetSystem().GetCommonSymbol())
 			return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 		
 		// Never for regular symbols

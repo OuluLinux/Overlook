@@ -934,7 +934,7 @@ void Overlook::LoadDefaultEAs() {
 	}
 	
 	for(int i = 0; i < SYM_COUNT+1; i++) {
-		int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetStrongSymbol();
+		int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetCommonSymbol();
 		
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = sym;

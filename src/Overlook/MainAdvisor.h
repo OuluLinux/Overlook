@@ -111,7 +111,7 @@ public:
 			% In<VolumeSlots>(&FilterFunction1)
 			% In<ChannelOscillator>(&FilterFunction1)
 			% In<ScissorChannelOscillator>(&FilterFunction1)
-			% In<StrongForce>(&FilterFunction1)
+			% In<CommonForce>(&FilterFunction1)
 			
 			% Out(1, 1)
 			% Mem(data)
@@ -128,7 +128,7 @@ public:
 		}
 
 		static int strong_sym;
-		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetStrongSymbol();
+		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetCommonSymbol();
 		
 		return out_sym == strong_sym || ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}
@@ -142,7 +142,7 @@ public:
 		if (in_sym == out_sym) return true;
 		
 		static int strong_sym;
-		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetStrongSymbol();
+		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetCommonSymbol();
 		
 		return out_sym == strong_sym || ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
 	}

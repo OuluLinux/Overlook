@@ -46,7 +46,7 @@ void DataBridge::Start() {
 		common.InspectInit();
 		
 		// Correlation unit setup
-		if (GetSymbol() == sys.GetStrongSymbol()) {
+		if (GetSymbol() == sys.GetCommonSymbol()) {
 			if (corr.IsEmpty()) {
 				corr.Add();
 				
@@ -78,8 +78,8 @@ void DataBridge::Start() {
 	if (sym == sys.GetAccountSymbol()) {
 		RefreshAccount();
 	}
-	else if (sym == sys.GetStrongSymbol()) {
-		RefreshStrong();
+	else if (sym == sys.GetCommonSymbol()) {
+		RefreshCommon();
 	}
 	else
 	
@@ -144,7 +144,7 @@ void DataBridge::RefreshAccount() {
 	}
 }
 
-void DataBridge::RefreshStrong() {
+void DataBridge::RefreshCommon() {
 	RefreshCorrelation();
 	
 	Buffer& open_buf = GetBuffer(0);

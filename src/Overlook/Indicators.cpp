@@ -4491,19 +4491,19 @@ void MinimalLabel::Start() {
 
 
 
-StrongForce::StrongForce()
+CommonForce::CommonForce()
 {
 	
 }
 
-void StrongForce::Init() {
+void CommonForce::Init() {
 	SetCoreSeparateWindow();
 	
 	SetBufferColor(0, DodgerBlue);
 	SetBufferStyle(0, DRAW_LINE);
 }
 
-void StrongForce::Start() {
+void CommonForce::Start() {
 	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -4515,7 +4515,7 @@ void StrongForce::Start() {
 		counted++;
 	
 	System& sys = GetSystem();
-	int strong_sym = sys.GetStrongSymbol();
+	int strong_sym = sys.GetCommonSymbol();
 	int tf = GetTf();
 	int sym_priority = sys.GetSymbolPriority(GetSymbol());
 	if (sym_priority >= SYM_COUNT) return;
@@ -4547,7 +4547,7 @@ void StrongForce::Start() {
 	}
 }
 
-void StrongForce::Assist(int cursor, VectorBool& vec) {
+void CommonForce::Assist(int cursor, VectorBool& vec) {
 	double value0 = GetBuffer(0).Get(cursor);
 	if (value0 > 0.0)			vec.Set(STRONG_OVERZERO, true);
 	else						vec.Set(STRONG_BELOWZERO, true);

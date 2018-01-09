@@ -390,7 +390,7 @@ public:
 	Vector<int>		proxy_base_mul;
 	
 	int		GetAccountSymbol() const				{return symbols.GetCount()-1;}
-	int		GetStrongSymbol() const					{return symbols.GetCount()-2;}
+	int		GetCommonSymbol() const					{return symbols.GetCount()-2;}
 	
 public:
 	

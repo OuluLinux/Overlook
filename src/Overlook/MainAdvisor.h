@@ -12,9 +12,13 @@ protected:
 	friend class AccountAdvisor;
 	friend class WeekSlotAdvisor;
 	
-	
-	static const int INPUT_SIZE			= (SYM_COUNT+1) * ASSIST_COUNT;
-	static const int OUTPUT_SIZE		= (SYM_COUNT+1) * 2;
+	static const int SYM_BITS			= 4;
+	static const int tf_count			= 3;
+	static const int week_bits			= 5 * 24 * 4;
+	static const int TIME_BITS			= 5 + 24 + 4;
+	static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * tf_count;
+	static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * tf_count;
+;
 	static const int CORE_COUNT			= 25;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
@@ -23,7 +27,7 @@ protected:
 	};
 	
 	
-	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 142> DQN;
 	
 	
 	// Persistent
@@ -36,12 +40,18 @@ protected:
 	
 	
 	// Temp
-	ConstBuffer*				open_buf[SYM_COUNT+1];
+	ConstBuffer*				open_buf[(SYM_COUNT+1) * tf_count];
 	DQN::MatType				tmp_before_state, tmp_after_state;
 	Vector<CoreIO*>				cores;
 	VectorBool					tmp_assist;
+	SimBroker					sb;
+	int							tf_ids[tf_count];
+	int							tf_step[tf_count];
+	int							tf_div[tf_count];
 	int							prev_counted		= 0;
-	double						spread_point[SYM_COUNT];
+	int							realtime_count		= 0;
+	double						spread_point[SYM_COUNT+1];
+	bool						priority_bits[SYM_COUNT * week_bits];
 	bool						once				= true;
 	#ifdef flagDEBUG
 	int							dqn_max_rounds		= 500;
@@ -63,6 +73,8 @@ protected:
 	void RefreshAction(int data_pos);
 	void RefreshReward(int data_pos);
 	void LoadState(DQN::MatType& state, int cursor);
+	void MainReal();
+	void RunSimBroker();
 	
 public:
 	typedef MainAdvisor CLASSNAME;
@@ -110,8 +122,10 @@ public:
 	}
 	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf == out_tf;
+		if (in_sym == -1) {
+			int mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			return mins == 15 || (tf_count > 1 && mins == 60) || (tf_count > 2 && mins == 240);
+		}
 
 		static int strong_sym;
 		if (strong_sym == 0) strong_sym = ::Overlook::GetSystem().GetStrongSymbol();
@@ -120,8 +134,10 @@ public:
 	}
 	
 	static bool FilterFunction2(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf == out_tf;
+		if (in_sym == -1) {
+			int mins = ::Overlook::GetSystem().GetPeriod(out_tf);
+			return mins == 15 || (tf_count > 1 && mins == 60) || (tf_count > 2 && mins == 240);
+		}
 		
 		if (in_sym == out_sym) return true;
 		

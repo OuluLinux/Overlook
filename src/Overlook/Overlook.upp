@@ -34,9 +34,6 @@ file
 	ExposureTester.cpp,
 	ExportCtrl.h,
 	ExportCtrl.cpp,
-	RandomForestCtrl.h,
-	RandomForestCtrl.cpp,
-	RandomForestCtrl.lay,
 	Core readonly separator,
 	Common.h,
 	Common.cpp,
@@ -55,18 +52,10 @@ file
 	Utils.cpp,
 	Indicators.h,
 	Indicators.cpp,
-	PatternAdvisor.h,
-	PatternAdvisor.cpp,
 	MainAdvisor.h,
 	MainAdvisor.cpp,
-	AccountAdvisor.h,
-	AccountAdvisor.cpp,
-	RandomForest.h,
-	RandomForest.cpp,
 	Optimizer.h,
 	Optimizer.cpp,
-	FixedSimBroker.h,
-	FixedSimBroker.cpp,
 	DQN.h;
 
 mainconfig

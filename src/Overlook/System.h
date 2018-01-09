@@ -348,7 +348,6 @@ public:
 	int		FindPeriod(int period) const			{return periods.Find(period);}
 	int		FindSymbol(const String& s) const		{return symbols.Find(s);}
 	void	GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
-	void	SetFixedBroker(FixedSimBroker& broker, int sym_id);
 	
 public:
 	

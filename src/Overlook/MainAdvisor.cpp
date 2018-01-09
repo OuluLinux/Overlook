@@ -338,6 +338,8 @@ void MainAdvisor::RunMain() {
 				
 				change_sum += change;
 			}
+			else if (is_priority)
+				open_count++;
 			
 			prev_signal[j] = signal;
 			prev_enabled[j] = is_enabled;
@@ -582,6 +584,8 @@ void MainAdvisor::RunSimBroker() {
 				sig = signal ? -1 : +1;
 				open_count++;
 			}
+			else if (is_priority)
+				open_count++;
 			
 			
 			if (sig == sb.GetSignal(sym) && sig != 0)

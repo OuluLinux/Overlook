@@ -20,7 +20,7 @@ void MainAdvisor::Init() {
 	
 	for(int i = 0; i < SYM_COUNT; i++) {
 		for(int j = 0; j < week_bits; j++) {
-			int hour = j % (24 * 4);
+			int hour = (j % (24 * 4)) / 4;
 			int minutes = (j % 4) * 15;
 			int t = hour * 100 + minutes;
 			

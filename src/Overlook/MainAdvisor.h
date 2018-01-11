@@ -21,13 +21,16 @@ protected:
 ;
 	static const int CORE_COUNT			= 25;
 	
+	static const int check_period1		= 4;
+	static const int check_period2		= 4*4;
+	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
 	};
 	
 	
-	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 142> DQN;
+	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 173> DQN;
 	
 	
 	// Persistent
@@ -50,13 +53,15 @@ protected:
 	int							tf_div[tf_count];
 	int							prev_counted		= 0;
 	int							realtime_count		= 0;
+	double						check_sum1[SYM_COUNT];
+	double						check_sum2[SYM_COUNT];
 	double						spread_point[SYM_COUNT+1];
 	bool						priority_bits[SYM_COUNT * week_bits];
 	bool						once				= true;
 	#ifdef flagDEBUG
 	int							dqn_max_rounds		= 500;
 	#else
-	int							dqn_max_rounds		= 5000000;
+	int							dqn_max_rounds		= 10000000;
 	#endif
 	
 protected:

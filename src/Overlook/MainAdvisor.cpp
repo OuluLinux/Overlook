@@ -29,22 +29,23 @@ void MainAdvisor::Init() {
 			
 			switch (i) {
 				case 0: // EURUSD
-					if      (t >=  800 && t < 1630) b = true;
+				case 2: // USDCHF
+				case 4: // EURCHF
+				case 5: // EURGBP
+				case 6: // GBPUSD
+					if (t >= 800 && t < 1630) b = true;
 					break;
 					
 				case 1: // EURJPY
-					if      (t >=  330 && t <  800) b = true;
+				case 3: // USDJPY
+				case 8: // AUDUSD
+				case 9: // NZDUSD
+					if      (t >=  200 && t <  800) b = true;
 					else if (t >= 1300 && t < 1630) b = true;
 					break;
 					
-				case 2: // USDCHF
-					if      (t >=  645 && t < 1045) b = true;
-					else if (t >= 1300 && t < 1630) b = true;
-					break;
-				
-				case 3: // USDJPY
-					if      (t >=  515 && t < 1200) b = true;
-					else if (t >= 1600 && t < 1630) b = true;
+				case 7: // USDCAD
+					if      (t >=  1300 && t < 2000) b = true;
 					break;
 			}
 		}
@@ -501,6 +502,9 @@ void MainAdvisor::MainReal() {
 			
 			int sig = sb.GetSignal(sym);
 			
+			if (check_sum1[i] <= 0.0 || check_sum2[i] <= 0.0)
+				sig = 0;
+			
 			if (sig != 0) open_count++;
 			
 			if (sig == mt.GetSignal(sym) && sig != 0)
@@ -544,6 +548,10 @@ void MainAdvisor::RunSimBroker() {
 	sb.Init();
 	sb.SetFreeMarginLevel(FMLEVEL);
 	
+	for(int i = 0; i < SYM_COUNT; i++) {
+		check_sum1[i] = 0;
+		check_sum2[i] = 0;
+	}
 	
 	for(int i = 0; i < bars; i++) {
 		DQN::DQVector& current = data[i];
@@ -593,6 +601,27 @@ void MainAdvisor::RunSimBroker() {
 			else {
 				sb.SetSignal(sym, sig);
 				sb.SetSignalFreeze(sym, false);
+			}
+			
+			
+			bool not_last = i < bars - 1;
+			bool check1 = i >= bars - check_period1;
+			bool check2 = i >= bars - check_period2;
+			if (not_last && (check1 || check2)) {
+				double curr		= this->open_buf[j]->GetUnsafe(i);
+				double next		= this->open_buf[j]->GetUnsafe(i + 1);
+				double change;
+				
+				if (prev_signal != signal || !prev_enabled) {
+					if (!signal)	change = next / (curr + spread_point[j]) - 1.0;
+					else			change = 1.0 - next / (curr - spread_point[j]);
+				} else {
+					if (!signal)	change = next / curr - 1.0;
+					else			change = 1.0 - next / curr;
+				}
+				
+				if (check1)	check_sum1[j] += change;
+				if (check2)	check_sum2[j] += change;
 			}
 		}
 		

@@ -21,8 +21,8 @@ protected:
 ;
 	static const int CORE_COUNT			= 25;
 	
-	static const int check_period1		= 4;
-	static const int check_period2		= 4*4;
+	static const int check_period1		= 2;
+	static const int check_period2		= 2*4;
 	
 	struct TrainingDQNCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -30,7 +30,7 @@ protected:
 	};
 	
 	
-	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 173> DQN;
+	typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 	
 	
 	// Persistent
@@ -61,7 +61,7 @@ protected:
 	#ifdef flagDEBUG
 	int							dqn_max_rounds		= 500;
 	#else
-	int							dqn_max_rounds		= 10000000;
+	int							dqn_max_rounds		= 5000000;
 	#endif
 	
 protected:

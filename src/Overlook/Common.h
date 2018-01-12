@@ -43,7 +43,7 @@ using namespace Upp;
 #define MAX_SYMOPEN				4
 
 #ifndef flagHAVE_ALLSYM
-#define SYM_COUNT				10
+#define SYM_COUNT				4
 #else
 #define SYM_COUNT				19
 #endif

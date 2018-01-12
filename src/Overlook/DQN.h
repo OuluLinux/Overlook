@@ -405,8 +405,8 @@ public:
 	Data data;
 	
 	typedef  Mat<double, 1, num_actions>				FwdOut;
-	typedef  DQItem<1, num_states>						DQItem;
-	typedef  DQVector<num_actions>						DQVector;
+	typedef  DQItem<1, num_states>						DQItemType;
+	typedef  DQVector<num_actions>						DQVectorType;
 	
 	
 protected:
@@ -480,7 +480,7 @@ public:
 		return action;
 	}
 	
-	void Evaluate(MatType& before_state, DQVector& out) {
+	void Evaluate(MatType& before_state, DQVectorType& out) {
 		
 		// greedy wrt Q function
 		FwdOut& amat = Forward(before_state);
@@ -529,7 +529,7 @@ public:
 		return tderror;
 	}
 	
-	double Learn(MatType& s0, const DQVector& vec, MatType& s1) {
+	double Learn(MatType& s0, const DQVectorType& vec, MatType& s1) {
 		
 		// now predict
 		FwdOut& pred = Forward(s0);

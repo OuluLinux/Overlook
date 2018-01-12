@@ -140,7 +140,7 @@ void MainAdvisor::RefreshAll() {
 }
 
 void MainAdvisor::RefreshAction(int cursor) {
-	DQN::DQVector& before		= data[cursor];
+	DQN::DQVectorType& before		= data[cursor];
 	
 	LoadState(tmp_before_state, cursor);
 	dqn_trainer.Evaluate(tmp_before_state, before);
@@ -148,7 +148,7 @@ void MainAdvisor::RefreshAction(int cursor) {
 
 void MainAdvisor::RefreshReward(int cursor) {
 	System& sys = GetSystem();
-	DQN::DQVector& current	= data[cursor];
+	DQN::DQVectorType& current	= data[cursor];
 	
 	
 	int col = 0;
@@ -248,7 +248,7 @@ bool MainAdvisor::TrainingDQNIterator() {
 			if (count < 1) break;
 			int pos = min_pos + Random(count);
 			if (pos < 0 || pos >= data.GetCount()) continue;
-			DQN::DQVector& before = data[pos];
+			DQN::DQVectorType& before = data[pos];
 			LoadState(tmp_before_state, pos);
 			LoadState(tmp_after_state, pos+1);
 			dqn_trainer.Learn(tmp_before_state, before, tmp_after_state);
@@ -306,7 +306,7 @@ void MainAdvisor::RunMain() {
 	}
 	
 	for(int i = 0; i < bars; i++) {
-		DQN::DQVector& current = data[i];
+		DQN::DQVectorType& current = data[i];
 		double change_sum = 0.0;
 		int open_count = 0;
 		for (int j = 0; j < SYM_COUNT; j++) {
@@ -431,7 +431,7 @@ void MainAdvisor::RefreshMain() {
 	
 	for(; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);
-		DQN::DQVector& before = data[cursor];
+		DQN::DQVectorType& before = data[cursor];
 		
 		RefreshAction(cursor);
 		RefreshReward(cursor);
@@ -554,7 +554,7 @@ void MainAdvisor::RunSimBroker() {
 	}
 	
 	for(int i = 0; i < bars; i++) {
-		DQN::DQVector& current = data[i];
+		DQN::DQVectorType& current = data[i];
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
 			ConstBuffer& open_buf = *this->open_buf[j];

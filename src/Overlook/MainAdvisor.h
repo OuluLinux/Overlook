@@ -34,7 +34,7 @@ protected:
 	
 	
 	// Persistent
-	Vector<DQN::DQVector>		data;
+	Vector<DQN::DQVectorType>	data;
 	DQN							dqn_trainer;
 	Vector<double>				dqntraining_pts;
 	int							dqn_round			= 0;

@@ -10,7 +10,6 @@ void System::InitRegistry() {
 	for(int i = 0; i < System::GetCoreFactories().GetCount(); i++) {
 		// unfortunately one object must be created, because IO can't be static and virtual at the same time and it is cleaner to use virtual.
 		Ptr<Core> core = System::GetCoreFactories()[i].c();
-		core->base = this;
 		FactoryRegister& reg = regs.Add();
 		core->IO(reg);
 	}
@@ -337,7 +336,6 @@ void System::CreateCore(CoreItem& ci) {
 	Core& c = *ci.core;
 	
 	// Set attributes
-	c.base = this;
 	c.RefreshIO();
 	c.SetSymbol(ci.sym);
 	c.SetTimeframe(ci.tf, GetPeriod(ci.tf));

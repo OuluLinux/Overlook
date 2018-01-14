@@ -54,7 +54,6 @@ protected:
 	friend class Overlook;
 	
 	Vector<Core*> src;
-	System* base = NULL;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;

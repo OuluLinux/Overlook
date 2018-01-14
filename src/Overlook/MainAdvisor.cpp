@@ -150,13 +150,15 @@ void MainAdvisor::RefreshReward(int cursor) {
 	System& sys = GetSystem();
 	DQN::DQVectorType& current	= data[cursor];
 	
-	
+	int sym = GetSymbol();
 	int col = 0;
 	int buf = 0;
 	for(int j = 0; j < tf_count; j++) {
-		int pos = sys.GetShiftTf(tf_ids[0], tf_ids[j], cursor);
-		int last = sys.GetCountTf(tf_ids[j]) - 2;
 		for(int i = 0; i < SYM_COUNT+1; i++) {
+			int sym2 = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetCommonSymbol();
+			int pos = sys.GetShiftTf(sym, tf_ids[0], sym2, tf_ids[j], cursor);
+			int last = sys.GetCountTf(sym2, tf_ids[j]) - 2;
+			
 			if (pos > last) {
 				current.correct[col++] = 0.5;
 				current.correct[col++] = 0.5;
@@ -222,6 +224,14 @@ bool MainAdvisor::TrainingDQNBegin() {
 		}
 	}
 	
+	System& sys = GetSystem();
+	main_begin = 0;
+	for(int i = 0; i < SYM_COUNT; i++) {
+		int sym = sys.GetPrioritySymbol(i);
+		int pos = sys.GetShiftToMain(sym, GetTf(), 1);
+		if (pos > main_begin) main_begin = pos;
+	}
+	
 	return true;
 }
 
@@ -230,7 +240,7 @@ bool MainAdvisor::TrainingDQNIterator() {
 	
 	ASSERT(!data.IsEmpty());
 	
-	const int min_pos = 100;
+	const int min_pos = main_begin;
 	
 	double max_epsilon = 0.20;
 	double min_epsilon = 0.00;
@@ -293,6 +303,7 @@ bool MainAdvisor::TrainingDQNInspect() {
 
 
 void MainAdvisor::RunMain() {
+	System& sys = GetSystem();
 	int bars = Upp::min(data.GetCount(), GetBars());
 	dqntraining_pts.SetCount(bars, 0.0);
 	bars--;
@@ -305,7 +316,10 @@ void MainAdvisor::RunMain() {
 		prev_enabled[i] = 0;
 	}
 	
-	for(int i = 0; i < bars; i++) {
+	for(int i = 0; i < main_begin; i++)
+		dqntraining_pts[i] = 1.0;
+	
+	for(int i = main_begin; i < bars; i++) {
 		DQN::DQVectorType& current = data[i];
 		double change_sum = 0.0;
 		int open_count = 0;
@@ -324,8 +338,9 @@ void MainAdvisor::RunMain() {
 			
 			if (is_enabled) {
 				open_count++;
-				double curr		= open_buf[j]->GetUnsafe(i);
-				double next		= open_buf[j]->GetUnsafe(i + 1);
+				int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sys.GetPrioritySymbol(j), tf_ids[0], i);
+				double curr		= open_buf[j]->GetUnsafe(pos);
+				double next		= open_buf[j]->GetUnsafe(pos + 1);
 				ASSERT(curr > 0.0);
 				double change;
 				
@@ -379,6 +394,7 @@ void MainAdvisor::RefreshOutputBuffers() {
 }
 
 void MainAdvisor::LoadState(DQN::MatType& state, int cursor) {
+	System& sys = GetSystem();
 	SetSafetyLimit(cursor);
 	
 	int col = 0;
@@ -388,7 +404,7 @@ void MainAdvisor::LoadState(DQN::MatType& state, int cursor) {
 	for(int i = 0; i < 5+24+4; i++)
 		state.Set(col + i, 1.0);
 	
-	Time t = GetSystem().GetTimeTf(GetTf(), cursor);
+	Time t = GetSystem().GetTimeTf(GetSymbol(), GetTf(), cursor);
 	
 	int wday = Upp::max(0, Upp::min(5, DayOfWeek(t) - 1));
 	state.Set(col + wday, 0.0);
@@ -405,8 +421,10 @@ void MainAdvisor::LoadState(DQN::MatType& state, int cursor) {
 	
 	int c = 0;
 	for (int l = 0; l < tf_count; l++) {
-		int pos = GetSystem().GetShiftTf(tf_ids[0], tf_ids[l], cursor);
 		for(int i = 0; i < SYM_COUNT+1; i++) {
+			int sym2 = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetCommonSymbol();
+			int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sym2, tf_ids[l], cursor);
+			ASSERT(pos != -1);
 			tmp_assist.Zero();
 			for(int j = 0; j < CORE_COUNT; j++) {
 				CoreIO& cio = *cores[c++];
@@ -452,10 +470,10 @@ void MainAdvisor::TrainingDQNCtrl::Paint(Draw& w) {
 
 void MainAdvisor::MainReal() {
 	System&	sys				= GetSystem();
-	Time now				= GetSysTime();
+	Time now				= GetUtcTime();
 	int wday				= DayOfWeek(now);
-	Time after_hour			= now + 2 * 60 * 60;
-	int wday_after_hour		= DayOfWeek(after_hour);
+	Time after_3hours		= now + 3 * 60 * 60;
+	int wday_after_3hours	= DayOfWeek(after_3hours);
 	now.second				= 0;
 	MetaTrader& mt			= GetMetaTrader();
 	
@@ -468,7 +486,7 @@ void MainAdvisor::MainReal() {
 	
 	
 	// Inspect for market closing (weekend and holidays)
-	else if (wday == 5 && wday_after_hour == 6) {
+	else if (wday == 5 && wday_after_3hours == 6) {
 		sys.WhenInfo("Closing all orders before market break");
 
 		for (int i = 0; i < mt.GetSymbolCount(); i++) {
@@ -538,6 +556,7 @@ void MainAdvisor::RunSimBroker() {
 	Buffer& high_buf	= db->GetBuffer(2);
 	Buffer& volume_buf	= db->GetBuffer(3);
 	
+	int sym = GetSymbol();
 	int tf = GetTf();
 	int bars = GetBars();
 	db->ForceCount(bars);
@@ -553,18 +572,19 @@ void MainAdvisor::RunSimBroker() {
 		check_sum2[i] = 0;
 	}
 	
-	for(int i = 0; i < bars; i++) {
+	for(int i = main_begin; i < bars; i++) {
 		DQN::DQVectorType& current = data[i];
 		
 		for(int j = 0; j < SYM_COUNT; j++) {
+			int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sys.GetPrioritySymbol(j), tf_ids[0], i);
 			ConstBuffer& open_buf = *this->open_buf[j];
-			double curr = open_buf.GetUnsafe(i);
+			double curr = open_buf.GetUnsafe(pos);
 			int symbol = sys.GetPrioritySymbol(j);
 			sb.SetPrice(symbol, curr);
 		}
 		sb.RefreshOrders();
 		
-		Time time = sys.GetTimeTf(tf, i);
+		Time time = sys.GetTimeTf(sym, tf, i);
 		int t = time.hour * 100 + time.minute;
 		int open_count = 0;
 		
@@ -608,8 +628,9 @@ void MainAdvisor::RunSimBroker() {
 			bool check1 = i >= bars - check_period1;
 			bool check2 = i >= bars - check_period2;
 			if (not_last && (check1 || check2)) {
-				double curr		= this->open_buf[j]->GetUnsafe(i);
-				double next		= this->open_buf[j]->GetUnsafe(i + 1);
+				int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sys.GetPrioritySymbol(j), tf_ids[0], i);
+				double curr		= this->open_buf[j]->GetUnsafe(pos);
+				double next		= this->open_buf[j]->GetUnsafe(pos + 1);
 				double change;
 				
 				if (prev_signal != signal || !prev_enabled) {

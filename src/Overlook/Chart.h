@@ -54,13 +54,14 @@ public:
 	virtual String GetTitle();
 	
 	Core& GetCore() {return *bardata;}
-	Color GetBackground() {return White();}
-	Color GetGridColor() {return GrayColor();}
-	int GetTf() {return tf;}
-	int GetWidthDivider() {return div;}
-	int GetShift() {return shift;}
-	bool GetRightOffset() {return right_offset;}
-	bool GetKeepAtEnd() {return keep_at_end;}
+	Color GetBackground() const {return White();}
+	Color GetGridColor() const {return GrayColor();}
+	int GetSymbol() const {return symbol;}
+	int GetTf() const {return tf;}
+	int GetWidthDivider() const {return div;}
+	int GetShift() const {return shift;}
+	bool GetRightOffset() const {return right_offset;}
+	bool GetKeepAtEnd() const {return keep_at_end;}
 	int GetGraphCount() const {return graphs.GetCount();}
 	const GraphCtrl& GetGraph(int i) const {return graphs[i];}
 	GraphCtrl& GetGraph(int i) {return graphs[i];}

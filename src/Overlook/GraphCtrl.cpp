@@ -12,17 +12,16 @@ static Font gridfont = Arial(fonth);
 
 
 // Temporary
-#define DATAUP Color(126, 229, 52)
-#define DATADOWN Color(229, 52, 78)
-#define DATAUP_DARK Color(59, 107, 24);
-#define DATADOWN_DARK Color(84, 19, 29);
+#define DATAUP Color(56, 212, 150)
+#define DATADOWN Color(28, 85, 150)
+#define DATAUP_DARK Color(0, 138, 78)
+#define DATADOWN_DARK Color(23, 58, 99)
 
 
 GraphCtrl::GraphCtrl() {
 	chart = 0;
 	count = 0;
 	shift = 0;
-	base = NULL;
 	
 	latest_screen_count = 0;
 	mouse_left_is_down = false;
@@ -84,12 +83,8 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 void GraphCtrl::Paint(Draw& draw) {
 	if (src.IsEmpty()) {draw.DrawRect(GetSize(), White()); return;}
 	
-	if (!base) {
-		base = &src[0]->GetSystem();
-		if (!base) {draw.DrawRect(GetSize(), White()); return;}
-	}
 	
-	System& bs = *base;
+	System& sys = GetSystem();
 	
 	Size sz(GetSize());
 	ImageDraw w(sz);
@@ -120,13 +115,15 @@ void GraphCtrl::Paint(Draw& draw) {
 		return;
 	}
     
+    int sym = src[0]->GetSymbol();
     int tf = src[0]->GetTf();
-    if (tf == -1) {
+    
+    if (sym == -1 || tf == -1) {
         LOG("GraphCtrl::Paint invalid tf");
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = bs.GetCountTf(tf);
+    int data_count = sys.GetCountTf(sym, tf);
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -189,10 +186,10 @@ void GraphCtrl::Paint(Draw& draw) {
         
         if (latest_mouse_move_pt.y >= 0) {
 	        int x = latest_mouse_move_pt.x;
-	        int pos = bs.GetCountTf(tf) - count + (x - border) / div - shift;
+	        int pos = sys.GetCountTf(sym, tf) - count + (x - border) / div - shift;
 	        last_time_value_tool_pos = pos;
 	        if (pos >= 0 && pos < data_count) {
-	            Time t = bs.GetTimeTf(tf, pos);
+	            Time t = sys.GetTimeTf(sym, tf, pos);
 	            String timestr = Format("%", t);
 	            Font fnt = StdFont(12);
 	            Size str_sz = GetTextSize(timestr, fnt);
@@ -208,16 +205,15 @@ void GraphCtrl::Paint(Draw& draw) {
 }
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
-	
-	System& bs = *base;
-	
+	System& sys = GetSystem();
 	int gridw, gridh, w, h, y, pos, c;
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = chart->GetGridColor();
 	Core& pb = chart->GetCore();
+    int sym = chart->GetSymbol();
     int tf = chart->GetTf();
-    if (tf == -1) return;
+    if (sym == -1 || tf == -1) return;
     
 	y = r.top;
     w = r.GetWidth();
@@ -238,7 +234,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         pos = c - count - shift + i * grid/div;
         if (pos >= c || pos < 0) continue;
         
-        Time time = bs.GetTimeTf(tf, pos);
+        Time time = sys.GetTimeTf(sym, tf, pos);
         String text = Format("%", time);
         Size text_sz = GetTextSize(text, gridfont);
         W.DrawText(border+i*grid-text_sz.cx-5, y+h+2, text, gridfont, gridcolor);
@@ -303,8 +299,6 @@ Rect GraphCtrl::GetGraphCtrlRect() {
 }
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	System& bs = chart->GetCore().GetSystem();
-	
 	DrawGrid(W, true);
     
 	int f, pos, x, y, h, c, w;
@@ -368,11 +362,6 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 }
 
 void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
-	ASSERT(base);
-	System& bs = *base;
-	
-	
-	
 	r = GetGraphCtrlRect();
     
     bool skip_zero;

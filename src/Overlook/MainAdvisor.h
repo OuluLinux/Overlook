@@ -39,6 +39,7 @@ protected:
 	Vector<double>				dqntraining_pts;
 	int							dqn_round			= 0;
 	int							dqn_pt_cursor		= 0;
+	int							main_begin = 0;
 	
 	
 	
@@ -123,7 +124,8 @@ public:
 			% Mem(dqn_trainer)
 			% Mem(dqntraining_pts)
 			% Mem(dqn_round)
-			% Mem(dqn_pt_cursor);
+			% Mem(dqn_pt_cursor)
+			% Mem(main_begin);
 	}
 	
 	static bool FilterFunction1(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {

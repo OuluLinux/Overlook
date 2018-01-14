@@ -42,11 +42,7 @@ using namespace Upp;
 
 #define MAX_SYMOPEN				4
 
-#ifndef flagHAVE_ALLSYM
 #define SYM_COUNT				4
-#else
-#define SYM_COUNT				19
-#endif
 
 class AgentGroup;
 class Agent;
@@ -78,6 +74,30 @@ enum {
 enum {
 	PHASE_TRAINING,
 	PHASE_REAL
+};
+
+class OnlineAverageWindow2 : Moveable<OnlineAverageWindow2> {
+	Vector<double> win_a, win_b;
+	double sum_a = 0.0, sum_b = 0.0;
+	int period = 0, cursor = 0;
+	
+public:
+	OnlineAverageWindow2() {}
+	void SetPeriod(int i) {period = i; win_a.SetCount(i,0); win_b.SetCount(i,0);}
+	void Add(double a, double b) {
+		double& da = win_a[cursor];
+		double& db = win_b[cursor];
+		sum_a -= da;
+		sum_b -= db;
+		da = a;
+		db = b;
+		sum_a += da;
+		sum_b += db;
+		cursor = (cursor + 1) % period;
+	}
+	double GetMeanA() const {return sum_a / period;}
+	double GetMeanB() const {return sum_b / period;}
+	void Serialize(Stream& s) {s % win_a % win_b % sum_a % sum_b % period % cursor;}
 };
 
 struct OnlineAverage2 : Moveable<OnlineAverage2> {
@@ -454,6 +474,7 @@ public:
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
 	void SetCount(int i) {value.SetCount(i, 0.0);}
 	void Add(double d) {value.Add(d);}
+	void Reserve(int n) {value.Reserve(n);}
 	
 	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
 	int GetCount() const {return value.GetCount();}
@@ -662,12 +683,8 @@ struct Downloader {
 inline int GetUsedCpuCores() {
 	static int cores;
 	if (!cores) cores = CPU_Cores();
-	#ifndef flagHAVE_ALLSYM
+	
 	return Upp::max(1, cores - 2); // Leave a little for the system
-	#else
-	// Don't even try this as primary mode... when without GPGPU acceleration...
-	return Upp::max(1, cores / 2); // Leave at least a half for the system
-	#endif
 }
 
 inline unsigned int root(unsigned int x) {

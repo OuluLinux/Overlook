@@ -3420,7 +3420,7 @@ void LinearTimeFrames::Start() {
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		Time t = base.GetTimeTf(GetTf(), i);
+		Time t = base.GetTimeTf(GetSymbol(), GetTf(), i);
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 		day.Set(i, t1);
@@ -3464,7 +3464,7 @@ void LinearWeekTime::Start() {
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		Time t = base.GetTimeTf(GetTf(), i);
+		Time t = base.GetTimeTf(GetSymbol(), GetTf(), i);
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 		double days = GetDaysOfMonth(t.month, t.year);
@@ -3875,7 +3875,7 @@ void CorrelationOscillator::Init() {
 	SetCoreSeparateWindow();
 	SetBufferBegin(0, period);
 	
-	for(int i = 0; i < SYM_COUNT-1-1; i++) {
+	for(int i = 0; i < SYM_COUNT-1; i++) {
 		SetBufferColor(i, RainbowColor((double)i / (SYM_COUNT-1)));
 	}
 	
@@ -3884,20 +3884,23 @@ void CorrelationOscillator::Init() {
 	for(int i = 0; i < SYM_COUNT-1; i++) {
 		ConstBuffer& open = GetInputBuffer(0, sym_ids[i], GetTimeframe(), 0);
 		opens[i] = &open;
+		averages[i].SetPeriod(period);
 	}
 	this_open = &GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0);
 }
 
 void CorrelationOscillator::Process(int id, int output) {
+	System& sys = GetSystem();
 	int counted = GetCounted();
 	int bars = GetBars();
+	int tf = GetTf();
 	
 	ConstBuffer& a = *this_open;
 	ConstBuffer& b = *opens[output];
 	
 	Buffer& buf = GetBuffer(output);
 	
-	OnlineAverage2& s = averages[output];
+	OnlineAverageWindow2& s = averages[output];
 	
 	if (b.GetCount() == 0) {
 		LOG("CorrelationOscillator error: No data for symbol " << GetSystem().GetSymbol(id));
@@ -3906,12 +3909,11 @@ void CorrelationOscillator::Process(int id, int output) {
 	
 	if (counted < period) {
 		ASSERT(counted == 0);
-		s.mean_a = a.Get(0);
-		s.mean_b = b.Get(0);
-		s.count = 1;
-		for(int i = 1; i < period; i++) {
+		for(int i = 0; i < period; i++) {
 			SetSafetyLimit(i);
-			s.Add(a.Get(i), b.Get(i));
+			int posa = i;
+			int posb = sys.GetShiftFromMain(id, tf, i);
+			s.Add(a.Get(posa), b.Get(posb));
 		}
 		counted = period;
 	}
@@ -3923,23 +3925,28 @@ void CorrelationOscillator::Process(int id, int output) {
 	
 	int cache_offset = 0;
 	for(int i = 1; i < period; i++) {
-		cache_a[i] = a.Get(counted - period + i);
-		cache_b[i] = b.Get(counted - period + i);
+		int posa = counted - period + i;
+		int posb = sys.GetShiftFromMain(id, tf, posa);
+		cache_a[i] = a.Get(posa);
+		cache_b[i] = b.Get(posb);
 	}
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		double da = a.Get(i);
-		double db = b.Get(i);
+		int posa = i;
+		int posb = sys.GetShiftFromMain(id, tf, posa);
+		
+		double da = a.Get(posa);
+		double db = b.Get(posb);
 		
 		s.Add(da, db);
 		cache_a[cache_offset] = da;
 		cache_b[cache_offset] = db;
 		cache_offset = (cache_offset + 1) % period;
 		
-		double avg1 = s.mean_a;
-		double avg2 = s.mean_b;
+		double avg1 = s.GetMeanA();
+		double avg2 = s.GetMeanB();
 		double sum1 = 0;
 	    double sumSqr1 = 0;
 	    double sumSqr2 = 0;
@@ -3964,8 +3971,6 @@ void CorrelationOscillator::Start() {
 	
 	if (counted == bars)
 		return;
-	
-	if (counted > 0) counted = Upp::max(counted - period, 0);
 	
 	for(int i = 0; i < sym_ids.GetCount(); i++) {
 		Process(sym_ids[i], i);
@@ -4237,7 +4242,7 @@ void PeriodicalChange::Start() {
 		if (!IsFin(change))
 			continue;
 		
-		Time t = sys.GetTimeTf(GetTf(), i);
+		Time t = sys.GetTimeTf(GetSymbol(), GetTf(), i);
 		
 		if (split_type == 0) {
 			int wday = DayOfWeek(t);
@@ -4261,7 +4266,7 @@ void PeriodicalChange::Start() {
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		Time t = sys.GetTimeTf(GetTf(), i);
+		Time t = sys.GetTimeTf(GetSymbol(), GetTf(), i);
 		double av_change = 0;
 		if (split_type == 0) {
 			int wday = DayOfWeek(t);
@@ -4515,27 +4520,30 @@ void CommonForce::Start() {
 		counted++;
 	
 	System& sys = GetSystem();
-	int strong_sym = sys.GetCommonSymbol();
+	int common_sym = sys.GetCommonSymbol();
+	int id = GetSymbol();
 	int tf = GetTf();
 	int sym_priority = sys.GetSymbolPriority(GetSymbol());
 	if (sym_priority >= SYM_COUNT) return;
 	bool check_corr = sym_priority > 0;
 	
 	ConstBuffer& own_open = GetInputBuffer(0, 0);
-	ConstBuffer& strong_open = GetInputBuffer(0, strong_sym, tf, 0);
-	ConstBuffer* corr_buf = check_corr ? &dynamic_cast<DataBridge*>(GetInputCore(0, strong_sym, tf))->corr[0].buffer[sym_priority-1] : NULL;
+	ConstBuffer& common_open = GetInputBuffer(0, common_sym, tf, 0);
+	ConstBuffer* corr_buf = check_corr ? &dynamic_cast<DataBridge*>(GetInputCore(0, common_sym, tf))->corr[0].buffer[sym_priority-1] : NULL;
 	
 	for(int i = counted; i < bars; i++) {
+		int common_pos = sys.GetShiftToMain(id, tf, i);
+		
 		SetSafetyLimit(i);
 		double own_change = own_open.Get(i)		/ own_open.Get(i-1)		- 1.0;
-		bool inv = check_corr && corr_buf->Get(i) < 0.0;
-		double strong_change = strong_open.Get(i)	/ strong_open.Get(i-1)	- 1.0;
+		bool inv = check_corr && corr_buf->Get(common_pos) < 0.0;
+		double common_change = common_open.Get(common_pos)	/ common_open.Get(common_pos-1)	- 1.0;
 		double diff;
 		if (!inv) {
-			diff		= own_change - strong_change;
+			diff		= own_change - common_change;
 		} else {
 			own_change	*= -1.0;
-			diff		= own_change - strong_change;
+			diff		= own_change - common_change;
 			diff		*= -1.0;
 		}
 		max_diff = Upp::max(max_diff, fabs(diff));

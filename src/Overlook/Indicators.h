@@ -868,7 +868,7 @@ protected:
 	ConstBuffer* this_open;
 	Vector<int> sym_ids;
 	Vector<ConstBuffer*> opens;
-	Vector<OnlineAverage2> averages;
+	Vector<OnlineAverageWindow2> averages;
 	
 	void Process(int id, int output);
 	

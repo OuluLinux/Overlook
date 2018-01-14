@@ -36,12 +36,8 @@ void DataBridgeCommon::Init() {
 		sym_count = mt.GetSymbolCount();
 		
 		tfs.Clear();
-		int base_mtf = sys.GetBasePeriod() / 60;
-		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
-			int tf = mt.GetTimeframe(i);
-			if (tf >= base_mtf)
-				tfs.Add(tf);
-		}
+		for(int i = 0; i < mt.GetTimeframeCount(); i++)
+			tfs.Add(mt.GetTimeframe(i));
 		
 		// Get maximum of 6 chars strings to match src symbols
 		short_ids.Clear();
@@ -59,11 +55,6 @@ void DataBridgeCommon::Init() {
 	// Inspect that symbol names match
 	for(int i = 0; i < sym_count; i++) {
 		ASSERTEXC(sys.GetSymbol(i) == mt.GetSymbol(i).name);
-	}
-	
-	// Assert that first tf matches base period
-	if (sys.GetBasePeriod() != tfs[0] * 60) {
-		throw DataExc("Resolver's base period differs from mt");
 	}
 	
 	points.SetCount(sym_count, 0.0001);

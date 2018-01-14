@@ -104,7 +104,7 @@ void SignalGraph::Paint(Draw& w) {
 	AgentSystem& sys = GetSystem().GetAgentSystem();
 	double ydiv = ((double)sz.cy) / ((double)(SYM_COUNT));
 	
-	Time now = GetSysTime();
+	Time now = GetUtcTime();
 	int wday = DayOfWeek(now) - 1;
 	double now_sensor = ((wday * 24 + now.hour) * 60 + now.minute) / (5.0 * 24.0 * 60.0);
 	int now_x = now_sensor * sz.cx;

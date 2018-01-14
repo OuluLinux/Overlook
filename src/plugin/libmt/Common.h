@@ -126,13 +126,13 @@ enum ENUM_SYMBOL_INFO_STRING {
 };
 
 struct Price : Moveable<Price> {
-	double ask, bid, volume;
-    dword time;
+	double ask = 0.0, bid = 0.0, volume = 0.0;
+    Time time = Null;
     
-    Price() : ask(0), bid(0), volume(0), time(0) {}
+    Price() {}
     Price(const Price& p) {ask = p.ask; bid = p.bid; volume = p.volume; time = p.time;}
     
-	void Set(dword time, double ask, double bid, double volume) {
+	void Set(Time time, double ask, double bid, double volume) {
 		this->ask = ask;
 		this->bid = bid;
 		this->time = time;
@@ -149,10 +149,10 @@ struct Price : Moveable<Price> {
 };
 
 struct PriceTf : Moveable<PriceTf> {
-	double open, low, high, close, volume;
-	dword time;
+	double open = 0.0, low = 0.0, high = 0.0, close = 0.0, volume = 0.0;
+	Time time = Null;
 	
-	PriceTf() : open(0), low(0), high(0), close(0), volume(0), time(0) {}
+	PriceTf() {}
 	
 	void Serialize(Stream &s) {
 		s % open % low % high % close % volume % time;
@@ -160,9 +160,9 @@ struct PriceTf : Moveable<PriceTf> {
 };
 
 struct SpreadTick : Moveable<SpreadTick> {
-	Time time;
-	int sym;
-	double spread;
+	Time time = Null;
+	double spread = 0.0;
+	int sym = 0;
 	void Serialize(Stream& s) {s % time % sym % spread;}
 };
 

@@ -43,8 +43,8 @@ struct LoaderWindow : public TopWindow {
 			}
 			
 			try {
-				System& sys = GetSystem();
-				sys.Init();
+				GetSystem().Init();
+				GetCalendar().Init();
 			}
 			catch (::Overlook::UserExc e) {
 				PromptOK(e);
@@ -120,5 +120,7 @@ GUI_APP_MAIN {
 	catch (...) {
 		PromptOK("Unknown error");
 	}
+	
+	GetSystem().Deinit();
 }
 

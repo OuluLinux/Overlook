@@ -6,9 +6,6 @@ inline Time TimeFromTimestamp(int64 seconds) {
 	return Time(1970, 1, 1) + seconds;
 }
 
-inline dword TimestampNow() {
-	return GetSysTime().Get() - Time(1970,1,1).Get();
-}
 
 #define NEVER          ASSERT(0)
 
@@ -249,7 +246,17 @@ int MetaTrader::Init(String addr, int port) {
 		
 		init_success = true; // required temporarily
 		
-		// Refresh symbols
+		Time utc_now = GetUtcTime();
+		Time broker_now = Time(1970,1,1) + _TimeCurrent();
+		int utc_wday = DayOfWeek(utc_now);
+		if (utc_wday == 0 || utc_wday == 6) {
+			utc_now.second = 0;
+			utc_now.minute = 0;
+			utc_now.hour = 0;
+			if (utc_wday == 0) utc_now -= 24 * 60 * 60;
+			utc_now -= 1;
+		}
+		time_offset = utc_now - broker_now;
 		
 		account_name = _AccountName();
 		account_server = _AccountServer();
@@ -458,6 +465,7 @@ MTFUNC0(66,	String,		_GetLastError,			GetStr);
 MTFUNC0(68,	bool,		_IsDemo,				GetInt);
 MTFUNC0(69,	bool,		_IsConnected,			GetInt);
 MTFUNC3(70,	int,		_FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetInt);
+MTFUNC0(72,	int,		_TimeCurrent,			GetInt);
 
 
 
@@ -891,7 +899,7 @@ const Vector<Price>& MetaTrader::_GetAskBid() {
 		}
 	}
 	
-	dword time = TimestampNow();
+	Time time = GetTime();
 	Vector<String> lines = Split(content, ";");
 	int c1 = lines.GetCount();
 	
@@ -1066,7 +1074,7 @@ const Vector<PriceTf>&	MetaTrader::_GetTickData() {
 			ASSERT(count == 1);
 			
 			// Load the actual data
-			dword time;
+			int time;
 			double high, low, open, close, volume;
 			for(int k = 0; k < count; k++) {
 				// Common data
@@ -1080,7 +1088,7 @@ const Vector<PriceTf>&	MetaTrader::_GetTickData() {
 			}
 			
 			PriceTf& p = pricetf.Add();
-			p.time = time;
+			p.time = Time(1970,1,1) + time;
 			p.high = high;
 			p.low = low;
 			p.open = open;

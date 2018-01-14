@@ -506,7 +506,7 @@ void HistoryCenter::Data() {
 	for(int i = 0; i < screen_count; i++) {
 		int pos = shift + i;
 		if (pos < 0 || pos >= count) continue;
-		Time time = sys.GetTimeTf(tf_id, pos);
+		Time time = sys.GetTimeTf(sym, tf_id, pos);
 		
 		data_list.Set(i, 0, time);
 		data_list.Set(i, 1, open.Get(pos));

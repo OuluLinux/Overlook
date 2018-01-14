@@ -275,38 +275,35 @@ protected:
 	friend class CoreIO;
 	friend class Core;
 	
-	Vector<FactoryRegister>		regs;
-	Vector<String>				period_strings;
-	Vector<int>					bars;
-	Vector<int>					priority;
-	Vector<int>					sym_priority;
+	
+	// Persistent
 	Index<String>				symbols;
 	Index<int>					periods;
+	Vector<String>				period_strings;
+	Vector<int>					priority;
+	Vector<double>				spread_points;
+	Vector<int>					proxy_id;
+	Vector<int>					proxy_base_mul;
+	Vector<int>					sym_priority;
+	int							time_offset = 0;
+	
+	
+	// Temporary
+	Vector<FactoryRegister>		regs;
+	Time						end;
 	Data						data;
-	SpinLock					task_lock;
-	SpinLock					pl_queue_lock;
 	String						addr;
-	double						exploration;
-	int64						memory_limit;
 	int							port;
-	int							task_counter;
 	
 	
 protected:
 	
-	// Time
-	Vector<Time>	begin;
-	Vector<int>		begin_ts;
-	Time			end;
-	int				timediff;
-	int				base_period;
-	int				source_symbol_count;
 	
-	void	Serialize(Stream& s) {s % begin % end % timediff % base_period % begin_ts;}
 	void	RefreshRealtime();
 	int		GetHash(const Vector<byte>& vec);
 	int		GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> >& ci_queue, int tf, const Index<int>& sym_ids);
 	void	CreateCore(CoreItem& ci);
+	void	FirstStart();
 	void	InitRegistry();
 	void	ConnectCore(CoreItem& ci);
 	void	ConnectInput(int input_id, int output_id, CoreItem& ci, int factory, int hash);
@@ -316,19 +313,46 @@ public:
 	
 	void	Process(CoreItem& ci, bool store_cache);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
-	int		GetCountTf(int tf_id) const;
-	Time	GetTimeTf(int tf, int pos) const;
-	Time	GetBegin(int tf) const					{return begin[tf];}
-	Time	GetEnd() const							{return end;}
-	int		GetBeginTS(int tf)						{return begin_ts[tf];}
-	int		GetBasePeriod() const					{return base_period;}
-	int		GetShiftTf(int src_tf, int dst_tf, int shift);
-	int		GetShiftFromTimeTf(int timestamp, int tf);
-	int		GetShiftFromTimeTf(const Time& t, int tf);
+	int		GetCountTf(int sym, int tf) const;
+	Time	GetTimeTf(int sym, int tf, int pos) const;
+	int		GetShiftTf(int src_sym, int src_tf, int dst_sym, int dst_tf, int shift);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	void	SetEnd(const Time& t);
+	Time	GetEnd() const							{return end;}
 	const Vector<FactoryRegister>& GetRegs() const	{return regs;}
 	
+public:
+	
+	// Persistent
+	Vector<Vector<Vector<Time> > > pos_time;
+	Vector<VectorMap<Time, byte> > main_time;
+	Vector<Vector<Vector<int> > > main_conv;
+	Vector<Vector<Vector<int> > > posconv_from, posconv_to;
+	
+	// Temporary
+	bool main_time_changed = false;
+	
+	
+	void	Serialize(Stream& s) {
+		s % symbols % periods % period_strings % priority % spread_points % proxy_id
+		  % proxy_base_mul % sym_priority % time_offset
+		  % pos_time % main_time % main_conv % posconv_from % posconv_to;
+	}
+	
+	void	DataTimeBegin(int sym, int tf);
+	void	DataTimeEnd(int sym, int tf);
+	int		DataTimeAdd(int sym, int tf, Time utc_time);
+	Time	TimeFromBroker(Time t) {return t - time_offset;}
+	Time	TimeToBroker(Time t) {return t + time_offset;}
+	void	RefreshTimeTfVectors(int tf);
+	void	RefreshTimeTfVector(int tf_from, int tf_to);
+	void	RefreshTimeSymVectors(int sym, int tf);
+	void	LoadThis() {LoadFromFile(*this, ConfigFile("system.bin"));}
+	void	StoreThis() {StoreToFile(*this, ConfigFile("system.bin"));}
+	int		GetCountMain(int tf) const {return main_time[tf].GetCount();}
+	Time	GetTimeMain(int tf, int i) const {return main_time[tf].GetKey(i);}
+	int		GetShiftFromMain(int sym, int tf, int i) const {return posconv_to[sym][tf][i];}
+	int		GetShiftToMain(int sym, int tf, int i) const {return posconv_from[sym][tf][i];}
 	
 public:
 	
@@ -340,7 +364,7 @@ public:
 	int		GetSymbolPriority(int i) const			{return priority[i];}
 	int		GetPrioritySymbol(int i) const			{return sym_priority[i];}
 	int		GetFactoryCount() const					{return GetRegs().GetCount();}
-	int		GetBrokerSymbolCount() const			{return source_symbol_count;}
+	int		GetBrokerSymbolCount() const			{return symbols.GetCount()-2;}
 	int		GetTotalSymbolCount() const				{return symbols.GetCount();}
 	int		GetSymbolCount() const					{return symbols.GetCount();}
 	int		GetPeriod(int i) const					{return periods[i];}
@@ -385,9 +409,6 @@ public:
 	
 public:
 	
-	Vector<double>	spread_points;
-	Vector<int>		proxy_id;
-	Vector<int>		proxy_base_mul;
 	
 	int		GetAccountSymbol() const				{return symbols.GetCount()-1;}
 	int		GetCommonSymbol() const					{return symbols.GetCount()-2;}
@@ -399,6 +420,7 @@ public:
 	~System();
 	
 	void Init();
+	void Deinit();
 	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;

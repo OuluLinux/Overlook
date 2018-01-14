@@ -107,6 +107,14 @@ Overlook::Overlook() : watch(this) {
 	debuglist.AddColumn("Source line");
 	debuglist.ColumnWidths("6 1 2 2 24");
 	
+	calendar.AddColumn("Time");
+	calendar.AddColumn("Title");
+	calendar.AddColumn("Currency");
+	calendar.AddColumn("Impact");
+	calendar.AddColumn("Forecast");
+	calendar.AddColumn("Previous");
+	calendar.AddColumn("Actual");
+	
 	LoadPreviousProfile();
 	PostRefreshData();
 }
@@ -121,11 +129,12 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
+	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	
 	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
@@ -423,6 +432,7 @@ void Overlook::DeepRefresh() {
 	common.InspectInit();
 	common.DownloadAskBid();
 	common.RefreshAskBidData(true);
+	GetCalendar().Data();
 	cman.RefreshWindows();
 }
 
@@ -460,6 +470,7 @@ void Overlook::Data() {
 	watch.Data();
 	
 	if (assist.IsVisible())			RefreshAssist();
+	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
@@ -496,6 +507,33 @@ void Overlook::RefreshAssist() {
 			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
 	assist.SetCount(row);
+}
+
+void Overlook::RefreshCalendar() {
+	Calendar& cal = GetCalendar();
+	
+	Time now = GetUtcTime();
+	Time end = now + 60*60;
+	Time begin = now - 24 * 60*60;
+	int row = 0;
+	for(int i = cal.GetCount()-1; i >= 0; i--) {
+		const CalEvent& e = cal.GetEvent(i);
+		if (e.timestamp > end) continue;
+		if (e.timestamp < begin) break;
+		
+		calendar.Set(row, 0, Format("%", e.timestamp));
+		calendar.Set(row, 1, e.title);
+		calendar.Set(row, 2, e.currency);
+		calendar.Set(row, 3, e.GetImpactString());
+		calendar.Set(row, 4, e.forecast + e.unit);
+		calendar.Set(row, 5, e.previous + e.unit);
+		calendar.Set(row, 6, e.actual + e.unit);
+		row++;
+	}
+	calendar.SetCount(row);
+	
+	if (!row)
+		calendar.Set(0, 1, "No events...");
 }
 
 void Overlook::RefreshTrades() {

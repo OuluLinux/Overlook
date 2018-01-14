@@ -11,6 +11,7 @@ using namespace Upp;
 #include <CtrlCore/lay.h>
 
 #include "Common.h"
+#include "Calendar.h"
 #include "Optimizer.h"
 #include "DQN.h"
 #include "SimBroker.h"
@@ -76,7 +77,7 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
@@ -148,6 +149,7 @@ public:
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshAssist();
+	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();
 	void RefreshTradesHistory();

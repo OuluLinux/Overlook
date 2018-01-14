@@ -143,7 +143,6 @@ protected:
 	Vector<Buffer*> buffers;
 	Array<Job> jobs;
 	Array<Persistent> persistents;
-	System* base;
 	Job* current_job = NULL;
 	JobThread* current_thrd = NULL;
 	SpinLock serialization_lock, refresh_lock;
@@ -211,8 +210,6 @@ public:
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
-	System& GetSystem() {return *base;}
-	const System& GetSystem() const {return *base;}
 	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory();
 	Color GetBufferColor(int i) {return buffers[i]->clr;}

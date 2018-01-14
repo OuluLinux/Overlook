@@ -10,7 +10,7 @@ class MetaTrader : public Brokerage {
 	String mainaddr;
 	int input, output;
 	int port;
-	
+	int time_offset = 0;
 
 	
 public:
@@ -27,6 +27,7 @@ public:
 	void Data();
 	void DataEnter() {data_lock.Enter();}
 	void DataLeave() {data_lock.Leave();}
+	int GetTimeOffset() const {return time_offset;}
 	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and
@@ -45,7 +46,7 @@ public:
 	virtual int		iTime(String symbol, int timeframe, int shift);
 	virtual int		iVolume(String symbol, int timeframe, int shift);
 	virtual int		RefreshRates();
-	virtual Time	GetTime() const {return GetSysTime();}
+	virtual Time	GetTime() const {return GetUtcTime() - time_offset;}
 	virtual double	RealtimeAsk(int sym) {return _MarketInfo(symbols[sym].name, MODE_ASK);}
 	virtual double	RealtimeBid(int sym) {return _MarketInfo(symbols[sym].name, MODE_BID);}
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
@@ -158,7 +159,7 @@ public:
 	bool    _IsConnected();
 	String	_GetLastError();
 	int		_FindPriceTime(int sym, int tf, dword ts);
-	
+	int		_TimeCurrent();
 };
 
 inline MetaTrader& GetMetaTrader() {return Single<MetaTrader>();}

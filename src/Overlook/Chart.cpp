@@ -102,7 +102,6 @@ GraphCtrl& Chart::AddGraph(Core* src) {
 void Chart::SetGraph(Core* src) {
 	ASSERT(src);
 	tf = src->GetTf();
-	System& bs = src->GetSystem();
 	ClearCores();
 	BarData* src_cast = dynamic_cast<BarData*>(src);
 	if (src_cast) {

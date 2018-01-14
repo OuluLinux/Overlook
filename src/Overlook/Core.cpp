@@ -118,7 +118,6 @@ void Core::InitAll() {
 	const FactoryRegister& src_reg = sys.regs[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
 		Core& core = subcores[i];
-		core.base = base;
 		core.factory = subcore_factories[i];
 		core.RefreshIO();
 		core.SetSymbol(GetSymbol());
@@ -198,7 +197,7 @@ void Core::Refresh() {
 	
 	// Some indicators might want to set the size by themselves
 	if (!skip_setcount) {
-		int count = GetSystem().GetCountTf(tf_id) + end_offset;
+		int count = GetSystem().GetCountTf(sym_id, tf_id) + end_offset;
 		bars = count;
 		next_count = count;
 		if (!skip_allocate) {
@@ -312,8 +311,7 @@ int Core::LowestOpen(int period, int shift) {
 }
 
 int Core::GetMinutePeriod() {
-	System& bs = GetSystem();
-	return bs.GetBasePeriod() * bs.GetPeriod(tf_id) / 60;
+	return GetSystem().GetPeriod(tf_id);
 }
 
 int Core::GetPeriod() const {

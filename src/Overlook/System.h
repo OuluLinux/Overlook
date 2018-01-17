@@ -190,7 +190,7 @@ struct InspectionResult : Moveable<InspectionResult> {
 };
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
-enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_ACCOUNTADVISOR, CORE_HIDDEN};
+enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_HIDDEN};
 
 class System {
 	
@@ -207,7 +207,6 @@ public:
 	inline static Vector<CoreSystem>&		CoreFactories() {static Vector<CoreSystem> list; return list;}
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
-	inline static Vector<int>&				AccountAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
 	inline static FactoryAssistList&		AssistantFactories() {static FactoryAssistList list; return list;}
 	inline static AssistList&				Assistants() {static AssistList list; return list;}
@@ -218,7 +217,6 @@ public:
 		int id = GetId<CoreT>();
 		if      (type == CORE_INDICATOR)		Indicators().Add(id);
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
-		else if (type == CORE_ACCOUNTADVISOR)	AccountAdvisorFactories().Add(id);
 		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
 	}
 	
@@ -280,11 +278,13 @@ protected:
 	Index<String>				symbols;
 	Index<int>					periods;
 	Vector<String>				period_strings;
-	Vector<int>					priority;
 	Vector<double>				spread_points;
 	Vector<int>					proxy_id;
 	Vector<int>					proxy_base_mul;
 	Vector<int>					sym_priority;
+	Vector<int>					common_symbol_id;
+	Vector<int>					common_symbol_pos;
+	Vector<Vector<int> >		common_symbol_group_pos;
 	int							time_offset = 0;
 	
 	
@@ -334,9 +334,10 @@ public:
 	
 	
 	void	Serialize(Stream& s) {
-		s % symbols % periods % period_strings % priority % spread_points % proxy_id
-		  % proxy_base_mul % sym_priority % time_offset
-		  % pos_time % main_time % main_conv % posconv_from % posconv_to;
+		s % symbols % periods % period_strings % spread_points % proxy_id
+		  % proxy_base_mul % sym_priority % common_symbol_id % common_symbol_pos % common_symbol_group_pos % time_offset
+		  % pos_time % main_time % main_conv % posconv_from % posconv_to
+		  % main_data % main_mem % logic0 % logic1 % logic2;
 	}
 	
 	void	DataTimeBegin(int sym, int tf);
@@ -361,8 +362,6 @@ public:
 	
 	String	GetSymbol(int i) const					{return symbols[i];}
 	String	GetPeriodString(int i) const			{return period_strings[i];}
-	int		GetSymbolPriority(int i) const			{return priority[i];}
-	int		GetPrioritySymbol(int i) const			{return sym_priority[i];}
 	int		GetFactoryCount() const					{return GetRegs().GetCount();}
 	int		GetBrokerSymbolCount() const			{return symbols.GetCount()-2;}
 	int		GetTotalSymbolCount() const				{return symbols.GetCount();}
@@ -372,6 +371,7 @@ public:
 	int		FindPeriod(int period) const			{return periods.Find(period);}
 	int		FindSymbol(const String& s) const		{return symbols.Find(s);}
 	void	GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
+	void	StoreCores();
 	
 public:
 	
@@ -411,7 +411,175 @@ public:
 	
 	
 	int		GetAccountSymbol() const				{return symbols.GetCount()-1;}
-	int		GetCommonSymbol() const					{return symbols.GetCount()-2;}
+	int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-1-COMMON_COUNT+common_pos;}
+	int		GetCommonSymbolId(int common_pos, int symbol_pos) const;
+	int		GetCommonCount() const					{return COMMON_COUNT;}
+	int		GetCommonSymbolCount() const			{return SYM_COUNT;}
+	int		FindCommonSymbolId(int sym_id) const;
+	int		FindCommonSymbolPos(int sym_id) const;
+	int		FindCommonSymbolPos(int common_id, int sym_id) const;
+	
+public:
+	
+	static const int L2_INPUT = 4;
+	
+	enum {
+		BIT_L0BITS_BEGIN,
+		BIT_L0BITS_LAST=ASSIST_COUNT-1,
+		
+		BIT_L2BITS_BEGIN,
+		BIT_L2BITS_LAST=ASSIST_COUNT + L2_INPUT - 1,
+		
+		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_L1, BIT_WRITTEN_L2,
+		
+		BIT_REALSIGNAL,
+		BIT_L0_SIGNAL, BIT_L0_WEAKSIGNAL,
+		BIT_L1_SIGNAL, BIT_L1_WEAKSIGNAL,
+		
+		BIT_L2_REALENABLED,
+		BIT_L2_ENABLED,
+		
+		BIT_SKIP_CALENDAREVENT,
+		
+		BIT_COUNT
+	};
+	enum {
+		REG_INS, REG_WORKQUEUE_CURSOR,
+		
+		REG_WORKQUEUE_INITED, REG_INDIBITS_INITED,
+		REG_LOGICTRAINING_L0_ISRUNNING, REG_LOGICTRAINING_L1_ISRUNNING, REG_LOGICTRAINING_L2_ISRUNNING,
+		REG_COUNT
+	};
+	enum {
+		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_INDIBITS, INS_TRAINABLE,
+		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_REFRESH_REAL,
+		INS_COUNT
+	};
+	enum {
+		MEM_TRAINABLESET, MEM_INDIBARS, MEM_COUNTED_INDI,
+		MEM_TRAINBARS, MEM_TRAINMIDSTEP, MEM_TRAINBEGIN,
+		
+		MEM_COUNTED_L0, MEM_COUNTED_L1, MEM_COUNTED_L2,
+		MEM_TRAINED_L0, MEM_TRAINED_L1, MEM_TRAINED_L2,
+		MEM_OUTPUT_L0, MEM_OUTPUT_L1, MEM_OUTPUT_L2,
+		MEM_ACTIONBEGIN_L0, MEM_ACTIONBEGIN_L1, MEM_ACTIONBEGIN_L2,
+		MEM_ACTIONCOUNT_L0, MEM_ACTIONCOUNT_L1, MEM_ACTIONCOUNT_L2,
+		
+		MEM_COUNT
+	};
+	
+	static const int level_count = 3;
+	
+	struct MainJob {
+		Vector<double> training_pts;
+		int level = -1, common_pos = -1;
+		int actual = 0, total = 1;
+		Atomic being_processed;
+		bool is_finished = false;
+	};
+	
+	struct LogicLearner0 : Moveable<LogicLearner0> {
+		
+		static const int SYM_BITS			= 2;
+		static const int TIME_BITS			= 5 + 24 + 4;
+		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
+		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
+		
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+		
+		
+		// Persistent
+		DQN							dqn_trainer;
+		int							dqn_round = 0;
+		
+		// Temporary
+		#ifdef flagDEBUG
+		int							dqn_max_rounds		= 500;
+		#else
+		int							dqn_max_rounds		= 5000000;
+		#endif
+		
+		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
+		
+	};
+	
+	typedef LogicLearner0 LogicLearner1;
+	
+	struct LogicLearner2 : Moveable<LogicLearner2> {
+		
+		static const int SYM_BITS			= 1;
+		static const int TIME_BITS			= 5 + 24 + 4;
+		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
+		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
+		
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+		
+		
+		// Persistent
+		DQN							dqn_trainer;
+		int							dqn_round = 0;
+		
+		// Temporary
+		#ifdef flagDEBUG
+		int							dqn_max_rounds		= 500;
+		#else
+		int							dqn_max_rounds		= 5000000;
+		#endif
+		
+		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
+		
+	};
+	
+	// Persistent
+	VectorBool main_data;
+	Vector<dword> main_mem;
+	Vector<LogicLearner0> logic0;
+	Vector<LogicLearner1> logic1;
+	Vector<LogicLearner2> logic2;
+	
+	
+	// Temporary
+	Vector<int> main_begin;
+	Array<MainJob> main_jobs;
+	Vector<Core*> ordered_cores;
+	Vector<FactoryDeclaration> main_indi_ids;
+	Vector<Ptr<CoreItem> > main_work_queue;
+	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
+	Atomic workers_started;
+	const int main_tf_pos = 1;
+	dword main_reg[REG_COUNT];
+	int realtime_count = 0;
+	int prev_step = -1;
+	bool main_stopped = true, main_running = false;
+	bool store_this = false;
+	RWMutex main_lock;
+	Mutex workqueue_lock;
+	
+	void	StartMain();
+	void	StopMain();
+	void	MainLoop();
+	void	Worker(int id);
+	void	RealizeMainWorkQueue();
+	void	ProcessMainWorkQueue(bool store_cache=false);
+	void	FillIndicatorBits();
+	void	FillTrainableBits();
+	void	RealizeLogicTraining();
+	void	FillLogicBits();
+	void	RefreshReal();
+	void	LearnLogic(int level, int common_pos);
+	int		ProcessMainJob(MainJob& job);
+	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
+	int		GetMainDataPos(int cursor, int sym_pos, int tf_pos, int bit_pos) const;
+	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
+	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
+	void	EnterProcessing() {workqueue_lock.Enter();}
+	void	LeaveProcessing() {if (store_this) {store_this = false; StoreThis();} workqueue_lock.Leave();}
+	String	GetRegisterKey(int i) const;
+	String	GetRegisterValue(int i, int j) const;
+	String	GetMemoryKey(int i) const;
+	String	GetMemoryValue(int i, int j) const;
+	
+	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	
 public:
 	

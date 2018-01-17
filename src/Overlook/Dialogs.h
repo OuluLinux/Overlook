@@ -129,6 +129,50 @@ public:
 };
 
 
+class SystemDataCtrl : public ParentCtrl {
+	
+	struct DataDraw : public Ctrl {
+		int cursor = 0;
+		virtual void Paint(Draw& w);
+	};
+	
+	Splitter split;
+	ArrayCtrl memlist, reglist;
+	ParentCtrl datactrl;
+	SliderCtrl slider;
+	DataDraw datadraw;
+	
+public:
+	typedef SystemDataCtrl CLASSNAME;
+	SystemDataCtrl();
+	
+	void Data();
+	
+};
+
+
+class SystemJobCtrl : public ParentCtrl {
+	
+	struct TrainingCtrl : public Ctrl {
+		Vector<Point> polyline;
+		int job_id = 0;
+		virtual void Paint(Draw& w);
+	};
+	
+	
+	Splitter split;
+	ArrayCtrl joblist;
+	TrainingCtrl draw;
+	Id job_id;
+	
+public:
+	typedef SystemJobCtrl CLASSNAME;
+	SystemJobCtrl();
+	
+	void Data();
+	
+};
+
 }
 
 

@@ -1403,14 +1403,14 @@ void ForceIndex::Init() {
 }
 
 void ForceIndex::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
+	/*if (cursor > 0) {
 		double force0 = GetBuffer(0).Get(cursor);
 		double force1 = GetBuffer(0).Get(cursor-1);
 		if (force0 > 0.0)		vec.Set(FORCE_OVERZERO, true);
 		else					vec.Set(FORCE_BELOWZERO, true);
 		if (force0 > force1)	vec.Set(FORCE_INC, true);
 		else					vec.Set(FORCE_DEC, true);
-	}
+	}*/
 }
 
 void ForceIndex::Start() {
@@ -3864,46 +3864,42 @@ void CorrelationOscillator::Init() {
 	
 	MetaTrader& mt = GetMetaTrader();
 	
-	sym_ids.SetCount(SYM_COUNT-1, -1);
 	
 	System& sys = GetSystem();
-	for(int i = 0; i < SYM_COUNT-1; i++)
-		sym_ids[i] = GetSystem().GetPrioritySymbol(i);
+	common_id = sys.FindCommonSymbolId(GetSymbol());
+	if (common_id == -1) common_id = 0;
+	
 	
 	SetCoreMaximum(+1.0);
 	SetCoreMinimum(-1.0);
 	SetCoreSeparateWindow();
 	SetBufferBegin(0, period);
+	SetBufferColor(0, Color(113, 42, 255));
 	
-	for(int i = 0; i < SYM_COUNT-1; i++) {
-		SetBufferColor(i, RainbowColor((double)i / (SYM_COUNT-1)));
-	}
 	
-	opens.SetCount(SYM_COUNT-1, 0);
-	averages.SetCount(SYM_COUNT-1);
-	for(int i = 0; i < SYM_COUNT-1; i++) {
-		ConstBuffer& open = GetInputBuffer(0, sym_ids[i], GetTimeframe(), 0);
-		opens[i] = &open;
-		averages[i].SetPeriod(period);
-	}
+	common_open = &GetInputBuffer(0, common_id, GetTimeframe(), 0);
+	average.SetPeriod(period);
 	this_open = &GetInputBuffer(0, GetSymbol(), GetTimeframe(), 0);
 }
 
-void CorrelationOscillator::Process(int id, int output) {
-	System& sys = GetSystem();
+void CorrelationOscillator::Start() {
 	int counted = GetCounted();
 	int bars = GetBars();
+	
+	if (counted == bars)
+		return;
+	
+	System& sys = GetSystem();
 	int tf = GetTf();
+	int id = GetSymbol();
 	
 	ConstBuffer& a = *this_open;
-	ConstBuffer& b = *opens[output];
+	ConstBuffer& b = *common_open;
 	
-	Buffer& buf = GetBuffer(output);
-	
-	OnlineAverageWindow2& s = averages[output];
+	Buffer& buf = GetBuffer(0);
 	
 	if (b.GetCount() == 0) {
-		LOG("CorrelationOscillator error: No data for symbol " << GetSystem().GetSymbol(id));
+		LOG("CorrelationOscillator error: No data for symbol " << common_id);
 		return;
 	}
 	
@@ -3912,8 +3908,8 @@ void CorrelationOscillator::Process(int id, int output) {
 		for(int i = 0; i < period; i++) {
 			SetSafetyLimit(i);
 			int posa = i;
-			int posb = sys.GetShiftFromMain(id, tf, i);
-			s.Add(a.Get(posa), b.Get(posb));
+			int posb = sys.GetShiftToMain(id, tf, i);
+			average.Add(a.Get(posa), b.Get(posb));
 		}
 		counted = period;
 	}
@@ -3926,7 +3922,7 @@ void CorrelationOscillator::Process(int id, int output) {
 	int cache_offset = 0;
 	for(int i = 1; i < period; i++) {
 		int posa = counted - period + i;
-		int posb = sys.GetShiftFromMain(id, tf, posa);
+		int posb = sys.GetShiftToMain(id, tf, posa);
 		cache_a[i] = a.Get(posa);
 		cache_b[i] = b.Get(posb);
 	}
@@ -3935,18 +3931,18 @@ void CorrelationOscillator::Process(int id, int output) {
 		SetSafetyLimit(i);
 		
 		int posa = i;
-		int posb = sys.GetShiftFromMain(id, tf, posa);
+		int posb = sys.GetShiftToMain(id, tf, posa);
 		
 		double da = a.Get(posa);
 		double db = b.Get(posb);
 		
-		s.Add(da, db);
+		average.Add(da, db);
 		cache_a[cache_offset] = da;
 		cache_b[cache_offset] = db;
 		cache_offset = (cache_offset + 1) % period;
 		
-		double avg1 = s.GetMeanA();
-		double avg2 = s.GetMeanB();
+		double avg1 = average.GetMeanA();
+		double avg2 = average.GetMeanB();
 		double sum1 = 0;
 	    double sumSqr1 = 0;
 	    double sumSqr2 = 0;
@@ -3965,18 +3961,16 @@ void CorrelationOscillator::Process(int id, int output) {
 	}
 }
 
-void CorrelationOscillator::Start() {
-	int counted = GetCounted();
-	int bars = GetBars();
-	
-	if (counted == bars)
-		return;
-	
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
-		Process(sym_ids[i], i);
+void CorrelationOscillator::Assist(int cursor, VectorBool& vec) {
+	double v = GetBuffer(0).Get(cursor);
+	if (v >= 0.0)	vec.Set(CORROSC_HIGH, true);
+	else			vec.Set(CORROSC_LOW, true);
+	if (cursor > 0) {
+		double prev = GetBuffer(0).Get(cursor - 1);
+		if (v > prev)	vec.Set(CORROSC_INC, true);
+		else			vec.Set(CORROSC_DEC, true);
 	}
 }
-
 
 
 
@@ -4520,16 +4514,18 @@ void CommonForce::Start() {
 		counted++;
 	
 	System& sys = GetSystem();
-	int common_sym = sys.GetCommonSymbol();
 	int id = GetSymbol();
+	int common_id = sys.FindCommonSymbolId(id);
+	int common_pos = sys.FindCommonSymbolPos(id);
+	if (common_pos == -1) return;
 	int tf = GetTf();
-	int sym_priority = sys.GetSymbolPriority(GetSymbol());
-	if (sym_priority >= SYM_COUNT) return;
-	bool check_corr = sym_priority > 0;
+	int sym_pos = sys.FindCommonSymbolPos(common_id, id);
+	if (sym_pos == -1) return;
+	bool check_corr = sym_pos > 0;
 	
 	ConstBuffer& own_open = GetInputBuffer(0, 0);
-	ConstBuffer& common_open = GetInputBuffer(0, common_sym, tf, 0);
-	ConstBuffer* corr_buf = check_corr ? &dynamic_cast<DataBridge*>(GetInputCore(0, common_sym, tf))->corr[0].buffer[sym_priority-1] : NULL;
+	ConstBuffer& common_open = GetInputBuffer(0, common_id, tf, 0);
+	ConstBuffer* corr_buf = check_corr ? &dynamic_cast<DataBridge*>(GetInputCore(0, common_id, tf))->corr[0].buffer[sym_pos-1] : NULL;
 	
 	for(int i = counted; i < bars; i++) {
 		int common_pos = sys.GetShiftToMain(id, tf, i);
@@ -4731,6 +4727,144 @@ void VolumeSlots::Assist(int cursor, VectorBool& vec) {
 		if (value0 > value1)		vec.Set(VOLUME_INC, true);
 		else						vec.Set(VOLUME_DEC, true);
 	}
+}
+
+
+
+
+
+
+
+
+ExampleAdvisor::ExampleAdvisor() {
+	
+}
+
+void ExampleAdvisor::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, RainbowColor(Randomf()));
+	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	SetJobCount(1);
+	
+	SetJob(0, tf_str + " Training")
+		.SetBegin		(THISBACK(TrainingBegin))
+		.SetIterator	(THISBACK(TrainingIterator))
+		.SetEnd			(THISBACK(TrainingEnd))
+		.SetInspect		(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
+}
+
+void ExampleAdvisor::Start() {
+	if (once) {
+		if (prev_counted > 0) prev_counted--;
+		once = false;
+		RefreshSourcesOnlyDeep();
+	}
+	
+	if (IsJobsFinished()) {
+		int bars = GetBars();
+		if (prev_counted < bars) {
+			LOG("ExampleAdvisor::Start Refresh");
+			RefreshAll();
+		}
+	}
+}
+
+bool ExampleAdvisor::TrainingBegin() {
+	
+	training_pts.SetCount(max_rounds, 0);
+	
+	// In case of having other advisors as dependency:
+	// Don't start if jobs of dependencies are not finished
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return false;
+			}
+		}
+	}
+	
+	// Allow iterating
+	return true;
+}
+
+bool ExampleAdvisor::TrainingIterator() {
+	
+	// Show progress
+	GetCurrentJob().SetProgress(round, max_rounds);
+	
+	
+	// ---- Do your training work here ----
+	
+	
+	// Put some result data here for graph
+	training_pts[round] = sin(round * 0.01);
+	
+	
+	// Keep count of iterations
+	round++;
+	
+	// Stop eventually
+	if (round >= max_rounds) {
+		SetJobFinished();
+	}
+	
+	return true;
+}
+
+bool ExampleAdvisor::TrainingEnd() {
+	RefreshAll();
+	return true;
+}
+
+bool ExampleAdvisor::TrainingInspect() {
+	bool success = false;
+	
+	INSPECT(success, "ok: this is an example");
+	INSPECT(success, "warning: this is an example");
+	INSPECT(success, "error: this is an example");
+	
+	// You can fail the inspection too
+	//if (!success) return false;
+	
+	return true;
+}
+
+void ExampleAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	
+	
+	// ---- Do your final result work here ----
+	
+	
+	// Keep counted manually
+	prev_counted = GetBars();
+	
+	
+	// Write oscillator indicator
+	Buffer& buf = GetBuffer(0);
+	for(int i = 0; i < GetBars(); i++) {
+		buf.Set(i, sin(i * 0.01));
+	}
+}
+
+void ExampleAdvisor::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	ExampleAdvisor* ea = dynamic_cast<ExampleAdvisor*>(&*job->core);
+	ASSERT(ea);
+	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
 }
 
 }

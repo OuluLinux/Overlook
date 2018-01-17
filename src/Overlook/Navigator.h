@@ -11,7 +11,7 @@ class Navigator : public ParentCtrl {
 	
 	// Vars
 	TreeCtrl tree;
-	int accounts, account_id, indicators, expertadvisors, accountadvisors;
+	int accounts, account_id, indicators, expertadvisors;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void FillTree(TreeCtrl &tree);

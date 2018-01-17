@@ -203,9 +203,11 @@ void Core::Refresh() {
 		if (!skip_allocate) {
 			int reserve = count + 512;
 			reserve -= reserve % 512;
-			for(int i = 0; i < buffers.GetCount(); i++) {
-				buffers[i]->value.Reserve(reserve);
-				buffers[i]->value.SetCount(count, 0);
+			for (auto& o : outputs) {
+				for (auto& b : o.buffers) {
+					b.value.Reserve(reserve);
+					b.value.SetCount(count, 0);
+				}
 			}
 		}
 	}

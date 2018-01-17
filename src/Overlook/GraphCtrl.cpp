@@ -52,7 +52,10 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 		if (lo > 0) lo = 0;
 	}
 	
-	int c = cont.GetBars();
+	System& sys = GetSystem();
+	int sym = cont.GetSymbol();
+	int tf = cont.GetTf();
+	int c = Upp::min(cont.GetBuffer(buffer).GetCount(), Upp::min(sys.GetCountTf(sym, tf), cont.GetBars()));
 	bool get_hi = !cont.HasMaximum();
 	bool get_lo = !cont.HasMinimum();
 	bool get_any = get_hi || get_lo;
@@ -218,7 +221,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	y = r.top;
     w = r.GetWidth();
 	h = r.GetHeight();
-	c = pb.GetBuffer(0).GetCount();
+	c = Upp::min(sys.GetCountTf(sym, tf), pb.GetBuffer(0).GetCount());
 	
 	gridw = w / grid + 1;
     gridh = h / grid + 1;
@@ -304,6 +307,8 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	int f, pos, x, y, h, c, w;
 	double diff;
     Rect r(GetGraphCtrlRect());
+	System& sys = GetSystem();
+    int sym = chart->GetSymbol();
     int tf = chart->GetTf();
     
     f = 2;
@@ -311,7 +316,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	y = r.top;
     h = r.GetHeight();
     w = r.GetWidth();
-	c = values.GetBuffer(0).GetCount();
+	c = Upp::min(sys.GetCountTf(sym, tf), values.GetBuffer(0).GetCount());
 	diff = hi - lo;
 	
 	for(int i = 0; i < count; i++) {
@@ -366,12 +371,14 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
     
     bool skip_zero;
     Color value_color = cont.GetBufferColor(buffer);
+	System& sys = GetSystem();
+    int sym = chart->GetSymbol();
     int tf = chart->GetTf();
     
     x = border;
 	y = r.top;
     h = r.GetHeight();
-	c = cont.GetBuffer(0).GetCount();
+	c = Upp::min(sys.GetCountTf(sym, tf), cont.GetBuffer(0).GetCount());
 	diff = hi - lo;
 	data_shift = cont.GetBuffer(buffer).shift;
 	data_begin = cont.GetBuffer(buffer).begin;

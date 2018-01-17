@@ -619,4 +619,17 @@ void System::InspectionFailed(const char* file, int line, int symbol, int tf, St
 	}
 }
 
+void System::StoreCores() {
+	for (auto& s : data) {
+		for (auto& t : s) {
+			for (auto& f : t) {
+				for (auto& ci : f) {
+					if (!ci.core.IsEmpty())
+						ci.core->StoreCache();
+				}
+			}
+		}
+	}
+}
+
 }

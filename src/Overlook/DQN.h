@@ -77,6 +77,11 @@ void copy_linear(T* write, const T* read, unsigned int size) {
 
 template <class T, int width, int height>
 class Mat : Moveable<Mat<T, width, height> > {
+	
+	
+protected:
+	friend class System;
+	
 	static const int length = width * height;
 	
 	T weight_gradients[length];
@@ -84,7 +89,6 @@ class Mat : Moveable<Mat<T, width, height> > {
 	
 	typedef Mat<T, width, height> MatType;
 	
-protected:
 	inline int GetPos(int x, int y) const {
 		ASSERT(x >= 0 && y >= 0 && x < width && y < height);
 		return (width * y) + x;
@@ -382,6 +386,8 @@ template <int num_actions, int num_states, int num_hidden_units = 100>
 class DQNTrainer {
 	
 public:
+	static const int INPUT_SIZE = num_states;
+	static const int OUTPUT_SIZE = num_actions;
 	
 	typedef Mat<double, 1, num_states> MatType;
 	
@@ -428,8 +434,8 @@ public:
 		Reset();
 	}
 	
-	void   SetLearningRate(double r) {alpha = r;}
-	int    GetLearningRate() const {return alpha;}
+	void   SetAlpha(double r) {alpha = r;}
+	int    GetAlpha() const {return alpha;}
 	
 	void   SetGamma(double d) {gamma = d;}
 	double GetGamma() const {return gamma;}
@@ -529,13 +535,14 @@ public:
 		return tderror;
 	}
 	
-	double Learn(MatType& s0, const DQVectorType& vec, MatType& s1) {
+	double Learn(MatType& s0, double correct[num_actions], MatType& s1) {
 		
 		// now predict
 		FwdOut& pred = Forward(s0);
 		
+		double av_tderror = 0.0;
 		for (int i = 0; i < num_actions; i++) {
-			double tderror = pred.Get(i) - vec.correct[i];
+			double tderror = pred.Get(i) - correct[i];
 			double clamp = tderror_clamp;
 			double abs_tderror = tderror >= 0.0 ? +tderror : -tderror;
 			if (abs_tderror > clamp) {
@@ -546,7 +553,11 @@ public:
 					tderror = -clamp;
 			}
 			pred.SetGradient(i, tderror);
+			
+			av_tderror += abs_tderror;
 		}
+		av_tderror /= num_actions;
+		
 		Backward(s0); // compute gradients on net params
 		
 		// update net
@@ -555,7 +566,7 @@ public:
 		UpdateMat(data.W2, alpha);
 		UpdateMat(data.b2, alpha);
 		
-		return tderror;
+		return av_tderror;
 	}
 	
 	double GetTDError() const {return tderror;}

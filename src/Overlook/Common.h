@@ -25,7 +25,7 @@ using namespace Upp;
 #define SECTOR_COUNT			(1 << SECTOR_2EXP)
 #define CONST_TREE_INPUT		2
 #define FUSE_DEC_COUNT			4
-#define TF_COUNT				6
+#define TF_COUNT				3
 #define TRUEINDI_COUNT			3
 #define LABELINDI_COUNT			3
 #define ADVISOR_COUNT			4
@@ -43,6 +43,7 @@ using namespace Upp;
 #define MAX_SYMOPEN				4
 
 #define SYM_COUNT				4
+#define COMMON_COUNT			4
 
 class AgentGroup;
 class Agent;
@@ -59,8 +60,8 @@ enum {
 	PSAR_TRENDDOWN, STDDEV_INC, STDDEV_DEC, ATR_INC, ATR_DEC, BEAR_OVERZERO, BEAR_BELOWZERO,
 	BEAR_INC, BEAR_DEC, BULL_OVERZERO, BULL_BELOWZERO, BULL_INC, BULL_DEC, CCI_OVERZERO,
 	CCI_BELOWZERO, CCI_OVERHIGH, CCI_BELOWLOW, CCI_INC, CCI_DEC, DEM_OVERZERO, DEM_BELOWZERO,
-	DEM_OVERHIGH, DEM_BELOWLOW, DEM_INC, DEM_DEC, FORCE_OVERZERO, FORCE_BELOWZERO, FORCE_INC,
-	FORCE_DEC, MOM_OVERZERO, MOM_BELOWZERO, MOM_INC, MOM_DEC, RSI_OVERZERO, RSI_BELOWZERO,
+	DEM_OVERHIGH, DEM_BELOWLOW, DEM_INC, DEM_DEC, /*FORCE_OVERZERO, FORCE_BELOWZERO, FORCE_INC,
+	FORCE_DEC,*/ MOM_OVERZERO, MOM_BELOWZERO, MOM_INC, MOM_DEC, RSI_OVERZERO, RSI_BELOWZERO,
 	RSI_INC, RSI_DEC, RVI_OVERZERO, RVI_BELOWZERO, RVI_INC, RVI_DEC, RVI_INCDIFF, RVI_DECDIFF,
 	STOCH_OVERZERO, STOCH_BELOWZERO, STOCH_OVERHIGH, STOCH_BELOWLOW, STOCH_INC, STOCH_DEC,
 	ACC_OVERZERO, ACC_BELOWZERO, ACC_INC, ACC_DEC, AWE_OVERZERO, AWE_BELOWZERO, AWE_INC, AWE_DEC,
@@ -68,6 +69,7 @@ enum {
 	VOLSL_INC, VOLSL_DEC, CHOSC_LOWEST, CHOSC_LOW, CHOSC_HIGH, CHOSC_HIGHEST, SCIS_LOW, SCIS_HIGH,
 	STRONG_OVERZERO, STRONG_BELOWZERO, STRONG_INC, STRONG_DEC,
 	VOLUME_HIGH, VOLUME_VERYHIGH, VOLUME_MED, VOLUME_LOW, VOLUME_INC, VOLUME_DEC,
+	CORROSC_HIGH, CORROSC_LOW, CORROSC_INC, CORROSC_DEC,
 	
 	ASSIST_COUNT};
 
@@ -952,6 +954,26 @@ struct AssistBase {
 };
 
 int log2_64 (uint64 value);
+
+
+struct JobProgressDislay : public Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
+		w.DrawRect(r, paper);
+		Rect g = r;
+		g.top += 1;
+		g.bottom -= 1;
+		int perc = q;
+		g.right -= g.Width() * (100 - perc) / 100;
+		Color clr = Color(72, 213, 119);
+		w.DrawRect(g, clr);
+		Font fnt = SansSerif(g.Height()-1);
+		String perc_str = ((perc >= 0 && perc <= 100) ? IntStr(perc) : String("0")) + "%";
+		Size str_sz = GetTextSize(perc_str, fnt);
+		Point pt = r.CenterPos(str_sz);
+		w.DrawText(pt.x, pt.y, perc_str, fnt, Black());
+		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, GrayColor(128+64));
+	}
+};
 
 }
 

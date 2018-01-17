@@ -19,7 +19,6 @@ void Navigator::FillTree(TreeCtrl &tree)
 	accounts		= tree.Add(0, OverlookImg::accounts(), "Accounts");
 	indicators		= tree.Add(0, OverlookImg::indicators(), "Indicators");
 	expertadvisors	= tree.Add(0, OverlookImg::expertadvisors(), "Expert Advisors");
-	accountadvisors	= tree.Add(0, OverlookImg::accountadvisors(), "Account Advisors");
 	
 }
 
@@ -54,14 +53,6 @@ void Navigator::Data() {
 	}
 	
 	
-	tree.RemoveChildren(accountadvisors);
-	count = System::AccountAdvisorFactories().GetCount();
-	for(int i = 0; i < count; i++) {
-		int id = System::AccountAdvisorFactories()[i];
-		tree.Add(accountadvisors, OverlookImg::accountadvisors(), System::CoreFactories()[id].a);
-	}
-	
-	
 	tree.OpenDeep(0);
 }
 
@@ -76,11 +67,6 @@ void Navigator::SelectTree() {
 	else if (parent == expertadvisors) {
 		int pos = tree.GetChildIndex(expertadvisors, i);
 		int id = System::ExpertAdvisorFactories()[pos];
-		WhenFactory(id);
-	}
-	else if (parent == accountadvisors) {
-		int pos = tree.GetChildIndex(accountadvisors, i);
-		int id = System::AccountAdvisorFactories()[pos];
 		WhenFactory(id);
 	}
 }

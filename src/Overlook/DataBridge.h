@@ -105,7 +105,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(4, 3)
+			% Out(4, 4)
 			% Mem(spread_mean) % Mem(spread_count)
 			% Mem(cursor)
 			% Mem(median_max_map) % Mem(median_min_map)
@@ -144,8 +144,10 @@ public:
 			return in_tf == out_tf;
 		}
 		
-		if (in_sym == ::Overlook::GetSystem().GetCommonSymbol())
-			return ::Overlook::GetSystem().GetSymbolPriority(out_sym) < SYM_COUNT;
+		auto& sys = ::Overlook::GetSystem();
+		int common_id = sys.FindCommonSymbolId(in_sym);
+		if (common_id != -1)
+			return common_id == in_sym && common_id != out_sym && sys.FindCommonSymbolPos(common_id, out_sym) != -1;
 		
 		return false;
 	}

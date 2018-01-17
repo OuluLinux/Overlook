@@ -37,6 +37,9 @@ void DataBridge::Start() {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
+	int id = GetSymbol();
+	int common_id = sys.FindCommonSymbolId(id);
+	bool is_common_symbol = id == common_id;
 	
 	if (once) {
 		once = false;
@@ -44,15 +47,16 @@ void DataBridge::Start() {
 		common.InspectInit();
 		
 		// Correlation unit setup
-		if (GetSymbol() == sys.GetCommonSymbol()) {
+		if (is_common_symbol) {
 			if (corr.IsEmpty()) {
 				corr.Add();
 				
 				corr[0].period = 10;
 				
+				int common_pos = sys.FindCommonSymbolPos(id);
 				corr[0].sym_ids.SetCount(SYM_COUNT, -1);
 				for(int i = 0; i < SYM_COUNT; i++)
-					corr[0].sym_ids[i] = sys.GetPrioritySymbol(i);
+					corr[0].sym_ids[i] = sys.GetCommonSymbolId(common_pos, i);
 				
 				corr[0].averages.SetCount(SYM_COUNT-1);
 				corr[0].buffer.SetCount(SYM_COUNT-1);
@@ -81,7 +85,7 @@ void DataBridge::Start() {
 	if (sym == sys.GetAccountSymbol()) {
 		RefreshAccount();
 	}
-	else if (sym == sys.GetCommonSymbol()) {
+	else if (is_common_symbol) {
 		RefreshCommon();
 	}
 	else
@@ -270,10 +274,15 @@ void DataBridge::ProcessCorrelation(int output) {
 		cache_b[i] = b.Get(posb);
 	}
 	
+	if (sys.GetShiftFromMain(corr[0].sym_ids[0], tf, bars-1) >= a.GetCount() ||
+		sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, bars-1) >= b.GetCount())
+		RefreshSourcesOnlyDeep();
+	
 	buf.SetCount(bars);
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
+		// Crash here means that cores were not saved, but system peristency binary was...
 		int posa = sys.GetShiftFromMain(corr[0].sym_ids[0], tf, i);
 		int posb = sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, i);
 		
@@ -398,6 +407,9 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			if (ask > high) {high_buf	.Set(shift, ask);}
 		}
 	}
+	
+	// Very weird bug of volume not being updated
+	volume_buf.SetCount(open_buf.GetCount());
 	
 	sys.DataTimeEnd(id, tf);
 	

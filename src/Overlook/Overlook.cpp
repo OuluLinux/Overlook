@@ -130,6 +130,8 @@ void Overlook::DockInit() {
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sysjobs, "System Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sysdata, "System Data").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -475,6 +477,8 @@ void Overlook::Data() {
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
+	if (sysdata.IsVisible())		RefreshSystemData();
+	if (sysjobs.IsVisible())		RefreshSystemJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
 }
 
@@ -507,6 +511,14 @@ void Overlook::RefreshAssist() {
 			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
 	assist.SetCount(row);
+}
+
+void Overlook::RefreshSystemData() {
+	sysdata.Data();
+}
+
+void Overlook::RefreshSystemJobs() {
+	sysjobs.Data();
 }
 
 void Overlook::RefreshCalendar() {
@@ -807,25 +819,6 @@ void Overlook::RefreshTradesHistory() {
 	}
 }
 
-struct JobProgressDislay : public Display {
-	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
-		w.DrawRect(r, paper);
-		Rect g = r;
-		g.top += 1;
-		g.bottom -= 1;
-		int perc = q;
-		g.right -= g.Width() * (100 - perc) / 100;
-		Color clr = Color(72, 213, 119);
-		w.DrawRect(g, clr);
-		Font fnt = SansSerif(g.Height()-1);
-		String perc_str = ((perc >= 0 && perc <= 100) ? IntStr(perc) : String("0")) + "%";
-		Size str_sz = GetTextSize(perc_str, fnt);
-		Point pt = r.CenterPos(str_sz);
-		w.DrawText(pt.x, pt.y, perc_str, fnt, Black());
-		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, GrayColor(128+64));
-	}
-};
-
 void Overlook::RefreshJobs() {
 	System& sys = GetSystem();
 	
@@ -961,7 +954,7 @@ void Overlook::LoadDefaultEAs() {
 	
 	int tf = sys.FindPeriod(15);
 	int bb  = System::Find<DataBridge>();
-	int wsa = System::Find<MainAdvisor>();
+	int wsa = System::Find<ExampleAdvisor>();
 	
 	{
 		ProfileGroup& pgroup = profile.charts.Add();
@@ -971,8 +964,9 @@ void Overlook::LoadDefaultEAs() {
 		pgroup.decl.factory = wsa;
 	}
 	
+	int common_pos = 0;
 	for(int i = 0; i < SYM_COUNT+1; i++) {
-		int sym = i < SYM_COUNT ? sys.GetPrioritySymbol(i) : sys.GetCommonSymbol();
+		int sym = i < SYM_COUNT ? sys.GetCommonSymbolId(common_pos, i) : sys.GetCommonSymbolId(common_pos);
 		
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = sym;

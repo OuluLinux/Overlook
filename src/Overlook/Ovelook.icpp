@@ -68,7 +68,7 @@ INITBLOCK {
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	System::Register<CommonForce>("CommonForce");
 	
-	System::Register<MainAdvisor>("MainAdvisor", CORE_ACCOUNTADVISOR);
+	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
 	
 	System::RegisterAssistant<DataBridge>("Up Change -1 ", DB_UP1);
 	System::RegisterAssistant<DataBridge>("Up Change -2 ", DB_UP2);
@@ -131,10 +131,10 @@ INITBLOCK {
     System::RegisterAssistant<DeMarker>("Below low", DEM_BELOWLOW);
     System::RegisterAssistant<DeMarker>("Increasing", DEM_INC);
     System::RegisterAssistant<DeMarker>("Decreasing", DEM_DEC);
-    System::RegisterAssistant<ForceIndex>("Over zero", FORCE_OVERZERO);
+    /*System::RegisterAssistant<ForceIndex>("Over zero", FORCE_OVERZERO);
     System::RegisterAssistant<ForceIndex>("Below zero", FORCE_BELOWZERO);
     System::RegisterAssistant<ForceIndex>("Increasing", FORCE_INC);
-    System::RegisterAssistant<ForceIndex>("Decreasing", FORCE_DEC);
+    System::RegisterAssistant<ForceIndex>("Decreasing", FORCE_DEC);*/
     System::RegisterAssistant<Momentum>("Over zero", MOM_OVERZERO);
     System::RegisterAssistant<Momentum>("Below zero", MOM_BELOWZERO);
     System::RegisterAssistant<Momentum>("Increasing", MOM_INC);
@@ -189,6 +189,10 @@ INITBLOCK {
     System::RegisterAssistant<CommonForce>("Below zero", STRONG_BELOWZERO);
     System::RegisterAssistant<CommonForce>("Increasing", STRONG_INC);
     System::RegisterAssistant<CommonForce>("Decreasing", STRONG_DEC);
+    System::RegisterAssistant<CorrelationOscillator>("Over zero", CORROSC_HIGH);
+    System::RegisterAssistant<CorrelationOscillator>("Below zero", CORROSC_LOW);
+    System::RegisterAssistant<CorrelationOscillator>("Increasing", CORROSC_INC);
+    System::RegisterAssistant<CorrelationOscillator>("Decreasing", CORROSC_DEC);
     
 	//System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
 	

@@ -519,4 +519,133 @@ void HistoryCenter::Data() {
 	sb.SetPage(screen_count);
 }
 
+
+
+
+
+
+
+SystemDataCtrl::SystemDataCtrl() {
+	Add(split.SizePos());
+	split.Horz();
+	
+	split << reglist << memlist << datactrl;
+	split.SetPos(2500, 0);
+	split.SetPos(5000, 1);
+	
+	datactrl.Add(slider.TopPos(0, 30).HSizePos());
+	datactrl.Add(datadraw.VSizePos(30).HSizePos());
+	slider.MinMax(0, 1);
+	slider.SetData(1);
+	slider << THISBACK(Data);
+	
+	reglist.AddColumn("Reg Key");
+	reglist.AddColumn("Value");
+	reglist.ColumnWidths("2 1");
+	
+	memlist.AddColumn("Mem Key");
+	memlist.AddColumn("Value");
+	memlist.ColumnWidths("2 1");
+	
+	
+}
+
+void SystemDataCtrl::Data() {
+	System& sys = GetSystem();
+	
+	for(int i = 0; i < System::REG_COUNT; i++) {
+		reglist.Set(i, 0, sys.GetRegisterKey(i));
+		reglist.Set(i, 1, sys.GetRegisterValue(i, sys.main_reg[i]));
+	}
+	
+	for(int i = 0; i < System::MEM_COUNT; i++) {
+		memlist.Set(i, 0, sys.GetMemoryKey(i));
+		memlist.Set(i, 1, sys.GetMemoryValue(i, sys.main_mem[i]));
+	}
+	
+	int count = sys.GetCountMain(sys.FindPeriod(15));
+	int cursor = slider.GetData();
+	if (slider.GetMax() == 1) {
+		slider.MinMax(0, count-1);
+		slider.SetData(count-1);
+	} else {
+		slider.MinMax(0, count-1);
+	}
+	
+	datadraw.cursor = slider.GetData();
+	datadraw.Refresh();
+}
+
+void SystemDataCtrl::DataDraw::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	/*
+	System& sys = GetSystem();
+	READLOCK(sys.main_lock) {
+		if (job_id >= 0 && job_id < sys.main_jobs.GetCount()) {
+			const System::MainJob& job = sys.main_jobs[job_id];
+			DrawVectorPolyline(id, sz, job.training_pts, polyline);
+		}
+	}
+	*/
+	w.DrawImage(0, 0, id);
+}
+
+
+
+
+
+SystemJobCtrl::SystemJobCtrl() {
+	Add(split.SizePos());
+	split.Horz();
+	
+	
+	split << joblist << draw;
+	split.SetPos(2500);
+	
+	joblist.AddIndex(job_id);
+	joblist.AddColumn("Common #");
+	joblist.AddColumn("Level #");
+	joblist.AddColumn("Progress");
+	joblist.ColumnWidths("1 1 5");
+	joblist << THISBACK(Data);
+	
+}
+
+void SystemJobCtrl::Data() {
+	System& sys = GetSystem();
+	READLOCK(sys.main_lock) {
+		for(int i = 0; i < sys.main_jobs.GetCount(); i++) {
+			const System::MainJob& job = sys.main_jobs[i];
+			joblist.Set(i, 0, i);
+			joblist.Set(i, 1, job.common_pos);
+			joblist.Set(i, 2, job.level);
+			joblist.Set(i, 3, job.total > 0 ? job.actual * 100 / job.total : 0);
+			joblist.SetDisplay(i, 4, Single<JobProgressDislay>());
+		}
+	}
+	int cursor = joblist.GetCursor();
+	if (cursor >= 0 && cursor < joblist.GetCount()) {
+		draw.job_id = joblist.Get(cursor, 0);
+		draw.Refresh();
+	}
+}
+
+void SystemJobCtrl::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	System& sys = GetSystem();
+	READLOCK(sys.main_lock) {
+		if (job_id >= 0 && job_id < sys.main_jobs.GetCount()) {
+			const System::MainJob& job = sys.main_jobs[job_id];
+			DrawVectorPolyline(id, sz, job.training_pts, polyline);
+		}
+	}
+	
+	w.DrawImage(0, 0, id);
+}
+
 }

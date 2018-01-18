@@ -132,7 +132,10 @@ public:
 class SystemDataCtrl : public ParentCtrl {
 	
 	struct DataDraw : public Ctrl {
-		int cursor = 0;
+		int cursor = -1;
+		Image img, scaled_img;
+		Size img_sz, scaled_img_sz;
+		void Data();
 		virtual void Paint(Draw& w);
 	};
 	

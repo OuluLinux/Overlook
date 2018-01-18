@@ -572,24 +572,56 @@ void SystemDataCtrl::Data() {
 		slider.MinMax(0, count-1);
 	}
 	
-	datadraw.cursor = slider.GetData();
+	int cur = slider.GetData();
+	if (cur != datadraw.cursor) {
+		datadraw.cursor = cur;
+		datadraw.Data();
+	}
 	datadraw.Refresh();
+}
+
+void SystemDataCtrl::DataDraw::Data() {
+	System& sys = GetSystem();
+	int H = sys.main_sym_ids.GetCount() * sys.main_tf_ids.GetCount();
+	int W = System::BIT_COUNT;
+	Size sz(W, H);
+	
+	int64 count = sys.main_data.GetCount();
+	if (!count) return;
+	
+	ImageBuffer id(sz);
+	RGBA* cur = id.Begin();
+	for(int i = 0; i < sys.main_tf_ids.GetCount(); i++) {
+		for(int j = 0; j < sys.main_sym_ids.GetCount(); j++) {
+			for (int x = 0; x < System::BIT_COUNT; x++) {
+				int64 pos = sys.GetMainDataPos(cursor, j, i, x);
+				if (pos < count) {
+					bool b = sys.main_data.Get(pos);
+					uint8 gray = b ? 0 : 255;
+					cur->r = gray;
+					cur->g = gray;
+					cur->b = gray;
+					cur->a = 255;
+				}
+				cur++;
+			}
+		}
+	}
+	
+	img_sz = sz;
+	img = id;
+	scaled_img_sz = Size(0,0);
 }
 
 void SystemDataCtrl::DataDraw::Paint(Draw& w) {
 	Size sz = GetSize();
-	ImageDraw id(sz);
-	id.DrawRect(sz, White());
-	/*
-	System& sys = GetSystem();
-	READLOCK(sys.main_lock) {
-		if (job_id >= 0 && job_id < sys.main_jobs.GetCount()) {
-			const System::MainJob& job = sys.main_jobs[job_id];
-			DrawVectorPolyline(id, sz, job.training_pts, polyline);
-		}
+	w.DrawRect(sz, White());
+	if (img_sz.cx == 0 && img_sz.cy == 0) return;
+	if (scaled_img_sz != sz) {
+		scaled_img_sz = sz;
+		scaled_img = RescaleFilter(img, scaled_img_sz, FILTER_NEAREST);
 	}
-	*/
-	w.DrawImage(0, 0, id);
+	w.DrawImage(0, 0, scaled_img);
 }
 
 
@@ -622,8 +654,10 @@ void SystemJobCtrl::Data() {
 			joblist.Set(i, 1, job.common_pos);
 			joblist.Set(i, 2, job.level);
 			joblist.Set(i, 3, job.total > 0 ? job.actual * 100 / job.total : 0);
-			joblist.SetDisplay(i, 4, Single<JobProgressDislay>());
+			joblist.SetDisplay(i, 2, Single<JobProgressDislay>());
+			joblist.SetDisplay(i, 3, Single<JobProgressDislay>());
 		}
+		joblist.SetCount(sys.main_jobs.GetCount());
 	}
 	int cursor = joblist.GetCursor();
 	if (cursor >= 0 && cursor < joblist.GetCount()) {

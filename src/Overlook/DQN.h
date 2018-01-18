@@ -501,6 +501,16 @@ public:
 		}
 	}
 	
+	void Evaluate(MatType& before_state, double* buf, int size) {
+		ASSERT(size == num_actions);
+		
+		// greedy wrt Q function
+		FwdOut& amat = Forward(before_state);
+		
+		for(int i = 0; i < num_actions; i++)
+			buf[i] = amat.Get(i);
+	}
+	
 	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {
 		
 		// compute the target Q value

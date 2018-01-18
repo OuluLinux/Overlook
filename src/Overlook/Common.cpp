@@ -92,17 +92,17 @@ double VectorBool::GetOverlapFactor(const VectorBool& b) const {
 	return Upp::min(1.0, (double)pop_count / count);
 }
 
-bool VectorBool::Get(int i) const {
-	int j = i / 64;
-	int k = i % 64;
+bool VectorBool::Get(int64 i) const {
+	int64 j = i / 64;
+	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());
 	ConstU64* it = Begin() + j;
 	return *it & (1ULL << k);
 }
 
-void VectorBool::Set(int i, bool b) {
-	int j = i / 64;
-	int k = i % 64;
+void VectorBool::Set(int64 i, bool b) {
+	int64 j = i / 64;
+	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());
 	uint64* it = data.Begin() + j;
 	if (b)	*it |=  (1ULL << k);

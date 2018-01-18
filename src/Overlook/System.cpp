@@ -106,12 +106,15 @@ void System::FirstStart() {
 		ASSERTUSER_(false, "Unknown error with MT4 connection.");
 	}
 	
-	const int priosym_count = GetCommonCount() * GetCommonSymbolCount();
+	spread_points.SetCount(symbols.GetCount(), 0);
+	for(int i = 0; i < mt.GetSymbolCount(); i++) spread_points[i] = mt.GetSymbol(i).point;
+		
 	
-	spread_points.SetCount(priosym_count, 0);
+	const int priosym_count = GetCommonCount() * GetCommonSymbolCount();
 	proxy_id.SetCount(priosym_count, 0);
 	proxy_base_mul.SetCount(priosym_count, 0);
-
+	
+	
 	int prio = 0;
 	sym_priority.SetCount(priosym_count, 100000);
 	for(int i = 0; i < priosym_count; i++) {
@@ -157,7 +160,7 @@ void System::FirstStart() {
 		
 		int sym = this->symbols.Find(symstr);
 		sym_priority[prio] = sym;
-		spread_points[prio] = spread_point;
+		spread_points[sym] = spread_point;
 		prio++;
 	}
 	

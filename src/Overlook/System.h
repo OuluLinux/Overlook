@@ -432,11 +432,9 @@ public:
 		
 		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_L1, BIT_WRITTEN_L2,
 		
-		BIT_REALSIGNAL,
-		BIT_L0_SIGNAL, BIT_L0_WEAKSIGNAL,
-		BIT_L1_SIGNAL, BIT_L1_WEAKSIGNAL,
-		
-		BIT_L2_REALENABLED,
+		BIT_REALSIGNAL,  BIT_REALENABLED,
+		BIT_L0_SIGNAL,
+		BIT_L1_SIGNAL,
 		BIT_L2_ENABLED,
 		
 		BIT_SKIP_CALENDAREVENT,
@@ -451,19 +449,18 @@ public:
 		REG_COUNT
 	};
 	enum {
-		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_INDIBITS, INS_TRAINABLE,
+		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_INDIBITS, INS_TRAINABLE, INS_CUSTOMLOGIC,
 		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_REFRESH_REAL,
 		INS_COUNT
 	};
 	enum {
-		MEM_TRAINABLESET, MEM_INDIBARS, MEM_COUNTED_INDI,
-		MEM_TRAINBARS, MEM_TRAINMIDSTEP, MEM_TRAINBEGIN,
+		MEM_TRAINABLESET, MEM_INDIBARS, MEM_COUNTED_INDI, MEM_COUNTED_ENABLED,
+		MEM_TRAINBARS, 
+		MEM_TRAINMIDSTEP,		MEM_TRAINMIDSTEP_LAST=MEM_TRAINMIDSTEP+COMMON_COUNT-1,
+		MEM_TRAINBEGIN,			MEM_TRAINBEGIN_LAST=MEM_TRAINBEGIN+COMMON_COUNT-1,
 		
 		MEM_COUNTED_L0, MEM_COUNTED_L1, MEM_COUNTED_L2,
 		MEM_TRAINED_L0, MEM_TRAINED_L1, MEM_TRAINED_L2,
-		MEM_OUTPUT_L0, MEM_OUTPUT_L1, MEM_OUTPUT_L2,
-		MEM_ACTIONBEGIN_L0, MEM_ACTIONBEGIN_L1, MEM_ACTIONBEGIN_L2,
-		MEM_ACTIONCOUNT_L0, MEM_ACTIONCOUNT_L1, MEM_ACTIONCOUNT_L2,
 		
 		MEM_COUNT
 	};
@@ -480,7 +477,7 @@ public:
 	
 	struct LogicLearner0 : Moveable<LogicLearner0> {
 		
-		static const int SYM_BITS			= 2;
+		static const int SYM_BITS			= 1;
 		static const int TIME_BITS			= 5 + 24 + 4;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
@@ -510,7 +507,7 @@ public:
 		static const int SYM_BITS			= 1;
 		static const int TIME_BITS			= 5 + 24 + 4;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
-		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
+		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
@@ -563,15 +560,17 @@ public:
 	void	ProcessMainWorkQueue(bool store_cache=false);
 	void	FillIndicatorBits();
 	void	FillTrainableBits();
+	void	FillCustomLogicBits();
 	void	RealizeLogicTraining();
 	void	FillLogicBits();
-	void	RefreshReal();
+	bool	RefreshReal();
 	void	LearnLogic(int level, int common_pos);
 	int		ProcessMainJob(MainJob& job);
 	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
-	int		GetMainDataPos(int cursor, int sym_pos, int tf_pos, int bit_pos) const;
+	int64	GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const;
 	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
+	void	StoreOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	EnterProcessing() {workqueue_lock.Enter();}
 	void	LeaveProcessing() {if (store_this) {store_this = false; StoreThis();} workqueue_lock.Leave();}
 	String	GetRegisterKey(int i) const;

@@ -526,8 +526,8 @@ public:
 	VectorBool& Or(const VectorBool& b);
 	double GetOverlapFactor(const VectorBool& b) const;
 	
-	bool Get(int i) const;
-	void Set(int i, bool b);
+	bool Get(int64 i) const;
+	void Set(int64 i, bool b);
 	void LimitLeft(int i);
 	void LimitRight(int i);
 	

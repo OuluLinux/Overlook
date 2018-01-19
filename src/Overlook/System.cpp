@@ -220,6 +220,10 @@ void System::FirstStart() {
 void System::Deinit() {
 	StopJobs();
 	StopMain();
+	StoreAll();
+}
+
+void System::StoreAll() {
 	StoreThis();
 	StoreCores();
 }
@@ -396,6 +400,16 @@ int System::GetCountTf(int sym, int tf) const {
 
 int System::GetShiftTf(int src_sym, int src_tf, int dst_sym, int dst_tf, int src_shift) {
 	int src_mainpos = posconv_from[src_sym][src_tf][src_shift];
+	if (src_tf != dst_tf) {
+		src_mainpos = main_conv[src_tf][dst_tf][src_mainpos];
+	}
+	int dst_shift = posconv_to[dst_sym][dst_tf][src_mainpos];
+	ASSERT(dst_shift != -1); // warn
+	return dst_shift;
+}
+
+int System::GetShiftMainTf(int src_tf, int dst_sym, int dst_tf, int src_shift) {
+	int src_mainpos = src_shift;
 	if (src_tf != dst_tf) {
 		src_mainpos = main_conv[src_tf][dst_tf][src_mainpos];
 	}

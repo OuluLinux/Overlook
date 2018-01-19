@@ -21,31 +21,24 @@ void System::MainLoop() {
 	logic2.SetCount(GetCommonCount());
 	workers_started = 0;
 	
-	int workers = Upp::max(1, CPU_Cores() - 1);
-	for(int i = 0; i < workers; i++) {
+	int workers = Upp::max(1, CPU_Cores() - 2);
+	for (int i = 0; i < workers; i++) {
 		Thread::Start(THISBACK1(Worker, i));
 		workers_started++;
 	}
 	
+	for (int i = 0; i < REG_COUNT; i++) main_reg[i] = 0;
 	
-	for(int i = 0; i < REG_COUNT; i++) main_reg[i] = 0;
-	
-	TimeStop ts;
 	
 	while (main_running && !Thread::IsShutdownThreads()) {
-		if (ts.Elapsed() > 15*60*1000) {
-			StoreThis();
-			StoreCores();
-			ts.Reset();
-		}
-		
+	
 		dword& ins = main_reg[REG_INS];
 		
 		Time t = GetMetaTrader().GetTime();
 		int step = t.minute / 15;
 		
 		switch (ins) {
-			
+		
 		case INS_WAIT_NEXTSTEP:
 			// Wait until new data position
 			if (prev_step == step) {
@@ -55,7 +48,7 @@ void System::MainLoop() {
 			prev_step = step;
 			ins++;
 			break;
-		
+			
 		case INS_WAIT_LOGICTRAINING:
 			for (int l = 0; l < level_count; l++) {
 				dword& is_training = main_reg[REG_LOGICTRAINING_L0_ISRUNNING + l];
@@ -64,7 +57,9 @@ void System::MainLoop() {
 					if (main_jobs.IsEmpty()) {
 						is_training = false;
 						is_trained = true;
-					} else {
+						StoreAll();
+					}
+					else {
 						Sleep(100);
 						ins--;
 						break;
@@ -77,14 +72,15 @@ void System::MainLoop() {
 		case INS_REFRESHINDI:
 			RealizeMainWorkQueue();
 			ProcessMainWorkQueue(true);
+			//ProcessEnds();
 			ins++;
 			break;
-		
+			
 		case INS_INDIBITS:
 			FillIndicatorBits();
 			ins++;
 			break;
-		
+			
 		case INS_TRAINABLE:
 			FillTrainableBits();
 			ins++;
@@ -99,7 +95,7 @@ void System::MainLoop() {
 			RealizeLogicTraining();
 			ins++;
 			break;
-		
+			
 		case INS_LOGICBITS:
 			FillLogicBits();
 			
@@ -109,7 +105,7 @@ void System::MainLoop() {
 			else
 				ins++;
 			break;
-		
+			
 		case INS_REFRESH_REAL:
 			if (RefreshReal())
 				ins = 0; // success
@@ -137,7 +133,7 @@ void System::RealizeMainWorkQueue() {
 	ASSERT(main_indi_ids.IsEmpty());
 	
 	FactoryDeclaration decl;
-
+	
 	decl.factory = Find<DataBridge>();							main_indi_ids.Add(decl);
 	decl.factory = Find<MovingAverage>();						main_indi_ids.Add(decl);
 	decl.factory = Find<MovingAverageConvergenceDivergence>();	main_indi_ids.Add(decl);
@@ -165,17 +161,17 @@ void System::RealizeMainWorkQueue() {
 	decl.factory = Find<CorrelationOscillator>();				main_indi_ids.Add(decl);
 	
 	main_factory_ids.Clear();
-	for(int i = 0; i < main_indi_ids.GetCount(); i++)
+	for (int i = 0; i < main_indi_ids.GetCount(); i++)
 		main_factory_ids.Add(main_indi_ids[i].factory);
-	
+		
 	main_tf_ids.Add(FindPeriod(5));
 	main_tf_ids.Add(FindPeriod(15));
 	main_tf_ids.Add(FindPeriod(60));
 	//tf_ids.Add(FindPeriod(240));
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
 	
-	for(int i = 0; i < GetCommonCount(); i++) {
-		for(int j = 0; j < GetCommonSymbolCount(); j++)
+	for (int i = 0; i < GetCommonCount(); i++) {
+		for (int j = 0; j < GetCommonSymbolCount(); j++)
 			main_sym_ids.Add(GetCommonSymbolId(i, j));
 		main_sym_ids.Add(GetCommonSymbolId(i));
 	}
@@ -197,7 +193,7 @@ void System::RealizeMainWorkQueue() {
 	ordered_cores.Clear();
 	ordered_cores.SetCount(ordered_cores_total, NULL);
 	
-	for(int i = 0; i < main_work_queue.GetCount(); i++) {
+	for (int i = 0; i < main_work_queue.GetCount(); i++) {
 		CoreItem& ci = *main_work_queue[i];
 		ASSERT(&*ci.core != NULL);
 		
@@ -214,21 +210,21 @@ void System::RealizeMainWorkQueue() {
 		ordered_cores[core_pos] = &*ci.core;
 	}
 	
-	for(int i = 0; i < ordered_cores.GetCount(); i++) {
+	for (int i = 0; i < ordered_cores.GetCount(); i++) {
 		ASSERT(ordered_cores[i] != NULL);
 	}
 	
 	
 	// Find starting position
 	main_begin.SetCount(GetCommonCount(), 0);
-	for(int c = 0; c < GetCommonCount(); c++) {
+	for (int c = 0; c < GetCommonCount(); c++) {
 		int common_id = GetCommonSymbolId(c);
 		int main_tf  = main_tf_ids[main_tf_pos];
 		int& begin = main_begin[c];
-		for(int i = 0; i < main_tf_ids.GetCount(); i++) {
+		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
 			
-			for(int j = 0; j < GetCommonSymbolCount(); j++) {
+			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(c, j);
 				int pos = GetShiftTf(sym_id, tf, common_id, main_tf, 1);
 				if (pos > begin) begin = pos;
@@ -248,16 +244,28 @@ void System::ProcessMainWorkQueue(bool store_cache) {
 	LeaveProcessing();
 }
 
+void System::ProcessEnds() {
+	for (int i = 0; i < main_tf_ids.GetCount(); i++) {
+		int tf = main_tf_ids[i];
+		RefreshTimeTfVectors(tf);
+		for (int j = 0; j < main_sym_ids.GetCount(); j++) {
+			int sym = main_sym_ids[j];
+			RefreshTimeSymVectors(sym, tf);
+		}
+	}
+}
+
 void System::FillIndicatorBits() {
 	ASSERT(!main_tf_ids.IsEmpty());
 	ASSERT(!main_sym_ids.IsEmpty());
 	ASSERT(!main_indi_ids.IsEmpty());
 	
 	dword& cursor = main_mem[MEM_COUNTED_INDI];
+	bool init = cursor == 0;
 	
 	if (cursor > 0)
 		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALSIGNAL
-	
+		
 	VectorBool vec;
 	vec.SetCount(ASSIST_COUNT);
 	
@@ -267,22 +275,24 @@ void System::FillIndicatorBits() {
 	main_data.SetCount(main_data_count);
 	
 	
-	int any_main_id = GetCommonSymbolId(0);
 	int main_tf = main_tf_ids[main_tf_pos];
 	
 	for (; cursor < bars && main_running; cursor++) {
-		
-		for(int i = 0; i < main_tf_ids.GetCount(); i++) {
+	
+		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
 			
-			for(int j = 0; j < main_sym_ids.GetCount(); j++) {
+			for (int j = 0; j < main_sym_ids.GetCount(); j++) {
 				int sym = main_sym_ids[j];
-				int core_cursor = GetShiftTf(any_main_id, main_tf, sym, tf, cursor);
+				int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
 				int core_bars = GetCountTf(sym, tf);
+				
+				// Skip first
+				if (core_cursor == 0) continue;
 				
 				vec.Zero();
 				
-				for(int k = 0; k < main_indi_ids.GetCount(); k++) {
+				for (int k = 0; k < main_indi_ids.GetCount(); k++) {
 					int core_pos = GetOrderedCorePos(j, i, k);
 					Core& core = *ordered_cores[core_pos];
 					core.Assist(core_cursor, vec);
@@ -300,7 +310,7 @@ void System::FillIndicatorBits() {
 				}
 				
 				int64 main_pos = GetMainDataPos(cursor, j, i, BIT_L0BITS_BEGIN);
-				for(int k = 0; k < ASSIST_COUNT; k++) {
+				for (int k = 0; k < ASSIST_COUNT; k++) {
 					main_data.Set(main_pos++, vec.Get(k));
 				}
 			}
@@ -308,6 +318,7 @@ void System::FillIndicatorBits() {
 	}
 	
 	main_reg[REG_INDIBITS_INITED] = true;
+	if (init) StoreAll();
 }
 
 int System::GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos) {
@@ -315,24 +326,24 @@ int System::GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos) {
 }
 
 void System::FillTrainableBits() {
-	
+
 	// Set trainable bits only once to keep fixed training dataset
 	dword& is_set_already = main_mem[MEM_TRAINABLESET];
 	if (is_set_already)
 		return;
-	
+		
 	dword bars = main_mem[MEM_INDIBARS];
 	ASSERT(bars > 0);
 	
 	dword& train_bars		= main_mem[MEM_TRAINBARS];
 	train_bars = bars;
 	
-	for(int i = 0; i < GetCommonCount(); i++) {
+	for (int i = 0; i < GetCommonCount(); i++) {
 		dword& train_midstep	= main_mem[MEM_TRAINMIDSTEP + i];
 		dword& train_begin		= main_mem[MEM_TRAINBEGIN   + i];
 		
 		train_begin = main_begin[i];
-		train_midstep = train_begin + (train_bars - train_begin) * 2/3;
+		train_midstep = train_begin + (train_bars - train_begin) * 2 / 3;
 		ASSERT(train_begin < train_midstep && train_midstep < train_bars);
 	}
 	
@@ -344,23 +355,22 @@ void System::FillCustomLogicBits() {
 	
 	if (cursor > 0)
 		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
-	
+		
 	int bars = main_mem[MEM_COUNTED_L0];
 	if (!bars) return;
 	
-	int any_main_id = GetCommonSymbolId(0);
 	int main_tf = main_tf_ids[main_tf_pos];
 	
 	int first_common_id = GetCommonSymbolId(0);
 	
 	for (; cursor < bars && main_running; cursor++) {
-		
-		for(int i = 0; i < main_tf_ids.GetCount(); i++) {
+	
+		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
 			
-			for(int j = 0; j < main_sym_ids.GetCount(); j++) {
+			for (int j = 0; j < main_sym_ids.GetCount(); j++) {
 				int sym = main_sym_ids[j];
-				int core_cursor = GetShiftTf(any_main_id, main_tf, sym, tf, cursor);
+				int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
 				int core_bars = GetCountTf(sym, tf);
 				int db_pos = GetOrderedCorePos(j, i, 0);
 				Core& db = *ordered_cores[db_pos];
@@ -370,17 +380,17 @@ void System::FillCustomLogicBits() {
 				
 				if (core_cursor >= core_bars - 1)
 					continue;
-				
-				for(int k = 0; k <= L2_INPUT; k++) {
+					
+				for (int k = 0; k <= L2_INPUT; k++) {
 					int pos = Upp::max(0, (int)cursor - L2_INPUT + k);
 					bool real_sig	= main_data.Get(GetMainDataPos(pos, j, i, BIT_REALSIGNAL));
 					bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
 					bool enabled	= real_sig == l0_sig;
 					if (enabled) {
 						// Check spread
-						int core_pos = GetShiftTf(any_main_id, main_tf, sym, tf, pos);
+						int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
 						double curr = open_buf.GetUnsafe(core_pos);
-						double next = open_buf.GetUnsafe(core_pos+1);
+						double next = open_buf.GetUnsafe(core_pos + 1);
 						//ASSERT((!real_sig && next >= curr) || (real_sig && next <= curr));
 						if (!real_sig)
 							enabled = next >= curr + point;
@@ -399,13 +409,13 @@ void System::FillCustomLogicBits() {
 }
 
 void System::RealizeLogicTraining() {
-	for(int l = 0; l < level_count; l++) {
+	for (int l = 0; l < level_count; l++) {
 		dword& is_trained = main_mem[MEM_TRAINED_L0 + l];
 		
 		if (!is_trained) {
 			dword& is_training = main_reg[REG_LOGICTRAINING_L0_ISRUNNING + l];
 			if (!is_training) {
-				for(int i = 0; i < GetCommonCount(); i++) LearnLogic(l, i);
+				for (int i = 0; i < GetCommonCount(); i++) LearnLogic(l, i);
 				is_training = true;
 			}
 			return;
@@ -428,7 +438,7 @@ void System::Worker(int id) {
 	while (main_running && !Thread::IsShutdownThreads()) {
 		bool processed_something = false;
 		main_lock.EnterRead();
-		for(int i = 0; i < main_jobs.GetCount(); i++) {
+		for (int i = 0; i < main_jobs.GetCount(); i++) {
 			MainJob& job = main_jobs[i];
 			if (job.is_finished)
 				continue;
@@ -447,7 +457,7 @@ void System::Worker(int id) {
 		
 		if (rem_job) {
 			main_lock.EnterWrite();
-			for(int i = 0; i < main_jobs.GetCount(); i++) {
+			for (int i = 0; i < main_jobs.GetCount(); i++) {
 				MainJob& job = main_jobs[i];
 				if (job.is_finished && job.being_processed == 0) {
 					main_jobs.Remove(i);
@@ -466,7 +476,7 @@ void System::Worker(int id) {
 }
 
 template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
-	
+
 	// Random event probability (not used anyway)
 	logic.dqn_trainer.SetEpsilon(0);
 	
@@ -485,7 +495,7 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	const dword train_begin		= sys.main_mem[System::MEM_TRAINBEGIN + job.common_pos];
 	
 	int data_count, data_begin;
-	if      (job.level == 0)		{data_count = train_midstep - train_begin;	data_begin = train_begin;}
+	if (job.level == 0)		{data_count = train_midstep - train_begin;	data_begin = train_begin;}
 	else if (job.level == 1)		{data_count = train_bars - train_begin;		data_begin = train_begin;}
 	else if (job.level == 2)		{data_count = train_bars - train_midstep;	data_begin = train_midstep;}
 	else Panic("Invalid level");
@@ -495,16 +505,16 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	typename T::DQN::MatType tmp_before_state, tmp_after_state;
 	
 	double av_tderror = 0.0;
-	for(int i = 0; i < 10; i++) {
+	for (int i = 0; i < 10; i++) {
 		int cursor = train_begin + logic.dqn_round % (data_count - 1);
 		
-		for(int j = 0; j < 5; j++) {
+		for (int j = 0; j < 5; j++) {
 			int count = Upp::min(data_count - 1, logic.dqn_round - 1);
 			if (count < 1) break;
 			int pos = data_begin + Random(count);
 			if (pos < 0 || pos >= train_bars) continue;
 			sys.LoadInput(job.level, job.common_pos, pos, tmp_before_state);
-			sys.LoadInput(job.level, job.common_pos, pos+1, tmp_after_state);
+			sys.LoadInput(job.level, job.common_pos, pos + 1, tmp_after_state);
 			sys.LoadOutput(job.level, job.common_pos, pos, correct, logic.dqn_trainer.OUTPUT_SIZE);
 			av_tderror = logic.dqn_trainer.Learn(tmp_before_state, correct, tmp_after_state);
 		}
@@ -512,10 +522,10 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 		logic.dqn_round++;
 	}
 	
-	int exp_pts_count = logic.dqn_round / 10 + 1;
+	int exp_pts_count = logic.dqn_round / 1000 + 1;
 	if (job.training_pts.GetCount() < exp_pts_count)
 		job.training_pts.Add(av_tderror);
-	
+		
 	job.actual = logic.dqn_round;
 	job.total = logic.dqn_max_rounds;
 	
@@ -524,7 +534,7 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 
 int System::ProcessMainJob(MainJob& job) {
 	int ret = 0;
-	if      (job.level == 0)		ret = TrainLogic(job, *this, logic0[job.common_pos]);
+	if (job.level == 0)		ret = TrainLogic(job, *this, logic0[job.common_pos]);
 	else if (job.level == 1)		ret = TrainLogic(job, *this, logic1[job.common_pos]);
 	else if (job.level == 2)		ret = TrainLogic(job, *this, logic2[job.common_pos]);
 	else Panic("Invalid level");
@@ -533,11 +543,13 @@ int System::ProcessMainJob(MainJob& job) {
 
 template <class T> void FillLogicBits(int level, int common_pos, System& sys, T& logic) {
 	dword bars					= sys.main_mem[System::MEM_INDIBARS];
-	dword& cursor				= sys.main_mem[System::MEM_COUNTED_L0 + level];
+	dword cursor				= sys.main_mem[System::MEM_COUNTED_L0 + level];
 	const dword output_size		= logic.dqn_trainer.OUTPUT_SIZE;
 	ASSERT(output_size > 0);
 	
-	
+	if (cursor > 0)
+		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
+		
 	int sym_count = sys.GetCommonSymbolCount() + 1;
 	int sym_begin = common_pos * sym_count;
 	
@@ -554,16 +566,21 @@ template <class T> void FillLogicBits(int level, int common_pos, System& sys, T&
 }
 
 void System::FillLogicBits() {
-	for(int l = 0; l < level_count; l++) {
+	for (int l = 0; l < level_count; l++) {
 		bool is_trained				= main_mem[MEM_TRAINED_L0 + l];
 		if (!is_trained) break;
 		
-		for(int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
+		dword bars					= main_mem[System::MEM_INDIBARS];
+		dword& cursor				= main_mem[System::MEM_COUNTED_L0 + l];
+		
+		for (int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
 			if      (l == 0)		::Overlook::FillLogicBits(l, common_pos, *this, logic0[common_pos]);
 			else if (l == 1)		::Overlook::FillLogicBits(l, common_pos, *this, logic1[common_pos]);
 			else if (l == 2)		::Overlook::FillLogicBits(l, common_pos, *this, logic2[common_pos]);
 			else Panic("Invalid level");
 		}
+		
+		cursor = bars;
 	}
 }
 
@@ -581,7 +598,7 @@ bool System::RefreshReal() {
 	
 	if (current_main_pos >= main_mem[MEM_INDIBARS])
 		return false;
-	
+		
 	int wday				= DayOfWeek(now);
 	Time after_3hours		= now + 3 * 60 * 60;
 	int wday_after_3hours	= DayOfWeek(after_3hours);
@@ -599,12 +616,12 @@ bool System::RefreshReal() {
 	// Inspect for market closing (weekend and holidays)
 	else if (wday == 5 && wday_after_3hours == 6) {
 		WhenInfo("Closing all orders before market break");
-
+		
 		for (int i = 0; i < mt.GetSymbolCount(); i++) {
 			mt.SetSignal(i, 0);
 			mt.SetSignalFreeze(i, false);
 		}
-
+		
 		mt.SignalOrders(true);
 		return true;
 	}
@@ -627,8 +644,8 @@ bool System::RefreshReal() {
 		mt.RefreshLimits();
 		int open_count = 0;
 		Vector<int> signals;
-		for(int i = 0; i < GetCommonCount(); i++) {
-			for(int j = 0; j < GetCommonSymbolCount(); j++) {
+		for (int i = 0; i < GetCommonCount(); i++) {
+			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(i, j);
 				int sym_pos = main_sym_ids.Find(sym_id);
 				
@@ -643,14 +660,15 @@ bool System::RefreshReal() {
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L2);
 					int not_written_L2 = !main_data.Get(pos);
 					int e = (not_written_real << 3) | (not_written_L0 << 2) | (not_written_L0 << 1) | (not_written_L0 << 0);
-					if (e) throw UserExc("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
+					if (e)
+						throw UserExc("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
 				}
 				
 				int64 signal_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_L1_SIGNAL);
 				int64 enabled_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_L2_ENABLED);
 				bool signal_bit = main_data.Get(signal_pos);
 				bool enabled_bit = main_data.Get(enabled_pos);
-				int sig = enabled_bit ? (signal_bit ? -1 : +1) : 0;
+				int sig = enabled_bit ? (signal_bit ? -1 : + 1) : 0;
 				int prev_sig = mt.GetSignal(sym_id);
 				signals.Add(sig);
 				if (sig == prev_sig && sig != 0)
@@ -658,8 +676,8 @@ bool System::RefreshReal() {
 			}
 		}
 		int sig_pos = 0;
-		for(int i = 0; i < GetCommonCount(); i++) {
-			for(int j = 0; j < GetCommonSymbolCount(); j++) {
+		for (int i = 0; i < GetCommonCount(); i++) {
+			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(i, j);
 				int sym_pos = main_sym_ids.Find(sym_id);
 				int sig = signals[sig_pos++];
@@ -674,6 +692,11 @@ bool System::RefreshReal() {
 						else
 							open_count++;
 					}
+					
+					
+					if (sym_id == 0) sig = +1;
+					
+					
 					mt.SetSignal(sym_id, sig);
 					mt.SetSignalFreeze(sym_id, false);
 				}
@@ -684,6 +707,10 @@ bool System::RefreshReal() {
 		mt.SetFreeMarginLevel(FMLEVEL);
 		mt.SetFreeMarginScale(GetCommonSymbolCount());
 		mt.SignalOrders(true);
+	}
+	catch (UserExc e) {
+		LOG(e);
+		return false;
 	}
 	catch (...) {
 		return false;
@@ -726,13 +753,13 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	int buf_pos = 0;
 	
 	// Time bits
-	for(int i = 0; i < 5+24+4; i++)
+	for (int i = 0; i < 5 + 24 + 4; i++)
 		buf[buf_pos + i] = 1.0;
-	
+		
 	Time t = GetTimeMain(main_tf_pos, cursor);
 	
 	int wday = Upp::max(0, Upp::min(5, DayOfWeek(t) - 1));
-	buf[buf_pos + wday] =0.0;
+	buf[buf_pos + wday] = 0.0;
 	buf_pos += 5;
 	
 	buf[buf_pos + t.hour] = 0.0;
@@ -744,11 +771,11 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	int bit = (level == 0 || level == 1) ? BIT_L0BITS_BEGIN : BIT_L2BITS_BEGIN;
 	int bit_count = (level == 0 || level == 1) ? ASSIST_COUNT : L2_INPUT;
 	
-	for(int i = 0; i <= GetCommonSymbolCount(); i++) {
+	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for(int j = 0; j < main_tf_ids.GetCount(); j++) {
+		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
-			for(int k = 0; k < bit_count; k++) {
+			for (int k = 0; k < bit_count; k++) {
 				bool b = main_data.Get(pos++);
 				buf[buf_pos++] = b ? 0.0 : 1.0;
 			}
@@ -761,9 +788,9 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize) {
 	int bit = (level == 0 || level == 1) ? BIT_REALSIGNAL : BIT_REALENABLED;
 	int buf_pos = 0;
-	for(int i = 0; i <= GetCommonSymbolCount(); i++) {
+	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for(int j = 0; j < main_tf_ids.GetCount(); j++) {
+		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
 			bool action = main_data.Get(pos);
 			buf[buf_pos++] = action ? 0.0 : 1.0;
@@ -782,9 +809,9 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 		default: Panic("Invalid level");
 	}
 	int buf_pos = 0;
-	for(int i = 0; i <= GetCommonSymbolCount(); i++) {
+	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for(int j = 0; j < main_tf_ids.GetCount(); j++) {
+		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
 			bool action = buf[buf_pos++] < 0.5;
 			main_data.Set(pos, action);
@@ -799,42 +826,42 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 
 String System::GetRegisterKey(int i) const {
 	switch (i) {
-		case REG_INS: return "Instruction";
-		case REG_WORKQUEUE_CURSOR: return "Work queue cursor";
-		case REG_WORKQUEUE_INITED: return "Is workqueue initialised";
-		case REG_INDIBITS_INITED: return "Is indicator bits initialised";
-		case REG_LOGICTRAINING_L0_ISRUNNING: return "Is level 0 training running";
-		case REG_LOGICTRAINING_L1_ISRUNNING: return "Is level 1 training running";
-		case REG_LOGICTRAINING_L2_ISRUNNING: return "Is level 2 training running";
-		default: return IntStr(i);
+	case REG_INS: return "Instruction";
+	case REG_WORKQUEUE_CURSOR: return "Work queue cursor";
+	case REG_WORKQUEUE_INITED: return "Is workqueue initialised";
+	case REG_INDIBITS_INITED: return "Is indicator bits initialised";
+	case REG_LOGICTRAINING_L0_ISRUNNING: return "Is level 0 training running";
+	case REG_LOGICTRAINING_L1_ISRUNNING: return "Is level 1 training running";
+	case REG_LOGICTRAINING_L2_ISRUNNING: return "Is level 2 training running";
+	default: return IntStr(i);
 	}
 }
 
 String System::GetRegisterValue(int i, int j) const {
 	switch (i) {
-		case REG_INS:
-			switch (j) {
-				case INS_WAIT_NEXTSTEP:				return "Waiting next timestep";
-				case INS_REFRESHINDI:				return "Indicator refresh";
-				case INS_INDIBITS:					return "Indicator bits in main data";
-				case INS_TRAINABLE:					return "Training values";
-				case INS_CUSTOMLOGIC:				return "Custom logic values";
-				case INS_REALIZE_LOGICTRAINING:		return "Realize logic training";
-				case INS_WAIT_LOGICTRAINING:		return "Wait logic training to finish";
-				case INS_LOGICBITS:					return "Logic bits in main data";
-				case INS_REFRESH_REAL:				return "Real account";
-				default:							return "Unknown";
-			};
-		case REG_WORKQUEUE_CURSOR:
-			return IntStr(j) + "/" + IntStr(main_work_queue.GetCount());
-		case REG_WORKQUEUE_INITED:
-		case REG_INDIBITS_INITED:
-		case REG_LOGICTRAINING_L0_ISRUNNING:
-		case REG_LOGICTRAINING_L1_ISRUNNING:
-		case REG_LOGICTRAINING_L2_ISRUNNING:
-			return j ? "Yes" : "No";
-		default:
-			return IntStr(j);
+	case REG_INS:
+		switch (j) {
+		case INS_WAIT_NEXTSTEP:				return "Waiting next timestep";
+		case INS_REFRESHINDI:				return "Indicator refresh";
+		case INS_INDIBITS:					return "Indicator bits in main data";
+		case INS_TRAINABLE:					return "Training values";
+		case INS_CUSTOMLOGIC:				return "Custom logic values";
+		case INS_REALIZE_LOGICTRAINING:		return "Realize logic training";
+		case INS_WAIT_LOGICTRAINING:		return "Wait logic training to finish";
+		case INS_LOGICBITS:					return "Logic bits in main data";
+		case INS_REFRESH_REAL:				return "Real account";
+		default:							return "Unknown";
+		};
+	case REG_WORKQUEUE_CURSOR:
+		return IntStr(j) + "/" + IntStr(main_work_queue.GetCount());
+	case REG_WORKQUEUE_INITED:
+	case REG_INDIBITS_INITED:
+	case REG_LOGICTRAINING_L0_ISRUNNING:
+	case REG_LOGICTRAINING_L1_ISRUNNING:
+	case REG_LOGICTRAINING_L2_ISRUNNING:
+		return j ? "Yes" : "No";
+	default:
+		return IntStr(j);
 	}
 }
 
@@ -843,38 +870,38 @@ String System::GetMemoryKey(int i) const {
 	if (i >= MEM_TRAINBEGIN   && i < MEM_TRAINBEGIN   + COMMON_COUNT)	return "Beginning of training";
 	
 	switch (i) {
-		case MEM_TRAINABLESET:		return "Is trainable bits set";
-		case MEM_INDIBARS:			return "Bars (for all)";
-		case MEM_COUNTED_INDI:		return "Counted for indicators";
-		case MEM_TRAINBARS:			return "Bars (for training)";
-		case MEM_COUNTED_L0:		return "Counted for level 0";
-		case MEM_COUNTED_L1:		return "Counted for level 1";
-		case MEM_COUNTED_L2:		return "Counted for level 2";
-		case MEM_TRAINED_L0:		return "Is level 0 trained";
-		case MEM_TRAINED_L1:		return "Is level 1 trained";
-		case MEM_TRAINED_L2:		return "Is level 2 trained";
-		
-		default: return IntStr(i);
+	case MEM_TRAINABLESET:		return "Is trainable bits set";
+	case MEM_INDIBARS:			return "Bars (for all)";
+	case MEM_COUNTED_INDI:		return "Counted for indicators";
+	case MEM_TRAINBARS:			return "Bars (for training)";
+	case MEM_COUNTED_L0:		return "Counted for level 0";
+	case MEM_COUNTED_L1:		return "Counted for level 1";
+	case MEM_COUNTED_L2:		return "Counted for level 2";
+	case MEM_TRAINED_L0:		return "Is level 0 trained";
+	case MEM_TRAINED_L1:		return "Is level 1 trained";
+	case MEM_TRAINED_L2:		return "Is level 2 trained";
+	
+	default: return IntStr(i);
 	}
 }
 
 String System::GetMemoryValue(int i, int j) const {
 	switch (i) {
-		case MEM_TRAINABLESET:
-		case MEM_TRAINED_L0:
-		case MEM_TRAINED_L1:
-		case MEM_TRAINED_L2:
-			return j ? "Yes" : "No";
-		case MEM_INDIBARS:
-		case MEM_COUNTED_INDI:
-		case MEM_TRAINBARS:
-		case MEM_TRAINMIDSTEP:
-		case MEM_TRAINBEGIN:
-		case MEM_COUNTED_L0:
-		case MEM_COUNTED_L1:
-		case MEM_COUNTED_L2:
-		default:
-			return IntStr(j);
+	case MEM_TRAINABLESET:
+	case MEM_TRAINED_L0:
+	case MEM_TRAINED_L1:
+	case MEM_TRAINED_L2:
+		return j ? "Yes" : "No";
+	case MEM_INDIBARS:
+	case MEM_COUNTED_INDI:
+	case MEM_TRAINBARS:
+	case MEM_TRAINMIDSTEP:
+	case MEM_TRAINBEGIN:
+	case MEM_COUNTED_L0:
+	case MEM_COUNTED_L1:
+	case MEM_COUNTED_L2:
+	default:
+		return IntStr(j);
 	}
 }
 
@@ -884,31 +911,31 @@ String System::GetMemoryValue(int i, int j) const {
 void RunSimBroker() {
 	System& sys = GetSystem();
 	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
-	
+
 	Buffer& open_buf	= db->GetBuffer(0);
 	Buffer& low_buf		= db->GetBuffer(1);
 	Buffer& high_buf	= db->GetBuffer(2);
 	Buffer& volume_buf	= db->GetBuffer(3);
-	
+
 	int sym = GetSymbol();
 	int tf = GetTf();
 	int bars = GetBars();
 	db->ForceCount(bars);
-	
-	
+
+
 	sb.Brokerage::operator=(GetMetaTrader());
 	sb.SetInitialBalance(10000);
 	sb.Init();
 	sb.SetFreeMarginLevel(FMLEVEL);
-	
+
 	for(int i = 0; i < SYM_COUNT; i++) {
 		check_sum1[i] = 0;
 		check_sum2[i] = 0;
 	}
-	
+
 	for(int i = main_begin; i < bars; i++) {
 		DQN::DQVectorType& current = data[i];
-		
+
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sys.GetCommonSymbol(j), tf_ids[0], i);
 			ConstBuffer& open_buf = *this->open_buf[j];
@@ -917,27 +944,27 @@ void RunSimBroker() {
 			sb.SetPrice(symbol, curr);
 		}
 		sb.RefreshOrders();
-		
+
 		Time time = sys.GetTimeTf(sym, tf, i);
 		int t = time.hour * 100 + time.minute;
 		int open_count = 0;
-		
+
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int sym			= sys.GetCommonSymbol(j);
 			int prev_sig	= sb.GetSignal(sym);
 			bool prev_signal  = prev_sig == +1 ? false : true;
 			bool prev_enabled = prev_sig !=  0;
-			
+
 			int sig = 0;
-			
+
 			if (is_enabled) {
 				sig = signal ? -1 : +1;
 				open_count++;
 			}
 			else if (is_priority)
 				open_count++;
-			
-			
+
+
 			if (sig == sb.GetSignal(sym) && sig != 0)
 				sb.SetSignalFreeze(sym, true);
 			else {
@@ -945,12 +972,12 @@ void RunSimBroker() {
 				sb.SetSignalFreeze(sym, false);
 			}
 		}
-		
+
 		sb.SetFreeMarginScale(open_count ? open_count : 1);
-		
+
 		sb.SignalOrders(false);
-		
-		
+
+
 		double value = sb.AccountEquity();
 		if (value < 0.0) {
 			sb.ZeroEquity();
@@ -962,5 +989,5 @@ void RunSimBroker() {
 	}
 }
 */
-	
+
 }

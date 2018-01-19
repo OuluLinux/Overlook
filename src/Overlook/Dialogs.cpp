@@ -589,6 +589,9 @@ void SystemDataCtrl::DataDraw::Data() {
 	int64 count = sys.main_data.GetCount();
 	if (!count) return;
 	
+	if (cursor < 0 || cursor >= sys.main_mem[System::MEM_INDIBARS])
+		return;
+	
 	ImageBuffer id(sz);
 	RGBA* cur = id.Begin();
 	for(int i = 0; i < sys.main_tf_ids.GetCount(); i++) {

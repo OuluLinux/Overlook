@@ -316,6 +316,7 @@ public:
 	int		GetCountTf(int sym, int tf) const;
 	Time	GetTimeTf(int sym, int tf, int pos) const;
 	int		GetShiftTf(int src_sym, int src_tf, int dst_sym, int dst_tf, int shift);
+	int		GetShiftMainTf(int src_tf, int dst_sym, int dst_tf, int src_shift);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	void	SetEnd(const Time& t);
 	Time	GetEnd() const							{return end;}
@@ -455,7 +456,7 @@ public:
 	};
 	enum {
 		MEM_TRAINABLESET, MEM_INDIBARS, MEM_COUNTED_INDI, MEM_COUNTED_ENABLED,
-		MEM_TRAINBARS, 
+		MEM_TRAINBARS,
 		MEM_TRAINMIDSTEP,		MEM_TRAINMIDSTEP_LAST=MEM_TRAINMIDSTEP+COMMON_COUNT-1,
 		MEM_TRAINBEGIN,			MEM_TRAINBEGIN_LAST=MEM_TRAINBEGIN+COMMON_COUNT-1,
 		
@@ -482,7 +483,7 @@ public:
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 60> DQN;
 		
 		
 		// Persistent
@@ -493,7 +494,7 @@ public:
 		#ifdef flagDEBUG
 		int							dqn_max_rounds		= 500;
 		#else
-		int							dqn_max_rounds		= 5000000;
+		int							dqn_max_rounds		= 1000000;
 		#endif
 		
 		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
@@ -509,7 +510,7 @@ public:
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 60> DQN;
 		
 		
 		// Persistent
@@ -520,7 +521,7 @@ public:
 		#ifdef flagDEBUG
 		int							dqn_max_rounds		= 500;
 		#else
-		int							dqn_max_rounds		= 5000000;
+		int							dqn_max_rounds		= 1000000;
 		#endif
 		
 		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
@@ -557,6 +558,7 @@ public:
 	void	MainLoop();
 	void	Worker(int id);
 	void	RealizeMainWorkQueue();
+	void	ProcessEnds();
 	void	ProcessMainWorkQueue(bool store_cache=false);
 	void	FillIndicatorBits();
 	void	FillTrainableBits();
@@ -577,6 +579,7 @@ public:
 	String	GetRegisterValue(int i, int j) const;
 	String	GetMemoryKey(int i) const;
 	String	GetMemoryValue(int i, int j) const;
+	void	StoreAll();
 	
 	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	

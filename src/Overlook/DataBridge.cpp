@@ -68,9 +68,12 @@ void DataBridge::Start() {
 			
 			
 			corr[0].opens.SetCount(SYM_COUNT, 0);
+			corr[0].vols.SetCount(SYM_COUNT, 0);
 			for(int i = 0; i < SYM_COUNT; i++) {
 				ConstBuffer& open = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 0);
+				ConstBuffer& vol = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 3);
 				corr[0].opens[i] = &open;
+				corr[0].vols[i] = &vol;
 			}
 		}
 	}
@@ -201,6 +204,7 @@ void DataBridge::RefreshCommon() {
 		sys.DataTimeAdd(id, tf, utc_time);
 		
 		double chng_sum = 0.0;
+		double vol_av = 0.0;
 		for(int j = 0; j < SYM_COUNT; j++) {
 			int pos = sys.GetShiftFromMain(corr[0].sym_ids[j], tf, i);
 			ConstBuffer& buf = *corr[0].opens[j];
@@ -211,9 +215,11 @@ void DataBridge::RefreshCommon() {
 			double corr = j > 0 ? this->corr[0].buffer[j-1].Get(i) : +1.0;
 			double valu = chng * corr;
 			chng_sum += valu;
+			vol_av += this->corr[0].vols[j]->Get(pos);
 		}
 		
 		chng_sum /= SYM_COUNT;
+		vol_av /= SYM_COUNT;
 		if (!IsFin(chng_sum) || fabs(chng_sum) > 0.1)
 			chng_sum = 0.0;
 		double prev		= open_buf.Get(i-1);
@@ -221,6 +227,7 @@ void DataBridge::RefreshCommon() {
 		open_buf.Set(i, value);
 		low_buf.Set(i, value);
 		high_buf.Set(i, value);
+		volume_buf.Set(i, vol_av);
 		
 		low_buf		.Set(i-1, Upp::min(value, prev));
 		high_buf	.Set(i-1, Upp::max(value, prev));
@@ -407,6 +414,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			if (ask > high) {high_buf	.Set(shift, ask);}
 		}
 	}
+	
 	
 	// Very weird bug of volume not being updated
 	volume_buf.SetCount(open_buf.GetCount());

@@ -230,7 +230,7 @@ void MetaTrader::Data() {
 	leverage = _AccountLeverage();
 	initial_balance = balance;
 	connected = _IsConnected();
-	_GetSymbols();
+	//_GetSymbols(); GetMarginPercentages();
 	_GetAskBid();
 	_GetOrders(0, true);
 	data_lock.Leave();

@@ -36,6 +36,18 @@ double Brokerage::GetMargin(int sym_id, double volume) {
 		}
 		used_margin /= leverage;
 	}
+	else if (sym.IsCFD()) {
+		const Price& p = askbid[sym_id];
+		if (sym.proxy_id == -1) {
+			used_margin = p.ask * volume * sym.contract_size * sym.margin_factor;
+		} else {
+			const Price& proxy = askbid[sym.proxy_id];
+			if (sym.proxy_factor == -1)
+				used_margin = p.ask * proxy.ask * volume * sym.contract_size * sym.margin_factor;
+			else
+				used_margin = p.ask * (1.0 / proxy.ask) * volume * sym.contract_size * sym.margin_factor;
+		}
+	}
 	else {
 		if (sym.proxy_id == -1) {
 			const Price& p = askbid[sym_id];
@@ -247,8 +259,9 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
 		const Price& p = askbid[i];
-		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min;
-		double sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min;
+		double balance = sym.IsCFD() ? 0.1 : 1.0;
+		double buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * balance;
+		double sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * balance;
 		ASSERT(IsFin(p.ask));
 		ASSERT(IsFin(p.bid));
 		ASSERT(IsFin(buy_lots));
@@ -284,14 +297,15 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
 		const Price& p = askbid[i];
-		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * lot_multiplier;
-		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * lot_multiplier;
+		double balance = sym.IsCFD() ? 0.1 : 1.0;
+		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * lot_multiplier * balance;
+		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * lot_multiplier * balance;
 		buy_lots[i]  = ((int64)(sym_buy_lots  / sym.volume_min)) * sym.volume_min;
 		sell_lots[i] = ((int64)(sym_sell_lots / sym.volume_min)) * sym.volume_min;
 	}
 	if (debug_print) {
-		//DUMPC(buy_lots);
-		//DUMPC(sell_lots);
+		DUMPC(buy_lots);
+		DUMPC(sell_lots);
 	}
 	
 	for(int i = 0; i < orders.GetCount(); i++) {

@@ -66,7 +66,7 @@ struct CorrelationUnit : Moveable<CorrelationUnit> {
 	Vector<OnlineAverageWindow2> averages;
 	Vector<Buffer> buffer;
 	
-	Vector<ConstBuffer*> opens;
+	Vector<ConstBuffer*> opens, vols;
 	
 	void Serialize(Stream& s) {s % period % sym_ids % averages % buffer;}
 };

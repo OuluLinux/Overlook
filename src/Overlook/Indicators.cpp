@@ -4718,6 +4718,7 @@ void VolumeSlots::Start() {
 
 void VolumeSlots::Assist(int cursor, VectorBool& vec) {
 	double value0 = GetBuffer(0).Get(cursor);
+	ASSERT(IsFin(value0));
 	if      (value0 > total.mean * 2.000)		vec.Set(VOLUME_VERYHIGH, true);
 	else if (value0 > total.mean * 1.333)		vec.Set(VOLUME_HIGH, true);
 	else if (value0 > total.mean * 0.666)		vec.Set(VOLUME_MED, true);

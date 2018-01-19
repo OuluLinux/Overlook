@@ -170,6 +170,7 @@ void Calendar::LoadThis() {
 }
 
 void Calendar::Data() {
+	lock.Enter();
 	Time now = GetUtcTime();
 	
 	if (last_week_update.hour != now.hour) {
@@ -178,6 +179,7 @@ void Calendar::Data() {
 		UpdateNextWeek();
 		StoreThis();
 	}
+	lock.Leave();
 }
 
 void Calendar::Refresh() {
@@ -437,14 +439,13 @@ void Calendar::SetTimeNow() {
 	thismonth = now.month;
 }
 
-#define LEAVE {lock.Leave(); return downloaded;}
+#define LEAVE {return downloaded;}
 int Calendar::Update(String postfix, bool force_update) {
 	int downloaded = 0;
 	
 	prevtime = Null;
 	
 	LOG("Calendar::Update " << postfix);
-	lock.Enter();
 	errorcode = 0;
 	
 	if (!postfix.GetCount()) {

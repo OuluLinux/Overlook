@@ -91,6 +91,11 @@ void System::MainLoop() {
 			ins++;
 			break;
 			
+		case INS_CALENDARLOGIC:
+			FillCalendarBits();
+			ins++;
+			break;
+			
 		case INS_REALIZE_LOGICTRAINING:
 			RealizeLogicTraining();
 			ins++;
@@ -408,6 +413,46 @@ void System::FillCustomLogicBits() {
 	}
 }
 
+void System::FillCalendarBits() {
+	Calendar& cal = GetCalendar();
+	cal.Data();
+	
+	dword& cursor = main_mem[MEM_COUNTED_CALENDAR];
+	
+	if (cursor > 0)
+		cursor = Upp::max(0, (int)cursor - 8); // set trailing bits
+	
+	cursor = 0;
+	
+	Time now = GetUtcTime();
+	int tf = main_tf_ids[main_tf_pos];
+	int bars = main_mem[MEM_INDIBARS];
+	
+	for (; cursor < cal.GetCount(); cursor++) {
+		const CalEvent& ce = cal.GetEvent(cursor);
+		if (ce.timestamp > now) break;
+		
+		if (ce.impact < 2) continue;
+		
+		Time t = ce.timestamp;
+		t += 7 * 60;
+		t -= (t.minute % 15) * 60 + t.second;
+		int current_main_pos = main_time[tf].Find(t);
+		if (current_main_pos == -1) continue;
+		
+		int begin = Upp::max(0, current_main_pos - 1);
+		int end = Upp::min(bars, current_main_pos + 1);
+		for(int c = begin; c < end; c++) {
+			for(int i = 0; i < main_sym_ids.GetCount(); i++) {
+				for(int j = 0; j < main_tf_ids.GetCount(); j++) {
+					int pos = GetMainDataPos(c, i, j, BIT_SKIP_CALENDAREVENT);
+					main_data.Set(pos, true);
+				}
+			}
+		}
+	}
+}
+
 void System::RealizeLogicTraining() {
 	for (int l = 0; l < level_count; l++) {
 		dword& is_trained = main_mem[MEM_TRAINED_L0 + l];
@@ -670,6 +715,14 @@ bool System::RefreshReal() {
 				bool enabled_bit = main_data.Get(enabled_pos);
 				int sig = enabled_bit ? (signal_bit ? -1 : + 1) : 0;
 				int prev_sig = mt.GetSignal(sym_id);
+				
+				// Avoid unpredictable calendar events...
+				{
+					int pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_SKIP_CALENDAREVENT);
+					bool skip = main_data.Get(pos);
+					if (skip) sig = 0;
+				}
+					
 				signals.Add(sig);
 				if (sig == prev_sig && sig != 0)
 					open_count++;
@@ -692,10 +745,6 @@ bool System::RefreshReal() {
 						else
 							open_count++;
 					}
-					
-					
-					if (sym_id == 0) sig = +1;
-					
 					
 					mt.SetSignal(sym_id, sig);
 					mt.SetSignalFreeze(sym_id, false);
@@ -846,6 +895,7 @@ String System::GetRegisterValue(int i, int j) const {
 		case INS_INDIBITS:					return "Indicator bits in main data";
 		case INS_TRAINABLE:					return "Training values";
 		case INS_CUSTOMLOGIC:				return "Custom logic values";
+		case INS_CALENDARLOGIC:				return "Calendar logic values";
 		case INS_REALIZE_LOGICTRAINING:		return "Realize logic training";
 		case INS_WAIT_LOGICTRAINING:		return "Wait logic training to finish";
 		case INS_LOGICBITS:					return "Logic bits in main data";

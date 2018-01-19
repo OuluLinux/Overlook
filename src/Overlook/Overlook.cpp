@@ -525,7 +525,7 @@ void Overlook::RefreshCalendar() {
 	Calendar& cal = GetCalendar();
 	
 	Time now = GetUtcTime();
-	Time end = now + 60*60;
+	Time end = now + 2*60*60;
 	Time begin = now - 24 * 60*60;
 	int row = 0;
 	for(int i = cal.GetCount()-1; i >= 0; i--) {

@@ -15,32 +15,40 @@ void System::StopMain() {
 }
 
 void System::MainLoop() {
+	
+	// Allocate some non-persistent memory
 	main_mem.SetCount(MEM_COUNT, 0);
 	logic0.SetCount(GetCommonCount());
 	logic1.SetCount(GetCommonCount());
 	logic2.SetCount(GetCommonCount());
 	workers_started = 0;
+	for (int i = 0; i < REG_COUNT; i++) main_reg[i] = 0;
+	int prev_step = -1;
 	
+	
+	// Start workers
 	int workers = Upp::max(1, CPU_Cores() - 2);
 	for (int i = 0; i < workers; i++) {
 		Thread::Start(THISBACK1(Worker, i));
 		workers_started++;
 	}
 	
-	for (int i = 0; i < REG_COUNT; i++) main_reg[i] = 0;
 	
-	
+	// Run main loop
 	while (main_running && !Thread::IsShutdownThreads()) {
 	
-		dword& ins = main_reg[REG_INS];
 		
 		Time t = GetMetaTrader().GetTime();
 		int step = t.minute / 15;
 		
+		
+		// Run actions by "instruction"
+		dword& ins = main_reg[REG_INS];
 		switch (ins) {
 		
+		// Wait until new data position
 		case INS_WAIT_NEXTSTEP:
-			// Wait until new data position
+			
 			if (prev_step == step) {
 				Sleep(100);
 				break;
@@ -48,7 +56,9 @@ void System::MainLoop() {
 			prev_step = step;
 			ins++;
 			break;
-			
+		
+		
+		// Wait until logic is trained by worker threads
 		case INS_WAIT_LOGICTRAINING:
 			for (int l = 0; l < level_count; l++) {
 				dword& is_training = main_reg[REG_LOGICTRAINING_L0_ISRUNNING + l];
@@ -69,6 +79,8 @@ void System::MainLoop() {
 			ins++;
 			break;
 			
+		
+		// Refresh data-sources and indicators
 		case INS_REFRESHINDI:
 			RealizeMainWorkQueue();
 			ProcessMainWorkQueue(true);
@@ -76,44 +88,71 @@ void System::MainLoop() {
 			ins++;
 			break;
 			
-		case INS_INDIBITS:
-			FillIndicatorBits();
-			ins++;
-			break;
 			
+		// Refresh persistent variables for training. Only once at first time.
 		case INS_TRAINABLE:
 			FillTrainableBits();
 			ins++;
 			break;
 			
+		
+		// Write boolean values from indicators to the main memory.
+		// This refresh L0 & L1 input sources.
+		case INS_INDIBITS:
+			FillIndicatorBits();
+			ins++;
+			break;
+			
+			
+		// Fill L0 test data performance to the main memory.
+		// L0 must be trained and evaluated values must be written to the main memory.
+		// This refresh L2 input source.
 		case INS_CUSTOMLOGIC:
 			FillCustomLogicBits();
 			ins++;
 			break;
 			
+			
+		// Fill calendar events to the main memory.
+		// These events might be public speeches and national publications, which tends to
+		// override technical rules with large volatility. They should be avoided usually.
 		case INS_CALENDARLOGIC:
 			FillCalendarBits();
 			ins++;
 			break;
 			
+			
+		// Start logic training if it's time to.
 		case INS_REALIZE_LOGICTRAINING:
 			RealizeLogicTraining();
 			ins++;
 			break;
 			
+			
+		// Evaluate logic and write it to the main memory.
+		// Requires training to be finished.
 		case INS_LOGICBITS:
 			FillLogicBits();
 			
-			// Require trained logic
+			// Don't continue to INS_REFRESH_REAL before all levels have been written.
 			if (main_mem[MEM_COUNTED_L2] == 0)
 				ins = 1;
 			else
 				ins++;
 			break;
 			
+			
+		// Fill some statistics
+		case INS_STATS:
+			FillStatistics();
+			ins++;
+			break;
+			
+			
+		// Handle real MT4 account.
 		case INS_REFRESH_REAL:
 			if (RefreshReal())
-				ins = 0; // success
+				ins = 0; // go to waiting when success
 			else
 				ins = 1;
 			break;
@@ -128,17 +167,24 @@ void System::MainLoop() {
 }
 
 void System::RealizeMainWorkQueue() {
+	
+	// Run only once
 	if (main_reg[REG_WORKQUEUE_INITED]) {
+		
+		// Update data count
 		main_mem[MEM_INDIBARS] = GetCountMain(main_tf_ids[main_tf_pos]);
 		return;
 	}
 	
+	
+	// Debug assertions
 	ASSERT(main_tf_ids.IsEmpty());
 	ASSERT(main_sym_ids.IsEmpty());
 	ASSERT(main_indi_ids.IsEmpty());
 	
-	FactoryDeclaration decl;
 	
+	// Add indicators
+	FactoryDeclaration decl;
 	decl.factory = Find<DataBridge>();							main_indi_ids.Add(decl);
 	decl.factory = Find<MovingAverage>();						main_indi_ids.Add(decl);
 	decl.factory = Find<MovingAverageConvergenceDivergence>();	main_indi_ids.Add(decl);
@@ -164,36 +210,42 @@ void System::RealizeMainWorkQueue() {
 	decl.factory = Find<ScissorChannelOscillator>();			main_indi_ids.Add(decl);
 	decl.factory = Find<CommonForce>();							main_indi_ids.Add(decl);
 	decl.factory = Find<CorrelationOscillator>();				main_indi_ids.Add(decl);
-	
 	main_factory_ids.Clear();
 	for (int i = 0; i < main_indi_ids.GetCount(); i++)
 		main_factory_ids.Add(main_indi_ids[i].factory);
-		
+	
+	
+	// Add timeframes
 	main_tf_ids.Add(FindPeriod(5));
 	main_tf_ids.Add(FindPeriod(15));
 	main_tf_ids.Add(FindPeriod(60));
-	//tf_ids.Add(FindPeriod(240));
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
 	
+	
+	// Add symbols
 	for (int i = 0; i < GetCommonCount(); i++) {
 		for (int j = 0; j < GetCommonSymbolCount(); j++)
 			main_sym_ids.Add(GetCommonSymbolId(i, j));
 		main_sym_ids.Add(GetCommonSymbolId(i));
 	}
 	
+	
+	// Get queue of cores
 	main_work_queue.Clear();
 	GetCoreQueue(main_work_queue, main_sym_ids, main_tf_ids, main_indi_ids);
 	
 	
+	// Refresh all cores
 	ProcessMainWorkQueue(true);
 	if (!main_running) return;
 	
 	
-	// Save data count at the time of queue processing
+	// Update data count
 	int bars = GetCountMain(main_tf_ids[main_tf_pos]);
 	main_mem[MEM_INDIBARS] = bars;
 	
 	
+	// Get ordered core vector for easy locating.
 	int ordered_cores_total = main_tf_ids.GetCount() * main_sym_ids.GetCount() * main_indi_ids.GetCount();
 	ordered_cores.Clear();
 	ordered_cores.SetCount(ordered_cores_total, NULL);
@@ -220,7 +272,7 @@ void System::RealizeMainWorkQueue() {
 	}
 	
 	
-	// Find starting position
+	// Find starting position of data
 	main_begin.SetCount(GetCommonCount(), 0);
 	for (int c = 0; c < GetCommonCount(); c++) {
 		int common_id = GetCommonSymbolId(c);
@@ -268,8 +320,7 @@ void System::FillIndicatorBits() {
 	dword& cursor = main_mem[MEM_COUNTED_INDI];
 	bool init = cursor == 0;
 	
-	if (cursor > 0)
-		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALSIGNAL
+	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALSIGNAL
 		
 	VectorBool vec;
 	vec.SetCount(ASSIST_COUNT);
@@ -292,9 +343,6 @@ void System::FillIndicatorBits() {
 				int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
 				int core_bars = GetCountTf(sym, tf);
 				
-				// Skip first
-				if (core_cursor == 0) continue;
-				
 				vec.Zero();
 				
 				for (int k = 0; k < main_indi_ids.GetCount(); k++) {
@@ -302,6 +350,7 @@ void System::FillIndicatorBits() {
 					Core& core = *ordered_cores[core_pos];
 					core.Assist(core_cursor, vec);
 					
+					// First indi_id is DataBridge and open price data is used to set real signal bit
 					if (k == 0 && core_cursor < core_bars - 1) {
 						ConstBuffer& open_buf = core.GetBuffer(0);
 						double next = open_buf.GetUnsafe(core_cursor + 1);
@@ -358,8 +407,7 @@ void System::FillTrainableBits() {
 void System::FillCustomLogicBits() {
 	dword& cursor = main_mem[MEM_COUNTED_ENABLED];
 	
-	if (cursor > 0)
-		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
+	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
 		
 	int bars = main_mem[MEM_COUNTED_L0];
 	if (!bars) return;
@@ -419,10 +467,7 @@ void System::FillCalendarBits() {
 	
 	dword& cursor = main_mem[MEM_COUNTED_CALENDAR];
 	
-	if (cursor > 0)
-		cursor = Upp::max(0, (int)cursor - 8); // set trailing bits
-	
-	cursor = 0;
+	cursor = Upp::max(0, (int)cursor - 8); // set trailing bits
 	
 	Time now = GetUtcTime();
 	int tf = main_tf_ids[main_tf_pos];
@@ -435,7 +480,7 @@ void System::FillCalendarBits() {
 		if (ce.impact < 2) continue;
 		
 		Time t = ce.timestamp;
-		t += 7 * 60;
+		t += (15 * 0.5) * 60;
 		t -= (t.minute % 15) * 60 + t.second;
 		int current_main_pos = main_time[tf].Find(t);
 		if (current_main_pos == -1) continue;
@@ -456,6 +501,9 @@ void System::FillCalendarBits() {
 void System::RealizeLogicTraining() {
 	for (int l = 0; l < level_count; l++) {
 		dword& is_trained = main_mem[MEM_TRAINED_L0 + l];
+		
+		if (l < 2 && main_mem[MEM_COUNTED_INDI] == 0) return;
+		if (l == 2 && main_mem[MEM_COUNTED_ENABLED] == 0) return;
 		
 		if (!is_trained) {
 			dword& is_training = main_reg[REG_LOGICTRAINING_L0_ISRUNNING + l];
@@ -540,7 +588,7 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	const dword train_begin		= sys.main_mem[System::MEM_TRAINBEGIN + job.common_pos];
 	
 	int data_count, data_begin;
-	if (job.level == 0)		{data_count = train_midstep - train_begin;	data_begin = train_begin;}
+	if      (job.level == 0)		{data_count = train_midstep - train_begin;	data_begin = train_begin;}
 	else if (job.level == 1)		{data_count = train_bars - train_begin;		data_begin = train_begin;}
 	else if (job.level == 2)		{data_count = train_bars - train_midstep;	data_begin = train_midstep;}
 	else Panic("Invalid level");
@@ -550,24 +598,20 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	typename T::DQN::MatType tmp_before_state, tmp_after_state;
 	
 	double av_tderror = 0.0;
-	for (int i = 0; i < 10; i++) {
-		int cursor = train_begin + logic.dqn_round % (data_count - 1);
-		
-		for (int j = 0; j < 5; j++) {
-			int count = Upp::min(data_count - 1, logic.dqn_round - 1);
-			if (count < 1) break;
-			int pos = data_begin + Random(count);
-			if (pos < 0 || pos >= train_bars) continue;
-			sys.LoadInput(job.level, job.common_pos, pos, tmp_before_state);
-			sys.LoadInput(job.level, job.common_pos, pos + 1, tmp_after_state);
-			sys.LoadOutput(job.level, job.common_pos, pos, correct, logic.dqn_trainer.OUTPUT_SIZE);
-			av_tderror = logic.dqn_trainer.Learn(tmp_before_state, correct, tmp_after_state);
-		}
+	for (int i = 0; i < 50; i++) {
+		int count = data_count - 1;
+		if (count < 1) break;
+		int pos = data_begin + Random(count);
+		if (pos < 0 || pos >= train_bars) continue;
+		sys.LoadInput(job.level, job.common_pos, pos, tmp_before_state);
+		sys.LoadInput(job.level, job.common_pos, pos + 1, tmp_after_state);
+		sys.LoadOutput(job.level, job.common_pos, pos, correct, logic.dqn_trainer.OUTPUT_SIZE);
+		av_tderror = logic.dqn_trainer.Learn(tmp_before_state, correct, tmp_after_state);
 		
 		logic.dqn_round++;
 	}
 	
-	int exp_pts_count = logic.dqn_round / 1000 + 1;
+	int exp_pts_count = logic.dqn_round / 5000 + 1;
 	if (job.training_pts.GetCount() < exp_pts_count)
 		job.training_pts.Add(av_tderror);
 		
@@ -579,7 +623,7 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 
 int System::ProcessMainJob(MainJob& job) {
 	int ret = 0;
-	if (job.level == 0)		ret = TrainLogic(job, *this, logic0[job.common_pos]);
+	if      (job.level == 0)		ret = TrainLogic(job, *this, logic0[job.common_pos]);
 	else if (job.level == 1)		ret = TrainLogic(job, *this, logic1[job.common_pos]);
 	else if (job.level == 2)		ret = TrainLogic(job, *this, logic2[job.common_pos]);
 	else Panic("Invalid level");
@@ -588,16 +632,12 @@ int System::ProcessMainJob(MainJob& job) {
 
 template <class T> void FillLogicBits(int level, int common_pos, System& sys, T& logic) {
 	dword bars					= sys.main_mem[System::MEM_INDIBARS];
-	dword cursor				= sys.main_mem[System::MEM_COUNTED_L0 + level];
+	dword cursor				= sys.main_mem[System::MEM_COUNTED_L0 + level]; // don't ref
 	const dword output_size		= logic.dqn_trainer.OUTPUT_SIZE;
 	ASSERT(output_size > 0);
 	
-	if (cursor > 0)
-		cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
+	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
 		
-	int sym_count = sys.GetCommonSymbolCount() + 1;
-	int sym_begin = common_pos * sym_count;
-	
 	double evaluated[output_size];
 	typename T::DQN::MatType tmp_before_state;
 	
@@ -629,21 +669,97 @@ void System::FillLogicBits() {
 	}
 }
 
+void System::FillStatistics() {
+	if (main_mem[System::MEM_COUNTED_L2] == 0) return;
+	if (main_reg[REG_DD_L0TEST] != 0) return;
+	
+	int midstep = 0, begin = 0;
+	for(int i = 0; i < GetCommonCount(); i++)
+		midstep = Upp::max(midstep, (int)main_mem[MEM_TRAINMIDSTEP + i]);
+	for(int i = 0; i < GetCommonCount(); i++)
+		begin = Upp::max(begin, (int)main_mem[MEM_TRAINBEGIN + i]);
+	
+	int count_mul = main_sym_ids.GetCount() * main_tf_ids.GetCount();
+	int bars = main_mem[MEM_TRAINBARS];
+	int count = (bars - midstep) * count_mul;
+	
+	int l0_correct = 0;
+	int l1_correct = 0;
+	int l2_correct = 0;
+	int l0l2_correct = 0;
+	int l1l2_correct = 0;
+	int l0ena_correct = 0, l0ena_count = 0;
+	int l1ena_correct = 0, l1ena_count = 0;
+	
+	for(int i = midstep; i < bars; i++) {
+		for(int j = 0; j < main_sym_ids.GetCount(); j++) {
+			for(int k = 0; k < main_tf_ids.GetCount(); k++) {
+				int64 pos;
+				
+				pos = GetMainDataPos(i, j, k, BIT_REALSIGNAL);
+				bool real_sig = main_data.Get(pos);
+				pos = GetMainDataPos(i, j, k, BIT_L0_SIGNAL);
+				bool l0_sig = main_data.Get(pos);
+				pos = GetMainDataPos(i, j, k, BIT_L1_SIGNAL);
+				bool l1_sig = main_data.Get(pos);
+				
+				pos = GetMainDataPos(i, j, k, BIT_REALENABLED);
+				bool real_ena = main_data.Get(pos);
+				pos = GetMainDataPos(i, j, k, BIT_L2_ENABLED);
+				bool l2_ena = main_data.Get(pos);
+				
+				
+				if (l0_sig == real_sig)		l0_correct++;
+				if (l1_sig == real_sig)		l1_correct++;
+				if (l2_ena == real_ena)		l2_correct++;
+				if (l2_ena == real_ena && (!l2_ena || l0_sig == real_sig))	l0l2_correct++;
+				if (l2_ena == real_ena && (!l2_ena || l1_sig == real_sig))	l1l2_correct++;
+				
+				if (l2_ena) {
+					if (l0_sig == real_sig)	l0ena_correct++;
+					l0ena_count++;
+					if (l1_sig == real_sig)	l1ena_correct++;
+					l1ena_count++;
+				}
+			}
+		}
+	}
+	
+	int train_count = (midstep * begin) * count_mul;
+	int train_l0_correct = 0;
+	for(int i = begin; i < midstep; i++) {
+		for(int j = 0; j < main_sym_ids.GetCount(); j++) {
+			for(int k = 0; k < main_tf_ids.GetCount(); k++) {
+				int64 pos;
+				
+				pos = GetMainDataPos(i, j, k, BIT_REALSIGNAL);
+				bool real_sig = main_data.Get(pos);
+				pos = GetMainDataPos(i, j, k, BIT_L0_SIGNAL);
+				bool l0_sig = main_data.Get(pos);
+				
+				if (l0_sig == real_sig)		train_l0_correct++;
+			}
+		}
+	}
+	
+	
+	main_reg[REG_SIG_L0TOREAL]		= 1000 * l0_correct / count;
+	main_reg[REG_SIG_L1TOREAL]		= 1000 * l1_correct / count;
+	main_reg[REG_SIG_L2TOREAL]		= 1000 * l2_correct / count;
+	main_reg[REG_SIG_L0TOL1]		= 1000 * main_reg[REG_SIG_L0TOREAL] / main_reg[REG_SIG_L1TOREAL];
+	main_reg[REG_ENA_L0L2TOREAL]	= 1000 * l0l2_correct / count;
+	main_reg[REG_ENA_L1L2TOREAL]	= 1000 * l1l2_correct / count;
+	main_reg[REG_SIG_L0L2TOL1L2]	= 1000 * main_reg[REG_ENA_L0L2TOREAL] / main_reg[REG_ENA_L1L2TOREAL];
+	main_reg[REG_DD_L0TRAIN]		= 1000 * (train_count - train_l0_correct) / train_count;
+	main_reg[REG_DD_L0TEST]			= 1000 * (count - l0_correct) / count;
+	main_reg[REG_L0ENA]				= 1000 * l0ena_correct / l0ena_count;
+	main_reg[REG_L1ENA]				= 1000 * l1ena_correct / l1ena_count;
+	
+}
+
 bool System::RefreshReal() {
 	int tf = main_tf_ids[main_tf_pos];
 	Time now = GetUtcTime();
-	int64 step = periods[tf] * 60;
-	now -= now.Get() % step;
-	int current_main_pos = main_time[tf].Find(now);
-	
-	if (current_main_pos == -1) {
-		LOG("error: current main pos not found");
-		return false;
-	}
-	
-	if (current_main_pos >= main_mem[MEM_INDIBARS])
-		return false;
-		
 	int wday				= DayOfWeek(now);
 	Time after_3hours		= now + 3 * 60 * 60;
 	int wday_after_3hours	= DayOfWeek(after_3hours);
@@ -671,7 +787,18 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
+	int64 step = periods[tf] * 60;
+	now -= now.Get() % step;
+	int current_main_pos = main_time[tf].Find(now);
 	
+	if (current_main_pos == -1) {
+		LOG("error: current main pos not found");
+		return false;
+	}
+	
+	if (current_main_pos >= main_mem[MEM_INDIBARS])
+		return false;
+		
 	
 	WhenInfo("Updating MetaTrader");
 	WhenPushTask("Putting latest signals");
@@ -732,7 +859,6 @@ bool System::RefreshReal() {
 		for (int i = 0; i < GetCommonCount(); i++) {
 			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(i, j);
-				int sym_pos = main_sym_ids.Find(sym_id);
 				int sig = signals[sig_pos++];
 				int prev_sig = mt.GetSignal(sym_id);
 				
@@ -842,7 +968,8 @@ void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int 
 		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
 			bool action = main_data.Get(pos);
-			buf[buf_pos++] = action ? 0.0 : 1.0;
+			buf[buf_pos++] =  action ? 0.0 : 1.0;
+			buf[buf_pos++] = !action ? 0.0 : 1.0;
 		}
 	}
 	ASSERT(buf_pos == bufsize);
@@ -862,7 +989,9 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
 		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
-			bool action = buf[buf_pos++] < 0.5;
+			double prob_true  = 1.0 - buf[buf_pos++];
+			double prob_false = 1.0 - buf[buf_pos++];
+			bool action = prob_true > prob_false;
 			main_data.Set(pos, action);
 			
 			pos = GetMainDataPos(cursor, sym_pos, j, chk_bit);
@@ -882,6 +1011,19 @@ String System::GetRegisterKey(int i) const {
 	case REG_LOGICTRAINING_L0_ISRUNNING: return "Is level 0 training running";
 	case REG_LOGICTRAINING_L1_ISRUNNING: return "Is level 1 training running";
 	case REG_LOGICTRAINING_L2_ISRUNNING: return "Is level 2 training running";
+	
+	case REG_SIG_L0TOREAL:		return "L0/real";
+	case REG_SIG_L1TOREAL:		return "L1/real";
+	case REG_SIG_L2TOREAL:		return "L2/real";
+	case REG_SIG_L0TOL1:		return "L0/L1";
+	case REG_ENA_L0L2TOREAL:	return "L0L2/real";
+	case REG_ENA_L1L2TOREAL:	return "L1L2/real";
+	case REG_SIG_L0L2TOL1L2:	return "L0L2/L1L2";
+	case REG_DD_L0TRAIN:		return "L0 DD Train";
+	case REG_DD_L0TEST:			return "L0 DD Test";
+	case REG_L0ENA:				return "L0 enabled / real";
+	case REG_L1ENA:				return "L1 enabled / real";
+		
 	default: return IntStr(i);
 	}
 }
@@ -902,27 +1044,45 @@ String System::GetRegisterValue(int i, int j) const {
 		case INS_REFRESH_REAL:				return "Real account";
 		default:							return "Unknown";
 		};
+	
 	case REG_WORKQUEUE_CURSOR:
 		return IntStr(j) + "/" + IntStr(main_work_queue.GetCount());
+	
 	case REG_WORKQUEUE_INITED:
 	case REG_INDIBITS_INITED:
 	case REG_LOGICTRAINING_L0_ISRUNNING:
 	case REG_LOGICTRAINING_L1_ISRUNNING:
 	case REG_LOGICTRAINING_L2_ISRUNNING:
 		return j ? "Yes" : "No";
+	
+	case REG_SIG_L0TOREAL:
+	case REG_SIG_L1TOREAL:
+	case REG_SIG_L2TOREAL:
+	case REG_SIG_L0TOL1:
+	case REG_ENA_L0L2TOREAL:
+	case REG_ENA_L1L2TOREAL:
+	case REG_SIG_L0L2TOL1L2:
+	case REG_DD_L0TRAIN:
+	case REG_DD_L0TEST:
+	case REG_L0ENA:
+	case REG_L1ENA:
+		return DblStr(j * 0.1) + "%";
+	
 	default:
 		return IntStr(j);
 	}
 }
 
 String System::GetMemoryKey(int i) const {
-	if (i >= MEM_TRAINMIDSTEP && i < MEM_TRAINMIDSTEP + COMMON_COUNT)	return "Midstep (for levels)";
-	if (i >= MEM_TRAINBEGIN   && i < MEM_TRAINBEGIN   + COMMON_COUNT)	return "Beginning of training";
+	if (i >= MEM_TRAINMIDSTEP && i < MEM_TRAINMIDSTEP + COMMON_COUNT)	return "Midstep (common " + IntStr(i - MEM_TRAINMIDSTEP) + ")";
+	if (i >= MEM_TRAINBEGIN   && i < MEM_TRAINBEGIN   + COMMON_COUNT)	return "Beginning of training (common " + IntStr(i - MEM_TRAINBEGIN) + ")";
 	
 	switch (i) {
 	case MEM_TRAINABLESET:		return "Is trainable bits set";
 	case MEM_INDIBARS:			return "Bars (for all)";
-	case MEM_COUNTED_INDI:		return "Counted for indicators";
+	case MEM_COUNTED_INDI:		return "Counted indicator data";
+	case MEM_COUNTED_ENABLED:	return "Counted enabled bits";
+	case MEM_COUNTED_CALENDAR:	return "Counted calendar bits";
 	case MEM_TRAINBARS:			return "Bars (for training)";
 	case MEM_COUNTED_L0:		return "Counted for level 0";
 	case MEM_COUNTED_L1:		return "Counted for level 1";

@@ -426,10 +426,10 @@ public:
 	
 	enum {
 		BIT_L0BITS_BEGIN,
-		BIT_L0BITS_LAST=ASSIST_COUNT-1,
+		BIT_L0BITS_LAST = BIT_L0BITS_BEGIN + ASSIST_COUNT - 1,
 		
 		BIT_L2BITS_BEGIN,
-		BIT_L2BITS_LAST=ASSIST_COUNT + L2_INPUT - 1,
+		BIT_L2BITS_LAST = BIT_L2BITS_BEGIN + L2_INPUT - 1,
 		
 		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_L1, BIT_WRITTEN_L2,
 		
@@ -447,11 +447,17 @@ public:
 		
 		REG_WORKQUEUE_INITED, REG_INDIBITS_INITED,
 		REG_LOGICTRAINING_L0_ISRUNNING, REG_LOGICTRAINING_L1_ISRUNNING, REG_LOGICTRAINING_L2_ISRUNNING,
+		
+		REG_SIG_L0TOREAL, REG_SIG_L1TOREAL, REG_SIG_L2TOREAL, REG_SIG_L0TOL1,
+		REG_ENA_L0L2TOREAL, REG_ENA_L1L2TOREAL, REG_SIG_L0L2TOL1L2,
+		REG_DD_L0TRAIN, REG_DD_L0TEST,
+		REG_L0ENA, REG_L1ENA,
+		
 		REG_COUNT
 	};
 	enum {
-		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_INDIBITS, INS_TRAINABLE, INS_CUSTOMLOGIC, INS_CALENDARLOGIC,
-		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_REFRESH_REAL,
+		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INDIBITS, INS_CUSTOMLOGIC, INS_CALENDARLOGIC,
+		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_STATS, INS_REFRESH_REAL,
 		INS_COUNT
 	};
 	enum {
@@ -478,12 +484,12 @@ public:
 	
 	struct LogicLearner0 : Moveable<LogicLearner0> {
 		
-		static const int SYM_BITS			= 1;
+		static const int SYM_BITS			= 2;
 		static const int TIME_BITS			= 5 + 24 + 4;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 60> DQN;
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
 		
 		// Persistent
@@ -494,7 +500,7 @@ public:
 		#ifdef flagDEBUG
 		int							dqn_max_rounds		= 500;
 		#else
-		int							dqn_max_rounds		= 1000000;
+		int							dqn_max_rounds		= 25000000;
 		#endif
 		
 		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
@@ -505,12 +511,12 @@ public:
 	
 	struct LogicLearner2 : Moveable<LogicLearner2> {
 		
-		static const int SYM_BITS			= 1;
+		static const int SYM_BITS			= 2;
 		static const int TIME_BITS			= 5 + 24 + 4;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 60> DQN;
+		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
 		
 		// Persistent
@@ -521,7 +527,7 @@ public:
 		#ifdef flagDEBUG
 		int							dqn_max_rounds		= 500;
 		#else
-		int							dqn_max_rounds		= 1000000;
+		int							dqn_max_rounds		= 25000000;
 		#endif
 		
 		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
@@ -547,7 +553,6 @@ public:
 	const int main_tf_pos = 1;
 	dword main_reg[REG_COUNT];
 	int realtime_count = 0;
-	int prev_step = -1;
 	bool main_stopped = true, main_running = false;
 	bool store_this = false;
 	RWMutex main_lock;
@@ -566,6 +571,7 @@ public:
 	void	FillCalendarBits();
 	void	RealizeLogicTraining();
 	void	FillLogicBits();
+	void	FillStatistics();
 	bool	RefreshReal();
 	void	LearnLogic(int level, int common_pos);
 	int		ProcessMainJob(MainJob& job);

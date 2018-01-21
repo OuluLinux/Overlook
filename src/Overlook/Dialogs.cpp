@@ -656,7 +656,7 @@ void SystemJobCtrl::Data() {
 			joblist.Set(i, 0, i);
 			joblist.Set(i, 1, job.common_pos);
 			joblist.Set(i, 2, job.level);
-			joblist.Set(i, 3, job.total > 0 ? job.actual * 100 / job.total : 0);
+			joblist.Set(i, 3, job.total > 0 ? (int64)job.actual * 100L / (int64)job.total : 0);
 			joblist.SetDisplay(i, 2, Single<JobProgressDislay>());
 			joblist.SetDisplay(i, 3, Single<JobProgressDislay>());
 		}

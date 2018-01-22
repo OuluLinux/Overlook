@@ -824,14 +824,14 @@ bool System::RefreshReal() {
 				// Do some quality checks
 				{
 					int64 pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_REAL);
-					int not_written_real = !main_data.Get(pos);
+					int written_real = main_data.Get(pos);
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L0);
 					int not_written_L0 = !main_data.Get(pos);
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L1);
 					int not_written_L1 = !main_data.Get(pos);
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L2);
 					int not_written_L2 = !main_data.Get(pos);
-					int e = (not_written_real << 3) | (not_written_L0 << 2) | (not_written_L0 << 1) | (not_written_L0 << 0);
+					int e = (written_real << 3) | (not_written_L0 << 2) | (not_written_L1 << 1) | (not_written_L2 << 0);
 					if (e)
 						throw UserExc("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
 				}

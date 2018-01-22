@@ -39,7 +39,7 @@ void System::MainLoop() {
 	
 		
 		Time t = GetMetaTrader().GetTime();
-		#ifdef SYS_M15
+		#if SYS_M15
 		int step = t.minute / 15;
 		#elif SYS_H1
 		int step = t.hour;
@@ -176,7 +176,7 @@ void System::RealizeMainWorkQueue() {
 	if (main_reg[REG_WORKQUEUE_INITED]) {
 		
 		// Update data count
-		main_mem[MEM_INDIBARS] = GetCountMain(main_tf_ids[main_tf_pos]);
+		main_mem[MEM_INDIBARS] = GetCountMain(main_tf);
 		return;
 	}
 	
@@ -230,6 +230,7 @@ void System::RealizeMainWorkQueue() {
 	main_tf_ids.Add(FindPeriod(240));
 	#endif
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
+	main_tf = main_tf_ids[main_tf_pos];
 	
 	
 	// Add symbols
@@ -251,7 +252,7 @@ void System::RealizeMainWorkQueue() {
 	
 	
 	// Update data count
-	int bars = GetCountMain(main_tf_ids[main_tf_pos]);
+	int bars = GetCountMain(main_tf);
 	main_mem[MEM_INDIBARS] = bars;
 	
 	
@@ -286,7 +287,6 @@ void System::RealizeMainWorkQueue() {
 	main_begin.SetCount(GetCommonCount(), 0);
 	for (int c = 0; c < GetCommonCount(); c++) {
 		int common_id = GetCommonSymbolId(c);
-		int main_tf  = main_tf_ids[main_tf_pos];
 		int& begin = main_begin[c];
 		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
@@ -343,8 +343,6 @@ void System::FillIndicatorBits() {
 	#ifdef flagDEBUG
 	cursor = bars;
 	#else
-	
-	int main_tf = main_tf_ids[main_tf_pos];
 	
 	for (; cursor < bars && main_running; cursor++) {
 	
@@ -426,8 +424,6 @@ void System::FillCustomLogicBits() {
 	int bars = main_mem[MEM_COUNTED_L0];
 	if (!bars) return;
 	
-	int main_tf = main_tf_ids[main_tf_pos];
-	
 	int first_common_id = GetCommonSymbolId(0);
 	
 	for (; cursor < bars && main_running; cursor++) {
@@ -484,7 +480,6 @@ void System::FillCalendarBits() {
 	cursor = Upp::max(0, (int)cursor - 8); // set trailing bits
 	
 	Time now = GetUtcTime();
-	int tf = main_tf_ids[main_tf_pos];
 	int bars = main_mem[MEM_INDIBARS];
 	
 	for (; cursor < cal.GetCount(); cursor++) {
@@ -503,7 +498,7 @@ void System::FillCalendarBits() {
 		t.second = 0;
 		int end_count = 0;
 		#endif
-		int current_main_pos = main_time[tf].Find(t);
+		int current_main_pos = main_time[main_tf].Find(t);
 		if (current_main_pos == -1) continue;
 		
 		int begin = Upp::max(0, current_main_pos - 1);
@@ -786,7 +781,6 @@ void System::FillStatistics() {
 }
 
 bool System::RefreshReal() {
-	int tf = main_tf_ids[main_tf_pos];
 	Time now = GetUtcTime();
 	int wday				= DayOfWeek(now);
 	Time after_3hours		= now + 3 * 60 * 60;
@@ -815,9 +809,9 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
-	int64 step = periods[tf] * 60;
+	int64 step = periods[main_tf] * 60;
 	now -= now.Get() % step;
-	int current_main_pos = main_time[tf].Find(now);
+	int current_main_pos = main_time[main_tf].Find(now);
 	
 	if (current_main_pos == -1) {
 		LOG("error: current main pos not found");
@@ -959,7 +953,7 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	for (int i = 0; i < 5 + SYS_HOURBITS + SYS_MINBITS; i++)
 		buf[buf_pos + i] = 1.0;
 		
-	Time t = GetTimeMain(main_tf_ids[main_tf_pos], cursor);
+	Time t = GetTimeMain(main_tf, cursor);
 	
 	int wday = Upp::max(0, Upp::min(5, DayOfWeek(t) - 1));
 	buf[buf_pos + wday] = 0.0;

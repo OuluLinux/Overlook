@@ -560,8 +560,9 @@ public:
 	Vector<Ptr<CoreItem> > main_work_queue;
 	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
 	Atomic workers_started;
-	const int main_tf_pos = 0;
+	const int main_tf_pos = 1;
 	dword main_reg[REG_COUNT];
+	int main_tf = 2;
 	int realtime_count = 0;
 	bool main_stopped = true, main_running = false;
 	bool store_this = false;

@@ -27,7 +27,7 @@ void System::MainLoop() {
 	
 	
 	// Start workers
-	int workers = Upp::max(1, CPU_Cores() - 2);
+	int workers = Upp::min(GetCommonSymbolCount(), Upp::max(1, CPU_Cores() - 2));
 	for (int i = 0; i < workers; i++) {
 		Thread::Start(THISBACK1(Worker, i));
 		workers_started++;
@@ -39,7 +39,11 @@ void System::MainLoop() {
 	
 		
 		Time t = GetMetaTrader().GetTime();
+		#ifdef SYS_M15
 		int step = t.minute / 15;
+		#elif SYS_H1
+		int step = t.hour;
+		#endif
 		
 		
 		// Run actions by "instruction"
@@ -216,9 +220,15 @@ void System::RealizeMainWorkQueue() {
 	
 	
 	// Add timeframes
+	#if SYS_M15
 	main_tf_ids.Add(FindPeriod(5));
 	main_tf_ids.Add(FindPeriod(15));
 	main_tf_ids.Add(FindPeriod(60));
+	#elif SYS_H1
+	main_tf_ids.Add(FindPeriod(15));
+	main_tf_ids.Add(FindPeriod(60));
+	main_tf_ids.Add(FindPeriod(240));
+	#endif
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
 	
 	
@@ -330,6 +340,9 @@ void System::FillIndicatorBits() {
 	int64 main_data_count = GetMainDataPos(bars, 0, 0, 0);
 	main_data.SetCount(main_data_count);
 	
+	#ifdef flagDEBUG
+	cursor = bars;
+	#else
 	
 	int main_tf = main_tf_ids[main_tf_pos];
 	
@@ -370,6 +383,7 @@ void System::FillIndicatorBits() {
 			}
 		}
 	}
+	#endif
 	
 	main_reg[REG_INDIBITS_INITED] = true;
 	if (init) StoreAll();
@@ -480,13 +494,20 @@ void System::FillCalendarBits() {
 		if (ce.impact < 2) continue;
 		
 		Time t = ce.timestamp;
+		#if SYS_M15
 		t += (15 * 0.5) * 60;
 		t -= (t.minute % 15) * 60 + t.second;
+		int end_count = 1;
+		#elif SYS_H1
+		t.minute = 0;
+		t.second = 0;
+		int end_count = 0;
+		#endif
 		int current_main_pos = main_time[tf].Find(t);
 		if (current_main_pos == -1) continue;
 		
 		int begin = Upp::max(0, current_main_pos - 1);
-		int end = Upp::min(bars, current_main_pos + 1);
+		int end = Upp::min(bars, current_main_pos + end_count);
 		for(int c = begin; c < end; c++) {
 			for(int i = 0; i < main_sym_ids.GetCount(); i++) {
 				for(int j = 0; j < main_tf_ids.GetCount(); j++) {
@@ -579,7 +600,7 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	
 	// Learning rate. Decreases over training.
 	double max_alpha = 0.01;
-	double min_alpha = 0.0001;
+	double min_alpha = 0.001;
 	double alpha = (max_alpha - min_alpha) * (logic.dqn_max_rounds - logic.dqn_round) / (double)logic.dqn_max_rounds + min_alpha;
 	logic.dqn_trainer.SetAlpha(alpha);
 	
@@ -647,6 +668,11 @@ template <class T> void FillLogicBits(int level, int common_pos, System& sys, T&
 		logic.dqn_trainer.Evaluate(tmp_before_state, evaluated, output_size);
 		
 		sys.StoreOutput(level, common_pos, cursor, evaluated, output_size);
+		
+		#ifdef flagDEBUG
+		cursor = bars;
+		break;
+		#endif
 	}
 }
 
@@ -724,6 +750,8 @@ void System::FillStatistics() {
 			}
 		}
 	}
+	if (!l0ena_count) l0ena_count++;
+	if (!l1ena_count) l1ena_count++;
 	
 	int train_count = (midstep * begin) * count_mul;
 	int train_l0_correct = 0;
@@ -822,7 +850,7 @@ bool System::RefreshReal() {
 				int sym_pos = main_sym_ids.Find(sym_id);
 				
 				// Do some quality checks
-				{
+				if (0) {
 					int64 pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_REAL);
 					int written_real = main_data.Get(pos);
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L0);
@@ -928,10 +956,10 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	int buf_pos = 0;
 	
 	// Time bits
-	for (int i = 0; i < 5 + 24 + 4; i++)
+	for (int i = 0; i < 5 + SYS_HOURBITS + SYS_MINBITS; i++)
 		buf[buf_pos + i] = 1.0;
 		
-	Time t = GetTimeMain(main_tf_pos, cursor);
+	Time t = GetTimeMain(main_tf_ids[main_tf_pos], cursor);
 	
 	int wday = Upp::max(0, Upp::min(5, DayOfWeek(t) - 1));
 	buf[buf_pos + wday] = 0.0;
@@ -940,8 +968,10 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	buf[buf_pos + t.hour] = 0.0;
 	buf_pos += 24;
 	
+	#if SYS_M15
 	buf[buf_pos + t.minute / 15] = 0.0;
 	buf_pos += 4;
+	#endif
 	
 	int bit = (level == 0 || level == 1) ? BIT_L0BITS_BEGIN : BIT_L2BITS_BEGIN;
 	int bit_count = (level == 0 || level == 1) ? ASSIST_COUNT : L2_INPUT;

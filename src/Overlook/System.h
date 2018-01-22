@@ -422,6 +422,16 @@ public:
 	
 public:
 	
+	#if 1
+		#define SYS_M15			1
+		#define SYS_HOURBITS	24
+		#define SYS_MINBITS		4
+	#else
+		#define SYS_H1			1
+		#define SYS_HOURBITS	24
+		#define SYS_MINBITS		0
+	#endif
+	
 	static const int L2_INPUT = 4;
 	
 	enum {
@@ -485,7 +495,7 @@ public:
 	struct LogicLearner0 : Moveable<LogicLearner0> {
 		
 		static const int SYM_BITS			= 2;
-		static const int TIME_BITS			= 5 + 24 + 4;
+		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
@@ -512,7 +522,7 @@ public:
 	struct LogicLearner2 : Moveable<LogicLearner2> {
 		
 		static const int SYM_BITS			= 2;
-		static const int TIME_BITS			= 5 + 24 + 4;
+		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
 		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
 		
@@ -550,7 +560,7 @@ public:
 	Vector<Ptr<CoreItem> > main_work_queue;
 	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
 	Atomic workers_started;
-	const int main_tf_pos = 1;
+	const int main_tf_pos = 0;
 	dword main_reg[REG_COUNT];
 	int realtime_count = 0;
 	bool main_stopped = true, main_running = false;

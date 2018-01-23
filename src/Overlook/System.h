@@ -494,7 +494,7 @@ public:
 	
 	struct LogicLearner0 : Moveable<LogicLearner0> {
 		
-		static const int SYM_BITS			= 2;
+		static const int SYM_BITS			= 1;
 		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
 		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
@@ -521,7 +521,7 @@ public:
 	
 	struct LogicLearner2 : Moveable<LogicLearner2> {
 		
-		static const int SYM_BITS			= 2;
+		static const int SYM_BITS			= 1;
 		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
 		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;

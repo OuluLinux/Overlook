@@ -989,7 +989,6 @@ void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int 
 		int64 pos = GetMainDataPos(cursor, sym_pos, main_tf_pos, bit);
 		bool action = main_data.Get(pos);
 		buf[buf_pos++] =  action ? 0.0 : 1.0;
-		buf[buf_pos++] = !action ? 0.0 : 1.0;
 	}
 	ASSERT(buf_pos == bufsize);
 	ASSERT(buf_pos == ((level == 0 || level == 1) ? LogicLearner0::OUTPUT_SIZE : LogicLearner2::OUTPUT_SIZE));
@@ -1004,18 +1003,14 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 		default: Panic("Invalid level");
 	}
 	int buf_pos = 0;
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
+	for (int i = 0; i < GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
-			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
-			double prob_true  = 1.0 - buf[buf_pos++];
-			double prob_false = 1.0 - buf[buf_pos++];
-			bool action = prob_true > prob_false;
-			main_data.Set(pos, action);
-			
-			pos = GetMainDataPos(cursor, sym_pos, j, chk_bit);
-			main_data.Set(pos, true);
-		}
+		int64 pos = GetMainDataPos(cursor, sym_pos, main_tf_pos, bit);
+		bool action = buf[buf_pos++] < 0.5;
+		main_data.Set(pos, action);
+		
+		pos = GetMainDataPos(cursor, sym_pos, main_tf_pos, chk_bit);
+		main_data.Set(pos, true);
 	}
 	ASSERT(buf_pos == bufsize);
 	ASSERT(buf_pos == ((level == 0 || level == 1) ? LogicLearner0::OUTPUT_SIZE : LogicLearner2::OUTPUT_SIZE));

@@ -221,13 +221,13 @@ void System::RealizeMainWorkQueue() {
 	
 	// Add timeframes
 	#if SYS_M15
-	main_tf_ids.Add(FindPeriod(5));
-	main_tf_ids.Add(FindPeriod(15));
-	main_tf_ids.Add(FindPeriod(60));
-	#elif SYS_H1
 	main_tf_ids.Add(FindPeriod(15));
 	main_tf_ids.Add(FindPeriod(60));
 	main_tf_ids.Add(FindPeriod(240));
+	#elif SYS_H1
+	main_tf_ids.Add(FindPeriod(60));
+	main_tf_ids.Add(FindPeriod(240));
+	main_tf_ids.Add(FindPeriod(1440));
 	#endif
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
 	main_tf = main_tf_ids[main_tf_pos];
@@ -593,11 +593,8 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 	// 0 means, that the loss or reward event is completely separate event from future events.
 	logic.dqn_trainer.SetGamma(0);
 	
-	// Learning rate. Decreases over training.
-	double max_alpha = 0.01;
-	double min_alpha = 0.001;
-	double alpha = (max_alpha - min_alpha) * (logic.dqn_max_rounds - logic.dqn_round) / (double)logic.dqn_max_rounds + min_alpha;
-	logic.dqn_trainer.SetAlpha(alpha);
+	// Learning rate.
+	logic.dqn_trainer.SetAlpha(0.005);
 	
 	const dword train_bars		= sys.main_mem[System::MEM_TRAINBARS];
 	const dword train_midstep	= sys.main_mem[System::MEM_TRAINMIDSTEP + job.common_pos];
@@ -887,7 +884,7 @@ bool System::RefreshReal() {
 				if (sig == prev_sig && sig != 0)
 					mt.SetSignalFreeze(sym_id, true);
 				else {
-					if (!prev_sig && sig) {
+					if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
 						if (open_count >= GetCommonSymbolCount())
 							sig = 0;
 						else
@@ -987,14 +984,12 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize) {
 	int bit = (level == 0 || level == 1) ? BIT_REALSIGNAL : BIT_REALENABLED;
 	int buf_pos = 0;
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
+	for (int i = 0; i < GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
-			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
-			bool action = main_data.Get(pos);
-			buf[buf_pos++] =  action ? 0.0 : 1.0;
-			buf[buf_pos++] = !action ? 0.0 : 1.0;
-		}
+		int64 pos = GetMainDataPos(cursor, sym_pos, main_tf_pos, bit);
+		bool action = main_data.Get(pos);
+		buf[buf_pos++] =  action ? 0.0 : 1.0;
+		buf[buf_pos++] = !action ? 0.0 : 1.0;
 	}
 	ASSERT(buf_pos == bufsize);
 	ASSERT(buf_pos == ((level == 0 || level == 1) ? LogicLearner0::OUTPUT_SIZE : LogicLearner2::OUTPUT_SIZE));

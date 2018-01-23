@@ -497,7 +497,7 @@ public:
 		static const int SYM_BITS			= 2;
 		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
-		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
+		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
@@ -524,7 +524,7 @@ public:
 		static const int SYM_BITS			= 2;
 		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
 		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
-		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
+		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
@@ -560,7 +560,7 @@ public:
 	Vector<Ptr<CoreItem> > main_work_queue;
 	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
 	Atomic workers_started;
-	const int main_tf_pos = 1;
+	const int main_tf_pos = 0;
 	dword main_reg[REG_COUNT];
 	int main_tf = 2;
 	int realtime_count = 0;

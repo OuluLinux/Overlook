@@ -432,7 +432,7 @@ public:
 		#define SYS_MINBITS		0
 	#endif
 	
-	static const int L2_INPUT = 4;
+	static const int L2_INPUT = 8;
 	
 	enum {
 		BIT_L0BITS_BEGIN,
@@ -523,7 +523,7 @@ public:
 		
 		static const int SYM_BITS			= 1;
 		static const int TIME_BITS			= 5 + SYS_HOURBITS + SYS_MINBITS;
-		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
+		static const int INPUT_SIZE			= TIME_BITS + SYM_COUNT * L2_INPUT;
 		static const int OUTPUT_SIZE		= SYM_COUNT * SYM_BITS;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;

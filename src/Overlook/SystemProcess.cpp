@@ -427,45 +427,43 @@ void System::FillCustomLogicBits() {
 	int first_common_id = GetCommonSymbolId(0);
 	
 	for (; cursor < bars && main_running; cursor++) {
-	
-		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
-			int tf = main_tf_ids[i];
+		
+		int i = main_tf_pos;
+		
+		for (int j = 0; j < main_sym_ids.GetCount(); j++) {
+			int sym = main_sym_ids[j];
+			int core_cursor = GetShiftMainTf(main_tf, sym, main_tf, cursor);
+			int core_bars = GetCountTf(sym, main_tf);
+			int db_pos = GetOrderedCorePos(j, i, 0);
+			Core& db = *ordered_cores[db_pos];
+			ConstBuffer& open_buf = db.GetBuffer(0);
+			double point = spread_points[sym];
+			ASSERT(sym >= first_common_id || point > 0.0);
 			
-			for (int j = 0; j < main_sym_ids.GetCount(); j++) {
-				int sym = main_sym_ids[j];
-				int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
-				int core_bars = GetCountTf(sym, tf);
-				int db_pos = GetOrderedCorePos(j, i, 0);
-				Core& db = *ordered_cores[db_pos];
-				ConstBuffer& open_buf = db.GetBuffer(0);
-				double point = spread_points[sym];
-				ASSERT(sym >= first_common_id || point > 0.0);
+			if (core_cursor >= core_bars - 1)
+				continue;
 				
-				if (core_cursor >= core_bars - 1)
-					continue;
+			for (int k = 0; k <= L2_INPUT; k++) {
+				int pos = Upp::max(0, (int)cursor - L2_INPUT + k);
+				bool real_sig	= main_data.Get(GetMainDataPos(pos, j, i, BIT_REALSIGNAL));
+				bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
+				bool enabled	= real_sig == l0_sig;
+				if (enabled) {
+					// Check spread
+					int core_pos = GetShiftMainTf(main_tf, sym, main_tf, pos);
+					double curr = open_buf.GetUnsafe(core_pos);
+					double next = open_buf.GetUnsafe(core_pos + 1);
 					
-				for (int k = 0; k <= L2_INPUT; k++) {
-					int pos = Upp::max(0, (int)cursor - L2_INPUT + k);
-					bool real_sig	= main_data.Get(GetMainDataPos(pos, j, i, BIT_REALSIGNAL));
-					bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
-					bool enabled	= real_sig == l0_sig;
-					if (enabled) {
-						// Check spread
-						int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
-						double curr = open_buf.GetUnsafe(core_pos);
-						double next = open_buf.GetUnsafe(core_pos + 1);
-						//ASSERT((!real_sig && next >= curr) || (real_sig && next <= curr));
-						if (!real_sig)
-							enabled = next >= curr + point;
-						else
-							enabled = next <= curr - point;
-					}
-					
-					if (k < L2_INPUT)
-						main_data.Set(GetMainDataPos(cursor, j, i, BIT_L2BITS_BEGIN + k), enabled);
+					if (!real_sig)
+						enabled = next >= curr + point;
 					else
-						main_data.Set(GetMainDataPos(cursor, j, i, BIT_REALENABLED), enabled);
+						enabled = next <= curr - point;
 				}
+				
+				if (k < L2_INPUT)
+					main_data.Set(GetMainDataPos(cursor, j, i, BIT_L2BITS_BEGIN + k), enabled);
+				else
+					main_data.Set(GetMainDataPos(cursor, j, i, BIT_REALENABLED), enabled);
 			}
 		}
 	}
@@ -697,7 +695,7 @@ void System::FillStatistics() {
 	for(int i = 0; i < GetCommonCount(); i++)
 		begin = Upp::max(begin, (int)main_mem[MEM_TRAINBEGIN + i]);
 	
-	int count_mul = main_sym_ids.GetCount() * main_tf_ids.GetCount();
+	int count_mul = main_sym_ids.GetCount();
 	int bars = main_mem[MEM_TRAINBARS];
 	int count = (bars - midstep) * count_mul;
 	
@@ -711,34 +709,34 @@ void System::FillStatistics() {
 	
 	for(int i = midstep; i < bars; i++) {
 		for(int j = 0; j < main_sym_ids.GetCount(); j++) {
-			for(int k = 0; k < main_tf_ids.GetCount(); k++) {
-				int64 pos;
-				
-				pos = GetMainDataPos(i, j, k, BIT_REALSIGNAL);
-				bool real_sig = main_data.Get(pos);
-				pos = GetMainDataPos(i, j, k, BIT_L0_SIGNAL);
-				bool l0_sig = main_data.Get(pos);
-				pos = GetMainDataPos(i, j, k, BIT_L1_SIGNAL);
-				bool l1_sig = main_data.Get(pos);
-				
-				pos = GetMainDataPos(i, j, k, BIT_REALENABLED);
-				bool real_ena = main_data.Get(pos);
-				pos = GetMainDataPos(i, j, k, BIT_L2_ENABLED);
-				bool l2_ena = main_data.Get(pos);
-				
-				
-				if (l0_sig == real_sig)		l0_correct++;
-				if (l1_sig == real_sig)		l1_correct++;
-				if (l2_ena == real_ena)		l2_correct++;
-				if (l2_ena == real_ena && (!l2_ena || l0_sig == real_sig))	l0l2_correct++;
-				if (l2_ena == real_ena && (!l2_ena || l1_sig == real_sig))	l1l2_correct++;
-				
-				if (l2_ena) {
-					if (l0_sig == real_sig)	l0ena_correct++;
-					l0ena_count++;
-					if (l1_sig == real_sig)	l1ena_correct++;
-					l1ena_count++;
-				}
+			int k = main_tf_pos;
+			
+			int64 pos;
+			
+			pos = GetMainDataPos(i, j, k, BIT_REALSIGNAL);
+			bool real_sig = main_data.Get(pos);
+			pos = GetMainDataPos(i, j, k, BIT_L0_SIGNAL);
+			bool l0_sig = main_data.Get(pos);
+			pos = GetMainDataPos(i, j, k, BIT_L1_SIGNAL);
+			bool l1_sig = main_data.Get(pos);
+			
+			pos = GetMainDataPos(i, j, k, BIT_REALENABLED);
+			bool real_ena = main_data.Get(pos);
+			pos = GetMainDataPos(i, j, k, BIT_L2_ENABLED);
+			bool l2_ena = main_data.Get(pos);
+			
+			
+			if (l0_sig == real_sig)		l0_correct++;
+			if (l1_sig == real_sig)		l1_correct++;
+			if (l2_ena == real_ena)		l2_correct++;
+			if (l2_ena == real_ena && (!l2_ena || l0_sig == real_sig))	l0l2_correct++;
+			if (l2_ena == real_ena && (!l2_ena || l1_sig == real_sig))	l1l2_correct++;
+			
+			if (l2_ena) {
+				if (l0_sig == real_sig)	l0ena_correct++;
+				l0ena_count++;
+				if (l1_sig == real_sig)	l1ena_correct++;
+				l1ena_count++;
 			}
 		}
 	}
@@ -967,10 +965,22 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	int bit = (level == 0 || level == 1) ? BIT_L0BITS_BEGIN : BIT_L2BITS_BEGIN;
 	int bit_count = (level == 0 || level == 1) ? ASSIST_COUNT : L2_INPUT;
 	
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
-		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
-		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
-			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
+	if (level < 2) {
+		for (int i = 0; i <= GetCommonSymbolCount(); i++) {
+			int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
+			for (int j = 0; j < main_tf_ids.GetCount(); j++) {
+				int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
+				for (int k = 0; k < bit_count; k++) {
+					bool b = main_data.Get(pos++);
+					buf[buf_pos++] = b ? 0.0 : 1.0;
+				}
+			}
+		}
+	}
+	else if (level == 2) {
+		for (int i = 0; i < GetCommonSymbolCount(); i++) {
+			int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
+			int64 pos = GetMainDataPos(cursor, sym_pos, main_tf_pos, bit);
 			for (int k = 0; k < bit_count; k++) {
 				bool b = main_data.Get(pos++);
 				buf[buf_pos++] = b ? 0.0 : 1.0;

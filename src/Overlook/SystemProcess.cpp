@@ -34,6 +34,17 @@ void System::MainLoop() {
 	}
 	
 	
+	// For developing purposes
+	////ClearCounters();
+	
+	
+	// Initial refresh
+	DataBridgeCommon& common = GetDataBridgeCommon();
+	common.InspectInit();
+	common.DownloadAskBid();
+	common.RefreshAskBidData(true);
+	
+	
 	// Run main loop
 	while (main_running && !Thread::IsShutdownThreads()) {
 	
@@ -86,6 +97,9 @@ void System::MainLoop() {
 		
 		// Refresh data-sources and indicators
 		case INS_REFRESHINDI:
+			common.DownloadAskBid();
+			common.RefreshAskBidData(true);
+			SetEnd(GetUtcTime());
 			RealizeMainWorkQueue();
 			ProcessMainWorkQueue(true);
 			//ProcessEnds();
@@ -112,6 +126,7 @@ void System::MainLoop() {
 		// L0 must be trained and evaluated values must be written to the main memory.
 		// This refresh L2 input source.
 		case INS_CUSTOMLOGIC:
+			FillLogicBits(0);
 			FillCustomLogicBits();
 			ins++;
 			break;
@@ -136,7 +151,8 @@ void System::MainLoop() {
 		// Evaluate logic and write it to the main memory.
 		// Requires training to be finished.
 		case INS_LOGICBITS:
-			FillLogicBits();
+			FillLogicBits(1);
+			FillLogicBits(2);
 			
 			// Don't continue to INS_REFRESH_REAL before all levels have been written.
 			if (main_mem[MEM_COUNTED_L2] == 0)
@@ -168,6 +184,15 @@ void System::MainLoop() {
 	
 	main_running = false;
 	main_stopped = true;
+}
+
+void System::ClearCounters() {
+	main_mem[MEM_INDIBARS] = 0;
+	main_mem[MEM_COUNTED_INDI] = 0;
+	main_mem[MEM_COUNTED_ENABLED] = 0;
+	main_mem[MEM_COUNTED_L0] = 0;
+	main_mem[MEM_COUNTED_L1] = 0;
+	main_mem[MEM_COUNTED_L2] = 0;
 }
 
 void System::RealizeMainWorkQueue() {
@@ -221,13 +246,34 @@ void System::RealizeMainWorkQueue() {
 	
 	// Add timeframes
 	#if SYS_M15
-	if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(15));
-	if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(60));
-	if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(240));
+	if (main_tf_pos == 0) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(15)); // <---
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(60));
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(240));
+	}
+	else if (main_tf_pos == 1) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(5));
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(15)); // <---
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(60));
+	}
+	else Panic("Invalid tf pos");
 	#elif SYS_H1
-	if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(60));
-	if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(240));
-	if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(1440));
+	if (main_tf_pos == 0) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(60)); // <---
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(240));
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(1440));
+	}
+	else if (main_tf_pos == 1) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(15));
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(60)); // <---
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(240));
+	}
+	else if (main_tf_pos == 2) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(5));
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(15));
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(60)); // <---
+	}
+	else Panic("Invalid tf pos");
 	#endif
 	ASSERT(main_tf_ids.GetCount() == TF_COUNT);
 	main_tf = main_tf_ids[main_tf_pos];
@@ -362,15 +408,18 @@ void System::FillIndicatorBits() {
 					core.Assist(core_cursor, vec);
 					
 					// First indi_id is DataBridge and open price data is used to set real signal bit
-					if (k == 0 && core_cursor < core_bars - 1) {
-						ConstBuffer& open_buf = core.GetBuffer(0);
-						double next = open_buf.GetUnsafe(core_cursor + 1);
-						double curr = open_buf.GetUnsafe(core_cursor);
-						bool signal = next < curr;
-						int64 pos = GetMainDataPos(cursor, j, i, BIT_REALSIGNAL);
-						main_data.Set(pos, signal);
-						pos = GetMainDataPos(cursor, j, i, BIT_WRITTEN_REAL);
-						main_data.Set(pos, true);
+					if (k == 0) {
+						bool can_write = core_cursor < core_bars - 1;
+						if (can_write) {
+							ConstBuffer& open_buf = core.GetBuffer(0);
+							double next = open_buf.GetUnsafe(core_cursor + 1);
+							double curr = open_buf.GetUnsafe(core_cursor);
+							bool signal = next < curr;
+							int64 pos = GetMainDataPos(cursor, j, i, BIT_REALSIGNAL);
+							main_data.Set(pos, signal);
+						}
+						int64 pos = GetMainDataPos(cursor, j, i, BIT_WRITTEN_REAL);
+						main_data.Set(pos, can_write);
 					}
 				}
 				
@@ -422,7 +471,8 @@ void System::FillCustomLogicBits() {
 	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
 		
 	int bars = main_mem[MEM_COUNTED_L0];
-	if (!bars) return;
+	if (!bars || bars < main_mem[MEM_INDIBARS])
+		return;
 	
 	int first_common_id = GetCommonSymbolId(0);
 	
@@ -441,10 +491,10 @@ void System::FillCustomLogicBits() {
 				double point = spread_points[sym];
 				ASSERT(sym >= first_common_id || point > 0.0);
 				
-				if (core_cursor >= core_bars - 1)
-					continue;
+				
+				int end = (core_cursor < core_bars - 1) ? L2_INPUT + 1 : L2_INPUT;
 					
-				for (int k = 0; k <= L2_INPUT; k++) {
+				for (int k = 0; k < end; k++) {
 					int pos = Upp::max(0, (int)cursor - L2_INPUT + k);
 					bool real_sig	= main_data.Get(GetMainDataPos(pos, j, i, BIT_REALSIGNAL));
 					bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
@@ -668,23 +718,23 @@ template <class T> void FillLogicBits(int level, int common_pos, System& sys, T&
 	}
 }
 
-void System::FillLogicBits() {
-	for (int l = 0; l < level_count; l++) {
+void System::FillLogicBits(int level) {
+	for (int l = 0; l <= level; l++) {
 		bool is_trained				= main_mem[MEM_TRAINED_L0 + l];
-		if (!is_trained) break;
-		
-		dword bars					= main_mem[System::MEM_INDIBARS];
-		dword& cursor				= main_mem[System::MEM_COUNTED_L0 + l];
-		
-		for (int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
-			if      (l == 0)		::Overlook::FillLogicBits(l, common_pos, *this, logic0[common_pos]);
-			else if (l == 1)		::Overlook::FillLogicBits(l, common_pos, *this, logic1[common_pos]);
-			else if (l == 2)		::Overlook::FillLogicBits(l, common_pos, *this, logic2[common_pos]);
-			else Panic("Invalid level");
-		}
-		
-		cursor = bars;
+		if (!is_trained) return;
 	}
+	
+	dword bars					= main_mem[System::MEM_INDIBARS];
+	dword& cursor				= main_mem[System::MEM_COUNTED_L0 + level];
+	
+	for (int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
+		if      (level == 0)		::Overlook::FillLogicBits(level, common_pos, *this, logic0[common_pos]);
+		else if (level == 1)		::Overlook::FillLogicBits(level, common_pos, *this, logic1[common_pos]);
+		else if (level == 2)		::Overlook::FillLogicBits(level, common_pos, *this, logic2[common_pos]);
+		else Panic("Invalid level");
+	}
+	
+	cursor = bars;
 }
 
 void System::FillStatistics() {
@@ -785,6 +835,18 @@ bool System::RefreshReal() {
 	now.second				= 0;
 	MetaTrader& mt			= GetMetaTrader();
 	
+	if (periods[main_tf] < 60) {
+		now.minute -= now.minute % periods[main_tf];
+	}
+	else if (periods[main_tf] < 1440) {
+		now.minute = 0;
+		now.hour -= periods[main_tf] / 60;
+	}
+	else {
+		now.minute = 0;
+		now.hour = 0;
+	}
+	
 	
 	// Skip weekends and first hours of monday
 	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
@@ -806,14 +868,16 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
-	int64 step = periods[main_tf] * 60;
-	now -= now.Get() % step;
 	int current_main_pos = main_time[main_tf].Find(now);
-	
+	int last_pos = main_time[main_tf].GetCount() - 1;
 	if (current_main_pos == -1) {
 		LOG("error: current main pos not found");
 		return false;
 	}
+	else if (current_main_pos != last_pos)
+		Panic(
+			"Invalid current pos: " + IntStr(current_main_pos) + " != " + IntStr(last_pos) +
+			" (" + Format("%", main_time[main_tf].GetKey(current_main_pos)) + " != " + Format("%", main_time[main_tf].GetKey(last_pos)) + ")");
 	
 	if (current_main_pos >= main_mem[MEM_INDIBARS])
 		return false;
@@ -841,7 +905,7 @@ bool System::RefreshReal() {
 				int sym_pos = main_sym_ids.Find(sym_id);
 				
 				// Do some quality checks
-				if (0) {
+				if (1) {
 					int64 pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_REAL);
 					int written_real = main_data.Get(pos);
 					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L0);
@@ -852,7 +916,7 @@ bool System::RefreshReal() {
 					int not_written_L2 = !main_data.Get(pos);
 					int e = (written_real << 3) | (not_written_L0 << 2) | (not_written_L1 << 1) | (not_written_L2 << 0);
 					if (e)
-						throw UserExc("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
+						Panic("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
 				}
 				
 				int64 signal_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_L1_SIGNAL);

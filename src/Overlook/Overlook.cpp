@@ -429,7 +429,7 @@ void Overlook::SetTimeframe(int tf_id) {
 void Overlook::DeepRefresh() {
 	MetaTrader& mt = GetMetaTrader();
 	mt.Data();
-	GetSystem().SetEnd(mt.GetTime());
+	GetSystem().SetEnd(GetUtcTime());
 	DataBridgeCommon& common = GetDataBridgeCommon();
 	common.InspectInit();
 	common.DownloadAskBid();

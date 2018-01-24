@@ -344,8 +344,8 @@ public:
 	void	DataTimeBegin(int sym, int tf);
 	void	DataTimeEnd(int sym, int tf);
 	int		DataTimeAdd(int sym, int tf, Time utc_time);
-	Time	TimeFromBroker(Time t) {return t - time_offset;}
-	Time	TimeToBroker(Time t) {return t + time_offset;}
+	Time	TimeFromBroker(Time t) {return t + time_offset;}
+	Time	TimeToBroker(Time t) {return t - time_offset;}
 	void	RefreshTimeTfVectors(int tf);
 	void	RefreshTimeTfVector(int tf_from, int tf_to);
 	void	RefreshTimeSymVectors(int sym, int tf);
@@ -551,7 +551,7 @@ public:
 	Vector<Ptr<CoreItem> > main_work_queue;
 	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
 	Atomic workers_started;
-	const int main_tf_pos = 0;
+	const int main_tf_pos = 1;
 	dword main_reg[REG_COUNT];
 	int main_tf = 2;
 	int realtime_count = 0;
@@ -572,7 +572,7 @@ public:
 	void	FillCustomLogicBits();
 	void	FillCalendarBits();
 	void	RealizeLogicTraining();
-	void	FillLogicBits();
+	void	FillLogicBits(int level);
 	void	FillStatistics();
 	bool	RefreshReal();
 	void	LearnLogic(int level, int common_pos);
@@ -589,6 +589,7 @@ public:
 	String	GetMemoryKey(int i) const;
 	String	GetMemoryValue(int i, int j) const;
 	void	StoreAll();
+	void	ClearCounters();
 	
 	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	

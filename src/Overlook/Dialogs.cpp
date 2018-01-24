@@ -563,7 +563,7 @@ void SystemDataCtrl::Data() {
 		memlist.Set(i, 1, sys.GetMemoryValue(i, sys.main_mem[i]));
 	}
 	
-	int count = sys.GetCountMain(sys.FindPeriod(15));
+	int count = sys.GetCountMain(sys.main_tf);
 	int cursor = slider.GetData();
 	if (slider.GetMax() == 1) {
 		slider.MinMax(0, count-1);

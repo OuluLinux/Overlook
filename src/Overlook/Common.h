@@ -17,33 +17,44 @@
 namespace Overlook {
 using namespace Upp;
 
-#define ENABLE_TRAINING			1
-#define MAIN_PERIOD_MINUTES		60
-#define ONLY_M1_SOURCE			0
-#define DECISION_DD_LEVEL		0.1
-#define SECTOR_2EXP				1
-#define SECTOR_COUNT			(1 << SECTOR_2EXP)
-#define CONST_TREE_INPUT		2
-#define FUSE_DEC_COUNT			4
-#define TF_COUNT				3
-#define TRUEINDI_COUNT			3
-#define LABELINDI_COUNT			3
-#define ADVISOR_COUNT			4
-#define MINPRED_LEN				8
-#define FMLEVEL					0.60
-#define FEEDBACK_PERIOD			10
-#define FASTAGENT_PERIODLIMIT	240
+// Tunable variables
 
-#ifdef flagDEBUG
-#define	LOCALPROB_DEPTH			5
-#else
-#define	LOCALPROB_DEPTH			80
-#endif
-
-#define MAX_SYMOPEN				4
-
+// Total used symbols: SYM_COUNT * COMMON_COUNT
+// Check System::FirstStart() symbol-list to see which are enabled.
 #define SYM_COUNT				4
 #define COMMON_COUNT			4
+
+// How many timeframes are enabled: [1-3]
+// Note: higher value increases DQN input count dramatically, which decreases output quality.
+#define TF_COUNT				1
+
+// The factor for free-margin level. How much of equity is committed for trading.
+// Lower value increases risks, higher reduces. [0.60 - 0.98]
+#define FMLEVEL					0.60
+
+
+#define ONLY_M1_SOURCE			0
+#define MAX_SYMOPEN				SYM_COUNT
+
+
+// Fast mode: M15
+//  - causes lot of idling during nights
+//  - doesn't create huge losses during length of single order, which allows lower FMLEVEL.
+// Slow mode: H1
+//  - more active during all day
+//  - more volatile order value, reduce FMLEVEL
+#if 1
+	#define SYS_M15			1
+	#define SYS_HOURBITS	24
+	#define SYS_MINBITS		4
+	#define SYS_HAVETIMEIN	0
+#else
+	#define SYS_H1			1
+	#define SYS_HOURBITS	24
+	#define SYS_MINBITS		0
+	#define SYS_HAVETIMEIN	0
+#endif
+
 
 class AgentGroup;
 class Agent;

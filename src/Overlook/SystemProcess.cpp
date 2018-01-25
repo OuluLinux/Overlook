@@ -36,6 +36,7 @@ void System::MainLoop() {
 	
 	// For developing purposes
 	////ClearCounters();
+	////ClearL2();
 	
 	
 	// Initial refresh
@@ -193,6 +194,17 @@ void System::ClearCounters() {
 	main_mem[MEM_COUNTED_L0] = 0;
 	main_mem[MEM_COUNTED_L1] = 0;
 	main_mem[MEM_COUNTED_L2] = 0;
+}
+
+void System::ClearL2() {
+	main_mem[MEM_COUNTED_L2] = 0;
+	main_mem[MEM_COUNTED_ENABLED] = 0;
+	main_mem[MEM_TRAINED_L2] = 0;
+	main_reg[REG_DD_L0TEST] = 0;
+	for (auto& l : logic2) {
+		l.dqn_round = 0;
+		l.dqn_trainer.Reset();
+	}
 }
 
 void System::RealizeMainWorkQueue() {
@@ -402,25 +414,22 @@ void System::FillIndicatorBits() {
 				
 				vec.Zero();
 				
+				bool can_write = core_cursor < core_bars - 1;
+				if (can_write) {
+					ConstBuffer& open_buf = ordered_cores[GetOrderedCorePos(j, i, 0)]->GetBuffer(0);
+					double curr = open_buf.GetUnsafe(core_cursor);
+					double next = open_buf.GetUnsafe(core_cursor + 1);
+					bool signal = next < curr;
+					int64 pos = GetMainDataPos(cursor, j, i, BIT_REALSIGNAL);
+					main_data.Set(pos, signal);
+				}
+				int64 pos = GetMainDataPos(cursor, j, i, BIT_WRITTEN_REAL);
+				main_data.Set(pos, can_write);
+				
 				for (int k = 0; k < main_indi_ids.GetCount(); k++) {
 					int core_pos = GetOrderedCorePos(j, i, k);
 					Core& core = *ordered_cores[core_pos];
 					core.Assist(core_cursor, vec);
-					
-					// First indi_id is DataBridge and open price data is used to set real signal bit
-					if (k == 0) {
-						bool can_write = core_cursor < core_bars - 1;
-						if (can_write) {
-							ConstBuffer& open_buf = core.GetBuffer(0);
-							double next = open_buf.GetUnsafe(core_cursor + 1);
-							double curr = open_buf.GetUnsafe(core_cursor);
-							bool signal = next < curr;
-							int64 pos = GetMainDataPos(cursor, j, i, BIT_REALSIGNAL);
-							main_data.Set(pos, signal);
-						}
-						int64 pos = GetMainDataPos(cursor, j, i, BIT_WRITTEN_REAL);
-						main_data.Set(pos, can_write);
-					}
 				}
 				
 				int64 main_pos = GetMainDataPos(cursor, j, i, BIT_L0BITS_BEGIN);
@@ -480,6 +489,7 @@ void System::FillCustomLogicBits() {
 		
 		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
+			bool is_slower = i > main_tf_pos;
 			
 			for (int j = 0; j < main_sym_ids.GetCount(); j++) {
 				int sym = main_sym_ids[j];
@@ -500,10 +510,16 @@ void System::FillCustomLogicBits() {
 					bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
 					bool enabled	= real_sig == l0_sig;
 					if (enabled) {
-						// Check spread
-						int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
-						double curr = open_buf.GetUnsafe(core_pos);
-						double next = open_buf.GetUnsafe(core_pos + 1);
+						double curr, next;
+						if (is_slower) {
+							int next_core_pos = GetShiftMainTf(main_tf, sym, tf, pos + 1);
+							curr = open_buf.GetUnsafe(Upp::max(0, next_core_pos - 1));
+							next = open_buf.GetUnsafe(next_core_pos);
+						} else {
+							int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
+							curr = open_buf.GetUnsafe(core_pos);
+							next = open_buf.GetUnsafe(core_pos + 1);
+						}
 						
 						if (!real_sig)
 							enabled = next >= curr + point;
@@ -747,7 +763,7 @@ void System::FillStatistics() {
 	for(int i = 0; i < GetCommonCount(); i++)
 		begin = Upp::max(begin, (int)main_mem[MEM_TRAINBEGIN + i]);
 	
-	int count_mul = main_sym_ids.GetCount();
+	int count_mul = main_sym_ids.GetCount() * main_tf_ids.GetCount();
 	int bars = main_mem[MEM_TRAINBARS];
 	int count = (bars - midstep) * count_mul;
 	

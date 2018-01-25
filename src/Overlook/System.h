@@ -590,6 +590,7 @@ public:
 	String	GetMemoryValue(int i, int j) const;
 	void	StoreAll();
 	void	ClearCounters();
+	void	ClearL2();
 	
 	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	

@@ -176,6 +176,7 @@ void System::MainLoop() {
 		case INS_REFRESH_REAL:
 			if (RefreshReal()) {
 				ins = 0; // go to waiting when success
+				GetMetaTrader().Data();
 				PostCallback(WhenRealRefresh);
 			}
 			else

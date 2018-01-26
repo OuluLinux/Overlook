@@ -399,8 +399,9 @@ void System::FillIndicatorBits() {
 	main_data.SetCount(main_data_count);
 	
 	#ifdef flagDEBUG
-	cursor = bars;
-	#else
+	if (!cursor)
+		cursor = bars;
+	#endif
 	
 	for (; cursor < bars && main_running; cursor++) {
 	
@@ -414,7 +415,7 @@ void System::FillIndicatorBits() {
 				
 				vec.Zero();
 				
-				bool can_write = core_cursor < core_bars - 1;
+				bool can_write = core_cursor < core_bars - 1 && cursor < bars - 1;
 				if (can_write) {
 					ConstBuffer& open_buf = ordered_cores[GetOrderedCorePos(j, i, 0)]->GetBuffer(0);
 					double curr = open_buf.GetUnsafe(core_cursor);
@@ -439,7 +440,6 @@ void System::FillIndicatorBits() {
 			}
 		}
 	}
-	#endif
 	
 	main_reg[REG_INDIBITS_INITED] = true;
 	if (init) StoreAll();
@@ -728,8 +728,10 @@ template <class T> void FillLogicBits(int level, int common_pos, System& sys, T&
 		sys.StoreOutput(level, common_pos, cursor, evaluated, output_size);
 		
 		#ifdef flagDEBUG
-		cursor = bars;
-		break;
+		if (!cursor) {
+			cursor = bars;
+			break;
+		}
 		#endif
 	}
 }

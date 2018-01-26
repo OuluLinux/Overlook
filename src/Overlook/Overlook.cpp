@@ -117,6 +117,8 @@ Overlook::Overlook() : watch(this) {
 	
 	LoadPreviousProfile();
 	PostRefreshData();
+	
+	GetSystem().WhenRealRefresh << THISBACK(LoadOpenOrderCharts);
 }
 
 Overlook::~Overlook() {
@@ -171,7 +173,7 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
-		bar.Add("Load default EAs", THISBACK(LoadDefaultEAs));
+		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
 		String profile_dir = ConfigFile("Profiles");
@@ -427,15 +429,19 @@ void Overlook::SetTimeframe(int tf_id) {
 }
 
 void Overlook::DeepRefresh() {
+	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
-	mt.Data();
-	GetSystem().SetEnd(GetUtcTime());
-	DataBridgeCommon& common = GetDataBridgeCommon();
-	common.InspectInit();
-	common.DownloadAskBid();
-	common.RefreshAskBidData(true);
-	GetCalendar().Data();
-	cman.RefreshWindows();
+	if (sys.mainloop_lock.TryEnter()) {
+		mt.Data();
+		sys.SetEnd(GetUtcTime());
+		DataBridgeCommon& common = GetDataBridgeCommon();
+		common.InspectInit();
+		common.DownloadAskBid();
+		common.RefreshAskBidData(true);
+		GetCalendar().Data();
+		cman.RefreshWindows();
+		sys.mainloop_lock.Leave();
+	}
 }
 
 void Overlook::RefreshData() {
@@ -948,30 +954,30 @@ void Overlook::ActiveWindowChanged() {
 	}
 }
 
-void Overlook::LoadDefaultEAs() {
+void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();
 	Profile profile;
 	
-	int tf = sys.FindPeriod(15);
-	int bb  = System::Find<DataBridge>();
-	int wsa = System::Find<ExampleAdvisor>();
+	int tf = 0;
+	int bb  = System::Find<BollingerBands>();
 	
-	{
-		ProfileGroup& pgroup = profile.charts.Add();
-		pgroup.symbol = sys.GetAccountSymbol();
-		pgroup.tf = tf;
-		pgroup.keep_at_end = true;
-		pgroup.decl.factory = wsa;
-	}
+	MetaTrader& mt = GetMetaTrader();
+	mt.Enter();
+	const Vector<Order>& orders = mt.GetOpenOrders();
+	Index<int> open_symbols;
+	for (auto& o : orders)
+		open_symbols.FindAdd(o.symbol);
+	mt.Leave();
 	
 	int common_pos = 0;
-	for(int i = 0; i < SYM_COUNT+1; i++) {
-		int sym = i < SYM_COUNT ? sys.GetCommonSymbolId(common_pos, i) : sys.GetCommonSymbolId(common_pos);
+	for(int i = 0; i < open_symbols.GetCount(); i++) {
+		int sym = open_symbols[i];
 		
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = sym;
 		pgroup.tf = tf;
 		pgroup.keep_at_end = true;
+		pgroup.right_offset = true;
 		pgroup.decl.factory = bb;
 	}
 	
@@ -1019,8 +1025,6 @@ void Overlook::LoadProfile(Profile& profile) {
 		if (pchart.symbol >= sys.GetSymbolCount() || pchart.tf >= sys.GetPeriodCount()) continue;
 		Chart& chart				= OpenChart(pchart.symbol, pchart.decl, pchart.tf);
 		chart.shift					= pchart.shift;
-		chart.right_offset			= pchart.right_offset;
-		chart.keep_at_end			= pchart.keep_at_end;
 		
 		SubWindow& swin = cman.GetWindow(chart);
 		if (pchart.is_maximized) {
@@ -1030,6 +1034,9 @@ void Overlook::LoadProfile(Profile& profile) {
 			if (swin.IsMaximized()) swin.Maximize();
 			swin.SetRect(pchart.rect);
 		}
+		
+		chart.SetRightOffset(pchart.right_offset);
+		chart.SetKeepAtEnd(pchart.keep_at_end);
 	}
 	
 	ActiveWindowChanged();

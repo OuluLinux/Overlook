@@ -40,6 +40,7 @@ void System::MainLoop() {
 	
 	
 	// Initial refresh
+	mainloop_lock.Enter();
 	DataBridgeCommon& common = GetDataBridgeCommon();
 	common.InspectInit();
 	common.DownloadAskBid();
@@ -48,7 +49,6 @@ void System::MainLoop() {
 	
 	// Run main loop
 	while (main_running && !Thread::IsShutdownThreads()) {
-	
 		
 		Time t = GetMetaTrader().GetTime();
 		#if SYS_M15
@@ -66,7 +66,9 @@ void System::MainLoop() {
 		case INS_WAIT_NEXTSTEP:
 			
 			if (prev_step == step) {
+				mainloop_lock.Leave();
 				Sleep(100);
+				mainloop_lock.Enter();
 				break;
 			}
 			prev_step = step;
@@ -172,8 +174,10 @@ void System::MainLoop() {
 			
 		// Handle real MT4 account.
 		case INS_REFRESH_REAL:
-			if (RefreshReal())
+			if (RefreshReal()) {
 				ins = 0; // go to waiting when success
+				PostCallback(WhenRealRefresh);
+			}
 			else
 				ins = 1;
 			break;
@@ -182,6 +186,8 @@ void System::MainLoop() {
 		
 		
 	}
+	
+	mainloop_lock.Leave();
 	
 	main_running = false;
 	main_stopped = true;
@@ -518,7 +524,10 @@ void System::FillCustomLogicBits() {
 						} else {
 							int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
 							curr = open_buf.GetUnsafe(core_pos);
-							next = open_buf.GetUnsafe(core_pos + 1);
+							if (core_pos + 1 < open_buf.GetCount())
+								next = open_buf.GetUnsafe(core_pos + 1);
+							else
+								next = curr;
 						}
 						
 						if (!real_sig)
@@ -945,9 +954,15 @@ bool System::RefreshReal() {
 				int prev_sig = mt.GetSignal(sym_id);
 				
 				// Avoid unpredictable calendar events...
-				{
+				if (sig) {
 					int pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_SKIP_CALENDAREVENT);
 					bool skip = main_data.Get(pos);
+					if (skip) sig = 0;
+				}
+				
+				// Last resort for avoiding failure
+				if (sig) {
+					bool skip = !TestSymbol(sym_id);
 					if (skip) sig = 0;
 				}
 					
@@ -1023,6 +1038,64 @@ int64 System::GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bi
 	ASSERT(tf_pos >= 0 && tf_pos < main_tf_ids.GetCount());
 	ASSERT(bit_pos >= 0 && bit_pos < BIT_COUNT);
 	return (((cursor * main_sym_ids.GetCount() + sym_pos) * main_tf_ids.GetCount() + tf_pos) * BIT_COUNT + bit_pos);
+}
+
+bool System::TestSymbol(int sym_id) {
+	Time latest = main_time[main_tf].TopKey();
+	Time begin = latest - 4 * 60 * 60;
+	int bars = GetCountMain(main_tf);
+	int cursor;
+	int sym_pos = main_sym_ids.Find(sym_id);
+	if (sym_pos == -1)
+		return false;
+	
+	for (cursor = bars - 1; cursor >= 0; cursor--)
+		if (GetTimeMain(main_tf, cursor) <= begin)
+			break;
+	if (cursor < 0) cursor = 0;
+	
+	ConstBuffer& open_buf = ordered_cores[GetOrderedCorePos(sym_pos, main_tf_pos, 0)]->GetBuffer(0);
+	int corebars = open_buf.GetCount();
+	int trainbars = main_mem[MEM_TRAINBARS];
+	double change_total = 0.0;
+	bool prev_signal = 0, prev_enabled = 0;
+	double spread_point = spread_points[sym_id];
+	for(; cursor < bars; cursor++) {
+		double change_sum = 0.0;
+		
+		int sig_bit = cursor < trainbars ? BIT_L0_SIGNAL : BIT_L1_SIGNAL;
+		bool signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, sig_bit));
+		bool is_enabled = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_L2_ENABLED));
+		
+		if (is_enabled) {
+			int pos = GetShiftFromMain(sym_id, main_tf, cursor);
+			if (pos >= corebars - 1)
+				break;
+			double curr		= open_buf.GetUnsafe(pos);
+			double next		= open_buf.GetUnsafe(pos + 1);
+			ASSERT(curr > 0.0);
+			double change;
+			
+			if (prev_signal != signal || !prev_enabled) {
+				if (!signal)	change = next - (curr + spread_point);
+				else			change = (curr - spread_point) - next;
+			} else {
+				if (!signal)	change = next - curr;
+				else			change = curr - next;
+			}
+			
+			if (!IsFin(change)) change = 0.0;
+			change_total += change;
+		}
+		
+		prev_signal = signal;
+		prev_enabled = is_enabled;
+	}
+	
+	if (change_total > 0.0)
+		return true;
+	
+	return false;
 }
 
 void System::LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize) {
@@ -1219,90 +1292,5 @@ String System::GetMemoryValue(int i, int j) const {
 		return IntStr(j);
 	}
 }
-
-
-/*
-
-void RunSimBroker() {
-	System& sys = GetSystem();
-	DataBridge* db = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
-
-	Buffer& open_buf	= db->GetBuffer(0);
-	Buffer& low_buf		= db->GetBuffer(1);
-	Buffer& high_buf	= db->GetBuffer(2);
-	Buffer& volume_buf	= db->GetBuffer(3);
-
-	int sym = GetSymbol();
-	int tf = GetTf();
-	int bars = GetBars();
-	db->ForceCount(bars);
-
-
-	sb.Brokerage::operator=(GetMetaTrader());
-	sb.SetInitialBalance(10000);
-	sb.Init();
-	sb.SetFreeMarginLevel(FMLEVEL);
-
-	for(int i = 0; i < SYM_COUNT; i++) {
-		check_sum1[i] = 0;
-		check_sum2[i] = 0;
-	}
-
-	for(int i = main_begin; i < bars; i++) {
-		DQN::DQVectorType& current = data[i];
-
-		for(int j = 0; j < SYM_COUNT; j++) {
-			int pos = sys.GetShiftTf(GetSymbol(), tf_ids[0], sys.GetCommonSymbol(j), tf_ids[0], i);
-			ConstBuffer& open_buf = *this->open_buf[j];
-			double curr = open_buf.GetUnsafe(pos);
-			int symbol = sys.GetCommonSymbol(j);
-			sb.SetPrice(symbol, curr);
-		}
-		sb.RefreshOrders();
-
-		Time time = sys.GetTimeTf(sym, tf, i);
-		int t = time.hour * 100 + time.minute;
-		int open_count = 0;
-
-		for(int j = 0; j < SYM_COUNT; j++) {
-			int sym			= sys.GetCommonSymbol(j);
-			int prev_sig	= sb.GetSignal(sym);
-			bool prev_signal  = prev_sig == +1 ? false : true;
-			bool prev_enabled = prev_sig !=  0;
-
-			int sig = 0;
-
-			if (is_enabled) {
-				sig = signal ? -1 : +1;
-				open_count++;
-			}
-			else if (is_priority)
-				open_count++;
-
-
-			if (sig == sb.GetSignal(sym) && sig != 0)
-				sb.SetSignalFreeze(sym, true);
-			else {
-				sb.SetSignal(sym, sig);
-				sb.SetSignalFreeze(sym, false);
-			}
-		}
-
-		sb.SetFreeMarginScale(open_count ? open_count : 1);
-
-		sb.SignalOrders(false);
-
-
-		double value = sb.AccountEquity();
-		if (value < 0.0) {
-			sb.ZeroEquity();
-			value = 0.0;
-		}
-		open_buf.Set(i, value);
-		low_buf.Set(i, value);
-		high_buf.Set(i, value);
-	}
-}
-*/
 
 }

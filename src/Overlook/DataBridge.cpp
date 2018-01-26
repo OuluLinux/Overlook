@@ -84,11 +84,7 @@ void DataBridge::Start() {
 	int cur = sym - sym_count;
 	int mt_period = GetPeriod();
 	
-	// Account symbol
-	if (sym == sys.GetAccountSymbol()) {
-		RefreshAccount();
-	}
-	else if (is_common_symbol) {
+	if (is_common_symbol) {
 		RefreshCommon();
 	}
 	else
@@ -128,43 +124,6 @@ void DataBridge::AddSpread(double a) {
 		spread_mean += delta / spread_count;
 	}
 	spread_count++;
-}
-
-
-void DataBridge::RefreshAccount() {
-	System& sys = GetSystem();
-	Buffer& open_buf = GetBuffer(0);
-	Buffer& low_buf = GetBuffer(1);
-	Buffer& high_buf = GetBuffer(2);
-	Buffer& volume_buf = GetBuffer(3);
-	
-	int id = GetSymbol();
-	int tf = GetTimeframe();
-	int bars = sys.GetCountMain(tf);
-	int counted = GetCounted();
-	
-	if (!counted) {
-		sys.DataTimeBegin(id, tf);
-	}
-	
-	// Allocate memory
-	ASSERT(bars > 0);
-	SetSafetyLimit(bars);
-	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
-		outputs[0].buffers[i].SetCount(bars);
-	double prev_open = counted ? open_buf.Get(counted-1) : 0.0;
-	for(int i = counted; i < bars; i++) {
-		Time utc_time = sys.GetTimeMain(tf, i);
-		sys.DataTimeAdd(id, tf, utc_time);
-		
-		open_buf.Set(i, prev_open);
-		low_buf.Set(i, prev_open);
-		high_buf.Set(i, prev_open);
-	}
-	
-	sys.DataTimeEnd(id, tf);
-	
-	ForceSetCounted(open_buf.GetCount());
 }
 
 void DataBridge::RefreshCommon() {

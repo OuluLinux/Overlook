@@ -165,7 +165,7 @@ public:
 	void LoadPreviousProfile();
 	void StorePreviousProfile();
 	void SaveProfile();
-	void LoadDefaultEAs();
+	void LoadOpenOrderCharts();
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
 	void SetProfileFromFile(String path);

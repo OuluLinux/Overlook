@@ -411,7 +411,6 @@ public:
 public:
 	
 	
-	int		GetAccountSymbol() const				{return symbols.GetCount()-1;}
 	int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-1-COMMON_COUNT+common_pos;}
 	int		GetCommonSymbolId(int common_pos, int symbol_pos) const;
 	int		GetCommonCount() const					{return COMMON_COUNT;}
@@ -558,7 +557,8 @@ public:
 	bool main_stopped = true, main_running = false;
 	bool store_this = false;
 	RWMutex main_lock;
-	Mutex workqueue_lock;
+	Mutex workqueue_lock, mainloop_lock;
+	Callback WhenRealRefresh;
 	
 	void	StartMain();
 	void	StopMain();
@@ -578,6 +578,7 @@ public:
 	void	LearnLogic(int level, int common_pos);
 	int		ProcessMainJob(MainJob& job);
 	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
+	bool	TestSymbol(int sym_id);
 	int64	GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const;
 	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);

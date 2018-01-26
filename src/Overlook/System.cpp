@@ -81,7 +81,6 @@ void System::FirstStart() {
 		}
 		for(int i = 0; i < COMMON_COUNT; i++)
 			AddSymbol("Common " + IntStr(i+1));
-		AddSymbol("Account");
 		
 		
 		// Add periods

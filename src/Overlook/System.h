@@ -338,7 +338,7 @@ public:
 		s % symbols % periods % period_strings % spread_points % proxy_id
 		  % proxy_base_mul % sym_priority % common_symbol_id % common_symbol_pos % common_symbol_group_pos % time_offset
 		  % pos_time % main_time % main_conv % posconv_from % posconv_to
-		  % main_data % main_mem % logic0 % logic1 % logic2;
+		  % main_data % main_mem % logic0;
 	}
 	
 	void	DataTimeBegin(int sym, int tf);
@@ -428,15 +428,12 @@ public:
 		BIT_L0BITS_BEGIN,
 		BIT_L0BITS_LAST = BIT_L0BITS_BEGIN + ASSIST_COUNT - 1,
 		
-		BIT_L2BITS_BEGIN,
-		BIT_L2BITS_LAST = BIT_L2BITS_BEGIN + L2_INPUT - 1,
+		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_SYMOPT,
 		
-		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_L1, BIT_WRITTEN_L2,
-		
-		BIT_REALSIGNAL,  BIT_REALENABLED,
+		BIT_REALSIGNAL,
 		BIT_L0_SIGNAL,
-		BIT_L1_SIGNAL,
-		BIT_L2_ENABLED,
+		BIT_SYMOPT_SIGNAL,
+		BIT_SYMOPT_ENABLED,
 		
 		BIT_SKIP_CALENDAREVENT,
 		
@@ -446,17 +443,15 @@ public:
 		REG_INS, REG_WORKQUEUE_CURSOR,
 		
 		REG_WORKQUEUE_INITED, REG_INDIBITS_INITED,
-		REG_LOGICTRAINING_L0_ISRUNNING, REG_LOGICTRAINING_L1_ISRUNNING, REG_LOGICTRAINING_L2_ISRUNNING,
+		REG_LOGICTRAINING_L0_ISRUNNING,
 		
-		REG_SIG_L0TOREAL, REG_SIG_L1TOREAL, REG_SIG_L2TOREAL, REG_SIG_L0TOL1,
-		REG_ENA_L0L2TOREAL, REG_ENA_L1L2TOREAL, REG_SIG_L0L2TOL1L2,
+		REG_SIG_L0TOREAL,
 		REG_DD_L0TRAIN, REG_DD_L0TEST,
-		REG_L0ENA, REG_L1ENA,
 		
 		REG_COUNT
 	};
 	enum {
-		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INDIBITS, INS_CUSTOMLOGIC, INS_CALENDARLOGIC,
+		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INDIBITS, INS_CALENDARLOGIC,
 		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_STATS, INS_REFRESH_REAL,
 		INS_COUNT
 	};
@@ -466,13 +461,13 @@ public:
 		MEM_TRAINMIDSTEP,		MEM_TRAINMIDSTEP_LAST=MEM_TRAINMIDSTEP+COMMON_COUNT-1,
 		MEM_TRAINBEGIN,			MEM_TRAINBEGIN_LAST=MEM_TRAINBEGIN+COMMON_COUNT-1,
 		
-		MEM_COUNTED_L0, MEM_COUNTED_L1, MEM_COUNTED_L2,
-		MEM_TRAINED_L0, MEM_TRAINED_L1, MEM_TRAINED_L2,
+		MEM_COUNTED_L0,
+		MEM_TRAINED_L0,
 		
 		MEM_COUNT
 	};
 	
-	static const int level_count = 3;
+	static const int level_count = 1;
 	
 	struct MainJob {
 		Vector<double> training_pts;
@@ -507,39 +502,11 @@ public:
 		
 	};
 	
-	typedef LogicLearner0 LogicLearner1;
-	
-	struct LogicLearner2 : Moveable<LogicLearner2> {
-		
-		static const int SYM_BITS			= 2;
-		static const int TIME_BITS			= (5 + SYS_HOURBITS + SYS_MINBITS) * SYS_HAVETIMEIN;
-		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * L2_INPUT * TF_COUNT;
-		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
-		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
-		
-		
-		// Persistent
-		DQN							dqn_trainer;
-		int							dqn_round = 0;
-		
-		// Temporary
-		#ifdef flagDEBUG
-		int							dqn_max_rounds		= 500;
-		#else
-		int							dqn_max_rounds		= 25000000;
-		#endif
-		
-		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
-		
-	};
 	
 	// Persistent
 	VectorBool main_data;
 	Vector<dword> main_mem;
 	Vector<LogicLearner0> logic0;
-	Vector<LogicLearner1> logic1;
-	Vector<LogicLearner2> logic2;
 	
 	
 	// Temporary
@@ -569,7 +536,6 @@ public:
 	void	ProcessMainWorkQueue(bool store_cache=false);
 	void	FillIndicatorBits();
 	void	FillTrainableBits();
-	void	FillCustomLogicBits();
 	void	FillCalendarBits();
 	void	RealizeLogicTraining();
 	void	FillLogicBits(int level);
@@ -579,6 +545,7 @@ public:
 	int		ProcessMainJob(MainJob& job);
 	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
 	bool	TestSymbol(int sym_id);
+	double	RunTest(int sym_id, int sym_pos, int begin, int bars, int sigperiod, double tp, double sl, double ddlimit, bool write);
 	int64	GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const;
 	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
@@ -591,7 +558,6 @@ public:
 	String	GetMemoryValue(int i, int j) const;
 	void	StoreAll();
 	void	ClearCounters();
-	void	ClearL2();
 	
 	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	

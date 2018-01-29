@@ -44,7 +44,7 @@ void System::Init() {
 	if (symbols.IsEmpty())
 		FirstStart();
 	else {
-		if (mt.GetSymbolCount() + GetCommonCount() + 1 != symbols.GetCount())
+		if (mt.GetSymbolCount() + GetCommonCount() != symbols.GetCount())
 			throw UserExc("MT4 symbols changed. Remove cached data.");
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& s = mt.GetSymbol(i);

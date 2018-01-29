@@ -19,8 +19,6 @@ void System::MainLoop() {
 	// Allocate some non-persistent memory
 	main_mem.SetCount(MEM_COUNT, 0);
 	logic0.SetCount(GetCommonCount());
-	logic1.SetCount(GetCommonCount());
-	logic2.SetCount(GetCommonCount());
 	workers_started = 0;
 	for (int i = 0; i < REG_COUNT; i++) main_reg[i] = 0;
 	int prev_step = -1;
@@ -127,16 +125,6 @@ void System::MainLoop() {
 			break;
 			
 		
-		// Fill L0 test data performance to the main memory.
-		// L0 must be trained and evaluated values must be written to the main memory.
-		// This refresh L2 input source.
-		case INS_CUSTOMLOGIC:
-			FillLogicBits(0);
-			FillCustomLogicBits();
-			ins++;
-			break;
-			
-			
 		// Fill calendar events to the main memory.
 		// These events might be public speeches and national publications, which tends to
 		// override technical rules with large volatility. They should be avoided usually.
@@ -156,11 +144,10 @@ void System::MainLoop() {
 		// Evaluate logic and write it to the main memory.
 		// Requires training to be finished.
 		case INS_LOGICBITS:
-			FillLogicBits(1);
-			FillLogicBits(2);
+			FillLogicBits(0);
 			
 			// Don't continue to INS_REFRESH_REAL before all levels have been written.
-			if (main_mem[MEM_COUNTED_L2] == 0)
+			if (main_mem[MEM_COUNTED_L0] == 0)
 				ins = 1;
 			else
 				ins++;
@@ -201,19 +188,6 @@ void System::ClearCounters() {
 	main_mem[MEM_COUNTED_INDI] = 0;
 	main_mem[MEM_COUNTED_ENABLED] = 0;
 	main_mem[MEM_COUNTED_L0] = 0;
-	main_mem[MEM_COUNTED_L1] = 0;
-	main_mem[MEM_COUNTED_L2] = 0;
-}
-
-void System::ClearL2() {
-	main_mem[MEM_COUNTED_L2] = 0;
-	main_mem[MEM_COUNTED_ENABLED] = 0;
-	main_mem[MEM_TRAINED_L2] = 0;
-	main_reg[REG_DD_L0TEST] = 0;
-	for (auto& l : logic2) {
-		l.dqn_round = 0;
-		l.dqn_trainer.Reset();
-	}
 }
 
 void System::RealizeMainWorkQueue() {
@@ -409,6 +383,11 @@ void System::FillIndicatorBits() {
 	bool init = cursor == 0;
 	
 	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALSIGNAL
+	if (!cursor) {
+		cursor = UINT_MAX;
+		for(int i = 0; i < main_begin.GetCount(); i++)
+			cursor = Upp::min(cursor, (dword)main_begin[i]);
+	}
 		
 	VectorBool vec;
 	vec.SetCount(ASSIST_COUNT);
@@ -492,72 +471,6 @@ void System::FillTrainableBits() {
 	}
 	
 	is_set_already = true;
-}
-
-void System::FillCustomLogicBits() {
-	dword& cursor = main_mem[MEM_COUNTED_ENABLED];
-	
-	cursor = Upp::max(0, (int)cursor - 8); // set previous BIT_REALENABLED
-		
-	int bars = main_mem[MEM_COUNTED_L0];
-	if (!bars || bars < main_mem[MEM_INDIBARS])
-		return;
-	
-	int first_common_id = GetCommonSymbolId(0);
-	
-	for (; cursor < bars && main_running; cursor++) {
-		
-		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
-			int tf = main_tf_ids[i];
-			bool is_slower = i > main_tf_pos;
-			
-			for (int j = 0; j < main_sym_ids.GetCount(); j++) {
-				int sym = main_sym_ids[j];
-				int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
-				int core_bars = GetCountTf(sym, tf);
-				int db_pos = GetOrderedCorePos(j, i, 0);
-				Core& db = *ordered_cores[db_pos];
-				ConstBuffer& open_buf = db.GetBuffer(0);
-				double point = spread_points[sym];
-				ASSERT(sym >= first_common_id || point > 0.0);
-				
-				
-				int end = (core_cursor < core_bars - 1) ? L2_INPUT + 1 : L2_INPUT;
-					
-				for (int k = 0; k < end; k++) {
-					int pos = Upp::max(0, (int)cursor - L2_INPUT + k);
-					bool real_sig	= main_data.Get(GetMainDataPos(pos, j, i, BIT_REALSIGNAL));
-					bool l0_sig		= main_data.Get(GetMainDataPos(pos, j, i, BIT_L0_SIGNAL));
-					bool enabled	= real_sig == l0_sig;
-					if (enabled) {
-						double curr, next;
-						if (is_slower) {
-							int next_core_pos = GetShiftMainTf(main_tf, sym, tf, pos + 1);
-							curr = open_buf.GetUnsafe(Upp::max(0, next_core_pos - 1));
-							next = open_buf.GetUnsafe(next_core_pos);
-						} else {
-							int core_pos = GetShiftMainTf(main_tf, sym, tf, pos);
-							curr = open_buf.GetUnsafe(core_pos);
-							if (core_pos + 1 < open_buf.GetCount())
-								next = open_buf.GetUnsafe(core_pos + 1);
-							else
-								next = curr;
-						}
-						
-						if (!real_sig)
-							enabled = next >= curr + point;
-						else
-							enabled = next <= curr - point;
-					}
-					
-					if (k < L2_INPUT)
-						main_data.Set(GetMainDataPos(cursor, j, i, BIT_L2BITS_BEGIN + k), enabled);
-					else
-						main_data.Set(GetMainDataPos(cursor, j, i, BIT_REALENABLED), enabled);
-				}
-			}
-		}
-	}
 }
 
 void System::FillCalendarBits() {
@@ -729,8 +642,6 @@ template <class T> int TrainLogic(System::MainJob& job, System& sys, T& logic) {
 int System::ProcessMainJob(MainJob& job) {
 	int ret = 0;
 	if      (job.level == 0)		ret = TrainLogic(job, *this, logic0[job.common_pos]);
-	else if (job.level == 1)		ret = TrainLogic(job, *this, logic1[job.common_pos]);
-	else if (job.level == 2)		ret = TrainLogic(job, *this, logic2[job.common_pos]);
 	else Panic("Invalid level");
 	return ret;
 }
@@ -773,8 +684,6 @@ void System::FillLogicBits(int level) {
 	
 	for (int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
 		if      (level == 0)		::Overlook::FillLogicBits(level, common_pos, *this, logic0[common_pos]);
-		else if (level == 1)		::Overlook::FillLogicBits(level, common_pos, *this, logic1[common_pos]);
-		else if (level == 2)		::Overlook::FillLogicBits(level, common_pos, *this, logic2[common_pos]);
 		else Panic("Invalid level");
 	}
 	
@@ -782,7 +691,7 @@ void System::FillLogicBits(int level) {
 }
 
 void System::FillStatistics() {
-	if (main_mem[System::MEM_COUNTED_L2] == 0) return;
+	if (main_mem[System::MEM_COUNTED_L0] == 0) return;
 	if (main_reg[REG_DD_L0TEST] != 0) return;
 	
 	int midstep = 0, begin = 0;
@@ -812,27 +721,8 @@ void System::FillStatistics() {
 				bool real_sig = main_data.Get(pos);
 				pos = GetMainDataPos(i, sym_pos, tf_pos, BIT_L0_SIGNAL);
 				bool l0_sig = main_data.Get(pos);
-				pos = GetMainDataPos(i, sym_pos, tf_pos, BIT_L1_SIGNAL);
-				bool l1_sig = main_data.Get(pos);
-				
-				pos = GetMainDataPos(i, sym_pos, tf_pos, BIT_REALENABLED);
-				bool real_ena = main_data.Get(pos);
-				pos = GetMainDataPos(i, sym_pos, tf_pos, BIT_L2_ENABLED);
-				bool l2_ena = main_data.Get(pos);
-				
 				
 				if (l0_sig == real_sig)		l0_correct++;
-				if (l1_sig == real_sig)		l1_correct++;
-				if (l2_ena == real_ena)		l2_correct++;
-				if (l2_ena == real_ena && (!l2_ena || l0_sig == real_sig))	l0l2_correct++;
-				if (l2_ena == real_ena && (!l2_ena || l1_sig == real_sig))	l1l2_correct++;
-				
-				if (l2_ena) {
-					if (l0_sig == real_sig)	l0ena_correct++;
-					l0ena_count++;
-					if (l1_sig == real_sig)	l1ena_correct++;
-					l1ena_count++;
-				}
 			}
 		}
 	}
@@ -858,16 +748,8 @@ void System::FillStatistics() {
 	
 	
 	main_reg[REG_SIG_L0TOREAL]		= 1000 * l0_correct / count;
-	main_reg[REG_SIG_L1TOREAL]		= 1000 * l1_correct / count;
-	main_reg[REG_SIG_L2TOREAL]		= 1000 * l2_correct / count;
-	main_reg[REG_SIG_L0TOL1]		= 1000 * main_reg[REG_SIG_L0TOREAL] / main_reg[REG_SIG_L1TOREAL];
-	main_reg[REG_ENA_L0L2TOREAL]	= 1000 * l0l2_correct / count;
-	main_reg[REG_ENA_L1L2TOREAL]	= 1000 * l1l2_correct / count;
-	main_reg[REG_SIG_L0L2TOL1L2]	= 1000 * main_reg[REG_ENA_L0L2TOREAL] / main_reg[REG_ENA_L1L2TOREAL];
 	main_reg[REG_DD_L0TRAIN]		= 1000 * (train_count - train_l0_correct) / train_count;
 	main_reg[REG_DD_L0TEST]			= 1000 * (count - l0_correct) / count;
-	main_reg[REG_L0ENA]				= 1000 * l0ena_correct / l0ena_count;
-	main_reg[REG_L1ENA]				= 1000 * l1ena_correct / l1ena_count;
 	
 }
 
@@ -946,25 +828,14 @@ bool System::RefreshReal() {
 		for (int i = 0; i < GetCommonCount(); i++) {
 			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(i, j);
-				int sym_pos = main_sym_ids.Find(sym_id);
-				
-				// Do some quality checks
-				if (1) {
-					int64 pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_REAL);
-					int written_real = main_data.Get(pos);
-					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L0);
-					int not_written_L0 = !main_data.Get(pos);
-					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L1);
-					int not_written_L1 = !main_data.Get(pos);
-					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L2);
-					int not_written_L2 = !main_data.Get(pos);
-					int e = (written_real << 3) | (not_written_L0 << 2) | (not_written_L1 << 1) | (not_written_L2 << 0);
-					if (e)
-						Panic("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
+				if (!TestSymbol(sym_id)) {
+					signals.Add(0);
+					continue;
 				}
 				
-				int64 signal_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_L1_SIGNAL);
-				int64 enabled_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_L2_ENABLED);
+				int sym_pos = main_sym_ids.Find(sym_id);
+				int64 signal_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_SYMOPT_SIGNAL);
+				int64 enabled_pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_SYMOPT_ENABLED);
 				bool signal_bit = main_data.Get(signal_pos);
 				bool enabled_bit = main_data.Get(enabled_pos);
 				int sig = enabled_bit ? (signal_bit ? -1 : + 1) : 0;
@@ -976,16 +847,27 @@ bool System::RefreshReal() {
 					bool skip = main_data.Get(pos);
 					if (skip) sig = 0;
 				}
-				
-				// Last resort for avoiding failure
-				if (sig) {
-					bool skip = !TestSymbol(sym_id);
-					if (skip) sig = 0;
-				}
 					
 				signals.Add(sig);
 				if (sig == prev_sig && sig != 0)
 					open_count++;
+				
+				// Do some quality checks
+				if (1) {
+					int64 pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_REAL);
+					int written_real = main_data.Get(pos);
+					#ifdef flagDEBUG
+					int not_written_L0 = 0;
+					#else
+					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_L0);
+					int not_written_L0 = !main_data.Get(pos);
+					#endif
+					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_WRITTEN_SYMOPT);
+					int not_written_symopt = sig && !main_data.Get(pos);
+					int e = (written_real << 2) | (not_written_L0 << 1) | (not_written_symopt << 0);
+					if (e)
+						Panic("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
+				}
 			}
 		}
 		int sig_pos = 0;
@@ -1058,66 +940,172 @@ int64 System::GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bi
 }
 
 bool System::TestSymbol(int sym_id) {
-	Time latest = main_time[main_tf].TopKey();
-	Time begin = latest - 4 * 60 * 60;
 	int bars = GetCountMain(main_tf);
-	int cursor;
+	int begin = bars - 60;
 	int sym_pos = main_sym_ids.Find(sym_id);
 	if (sym_pos == -1)
 		return false;
 	
-	for (cursor = bars - 1; cursor >= 0; cursor--)
-		if (GetTimeMain(main_tf, cursor) <= begin)
-			break;
-	if (cursor < 0) cursor = 0;
 	
+	int topsigperiod;
+	double topresult = -DBL_MAX, toptp, topsl, topdd;
+	for (int sigperiod = 0; sigperiod < 3; sigperiod++) {
+		for (int tpi = 0; tpi < 3; tpi++) {
+			for (int sli = 0; sli < 3; sli++) {
+				for (int ddi = 0; ddi < 3; ddi++) {
+					double tp = (tpi + 1) * +0.0004;
+					double sl = (sli + 1) * -0.0007;
+					double dd = (ddi + 1) * 0.15;
+					
+					double result = RunTest(sym_id, sym_pos, begin, bars, sigperiod, tp, sl, dd, false);
+					
+					if (result > topresult){
+						topresult = result;
+						topsigperiod = sigperiod;
+						toptp = tp;
+						topsl = sl;
+						topdd = dd;
+					}
+				}
+			}
+		}
+	}
+	
+	RunTest(sym_id, sym_pos, begin, bars, topsigperiod, toptp, topsl, topdd, true);
+	
+	if (topresult < 0)
+		return false;
+	
+	return main_data.Get(GetMainDataPos(bars - 1, sym_pos, main_tf_pos, BIT_SYMOPT_ENABLED));
+}
+
+double System::RunTest(int sym_id, int sym_pos, int begin, int bars, int sigperiod, double tp, double sl, double ddlimit, bool write) {
 	ConstBuffer& open_buf = ordered_cores[GetOrderedCorePos(sym_pos, main_tf_pos, 0)]->GetBuffer(0);
 	int corebars = open_buf.GetCount();
 	int trainbars = main_mem[MEM_TRAINBARS];
-	double change_total = 0.0, pos_total = 0.0, neg_total = 0.0;
+	double change_total = 0.0;
 	bool prev_signal = 0, prev_enabled = 0;
 	double spread_point = spread_points[sym_id];
-	for(; cursor < bars; cursor++) {
-		double change_sum = 0.0;
+	
+	const int ddperiod = 15;
+	
+	int sig_cursor = 0;
+	int truesig_count = 0;
+	int correctsig_cursor = 0;
+	int correctsig_count = 0;
+	bool sig_buf[ddperiod];
+	bool correctsig_buf[ddperiod];
+	for(int i = 0; i < ddperiod; i++) {
+		int cursor = begin - ddperiod + i;
+		bool pred_signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_L0_SIGNAL));
+		bool real_signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_REALSIGNAL));
+		sig_buf[i] = pred_signal;
+		if (pred_signal) truesig_count++;
+		bool correct = pred_signal == real_signal;
+		if (correct) correctsig_count++;
+		correctsig_buf[i] = correct;
+	}
+	
+	bool used_signal = false;
+	bool stop_triggered = false;
+	double open;
+	int open_len = 0;
+	for(int cursor = begin; cursor < bars; cursor++) {
 		
-		int sig_bit = cursor < trainbars ? BIT_L0_SIGNAL : BIT_L1_SIGNAL;
-		bool signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, sig_bit));
-		bool is_enabled = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_L2_ENABLED));
+		bool pred_signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_L0_SIGNAL));
 		
-		if (is_enabled) {
-			int pos = GetShiftFromMain(sym_id, main_tf, cursor);
-			if (pos >= corebars - 1)
-				break;
-			double curr		= open_buf.GetUnsafe(pos);
-			double next		= open_buf.GetUnsafe(pos + 1);
-			ASSERT(curr > 0.0);
-			double change;
-			
-			if (prev_signal != signal || !prev_enabled) {
-				if (!signal)	change = next - (curr + spread_point);
-				else			change = (curr - spread_point) - next;
-			} else {
-				if (!signal)	change = next - curr;
-				else			change = curr - next;
-			}
-			
-			if (!IsFin(change)) change = 0.0;
-			change_total += change;
-			if (change > 0.0)	pos_total += change;
-			else				neg_total -= change;
+		// Get dd before using real signal, which is unknown in realtime.
+		double dd = (double)(ddperiod - correctsig_count) / (double)ddperiod;
+		ASSERT(dd >= 0.0 && dd <= 1.0);
+		bool is_enabled = dd < ddlimit;
+		
+		// Include previous real signals
+		if (cursor < bars - 1) {
+			bool real_signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_REALSIGNAL));
+			bool& correctsig_ref = correctsig_buf[correctsig_cursor++];
+			if (correctsig_cursor >= ddperiod) correctsig_cursor = 0;
+			if (correctsig_ref) correctsig_count--;
+			correctsig_ref = pred_signal == real_signal;
+			if (correctsig_ref) correctsig_count++;
 		}
 		
-		prev_signal = signal;
+		// Include current signal
+		bool& sig_ref = sig_buf[sig_cursor++];
+		if (sig_cursor > sigperiod) sig_cursor = 0;
+		if (sig_ref) truesig_count--;
+		sig_ref = pred_signal;
+		if (sig_ref) truesig_count++;
+		
+		// Get signal after including current predicted signal
+		double floatsig = (double)truesig_count / (double)(sigperiod + 1);
+		ASSERT(dd >= 0.0 && dd <= 1.0);
+		bool used_signal = floatsig >= 0.5;
+		
+		
+		if (stop_triggered) {
+			if (is_enabled) {
+				if (used_signal == prev_signal)
+					is_enabled = false;
+				else
+					stop_triggered = false;
+			}
+		}
+		
+		bool do_close = false, do_open = false, do_check_stop = false;
+		if (is_enabled) {
+			do_open = prev_signal != used_signal || !prev_enabled;
+			do_close = do_open && prev_enabled;
+			do_check_stop = !do_open && !do_close;
+			open_len++;
+		}
+		else {
+			do_close = prev_enabled;
+		}
+		
+		if (do_close || do_open || do_check_stop) {
+			double curr = open_buf.GetUnsafe(GetShiftFromMain(sym_id, main_tf, cursor));
+			ASSERT(curr > 0.0);
+			if (do_close || do_check_stop) {
+				double change;
+				if (!prev_signal)	change = curr / (open + spread_point) - 1.0;
+				else				change = 1.0 - curr / (open - spread_point);
+				if (do_check_stop) {
+					if (change >= tp || change <= sl) {
+						do_close = true;
+						stop_triggered = true;
+					}
+				}
+				if (do_close) {
+					LOG("   stop " << change);
+					change_total += change;
+				}
+			}
+			if (do_open) {
+				open = curr;
+				open_len = 0;
+			}
+		}
+		
+		LOG(Format("cursor=%d, close=%d, open=%d, check=%d, trigged=%d", cursor, (int)do_close, (int)do_open, (int)do_check_stop, (int)stop_triggered));
+		
+		if (write) {
+			main_data.Set(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_WRITTEN_SYMOPT), true);
+			main_data.Set(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_SYMOPT_SIGNAL), used_signal);
+			main_data.Set(GetMainDataPos(cursor, sym_pos, main_tf_pos, BIT_SYMOPT_ENABLED), is_enabled);
+		}
+		
+		prev_signal = used_signal;
 		prev_enabled = is_enabled;
 	}
 	
-	double abs_total = pos_total + neg_total;
-	double dd = abs_total > 0.0 ? neg_total / abs_total : 100.0;
-	LOG("TestSymbol: symbol " << sym_id << ", dd " << dd << ", abs_total " << abs_total << ", pos_total " << pos_total << ", neg_total " << neg_total);
-	if (dd <= 0.33)
-		return true;
+	if (open_len > 0 && prev_enabled) {
+		double curr = open_buf.GetUnsafe(GetShiftFromMain(sym_id, main_tf, bars - 1));
+		ASSERT(curr > 0.0);
+		if (!prev_signal)	change_total += curr / (open + spread_point) - 1.0;
+		else				change_total += 1.0 - curr / (open - spread_point);
+	}
 	
-	return false;
+	return change_total;
 }
 
 void System::LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize) {
@@ -1143,8 +1131,8 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	#endif
 	#endif
 	
-	int bit = level < 2 ? BIT_L0BITS_BEGIN : BIT_L2BITS_BEGIN;
-	int bit_count = level < 2 ? ASSIST_COUNT : L2_INPUT;
+	int bit = BIT_L0BITS_BEGIN;
+	int bit_count = ASSIST_COUNT;
 	
 	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
@@ -1157,11 +1145,11 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 		}
 	}
 	ASSERT(buf_pos == bufsize);
-	ASSERT(buf_pos == (level < 2 ? LogicLearner0::INPUT_SIZE : LogicLearner2::INPUT_SIZE));
+	ASSERT(buf_pos == LogicLearner0::INPUT_SIZE);
 }
 
 void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize) {
-	int bit = level < 2 ? BIT_REALSIGNAL : BIT_REALENABLED;
+	int bit = BIT_REALSIGNAL;
 	int buf_pos = 0;
 	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
 		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
@@ -1173,15 +1161,13 @@ void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int 
 		}
 	}
 	ASSERT(buf_pos == bufsize);
-	ASSERT(buf_pos == (level < 2 ? LogicLearner0::OUTPUT_SIZE : LogicLearner2::OUTPUT_SIZE));
+	ASSERT(buf_pos == LogicLearner0::OUTPUT_SIZE);
 }
 
 void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int bufsize) {
 	int bit, chk_bit;
 	switch (level) {
 		case 0: bit = BIT_L0_SIGNAL;	chk_bit = BIT_WRITTEN_L0; break;
-		case 1: bit = BIT_L1_SIGNAL;	chk_bit = BIT_WRITTEN_L1; break;
-		case 2: bit = BIT_L2_ENABLED;	chk_bit = BIT_WRITTEN_L2; break;
 		default: Panic("Invalid level");
 	}
 	int buf_pos = 0;
@@ -1199,7 +1185,7 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 		}
 	}
 	ASSERT(buf_pos == bufsize);
-	ASSERT(buf_pos == (level < 2 ? LogicLearner0::OUTPUT_SIZE : LogicLearner2::OUTPUT_SIZE));
+	ASSERT(buf_pos == LogicLearner0::OUTPUT_SIZE);
 }
 
 String System::GetRegisterKey(int i) const {
@@ -1209,20 +1195,10 @@ String System::GetRegisterKey(int i) const {
 	case REG_WORKQUEUE_INITED: return "Is workqueue initialised";
 	case REG_INDIBITS_INITED: return "Is indicator bits initialised";
 	case REG_LOGICTRAINING_L0_ISRUNNING: return "Is level 0 training running";
-	case REG_LOGICTRAINING_L1_ISRUNNING: return "Is level 1 training running";
-	case REG_LOGICTRAINING_L2_ISRUNNING: return "Is level 2 training running";
 	
 	case REG_SIG_L0TOREAL:		return "L0/real";
-	case REG_SIG_L1TOREAL:		return "L1/real";
-	case REG_SIG_L2TOREAL:		return "L2/real";
-	case REG_SIG_L0TOL1:		return "L0/L1";
-	case REG_ENA_L0L2TOREAL:	return "L0L2/real";
-	case REG_ENA_L1L2TOREAL:	return "L1L2/real";
-	case REG_SIG_L0L2TOL1L2:	return "L0L2/L1L2";
 	case REG_DD_L0TRAIN:		return "L0 DD Train";
 	case REG_DD_L0TEST:			return "L0 DD Test";
-	case REG_L0ENA:				return "L0 enabled / real";
-	case REG_L1ENA:				return "L1 enabled / real";
 		
 	default: return IntStr(i);
 	}
@@ -1236,7 +1212,6 @@ String System::GetRegisterValue(int i, int j) const {
 		case INS_REFRESHINDI:				return "Indicator refresh";
 		case INS_INDIBITS:					return "Indicator bits in main data";
 		case INS_TRAINABLE:					return "Training values";
-		case INS_CUSTOMLOGIC:				return "Custom logic values";
 		case INS_CALENDARLOGIC:				return "Calendar logic values";
 		case INS_REALIZE_LOGICTRAINING:		return "Realize logic training";
 		case INS_WAIT_LOGICTRAINING:		return "Wait logic training to finish";
@@ -1251,21 +1226,11 @@ String System::GetRegisterValue(int i, int j) const {
 	case REG_WORKQUEUE_INITED:
 	case REG_INDIBITS_INITED:
 	case REG_LOGICTRAINING_L0_ISRUNNING:
-	case REG_LOGICTRAINING_L1_ISRUNNING:
-	case REG_LOGICTRAINING_L2_ISRUNNING:
 		return j ? "Yes" : "No";
 	
 	case REG_SIG_L0TOREAL:
-	case REG_SIG_L1TOREAL:
-	case REG_SIG_L2TOREAL:
-	case REG_SIG_L0TOL1:
-	case REG_ENA_L0L2TOREAL:
-	case REG_ENA_L1L2TOREAL:
-	case REG_SIG_L0L2TOL1L2:
 	case REG_DD_L0TRAIN:
 	case REG_DD_L0TEST:
-	case REG_L0ENA:
-	case REG_L1ENA:
 		return DblStr(j * 0.1) + "%";
 	
 	default:
@@ -1285,11 +1250,7 @@ String System::GetMemoryKey(int i) const {
 	case MEM_COUNTED_CALENDAR:	return "Counted calendar bits";
 	case MEM_TRAINBARS:			return "Bars (for training)";
 	case MEM_COUNTED_L0:		return "Counted for level 0";
-	case MEM_COUNTED_L1:		return "Counted for level 1";
-	case MEM_COUNTED_L2:		return "Counted for level 2";
 	case MEM_TRAINED_L0:		return "Is level 0 trained";
-	case MEM_TRAINED_L1:		return "Is level 1 trained";
-	case MEM_TRAINED_L2:		return "Is level 2 trained";
 	
 	default: return IntStr(i);
 	}
@@ -1299,8 +1260,6 @@ String System::GetMemoryValue(int i, int j) const {
 	switch (i) {
 	case MEM_TRAINABLESET:
 	case MEM_TRAINED_L0:
-	case MEM_TRAINED_L1:
-	case MEM_TRAINED_L2:
 		return j ? "Yes" : "No";
 	case MEM_INDIBARS:
 	case MEM_COUNTED_INDI:
@@ -1308,8 +1267,6 @@ String System::GetMemoryValue(int i, int j) const {
 	case MEM_TRAINMIDSTEP:
 	case MEM_TRAINBEGIN:
 	case MEM_COUNTED_L0:
-	case MEM_COUNTED_L1:
-	case MEM_COUNTED_L2:
 	default:
 		return IntStr(j);
 	}

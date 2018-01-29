@@ -1058,7 +1058,7 @@ bool System::TestSymbol(int sym_id) {
 	ConstBuffer& open_buf = ordered_cores[GetOrderedCorePos(sym_pos, main_tf_pos, 0)]->GetBuffer(0);
 	int corebars = open_buf.GetCount();
 	int trainbars = main_mem[MEM_TRAINBARS];
-	double change_total = 0.0;
+	double change_total = 0.0, pos_total = 0.0, neg_total = 0.0;
 	bool prev_signal = 0, prev_enabled = 0;
 	double spread_point = spread_points[sym_id];
 	for(; cursor < bars; cursor++) {
@@ -1087,13 +1087,18 @@ bool System::TestSymbol(int sym_id) {
 			
 			if (!IsFin(change)) change = 0.0;
 			change_total += change;
+			if (change > 0.0)	pos_total += change;
+			else				neg_total -= change;
 		}
 		
 		prev_signal = signal;
 		prev_enabled = is_enabled;
 	}
 	
-	if (change_total > 0.0)
+	double abs_total = pos_total + neg_total;
+	double dd = abs_total > 0.0 ? neg_total / abs_total : 100.0;
+	LOG("TestSymbol: symbol " << sym_id << ", dd " << dd << ", abs_total " << abs_total << ", pos_total " << pos_total << ", neg_total " << neg_total);
+	if (dd <= 0.33)
 		return true;
 	
 	return false;

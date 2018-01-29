@@ -239,6 +239,7 @@ void MetaTrader::Data() {
 int MetaTrader::Init(String addr, int port) {
 	mainaddr = addr;
 	this->port = port;
+	int tcur = 0;
 	try {
 		if (mainaddr.IsEmpty() || !_IsResponding()) {
 			return 1;
@@ -247,16 +248,19 @@ int MetaTrader::Init(String addr, int port) {
 		init_success = true; // required temporarily
 		
 		Time utc_now = GetUtcTime();
-		Time broker_now = Time(1970,1,1) + _TimeCurrent();
+		tcur = _TimeCurrent();
+		if (!tcur)
+			return 1;
+		Time broker_now = Time(1970,1,1) + tcur;
 		int utc_wday = DayOfWeek(utc_now);
 		if (utc_wday == 0 || utc_wday == 6) {
 			utc_now.second = 0;
 			utc_now.minute = 0;
 			utc_now.hour = 0;
 			if (utc_wday == 0) utc_now -= 24 * 60 * 60;
-			utc_now += 1;
 		}
 		time_offset = utc_now - broker_now;
+		time_offset = ((int)((time_offset + (time_offset >= 0 ? 30 : -30)) / 60)) * 60;
 		
 		account_name = _AccountName();
 		account_server = _AccountServer();

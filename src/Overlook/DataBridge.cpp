@@ -70,8 +70,10 @@ void DataBridge::Start() {
 			corr[0].opens.SetCount(SYM_COUNT, 0);
 			corr[0].vols.SetCount(SYM_COUNT, 0);
 			for(int i = 0; i < SYM_COUNT; i++) {
-				ConstBuffer& open = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 0);
-				ConstBuffer& vol = GetInputBuffer(0, corr[0].sym_ids[i], GetTimeframe(), 3);
+				int sym = corr[0].sym_ids[i];
+				int tf = GetTimeframe();
+				ConstBuffer& open = GetInputBuffer(0, sym, tf, 0);
+				ConstBuffer& vol = GetInputBuffer(0, sym, tf, 3);
 				corr[0].opens[i] = &open;
 				corr[0].vols[i] = &vol;
 			}

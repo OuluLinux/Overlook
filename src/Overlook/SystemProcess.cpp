@@ -51,7 +51,9 @@ void System::MainLoop() {
 	while (main_running && !Thread::IsShutdownThreads()) {
 		
 		Time t = GetMetaTrader().GetTime();
-		#if SYS_M15
+		#if SYS_M1
+		int step = t.minute;
+		#elif SYS_M15
 		int step = t.minute / 15;
 		#elif SYS_H1
 		int step = t.hour;
@@ -264,16 +266,24 @@ void System::RealizeMainWorkQueue() {
 	
 	
 	// Add timeframes
-	#if SYS_M15
+	#if SYS_M1
+	if (main_tf_pos == 0) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(1)); // <---
+		if (TF_COUNT > 1)	Panic("Invalid TF_COUNT");
+	}
+	else Panic("Invalid tf pos");
+	#elif SYS_M15
 	if (main_tf_pos == 0) {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(15)); // <---
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(60));
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(240));
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else if (main_tf_pos == 1) {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(5));
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(15)); // <---
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(60));
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else Panic("Invalid tf pos");
 	#elif SYS_H1
@@ -281,16 +291,19 @@ void System::RealizeMainWorkQueue() {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(60)); // <---
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(240));
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(1440));
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else if (main_tf_pos == 1) {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(15));
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(60)); // <---
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(240));
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else if (main_tf_pos == 2) {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(5));
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(15));
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(60)); // <---
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else Panic("Invalid tf pos");
 	#endif
@@ -565,19 +578,22 @@ void System::FillCalendarBits() {
 		if (ce.impact < 2) continue;
 		
 		Time t = ce.timestamp;
-		#if SYS_M15
+		#if SYS_M1
+		t.second = 0;
+		int begin_count = 15, end_count = 15;
+		#elif SYS_M15
 		t += (15 * 0.5) * 60;
 		t -= (t.minute % 15) * 60 + t.second;
-		int end_count = 1;
+		int begin_count = 1, end_count = 1;
 		#elif SYS_H1
 		t.minute = 0;
 		t.second = 0;
-		int end_count = 0;
+		int begin_count = 1, end_count = 0;
 		#endif
 		int current_main_pos = main_time[main_tf].Find(t);
 		if (current_main_pos == -1) continue;
 		
-		int begin = Upp::max(0, current_main_pos - 1);
+		int begin = Upp::max(0, current_main_pos - begin_count);
 		int end = Upp::min(bars, current_main_pos + end_count);
 		for(int c = begin; c < end; c++) {
 			for(int i = 0; i < main_sym_ids.GetCount(); i++) {

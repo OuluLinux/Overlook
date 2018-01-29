@@ -364,7 +364,7 @@ public:
 	String	GetSymbol(int i) const					{return symbols[i];}
 	String	GetPeriodString(int i) const			{return period_strings[i];}
 	int		GetFactoryCount() const					{return GetRegs().GetCount();}
-	int		GetBrokerSymbolCount() const			{return symbols.GetCount()-2;}
+	int		GetBrokerSymbolCount() const			{return symbols.GetCount()-GetCommonCount();}
 	int		GetTotalSymbolCount() const				{return symbols.GetCount();}
 	int		GetSymbolCount() const					{return symbols.GetCount();}
 	int		GetPeriod(int i) const					{return periods[i];}
@@ -411,7 +411,7 @@ public:
 public:
 	
 	
-	int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-1-COMMON_COUNT+common_pos;}
+	int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-COMMON_COUNT+common_pos;}
 	int		GetCommonSymbolId(int common_pos, int symbol_pos) const;
 	int		GetCommonCount() const					{return COMMON_COUNT;}
 	int		GetCommonSymbolCount() const			{return SYM_COUNT;}
@@ -550,7 +550,7 @@ public:
 	Vector<Ptr<CoreItem> > main_work_queue;
 	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
 	Atomic workers_started;
-	const int main_tf_pos = 1;
+	const int main_tf_pos = MAIN_TF_POS;
 	dword main_reg[REG_COUNT];
 	int main_tf = 2;
 	int realtime_count = 0;

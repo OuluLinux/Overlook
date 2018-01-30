@@ -398,22 +398,48 @@ void System::FillInputBits() {
 				
 				for (int cursor = main_cursor; cursor < bars && main_running; cursor++) {
 					int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
-					int begin = Upp::max(0, core_cursor - 50);
+					int begin = Upp::max(0, core_cursor - 100);
 					
 					// Input
 					{
 						int end = Upp::min(core_cursor + 1, core_bars);
-						bool sigbuf[BWD_COUNT];
+						bool sigbuf[BWD_COUNT * BWD_COUNT];
 						
 						int64 main_pos = GetMainDataPos(cursor, j, i, LevelBwd(cost_level, 0));
 						
-						GetMinimalSignal(begin, j, i, end, sigbuf, BWD_COUNT, cost_level);
-						for (int k = 0; k < BWD_COUNT; k++)
-							main_data.Set(main_pos++, sigbuf[k]);
+						for (int l = 0; l < BWD_COUNT; l++)
+							GetMinimalSignal(begin, j, i, end - l, &sigbuf[l * BWD_COUNT], BWD_COUNT, cost_level);
+						
+						for (int k = 0; k < BWD_COUNT; k++) {
+							int av = BWD_COUNT - k;
+							if ((av % 2) == 0) av--;
+							int half_av = av / 2;
+							int true_count = 0;
+							for (int l = 0; l < av; l++) {
+								//   k    01234
+								// l0     10101		0  1  2  3  4
+								// l1    01010		5  6  7  8  9
+								// l2   10101		10 11 12 13 14
+								// l3  01010		15 16 17 18 19
+								// l4 10101			20 21 22 23 24
+								// av     54321
+								// k = 0, l = 0 --> 0
+								// k = 0, l = 1 --> 6
+								// k = 0, l = 2 --> 12
+								// pos = l * (5 + 1) + k
+								// av = 5 - k
+								int pos = l * (BWD_COUNT + 1) + k;
+								bool value = sigbuf[pos];
+								if (value)
+									true_count++;
+							}
+							bool sig = true_count > half_av;
+							main_data.Set(main_pos++, sig);
+						}
 					}
 					
 					// Output
-					if (init && core_cursor < core_train_bars) {
+					if (init && core_cursor + FWD_COUNT <= core_train_bars) {
 						int64 main_pos = GetMainDataPos(cursor, j, i, LevelFwd(cost_level, 0));
 						for (int k = 0; k < FWD_COUNT; k++)
 							main_data.Set(main_pos++, output_bits[core_cursor + k]);

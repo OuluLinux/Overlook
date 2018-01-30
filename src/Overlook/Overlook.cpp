@@ -959,7 +959,7 @@ void Overlook::LoadOpenOrderCharts() {
 	Profile profile;
 	
 	int tf = 0;
-	int bb  = System::Find<BollingerBands>();
+	int ml = System::Find<MinimalLabel>();
 	
 	MetaTrader& mt = GetMetaTrader();
 	mt.Enter();
@@ -978,7 +978,7 @@ void Overlook::LoadOpenOrderCharts() {
 		pgroup.tf = tf;
 		pgroup.keep_at_end = true;
 		pgroup.right_offset = true;
-		pgroup.decl.factory = bb;
+		pgroup.decl.factory = ml;
 	}
 	
 	LoadProfile(profile);

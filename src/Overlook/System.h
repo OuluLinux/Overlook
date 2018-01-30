@@ -338,7 +338,7 @@ public:
 		s % symbols % periods % period_strings % spread_points % proxy_id
 		  % proxy_base_mul % sym_priority % common_symbol_id % common_symbol_pos % common_symbol_group_pos % time_offset
 		  % pos_time % main_time % main_conv % posconv_from % posconv_to
-		  % main_data % main_mem % logic0;
+		  % main_data % main_mem % logic;
 	}
 	
 	void	DataTimeBegin(int sym, int tf);
@@ -422,52 +422,64 @@ public:
 public:
 	
 	
-	static const int L2_INPUT = 8;
+	static const int COST_LEVEL_COUNT	= 4;
+	static const int BWD_COUNT			= 16;
+	static const int FWD_COUNT			= 5;
+	static const int LEVEL_TOTAL		= BWD_COUNT + FWD_COUNT + 4;
 	
 	enum {
-		BIT_L0BITS_BEGIN,
-		BIT_L0BITS_LAST = BIT_L0BITS_BEGIN + ASSIST_COUNT - 1,
-		
-		BIT_WRITTEN_REAL, BIT_WRITTEN_L0, BIT_WRITTEN_SYMOPT,
-		
-		BIT_REALSIGNAL,
-		BIT_L0_SIGNAL,
-		BIT_SYMOPT_SIGNAL,
-		BIT_SYMOPT_ENABLED,
-		
-		BIT_SKIP_CALENDAREVENT,
+		BIT_SKIP_CALENDAREVENT = LEVEL_TOTAL * COST_LEVEL_COUNT,
 		
 		BIT_COUNT
 	};
+	
+	inline int LevelBwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + i;}
+	inline int LevelFwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + BWD_COUNT + i;}
+	inline int LevelActive(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 4;}
+	inline int LevelSignal(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 3;}
+	inline int LevelWrittenFwd(int cost_level) {return (cost_level + 1) * LEVEL_TOTAL - 2;}
+	inline int LevelWrittenDqn(int cost_level) {return (cost_level + 1) * LEVEL_TOTAL - 1;}
 	enum {
 		REG_INS, REG_WORKQUEUE_CURSOR,
 		
 		REG_WORKQUEUE_INITED, REG_INDIBITS_INITED,
 		REG_LOGICTRAINING_L0_ISRUNNING,
+		REG_LOGICTRAINING_L1_ISRUNNING,
+		REG_LOGICTRAINING_L2_ISRUNNING,
+		REG_LOGICTRAINING_L3_ISRUNNING,
 		
 		REG_SIG_L0TOREAL,
-		REG_DD_L0TRAIN, REG_DD_L0TEST,
+		REG_SIG_L1TOREAL,
+		REG_SIG_L2TOREAL,
+		REG_SIG_L3TOREAL,
 		
 		REG_COUNT
 	};
 	enum {
-		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INDIBITS, INS_CALENDARLOGIC,
-		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_STATS, INS_REFRESH_REAL,
+		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INPUTBITS, INS_CALENDARLOGIC,
+		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_ACTIVELEVEL,
+		INS_STATS, INS_REFRESH_REAL,
 		INS_COUNT
 	};
 	enum {
-		MEM_TRAINABLESET, MEM_INDIBARS, MEM_COUNTED_INDI, MEM_COUNTED_ENABLED, MEM_COUNTED_CALENDAR,
+		MEM_TRAINABLESET, MEM_INPUTBARS, MEM_COUNTED_INPUT, MEM_COUNTED_CALENDAR,
+		MEM_COUNTED_ACTIVE,
 		MEM_TRAINBARS,
-		MEM_TRAINMIDSTEP,		MEM_TRAINMIDSTEP_LAST=MEM_TRAINMIDSTEP+COMMON_COUNT-1,
 		MEM_TRAINBEGIN,			MEM_TRAINBEGIN_LAST=MEM_TRAINBEGIN+COMMON_COUNT-1,
 		
 		MEM_COUNTED_L0,
+		MEM_COUNTED_L1,
+		MEM_COUNTED_L2,
+		MEM_COUNTED_L3,
+		
 		MEM_TRAINED_L0,
+		MEM_TRAINED_L1,
+		MEM_TRAINED_L2,
+		MEM_TRAINED_L3,
 		
 		MEM_COUNT
 	};
 	
-	static const int level_count = 1;
 	
 	struct MainJob {
 		Vector<double> training_pts;
@@ -477,12 +489,11 @@ public:
 		bool is_finished = false;
 	};
 	
-	struct LogicLearner0 : Moveable<LogicLearner0> {
+	
+	struct LogicLearner : Moveable<LogicLearner> {
 		
-		static const int SYM_BITS			= 2;
-		static const int TIME_BITS			= (5 + SYS_HOURBITS + SYS_MINBITS) * SYS_HAVETIMEIN;
-		static const int INPUT_SIZE			= TIME_BITS + (SYM_COUNT+1) * ASSIST_COUNT * TF_COUNT;
-		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * SYM_BITS * TF_COUNT;
+		static const int INPUT_SIZE			= (SYM_COUNT+1) * BWD_COUNT * TF_COUNT;
+		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * FWD_COUNT * TF_COUNT;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		
@@ -506,7 +517,7 @@ public:
 	// Persistent
 	VectorBool main_data;
 	Vector<dword> main_mem;
-	Vector<LogicLearner0> logic0;
+	Vector<LogicLearner> logic;
 	
 	
 	// Temporary
@@ -534,19 +545,21 @@ public:
 	void	RealizeMainWorkQueue();
 	void	ProcessEnds();
 	void	ProcessMainWorkQueue(bool store_cache=false);
-	void	FillIndicatorBits();
+	void	FillInputBits();
 	void	FillTrainableBits();
 	void	FillCalendarBits();
 	void	RealizeLogicTraining();
 	void	FillLogicBits(int level);
 	void	FillStatistics();
+	void	FillActive();
 	bool	RefreshReal();
 	void	LearnLogic(int level, int common_pos);
 	int		ProcessMainJob(MainJob& job);
 	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
-	bool	TestSymbol(int sym_id);
-	double	RunTest(int sym_id, int sym_pos, int begin, int bars, int sigperiod, double tp, double sl, double ddlimit, bool write);
+	//bool		TestSymbol(int sym_id);
+	double	RunTest(int sym_id, int sym_pos, int begin, int end, int cost_level_count);
 	int64	GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const;
+	void	GetMinimalSignal(int begin, int sym_pos, int tf_pos, int end, bool* sigbuf, int sigbuf_size, int cost_level);
 	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
 	void	StoreOutput(int level, int common_pos, int cursor, double* buf, int bufsize);

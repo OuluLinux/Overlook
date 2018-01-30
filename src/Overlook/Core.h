@@ -269,7 +269,7 @@ protected:
 	double minimum, maximum;
 	double point = 0.0;
 	int levels_style;
-	int window_type;
+	int window_type = WINDOW_CHART;
 	int next_count;
 	int period;
 	int end_offset;

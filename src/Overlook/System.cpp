@@ -157,6 +157,10 @@ void System::FirstStart() {
 			default: Panic("Broken");
 		};
 		
+		// "Add commission" TODO: real commission... usually not specified, so it's difficult.
+		if (i >= 8)
+			spread_point *= 2;
+		
 		int sym = this->symbols.Find(symstr);
 		sym_priority[prio] = sym;
 		spread_points[sym] = spread_point;

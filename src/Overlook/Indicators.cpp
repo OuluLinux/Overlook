@@ -168,7 +168,7 @@ int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const
 MovingAverage::MovingAverage()
 {
 	ma_period = 13;
-	ma_shift = 0;
+	ma_shift = -6;
 	ma_method = 0;
 	ma_counted = 0;
 }
@@ -4429,6 +4429,8 @@ void MinimalLabel::Start() {
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	double spread_point		= db->GetPoint();
+	double slippage			= spread_point * 2;
+	double cost				= spread_point + slippage;
 	ASSERT(spread_point > 0.0);
 	
 	VectorBool& labelvec = GetOutput(0).label;
@@ -4450,7 +4452,7 @@ void MinimalLabel::Start() {
 			close = open_buf.GetUnsafe(j);
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
-				if (abs_diff >= spread_point) {
+				if (abs_diff >= cost) {
 					break_label = close < open;
 					can_break = true;
 				}

@@ -552,6 +552,7 @@ SystemDataCtrl::SystemDataCtrl() {
 
 void SystemDataCtrl::Data() {
 	System& sys = GetSystem();
+	if (sys.main_mem.IsEmpty()) return;
 	
 	for(int i = 0; i < System::REG_COUNT; i++) {
 		reglist.Set(i, 0, sys.GetRegisterKey(i));
@@ -589,7 +590,7 @@ void SystemDataCtrl::DataDraw::Data() {
 	int64 count = sys.main_data.GetCount();
 	if (!count) return;
 	
-	if (cursor < 0 || cursor >= sys.main_mem[System::MEM_INDIBARS])
+	if (cursor < 0 || cursor >= sys.main_mem[System::MEM_INPUTBARS])
 		return;
 	
 	ImageBuffer id(sz);

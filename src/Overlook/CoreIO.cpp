@@ -123,14 +123,13 @@ void CoreIO::StoreCache() {
 		String dir = GetCacheDirectory();
 		String file = AppendFileName(dir, "core.bin");
 		FileOut out(file);
-		if (!out.IsOpen())
-			Panic("Couldn't open file: " + file);
-		
-		Put(out, dir, 0);
-		Core* c = dynamic_cast<Core*>(this);
-		if (c) {
-			for(int i = 0; i < c->subcores.GetCount(); i++)
-				c->subcores[i].Put(out, dir, 1+i);
+		if (out.IsOpen()) {
+			Put(out, dir, 0);
+			Core* c = dynamic_cast<Core*>(this);
+			if (c) {
+				for(int i = 0; i < c->subcores.GetCount(); i++)
+					c->subcores[i].Put(out, dir, 1+i);
+			}
 		}
 		
 		serialization_lock.Leave();
@@ -167,7 +166,7 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 			String file = AppendFileName(dir, Format("%d-%d-%d.bin", i, j, subcore_id));
 			FileAppend out(file);
 			if (!out.IsOpen())
-				Panic("Couldn't open file: " + file);
+				continue;
 			
 			int begin = buf.GetResetEarliestWrite();
 			int64 add = begin != INT_MAX ? buf.value.GetCount() - begin : -1;

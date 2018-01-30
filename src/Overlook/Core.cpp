@@ -23,7 +23,6 @@ void Buffer::Inc(int i, double value) {
 
 Core::Core()
 {
-	window_type = WINDOW_CHART;
 	bars = 0;
 	next_count = 0;
 	counted = 0;

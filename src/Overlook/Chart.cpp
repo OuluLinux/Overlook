@@ -118,6 +118,7 @@ void Chart::SetGraph(Core* src) {
 			main.AddSource(src);
 		} else {
 			AddGraph(src);
+			split.SetPos(8000);
 		}
 	}
 }

@@ -226,7 +226,9 @@ void System::RealizeMainWorkQueue() {
 	#if SYS_M1
 	if (main_tf_pos == 0) {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(1)); // <---
-		if (TF_COUNT > 1)	Panic("Invalid TF_COUNT");
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(5));
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(15)); 
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else Panic("Invalid tf pos");
 	#elif SYS_M15
@@ -240,6 +242,12 @@ void System::RealizeMainWorkQueue() {
 		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(5));
 		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(15)); // <---
 		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(60));
+		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
+	}
+	else if (main_tf_pos == 2) {
+		if (TF_COUNT > 0)	main_tf_ids.Add(FindPeriod(1));
+		if (TF_COUNT > 1)	main_tf_ids.Add(FindPeriod(5));
+		if (TF_COUNT > 2)	main_tf_ids.Add(FindPeriod(15)); // <---
 		if (TF_COUNT > 3)	Panic("Invalid TF_COUNT");
 	}
 	else Panic("Invalid tf pos");
@@ -947,11 +955,16 @@ int64 System::GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bi
 void System::FillActive() {
 	dword& cursor = main_mem[MEM_COUNTED_ACTIVE];
 	
+	#if SYS_M1
 	const int refresh_step = 15;
+	#elif SYS_M15
+	const int refresh_step = 0;
+	#endif
 	
 	if (!cursor) {
 		cursor = main_mem[MEM_TRAINBARS];
-		cursor -= cursor % refresh_step;
+		if (refresh_step > 0)
+			cursor -= cursor % refresh_step;
 	}
 	
 	int bars = main_mem[MEM_INPUTBARS];
@@ -959,36 +972,40 @@ void System::FillActive() {
 	for(; cursor < bars; cursor++) {
 		
 		// Copy previous
-		if ((cursor % refresh_step) != 0) {
+		if (refresh_step > 0 && (cursor % refresh_step) != 0) {
 			for(int i = 0; i < main_sym_ids.GetCount(); i++) {
 				for(int j = 0; j < main_tf_ids.GetCount(); j++) {
 					for(int k = 0; k < COST_LEVEL_COUNT; k++) {
-						int bit = LevelActive(j);
+						int bit = LevelActive(k);
 						main_data.Set(GetMainDataPos(cursor,   i, j, bit),
 						main_data.Get(GetMainDataPos(cursor-1, i, j, bit)));
 					}
 				}
 			}
 		} else {
-			int begin = cursor - 1 * 60 * 60;
+			#if SYS_M1
+			int begin = cursor - 1 * 60;
+			#elif SYS_M15
+			int begin = cursor - 1 * 8;
+			#endif
 			
 			for(int i = 0; i < main_sym_ids.GetCount(); i++) {
 				for(int j = 0; j < main_tf_ids.GetCount(); j++) {
 					int sym_id = main_sym_ids[i];
 					
-					double top_result = -DBL_MAX;
+					double top_dd = 100;
 					int top_cost_level = -1;
 	
 					for(int k = 0; k < COST_LEVEL_COUNT; k++) {
-						double result = RunTest(sym_id, i, begin, cursor+1, k);
+						double dd = RunTest(sym_id, i, begin, cursor+1, k);
 						
-						if (result > top_result){
-							top_result = result;
+						if (dd < top_dd){
+							top_dd = dd;
 							top_cost_level = k;
 						}
 					}
 					
-					if (top_result < 0)
+					if (top_dd > 33)
 						top_cost_level = -1;
 					
 					for(int k = 0; k < COST_LEVEL_COUNT; k++) {
@@ -1013,6 +1030,8 @@ double System::RunTest(int sym_id, int sym_pos, int begin, int end, int cost_lev
 	bool first_open = true;
 	int sig_bit = LevelSignal(cost_level);
 	
+	double pos_sum = 0, neg_sum = 0;
+	
 	for(int cursor = begin; cursor < end; cursor++) {
 		bool used_signal = main_data.Get(GetMainDataPos(cursor, sym_pos, main_tf_pos, sig_bit));
 		
@@ -1030,6 +1049,8 @@ double System::RunTest(int sym_id, int sym_pos, int begin, int end, int cost_lev
 				if (!prev_signal)	change = curr / (open + spread_point) - 1.0;
 				else				change = 1.0 - curr / (open - spread_point);
 				change_total += change;
+				if (change > 0)	pos_sum += change;
+				else			neg_sum -= change;
 			}
 			if (do_open) {
 				open = curr;
@@ -1043,11 +1064,17 @@ double System::RunTest(int sym_id, int sym_pos, int begin, int end, int cost_lev
 	if (open_len > 0) {
 		double curr = open_buf.GetUnsafe(GetShiftFromMain(sym_id, main_tf, end - 1));
 		ASSERT(curr > 0.0);
-		if (!prev_signal)	change_total += curr / (open + spread_point) - 1.0;
-		else				change_total += 1.0 - curr / (open - spread_point);
+		double change;
+		if (!prev_signal)	change = curr / (open + spread_point) - 1.0;
+		else				change = 1.0 - curr / (open - spread_point);
+		change_total += change;
+		if (change > 0)	pos_sum += change;
+		else			neg_sum -= change;
 	}
 	
-	return change_total;
+	double total = pos_sum + neg_sum;
+	if (total <= 0.0) return 100;
+	else return neg_sum / total * 100;
 }
 
 void System::LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize) {
@@ -1122,16 +1149,10 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 			
 			// Get symmetric average from real previous and predicted next
 			int true_count = 0;
-			int64 pos = GetMainDataPos(cursor, sym_pos, j, lside_bit);
-			for (int k = 0; k < lside_count; k++) {
-				if (main_data.Get(pos++))
-					true_count++;
-			}
-			for(int k = 0; k < rside_count; k++) {
-				if (buf[buf_pos++] >= 0.5)
-					true_count++;
-			}
-			bool sig = true_count > lside_count;
+			int64 pos;
+			
+			bool sig = buf[buf_pos] >= 0.5;
+			buf_pos += FWD_COUNT;
 			
 			pos = GetMainDataPos(cursor, sym_pos, j, sig_bit);
 			main_data.Set(pos, sig);

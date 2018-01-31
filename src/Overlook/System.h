@@ -424,7 +424,7 @@ public:
 	
 	static const int COST_LEVEL_COUNT	= 4;
 	static const int BWD_COUNT			= 16;
-	static const int FWD_COUNT			= 5;
+	static const int FWD_COUNT			= 1;
 	static const int LEVEL_TOTAL		= BWD_COUNT + FWD_COUNT + 4;
 	
 	enum {

@@ -26,8 +26,8 @@ using namespace Upp;
 
 // How many timeframes are enabled: [1-3]
 // Note: higher value increases DQN input count dramatically, which might decrease output quality.
-#define TF_COUNT				1
-#define MAIN_TF_POS				0
+#define TF_COUNT				3
+#define MAIN_TF_POS				2
 
 // The factor for free-margin level. How much of equity is committed for trading.
 // Lower value increases risks, higher reduces. [0.60 - 0.98]
@@ -44,16 +44,16 @@ using namespace Upp;
 // Slow mode: H1
 //  - more active during all day
 //  - more volatile order value, reduce FMLEVEL
-#if 1
+#if 0
 	#define SYS_M1			1
 	#define SYS_HOURBITS	24
 	#define SYS_MINBITS		0
 	#define SYS_HAVETIMEIN	0
-#elif 0
+#elif 1
 	#define SYS_M15			1
 	#define SYS_HOURBITS	24
 	#define SYS_MINBITS		4
-	#define SYS_HAVETIMEIN	1
+	#define SYS_HAVETIMEIN	0
 #else
 	#define SYS_H1			1
 	#define SYS_HOURBITS	24

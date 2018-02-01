@@ -60,17 +60,6 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-struct CorrelationUnit : Moveable<CorrelationUnit> {
-	int period;
-	Vector<int> sym_ids;
-	Vector<OnlineAverageWindow2> averages;
-	Vector<Buffer> buffer;
-	
-	Vector<ConstBuffer*> opens, vols;
-	
-	void Serialize(Stream& s) {s % period % sym_ids % averages % buffer;}
-};
-
 class DataBridge : public BarData {
 	
 protected:
@@ -80,7 +69,6 @@ protected:
 	VectorMap<int,int> symbols;
 	Vector<Vector<byte> > ext_data;
 	Vector<Vector<int> > sym_group_stats, sym_groups;
-	Vector<CorrelationUnit> corr;
 	double spread_mean;
 	int spread_count;
 	int median_max, median_min;
@@ -93,9 +81,6 @@ protected:
 	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshMedian();
-	void RefreshCommon();
-	void RefreshCorrelation();
-	void ProcessCorrelation(int output);
 	
 public:
 	typedef DataBridge CLASSNAME;
@@ -111,7 +96,6 @@ public:
 			% Mem(symbols)
 			% Mem(ext_data)
 			% Mem(sym_group_stats) % Mem(sym_groups)
-			% Mem(corr)
 			% Mem(median_max) % Mem(median_min)
 			% Mem(max_value) % Mem(min_value);
 	}
@@ -142,11 +126,6 @@ public:
 		if (in_sym == -1) {
 			return in_tf == out_tf;
 		}
-		
-		auto& sys = ::Overlook::GetSystem();
-		int common_id = sys.FindCommonSymbolId(in_sym);
-		if (common_id != -1)
-			return common_id == in_sym && common_id != out_sym && sys.FindCommonSymbolPos(common_id, out_sym) != -1;
 		
 		return false;
 	}

@@ -51,7 +51,6 @@ INITBLOCK {
 	
 	System::Register<SupportResistanceOscillator>("Support/Resistance Oscillator");
 	System::Register<Psychological>("Psychological Oscillator");
-	System::Register<CorrelationOscillator>("Correlation Oscillator");
 	System::Register<ZigZag>("Zig-Zag");
 	System::Register<ZigZagOsc>("Zig-Zag Oscillator");
 	
@@ -66,7 +65,6 @@ INITBLOCK {
 	System::Register<VolumeSlots>("VolumeSlots");
 	System::Register<ChannelOscillator>("ChannelOscillator");
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
-	System::Register<CommonForce>("CommonForce");
 	
 	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
 	
@@ -185,14 +183,6 @@ INITBLOCK {
     System::RegisterAssistant<ChannelOscillator>("Highest", CHOSC_HIGHEST);
     System::RegisterAssistant<ScissorChannelOscillator>("Low", SCIS_LOW);
     System::RegisterAssistant<ScissorChannelOscillator>("High", SCIS_HIGH);
-    System::RegisterAssistant<CommonForce>("Over zero", STRONG_OVERZERO);
-    System::RegisterAssistant<CommonForce>("Below zero", STRONG_BELOWZERO);
-    System::RegisterAssistant<CommonForce>("Increasing", STRONG_INC);
-    System::RegisterAssistant<CommonForce>("Decreasing", STRONG_DEC);
-    System::RegisterAssistant<CorrelationOscillator>("Over zero", CORROSC_HIGH);
-    System::RegisterAssistant<CorrelationOscillator>("Below zero", CORROSC_LOW);
-    System::RegisterAssistant<CorrelationOscillator>("Increasing", CORROSC_INC);
-    System::RegisterAssistant<CorrelationOscillator>("Decreasing", CORROSC_DEC);
     
 	//System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
 	

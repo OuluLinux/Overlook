@@ -216,7 +216,29 @@ void System::RealizeMainWorkQueue() {
 	
 	// Add indicators
 	FactoryDeclaration decl;
-	decl.factory = Find<DataBridge>();			main_indi_ids.Add(decl);
+	decl.factory = Find<DataBridge>();							main_indi_ids.Add(decl);
+	decl.factory = Find<MovingAverage>();						main_indi_ids.Add(decl);
+	decl.factory = Find<MovingAverageConvergenceDivergence>();	main_indi_ids.Add(decl);
+	decl.factory = Find<BollingerBands>();						main_indi_ids.Add(decl);
+	decl.factory = Find<ParabolicSAR>();						main_indi_ids.Add(decl);
+	decl.factory = Find<StandardDeviation>();					main_indi_ids.Add(decl);
+	decl.factory = Find<AverageTrueRange>();					main_indi_ids.Add(decl);
+	decl.factory = Find<BearsPower>();							main_indi_ids.Add(decl);
+	decl.factory = Find<BullsPower>();							main_indi_ids.Add(decl);
+	decl.factory = Find<CommodityChannelIndex>();				main_indi_ids.Add(decl);
+	decl.factory = Find<DeMarker>();							main_indi_ids.Add(decl);
+	decl.factory = Find<Momentum>();							main_indi_ids.Add(decl);
+	decl.factory = Find<RelativeStrengthIndex>();				main_indi_ids.Add(decl);
+	decl.factory = Find<RelativeVigorIndex>();					main_indi_ids.Add(decl);
+	decl.factory = Find<StochasticOscillator>();				main_indi_ids.Add(decl);
+	decl.factory = Find<AcceleratorOscillator>();				main_indi_ids.Add(decl);
+	decl.factory = Find<AwesomeOscillator>();					main_indi_ids.Add(decl);
+	decl.factory = Find<PeriodicalChange>();					main_indi_ids.Add(decl);
+	decl.factory = Find<VolatilityAverage>();					main_indi_ids.Add(decl);
+	decl.factory = Find<VolatilitySlots>();						main_indi_ids.Add(decl);
+	decl.factory = Find<VolumeSlots>();							main_indi_ids.Add(decl);
+	decl.factory = Find<ChannelOscillator>();					main_indi_ids.Add(decl);
+	decl.factory = Find<ScissorChannelOscillator>();			main_indi_ids.Add(decl);
 	main_factory_ids.Clear();
 	for (int i = 0; i < main_indi_ids.GetCount(); i++)
 		main_factory_ids.Add(main_indi_ids[i].factory);
@@ -280,7 +302,6 @@ void System::RealizeMainWorkQueue() {
 	for (int i = 0; i < GetCommonCount(); i++) {
 		for (int j = 0; j < GetCommonSymbolCount(); j++)
 			main_sym_ids.Add(GetCommonSymbolId(i, j));
-		main_sym_ids.Add(GetCommonSymbolId(i));
 	}
 	
 	
@@ -329,14 +350,13 @@ void System::RealizeMainWorkQueue() {
 	// Find starting position of data
 	main_begin.SetCount(GetCommonCount(), 0);
 	for (int c = 0; c < GetCommonCount(); c++) {
-		int common_id = GetCommonSymbolId(c);
 		int& begin = main_begin[c];
 		for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 			int tf = main_tf_ids[i];
 			
 			for (int j = 0; j < GetCommonSymbolCount(); j++) {
 				int sym_id = GetCommonSymbolId(c, j);
-				int pos = GetShiftTf(sym_id, tf, common_id, main_tf, 1);
+				int pos = GetShiftToMain(sym_id, tf, main_tf, 1);
 				if (pos > begin) begin = pos;
 			}
 		}
@@ -388,6 +408,8 @@ void System::FillInputBits() {
 	main_data.SetCount(main_data_count);
 	
 	Vector<bool> output_bits;
+	VectorBool vec;
+	vec.SetCount(ASSIST_COUNT);
 	
 	for (int i = 0; i < main_tf_ids.GetCount(); i++) {
 		int tf = main_tf_ids[i];
@@ -397,7 +419,7 @@ void System::FillInputBits() {
 			
 			int core_bars = GetCountTf(sym, tf);
 			int core_train_bars = GetShiftMainTf(main_tf, sym, tf, train_bars - 1);
-			
+						
 			for (int cost_level = 0; cost_level < COST_LEVEL_COUNT; cost_level++) {
 				if (init) {
 					output_bits.SetCount(core_bars);
@@ -407,6 +429,13 @@ void System::FillInputBits() {
 				for (int cursor = main_cursor; cursor < bars && main_running; cursor++) {
 					int core_cursor = GetShiftMainTf(main_tf, sym, tf, cursor);
 					int begin = Upp::max(0, core_cursor - 100);
+
+					vec.Zero();
+					for (int k = 0; k < main_indi_ids.GetCount(); k++) {
+						int core_pos = GetOrderedCorePos(j, i, k);
+						Core& core = *ordered_cores[core_pos];
+						core.Assist(core_cursor, vec);
+					}
 					
 					// Input
 					{
@@ -415,6 +444,9 @@ void System::FillInputBits() {
 						
 						int64 main_pos = GetMainDataPos(cursor, j, i, LevelBwd(cost_level, 0));
 						
+						for (int k = 0; k < ASSIST_COUNT; k++)
+							main_data.Set(main_pos++, vec.Get(k));
+				
 						for (int l = 0; l < BWD_COUNT; l++)
 							GetMinimalSignal(begin, j, i, end - l, &sigbuf[l * BWD_COUNT], BWD_COUNT, cost_level);
 						
@@ -932,16 +964,8 @@ int System::GetCommonSymbolId(int common_pos, int symbol_pos) const {
 	return sym_priority[common_pos * SYM_COUNT + symbol_pos];
 }
 
-int System::FindCommonSymbolId(int sym_id) const {
-	return common_symbol_id[sym_id];
-}
-
 int System::FindCommonSymbolPos(int sym_id) const {
 	return common_symbol_pos[sym_id];
-}
-
-int System::FindCommonSymbolPos(int common_id, int sym_id) const {
-	return common_symbol_group_pos[common_id][sym_id];
 }
 
 int64 System::GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const {
@@ -1101,10 +1125,10 @@ void System::LoadInput(int level, int common_pos, int cursor, double* buf, int b
 	#endif
 	
 	int bit = LevelBwd(level, 0);
-	int bit_count = BWD_COUNT;
+	int bit_count = ASSIST_COUNT + BWD_COUNT;
 	
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
-		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
+	for (int i = 0; i < GetCommonSymbolCount(); i++) {
+		int sym_pos = common_pos * GetCommonSymbolCount() + i;
 		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
 			for (int k = 0; k < bit_count; k++) {
@@ -1122,8 +1146,8 @@ void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int 
 	int bit_count = FWD_COUNT;
 	
 	int buf_pos = 0;
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
-		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
+	for (int i = 0; i < GetCommonSymbolCount(); i++) {
+		int sym_pos = common_pos * GetCommonSymbolCount() + i;
 		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			int64 pos = GetMainDataPos(cursor, sym_pos, j, bit);
 			for(int k = 0; k < bit_count; k++) {
@@ -1139,12 +1163,11 @@ void System::LoadOutput(int level, int common_pos, int cursor, double* buf, int 
 void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int bufsize) {
 	const int lside_count = FWD_COUNT - 1;
 	const int rside_count = FWD_COUNT;
-	int lside_bit = LevelBwd(level, BWD_COUNT - lside_count);
 	int sig_bit = LevelSignal(level);
 	int chk_bit	= LevelWrittenDqn(level);
 	int buf_pos = 0;
-	for (int i = 0; i <= GetCommonSymbolCount(); i++) {
-		int sym_pos = common_pos * (GetCommonSymbolCount() + 1) + i;
+	for (int i = 0; i < GetCommonSymbolCount(); i++) {
+		int sym_pos = common_pos * GetCommonSymbolCount() + i;
 		for (int j = 0; j < main_tf_ids.GetCount(); j++) {
 			
 			// Get symmetric average from real previous and predicted next
@@ -1162,7 +1185,7 @@ void System::StoreOutput(int level, int common_pos, int cursor, double* buf, int
 		}
 	}
 	ASSERT(buf_pos == bufsize);
-	ASSERT(buf_pos == rside_count * (GetCommonSymbolCount() + 1) * main_tf_ids.GetCount());
+	ASSERT(buf_pos == rside_count * GetCommonSymbolCount() * main_tf_ids.GetCount());
 	ASSERT(buf_pos == LogicLearner::OUTPUT_SIZE);
 }
 

@@ -21,8 +21,8 @@ using namespace Upp;
 
 // Total used symbols: SYM_COUNT * COMMON_COUNT
 // Check System::FirstStart() symbol-list to see which are enabled.
-#define SYM_COUNT				4
-#define COMMON_COUNT			4
+#define SYM_COUNT				1
+#define COMMON_COUNT			6
 
 // How many timeframes are enabled: [1-3]
 // Note: higher value increases DQN input count dramatically, which might decrease output quality.
@@ -84,9 +84,8 @@ enum {
 	ACC_OVERZERO, ACC_BELOWZERO, ACC_INC, ACC_DEC, AWE_OVERZERO, AWE_BELOWZERO, AWE_INC, AWE_DEC,
 	PC_INC, PC_DEC, VOL_LOWEST, VOL_LOW, VOL_HIGH, VOL_HIGHEST, VOLSL_LOW, VOLSL_MED, VOLSL_HIGH, VOLSL_VERYHIGH,
 	VOLSL_INC, VOLSL_DEC, CHOSC_LOWEST, CHOSC_LOW, CHOSC_HIGH, CHOSC_HIGHEST, SCIS_LOW, SCIS_HIGH,
-	STRONG_OVERZERO, STRONG_BELOWZERO, STRONG_INC, STRONG_DEC,
 	VOLUME_HIGH, VOLUME_VERYHIGH, VOLUME_MED, VOLUME_LOW, VOLUME_INC, VOLUME_DEC,
-	CORROSC_HIGH, CORROSC_LOW, CORROSC_INC, CORROSC_DEC,
+	
 	
 	ASSIST_COUNT};
 

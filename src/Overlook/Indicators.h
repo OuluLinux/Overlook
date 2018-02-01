@@ -859,45 +859,6 @@ struct Average : Moveable<Average> {
 	}
 };
 
-class CorrelationOscillator : public Core {
-	
-protected:
-	typedef const Vector<double> ConstVector;
-	
-	int period = 10;
-	ConstBuffer* this_open = NULL;
-	int common_id = -1;
-	ConstBuffer* common_open = NULL;
-	OnlineAverageWindow2 average;
-	
-	
-public:
-	CorrelationOscillator();
-	
-	virtual void Init();
-	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>(&FilterFunction)
-			% Out(SYM_COUNT-1, SYM_COUNT-1)
-			% Mem(average)
-			% Arg("period", period, 2, 16);
-	}
-	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf == out_tf;
-		
-		if (out_sym == in_sym)
-			return true;
-		
-		auto& sys = ::Overlook::GetSystem();
-		int common_id = sys.FindCommonSymbolId(in_sym);
-		if (common_id == -1) common_id = 0;
-		return out_sym == common_id;
-	}
-};
 
 
 
@@ -1035,38 +996,6 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Mem(prev_counted);
-	}
-};
-
-
-class CommonForce : public Core {
-	double max_diff = 0.0;
-	
-public:
-	CommonForce();
-	
-	
-	virtual void Init();
-	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>(&FilterFunction)
-			% Out(1, 1)
-			% Mem(max_diff);
-	}
-	
-	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
-			return in_tf == out_tf;
-		
-		if (out_sym == in_sym) return true;
-		
-		auto& sys = ::Overlook::GetSystem();
-		int common_id = sys.FindCommonSymbolId(in_sym);
-		if (common_id == -1) return false;
-		return out_sym == common_id && in_sym != common_id;
 	}
 };
 

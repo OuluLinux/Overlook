@@ -282,9 +282,7 @@ protected:
 	Vector<int>					proxy_id;
 	Vector<int>					proxy_base_mul;
 	Vector<int>					sym_priority;
-	Vector<int>					common_symbol_id;
 	Vector<int>					common_symbol_pos;
-	Vector<Vector<int> >		common_symbol_group_pos;
 	int							time_offset = 0;
 	
 	
@@ -336,7 +334,7 @@ public:
 	
 	void	Serialize(Stream& s) {
 		s % symbols % periods % period_strings % spread_points % proxy_id
-		  % proxy_base_mul % sym_priority % common_symbol_id % common_symbol_pos % common_symbol_group_pos % time_offset
+		  % proxy_base_mul % sym_priority % common_symbol_pos % time_offset
 		  % pos_time % main_time % main_conv % posconv_from % posconv_to
 		  % main_data % main_mem % logic;
 	}
@@ -355,6 +353,7 @@ public:
 	Time	GetTimeMain(int tf, int i) const {return main_time[tf].GetKey(i);}
 	int		GetShiftFromMain(int sym, int tf, int i) const {return posconv_to[sym][tf][i];}
 	int		GetShiftToMain(int sym, int tf, int i) const {return posconv_from[sym][tf][i];}
+	int		GetShiftToMain(int sym, int tf, int main_tf, int i) const;
 	
 public:
 	
@@ -364,7 +363,7 @@ public:
 	String	GetSymbol(int i) const					{return symbols[i];}
 	String	GetPeriodString(int i) const			{return period_strings[i];}
 	int		GetFactoryCount() const					{return GetRegs().GetCount();}
-	int		GetBrokerSymbolCount() const			{return symbols.GetCount()-GetCommonCount();}
+	int		GetBrokerSymbolCount() const			{return symbols.GetCount();}
 	int		GetTotalSymbolCount() const				{return symbols.GetCount();}
 	int		GetSymbolCount() const					{return symbols.GetCount();}
 	int		GetPeriod(int i) const					{return periods[i];}
@@ -411,21 +410,19 @@ public:
 public:
 	
 	
-	int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-COMMON_COUNT+common_pos;}
+	//int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-COMMON_COUNT+common_pos;}
 	int		GetCommonSymbolId(int common_pos, int symbol_pos) const;
 	int		GetCommonCount() const					{return COMMON_COUNT;}
 	int		GetCommonSymbolCount() const			{return SYM_COUNT;}
-	int		FindCommonSymbolId(int sym_id) const;
 	int		FindCommonSymbolPos(int sym_id) const;
-	int		FindCommonSymbolPos(int common_id, int sym_id) const;
 	
 public:
 	
 	
-	static const int COST_LEVEL_COUNT	= 4;
+	static const int COST_LEVEL_COUNT	= 1;
 	static const int BWD_COUNT			= 16;
 	static const int FWD_COUNT			= 1;
-	static const int LEVEL_TOTAL		= BWD_COUNT + FWD_COUNT + 4;
+	static const int LEVEL_TOTAL		= ASSIST_COUNT + BWD_COUNT + FWD_COUNT + 4;
 	
 	enum {
 		BIT_SKIP_CALENDAREVENT = LEVEL_TOTAL * COST_LEVEL_COUNT,
@@ -434,7 +431,7 @@ public:
 	};
 	
 	inline int LevelBwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + i;}
-	inline int LevelFwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + BWD_COUNT + i;}
+	inline int LevelFwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + ASSIST_COUNT + BWD_COUNT + i;}
 	inline int LevelActive(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 4;}
 	inline int LevelSignal(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 3;}
 	inline int LevelWrittenFwd(int cost_level) {return (cost_level + 1) * LEVEL_TOTAL - 2;}
@@ -492,8 +489,8 @@ public:
 	
 	struct LogicLearner : Moveable<LogicLearner> {
 		
-		static const int INPUT_SIZE			= (SYM_COUNT+1) * BWD_COUNT * TF_COUNT;
-		static const int OUTPUT_SIZE		= (SYM_COUNT+1) * FWD_COUNT * TF_COUNT;
+		static const int INPUT_SIZE			= SYM_COUNT * (BWD_COUNT + ASSIST_COUNT) * TF_COUNT;
+		static const int OUTPUT_SIZE		= SYM_COUNT * FWD_COUNT * TF_COUNT;
 		
 		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
 		

@@ -37,47 +37,11 @@ void DataBridge::Start() {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
-	int id = GetSymbol();
-	int common_id = sys.FindCommonSymbolId(id);
-	bool is_common_symbol = id == common_id;
-	
 	if (once) {
 		once = false;
 		
 		common.InspectInit();
 		
-		// Correlation unit setup
-		if (is_common_symbol) {
-			if (corr.IsEmpty()) {
-				corr.Add();
-				
-				corr[0].period = 10;
-				
-				int common_pos = sys.FindCommonSymbolPos(id);
-				corr[0].sym_ids.SetCount(SYM_COUNT, -1);
-				for(int i = 0; i < SYM_COUNT; i++)
-					corr[0].sym_ids[i] = sys.GetCommonSymbolId(common_pos, i);
-				
-				corr[0].averages.SetCount(SYM_COUNT-1);
-				corr[0].buffer.SetCount(SYM_COUNT-1);
-				
-				for(int i = 0; i < SYM_COUNT-1; i++) {
-					corr[0].averages[i].SetPeriod(corr[0].period);
-				}
-			}
-			
-			
-			corr[0].opens.SetCount(SYM_COUNT, 0);
-			corr[0].vols.SetCount(SYM_COUNT, 0);
-			for(int i = 0; i < SYM_COUNT; i++) {
-				int sym = corr[0].sym_ids[i];
-				int tf = GetTimeframe();
-				ConstBuffer& open = GetInputBuffer(0, sym, tf, 0);
-				ConstBuffer& vol = GetInputBuffer(0, sym, tf, 3);
-				corr[0].opens[i] = &open;
-				corr[0].vols[i] = &vol;
-			}
-		}
 	}
 	
 	int sym_count = common.GetSymbolCount();
@@ -85,11 +49,6 @@ void DataBridge::Start() {
 	int sym = GetSymbol();
 	int cur = sym - sym_count;
 	int mt_period = GetPeriod();
-	
-	if (is_common_symbol) {
-		RefreshCommon();
-	}
-	else
 	
 	// Regular symbols
 	#if ONLY_M1_SOURCE
@@ -126,176 +85,6 @@ void DataBridge::AddSpread(double a) {
 		spread_mean += delta / spread_count;
 	}
 	spread_count++;
-}
-
-void DataBridge::RefreshCommon() {
-	System& sys = GetSystem();
-	RefreshCorrelation();
-	
-	Buffer& open_buf = GetBuffer(0);
-	Buffer& low_buf = GetBuffer(1);
-	Buffer& high_buf = GetBuffer(2);
-	Buffer& volume_buf = GetBuffer(3);
-	
-	
-	int id = GetSymbol();
-	int tf = GetTimeframe();
-	int bars = sys.GetCountMain(tf);
-	int counted = GetCounted();
-	SetSafetyLimit(bars);
-	
-	open_buf.SetCount(bars);
-	low_buf.SetCount(bars);
-	high_buf.SetCount(bars);
-	volume_buf.SetCount(bars);
-	
-	if (!counted) {
-		sys.DataTimeBegin(id, tf);
-		
-		open_buf.Set(0, 1.0);
-		low_buf.Set(0, 1.0);
-		high_buf.Set(0, 1.0);
-		counted++;
-		Time utc_time = sys.GetTimeMain(tf, 0);
-		sys.DataTimeAdd(id, tf, utc_time);
-	}
-	
-	for(int i = counted; i < bars; i++) {
-		Time utc_time = sys.GetTimeMain(tf, i);
-		sys.DataTimeAdd(id, tf, utc_time);
-		
-		double chng_sum = 0.0;
-		double vol_av = 0.0;
-		for(int j = 0; j < SYM_COUNT; j++) {
-			int pos = sys.GetShiftFromMain(corr[0].sym_ids[j], tf, i);
-			ConstBuffer& buf = *corr[0].opens[j];
-			if (pos == 0) continue;
-			double prev = buf.Get(pos-1);
-			double curr = buf.Get(pos);
-			double chng = curr / prev - 1.0;
-			double corr = j > 0 ? this->corr[0].buffer[j-1].Get(i) : +1.0;
-			double valu = chng * corr;
-			chng_sum += valu;
-			vol_av += this->corr[0].vols[j]->Get(pos);
-		}
-		
-		chng_sum /= SYM_COUNT;
-		vol_av /= SYM_COUNT;
-		if (!IsFin(chng_sum) || fabs(chng_sum) > 0.1)
-			chng_sum = 0.0;
-		double prev		= open_buf.Get(i-1);
-		double value	= prev * (1.0 + chng_sum);
-		open_buf.Set(i, value);
-		low_buf.Set(i, value);
-		high_buf.Set(i, value);
-		volume_buf.Set(i, vol_av);
-		
-		low_buf		.Set(i-1, Upp::min(value, prev));
-		high_buf	.Set(i-1, Upp::max(value, prev));
-	}
-	
-	sys.DataTimeEnd(id, tf);
-	
-	ForceSetCounted(open_buf.GetCount());
-}
-
-void DataBridge::ProcessCorrelation(int output) {
-	System& sys = GetSystem();
-	int counted = GetCounted();
-	int tf = GetTimeframe();
-	int bars = sys.GetCountMain(tf);
-	
-	ConstBuffer& a			= *corr[0].opens[0];
-	ConstBuffer& b			= *corr[0].opens[output+1];
-	Buffer& buf				=  corr[0].buffer[output];
-	OnlineAverageWindow2& s	=  corr[0].averages[output];
-	
-	if (b.GetCount() == 0) {
-		LOG("CorrelationOscillator error: No data for output " << output);
-		return;
-	}
-	
-	int period = corr[0].period;
-	
-	if (counted < period) {
-		ASSERT(counted == 0);
-		for(int i = 0; i < period; i++) {
-			SetSafetyLimit(i);
-			int posa = sys.GetShiftFromMain(corr[0].sym_ids[0], tf, i);
-			int posb = sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, i);
-			s.Add(a.Get(posa), b.Get(posb));
-		}
-		counted = period;
-	}
-	SetSafetyLimit(counted);
-	
-	Vector<double> cache_a, cache_b;
-	cache_a.SetCount(period);
-	cache_b.SetCount(period);
-	
-	int cache_offset = 0;
-	for(int i = 1; i < period; i++) {
-		int posa = sys.GetShiftFromMain(corr[0].sym_ids[0], tf, counted - period + i);
-		int posb = sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, counted - period + i);
-		
-		cache_a[i] = a.Get(posa);
-		cache_b[i] = b.Get(posb);
-	}
-	
-	if (sys.GetShiftFromMain(corr[0].sym_ids[0], tf, bars-1) >= a.GetCount() ||
-		sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, bars-1) >= b.GetCount())
-		RefreshSourcesOnlyDeep();
-	
-	buf.SetCount(bars);
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		// Crash here means that cores were not saved, but system peristency binary was...
-		int posa = sys.GetShiftFromMain(corr[0].sym_ids[0], tf, i);
-		int posb = sys.GetShiftFromMain(corr[0].sym_ids[output+1], tf, i);
-		
-		double da = a.Get(posa);
-		double db = b.Get(posb);
-		
-		s.Add(da, db);
-		cache_a[cache_offset] = da;
-		cache_b[cache_offset] = db;
-		cache_offset = (cache_offset + 1) % period;
-		
-		double avg1 = s.GetMeanA();
-		double avg2 = s.GetMeanB();
-		double sum1 = 0;
-	    double sumSqr1 = 0;
-	    double sumSqr2 = 0;
-		for(int j = 0; j < period; j++) {
-			double v1 = cache_a[j];
-			double v2 = cache_b[j];
-			sum1 += (v1 - avg1) * (v2 - avg2);
-			sumSqr1 += pow(v1 - avg1, 2.0);
-			sumSqr2 += pow(v2 - avg2, 2.0);
-		}
-    
-		double mul = sumSqr1 * sumSqr2;
-		double correlation_coef = mul != 0.0 ? sum1 / sqrt(mul) : 0;
-		
-		buf.Set(i, correlation_coef);
-	}
-}
-
-void DataBridge::RefreshCorrelation() {
-	System& sys = GetSystem();
-	int counted = GetCounted();
-	int tf = GetTimeframe();
-	int bars = sys.GetCountMain(tf);
-	
-	ASSERT(counted != 0 || bars != 0);
-	if (counted == bars)
-		return;
-	
-	int k = 0;
-	for(int i = 0; i < SYM_COUNT-1; i++) {
-		ProcessCorrelation(i);
-	}
 }
 
 void DataBridge::RefreshFromAskBid(bool init_round) {

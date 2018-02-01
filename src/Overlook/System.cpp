@@ -44,7 +44,7 @@ void System::Init() {
 	if (symbols.IsEmpty())
 		FirstStart();
 	else {
-		if (mt.GetSymbolCount() + GetCommonCount() != symbols.GetCount())
+		if (mt.GetSymbolCount() != symbols.GetCount())
 			throw UserExc("MT4 symbols changed. Remove cached data.");
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& s = mt.GetSymbol(i);
@@ -79,8 +79,6 @@ void System::FirstStart() {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
 		}
-		for(int i = 0; i < COMMON_COUNT; i++)
-			AddSymbol("Common " + IntStr(i+1));
 		
 		
 		// Add periods
@@ -167,22 +165,13 @@ void System::FirstStart() {
 		prio++;
 	}
 	
-	common_symbol_id		.SetCount(symbols.GetCount(), -1);
 	common_symbol_pos		.SetCount(symbols.GetCount(), -1);
-	common_symbol_group_pos	.SetCount(symbols.GetCount());
-	for(int i = 0; i < common_symbol_group_pos.GetCount(); i++)
-		common_symbol_group_pos[i].SetCount(symbols.GetCount(), -1);
 	int r = 0;
 	for(int common_pos = 0; common_pos < GetCommonCount(); common_pos++) {
-		int common_id = GetCommonSymbolId(common_pos);
 		for(int j = 0; j < GetCommonSymbolCount(); j++) {
 			int sym = sym_priority[r++];
-			common_symbol_id[sym] = common_id;
 			common_symbol_pos[sym] = common_pos;
-			common_symbol_group_pos[common_id][sym] = common_pos;
 		}
-		common_symbol_id[common_id] = common_id;
-		common_symbol_pos[common_id] = common_pos;
 	}
 	
 	for(int i = 0; i < priosym_count; i++) {
@@ -419,6 +408,14 @@ int System::GetShiftMainTf(int src_tf, int dst_sym, int dst_tf, int src_shift) {
 	int dst_shift = posconv_to[dst_sym][dst_tf][src_mainpos];
 	ASSERT(dst_shift != -1); // warn
 	return dst_shift;
+}
+
+int System::GetShiftToMain(int sym, int src_tf, int dst_tf, int i) const {
+	int src_mainpos = posconv_from[sym][src_tf][i];
+	if (src_tf != dst_tf) {
+		src_mainpos = main_conv[src_tf][dst_tf][src_mainpos];
+	}
+	return src_mainpos;
 }
 
 void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {

@@ -65,8 +65,13 @@ INITBLOCK {
 	System::Register<VolumeSlots>("VolumeSlots");
 	System::Register<ChannelOscillator>("ChannelOscillator");
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
+	System::Register<TrendIndex>("TrendIndex");
+	System::Register<OnlineMinimalLabel>("OnlineMinimalLabel");
+	System::Register<ReactionContext>("ReactionContext");
+	System::Register<VolatilityContext>("VolatilityContext");
 	
 	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
+	//System::Register<ParserAdvisor>("ParserAdvisor", CORE_EXPERTADVISOR);
 	
 	System::RegisterAssistant<DataBridge>("Up Change -1 ", DB_UP1);
 	System::RegisterAssistant<DataBridge>("Up Change -2 ", DB_UP2);

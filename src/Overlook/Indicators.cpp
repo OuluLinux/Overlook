@@ -4540,6 +4540,400 @@ void VolumeSlots::Assist(int cursor, VectorBool& vec) {
 
 
 
+
+TrendIndex::TrendIndex() {
+	
+}
+
+void TrendIndex::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Blue);
+	SetBufferColor(1, Green);
+	SetBufferColor(2, Red);
+	
+	if ( period < 1 )
+		throw DataExc();
+	
+	SetBufferStyle(0,DRAW_LINE);
+	SetBufferLabel(0, "TrendIndex");
+}
+
+void TrendIndex::Start() {
+	Buffer& buffer     = GetBuffer(0);
+	Buffer& err_buffer = GetBuffer(1);
+	Buffer& change_buf = GetBuffer(2);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	
+	double diff;
+	int bars = GetBars();
+	int counted = GetCounted();
+
+	if ( bars <= period )
+		throw DataExc();
+	
+	VectorBool& label = GetOutput(0).label;
+	label.SetCount(bars);
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double current = open_buf.GetUnsafe(i);
+		int trend_begin_pos = Upp::max(0, i - period);
+		double begin = open_buf.GetUnsafe(trend_begin_pos);
+		
+		int len = (i - trend_begin_pos);
+		if (len <= 0) continue;
+		double av_change = fabs(current - begin) / len;
+		
+		double err = 0;
+		for(int j = trend_begin_pos; j < i; j++) {
+			double change = open_buf.GetUnsafe(j+1) - open_buf.GetUnsafe(j);
+			double diff = change - av_change;
+			err += fabs(diff);
+		}
+		err /= len;
+		
+		err /= err_div;
+		
+		err_buffer.Set(i, err);
+		change_buf.Set(i, av_change);
+		
+		double buf_value = av_change - err;
+		buffer.Set(i, buf_value);
+		
+		label.Set(i, begin > current);
+	}
+	
+	
+	int true_count = 0;
+	for (int i = 0; i < bars; i++) {
+		if (label.Get(i)) true_count++;
+	}
+	ASSERT(true_count > 0);
+}
+
+
+
+
+
+
+
+OnlineMinimalLabel::OnlineMinimalLabel() {
+	
+}
+
+void OnlineMinimalLabel::Init() {
+	SetCoreSeparateWindow();
+	SetCoreMinimum(-1.0);
+	SetCoreMaximum(+1.0);
+	SetBufferColor(0, Color(85, 255, 150));
+	SetBufferLineWidth(0, 2);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, +0.5);
+	SetCoreLevel(1, -0.5);
+	SetCoreLevelsColor(Silver);
+	SetCoreLevelsStyle(STYLE_DOT);
+}
+
+void OnlineMinimalLabel::Start() {
+	int bars = GetBars();
+	int symbol = GetSymbol();
+	int tf = GetTf();
+	
+	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
+	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
+	double spread_point		= db->GetPoint();
+	double slippage			= spread_point * cost_level;
+	cost				= spread_point + slippage;
+	ASSERT(spread_point > 0.0);
+	
+	VectorBool& labelvec = GetOutput(0).label;
+	labelvec.SetCount(bars);
+	
+	Buffer& buf = GetBuffer(0);
+	
+	for(int i = prev_counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		const int count = 1;
+		bool sigbuf[count];
+		int begin = Upp::max(0, i - 100);
+		int end = i + 1;
+		GetMinimalSignal(begin, end, sigbuf, count);
+		
+		bool label = sigbuf[count - 1];
+		labelvec.Set(i, label);
+		if (label)		buf.Set(i, -0.75);
+		else			buf.Set(i, +0.75);
+	}
+}
+
+void OnlineMinimalLabel::GetMinimalSignal(int begin, int end, bool* sigbuf, int sigbuf_size) {
+	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
+	int write_begin = end - sigbuf_size;
+	
+	for(int i = begin; i < end; i++) {
+		double open = open_buf.GetUnsafe(i);
+		double close = open;
+		int j = i + 1;
+		bool can_break = false;
+		bool break_label;
+		double prev = open;
+		for(; j < end; j++) {
+			close = open_buf.GetUnsafe(j);
+			if (!can_break) {
+				double abs_diff = fabs(close - open);
+				if (abs_diff >= cost) {
+					break_label = close < open;
+					can_break = true;
+				}
+			} else {
+				bool change_label = close < prev;
+				if (change_label != break_label) {
+					j--;
+					break;
+				}
+			}
+			prev = close;
+		}
+		
+		bool label = close < open;
+		
+		for(int k = i; k < j; k++) {
+			int buf_pos = k - write_begin;
+			if (buf_pos >= 0)
+				sigbuf[buf_pos] = label;
+		}
+		
+		i = j - 1;
+	}
+}
+
+
+
+
+
+
+
+
+ReactionContext::ReactionContext() {
+	
+}
+
+void ReactionContext::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Blue);
+	
+	if ( period < 1 )
+		throw DataExc();
+	
+	SetBufferStyle(0,DRAW_LINE);
+	SetBufferLabel(0, "ReactionContext");
+}
+
+void ReactionContext::Start() {
+	ConstBuffer& open = GetInputBuffer(0, 0);
+	ConstBuffer& low  = GetInputBuffer(0, 1);
+	ConstBuffer& high = GetInputBuffer(0, 2);
+	
+	Buffer& buffer     = GetBuffer(0);
+	
+	double diff;
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (!counted) counted++;
+
+	if ( bars <= period )
+		throw DataExc();
+
+	for (int cursor = counted; cursor < bars; cursor++) {
+		SetSafetyLimit(cursor);
+
+		
+		// Open/Close trend
+		{
+			int dir = 0;
+			int len = 0;
+			for (int i = cursor-1; i >= 0; i--) {
+				int idir = open.Get(i+1) > open.Get(i) ? +1 : -1;
+				if (dir != 0 && idir != dir) break;
+				dir = idir;
+				len++;
+			}
+			if (len >= length) {
+				if (dir == +1)
+					buffer.Set(cursor, UPTREND);
+				else
+					buffer.Set(cursor, DOWNTREND);
+				continue;
+			}
+		}
+		
+		
+		// High break
+		{
+			int dir = 0;
+			int len = 0;
+			double hi = high.Get(cursor-1);
+			for (int i = cursor-2; i >= 0; i--) {
+				int idir = hi > high.Get(i) ? +1 : -1;
+				if (dir != 0 && idir != +1) break;
+				dir = idir;
+				len++;
+			}
+			if (len >= length) {
+				buffer.Set(cursor, HIGHBREAK);
+				continue;
+			}
+		}
+		
+		// Low break
+		{
+			int dir = 0;
+			int len = 0;
+			double lo = low.Get(cursor-1);
+			for (int i = cursor-2; i >= 0; i--) {
+				int idir = lo < low.Get(i) ? +1 : -1;
+				if (dir != 0 && idir != +1) break;
+				dir = idir;
+				len++;
+			}
+			if (len >= length) {
+				buffer.Set(cursor, LOWBREAK);
+				continue;
+			}
+		}
+		
+		// Trend reversal
+		if (cursor >= 4) {
+			double t0_diff		= open.Get(cursor-0) - open.Get(cursor-1);
+			double t1_diff		= open.Get(cursor-1) - open.Get(cursor-2);
+			double t2_diff		= open.Get(cursor-2) - open.Get(cursor-3);
+			int t0 = t0_diff > 0 ? +1 : -1;
+			int t1 = t1_diff > 0 ? +1 : -1;
+			int t2 = t2_diff > 0 ? +1 : -1;
+			if (t0 * t1 == -1 && t1 * t2 == +1) {
+				double t0_hilodiff	= high.Get(cursor-1) - low.Get(cursor-1);
+				if (fabs(t0_hilodiff) >= fabs(t1_diff)) {
+					if (t0 == +1)
+						buffer.Set(cursor, REVERSALUP);
+					else
+						buffer.Set(cursor, REVERSALDOWN);
+				} else {
+					if (t0 == +1)
+						buffer.Set(cursor, REVERSALUP);
+					else
+						buffer.Set(cursor, REVERSALDOWN);
+				}
+				continue;
+			}
+		}
+		
+	}
+}
+
+
+
+
+
+
+
+
+
+VolatilityContext::VolatilityContext() {
+	
+}
+
+void VolatilityContext::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Blue);
+	
+	if ( period < 1 )
+		throw DataExc();
+	
+	SetBufferStyle(0,DRAW_LINE);
+	SetBufferLabel(0, "VolatilityContext");
+}
+
+void VolatilityContext::Start() {
+	ConstBuffer& open = GetInputBuffer(0, 0);
+	ConstBuffer& low  = GetInputBuffer(0, 1);
+	ConstBuffer& high = GetInputBuffer(0, 2);
+	
+	Buffer& buffer     = GetBuffer(0);
+	
+	double diff;
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (!counted) counted++;
+	
+	double point = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()))->GetPoint();
+
+	if ( bars <= period )
+		throw DataExc();
+	
+	for (int cursor = counted; cursor < bars; cursor++) {
+		
+		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
+		int step = (int)((diff + point * 0.5) / point);
+		median_map.GetAdd(step, 0)++;
+		
+	}
+	
+	SortByKey(median_map, StdLess<int>());
+	
+	volat_divs.SetCount(0);
+	
+	int64 total = 0;
+	for(int i = 0; i < median_map.GetCount(); i++)
+		total += median_map[i];
+	
+	int64 count_div = total / div;
+	total = 0;
+	int64 next_div = count_div;
+	volat_divs.Add(median_map.GetKey(0) * point);
+	for(int i = 0; i < median_map.GetCount(); i++) {
+		total += median_map[i];
+		if (total >= next_div) {
+			next_div += count_div;
+			volat_divs.Add(median_map.GetKey(i) * point);
+		}
+	}
+	if (volat_divs.GetCount() < div) {
+		volat_divs.Add(median_map.TopKey() * point);
+	}
+	
+	for (int cursor = counted; cursor < bars; cursor++) {
+		SetSafetyLimit(cursor);
+		
+		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
+		
+		int lvl = -1;
+		for(int i = 0; i < volat_divs.GetCount(); i++) {
+			if (diff < volat_divs[i]) {
+				lvl = i - 1;
+				break;
+			}
+		}
+		if (lvl == -1)
+			lvl = div - 1;
+		
+		
+		buffer.Set(cursor, lvl);
+	}
+}
+
+
+
+
+
+
+
+
+
+
 ExampleAdvisor::ExampleAdvisor() {
 	
 }
@@ -4669,6 +5063,397 @@ void ExampleAdvisor::TrainingCtrl::Paint(Draw& w) {
 	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
 	
 	w.DrawImage(0, 0, id);
+}
+
+
+
+
+
+
+
+
+ParserAdvisor::ParserAdvisor() {
+	for(int i = 0; i < TI_TOTAL; i++)		ti_buf[i] = NULL;
+	for(int i = 0; i < TI_TOTAL; i++)		ti_label_buf[i] = NULL;
+	for(int i = 0; i < ML_TOTAL; i++)		ml_buf[i] = NULL;
+	for(int i = 0; i < ML_TOTAL; i++)		ml_label_buf[i] = NULL;
+}
+
+void ParserAdvisor::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, RainbowColor(Randomf()));
+	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	SetJobCount(1);
+	
+	
+	spread_point = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()))->GetPoint();
+	
+	int cur = 0;
+	open_buf	= &GetInputBuffer(cur++, 0);
+	rc_buf		= &GetInputBuffer(cur++, 0);
+	vc_buf		= &GetInputBuffer(cur++, 0);
+	
+	RefreshSourcesOnlyDeep();
+	
+	for(int i = 0, k = 0; i < TI_TF_COUNT; i++) {
+		for(int j = 0; j < TI_PERIOD_COUNT; j++) {
+			CoreIO* c = GetInputCore(cur++, GetSymbol(), GetInputTf(i));
+			ti_buf[k] = &CoreIO::GetOutput(0).buffers[0];
+			ti_label_buf[k] = &c->CoreIO::GetOutput(0).label;
+			
+			int true_count = 0;
+			for (int l = 0; l < ti_label_buf[k]->GetCount(); l++) {
+				if (ti_label_buf[k]->Get(l))
+					true_count++;
+			}
+			if (true_count == 0) Panic("Invalid source values");
+			
+			
+			k++;
+		}
+	}
+		
+	for(int i = 0, k = 0; i < ML_TF_COUNT; i++) {
+		for(int j = 0; j < ML_COSTLEVEL_COUNT; j++) {
+			CoreIO* c = GetInputCore(cur++, GetSymbol(), GetInputTf(i));
+			ml_buf[k] = &c->CoreIO::GetOutput(0).buffers[0];
+			ml_label_buf[k] = &c->CoreIO::GetOutput(0).label;
+			
+			int true_count = 0;
+			for (int l = 0; l < ml_label_buf[k]->GetCount(); l++) {
+				if (ml_label_buf[k]->Get(l))
+					true_count++;
+			}
+			if (true_count == 0) Panic("Invalid source values");
+			
+			k++;
+		}
+	}
+	
+	SetJob(0, tf_str + " Training")
+		.SetBegin		(THISBACK(TrainingBegin))
+		.SetIterator	(THISBACK(TrainingIterator))
+		.SetEnd			(THISBACK(TrainingEnd))
+		.SetInspect		(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
+}
+
+void ParserAdvisor::Start() {
+	if (once) {
+		if (prev_counted > 0) prev_counted--;
+		once = false;
+		RefreshSourcesOnlyDeep();
+	}
+	
+	if (IsJobsFinished()) {
+		int bars = GetBars();
+		if (prev_counted < bars) {
+			LOG("ParserAdvisor::Start Refresh");
+			RefreshAll();
+		}
+	}
+}
+
+bool ParserAdvisor::TrainingBegin() {
+	
+	RefreshSourcesOnlyDeep();
+	
+	train_bars = GetBars();
+	
+	if (optimizer.GetCount() <= 0) {
+		int count = reaction_ctx_count * volat_ctx_count * (start_trigger_count * 4 + stop_trigger_count * 3);
+		optimizer.SetArrayCount(1);
+		optimizer.SetCount(count);
+		optimizer.SetPopulation(1000);
+		optimizer.SetMaxGenerations(100);
+		
+		int row = 0;
+		for(int i = 0; i < reaction_ctx_count; i++) {
+			for(int j = 0; j < volat_ctx_count; j++) {
+				String s = Format("%d %d ", i, j);
+				for(int k = 0; k < start_trigger_count; k++) {
+					optimizer.Set(row++, 0, 3, 1, s + "period");
+					optimizer.Set(row++, 0, 3, 1, s + "tf");
+					optimizer.Set(row++, 0, 3, 1, s + "trigger");
+					optimizer.Set(row++, 0, 3, 1, s + "in use");
+				}
+				for(int k = 0; k < stop_trigger_count; k++) {
+					optimizer.Set(row++, 0, 3, 1, s + "cost level");
+					optimizer.Set(row++, 0, 3, 1, s + "tf");
+					optimizer.Set(row++, 0, 3, 1, s + "in use");
+				}
+			}
+		}
+		ASSERT(row == count);
+		
+		
+		//optimizer.UseLimits();
+		optimizer.Init();
+		
+		max_rounds = optimizer.GetMaxRounds();
+	}
+	
+	
+	training_pts.SetCount(max_rounds, 0);
+	
+	// In case of having other advisors as dependency:
+	// Don't start if jobs of dependencies are not finished
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return false;
+			}
+		}
+	}
+	
+	// Allow iterating
+	return true;
+}
+
+bool ParserAdvisor::TrainingIterator() {
+	
+	// Show progress
+	GetCurrentJob().SetProgress(round, max_rounds);
+	
+	
+	// Do your training work here
+	optimizer.Start();
+	double energy = RunTest(0, train_bars);
+	optimizer.Stop(energy);
+	
+	
+	// Put some result data here for graph
+	training_pts[round] = energy;
+	
+	
+	// Keep count of iterations
+	round++;
+	
+	// Stop eventually
+	if (round >= optimizer.GetMaxRounds() || round >= max_rounds) {
+		SetJobFinished();
+	}
+	
+	return true;
+}
+
+bool ParserAdvisor::TrainingEnd() {
+	RefreshAll();
+	return true;
+}
+
+bool ParserAdvisor::TrainingInspect() {
+	bool success = false;
+	
+	INSPECT(success, "ok: this is an example");
+	INSPECT(success, "warning: this is an example");
+	INSPECT(success, "error: this is an example");
+	
+	// You can fail the inspection too
+	//if (!success) return false;
+	
+	return true;
+}
+
+void ParserAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	
+	
+	// ---- Do your final result work here ----
+	
+	
+	// Keep counted manually
+	prev_counted = GetBars();
+	
+	
+	// Write oscillator indicator
+	Buffer& buf = GetBuffer(0);
+	for(int i = 0; i < GetBars(); i++) {
+		buf.Set(i, sin(i * 0.01));
+	}
+}
+
+void ParserAdvisor::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	ParserAdvisor* ea = dynamic_cast<ParserAdvisor*>(&*job->core);
+	ASSERT(ea);
+	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
+
+double ParserAdvisor::RunTest(int begin, int end) {
+	System& sys = GetSystem();
+	ConstBuffer& open_buf = *this->open_buf;
+	
+	double change_total = 0.0;
+	bool prev_signal = 0;
+	ASSERT(spread_point > 0.0);
+	
+	double open;
+	int open_len = -1;
+	is_open = false;
+	
+	VectorBool& signal = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	signal.SetCount(GetBars());
+	enabled.SetCount(GetBars());
+	
+	for(cursor = begin; cursor < end; cursor++) {
+		open_len++;
+		
+		bool fail = false;
+		for(int i = 0; i < TI_TF_COUNT; i++) {
+			if (i == 0)
+				core_cursor[i] = cursor;
+			else
+				core_cursor[i] = sys.GetShiftTf(GetSymbol(), GetTf(), GetSymbol(), GetInputTf(i), cursor);
+			fail |= core_cursor[i] == -1;
+		}
+		if (fail)
+			continue;
+		
+		int cmd = Command();
+		
+		bool do_close = cmd == 2;
+		bool do_open = cmd == 1;
+		do_open &= (prev_signal != used_signal && is_open) || !is_open;
+		do_close &= is_open;
+		
+		if (do_close || do_open) {
+			double curr = open_buf.GetUnsafe(cursor);
+			ASSERT(curr > 0.0);
+			if (do_close) {
+				double change;
+				if (!prev_signal)	change = curr / (open + spread_point) - 1.0;
+				else				change = 1.0 - curr / (open - spread_point);
+				if (open_len > 0)
+					change_total += change;
+				is_open = false;
+			}
+			if (do_open) {
+				open = curr;
+				open_len = 0;
+				is_open = true;
+			}
+		}
+		
+		signal.Set(cursor, used_signal);
+		enabled.Set(cursor, is_open);
+		prev_signal = used_signal;
+	}
+	
+	if (open_len > 0) {
+		double curr = open_buf.GetUnsafe(end - 1);
+		ASSERT(curr > 0.0);
+		double change;
+		if (!prev_signal)	change = curr / (open + spread_point) - 1.0;
+		else				change = 1.0 - curr / (open - spread_point);
+		change_total += change;
+	}
+	
+	
+	return change_total;
+}
+
+int ParserAdvisor::Command() {
+	
+	reaction = ContextReaction();
+	
+	volatility = ContextVolatility();
+	
+	
+	// Open
+	if (!is_open) {
+		if (TrendIndexTrigger())
+			return 1;
+	}
+	// Close
+	else {
+		if (MinimalLabelTrigger())
+			return 2;
+	}
+	
+	
+	return 0;
+}
+
+int ParserAdvisor::ContextReaction() {
+	return rc_buf->Get(cursor);
+}
+
+int ParserAdvisor::ContextVolatility() {
+	return vc_buf->Get(cursor);
+}
+
+int ParserAdvisor::TrendIndexTrigger() {
+	
+	int row = (reaction * volat_ctx_count + volatility) * (start_trigger_count * 4 + stop_trigger_count * 3);
+	
+	for(int i = 0; i < start_trigger_count; i++) {
+		
+		// Read trigger rules from optimizer table
+		int trend_index_period		= optimizer.Get(row++);
+		int trend_index_tf			= optimizer.Get(row++);
+		double trend_index_trigger	= optimizer.Get(row++);
+		bool in_use					= optimizer.Get(row++) >= 0.5;
+		
+		trend_index_tf		= Upp::max(0, Upp::min(trend_index_tf,		TI_TF_COUNT - 1));
+		trend_index_period	= Upp::max(0, Upp::min(trend_index_period,	TI_PERIOD_COUNT - 1));
+		
+		int buf_idx = trend_index_tf * TI_PERIOD_COUNT + trend_index_period;
+		ConstBuffer* ti_buf = this->ti_buf[buf_idx];
+		ConstVectorBool* ti_label_buf = this->ti_label_buf[buf_idx];
+		double trend_index_value = ti_buf->Get(core_cursor[trend_index_tf]);
+		bool triggered = trend_index_value > trend_index_trigger;
+		
+		if (triggered) {
+			
+			used_signal = ti_label_buf->Get(core_cursor[trend_index_tf]);
+			
+			return in_use;
+		}
+	}
+	
+	return false;
+}
+
+int ParserAdvisor::MinimalLabelTrigger() {
+	
+	int row = (reaction * volat_ctx_count + volatility) * (start_trigger_count * 4 + stop_trigger_count * 3) + start_trigger_count * 4;
+	
+	for(int i = 0; i < stop_trigger_count; i++) {
+		
+		// Read trigger rules from optimizer table
+		int cost_level				= optimizer.Get(row++);
+		int minimal_label_tf		= optimizer.Get(row++);
+		bool in_use					= optimizer.Get(row++) >= 0.5;
+		
+		minimal_label_tf			= Upp::max(0, Upp::min(minimal_label_tf,	ML_TF_COUNT - 1));
+		cost_level					= Upp::max(0, Upp::min(cost_level,			ML_COSTLEVEL_COUNT - 1));
+		
+		int buf_idx = minimal_label_tf * ML_COSTLEVEL_COUNT + cost_level;
+		ConstVectorBool* ml_label_buf = this->ml_label_buf[buf_idx];
+		bool minimal_label_signal = ml_label_buf->Get(core_cursor[minimal_label_tf]);
+		bool triggered = minimal_label_signal != used_signal;
+		
+		if (triggered) {
+			
+			return in_use;
+		}
+	}
+	
+	return false;
 }
 
 }

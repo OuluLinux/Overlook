@@ -3,6 +3,7 @@
 namespace Overlook {
 
 void System::StartMain() {
+	return;
 	StopMain();
 	main_stopped = false;
 	main_running = true;
@@ -1010,7 +1011,7 @@ void System::FillActive() {
 			#if SYS_M1
 			int begin = cursor - 1 * 60;
 			#elif SYS_M15
-			int begin = cursor - 1 * 8;
+			int begin = cursor - 1 * 4*4;
 			#endif
 			
 			for(int i = 0; i < main_sym_ids.GetCount(); i++) {

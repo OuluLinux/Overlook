@@ -1055,6 +1055,91 @@ public:
 
 
 
+class TrendIndex : public Core {
+	int period = 6;
+	int err_div = 3;
+public:
+	TrendIndex();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 3)
+			% Arg("period", period, 2)
+			% Arg("err_div", err_div, 0);
+	}
+};
+
+class OnlineMinimalLabel : public Core {
+	int prev_counted = 0;
+	int cost_level = 0;
+	double cost = 0.0;
+	
+	
+protected:
+	virtual void Start();
+	void GetMinimalSignal(int begin, int end, bool* sigbuf, int sigbuf_size);
+	
+public:
+	OnlineMinimalLabel();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(prev_counted)
+			% Arg("cost_level", cost_level, 0);
+	}
+};
+
+class ReactionContext : public Core {
+	int length = 3;
+	
+public:
+	ReactionContext();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("length", length, 1);
+	}
+	
+	enum {UNKNOWN, UPTREND, DOWNTREND, HIGHBREAK, LOWBREAK, REVERSALUP, REVERSALDOWN, COUNT};
+	
+};
+
+class VolatilityContext : public Core {
+	VectorMap<int,int> median_map;
+	Vector<double> volat_divs;
+	int div = DEFAULT_DIV;
+	
+public:
+	VolatilityContext();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("div", div, 1)
+			% Mem(median_map);
+	}
+	
+	static const int DEFAULT_DIV = 6;
+	
+};
+
+
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {
@@ -1093,6 +1178,128 @@ public:
 			% Mem(training_pts)
 			% Mem(prev_counted);
 	}
+};
+
+class ParserAdvisor : public Core {
+	
+	struct TrainingCtrl : public JobCtrl {
+		Vector<Point> polyline;
+		virtual void Paint(Draw& w);
+	};
+	
+	bool TrainingBegin();
+	bool TrainingIterator();
+	bool TrainingEnd();
+	bool TrainingInspect();
+	void RefreshAll();
+	
+	
+	// Persistent
+	GeneticOptimizer optimizer;
+	Vector<double> training_pts;
+	int prev_counted = 0;
+	
+	static const int TI_TF_COUNT = 1;
+	static const int TI_PERIOD_COUNT = 3;
+	static const int ML_TF_COUNT = 1;
+	static const int ML_COSTLEVEL_COUNT = 3;
+	
+	static const int TI_TOTAL = TI_TF_COUNT * TI_PERIOD_COUNT;
+	static const int ML_TOTAL = ML_TF_COUNT * ML_COSTLEVEL_COUNT;
+	
+	// Temporary
+	ConstBuffer *open_buf = NULL, *low_buf = NULL, *high_buf = NULL, *rc_buf = NULL, *vc_buf = NULL;
+	ConstBuffer* ti_buf[TI_TOTAL];
+	ConstVectorBool* ti_label_buf[TI_TOTAL];
+	ConstBuffer* ml_buf[ML_TOTAL];
+	ConstVectorBool* ml_label_buf[ML_TOTAL];
+	double spread_point = 0.0;
+	int core_cursor[TI_TF_COUNT];
+	int reaction_ctx_count = ReactionContext::COUNT;
+	int volat_ctx_count = VolatilityContext::DEFAULT_DIV;
+	int start_trigger_count = 6;
+	int stop_trigger_count = 6;
+	int train_bars = 0;
+	int cursor = 0;
+	int reaction, volatility;
+	int train_end = 0;
+	int round = 0;
+	int max_rounds = 1000;
+	bool used_signal = false;
+	bool is_open = false;
+	bool once = true;
+	
+protected:
+	virtual void Start();
+	
+	double RunTest(int begin, int end);
+	int Command();
+	int ContextReaction();
+	int ContextVolatility();
+	int TrendIndexTrigger();
+	int MinimalLabelTrigger();
+	int GetInputTf(int i) const {return i < 3 ? i : i + 1;}
+	
+public:
+	typedef ParserAdvisor CLASSNAME;
+	ParserAdvisor();
+	
+	virtual void Init();
+	
+	template <int I>
+	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1) {
+			return out_tf == I;
+		}
+		
+		return in_sym == out_sym;
+	}
+	
+	template <int I>
+	static void Args0(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		decl.args[0] = I;
+		decl.arg_count = 1;
+	}
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<ReactionContext>()
+			% In<VolatilityContext>()
+			% Out(1, 1)
+			% Out(0, 0)
+			% Mem(optimizer)
+			% Mem(training_pts)
+			% Mem(prev_counted);
+		
+		static FilterFunction filt[TI_TF_COUNT];
+		static ArgsFn ti_period[TI_PERIOD_COUNT];
+		static ArgsFn ml_costlevel[ML_COSTLEVEL_COUNT];
+		
+		if (filt[0] == NULL) {
+			filt[0] = &FilterFunction0<0>;
+			filt[1] = &FilterFunction0<1>;
+			filt[2] = &FilterFunction0<2>;
+			filt[3] = &FilterFunction0<4>;
+			
+			ti_period[0] = &Args0<3>;
+			ti_period[1] = &Args0<6>;
+			ti_period[2] = &Args0<12>;
+			
+			ml_costlevel[0] = &Args0<0>;
+			ml_costlevel[1] = &Args0<3>;
+			ml_costlevel[2] = &Args0<6>;
+		}
+		
+		for(int i = 0; i < TI_TF_COUNT; i++)
+			for(int j = 0; j < TI_PERIOD_COUNT; j++)
+				reg % In<TrendIndex>(filt[i], ti_period[j]);
+			
+		
+		for(int i = 0; i < ML_TF_COUNT; i++)
+			for(int j = 0; j < ML_COSTLEVEL_COUNT; j++)
+				reg % In<OnlineMinimalLabel>(filt[i], ml_costlevel[j]);
+	}
+	
 };
 
 }

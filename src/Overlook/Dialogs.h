@@ -128,52 +128,67 @@ public:
 	
 };
 
-
-class SystemDataCtrl : public ParentCtrl {
+struct BitStats : Moveable<BitStats> {
+	double prob_av = 0.0, succ_idx = 0.0;
+	bool type;
 	
-	struct DataDraw : public Ctrl {
-		int cursor = -1;
-		Image img, scaled_img;
-		Size img_sz, scaled_img_sz;
-		void Data();
-		virtual void Paint(Draw& w);
-	};
-	
-	Splitter split;
-	ArrayCtrl memlist, reglist;
-	ParentCtrl datactrl;
-	SliderCtrl slider;
-	DataDraw datadraw;
-	
-public:
-	typedef SystemDataCtrl CLASSNAME;
-	SystemDataCtrl();
-	
-	void Data();
-	
+	void Serialize(Stream& s) {s % prob_av % succ_idx % type;}
 };
 
+struct BeginStats : Moveable<BeginStats> {
+	Vector<int> bits;
+	BitStats begin;
+	Vector<BitStats> sustains;
+	Vector<BitStats> ends;
+	
+	void Serialize(Stream& s) {s % bits % begin % sustains % ends;}
+};
 
-class SystemJobCtrl : public ParentCtrl {
+class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
 	
-	struct TrainingCtrl : public Ctrl {
-		Vector<Point> polyline;
-		int job_id = 0;
-		virtual void Paint(Draw& w);
-	};
+	// Persistent
+	Vector<Vector<BeginStats> > stats;
+	Vector<VectorBool> data;
+	int cursor = 0;
+	int current = 0, total = 10, phase = 0, joinlevel = 0;
 	
 	
-	Splitter split;
-	ArrayCtrl joblist;
-	TrainingCtrl draw;
-	Id job_id;
+	// Temporary
+	Index<int> sym_ids, tf_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > ci_queue;
+	int processed_cursor = 0, data_cursor = 0;
+	bool is_prepared = false;
+	
+	// Constants
+	const int period_count = 6;
+	enum {TRENDINDEX, ONLINEMINLAB, COUNT};
+	const int row_size = period_count * COUNT;
+	const int JOINLEVEL_COUNT = 3;
+	
+	void Prepare();
+	void ProcessData();
+	void IterateBegin();
+	void IterateSustain();
+	void IterateSustainOptimization();
+	void IterateEnd();
+	void IterateEndOptimization();
+	void IterateJoining();
+	
+	double GetBitProbBegin(int symbol, int begin_id);
+	double GetBitProbSustain(int symbol, int begin_id, int susta_id);
+	double GetBitProbEnd(int symbol, int begin_id, int end_id);
 	
 public:
-	typedef SystemJobCtrl CLASSNAME;
-	SystemJobCtrl();
+	typedef RuleAnalyzer CLASSNAME;
+	RuleAnalyzer();
+	~RuleAnalyzer();
 	
-	void Data();
+	void Process();
 	
+	void Serialize(Stream& s) {s % stats % data % cursor % current % total % phase % joinlevel;}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("ruleanalyzer.bin"));}
+	void StoreThis() {StoreToFile(*this, ConfigFile("ruleanalyzer.bin"));}
 };
 
 }

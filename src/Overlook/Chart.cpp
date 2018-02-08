@@ -53,10 +53,8 @@ void Chart::RefreshCore() {
 
 void Chart::RefreshCoreData(bool store_cache) {
 	System& sys = GetSystem();
-	sys.EnterProcessing();
 	for (int i = 0; i < work_queue.GetCount(); i++)
 		sys.Process(*work_queue[i], store_cache);
-	sys.LeaveProcessing();
 }
 
 void Chart::ContextMenu(Bar& bar) {

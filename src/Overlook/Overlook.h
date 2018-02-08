@@ -78,8 +78,6 @@ protected:
 	MarketWatch watch;
 	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
-	SystemDataCtrl sysdata;
-	SystemJobCtrl sysjobs;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -132,6 +130,7 @@ public:
 	void ChartProperties();
 	void NewOrder();
 	void HistoryCenter();
+	void TradingRules();
 	void Options();
 	void TileWindow();
 	void CloseWindow();
@@ -150,8 +149,6 @@ public:
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshAssist();
-	void RefreshSystemData();
-	void RefreshSystemJobs();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();

@@ -274,24 +274,17 @@ protected:
 	friend class Core;
 	
 	
-	// Persistent
-	Index<String>				symbols;
+	// Temporary
+	Index<String>				symbols, allowed_symbols;
 	Index<int>					periods;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;
-	Vector<int>					proxy_id;
-	Vector<int>					proxy_base_mul;
-	Vector<int>					sym_priority;
-	Vector<int>					common_symbol_pos;
-	int							time_offset = 0;
-	
-	
-	// Temporary
 	Vector<FactoryRegister>		regs;
 	Time						end;
 	Data						data;
 	String						addr;
 	int							port;
+	int							time_offset = 0;
 	
 	
 protected:
@@ -311,49 +304,9 @@ public:
 	
 	void	Process(CoreItem& ci, bool store_cache);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
-	int		GetCountTf(int sym, int tf) const;
-	Time	GetTimeTf(int sym, int tf, int pos) const;
-	int		GetShiftTf(int src_sym, int src_tf, int dst_sym, int dst_tf, int shift);
-	int		GetShiftMainTf(int src_tf, int dst_sym, int dst_tf, int src_shift);
 	Core*	CreateSingle(int factory, int sym, int tf);
-	void	SetEnd(const Time& t);
 	Time	GetEnd() const							{return end;}
 	const Vector<FactoryRegister>& GetRegs() const	{return regs;}
-	
-public:
-	
-	// Persistent
-	Vector<Vector<Vector<Time> > > pos_time;
-	Vector<VectorMap<Time, byte> > main_time;
-	Vector<Vector<Vector<int> > > main_conv;
-	Vector<Vector<Vector<int> > > posconv_from, posconv_to;
-	
-	// Temporary
-	bool main_time_changed = false;
-	
-	
-	void	Serialize(Stream& s) {
-		s % symbols % periods % period_strings % spread_points % proxy_id
-		  % proxy_base_mul % sym_priority % common_symbol_pos % time_offset
-		  % pos_time % main_time % main_conv % posconv_from % posconv_to
-		  % main_data % main_mem % logic;
-	}
-	
-	void	DataTimeBegin(int sym, int tf);
-	void	DataTimeEnd(int sym, int tf);
-	int		DataTimeAdd(int sym, int tf, Time utc_time);
-	Time	TimeFromBroker(Time t) {return t + time_offset;}
-	Time	TimeToBroker(Time t) {return t - time_offset;}
-	void	RefreshTimeTfVectors(int tf);
-	void	RefreshTimeTfVector(int tf_from, int tf_to);
-	void	RefreshTimeSymVectors(int sym, int tf);
-	void	LoadThis() {LoadFromFile(*this, ConfigFile("system.bin"));}
-	void	StoreThis() {StoreToFile(*this, ConfigFile("system.bin"));}
-	int		GetCountMain(int tf) const {return main_time[tf].GetCount();}
-	Time	GetTimeMain(int tf, int i) const {return main_time[tf].GetKey(i);}
-	int		GetShiftFromMain(int sym, int tf, int i) const {return posconv_to[sym][tf][i];}
-	int		GetShiftToMain(int sym, int tf, int i) const {return posconv_from[sym][tf][i];}
-	int		GetShiftToMain(int sym, int tf, int main_tf, int i) const;
 	
 public:
 	
@@ -375,11 +328,6 @@ public:
 	
 public:
 	
-	// Job threads for symbol/timeframe cores.
-	// Both single-threaded and multi-threaded processing is supported for CLEANLINESS.
-	// All optimizations are done in jobs, which can contain the generic genetic local optimizer too.
-	// ExpertAdvisors are expected to contain their own optimization jobs, to automate usage.
-	
 	ArrayMap<int, JobThread>	job_threads;
 	Vector<InspectionResult>	inspection_results;
 	SpinLock					job_lock;
@@ -398,7 +346,6 @@ public:
 	bool	ProcessJob(int job_thread);
 	void	StopJobs();
 	void	StoreJobCores();
-	//const JobThread& GetJobThread(int i) const		{return job_threads[i];}
 	JobThread& GetJobThread(int i)					{JobThread* thrd; LOCK(job_lock) {thrd = &job_threads[i];} return *thrd;}
 	JobThread& GetJobThread(int sym, int tf)		{JobThread* thrd; LOCK(job_lock) {thrd = &job_threads.GetAdd(HashSymTf(sym, tf));} return *thrd;}
 	#ifdef flagGUITASK
@@ -406,170 +353,6 @@ public:
 	#endif
 	void	InspectionFailed(const char* file, int line, int symbol, int tf, String msg);
 	
-	
-public:
-	
-	
-	//int		GetCommonSymbolId(int common_pos) const {ASSERT(common_pos >= 0 && common_pos < COMMON_COUNT); return symbols.GetCount()-COMMON_COUNT+common_pos;}
-	int		GetCommonSymbolId(int common_pos, int symbol_pos) const;
-	int		GetCommonCount() const					{return COMMON_COUNT;}
-	int		GetCommonSymbolCount() const			{return SYM_COUNT;}
-	int		FindCommonSymbolPos(int sym_id) const;
-	
-public:
-	
-	
-	static const int COST_LEVEL_COUNT	= 4;
-	static const int BWD_COUNT			= 16;
-	static const int FWD_COUNT			= 1;
-	static const int LEVEL_TOTAL		= ASSIST_COUNT + BWD_COUNT + FWD_COUNT + 4;
-	
-	enum {
-		BIT_SKIP_CALENDAREVENT = LEVEL_TOTAL * COST_LEVEL_COUNT,
-		
-		BIT_COUNT
-	};
-	
-	inline int LevelBwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + i;}
-	inline int LevelFwd(int cost_level, int i) {return cost_level * LEVEL_TOTAL + ASSIST_COUNT + BWD_COUNT + i;}
-	inline int LevelActive(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 4;}
-	inline int LevelSignal(int cost_level)  {return (cost_level + 1) * LEVEL_TOTAL - 3;}
-	inline int LevelWrittenFwd(int cost_level) {return (cost_level + 1) * LEVEL_TOTAL - 2;}
-	inline int LevelWrittenDqn(int cost_level) {return (cost_level + 1) * LEVEL_TOTAL - 1;}
-	enum {
-		REG_INS, REG_WORKQUEUE_CURSOR,
-		
-		REG_WORKQUEUE_INITED, REG_INDIBITS_INITED,
-		REG_LOGICTRAINING_L0_ISRUNNING,
-		REG_LOGICTRAINING_L1_ISRUNNING,
-		REG_LOGICTRAINING_L2_ISRUNNING,
-		REG_LOGICTRAINING_L3_ISRUNNING,
-		
-		REG_SIG_L0TOREAL,
-		REG_SIG_L1TOREAL,
-		REG_SIG_L2TOREAL,
-		REG_SIG_L3TOREAL,
-		
-		REG_COUNT
-	};
-	enum {
-		INS_WAIT_NEXTSTEP, INS_REFRESHINDI, INS_TRAINABLE, INS_INPUTBITS, INS_CALENDARLOGIC,
-		INS_REALIZE_LOGICTRAINING, INS_WAIT_LOGICTRAINING, INS_LOGICBITS, INS_ACTIVELEVEL,
-		INS_STATS, INS_REFRESH_REAL,
-		INS_COUNT
-	};
-	enum {
-		MEM_TRAINABLESET, MEM_INPUTBARS, MEM_COUNTED_INPUT, MEM_COUNTED_CALENDAR,
-		MEM_COUNTED_ACTIVE,
-		MEM_TRAINBARS,
-		MEM_TRAINBEGIN,			MEM_TRAINBEGIN_LAST=MEM_TRAINBEGIN+COMMON_COUNT-1,
-		
-		MEM_COUNTED_L0,
-		MEM_COUNTED_L1,
-		MEM_COUNTED_L2,
-		MEM_COUNTED_L3,
-		
-		MEM_TRAINED_L0,
-		MEM_TRAINED_L1,
-		MEM_TRAINED_L2,
-		MEM_TRAINED_L3,
-		
-		MEM_COUNT
-	};
-	
-	
-	struct MainJob {
-		Vector<double> training_pts;
-		int level = -1, common_pos = -1;
-		int actual = 0, total = 1;
-		Atomic being_processed;
-		bool is_finished = false;
-	};
-	
-	
-	struct LogicLearner : Moveable<LogicLearner> {
-		
-		static const int INPUT_SIZE			= SYM_COUNT * (BWD_COUNT + ASSIST_COUNT) * TF_COUNT;
-		static const int OUTPUT_SIZE		= SYM_COUNT * FWD_COUNT * TF_COUNT;
-		
-		typedef DQNTrainer<OUTPUT_SIZE, INPUT_SIZE, 100> DQN;
-		
-		
-		// Persistent
-		DQN							dqn_trainer;
-		int							dqn_round = 0;
-		
-		// Temporary
-		#ifdef flagDEBUG
-		int							dqn_max_rounds		= 500;
-		#else
-		int							dqn_max_rounds		= 25000000;
-		#endif
-		
-		void	Serialize(Stream& s) {s % dqn_trainer % dqn_round;}
-		
-	};
-	
-	
-	// Persistent
-	VectorBool main_data;
-	Vector<dword> main_mem;
-	Vector<LogicLearner> logic;
-	
-	
-	// Temporary
-	Vector<int> main_begin;
-	Array<MainJob> main_jobs;
-	Vector<Core*> ordered_cores;
-	Vector<FactoryDeclaration> main_indi_ids;
-	Vector<Ptr<CoreItem> > main_work_queue;
-	Index<int> main_tf_ids, main_sym_ids, main_factory_ids;
-	Atomic workers_started;
-	const int main_tf_pos = MAIN_TF_POS;
-	dword main_reg[REG_COUNT];
-	int main_tf = 2;
-	int realtime_count = 0;
-	bool main_stopped = true, main_running = false;
-	bool store_this = false;
-	RWMutex main_lock;
-	Mutex workqueue_lock, mainloop_lock;
-	Callback WhenRealRefresh;
-	
-	void	StartMain();
-	void	StopMain();
-	void	MainLoop();
-	void	Worker(int id);
-	void	RealizeMainWorkQueue();
-	void	ProcessEnds();
-	void	ProcessMainWorkQueue(bool store_cache=false);
-	void	FillInputBits();
-	void	FillTrainableBits();
-	void	FillCalendarBits();
-	void	RealizeLogicTraining();
-	void	FillLogicBits(int level);
-	void	FillStatistics();
-	void	FillActive();
-	bool	RefreshReal();
-	void	LearnLogic(int level, int common_pos);
-	int		ProcessMainJob(MainJob& job);
-	int		GetOrderedCorePos(int sym_pos, int tf_pos, int factory_pos);
-	//bool		TestSymbol(int sym_id);
-	double	RunTest(int sym_id, int sym_pos, int begin, int end, int cost_level_count);
-	int64	GetMainDataPos(int64 cursor, int64 sym_pos, int64 tf_pos, int64 bit_pos) const;
-	void	GetMinimalSignal(int begin, int sym_pos, int tf_pos, int end, bool* sigbuf, int sigbuf_size, int cost_level);
-	void	LoadInput(int level, int common_pos, int cursor, double* buf, int bufsize);
-	void	LoadOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
-	void	StoreOutput(int level, int common_pos, int cursor, double* buf, int bufsize);
-	void	EnterProcessing() {workqueue_lock.Enter();}
-	void	LeaveProcessing() {if (store_this) {store_this = false; StoreThis();} workqueue_lock.Leave();}
-	String	GetRegisterKey(int i) const;
-	String	GetRegisterValue(int i, int j) const;
-	String	GetMemoryKey(int i) const;
-	String	GetMemoryValue(int i, int j) const;
-	void	StoreAll();
-	void	ClearCounters();
-	
-	template <class T> void LoadInput(int level, int common_pos, int cursor, T& state) {LoadInput(level, common_pos, cursor, state.weights, state.length);}
 	
 public:
 	

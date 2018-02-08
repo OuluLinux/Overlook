@@ -45,7 +45,6 @@ file
 	System.h,
 	SystemQueue.cpp,
 	System.cpp,
-	SystemProcess.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,

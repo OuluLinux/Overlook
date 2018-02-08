@@ -196,7 +196,7 @@ void Core::Refresh() {
 	
 	// Some indicators might want to set the size by themselves
 	if (!skip_setcount) {
-		int count = GetSystem().GetCountTf(sym_id, tf_id) + end_offset;
+		int count = GetInputBuffer(0,0).GetCount() + end_offset;
 		bars = count;
 		next_count = count;
 		if (!skip_allocate) {

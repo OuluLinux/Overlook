@@ -497,6 +497,7 @@ void HistoryCenter::Data() {
 	const Buffer& low   = out.buffers[1];
 	const Buffer& high  = out.buffers[2];
 	const Buffer& vol   = out.buffers[3];
+	const Buffer& tbuf  = out.buffers[4];
 	
 	int count = open.GetCount();
 	data_list.Clear();
@@ -506,7 +507,7 @@ void HistoryCenter::Data() {
 	for(int i = 0; i < screen_count; i++) {
 		int pos = shift + i;
 		if (pos < 0 || pos >= count) continue;
-		Time time = sys.GetTimeTf(sym, tf_id, pos);
+		Time time = Time(1970,1,1) + tbuf.Get(pos);
 		
 		data_list.Set(i, 0, time);
 		data_list.Set(i, 1, open.Get(pos));
@@ -525,165 +526,257 @@ void HistoryCenter::Data() {
 
 
 
-SystemDataCtrl::SystemDataCtrl() {
-	Add(split.SizePos());
-	split.Horz();
+
+
+RuleAnalyzer::RuleAnalyzer() {
+	CtrlLayout(*this, "Rule Analyzer");
+	prog.Set(0, 1);
+	analyze << THISBACK(Process);
+	LoadThis();
 	
-	split << reglist << memlist << datactrl;
-	split.SetPos(2500, 0);
-	split.SetPos(5000, 1);
-	
-	datactrl.Add(slider.TopPos(0, 30).HSizePos());
-	datactrl.Add(datadraw.VSizePos(30).HSizePos());
-	slider.MinMax(0, 1);
-	slider.SetData(1);
-	slider << THISBACK(Data);
-	
-	reglist.AddColumn("Reg Key");
-	reglist.AddColumn("Value");
-	reglist.ColumnWidths("2 1");
-	
-	memlist.AddColumn("Mem Key");
-	memlist.AddColumn("Value");
-	memlist.ColumnWidths("2 1");
-	
-	
+	begin.AddColumn("");
 }
 
-void SystemDataCtrl::Data() {
-	System& sys = GetSystem();
-	if (sys.main_mem.IsEmpty()) return;
-	
-	for(int i = 0; i < System::REG_COUNT; i++) {
-		reglist.Set(i, 0, sys.GetRegisterKey(i));
-		reglist.Set(i, 1, sys.GetRegisterValue(i, sys.main_reg[i]));
-	}
-	
-	for(int i = 0; i < System::MEM_COUNT; i++) {
-		memlist.Set(i, 0, sys.GetMemoryKey(i));
-		memlist.Set(i, 1, sys.GetMemoryValue(i, sys.main_mem[i]));
-	}
-	
-	int count = sys.GetCountMain(sys.main_tf);
-	int cursor = slider.GetData();
-	if (slider.GetMax() == 1) {
-		slider.MinMax(0, count-1);
-		slider.SetData(count-1);
-	} else {
-		slider.MinMax(0, count-1);
-	}
-	
-	int cur = slider.GetData();
-	if (cur != datadraw.cursor) {
-		datadraw.cursor = cur;
-		datadraw.Data();
-	}
-	datadraw.Refresh();
+RuleAnalyzer::~RuleAnalyzer() {
+	StoreThis();
 }
 
-void SystemDataCtrl::DataDraw::Data() {
+void RuleAnalyzer::Prepare() {
 	System& sys = GetSystem();
-	int H = sys.main_sym_ids.GetCount() * sys.main_tf_ids.GetCount();
-	int W = System::BIT_COUNT;
-	Size sz(W, H);
+	for(int i = 0; i < sys.GetSymbolCount(); i++) sym_ids.Add(i);
+	tf_ids.Add(0);
 	
-	int64 count = sys.main_data.GetCount();
-	if (!count) return;
+	FactoryDeclaration tmp;
+	tmp.arg_count = 0;
+	tmp.factory = System::Find<DataBridge>();							indi_ids.Add(tmp);
+    /*tmp.factory = System::Find<MovingAverage>();						indi_ids.Add(tmp);
+    tmp.factory = System::Find<MovingAverageConvergenceDivergence>();	indi_ids.Add(tmp);
+    tmp.factory = System::Find<BollingerBands>();						indi_ids.Add(tmp);
+    tmp.factory = System::Find<ParabolicSAR>();							indi_ids.Add(tmp);
+    tmp.factory = System::Find<StandardDeviation>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<AverageTrueRange>();						indi_ids.Add(tmp);
+    tmp.factory = System::Find<BearsPower>();							indi_ids.Add(tmp);
+    tmp.factory = System::Find<BullsPower>();							indi_ids.Add(tmp);
+    tmp.factory = System::Find<CommodityChannelIndex>();				indi_ids.Add(tmp);
+    tmp.factory = System::Find<DeMarker>();								indi_ids.Add(tmp);
+    tmp.factory = System::Find<Momentum>();								indi_ids.Add(tmp);
+    tmp.factory = System::Find<RelativeStrengthIndex>();				indi_ids.Add(tmp);
+    tmp.factory = System::Find<RelativeVigorIndex>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<StochasticOscillator>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<AcceleratorOscillator>();				indi_ids.Add(tmp);
+    tmp.factory = System::Find<AwesomeOscillator>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<PeriodicalChange>();						indi_ids.Add(tmp);
+    tmp.factory = System::Find<VolatilityAverage>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<VolatilitySlots>();						indi_ids.Add(tmp);
+    tmp.factory = System::Find<VolumeSlots>();							indi_ids.Add(tmp);
+    tmp.factory = System::Find<ChannelOscillator>();					indi_ids.Add(tmp);
+    tmp.factory = System::Find<ScissorChannelOscillator>();				indi_ids.Add(tmp);*/
+    
+    sys.System::GetCoreQueue(ci_queue, sym_ids, tf_ids, indi_ids);
+}
+
+void RuleAnalyzer::ProcessData() {
+	System& sys = GetSystem();
 	
-	if (cursor < 0 || cursor >= sys.main_mem[System::MEM_INPUTBARS])
-		return;
+	VectorBool& data = this->data[data_cursor];
+	DataBridge& db = dynamic_cast<DataBridge&>(*ci_queue[data_cursor]->core);
+	ASSERT(db.GetSymbol() == data_cursor);
+	double spread_point		= db.GetPoint();
 	
-	ImageBuffer id(sz);
-	RGBA* cur = id.Begin();
-	for(int i = 0; i < sys.main_tf_ids.GetCount(); i++) {
-		for(int j = 0; j < sys.main_sym_ids.GetCount(); j++) {
-			for (int x = 0; x < System::BIT_COUNT; x++) {
-				int64 pos = sys.GetMainDataPos(cursor, j, i, x);
-				if (pos < count) {
-					bool b = sys.main_data.Get(pos);
-					uint8 gray = b ? 0 : 255;
-					cur->r = gray;
-					cur->g = gray;
-					cur->b = gray;
-					cur->a = 255;
-				}
-				cur++;
+	ConstBuffer& open_buf = db.GetBuffer(0);
+	int data_count = open_buf.GetCount();
+	int bit_count = row_size * data_count;
+	int begin = data.GetCount() / row_size;
+	data.SetCount(bit_count);
+	
+	for(int j = begin; j < data_count; j++) {
+		int bit_pos = j * period_count * COUNT;
+		
+		for(int k = 0; k < period_count; k++) {
+			
+			// OnlineMinimalLabel
+			double cost	 = spread_point * (1 + k);
+			const int count = 1;
+			bool sigbuf[count];
+			int begin = Upp::max(0, j - 200);
+			int end = j + 1;
+			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
+			bool label = sigbuf[count - 1];
+			data.Set(bit_pos++, label);
+		
+			
+			// TrendIndex
+			bool bit_value;
+			int period = 1 << (1 + k);
+			double err, av_change, buf_value;
+			TrendIndex::Process(open_buf, j, period, 3, err, buf_value, av_change, bit_value);
+			data.Set(bit_pos++, buf_value > 0.0);
+		
+			
+		}
+	}
+}
+
+void RuleAnalyzer::Process() {
+	System& sys = GetSystem();
+	enum {BEGIN, SUSTAIN, OPTIMIZE_SUSTAIN, END, OPTIMIZE_END, JOINING, FINISHED};
+	int total;
+	TimeStop ts;
+	
+	if (!is_prepared) {
+		Prepare();
+		is_prepared = true;
+	}
+	
+	data.SetCount(sys.GetSymbolCount());
+	
+	while (ts.Elapsed() < 100 && phase < FINISHED) {
+		
+		if (processed_cursor < ci_queue.GetCount()) {
+			sys.System::Process(*ci_queue[processed_cursor++], true);
+		}
+		else if (data_cursor < sys.GetSymbolCount()) {
+			ProcessData();
+			data_cursor++;
+		}
+		else if (phase == BEGIN) {
+			total = row_size;
+			IterateBegin();
+		}
+		else if (phase == SUSTAIN) {
+			total = row_size * row_size;
+			IterateSustain();
+		}
+		else if (phase == OPTIMIZE_SUSTAIN) {
+			total = row_size;
+			IterateSustainOptimization();
+		}
+		else if (phase == END) {
+			total = row_size * row_size;
+			IterateEnd();
+		}
+		else if (phase == OPTIMIZE_END) {
+			total = row_size;
+			IterateEndOptimization();
+		}
+		else if (phase == JOINING) {
+			total = row_size;
+			IterateJoining();
+		}
+		
+		
+		current++;
+		if (current >= total) {
+			current = 0;
+			phase++;
+			
+			if (phase >= FINISHED) {
+				phase = 0;
+				joinlevel++;
 			}
 		}
 	}
 	
-	img_sz = sz;
-	img = id;
-	scaled_img_sz = Size(0,0);
+	int actual = this->total * phase + current;
+	prog.Set(actual, total);
+	
+	bool ready = phase == FINISHED && joinlevel == JOINLEVEL_COUNT;
+	if (!ready) PostCallback(THISBACK(Process));
 }
 
-void SystemDataCtrl::DataDraw::Paint(Draw& w) {
-	Size sz = GetSize();
-	w.DrawRect(sz, White());
-	if (img_sz.cx == 0 && img_sz.cy == 0) return;
-	if (scaled_img_sz != sz) {
-		scaled_img_sz = sz;
-		scaled_img = RescaleFilter(img, scaled_img_sz, FILTER_NEAREST);
-	}
-	w.DrawImage(0, 0, scaled_img);
-}
-
-
-
-
-
-SystemJobCtrl::SystemJobCtrl() {
-	Add(split.SizePos());
-	split.Horz();
-	
-	
-	split << joblist << draw;
-	split.SetPos(2500);
-	
-	joblist.AddIndex(job_id);
-	joblist.AddColumn("Common #");
-	joblist.AddColumn("Level #");
-	joblist.AddColumn("Progress");
-	joblist.ColumnWidths("1 1 5");
-	joblist << THISBACK(Data);
-	
-}
-
-void SystemJobCtrl::Data() {
+void RuleAnalyzer::IterateBegin() {
 	System& sys = GetSystem();
-	READLOCK(sys.main_lock) {
-		for(int i = 0; i < sys.main_jobs.GetCount(); i++) {
-			const System::MainJob& job = sys.main_jobs[i];
-			joblist.Set(i, 0, i);
-			joblist.Set(i, 1, job.common_pos);
-			joblist.Set(i, 2, job.level);
-			joblist.Set(i, 3, job.total > 0 ? (int64)job.actual * 100L / (int64)job.total : 0);
-			joblist.SetDisplay(i, 2, Single<JobProgressDislay>());
-			joblist.SetDisplay(i, 3, Single<JobProgressDislay>());
-		}
-		joblist.SetCount(sys.main_jobs.GetCount());
+	stats.SetCount(row_size);
+	
+	BitStats& stat = this->stats[joinlevel][current].begin;
+	stat.prob_av = 0.0;
+	for(int i = 0; i < sys.GetSymbolCount(); i++) {
+		stat.prob_av += GetBitProbBegin(i, current);
 	}
-	int cursor = joblist.GetCursor();
-	if (cursor >= 0 && cursor < joblist.GetCount()) {
-		draw.job_id = joblist.Get(cursor, 0);
-		draw.Refresh();
-	}
+	stat.prob_av /= sys.GetSymbolCount();
+	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
+	stat.type = stat.prob_av < 0.5;
+	
 }
 
-void SystemJobCtrl::TrainingCtrl::Paint(Draw& w) {
-	Size sz = GetSize();
-	ImageDraw id(sz);
-	id.DrawRect(sz, White());
-	
+void RuleAnalyzer::IterateSustain() {
 	System& sys = GetSystem();
-	READLOCK(sys.main_lock) {
-		if (job_id >= 0 && job_id < sys.main_jobs.GetCount()) {
-			const System::MainJob& job = sys.main_jobs[job_id];
-			DrawVectorPolyline(id, sz, job.training_pts, polyline);
-		}
-	}
+	int begin_id = current / row_size;
+	int susta_id = current % row_size;
 	
-	w.DrawImage(0, 0, id);
+	BeginStats& begin = this->stats[joinlevel][begin_id];
+	
+	begin.sustains.SetCount(row_size);
+	
+	BitStats& stat = begin.sustains[susta_id];
+	stat.prob_av = 0.0;
+	for(int i = 0; i < sys.GetSymbolCount(); i++) {
+		stat.prob_av += GetBitProbSustain(i, begin_id, susta_id);
+	}
+	stat.prob_av /= sys.GetSymbolCount();
+	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
+	stat.type = stat.prob_av < 0.5;
+	
 }
+
+void RuleAnalyzer::IterateSustainOptimization() {
+	
+	
+}
+
+void RuleAnalyzer::IterateEnd() {
+	System& sys = GetSystem();
+	int begin_id = current / row_size;
+	int end_id = current % row_size;
+	
+	BeginStats& begin = this->stats[joinlevel][begin_id];
+	
+	begin.ends.SetCount(row_size);
+	
+	BitStats& stat = begin.ends[end_id];
+	stat.prob_av = 0.0;
+	for(int i = 0; i < sys.GetSymbolCount(); i++) {
+		stat.prob_av += GetBitProbEnd(i, begin_id, end_id);
+	}
+	stat.prob_av /= sys.GetSymbolCount();
+	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
+	stat.type = stat.prob_av < 0.5;
+	
+}
+
+void RuleAnalyzer::IterateEndOptimization() {
+	
+	
+}
+
+void RuleAnalyzer::IterateJoining() {
+	
+	
+}
+
+double RuleAnalyzer::GetBitProbBegin(int symbol, int begin_id) {
+	VectorBool& data = this->data[symbol];
+	int bars = data.GetCount() / row_size;
+	
+	
+	return 0.0;
+}
+
+double RuleAnalyzer::GetBitProbSustain(int symbol, int begin_id, int susta_id) {
+	VectorBool& data = this->data[symbol];
+	int bars = data.GetCount() / row_size;
+	
+	
+	return 0.0;
+}
+
+double RuleAnalyzer::GetBitProbEnd(int symbol, int begin_id, int end_id) {
+	VectorBool& data = this->data[symbol];
+	int bars = data.GetCount() / row_size;
+	
+	
+	return 0.0;
+}
+
 
 }

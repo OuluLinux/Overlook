@@ -55,7 +55,7 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 	System& sys = GetSystem();
 	int sym = cont.GetSymbol();
 	int tf = cont.GetTf();
-	int c = Upp::min(cont.GetBuffer(buffer).GetCount(), Upp::min(sys.GetCountTf(sym, tf), cont.GetBars()));
+	int c = cont.GetBuffer(buffer).GetCount();
 	bool get_hi = !cont.HasMaximum();
 	bool get_lo = !cont.HasMinimum();
 	bool get_any = get_hi || get_lo;
@@ -126,7 +126,7 @@ void GraphCtrl::Paint(Draw& draw) {
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = sys.GetCountTf(sym, tf);
+    int data_count = src[0]->GetBuffer(0).GetCount();
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -160,10 +160,12 @@ void GraphCtrl::Paint(Draw& draw) {
 	DrawGrid(w, false);
 	
 	String graph_label;
+	BarData* bd_src = NULL;
 	for(int i = 0; i < src.GetCount(); i++) {
 		Core& cont = *src[i];
 		BarData* bardata = dynamic_cast<BarData*>(&cont);
 		if (bardata) {
+			bd_src = bardata;
 			PaintCandlesticks(w, cont);
 		} else {
 			if (graph_label.GetCount()) graph_label += ", ";
@@ -189,10 +191,10 @@ void GraphCtrl::Paint(Draw& draw) {
         
         if (latest_mouse_move_pt.y >= 0) {
 	        int x = latest_mouse_move_pt.x;
-	        int pos = sys.GetCountTf(sym, tf) - count + (x - border) / div - shift;
+	        int pos = data_count - count + (x - border) / div - shift;
 	        last_time_value_tool_pos = pos;
 	        if (pos >= 0 && pos < data_count) {
-	            Time t = sys.GetTimeTf(sym, tf, pos);
+	            Time t = Time(1970,1,1) + bd_src->GetBuffer(4).Get(pos);
 	            String timestr = Format("%", t);
 	            Font fnt = StdFont(12);
 	            Size str_sz = GetTextSize(timestr, fnt);
@@ -221,7 +223,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	y = r.top;
     w = r.GetWidth();
 	h = r.GetHeight();
-	c = Upp::min(sys.GetCountTf(sym, tf), pb.GetBuffer(0).GetCount());
+	c = pb.GetBuffer(0).GetCount();
 	
 	gridw = w / grid + 1;
     gridh = h / grid + 1;
@@ -232,12 +234,16 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	for(int i = 1; i < gridw; i++)
         W.DrawLine(border + i*grid, y, border + i*grid, y+h, PEN_DOT, gridcolor);
 
+	BarData* bardata = dynamic_cast<BarData*>(src[0]);
+	if (!bardata) return;
+	ConstBuffer& time_buf = bardata->GetBuffer(4);
+	
 	int gridstep = 4;
     for(int i = gridw - 1; i >= gridstep; i-=gridstep ) {
         pos = c - count - shift + i * grid/div;
         if (pos >= c || pos < 0) continue;
         
-        Time time = sys.GetTimeTf(sym, tf, pos);
+        Time time = Time(1970,1,1) + time_buf.Get(pos);
         String text = Format("%", time);
         Size text_sz = GetTextSize(text, gridfont);
         W.DrawText(border+i*grid-text_sz.cx-5, y+h+2, text, gridfont, gridcolor);
@@ -316,7 +322,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	y = r.top;
     h = r.GetHeight();
     w = r.GetWidth();
-	c = Upp::min(sys.GetCountTf(sym, tf), values.GetBuffer(0).GetCount());
+	c = values.GetBuffer(0).GetCount();
 	diff = hi - lo;
 	
 	for(int i = 0; i < count; i++) {
@@ -378,7 +384,7 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
     x = border;
 	y = r.top;
     h = r.GetHeight();
-	c = Upp::min(sys.GetCountTf(sym, tf), cont.GetBuffer(0).GetCount());
+	c = cont.GetBuffer(0).GetCount();
 	diff = hi - lo;
 	data_shift = cont.GetBuffer(buffer).shift;
 	data_begin = cont.GetBuffer(buffer).begin;
@@ -627,7 +633,7 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 
 int GraphCtrl::GetCount() {
 	if (!chart) return 0;
-	int c = chart->GetCore().GetBars();
+	int c = chart->GetCore().GetBuffer(0).GetCount();
     return c;
 }
 

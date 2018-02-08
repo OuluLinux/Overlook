@@ -156,3 +156,15 @@ LAYOUT(EnterProfileName, 400, 68)
 	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 100).BottomPosZ(4, 20))
 END_LAYOUT
 
+LAYOUT(RuleAnalyzer, 832, 432)
+	ITEM(ArrayCtrl, end, HSizePosZ(556, 4).VSizePosZ(28, 32))
+	ITEM(ArrayCtrl, sustain, HSizePosZ(280, 280).VSizePosZ(28, 32))
+	ITEM(ArrayCtrl, begin, HSizePosZ(4, 556).VSizePosZ(28, 32))
+	ITEM(ProgressIndicator, prog, HSizePosZ(4, 280).BottomPosZ(4, 24))
+	ITEM(Button, analyze, SetLabel(t_("Analyze")).RightPosZ(144, 132).BottomPosZ(4, 24))
+	ITEM(Label, dv___5, SetLabel(t_("End")).SetAlign(ALIGN_CENTER).SetFont(StdFontZ(15).Bold()).HSizePosZ(556, 4).TopPosZ(4, 19))
+	ITEM(Label, dv___6, SetLabel(t_("Sustain")).SetAlign(ALIGN_CENTER).SetFont(StdFontZ(15).Bold()).HSizePosZ(280, 280).TopPosZ(4, 19))
+	ITEM(Label, dv___7, SetLabel(t_("Begin")).SetAlign(ALIGN_CENTER).SetFont(StdFontZ(15).Bold()).HSizePosZ(4, 556).TopPosZ(4, 19))
+	ITEM(Option, enable, SetLabel(t_("Enable trading")).RightPosZ(4, 136).BottomPosZ(4, 24))
+END_LAYOUT
+

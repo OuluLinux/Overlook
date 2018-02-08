@@ -117,8 +117,6 @@ Overlook::Overlook() : watch(this) {
 	
 	LoadPreviousProfile();
 	PostRefreshData();
-	
-	GetSystem().WhenRealRefresh << THISBACK(LoadOpenOrderCharts);
 }
 
 Overlook::~Overlook() {
@@ -132,8 +130,6 @@ void Overlook::DockInit() {
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(sysjobs, "System Jobs").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(sysdata, "System Data").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -209,6 +205,7 @@ void Overlook::ToolMenu(Bar& bar) {
 	bar.Add("New Order", THISBACK(NewOrder)).Key(K_F9);
 	bar.Separator();
 	bar.Add("History Center", THISBACK(HistoryCenter)).Key(K_F2);
+	bar.Add("Trading rule analyzer", THISBACK(TradingRules)).Key(K_F3);
 	bar.Separator();
 	bar.Add("Options", THISBACK(Options)).Key(K_CTRL|K_O);
 }
@@ -337,6 +334,11 @@ void Overlook::HistoryCenter() {
 	hc.Run();
 }
 
+void Overlook::TradingRules() {
+	class RuleAnalyzer ra;
+	ra.Run();
+}
+
 void Overlook::Options() {
 	OptionWindow opt;
 	opt.Run();
@@ -431,17 +433,14 @@ void Overlook::SetTimeframe(int tf_id) {
 void Overlook::DeepRefresh() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
-	if (sys.mainloop_lock.TryEnter()) {
-		mt.Data();
-		sys.SetEnd(GetUtcTime());
-		DataBridgeCommon& common = GetDataBridgeCommon();
-		common.InspectInit();
-		common.DownloadAskBid();
-		common.RefreshAskBidData(true);
-		GetCalendar().Data();
-		cman.RefreshWindows();
-		sys.mainloop_lock.Leave();
-	}
+	
+	mt.Data();
+	DataBridgeCommon& common = GetDataBridgeCommon();
+	common.InspectInit();
+	common.DownloadAskBid();
+	common.RefreshAskBidData(true);
+	GetCalendar().Data();
+	cman.RefreshWindows();
 }
 
 void Overlook::RefreshData() {
@@ -483,8 +482,6 @@ void Overlook::Data() {
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
-	if (sysdata.IsVisible())		RefreshSystemData();
-	if (sysjobs.IsVisible())		RefreshSystemJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
 }
 
@@ -517,14 +514,6 @@ void Overlook::RefreshAssist() {
 			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
 	assist.SetCount(row);
-}
-
-void Overlook::RefreshSystemData() {
-	sysdata.Data();
-}
-
-void Overlook::RefreshSystemJobs() {
-	sysjobs.Data();
 }
 
 void Overlook::RefreshCalendar() {

@@ -1070,17 +1070,18 @@ public:
 			% Arg("period", period, 2)
 			% Arg("err_div", err_div, 0);
 	}
+	
+	static void Process(ConstBuffer& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value);
+	
 };
 
 class OnlineMinimalLabel : public Core {
 	int prev_counted = 0;
 	int cost_level = 0;
-	double cost = 0.0;
 	
 	
 protected:
 	virtual void Start();
-	void GetMinimalSignal(int begin, int end, bool* sigbuf, int sigbuf_size);
 	
 public:
 	OnlineMinimalLabel();
@@ -1093,6 +1094,9 @@ public:
 			% Mem(prev_counted)
 			% Arg("cost_level", cost_level, 0);
 	}
+	
+	static void GetMinimalSignal(double cost, ConstBuffer& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size);
+	
 };
 
 class ReactionContext : public Core {

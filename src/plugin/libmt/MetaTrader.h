@@ -47,6 +47,8 @@ public:
 	virtual int		iVolume(String symbol, int timeframe, int shift);
 	virtual int		RefreshRates();
 	virtual Time	GetTime() const {return GetUtcTime() - time_offset;}
+	virtual Time	GetTimeFromUtc(const Time& utc_time) const {return utc_time - time_offset;}
+	virtual Time	GetTimeToUtc(const Time& utc_time) const {return utc_time + time_offset;}
 	virtual double	RealtimeAsk(int sym) {return _MarketInfo(symbols[sym].name, MODE_ASK);}
 	virtual double	RealtimeBid(int sym) {return _MarketInfo(symbols[sym].name, MODE_BID);}
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);

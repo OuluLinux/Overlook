@@ -17,49 +17,7 @@
 namespace Overlook {
 using namespace Upp;
 
-// Tunable variables
 
-// Total used symbols: SYM_COUNT * COMMON_COUNT
-// Check System::FirstStart() symbol-list to see which are enabled.
-#define SYM_COUNT				1
-#define COMMON_COUNT			6
-
-// How many timeframes are enabled: [1-3]
-// Note: higher value increases DQN input count dramatically, which might decrease output quality.
-#define TF_COUNT				1
-#define MAIN_TF_POS				0
-
-// The factor for free-margin level. How much of equity is committed for trading.
-// Lower value increases risks, higher reduces. [0.60 - 0.98]
-#define FMLEVEL					0.60
-
-
-#define ONLY_M1_SOURCE			0
-#define MAX_SYMOPEN				SYM_COUNT
-
-
-// Fast mode: M15
-//  - causes lot of idling during nights
-//  - doesn't create huge losses during length of single order, which allows lower FMLEVEL.
-// Slow mode: H1
-//  - more active during all day
-//  - more volatile order value, reduce FMLEVEL
-#if 1
-	#define SYS_M1			1
-	#define SYS_HOURBITS	24
-	#define SYS_MINBITS		0
-	#define SYS_HAVETIMEIN	0
-#elif 0
-	#define SYS_M15			1
-	#define SYS_HOURBITS	24
-	#define SYS_MINBITS		4
-	#define SYS_HAVETIMEIN	0
-#else
-	#define SYS_H1			1
-	#define SYS_HOURBITS	24
-	#define SYS_MINBITS		0
-	#define SYS_HAVETIMEIN	1
-#endif
 
 
 class AgentGroup;

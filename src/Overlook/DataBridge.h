@@ -73,7 +73,7 @@ protected:
 	int spread_count;
 	int median_max, median_min;
 	int max_value, min_value;
-	int cursor;
+	int cursor = 0, cursor2 = 0;
 	bool slow_volume, day_volume;
 	bool once = true;
 	
@@ -89,9 +89,9 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
-			% Out(4, 4)
+			% Out(5, 5)
 			% Mem(spread_mean) % Mem(spread_count)
-			% Mem(cursor)
+			% Mem(cursor) % Mem(cursor2)
 			% Mem(median_max_map) % Mem(median_min_map)
 			% Mem(symbols)
 			% Mem(ext_data)
@@ -114,20 +114,9 @@ public:
 	void RefreshFromFaster();
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		
-		// NOTE: breaks a lot of stuff
-		#if ONLY_M1_SOURCE
 		if (in_sym == -1)
 			return in_tf > 0 && out_tf == 0;
 		return in_sym == out_sym;
-		#endif
-		
-		
-		if (in_sym == -1) {
-			return in_tf == out_tf;
-		}
-		
-		return false;
 	}
 };
 

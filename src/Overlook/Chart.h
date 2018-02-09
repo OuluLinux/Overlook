@@ -22,7 +22,7 @@ protected:
 	int symbol = 0, tf = 0;
 	bool right_offset = 0, keep_at_end = 0;
 	Core* core = NULL;
-	BarData* bardata = NULL;
+	DataBridge* bardata = NULL;
 	
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);

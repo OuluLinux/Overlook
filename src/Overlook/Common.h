@@ -52,6 +52,25 @@ enum {
 	PHASE_REAL
 };
 
+class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
+	Vector<double> win_a;
+	double sum_a = 0.0;
+	int period = 0, cursor = 0;
+	
+public:
+	OnlineAverageWindow1() {}
+	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
+	void Add(double a) {
+		double& da = win_a[cursor];
+		sum_a -= da;
+		da = a;
+		sum_a += da;
+		cursor = (cursor + 1) % period;
+	}
+	double GetMean() const {return sum_a / period;}
+	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor;}
+};
+
 class OnlineAverageWindow2 : Moveable<OnlineAverageWindow2> {
 	Vector<double> win_a, win_b;
 	double sum_a = 0.0, sum_b = 0.0;

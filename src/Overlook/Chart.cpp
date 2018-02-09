@@ -103,12 +103,12 @@ void Chart::SetGraph(Core* src) {
 	ASSERT(src);
 	tf = src->GetTf();
 	ClearCores();
-	BarData* src_cast = dynamic_cast<BarData*>(src);
+	DataBridge* src_cast = dynamic_cast<DataBridge*>(src);
 	if (src_cast) {
 		bardata = src_cast;
 		GraphCtrl& main = AddGraph(bardata);
 	} else {
-		bardata = src->GetBarData();
+		bardata = src->GetDataBridge();
 		ASSERT(bardata);
 		GraphCtrl& main = AddGraph(bardata);
 		bool separate_window = src->IsCoreSeparateWindow();

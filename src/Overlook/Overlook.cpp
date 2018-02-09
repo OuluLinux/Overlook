@@ -441,6 +441,7 @@ void Overlook::DeepRefresh() {
 	common.RefreshAskBidData(true);
 	GetCalendar().Data();
 	cman.RefreshWindows();
+	GetRuleAnalyzer().Refresh();
 }
 
 void Overlook::RefreshData() {

@@ -60,7 +60,7 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-class DataBridge : public BarData {
+class DataBridge : public Core {
 	
 protected:
 	friend class CommonForce;

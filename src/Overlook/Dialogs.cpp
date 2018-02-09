@@ -529,12 +529,37 @@ void HistoryCenter::Data() {
 
 
 RuleAnalyzer::RuleAnalyzer() {
-	CtrlLayout(*this, "Rule Analyzer");
+	data_check.ra = this;
+	datactrl_cursor << THISBACK(SetCursor);
+	datactrl_cursor.MinMax(0, 1);
+	
+	CtrlLayout(*this, "Rule Analyzer :: Alpha version :: Long half-crashed loading at beginning");
 	prog.Set(0, 1);
 	analyze << THISBACK(Process);
 	LoadThis();
 	
-	begin.AddColumn("");
+	begin.AddColumn("Bit period #");
+	begin.AddColumn("Bit type");
+	begin.AddColumn("Prob. Av.");
+	begin.AddColumn("Succ. idx");
+	begin.AddColumn("Type");
+	begin.ColumnWidths("1 3 2 2 1");
+	
+	sustain.AddColumn("Bit period #");
+	sustain.AddColumn("Bit type");
+	sustain.AddColumn("Prob. Av.");
+	sustain.AddColumn("Succ. idx");
+	sustain.AddColumn("Type");
+	sustain.ColumnWidths("1 3 2 2 1");
+	
+	end.AddColumn("Bit period #");
+	end.AddColumn("Bit type");
+	end.AddColumn("Prob. Av.");
+	end.AddColumn("Succ. idx");
+	end.AddColumn("Type");
+	end.ColumnWidths("1 3 2 2 1");
+	
+	Data();
 }
 
 RuleAnalyzer::~RuleAnalyzer() {
@@ -575,22 +600,106 @@ void RuleAnalyzer::Prepare() {
     sys.System::GetCoreQueue(ci_queue, sym_ids, tf_ids, indi_ids);
 }
 
-void RuleAnalyzer::ProcessData() {
-	System& sys = GetSystem();
+void RADataCtrl::Paint(Draw& d) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
 	
+	id.DrawRect(sz, White());
+	
+	int mem_pos = cursor * ra->row_size;
+	
+	if (symbol < ra->data.GetCount() && cursor >= 0 && mem_pos + ra->row_size <= ra->data[symbol].GetCount()) {
+		const VectorBool& data = ra->data[symbol];
+		
+		double xstep = (double)sz.cx / ra->period_count;
+		double ystep = (double)sz.cy / ra->COUNT;
+		int w = xstep + 0.5;
+		int h = ystep + 0.5;
+		for(int i = 0; i < ra->period_count; i++) {
+			int x = xstep * i;
+			for(int j = 0; j < ra->COUNT; j++) {
+				int y = ystep * j;
+				
+				bool bit = data.Get(mem_pos++);
+				if (bit)
+					id.DrawRect(x, y, w, h, Black());
+			}
+		}
+	}
+	
+	
+	d.DrawImage(0,0,id);
+}
+
+void RuleAnalyzer::ProcessData() {
+	
+	// Get reference values
+	System& sys = GetSystem();
 	VectorBool& data = this->data[data_cursor];
 	DataBridge& db = dynamic_cast<DataBridge&>(*ci_queue[data_cursor]->core);
 	ASSERT(db.GetSymbol() == data_cursor);
 	double spread_point		= db.GetPoint();
 	
+	
+	// Prepare maind data
 	ConstBuffer& open_buf = db.GetBuffer(0);
+	ConstBuffer& low_buf  = db.GetBuffer(1);
+	ConstBuffer& high_buf = db.GetBuffer(2);
 	int data_count = open_buf.GetCount();
 	int bit_count = row_size * data_count;
 	int begin = data.GetCount() / row_size;
 	data.SetCount(bit_count);
 	
-	for(int j = begin; j < data_count; j++) {
-		int bit_pos = j * period_count * COUNT;
+	
+	// Prepare Moving average
+	Vector<OnlineAverageWindow1> av_wins;
+	av_wins.SetCount(period_count);
+	for(int i = 0; i < av_wins.GetCount(); i++)
+		av_wins[i].SetPeriod(1 << (1+i));
+	
+	
+	// Prepare VolatilityContext
+	Vector<Vector<double> > volat_divs;
+	for(int j = 0; j < period_count; j++) {
+		int period = 1 << (1+j);
+		volat_divs.Add();
+		VectorMap<int,int> median_map;
+		for(int cursor = period; cursor < data_count; cursor++) {
+			double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+			int step = (int)((diff + spread_point * 0.5) / spread_point);
+			median_map.GetAdd(step, 0)++;
+		}
+		SortByKey(median_map, StdLess<int>());
+		volat_divs[j].SetCount(0);
+		int64 total = 0;
+		for(int i = 0; i < median_map.GetCount(); i++)
+			total += median_map[i];
+		int64 count_div = total / volat_div;
+		total = 0;
+		int64 next_div = count_div;
+		volat_divs[j].Add(median_map.GetKey(0) * spread_point);
+		for(int i = 0; i < median_map.GetCount(); i++) {
+			total += median_map[i];
+			if (total >= next_div) {
+				next_div += count_div;
+				volat_divs[j].Add(median_map.GetKey(i) * spread_point);
+			}
+		}
+		if (volat_divs[j].GetCount() < volat_div)
+			volat_divs[j].Add(median_map.TopKey() * spread_point);
+	}
+	
+	
+	// Run main data filler
+	for(int cursor = begin; cursor < data_count; cursor++) {
+		#ifdef flagDEBUG
+		if (cursor >= 100000)
+			break;
+		#endif
+		int bit_pos = cursor * row_size;
+		double open1 = open_buf.Get(cursor);
+		
+		int bit_begin = bit_pos;
 		
 		for(int k = 0; k < period_count; k++) {
 			
@@ -598,8 +707,8 @@ void RuleAnalyzer::ProcessData() {
 			double cost	 = spread_point * (1 + k);
 			const int count = 1;
 			bool sigbuf[count];
-			int begin = Upp::max(0, j - 200);
-			int end = j + 1;
+			int begin = Upp::max(0, cursor - 200);
+			int end = cursor + 1;
 			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
 			bool label = sigbuf[count - 1];
 			data.Set(bit_pos++, label);
@@ -609,19 +718,176 @@ void RuleAnalyzer::ProcessData() {
 			bool bit_value;
 			int period = 1 << (1 + k);
 			double err, av_change, buf_value;
-			TrendIndex::Process(open_buf, j, period, 3, err, buf_value, av_change, bit_value);
+			TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
 			data.Set(bit_pos++, buf_value > 0.0);
-		
 			
+			
+			#ifndef flagDEBUG
+			
+			// VolatilityContext
+			int lvl = -1;
+			if (cursor >= period) {
+				double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+				for(int i = 0; i < volat_divs[k].GetCount(); i++) {
+					if (diff < volat_divs[k][i]) {
+						lvl = i - 1;
+						break;
+					}
+				}
+			}
+			for(int i = 0; i < volat_div; i++)
+				data.Set(bit_pos++,  lvl == i);
+			
+		
+			// MovingAverage
+			OnlineAverageWindow1& av_win = av_wins[k];
+			double prev = av_win.GetMean();
+			av_win.Add(open1);
+			double curr = av_win.GetMean();
+			label = open1 < prev;
+			data.Set(bit_pos++, label);
+			
+			
+			// Momentum
+			begin = Upp::max(0, cursor - period);
+			double open2 = open_buf.Get(begin);
+			double value = open1 / open2 - 1.0;
+			label = value < 0.0;
+			data.Set(bit_pos++, label);
+			
+			
+			// Open/Close trend
+			period = 1 << k;
+			int dir = 0;
+			int len = 0;
+			if (cursor >= period * 3) {
+				for (int i = cursor-period; i >= 0; i -= period) {
+					int idir = open_buf.Get(i+period) > open_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != dir) break;
+					dir = idir;
+					len++;
+				}
+			}
+			data.Set(bit_pos++, len > 2);
+		
+		
+			// High break
+			dir = 0;
+			len = 0;
+			if (cursor >= period * 3) {
+				double hi = high_buf.Get(cursor-period);
+				for (int i = cursor-1-period; i >= 0; i -= period) {
+					int idir = hi > high_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != +1) break;
+					dir = idir;
+					len++;
+				}
+			}
+			data.Set(bit_pos++, len > 2);
+			
+			
+			// Low break
+			dir = 0;
+			len = 0;
+			if (cursor >= period * 3) {
+				double lo = low_buf.Get(cursor-period);
+				for (int i = cursor-1-period; i >= 0; i -= period) {
+					int idir = lo < low_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != +1) break;
+					dir = idir;
+					len++;
+				}
+			}
+			data.Set(bit_pos++, len > 2);
+			
+			
+			// Trend reversal
+			int t0 = +1;
+			int t1 = +1;
+			int t2 = -1;
+			if (cursor >= 4*period) {
+				double t0_diff		= open_buf.Get(cursor-0*period) - open_buf.Get(cursor-1*period);
+				double t1_diff		= open_buf.Get(cursor-1*period) - open_buf.Get(cursor-2*period);
+				double t2_diff		= open_buf.Get(cursor-2*period) - open_buf.Get(cursor-3*period);
+				t0 = t0_diff > 0 ? +1 : -1;
+				t1 = t1_diff > 0 ? +1 : -1;
+				t2 = t2_diff > 0 ? +1 : -1;
+			}
+			if (t0 * t1 == -1 && t1 * t2 == +1) {
+				data.Set(bit_pos++, t0 == +1);
+				data.Set(bit_pos++, t0 != +1);
+			} else {
+				data.Set(bit_pos++, false);
+				data.Set(bit_pos++, false);
+			}
+			
+			#endif
 		}
+		
+		ASSERT(bit_pos - bit_begin == row_size);
+	}
+}
+
+void RuleAnalyzer::Data() {
+	if (this->data.IsEmpty()) return;
+	RealizeStats();
+	
+	int begin_id = 0;
+	
+	if (begin_id >= 0 && begin_id < row_size) {
+		auto& stats = this->stats[Upp::min(JOINLEVEL_COUNT-1, joinlevel)][begin_id];
+		if (stats.begins.IsEmpty()) return;
+		
+		for(int i = 0; i < row_size; i++) {
+			BitStats& stat = stats.begins[i];
+			int period_id = i / COUNT;
+			int type_id = i % COUNT;
+			begin.Set(i, 0, period_id);
+			begin.Set(i, 1, GetTypeString(type_id));
+			begin.Set(i, 2, stat.prob_av);
+			begin.Set(i, 3, stat.succ_idx);
+			begin.Set(i, 4, stat.type ? "Short" : "Long");
+		}
+		begin.SetSortColumn(3, true);
+		
+		for(int i = 0; i < row_size; i++) {
+			BitStats& stat = stats.sustains[i];
+			int period_id = i / COUNT;
+			int type_id = i % COUNT;
+			sustain.Set(i, 0, period_id);
+			sustain.Set(i, 1, GetTypeString(type_id));
+			sustain.Set(i, 2, stat.prob_av);
+			sustain.Set(i, 3, stat.succ_idx);
+			sustain.Set(i, 4, stat.type ? "Short" : "Long");
+		}
+		sustain.SetSortColumn(3, true);
+		
+		for(int i = 0; i < row_size; i++) {
+			BitStats& stat = stats.ends[i];
+			int period_id = i / COUNT;
+			int type_id = i % COUNT;
+			end.Set(i, 0, period_id);
+			end.Set(i, 1, GetTypeString(type_id));
+			end.Set(i, 2, stat.prob_av);
+			end.Set(i, 3, stat.succ_idx);
+			end.Set(i, 4, stat.type ? "Short" : "Long");
+		}
+		end.SetSortColumn(3, true);
+	}
+	
+	
+	auto& data = this->data[0];
+	int data_count = data.GetCount() / row_size;
+	if (datactrl_cursor.GetMax() != data_count-1) {
+		datactrl_cursor.MinMax(0, data_count-1);
+		datactrl_cursor.SetData(data_count-1);
 	}
 }
 
 void RuleAnalyzer::Process() {
 	System& sys = GetSystem();
-	enum {BEGIN, SUSTAIN, OPTIMIZE_SUSTAIN, END, OPTIMIZE_END, JOINING, FINISHED};
-	int total;
 	TimeStop ts;
+	int phase_total = row_size * row_size * LOOP_COUNT;
 	
 	if (!is_prepared) {
 		Prepare();
@@ -630,43 +896,27 @@ void RuleAnalyzer::Process() {
 	
 	data.SetCount(sys.GetSymbolCount());
 	
-	while (ts.Elapsed() < 100 && phase < FINISHED) {
+	int current_in_loop = 0;
+	while (ts.Elapsed() < 100 && phase < FINISHED && joinlevel < JOINLEVEL_COUNT) {
 		
 		if (processed_cursor < ci_queue.GetCount()) {
 			sys.System::Process(*ci_queue[processed_cursor++], true);
+			continue;
 		}
 		else if (data_cursor < sys.GetSymbolCount()) {
 			ProcessData();
+			StoreThis();
 			data_cursor++;
+			continue;
 		}
-		else if (phase == BEGIN) {
-			total = row_size;
-			IterateBegin();
-		}
-		else if (phase == SUSTAIN) {
-			total = row_size * row_size;
-			IterateSustain();
-		}
-		else if (phase == OPTIMIZE_SUSTAIN) {
-			total = row_size;
-			IterateSustainOptimization();
-		}
-		else if (phase == END) {
-			total = row_size * row_size;
-			IterateEnd();
-		}
-		else if (phase == OPTIMIZE_END) {
-			total = row_size;
-			IterateEndOptimization();
-		}
-		else if (phase == JOINING) {
-			total = row_size;
-			IterateJoining();
+		else if (phase >= BEGIN && phase <= END) {
+			Iterate(phase - BEGIN);
 		}
 		
 		
 		current++;
-		if (current >= total) {
+		current_in_loop++;
+		if (current >= phase_total) {
 			current = 0;
 			phase++;
 			
@@ -677,106 +927,246 @@ void RuleAnalyzer::Process() {
 		}
 	}
 	
-	int actual = this->total * phase + current;
+	int actual = phase_total * (phase + FINISHED * joinlevel) + current;
+	int total = phase_total * FINISHED * JOINLEVEL_COUNT;
 	prog.Set(actual, total);
+	
+	double speed = ((double)current_in_loop / (double)ts.Elapsed()) * 1000.0;
+	if (speed < 1.0) speed = 1.0;
+	int seconds = total / speed;
+	int perc = actual * 100 / total;
+	if (perc < 100) {
+		int hours = seconds / 3600;		seconds = seconds % 3600;
+		int minutes = seconds / 60;		seconds = seconds % 60;
+		Title(Format("Rule Analyzer :: %d%% :: Time remaining %d hours %d minutes %d seconds", perc, hours, minutes, seconds));
+	}
+	else Title("Rule Analyzer :: Ready");
+	
+	Data();
 	
 	bool ready = phase == FINISHED && joinlevel == JOINLEVEL_COUNT;
 	if (!ready) PostCallback(THISBACK(Process));
 }
 
-void RuleAnalyzer::IterateBegin() {
+void RuleAnalyzer::RealizeStats() {
+	if (!stats.IsEmpty()) return;
+	stats.SetCount(JOINLEVEL_COUNT);
+	for(int i = 0; i < stats.GetCount(); i++) {
+		stats[i].SetCount(row_size);
+		for(int j = 0; j < row_size; j++) {
+			BeginStats& bs = stats[i][j];
+			bs.begins.SetCount(row_size);
+			bs.sustains.SetCount(row_size);
+			bs.ends.SetCount(row_size);
+			if (i == 0) bs.begin_bits.Add(j);
+		}
+	}
+}
+
+void RuleAnalyzer::Iterate(int type) {
 	System& sys = GetSystem();
-	stats.SetCount(row_size);
+	RealizeStats();
 	
-	BitStats& stat = this->stats[joinlevel][current].begin;
+	if (!type && !joinlevel) return; // no new begins for first joinlevel
+	
+	int bit_id = current / (row_size * row_size);
+	int bit_opt = current % (row_size * row_size);
+	int begin_id = bit_opt / row_size;
+	int sub_id = bit_opt % row_size;
+	
+	// Getvalues for bits
+	auto& stats = this->stats[joinlevel][begin_id];
+	auto& sub_stats = type == 0 ? stats.begins : (type == 1 ? stats.sustains : stats.ends);
+	BitStats& stat = sub_stats[sub_id];
 	stat.prob_av = 0.0;
 	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		stat.prob_av += GetBitProbBegin(i, current);
+		stat.prob_av += GetBitProbTest(i, begin_id, type, sub_id, stat.type);
 	}
 	stat.prob_av /= sys.GetSymbolCount();
 	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
 	stat.type = stat.prob_av < 0.5;
 	
-}
-
-void RuleAnalyzer::IterateSustain() {
-	System& sys = GetSystem();
-	int begin_id = current / row_size;
-	int susta_id = current % row_size;
-	
-	BeginStats& begin = this->stats[joinlevel][begin_id];
-	
-	begin.sustains.SetCount(row_size);
-	
-	BitStats& stat = begin.sustains[susta_id];
-	stat.prob_av = 0.0;
-	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		stat.prob_av += GetBitProbSustain(i, begin_id, susta_id);
+	// When bit is added
+	if (bit_opt+1 == row_size * row_size && current > 0) {
+		for(int begin_id = 0; begin_id < row_size; begin_id++) {
+			auto& stats = this->stats[joinlevel][begin_id];
+			auto& sub_stats = type == 0 ? stats.begins : (type == 1 ? stats.sustains : stats.ends);
+			auto& bits = (type == 0 ? stats.begin_bits : (type == 1 ? stats.sust_bits : stats.end_bits));
+			double max_succ_idx = -DBL_MAX;
+			int max_pos = -1;
+			for(int i = 0; i < sub_stats.GetCount(); i++) {
+				double d = sub_stats[i].succ_idx;
+				if (d > max_succ_idx) {
+					if (bits.Find(i)) continue;
+					max_succ_idx = d;
+					max_pos = i;
+				}
+			}
+			// Append best bit
+			if (max_pos != -1) {
+				ASSERT(max_pos >= 0 && max_pos < row_size);
+				bits.Add(max_pos);
+			}
+		}
 	}
-	stat.prob_av /= sys.GetSymbolCount();
-	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
-	stat.type = stat.prob_av < 0.5;
-	
-}
-
-void RuleAnalyzer::IterateSustainOptimization() {
-	
-	
-}
-
-void RuleAnalyzer::IterateEnd() {
-	System& sys = GetSystem();
-	int begin_id = current / row_size;
-	int end_id = current % row_size;
-	
-	BeginStats& begin = this->stats[joinlevel][begin_id];
-	
-	begin.ends.SetCount(row_size);
-	
-	BitStats& stat = begin.ends[end_id];
-	stat.prob_av = 0.0;
-	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		stat.prob_av += GetBitProbEnd(i, begin_id, end_id);
-	}
-	stat.prob_av /= sys.GetSymbolCount();
-	stat.succ_idx = fabs(stat.prob_av * 200.0 - 100.0);
-	stat.type = stat.prob_av < 0.5;
-	
-}
-
-void RuleAnalyzer::IterateEndOptimization() {
-	
-	
-}
-
-void RuleAnalyzer::IterateJoining() {
-	
-	
 }
 
 double RuleAnalyzer::GetBitProbBegin(int symbol, int begin_id) {
 	VectorBool& data = this->data[symbol];
-	int bars = data.GetCount() / row_size;
+	ConstBuffer& open_buf = ci_queue[symbol]->core->GetBuffer(0);
 	
+	int bars = data.GetCount() / row_size - BEGIN_PEEK;
 	
-	return 0.0;
+	int true_count = 0;
+	int pos = begin_id;
+	for(int i = 0; i < bars; i++) {
+		bool pred_value = data.Get(pos);
+		bool actual_value = open_buf.Get(i + BEGIN_PEEK) < open_buf.Get(i);
+		pos += row_size;
+		if (pred_value == actual_value) true_count++;
+	}
+	
+	return (double)true_count / (double)bars;
 }
 
-double RuleAnalyzer::GetBitProbSustain(int symbol, int begin_id, int susta_id) {
+double RuleAnalyzer::GetBitProbTest(int symbol, int begin_id, int type, int sub_id, bool inv_action) {
 	VectorBool& data = this->data[symbol];
-	int bars = data.GetCount() / row_size;
+	ConstBuffer& open_buf = ci_queue[symbol]->core->GetBuffer(0);
+	BeginStats& begin = this->stats[joinlevel][begin_id];
 	
+	int peek;
+	bool test_begin = false, test_sust = false, test_end = false;
+	switch (type) {
+		case 0:
+			test_begin = true;
+			peek = BEGIN_PEEK;
+			break;
+		case 1:
+			test_sust = true;
+			peek = SUSTAIN_PEEK;
+			break;
+		case 2:
+			test_end = true;
+			peek = END_PEEK;
+			break;
+		default: Panic("Invalid caller");
+	}
 	
-	return 0.0;
+	int bars = data.GetCount() / row_size - peek;
+	
+	int open_left = 0;
+	bool open_dir = false;
+	
+	int true_count = 0;
+	int begin_pos = 0;
+	int total = 0;
+	for(int i = 0; i < bars; i++) {
+		
+		// Existing values
+		bool begin_value = true;
+		for(int j = 0; j < begin.begin_bits.GetCount(); j++)
+			begin_value &= data.Get(begin_pos + begin.begin_bits[j]); // AND
+		if (begin_value && open_left < peek)
+			open_left = peek;
+		
+		bool sust_value = false;
+		for(int j = 0; j < begin.sust_bits.GetCount(); j++)
+			sust_value |= data.Get(begin_pos + begin.sust_bits[j]); // OR
+		if (sust_value && open_left == 1)
+			open_left++;
+		
+		bool end_value = false;
+		for(int j = 0; j < begin.end_bits.GetCount(); j++)
+			end_value |= data.Get(begin_pos + begin.end_bits[j]); // OR
+		if (end_value)
+			open_left = 0;
+		
+		// Test values
+		if (test_begin && begin_value) {
+			bool pred_value = data.Get(begin_pos + sub_id);
+			bool actual_value = open_buf.Get(i + peek) < open_buf.Get(i);
+			if (inv_action) actual_value = !actual_value;
+			if (pred_value == actual_value) true_count++;
+			total++;
+		}
+		if (test_sust && open_left > 0) {
+			bool pred_value = data.Get(begin_pos + sub_id);
+			bool actual_value = open_buf.Get(i + peek) < open_buf.Get(i);
+			if (inv_action) actual_value = !actual_value;
+			if (pred_value == actual_value) true_count++;
+			total++;
+		}
+		if (test_end && open_left > 0) {
+			bool pred_value = data.Get(begin_pos + sub_id);
+			bool actual_value = open_buf.Get(i + peek) < open_buf.Get(i);
+			if (inv_action) actual_value = !actual_value;
+			if (pred_value != actual_value) true_count++;
+			total++;
+		}
+		
+		if (open_left > 0)
+			open_left--;
+		begin_pos += row_size;
+	}
+	
+	return total > 0 ? (double)true_count / (double)total : 0.50;
 }
 
-double RuleAnalyzer::GetBitProbEnd(int symbol, int begin_id, int end_id) {
-	VectorBool& data = this->data[symbol];
-	int bars = data.GetCount() / row_size;
+
+void RuleAnalyzer::ProcessRealtime() {
+	
+	// Get reference values
+	System& sys = GetSystem();
+	VectorBool& data = this->data[data_cursor];
+	DataBridge& db = dynamic_cast<DataBridge&>(*ci_queue[data_cursor]->core);
+	ASSERT(db.GetSymbol() == data_cursor);
+	double spread_point		= db.GetPoint();
 	
 	
-	return 0.0;
+	// Prepare maind data
+	ConstBuffer& open_buf = db.GetBuffer(0);
+	ConstBuffer& low_buf  = db.GetBuffer(1);
+	ConstBuffer& high_buf = db.GetBuffer(2);
+	int data_count = open_buf.GetCount();
+	int bit_count = rt_row_size * data_count;
+	int begin = data.GetCount() / rt_row_size;
+	data.SetCount(bit_count);
+	
+	/*
+	// Run main data filler
+	for(int cursor = begin; cursor < data_count; cursor++) {
+		if (cursor >= 100000)
+			break;
+		int bit_pos = cursor * rt_row_size;
+		double open1 = open_buf.Get(cursor);
+		
+		// Existing values
+		bool begin_value = true;
+		for(int j = 0; j < begin.begin_bits.GetCount(); j++)
+			begin_value &= data.Get(begin_pos + begin.begin_bits[j]); // AND
+		if (begin_value && open_left < peek)
+			open_left = peek;
+		
+		bool sust_value = false;
+		for(int j = 0; j < begin.sust_bits.GetCount(); j++)
+			sust_value |= data.Get(begin_pos + begin.sust_bits[j]); // OR
+		if (sust_value && open_left == 1)
+			open_left++;
+		
+		bool end_value = false;
+		for(int j = 0; j < begin.end_bits.GetCount(); j++)
+			end_value |= data.Get(begin_pos + begin.end_bits[j]); // OR
+		if (end_value)
+			open_left = 0;
+		
+	}*/
 }
 
+void RuleAnalyzer::Refresh() {
+	if (joinlevel < JOINLEVEL_COUNT)
+		return;
+	ProcessData();
+	ProcessRealtime();
+}
 
 }

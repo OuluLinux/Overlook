@@ -250,7 +250,7 @@ struct ArgumentBase {
 	void Arg(const char* var, String& v) {}
 };
 
-class BarData;
+class DataBridge;
 
 class Core : public CoreIO {
 	
@@ -328,7 +328,7 @@ public:
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
 	inline ConstVectorBool& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
-	BarData* GetBarData();
+	DataBridge* GetDataBridge();
 	bool IsJobsFinished() const;
 	Job& GetCurrentJob() {return *current_job;}
 	JobThread& GetCurrentThread() {return *current_thrd;}
@@ -383,7 +383,6 @@ protected:
 	
 };
 
-class BarData : public Core {};
 
 }
 

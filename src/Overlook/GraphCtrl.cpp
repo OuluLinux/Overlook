@@ -145,7 +145,7 @@ void GraphCtrl::Paint(Draw& draw) {
 		Core& cont = *cont_;
 		// cont.Refresh();
 		
-		if (dynamic_cast<BarData*>(&cont)) {
+		if (dynamic_cast<DataBridge*>(&cont)) {
 		    GetDataRange(cont, 1); // low
 		    GetDataRange(cont, 2); // high
 		}
@@ -160,10 +160,10 @@ void GraphCtrl::Paint(Draw& draw) {
 	DrawGrid(w, false);
 	
 	String graph_label;
-	BarData* bd_src = NULL;
+	DataBridge* bd_src = NULL;
 	for(int i = 0; i < src.GetCount(); i++) {
 		Core& cont = *src[i];
-		BarData* bardata = dynamic_cast<BarData*>(&cont);
+		DataBridge* bardata = dynamic_cast<DataBridge*>(&cont);
 		if (bardata) {
 			bd_src = bardata;
 			PaintCandlesticks(w, cont);
@@ -234,7 +234,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	for(int i = 1; i < gridw; i++)
         W.DrawLine(border + i*grid, y, border + i*grid, y+h, PEN_DOT, gridcolor);
 
-	BarData* bardata = dynamic_cast<BarData*>(src[0]);
+	DataBridge* bardata = dynamic_cast<DataBridge*>(src[0]);
 	if (!bardata) return;
 	ConstBuffer& time_buf = bardata->GetBuffer(4);
 	

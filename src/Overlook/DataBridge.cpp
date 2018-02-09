@@ -56,7 +56,7 @@ void DataBridge::Start() {
 		RefreshFromFaster();
 	}
 	else if (sym < sym_count) {
-		bool init_round = GetCounted() == 0;
+		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym);
 			RefreshFromHistory(true);
@@ -64,7 +64,6 @@ void DataBridge::Start() {
 		}
 		RefreshFromAskBid(init_round);
 	}
-	
 }
 
 void DataBridge::AddSpread(double a) {
@@ -127,7 +126,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
 		
-		if (!time_buf.GetCount() || time_buf.Top() != time) shift++;
+		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
@@ -298,7 +297,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	
 	// Seek to begin of the data
 	int cursor = (4+64+12+4+4+4+4 +13*4);
-	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
+	int expected_count = open_buf.GetCount() + (int)((src.GetSize() - cursor) / struct_size);
 	src.Seek(cursor);
 	
 	open_buf.Reserve(expected_count);
@@ -309,9 +308,6 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	
 	bool overwrite = false;
 	double prev_open = 0.0;
-	
-	ASSERT(!GetCounted());
-	ASSERT(open_buf.GetCount() == 0);
 	
 	int64 step = GetMinutePeriod() * 60;
 	int shift = open_buf.GetCount() - 1;
@@ -359,7 +355,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		
 		
 		cursor += struct_size;
-		if (!time_buf.GetCount() || time_buf.Top() != time) shift++;
+		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		if (shift >= open_buf.GetCount()) {
 			open_buf.SetCount(shift+1);
@@ -465,7 +461,7 @@ void DataBridge::RefreshFromFaster() {
 		//    t0int - t1int == tdiff
 		int time = steps * period_secs + tdiff;
 		
-		if (!time_buf.GetCount() || time_buf.Top() != time) shift++;
+		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {

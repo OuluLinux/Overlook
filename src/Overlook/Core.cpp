@@ -227,12 +227,12 @@ void Core::SetPoint(double d) {
 
 
 
-BarData* Core::GetBarData() {
+DataBridge* Core::GetDataBridge() {
 	for(int i = 0; i < inputs.GetCount(); i++) {
-		BarData* bd = dynamic_cast<BarData*>(GetInputCore(i, GetSymbol(), GetTimeframe()));
+		DataBridge* bd = dynamic_cast<DataBridge*>(GetInputCore(i, GetSymbol(), GetTimeframe()));
 		if (bd) return bd;
 	}
-	return Get<BarData>();
+	return Get<DataBridge>();
 }
 
 double Core::Open ( int shift ) {

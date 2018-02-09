@@ -136,21 +136,24 @@ struct BitStats : Moveable<BitStats> {
 };
 
 struct BeginStats : Moveable<BeginStats> {
-	Vector<int> bits;
-	BitStats begin;
+	Index<int> begin_bits, sust_bits, end_bits;
+	Vector<BitStats> begins;
 	Vector<BitStats> sustains;
 	Vector<BitStats> ends;
 	
-	void Serialize(Stream& s) {s % bits % begin % sustains % ends;}
+	void Serialize(Stream& s) {s % begin_bits % sust_bits % end_bits % begins % sustains % ends;}
 };
 
 class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
+	
+protected:
+	friend class RADataCtrl;
 	
 	// Persistent
 	Vector<Vector<BeginStats> > stats;
 	Vector<VectorBool> data;
 	int cursor = 0;
-	int current = 0, total = 10, phase = 0, joinlevel = 0;
+	int current = 0, phase = 0, joinlevel = 0;
 	
 	
 	// Temporary
@@ -160,24 +163,15 @@ class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
 	int processed_cursor = 0, data_cursor = 0;
 	bool is_prepared = false;
 	
-	// Constants
-	const int period_count = 6;
-	enum {TRENDINDEX, ONLINEMINLAB, COUNT};
-	const int row_size = period_count * COUNT;
-	const int JOINLEVEL_COUNT = 3;
 	
 	void Prepare();
 	void ProcessData();
-	void IterateBegin();
-	void IterateSustain();
-	void IterateSustainOptimization();
-	void IterateEnd();
-	void IterateEndOptimization();
+	void RealizeStats();
+	void Iterate(int type);
 	void IterateJoining();
 	
 	double GetBitProbBegin(int symbol, int begin_id);
-	double GetBitProbSustain(int symbol, int begin_id, int susta_id);
-	double GetBitProbEnd(int symbol, int begin_id, int end_id);
+	double GetBitProbTest(int symbol, int begin_id, int type, int sub_id, bool inv_action);
 	
 public:
 	typedef RuleAnalyzer CLASSNAME;
@@ -185,11 +179,63 @@ public:
 	~RuleAnalyzer();
 	
 	void Process();
+	void Process();
+	void Refresh();
+	void Data();
+	void SetCursor() {data_check.cursor = datactrl_cursor.GetData(); data_check.Refresh();}
 	
-	void Serialize(Stream& s) {s % stats % data % cursor % current % total % phase % joinlevel;}
+	void Serialize(Stream& s) {s % stats % data % cursor % current % phase % joinlevel;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("ruleanalyzer.bin"));}
+	
+	
+	// Constants
+	enum {BEGIN, SUSTAIN, END, FINISHED};
+	#ifdef flagDEBUG
+	const int period_count = 1;
+	#else
+	const int period_count = 6;
+	#endif
+	enum {ONLINEMINLAB, TRENDINDEX,
+		#ifndef flagDEBUG
+		VOLATCTX0, VOLATCTX1, VOLATCTX2, VOLATCTX3, VOLATCTX4, VOLATCTX5, MA, MOM, OTREND, HTREND, LTREND, RTRENDUP, RTRENDDOWN,
+		#endif
+		COUNT
+	};
+	const int row_size = period_count * COUNT;
+	const int rt_row_size = 2;
+	const int JOINLEVEL_COUNT = 3;
+	const int volat_div = 6;
+	const int LOOP_COUNT = 10;
+	const int BEGIN_PEEK = 2;
+	const int SUSTAIN_PEEK = 6;
+	const int END_PEEK = 6;
+	
+	static const String GetTypeString(int id) {
+		switch (id) {
+			case ONLINEMINLAB:	return "Online Minimum Label";
+			case TRENDINDEX:	return "Trend Index";
+			#ifndef flagDEBUG
+			case VOLATCTX0:		return "Volatility Ctx #1";
+			case VOLATCTX1:		return "Volatility Ctx #2";
+			case VOLATCTX2:		return "Volatility Ctx #3";
+			case VOLATCTX3:		return "Volatility Ctx #4";
+			case VOLATCTX4:		return "Volatility Ctx #5";
+			case VOLATCTX5:		return "Volatility Ctx #6";
+			case MA:			return "Moving Average";
+			case MOM:			return "Momentum";
+			case OTREND:		return "Open-trend";
+			case HTREND:		return "High-trend";
+			case LTREND:		return "Low-trend";
+			case RTRENDUP:		return "Up trend reversal";
+			case RTRENDDOWN:	return "Down trend reversal";
+			#endif
+			default:			return "INVALID";
+		}
+	}
 };
+
+inline RuleAnalyzer& GetRuleAnalyzer() {return Single<RuleAnalyzer>();}
 
 }
 

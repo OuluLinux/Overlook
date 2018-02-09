@@ -559,6 +559,9 @@ RuleAnalyzer::RuleAnalyzer() {
 	end.AddColumn("Type");
 	end.ColumnWidths("1 3 2 2 1");
 	
+	enable.Set(is_enabled);
+	enable << THISBACK(SetEnable);
+	
 	Data();
 }
 
@@ -1167,6 +1170,169 @@ void RuleAnalyzer::Refresh() {
 		return;
 	ProcessData();
 	ProcessRealtime();
+	if (is_enabled)
+		RefreshReal();
+}
+
+
+bool RuleAnalyzer::RefreshReal() {
+	/*Time now = GetUtcTime();
+	int wday				= DayOfWeek(now);
+	Time after_3hours		= now + 3 * 60 * 60;
+	int wday_after_3hours	= DayOfWeek(after_3hours);
+	now.second				= 0;
+	MetaTrader& mt			= GetMetaTrader();
+	
+	if (periods[main_tf] < 60) {
+		now.minute -= now.minute % periods[main_tf];
+	}
+	else if (periods[main_tf] < 1440) {
+		now.minute = 0;
+		now.hour -= periods[main_tf] / 60;
+	}
+	else {
+		now.minute = 0;
+		now.hour = 0;
+	}
+	
+	
+	// Skip weekends and first hours of monday
+	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+		LOG("Skipping weekend...");
+		return true;
+	}
+	
+	
+	// Inspect for market closing (weekend and holidays)
+	else if (wday == 5 && wday_after_3hours == 6) {
+		WhenInfo("Closing all orders before market break");
+		
+		for (int i = 0; i < mt.GetSymbolCount(); i++) {
+			mt.SetSignal(i, 0);
+			mt.SetSignalFreeze(i, false);
+		}
+		
+		mt.SignalOrders(true);
+		return true;
+	}
+	
+	int current_main_pos = main_time[main_tf].Find(now);
+	int last_pos = main_time[main_tf].GetCount() - 1;
+	if (current_main_pos == -1) {
+		LOG("error: current main pos not found");
+		return false;
+	}
+	else if (current_main_pos != last_pos)
+		Panic(
+			"Invalid current pos: " + IntStr(current_main_pos) + " != " + IntStr(last_pos) +
+			" (" + Format("%", main_time[main_tf].GetKey(current_main_pos)) + " != " + Format("%", main_time[main_tf].GetKey(last_pos)) + ")");
+	
+	if (current_main_pos >= main_mem[MEM_INPUTBARS])
+		return false;
+		
+	
+	WhenInfo("Updating MetaTrader");
+	WhenPushTask("Putting latest signals");
+	
+	// Reset signals
+	if (realtime_count == 0) {
+		for (int i = 0; i < mt.GetSymbolCount(); i++)
+			mt.SetSignal(i, 0);
+	}
+	realtime_count++;
+	
+	
+	try {
+		mt.Data();
+		mt.RefreshLimits();
+		int open_count = 0;
+		Vector<int> signals;
+		for (int i = 0; i < GetCommonCount(); i++) {
+			for (int j = 0; j < GetCommonSymbolCount(); j++) {
+				int sym_id = GetCommonSymbolId(i, j);
+				int sym_pos = main_sym_ids.Find(sym_id);
+				
+				bool enabled_bit = false;
+				int enabled_costlevel = -1;
+				for(int k = 0; k < COST_LEVEL_COUNT; k++) {
+					if (main_data.Get(GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, LevelActive(k)))) {
+						enabled_bit = true;
+						enabled_costlevel = k;
+						break;
+					}
+				}
+				
+				int sig = 0;
+				int prev_sig = mt.GetSignal(sym_id);
+				if (enabled_bit) {
+					bool signal_bit = main_data.Get(GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, LevelSignal(enabled_costlevel)));
+					sig = signal_bit ? -1 : +1;
+				}
+				
+				// Avoid unpredictable calendar events...
+				if (sig && main_data.Get(GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, BIT_SKIP_CALENDAREVENT)))
+						sig = 0;
+					
+				signals.Add(sig);
+				if (sig == prev_sig && sig != 0)
+					open_count++;
+				
+				// Do some quality checks
+				if (enabled_costlevel != -1) {
+					int64
+					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, LevelWrittenFwd(enabled_costlevel));
+					int written_fwd = main_data.Get(pos);
+					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, LevelWrittenDqn(enabled_costlevel));
+					int not_written_dqn = !main_data.Get(pos);
+					pos = GetMainDataPos(current_main_pos, sym_pos, main_tf_pos, LevelActive(enabled_costlevel));
+					int not_written_act = !main_data.Get(pos);
+					int e = (written_fwd << 2) | (not_written_dqn << 1) | (not_written_act << 0);
+					if (e)
+						Panic("Real account function quality check failed: error code " + IntStr(e) + " sym=" + IntStr(sym_id));
+				}
+			}
+		}
+		int sig_pos = 0;
+		for (int i = 0; i < GetCommonCount(); i++) {
+			for (int j = 0; j < GetCommonSymbolCount(); j++) {
+				int sym_id = GetCommonSymbolId(i, j);
+				int sig = signals[sig_pos++];
+				int prev_sig = mt.GetSignal(sym_id);
+				
+				if (sig == prev_sig && sig != 0)
+					mt.SetSignalFreeze(sym_id, true);
+				else {
+					if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
+						if (open_count >= MAX_SYMOPEN)
+							sig = 0;
+						else
+							open_count++;
+					}
+					
+					mt.SetSignal(sym_id, sig);
+					mt.SetSignalFreeze(sym_id, false);
+				}
+				LOG("Real symbol " << sym_id << " signal " << sig);
+			}
+		}
+		
+		mt.SetFreeMarginLevel(FMLEVEL);
+		mt.SetFreeMarginScale(MAX_SYMOPEN);
+		mt.SignalOrders(true);
+	}
+	catch (UserExc e) {
+		LOG(e);
+		return false;
+	}
+	catch (...) {
+		return false;
+	}
+	
+	
+	WhenRealtimeUpdate();
+	WhenPopTask();
+	*/
+	return true;
 }
 
 }

@@ -154,6 +154,7 @@ protected:
 	Vector<VectorBool> data;
 	int cursor = 0;
 	int current = 0, phase = 0, joinlevel = 0;
+	bool is_enabled = false;
 	
 	
 	// Temporary
@@ -179,12 +180,14 @@ public:
 	~RuleAnalyzer();
 	
 	void Process();
-	void Process();
+	void ProcessRealtime();
 	void Refresh();
+	bool RefreshReal();
 	void Data();
 	void SetCursor() {data_check.cursor = datactrl_cursor.GetData(); data_check.Refresh();}
+	void SetEnable() {is_enabled = enable.Get();}
 	
-	void Serialize(Stream& s) {s % stats % data % cursor % current % phase % joinlevel;}
+	void Serialize(Stream& s) {s % stats % data % cursor % current % phase % joinlevel % is_enabled;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	

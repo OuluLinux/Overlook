@@ -335,7 +335,7 @@ void Overlook::HistoryCenter() {
 }
 
 void Overlook::TradingRules() {
-	class RuleAnalyzer ra;
+	class RuleAnalyzer& ra = GetRuleAnalyzer();
 	ra.Run();
 }
 

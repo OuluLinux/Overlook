@@ -130,18 +130,19 @@ public:
 
 struct BitStats : Moveable<BitStats> {
 	double prob_av = 0.0, succ_idx = 0.0;
-	bool type;
 	
-	void Serialize(Stream& s) {s % prob_av % succ_idx % type;}
+	void Serialize(Stream& s) {s % prob_av % succ_idx;}
 };
 
 struct BeginStats : Moveable<BeginStats> {
+	bool type;
+	BitStats initial;
 	Index<int> begin_bits, sust_bits, end_bits;
 	Vector<BitStats> begins;
 	Vector<BitStats> sustains;
 	Vector<BitStats> ends;
 	
-	void Serialize(Stream& s) {s % begin_bits % sust_bits % end_bits % begins % sustains % ends;}
+	void Serialize(Stream& s) {s % type % initial % begin_bits % sust_bits % end_bits % begins % sustains % ends;}
 };
 
 class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
@@ -161,7 +162,7 @@ protected:
 	Index<int> sym_ids, tf_ids;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > ci_queue;
-	int processed_cursor = 0, data_cursor = 0;
+	int processed_cursor = 0, data_cursor = 0, realtime_count = 0;
 	bool is_prepared = false;
 	
 	

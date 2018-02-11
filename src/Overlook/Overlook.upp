@@ -26,6 +26,8 @@ file
 	Dialogs.cpp,
 	MarketWatch.h,
 	MarketWatch.cpp,
+	RuleAnalyzer.h,
+	RuleAnalyzer.cpp,
 	Navigator.h,
 	Navigator.cpp,
 	Chart.h,

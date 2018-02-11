@@ -14,7 +14,6 @@ class RuleAnalyzer;
 struct RADataCtrl : public Ctrl {
 	RuleAnalyzer* ra = NULL;
 	int cursor = 0;
-	int symbol = 0;
 	virtual void Paint(Draw& d);
 };
 }
@@ -40,6 +39,7 @@ struct RADataCtrl : public Ctrl {
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
+#include "RuleAnalyzer.h"
 
 
 namespace Overlook {

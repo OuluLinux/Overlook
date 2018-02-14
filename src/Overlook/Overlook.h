@@ -8,15 +8,7 @@
 
 using namespace Upp;
 
-namespace Overlook {
-class RuleAnalyzer;
 
-struct RADataCtrl : public Ctrl {
-	RuleAnalyzer* ra = NULL;
-	int cursor = 0;
-	virtual void Paint(Draw& d);
-};
-}
 
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>

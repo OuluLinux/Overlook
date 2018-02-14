@@ -20,24 +20,74 @@ struct BeginStats : Moveable<BeginStats> {
 	void Serialize(Stream& s) {s % type % initial % begin_bits % sust_bits % end_bits % begins % sustains % ends;}
 };
 
+
+
+class OrganizationAgent {
+	
+	bool is_init = false;
+	
+	
+public:
+	typedef OrganizationAgent CLASSNAME;
+	OrganizationAgent();
+	void Init();
+	
+	bool IsInit() const {return is_init;}
+	
+	
+	
+	void Serialize(Stream& s) {}
+	
+};
+
+class OrganizationAgentCtrl : public ParentCtrl {
+	
+};
+
 class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
 	
 protected:
-	friend class RADataCtrl;
+	struct RADataCtrl : public Ctrl {
+		RuleAnalyzer* ra = NULL;
+		int cursor = 0;
+		virtual void Paint(Draw& d);
+	};
+	
+	struct Order : Moveable<Order> {
+		bool label;
+		int start, stop, len;
+		double av_change, err;
+		double av_idx, err_idx, len_idx;
+		double idx, idx_norm;
+		void Serialize(Stream& s) {s % label % start % stop % len % av_change % err % av_idx % err_idx % len_idx % idx % idx_norm;}
+	};
+	
+	struct Snap : Moveable<Snap> {
+		dword[4] data;
+	};
+	typedef Vector<Snap> VectorSnap;
+	
 	
 	// Persistent
-	Vector<Vector<BeginStats> > stats;
-	Vector<VectorBool> data;
+	Vector<Vector<OnlineAverageWindow1> > av_wins;
+	Vector<Vector<Vector<double> > > volat_divs;
+	Vector<Vector<VectorMap<int,int> > > median_maps;
+	OrganizationAgent agent;
+	Vector<VectorSnap> data;
+	Vector<VectorSnap> rtdata;
 	int cursor = 0;
-	int phase = 0, joinlevel = 0;
+	int phase = 0;
 	bool is_enabled = false;
 	
 	
 	// Temporary
+	SliderCtrl data_slider;
+	RADataCtrl data_ctrl;
 	Array<Thread> thrds;
 	Index<int> sym_ids, tf_ids;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > ci_queue;
+	OrganizationAgentCtrl agentctrl;
 	Atomic not_stopped, thrd_current, waiting;
 	double prev_speed = 1.0;
 	int perc = 0, actual = 0, total = 1;
@@ -54,12 +104,13 @@ protected:
 	void ProcessIteration(int thrd_id);
 	void Prepare();
 	void ProcessData();
-	void RealizeStats();
-	void Iterate(int current, int type);
+	void ProcessSignalInitial();
+	void ProcessSignalPrediction();
+	void IterateTrain(int current);
+	void IterateTest(int current);
 	void IterateJoining();
 	
-	double GetBitProbBegin(int symbol, int begin_id);
-	double GetBitProbTest(int symbol, int begin_id, int type, int sub_id, bool inv_action);
+	String GetSignalString(int i);
 	
 public:
 	typedef RuleAnalyzer CLASSNAME;
@@ -71,16 +122,18 @@ public:
 	bool RefreshReal();
 	void Data();
 	void PostData() {PostCallback(THISBACK(Data));}
-	void SetCursor() {data_check.cursor = datactrl_cursor.GetData(); data_check.Refresh();}
+	void SetCursor() {data_ctrl.cursor = data_slider.GetData(); data_ctrl.Refresh();}
 	void SetEnable() {is_enabled = enable.Get();}
 	
-	void Serialize(Stream& s) {s % stats % data % cursor % phase % joinlevel % is_enabled;}
+	void Serialize(Stream& s) {s % av_wins % volat_divs % median_maps % agent % data % rtdata % cursor % phase % is_enabled;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	
 	
 	// Constants
-	enum {BEGIN, SUSTAIN, END, FINISHED};
+	enum {TRAIN, TEST, FINISHED};
+	enum {OPEN, CLOSE, SUSTAIN, BLOCK, ATTENTION, signal_count};
+	enum {RT_SIGNAL, RT_ENABLED, rt_row_size};
 	#ifdef flagDEBUG
 	const int period_count = 1;
 	#else
@@ -92,14 +145,9 @@ public:
 		#endif
 		COUNT
 	};
+	const int trsh_bits = 5;
 	const int row_size = period_count * COUNT;
-	const int rt_row_size = 2;
-	const int JOINLEVEL_COUNT = 3;
 	const int volat_div = 6;
-	const int LOOP_COUNT = 10;
-	const int BEGIN_PEEK = 2;
-	const int SUSTAIN_PEEK = 6;
-	const int END_PEEK = 6;
 	
 	static const String GetTypeString(int id) {
 		switch (id) {
@@ -124,6 +172,7 @@ public:
 		}
 	}
 };
+
 
 inline RuleAnalyzer& GetRuleAnalyzer() {return Single<RuleAnalyzer>();}
 

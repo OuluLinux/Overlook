@@ -101,7 +101,8 @@ GUI_APP_MAIN {
 	{
 		LoaderWindow loader;
 		loader.Start();
-		loader.Run();
+		Ctrl::EventLoop();
+		loader.OpenMain();
 		while (!loader.finished) Sleep(100);
 		if (loader.fail) return;
 	}

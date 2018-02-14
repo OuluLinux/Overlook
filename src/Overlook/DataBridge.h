@@ -69,6 +69,7 @@ protected:
 	VectorMap<int,int> symbols;
 	Vector<Vector<byte> > ext_data;
 	Vector<Vector<int> > sym_group_stats, sym_groups;
+	double point = 0.01;
 	double spread_mean;
 	int spread_count;
 	int median_max, median_min;
@@ -90,6 +91,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(5, 5)
+			% Mem(point)
 			% Mem(spread_mean) % Mem(spread_count)
 			% Mem(cursor) % Mem(cursor2)
 			% Mem(median_max_map) % Mem(median_min_map)
@@ -105,6 +107,7 @@ public:
 	virtual void Assist(int cursor, VectorBool& vec);
 	
 	int GetChangeStep(int shift, int steps);
+	double GetPoint() const {return point;}
 	double GetMax() const {return max_value * point;}
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}

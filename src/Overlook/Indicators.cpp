@@ -4291,16 +4291,10 @@ MinimalLabel::MinimalLabel() {
 }
 
 void MinimalLabel::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1.0);
-	SetCoreMaximum(+1.0);
+	SetCoreChartWindow();
 	SetBufferColor(0, Color(85, 255, 150));
-	SetBufferLineWidth(0, 2);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, +0.5);
-	SetCoreLevel(1, -0.5);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	SetBufferStyle(0, DRAW_ARROW);
+	SetBufferArrow(0, 159);
 }
 
 void MinimalLabel::Start() {
@@ -4353,9 +4347,10 @@ void MinimalLabel::Start() {
 		
 		for(int k = i; k < j; k++) {
 			SetSafetyLimit(k);
+			open = open_buf.GetUnsafe(k);
 			labelvec.Set(k, label);
-			if (label)		buf.Set(k, -0.75);
-			else			buf.Set(k, +0.75);
+			if (label)		buf.Set(k, open - 10 * spread_point);
+			else			buf.Set(k, open + 10 * spread_point);
 		}
 		
 		if (clean_break)
@@ -4716,6 +4711,221 @@ void OnlineMinimalLabel::GetMinimalSignal(double cost, ConstBuffer& open_buf, in
 		i = j - 1;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SelectiveMinimalLabel::SelectiveMinimalLabel() {
+	
+}
+
+void SelectiveMinimalLabel::Init() {
+	SetCoreChartWindow();
+	SetBufferColor(0, Color(85, 255, 150));
+	SetBufferStyle(0, DRAW_ARROW);
+	SetBufferArrow(0, 159);
+}
+
+void SelectiveMinimalLabel::Start() {
+	int bars = GetBars();
+	int symbol = GetSymbol();
+	int tf = GetTf();
+	
+	// Too heavy to calculate every time and too useless
+	if (GetCounted()) return;
+	
+	VectorMap<int, Order> orders;
+	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
+	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
+	double spread_point		= db->GetPoint();
+	double slippage			= spread_point * 2;
+	double cost				= spread_point + slippage;
+	ASSERT(spread_point > 0.0);
+	
+	VectorBool& labelvec = GetOutput(0).label;
+	VectorBool& enabledvec = GetOutput(1).label;
+	labelvec.SetCount(bars);
+	enabledvec.SetCount(bars);
+	
+	Buffer& buf = GetBuffer(0);
+	
+	bars--;
+	
+	for(int i = 0; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double open = open_buf.GetUnsafe(i);
+		double close = open;
+		int j = i + 1;
+		bool can_break = false;
+		bool break_label;
+		double prev = open;
+		for(; j < bars; j++) {
+			close = open_buf.GetUnsafe(j);
+			if (!can_break) {
+				double abs_diff = fabs(close - open);
+				if (abs_diff >= cost) {
+					break_label = close < open;
+					can_break = true;
+				}
+			} else {
+				bool change_label = close < prev;
+				if (change_label != break_label) {
+					j--;
+					break;
+				}
+			}
+			prev = close;
+		}
+		
+		bool label = close < open;
+		for(int k = i; k < j; k++) {
+			SetSafetyLimit(k);
+			labelvec.Set(k, label);
+		}
+		
+		i = j - 1;
+	}
+	
+	bool prev_label = labelvec.Get(0);
+	int prev_switch = 0;
+	for(int i = 1; i < bars; i++) {
+		bool label = labelvec.Get(i);
+		
+		int len = i - prev_switch;
+		
+		if (label != prev_label) {
+			Order& o = orders.Add(i);
+			o.label = prev_label;
+			o.start = prev_switch;
+			o.stop = i;
+			o.len = o.stop - o.start;
+			
+			double open = open_buf.GetUnsafe(o.start);
+			double close = open_buf.GetUnsafe(o.stop);
+			o.av_change = fabs(close - open) / len;
+			
+			double err = 0;
+			for(int k = o.start; k < o.stop; k++) {
+				SetSafetyLimit(k);
+				double diff = open_buf.GetUnsafe(k+1) - open_buf.GetUnsafe(k);
+				err += fabs(diff);
+			}
+			o.err = err / len;
+			
+			prev_switch = i;
+			prev_label = label;
+		}
+	}
+	
+	
+	
+	struct ChangeSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.av_change < b.av_change;
+		}
+	};
+	Sort(orders, ChangeSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.av_idx = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	
+	struct LengthSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.len < b.len;
+		}
+	};
+	Sort(orders, LengthSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.len_idx = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	
+	
+	struct ErrorSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.err > b.err;
+		}
+	};
+	Sort(orders, ErrorSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.err_idx = (double)i / (double)(orders.GetCount() - 1);
+		o.idx = o.av_idx + o.err_idx + 2 * o.len_idx;
+	}
+	
+	
+	struct IndexSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.idx < b.idx;
+		}
+	};
+	Sort(orders, IndexSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.idx_norm = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	/*
+	struct PosSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.start < b.start;
+		}
+	};
+	Sort(orders, PosSorter());
+	
+	if (GetCounted() == 0) {DUMPC(orders);}*/
+	
+	double idx_limit_f = idx_limit * 0.01;
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		if (o.idx_norm < idx_limit_f) continue;
+		
+		ASSERT(o.start <= o.stop);
+		
+		for(int k = o.start; k < o.stop; k++) {
+			SetSafetyLimit(k);
+			enabledvec.Set(k, true);
+			double open = open_buf.GetUnsafe(k);
+			if (o.label)		buf.Set(k, open - 10 * spread_point);
+			else				buf.Set(k, open + 10 * spread_point);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

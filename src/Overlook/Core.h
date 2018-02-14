@@ -267,7 +267,6 @@ protected:
 	Vector<DataLevel> levels;
 	Color levels_clr;
 	double minimum, maximum;
-	double point = 0.0;
 	int levels_style;
 	int window_type = WINDOW_CHART;
 	int next_count;
@@ -306,7 +305,6 @@ public:
 	int GetBars() {return bars;}
 	int GetWindowType() {return window_type;}
 	int GetCounted() {return counted;}
-	double GetPoint() const {return point;}
 	int GetCoreLevelCount() const {return levels.GetCount();}
 	int GetCoreLevelType(int i) const {return levels[i].style;}
 	int GetCoreLevelLineWidth(int i) const {return levels[i].line_width;}

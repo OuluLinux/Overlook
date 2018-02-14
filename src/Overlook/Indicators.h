@@ -1099,6 +1099,35 @@ public:
 	
 };
 
+class SelectiveMinimalLabel : public Core {
+	struct Order : Moveable<Order> {
+		bool label;
+		int start, stop, len;
+		double av_change, err;
+		double av_idx, err_idx, len_idx;
+		double idx, idx_norm;
+		void Serialize(Stream& s) {s % label % start % stop % len % av_change % err % av_idx % err_idx % len_idx % idx % idx_norm;}
+	};
+	
+	
+	int idx_limit = 75;
+	
+protected:
+	virtual void Start();
+	
+public:
+	SelectiveMinimalLabel();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Out(0, 0)
+			% Arg("idx_limit", idx_limit, 0, 100);
+	}
+};
+
 class ReactionContext : public Core {
 	int length = 3;
 	

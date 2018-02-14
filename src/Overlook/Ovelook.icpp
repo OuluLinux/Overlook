@@ -9,7 +9,6 @@ INITBLOCK {
 	System::Register<MovingAverage>("Moving average");
 	System::Register<MovingAverageConvergenceDivergence>("Moving Average Convergence/Divergence");
 	System::Register<AverageDirectionalMovement>("Average Directional Movement");
-	
 	System::Register<BollingerBands>("Bollinger Bands");
 	System::Register<Envelopes>("Envelopes");
 	System::Register<ParabolicSAR>("Parabolic SAR");
@@ -22,20 +21,17 @@ INITBLOCK {
 	System::Register<CommodityChannelIndex>("Commodity Channel Index");
 	System::Register<DeMarker>("DeMarker");
 	System::Register<ForceIndex>("Force Index");
-	
 	System::Register<Momentum>("Momentum");
 	System::Register<OsMA>("OsMA");
 	System::Register<RelativeStrengthIndex>("Relative Strength Index");
 	System::Register<RelativeVigorIndex>("Relative Vigor Index");
 	System::Register<StochasticOscillator>("Stochastic Oscillator");
 	
-	
 	System::Register<WilliamsPercentRange>("Williams Percent Range");
 	System::Register<AccumulationDistribution>("Accumulation Distribution");
 	System::Register<MoneyFlowIndex>("Money Flow Index");
 	System::Register<ValueAndVolumeTrend>("Value And Volume Trend");
 	System::Register<OnBalanceVolume>("On Balance Volume");
-	
 	System::Register<Volumes>("Volumes");
 	System::Register<AcceleratorOscillator>("Accelerator Oscillator");
 	System::Register<GatorOscillator>("Gator Oscillator");
@@ -48,27 +44,26 @@ INITBLOCK {
 	System::Register<LinearTimeFrames>("Linear TimeFrames");
 	System::Register<LinearWeekTime>("Linear WeekTime");
 	System::Register<SupportResistance>("Support/Resistance");
-	
 	System::Register<SupportResistanceOscillator>("Support/Resistance Oscillator");
 	System::Register<Psychological>("Psychological Oscillator");
 	System::Register<ZigZag>("Zig-Zag");
 	System::Register<ZigZagOsc>("Zig-Zag Oscillator");
-	
-	
 	System::Register<TrendChange>("TrendChange");
+	
 	System::Register<TrendChangeEdge>("TrendChangeEdge");
 	System::Register<PeriodicalChange>("PeriodicalChange");
 	System::Register<VolatilityAverage>("VolatilityAverage");
 	System::Register<MinimalLabel>("MinimalLabel");
-	
 	System::Register<VolatilitySlots>("VolatilitySlots");
 	System::Register<VolumeSlots>("VolumeSlots");
 	System::Register<ChannelOscillator>("ChannelOscillator");
 	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
 	System::Register<TrendIndex>("TrendIndex");
 	System::Register<OnlineMinimalLabel>("OnlineMinimalLabel");
+	
 	System::Register<ReactionContext>("ReactionContext");
 	System::Register<VolatilityContext>("VolatilityContext");
+	System::Register<SelectiveMinimalLabel>("SelectiveMinimalLabel");
 	
 	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
 	

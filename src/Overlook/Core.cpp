@@ -32,7 +32,6 @@ Core::Core()
 	minimum = 0;
 	skip_setcount = false;
 	skip_allocate = false;
-	point = 0.01;
 	period = 0;
 	end_offset = 0;
 	future_bars = 0;
@@ -220,9 +219,7 @@ void Core::Refresh() {
 }
 
 
-void Core::SetPoint(double d) {
-	point = d;
-}
+
 
 
 

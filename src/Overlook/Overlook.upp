@@ -58,6 +58,8 @@ file
 	Indicators.cpp,
 	Optimizer.h,
 	Optimizer.cpp,
+	BitOptimizer.h,
+	BitOptimizer.cpp,
 	DQN.h,
 	Calendar.h,
 	Calendar.cpp;

@@ -16,6 +16,7 @@ using namespace Upp;
 #include "Common.h"
 #include "Calendar.h"
 #include "Optimizer.h"
+#include "BitOptimizer.h"
 #include "DQN.h"
 #include "SimBroker.h"
 #include "System.h"
@@ -145,6 +146,7 @@ public:
 	virtual void DockInit();
 	virtual void TradeRightDown(Point, dword) {MenuBar::Execute(THISBACK(TradeMenu));}
 	void RefreshData();
+	void DeepRefreshData();
 	void PostRefreshData() {PostCallback(THISBACK(RefreshData));}
 	void Data();
 	Chart& OpenChart(int symbol, int indi=0, int tf=-1);

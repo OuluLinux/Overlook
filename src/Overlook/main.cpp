@@ -87,10 +87,6 @@ GUI_APP_MAIN {
 		else if (s == "-waitmt4") {
 			Config::wait_mt4 = ScanInt(args[i]);
 		}
-		/*else if (s == "-foresttest") {
-			RandomForestTester().Run();
-			return;
-		}*/
 		else if (s == "-extremumtest") {
 			TestExtremumCache();
 			return;
@@ -101,16 +97,18 @@ GUI_APP_MAIN {
 	{
 		LoaderWindow loader;
 		loader.Start();
-		Ctrl::EventLoop();
-		loader.OpenMain();
+		loader.Run();
 		while (!loader.finished) Sleep(100);
 		if (loader.fail) return;
 	}
 	
 	
 	try {
+		GetRuleAnalyzer(); // construct in gui thread
+		
 		::Overlook::Overlook ol;
-		ol.Run();
+		ol.OpenMain();
+		Ctrl::EventLoop();
 	}
 	catch (::Overlook::UserExc e) {
 		PromptOK(e);

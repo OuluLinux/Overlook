@@ -1232,7 +1232,7 @@ class ParserAdvisor : public Core {
 	Vector<double> training_pts;
 	int prev_counted = 0;
 	
-	static const int TI_TF_COUNT = 1;
+	static const int TI_TF_COUNT = 4;
 	static const int TI_PERIOD_COUNT = 3;
 	static const int ML_TF_COUNT = 1;
 	static const int ML_COSTLEVEL_COUNT = 3;
@@ -1316,7 +1316,7 @@ public:
 			
 			ti_period[0] = &Args0<3>;
 			ti_period[1] = &Args0<6>;
-			ti_period[2] = &Args0<12>;
+			ti_period[2] = & Args0<12>;
 			
 			ml_costlevel[0] = &Args0<0>;
 			ml_costlevel[1] = &Args0<3>;

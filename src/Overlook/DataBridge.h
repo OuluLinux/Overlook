@@ -24,9 +24,7 @@ protected:
 	Vector<double> points;
 	Index<String> short_ids;
 	String account_server;
-	String addr;
 	TimeStop since_last_askbid_refresh;
-	int port;
 	int sym_count;
 	int cursor;
 	bool connected;

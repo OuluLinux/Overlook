@@ -336,7 +336,12 @@ void Overlook::HistoryCenter() {
 
 void Overlook::TradingRules() {
 	class RuleAnalyzer& ra = GetRuleAnalyzer();
-	ra.OpenMain();
+	if (!ra.IsOpen()) {
+		ra.OpenMain();
+		ra.Data();
+	}
+	else
+		ra.SetForeground();
 }
 
 void Overlook::Options() {
@@ -434,20 +439,33 @@ void Overlook::DeepRefresh() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	
-	mt.Data();
-	DataBridgeCommon& common = GetDataBridgeCommon();
-	common.InspectInit();
-	common.DownloadAskBid();
-	common.RefreshAskBidData(true);
-	GetCalendar().Data();
+	static Mutex m;
+	
+	if (m.TryEnter()) {
+		
+		mt.Data();
+		DataBridgeCommon& common = GetDataBridgeCommon();
+		common.InspectInit();
+		common.DownloadAskBid();
+		common.RefreshAskBidData(true);
+		GetCalendar().Data();
+		GetRuleAnalyzer().Refresh();
+		
+		mt_refresh.Reset();
+		
+		PostCallback(THISBACK(DeepRefreshData));
+		
+		m.Leave();
+	}
+}
+
+void Overlook::DeepRefreshData() {
 	cman.RefreshWindows();
-	GetRuleAnalyzer().Refresh();
 }
 
 void Overlook::RefreshData() {
 	if (mt_refresh.Elapsed() >= 10*1000) {
-		DeepRefresh();
-		mt_refresh.Reset();
+		Thread::Start(THISBACK(DeepRefresh));
 	}
 	
 	Data();

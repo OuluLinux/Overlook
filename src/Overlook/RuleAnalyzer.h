@@ -20,29 +20,22 @@ struct BeginStats : Moveable<BeginStats> {
 	void Serialize(Stream& s) {s % type % initial % begin_bits % sust_bits % end_bits % begins % sustains % ends;}
 };
 
-
-
-class OrganizationAgent {
+struct Snap : Moveable<Snap> {
+	uint64 data[2] = {0,0};
 	
-	bool is_init = false;
-	
-	
-public:
-	typedef OrganizationAgent CLASSNAME;
-	OrganizationAgent();
-	void Init();
-	
-	bool IsInit() const {return is_init;}
-	
-	
-	
-	void Serialize(Stream& s) {}
+	void Copy(uint64* src) {data[0] = src[0]; data[1] = src[1];}
+	void Set(int bit, bool b) {int s = bit/64; if (b) data[s] |= 1 << (bit-s*64); else data[s] &= ~(1 << (bit-s*64));}
+	bool Get(int bit) const {int s = bit/64; return data[s] & (1 << (bit-s*64));}
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(data, sizeof(data)); else  s.Put(data, sizeof(data));}
+	int GetDistance(const Snap& s) const {return PopCount64(data[0]) + PopCount64(data[1]);}
 	
 };
+typedef Vector<Snap> VectorSnap;
 
-class OrganizationAgentCtrl : public ParentCtrl {
-	
-};
+
+
+
+
 
 class RuleAnalyzer : public WithRuleAnalyzer<TopWindow> {
 	
@@ -53,6 +46,12 @@ protected:
 		virtual void Paint(Draw& d);
 	};
 	
+	struct OrganizationAgentCtrl : public Ctrl {
+		RuleAnalyzer* ra = NULL;
+		Vector<Point> pts;
+		virtual void Paint(Draw& d);
+};
+	
 	struct Order : Moveable<Order> {
 		bool label;
 		int start, stop, len;
@@ -62,19 +61,15 @@ protected:
 		void Serialize(Stream& s) {s % label % start % stop % len % av_change % err % av_idx % err_idx % len_idx % idx % idx_norm;}
 	};
 	
-	struct Snap : Moveable<Snap> {
-		dword[4] data;
-	};
-	typedef Vector<Snap> VectorSnap;
 	
 	
 	// Persistent
 	Vector<Vector<OnlineAverageWindow1> > av_wins;
 	Vector<Vector<Vector<double> > > volat_divs;
 	Vector<Vector<VectorMap<int,int> > > median_maps;
-	OrganizationAgent agent;
-	Vector<VectorSnap> data;
-	Vector<VectorSnap> rtdata;
+	Vector<double> training_pts;
+	BitOptimizer opt;
+	Vector<VectorSnap> data_in, data_out;
 	int cursor = 0;
 	int phase = 0;
 	bool is_enabled = false;
@@ -83,13 +78,12 @@ protected:
 	// Temporary
 	SliderCtrl data_slider;
 	RADataCtrl data_ctrl;
-	Array<Thread> thrds;
 	Index<int> sym_ids, tf_ids;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > ci_queue;
 	OrganizationAgentCtrl agentctrl;
-	Atomic not_stopped, thrd_current, waiting;
 	double prev_speed = 1.0;
+	int current = 0;
 	int perc = 0, actual = 0, total = 1;
 	int processed_cursor = 0, data_cursor = 0, realtime_count = 0;
 	bool is_prepared = false;
@@ -100,16 +94,17 @@ protected:
 	void StopProcess();
 	void PostStartProcess() {PostCallback(THISBACK(StartProcess));}
 	void PostStopProcess() {PostCallback(THISBACK(StopProcess));}
-	void Process(int thrd_id);
-	void ProcessIteration(int thrd_id);
+	void Process();
+	void ProcessIteration();
 	void Prepare();
 	void ProcessData();
 	void ProcessSignalInitial();
 	void ProcessSignalPrediction();
-	void IterateTrain(int current);
-	void IterateTest(int current);
+	void IterateTrain();
+	void IterateTest();
 	void IterateJoining();
 	
+	double RunAgent(bool test);
 	String GetSignalString(int i);
 	
 public:
@@ -117,7 +112,6 @@ public:
 	RuleAnalyzer();
 	~RuleAnalyzer();
 	
-	void ProcessRealtime();
 	void Refresh();
 	bool RefreshReal();
 	void Data();
@@ -125,14 +119,16 @@ public:
 	void SetCursor() {data_ctrl.cursor = data_slider.GetData(); data_ctrl.Refresh();}
 	void SetEnable() {is_enabled = enable.Get();}
 	
-	void Serialize(Stream& s) {s % av_wins % volat_divs % median_maps % agent % data % rtdata % cursor % phase % is_enabled;}
+	void Serialize(Stream& s) {
+		s % av_wins % volat_divs % median_maps % training_pts % opt % data_in % data_out % cursor % phase % is_enabled;
+	}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("ruleanalyzer.bin"));}
 	
 	
 	// Constants
 	enum {TRAIN, TEST, FINISHED};
-	enum {OPEN, CLOSE, SUSTAIN, BLOCK, ATTENTION, signal_count};
+	enum {OPEN_LONG, OPEN_SHORT, CLOSE_LONG, CLOSE_SHORT, SUSTAIN, BLOCK, ATTENTION1, ATTENTION5, ATTENTION15, signal_count};
 	enum {RT_SIGNAL, RT_ENABLED, rt_row_size};
 	#ifdef flagDEBUG
 	const int period_count = 1;
@@ -143,11 +139,12 @@ public:
 		#ifndef flagDEBUG
 		VOLATCTX0, VOLATCTX1, VOLATCTX2, VOLATCTX3, VOLATCTX4, VOLATCTX5, MA, MOM, OTREND, HTREND, LTREND, RTRENDUP, RTRENDDOWN,
 		#endif
-		COUNT
+		INPUT_COUNT
 	};
 	const int trsh_bits = 5;
-	const int row_size = period_count * COUNT;
+	const int row_size = period_count * INPUT_COUNT;
 	const int volat_div = 6;
+	const int opt_row_size = (row_size + trsh_bits) * 2;
 	
 	static const String GetTypeString(int id) {
 		switch (id) {

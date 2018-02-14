@@ -4,7 +4,6 @@ namespace Overlook {
 
 DataBridgeCommon::DataBridgeCommon() {
 	inited = false;
-	port = 0;
 	sym_count = -1;
 	cursor = 0;
 }
@@ -21,10 +20,8 @@ void DataBridgeCommon::InspectInit() {
 
 void DataBridgeCommon::Init() {
 	System& sys = GetSystem();
-	addr = sys.addr;
-	port = sys.port;
 	
-	if (addr.IsEmpty() || !port) throw DataExc("No address and port");
+	if (String(Config::arg_addr).IsEmpty() || !Config::arg_port) throw DataExc("No address nor port defined");
 	
 	MetaTrader& mt = GetMetaTrader();
 	

@@ -6,10 +6,8 @@ namespace Overlook {
 
 
 RuleAnalyzer::RuleAnalyzer() {
-	not_stopped = 0;
-	waiting = 0;
-	
 	data_ctrl.ra = this;
+	agentctrl.ra = this;
 	data_slider << THISBACK(SetCursor);
 	data_slider.MinMax(0, 1);
 	
@@ -36,11 +34,15 @@ RuleAnalyzer::~RuleAnalyzer() {
 
 String RuleAnalyzer::GetSignalString(int i) {
 	switch (i) {
-		case OPEN: return "Open";
-		case CLOSE: return "Close";
+		case OPEN_LONG: return "Open long";
+		case OPEN_SHORT: return "Open short";
+		case CLOSE_LONG: return "Close long";
+		case CLOSE_SHORT: return "Close short";
 		case SUSTAIN: return "Sustain";
 		case BLOCK: return "Block";
-		case ATTENTION: return "Attention level";
+		case ATTENTION1: return "1 min attention";
+		case ATTENTION5: return "5 mins attention";
+		case ATTENTION15: return "15 mins attention";
 		default: return "Invalid";
 	}
 }
@@ -52,13 +54,8 @@ void RuleAnalyzer::StartProcess() {
 	analyze.WhenAction = THISBACK(PostStopProcess);
 	
 	running = true;
-	ASSERT(not_stopped == 0);
-	thrds.Clear();
-	int cpus = GetUsedCpuCores();
-	for(int i = 0; i < cpus; i++) {
-		not_stopped++;
-		thrds.Add().Start(THISBACK1(Process, i));
-	}
+	stopped = false;
+	Thread::Start(THISBACK(Process));
 }
 
 void RuleAnalyzer::StopProcess() {
@@ -66,7 +63,7 @@ void RuleAnalyzer::StopProcess() {
 	analyze.WhenAction = THISBACK(PostStartProcess);
 	
 	running = false;
-	while (not_stopped > 0) Sleep(100);
+	while (!stopped) Sleep(100);
 }
 
 void RuleAnalyzer::Prepare() {
@@ -102,20 +99,20 @@ void RuleAnalyzer::Prepare() {
     
     sys.System::GetCoreQueue(ci_queue, sym_ids, tf_ids, indi_ids);
     
-    this->data.SetCount(sys.GetSymbolCount());
-    this->rtdata.SetCount(sys.GetSymbolCount());
+    this->data_in.SetCount(sys.GetSymbolCount());
+    this->data_out.SetCount(sys.GetSymbolCount());
 	this->av_wins.SetCount(sys.GetSymbolCount());
 	this->median_maps.SetCount(sys.GetSymbolCount());
 	this->volat_divs.SetCount(sys.GetSymbolCount());
     
-    agent.Init();
+	opt.Init(signal_count, 1, opt_row_size, StrategyBest1Exp);
 }
 
 void RuleAnalyzer::ProcessData() {
 	
 	// Get reference values
 	System& sys = GetSystem();
-	VectorBool& data = this->data[data_cursor];
+	VectorSnap& data_in = this->data_in[data_cursor];
 	DataBridge& db = dynamic_cast<DataBridge&>(*ci_queue[data_cursor]->core);
 	ASSERT(db.GetSymbol() == data_cursor);
 	double spread_point		= db.GetPoint();
@@ -126,10 +123,8 @@ void RuleAnalyzer::ProcessData() {
 	ConstBuffer& low_buf  = db.GetBuffer(1);
 	ConstBuffer& high_buf = db.GetBuffer(2);
 	int data_count = open_buf.GetCount();
-	int bit_count = row_size * data_count;
-	int begin = data.GetCount() / row_size;
-	data.SetCount(bit_count);
-	
+	int begin = data_in.GetCount();
+	data_in.SetCount(data_count);
 	
 	// Prepare Moving average
 	Vector<OnlineAverageWindow1>& av_wins = this->av_wins[data_cursor];
@@ -178,10 +173,10 @@ void RuleAnalyzer::ProcessData() {
 		if (cursor >= 100000)
 			break;
 		#endif
-		int bit_pos = cursor * row_size;
+		Snap& snap = data_in[cursor];
+		int bit_pos = 0;
 		double open1 = open_buf.Get(cursor);
 		
-		int bit_begin = bit_pos;
 		
 		for(int k = 0; k < period_count; k++) {
 			
@@ -193,7 +188,7 @@ void RuleAnalyzer::ProcessData() {
 			int end = cursor + 1;
 			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
 			bool label = sigbuf[count - 1];
-			data.Set(bit_pos++, label);
+			snap.Set(bit_pos++, label);
 		
 			
 			// TrendIndex
@@ -201,7 +196,7 @@ void RuleAnalyzer::ProcessData() {
 			int period = 1 << (1 + k);
 			double err, av_change, buf_value;
 			TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
-			data.Set(bit_pos++, buf_value > 0.0);
+			snap.Set(bit_pos++, buf_value > 0.0);
 			
 			
 			#ifndef flagDEBUG
@@ -218,7 +213,7 @@ void RuleAnalyzer::ProcessData() {
 				}
 			}
 			for(int i = 0; i < volat_div; i++)
-				data.Set(bit_pos++,  lvl == i);
+				snap.Set(bit_pos++,  lvl == i);
 			
 		
 			// MovingAverage
@@ -227,7 +222,7 @@ void RuleAnalyzer::ProcessData() {
 			av_win.Add(open1);
 			double curr = av_win.GetMean();
 			label = open1 < prev;
-			data.Set(bit_pos++, label);
+			snap.Set(bit_pos++, label);
 			
 			
 			// Momentum
@@ -235,7 +230,7 @@ void RuleAnalyzer::ProcessData() {
 			double open2 = open_buf.Get(begin);
 			double value = open1 / open2 - 1.0;
 			label = value < 0.0;
-			data.Set(bit_pos++, label);
+			snap.Set(bit_pos++, label);
 			
 			
 			// Open/Close trend
@@ -250,7 +245,7 @@ void RuleAnalyzer::ProcessData() {
 					len++;
 				}
 			}
-			data.Set(bit_pos++, len > 2);
+			snap.Set(bit_pos++, len > 2);
 		
 		
 			// High break
@@ -265,7 +260,7 @@ void RuleAnalyzer::ProcessData() {
 					len++;
 				}
 			}
-			data.Set(bit_pos++, len > 2);
+			snap.Set(bit_pos++, len > 2);
 			
 			
 			// Low break
@@ -280,7 +275,7 @@ void RuleAnalyzer::ProcessData() {
 					len++;
 				}
 			}
-			data.Set(bit_pos++, len > 2);
+			snap.Set(bit_pos++, len > 2);
 			
 			
 			// Trend reversal
@@ -296,22 +291,22 @@ void RuleAnalyzer::ProcessData() {
 				t2 = t2_diff > 0 ? +1 : -1;
 			}
 			if (t0 * t1 == -1 && t1 * t2 == +1) {
-				data.Set(bit_pos++, t0 == +1);
-				data.Set(bit_pos++, t0 != +1);
+				snap.Set(bit_pos++, t0 == +1);
+				snap.Set(bit_pos++, t0 != +1);
 			} else {
-				data.Set(bit_pos++, false);
-				data.Set(bit_pos++, false);
+				snap.Set(bit_pos++, false);
+				snap.Set(bit_pos++, false);
 			}
 			
 			#endif
 		}
 		
-		ASSERT(bit_pos - bit_begin == row_size);
+		ASSERT(bit_pos == row_size);
 	}
 }
 
 void RuleAnalyzer::ProcessSignalPrediction() {
-	
+	RunAgent(false);
 }
 
 void RuleAnalyzer::ProcessSignalInitial() {
@@ -319,7 +314,7 @@ void RuleAnalyzer::ProcessSignalInitial() {
 	
 	// Get reference values
 	System& sys = GetSystem();
-	VectorBool& data = this->rtdata[data_cursor];
+	VectorSnap& data_out = this->data_out[data_cursor];
 	DataBridge& db = dynamic_cast<DataBridge&>(*ci_queue[data_cursor]->core);
 	ASSERT(db.GetSymbol() == data_cursor);
 	double spread_point		= db.GetPoint();
@@ -333,9 +328,8 @@ void RuleAnalyzer::ProcessSignalInitial() {
 	ConstBuffer& low_buf  = db.GetBuffer(1);
 	ConstBuffer& high_buf = db.GetBuffer(2);
 	int data_count = open_buf.GetCount();
-	int bit_count = rt_row_size * data_count;
-	int begin = data.GetCount() / rt_row_size;
-	data.SetCount(bit_count);
+	int begin = data_in.GetCount();
+	data_out.SetCount(data_count);
 	VectorMap<int, Order> orders;
 	data_count--;
 	
@@ -368,16 +362,16 @@ void RuleAnalyzer::ProcessSignalInitial() {
 		
 		bool label = close < open;
 		for(int k = i; k < j; k++) {
-			data.Set(k * rt_row_size + RT_SIGNAL, label);
+			data_out[k].Set(RT_SIGNAL, label);
 		}
 		
 		i = j - 1;
 	}
 	
-	bool prev_label = data.Get(0 * rt_row_size + RT_SIGNAL);
+	bool prev_label = data_out[0].Get(RT_SIGNAL);
 	int prev_switch = 0;
 	for(int i = 1; i < data_count; i++) {
-		bool label = data.Get(i * rt_row_size + RT_SIGNAL);
+		bool label = data_out[i].Get(RT_SIGNAL);
 		
 		int len = i - prev_switch;
 		
@@ -467,20 +461,18 @@ void RuleAnalyzer::ProcessSignalInitial() {
 		ASSERT(o.start <= o.stop);
 		
 		for(int k = o.start; k < o.stop; k++) {
-			data.Set(k * rt_row_size + RT_ENABLED, true);
+			data_out[k].Set(RT_ENABLED, true);
 		}
 	}
 }
 
 void RuleAnalyzer::Data() {
-	if (this->data.IsEmpty()) return;
+	if (this->data_in.IsEmpty()) return;
 	
 	int begin_id = 0;
 	
-	
-	
-	auto& data = this->data[0];
-	int data_count = data.GetCount() / row_size;
+	auto& data_in = this->data_in[0];
+	int data_count = data_in.GetCount() / row_size;
 	if (data_slider.GetMax() != data_count-1) {
 		data_slider.MinMax(0, data_count-1);
 		data_slider.SetData(data_count-1);
@@ -497,130 +489,248 @@ void RuleAnalyzer::Data() {
 		Title("Rule Analyzer :: Ready");
 		prog.Set(0, 1);
 	}
+	
+	agentctrl.Refresh();
 }
 
-void RuleAnalyzer::Process(int thrd_id) {
+void RuleAnalyzer::Process() {
 	System& sys = GetSystem();
 	
 	while (running && !is_prepared) {
-		if (thrd_id == 0) {
-			Prepare();
-			is_prepared = true;
-		}
-		else
-			Sleep(100);
+		Prepare();
+		is_prepared = true;
 	}
 	
 	while (running && (ci_queue.IsEmpty() || processed_cursor < ci_queue.GetCount())) {
-		if (thrd_id == 0)
-			sys.System::Process(*ci_queue[processed_cursor++], true);
-		else
-			Sleep(100);
+		sys.System::Process(*ci_queue[processed_cursor++], true);
 	}
 	
 	while (running && data_cursor < sys.GetSymbolCount()) {
-		if (thrd_id == 0) {
-			ProcessData();
-			ProcessSignalInitial();
-			data_cursor++;
-		}
-		else Sleep(100);
+		ProcessData();
+		ProcessSignalInitial();
+		data_cursor++;
 	}
 	while (running) {
-		ProcessIteration(thrd_id);
+		ProcessIteration();
 	}
-	not_stopped--;
+	
+	stopped = true;
 }
 
-void RuleAnalyzer::ProcessIteration(int thrd_id) {
+void RuleAnalyzer::ProcessIteration() {
 	System& sys = GetSystem();
 	TimeStop ts;
-	int phase_total = period_count * signal_count;
+	int phase_total = opt.GetMaxRounds();
 	
 	int current_in_loop = 0;
 	while (ts.Elapsed() < 100 && phase < FINISHED) {
-		int current = thrd_current++;
-		
 		if (current < phase_total && phase >= 0 && phase < FINISHED) {
 			switch (phase) {
-				case TRAIN:				IterateTrain(current); break;
-				case TEST:				IterateTest(current); break;
+				case TRAIN:				IterateTrain(); break;
+				case TEST:				IterateTest(); break;
 			}
 		}
 		
-		current_in_loop++;
+		current++;
 		
 		
-		if (thrd_current >= phase_total) {
-			if (thrd_id == 0) {
-				while (waiting != thrds.GetCount() - 1) Sleep(100); // wait before phase,joinlevel can be changed
-				thrd_current = 0;
-				phase++;
-				
-				if (phase >= FINISHED) {
-					phase = 0;
-					PostCallback(THISBACK(StopProcess));
-				}
-			}
-			else {
-				waiting++;
-				while (thrd_current >= phase_total) Sleep(100);
-				waiting--;
+		if (current >= phase_total) {
+			current = 0;
+			phase++;
+			
+			if (phase >= FINISHED) {
+				phase = 0;
+				PostCallback(THISBACK(StopProcess));
 			}
 		}
 	}
 	
-	if (thrd_id == 0) {
-		actual = phase_total * phase + thrd_current;
-		total = phase_total * FINISHED;
-		prev_speed = ((double)current_in_loop / (double)ts.Elapsed()) * 1000.0;
-		if (prev_speed < 1.0) prev_speed = 1.0;
-		perc = actual * 100 / total;
-	}
+	actual = opt.GetRound();
+	total = phase_total;
+	prev_speed = ((double)current_in_loop / (double)ts.Elapsed()) * 1000.0;
+	if (prev_speed < 1.0) prev_speed = 1.0;
+	perc = actual * 100 / total;
+	
 	PostData();
 	
 	bool ready = phase == FINISHED;
 	
 }
 
-void RuleAnalyzer::IterateTrain(int current) {
+void RuleAnalyzer::IterateTrain() {
+	if (opt.IsEnd()) return;
+	
 	System& sys = GetSystem();
 	
-	BitOptimizer opt;
+	
+	opt.Start();
+	
+	double result = RunAgent(true);
+	
+	//if (opt.GetRound() % 100 == 0)
+	{
+		training_pts.Add(result);
+	}
+	
+	opt.Stop(result);
+}
+
+void RuleAnalyzer::IterateTest() {
+	
+}
+
+double RuleAnalyzer::RunAgent(bool test) {
+	ASSERT(row_size <= 128);
+	
+	const Vector<bool>& trial = opt.GetTrialSolution();
 	
 	
-	int opt_row_size = COUNT * 2 + trsh_bits;
-	opt.SetDimensions(signal_count, period_count, opt_row_size);
-	
-	
-	
-	
-	
-	while (!optimizer.IsEnd()) {
+	// signals open, close, sustain, attention, block
+	bool cur_signals[signal_count];
+	int bit = 0;
+	Snap sig_poles[signal_count*2];
+	double sig_dist_mult[signal_count];
+	for(int i = 0; i < signal_count; i++) {
 		
-		optimizer.Start();
+		// two per signal... on and off poles
+		for(int j = 0; j < 2; j++) {
+			Snap& s = sig_poles[i * 2 + j];
+			double& d = sig_dist_mult[i * 2 + j];
+			for(int k = 0; k < row_size; k++) {
+				s.Set(k, trial[bit++]);
+			}
+			d = 1.0;
+			for(int k = 0; k < trsh_bits; k++)
+				if (trial[bit++]) d += 1.0;
+			d /= trsh_bits + 2.0;
+		}
+	}
+	ASSERT(bit == trial.GetCount());
+	
+	
+	int sym_count = data_in.GetCount();
+	double av_accuracy = 0.0;
+	
+	for(int sym_id = 0; sym_id < sym_count; sym_id++) {
+		const VectorSnap& data_in = this->data_in[sym_id];
+		VectorSnap& data_out = this->data_out[sym_id];
+		ASSERT(data_in.GetCount() == data_out.GetCount());
+		int data_count = data_in.GetCount();
 		
-		for(int i = 0; i < signal_count; i++) {
-			for(int j = 0; j < period_count; j++) {
-				VectorSnap& row = agent.Get(i, j);
-				dword* opt_row = opt.Get(i, j);
-				row.Copy(opt_row);
+		int correct_testbits = 0;
+		int total_signaltestbits = 0;
+		double total_change = 1.0;
+		bool is_enabled = false, prev_signal;
+		int step = 1;
+		for(int i = 0; i < data_count; i += step) {
+			
+			const Snap& sym_in = data_in[i];
+			
+			Snap* pole = sig_poles;
+			double* mult = sig_dist_mult;
+			bool signal[signal_count];
+			for(int j = 0; j < signal_count; j++) {
+				
+				// two per signal... on and off poles
+				double dist[2];
+				for(int k = 0; k < 2; k++) {
+					dist[k] = sym_in.GetDistance(*pole) * *mult;
+					pole++;
+					mult++;
+				}
+				
+				signal[j] = dist[1] > dist[0];
+			}
+			
+			bool& is_openl			= signal[OPEN_LONG];
+			bool& is_opens			= signal[OPEN_SHORT];
+			bool& is_closel			= signal[CLOSE_LONG];
+			bool& is_closes			= signal[CLOSE_SHORT];
+			bool& is_sustain		= signal[SUSTAIN];
+			bool& is_block			= signal[BLOCK];
+			bool& is_attention1		= signal[ATTENTION1];
+			bool& is_attention5		= signal[ATTENTION5];
+			bool& is_attention15	= signal[ATTENTION15];
+			
+			
+			
+			
+			if (is_enabled) {
+				if (is_block) {
+					is_openl = false;
+					is_opens = false;
+					is_closel = true;
+					is_closes = true;
+				}
+				else if (is_sustain) {
+					is_openl = false;
+					is_opens = false;
+					is_closel = false;
+					is_closes = false;
+				}
+
+				if ((is_closel && prev_signal == 0) || (is_closes && prev_signal == 1))
+					is_enabled = false;
+			}
+			
+			if (is_openl || is_opens) {
+				bool was_enable = is_enabled;
+				is_enabled = true;
+				
+				if (was_enable) {
+					if (is_openl && prev_signal == 0)
+						; // keep going
+					else if (is_opens && prev_signal == 1)
+						; // keep going
+					else if (is_openl && is_opens)
+						is_enabled = false; // conflict, don't open
+					else if (is_openl)
+						prev_signal = 0;
+					else if (is_opens)
+						prev_signal = 1;
+				}
+			}
+			
+			if (is_attention1)
+				step = 1;
+			else if (is_attention5)
+				step = 5;
+			else if (is_attention15)
+				step = 15;
+			
+			
+			
+			
+			if (test) {
+				const auto& out = data_out[i];
+				bool test_enabled = out.Get(RT_ENABLED);
+				bool test_signal = out.Get(RT_SIGNAL);
+				
+				if (test_enabled == is_enabled) {
+					correct_testbits++;
+					if (test_enabled) {
+						total_signaltestbits++;
+						if (test_signal == prev_signal)
+							correct_testbits++;
+					}
+				}
+			} else {
+				
+				for(int j = i; j < i+step; j++) {
+					auto& out = data_out[j];
+					
+					out.Set(RT_ENABLED, is_enabled);
+					out.Set(RT_SIGNAL, prev_signal);
+				}
 			}
 		}
 		
-		double result = agent.Test();
-		
-		optimizer.Stop();
-		
+		av_accuracy += (double)correct_testbits / (double)(data_count + total_signaltestbits);
 	}
-}
-
-void RuleAnalyzer::IterateTest(int current) {
 	
-}
-
-void RuleAnalyzer::ProcessRealtime() {
+	av_accuracy /= sym_count;
 	
+	return av_accuracy;
 }
 
 void RuleAnalyzer::Refresh() {
@@ -632,7 +742,6 @@ void RuleAnalyzer::Refresh() {
 		ProcessData();
 		ProcessSignalPrediction();
 	}
-	ProcessRealtime();
 	if (is_enabled)
 		RefreshReal();
 }
@@ -688,10 +797,9 @@ bool RuleAnalyzer::RefreshReal() {
 		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < sys.GetSymbolCount(); sym_id++) {
-			VectorBool& data = this->rtdata[sym_id];
-			int bit_begin = data.GetCount() - rt_row_size;
-			bool enabled = data.Get(bit_begin + 0);
-			bool signal  = data.Get(bit_begin + 1);
+			VectorSnap& data_out = this->data_out[sym_id];
+			bool enabled = data_out.Top().Get(RT_ENABLED);
+			bool signal  = data_out.Top().Get(RT_SIGNAL);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			int prev_sig = mt.GetSignal(sym_id);
 			
@@ -745,20 +853,6 @@ bool RuleAnalyzer::RefreshReal() {
 
 
 
-OrganizationAgent::OrganizationAgent() {
-	
-}
-
-void OrganizationAgent::Init() {
-	
-	
-	
-}
-
-
-
-
-
 
 
 
@@ -771,28 +865,60 @@ void RuleAnalyzer::RADataCtrl::Paint(Draw& d) {
 	
 	id.DrawRect(sz, White());
 	
-	int mem_pos = cursor * ra->row_size;
+	int sym_count = ra->data_in.GetCount();
 	
-	for(int sym_id = 0; sym_id < ra->data.GetCount(); sym_id++) {
-		const VectorBool& data = ra->data[sym_id];
-		int sym_mem_pos = min(data.GetCount() - ra->row_size, mem_pos);
-		double xstep = (double)sz.cx / (ra->period_count * ra->data.GetCount());
-		double ystep = (double)sz.cy / ra->COUNT;
+	for(int sym_id = 0; sym_id < sym_count; sym_id++) {
+		const VectorSnap& data_in = ra->data_in[sym_id];
+		int sym_pos = min(data_in.GetCount() - 1, cursor);
+		double xstep = (double)sz.cx / (ra->period_count * ra->data_in.GetCount());
+		double ystep = (double)sz.cy / ra->INPUT_COUNT;
 		int w = xstep + 0.5;
 		int h = ystep + 0.5;
-		if (sym_mem_pos < 0 || sym_mem_pos + ra->row_size > data.GetCount()) continue;
+		if (sym_pos < 0 || sym_pos + 1 > data_in.GetCount()) continue;
+		int bit_pos = 0;
 		for(int i = 0; i < ra->period_count; i++) {
 			int x = xstep * (i + sym_id * ra->period_count);
-			for(int j = 0; j < ra->COUNT; j++) {
+			for(int j = 0; j < ra->INPUT_COUNT; j++) {
 				int y = ystep * j;
 				
-				bool bit = data.Get(sym_mem_pos++);
-				if (bit)
-					id.DrawRect(x, y, w, h, Black());
+				bool bit = data_in[sym_pos].Get(bit_pos++);
+				if (bit) id.DrawRect(x, y, w, h, Black());
 			}
 		}
 	}
 	
+	
+	d.DrawImage(0,0,id);
+}
+
+void RuleAnalyzer::OrganizationAgentCtrl::Paint(Draw& d) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	
+	id.DrawRect(sz, White());
+	
+	int data_count = ra->training_pts.GetCount();
+	if (data_count >= 2) {
+		
+		pts.SetCount(0);
+		
+		double minv = DBL_MAX, maxv = -DBL_MAX;
+		for(int i = 0; i < data_count; i++) {
+			double d = ra->training_pts[i];
+			if (d < minv) minv = d;
+			if (d > maxv) maxv = d;
+		}
+		double diff = maxv - minv;
+		
+		double xstep = (double)sz.cx / (data_count - 1);
+		for(int i = 0; i < data_count; i++) {
+			double d = ra->training_pts[i];
+			Point& pt = pts.Add();
+			pt.x = i * xstep;
+			pt.y = sz.cy * (1.0 - ((d - minv) / diff));
+		}
+		id.DrawPolyline(pts, 1, Color(56, 85, 150));
+	}
 	
 	d.DrawImage(0,0,id);
 }

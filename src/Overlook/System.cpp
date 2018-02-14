@@ -9,9 +9,6 @@ namespace Overlook {
 
 
 System::System() {
-	addr = Config::arg_addr;
-	port = Config::arg_port;
-	
 	allowed_symbols.Add("AUDCAD");
 	allowed_symbols.Add("EURCAD");
 	allowed_symbols.Add("GBPUSD");
@@ -44,7 +41,7 @@ void System::Init() {
 	
 	MetaTrader& mt = GetMetaTrader();
 	try {
-		bool connected = mt.Init(addr, port);
+		bool connected = mt.Init(Config::arg_addr, Config::arg_port);
 		ASSERTUSER_(!connected, "Can't connect to MT4. Is MT4Connection script activated in MT4?");
 	}
 	catch (UserExc e) {

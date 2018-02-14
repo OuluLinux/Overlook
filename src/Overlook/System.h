@@ -282,8 +282,6 @@ protected:
 	Vector<FactoryRegister>		regs;
 	Time						end;
 	Data						data;
-	String						addr;
-	int							port;
 	int							time_offset = 0;
 	
 	

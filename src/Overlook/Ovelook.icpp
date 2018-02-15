@@ -64,6 +64,7 @@ INITBLOCK {
 	System::Register<ReactionContext>("ReactionContext");
 	System::Register<VolatilityContext>("VolatilityContext");
 	System::Register<SelectiveMinimalLabel>("SelectiveMinimalLabel");
+	System::Register<Obviousness>("Obviousness");
 	
 	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
 	

@@ -1171,6 +1171,92 @@ public:
 
 
 
+class Obviousness : public Core {
+	
+	struct Snap : Moveable<Snap> {
+		uint64 data[2] = {0,0};
+		
+		void Copy(uint64* src) {data[0] = src[0]; data[1] = src[1];}
+		void Set(int bit, bool b) {int s = bit/64; if (b) data[s] |= 1 << (bit-s*64); else data[s] &= ~(1 << (bit-s*64));}
+		bool Get(int bit) const {int s = bit/64; return data[s] & (1 << (bit-s*64));}
+		void Serialize(Stream& s) {if (s.IsLoading()) s.Get(data, sizeof(data)); else  s.Put(data, sizeof(data));}
+		int GetDistance(const Snap& s) const {return PopCount64(data[0]) + PopCount64(data[1]);}
+		
+	};
+	struct Order : Moveable<Order> {
+		bool label;
+		int start, stop, len;
+		double av_change, err;
+		double av_idx, err_idx, len_idx;
+		double idx, idx_norm;
+		void Serialize(Stream& s) {s % label % start % stop % len % av_change % err % av_idx % err_idx % len_idx % idx % idx_norm;}
+	};
+	struct BitComboStat {
+		int enabled_count = 0;
+		int total_count = 0;
+		int true_count = 0;
+	};
+	
+	static const int buffer_count = 2;
+	static const int max_bit_ids = 4;
+	static const int max_bit_values = 2*2*2*2;
+	struct BitMatcher : Moveable<BitMatcher> {
+		uint8 bit_count = 0;
+		uint8 bit_ids[max_bit_ids] = {0,0,0,0};
+		BitComboStat bit_stats[max_bit_values];
+		void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(BitMatcher)); else s.Put(this, sizeof(BitMatcher));}
+	};
+	typedef Vector<Snap> VectorSnap;
+	
+	const int period_count = 6;
+	enum {ONLINEMINLAB, TRENDINDEX,VOLATCTX0, VOLATCTX1, VOLATCTX2, VOLATCTX3, VOLATCTX4, VOLATCTX5, MA, MOM, OTREND, HTREND, LTREND, RTRENDUP, RTRENDDOWN,INPUT_COUNT};
+	
+	enum {RT_SIGNAL, RT_ENABLED, rt_row_size};
+	const int row_size = period_count * INPUT_COUNT;
+	const int volat_div = 6;
+	const double idx_limit_f = 0.75;
+	
+	VectorSnap data_in, data_out;
+	Vector<OnlineAverageWindow1> av_wins;
+	Vector<Vector<double> > volat_divs;
+	Vector<VectorMap<int,int> > median_maps;
+	Vector<BitMatcher> bitmatches;
+	double max_res_enabled_treshold;
+	double max_res_signal_treshold;
+	
+	void RefreshInput();
+	void RefreshInitialOutput();
+	void RefreshOutput();
+	void RefreshIOStats();
+	
+	
+public:
+	typedef Obviousness CLASSNAME;
+	
+	Obviousness();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(buffer_count, buffer_count)
+			% Mem(data_in)
+			% Mem(data_out)
+			% Mem(av_wins)
+			% Mem(volat_divs)
+			% Mem(median_maps)
+			% Mem(bitmatches)
+			% Mem(max_res_enabled_treshold)
+			% Mem(max_res_signal_treshold)
+			;
+	}
+	
+};
+
+
+
 
 
 class ExampleAdvisor : public Core {
@@ -1212,6 +1298,13 @@ public:
 			% Mem(prev_counted);
 	}
 };
+
+
+
+
+
+
+
 
 class ParserAdvisor : public Core {
 	

@@ -205,7 +205,6 @@ void Overlook::ToolMenu(Bar& bar) {
 	bar.Add("New Order", THISBACK(NewOrder)).Key(K_F9);
 	bar.Separator();
 	bar.Add("History Center", THISBACK(HistoryCenter)).Key(K_F2);
-	bar.Add("Trading rule analyzer", THISBACK(TradingRules)).Key(K_F3);
 	bar.Separator();
 	bar.Add("Options", THISBACK(Options)).Key(K_CTRL|K_O);
 }
@@ -334,16 +333,6 @@ void Overlook::HistoryCenter() {
 	hc.Run();
 }
 
-void Overlook::TradingRules() {
-	class RuleAnalyzer& ra = GetRuleAnalyzer();
-	if (!ra.IsOpen()) {
-		ra.OpenMain();
-		ra.Data();
-	}
-	else
-		ra.SetForeground();
-}
-
 void Overlook::Options() {
 	OptionWindow opt;
 	opt.Run();
@@ -449,7 +438,6 @@ void Overlook::DeepRefresh() {
 		common.DownloadAskBid();
 		common.RefreshAskBidData(true);
 		GetCalendar().Data();
-		GetRuleAnalyzer().Refresh();
 		
 		mt_refresh.Reset();
 		

@@ -5152,6 +5152,628 @@ void VolatilityContext::Start() {
 
 
 
+Obviousness::Obviousness() {
+	
+}
+
+void Obviousness::Init() {
+	SetCoreSeparateWindow();
+	for(int i = 0; i < buffer_count; i++) {
+		int j = i / 2;
+		bool is_sig = i % 2;
+		SetBufferColor(i, GrayColor(80 + j * 20));
+		SetBufferLineWidth(i, 1 + is_sig);
+	}
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.5);
+}
+
+void Obviousness::Start() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	RefreshInput();
+	if (!counted) {
+		RefreshInitialOutput();
+		RefreshIOStats();
+	}
+	
+	RefreshOutput();
+	
+}
+
+void Obviousness::RefreshInput() {
+
+	// Get reference values
+	System& sys = GetSystem();
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	double spread_point		= db.GetPoint();
+	
+	
+	// Prepare maind data
+	ConstBuffer& open_buf = db.GetBuffer(0);
+	ConstBuffer& low_buf  = db.GetBuffer(1);
+	ConstBuffer& high_buf = db.GetBuffer(2);
+	int data_count = open_buf.GetCount();
+	int begin = data_in.GetCount();
+	data_in.SetCount(data_count);
+	
+	// Prepare Moving average
+	av_wins.SetCount(period_count);
+	for(int i = 0; i < av_wins.GetCount(); i++)
+		av_wins[i].SetPeriod(1 << (1+i));
+	
+	
+	// Prepare VolatilityContext
+	volat_divs.SetCount(period_count);
+	median_maps.SetCount(period_count);
+	for(int j = 0; j < period_count; j++) {
+		int period = 1 << (1+j);
+		VectorMap<int,int>& median_map = median_maps[j];
+		for(int cursor = max(period, begin); cursor < data_count; cursor++) {
+			double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+			int step = (int)((diff + spread_point * 0.5) / spread_point);
+			median_map.GetAdd(step, 0)++;
+		}
+		SortByKey(median_map, StdLess<int>());
+		int64 total = 0;
+		for(int i = 0; i < median_map.GetCount(); i++)
+			total += median_map[i];
+		int64 count_div = total / volat_div;
+		total = 0;
+		int64 next_div = count_div;
+		volat_divs[j].SetCount(0);
+		volat_divs[j].Add(median_map.GetKey(0) * spread_point);
+		for(int i = 0; i < median_map.GetCount(); i++) {
+			total += median_map[i];
+			if (total >= next_div) {
+				next_div += count_div;
+				volat_divs[j].Add(median_map.GetKey(i) * spread_point);
+			}
+		}
+		if (volat_divs[j].GetCount() < volat_div)
+			volat_divs[j].Add(median_map.TopKey() * spread_point);
+	}
+	
+	
+	// Run main data filler
+	for(int cursor = begin; cursor < data_count; cursor++) {
+		Snap& snap = data_in[cursor];
+		int bit_pos = 0;
+		double open1 = open_buf.Get(cursor);
+		
+		
+		for(int k = 0; k < period_count; k++) {
+			
+			// OnlineMinimalLabel
+			double cost	 = spread_point * (1 + k);
+			const int count = 1;
+			bool sigbuf[count];
+			int begin = Upp::max(0, cursor - 200);
+			int end = cursor + 1;
+			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
+			bool label = sigbuf[count - 1];
+			snap.Set(bit_pos++, label);
+		
+			
+			// TrendIndex
+			bool bit_value;
+			int period = 1 << (1 + k);
+			double err, av_change, buf_value;
+			TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
+			snap.Set(bit_pos++, buf_value > 0.0);
+			
+			
+			// VolatilityContext
+			int lvl = -1;
+			if (cursor >= period) {
+				double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+				for(int i = 0; i < volat_divs[k].GetCount(); i++) {
+					if (diff < volat_divs[k][i]) {
+						lvl = i - 1;
+						break;
+					}
+				}
+			}
+			for(int i = 0; i < volat_div; i++)
+				snap.Set(bit_pos++,  lvl == i);
+			
+		
+			// MovingAverage
+			OnlineAverageWindow1& av_win = av_wins[k];
+			double prev = av_win.GetMean();
+			av_win.Add(open1);
+			double curr = av_win.GetMean();
+			label = open1 < prev;
+			snap.Set(bit_pos++, label);
+			
+			
+			// Momentum
+			begin = Upp::max(0, cursor - period);
+			double open2 = open_buf.Get(begin);
+			double value = open1 / open2 - 1.0;
+			label = value < 0.0;
+			snap.Set(bit_pos++, label);
+			
+			
+			// Open/Close trend
+			period = 1 << k;
+			int dir = 0;
+			int len = 0;
+			if (cursor >= period * 3) {
+				for (int i = cursor-period; i >= 0; i -= period) {
+					int idir = open_buf.Get(i+period) > open_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != dir) break;
+					dir = idir;
+					len++;
+				}
+			}
+			snap.Set(bit_pos++, len > 2);
+		
+		
+			// High break
+			dir = 0;
+			len = 0;
+			if (cursor >= period * 3) {
+				double hi = high_buf.Get(cursor-period);
+				for (int i = cursor-1-period; i >= 0; i -= period) {
+					int idir = hi > high_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != +1) break;
+					dir = idir;
+					len++;
+				}
+			}
+			snap.Set(bit_pos++, len > 2);
+			
+			
+			// Low break
+			dir = 0;
+			len = 0;
+			if (cursor >= period * 3) {
+				double lo = low_buf.Get(cursor-period);
+				for (int i = cursor-1-period; i >= 0; i -= period) {
+					int idir = lo < low_buf.Get(i) ? +1 : -1;
+					if (dir != 0 && idir != +1) break;
+					dir = idir;
+					len++;
+				}
+			}
+			snap.Set(bit_pos++, len > 2);
+			
+			
+			// Trend reversal
+			int t0 = +1;
+			int t1 = +1;
+			int t2 = -1;
+			if (cursor >= 4*period) {
+				double t0_diff		= open_buf.Get(cursor-0*period) - open_buf.Get(cursor-1*period);
+				double t1_diff		= open_buf.Get(cursor-1*period) - open_buf.Get(cursor-2*period);
+				double t2_diff		= open_buf.Get(cursor-2*period) - open_buf.Get(cursor-3*period);
+				t0 = t0_diff > 0 ? +1 : -1;
+				t1 = t1_diff > 0 ? +1 : -1;
+				t2 = t2_diff > 0 ? +1 : -1;
+			}
+			if (t0 * t1 == -1 && t1 * t2 == +1) {
+				snap.Set(bit_pos++, t0 == +1);
+				snap.Set(bit_pos++, t0 != +1);
+			} else {
+				snap.Set(bit_pos++, false);
+				snap.Set(bit_pos++, false);
+			}
+		}
+		
+		ASSERT(bit_pos == row_size);
+	}
+}
+
+void Obviousness::RefreshInitialOutput() {
+	
+	// Get reference values
+	System& sys = GetSystem();
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	double spread_point		= db.GetPoint();
+	double cost				= spread_point * 3;
+	int tf = 0;
+	ASSERT(spread_point > 0.0);
+	
+	
+	// Prepare maind data
+	ConstBuffer& open_buf = db.GetBuffer(0);
+	ConstBuffer& low_buf  = db.GetBuffer(1);
+	ConstBuffer& high_buf = db.GetBuffer(2);
+	int data_count = open_buf.GetCount();
+	int begin = data_out.GetCount();
+	data_out.SetCount(data_count);
+	VectorMap<int, Order> orders;
+	data_count--;
+	
+	if (begin != 0) return;
+	
+	for(int i = GetCounted(); i < data_count; i++) {
+		double open = open_buf.GetUnsafe(i);
+		double close = open;
+		int j = i + 1;
+		bool can_break = false;
+		bool break_label;
+		double prev = open;
+		for(; j < data_count; j++) {
+			close = open_buf.GetUnsafe(j);
+			if (!can_break) {
+				double abs_diff = fabs(close - open);
+				if (abs_diff >= cost) {
+					break_label = close < open;
+					can_break = true;
+				}
+			} else {
+				bool change_label = close < prev;
+				if (change_label != break_label) {
+					j--;
+					break;
+				}
+			}
+			prev = close;
+		}
+		
+		bool label = close < open;
+		for(int k = i; k < j; k++) {
+			data_out[k].Set(RT_SIGNAL, label);
+		}
+		
+		i = j - 1;
+	}
+	
+	bool prev_label = data_out[0].Get(RT_SIGNAL);
+	int prev_switch = 0;
+	for(int i = 1; i < data_count; i++) {
+		bool label = data_out[i].Get(RT_SIGNAL);
+		
+		int len = i - prev_switch;
+		
+		if (label != prev_label) {
+			Order& o = orders.Add(i);
+			o.label = prev_label;
+			o.start = prev_switch;
+			o.stop = i;
+			o.len = o.stop - o.start;
+			
+			double open = open_buf.GetUnsafe(o.start);
+			double close = open_buf.GetUnsafe(o.stop);
+			o.av_change = fabs(close - open) / len;
+			
+			double err = 0;
+			for(int k = o.start; k < o.stop; k++) {
+				double diff = open_buf.GetUnsafe(k+1) - open_buf.GetUnsafe(k);
+				err += fabs(diff);
+			}
+			o.err = err / len;
+			
+			prev_switch = i;
+			prev_label = label;
+		}
+	}
+	
+	
+	
+	struct ChangeSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.av_change < b.av_change;
+		}
+	};
+	Sort(orders, ChangeSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.av_idx = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	
+	struct LengthSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.len < b.len;
+		}
+	};
+	Sort(orders, LengthSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.len_idx = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	
+	
+	struct ErrorSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.err > b.err;
+		}
+	};
+	Sort(orders, ErrorSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.err_idx = (double)i / (double)(orders.GetCount() - 1);
+		o.idx = o.av_idx + o.err_idx + 2 * o.len_idx;
+	}
+	
+	
+	struct IndexSorter {
+		bool operator ()(const Order& a, const Order& b) const {
+			return a.idx < b.idx;
+		}
+	};
+	Sort(orders, IndexSorter());
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		o.idx_norm = (double)i / (double)(orders.GetCount() - 1);
+	}
+	
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		if (o.idx_norm < idx_limit_f) continue;
+		
+		ASSERT(o.start <= o.stop);
+		
+		for(int k = o.start; k < o.stop; k++) {
+			data_out[k].Set(RT_ENABLED, true);
+		}
+	}
+}
+
+void Obviousness::RefreshIOStats() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	bars -= 1;
+	
+	// Randomize the input pattern at first call
+	int c0 = Upp::min(250, row_size);
+	int c1 = Upp::min(250, row_size*row_size);
+	int c2 = Upp::min(250, row_size*row_size*row_size);
+	int c3 = Upp::min(250, row_size*row_size*row_size*row_size);
+	const int MAX_BITS = 4;
+	int counts[MAX_BITS] = {c0, c1, c2, c3};
+	int exp_count = c0 + c1 + c2 + c3;
+	bitmatches.SetCount(exp_count);
+	Index<uint32> hashes;
+	
+	ASSERT(row_size < 256);
+	int total_count = 0;
+	for(int i = 0; i < MAX_BITS; i++) {
+		int count = counts[i];
+		
+		for(int j = 0; j < count; j++) {
+			BitMatcher& bm = bitmatches[total_count++];
+			bm.bit_count = i+1;
+			
+			uint32 hash;
+			do {
+				CombineHash ch;
+				for(int k = 0; k < bm.bit_count; k++) {
+					int v;
+					bool already;
+					do {
+						v = Random(row_size);
+						already = false;
+						for (int l = 0; l < k; l++) {
+							if (bm.bit_ids[l] == v) {
+								already = true;
+								break;
+							}
+						}
+					}
+					while (already);
+					bm.bit_ids[k] = v;
+					ch << v << 1;
+				}
+				hash = ch;
+			}
+			while (hashes.Find(hash) != -1);
+			hashes.Add(hash);
+		}
+		
+	}
+	ASSERT(exp_count == total_count);
+	
+	
+	// Collect stats
+	for(int i = counted; i < bars; i++) {
+		Snap& snap_in = data_in[i];
+		
+		
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = snap_in.Get(bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			Snap& snap_out = data_out[i];
+			
+			bool enabled = snap_out.Get(RT_ENABLED);
+			bool signal  = snap_out.Get(RT_SIGNAL);
+			
+			stat.total_count++;
+			if (enabled) {
+				stat.enabled_count++;
+				if (signal) stat.true_count++;
+			}
+		}
+	}
+}
+
+
+void Obviousness::RefreshOutput() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	for(int i = counted; i < bars; i++) {
+		
+		Snap& snap_in = data_in[i];
+		
+		int signal_div = 0;
+		int enabled_div = 0;
+		double signal_av = 0;
+		double enabled_av = 0;
+		
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = snap_in.Get(bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			
+			if (stat.total_count > 1) {
+				enabled_div++;
+				double prob = stat.total_count > 1 ? (double)stat.enabled_count / (double)(stat.total_count - 1) : 0.5;
+				enabled_av += prob;
+				if (prob > 0.5) {
+					signal_div++;
+					double sigprob = stat.enabled_count > 1 ? (double)stat.true_count / (double)(stat.enabled_count - 1) : 0.5;
+					signal_av += sigprob;
+				}
+			}
+		}
+		
+		enabled_av	/= max(1, enabled_div);
+		signal_av	/= max(1, signal_div);
+		GetBuffer(0).Set(i, enabled_av);
+		GetBuffer(1).Set(i, signal_av);
+	}
+}
+/*
+void Obviousness::RefreshTreshold() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	
+	System& sys = GetSystem();
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	double spread_point		= db.GetPoint();
+	double cost				= spread_point * 3;
+	int tf = 0;
+	ASSERT(spread_point > 0.0);
+	ConstBuffer& open_buf = db.GetBuffer(0);
+
+	
+	// Get enabled step
+	double max_enabled = 0, max_signal = 0;
+	for(int i = 0; i < 15; i++) {
+		int pos = bars - 1 - i;
+		double enabled = fabs(GetBuffer(0).Get(pos));
+		double signal = fabs(GetBuffer(1).Get(pos) - 0.5);
+		if (enabled > max_enabled) max_enabled = enabled;
+		if (signal  > max_signal) max_signal = signal;
+	}
+	double enabled_step = max_enabled * 0.1;
+	double signal_step = max_signal * 0.1;
+	
+	
+	// Loop treshold ranges
+	double max_res = -DBL_MAX;
+	max_res_enabled_treshold = 0;
+	max_res_signal_treshold = 0;
+	const int min_len = 5;
+	for (int step_i = -15; step_i < 15; step_i++) {
+		double enabled_treshold = step_i * enabled_step;
+		
+		for (int step_j = 0; step_j < 15; step_j++) {
+			double signal_treshold = step_j * signal_step;
+			
+			double total_change = 1.0;
+			double prev_open;
+			bool prev_enabled = false, prev_signal;
+			int open_len = 0;
+			for(int i = counted; i < bars; i++) {
+				
+				double enabled_av = GetBuffer(0).Get(i);
+				
+				
+				bool enabled = enabled_av >= enabled_treshold;
+				bool signal;
+				
+				if (enabled) {
+					double signal_av = GetBuffer(1).Get(i);
+					signal = signal_av > 0.5;
+					if ( signal && signal_av < 0.5 + signal_treshold)
+						enabled = false;
+					if (!signal && signal_av > 0.5 - signal_treshold)
+						enabled = false;
+				}
+				
+				bool do_close = false, do_open = false;
+				if (prev_enabled) {
+					if (!enabled)
+						do_close = true;
+					else if (signal != prev_signal && open_len >= min_len) {
+						do_close = true;
+						do_open = true;
+					}
+				}
+				else if (enabled)
+					do_open = true;
+				
+				double open = open_buf.Get(i);
+				if (do_close) {
+					double change;
+					if (prev_signal == false) change = open / (prev_open + spread_point);
+					else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
+					total_change *= change;
+				}
+				if (do_open) {
+					prev_signal = signal;
+					prev_open = open;
+					open_len = 0;
+				}
+				prev_enabled = enabled;
+				if (enabled) open_len++;
+			}
+			if (prev_enabled) {
+				double open = open_buf.Get(bars-1);
+				double change = open / prev_open;
+				if (prev_signal == false) change = open / (prev_open + spread_point);
+				else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
+				total_change *= change;
+			}
+			
+			
+			if (total_change > max_res) {
+				max_res_enabled_treshold = enabled_treshold;
+				max_res_signal_treshold = signal_treshold;
+				max_res = total_change;
+			}
+		}
+	}
+	
+	
+	LOG("Max treshold: " << max_res_enabled_treshold << ", " << max_res_signal_treshold << " with result " << max_res);
+	
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
 ExampleAdvisor::ExampleAdvisor() {
 	
 }

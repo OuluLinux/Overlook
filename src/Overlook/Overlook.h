@@ -135,7 +135,6 @@ public:
 	void ChartProperties();
 	void NewOrder();
 	void HistoryCenter();
-	void TradingRules();
 	void Options();
 	void TileWindow();
 	void CloseWindow();

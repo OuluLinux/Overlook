@@ -104,8 +104,6 @@ GUI_APP_MAIN {
 	
 	
 	try {
-		GetRuleAnalyzer(); // construct in gui thread
-		
 		::Overlook::Overlook ol;
 		ol.OpenMain();
 		Ctrl::EventLoop();

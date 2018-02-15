@@ -131,6 +131,15 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
 			if (shift >= open_buf.GetCount()) {
+				int res = shift + 1000;
+				res -= res % 1000;
+				
+				open_buf.Reserve(res);
+				low_buf.Reserve(res);
+				high_buf.Reserve(res);
+				volume_buf.Reserve(res);
+				time_buf.Reserve(res);
+				
 				open_buf.SetCount(shift+1);
 				low_buf.SetCount(shift+1);
 				high_buf.SetCount(shift+1);

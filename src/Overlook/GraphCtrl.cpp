@@ -126,7 +126,7 @@ void GraphCtrl::Paint(Draw& draw) {
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = src[0]->GetBuffer(0).GetCount();
+    int data_count = src[0]->GetBufferCount() > 0 ? src[0]->GetBuffer(0).GetCount() : src[0]->GetOutput(0).label.GetCount();
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -185,7 +185,7 @@ void GraphCtrl::Paint(Draw& draw) {
 	
 	w.DrawText(5,5, graph_label, StdFont(10), GrayColor());
 	
-    if (show_timevalue_tool) {
+    if (show_timevalue_tool && bd_src) {
         w.DrawLine(latest_mouse_move_pt.x, 0, latest_mouse_move_pt.x, sz.cy, 1, Black());
         w.DrawLine(0, latest_mouse_move_pt.y, sz.cx,  latest_mouse_move_pt.y, 1, Black());
         
@@ -498,6 +498,9 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 }
 
 void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
+    x = border;
+    r = GetGraphCtrlRect();
+    y = r.top;
 	bool draw_label = cont.GetOutputCount() > 0;
 	bool draw_label_enabled = cont.GetOutputCount() > 1;
 	if (draw_label) {
@@ -511,8 +514,8 @@ void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
 			label_data_count = Upp::min(label_data_count, cont.GetOutput(0).label.GetCount());
 		}
 		for(int i = begin; i < end; i++) {
-	        int pos = c - (count + shift - i + data_shift);
-	        if (pos >= label_data_count || pos < data_begin || pos >= buf_count)
+	        int pos = label_data_count - (count + shift - i);
+	        if (pos < 0 || pos >= label_data_count)
 				continue;
 	        
 	        int xi = (x+(i+0.5)*div);

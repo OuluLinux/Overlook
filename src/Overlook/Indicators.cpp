@@ -4305,8 +4305,7 @@ void MinimalLabel::Start() {
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	double spread_point		= db->GetPoint();
-	double slippage			= spread_point * 2;
-	double cost				= spread_point + slippage;
+	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
 	VectorBool& labelvec = GetOutput(0).label;
@@ -4627,16 +4626,7 @@ OnlineMinimalLabel::OnlineMinimalLabel() {
 }
 
 void OnlineMinimalLabel::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1.0);
-	SetCoreMaximum(+1.0);
-	SetBufferColor(0, Color(85, 255, 150));
-	SetBufferLineWidth(0, 2);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, +0.5);
-	SetCoreLevel(1, -0.5);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	SetCoreChartWindow();
 }
 
 void OnlineMinimalLabel::Start() {
@@ -4647,16 +4637,13 @@ void OnlineMinimalLabel::Start() {
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	double spread_point		= db->GetPoint();
-	double slippage			= spread_point * cost_level;
-	double cost				= spread_point + slippage;
+	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
 	VectorBool& labelvec = GetOutput(0).label;
 	labelvec.SetCount(bars);
 	
-	Buffer& buf = GetBuffer(0);
-	
-	for(int i = prev_counted; i < bars; i++) {
+	for(int i = GetCounted(); i < bars; i++) {
 		SetSafetyLimit(i);
 		
 		const int count = 1;
@@ -4667,8 +4654,6 @@ void OnlineMinimalLabel::Start() {
 		
 		bool label = sigbuf[count - 1];
 		labelvec.Set(i, label);
-		if (label)		buf.Set(i, -0.75);
-		else			buf.Set(i, +0.75);
 	}
 }
 
@@ -4751,8 +4736,7 @@ void SelectiveMinimalLabel::Start() {
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
 	double spread_point		= db->GetPoint();
-	double slippage			= spread_point * 2;
-	double cost				= spread_point + slippage;
+	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
 	VectorBool& labelvec = GetOutput(0).label;
@@ -4962,9 +4946,6 @@ void ReactionContext::Start() {
 	int counted = GetCounted();
 	if (!counted) counted++;
 
-	if ( bars <= period )
-		throw DataExc();
-
 	for (int cursor = counted; cursor < bars; cursor++) {
 		SetSafetyLimit(cursor);
 
@@ -5089,9 +5070,6 @@ void VolatilityContext::Start() {
 	
 	double point = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()))->GetPoint();
 
-	if ( bars <= period )
-		throw DataExc();
-	
 	for (int cursor = counted; cursor < bars; cursor++) {
 		
 		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
@@ -5139,7 +5117,7 @@ void VolatilityContext::Start() {
 			lvl = div - 1;
 		
 		
-		buffer.Set(cursor, lvl);
+		buffer.Set(cursor, lvl / (double)(volat_divs.GetCount()-2));
 	}
 }
 
@@ -5613,6 +5591,10 @@ void Obviousness::RefreshOutput() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
+	VectorBool& signalbool = GetOutput(0).label;
+	VectorBool& enabledbool = GetOutput(1).label;
+	signalbool.SetCount(bars);
+	enabledbool.SetCount(bars);
 	for(int i = counted; i < bars; i++) {
 		
 		Snap& snap_in = data_in[i];
@@ -5651,6 +5633,9 @@ void Obviousness::RefreshOutput() {
 		signal_av	/= max(1, signal_div);
 		GetBuffer(0).Set(i, enabled_av);
 		GetBuffer(1).Set(i, signal_av);
+		
+		signalbool.Set(i, signal_av > 0.5);
+		enabledbool.Set(i, enabled_av > 0.5);
 	}
 }
 /*
@@ -5765,6 +5750,230 @@ void Obviousness::RefreshTreshold() {
 
 
 
+
+
+
+
+VolatilityContextReversal::VolatilityContextReversal() {
+	
+}
+
+void VolatilityContextReversal::Init() {
+	/*SetCoreSeparateWindow();
+	SetBufferColor(0, GrayColor(80));
+	SetBufferLineWidth(0, 2);
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.5);*/
+}
+
+void VolatilityContextReversal::Start() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& volat_ctx = GetInputBuffer(1, 0);
+	
+	VectorBool& signal = GetOutput(0).label;
+	signal.SetCount(bars);
+	
+	for(int i = counted; i < bars; i++) {
+		double d = volat_ctx.Get(i);
+		bool is_peak = d > 0.99;
+		
+		if (is_peak) {
+			double open = open_buf.Get(i);
+			int true_count = 0;
+			for(int j = max(0, i-11); j < i; j++) {
+				double o = open_buf.Get(j);
+				if (o > open) true_count++;
+			}
+			signal.Set(i, true_count >= 6);
+		}
+		else {
+			// Copy previous
+			signal.Set(i, signal.Get(max(0, i-1)));
+		}
+	}
+}
+
+
+
+
+
+ObviousTarget::ObviousTarget() {
+	
+}
+
+bool ObviousTarget::GetInput(int i, int j) {
+	return bufs[j]->Get(i);
+}
+
+double ObviousTarget::GetOutput(int i) {
+	return GetBuffer(1).Get(i);
+}
+
+void ObviousTarget::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, GrayColor(80));
+	SetBufferLineWidth(0, 1);
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.0);
+	
+	bufs.SetCount(row_size);
+	for(int i = 0; i < bufs.GetCount(); i++)
+		bufs[i] = &GetInputCore(1 + i, GetSymbol(), GetTf())->GetOutput(0).label;
+	
+	outbuf = &GetInputCore(5, GetSymbol(), GetTf())->GetOutput(0).label;
+}
+
+void ObviousTarget::Start() {
+	
+	if (!GetCounted()) {
+		RefreshTargetValues();
+		RefreshIOStats();
+	}
+	
+	RefreshOutput();
+}
+
+void ObviousTarget::RefreshTargetValues() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0,0);
+	Buffer& dst = GetBuffer(1);
+	
+	bool prev_value = outbuf->Get(bars-1);
+	double prev_open = open_buf.Get(bars-1);
+	for(int i = bars-1; i >= counted; i--) {
+		bool value = outbuf->Get(i);
+		double open = open_buf.Get(i);
+		
+		if (value != prev_value) {
+			prev_open = open;
+			prev_value = value;
+		}
+		
+		double change = prev_open / open - 1.0;
+		// Don't add this: if (prev_value) change *= -1.0;
+		
+		dst.Set(i, change);
+	}
+	
+	
+}
+
+void ObviousTarget::RefreshIOStats() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	bars -= 1;
+	
+	// Randomize the input pattern at first call
+	int c0 = Upp::min(250, row_size);
+	int c1 = Upp::min(250, row_size*(row_size-1));
+	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
+	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
+	const int MAX_BITS = 4;
+	int counts[MAX_BITS] = {c0, c1, c2, c3};
+	int exp_count = c0 + c1 + c2 + c3;
+	bitmatches.SetCount(exp_count);
+	Index<uint32> hashes;
+	
+	ASSERT(row_size < 256);
+	int total_count = 0;
+	for(int i = 0; i < MAX_BITS; i++) {
+		int count = counts[i];
+		
+		for(int j = 0; j < count; j++) {
+			BitMatcher& bm = bitmatches[total_count++];
+			bm.bit_count = i+1;
+			
+			uint32 hash;
+			do {
+				CombineHash ch;
+				for(int k = 0; k < bm.bit_count; k++) {
+					int v;
+					bool already;
+					do {
+						v = Random(row_size);
+						already = false;
+						for (int l = 0; l < k; l++) {
+							if (bm.bit_ids[l] == v) {
+								already = true;
+								break;
+							}
+						}
+					}
+					while (already);
+					bm.bit_ids[k] = v;
+					ch << v << 1;
+				}
+				hash = ch;
+			}
+			while (hashes.Find(hash) != -1);
+			hashes.Add(hash);
+		}
+		
+	}
+	ASSERT(exp_count == total_count);
+	
+	
+	// Collect stats
+	for(int i = counted; i < bars; i++) {
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = GetInput(i, bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			
+			stat.total_count++;
+			stat.sum += GetOutput(i);
+		}
+	}
+}
+
+void ObviousTarget::RefreshOutput() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	for(int i = counted; i < bars; i++) {
+		int enabled_div = 0;
+		double enabled_av = 0;
+		
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = GetInput(i, bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			
+			if (stat.total_count > 1) {
+				enabled_div++;
+				double av = stat.total_count > 0 ? stat.sum / stat.total_count : 0.0;
+				enabled_av += av;
+			}
+		}
+		
+		enabled_av	/= max(1, enabled_div);
+		GetBuffer(0).Set(i, enabled_av);
+	}
+}
 
 
 

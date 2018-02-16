@@ -982,7 +982,7 @@ public:
 
 class MinimalLabel : public Core {
 	int prev_counted = 0;
-	
+	int cost_level = 0;
 	
 protected:
 	virtual void Start();
@@ -995,7 +995,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Mem(prev_counted);
+			% Mem(prev_counted)
+			% Arg("cost_level", cost_level, 0);
 	}
 };
 
@@ -1090,7 +1091,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(1, 1)
+			% Out(0, 0)
 			% Mem(prev_counted)
 			% Arg("cost_level", cost_level, 0);
 	}
@@ -1111,6 +1112,7 @@ class SelectiveMinimalLabel : public Core {
 	
 	
 	int idx_limit = 75;
+	int cost_level = 0;
 	
 protected:
 	virtual void Start();
@@ -1122,9 +1124,10 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(1, 1)
 			% Out(0, 0)
-			% Arg("idx_limit", idx_limit, 0, 100);
+			% Out(0, 0)
+			% Arg("idx_limit", idx_limit, 0, 100)
+			% Arg("cost_level", cost_level, 0);
 	}
 };
 
@@ -1242,6 +1245,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(buffer_count, buffer_count)
+			% Out(0, 0)
 			% Mem(data_in)
 			% Mem(data_out)
 			% Mem(av_wins)
@@ -1256,7 +1260,78 @@ public:
 };
 
 
+class VolatilityContextReversal : public Core {
+	
+public:
+	typedef VolatilityContextReversal CLASSNAME;
+	
+	VolatilityContextReversal();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<VolatilityContext>()
+			% Out(0, 0);
+	}
+	
+};
 
+
+class ObviousTarget : public Core {
+	struct BitComboStat {
+		int total_count = 0;
+		double sum = 0.0;
+	};
+	
+	const int row_size = 4;
+	static const int max_bit_ids = 4;
+	static const int max_bit_values = 2*2*2*2;
+	struct BitMatcher : Moveable<BitMatcher> {
+		uint8 bit_count = 0;
+		uint8 bit_ids[max_bit_ids] = {0,0,0,0};
+		BitComboStat bit_stats[max_bit_values];
+		void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(BitMatcher)); else s.Put(this, sizeof(BitMatcher));}
+	};
+	Vector<BitMatcher> bitmatches;
+	
+	Vector<ConstVectorBool*> bufs;
+	ConstVectorBool* outbuf = NULL;
+	
+	void RefreshIOStats();
+	void RefreshTargetValues();
+	void RefreshOutput();
+	bool GetInput(int i, int j);
+	double GetOutput(int i);
+	
+public:
+	typedef ObviousTarget CLASSNAME;
+	
+	ObviousTarget();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<TrendIndex>()
+			% In<Obviousness>()
+			% In<OnlineMinimalLabel>()
+			% In<VolatilityContextReversal>()
+			% In<MinimalLabel>(&Args0)
+			% Out(2, 1)
+			% Mem(bitmatches);
+	}
+	
+	static void Args0(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		decl.args[0] = 10;
+		decl.arg_count = 1;
+	}
+	
+};
 
 
 class ExampleAdvisor : public Core {

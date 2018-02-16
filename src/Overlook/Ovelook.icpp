@@ -48,23 +48,25 @@ INITBLOCK {
 	System::Register<Psychological>("Psychological Oscillator");
 	System::Register<ZigZag>("Zig-Zag");
 	System::Register<ZigZagOsc>("Zig-Zag Oscillator");
-	System::Register<TrendChange>("TrendChange");
+	System::Register<TrendChange>("Trend Change");
 	
-	System::Register<TrendChangeEdge>("TrendChangeEdge");
-	System::Register<PeriodicalChange>("PeriodicalChange");
-	System::Register<VolatilityAverage>("VolatilityAverage");
-	System::Register<MinimalLabel>("MinimalLabel");
-	System::Register<VolatilitySlots>("VolatilitySlots");
-	System::Register<VolumeSlots>("VolumeSlots");
-	System::Register<ChannelOscillator>("ChannelOscillator");
-	System::Register<ScissorChannelOscillator>("ScissorChannelOscillator");
-	System::Register<TrendIndex>("TrendIndex");
-	System::Register<OnlineMinimalLabel>("OnlineMinimalLabel");
+	System::Register<TrendChangeEdge>("Trend Change Edge");
+	System::Register<PeriodicalChange>("Periodical Change");
+	System::Register<VolatilityAverage>("Volatility Average");
+	System::Register<MinimalLabel>("Minimal Label");
+	System::Register<VolatilitySlots>("Volatility Slots");
+	System::Register<VolumeSlots>("Volume Slots");
+	System::Register<ChannelOscillator>("Channel Oscillator");
+	System::Register<ScissorChannelOscillator>("Scissor Channel Oscillator");
+	System::Register<TrendIndex>("Trend Index");
+	System::Register<OnlineMinimalLabel>("Online Minimal Label");
 	
-	System::Register<ReactionContext>("ReactionContext");
-	System::Register<VolatilityContext>("VolatilityContext");
-	System::Register<SelectiveMinimalLabel>("SelectiveMinimalLabel");
+	System::Register<ReactionContext>("Reaction Context");
+	System::Register<VolatilityContext>("Volatility Context");
+	System::Register<SelectiveMinimalLabel>("Selective Minimal Label");
 	System::Register<Obviousness>("Obviousness");
+	System::Register<VolatilityContextReversal>("Volatility Context Reversal");
+	System::Register<ObviousTarget>("Obvious Target");
 	
 	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
 	

@@ -6323,6 +6323,7 @@ bool ObviousAdvisor::TrainingIterator() {
 	double reward;
 	if (action == ACCEPT) {
 		OpenAt();
+		reward = 0;
 	}
 	else {
 		CloseAt();
@@ -6377,7 +6378,7 @@ bool ObviousAdvisor::TrainingIterator() {
 	if (cursor >= data_in_vec.GetCount()) {
 		cursor = 0;
 		total_reward = 0.0;
-	}	
+	}
 	
 	
 	// Put some result data here for graph

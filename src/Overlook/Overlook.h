@@ -167,6 +167,7 @@ public:
 	void LoadPreviousProfile();
 	void StorePreviousProfile();
 	void SaveProfile();
+	void LoadAdvisorProfile();
 	void LoadOpenOrderCharts();
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);

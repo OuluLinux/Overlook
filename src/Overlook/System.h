@@ -276,6 +276,7 @@ protected:
 	
 	// Temporary
 	Index<String>				symbols, allowed_symbols;
+	Vector<int>					signals;
 	Index<int>					periods;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;
@@ -283,6 +284,7 @@ protected:
 	Time						end;
 	Data						data;
 	int							time_offset = 0;
+	int							realtime_count = 0;
 	
 	
 protected:
@@ -323,6 +325,8 @@ public:
 	int		FindSymbol(const String& s) const		{return symbols.Find(s);}
 	void	GetWorkQueue(Vector<Ptr<CoreItem> >& ci_queue);
 	void	StoreCores();
+	bool	RefreshReal();
+	void	SetSignal(int sym, int i)				{signals[sym] = i;}
 	
 public:
 	

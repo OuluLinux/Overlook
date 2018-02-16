@@ -66,9 +66,11 @@ INITBLOCK {
 	System::Register<SelectiveMinimalLabel>("Selective Minimal Label");
 	System::Register<Obviousness>("Obviousness");
 	System::Register<VolatilityContextReversal>("Volatility Context Reversal");
-	System::Register<ObviousTarget>("Obvious Target");
+	System::Register<ObviousTargetValue>("Obvious Target");
+	System::Register<BasicSignal>("Basic Signal");
 	
-	System::Register<ExampleAdvisor>("ExampleAdvisor", CORE_EXPERTADVISOR);
+	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
+	System::Register<ObviousAdvisor>("Obviousness Advisor", CORE_EXPERTADVISOR);
 	
 	System::RegisterAssistant<DataBridge>("Up Change -1 ", DB_UP1);
 	System::RegisterAssistant<DataBridge>("Up Change -2 ", DB_UP2);

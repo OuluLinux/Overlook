@@ -30,6 +30,8 @@ void NewOrderWindow::Init(int id) {
 	for(int i = 0; i < mt.GetSymbolCount(); i++) {
 		diag.symlist.Add(mt.GetSymbol(i).name + ", " + mt.GetSymbol(i).description);
 	}
+	if (id < 0 || id >= diag.symlist.GetCount()) return;
+	
 	diag.symlist.SetIndex(id);
 	
 	diag.volume.SetData(0.01);

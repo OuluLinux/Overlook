@@ -1176,6 +1176,10 @@ public:
 
 class Obviousness : public Core {
 	
+protected:
+	friend class ObviousAdvisor;
+	
+	
 	struct Snap : Moveable<Snap> {
 		uint64 data[2] = {0,0};
 		
@@ -1211,11 +1215,11 @@ class Obviousness : public Core {
 	};
 	typedef Vector<Snap> VectorSnap;
 	
-	const int period_count = 6;
+	static const int period_count = 6;
 	enum {ONLINEMINLAB, TRENDINDEX,VOLATCTX0, VOLATCTX1, VOLATCTX2, VOLATCTX3, VOLATCTX4, VOLATCTX5, MA, MOM, OTREND, HTREND, LTREND, RTRENDUP, RTRENDDOWN,INPUT_COUNT};
 	
 	enum {RT_SIGNAL, RT_ENABLED, rt_row_size};
-	const int row_size = period_count * INPUT_COUNT;
+	static const int row_size = period_count * INPUT_COUNT;
 	const int volat_div = 6;
 	const double idx_limit_f = 0.75;
 	
@@ -1280,7 +1284,7 @@ public:
 };
 
 
-class ObviousTarget : public Core {
+class ObviousTargetValue : public Core {
 	struct BitComboStat {
 		int total_count = 0;
 		double sum = 0.0;
@@ -1307,9 +1311,9 @@ class ObviousTarget : public Core {
 	double GetOutput(int i);
 	
 public:
-	typedef ObviousTarget CLASSNAME;
+	typedef ObviousTargetValue CLASSNAME;
 	
-	ObviousTarget();
+	ObviousTargetValue();
 	
 	
 	virtual void Init();
@@ -1324,6 +1328,36 @@ public:
 			% In<MinimalLabel>(&Args0)
 			% Out(2, 1)
 			% Mem(bitmatches);
+	}
+	
+	static void Args0(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		decl.args[0] = 10;
+		decl.arg_count = 1;
+	}
+	
+};
+
+class BasicSignal : public Core {
+	
+	
+	Vector<ConstVectorBool*> bufs;
+public:
+	typedef BasicSignal CLASSNAME;
+	
+	BasicSignal();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<MinimalLabel>(&Args0)
+			% In<VolatilityContextReversal>()
+			% In<Obviousness>()
+			% In<ObviousTargetValue>()
+			% Out(0, 0)
+			% Out(0, 0);
 	}
 	
 	static void Args0(int input, FactoryDeclaration& decl, const Vector<int>& args) {
@@ -1381,7 +1415,11 @@ public:
 
 
 
-class ParserAdvisor : public Core {
+class ObviousAdvisor : public Core {
+	
+	enum {ACCEPT, REJECT, ACTION_COUNT};
+	static const int INPUT_STATES = Obviousness::row_size;
+	static const int OUTPUT_STATES = ACTION_COUNT;
 	
 	struct TrainingCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -1394,113 +1432,62 @@ class ParserAdvisor : public Core {
 	bool TrainingInspect();
 	void RefreshAll();
 	
+	typedef DQNTrainer<OUTPUT_STATES, INPUT_STATES> Trainer;
+	static const int MAX_TRAIN_STATES = 1000;
 	
 	// Persistent
-	GeneticOptimizer optimizer;
+	Vector<Trainer::DQItemType> train_memory;
+	Trainer dqn_trainer;
 	Vector<double> training_pts;
+	double total_reward = 0;
 	int prev_counted = 0;
-	
-	static const int TI_TF_COUNT = 4;
-	static const int TI_PERIOD_COUNT = 3;
-	static const int ML_TF_COUNT = 1;
-	static const int ML_COSTLEVEL_COUNT = 3;
-	
-	static const int TI_TOTAL = TI_TF_COUNT * TI_PERIOD_COUNT;
-	static const int ML_TOTAL = ML_TF_COUNT * ML_COSTLEVEL_COUNT;
+	int train_cursor = 0;
 	
 	// Temporary
-	ConstBuffer *open_buf = NULL, *low_buf = NULL, *high_buf = NULL, *rc_buf = NULL, *vc_buf = NULL;
-	ConstBuffer* ti_buf[TI_TOTAL];
-	ConstVectorBool* ti_label_buf[TI_TOTAL];
-	ConstBuffer* ml_buf[ML_TOTAL];
-	ConstVectorBool* ml_label_buf[ML_TOTAL];
+	Trainer::DQItemType* current_state = NULL;
+	double accum_reward = 0.0;
+	double prev_open = 0.0;
 	double spread_point = 0.0;
-	int core_cursor[TI_TF_COUNT];
-	int reaction_ctx_count = ReactionContext::COUNT;
-	int volat_ctx_count = VolatilityContext::DEFAULT_DIV;
-	int start_trigger_count = 6;
-	int stop_trigger_count = 6;
-	int train_bars = 0;
 	int cursor = 0;
-	int reaction, volatility;
-	int train_end = 0;
 	int round = 0;
-	int max_rounds = 1000;
-	bool used_signal = false;
-	bool is_open = false;
+	#ifndef flagDEBUG
+	int max_rounds = 50000000;
+	#else
+	int max_rounds = 5000;
+	#endif
+	ConstBuffer* open_buf = NULL;
+	Obviousness* obviousness = NULL;
+	ConstVectorBool* basic_enabled = NULL;
+	ConstVectorBool* basic_signal = NULL;
+	bool prev_enabled = false, prev_signal = false;
 	bool once = true;
 	
 protected:
 	virtual void Start();
-	
-	double RunTest(int begin, int end);
-	int Command();
-	int ContextReaction();
-	int ContextVolatility();
-	int TrendIndexTrigger();
-	int MinimalLabelTrigger();
-	int GetInputTf(int i) const {return i < 3 ? i : i + 1;}
+	void LoadState(Trainer::MatType& mat);
+	void OpenAt();
+	void CloseAt();
+	void SeekNextActive();
 	
 public:
-	typedef ParserAdvisor CLASSNAME;
-	ParserAdvisor();
+	typedef ObviousAdvisor CLASSNAME;
+	ObviousAdvisor();
 	
 	virtual void Init();
 	
-	template <int I>
-	static bool FilterFunction0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1) {
-			return out_tf == I;
-		}
-		
-		return in_sym == out_sym;
-	}
-	
-	template <int I>
-	static void Args0(int input, FactoryDeclaration& decl, const Vector<int>& args) {
-		decl.args[0] = I;
-		decl.arg_count = 1;
-	}
-	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% In<ReactionContext>()
-			% In<VolatilityContext>()
-			% Out(1, 1)
+			% In<Obviousness>()
+			% In<BasicSignal>()
 			% Out(0, 0)
-			% Mem(optimizer)
+			% Out(0, 0)
+			% Mem(train_memory)
+			% Mem(dqn_trainer)
 			% Mem(training_pts)
-			% Mem(prev_counted);
-		
-		static FilterFunction filt[TI_TF_COUNT];
-		static ArgsFn ti_period[TI_PERIOD_COUNT];
-		static ArgsFn ml_costlevel[ML_COSTLEVEL_COUNT];
-		
-		if (filt[0] == NULL) {
-			filt[0] = &FilterFunction0<0>;
-			filt[1] = &FilterFunction0<1>;
-			filt[2] = &FilterFunction0<2>;
-			filt[3] = &FilterFunction0<4>;
-			
-			ti_period[0] = &Args0<3>;
-			ti_period[1] = &Args0<6>;
-			ti_period[2] = & Args0<12>;
-			
-			ml_costlevel[0] = &Args0<0>;
-			ml_costlevel[1] = &Args0<3>;
-			ml_costlevel[2] = &Args0<6>;
-		}
-		
-		for(int i = 0; i < TI_TF_COUNT; i++)
-			for(int j = 0; j < TI_PERIOD_COUNT; j++)
-				reg % In<TrendIndex>(filt[i], ti_period[j]);
-			
-		
-		for(int i = 0; i < ML_TF_COUNT; i++)
-			for(int j = 0; j < ML_COSTLEVEL_COUNT; j++)
-				reg % In<OnlineMinimalLabel>(filt[i], ml_costlevel[j]);
+			% Mem(total_reward)
+			% Mem(prev_counted)
+			% Mem(train_cursor);
 	}
-	
 };
 
 }

@@ -169,6 +169,7 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
+		bar.Add("Load default advisor profile", THISBACK(LoadAdvisorProfile));
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
@@ -438,6 +439,7 @@ void Overlook::DeepRefresh() {
 		common.DownloadAskBid();
 		common.RefreshAskBidData(true);
 		GetCalendar().Data();
+		sys.RefreshReal();
 		
 		mt_refresh.Reset();
 		
@@ -950,12 +952,33 @@ void Overlook::ActiveWindowChanged() {
 	}
 }
 
+void Overlook::LoadAdvisorProfile() {
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
+	
+	int tf = 0;
+	int id = System::Find<ObviousAdvisor>();
+	
+	for(int i = 0; i < mt.GetSymbolCount(); i++) {
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = i;
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.right_offset = true;
+		pgroup.decl.factory = id;
+	}
+	
+	LoadProfile(profile);
+	TileWindow();
+}
+
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();
 	Profile profile;
 	
 	int tf = 0;
-	int ml = System::Find<MinimalLabel>();
+	int id = System::Find<MinimalLabel>();
 	
 	MetaTrader& mt = GetMetaTrader();
 	mt.Enter();
@@ -974,7 +997,7 @@ void Overlook::LoadOpenOrderCharts() {
 		pgroup.tf = tf;
 		pgroup.keep_at_end = true;
 		pgroup.right_offset = true;
-		pgroup.decl.factory = ml;
+		pgroup.decl.factory = id;
 	}
 	
 	LoadProfile(profile);

@@ -5134,6 +5134,8 @@ Obviousness::Obviousness() {
 	
 }
 
+const int Obviousness::row_size;
+
 void Obviousness::Init() {
 	SetCoreSeparateWindow();
 	for(int i = 0; i < buffer_count; i++) {
@@ -5801,19 +5803,19 @@ void VolatilityContextReversal::Start() {
 
 
 
-ObviousTarget::ObviousTarget() {
+ObviousTargetValue::ObviousTargetValue() {
 	
 }
 
-bool ObviousTarget::GetInput(int i, int j) {
+bool ObviousTargetValue::GetInput(int i, int j) {
 	return bufs[j]->Get(i);
 }
 
-double ObviousTarget::GetOutput(int i) {
+double ObviousTargetValue::GetOutput(int i) {
 	return GetBuffer(1).Get(i);
 }
 
-void ObviousTarget::Init() {
+void ObviousTargetValue::Init() {
 	SetCoreSeparateWindow();
 	SetBufferColor(0, GrayColor(80));
 	SetBufferLineWidth(0, 1);
@@ -5828,7 +5830,7 @@ void ObviousTarget::Init() {
 	outbuf = &GetInputCore(5, GetSymbol(), GetTf())->GetOutput(0).label;
 }
 
-void ObviousTarget::Start() {
+void ObviousTargetValue::Start() {
 	
 	if (!GetCounted()) {
 		RefreshTargetValues();
@@ -5838,7 +5840,7 @@ void ObviousTarget::Start() {
 	RefreshOutput();
 }
 
-void ObviousTarget::RefreshTargetValues() {
+void ObviousTargetValue::RefreshTargetValues() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
@@ -5865,7 +5867,7 @@ void ObviousTarget::RefreshTargetValues() {
 	
 }
 
-void ObviousTarget::RefreshIOStats() {
+void ObviousTargetValue::RefreshIOStats() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
@@ -5942,13 +5944,15 @@ void ObviousTarget::RefreshIOStats() {
 	}
 }
 
-void ObviousTarget::RefreshOutput() {
+void ObviousTargetValue::RefreshOutput() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
+	VectorBool& label = Core::GetOutput(0).label;
+	label.SetCount(bars);
 	for(int i = counted; i < bars; i++) {
-		int enabled_div = 0;
-		double enabled_av = 0;
+		int changed_div = 0;
+		double change_av = 0;
 		
 		for(int j = 0; j < bitmatches.GetCount(); j++) {
 			BitMatcher& bm = bitmatches[j];
@@ -5964,14 +5968,72 @@ void ObviousTarget::RefreshOutput() {
 			BitComboStat& stat = bm.bit_stats[value];
 			
 			if (stat.total_count > 1) {
-				enabled_div++;
+				changed_div++;
 				double av = stat.total_count > 0 ? stat.sum / stat.total_count : 0.0;
-				enabled_av += av;
+				change_av += av;
 			}
 		}
 		
-		enabled_av	/= max(1, enabled_div);
-		GetBuffer(0).Set(i, enabled_av);
+		change_av	/= max(1, changed_div);
+		GetBuffer(0).Set(i, change_av);
+		label.Set(i, change_av < 0.0);
+	}
+}
+
+
+
+
+
+
+
+
+
+BasicSignal::BasicSignal() {
+	
+}
+
+void BasicSignal::Init() {
+	bufs.SetCount(4);
+	for(int i = 0; i < bufs.GetCount(); i++)
+		bufs[i] = &GetInputCore(1 + i, GetSymbol(), GetTf())->GetOutput(0).label;
+}
+
+void BasicSignal::Start() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	VectorBool& signal = Core::GetOutput(0).label;
+	VectorBool& enabled = Core::GetOutput(1).label;
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	for(int i = counted; i < bars; i++) {
+		
+		bool mini_signal  = bufs[0]->Get(i);
+		bool vola_signal  = bufs[1]->Get(i);
+		bool obvs_signal  = bufs[2]->Get(i);
+		bool obvt_signal  = bufs[3]->Get(i);
+		
+		bool is_enabled = mini_signal == vola_signal;
+		bool triggered = mini_signal == vola_signal && vola_signal == obvs_signal && obvs_signal == obvt_signal;
+		
+		bool prev_enabled = i > 0 ? enabled.Get(i-1) : false;
+		bool prev_signal = i > 0 ? signal.Get(i-1) : false;
+		
+		if (prev_enabled) {
+			if (is_enabled && prev_signal == mini_signal) {
+				signal.Set(i, mini_signal);
+				enabled.Set(i, true);
+			}
+			else {
+				signal.Set(i, false);
+				enabled.Set(i, false);
+			}
+		} else {
+			if (triggered) {
+				signal.Set(i, mini_signal);
+				enabled.Set(i, true);
+			}
+		}
 	}
 }
 
@@ -6113,6 +6175,283 @@ void ExampleAdvisor::TrainingCtrl::Paint(Draw& w) {
 	
 	w.DrawImage(0, 0, id);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ObviousAdvisor::ObviousAdvisor() {
+	
+}
+
+void ObviousAdvisor::Init() {
+	open_buf = &GetInputBuffer(0, 0);
+	obviousness = dynamic_cast<Obviousness*>(GetInputCore(1, GetSymbol(), GetTf()));
+	basic_enabled = &GetInputCore(2, GetSymbol(), GetTf())->GetOutput(0).label;
+	basic_signal = &GetInputCore(2, GetSymbol(), GetTf())->GetOutput(1).label;
+	ASSERT(obviousness);
+	
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	spread_point = db.GetPoint();
+	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	SetJobCount(1);
+	
+	SetJob(0, tf_str + " Training")
+		.SetBegin		(THISBACK(TrainingBegin))
+		.SetIterator	(THISBACK(TrainingIterator))
+		.SetEnd			(THISBACK(TrainingEnd))
+		.SetInspect		(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
+}
+
+void ObviousAdvisor::Start() {
+	if (once) {
+		if (prev_counted > 0) prev_counted--;
+		once = false;
+		RefreshSourcesOnlyDeep();
+	}
+	
+	if (IsJobsFinished()) {
+		int bars = GetBars();
+		if (prev_counted < bars) {
+			LOG("ObviousAdvisor::Start Refresh");
+			RefreshAll();
+		}
+	}
+}
+
+bool ObviousAdvisor::TrainingBegin() {
+	
+	int bars = GetBars();
+	GetOutput(0).label.SetCount(bars);
+	GetOutput(1).label.SetCount(bars);
+	
+	training_pts.SetCount(obviousness->data_in.GetCount(), 0);
+	
+	// In case of having other advisors as dependency:
+	// Don't start if jobs of dependencies are not finished
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return false;
+			}
+		}
+	}
+	
+	// Allow iterating
+	return true;
+}
+
+void ObviousAdvisor::LoadState(Trainer::MatType& mat) {
+	auto& data_in_vec = obviousness->data_in;
+	auto& data_in = data_in_vec[cursor];
+	for(int i = 0; i < Obviousness::row_size; i++)
+		mat.Set(i, data_in.Get(i) ? 1.0 : 0.0);
+}
+
+void ObviousAdvisor::OpenAt() {
+	ASSERT(basic_enabled->Get(cursor));
+	bool signal = basic_signal->Get(cursor);
+	if (prev_enabled) {
+		if (prev_signal == signal)
+			return;
+		else
+			CloseAt();
+	}
+	prev_open = open_buf->Get(cursor);
+	prev_signal = signal;
+	prev_enabled = true;
+	LOG("Open " << cursor);
+}
+
+void ObviousAdvisor::CloseAt() {
+	ASSERT(spread_point > 0.0);
+	double open = open_buf->Get(cursor);
+	double change;
+	if (!prev_signal)	change = open / (prev_open + spread_point) - 1.0;
+	else				change = 1.0 - (open / (prev_open - spread_point) - 1.0);
+	accum_reward += change * 1000.0;
+	prev_open = false;
+	prev_enabled = false;
+	LOG("Close " << cursor << " accum_reward: " << accum_reward);
+}
+
+void ObviousAdvisor::SeekNextActive() {
+	int rounds = 0;
+	auto& data_in_vec = obviousness->data_in;
+	for(;;) {
+		bool b = basic_enabled->Get(cursor);
+		if (b) break;
+		cursor++;
+		if (cursor >= data_in_vec.GetCount()) {
+			cursor = 0;
+			rounds++;
+			if (rounds > 1) Panic("Unexpected forever loop");
+		}
+	}
+}
+
+bool ObviousAdvisor::TrainingIterator() {
+	
+	// Show progress
+	GetCurrentJob().SetProgress(round, max_rounds);
+	
+	
+	// Act every round
+	SeekNextActive();
+	Trainer::MatType mat;
+	LoadState(mat);
+	int action = dqn_trainer.Act(mat);
+	
+	
+	// Use action, give reward
+	double reward;
+	if (action == ACCEPT) {
+		OpenAt();
+	}
+	else {
+		CloseAt();
+		reward = accum_reward;
+		accum_reward = 0;
+		total_reward += reward;
+	}
+	
+	GetOutput(0).label.Set(cursor, prev_signal);
+	GetOutput(1).label.Set(cursor, prev_enabled);
+	
+	
+	// Fill state if not filled
+	if (current_state) {
+		current_state->after_reward = reward;
+		LoadState(current_state->after_state);
+		
+		
+		// Reduce epsilon over time
+		double prog = (double)round / (double)max_rounds;
+		dqn_trainer.SetEpsilon((1.0 - prog) * 0.2);
+		
+		
+		// Learn it
+		dqn_trainer.Learn(*current_state);
+		
+		
+		// Learn few other states from memory too
+		for(int i = 0; i < 5; i++)
+			dqn_trainer.Learn(train_memory[Random(train_memory.GetCount())]);
+		
+		
+		current_state = NULL;
+	}
+	
+	
+	// Train less often
+	if (round % 5 == 0) {
+		if (train_cursor >= train_memory.GetCount()) train_memory.Add();
+		current_state = &train_memory[train_cursor];
+		
+		current_state->before_action = action;
+		LoadState(current_state->before_state);
+		
+		train_cursor++;
+		if (train_cursor >= MAX_TRAIN_STATES)
+			train_cursor = 0;
+	}
+	
+	auto& data_in_vec = obviousness->data_in;
+	cursor++;
+	if (cursor >= data_in_vec.GetCount()) {
+		cursor = 0;
+		total_reward = 0.0;
+	}	
+	
+	
+	// Put some result data here for graph
+	training_pts[cursor] = total_reward;
+	
+	
+	// Keep count of iterations
+	round++;
+	
+	// Stop eventually
+	if (round >= max_rounds) {
+		SetJobFinished();
+	}
+	
+	return true;
+}
+
+bool ObviousAdvisor::TrainingEnd() {
+	RefreshAll();
+	return true;
+}
+
+bool ObviousAdvisor::TrainingInspect() {
+	bool success = false;
+	
+	INSPECT(success, "ok: this is an example");
+	INSPECT(success, "warning: this is an example");
+	INSPECT(success, "error: this is an example");
+	
+	// You can fail the inspection too
+	//if (!success) return false;
+	
+	return true;
+}
+
+void ObviousAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	
+	
+	int bars = GetBars();
+	cursor = bars - 1;
+	Trainer::MatType mat;
+	LoadState(mat);
+	int action = dqn_trainer.Act(mat);
+	int sig = 0;
+	if (action == ACCEPT) {
+		bool enabled = basic_enabled->Get(cursor);
+		bool signal = basic_signal->Get(cursor);
+		if (enabled)
+			sig = signal ? -1.0 : +1.0;
+	}
+	
+	GetSystem().SetSignal(GetSymbol(), sig);
+	
+	
+	
+	// Keep counted manually
+	prev_counted = GetBars();
+	
+}
+
+void ObviousAdvisor::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	ObviousAdvisor* ea = dynamic_cast<ObviousAdvisor*>(&*job->core);
+	ASSERT(ea);
+	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
+
+
 
 
 

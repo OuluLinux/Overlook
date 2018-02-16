@@ -330,10 +330,11 @@ template <int WIDTH, int HEIGHT>
 struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	typedef Mat<double, WIDTH, HEIGHT> MatType;
 	
-	double reward = 0.0;
-	int action = 0;
+	MatType before_state, after_state;
+	double after_reward = 0.0;
+	int before_action = 0;
 	
-	void Serialize(Stream& s) {s % reward % action;}
+	void Serialize(Stream& s) {s % before_state % after_state % after_reward % before_action;}
 };
 
 template <int ACTIONS>
@@ -425,8 +426,8 @@ protected:
 public:
 
 	DQNTrainer() {
-		gamma = 0.1;	// future reward discount factor
-		epsilon = 0.02;	// for epsilon-greedy policy
+		gamma = 0.99;	// future reward discount factor
+		epsilon = 0.2;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
 		tderror_clamp = 1.0;
 		tderror = 0;
@@ -439,6 +440,11 @@ public:
 	
 	void   SetGamma(double d) {gamma = d;}
 	double GetGamma() const {return gamma;}
+	
+	double GetTDError() const {return tderror;}
+	
+	void   SetEpsilon(double e) {epsilon = e;}
+	double GetEpsilon() const {return epsilon;}
 	
 	void Reset() {
 		RandMat(0, 0.01, data.W1);
@@ -511,6 +517,10 @@ public:
 			buf[i] = amat.Get(i);
 	}
 	
+	double Learn(DQItemType& item) {
+		return Learn(item.before_state, item.before_action, item.after_reward, item.after_state);
+	}
+	
 	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {
 		
 		// compute the target Q value
@@ -579,10 +589,6 @@ public:
 		return av_tderror;
 	}
 	
-	double GetTDError() const {return tderror;}
-	double GetEpsilon() const {return epsilon;}
-	
-	void SetEpsilon(double e) {epsilon = e;}
 	
 	
 	void Serialize(Stream& s) {

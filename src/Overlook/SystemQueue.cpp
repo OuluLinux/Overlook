@@ -632,4 +632,91 @@ void System::StoreCores() {
 	}
 }
 
+bool System::RefreshReal() {
+	Time now				= GetUtcTime();
+	int wday				= DayOfWeek(now);
+	Time after_3hours		= now + 3 * 60 * 60;
+	int wday_after_3hours	= DayOfWeek(after_3hours);
+	now.second				= 0;
+	MetaTrader& mt			= GetMetaTrader();
+	
+	
+	// Skip weekends and first hours of monday
+	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+		LOG("Skipping weekend...");
+		return true;
+	}
+	
+	
+	// Inspect for market closing (weekend and holidays)
+	else if (wday == 5 && wday_after_3hours == 6) {
+		WhenInfo("Closing all orders before market break");
+		
+		for (int i = 0; i < mt.GetSymbolCount(); i++) {
+			mt.SetSignal(i, 0);
+			mt.SetSignalFreeze(i, false);
+		}
+		
+		mt.SignalOrders(true);
+		return true;
+	}
+	
+	
+	WhenInfo("Updating MetaTrader");
+	WhenPushTask("Putting latest signals");
+	
+	// Reset signals
+	if (realtime_count == 0) {
+		for (int i = 0; i < mt.GetSymbolCount(); i++)
+			mt.SetSignal(i, 0);
+	}
+	realtime_count++;
+	
+	
+	try {
+		mt.Data();
+		mt.RefreshLimits();
+		int open_count = 0;
+		const int MAX_SYMOPEN = 4;
+		const double FMLEVEL = 0.6;
+		
+		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
+			int sig = signals[sym_id];
+			int prev_sig = mt.GetSignal(sym_id);
+			
+			if (sig == prev_sig && sig != 0)
+				mt.SetSignalFreeze(sym_id, true);
+			else {
+				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
+					if (open_count >= MAX_SYMOPEN)
+						sig = 0;
+					else
+						open_count++;
+				}
+				
+				mt.SetSignal(sym_id, sig);
+				mt.SetSignalFreeze(sym_id, false);
+			}
+			LOG("Real symbol " << sym_id << " signal " << sig);
+		}
+		
+		mt.SetFreeMarginLevel(FMLEVEL);
+		mt.SetFreeMarginScale(MAX_SYMOPEN);
+		mt.SignalOrders(true);
+	}
+	catch (UserExc e) {
+		LOG(e);
+		return false;
+	}
+	catch (...) {
+		return false;
+	}
+	
+	
+	WhenRealtimeUpdate();
+	WhenPopTask();
+	
+	return true;
+}
+
 }

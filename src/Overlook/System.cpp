@@ -141,6 +141,7 @@ void System::AddPeriod(String nice_str, int period) {
 void System::AddSymbol(String sym) {
 	ASSERT(symbols.Find(sym) == -1); // no duplicates
 	symbols.Add(sym);
+	signals.Add(0);
 }
 
 void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {

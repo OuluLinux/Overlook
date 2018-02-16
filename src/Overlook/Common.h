@@ -969,6 +969,9 @@ struct JobProgressDislay : public Display {
 	}
 };
 
+
+inline void ReleaseLog(String s) {FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol();}
+
 }
 
 #endif

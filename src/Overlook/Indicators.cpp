@@ -6298,10 +6298,10 @@ void ObviousAdvisor::SeekNextActive() {
 		bool b = basic_enabled->Get(cursor);
 		if (b) break;
 		cursor++;
-		if (cursor >= data_in_vec.GetCount()) {
+		if (cursor >= basic_enabled->GetCount()) {
 			cursor = 0;
 			rounds++;
-			if (rounds > 1) Panic("Unexpected forever loop");
+			if (rounds > 1) Panic("Unexpected forever loop with symbol " + GetSystem().GetSymbol(GetSymbol()));
 		}
 	}
 }

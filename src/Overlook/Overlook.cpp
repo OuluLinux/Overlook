@@ -429,10 +429,13 @@ void Overlook::DeepRefresh() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	
+	ReleaseLog("DeepRefresh");
+	
 	static Mutex m;
 	
-	if (m.TryEnter()) {
-		
+	if (m.TryEnter())
+	{
+		ReleaseLog("DeepRefresh entered");
 		mt.Data();
 		DataBridgeCommon& common = GetDataBridgeCommon();
 		common.InspectInit();

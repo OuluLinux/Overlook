@@ -98,6 +98,8 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 }
 
 int DataBridgeCommon::DownloadAskBid() {
+	ReleaseLog("DownloadAskBid");
+	
 	String local_path = ConfigFile("askbid.bin");
 	String remote_path = "MQL4\\Files\\askbid.bin";
 	
@@ -105,7 +107,7 @@ int DataBridgeCommon::DownloadAskBid() {
 }
 
 int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) {
-	LOG("DownloadRemoteFile " << remote_path << " ----> " << local_path);
+	ReleaseLog("DownloadRemoteFile " << remote_path << " ----> " << local_path);
 	
 	MetaTrader& mt = GetMetaTrader();
 	
@@ -115,16 +117,16 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	if (!out.IsOpen()) return 1;
 	out.SeekEnd();
 	int offset = (int)out.GetPos(); // No >2Gt files expected
-	LOG("Existing size " << offset);
+	ReleaseLog("Existing size " + IntStr(offset));
 	
 	// Get the MT4 remote file
 	
-	#define CHK(x) if (!(x)) {sock.Close(); LOG("FileRequest fail: " + String(#x)); return 1;}
+	#define CHK(x) if (!(x)) {sock.Close(); ReleaseLog("FileRequest fail: " + String(#x)); return 1;}
 	
 	TcpSocket sock;
 	sock.Timeout(3000);
 	if (!sock.Connect(mt.GetAddr(), mt.GetPort() + 100)) {
-		LOG("Can't connect file server");
+		ReleaseLog("Can't connect file server");
 		return 1;
 	}
 	
@@ -177,7 +179,7 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 	
 	out.Close();
 	
-	LOG("DataBridgeCommon::DownloadRemoteFile: " << out.GetSize() << " bytes for " << remote_path << " took " << ts.ToString());
+	ReleaseLog("DataBridgeCommon::DownloadRemoteFile: " + IntStr(out.GetSize()) + " bytes for " + remote_path + " took " + ts.ToString());
 	return 0;
 }
 
@@ -202,6 +204,7 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	
 	src.Seek(cursor);
 	
+	int added = 0;
 	int struct_size = 4 + 6 + 8 + 8;
 	String src_id;
 	while ((cursor + struct_size) <= data_size) {
@@ -226,6 +229,7 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 				ab.a = TimeFromTimestamp(timestamp);
 				src.Get(&ab.b, 8); // ask
 				src.Get(&ab.c, 8); // bid
+				added++;
 			}
 			else src.SeekCur(8+8);
 		}
@@ -233,6 +237,8 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 		
 		cursor += struct_size;
 	}
+	
+	ReleaseLog("RefreshAskBidData added " + IntStr(added));
 	
 	since_last_askbid_refresh.Reset();
 	

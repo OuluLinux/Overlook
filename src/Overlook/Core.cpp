@@ -226,7 +226,7 @@ void Core::Refresh() {
 
 DataBridge* Core::GetDataBridge() {
 	for(int i = 0; i < inputs.GetCount(); i++) {
-		DataBridge* bd = dynamic_cast<DataBridge*>(GetInputCore(i, GetSymbol(), GetTimeframe()));
+		DataBridge* bd = dynamic_cast<DataBridge*>(GetInputCore(i));
 		if (bd) return bd;
 	}
 	return Get<DataBridge>();

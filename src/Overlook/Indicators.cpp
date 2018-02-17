@@ -5068,7 +5068,7 @@ void VolatilityContext::Start() {
 	int counted = GetCounted();
 	if (!counted) counted++;
 	
-	double point = dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()))->GetPoint();
+	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
 
 	for (int cursor = counted; cursor < bars; cursor++) {
 		
@@ -5167,7 +5167,7 @@ void Obviousness::RefreshInput() {
 
 	// Get reference values
 	System& sys = GetSystem();
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
 	double spread_point		= db.GetPoint();
 	
 	
@@ -5351,7 +5351,7 @@ void Obviousness::RefreshInitialOutput() {
 	
 	// Get reference values
 	System& sys = GetSystem();
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
 	double spread_point		= db.GetPoint();
 	double cost				= spread_point * 3;
 	int tf = 0;
@@ -5366,7 +5366,7 @@ void Obviousness::RefreshInitialOutput() {
 	int begin = data_out.GetCount();
 	data_out.SetCount(data_count);
 	VectorMap<int, Order> orders;
-	data_count--;
+	data_count -= 1 + TEST_SIZE;
 	
 	if (begin != 0) return;
 	
@@ -5505,13 +5505,13 @@ void Obviousness::RefreshIOStats() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
-	bars -= 1;
+	bars -= 1 + TEST_SIZE;
 	
 	// Randomize the input pattern at first call
 	int c0 = Upp::min(250, row_size);
-	int c1 = Upp::min(250, row_size*row_size);
-	int c2 = Upp::min(250, row_size*row_size*row_size);
-	int c3 = Upp::min(250, row_size*row_size*row_size*row_size);
+	int c1 = Upp::min(250, row_size*(row_size-1));
+	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
+	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
 	const int MAX_BITS = 4;
 	int counts[MAX_BITS] = {c0, c1, c2, c3};
 	int exp_count = c0 + c1 + c2 + c3;
@@ -5640,115 +5640,7 @@ void Obviousness::RefreshOutput() {
 		enabledbool.Set(i, enabled_av > 0.5);
 	}
 }
-/*
-void Obviousness::RefreshTreshold() {
-	int counted = GetCounted();
-	int bars = GetBars();
-	
-	
-	System& sys = GetSystem();
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
-	double spread_point		= db.GetPoint();
-	double cost				= spread_point * 3;
-	int tf = 0;
-	ASSERT(spread_point > 0.0);
-	ConstBuffer& open_buf = db.GetBuffer(0);
 
-	
-	// Get enabled step
-	double max_enabled = 0, max_signal = 0;
-	for(int i = 0; i < 15; i++) {
-		int pos = bars - 1 - i;
-		double enabled = fabs(GetBuffer(0).Get(pos));
-		double signal = fabs(GetBuffer(1).Get(pos) - 0.5);
-		if (enabled > max_enabled) max_enabled = enabled;
-		if (signal  > max_signal) max_signal = signal;
-	}
-	double enabled_step = max_enabled * 0.1;
-	double signal_step = max_signal * 0.1;
-	
-	
-	// Loop treshold ranges
-	double max_res = -DBL_MAX;
-	max_res_enabled_treshold = 0;
-	max_res_signal_treshold = 0;
-	const int min_len = 5;
-	for (int step_i = -15; step_i < 15; step_i++) {
-		double enabled_treshold = step_i * enabled_step;
-		
-		for (int step_j = 0; step_j < 15; step_j++) {
-			double signal_treshold = step_j * signal_step;
-			
-			double total_change = 1.0;
-			double prev_open;
-			bool prev_enabled = false, prev_signal;
-			int open_len = 0;
-			for(int i = counted; i < bars; i++) {
-				
-				double enabled_av = GetBuffer(0).Get(i);
-				
-				
-				bool enabled = enabled_av >= enabled_treshold;
-				bool signal;
-				
-				if (enabled) {
-					double signal_av = GetBuffer(1).Get(i);
-					signal = signal_av > 0.5;
-					if ( signal && signal_av < 0.5 + signal_treshold)
-						enabled = false;
-					if (!signal && signal_av > 0.5 - signal_treshold)
-						enabled = false;
-				}
-				
-				bool do_close = false, do_open = false;
-				if (prev_enabled) {
-					if (!enabled)
-						do_close = true;
-					else if (signal != prev_signal && open_len >= min_len) {
-						do_close = true;
-						do_open = true;
-					}
-				}
-				else if (enabled)
-					do_open = true;
-				
-				double open = open_buf.Get(i);
-				if (do_close) {
-					double change;
-					if (prev_signal == false) change = open / (prev_open + spread_point);
-					else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
-					total_change *= change;
-				}
-				if (do_open) {
-					prev_signal = signal;
-					prev_open = open;
-					open_len = 0;
-				}
-				prev_enabled = enabled;
-				if (enabled) open_len++;
-			}
-			if (prev_enabled) {
-				double open = open_buf.Get(bars-1);
-				double change = open / prev_open;
-				if (prev_signal == false) change = open / (prev_open + spread_point);
-				else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
-				total_change *= change;
-			}
-			
-			
-			if (total_change > max_res) {
-				max_res_enabled_treshold = enabled_treshold;
-				max_res_signal_treshold = signal_treshold;
-				max_res = total_change;
-			}
-		}
-	}
-	
-	
-	LOG("Max treshold: " << max_res_enabled_treshold << ", " << max_res_signal_treshold << " with result " << max_res);
-	
-}
-*/
 
 
 
@@ -5871,7 +5763,7 @@ void ObviousTargetValue::RefreshIOStats() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
-	bars -= 1;
+	bars -= 1 + TEST_SIZE;
 	
 	// Randomize the input pattern at first call
 	int c0 = Upp::min(250, row_size);
@@ -6045,6 +5937,336 @@ void BasicSignal::Start() {
 
 
 
+
+
+
+
+ObviousAdvisor::ObviousAdvisor() {
+	
+}
+
+void ObviousAdvisor::Init() {
+	
+	bs  = dynamic_cast<BasicSignal*>(GetInputCore(1));
+	obv = dynamic_cast<Obviousness*>(GetInputCore(2));
+	ASSERT(bs && obv);
+}
+
+void ObviousAdvisor::Start() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	if (!counted) RefreshIOStats();
+	
+	RefreshOutput();
+	
+	if (!counted) TestAdvisor();
+	
+	
+	int sig = 0;
+	bool signal = GetOutput(0).label.Get(bars-1);
+	bool enabled = GetOutput(1).label.Get(bars-1);
+	if (enabled)
+		sig = signal ? -1.0 : +1.0;
+	
+	GetSystem().SetSignal(GetSymbol(), sig);
+}
+
+void ObviousAdvisor::RefreshIOStats() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	ConstBuffer& open_buf = GetInputBuffer(0,0);
+	
+	bars -= 1 + TEST_SIZE;
+	
+	ConstVectorBool& src_signal  = bs->GetOutput(0).label;
+	ConstVectorBool& src_enabled = bs->GetOutput(1).label;
+	
+	bool prev_enabled = false, prev_signal;
+	for(int i = 0; i < bars; i++) {
+		bool enabled = src_enabled.Get(i);
+		if (enabled) {
+			bool signal = src_signal.Get(i);
+			if (!prev_enabled || prev_signal != signal) {
+				begins.FindAdd(i);
+			}
+			prev_signal = signal;
+		}
+		prev_enabled = enabled;
+	}
+	
+	// Randomize the input pattern at first call
+	int c0 = Upp::min(250, row_size);
+	int c1 = Upp::min(250, row_size*(row_size-1));
+	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
+	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
+	const int MAX_BITS = 4;
+	int counts[MAX_BITS] = {c0, c1, c2, c3};
+	int exp_count = c0 + c1 + c2 + c3;
+	bitmatches.SetCount(exp_count);
+	Index<uint32> hashes;
+	
+	ASSERT(row_size < 256);
+	int total_count = 0;
+	for(int i = 0; i < MAX_BITS; i++) {
+		int count = counts[i];
+		
+		for(int j = 0; j < count; j++) {
+			BitMatcher& bm = bitmatches[total_count++];
+			bm.bit_count = i+1;
+			
+			uint32 hash;
+			do {
+				CombineHash ch;
+				for(int k = 0; k < bm.bit_count; k++) {
+					int v;
+					bool already;
+					do {
+						v = Random(row_size);
+						already = false;
+						for (int l = 0; l < k; l++) {
+							if (bm.bit_ids[l] == v) {
+								already = true;
+								break;
+							}
+						}
+					}
+					while (already);
+					bm.bit_ids[k] = v;
+					ch << v << 1;
+				}
+				hash = ch;
+			}
+			while (hashes.Find(hash) != -1);
+			hashes.Add(hash);
+		}
+		
+	}
+	ASSERT(exp_count == total_count);
+	
+	
+	// Collect stats
+	for(int i = 0; i < begins.GetCount(); i++) {
+		int pos = begins[i];
+		Obviousness::Snap& snap_in = obv->data_in[pos];
+		
+		bool open_enabled = src_enabled.Get(pos);
+		bool open_signal = src_signal.Get(pos);
+		ASSERT(open_enabled);
+		double signal_open, prev_open;
+		prev_open = signal_open = open_buf.Get(pos);
+		int total_positive = 0, total = 0;
+		for(int j = pos + 1; j < bars; j++) {
+			bool enabled = src_enabled.Get(j);
+			if (!enabled) break;
+			bool signal = src_signal.Get(j);
+			if (open_signal != signal) break;
+			prev_open = open_buf.Get(j);
+			bool positive = prev_open > signal_open;
+			if (signal) positive = !positive;
+			if (positive) total_positive++;
+			total++;
+		}
+		bool positive_outcome = prev_open > signal_open;
+		if (open_signal) positive_outcome = !positive_outcome;
+		
+		
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = snap_in.Get(bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			
+			// Distance
+			stat.total_positive += total_positive;
+			stat.total += total;
+			
+			// outcome
+			if (positive_outcome) stat.outcome_positive++;
+			stat.outcome_total++;
+		}
+	}
+}
+
+void ObviousAdvisor::RefreshOutput() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	ConstVectorBool& src_signal  = bs->GetOutput(0).label;
+	ConstVectorBool& src_enabled = bs->GetOutput(1).label;
+	
+	bool prev_enabled = src_enabled.Get(counted - 1);
+	bool prev_signal = src_signal.Get(counted - 1);
+	for(int i = counted; i < bars; i++) {
+		bool enabled = src_enabled.Get(i);
+		if (enabled) {
+			bool signal = src_signal.Get(i);
+			if (!prev_enabled || prev_signal != signal) {
+				begins.FindAdd(i);
+			}
+			prev_signal = signal;
+		}
+		prev_enabled = enabled;
+	}
+	
+	
+	
+	VectorBool& signalbool = GetOutput(0).label;
+	VectorBool& enabledbool = GetOutput(1).label;
+	signalbool.SetCount(bars);
+	enabledbool.SetCount(bars);
+	if (begin_cursor > 0) begin_cursor--;
+	for(; begin_cursor < begins.GetCount(); begin_cursor++) {
+		int i = begins[begin_cursor];
+		
+		Obviousness::Snap& snap_in = obv->data_in[i];
+		
+		int total_div = 0;
+		int outcome_div = 0;
+		double total_av = 0;
+		double outcome_av = 0;
+		
+		for(int j = 0; j < bitmatches.GetCount(); j++) {
+			BitMatcher& bm = bitmatches[j];
+			uint32 value = 0;
+			for(int k = 0; k < bm.bit_count; k++) {
+				bool b = snap_in.Get(bm.bit_ids[k]);
+				if (b)
+					value |= 1 << k;
+			}
+			
+			ASSERT(value < max_bit_values);
+			
+			BitComboStat& stat = bm.bit_stats[value];
+			
+			if (stat.total > 1) {
+				total_div++;
+				total_av += (double)stat.total_positive / (double)(stat.total - 1);
+			}
+			if (stat.outcome_total > 1) {
+				outcome_div++;
+				outcome_av += (double)stat.outcome_positive / (double)(stat.outcome_total - 1);
+			}
+		}
+		
+		total_av	/= max(1, total_div);
+		outcome_av	/= max(1, outcome_div);
+		
+		bool enabled = outcome_av >= 0.667 && total_av >= 0.667;
+		
+		if (!enabled)
+			continue;
+		
+		bool prev_enabled = src_enabled.Get(i);
+		bool prev_signal = src_signal.Get(i);
+		ASSERT(prev_enabled);
+		for(int j = i; j < bars; j++) {
+			bool enabled = src_enabled.Get(j);
+			if (enabled) {
+				bool signal = src_signal.Get(j);
+				if (prev_signal != signal)
+					break;
+				prev_signal = signal;
+			}
+			else
+				break;
+			prev_enabled = enabled;
+			signalbool.Set(j, prev_signal);
+			enabledbool.Set(j, true);
+		}
+	}
+}
+
+void ObviousAdvisor::TestAdvisor() {
+	int bars = GetBars();
+	int counted = bars - TEST_SIZE;
+	
+	
+	VectorBool& signalbool = GetOutput(0).label;
+	VectorBool& enabledbool = GetOutput(1).label;
+	
+	System& sys = GetSystem();
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
+	double spread_point		= db.GetPoint();
+	double cost				= spread_point * 3;
+	int tf = 0;
+	ASSERT(spread_point > 0.0);
+	ConstBuffer& open_buf = db.GetBuffer(0);
+
+	
+	
+	double total_change = 1.0;
+	double prev_open;
+	bool prev_enabled = false, prev_signal;
+	int open_len = 0;
+	for(int i = counted; i < bars; i++) {
+		bool enabled = enabledbool.Get(i);
+		bool signal = signalbool.Get(i);
+		
+		bool do_close = false, do_open = false;
+		if (prev_enabled) {
+			if (!enabled)
+				do_close = true;
+			else if (signal != prev_signal) {
+				do_close = true;
+				do_open = true;
+			}
+		}
+		else if (enabled)
+			do_open = true;
+		
+		double open = open_buf.Get(i);
+		if (do_close) {
+			double change;
+			if (prev_signal == false) change = open / (prev_open + spread_point);
+			else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
+			total_change *= change;
+			LOG(Format("total_change=%f change=%f", total_change, change));
+		}
+		if (do_open) {
+			prev_signal = signal;
+			prev_open = open;
+			open_len = 0;
+		}
+		prev_enabled = enabled;
+		if (enabled) open_len++;
+	}
+	if (prev_enabled) {
+		double open = open_buf.Get(bars-1);
+		double change = open / prev_open;
+		if (prev_signal == false) change = open / (prev_open + spread_point);
+		else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
+		total_change *= change;
+		LOG(Format("total_change=%f change=%f", total_change, change));
+	}
+	
+	
+	
+	ReleaseLog("Result " + DblStr(total_change));
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ExampleAdvisor::ExampleAdvisor() {
 	
 }
@@ -6189,18 +6411,18 @@ void ExampleAdvisor::TrainingCtrl::Paint(Draw& w) {
 
 
 
-ObviousAdvisor::ObviousAdvisor() {
+LessObviousAdvisor::LessObviousAdvisor() {
 	
 }
 
-void ObviousAdvisor::Init() {
+void LessObviousAdvisor::Init() {
 	open_buf = &GetInputBuffer(0, 0);
-	obviousness = dynamic_cast<Obviousness*>(GetInputCore(1, GetSymbol(), GetTf()));
-	basic_enabled = &GetInputCore(2, GetSymbol(), GetTf())->GetOutput(0).label;
-	basic_signal = &GetInputCore(2, GetSymbol(), GetTf())->GetOutput(1).label;
+	obviousness = dynamic_cast<Obviousness*>(GetInputCore(1));
+	basic_enabled = &GetInputCore(2)->GetOutput(0).label;
+	basic_signal = &GetInputCore(2)->GetOutput(1).label;
 	ASSERT(obviousness);
 	
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), GetTf()));
+	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
 	spread_point = db.GetPoint();
 	
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
@@ -6215,7 +6437,7 @@ void ObviousAdvisor::Init() {
 		.SetCtrl		<TrainingCtrl>();
 }
 
-void ObviousAdvisor::Start() {
+void LessObviousAdvisor::Start() {
 	if (once) {
 		if (prev_counted > 0) prev_counted--;
 		once = false;
@@ -6225,13 +6447,13 @@ void ObviousAdvisor::Start() {
 	if (IsJobsFinished()) {
 		int bars = GetBars();
 		if (prev_counted < bars) {
-			LOG("ObviousAdvisor::Start Refresh");
+			LOG("LessObviousAdvisor::Start Refresh");
 			RefreshAll();
 		}
 	}
 }
 
-bool ObviousAdvisor::TrainingBegin() {
+bool LessObviousAdvisor::TrainingBegin() {
 	
 	int bars = GetBars();
 	GetOutput(0).label.SetCount(bars);
@@ -6257,14 +6479,14 @@ bool ObviousAdvisor::TrainingBegin() {
 	return true;
 }
 
-void ObviousAdvisor::LoadState(Trainer::MatType& mat) {
+void LessObviousAdvisor::LoadState(Trainer::MatType& mat) {
 	auto& data_in_vec = obviousness->data_in;
 	auto& data_in = data_in_vec[cursor];
 	for(int i = 0; i < Obviousness::row_size; i++)
 		mat.Set(i, data_in.Get(i) ? 1.0 : 0.0);
 }
 
-void ObviousAdvisor::OpenAt() {
+void LessObviousAdvisor::OpenAt() {
 	ASSERT(basic_enabled->Get(cursor));
 	bool signal = basic_signal->Get(cursor);
 	if (prev_enabled) {
@@ -6279,7 +6501,7 @@ void ObviousAdvisor::OpenAt() {
 	LOG("Open " << cursor);
 }
 
-void ObviousAdvisor::CloseAt() {
+void LessObviousAdvisor::CloseAt() {
 	ASSERT(spread_point > 0.0);
 	double open = open_buf->Get(cursor);
 	double change;
@@ -6291,7 +6513,7 @@ void ObviousAdvisor::CloseAt() {
 	LOG("Close " << cursor << " accum_reward: " << accum_reward);
 }
 
-void ObviousAdvisor::SeekNextActive() {
+void LessObviousAdvisor::SeekNextActive() {
 	int rounds = 0;
 	auto& data_in_vec = obviousness->data_in;
 	for(;;) {
@@ -6306,7 +6528,7 @@ void ObviousAdvisor::SeekNextActive() {
 	}
 }
 
-bool ObviousAdvisor::TrainingIterator() {
+bool LessObviousAdvisor::TrainingIterator() {
 	
 	// Show progress
 	GetCurrentJob().SetProgress(round, max_rounds);
@@ -6396,12 +6618,12 @@ bool ObviousAdvisor::TrainingIterator() {
 	return true;
 }
 
-bool ObviousAdvisor::TrainingEnd() {
+bool LessObviousAdvisor::TrainingEnd() {
 	RefreshAll();
 	return true;
 }
 
-bool ObviousAdvisor::TrainingInspect() {
+bool LessObviousAdvisor::TrainingInspect() {
 	bool success = false;
 	
 	INSPECT(success, "ok: this is an example");
@@ -6414,7 +6636,7 @@ bool ObviousAdvisor::TrainingInspect() {
 	return true;
 }
 
-void ObviousAdvisor::RefreshAll() {
+void LessObviousAdvisor::RefreshAll() {
 	RefreshSourcesOnlyDeep();
 	
 	
@@ -6440,12 +6662,12 @@ void ObviousAdvisor::RefreshAll() {
 	
 }
 
-void ObviousAdvisor::TrainingCtrl::Paint(Draw& w) {
+void LessObviousAdvisor::TrainingCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	ObviousAdvisor* ea = dynamic_cast<ObviousAdvisor*>(&*job->core);
+	LessObviousAdvisor* ea = dynamic_cast<LessObviousAdvisor*>(&*job->core);
 	ASSERT(ea);
 	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
 	

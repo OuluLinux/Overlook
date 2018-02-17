@@ -1178,6 +1178,7 @@ class Obviousness : public Core {
 	
 protected:
 	friend class ObviousAdvisor;
+	friend class LessObviousAdvisor;
 	
 	
 	struct Snap : Moveable<Snap> {
@@ -1228,8 +1229,6 @@ protected:
 	Vector<Vector<double> > volat_divs;
 	Vector<VectorMap<int,int> > median_maps;
 	Vector<BitMatcher> bitmatches;
-	double max_res_enabled_treshold;
-	double max_res_signal_treshold;
 	
 	void RefreshInput();
 	void RefreshInitialOutput();
@@ -1256,8 +1255,6 @@ public:
 			% Mem(volat_divs)
 			% Mem(median_maps)
 			% Mem(bitmatches)
-			% Mem(max_res_enabled_treshold)
-			% Mem(max_res_signal_treshold)
 			;
 	}
 	
@@ -1368,6 +1365,62 @@ public:
 };
 
 
+class ObviousAdvisor : public Core {
+	
+	
+	const int row_size = 4;
+	static const int max_bit_ids = Obviousness::row_size;
+	static const int max_bit_values = 2*2*2*2;
+	struct BitComboStat {
+		int total_positive = 0;
+		int total = 0;
+		int outcome_positive = 0;
+		int outcome_total = 0;
+	};
+	struct BitMatcher : Moveable<BitMatcher> {
+		uint8 bit_count = 0;
+		uint8 bit_ids[max_bit_ids] = {0,0,0,0};
+		BitComboStat bit_stats[max_bit_values];
+		void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(BitMatcher)); else s.Put(this, sizeof(BitMatcher));}
+	};
+	Vector<BitMatcher> bitmatches;
+	
+	
+	
+	Index<int> begins;
+	int begin_cursor = 0;
+	
+	Vector<ConstVectorBool*> bufs;
+	BasicSignal* bs = NULL;
+	Obviousness* obv = NULL;
+	
+	void RefreshIOStats();
+	void RefreshOutput();
+	void TestAdvisor();
+	
+	
+public:
+	typedef ObviousAdvisor CLASSNAME;
+	
+	ObviousAdvisor();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<BasicSignal>()
+			% In<Obviousness>()
+			% Out(0, 0)
+			% Out(0, 0)
+			% Mem(begins)
+			% Mem(begin_cursor);
+	}
+	
+};
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {
@@ -1415,7 +1468,7 @@ public:
 
 
 
-class ObviousAdvisor : public Core {
+class LessObviousAdvisor : public Core {
 	
 	enum {ACCEPT, REJECT, ACTION_COUNT};
 	static const int INPUT_STATES = Obviousness::row_size;
@@ -1470,8 +1523,8 @@ protected:
 	void SeekNextActive();
 	
 public:
-	typedef ObviousAdvisor CLASSNAME;
-	ObviousAdvisor();
+	typedef LessObviousAdvisor CLASSNAME;
+	LessObviousAdvisor();
 	
 	virtual void Init();
 	

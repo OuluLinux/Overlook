@@ -71,6 +71,7 @@ INITBLOCK {
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<ObviousAdvisor>("Obviousness Advisor", CORE_EXPERTADVISOR);
+	System::Register<LessObviousAdvisor>("Less Obviousness Advisor", CORE_EXPERTADVISOR);
 	
 	System::RegisterAssistant<DataBridge>("Up Change -1 ", DB_UP1);
 	System::RegisterAssistant<DataBridge>("Up Change -2 ", DB_UP2);

@@ -208,6 +208,7 @@ public:
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const;
 	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
+	CoreIO* GetInputCore(int input) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
 	const CoreIO& GetInput(int input, int sym, int tf) const;

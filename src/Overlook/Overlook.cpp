@@ -961,7 +961,7 @@ void Overlook::LoadAdvisorProfile() {
 	Profile profile;
 	
 	int tf = 0;
-	int id = System::Find<ObviousAdvisor>();
+	int id = System::Find<LessObviousAdvisor>();
 	
 	for(int i = 0; i < mt.GetSymbolCount(); i++) {
 		ProfileGroup& pgroup = profile.charts.Add();

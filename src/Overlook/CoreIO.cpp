@@ -80,6 +80,10 @@ CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
 	return inputs[input].Get(HashSymTf(sym, tf)).core;
 }
 
+CoreIO* CoreIO::GetInputCore(int input) const {
+	return inputs[input].Get(HashSymTf(this->sym_id, this->tf_id)).core;
+}
+
 const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
 	return *inputs[input].Get(HashSymTf(sym, tf)).core;
 }

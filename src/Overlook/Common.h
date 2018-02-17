@@ -14,6 +14,10 @@
 #include <intrin.h>
 #endif
 
+
+#define TEST_SIZE (4*5*24*60)
+
+
 namespace Overlook {
 using namespace Upp;
 
@@ -970,7 +974,7 @@ struct JobProgressDislay : public Display {
 };
 
 
-inline void ReleaseLog(String s) {FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol();}
+inline void ReleaseLog(String s) {FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol(); LOG(s);}
 
 }
 

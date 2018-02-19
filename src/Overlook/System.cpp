@@ -10,25 +10,25 @@ namespace Overlook {
 
 System::System() {
 	allowed_symbols.Add("AUDCAD");
-	allowed_symbols.Add("EURCAD");
-	allowed_symbols.Add("GBPUSD");
 	allowed_symbols.Add("AUDJPY");
-	allowed_symbols.Add("EURCHF");
-	allowed_symbols.Add("NZDUSD");
 	allowed_symbols.Add("AUDNZD");
-	allowed_symbols.Add("EURGBP");
-	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("USDCHF");
 	allowed_symbols.Add("CADJPY");
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("USDJPY");
 	allowed_symbols.Add("CHFJPY");
-	allowed_symbols.Add("GBPCHF");
-	allowed_symbols.Add("USDMXN");
+	allowed_symbols.Add("EURCAD");
+	allowed_symbols.Add("EURCHF");
+	allowed_symbols.Add("EURGBP");
+	allowed_symbols.Add("EURJPY");
+	allowed_symbols.Add("EURUSD");
 	allowed_symbols.Add("EURAUD");
+	allowed_symbols.Add("GBPCHF");
+	allowed_symbols.Add("GBPUSD");
 	allowed_symbols.Add("GBPJPY");
+	allowed_symbols.Add("NZDUSD");
+	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("USDCHF");
+	allowed_symbols.Add("USDJPY");
+	allowed_symbols.Add("USDMXN");
 	allowed_symbols.Add("USDTRY");
 }
 

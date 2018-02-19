@@ -1172,6 +1172,34 @@ public:
 	
 };
 
+class ChannelContext : public Core {
+	VectorMap<int,int> median_map;
+	Vector<double> volat_divs;
+	ExtremumCache channel;
+	int div = DEFAULT_DIV;
+	int useable_div = DEFAULT_DIV * 2 / 3;
+	int period = 30;
+	
+public:
+	ChannelContext();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 1)
+			% Arg("div", div, 1)
+			% Arg("useable_div", useable_div, 1)
+			% Mem(median_map)
+			% Mem(channel);
+	}
+	
+	static const int DEFAULT_DIV = 6;
+	
+};
+
 
 
 class Obviousness : public Core {
@@ -1353,6 +1381,7 @@ public:
 			% In<VolatilityContextReversal>()
 			% In<Obviousness>()
 			% In<ObviousTargetValue>()
+			% In<ChannelContext>()
 			% Out(0, 0)
 			% Out(0, 0);
 	}

@@ -5130,6 +5130,128 @@ void VolatilityContext::Start() {
 
 
 
+
+ChannelContext::ChannelContext() {
+	
+}
+
+void ChannelContext::Init() {
+	SetCoreSeparateWindow();
+	
+	SetBufferColor(0, Blue);
+	
+	if ( period < 1 )
+		throw DataExc();
+	
+	SetBufferStyle(0,DRAW_LINE);
+	SetBufferLabel(0, "ChannelContext");
+}
+
+void ChannelContext::Start() {
+	ConstBuffer& open		= GetInputBuffer(0, 0);
+	ConstBuffer& low		= GetInputBuffer(0, 1);
+	ConstBuffer& high		= GetInputBuffer(0, 2);
+	
+	Buffer& buffer			= GetBuffer(0);
+	VectorBool& enabled_buf	= GetOutput(0).label;
+	
+	double diff;
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (!counted) counted++;
+	
+	enabled_buf.SetCount(bars);
+	
+	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
+
+	channel.SetSize(period);
+	for(int i = 0; i < period; i++) {
+		int cursor = max(1, counted - i - 1);
+		double l = low.Get(cursor - 1);
+		double h = high.Get(cursor - 1);
+		channel.Add(l, h);
+	}
+	channel.pos = counted-1;
+	
+	for (int cursor = counted; cursor < bars; cursor++) {
+		double l = low.Get(cursor - 1);
+		double h = high.Get(cursor - 1);
+		channel.Add(l, h);
+		l = low.Get(channel.GetLowest());
+		h = high.Get(channel.GetHighest());
+		
+		double diff = h - l;
+		int step = (int)((diff + point * 0.5) / point);
+		median_map.GetAdd(step, 0)++;
+	}
+	
+	SortByKey(median_map, StdLess<int>());
+	
+	volat_divs.SetCount(0);
+	
+	int64 total = 0;
+	for(int i = 0; i < median_map.GetCount(); i++)
+		total += median_map[i];
+	
+	int64 count_div = total / div;
+	total = 0;
+	int64 next_div = count_div;
+	volat_divs.Add(median_map.GetKey(0) * point);
+	for(int i = 0; i < median_map.GetCount(); i++) {
+		total += median_map[i];
+		if (total >= next_div) {
+			next_div += count_div;
+			volat_divs.Add(median_map.GetKey(i) * point);
+		}
+	}
+	if (volat_divs.GetCount() < div) {
+		volat_divs.Add(median_map.TopKey() * point);
+	}
+	
+	channel.SetSize(period);
+	for(int i = 0; i < period; i++) {
+		int cursor = max(1, counted - i - 1);
+		double l = low.Get(cursor - 1);
+		double h = high.Get(cursor - 1);
+		channel.Add(l, h);
+	}
+	channel.pos = counted-1;
+	
+	for (int cursor = counted; cursor < bars; cursor++) {
+		SetSafetyLimit(cursor);
+		double l = low.Get(cursor - 1);
+		double h = high.Get(cursor - 1);
+		channel.Add(l, h);
+		l = low.Get(channel.GetLowest());
+		h = high.Get(channel.GetHighest());
+		
+		double diff = h - l;
+		
+		int lvl = -1;
+		for(int i = 0; i < volat_divs.GetCount(); i++) {
+			if (diff < volat_divs[i]) {
+				lvl = i - 1;
+				break;
+			}
+		}
+		if (lvl == -1)
+			lvl = div - 1;
+		
+		
+		buffer.Set(cursor, lvl / (double)(volat_divs.GetCount()-2));
+		enabled_buf.Set(cursor, lvl < useable_div);
+	}
+}
+
+
+
+
+
+
+
+
+
+
 Obviousness::Obviousness() {
 	
 }
@@ -5885,7 +6007,7 @@ BasicSignal::BasicSignal() {
 }
 
 void BasicSignal::Init() {
-	bufs.SetCount(4);
+	bufs.SetCount(5);
 	for(int i = 0; i < bufs.GetCount(); i++)
 		bufs[i] = &GetInputCore(1 + i, GetSymbol(), GetTf())->GetOutput(0).label;
 }
@@ -5904,9 +6026,10 @@ void BasicSignal::Start() {
 		bool vola_signal  = bufs[1]->Get(i);
 		bool obvs_signal  = bufs[2]->Get(i);
 		bool obvt_signal  = bufs[3]->Get(i);
+		bool chnl_signal  = bufs[4]->Get(i);
 		
-		bool is_enabled = mini_signal == vola_signal;
-		bool triggered = mini_signal == vola_signal && vola_signal == obvs_signal && obvs_signal == obvt_signal;
+		bool is_enabled = mini_signal == vola_signal && !chnl_signal;
+		bool triggered = mini_signal == vola_signal && !chnl_signal && vola_signal == obvs_signal && obvs_signal == obvt_signal;
 		
 		bool prev_enabled = i > 0 ? enabled.Get(i-1) : false;
 		bool prev_signal = i > 0 ? signal.Get(i-1) : false;
@@ -6186,7 +6309,7 @@ void ObviousAdvisor::RefreshOutput() {
 
 void ObviousAdvisor::TestAdvisor() {
 	int bars = GetBars();
-	int counted = bars - TEST_SIZE;
+	int counted = max(0, bars - TEST_SIZE);
 	
 	
 	VectorBool& signalbool = GetOutput(0).label;

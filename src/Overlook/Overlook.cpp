@@ -169,7 +169,7 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
-		bar.Add("Load default advisor profile", THISBACK(LoadAdvisorProfile));
+		bar.Add(!default_running, "Load default advisor profile", THISBACK(LoadAdvisorProfile));
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
@@ -955,15 +955,15 @@ void Overlook::ActiveWindowChanged() {
 	}
 }
 
-void Overlook::LoadAdvisorProfile() {
+void Overlook::LoadAdvisorProfileFinish() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
 	int tf = 0;
-	int id = System::Find<LessObviousAdvisor>();
-	
-	for(int i = 0; i < mt.GetSymbolCount(); i++) {
+	int id = System::Find<ObviousAdvisor>();
+	int sym_count = mt.GetSymbolCount();
+	for(int i = 0; i < sym_count; i++) {
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;
 		pgroup.tf = tf;
@@ -974,7 +974,88 @@ void Overlook::LoadAdvisorProfile() {
 	
 	LoadProfile(profile);
 	TileWindow();
+	default_running = false;
 }
+
+#if 1
+
+void Overlook::LoadAdvisorProfile() {
+	LoadAdvisorProfileFinish();
+}
+
+#else
+void Overlook::LoadAdvisorProfile() {
+	default_running = true;
+	Thread::Start(THISBACK(LoadAdvisorProfileThread));
+}
+
+void Overlook::LoadAdvisorProfileThread() {
+	System& sys = GetSystem();
+	
+	
+	int sym_count = sys.GetSymbolCount();
+	
+	
+	// Process DataBridge in single thread
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > work_queue;
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	FactoryDeclaration decl;
+	decl.factory = 0;
+	indi_ids.Add(decl);
+	tf_ids.Add(0);
+	for(int i = 0; i < sym_count; i++) sym_ids.Add(i);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+	
+	
+	
+	One<Atomic> running_count = new Atomic(0), finished_count = new Atomic(0);
+	
+	for(int i = 0; i < sym_count; i++) {
+		Thread::Start(THISBACK3(LoadAdvisorProfileIterate, i, running_count.Get(), finished_count.Get()));
+	}
+	
+	while (!Thread::IsShutdownThreads() && finished_count < sym_count) Sleep(100);
+	
+	PostCallback(THISBACK(LoadAdvisorProfileFinish));
+}
+
+void Overlook::LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count) {
+	const int max_count = GetUsedCpuCores();
+	System& sys = GetSystem();
+	
+	while (true) {
+		int run_id = ++(*running_count);
+		if (run_id < max_count)
+			break;
+		(*running_count)--;
+		Sleep(500);
+	}
+	
+	
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > work_queue;
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	FactoryDeclaration decl;
+	decl.factory = System::Find<ObviousAdvisor>();
+	indi_ids.Add(decl);
+	tf_ids.Add(0);
+	sym_ids.Add(symbol);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+	
+	
+	(*running_count)--;
+	(*finished_count)++;
+}
+#endif
 
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();

@@ -97,6 +97,7 @@ protected:
 	TimeStop mt_refresh;
 	Id thrd_id, thrd_job_id;
 	Id sym;
+	bool default_running = false;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void ToggleRightOffset();
@@ -168,6 +169,9 @@ public:
 	void StorePreviousProfile();
 	void SaveProfile();
 	void LoadAdvisorProfile();
+	void LoadAdvisorProfileFinish();
+	void LoadAdvisorProfileThread();
+	void LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count);
 	void LoadOpenOrderCharts();
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);

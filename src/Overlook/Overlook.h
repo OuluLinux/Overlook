@@ -15,24 +15,17 @@ using namespace Upp;
 
 #include "Common.h"
 #include "Calendar.h"
-#include "Optimizer.h"
-#include "BitOptimizer.h"
-#include "DQN.h"
 #include "SimBroker.h"
-#include "System.h"
-#include "Core.h"
-#include "ExposureTester.h"
 #include "DataBridge.h"
+#include "System.h"
 #include "Utils.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
-#include "ExportCtrl.h"
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "RuleAnalyzer.h"
 
 
 namespace Overlook {
@@ -159,8 +152,6 @@ public:
 	void RefreshTrades();
 	void RefreshExposure();
 	void RefreshTradesHistory();
-	void RefreshJobs();
-	void RefreshDebug();
 	void MenuNewOrder();
 	void MenuCloseOrder();
 	void MenuModifyOrder();

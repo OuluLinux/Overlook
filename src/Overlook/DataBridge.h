@@ -58,7 +58,7 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-class DataBridge : public Core {
+class DataBridge {
 	
 protected:
 	friend class CommonForce;
@@ -73,8 +73,15 @@ protected:
 	int median_max, median_min;
 	int max_value, min_value;
 	int cursor = 0, cursor2 = 0;
-	bool slow_volume, day_volume;
+	int sym_id = -1, tf_id = -1, period = -1;
+	int counted = 0;
 	bool once = true;
+	
+	int GetSymbol() const {return sym_id;}
+	int GetTf() const {return tf_id;}
+	int GetCounted() const {return counted;}
+	int GetPeriod() const {ASSERT(period != -1); return period;}
+	void ForceSetCounted(int i) {counted = i;}
 	
 	void RefreshFromHistory(bool use_internet_data);
 	void RefreshFromInternet();
@@ -86,9 +93,18 @@ public:
 	DataBridge();
 	~DataBridge();
 	
-	virtual void IO(ValueRegister& reg) {
+	
+	Vector<double> open, low, high, volume;
+	Vector<int> time;
+	
+	/*void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(5, 5)
+			% Mem(open)
+			% Mem(low)
+			% Mem(high)
+			% Mem(volume)
+			% Mem(time)
 			% Mem(point)
 			% Mem(spread_mean) % Mem(spread_count)
 			% Mem(cursor) % Mem(cursor2)
@@ -98,11 +114,11 @@ public:
 			% Mem(sym_group_stats) % Mem(sym_groups)
 			% Mem(median_max) % Mem(median_min)
 			% Mem(max_value) % Mem(min_value);
-	}
+	}*/
 	
-	virtual void Init();
-	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	void Init();
+	void Start();
+	void Assist(int cursor, VectorBool& vec);
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}

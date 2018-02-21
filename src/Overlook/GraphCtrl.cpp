@@ -35,14 +35,16 @@ GraphCtrl::GraphCtrl() {
 	IgnoreMouse(false);
 }
 
-void GraphCtrl::GetDataRange(Core& cont, int buffer) {
+void GraphCtrl::GetDataRange(int buffer) {
+	GraphImage& img = *this->src;
+	ChartImage& chart = *this->chartimg;
 	
-	if (buffer >= cont.GetVisibleCount()) {
+	if (buffer >= img.GetVisibleCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
 		return;
 	}
 	
-	int style = cont.GetBufferStyle(buffer);
+	int style = img.GetBuffer(buffer).style;
 	if (style == DRAW_NONE) return;
 	
 	bool skip_zero = false;
@@ -52,39 +54,18 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 		if (lo > 0) lo = 0;
 	}
 	
-	System& sys = GetSystem();
-	int sym = cont.GetSymbol();
-	int tf = cont.GetTf();
-	int c = cont.GetBuffer(buffer).GetCount();
-	bool get_hi = !cont.HasMaximum();
-	bool get_lo = !cont.HasMinimum();
-	bool get_any = get_hi || get_lo;
-	if (!get_hi)
-		hi = cont.GetMaximum();
-	if (!get_lo)
-		lo = cont.GetMinimum();
-	if (!get_any) return;
-    int data_shift = cont.GetBuffer(buffer).shift;
-    int data_begin = cont.GetBuffer(buffer).begin;
-    ASSERT(data_begin >= 0);
-    
-    if (cont.GetBuffer(buffer).IsEmpty()) return;
-    
-	for(int i = 0; i < count; i++) {
-        int pos = c - 1 - (shift + i + data_shift);
-        if (pos > cont.GetBuffer(buffer).GetCount()) continue;
-        if (pos >= c || pos < data_begin) continue;
-        double value = cont.GetBufferValue(buffer, pos);
-        if (skip_zero && value == 0) continue;
-		if (get_hi && value > hi)
-			hi = value;
-		if (get_lo && value  < lo)
-			lo = value;
-    }
+	if (img.HasMaximum())
+		hi = img.GetMaximum();
+	else
+		hi = img.GetBuffer(buffer).GetMaximum();
+	if (img.HasMaximum())
+		hi = img.GetMinimum();
+	else
+		hi = img.GetBuffer(buffer).GetMinimum();
 }
 
 void GraphCtrl::Paint(Draw& draw) {
-	if (src.IsEmpty()) {draw.DrawRect(GetSize(), White()); return;}
+	if (src == NULL) {draw.DrawRect(GetSize(), White()); return;}
 	
 	
 	System& sys = GetSystem();
@@ -94,7 +75,7 @@ void GraphCtrl::Paint(Draw& draw) {
 	
 	w.DrawRect(sz, chart->GetBackground());
 	
-	
+	/*
 	div = chart->GetWidthDivider();
 	shift = chart->GetShift();
 	
@@ -204,18 +185,18 @@ void GraphCtrl::Paint(Draw& draw) {
 	            w.DrawText(x, y, timestr, fnt, White());
 	        }
         }
-    }
+    }*/
     
     draw.DrawImage(0,0,w);
 }
 
 void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
-	System& sys = GetSystem();
+	/*System& sys = GetSystem();
 	int gridw, gridh, w, h, y, pos, c;
 	double diff, step;
 	Rect r(GetGraphCtrlRect());
 	Color gridcolor = chart->GetGridColor();
-	Core& pb = chart->GetCore();
+	DataBridge& pb = chart->GetDataBridge();
     int sym = chart->GetSymbol();
     int tf = chart->GetTf();
     if (sym == -1 || tf == -1) return;
@@ -278,7 +259,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         W.DrawLine(r.left, vy, r.left + w, vy, PEN_DOT, gridcolor);
         text = FormatDoubleFix(v, 5, FD_ZEROS);
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
-    }
+    }*/
 }
 
 void GraphCtrl::DrawBorder(Draw& W) {
@@ -307,8 +288,8 @@ Rect GraphCtrl::GetGraphCtrlRect() {
     return r;
 }
 
-void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
-	DrawGrid(W, true);
+void GraphCtrl::PaintCandlesticks(Draw& W) {
+	/*DrawGrid(W, true);
     
 	int f, pos, x, y, h, c, w;
 	double diff;
@@ -369,11 +350,11 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
     // Draw indicator about window range in total data range
 	int shift_x  = c ? (c - shift - count) * w / c : 0;
 	int width_x = c ? count * w / c + 1 : 0;
-    W.DrawRect(shift_x, 0, width_x, 3, Blue());
+    W.DrawRect(shift_x, 0, width_x, 3, Blue());*/
 }
 
-void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
-	r = GetGraphCtrlRect();
+void GraphCtrl::PaintCoreLine(Draw& W, int shift, int buffer) {
+	/*r = GetGraphCtrlRect();
     
     bool skip_zero;
     Color value_color = cont.GetBufferColor(buffer);
@@ -494,11 +475,11 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 	        
 	        W.DrawText((int)(x+(i+0.5)*div), (int)(y+V), str, StdFont(), value_color);
 		}
-	}
+	}*/
 }
 
-void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
-    x = border;
+void GraphCtrl::DrawBorders(Draw& d) {
+    /*x = border;
     r = GetGraphCtrlRect();
     y = r.top;
 	bool draw_label = cont.GetOutputCount() > 0;
@@ -507,10 +488,10 @@ void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
 		int label_data_count = cont.GetOutput(0).label.GetCount();
 		int begin = 0;
 		int end = real_screen_count;
-		VectorBool* labelvec = &cont.GetOutput(0).label;
+		VectorBool* labelvec = &cont.GetSignal();
 		VectorBool* enabledvec = NULL;
 		if (draw_label_enabled) {
-			enabledvec = &cont.GetOutput(1).label;
+			enabledvec = &cont.GetEnabled();
 			label_data_count = Upp::min(label_data_count, cont.GetOutput(0).label.GetCount());
 		}
 		for(int i = begin; i < end; i++) {
@@ -531,11 +512,11 @@ void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
 				}
 			}
 		}
-	}
+	}*/
 }
 
-void GraphCtrl::DrawLines(Draw& d, Core& cont) {
-	if (cont.IsCoreSeparateWindow()) {
+void GraphCtrl::DrawLines(Draw& d) {
+	/*if (cont.IsCoreSeparateWindow()) {
 		Rect r = GetGraphCtrlRect();
 		double diff = hi - lo;
 		int h = r.GetHeight();
@@ -562,7 +543,7 @@ void GraphCtrl::DrawLines(Draw& d, Core& cont) {
 		
 	} else {
 		// TODO: make level-line with level-line-value difference to datacator-line
-	}
+	}*/
 }
 
 
@@ -636,8 +617,10 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 
 int GraphCtrl::GetCount() {
 	if (!chart) return 0;
-	int c = chart->GetCore().GetBuffer(0).GetCount();
-    return c;
+	/*int c = chart->GetCore().GetBuffer(0).GetCount();
+    return c;*/
+    Panic("TODO");
+    return 0;
 }
 
 int GraphCtrl::GetPos() {

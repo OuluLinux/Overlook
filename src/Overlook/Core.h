@@ -1,17 +1,11 @@
 #ifndef _Overlook_Core_h_
 #define _Overlook_Core_h_
 
-
+#if 0
 namespace Overlook {
 using namespace Upp;
 
 class Overlook;
-
-// Visual setting enumerators
-enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
-enum {WINDOW_SEPARATE, WINDOW_CHART};
-enum {STYLE_SOLID, STYLE_DASH, STYLE_DOT, STYLE_DASHDOT, STYLE_DASHDOTDOT};
-
 
 // Class for vertical levels on containers
 struct DataLevel : public Moveable<DataLevel> {
@@ -44,9 +38,9 @@ inline bool AnyTf(void* basesystem, int in_sym, int in_tf, int out_sym, int out_
 // Classes for IO arguments
 template <class T>
 struct In : public ValueBase {
-	In(FilterFunction fn, ArgsFn args=NULL)	{data_type = IN_; data = (void*)fn;			 factory = System::GetId<T>(); data2 = (void*)args;}
-	In(ArgsFn args)							{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = (void*)args;}
-	In()									{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = NULL;}
+	In(FilterFunction fn, ArgsFn args=NULL)	{data_type = IN_; data = (void*)fn;			 /*factory = System::GetId<T>();*/ data2 = (void*)args;}
+	In(ArgsFn args)							{data_type = IN_; data = (void*)SymTfFilter; /*factory = System::GetId<T>();*/ data2 = (void*)args;}
+	In()									{data_type = IN_; data = (void*)SymTfFilter; /*factory = System::GetId<T>();*/ data2 = NULL;}
 };
 
 struct InOptional : public ValueBase {
@@ -100,51 +94,20 @@ template <class T> inline Persistent Mem(T& t) {
 }
 
 
-// Utility function for changing class arguments
-struct ArgChanger : public ValueRegister {
-	ArgChanger() : cursor(0), storing(0) {}
-	
-	virtual void IO(const ValueBase& base) {
-		if (!storing) {
-			keys.SetCount(cursor+1);
-			keys[cursor] = base.s0;
-			args.SetCount(cursor+1);
-			if (base.data_type == ValueBase::BOOL_)
-				args[cursor++] = *(bool*)base.data;
-			else if (base.data_type == ValueBase::INT_)
-				args[cursor++] = *(int*)base.data;
-		} else {
-			if (base.data_type == ValueBase::BOOL_)
-				*(bool*)base.data = args[cursor++];
-			else if (base.data_type == ValueBase::INT_)
-				*(int*)base.data = args[cursor++];
-		}
-	}
-	void SetLoading() {storing = false; cursor = 0;}
-	void SetStoring() {storing = true;  cursor = 0;}
-	
-	Vector<Value> args;
-	Vector<String> keys;
-	int cursor;
-	bool storing;
-};
 
+/*
 class CoreIO : public ValueRegister, public Pte<CoreIO> {
 	
 protected:
 	friend class System;
 	friend class Buffer;
-	friend class Job;
 	
 	typedef Ptr<CoreIO> CoreIOPtr;
 	
 	Vector<Input> inputs;
 	Vector<Output> outputs;
 	Vector<Buffer*> buffers;
-	Array<Job> jobs;
 	Array<Persistent> persistents;
-	Job* current_job = NULL;
-	JobThread* current_thrd = NULL;
 	SpinLock serialization_lock, refresh_lock;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
@@ -175,11 +138,6 @@ public:
 	CoreIO();
 	virtual ~CoreIO();
 	
-	void StoreCache();
-	void LoadCache();
-	void Put(Stream& out, const String& dir, int subcore_id);
-	void Get(Stream& in, const String& dir, int subcore_id);
-	
 	virtual void IO(const ValueBase& base);
 	virtual void Assist(int cursor, VectorBool& vec) {}
 	void RefreshBuffers();
@@ -206,7 +164,6 @@ public:
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const;
-	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input) const;
 	Output& GetOutput(int output) {return outputs[output];}
@@ -214,8 +171,6 @@ public:
 	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory();
 	Color GetBufferColor(int i) {return buffers[i]->clr;}
-	double GetBufferValue(int i, int shift) {return buffers[i]->value[shift];}
-	double GetBufferValue(int shift) {return outputs[0].buffers[0].value[shift];}
 	int GetBufferStyle(int i) {return buffers[i]->style;}
 	int GetBufferArrow(int i) {return buffers[i]->chr;}
 	int GetBufferLineWidth(int i) {return buffers[i]->line_width;}
@@ -226,13 +181,6 @@ public:
 	bool IsInitialized() const {return is_init;}
 	
 	void SetInput(int input_id, int sym_id, int tf_id, CoreIO& core, int output_id);
-	void SetBufferColor(int i, Color c) {buffers[i]->clr = c;}
-	void SetBufferLineWidth(int i, int line_width) {buffers[i]->line_width = line_width;}
-	void SetBufferType(int i, int style) {buffers[i]->line_style = style;}
-	void SetBufferStyle(int i, int style) {buffers[i]->style = style;}
-	void SetBufferShift(int i, int shift) {buffers[i]->shift = shift;}
-	void SetBufferBegin(int i, int begin) {buffers[i]->begin = begin;}
-	void SetBufferArrow(int i, int chr)   {buffers[i]->chr = chr;}
 	void SetSymbol(int i) {sym_id = i;}
 	void SetTimeframe(int i) {tf_id = i;}
 	void SetFactory(int i) {factory = i;}
@@ -291,7 +239,6 @@ public:
 	virtual void IO(ValueRegister& reg) = 0;
 	
 	void InitAll();
-	void AllowJobs();
 	template <class T> Core& AddSubCore()  {
 		int i = System::Find<T>();
 		ASSERT_(i != -1, "This class is not registered to the factory");
@@ -317,7 +264,7 @@ public:
 	bool IsCoreSeparateWindow() {return window_type == WINDOW_SEPARATE;}
 	bool HasMaximum() const {return has_maximum;}
 	bool HasMinimum() const {return has_minimum;}
-	int GetMinutePeriod();
+	int GetPeriod();
 	int GetTimeframe() const {return tf_id;}
 	int GetTf() const {return tf_id;}
 	int GetSymbol() const {return sym_id;}
@@ -326,63 +273,36 @@ public:
 	int GetFutureBars() const {return future_bars;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
-	inline ConstVectorBool& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
 	DataBridge* GetDataBridge();
-	bool IsJobsFinished() const;
-	Job& GetCurrentJob() {return *current_job;}
-	JobThread& GetCurrentThread() {return *current_thrd;}
 	
 	
 	// Set settings
 	void SetTimeframe(int i, int period);
 	void SetWindowType(int i) {window_type = i;}
 	void SetPoint(double d);
-	void SetCoreLevelCount(int count) {levels.SetCount(count);}
-	void SetCoreLevel(int i, double value) {levels[i].value = value;}
-	void SetCoreLevelType(int i, int style) {levels[i].style = style;}
-	void SetCoreLevelLineWidth(int i, int line_width) {levels[i].line_width = line_width;}
-	void SetCoreLevelsColor(Color clr) {levels_clr = clr;}
-	void SetCoreLevelsStyle(int style) {levels_style = style;}
-	void SetCoreMinimum(double value) {minimum = value; has_minimum = true;}
-	void SetCoreMaximum(double value) {maximum = value; has_maximum = true;}
-	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
-	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
 	void ForceSetCounted(int i) {counted = i; next_count = i;}
 	void SetSkipSetCount(bool b=true) {skip_setcount = b;}
-	void SetBufferLabel(int i, const String& s) {}
 	void SetEndOffset(int i) {ASSERT(i > 0); end_offset = i;}
 	void SetSkipAllocate(bool b=true) {skip_allocate = b;}
 	void SetFutureBars(int i) {future_bars = i;}
-	Job& SetJob(int i, String job_title);
-	Job& GetJob(int i);
-	void SetJobFinished(bool b=true);
-	void SetJobCount(int i) {jobs.SetCount(i);}
-	void EnterJob(Job* job, JobThread* thrd) {current_job = job; current_thrd = thrd;}
-	void LeaveJob() {current_job = NULL; current_thrd = NULL;}
 	
 	// Visible main functions
 	void Refresh();
 	void RefreshSources();
 	void RefreshSourcesOnlyDeep();
-	void ClearContent();
 	void RefreshIO() {IO(*this);}
 	
 protected:
 	
 	// Value data functions
-	double GetAppliedValue ( int applied_value, int i );
-	double Open(int shift);
-	double High(int shift);
-	double Low(int shift);
-	double Volume(int shift);
-	int HighestHigh(int period, int shift);
-	int LowestLow(int period, int shift);
-	int HighestOpen(int period, int shift);
-	int LowestOpen(int period, int shift);
 	
 };
+*/
+
+
 
 
 }
 
+#endif
 #endif

@@ -53,7 +53,8 @@ class GraphCtrl : public Ctrl {
 protected:
 	friend class Overlook;
 	
-	Vector<Core*> src;
+	ChartImage* chartimg = NULL;
+	GraphImage* src = NULL;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;
@@ -80,9 +81,9 @@ protected:
 	void GotMouseMove(Point p, GraphCtrl* g);
 	void DrawBorder(Draw& W);
 	void DrawGrid(Draw& W, bool draw_vert_grid);
-	void DrawLines(Draw& d, Core& cont);
-	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
-	void DrawBorders(Draw& d, Core& cont);
+	void DrawLines(Draw& d);
+	void PaintCoreLine(Draw& d, int shift, int buffer);
+	void DrawBorders(Draw& d);
 	Rect GetGraphCtrlRect();
 	
 	
@@ -91,10 +92,10 @@ public:
     typedef GraphCtrl CLASSNAME;
     GraphCtrl();
     
-    void PaintCandlesticks(Draw& W, Core& values);
+    void PaintCandlesticks(Draw& W);
 	void PostRefresh() {PostCallback(THISBACK(GraphCtrlRefresh));}
 	void GraphCtrlRefresh() {Refresh();}
-	void AddSource(Core* src) {this->src.Add(src);}
+	void SetSource(ChartImage* img, int i) {this->src = &img->GetGraph(i); chartimg = img;}
 	void SetRightOffset(bool b=true) {right_offset = b;}
 	virtual void Paint(Draw& w);
 	virtual bool Key(dword key, int count);
@@ -105,7 +106,7 @@ public:
 	virtual void RightDown(Point, dword);
 	virtual void MiddleDown(Point p, dword keyflags);
 	
-	void GetDataRange(Core& cont, int buffer);
+	void GetDataRange(int buffer);
 	int GetCount();
 	int GetPos();
 	bool IsTimeValueToolShown() const {return show_timevalue_tool;}

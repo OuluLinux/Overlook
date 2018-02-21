@@ -56,6 +56,85 @@ enum {
 	PHASE_REAL
 };
 
+#define FACTORY_LIST \
+FITEM(DataSource) \
+FITEM(MovingAverage) \
+FITEM(MovingAverageConvergenceDivergence) \
+FITEM(AverageDirectionalMovement) \
+FITEM(BollingerBands) \
+FITEM(Envelopes) \
+FITEM(ParabolicSAR) \
+FITEM(StandardDeviation) \
+FITEM(AverageTrueRange) \
+FITEM(BearsPower) \
+FITEM(BullsPower) \
+FITEM(CommodityChannelIndex) \
+FITEM(DeMarker) \
+FITEM(ForceIndex) \
+FITEM(Momentum) \
+FITEM(OsMA) \
+FITEM(RelativeStrengthIndex) \
+FITEM(RelativeVigorIndex) \
+FITEM(StochasticOscillator) \
+FITEM(WilliamsPercentRange) \
+FITEM(AccumulationDistribution) \
+FITEM(MoneyFlowIndex) \
+FITEM(ValueAndVolumeTrend) \
+FITEM(OnBalanceVolume) \
+FITEM(Volumes) \
+FITEM(AcceleratorOscillator) \
+FITEM(GatorOscillator) \
+FITEM(AwesomeOscillator) \
+FITEM(Fractals) \
+FITEM(FractalOsc) \
+FITEM(MarketFacilitationIndex) \
+FITEM(LinearTimeFrames) \
+FITEM(LinearWeekTime) \
+FITEM(SupportResistance) \
+FITEM(SupportResistanceOscillator) \
+FITEM(Psychological) \
+FITEM(ZigZag) \
+FITEM(ZigZagOsc) \
+FITEM(TrendChange) \
+FITEM(TrendChangeEdge) \
+FITEM(PeriodicalChange) \
+FITEM(VolatilityAverage) \
+FITEM(MinimalLabel) \
+FITEM(VolatilitySlots) \
+FITEM(VolumeSlots) \
+FITEM(ChannelOscillator) \
+FITEM(ScissorChannelOscillator) \
+FITEM(TrendIndex) \
+FITEM(OnlineMinimalLabel) \
+FITEM(ReactionContext) \
+FITEM(VolatilityContext) \
+FITEM(ChannelContext) \
+FITEM(SelectiveMinimalLabel) \
+FITEM(Obviousness) \
+FITEM(VolatilityContextReversal) \
+FITEM(ObviousTargetValue)
+
+#define FITEM(x) FACTORY_##x ,
+
+enum {
+	FACTORY_LIST
+	FACTORY_COUNT
+};
+
+
+#define FITEM(x) if (FACTORY_##x == id) return #x;
+inline String GetFactoryName(int id) {
+	FACTORY_LIST
+	return "Unknown";
+}
+
+// Visual setting enumerators
+enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
+enum {WINDOW_SEPARATE, WINDOW_CHART};
+enum {STYLE_SOLID, STYLE_DASH, STYLE_DOT, STYLE_DASHDOT, STYLE_DASHDOTDOT};
+
+
+
 class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	Vector<double> win_a;
 	double sum_a = 0.0;
@@ -294,17 +373,18 @@ struct ValueBase {
 	}
 };
 
-struct ValueRegister {
-	ValueRegister() {}
-	
-	virtual void IO(const ValueBase& base) = 0;
-	virtual ValueRegister& operator % (const ValueBase& base) {IO(base); return *this;}
-};
 
-struct FactoryDeclaration : Moveable<FactoryDeclaration> {
+struct FactoryDeclaration {
+	
+	// Persistent
 	int args[8];
 	int factory = -1;
 	int arg_count = 0;
+	
+	// Temp
+	int input_id[8];
+	int input_count = 0;
+	
 	
 	FactoryDeclaration() {}
 	FactoryDeclaration(const FactoryDeclaration& src) {*this = src;}
@@ -314,7 +394,17 @@ struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 		factory = src.factory;
 		arg_count = src.arg_count;
 		for(int i = 0; i < 8; i++) args[i] = src.args[i];
+		for(int i = 0; i < 8; i++) input_id[i] = src.input_id[i];
+		input_count = src.input_count;
 		return *this;
+	}
+	bool operator==(const FactoryDeclaration& src) {
+		if (factory != src.factory) return false;
+		if (arg_count != src.arg_count) return false;
+		for(int i = 0; i < src.arg_count; i++)
+			if (args[i] != src.args[i])
+				return false;
+		return true;
 	}
 	
 	unsigned GetHashValue() {
@@ -325,16 +415,70 @@ struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 		return ch;
 	}
 	
-	void Serialize(Stream& s) {
-		if (s.IsLoading()) {
-			s.Get(args, sizeof(int) * 8);
-		}
-		else if (s.IsStoring()) {
-			s.Put(args, sizeof(int) * 8);
-		}
-		s % factory % arg_count;
-	}
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(FactoryDeclaration)); else s.Put(this, sizeof(FactoryDeclaration));}
 };
+
+typedef const FactoryDeclaration ConstFactoryDeclaration;
+
+struct ValueRegister {
+	struct ArgDecl {
+		int def = 0, min = 0, max = 0;
+	};
+	FactoryDeclaration inputs[8];
+	ArgDecl args[8];
+	int input_count = 0;
+	int arg_count = 0;
+	int arg_cursor = 0;
+	int output_count = -1, output_visible = -1;
+	
+	bool is_loading = false;
+	
+	
+	ValueRegister() {}
+	ValueRegister(ConstFactoryDeclaration& decl);
+	
+	ValueRegister& In(int factory);
+	ValueRegister& In(int factory, int arg0);
+	ValueRegister& In(int factory, int arg0, int arg1);
+	ValueRegister& In(int factory, int arg0, int arg1, int arg2);
+	ValueRegister& In(int factory, int arg0, int arg1, int arg2, int arg3);
+	ValueRegister& Out(int bufcount, int bufvisible);
+	ValueRegister& Arg(int& def_value, int min_value=0, int max_value=10000);
+	
+	template <class T> ValueRegister& Mem(T& obj){return *this;}
+};
+
+/*
+// Utility function for changing class arguments
+struct ArgChanger : public ValueRegister {
+	ArgChanger() : cursor(0), storing(0) {}
+	
+	virtual void IO(const ValueBase& base) {
+		if (!storing) {
+			keys.SetCount(cursor+1);
+			keys[cursor] = base.s0;
+			args.SetCount(cursor+1);
+			if (base.data_type == ValueBase::BOOL_)
+				args[cursor++] = *(bool*)base.data;
+			else if (base.data_type == ValueBase::INT_)
+				args[cursor++] = *(int*)base.data;
+		} else {
+			if (base.data_type == ValueBase::BOOL_)
+				*(bool*)base.data = args[cursor++];
+			else if (base.data_type == ValueBase::INT_)
+				*(int*)base.data = args[cursor++];
+		}
+	}
+	void SetLoading() {storing = false; cursor = 0;}
+	void SetStoring() {storing = true;  cursor = 0;}
+	
+	Vector<Value> args;
+	Vector<String> keys;
+	int cursor;
+	bool storing;
+};
+*/
+
 
 struct DataExc : public Exc {
 	DataExc() {
@@ -458,49 +602,6 @@ class CoreIO;
 typedef const double ConstDouble;
 
 
-// Class for default visual settings for a single visible line of an indicator
-class Buffer : public Moveable<Buffer> {
-	
-public:
-	Vector<double> value;
-	String label;
-	Color clr;
-	int style, line_style, line_width, chr, begin, shift, earliest_write;
-	bool visible;
-	
-public:
-	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
-	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
-	void SetCount(int i) {value.SetCount(i, 0.0);}
-	void Add(double d) {value.Add(d);}
-	void Reserve(int n) {value.Reserve(n);}
-	
-	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
-	int GetCount() const {return value.GetCount();}
-	bool IsEmpty() const {return value.IsEmpty();}
-	double GetUnsafe(int i) const {return value[i];}
-	double Top() const {return value.Top();}
-	
-	ConstDouble* Begin() const {return value.Begin();}
-	ConstDouble* End()   const {return value.End();}
-	double* Begin() {return value.Begin();}
-	double* End()   {return value.End();}
-	
-	// Some utility functions for checking that indicator values are strictly L-R
-	#ifdef flagDEBUG
-	CoreIO* check_cio = NULL;
-	void SafetyInspect(CoreIO* io) {check_cio = io;}
-	double Get(int i) const;
-	void Set(int i, double value);
-	void Inc(int i, double value);
-	#else
-	double Get(int i) const {return value[i];}
-	void Set(int i, double value) {this->value[i] = value; if (i < earliest_write) earliest_write = i;}
-	void Inc(int i, double value) {this->value[i] += value;}
-	#endif
-	
-	
-};
 
 typedef const uint64 ConstU64;
 
@@ -538,75 +639,102 @@ public:
 };
 
 typedef const VectorBool	ConstVectorBool;
-typedef const Buffer		ConstBuffer;
+//typedef const Buffer		ConstBuffer;
 
-struct Output : Moveable<Output> {
-	Output() {}
-	Vector<Buffer> buffers;
-	VectorBool label;
-	int phase = 0, type = 0, visible = 0;
+
+struct BufferImage : Moveable<BufferImage> {
+	Vector<double> value;
+	Color clr = Black();
+	double min = 0, max = 0;
+	int style = 0, line_style = 0, line_width = 1, chr = '*', shift = 0, begin = 0;
+	char label[10];
+	
+	
+	double GetMaximum() const {return max;}
+	double GetMinimum() const {return min;}
+	int GetCount() const {return value.GetCount();}
+	bool IsEmpty() const {return value.IsEmpty();}
+	void Set(int i, double d) {value[i] = d;}
+	double Get(int i) const {return value[i];}
 };
 
-class Core;
-class System;
-class CoreItem;
+typedef const BufferImage ConstBufferImage;
 
-class Source : Moveable<Source> {
+struct GraphImage : Moveable<GraphImage> {
+	struct LevelSettings {
+		double value = 0;
+		int style = 0;
+		int line_width = 1;
+	};
+	static const int MAX_SETTINGS = 4;
 	
-public:
-	Source() {}
-	Source(CoreIO* c, Output* out, int s, int t) : core(c), output(out), sym(s), tf(t) {}
-	Source(const Source& src) {*this = src;}
-	void operator=(const Source& src) {
-		core = src.core;
-		output = src.output;
-		sym = src.sym;
-		tf = src.tf;
-	}
+	Vector<BufferImage> buffers;
+	VectorBool signal, enabled;
+	LevelSettings levels[MAX_SETTINGS];
+	Color levels_clr;
+	double minimum = 0, maximum = 0;
+	int levels_style = 0;
+	int level_count = 0;
+	int window_type = 0;
+	int input_id[8];
+	int input_count = 0;
+	bool is_fixed_max = false, is_fixed_min = false;
 	
-	CoreIO* core = NULL;
-	Output* output = NULL;
-	int sym = -1, tf = -1;
+	
+	double GetMaximum() const {return maximum;}
+	double GetMinimum() const {return minimum;}
+	bool HasMaximum() const {return is_fixed_max;}
+	bool HasMinimum() const {return is_fixed_min;}
+	int GetVisibleCount() const {return buffers.GetCount();}
+	BufferImage& GetBuffer(int i) {return buffers[i];}
+	VectorBool& GetSignal() {return signal;}
+	VectorBool& GetEnabled() {return enabled;}
+	
+	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
+	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}
+	void SetCoreLevelCount(int count) {ASSERT(count >= 0 && count < MAX_SETTINGS); level_count = count;}
+	void SetCoreLevel(int i, double value) {levels[i].value = value;}
+	void SetCoreLevelType(int i, int style) {levels[i].style = style;}
+	void SetCoreLevelLineWidth(int i, int line_width) {levels[i].line_width = line_width;}
+	void SetCoreLevelsColor(Color clr) {levels_clr = clr;}
+	void SetCoreLevelsStyle(int style) {levels_style = style;}
+	void SetCoreMinimum(double value) {minimum = value; is_fixed_min = true;}
+	void SetCoreMaximum(double value) {maximum = value; is_fixed_max = true;}
+	void SetBufferColor(int i, Color c) {buffers[i].clr = c;}
+	void SetBufferLineWidth(int i, int line_width) {buffers[i].line_width = line_width;}
+	void SetBufferType(int i, int style) {buffers[i].line_style = style;}
+	void SetBufferStyle(int i, int style) {buffers[i].style = style;}
+	void SetBufferShift(int i, int shift) {buffers[i].shift = shift;}
+	void SetBufferBegin(int i, int begin) {buffers[i].begin = begin;}
+	void SetBufferArrow(int i, int chr)   {buffers[i].chr = chr;}
+	
 };
 
-class SourceDef : Moveable<SourceDef> {
+struct ChartImage {
+	Vector<GraphImage> graphs;
+	double point = 0.0;
+	int symbol = -1, tf = -1, period = -1;
+	int begin = 0, end = 0;
+	int cursor = -1;
 	
-public:
-	SourceDef() {}
-	SourceDef(CoreItem* ci, int out, int s, int t) : coreitem(ci), output(out), sym(s), tf(t) {}
-	SourceDef(const Source& src) {*this = src;}
-	void operator=(const SourceDef& src) {
-		coreitem = src.coreitem;
-		output = src.output;
-		sym = src.sym;
-		tf = src.tf;
-	}
+	int GetSymbol() const {return symbol;}
+	int GetTf() const {return tf;}
+	int GetPeriod() const {return period;}
+	GraphImage& GetGraph(int i) {return graphs[i];}
+	int GetCount() {return graphs.GetCount();}
 	
-	CoreItem* coreitem = NULL;
-	int output = -1, sym = -1, tf = -1;
-};
-
-typedef VectorMap<int, Source>		Input;
-typedef VectorMap<int, SourceDef>	InputDef;
-typedef Tuple2<int, int>			FactoryHash;
-
-class CoreItem : Moveable<CoreItem>, public Pte<CoreItem> {
 	
-public:
-	One<Core> core;
-	int sym, tf, priority, factory, hash;
-	Vector<VectorMap<int, SourceDef> > inputs;
-	Vector<int> args;
-	Vector<Vector<FactoryHash> > input_hashes;
+	int GetBegin() const {return begin;}
+	int GetEnd() const {return end;}
+	double GetPoint() {return point;}
 	
-public:
-	typedef CoreItem CLASSNAME;
-	CoreItem() {sym = -1; tf = -1; priority = INT_MAX; factory = -1; hash = -1;}
-	~CoreItem() {}
-	void operator=(const CoreItem& ci) {Panic("TODO");}
-	void SetInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
+	VectorBool& GetInputSignal(int in) {return graphs[graphs[cursor].input_id[in]].GetSignal();}
+	VectorBool& GetInputEnabled(int in) {return graphs[graphs[cursor].input_id[in]].GetEnabled();}
+	ConstBufferImage& GetInputBuffer(int in, int buf) {return graphs[graphs[cursor].input_id[in]].GetBuffer(buf);}
 	
 };
+
+
 
 
 
@@ -903,7 +1031,7 @@ void TestLockMacro();
 
 
 
-
+/*
 struct ConstBufferSource {
 	Vector<ConstBuffer*> bufs;
 	int serial_depth = 0;
@@ -950,28 +1078,10 @@ struct AssistBase {
 	
 	void Add(String msg) {items.Add().Set(msg);}
 };
-
+*/
 int log2_64 (uint64 value);
 
 
-struct JobProgressDislay : public Display {
-	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
-		w.DrawRect(r, paper);
-		Rect g = r;
-		g.top += 1;
-		g.bottom -= 1;
-		int perc = q;
-		g.right -= g.Width() * (100 - perc) / 100;
-		Color clr = Color(72, 213, 119);
-		w.DrawRect(g, clr);
-		Font fnt = SansSerif(g.Height()-1);
-		String perc_str = ((perc >= 0 && perc <= 100) ? IntStr(perc) : String("0")) + "%";
-		Size str_sz = GetTextSize(perc_str, fnt);
-		Point pt = r.CenterPos(str_sz);
-		w.DrawText(pt.x, pt.y, perc_str, fnt, Black());
-		w.DrawText(pt.x+1, pt.y+1, perc_str, fnt, GrayColor(128+64));
-	}
-};
 
 
 inline void ReleaseLog(String s) {FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol(); LOG(s);}

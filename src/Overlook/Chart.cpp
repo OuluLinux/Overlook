@@ -24,7 +24,14 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 }
 
 void Chart::RefreshCore() {
-	System& sys = GetSystem();
+	
+	ImageCompiler comp;
+	
+	comp.SetMain(decl);
+	
+	comp.Compile(GetSystem().GetSource(symbol, tf), image);
+	
+	/*System& sys = GetSystem();
 	
 	Index<int> tf_ids, sym_ids;
 	Vector<FactoryDeclaration> indi_ids;
@@ -48,13 +55,13 @@ void Chart::RefreshCore() {
 	Title(title);
 	
 	SetGraph(src);
-	Data();
+	Data();*/
 }
 
 void Chart::RefreshCoreData(bool store_cache) {
-	System& sys = GetSystem();
+	/*System& sys = GetSystem();
 	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], store_cache);
+		sys.Process(*work_queue[i], store_cache);*/
 }
 
 void Chart::ContextMenu(Bar& bar) {
@@ -94,13 +101,14 @@ GraphCtrl& Chart::AddGraph(Core* src) {
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
 	g.SetRightOffset(right_offset);
 	g.chart = this;
-	g.AddSource(src);
+	//g.AddSource(src);
+	Panic("TODO");
 	split << g;
 	return g;
 }
 
 void Chart::SetGraph(Core* src) {
-	ASSERT(src);
+	/*ASSERT(src);
 	tf = src->GetTf();
 	ClearCores();
 	DataBridge* src_cast = dynamic_cast<DataBridge*>(src);
@@ -118,7 +126,8 @@ void Chart::SetGraph(Core* src) {
 			AddGraph(src);
 			split.SetPos(8000);
 		}
-	}
+	}*/
+	Panic("TODO");
 }
 
 void Chart::ClearCores() {
@@ -180,7 +189,7 @@ void Chart::Settings() {
 		save = true;
 		tw->Close();
 	};
-	
+	/*
 	ArgChanger reg;
 	reg.SetLoading();
 	core->IO(reg);
@@ -210,7 +219,7 @@ void Chart::Settings() {
 		for(int i = 0; i < reg.args.GetCount(); i++)
 			decl.AddArg(edits[i].GetData());
 		Init(symbol, decl, tf);
-	}
+	}*/
 }
 
 }

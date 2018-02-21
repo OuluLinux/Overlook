@@ -35,22 +35,21 @@ void Navigator::Data() {
 	int server_node = tree.Add(accounts, OverlookImg::servers(), server);
 	String id = IntStr(mt.AccountNumber()) + ": " + mt.AccountName();
 	tree.Add(server_node, OverlookImg::account(), id);
-	
+
 	
 	tree.RemoveChildren(indicators);
-	int count = System::Indicators().GetCount();
+	int count = FACTORY_COUNT;
 	for(int i = 0; i < count; i++) {
-		int id = System::Indicators()[i];
-		tree.Add(indicators, OverlookImg::indicator(), System::CoreFactories()[id].a);
+		tree.Add(indicators, OverlookImg::indicator(), GetFactoryName(i));
 	}
 	
-	
+	/*
 	tree.RemoveChildren(expertadvisors);
 	count = System::ExpertAdvisorFactories().GetCount();
 	for(int i = 0; i < count; i++) {
 		int id = System::ExpertAdvisorFactories()[i];
 		tree.Add(expertadvisors, OverlookImg::expertadvisors(), System::CoreFactories()[id].a);
-	}
+	}*/
 	
 	
 	tree.OpenDeep(0);
@@ -61,14 +60,14 @@ void Navigator::SelectTree() {
 	int parent = tree.GetParent(i);
 	if (parent == indicators) {
 		int pos = tree.GetChildIndex(indicators, i);
-		int id = System::Indicators()[pos];
-		WhenFactory(id);
+		WhenFactory(pos);
 	}
+	/*
 	else if (parent == expertadvisors) {
 		int pos = tree.GetChildIndex(expertadvisors, i);
 		int id = System::ExpertAdvisorFactories()[pos];
 		WhenFactory(id);
-	}
+	}*/
 }
 
 }

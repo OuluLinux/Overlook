@@ -3,8 +3,12 @@ using namespace Overlook;
 
 NAMESPACE_UPP
 
+
 INITBLOCK {
-	System::Register<DataBridge>("DataBridge");
+	
+	
+	
+	/*System::Register<DataBridge>("DataBridge");
 	System::Register<ValueChange>("Change of data-values");
 	System::Register<MovingAverage>("Moving average");
 	System::Register<MovingAverageConvergenceDivergence>("Moving Average Convergence/Divergence");
@@ -68,9 +72,9 @@ INITBLOCK {
 	System::Register<Obviousness>("Obviousness");
 	System::Register<VolatilityContextReversal>("Volatility Context Reversal");
 	System::Register<ObviousTargetValue>("Obvious Target");
-	System::Register<BasicSignal>("Basic Signal");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
+	System::Register<BasicSignal>("Basic Signal", CORE_EXPERTADVISOR);
 	System::Register<ObviousAdvisor>("Obviousness Advisor", CORE_EXPERTADVISOR);
 	System::Register<LessObviousAdvisor>("Lesser Obviousness Advisor", CORE_EXPERTADVISOR);
 	
@@ -134,12 +138,12 @@ INITBLOCK {
     System::RegisterAssistant<DeMarker>("Over high", DEM_OVERHIGH);
     System::RegisterAssistant<DeMarker>("Below low", DEM_BELOWLOW);
     System::RegisterAssistant<DeMarker>("Increasing", DEM_INC);
-    System::RegisterAssistant<DeMarker>("Decreasing", DEM_DEC);
+    System::RegisterAssistant<DeMarker>("Decreasing", DEM_DEC);*/
     /*System::RegisterAssistant<ForceIndex>("Over zero", FORCE_OVERZERO);
     System::RegisterAssistant<ForceIndex>("Below zero", FORCE_BELOWZERO);
     System::RegisterAssistant<ForceIndex>("Increasing", FORCE_INC);
     System::RegisterAssistant<ForceIndex>("Decreasing", FORCE_DEC);*/
-    System::RegisterAssistant<Momentum>("Over zero", MOM_OVERZERO);
+    /*System::RegisterAssistant<Momentum>("Over zero", MOM_OVERZERO);
     System::RegisterAssistant<Momentum>("Below zero", MOM_BELOWZERO);
     System::RegisterAssistant<Momentum>("Increasing", MOM_INC);
     System::RegisterAssistant<Momentum>("Decreasing", MOM_DEC);
@@ -188,7 +192,7 @@ INITBLOCK {
     System::RegisterAssistant<ChannelOscillator>("High", CHOSC_HIGH);
     System::RegisterAssistant<ChannelOscillator>("Highest", CHOSC_HIGHEST);
     System::RegisterAssistant<ScissorChannelOscillator>("Low", SCIS_LOW);
-    System::RegisterAssistant<ScissorChannelOscillator>("High", SCIS_HIGH);
+    System::RegisterAssistant<ScissorChannelOscillator>("High", SCIS_HIGH);*/
     
 	//System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
 	

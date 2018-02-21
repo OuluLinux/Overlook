@@ -7,13 +7,14 @@ namespace Overlook {
 
 class ChartManager;
 
+
 class Chart : public SubWindowCtrl {
 	
 protected:
 	friend class Overlook;
 	
-	Vector<Ptr<CoreItem> > work_queue;
 	Array<GraphCtrl> graphs;
+	ChartImage image;
 	Splitter split;
 	FactoryDeclaration decl;
 	String title;
@@ -53,7 +54,7 @@ public:
 	virtual void Data();
 	virtual String GetTitle();
 	
-	Core& GetCore() {return *bardata;}
+	DataBridge& GetDataBridge() {return *bardata;}
 	Color GetBackground() const {return White();}
 	Color GetGridColor() const {return GrayColor();}
 	int GetSymbol() const {return symbol;}

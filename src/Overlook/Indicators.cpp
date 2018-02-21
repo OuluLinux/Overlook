@@ -2,7 +2,43 @@
 
 namespace Overlook {
 
-double SimpleMA ( const int position, const int period, ConstBuffer& value ) {
+void InitFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	
+	#define FITEM(x) if (id.factory == FACTORY_##x) {x().Init(si, ci, gi); return;}
+	
+	FACTORY_LIST
+	
+}
+
+void StartFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ValueRegister reg(id);
+	ASSERT(reg.arg_cursor == 0);
+	ASSERT(reg.is_loading);
+	
+	#define FITEM(x) if (id.factory == FACTORY_##x) {\
+		x obj; obj.Conf(reg); obj.Start(si, ci, gi); return;\
+	}
+	
+	FACTORY_LIST
+	
+}
+
+void ConfFactory(ConstFactoryDeclaration& id, ValueRegister& reg) {
+	
+	#define FITEM(x) if (id.factory == FACTORY_##x) {x().Conf(reg); return;}
+	
+	FACTORY_LIST
+	
+}
+
+
+
+
+
+
+
+
+double SimpleMA ( const int position, const int period, ConstBufferImage& value ) {
 	double result = 0.0;
 	if ( position >= period && period > 0 ) {
 		for ( int i = 0; i < period; i++)
@@ -12,7 +48,7 @@ double SimpleMA ( const int position, const int period, ConstBuffer& value ) {
 	return ( result );
 }
 
-double ExponentialMA ( const int position, const int period, const double prev_value, ConstBuffer& value ) {
+double ExponentialMA ( const int position, const int period, const double prev_value, ConstBufferImage& value ) {
 	double result = 0.0;
 	if ( period > 0 ) {
 		double pr = 2.0 / ( period + 1.0 );
@@ -21,7 +57,7 @@ double ExponentialMA ( const int position, const int period, const double prev_v
 	return ( result );
 }
 
-double SmoothedMA ( const int position, const int period, const double prev_value, ConstBuffer& value ) {
+double SmoothedMA ( const int position, const int period, const double prev_value, ConstBufferImage& value ) {
 	double result = 0.0;
 	if ( period > 0 ) {
 		if ( position == period - 1 ) {
@@ -36,7 +72,7 @@ double SmoothedMA ( const int position, const int period, const double prev_valu
 	return ( result );
 }
 
-double LinearWeightedMA ( const int position, const int period, ConstBuffer& value ) {
+double LinearWeightedMA ( const int position, const int period, ConstBufferImage& value ) {
 	double result = 0.0, sum = 0.0;
 	int    i, wsum = 0;
 	if ( position >= period - 1 && period > 0 ) {
@@ -51,7 +87,7 @@ double LinearWeightedMA ( const int position, const int period, ConstBuffer& val
 
 
 int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBuffer& value, Buffer& buffer ) {
+		const int period, ConstBufferImage& value, BufferImage& buffer ) {
 	int i, limit;
 	if ( period <= 1 || rates_total - begin < period )
 		return ( 0 );
@@ -76,7 +112,7 @@ int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const i
 
 
 int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBuffer& value, Buffer& buffer ) {
+		const int period, ConstBufferImage& value, BufferImage& buffer ) {
 	int    i, limit;
 	if ( period <= 1 || rates_total - begin < period )
 		return ( 0 );
@@ -99,7 +135,7 @@ int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, co
 
 
 int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-	const int period, ConstBuffer& value, Buffer& buffer, int &weightsum ) {
+	const int period, ConstBufferImage& value, BufferImage& buffer, int &weightsum ) {
 	int        i, limit;
 	double     sum;
 	if ( period <= 1 || rates_total - begin < period )
@@ -133,7 +169,7 @@ int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated,
 
 
 int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBuffer& value, Buffer& buffer )
+		const int period, ConstBufferImage& value, BufferImage& buffer )
 {
 	int i, limit;
 	if ( period <= 1 || rates_total - begin < period )
@@ -165,69 +201,146 @@ int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const
 
 
 
+
+
+
+DataSource::DataSource() {
+	
+}
+
+void DataSource::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	Panic("TODO");
+}
+void DataSource::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	Panic("TODO");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+ValueChange::ValueChange() {
+	
+}
+
+void ValueChange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Color(128,0,0));
+	gi.SetBufferLineWidth(0, 2);
+	gi.SetBufferColor(1, Color(0,128,0));
+	gi.SetBufferLineWidth(1, 2);
+	gi.SetBufferColor(2, Color(0,0,128));
+	gi.SetBufferLineWidth(2, 2);
+}
+
+void ValueChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int tf = ci.GetTf();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	
+	double point = ci.GetPoint();
+	
+	ConstBufferImage& open				= ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low				= ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high				= ci.GetInputBuffer(0, 2);
+	BufferImage& low_change				= gi.GetBuffer(0);
+	BufferImage& high_change			= gi.GetBuffer(1);
+	BufferImage& value_change			= gi.GetBuffer(2);
+	
+	if (!begin) begin = 1;
+	
+	for(int i = begin; i < end; i++) {
+		double open_value = open.Get(i-1);
+		double change_value = open.Get(i) / open_value - 1.0;
+		double low_change_ = low.Get(i-1) / open_value - 1.0;
+		double high_change_ = high.Get(i-1) / open_value - 1.0;
+		change_av.Add(fabs(change_value));
+		value_change.Set(i, change_value);
+		low_change.Set(i, low_change_);
+		high_change.Set(i, high_change_);
+	}
+	
+	for(int i = begin; i < end; i++) {
+		value_change	.Set(i, value_change	.Get(i) / (3 * change_av.mean));
+		low_change		.Set(i, low_change		.Get(i) / (3 * change_av.mean));
+		high_change		.Set(i, high_change		.Get(i) / (3 * change_av.mean));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 MovingAverage::MovingAverage()
 {
 	ma_period = 13;
-	ma_shift = -6;
-	ma_method = 0;
-	ma_counted = 0;
+	ma_shift  = -6;
+	ma_method  = 0;
 }
 
-void MovingAverage::Init() {
+void MovingAverage::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int draw_begin;
 	if (ma_period < 2)
 		ma_period = 13;
 	draw_begin = ma_period - 1;
 	
-	SetBufferColor(0, Red());
-	SetBufferShift(0, ma_shift);
-	SetBufferBegin(0, draw_begin );
+	gi.SetBufferColor(0, Red());
+	gi.SetBufferShift(0, ma_shift);
+	gi.SetBufferBegin(0, draw_begin );
 }
-
+/*
 void MovingAverage::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double ma = GetBuffer(0).Get(cursor);
+	double open = si.Open(cursor);
+	double ma = gi.GetBuffer(0).Get(cursor);
 	if (open > ma)	vec.Set(MA_OVERAV, true);
 	else			vec.Set(MA_BELOWAV, true);
 	if (cursor > 0) {
-		double prev = GetBuffer(0).Get(cursor - 1);
+		double prev = gi.GetBuffer(0).Get(cursor - 1);
 		if (ma > prev)	vec.Set(MA_TRENDUP, true);
 		else			vec.Set(MA_TRENDDOWN, true);
 	}
 }
-
-void MovingAverage::Start() {
-	int bars = GetBars();
-	if ( bars <= ma_period )
-		throw DataExc();
-	ma_counted = GetCounted();
-	if ( ma_counted < 0 )
-		throw DataExc();
-	if ( ma_counted > 0 )
-		ma_counted--;
-	int begin = ma_counted;
-	switch ( ma_method )
-	{
+*/
+void MovingAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	
+	
+	switch (ma_method) {
 		case MODE_SIMPLE:
-			Simple();
+			Simple(si, ci, gi);
 			break;
 		case MODE_EXPONENTIAL:
-			Exponential();
+			Exponential(si, ci, gi);
 			break;
 		case MODE_SMOOTHED:
-			Smoothed();
+			Smoothed(si, ci, gi);
 			break;
 		case MODE_LINWEIGHT:
-			LinearlyWeighted();
+			LinearlyWeighted(si, ci, gi);
 	}
 	
-	Buffer& buffer = GetBuffer(0);
-	VectorBool& label = outputs[0].label;
-	label.SetCount(bars);
-	SetSafetyLimit(ma_counted-1);
-	double prev = ma_counted > 0 ? buffer.Get(ma_counted-1) : 0.0;
-	for(int i = ma_counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	BufferImage& buffer = gi.GetBuffer(0);
+	VectorBool& label = gi.GetSignal();
+	label.SetCount(end);
+	
+	double prev = begin > 0 ? buffer.Get(begin-1) : 0.0;
+	for(int i = begin; i < end; i++) {
 		double cur = buffer.Get(i);
 		bool label_value = cur < prev;
 		label.Set(i, label_value);
@@ -235,99 +348,94 @@ void MovingAverage::Start() {
 	}
 }
 
-void MovingAverage::Simple()
-{
-	Buffer& buffer = GetBuffer(0);
+void MovingAverage::Simple(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	double sum = 0;
-	int bars = GetBars();
-	int pos = ma_counted;
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	int pos = begin;
 	if (pos < ma_period) pos = ma_period;
-	SetSafetyLimit(pos);
+	
 	for (int i = 1; i < ma_period; i++)
-		sum += Open(pos - i);
-	while (pos < bars) {
-		SetSafetyLimit(pos);
-		sum += Open( pos );
+		sum += si.Open(pos - i);
+	while (pos < end) {
+		sum += si.Open( pos );
 		buffer.Set(pos, sum / ma_period);
-		sum -= Open( pos - ma_period + 1 );
+		sum -= si.Open( pos - ma_period + 1 );
 		pos++;
 	}
-	if (ma_counted < 1)
+	if (begin < 1)
 		for (int i = 0; i < ma_period; i++)
 			buffer.Set(i, 0);
 }
 
-void MovingAverage::Exponential()
-{
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
+void MovingAverage::Exponential(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	double pr = 2.0 / ( ma_period + 1 );
 	int pos = 1;
-	if ( ma_counted > 2 )
-		pos = ma_counted + 1;
-	while (pos < bars) {
-		SetSafetyLimit(pos);
+	if ( begin > 2 )
+		pos = begin + 1;
+	while (pos < end) {
 		if (pos == 1)
-			buffer.Set(pos-1, Open(pos - 1));
-		buffer.Set(pos, Open(pos) * pr + buffer.Get(pos-1) * ( 1 - pr ));
+			buffer.Set(pos-1, si.Open(pos - 1));
+		buffer.Set(pos, si.Open(pos) * pr + buffer.Get(pos-1) * ( 1 - pr ));
 		pos++;
 	}
 }
 
-void MovingAverage::Smoothed()
-{
-	Buffer& buffer = GetBuffer(0);
+void MovingAverage::Smoothed(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	double sum = 0;
-	int bars = GetBars();
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	int pos = ma_period;
-	if (pos < ma_counted)
-		pos = ma_counted;
-	while (pos < bars) {
-		SetSafetyLimit(pos);
+	if (pos < begin)
+		pos = begin;
+	while (pos < end) {
 		if (pos == ma_period) {
 			for (int i = 0, k = pos; i < ma_period; i++, k--) {
-				sum += Open(k);
+				sum += si.Open(k);
 				buffer.Set(k, 0);
 			}
 		}
 		else
-			sum = buffer.Get(pos-1) * ( ma_period - 1 ) + Open(pos);
+			sum = buffer.Get(pos-1) * ( ma_period - 1 ) + si.Open(pos);
 		buffer.Set(pos, sum / ma_period);
 		pos++;
 	}
 }
 
-void MovingAverage::LinearlyWeighted()
-{
-	Buffer& buffer = GetBuffer(0);
+void MovingAverage::LinearlyWeighted(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	double sum = 0.0, lsum = 0.0;
 	double value;
-	int bars = GetBars();
-	int weight = 0, pos = ma_counted + 1;
-	if (pos > bars - ma_period)
-		pos = bars - ma_period;
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	int weight = 0, pos = begin + 1;
+	if (pos > end - ma_period)
+		pos = end - ma_period;
 	for (int i = 1; i <= ma_period; i++, pos++) {
-		SetSafetyLimit(pos);
-		value = Open( pos );
+		value = si.Open( pos );
 		sum += value * i;
 		lsum += value;
 		weight += i;
 	}
 	pos--;
 	int i = pos - ma_period;
-	while (pos < bars) {
+	while (pos < end) {
 		buffer.Set(pos, sum / weight);
 		pos++;
 		i++;
-		if ( pos == bars )
+		if ( pos == end )
 			break;
-		SetSafetyLimit(pos);
-		value = Open(pos);
+		value = si.Open(pos);
 		sum = sum - lsum + value * ma_period;
-		lsum -= Open(i);
+		lsum -= si.Open(i);
 		lsum += value;
 	}
-	if ( ma_counted < 1 )
+	if ( begin < 1 )
 		for (i = 0; i < ma_period; i++)
 			buffer.Set(i, 0);
 }
@@ -350,65 +458,55 @@ MovingAverageConvergenceDivergence::MovingAverageConvergenceDivergence() {
 	signal_sma_period = 9;
 }
 
-void MovingAverageConvergenceDivergence::Init() {
-	SetCoreSeparateWindow();
-	
-	SetBufferColor(0, Silver);
-	SetBufferColor(1, Red);
-	SetBufferLineWidth(0, 2);
-	
-	SetBufferBegin ( 1, signal_sma_period );
-	
-	SetBufferStyle(0, DRAW_HISTOGRAM);
-	SetBufferStyle(1, DRAW_LINE);
-	
-	SetBufferLabel(0,"MACD");
-	SetBufferLabel(1,"Signal");
-	
-	AddSubCore<MovingAverage>().Set("period", fast_ema_period);
-	AddSubCore<MovingAverage>().Set("period", slow_ema_period);
+void MovingAverageConvergenceDivergence::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Silver);
+	gi.SetBufferColor(1, Red);
+	gi.SetBufferLineWidth(0, 2);
+	gi.SetBufferBegin ( 1, signal_sma_period );
+	gi.SetBufferStyle(0, DRAW_HISTOGRAM);
+	gi.SetBufferStyle(1, DRAW_LINE);
+	//gi.SetBufferLabel(0,"MACD");
+	//gi.SetBufferLabel(1,"Signal");
 }
 
-void MovingAverageConvergenceDivergence::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& signal_buffer = GetBuffer(1);
+void MovingAverageConvergenceDivergence::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& signal_buffer = gi.GetBuffer(1);
 	
-	int bars = GetBars();
-	if ( bars <= signal_sma_period )
+	int end = ci.GetEnd();
+	if ( end <= signal_sma_period )
 		throw DataExc();
 
-	int counted = GetCounted();
-	if ( counted > 0 )
-		counted--;
+	int begin = ci.GetBegin();
+	if ( begin > 0 )
+		begin--;
 
-	const Core& a_ind = At(0);
-	const Core& b_ind = At(1);
-	ConstBuffer& a_buf = a_ind.GetBuffer(0);
-	ConstBuffer& b_buf = b_ind.GetBuffer(0);
+	ConstBufferImage& a_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& b_buf = ci.GetInputBuffer(2, 0);
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		double a_value = a_buf.Get(i);
 		double b_value = b_buf.Get(i);
 		double diff = a_value - b_value;
 		buffer.Set(i, diff);
 	}
 
-	SimpleMAOnBuffer( bars, GetCounted(), 0, signal_sma_period, buffer, signal_buffer );
+	SimpleMAOnBuffer( end, ci.GetBegin(), 0, signal_sma_period, buffer, signal_buffer );
 }
-
+/*
 void MovingAverageConvergenceDivergence::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double macd = GetBuffer(0).Get(cursor);
+	double open = si.Open(cursor);
+	double macd = gi.GetBuffer(0).Get(cursor);
 	if (macd > 0.0)		vec.Set(MACD_OVERZERO, true);
 	else				vec.Set(MACD_BELOWZERO, true);
 	if (cursor > 0) {
-		double prev = GetBuffer(0).Get(cursor - 1);
+		double prev = gi.GetBuffer(0).Get(cursor - 1);
 		if (macd > prev)	vec.Set(MACD_TRENDUP, true);
 		else				vec.Set(MACD_TRENDDOWN, true);
 	}
 }
-
+*/
 
 
 
@@ -418,58 +516,56 @@ AverageDirectionalMovement::AverageDirectionalMovement() {
 	period_adx = 14;
 }
 
-void AverageDirectionalMovement::Init() {
-	SetCoreSeparateWindow();
+void AverageDirectionalMovement::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, LightSeaGreen);
-	SetBufferColor(1,  YellowGreen);
-	SetBufferColor(2,  Wheat);
+	gi.SetBufferColor(0, LightSeaGreen);
+	gi.SetBufferColor(1,  YellowGreen);
+	gi.SetBufferColor(2,  Wheat);
 	
-	SetBufferLabel(0,"ADX");
-	SetBufferLabel(1,"+DI");
-	SetBufferLabel(2,"-DI");
+	//gi.SetBufferLabel(0,"ADX");
+	//gi.SetBufferLabel(1,"+DI");
+	//gi.SetBufferLabel(2,"-DI");
 	
 	if ( period_adx >= 128 || period_adx <= 1 )
 		throw DataExc();
 	
-	SetBufferBegin ( 0, period_adx );
-	SetBufferBegin ( 1, period_adx );
-	SetBufferBegin ( 2, period_adx );
+	gi.SetBufferBegin ( 0, period_adx );
+	gi.SetBufferBegin ( 1, period_adx );
+	gi.SetBufferBegin ( 2, period_adx );
 }
 
-void AverageDirectionalMovement::Start() {
-	Buffer& adx_buffer = GetBuffer(0);
-	Buffer& pdi_buffer = GetBuffer(1);
-	Buffer& ndi_buffer = GetBuffer(2);
-	Buffer& pd_buffer  = GetBuffer(3);
-	Buffer& nd_buffer  = GetBuffer(4);
-	Buffer& tmp_buffer = GetBuffer(5);
+void AverageDirectionalMovement::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& adx_buffer = gi.GetBuffer(0);
+	BufferImage& pdi_buffer = gi.GetBuffer(1);
+	BufferImage& ndi_buffer = gi.GetBuffer(2);
+	BufferImage& pd_buffer  = gi.GetBuffer(3);
+	BufferImage& nd_buffer  = gi.GetBuffer(4);
+	BufferImage& tmp_buffer = gi.GetBuffer(5);
 	
-	int bars = GetBars();
-	if ( bars < period_adx )
+	int end = ci.GetEnd();
+	if ( end < period_adx )
 		throw DataExc();
 
-	int counted = GetCounted();
+	int begin = ci.GetBegin();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 	else {
-		counted = 2;
+		begin = 2;
 		for(int i = 0; i < 2; i++) {
-			SetSafetyLimit(i);
 			pdi_buffer.Set(i, 0.0);
 			ndi_buffer.Set(i, 0.0);
 			adx_buffer.Set(i, 0.0);
 		}
 	}
 	
-	for ( int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double Hi		= High(i - 1);
-		double prev_hi	= High(i - 2);
-		double Lo		= Low(i - 1);
-		double prev_lo	= Low(i - 2);
-		double prev_cl	= Open(i);
+	for ( int i = begin; i < end; i++) {
+		double Hi		= si.High(i - 1);
+		double prev_hi	= si.High(i - 2);
+		double Lo		= si.Low(i - 1);
+		double prev_lo	= si.Low(i - 2);
+		double prev_cl	= si.Open(i);
 
 		double tmp_p = Hi - prev_hi;
 		double tmp_n = prev_lo - Lo;
@@ -544,26 +640,26 @@ BollingerBands::BollingerBands()
 	plot_begin = 0;
 }
 
-void BollingerBands::Init() {
-	SetCoreChartWindow();
+void BollingerBands::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
 	
 	bands_deviation = deviation * 0.1;
 	
-	SetBufferColor(0, LightSeaGreen);
-	SetBufferColor(1,  LightSeaGreen);
-	SetBufferColor(2,  LightSeaGreen);
+	gi.SetBufferColor(0, LightSeaGreen);
+	gi.SetBufferColor(1,  LightSeaGreen);
+	gi.SetBufferColor(2,  LightSeaGreen);
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferShift(0,bands_shift);
-	SetBufferLabel(0,"Bands SMA");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	gi.SetBufferShift(0,bands_shift);
+	//gi.SetBufferLabel(0,"Bands SMA");
 	
-	SetBufferStyle(1,DRAW_LINE);
-	SetBufferShift(1,bands_shift);
-	SetBufferLabel(1,"Bands Upper");
+	gi.SetBufferStyle(1,DRAW_LINE);
+	gi.SetBufferShift(1,bands_shift);
+	//gi.SetBufferLabel(1,"Bands Upper");
 	
-	SetBufferStyle(2,DRAW_LINE);
-	SetBufferShift(2,bands_shift);
-	SetBufferLabel(2,"Bands Lower");
+	gi.SetBufferStyle(2,DRAW_LINE);
+	gi.SetBufferShift(2,bands_shift);
+	//gi.SetBufferLabel(2,"Bands Lower");
 	
 	if ( bands_period < 2 )
 		throw DataExc();
@@ -572,120 +668,103 @@ void BollingerBands::Init() {
 		throw DataExc();
 	
 	plot_begin = bands_period - 1;
-	SetBufferBegin ( 0, bands_period );
-	SetBufferBegin ( 1, bands_period );
-	SetBufferBegin ( 2, bands_period );
+	gi.SetBufferBegin ( 0, bands_period );
+	gi.SetBufferBegin ( 1, bands_period );
+	gi.SetBufferBegin ( 2, bands_period );
 	
-	SetBufferShift ( 0, bands_shift );
-	SetBufferShift ( 1, bands_shift );
-	SetBufferShift ( 2, bands_shift );
+	gi.SetBufferShift ( 0, bands_shift );
+	gi.SetBufferShift ( 1, bands_shift );
+	gi.SetBufferShift ( 2, bands_shift );
 }
 
-void BollingerBands::Start() {
-	Buffer& ml_buffer = GetBuffer(0);
-	Buffer& tl_buffer = GetBuffer(1);
-	Buffer& bl_buffer = GetBuffer(2);
-	Buffer& stddev_buffer = GetBuffer(3);
+void BollingerBands::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& ml_buffer = gi.GetBuffer(0);
+	BufferImage& tl_buffer = gi.GetBuffer(1);
+	BufferImage& bl_buffer = gi.GetBuffer(2);
+	BufferImage& stddev_buffer = gi.GetBuffer(3);
 	
-	int bars = GetBars();
+	int end = ci.GetEnd();
 	int pos;
-	int counted = GetCounted();
+	int begin = ci.GetBegin();
 	
-	if ( bars < plot_begin )
+	if ( end < plot_begin )
 		throw DataExc();
 	
-	if ( counted > 1 )
-		pos = counted - 1;
+	if ( begin > 1 )
+		pos = begin - 1;
 	else
 		pos = 0;
 	
-	ConstBuffer& open = GetInputBuffer(0, 0);
+	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
 	
-	for ( int i = pos; i < bars; i++) {
-		SetSafetyLimit(i);
+	for ( int i = pos; i < end; i++) {
 		ml_buffer.Set(i, SimpleMA( i, bands_period, open ));
-		stddev_buffer.Set(i, StdDev_Func ( i, ml_buffer, bands_period ));
+		
+		double tmp = 0.0;
+	
+		if ( i >= bands_period ) {
+			int end = ci.GetEnd();
+			for (int j = 0; j < bands_period; j++) {
+				double value =  si.Open(i - j );
+				tmp += pow ( value - ml_buffer.Get( i ), 2 );
+			}
+		
+			tmp = sqrt( tmp / bands_period );
+		}
+		stddev_buffer.Set(i, tmp);
+		
 		tl_buffer.Set(i, ml_buffer.Get(i) + bands_deviation * stddev_buffer.Get(i));
 		bl_buffer.Set(i, ml_buffer.Get(i) - bands_deviation * stddev_buffer.Get(i));
 	}
 }
-
+/*
 void BollingerBands::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double high = High(cursor - 1);
-		double low  = Low(cursor - 1);
-		double top = GetBuffer(1).Get(cursor);
-		double bot = GetBuffer(2).Get(cursor);
+		double high = si.High(cursor - 1);
+		double low  = si.Low(cursor - 1);
+		double top = gi.GetBuffer(1).Get(cursor);
+		double bot = gi.GetBuffer(2).Get(cursor);
 		if (high >= top)		vec.Set(BB_HIGHBAND, true);
 		if (low  <= bot)		vec.Set(BB_LOWBAND, true);
 	}
 }
-
-double BollingerBands::StdDev_Func ( int position, const Buffer& MAvalue, int period ) {
-	double tmp = 0.0;
-
-	if ( position < period )
-		return tmp;
-	
-	int bars = GetBars();
-	for (int i = 0; i < period; i++) {
-		double value = Open (position - i );
-		tmp += pow ( value - MAvalue.Get( position ), 2 );
-	}
-
-	tmp = sqrt( tmp / period );
-
-	return tmp;
-}
+*/
 
 
 
 
 
 Envelopes::Envelopes() {
-	ma_period = 14;
-	ma_shift = 0;
-	ma_method = MODE_SMA;
 	deviation = 0.1;
 	dev = 10;
 }
 
-void Envelopes::Init() {
-	SetCoreChartWindow();
+void Envelopes::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
 	
 	deviation = dev * 0.1;
 	
-	SetBufferColor(0, Blue);
-	SetBufferColor(1, Red);
+	gi.SetBufferColor(0, Blue);
+	gi.SetBufferColor(1, Red);
 	
-	SetBufferBegin ( 0, ma_period - 1 );
-	SetBufferShift ( 0, ma_shift );
-	SetBufferShift ( 1, ma_shift );
-	
-	SetBufferStyle(0, DRAW_LINE);
-	SetBufferStyle(1, DRAW_LINE);
-	
-	AddSubCore<MovingAverage>().Set("period", ma_period).Set("offset", 0).Set("method", ma_method);
+	gi.SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferStyle(1, DRAW_LINE);
 }
 
 
-void Envelopes::Start() {
-	Buffer& up_buffer = GetBuffer(0);
-	Buffer& down_buffer = GetBuffer(1);
-	Buffer& ma_buffer = GetBuffer(2);
+void Envelopes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& up_buffer = gi.GetBuffer(0);
+	BufferImage& down_buffer = gi.GetBuffer(1);
+	BufferImage& ma_buffer = gi.GetBuffer(2);
 	
-	int bars = GetBars();
-
-	if ( bars < ma_period )
-		throw DataExc();
-
-	int counted = GetCounted();
-	if (counted) counted--;
-	else counted = ma_period;
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double value = Open(i);
+	if (begin) begin--;
+	else begin = 0;
+	
+	for (int i = begin; i < end; i++) {
+		double value = si.Open(i);
 		ASSERT(value != 0);
 		ma_buffer.Set(i, value);
 		up_buffer.Set(i, ( 1 + deviation / 100.0 ) * ma_buffer.Get(i));
@@ -707,13 +786,13 @@ ParabolicSAR::ParabolicSAR() {
 	maximum = 20;
 }
 
-void ParabolicSAR::Init() {
-	SetCoreChartWindow();
+void ParabolicSAR::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
 	
 	sar_step = step * 0.001;
 	sar_maximum = maximum * 0.01;
 	
-	SetBufferColor(0, Lime);
+	gi.SetBufferColor(0, Lime);
 	
 	if (sar_step <= 0.0)
 		throw DataExc();
@@ -724,33 +803,32 @@ void ParabolicSAR::Init() {
 	last_rev_pos = 0;
 	direction_long = false;
 	
-	SetBufferStyle(0, DRAW_ARROW);
-	SetBufferArrow(0, 159);
+	gi.SetBufferStyle(0, DRAW_ARROW);
+	gi.SetBufferArrow(0, 159);
 }
 
-void ParabolicSAR::Start () {
-	Buffer& sar_buffer = GetBuffer(0);
-	Buffer& ep_buffer  = GetBuffer(1);
-	Buffer& af_buffer  = GetBuffer(2);
+void ParabolicSAR::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& sar_buffer = gi.GetBuffer(0);
+	BufferImage& ep_buffer  = gi.GetBuffer(1);
+	BufferImage& af_buffer  = gi.GetBuffer(2);
 	
-	int counted = GetCounted();
-	int bars = GetBars();
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 
-	if ( bars < 3 )
+	if ( end < 3 )
 		throw DataExc();
 	
-	int pos = counted - 1;
+	int pos = begin - 1;
 
 	if ( pos < 1 ) {
-		SetSafetyLimit(1);
 		pos = 1;
 		af_buffer.Set(0, sar_step);
 		af_buffer.Set(1, sar_step);
-		sar_buffer.Set(0, High( 0 ));
+		sar_buffer.Set(0, si.High( 0 ));
 		last_rev_pos = 0;
 		direction_long = false;
-		sar_buffer.Set(1, GetHigh( pos-1, last_rev_pos ));
-		double low = Low( 0 );
+		sar_buffer.Set(1, GetHigh( pos-1, last_rev_pos, si, ci, gi ));
+		double low = si.Low( 0 );
 		ep_buffer.Set(0, low);
 		ep_buffer.Set(1, low);
 	}
@@ -760,21 +838,19 @@ void ParabolicSAR::Start () {
 	int prev_pos = pos - 1;
 	if (prev_pos < 0) prev_pos = 0;
 	
-	SetSafetyLimit(prev_pos+1);
-	double prev_high = High( prev_pos );
-	double prev_low  = Low( prev_pos );
+	double prev_high = si.High( prev_pos );
+	double prev_low  = si.Low( prev_pos );
 	
-	//bars--;
+	//end--;
 	
-	for (int i = pos; i < bars; i++) {
-		SetSafetyLimit(i);
-		double low  = Low(i-1);
-		double high = High(i-1);
+	for (int i = pos; i < end; i++) {
+		double low  = si.Low(i-1);
+		double high = si.High(i-1);
 
 		if ( direction_long ) {
 			if ( sar_buffer.Get(i-1) > low ) {
 				direction_long = false;
-				sar_buffer.Set(i-1, GetHigh( i-1, last_rev_pos ));
+				sar_buffer.Set(i-1, GetHigh( i-1, last_rev_pos, si, ci, gi ));
 				ep_buffer.Set(i, low);
 				last_rev_pos = i;
 				af_buffer.Set(i, sar_step);
@@ -783,7 +859,7 @@ void ParabolicSAR::Start () {
 		else {
 			if ( sar_buffer.Get(i-1) < high ) {
 				direction_long = true;
-				sar_buffer.Set(i-1, GetLow( i-1, last_rev_pos ));
+				sar_buffer.Set(i-1, GetLow( i-1, last_rev_pos, si, ci, gi ));
 				ep_buffer.Set(i, high);
 				last_rev_pos = i;
 				af_buffer.Set(i, sar_step);
@@ -841,16 +917,16 @@ void ParabolicSAR::Start () {
 	}
 }
 
-double ParabolicSAR::GetHigh( int pos, int start_pos )
+double ParabolicSAR::GetHigh( int pos, int start_pos, SourceImage& si, ChartImage& ci, GraphImage& gi )
 {
 	ASSERT(pos >= start_pos);
-	int bars = GetBars();
+	int end = ci.GetEnd();
 	
-	double result = High( start_pos );
+	double result = si.High( start_pos );
 
 	for ( int i = start_pos+1; i <= pos; i++)
 	{
-		double high = High(i);
+		double high = si.High(i);
 
 		if ( result < high )
 			result = high;
@@ -859,16 +935,16 @@ double ParabolicSAR::GetHigh( int pos, int start_pos )
 	return ( result );
 }
 
-double ParabolicSAR::GetLow( int pos, int start_pos )
+double ParabolicSAR::GetLow( int pos, int start_pos, SourceImage& si, ChartImage& ci, GraphImage& gi )
 {
 	ASSERT(pos >= start_pos);
-	int bars = GetBars();
+	int end = ci.GetEnd();
 	
-	double result = Low( start_pos );
+	double result = si.Low( start_pos );
 
 	for ( int i = start_pos+1; i <= pos; i++)
 	{
-		double low = Low(i);
+		double low = si.Low(i);
 
 		if ( result > low )
 			result = low;
@@ -876,14 +952,14 @@ double ParabolicSAR::GetLow( int pos, int start_pos )
 
 	return ( result );
 }
-
+/*
 void ParabolicSAR::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double sar = GetBuffer(0).Get(cursor);
+	double open = si.Open(cursor);
+	double sar = gi.GetBuffer(0).Get(cursor);
 	if (open > sar)		vec.Set(PSAR_TRENDUP, true);
 	else				vec.Set(PSAR_TRENDDOWN, true);
 }
-
+*/
 
 
 
@@ -897,52 +973,49 @@ StandardDeviation::StandardDeviation() {
 	ma_method = 0;
 }
 
-void StandardDeviation::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(0);
+void StandardDeviation::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(0);
 	
-	SetBufferColor(0, Blue);
-	SetBufferBegin ( 0, period );
+	gi.SetBufferColor(0, Blue);
+	gi.SetBufferBegin ( 0, period );
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "StdDev");
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", ma_method);
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "StdDev");
 }
-
+/*
 void StandardDeviation::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > std1)	vec.Set(STDDEV_INC, true);
 		else				vec.Set(STDDEV_DEC, true);
 	}
 }
-
-void StandardDeviation::Start() {
-	Buffer& stddev_buffer = GetBuffer(0);
+*/
+void StandardDeviation::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& stddev_buffer = gi.GetBuffer(0);
 	double value, amount, ma;
 
-	int bars = GetBars();
-	if ( bars <= period )
+	int end = ci.GetEnd();
+	if ( end <= period )
 		throw DataExc();
 
-	int counted = GetCounted();
+	int begin = ci.GetBegin();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 	else
-		counted = period;
+		begin = period;
 	
-	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		amount = 0.0;
 		ma = ma_buf.Get(i);
 
 		for ( int j = 0; j < period; j++ ) {
-			value = Open( i - j );
+			value = si.Open( i - j );
 			amount += ( value - ma ) * ( value - ma );
 		}
 
@@ -963,46 +1036,45 @@ AverageTrueRange::AverageTrueRange() {
 	period = 14;
 }
 
-void AverageTrueRange::Init() {
-	SetCoreSeparateWindow();
+void AverageTrueRange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, DodgerBlue);
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "ATR");
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "ATR");
 	
 	if ( period <= 0 )
 		throw DataExc();
 	
-	SetBufferBegin ( 0, period );
+	gi.SetBufferBegin ( 0, period );
 }
-
+/*
 void AverageTrueRange::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > std1)	vec.Set(ATR_INC, true);
 		else				vec.Set(ATR_DEC, true);
 	}
 }
-
-void AverageTrueRange::Start() {
-	Buffer& atr_buffer = GetBuffer(0);
-	Buffer& tr_buffer = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+*/
+void AverageTrueRange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& atr_buffer = gi.GetBuffer(0);
+	BufferImage& tr_buffer = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if ( bars <= period || period <= 0 )
+	if ( end <= period || period <= 0 )
 		throw DataExc();
 	
-	if ( counted == 0 ) {
+	if ( begin == 0 ) {
 		tr_buffer.Set(0, 0.0);
 		atr_buffer.Set(0, 0.0);
 		
-		for (int i = 1; i < bars; i++) {
-			SetSafetyLimit(i);
-			double h = High(i-1);
-			double l = Low(i-1);
-			double c = Open(i);
+		for (int i = 1; i < end; i++) {
+			double h = si.High(i-1);
+			double l = si.Low(i-1);
+			double c = si.Open(i);
 
 			tr_buffer.Set(i, Upp::max( h, c ) - Upp::min( l, c ));
 		}
@@ -1018,16 +1090,15 @@ void AverageTrueRange::Start() {
 
 		atr_buffer.Set(period, first_value);
 
-		counted = period + 1;
+		begin = period + 1;
 	}
 	else
-		counted--;
+		begin--;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double h = High(i-1);
-		double l = Low(i-1);
-		double c = Open(i);
+	for (int i = begin; i < end; i++) {
+		double h = si.High(i-1);
+		double l = si.Low(i-1);
+		double c = si.Open(i);
 
 		tr_buffer.Set(i, Upp::max( h, c ) - Upp::min( l, c ));
 		atr_buffer.Set(i, atr_buffer.Get( i - 1 ) + ( tr_buffer.Get(i) - tr_buffer.Get( i - period ) ) / period);
@@ -1050,45 +1121,42 @@ BearsPower::BearsPower() {
 	period = 13;
 }
 
-void BearsPower::Init() {
-	SetCoreSeparateWindow();
+void BearsPower::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Silver);
-	SetBufferStyle(0,DRAW_HISTOGRAM);
-	SetBufferLabel(0,"ATR");
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", MODE_EMA);
+	gi.SetBufferColor(0, Silver);
+	gi.SetBufferStyle(0,DRAW_HISTOGRAM);
+	//gi.SetBufferLabel(0,"ATR");
 }
-
+/*
 void BearsPower::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > 0.0)		vec.Set(BEAR_OVERZERO, true);
 		else				vec.Set(BEAR_BELOWZERO, true);
 		if (std0 > std1)	vec.Set(BEAR_INC, true);
 		else				vec.Set(BEAR_DEC, true);
 	}
-}
+}*/
 
-void BearsPower::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void BearsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 	else
-		counted++;
+		begin++;
 	
-	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		buffer.Set(i, Low(i-1) - ma_buf.Get(i));
+	for (int i = begin; i < end; i++) {
+		buffer.Set(i, si.Low(i-1) - ma_buf.Get(i));
 	}
 }
 
@@ -1104,46 +1172,43 @@ BullsPower::BullsPower() {
 	period = 13;
 }
 
-void BullsPower::Init() {
-	SetCoreSeparateWindow();
+void BullsPower::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Silver);
+	gi.SetBufferColor(0, Silver);
 	
-	SetBufferStyle(0,DRAW_HISTOGRAM);
-	SetBufferLabel(0,"Bulls");
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", MODE_EMA);
+	gi.SetBufferStyle(0,DRAW_HISTOGRAM);
+	//gi.SetBufferLabel(0,"Bulls");
 }
-
+/*
 void BullsPower::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > 0.0)		vec.Set(BULL_OVERZERO, true);
 		else				vec.Set(BULL_BELOWZERO, true);
 		if (std0 > std1)	vec.Set(BULL_INC, true);
 		else				vec.Set(BULL_DEC, true);
 	}
 }
+*/
+void BullsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-void BullsPower::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
-
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 	else
-		counted++;
+		begin++;
 	
-	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
-	for ( int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		buffer.Set(i, High(i-1) - ma_buf.Get(i) );
+	for ( int i = begin; i < end; i++) {
+		buffer.Set(i, si.High(i-1) - ma_buf.Get(i) );
 	}
 }
 
@@ -1163,29 +1228,29 @@ CommodityChannelIndex::CommodityChannelIndex() {
 	period = 14;
 }
 
-void CommodityChannelIndex::Init() {
-	SetCoreSeparateWindow();
+void CommodityChannelIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, LightSeaGreen);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, -100.0);
-	SetCoreLevel(1,  100.0);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	gi.SetBufferColor(0, LightSeaGreen);
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, -100.0);
+	gi.SetCoreLevel(1,  100.0);
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0,"CCI");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0,"CCI");
 	
 	if ( period <= 1 )
 		throw DataExc();
 	
-	SetBufferBegin ( 0, period );
+	gi.SetBufferBegin ( 0, period );
 }
-
+/*
 void CommodityChannelIndex::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > 0.0)		vec.Set(CCI_OVERZERO, true);
 		else				vec.Set(CCI_BELOWZERO, true);
 		if (std0 > +100.0)	vec.Set(CCI_OVERHIGH, true);
@@ -1194,26 +1259,25 @@ void CommodityChannelIndex::Assist(int cursor, VectorBool& vec) {
 		else				vec.Set(CCI_DEC, true);
 	}
 }
-
-void CommodityChannelIndex::Start() {
-	Buffer& cci_buffer = GetBuffer(0);
-	Buffer& value_buffer = GetBuffer(1);
-	Buffer& mov_buffer = GetBuffer(2);
+*/
+void CommodityChannelIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& cci_buffer = gi.GetBuffer(0);
+	BufferImage& value_buffer = gi.GetBuffer(1);
+	BufferImage& mov_buffer = gi.GetBuffer(2);
 	
 	int i, k, pos;
 	double sum, mul;
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if ( bars <= period || period <= 1 )
+	if ( end <= period || period <= 1 )
 		throw DataExc();
 	
-	if ( counted < 1 ) {
+	if ( begin < 1 ) {
 		for ( i = 1; i < period; i++) {
-			SetSafetyLimit(i);
-			double h = High(i-1);
-			double l = Low(i-1);
-			double c = Open(i);
+			double h = si.High(i-1);
+			double l = si.Low(i-1);
+			double c = si.Open(i);
 
 			cci_buffer.Set(i, 0.0);
 			value_buffer.Set(i, ( h + l + c ) / 3);
@@ -1221,7 +1285,7 @@ void CommodityChannelIndex::Start() {
 		}
 	}
 
-	pos = counted - 1;
+	pos = begin - 1;
 
 	if ( pos < period )
 		pos = period;
@@ -1229,12 +1293,11 @@ void CommodityChannelIndex::Start() {
 	if (pos == 0)
 		pos++;
 	
-	//bars--;
-	for ( i = pos; i < bars; i++) {
-		SetSafetyLimit(i);
-		double h = High(i-1);
-		double l = Low(i-1);
-		double c = Open(i);
+	//end--;
+	for ( i = pos; i < end; i++) {
+		double h = si.High(i-1);
+		double l = si.Low(i-1);
+		double c = si.Open(i);
 		value_buffer.Set(i, ( h + l + c ) / 3);
 		mov_buffer.Set(i, SimpleMA ( i, period, value_buffer ));
 	}
@@ -1242,19 +1305,16 @@ void CommodityChannelIndex::Start() {
 	mul = 0.015 / period;
 	pos = period - 1;
 
-	if ( pos < counted - 1 )
-		pos = counted - 2;
+	if ( pos < begin - 1 )
+		pos = begin - 2;
 
 	i = pos;
 
-	while ( i < bars ) {
-		SetSafetyLimit(i);
+	while ( i < end ) {
 		sum = 0.0;
 		k = i + 1 - period;
-		SafetyInspect(k);
 		
 		while ( k <= i ) {
-			SafetyInspect(k);
 			sum += fabs ( value_buffer.Get(k) - mov_buffer.Get(i) );
 			k++;
 		}
@@ -1280,26 +1340,26 @@ DeMarker::DeMarker() {
 	period = 14;
 }
 
-void DeMarker::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-0.5);  // normalized
-	SetCoreMaximum(0.5);   // normalized
+void DeMarker::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-0.5);  // normalized
+	gi.SetCoreMaximum(0.5);   // normalized
 	
-	SetBufferColor(0, DodgerBlue);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, -0.2); // normalized
-	SetCoreLevel(1, +0.2); // normalized
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, -0.2); // normalized
+	gi.SetCoreLevel(1, +0.2); // normalized
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0,"DeMarker");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0,"DeMarker");
 	
-	SetBufferBegin ( 0, period );
+	gi.SetBufferBegin ( 0, period );
 }
-
+/*
 void DeMarker::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
+		double std0 = gi.GetBuffer(0).Get(cursor);
+		double std1 = gi.GetBuffer(0).Get(cursor-1);
 		if (std0 > 0.0)		vec.Set(DEM_OVERZERO, true);
 		else				vec.Set(DEM_BELOWZERO, true);
 		if (std0 > +0.2)	vec.Set(DEM_OVERHIGH, true);
@@ -1308,36 +1368,33 @@ void DeMarker::Assist(int cursor, VectorBool& vec) {
 		else				vec.Set(DEM_DEC, true);
 	}
 }
-
-void DeMarker::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& max_buffer = GetBuffer(1);
-	Buffer& min_buffer = GetBuffer(2);
+*/
+void DeMarker::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& max_buffer = gi.GetBuffer(1);
+	BufferImage& min_buffer = gi.GetBuffer(2);
 	double num;
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 	
 	max_buffer.Set(0, 0.0);
 	min_buffer.Set(0, 0.0);
 
-	if ( counted > 2 )
-		counted--;
+	if ( begin > 2 )
+		begin--;
 	else
-		counted = 2;
+		begin = 2;
 	
-	SetSafetyLimit(counted);
-	double prev_high = counted >= 2 ? High( counted - 1 ) : 0;
-	double prev_low  = counted >= 2 ? Low( counted - 1 ) : 0;
+	double prev_high = begin >= 2 ? si.High( begin - 1 ) : 0;
+	double prev_low  = begin >= 2 ? si.Low( begin - 1 ) : 0;
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double high = High(i-1);
-		double low  = Low(i-1);
+	for (int i = begin; i < end; i++) {
+		double high = si.High(i-1);
+		double low  = si.Low(i-1);
 
 		num = high - prev_high;
 
@@ -1357,14 +1414,13 @@ void DeMarker::Start() {
 		prev_low  = low;
 	}
 
-	if ( counted == 0 )
+	if ( begin == 0 )
 		for (int i = 0; i < period; i++)
-			buffer.Set(bars - i, 0.0);
+			buffer.Set(end - i, 0.0);
 
 	
-	for (int i = counted; i < bars; i++)
+	for (int i = begin; i < end; i++)
 	{
-		SetSafetyLimit(i);
 		double maxvalue = SimpleMA ( i, period, max_buffer );
 		num = maxvalue + SimpleMA ( i, period, min_buffer );
 
@@ -1389,49 +1445,46 @@ ForceIndex::ForceIndex() {
 	ma_method = 0;
 }
 
-void ForceIndex::Init() {
-	SetCoreSeparateWindow();
+void ForceIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, DodgerBlue);
+	gi.SetBufferColor(0, DodgerBlue);
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferBegin(0,period);
+	gi.SetBufferStyle(0,DRAW_LINE);
+	gi.SetBufferBegin(0,period);
 	
-	SetBufferBegin ( 0, period );
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", ma_method);
+	gi.SetBufferBegin ( 0, period );
 }
-
+/*
 void ForceIndex::Assist(int cursor, VectorBool& vec) {
-	/*if (cursor > 0) {
-		double force0 = GetBuffer(0).Get(cursor);
-		double force1 = GetBuffer(0).Get(cursor-1);
+	if (cursor > 0) {
+		double force0 = gi.GetBuffer(0).Get(cursor);
+		double force1 = gi.GetBuffer(0).Get(cursor-1);
 		if (force0 > 0.0)		vec.Set(FORCE_OVERZERO, true);
 		else					vec.Set(FORCE_BELOWZERO, true);
 		if (force0 > force1)	vec.Set(FORCE_INC, true);
 		else					vec.Set(FORCE_DEC, true);
-	}*/
+	}
 }
-
-void ForceIndex::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+*/
+void ForceIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if (bars <= period)
+	if (end <= period)
 		throw DataExc();
 	
-	if (counted > 0)
-		counted--;
+	if (begin > 0)
+		begin--;
 	
-	if (counted == 0)
-		counted++;
+	if (begin == 0)
+		begin++;
 	
-	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
-	for ( int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double volume = Volume(i-1);
+	for ( int i = begin; i < end; i++) {
+		double volume = si.Volume(i-1);
 		double ma1 = ma_buf.Get(i);
 		double ma2 = ma_buf.Get( i - 1 );
 		buffer.Set(i, volume * (ma1 - ma2));
@@ -1454,57 +1507,54 @@ Momentum::Momentum()
 	shift = -7;
 }
 
-void Momentum::Init() {
-	SetCoreSeparateWindow();
+void Momentum::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, DodgerBlue);
-	SetBufferColor(1, Color(28, 255, 200));
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferColor(1, Color(28, 255, 200));
 	
 	if ( period <= 0 )
 		throw DataExc();
 
-	SetBufferBegin(0, period);
-	SetBufferShift(0, shift);
+	gi.SetBufferBegin(0, period);
+	gi.SetBufferShift(0, shift);
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0,"Momentum");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0,"Momentum");
 }
-
+/*
 void Momentum::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
 		if (value0 > 0.0)		vec.Set(MOM_OVERZERO, true);
 		else					vec.Set(MOM_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(MOM_INC, true);
 		else					vec.Set(MOM_DEC, true);
 	}
 }
-
-void Momentum::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& change_buf = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+*/
+void Momentum::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& change_buf = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if ( bars <= period || period <= 0 )
+	if ( end <= period || period <= 0 )
 		throw DataExc();
 
-	if ( counted <= 0 ) {
+	if ( begin <= 0 ) {
 		for (int i = 0; i < period; i++) {
-			SetSafetyLimit(i);
 			buffer.Set(i, 0.0);
 		}
-		counted = period;
+		begin = period;
 	}
 	else
-		counted--;
+		begin--;
 	
-	SetSafetyLimit(counted-1);
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double close1 = Open( i );
-		double close2 = Open( i - period );
+	for (int i = begin; i < end; i++) {
+		double close1 = si.Open( i );
+		double close2 = si.Open( i - period );
 		double value = close1 * 100 / close2 - 100;
 		buffer.Set(i, value);
 		
@@ -1531,59 +1581,52 @@ OsMA::OsMA() {
 	diff_count = 0;
 }
 
-void OsMA::Init() {
-	SetCoreSeparateWindow();
+void OsMA::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Silver);
-	SetBufferLineWidth(0, 2);
-	SetBufferColor(1, Red);
-	SetBufferLineWidth(1, 1);
+	gi.SetBufferColor(0, Silver);
+	gi.SetBufferLineWidth(0, 2);
+	gi.SetBufferColor(1, Red);
+	gi.SetBufferLineWidth(1, 1);
 	
-	SetBufferStyle(0,DRAW_HISTOGRAM);
-	SetBufferStyle(1,DRAW_LINE);
+	gi.SetBufferStyle(0,DRAW_HISTOGRAM);
+	gi.SetBufferStyle(1,DRAW_LINE);
 	
-	SetBufferBegin ( 0, signal_sma_period );
-
-	//	AddSubCore<MovingAverage>().Set("period", fast_ema_period).Set("offset", 0).Set("method", MODE_EMA);
-	//	AddSubCore<MovingAverage>().Set("period", slow_ema_period).Set("offset", 0).Set("method", MODE_EMA);
+	gi.SetBufferBegin ( 0, signal_sma_period );
 }
 
 
 
 	
-void OsMA::Start() {
-	Buffer& osma_buffer = GetBuffer(0);
-	Buffer& diff_buffer = GetBuffer(1);
-	Buffer& buffer = GetBuffer(2);
-	Buffer& signal_buffer = GetBuffer(3);
-	int bars = GetBars();
-	int counted = GetCounted();
+void OsMA::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osma_buffer = gi.GetBuffer(0);
+	BufferImage& diff_buffer = gi.GetBuffer(1);
+	BufferImage& buffer = gi.GetBuffer(2);
+	BufferImage& signal_buffer = gi.GetBuffer(3);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= signal_sma_period )
+	if ( end <= signal_sma_period )
 		return;
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 	
-	//	ConstBuffer& ma1_buf = At(0).GetBuffer(0);
-	//	ConstBuffer& ma2_buf = At(1).GetBuffer(0);
-	ConstBuffer& ma1_buf = GetInputBuffer(1, 0);
-	ConstBuffer& ma2_buf = GetInputBuffer(2, 0);
-	ASSERT(ma1_buf.GetCount() >= bars);
-	ASSERT(ma2_buf.GetCount() >= bars);
+	ConstBufferImage& ma1_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma2_buf = ci.GetInputBuffer(2, 0);
+	ASSERT(ma1_buf.GetCount() >= end);
+	ASSERT(ma2_buf.GetCount() >= end);
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double ma1 = ma1_buf.GetUnsafe(i);
-		double ma2 = ma2_buf.GetUnsafe(i);
+	for (int i = begin; i < end; i++) {
+		double ma1 = ma1_buf.Get(i);
+		double ma2 = ma2_buf.Get(i);
 		double d = ma1 - ma2;
 		buffer.Set(i, d);
 	}
 	
-	SetSafetyLimit(bars);
-	SimpleMAOnBuffer( bars, counted, 0, signal_sma_period, buffer, signal_buffer );
+	SimpleMAOnBuffer( end, begin, 0, signal_sma_period, buffer, signal_buffer );
 	
-	for (int i = counted; i < bars; i++) {
+	for (int i = begin; i < end; i++) {
 		double d = buffer.Get(i) - signal_buffer.Get(i);
 		if (d != 0.0)
 			AddValue(fabs(d));
@@ -1591,7 +1634,7 @@ void OsMA::Start() {
 	}
 	
 	double value_mul = 1.0 / (value_mean * 3.0);
-	for (int i = counted; i < bars; i++) {
+	for (int i = begin; i < end; i++) {
 		double d = osma_buffer.Get(i) * value_mul;
 		osma_buffer.Set(i, d);
 		if (i == 0) continue;
@@ -1603,12 +1646,12 @@ void OsMA::Start() {
 	}
 	
 	double diff_mul = 1.0 / (diff_mean * 3.0);
-	for (int i = counted; i < bars; i++) {
+	for (int i = begin; i < end; i++) {
 		double d = diff_buffer.Get(i) * diff_mul;
 		diff_buffer.Set(i, d);
 	}
 	
-	for (int i = counted; i < bars; i++) {
+	for (int i = begin; i < end; i++) {
 		osma_buffer.Set(i, Upp::max(-1.0, Upp::min(+1.0, osma_buffer.Get(i))));
 		diff_buffer.Set(i, Upp::max(-1.0, Upp::min(+1.0, diff_buffer.Get(i))));
 	}
@@ -1632,53 +1675,53 @@ RelativeStrengthIndex::RelativeStrengthIndex()
 	period = 32;
 }
 
-void RelativeStrengthIndex::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1); // normalized
-	SetCoreMaximum(+1);  // normalized
+void RelativeStrengthIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-1); // normalized
+	gi.SetCoreMaximum(+1);  // normalized
 	
-	SetBufferColor(0, DodgerBlue);
-	SetBufferColor(1, White());
-	SetBufferColor(2, White());
-	SetBufferColor(3, Color(28, 255, 200));
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, +0.4); // normalized
-	SetCoreLevel(1, -0.4); // normalized
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferColor(1, White());
+	gi.SetBufferColor(2, White());
+	gi.SetBufferColor(3, Color(28, 255, 200));
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, +0.4); // normalized
+	gi.SetCoreLevel(1, -0.4); // normalized
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
 	if ( period < 1 )
 		throw DataExc();
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "RSI");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "RSI");
 }
-
+/*
 void RelativeStrengthIndex::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
 		if (value0 > 0.0)		vec.Set(RSI_OVERZERO, true);
 		else					vec.Set(RSI_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(RSI_INC, true);
 		else					vec.Set(RSI_DEC, true);
 	}
 }
-
-void RelativeStrengthIndex::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& pos_buffer = GetBuffer(1);
-	Buffer& neg_buffer = GetBuffer(2);
-	Buffer& change_buf = GetBuffer(3);
+*/
+void RelativeStrengthIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& pos_buffer = gi.GetBuffer(1);
+	BufferImage& neg_buffer = gi.GetBuffer(2);
+	BufferImage& change_buf = gi.GetBuffer(3);
 	
 	double diff;
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 
-	int pos = counted - 1;
+	int pos = begin - 1;
 
 	if ( pos <= period ) {
 		buffer.Set(0, 0.0);
@@ -1688,11 +1731,10 @@ void RelativeStrengthIndex::Start() {
 		double sum_n = 0.0;
 
 
-		double prev_value  = Open( 0 );
+		double prev_value  = si.Open( 0 );
 
 		for (int i = 1; i <= period; i++) {
-			SetSafetyLimit(i);
-			double value  = Open(i);
+			double value  = si.Open(i);
 
 			if ( prev_value == 0 ) {
 				prev_value = value;
@@ -1715,12 +1757,10 @@ void RelativeStrengthIndex::Start() {
 		pos = period + 1;
 	}
 	
-	SetSafetyLimit(pos-1);
-	double prev_value  = Open(pos-1);
+	double prev_value  = si.Open(pos-1);
 
-	for (int i = pos; i < bars; i++) {
-		SetSafetyLimit(i);
-		double value  = Open(i);
+	for (int i = pos; i < end; i++) {
+		double value  = si.Open(i);
 		diff = value - prev_value;
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
 		neg_buffer.Set(i, ( neg_buffer.Get(i - 1) * ( period - 1 ) + ( diff < 0.0 ? -diff : 0.0 ) ) / period);
@@ -1743,79 +1783,76 @@ RelativeVigorIndex::RelativeVigorIndex() {
 	period = 10;
 }
 
-void RelativeVigorIndex::Init() {
-	SetCoreSeparateWindow();
+void RelativeVigorIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Green);
-	SetBufferColor(1, Red);
+	gi.SetBufferColor(0, Green);
+	gi.SetBufferColor(1, Red);
 	
-	SetBufferBegin ( 0, period + 3 );
-	SetBufferBegin ( 1, period + 7 );
+	gi.SetBufferBegin ( 0, period + 3 );
+	gi.SetBufferBegin ( 1, period + 7 );
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferStyle(1,DRAW_LINE);
-	SetBufferLabel(0,"RVI");
-	SetBufferLabel(1,"RVIS");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	gi.SetBufferStyle(1,DRAW_LINE);
+	//gi.SetBufferLabel(0,"RVI");
+	//gi.SetBufferLabel(1,"RVIS");
 }
-
+/*
 void RelativeVigorIndex::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		double value2 = GetBuffer(1).Get(cursor);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
+		double value2 = gi.GetBuffer(1).Get(cursor);
 		if (value0 > 0.0)		vec.Set(RVI_OVERZERO, true);
 		else					vec.Set(RVI_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(RVI_INC, true);
 		else					vec.Set(RVI_DEC, true);
-		if (value0 > value2)	vec.Set(RVI_INCDIFF, true);
-		else					vec.Set(RVI_DECDIFF, true);
 	}
 }
-
-void RelativeVigorIndex::Start()
+*/
+void RelativeVigorIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi)
 {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& signal_buffer = GetBuffer(1);
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& signal_buffer = gi.GetBuffer(1);
 	double value_up, value_down, num, denum;
 
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period + 8 )
+	if ( end <= period + 8 )
 		throw DataExc();
 
-	if ( counted < 0 )
+	if ( begin < 0 )
 		throw DataExc();
 
-	if (counted < 4+period) counted = 4+period;
+	if (begin < 4+period) begin = 4+period;
 	
-	//bars--;
+	//end--;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		num = 0.0;
 		denum = 0.0;
 
 		for ( int j = i; j > i - period && j >= 0; j-- ) {
-			double close0 = Open( j ); // peek is fixed at for loop
-			double close1 = Open( j - 1 );
-			double close2 = Open( j - 2 );
-			double close3 = Open( j - 3 );
+			double close0 = si.Open( j ); // peek is fixed at for loop
+			double close1 = si.Open( j - 1 );
+			double close2 = si.Open( j - 2 );
+			double close3 = si.Open( j - 3 );
 
-			double open0 = Open ( j - 1 );
-			double open1 = Open ( j - 2 );
-			double open2 = Open ( j - 3 );
-			double open3 = Open ( j - 4 );
+			double open0 =  si.Open( j - 1 );
+			double open1 =  si.Open( j - 2 );
+			double open2 =  si.Open( j - 3 );
+			double open3 =  si.Open( j - 4 );
 
-			double high0 = High( j - 1 );
-			double high1 = High( j - 2 );
-			double high2 = High( j - 3 );
-			double high3 = High( j - 4 );
+			double high0 = si.High( j - 1 );
+			double high1 = si.High( j - 2 );
+			double high2 = si.High( j - 3 );
+			double high3 = si.High( j - 4 );
 
-			double low0 = Low( j - 1 );
-			double low1 = Low( j - 2 );
-			double low2 = Low( j - 3 );
-			double low3 = Low( j - 4 );
+			double low0 = si.Low( j - 1 );
+			double low1 = si.Low( j - 2 );
+			double low2 = si.Low( j - 3 );
+			double low3 = si.Low( j - 4 );
 
 			value_up = ( ( close0 - open0 ) + 2 * ( close1 - open1 ) + 2 * ( close2 - open2 ) + ( close3 - open3 ) ) / 6;
 			value_down = ( ( high0 - low0 ) + 2 * ( high1 - low1 ) + 2 * ( high2 - low2 ) + ( high3 - low3 ) ) / 6;
@@ -1830,10 +1867,10 @@ void RelativeVigorIndex::Start()
 			buffer.Set(i, num);
 	}
 
-	if ( counted < 8 )
-		counted = 8;
+	if ( begin < 8 )
+		begin = 8;
 
-	for ( int i = counted; i < bars; i++)
+	for ( int i = begin; i < end; i++)
 		signal_buffer.Set(i, ( buffer.Get(i) + 2 * buffer.Get(i-1) + 2 * buffer.Get(i-2) + buffer.Get(i-3) ) / 6);
 }
 
@@ -1849,33 +1886,33 @@ StochasticOscillator::StochasticOscillator() {
 	slowing = 3;
 }
 
-void StochasticOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1.0); // normalized
-	SetCoreMaximum(+1.0);  // normalized
-	SetBufferColor(0, LightSeaGreen);
-	SetBufferColor(1, Red);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, -0.60); // normalized
-	SetCoreLevel(1, +0.60); // normalized
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+void StochasticOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-1.0); // normalized
+	gi.SetCoreMaximum(+1.0);  // normalized
+	gi.SetBufferColor(0, LightSeaGreen);
+	gi.SetBufferColor(1, Red);
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, -0.60); // normalized
+	gi.SetCoreLevel(1, +0.60); // normalized
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
-	SetBufferLabel( 0, "Main");
-	SetBufferLabel( 1, "Signal" );
-	SetBufferBegin(0, k_period + slowing - 2 );
-	SetBufferBegin(1, k_period + d_period );
+	//gi.SetBufferLabel( 0, "Main");
+	//gi.SetBufferLabel( 1, "Signal" );
+	gi.SetBufferBegin(0, k_period + slowing - 2 );
+	gi.SetBufferBegin(1, k_period + d_period );
 
-	SetBufferStyle(0, DRAW_LINE);
-	SetBufferStyle(1, DRAW_LINE);
-	SetBufferType(1, STYLE_DOT);
+	gi.SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferStyle(1, DRAW_LINE);
+	gi.SetBufferType(1, STYLE_DOT);
 	
 }
-
+/*
 void StochasticOscillator::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
 		if (value0 > 0.0)		vec.Set(STOCH_OVERZERO, true);
 		else					vec.Set(STOCH_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(STOCH_INC, true);
@@ -1884,26 +1921,25 @@ void StochasticOscillator::Assist(int cursor, VectorBool& vec) {
 		if (value0 < -0.60)		vec.Set(STOCH_BELOWLOW, true);
 	}
 }
-
-void StochasticOscillator::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& signal_buffer = GetBuffer(1);
-	Buffer& high_buffer = GetBuffer(2);
-	Buffer& low_buffer = GetBuffer(3);
+*/
+void StochasticOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& signal_buffer = gi.GetBuffer(1);
+	BufferImage& high_buffer = gi.GetBuffer(2);
+	BufferImage& low_buffer = gi.GetBuffer(3);
 	int start;
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= k_period + d_period + slowing )
+	if ( end <= k_period + d_period + slowing )
 		throw DataExc();
 
 	start = k_period;
 
-	if ( start + 1 < counted )
-		start = counted - 2;
+	if ( start + 1 < begin )
+		start = begin - 2;
 	else {
 		for (int i = 0; i < start; i++) {
-			SetSafetyLimit(i);
 			low_buffer.Set(i, 0.0);
 			high_buffer.Set(i, 0.0);
 		}
@@ -1913,20 +1949,19 @@ void StochasticOscillator::Start() {
 	int high_length = k_period;
 	double dmin = 1000000.0;
 	double dmax = -1000000.0;
-	for (int i = start; i < bars; i++) {
-		SetSafetyLimit(i);
-
+	for (int i = start; i < end; i++) {
+		
 		if (low_length >= k_period) {
 			dmin = 1000000.0;
 			for (int k = i - k_period; k < i; k++) {
-				double low = Low( k );
+				double low = si.Low( k );
 				if ( dmin > low )
 					dmin = low;
 			}
 			low_length = 0;
 		} else {
 			low_length++;
-			double low = Low( i - 1 );
+			double low = si.Low( i - 1 );
 			if ( dmin > low )
 				dmin = low;
 		}
@@ -1934,14 +1969,14 @@ void StochasticOscillator::Start() {
 		if (high_length >= k_period) {
 			dmax = -1000000.0;
 			for (int k = i - k_period; k < i; k++) {
-				double high = High( k );
+				double high = si.High( k );
 				if ( dmax < high )
 					dmax = high;
 			}
 			high_length = 0;
 		} else {
 			high_length++;
-			double high = High( i - 1 );
+			double high = si.High( i - 1 );
 			if ( dmax < high )
 				dmax = high;
 		}
@@ -1952,33 +1987,30 @@ void StochasticOscillator::Start() {
 
 	start = k_period - 1 + slowing - 1;
 
-	if ( start + 1 < counted )
-		start = counted - 2;
+	if ( start + 1 < begin )
+		start = begin - 2;
 	else {
 		for (int i = 0; i < start; i++)
 			buffer.Set(i, 0.0);
 	}
 
-	//bars--;
+	//end--;
 	double sumlow = 0.0;
 	double sumhigh = 0.0;
 	for(int i = Upp::max(1, start - slowing); i < start; i++) {
 		if (i <= 0) continue;
-			SetSafetyLimit(i);
-		double close = Open(i);
+		double close = si.Open(i);
 		double low = Upp::min(close, low_buffer.Get(i-1));
 		double high = Upp::max(close, high_buffer.Get(i-1));
 		sumlow  += close - low;
 		sumhigh += high - low;
 	}
 	
-	for (int i = Upp::max(1, start); i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = Upp::max(1, start); i < end; i++) {
 		
 		int j = i - slowing;
 		if (j > 0) {
-			double close = Open(j);
+			double close = si.Open(j);
 			double low = Upp::min(close, low_buffer.Get(j-1));
 			double high = Upp::max(close, high_buffer.Get(j-1));
 			sumlow  -= close - low;
@@ -1986,7 +2018,7 @@ void StochasticOscillator::Start() {
 		}
 		
 		
-		double close = Open(i);
+		double close = si.Open(i);
 		double low = Upp::min(close, low_buffer.Get(i-1));
 		double high = Upp::max(close, high_buffer.Get(i-1));
 		sumlow  += close - low;
@@ -2001,14 +2033,14 @@ void StochasticOscillator::Start() {
 
 	start = d_period - 1;
 
-	if ( start + 1 < counted )
-		start = counted - 2;
+	if ( start + 1 < begin )
+		start = begin - 2;
 	else {
 		for (int i = 0;i < start; i++)
 			signal_buffer.Set(i, 0.0);
 	}
 
-	for (int i = start; i < bars; i++) {
+	for (int i = start; i < end; i++) {
 		double sum = 0.0;
 
 		for (int k = 0; k < d_period; k++ )
@@ -2028,42 +2060,41 @@ WilliamsPercentRange::WilliamsPercentRange()
 	period = 14;
 }
 
-void WilliamsPercentRange::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1); // normalized
-	SetCoreMaximum(+1);  // normalized
-	SetBufferColor(0, DodgerBlue);
-	SetBufferColor(1, Color(28, 255, 200));
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, -20 + 50); // normalized
-	SetCoreLevel(1, -80 + 50); // normalized
-	SetBufferBegin ( 0, period );
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0,"WPR");
+void WilliamsPercentRange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-1); // normalized
+	gi.SetCoreMaximum(+1);  // normalized
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferColor(1, Color(28, 255, 200));
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, -20 + 50); // normalized
+	gi.SetCoreLevel(1, -80 + 50); // normalized
+	gi.SetBufferBegin ( 0, period );
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0,"WPR");
 }
 
-void WilliamsPercentRange::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& change_buf = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+void WilliamsPercentRange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& change_buf = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 
-	if (!counted) {
-		counted++;
+	if (!begin) {
+		begin++;
 		buffer.Set(0, 0);
 	}
 	
-	//bars--;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		int highest = HighestHigh( period, i-1 );
-		int lowest = LowestLow( period, i-1 );
-		double max_high = High( highest );
-		double min_low = Low( lowest );
-		double close = Open( i );
+	//end--;
+	for (int i = begin; i < end; i++) {
+		int highest = si.HighestHigh( period, i-1 );
+		int lowest = si.LowestLow( period, i-1 );
+		double max_high = si.High( highest );
+		double min_low = si.Low( lowest );
+		double close = si.Open( i );
 		double cur = -2 * ( max_high - close ) / ( max_high - min_low ) + 1;
 		buffer.Set(i, cur); // normalized
 		
@@ -2084,11 +2115,11 @@ AccumulationDistribution::AccumulationDistribution() {
 	
 }
 
-void AccumulationDistribution::Init() {
-	SetCoreSeparateWindow();
+void AccumulationDistribution::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, LightSeaGreen);
-	SetBufferStyle(0,DRAW_LINE);
+	gi.SetBufferColor(0, LightSeaGreen);
+	gi.SetBufferStyle(0,DRAW_LINE);
 }
 
 bool IsEqualDoubles ( double d1, double d2, double epsilon = 0.00001 ) {
@@ -2106,29 +2137,28 @@ bool IsEqualDoubles ( double d1, double d2, double epsilon = 0.00001 ) {
 	return ( true );
 }
 
-void AccumulationDistribution::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void AccumulationDistribution::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if (!counted) {
-		counted++;
+	if (!begin) {
+		begin++;
 		buffer.Set(0, 0);
 	}
 	
-	//bars--;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double close = Open(i);
-		buffer.Set(i, (close - Low(i-1)) - (High(i-1) - close));
+	//end--;
+	for (int i = begin; i < end; i++) {
+		double close = si.Open(i);
+		buffer.Set(i, (close - si.Low(i-1)) - (si.High(i-1) - close));
 		
 		if (buffer.Get(i) != 0.0) {
-			double diff = High(i-1) - Low(i-1);
+			double diff = si.High(i-1) - si.Low(i-1);
 			if (diff < 0.000000001)
 				buffer.Set(i, 0.0);
 			else {
 				buffer.Set(i, buffer.Get(i) / diff);
-				buffer.Set(i, buffer.Get(i) * (double)Volume(i-1));
+				buffer.Set(i, buffer.Get(i) * (double)si.Volume(i-1));
 			}
 		}
 		
@@ -2149,52 +2179,51 @@ MoneyFlowIndex::MoneyFlowIndex() {
 	period = 14;
 }
 
-void MoneyFlowIndex::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-50); // normalized
-	SetCoreMaximum(50);  // normalized
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, 20 - 50); // normalized
-	SetCoreLevel(1, 80 - 50); // normalized
-	SetBufferColor(0, Blue);
-	SetBufferBegin ( 0, period );
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0,"MFI");
+void MoneyFlowIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-50); // normalized
+	gi.SetCoreMaximum(50);  // normalized
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, 20 - 50); // normalized
+	gi.SetCoreLevel(1, 80 - 50); // normalized
+	gi.SetBufferColor(0, Blue);
+	gi.SetBufferBegin ( 0, period );
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0,"MFI");
 }
 
-void MoneyFlowIndex::Start() {
-	Buffer& buffer = GetBuffer(0);
+void MoneyFlowIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	double pos_mf, neg_mf, cur_tp, prev_tp;
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 	
-	if (counted < period + 2)
-		counted = period + 2;
+	if (begin < period + 2)
+		begin = period + 2;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		pos_mf = 0.0;
 		neg_mf = 0.0;
 		cur_tp = (
-			High(i-1) +
-			Low(i-1) +
-			Open(i) ) / 3;
+			si.High(i-1) +
+			si.Low(i-1) +
+			si.Open(i) ) / 3;
 
 		for (int j = 0; j < period; j++) {
 			prev_tp = (
-				High(i-j-2) +
-				Low(i-j-2) +
-				Open(i-j-1) ) / 3;
+				si.High(i-j-2) +
+				si.Low (i-j-2) +
+				si.Open(i-j-1) ) / 3;
 
 			if ( cur_tp > prev_tp )
-				pos_mf += Volume(i-j-1) * cur_tp;
+				pos_mf += si.Volume(i-j-1) * cur_tp;
 			else {
 				if ( cur_tp < prev_tp )
-					neg_mf += Volume(i-j-1) * cur_tp;
+					neg_mf += si.Volume(i-j-1) * cur_tp;
 			}
 
 			cur_tp = prev_tp;
@@ -2218,30 +2247,29 @@ ValueAndVolumeTrend::ValueAndVolumeTrend() {
 	applied_value = 5;
 }
 
-void ValueAndVolumeTrend::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, DodgerBlue);
-	SetBufferStyle(0, DRAW_LINE);
+void ValueAndVolumeTrend::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferStyle(0, DRAW_LINE);
 }
 
-void ValueAndVolumeTrend::Start() {
-	Buffer& buffer = GetBuffer(0);
+void ValueAndVolumeTrend::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	double cur_value, prev_value;
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 
-	if (counted < 2)
-		counted = 2;
+	if (begin < 2)
+		begin = 2;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double volume = Volume(i-1);
-		cur_value = GetAppliedValue ( applied_value, i - 1);
-		prev_value = GetAppliedValue ( applied_value, i - 2 );
+	for (int i = begin; i < end; i++) {
+		double volume = si.Volume(i-1);
+		cur_value = si.GetAppliedValue( applied_value, i - 1);
+		prev_value = si.GetAppliedValue( applied_value, i - 2 );
 		buffer.Set(i,
 			buffer.Get(i-1) + volume * ( cur_value -
 			prev_value ) / prev_value);
@@ -2257,37 +2285,36 @@ OnBalanceVolume::OnBalanceVolume() {
 	applied_value = 5;
 }
 
-void OnBalanceVolume::Init() {
-	SetCoreSeparateWindow();
+void OnBalanceVolume::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, DodgerBlue);
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "OBV");
+	gi.SetBufferColor(0, DodgerBlue);
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "OBV");
 }
 
-void OnBalanceVolume::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void OnBalanceVolume::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( counted > 0 )
-		counted--;
+	if ( begin > 0 )
+		begin--;
 
-	if (counted < 2)
-		counted = 2;
+	if (begin < 2)
+		begin = 2;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double cur_value = GetAppliedValue ( applied_value, i - 1);
-		double prev_value = GetAppliedValue ( applied_value, i - 2);
+	for (int i = begin; i < end; i++) {
+		double cur_value = si.GetAppliedValue( applied_value, i - 1);
+		double prev_value = si.GetAppliedValue( applied_value, i - 2);
 
 		if ( cur_value == prev_value )
 			buffer.Set(i, buffer.Get(i));
 		else {
 			if ( cur_value < prev_value )
-				buffer.Set(i, buffer.Get(i) - Volume(i - 1));
+				buffer.Set(i, buffer.Get(i) - si.Volume(i - 1));
 			else
-				buffer.Set(i, buffer.Get(i) + Volume(i - 1));
+				buffer.Set(i, buffer.Get(i) + si.Volume(i - 1));
 		}
 	}
 }
@@ -2306,22 +2333,21 @@ Volumes::Volumes() {
 	
 }
 
-void Volumes::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Green);
-	SetBufferStyle(0, DRAW_HISTOGRAM);
-	SetBufferLabel(0,"Volume");
+void Volumes::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Green);
+	gi.SetBufferStyle(0, DRAW_HISTOGRAM);
+	//gi.SetBufferLabel(0,"Volume");
 }
 
-void Volumes::Start() {
-	Buffer& buffer = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (!counted) counted++;
-	else counted--;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		buffer.Set(i, Volume(i));
+void Volumes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	if (!begin) begin++;
+	else begin--;
+	for (int i = begin; i < end; i++) {
+		buffer.Set(i, si.Volume(i));
 	}
 }
 
@@ -2337,80 +2363,68 @@ void Volumes::Start() {
 
 
 
-
-#define PERIOD_FAST  5
-#define PERIOD_SLOW 34
-#undef DATA_LIMIT
-#define DATA_LIMIT  3
 
 
 AcceleratorOscillator::AcceleratorOscillator() {
 	
 }
 
-void AcceleratorOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Black);
-	SetBufferColor(1, Green);
-	SetBufferColor(2, Red);
-	SetBufferStyle ( 0, DRAW_NONE );
-	SetBufferStyle ( 1, DRAW_HISTOGRAM );
-	SetBufferStyle ( 2, DRAW_HISTOGRAM );
-	SetBufferBegin ( 0, DATA_LIMIT );
-	SetBufferBegin ( 1, DATA_LIMIT );
-	SetBufferBegin ( 2, DATA_LIMIT );
-	
-	AddSubCore<MovingAverage>().Set("period", PERIOD_FAST).Set("offset", 0).Set("method", MODE_SMA);
-	AddSubCore<MovingAverage>().Set("period", PERIOD_SLOW).Set("offset", 0).Set("method", MODE_SMA);
+void AcceleratorOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Black);
+	gi.SetBufferColor(1, Green);
+	gi.SetBufferColor(2, Red);
+	gi.SetBufferStyle ( 0, DRAW_NONE );
+	gi.SetBufferStyle ( 1, DRAW_HISTOGRAM );
+	gi.SetBufferStyle ( 2, DRAW_HISTOGRAM );
+	gi.SetBufferBegin ( 0, 3 );
+	gi.SetBufferBegin ( 1, 3 );
+	gi.SetBufferBegin ( 2, 3 );
 }
-
+/*
 void AcceleratorOscillator::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
 		if (value0 > 0.0)		vec.Set(ACC_OVERZERO, true);
 		else					vec.Set(ACC_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(ACC_INC, true);
 		else					vec.Set(ACC_DEC, true);
 	}
 }
-
-void AcceleratorOscillator::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& up_buffer = GetBuffer(1);
-	Buffer& down_buffer = GetBuffer(2);
-	Buffer& macd_buffer = GetBuffer(3);
-	Buffer& signal_buffer = GetBuffer(4);
+*/
+void AcceleratorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& up_buffer = gi.GetBuffer(1);
+	BufferImage& down_buffer = gi.GetBuffer(2);
+	BufferImage& macd_buffer = gi.GetBuffer(3);
+	BufferImage& signal_buffer = gi.GetBuffer(4);
 	double prev = 0.0, current;
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if ( bars <= DATA_LIMIT )
+	if ( end <= 3 )
 		throw DataExc();
 	
-	Buffer& ind1 = At(0).GetBuffer(0);
-	Buffer& ind2 = At(1).GetBuffer(0);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
 	
-	if ( counted > 0 ) {
-		SetSafetyLimit(counted);
-		counted--;
-		prev = macd_buffer.Get(counted) - signal_buffer.Get(counted);
+	if ( begin > 0 ) {
+		begin--;
+		prev = macd_buffer.Get(begin) - signal_buffer.Get(begin);
 	}
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		macd_buffer.Set(i,
 			ind1.Get(i) -
 			ind2.Get(i));
 	}
 
-	SimpleMAOnBuffer ( bars, counted, 0, 5, macd_buffer, signal_buffer );
+	SimpleMAOnBuffer ( end, begin, 0, 5, macd_buffer, signal_buffer );
 	
 	bool up = true;
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		current = macd_buffer.Get(i) - signal_buffer.Get(i);
 
 		if ( current > prev )
@@ -2438,6 +2452,12 @@ void AcceleratorOscillator::Start() {
 
 
 
+
+
+
+
+
+
 GatorOscillator::GatorOscillator() {
 	jaws_period = 13;
 	jaws_shift = 8;
@@ -2449,73 +2469,67 @@ GatorOscillator::GatorOscillator() {
 	applied_value = PRICE_MEDIAN;
 }
 
-void GatorOscillator::Init() {
-	SetCoreSeparateWindow();
+void GatorOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Black);
-	SetBufferColor(1, Red);
-	SetBufferColor(2, Green);
-	SetBufferColor(3, Black);
-	SetBufferColor(4, Red);
-	SetBufferColor(5, Green);
+	gi.SetBufferColor(0, Black);
+	gi.SetBufferColor(1, Red);
+	gi.SetBufferColor(2, Green);
+	gi.SetBufferColor(3, Black);
+	gi.SetBufferColor(4, Red);
+	gi.SetBufferColor(5, Green);
 	
-	SetBufferBegin ( 1, jaws_period + jaws_shift - teeth_shift );
-	SetBufferBegin ( 2, jaws_period + jaws_shift - teeth_shift );
-	SetBufferBegin ( 4, teeth_period + teeth_shift - lips_shift );
-	SetBufferBegin ( 5, teeth_period + teeth_shift - lips_shift );
+	gi.SetBufferBegin ( 1, jaws_period + jaws_shift - teeth_shift );
+	gi.SetBufferBegin ( 2, jaws_period + jaws_shift - teeth_shift );
+	gi.SetBufferBegin ( 4, teeth_period + teeth_shift - lips_shift );
+	gi.SetBufferBegin ( 5, teeth_period + teeth_shift - lips_shift );
 
-	SetBufferShift ( 0, teeth_shift );
-	SetBufferShift ( 1, teeth_shift );
-	SetBufferShift ( 2, teeth_shift );
-	SetBufferShift ( 3, lips_shift );
-	SetBufferShift ( 4, lips_shift );
-	SetBufferShift ( 5, lips_shift );
+	gi.SetBufferShift ( 0, teeth_shift );
+	gi.SetBufferShift ( 1, teeth_shift );
+	gi.SetBufferShift ( 2, teeth_shift );
+	gi.SetBufferShift ( 3, lips_shift );
+	gi.SetBufferShift ( 4, lips_shift );
+	gi.SetBufferShift ( 5, lips_shift );
 	
-	AddSubCore<MovingAverage>().Set("period", teeth_period).Set("offset", teeth_shift - lips_shift).Set("method", ma_method);
-	AddSubCore<MovingAverage>().Set("period", lips_period).Set("offset", 0).Set("method", ma_method);
-	AddSubCore<MovingAverage>().Set("period", jaws_period).Set("offset", jaws_shift - teeth_shift).Set("method", ma_method);
-	AddSubCore<MovingAverage>().Set("period", teeth_period).Set("offset", 0).Set("method", ma_method);
+	gi.SetBufferStyle(0,DRAW_NONE);
+	gi.SetBufferStyle(1,DRAW_HISTOGRAM);
+	gi.SetBufferStyle(2,DRAW_HISTOGRAM);
+	gi.SetBufferStyle(3,DRAW_NONE);
+	gi.SetBufferStyle(4,DRAW_HISTOGRAM);
+	gi.SetBufferStyle(5,DRAW_HISTOGRAM);
 	
-	SetBufferStyle(0,DRAW_NONE);
-	SetBufferStyle(1,DRAW_HISTOGRAM);
-	SetBufferStyle(2,DRAW_HISTOGRAM);
-	SetBufferStyle(3,DRAW_NONE);
-	SetBufferStyle(4,DRAW_HISTOGRAM);
-	SetBufferStyle(5,DRAW_HISTOGRAM);
-	
-	SetBufferLabel(0,"GatorUp");
-	SetBufferLabel(1,NULL);
-	SetBufferLabel(2,NULL);
-	SetBufferLabel(3,"GatorDown");
-	SetBufferLabel(4,NULL);
-	SetBufferLabel(5,NULL);
+	//gi.SetBufferLabel(0,"GatorUp");
+	//gi.SetBufferLabel(1,NULL);
+	//gi.SetBufferLabel(2,NULL);
+	//gi.SetBufferLabel(3,"GatorDown");
+	//gi.SetBufferLabel(4,NULL);
+	//gi.SetBufferLabel(5,NULL);
 }
 
-void GatorOscillator::Start() {
-	Buffer& up_buffer = GetBuffer(0);
-	Buffer& up_red_buffer = GetBuffer(1);
-	Buffer& up_green_buffer = GetBuffer(2);
-	Buffer& down_buffer = GetBuffer(3);
-	Buffer& down_red_buffer = GetBuffer(4);
-	Buffer& down_green_buffer = GetBuffer(5);
+void GatorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& up_buffer = gi.GetBuffer(0);
+	BufferImage& up_red_buffer = gi.GetBuffer(1);
+	BufferImage& up_green_buffer = gi.GetBuffer(2);
+	BufferImage& down_buffer = gi.GetBuffer(3);
+	BufferImage& down_red_buffer = gi.GetBuffer(4);
+	BufferImage& down_green_buffer = gi.GetBuffer(5);
 	
 	double prev, current;
-	int    bars    = GetBars();
-	int    counted = GetCounted();
+	int    end    = ci.GetEnd();
+	int    begin = ci.GetBegin();
 	
-	ConstBuffer& ind1 = At(0).GetBuffer(0);
-	ConstBuffer& ind2 = At(1).GetBuffer(0);
-	ConstBuffer& ind3 = At(2).GetBuffer(0);
-	ConstBuffer& ind4 = At(3).GetBuffer(0);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& ind3 = ci.GetInputBuffer(3, 0);
+	ConstBufferImage& ind4 = ci.GetInputBuffer(4, 0);
 	
-	if ( counted <= teeth_period + teeth_shift - lips_shift )
-		counted = ( teeth_period + teeth_shift - lips_shift );
+	if ( begin <= teeth_period + teeth_shift - lips_shift )
+		begin = ( teeth_period + teeth_shift - lips_shift );
 	
-	if (counted > 0) counted--;
-	else counted++;
+	if (begin > 0) begin--;
+	else begin++;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		
 		current =
 			ind1.Get(i) -
@@ -2528,9 +2542,7 @@ void GatorOscillator::Start() {
 	}
 
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		prev = down_buffer.Get(i-1);
 		current = down_buffer.Get(i);
 
@@ -2552,16 +2564,14 @@ void GatorOscillator::Start() {
 		}
 	}
 	
-	counted = GetCounted();
-	if ( counted <= jaws_period + jaws_shift - teeth_shift )
-		counted = ( jaws_period + jaws_shift - teeth_shift );
+	begin = ci.GetBegin();
+	if ( begin <= jaws_period + jaws_shift - teeth_shift )
+		begin = ( jaws_period + jaws_shift - teeth_shift );
 	
-	if (counted > 1) counted--;
-	else counted++;
+	if (begin > 1) begin--;
+	else begin++;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		current =
 			ind3.Get(i) -
 			ind4.Get(i);
@@ -2572,9 +2582,7 @@ void GatorOscillator::Start() {
 			up_buffer.Set(i, -current);
 	}
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		prev = up_buffer.Get(i-1);
 		current = up_buffer.Get(i);
 
@@ -2603,76 +2611,68 @@ void GatorOscillator::Start() {
 
 
 
-#undef DATA_LIMIT
-#define PERIOD_FAST  5
-#define PERIOD_SLOW 34
-#define DATA_LIMIT  34
+
+
+
 
 AwesomeOscillator::AwesomeOscillator() {
 	
 }
 
-void AwesomeOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Black);
-	SetBufferColor(1, Green);
-	SetBufferColor(2, Red);
-	SetBufferStyle ( 0, DRAW_NONE );
-	SetBufferStyle ( 1, DRAW_HISTOGRAM );
-	SetBufferStyle ( 2, DRAW_HISTOGRAM );
+void AwesomeOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Black);
+	gi.SetBufferColor(1, Green);
+	gi.SetBufferColor(2, Red);
+	gi.SetBufferStyle ( 0, DRAW_NONE );
+	gi.SetBufferStyle ( 1, DRAW_HISTOGRAM );
+	gi.SetBufferStyle ( 2, DRAW_HISTOGRAM );
 	
-	SetBufferBegin ( 0, DATA_LIMIT );
-	SetBufferBegin ( 1, DATA_LIMIT );
-	SetBufferBegin ( 2, DATA_LIMIT );
-	
-	AddSubCore<MovingAverage>().Set("period", PERIOD_FAST).Set("offset", 0).Set("method", MODE_SMA);
-	AddSubCore<MovingAverage>().Set("period", PERIOD_SLOW).Set("offset", 0).Set("method", MODE_SMA);
+	gi.SetBufferBegin ( 0, 5 );
+	gi.SetBufferBegin ( 1, 5 );
+	gi.SetBufferBegin ( 2, 5 );
 }
-
+/*
 void AwesomeOscillator::Assist(int cursor, VectorBool& vec) {
 	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
+		double value0 = gi.GetBuffer(0).Get(cursor);
+		double value1 = gi.GetBuffer(0).Get(cursor-1);
 		if (value0 > 0.0)		vec.Set(AWE_OVERZERO, true);
 		else					vec.Set(AWE_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(AWE_INC, true);
 		else					vec.Set(AWE_DEC, true);
 	}
 }
-
-void AwesomeOscillator::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& up_buffer = GetBuffer(1);
-	Buffer& down_buffer = GetBuffer(2);
+*/
+void AwesomeOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& up_buffer = gi.GetBuffer(1);
+	BufferImage& down_buffer = gi.GetBuffer(2);
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	double prev = 0.0, current;
 	
-	if ( bars <= DATA_LIMIT )
+	if ( end <= 5 )
 		throw DataExc();
 
-	ConstBuffer& ind1 = At(0).GetBuffer(0);
-	ConstBuffer& ind2 = At(1).GetBuffer(0);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
 	
-	if (counted > 0) {
-		counted--;
-		SetSafetyLimit(counted);
-		if (counted)
-			prev = buffer.Get(counted - 1);
+	if (begin > 0) {
+		begin--;
+		if (begin)
+			prev = buffer.Get(begin - 1);
 	}
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		buffer.Set(i,
 			ind1.Get(i) - ind2.Get(i));
 	}
 
 	bool up = true;
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		current = buffer.Get(i);
 
 		if ( current > prev )
@@ -2712,61 +2712,58 @@ Fractals::Fractals() {
 	right_bars = 0;
 }
 
-void Fractals::Init() {
-	SetCoreChartWindow();
-	SetBufferColor(0, Blue);
-	SetBufferColor(1, Blue);
-	SetBufferColor(2, Blue);
-	SetBufferColor(3, Blue);
-	SetBufferColor(4, Blue);
-	SetBufferColor(5, Blue);
-	SetBufferStyle(0, DRAW_LINE);
-	SetBufferArrow(0, 158);
-	SetBufferStyle(1, DRAW_LINE);
-	SetBufferArrow(1, 158);
-	SetBufferStyle(2, DRAW_ARROW);
-	SetBufferArrow(2, 119);
-	SetBufferStyle(3, DRAW_ARROW);
-	SetBufferArrow(3, 119);
-	SetBufferStyle(4, DRAW_ARROW);
-	SetBufferArrow(4, 119);
-	SetBufferStyle(5, DRAW_ARROW);
-	SetBufferArrow(5, 119);
+void Fractals::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
+	gi.SetBufferColor(0, Blue);
+	gi.SetBufferColor(1, Blue);
+	gi.SetBufferColor(2, Blue);
+	gi.SetBufferColor(3, Blue);
+	gi.SetBufferColor(4, Blue);
+	gi.SetBufferColor(5, Blue);
+	gi.SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferArrow(0, 158);
+	gi.SetBufferStyle(1, DRAW_LINE);
+	gi.SetBufferArrow(1, 158);
+	gi.SetBufferStyle(2, DRAW_ARROW);
+	gi.SetBufferArrow(2, 119);
+	gi.SetBufferStyle(3, DRAW_ARROW);
+	gi.SetBufferArrow(3, 119);
+	gi.SetBufferStyle(4, DRAW_ARROW);
+	gi.SetBufferArrow(4, 119);
+	gi.SetBufferStyle(5, DRAW_ARROW);
+	gi.SetBufferArrow(5, 119);
 }
 
-void Fractals::Start() {
-	Buffer& line_up_buf1 = GetBuffer(0);
-	Buffer& line_up_buf2 = GetBuffer(1);
-	Buffer& arrow_up_buf = GetBuffer(2);
-	Buffer& arrow_down_buf = GetBuffer(3);
-	Buffer& arrow_breakup_buf = GetBuffer(4);
-	Buffer& arrow_breakdown_buf = GetBuffer(5);
+void Fractals::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& line_up_buf1 = gi.GetBuffer(0);
+	BufferImage& line_up_buf2 = gi.GetBuffer(1);
+	BufferImage& arrow_up_buf = gi.GetBuffer(2);
+	BufferImage& arrow_down_buf = gi.GetBuffer(3);
+	BufferImage& arrow_breakup_buf = gi.GetBuffer(4);
+	BufferImage& arrow_breakdown_buf = gi.GetBuffer(5);
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if(counted==0)
-		counted = 1 + Upp::max(left_bars, right_bars);
+	if(begin==0)
+		begin = 1 + Upp::max(left_bars, right_bars);
 	else
-		counted--;
+		begin--;
 	
-	SetSafetyLimit(counted);
-	double prev_close = Open(counted);
+	double prev_close = si.Open(begin);
 	
-	//bars--;
+	//end--;
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end; i++) {
+		double close = si.Open(i);
 		
-		double close = Open(i);
-		
-		line_up_buf1.Set(i, IsFractalUp(i-1, left_bars, right_bars, bars));
+		line_up_buf1.Set(i, IsFractalUp(i-1, left_bars, right_bars, end, si, ci, gi));
 		if (line_up_buf1.Get(i) == 0)
 			line_up_buf1.Set(i, line_up_buf1.Get(i-1));
 		else
 			arrow_up_buf.Set(i, line_up_buf1.Get(i));
 		
-		line_up_buf2.Set(i, IsFractalDown(i-1, left_bars, right_bars, bars));
+		line_up_buf2.Set(i, IsFractalDown(i-1, left_bars, right_bars, end, si, ci, gi));
 		
 		if (line_up_buf2.Get(i) == 0)
 			line_up_buf2.Set(i, line_up_buf2.Get(i-1));
@@ -2782,12 +2779,12 @@ void Fractals::Start() {
 }
 
 
-double Fractals::IsFractalUp(int index, int left, int right, int maxind) {
-	double max = High(index);
+double Fractals::IsFractalUp(int index, int left, int right, int maxind, SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	double max = si.High(index);
 	for(int i = index - left; i <= (index + right); i++) {
 		if (i < 0 || i > maxind)
 			return(0);
-		double high =  High(i);
+		double high =  si.High(i);
 		if(!(high > 0.0))
 			return(0);
 		if (max < high && i != index) {
@@ -2801,13 +2798,13 @@ double Fractals::IsFractalUp(int index, int left, int right, int maxind) {
 
 
 
-double Fractals::IsFractalDown(int index, int left, int right, int maxind)
+double Fractals::IsFractalDown(int index, int left, int right, int maxind, SourceImage& si, ChartImage& ci, GraphImage& gi)
 {
-	double min = Low(index);
+	double min = si.Low(index);
 	for(int i = index - left; i <= (index + right); i++) {
 		if (i < 0 || i > maxind)
 			return(0);
-		double low =  Low(i);
+		double low =  si.Low(i);
 		if (!(low > 0.0))
 			return(0);
 		if (min > low && i != index) {
@@ -2841,35 +2838,33 @@ FractalOsc::FractalOsc() {
 	smoothing_period = 12;
 }
 
-void FractalOsc::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
-	SetBufferColor(1, Blue);
-	SetBufferStyle(0, DRAW_LINE);
-	SetBufferStyle(1, DRAW_LINE);
-	AddSubCore<Fractals>().Set("left_bars", left_bars).Set("right_bars", right_bars);
+void FractalOsc::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red);
+	gi.SetBufferColor(1, Blue);
+	gi.SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferStyle(1, DRAW_LINE);
 }
 
 
-void FractalOsc::Start() {
-	Buffer& buf = GetBuffer(0);
-	Buffer& av  = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+void FractalOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buf = gi.GetBuffer(0);
+	BufferImage& av  = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if (counted > 0)
-		counted--;
+	if (begin > 0)
+		begin--;
 	else
-		counted = 1 + Upp::max(left_bars,right_bars);
+		begin = 1 + Upp::max(left_bars, right_bars);
 	
-	ConstBuffer& ind1 = At(0).GetBuffer(0);
-	ConstBuffer& ind2 = At(0).GetBuffer(1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
 	
-	//bars--;
+	//end--;
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double close = Open(i);
+	for(int i = begin; i < end; i++) {
+		double close = si.Open(i);
 		double buf1 = ind1.Get(i);
 		double buf2 = ind2.Get(i);
 		double v = (close - buf2) / (buf1 - buf2);
@@ -2889,52 +2884,49 @@ MarketFacilitationIndex::MarketFacilitationIndex() {
 	
 }
 
-void MarketFacilitationIndex::Init() {
-	SetCoreSeparateWindow();
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, 20);
-	SetCoreLevel(1, 80);
-	SetBufferColor(0, Lime);
-	SetBufferColor(1, SaddleBrown);
-	SetBufferColor(2, Blue);
-	SetBufferColor(3, Pink);
-	SetBufferStyle ( 0, DRAW_HISTOGRAM );
-	SetBufferStyle ( 1, DRAW_HISTOGRAM );
-	SetBufferStyle ( 2, DRAW_HISTOGRAM );
-	SetBufferStyle ( 3, DRAW_HISTOGRAM );
-	SetBufferLabel ( 0, "MFI Up, Volume Up" );
-	SetBufferLabel ( 1, "MFI Down, Volume Down" );
-	SetBufferLabel ( 2, "MFI Up, Volume Down" );
-	SetBufferLabel ( 3, "MFI Down, Volume Up" );
+void MarketFacilitationIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, 20);
+	gi.SetCoreLevel(1, 80);
+	gi.SetBufferColor(0, Lime);
+	gi.SetBufferColor(1, SaddleBrown);
+	gi.SetBufferColor(2, Blue);
+	gi.SetBufferColor(3, Pink);
+	gi.SetBufferStyle ( 0, DRAW_HISTOGRAM );
+	gi.SetBufferStyle ( 1, DRAW_HISTOGRAM );
+	gi.SetBufferStyle ( 2, DRAW_HISTOGRAM );
+	gi.SetBufferStyle ( 3, DRAW_HISTOGRAM );
+	//gi.SetBufferLabel ( 0, "MFI Up, Volume Up" );
+	//gi.SetBufferLabel ( 1, "MFI Down, Volume Down" );
+	//gi.SetBufferLabel ( 2, "MFI Up, Volume Down" );
+	//gi.SetBufferLabel ( 3, "MFI Down, Volume Up" );
 }
 
 
-void MarketFacilitationIndex::Start() {
-	Buffer& up_up_buffer = GetBuffer(0);
-	Buffer& down_down_buffer = GetBuffer(1);
-	Buffer& up_down_buffer = GetBuffer(2);
-	Buffer& down_up_buffer = GetBuffer(3);
-	Buffer& buffer = GetBuffer(4);
+void MarketFacilitationIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& up_up_buffer = gi.GetBuffer(0);
+	BufferImage& down_down_buffer = gi.GetBuffer(1);
+	BufferImage& up_down_buffer = gi.GetBuffer(2);
+	BufferImage& down_up_buffer = gi.GetBuffer(3);
+	BufferImage& buffer = gi.GetBuffer(4);
 	
 	bool mfi_up = true, vol_up = true;
 
-	int bars    = GetBars();
-	int counted = GetCounted();
+	int sym_id = ci.GetSymbol();
+	int end    = ci.GetEnd();
+	int begin  = ci.GetBegin();
 	
-	if (counted > 0)
-		counted--;
+	if (begin > 0)
+		begin--;
 	else
-		counted++;
+		begin++;
 	
-	double point = 0.00001;
-	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
-		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-		point = sym.point;
-	}
+	double point = GetMetaTrader().GetSymbol(sym_id).point;
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double volume = Volume(i-1);
+	
+	for (int i = begin; i < end; i++) {
+		double volume = si.Volume(i-1);
 		if ( IsEqualDoubles ( volume, 0.0 ) ) {
 			if ( i == 0 )
 				buffer.Set(i, 0.0);
@@ -2943,13 +2935,13 @@ void MarketFacilitationIndex::Start() {
 		}
 		else
 			buffer.Set(i,
-				( High(i-1) - Low(i-1) ) /
+				( si.High(i-1) - si.Low(i-1) ) /
 				( volume * point ));
 	}
 	
-	if ( counted > 1 ) {
+	if ( begin > 1 ) {
 
-		int i = counted -1;
+		int i = begin -1;
 
 		if ( up_up_buffer.Get(i) != 0.0 ) {
 			mfi_up = true;
@@ -2973,18 +2965,16 @@ void MarketFacilitationIndex::Start() {
 	}
 	
 	double volume_prev;
-	SetSafetyLimit(counted);
-	if (counted > 0)
-		volume_prev = Volume(counted-1);
+	if (begin > 0)
+		volume_prev = si.Volume(begin-1);
 	else {
-		volume_prev = Volume(counted-1);
-		counted++;
+		volume_prev = si.Volume(begin-1);
+		begin++;
 	}
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		double volume = Volume(i-1);
-		if ( i < bars - 1 ) {
+	for (int i = begin; i < end; i++) {
+		double volume = si.Volume(i-1);
+		if ( i < end - 1 ) {
 			if ( buffer.Get(i) > buffer.Get(i-1) )
 				mfi_up = true;
 
@@ -3052,46 +3042,45 @@ ZigZag::ZigZag()
 	extremum_level	= 3;  // recounting's depth of extremums
 }
 
-void ZigZag::Init() {
-	SetCoreChartWindow();
-	SetBufferColor(0, Red());
-	SetBufferColor(1, Red());
+void ZigZag::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
+	gi.SetBufferColor(0, Red());
+	gi.SetBufferColor(1, Red());
 	
 	if (input_backstep >= input_depth) {
 		input_backstep = input_depth-1;
 	}
 	
-	SetBufferStyle(0, DRAW_NONE);
-	SetBufferStyle(1, DRAW_SECTION);
+	gi.SetBufferStyle(0, DRAW_NONE);
+	gi.SetBufferStyle(1, DRAW_SECTION);
 }
 
-void ZigZag::Start() {
-	Buffer& osc = GetBuffer(0);
-	Buffer& keypoint_buffer = GetBuffer(1);
-	Buffer& high_buffer = GetBuffer(2);
-	Buffer& low_buffer = GetBuffer(3);
+void ZigZag::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osc = gi.GetBuffer(0);
+	BufferImage& keypoint_buffer = gi.GetBuffer(1);
+	BufferImage& high_buffer = gi.GetBuffer(2);
+	BufferImage& low_buffer = gi.GetBuffer(3);
 	int    counter_z, whatlookfor = 0;
 	int    back, pos, lasthighpos = 0, lastlowpos = 0;
 	double extremum;
 	double curlow = 0.0, curhigh = 0.0, lasthigh = 0.0, lastlow = 0.0;
 	
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	VectorBool& label = outputs[0].label;
-	label.SetCount(bars);
+	VectorBool& label = gi.GetSignal();
+	label.SetCount(end);
 	
-	if ( bars < input_depth || input_backstep >= input_depth )
+	if ( end < input_depth || input_backstep >= input_depth )
 		throw DataExc();
 
-	if ( counted == 0 )
-		counted = input_backstep;
+	if ( begin == 0 )
+		begin = input_backstep;
 	else {
-		int i = bars-1;
+		int i = end-1;
 		counter_z = 0;
-		SetSafetyLimit(i);
-
-		while ( counter_z < extremum_level && i >= bars-100 && i >= 0 ) {
+		
+		while ( counter_z < extremum_level && i >= end-100 && i >= 0 ) {
 			if ( keypoint_buffer.Get(i) != 0.0 )
 				counter_z++;
 			i--;
@@ -3101,9 +3090,9 @@ void ZigZag::Start() {
 			i = 0;
 		
 		if ( counter_z == 0 )
-			counted = input_backstep;
+			begin = input_backstep;
 		else {
-			counted = i+1;
+			begin = i+1;
 
 			if ( low_buffer.Get(i) != 0.0 )
 			{
@@ -3114,7 +3103,7 @@ void ZigZag::Start() {
 				whatlookfor = -1;
 			}
 
-			for (int i = counted; i < bars; i++) {
+			for (int i = begin; i < end; i++) {
 				keypoint_buffer.Set(i, 0.0);
 				low_buffer.Set(i, 0.0);
 				high_buffer.Set(i, 0.0);
@@ -3122,31 +3111,25 @@ void ZigZag::Start() {
 		}
 	}
 
-	double point = 0.00001;
-	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
-		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-		point = sym.point;
-	}
+	double point = ci.GetPoint();
+	
 	
 	ExtremumCache ec(input_depth);
-	int begin = Upp::max(0, counted - input_depth);
+	int border = Upp::max(0, begin - input_depth);
 	ec.pos = begin - 1;
-	for(int i = begin; i < counted; i++) {
-		SetSafetyLimit(i+1);
-		double low = Low(i);
-		double high = High(i);
+	for(int i = border; i < begin; i++) {
+		double low = si.Low(i);
+		double high = si.High(i);
 		ec.Add(low, high);
 	}
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1); // This indicator peeks anyway
-		
-		double low = Low(i);
-		double high = High(i);
+	for (int i = begin; i < end; i++) {
+		double low = si.Low(i);
+		double high = si.High(i);
 		ec.Add(low, high);
 		
 		int lowest = ec.GetLowest();
-		extremum = Low(lowest);
+		extremum = si.Low(lowest);
 		
 		if ( extremum == lastlow )
 			extremum = 0.0;
@@ -3174,7 +3157,7 @@ void ZigZag::Start() {
 			low_buffer.Set(i, 0.0);
 
 		int highest = ec.GetHighest();
-		extremum = High(highest);
+		extremum = si.High(highest);
 	
 		if ( extremum == lasthigh )
 			extremum = 0.0;
@@ -3211,11 +3194,9 @@ void ZigZag::Start() {
 		lasthigh = curhigh;
 	}
 
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1); // This indicator peeks anyway
-		
-		double low = Low(i);
-		double high = High(i);
+	for (int i = begin; i < end; i++) {
+		double low = si.Low(i);
+		double high = si.High(i);
 		
 		osc.Set(i, whatlookfor);
 		
@@ -3283,14 +3264,14 @@ void ZigZag::Start() {
 	
 	
 	bool current = false;
-	for (int i = counted-1; i >= 0; i--) {
+	for (int i = begin-1; i >= 0; i--) {
 		if (keypoint_buffer.Get(i) != 0.0) {
 			current = high_buffer.Get(i) != 0.0; // going down after high
 			break;
 		}
 	}
-	if (!counted) counted++;
-	for (int i = counted; i < bars; i++) {
+	if (!begin) begin++;
+	for (int i = begin; i < end; i++) {
 		label.Set(i-1, current);
 		if (keypoint_buffer.Get(i) != 0.0) {
 			current = high_buffer.Get(i) != 0.0; // going down after high
@@ -3315,37 +3296,35 @@ ZigZagOsc::ZigZagOsc() {
 	backstep = 3;
 }
 
-void ZigZagOsc::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, GrayColor());
-	SetBufferStyle(0, DRAW_HISTOGRAM);
-	AddSubCore<ZigZag>().Set("depth", depth).Set("deviation", deviation).Set("backstep", backstep);
+void ZigZagOsc::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, GrayColor());
+	gi.SetBufferStyle(0, DRAW_HISTOGRAM);
 }
 
-void ZigZagOsc::Start() {
-	Buffer& osc = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void ZigZagOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osc = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	ConstBuffer& ind1 = At(0).GetBuffer(0);
-	ConstBuffer& ind2 = At(0).GetBuffer(1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
 	
 	double prev, next;
 	bool has_prev = false, has_next = false;;
 	int prev_pos, next_pos;
 	
-	if (counted) {
-		counted = Upp::min(counted, GetBars()-1);
-		for (; counted > 0; counted--) {
-			double v = ind2.Get(counted);
+	if (begin) {
+		begin = Upp::min(begin, ci.GetEnd()-1);
+		for (; begin > 0; begin--) {
+			double v = ind2.Get(begin);
 			if (!v) continue;
 			break;
 		}
 	}
 	
 	double diff, step;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1); // This indicator peeks anyway
+	for (int i = begin; i < end; i++) {
 		
 		if (has_prev) {
 			if (has_next && next_pos == i) {
@@ -3363,7 +3342,7 @@ void ZigZagOsc::Start() {
 		}
 		
 		if (!has_next) {
-			for (int j = i+1; j < bars; j++) {
+			for (int j = i+1; j < end; j++) {
 				double v = ind2.Get(j);
 				if (!v) continue;
 				next = v;
@@ -3378,7 +3357,7 @@ void ZigZagOsc::Start() {
 		}
 		
 		double v = (i - prev_pos) * step + prev;
-		double value_diff = GetAppliedValue(PRICE_TYPICAL, i) - v;
+		double value_diff = si.GetAppliedValue(PRICE_TYPICAL, i) - v;
 		
 		osc.Set(i, value_diff);
 	}
@@ -3396,30 +3375,29 @@ LinearTimeFrames::LinearTimeFrames() {
 	
 }
 
-void LinearTimeFrames::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
-	SetBufferColor(1, Green);
-	SetBufferColor(2, Blue);
-	SetBufferColor(3, Yellow);
-	SetBufferLineWidth(0, 3);
-	SetBufferLineWidth(1, 2);
-	SetBufferLineWidth(2, 1);
-	SetCoreMinimum(0);
-	SetCoreMaximum(1);
+void LinearTimeFrames::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red);
+	gi.SetBufferColor(1, Green);
+	gi.SetBufferColor(2, Blue);
+	gi.SetBufferColor(3, Yellow);
+	gi.SetBufferLineWidth(0, 3);
+	gi.SetBufferLineWidth(1, 2);
+	gi.SetBufferLineWidth(2, 1);
+	gi.SetCoreMinimum(0);
+	gi.SetCoreMaximum(1);
 }
 
-void LinearTimeFrames::Start() {
-	ConstBuffer& src_time = GetInputBuffer(0,4);
-	Buffer& day = GetBuffer(0);
-	Buffer& month = GetBuffer(1);
-	Buffer& year = GetBuffer(2);
-	Buffer& week = GetBuffer(3);
-	int bars = GetBars();
-	int counted =  GetCounted();
+void LinearTimeFrames::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	BufferImage& day = gi.GetBuffer(0);
+	BufferImage& month = gi.GetBuffer(1);
+	BufferImage& year = gi.GetBuffer(2);
+	BufferImage& week = gi.GetBuffer(3);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	System& base = GetSystem();
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end; i++) {
 		
 		Time t = Time(1970,1,1) + src_time.Get(i);
 		double h = t.hour;
@@ -3449,22 +3427,21 @@ LinearWeekTime::LinearWeekTime() {
 	
 }
 
-void LinearWeekTime::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Green);
-	SetBufferLineWidth(0, 3);
-	SetCoreMinimum(-1);
-	SetCoreMaximum(+1);
+void LinearWeekTime::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Green);
+	gi.SetBufferLineWidth(0, 3);
+	gi.SetCoreMinimum(-1);
+	gi.SetCoreMaximum(+1);
 }
 
-void LinearWeekTime::Start() {
-	ConstBuffer& src_time = GetInputBuffer(0,4);
-	Buffer& week = GetBuffer(0);
-	int bars = GetBars();
-	int counted =  GetCounted();
+void LinearWeekTime::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	BufferImage& week = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	System& base = GetSystem();
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end; i++) {
 		
 		Time t = Time(1970,1,1) + src_time.Get(i);
 		double h = t.hour;
@@ -3492,38 +3469,33 @@ SupportResistance::SupportResistance() {
 	max_radius = 100;
 }
 
-void SupportResistance::Init() {
-	SetCoreChartWindow();
-	SetBufferColor(0, Red);
-	SetBufferColor(1, Green);
+void SupportResistance::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
+	gi.SetBufferColor(0, Red);
+	gi.SetBufferColor(1, Green);
 }
 
-void SupportResistance::Start() {
-	Buffer& support = GetBuffer(0);
-	Buffer& resistance = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+void SupportResistance::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& support = gi.GetBuffer(0);
+	BufferImage& resistance = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	double point = 0.00001;
-	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
-		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
-		point = sym.point;
-	}
+	double point = ci.GetPoint();
 	
 	ASSERT(point > 0);
 	
-	if (counted) counted--;
-	else counted++;
-	//bars--;
+	if (begin) begin--;
+	else begin++;
+	//end--;
 	
 	Vector<int> crosses;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for (int i = begin; i < end; i++) {
 		
-		int highest = HighestHigh(period, i-1);
-		int lowest  = LowestLow(period, i-1);
-		double highesthigh = High(highest);
-		double lowestlow   = Low(lowest);
+		int highest = si.HighestHigh(period, i-1);
+		int lowest  = si.LowestLow(period, i-1);
+		double highesthigh = si.High(highest);
+		double lowestlow   = si.Low(lowest);
 		
 		int count = (int)((highesthigh - lowestlow) / point + 1);
 		double inc = point;
@@ -3541,8 +3513,8 @@ void SupportResistance::Start() {
 		
 		for(int j = i - period; j < i ; j++) {
 			if (j < 0) continue;
-			double high = High(j);
-			double low  = Low(j);
+			double high = si.High(j);
+			double low  = si.Low(j);
 			
 			int low_pos  = (int)((low  - lowestlow) / inc);
 			int high_pos = (int)((high - lowestlow) / inc);
@@ -3553,7 +3525,7 @@ void SupportResistance::Start() {
 			}
 		}
 		
-		double close = Open(i);
+		double close = si.Open(i);
 		int value_pos = (int)((close  - lowestlow) / inc);
 		if (value_pos >= count) value_pos = count - 1;
 		if (value_pos < 0) value_pos = 0;
@@ -3612,31 +3584,28 @@ SupportResistanceOscillator::SupportResistanceOscillator()
 	smoothing_period = 30;
 }
 
-void SupportResistanceOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Green);
-	SetBufferColor(1, Red);
-	SetCoreMinimum(-1);
-	SetCoreMaximum(1);
-	AddSubCore<SupportResistance>().Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
+void SupportResistanceOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Green);
+	gi.SetBufferColor(1, Red);
+	gi.SetCoreMinimum(-1);
+	gi.SetCoreMaximum(1);
 }
 
-void SupportResistanceOscillator::Start() {
-	Buffer& osc_av = GetBuffer(0);
-	Buffer& osc = GetBuffer(1);
-	int bars = GetBars();
-	int counted = GetCounted();
+void SupportResistanceOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osc_av = gi.GetBuffer(0);
+	BufferImage& osc = gi.GetBuffer(1);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	ConstBuffer& ind1 = At(0).GetBuffer(0);
-	ConstBuffer& ind2 = At(0).GetBuffer(1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
 	
-	int prev_pos = counted ? counted-1 : 0;
-	SetSafetyLimit(counted-1);
-	double prev_value = counted ? osc_av.Get(counted-1) : 0;
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	int prev_pos = begin ? begin-1 : 0;
+	double prev_value = begin ? osc_av.Get(begin-1) : 0;
+	for (int i = begin; i < end; i++) {
 		
-		double applied_value = Open(i);
+		double applied_value = si.Open(i);
 		double s = ind1.Get(i);
 		double r = ind2.Get(i);
 		double range = r - s;
@@ -3660,48 +3629,45 @@ ChannelOscillator::ChannelOscillator()
 	period = 300;
 }
 
-void ChannelOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
-	SetCoreMinimum(-1);
-	SetCoreMaximum(1);
+void ChannelOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red);
+	gi.SetCoreMinimum(-1);
+	gi.SetCoreMaximum(1);
 }
 
-void ChannelOscillator::Start() {
-	Buffer& osc = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void ChannelOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osc = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
 	ec.SetSize(period);
 	
-	SetSafetyLimit(counted-1);
-	for (int i = ec.pos+1; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double open = Open(i);
-		double low = i > 0 ? Low(i-1) : open;
-		double high = i > 0 ? High(i-1) : open;
+	for (int i = ec.pos+1; i < end; i++) {
+		double open = si.Open(i);
+		double low = i > 0 ? si.Low(i-1) : open;
+		double high = i > 0 ? si.High(i-1) : open;
 		double max = Upp::max(open, high);
 		double min = Upp::min(open, low);
 		ec.Add(max, min);
 		
-		double ch_high = High(ec.GetHighest());
-		double ch_low = Low(ec.GetLowest());
+		double ch_high = si.High(ec.GetHighest());
+		double ch_low = si.Low(ec.GetLowest());
 		double ch_diff = ch_high - ch_low;
 		
 		double value = (open - ch_low) / ch_diff * 2.0 - 1.0;
 		osc.Set(i, value);
 	}
 }
-
+/*
 void ChannelOscillator::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	if      (value0 > +0.5)		vec.Set(CHOSC_HIGHEST, true);
 	else if (value0 > +0.0)		vec.Set(CHOSC_HIGH, true);
 	else if (value0 > -0.5)		vec.Set(CHOSC_LOW, true);
 	else						vec.Set(CHOSC_LOWEST, true);
 }
-
+*/
 
 
 
@@ -3715,35 +3681,32 @@ ScissorChannelOscillator::ScissorChannelOscillator()
 	period = 30;
 }
 
-void ScissorChannelOscillator::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
-	SetCoreMinimum(-1);
-	SetCoreMaximum(1);
+void ScissorChannelOscillator::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red);
+	gi.SetCoreMinimum(-1);
+	gi.SetCoreMaximum(1);
 }
 
-void ScissorChannelOscillator::Start() {
-	Buffer& osc = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void ScissorChannelOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& osc = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
 	ec.SetSize(period);
 	
-	SetSafetyLimit(counted-1);
-	for (int i = ec.pos+1; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double open = Open(i);
-		double low = i > 0 ? Low(i-1) : open;
-		double high = i > 0 ? High(i-1) : open;
+	for (int i = ec.pos+1; i < end; i++) {
+		double open = si.Open(i);
+		double low = i > 0 ? si.Low(i-1) : open;
+		double high = i > 0 ? si.High(i-1) : open;
 		double max = Upp::max(open, high);
 		double min = Upp::min(open, low);
 		ec.Add(max, min);
 		
 		int high_pos = ec.GetHighest();
 		int low_pos = ec.GetLowest();
-		double ch_high = High(high_pos);
-		double ch_low = Low(low_pos);
+		double ch_high = si.High(high_pos);
+		double ch_low = si.Low(low_pos);
 		double ch_diff = ch_high - ch_low;
 		
 		double highest_change = DBL_MAX;
@@ -3752,7 +3715,7 @@ void ScissorChannelOscillator::Start() {
 		int lowest_change_pos = 0;
 		
 		for(int j = Upp::min(high_pos+1, low_pos+1); j <= i; j++) {
-			double open = Open(j);
+			double open = si.Open(j);
 			
 			if (j >= high_pos) {
 				int dist = j - high_pos;
@@ -3786,13 +3749,13 @@ void ScissorChannelOscillator::Start() {
 		osc.Set(i, value);
 	}
 }
-
+/*
 void ScissorChannelOscillator::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	if (value0 > 0.0)			vec.Set(SCIS_HIGH, true);
 	else						vec.Set(SCIS_LOW,  true);
 }
-
+*/
 
 
 
@@ -3802,46 +3765,44 @@ Psychological::Psychological() {
 	period = 25;
 }
 
-void Psychological::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, DodgerBlue());
-	SetBufferStyle(0, DRAW_LINE);
-	SetBufferBegin(0, period);
-	SetBufferLabel(0, "Psychological");
+void Psychological::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, DodgerBlue());
+	gi.SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferBegin(0, period);
+	//gi.SetBufferLabel(0, "Psychological");
 }
 
-void Psychological::Start() {
-	Buffer& buf = GetBuffer(0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void Psychological::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buf = gi.GetBuffer(0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if(counted < 0)
+	if(begin < 0)
 		throw DataExc();
 	
-	if(counted > 0)
-		counted--;
+	if(begin > 0)
+		begin--;
 	
-	if (bars < period)
+	if (end < period)
 		throw DataExc();
 	
-	if (counted == 0)
-		counted = (1 + period + 1);
+	if (begin == 0)
+		begin = (1 + period + 1);
 	
-	//bars--;
+	//end--;
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for(int i = begin; i < end; i++) {
 		int count=0;
 		for (int j=i-period+1; j <= i; j++) {
-			if (Open(j) > Open(j-1)) {
+			if (si.Open(j) > si.Open(j-1)) {
 				count++;
 			}
 		}
-		if (Open(i) > Open(i-1)) {
+		if (si.Open(i) > si.Open(i-1)) {
 			count++;
 		}
-		if (Open(i-period) > Open(i-period-1)) {
+		if (si.Open(i-period) > si.Open(i-period-1)) {
 			count--;
 		}
 		buf.Set(i, ((double)count / period) *100.0 - 50); // normalized
@@ -3869,60 +3830,44 @@ void Psychological::Start() {
 
 
 TrendChange::TrendChange() {
-	period = 13;
-	method = 0;
-	SetCoreSeparateWindow();
+	
 }
 
-void TrendChange::Init() {
-	int draw_begin;
-	if (period < 2)
-		period = 13;
-	draw_begin = period - 1;
+void TrendChange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red());
 	
-	SetBufferColor(0, Red());
-	SetBufferBegin(0, draw_begin );
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("method", method);
-	
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0);
-	SetCoreLevelsColor(GrayColor(192));
-	SetCoreLevelsStyle(STYLE_DOT);
+	gi.SetCoreLevelCount(1);
+	gi.SetCoreLevel(0, 0);
+	gi.SetCoreLevelsColor(GrayColor(192));
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 }
 
-void TrendChange::Start() {
-	Buffer& buffer = GetBuffer(0);
+void TrendChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
 	
-	int bars = GetBars();
-	if ( bars <= period )
-		throw DataExc();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	int counted = GetCounted();
-	if ( counted < 0 )
-		throw DataExc();
-	
-	if ( counted > 0 )
-		counted--;
+	if (begin > 0)
+		begin--;
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.
 	int shift = period / 2;
-	counted = Upp::max(0, counted - shift);
-	//bars -= shift;
+	begin = Upp::max(0, begin - shift);
+	//end -= shift;
 	
 	// Calculate averages
-	ConstBuffer& dbl = At(0).GetBuffer(0);
+	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
 	
 	// Prepare values for loop
-	SetSafetyLimit(counted);
-	double prev1 = dbl.Get(Upp::max(0, counted-1));
-	double prev2 = dbl.Get(Upp::max(0, counted-1+shift));
-	double prev_value = counted > 0 ? buffer.Get(counted-1) : 0;
-	double prev_diff = counted > 1 ? prev_value - buffer.Get(counted-2) : 0;
+	double prev1 = dbl.Get(Upp::max(0, begin-1));
+	double prev2 = dbl.Get(Upp::max(0, begin-1+shift));
+	double prev_value = begin > 0 ? buffer.Get(begin-1) : 0;
+	double prev_diff = begin > 1 ? prev_value - buffer.Get(begin-2) : 0;
 	
 	// Loop unprocessed range of time
-	for(int i = counted; i < bars-shift; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end-shift; i++) {
 		
 		// Calculate values
 		double d1 = dbl.Get(i);
@@ -3961,61 +3906,38 @@ void TrendChange::Start() {
 
 
 TrendChangeEdge::TrendChangeEdge() {
-	period = 13;
-	method = 0;
-	slowing = 54;
-	SetCoreSeparateWindow();
+	
 }
 
-void TrendChangeEdge::Init() {
-	int draw_begin;
-	if (period < 2)
-		period = 13;
-	draw_begin = period - 1;
-	
-	SetBufferColor(0, Red());
-	SetBufferBegin(0, draw_begin );
-	
-	AddSubCore<MovingAverage>().Set("period", period).Set("method", method);
-	AddSubCore<MovingAverage>().Set("period", slowing).Set("method", method).Set("offset", -slowing/2);
+void TrendChangeEdge::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red());
 }
 
-void TrendChangeEdge::Start() {
-	Buffer& buffer = GetBuffer(0);
-	Buffer& edge = GetBuffer(1);
-	Buffer& symlr = GetBuffer(2);
+void TrendChangeEdge::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	BufferImage& edge = gi.GetBuffer(1);
+	BufferImage& symlr = gi.GetBuffer(2);
 	
-	int bars = GetBars();
-	if ( bars <= period )
-		throw DataExc();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	int counted = GetCounted();
-	if ( counted < 0 )
-		throw DataExc();
+	if (begin > 0) begin -= 3;
 	
-	if ( counted > 0 )
-		counted-=3;
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.
 	int shift = period / 2;
-	counted = Upp::max(0, counted - shift);
-	
-	// Refresh source data
-	Core& cont = At(0);
-	Core& slowcont = At(1);
-	cont.Refresh();
-	slowcont.Refresh();
+	begin = Upp::max(0, begin - shift);
 	
 	// Prepare values for looping
-	ConstBuffer& dbl = cont.GetBuffer(0);
-	ConstBuffer& slow_dbl = slowcont.GetBuffer(0);
-	double prev_slow = slow_dbl.Get(Upp::max(0, counted-1));
-	double prev1 = dbl.Get(Upp::max(0, counted-1)) - prev_slow;
-	double prev2 = dbl.Get(Upp::max(0, counted-1+shift)) - prev_slow;
+	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& slow_dbl = ci.GetInputBuffer(2, 0);
+	double prev_slow = slow_dbl.Get(Upp::max(0, begin-1));
+	double prev1 = dbl.Get(Upp::max(0, begin-1)) - prev_slow;
+	double prev2 = dbl.Get(Upp::max(0, begin-1+shift)) - prev_slow;
 	
 	// Calculate 'TrendChange' data locally. See info for that.
-	for(int i = counted; i < bars-shift; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end-shift; i++) {
 		
 		double slow = slow_dbl.Get(i);
 		double d1 = dbl.Get(i) - slow;
@@ -4029,8 +3951,7 @@ void TrendChangeEdge::Start() {
 	}
 	
 	// Loop unprocessed area
-	for(int i = Upp::max(2, counted); i < bars - 2; i++) {
-		SetSafetyLimit(i + 2);
+	for(int i = Upp::max(2, begin); i < end - 2; i++) {
 		
 		// Finds local maximum value for constant range. TODO: optimize
 		double high = 0;
@@ -4082,11 +4003,11 @@ PeriodicalChange::PeriodicalChange() {
 	
 }
 
-void PeriodicalChange::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, Red);
+void PeriodicalChange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Red);
 	
-	tfmin = GetMinutePeriod();
+	tfmin = ci.GetPeriod();
 	int w1 = 7 * 24 * 60;
 	int count = 0;
 	
@@ -4099,17 +4020,16 @@ void PeriodicalChange::Init() {
 	counts.SetCount(count, 0);
 }
 
-void PeriodicalChange::Start() {
+void PeriodicalChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	System& sys = GetSystem();
-	ConstBuffer& src = GetInputBuffer(0, 0);
-	ConstBuffer& src_time = GetInputBuffer(0,4);
-	Buffer& dst = GetBuffer(0);
+	ConstBufferImage& src = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	BufferImage& dst = gi.GetBuffer(0);
 	
-	int bars = GetBars() - 1;
-	int counted = GetCounted();
+	int end = ci.GetEnd() - 1;
+	int begin = ci.GetBegin();
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1);
+	for(int i = begin; i < end; i++) {
 		
 		double prev = src.Get(i);
 		if (prev == 0.0)
@@ -4137,11 +4057,10 @@ void PeriodicalChange::Start() {
 	}
 	
 	
-	if (counted) counted--;
-	bars++;
+	if (begin) begin--;
+	end++;
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
+	for(int i = begin; i < end; i++) {
 		Time t = Time(1970,1,1) + src_time.Get(i);
 		double av_change = 0;
 		if (split_type == 0) {
@@ -4162,13 +4081,13 @@ void PeriodicalChange::Start() {
 		dst.Set(i, av_change);
 	}
 }
-
+/*
 void PeriodicalChange::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	if (value0 > 0.0)		vec.Set(PC_INC, true);
 	else					vec.Set(PC_DEC, true);
 }
-
+*/
 
 
 
@@ -4186,39 +4105,37 @@ VolatilityAverage::VolatilityAverage() {
 	period = 60;
 }
 
-void VolatilityAverage::Init() {
-	SetCoreSeparateWindow();
-	SetCoreMinimum(-1.0);
-	SetCoreMaximum(+1.0);
-	SetBufferColor(0, Color(85, 255, 150));
-	SetBufferLineWidth(0, 2);
-	SetCoreLevelCount(2);
-	SetCoreLevel(0, +0.5);
-	SetCoreLevel(1, -0.5);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+void VolatilityAverage::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetCoreMinimum(-1.0);
+	gi.SetCoreMaximum(+1.0);
+	gi.SetBufferColor(0, Color(85, 255, 150));
+	gi.SetBufferLineWidth(0, 2);
+	gi.SetCoreLevelCount(2);
+	gi.SetCoreLevel(0, +0.5);
+	gi.SetCoreLevel(1, -0.5);
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 }
 
-void VolatilityAverage::Start() {
+void VolatilityAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	System& sys = GetSystem();
-	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBufferImage& src = ci.GetInputBuffer(0, 0);
 	
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (counted >= bars) return;
-	if (!counted) counted++;
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	if (begin >= end) return;
+	if (!begin) begin++;
 	
-	Buffer& dst = GetBuffer(0);
+	BufferImage& dst = gi.GetBuffer(0);
 	
 	double sum = 0.0;
-	SetSafetyLimit(counted);
-	for(int i = Upp::max(1, counted - period); i < counted; i++) {
+	for(int i = Upp::max(1, begin - period); i < begin; i++) {
 		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
 		sum += change;
 	}
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1);
+	for(int i = begin; i < end; i++) {
 		
 		// Add current
 		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
@@ -4248,9 +4165,7 @@ void VolatilityAverage::Start() {
 		total += stats[i];
 	}
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i+1);
-		
+	for(int i = begin; i < end; i++) {
 		double average = dst.Get(i);
 		int av = average * 100000;
 		double j = stats_limit[stats.Find(av)];
@@ -4258,15 +4173,15 @@ void VolatilityAverage::Start() {
 		dst.Set(i, sens);
 	}
 }
-
+/*
 void VolatilityAverage::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	if      (value0 > +0.5)		vec.Set(VOL_HIGHEST, true);
 	else if (value0 > +0.0)		vec.Set(VOL_HIGH, true);
 	else if (value0 > -0.5)		vec.Set(VOL_LOW, true);
 	else						vec.Set(VOL_LOWEST, true);
 }
-
+*/
 
 
 
@@ -4290,41 +4205,40 @@ MinimalLabel::MinimalLabel() {
 	
 }
 
-void MinimalLabel::Init() {
-	SetCoreChartWindow();
-	SetBufferColor(0, Color(85, 255, 150));
-	SetBufferStyle(0, DRAW_ARROW);
-	SetBufferArrow(0, 159);
+void MinimalLabel::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
+	gi.SetBufferColor(0, Color(85, 255, 150));
+	gi.SetBufferStyle(0, DRAW_ARROW);
+	gi.SetBufferArrow(0, 159);
 }
 
-void MinimalLabel::Start() {
-	int bars = GetBars();
-	int symbol = GetSymbol();
-	int tf = GetTf();
+void MinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	int symbol = ci.GetSymbol();
+	int tf = ci.GetTf();
 	
-	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
-	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
-	double spread_point		= db->GetPoint();
+	begin = max(0, begin - 200);
+	
+	double spread_point		= ci.GetPoint();
 	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
-	labelvec.SetCount(bars);
+	VectorBool& labelvec = gi.GetSignal();
+	labelvec.SetCount(end);
 	
-	Buffer& buf = GetBuffer(0);
+	BufferImage& buf = gi.GetBuffer(0);
 	
-	for(int i = prev_counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double open = open_buf.GetUnsafe(i);
+	for(int i = begin; i < end; i++) {
+		double open = si.Open(i);
 		double close = open;
 		int j = i + 1;
 		bool can_break = false;
 		bool break_label;
 		double prev = open;
 		bool clean_break = false;
-		for(; j < bars; j++) {
-			close = open_buf.GetUnsafe(j);
+		for(; j < end; j++) {
+			close = si.Open(j);
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
 				if (abs_diff >= cost) {
@@ -4345,15 +4259,12 @@ void MinimalLabel::Start() {
 		bool label = close < open;
 		
 		for(int k = i; k < j; k++) {
-			SetSafetyLimit(k);
-			open = open_buf.GetUnsafe(k);
+			open = si.Open(k);
 			labelvec.Set(k, label);
 			if (label)		buf.Set(k, open - 10 * spread_point);
 			else			buf.Set(k, open + 10 * spread_point);
 		}
 		
-		if (clean_break)
-			prev_counted = i;
 		i = j - 1;
 	}
 }
@@ -4376,21 +4287,21 @@ VolatilitySlots::VolatilitySlots() {
 	
 }
 
-void VolatilitySlots::Init() {
-	SetCoreSeparateWindow();
+void VolatilitySlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Color(113, 42, 150));
-	SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferColor(0, Color(113, 42, 150));
+	gi.SetBufferStyle(0, DRAW_LINE);
 	
-	SetCoreLevelCount(3);
-	SetCoreLevel(0, 0.0002);
-	SetCoreLevel(1,  0.001);
-	SetCoreLevel(2,  0.010);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	gi.SetCoreLevelCount(3);
+	gi.SetCoreLevel(0, 0.0002);
+	gi.SetCoreLevel(1,  0.001);
+	gi.SetCoreLevel(2,  0.010);
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
 	
-	int tf_mins = GetMinutePeriod();
+	int tf_mins = ci.GetPeriod();
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
@@ -4399,21 +4310,21 @@ void VolatilitySlots::Init() {
 	stats.SetCount(slot_count);
 }
 
-void VolatilitySlots::Start() {
-	Buffer& buffer = GetBuffer(0);
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	int bars = GetBars();
-	int counted = GetCounted();
+void VolatilitySlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if (counted > 0)
-		counted--;
+	if (begin > 0)
+		begin--;
 	
-	if (counted == 0)
-		counted++;
+	if (begin == 0)
+		begin++;
 	
-	int tf_mins = GetMinutePeriod();
+	int tf_mins = ci.GetPeriod();
 	
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		double cur  = open_buf.Get(i);
 		double prev = open_buf.Get(i-1);
 		double change = fabs(cur / prev - 1.0);
@@ -4423,29 +4334,27 @@ void VolatilitySlots::Start() {
 		total.Add(change);
 	}
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for(int i = begin; i < end; i++) {
 		int slot_id = i % slot_count;
 		const OnlineAverage1& av = stats[slot_id];
 		
 		buffer.Set(i, av.mean);
 	}
 }
-
+/*
 void VolatilitySlots::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	if      (value0 > total.mean * 2.000)		vec.Set(VOLSL_VERYHIGH, true);
 	else if (value0 > total.mean * 1.333)		vec.Set(VOLSL_HIGH, true);
 	else if (value0 > total.mean * 0.666)		vec.Set(VOLSL_MED, true);
 	else										vec.Set(VOLSL_LOW, true);
 	if (cursor > 0) {
-		double value1 = GetBuffer(0).Get(cursor - 1);
+		double value1 = gi.GetBuffer(0).Get(cursor - 1);
 		if (value0 > value1)		vec.Set(VOLSL_INC, true);
 		else						vec.Set(VOLSL_DEC, true);
 	}
 }
-
+*/
 
 
 
@@ -4460,21 +4369,21 @@ VolumeSlots::VolumeSlots() {
 	
 }
 
-void VolumeSlots::Init() {
-	SetCoreSeparateWindow();
+void VolumeSlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Color(113, 42, 150));
-	SetBufferStyle(0, DRAW_LINE);
+	gi.SetBufferColor(0, Color(113, 42, 150));
+	gi.SetBufferStyle(0, DRAW_LINE);
 	
-	SetCoreLevelCount(3);
-	SetCoreLevel(0, 0.0002);
-	SetCoreLevel(1,  0.001);
-	SetCoreLevel(2,  0.010);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
+	gi.SetCoreLevelCount(3);
+	gi.SetCoreLevel(0, 0.0002);
+	gi.SetCoreLevel(1,  0.001);
+	gi.SetCoreLevel(2,  0.010);
+	gi.SetCoreLevelsColor(Silver);
+	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
 	
-	int tf_mins = GetMinutePeriod();
+	int tf_mins = ci.GetPeriod();
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
@@ -4483,21 +4392,21 @@ void VolumeSlots::Init() {
 	stats.SetCount(slot_count);
 }
 
-void VolumeSlots::Start() {
-	Buffer& buffer = GetBuffer(0);
-	ConstBuffer& vol_buf = GetInputBuffer(0, 3);
-	int bars = GetBars();
-	int counted = GetCounted();
+void VolumeSlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer = gi.GetBuffer(0);
+	ConstBufferImage& vol_buf = ci.GetInputBuffer(0, 3);
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 	
-	if (counted > 0)
-		counted--;
+	if (begin > 0)
+		begin--;
 	
-	if (counted == 0)
-		counted++;
+	if (begin == 0)
+		begin++;
 	
-	int tf_mins = GetMinutePeriod();
+	int tf_mins = ci.GetPeriod();
 	
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		double vol  = vol_buf.Get(i);
 		if (vol == 0.0) continue;
 		int slot_id = (i-1) % slot_count;
@@ -4506,30 +4415,28 @@ void VolumeSlots::Start() {
 		total.Add(vol);
 	}
 	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for(int i = begin; i < end; i++) {
 		int slot_id = i % slot_count;
 		const OnlineAverage1& av = stats[slot_id];
 		
 		buffer.Set(i, av.mean);
 	}
 }
-
+/*
 void VolumeSlots::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
+	double value0 = gi.GetBuffer(0).Get(cursor);
 	ASSERT(IsFin(value0));
 	if      (value0 > total.mean * 2.000)		vec.Set(VOLUME_VERYHIGH, true);
 	else if (value0 > total.mean * 1.333)		vec.Set(VOLUME_HIGH, true);
 	else if (value0 > total.mean * 0.666)		vec.Set(VOLUME_MED, true);
 	else										vec.Set(VOLUME_LOW, true);
 	if (cursor > 0) {
-		double value1 = GetBuffer(0).Get(cursor - 1);
+		double value1 = gi.GetBuffer(0).Get(cursor - 1);
 		if (value0 > value1)		vec.Set(VOLUME_INC, true);
 		else						vec.Set(VOLUME_DEC, true);
 	}
 }
-
+*/
 
 
 
@@ -4542,39 +4449,37 @@ TrendIndex::TrendIndex() {
 	
 }
 
-void TrendIndex::Init() {
-	SetCoreSeparateWindow();
+void TrendIndex::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Blue);
-	SetBufferColor(1, Green);
-	SetBufferColor(2, Red);
+	gi.SetBufferColor(0, Blue);
+	gi.SetBufferColor(1, Green);
+	gi.SetBufferColor(2, Red);
 	
 	if ( period < 1 )
 		throw DataExc();
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "TrendIndex");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "TrendIndex");
 }
 
-void TrendIndex::Start() {
-	Buffer& buffer     = GetBuffer(0);
-	Buffer& err_buffer = GetBuffer(1);
-	Buffer& change_buf = GetBuffer(2);
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	BufferImage& buffer     = gi.GetBuffer(0);
+	BufferImage& err_buffer = gi.GetBuffer(1);
+	BufferImage& change_buf = gi.GetBuffer(2);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
 	
 	double diff;
-	int bars = GetBars();
-	int counted = GetCounted();
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
 
-	if ( bars <= period )
+	if ( end <= period )
 		throw DataExc();
 	
-	VectorBool& label = GetOutput(0).label;
-	label.SetCount(bars);
+	VectorBool& label = gi.GetSignal();
+	label.SetCount(end);
 	
-	for (int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for (int i = begin; i < end; i++) {
 		bool bit_value;
 		double err, av_change, buf_value;
 		
@@ -4588,16 +4493,16 @@ void TrendIndex::Start() {
 	
 	
 	int true_count = 0;
-	for (int i = 0; i < bars; i++) {
+	for (int i = 0; i < end; i++) {
 		if (label.Get(i)) true_count++;
 	}
 	ASSERT(true_count > 0);
 }
 
-void TrendIndex::Process(ConstBuffer& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value) {
-	double current = open_buf.GetUnsafe(i);
+void TrendIndex::Process(ConstBufferImage& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value) {
+	double current = open_buf.Get(i);
 	int trend_begin_pos = Upp::max(0, i - period);
-	double begin = open_buf.GetUnsafe(trend_begin_pos);
+	double begin = open_buf.Get(trend_begin_pos);
 	
 	int len = (i - trend_begin_pos);
 	if (len <= 0) return;
@@ -4605,7 +4510,7 @@ void TrendIndex::Process(ConstBuffer& open_buf, int i, int period, int err_div, 
 	
 	err = 0;
 	for(int j = trend_begin_pos; j < i; j++) {
-		double change = open_buf.GetUnsafe(j+1) - open_buf.GetUnsafe(j);
+		double change = open_buf.Get(j+1) - open_buf.Get(j);
 		double diff = change - av_change;
 		err += fabs(diff);
 	}
@@ -4625,27 +4530,24 @@ OnlineMinimalLabel::OnlineMinimalLabel() {
 	
 }
 
-void OnlineMinimalLabel::Init() {
-	SetCoreChartWindow();
+void OnlineMinimalLabel::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
 }
 
-void OnlineMinimalLabel::Start() {
-	int bars = GetBars();
-	int symbol = GetSymbol();
-	int tf = GetTf();
+void OnlineMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int end = ci.GetEnd();
+	int symbol = ci.GetSymbol();
+	int tf = ci.GetTf();
 	
-	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
-	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
-	double spread_point		= db->GetPoint();
-	double cost				= spread_point * (1 + cost_level);
+	ConstBufferImage& open_buf	= ci.GetInputBuffer(0, 0);
+	double spread_point			= ci.GetPoint();
+	double cost					= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
-	labelvec.SetCount(bars);
+	VectorBool& labelvec = gi.GetSignal();
+	labelvec.SetCount(end);
 	
-	for(int i = GetCounted(); i < bars; i++) {
-		SetSafetyLimit(i);
-		
+	for(int i = ci.GetBegin(); i < end; i++) {
 		const int count = 1;
 		bool sigbuf[count];
 		int begin = Upp::max(0, i - 100);
@@ -4657,18 +4559,18 @@ void OnlineMinimalLabel::Start() {
 	}
 }
 
-void OnlineMinimalLabel::GetMinimalSignal(double cost, ConstBuffer& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size) {
+void OnlineMinimalLabel::GetMinimalSignal(double cost, ConstBufferImage& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size) {
 	int write_begin = end - sigbuf_size;
 	
 	for(int i = begin; i < end; i++) {
-		double open = open_buf.GetUnsafe(i);
+		double open = open_buf.Get(i);
 		double close = open;
 		int j = i + 1;
 		bool can_break = false;
 		bool break_label;
 		double prev = open;
 		for(; j < end; j++) {
-			close = open_buf.GetUnsafe(j);
+			close = open_buf.Get(j);
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
 				if (abs_diff >= cost) {
@@ -4717,48 +4619,45 @@ SelectiveMinimalLabel::SelectiveMinimalLabel() {
 	
 }
 
-void SelectiveMinimalLabel::Init() {
-	SetCoreChartWindow();
-	SetBufferColor(0, Color(85, 255, 150));
-	SetBufferStyle(0, DRAW_ARROW);
-	SetBufferArrow(0, 159);
+void SelectiveMinimalLabel::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreChartWindow();
+	gi.SetBufferColor(0, Color(85, 255, 150));
+	gi.SetBufferStyle(0, DRAW_ARROW);
+	gi.SetBufferArrow(0, 159);
 }
 
-void SelectiveMinimalLabel::Start() {
-	int bars = GetBars();
-	int symbol = GetSymbol();
-	int tf = GetTf();
+void SelectiveMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int end = ci.GetEnd();
+	int symbol = ci.GetSymbol();
+	int tf = ci.GetTf();
 	
 	// Too heavy to calculate every time and too useless
-	if (GetCounted()) return;
+	if (ci.GetBegin()) return;
 	
 	VectorMap<int, Order> orders;
-	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
-	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
-	double spread_point		= db->GetPoint();
+	ConstBufferImage& open_buf	= ci.GetInputBuffer(0, 0);
+	double spread_point		= ci.GetPoint();
 	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
-	VectorBool& enabledvec = GetOutput(1).label;
-	labelvec.SetCount(bars);
-	enabledvec.SetCount(bars);
+	VectorBool& labelvec = gi.GetSignal();
+	VectorBool& enabledvec = gi.GetEnabled();
+	labelvec.SetCount(end);
+	enabledvec.SetCount(end);
 	
-	Buffer& buf = GetBuffer(0);
+	BufferImage& buf = gi.GetBuffer(0);
 	
-	bars--;
+	end--;
 	
-	for(int i = 0; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		double open = open_buf.GetUnsafe(i);
+	for(int i = 0; i < end; i++) {
+		double open = open_buf.Get(i);
 		double close = open;
 		int j = i + 1;
 		bool can_break = false;
 		bool break_label;
 		double prev = open;
-		for(; j < bars; j++) {
-			close = open_buf.GetUnsafe(j);
+		for(; j < end; j++) {
+			close = open_buf.Get(j);
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
 				if (abs_diff >= cost) {
@@ -4777,7 +4676,6 @@ void SelectiveMinimalLabel::Start() {
 		
 		bool label = close < open;
 		for(int k = i; k < j; k++) {
-			SetSafetyLimit(k);
 			labelvec.Set(k, label);
 		}
 		
@@ -4786,7 +4684,7 @@ void SelectiveMinimalLabel::Start() {
 	
 	bool prev_label = labelvec.Get(0);
 	int prev_switch = 0;
-	for(int i = 1; i < bars; i++) {
+	for(int i = 1; i < end; i++) {
 		bool label = labelvec.Get(i);
 		
 		int len = i - prev_switch;
@@ -4798,14 +4696,13 @@ void SelectiveMinimalLabel::Start() {
 			o.stop = i;
 			o.len = o.stop - o.start;
 			
-			double open = open_buf.GetUnsafe(o.start);
-			double close = open_buf.GetUnsafe(o.stop);
+			double open = open_buf.Get(o.start);
+			double close = open_buf.Get(o.stop);
 			o.av_change = fabs(close - open) / len;
 			
 			double err = 0;
 			for(int k = o.start; k < o.stop; k++) {
-				SetSafetyLimit(k);
-				double diff = open_buf.GetUnsafe(k+1) - open_buf.GetUnsafe(k);
+				double diff = open_buf.Get(k+1) - open_buf.Get(k);
 				err += fabs(diff);
 			}
 			o.err = err / len;
@@ -4878,7 +4775,7 @@ void SelectiveMinimalLabel::Start() {
 	};
 	Sort(orders, PosSorter());
 	
-	if (GetCounted() == 0) {DUMPC(orders);}*/
+	if (GetBegin() == 0) {DUMPC(orders);}*/
 	
 	double idx_limit_f = idx_limit * 0.01;
 	for(int i = 0; i < orders.GetCount(); i++) {
@@ -4888,9 +4785,8 @@ void SelectiveMinimalLabel::Start() {
 		ASSERT(o.start <= o.stop);
 		
 		for(int k = o.start; k < o.stop; k++) {
-			SetSafetyLimit(k);
 			enabledvec.Set(k, true);
-			double open = open_buf.GetUnsafe(k);
+			double open = open_buf.Get(k);
 			if (o.label)		buf.Set(k, open - 10 * spread_point);
 			else				buf.Set(k, open + 10 * spread_point);
 		}
@@ -4922,33 +4818,31 @@ ReactionContext::ReactionContext() {
 	
 }
 
-void ReactionContext::Init() {
-	SetCoreSeparateWindow();
+void ReactionContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Blue);
+	gi.SetBufferColor(0, Blue);
 	
-	if ( period < 1 )
+	if ( length < 1 )
 		throw DataExc();
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "ReactionContext");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "ReactionContext");
 }
 
-void ReactionContext::Start() {
-	ConstBuffer& open = GetInputBuffer(0, 0);
-	ConstBuffer& low  = GetInputBuffer(0, 1);
-	ConstBuffer& high = GetInputBuffer(0, 2);
+void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low  = ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high = ci.GetInputBuffer(0, 2);
 	
-	Buffer& buffer     = GetBuffer(0);
+	BufferImage& buffer     = gi.GetBuffer(0);
 	
 	double diff;
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (!counted) counted++;
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	if (!begin) begin++;
 
-	for (int cursor = counted; cursor < bars; cursor++) {
-		SetSafetyLimit(cursor);
-
+	for (int cursor = begin; cursor < end; cursor++) {
 		
 		// Open/Close trend
 		{
@@ -5044,33 +4938,30 @@ VolatilityContext::VolatilityContext() {
 	
 }
 
-void VolatilityContext::Init() {
-	SetCoreSeparateWindow();
+void VolatilityContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Blue);
+	gi.SetBufferColor(0, Blue);
 	
-	if ( period < 1 )
-		throw DataExc();
-	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "VolatilityContext");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "VolatilityContext");
 }
 
-void VolatilityContext::Start() {
-	ConstBuffer& open = GetInputBuffer(0, 0);
-	ConstBuffer& low  = GetInputBuffer(0, 1);
-	ConstBuffer& high = GetInputBuffer(0, 2);
+void VolatilityContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low  = ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high = ci.GetInputBuffer(0, 2);
 	
-	Buffer& buffer     = GetBuffer(0);
+	BufferImage& buffer     = gi.GetBuffer(0);
 	
 	double diff;
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (!counted) counted++;
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	if (!begin) begin++;
 	
-	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
+	double point = ci.GetPoint();
 
-	for (int cursor = counted; cursor < bars; cursor++) {
+	for (int cursor = begin; cursor < end; cursor++) {
 		
 		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
 		int step = (int)((diff + point * 0.5) / point);
@@ -5101,9 +4992,7 @@ void VolatilityContext::Start() {
 		volat_divs.Add(median_map.TopKey() * point);
 	}
 	
-	for (int cursor = counted; cursor < bars; cursor++) {
-		SetSafetyLimit(cursor);
-		
+	for (int cursor = begin; cursor < end; cursor++) {
 		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
 		
 		int lvl = -1;
@@ -5135,45 +5024,45 @@ ChannelContext::ChannelContext() {
 	
 }
 
-void ChannelContext::Init() {
-	SetCoreSeparateWindow();
+void ChannelContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, Blue);
+	gi.SetBufferColor(0, Blue);
 	
 	if ( period < 1 )
 		throw DataExc();
 	
-	SetBufferStyle(0,DRAW_LINE);
-	SetBufferLabel(0, "ChannelContext");
+	gi.SetBufferStyle(0,DRAW_LINE);
+	//gi.SetBufferLabel(0, "ChannelContext");
 }
 
-void ChannelContext::Start() {
-	ConstBuffer& open		= GetInputBuffer(0, 0);
-	ConstBuffer& low		= GetInputBuffer(0, 1);
-	ConstBuffer& high		= GetInputBuffer(0, 2);
+void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	ConstBufferImage& open		= ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low		= ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high		= ci.GetInputBuffer(0, 2);
 	
-	Buffer& buffer			= GetBuffer(0);
-	VectorBool& enabled_buf	= GetOutput(0).label;
+	BufferImage& buffer			= gi.GetBuffer(0);
+	VectorBool& enabled_buf	= gi.GetSignal();
 	
 	double diff;
-	int bars = GetBars();
-	int counted = GetCounted();
-	if (!counted) counted++;
+	int end = ci.GetEnd();
+	int begin = ci.GetBegin();
+	if (!begin) begin++;
 	
-	enabled_buf.SetCount(bars);
+	enabled_buf.SetCount(end);
 	
-	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
+	double point = ci.GetPoint();
 
 	channel.SetSize(period);
 	for(int i = 0; i < period; i++) {
-		int cursor = max(1, counted - i - 1);
+		int cursor = max(1, begin - i - 1);
 		double l = low.Get(cursor - 1);
 		double h = high.Get(cursor - 1);
 		channel.Add(l, h);
 	}
-	channel.pos = counted-1;
+	channel.pos = begin-1;
 	
-	for (int cursor = counted; cursor < bars; cursor++) {
+	for (int cursor = begin; cursor < end; cursor++) {
 		double l = low.Get(cursor - 1);
 		double h = high.Get(cursor - 1);
 		channel.Add(l, h);
@@ -5210,15 +5099,14 @@ void ChannelContext::Start() {
 	
 	channel.SetSize(period);
 	for(int i = 0; i < period; i++) {
-		int cursor = max(1, counted - i - 1);
+		int cursor = max(1, begin - i - 1);
 		double l = low.Get(cursor - 1);
 		double h = high.Get(cursor - 1);
 		channel.Add(l, h);
 	}
-	channel.pos = counted-1;
+	channel.pos = begin-1;
 	
-	for (int cursor = counted; cursor < bars; cursor++) {
-		SetSafetyLimit(cursor);
+	for (int cursor = begin; cursor < end; cursor++) {
 		double l = low.Get(cursor - 1);
 		double h = high.Get(cursor - 1);
 		channel.Add(l, h);
@@ -5258,45 +5146,44 @@ Obviousness::Obviousness() {
 
 const int Obviousness::row_size;
 
-void Obviousness::Init() {
-	SetCoreSeparateWindow();
+void Obviousness::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	for(int i = 0; i < buffer_count; i++) {
 		int j = i / 2;
 		bool is_sig = i % 2;
-		SetBufferColor(i, GrayColor(80 + j * 20));
-		SetBufferLineWidth(i, 1 + is_sig);
+		gi.SetBufferColor(i, GrayColor(80 + j * 20));
+		gi.SetBufferLineWidth(i, 1 + is_sig);
 	}
 	
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0.5);
+	gi.SetCoreLevelCount(1);
+	gi.SetCoreLevel(0, 0.5);
 }
 
-void Obviousness::Start() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void Obviousness::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	RefreshInput();
-	if (!counted) {
-		RefreshInitialOutput();
-		RefreshIOStats();
+	RefreshInput(si, ci, gi);
+	if (!begin) {
+		RefreshInitialOutput(si, ci, gi);
+		RefreshIOStats(si, ci, gi);
 	}
 	
-	RefreshOutput();
+	RefreshOutput(si, ci, gi);
 	
 }
 
-void Obviousness::RefreshInput() {
+void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 	// Get reference values
 	System& sys = GetSystem();
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
-	double spread_point		= db.GetPoint();
+	double spread_point		= ci.GetPoint();
 	
 	
 	// Prepare maind data
-	ConstBuffer& open_buf = db.GetBuffer(0);
-	ConstBuffer& low_buf  = db.GetBuffer(1);
-	ConstBuffer& high_buf = db.GetBuffer(2);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low_buf  = ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high_buf = ci.GetInputBuffer(0, 2);
 	int data_count = open_buf.GetCount();
 	int begin = data_in.GetCount();
 	data_in.SetCount(data_count);
@@ -5469,21 +5356,20 @@ void Obviousness::RefreshInput() {
 	}
 }
 
-void Obviousness::RefreshInitialOutput() {
+void Obviousness::RefreshInitialOutput(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	// Get reference values
 	System& sys = GetSystem();
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
-	double spread_point		= db.GetPoint();
+	double spread_point		= ci.GetPoint();
 	double cost				= spread_point * 3;
 	int tf = 0;
 	ASSERT(spread_point > 0.0);
 	
 	
 	// Prepare maind data
-	ConstBuffer& open_buf = db.GetBuffer(0);
-	ConstBuffer& low_buf  = db.GetBuffer(1);
-	ConstBuffer& high_buf = db.GetBuffer(2);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& low_buf  = ci.GetInputBuffer(0, 1);
+	ConstBufferImage& high_buf = ci.GetInputBuffer(0, 2);
 	int data_count = open_buf.GetCount();
 	int begin = data_out.GetCount();
 	data_out.SetCount(data_count);
@@ -5492,15 +5378,15 @@ void Obviousness::RefreshInitialOutput() {
 	
 	if (begin != 0) return;
 	
-	for(int i = GetCounted(); i < data_count; i++) {
-		double open = open_buf.GetUnsafe(i);
+	for(int i = ci.GetBegin(); i < data_count; i++) {
+		double open = open_buf.Get(i);
 		double close = open;
 		int j = i + 1;
 		bool can_break = false;
 		bool break_label;
 		double prev = open;
 		for(; j < data_count; j++) {
-			close = open_buf.GetUnsafe(j);
+			close = open_buf.Get(j);
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
 				if (abs_diff >= cost) {
@@ -5539,13 +5425,13 @@ void Obviousness::RefreshInitialOutput() {
 			o.stop = i;
 			o.len = o.stop - o.start;
 			
-			double open = open_buf.GetUnsafe(o.start);
-			double close = open_buf.GetUnsafe(o.stop);
+			double open = open_buf.Get(o.start);
+			double close = open_buf.Get(o.stop);
 			o.av_change = fabs(close - open) / len;
 			
 			double err = 0;
 			for(int k = o.start; k < o.stop; k++) {
-				double diff = open_buf.GetUnsafe(k+1) - open_buf.GetUnsafe(k);
+				double diff = open_buf.Get(k+1) - open_buf.Get(k);
 				err += fabs(diff);
 			}
 			o.err = err / len;
@@ -5623,20 +5509,20 @@ void Obviousness::RefreshInitialOutput() {
 	}
 }
 
-void Obviousness::RefreshIOStats() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void Obviousness::RefreshIOStats(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	bars -= 1 + TEST_SIZE;
+	end -= 1 + TEST_SIZE;
 	
 	// Randomize the input pattern at first call
 	int c0 = Upp::min(250, row_size);
 	int c1 = Upp::min(250, row_size*(row_size-1));
 	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
 	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
-	const int MAX_BITS = 4;
+	const int MAX_BITS = max_bit_ids;
 	int counts[MAX_BITS] = {c0, c1, c2, c3};
-	int exp_count = c0 + c1 + c2 + c3;
+	int exp_count = 0; for (int i = 0; i < MAX_BITS; i++) exp_count += counts[i];
 	bitmatches.SetCount(exp_count);
 	Index<uint32> hashes;
 	
@@ -5680,7 +5566,7 @@ void Obviousness::RefreshIOStats() {
 	
 	
 	// Collect stats
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		Snap& snap_in = data_in[i];
 		
 		
@@ -5711,15 +5597,15 @@ void Obviousness::RefreshIOStats() {
 }
 
 
-void Obviousness::RefreshOutput() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void Obviousness::RefreshOutput(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	VectorBool& signalbool = GetOutput(0).label;
-	VectorBool& enabledbool = GetOutput(1).label;
-	signalbool.SetCount(bars);
-	enabledbool.SetCount(bars);
-	for(int i = counted; i < bars; i++) {
+	VectorBool& signalbool = gi.GetSignal();
+	VectorBool& enabledbool = gi.GetEnabled();
+	signalbool.SetCount(end);
+	enabledbool.SetCount(end);
+	for(int i = begin; i < end; i++) {
 		
 		Snap& snap_in = data_in[i];
 		
@@ -5755,8 +5641,8 @@ void Obviousness::RefreshOutput() {
 		
 		enabled_av	/= max(1, enabled_div);
 		signal_av	/= max(1, signal_div);
-		GetBuffer(0).Set(i, enabled_av);
-		GetBuffer(1).Set(i, signal_av);
+		gi.GetBuffer(0).Set(i, enabled_av);
+		gi.GetBuffer(1).Set(i, signal_av);
 		
 		signalbool.Set(i, signal_av > 0.5);
 		enabledbool.Set(i, enabled_av > 0.5);
@@ -5774,26 +5660,26 @@ VolatilityContextReversal::VolatilityContextReversal() {
 	
 }
 
-void VolatilityContextReversal::Init() {
-	/*SetCoreSeparateWindow();
-	SetBufferColor(0, GrayColor(80));
-	SetBufferLineWidth(0, 2);
+void VolatilityContextReversal::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	/*gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, GrayColor(80));
+	gi.SetBufferLineWidth(0, 2);
 	
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0.5);*/
+	gi.SetCoreLevelCount(1);
+	gi.SetCoreLevel(0, 0.5);*/
 }
 
-void VolatilityContextReversal::Start() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void VolatilityContextReversal::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	ConstBuffer& volat_ctx = GetInputBuffer(1, 0);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& volat_ctx = ci.GetInputBuffer(1, 0);
 	
-	VectorBool& signal = GetOutput(0).label;
-	signal.SetCount(bars);
+	VectorBool& signal = gi.GetSignal();
+	signal.SetCount(end);
 	
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		double d = volat_ctx.Get(i);
 		bool is_peak = d > 0.99;
 		
@@ -5825,45 +5711,41 @@ bool ObviousTargetValue::GetInput(int i, int j) {
 	return bufs[j]->Get(i);
 }
 
-double ObviousTargetValue::GetOutput(int i) {
-	return GetBuffer(1).Get(i);
-}
-
-void ObviousTargetValue::Init() {
-	SetCoreSeparateWindow();
-	SetBufferColor(0, GrayColor(80));
-	SetBufferLineWidth(0, 1);
+void ObviousTargetValue::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, GrayColor(80));
+	gi.SetBufferLineWidth(0, 1);
 	
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0.0);
+	gi.SetCoreLevelCount(1);
+	gi.SetCoreLevel(0, 0.0);
 	
 	bufs.SetCount(row_size);
 	for(int i = 0; i < bufs.GetCount(); i++)
-		bufs[i] = &GetInputCore(1 + i, GetSymbol(), GetTf())->GetOutput(0).label;
+		bufs[i] = &ci.GetInputSignal(1 + i);
 	
-	outbuf = &GetInputCore(5, GetSymbol(), GetTf())->GetOutput(0).label;
+	outbuf = &ci.GetInputSignal(5);
 }
 
-void ObviousTargetValue::Start() {
+void ObviousTargetValue::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
-	if (!GetCounted()) {
-		RefreshTargetValues();
-		RefreshIOStats();
+	if (!ci.GetBegin()) {
+		RefreshTargetValues(si, ci, gi);
+		RefreshIOStats(si, ci, gi);
 	}
 	
-	RefreshOutput();
+	RefreshOutput(si, ci, gi);
 }
 
-void ObviousTargetValue::RefreshTargetValues() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void ObviousTargetValue::RefreshTargetValues(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	ConstBuffer& open_buf = GetInputBuffer(0,0);
-	Buffer& dst = GetBuffer(1);
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0,0);
+	BufferImage& dst = gi.GetBuffer(1);
 	
-	bool prev_value = outbuf->Get(bars-1);
-	double prev_open = open_buf.Get(bars-1);
-	for(int i = bars-1; i >= counted; i--) {
+	bool prev_value = outbuf->Get(end-1);
+	double prev_open = open_buf.Get(end-1);
+	for(int i = end-1; i >= begin; i--) {
 		bool value = outbuf->Get(i);
 		double open = open_buf.Get(i);
 		
@@ -5881,20 +5763,20 @@ void ObviousTargetValue::RefreshTargetValues() {
 	
 }
 
-void ObviousTargetValue::RefreshIOStats() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void ObviousTargetValue::RefreshIOStats(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	bars -= 1 + TEST_SIZE;
+	end -= 1 + TEST_SIZE;
 	
 	// Randomize the input pattern at first call
 	int c0 = Upp::min(250, row_size);
 	int c1 = Upp::min(250, row_size*(row_size-1));
 	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
 	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
-	const int MAX_BITS = 4;
+	const int MAX_BITS = max_bit_ids;
 	int counts[MAX_BITS] = {c0, c1, c2, c3};
-	int exp_count = c0 + c1 + c2 + c3;
+	int exp_count = 0; for (int i = 0; i < MAX_BITS; i++) exp_count += counts[i];
 	bitmatches.SetCount(exp_count);
 	Index<uint32> hashes;
 	
@@ -5938,7 +5820,7 @@ void ObviousTargetValue::RefreshIOStats() {
 	
 	
 	// Collect stats
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		for(int j = 0; j < bitmatches.GetCount(); j++) {
 			BitMatcher& bm = bitmatches[j];
 			uint32 value = 0;
@@ -5953,18 +5835,18 @@ void ObviousTargetValue::RefreshIOStats() {
 			BitComboStat& stat = bm.bit_stats[value];
 			
 			stat.total_count++;
-			stat.sum += GetOutput(i);
+			stat.sum += gi.GetBuffer(1).Get(i);
 		}
 	}
 }
 
-void ObviousTargetValue::RefreshOutput() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void ObviousTargetValue::RefreshOutput(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	VectorBool& label = Core::GetOutput(0).label;
-	label.SetCount(bars);
-	for(int i = counted; i < bars; i++) {
+	VectorBool& label = gi.GetSignal();
+	label.SetCount(end);
+	for(int i = begin; i < end; i++) {
 		int changed_div = 0;
 		double change_av = 0;
 		
@@ -5989,7 +5871,7 @@ void ObviousTargetValue::RefreshOutput() {
 		}
 		
 		change_av	/= max(1, changed_div);
-		GetBuffer(0).Set(i, change_av);
+		gi.GetBuffer(0).Set(i, change_av);
 		label.Set(i, change_av < 0.0);
 	}
 }
@@ -6006,27 +5888,32 @@ BasicSignal::BasicSignal() {
 	
 }
 
-void BasicSignal::Init() {
+void BasicSignal::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	bufs.SetCount(5);
 	for(int i = 0; i < bufs.GetCount(); i++)
-		bufs[i] = &GetInputCore(1 + i, GetSymbol(), GetTf())->GetOutput(0).label;
+		bufs[i] = &ci.GetInputSignal(1 + i);
 }
 
-void BasicSignal::Start() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void BasicSignal::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	VectorBool& signal = Core::GetOutput(0).label;
-	VectorBool& enabled = Core::GetOutput(1).label;
-	signal.SetCount(bars);
-	enabled.SetCount(bars);
-	for(int i = counted; i < bars; i++) {
+	VectorBool& signal = gi.GetSignal();
+	VectorBool& enabled = gi.GetEnabled();
+	signal.SetCount(end);
+	enabled.SetCount(end);
+	for(int i = begin; i < end; i++) {
 		
 		bool mini_signal  = bufs[0]->Get(i);
 		bool vola_signal  = bufs[1]->Get(i);
 		bool obvs_signal  = bufs[2]->Get(i);
 		bool obvt_signal  = bufs[3]->Get(i);
-		bool chnl_signal  = bufs[4]->Get(i);
+		
+		bool chnl_signal = true;
+		if (i >= 3) for(int j = 0; j < 4; j++) {
+			chnl_signal &= bufs[4]->Get(i - j);
+		}
+		
 		
 		bool is_enabled = mini_signal == vola_signal && !chnl_signal;
 		bool triggered = mini_signal == vola_signal && !chnl_signal && vola_signal == obvs_signal && obvs_signal == obvt_signal;
@@ -6050,6 +5937,16 @@ void BasicSignal::Start() {
 			}
 		}
 	}
+	
+	
+	{
+		int sig = 0;
+		bool signal = gi.GetSignal().Get(end-1);
+		bool enabled = gi.GetEnabled().Get(end-1);
+		if (enabled)
+			sig = signal ? -1.0 : +1.0;
+		GetSystem().SetSignal(ci.GetSymbol(), sig);
+	}
 }
 
 
@@ -6063,32 +5960,32 @@ void BasicSignal::Start() {
 
 
 
-
+#if 0
 ObviousAdvisor::ObviousAdvisor() {
 	
 }
 
-void ObviousAdvisor::Init() {
+void ObviousAdvisor::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	bs  = dynamic_cast<BasicSignal*>(GetInputCore(1));
 	obv = dynamic_cast<Obviousness*>(GetInputCore(2));
 	ASSERT(bs && obv);
 }
 
-void ObviousAdvisor::Start() {
-	int counted = GetCounted();
-	int bars = GetBars();
+void ObviousAdvisor::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	if (!counted) RefreshIOStats();
+	if (!begin) RefreshIOStats();
 	
 	RefreshOutput();
 	
-	if (!counted) TestAdvisor();
+	if (!begin) TestAdvisor();
 	
 	
 	int sig = 0;
-	bool signal = GetOutput(0).label.Get(bars-1);
-	bool enabled = GetOutput(1).label.Get(bars-1);
+	bool signal = GetOutput(0).label.Get(end-1);
+	bool enabled = GetOutput(1).label.Get(end-1);
 	if (enabled)
 		sig = signal ? -1.0 : +1.0;
 	
@@ -6096,17 +5993,17 @@ void ObviousAdvisor::Start() {
 }
 
 void ObviousAdvisor::RefreshIOStats() {
-	int counted = GetCounted();
-	int bars = GetBars();
-	ConstBuffer& open_buf = GetInputBuffer(0,0);
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	ConstBufferImage& open_buf = ci.GetInputBuffer(0,0);
 	
-	bars -= 1 + TEST_SIZE;
+	end -= 1 + TEST_SIZE;
 	
-	ConstVectorBool& src_signal  = bs->GetOutput(0).label;
-	ConstVectorBool& src_enabled = bs->GetOutput(1).label;
+	ConstVectorBool& src_signal  = bs->GetSignal();
+	ConstVectorBool& src_enabled = bs->GetEnabled();
 	
 	bool prev_enabled = false, prev_signal;
-	for(int i = 0; i < bars; i++) {
+	for(int i = 0; i < end; i++) {
 		bool enabled = src_enabled.Get(i);
 		if (enabled) {
 			bool signal = src_signal.Get(i);
@@ -6123,9 +6020,9 @@ void ObviousAdvisor::RefreshIOStats() {
 	int c1 = Upp::min(250, row_size*(row_size-1));
 	int c2 = Upp::min(250, row_size*(row_size-1)*(row_size-2));
 	int c3 = Upp::min(250, row_size*(row_size-1)*(row_size-2)*(row_size-3));
-	const int MAX_BITS = 4;
+	const int MAX_BITS = max_bit_ids;
 	int counts[MAX_BITS] = {c0, c1, c2, c3};
-	int exp_count = c0 + c1 + c2 + c3;
+	int exp_count = 0; for (int i = 0; i < MAX_BITS; i++) exp_count += counts[i];
 	bitmatches.SetCount(exp_count);
 	Index<uint32> hashes;
 	
@@ -6179,7 +6076,7 @@ void ObviousAdvisor::RefreshIOStats() {
 		double signal_open, prev_open;
 		prev_open = signal_open = open_buf.Get(pos);
 		int total_positive = 0, total = 0;
-		for(int j = pos + 1; j < bars; j++) {
+		for(int j = pos + 1; j < end; j++) {
 			bool enabled = src_enabled.Get(j);
 			if (!enabled) break;
 			bool signal = src_signal.Get(j);
@@ -6219,15 +6116,15 @@ void ObviousAdvisor::RefreshIOStats() {
 }
 
 void ObviousAdvisor::RefreshOutput() {
-	int counted = GetCounted();
-	int bars = GetBars();
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
 	
-	ConstVectorBool& src_signal  = bs->GetOutput(0).label;
-	ConstVectorBool& src_enabled = bs->GetOutput(1).label;
+	ConstVectorBool& src_signal  = bs->GetSignal();
+	ConstVectorBool& src_enabled = bs->GetEnabled();
 	
-	bool prev_enabled = src_enabled.Get(counted - 1);
-	bool prev_signal = src_signal.Get(counted - 1);
-	for(int i = counted; i < bars; i++) {
+	bool prev_enabled = src_enabled.Get(begin - 1);
+	bool prev_signal = src_signal.Get(begin - 1);
+	for(int i = begin; i < end; i++) {
 		bool enabled = src_enabled.Get(i);
 		if (enabled) {
 			bool signal = src_signal.Get(i);
@@ -6241,10 +6138,10 @@ void ObviousAdvisor::RefreshOutput() {
 	
 	
 	
-	VectorBool& signalbool = GetOutput(0).label;
-	VectorBool& enabledbool = GetOutput(1).label;
-	signalbool.SetCount(bars);
-	enabledbool.SetCount(bars);
+	VectorBool& signalbool = gi.GetSignal();
+	VectorBool& enabledbool = gi.GetEnabled();
+	signalbool.SetCount(end);
+	enabledbool.SetCount(end);
 	if (begin_cursor > 0) begin_cursor--;
 	for(; begin_cursor < begins.GetCount(); begin_cursor++) {
 		int i = begins[begin_cursor];
@@ -6290,7 +6187,7 @@ void ObviousAdvisor::RefreshOutput() {
 		bool prev_enabled = src_enabled.Get(i);
 		bool prev_signal = src_signal.Get(i);
 		ASSERT(prev_enabled);
-		for(int j = i; j < bars; j++) {
+		for(int j = i; j < end; j++) {
 			bool enabled = src_enabled.Get(j);
 			if (enabled) {
 				bool signal = src_signal.Get(j);
@@ -6308,12 +6205,12 @@ void ObviousAdvisor::RefreshOutput() {
 }
 
 void ObviousAdvisor::TestAdvisor() {
-	int bars = GetBars();
-	int counted = max(0, bars - TEST_SIZE);
+	int end = ci.GetEnd();
+	int begin = max(0, end - TEST_SIZE);
 	
 	
-	VectorBool& signalbool = GetOutput(0).label;
-	VectorBool& enabledbool = GetOutput(1).label;
+	VectorBool& signalbool = gi.GetSignal();
+	VectorBool& enabledbool = gi.GetEnabled();
 	
 	System& sys = GetSystem();
 	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
@@ -6321,7 +6218,7 @@ void ObviousAdvisor::TestAdvisor() {
 	double cost				= spread_point * 3;
 	int tf = 0;
 	ASSERT(spread_point > 0.0);
-	ConstBuffer& open_buf = db.GetBuffer(0);
+	ConstBufferImage& open_buf = db.GetBuffer(0);
 
 	
 	
@@ -6329,7 +6226,7 @@ void ObviousAdvisor::TestAdvisor() {
 	double prev_open;
 	bool prev_enabled = false, prev_signal;
 	int open_len = 0;
-	for(int i = counted; i < bars; i++) {
+	for(int i = begin; i < end; i++) {
 		bool enabled = enabledbool.Get(i);
 		bool signal = signalbool.Get(i);
 		
@@ -6362,7 +6259,7 @@ void ObviousAdvisor::TestAdvisor() {
 		if (enabled) open_len++;
 	}
 	if (prev_enabled) {
-		double open = open_buf.Get(bars-1);
+		double open = open_buf.Get(end-1);
 		double change = open / prev_open;
 		if (prev_signal == false) change = open / (prev_open + spread_point);
 		else change = 1.0 - (open / (prev_open - spread_point) - 1.0);
@@ -6394,10 +6291,10 @@ ExampleAdvisor::ExampleAdvisor() {
 	
 }
 
-void ExampleAdvisor::Init() {
-	SetCoreSeparateWindow();
+void ExampleAdvisor::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
 	
-	SetBufferColor(0, RainbowColor(Randomf()));
+	gi.SetBufferColor(0, RainbowColor(Randomf()));
 	
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
 	
@@ -6411,16 +6308,16 @@ void ExampleAdvisor::Init() {
 		.SetCtrl		<TrainingCtrl>();
 }
 
-void ExampleAdvisor::Start() {
+void ExampleAdvisor::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if (once) {
-		if (prev_counted > 0) prev_counted--;
+		if (prev_begin > 0) prev_begin--;
 		once = false;
 		RefreshSourcesOnlyDeep();
 	}
 	
 	if (IsJobsFinished()) {
-		int bars = GetBars();
-		if (prev_counted < bars) {
+		int end = ci.GetEnd();
+		if (prev_begin < end) {
 			LOG("ExampleAdvisor::Start Refresh");
 			RefreshAll();
 		}
@@ -6498,13 +6395,13 @@ void ExampleAdvisor::RefreshAll() {
 	// ---- Do your final result work here ----
 	
 	
-	// Keep counted manually
-	prev_counted = GetBars();
+	// Keep begin manually
+	prev_begin = ci.GetEnd();
 	
 	
 	// Write oscillator indicator
-	Buffer& buf = GetBuffer(0);
-	for(int i = 0; i < GetBars(); i++) {
+	BufferImage& buf = gi.GetBuffer(0);
+	for(int i = 0; i < ci.GetEnd(); i++) {
 		buf.Set(i, sin(i * 0.01));
 	}
 }
@@ -6532,278 +6429,7 @@ void ExampleAdvisor::TrainingCtrl::Paint(Draw& w) {
 
 
 
-
-
-LessObviousAdvisor::LessObviousAdvisor() {
-	
-}
-
-void LessObviousAdvisor::Init() {
-	open_buf = &GetInputBuffer(0, 0);
-	obviousness = dynamic_cast<Obviousness*>(GetInputCore(1));
-	basic_enabled = &GetInputCore(2)->GetOutput(0).label;
-	basic_signal = &GetInputCore(2)->GetOutput(1).label;
-	ASSERT(obviousness);
-	
-	DataBridge& db = dynamic_cast<DataBridge&>(*GetInputCore(0));
-	spread_point = db.GetPoint();
-	
-	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
-	
-	SetJobCount(1);
-	
-	SetJob(0, tf_str + " Training")
-		.SetBegin		(THISBACK(TrainingBegin))
-		.SetIterator	(THISBACK(TrainingIterator))
-		.SetEnd			(THISBACK(TrainingEnd))
-		.SetInspect		(THISBACK(TrainingInspect))
-		.SetCtrl		<TrainingCtrl>();
-}
-
-void LessObviousAdvisor::Start() {
-	if (once) {
-		if (prev_counted > 0) prev_counted--;
-		once = false;
-		RefreshSourcesOnlyDeep();
-	}
-	
-	if (IsJobsFinished()) {
-		int bars = GetBars();
-		if (prev_counted < bars) {
-			LOG("LessObviousAdvisor::Start Refresh");
-			RefreshAll();
-		}
-	}
-}
-
-bool LessObviousAdvisor::TrainingBegin() {
-	
-	int bars = GetBars();
-	GetOutput(0).label.SetCount(bars);
-	GetOutput(1).label.SetCount(bars);
-	
-	training_pts.SetCount(obviousness->data_in.GetCount(), 0);
-	
-	// In case of having other advisors as dependency:
-	// Don't start if jobs of dependencies are not finished
-	for(int i = 0; i < inputs.GetCount(); i++) {
-		Input& in = inputs[i];
-		for(int j = 0; j < in.GetCount(); j++) {
-			Source& src = in[j];
-			if (src.core) {
-				Core* core = dynamic_cast<Core*>(src.core);
-				if (core && !core->IsJobsFinished())
-					return false;
-			}
-		}
-	}
-	
-	// Allow iterating
-	return true;
-}
-
-void LessObviousAdvisor::LoadState(Trainer::MatType& mat) {
-	auto& data_in_vec = obviousness->data_in;
-	auto& data_in = data_in_vec[cursor];
-	for(int i = 0; i < Obviousness::row_size; i++)
-		mat.Set(i, data_in.Get(i) ? 1.0 : 0.0);
-}
-
-void LessObviousAdvisor::OpenAt() {
-	ASSERT(basic_enabled->Get(cursor));
-	bool signal = basic_signal->Get(cursor);
-	if (prev_enabled) {
-		if (prev_signal == signal)
-			return;
-		else
-			CloseAt();
-	}
-	prev_open = open_buf->Get(cursor);
-	prev_signal = signal;
-	prev_enabled = true;
-	LOG("Open " << cursor);
-}
-
-void LessObviousAdvisor::CloseAt() {
-	ASSERT(spread_point > 0.0);
-	double open = open_buf->Get(cursor);
-	double change;
-	if (!prev_signal)	change = open / (prev_open + spread_point) - 1.0;
-	else				change = 1.0 - (open / (prev_open - spread_point) - 1.0);
-	accum_reward += change * 1000.0;
-	prev_open = false;
-	prev_enabled = false;
-	LOG("Close " << cursor << " accum_reward: " << accum_reward);
-}
-
-void LessObviousAdvisor::SeekNextActive() {
-	int rounds = 0;
-	auto& data_in_vec = obviousness->data_in;
-	for(;;) {
-		bool b = basic_enabled->Get(cursor);
-		if (b) break;
-		cursor++;
-		if (cursor >= basic_enabled->GetCount()) {
-			cursor = 0;
-			rounds++;
-			if (rounds > 1) Panic("Unexpected forever loop with symbol " + GetSystem().GetSymbol(GetSymbol()));
-		}
-	}
-}
-
-bool LessObviousAdvisor::TrainingIterator() {
-	
-	// Show progress
-	GetCurrentJob().SetProgress(round, max_rounds);
-	
-	
-	// Act every round
-	SeekNextActive();
-	Trainer::MatType mat;
-	LoadState(mat);
-	int action = dqn_trainer.Act(mat);
-	
-	
-	// Use action, give reward
-	double reward;
-	if (action == ACCEPT) {
-		OpenAt();
-		reward = 0;
-	}
-	else {
-		CloseAt();
-		reward = accum_reward;
-		accum_reward = 0;
-		total_reward += reward;
-	}
-	
-	GetOutput(0).label.Set(cursor, prev_signal);
-	GetOutput(1).label.Set(cursor, prev_enabled);
-	
-	
-	// Fill state if not filled
-	if (current_state) {
-		current_state->after_reward = reward;
-		LoadState(current_state->after_state);
-		
-		
-		// Reduce epsilon over time
-		double prog = (double)round / (double)max_rounds;
-		dqn_trainer.SetEpsilon((1.0 - prog) * 0.2);
-		
-		
-		// Learn it
-		dqn_trainer.Learn(*current_state);
-		
-		
-		// Learn few other states from memory too
-		for(int i = 0; i < 5; i++)
-			dqn_trainer.Learn(train_memory[Random(train_memory.GetCount())]);
-		
-		
-		current_state = NULL;
-	}
-	
-	
-	// Train less often
-	if (round % 5 == 0) {
-		if (train_cursor >= train_memory.GetCount()) train_memory.Add();
-		current_state = &train_memory[train_cursor];
-		
-		current_state->before_action = action;
-		LoadState(current_state->before_state);
-		
-		train_cursor++;
-		if (train_cursor >= MAX_TRAIN_STATES)
-			train_cursor = 0;
-	}
-	
-	auto& data_in_vec = obviousness->data_in;
-	cursor++;
-	if (cursor >= data_in_vec.GetCount()) {
-		cursor = 0;
-		total_reward = 0.0;
-	}
-	
-	
-	// Put some result data here for graph
-	training_pts[cursor] = total_reward;
-	
-	
-	// Keep count of iterations
-	round++;
-	
-	// Stop eventually
-	if (round >= max_rounds) {
-		SetJobFinished();
-	}
-	
-	return true;
-}
-
-bool LessObviousAdvisor::TrainingEnd() {
-	RefreshAll();
-	return true;
-}
-
-bool LessObviousAdvisor::TrainingInspect() {
-	bool success = false;
-	
-	INSPECT(success, "ok: this is an example");
-	INSPECT(success, "warning: this is an example");
-	INSPECT(success, "error: this is an example");
-	
-	// You can fail the inspection too
-	//if (!success) return false;
-	
-	return true;
-}
-
-void LessObviousAdvisor::RefreshAll() {
-	RefreshSourcesOnlyDeep();
-	
-	
-	int bars = GetBars();
-	cursor = bars - 1;
-	Trainer::MatType mat;
-	LoadState(mat);
-	int action = dqn_trainer.Act(mat);
-	int sig = 0;
-	if (action == ACCEPT) {
-		bool enabled = basic_enabled->Get(cursor);
-		bool signal = basic_signal->Get(cursor);
-		if (enabled)
-			sig = signal ? -1.0 : +1.0;
-	}
-	
-	GetSystem().SetSignal(GetSymbol(), sig);
-	
-	
-	
-	// Keep counted manually
-	prev_counted = GetBars();
-	
-}
-
-void LessObviousAdvisor::TrainingCtrl::Paint(Draw& w) {
-	Size sz = GetSize();
-	ImageDraw id(sz);
-	id.DrawRect(sz, White());
-	
-	LessObviousAdvisor* ea = dynamic_cast<LessObviousAdvisor*>(&*job->core);
-	ASSERT(ea);
-	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
-	
-	w.DrawImage(0, 0, id);
-}
-
-
-
-
-
-
-
-
+#endif
 
 
 }

@@ -1,5 +1,7 @@
 #include "Overlook.h"
 
+#if 0
+
 namespace Overlook {
 
 
@@ -72,10 +74,6 @@ ConstBuffer& CoreIO::GetInputBuffer(int input, int sym, int tf, int buffer) cons
 	return SafetyBuffer(out->buffers[buffer]);
 }
 
-ConstVectorBool& CoreIO::GetInputLabel(int input, int sym, int tf) const {
-	return inputs[input].Get(HashSymTf(sym, tf)).output->label;
-}
-	
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
 	return inputs[input].Get(HashSymTf(sym, tf)).core;
 }
@@ -88,192 +86,6 @@ const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
 	return *inputs[input].Get(HashSymTf(sym, tf)).core;
 }
 
-String CoreIO::GetCacheDirectory() {
-	ASSERT(factory != -1);
-	int64 arghash = 0;
-	Core* core = dynamic_cast<Core*>(this);
-	if (core) {
-		ArgChanger arg;
-		arg.SetLoading();
-		core->IO(arg);
-		if (!arg.args.IsEmpty()) {
-			CombineHash ch;
-			for(int i = 0; i < arg.args.GetCount(); i++)
-				ch << (int)arg.args[i] << 1;
-			arghash = ch;
-		}
-	}
-	
-	String coredir = Format("%d-%d-%d-%d-", sym_id, tf_id, factory, hash) + IntStr64(arghash);
-	String dir = AppendFileName(ConfigFile("corecache"), coredir);
-	RealizeDirectory(dir);
-	return dir;
-}
-
-void CoreIO::StoreCache() {
-	if (!is_init) {
-		LOG("warning: CoreIO::StoreCache not storing without init");
-		return;
-	}
-	
-	if (!serialized)
-		return;
-	
-	if (outputs.IsEmpty() || outputs.GetCount() == 1 && outputs[0].buffers.IsEmpty())
-		return;
-	
-	if (serialization_lock.TryEnter()) {
-		
-		String dir = GetCacheDirectory();
-		String file = AppendFileName(dir, "core.bin");
-		FileOut out(file);
-		if (out.IsOpen()) {
-			Put(out, dir, 0);
-			Core* c = dynamic_cast<Core*>(this);
-			if (c) {
-				for(int i = 0; i < c->subcores.GetCount(); i++)
-					c->subcores[i].Put(out, dir, 1+i);
-			}
-		}
-		
-		serialization_lock.Leave();
-	}
-}
-
-void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
-	int output_count = outputs.GetCount();
-	int persistent_count = persistents.GetCount();
-	int job_count = jobs.GetCount();
-	
-	out % output_count % persistent_count % counted % bars;
-	
-	out % job_count;
-	for(int i = 0; i < jobs.GetCount(); i++)
-		out % jobs[i];
-	
-	for(int i = 0; i < persistents.GetCount(); i++) {
-		Persistent& p = persistents[i];
-		p.Serialize(out);
-	}
-	
-	for(int i = 0; i < outputs.GetCount(); i++) {
-		Output& output = outputs[i];
-		out % output.phase % output.type % output.visible;
-		
-		// VectorBool label is typically around 1-10K bytes and that's not too much.
-		out % output.label;
-		
-		for(int j = 0; j < output.buffers.GetCount(); j++) {
-			Buffer& buf = output.buffers[j];
-			
-			// Store values incrementally
-			String file = AppendFileName(dir, Format("%d-%d-%d.bin", i, j, subcore_id));
-			FileAppend out(file);
-			if (!out.IsOpen())
-				continue;
-			
-			int begin = buf.GetResetEarliestWrite();
-			int64 add = begin != INT_MAX ? buf.value.GetCount() - begin : -1;
-			if (add > 0) {
-				out.Seek(begin * sizeof(double));
-				out.Put(buf.value.Begin() + begin, (int)(add * sizeof(double)));
-			}
-		}
-	}
-	
-}
-
-void CoreIO::LoadCache() {
-	if (!serialized)
-		return;
-	
-	String dir = GetCacheDirectory();
-	
-	String file = AppendFileName(dir, "core.bin");
-	FileIn in(file);
-	if (!in.IsOpen())
-		return;
-	
-	Get(in, dir, 0);
-	Core* c = dynamic_cast<Core*>(this);
-	if (c) {
-		for(int i = 0; i < c->subcores.GetCount(); i++)
-			c->subcores[i].Get(in, dir, 1+i);
-	}
-}
-
-void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
-	int output_count = 0;
-	in % output_count;
-	if (output_count != outputs.GetCount()) {
-		LOG("CoreIO::LoadCache: error: output count mismatch");
-		return;
-	}
-	
-	int persistent_count = 0;
-	in % persistent_count;
-	if (persistent_count != persistents.GetCount()) {
-		LOG("CoreIO::LoadCache: error: persistent variable count mismatch");
-		return;
-	}
-	
-	int counted, bars;
-	in % counted % bars;
-	
-	int job_count;
-	in % job_count;
-	if (job_count != jobs.GetCount()) {
-		LOG("CoreIO::LoadCache: error: persistent variable count mismatch");
-		return;
-	}
-	for(int i = 0; i < jobs.GetCount(); i++)
-		in % jobs[i];
-	
-	for(int i = 0; i < persistents.GetCount(); i++) {
-		Persistent& p = persistents[i];
-		p.Serialize(in);
-	}
-	
-	for(int i = 0; i < outputs.GetCount(); i++) {
-		int phase, type, visible;
-		in % phase % type % visible;
-		
-		Output& output = outputs[i];
-		
-		in % output.label;
-		
-		if (output.phase != phase || output.type != type || output.visible != visible) {
-			LOG("CoreIO::LoadCache: error: output type mismatch");
-			return;
-		}
-		
-		for(int j = 0; j < output.buffers.GetCount(); j++) {
-			Buffer& buf = output.buffers[j];
-			
-			// Store values incrementally
-			String file = AppendFileName(dir, Format("%d-%d-%d.bin", i, j, subcore_id));
-			FileIn in(file);
-			if (!in.IsOpen()) {
-				LOG("CoreIO::LoadCache: error: file doesn't exist: " + file);
-				continue;
-			}
-			
-			int count = (int)(in.GetSize() / sizeof(double));
-			if (count > 0) {
-				buf.value.SetCount(count);
-				in.Get(buf.value.Begin(), count * sizeof(double));
-			}
-		}
-	}
-	
-	this->counted = counted;
-	this->bars = bars;
-}
-
-void CoreIO::ForceCount(int data_count) {
-	SetSafetyLimit(data_count);
-	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
-		outputs[0].buffers[i].SetCount(data_count);
-}
 
 }
+#endif

@@ -1,24 +1,9 @@
 #include "Overlook.h"
 
+#if 0
+
 namespace Overlook {
 	
-#ifdef flagDEBUG
-double Buffer::Get(int i) const {
-	if (check_cio) check_cio->SafetyInspect(i);
-	return value[i];
-}
-
-void Buffer::Set(int i, double value) {
-	if (check_cio) check_cio->SafetyInspect(i);
-	this->value[i] = value;
-	if (i < earliest_write) earliest_write = i;
-}
-
-void Buffer::Inc(int i, double value) {
-	if (check_cio) check_cio->SafetyInspect(i);
-	this->value[i] += value;
-}
-#endif
 
 
 Core::Core()
@@ -57,22 +42,6 @@ Core& Core::Set(String key, Value value) {
 	return *this;
 }
 
-void Core::ClearContent() {
-	bars = 0;
-	counted = 0;
-	for(int i = 0; i < buffers.GetCount(); i++) {
-		buffers[i]->value.Clear();
-	}
-	for(int i = 0; i < subcores.GetCount(); i++) {
-		subcores[i].ClearContent();
-	}
-}
-
-void Core::AllowJobs() {
-	for(int i = 0; i < jobs.GetCount(); i++)
-		jobs[i].allow_processing = true;
-}
-
 void Core::InitAll() {
 	System& sys = GetSystem();
 	
@@ -99,19 +68,6 @@ void Core::InitAll() {
 	Init();
 	
 	
-	// Register jobs
-	JobThread& thrd = sys.GetJobThread(sym_id, tf_id);
-	WRITELOCK(thrd.job_lock) {
-		for(int i = 0; i < jobs.GetCount(); i++) {
-			Job& job = jobs[i];
-			Core* core = job.core;
-			if (core == NULL)
-				Panic("You haven't called SetJob for all jobs or SetJobCount has invalid count.");
-			thrd.jobs.Add(&job);
-		}
-	}
-	
-	
 	// Initialize sub-cores
 	const FactoryRegister& src_reg = sys.regs[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
@@ -119,7 +75,7 @@ void Core::InitAll() {
 		core.factory = subcore_factories[i];
 		core.RefreshIO();
 		core.SetSymbol(GetSymbol());
-		core.SetTimeframe(GetTimeframe(), GetPeriod());
+		core.SetTimeframe(GetTimeframe(), ci.GetPeriod());
 		
 		const FactoryRegister& reg = sys.regs[core.factory];
 		
@@ -184,7 +140,7 @@ void Core::RefreshSourcesOnlyDeep() {
 		}
 	}
 }
-
+/*
 void Core::Refresh() {
 	refresh_lock.Enter();
 	
@@ -217,7 +173,7 @@ void Core::Refresh() {
 	refresh_lock.Leave();
 	
 }
-
+*/
 
 
 
@@ -232,83 +188,7 @@ DataBridge* Core::GetDataBridge() {
 	return Get<DataBridge>();
 }
 
-double Core::Open ( int shift ) {
-	SAFETYASSERT(shift <= read_safety_limit);
-	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 0).Get(shift);
-}
-
-double Core::Low( int shift ) {
-	SAFETYASSERT(shift < read_safety_limit);
-	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 1).Get(shift);
-}
-
-double Core::High( int shift ) {
-	SAFETYASSERT(shift < read_safety_limit);
-	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 2).Get(shift);
-}
-
-double Core::Volume ( int shift ) {
-	SAFETYASSERT(shift <= read_safety_limit);
-	return GetInputBuffer(db_src, GetSymbol(), GetTimeframe(), 3).Get(shift);
-}
-
-int Core::HighestHigh(int period, int shift) {
-	ASSERT(period > 0);
-	double highest = -DBL_MAX;
-	int highest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double high = High(shift);
-		if (high > highest) {
-			highest = high;
-			highest_pos = shift;
-		}
-	}
-	return highest_pos;
-}
-
-int Core::LowestLow(int period, int shift) {
-	ASSERT(period > 0);
-	double lowest = DBL_MAX;
-	int lowest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double low = Low(shift);
-		if (low < lowest) {
-			lowest = low;
-			lowest_pos = shift;
-		}
-	}
-	return lowest_pos;
-}
-
-int Core::HighestOpen(int period, int shift) {
-	ASSERT(period > 0);
-	double highest = -DBL_MAX;
-	int highest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double open = Open(shift);
-		if (open > highest) {
-			highest = open;
-			highest_pos = shift;
-		}
-	}
-	return highest_pos;
-}
-
-int Core::LowestOpen(int period, int shift) {
-	ASSERT(period > 0);
-	double lowest = DBL_MAX;
-	int lowest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double open = Open(shift);
-		if (open < lowest) {
-			lowest = open;
-			lowest_pos = shift;
-		}
-	}
-	return lowest_pos;
-}
-
-int Core::GetMinutePeriod() {
+int Core::GetPeriod() {
 	return GetSystem().GetPeriod(tf_id);
 }
 
@@ -322,75 +202,8 @@ void Core::SetTimeframe(int i, int period) {
 	this->period = period;
 }
 
-double Core::GetAppliedValue ( int applied_value, int i ) {
-	double dValue;
-	
-	switch ( applied_value ) {
-		case 0:
-			SAFETYASSERT(i <= read_safety_limit);
-			dValue = Open(i);
-			break;
-		case 1:
-			SAFETYASSERT(i < read_safety_limit);
-			dValue = High(i);
-			break;
-		case 2:
-			SAFETYASSERT(i < read_safety_limit);
-			dValue = Low(i);
-			break;
-		case 3:
-			SAFETYASSERT(i < read_safety_limit);
-			dValue =
-				( High(i) + Low(i) )
-				/ 2.0;
-			break;
-		case 4:
-			SAFETYASSERT(i < read_safety_limit);
-			dValue =
-				( High(i) + Low(i) + Open(i) )
-				/ 3.0;
-			break;
-		case 5:
-			SAFETYASSERT(i < read_safety_limit);
-			dValue =
-				( High(i) + Low(i) + 2 * Open(i) )
-				/ 4.0;
-			break;
-		default:
-			dValue = 0.0;
-	}
-	return ( dValue );
-}
 
-bool Core::IsJobsFinished() const {
-	bool all_done = true;
-	for(int i = 0; i < inputs.GetCount(); i++) {
-		const Input& input = inputs[i];
-		for(int j = 0; j < input.GetCount(); j++)
-			all_done &= dynamic_cast<Core*>(input[j].core)->IsJobsFinished();
-	}
-	for(int i = 0; i < jobs.GetCount(); i++)
-		all_done &= jobs[i].IsFinished();
-	return all_done;
-}
-
-Job& Core::SetJob(int i, String job_title) {
-	Job& job	= jobs[i];
-	job.title	= job_title;
-	job.core	= this;
-	
-	return job;
-}
-
-Job& Core::GetJob(int i) {
-	return jobs[i];
-}
-
-void Core::SetJobFinished(bool b) {
-	if (!current_job)
-		Panic("No job set currently");
-	current_job->actual		= 1;
-	current_job->total		= 1;
-}
 
 }
+
+#endif

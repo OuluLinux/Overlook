@@ -2,6 +2,105 @@
 
 namespace Overlook {
 
+int SourceImage::HighestHigh(int period, int shift) {
+	ASSERT(period > 0);
+	double highest = -DBL_MAX;
+	int highest_pos = -1;
+	for (int i = 0; i < period && shift >= 0; i++, shift--) {
+		double high = High(shift);
+		if (high > highest) {
+			highest = high;
+			highest_pos = shift;
+		}
+	}
+	return highest_pos;
+}
+
+int SourceImage::LowestLow(int period, int shift) {
+	ASSERT(period > 0);
+	double lowest = DBL_MAX;
+	int lowest_pos = -1;
+	for (int i = 0; i < period && shift >= 0; i++, shift--) {
+		double low = Low(shift);
+		if (low < lowest) {
+			lowest = low;
+			lowest_pos = shift;
+		}
+	}
+	return lowest_pos;
+}
+
+int SourceImage::HighestOpen(int period, int shift) {
+	ASSERT(period > 0);
+	double highest = -DBL_MAX;
+	int highest_pos = -1;
+	for (int i = 0; i < period && shift >= 0; i++, shift--) {
+		double open = Open(shift);
+		if (open > highest) {
+			highest = open;
+			highest_pos = shift;
+		}
+	}
+	return highest_pos;
+}
+
+int SourceImage::LowestOpen(int period, int shift) {
+	ASSERT(period > 0);
+	double lowest = DBL_MAX;
+	int lowest_pos = -1;
+	for (int i = 0; i < period && shift >= 0; i++, shift--) {
+		double open = Open(shift);
+		if (open < lowest) {
+			lowest = open;
+			lowest_pos = shift;
+		}
+	}
+	return lowest_pos;
+}
+
+double SourceImage::GetAppliedValue ( int applied_value, int i ) {
+	double dValue;
+	
+	switch ( applied_value ) {
+		case 0:
+			dValue = Open(i);
+			break;
+		case 1:
+			dValue = High(i);
+			break;
+		case 2:
+			dValue = Low(i);
+			break;
+		case 3:
+			dValue =
+				( High(i) + Low(i) )
+				/ 2.0;
+			break;
+		case 4:
+			dValue =
+				( High(i) + Low(i) + Open(i) )
+				/ 3.0;
+			break;
+		case 5:
+			dValue =
+				( High(i) + Low(i) + 2 * Open(i) )
+				/ 4.0;
+			break;
+		default:
+			dValue = 0.0;
+	}
+	return dValue;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -33,7 +132,6 @@ System::System() {
 }
 
 System::~System() {
-	StopJobs();
 	data.Clear();
 }
 
@@ -66,16 +164,6 @@ void System::Init() {
 				throw UserExc("MT4 symbols changed. Remove cached data.");
 		}
 	}
-	InitRegistry();
-	
-	
-	#ifdef flagGUITASK
-	jobs_tc.Set(10, THISBACK(PostProcessJobs));
-	#else
-	jobs_running = true;
-	jobs_stopped = false;
-	Thread::Start(THISBACK(ProcessJobs));
-	#endif
 	
 }
 
@@ -125,7 +213,7 @@ void System::FirstStart() {
 }
 
 void System::Deinit() {
-	StopJobs();
+	
 }
 
 void System::AddPeriod(String nice_str, int period) {
@@ -144,8 +232,193 @@ void System::AddSymbol(String sym) {
 	signals.Add(0);
 }
 
-void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {
-	CoreFactories().Add(CoreSystem(name, f, singlef));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ImageCompiler::ImageCompiler() {
+	
+}
+
+void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
+	pipeline_size = 0;
+	pipeline[pipeline_size++] = decl;
+	
+	int pipeline_cursor = 0;
+	while (pipeline_cursor < pipeline_size) {
+		FactoryDeclaration& decl = pipeline[pipeline_cursor++];
+		
+		ValueRegister reg;
+		
+		ConfFactory(decl, reg);
+		
+		decl.input_count = reg.input_count;
+		for(int i = 0; i < reg.input_count; i++) {
+			int id = pipeline_size++;
+			decl.input_id[i] = id;
+			pipeline[id] = reg.inputs[i];
+		}
+		ASSERT(pipeline_size < MAX_PIPELINE);
+	}
+	
+	
+	// Remove duplicates and prefer later
+	for(int i = 0; i < pipeline_size; i++) {
+		FactoryDeclaration& a = pipeline[i];
+		bool remove = false;
+		int replace_id = -1;
+		for(int j = i+1; j < pipeline_size; j++) {
+			FactoryDeclaration& b = pipeline[j];
+			if (a == b) {
+				remove = true;
+				replace_id = j;
+				break;
+			}
+		}
+		if (remove) {
+			Remove(i, replace_id);
+			i--;
+		}
+	}
+}
+
+void ImageCompiler::Remove(int i, int replace_id) {
+	ASSERT(i >= 0 && i < pipeline_size);
+	replace_id--;
+	pipeline_size--;
+	for(; i < pipeline_size - 1; i++) {
+		FactoryDeclaration& decl = pipeline[i];
+		decl = pipeline[i+1];
+		
+		for(int j = 0; j < decl.input_count; j++) {
+			int& b = decl.input_id[j];
+			int a = b;
+			if (a == i)
+				b = replace_id;
+			else if (a > i)
+				b--;
+		}
+	}
+}
+
+void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
+	
+	ci.graphs.SetCount(pipeline_size);
+	
+	for(int i = pipeline_size-1; i >= pipeline_size; i--) {
+		ConstFactoryDeclaration& decl = pipeline[i];
+		
+		GraphImage& gi = ci.graphs[i];
+		gi.input_count = decl.input_count;
+		for(int j = 0; j < 8; j++)
+			gi.input_id[j] = decl.input_id[j];
+		
+		StartFactory(decl, si, ci, gi);
+	}
+	
+}
+
+bool System::RefreshReal() {
+	Time now				= GetUtcTime();
+	int wday				= DayOfWeek(now);
+	Time after_3hours		= now + 3 * 60 * 60;
+	int wday_after_3hours	= DayOfWeek(after_3hours);
+	now.second				= 0;
+	MetaTrader& mt			= GetMetaTrader();
+	
+	
+	// Skip weekends and first hours of monday
+	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+		LOG("Skipping weekend...");
+		return true;
+	}
+	
+	
+	// Inspect for market closing (weekend and holidays)
+	else if (wday == 5 && wday_after_3hours == 6) {
+		WhenInfo("Closing all orders before market break");
+		
+		for (int i = 0; i < mt.GetSymbolCount(); i++) {
+			mt.SetSignal(i, 0);
+			mt.SetSignalFreeze(i, false);
+		}
+		
+		mt.SignalOrders(true);
+		return true;
+	}
+	
+	
+	WhenInfo("Updating MetaTrader");
+	WhenPushTask("Putting latest signals");
+	
+	// Reset signals
+	if (realtime_count == 0) {
+		for (int i = 0; i < mt.GetSymbolCount(); i++)
+			mt.SetSignal(i, 0);
+	}
+	realtime_count++;
+	
+	
+	try {
+		mt.Data();
+		mt.RefreshLimits();
+		int open_count = 0;
+		const int MAX_SYMOPEN = 8;
+		const double FMLEVEL = 0.6;
+		
+		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
+			int sig = signals[sym_id];
+			int prev_sig = mt.GetSignal(sym_id);
+			if (sig != 0 && sig == prev_sig)
+				open_count++;
+		}
+		
+		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
+			int sig = signals[sym_id];
+			int prev_sig = mt.GetSignal(sym_id);
+			if (sig == prev_sig && sig != 0)
+				mt.SetSignalFreeze(sym_id, true);
+			else {
+				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
+					if (open_count >= MAX_SYMOPEN)
+						sig = 0;
+					else
+						open_count++;
+				}
+				
+				mt.SetSignal(sym_id, sig);
+				mt.SetSignalFreeze(sym_id, false);
+			}
+			LOG("Real symbol " << sym_id << " signal " << sig);
+		}
+		
+		mt.SetFreeMarginLevel(FMLEVEL);
+		mt.SetFreeMarginScale(MAX_SYMOPEN);
+		mt.SignalOrders(true);
+	}
+	catch (UserExc e) {
+		LOG(e);
+		return false;
+	}
+	catch (...) {
+		return false;
+	}
+	
+	
+	WhenRealtimeUpdate();
+	WhenPopTask();
+	
+	return true;
 }
 
 }

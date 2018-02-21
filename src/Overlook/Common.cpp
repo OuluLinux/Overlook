@@ -351,4 +351,93 @@ int log2_64 (uint64 value)
     return tab64[((uint64_t)((value - (value >> 1))*0x07EDD5E59A4E28C2)) >> 58];
 }
 
+
+
+
+
+
+
+
+
+
+ValueRegister::ValueRegister(ConstFactoryDeclaration& decl) {
+	is_loading = true;
+	arg_count = decl.arg_count;
+	for(int i = 0; i < arg_count; i++)
+		args[i].def = decl.args[i];
+}
+
+ValueRegister& ValueRegister::In(int factory) {
+	if (!is_loading) {
+		FactoryDeclaration& in = inputs[input_count++];
+		in.Set(factory);
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::In(int factory, int arg0) {
+	if (!is_loading) {
+		FactoryDeclaration& in = inputs[input_count++];
+		in.Set(factory);
+		in.AddArg(arg0);
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::In(int factory, int arg0, int arg1) {
+	if (!is_loading) {
+		FactoryDeclaration& in = inputs[input_count++];
+		in.Set(factory);
+		in.AddArg(arg0);
+		in.AddArg(arg1);
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::In(int factory, int arg0, int arg1, int arg2) {
+	if (!is_loading) {
+		FactoryDeclaration& in = inputs[input_count++];
+		in.Set(factory);
+		in.AddArg(arg0);
+		in.AddArg(arg1);
+		in.AddArg(arg2);
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::In(int factory, int arg0, int arg1, int arg2, int arg3) {
+	if (!is_loading) {
+		FactoryDeclaration& in = inputs[input_count++];
+		in.Set(factory);
+		in.AddArg(arg0);
+		in.AddArg(arg1);
+		in.AddArg(arg2);
+		in.AddArg(arg3);
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::Out(int bufcount, int bufvisible) {
+	if (!is_loading) {
+		output_count = bufcount;
+		output_visible = bufvisible;
+	}
+	return *this;
+}
+
+ValueRegister& ValueRegister::Arg(int& def_value, int min_value, int max_value) {
+	if (!is_loading) {
+		ArgDecl& arg = args[arg_count++];
+		ASSERT(arg_count <= 8);
+		arg.def = def_value;
+		arg.min = min_value;
+		arg.max = max_value;
+	} else {
+		ArgDecl& arg = args[arg_cursor++];
+		def_value = arg.def;
+	}
+	return *this;
+}
+
+	
 }

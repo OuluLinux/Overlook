@@ -153,23 +153,6 @@ void System::Init() {
 	}
 	
 	
-	if (symbols.IsEmpty())
-		FirstStart();
-	else {
-		if (mt.GetSymbolCount() != symbols.GetCount())
-			throw UserExc("MT4 symbols changed. Remove cached data.");
-		for(int i = 0; i < mt.GetSymbolCount(); i++) {
-			const Symbol& s = mt.GetSymbol(i);
-			if (s.name != symbols[i])
-				throw UserExc("MT4 symbols changed. Remove cached data.");
-		}
-	}
-	
-}
-
-void System::FirstStart() {
-	MetaTrader& mt = GetMetaTrader();
-	
 	try {
 		time_offset = mt.GetTimeOffset();
 		
@@ -190,6 +173,19 @@ void System::FirstStart() {
 		
 		int sym_count = symbols.GetCount();
 		int tf_count = periods.GetCount();
+		
+		data.SetCount(sym_count);
+		for(int i = 0; i < data.GetCount(); i++) {
+			data[i].SetCount(tf_count);
+			for(int j = 0; j < data[i].GetCount(); j++) {
+				DataBridge& db = data[i][j].db;
+				
+				db.sym_id = i;
+				db.tf_id = j;
+				db.period = mt.GetTimeframe(j);
+				db.point = mt.GetSymbol(i).point;
+			}
+		}
 	
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();
@@ -209,7 +205,6 @@ void System::FirstStart() {
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		spread_points[i] = mt.GetSymbol(i).point * 4;
 	}
-	
 }
 
 void System::Deinit() {
@@ -262,12 +257,16 @@ void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 		
 		ConfFactory(decl, reg);
 		
+		decl.buffer_count = reg.output_count;
 		decl.input_count = reg.input_count;
 		for(int i = 0; i < reg.input_count; i++) {
 			int id = pipeline_size++;
 			decl.input_id[i] = id;
 			pipeline[id] = reg.inputs[i];
 		}
+		decl.arg_count = reg.arg_count;
+		for(int i = 0; i < 8; i++) decl.args[i] = reg.args[i].def;
+			
 		ASSERT(pipeline_size < MAX_PIPELINE);
 	}
 	
@@ -312,13 +311,22 @@ void ImageCompiler::Remove(int i, int replace_id) {
 }
 
 void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
+	int bars = ci.end - ci.begin;
 	
 	ci.graphs.SetCount(pipeline_size);
 	
-	for(int i = pipeline_size-1; i >= pipeline_size; i--) {
+	for(int i = pipeline_size-1; i >= 0; i--) {
 		ConstFactoryDeclaration& decl = pipeline[i];
 		
 		GraphImage& gi = ci.graphs[i];
+		gi.buffers.SetCount(decl.buffer_count);
+		for(int j = 0; j < gi.buffers.GetCount(); j++) {
+			BufferImage& ib = gi.buffers[j];
+			ib.data_begin = ci.begin;
+			ib.value.SetCount(bars);
+		}
+		gi.GetSignal().SetCount(bars);
+		gi.GetEnabled().SetCount(bars);
 		gi.input_count = decl.input_count;
 		for(int j = 0; j < 8; j++)
 			gi.input_id[j] = decl.input_id[j];

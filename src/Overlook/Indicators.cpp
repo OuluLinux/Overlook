@@ -208,11 +208,23 @@ DataSource::DataSource() {
 	
 }
 
-void DataSource::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	Panic("TODO");
-}
 void DataSource::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	Panic("TODO");
+	
+}
+
+void DataSource::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	
+	for(int i = begin; i < end; i++) {
+		
+		gi.GetBuffer(0).Set(i, si.Open(i));
+		gi.GetBuffer(1).Set(i, si.Low(i));
+		gi.GetBuffer(2).Set(i, si.High(i));
+		gi.GetBuffer(3).Set(i, si.Volume(i));
+		gi.GetBuffer(4).Set(i, si.Time(i));
+		
+	}
 }
 
 
@@ -339,7 +351,7 @@ void MovingAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	VectorBool& label = gi.GetSignal();
 	label.SetCount(end);
 	
-	double prev = begin > 0 ? buffer.Get(begin-1) : 0.0;
+	double prev = begin > buffer.data_begin ? buffer.Get(begin-1) : 0.0;
 	for(int i = begin; i < end; i++) {
 		double cur = buffer.Get(i);
 		bool label_value = cur < prev;
@@ -355,13 +367,14 @@ void MovingAverage::Simple(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int pos = begin;
 	if (pos < ma_period) pos = ma_period;
+	ASSERT(ma_period > 0);
 	
 	for (int i = 1; i < ma_period; i++)
 		sum += si.Open(pos - i);
 	while (pos < end) {
-		sum += si.Open( pos );
+		sum += si.Open(pos);
 		buffer.Set(pos, sum / ma_period);
-		sum -= si.Open( pos - ma_period + 1 );
+		sum -= si.Open(pos - ma_period + 1);
 		pos++;
 	}
 	if (begin < 1)

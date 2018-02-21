@@ -38,8 +38,8 @@ public:
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
 	void ClearCores();
-	GraphCtrl& AddGraph(Core* src);
-	void SetGraph(Core* src);
+	GraphCtrl& AddGraph(GraphImage& gi);
+	void SetGraph(GraphImage& gi);
 	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);

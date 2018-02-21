@@ -20,6 +20,7 @@ struct SourceImage {
 	double High(int shift) {return db.high[shift];}
 	double Low(int shift) {return db.low[shift];}
 	double Volume(int shift) {return db.volume[shift];}
+	int Time(int shift) {return db.time[shift];}
 	int HighestHigh(int period, int shift);
 	int LowestLow(int period, int shift);
 	int HighestOpen(int period, int shift);
@@ -101,7 +102,6 @@ public:
 	~System();
 	
 	
-	void FirstStart();
 	void Init();
 	void Deinit();
 	

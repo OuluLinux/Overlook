@@ -24,12 +24,28 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 }
 
 void Chart::RefreshCore() {
+	SourceImage& si = GetSystem().GetSource(symbol, tf);
+	si.db.Start();
+	int bars = si.db.open.GetCount();
+	int screen_count = 100;
+	image.begin = bars - screen_count;
+	image.end = bars;
+	image.symbol = symbol;
+	image.tf = tf;
+	image.period = si.db.GetPeriod();
+	image.cursor = 0;
+	
+	if (image.begin < 0)
+		return;
+	
 	
 	ImageCompiler comp;
 	
 	comp.SetMain(decl);
 	
-	comp.Compile(GetSystem().GetSource(symbol, tf), image);
+	comp.Compile(si, image);
+	
+	AddGraph(image.GetGraph(0));
 	
 	/*System& sys = GetSystem();
 	
@@ -95,19 +111,18 @@ void Chart::Start() {
 	Refresh();
 }
 
-GraphCtrl& Chart::AddGraph(Core* src) {
+GraphCtrl& Chart::AddGraph(GraphImage& gi) {
 	GraphCtrl& g = graphs.Add();
 	g.WhenTimeValueTool = THISBACK(SetTimeValueTool);
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
 	g.SetRightOffset(right_offset);
 	g.chart = this;
-	//g.AddSource(src);
-	Panic("TODO");
+	g.SetSource(image, gi);
 	split << g;
 	return g;
 }
 
-void Chart::SetGraph(Core* src) {
+void Chart::SetGraph(GraphImage& gi) {
 	/*ASSERT(src);
 	tf = src->GetTf();
 	ClearCores();

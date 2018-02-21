@@ -61,7 +61,7 @@ struct AskBid : Moveable<AskBid> {
 class DataBridge {
 	
 protected:
-	friend class CommonForce;
+	friend class System;
 	
 	VectorMap<int,int> median_max_map, median_min_map;
 	VectorMap<int,int> symbols;
@@ -77,6 +77,7 @@ protected:
 	int counted = 0;
 	bool once = true;
 	
+public:
 	int GetSymbol() const {return sym_id;}
 	int GetTf() const {return tf_id;}
 	int GetCounted() const {return counted;}

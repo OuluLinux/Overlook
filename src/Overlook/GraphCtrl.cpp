@@ -36,8 +36,8 @@ GraphCtrl::GraphCtrl() {
 }
 
 void GraphCtrl::GetDataRange(int buffer) {
-	GraphImage& img = *this->src;
-	ChartImage& chart = *this->chartimg;
+	GraphImage& img = *this->gi;
+	ChartImage& chart = *this->ci;
 	
 	if (buffer >= img.GetVisibleCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
@@ -65,7 +65,7 @@ void GraphCtrl::GetDataRange(int buffer) {
 }
 
 void GraphCtrl::Paint(Draw& draw) {
-	if (src == NULL) {draw.DrawRect(GetSize(), White()); return;}
+	if (ci == NULL) {draw.DrawRect(GetSize(), White()); return;}
 	
 	
 	System& sys = GetSystem();

@@ -53,8 +53,8 @@ class GraphCtrl : public Ctrl {
 protected:
 	friend class Overlook;
 	
-	ChartImage* chartimg = NULL;
-	GraphImage* src = NULL;
+	ChartImage* ci = NULL;
+	GraphImage* gi = NULL;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;
@@ -95,7 +95,7 @@ public:
     void PaintCandlesticks(Draw& W);
 	void PostRefresh() {PostCallback(THISBACK(GraphCtrlRefresh));}
 	void GraphCtrlRefresh() {Refresh();}
-	void SetSource(ChartImage* img, int i) {this->src = &img->GetGraph(i); chartimg = img;}
+	void SetSource(ChartImage& ci, GraphImage& gi) {this->ci = &ci; this->gi = &gi;}
 	void SetRightOffset(bool b=true) {right_offset = b;}
 	virtual void Paint(Draw& w);
 	virtual bool Key(dword key, int count);

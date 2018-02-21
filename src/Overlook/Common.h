@@ -384,6 +384,7 @@ struct FactoryDeclaration {
 	// Temp
 	int input_id[8];
 	int input_count = 0;
+	int buffer_count = 0;
 	
 	
 	FactoryDeclaration() {}
@@ -396,6 +397,7 @@ struct FactoryDeclaration {
 		for(int i = 0; i < 8; i++) args[i] = src.args[i];
 		for(int i = 0; i < 8; i++) input_id[i] = src.input_id[i];
 		input_count = src.input_count;
+		buffer_count = src.buffer_count;
 		return *this;
 	}
 	bool operator==(const FactoryDeclaration& src) {
@@ -647,6 +649,7 @@ struct BufferImage : Moveable<BufferImage> {
 	Color clr = Black();
 	double min = 0, max = 0;
 	int style = 0, line_style = 0, line_width = 1, chr = '*', shift = 0, begin = 0;
+	int data_begin = 0;
 	char label[10];
 	
 	
@@ -654,8 +657,8 @@ struct BufferImage : Moveable<BufferImage> {
 	double GetMinimum() const {return min;}
 	int GetCount() const {return value.GetCount();}
 	bool IsEmpty() const {return value.IsEmpty();}
-	void Set(int i, double d) {value[i] = d;}
-	double Get(int i) const {return value[i];}
+	void Set(int i, double d) {value[i - data_begin] = d;}
+	double Get(int i) const {return value[i - data_begin];}
 };
 
 typedef const BufferImage ConstBufferImage;

@@ -248,6 +248,7 @@ ImageCompiler::ImageCompiler() {
 void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 	pipeline_size = 0;
 	pipeline[pipeline_size++] = decl;
+	LOG("0 " << decl.ToString());
 	
 	int pipeline_cursor = 0;
 	while (pipeline_cursor < pipeline_size) {
@@ -262,13 +263,21 @@ void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 			int id = pipeline_size++;
 			decl.input_id[i] = id;
 			pipeline[id] = reg.inputs[i];
+			LOG(id << " " << pipeline[id].ToString());
 		}
+		
+		int initial_args = decl.arg_count;
 		decl.arg_count = reg.arg_count;
-		for(int i = 0; i < 8; i++) decl.args[i] = reg.args[i].def;
+		for(int i = initial_args; i < 8; i++) decl.args[i] = reg.args[i].def;
+		
 			
 		ASSERT(pipeline_size < MAX_PIPELINE);
 	}
 	
+	LOG("BEFORE");
+	for(int i = 0; i < pipeline_size; i++) {
+		LOG(i << " " << pipeline[i].ToString());
+	}
 	
 	// Remove duplicates and prefer later
 	for(int i = 0; i < pipeline_size; i++) {
@@ -285,16 +294,26 @@ void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 		}
 		if (remove) {
 			Remove(i, replace_id);
+			LOG("REMOVE " << i);
+			for(int i = 0; i < pipeline_size; i++) {
+				LOG(i << " " << pipeline[i].ToString());
+			}
 			i--;
 		}
 	}
+	
+	LOG("AFTER");
+	for(int i = 0; i < pipeline_size; i++) {
+		LOG(i << " " << pipeline[i].ToString());
+	}
+	LOG("");
 }
 
 void ImageCompiler::Remove(int i, int replace_id) {
 	ASSERT(i >= 0 && i < pipeline_size);
 	replace_id--;
 	pipeline_size--;
-	for(; i < pipeline_size - 1; i++) {
+	for(; i < pipeline_size; i++) {
 		FactoryDeclaration& decl = pipeline[i];
 		decl = pipeline[i+1];
 		
@@ -312,6 +331,7 @@ void ImageCompiler::Remove(int i, int replace_id) {
 void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 	int bars = ci.end - ci.begin;
 	
+	ci.graphs.SetCount(0);
 	ci.graphs.SetCount(pipeline_size);
 	
 	for(int i = pipeline_size-1; i >= 0; i--) {
@@ -321,7 +341,7 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 		
 		GraphImage& gi = ci.graphs[i];
 		
-		gi.reg.arg_count = 0;
+		gi.reg.Reset();
 		ConfFactory(decl, gi.reg);
 		
 		
@@ -330,7 +350,7 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 		for(int j = 0; j < gi.buffers.GetCount(); j++) {
 			BufferImage& ib = gi.buffers[j];
 			ib.data_begin = ci.begin;
-			ib.value.SetCount(bars);
+			ib.value.SetCount(bars, 0.0);
 		}
 		gi.GetSignal().SetCount(bars);
 		gi.GetEnabled().SetCount(bars);

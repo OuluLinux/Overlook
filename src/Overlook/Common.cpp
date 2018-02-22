@@ -453,8 +453,8 @@ ValueRegister& ValueRegister::Arg(int& def_value, int min_value, int max_value) 
 void GraphImage::RefreshLimits() {
 	bool find_max = !HasMaximum();
 	bool find_min = !HasMinimum();
-	maximum = -DBL_MAX;
-	minimum = +DBL_MAX;
+	if (find_max) maximum = -DBL_MAX;
+	if (find_min) minimum = +DBL_MAX;
 	
 	for(int i = 0; i < buffers.GetCount(); i++) {
 		BufferImage& buf = buffers[i];
@@ -463,13 +463,15 @@ void GraphImage::RefreshLimits() {
 		buf.min = +DBL_MAX;
 		for(int j = 0; j < buf.value.GetCount(); j++) {
 			double d = buf.value[j];
-			
+			if (d == 0.0) continue;
 			if (d > buf.max) buf.max = d;
 			if (d < buf.min) buf.min = d;
 		}
 		
-		if (find_max && buf.max > maximum) maximum = buf.max;
-		if (find_min && buf.min < minimum) minimum = buf.min;
+		if (i < reg.output_visible) {
+			if (find_max && buf.max > maximum) maximum = buf.max;
+			if (find_min && buf.min < minimum) minimum = buf.min;
+		}
 	}
 }
 

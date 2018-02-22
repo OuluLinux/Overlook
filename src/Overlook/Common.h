@@ -400,6 +400,7 @@ struct FactoryDeclaration {
 		buffer_count = src.buffer_count;
 		return *this;
 	}
+	void Reset() {arg_count = 0; factory = -1;}
 	bool operator==(const FactoryDeclaration& src) {
 		if (factory != src.factory) return false;
 		if (arg_count != src.arg_count) return false;
@@ -417,6 +418,14 @@ struct FactoryDeclaration {
 		return ch;
 	}
 
+	String ToString() const {
+		String s;
+		s << "factory=" << factory << " arg_count=" << arg_count << " ";
+		for(int i = 0; i < arg_count; i++) s << "a" << i << "=" << args[i] << " ";
+		s << "input_count=" << input_count << " ";
+		for(int i = 0; i < input_count; i++) s << "in" << i << "=" << input_id[i] << " ";
+		return s;
+	}
 	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(FactoryDeclaration)); else s.Put(this, sizeof(FactoryDeclaration));}
 };
 
@@ -440,6 +449,11 @@ struct ValueRegister {
 	ValueRegister() {}
 	ValueRegister(ConstFactoryDeclaration& decl);
 	
+	void Reset() {
+		arg_count = 0;
+		arg_cursor = 0;
+		for(int i = 0; i < 8; i++) inputs[i].Reset();
+	}
 	ValueRegister& In(int factory);
 	ValueRegister& In(int factory, int arg0);
 	ValueRegister& In(int factory, int arg0, int arg1);

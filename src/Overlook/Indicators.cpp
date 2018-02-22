@@ -492,6 +492,7 @@ void MovingAverageConvergenceDivergence::Start(SourceImage& si, ChartImage& ci, 
 		throw DataExc();
 
 	int begin = ci.GetBegin();
+	begin += signal_sma_period + 1;
 	
 	ConstBufferImage& a_buf = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& b_buf = ci.GetInputBuffer(2, 0);
@@ -503,7 +504,7 @@ void MovingAverageConvergenceDivergence::Start(SourceImage& si, ChartImage& ci, 
 		buffer.Set(i, diff);
 	}
 
-	SimpleMAOnBuffer( end, ci.GetBegin(), 0, signal_sma_period, buffer, signal_buffer );
+	SimpleMAOnBuffer(end, begin, 0, signal_sma_period, buffer, signal_buffer);
 }
 /*
 void MovingAverageConvergenceDivergence::Assist(int cursor, VectorBool& vec) {
@@ -555,21 +556,7 @@ void AverageDirectionalMovement::Start(SourceImage& si, ChartImage& ci, GraphIma
 	BufferImage& tmp_buffer = gi.GetBuffer(5);
 	
 	int end = ci.GetEnd();
-	if ( end < period_adx )
-		throw DataExc();
-
-	int begin = ci.GetBegin();
-
-	if ( begin > 0 )
-		begin--;
-	else {
-		begin = 2;
-		for(int i = 0; i < 2; i++) {
-			pdi_buffer.Set(i, 0.0);
-			ndi_buffer.Set(i, 0.0);
-			adx_buffer.Set(i, 0.0);
-		}
-	}
+	int begin = ci.GetBegin() + period_adx;
 	
 	for ( int i = begin; i < end; i++) {
 		double Hi		= si.High(i - 1);
@@ -763,12 +750,12 @@ void Envelopes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& up_buffer = gi.GetBuffer(0);
 	BufferImage& down_buffer = gi.GetBuffer(1);
 	BufferImage& ma_buffer = gi.GetBuffer(2);
-	
+	ConstBufferImage& ma = ci.GetInputBuffer(1, 0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
 	for (int i = begin; i < end; i++) {
-		double value = si.Open(i);
+		double value = ma.Get(i);
 		ASSERT(value != 0);
 		ma_buffer.Set(i, value);
 		up_buffer.Set(i, ( 1 + deviation / 100.0 ) * ma_buffer.Get(i));
@@ -822,22 +809,19 @@ void ParabolicSAR::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if ( end < 3 )
 		throw DataExc();
 	
-	int pos = begin - 1;
+	int pos = begin + 1;
 
-	if ( pos < 1 ) {
-		pos = 1;
-		af_buffer.Set(0, sar_step);
-		af_buffer.Set(1, sar_step);
-		sar_buffer.Set(0, si.High( 0 ));
-		last_rev_pos = 0;
-		direction_long = false;
-		sar_buffer.Set(1, GetHigh( pos-1, last_rev_pos, si, ci, gi ));
-		double low = si.Low( 0 );
-		ep_buffer.Set(0, low);
-		ep_buffer.Set(1, low);
-	}
+	af_buffer.Set(pos - 1, sar_step);
+	af_buffer.Set(pos, sar_step);
+	sar_buffer.Set(pos - 1, si.High(pos-1));
+	last_rev_pos = 0;
+	direction_long = false;
+	sar_buffer.Set(pos, GetHigh( pos-1, last_rev_pos, si, ci, gi ));
+	double low = si.Low(pos-1);
+	ep_buffer.Set(pos - 1, low);
+	ep_buffer.Set(pos, low);
 	
-	if (pos == 0) pos++;
+	
 	
 	int prev_pos = pos - 1;
 	if (prev_pos < 0) prev_pos = 0;
@@ -1065,36 +1049,27 @@ void AverageTrueRange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if ( end <= period || period <= 0 )
-		throw DataExc();
-	
-	if ( begin == 0 ) {
-		tr_buffer.Set(0, 0.0);
-		atr_buffer.Set(0, 0.0);
-		
-		for (int i = 1; i < end; i++) {
-			double h = si.High(i-1);
-			double l = si.Low(i-1);
-			double c = si.Open(i);
+	for (int i = begin; i < end; i++) {
+		double h = si.High(i-1);
+		double l = si.Low(i-1);
+		double c = si.Open(i);
 
-			tr_buffer.Set(i, Upp::max( h, c ) - Upp::min( l, c ));
-		}
-
-		double first_value = 0.0;
-
-		for (int i = 1; i <= period; i++) {
-			atr_buffer.Set(i, 0.0);
-			first_value += tr_buffer.Get(i);
-		}
-
-		first_value /= period;
-
-		atr_buffer.Set(period, first_value);
-
-		begin = period + 1;
+		tr_buffer.Set(i, Upp::max( h, c ) - Upp::min( l, c ));
 	}
-	else
-		begin--;
+
+	double first_value = 0.0;
+
+	for (int i = begin+1; i <= begin+period; i++) {
+		atr_buffer.Set(i, 0.0);
+		first_value += tr_buffer.Get(i);
+	}
+
+	first_value /= period;
+
+	begin += period;
+	atr_buffer.Set(begin, first_value);
+
+	begin++;
 	
 	for (int i = begin; i < end; i++) {
 		double h = si.High(i-1);
@@ -3920,8 +3895,6 @@ void TrendChangeEdge::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	
-	if (begin > 0) begin -= 3;
 	
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.

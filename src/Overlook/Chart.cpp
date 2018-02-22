@@ -112,7 +112,8 @@ void Chart::SetGraph() {
 	} else {
 		GraphImage* src = NULL;
 		for(int i = 0; i < image.GetCount(); i++) {
-			if (image.GetGraph(i).factory == FACTORY_DataSource) {
+			int factory = image.GetGraph(i).factory;
+			if (factory == FACTORY_DataSource) {
 				src = &image.GetGraph(i);
 				break;
 			}

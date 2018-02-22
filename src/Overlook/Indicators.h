@@ -18,7 +18,7 @@ public:
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .Out(5, 5);
+		reg .Out(5, 3);
 	}
 };
 

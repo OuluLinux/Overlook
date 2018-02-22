@@ -257,7 +257,6 @@ void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 		
 		ConfFactory(decl, reg);
 		
-		decl.buffer_count = reg.output_count;
 		decl.input_count = reg.input_count;
 		for(int i = 0; i < reg.input_count; i++) {
 			int id = pipeline_size++;
@@ -318,8 +317,16 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 	for(int i = pipeline_size-1; i >= 0; i--) {
 		ConstFactoryDeclaration& decl = pipeline[i];
 		
+		
+		
 		GraphImage& gi = ci.graphs[i];
-		gi.buffers.SetCount(decl.buffer_count);
+		
+		gi.reg.arg_count = 0;
+		ConfFactory(decl, gi.reg);
+		
+		
+		gi.factory = decl.factory;
+		gi.buffers.SetCount(gi.reg.output_count);
 		for(int j = 0; j < gi.buffers.GetCount(); j++) {
 			BufferImage& ib = gi.buffers[j];
 			ib.data_begin = ci.begin;
@@ -331,7 +338,9 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 		for(int j = 0; j < 8; j++)
 			gi.input_id[j] = decl.input_id[j];
 		
+		InitFactory(decl, si, ci, gi);
 		StartFactory(decl, si, ci, gi);
+		gi.RefreshLimits();
 	}
 	
 }

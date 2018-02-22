@@ -130,7 +130,7 @@ inline String GetFactoryName(int id) {
 
 // Visual setting enumerators
 enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
-enum {WINDOW_SEPARATE, WINDOW_CHART};
+enum {WINDOW_CHART, WINDOW_SEPARATE};
 enum {STYLE_SOLID, STYLE_DASH, STYLE_DOT, STYLE_DASHDOT, STYLE_DASHDOTDOT};
 
 
@@ -375,18 +375,18 @@ struct ValueBase {
 
 
 struct FactoryDeclaration {
-	
+
 	// Persistent
 	int args[8];
 	int factory = -1;
 	int arg_count = 0;
-	
+
 	// Temp
 	int input_id[8];
 	int input_count = 0;
 	int buffer_count = 0;
-	
-	
+
+
 	FactoryDeclaration() {}
 	FactoryDeclaration(const FactoryDeclaration& src) {*this = src;}
 	FactoryDeclaration& Set(int i) {factory = i; return *this;}
@@ -408,7 +408,7 @@ struct FactoryDeclaration {
 				return false;
 		return true;
 	}
-	
+
 	unsigned GetHashValue() {
 		CombineHash ch;
 		ch << factory << 1;
@@ -416,9 +416,10 @@ struct FactoryDeclaration {
 			ch << args[i] << 1;
 		return ch;
 	}
-	
+
 	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(FactoryDeclaration)); else s.Put(this, sizeof(FactoryDeclaration));}
 };
+
 
 typedef const FactoryDeclaration ConstFactoryDeclaration;
 
@@ -659,6 +660,7 @@ struct BufferImage : Moveable<BufferImage> {
 	bool IsEmpty() const {return value.IsEmpty();}
 	void Set(int i, double d) {value[i - data_begin] = d;}
 	double Get(int i) const {return value[i - data_begin];}
+	int GetEnd() const {return data_begin + value.GetCount();}
 };
 
 typedef const BufferImage ConstBufferImage;
@@ -674,6 +676,7 @@ struct GraphImage : Moveable<GraphImage> {
 	Vector<BufferImage> buffers;
 	VectorBool signal, enabled;
 	LevelSettings levels[MAX_SETTINGS];
+	ValueRegister reg;
 	Color levels_clr;
 	double minimum = 0, maximum = 0;
 	int levels_style = 0;
@@ -681,17 +684,36 @@ struct GraphImage : Moveable<GraphImage> {
 	int window_type = 0;
 	int input_id[8];
 	int input_count = 0;
+	int future_bars = 0;
+	int factory = -1;
 	bool is_fixed_max = false, is_fixed_min = false;
 	
 	
+	void RefreshLimits();
 	double GetMaximum() const {return maximum;}
 	double GetMinimum() const {return minimum;}
 	bool HasMaximum() const {return is_fixed_max;}
 	bool HasMinimum() const {return is_fixed_min;}
-	int GetVisibleCount() const {return buffers.GetCount();}
+	int GetCount() const {return buffers.GetCount();}
+	int GetOutputCount() const {return GetCount();}
+	int GetVisibleCount() const {return reg.output_visible;}
 	BufferImage& GetBuffer(int i) {return buffers[i];}
 	VectorBool& GetSignal() {return signal;}
 	VectorBool& GetEnabled() {return enabled;}
+	bool IsCoreSeparateWindow() {return window_type == WINDOW_SEPARATE;}
+	int GetFutureBars() const {return future_bars;}
+	int GetFactory() const {return factory;}
+	double GetBufferValue(int buf, int shift) {return buffers[buf].Get(shift);}
+	Color GetBufferColor(int i) {return buffers[i].clr;}
+	int GetBufferStyle(int i) {return buffers[i].style;}
+	int GetBufferArrow(int i) {return buffers[i].chr;}
+	int GetBufferLineWidth(int i) {return buffers[i].line_width;}
+	int GetBufferType(int i) {return buffers[i].line_style;}
+	int GetBars() const {return buffers.Top().GetEnd();}
+	int GetCoreLevelCount() const {return level_count;}
+	int GetCoreLevelType(int i) const {return levels[i].style;}
+	int GetCoreLevelLineWidth(int i) const {return levels[i].line_width;}
+	double GetCoreLevelValue(int i) const {return levels[i].value;}
 	
 	void SetCoreChartWindow() {window_type = WINDOW_CHART;}
 	void SetCoreSeparateWindow() {window_type = WINDOW_SEPARATE;}

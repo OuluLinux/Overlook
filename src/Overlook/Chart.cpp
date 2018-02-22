@@ -24,10 +24,11 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 }
 
 void Chart::RefreshCore() {
-	SourceImage& si = GetSystem().GetSource(symbol, tf);
+	System& sys = GetSystem();
+	SourceImage& si = sys.GetSource(symbol, tf);
 	si.db.Start();
 	int bars = si.db.open.GetCount();
-	int screen_count = 100;
+	const int screen_count = 256;
 	image.begin = bars - screen_count;
 	image.end = bars;
 	image.symbol = symbol;
@@ -45,33 +46,12 @@ void Chart::RefreshCore() {
 	
 	comp.Compile(si, image);
 	
-	AddGraph(image.GetGraph(0));
-	
-	/*System& sys = GetSystem();
-	
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	ASSERT(tf >= 0 && tf < sys.GetPeriodCount());
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	indi_ids.Add(decl);
-	tf_ids.Add(tf);
-	sym_ids.Add(symbol);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	
-	RefreshCoreData(true);
-	
-	Core* src = &*work_queue.Top()->core;
-	if (!src) return;
-	
-	core = src;
-	bardata = 0;
 	
 	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
 	Title(title);
 	
-	SetGraph(src);
-	Data();*/
+	SetGraph();
+	Data();
 }
 
 void Chart::RefreshCoreData(bool store_cache) {
@@ -122,30 +102,36 @@ GraphCtrl& Chart::AddGraph(GraphImage& gi) {
 	return g;
 }
 
-void Chart::SetGraph(GraphImage& gi) {
-	/*ASSERT(src);
-	tf = src->GetTf();
-	ClearCores();
-	DataBridge* src_cast = dynamic_cast<DataBridge*>(src);
-	if (src_cast) {
-		bardata = src_cast;
-		GraphCtrl& main = AddGraph(bardata);
+void Chart::SetGraph() {
+	tf = image.GetTf();
+	Clear();
+	GraphImage& main = image.GetGraph(0);
+	ASSERT(main.factory >= 0);
+	if (main.factory == FACTORY_DataSource) {
+		AddGraph(main);
 	} else {
-		bardata = src->GetDataBridge();
-		ASSERT(bardata);
-		GraphCtrl& main = AddGraph(bardata);
-		bool separate_window = src->IsCoreSeparateWindow();
+		GraphImage* src = NULL;
+		for(int i = 0; i < image.GetCount(); i++) {
+			if (image.GetGraph(i).factory == FACTORY_DataSource) {
+				src = &image.GetGraph(i);
+				break;
+			}
+		}
+		if (!src)
+			return;
+		
+		GraphCtrl& mainctrl = AddGraph(*src);
+		bool separate_window = main.IsCoreSeparateWindow();
 		if (!separate_window) {
-			main.AddSource(src);
+			mainctrl.AddSource(main);
 		} else {
-			AddGraph(src);
+			AddGraph(main);
 			split.SetPos(8000);
 		}
-	}*/
-	Panic("TODO");
+	}
 }
 
-void Chart::ClearCores() {
+void Chart::Clear() {
 	split.Clear();
 	graphs.Clear();
 }
@@ -184,8 +170,6 @@ void Chart::SetKeepAtEnd(bool enable) {
 }
 
 void Chart::Settings() {
-	if (!core) return;
-	
 	System& sys = GetSystem();
 	
 	One<TopWindow> tw;

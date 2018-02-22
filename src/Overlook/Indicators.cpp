@@ -492,9 +492,7 @@ void MovingAverageConvergenceDivergence::Start(SourceImage& si, ChartImage& ci, 
 		throw DataExc();
 
 	int begin = ci.GetBegin();
-	if ( begin > 0 )
-		begin--;
-
+	
 	ConstBufferImage& a_buf = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& b_buf = ci.GetInputBuffer(2, 0);
 	
@@ -697,25 +695,21 @@ void BollingerBands::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& stddev_buffer = gi.GetBuffer(3);
 	
 	int end = ci.GetEnd();
-	int pos;
 	int begin = ci.GetBegin();
+	
+	begin += bands_period;
 	
 	if ( end < plot_begin )
 		throw DataExc();
 	
-	if ( begin > 1 )
-		pos = begin - 1;
-	else
-		pos = 0;
-	
 	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
 	
-	for ( int i = pos; i < end; i++) {
-		ml_buffer.Set(i, SimpleMA( i, bands_period, open ));
+	for (int i = begin; i < end; i++) {
+		ml_buffer.Set(i, SimpleMA(i, bands_period, open));
 		
 		double tmp = 0.0;
 	
-		if ( i >= bands_period ) {
+		if ( i >= bands_period) {
 			int end = ci.GetEnd();
 			for (int j = 0; j < bands_period; j++) {
 				double value =  si.Open(i - j );
@@ -772,9 +766,6 @@ void Envelopes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	
-	if (begin) begin--;
-	else begin = 0;
 	
 	for (int i = begin; i < end; i++) {
 		double value = si.Open(i);
@@ -1016,10 +1007,7 @@ void StandardDeviation::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 	int begin = ci.GetBegin();
 
-	if ( begin > 0 )
-		begin--;
-	else
-		begin = period;
+	begin += period;
 	
 	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
@@ -2357,8 +2345,6 @@ void Volumes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& buffer = gi.GetBuffer(0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	if (!begin) begin++;
-	else begin--;
 	for (int i = begin; i < end; i++) {
 		buffer.Set(i, si.Volume(i));
 	}

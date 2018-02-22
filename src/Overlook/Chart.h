@@ -22,8 +22,6 @@ protected:
 	int shift = 0;
 	int symbol = 0, tf = 0;
 	bool right_offset = 0, keep_at_end = 0;
-	Core* core = NULL;
-	DataBridge* bardata = NULL;
 	
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);
@@ -37,9 +35,9 @@ public:
 	Chart();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
-	void ClearCores();
+	void Clear();
 	GraphCtrl& AddGraph(GraphImage& gi);
-	void SetGraph(GraphImage& gi);
+	void SetGraph();
 	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
@@ -54,7 +52,6 @@ public:
 	virtual void Data();
 	virtual String GetTitle();
 	
-	DataBridge& GetDataBridge() {return *bardata;}
 	Color GetBackground() const {return White();}
 	Color GetGridColor() const {return GrayColor();}
 	int GetSymbol() const {return symbol;}

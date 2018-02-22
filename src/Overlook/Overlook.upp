@@ -11,6 +11,7 @@ uses
 	Core/SSL;
 
 file
+	Journal.qtf,
 	Copying,
 	app.tpp,
 	main.cpp,

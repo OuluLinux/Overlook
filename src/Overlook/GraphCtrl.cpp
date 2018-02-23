@@ -48,11 +48,15 @@ void GraphCtrl::GetDataRange(GraphImage& gi, int buffer) {
 	if (style == DRAW_NONE) return;
 	
 	bool skip_zero = false;
-	if (style == DRAW_SECTION || style == DRAW_ARROW) skip_zero = true;
+	if (style == DRAW_SECTION || style == DRAW_ARROW)
+		skip_zero = true;
 	else if (style == DRAW_HISTOGRAM) {
 		if (hi < 0) hi = 0;
 		if (lo > 0) lo = 0;
 	}
+	
+	double prev_hi = hi;
+	double prev_lo = lo;
 	
 	if (img.HasMaximum())
 		hi = max(hi, img.GetMaximum());
@@ -62,6 +66,11 @@ void GraphCtrl::GetDataRange(GraphImage& gi, int buffer) {
 		lo = min(lo, img.GetMinimum());
 	else
 		lo = min(lo, img.GetBuffer(buffer).GetMinimum());
+	
+	if (skip_zero) {
+		if (hi == 0.0) hi = prev_hi;
+		if (lo == 0.0) lo = prev_lo;
+	}
 }
 
 void GraphCtrl::Paint(Draw& draw) {
@@ -502,8 +511,10 @@ void GraphCtrl::DrawBorders(Draw& d, GraphImage& gi) {
 		}
 		for(int i = begin; i < end; i++) {
 	        int pos = label_data_count - (count + shift - i);
-	        if (pos < data_begin || pos >= label_data_count)
+	        if (pos < 0 || pos >= label_data_count)
 				continue;
+	        
+	        pos += data_begin;
 	        
 	        int xi = (x+(i+0.5)*div);
 			
@@ -529,10 +540,16 @@ void GraphCtrl::DrawLines(Draw& d, GraphImage& gi) {
 		int w = r.GetWidth();
 		Color grid_color = chart->GetGridColor();
 		String text;
-		for(int i = 0; i < gi.GetCoreLevelCount(); i++) {
-			double value = gi.GetCoreLevelValue(i);
-			int type = gi.GetCoreLevelType(i);
-			int line_width = gi.GetCoreLevelLineWidth(i);
+		for(int i = -1; i < gi.GetCoreLevelCount(); i++) {
+			double value;
+			int type = PEN_DOT, line_width = 1;
+			if (i == -1) {
+				value = 0.0;
+			} else {
+				value = gi.GetCoreLevelValue(i);
+				type = gi.GetCoreLevelType(i);
+				line_width = gi.GetCoreLevelLineWidth(i);
+			}
 			
 			if (type == STYLE_DASH)				line_width = PEN_DASH;
 			else if (type == STYLE_DOT)			line_width = PEN_DOT;

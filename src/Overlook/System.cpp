@@ -358,6 +358,7 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 		gi.GetSignal().data_begin = ci.begin;
 		gi.GetEnabled().SetCount(bars);
 		gi.GetEnabled().data_begin = ci.begin;
+		gi.GetEnabled().One();
 		gi.input_count = decl.input_count;
 		for(int j = 0; j < 8; j++)
 			gi.input_id[j] = decl.input_id[j];

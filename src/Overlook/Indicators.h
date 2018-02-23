@@ -59,7 +59,6 @@ public:
 	
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -81,7 +80,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -126,7 +125,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -172,7 +171,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -194,7 +193,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -214,7 +213,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -232,7 +231,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -251,7 +250,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -270,7 +269,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -288,7 +287,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -307,7 +306,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -327,7 +326,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -394,7 +393,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -412,7 +411,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -432,7 +431,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -549,7 +548,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -559,32 +558,6 @@ public:
 	}
 };
 
-class GatorOscillator {
-	int jaws_period = 13;
-	int jaws_shift = 8;
-	int teeth_period = 8;
-	int teeth_shift = 5;
-	int lips_period = 5;
-	int lips_shift = 3;
-	int ma_method = 2;
-	int applied_value = PRICE_MEDIAN;
-	
-public:
-	GatorOscillator();
-	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	//void Assist(int cursor, VectorBool& vec);
-	
-	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage,  5, 5-3, 2)
-			.In(FACTORY_MovingAverage,  5,   0, 2)
-			.In(FACTORY_MovingAverage, 13, 8-3, 2)
-			.In(FACTORY_MovingAverage,  8,   0, 2)
-			.Out(6, 3);
-	}
-};
 
 
 
@@ -596,7 +569,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -793,7 +766,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -813,7 +786,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -929,7 +902,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -951,7 +924,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -993,7 +966,7 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
+	
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
@@ -1019,8 +992,8 @@ public:
 	
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Assist(int cursor, VectorBool& vec);
 	
+		
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
 			.Out(1, 1)

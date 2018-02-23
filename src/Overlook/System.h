@@ -14,6 +14,7 @@ using namespace Upp;
 struct SourceImage {
 	DataBridge db;
 	
+	void Assist(int shift, int row, bool value) {}
 	
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}

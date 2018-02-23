@@ -83,7 +83,6 @@ FITEM(ValueAndVolumeTrend) \
 FITEM(OnBalanceVolume) \
 FITEM(Volumes) \
 FITEM(AcceleratorOscillator) \
-FITEM(GatorOscillator) \
 FITEM(AwesomeOscillator) \
 FITEM(Fractals) \
 FITEM(FractalOsc) \

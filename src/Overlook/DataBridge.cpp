@@ -141,7 +141,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			high_buf[shift] = ask;
 			time_buf[shift] = time;
 		}
-		else {
+		else if (time_buf.Top() == time) {
 			double low  = low_buf[shift];
 			double high = high_buf[shift];
 			if (ask < low)  {low_buf[shift] = ask;}

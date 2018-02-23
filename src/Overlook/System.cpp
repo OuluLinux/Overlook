@@ -309,20 +309,22 @@ void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 	LOG("");
 }
 
-void ImageCompiler::Remove(int i, int replace_id) {
-	ASSERT(i >= 0 && i < pipeline_size);
+void ImageCompiler::Remove(int rem_pos, int replace_id) {
+	ASSERT(rem_pos >= 0 && rem_pos < pipeline_size);
 	replace_id--;
 	pipeline_size--;
-	for(; i < pipeline_size; i++) {
+	for(int i = 0; i < pipeline_size; i++) {
 		FactoryDeclaration& decl = pipeline[i];
-		decl = pipeline[i+1];
+		
+		if (i >= rem_pos)
+			decl = pipeline[i+1];
 		
 		for(int j = 0; j < decl.input_count; j++) {
 			int& b = decl.input_id[j];
 			int a = b;
-			if (a == i)
+			if (a == rem_pos)
 				b = replace_id;
-			else if (a > i)
+			else if (a > rem_pos)
 				b--;
 		}
 	}
@@ -337,7 +339,7 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 	for(int i = pipeline_size-1; i >= 0; i--) {
 		ConstFactoryDeclaration& decl = pipeline[i];
 		
-		
+		ci.cursor = i;
 		
 		GraphImage& gi = ci.graphs[i];
 		
@@ -353,13 +355,14 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 			ib.value.SetCount(bars, 0.0);
 		}
 		gi.GetSignal().SetCount(bars);
+		gi.GetSignal().data_begin = ci.begin;
 		gi.GetEnabled().SetCount(bars);
+		gi.GetEnabled().data_begin = ci.begin;
 		gi.input_count = decl.input_count;
 		for(int j = 0; j < 8; j++)
 			gi.input_id[j] = decl.input_id[j];
 		
-		InitFactory(decl, si, ci, gi);
-		StartFactory(decl, si, ci, gi);
+		RunFactory(decl, si, ci, gi);
 		gi.RefreshLimits();
 	}
 	

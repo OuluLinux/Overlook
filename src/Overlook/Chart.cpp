@@ -35,6 +35,7 @@ void Chart::RefreshCore() {
 	image.tf = tf;
 	image.period = si.db.GetPeriod();
 	image.cursor = 0;
+	image.point = si.db.GetPoint();
 	
 	if (image.begin < 0)
 		return;

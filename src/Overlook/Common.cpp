@@ -93,6 +93,7 @@ double VectorBool::GetOverlapFactor(const VectorBool& b) const {
 }
 
 bool VectorBool::Get(int64 i) const {
+	i -= data_begin;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());
@@ -101,6 +102,7 @@ bool VectorBool::Get(int64 i) const {
 }
 
 void VectorBool::Set(int64 i, bool b) {
+	i -= data_begin;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());

@@ -2,21 +2,14 @@
 
 namespace Overlook {
 
-void InitFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	
-	#define FITEM(x) if (id.factory == FACTORY_##x) {x().Init(si, ci, gi); return;}
-	
-	FACTORY_LIST
-	
-}
 
-void StartFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi) {
+void RunFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	ValueRegister reg(id);
 	ASSERT(reg.arg_cursor == 0);
 	ASSERT(reg.is_loading);
 	
 	#define FITEM(x) if (id.factory == FACTORY_##x) {\
-		x obj; obj.Conf(reg); obj.Start(si, ci, gi); return;\
+		x obj; obj.Conf(reg); obj.Init(si, ci, gi); obj.Start(si, ci, gi); return;\
 	}
 	
 	FACTORY_LIST
@@ -403,9 +396,7 @@ void MovingAverage::Smoothed(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	double sum = 0;
 	int begin = ci.GetBegin();
 	int end = ci.GetEnd();
-	int pos = ma_period;
-	if (pos < begin)
-		pos = begin;
+	int pos = begin + ma_period;
 	while (pos < end) {
 		if (pos == ma_period) {
 			for (int i = 0, k = pos; i < ma_period; i++, k--) {
@@ -753,6 +744,10 @@ void Envelopes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	ConstBufferImage& ma = ci.GetInputBuffer(1, 0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
+	
+	int id2 = ci.graphs[ci.cursor].input_id[2];
+	int id1 = ci.graphs[ci.cursor].input_id[1];
+	int id0 = ci.graphs[ci.cursor].input_id[0];
 	
 	for (int i = begin; i < end; i++) {
 		double value = ma.Get(i);
@@ -1121,14 +1116,6 @@ void BearsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if ( end <= period )
-		throw DataExc();
-
-	if ( begin > 0 )
-		begin--;
-	else
-		begin++;
-	
 	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
 	for (int i = begin; i < end; i++) {
@@ -1172,14 +1159,6 @@ void BullsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& buffer = gi.GetBuffer(0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-
-	if ( end <= period )
-		throw DataExc();
-
-	if ( begin > 0 )
-		begin--;
-	else
-		begin++;
 	
 	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
@@ -1241,7 +1220,6 @@ void CommodityChannelIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	BufferImage& value_buffer = gi.GetBuffer(1);
 	BufferImage& mov_buffer = gi.GetBuffer(2);
 	
-	int i, k, pos;
 	double sum, mul;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
@@ -1249,28 +1227,20 @@ void CommodityChannelIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	if ( end <= period || period <= 1 )
 		throw DataExc();
 	
-	if ( begin < 1 ) {
-		for ( i = 1; i < period; i++) {
-			double h = si.High(i-1);
-			double l = si.Low(i-1);
-			double c = si.Open(i);
+	for (int i = begin; i < begin+period; i++) {
+		double h = si.High(i-1);
+		double l = si.Low(i-1);
+		double c = si.Open(i);
 
-			cci_buffer.Set(i, 0.0);
-			value_buffer.Set(i, ( h + l + c ) / 3);
-			mov_buffer.Set(i, 0.0);
-		}
+		cci_buffer.Set(i, 0.0);
+		value_buffer.Set(i, ( h + l + c ) / 3);
+		mov_buffer.Set(i, 0.0);
 	}
 
-	pos = begin - 1;
-
-	if ( pos < period )
-		pos = period;
+	begin += period;
 	
-	if (pos == 0)
-		pos++;
 	
-	//end--;
-	for ( i = pos; i < end; i++) {
+	for (int i = begin; i < end; i++) {
 		double h = si.High(i-1);
 		double l = si.Low(i-1);
 		double c = si.Open(i);
@@ -1279,16 +1249,11 @@ void CommodityChannelIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	}
 
 	mul = 0.015 / period;
-	pos = period - 1;
 
-	if ( pos < begin - 1 )
-		pos = begin - 2;
 
-	i = pos;
-
-	while ( i < end ) {
+	for (int i = begin; i < end; i++) {
 		sum = 0.0;
-		k = i + 1 - period;
+		int k = i + 1 - period;
 		
 		while ( k <= i ) {
 			sum += fabs ( value_buffer.Get(k) - mov_buffer.Get(i) );
@@ -1302,7 +1267,6 @@ void CommodityChannelIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 		else
 			cci_buffer.Set(i, ( value_buffer.Get(i) - mov_buffer.Get(i) ) / sum);
 
-		i++;
 	}
 }
 
@@ -1357,13 +1321,10 @@ void DeMarker::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if ( end <= period )
 		throw DataExc();
 	
-	max_buffer.Set(0, 0.0);
-	min_buffer.Set(0, 0.0);
+	max_buffer.Set(begin, 0.0);
+	min_buffer.Set(begin, 0.0);
 
-	if ( begin > 2 )
-		begin--;
-	else
-		begin = 2;
+	begin += 2;
 	
 	double prev_high = begin >= 2 ? si.High( begin - 1 ) : 0;
 	double prev_low  = begin >= 2 ? si.Low( begin - 1 ) : 0;
@@ -1394,6 +1355,7 @@ void DeMarker::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		for (int i = 0; i < period; i++)
 			buffer.Set(end - i, 0.0);
 
+	begin += period - 2;
 	
 	for (int i = begin; i < end; i++)
 	{
@@ -1448,14 +1410,7 @@ void ForceIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (end <= period)
-		throw DataExc();
-	
-	if (begin > 0)
-		begin--;
-	
-	if (begin == 0)
-		begin++;
+	begin++;
 	
 	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
 	
@@ -1489,9 +1444,6 @@ void Momentum::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	gi.SetBufferColor(0, DodgerBlue);
 	gi.SetBufferColor(1, Color(28, 255, 200));
 	
-	if ( period <= 0 )
-		throw DataExc();
-
 	gi.SetBufferBegin(0, period);
 	gi.SetBufferShift(0, shift);
 	
@@ -1516,17 +1468,7 @@ void Momentum::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if ( end <= period || period <= 0 )
-		throw DataExc();
-
-	if ( begin <= 0 ) {
-		for (int i = 0; i < period; i++) {
-			buffer.Set(i, 0.0);
-		}
-		begin = period;
-	}
-	else
-		begin--;
+	begin += period;
 	
 	for (int i = begin; i < end; i++) {
 		double close1 = si.Open( i );
@@ -1581,17 +1523,11 @@ void OsMA::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& signal_buffer = gi.GetBuffer(3);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-
-	if ( end <= signal_sma_period )
-		return;
-
-	if ( begin > 0 )
-		begin--;
+	
+	begin += signal_sma_period + 1;
 	
 	ConstBufferImage& ma1_buf = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& ma2_buf = ci.GetInputBuffer(2, 0);
-	ASSERT(ma1_buf.GetCount() >= end);
-	ASSERT(ma2_buf.GetCount() >= end);
 	
 	for (int i = begin; i < end; i++) {
 		double ma1 = ma1_buf.Get(i);
@@ -1694,48 +1630,37 @@ void RelativeStrengthIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( end <= period )
-		throw DataExc();
-
-	int pos = begin - 1;
-
-	if ( pos <= period ) {
-		buffer.Set(0, 0.0);
-		pos_buffer.Set(0, 0.0);
-		neg_buffer.Set(0, 0.0);
-		double sum_p = 0.0;
-		double sum_n = 0.0;
+	buffer.Set(begin, 0.0);
+	pos_buffer.Set(begin, 0.0);
+	neg_buffer.Set(begin, 0.0);
+	double sum_p = 0.0;
+	double sum_n = 0.0;
 
 
-		double prev_value  = si.Open( 0 );
+	double prev_value  = si.Open(begin);
 
-		for (int i = 1; i <= period; i++) {
-			double value  = si.Open(i);
+	for (int i = begin + 1; i < begin + period; i++) {
+		double value  = si.Open(i);
+		
+		buffer.Set(i, 0.0);
 
-			if ( prev_value == 0 ) {
-				prev_value = value;
-				continue;
-			}
-
-			buffer.Set(i, 0.0);
-
-			pos_buffer.Set(i, 0.0);
-			neg_buffer.Set(i, 0.0);
-			diff = value - prev_value;
-			sum_p += ( diff > 0 ? diff : 0 );
-			sum_n += ( diff < 0 ? -diff : 0 );
-			prev_value = value;
-		}
-
-		pos_buffer.Set(period, sum_p / period);
-		neg_buffer.Set(period, sum_n / period);
-		buffer.Set(period, (1.0 - ( 1.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) )) * 2.0 - 1.0);
-		pos = period + 1;
+		pos_buffer.Set(i, 0.0);
+		neg_buffer.Set(i, 0.0);
+		diff = value - prev_value;
+		sum_p += ( diff > 0 ? diff : 0 );
+		sum_n += ( diff < 0 ? -diff : 0 );
+		prev_value = value;
 	}
-	
-	double prev_value  = si.Open(pos-1);
 
-	for (int i = pos; i < end; i++) {
+	begin += period;
+	
+	pos_buffer.Set(begin, sum_p / period);
+	neg_buffer.Set(begin, sum_n / period);
+	buffer.Set(begin, (1.0 - ( 1.0 / ( 1.0 + pos_buffer.Get(begin) / neg_buffer.Get(begin) ) )) * 2.0 - 1.0);
+	
+	prev_value  = si.Open(begin);
+
+	for (int i = begin + 1; i < end; i++) {
 		double value  = si.Open(i);
 		diff = value - prev_value;
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
@@ -1843,8 +1768,7 @@ void RelativeVigorIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi)
 			buffer.Set(i, num);
 	}
 
-	if ( begin < 8 )
-		begin = 8;
+	begin += 8;
 
 	for ( int i = begin; i < end; i++)
 		signal_buffer.Set(i, ( buffer.Get(i) + 2 * buffer.Get(i-1) + 2 * buffer.Get(i-2) + buffer.Get(i-3) ) / 6);
@@ -1903,29 +1827,16 @@ void StochasticOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi
 	BufferImage& signal_buffer = gi.GetBuffer(1);
 	BufferImage& high_buffer = gi.GetBuffer(2);
 	BufferImage& low_buffer = gi.GetBuffer(3);
-	int start;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( end <= k_period + d_period + slowing )
-		throw DataExc();
-
-	start = k_period;
-
-	if ( start + 1 < begin )
-		start = begin - 2;
-	else {
-		for (int i = 0; i < start; i++) {
-			low_buffer.Set(i, 0.0);
-			high_buffer.Set(i, 0.0);
-		}
-	}
+	begin += k_period;
 
 	int low_length = k_period;
 	int high_length = k_period;
 	double dmin = 1000000.0;
 	double dmax = -1000000.0;
-	for (int i = start; i < end; i++) {
+	for (int i = begin; i < end; i++) {
 		
 		if (low_length >= k_period) {
 			dmin = 1000000.0;
@@ -1960,20 +1871,11 @@ void StochasticOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi
 		low_buffer.Set(i, dmin);
 		high_buffer.Set(i, dmax);
 	}
+	
 
-	start = k_period - 1 + slowing - 1;
-
-	if ( start + 1 < begin )
-		start = begin - 2;
-	else {
-		for (int i = 0; i < start; i++)
-			buffer.Set(i, 0.0);
-	}
-
-	//end--;
 	double sumlow = 0.0;
 	double sumhigh = 0.0;
-	for(int i = Upp::max(1, start - slowing); i < start; i++) {
+	for(int i = begin; i < begin + slowing; i++) {
 		if (i <= 0) continue;
 		double close = si.Open(i);
 		double low = Upp::min(close, low_buffer.Get(i-1));
@@ -1982,7 +1884,7 @@ void StochasticOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi
 		sumhigh += high - low;
 	}
 	
-	for (int i = Upp::max(1, start); i < end; i++) {
+	for (int i = begin + slowing; i < end; i++) {
 		
 		int j = i - slowing;
 		if (j > 0) {
@@ -2006,17 +1908,8 @@ void StochasticOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi
 		else
 			buffer.Set(i, sumlow / sumhigh * 2.0 - 1.0); // normalized
 	}
-
-	start = d_period - 1;
-
-	if ( start + 1 < begin )
-		start = begin - 2;
-	else {
-		for (int i = 0;i < start; i++)
-			signal_buffer.Set(i, 0.0);
-	}
-
-	for (int i = start; i < end; i++) {
+	
+	for (int i = begin; i < end; i++) {
 		double sum = 0.0;
 
 		for (int k = 0; k < d_period; k++ )
@@ -2056,15 +1949,8 @@ void WilliamsPercentRange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( end <= period )
-		throw DataExc();
-
-	if (!begin) {
-		begin++;
-		buffer.Set(0, 0);
-	}
+	begin++;
 	
-	//end--;
 	for (int i = begin; i < end; i++) {
 		int highest = si.HighestHigh( period, i-1 );
 		int lowest = si.LowestLow( period, i-1 );
@@ -2118,12 +2004,8 @@ void AccumulationDistribution::Start(SourceImage& si, ChartImage& ci, GraphImage
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (!begin) {
-		begin++;
-		buffer.Set(0, 0);
-	}
+	begin++;
 	
-	//end--;
 	for (int i = begin; i < end; i++) {
 		double close = si.Open(i);
 		buffer.Set(i, (close - si.Low(i-1)) - (si.High(i-1) - close));
@@ -2175,11 +2057,7 @@ void MoneyFlowIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( end <= period )
-		throw DataExc();
-	
-	if (begin < period + 2)
-		begin = period + 2;
+	begin += period + 2;
 	
 	for (int i = begin; i < end; i++) {
 		pos_mf = 0.0;
@@ -2236,11 +2114,7 @@ void ValueAndVolumeTrend::Start(SourceImage& si, ChartImage& ci, GraphImage& gi)
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( begin > 0 )
-		begin--;
-
-	if (begin < 2)
-		begin = 2;
+	begin += 2;
 	
 	for (int i = begin; i < end; i++) {
 		double volume = si.Volume(i-1);
@@ -2274,11 +2148,7 @@ void OnBalanceVolume::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( begin > 0 )
-		begin--;
-
-	if (begin < 2)
-		begin = 2;
+	begin += 2;
 	
 	for (int i = begin; i < end; i++) {
 		double cur_value = si.GetAppliedValue( applied_value, i - 1);
@@ -2376,25 +2246,22 @@ void AcceleratorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	double prev = 0.0, current;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
+	const int period = 5;
 	
-	if ( end <= 3 )
-		throw DataExc();
+	begin += period + 1;
 	
 	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
 	
-	if ( begin > 0 ) {
-		begin--;
-		prev = macd_buffer.Get(begin) - signal_buffer.Get(begin);
-	}
-
+	prev = macd_buffer.Get(begin) - signal_buffer.Get(begin);
+	
 	for (int i = begin; i < end; i++) {
 		macd_buffer.Set(i,
 			ind1.Get(i) -
 			ind2.Get(i));
 	}
 
-	SimpleMAOnBuffer ( end, begin, 0, 5, macd_buffer, signal_buffer );
+	SimpleMAOnBuffer ( end, begin, 0, period, macd_buffer, signal_buffer );
 	
 	bool up = true;
 
@@ -2497,11 +2364,7 @@ void GatorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	ConstBufferImage& ind3 = ci.GetInputBuffer(3, 0);
 	ConstBufferImage& ind4 = ci.GetInputBuffer(4, 0);
 	
-	if ( begin <= teeth_period + teeth_shift - lips_shift )
-		begin = ( teeth_period + teeth_shift - lips_shift );
-	
-	if (begin > 0) begin--;
-	else begin++;
+	begin += 1 + teeth_period + teeth_shift - lips_shift;
 	
 	for (int i = begin; i < end; i++) {
 		
@@ -2542,8 +2405,7 @@ void GatorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if ( begin <= jaws_period + jaws_shift - teeth_shift )
 		begin = ( jaws_period + jaws_shift - teeth_shift );
 	
-	if (begin > 1) begin--;
-	else begin++;
+	begin++;
 	
 	for (int i = begin; i < end; i++) {
 		current =
@@ -2627,17 +2489,11 @@ void AwesomeOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int begin = ci.GetBegin();
 	double prev = 0.0, current;
 	
-	if ( end <= 5 )
-		throw DataExc();
-
 	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
 	
-	if (begin > 0) {
-		begin--;
-		if (begin)
-			prev = buffer.Get(begin - 1);
-	}
+	prev = buffer.Get(begin);
+	begin++;
 
 	for (int i = begin; i < end; i++) {
 		buffer.Set(i,
@@ -2719,10 +2575,7 @@ void Fractals::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if(begin==0)
-		begin = 1 + Upp::max(left_bars, right_bars);
-	else
-		begin--;
+	begin += 1 + Upp::max(left_bars, right_bars);
 	
 	double prev_close = si.Open(begin);
 	
@@ -2827,15 +2680,10 @@ void FractalOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (begin > 0)
-		begin--;
-	else
-		begin = 1 + Upp::max(left_bars, right_bars);
+	begin += 1 + Upp::max(left_bars, right_bars) + smoothing_period;
 	
 	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
-	
-	//end--;
 	
 	for(int i = begin; i < end; i++) {
 		double close = si.Open(i);
@@ -2891,10 +2739,7 @@ void MarketFacilitationIndex::Start(SourceImage& si, ChartImage& ci, GraphImage&
 	int end    = ci.GetEnd();
 	int begin  = ci.GetBegin();
 	
-	if (begin > 0)
-		begin--;
-	else
-		begin++;
+	begin++;
 	
 	double point = GetMetaTrader().GetSymbol(sym_id).point;
 	
@@ -3048,49 +2893,14 @@ void ZigZag::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if ( end < input_depth || input_backstep >= input_depth )
 		throw DataExc();
 
-	if ( begin == 0 )
-		begin = input_backstep;
-	else {
-		int i = end-1;
-		counter_z = 0;
-		
-		while ( counter_z < extremum_level && i >= end-100 && i >= 0 ) {
-			if ( keypoint_buffer.Get(i) != 0.0 )
-				counter_z++;
-			i--;
-		}
-		
-		if (i < 0)
-			i = 0;
-		
-		if ( counter_z == 0 )
-			begin = input_backstep;
-		else {
-			begin = i+1;
-
-			if ( low_buffer.Get(i) != 0.0 )
-			{
-				curlow = low_buffer.Get(i);
-				whatlookfor = 1;
-			} else {
-				curhigh = high_buffer.Get(i);
-				whatlookfor = -1;
-			}
-
-			for (int i = begin; i < end; i++) {
-				keypoint_buffer.Set(i, 0.0);
-				low_buffer.Set(i, 0.0);
-				high_buffer.Set(i, 0.0);
-			}
-		}
-	}
-
+	begin += max(input_depth, input_backstep) + 1;
+	
 	double point = ci.GetPoint();
 	
 	
 	ExtremumCache ec(input_depth);
 	int border = Upp::max(0, begin - input_depth);
-	ec.pos = begin - 1;
+	ec.pos = border - 1;
 	for(int i = border; i < begin; i++) {
 		double low = si.Low(i);
 		double high = si.High(i);
@@ -3238,7 +3048,7 @@ void ZigZag::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	
 	bool current = false;
-	for (int i = begin-1; i >= 0; i--) {
+	for (int i = begin-1; i >= begin; i--) {
 		if (keypoint_buffer.Get(i) != 0.0) {
 			current = high_buffer.Get(i) != 0.0; // going down after high
 			break;
@@ -3288,14 +3098,6 @@ void ZigZagOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	bool has_prev = false, has_next = false;;
 	int prev_pos, next_pos;
 	
-	if (begin) {
-		begin = Upp::min(begin, ci.GetEnd()-1);
-		for (; begin > 0; begin--) {
-			double v = ind2.Get(begin);
-			if (!v) continue;
-			break;
-		}
-	}
 	
 	double diff, step;
 	for (int i = begin; i < end; i++) {
@@ -3459,9 +3261,7 @@ void SupportResistance::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	ASSERT(point > 0);
 	
-	if (begin) begin--;
-	else begin++;
-	//end--;
+	begin++;
 	
 	Vector<int> crosses;
 	for (int i = begin; i < end; i++) {
@@ -3572,6 +3372,8 @@ void SupportResistanceOscillator::Start(SourceImage& si, ChartImage& ci, GraphIm
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
+	begin++;
+	
 	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
 	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
 	
@@ -3616,8 +3418,9 @@ void ChannelOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int begin = ci.GetBegin();
 	
 	ec.SetSize(period);
+	ec.pos = begin;
 	
-	for (int i = ec.pos+1; i < end; i++) {
+	for (int i = begin+1; i < end; i++) {
 		double open = si.Open(i);
 		double low = i > 0 ? si.Low(i-1) : open;
 		double high = i > 0 ? si.High(i-1) : open;
@@ -3668,8 +3471,9 @@ void ScissorChannelOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage
 	int begin = ci.GetBegin();
 	
 	ec.SetSize(period);
+	ec.pos = begin;
 	
-	for (int i = ec.pos+1; i < end; i++) {
+	for (int i = begin+1; i < end; i++) {
 		double open = si.Open(i);
 		double low = i > 0 ? si.Low(i-1) : open;
 		double high = i > 0 ? si.High(i-1) : open;
@@ -3752,19 +3556,8 @@ void Psychological::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if(begin < 0)
-		throw DataExc();
+	begin += (1 + period + 1);
 	
-	if(begin > 0)
-		begin--;
-	
-	if (end < period)
-		throw DataExc();
-	
-	if (begin == 0)
-		begin = (1 + period + 1);
-	
-	//end--;
 	
 	for(int i = begin; i < end; i++) {
 		int count=0;
@@ -3823,13 +3616,10 @@ void TrendChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (begin > 0)
-		begin--;
+	begin += 2;
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.
 	int shift = period / 2;
-	begin = Upp::max(0, begin - shift);
-	//end -= shift;
 	
 	// Calculate averages
 	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
@@ -3896,10 +3686,10 @@ void TrendChangeEdge::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
+	begin += 2 + period;
 	
 	// The newest part can't be evaluated. Only after 'shift' amount of time.
 	int shift = period / 2;
-	begin = Upp::max(0, begin - shift);
 	
 	// Prepare values for looping
 	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
@@ -4029,7 +3819,6 @@ void PeriodicalChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	}
 	
 	
-	if (begin) begin--;
 	end++;
 	
 	for(int i = begin; i < end; i++) {
@@ -4096,8 +3885,8 @@ void VolatilityAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	if (begin >= end) return;
-	if (!begin) begin++;
+	
+	begin += period + 1;
 	
 	BufferImage& dst = gi.GetBuffer(0);
 	
@@ -4190,7 +3979,6 @@ void MinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int symbol = ci.GetSymbol();
 	int tf = ci.GetTf();
 	
-	begin = max(0, begin - 200);
 	
 	double spread_point		= ci.GetPoint();
 	double cost				= spread_point * (1 + cost_level);
@@ -4288,11 +4076,7 @@ void VolatilitySlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (begin > 0)
-		begin--;
-	
-	if (begin == 0)
-		begin++;
+	begin++;
 	
 	int tf_mins = ci.GetPeriod();
 	
@@ -4370,11 +4154,7 @@ void VolumeSlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	if (begin > 0)
-		begin--;
-	
-	if (begin == 0)
-		begin++;
+	begin++;
 	
 	int tf_mins = ci.GetPeriod();
 	
@@ -4445,8 +4225,7 @@ void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 
-	if ( end <= period )
-		throw DataExc();
+	begin += period;
 	
 	VectorBool& label = gi.GetSignal();
 	label.SetCount(end);
@@ -4465,7 +4244,7 @@ void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	
 	int true_count = 0;
-	for (int i = 0; i < end; i++) {
+	for (int i = begin; i < end; i++) {
 		if (label.Get(i)) true_count++;
 	}
 	ASSERT(true_count > 0);
@@ -4522,7 +4301,7 @@ void OnlineMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 	for(int i = ci.GetBegin(); i < end; i++) {
 		const int count = 1;
 		bool sigbuf[count];
-		int begin = Upp::max(0, i - 100);
+		int begin = Upp::max(ci.GetBegin(), i - 100);
 		int end = i + 1;
 		GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
 		
@@ -4812,7 +4591,8 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	double diff;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	if (!begin) begin++;
+	
+	begin += 3;
 
 	for (int cursor = begin; cursor < end; cursor++) {
 		
@@ -4820,7 +4600,7 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		{
 			int dir = 0;
 			int len = 0;
-			for (int i = cursor-1; i >= 0; i--) {
+			for (int i = cursor-1; i >= begin; i--) {
 				int idir = open.Get(i+1) > open.Get(i) ? +1 : -1;
 				if (dir != 0 && idir != dir) break;
 				dir = idir;
@@ -4841,7 +4621,7 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 			int dir = 0;
 			int len = 0;
 			double hi = high.Get(cursor-1);
-			for (int i = cursor-2; i >= 0; i--) {
+			for (int i = cursor-2; i >= begin; i--) {
 				int idir = hi > high.Get(i) ? +1 : -1;
 				if (dir != 0 && idir != +1) break;
 				dir = idir;
@@ -4858,7 +4638,7 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 			int dir = 0;
 			int len = 0;
 			double lo = low.Get(cursor-1);
-			for (int i = cursor-2; i >= 0; i--) {
+			for (int i = cursor-2; i >= begin; i--) {
 				int idir = lo < low.Get(i) ? +1 : -1;
 				if (dir != 0 && idir != +1) break;
 				dir = idir;
@@ -4929,7 +4709,8 @@ void VolatilityContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	double diff;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	if (!begin) begin++;
+	
+	begin++;
 	
 	double point = ci.GetPoint();
 
@@ -5019,19 +4800,20 @@ void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	double diff;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
-	if (!begin) begin++;
+	begin += 2;
 	
 	enabled_buf.SetCount(end);
 	
 	double point = ci.GetPoint();
 
 	channel.SetSize(period);
-	for(int i = 0; i < period; i++) {
-		int cursor = max(1, begin - i - 1);
+	for(int cursor = begin; cursor < begin + period; cursor++) {
 		double l = low.Get(cursor - 1);
 		double h = high.Get(cursor - 1);
 		channel.Add(l, h);
 	}
+	
+	begin += period;
 	channel.pos = begin-1;
 	
 	for (int cursor = begin; cursor < end; cursor++) {
@@ -5136,10 +4918,9 @@ void Obviousness::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	
 	RefreshInput(si, ci, gi);
-	if (!begin) {
-		RefreshInitialOutput(si, ci, gi);
-		RefreshIOStats(si, ci, gi);
-	}
+	
+	RefreshInitialOutput(si, ci, gi);
+	RefreshIOStats(si, ci, gi);
 	
 	RefreshOutput(si, ci, gi);
 	

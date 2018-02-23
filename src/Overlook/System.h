@@ -45,8 +45,7 @@ public:
 };
 
 
-void InitFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
-void StartFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
+void RunFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
 void ConfFactory(ConstFactoryDeclaration& gi, ValueRegister& reg);
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};

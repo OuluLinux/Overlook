@@ -236,7 +236,7 @@ public:
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
-			.In(FACTORY_BearsPower, 13, 0, 0)
+			.In(FACTORY_MovingAverage, 13, 0, 0)
 			.Out(1, 1)
 			.Arg(period, 2, 127);
 	}
@@ -255,7 +255,7 @@ public:
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
-			.In(FACTORY_BearsPower, 13, 0, 0)
+			.In(FACTORY_MovingAverage, 13, 0, 0)
 			.Out(1, 1)
 			.Arg(period, 2, 127);
 	}
@@ -582,7 +582,7 @@ public:
 			.In(FACTORY_MovingAverage,  5,   0, 2)
 			.In(FACTORY_MovingAverage, 13, 8-3, 2)
 			.In(FACTORY_MovingAverage,  8,   0, 2)
-			.Out(5, 3);
+			.Out(6, 3);
 	}
 };
 
@@ -1064,7 +1064,7 @@ public:
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
-			.Out(0, 0)
+			.Out(1, 1)
 			.Mem(prev_counted)
 			.Arg(cost_level, 0);
 	}
@@ -1095,8 +1095,7 @@ public:
 	
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
-			.Out(0, 0)
-			.Out(0, 0)
+			.Out(1, 1)
 			.Arg(idx_limit, 0, 100)
 			.Arg(cost_level, 0);
 	}
@@ -1246,7 +1245,6 @@ public:
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
 			.Out(buffer_count, buffer_count)
-			.Out(0, 0)
 			.Mem(data_in)
 			.Mem(data_out)
 			.Mem(av_wins)
@@ -1272,7 +1270,7 @@ public:
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_DataSource)
 			.In(FACTORY_VolatilityContext)
-			.Out(0, 0);
+			.Out(1, 1);
 	}
 	
 };
@@ -1345,8 +1343,7 @@ public:
 			.In(FACTORY_Obviousness)
 			.In(FACTORY_ObviousTargetValue)
 			.In(FACTORY_ChannelContext)
-			.Out(0, 0)
-			.Out(0, 0);
+			.Out(1, 1);
 	}
 	
 	
@@ -1401,8 +1398,7 @@ public:
 		reg .In(FACTORY_DataSource)
 			.In(FACTORY_BasicSignal)
 			.In(FACTORY_Obviousness)
-			.Out(0, 0)
-			.Out(0, 0)
+			.Out(1, 1)
 			.Mem(begins)
 			.Mem(begin_cursor);
 	}

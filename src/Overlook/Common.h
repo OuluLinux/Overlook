@@ -623,8 +623,13 @@ typedef const double ConstDouble;
 typedef const uint64 ConstU64;
 
 class VectorBool : Moveable<VectorBool> {
+	
+protected:
+	friend class ImageCompiler;
+	
 	Vector<uint64> data;
 	int count = 0;
+	int64 data_begin = 0;
 	
 public:
 	VectorBool() {}
@@ -709,7 +714,6 @@ struct GraphImage : Moveable<GraphImage> {
 	bool HasMaximum() const {return is_fixed_max;}
 	bool HasMinimum() const {return is_fixed_min;}
 	int GetCount() const {return buffers.GetCount();}
-	int GetOutputCount() const {return GetCount();}
 	int GetVisibleCount() const {return reg.output_visible;}
 	BufferImage& GetBuffer(int i) {return buffers[i];}
 	VectorBool& GetSignal() {return signal;}

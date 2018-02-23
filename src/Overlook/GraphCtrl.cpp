@@ -487,8 +487,8 @@ void GraphCtrl::DrawBorders(Draw& d, GraphImage& gi) {
     x = border;
     r = GetGraphCtrlRect();
     y = r.top;
-	bool draw_label = gi.GetOutputCount() > 0;
-	bool draw_label_enabled = gi.GetOutputCount() > 1;
+	bool draw_label = true;//gi.GetCount() > 0;
+	bool draw_label_enabled = true;//gi.GetCount() > 1;
 	int data_begin = src[0]->GetBuffer(0).data_begin;
 	if (draw_label) {
 		int label_data_count = gi.signal.GetCount();

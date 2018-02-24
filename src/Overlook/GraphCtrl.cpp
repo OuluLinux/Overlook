@@ -39,13 +39,16 @@ void GraphCtrl::GetDataRange(GraphImage& gi, int buffer) {
 	GraphImage& img = gi;
 	ChartImage& chart = *this->ci;
 	
+	c = img.GetBars();
+	
 	if (buffer >= img.GetVisibleCount()) {
 		LOG("GraphCtrl::GetDataRange error no settings for buffer");
 		return;
 	}
 	
 	int style = img.GetBuffer(buffer).style;
-	if (style == DRAW_NONE) return;
+	if (style == DRAW_NONE)
+		return;
 	
 	bool skip_zero = false;
 	if (style == DRAW_SECTION || style == DRAW_ARROW)
@@ -55,21 +58,27 @@ void GraphCtrl::GetDataRange(GraphImage& gi, int buffer) {
 		if (lo > 0) lo = 0;
 	}
 	
-	double prev_hi = hi;
-	double prev_lo = lo;
+	
+	data_begin = gi.GetBuffer(0).data_begin;
 	
 	if (img.HasMaximum())
 		hi = max(hi, img.GetMaximum());
-	else
-		hi = max(hi, img.GetBuffer(buffer).GetMaximum());
+	
 	if (img.HasMinimum())
 		lo = min(lo, img.GetMinimum());
-	else
-		lo = min(lo, img.GetBuffer(buffer).GetMinimum());
 	
-	if (skip_zero) {
-		if (hi == 0.0) hi = prev_hi;
-		if (lo == 0.0) lo = prev_lo;
+	for(int i = 0; i < count; i++) {
+        
+        double O, H, L, C;
+        pos = c - (count + shift - i);
+        if (pos >= c || pos < data_begin) continue;
+		
+		double d = img.GetBuffer(buffer).Get(pos);
+		
+		if (skip_zero && d == 0.0) continue;
+		
+		if (!img.HasMaximum() && d > hi) hi = d;
+		if (!img.HasMinimum() && d < lo) lo = d;
 	}
 }
 
@@ -116,7 +125,7 @@ void GraphCtrl::Paint(Draw& draw) {
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = src[0]->GetCount() > 0 ? src[0]->GetBuffer(0).GetEnd() : src[0]->signal.GetCount();
+    int data_count = src[0]->GetCount() > 0 ? src[0]->GetBuffer(0).GetEnd() : src[0]->booleans[0].GetEnd();
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -496,18 +505,18 @@ void GraphCtrl::DrawBorders(Draw& d, GraphImage& gi) {
     x = border;
     r = GetGraphCtrlRect();
     y = r.top;
-	bool draw_label = true;//gi.GetCount() > 0;
-	bool draw_label_enabled = true;//gi.GetCount() > 1;
+	bool draw_label = gi.booleans.GetCount() > 0;
+	bool draw_label_enabled = gi.booleans.GetCount() > 1;
 	int data_begin = src[0]->GetBuffer(0).data_begin;
 	if (draw_label) {
-		int label_data_count = gi.signal.GetCount();
+		int label_data_count = gi.booleans[0].GetCount();
 		int begin = 0;
 		int end = real_screen_count;
-		VectorBool* labelvec = &gi.GetSignal();
+		VectorBool* labelvec = &gi.booleans[0];
 		VectorBool* enabledvec = NULL;
 		if (draw_label_enabled) {
-			enabledvec = &gi.GetEnabled();
-			label_data_count = Upp::min(label_data_count, gi.signal.GetCount());
+			enabledvec = &gi.booleans[1];
+			label_data_count = Upp::min(label_data_count, gi.booleans[0].GetCount());
 		}
 		for(int i = begin; i < end; i++) {
 	        int pos = label_data_count - (count + shift - i);

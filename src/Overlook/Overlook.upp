@@ -33,6 +33,8 @@ file
 	Chart.cpp,
 	GraphCtrl.h,
 	GraphCtrl.cpp,
+	SystemCtrl.h,
+	SystemCtrl.cpp,
 	Core readonly separator,
 	Common.h,
 	Common.cpp,

@@ -488,7 +488,7 @@ void DataBridge::RefreshFromFaster() {
 }
 
 /*
-void DataBridge::Assist(int cursor, VectorBool& vec) {
+void DataBridge::SetBoolean(int cursor, VectorBool& vec) {
 	if (cursor < 5 || cursor >= GetBars()) return;
 	
 	Buffer& open   = gi.GetBuffer(0);

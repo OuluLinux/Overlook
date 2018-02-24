@@ -14,8 +14,6 @@ using namespace Upp;
 struct SourceImage {
 	DataBridge db;
 	
-	void Assist(int shift, int row, bool value) {}
-	
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
 	double High(int shift) {return db.high[shift];}
@@ -45,6 +43,12 @@ public:
 	
 };
 
+struct Snap : Moveable<Snap> {
+	
+	
+	void Set(int i, bool value) {}
+	
+};
 
 void RunFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
 void ConfFactory(ConstFactoryDeclaration& gi, ValueRegister& reg);
@@ -58,6 +62,7 @@ class System {
 protected:
 	
 	friend class DataBridgeCommon;
+	friend class SystemCtrl;
 	friend class DataBridge;
 	friend class SimBroker;
 	friend class CoreIO;
@@ -66,6 +71,7 @@ protected:
 	
 	// Persistent
 	Array<Array<SourceImage> >	data;
+	Vector<Vector<Snap> >			main_booleans;
 	
 	
 	// Temporary

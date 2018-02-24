@@ -29,7 +29,7 @@ class Agent;
 
 typedef const int ConstInt;
 
-enum {
+/*enum {
 	DB_UP1, DB_UP2, DB_UP3, DB_UP4, DB_UP5, DB_DOWN1, DB_DOWN2, DB_DOWN3, DB_DOWN4, DB_DOWN5,
 	DB_UPTREND, DB_DOWNTREND, DB_HIGHUPTREND, DB_HIGHDOWNTREND, DB_LOWUPTREND,
 	DB_LOWDOWNTREND, DB_SIDEWAYSTREND, DB_HIGHBREAK, DB_LOWBREAK,
@@ -40,7 +40,7 @@ enum {
 	BEAR_INC, BEAR_DEC, BULL_OVERZERO, BULL_BELOWZERO, BULL_INC, BULL_DEC, CCI_OVERZERO,
 	CCI_BELOWZERO, CCI_OVERHIGH, CCI_BELOWLOW, CCI_INC, CCI_DEC, DEM_OVERZERO, DEM_BELOWZERO,
 	DEM_OVERHIGH, DEM_BELOWLOW, DEM_INC, DEM_DEC, /*FORCE_OVERZERO, FORCE_BELOWZERO, FORCE_INC,
-	FORCE_DEC,*/ MOM_OVERZERO, MOM_BELOWZERO, MOM_INC, MOM_DEC, RSI_OVERZERO, RSI_BELOWZERO,
+	FORCE_DEC,*/ /*MOM_OVERZERO, MOM_BELOWZERO, MOM_INC, MOM_DEC, RSI_OVERZERO, RSI_BELOWZERO,
 	RSI_INC, RSI_DEC, RVI_OVERZERO, RVI_BELOWZERO, RVI_INC, RVI_DEC, RVI_INCDIFF, RVI_DECDIFF,
 	STOCH_OVERZERO, STOCH_BELOWZERO, STOCH_OVERHIGH, STOCH_BELOWLOW, STOCH_INC, STOCH_DEC,
 	ACC_OVERZERO, ACC_BELOWZERO, ACC_INC, ACC_DEC, AWE_OVERZERO, AWE_BELOWZERO, AWE_INC, AWE_DEC,
@@ -49,7 +49,7 @@ enum {
 	VOLUME_HIGH, VOLUME_VERYHIGH, VOLUME_MED, VOLUME_LOW, VOLUME_INC, VOLUME_DEC,
 	
 	
-	ASSIST_COUNT};
+	ASSIST_COUNT};*/
 
 enum {
 	PHASE_TRAINING,
@@ -58,6 +58,7 @@ enum {
 
 #define FACTORY_LIST \
 FITEM(DataSource) \
+FITEM(ValueChange) \
 FITEM(MovingAverage) \
 FITEM(MovingAverageConvergenceDivergence) \
 FITEM(AverageDirectionalMovement) \
@@ -107,11 +108,10 @@ FITEM(TrendIndex) \
 FITEM(OnlineMinimalLabel) \
 FITEM(ReactionContext) \
 FITEM(VolatilityContext) \
-FITEM(ChannelContext) \
-FITEM(SelectiveMinimalLabel) \
+FITEM(ChannelContext) /*\
 FITEM(Obviousness) \
 FITEM(VolatilityContextReversal) \
-FITEM(ObviousTargetValue)
+FITEM(ObviousTargetValue)*/
 
 #define FITEM(x) FACTORY_##x ,
 
@@ -440,7 +440,7 @@ struct ValueRegister {
 	int input_count = 0;
 	int arg_count = 0;
 	int arg_cursor = 0;
-	int output_count = -1, output_visible = -1;
+	int output_count = -1, output_visible = -1, output_boolean_count = -1;
 	
 	bool is_loading = false;
 	
@@ -458,7 +458,7 @@ struct ValueRegister {
 	ValueRegister& In(int factory, int arg0, int arg1);
 	ValueRegister& In(int factory, int arg0, int arg1, int arg2);
 	ValueRegister& In(int factory, int arg0, int arg1, int arg2, int arg3);
-	ValueRegister& Out(int bufcount, int bufvisible);
+	ValueRegister& Out(int bufcount, int bufvisible, int boolcount);
 	ValueRegister& Arg(int& def_value, int min_value=0, int max_value=10000);
 	
 	template <class T> ValueRegister& Mem(T& obj){return *this;}
@@ -636,6 +636,7 @@ public:
 	void operator=(const VectorBool& src);
 	
 	int GetCount() const;
+	int GetEnd() const {return data_begin + GetCount();}
 	int PopCount() const;
 	VectorBool& SetCount(int i);
 	VectorBool& Zero();
@@ -692,7 +693,7 @@ struct GraphImage : Moveable<GraphImage> {
 	static const int MAX_SETTINGS = 4;
 	
 	Vector<BufferImage> buffers;
-	VectorBool signal, enabled;
+	Vector<VectorBool> booleans;
 	LevelSettings levels[MAX_SETTINGS];
 	ValueRegister reg;
 	Color levels_clr;
@@ -707,6 +708,10 @@ struct GraphImage : Moveable<GraphImage> {
 	bool is_fixed_max = false, is_fixed_min = false;
 	
 	
+	void SetBoolean(int shift, int row, bool value) {booleans[row].Set(shift, value);}
+	bool GetBoolean(int shift, int row) {return booleans[row].Get(shift);}
+	
+	
 	void RefreshLimits();
 	double GetMaximum() const {return maximum;}
 	double GetMinimum() const {return minimum;}
@@ -715,8 +720,6 @@ struct GraphImage : Moveable<GraphImage> {
 	int GetCount() const {return buffers.GetCount();}
 	int GetVisibleCount() const {return reg.output_visible;}
 	BufferImage& GetBuffer(int i) {return buffers[i];}
-	VectorBool& GetSignal() {return signal;}
-	VectorBool& GetEnabled() {return enabled;}
 	bool IsCoreSeparateWindow() {return window_type == WINDOW_SEPARATE;}
 	int GetFutureBars() const {return future_bars;}
 	int GetFactory() const {return factory;}
@@ -770,8 +773,7 @@ struct ChartImage {
 	int GetEnd() const {return end;}
 	double GetPoint() {return point;}
 	
-	VectorBool& GetInputSignal(int in) {return graphs[graphs[cursor].input_id[in]].GetSignal();}
-	VectorBool& GetInputEnabled(int in) {return graphs[graphs[cursor].input_id[in]].GetEnabled();}
+	VectorBool& GetInputBoolean(int in, int b) {return graphs[graphs[cursor].input_id[in]].booleans[b];}
 	ConstBufferImage& GetInputBuffer(int in, int buf) {return graphs[graphs[cursor].input_id[in]].GetBuffer(buf);}
 	
 };

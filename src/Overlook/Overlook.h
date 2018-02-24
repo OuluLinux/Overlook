@@ -26,6 +26,7 @@ using namespace Upp;
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
+#include "SystemCtrl.h"
 
 
 namespace Overlook {
@@ -88,6 +89,7 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
+	SystemCtrl sysctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;
@@ -147,7 +149,8 @@ public:
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
-	void RefreshAssist();
+	void RefreshSetBoolean();
+	void RefreshSystem();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();

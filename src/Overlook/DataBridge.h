@@ -119,7 +119,7 @@ public:
 	
 	void Init();
 	void Start();
-	void Assist(int cursor, VectorBool& vec);
+	void SetBoolean(int cursor, VectorBool& vec);
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}

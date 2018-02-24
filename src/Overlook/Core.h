@@ -139,7 +139,7 @@ public:
 	virtual ~CoreIO();
 	
 	virtual void IO(const ValueBase& base);
-	virtual void Assist(int cursor, VectorBool& vec) {}
+	virtual void SetBoolean(int cursor, VectorBool& vec) {}
 	void RefreshBuffers();
 	
 	template <class T> T* Get() {

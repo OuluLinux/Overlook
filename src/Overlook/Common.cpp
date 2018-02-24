@@ -419,10 +419,11 @@ ValueRegister& ValueRegister::In(int factory, int arg0, int arg1, int arg2, int 
 	return *this;
 }
 
-ValueRegister& ValueRegister::Out(int bufcount, int bufvisible) {
+ValueRegister& ValueRegister::Out(int bufcount, int bufvisible, int boolcount) {
 	if (!is_loading) {
 		output_count = bufcount;
 		output_visible = bufvisible;
+		output_boolean_count = boolcount;
 	}
 	return *this;
 }

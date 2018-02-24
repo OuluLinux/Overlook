@@ -349,16 +349,17 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 		
 		gi.factory = decl.factory;
 		gi.buffers.SetCount(gi.reg.output_count);
+		gi.booleans.SetCount(gi.reg.output_boolean_count);
 		for(int j = 0; j < gi.buffers.GetCount(); j++) {
 			BufferImage& ib = gi.buffers[j];
 			ib.data_begin = ci.begin;
 			ib.value.SetCount(bars, 0.0);
 		}
-		gi.GetSignal().SetCount(bars);
-		gi.GetSignal().data_begin = ci.begin;
-		gi.GetEnabled().SetCount(bars);
-		gi.GetEnabled().data_begin = ci.begin;
-		gi.GetEnabled().One();
+		for(int i = 0; i < gi.booleans.GetCount(); i++) {
+			gi.booleans[i].SetCount(bars);
+			gi.booleans[i].data_begin = ci.begin;
+			gi.booleans[i].One();
+		}
 		gi.input_count = decl.input_count;
 		for(int j = 0; j < 8; j++)
 			gi.input_id[j] = decl.input_id[j];

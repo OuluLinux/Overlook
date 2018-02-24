@@ -129,6 +129,7 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
+	Tabify(last, Dockable(sysctrl, "System").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -487,14 +488,15 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
-	if (assist.IsVisible())			RefreshAssist();
+	if (assist.IsVisible())			RefreshSetBoolean();
+	if (sysctrl.IsVisible())		RefreshSystem();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 }
 
-void Overlook::RefreshAssist() {
+void Overlook::RefreshSetBoolean() {
 	/*Chart* chart = cman.GetVisibleChart();
 	if (!chart || chart->graphs.IsEmpty()) {
 		assist.Clear();
@@ -514,7 +516,7 @@ void Overlook::RefreshAssist() {
 		
 		Core& core = *ci.core;
 		if (cursor >= core.GetBars()) break;
-		core.Assist(cursor, vec);
+		core.SetBoolean(cursor, vec);
 	}
 	
 	int row = 0;
@@ -523,6 +525,10 @@ void Overlook::RefreshAssist() {
 			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
 	assist.SetCount(row);*/
+}
+
+void Overlook::RefreshSystem() {
+	
 }
 
 void Overlook::RefreshCalendar() {

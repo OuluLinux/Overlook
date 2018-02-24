@@ -248,6 +248,7 @@ ImageCompiler::ImageCompiler() {
 void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
 	pipeline_size = 0;
 	pipeline[pipeline_size++] = decl;
+	pipeline[pipeline_size++].factory = FACTORY_DataSource;
 	LOG("0 " << decl.ToString());
 	
 	int pipeline_cursor = 0;

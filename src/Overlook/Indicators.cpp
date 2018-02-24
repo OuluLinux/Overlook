@@ -30,57 +30,60 @@ void ConfFactory(ConstFactoryDeclaration& id, ValueRegister& reg) {
 
 
 
-
-double SimpleMA ( const int position, const int period, ConstBufferImage& value ) {
+template <class T>
+double SimpleMA ( const int position, const int period, const T& value ) {
 	double result = 0.0;
 	if ( position >= period && period > 0 ) {
 		for ( int i = 0; i < period; i++)
-			result += value.Get( position - i );
+			result += value[ position - i ];
 		result /= period;
 	}
 	return ( result );
 }
 
-double ExponentialMA ( const int position, const int period, const double prev_value, ConstBufferImage& value ) {
+template <class T>
+double ExponentialMA ( const int position, const int period, const double prev_value, const T& value ) {
 	double result = 0.0;
 	if ( period > 0 ) {
 		double pr = 2.0 / ( period + 1.0 );
-		result = value.Get( position ) * pr + prev_value * ( 1 - pr );
+		result = value[ position ] * pr + prev_value * ( 1 - pr );
 	}
 	return ( result );
 }
 
-double SmoothedMA ( const int position, const int period, const double prev_value, ConstBufferImage& value ) {
+template <class T>
+double SmoothedMA ( const int position, const int period, const double prev_value, const T& value ) {
 	double result = 0.0;
 	if ( period > 0 ) {
 		if ( position == period - 1 ) {
 			for ( int i = 0;i < period;i++ )
-				result += value.Get( position - i );
+				result += value[ position - i ];
 
 			result /= period;
 		}
 		if ( position >= period )
-			result = ( prev_value * ( period - 1 ) + value.Get( position ) ) / period;
+			result = ( prev_value * ( period - 1 ) + value[ position ] ) / period;
 	}
 	return ( result );
 }
 
-double LinearWeightedMA ( const int position, const int period, ConstBufferImage& value ) {
+template <class T>
+double LinearWeightedMA ( const int position, const int period, const T& value ) {
 	double result = 0.0, sum = 0.0;
 	int    i, wsum = 0;
 	if ( position >= period - 1 && period > 0 ) {
 		for ( i = period;i > 0;i-- ) {
 			wsum += i;
-			sum += value.Get( position - i + 1 ) * ( period - i + 1 );
+			sum += value[ position - i + 1 ] * ( period - i + 1 );
 		}
 		result = sum / wsum;
 	}
 	return ( result );
 }
 
-
+template <class T>
 int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBufferImage& value, BufferImage& buffer ) {
+		const int period, const T& value, T& buffer ) {
 	int i, limit;
 	if ( period <= 1 || rates_total - begin < period )
 		return ( 0 );
@@ -90,7 +93,7 @@ int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const i
 			buffer.Set( i, 0.0 );
 		double first_value = 0;
 		for ( i = begin; i < limit;i++ )
-			first_value += value.Get(i);
+			first_value += value[i];
 		first_value /= period;
 		buffer.Set( limit - 1, first_value);
 	}
@@ -98,14 +101,14 @@ int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const i
 		limit = prev_calculated - 1;
 	
 	for ( i = limit; i < rates_total; i++)
-		buffer.Set( i, buffer.Get( i - 1 ) + ( value.Get(i) - value.Get( i - period ) ) / period );
+		buffer.Set( i, buffer[ i - 1 ] + ( value[i] - value[ i - period ] ) / period );
 	
 	return ( rates_total );
 }
 
-
+template <class T>
 int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBufferImage& value, BufferImage& buffer ) {
+		const int period, const T& value, T& buffer ) {
 	int    i, limit;
 	if ( period <= 1 || rates_total - begin < period )
 		return ( 0 );
@@ -115,20 +118,20 @@ int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, co
 		limit = period + begin;
 		for ( i = 0;i < begin;i++ )
 			buffer.Set( i, 0.0 );
-		buffer.Set( begin, value.Get( begin ) );
+		buffer.Set( begin, value[ begin ] );
 		for ( i = begin + 1;i < limit;i++ )
-			buffer.Set( i, value.Get(i) * dSmoothFactor + buffer.Get( i - 1 ) * ( 1.0 - dSmoothFactor ) );
+			buffer.Set( i, value[i] * dSmoothFactor + buffer[ i - 1 ] * ( 1.0 - dSmoothFactor ) );
 	}
 	else
 		limit = prev_calculated - 1;
 	for ( i = limit;i < rates_total;i++ )
-		buffer.Set( i, value.Get(i) * dSmoothFactor + buffer.Get( i - 1 ) * ( 1.0 - dSmoothFactor ) );
-	return ( rates_total );
+		buffer.Set( i, value[i] * dSmoothFactor + buffer[ i - 1 ] * ( 1.0 - dSmoothFactor ) );
+	return rates_total;
 }
 
-
+template <class T>
 int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-	const int period, ConstBufferImage& value, BufferImage& buffer, int &weightsum ) {
+	const int period, const T& value, T& buffer, int &weightsum ) {
 	int        i, limit;
 	double     sum;
 	if ( period <= 1 || rates_total - begin < period )
@@ -143,7 +146,7 @@ int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated,
 		for ( i = begin;i < limit; i++) {
 			int k = i - begin + 1;
 			weightsum += k;
-			first_value += k * value.Get(i);
+			first_value += k * value[i];
 		}
 		first_value /= ( double ) weightsum;
 		buffer.Set( limit - 1, first_value );
@@ -154,15 +157,15 @@ int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated,
 	{
 		sum = 0;
 		for ( int j = 0;j < period;j++ )
-			sum += ( period - j ) * value.Get( i - j );
+			sum += ( period - j ) * value[i - j];
 		buffer.Set( i, sum / weightsum );
 	}
 	return ( rates_total );
 }
 
-
+template <class T>
 int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
-		const int period, ConstBufferImage& value, BufferImage& buffer )
+		const int period, const T& value, T& buffer )
 {
 	int i, limit;
 	if ( period <= 1 || rates_total - begin < period )
@@ -173,14 +176,14 @@ int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const
 			buffer.Set( i, 0.0 );
 		double first_value = 0;
 		for ( i = begin;i < limit;i++ )
-			first_value += value.Get(i);
+			first_value += value[i];
 		first_value /= period;
 		buffer.Set( limit - 1, first_value );
 	}
 	else
 		limit = prev_calculated - 1;
 	for ( i = limit;i < rates_total; i++)
-		buffer.Set( i, ( buffer.Get( i - 1 ) * ( period - 1 ) + value.Get(i) ) / period );
+		buffer.Set( i, ( buffer[ i - 1 ] * ( period - 1 ) + value[i] ) / period );
 	return rates_total;
 }
 
@@ -254,9 +257,9 @@ void ValueChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	double point = ci.GetPoint();
 	
-	ConstBufferImage& open				= ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low				= ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high				= ci.GetInputBuffer(0, 2);
+	const Vector<double>& open			= si.db.open;
+	const Vector<double>& low			= si.db.low;
+	const Vector<double>& high			= si.db.high;
 	BufferImage& low_change				= gi.GetBuffer(0);
 	BufferImage& high_change			= gi.GetBuffer(1);
 	BufferImage& value_change			= gi.GetBuffer(2);
@@ -264,10 +267,10 @@ void ValueChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	begin++;
 	
 	for(int i = begin; i < end; i++) {
-		double open_value = open.Get(i-1);
-		double change_value = open.Get(i) / open_value - 1.0;
-		double low_change_ = low.Get(i-1) / open_value - 1.0;
-		double high_change_ = high.Get(i-1) / open_value - 1.0;
+		double open_value = open[i-1];
+		double change_value = open[i] / open_value - 1.0;
+		double low_change_ = low[i-1] / open_value - 1.0;
+		double high_change_ = high[i-1] / open_value - 1.0;
 		change_av.Add(fabs(change_value));
 		value_change.Set(i, change_value);
 		low_change.Set(i, low_change_);
@@ -278,6 +281,8 @@ void ValueChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		value_change	.Set(i, value_change	.Get(i) / (3 * change_av.mean));
 		low_change		.Set(i, low_change		.Get(i) / (3 * change_av.mean));
 		high_change		.Set(i, high_change		.Get(i) / (3 * change_av.mean));
+		
+		gi.SetBoolean(i, 0, value_change.Get(i) < 0);
 	}
 }
 
@@ -478,8 +483,8 @@ void MovingAverageConvergenceDivergence::Start(SourceImage& si, ChartImage& ci, 
 	int begin = ci.GetBegin();
 	begin += signal_sma_period + 1;
 	
-	ConstBufferImage& a_buf = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& b_buf = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& a_buf = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& b_buf = ci.GetInputBuffer(1, 0);
 	
 	for (int i = begin; i < end; i++) {
 		double a_value = a_buf.Get(i);
@@ -685,7 +690,7 @@ void BollingerBands::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	if ( end < plot_begin )
 		throw DataExc();
 	
-	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
+	const Vector<double>& open = si.db.open;
 	
 	for (int i = begin; i < end; i++) {
 		double ma = SimpleMA(i, bands_period, open);
@@ -751,7 +756,7 @@ void Envelopes::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& up_buffer = gi.GetBuffer(0);
 	BufferImage& down_buffer = gi.GetBuffer(1);
 	BufferImage& ma_buffer = gi.GetBuffer(2);
-	ConstBufferImage& ma = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma = ci.GetInputBuffer(0, 0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
@@ -986,7 +991,7 @@ void StandardDeviation::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 	begin += period;
 	
-	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(0, 0);
 	
 	double prev_value = 0;
 	for (int i = begin; i < end; i++) {
@@ -1109,7 +1114,7 @@ void BearsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(0, 0);
 	begin++;
 	double prev_value = 0;
 	for (int i = begin; i < end; i++) {
@@ -1148,7 +1153,7 @@ void BullsPower::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(0, 0);
 	begin++;
 	double prev_value = 0;
 	for ( int i = begin; i < end; i++) {
@@ -1376,7 +1381,7 @@ void ForceIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	begin++;
 	
-	ConstBufferImage& ma_buf = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& ma_buf = ci.GetInputBuffer(0, 0);
 	
 	double prev_value = 0.0;
 	for ( int i = begin; i < end; i++) {
@@ -1492,8 +1497,8 @@ void OsMA::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	begin += signal_sma_period + 1;
 	
-	ConstBufferImage& ma1_buf = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ma2_buf = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& ma1_buf = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ma2_buf = ci.GetInputBuffer(1, 0);
 	
 	for (int i = begin; i < end; i++) {
 		double ma1 = ma1_buf.Get(i);
@@ -2185,8 +2190,8 @@ void AcceleratorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 	
 	begin += period + 1;
 	
-	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 0);
 	
 	prev = macd_buffer.Get(begin) - signal_buffer.Get(begin);
 	
@@ -2196,7 +2201,7 @@ void AcceleratorOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& g
 			ind2.Get(i));
 	}
 
-	SimpleMAOnBuffer ( end, begin, 0, period, macd_buffer, signal_buffer );
+	SimpleMAOnBuffer ( end, begin, 0, period, macd_buffer, signal_buffer);
 	
 	bool up = true;
 
@@ -2272,8 +2277,8 @@ void AwesomeOscillator::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int begin = ci.GetBegin();
 	double prev = 0.0, current;
 	
-	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ind2 = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 0);
 	
 	prev = buffer.Get(begin);
 	begin++;
@@ -2469,8 +2474,8 @@ void FractalOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	begin += 1 + Upp::max(left_bars, right_bars) + smoothing_period;
 	
-	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(0, 1);
 	
 	for(int i = begin; i < end; i++) {
 		double close = si.Open(i);
@@ -2480,7 +2485,7 @@ void FractalOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		if ( v > 1) v = 1;
 		else if ( v < 0) v = 0;
 		buf.Set(i, v - 0.5); // normalized
-		av.Set(i, SimpleMA( i, smoothing_period, buf ));
+		av.Set(i, SimpleMA( i, smoothing_period, buf));
 	}
 }
 
@@ -2875,8 +2880,8 @@ void ZigZagOsc::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
-	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(0, 1);
 	
 	double prev, next;
 	bool has_prev = false, has_next = false;;
@@ -2949,7 +2954,7 @@ void LinearTimeFrames::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 }
 
 void LinearTimeFrames::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	const Vector<int>& src_time = si.db.time;
 	BufferImage& day = gi.GetBuffer(0);
 	BufferImage& month = gi.GetBuffer(1);
 	BufferImage& year = gi.GetBuffer(2);
@@ -2959,7 +2964,7 @@ void LinearTimeFrames::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	System& base = GetSystem();
 	for(int i = begin; i < end; i++) {
 		
-		Time t = Time(1970,1,1) + src_time.Get(i);
+		Time t = Time(1970,1,1) + src_time[i];
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 		day.Set(i, t1);
@@ -2996,14 +3001,14 @@ void LinearWeekTime::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 }
 
 void LinearWeekTime::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	const Vector<int>& src_time = si.db.time;
 	BufferImage& week = gi.GetBuffer(0);
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	System& base = GetSystem();
 	for(int i = begin; i < end; i++) {
 		
-		Time t = Time(1970,1,1) + src_time.Get(i);
+		Time t = Time(1970,1,1) + src_time[i];
 		double h = t.hour;
 		double t1 = ((double)t.minute + h * 60.0 ) / (24.0 * 60.0);
 		double days = GetDaysOfMonth(t.month, t.year);
@@ -3158,8 +3163,8 @@ void SupportResistanceOscillator::Start(SourceImage& si, ChartImage& ci, GraphIm
 	
 	begin++;
 	
-	ConstBufferImage& ind1 = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& ind2 = ci.GetInputBuffer(1, 1);
+	ConstBufferImage& ind1 = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& ind2 = ci.GetInputBuffer(0, 1);
 	
 	int prev_pos = begin ? begin-1 : 0;
 	double prev_value = begin ? osc_av.Get(begin-1) : 0;
@@ -3173,7 +3178,7 @@ void SupportResistanceOscillator::Start(SourceImage& si, ChartImage& ci, GraphIm
 		if (value >  1) value = 1;
 		if (value < -1) value = -1;
 		osc.Set(i, value);
-		value = ExponentialMA( i, smoothing_period, prev_value, osc );
+		value = ExponentialMA( i, smoothing_period, prev_value, osc);
 		osc_av.Set(i, value);
 		prev_pos = i;
 		prev_value = value;
@@ -3412,7 +3417,7 @@ void TrendChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int shift = period / 2;
 	
 	// Calculate averages
-	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
+	ConstBufferImage& dbl = ci.GetInputBuffer(0, 0);
 	
 	// Prepare values for loop
 	double prev1 = dbl.Get(Upp::max(0, begin-1));
@@ -3482,8 +3487,8 @@ void TrendChangeEdge::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int shift = period / 2;
 	
 	// Prepare values for looping
-	ConstBufferImage& dbl = ci.GetInputBuffer(1, 0);
-	ConstBufferImage& slow_dbl = ci.GetInputBuffer(2, 0);
+	ConstBufferImage& dbl = ci.GetInputBuffer(0, 0);
+	ConstBufferImage& slow_dbl = ci.GetInputBuffer(1, 0);
 	double prev_slow = slow_dbl.Get(Upp::max(0, begin-1));
 	double prev1 = dbl.Get(Upp::max(0, begin-1)) - prev_slow;
 	double prev2 = dbl.Get(Upp::max(0, begin-1+shift)) - prev_slow;
@@ -3574,8 +3579,8 @@ void PeriodicalChange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 void PeriodicalChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	System& sys = GetSystem();
-	ConstBufferImage& src = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& src_time = ci.GetInputBuffer(0,4);
+	const Vector<double>& src = si.db.open;
+	const Vector<int>& src_time = si.db.time;
 	BufferImage& dst = gi.GetBuffer(0);
 	
 	int end = ci.GetEnd() - 1;
@@ -3583,14 +3588,14 @@ void PeriodicalChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	for(int i = begin; i < end; i++) {
 		
-		double prev = src.Get(i);
+		double prev = src[i];
 		if (prev == 0.0)
 			continue;
-		double change = src.Get(i+1) / prev - 1.0;
+		double change = src[i+1] / prev - 1.0;
 		if (!IsFin(change))
 			continue;
 		
-		Time t = Time(1970,1,1) + src_time.Get(i);
+		Time t = Time(1970,1,1) + src_time[i];
 		
 		if (split_type == 0) {
 			int wday = DayOfWeek(t);
@@ -3613,7 +3618,7 @@ void PeriodicalChange::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	double prev_value = 0.0;
 	for(int i = begin; i < end; i++) {
-		Time t = Time(1970,1,1) + src_time.Get(i);
+		Time t = Time(1970,1,1) + src_time[i];
 		double value = 0;
 		if (split_type == 0) {
 			int wday = DayOfWeek(t);
@@ -3671,7 +3676,7 @@ void VolatilityAverage::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 void VolatilityAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	System& sys = GetSystem();
-	ConstBufferImage& src = ci.GetInputBuffer(0, 0);
+	const Vector<double>& src = si.db.open;
 	
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
@@ -3682,20 +3687,20 @@ void VolatilityAverage::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	double sum = 0.0;
 	for(int i = Upp::max(1, begin - period); i < begin; i++) {
-		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		double change = fabs(src[i] / src[i-1] - 1.0);
 		sum += change;
 	}
 	
 	for(int i = begin; i < end; i++) {
 		
 		// Add current
-		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		double change = fabs(src[i] / src[i-1] - 1.0);
 		sum += change;
 		
 		// Subtract
 		int j = i - period;
 		if (j > 0) {
-			double prev_change = fabs(src.Get(j) / src.Get(j-1) - 1.0);
+			double prev_change = fabs(src[j] / src[j-1] - 1.0);
 			sum -= prev_change;
 		}
 		
@@ -3858,7 +3863,7 @@ void VolatilitySlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 void VolatilitySlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& buffer = gi.GetBuffer(0);
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
+	const Vector<double>& open_buf = si.db.open;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
@@ -3867,8 +3872,8 @@ void VolatilitySlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int tf_mins = ci.GetPeriod();
 	
 	for(int i = begin; i < end; i++) {
-		double cur  = open_buf.Get(i);
-		double prev = open_buf.Get(i-1);
+		double cur  = open_buf[i];
+		double prev = open_buf[i-1];
 		double change = fabs(cur / prev - 1.0);
 		int slot_id = (i-1) % slot_count;
 		OnlineAverage1& av = stats[slot_id];
@@ -3931,7 +3936,7 @@ void VolumeSlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 void VolumeSlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& buffer = gi.GetBuffer(0);
-	ConstBufferImage& vol_buf = ci.GetInputBuffer(0, 3);
+	const Vector<double>& vol_buf = si.db.volume;
 	int end = ci.GetEnd();
 	int begin = ci.GetBegin();
 	
@@ -3940,7 +3945,7 @@ void VolumeSlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int tf_mins = ci.GetPeriod();
 	
 	for(int i = begin; i < end; i++) {
-		double vol  = vol_buf.Get(i);
+		double vol  = vol_buf[i];
 		if (vol == 0.0) continue;
 		int slot_id = (i-1) % slot_count;
 		OnlineAverage1& av = stats[slot_id];
@@ -3994,7 +3999,7 @@ void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	BufferImage& buffer				= gi.GetBuffer(0);
 	BufferImage& err_buffer			= gi.GetBuffer(1);
 	BufferImage& change_buf			= gi.GetBuffer(2);
-	const Vector<double>& open_buf	= ci.GetInputBuffer(0, 0).value;
+	const Vector<double>& open_buf	= si.db.open;
 	
 	double diff;
 	int end = ci.GetEnd();
@@ -4061,7 +4066,7 @@ void OnlineMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 	int symbol = ci.GetSymbol();
 	int tf = ci.GetTf();
 	
-	const Vector<double>& open_buf	= ci.GetInputBuffer(0, 0).value;
+	const Vector<double>& open_buf	= si.db.open;
 	double spread_point				= ci.GetPoint();
 	double cost						= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
@@ -4168,9 +4173,9 @@ void ReactionContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 }
 
 void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low  = ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high = ci.GetInputBuffer(0, 2);
+	const Vector<double>& open = si.db.open;
+	const Vector<double>& low  = si.db.low;
+	const Vector<double>& high = si.db.high;
 	
 	BufferImage& buffer     = gi.GetBuffer(0);
 	
@@ -4187,7 +4192,7 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 			int dir = 0;
 			int len = 0;
 			for (int i = cursor-1; i >= begin; i--) {
-				int idir = open.Get(i+1) > open.Get(i) ? +1 : -1;
+				int idir = open[i+1] > open[i] ? +1 : -1;
 				if (dir != 0 && idir != dir) break;
 				dir = idir;
 				len++;
@@ -4206,9 +4211,9 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		{
 			int dir = 0;
 			int len = 0;
-			double hi = high.Get(cursor-1);
+			double hi = high[cursor-1];
 			for (int i = cursor-2; i >= begin; i--) {
-				int idir = hi > high.Get(i) ? +1 : -1;
+				int idir = hi > high[i] ? +1 : -1;
 				if (dir != 0 && idir != +1) break;
 				dir = idir;
 				len++;
@@ -4223,9 +4228,9 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		{
 			int dir = 0;
 			int len = 0;
-			double lo = low.Get(cursor-1);
+			double lo = low[cursor-1];
 			for (int i = cursor-2; i >= begin; i--) {
-				int idir = lo < low.Get(i) ? +1 : -1;
+				int idir = lo < low[i] ? +1 : -1;
 				if (dir != 0 && idir != +1) break;
 				dir = idir;
 				len++;
@@ -4238,14 +4243,14 @@ void ReactionContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		
 		// Trend reversal
 		if (cursor >= 4) {
-			double t0_diff		= open.Get(cursor-0) - open.Get(cursor-1);
-			double t1_diff		= open.Get(cursor-1) - open.Get(cursor-2);
-			double t2_diff		= open.Get(cursor-2) - open.Get(cursor-3);
+			double t0_diff		= open[cursor-0] - open[cursor-1];
+			double t1_diff		= open[cursor-1] - open[cursor-2];
+			double t2_diff		= open[cursor-2] - open[cursor-3];
 			int t0 = t0_diff > 0 ? +1 : -1;
 			int t1 = t1_diff > 0 ? +1 : -1;
 			int t2 = t2_diff > 0 ? +1 : -1;
 			if (t0 * t1 == -1 && t1 * t2 == +1) {
-				double t0_hilodiff	= high.Get(cursor-1) - low.Get(cursor-1);
+				double t0_hilodiff	= high[cursor-1] - low[cursor-1];
 				if (fabs(t0_hilodiff) >= fabs(t1_diff)) {
 					if (t0 == +1)
 						buffer.Set(cursor, REVERSALUP);
@@ -4286,9 +4291,9 @@ void VolatilityContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 }
 
 void VolatilityContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	ConstBufferImage& open = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low  = ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high = ci.GetInputBuffer(0, 2);
+	const Vector<double>& open = si.db.open;
+	const Vector<double>& low  = si.db.low;
+	const Vector<double>& high = si.db.high;
 	
 	BufferImage& buffer     = gi.GetBuffer(0);
 	
@@ -4302,7 +4307,7 @@ void VolatilityContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 	for (int cursor = begin; cursor < end; cursor++) {
 		
-		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
+		double diff = fabs(open[cursor] - open[cursor - 1]);
 		int step = (int)((diff + point * 0.5) / point);
 		median_map.GetAdd(step, 0)++;
 		
@@ -4332,7 +4337,7 @@ void VolatilityContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	}
 	
 	for (int cursor = begin; cursor < end; cursor++) {
-		double diff = fabs(open.Get(cursor) - open.Get(cursor - 1));
+		double diff = fabs(open[cursor] - open[cursor - 1]);
 		
 		int lvl = -1;
 		for(int i = 0; i < volat_divs.GetCount(); i++) {
@@ -4376,9 +4381,9 @@ void ChannelContext::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 }
 
 void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	ConstBufferImage& open		= ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low		= ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high		= ci.GetInputBuffer(0, 2);
+	const Vector<double>& open		= si.db.open;
+	const Vector<double>& low		= si.db.low;
+	const Vector<double>& high		= si.db.high;
 	
 	BufferImage& buffer			= gi.GetBuffer(0);
 	
@@ -4392,8 +4397,8 @@ void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 
 	channel.SetSize(period);
 	for(int cursor = begin; cursor < begin + period; cursor++) {
-		double l = low.Get(cursor - 1);
-		double h = high.Get(cursor - 1);
+		double l = low[cursor - 1];
+		double h = high[cursor - 1];
 		channel.Add(l, h);
 	}
 	
@@ -4401,11 +4406,11 @@ void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	channel.pos = begin-1;
 	
 	for (int cursor = begin; cursor < end; cursor++) {
-		double l = low.Get(cursor - 1);
-		double h = high.Get(cursor - 1);
+		double l = low[cursor - 1];
+		double h = high[cursor - 1];
 		channel.Add(l, h);
-		l = low.Get(channel.GetLowest());
-		h = high.Get(channel.GetHighest());
+		l = low[channel.GetLowest()];
+		h = high[channel.GetHighest()];
 		
 		double diff = h - l;
 		int step = (int)((diff + point * 0.5) / point);
@@ -4438,18 +4443,18 @@ void ChannelContext::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	channel.SetSize(period);
 	for(int i = 0; i < period; i++) {
 		int cursor = max(1, begin - i - 1);
-		double l = low.Get(cursor - 1);
-		double h = high.Get(cursor - 1);
+		double l = low[cursor - 1];
+		double h = high[cursor - 1];
 		channel.Add(l, h);
 	}
 	channel.pos = begin-1;
 	
 	for (int cursor = begin; cursor < end; cursor++) {
-		double l = low.Get(cursor - 1);
-		double h = high.Get(cursor - 1);
+		double l = low[cursor - 1];
+		double h = high[cursor - 1];
 		channel.Add(l, h);
-		l = low.Get(channel.GetLowest());
-		h = high.Get(channel.GetHighest());
+		l = low[channel.GetLowest()];
+		h = high[channel.GetHighest()];
 		
 		double diff = h - l;
 		
@@ -4518,9 +4523,9 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 	
 	
 	// Prepare maind data
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low_buf  = ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high_buf = ci.GetInputBuffer(0, 2);
+	const Vector<double>& open_buf = si.db.open;
+	const Vector<double>& low_buf  = si.db.low;
+	const Vector<double>& high_buf = si.db.high;
 	int data_count = open_buf.GetCount();
 	int begin = data_in.GetCount();
 	data_in.SetCount(data_count);
@@ -4538,7 +4543,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 		int period = 1 << (1+j);
 		VectorMap<int,int>& median_map = median_maps[j];
 		for(int cursor = max(period, begin); cursor < data_count; cursor++) {
-			double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+			double diff = fabs(open_buf[cursor] - open_buf[cursor - period]);
 			int step = (int)((diff + spread_point * 0.5) / spread_point);
 			median_map.GetAdd(step, 0)++;
 		}
@@ -4567,7 +4572,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 	for(int cursor = begin; cursor < data_count; cursor++) {
 		Snap& snap = data_in[cursor];
 		int bit_pos = 0;
-		double open1 = open_buf.Get(cursor);
+		double open1 = open_buf[cursor];
 		
 		
 		for(int k = 0; k < period_count; k++) {
@@ -4578,7 +4583,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			bool sigbuf[count];
 			int begin = Upp::max(0, cursor - 200);
 			int end = cursor + 1;
-			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf.value, begin, end, sigbuf, count);
+			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
 			bool label = sigbuf[count - 1];
 			snap.Set(bit_pos++, label);
 		
@@ -4587,14 +4592,14 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			bool bit_value;
 			int period = 1 << (1 + k);
 			double err, av_change, buf_value;
-			TrendIndex::Process(open_buf.value, cursor, period, 3, err, buf_value, av_change, bit_value);
+			TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
 			snap.Set(bit_pos++, buf_value > 0.0);
 			
 			
 			// VolatilityContext
 			int lvl = -1;
 			if (cursor >= period) {
-				double diff = fabs(open_buf.Get(cursor) - open_buf.Get(cursor - period));
+				double diff = fabs(open_buf[cursor] - open_buf[cursor - period]);
 				for(int i = 0; i < volat_divs[k].GetCount(); i++) {
 					if (diff < volat_divs[k][i]) {
 						lvl = i - 1;
@@ -4617,7 +4622,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			
 			// Momentum
 			begin = Upp::max(0, cursor - period);
-			double open2 = open_buf.Get(begin);
+			double open2 = open_buf[begin];
 			double value = open1 / open2 - 1.0;
 			label = value < 0.0;
 			snap.Set(bit_pos++, label);
@@ -4629,7 +4634,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			int len = 0;
 			if (cursor >= period * 3) {
 				for (int i = cursor-period; i >= 0; i -= period) {
-					int idir = open_buf.Get(i+period) > open_buf.Get(i) ? +1 : -1;
+					int idir = open_buf[i+period] > open_buf[i] ? +1 : -1;
 					if (dir != 0 && idir != dir) break;
 					dir = idir;
 					len++;
@@ -4642,9 +4647,9 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			dir = 0;
 			len = 0;
 			if (cursor >= period * 3) {
-				double hi = high_buf.Get(cursor-period);
+				double hi = high_buf[cursor-period];
 				for (int i = cursor-1-period; i >= 0; i -= period) {
-					int idir = hi > high_buf.Get(i) ? +1 : -1;
+					int idir = hi > high_buf[i] ? +1 : -1;
 					if (dir != 0 && idir != +1) break;
 					dir = idir;
 					len++;
@@ -4657,9 +4662,9 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			dir = 0;
 			len = 0;
 			if (cursor >= period * 3) {
-				double lo = low_buf.Get(cursor-period);
+				double lo = low_buf[cursor-period];
 				for (int i = cursor-1-period; i >= 0; i -= period) {
-					int idir = lo < low_buf.Get(i) ? +1 : -1;
+					int idir = lo < low_buf[i] ? +1 : -1;
 					if (dir != 0 && idir != +1) break;
 					dir = idir;
 					len++;
@@ -4673,9 +4678,9 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			int t1 = +1;
 			int t2 = -1;
 			if (cursor >= 4*period) {
-				double t0_diff		= open_buf.Get(cursor-0*period) - open_buf.Get(cursor-1*period);
-				double t1_diff		= open_buf.Get(cursor-1*period) - open_buf.Get(cursor-2*period);
-				double t2_diff		= open_buf.Get(cursor-2*period) - open_buf.Get(cursor-3*period);
+				double t0_diff		= open_buf[cursor-0*period] - open_buf[cursor-1*period];
+				double t1_diff		= open_buf[cursor-1*period] - open_buf[cursor-2*period];
+				double t2_diff		= open_buf[cursor-2*period] - open_buf[cursor-3*period];
 				t0 = t0_diff > 0 ? +1 : -1;
 				t1 = t1_diff > 0 ? +1 : -1;
 				t2 = t2_diff > 0 ? +1 : -1;
@@ -4704,9 +4709,9 @@ void Obviousness::RefreshInitialOutput(SourceImage& si, ChartImage& ci, GraphIma
 	
 	
 	// Prepare maind data
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& low_buf  = ci.GetInputBuffer(0, 1);
-	ConstBufferImage& high_buf = ci.GetInputBuffer(0, 2);
+	const Vector<double>& open_buf = si.db.open;
+	const Vector<double>& low_buf  = si.db.low;
+	const Vector<double>& high_buf = si.db.high;
 	int data_count = open_buf.GetCount();
 	int begin = data_out.GetCount();
 	data_out.SetCount(data_count);
@@ -4716,14 +4721,14 @@ void Obviousness::RefreshInitialOutput(SourceImage& si, ChartImage& ci, GraphIma
 	if (begin != 0) return;
 	
 	for(int i = ci.GetBegin(); i < data_count; i++) {
-		double open = open_buf.Get(i);
+		double open = open_buf[i];
 		double close = open;
 		int j = i + 1;
 		bool can_break = false;
 		bool break_label;
 		double prev = open;
 		for(; j < data_count; j++) {
-			close = open_buf.Get(j);
+			close = open_buf[j];
 			if (!can_break) {
 				double abs_diff = fabs(close - open);
 				if (abs_diff >= cost) {
@@ -4762,13 +4767,13 @@ void Obviousness::RefreshInitialOutput(SourceImage& si, ChartImage& ci, GraphIma
 			o.stop = i;
 			o.len = o.stop - o.start;
 			
-			double open = open_buf.Get(o.start);
-			double close = open_buf.Get(o.stop);
+			double open = open_buf[o.start];
+			double close = open_buf[o.stop];
 			o.av_change = fabs(close - open) / len;
 			
 			double err = 0;
 			for(int k = o.start; k < o.stop; k++) {
-				double diff = open_buf.Get(k+1) - open_buf.Get(k);
+				double diff = open_buf[k+1] - open_buf[k];
 				err += fabs(diff);
 			}
 			o.err = err / len;
@@ -5006,8 +5011,8 @@ void VolatilityContextReversal::Start(SourceImage& si, ChartImage& ci, GraphImag
 	int begin = ci.GetBegin();
 	int end = ci.GetEnd();
 	
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0, 0);
-	ConstBufferImage& volat_ctx = ci.GetInputBuffer(1, 0);
+	const Vector<double>& open_buf = si.db.open;
+	ConstBufferImage& volat_ctx = ci.GetInputBuffer(0, 0);
 	
 	
 	for(int i = begin; i < end; i++) {
@@ -5015,10 +5020,10 @@ void VolatilityContextReversal::Start(SourceImage& si, ChartImage& ci, GraphImag
 		bool is_peak = d > 0.99;
 		
 		if (is_peak) {
-			double open = open_buf.Get(i);
+			double open = open_buf[i];
 			int true_count = 0;
 			for(int j = max(0, i-11); j < i; j++) {
-				double o = open_buf.Get(j);
+				double o = open_buf[j];
 				if (o > open) true_count++;
 			}
 			gi.SetBoolean(i, 0, true_count >= 6);
@@ -5071,7 +5076,7 @@ void ObviousTargetValue::RefreshTargetValues(SourceImage& si, ChartImage& ci, Gr
 	int begin = ci.GetBegin();
 	int end = ci.GetEnd();
 	
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0,0);
+	const Vector<double>& open_buf = si.db.open;
 	BufferImage& dst = gi.GetBuffer(1);
 	
 	bool prev_value = outbuf->Get(end-1);
@@ -5320,7 +5325,7 @@ void ObviousAdvisor::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 void ObviousAdvisor::RefreshIOStats() {
 	int begin = ci.GetBegin();
 	int end = ci.GetEnd();
-	ConstBufferImage& open_buf = ci.GetInputBuffer(0,0);
+	const Vector<double>& open_buf = si.db.open;
 	
 	end -= 1 + TEST_SIZE;
 	

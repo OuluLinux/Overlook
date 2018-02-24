@@ -35,8 +35,7 @@ public:
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(3, 2, 0)
+		reg	.Out(3, 2, 1)
 			.Mem(change_av);
 	}
 	
@@ -61,8 +60,7 @@ public:
 	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 3)
+		reg	.Out(1, 1, 3)
 			.Arg(ma_period, 2)
 			.Arg(ma_shift, -10000)
 			.Arg(ma_method, 0, 3);
@@ -83,8 +81,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 12)
+		reg	.In(FACTORY_MovingAverage, 12)
 			.In(FACTORY_MovingAverage, 26)
 			.Out(2, 2, 4)
 			.Arg(fast_ema_period, 2, 127)
@@ -104,8 +101,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(6, 3, 2)
+		reg	.Out(6, 3, 2)
 			.Arg(period_adx, 2, 127);
 	}
 };
@@ -128,8 +124,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(4, 3, 4)
+		reg	.Out(4, 3, 4)
 			.Arg(bands_period, 2, 127)
 			.Arg(bands_shift, 0, 0)
 			.Arg(deviation, 2, 127);
@@ -148,8 +143,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 14, 0, MODE_SMA)
+		reg	.In(FACTORY_MovingAverage, 14, 0, MODE_SMA)
 			.Out(3, 2, 0)
 			.Arg(dev, 2, 127);
 	}
@@ -174,8 +168,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(3, 1, 1)
+		reg	.Out(3, 1, 1)
 			.Arg(step, 2, 127)
 			.Arg(maximum, 2, 127)
 			.Mem(last_rev_pos)
@@ -196,8 +189,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 20, 0, 0)
+		reg	.In(FACTORY_MovingAverage, 20, 0, 0)
 			.Out(1, 1, 1)
 			.Arg(period, 2, 127)
 			.Arg(ma_method, 0, 3);
@@ -216,8 +208,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(2, 1, 1)
+		reg	.Out(2, 1, 1)
 			.Arg(period, 2, 127);
 	}
 };
@@ -234,8 +225,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 13, 0, 0)
+		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
 			.Out(1, 1, 2)
 			.Arg(period, 2, 127);
 	}
@@ -253,8 +243,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 13, 0, 0)
+		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
 			.Out(1, 1, 2)
 			.Arg(period, 2, 127);
 	}
@@ -272,8 +261,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(3, 1, 4)
+		reg	.Out(3, 1, 4)
 			.Arg(period, 2, 127);
 	}
 };
@@ -290,8 +278,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(3, 1, 4)
+		reg	.Out(3, 1, 4)
 			.Arg(period, 2, 127);
 	}
 };
@@ -309,8 +296,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 13, 0, 0)
+		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
 			.Out(1, 1, 2)
 			.Arg(period, 2, 127)
 			.Arg(ma_method, 0, 3);
@@ -329,8 +315,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(2, 2, 2)
+		reg	.Out(2, 2, 2)
 			.Arg(period, 2)
 			.Arg(shift, -10000);
 	}
@@ -353,8 +338,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 12) // fast
+		reg	.In(FACTORY_MovingAverage, 12) // fast
 			.In(FACTORY_MovingAverage, 26) // slow
 			.Out(4, 2, 0)
 			.Arg(fast_ema_period, 2)
@@ -396,8 +380,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(4, 4, 2)
+		reg	.Out(4, 4, 2)
 			.Arg(period, 2);
 	}
 };
@@ -414,8 +397,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(2, 2, 2)
+		reg	.Out(2, 2, 2)
 			.Arg(period, 2, 127);
 	}
 };
@@ -434,8 +416,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(4, 2, 3)
+		reg	.Out(4, 2, 3)
 			.Arg(k_period, 2)
 			.Arg(d_period, 2)
 			.Arg(slowing, 2);
@@ -456,8 +437,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(2, 2, 0)
+		reg	.Out(2, 2, 0)
 			.Arg(period, 2);
 	}
 };
@@ -472,8 +452,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0);
+		reg	.Out(1, 1, 0);
 	}
 };
 
@@ -487,8 +466,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg	.Out(1, 1, 0)
 			.Arg(period, 2, 127);
 	}
 };
@@ -503,8 +481,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg	.Out(1, 1, 0)
 			.Arg(applied_value, 0, 0);
 	}
 };
@@ -519,8 +496,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg	.Out(1, 1, 0)
 			.Arg(applied_value, 0, 0);
 	}
 };
@@ -535,8 +511,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0);
+		reg	.Out(1, 1, 0);
 	}
 };
 
@@ -551,8 +526,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
+		reg	.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
 			.In(FACTORY_MovingAverage, 34, 0, MODE_SMA)
 			.Out(5, 3, 2);
 	}
@@ -572,8 +546,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
+		reg	.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
 			.In(FACTORY_MovingAverage, 34, 0, MODE_SMA)
 			.Out(3, 3, 2);
 	}
@@ -594,8 +567,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(6, 6, 0)
+		reg	.Out(6, 6, 0)
 			.Arg(left_bars, 2, 20)
 			.Arg(right_bars, 0, 0);
 	}
@@ -614,8 +586,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_Fractals, 3, 0)
+		reg	.In(FACTORY_Fractals, 3, 0)
 			.Out(2, 2, 0)
 			.Arg(smoothing_period, 2, 127);
 	}
@@ -631,8 +602,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(5, 4, 0);
+		reg	.Out(5, 4, 0);
 	}
 };
 
@@ -650,8 +620,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(4, 2, 1)
+		reg	.Out(4, 2, 1)
 			.Arg(input_depth, 1)
 			.Arg(input_depth, 1)
 			.Arg(input_backstep, 1)
@@ -671,8 +640,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg	.Out(1, 1, 0)
 			.In(FACTORY_ZigZag, 12, 5, 3)
 			.Arg(depth, 2, 16)
 			.Arg(deviation, 2, 16)
@@ -692,8 +660,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(4, 4, 0);
+		reg	.Out(4, 4, 0);
 	}
 };
 
@@ -709,8 +676,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0);
+		reg	.Out(1, 1, 0);
 	}
 };
 
@@ -727,8 +693,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(2, 2, 0)
+		reg	.Out(2, 2, 0)
 			.Arg(period, 300, 300)
 			.Arg(max_crosses, 100, 100)
 			.Arg(max_radius, 100, 100);
@@ -746,8 +711,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_SupportResistance) // Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
+		reg	.In(FACTORY_SupportResistance) // Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
 			.Out(2, 2, 0)
 			.Arg(period, 2, 127)
 			.Arg(max_crosses, 300, 300)
@@ -769,8 +733,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 2)
+		reg	.Out(1, 1, 2)
 			.Arg(period, 2)
 			.Mem(ec);
 	}
@@ -789,8 +752,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 2)
+		reg	.Out(1, 1, 2)
 			.Arg(period, 2)
 			.Mem(ec);
 	}
@@ -807,8 +769,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 2)
+		reg	.Out(1, 1, 2)
 			.Arg(period, 2, 127);
 	}
 };
@@ -846,8 +807,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, period, 0)
+		reg	.In(FACTORY_MovingAverage, period, 0)
 			.Out(1, 1, 0);
 	}
 };
@@ -867,8 +827,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MovingAverage, period, 0)
+		reg	.In(FACTORY_MovingAverage, period, 0)
 			.In(FACTORY_MovingAverage, 54, 0, -27)
 			.Out(3, 1, 0);
 	}
@@ -905,8 +864,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 2)
+		reg	.Out(1, 1, 2)
 			.Mem(means)
 			.Mem(counts);
 	}
@@ -927,8 +885,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 2)
+		reg	.Out(1, 1, 2)
 			.Arg(period, 2)
 			.Mem(stats);
 	}
@@ -945,8 +902,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 1)
+		reg	.Out(1, 1, 1)
 			.Arg(cost_level, 0);
 	}
 };
@@ -969,8 +925,7 @@ public:
 	
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 4)
+		reg	.Out(1, 1, 4)
 			.Mem(stats)
 			.Mem(total);
 	}
@@ -995,8 +950,7 @@ public:
 	
 		
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 4)
+		reg	.Out(1, 1, 4)
 			.Mem(stats)
 			.Mem(total);
 	}
@@ -1015,8 +969,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(3, 3, 1)
+		reg	.Out(3, 3, 1)
 			.Arg(period, 2)
 			.Arg(err_div, 0);
 	}
@@ -1036,8 +989,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 1)
+		reg	.Out(1, 1, 1)
 			.Mem(prev_counted)
 			.Arg(cost_level, 0);
 	}
@@ -1057,8 +1009,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg	.Out(1, 1, 0)
 			.Arg(length, 1);
 	}
 	
@@ -1078,8 +1029,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 0)
+		reg .Out(1, 1, 0)
 			.Arg(div, 1)
 			.Mem(median_map);
 	}
@@ -1103,8 +1053,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1, 1)
+		reg .Out(1, 1, 1)
 			.Arg(period, 1)
 			.Arg(div, 1)
 			.Arg(useable_div, 1)
@@ -1189,8 +1138,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(buffer_count, buffer_count, 2)
+		reg .Out(buffer_count, buffer_count, 2)
 			.Mem(data_in)
 			.Mem(data_out)
 			.Mem(av_wins)
@@ -1214,8 +1162,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_VolatilityContext)
+		reg .In(FACTORY_VolatilityContext)
 			.Out(1, 1, 1);
 	}
 	
@@ -1257,8 +1204,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_TrendIndex)
+		reg .In(FACTORY_TrendIndex)
 			.In(FACTORY_Obviousness)
 			.In(FACTORY_OnlineMinimalLabel)
 			.In(FACTORY_VolatilityContextReversal)
@@ -1284,8 +1230,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_MinimalLabel, 10)
+		reg .In(FACTORY_MinimalLabel, 10)
 			.In(FACTORY_VolatilityContextReversal)
 			.In(FACTORY_Obviousness)
 			.In(FACTORY_ObviousTargetValue)
@@ -1341,8 +1286,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.In(FACTORY_BasicSignal)
+		reg .In(FACTORY_BasicSignal)
 			.In(FACTORY_Obviousness)
 			.Out(1, 1)
 			.Mem(begins)
@@ -1383,8 +1327,7 @@ public:
 	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
 	void Conf(ValueRegister& reg) {
-		reg .In(FACTORY_DataSource)
-			.Out(1, 1)
+		reg .Out(1, 1)
 			.Mem(training_pts)
 			.Mem(prev_counted);
 	}

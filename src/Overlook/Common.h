@@ -679,6 +679,7 @@ struct BufferImage : Moveable<BufferImage> {
 	bool IsEmpty() const {return value.IsEmpty();}
 	void Set(int i, double d) {value[i - data_begin] = d;}
 	double Get(int i) const {return value[i - data_begin];}
+	double operator[](int i) const {return value[i - data_begin];}
 	int GetEnd() const {return data_begin + value.GetCount();}
 };
 

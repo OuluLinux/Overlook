@@ -136,6 +136,7 @@ System::~System() {
 }
 
 void System::Init() {
+	LoadThis();
 	
 	MetaTrader& mt = GetMetaTrader();
 	try {

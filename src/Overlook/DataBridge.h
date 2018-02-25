@@ -64,9 +64,6 @@ protected:
 	friend class System;
 	
 	VectorMap<int,int> median_max_map, median_min_map;
-	VectorMap<int,int> symbols;
-	Vector<Vector<byte> > ext_data;
-	Vector<Vector<int> > sym_group_stats, sym_groups;
 	double point = 0.01;
 	double spread_mean;
 	int spread_count;
@@ -97,25 +94,19 @@ public:
 	
 	Vector<double> open, low, high, volume;
 	Vector<int> time;
+	void Serialize(Stream& s) {
+		s % median_max_map % median_min_map
+		  % point
+		  % spread_mean
+		  % spread_count
+		  % median_max % median_min
+		  % max_value % min_value
+		  % cursor % cursor2
+		  % sym_id % tf_id % period
+		  % counted % once
+		  % open % low % high % volume % time;
+	}
 	
-	/*void IO(ValueRegister& reg) {
-		reg % In<DataBridge>(&FilterFunction)
-			% Out(5, 5)
-			% Mem(open)
-			% Mem(low)
-			% Mem(high)
-			% Mem(volume)
-			% Mem(time)
-			% Mem(point)
-			% Mem(spread_mean) % Mem(spread_count)
-			% Mem(cursor) % Mem(cursor2)
-			% Mem(median_max_map) % Mem(median_min_map)
-			% Mem(symbols)
-			% Mem(ext_data)
-			% Mem(sym_group_stats) % Mem(sym_groups)
-			% Mem(median_max) % Mem(median_min)
-			% Mem(max_value) % Mem(min_value);
-	}*/
 	
 	void Init();
 	void Start();

@@ -893,7 +893,7 @@ public:
 
 
 class MinimalLabel {
-	int cost_level = 0;
+	int cost_level = 10;
 	
 public:
 	MinimalLabel();
@@ -980,7 +980,7 @@ public:
 
 class OnlineMinimalLabel {
 	int prev_counted = 0;
-	int cost_level = 0;
+	int cost_level = 10;
 	
 public:
 	OnlineMinimalLabel();

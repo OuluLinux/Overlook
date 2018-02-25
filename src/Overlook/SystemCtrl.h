@@ -6,9 +6,19 @@ namespace Overlook {
 using namespace Upp;
 
 
+struct BooleansDraw : public Ctrl {
+	virtual void Paint(Draw& w);
+	
+	int cursor = 0;
+};
+
 class SystemCtrl : public ParentCtrl {
 	ProgressIndicator prog;
-	Button load_sources, load_booleans;
+	BooleansDraw bools;
+	ArrayCtrl stats;
+	Splitter hsplit;
+	SliderCtrl slider;
+	Button load_sources, load_booleans, load_stats;
 	bool running = false, stopped = true;
 	
 	void LoadSources();
@@ -19,11 +29,18 @@ public:
 	SystemCtrl();
 	~SystemCtrl() {Stop();}
 	
+	void Data();
 	void StartLoadSources() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadSources));}
 	void StartLoadBooleans() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadBooleans));}
+	void StartLoadStats() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadStats));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	void SetProg(int a, int t) {prog.Set(a, t);}
 	
+	
+	// NOTE: update SnapStatVector or make macros
+	static const int period_count = 6;
+	static const int volat_div = 6;
+	static const int row_size = period_count * (9 + volat_div);
 };
 
 

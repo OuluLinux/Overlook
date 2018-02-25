@@ -14,6 +14,7 @@ using namespace Upp;
 struct SourceImage {
 	DataBridge db;
 	
+	void Serialize(Stream& s) {s % db;}
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
 	double High(int shift) {return db.high[shift];}
@@ -44,10 +45,22 @@ public:
 };
 
 struct Snap : Moveable<Snap> {
+	uint64 data[4];
 	
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(Snap)); else s.Put(this, sizeof(Snap));}
+	void Set(int i, bool value) {int j = i/64; i=i%64;if (value) data[j] |= 1 << i; else data[j] &= ~(1 << i);}
+	bool Get(int i) const {int j = i/64; i=i%64; return data[j] & (1 << i);}
+};
+
+struct SnapStats : Moveable<SnapStats> {
+	int actual = 0, total = 0;
+};
+
+struct SnapStatVector : Moveable<SnapStatVector> {
+	SnapStats data[8100][4];
+	int cursor = 100;
 	
-	void Set(int i, bool value) {}
-	
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(SnapStatVector)); else s.Put(this, sizeof(SnapStatVector));}
 };
 
 void RunFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
@@ -62,6 +75,7 @@ class System {
 protected:
 	
 	friend class DataBridgeCommon;
+	friend class BooleansDraw;
 	friend class SystemCtrl;
 	friend class DataBridge;
 	friend class SimBroker;
@@ -71,7 +85,9 @@ protected:
 	
 	// Persistent
 	Array<Array<SourceImage> >	data;
-	Vector<Vector<Snap> >			main_booleans;
+	Vector<Vector<Snap> >		main_booleans;
+	Vector<VectorBool>			main_signal;
+	Vector<SnapStatVector>		main_stats;
 	
 	
 	// Temporary
@@ -86,6 +102,10 @@ protected:
 	
 	
 public:
+	
+	void	Serialize(Stream& s) {s % data % main_booleans % main_signal % main_stats;}
+	void	StoreThis() {StoreToFile(*this, ConfigFile("system.bin"));}
+	void	LoadThis() {LoadFromFile(*this, ConfigFile("system.bin"));}
 	
 	void	AddPeriod(String nice_str, int period);
 	void	AddSymbol(String sym);

@@ -528,7 +528,7 @@ void Overlook::RefreshSetBoolean() {
 }
 
 void Overlook::RefreshSystem() {
-	
+	sysctrl.Data();
 }
 
 void Overlook::RefreshCalendar() {

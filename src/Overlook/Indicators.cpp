@@ -720,8 +720,8 @@ void BollingerBands::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 			double bot = gi.GetBuffer(2).Get(i);
 			
 			bool a = open < ma;
-			bool b = high >= top;
-			bool c = low <= bot;
+			bool b = open >= top || high >= top;
+			bool c = open <= bot || low  <= bot;
 			gi.SetBoolean(i, 0, a);
 			gi.SetBoolean(i, 1, a ? c : b);
 			gi.SetBoolean(i, 2, b);
@@ -4058,7 +4058,7 @@ OnlineMinimalLabel::OnlineMinimalLabel() {
 }
 
 void OnlineMinimalLabel::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
-	gi.SetCoreChartWindow();
+	gi.SetCoreSeparateWindow();
 }
 
 void OnlineMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {

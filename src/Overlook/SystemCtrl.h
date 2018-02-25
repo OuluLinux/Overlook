@@ -29,10 +29,12 @@ public:
 	SystemCtrl();
 	~SystemCtrl() {Stop();}
 	
+	void Enable() {load_sources.Enable(); load_booleans.Enable(); load_stats.Enable();}
+	void Disable() {load_sources.Disable(); load_booleans.Disable(); load_stats.Disable();}
 	void Data();
-	void StartLoadSources() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadSources));}
-	void StartLoadBooleans() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadBooleans));}
-	void StartLoadStats() {Stop(); running = true; stopped = false; Thread::Start(THISBACK(LoadStats));}
+	void StartLoadSources() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadSources));}
+	void StartLoadBooleans() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadBooleans));}
+	void StartLoadStats() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadStats));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	void SetProg(int a, int t) {prog.Set(a, t);}
 	

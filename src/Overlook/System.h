@@ -57,7 +57,7 @@ struct SnapStats : Moveable<SnapStats> {
 };
 
 struct SnapStatVector : Moveable<SnapStatVector> {
-	SnapStats data[8100][4];
+	SnapStats data[90][2];
 	int cursor = 100;
 	
 	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(SnapStatVector)); else s.Put(this, sizeof(SnapStatVector));}

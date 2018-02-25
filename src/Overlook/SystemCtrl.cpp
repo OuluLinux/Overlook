@@ -90,14 +90,11 @@ void SystemCtrl::Data() {
 		
 		
 		int id = 0, row = 0;
-		for (int i = 0; i < row_size * row_size; i++) {
-			int r0 = i / row_size;
-			int r1 = i % row_size;
-			
+		for (int i = 0; i < row_size; i++) {
 			String key;
-			key << r0 << " " << r1 << " ";
+			key << i << " ";
 			
-			for(int i = 0; i < 4; i++) {
+			for(int i = 0; i < 2; i++) {
 				SnapStats& ss = stat_in.data[id][i];
 				
 				stats.Set(row, 0, key + IntStr(i));
@@ -136,6 +133,7 @@ void SystemCtrl::LoadSources() {
 	PostCallback(THISBACK2(SetProg, 0, 1));
 	running = false;
 	stopped = true;
+	Enable();
 }
 
 void SystemCtrl::LoadBooleans() {
@@ -156,7 +154,8 @@ void SystemCtrl::LoadBooleans() {
 		
 		// Get reference values
 		System& sys = GetSystem();
-		double spread_point				= ci.GetPoint();
+		double spread_point				= si.db.GetPoint();
+		ASSERT(spread_point != 0.0);
 		Vector<Snap>& data_in			= sys.main_booleans[sym];
 		VectorBool& main_in				= sys.main_signal[sym];
 		const Vector<double>& open_buf	= si.db.open;
@@ -227,9 +226,15 @@ void SystemCtrl::LoadBooleans() {
 					volat_divs[j].Add(median_map.TopKey() * spread_point);
 			}
 			
+			DUMPCC(volat_divs);
+			
 			
 			// Run main data filler
 			for(int cursor = begin; cursor < end; cursor++) {
+				#ifdef flagDEBUG
+				if (cursor == 100000) break;
+				#endif
+				
 				Snap& snap = data_in[cursor];
 				int bit_pos = 0;
 				double open1 = open_buf[cursor];
@@ -238,7 +243,7 @@ void SystemCtrl::LoadBooleans() {
 				for(int k = 0; k < period_count; k++) {
 					
 					// OnlineMinimalLabel
-					double cost	 = spread_point * (1 + k*2);
+					double cost	 = spread_point * (1 + k);
 					const int count = 1;
 					bool sigbuf[count];
 					int begin = Upp::max(0, cursor - 200);
@@ -246,6 +251,9 @@ void SystemCtrl::LoadBooleans() {
 					OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
 					bool label = sigbuf[count - 1];
 					snap.Set(bit_pos++, label);
+					if (label) {
+						LOG(cursor);
+					}
 				
 					
 					// TrendIndex
@@ -367,13 +375,14 @@ void SystemCtrl::LoadBooleans() {
 	PostCallback(THISBACK2(SetProg, 0, 1));
 	running = false;
 	stopped = true;
+	Enable();
 }
 
 void SystemCtrl::LoadStats() {
 	System& sys = GetSystem();
 	ChartImage image;
 	
-	if (sys.main_signal.IsEmpty()) {running = false; stopped = true; return;}
+	if (sys.main_signal.IsEmpty()) {Enable(); running = false; stopped = true; return;}
 	sys.main_stats.SetCount(sys.GetSymbolCount());
 	
 	int sym = 0;
@@ -391,18 +400,16 @@ void SystemCtrl::LoadStats() {
 		
 		
 		for(; stat_in.cursor < bars; stat_in.cursor++) {
+			#ifdef flagDEBUG
+			if (stat_in.cursor == 100000) break;
+			#endif
 			
 			bool signal = main_in.Get(stat_in.cursor);
 			Snap& snap = data_in[stat_in.cursor];
 			
 			int id = 0;
-			for (int i = 0; i < row_size * row_size; i++) {
-				int r0 = i / row_size;
-				int r1 = i % row_size;
-				bool b0 = snap.Get(r0);
-				bool b1 = snap.Get(r1);
-				
-				int value = (b0 << 0) | (b1 << 1);
+			for (int i = 0; i < row_size; i++) {
+				int value = snap.Get(i);
 				
 				SnapStats& ss = stat_in.data[id][value];
 				ss.total++;
@@ -422,6 +429,7 @@ void SystemCtrl::LoadStats() {
 	PostCallback(THISBACK2(SetProg, 0, 1));
 	running = false;
 	stopped = true;
+	Enable();
 }
 
 }

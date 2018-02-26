@@ -4412,4 +4412,14 @@ that machine: stream of consciousness.&]
 [s0; &]
 [s0; Had to do a lot of routine coding today. Old code didn`'t work 
 out too easily with the new lightweight system.&]
+[s0; &]
+[s0; &]
+[s3; 26.2.2018&]
+[s0; Whew, a lot of programming again. What did I wrote? Let`'s see...&]
+[s0; There is now a `"strand`" code, which optimizes result by bit 
+combination. It gets positive results in testing, but some difficult 
+realtime problems are possible. The Overlook is now again in 
+operating mode, but everything is under the hood and it should 
+be visualized better. I don`'t follow the `"view`" part from 
+model,view,controller method closely.&]
 [s0; ]]

@@ -35,6 +35,7 @@ public:
 	Chart();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
+	void RefreshImage();
 	void Clear();
 	GraphCtrl& AddGraph(GraphImage& gi);
 	void SetGraph();

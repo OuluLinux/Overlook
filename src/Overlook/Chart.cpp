@@ -25,6 +25,18 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 
 void Chart::RefreshCore() {
 	System& sys = GetSystem();
+	
+	RefreshImage();
+	
+	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
+	Title(title);
+	
+	SetGraph();
+	Data();
+}
+
+void Chart::RefreshImage() {
+	System& sys = GetSystem();
 	SourceImage& si = sys.GetSource(symbol, tf);
 	si.db.Start();
 	int bars = si.db.open.GetCount();
@@ -42,23 +54,12 @@ void Chart::RefreshCore() {
 	
 	
 	ImageCompiler comp;
-	
 	comp.SetMain(decl);
-	
 	comp.Compile(si, image);
-	
-	
-	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
-	Title(title);
-	
-	SetGraph();
-	Data();
 }
 
 void Chart::RefreshCoreData(bool store_cache) {
-	/*System& sys = GetSystem();
-	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], store_cache);*/
+	RefreshImage();
 }
 
 void Chart::ContextMenu(Bar& bar) {

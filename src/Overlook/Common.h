@@ -108,6 +108,7 @@ FITEM(TrendIndex) \
 FITEM(OnlineMinimalLabel) \
 FITEM(ReactionContext) \
 FITEM(VolatilityContext) \
+FITEM(SystemBooleanView) \
 FITEM(ChannelContext) /*\
 FITEM(Obviousness) \
 FITEM(VolatilityContextReversal) \
@@ -127,6 +128,8 @@ inline String GetFactoryName(int id) {
 	return "Unknown";
 }
 
+#define SNAP_BITS (6*(13+6)+2)
+
 // Visual setting enumerators
 enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};
 enum {WINDOW_CHART, WINDOW_SEPARATE};
@@ -141,6 +144,7 @@ class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	
 public:
 	OnlineAverageWindow1() {}
+	void Clear() {cursor = 0; sum_a = 0.0; for(int i = 0; i < win_a.GetCount(); i++) win_a[i] = 0.0;}
 	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
 	void Add(double a) {
 		double& da = win_a[cursor];
@@ -945,7 +949,7 @@ inline int PopCount64(uint64 i) {
 
 // Reduce complexity: e.g. for zigzag
 
-struct ExtremumCache {
+struct ExtremumCache : Moveable<ExtremumCache> {
 	Vector<double> max, min;
 	double max_value = -DBL_MAX, min_value = DBL_MAX;
 	int pos = -1, size = 0, max_left = 0, min_left = 0;

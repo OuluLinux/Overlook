@@ -173,11 +173,14 @@ public:
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}
+	SystemCtrl& GetSystemCtrl() {return sysctrl;}
 	
 	// Public vars
 	Callback WhenExit;
 	
 };
+
+inline Overlook& GetOverlook() {static One<Overlook> o; if (o.IsEmpty()) o = new Overlook(); return *o;}
 
 }
 

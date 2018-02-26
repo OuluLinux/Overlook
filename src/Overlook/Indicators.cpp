@@ -31,57 +31,6 @@ void ConfFactory(ConstFactoryDeclaration& id, ValueRegister& reg) {
 
 
 template <class T>
-double SimpleMA ( const int position, const int period, const T& value ) {
-	double result = 0.0;
-	if ( position >= period && period > 0 ) {
-		for ( int i = 0; i < period; i++)
-			result += value[ position - i ];
-		result /= period;
-	}
-	return ( result );
-}
-
-template <class T>
-double ExponentialMA ( const int position, const int period, const double prev_value, const T& value ) {
-	double result = 0.0;
-	if ( period > 0 ) {
-		double pr = 2.0 / ( period + 1.0 );
-		result = value[ position ] * pr + prev_value * ( 1 - pr );
-	}
-	return ( result );
-}
-
-template <class T>
-double SmoothedMA ( const int position, const int period, const double prev_value, const T& value ) {
-	double result = 0.0;
-	if ( period > 0 ) {
-		if ( position == period - 1 ) {
-			for ( int i = 0;i < period;i++ )
-				result += value[ position - i ];
-
-			result /= period;
-		}
-		if ( position >= period )
-			result = ( prev_value * ( period - 1 ) + value[ position ] ) / period;
-	}
-	return ( result );
-}
-
-template <class T>
-double LinearWeightedMA ( const int position, const int period, const T& value ) {
-	double result = 0.0, sum = 0.0;
-	int    i, wsum = 0;
-	if ( position >= period - 1 && period > 0 ) {
-		for ( i = period;i > 0;i-- ) {
-			wsum += i;
-			sum += value[ position - i + 1 ] * ( period - i + 1 );
-		}
-		result = sum / wsum;
-	}
-	return ( result );
-}
-
-template <class T>
 int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin,
 		const int period, const T& value, T& buffer ) {
 	int i, limit;
@@ -699,7 +648,6 @@ void BollingerBands::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		double tmp = 0.0;
 	
 		if ( i >= bands_period) {
-			int end = ci.GetEnd();
 			for (int j = 0; j < bands_period; j++) {
 				double value =  si.Open(i - j );
 				tmp += pow ( value - ml_buffer.Get( i ), 2 );
@@ -5037,6 +4985,99 @@ void VolatilityContextReversal::Start(SourceImage& si, ChartImage& ci, GraphImag
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SystemBooleanView::SystemBooleanView() {
+	
+}
+
+void SystemBooleanView::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	gi.SetCoreSeparateWindow();
+	gi.SetBufferColor(0, Color(56, 85, 255));
+	gi.SetBufferColor(1, Color(226, 170, 150));
+}
+
+void SystemBooleanView::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
+	System& sys = GetSystem();
+	int begin = ci.GetBegin();
+	int end = ci.GetEnd();
+	
+	begin += ma_period;
+	
+	auto& stat_in = si.main_stats;
+	Vector<Snap>& data_in = si.main_booleans;
+	
+	si.LoadAll();
+	
+	if (si.main_booleans.IsEmpty()) return;
+	if (end > data_in.GetCount()) return;
+	
+	const VectorBool& ch_ctx_vec = ci.GetInputBoolean(0, 0);
+	const VectorBool& bb_sig_vec = ci.GetInputBoolean(1, 0);
+	const VectorBool& bb_ena_vec = ci.GetInputBoolean(1, 1);
+	const VectorBool& om_sig_vec = ci.GetInputBoolean(2, 0);
+	
+	for(int i = begin; i < end; i++) {
+		Snap& snap = data_in[i];
+		
+		int idxsum = 0, trueidxsum = 0;
+		for(int j = 0; j < SNAP_BITS; j++) {
+			bool value = snap.Get(j);
+			SnapStats& ss = stat_in.data[j][(int)value];
+			if (!ss.total) continue;
+			int idx = abs(ss.actual * 200 / ss.total - 100);
+			if (idx < 10) continue;
+			idxsum += idx;
+			if (ss.actual >= ss.total / 2)
+				trueidxsum += idx;
+		}
+		
+		double d = idxsum > 0 ? (double)trueidxsum / (double)idxsum * -2.0 + 1.0 : 0.0;
+		gi.GetBuffer(0).Set(i, d);
+		
+		double ema = ExponentialMA(i, ma_period, gi.GetBuffer(1).Get(i - 1),  gi.GetBuffer(0) );
+		gi.GetBuffer(1).Set(i, ema);
+		bool ema_enable = d > 0 ? ema > 0.5 : ema < -0.5;
+		
+		bool a = d < 0.0;
+		bool ch_sig = ch_ctx_vec.Get(i);
+		bool bb_sig = bb_sig_vec.Get(i);
+		bool bb_ena = bb_ena_vec.Get(i);
+		bool om_sig = om_sig_vec.Get(i);
+		
+		bool b = bb_ena && a == ch_sig && a == bb_sig && a == om_sig && ema_enable;
+		gi.SetBoolean(i, 2, a);
+		gi.SetBoolean(i, 3, b);
+		
+		// average
+		const int period = 3;
+		int sig_sum = 0, ena_sum = 0;
+		for(int j = 0; j < period; j++) {
+			int pos = max(begin, i - j);
+			sig_sum += gi.GetBoolean(pos, 2);
+			ena_sum += gi.GetBoolean(pos, 3);
+		}
+		gi.SetBoolean(i, 0, sig_sum > (period / 2));
+		gi.SetBoolean(i, 1, ena_sum > (period / 2));
+		
+		
+	}
+}
+
+
 #if 0
 
 ObviousTargetValue::ObviousTargetValue() {
@@ -5269,14 +5310,7 @@ void BasicSignal::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	}
 	
 	
-	/*{
-		int sig = 0;
-		bool signal = gi.GetSignal().Get(end-1);
-		bool enabled = gi.GetEnabled().Get(end-1);
-		if (enabled)
-			sig = signal ? -1.0 : +1.0;
-		GetSystem().SetSignal(ci.GetSymbol(), sig);
-	}*/
+	/**/
 }
 
 

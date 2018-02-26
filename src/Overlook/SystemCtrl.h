@@ -15,34 +15,26 @@ struct BooleansDraw : public Ctrl {
 class SystemCtrl : public ParentCtrl {
 	ProgressIndicator prog;
 	BooleansDraw bools;
-	ArrayCtrl stats;
+	ArrayCtrl stats, strands;
 	Splitter hsplit;
 	SliderCtrl slider;
-	Button load_sources, load_booleans, load_stats;
+	Button  load_all;
 	bool running = false, stopped = true;
 	
-	void LoadSources();
-	void LoadBooleans();
-	void LoadStats();
 public:
 	typedef SystemCtrl CLASSNAME;
 	SystemCtrl();
 	~SystemCtrl() {Stop();}
 	
-	void Enable() {load_sources.Enable(); load_booleans.Enable(); load_stats.Enable();}
-	void Disable() {load_sources.Disable(); load_booleans.Disable(); load_stats.Disable();}
+	void Enable() {load_all.Enable();}
+	void Disable() {load_all.Disable();}
 	void Data();
-	void StartLoadSources() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadSources));}
-	void StartLoadBooleans() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadBooleans));}
-	void StartLoadStats() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadStats));}
+	void StartLoadAll() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadAll));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	void SetProg(int a, int t) {prog.Set(a, t);}
+	void LoadAll();
 	
 	
-	// NOTE: update SnapStatVector or make macros
-	static const int period_count = 6;
-	static const int volat_div = 6;
-	static const int row_size = period_count * (9 + volat_div);
 };
 
 

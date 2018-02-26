@@ -11,8 +11,8 @@ uses
 	Core/SSL;
 
 file
-	Journal.qtf,
 	Copying,
+	Journal.qtf,
 	app.tpp,
 	main.cpp,
 	Overlook.rc,
@@ -40,6 +40,7 @@ file
 	Common.cpp,
 	System.h,
 	System.cpp,
+	SourceImage.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,
@@ -59,9 +60,5 @@ file
 
 mainconfig
 	"Working" = "GUI MT X11",
-	"Have extra instruments" = "GUI MT X11 HAVE_ALLSYM",
-	"Fast" = "GUI MT X11 FAST",
-	"Very Fast" = "GUI MT X11 VERY_FAST",
-	"Working, system malloc" = "GUI MT X11 USEMALLOC",
-	"Working, single thread" = "GUI X11 GUITASK";
+	"Working, system malloc" = "GUI MT X11 USEMALLOC";
 

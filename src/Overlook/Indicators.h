@@ -9,6 +9,59 @@ enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
 
+template <class T>
+double SimpleMA ( const int position, const int period, const T& value ) {
+	double result = 0.0;
+	if ( position >= period && period > 0 ) {
+		for ( int i = 0; i < period; i++)
+			result += value[ position - i ];
+		result /= period;
+	}
+	return ( result );
+}
+
+template <class T>
+double ExponentialMA ( const int position, const int period, const double prev_value, const T& value ) {
+	double result = 0.0;
+	if ( period > 0 ) {
+		double pr = 2.0 / ( period + 1.0 );
+		result = value[ position ] * pr + prev_value * ( 1 - pr );
+	}
+	return ( result );
+}
+
+template <class T>
+double SmoothedMA ( const int position, const int period, const double prev_value, const T& value ) {
+	double result = 0.0;
+	if ( period > 0 ) {
+		if ( position == period - 1 ) {
+			for ( int i = 0;i < period;i++ )
+				result += value[ position - i ];
+
+			result /= period;
+		}
+		if ( position >= period )
+			result = ( prev_value * ( period - 1 ) + value[ position ] ) / period;
+	}
+	return ( result );
+}
+
+template <class T>
+double LinearWeightedMA ( const int position, const int period, const T& value ) {
+	double result = 0.0, sum = 0.0;
+	int    i, wsum = 0;
+	if ( position >= period - 1 && period > 0 ) {
+		for ( i = period;i > 0;i-- ) {
+			wsum += i;
+			sum += value[ position - i + 1 ] * ( period - i + 1 );
+		}
+		result = sum / wsum;
+	}
+	return ( result );
+}
+
+
+
 class DataSource {
 	
 public:
@@ -1164,6 +1217,30 @@ public:
 	void Conf(ValueRegister& reg) {
 		reg .In(FACTORY_VolatilityContext)
 			.Out(1, 1, 1);
+	}
+	
+};
+
+
+
+class SystemBooleanView {
+	int ma_period = 15;
+	
+	
+public:
+	typedef SystemBooleanView CLASSNAME;
+	
+	SystemBooleanView();
+	
+	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	
+	void Conf(ValueRegister& reg) {
+		reg .In(FACTORY_ChannelContext)
+			.In(FACTORY_BollingerBands)
+			.In(FACTORY_OnlineMinimalLabel)
+			.Out(2, 2, 4)
+			.Arg(ma_period, 2);
 	}
 	
 };

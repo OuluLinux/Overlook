@@ -209,7 +209,7 @@ void System::Init() {
 }
 
 void System::Deinit() {
-	
+	StoreThis();
 }
 
 void System::AddPeriod(String nice_str, int period) {

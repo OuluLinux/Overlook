@@ -104,7 +104,8 @@ GUI_APP_MAIN {
 	
 	
 	try {
-		::Overlook::Overlook ol;
+		::Overlook::Overlook& ol = GetOverlook();
+		ol.LoadPreviousProfile();
 		ol.OpenMain();
 		Ctrl::EventLoop();
 	}

@@ -115,7 +115,6 @@ Overlook::Overlook() : watch(this) {
 	calendar.AddColumn("Previous");
 	calendar.AddColumn("Actual");
 	
-	LoadPreviousProfile();
 	PostRefreshData();
 }
 
@@ -889,9 +888,9 @@ void Overlook::LoadAdvisorProfileFinish() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
-	/*
+	
 	int tf = 0;
-	int id = System::Find<ObviousAdvisor>();
+	int id = FACTORY_SystemBooleanView;
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		ProfileGroup& pgroup = profile.charts.Add();
@@ -900,8 +899,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 		pgroup.keep_at_end = true;
 		pgroup.right_offset = true;
 		pgroup.decl.factory = id;
-	}*/
-	Panic("TODO");
+	}
 	
 	LoadProfile(profile);
 	TileWindow();

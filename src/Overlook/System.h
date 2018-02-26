@@ -10,11 +10,91 @@ namespace Overlook {
 using namespace Upp;
 
 
+struct Snap : Moveable<Snap> {
+	uint64 data[4];
+	
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(Snap)); else s.Put(this, sizeof(Snap));}
+	void Set(int i, bool value) {int j = i/64; i=i%64;if (value) data[j] |= 1 << i; else data[j] &= ~(1 << i);}
+	bool Get(int i) const {int j = i/64; i=i%64; return data[j] & (1 << i);}
+};
+
+struct SnapStats : Moveable<SnapStats> {
+	int actual = 0, total = 0;
+};
+
+struct SnapStatVector : Moveable<SnapStatVector> {
+	SnapStats data[SNAP_BITS][2];
+	int cursor = 100;
+	
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(SnapStatVector)); else s.Put(this, sizeof(SnapStatVector));}
+};
+
+#define MAX_STRANDS 100
+#define MAX_STRAND_BITS 20
+struct Strand {
+	int enabled[MAX_STRAND_BITS], signal[MAX_STRAND_BITS];
+	int enabled_count = 0, signal_count = 0;
+	double result = -DBL_MAX;
+	
+	void AddEnabled(int i) {ASSERT(signal_count < MAX_STRAND_BITS); enabled[enabled_count++] = i;}
+	void AddSignal(int i) {ASSERT(signal_count < MAX_STRAND_BITS); signal[signal_count++] = i;}
+	bool EvolveSignal(int bit, Strand& dst);
+	bool EvolveEnabled(int bit, Strand& dst);
+	String ToString() const;
+	String BitString() const;
+	void Clear() {enabled_count = 0; signal_count = 0; result = -DBL_MAX;}
+};
+
+struct StrandList : Moveable<Strand> {
+	Strand strands[MAX_STRANDS * 3];
+	int strand_count = 0;
+	int cursor = 0;
+	
+	int GetCount() const {return strand_count;}
+	bool IsEmpty() const {return strand_count == 0;}
+	void SetCount(int i) {ASSERT(i >= 0 && i <= MAX_STRANDS); strand_count = i;}
+	Strand& Add() {ASSERT(strand_count < MAX_STRANDS * 3); return strands[strand_count++];}
+	Strand& Add(Strand& s) {ASSERT(strand_count < MAX_STRANDS * 3); strands[strand_count] = s; return strands[strand_count++];}
+	Strand& operator[] (int i) {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
+	Strand& Top() {ASSERT(strand_count > 0); return strands[strand_count-1];}
+	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(StrandList)); else s.Put(this, sizeof(StrandList));}
+	void Sort();
+	void Dump();
+};
+
+
 
 struct SourceImage {
 	DataBridge db;
+	Vector<Snap>					main_booleans;
+	VectorBool						main_signal;
+	SnapStatVector					main_stats;
+	Vector<Vector<double> >			volat_divs;
+	Vector<VectorMap<int,int> >		median_maps;
+	OnlineAverageWindow1			stat_osc_ma;
+	Vector<OnlineAverageWindow1>	av_wins;
+	Vector<ExtremumCache>			ec;
+	Vector<OnlineAverageWindow1>	bbma;
+	StrandList						strands;
 	
-	void Serialize(Stream& s) {s % db;}
+	int								lock = 0;
+	
+	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % strands;}
+	
+	// NOTE: update SNAP_BITS
+	static const int period_count = 6;
+	static const int volat_div = 6;
+	static const int extra_row = 2;
+	static const int generic_row = (13 + volat_div);
+	static const int row_size = period_count * generic_row + extra_row; // == SNAP_BITS
+	
+	void LoadSources();
+	void LoadBooleans();
+	void LoadStats();
+	void LoadStrands();
+	void LoadReal();
+	void LoadAll() {if (lock++) {lock--; return;} LoadSources(); LoadBooleans(); LoadStats(); LoadStrands(); LoadReal(); lock--;}
+	void TestStrand(Strand& st);
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
 	double High(int shift) {return db.high[shift];}
@@ -44,36 +124,19 @@ public:
 	
 };
 
-struct Snap : Moveable<Snap> {
-	uint64 data[4];
-	
-	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(Snap)); else s.Put(this, sizeof(Snap));}
-	void Set(int i, bool value) {int j = i/64; i=i%64;if (value) data[j] |= 1 << i; else data[j] &= ~(1 << i);}
-	bool Get(int i) const {int j = i/64; i=i%64; return data[j] & (1 << i);}
-};
-
-struct SnapStats : Moveable<SnapStats> {
-	int actual = 0, total = 0;
-};
-
-struct SnapStatVector : Moveable<SnapStatVector> {
-	SnapStats data[90][2];
-	int cursor = 100;
-	
-	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(SnapStatVector)); else s.Put(this, sizeof(SnapStatVector));}
-};
-
 void RunFactory(ConstFactoryDeclaration& id, SourceImage& si, ChartImage& ci, GraphImage& gi);
 void ConfFactory(ConstFactoryDeclaration& gi, ValueRegister& reg);
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_HIDDEN};
 
+
 class System {
 	
 	
 protected:
 	
+	friend class SystemBooleanView;
 	friend class DataBridgeCommon;
 	friend class BooleansDraw;
 	friend class SystemCtrl;
@@ -85,9 +148,6 @@ protected:
 	
 	// Persistent
 	Array<Array<SourceImage> >	data;
-	Vector<Vector<Snap> >		main_booleans;
-	Vector<VectorBool>			main_signal;
-	Vector<SnapStatVector>		main_stats;
 	
 	
 	// Temporary
@@ -103,7 +163,7 @@ protected:
 	
 public:
 	
-	void	Serialize(Stream& s) {s % data % main_booleans % main_signal % main_stats;}
+	void	Serialize(Stream& s) {s % data;}
 	void	StoreThis() {StoreToFile(*this, ConfigFile("system.bin"));}
 	void	LoadThis() {LoadFromFile(*this, ConfigFile("system.bin"));}
 	

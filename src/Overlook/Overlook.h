@@ -75,7 +75,7 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> journal, calendar, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
@@ -149,7 +149,7 @@ public:
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
-	void RefreshSetBoolean();
+	void RefreshJournal();
 	void RefreshSystem();
 	void RefreshCalendar();
 	void RefreshTrades();

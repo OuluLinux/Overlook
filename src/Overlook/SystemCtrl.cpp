@@ -22,7 +22,7 @@ void BooleansDraw::Paint(Draw& w) {
 		for(int i = 0; i < h; i++) {
 			if (i >= sys.data.GetCount()) continue;
 			
-			auto& main_booleans = sys.data[i][0].main_booleans;
+			auto& main_booleans = sys.data[i][tf].main_booleans;
 			
 			int count = main_booleans.GetCount();
 			if (count == 0) continue;
@@ -46,20 +46,38 @@ void BooleansDraw::Paint(Draw& w) {
 }
 
 SystemCtrl::SystemCtrl() {
-	prog.Set(0, 1);
 	
-	Add(prog.BottomPos(2,26).HSizePos(2,2));
-	Add(load_all.TopPos(2, 26).LeftPos(2,96));
-	Add(slider.HSizePos(100).BottomPos(30,30));
-	Add(hsplit.HSizePos(100).VSizePos(0,60));
+	Add(toggle.TopPos(2, 26).LeftPos(2,96));
+	Add(hsplit.HSizePos(100).VSizePos());
+	hsplit.SetPos(2000);
+	hsplit << symbols << symctrl_place;
+	
+	toggle.SetLabel("Start");
+	toggle <<= THISBACK(Start);
+	
+	symbols.AddIndex();
+	symbols.AddIndex();
+	symbols.AddColumn("Symbol");
+	symbols.AddColumn("Tf");
+	symbols.AddColumn("Phase");
+	symbols.AddColumn("Processed");
+	symbols <<= THISBACK(Data);
+	
+	symctrl_place.Add(tabs.SizePos());
+	
+	tabs.WhenSet << THISBACK(Data);
+	tabs.Add(boolctrl, "Bits");
+	tabs.Add(boolctrl);
+	tabs.Add(stats, "Stats");
+	tabs.Add(stats);
+	tabs.Add(strands, "Strands");
+	tabs.Add(strands);
 	
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
 	
-	hsplit << bools << stats << strands;
-	
-	load_all.SetLabel("Load all");
-	load_all <<= THISBACK(StartLoadAll);
+	boolctrl.Add(bools.HSizePos().VSizePos(0,30));
+	boolctrl.Add(slider.HSizePos().BottomPos(0,30));
 	
 	stats.AddColumn("Bit combination");
 	stats.AddColumn("Percent");
@@ -68,30 +86,47 @@ SystemCtrl::SystemCtrl() {
 	strands.AddColumn("Index");
 	strands.AddColumn("Bit list");
 	strands.AddColumn("Result");
-	
 }
 
 void SystemCtrl::Data() {
 	ASSERT(SourceImage::row_size == SNAP_BITS);
-	
 	System& sys = GetSystem();
 	
-	const int sym = 0;
 	
-	auto& sym_data = sys.data[sym][0];
+	int row = 0;
+	for(int i = 0; i < sys.GetSymbolCount(); i++) {
+		for(int j = 0; j < sys.GetPeriodCount(); j++) {
+			SourceImage& job = *sys.jobs[row];
+			symbols.Set(row, 0, i);
+			symbols.Set(row, 1, j);
+			symbols.Set(row, 2, sys.GetSymbol(i));
+			symbols.Set(row, 3, sys.GetPeriod(j));
+			symbols.Set(row, 4, job.GetPhaseString());
+			symbols.Set(row, 5, job.GetProgress());
+			symbols.SetDisplay(row, 3, ProgressDisplay());
+			row++;
+		}
+	}
+	
+	
+	int cursor = symbols.GetCursor();
+	if (cursor == -1) return;
+	
+	int sym = symbols.Get(cursor, 0);
+	int tf  = symbols.Get(cursor, 1);
+	
+	
+	auto& sym_data = sys.data[sym][tf];
 	auto& main_booleans = sym_data.main_booleans;
 	
-	slider.MinMax(0, main_booleans.GetCount() - 1);
-	bools.cursor = slider.GetData();
-	bools.Refresh();
-	
-	
-	
-	if (running)
-		stats.Clear();
-	
-	if (stats.GetCount() == 0 && stopped) {
-			
+	int tab = tabs.Get();
+	if (tab == 0) {
+		slider.MinMax(0, main_booleans.GetCount() - 1);
+		bools.tf = tf;
+		bools.cursor = slider.GetData();
+		bools.Refresh();
+	}
+	else if (tab == 1) {
 		auto& stat_in = sym_data.main_stats;
 		
 		
@@ -119,7 +154,8 @@ void SystemCtrl::Data() {
 		
 		stats.SetSortColumn(2, true);
 		
-		
+	}
+	else if (tab == 2) {
 		for(int i = 0; i < sym_data.strands.GetCount(); i++) {
 			strands.Set(i, 0, i);
 			strands.Set(i, 1, sym_data.strands[i].BitString());
@@ -128,17 +164,6 @@ void SystemCtrl::Data() {
 	}
 }
 
-
-void SystemCtrl::LoadAll() {
-	System& sys = GetSystem();
-	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		for(int j = 0; j < sys.GetPeriodCount(); j++) {
-			sys.data[i][j].LoadAll();
-		}
-	}
-	
-	PostCallback(THISBACK(Enable)); running = false; stopped = true;
-}
 
 }
 

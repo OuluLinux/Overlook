@@ -10,31 +10,29 @@ struct BooleansDraw : public Ctrl {
 	virtual void Paint(Draw& w);
 	
 	int cursor = 0;
+	int tf = 0;
 };
 
 class SystemCtrl : public ParentCtrl {
-	ProgressIndicator prog;
+	ArrayCtrl symbols;
+	ParentCtrl symctrl_place;
+	Splitter hsplit;
+	Button toggle;
+	
+	TabCtrl tabs;
+	ParentCtrl boolctrl;
 	BooleansDraw bools;
 	ArrayCtrl stats, strands;
-	Splitter hsplit;
 	SliderCtrl slider;
-	Button  load_all;
-	bool running = false, stopped = true;
 	
 public:
 	typedef SystemCtrl CLASSNAME;
 	SystemCtrl();
-	~SystemCtrl() {Stop();}
+	~SystemCtrl() {}
 	
-	void Enable() {load_all.Enable();}
-	void Disable() {load_all.Disable();}
 	void Data();
-	void StartLoadAll() {Stop(); running = true; stopped = false; Disable(); Thread::Start(THISBACK(LoadAll));}
-	void Stop() {running = false; while (!stopped) Sleep(100);}
-	void SetProg(int a, int t) {prog.Set(a, t);}
-	void LoadAll();
-	
-	
+	void Start() {toggle.SetLabel("Stop"); toggle.WhenAction = THISBACK(Stop); GetSystem().StartJobs();}
+	void Stop() {toggle.SetLabel("Start"); toggle.WhenAction = THISBACK(Start); GetSystem().StopJobs();}
 };
 
 

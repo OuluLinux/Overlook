@@ -57,6 +57,7 @@ struct StrandList : Moveable<Strand> {
 	Strand& Add(Strand& s) {ASSERT(strand_count < MAX_STRANDS * 3); strands[strand_count] = s; return strands[strand_count++];}
 	Strand& operator[] (int i) {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
 	Strand& Top() {ASSERT(strand_count > 0); return strands[strand_count-1];}
+	bool Has(Strand& s);
 	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(StrandList)); else s.Put(this, sizeof(StrandList));}
 	void Sort();
 	void Dump();
@@ -76,10 +77,12 @@ struct SourceImage {
 	Vector<ExtremumCache>			ec;
 	Vector<OnlineAverageWindow1>	bbma;
 	StrandList						strands;
+	int phase = 0;
+	int end = 0;
 	
-	int								lock = 0;
+	Mutex							lock;
 	
-	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % strands;}
+	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % strands % phase % end;}
 	
 	// NOTE: update SNAP_BITS
 	static const int period_count = 6;
@@ -92,8 +95,6 @@ struct SourceImage {
 	void LoadBooleans();
 	void LoadStats();
 	void LoadStrands();
-	void LoadReal();
-	void LoadAll() {if (lock++) {lock--; return;} LoadSources(); LoadBooleans(); LoadStats(); LoadStrands(); LoadReal(); lock--;}
 	void TestStrand(Strand& st);
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
@@ -105,6 +106,15 @@ struct SourceImage {
 	int LowestLow(int period, int shift);
 	int HighestOpen(int period, int shift);
 	int LowestOpen(int period, int shift);
+	int GetSignal();
+	
+	
+	// As job
+	enum {PHASE_SOURCE, PHASE_BOOLEANS, PHASE_STATS, PHASE_STRANDS, PHASE_COUNT};
+	String GetPhaseString() const;
+	double GetProgress() const;
+	bool IsFinished() const;
+	void Process();
 };
 
 
@@ -129,6 +139,7 @@ void ConfFactory(ConstFactoryDeclaration& gi, ValueRegister& reg);
 
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_HIDDEN};
+
 
 
 class System {
@@ -164,8 +175,8 @@ protected:
 public:
 	
 	void	Serialize(Stream& s) {s % data;}
-	void	StoreThis() {StoreToFile(*this, ConfigFile("system.bin"));}
-	void	LoadThis() {LoadFromFile(*this, ConfigFile("system.bin"));}
+	void	StoreThis() {AddJournal("System saving to file"); StoreToFile(*this, ConfigFile("system.bin"));}
+	void	LoadThis() {AddJournal("System loading from file"); LoadFromFile(*this, ConfigFile("system.bin"));}
 	
 	void	AddPeriod(String nice_str, int period);
 	void	AddSymbol(String sym);
@@ -180,6 +191,19 @@ public:
 	bool	RefreshReal();
 	void	SetSignal(int sym, int i)				{signals[sym] = i;}
 	SourceImage& GetSource(int sym, int tf)			{return data[sym][tf];}
+	
+public:
+	Vector<Tuple<String, Time> > journal;
+	Vector<SourceImage*> jobs;
+	Atomic not_stopped;
+	SpinLock workitem_lock;
+	int worker_cursor = 0;
+	bool running = false, stopped = true;
+	
+	void	StartJobs();
+	void	StopJobs();
+	void	JobWorker(int i);
+	void	AddJournal(String what) {journal.Add(Tuple<String,Time>(what, GetSysTime()));}
 	
 public:
 	

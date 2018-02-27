@@ -5020,8 +5020,6 @@ void SystemBooleanView::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	auto& stat_in = si.main_stats;
 	Vector<Snap>& data_in = si.main_booleans;
 	
-	si.LoadAll();
-	
 	if (si.main_booleans.IsEmpty()) return;
 	if (end > data_in.GetCount()) return;
 	

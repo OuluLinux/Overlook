@@ -36,7 +36,9 @@ Overlook::Overlook() : watch(this) {
 	
 	NewOrderWindow::WhenOrdersChanged = THISBACK(Data);
 	
-	assist.AddColumn("What");
+	journal.AddColumn("What");
+	journal.AddColumn("When");
+	journal.ColumnWidths("5 3");
 	
 	trade.AddColumn ( "Order" );
 	trade.AddColumn ( "Time" );
@@ -129,13 +131,13 @@ void Overlook::DockInit() {
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
 	Tabify(last, Dockable(sysctrl, "System").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
 	
-	assist			.WhenVisible << THISBACK(Data);
+	journal			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
@@ -487,7 +489,7 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
-	if (assist.IsVisible())			RefreshSetBoolean();
+	if (journal.IsVisible())		RefreshJournal();
 	if (sysctrl.IsVisible())		RefreshSystem();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
@@ -495,35 +497,19 @@ void Overlook::Data() {
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 }
 
-void Overlook::RefreshSetBoolean() {
-	/*Chart* chart = cman.GetVisibleChart();
-	if (!chart || chart->graphs.IsEmpty()) {
-		assist.Clear();
-		return;
+void Overlook::RefreshJournal() {
+	System& sys = GetSystem();
+	
+	
+	int count = min(1000, sys.journal.GetCount());
+	
+	for(int i = 0; i < count; i++) {
+		int pos = sys.journal.GetCount() - 1 - i;
+		auto& t = sys.journal[pos];
+		journal.Set(i, 0, t.a);
+		journal.Set(i, 1, t.b);
 	}
 	
-	GraphCtrl& graph = chart->graphs[0];
-	if (!graph.IsTimeValueToolShown())
-		return;
-	int cursor = graph.last_time_value_tool_pos;
-	
-	VectorBool vec;
-	vec.SetCount(ASSIST_COUNT);
-	for(int i = chart->work_queue.GetCount()-1; i >= 0; i--) {
-		CoreItem& ci = *chart->work_queue[i];
-		if (ci.core.IsEmpty()) continue;
-		
-		Core& core = *ci.core;
-		if (cursor >= core.GetBars()) break;
-		core.SetBoolean(cursor, vec);
-	}
-	
-	int row = 0;
-	for(int i = 0; i < ASSIST_COUNT; i++) {
-		if (vec.Get(i))
-			assist.Set(row++, 0, System::Assistants().Get(i).b);
-	}
-	assist.SetCount(row);*/
 }
 
 void Overlook::RefreshSystem() {

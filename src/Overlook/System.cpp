@@ -129,6 +129,8 @@ System::System() {
 	allowed_symbols.Add("USDJPY");
 	allowed_symbols.Add("USDMXN");
 	allowed_symbols.Add("USDTRY");
+	
+	not_stopped = 0;
 }
 
 System::~System() {
@@ -136,6 +138,8 @@ System::~System() {
 }
 
 void System::Init() {
+	AddJournal("System initialization");
+	
 	LoadThis();
 	
 	MetaTrader& mt = GetMetaTrader();
@@ -175,10 +179,13 @@ void System::Init() {
 		int sym_count = symbols.GetCount();
 		int tf_count = periods.GetCount();
 		
+		jobs.SetCount(0);
 		data.SetCount(sym_count);
 		for(int i = 0; i < data.GetCount(); i++) {
 			data[i].SetCount(tf_count);
 			for(int j = 0; j < data[i].GetCount(); j++) {
+				jobs.Add(&data[i][j]);
+				
 				DataBridge& db = data[i][j].db;
 				
 				db.sym_id = i;
@@ -209,6 +216,9 @@ void System::Init() {
 }
 
 void System::Deinit() {
+	AddJournal("System deinitialization");
+	StopJobs();
+	while (not_stopped > 0) Sleep(100);
 	StoreThis();
 }
 
@@ -401,6 +411,15 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		int signal;
+		for(int j = 0; j < periods.GetCount(); j++) {
+			signal = data[i][j].GetSignal();
+			if (signal)
+				break;
+		}
+		SetSignal(i, signal);
+	}
 	
 	WhenInfo("Updating MetaTrader");
 	WhenPushTask("Putting latest signals");
@@ -412,7 +431,7 @@ bool System::RefreshReal() {
 	}
 	realtime_count++;
 	
-	
+	String msg;
 	try {
 		mt.Data();
 		mt.RefreshLimits();
@@ -444,6 +463,7 @@ bool System::RefreshReal() {
 				mt.SetSignalFreeze(sym_id, false);
 			}
 			LOG("Real symbol " << sym_id << " signal " << sig);
+			msg << symbols[sym_id] << "=" << sig << ", ";
 		}
 		
 		mt.SetFreeMarginLevel(FMLEVEL);
@@ -452,12 +472,16 @@ bool System::RefreshReal() {
 	}
 	catch (UserExc e) {
 		LOG(e);
+		AddJournal("Error in updating metatrader: " + e);
 		return false;
 	}
 	catch (...) {
+		AddJournal("Unknown error in updating metatrader");
 		return false;
 	}
 	
+	
+	AddJournal("Updating metatrader real signals: " + msg);
 	
 	WhenRealtimeUpdate();
 	WhenPopTask();

@@ -23,7 +23,7 @@ void SourceImage::LoadBooleans() {
 	
 	// Prepare maind data
 	int begin						= data_in.GetCount();
-	int end							= open_buf.GetCount();
+	end								= open_buf.GetCount();
 	data_in.SetCount(end);
 	main_in.SetCount(end);
 	
@@ -61,6 +61,8 @@ void SourceImage::LoadBooleans() {
 				int step = (int)((diff + spread_point * 0.5) / spread_point);
 				median_map.GetAdd(step, 0)++;
 			}
+			if (median_map.IsEmpty())
+				return;
 			SortByKey(median_map, StdLess<int>());
 			int64 total = 0;
 			for(int i = 0; i < median_map.GetCount(); i++)
@@ -276,8 +278,6 @@ void SourceImage::LoadStats() {
 	
 	db.Start();
 	
-	int end = db.open.GetCount();
-	
 	int stat_osc_cursor = stat_in.cursor;
 	
 	for(; stat_in.cursor < end; stat_in.cursor++) {
@@ -336,7 +336,6 @@ void SourceImage::LoadStats() {
 
 void SourceImage::LoadStrands() {
 	System& sys = GetSystem();
-	int end = db.open.GetCount();
 	
 	
 	if (strands.IsEmpty())
@@ -389,8 +388,11 @@ void SourceImage::LoadStrands() {
 					single_added.SetCount(MAX_STRANDS);
 				
 				int count = max(2, single_added.GetCount());
-				for(int i = 0; i < count; i++)
-					meta_added.Add(single_added.strands[i]);
+				for(int i = 0; i < count; i++) {
+					auto& s = single_added.strands[i];
+					if (!meta_added.Has(s))
+						meta_added.Add(s);
+				}
 				
 				
 				meta_added.Sort();
@@ -405,7 +407,9 @@ void SourceImage::LoadStrands() {
 		
 		int count = min(MAX_STRANDS*2, meta_added.GetCount());
 		for(int i = 0; i < count; i++) {
-			strands.Add(meta_added.strands[i]);
+			auto& s = meta_added.strands[i];
+			if (!strands.Has(s))
+				strands.Add(s);
 		}
 		
 		// Sort
@@ -423,41 +427,48 @@ void SourceImage::LoadStrands() {
 }
 
 
-void SourceImage::LoadReal() {
-	int end = db.open.GetCount();
-	int cursor = end - 1;
+int SourceImage::GetSignal() {
+	if (main_booleans.IsEmpty())
+		return 0;
 	
-	Snap& snap = main_booleans[cursor];
-	Strand& st = strands.strands[0];
+	Snap& snap = main_booleans.Top();
 	
-	bool signal = snap.Get((SourceImage::period_count-1) * SourceImage::generic_row);
+	for(int i = 0; i < strands.GetCount(); i++) {
+		Strand& st = strands.strands[i];
+		if (st.result <= 1.0)
+			continue;
 		
-	bool enabled = true;
-	for(int j = 0; j < st.enabled_count && enabled; j++) {
-		int bit = st.enabled[j];
-		bool is_bit_enabled = snap.Get(bit);
-		enabled &= is_bit_enabled;
-	}
-	
-	if (enabled) {
-		bool signal_enabled = true;
-		for(int j = 0; j < st.signal_count && signal_enabled; j++) {
-			int bit = st.signal[j];
-			bool is_bit_equal = snap.Get(bit) == signal;
-			signal_enabled &= is_bit_equal;
+		bool signal = snap.Get((SourceImage::period_count-1) * SourceImage::generic_row);
+			
+		bool enabled = true;
+		for(int j = 0; j < st.enabled_count && enabled; j++) {
+			int bit = st.enabled[j];
+			bool is_bit_enabled = snap.Get(bit);
+			enabled &= is_bit_enabled;
 		}
-		enabled &= signal_enabled;
+		
+		if (enabled) {
+			bool signal_enabled = true;
+			for(int j = 0; j < st.signal_count && signal_enabled; j++) {
+				int bit = st.signal[j];
+				bool is_bit_equal = snap.Get(bit) == signal;
+				signal_enabled &= is_bit_equal;
+			}
+			enabled &= signal_enabled;
+		}
+		
+		if (enabled) {
+			int sig = 0;
+			sig = signal ? -1.0 : +1.0;
+			return sig;
+		}
 	}
 	
-	int sig = 0;
-	if (enabled)
-		sig = signal ? -1.0 : +1.0;
-	GetSystem().SetSignal(db.GetSymbol(), sig);
+	return 0;
 }
 
 void SourceImage::TestStrand(Strand& st) {
 	int begin = 200;
-	int end = db.open.GetCount();
 	#ifdef flagDEBUG
 	end = min(100000, end);
 	#else
@@ -527,7 +538,13 @@ void SourceImage::TestStrand(Strand& st) {
 	st.result = result;
 }
 
-
+bool StrandList::Has(Strand& s) {
+	for(int i = 0; i < strand_count; i++) {
+		if (s.result == strands[i].result)
+			return true;
+	}
+	return false;
+}
 
 void StrandList::Sort() {
 	for(int i = 0; i < strand_count; i++) {
@@ -591,6 +608,109 @@ String Strand::BitString() const {
 	for(int i = 0; i < signal_count; i++)
 		out << "s" << i << "=" << signal[i] << ", ";
 	return out;
+}
+
+
+
+String SourceImage::GetPhaseString() const {
+	switch (phase){
+		case PHASE_SOURCE: return "Source";
+		case PHASE_BOOLEANS: return "Booleans";
+		case PHASE_STATS: return "Statistics";
+		case PHASE_STRANDS: return "Strands";
+	}
+	return "";
+}
+
+double SourceImage::GetProgress() const {
+	return phase * 1000 / PHASE_COUNT;
+}
+
+bool SourceImage::IsFinished() const {
+	
+	return phase == PHASE_COUNT;
+}
+
+void SourceImage::Process() {
+	if (!lock.TryEnter()) return;
+	
+	if (phase == PHASE_SOURCE) {
+		LoadSources();
+		phase++;
+	}
+	else if (phase == PHASE_BOOLEANS) {
+		LoadBooleans();
+		phase++;
+	}
+	else if (phase == PHASE_STATS) {
+		LoadStats();
+		phase++;
+	}
+	else if (phase == PHASE_STRANDS) {
+		LoadStrands();
+		
+		Sleep(100);
+		phase = PHASE_SOURCE;
+	}
+	
+	lock.Leave();
+}
+
+
+
+
+
+
+
+
+void System::StartJobs() {
+	if (running || not_stopped > 0) return;
+	
+	AddJournal("Starting system jobs");
+	
+	running = true;
+	int thrd_count = GetUsedCpuCores();
+	not_stopped = 0;
+	for(int i = 0; i < thrd_count; i++) {
+		not_stopped++;
+		Thread::Start(THISBACK1(JobWorker, i));
+	}
+}
+
+void System::StopJobs() {
+	AddJournal("Stopping system jobs");
+	
+	running = false;
+}
+
+void System::JobWorker(int i) {
+	
+	while (running) {
+		
+		workitem_lock.Enter();
+		bool found = false;
+		int job_id;
+		for(int i = 0; i < jobs.GetCount(); i++) {
+			job_id = worker_cursor++;
+			if (worker_cursor >= jobs.GetCount())
+				worker_cursor = 0;
+			SourceImage& job = *jobs[job_id];
+			if (job.IsFinished())
+				continue;
+			found = true;
+			break;
+		}
+		if (!found) running = false;
+		workitem_lock.Leave();
+		if (!found) break;
+		
+		SourceImage& job = *jobs[job_id];
+		job.Process();
+	}
+	
+	
+	
+	not_stopped--;
 }
 
 }

@@ -34,7 +34,7 @@ struct SnapStatVector : Moveable<SnapStatVector> {
 struct Strand {
 	int enabled[MAX_STRAND_BITS], signal[MAX_STRAND_BITS];
 	int enabled_count = 0, signal_count = 0;
-	double result = -DBL_MAX;
+	double result = 0.0;
 	
 	void AddEnabled(int i) {ASSERT(signal_count < MAX_STRAND_BITS); enabled[enabled_count++] = i;}
 	void AddSignal(int i) {ASSERT(signal_count < MAX_STRAND_BITS); signal[signal_count++] = i;}
@@ -63,7 +63,18 @@ struct StrandList : Moveable<Strand> {
 	void Dump();
 };
 
-
+struct StrandVector {
+	
+	static const int row_size = 4;
+	
+	VectorBool data;
+	int try_cursor = 0, catch_cursor = 0;
+	
+	void Serialize(Stream& s) {s % data % try_cursor % catch_cursor;}
+	void SetCount(int i) {data.SetCount(row_size * i);}
+	void Set(int i, int j, bool b) {data.Set(i * row_size + j, b);}
+	bool Get(int i, int j) const {return data.Get(i * row_size + j);}
+};
 
 struct SourceImage {
 	DataBridge db;
@@ -76,13 +87,14 @@ struct SourceImage {
 	Vector<OnlineAverageWindow1>	av_wins;
 	Vector<ExtremumCache>			ec;
 	Vector<OnlineAverageWindow1>	bbma;
-	StrandList						strands;
+	StrandList						try_strands, catch_strands;
+	StrandVector					strand_data;
 	int phase = 0;
 	int end = 0;
 	
 	Mutex							lock;
 	
-	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % strands % phase % end;}
+	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % try_strands % catch_strands % strand_data % phase % end;}
 	
 	// NOTE: update SNAP_BITS
 	static const int period_count = 6;
@@ -94,8 +106,10 @@ struct SourceImage {
 	void LoadSources();
 	void LoadBooleans();
 	void LoadStats();
-	void LoadStrands();
-	void TestStrand(Strand& st);
+	void LoadTryStrands();
+	void LoadCatchStrands();
+	void TestTryStrand(Strand& st);
+	void TestCatchStrand(Strand& st);
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
 	double High(int shift) {return db.high[shift];}
@@ -106,11 +120,13 @@ struct SourceImage {
 	int LowestLow(int period, int shift);
 	int HighestOpen(int period, int shift);
 	int LowestOpen(int period, int shift);
-	int GetSignal();
+	int GetTrySignal(int pos=-1);
+	int GetCatchSignal(int pos=-1);
+	int GetSignal() {return GetCatchSignal();}
 	
 	
 	// As job
-	enum {PHASE_SOURCE, PHASE_BOOLEANS, PHASE_STATS, PHASE_STRANDS, PHASE_COUNT};
+	enum {PHASE_SOURCE, PHASE_BOOLEANS, PHASE_STATS, PHASE_TRYSTRANDS, PHASE_CATCHSTRANDS, PHASE_COUNT};
 	String GetPhaseString() const;
 	double GetProgress() const;
 	bool IsFinished() const;

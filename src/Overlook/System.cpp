@@ -413,7 +413,7 @@ bool System::RefreshReal() {
 	
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		int signal;
-		for(int j = 0; j < periods.GetCount(); j++) {
+		for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
 			signal = data[i][j].GetSignal();
 			if (signal)
 				break;

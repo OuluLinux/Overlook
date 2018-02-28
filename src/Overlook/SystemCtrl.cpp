@@ -70,8 +70,10 @@ SystemCtrl::SystemCtrl() {
 	tabs.Add(boolctrl);
 	tabs.Add(stats, "Stats");
 	tabs.Add(stats);
-	tabs.Add(strands, "Strands");
-	tabs.Add(strands);
+	tabs.Add(try_strands, "Try strands");
+	tabs.Add(try_strands);
+	tabs.Add(catch_strands, "Catch strands");
+	tabs.Add(catch_strands);
 	
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
@@ -83,9 +85,13 @@ SystemCtrl::SystemCtrl() {
 	stats.AddColumn("Percent");
 	stats.AddColumn("Index");
 	
-	strands.AddColumn("Index");
-	strands.AddColumn("Bit list");
-	strands.AddColumn("Result");
+	try_strands.AddColumn("Index");
+	try_strands.AddColumn("Bit list");
+	try_strands.AddColumn("Result");
+	
+	catch_strands.AddColumn("Index");
+	catch_strands.AddColumn("Bit list");
+	catch_strands.AddColumn("Result");
 }
 
 void SystemCtrl::Data() {
@@ -156,10 +162,17 @@ void SystemCtrl::Data() {
 		
 	}
 	else if (tab == 2) {
-		for(int i = 0; i < sym_data.strands.GetCount(); i++) {
-			strands.Set(i, 0, i);
-			strands.Set(i, 1, sym_data.strands[i].BitString());
-			strands.Set(i, 2, sym_data.strands[i].result);
+		for(int i = 0; i < sym_data.try_strands.GetCount(); i++) {
+			try_strands.Set(i, 0, i);
+			try_strands.Set(i, 1, sym_data.try_strands[i].BitString());
+			try_strands.Set(i, 2, sym_data.try_strands[i].result);
+		}
+	}
+	else if (tab == 3) {
+		for(int i = 0; i < sym_data.catch_strands.GetCount(); i++) {
+			catch_strands.Set(i, 0, i);
+			catch_strands.Set(i, 1, sym_data.catch_strands[i].BitString());
+			catch_strands.Set(i, 2, sym_data.catch_strands[i].result);
 		}
 	}
 }

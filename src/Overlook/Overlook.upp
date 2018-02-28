@@ -41,6 +41,8 @@ file
 	System.h,
 	System.cpp,
 	SourceImage.cpp,
+	SourceTry.cpp,
+	SourceCatch.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,

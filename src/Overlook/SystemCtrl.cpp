@@ -167,6 +167,7 @@ void SystemCtrl::Data() {
 			try_strands.Set(i, 1, sym_data.try_strands[i].BitString());
 			try_strands.Set(i, 2, sym_data.try_strands[i].result);
 		}
+		try_strands.SetCount(sym_data.try_strands.GetCount());
 	}
 	else if (tab == 3) {
 		for(int i = 0; i < sym_data.catch_strands.GetCount(); i++) {
@@ -174,6 +175,7 @@ void SystemCtrl::Data() {
 			catch_strands.Set(i, 1, sym_data.catch_strands[i].BitString());
 			catch_strands.Set(i, 2, sym_data.catch_strands[i].result);
 		}
+		catch_strands.SetCount(sym_data.catch_strands.GetCount());
 	}
 }
 

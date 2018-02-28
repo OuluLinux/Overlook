@@ -72,6 +72,7 @@ struct StrandVector {
 	
 	void Serialize(Stream& s) {s % data % try_cursor % catch_cursor;}
 	void SetCount(int i) {data.SetCount(row_size * i);}
+	int GetCount() const {return data.GetCount() / row_size;}
 	void Set(int i, int j, bool b) {data.Set(i * row_size + j, b);}
 	bool Get(int i, int j) const {return data.Get(i * row_size + j);}
 };

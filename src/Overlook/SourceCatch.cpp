@@ -10,9 +10,9 @@ void SourceImage::LoadCatchStrands() {
 		strands.Add();
 	
 	int iter_count = 6;
-	#ifdef flagDEBUG
+	/*#ifdef flagDEBUG
 	iter_count = 2;
-	#endif
+	#endif*/
 	
 	for (; strands.cursor < iter_count; strands.cursor++) {
 		bool total_added = false;
@@ -109,9 +109,11 @@ void SourceImage::LoadCatchStrands() {
 
 void SourceImage::TestCatchStrand(Strand& st) {
 	int begin = 200;
-	#ifdef flagDEBUG
+	/*#ifdef flagDEBUG
 	end = min(100000, end);
-	#endif
+	#else
+	end = max(500000, end - 500000);
+	#endif*/
 	
 	double result = 1.0;
 	double point = db.GetPoint();
@@ -182,16 +184,17 @@ int SourceImage::GetCatchSignal(int pos) {
 	if (main_booleans.IsEmpty())
 		return 0;
 	
-	if (pos == -1) pos = end - 1;
+	if (pos == -1) pos = main_booleans.GetCount() - 1;
 	Snap& snap = main_booleans[pos];
 	
 	for(int i = 0; i < strands.GetCount(); i++) {
 		Strand& st = strands.strands[i];
-		if (st.result <= 1.0)
+		if (st.result <= 1.1)
 			continue;
 		
-		bool signal = strand_data.Get(pos, 0);
-		bool enabled = strand_data.Get(pos, 1);
+		int latest = strand_data.GetCount() - 1;
+		bool signal = strand_data.Get(latest, 0);
+		bool enabled = strand_data.Get(latest, 1);
 		
 		for(int j = 0; j < st.enabled_count && enabled; j++) {
 			int bit = st.enabled[j];

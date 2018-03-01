@@ -32,17 +32,19 @@ struct SnapStatVector : Moveable<SnapStatVector> {
 #define MAX_STRANDS 100
 #define MAX_STRAND_BITS 20
 struct Strand {
-	int enabled[MAX_STRAND_BITS], signal[MAX_STRAND_BITS];
-	int enabled_count = 0, signal_count = 0;
+	int enabled[MAX_STRAND_BITS], signal[MAX_STRAND_BITS], oppositesignal[MAX_STRAND_BITS];
+	int enabled_count = 0, signal_count = 0, oppositesignal_count = 0;
 	double result = 0.0;
 	
 	void AddEnabled(int i) {ASSERT(signal_count < MAX_STRAND_BITS); enabled[enabled_count++] = i;}
 	void AddSignal(int i) {ASSERT(signal_count < MAX_STRAND_BITS); signal[signal_count++] = i;}
+	void AddOppositeSignal(int i) {ASSERT(oppositesignal_count < MAX_STRAND_BITS); oppositesignal[oppositesignal_count++] = i;}
 	bool EvolveSignal(int bit, Strand& dst);
 	bool EvolveEnabled(int bit, Strand& dst);
+	bool EvolveOppositeSignal(int bit, Strand& dst);
 	String ToString() const;
 	String BitString() const;
-	void Clear() {enabled_count = 0; signal_count = 0; result = -DBL_MAX;}
+	void Clear() {enabled_count = 0; signal_count = 0; oppositesignal_count = 0; result = -DBL_MAX;}
 };
 
 struct StrandList : Moveable<Strand> {
@@ -53,8 +55,8 @@ struct StrandList : Moveable<Strand> {
 	int GetCount() const {return strand_count;}
 	bool IsEmpty() const {return strand_count == 0;}
 	void SetCount(int i) {ASSERT(i >= 0 && i <= MAX_STRANDS); strand_count = i;}
-	Strand& Add() {ASSERT(strand_count < MAX_STRANDS * 3); return strands[strand_count++];}
-	Strand& Add(Strand& s) {ASSERT(strand_count < MAX_STRANDS * 3); strands[strand_count] = s; return strands[strand_count++];}
+	void Add() {if (strand_count < MAX_STRANDS * 3) strand_count++;}
+	void Add(Strand& s) {if (strand_count < MAX_STRANDS * 3) strands[strand_count++] = s;}
 	Strand& operator[] (int i) {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
 	Strand& Top() {ASSERT(strand_count > 0); return strands[strand_count-1];}
 	bool Has(Strand& s);
@@ -101,7 +103,8 @@ struct SourceImage {
 	static const int period_count = 6;
 	static const int volat_div = 6;
 	static const int extra_row = 2;
-	static const int generic_row = (13 + volat_div);
+	static const int descriptor_count = 6;
+	static const int generic_row = (13 + volat_div + descriptor_count);
 	static const int row_size = period_count * generic_row + extra_row; // == SNAP_BITS
 	
 	void LoadSources();
@@ -216,6 +219,7 @@ public:
 	SpinLock workitem_lock;
 	int worker_cursor = 0;
 	bool running = false, stopped = true;
+	Callback WhenJobOrders;
 	
 	void	StartJobs();
 	void	StopJobs();

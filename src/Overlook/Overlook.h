@@ -167,6 +167,7 @@ public:
 	void LoadAdvisorProfileThread();
 	void LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count);
 	void LoadOpenOrderCharts();
+	void PostLoadOpenOrderCharts() {PostCallback(THISBACK(LoadOpenOrderCharts));}
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
 	void SetProfileFromFile(String path);

@@ -262,6 +262,16 @@ void SourceImage::LoadBooleans() {
 				bool bb_c = open1 <= bb_bot;
 				snap.Set(bit_pos++, open1 < ma);
 				snap.Set(bit_pos++, open1 < ma ? open1 <= bb_bot : open1 >= bb_top);
+				
+				
+				// Descriptor bits
+				period = 1 << k;
+				for(int i = 0; i < descriptor_count; i++) {
+					int pos = Upp::max(0, cursor - period * (i + 1));
+					double open2 = open_buf[pos];
+					bool value = open1 < open2;
+					snap.Set(bit_pos++, value);
+				}
 			}
 			
 			ASSERT(bit_pos == row_size - extra_row);
@@ -390,6 +400,19 @@ bool Strand::EvolveSignal(int bit, Strand& dst) {
 	return fail;
 }
 
+bool Strand::EvolveOppositeSignal(int bit, Strand& dst) {
+	dst = *this;
+	bool fail = false;
+	for(int i = 0; i < dst.oppositesignal_count; i++) {
+		if (dst.oppositesignal[i] == bit) {
+			fail = true;
+			break;
+		}
+	}
+	dst.AddOppositeSignal(bit);
+	return fail;
+}
+
 bool Strand::EvolveEnabled(int bit, Strand& dst) {
 	dst = *this;
 	bool fail = false;
@@ -415,6 +438,8 @@ String Strand::BitString() const {
 		out << "e" << i << "=" << enabled[i] << ", ";
 	for(int i = 0; i < signal_count; i++)
 		out << "s" << i << "=" << signal[i] << ", ";
+	for(int i = 0; i < oppositesignal_count; i++)
+		out << "os" << i << "=" << oppositesignal[i] << ", ";
 	return out;
 }
 

@@ -26,13 +26,14 @@ void SourceImage::LoadCatchStrands() {
 			
 			for(int j = 0; j < SourceImage::row_size; j++) {
 				
-				for(int k = 0; k < 2; k++) {
+				for(int k = 0; k < 3; k++) {
 					Strand test;
 					test.Clear();
 					
 					bool fail = false;
-					if (k == 0)		fail = st.EvolveSignal(j, test);
-					else			fail = st.EvolveEnabled(j, test);
+					if (k == 0)			fail = st.EvolveSignal(j, test);
+					else if (k == 1)	fail = st.EvolveEnabled(j, test);
+					else				fail = st.EvolveOppositeSignal(j, test);
 					if (fail) continue;
 					
 					TestCatchStrand(test);
@@ -142,6 +143,16 @@ void SourceImage::TestCatchStrand(Strand& st) {
 			enabled &= signal_enabled;
 		}
 		
+		if (enabled) {
+			bool oppositesignal_enabled = true;
+			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
+				int bit = st.oppositesignal[j];
+				bool is_bit_equal = snap.Get(bit) != signal;
+				oppositesignal_enabled &= is_bit_equal;
+			}
+			enabled &= oppositesignal_enabled;
+		}
+		
 		bool do_open = false, do_close = false;
 		
 		if (prev_enabled) {
@@ -210,6 +221,16 @@ int SourceImage::GetCatchSignal(int pos) {
 				signal_enabled &= is_bit_equal;
 			}
 			enabled &= signal_enabled;
+		}
+		
+		if (enabled) {
+			bool oppositesignal_enabled = true;
+			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
+				int bit = st.oppositesignal[j];
+				bool is_bit_equal = snap.Get(bit) != signal;
+				oppositesignal_enabled &= is_bit_equal;
+			}
+			enabled &= oppositesignal_enabled;
 		}
 		
 		if (enabled) {

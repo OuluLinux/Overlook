@@ -431,6 +431,7 @@ bool System::RefreshReal() {
 	}
 	realtime_count++;
 	
+	bool sig_change = false;
 	String msg;
 	try {
 		mt.Data();
@@ -464,6 +465,8 @@ bool System::RefreshReal() {
 			}
 			LOG("Real symbol " << sym_id << " signal " << sig);
 			msg << symbols[sym_id] << "=" << sig << ", ";
+			if (prev_sig != sig)
+				sig_change = true;
 		}
 		
 		mt.SetFreeMarginLevel(FMLEVEL);
@@ -485,6 +488,9 @@ bool System::RefreshReal() {
 	
 	WhenRealtimeUpdate();
 	WhenPopTask();
+	
+	if (running && sig_change)
+		WhenJobOrders();
 	
 	return true;
 }

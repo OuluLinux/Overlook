@@ -29,8 +29,8 @@ class Agent;
 
 typedef const int ConstInt;
 
-#define MIN_REAL_TFID 0
-#define MAX_REAL_TFID 100
+#define MIN_REAL_TFID 2
+#define MAX_REAL_TFID 6
 
 enum {
 	PHASE_TRAINING,
@@ -109,7 +109,7 @@ inline String GetFactoryName(int id) {
 	return "Unknown";
 }
 
-#define SNAP_BITS (6*(13+6)+2)
+#define SNAP_BITS (6*(13+6+6)+2)
 
 // Visual setting enumerators
 enum {DRAW_LINE, DRAW_SECTION, DRAW_HISTOGRAM, DRAW_ARROW, DRAW_ZIGZAG, DRAW_NONE};

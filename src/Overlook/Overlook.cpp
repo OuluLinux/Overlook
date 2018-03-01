@@ -117,6 +117,8 @@ Overlook::Overlook() : watch(this) {
 	calendar.AddColumn("Previous");
 	calendar.AddColumn("Actual");
 	
+	GetSystem().WhenJobOrders << THISBACK(PostLoadOpenOrderCharts);
+	
 	PostRefreshData();
 }
 
@@ -975,9 +977,9 @@ void Overlook::LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atom
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();
 	Profile profile;
-	/*
+	
 	int tf = 0;
-	int id = System::Find<MinimalLabel>();
+	int id = FACTORY_MovingAverage;
 	
 	MetaTrader& mt = GetMetaTrader();
 	mt.Enter();
@@ -998,8 +1000,6 @@ void Overlook::LoadOpenOrderCharts() {
 		pgroup.right_offset = true;
 		pgroup.decl.factory = id;
 	}
-	*/
-	Panic("TODO");
 	
 	LoadProfile(profile);
 	TileWindow();

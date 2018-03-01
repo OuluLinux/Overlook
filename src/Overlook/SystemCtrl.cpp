@@ -95,7 +95,6 @@ SystemCtrl::SystemCtrl() {
 }
 
 void SystemCtrl::Data() {
-	ASSERT(SourceImage::row_size == SNAP_BITS);
 	System& sys = GetSystem();
 	
 	

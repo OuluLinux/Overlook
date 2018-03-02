@@ -29,6 +29,7 @@ class Agent;
 
 typedef const int ConstInt;
 
+#define MAX_ITERS 6
 #define MIN_REAL_TFID 0
 #define MAX_REAL_TFID 6
 #define SNAP_BITS (6*(14+6+6)+2)

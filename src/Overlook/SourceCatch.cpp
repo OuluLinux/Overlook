@@ -9,7 +9,7 @@ void SourceImage::LoadCatchStrands() {
 	if (strands.IsEmpty())
 		strands.Add();
 	
-	int iter_count = 20;
+	int iter_count = MAX_ITERS;
 	#ifdef flagDEBUG
 	iter_count = 2;
 	#endif

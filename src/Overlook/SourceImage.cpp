@@ -444,28 +444,30 @@ bool SourceImage::IsFinished() const {
 }
 
 void SourceImage::Process() {
+	System& sys = GetSystem();
+	
 	if (!lock.TryEnter()) return;
 	
 	if (phase == PHASE_SOURCE) {
 		LoadSources();
-		phase++;
+		if (sys.running) phase++;
 	}
 	else if (phase == PHASE_BOOLEANS) {
 		LoadBooleans();
-		phase++;
+		if (sys.running) phase++;
 	}
 	else if (phase == PHASE_STATS) {
 		LoadStats();
-		phase++;
+		if (sys.running) phase++;
 	}
 	else if (phase == PHASE_TRYSTRANDS) {
 		LoadTryStrands();
-		phase++;
+		if (sys.running) phase++;
 	}
 	else if (phase == PHASE_CATCHSTRANDS) {
 		LoadCatchStrands();
 		
-		phase = PHASE_SOURCE;
+		if (sys.running) phase = PHASE_SOURCE;
 		Sleep(1000);
 	}
 	

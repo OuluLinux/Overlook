@@ -106,7 +106,7 @@ struct SourceImage {
 	static const int volat_div = 6;
 	static const int extra_row = 2;
 	static const int descriptor_count = 6;
-	static const int generic_row = (13 + volat_div + descriptor_count);
+	static const int generic_row = (14 + volat_div + descriptor_count);
 	static const int row_size = period_count * generic_row + extra_row; // == SNAP_BITS
 	
 	void LoadSources();

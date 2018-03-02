@@ -14,17 +14,17 @@ void SourceImage::LoadCatchStrands() {
 	iter_count = 2;
 	#endif
 	
-	for (; strands.cursor < iter_count; strands.cursor++) {
+	for (; strands.cursor < iter_count && sys.running; strands.cursor++) {
 		bool total_added = false;
 		
 		StrandList meta_added;
 		int evolve_count = strands.GetCount();
-		for(int i = 0; i < evolve_count; i++) {
+		for(int i = 0; i < evolve_count && sys.running; i++) {
 			Strand& st = strands[i];
 			
 			StrandList single_added;
 			
-			for(int j = 0; j < SourceImage::row_size; j++) {
+			for(int j = 0; j < SourceImage::row_size && sys.running; j++) {
 				
 				for(int k = 0; k < 5; k++) {
 					Strand test;
@@ -72,6 +72,8 @@ void SourceImage::LoadCatchStrands() {
 					meta_added.SetCount(MAX_STRANDS);
 			}
 		}
+		
+		if (!sys.running) break;
 		
 		if (total_added == false)
 			break;
@@ -139,7 +141,7 @@ void SourceImage::TestCatchStrand(Strand& st, bool write) {
 		}
 		
 		if (enabled) {
-			bool signal_triggered =  true;
+			bool signal_triggered = true;
 			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
 				signal_triggered &= snap.Get(st.trigger_true.bits[j]) == signal;
 			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)

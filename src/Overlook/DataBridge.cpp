@@ -440,7 +440,7 @@ void DataBridge::RefreshFromFaster() {
 	//   int64 t1int = epoch.Get();
 	//   tdiff == t0int - t1int
 	
-	int expected_count = faster_bars / period_mins;
+	int expected_count = faster_bars / period_mins * 1.2;
 	open_buf.Reserve(expected_count);
 	low_buf.Reserve(expected_count);
 	high_buf.Reserve(expected_count);

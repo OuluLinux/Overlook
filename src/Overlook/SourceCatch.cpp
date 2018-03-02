@@ -139,7 +139,7 @@ void SourceImage::TestCatchStrand(Strand& st, bool write) {
 		}
 		
 		if (enabled) {
-			bool signal_triggered = true;
+			bool signal_triggered = catch_strands.cursor == 0 || (catch_strands.cursor > 0 && (st.trigger_true.count || st.trigger_false.count));
 			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
 				signal_triggered &= snap.Get(st.trigger_true.bits[j]) == signal;
 			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)

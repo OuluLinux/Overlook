@@ -42,7 +42,7 @@ struct StrandItem {
 
 struct Strand {
 	StrandItem enabled, signal_true, signal_false, trigger_true, trigger_false;
-	double result = 0.0;
+	long double result = 0.0;
 	
 	String ToString() const;
 	String BitString() const;

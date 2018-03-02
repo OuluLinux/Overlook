@@ -92,6 +92,9 @@ SystemCtrl::SystemCtrl() {
 	catch_strands.AddColumn("Index");
 	catch_strands.AddColumn("Bit list");
 	catch_strands.AddColumn("Result");
+	
+	
+	PostCallback(THISBACK(Start));
 }
 
 void SystemCtrl::Data() {
@@ -164,7 +167,7 @@ void SystemCtrl::Data() {
 		for(int i = 0; i < sym_data.try_strands.GetCount(); i++) {
 			try_strands.Set(i, 0, i);
 			try_strands.Set(i, 1, sym_data.try_strands[i].BitString());
-			try_strands.Set(i, 2, sym_data.try_strands[i].result);
+			try_strands.Set(i, 2, (double)sym_data.try_strands[i].result);
 		}
 		try_strands.SetCount(sym_data.try_strands.GetCount());
 	}
@@ -172,7 +175,7 @@ void SystemCtrl::Data() {
 		for(int i = 0; i < sym_data.catch_strands.GetCount(); i++) {
 			catch_strands.Set(i, 0, i);
 			catch_strands.Set(i, 1, sym_data.catch_strands[i].BitString());
-			catch_strands.Set(i, 2, sym_data.catch_strands[i].result);
+			catch_strands.Set(i, 2, (double)sym_data.catch_strands[i].result);
 		}
 		catch_strands.SetCount(sym_data.catch_strands.GetCount());
 	}

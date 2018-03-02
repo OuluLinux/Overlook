@@ -32,7 +32,7 @@ typedef const int ConstInt;
 #define MIN_REAL_TFID 0
 #define MAX_REAL_TFID 6
 #define SNAP_BITS (6*(13+6+6)+2)
-#define STRAND_COSTMULT 3
+#define STRAND_COSTMULT (4 * (1 + db.GetTf()))
 
 enum {
 	PHASE_TRAINING,

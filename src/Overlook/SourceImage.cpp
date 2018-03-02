@@ -112,6 +112,15 @@ void SourceImage::LoadBooleans() {
 			
 			for(int k = 0; k < period_count; k++) {
 				
+				// MovingAverage
+				OnlineAverageWindow1& av_win = av_wins[k];
+				double prev = av_win.GetMean();
+				av_win.Add(open1);
+				double curr = av_win.GetMean();
+				snap.Set(bit_pos++, curr < prev);
+				snap.Set(bit_pos++, open1 < prev);
+				
+				
 				// OnlineMinimalLabel
 				double cost	 = spread_point * (1 + k);
 				const int count = 1;
@@ -144,16 +153,7 @@ void SourceImage::LoadBooleans() {
 				}
 				for(int i = 0; i < volat_div; i++)
 					snap.Set(bit_pos++,  lvl == i);
-				
 			
-				// MovingAverage
-				OnlineAverageWindow1& av_win = av_wins[k];
-				double prev = av_win.GetMean();
-				av_win.Add(open1);
-				double curr = av_win.GetMean();
-				label = open1 < prev;
-				snap.Set(bit_pos++, label);
-				
 				
 				// Momentum
 				begin = Upp::max(0, cursor - period);
@@ -402,7 +402,7 @@ bool StrandItem::Evolve(int bit, StrandItem& dst) {
 
 String Strand::ToString() const {
 	String out;
-	out << "result=" << result << ", " << BitString();
+	out << "result=" << (double)result << ", " << BitString();
 	return out;
 }
 

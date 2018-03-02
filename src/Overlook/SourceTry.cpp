@@ -113,7 +113,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 	end = min(100000, end);
 	#endif
 	
-	double result = 1.0;
+	long double result = 1.0;
 	double point = db.GetPoint();
 	
 	bool prev_enabled = false, prev_signal;
@@ -121,7 +121,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 	for(int i = begin; i < end; i++) {
 		Snap& snap = main_booleans[i];
 		
-		bool signal = snap.Get((SourceImage::period_count-1) * SourceImage::generic_row);
+		bool signal = snap.Get(1 * SourceImage::generic_row); // Moving average period 4
 		bool enabled = true;
 		bool triggered = false;
 		
@@ -139,7 +139,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 		}
 		
 		if (enabled) {
-			bool signal_triggered = try_strands.cursor == 0 || (try_strands.cursor > 0 && (st.trigger_true.count || st.trigger_false.count));
+			bool signal_triggered = true;
 			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
 				signal_triggered &= snap.Get(st.trigger_true.bits[j]) == signal;
 			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)
@@ -171,6 +171,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 			double change;
 			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
 			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
+			if (fabs(change - 1.0) > 0.5) change = 1.0;
 			result *= change;
 		}
 		if (do_open) {

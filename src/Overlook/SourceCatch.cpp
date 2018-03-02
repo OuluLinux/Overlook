@@ -9,10 +9,10 @@ void SourceImage::LoadCatchStrands() {
 	if (strands.IsEmpty())
 		strands.Add();
 	
-	int iter_count = 6;
-	/*#ifdef flagDEBUG
+	int iter_count = 20;
+	#ifdef flagDEBUG
 	iter_count = 2;
-	#endif*/
+	#endif
 	
 	for (; strands.cursor < iter_count; strands.cursor++) {
 		bool total_added = false;
@@ -31,9 +31,11 @@ void SourceImage::LoadCatchStrands() {
 					test.Clear();
 					
 					bool fail = false;
-					if (k == 0)			fail = st.EvolveSignal(j, test);
-					else if (k == 1)	fail = st.EvolveEnabled(j, test);
-					else				fail = st.EvolveOppositeSignal(j, test);
+					if      (k == 0)	fail = st.enabled			.Evolve(j, test.enabled);
+					else if (k == 1)	fail = st.signal_true		.Evolve(j, test.signal_true);
+					else if (k == 2)	fail = st.signal_false		.Evolve(j, test.signal_false);
+					else if (k == 3)	fail = st.trigger_true		.Evolve(j, test.trigger_true);
+					else if (k == 4)	fail = st.trigger_false		.Evolve(j, test.trigger_false);
 					if (fail) continue;
 					
 					TestCatchStrand(test);
@@ -98,23 +100,18 @@ void SourceImage::LoadCatchStrands() {
 	
 	strand_data.SetCount(end);
 	
-	for(; strand_data.catch_cursor < end; strand_data.catch_cursor++) {
-		int sig = GetCatchSignal(strand_data.catch_cursor);
-		bool enabled = sig != 0;
-		bool signal = sig == -1;
-		
-		strand_data.Set(strand_data.catch_cursor, 2, signal);
-		strand_data.Set(strand_data.catch_cursor, 3, enabled);
+	for(int i = strands.GetCount() -1; i >= 0; i--) {
+		auto& st = strands[i];
+		if (st.result < 1.1) continue;
+		TestCatchStrand(st, true);
 	}
 }
 
-void SourceImage::TestCatchStrand(Strand& st) {
+void SourceImage::TestCatchStrand(Strand& st, bool write) {
 	int begin = 200;
-	/*#ifdef flagDEBUG
+	#ifdef flagDEBUG
 	end = min(100000, end);
-	#else
-	end = max(500000, end - 500000);
-	#endif*/
+	#endif
 	
 	double result = 1.0;
 	double point = db.GetPoint();
@@ -126,31 +123,28 @@ void SourceImage::TestCatchStrand(Strand& st) {
 		
 		bool signal = strand_data.Get(i, 0);
 		bool enabled = strand_data.Get(i, 1);
+		bool triggered = false;
 		
-		for(int j = 0; j < st.enabled_count && enabled; j++) {
-			int bit = st.enabled[j];
+		for(int j = 0; j < st.enabled.count && enabled; j++) {
+			int bit = st.enabled.bits[j];
 			bool is_bit_enabled = snap.Get(bit);
 			enabled &= is_bit_enabled;
 		}
 		
 		if (enabled) {
-			bool signal_enabled = true;
-			for(int j = 0; j < st.signal_count && signal_enabled; j++) {
-				int bit = st.signal[j];
-				bool is_bit_equal = snap.Get(bit) == signal;
-				signal_enabled &= is_bit_equal;
-			}
-			enabled &= signal_enabled;
+			for(int j = 0; j < st.signal_true.count && enabled; j++)
+				enabled &= snap.Get(st.signal_true.bits[j]) == signal;
+			for(int j = 0; j < st.signal_false.count && enabled; j++)
+				enabled &= snap.Get(st.signal_false.bits[j]) != signal;
 		}
 		
 		if (enabled) {
-			bool oppositesignal_enabled = true;
-			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
-				int bit = st.oppositesignal[j];
-				bool is_bit_equal = snap.Get(bit) != signal;
-				oppositesignal_enabled &= is_bit_equal;
-			}
-			enabled &= oppositesignal_enabled;
+			bool signal_triggered = true;
+			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
+				signal_triggered &= snap.Get(st.trigger_true.bits[j]) == signal;
+			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)
+				signal_triggered &= snap.Get(st.trigger_false.bits[j]) != signal;
+			triggered |= signal_triggered;
 		}
 		
 		bool do_open = false, do_close = false;
@@ -158,7 +152,8 @@ void SourceImage::TestCatchStrand(Strand& st) {
 		if (prev_enabled) {
 			if (enabled) {
 				if (signal != prev_signal) {
-					do_open = true;
+					if (triggered)
+						do_open = true;
 					do_close = true;
 				}
 			} else {
@@ -166,15 +161,16 @@ void SourceImage::TestCatchStrand(Strand& st) {
 			}
 		}
 		else if (enabled) {
-			do_open = true;
+			if (triggered)
+				do_open = true;
 		}
 		
 		
 		if (do_close) {
 			double current = db.open[i];
 			double change;
-			if (!prev_signal)	change = current / (prev_open + point);
-			else				change = 1.0 - (current / (prev_open - point) - 1.0);
+			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
+			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
 			result *= change;
 		}
 		if (do_open) {
@@ -184,63 +180,24 @@ void SourceImage::TestCatchStrand(Strand& st) {
 		
 		prev_signal = signal;
 		prev_enabled = enabled;
+		
+		if (write && enabled) {
+			strand_data.Set(i, 2, signal);
+			strand_data.Set(i, 3, enabled);
+		}
 	}
 	
 	st.result = result;
 }
 
 int SourceImage::GetCatchSignal(int pos) {
-	auto& strands = this->catch_strands;
+	if (pos < 0)
+		pos = strand_data.GetCount() - 1;
+	if (pos < 0) return 0;
+	bool signal = strand_data.Get(pos, 2);
+	bool enabled = strand_data.Get(pos, 3);
 	
-	if (main_booleans.IsEmpty())
-		return 0;
-	
-	if (pos == -1) pos = main_booleans.GetCount() - 1;
-	Snap& snap = main_booleans[pos];
-	
-	for(int i = 0; i < strands.GetCount(); i++) {
-		Strand& st = strands.strands[i];
-		if (st.result <= 1.1)
-			continue;
-		
-		int latest = strand_data.GetCount() - 1;
-		bool signal = strand_data.Get(latest, 0);
-		bool enabled = strand_data.Get(latest, 1);
-		
-		for(int j = 0; j < st.enabled_count && enabled; j++) {
-			int bit = st.enabled[j];
-			bool is_bit_enabled = snap.Get(bit);
-			enabled &= is_bit_enabled;
-		}
-		
-		if (enabled) {
-			bool signal_enabled = true;
-			for(int j = 0; j < st.signal_count && signal_enabled; j++) {
-				int bit = st.signal[j];
-				bool is_bit_equal = snap.Get(bit) == signal;
-				signal_enabled &= is_bit_equal;
-			}
-			enabled &= signal_enabled;
-		}
-		
-		if (enabled) {
-			bool oppositesignal_enabled = true;
-			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
-				int bit = st.oppositesignal[j];
-				bool is_bit_equal = snap.Get(bit) != signal;
-				oppositesignal_enabled &= is_bit_equal;
-			}
-			enabled &= oppositesignal_enabled;
-		}
-		
-		if (enabled) {
-			int sig = 0;
-			sig = signal ? -1.0 : +1.0;
-			return sig;
-		}
-	}
-	
-	return 0;
+	return enabled ? (signal ? -1 : +1) : 0;
 }
 
 }

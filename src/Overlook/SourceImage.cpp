@@ -387,42 +387,16 @@ void StrandList::Dump() {
 	}
 }
 
-bool Strand::EvolveSignal(int bit, Strand& dst) {
+bool StrandItem::Evolve(int bit, StrandItem& dst) {
 	dst = *this;
 	bool fail = false;
-	for(int i = 0; i < dst.signal_count; i++) {
-		if (dst.signal[i] == bit) {
+	for(int i = 0; i < dst.count; i++) {
+		if (dst.bits[i] == bit) {
 			fail = true;
 			break;
 		}
 	}
-	dst.AddSignal(bit);
-	return fail;
-}
-
-bool Strand::EvolveOppositeSignal(int bit, Strand& dst) {
-	dst = *this;
-	bool fail = false;
-	for(int i = 0; i < dst.oppositesignal_count; i++) {
-		if (dst.oppositesignal[i] == bit) {
-			fail = true;
-			break;
-		}
-	}
-	dst.AddOppositeSignal(bit);
-	return fail;
-}
-
-bool Strand::EvolveEnabled(int bit, Strand& dst) {
-	dst = *this;
-	bool fail = false;
-	for(int i = 0; i < dst.enabled_count; i++) {
-		if (dst.enabled[i] == bit) {
-			fail = true;
-			break;
-		}
-	}
-	dst.AddEnabled(bit);
+	dst.Add(bit);
 	return fail;
 }
 
@@ -434,12 +408,16 @@ String Strand::ToString() const {
 
 String Strand::BitString() const {
 	String out;
-	for(int i = 0; i < enabled_count; i++)
-		out << "e" << i << "=" << enabled[i] << ", ";
-	for(int i = 0; i < signal_count; i++)
-		out << "s" << i << "=" << signal[i] << ", ";
-	for(int i = 0; i < oppositesignal_count; i++)
-		out << "os" << i << "=" << oppositesignal[i] << ", ";
+	for(int i = 0; i < enabled.count; i++)
+		out << "e" << i << "=" << enabled.bits[i] << ", ";
+	for(int i = 0; i < signal_true.count; i++)
+		out << "s+" << i << "=" << signal_true.bits[i] << ", ";
+	for(int i = 0; i < signal_false.count; i++)
+		out << "s-" << i << "=" << signal_false.bits[i] << ", ";
+	for(int i = 0; i < trigger_true.count; i++)
+		out << "t+" << i << "=" << trigger_true.bits[i] << ", ";
+	for(int i = 0; i < trigger_false.count; i++)
+		out << "t-" << i << "=" << trigger_false.bits[i] << ", ";
 	return out;
 }
 

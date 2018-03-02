@@ -31,20 +31,22 @@ struct SnapStatVector : Moveable<SnapStatVector> {
 
 #define MAX_STRANDS 100
 #define MAX_STRAND_BITS 20
+struct StrandItem {
+	int bits[MAX_STRAND_BITS];
+	int count = 0;
+	
+	bool Evolve(int bit, StrandItem& dst);
+	void Add(int i) {ASSERT(count < MAX_STRAND_BITS); bits[count++] = i;}
+	void Clear() {count = 0;}
+};
+
 struct Strand {
-	int enabled[MAX_STRAND_BITS], signal[MAX_STRAND_BITS], oppositesignal[MAX_STRAND_BITS];
-	int enabled_count = 0, signal_count = 0, oppositesignal_count = 0;
+	StrandItem enabled, signal_true, signal_false, trigger_true, trigger_false;
 	double result = 0.0;
 	
-	void AddEnabled(int i) {ASSERT(signal_count < MAX_STRAND_BITS); enabled[enabled_count++] = i;}
-	void AddSignal(int i) {ASSERT(signal_count < MAX_STRAND_BITS); signal[signal_count++] = i;}
-	void AddOppositeSignal(int i) {ASSERT(oppositesignal_count < MAX_STRAND_BITS); oppositesignal[oppositesignal_count++] = i;}
-	bool EvolveSignal(int bit, Strand& dst);
-	bool EvolveEnabled(int bit, Strand& dst);
-	bool EvolveOppositeSignal(int bit, Strand& dst);
 	String ToString() const;
 	String BitString() const;
-	void Clear() {enabled_count = 0; signal_count = 0; oppositesignal_count = 0; result = -DBL_MAX;}
+	void Clear() {enabled.Clear(); signal_true.Clear(); signal_false.Clear(); trigger_true.Clear(); trigger_false.Clear(); result = -DBL_MAX;}
 };
 
 struct StrandList : Moveable<Strand> {
@@ -112,8 +114,8 @@ struct SourceImage {
 	void LoadStats();
 	void LoadTryStrands();
 	void LoadCatchStrands();
-	void TestTryStrand(Strand& st);
-	void TestCatchStrand(Strand& st);
+	void TestTryStrand(Strand& st, bool write=false);
+	void TestCatchStrand(Strand& st, bool write=false);
 	double GetAppliedValue ( int applied_value, int i );
 	double Open(int shift) {return db.open[shift];}
 	double High(int shift) {return db.high[shift];}
@@ -124,7 +126,6 @@ struct SourceImage {
 	int LowestLow(int period, int shift);
 	int HighestOpen(int period, int shift);
 	int LowestOpen(int period, int shift);
-	int GetTrySignal(int pos=-1);
 	int GetCatchSignal(int pos=-1);
 	int GetSignal() {return GetCatchSignal();}
 	

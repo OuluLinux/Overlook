@@ -9,7 +9,7 @@ void SourceImage::LoadTryStrands() {
 	if (strands.IsEmpty())
 		strands.Add();
 	
-	int iter_count = 6;
+	int iter_count = 20;
 	#ifdef flagDEBUG
 	iter_count = 2;
 	#endif
@@ -31,9 +31,11 @@ void SourceImage::LoadTryStrands() {
 					test.Clear();
 					
 					bool fail = false;
-					if (k == 0)			fail = st.EvolveSignal(j, test);
-					else if (k == 1)	fail = st.EvolveEnabled(j, test);
-					else				fail = st.EvolveOppositeSignal(j, test);
+					if      (k == 0)	fail = st.enabled			.Evolve(j, test.enabled);
+					else if (k == 1)	fail = st.signal_true		.Evolve(j, test.signal_true);
+					else if (k == 2)	fail = st.signal_false		.Evolve(j, test.signal_false);
+					else if (k == 3)	fail = st.trigger_true		.Evolve(j, test.trigger_true);
+					else if (k == 4)	fail = st.trigger_false		.Evolve(j, test.trigger_false);
 					if (fail) continue;
 					
 					TestTryStrand(test);
@@ -98,17 +100,14 @@ void SourceImage::LoadTryStrands() {
 	
 	strand_data.SetCount(end);
 	
-	for(; strand_data.try_cursor < end; strand_data.try_cursor++) {
-		int sig = GetTrySignal(strand_data.try_cursor);
-		bool enabled = sig != 0;
-		bool signal = sig == -1;
-		
-		strand_data.Set(strand_data.try_cursor, 0, signal);
-		strand_data.Set(strand_data.try_cursor, 1, enabled);
+	for(int i = strands.GetCount() -1; i >= 0; i--) {
+		auto& st = strands[i];
+		if (st.result < 1.0) continue;
+		TestTryStrand(st, true);
 	}
 }
 
-void SourceImage::TestTryStrand(Strand& st) {
+void SourceImage::TestTryStrand(Strand& st, bool write) {
 	int begin = 200;
 	#ifdef flagDEBUG
 	end = min(100000, end);
@@ -123,32 +122,29 @@ void SourceImage::TestTryStrand(Strand& st) {
 		Snap& snap = main_booleans[i];
 		
 		bool signal = snap.Get((SourceImage::period_count-1) * SourceImage::generic_row);
-		
 		bool enabled = true;
-		for(int j = 0; j < st.enabled_count && enabled; j++) {
-			int bit = st.enabled[j];
+		bool triggered = false;
+		
+		for(int j = 0; j < st.enabled.count && enabled; j++) {
+			int bit = st.enabled.bits[j];
 			bool is_bit_enabled = snap.Get(bit);
 			enabled &= is_bit_enabled;
 		}
 		
 		if (enabled) {
-			bool signal_enabled = true;
-			for(int j = 0; j < st.signal_count && signal_enabled; j++) {
-				int bit = st.signal[j];
-				bool is_bit_equal = snap.Get(bit) == signal;
-				signal_enabled &= is_bit_equal;
-			}
-			enabled &= signal_enabled;
+			for(int j = 0; j < st.signal_true.count && enabled; j++)
+				enabled &= snap.Get(st.signal_true.bits[j]) == signal;
+			for(int j = 0; j < st.signal_false.count && enabled; j++)
+				enabled &= snap.Get(st.signal_false.bits[j]) != signal;
 		}
 		
 		if (enabled) {
-			bool oppositesignal_enabled = true;
-			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
-				int bit = st.oppositesignal[j];
-				bool is_bit_equal = snap.Get(bit) != signal;
-				oppositesignal_enabled &= is_bit_equal;
-			}
-			enabled &= oppositesignal_enabled;
+			bool signal_triggered = true;
+			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
+				signal_triggered &= snap.Get(st.trigger_true.bits[j]) == signal;
+			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)
+				signal_triggered &= snap.Get(st.trigger_false.bits[j]) != signal;
+			triggered |= signal_triggered;
 		}
 		
 		bool do_open = false, do_close = false;
@@ -156,7 +152,8 @@ void SourceImage::TestTryStrand(Strand& st) {
 		if (prev_enabled) {
 			if (enabled) {
 				if (signal != prev_signal) {
-					do_open = true;
+					if (triggered)
+						do_open = true;
 					do_close = true;
 				}
 			} else {
@@ -164,15 +161,16 @@ void SourceImage::TestTryStrand(Strand& st) {
 			}
 		}
 		else if (enabled) {
-			do_open = true;
+			if (triggered)
+				do_open = true;
 		}
 		
 		
 		if (do_close) {
 			double current = db.open[i];
 			double change;
-			if (!prev_signal)	change = current / (prev_open + point);
-			else				change = 1.0 - (current / (prev_open - point) - 1.0);
+			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
+			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
 			result *= change;
 		}
 		if (do_open) {
@@ -182,61 +180,14 @@ void SourceImage::TestTryStrand(Strand& st) {
 		
 		prev_signal = signal;
 		prev_enabled = enabled;
+		
+		if (write && enabled) {
+			strand_data.Set(i, 0, signal);
+			strand_data.Set(i, 1, enabled);
+		}
 	}
 	
 	st.result = result;
-}
-
-int SourceImage::GetTrySignal(int pos) {
-	auto& strands = this->try_strands;
-	
-	if (main_booleans.IsEmpty())
-		return 0;
-	
-	Snap& snap = pos == -1 ? main_booleans.Top() : main_booleans[pos];
-	
-	for(int i = 0; i < strands.GetCount(); i++) {
-		Strand& st = strands.strands[i];
-		if (st.result <= 1.0)
-			continue;
-		
-		bool signal = snap.Get((SourceImage::period_count-1) * SourceImage::generic_row);
-			
-		bool enabled = true;
-		for(int j = 0; j < st.enabled_count && enabled; j++) {
-			int bit = st.enabled[j];
-			bool is_bit_enabled = snap.Get(bit);
-			enabled &= is_bit_enabled;
-		}
-		
-		if (enabled) {
-			bool signal_enabled = true;
-			for(int j = 0; j < st.signal_count && signal_enabled; j++) {
-				int bit = st.signal[j];
-				bool is_bit_equal = snap.Get(bit) == signal;
-				signal_enabled &= is_bit_equal;
-			}
-			enabled &= signal_enabled;
-		}
-		
-		if (enabled) {
-			bool oppositesignal_enabled = true;
-			for(int j = 0; j < st.oppositesignal_count && oppositesignal_enabled; j++) {
-				int bit = st.oppositesignal[j];
-				bool is_bit_equal = snap.Get(bit) != signal;
-				oppositesignal_enabled &= is_bit_equal;
-			}
-			enabled &= oppositesignal_enabled;
-		}
-		
-		if (enabled) {
-			int sig = 0;
-			sig = signal ? -1.0 : +1.0;
-			return sig;
-		}
-	}
-	
-	return 0;
 }
 
 }

@@ -26,7 +26,7 @@ void SourceImage::LoadTryStrands() {
 			
 			for(int j = 0; j < SourceImage::row_size; j++) {
 				
-				for(int k = 0; k < 3; k++) {
+				for(int k = 0; k < 5; k++) {
 					Strand test;
 					test.Clear();
 					

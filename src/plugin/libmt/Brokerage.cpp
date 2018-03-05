@@ -399,12 +399,12 @@ void Brokerage::RefreshLimits() {
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
 		if (o.type == OP_BUY) {
-			double stop = RealtimeBid(i);
+			double stop = RealtimeBid(o.symbol);
 			double tp = stop * (1 + limit_factor);
 			double sl = stop * (1 - limit_factor);
 			OrderModify(o.ticket, stop, sl, tp, 0);
 		} else {
-			double stop = RealtimeAsk(i);
+			double stop = RealtimeAsk(o.symbol);
 			double tp = stop * (1 - limit_factor);
 			double sl = stop * (1 + limit_factor);
 			OrderModify(o.ticket, stop, sl, tp, 0);

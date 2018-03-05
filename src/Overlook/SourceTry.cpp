@@ -99,8 +99,10 @@ void SourceImage::LoadTryStrands() {
 			strands.SetCount(MAX_STRANDS);
 	}
 	
-	
+		
+	strand_lock.Enter();
 	strand_data.SetCount(end);
+	strand_lock.Leave();
 	
 	for(int i = strands.GetCount() -1; i >= 0; i--) {
 		auto& st = strands[i];

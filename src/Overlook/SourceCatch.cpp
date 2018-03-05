@@ -100,7 +100,9 @@ void SourceImage::LoadCatchStrands() {
 	}
 	
 	
+	strand_lock.Enter();
 	strand_data.SetCount(end);
+	strand_lock.Leave();
 	
 	for(int i = strands.GetCount() -1; i >= 0; i--) {
 		auto& st = strands[i];
@@ -197,8 +199,11 @@ int SourceImage::GetCatchSignal(int pos) {
 	if (pos < 0)
 		pos = strand_data.GetCount() - 1;
 	if (pos < 0) return 0;
+	
+	strand_lock.Enter();
 	bool signal = strand_data.Get(pos, 2);
 	bool enabled = strand_data.Get(pos, 3);
+	strand_lock.Leave();
 	
 	return enabled ? (signal ? -1 : +1) : 0;
 }

@@ -98,6 +98,7 @@ struct SourceImage {
 	int end = 0;
 	
 	Mutex							lock;
+	Mutex							strand_lock;
 	
 	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % try_strands % catch_strands % strand_data % phase % end;}
 	

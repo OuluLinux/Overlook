@@ -413,8 +413,13 @@ bool System::RefreshReal() {
 	
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		int signal;
+		VectorMap<int, double> period_results;
 		for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
-			signal = data[i][j].GetSignal();
+			period_results.Add(j, data[i][j].GetBestResult());
+		}
+		SortByValue(period_results, StdGreater<double>());
+		for(int j = 0; j < period_results.GetCount(); j++) {
+			signal = data[i][period_results.GetKey(j)].GetSignal();
 			if (signal)
 				break;
 		}
@@ -437,7 +442,7 @@ bool System::RefreshReal() {
 		mt.Data();
 		mt.RefreshLimits();
 		int open_count = 0;
-		const int MAX_SYMOPEN = mt.GetSymbolCount();
+		const int MAX_SYMOPEN = max(1, mt.GetSymbolCount() / 3);
 		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {

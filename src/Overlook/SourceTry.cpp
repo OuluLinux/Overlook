@@ -113,9 +113,14 @@ void SourceImage::LoadTryStrands() {
 
 void SourceImage::TestTryStrand(Strand& st, bool write) {
 	int begin = 200;
-	#ifdef flagDEBUG
-	end = min(100000, end);
-	#endif
+	
+	if (!write) {
+		#ifdef flagDEBUG
+		end = min(100000, end);
+		#else
+		end = min(500000, end);
+		#endif
+	}
 	
 	long double result = 1.0;
 	double point = db.GetPoint();

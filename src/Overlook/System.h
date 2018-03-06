@@ -129,7 +129,7 @@ struct SourceImage {
 	int LowestOpen(int period, int shift);
 	int GetCatchSignal(int pos=-1);
 	int GetSignal() {return GetCatchSignal();}
-	
+	double GetBestResult() {return catch_strands.GetCount() ? catch_strands[0].result : 0.0;}
 	
 	// As job
 	enum {PHASE_SOURCE, PHASE_BOOLEANS, PHASE_STATS, PHASE_TRYSTRANDS, PHASE_CATCHSTRANDS, PHASE_COUNT};

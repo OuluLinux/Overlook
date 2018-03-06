@@ -446,6 +446,13 @@ bool SourceImage::IsFinished() const {
 void SourceImage::Process() {
 	System& sys = GetSystem();
 	
+	
+	if (phase > PHASE_SOURCE) {
+		int tf = db.GetTf();
+		if (tf < MIN_REAL_TFID || tf > MAX_REAL_TFID)
+			return;
+	}
+	
 	if (!lock.TryEnter()) return;
 	
 	if (phase == PHASE_SOURCE) {

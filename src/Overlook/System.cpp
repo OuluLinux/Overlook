@@ -179,6 +179,20 @@ void System::Init() {
 		int sym_count = symbols.GetCount();
 		int tf_count = periods.GetCount();
 		
+		bool same_symbols = true;
+		if (!data.IsEmpty()) {
+			same_symbols &= data.GetCount() == sym_count;
+			if (same_symbols) {
+				for(int i = 0; i < data.GetCount(); i++) {
+					for(int j = 0; j < data[i].GetCount(); j++) {
+						DataBridge& db = data[i][j].db;
+						same_symbols &= symbols[i] == db.symbol;
+					}
+				}
+			}
+		}
+		ASSERTUSER_(same_symbols, "MT4 symbols have been changed. Remove system.bin to continue.");
+		
 		jobs.SetCount(0);
 		data.SetCount(sym_count);
 		for(int i = 0; i < data.GetCount(); i++) {
@@ -188,6 +202,7 @@ void System::Init() {
 				
 				DataBridge& db = data[i][j].db;
 				
+				db.symbol = symbols[i];
 				db.sym_id = i;
 				db.tf_id = j;
 				db.period = mt.GetTimeframe(j);

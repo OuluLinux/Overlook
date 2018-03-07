@@ -64,6 +64,7 @@ protected:
 	friend class System;
 	
 	VectorMap<int,int> median_max_map, median_min_map;
+	String symbol;
 	double point = 0.01;
 	double spread_mean;
 	int spread_count;
@@ -95,7 +96,8 @@ public:
 	Vector<double> open, low, high, volume;
 	Vector<int> time;
 	void Serialize(Stream& s) {
-		s % median_max_map % median_min_map
+		s % symbol
+		  % median_max_map % median_min_map
 		  % point
 		  % spread_mean
 		  % spread_count
@@ -108,6 +110,7 @@ public:
 	}
 	
 	
+	void Clear();
 	void Init();
 	void Start();
 	void SetBoolean(int cursor, VectorBool& vec);

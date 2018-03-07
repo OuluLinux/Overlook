@@ -27,6 +27,23 @@ void DataBridge::Init() {
 	
 }
 
+void DataBridge::Clear() {
+	median_max_map.Clear();
+	median_min_map.Clear();
+	spread_mean = 0;
+	spread_count = 0;
+	median_max = -DBL_MAX;
+	median_min = DBL_MAX;
+	cursor = 0;
+	cursor2 = 0;
+	counted = 0;
+	open.Clear();
+	low.Clear();
+	high.Clear();
+	volume.Clear();
+	time.Clear();
+}
+
 void DataBridge::Start() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
@@ -36,7 +53,6 @@ void DataBridge::Start() {
 		once = false;
 		
 		common.InspectInit();
-		
 	}
 	
 	int sym_count = common.GetSymbolCount();
@@ -46,7 +62,7 @@ void DataBridge::Start() {
 		RefreshFromFaster();
 	}
 	else if (sym_id < sym_count) {
-		bool init_round = GetCounted() == 0 && open.GetCount() == 0;
+		bool init_round = open.GetCount() == 0;
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym_id);
 			RefreshFromHistory(true);

@@ -181,7 +181,7 @@ struct AccountImage : public Job {
 	Vector<Job*> jobs;
 	Vector<DataBridge*> dbs;
 	
-	void Serialize(Stream& s) {s % sym % tf % point % gain % signals % balance % current_state;}
+	void Serialize(Stream& s) {s % sym % tf % point % gain % signals % balance % current_state; Job::Serialize(s);}
 	virtual int GetSymbol() {return sym;}
 	virtual int GetTf() {return tf;}
 	virtual double GetPoint() {return point;}

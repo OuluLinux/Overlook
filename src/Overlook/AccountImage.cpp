@@ -22,12 +22,20 @@ bool AccountImage::LoadSources() {
 	
 	if (current_state.IsEmpty()) {
 		current_state.SetCount(jobs.GetCount());
-		dbs.SetCount(jobs.GetCount());
 		
 		for(int i = 0; i < jobs.GetCount(); i++) {
 			DataBridge& db = dynamic_cast<SourceImage&>(*jobs[i]).db;
 			db.Start();
 			current_state[i] = State(0, db.time[0], db.open[0], 0);
+		}
+	}
+	
+	if (dbs.IsEmpty()) {
+		dbs.SetCount(jobs.GetCount());
+		
+		for(int i = 0; i < jobs.GetCount(); i++) {
+			DataBridge& db = dynamic_cast<SourceImage&>(*jobs[i]).db;
+			db.Start();
 			dbs[i] = &db;
 			ASSERT(db.GetTf() == GetTf());
 		}

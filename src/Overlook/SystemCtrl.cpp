@@ -91,6 +91,7 @@ SystemCtrl::SystemCtrl() {
 	try_strands.AddColumn("Result");
 	
 	catch_strands.AddColumn("Index");
+	catch_strands.AddColumn("Signal bit");
 	catch_strands.AddColumn("Bit list");
 	catch_strands.AddColumn("Result");
 	

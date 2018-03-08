@@ -433,15 +433,18 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
+	VectorMap<int, double> period_results;
+	for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
+		period_results.Add(j, account[j].GetBestResult());
+	}
+	SortByValue(period_results, StdGreater<double>());
+	
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		int signal;
-		VectorMap<int, double> period_results;
-		for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
-			period_results.Add(j, data[i][j].GetBestResult());
-		}
-		SortByValue(period_results, StdGreater<double>());
 		for(int j = 0; j < period_results.GetCount(); j++) {
-			signal = data[i][period_results.GetKey(j)].GetSignal();
+			int tf = period_results.GetKey(j);
+			int account_signal = account[tf].GetSignal();
+			signal = data[i][tf].GetSignal() * account_signal;
 			if (signal)
 				break;
 		}

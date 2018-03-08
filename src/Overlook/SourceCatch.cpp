@@ -26,7 +26,7 @@ void Job::LoadCatchStrands() {
 			
 			for(int j = 0; j < Job::row_size && sys.running; j++) {
 				
-				for(int k = 0; k < 5; k++) {
+				for(int k = 0; k < 6; k++) {
 					Strand test;
 					test.Clear();
 					
@@ -36,6 +36,7 @@ void Job::LoadCatchStrands() {
 					else if (k == 2)	fail = st.signal_false		.Evolve(j, test.signal_false);
 					else if (k == 3)	fail = st.trigger_true		.Evolve(j, test.trigger_true);
 					else if (k == 4)	fail = st.trigger_false		.Evolve(j, test.trigger_false);
+					else if (k == 5)	{test = st; test.sig_bit = j;}
 					if (fail) continue;
 					
 					TestCatchStrand(test);
@@ -127,7 +128,8 @@ void Job::TestCatchStrand(Strand& st, bool write) {
 	for(int i = begin; i < end; i++) {
 		Snap& snap = main_booleans[i];
 		
-		bool signal = strand_data.Get(i, 0);
+		//bool signal = strand_data.Get(i, 0);
+		bool signal = snap.Get(st.sig_bit);
 		bool enabled = strand_data.Get(i, 1);
 		bool triggered = false;
 		

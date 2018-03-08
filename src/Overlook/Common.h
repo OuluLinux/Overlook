@@ -30,10 +30,11 @@ class Agent;
 typedef const int ConstInt;
 
 #define MAX_ITERS 6
-#define MIN_REAL_TFID 0
+#define MIN_REAL_TFID 2
 #define MAX_REAL_TFID 6
-#define SNAP_BITS (6*(14+6+6)+2)
-#define STRAND_COSTMULT (4 * (1 + db.GetTf()))
+#define SNAP_GENERIC (14+6+6)
+#define SNAP_BITS (6*SNAP_GENERIC+2)
+#define STRAND_COSTMULT (4 * (1 + tf))
 
 enum {
 	PHASE_TRAINING,
@@ -626,6 +627,7 @@ public:
 	int GetEnd() const {return data_begin + GetCount();}
 	int PopCount() const;
 	VectorBool& SetCount(int i);
+	VectorBool& Reserve(int i);
 	VectorBool& Zero();
 	VectorBool& One();
 	VectorBool& SetInverse(const VectorBool& b);

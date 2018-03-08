@@ -24,6 +24,15 @@ VectorBool& VectorBool::SetCount(int i) {
 	return *this;
 }
 
+VectorBool& VectorBool::Reserve(int i) {
+	if (count == i) return *this;
+	int c64 = i / 64;
+	if (i % 64 != 0) c64++;
+	count = i;
+	data.Reserve(c64);
+	return *this;
+}
+
 VectorBool& VectorBool::Zero() {
 	uint64* it = data.Begin();
 	ConstU64* end = data.End();

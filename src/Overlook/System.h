@@ -43,6 +43,7 @@ struct StrandItem {
 struct Strand {
 	StrandItem enabled, signal_true, signal_false, trigger_true, trigger_false;
 	long double result = 0.0;
+	int sig_bit = 0;
 	
 	String ToString() const;
 	String BitString() const;
@@ -69,20 +70,19 @@ struct StrandList : Moveable<Strand> {
 
 struct StrandVector {
 	
-	static const int row_size = 4;
-	
 	VectorBool data;
+	int row_size = 4;
 	int try_cursor = 0, catch_cursor = 0;
 	
-	void Serialize(Stream& s) {s % data % try_cursor % catch_cursor;}
+	void Serialize(Stream& s) {s % data % row_size % try_cursor % catch_cursor;}
 	void SetCount(int i) {data.SetCount(row_size * i);}
+	void Reserve(int i) {data.Reserve(row_size * i);}
 	int GetCount() const {return data.GetCount() / row_size;}
 	void Set(int i, int j, bool b) {data.Set(i * row_size + j, b);}
 	bool Get(int i, int j) const {return data.Get(i * row_size + j);}
 };
 
-struct SourceImage {
-	DataBridge db;
+struct Job {
 	Vector<Snap>					main_booleans;
 	VectorBool						main_signal;
 	SnapStatVector					main_stats;
@@ -96,11 +96,10 @@ struct SourceImage {
 	StrandVector					strand_data;
 	int phase = 0;
 	int end = 0;
+	bool is_finished = false;
 	
 	Mutex							lock;
 	Mutex							strand_lock;
-	
-	void Serialize(Stream& s) {s % db % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % try_strands % catch_strands % strand_data % phase % end;}
 	
 	// NOTE: update SNAP_BITS
 	static const int period_count = 6;
@@ -110,23 +109,19 @@ struct SourceImage {
 	static const int generic_row = (14 + volat_div + descriptor_count);
 	static const int row_size = period_count * generic_row + extra_row; // == SNAP_BITS
 	
-	void LoadSources();
+	virtual int GetSymbol() = 0;
+	virtual int GetTf() = 0;
+	virtual double GetPoint() = 0;
+	virtual const Vector<double>& GetOpen() = 0;
+	virtual const Vector<double>& GetLow()  = 0;
+	virtual const Vector<double>& GetHigh() = 0;
+	virtual bool LoadSources() = 0;
 	void LoadBooleans();
 	void LoadStats();
 	void LoadTryStrands();
 	void LoadCatchStrands();
 	void TestTryStrand(Strand& st, bool write=false);
 	void TestCatchStrand(Strand& st, bool write=false);
-	double GetAppliedValue ( int applied_value, int i );
-	double Open(int shift) {return db.open[shift];}
-	double High(int shift) {return db.high[shift];}
-	double Low(int shift) {return db.low[shift];}
-	double Volume(int shift) {return db.volume[shift];}
-	int Time(int shift) {return db.time[shift];}
-	int HighestHigh(int period, int shift);
-	int LowestLow(int period, int shift);
-	int HighestOpen(int period, int shift);
-	int LowestOpen(int period, int shift);
 	int GetCatchSignal(int pos=-1);
 	int GetSignal() {return GetCatchSignal();}
 	double GetBestResult() {return catch_strands.GetCount() ? catch_strands[0].result : 0.0;}
@@ -137,8 +132,64 @@ struct SourceImage {
 	double GetProgress() const;
 	bool IsFinished() const;
 	void Process();
+	
+	
+	
+	void Serialize(Stream& s) {s % main_booleans % main_signal % main_stats % volat_divs % median_maps % stat_osc_ma % av_wins % ec % bbma % try_strands % catch_strands % strand_data % phase % end % is_finished;}
+	
 };
 
+struct SourceImage : public Job {
+	DataBridge db;
+	
+	
+	void Serialize(Stream& s) {s % db; Job::Serialize(s);}
+	
+	
+	double GetAppliedValue ( int applied_value, int i );
+	double Open(int shift) {return db.open[shift];}
+	double High(int shift) {return db.high[shift];}
+	double Low(int shift) {return db.low[shift];}
+	double Volume(int shift) {return db.volume[shift];}
+	int Time(int shift) {return db.time[shift];}
+	int HighestHigh(int period, int shift);
+	int LowestLow(int period, int shift);
+	int HighestOpen(int period, int shift);
+	int LowestOpen(int period, int shift);
+	
+	virtual int GetSymbol() {return db.GetSymbol();}
+	virtual int GetTf() {return db.GetTf();}
+	virtual double GetPoint() {return db.GetPoint();}
+	virtual const Vector<double>& GetOpen() {return db.open;}
+	virtual const Vector<double>& GetLow()  {return db.low;}
+	virtual const Vector<double>& GetHigh() {return db.high;}
+	virtual bool LoadSources();
+	
+};
+
+
+struct AccountImage : public Job {
+	typedef Tuple<int, int, double, int> State;
+	
+	int sym = -1, tf = -1;
+	double point = 0.0001;
+	Vector<double> gain;
+	StrandVector signals;
+	double balance = 1000.0;
+	Vector<State> current_state;
+	
+	Vector<Job*> jobs;
+	Vector<DataBridge*> dbs;
+	
+	void Serialize(Stream& s) {s % sym % tf % point % gain % signals % balance % current_state;}
+	virtual int GetSymbol() {return sym;}
+	virtual int GetTf() {return tf;}
+	virtual double GetPoint() {return point;}
+	virtual const Vector<double>& GetOpen() {return gain;}
+	virtual const Vector<double>& GetLow()  {return gain;}
+	virtual const Vector<double>& GetHigh() {return gain;}
+	virtual bool LoadSources();
+};
 
 struct ImageCompiler {
 	static const int MAX_PIPELINE = 128;
@@ -181,6 +232,7 @@ protected:
 	
 	// Persistent
 	Array<Array<SourceImage> >	data;
+	Array<AccountImage>			account;
 	
 	
 	// Temporary
@@ -196,7 +248,7 @@ protected:
 	
 public:
 	
-	void	Serialize(Stream& s) {s % data;}
+	void	Serialize(Stream& s) {s % data % account;}
 	void	StoreThis() {AddJournal("System saving to file"); StoreToFile(*this, ConfigFile("system.bin"));}
 	void	LoadThis() {AddJournal("System loading from file"); LoadFromFile(*this, ConfigFile("system.bin"));}
 	
@@ -216,7 +268,7 @@ public:
 	
 public:
 	Vector<Tuple<String, Time> > journal;
-	Vector<SourceImage*> jobs;
+	Vector<Job*> jobs;
 	Atomic not_stopped;
 	SpinLock workitem_lock;
 	int worker_cursor = 0;

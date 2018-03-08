@@ -49,6 +49,8 @@ void DataBridge::Start() {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
+	lock.Enter();
+	
 	if (once) {
 		once = false;
 		
@@ -70,6 +72,8 @@ void DataBridge::Start() {
 		}
 		RefreshFromAskBid(init_round);
 	}
+	
+	lock.Leave();
 }
 
 void DataBridge::AddSpread(double a) {

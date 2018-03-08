@@ -2,7 +2,7 @@
 
 namespace Overlook {
 
-void SourceImage::LoadCatchStrands() {
+void Job::LoadCatchStrands() {
 	System& sys = GetSystem();
 	auto& strands = this->catch_strands;
 	
@@ -24,7 +24,7 @@ void SourceImage::LoadCatchStrands() {
 			
 			StrandList single_added;
 			
-			for(int j = 0; j < SourceImage::row_size && sys.running; j++) {
+			for(int j = 0; j < Job::row_size && sys.running; j++) {
 				
 				for(int k = 0; k < 5; k++) {
 					Strand test;
@@ -111,14 +111,16 @@ void SourceImage::LoadCatchStrands() {
 	}
 }
 
-void SourceImage::TestCatchStrand(Strand& st, bool write) {
+void Job::TestCatchStrand(Strand& st, bool write) {
 	int begin = 200;
 	#ifdef flagDEBUG
 	end = min(100000, end);
 	#endif
 	
 	long double result = 1.0;
-	double point = db.GetPoint();
+	double point = GetPoint();
+	const Vector<double>& open_buf = GetOpen();
+	int tf = GetTf();
 	
 	bool prev_enabled = false, prev_signal;
 	double prev_open;
@@ -171,7 +173,7 @@ void SourceImage::TestCatchStrand(Strand& st, bool write) {
 		
 		
 		if (do_close) {
-			double current = db.open[i];
+			double current = open_buf[i];
 			double change;
 			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
 			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
@@ -179,7 +181,7 @@ void SourceImage::TestCatchStrand(Strand& st, bool write) {
 			result *= change;
 		}
 		if (do_open) {
-			double current = db.open[i];
+			double current = open_buf[i];
 			prev_open = current;
 		}
 		
@@ -195,7 +197,7 @@ void SourceImage::TestCatchStrand(Strand& st, bool write) {
 	st.result = result;
 }
 
-int SourceImage::GetCatchSignal(int pos) {
+int Job::GetCatchSignal(int pos) {
 	if (pos < 0)
 		pos = strand_data.GetCount() - 1;
 	if (pos < 0) return 0;

@@ -43,6 +43,7 @@ file
 	SourceImage.cpp,
 	SourceTry.cpp,
 	SourceCatch.cpp,
+	AccountImage.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,

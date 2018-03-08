@@ -2,7 +2,7 @@
 
 namespace Overlook {
 
-void SourceImage::LoadTryStrands() {
+void Job::LoadTryStrands() {
 	System& sys = GetSystem();
 	auto& strands = this->try_strands;
 	
@@ -24,9 +24,9 @@ void SourceImage::LoadTryStrands() {
 			
 			StrandList single_added;
 			
-			for(int j = 0; j < SourceImage::row_size && sys.running; j++) {
+			for(int j = 0; j < Job::row_size && sys.running; j++) {
 				
-				for(int k = 0; k < 5; k++) {
+				for(int k = 0; k < 6; k++) {
 					Strand test;
 					test.Clear();
 					
@@ -36,10 +36,11 @@ void SourceImage::LoadTryStrands() {
 					else if (k == 2)	fail = st.signal_false		.Evolve(j, test.signal_false);
 					else if (k == 3)	fail = st.trigger_true		.Evolve(j, test.trigger_true);
 					else if (k == 4)	fail = st.trigger_false		.Evolve(j, test.trigger_false);
+					else if (k == 5)	{test = st; test.sig_bit = j;}
 					if (fail) continue;
 					
 					TestTryStrand(test);
-					
+
 					if (test.result == 1.0)
 						continue;
 					
@@ -111,7 +112,7 @@ void SourceImage::LoadTryStrands() {
 	}
 }
 
-void SourceImage::TestTryStrand(Strand& st, bool write) {
+void Job::TestTryStrand(Strand& st, bool write) {
 	int begin = 200;
 	
 	if (!write) {
@@ -123,14 +124,16 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 	}
 	
 	long double result = 1.0;
-	double point = db.GetPoint();
+	double point = GetPoint();
+	const Vector<double>& open_buf = GetOpen();
+	int tf = GetTf();
 	
 	bool prev_enabled = false, prev_signal;
 	double prev_open;
 	for(int i = begin; i < end; i++) {
 		Snap& snap = main_booleans[i];
 		
-		bool signal = snap.Get(1 * SourceImage::generic_row); // Moving average period 4
+		bool signal = snap.Get(st.sig_bit);
 		bool enabled = true;
 		bool triggered = false;
 		
@@ -176,7 +179,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 		
 		
 		if (do_close) {
-			double current = db.open[i];
+			double current = open_buf[i];
 			double change;
 			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
 			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
@@ -184,7 +187,7 @@ void SourceImage::TestTryStrand(Strand& st, bool write) {
 			result *= change;
 		}
 		if (do_open) {
-			double current = db.open[i];
+			double current = open_buf[i];
 			prev_open = current;
 		}
 		

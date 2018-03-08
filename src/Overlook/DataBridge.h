@@ -74,6 +74,7 @@ protected:
 	int sym_id = -1, tf_id = -1, period = -1;
 	int counted = 0;
 	bool once = true;
+	Mutex lock;
 	
 public:
 	int GetSymbol() const {return sym_id;}

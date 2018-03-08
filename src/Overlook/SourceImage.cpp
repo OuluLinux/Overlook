@@ -2,23 +2,24 @@
 
 namespace Overlook {
 
-void SourceImage::LoadSources() {
+bool SourceImage::LoadSources() {
+	if (GetTf())
+		GetSystem().GetSource(GetSymbol(), 0).db.Start();
 	db.Start();
+	return true;
 }
 
-void SourceImage::LoadBooleans() {
+void Job::LoadBooleans() {
 	System& sys = GetSystem();
-	
-	db.Start();
 		
 	// Get reference values
-	double spread_point				= db.GetPoint();
+	double spread_point				= GetPoint();
 	ASSERT(spread_point != 0.0);
 	Vector<Snap>& data_in			= main_booleans;
 	VectorBool& main_in				= main_signal;
-	const Vector<double>& open_buf	= db.open;
-	const Vector<double>& low_buf	= db.low;
-	const Vector<double>& high_buf	= db.high;
+	const Vector<double>& open_buf	= GetOpen();
+	const Vector<double>& low_buf	= GetLow();
+	const Vector<double>& high_buf	= GetHigh();
 	
 	
 	// Prepare maind data
@@ -279,14 +280,12 @@ void SourceImage::LoadBooleans() {
 	}
 }
 
-void SourceImage::LoadStats() {
+void Job::LoadStats() {
 	System& sys = GetSystem();
 	
 	Vector<Snap>& data_in = main_booleans;
 	VectorBool& main_in = main_signal;
 	auto& stat_in = main_stats;
-	
-	db.Start();
 	
 	int stat_osc_cursor = stat_in.cursor;
 	
@@ -423,7 +422,7 @@ String Strand::BitString() const {
 
 
 
-String SourceImage::GetPhaseString() const {
+String Job::GetPhaseString() const {
 	switch (phase){
 		case PHASE_SOURCE: return "Source";
 		case PHASE_BOOLEANS: return "Booleans";
@@ -434,21 +433,22 @@ String SourceImage::GetPhaseString() const {
 	return "";
 }
 
-double SourceImage::GetProgress() const {
+double Job::GetProgress() const {
 	return phase * 1000 / PHASE_COUNT;
 }
 
-bool SourceImage::IsFinished() const {
-	
-	return phase == PHASE_COUNT;
+bool Job::IsFinished() const {
+	return is_finished;
 }
 
-void SourceImage::Process() {
+void Job::Process() {
 	System& sys = GetSystem();
 	
+	int sym = GetSymbol();
+	int tf = GetTf();
+	ReleaseLog(Format("Job::Process sym=%d tf=%d", sym, tf)); // keep this to avoid optimization bugs
 	
 	if (phase > PHASE_SOURCE) {
-		int tf = db.GetTf();
 		if (tf < MIN_REAL_TFID || tf > MAX_REAL_TFID)
 			return;
 	}
@@ -456,8 +456,8 @@ void SourceImage::Process() {
 	if (!lock.TryEnter()) return;
 	
 	if (phase == PHASE_SOURCE) {
-		LoadSources();
-		if (sys.running) phase++;
+		bool r = LoadSources();
+		if (sys.running && r) phase++;
 	}
 	else if (phase == PHASE_BOOLEANS) {
 		LoadBooleans();
@@ -474,7 +474,8 @@ void SourceImage::Process() {
 	else if (phase == PHASE_CATCHSTRANDS) {
 		LoadCatchStrands();
 		
-		if (sys.running) phase = PHASE_SOURCE;
+		
+		if (sys.running) {phase = PHASE_SOURCE; is_finished = true;}
 		Sleep(1000);
 	}
 	
@@ -519,7 +520,7 @@ void System::JobWorker(int i) {
 			job_id = worker_cursor++;
 			if (worker_cursor >= jobs.GetCount())
 				worker_cursor = 0;
-			SourceImage& job = *jobs[job_id];
+			Job& job = *jobs[job_id];
 			if (job.IsFinished())
 				continue;
 			found = true;
@@ -529,7 +530,7 @@ void System::JobWorker(int i) {
 		workitem_lock.Leave();
 		if (!found) break;
 		
-		SourceImage& job = *jobs[job_id];
+		Job& job = *jobs[job_id];
 		job.Process();
 	}
 	

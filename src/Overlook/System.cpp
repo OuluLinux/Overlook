@@ -209,6 +209,13 @@ void System::Init() {
 				db.point = mt.GetSymbol(i).point;
 			}
 		}
+		account.SetCount(tf_count);
+		for(int i = 0; i < account.GetCount(); i++) {
+			AccountImage& ai = account[i];
+			ai.sym = -1;
+			ai.tf = i;
+			jobs.Add(&ai);
+		}
 	
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();

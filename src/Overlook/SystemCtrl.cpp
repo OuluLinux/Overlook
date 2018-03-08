@@ -86,6 +86,7 @@ SystemCtrl::SystemCtrl() {
 	stats.AddColumn("Index");
 	
 	try_strands.AddColumn("Index");
+	try_strands.AddColumn("Signal bit");
 	try_strands.AddColumn("Bit list");
 	try_strands.AddColumn("Result");
 	
@@ -102,18 +103,17 @@ void SystemCtrl::Data() {
 	
 	
 	int row = 0;
-	for(int i = 0; i < sys.GetSymbolCount(); i++) {
-		for(int j = 0; j < sys.GetPeriodCount(); j++) {
-			SourceImage& job = *sys.jobs[row];
-			symbols.Set(row, 0, i);
-			symbols.Set(row, 1, j);
-			symbols.Set(row, 2, sys.GetSymbol(i));
-			symbols.Set(row, 3, sys.GetPeriod(j));
-			symbols.Set(row, 4, job.GetPhaseString());
-			symbols.Set(row, 5, job.GetProgress());
-			symbols.SetDisplay(row, 3, ProgressDisplay());
-			row++;
-		}
+	for(int i = 0; i < sys.jobs.GetCount(); i++) {
+		Job& job = *sys.jobs[i];
+		int sym = job.GetSymbol();
+		int tf = job.GetTf();
+		symbols.Set(i, 0, sym);
+		symbols.Set(i, 1, tf);
+		symbols.Set(i, 2, sym >= 0 ? sys.GetSymbol(sym) : "Account");
+		symbols.Set(i, 3, sys.GetPeriod(tf));
+		symbols.Set(i, 4, job.GetPhaseString());
+		symbols.Set(i, 5, job.GetProgress());
+		symbols.SetDisplay(i, 3, ProgressDisplay());
 	}
 	
 	
@@ -124,7 +124,7 @@ void SystemCtrl::Data() {
 	int tf  = symbols.Get(cursor, 1);
 	
 	
-	auto& sym_data = sys.data[sym][tf];
+	Job& sym_data = sym >= 0 ? (Job&)sys.data[sym][tf] : (Job&)sys.account[tf];
 	auto& main_booleans = sym_data.main_booleans;
 	
 	int tab = tabs.Get();
@@ -166,16 +166,18 @@ void SystemCtrl::Data() {
 	else if (tab == 2) {
 		for(int i = 0; i < sym_data.try_strands.GetCount(); i++) {
 			try_strands.Set(i, 0, i);
-			try_strands.Set(i, 1, sym_data.try_strands[i].BitString());
-			try_strands.Set(i, 2, (double)sym_data.try_strands[i].result);
+			try_strands.Set(i, 1, sym_data.try_strands[i].sig_bit);
+			try_strands.Set(i, 2, sym_data.try_strands[i].BitString());
+			try_strands.Set(i, 3, (double)sym_data.try_strands[i].result);
 		}
 		try_strands.SetCount(sym_data.try_strands.GetCount());
 	}
 	else if (tab == 3) {
 		for(int i = 0; i < sym_data.catch_strands.GetCount(); i++) {
 			catch_strands.Set(i, 0, i);
-			catch_strands.Set(i, 1, sym_data.catch_strands[i].BitString());
-			catch_strands.Set(i, 2, (double)sym_data.catch_strands[i].result);
+			catch_strands.Set(i, 1, sym_data.catch_strands[i].sig_bit);
+			catch_strands.Set(i, 2, sym_data.catch_strands[i].BitString());
+			catch_strands.Set(i, 3, (double)sym_data.catch_strands[i].result);
 		}
 		catch_strands.SetCount(sym_data.catch_strands.GetCount());
 	}

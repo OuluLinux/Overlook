@@ -112,6 +112,7 @@ struct Job {
 	virtual int GetSymbol() = 0;
 	virtual int GetTf() = 0;
 	virtual double GetPoint() = 0;
+	virtual double GetSpread() = 0;
 	virtual const Vector<double>& GetOpen() = 0;
 	virtual const Vector<double>& GetLow()  = 0;
 	virtual const Vector<double>& GetHigh() = 0;
@@ -160,6 +161,7 @@ struct SourceImage : public Job {
 	virtual int GetSymbol() {return db.GetSymbol();}
 	virtual int GetTf() {return db.GetTf();}
 	virtual double GetPoint() {return db.GetPoint();}
+	virtual double GetSpread() {return db.GetSpread();}
 	virtual const Vector<double>& GetOpen() {return db.open;}
 	virtual const Vector<double>& GetLow()  {return db.low;}
 	virtual const Vector<double>& GetHigh() {return db.high;}
@@ -172,7 +174,7 @@ struct AccountImage : public Job {
 	typedef Tuple<int, int, double, int> State;
 	
 	int sym = -1, tf = -1;
-	double point = 0.0000000001;
+	double point = 0.0000001;
 	Vector<double> gain;
 	StrandVector signals;
 	double balance = 1000.0;
@@ -185,6 +187,7 @@ struct AccountImage : public Job {
 	virtual int GetSymbol() {return sym;}
 	virtual int GetTf() {return tf;}
 	virtual double GetPoint() {return point;}
+	virtual double GetSpread() {return point * 4;}
 	virtual const Vector<double>& GetOpen() {return gain;}
 	virtual const Vector<double>& GetLow()  {return gain;}
 	virtual const Vector<double>& GetHigh() {return gain;}

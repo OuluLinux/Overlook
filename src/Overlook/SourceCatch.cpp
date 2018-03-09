@@ -119,7 +119,7 @@ void Job::TestCatchStrand(Strand& st, bool write) {
 	#endif
 	
 	long double result = 1.0;
-	double point = GetPoint();
+	double spread = GetSpread();
 	const Vector<double>& open_buf = GetOpen();
 	int tf = GetTf();
 	
@@ -177,8 +177,8 @@ void Job::TestCatchStrand(Strand& st, bool write) {
 		if (do_close) {
 			double current = open_buf[i];
 			double change;
-			if (!prev_signal)	change = current / (prev_open + STRAND_COSTMULT * point);
-			else				change = 1.0 - (current / (prev_open - STRAND_COSTMULT * point) - 1.0);
+			if (!prev_signal)	change = current / (prev_open + spread);
+			else				change = 1.0 - (current / (prev_open - spread) - 1.0);
 			if (fabs(change - 1.0) > 0.5) change = 1.0;
 			result *= change;
 		}

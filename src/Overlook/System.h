@@ -172,7 +172,7 @@ struct AccountImage : public Job {
 	typedef Tuple<int, int, double, int> State;
 	
 	int sym = -1, tf = -1;
-	double point = 0.0001;
+	double point = 0.0000000001;
 	Vector<double> gain;
 	StrandVector signals;
 	double balance = 1000.0;

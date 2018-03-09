@@ -7,8 +7,9 @@ bool AccountImage::LoadSources() {
 	
 	if (jobs.IsEmpty()) {
 		for(int i = 0; i < sys.jobs.GetCount(); i++) {
-			if (sys.jobs[i]->GetTf() == GetTf() && dynamic_cast<SourceImage*>(sys.jobs[i]))
-				jobs.Add(sys.jobs[i]);
+			Job& job = *sys.jobs[i];
+			if (job.GetTf() == GetTf() && dynamic_cast<SourceImage*>(&job))
+				jobs.Add(&job);
 		}
 	}
 	
@@ -19,6 +20,14 @@ bool AccountImage::LoadSources() {
 		if (!jobs[i]->IsFinished())
 			return false;
 	
+	for(int i = 0; i < jobs.GetCount(); i++) {
+		Job& job = *jobs[i];
+		double result = job.GetBestResult();
+		if (result < 1.1) {
+			jobs.Remove(i);
+			i--;
+		}
+	}
 	
 	if (current_state.IsEmpty()) {
 		current_state.SetCount(jobs.GetCount());

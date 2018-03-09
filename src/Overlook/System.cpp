@@ -193,7 +193,6 @@ void System::Init() {
 		}
 		ASSERTUSER_(same_symbols, "MT4 symbols have been changed. Remove system.bin to continue.");
 		
-		jobs.SetCount(0);
 		data.SetCount(sym_count);
 		for(int i = 0; i < data.GetCount(); i++) {
 			data[i].SetCount(tf_count);
@@ -436,7 +435,7 @@ bool System::RefreshReal() {
 	VectorMap<int, double> period_results;
 	for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
 		double res = account[j].GetBestResult();
-		if (res >= 1.001)
+		if (res >= 1.0001)
 			period_results.Add(j, res);
 	}
 	SortByValue(period_results, StdGreater<double>());
@@ -469,7 +468,7 @@ bool System::RefreshReal() {
 		mt.Data();
 		mt.RefreshLimits();
 		int open_count = 0;
-		const int MAX_SYMOPEN = max(1, mt.GetSymbolCount() / 3);
+		const int MAX_SYMOPEN = max(1, mt.GetSymbolCount());
 		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {

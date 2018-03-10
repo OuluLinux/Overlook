@@ -130,6 +130,15 @@ System::System() {
 	allowed_symbols.Add("USDMXN");
 	allowed_symbols.Add("USDTRY");
 	
+	used_symbols.Add("USDCAD");
+	used_symbols.Add("EURJPY");
+	used_symbols.Add("EURUSD");
+	used_symbols.Add("EURAUD");
+	used_symbols.Add("CHFJPY");
+	used_symbols.Add("GBPUSD");
+	used_symbols.Add("GBPJPY");
+	used_symbols.Add("USDJPY");
+	
 	not_stopped = 0;
 }
 
@@ -167,6 +176,9 @@ void System::Init() {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
 			ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
+			
+			int j = used_symbols.Find(s.name);
+			if (j != -1) used_symbols_id.Add(i);
 		}
 		
 		
@@ -215,7 +227,7 @@ void System::Init() {
 			ai.tf = i;
 			jobs.Add(&ai);
 		}
-	
+		
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();
 	}
@@ -440,16 +452,17 @@ bool System::RefreshReal() {
 	}
 	SortByValue(period_results, StdGreater<double>());
 	
-	for(int i = 0; i < symbols.GetCount(); i++) {
+	for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+		int sym = used_symbols_id[i];
 		int signal = 0;
 		for(int j = 0; j < period_results.GetCount(); j++) {
 			int tf = period_results.GetKey(j);
 			int account_signal = account[tf].GetSignal();
-			signal = data[i][tf].GetSignal() * account_signal;
+			signal = data[sym][tf].GetSignal() * account_signal;
 			if (signal)
 				break;
 		}
-		SetSignal(i, signal);
+		SetSignal(sym, signal);
 	}
 	
 	WhenInfo("Updating MetaTrader");
@@ -468,7 +481,7 @@ bool System::RefreshReal() {
 		mt.Data();
 		mt.RefreshLimits();
 		int open_count = 0;
-		const int MAX_SYMOPEN = max(1, mt.GetSymbolCount());
+		const int MAX_SYMOPEN = max(1, used_symbols_id.GetCount());
 		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {

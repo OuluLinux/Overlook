@@ -239,8 +239,8 @@ protected:
 	
 	
 	// Temporary
-	Index<String>				symbols, allowed_symbols;
-	Vector<int>					signals;
+	Index<String>				symbols, allowed_symbols, used_symbols;
+	Vector<int>					signals, used_symbols_id;
 	Index<int>					periods;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;

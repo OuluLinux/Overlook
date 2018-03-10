@@ -52,11 +52,12 @@ bool AccountImage::LoadSources() {
 	
 	signals.row_size = jobs.GetCount() * 2;
 	
-	while (true) {
+	while (sys.running) {
 		int pos = this->gain.GetCount();
 		int reserve_step = 100000;
 		int reserve = pos - (pos % reserve_step) + reserve_step;
 		signals.Reserve(reserve);
+		gain.Reserve(reserve);
 		signals.SetCount(pos+1);
 		
 		
@@ -83,6 +84,8 @@ bool AccountImage::LoadSources() {
 				current_state[i].a++;
 		}
 		
+		double gain = balance;
+		
 		for(int i = 0; i < jobs.GetCount(); i++) {
 			Job& job = *jobs[i];
 			DataBridge& db = *dbs[i];
@@ -96,11 +99,10 @@ bool AccountImage::LoadSources() {
 			signals.Set(pos, i*2 + 1, enabled);
 			
 			int sig = enabled ? (signal ? -1 : +1) : 0;
-			double open = db.open[state.a];
+			double open = db.open[src_pos];
 			
 			int& prev_sig = state.d;
 			
-			double gain = balance;
 			if (prev_sig == sig) {
 				if (sig) {
 					double change;
@@ -115,6 +117,7 @@ bool AccountImage::LoadSources() {
 					if (sig > 0)	change = +(open / state.c - 1.0);
 					else			change = -(open / state.c - 1.0);
 					balance += change;
+					gain += change;
 				}
 				if (sig) {
 					state.c = open;
@@ -122,9 +125,9 @@ bool AccountImage::LoadSources() {
 			}
 			prev_sig = sig;
 			ASSERT(gain > 0);
-			
-			this->gain.Add(gain);
 		}
+		
+		this->gain.Add(gain);
 	}
 	
 	return true;

@@ -448,7 +448,7 @@ void Job::Process() {
 	int tf = GetTf();
 	ReleaseLog(Format("Job::Process sym=%d tf=%d", sym, tf)); // keep this to avoid optimization bugs
 	
-	if (phase > PHASE_SOURCE) {
+	if (phase > PHASE_SOURCE || sym == -1) {
 		if (tf < MIN_REAL_TFID || tf > MAX_REAL_TFID)
 			return;
 	}

@@ -482,7 +482,7 @@ bool System::RefreshReal() {
 		mt.RefreshLimits();
 		int open_count = 0;
 		const int MAX_SYMOPEN = max(1, used_symbols_id.GetCount());
-		const double FMLEVEL = 0.6;
+		const double FMLEVEL = 0.8;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];

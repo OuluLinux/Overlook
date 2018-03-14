@@ -584,10 +584,22 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 			for(int j = 0; j < st.limit_dec_false.count && decrease; j++)
 				decrease &= GetBit(i, sym, st.limit_dec_false.bits[j]) != signal;
 			
-			if (increase) order_limit = min(max_order_limit, order_limit + 1);
-			if (decrease) order_limit = max(min_order_limit, order_limit - 1);
+			if (increase && decrease)
+				;
+			else if (increase) order_limit = min(max_order_limit, order_limit + 1);
+			else if (decrease) order_limit = max(min_order_limit, order_limit - 1);
 			
-			Panic("TODO");
+			int prev_pos = max(0, i - 12);
+			double diff_a = trigger_result[sym][i] - trigger_result[sym][prev_pos];
+			int better_count = 0;
+			for(int j = 0; j < sym_count; j++) {
+				if (j == sym) continue;
+				double diff_b = trigger_result[j][i] - trigger_result[j][prev_pos];
+				if (diff_b > diff_a)
+					better_count++;
+			}
+			if (better_count >= order_limit)
+				enabled = false;
 		}
 		
 		if (check_weight && enabled) {
@@ -605,10 +617,10 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 			for(int j = 0; j < st.weight_dec_false.count && decrease; j++)
 				decrease &= GetBit(i, sym, st.weight_dec_false.bits[j]) != signal;
 			
-			if (increase) weight = min(max_weight, weight + 1);
-			if (decrease) weight = max(min_weight, weight - 1);
-			
-			Panic("TODO");
+			if (increase && decrease)
+				;
+			else if (increase) weight = min(max_weight, weight + 1);
+			else if (decrease) weight = max(min_weight, weight - 1);
 		}
 		
 		bool do_open = false, do_close = false;
@@ -633,10 +645,11 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		if (do_close) {
 			double current = open_buf[i];
 			double change;
-			if (!prev_signal)	change = current / (prev_open + spread);
-			else				change = 1.0 - (current / (prev_open - spread) - 1.0);
+			if (!prev_signal)	change = +(current / (prev_open + spread) - 1.0);
+			else				change = -(current / (prev_open - spread) - 1.0);
+			change *= weight;
 			if (fabs(change - 1.0) > 0.5) change = 1.0;
-			result *= change;
+			result *= 1.0 + change;
 		}
 		if (do_open) {
 			double current = open_buf[i];
@@ -648,7 +661,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		
 		if (write && enabled) {
 			if (write_result) {
-				Panic("TODO");
+				trigger_result[sym][i] = result;
 			}
 			
 			SetBitOutput(i, sym, group_id * 2 + 0, signal);

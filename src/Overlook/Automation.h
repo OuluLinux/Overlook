@@ -111,6 +111,7 @@ class Automation {
 	double		spread[sym_count];
 	double		output_fmlevel = 0.8;
 	double		open_buf[sym_count][loadsource_reserved];
+	float		trigger_result[sym_count][loadsource_reserved];
 	uint64		bits_buf[processbits_reserved_bytes];
 	int			loadsource_cursor = 0;
 	int			processbits_cursor = 0;

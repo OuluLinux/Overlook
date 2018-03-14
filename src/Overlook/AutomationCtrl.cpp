@@ -11,9 +11,9 @@ void BooleansDraw::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (cursor >= 0) {
+	/*if (cursor >= 0) {
 		
-		int w = SourceImage::row_size;
+		int w = Snap::src_row_size;
 		int h = sys.GetSymbolCount();
 		
 		double xstep = (double)sz.cx / w;
@@ -40,12 +40,12 @@ void BooleansDraw::Paint(Draw& w) {
 				
 			}
 		}
-	}
+	}*/
 	
 	w.DrawImage(0, 0, id);
 }
 
-SystemCtrl::SystemCtrl() {
+AutomationCtrl::AutomationCtrl() {
 	
 	Add(toggle.TopPos(2, 26).LeftPos(2,96));
 	Add(hsplit.HSizePos(100).VSizePos());
@@ -99,10 +99,10 @@ SystemCtrl::SystemCtrl() {
 	PostCallback(THISBACK(Start));
 }
 
-void SystemCtrl::Data() {
+void AutomationCtrl::Data() {
 	System& sys = GetSystem();
 	
-	
+	/*
 	int row = 0;
 	for(int i = 0; i < sys.jobs.GetCount(); i++) {
 		Job& job = *sys.jobs[i];
@@ -181,7 +181,7 @@ void SystemCtrl::Data() {
 			catch_strands.Set(i, 3, (double)sym_data.catch_strands[i].result);
 		}
 		catch_strands.SetCount(sym_data.catch_strands.GetCount());
-	}
+	}*/
 }
 
 

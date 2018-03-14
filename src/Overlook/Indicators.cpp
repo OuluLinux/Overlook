@@ -3960,7 +3960,7 @@ void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		bool bit_value;
 		double err, av_change, buf_value;
 		
-		Process(open_buf, i, period, err_div, err, buf_value, av_change, bit_value);
+		Process(open_buf.Begin(), i, period, err_div, err, buf_value, av_change, bit_value);
 		
 		err_buffer.Set(i, err);
 		buffer.Set(i, buf_value);
@@ -3969,7 +3969,7 @@ void TrendIndex::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	}
 }
 
-void TrendIndex::Process(const Vector<double>& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value) {
+void TrendIndex::Process(const double* open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value) {
 	double current = open_buf[i];
 	int trend_begin_pos = Upp::max(0, i - period);
 	double begin = open_buf[trend_begin_pos];
@@ -4025,14 +4025,14 @@ void OnlineMinimalLabel::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 		bool sigbuf[count];
 		int begin = Upp::max(ci.GetBegin(), i - 100);
 		int end = i + 1;
-		GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
+		GetMinimalSignal(cost, open_buf.Begin(), begin, end, sigbuf, count);
 		
 		bool label = sigbuf[count - 1];
 		gi.SetBoolean(i, 0, label);
 	}
 }
 
-void OnlineMinimalLabel::GetMinimalSignal(double cost, const Vector<double>& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size) {
+void OnlineMinimalLabel::GetMinimalSignal(double cost, const double* open_buf, int begin, int end, bool* sigbuf, int sigbuf_size) {
 	int write_begin = end - sigbuf_size;
 	
 	for(int i = begin; i < end; i++) {
@@ -4531,7 +4531,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			bool sigbuf[count];
 			int begin = Upp::max(0, cursor - 200);
 			int end = cursor + 1;
-			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
+			OnlineMinimalLabel::GetMinimalSignal(cost, open_buf.Begin(), begin, end, sigbuf, count);
 			bool label = sigbuf[count - 1];
 			snap.Set(bit_pos++, label);
 		
@@ -4540,7 +4540,7 @@ void Obviousness::RefreshInput(SourceImage& si, ChartImage& ci, GraphImage& gi) 
 			bool bit_value;
 			int period = 1 << (1 + k);
 			double err, av_change, buf_value;
-			TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
+			TrendIndex::Process(open_buf.Begin(), cursor, period, 3, err, buf_value, av_change, bit_value);
 			snap.Set(bit_pos++, buf_value > 0.0);
 			
 			
@@ -5016,7 +5016,7 @@ void SystemBooleanView::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	int end = ci.GetEnd();
 	
 	begin += ma_period;
-	
+	/*
 	auto& stat_in = si.main_stats;
 	Vector<Snap>& data_in = si.main_booleans;
 	
@@ -5072,7 +5072,7 @@ void SystemBooleanView::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 		gi.SetBoolean(i, 1, ena_sum > (period / 2));
 		
 		
-	}
+	}*/
 }
 
 

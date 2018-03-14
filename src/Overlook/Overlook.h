@@ -14,10 +14,12 @@ using namespace Upp;
 #include <CtrlCore/lay.h>
 
 #include "Common.h"
+#include "CommonFixed.h"
 #include "Calendar.h"
 #include "SimBroker.h"
 #include "DataBridge.h"
 #include "System.h"
+#include "Automation.h"
 #include "Utils.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
@@ -26,7 +28,7 @@ using namespace Upp;
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "SystemCtrl.h"
+#include "AutomationCtrl.h"
 
 
 namespace Overlook {
@@ -89,7 +91,7 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
-	SystemCtrl sysctrl;
+	AutomationCtrl sysctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;
@@ -174,7 +176,7 @@ public:
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}
-	SystemCtrl& GetSystemCtrl() {return sysctrl;}
+	AutomationCtrl& GetAutomationCtrl() {return sysctrl;}
 	
 	// Public vars
 	Callback WhenExit;

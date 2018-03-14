@@ -1,5 +1,5 @@
-#ifndef _Overlook_SystemCtrl_h_
-#define _Overlook_SystemCtrl_h_
+#ifndef _Overlook_AutomationCtrl_h_
+#define _Overlook_AutomationCtrl_h_
 
 
 namespace Overlook {
@@ -13,7 +13,7 @@ struct BooleansDraw : public Ctrl {
 	int tf = 0;
 };
 
-class SystemCtrl : public ParentCtrl {
+class AutomationCtrl : public ParentCtrl {
 	ArrayCtrl symbols;
 	ParentCtrl symctrl_place;
 	Splitter hsplit;
@@ -26,13 +26,13 @@ class SystemCtrl : public ParentCtrl {
 	SliderCtrl slider;
 	
 public:
-	typedef SystemCtrl CLASSNAME;
-	SystemCtrl();
-	~SystemCtrl() {}
+	typedef AutomationCtrl CLASSNAME;
+	AutomationCtrl();
+	~AutomationCtrl() {}
 	
 	void Data();
-	void Start() {toggle.SetLabel("Stop"); toggle.WhenAction = THISBACK(Stop); GetSystem().StartJobs();}
-	void Stop() {toggle.SetLabel("Start"); toggle.WhenAction = THISBACK(Start); GetSystem().StopJobs();}
+	void Start() {toggle.SetLabel("Stop"); toggle.WhenAction = THISBACK(Stop); GetAutomation().StartJobs();}
+	void Stop() {toggle.SetLabel("Start"); toggle.WhenAction = THISBACK(Start); GetAutomation().StopJobs();}
 };
 
 

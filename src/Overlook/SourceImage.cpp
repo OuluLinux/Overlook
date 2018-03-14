@@ -1,3 +1,4 @@
+#if 0
 #include "Overlook.h"
 
 namespace Overlook {
@@ -113,166 +114,6 @@ void Job::LoadBooleans() {
 			
 			for(int k = 0; k < period_count; k++) {
 				
-				// MovingAverage
-				OnlineAverageWindow1& av_win = av_wins[k];
-				double prev = av_win.GetMean();
-				av_win.Add(open1);
-				double curr = av_win.GetMean();
-				snap.Set(bit_pos++, curr < prev);
-				snap.Set(bit_pos++, open1 < prev);
-				
-				
-				// OnlineMinimalLabel
-				double cost	 = spread_point * (1 + k);
-				const int count = 1;
-				bool sigbuf[count];
-				int begin = Upp::max(0, cursor - 200);
-				int end = cursor + 1;
-				OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
-				bool label = sigbuf[count - 1];
-				snap.Set(bit_pos++, label);
-			
-				
-				// TrendIndex
-				bool bit_value;
-				int period = 1 << (1 + k);
-				double err, av_change, buf_value;
-				TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
-				snap.Set(bit_pos++, buf_value > 0.0);
-				
-				
-				// VolatilityContext
-				int lvl = -1;
-				if (cursor >= period) {
-					double diff = fabs(open_buf[cursor] - open_buf[cursor - period]);
-					for(int i = 0; i < volat_divs[k].GetCount(); i++) {
-						if (diff < volat_divs[k][i]) {
-							lvl = i - 1;
-							break;
-						}
-					}
-				}
-				for(int i = 0; i < volat_div; i++)
-					snap.Set(bit_pos++,  lvl == i);
-			
-				
-				// Momentum
-				begin = Upp::max(0, cursor - period);
-				double open2 = open_buf[begin];
-				double value = open1 / open2 - 1.0;
-				label = value < 0.0;
-				snap.Set(bit_pos++, label);
-				
-				
-				// Open/Close trend
-				period = 1 << k;
-				int dir = 0;
-				int len = 0;
-				if (cursor >= period * 3) {
-					for (int i = cursor-period; i >= 0; i -= period) {
-						int idir = open_buf[i+period] > open_buf[i] ? +1 : -1;
-						if (dir != 0 && idir != dir) break;
-						dir = idir;
-						len++;
-					}
-				}
-				snap.Set(bit_pos++, len > 2);
-			
-			
-				// High break
-				dir = 0;
-				len = 0;
-				if (cursor >= period * 3) {
-					double hi = high_buf[cursor-period];
-					for (int i = cursor-1-period; i >= 0; i -= period) {
-						int idir = hi > high_buf[i] ? +1 : -1;
-						if (dir != 0 && idir != +1) break;
-						dir = idir;
-						len++;
-					}
-				}
-				snap.Set(bit_pos++, len > 2);
-				
-				
-				// Low break
-				dir = 0;
-				len = 0;
-				if (cursor >= period * 3) {
-					double lo = low_buf[cursor-period];
-					for (int i = cursor-1-period; i >= 0; i -= period) {
-						int idir = lo < low_buf[i] ? +1 : -1;
-						if (dir != 0 && idir != +1) break;
-						dir = idir;
-						len++;
-					}
-				}
-				snap.Set(bit_pos++, len > 2);
-				
-				
-				// Trend reversal
-				int t0 = +1;
-				int t1 = +1;
-				int t2 = -1;
-				if (cursor >= 4*period) {
-					double t0_diff		= open_buf[cursor-0*period] - open_buf[cursor-1*period];
-					double t1_diff		= open_buf[cursor-1*period] - open_buf[cursor-2*period];
-					double t2_diff		= open_buf[cursor-2*period] - open_buf[cursor-3*period];
-					t0 = t0_diff > 0 ? +1 : -1;
-					t1 = t1_diff > 0 ? +1 : -1;
-					t2 = t2_diff > 0 ? +1 : -1;
-				}
-				if (t0 * t1 == -1 && t1 * t2 == +1) {
-					snap.Set(bit_pos++, t0 == +1);
-					snap.Set(bit_pos++, t0 != +1);
-				} else {
-					snap.Set(bit_pos++, false);
-					snap.Set(bit_pos++, false);
-				}
-				
-				
-				// ChannelOscillator
-				period = 1 << (1 + k);
-				ExtremumCache& ec = this->ec[k];
-				double low  = cursor > 0 ? low_buf[cursor-1] : open1;
-				double high = cursor > 0 ? high_buf[cursor-1] : open1;
-				double max = Upp::max(open1, high);
-				double min = Upp::min(open1, low);
-				ec.Add(max, min);
-				double ch_high = high_buf[ec.GetHighest()];
-				double ch_low = low_buf[ec.GetLowest()];
-				double ch_diff = ch_high - ch_low;
-				value = (open1 - ch_low) / ch_diff * 2.0 - 1.0;
-				snap.Set(bit_pos++, value < 0.0);
-				snap.Set(bit_pos++, value < 0.0 ? (value < -0.5) : (value > +0.5));
-				
-				
-				// BollingerBands
-				OnlineAverageWindow1& bbma = this->bbma[k];
-				bbma.Add(open1);
-				double ma = bbma.GetMean();
-				double tmp = 0.0;
-				for (int j = 0; j < period; j++) {
-					double value = open_buf[Upp::max(0, cursor - j)];
-					tmp += pow ( value - ma, 2 );
-				}
-				tmp = sqrt( tmp / period );
-				double bb_top = ma + tmp;
-				double bb_bot = ma - tmp;
-				bool bb_a = open1 < ma;
-				bool bb_b = open1 >= bb_top;
-				bool bb_c = open1 <= bb_bot;
-				snap.Set(bit_pos++, open1 < ma);
-				snap.Set(bit_pos++, open1 < ma ? open1 <= bb_bot : open1 >= bb_top);
-				
-				
-				// Descriptor bits
-				period = 1 << k;
-				for(int i = 0; i < descriptor_count; i++) {
-					int pos = Upp::max(0, cursor - period * (i + 1));
-					double open2 = open_buf[pos];
-					bool value = open1 < open2;
-					snap.Set(bit_pos++, value);
-				}
 			}
 			
 			ASSERT(bit_pos == row_size - extra_row);
@@ -297,15 +138,12 @@ void Job::LoadStats() {
 		bool signal = main_in.Get(stat_in.cursor);
 		Snap& snap = data_in[stat_in.cursor];
 		
-		int id = 0;
 		for (int i = 0; i < row_size; i++) {
 			int value = snap.Get(i);
 			
-			SnapStats& ss = stat_in.data[id][value];
+			SnapStats& ss = stat_in.data[i][value];
 			ss.total++;
 			if (signal) ss.actual++;
-			
-			id++;
 		}
 	}
 	
@@ -353,72 +191,6 @@ void Job::LoadStats() {
 
 
 
-
-
-bool StrandList::Has(Strand& s) {
-	for(int i = 0; i < strand_count; i++) {
-		if (s.result == strands[i].result)
-			return true;
-	}
-	return false;
-}
-
-void StrandList::Sort() {
-	for(int i = 0; i < strand_count; i++) {
-		int pos = i;
-		double max = strands[i].result;
-		for(int j = i+1; j < strand_count; j++) {
-			Strand& s = strands[j];
-			if (s.result > max) {
-				max = s.result;
-				pos = j;
-			}
-		}
-		Swap(strands[i], strands[pos]);
-	}
-}
-
-void StrandList::Dump() {
-	DUMP(strand_count);
-	DUMP(cursor);
-	for(int i = 0; i < strand_count; i++) {
-		LOG("   " << i << ": " << strands[i].ToString());
-	}
-}
-
-bool StrandItem::Evolve(int bit, StrandItem& dst) {
-	dst = *this;
-	bool fail = false;
-	for(int i = 0; i < dst.count; i++) {
-		if (dst.bits[i] == bit) {
-			fail = true;
-			break;
-		}
-	}
-	dst.Add(bit);
-	return fail;
-}
-
-String Strand::ToString() const {
-	String out;
-	out << "result=" << (double)result << ", " << BitString();
-	return out;
-}
-
-String Strand::BitString() const {
-	String out;
-	for(int i = 0; i < enabled.count; i++)
-		out << "e" << i << "=" << enabled.bits[i] << ", ";
-	for(int i = 0; i < signal_true.count; i++)
-		out << "s+" << i << "=" << signal_true.bits[i] << ", ";
-	for(int i = 0; i < signal_false.count; i++)
-		out << "s-" << i << "=" << signal_false.bits[i] << ", ";
-	for(int i = 0; i < trigger_true.count; i++)
-		out << "t+" << i << "=" << trigger_true.bits[i] << ", ";
-	for(int i = 0; i < trigger_false.count; i++)
-		out << "t-" << i << "=" << trigger_false.bits[i] << ", ";
-	return out;
-}
 
 
 
@@ -488,55 +260,5 @@ void Job::Process() {
 
 
 
-
-void System::StartJobs() {
-	if (running || not_stopped > 0) return;
-	
-	AddJournal("Starting system jobs");
-	
-	running = true;
-	int thrd_count = GetUsedCpuCores();
-	not_stopped = 0;
-	for(int i = 0; i < thrd_count; i++) {
-		not_stopped++;
-		Thread::Start(THISBACK1(JobWorker, i));
-	}
 }
-
-void System::StopJobs() {
-	AddJournal("Stopping system jobs");
-	
-	running = false;
-}
-
-void System::JobWorker(int i) {
-	
-	while (running) {
-		
-		workitem_lock.Enter();
-		bool found = false;
-		int job_id;
-		for(int i = 0; i < jobs.GetCount(); i++) {
-			job_id = worker_cursor++;
-			if (worker_cursor >= jobs.GetCount())
-				worker_cursor = 0;
-			Job& job = *jobs[job_id];
-			if (job.IsFinished())
-				continue;
-			found = true;
-			break;
-		}
-		if (!found) running = false;
-		workitem_lock.Leave();
-		if (!found) break;
-		
-		Job& job = *jobs[job_id];
-		job.Process();
-	}
-	
-	
-	
-	not_stopped--;
-}
-
-}
+#endif

@@ -1027,7 +1027,7 @@ public:
 			.Arg(err_div, 0);
 	}
 	
-	static void Process(const Vector<double>& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value);
+	static void Process(const double* open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value);
 	
 };
 
@@ -1047,7 +1047,7 @@ public:
 			.Arg(cost_level, 0);
 	}
 	
-	static void GetMinimalSignal(double cost, const Vector<double>& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size);
+	static void GetMinimalSignal(double cost, const double* open_buf, int begin, int end, bool* sigbuf, int sigbuf_size);
 	
 };
 

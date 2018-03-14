@@ -138,8 +138,7 @@ System::System() {
 	used_symbols.Add("GBPUSD");
 	used_symbols.Add("GBPJPY");
 	used_symbols.Add("USDJPY");
-	
-	not_stopped = 0;
+	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
 }
 
 System::~System() {
@@ -147,7 +146,7 @@ System::~System() {
 }
 
 void System::Init() {
-	AddJournal("System initialization");
+	GetAutomation().AddJournal("System initialization");
 	
 	LoadThis();
 	
@@ -202,32 +201,25 @@ void System::Init() {
 					}
 				}
 			}
+		} else {
+			data.SetCount(sym_count);
+			for(int i = 0; i < data.GetCount(); i++) {
+				data[i].SetCount(tf_count);
+				for(int j = 0; j < data[i].GetCount(); j++) {
+					DataBridge& db = data[i][j].db;
+					
+					db.symbol = symbols[i];
+					db.sym_id = i;
+					db.tf_id = j;
+					db.period = mt.GetTimeframe(j);
+					db.point = mt.GetSymbol(i).point;
+				}
+			}
 		}
 		ASSERTUSER_(same_symbols, "MT4 symbols have been changed. Remove system.bin to continue.");
 		
-		data.SetCount(sym_count);
-		for(int i = 0; i < data.GetCount(); i++) {
-			data[i].SetCount(tf_count);
-			for(int j = 0; j < data[i].GetCount(); j++) {
-				jobs.Add(&data[i][j]);
-				
-				DataBridge& db = data[i][j].db;
-				
-				db.symbol = symbols[i];
-				db.sym_id = i;
-				db.tf_id = j;
-				db.period = mt.GetTimeframe(j);
-				db.point = mt.GetSymbol(i).point;
-			}
-		}
-		account.SetCount(tf_count);
-		for(int i = 0; i < account.GetCount(); i++) {
-			AccountImage& ai = account[i];
-			ai.sym = -1;
-			ai.tf = i;
-			jobs.Add(&ai);
-		}
 		
+	
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();
 	}
@@ -249,9 +241,8 @@ void System::Init() {
 }
 
 void System::Deinit() {
-	AddJournal("System deinitialization");
-	StopJobs();
-	while (not_stopped > 0) Sleep(100);
+	GetAutomation().AddJournal("System deinitialization");
+	GetAutomation().StopJobs();
 	StoreThis();
 }
 
@@ -271,6 +262,15 @@ void System::AddSymbol(String sym) {
 	signals.Add(0);
 }
 
+void System::StoreThis() {
+	GetAutomation().AddJournal("System saving to file");
+	StoreToFile(*this, ConfigFile("System.bin"));
+}
+
+void System::LoadThis() {
+	GetAutomation().AddJournal("System loading from file");
+	LoadFromFile(*this, ConfigFile("System.bin"));
+}
 
 
 
@@ -422,7 +422,7 @@ bool System::RefreshReal() {
 	int wday_after_3hours	= DayOfWeek(after_3hours);
 	now.second				= 0;
 	MetaTrader& mt			= GetMetaTrader();
-	
+	Automation& a			= GetAutomation();
 	
 	// Skip weekends and first hours of monday
 	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
@@ -444,24 +444,9 @@ bool System::RefreshReal() {
 		return true;
 	}
 	
-	VectorMap<int, double> period_results;
-	for(int j = MIN_REAL_TFID; j < periods.GetCount() && j <= MAX_REAL_TFID; j++) {
-		double res = account[j].GetBestResult();
-		if (res >= 1.0001)
-			period_results.Add(j, res);
-	}
-	SortByValue(period_results, StdGreater<double>());
-	
 	for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 		int sym = used_symbols_id[i];
-		int signal = 0;
-		for(int j = 0; j < period_results.GetCount(); j++) {
-			int tf = period_results.GetKey(j);
-			int account_signal = account[tf].GetSignal();
-			signal = data[sym][tf].GetSignal() * account_signal;
-			if (signal)
-				break;
-		}
+		int signal = a.GetSignal(i);
 		SetSignal(sym, signal);
 	}
 	
@@ -480,30 +465,13 @@ bool System::RefreshReal() {
 	try {
 		mt.Data();
 		mt.RefreshLimits();
-		int open_count = 0;
-		const int MAX_SYMOPEN = max(1, used_symbols_id.GetCount());
-		const double FMLEVEL = 0.8;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
-			if (sig != 0 && sig == prev_sig)
-				open_count++;
-		}
-		
-		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
-			int sig = signals[sym_id];
-			int prev_sig = mt.GetSignal(sym_id);
-			if (sig == prev_sig && sig != 0)
+			if (sig == prev_sig && sig != 0) {
 				mt.SetSignalFreeze(sym_id, true);
-			else {
-				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
-					if (open_count >= MAX_SYMOPEN)
-						sig = 0;
-					else
-						open_count++;
-				}
-				
+			} else {
 				mt.SetSignal(sym_id, sig);
 				mt.SetSignalFreeze(sym_id, false);
 			}
@@ -513,27 +481,27 @@ bool System::RefreshReal() {
 				sig_change = true;
 		}
 		
-		mt.SetFreeMarginLevel(FMLEVEL);
-		mt.SetFreeMarginScale(MAX_SYMOPEN);
+		mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
+		mt.SetFreeMarginScale(a.GetFreeMarginScale());
 		mt.SignalOrders(true);
 	}
 	catch (UserExc e) {
 		LOG(e);
-		AddJournal("Error in updating metatrader: " + e);
+		a.AddJournal("Error in updating metatrader: " + e);
 		return false;
 	}
 	catch (...) {
-		AddJournal("Unknown error in updating metatrader");
+		a.AddJournal("Unknown error in updating metatrader");
 		return false;
 	}
 	
 	
-	AddJournal("Updating metatrader real signals: " + msg);
+	a.AddJournal("Updating metatrader real signals: " + msg);
 	
 	WhenRealtimeUpdate();
 	WhenPopTask();
 	
-	if (running && sig_change)
+	if (a.IsRunning() && sig_change)
 		WhenJobOrders();
 	
 	return true;

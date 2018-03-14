@@ -30,10 +30,16 @@ class Agent;
 typedef const int ConstInt;
 
 #define MAX_ITERS 6
-#define MIN_REAL_TFID 1
-#define MAX_REAL_TFID 7
+#ifdef flagDEBUG
+	#define MIN_REAL_TFID 4
+	#define MAX_REAL_TFID 5
+#else
+	#define MIN_REAL_TFID 1
+	#define MAX_REAL_TFID 7
+#endif
 #define SNAP_GENERIC (14+6+6)
 #define SNAP_BITS (6*SNAP_GENERIC+2)
+#define USEDSYMBOL_COUNT 8
 
 enum {
 	PHASE_TRAINING,

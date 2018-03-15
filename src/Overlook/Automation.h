@@ -5,7 +5,7 @@ namespace Overlook {
 
 
 #define GROUP_RESULTS 4
-#define MAX_STRANDS 100
+#define MAX_STRANDS 300
 #define MAX_STRAND_BITS 20
 struct StrandItem {
 	int bits[MAX_STRAND_BITS];
@@ -44,6 +44,7 @@ struct StrandList : Moveable<Strand> {
 	int strand_count = 0;
 	int cursor = 0;
 	
+	void Clear() {strand_count = 0; cursor = 0;}
 	int GetCount() const {return strand_count;}
 	bool IsEmpty() const {return strand_count == 0;}
 	void SetCount(int i) {ASSERT(i >= 0 && i <= MAX_STRANDS); strand_count = i;}
@@ -61,7 +62,7 @@ struct StrandList : Moveable<Strand> {
 
 struct Job : Moveable<Job> {
 	bool is_finished = false;
-	
+	bool is_processing = false;
 };
 
 struct JobGroup : Moveable<JobGroup> {
@@ -71,22 +72,25 @@ struct JobGroup : Moveable<JobGroup> {
 };
 
 class Automation {
-	typedef Tuple<int, int, double, int> State;
+	
+protected:
+	friend class AutomationCtrl;
+	friend class BooleansDraw;
+	
+	
 	
 	enum {GROUP_SOURCE, GROUP_BITS, GROUP_ENABLE, GROUP_TRIGGER, GROUP_LIMIT, GROUP_WEIGHT, GROUP_COUNT};
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int max_sym_mult = 4;
 	static const int jobgroup_count = GROUP_COUNT;
-	static const int maxcount = 11*365*5/7*24*12; // 11 years, M5
+	static const int maxcount = 14*365*5/7*24*12; // 14 years, M5
 	
-	static const int loadsource_reserved = sym_count * maxcount;
+	static const int loadsource_reserved = maxcount;
 	
 	static const int processbits_period_count = 6;
-	static const int processbits_volat_div = 6;
-	static const int processbits_extra_row = 2;
-	static const int processbits_descriptor_count = 6 + (sym_count - 1) * 2;
-	static const int processbits_generic_row = (14 + processbits_volat_div + processbits_descriptor_count);
-	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row + processbits_extra_row;
+	static const int processbits_descriptor_count = processbits_period_count + (sym_count - 1) * 2;
+	static const int processbits_generic_row = (14 + processbits_descriptor_count);
+	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
 	static const int processbits_outputrow_size = GROUP_RESULTS * 2;
 	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
 	static const int processbits_reserved = processbits_row_size * sym_count * maxcount;
@@ -104,20 +108,23 @@ class Automation {
 	FixedExtremumCache<1 << 4>				ec3[sym_count];
 	FixedExtremumCache<1 << 5>				ec4[sym_count];
 	FixedExtremumCache<1 << 6>				ec5[sym_count];
+	StrandList	tmp_meta_added[sym_count];
+	StrandList	tmp_single_added[sym_count];
 	StrandList	strands;
-	State		loadsource_state[sym_count];
+	int			loadsource_pos[sym_count];
 	JobGroup	jobgroups[jobgroup_count];
 	double		point[sym_count];
 	double		spread[sym_count];
-	double		output_fmlevel = 0.8;
+	double		output_fmlevel;
 	double		open_buf[sym_count][loadsource_reserved];
 	float		trigger_result[sym_count][loadsource_reserved];
 	uint64		bits_buf[processbits_reserved_bytes];
+	int			time_buf[loadsource_reserved];
 	int			loadsource_cursor = 0;
 	int			processbits_cursor = 0;
 	int			worker_cursor = 0;
 	int			output_signals[sym_count];
-	int			tf = 1; // M5
+	int			tf;
 	bool		running = false, stopped = true;
 	
 	
@@ -143,7 +150,7 @@ public:
 	void	Evolve(int group_id, int job_id);
 	void	TestStrand(int group_id, int job_id, Strand& strand, bool write=false);
 	
-	void	ProcessBitsSingle(int period_id, int sym, int& bit_pos);
+	void	ProcessBitsSingle(int sym, int period_id, int& bit_pos);
 	void	SetBit(int pos, int sym, int bit, bool value);
 	void	SetBitOutput(int pos, int sym, int bit, bool value) {SetBit(pos, sym, processbits_inputrow_size + bit, value);}
 	void	SetBitCurrent(int sym, int bit, bool value) {SetBit(processbits_cursor, sym, bit, value);}
@@ -154,12 +161,10 @@ public:
 	int		GetSignal(int sym) {ASSERT(sym >= 0 && sym < sym_count); return output_signals[sym];}
 	double	GetFreeMarginLevel() {return output_fmlevel;}
 	int		GetFreeMarginScale() {return sym_count * max_sym_mult;}
+	int		GetSymGroupJobId(int symbol) const;
 	
 	
 	
-	
-	Vector<Tuple<String, Time> > journal;
-	void	AddJournal(String what) {journal.Add(Tuple<String,Time>(what, GetSysTime()));}
 	
 };
 

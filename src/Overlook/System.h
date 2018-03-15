@@ -125,6 +125,9 @@ public:
 	void Init();
 	void Deinit();
 	
+	Vector<Tuple<String, Time> > journal;
+	void	AddJournal(String what) {journal.Add(Tuple<String,Time>(what, GetSysTime()));}
+	
 	Callback2<int,int> WhenProgress;
 	Callback2<int,int> WhenSubProgress;
 	Callback1<String>  WhenInfo;

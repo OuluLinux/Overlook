@@ -500,14 +500,14 @@ void Overlook::Data() {
 }
 
 void Overlook::RefreshJournal() {
-	Automation& a = GetAutomation();
+	System& sys = GetSystem();
 	
 	
-	int count = min(1000, a.journal.GetCount());
+	int count = min(1000, sys.journal.GetCount());
 	
 	for(int i = 0; i < count; i++) {
-		int pos = a.journal.GetCount() - 1 - i;
-		auto& t = a.journal[pos];
+		int pos = sys.journal.GetCount() - 1 - i;
+		auto& t = sys.journal[pos];
 		journal.Set(i, 0, t.a);
 		journal.Set(i, 1, t.b);
 	}

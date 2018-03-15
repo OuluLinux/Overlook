@@ -22,7 +22,7 @@ class AutomationCtrl : public ParentCtrl {
 	TabCtrl tabs;
 	ParentCtrl boolctrl;
 	BooleansDraw bools;
-	ArrayCtrl stats, try_strands, catch_strands;
+	ArrayCtrl strands;
 	SliderCtrl slider;
 	
 public:

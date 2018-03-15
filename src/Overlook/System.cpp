@@ -146,7 +146,7 @@ System::~System() {
 }
 
 void System::Init() {
-	GetAutomation().AddJournal("System initialization");
+	AddJournal("System initialization");
 	
 	LoadThis();
 	
@@ -179,7 +179,8 @@ void System::Init() {
 			int j = used_symbols.Find(s.name);
 			if (j != -1) used_symbols_id.Add(i);
 		}
-		
+		if (used_symbols_id.GetCount() != USEDSYMBOL_COUNT)
+			Panic("Some important symbols for automation are missing");
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
@@ -241,7 +242,7 @@ void System::Init() {
 }
 
 void System::Deinit() {
-	GetAutomation().AddJournal("System deinitialization");
+	AddJournal("System deinitialization");
 	GetAutomation().StopJobs();
 	StoreThis();
 }
@@ -263,12 +264,12 @@ void System::AddSymbol(String sym) {
 }
 
 void System::StoreThis() {
-	GetAutomation().AddJournal("System saving to file");
+	AddJournal("System saving to file");
 	StoreToFile(*this, ConfigFile("System.bin"));
 }
 
 void System::LoadThis() {
-	GetAutomation().AddJournal("System loading from file");
+	AddJournal("System loading from file");
 	LoadFromFile(*this, ConfigFile("System.bin"));
 }
 
@@ -487,16 +488,16 @@ bool System::RefreshReal() {
 	}
 	catch (UserExc e) {
 		LOG(e);
-		a.AddJournal("Error in updating metatrader: " + e);
+		AddJournal("Error in updating metatrader: " + e);
 		return false;
 	}
 	catch (...) {
-		a.AddJournal("Unknown error in updating metatrader");
+		AddJournal("Unknown error in updating metatrader");
 		return false;
 	}
 	
 	
-	a.AddJournal("Updating metatrader real signals: " + msg);
+	AddJournal("Updating metatrader real signals: " + msg);
 	
 	WhenRealtimeUpdate();
 	WhenPopTask();

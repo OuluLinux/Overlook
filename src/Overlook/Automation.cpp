@@ -3,6 +3,12 @@
 namespace Overlook {
 
 Automation::Automation() {
+	memset(this, 0, sizeof(Automation));
+	ASSERT(sym_count > 0);
+	
+	tf = 1; // M5
+	output_fmlevel = 0.8;
+	
 	if (FileExists(ConfigFile("Automation.bin")))
 		LoadThis();
 	
@@ -13,10 +19,18 @@ Automation::~Automation() {
 	
 }
 
+int Automation::GetSymGroupJobId(int symbol) const {
+	for(int i = 0; i < GROUP_COUNT; i++) {
+		const JobGroup& jobgroup = jobgroups[i];
+		const Job& job = jobgroup.jobs[symbol];
+		if (!job.is_finished)
+			return i;
+	}
+	return GROUP_COUNT;
+}
+
 void Automation::StartJobs() {
 	if (running || not_stopped > 0) return;
-	
-	AddJournal("Starting system jobs");
 	
 	running = true;
 	int thrd_count = GetUsedCpuCores();
@@ -28,7 +42,6 @@ void Automation::StartJobs() {
 }
 
 void Automation::StopJobs() {
-	AddJournal("Stopping system jobs");
 	
 	running = false;
 	while (not_stopped > 0) Sleep(100);
@@ -52,8 +65,15 @@ void Automation::JobWorker(int i) {
 		for (;group_id < jobgroup_count; group_id++)
 			if (!jobgroups[group_id].is_finished)
 				break;
-		if (group_id >= jobgroup_count)
-			break;
+		if (group_id >= jobgroup_count) {
+			for(int i = 0; i < GROUP_COUNT; i++) {
+				jobgroups[i].is_finished = false;
+				for(int j = 0; j < sym_count; j++)
+					jobgroups[i].jobs[j].is_finished = false;
+			}
+			continue;
+		}
+		
 		JobGroup& jobgroup = jobgroups[group_id];
 		
 		workitem_lock.Enter();
@@ -64,15 +84,32 @@ void Automation::JobWorker(int i) {
 			if (worker_cursor >= sym_count)
 				worker_cursor = 0;
 			Job& job = jobgroup.jobs[job_id];
-			if (job.is_finished)
+			if (job.is_finished || job.is_processing)
 				continue;
+			job.is_processing = true;
 			found = true;
 			break;
 		}
+		
+		if (!found) {
+			bool all_finished = true;
+			for(int i = 0; i < sym_count; i++)
+				all_finished &= jobgroup.jobs[i].is_finished;
+			if (all_finished) {
+				jobgroup.is_finished = true;
+			}
+		}
+		
 		workitem_lock.Leave();
-		if (!found) continue;
+		
+		if (!found) {
+			Sleep(100);
+			continue;
+		}
 		
 		Process(group_id, job_id);
+		jobgroups[group_id].jobs[job_id].is_processing = false;
+		
 	}
 	
 	
@@ -89,7 +126,6 @@ void Automation::Process(int group_id, int job_id) {
 			LoadSource();
 		}
 		else Sleep(1000);
-		job.is_finished = true;
 	}
 	else if (group_id == GROUP_BITS) {
 		ProcessBits();
@@ -97,11 +133,19 @@ void Automation::Process(int group_id, int job_id) {
 	else {
 		Evolve(group_id, job_id);
 	}
+	
+	if (running) job.is_finished = true;
 }
 
 void Automation::LoadSource() {
 	System& sys = GetSystem();
 	Vector<int>& used_symbols_id = sys.used_symbols_id;
+	
+	for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+		int sym = used_symbols_id[i];
+		sys.data[sym][0].db.Start();
+		sys.data[sym][tf].db.Start();
+	}
 	
 	while (running) {
 		
@@ -113,7 +157,7 @@ void Automation::LoadSource() {
 			int sym = used_symbols_id[i];
 			DataBridge& db = sys.data[sym][tf].db;
 			int count = db.open.GetCount();
-			int next = loadsource_state[i].a + 1;
+			int next = loadsource_pos[i] + 1;
 			if (next >= count) continue;
 			
 			int time = db.time[next];
@@ -132,17 +176,19 @@ void Automation::LoadSource() {
 		
 		// Increase cursor with all which has the same time next
 		for(int i = 0; i < smallest_id_count; i++) {
-			loadsource_state[smallest_ids[i]].a++;
+			loadsource_pos[smallest_ids[i]]++;
 		}
 		
 		for(int i = 0; i < sym_count; i++) {
 			int sym = used_symbols_id[i];
 			DataBridge& db = sys.data[sym][tf].db;
-			State& state = loadsource_state[sym];
-			double open = db.open[state.a];
+			int pos = loadsource_pos[i];
+			//LOG(loadsource_cursor << "\t" << i << "\t" << pos << "/" << db.open.GetCount());
+			double open = db.open[pos];
 			open_buf[i][loadsource_cursor] = open;
 		}
 		
+		time_buf[loadsource_cursor] = smallest_time;
 		
 		loadsource_cursor++;
 		if (loadsource_cursor >= maxcount)
@@ -159,13 +205,23 @@ void Automation::LoadSource() {
 
 void Automation::ProcessBits() {
 	for (; processbits_cursor < loadsource_cursor; processbits_cursor++) {
-		int bit_pos = 0;
-		for(int i = 0; i < processbits_period_count; i++) {
-			for(int j = 0; j < sym_count; j++) {
+		#ifdef flagDEBUG
+		if (processbits_cursor == 10000) {
+			processbits_cursor = loadsource_cursor;
+			break;
+		}
+		#endif
+		for(int i = 0; i < sym_count; i++) {
+			int bit_pos = 0;
+			for(int j = 0; j < processbits_period_count; j++) {
 				ProcessBitsSingle(i, j, bit_pos);
 			}
+			if (!(bit_pos == processbits_inputrow_size)) {
+				DUMP(bit_pos);
+				DUMP(processbits_inputrow_size);
+			}
+			ASSERT(bit_pos == processbits_inputrow_size);
 		}
-		ASSERT(bit_pos == processbits_inputrow_size);
 	}
 }
 
@@ -188,7 +244,7 @@ bool Automation::GetBit(int pos, int sym, int bit) const {
 	return *it & (1ULL << k);
 }
 
-void Automation::ProcessBitsSingle(int period_id, int sym, int& bit_pos) {
+void Automation::ProcessBitsSingle(int sym, int period_id, int& bit_pos) {
 	double open1 = open_buf[sym][processbits_cursor];
 	double point = this->point[sym];
 	ASSERT(point >= 0.000001 && point < 0.1);
@@ -342,7 +398,7 @@ void Automation::ProcessBitsSingle(int period_id, int sym, int& bit_pos) {
 	
 	// Descriptor bits
 	period = 1 << period_id;
-	for(int i = 0; i < processbits_descriptor_count; i++) {
+	for(int i = 0; i < processbits_period_count; i++) {
 		int pos = Upp::max(0, cursor - period * (i + 1));
 		double open2 = open_buf[pos];
 		bool value = open1 < open2;
@@ -365,6 +421,8 @@ void Automation::ProcessBitsSingle(int period_id, int sym, int& bit_pos) {
 }
 
 void Automation::Evolve(int group_id, int job_id) {
+	StrandList& meta_added = this->tmp_meta_added[job_id];
+	StrandList& single_added = this->tmp_single_added[job_id];
 	
 	if (strands.IsEmpty())
 		strands.Add();
@@ -379,21 +437,22 @@ void Automation::Evolve(int group_id, int job_id) {
 	for (; strands.cursor < iter_count && running; strands.cursor++) {
 		bool total_added = false;
 		
-		StrandList meta_added;
+		meta_added.Clear();
+		
 		int evolve_count = strands.GetCount();
 		for(int i = 0; i < evolve_count && running; i++) {
 			Strand& st = strands[i];
 			
-			StrandList single_added;
+			single_added.Clear();
 			
 			for(int j = 0; j < processbits_inputrow_size && running; j++) {
 				
 				for(int k = 0; k < 14; k++) {
 					switch (group_id) {
-						case GROUP_ENABLE:	if (k >= 4) continue;
-						case GROUP_TRIGGER:	if (k < 4 || k >= 6) continue;
-						case GROUP_LIMIT:	if (k < 6 || k >= 10) continue;
-						case GROUP_WEIGHT:	if (k < 10) continue;
+						case GROUP_ENABLE:	if (k >= 4) continue; break;
+						case GROUP_TRIGGER:	if (k < 4 || k >= 6) continue; break;
+						case GROUP_LIMIT:	if (k < 6 || k >= 10) continue; break;
+						case GROUP_WEIGHT:	if (k < 10) continue; break;
 						default: Panic("Invalid group");
 					}
 					
@@ -659,13 +718,15 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		prev_signal = signal;
 		prev_enabled = enabled;
 		
-		if (write && enabled) {
+		if (write) {
 			if (write_result) {
 				trigger_result[sym][i] = result;
 			}
 			
-			SetBitOutput(i, sym, group_id * 2 + 0, signal);
-			SetBitOutput(i, sym, group_id * 2 + 1, enabled);
+			if (enabled) {
+				SetBitOutput(i, sym, group_id * 2 + 0, signal);
+				SetBitOutput(i, sym, group_id * 2 + 1, enabled);
+			}
 		}
 	}
 	
@@ -742,6 +803,22 @@ String Strand::BitString() const {
 		out << "t+" << i << "=" << trigger_true.bits[i] << ", ";
 	for(int i = 0; i < trigger_false.count; i++)
 		out << "t-" << i << "=" << trigger_false.bits[i] << ", ";
+	for(int i = 0; i < limit_inc_true.count; i++)
+		out << "l++" << i << "=" << limit_inc_true.bits[i] << ", ";
+	for(int i = 0; i < limit_inc_false.count; i++)
+		out << "l+-" << i << "=" << limit_inc_false.bits[i] << ", ";
+	for(int i = 0; i < limit_dec_true.count; i++)
+		out << "l-+" << i << "=" << limit_dec_true.bits[i] << ", ";
+	for(int i = 0; i < limit_dec_false.count; i++)
+		out << "l--" << i << "=" << limit_dec_false.bits[i] << ", ";
+	for(int i = 0; i < weight_inc_true.count; i++)
+		out << "w++" << i << "=" << weight_inc_true.bits[i] << ", ";
+	for(int i = 0; i < weight_inc_false.count; i++)
+		out << "w+-" << i << "=" << weight_inc_false.bits[i] << ", ";
+	for(int i = 0; i < weight_dec_true.count; i++)
+		out << "w-+" << i << "=" << weight_dec_true.bits[i] << ", ";
+	for(int i = 0; i < weight_dec_false.count; i++)
+		out << "w--" << i << "=" << weight_dec_false.bits[i];
 	return out;
 }
 

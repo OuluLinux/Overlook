@@ -17,7 +17,6 @@ file
 	main.cpp,
 	Overlook.rc,
 	Overlook.h,
-	Ovelook.icpp,
 	Overlook.iml,
 	Overlook.cpp,
 	Overlook.lay,

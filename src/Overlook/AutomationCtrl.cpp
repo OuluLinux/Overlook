@@ -6,27 +6,27 @@ using namespace Upp;
 
 void BooleansDraw::Paint(Draw& w) {
 	System& sys = GetSystem();
+	Automation& a = GetAutomation();
 	
 	Size sz(GetSize());
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	/*if (cursor >= 0) {
+	if (cursor >= 0) {
 		
-		int w = Snap::src_row_size;
-		int h = sys.GetSymbolCount();
+		int w = a.processbits_row_size;
+		int h = a.sym_count;
 		
 		double xstep = (double)sz.cx / w;
 		double ystep = (double)sz.cy / h;
 		
 		for(int i = 0; i < h; i++) {
-			if (i >= sys.data.GetCount()) continue;
+			if (i >= a.processbits_cursor) continue;
 			
-			auto& main_booleans = sys.data[i][tf].main_booleans;
+			//auto& main_booleans = a.bits_buf[i][tf].main_booleans;
 			
-			int count = main_booleans.GetCount();
+			int count = a.processbits_cursor;
 			if (count == 0) continue;
-			const Snap& snap = main_booleans[min(count-1, cursor)];
 			
 			int y0 = i * ystep;
 			int y1 = (i + 1) * ystep;
@@ -34,13 +34,12 @@ void BooleansDraw::Paint(Draw& w) {
 				int x0 = j * xstep;
 				int x1 = (j + 1) * xstep;
 				
-				bool b = snap.Get(j);
+				bool b = a.GetBit(cursor, i, j);
 				if (b)
 					id.DrawRect(x0, y0, x1-x0, y1-y0, Black());
-				
 			}
 		}
-	}*/
+	}
 	
 	w.DrawImage(0, 0, id);
 }
@@ -68,12 +67,8 @@ AutomationCtrl::AutomationCtrl() {
 	tabs.WhenSet << THISBACK(Data);
 	tabs.Add(boolctrl, "Bits");
 	tabs.Add(boolctrl);
-	tabs.Add(stats, "Stats");
-	tabs.Add(stats);
-	tabs.Add(try_strands, "Try strands");
-	tabs.Add(try_strands);
-	tabs.Add(catch_strands, "Catch strands");
-	tabs.Add(catch_strands);
+	tabs.Add(strands, "Strands");
+	tabs.Add(strands);
 	
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
@@ -81,39 +76,45 @@ AutomationCtrl::AutomationCtrl() {
 	boolctrl.Add(bools.HSizePos().VSizePos(0,30));
 	boolctrl.Add(slider.HSizePos().BottomPos(0,30));
 	
-	stats.AddColumn("Bit combination");
-	stats.AddColumn("Percent");
-	stats.AddColumn("Index");
-	
-	try_strands.AddColumn("Index");
-	try_strands.AddColumn("Signal bit");
-	try_strands.AddColumn("Bit list");
-	try_strands.AddColumn("Result");
-	
-	catch_strands.AddColumn("Index");
-	catch_strands.AddColumn("Signal bit");
-	catch_strands.AddColumn("Bit list");
-	catch_strands.AddColumn("Result");
-	
+	strands.AddColumn("Index");
+	strands.AddColumn("Signal bit");
+	strands.AddColumn("Bit list");
+	strands.AddColumn("Enable result");
+	strands.AddColumn("Trigger result");
+	strands.AddColumn("Limit result");
+	strands.AddColumn("Weight result");
 	
 	PostCallback(THISBACK(Start));
 }
 
 void AutomationCtrl::Data() {
 	System& sys = GetSystem();
+	Automation& a = GetAutomation();
 	
-	/*
 	int row = 0;
-	for(int i = 0; i < sys.jobs.GetCount(); i++) {
-		Job& job = *sys.jobs[i];
-		int sym = job.GetSymbol();
-		int tf = job.GetTf();
+	for(int i = 0; i < a.sym_count; i++) {
+		int sym = sys.used_symbols_id[i];
+		int tf = a.tf;
 		symbols.Set(i, 0, sym);
 		symbols.Set(i, 1, tf);
-		symbols.Set(i, 2, sym >= 0 ? sys.GetSymbol(sym) : "Account");
+		symbols.Set(i, 2, sys.GetSymbol(sym));
 		symbols.Set(i, 3, sys.GetPeriod(tf));
-		symbols.Set(i, 4, job.GetPhaseString());
-		symbols.Set(i, 5, job.GetProgress());
+		
+		int job_id = a.GetSymGroupJobId(i);
+		int prog = job_id * 1000 / Automation::GROUP_COUNT;
+		String phase_str;
+		switch (job_id) {
+			case Automation::GROUP_SOURCE:	phase_str = "Source"; break;
+			case Automation::GROUP_BITS:	phase_str = "Bits"; break;
+			case Automation::GROUP_ENABLE:	phase_str = "Enable"; break;
+			case Automation::GROUP_TRIGGER:	phase_str = "Trigger"; break;
+			case Automation::GROUP_LIMIT:	phase_str = "Limit"; break;
+			case Automation::GROUP_WEIGHT:	phase_str = "Weight"; break;
+			case Automation::GROUP_COUNT:	phase_str = "Finished"; break;
+		}
+		
+		symbols.Set(i, 4, phase_str);
+		symbols.Set(i, 5, prog);
 		symbols.SetDisplay(i, 3, ProgressDisplay());
 	}
 	
@@ -121,67 +122,29 @@ void AutomationCtrl::Data() {
 	int cursor = symbols.GetCursor();
 	if (cursor == -1) return;
 	
+	
 	int sym = symbols.Get(cursor, 0);
 	int tf  = symbols.Get(cursor, 1);
 	
 	
-	Job& sym_data = sym >= 0 ? (Job&)sys.data[sym][tf] : (Job&)sys.account[tf];
-	auto& main_booleans = sym_data.main_booleans;
-	
 	int tab = tabs.Get();
 	if (tab == 0) {
-		slider.MinMax(0, main_booleans.GetCount() - 1);
+		slider.MinMax(0, a.processbits_cursor - 1);
 		bools.tf = tf;
 		bools.cursor = slider.GetData();
 		bools.Refresh();
 	}
 	else if (tab == 1) {
-		auto& stat_in = sym_data.main_stats;
-		
-		
-		int id = 0, row = 0;
-		for (int i = 0; i < SourceImage::row_size; i++) {
-			String key;
-			key << i << " ";
-			
-			for(int i = 0; i < 2; i++) {
-				SnapStats& ss = stat_in.data[id][i];
-				
-				stats.Set(row, 0, key + IntStr(i));
-				if (ss.total > 0) {
-					stats.Set(row, 1, IntStr(ss.actual * 100 / ss.total) + "%");
-					stats.Set(row, 2, abs(ss.actual * 200 / ss.total - 100));
-				} else {
-					stats.Set(row, 1, "");
-					stats.Set(row, 2, "");
-				}
-				row++;
+		for(int i = 0; i < a.strands.GetCount(); i++) {
+			strands.Set(i, 0, i);
+			strands.Set(i, 1, a.strands[i].sig_bit);
+			strands.Set(i, 2, a.strands[i].BitString());
+			for(int j = 0; j < GROUP_RESULTS; j++) {
+				strands.Set(i, 3 + j, (double)a.strands[i].result[j]);
 			}
-			
-			id++;
 		}
-		
-		stats.SetSortColumn(2, true);
-		
+		strands.SetCount(a.strands.GetCount());
 	}
-	else if (tab == 2) {
-		for(int i = 0; i < sym_data.try_strands.GetCount(); i++) {
-			try_strands.Set(i, 0, i);
-			try_strands.Set(i, 1, sym_data.try_strands[i].sig_bit);
-			try_strands.Set(i, 2, sym_data.try_strands[i].BitString());
-			try_strands.Set(i, 3, (double)sym_data.try_strands[i].result);
-		}
-		try_strands.SetCount(sym_data.try_strands.GetCount());
-	}
-	else if (tab == 3) {
-		for(int i = 0; i < sym_data.catch_strands.GetCount(); i++) {
-			catch_strands.Set(i, 0, i);
-			catch_strands.Set(i, 1, sym_data.catch_strands[i].sig_bit);
-			catch_strands.Set(i, 2, sym_data.catch_strands[i].BitString());
-			catch_strands.Set(i, 3, (double)sym_data.catch_strands[i].result);
-		}
-		catch_strands.SetCount(sym_data.catch_strands.GetCount());
-	}*/
 }
 
 

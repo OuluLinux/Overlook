@@ -37,8 +37,8 @@ typedef const int ConstInt;
 	#define MIN_REAL_TFID 1
 	#define MAX_REAL_TFID 7
 #endif
-#define SNAP_GENERIC (14+6+6)
-#define SNAP_BITS (6*SNAP_GENERIC+2)
+//#define SNAP_GENERIC (14+6+6)
+//#define SNAP_BITS (6*SNAP_GENERIC+2)
 #define USEDSYMBOL_COUNT 8
 
 enum {

@@ -12,7 +12,10 @@ void BooleansDraw::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (cursor >= 0) {
+	if (cursor >= 0 && cursor < a.processbits_cursor) {
+		int ts = a.time_buf[cursor];
+		Time t = Time(1970,1,1) + ts;
+		LOG("BooleansDraw::Paint cursor time " + Format("%", t));
 		
 		int w = a.processbits_row_size;
 		int h = a.sym_count;
@@ -21,7 +24,6 @@ void BooleansDraw::Paint(Draw& w) {
 		double ystep = (double)sz.cy / h;
 		
 		for(int i = 0; i < h; i++) {
-			if (i >= a.processbits_cursor) continue;
 			
 			//auto& main_booleans = a.bits_buf[i][tf].main_booleans;
 			
@@ -135,15 +137,15 @@ void AutomationCtrl::Data() {
 		bools.Refresh();
 	}
 	else if (tab == 1) {
-		for(int i = 0; i < a.strands.GetCount(); i++) {
+		for(int i = 0; i < a.strands[cursor].GetCount(); i++) {
 			strands.Set(i, 0, i);
-			strands.Set(i, 1, a.strands[i].sig_bit);
-			strands.Set(i, 2, a.strands[i].BitString());
+			strands.Set(i, 1, a.strands[cursor][i].sig_bit);
+			strands.Set(i, 2, a.strands[cursor][i].BitString());
 			for(int j = 0; j < GROUP_RESULTS; j++) {
-				strands.Set(i, 3 + j, (double)a.strands[i].result[j]);
+				strands.Set(i, 3 + j, (double)a.strands[cursor][i].result[j]);
 			}
 		}
-		strands.SetCount(a.strands.GetCount());
+		strands.SetCount(a.strands[cursor].GetCount());
 	}
 }
 

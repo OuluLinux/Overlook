@@ -132,7 +132,7 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
-	Tabify(last, Dockable(sysctrl, "System").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sysctrl, "Automation").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));

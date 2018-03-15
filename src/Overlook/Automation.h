@@ -11,7 +11,7 @@ struct StrandItem {
 	int bits[MAX_STRAND_BITS];
 	int count = 0;
 	
-	bool Evolve(int bit, StrandItem& dst);
+	bool Evolve(int bit);
 	void Add(int i) {ASSERT(count < MAX_STRAND_BITS); bits[count++] = i;}
 	void Clear() {count = 0;}
 };
@@ -42,9 +42,10 @@ struct Strand {
 struct StrandList : Moveable<Strand> {
 	Strand strands[MAX_STRANDS * 3];
 	int strand_count = 0;
-	int cursor = 0;
+	int cursor[GROUP_RESULTS][USEDSYMBOL_COUNT];
 	
-	void Clear() {strand_count = 0; cursor = 0;}
+	StrandList() {Clear();}
+	void Clear() {memset(this, 0, sizeof(StrandList));}
 	int GetCount() const {return strand_count;}
 	bool IsEmpty() const {return strand_count == 0;}
 	void SetCount(int i) {ASSERT(i >= 0 && i <= MAX_STRANDS); strand_count = i;}
@@ -110,7 +111,7 @@ protected:
 	FixedExtremumCache<1 << 6>				ec5[sym_count];
 	StrandList	tmp_meta_added[sym_count];
 	StrandList	tmp_single_added[sym_count];
-	StrandList	strands;
+	StrandList	strands[sym_count];
 	int			loadsource_pos[sym_count];
 	JobGroup	jobgroups[jobgroup_count];
 	double		point[sym_count];

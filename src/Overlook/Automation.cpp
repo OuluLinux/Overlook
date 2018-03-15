@@ -6,7 +6,7 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
-	tf = 1; // M5
+	tf = 6; // M5
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -122,13 +122,16 @@ void Automation::Process(int group_id, int job_id) {
 	Job& job			= jobgroup.jobs[job_id];
 	
 	if (group_id == GROUP_SOURCE) {
-		if (job_id == 0) {
+		if (job_id == 0)
 			LoadSource();
-		}
-		else Sleep(1000);
+		else
+			Sleep(1000);
 	}
 	else if (group_id == GROUP_BITS) {
-		ProcessBits();
+		if (job_id == 0)
+			ProcessBits();
+		else
+			Sleep(1000);
 	}
 	else {
 		Evolve(group_id, job_id);
@@ -226,6 +229,7 @@ void Automation::ProcessBits() {
 }
 
 void Automation::SetBit(int pos, int sym, int bit, bool b) {
+	ASSERT(bit >= 0 && bit < processbits_row_size);
 	int64 i = (pos * sym_count + sym) * processbits_row_size + bit;
 	int64 j = i / 64;
 	int64 k = i % 64;
@@ -423,6 +427,7 @@ void Automation::ProcessBitsSingle(int sym, int period_id, int& bit_pos) {
 void Automation::Evolve(int group_id, int job_id) {
 	StrandList& meta_added = this->tmp_meta_added[job_id];
 	StrandList& single_added = this->tmp_single_added[job_id];
+	StrandList& strands = this->strands[job_id];
 	
 	if (strands.IsEmpty())
 		strands.Add();
@@ -434,7 +439,7 @@ void Automation::Evolve(int group_id, int job_id) {
 	
 	int res_id = group_id - GROUP_ENABLE;
 	
-	for (; strands.cursor < iter_count && running; strands.cursor++) {
+	for (; strands.cursor[group_id][job_id] < iter_count && running; strands.cursor[group_id][job_id]++) {
 		bool total_added = false;
 		
 		meta_added.Clear();
@@ -456,24 +461,23 @@ void Automation::Evolve(int group_id, int job_id) {
 						default: Panic("Invalid group");
 					}
 					
-					Strand test;
-					test.Clear();
+					Strand test = st;
 					
 					bool fail = false;
-					if      (k == 0)	fail = st.enabled			.Evolve(j, test.enabled);
-					else if (k == 1)	fail = st.signal_true		.Evolve(j, test.signal_true);
-					else if (k == 2)	fail = st.signal_false		.Evolve(j, test.signal_false);
-					else if (k == 3)	{test = st; test.sig_bit = j;}
-					else if (k == 4)	fail = st.trigger_true		.Evolve(j, test.trigger_true);
-					else if (k == 5)	fail = st.trigger_false		.Evolve(j, test.trigger_false);
-					else if (k == 6)	fail = st.limit_inc_true	.Evolve(j, test.limit_inc_true);
-					else if (k == 7)	fail = st.limit_inc_false	.Evolve(j, test.limit_inc_false);
-					else if (k == 8)	fail = st.limit_dec_true	.Evolve(j, test.limit_dec_true);
-					else if (k == 9)	fail = st.limit_dec_false	.Evolve(j, test.limit_dec_false);
-					else if (k == 10)	fail = st.weight_inc_true	.Evolve(j, test.weight_inc_true);
-					else if (k == 11)	fail = st.weight_inc_false	.Evolve(j, test.weight_inc_false);
-					else if (k == 12)	fail = st.weight_dec_true	.Evolve(j, test.weight_dec_true);
-					else if (k == 13)	fail = st.weight_dec_false	.Evolve(j, test.weight_dec_false);
+					if      (k == 0)	fail = test.enabled				.Evolve(j);
+					else if (k == 1)	fail = test.signal_true			.Evolve(j);
+					else if (k == 2)	fail = test.signal_false		.Evolve(j);
+					else if (k == 3)	test.sig_bit = j;
+					else if (k == 4)	fail = test.trigger_true		.Evolve(j);
+					else if (k == 5)	fail = test.trigger_false		.Evolve(j);
+					else if (k == 6)	fail = test.limit_inc_true		.Evolve(j);
+					else if (k == 7)	fail = test.limit_inc_false		.Evolve(j);
+					else if (k == 8)	fail = test.limit_dec_true		.Evolve(j);
+					else if (k == 9)	fail = test.limit_dec_false		.Evolve(j);
+					else if (k == 10)	fail = test.weight_inc_true		.Evolve(j);
+					else if (k == 11)	fail = test.weight_inc_false	.Evolve(j);
+					else if (k == 12)	fail = test.weight_dec_true		.Evolve(j);
+					else if (k == 13)	fail = test.weight_dec_false	.Evolve(j);
 					if (fail) continue;
 					
 					TestStrand(group_id, job_id, test);
@@ -559,6 +563,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 	
 	int order_limit = sym_count / 2;
 	int weight = 1;
+	int prev_weight = 1;
 	const int max_order_limit = sym_count;
 	const int min_order_limit = 1;
 	const int max_weight = 4;
@@ -654,7 +659,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 			for(int j = 0; j < sym_count; j++) {
 				if (j == sym) continue;
 				double diff_b = trigger_result[j][i] - trigger_result[j][prev_pos];
-				if (diff_b > diff_a)
+				if (diff_b >= diff_a)
 					better_count++;
 			}
 			if (better_count >= order_limit)
@@ -707,7 +712,6 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 			if (!prev_signal)	change = +(current / (prev_open + spread) - 1.0);
 			else				change = -(current / (prev_open - spread) - 1.0);
 			change *= weight;
-			if (fabs(change - 1.0) > 0.5) change = 1.0;
 			result *= 1.0 + change;
 		}
 		if (do_open) {
@@ -717,6 +721,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		
 		prev_signal = signal;
 		prev_enabled = enabled;
+		prev_weight = weight;
 		
 		if (write) {
 			if (write_result) {
@@ -728,6 +733,14 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 				SetBitOutput(i, sym, group_id * 2 + 1, enabled);
 			}
 		}
+	}
+	
+	if (group_id == GROUP_WEIGHT) {
+		int last = processbits_cursor - 1;
+		bool signal  = GetBitOutput(last, sym, group_id * 2 + 0);
+		bool enabled = GetBitOutput(last, sym, group_id * 2 + 1);
+		int sig = enabled ? (sig ? -1 : +1) : 0;
+		output_signals[job_id] = sig * prev_weight;
 	}
 	
 	st.result[group_id - GROUP_ENABLE] = result;
@@ -772,16 +785,15 @@ void StrandList::Dump(int res_id) {
 	}
 }
 
-bool StrandItem::Evolve(int bit, StrandItem& dst) {
-	dst = *this;
+bool StrandItem::Evolve(int bit) {
 	bool fail = false;
-	for(int i = 0; i < dst.count; i++) {
-		if (dst.bits[i] == bit) {
+	for(int i = 0; i < count; i++) {
+		if (bits[i] == bit) {
 			fail = true;
 			break;
 		}
 	}
-	dst.Add(bit);
+	Add(bit);
 	return fail;
 }
 

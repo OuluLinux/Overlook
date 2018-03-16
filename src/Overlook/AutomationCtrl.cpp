@@ -75,15 +75,18 @@ AutomationCtrl::AutomationCtrl() {
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
 	
-	boolctrl.Add(bools.HSizePos().VSizePos(0,30));
+	boolctrl.Add(bools.HSizePos(0, 300).VSizePos(0,30));
+	boolctrl.Add(cursor_stats.RightPos(0, 300).VSizePos(0,30));
 	boolctrl.Add(slider.HSizePos().BottomPos(0,30));
+	
+	cursor_stats.AddColumn("Key");
+	cursor_stats.AddColumn("Value");
 	
 	strands.AddColumn("Index");
 	strands.AddColumn("Signal bit");
 	strands.AddColumn("Bit list");
 	strands.AddColumn("Enable result");
 	strands.AddColumn("Trigger result");
-	strands.AddColumn("Limit result");
 	strands.AddColumn("Weight result");
 	
 	PostCallback(THISBACK(Start));
@@ -110,7 +113,6 @@ void AutomationCtrl::Data() {
 			case Automation::GROUP_BITS:	phase_str = "Bits"; break;
 			case Automation::GROUP_ENABLE:	phase_str = "Enable"; break;
 			case Automation::GROUP_TRIGGER:	phase_str = "Trigger"; break;
-			case Automation::GROUP_LIMIT:	phase_str = "Limit"; break;
 			case Automation::GROUP_WEIGHT:	phase_str = "Weight"; break;
 			case Automation::GROUP_COUNT:	phase_str = "Finished"; break;
 		}
@@ -131,10 +133,32 @@ void AutomationCtrl::Data() {
 	
 	int tab = tabs.Get();
 	if (tab == 0) {
-		slider.MinMax(0, a.processbits_cursor - 1);
+		int last = a.processbits_cursor - 1;
+		slider.MinMax(0, last);
+		if (last < 0) return;
+		
 		bools.tf = tf;
 		bools.cursor = slider.GetData();
 		bools.Refresh();
+		
+		int cursor = slider.GetData();
+		if (cursor < 0) cursor = 0;
+		if (cursor > last) cursor = last;
+		
+		int row = 0;
+		cursor_stats.Set(row,   0, "Time");
+		cursor_stats.Set(row++, 1, Format("%", Time(1970,1,1) + a.time_buf[cursor]));
+		
+		for(int i = 0; i < sys.used_symbols_id.GetCount(); i++) {
+			int sym = sys.used_symbols_id[i];
+			String symstr = sys.symbols[sym];
+			
+			cursor_stats.Set(row,   0, symstr + " signal");
+			bool signal  = a.GetBitOutput(cursor, i, 4);
+			bool enabled = a.GetBitOutput(cursor, i, 5);
+			int sig = enabled ? (signal ? -1 : +1) : 0;
+			cursor_stats.Set(row++, 1, sig);
+		}
 	}
 	else if (tab == 1) {
 		for(int i = 0; i < a.strands[cursor].GetCount(); i++) {

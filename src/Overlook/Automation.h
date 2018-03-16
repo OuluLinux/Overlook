@@ -4,7 +4,7 @@
 namespace Overlook {
 
 
-#define GROUP_RESULTS 4
+#define GROUP_RESULTS 3
 #define MAX_STRANDS 300
 #define MAX_STRAND_BITS 20
 struct StrandItem {
@@ -20,9 +20,8 @@ struct Strand {
 	StrandItem enabled,
 		signal_true, signal_false,
 		trigger_true, trigger_false,
-		limit_inc_true, limit_inc_false, limit_dec_true, limit_dec_false,
 		weight_inc_true, weight_inc_false, weight_dec_true, weight_dec_false;
-	double result[GROUP_RESULTS];
+	long double result[GROUP_RESULTS];
 	int sig_bit = 0;
 	
 	String ToString(int res_id) const;
@@ -30,8 +29,6 @@ struct Strand {
 	void Clear() {
 		enabled.Clear(); signal_true.Clear(); signal_false.Clear();
 		trigger_true.Clear(); trigger_false.Clear();
-		limit_inc_true.Clear(); limit_inc_false.Clear();
-		limit_dec_true.Clear(); limit_dec_false.Clear();
 		weight_inc_true.Clear(); weight_inc_false.Clear();
 		weight_dec_true.Clear(); weight_dec_false.Clear();
 		for(int i = 0; i < GROUP_RESULTS; i++)
@@ -54,7 +51,7 @@ struct StrandList : Moveable<Strand> {
 	Strand& operator[] (int i) {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
 	const Strand& operator[] (int i) const {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
 	Strand& Top() {ASSERT(strand_count > 0); return strands[strand_count-1];}
-	bool Has(Strand& s);
+	bool Has(Strand& s, int res_id);
 	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(StrandList)); else s.Put(this, sizeof(StrandList));}
 	void Sort(int res_id);
 	void Dump(int res_id);
@@ -80,7 +77,7 @@ protected:
 	
 	
 	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_ENABLE, GROUP_TRIGGER, GROUP_LIMIT, GROUP_WEIGHT, GROUP_COUNT};
+	enum {GROUP_SOURCE, GROUP_BITS, GROUP_ENABLE, GROUP_TRIGGER, GROUP_WEIGHT, GROUP_COUNT};
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int max_sym_mult = 4;
 	static const int jobgroup_count = GROUP_COUNT;
@@ -118,13 +115,13 @@ protected:
 	double		spread[sym_count];
 	double		output_fmlevel;
 	double		open_buf[sym_count][loadsource_reserved];
-	float		trigger_result[sym_count][loadsource_reserved];
 	uint64		bits_buf[processbits_reserved_bytes];
 	int			time_buf[loadsource_reserved];
 	int			loadsource_cursor = 0;
 	int			processbits_cursor = 0;
 	int			worker_cursor = 0;
 	int			output_signals[sym_count];
+	int			prev_output_cursor = 0;
 	int			tf;
 	bool		running = false, stopped = true;
 	
@@ -159,7 +156,7 @@ public:
 	bool	GetBitOutput(int pos, int sym, int bit) const {return GetBit(pos, sym, processbits_inputrow_size + bit);}
 	
 	bool	IsRunning() const {return running;}
-	int		GetSignal(int sym) {ASSERT(sym >= 0 && sym < sym_count); return output_signals[sym];}
+	int		GetSignal(int sym);
 	double	GetFreeMarginLevel() {return output_fmlevel;}
 	int		GetFreeMarginScale() {return sym_count * max_sym_mult;}
 	int		GetSymGroupJobId(int symbol) const;

@@ -87,6 +87,7 @@ public:
 	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshMedian();
+	void RefreshViaConnection();
 	
 public:
 	typedef DataBridge CLASSNAME;

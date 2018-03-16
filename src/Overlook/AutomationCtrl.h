@@ -22,6 +22,7 @@ class AutomationCtrl : public ParentCtrl {
 	TabCtrl tabs;
 	ParentCtrl boolctrl;
 	BooleansDraw bools;
+	ArrayCtrl cursor_stats;
 	ArrayCtrl strands;
 	SliderCtrl slider;
 	

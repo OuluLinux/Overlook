@@ -71,6 +71,7 @@ void DataBridge::Start() {
 			RefreshFromHistory(false);
 		}
 		RefreshFromAskBid(init_round);
+		RefreshViaConnection();
 	}
 	
 	lock.Leave();
@@ -173,6 +174,53 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	// Very weird bug of volume not being updated
 	volume_buf.SetCount(open_buf.GetCount());
 	
+	
+	RefreshMedian();
+	ForceSetCounted(open_buf.GetCount());
+}
+
+void DataBridge::RefreshViaConnection() {
+	Vector<double>& open_buf = open;
+	Vector<double>& low_buf = low;
+	Vector<double>& high_buf = high;
+	Vector<double>& volume_buf = volume;
+	Vector<int>& time_buf = time;
+	MetaTrader& mt = GetMetaTrader();
+	
+	// find latest time
+	int latest_time = time_buf.Top();
+	
+	// ask all prices and times since latest time from mt
+	typedef Tuple<int, double> TimeOpen;
+	Vector<TimeOpen> data;
+	data.Reserve(1000);
+	for(int i = 0; i < 1000; i++) {
+		double open = mt.iOpen(symbol, period, i);
+		int time = mt.iTime(symbol, period, i);
+		if (time <= latest_time)
+			break;
+		data.Add(TimeOpen(time, open));
+	}
+	
+	Reverse(data);
+	
+	int shift = open_buf.GetCount();
+	int count = data.GetCount();
+	open_buf	.SetCount(shift+count);
+	low_buf		.SetCount(shift+count);
+	high_buf	.SetCount(shift+count);
+	volume_buf	.SetCount(shift+count);
+	time_buf	.SetCount(shift+count);
+	
+	for(int i = 0; i < data.GetCount(); i++) {
+		TimeOpen& to = data[i];
+		open_buf[shift] = to.b;
+		low_buf[shift] = to.b;
+		high_buf[shift] = to.b;
+		volume_buf[shift] = 0;
+		time_buf[shift] = to.a;
+		shift++;
+	}
 	
 	RefreshMedian();
 	ForceSetCounted(open_buf.GetCount());

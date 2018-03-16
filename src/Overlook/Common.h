@@ -29,7 +29,7 @@ class Agent;
 
 typedef const int ConstInt;
 
-#define MAX_ITERS 6
+#define MAX_ITERS 4
 #ifdef flagDEBUG
 	#define MIN_REAL_TFID 4
 	#define MAX_REAL_TFID 5

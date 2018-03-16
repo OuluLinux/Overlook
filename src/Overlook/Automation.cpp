@@ -6,7 +6,7 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
-	tf = 6; // M5
+	tf = 5; // M5
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -438,6 +438,7 @@ void Automation::Evolve(int group_id, int job_id) {
 	#endif
 	
 	int res_id = group_id - GROUP_ENABLE;
+	strands.Sort(res_id);
 	
 	for (; strands.cursor[group_id][job_id] < iter_count && running; strands.cursor[group_id][job_id]++) {
 		bool total_added = false;
@@ -452,12 +453,11 @@ void Automation::Evolve(int group_id, int job_id) {
 			
 			for(int j = 0; j < processbits_inputrow_size && running; j++) {
 				
-				for(int k = 0; k < 14; k++) {
+				for(int k = 0; k < 10; k++) {
 					switch (group_id) {
 						case GROUP_ENABLE:	if (k >= 4) continue; break;
 						case GROUP_TRIGGER:	if (k < 4 || k >= 6) continue; break;
-						case GROUP_LIMIT:	if (k < 6 || k >= 10) continue; break;
-						case GROUP_WEIGHT:	if (k < 10) continue; break;
+						case GROUP_WEIGHT:	if (k < 6) continue; break;
 						default: Panic("Invalid group");
 					}
 					
@@ -470,18 +470,14 @@ void Automation::Evolve(int group_id, int job_id) {
 					else if (k == 3)	test.sig_bit = j;
 					else if (k == 4)	fail = test.trigger_true		.Evolve(j);
 					else if (k == 5)	fail = test.trigger_false		.Evolve(j);
-					else if (k == 6)	fail = test.limit_inc_true		.Evolve(j);
-					else if (k == 7)	fail = test.limit_inc_false		.Evolve(j);
-					else if (k == 8)	fail = test.limit_dec_true		.Evolve(j);
-					else if (k == 9)	fail = test.limit_dec_false		.Evolve(j);
-					else if (k == 10)	fail = test.weight_inc_true		.Evolve(j);
-					else if (k == 11)	fail = test.weight_inc_false	.Evolve(j);
-					else if (k == 12)	fail = test.weight_dec_true		.Evolve(j);
-					else if (k == 13)	fail = test.weight_dec_false	.Evolve(j);
+					else if (k == 6)	fail = test.weight_inc_true		.Evolve(j);
+					else if (k == 7)	fail = test.weight_inc_false	.Evolve(j);
+					else if (k == 8)	fail = test.weight_dec_true		.Evolve(j);
+					else if (k == 9)	fail = test.weight_dec_false	.Evolve(j);
 					if (fail) continue;
 					
 					TestStrand(group_id, job_id, test);
-
+					
 					if (test.result[res_id] == 1.0)
 						continue;
 					
@@ -502,7 +498,7 @@ void Automation::Evolve(int group_id, int job_id) {
 				
 				for(int i = 0, added_count = 0; i < single_added.GetCount() && added_count < 2; i++) {
 					auto& s = single_added.strands[i];
-					if (!meta_added.Has(s)) {
+					if (!meta_added.Has(s, res_id)) {
 						meta_added.Add(s);
 						added_count++;
 					}
@@ -524,7 +520,7 @@ void Automation::Evolve(int group_id, int job_id) {
 		int count = min(MAX_STRANDS*2, meta_added.GetCount());
 		for(int i = 0; i < count; i++) {
 			auto& s = meta_added.strands[i];
-			if (!strands.Has(s))
+			if (!strands.Has(s, res_id))
 				strands.Add(s);
 		}
 		
@@ -553,6 +549,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 	int begin = 200;
 	
 	const int sym = job_id;
+	const int output_group_id = group_id - GROUP_ENABLE;
 	
 	long double result = 1.0;
 	double spread = this->spread[sym];
@@ -561,13 +558,11 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 	bool prev_enabled = false, prev_signal;
 	double prev_open;
 	
-	int order_limit = sym_count / 2;
 	int weight = 1;
 	int prev_weight = 1;
-	const int max_order_limit = sym_count;
-	const int min_order_limit = 1;
 	const int max_weight = 4;
 	const int min_weight = 1;
+	
 	
 	for(int i = begin; i < processbits_cursor; i++) {
 		
@@ -591,16 +586,9 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 				write_result = true;
 				break;
 				
-			case GROUP_LIMIT:
+			case GROUP_WEIGHT:
 				signal    = GetBitOutput(i, sym, 2);
 				enabled   = GetBitOutput(i, sym, 3);
-				triggered = true;
-				check_resultorder = true;
-				break;
-				
-			case GROUP_WEIGHT:
-				signal    = GetBitOutput(i, sym, 4);
-				enabled   = GetBitOutput(i, sym, 5);
 				triggered = true;
 				check_weight = true;
 				break;
@@ -633,38 +621,6 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 			triggered |= signal_triggered;
 		}
 		
-		if (check_resultorder && enabled) {
-			
-			bool increase = true;
-			for(int j = 0; j < st.limit_inc_true.count && increase; j++)
-				increase &= GetBit(i, sym, st.limit_inc_true.bits[j]) == signal;
-			for(int j = 0; j < st.limit_inc_false.count && increase; j++)
-				increase &= GetBit(i, sym, st.limit_inc_false.bits[j]) != signal;
-			
-			
-			bool decrease = true;
-			for(int j = 0; j < st.limit_dec_true.count && decrease; j++)
-				decrease &= GetBit(i, sym, st.limit_dec_true.bits[j]) == signal;
-			for(int j = 0; j < st.limit_dec_false.count && decrease; j++)
-				decrease &= GetBit(i, sym, st.limit_dec_false.bits[j]) != signal;
-			
-			if (increase && decrease)
-				;
-			else if (increase) order_limit = min(max_order_limit, order_limit + 1);
-			else if (decrease) order_limit = max(min_order_limit, order_limit - 1);
-			
-			int prev_pos = max(0, i - 12);
-			double diff_a = trigger_result[sym][i] - trigger_result[sym][prev_pos];
-			int better_count = 0;
-			for(int j = 0; j < sym_count; j++) {
-				if (j == sym) continue;
-				double diff_b = trigger_result[j][i] - trigger_result[j][prev_pos];
-				if (diff_b >= diff_a)
-					better_count++;
-			}
-			if (better_count >= order_limit)
-				enabled = false;
-		}
 		
 		if (check_weight && enabled) {
 			
@@ -708,10 +664,11 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		
 		if (do_close) {
 			double current = open_buf[i];
-			double change;
+			long double change;
 			if (!prev_signal)	change = +(current / (prev_open + spread) - 1.0);
 			else				change = -(current / (prev_open - spread) - 1.0);
-			change *= weight;
+			change *= weight * 0.001;
+			if (change > +0.5 || change < -0.5) change = 0.0;
 			result *= 1.0 + change;
 		}
 		if (do_open) {
@@ -724,26 +681,35 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		prev_weight = weight;
 		
 		if (write) {
-			if (write_result) {
-				trigger_result[sym][i] = result;
-			}
-			
 			if (enabled) {
-				SetBitOutput(i, sym, group_id * 2 + 0, signal);
-				SetBitOutput(i, sym, group_id * 2 + 1, enabled);
+				SetBitOutput(i, sym, output_group_id * 2 + 0, signal);
+				SetBitOutput(i, sym, output_group_id * 2 + 1, enabled);
 			}
 		}
 	}
 	
 	if (group_id == GROUP_WEIGHT) {
 		int last = processbits_cursor - 1;
-		bool signal  = GetBitOutput(last, sym, group_id * 2 + 0);
-		bool enabled = GetBitOutput(last, sym, group_id * 2 + 1);
-		int sig = enabled ? (sig ? -1 : +1) : 0;
-		output_signals[job_id] = sig * prev_weight;
+		if (last != prev_output_cursor) {
+			bool signal  = GetBitOutput(last, sym, output_group_id * 2 + 0);
+			bool enabled = GetBitOutput(last, sym, output_group_id * 2 + 1);
+			int sig = enabled ? (signal ? -1 : +1) : 0;
+			output_signals[job_id] = sig * prev_weight;
+			prev_output_cursor = last;
+		}
 	}
 	
-	st.result[group_id - GROUP_ENABLE] = result;
+	st.result[output_group_id] = result;
+}
+
+int Automation::GetSignal(int sym) {
+	int cursor = processbits_cursor - 1;
+	if (cursor < 0) return 0;
+
+	bool signal  = GetBitOutput(cursor, sym, 4);
+	bool enabled = GetBitOutput(cursor, sym, 5);
+	int sig = enabled ? (signal ? -1 : +1) : 0;
+	return sig * max(1, abs(output_signals[sym]));
 }
 
 
@@ -751,11 +717,9 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 
 
 
-
-
-bool StrandList::Has(Strand& s) {
+bool StrandList::Has(Strand& s, int res_id) {
 	for(int i = 0; i < strand_count; i++) {
-		if (s.result == strands[i].result)
+		if (s.result[res_id] == strands[i].result[res_id])
 			return true;
 	}
 	return false;
@@ -815,14 +779,6 @@ String Strand::BitString() const {
 		out << "t+" << i << "=" << trigger_true.bits[i] << ", ";
 	for(int i = 0; i < trigger_false.count; i++)
 		out << "t-" << i << "=" << trigger_false.bits[i] << ", ";
-	for(int i = 0; i < limit_inc_true.count; i++)
-		out << "l++" << i << "=" << limit_inc_true.bits[i] << ", ";
-	for(int i = 0; i < limit_inc_false.count; i++)
-		out << "l+-" << i << "=" << limit_inc_false.bits[i] << ", ";
-	for(int i = 0; i < limit_dec_true.count; i++)
-		out << "l-+" << i << "=" << limit_dec_true.bits[i] << ", ";
-	for(int i = 0; i < limit_dec_false.count; i++)
-		out << "l--" << i << "=" << limit_dec_false.bits[i] << ", ";
 	for(int i = 0; i < weight_inc_true.count; i++)
 		out << "w++" << i << "=" << weight_inc_true.bits[i] << ", ";
 	for(int i = 0; i < weight_inc_false.count; i++)

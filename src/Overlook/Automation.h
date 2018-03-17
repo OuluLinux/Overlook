@@ -121,7 +121,7 @@ protected:
 	int			processbits_cursor = 0;
 	int			worker_cursor = 0;
 	int			output_signals[sym_count];
-	int			prev_output_cursor = 0;
+	int			prev_output_cursor[sym_count];
 	int			tf;
 	bool		running = false, stopped = true;
 	

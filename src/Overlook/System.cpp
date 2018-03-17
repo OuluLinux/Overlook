@@ -135,8 +135,8 @@ System::System() {
 	used_symbols.Add("EURUSD");
 	used_symbols.Add("EURAUD");
 	used_symbols.Add("CHFJPY");
-	//used_symbols.Add("GBPUSD");
-	//used_symbols.Add("GBPJPY");
+	used_symbols.Add("GBPUSD");
+	used_symbols.Add("GBPJPY");
 	used_symbols.Add("USDJPY");
 	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
 }

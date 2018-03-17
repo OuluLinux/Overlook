@@ -39,7 +39,7 @@ typedef const int ConstInt;
 #endif
 //#define SNAP_GENERIC (14+6+6)
 //#define SNAP_BITS (6*SNAP_GENERIC+2)
-#define USEDSYMBOL_COUNT 6
+#define USEDSYMBOL_COUNT 8
 
 enum {
 	PHASE_TRAINING,

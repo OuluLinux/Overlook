@@ -69,6 +69,7 @@ void DataBridge::Start() {
 			const Symbol& mtsym = mt.GetSymbol(sym_id);
 			RefreshFromHistory(true);
 			RefreshFromHistory(false);
+			RefreshViaConnection();
 		}
 		RefreshFromAskBid(init_round);
 		RefreshViaConnection();

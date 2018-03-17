@@ -50,20 +50,7 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	Calendar.h,
-	Calendar.cpp,
-	Trash readonly separator,
-	Jobs.h,
-	SourceImage.cpp,
-	SourceTry.cpp,
-	SourceCatch.cpp,
-	AccountImage.cpp,
-	MarginImage.cpp,
-	Core.h,
-	Core.cpp,
-	SystemQueue.cpp,
-	Utils.h,
-	Utils.cpp,
-	CoreIO.cpp;
+	Calendar.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

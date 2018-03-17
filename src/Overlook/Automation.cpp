@@ -6,7 +6,7 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
-	tf = 5; // M5
+	tf = 1; // M5
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -688,14 +688,15 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		}
 	}
 	
-	if (group_id == GROUP_WEIGHT) {
+	if (write && group_id == GROUP_WEIGHT) {
 		int last = processbits_cursor - 1;
-		if (last != prev_output_cursor) {
+		if (last != prev_output_cursor[job_id]) {
 			bool signal  = GetBitOutput(last, sym, output_group_id * 2 + 0);
 			bool enabled = GetBitOutput(last, sym, output_group_id * 2 + 1);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			output_signals[job_id] = sig * prev_weight;
-			prev_output_cursor = last;
+			ReleaseLog("sym " + IntStr(job_id) + " signal " + IntStr(output_signals[job_id]));
+			prev_output_cursor[job_id] = last;
 		}
 	}
 	
@@ -703,13 +704,7 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 }
 
 int Automation::GetSignal(int sym) {
-	int cursor = processbits_cursor - 1;
-	if (cursor < 0) return 0;
-
-	bool signal  = GetBitOutput(cursor, sym, 4);
-	bool enabled = GetBitOutput(cursor, sym, 5);
-	int sig = enabled ? (signal ? -1 : +1) : 0;
-	return sig * max(1, abs(output_signals[sym]));
+	return output_signals[sym];
 }
 
 

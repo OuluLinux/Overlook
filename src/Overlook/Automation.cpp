@@ -6,7 +6,7 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
-	tf = 1; // M5
+	tf = 5; // H4
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -133,6 +133,9 @@ void Automation::Process(int group_id, int job_id) {
 		else
 			Sleep(1000);
 	}
+	else if (group_id == GROUP_CORRELATION) {
+		ProcessCorrelation(job_id);
+	}
 	else {
 		Evolve(group_id, job_id);
 	}
@@ -226,6 +229,60 @@ void Automation::ProcessBits() {
 			ASSERT(bit_pos == processbits_inputrow_size);
 		}
 	}
+}
+
+void Automation::ProcessCorrelation(int job_id) {
+	
+	int& cursor = correlation_cursor[job_id];
+	
+	for (; cursor < weight_cursor[job_id]; cursor++) {
+		
+		bool signal  = GetBitOutput(cursor, job_id, 4);
+		bool enabled = GetBitOutput(cursor, job_id, 5);
+		
+		if (enabled) {
+			// Prefer coherence in symbol correlations
+			
+			// Calculate for and against from other symbols
+			int same = 0, opposite = 0;
+			
+			int bit_pos = processbits_generic_row - processbits_correlation_count;
+			
+			for(int i = 0; i < sym_count; i++) {
+				if (i == job_id) continue;
+				
+				bool correlation_bit = GetBit(cursor, job_id, bit_pos);
+				bool other_signal  = GetBitOutput(cursor, i, 4);
+				bool other_enabled = GetBitOutput(cursor, i, 5);
+				
+				if (other_enabled) {
+					if (!correlation_bit) {
+						if (other_signal == signal)		same++;
+						else							opposite++;
+					} else {
+						if (other_signal != signal)		same++;
+						else							opposite++;
+					}
+				}
+				
+				bit_pos++;
+			}
+
+
+			// Cancel signal
+			if (same == opposite)
+				enabled = false;
+			else if (same < opposite)
+				signal = !signal;
+		}
+		
+		
+		// Write output
+		SetBitOutput(cursor, job_id, 6, signal);
+		SetBitOutput(cursor, job_id, 7, enabled);
+		
+	}
+	
 }
 
 void Automation::SetBit(int pos, int sym, int bit, bool b) {
@@ -422,6 +479,47 @@ void Automation::ProcessBitsSingle(int sym, int period_id, int& bit_pos) {
 		SetBitCurrent(sym, bit_pos++, change_b > 0);
 	}
 	
+	
+	// Correlation
+	const int corr_count = 4;
+	const int corr_step = 1 << period_id;
+	
+	for(int j = 0; j < sym_count; j++) {
+		if (j == sym) continue;
+		
+		double x[corr_count], y[corr_count], xy[corr_count], xsquare[corr_count], ysquare[corr_count];
+		double xsum, ysum, xysum, xsqr_sum, ysqr_sum;
+		double coeff, num, deno;
+		
+		xsum = ysum = xysum = xsqr_sum = ysqr_sum = 0;
+		
+		// find the needed data to manipulate correlation coeff
+		for (int i = 0; i < corr_count; i++) {
+			int pos = Upp::max(0, cursor - i * corr_step);
+			x[i] = open_buf[pos];
+			y[i] = this->open_buf[j][pos];
+			
+			xy[i] = x[i] * y[i];
+			xsquare[i] = x[i] * x[i];
+			ysquare[i] = y[i] * y[i];
+			xsum = xsum + x[i];
+			ysum = ysum + y[i];
+			xysum = xysum + xy[i];
+			xsqr_sum = xsqr_sum + xsquare[i];
+			ysqr_sum = ysqr_sum + ysquare[i];
+		}
+		
+		num = 1.0 * (((double)corr_count * xysum) - (xsum * ysum));
+		deno = 1.0 * (((double)corr_count * xsqr_sum - xsum * xsum)* ((double)corr_count * ysqr_sum - ysum * ysum));
+		
+		// calculate correlation coefficient
+		coeff = deno > 0.0 ? num / sqrt(deno) : 0.0;
+		//LOG("xsum " << xsum << " ysum " << ysum << " xysum " << xysum << " xsqr_sum " << xsqr_sum << " ysqr_sum " << ysqr_sum);
+		//LOG("num " << num << " deno " << deno << " coeff " << coeff);
+		bool value = coeff < 0.0;
+		SetBitCurrent(sym, bit_pos++, value);
+	}
+	
 }
 
 void Automation::Evolve(int group_id, int job_id) {
@@ -440,7 +538,7 @@ void Automation::Evolve(int group_id, int job_id) {
 	int res_id = group_id - GROUP_ENABLE;
 	strands.Sort(res_id);
 	
-	for (; strands.cursor[group_id][job_id] < iter_count && running; strands.cursor[group_id][job_id]++) {
+	for (; strands.cursor[group_id] < iter_count && running; strands.cursor[group_id]++) {
 		bool total_added = false;
 		
 		meta_added.Clear();
@@ -540,16 +638,16 @@ void Automation::Evolve(int group_id, int job_id) {
 	
 	for(int i = strands.GetCount() -1; i >= 0; i--) {
 		auto& st = strands[i];
-		if (st.result[res_id] < 1.0) continue;
+		//if (st.result[res_id] < 1.0) continue;
 		TestStrand(group_id, job_id, st, true);
 	}
 }
 
 void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
-	int begin = 200;
+	int begin = 0;
 	
 	const int sym = job_id;
-	const int output_group_id = group_id - GROUP_ENABLE;
+	const int res_id = group_id - GROUP_ENABLE;
 	
 	long double result = 1.0;
 	double spread = this->spread[sym];
@@ -560,8 +658,6 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 	
 	int weight = 1;
 	int prev_weight = 1;
-	const int max_weight = 4;
-	const int min_weight = 1;
 	
 	
 	for(int i = begin; i < processbits_cursor; i++) {
@@ -682,29 +778,33 @@ void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
 		
 		if (write) {
 			if (enabled) {
-				SetBitOutput(i, sym, output_group_id * 2 + 0, signal);
-				SetBitOutput(i, sym, output_group_id * 2 + 1, enabled);
+				SetBitOutput(i, sym, res_id * 2 + 0, signal);
+				SetBitOutput(i, sym, res_id * 2 + 1, enabled);
+				if (check_weight) {
+					SetBitOutput(i, sym, GROUP_RESULTS * 2 + weight - min_weight, true);
+					if (i + 1 > weight_cursor[sym]) weight_cursor[sym] = i + 1;
+				}
 			}
 		}
 	}
 	
-	if (write && group_id == GROUP_WEIGHT) {
-		int last = processbits_cursor - 1;
-		if (last != prev_output_cursor[job_id]) {
-			bool signal  = GetBitOutput(last, sym, output_group_id * 2 + 0);
-			bool enabled = GetBitOutput(last, sym, output_group_id * 2 + 1);
-			int sig = enabled ? (signal ? -1 : +1) : 0;
-			output_signals[job_id] = sig * prev_weight;
-			ReleaseLog("sym " + IntStr(job_id) + " signal " + IntStr(output_signals[job_id]));
-			prev_output_cursor[job_id] = last;
-		}
-	}
-	
-	st.result[output_group_id] = result;
+	st.result[res_id] = result;
 }
 
 int Automation::GetSignal(int sym) {
-	return output_signals[sym];
+	int last = correlation_cursor[sym] - 1;
+	if (last < 0) return 0;
+	bool signal  = GetBitOutput(last, sym, 6);
+	bool enabled = GetBitOutput(last, sym, 7);
+	int sig = enabled ? (signal ? -1 : +1) : 0;
+	int mult = 0;
+	for(int i = min_weight; i <= max_weight; i++) {
+		int bit = i - min_weight;
+		if (GetBitOutput(last, sym, 8 + bit))
+			mult = i;
+	}
+	sig *= mult;
+	return sig;
 }
 
 

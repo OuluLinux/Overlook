@@ -4,7 +4,7 @@
 namespace Overlook {
 
 
-#define GROUP_RESULTS 3
+#define GROUP_RESULTS 4
 #define MAX_STRANDS 300
 #define MAX_STRAND_BITS 20
 struct StrandItem {
@@ -39,7 +39,7 @@ struct Strand {
 struct StrandList : Moveable<Strand> {
 	Strand strands[MAX_STRANDS * 3];
 	int strand_count = 0;
-	int cursor[GROUP_RESULTS][USEDSYMBOL_COUNT];
+	int cursor[GROUP_RESULTS];
 	
 	StrandList() {Clear();}
 	void Clear() {memset(this, 0, sizeof(StrandList));}
@@ -77,19 +77,23 @@ protected:
 	
 	
 	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_ENABLE, GROUP_TRIGGER, GROUP_WEIGHT, GROUP_COUNT};
+	enum {GROUP_SOURCE, GROUP_BITS, GROUP_ENABLE, GROUP_TRIGGER, GROUP_WEIGHT, GROUP_CORRELATION, GROUP_COUNT};
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int max_sym_mult = 4;
 	static const int jobgroup_count = GROUP_COUNT;
-	static const int maxcount = 14*365*5/7*24*12; // 14 years, M5
+	static const int maxcount = 14*365*5/7*6; // 14 years, H4
+	
+	static const int max_weight = 4;
+	static const int min_weight = 1;
 	
 	static const int loadsource_reserved = maxcount;
 	
 	static const int processbits_period_count = 6;
 	static const int processbits_descriptor_count = processbits_period_count + (sym_count - 1) * 2;
-	static const int processbits_generic_row = (14 + processbits_descriptor_count);
+	static const int processbits_correlation_count = (sym_count - 1);
+	static const int processbits_generic_row = (14 + processbits_descriptor_count + processbits_correlation_count);
 	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
-	static const int processbits_outputrow_size = GROUP_RESULTS * 2;
+	static const int processbits_outputrow_size = GROUP_RESULTS * 2 + (max_weight - min_weight + 1);
 	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
 	static const int processbits_reserved = processbits_row_size * sym_count * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
@@ -119,9 +123,9 @@ protected:
 	int			time_buf[loadsource_reserved];
 	int			loadsource_cursor = 0;
 	int			processbits_cursor = 0;
+	int			weight_cursor[sym_count];
+	int			correlation_cursor[sym_count];
 	int			worker_cursor = 0;
-	int			output_signals[sym_count];
-	int			prev_output_cursor[sym_count];
 	int			tf;
 	bool		running = false, stopped = true;
 	
@@ -145,6 +149,7 @@ public:
 	
 	void	LoadSource();
 	void	ProcessBits();
+	void	ProcessCorrelation(int job_id);
 	void	Evolve(int group_id, int job_id);
 	void	TestStrand(int group_id, int job_id, Strand& strand, bool write=false);
 	

@@ -20,7 +20,6 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "System.h"
 #include "Automation.h"
-#include "Utils.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
 #include "Chart.h"

@@ -441,95 +441,100 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 }
 
 bool System::RefreshReal() {
-	Time now				= GetUtcTime();
-	int wday				= DayOfWeek(now);
-	Time after_3hours		= now + 3 * 60 * 60;
-	int wday_after_3hours	= DayOfWeek(after_3hours);
-	now.second				= 0;
-	MetaTrader& mt			= GetMetaTrader();
-	Automation& a			= GetAutomation();
-	
-	// Skip weekends and first hours of monday
-	if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
-		LOG("Skipping weekend...");
-		return true;
-	}
-	
-	
-	// Inspect for market closing (weekend and holidays)
-	else if (wday == 5 && wday_after_3hours == 6) {
-		WhenInfo("Closing all orders before market break");
-		
-		for (int i = 0; i < mt.GetSymbolCount(); i++) {
-			mt.SetSignal(i, 0);
-			mt.SetSignalFreeze(i, false);
-		}
-		
-		mt.SignalOrders(true);
-		return true;
-	}
-	
-	for(int i = 0; i < used_symbols_id.GetCount(); i++) {
-		int sym = used_symbols_id[i];
-		int signal = a.GetSignal(i);
-		SetSignal(sym, signal);
-	}
-	
-	WhenInfo("Updating MetaTrader");
-	WhenPushTask("Putting latest signals");
-	
-	// Reset signals
-	if (realtime_count == 0) {
-		for (int i = 0; i < mt.GetSymbolCount(); i++)
-			mt.SetSignal(i, 0);
-	}
-	realtime_count++;
-	
-	bool sig_change = false;
-	String msg;
 	try {
-		mt.Data();
-		mt.RefreshLimits();
+		Time now				= GetUtcTime();
+		int wday				= DayOfWeek(now);
+		Time after_3hours		= now + 3 * 60 * 60;
+		int wday_after_3hours	= DayOfWeek(after_3hours);
+		now.second				= 0;
+		MetaTrader& mt			= GetMetaTrader();
+		Automation& a			= GetAutomation();
 		
-		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
-			int sig = signals[sym_id];
-			int prev_sig = mt.GetSignal(sym_id);
-			if (sig == prev_sig && sig != 0) {
-				mt.SetSignalFreeze(sym_id, true);
-			} else {
-				mt.SetSignal(sym_id, sig);
-				mt.SetSignalFreeze(sym_id, false);
-			}
-			LOG("Real symbol " << sym_id << " signal " << sig);
-			msg << symbols[sym_id] << "=" << sig << ", ";
-			if (prev_sig != sig)
-				sig_change = true;
+		// Skip weekends and first hours of monday
+		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+			LOG("Skipping weekend...");
+			return true;
 		}
 		
-		mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
-		mt.SetFreeMarginScale(a.GetFreeMarginScale());
-		mt.SignalOrders(true);
+		
+		// Inspect for market closing (weekend and holidays)
+		else if (wday == 5 && wday_after_3hours == 6) {
+			WhenInfo("Closing all orders before market break");
+			
+			for (int i = 0; i < mt.GetSymbolCount(); i++) {
+				mt.SetSignal(i, 0);
+				mt.SetSignalFreeze(i, false);
+			}
+			
+			mt.SignalOrders(true);
+			return true;
+		}
+		
+		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+			int sym = used_symbols_id[i];
+			int signal = a.GetSignal(i);
+			SetSignal(sym, signal);
+		}
+		
+		WhenInfo("Updating MetaTrader");
+		WhenPushTask("Putting latest signals");
+		
+		// Reset signals
+		if (realtime_count == 0) {
+			for (int i = 0; i < mt.GetSymbolCount(); i++)
+				mt.SetSignal(i, 0);
+		}
+		realtime_count++;
+		
+		bool sig_change = false;
+		String msg;
+		try {
+			mt.Data();
+			mt.RefreshLimits();
+			
+			for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
+				int sig = signals[sym_id];
+				int prev_sig = mt.GetSignal(sym_id);
+				if (sig == prev_sig && sig != 0) {
+					mt.SetSignalFreeze(sym_id, true);
+				} else {
+					mt.SetSignal(sym_id, sig);
+					mt.SetSignalFreeze(sym_id, false);
+				}
+				LOG("Real symbol " << sym_id << " signal " << sig);
+				msg << symbols[sym_id] << "=" << sig << ", ";
+				if (prev_sig != sig)
+					sig_change = true;
+			}
+			
+			mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
+			mt.SetFreeMarginScale(a.GetFreeMarginScale());
+			mt.SignalOrders(true);
+		}
+		catch (UserExc e) {
+			LOG(e);
+			AddJournal("Error in updating metatrader: " + e);
+			return false;
+		}
+		catch (...) {
+			AddJournal("Unknown error in updating metatrader");
+			return false;
+		}
+		
+		
+		AddJournal("Updating metatrader real signals: " + msg);
+		
+		WhenRealtimeUpdate();
+		WhenPopTask();
+		
+		if (a.IsRunning() && sig_change)
+			WhenJobOrders();
+		
+		return true;
 	}
-	catch (UserExc e) {
-		LOG(e);
-		AddJournal("Error in updating metatrader: " + e);
+	catch (ConnectionError e) {
 		return false;
 	}
-	catch (...) {
-		AddJournal("Unknown error in updating metatrader");
-		return false;
-	}
-	
-	
-	AddJournal("Updating metatrader real signals: " + msg);
-	
-	WhenRealtimeUpdate();
-	WhenPopTask();
-	
-	if (a.IsRunning() && sig_change)
-		WhenJobOrders();
-	
-	return true;
 }
 
 }

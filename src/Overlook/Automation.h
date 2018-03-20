@@ -14,6 +14,12 @@ struct StrandItem {
 	bool Evolve(int bit);
 	void Add(int i) {ASSERT(count < MAX_STRAND_BITS); bits[count++] = i;}
 	void Clear() {count = 0;}
+	unsigned GetHashValue() const {
+		CombineHash ch;
+		for(int i = 0; i < count; i++)
+			ch << bits[i] << 1;
+		return ch;
+	}
 };
 
 struct Strand {
@@ -33,6 +39,20 @@ struct Strand {
 		weight_dec_true.Clear(); weight_dec_false.Clear();
 		for(int i = 0; i < GROUP_RESULTS; i++)
 			result[i] = -DBL_MAX;
+	}
+	unsigned GetHashValue() const {
+		CombineHash ch;
+		ch	<< enabled.GetHashValue() << 1
+			<< signal_true.GetHashValue() << 1
+			<< signal_false.GetHashValue() << 1
+			<< trigger_true.GetHashValue() << 1
+			<< trigger_false.GetHashValue() << 1
+			<< weight_inc_true.GetHashValue() << 1
+			<< weight_inc_false.GetHashValue() << 1
+			<< weight_dec_true.GetHashValue() << 1
+			<< weight_dec_false.GetHashValue() << 1;
+		ch << sig_bit << 1;
+		return ch;
 	}
 };
 

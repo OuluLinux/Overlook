@@ -438,19 +438,23 @@ void Overlook::DeepRefresh() {
 	
 	if (m.TryEnter())
 	{
-		ReleaseLog("DeepRefresh entered");
-		mt.Data();
-		DataBridgeCommon& common = GetDataBridgeCommon();
-		common.InspectInit();
-		common.DownloadAskBid();
-		common.RefreshAskBidData(true);
-		GetCalendar().Data();
-		sys.RefreshReal();
-		
-		mt_refresh.Reset();
-		
-		PostCallback(THISBACK(DeepRefreshData));
-		
+		try {
+			ReleaseLog("DeepRefresh entered");
+			mt.Data();
+			DataBridgeCommon& common = GetDataBridgeCommon();
+			common.InspectInit();
+			common.DownloadAskBid();
+			common.RefreshAskBidData(true);
+			GetCalendar().Data();
+			sys.RefreshReal();
+			
+			mt_refresh.Reset();
+			
+			PostCallback(THISBACK(DeepRefreshData));
+		}
+		catch (ConnectionError e) {
+			
+		}
 		m.Leave();
 	}
 }

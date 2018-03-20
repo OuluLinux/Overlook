@@ -538,6 +538,8 @@ void Automation::Evolve(int group_id, int job_id) {
 	int res_id = group_id - GROUP_ENABLE;
 	strands.Sort(res_id);
 	
+	Index<unsigned> visited_hashes;
+	
 	for (; strands.cursor[group_id] < iter_count && running; strands.cursor[group_id]++) {
 		bool total_added = false;
 		
@@ -574,6 +576,11 @@ void Automation::Evolve(int group_id, int job_id) {
 					else if (k == 9)	fail = test.weight_dec_false	.Evolve(j);
 					if (fail) continue;
 					
+					unsigned hash = test.GetHashValue();
+					if (visited_hashes.Find(hash) != -1)
+						continue;
+					visited_hashes.FindAdd(hash);
+					
 					TestStrand(group_id, job_id, test);
 					
 					if (test.result[res_id] == 1.0)
@@ -583,6 +590,7 @@ void Automation::Evolve(int group_id, int job_id) {
 						continue;
 					
 					single_added.Add(test);
+					
 				}
 				
 			}

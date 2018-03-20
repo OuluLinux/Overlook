@@ -204,14 +204,19 @@ void DataBridge::RefreshViaConnection() {
 	Vector<TimeOpen> data;
 	data.Reserve(1000);
 	for(int i = 0; i < 1000; i++) {
-		double open = mt.iOpen(symbol, period, i);
-		int time = mt.iTime(symbol, period, i);
-		Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
-		time = utc_time.Get() - Time(1970,1,1).Get();
-		if (time <= latest_time)
-			break;
-		if (time < max_time_ts)
-			data.Add(TimeOpen(time, open));
+		try {
+			double open = mt.iOpen(symbol, period, i);
+			int time = mt.iTime(symbol, period, i);
+			Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
+			time = utc_time.Get() - Time(1970,1,1).Get();
+			if (time <= latest_time)
+				break;
+			if (time < max_time_ts)
+				data.Add(TimeOpen(time, open));
+		}
+		catch (ConnectionError e) {
+			
+		}
 	}
 	
 	Reverse(data);

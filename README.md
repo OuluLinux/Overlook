@@ -1,7 +1,8 @@
 # Overlook
-A project for seeking profitable forex trading automation outside the limitations of MT4.
+A project for searching profitable forex trading algorithm outside the limitations of MT4.
 
-I programmed a lot MQL before I fed up to those limitations. Now, I try to support useful parts and improve the automation, which would profit me as well as you. There is no point to clone an open source ecosystem of losing algorithms.
+I programmed a lot of MQL code in the limits of MT4 framework. I frustrated to the lack of scalability. I couldn't run algorithm over multiple instruments easily.
+Now, I try to support useful parts and improve the automation, which would profit me as well as you. There is no point to clone an open source ecosystem of losing algorithms.
 
 
 #### How to run

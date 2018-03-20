@@ -154,8 +154,8 @@ void AutomationCtrl::Data() {
 			String symstr = sys.symbols[sym];
 			
 			cursor_stats.Set(row,   0, symstr + " signal");
-			bool signal  = a.GetBitOutput(cursor, i, 4);
-			bool enabled = a.GetBitOutput(cursor, i, 5);
+			bool signal  = a.GetBitOutput(cursor, i, 6);
+			bool enabled = a.GetBitOutput(cursor, i, 7);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
 		}

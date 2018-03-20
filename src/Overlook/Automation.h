@@ -81,7 +81,7 @@ protected:
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int max_sym_mult = 4;
 	static const int jobgroup_count = GROUP_COUNT;
-	static const int maxcount = 14*365*5/7*6; // 14 years, H4
+	static const int maxcount = 14*365*5/7*24*4; // 14 years, M15
 	
 	static const int max_weight = 4;
 	static const int min_weight = 1;

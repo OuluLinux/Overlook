@@ -112,6 +112,9 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	int64 epoch_begin = Time(1970,1,1).Get();
 	int shift = open_buf.GetCount() - 1;
 	
+	Time max_time = GetUtcTime() + 5 * 60;
+	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
+	
 	for(; cursor < data.GetCount(); cursor++) {
 		
 		// Get local references
@@ -127,7 +130,8 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		time = time - time % step;
 		time -= 4*24*60*60;
 		time -= epoch_begin;
-		
+		if (time > max_time_ts)
+			continue;
 		
 		// Find min/max
 		double diff = ask - bid;
@@ -188,6 +192,10 @@ void DataBridge::RefreshViaConnection() {
 	Vector<int>& time_buf = time;
 	MetaTrader& mt = GetMetaTrader();
 	
+	Time max_time = GetUtcTime() + 5 * 60;
+	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
+	
+	
 	// find latest time
 	int latest_time = time_buf.Top();
 	
@@ -198,9 +206,12 @@ void DataBridge::RefreshViaConnection() {
 	for(int i = 0; i < 1000; i++) {
 		double open = mt.iOpen(symbol, period, i);
 		int time = mt.iTime(symbol, period, i);
+		Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
+		time = utc_time.Get() - Time(1970,1,1).Get();
 		if (time <= latest_time)
 			break;
-		data.Add(TimeOpen(time, open));
+		if (time < max_time_ts)
+			data.Add(TimeOpen(time, open));
 	}
 	
 	Reverse(data);
@@ -378,6 +389,8 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	
 	int64 step = GetPeriod() * 60;
 	int shift = open_buf.GetCount() - 1;
+	Time max_time = GetUtcTime() + 5 * 60;
+	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
 	
 	while ((cursor + struct_size) <= data_size) {
 		if ((open_buf.GetCount() % 10) == 0) {
@@ -420,8 +433,10 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		time = time - time % step;
 		time -= 4*24*60*60;
 		
-		
 		cursor += struct_size;
+		if (time > max_time_ts)
+			continue;
+		
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		if (shift >= open_buf.GetCount()) {

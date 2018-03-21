@@ -13,6 +13,7 @@ using namespace Upp;
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
+#include "DQN.h"
 #include "Common.h"
 #include "CommonFixed.h"
 #include "Calendar.h"

@@ -23,7 +23,9 @@ class AutomationCtrl : public ParentCtrl {
 	ParentCtrl boolctrl;
 	BooleansDraw bools;
 	ArrayCtrl cursor_stats;
-	ArrayCtrl strands;
+	ParentCtrl evolvectrl;
+	Array<ProgressIndicator> evolveprog;
+	Splitter evolvesplit;
 	SliderCtrl slider;
 	
 public:

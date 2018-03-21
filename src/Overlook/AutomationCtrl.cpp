@@ -69,8 +69,8 @@ AutomationCtrl::AutomationCtrl() {
 	tabs.WhenSet << THISBACK(Data);
 	tabs.Add(boolctrl, "Bits");
 	tabs.Add(boolctrl);
-	tabs.Add(strands, "Strands");
-	tabs.Add(strands);
+	tabs.Add(evolvectrl, "Evolve");
+	tabs.Add(evolvectrl);
 	
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
@@ -82,12 +82,10 @@ AutomationCtrl::AutomationCtrl() {
 	cursor_stats.AddColumn("Key");
 	cursor_stats.AddColumn("Value");
 	
-	strands.AddColumn("Index");
-	strands.AddColumn("Signal bit");
-	strands.AddColumn("Bit list");
-	strands.AddColumn("Enable result");
-	strands.AddColumn("Trigger result");
-	strands.AddColumn("Weight result");
+	evolvectrl.Add(evolvesplit.SizePos());
+	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
+		evolvesplit << evolveprog.Add();
+	evolvesplit.Vert();
 	
 	PostCallback(THISBACK(Start));
 }
@@ -109,12 +107,11 @@ void AutomationCtrl::Data() {
 		int prog = job_id * 1000 / Automation::GROUP_COUNT;
 		String phase_str;
 		switch (job_id) {
-			case Automation::GROUP_SOURCE:	phase_str = "Source"; break;
-			case Automation::GROUP_BITS:	phase_str = "Bits"; break;
-			case Automation::GROUP_ENABLE:	phase_str = "Enable"; break;
-			case Automation::GROUP_TRIGGER:	phase_str = "Trigger"; break;
-			case Automation::GROUP_WEIGHT:	phase_str = "Weight"; break;
-			case Automation::GROUP_COUNT:	phase_str = "Finished"; break;
+			case Automation::GROUP_SOURCE:		phase_str = "Source"; break;
+			case Automation::GROUP_BITS:		phase_str = "Bits"; break;
+			case Automation::GROUP_EVOLVE:		phase_str = "Evolve"; break;
+			case Automation::GROUP_CORRELATION:	phase_str = "Correlation"; break;
+			case Automation::GROUP_COUNT:		phase_str = "Finished"; break;
 		}
 		
 		symbols.Set(i, 4, phase_str);
@@ -124,7 +121,10 @@ void AutomationCtrl::Data() {
 	
 	
 	int cursor = symbols.GetCursor();
-	if (cursor == -1) return;
+	if (cursor == -1) {
+		cursor = 0;
+		symbols.SetCursor(0);
+	}
 	
 	
 	int sym = symbols.Get(cursor, 0);
@@ -154,22 +154,16 @@ void AutomationCtrl::Data() {
 			String symstr = sys.symbols[sym];
 			
 			cursor_stats.Set(row,   0, symstr + " signal");
-			bool signal  = a.GetBitOutput(cursor, i, 6);
-			bool enabled = a.GetBitOutput(cursor, i, 7);
+			bool signal  = a.GetBitOutput(cursor, i, OUT_EVOLVE_SIG);
+			bool enabled = a.GetBitOutput(cursor, i, OUT_EVOLVE_ENA);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
 		}
 	}
 	else if (tab == 1) {
-		for(int i = 0; i < a.strands[cursor].GetCount(); i++) {
-			strands.Set(i, 0, i);
-			strands.Set(i, 1, a.strands[cursor][i].sig_bit);
-			strands.Set(i, 2, a.strands[cursor][i].BitString());
-			for(int j = 0; j < GROUP_RESULTS; j++) {
-				strands.Set(i, 3 + j, (double)a.strands[cursor][i].result[j]);
-			}
+		for(int i = 0; i < USEDSYMBOL_COUNT; i++) {
+			evolveprog[i].Set(a.dqn_cursor[i], a.max_iters);
 		}
-		strands.SetCount(a.strands[cursor].GetCount());
 	}
 }
 

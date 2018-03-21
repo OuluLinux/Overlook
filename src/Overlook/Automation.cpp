@@ -6,6 +6,7 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
+	
 	tf = 2; // M15
 	output_fmlevel = 0.8;
 	
@@ -133,11 +134,11 @@ void Automation::Process(int group_id, int job_id) {
 		else
 			Sleep(1000);
 	}
+	else if (group_id == GROUP_EVOLVE) {
+		Evolve(job_id);
+	}
 	else if (group_id == GROUP_CORRELATION) {
 		ProcessCorrelation(job_id);
-	}
-	else {
-		Evolve(group_id, job_id);
 	}
 	
 	if (running) job.is_finished = true;
@@ -235,10 +236,10 @@ void Automation::ProcessCorrelation(int job_id) {
 	
 	int& cursor = correlation_cursor[job_id];
 	
-	for (; cursor < weight_cursor[job_id]; cursor++) {
+	for (; cursor < dqn_cursor[job_id]; cursor++) {
 		
-		bool signal  = GetBitOutput(cursor, job_id, 4);
-		bool enabled = GetBitOutput(cursor, job_id, 5);
+		bool signal  = GetBitOutput(cursor, job_id, OUT_EVOLVE_SIG);
+		bool enabled = GetBitOutput(cursor, job_id, OUT_EVOLVE_ENA);
 		
 		if (enabled) {
 			// Prefer coherence in symbol correlations
@@ -252,8 +253,8 @@ void Automation::ProcessCorrelation(int job_id) {
 				if (i == job_id) continue;
 				
 				bool correlation_bit = GetBit(cursor, job_id, bit_pos);
-				bool other_signal  = GetBitOutput(cursor, i, 4);
-				bool other_enabled = GetBitOutput(cursor, i, 5);
+				bool other_signal  = GetBitOutput(cursor, i, OUT_EVOLVE_SIG);
+				bool other_enabled = GetBitOutput(cursor, i, OUT_EVOLVE_ENA);
 				
 				if (other_enabled) {
 					if (!correlation_bit) {
@@ -278,8 +279,8 @@ void Automation::ProcessCorrelation(int job_id) {
 		
 		
 		// Write output
-		SetBitOutput(cursor, job_id, 6, signal);
-		SetBitOutput(cursor, job_id, 7, enabled);
+		SetBitOutput(cursor, job_id, OUT_CORR_SIG, signal);
+		SetBitOutput(cursor, job_id, OUT_CORR_ENA, enabled);
 		
 	}
 	
@@ -522,294 +523,98 @@ void Automation::ProcessBitsSingle(int sym, int period_id, int& bit_pos) {
 	
 }
 
-void Automation::Evolve(int group_id, int job_id) {
-	StrandList& meta_added = this->tmp_meta_added[job_id];
-	StrandList& single_added = this->tmp_single_added[job_id];
-	StrandList& strands = this->strands[job_id];
-	
-	if (strands.IsEmpty())
-		strands.Add();
-	
-	int iter_count = MAX_ITERS;
-	#ifdef flagDEBUG
-	iter_count = 2;
-	#endif
-	
-	int res_id = group_id - GROUP_ENABLE;
-	strands.Sort(res_id);
-	
-	Index<unsigned> visited_hashes;
-	
-	for (; strands.cursor[group_id] < iter_count && running; strands.cursor[group_id]++) {
-		bool total_added = false;
-		
-		meta_added.Clear();
-		
-		int evolve_count = strands.GetCount();
-		for(int i = 0; i < evolve_count && running; i++) {
-			Strand& st = strands[i];
-			
-			single_added.Clear();
-			
-			for(int j = 0; j < processbits_inputrow_size && running; j++) {
-				
-				for(int k = 0; k < 10; k++) {
-					switch (group_id) {
-						case GROUP_ENABLE:	if (k >= 4) continue; break;
-						case GROUP_TRIGGER:	if (k < 4 || k >= 6) continue; break;
-						case GROUP_WEIGHT:	if (k < 6) continue; break;
-						default: Panic("Invalid group");
-					}
-					
-					Strand test = st;
-					
-					bool fail = false;
-					if      (k == 0)	fail = test.enabled				.Evolve(j);
-					else if (k == 1)	fail = test.signal_true			.Evolve(j);
-					else if (k == 2)	fail = test.signal_false		.Evolve(j);
-					else if (k == 3)	test.sig_bit = j;
-					else if (k == 4)	fail = test.trigger_true		.Evolve(j);
-					else if (k == 5)	fail = test.trigger_false		.Evolve(j);
-					else if (k == 6)	fail = test.weight_inc_true		.Evolve(j);
-					else if (k == 7)	fail = test.weight_inc_false	.Evolve(j);
-					else if (k == 8)	fail = test.weight_dec_true		.Evolve(j);
-					else if (k == 9)	fail = test.weight_dec_false	.Evolve(j);
-					if (fail) continue;
-					
-					unsigned hash = test.GetHashValue();
-					if (visited_hashes.Find(hash) != -1)
-						continue;
-					visited_hashes.FindAdd(hash);
-					
-					TestStrand(group_id, job_id, test);
-					
-					if (test.result[res_id] == 1.0)
-						continue;
-					
-					if (test.result[res_id] < strands.Top().result[res_id] && strands.GetCount() >= MAX_STRANDS)
-						continue;
-					
-					single_added.Add(test);
-					
-				}
-				
-			}
-			
-			if (!single_added.IsEmpty()) {
-				total_added = true;
-				
-				single_added.Sort(res_id);
-				if (single_added.GetCount() > MAX_STRANDS)
-					single_added.SetCount(MAX_STRANDS);
-				
-				for(int i = 0, added_count = 0; i < single_added.GetCount() && added_count < 2; i++) {
-					auto& s = single_added.strands[i];
-					if (!meta_added.Has(s, res_id)) {
-						meta_added.Add(s);
-						added_count++;
-					}
-				}
-				
-				
-				meta_added.Sort(res_id);
-				if (meta_added.GetCount() > MAX_STRANDS)
-					meta_added.SetCount(MAX_STRANDS);
-			}
-		}
-		
-		if (!running) break;
-		
-		if (total_added == false)
-			break;
-		
-		
-		int count = min(MAX_STRANDS*2, meta_added.GetCount());
-		for(int i = 0; i < count; i++) {
-			auto& s = meta_added.strands[i];
-			if (!strands.Has(s, res_id))
-				strands.Add(s);
-		}
-		
-		// Sort
-		strands.Sort(res_id);
-		
-		
-		//DUMP(strands.cursor);
-		//strands.Dump(res_id);
-		
-		
-		// Trim
-		if (strands.GetCount() > MAX_STRANDS)
-			strands.SetCount(MAX_STRANDS);
-	}
-	
-	
-	for(int i = strands.GetCount() -1; i >= 0; i--) {
-		auto& st = strands[i];
-		//if (st.result[res_id] < 1.0) continue;
-		TestStrand(group_id, job_id, st, true);
+void Automation::LoadInput(Dqn::MatType& input, int sym, int pos) {
+	for(int i = 0; i < processbits_inputrow_size; i++) {
+		bool value = GetBit(pos, sym, i);
+		input.Set(i, value ? 0.0 : 1.0);
 	}
 }
 
-void Automation::TestStrand(int group_id, int job_id, Strand& st, bool write) {
-	int begin = 0;
+void Automation::LoadOutput(double output[dqn_output_size], int sym, int pos) {
 	
-	const int sym = job_id;
-	const int res_id = group_id - GROUP_ENABLE;
+	double change = open_buf[sym][pos + dqn_rightoffset] / open_buf[sym][pos] - 1.0;
 	
-	long double result = 1.0;
-	double spread = this->spread[sym];
-	double* open_buf = this->open_buf[sym];
+	int level = fabs(change) / 0.001;
+	if (level >= dqn_levels) level = dqn_levels-1;
 	
-	bool prev_enabled = false, prev_signal;
-	double prev_open;
+	for(int i = 0; i < dqn_output_size; i++)
+		output[i] = 1.0;
 	
-	int weight = 1;
-	int prev_weight = 1;
-	
-	
-	for(int i = begin; i < processbits_cursor; i++) {
-		
-		#ifdef flagDEBUG
-		if (i == 100000) break;
-		#endif
-		
-		bool signal = false, enabled = false, triggered = false, check_enabled = false, check_triggered = false, write_result = false, check_resultorder = false, check_weight = false;
-		switch (group_id) {
-			case GROUP_ENABLE:
-				signal    = GetBit(i, sym, st.sig_bit);
-				enabled   = true;
-				triggered = true;
-				check_enabled = true;
-				break;
-			
-			case GROUP_TRIGGER:
-				signal    = GetBitOutput(i, sym, 0);
-				enabled   = GetBitOutput(i, sym, 1);
-				check_triggered = true;
-				write_result = true;
-				break;
-				
-			case GROUP_WEIGHT:
-				signal    = GetBitOutput(i, sym, 2);
-				enabled   = GetBitOutput(i, sym, 3);
-				triggered = true;
-				check_weight = true;
-				break;
-			
-			default: Panic("Invalid group id");
-		}
-		
-		if (check_enabled) {
-			for(int j = 0; j < st.enabled.count && enabled; j++) {
-				int bit = st.enabled.bits[j];
-				bool is_bit_enabled = GetBit(i, sym, bit);
-				enabled &= is_bit_enabled;
-			}
-			
-			if (enabled) {
-				for(int j = 0; j < st.signal_true.count && enabled; j++)
-					enabled &= GetBit(i, sym, st.signal_true.bits[j]) == signal;
-				for(int j = 0; j < st.signal_false.count && enabled; j++)
-					enabled &= GetBit(i, sym, st.signal_false.bits[j]) != signal;
-			}
-			
-		}
-		
-		if (check_triggered && enabled) {
-			bool signal_triggered = true;
-			for(int j = 0; j < st.trigger_true.count && signal_triggered; j++)
-				signal_triggered &= GetBit(i, sym, st.trigger_true.bits[j]) == signal;
-			for(int j = 0; j < st.trigger_false.count && signal_triggered; j++)
-				signal_triggered &= GetBit(i, sym, st.trigger_false.bits[j]) != signal;
-			triggered |= signal_triggered;
-		}
-		
-		
-		if (check_weight && enabled) {
-			
-			bool increase = true;
-			for(int j = 0; j < st.weight_inc_true.count && increase; j++)
-				increase &= GetBit(i, sym, st.weight_inc_true.bits[j]) == signal;
-			for(int j = 0; j < st.weight_inc_false.count && increase; j++)
-				increase &= GetBit(i, sym, st.weight_inc_false.bits[j]) != signal;
-			
-			
-			bool decrease = true;
-			for(int j = 0; j < st.weight_dec_true.count && decrease; j++)
-				decrease &= GetBit(i, sym, st.weight_dec_true.bits[j]) == signal;
-			for(int j = 0; j < st.weight_dec_false.count && decrease; j++)
-				decrease &= GetBit(i, sym, st.weight_dec_false.bits[j]) != signal;
-			
-			if (increase && decrease)
-				;
-			else if (increase) weight = min(max_weight, weight + 1);
-			else if (decrease) weight = max(min_weight, weight - 1);
-		}
-		
-		bool do_open = false, do_close = false;
-		
-		if (prev_enabled) {
-			if (enabled) {
-				if (signal != prev_signal) {
-					if (triggered)
-						do_open = true;
-					do_close = true;
-				}
-			} else {
-				do_close = true;
-			}
-		}
-		else if (enabled) {
-			if (triggered)
-				do_open = true;
-		}
-		
-		
-		if (do_close) {
-			double current = open_buf[i];
-			long double change;
-			if (!prev_signal)	change = +(current / (prev_open + spread) - 1.0);
-			else				change = -(current / (prev_open - spread) - 1.0);
-			change *= weight * 0.001;
-			if (change > +0.5 || change < -0.5) change = 0.0;
-			result *= 1.0 + change;
-		}
-		if (do_open) {
-			double current = open_buf[i];
-			prev_open = current;
-		}
-		
-		prev_signal = signal;
-		prev_enabled = enabled;
-		prev_weight = weight;
-		
-		if (write) {
-			if (enabled) {
-				SetBitOutput(i, sym, res_id * 2 + 0, signal);
-				SetBitOutput(i, sym, res_id * 2 + 1, enabled);
-				if (check_weight) {
-					SetBitOutput(i, sym, GROUP_RESULTS * 2 + weight - min_weight, true);
-					if (i + 1 > weight_cursor[sym]) weight_cursor[sym] = i + 1;
-				}
-			}
-		}
+	if (change >= 0.0) {
+		for(int i = 0; i <= level; i++)
+			output[i] = 0.0;
+	} else {
+		for(int i = 0; i <= level; i++)
+			output[dqn_levels + i] = 0.0;
 	}
 	
-	st.result[res_id] = result;
+}
+
+void Automation::Evolve(int job_id) {
+	int& iters = this->dqn_iters[job_id];
+	
+	const double max_epsilon = 0.2;
+	
+	while (running && iters < max_iters) {
+		int pos = Random(processbits_cursor - dqn_rightoffset);
+		Dqn::MatType input;
+		double output[dqn_output_size];
+		
+		double epsilon = max_epsilon * (double)(max_iters-1-iters) / (double)max_iters;
+		dqn.SetEpsilon(epsilon);
+		
+		LoadInput(input, job_id, pos);
+		LoadOutput(output, job_id, pos);
+		
+		dqn.Learn(input, output);
+		
+		iters++;
+	}
+	
+	if (iters >= max_iters) {
+		int& cursor = dqn_cursor[job_id];
+		for(; cursor < processbits_cursor; cursor++) {
+			Dqn::MatType input;
+			double output[dqn_output_size];
+			
+			LoadInput(input, job_id, cursor);
+			
+			dqn.Evaluate(input, output, dqn_output_size);
+			
+			double pos_sensor = output[0];
+			double neg_sensor = output[dqn_levels];
+			
+			bool signal = neg_sensor < pos_sensor;
+			int level;
+			if (!signal) {
+				for(level = 0; level < dqn_levels-1; level++)
+					if (output[level] > 0.5)
+						break;
+			} else {
+				for(level = 0; level < dqn_levels-1; level++)
+					if (output[dqn_levels + level] > 0.5)
+						break;
+			}
+			
+			bool enabled = level > 0;
+			
+			SetBitOutput(cursor, job_id, OUT_EVOLVE_SIG, signal);
+			SetBitOutput(cursor, job_id, OUT_EVOLVE_ENA, enabled);
+			SetBitOutput(cursor, job_id, OUT_COUNT + level, true);
+		}
+	}
 }
 
 int Automation::GetSignal(int sym) {
 	int last = correlation_cursor[sym] - 1;
 	if (last < 0) return 0;
-	bool signal  = GetBitOutput(last, sym, 6);
-	bool enabled = GetBitOutput(last, sym, 7);
+	bool signal  = GetBitOutput(last, sym, OUT_CORR_SIG);
+	bool enabled = GetBitOutput(last, sym, OUT_CORR_ENA);
 	int sig = enabled ? (signal ? -1 : +1) : 0;
 	int mult = 0;
-	for(int i = min_weight; i <= max_weight; i++) {
-		int bit = i - min_weight;
-		if (GetBitOutput(last, sym, 8 + bit))
-			mult = i;
+	for(int level = 0; level < dqn_levels; level++) {
+		if (GetBitOutput(last, sym, OUT_COUNT + level))
+			mult = level + 1;
 	}
 	sig *= mult;
 	return sig;
@@ -820,77 +625,5 @@ int Automation::GetSignal(int sym) {
 
 
 
-bool StrandList::Has(Strand& s, int res_id) {
-	for(int i = 0; i < strand_count; i++) {
-		if (s.result[res_id] == strands[i].result[res_id])
-			return true;
-	}
-	return false;
-}
-
-void StrandList::Sort(int res_id) {
-	ASSERT(res_id >= 0 && res_id < GROUP_RESULTS);
-	for(int i = 0; i < strand_count; i++) {
-		int pos = i;
-		double max = strands[i].result[res_id];
-		for(int j = i+1; j < strand_count; j++) {
-			Strand& s = strands[j];
-			if (s.result[res_id] > max) {
-				max = s.result[res_id];
-				pos = j;
-			}
-		}
-		Swap(strands[i], strands[pos]);
-	}
-}
-
-void StrandList::Dump(int res_id) {
-	DUMP(strand_count);
-	DUMP(cursor);
-	for(int i = 0; i < strand_count; i++) {
-		LOG("   " << i << ": " << strands[i].ToString(res_id));
-	}
-}
-
-bool StrandItem::Evolve(int bit) {
-	bool fail = false;
-	for(int i = 0; i < count; i++) {
-		if (bits[i] == bit) {
-			fail = true;
-			break;
-		}
-	}
-	Add(bit);
-	return fail;
-}
-
-String Strand::ToString(int res_id) const {
-	String out;
-	out << "result=" << (double)result[res_id] << ", " << BitString();
-	return out;
-}
-
-String Strand::BitString() const {
-	String out;
-	for(int i = 0; i < enabled.count; i++)
-		out << "e" << i << "=" << enabled.bits[i] << ", ";
-	for(int i = 0; i < signal_true.count; i++)
-		out << "s+" << i << "=" << signal_true.bits[i] << ", ";
-	for(int i = 0; i < signal_false.count; i++)
-		out << "s-" << i << "=" << signal_false.bits[i] << ", ";
-	for(int i = 0; i < trigger_true.count; i++)
-		out << "t+" << i << "=" << trigger_true.bits[i] << ", ";
-	for(int i = 0; i < trigger_false.count; i++)
-		out << "t-" << i << "=" << trigger_false.bits[i] << ", ";
-	for(int i = 0; i < weight_inc_true.count; i++)
-		out << "w++" << i << "=" << weight_inc_true.bits[i] << ", ";
-	for(int i = 0; i < weight_inc_false.count; i++)
-		out << "w+-" << i << "=" << weight_inc_false.bits[i] << ", ";
-	for(int i = 0; i < weight_dec_true.count; i++)
-		out << "w-+" << i << "=" << weight_dec_true.bits[i] << ", ";
-	for(int i = 0; i < weight_dec_false.count; i++)
-		out << "w--" << i << "=" << weight_dec_false.bits[i];
-	return out;
-}
 
 }

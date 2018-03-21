@@ -1,15 +1,9 @@
-#ifndef _FastDQL_DQN_h_
-#define _FastDQL_DQN_h_
-
-/*
-	Optimized DQN agent
-	Copyright (C) 2017, Seppo Pakonen
-*/
+#ifndef _Overlook_DQN_h_
+#define _Overlook_DQN_h_
 
 #include <random>
 
-namespace FastDQL {
-using namespace Upp;
+namespace Overlook {
 
 class RandomGaussian {
 	std::default_random_engine generator;
@@ -83,6 +77,11 @@ void copy_linear(T* write, const T* read, unsigned int size) {
 
 template <class T, int width, int height>
 class Mat : Moveable<Mat<T, width, height> > {
+	
+	
+protected:
+	friend class System;
+	
 	static const int length = width * height;
 	
 	T weight_gradients[length];
@@ -90,7 +89,6 @@ class Mat : Moveable<Mat<T, width, height> > {
 	
 	typedef Mat<T, width, height> MatType;
 	
-protected:
 	inline int GetPos(int x, int y) const {
 		ASSERT(x >= 0 && y >= 0 && x < width && y < height);
 		return (width * y) + x;
@@ -339,6 +337,23 @@ struct DQItem : Moveable<DQItem<WIDTH, HEIGHT> > {
 	void Serialize(Stream& s) {s % before_state % after_state % after_reward % before_action;}
 };
 
+template <int ACTIONS>
+struct DQVector : Moveable<DQVector<ACTIONS> > {
+	double weight[ACTIONS];
+	double correct[ACTIONS];
+	
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) {
+			s.Get(weight,  sizeof(double) * ACTIONS);
+			s.Get(correct, sizeof(double) * ACTIONS);
+		}
+		else if (s.IsStoring()) {
+			s.Put(weight,  sizeof(double) * ACTIONS);
+			s.Put(correct, sizeof(double) * ACTIONS);
+		}
+	}
+};
+
 
 
 
@@ -372,6 +387,8 @@ template <int num_actions, int num_states, int num_hidden_units = 100>
 class DQNTrainer {
 	
 public:
+	static const int INPUT_SIZE = num_states;
+	static const int OUTPUT_SIZE = num_actions;
 	
 	typedef Mat<double, 1, num_states> MatType;
 	
@@ -395,7 +412,8 @@ public:
 	Data data;
 	
 	typedef  Mat<double, 1, num_actions>				FwdOut;
-	typedef  DQItem<1, num_states>						DQItem;
+	typedef  DQItem<1, num_states>						DQItemType;
+	typedef  DQVector<num_actions>						DQVectorType;
 	
 	
 protected:
@@ -408,28 +426,25 @@ protected:
 public:
 
 	DQNTrainer() {
-		SetDefaultSettings();
+		gamma = 0.99;	// future reward discount factor
+		epsilon = 0.2;	// for epsilon-greedy policy
+		alpha = 0.005;	// value function learning rate
 		tderror_clamp = 1.0;
 		tderror = 0;
 		
 		Reset();
 	}
 	
+	void   SetAlpha(double r) {alpha = r;}
+	int    GetAlpha() const {return alpha;}
 	
 	void   SetGamma(double d) {gamma = d;}
 	double GetGamma() const {return gamma;}
-	void   SetEpsilon(double d) {epsilon = d;}
-	double GetEpsilon() const {return epsilon;}
-	void   SetLearningRate(double r) {alpha = r;}
-	int    GetLearningRate() const {return alpha;}
+	
 	double GetTDError() const {return tderror;}
 	
-	
-	void SetDefaultSettings() {
-		gamma		= 0.99;		// future reward discount factor
-		epsilon		= 0.02;		// for epsilon-greedy policy
-		alpha		= 0.01;	// value function learning rate
-	}
+	void   SetEpsilon(double e) {epsilon = e;}
+	double GetEpsilon() const {return epsilon;}
 	
 	void Reset() {
 		RandMat(0, 0.01, data.W1);
@@ -477,15 +492,43 @@ public:
 		return action;
 	}
 	
-	double Learn(DQItem& item) {
+	void Evaluate(MatType& before_state, DQVectorType& out) {
+		
+		// greedy wrt Q function
+		FwdOut& amat = Forward(before_state);
+		
+		// epsilon greedy policy
+		if (epsilon > 0.0 && Randomf() < epsilon) {
+			for(int i = 0; i < num_actions; i++)
+				out.weight[i] = amat.Get(Random(num_actions));
+		} else {
+			for(int i = 0; i < num_actions; i++)
+				out.weight[i] = amat.Get(i);
+		}
+	}
+	
+	void Evaluate(MatType& before_state, double* buf, int size) {
+		ASSERT(size == num_actions);
+		
+		// greedy wrt Q function
+		FwdOut& amat = Forward(before_state);
+		
+		for(int i = 0; i < num_actions; i++)
+			buf[i] = amat.Get(i);
+	}
+	
+	double Learn(DQItemType& item) {
 		return Learn(item.before_state, item.before_action, item.after_reward, item.after_state);
 	}
 	
 	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {
 		
 		// compute the target Q value
-		FwdOut& tmat = Forward(s1);
-		double qmax = reward0 + gamma * tmat.Get(tmat.GetMaxColumn());
+		double qmax = reward0;
+		if (gamma > 0.0) {
+			FwdOut& tmat = Forward(s1);
+			qmax += gamma * tmat.Get(tmat.GetMaxColumn());
+		}
 		
 		// now predict
 		FwdOut& pred = Forward(s0);
@@ -500,7 +543,6 @@ public:
 			else
 				tderror = -clamp;
 		}
-		this->tderror = tderror;
 		pred.SetGradient(a0, tderror);
 		Backward(s0); // compute gradients on net params
 		
@@ -513,6 +555,39 @@ public:
 		return tderror;
 	}
 	
+	double Learn(MatType& s0, double correct[num_actions]) {
+		
+		// now predict
+		FwdOut& pred = Forward(s0);
+		
+		double av_tderror = 0.0;
+		for (int i = 0; i < num_actions; i++) {
+			double tderror = pred.Get(i) - correct[i];
+			double clamp = tderror_clamp;
+			double abs_tderror = tderror >= 0.0 ? +tderror : -tderror;
+			if (abs_tderror > clamp) {
+				// huber loss to robustify
+				if (tderror > clamp)
+					tderror = +clamp;
+				else
+					tderror = -clamp;
+			}
+			pred.SetGradient(i, tderror);
+			
+			av_tderror += abs_tderror;
+		}
+		av_tderror /= num_actions;
+		
+		Backward(s0); // compute gradients on net params
+		
+		// update net
+		UpdateMat(data.W1, alpha);
+		UpdateMat(data.b1, alpha);
+		UpdateMat(data.W2, alpha);
+		UpdateMat(data.b2, alpha);
+		
+		return av_tderror;
+	}
 	
 	
 	

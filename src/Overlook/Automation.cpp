@@ -556,7 +556,7 @@ void Automation::Evolve(int job_id) {
 	const double max_epsilon = 0.2;
 	
 	while (running && iters < max_iters) {
-		int pos = Random(processbits_cursor - dqn_rightoffset);
+		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
 		Dqn::MatType input;
 		double output[dqn_output_size];
 		

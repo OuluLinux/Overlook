@@ -31,9 +31,10 @@ protected:
 	static const int jobgroup_count = GROUP_COUNT;
 	static const int maxcount = 14*365*5/7*24*4; // 14 years, M15
 	
+	static const int dqn_leftoffset = 10000;
 	static const int dqn_rightoffset = 4*4+1;
 	static const int dqn_levels = 5;
-	static const int max_iters = 10000000;
+	static const int max_iters = 1000000;
 	
 	static const int loadsource_reserved = maxcount;
 	

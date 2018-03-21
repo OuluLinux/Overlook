@@ -162,7 +162,7 @@ void AutomationCtrl::Data() {
 	}
 	else if (tab == 1) {
 		for(int i = 0; i < USEDSYMBOL_COUNT; i++) {
-			evolveprog[i].Set(a.dqn_cursor[i], a.max_iters);
+			evolveprog[i].Set(a.dqn_iters[i], a.max_iters);
 		}
 	}
 }

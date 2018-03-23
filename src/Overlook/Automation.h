@@ -18,27 +18,10 @@ struct JobGroup : Moveable<JobGroup> {
 enum {
 	OUT_EVOLVE_SIG,	OUT_EVOLVE_ENA,
 	OUT_TRIM_SIG,	OUT_TRIM_ENA,
-	OUT_PEAK_SIG,	OUT_PEAK_ENA,
 	OUT_COUNT
 };
 
 class Automation {
-	
-	struct PeakState {
-		double		value_step = 0.0;
-		int			step_count = 0;
-		int			minimum_len = 0;
-		int			cursor = 0;
-		
-		bool		prev_signal = 0;
-		bool		prev_enabled = 0;
-		int			signal_len = 0;
-		
-		int			step_limit = 1;
-		bool		prev_peak_signal = 0;
-		bool		prev_peak_enabled = 0;
-		bool		prev_cursor = 0;
-	};
 	
 	
 protected:
@@ -46,20 +29,20 @@ protected:
 	friend class BooleansDraw;
 	
 	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_TRIM, GROUP_PEAK, GROUP_COUNT};
+	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_TRIM, GROUP_COUNT};
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int jobgroup_count = GROUP_COUNT;
-	static const int maxcount = 14*365*5/7*24*12; // 14 years, M5
+	static const int maxcount = 14*365*5/7*24; // 14 years, M5
 	
 	static const int dqn_leftoffset = 10000;
-	static const int dqn_rightoffset = 6+1;
+	static const int dqn_rightoffset = 1+1;
 	static const int dqn_levels = 5;
 	#ifdef flagDEBUG
 	static const int max_iters = 1000;
 	#else
-	static const int max_iters = 1000000;
+	static const int max_iters = 10000000;
 	#endif
 	
 	static const int loadsource_reserved = maxcount;
@@ -94,7 +77,6 @@ protected:
 	FixedExtremumCache<1 << 6>				ec5[sym_count];
 	Dqn			dqn;
 	JobGroup	jobgroups[jobgroup_count];
-	PeakState	main_peak_state[sym_count];
 	double		point[sym_count];
 	double		spread[sym_count];
 	double		output_fmlevel;
@@ -135,7 +117,6 @@ public:
 	void	ProcessBits();
 	void	Evolve(int job_id);
 	void	Trim(int job_id);
-	void	Peak(int job_id);
 	
 	void	ProcessBitsSingle(int sym, int period_id, int& bit_pos);
 	void	SetBit(int pos, int sym, int bit, bool value);
@@ -144,7 +125,6 @@ public:
 	bool	GetBit(int pos, int sym, int bit) const;
 	bool	GetBitOutput(int pos, int sym, int bit) const {return GetBit(pos, sym, processbits_inputrow_size + bit);}
 	double	TestTrim(int job_id, int bit, int type);
-	double	TestPeak(int job_id, PeakState& peak_state, bool write);
 	
 	bool	IsRunning() const {return running;}
 	int		GetSignal(int sym);

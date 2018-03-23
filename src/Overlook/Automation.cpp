@@ -7,7 +7,7 @@ Automation::Automation() {
 	ASSERT(sym_count > 0);
 	
 	
-	tf = 1; // M5
+	tf = 4; // H1
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -139,9 +139,6 @@ void Automation::Process(int group_id, int job_id) {
 	}
 	else if (group_id == GROUP_TRIM) {
 		Trim(job_id);
-	}
-	else if (group_id == GROUP_PEAK) {
-		Peak(job_id);
 	}
 	
 	if (running) job.is_finished = true;
@@ -558,7 +555,7 @@ void Automation::Evolve(int job_id) {
 						break;
 			}
 			
-			bool enabled = level > 0;
+			bool enabled = true;
 			
 			SetBitOutput(cursor, job_id, OUT_EVOLVE_SIG, signal);
 			SetBitOutput(cursor, job_id, OUT_EVOLVE_ENA, enabled);
@@ -654,108 +651,13 @@ double Automation::TestTrim(int job_id, int bit, int type) {
 	return res;
 }
 
-void Automation::Peak(int job_id) {
-	
-	// Brute force local optimize value-step, step-count, minimum-time
-	if (!peak_cursor[job_id]) {
-		double top_result = -DBL_MAX;
-		for(double value_step = 0.0001; value_step <= 0.0020; value_step += 0.0001) {
-			for(int step_count = 1; step_count < 10; step_count++) {
-				for (int minimum_len = 0; minimum_len < 10; minimum_len++) {
-					PeakState state;
-					state.cursor = 100;
-					state.value_step = value_step;
-					state.step_count = step_count;
-					state.minimum_len = minimum_len;
-					
-					double result = TestPeak(job_id, state, false);
-					
-					if (result > top_result) {
-						top_result = result;
-						main_peak_state[job_id].cursor = 100;
-						main_peak_state[job_id].value_step = value_step;
-						main_peak_state[job_id].step_count = step_count;
-					}
-				}
-			}
-		}
-		DUMP(top_result);
-		DUMP(main_peak_state[job_id].value_step);
-		DUMP(main_peak_state[job_id].step_count);
-	}
-	
-	
-	// Write output
-	int& cursor = peak_cursor[job_id];
-	TestPeak(job_id, main_peak_state[job_id], true);
-}
-
-double Automation::TestPeak(int job_id, PeakState& peak_state, bool write) {
-	double res = 0.0;
-	
-	#define TLOG(x) if (!job_id) {LOG(x);}
-	
-	for( ; peak_state.cursor < trim_cursor[job_id]; peak_state.cursor++) {
-		#ifdef flagDEBUG
-		if (peak_state.cursor == 10000)
-			break;
-		#endif
-		
-		
-		bool signal  = GetBitOutput(peak_state.cursor, job_id, OUT_TRIM_SIG);
-		bool enabled = GetBitOutput(peak_state.cursor, job_id, OUT_TRIM_ENA);
-		
-		if (signal != peak_state.prev_signal) {
-			peak_state.signal_len = 0;
-			peak_state.step_limit = 1;
-		}
-		else
-			peak_state.signal_len++;
-		
-		peak_state.prev_signal = signal;
-		peak_state.prev_enabled = enabled;
-		
-		
-		double change = open_buf[job_id][peak_state.cursor] / open_buf[job_id][peak_state.cursor - peak_state.signal_len] - 1.0;
-		if (signal) change *= -1.0;
-		
-		int step = change / peak_state.value_step;
-		if (step >= peak_state.step_count)
-			step = peak_state.step_count - 1;
-		
-		if (step < peak_state.step_limit)
-			enabled = false;
-		else if (step > peak_state.step_limit)
-			peak_state.step_limit = step;
-		
-		
-		if (!enabled && peak_state.prev_peak_signal != 0 && peak_state.cursor - peak_state.prev_cursor < peak_state.minimum_len) {
-			signal = peak_state.prev_peak_signal;
-			enabled = peak_state.prev_peak_enabled;
-		}
-		else if (enabled) {
-			peak_state.prev_peak_signal = signal;
-			peak_state.prev_peak_enabled = enabled;
-			peak_state.prev_cursor = peak_state.cursor;
-		}
-		
-		
-		if (write) {
-			SetBitOutput(peak_state.cursor, job_id, OUT_PEAK_SIG, signal);
-			SetBitOutput(peak_state.cursor, job_id, OUT_PEAK_ENA, enabled);
-		}
-	}
-	
-	return res;
-}
-
 int Automation::GetSignal(int sym) {
-	int last = main_peak_state[sym].cursor - 1;
+	int last = trim_cursor[sym] - 1;
 	if (last < 0) return 0;
-	bool signal  = GetBitOutput(last, sym, OUT_PEAK_SIG);
-	bool enabled = GetBitOutput(last, sym, OUT_PEAK_ENA);
+	bool signal  = GetBitOutput(last, sym, OUT_TRIM_SIG);
+	bool enabled = GetBitOutput(last, sym, OUT_TRIM_ENA);
 	int sig = enabled ? (signal ? -1 : +1) : 0;
-	int mult = 0;
+	int mult = 1;
 	for(int level = 0; level < dqn_levels; level++) {
 		if (GetBitOutput(last, sym, OUT_COUNT + level))
 			mult = level + 1;

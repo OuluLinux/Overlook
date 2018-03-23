@@ -508,6 +508,10 @@ void Automation::Evolve(int job_id) {
 	
 	const double max_epsilon = 0.2;
 	
+	if (!iters) {
+		dqn.Init();
+	}
+	
 	while (running && iters < max_iters) {
 		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
 		Dqn::MatType input;

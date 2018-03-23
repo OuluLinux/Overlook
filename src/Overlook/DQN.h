@@ -426,6 +426,10 @@ protected:
 public:
 
 	DQNTrainer() {
+		Init();
+	}
+	
+	void Init() {
 		gamma = 0.99;	// future reward discount factor
 		epsilon = 0.2;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate

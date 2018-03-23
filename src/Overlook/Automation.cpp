@@ -7,7 +7,7 @@ Automation::Automation() {
 	ASSERT(sym_count > 0);
 	
 	
-	tf = 2; // M15
+	tf = 1; // M5
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -137,8 +137,11 @@ void Automation::Process(int group_id, int job_id) {
 	else if (group_id == GROUP_EVOLVE) {
 		Evolve(job_id);
 	}
-	else if (group_id == GROUP_CORRELATION) {
-		ProcessCorrelation(job_id);
+	else if (group_id == GROUP_TRIM) {
+		Trim(job_id);
+	}
+	else if (group_id == GROUP_PEAK) {
+		Peak(job_id);
 	}
 	
 	if (running) job.is_finished = true;
@@ -207,6 +210,10 @@ void Automation::LoadSource() {
 		DataBridge& db = sys.data[sym][tf].db;
 		point[i] = db.GetPoint();
 		spread[i] = db.GetSpread();
+		if (point[i] <= 0) Panic("Invalid point");
+		if (spread[i] < point[i] * 2)
+			spread[i] = point[i] * 4;
+		ReleaseLog("Automation::LoadSource sym " + IntStr(sym) + " point " + DblStr(point[i]) + " spread " + DblStr(spread[i]));
 	}
 }
 
@@ -214,7 +221,7 @@ void Automation::ProcessBits() {
 	for (; processbits_cursor < loadsource_cursor; processbits_cursor++) {
 		#ifdef flagDEBUG
 		if (processbits_cursor == 10000) {
-			processbits_cursor = loadsource_cursor;
+			processbits_cursor = loadsource_cursor - 1;
 			break;
 		}
 		#endif
@@ -230,60 +237,6 @@ void Automation::ProcessBits() {
 			ASSERT(bit_pos == processbits_inputrow_size);
 		}
 	}
-}
-
-void Automation::ProcessCorrelation(int job_id) {
-	
-	int& cursor = correlation_cursor[job_id];
-	
-	for (; cursor < dqn_cursor[job_id]; cursor++) {
-		
-		bool signal  = GetBitOutput(cursor, job_id, OUT_EVOLVE_SIG);
-		bool enabled = GetBitOutput(cursor, job_id, OUT_EVOLVE_ENA);
-		
-		if (enabled) {
-			// Prefer coherence in symbol correlations
-			
-			// Calculate for and against from other symbols
-			int same = 0, opposite = 0;
-			
-			int bit_pos = processbits_generic_row - processbits_correlation_count;
-			
-			for(int i = 0; i < sym_count; i++) {
-				if (i == job_id) continue;
-				
-				bool correlation_bit = GetBit(cursor, job_id, bit_pos);
-				bool other_signal  = GetBitOutput(cursor, i, OUT_EVOLVE_SIG);
-				bool other_enabled = GetBitOutput(cursor, i, OUT_EVOLVE_ENA);
-				
-				if (other_enabled) {
-					if (!correlation_bit) {
-						if (other_signal == signal)		same++;
-						else							opposite++;
-					} else {
-						if (other_signal != signal)		same++;
-						else							opposite++;
-					}
-				}
-				
-				bit_pos++;
-			}
-
-
-			// Cancel signal
-			if (same == opposite)
-				enabled = false;
-			else if (same < opposite)
-				signal = !signal;
-		}
-		
-		
-		// Write output
-		SetBitOutput(cursor, job_id, OUT_CORR_SIG, signal);
-		SetBitOutput(cursor, job_id, OUT_CORR_ENA, enabled);
-		
-	}
-	
 }
 
 void Automation::SetBit(int pos, int sym, int bit, bool b) {
@@ -532,7 +485,7 @@ void Automation::LoadInput(Dqn::MatType& input, int sym, int pos) {
 
 void Automation::LoadOutput(double output[dqn_output_size], int sym, int pos) {
 	
-	double change = open_buf[sym][pos + dqn_rightoffset] / open_buf[sym][pos] - 1.0;
+	double change = open_buf[sym][pos + dqn_rightoffset - 1] / open_buf[sym][pos] - 1.0;
 	
 	int level = fabs(change) / 0.001;
 	if (level >= dqn_levels) level = dqn_levels-1;
@@ -574,6 +527,11 @@ void Automation::Evolve(int job_id) {
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor[job_id];
 		for(; cursor < processbits_cursor; cursor++) {
+			#ifdef flagDEBUG
+			if (cursor == 10000)
+				cursor = processbits_cursor - 1;
+			#endif
+			
 			Dqn::MatType input;
 			double output[dqn_output_size];
 			
@@ -605,11 +563,193 @@ void Automation::Evolve(int job_id) {
 	}
 }
 
+void Automation::Trim(int job_id) {
+	
+	if (trim_cursor[job_id] == 0) {
+		
+		// Find enabled, +signal, -signal bits, which allows trading
+		VectorMap<int, double> enable_results, possig_results, negsig_results;
+		for(int i = 0; i < processbits_inputrow_size; i++) {
+			double enable_result = TestTrim(job_id, i, 0);
+			double possig_result = TestTrim(job_id, i, 1);
+			double negsig_result = TestTrim(job_id, i, 2);
+			enable_results.Add(i, enable_result);
+			possig_results.Add(i, possig_result);
+			negsig_results.Add(i, negsig_result);
+		}
+		SortByValue(enable_results, StdGreater<double>());
+		SortByValue(possig_results, StdGreater<double>());
+		SortByValue(negsig_results, StdGreater<double>());
+		DUMPM(enable_results);
+		DUMPM(possig_results);
+		DUMPM(negsig_results);
+		
+		// Gather the most positive bits
+		for(int i = 0; i < trimbit_count; i++) {
+			enable_bits[i] = enable_results.GetKey(i);
+			possig_bits[i] = possig_results.GetKey(i);
+			negsig_bits[i] = negsig_results.GetKey(i);
+		}
+	}
+	
+	
+	// Write output
+	int& cursor = trim_cursor[job_id];
+	for(; cursor < dqn_cursor[job_id]; cursor++) {
+		
+		bool signal = GetBitOutput(cursor, job_id, OUT_EVOLVE_SIG);
+		bool enable = false; //GetBitOutput(cursor, job_id, OUT_EVOLVE_ENA);
+		
+		#ifdef flagDEBUG
+		signal = (cursor / 10) % 2;
+		enable = (cursor / 20) % 2;
+		#endif
+		
+		
+		for(int i = 0; i < trimbit_count && !enable; i++) {
+			enable |= GetBit(cursor, job_id, enable_bits[i]);
+			enable |= GetBit(cursor, job_id, possig_bits[i]) == signal;
+			enable |= GetBit(cursor, job_id, negsig_bits[i]) != signal;
+		}
+		
+		SetBitOutput(cursor, job_id, OUT_TRIM_SIG, signal);
+		SetBitOutput(cursor, job_id, OUT_TRIM_ENA, enable);
+	}
+}
+
+double Automation::TestTrim(int job_id, int bit, int type) {
+	
+	// Loop range and sum pips
+	double res = 0;
+	int end = dqn_cursor[job_id] - 1;
+	for(int cursor = 100; cursor < end; cursor++) {
+		#ifdef flagDEBUG
+		if (cursor == 10000)
+			break;
+		#endif
+		
+		
+		bool signal = GetBitOutput(cursor, job_id, OUT_EVOLVE_SIG);
+		bool enable = false; //GetBitOutput(cursor, job_id, OUT_EVOLVE_ENA);
+		
+		if      (type == 0)
+			enable |= GetBit(cursor, job_id, bit);
+		else if (type == 1)
+			enable |= GetBit(cursor, job_id, bit) == signal;
+		else if (type == 2)
+			enable |= GetBit(cursor, job_id, bit) != signal;
+		
+		if (enable) {
+			bool signal = GetBitOutput(cursor, job_id, OUT_EVOLVE_SIG);
+			double change = open_buf[job_id][cursor+1] - open_buf[job_id][cursor];
+			if (signal) change *= -1.0;
+			res += change;
+		}
+	}
+	
+	return res;
+}
+
+void Automation::Peak(int job_id) {
+	
+	// Brute force local optimize value-step, step-count, minimum-time
+	if (!peak_cursor[job_id]) {
+		double top_result = -DBL_MAX;
+		for(double value_step = 0.0001; value_step <= 0.0020; value_step += 0.0001) {
+			for(int step_count = 1; step_count < 10; step_count++) {
+				for (int minimum_len = 0; minimum_len < 10; minimum_len++) {
+					PeakState state;
+					state.cursor = 100;
+					state.value_step = value_step;
+					state.step_count = step_count;
+					state.minimum_len = minimum_len;
+					
+					double result = TestPeak(job_id, state, false);
+					
+					if (result > top_result) {
+						top_result = result;
+						main_peak_state[job_id].cursor = 100;
+						main_peak_state[job_id].value_step = value_step;
+						main_peak_state[job_id].step_count = step_count;
+					}
+				}
+			}
+		}
+		DUMP(top_result);
+		DUMP(main_peak_state[job_id].value_step);
+		DUMP(main_peak_state[job_id].step_count);
+	}
+	
+	
+	// Write output
+	int& cursor = peak_cursor[job_id];
+	TestPeak(job_id, main_peak_state[job_id], true);
+}
+
+double Automation::TestPeak(int job_id, PeakState& peak_state, bool write) {
+	double res = 0.0;
+	
+	#define TLOG(x) if (!job_id) {LOG(x);}
+	
+	for( ; peak_state.cursor < trim_cursor[job_id]; peak_state.cursor++) {
+		#ifdef flagDEBUG
+		if (peak_state.cursor == 10000)
+			break;
+		#endif
+		
+		
+		bool signal  = GetBitOutput(peak_state.cursor, job_id, OUT_TRIM_SIG);
+		bool enabled = GetBitOutput(peak_state.cursor, job_id, OUT_TRIM_ENA);
+		
+		if (signal != peak_state.prev_signal) {
+			peak_state.signal_len = 0;
+			peak_state.step_limit = 1;
+		}
+		else
+			peak_state.signal_len++;
+		
+		peak_state.prev_signal = signal;
+		peak_state.prev_enabled = enabled;
+		
+		
+		double change = open_buf[job_id][peak_state.cursor] / open_buf[job_id][peak_state.cursor - peak_state.signal_len] - 1.0;
+		if (signal) change *= -1.0;
+		
+		int step = change / peak_state.value_step;
+		if (step >= peak_state.step_count)
+			step = peak_state.step_count - 1;
+		
+		if (step < peak_state.step_limit)
+			enabled = false;
+		else if (step > peak_state.step_limit)
+			peak_state.step_limit = step;
+		
+		
+		if (!enabled && peak_state.prev_peak_signal != 0 && peak_state.cursor - peak_state.prev_cursor < peak_state.minimum_len) {
+			signal = peak_state.prev_peak_signal;
+			enabled = peak_state.prev_peak_enabled;
+		}
+		else if (enabled) {
+			peak_state.prev_peak_signal = signal;
+			peak_state.prev_peak_enabled = enabled;
+			peak_state.prev_cursor = peak_state.cursor;
+		}
+		
+		
+		if (write) {
+			SetBitOutput(peak_state.cursor, job_id, OUT_PEAK_SIG, signal);
+			SetBitOutput(peak_state.cursor, job_id, OUT_PEAK_ENA, enabled);
+		}
+	}
+	
+	return res;
+}
+
 int Automation::GetSignal(int sym) {
-	int last = correlation_cursor[sym] - 1;
+	int last = main_peak_state[sym].cursor - 1;
 	if (last < 0) return 0;
-	bool signal  = GetBitOutput(last, sym, OUT_CORR_SIG);
-	bool enabled = GetBitOutput(last, sym, OUT_CORR_ENA);
+	bool signal  = GetBitOutput(last, sym, OUT_PEAK_SIG);
+	bool enabled = GetBitOutput(last, sym, OUT_PEAK_ENA);
 	int sig = enabled ? (signal ? -1 : +1) : 0;
 	int mult = 0;
 	for(int level = 0; level < dqn_levels; level++) {
@@ -617,13 +757,10 @@ int Automation::GetSignal(int sym) {
 			mult = level + 1;
 	}
 	sig *= mult;
+	
 	return sig;
 }
 
 
-
-
-
-
-
 }
+

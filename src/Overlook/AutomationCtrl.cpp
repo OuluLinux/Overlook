@@ -110,7 +110,8 @@ void AutomationCtrl::Data() {
 			case Automation::GROUP_SOURCE:		phase_str = "Source"; break;
 			case Automation::GROUP_BITS:		phase_str = "Bits"; break;
 			case Automation::GROUP_EVOLVE:		phase_str = "Evolve"; break;
-			case Automation::GROUP_CORRELATION:	phase_str = "Correlation"; break;
+			case Automation::GROUP_TRIM:		phase_str = "Trim"; break;
+			case Automation::GROUP_PEAK:		phase_str = "Peak"; break;
 			case Automation::GROUP_COUNT:		phase_str = "Finished"; break;
 		}
 		
@@ -154,8 +155,8 @@ void AutomationCtrl::Data() {
 			String symstr = sys.symbols[sym];
 			
 			cursor_stats.Set(row,   0, symstr + " signal");
-			bool signal  = a.GetBitOutput(cursor, i, OUT_EVOLVE_SIG);
-			bool enabled = a.GetBitOutput(cursor, i, OUT_EVOLVE_ENA);
+			bool signal  = a.GetBitOutput(cursor, i, OUT_PEAK_SIG);
+			bool enabled = a.GetBitOutput(cursor, i, OUT_PEAK_ENA);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
 		}

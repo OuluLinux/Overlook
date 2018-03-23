@@ -38,7 +38,7 @@ typedef const int ConstInt;
 	#define MAX_REAL_TFID 7
 #endif
 
-#define USEDSYMBOL_COUNT 15
+#define USEDSYMBOL_COUNT 6
 
 enum {
 	PHASE_TRAINING,

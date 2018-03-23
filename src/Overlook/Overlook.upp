@@ -12,7 +12,6 @@ uses
 
 file
 	Copying,
-	Journal.qtf,
 	app.tpp,
 	main.cpp,
 	Overlook.rc,

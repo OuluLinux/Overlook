@@ -503,19 +503,22 @@ void Automation::LoadOutput(double output[dqn_output_size], int sym, int pos) {
 void Automation::Evolve(int job_id) {
 	int& iters = this->dqn_iters[job_id];
 	
-	const double max_epsilon = 0.2;
+	const double max_alpha = 0.01;
 	
 	if (!iters) {
 		dqn.Init();
 	}
+	
+	dqn.SetEpsilon(0);
+	dqn.SetGamma(0);
 	
 	while (running && iters < max_iters) {
 		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
 		Dqn::MatType input;
 		double output[dqn_output_size];
 		
-		double epsilon = max_epsilon * (double)(max_iters-1-iters) / (double)max_iters;
-		dqn.SetEpsilon(epsilon);
+		double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
+		dqn.SetAlpha(alpha);
 		
 		LoadInput(input, job_id, pos);
 		LoadOutput(output, job_id, pos);
@@ -663,6 +666,26 @@ int Automation::GetSignal(int sym) {
 			mult = level + 1;
 	}
 	sig *= mult;
+	
+	System& sys = GetSystem();
+	int sys_sym = sys.used_symbols_id[sym];
+	DataBridge& db = sys.GetSource(sys_sym, tf).db;
+	if (sig > 0) {
+		double change = +(db.GetLatestAsk() / (db.open.Top() + spread[sym]) - 1.0);
+		if (change < 0) sig = 0;
+	}
+	else if (sig < 0) {
+		double change = -(db.GetLatestAsk() / (db.open.Top() - spread[sym]) - 1.0);
+		if (change < 0) sig = 0;
+	}
+	
+	Time now = GetUtcTime();
+	if (!enabled && prev_sig[sym] != 0 && now.Get() - prev_sig_time[sym].Get() < 10*60) {
+		sig = prev_sig[sym];
+	} else {
+		prev_sig_time[sym] = now;
+		prev_sig[sym] = sig;
+	}
 	
 	return sig;
 }

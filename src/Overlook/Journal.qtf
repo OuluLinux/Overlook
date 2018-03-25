@@ -91,8 +91,6 @@ sections.&]
 [s0; &]
 [s0; &]
 [s0; &]
-[s0; &]
-[s0; &]
 [s2; Pre`-Release Journal&]
 [s0; This is the time before the first working version. It is about 
 searching for the best design via trial and error. Some ideas 
@@ -4509,4 +4507,29 @@ total crash is avoided. My broker has an insurance for my account
 anyway.&]
 [s0; I am trying to add a solution for adjusting free`-margin level 
 automatically. If it works, it will improve the result too.&]
+[s0; &]
+[s3; 25.3.2018&]
+[s0; The current Automation module is in very tight shape. It is 
+the same successful type, what I have been using 3 months, and 
+which deserves a scientific paper. Basically:&]
+[s0;i150;O0; Large binary input per time`-step. Boolean values derived 
+from simple indicators. Gives state of the instruments well. 
+This is reasonable in the light of evolution of image feature 
+descriptors, which shows strength of binary descriptors over 
+floating point value descriptors.&]
+[s0;i150;O0; Google deep`-mind DQN agent algorithm as learner. Output 
+value is 5 level `+/`- signal.&]
+[s0;i150;O0; A time`-slot filter is added after DQN`-agent. It is 
+optimized to enable signal only, when the most significant bits 
+have specific values.&]
+[s0;i150;O0; A heuristic profitability filter is added to GetSignal 
+function to prevent losses from bad forecasts. This is currently 
+kind of hack. It should be planned better, but I am out of ideas.&]
+[s0;i150;O0; A timer filter is added to prevent too fast signal changing 
+due to the previous heuristic profitability filter. It doesn`'t 
+allow fast signal changes.&]
+[s0; It`'s pretty reasonable stack, I think, but it`'s no way stable 
+solution yet. It`'s too tight fit now, and should be `"uncompressed`" 
+and all sections should be monitored in the GUI. All actions 
+should be tracked much better.&]
 [s0; ]]

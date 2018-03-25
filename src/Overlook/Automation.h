@@ -61,7 +61,7 @@ protected:
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	
-	static const int trimbit_count = 50;
+	static const int trimbit_count = 10;
 	
 	FixedOnlineAverageWindow1<1 << 1>		av_wins0[sym_count];
 	FixedOnlineAverageWindow1<1 << 2>		av_wins1[sym_count];
@@ -81,7 +81,9 @@ protected:
 	double		spread[sym_count];
 	double		output_fmlevel;
 	double		open_buf[sym_count][loadsource_reserved];
+	Time		prev_sig_time[sym_count];
 	uint64		bits_buf[processbits_reserved_bytes];
+	int			prev_sig[sym_count];
 	int			dqn_iters[sym_count];
 	int			loadsource_pos[sym_count];
 	int			trim_cursor[sym_count];

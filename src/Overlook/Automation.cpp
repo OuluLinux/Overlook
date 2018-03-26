@@ -688,6 +688,8 @@ int Automation::GetSignal(int sym) {
 		not_first[sym] = true;
 	}
 	
+	sig *= GetLevel(sym);
+	
 	return sig;
 }
 

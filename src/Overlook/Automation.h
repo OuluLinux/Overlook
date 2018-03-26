@@ -130,8 +130,9 @@ public:
 	
 	bool	IsRunning() const {return running;}
 	int		GetSignal(int sym);
+	int		GetLevel(int sym);
 	double	GetFreeMarginLevel() {return output_fmlevel;}
-	int		GetFreeMarginScale() {return sym_count * dqn_levels;}
+	int		GetFreeMarginScale() {return sym_count;}
 	int		GetSymGroupJobId(int symbol) const;
 	
 	void	LoadInput(Dqn::MatType& input, int sym, int pos);

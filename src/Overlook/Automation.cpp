@@ -660,36 +660,46 @@ int Automation::GetSignal(int sym) {
 	bool signal  = GetBitOutput(last, sym, OUT_TRIM_SIG);
 	bool enabled = GetBitOutput(last, sym, OUT_TRIM_ENA);
 	int sig = enabled ? (signal ? -1 : +1) : 0;
-	int mult = 1;
-	for(int level = 0; level < dqn_levels; level++) {
-		if (GetBitOutput(last, sym, OUT_COUNT + level))
-			mult = level + 1;
-	}
-	sig *= mult;
 	
 	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
 	int sys_sym = sys.used_symbols_id[sym];
 	DataBridge& db = sys.GetSource(sys_sym, tf).db;
 	if (sig > 0) {
-		double change = +(db.GetLatestAsk() / (db.open.Top() + spread[sym]) - 1.0);
+		double change = +(mt.GetAskBid()[sys_sym].ask / (open_buf[sym][last] + spread[sym]) - 1.0);
+		ReleaseLog(sys.GetSymbol(sys_sym) + " sig " + IntStr(sig) + " change " + DblStr(change) + " ask " + DblStr(mt.GetAskBid()[sys_sym].ask)
+			+ " open " + DblStr(open_buf[sym][last]) + " spread " + DblStr(spread[sym]));
 		if (change < 0) sig = 0;
 	}
 	else if (sig < 0) {
-		double change = -(db.GetLatestAsk() / (db.open.Top() - spread[sym]) - 1.0);
+		double change = -(mt.GetAskBid()[sys_sym].ask / (open_buf[sym][last] - spread[sym]) - 1.0);
+		ReleaseLog(sys.GetSymbol(sys_sym) + " sig " + IntStr(sig) + " change " + DblStr(change) + " ask " + DblStr(mt.GetAskBid()[sys_sym].ask)
+			+ " open " + DblStr(open_buf[sym][last]) + " spread " + DblStr(spread[sym]));
 		if (change < 0) sig = 0;
 	}
 	
+	static bool not_first[sym_count];
 	Time now = GetUtcTime();
-	if (!enabled && prev_sig[sym] != 0 && now.Get() - prev_sig_time[sym].Get() < 10*60) {
+	if (not_first[sym] && sig != prev_sig[sym] && now.Get() - prev_sig_time[sym].Get() < 10*60) {
 		sig = prev_sig[sym];
 	} else {
 		prev_sig_time[sym] = now;
 		prev_sig[sym] = sig;
+		not_first[sym] = true;
 	}
 	
 	return sig;
 }
 
-
+int Automation::GetLevel(int sym) {
+	int last = trim_cursor[sym] - 1;
+	if (last < 0) return 0;
+	int mult = 0;
+	for(int level = 0; level < dqn_levels; level++) {
+		if (GetBitOutput(last, sym, OUT_COUNT + level))
+			mult = level + 1;
+	}
+	return mult;
+}
 }
 

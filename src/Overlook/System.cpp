@@ -456,7 +456,7 @@ bool System::RefreshReal() {
 		Automation& a			= GetAutomation();
 		
 		// Skip weekends and first hours of monday
-		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 1)) {
+		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
 			LOG("Skipping weekend...");
 			return true;
 		}

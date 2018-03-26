@@ -158,6 +158,10 @@ void AutomationCtrl::Data() {
 			bool enabled = a.GetBitOutput(cursor, i, OUT_TRIM_ENA);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
+			
+			int level = a.GetLevel(i);
+			cursor_stats.Set(row,   0, symstr + " level");
+			cursor_stats.Set(row++, 1, level);
 		}
 	}
 	else if (tab == 1) {

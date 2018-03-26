@@ -76,14 +76,12 @@ protected:
 	bool once = true;
 	Mutex lock;
 	
-	double latest_ask = 0.0;
 	
 public:
 	int GetSymbol() const {return sym_id;}
 	int GetTf() const {return tf_id;}
 	int GetCounted() const {return counted;}
 	int GetPeriod() const {ASSERT(period != -1); return period;}
-	double GetLatestAsk() const {return latest_ask;}
 	void ForceSetCounted(int i) {counted = i;}
 	
 	void RefreshFromHistory(bool use_internet_data);

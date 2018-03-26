@@ -132,7 +132,6 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		time -= epoch_begin;
 		if (time > max_time_ts)
 			continue;
-		latest_ask = ask;
 		
 		// Find min/max
 		double diff = ask - bid;

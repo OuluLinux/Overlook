@@ -8,6 +8,8 @@ Automation::Automation() {
 	
 	
 	tf = 4; // H1
+	period = 60;
+	
 	output_fmlevel = 0.8;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
@@ -129,10 +131,7 @@ void Automation::Process(int group_id, int job_id) {
 			Sleep(1000);
 	}
 	else if (group_id == GROUP_BITS) {
-		if (job_id == 0)
-			ProcessBits();
-		else
-			Sleep(1000);
+		ProcessBits(job_id);
 	}
 	else if (group_id == GROUP_EVOLVE) {
 		Evolve(job_id);
@@ -214,24 +213,52 @@ void Automation::LoadSource() {
 	}
 }
 
-void Automation::ProcessBits() {
-	for (; processbits_cursor < loadsource_cursor; processbits_cursor++) {
+void Automation::ProcessBits(int job_id) {
+	bool initial = processbits_cursor[job_id] == 0;
+	
+	for (; processbits_cursor[job_id] < loadsource_cursor; processbits_cursor[job_id]++) {
 		#ifdef flagDEBUG
-		if (processbits_cursor == 10000) {
-			processbits_cursor = loadsource_cursor - 1;
+		if (processbits_cursor[job_id] == 10000) {
+			processbits_cursor[job_id] = loadsource_cursor - 1;
 			break;
 		}
 		#endif
-		for(int i = 0; i < sym_count; i++) {
-			int bit_pos = 0;
-			for(int j = 0; j < processbits_period_count; j++) {
-				ProcessBitsSingle(i, j, bit_pos);
-			}
-			if (!(bit_pos == processbits_inputrow_size)) {
-				DUMP(bit_pos);
-				DUMP(processbits_inputrow_size);
-			}
-			ASSERT(bit_pos == processbits_inputrow_size);
+		
+		int bit_pos = 0;
+		for(int j = 0; j < processbits_period_count; j++) {
+			ProcessBitsSingle(job_id, j, bit_pos);
+		}
+		if (!(bit_pos == processbits_inputrow_size)) {
+			DUMP(bit_pos);
+			DUMP(processbits_inputrow_size);
+		}
+		ASSERT(bit_pos == processbits_inputrow_size);
+		
+		int pos = processbits_cursor[job_id];
+		int next = pos + 1;
+		if (next < loadsource_cursor) {
+			double open = open_buf[job_id][pos];
+			double close = open_buf[job_id][next];
+			double change = fabs(close / open - 1.0);
+			Time time = Time(1970,1,1) + time_buf[pos];
+			int wday = DayOfWeek(time) - 1;
+			int wdaymins = (wday * 24 + time.hour) * 60 + time.minute;
+			int wdayslot = wdaymins / period;
+			if (wdayslot >= 0 && wdayslot < wdayhours)
+				slot_stats[job_id][wdayslot].Add(change);
+		}
+	}
+	
+	if (initial) {
+		VectorMap<int, double> slots;
+		for(int i = 0; i < wdayhours; i++) {
+			slots.Add(i, slot_stats[job_id][i].mean);
+		}
+		SortByValue(slots, StdGreater<double>());
+		DUMPM(slots);
+		int count = wdayhours * 2 / 3;
+		for(int i = 0; i < count; i++) {
+			enabled_slot[job_id][slots.GetKey(i)] = true;
 		}
 	}
 }
@@ -257,11 +284,11 @@ bool Automation::GetBit(int pos, int sym, int bit) const {
 }
 
 void Automation::ProcessBitsSingle(int sym, int period_id, int& bit_pos) {
-	double open1 = open_buf[sym][processbits_cursor];
+	double open1 = open_buf[sym][processbits_cursor[sym]];
 	double point = this->point[sym];
 	ASSERT(point >= 0.000001 && point < 0.1);
 	
-	int cursor = processbits_cursor;
+	int cursor = processbits_cursor[sym];
 	double* open_buf = this->open_buf[sym];
 	
 	
@@ -513,7 +540,7 @@ void Automation::Evolve(int job_id) {
 	dqn.SetGamma(0);
 	
 	while (running && iters < max_iters) {
-		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
+		int pos = dqn_leftoffset + Random(processbits_cursor[job_id] - dqn_rightoffset - dqn_leftoffset);
 		Dqn::MatType input;
 		double output[dqn_output_size];
 		
@@ -530,10 +557,10 @@ void Automation::Evolve(int job_id) {
 	
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor[job_id];
-		for(; cursor < processbits_cursor; cursor++) {
+		for(; cursor < processbits_cursor[job_id]; cursor++) {
 			#ifdef flagDEBUG
 			if (cursor == 10000)
-				cursor = processbits_cursor - 1;
+				cursor = processbits_cursor[job_id] - 1;
 			#endif
 			
 			Dqn::MatType input;
@@ -678,15 +705,20 @@ int Automation::GetSignal(int sym) {
 		if (change < 0) sig = 0;
 	}
 	
-	static bool not_first[sym_count];
-	Time now = GetUtcTime();
-	if (not_first[sym] && sig != prev_sig[sym] && now.Get() - prev_sig_time[sym].Get() < 10*60) {
+	Time time = GetUtcTime();
+	if (not_first[sym] && sig != prev_sig[sym] && time.Get() - prev_sig_time[sym].Get() < 10*60) {
 		sig = prev_sig[sym];
 	} else {
-		prev_sig_time[sym] = now;
+		prev_sig_time[sym] = time;
 		prev_sig[sym] = sig;
 		not_first[sym] = true;
 	}
+	
+	int wday = DayOfWeek(time) - 1;
+	int wdaymins = (wday * 24 + time.hour) * 60 + time.minute;
+	int wdayslot = wdaymins / period;
+	if (wdayslot >= 0 && wdayslot < wdayhours && !enabled_slot[sym][wdayslot])
+		sig = 0;
 	
 	sig *= GetLevel(sym);
 	

@@ -34,7 +34,8 @@ protected:
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int jobgroup_count = GROUP_COUNT;
-	static const int maxcount = 14*365*5/7*24; // 14 years, M5
+	static const int wdayhours = 5*24;
+	static const int maxcount = 14*52*wdayhours; // 14 years, M5
 	
 	static const int dqn_leftoffset = 10000;
 	static const int dqn_rightoffset = 1+1;
@@ -75,6 +76,7 @@ protected:
 	FixedExtremumCache<1 << 4>				ec3[sym_count];
 	FixedExtremumCache<1 << 5>				ec4[sym_count];
 	FixedExtremumCache<1 << 6>				ec5[sym_count];
+	OnlineAverage1							slot_stats[sym_count][wdayhours];
 	Dqn			dqn;
 	JobGroup	jobgroups[jobgroup_count];
 	double		point[sym_count];
@@ -89,12 +91,14 @@ protected:
 	int			trim_cursor[sym_count];
 	int			time_buf[loadsource_reserved];
 	int			loadsource_cursor = 0;
-	int			processbits_cursor = 0;
+	int			processbits_cursor[sym_count];
 	int			dqn_cursor[sym_count];
 	int			peak_cursor[sym_count];
 	int			enable_bits[trimbit_count], possig_bits[trimbit_count], negsig_bits[trimbit_count];
 	int			worker_cursor = 0;
-	int			tf;
+	int			tf, period;
+	bool		not_first[sym_count];
+	bool		enabled_slot[sym_count][wdayhours];
 	bool		running = false, stopped = true;
 	
 	
@@ -116,14 +120,14 @@ public:
 	void	Process(int group_id, int job_id);
 	
 	void	LoadSource();
-	void	ProcessBits();
+	void	ProcessBits(int job_id);
 	void	Evolve(int job_id);
 	void	Trim(int job_id);
 	
 	void	ProcessBitsSingle(int sym, int period_id, int& bit_pos);
 	void	SetBit(int pos, int sym, int bit, bool value);
 	void	SetBitOutput(int pos, int sym, int bit, bool value) {SetBit(pos, sym, processbits_inputrow_size + bit, value);}
-	void	SetBitCurrent(int sym, int bit, bool value) {SetBit(processbits_cursor, sym, bit, value);}
+	void	SetBitCurrent(int sym, int bit, bool value) {SetBit(processbits_cursor[sym], sym, bit, value);}
 	bool	GetBit(int pos, int sym, int bit) const;
 	bool	GetBitOutput(int pos, int sym, int bit) const {return GetBit(pos, sym, processbits_inputrow_size + bit);}
 	double	TestTrim(int job_id, int bit, int type);
@@ -131,7 +135,7 @@ public:
 	bool	IsRunning() const {return running;}
 	int		GetSignal(int sym);
 	int		GetLevel(int sym);
-	double	GetFreeMarginLevel() {return output_fmlevel;}
+	double	GetFreeMarginLevel() {output_fmlevel = 0.6; return output_fmlevel;}
 	int		GetFreeMarginScale() {return sym_count * dqn_levels;}
 	int		GetSymGroupJobId(int symbol) const;
 	

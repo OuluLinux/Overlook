@@ -12,7 +12,7 @@ void BooleansDraw::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (cursor >= 0 && cursor < a.processbits_cursor) {
+	if (cursor >= 0 && cursor < a.processbits_cursor[0]) {
 		int ts = a.time_buf[cursor];
 		Time t = Time(1970,1,1) + ts;
 		LOG("BooleansDraw::Paint cursor time " + Format("%", t));
@@ -27,7 +27,7 @@ void BooleansDraw::Paint(Draw& w) {
 			
 			//auto& main_booleans = a.bits_buf[i][tf].main_booleans;
 			
-			int count = a.processbits_cursor;
+			int count = a.processbits_cursor[i];
 			if (count == 0) continue;
 			
 			int y0 = i * ystep;
@@ -133,7 +133,7 @@ void AutomationCtrl::Data() {
 	
 	int tab = tabs.Get();
 	if (tab == 0) {
-		int last = a.processbits_cursor - 1;
+		int last = a.processbits_cursor[0] - 1;
 		slider.MinMax(0, last);
 		if (last < 0) return;
 		

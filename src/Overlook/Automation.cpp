@@ -7,8 +7,8 @@ Automation::Automation() {
 	ASSERT(sym_count > 0);
 	
 	
-	tf = 4; // H1
-	period = 60;
+	tf = 5; // H4
+	period = 240;
 	
 	output_fmlevel = 0.8;
 	

@@ -75,6 +75,7 @@ protected:
 	friend class BooleansDraw;
 	friend class AutomationCtrl;
 	friend class Automation;
+	friend class SlowAutomation;
 	friend class DataBridge;
 	friend class SimBroker;
 	

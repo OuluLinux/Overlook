@@ -21,19 +21,16 @@ enum {
 	OUT_COUNT
 };
 
-class Automation {
-	
+class SlowAutomation {
 	
 protected:
 	friend class AutomationCtrl;
+	friend class Automation;
 	friend class BooleansDraw;
-	
-	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_TRIM, GROUP_COUNT};
+	friend class System;
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int jobgroup_count = GROUP_COUNT;
 	static const int wdayhours = 5*6;
 	static const int maxcount = 14*52*wdayhours; // 14 years, H4
 	
@@ -43,7 +40,7 @@ protected:
 	#ifdef flagDEBUG
 	static const int max_iters = 1000;
 	#else
-	static const int max_iters = 10000000;
+	static const int max_iters = 1000000;
 	#endif
 	
 	static const int loadsource_reserved = maxcount;
@@ -55,7 +52,7 @@ protected:
 	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
 	static const int processbits_outputrow_size = OUT_COUNT + dqn_levels;
 	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
-	static const int processbits_reserved = processbits_row_size * sym_count * maxcount;
+	static const int processbits_reserved = processbits_row_size * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
 	static const int dqn_output_size = 2 * dqn_levels;
@@ -64,41 +61,89 @@ protected:
 	
 	static const int trimbit_count = 10;
 	
-	FixedOnlineAverageWindow1<1 << 1>		av_wins0[sym_count];
-	FixedOnlineAverageWindow1<1 << 2>		av_wins1[sym_count];
-	FixedOnlineAverageWindow1<1 << 3>		av_wins2[sym_count];
-	FixedOnlineAverageWindow1<1 << 4>		av_wins3[sym_count];
-	FixedOnlineAverageWindow1<1 << 5>		av_wins4[sym_count];
-	FixedOnlineAverageWindow1<1 << 6>		av_wins5[sym_count];
-	FixedExtremumCache<1 << 1>				ec0[sym_count];
-	FixedExtremumCache<1 << 2>				ec1[sym_count];
-	FixedExtremumCache<1 << 3>				ec2[sym_count];
-	FixedExtremumCache<1 << 4>				ec3[sym_count];
-	FixedExtremumCache<1 << 5>				ec4[sym_count];
-	FixedExtremumCache<1 << 6>				ec5[sym_count];
-	OnlineAverage1							slot_stats[sym_count][wdayhours];
+	
+	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
+	FixedOnlineAverageWindow1<1 << 2>		av_wins1;
+	FixedOnlineAverageWindow1<1 << 3>		av_wins2;
+	FixedOnlineAverageWindow1<1 << 4>		av_wins3;
+	FixedOnlineAverageWindow1<1 << 5>		av_wins4;
+	FixedOnlineAverageWindow1<1 << 6>		av_wins5;
+	FixedExtremumCache<1 << 1>				ec0;
+	FixedExtremumCache<1 << 2>				ec1;
+	FixedExtremumCache<1 << 3>				ec2;
+	FixedExtremumCache<1 << 4>				ec3;
+	FixedExtremumCache<1 << 5>				ec4;
+	FixedExtremumCache<1 << 6>				ec5;
+	OnlineAverage1							slot_stats[wdayhours];
 	Dqn			dqn;
-	JobGroup	jobgroups[jobgroup_count];
-	double		point[sym_count];
-	double		spread[sym_count];
-	double		output_fmlevel;
-	double		open_buf[sym_count][loadsource_reserved];
-	Time		prev_sig_time[sym_count];
 	uint64		bits_buf[processbits_reserved_bytes];
-	int			prev_sig[sym_count];
-	int			dqn_iters[sym_count];
-	int			loadsource_pos[sym_count];
-	int			trim_cursor[sym_count];
-	int			time_buf[loadsource_reserved];
-	int			loadsource_cursor = 0;
-	int			processbits_cursor[sym_count];
-	int			dqn_cursor[sym_count];
-	int			peak_cursor[sym_count];
+	double		point;
+	double		spread;
+	double		open_buf[loadsource_reserved];
+	Time		prev_sig_time;
+	int			sym, tf, period;
 	int			enable_bits[trimbit_count], possig_bits[trimbit_count], negsig_bits[trimbit_count];
+	int			time_buf[loadsource_reserved];
+	int			prev_sig;
+	int			dqn_iters;
+	int			loadsource_pos;
+	int			trim_cursor;
+	int			processbits_cursor;
+	int			loadsource_cursor = 0;
+	int			dqn_cursor;
+	int			peak_cursor;
+	bool		not_first;
+	bool		enabled_slot[wdayhours];
+	
+	double*		other_open_buf[sym_count];
+	bool*		running;
+	
+	
+public:
+	
+	
+	
+	void	ProcessBits();
+	void	Evolve();
+	void	Trim();
+	
+	void	ProcessBitsSingle(int period_id, int& bit_pos);
+	void	SetBit(int pos, int bit, bool value);
+	void	SetBitOutput(int pos, int bit, bool value) {SetBit(pos, processbits_inputrow_size + bit, value);}
+	void	SetBitCurrent(int bit, bool value) {SetBit(processbits_cursor, bit, value);}
+	bool	GetBit(int pos, int bit) const;
+	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
+	double	TestTrim(int job_id, int type);
+	int		GetSignal();
+	int		GetLevel();
+	
+	void	LoadInput(Dqn::MatType& input, int pos);
+	void	LoadOutput(double output[dqn_output_size], int pos);
+};
+
+class FastAutomation {
+	
+};
+
+class Automation {
+	
+	
+protected:
+	friend class AutomationCtrl;
+	friend class BooleansDraw;
+	friend class System;
+	
+	
+	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_TRIM, GROUP_COUNT};
+	
+	
+	static const int sym_count = USEDSYMBOL_COUNT;
+	static const int jobgroup_count = GROUP_COUNT;
+	
+	SlowAutomation	slow[sym_count];
+	JobGroup	jobgroups[jobgroup_count];
+	double		output_fmlevel;
 	int			worker_cursor = 0;
-	int			tf, period;
-	bool		not_first[sym_count];
-	bool		enabled_slot[sym_count][wdayhours];
 	bool		running = false, stopped = true;
 	
 	
@@ -120,27 +165,12 @@ public:
 	void	Process(int group_id, int job_id);
 	
 	void	LoadSource();
-	void	ProcessBits(int job_id);
-	void	Evolve(int job_id);
-	void	Trim(int job_id);
-	
-	void	ProcessBitsSingle(int sym, int period_id, int& bit_pos);
-	void	SetBit(int pos, int sym, int bit, bool value);
-	void	SetBitOutput(int pos, int sym, int bit, bool value) {SetBit(pos, sym, processbits_inputrow_size + bit, value);}
-	void	SetBitCurrent(int sym, int bit, bool value) {SetBit(processbits_cursor[sym], sym, bit, value);}
-	bool	GetBit(int pos, int sym, int bit) const;
-	bool	GetBitOutput(int pos, int sym, int bit) const {return GetBit(pos, sym, processbits_inputrow_size + bit);}
-	double	TestTrim(int job_id, int bit, int type);
 	
 	bool	IsRunning() const {return running;}
-	int		GetSignal(int sym);
-	int		GetLevel(int sym);
 	double	GetFreeMarginLevel() {output_fmlevel = 0.6; return output_fmlevel;}
-	int		GetFreeMarginScale() {return sym_count * dqn_levels;}
+	int		GetFreeMarginScale() {return sym_count * SlowAutomation::dqn_levels;}
 	int		GetSymGroupJobId(int symbol) const;
 	
-	void	LoadInput(Dqn::MatType& input, int sym, int pos);
-	void	LoadOutput(double output[dqn_output_size], int sym, int pos);
 	
 };
 

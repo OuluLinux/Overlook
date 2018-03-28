@@ -41,6 +41,7 @@ file
 	System.cpp,
 	Automation.h,
 	Automation.cpp,
+	SlowAutomation.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,

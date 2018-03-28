@@ -12,12 +12,12 @@ void BooleansDraw::Paint(Draw& w) {
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	if (cursor >= 0 && cursor < a.processbits_cursor[0]) {
-		int ts = a.time_buf[cursor];
+	if (cursor >= 0 && cursor < a.slow[0].processbits_cursor) {
+		int ts = a.slow[0].time_buf[cursor];
 		Time t = Time(1970,1,1) + ts;
 		LOG("BooleansDraw::Paint cursor time " + Format("%", t));
 		
-		int w = a.processbits_row_size;
+		int w = a.slow[0].processbits_row_size;
 		int h = a.sym_count;
 		
 		double xstep = (double)sz.cx / w;
@@ -27,7 +27,7 @@ void BooleansDraw::Paint(Draw& w) {
 			
 			//auto& main_booleans = a.bits_buf[i][tf].main_booleans;
 			
-			int count = a.processbits_cursor[i];
+			int count = a.slow[i].processbits_cursor;
 			if (count == 0) continue;
 			
 			int y0 = i * ystep;
@@ -36,7 +36,7 @@ void BooleansDraw::Paint(Draw& w) {
 				int x0 = j * xstep;
 				int x1 = (j + 1) * xstep;
 				
-				bool b = a.GetBit(cursor, i, j);
+				bool b = a.slow[i].GetBit(cursor, j);
 				if (b)
 					id.DrawRect(x0, y0, x1-x0, y1-y0, Black());
 			}
@@ -97,7 +97,7 @@ void AutomationCtrl::Data() {
 	int row = 0;
 	for(int i = 0; i < a.sym_count; i++) {
 		int sym = sys.used_symbols_id[i];
-		int tf = a.tf;
+		int tf = a.slow[i].tf;
 		symbols.Set(i, 0, sym);
 		symbols.Set(i, 1, tf);
 		symbols.Set(i, 2, sys.GetSymbol(sym));
@@ -133,7 +133,7 @@ void AutomationCtrl::Data() {
 	
 	int tab = tabs.Get();
 	if (tab == 0) {
-		int last = a.processbits_cursor[0] - 1;
+		int last = a.slow[0].processbits_cursor - 1;
 		slider.MinMax(0, last);
 		if (last < 0) return;
 		
@@ -147,26 +147,26 @@ void AutomationCtrl::Data() {
 		
 		int row = 0;
 		cursor_stats.Set(row,   0, "Time");
-		cursor_stats.Set(row++, 1, Format("%", Time(1970,1,1) + a.time_buf[cursor]));
+		cursor_stats.Set(row++, 1, Format("%", Time(1970,1,1) + a.slow[0].time_buf[cursor]));
 		
 		for(int i = 0; i < sys.used_symbols_id.GetCount(); i++) {
 			int sym = sys.used_symbols_id[i];
 			String symstr = sys.symbols[sym];
 			
 			cursor_stats.Set(row,   0, symstr + " signal");
-			bool signal  = a.GetBitOutput(cursor, i, OUT_TRIM_SIG);
-			bool enabled = a.GetBitOutput(cursor, i, OUT_TRIM_ENA);
+			bool signal  = a.slow[i].GetBitOutput(cursor, OUT_TRIM_SIG);
+			bool enabled = a.slow[i].GetBitOutput(cursor, OUT_TRIM_ENA);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
 			
-			int level = a.GetLevel(i);
+			int level = a.slow[i].GetLevel();
 			cursor_stats.Set(row,   0, symstr + " level");
 			cursor_stats.Set(row++, 1, level);
 		}
 	}
 	else if (tab == 1) {
 		for(int i = 0; i < USEDSYMBOL_COUNT; i++) {
-			evolveprog[i].Set(a.dqn_iters[i], a.max_iters);
+			evolveprog[i].Set(a.slow[i].dqn_iters, a.slow[i].max_iters);
 		}
 	}
 }

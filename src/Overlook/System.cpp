@@ -473,7 +473,7 @@ bool System::RefreshReal() {
 		
 		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
-			int signal = a.GetSignal(i);
+			int signal = a.slow[i].GetSignal();
 			SetSignal(sym, signal);
 		}
 		

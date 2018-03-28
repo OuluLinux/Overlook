@@ -491,7 +491,7 @@ bool System::RefreshReal() {
 		String msg;
 		try {
 			mt.Data();
-			mt.RefreshLimits();
+			//mt.RefreshLimits();
 			
 			for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
 				int sig = signals[sym_id];

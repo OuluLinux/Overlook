@@ -31,12 +31,12 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*6;
-	static const int maxcount = 14*52*wdayhours; // 14 years, H4
+	static const int wdayhours = 5*24; // H1
+	static const int maxcount = 14*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 10000;
-	static const int dqn_rightoffset = 1+1;
-	static const int dqn_levels = 5;
+	static const int dqn_rightoffset = 3+1;
+	static const int dqn_levels = 1;
 	#ifdef flagDEBUG
 	static const int max_iters = 1000;
 	#else
@@ -121,8 +121,17 @@ public:
 	void	LoadOutput(double output[dqn_output_size], int pos);
 };
 
+/*
+ - random slow signal in optimization
+ - trailing start / stop
+*/
 class FastAutomation {
+	/*
 	
+	double		open_buf[loadsource_reserved];
+	int			sym, tf, period;
+	int			time_buf[loadsource_reserved];
+	*/
 };
 
 class Automation {

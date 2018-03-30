@@ -1,0 +1,30 @@
+description "\3770,128,128";
+
+file
+	benchmarks.cpp,
+	civil_time.h,
+	civil_time_detail.cpp,
+	civil_time_detail.h,
+	civil_time_test.cpp,
+	time_tool.cpp,
+	time_zone.h,
+	time_zone_fixed.cpp,
+	time_zone_fixed.h,
+	time_zone_format.cpp,
+	time_zone_format_test.cpp,
+	time_zone_if.cpp,
+	time_zone_if.h,
+	time_zone_impl.cpp,
+	time_zone_impl.h,
+	time_zone_info.cpp,
+	time_zone_info.h,
+	time_zone_libc.cpp,
+	time_zone_libc.h,
+	time_zone_lookup.cpp,
+	time_zone_lookup_test.cpp,
+	time_zone_posix.cpp,
+	time_zone_posix.h,
+	tzfile.h,
+	zone_info_source.cpp,
+	zone_info_source.h;
+

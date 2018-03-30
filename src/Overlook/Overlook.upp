@@ -8,7 +8,8 @@ uses
 	Docking,
 	SubWindowCtrl,
 	plugin/tidy,
-	Core/SSL;
+	Core/SSL,
+	plugin/cctz;
 
 file
 	Copying,
@@ -42,6 +43,8 @@ file
 	Automation.h,
 	Automation.cpp,
 	SlowAutomation.cpp,
+	ExpertSystem.h,
+	ExpertSystem.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	DataBridge.h,
@@ -51,8 +54,7 @@ file
 	Indicators.cpp,
 	Calendar.h,
 	Calendar.cpp,
-	DQN.h,
-	Journal.qtf;
+	DQN.h;
 
 mainconfig
 	"Working" = "GUI MT X11",

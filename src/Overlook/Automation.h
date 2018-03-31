@@ -1,6 +1,7 @@
 #ifndef _Overlook_Automation_h_
 #define _Overlook_Automation_h_
 
+#if 0
 namespace Overlook {
 
 
@@ -189,4 +190,5 @@ inline Automation& GetAutomation() {return Single<Automation>();}
 
 }
 
+#endif
 #endif

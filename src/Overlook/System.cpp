@@ -147,6 +147,7 @@ System::System() {
 	
 	used_symbols.Add("CADJPY");
 	used_symbols.Add("EURGBP");
+	#ifndef flagDEBUG
 	used_symbols.Add("EURJPY");
 	used_symbols.Add("EURUSD");
 	used_symbols.Add("GBPUSD");
@@ -163,6 +164,8 @@ System::System() {
 	//used_symbols.Add("NZDUSD");
 	used_symbols.Add("USDCHF");
 	used_symbols.Add("USDJPY");
+	#endif
+	
 	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
 }
 
@@ -268,7 +271,6 @@ void System::Init() {
 
 void System::Deinit() {
 	AddJournal("System deinitialization");
-	GetAutomation().StopJobs();
 	StoreThis();
 }
 
@@ -449,7 +451,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Automation& a			= GetAutomation();
+		
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
@@ -471,12 +473,15 @@ bool System::RefreshReal() {
 			return true;
 		}
 		
-		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+		/*for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
 			int signal = a.slow[i].GetSignal();
 			SetSignal(sym, signal);
-		}
-		
+		}*/
+		//mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
+		//mt.SetFreeMarginScale(a.GetFreeMarginScale());
+
+
 		WhenInfo("Updating MetaTrader");
 		WhenPushTask("Putting latest signals");
 		
@@ -508,8 +513,6 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
-			mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
-			mt.SetFreeMarginScale(a.GetFreeMarginScale());
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {
@@ -528,8 +531,8 @@ bool System::RefreshReal() {
 		WhenRealtimeUpdate();
 		WhenPopTask();
 		
-		if (a.IsRunning() && sig_change)
-			WhenJobOrders();
+		//if (a.IsRunning() && sig_change)
+		//	WhenJobOrders();
 		
 		return true;
 	}

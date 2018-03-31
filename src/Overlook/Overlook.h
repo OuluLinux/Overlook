@@ -20,7 +20,6 @@ using namespace Upp;
 #include "SimBroker.h"
 #include "DataBridge.h"
 #include "System.h"
-#include "Automation.h"
 #include "ExpertSystem.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
@@ -29,7 +28,7 @@ using namespace Upp;
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "AutomationCtrl.h"
+#include "ExpertSystemCtrl.h"
 
 
 namespace Overlook {
@@ -92,7 +91,9 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
-	AutomationCtrl sysctrl;
+	BitProcessManagerCtrl bitsctrl;
+	ExchangeSlotsCtrl slotctrl;
+	SlotSignalsCtrl sigctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;
@@ -153,7 +154,9 @@ public:
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshJournal();
-	void RefreshSystem();
+	void RefreshBits();
+	void RefreshSlots();
+	void RefreshSignals();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();
@@ -177,7 +180,6 @@ public:
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}
-	AutomationCtrl& GetAutomationCtrl() {return sysctrl;}
 	
 	// Public vars
 	Callback WhenExit;

@@ -32,6 +32,8 @@ file
 	Chart.cpp,
 	GraphCtrl.h,
 	GraphCtrl.cpp,
+	ExpertSystemCtrl.h,
+	ExpertSystemCtrl.cpp,
 	AutomationCtrl.h,
 	AutomationCtrl.cpp,
 	Core readonly separator,

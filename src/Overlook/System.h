@@ -72,10 +72,11 @@ protected:
 	
 	friend class SystemBooleanView;
 	friend class DataBridgeCommon;
-	friend class BooleansDraw;
 	friend class AutomationCtrl;
-	friend class Automation;
 	friend class SlowAutomation;
+	friend class BooleansDraw;
+	friend class SyncedPrice;
+	friend class Automation;
 	friend class DataBridge;
 	friend class SimBroker;
 	

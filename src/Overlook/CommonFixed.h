@@ -21,7 +21,12 @@ public:
 		cursor = (cursor + 1) % period;
 	}
 	double GetMean() const {return sum_a / period;}
-	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor;}
+	void Serialize(Stream& s) {
+		if (s.IsLoading())
+			s.Get(this, sizeof(FixedOnlineAverageWindow1<I>));
+		else
+			s.Put(this, sizeof(FixedOnlineAverageWindow1<I>));
+	}
 };
 
 
@@ -38,6 +43,13 @@ struct FixedExtremumCache : Moveable<FixedExtremumCache<I> > {
 			max[i] = -DBL_MAX;
 			min[i] = +DBL_MAX;
 		}
+	}
+	
+	void Serialize(Stream& s) {
+		if (s.IsLoading())
+			s.Get(this, sizeof(FixedExtremumCache<I>));
+		else
+			s.Put(this, sizeof(FixedExtremumCache<I>));
 	}
 	
 	void Add(double low, double high) {

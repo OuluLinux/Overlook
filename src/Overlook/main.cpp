@@ -69,7 +69,7 @@ struct LoaderWindow : public TopWindow {
 
 GUI_APP_MAIN {
 	TestLockMacro();
-	TestExpertSystem();
+	TestExchangeSlots();
 	
 	SetIniFile(ConfigFile("overlook.ini"));
 	

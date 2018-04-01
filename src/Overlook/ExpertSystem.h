@@ -10,6 +10,7 @@ protected:
 	friend class SyncedPriceManager;
 	friend class BitProcess;
 	friend class ExchangeSlots;
+	friend class SlotSignals;
 	
 	struct Data : Moveable<Data> {
 		Vector<double> open, low, high;
@@ -54,6 +55,7 @@ protected:
 	friend class BitProcessManagerCtrl;
 	friend class BitProcessManager;
 	friend class BooleansDraw;
+	friend class SlotSignals;
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int processbits_period_count = 6;
@@ -228,21 +230,26 @@ public:
 	struct Data : Moveable<Data> {
 		Time open_time, close_time;
 		int open_pos, close_pos;
-		double pred_value = 0;
-		bool signal = 0, pred_signal = 0;
+		double pred_value[USEDSYMBOL_COUNT];
+		bool signal[USEDSYMBOL_COUNT];
+		bool pred_signal[USEDSYMBOL_COUNT];
 		
 		void Serialize(Stream& s) {
-			s % open_time % close_time % open_pos % close_pos % pred_value % signal % pred_signal;
+			if (s.IsLoading())
+				s.Get(this, sizeof(Data));
+			else
+				s.Put(this, sizeof(Data));
 		}
 	};
-	
+	Vector<Vector<double> > correlation;
 	Vector<Data> data;
 	String id;
 	
 public:
 	
-	void Serialize(Stream& s) {s % data % id;}
+	void Serialize(Stream& s) {s % correlation % data % id;}
 	
+	int GetSignal(int sym);
 };
 
 
@@ -259,12 +266,16 @@ public:
 	~SlotSignals();
 	
 	void Refresh();
+	double Correlation(SlotSignal& slot, int sym, int bit);
+	double Predict(SlotSignal& slot, int sym, int datapos);
+	bool TryGetSignal(SlotSignal& slot, int sym, int datapos);
 	
 	String GetPath() {return ConfigFile("SlotSignals.bin");}
 	void LoadThis() {LoadFromFile(*this, GetPath());}
 	void StoreThis() {StoreToFile(*this, GetPath());}
 	void Serialize(Stream& s) {s % slots;}
 	
+	SlotSignal* FindCurrent();
 	
 };
 

@@ -45,6 +45,8 @@ public:
 class SlotSignalsCtrl : public ParentCtrl {
 	
 public:
+	DropList symlist;
+	Button find_current;
 	Splitter splitter;
 	ArrayCtrl slotlist, openlist;
 	
@@ -53,6 +55,7 @@ public:
 	SlotSignalsCtrl();
 	
 	void Data();
+	void FindCurrent();
 	
 };
 

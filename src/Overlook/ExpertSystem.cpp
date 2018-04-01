@@ -150,16 +150,10 @@ void BitProcess::Refresh() {
 	int initial_cursor = processbits_cursor;
 	
 	for (; processbits_cursor < loadsource_cursor; processbits_cursor++) {
-		#ifdef flagDEBUG
-		if (processbits_cursor == 10000) {
-			processbits_cursor = loadsource_cursor - 1;
-			break;
-		}
-		#endif
-		
-		int reserve = processbits_cursor - processbits_cursor % 100000 + 100000;
-		bits_buf.Reserve(reserve);
-		bits_buf.SetCount((processbits_cursor + 1) * processbits_row_size, 0);
+		int next = processbits_cursor + 1;
+		int reserve = next - next % 100000 + 100000;
+		bits_buf.Reserve(reserve * processbits_row_size);
+		bits_buf.SetCount(next * processbits_row_size, 0);
 		
 		int bit_pos = 0;
 		for(int j = 0; j < processbits_period_count; j++) {
@@ -553,8 +547,8 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 	for(int i = 0; i < currencies.GetCount(); i++) {
 		Currency& cur = currencies[i];
 		String tzpath = cur.GetTZ();
-		LOG(cur.GetName());
-		LOG(tzpath);
+		//LOG(cur.GetName());
+		//LOG(tzpath);
 		
 		cctz::time_zone tz;
 		if(!cctz::load_time_zone(tzpath.Begin(), &tz))
@@ -568,7 +562,7 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 				const auto utc_open = cctz::convert(cctz::civil_second(t.year, t.month, t.day, t.hour, t.minute, 0), tz);
 				const cctz::time_zone::absolute_lookup al = utc.lookup(utc_open);
 				Time open(al.cs.year(), al.cs.month(), al.cs.day(), al.cs.hour(), al.cs.minute());
-				DUMP(open);
+				//DUMP(open);
 				slot.time_points.GetAdd(open).AddOpen(cur.GetName() + IntStr(j));
 			}
 			
@@ -577,7 +571,7 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 				const auto utc_close = cctz::convert(cctz::civil_second(t.year, t.month, t.day, t.hour, t.minute, 0), tz);
 				const cctz::time_zone::absolute_lookup al = utc.lookup(utc_close);
 				Time close(al.cs.year(), al.cs.month(), al.cs.day(), al.cs.hour(), al.cs.minute());
-				DUMP(close);
+				//DUMP(close);
 				slot.time_points.GetAdd(close).AddClose(cur.GetName() + IntStr(j));
 			}
 			
@@ -586,7 +580,7 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 	
 	
 	SortByKey(slot.time_points, StdLess<Time>());
-	DUMPM(slot.time_points);
+	//DUMPM(slot.time_points);
 	
 	Index<String> is_open;
 	for(int i = 0; i < slot.time_points.GetCount(); i++) {
@@ -616,7 +610,7 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 	}
 	
 	
-	DUMPM(slot.time_points);
+	//DUMPM(slot.time_points);
 }
 
 void ExchangeSlots::Refresh() {
@@ -639,26 +633,32 @@ void ExchangeSlots::Refresh() {
 	
 	while (cursor < end) {
 		
-		Date d(cursor.year, cursor.month, cursor.day);
-		GetDaySlots(d, ds);
-		
-		for(int i = 0; i < ds.time_points.GetCount(); i++) {
-			Time open = ds.time_points.GetKey(i);
-			unsigned hash = ds.time_points[i].GetHashValue();
-			Slot& slot = slots.GetAdd(hash);
-			if (slot.id.IsEmpty()) {
-				slot.id = Join(ds.time_points[i].is_open, ", ");
-			}
-			slot.open_time.Add(open);
+		int wday = DayOfWeek(cursor);
+		if (wday > 0 && wday < 6) {
+			Date d(cursor.year, cursor.month, cursor.day);
+			GetDaySlots(d, ds);
 			
-			Time close;
-			if (i < ds.time_points.GetCount()-1)
-				close = ds.time_points.GetKey(i+1);
-			else {
-				close = ds.time_points.GetKey(0);
-				close += 24*60*60;
+			for(int i = 0; i < ds.time_points.GetCount(); i++) {
+				Time open = ds.time_points.GetKey(i);
+				unsigned hash = ds.time_points[i].GetHashValue();
+				Slot& slot = slots.GetAdd(hash);
+				if (slot.id.IsEmpty()) {
+					slot.id = Join(ds.time_points[i].is_open, ", ");
+				}
+				slot.open_time.Add(open);
+				
+				Time close;
+				if (i < ds.time_points.GetCount()-1)
+					close = ds.time_points.GetKey(i+1);
+				else {
+					close = ds.time_points.GetKey(0);
+					close += 24*60*60;
+				}
+				slot.close_time.Add(close);
+				
+				slot.open_pos.Add(-1);
+				slot.close_pos.Add(-1);
 			}
-			slot.close_time.Add(close);
 		}
 		cursor += 24*60*60;
 	}
@@ -673,15 +673,13 @@ void ExchangeSlots::Refresh() {
 			
 			for(int j = 0; j < slot.open_time.GetCount(); j++) {
 				if (slot.open_time[j] == t) {
-					slot.open_pos.Add(j);
+					slot.open_pos[j] = findtime_cursor;
 				}
 			}
 			
 			for(int j = 0; j < slot.close_time.GetCount(); j++) {
 				if (slot.close_time[j] == t) {
-					int count = slot.open_pos.GetCount();
-					slot.close_pos.SetCount(count, -1);
-					slot.close_pos[count-1] = j;
+					slot.close_pos[j] = findtime_cursor;
 				}
 			}
 		}
@@ -712,6 +710,23 @@ void TestExchangeSlots() {
 
 
 
+int SlotSignal::GetSignal(int sym) {
+	int sig = 0;
+	
+	Time now = GetUtcTime();
+	
+	for(int i = data.GetCount() - 1; i >= 0; i--) {
+		Data& d = data[i];
+		if (d.open_time > now)
+			continue;
+		sig = d.signal[sym] ? -1 : +1;
+		break;
+	}
+	
+	return sig;
+}
+
+
 
 SlotSignals::SlotSignals() {
 	
@@ -722,8 +737,10 @@ SlotSignals::~SlotSignals() {
 }
 
 void SlotSignals::Refresh() {
-	ExchangeSlots& es = GetExchangeSlots();
+	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
+		GetBitProcessManager().Get(i, 2).Refresh();
 	
+	ExchangeSlots& es = GetExchangeSlots();
 	es.Refresh();
 	
 	if (!is_loaded) {
@@ -752,23 +769,28 @@ void SlotSignals::Refresh() {
 			dstd.close_pos  = src.close_pos[j];
 		}
 		
-		/*if (train) {
-			int count = BitProcess::processbits_inputrow_size;
-			dst.correlation.SetCount(count);
-			for(int j = 0; j < count; j++) {
-				dst.correlation[j].SetCount(sym_count);
-				for(int k = 0; k < sym_count; k++) {
-					dst.correlation[j][k] = Correlation(slot, j, k);
+		int count = BitProcess::processbits_inputrow_size;
+		int sym_count = USEDSYMBOL_COUNT;
+		if (train) {
+			dst.correlation.SetCount(sym_count);
+			for(int j = 0; j < sym_count; j++) {
+				dst.correlation[j].SetCount(count);
+				for(int k = 0; k < count; k++) {
+					dst.correlation[j][k] = Correlation(dst, j, k);
 				}
 			}
 		}
 		
 		
 		for(int j = begin; j < end; j++) {
+			SlotSignal::Data& data = dst.data[j];
+			
 			for(int k = 0; k < sym_count; k++) {
-				
+				data.signal[k] = TryGetSignal(dst, k, j);
+				data.pred_value[k] = Predict(dst, k, j);
+				data.pred_signal[k] = data.pred_value[k] < 0.0;
 			}
-		}*/
+		}
 		
 	}
 	
@@ -777,5 +799,97 @@ void SlotSignals::Refresh() {
 		StoreThis();
 }
 
+double SlotSignals::Correlation(SlotSignal& slot, int sym, int bit) {
+	BitProcess& bp = GetBitProcessManager().Get(sym, 2);
+	int corr_count = 0;
+	int diff_count = 0;
+	
+	// find the needed data to manipulate correlation coeff
+	for (int i = 0; i < slot.data.GetCount(); i++) {
+		SlotSignal::Data& data = slot.data[i];
+		if (data.open_pos == -1 || data.close_pos == -1)
+			continue;
+			
+		bool real_signal = TryGetSignal(slot, sym, i);
+		bool bit_value = bp.GetBit(data.open_pos, bit);
+		
+		//LOG((int) real_signal << " " << (int)bit_value);
+		diff_count += real_signal != bit_value;
+		corr_count++;
+	}
+	ASSERT(corr_count >= 2);
+	
+	double coeff = 1.0 - 2.0 * (double)diff_count / (double)corr_count;
+	//LOG(sym << " " << bit << " " << coeff);
+	
+	return coeff;
+}
+
+double SlotSignals::Predict(SlotSignal& slot, int sym, int datapos) {
+	BitProcess& bp = GetBitProcessManager().Get(sym, 2);
+	
+	int open_pos = slot.data[datapos].open_pos;
+	if (open_pos == -1)
+		return 0;;
+
+	double d = 0;
+	
+	int count = 0;
+	for(int i = 0; i < BitProcess::processbits_inputrow_size; i++) {
+		bool bit_value = bp.GetBit(open_pos, i);
+		double y = bit_value ? -1.0 : +1.0;
+		double corr = slot.correlation[sym][i];
+		double mul = y * corr;
+		
+		d += mul;
+		count++;
+	}
+	
+	d /= count;
+	
+	return d;
+}
+
+bool SlotSignals::TryGetSignal(SlotSignal& slot, int sym, int datapos) {
+	SyncedPrice& sp = GetSyncedPriceManager().Get(2);
+	
+	int open_pos  = slot.data[datapos].open_pos;
+	int close_pos = slot.data[datapos].close_pos;
+	if (open_pos < 0 || close_pos < 0) return Random(2);
+	
+	double open  = sp.data[sym].open[open_pos];
+	double close = sp.data[sym].open[close_pos];
+	
+	bool b = close < open;
+	return b;
+}
+
+SlotSignal* SlotSignals::FindCurrent() {
+	if (slots.IsEmpty())
+		return NULL;
+	
+	Time now = GetUtcTime();
+	
+	Time max_time(1970,1,1);
+	int max_i = 0;
+	
+	for(int i = 0; i < slots.GetCount(); i++) {
+		SlotSignal& slot = slots[i];
+		
+		for(int j = slot.data.GetCount() - 1; j >= 0; j--) {
+			SlotSignal::Data& data = slot.data[j];
+			if (data.open_time > now)
+				continue;
+			
+			if (data.open_time > max_time) {
+				max_time = data.open_time;
+				max_i = i;
+			}
+			break;
+		}
+	}
+	
+	return &slots[max_i];
+}
 
 }

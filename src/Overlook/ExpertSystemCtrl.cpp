@@ -129,7 +129,14 @@ void ExchangeSlotsCtrl::Data() {
 
 
 SlotSignalsCtrl::SlotSignalsCtrl() {
-	Add(splitter.SizePos());
+	Add(symlist.LeftPos(0,100).TopPos(0,30));
+	Add(find_current.LeftPos(100,100).TopPos(0,30));
+	Add(splitter.HSizePos().VSizePos(30));
+	
+	symlist << THISBACK(Data);
+	find_current.SetLabel("Find current");
+	find_current << THISBACK(FindCurrent);
+	
 	splitter << slotlist << openlist;
 	splitter.Horz();
 	
@@ -145,10 +152,44 @@ SlotSignalsCtrl::SlotSignalsCtrl() {
 	
 }
 
+void SlotSignalsCtrl::FindCurrent() {
+	SlotSignals& ss = GetSlotSignals();
+	Time now = GetUtcTime();
+	
+	Time max_time(1970,1,1);
+	int max_i = 0;
+	
+	for(int i = 0; i < ss.slots.GetCount(); i++) {
+		SlotSignal& slot = ss.slots[i];
+		
+		for(int j = slot.data.GetCount() - 1; j >= 0; j--) {
+			SlotSignal::Data& data = slot.data[j];
+			if (data.open_time > now)
+				continue;
+			
+			if (data.open_time > max_time) {
+				max_time = data.open_time;
+				max_i = i;
+			}
+			break;
+		}
+	}
+	
+	slotlist.SetCursor(max_i);
+	openlist.SetCursor(openlist.GetCount() - 1);
+}
+
 void SlotSignalsCtrl::Data() {
+	System& sys = GetSystem();
 	SlotSignals& ss = GetSlotSignals();
 	
 	ss.Refresh();
+	
+	if (symlist.GetCount() == 0) {
+		for(int i = 0; i < sys.used_symbols.GetCount(); i++)
+			symlist.Add(sys.used_symbols[i]);
+		symlist.SetIndex(0);
+	}
 	
 	for(int i = 0; i < ss.slots.GetCount(); i++) {
 		SlotSignal& slot = ss.slots[i];
@@ -156,6 +197,7 @@ void SlotSignalsCtrl::Data() {
 		slotlist.Set(i, 0, slot.id);
 	}
 	
+	int sym = symlist.GetIndex();
 	int cursor = slotlist.GetCursor();
 	if (cursor >= 0 && cursor < ss.slots.GetCount()) {
 		SlotSignal& slot = ss.slots[cursor];
@@ -165,10 +207,10 @@ void SlotSignalsCtrl::Data() {
 			
 			openlist.Set(j, 0, data.open_time);
 			openlist.Set(j, 1, data.close_time);
-			openlist.Set(j, 2, data.signal);
-			openlist.Set(j, 3, data.pred_value);
-			openlist.Set(j, 4, data.pred_signal);
-			openlist.Set(j, 5, data.signal == data.pred_signal ? "Is correct" : "");
+			openlist.Set(j, 2, data.signal[sym]);
+			openlist.Set(j, 3, data.pred_value[sym]);
+			openlist.Set(j, 4, data.pred_signal[sym]);
+			openlist.Set(j, 5, data.signal[sym] == data.pred_signal[sym] ? "Is correct" : "");
 		}
 		openlist.SetCount(slot.data.GetCount());
 	}

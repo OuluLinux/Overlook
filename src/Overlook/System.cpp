@@ -473,13 +473,17 @@ bool System::RefreshReal() {
 			return true;
 		}
 		
-		/*for(int i = 0; i < used_symbols_id.GetCount(); i++) {
-			int sym = used_symbols_id[i];
-			int signal = a.slow[i].GetSignal();
-			SetSignal(sym, signal);
-		}*/
-		//mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
-		//mt.SetFreeMarginScale(a.GetFreeMarginScale());
+		GetSlotSignals().Refresh();
+		SlotSignal* ss = GetSlotSignals().FindCurrent();
+		if (ss) {
+			for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+				int sym = used_symbols_id[i];
+				int signal = ss->GetSignal(i);
+				SetSignal(sym, signal);
+			}
+			mt.SetFreeMarginLevel(0.6);
+			mt.SetFreeMarginScale(used_symbols_id.GetCount());
+		}
 
 
 		WhenInfo("Updating MetaTrader");
@@ -531,8 +535,8 @@ bool System::RefreshReal() {
 		WhenRealtimeUpdate();
 		WhenPopTask();
 		
-		//if (a.IsRunning() && sig_change)
-		//	WhenJobOrders();
+		if (sig_change)
+			WhenJobOrders();
 		
 		return true;
 	}

@@ -72,6 +72,7 @@ protected:
 	
 	friend class SystemBooleanView;
 	friend class DataBridgeCommon;
+	friend class SlotSignalsCtrl;
 	friend class AutomationCtrl;
 	friend class SlowAutomation;
 	friend class BooleansDraw;

@@ -145,24 +145,24 @@ System::System() {
 	used_symbols.Add("USDJPY");*/
 	
 	
-	used_symbols.Add("CADJPY");
+	//used_symbols.Add("CADJPY");
 	used_symbols.Add("EURGBP");
-	#ifndef flagDEBUG
 	used_symbols.Add("EURJPY");
+	#ifndef flagDEBUG
 	used_symbols.Add("EURUSD");
 	used_symbols.Add("GBPUSD");
 	used_symbols.Add("USDCAD");
 	//used_symbols.Add("AUDCAD");
-	used_symbols.Add("AUDJPY");
-	used_symbols.Add("AUDUSD");
+	//used_symbols.Add("AUDJPY");
+	//used_symbols.Add("AUDUSD");
 	//used_symbols.Add("CHFJPY");
 	//used_symbols.Add("EURCAD");
 	//used_symbols.Add("EURCHF");
-	used_symbols.Add("EURAUD");
+	//used_symbols.Add("EURAUD");
 	//used_symbols.Add("GBPCHF");
-	used_symbols.Add("GBPJPY");
+	//used_symbols.Add("GBPJPY");
 	//used_symbols.Add("NZDUSD");
-	used_symbols.Add("USDCHF");
+	//used_symbols.Add("USDCHF");
 	used_symbols.Add("USDJPY");
 	#endif
 	

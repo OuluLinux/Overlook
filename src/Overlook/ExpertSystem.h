@@ -229,11 +229,11 @@ class SlotSignal : Moveable<SlotSignal> {
 public:
 	struct Data : Moveable<Data> {
 		Time open_time, close_time;
-		int open_pos, close_pos;
+		int open_pos = -1, close_pos = -1;
 		double pred_value[USEDSYMBOL_COUNT];
 		bool signal[USEDSYMBOL_COUNT];
 		bool pred_signal[USEDSYMBOL_COUNT];
-		
+		 
 		void Serialize(Stream& s) {
 			if (s.IsLoading())
 				s.Get(this, sizeof(Data));

@@ -719,7 +719,7 @@ int SlotSignal::GetSignal(int sym) {
 		Data& d = data[i];
 		if (d.open_time > now)
 			continue;
-		sig = d.signal[sym] ? -1 : +1;
+		sig = d.pred_signal[sym] ? -1 : +1;
 		break;
 	}
 	
@@ -760,6 +760,7 @@ void SlotSignals::Refresh() {
 		int begin = dst.data.GetCount();
 		int end = src.open_pos.GetCount();
 		changes |= begin != end;
+		begin = max(0, begin - 3);
 		dst.data.SetCount(end);
 		for(int j = begin; j < end; j++) {
 			SlotSignal::Data& dstd = dst.data[j];

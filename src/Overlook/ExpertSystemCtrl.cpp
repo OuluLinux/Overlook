@@ -131,11 +131,14 @@ void ExchangeSlotsCtrl::Data() {
 SlotSignalsCtrl::SlotSignalsCtrl() {
 	Add(symlist.LeftPos(0,100).TopPos(0,30));
 	Add(find_current.LeftPos(100,100).TopPos(0,30));
+	Add(refresh.LeftPos(200,100).TopPos(0,30));
 	Add(splitter.HSizePos().VSizePos(30));
 	
 	symlist << THISBACK(Data);
 	find_current.SetLabel("Find current");
+	refresh.SetLabel("Refresh");
 	find_current << THISBACK(FindCurrent);
+	refresh << THISBACK(RefreshSource);
 	
 	splitter << slotlist << openlist;
 	splitter.Horz();
@@ -150,6 +153,11 @@ SlotSignalsCtrl::SlotSignalsCtrl() {
 	openlist.AddColumn("Predicted signal");
 	openlist.AddColumn("Is correct");
 	
+}
+
+void SlotSignalsCtrl::RefreshSource() {
+	SlotSignals& ss = GetSlotSignals();
+	ss.Refresh();
 }
 
 void SlotSignalsCtrl::FindCurrent() {
@@ -182,8 +190,6 @@ void SlotSignalsCtrl::FindCurrent() {
 void SlotSignalsCtrl::Data() {
 	System& sys = GetSystem();
 	SlotSignals& ss = GetSlotSignals();
-	
-	ss.Refresh();
 	
 	if (symlist.GetCount() == 0) {
 		for(int i = 0; i < sys.used_symbols.GetCount(); i++)

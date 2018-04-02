@@ -41,7 +41,7 @@ typedef const int ConstInt;
 #ifdef flagDEBUG
 #define USEDSYMBOL_COUNT 2
 #else
-#define USEDSYMBOL_COUNT 12
+#define USEDSYMBOL_COUNT 6
 #endif
 
 enum {

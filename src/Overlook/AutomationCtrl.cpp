@@ -1,6 +1,5 @@
 #include "Overlook.h"
 
-#if 0
 namespace Overlook {
 using namespace Upp;
 
@@ -110,7 +109,6 @@ void AutomationCtrl::Data() {
 			case Automation::GROUP_SOURCE:		phase_str = "Source"; break;
 			case Automation::GROUP_BITS:		phase_str = "Bits"; break;
 			case Automation::GROUP_EVOLVE:		phase_str = "Evolve"; break;
-			case Automation::GROUP_TRIM:		phase_str = "Trim"; break;
 			case Automation::GROUP_COUNT:		phase_str = "Finished"; break;
 		}
 		
@@ -154,14 +152,10 @@ void AutomationCtrl::Data() {
 			String symstr = sys.symbols[sym];
 			
 			cursor_stats.Set(row,   0, symstr + " signal");
-			bool signal  = a.slow[i].GetBitOutput(cursor, OUT_TRIM_SIG);
-			bool enabled = a.slow[i].GetBitOutput(cursor, OUT_TRIM_ENA);
+			bool signal  = a.slow[i].GetBitOutput(cursor, OUT_EVOLVE_SIG);
+			bool enabled = a.slow[i].GetBitOutput(cursor, OUT_EVOLVE_ENA);
 			int sig = enabled ? (signal ? -1 : +1) : 0;
 			cursor_stats.Set(row++, 1, sig);
-			
-			int level = a.slow[i].GetLevel();
-			cursor_stats.Set(row,   0, symstr + " level");
-			cursor_stats.Set(row++, 1, level);
 		}
 	}
 	else if (tab == 1) {
@@ -173,5 +167,3 @@ void AutomationCtrl::Data() {
 
 
 }
-
-#endif

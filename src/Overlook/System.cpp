@@ -145,27 +145,26 @@ System::System() {
 	used_symbols.Add("USDJPY");*/
 	
 	
-	//used_symbols.Add("CADJPY");
+	used_symbols.Add("CADJPY");
 	used_symbols.Add("EURGBP");
-	used_symbols.Add("EURJPY");
 	#ifndef flagDEBUG
+	used_symbols.Add("EURJPY");
 	used_symbols.Add("EURUSD");
 	used_symbols.Add("GBPUSD");
 	used_symbols.Add("USDCAD");
 	//used_symbols.Add("AUDCAD");
-	//used_symbols.Add("AUDJPY");
-	//used_symbols.Add("AUDUSD");
+	used_symbols.Add("AUDJPY");
+	used_symbols.Add("AUDUSD");
 	//used_symbols.Add("CHFJPY");
 	//used_symbols.Add("EURCAD");
 	//used_symbols.Add("EURCHF");
-	//used_symbols.Add("EURAUD");
+	used_symbols.Add("EURAUD");
 	//used_symbols.Add("GBPCHF");
-	//used_symbols.Add("GBPJPY");
+	used_symbols.Add("GBPJPY");
 	//used_symbols.Add("NZDUSD");
-	//used_symbols.Add("USDCHF");
+	used_symbols.Add("USDCHF");
 	used_symbols.Add("USDJPY");
 	#endif
-	
 	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
 }
 
@@ -271,6 +270,7 @@ void System::Init() {
 
 void System::Deinit() {
 	AddJournal("System deinitialization");
+	GetAutomation().StopJobs();
 	StoreThis();
 }
 
@@ -451,7 +451,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		
+		Automation& a			= GetAutomation();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
@@ -473,19 +473,12 @@ bool System::RefreshReal() {
 			return true;
 		}
 		
-		GetSlotTrailings().Refresh();
-		SlotTrailing* st = GetSlotTrailings().FindCurrent();
-		if (st) {
-			for(int i = 0; i < used_symbols_id.GetCount(); i++) {
-				int sym = used_symbols_id[i];
-				int signal = st->GetSignal(i);
-				SetSignal(sym, signal);
-			}
-			mt.SetFreeMarginLevel(0.6);
-			mt.SetFreeMarginScale(used_symbols_id.GetCount());
+		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
+			int sym = used_symbols_id[i];
+			int signal = a.slow[i].GetSignal();
+			SetSignal(sym, signal);
 		}
-
-
+		
 		WhenInfo("Updating MetaTrader");
 		WhenPushTask("Putting latest signals");
 		
@@ -517,6 +510,8 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
+			mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
+			mt.SetFreeMarginScale(a.GetFreeMarginScale());
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {
@@ -535,7 +530,7 @@ bool System::RefreshReal() {
 		WhenRealtimeUpdate();
 		WhenPopTask();
 		
-		if (sig_change)
+		if (a.IsRunning() && sig_change)
 			WhenJobOrders();
 		
 		return true;

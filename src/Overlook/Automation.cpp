@@ -1,4 +1,3 @@
-#if 0
 #include "Overlook.h"
 
 namespace Overlook {
@@ -7,15 +6,15 @@ Automation::Automation() {
 	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
 	
-	output_fmlevel = 0.8;
+	output_fmlevel = 0.6;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
 		LoadThis();
 	
 	for(int i = 0; i < sym_count; i++) {
 		slow[i].sym = i;
-		slow[i].tf = 5; // H4
-		slow[i].period = 240;
+		slow[i].tf = 4; // H1
+		slow[i].period = 60;
 		slow[i].running = &running;
 		for(int j = 0; j < sym_count; j++) {
 			slow[i].other_open_buf[j] = slow[j].open_buf;
@@ -143,9 +142,6 @@ void Automation::Process(int group_id, int job_id) {
 	else if (group_id == GROUP_EVOLVE) {
 		slow[job_id].Evolve();
 	}
-	else if (group_id == GROUP_TRIM) {
-		slow[job_id].Trim();
-	}
 	
 	if (running) job.is_finished = true;
 }
@@ -222,5 +218,3 @@ void Automation::LoadSource() {
 }
 
 }
-
-#endif

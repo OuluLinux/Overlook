@@ -1,4 +1,3 @@
-#if 0
 #include "Overlook.h"
 
 namespace Overlook {
@@ -298,234 +297,141 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 	}
 }
 
-void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
-	
-	double change = open_buf[pos + dqn_rightoffset - 1] / open_buf[pos] - 1.0;
-	
-	int level = fabs(change) / 0.001;
-	if (level >= dqn_levels) level = dqn_levels-1;
-	
-	for(int i = 0; i < dqn_output_size; i++)
-		output[i] = 1.0;
-	
-	if (change >= 0.0) {
-		for(int i = 0; i <= level; i++)
-			output[i] = 0.0;
-	} else {
-		for(int i = 0; i <= level; i++)
-			output[dqn_levels + i] = 0.0;
-	}
-	
-}
-
 void SlowAutomation::Evolve() {
 	int& iters = this->dqn_iters;
 	
-	const double max_alpha = 0.01;
+	const double max_alpha = 0.1;
+	const double max_epsilon = 0.2;
 	
 	if (!iters) {
 		dqn.Init();
 	}
 	
-	dqn.SetEpsilon(0);
-	dqn.SetGamma(0);
+	dqn.SetGamma(0.0);
+	
+	int train_count = processbits_cursor - dqn_rightoffset - 1;
+	int train_cursor = 0;
 	
 	while (*running && iters < max_iters) {
-		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
-		Dqn::MatType input;
-		double output[dqn_output_size];
 		
-		double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
-		dqn.SetAlpha(alpha);
+		Dqn::DQItemType& item = train_cache[dqn_item_cursor++];
+		if (dqn_item_cursor >= dqn_items_count)
+			dqn_item_cursor = 0;
+		dqn_items_total++;
 		
-		LoadInput(input, pos);
-		LoadOutput(output, pos);
 		
-		dqn.Learn(input, output);
+		// Act for agent
+		double epsilon = max_epsilon * (double)(max_iters-1-iters) / (double)max_iters;
+		dqn.SetEpsilon(epsilon);
+		LoadInput(item.before_state, train_cursor);
+		LoadInput(item.after_state,  train_cursor + 1);
+		item.before_action = dqn.Act(item.before_state);
+		
+		if (item.before_action == DQN_IDLE) {
+			item.after_reward = 0.0;
+		} else {
+			#if 0
+			int open_pos = train_cursor;
+			int close_pos = train_cursor + 1;
+			#else
+			// Peek reward. No theoretical support.
+			int max_peek = 3;
+			int open_pos = train_cursor - 1;
+			int close_pos = train_cursor + 1;
+			while (close_pos < train_count) {
+				Dqn::MatType before_state;
+				LoadInput(before_state, close_pos);
+				int action = dqn.Act(before_state);
+				if (action != item.before_action)
+					break;
+				close_pos++;
+				if (close_pos - train_cursor > max_peek)
+					break;
+			}
+			while (open_pos >= 0) {
+				Dqn::MatType before_state;
+				LoadInput(before_state, open_pos);
+				int action = dqn.Act(before_state);
+				if (action != item.before_action)
+					break;
+				open_pos--;
+				if (train_cursor - open_pos > max_peek)
+					break;
+			}
+			open_pos++;
+			#endif
+			
+			int len = close_pos - open_pos;
+			double open = open_buf[open_pos];
+			double close = open_buf[close_pos];
+			
+			double change;
+			if (item.before_action == DQN_LONG)
+				change = +(close / (open + spread) - 1.0) / len;
+			else
+				change = -(close / (open - spread) - 1.0) / len;
+			
+			item.after_reward = change; // *10 more than 10 breaks result entirely
+			LOG(item.after_reward);
+		}
+		
+		train_cursor += Random(64);
+		if (train_cursor > train_count)
+			train_cursor = 0;
+		
+		
+		// Train random event few times
+		#if 1
+		if (dqn_items_total > 100) {
+			double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
+			dqn.SetAlpha(alpha);
+			
+			int pos = Random(min(dqn_items_total, (uint64)dqn_items_count));
+			Dqn::DQItemType& item = train_cache[pos];
+			dqn.Learn(item);
+		}
+		#else
+		dqn.Learn(item);
+		#endif
 		
 		iters++;
 	}
 	
 	if (iters >= max_iters) {
-		int& cursor = dqn_cursor;
-		for(; cursor < processbits_cursor; cursor++) {
+		for(; dqn_cursor < processbits_cursor; dqn_cursor++) {
 			#ifdef flagDEBUG
-			if (cursor == 10000)
-				cursor = processbits_cursor - 1;
+			if (dqn_cursor == 10000)
+				dqn_cursor = processbits_cursor - 1;
 			#endif
 			
 			Dqn::MatType input;
-			double output[dqn_output_size];
+			LoadInput(input, dqn_cursor);
 			
-			LoadInput(input, cursor);
+			int action = dqn.Act(input);
 			
-			dqn.Evaluate(input, output, dqn_output_size);
+			bool enabled = action != DQN_IDLE;
+			bool signal = action == DQN_SHORT;
 			
-			double pos_sensor = output[0];
-			double neg_sensor = output[dqn_levels];
-			
-			bool signal = neg_sensor < pos_sensor;
-			int level;
-			if (!signal) {
-				for(level = 0; level < dqn_levels-1; level++)
-					if (output[level] > 0.5)
-						break;
-			} else {
-				for(level = 0; level < dqn_levels-1; level++)
-					if (output[dqn_levels + level] > 0.5)
-						break;
-			}
-			
-			bool enabled = true;
-			
-			SetBitOutput(cursor, OUT_EVOLVE_SIG, signal);
-			SetBitOutput(cursor, OUT_EVOLVE_ENA, enabled);
-			SetBitOutput(cursor, OUT_COUNT + level, true);
+			SetBitOutput(dqn_cursor, OUT_EVOLVE_SIG, signal);
+			SetBitOutput(dqn_cursor, OUT_EVOLVE_ENA, enabled);
 		}
 	}
-}
-
-void SlowAutomation::Trim() {
-	
-	if (trim_cursor == 0) {
-		
-		// Find enabled, +signal, -signal bits, which allows trading
-		VectorMap<int, double> enable_results, possig_results, negsig_results;
-		for(int i = 0; i < processbits_inputrow_size; i++) {
-			double enable_result = TestTrim(i, 0);
-			double possig_result = TestTrim(i, 1);
-			double negsig_result = TestTrim(i, 2);
-			enable_results.Add(i, enable_result);
-			possig_results.Add(i, possig_result);
-			negsig_results.Add(i, negsig_result);
-		}
-		SortByValue(enable_results, StdGreater<double>());
-		SortByValue(possig_results, StdGreater<double>());
-		SortByValue(negsig_results, StdGreater<double>());
-		DUMPM(enable_results);
-		DUMPM(possig_results);
-		DUMPM(negsig_results);
-		
-		// Gather the most positive bits
-		for(int i = 0; i < trimbit_count; i++) {
-			enable_bits[i] = enable_results.GetKey(i);
-			possig_bits[i] = possig_results.GetKey(i);
-			negsig_bits[i] = negsig_results.GetKey(i);
-		}
-	}
-	
-	
-	// Write output
-	int& cursor = trim_cursor;
-	for(; cursor < dqn_cursor; cursor++) {
-		
-		bool signal = GetBitOutput(cursor, OUT_EVOLVE_SIG);
-		bool enable = false; //GetBitOutput(cursor, job_id, OUT_EVOLVE_ENA);
-		
-		#ifdef flagDEBUG
-		signal = (cursor / 10) % 2;
-		enable = (cursor / 20) % 2;
-		#endif
-		
-		
-		for(int i = 0; i < trimbit_count && !enable; i++) {
-			enable |= GetBit(cursor, enable_bits[i]);
-			enable |= GetBit(cursor, possig_bits[i]) == signal;
-			enable |= GetBit(cursor, negsig_bits[i]) != signal;
-		}
-		
-		SetBitOutput(cursor, OUT_TRIM_SIG, signal);
-		SetBitOutput(cursor, OUT_TRIM_ENA, enable);
-	}
-}
-
-double SlowAutomation::TestTrim(int bit, int type) {
-	
-	// Loop range and sum pips
-	double res = 0;
-	int end = dqn_cursor - 1;
-	for(int cursor = 100; cursor < end; cursor++) {
-		#ifdef flagDEBUG
-		if (cursor == 10000)
-			break;
-		#endif
-		
-		
-		bool signal = GetBitOutput(cursor, OUT_EVOLVE_SIG);
-		bool enable = false; //GetBitOutput(cursor, OUT_EVOLVE_ENA);
-		
-		if      (type == 0)
-			enable |= GetBit(cursor, bit);
-		else if (type == 1)
-			enable |= GetBit(cursor, bit) == signal;
-		else if (type == 2)
-			enable |= GetBit(cursor, bit) != signal;
-		
-		if (enable) {
-			bool signal = GetBitOutput(cursor, OUT_EVOLVE_SIG);
-			double change = open_buf[cursor+1] - open_buf[cursor];
-			if (signal) change *= -1.0;
-			res += change;
-		}
-	}
-	
-	return res;
 }
 
 int SlowAutomation::GetSignal() {
-	int last = trim_cursor - 1;
+	int last = dqn_cursor - 1;
 	if (last < 0) return 0;
-	bool signal  = GetBitOutput(last, OUT_TRIM_SIG);
-	bool enabled = GetBitOutput(last, OUT_TRIM_ENA);
+	bool signal  = GetBitOutput(last, OUT_EVOLVE_SIG);
+	bool enabled = GetBitOutput(last, OUT_EVOLVE_ENA);
 	int sig = enabled ? (signal ? -1 : +1) : 0;
-	
-	System& sys = GetSystem();
-	MetaTrader& mt = GetMetaTrader();
-	int sys_sym = sys.used_symbols_id[sym];
-	DataBridge& db = sys.GetSource(sys_sym, tf).db;
-	if (sig > 0) {
-		double change = +(mt.GetAskBid()[sys_sym].ask / (open_buf[last] + spread) - 1.0);
-		ReleaseLog(sys.GetSymbol(sys_sym) + " sig " + IntStr(sig) + " change " + DblStr(change) + " ask " + DblStr(mt.GetAskBid()[sys_sym].ask)
-			+ " open " + DblStr(open_buf[last]) + " spread " + DblStr(spread));
-		if (change < 0) sig = 0;
-	}
-	else if (sig < 0) {
-		double change = -(mt.GetAskBid()[sys_sym].ask / (open_buf[last] - spread) - 1.0);
-		ReleaseLog(sys.GetSymbol(sys_sym) + " sig " + IntStr(sig) + " change " + DblStr(change) + " ask " + DblStr(mt.GetAskBid()[sys_sym].ask)
-			+ " open " + DblStr(open_buf[last]) + " spread " + DblStr(spread));
-		if (change < 0) sig = 0;
-	}
-	
-	Time time = GetUtcTime();
-	if (not_first && sig != prev_sig && time.Get() - prev_sig_time.Get() < 10*60) {
-		sig = prev_sig;
-	} else {
-		prev_sig_time = time;
-		prev_sig = sig;
-		not_first = true;
-	}
-	
+	/*
 	int wday = DayOfWeek(time) - 1;
 	int wdaymins = (wday * 24 + time.hour) * 60 + time.minute;
 	int wdayslot = wdaymins / period;
 	if (wdayslot >= 0 && wdayslot < wdayhours && !enabled_slot[wdayslot])
 		sig = 0;
-	
-	sig *= GetLevel();
-	
+	*/
 	return sig;
 }
 
-int SlowAutomation::GetLevel() {
-	int last = trim_cursor - 1;
-	if (last < 0) return 0;
-	int mult = 0;
-	for(int level = 0; level < dqn_levels; level++) {
-		if (GetBitOutput(last, OUT_COUNT + level))
-			mult = level + 1;
-	}
-	return mult;
 }
-
-}
-#endif

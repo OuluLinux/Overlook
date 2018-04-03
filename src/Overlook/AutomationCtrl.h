@@ -1,8 +1,6 @@
 #ifndef _Overlook_AutomationCtrl_h_
 #define _Overlook_AutomationCtrl_h_
 
-#if 0
-
 namespace Overlook {
 using namespace Upp;
 
@@ -42,6 +40,4 @@ public:
 
 }
 
-
-#endif
 #endif

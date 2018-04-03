@@ -132,10 +132,7 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
-	Tabify(last, Dockable(trailctrl, "Slot trailing manager").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(sigctrl, "Slot signal manager").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(slotctrl, "Exchange slot manager").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(bitsctrl, "Bits manager").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sysctrl, "Automation").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -179,7 +176,7 @@ void Overlook::FileMenu(Bar& bar) {
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
-		String profile_dir = ConfigFile("Profiles");
+		String profile_dir = ConfigFile("profiles");
 		RealizeDirectory(profile_dir);
 		FindFile ff;
 		ff.Search(AppendFileName(profile_dir, "*"));
@@ -499,10 +496,7 @@ void Overlook::Data() {
 	watch.Data();
 	
 	if (journal.IsVisible())		RefreshJournal();
-	if (bitsctrl.IsVisible())		RefreshBits();
-	if (slotctrl.IsVisible())		RefreshSlots();
-	if (trailctrl.IsVisible())		RefreshTrailings();
-	if (sigctrl.IsVisible())		RefreshSignals();
+	if (sysctrl.IsVisible())		RefreshSystem();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
@@ -524,20 +518,8 @@ void Overlook::RefreshJournal() {
 	
 }
 
-void Overlook::RefreshBits() {
-	bitsctrl.Data();
-}
-
-void Overlook::RefreshSlots() {
-	slotctrl.Data();
-}
-
-void Overlook::RefreshSignals() {
-	sigctrl.Data();
-}
-
-void Overlook::RefreshTrailings() {
-	trailctrl.Data();
+void Overlook::RefreshSystem() {
+	sysctrl.Data();
 }
 
 void Overlook::RefreshCalendar() {
@@ -1047,7 +1029,7 @@ void Overlook::SaveProfile() {
 	tw.name.SetFocus();
 	tw.Run();
 	if (save) {
-		String profile_dir = ConfigFile("Profiles");
+		String profile_dir = ConfigFile("profiles");
 		RealizeDirectory(profile_dir);
 		String fname = tw.name.GetData();
 		if (GetFileExt(fname) != ".bin") fname += ".bin";

@@ -1,7 +1,6 @@
 #ifndef _Overlook_Automation_h_
 #define _Overlook_Automation_h_
 
-#if 0
 namespace Overlook {
 
 
@@ -18,7 +17,6 @@ struct JobGroup : Moveable<JobGroup> {
 
 enum {
 	OUT_EVOLVE_SIG,	OUT_EVOLVE_ENA,
-	OUT_TRIM_SIG,	OUT_TRIM_ENA,
 	OUT_COUNT
 };
 
@@ -32,16 +30,15 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*6; // H4
+	static const int wdayhours = 5*24; // H1
 	static const int maxcount = 14*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 10000;
 	static const int dqn_rightoffset = 3+1;
-	static const int dqn_levels = 1;
 	#ifdef flagDEBUG
-	static const int max_iters = 1000;
+	static const int max_iters = 10000;
 	#else
-	static const int max_iters = 1000000;
+	static const int max_iters = 5000000;
 	#endif
 	
 	static const int loadsource_reserved = maxcount;
@@ -51,16 +48,20 @@ protected:
 	static const int processbits_correlation_count = (sym_count - 1);
 	static const int processbits_generic_row = (14 + processbits_descriptor_count + processbits_correlation_count);
 	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
-	static const int processbits_outputrow_size = OUT_COUNT + dqn_levels;
+	static const int processbits_outputrow_size = OUT_COUNT;
 	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
 	static const int processbits_reserved = processbits_row_size * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	static const int dqn_output_size = 2 * dqn_levels;
+	enum {DQN_LONG, DQN_SHORT, DQN_IDLE, DQN_ACTIONS};
+	static const int dqn_output_size = DQN_ACTIONS;
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	
-	static const int trimbit_count = 10;
+	static const int dqn_items_count = 1000;
+	uint64 dqn_items_total = 0;
+	int dqn_item_cursor = 0;
+	Dqn::DQItemType train_cache[dqn_items_count];
 	
 	
 	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
@@ -83,12 +84,10 @@ protected:
 	double		open_buf[loadsource_reserved];
 	Time		prev_sig_time;
 	int			sym, tf, period;
-	int			enable_bits[trimbit_count], possig_bits[trimbit_count], negsig_bits[trimbit_count];
 	int			time_buf[loadsource_reserved];
 	int			prev_sig;
 	int			dqn_iters;
 	int			loadsource_pos;
-	int			trim_cursor;
 	int			processbits_cursor;
 	int			loadsource_cursor = 0;
 	int			dqn_cursor;
@@ -106,7 +105,6 @@ public:
 	
 	void	ProcessBits();
 	void	Evolve();
-	void	Trim();
 	
 	void	ProcessBitsSingle(int period_id, int& bit_pos);
 	void	SetBit(int pos, int bit, bool value);
@@ -114,25 +112,9 @@ public:
 	void	SetBitCurrent(int bit, bool value) {SetBit(processbits_cursor, bit, value);}
 	bool	GetBit(int pos, int bit) const;
 	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
-	double	TestTrim(int job_id, int type);
 	int		GetSignal();
-	int		GetLevel();
 	
 	void	LoadInput(Dqn::MatType& input, int pos);
-	void	LoadOutput(double output[dqn_output_size], int pos);
-};
-
-/*
- - random slow signal in optimization
- - trailing start / stop
-*/
-class FastAutomation {
-	/*
-	
-	double		open_buf[loadsource_reserved];
-	int			sym, tf, period;
-	int			time_buf[loadsource_reserved];
-	*/
 };
 
 class Automation {
@@ -144,7 +126,7 @@ protected:
 	friend class System;
 	
 	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_TRIM, GROUP_COUNT};
+	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_COUNT};
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
@@ -177,8 +159,8 @@ public:
 	void	LoadSource();
 	
 	bool	IsRunning() const {return running;}
-	double	GetFreeMarginLevel() {output_fmlevel = 0.6; return output_fmlevel;}
-	int		GetFreeMarginScale() {return sym_count * SlowAutomation::dqn_levels;}
+	double	GetFreeMarginLevel() {return output_fmlevel;}
+	int		GetFreeMarginScale() {return sym_count;}
 	int		GetSymGroupJobId(int symbol) const;
 	
 	
@@ -190,5 +172,4 @@ inline Automation& GetAutomation() {return Single<Automation>();}
 
 }
 
-#endif
 #endif

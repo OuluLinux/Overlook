@@ -60,6 +60,25 @@ public:
 	
 };
 
+class SlotTrailingsCtrl : public ParentCtrl {
+	
+public:
+	DropList symlist;
+	Button find_current, refresh;
+	Splitter splitter;
+	ArrayCtrl slotlist, openlist;
+	
+public:
+	typedef SlotTrailingsCtrl CLASSNAME;
+	SlotTrailingsCtrl();
+	
+	void Data();
+	void FindCurrent();
+	void RefreshSource();
+	
+};
+
+
 }
 
 #endif

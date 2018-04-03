@@ -614,7 +614,7 @@ void ExchangeSlots::GetDaySlots(Date date, DaySlots& slot) {
 }
 
 void ExchangeSlots::Refresh() {
-	SyncedPrice& sp = GetSyncedPriceManager().Get(2); // M15
+	SyncedPrice& sp = GetSyncedPriceManager().Get(SLOT_TF); // M15
 	
 	sp.Refresh();
 	
@@ -695,15 +695,7 @@ void ExchangeSlots::Refresh() {
 }
 
 
-void TestExchangeSlots() {
-	ExchangeSlots& es = GetExchangeSlots();
-	
-	Date d(2018,3,29);
-	DaySlots ds;
-	es.GetDaySlots(d, ds);
-	
-	
-}
+
 
 
 
@@ -738,7 +730,7 @@ SlotSignals::~SlotSignals() {
 
 void SlotSignals::Refresh() {
 	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
-		GetBitProcessManager().Get(i, 2).Refresh();
+		GetBitProcessManager().Get(i, SLOT_TF).Refresh();
 	
 	ExchangeSlots& es = GetExchangeSlots();
 	es.Refresh();
@@ -801,7 +793,7 @@ void SlotSignals::Refresh() {
 }
 
 double SlotSignals::Correlation(SlotSignal& slot, int sym, int bit) {
-	BitProcess& bp = GetBitProcessManager().Get(sym, 2);
+	BitProcess& bp = GetBitProcessManager().Get(sym, SLOT_TF);
 	int corr_count = 0;
 	int diff_count = 0;
 	
@@ -827,7 +819,7 @@ double SlotSignals::Correlation(SlotSignal& slot, int sym, int bit) {
 }
 
 double SlotSignals::Predict(SlotSignal& slot, int sym, int datapos) {
-	BitProcess& bp = GetBitProcessManager().Get(sym, 2);
+	BitProcess& bp = GetBitProcessManager().Get(sym, SLOT_TF);
 	
 	int open_pos = slot.data[datapos].open_pos;
 	if (open_pos == -1)
@@ -852,7 +844,7 @@ double SlotSignals::Predict(SlotSignal& slot, int sym, int datapos) {
 }
 
 bool SlotSignals::TryGetSignal(SlotSignal& slot, int sym, int datapos) {
-	SyncedPrice& sp = GetSyncedPriceManager().Get(2);
+	SyncedPrice& sp = GetSyncedPriceManager().Get(SLOT_TF);
 	
 	int open_pos  = slot.data[datapos].open_pos;
 	int close_pos = slot.data[datapos].close_pos;
@@ -891,6 +883,265 @@ SlotSignal* SlotSignals::FindCurrent() {
 	}
 	
 	return &slots[max_i];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int SlotTrailing::GetSignal(int sym) {
+	int sig = 0;
+	
+	Time now = GetUtcTime();
+	
+	for(int i = data.GetCount() - 1; i >= 0; i--) {
+		Data& d = data[i];
+		if (d.open_time > now)
+			continue;
+		sig = d.trailing_signal[sym];
+		break;
+	}
+	
+	return sig;
+}
+
+
+
+SlotTrailings::SlotTrailings() {
+	
+}
+
+SlotTrailings::~SlotTrailings() {
+	
+}
+
+void SlotTrailings::Refresh() {
+	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
+		GetBitProcessManager().Get(i, SLOT_TF).Refresh();
+	
+	SlotSignals& ss = GetSlotSignals();
+	ss.Refresh();
+	
+	if (!is_loaded) {
+		LoadThis();
+		is_loaded = true;
+	}
+	
+	bool train = slots.IsEmpty();
+	bool changes = false;
+	
+	for(int i = 0; i < ss.slots.GetCount(); i++) {
+		unsigned key = ss.slots.GetKey(i);
+		SlotSignal& src = ss.slots[i];
+		SlotTrailing& dst = slots.GetAdd(key);
+		dst.id = src.id;
+		
+		int sym_count = USEDSYMBOL_COUNT;
+		int begin = dst.data.GetCount();
+		int end = src.data.GetCount();
+		changes |= begin != end;
+		begin = max(0, begin - 3);
+		dst.data.SetCount(end);
+		for(int j = begin; j < end; j++) {
+			SlotSignal::Data& srcd = src.data[j];
+			SlotTrailing::Data& dstd = dst.data[j];
+			dstd.open_time  = srcd.open_time;
+			dstd.close_time = srcd.close_time;
+			dstd.open_pos   = srcd.open_pos;
+			dstd.close_pos  = srcd.close_pos;
+			for(int k = 0; k < sym_count; k++) {
+				dstd.signal[k] = srcd.pred_signal[k];
+			}
+		}
+		
+		if (train) {
+			dst.settings.SetCount(sym_count);
+			for(int j = 0; j < sym_count; j++) {
+				dst.settings[j].SetCount(SETTING_COUNT, 0);
+				Optimize(dst, j, dst.settings[j]);
+			}
+		}
+		
+		
+		for(int j = begin; j < end; j++) {
+			SlotTrailing::Data& data = dst.data[j];
+			
+			for(int k = 0; k < sym_count; k++) {
+				Test(dst, k, j, dst.settings[k]);
+			}
+		}
+		
+	}
+	
+	
+	if (changes)
+		StoreThis();
+}
+
+SlotTrailing* SlotTrailings::FindCurrent() {
+	if (slots.IsEmpty())
+		return NULL;
+	
+	Time now = GetUtcTime();
+	
+	Time max_time(1970,1,1);
+	int max_i = 0;
+	
+	for(int i = 0; i < slots.GetCount(); i++) {
+		SlotTrailing& slot = slots[i];
+		
+		for(int j = slot.data.GetCount() - 1; j >= 0; j--) {
+			SlotTrailing::Data& data = slot.data[j];
+			if (data.open_time > now)
+				continue;
+			
+			if (data.open_time > max_time) {
+				max_time = data.open_time;
+				max_i = i;
+			}
+			break;
+		}
+	}
+	
+	return &slots[max_i];
+}
+
+void SlotTrailings::Optimize(SlotTrailing& slot, int sym, Vector<double>& settings) {
+	double max_sum = -DBL_MAX;
+	Vector<double> max_settings;
+	for(int tp_len = 1; tp_len <= 6; tp_len++) {
+		for(int tp_ch = 1; tp_ch <= 10; tp_ch++) {
+			for(int sl_len = 1; sl_len <= 6; sl_len++) {
+				for(int sl_ch = 1; sl_ch <= 10; sl_ch++) {
+					settings[TP_LEN]    = tp_len;
+					settings[TP_CHANGE] = tp_ch * 0.0002;
+					settings[SL_LEN]    = sl_len;
+					settings[SL_CHANGE] = sl_ch * 0.0002;
+					
+					double sum = 0.0;
+					for(int i = 0; i < slot.data.GetCount(); i++) {
+						sum += Test(slot, sym, i, settings);
+					}
+					
+					//DUMP(sum);
+					//DUMPC(settings);
+					
+					if (sum > max_sum) {
+						max_sum = sum;
+						max_settings <<= settings;
+					}
+				}
+			}
+		}
+	}
+	//DUMP(max_sum);
+	//DUMPC(max_settings);
+	
+	settings <<= max_settings;
+	for(int i = 0; i < slot.data.GetCount(); i++)
+		Test(slot, sym, i, settings);
+	
+	if (max_sum <= 0) {
+		if (!settings[INVERSE]) {
+			settings[INVERSE] = true;
+			Optimize(slot, sym, settings);
+		} else {
+			settings[AVOID] = 1;
+		}
+	}
+}
+
+double SlotTrailings::Test(SlotTrailing& slot, int sym, int datapos, Vector<double>& settings) {
+	SlotTrailing::Data& data = slot.data[datapos];
+	SyncedPrice& sp = GetSyncedPriceManager().Get(SLOT_TF);
+	const Vector<double>& open_buf = sp.data[sym].open;
+	double spread = sp.data[sym].spread;
+	
+	bool signal = data.signal[sym];
+	int begin = data.open_pos;
+	int end = min(open_buf.GetCount(), data.close_pos);
+	
+	double tp_len = settings[TP_LEN];
+	double tp_chg = settings[TP_CHANGE];
+	double sl_len = settings[SL_LEN];
+	double sl_chg = settings[SL_CHANGE];
+	bool inverse = settings[INVERSE];
+	bool avoid = settings[AVOID];
+	
+	if (inverse)
+		signal = !signal;
+	
+	if (begin <= 0x100 || end == -1 || avoid) {
+		data.trailing_signal[sym] = 0;
+		data.profit[sym] = 0;
+		return 0;
+	}
+	
+	enum {WAIT_OPEN, IS_OPEN, WAIT_END};
+	int phase = WAIT_OPEN;
+	int sig = 0;
+	
+	double open_price = 0, close_price = 0;
+	bool was_open = false;
+	
+	for(int i = begin; i < end; i++) {
+		
+		if (phase == WAIT_OPEN) {
+			double trail_open = open_buf[i - tp_len];
+			double trail_close = open_buf[i];
+			double trail_ch = trail_close / trail_open - 1.0;
+			bool do_open;
+			if (!signal) do_open = +trail_ch > tp_chg;
+			else         do_open = -trail_ch > tp_chg;
+			if (do_open) {
+				sig = signal ? -1 : +1;
+				phase++;
+				
+				was_open = true;
+				open_price = trail_close;
+			}
+		}
+		if (phase == IS_OPEN) {
+			double trail_open = open_buf[i - sl_len];
+			double trail_close = open_buf[i];
+			double trail_ch = trail_close / trail_open - 1.0;
+			bool do_close;
+			if (!signal) do_close = -trail_ch > sl_chg;
+			else         do_close = +trail_ch > sl_chg;
+			if (do_close) {
+				sig = 0;
+				phase++;
+			}
+			
+			close_price = trail_close;
+		}
+		if (phase == WAIT_END) {
+			break;
+		}
+	}
+	
+	
+	double change;
+	if (!was_open)    change = 0;
+	else if (!signal) change = +(close_price / (open_price + spread) - 1.0);
+	else              change = -(close_price / (open_price - spread) - 1.0);
+	
+	data.profit[sym] = change;
+	data.trailing_signal[sym] = sig;
+	
+	return change;
 }
 
 }

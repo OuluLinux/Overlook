@@ -94,6 +94,7 @@ protected:
 	BitProcessManagerCtrl bitsctrl;
 	ExchangeSlotsCtrl slotctrl;
 	SlotSignalsCtrl sigctrl;
+	SlotTrailingsCtrl trailctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;
@@ -157,6 +158,7 @@ public:
 	void RefreshBits();
 	void RefreshSlots();
 	void RefreshSignals();
+	void RefreshTrailings();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();

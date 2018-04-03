@@ -132,6 +132,7 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
+	Tabify(last, Dockable(trailctrl, "Slot trailing manager").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sigctrl, "Slot signal manager").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(slotctrl, "Exchange slot manager").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(bitsctrl, "Bits manager").SizeHint(Size(300, 200)));
@@ -500,6 +501,7 @@ void Overlook::Data() {
 	if (journal.IsVisible())		RefreshJournal();
 	if (bitsctrl.IsVisible())		RefreshBits();
 	if (slotctrl.IsVisible())		RefreshSlots();
+	if (trailctrl.IsVisible())		RefreshTrailings();
 	if (sigctrl.IsVisible())		RefreshSignals();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
@@ -532,6 +534,10 @@ void Overlook::RefreshSlots() {
 
 void Overlook::RefreshSignals() {
 	sigctrl.Data();
+}
+
+void Overlook::RefreshTrailings() {
+	trailctrl.Data();
 }
 
 void Overlook::RefreshCalendar() {

@@ -222,4 +222,110 @@ void SlotSignalsCtrl::Data() {
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SlotTrailingsCtrl::SlotTrailingsCtrl() {
+	Add(symlist.LeftPos(0,100).TopPos(0,30));
+	Add(find_current.LeftPos(100,100).TopPos(0,30));
+	Add(refresh.LeftPos(200,100).TopPos(0,30));
+	Add(splitter.HSizePos().VSizePos(30));
+	
+	symlist << THISBACK(Data);
+	find_current.SetLabel("Find current");
+	refresh.SetLabel("Refresh");
+	find_current << THISBACK(FindCurrent);
+	refresh << THISBACK(RefreshSource);
+	
+	splitter << slotlist << openlist;
+	splitter.Horz();
+	
+	slotlist.AddColumn("Id");
+	slotlist << THISBACK(Data);
+	
+	openlist.AddColumn("Open time");
+	openlist.AddColumn("Close time");
+	openlist.AddColumn("Profit");
+	openlist.AddColumn("Trailing signal");
+	openlist.AddColumn("Signal");
+	
+}
+
+void SlotTrailingsCtrl::RefreshSource() {
+	SlotTrailings& st = GetSlotTrailings();
+	st.Refresh();
+}
+
+void SlotTrailingsCtrl::FindCurrent() {
+	SlotTrailings& st = GetSlotTrailings();
+	Time now = GetUtcTime();
+	
+	Time max_time(1970,1,1);
+	int max_i = 0;
+	
+	for(int i = 0; i < st.slots.GetCount(); i++) {
+		SlotTrailing& slot = st.slots[i];
+		
+		for(int j = slot.data.GetCount() - 1; j >= 0; j--) {
+			SlotTrailing::Data& data = slot.data[j];
+			if (data.open_time > now)
+				continue;
+			
+			if (data.open_time > max_time) {
+				max_time = data.open_time;
+				max_i = i;
+			}
+			break;
+		}
+	}
+	
+	slotlist.SetCursor(max_i);
+	openlist.SetCursor(openlist.GetCount() - 1);
+}
+
+void SlotTrailingsCtrl::Data() {
+	System& sys = GetSystem();
+	SlotTrailings& st = GetSlotTrailings();
+	
+	if (symlist.GetCount() == 0) {
+		for(int i = 0; i < sys.used_symbols.GetCount(); i++)
+			symlist.Add(sys.used_symbols[i]);
+		symlist.SetIndex(0);
+	}
+	
+	for(int i = 0; i < st.slots.GetCount(); i++) {
+		SlotTrailing& slot = st.slots[i];
+		
+		slotlist.Set(i, 0, slot.id);
+	}
+	
+	int sym = symlist.GetIndex();
+	int cursor = slotlist.GetCursor();
+	if (cursor >= 0 && cursor < st.slots.GetCount()) {
+		SlotTrailing& slot = st.slots[cursor];
+		
+		for(int j = 0; j < slot.data.GetCount(); j++) {
+			SlotTrailing::Data& data = slot.data[j];
+			
+			openlist.Set(j, 0, data.open_time);
+			openlist.Set(j, 1, data.close_time);
+			openlist.Set(j, 2, data.profit[sym]);
+			openlist.Set(j, 3, data.trailing_signal[sym]);
+			openlist.Set(j, 4, data.signal[sym]);
+		}
+		openlist.SetCount(slot.data.GetCount());
+	}
+}
+
 }

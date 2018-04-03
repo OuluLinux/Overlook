@@ -44,6 +44,8 @@ typedef const int ConstInt;
 #define USEDSYMBOL_COUNT 6
 #endif
 
+#define SLOT_TF 1
+
 enum {
 	PHASE_TRAINING,
 	PHASE_REAL

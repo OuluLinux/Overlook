@@ -473,12 +473,12 @@ bool System::RefreshReal() {
 			return true;
 		}
 		
-		GetSlotSignals().Refresh();
-		SlotSignal* ss = GetSlotSignals().FindCurrent();
-		if (ss) {
+		GetSlotTrailings().Refresh();
+		SlotTrailing* st = GetSlotTrailings().FindCurrent();
+		if (st) {
 			for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 				int sym = used_symbols_id[i];
-				int signal = ss->GetSignal(i);
+				int signal = st->GetSignal(i);
 				SetSignal(sym, signal);
 			}
 			mt.SetFreeMarginLevel(0.6);

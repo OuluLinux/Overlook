@@ -11,6 +11,7 @@ protected:
 	friend class BitProcess;
 	friend class ExchangeSlots;
 	friend class SlotSignals;
+	friend class SlotTrailings;
 	
 	struct Data : Moveable<Data> {
 		Vector<double> open, low, high;
@@ -221,8 +222,6 @@ public:
 
 inline ExchangeSlots& GetExchangeSlots() {return Single<ExchangeSlots>();}
 
-void TestExchangeSlots();
-
 class SlotSignal : Moveable<SlotSignal> {
 	
 	
@@ -280,6 +279,69 @@ public:
 };
 
 inline SlotSignals& GetSlotSignals() {return Single<SlotSignals>();}
+
+
+
+class SlotTrailing : Moveable<SlotTrailing> {
+	
+	
+public:
+	struct Data : Moveable<Data> {
+		Time open_time, close_time;
+		int open_pos = -1, close_pos = -1;
+		double profit[USEDSYMBOL_COUNT];
+		int trailing_signal[USEDSYMBOL_COUNT];
+		bool signal[USEDSYMBOL_COUNT];
+		 
+		void Serialize(Stream& s) {
+			if (s.IsLoading())
+				s.Get(this, sizeof(Data));
+			else
+				s.Put(this, sizeof(Data));
+		}
+	};
+	Vector<Vector<double> > settings;
+	Vector<Data> data;
+	String id;
+	
+public:
+	
+	void Serialize(Stream& s) {s % settings % data % id;}
+	
+	int GetSignal(int sym);
+};
+
+
+class SlotTrailings {
+	
+public:
+	VectorMap<unsigned, SlotTrailing> slots;
+	
+	bool is_loaded = false;
+	
+public:
+	typedef SlotTrailings CLASSNAME;
+	SlotTrailings();
+	~SlotTrailings();
+	
+	enum {TP_LEN, TP_CHANGE, SL_LEN, SL_CHANGE, INVERSE, AVOID, SETTING_COUNT};
+	
+	void Refresh();
+	void Optimize(SlotTrailing& slot, int sym, Vector<double>& settings);
+	double Test(SlotTrailing& slot, int sym, int datapos, Vector<double>& settings);
+	
+	String GetPath() {return ConfigFile("SlotTrailings.bin");}
+	void LoadThis() {LoadFromFile(*this, GetPath());}
+	void StoreThis() {StoreToFile(*this, GetPath());}
+	void Serialize(Stream& s) {s % slots;}
+	
+	SlotTrailing* FindCurrent();
+	
+};
+
+inline SlotTrailings& GetSlotTrailings() {return Single<SlotTrailings>();}
+
+
 
 }
 

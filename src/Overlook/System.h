@@ -70,6 +70,7 @@ class System {
 	
 protected:
 	
+	friend class SlotTrailingsCtrl;
 	friend class SystemBooleanView;
 	friend class DataBridgeCommon;
 	friend class SlotSignalsCtrl;

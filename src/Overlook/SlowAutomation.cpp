@@ -298,8 +298,11 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 }
 
 void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
-	double change = (open_buf[pos + dqn_rightoffset - 1] - open_buf[pos]) / point * 0.01;
-	output[0] = change;
+	double diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
+	bool p = diff > +spread;
+	bool n = diff < -spread;
+	output[0] = p ? 0 : 1;
+	output[1] = n ? 0 : 1;
 }
 
 void SlowAutomation::Evolve() {
@@ -330,6 +333,12 @@ void SlowAutomation::Evolve() {
 		iters++;
 	}
 	
+	/*static bool once;
+	if (!once) {
+		dqn_cursor = 0;
+		once = true;
+	}*/
+	
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor;
 		for(; cursor < processbits_cursor; cursor++) {
@@ -345,9 +354,8 @@ void SlowAutomation::Evolve() {
 			
 			dqn.Evaluate(input, output, dqn_output_size);
 			
-			double change = output[0];
-			bool signal = change < 0.0;
-			bool enabled = fabs(change) > (spread * 2 / point * 0.01);
+			bool signal = output[0] > output[1];
+			bool enabled = output[0] < 0.5 || output[1] < 0.5;
 			
 			if (!enabled && cursor > 0) {
 				bool prev_signal  = GetBitOutput(cursor-1, OUT_EVOLVE_SIG);

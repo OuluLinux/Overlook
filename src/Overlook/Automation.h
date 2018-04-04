@@ -53,7 +53,7 @@ protected:
 	static const int processbits_reserved = processbits_row_size * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	static const int dqn_output_size = 1;
+	static const int dqn_output_size = 2;
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	

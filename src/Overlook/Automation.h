@@ -30,11 +30,11 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24; // H1
+	static const int wdayhours = 5*24*12; // M5
 	static const int maxcount = 14*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 10000;
-	static const int dqn_rightoffset = 3+1;
+	static const int dqn_rightoffset = 1+1;
 	#ifdef flagDEBUG
 	static const int max_iters = 10000;
 	#else
@@ -53,8 +53,7 @@ protected:
 	static const int processbits_reserved = processbits_row_size * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	enum {DQN_LONG, DQN_SHORT, DQN_IDLE, DQN_ACTIONS};
-	static const int dqn_output_size = DQN_ACTIONS;
+	static const int dqn_output_size = 1;
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	
@@ -115,6 +114,7 @@ public:
 	int		GetSignal();
 	
 	void	LoadInput(Dqn::MatType& input, int pos);
+	void	LoadOutput(double output[dqn_output_size], int pos);
 };
 
 class Automation {

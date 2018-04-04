@@ -297,123 +297,67 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 	}
 }
 
+void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
+	double change = (open_buf[pos + dqn_rightoffset - 1] - open_buf[pos]) / point * 0.01;
+	output[0] = change;
+}
+
 void SlowAutomation::Evolve() {
 	int& iters = this->dqn_iters;
 	
-	const double max_alpha = 0.1;
-	const double max_epsilon = 0.2;
+	const double max_alpha = 0.01;
 	
 	if (!iters) {
 		dqn.Init();
 	}
 	
-	dqn.SetGamma(0.0);
-	
-	int train_count = processbits_cursor - dqn_rightoffset - 1;
-	int train_cursor = 0;
+	dqn.SetEpsilon(0);
+	dqn.SetGamma(0);
 	
 	while (*running && iters < max_iters) {
+		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
+		Dqn::MatType input;
+		double output[dqn_output_size];
 		
-		Dqn::DQItemType& item = train_cache[dqn_item_cursor++];
-		if (dqn_item_cursor >= dqn_items_count)
-			dqn_item_cursor = 0;
-		dqn_items_total++;
+		double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
+		dqn.SetAlpha(alpha);
 		
+		LoadInput(input, pos);
+		LoadOutput(output, pos);
 		
-		// Act for agent
-		double epsilon = max_epsilon * (double)(max_iters-1-iters) / (double)max_iters;
-		dqn.SetEpsilon(epsilon);
-		LoadInput(item.before_state, train_cursor);
-		LoadInput(item.after_state,  train_cursor + 1);
-		item.before_action = dqn.Act(item.before_state);
-		
-		if (item.before_action == DQN_IDLE) {
-			item.after_reward = 0.0;
-		} else {
-			#if 0
-			int open_pos = train_cursor;
-			int close_pos = train_cursor + 1;
-			#else
-			// Peek reward. No theoretical support.
-			int max_peek = 3;
-			int open_pos = train_cursor - 1;
-			int close_pos = train_cursor + 1;
-			while (close_pos < train_count) {
-				Dqn::MatType before_state;
-				LoadInput(before_state, close_pos);
-				int action = dqn.Act(before_state);
-				if (action != item.before_action)
-					break;
-				close_pos++;
-				if (close_pos - train_cursor > max_peek)
-					break;
-			}
-			while (open_pos >= 0) {
-				Dqn::MatType before_state;
-				LoadInput(before_state, open_pos);
-				int action = dqn.Act(before_state);
-				if (action != item.before_action)
-					break;
-				open_pos--;
-				if (train_cursor - open_pos > max_peek)
-					break;
-			}
-			open_pos++;
-			#endif
-			
-			int len = close_pos - open_pos;
-			double open = open_buf[open_pos];
-			double close = open_buf[close_pos];
-			
-			double change;
-			if (item.before_action == DQN_LONG)
-				change = +(close / (open + spread) - 1.0) / len;
-			else
-				change = -(close / (open - spread) - 1.0) / len;
-			
-			item.after_reward = change; // *10 more than 10 breaks result entirely
-			LOG(item.after_reward);
-		}
-		
-		train_cursor += Random(64);
-		if (train_cursor > train_count)
-			train_cursor = 0;
-		
-		
-		// Train random event few times
-		#if 1
-		if (dqn_items_total > 100) {
-			double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
-			dqn.SetAlpha(alpha);
-			
-			int pos = Random(min(dqn_items_total, (uint64)dqn_items_count));
-			Dqn::DQItemType& item = train_cache[pos];
-			dqn.Learn(item);
-		}
-		#else
-		dqn.Learn(item);
-		#endif
+		dqn.Learn(input, output);
 		
 		iters++;
 	}
 	
 	if (iters >= max_iters) {
-		for(; dqn_cursor < processbits_cursor; dqn_cursor++) {
+		int& cursor = dqn_cursor;
+		for(; cursor < processbits_cursor; cursor++) {
 			#ifdef flagDEBUG
-			if (dqn_cursor == 10000)
-				dqn_cursor = processbits_cursor - 1;
+			if (cursor == 10000)
+				cursor = processbits_cursor - 1;
 			#endif
 			
 			Dqn::MatType input;
-			LoadInput(input, dqn_cursor);
+			double output[dqn_output_size];
 			
-			int action = dqn.Act(input);
+			LoadInput(input, cursor);
 			
-			bool enabled = action != DQN_IDLE;
-			bool signal = action == DQN_SHORT;
+			dqn.Evaluate(input, output, dqn_output_size);
 			
-			SetBitOutput(dqn_cursor, OUT_EVOLVE_SIG, signal);
-			SetBitOutput(dqn_cursor, OUT_EVOLVE_ENA, enabled);
+			double change = output[0];
+			bool signal = change < 0.0;
+			bool enabled = fabs(change) > (spread * 2 / point * 0.01);
+			
+			if (!enabled && cursor > 0) {
+				bool prev_signal  = GetBitOutput(cursor-1, OUT_EVOLVE_SIG);
+				bool prev_enabled = GetBitOutput(cursor-1, OUT_EVOLVE_ENA);
+				if (prev_enabled && prev_signal == signal)
+					enabled = true;
+			}
+			
+			SetBitOutput(cursor, OUT_EVOLVE_SIG, signal);
+			SetBitOutput(cursor, OUT_EVOLVE_ENA, enabled);
 		}
 	}
 }

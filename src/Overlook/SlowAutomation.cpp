@@ -6,6 +6,8 @@ namespace Overlook {
 void SlowAutomation::ProcessBits() {
 	bool initial = processbits_cursor == 0;
 	
+	if (!initial) processbits_cursor--;
+	
 	for (; processbits_cursor < loadsource_cursor; processbits_cursor++) {
 		#ifdef flagDEBUG
 		if (processbits_cursor == 10000) {
@@ -341,6 +343,8 @@ void SlowAutomation::Evolve() {
 	
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor;
+		if (cursor > 0)
+			cursor--;
 		for(; cursor < processbits_cursor; cursor++) {
 			#ifdef flagDEBUG
 			if (cursor == 10000)
@@ -371,19 +375,36 @@ void SlowAutomation::Evolve() {
 }
 
 int SlowAutomation::GetSignal() {
-	int last = dqn_cursor - 1;
-	if (last < 0) return 0;
-	bool signal  = GetBitOutput(last, OUT_EVOLVE_SIG);
-	bool enabled = GetBitOutput(last, OUT_EVOLVE_ENA);
-	int sig = enabled ? (signal ? -1 : +1) : 0;
-	/*
-	int wday = DayOfWeek(time) - 1;
-	int wdaymins = (wday * 24 + time.hour) * 60 + time.minute;
-	int wdayslot = wdaymins / period;
-	if (wdayslot >= 0 && wdayslot < wdayhours && !enabled_slot[wdayslot])
-		sig = 0;
-	*/
-	return sig;
+	int cursor = dqn_cursor - 1;
+	if (cursor < 0) return 0;
+	
+	Dqn::MatType input;
+	double output[dqn_output_size];
+	
+	LoadInput(input, cursor);
+	
+	dqn.Evaluate(input, output, dqn_output_size);
+	
+	bool signal = output[0] > output[1];
+	return signal;
+}
+
+int SlowAutomation::GetLevel() {
+	int cursor = dqn_cursor - 1;
+	if (cursor < 0) return 0;
+	
+	Dqn::MatType input;
+	double output[dqn_output_size];
+	
+	LoadInput(input, cursor);
+	
+	dqn.Evaluate(input, output, dqn_output_size);
+	
+	bool signal = output[0] > output[1];
+	if (!signal)
+		return (output[0] - 0.5) * -20;
+	else
+		return (output[1] - 0.5) * -20;
 }
 
 }

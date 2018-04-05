@@ -21,6 +21,7 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "System.h"
 #include "Automation.h"
+#include "Game.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
@@ -29,6 +30,7 @@ using namespace Upp;
 #include "Navigator.h"
 #include "ChartManager.h"
 #include "AutomationCtrl.h"
+#include "GameCtrl.h"
 
 
 namespace Overlook {
@@ -91,10 +93,12 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
-	AutomationCtrl sysctrl;
+	AutomationCtrl autoctrl;
+	GameCtrl gamectrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;
+	bool enable_automation = false;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void ToggleRightOffset();
@@ -152,6 +156,7 @@ public:
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshJournal();
+	void RefreshGame();
 	void RefreshSystem();
 	void RefreshCalendar();
 	void RefreshTrades();
@@ -176,7 +181,6 @@ public:
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}
-	AutomationCtrl& GetAutomationCtrl() {return sysctrl;}
 	
 	// Public vars
 	Callback WhenExit;

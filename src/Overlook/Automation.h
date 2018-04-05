@@ -27,6 +27,7 @@ protected:
 	friend class Automation;
 	friend class BooleansDraw;
 	friend class System;
+	friend class Game;
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
@@ -112,6 +113,7 @@ public:
 	bool	GetBit(int pos, int bit) const;
 	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
 	int		GetSignal();
+	int		GetLevel();
 	
 	void	LoadInput(Dqn::MatType& input, int pos);
 	void	LoadOutput(double output[dqn_output_size], int pos);
@@ -124,6 +126,7 @@ protected:
 	friend class AutomationCtrl;
 	friend class BooleansDraw;
 	friend class System;
+	friend class Game;
 	
 	
 	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_COUNT};

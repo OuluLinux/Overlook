@@ -132,7 +132,8 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
-	Tabify(last, Dockable(sysctrl, "Automation").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(gamectrl, "Game").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(autoctrl, "Automation").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -446,7 +447,8 @@ void Overlook::DeepRefresh() {
 			common.DownloadAskBid();
 			common.RefreshAskBidData(true);
 			GetCalendar().Data();
-			sys.RefreshReal();
+			if (enable_automation)
+				sys.RefreshReal();
 			
 			mt_refresh.Reset();
 			
@@ -496,7 +498,8 @@ void Overlook::Data() {
 	watch.Data();
 	
 	if (journal.IsVisible())		RefreshJournal();
-	if (sysctrl.IsVisible())		RefreshSystem();
+	if (gamectrl.IsVisible())		RefreshGame();
+	if (autoctrl.IsVisible())		RefreshSystem();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
@@ -518,8 +521,12 @@ void Overlook::RefreshJournal() {
 	
 }
 
+void Overlook::RefreshGame() {
+	gamectrl.Data();
+}
+
 void Overlook::RefreshSystem() {
-	sysctrl.Data();
+	autoctrl.Data();
 }
 
 void Overlook::RefreshCalendar() {

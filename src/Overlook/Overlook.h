@@ -21,6 +21,7 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "System.h"
 #include "Automation.h"
+#include "ExpertSystem.h"
 #include "Game.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
@@ -30,6 +31,7 @@ using namespace Upp;
 #include "Navigator.h"
 #include "ChartManager.h"
 #include "AutomationCtrl.h"
+#include "ExpertSystemCtrl.h"
 #include "GameCtrl.h"
 
 
@@ -94,11 +96,11 @@ protected:
 	MenuBar menu;
 	TimeStop mt_refresh;
 	AutomationCtrl autoctrl;
+	ExchangeSlotsCtrl slotctrl;
 	GameCtrl gamectrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
-	bool default_running = false;
-	bool enable_automation = false;
+	bool enable_automation = true;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void ToggleRightOffset();
@@ -158,6 +160,7 @@ public:
 	void RefreshJournal();
 	void RefreshGame();
 	void RefreshSystem();
+	void RefreshSlots();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();
@@ -169,11 +172,8 @@ public:
 	void LoadPreviousProfile();
 	void StorePreviousProfile();
 	void SaveProfile();
-	void LoadAdvisorProfile();
-	void LoadAdvisorProfileFinish();
-	void LoadAdvisorProfileThread();
-	void LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count);
 	void LoadOpenOrderCharts();
+	void LoadDefaultProfile(int sym);
 	void PostLoadOpenOrderCharts() {PostCallback(THISBACK(LoadOpenOrderCharts));}
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);

@@ -117,7 +117,7 @@ Overlook::Overlook() : watch(this) {
 	calendar.AddColumn("Previous");
 	calendar.AddColumn("Actual");
 	
-	GetSystem().WhenJobOrders << THISBACK(PostLoadOpenOrderCharts);
+	//GetSystem().WhenJobOrders << THISBACK(PostLoadOpenOrderCharts);
 	
 	PostRefreshData();
 }
@@ -134,6 +134,7 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(gamectrl, "Game").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(autoctrl, "Automation").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(slotctrl, "Exchange slots").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -173,7 +174,6 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
-		bar.Add(!default_running, "Load default advisor profile", THISBACK(LoadAdvisorProfile));
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
@@ -500,6 +500,7 @@ void Overlook::Data() {
 	if (journal.IsVisible())		RefreshJournal();
 	if (gamectrl.IsVisible())		RefreshGame();
 	if (autoctrl.IsVisible())		RefreshSystem();
+	if (slotctrl.IsVisible())		RefreshSlots();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
@@ -527,6 +528,10 @@ void Overlook::RefreshGame() {
 
 void Overlook::RefreshSystem() {
 	autoctrl.Data();
+}
+
+void Overlook::RefreshSlots() {
+	slotctrl.Data();
 }
 
 void Overlook::RefreshCalendar() {
@@ -882,8 +887,8 @@ void Overlook::ActiveWindowChanged() {
 		keep_at_end.Set(b);
 	}
 }
-
-void Overlook::LoadAdvisorProfileFinish() {
+/*
+void Overlook::LoadAdvisorProfile() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
@@ -902,88 +907,26 @@ void Overlook::LoadAdvisorProfileFinish() {
 	
 	LoadProfile(profile);
 	TileWindow();
-	default_running = false;
 }
-
-#if 1
-
-void Overlook::LoadAdvisorProfile() {
-	LoadAdvisorProfileFinish();
-}
-
-#else
-void Overlook::LoadAdvisorProfile() {
-	default_running = true;
-	Thread::Start(THISBACK(LoadAdvisorProfileThread));
-}
-
-void Overlook::LoadAdvisorProfileThread() {
+*/
+void Overlook::LoadDefaultProfile(int sym) {
 	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
 	
+	int tf = 0;
+	int id = FACTORY_ChannelOscillator;
 	
-	int sym_count = sys.GetSymbolCount();
+	ProfileGroup& pgroup = profile.charts.Add();
+	pgroup.symbol = sym;
+	pgroup.tf = tf;
+	pgroup.keep_at_end = true;
+	pgroup.right_offset = true;
+	pgroup.decl.factory = id;
 	
-	
-	// Process DataBridge in single thread
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	Vector<Ptr<CoreItem> > work_queue;
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	FactoryDeclaration decl;
-	decl.factory = 0;
-	indi_ids.Add(decl);
-	tf_ids.Add(0);
-	for(int i = 0; i < sym_count; i++) sym_ids.Add(i);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
-	
-	
-	
-	One<Atomic> running_count = new Atomic(0), finished_count = new Atomic(0);
-	
-	for(int i = 0; i < sym_count; i++) {
-		Thread::Start(THISBACK3(LoadAdvisorProfileIterate, i, running_count.Get(), finished_count.Get()));
-	}
-	
-	while (!Thread::IsShutdownThreads() && finished_count < sym_count) Sleep(100);
-	
-	PostCallback(THISBACK(LoadAdvisorProfileFinish));
+	LoadProfile(profile);
+	TileWindow();
 }
-
-void Overlook::LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count) {
-	const int max_count = GetUsedCpuCores();
-	System& sys = GetSystem();
-	
-	while (true) {
-		int run_id = ++(*running_count);
-		if (run_id < max_count)
-			break;
-		(*running_count)--;
-		Sleep(500);
-	}
-	
-	
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	Vector<Ptr<CoreItem> > work_queue;
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	FactoryDeclaration decl;
-	decl.factory = System::Find<ObviousAdvisor>();
-	indi_ids.Add(decl);
-	tf_ids.Add(0);
-	sym_ids.Add(symbol);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
-	
-	
-	(*running_count)--;
-	(*finished_count)++;
-}
-#endif
 
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();

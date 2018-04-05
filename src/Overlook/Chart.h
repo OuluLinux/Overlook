@@ -13,6 +13,8 @@ class Chart : public SubWindowCtrl {
 protected:
 	friend class Overlook;
 	
+	static const int screen_count = 256;
+	
 	Array<GraphCtrl> graphs;
 	ChartImage image;
 	Splitter split;
@@ -39,7 +41,7 @@ public:
 	void Clear();
 	GraphCtrl& AddGraph(GraphImage& gi);
 	void SetGraph();
-	void SetShift(int i) {shift = i;}
+	void SetShift(int i);
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
 	void Settings();

@@ -112,7 +112,7 @@ public:
 	void	SetBitCurrent(int bit, bool value) {SetBit(processbits_cursor, bit, value);}
 	bool	GetBit(int pos, int bit) const;
 	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
-	int		GetSignal();
+	bool	GetSignal();
 	int		GetLevel();
 	
 	void	LoadInput(Dqn::MatType& input, int pos);

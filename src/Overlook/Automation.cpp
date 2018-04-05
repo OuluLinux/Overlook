@@ -195,13 +195,11 @@ void Automation::LoadSource() {
 			slow[smallest_ids[i]].loadsource_pos++;
 		}
 		
-		bool inc_cursor = smallest_time > largest_time;
+		bool dec_cursor = smallest_time == largest_time;
 		
 		for(int i = 0; i < sym_count; i++) {
-			if (inc_cursor)
-				slow[i].loadsource_cursor++;
-			if (slow[i].loadsource_cursor >= slow[i].maxcount)
-				Panic("Reserved memory exceeded");
+			if (dec_cursor)
+				slow[i].loadsource_cursor--;
 			
 			int sym = used_symbols_id[i];
 			DataBridge& db = sys.data[sym][tf].db;
@@ -210,6 +208,10 @@ void Automation::LoadSource() {
 			double open = db.open[pos];
 			slow[i].open_buf[slow[i].loadsource_cursor] = open;
 			slow[i].time_buf[slow[i].loadsource_cursor] = smallest_time;
+			
+			slow[i].loadsource_cursor++;
+			if (slow[i].loadsource_cursor >= slow[i].maxcount)
+				Panic("Reserved memory exceeded");
 		}
 		
 	}

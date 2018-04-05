@@ -53,13 +53,22 @@ enum {
 
 #define FACTORY_LIST \
 FITEM(DataSource) \
+FITEM(ParabolicSAR) \
+FITEM(StochasticOscillator) \
+FITEM(SupportResistanceOscillator) \
+FITEM(ChannelOscillator) \
+FITEM(ScissorChannelOscillator) \
+FITEM(OnlineMinimalLabel) \
+FITEM(Psychological) \
+FITEM(SupportResistance) \
+FITEM(FractalOsc) \
+\
 FITEM(ValueChange) \
 FITEM(MovingAverage) \
 FITEM(MovingAverageConvergenceDivergence) \
 FITEM(AverageDirectionalMovement) \
 FITEM(BollingerBands) \
 FITEM(Envelopes) \
-FITEM(ParabolicSAR) \
 FITEM(StandardDeviation) \
 FITEM(AverageTrueRange) \
 FITEM(BearsPower) \
@@ -71,7 +80,6 @@ FITEM(Momentum) \
 FITEM(OsMA) \
 FITEM(RelativeStrengthIndex) \
 FITEM(RelativeVigorIndex) \
-FITEM(StochasticOscillator) \
 FITEM(WilliamsPercentRange) \
 FITEM(AccumulationDistribution) \
 FITEM(MoneyFlowIndex) \
@@ -81,13 +89,9 @@ FITEM(Volumes) \
 FITEM(AcceleratorOscillator) \
 FITEM(AwesomeOscillator) \
 FITEM(Fractals) \
-FITEM(FractalOsc) \
 FITEM(MarketFacilitationIndex) \
 FITEM(LinearTimeFrames) \
 FITEM(LinearWeekTime) \
-FITEM(SupportResistance) \
-FITEM(SupportResistanceOscillator) \
-FITEM(Psychological) \
 FITEM(ZigZag) \
 FITEM(ZigZagOsc) \
 FITEM(TrendChange) \
@@ -97,17 +101,10 @@ FITEM(VolatilityAverage) \
 FITEM(MinimalLabel) \
 FITEM(VolatilitySlots) \
 FITEM(VolumeSlots) \
-FITEM(ChannelOscillator) \
-FITEM(ScissorChannelOscillator) \
 FITEM(TrendIndex) \
-FITEM(OnlineMinimalLabel) \
 FITEM(ReactionContext) \
 FITEM(VolatilityContext) \
-FITEM(SystemBooleanView) \
-FITEM(ChannelContext) /*\
-FITEM(Obviousness) \
-FITEM(VolatilityContextReversal) \
-FITEM(ObviousTargetValue)*/
+FITEM(ChannelContext)
 
 #define FITEM(x) FACTORY_##x ,
 

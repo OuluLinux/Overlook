@@ -27,11 +27,15 @@ class GameCtrl : public ParentCtrl {
 	WithGameView<ParentCtrl> view;
 	GameMatchCtrl match;
 	GameOrderCtrl order;
+	
 public:
 	typedef GameCtrl CLASSNAME;
 	GameCtrl();
 	
 	void Data();
+	void SetView();
+	void Start();
+	void Stop();
 	
 };
 

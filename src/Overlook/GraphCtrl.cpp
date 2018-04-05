@@ -186,7 +186,8 @@ void GraphCtrl::Paint(Draw& draw) {
 	        int x = latest_mouse_move_pt.x;
 	        int pos = data_count - count + (x - border) / div - shift;
 	        last_time_value_tool_pos = pos;
-	        if (pos >= 0 && pos < data_count) {
+	        int begin = bd_src->GetBuffer(4).data_begin;
+	        if (pos >= begin && pos < data_count) {
 	            Time t = Time(1970,1,1) + bd_src->GetBuffer(4).Get(pos);
 	            String timestr = Format("%", t);
 	            Font fnt = StdFont(12);

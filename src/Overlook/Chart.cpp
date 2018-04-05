@@ -35,14 +35,25 @@ void Chart::RefreshCore() {
 	Data();
 }
 
+void Chart::SetShift(int i) {
+	shift = i;
+	
+	int bars = GetSystem().GetSource(symbol, tf).db.open.GetCount();
+	if (bars - shift < image.begin + screen_count/* || bars - shift > image.end*/)
+		RefreshImage();
+}
+
 void Chart::RefreshImage() {
 	System& sys = GetSystem();
 	SourceImage& si = sys.GetSource(symbol, tf);
 	si.db.Start();
 	int bars = si.db.open.GetCount();
-	const int screen_count = 256;
-	image.begin = bars - screen_count;
-	image.end = bars;
+	
+	int new_begin = max(0, bars - screen_count - shift);
+	if (image.begin == 0) image.begin = new_begin;
+	else                  image.begin = min(image.begin, new_begin);
+	
+	image.end = image.begin + screen_count;
 	image.symbol = symbol;
 	image.tf = tf;
 	image.period = si.db.GetPeriod();
@@ -88,8 +99,11 @@ Chart& Chart::SetFactory(int f) {
 }
 
 void Chart::Start() {
-	if (keep_at_end) shift = 0;
-	RefreshCoreData(false);
+	if (keep_at_end) {
+		shift = 0;
+		image.begin = 0; // undo seeking to beginning
+		RefreshCoreData(false);
+	}
 	Refresh();
 }
 

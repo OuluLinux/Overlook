@@ -444,6 +444,9 @@ void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
 }
 
 bool System::RefreshReal() {
+	static Mutex lock;
+	lock.Enter();
+	
 	try {
 		Time now				= GetUtcTime();
 		int wday				= DayOfWeek(now);
@@ -451,11 +454,12 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Automation& a			= GetAutomation();
+		Game& a					= GetGame();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
 			LOG("Skipping weekend...");
+			lock.Leave();
 			return true;
 		}
 		
@@ -470,12 +474,13 @@ bool System::RefreshReal() {
 			}
 			
 			mt.SignalOrders(true);
+			lock.Leave();
 			return true;
 		}
 		
 		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
-			int signal = a.slow[i].GetSignal();
+			int signal = a.signal[i];;
 			SetSignal(sym, signal);
 		}
 		
@@ -510,17 +515,19 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
-			mt.SetFreeMarginLevel(a.GetFreeMarginLevel());
-			mt.SetFreeMarginScale(a.GetFreeMarginScale());
+			mt.SetFreeMarginLevel(a.free_margin_level);
+			mt.SetFreeMarginScale(a.free_margin_scale);
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {
 			LOG(e);
 			AddJournal("Error in updating metatrader: " + e);
+			lock.Leave();
 			return false;
 		}
 		catch (...) {
 			AddJournal("Unknown error in updating metatrader");
+			lock.Leave();
 			return false;
 		}
 		
@@ -530,12 +537,14 @@ bool System::RefreshReal() {
 		WhenRealtimeUpdate();
 		WhenPopTask();
 		
-		if (a.IsRunning() && sig_change)
+		if (sig_change)
 			WhenJobOrders();
 		
+		lock.Leave();
 		return true;
 	}
 	catch (ConnectionError e) {
+		lock.Leave();
 		return false;
 	}
 }

@@ -344,7 +344,7 @@ void SlowAutomation::Evolve() {
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor;
 		if (cursor > 0)
-			cursor--;
+			cursor -= 3;
 		for(; cursor < processbits_cursor; cursor++) {
 			#ifdef flagDEBUG
 			if (cursor == 10000)
@@ -374,7 +374,7 @@ void SlowAutomation::Evolve() {
 	}
 }
 
-int SlowAutomation::GetSignal() {
+bool SlowAutomation::GetSignal() {
 	int cursor = dqn_cursor - 1;
 	if (cursor < 0) return 0;
 	

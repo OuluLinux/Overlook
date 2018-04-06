@@ -15,10 +15,13 @@ public:
 };
 
 class GameOrderCtrl : public Ctrl {
+	Vector<Point> polyline;
 	
 public:
 	virtual void Paint(Draw& w);
 
+	int sym = 0;
+	
 };
 
 class GameCtrl : public ParentCtrl {
@@ -36,7 +39,8 @@ public:
 	void SetView();
 	void Start();
 	void Stop();
-	
+	void GetValues();
+	void SetValues();
 };
 
 }

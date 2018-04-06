@@ -53,7 +53,6 @@ void Game::Refresh() {
 		go.level      = sa.GetLevel();
 		opp_sum.Add(i, go.level);
 		
-		max_level = max(max_level, go.level);
 		
 		{
 			double open  = sa.open_buf[end-2];
@@ -71,24 +70,27 @@ void Game::Refresh() {
 	SortByValue(trend_sum,  StdGreater<int>());
 	SortByValue(opp_sum,    StdGreater<int>());
 	
+	GetMetaTrader()._GetOrders(0, false);
 	
 	GetExchangeSlots().Refresh();
 	Slot* slot = GetExchangeSlots().FindCurrent();
+	bool signal_changed = false;
 	
 	for(int i = 0; i < a.sym_count; i++) {
 		GameOpportunity& go = opps[i];
 		SlowAutomation& sa  = a.slow[i];
 		
-		go.created    = GetUtcTime();
 		go.vol_idx    = volat_sum.Find(i);
 		go.spread_idx = spread_sum.Find(i);
 		go.trend_idx  = trend_sum.Find(i);
 		go.opp_idx    = opp_sum.Find(i);
 		go.bcase_idx  = best_cases.Find(i);
 		
+		if (go.spread_idx < 6)
+			max_level = max(max_level, go.level);
 		
+		int sys_sym = sys.used_symbols_id[i];
 		if (slot) {
-			int sys_sym = sys.used_symbols_id[i];
 			String sym = sys.GetSymbol(sys_sym);
 			String a = sym.Left(3);
 			String b = sym.Right(3);
@@ -98,10 +100,58 @@ void Game::Refresh() {
 			if (slot->currencies.Find(b) != -1) go.is_active = true;
 		}
 		
+		double lots = 0.0, profit = 0.0;
+		const auto& open_orders = mt.GetOpenOrders();
+		for(int j = 0; j < open_orders.GetCount(); j++) {
+			const Order& o = open_orders[j];
+			if (o.symbol == sys_sym) {
+				lots += o.volume;
+				profit = o.profit;
+			}
+		}
+		go.profit = lots > 0.0 ? profit / (lots / 0.01) : 0.0;
+		
+		
+		if (go.prev_lots == 0.0 && lots > 0.0) {
+			
+			// Clear drawer
+			go.open_profits.SetCount(0);
+			
+			// Set opening time
+			go.opened = GetUtcTime();
+		}
+		go.prev_lots = lots;
+		
+		
+		if (lots > 0.0) {
+			// Check SL/TP limits
+			if (go.profit > tplimit || go.profit < sllimit) {
+				signal[i] = 0;
+				signal_changed = true;
+			}
+			
+			// Check time limits
+			int length = (GetUtcTime().Get() - go.opened.Get()) / 60;
+			if (length >= timelimit) {
+				signal[i] = 0;
+				signal_changed = true;
+			}
+			
+			go.open_profits.Add(go.profit);
+		}
+		else {
+			if (autostart && go.spread_idx < spread_limit && go.level > 0) {
+				signal[i] = go.signal;
+				signal_changed = true;
+			}
+		}
 	}
 	
+	if (signal_changed)
+		sys.RefreshReal();
 	
-	if (max_level != prev_max_level && max_level > 0)
+	
+	if (max_level != prev_max_level && max_level >= spread_limit)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);
 	prev_max_level = max_level;
 }

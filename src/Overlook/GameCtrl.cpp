@@ -14,6 +14,13 @@ void GameOrderCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
+	id.DrawRect(sz, White());
+	
+	Game& game = GetGame();
+	if (sym >= 0 && sym < game.opps.GetCount()) {
+		GameOpportunity& go = game.opps[sym];
+		DrawVectorPolyline(id, sz, go.open_profits, polyline);
+	}
 	
 	w.DrawImage(0, 0, id);
 }
@@ -33,9 +40,15 @@ GameCtrl::GameCtrl() {
 	view.signal.Add("Suggested");
 	view.signal.Add("Long");
 	view.signal.Add("Short");
-	view.fmlevel.SetData(0.6);
-	view.maxsym.SetData(1);
 	view.signal.SetIndex(0);
+	
+	view.fmlevel << THISBACK(SetValues);
+	view.maxsym << THISBACK(SetValues);
+	view.tp << THISBACK(SetValues);
+	view.sl << THISBACK(SetValues);
+	view.timelimit << THISBACK(SetValues);
+	view.spreadlimit << THISBACK(SetValues);
+	view.autostart << THISBACK(SetValues);
 	
 	opplist.AddIndex();
 	opplist.AddColumn("Symbol");
@@ -47,8 +60,35 @@ GameCtrl::GameCtrl() {
 	opplist.AddColumn("Level");
 	opplist.AddColumn("Signal");
 	opplist.AddColumn("Active");
+	opplist.AddColumn("Profit");
 	
 	opplist << THISBACK(SetView);
+	
+	GetValues();
+}
+
+void GameCtrl::SetValues() {
+	Game& game = GetGame();
+	
+	game.free_margin_level   = view.fmlevel.GetData();
+	game.max_symbols         = view.maxsym.GetData();
+	game.tplimit             = view.tp.GetData();
+	game.sllimit             = view.sl.GetData();
+	game.timelimit           = view.timelimit.GetData();
+	game.spread_limit        = view.spreadlimit.GetData();
+	game.autostart           = view.autostart.Get();
+}
+
+void GameCtrl::GetValues() {
+	Game& game = GetGame();
+	
+	view.fmlevel			.SetData(game.free_margin_level);
+	view.maxsym				.SetData(game.max_symbols);
+	view.tp					.SetData(game.tplimit);
+	view.sl					.SetData(game.sllimit);
+	view.timelimit			.SetData(game.timelimit);
+	view.spreadlimit		.SetData(game.spread_limit);
+	view.autostart			.Set(game.autostart);
 }
 
 void GameCtrl::Data() {
@@ -58,6 +98,9 @@ void GameCtrl::Data() {
 	game.Refresh();
 	
 	int cursor = opplist.GetCursor();
+	int sym = -1;
+	if (cursor >= 0 && cursor < opplist.GetCount())
+		sym = opplist.Get(cursor, 0);
 	
 	for(int i = 0; i < game.opps.GetCount(); i++) {
 		GameOpportunity& o = game.opps[i];
@@ -73,30 +116,33 @@ void GameCtrl::Data() {
 		opplist.Set(i, 7, o.level);
 		opplist.Set(i, 8, o.signal ? "Short" : "Long");
 		opplist.Set(i, 9, o.is_active ? "Is active" : "");
+		opplist.Set(i, 10, o.profit);
 	}
 	opplist.SetSortColumn(5, false);
 	
 	
 	opplist.WhenAction.Clear();
-	if (cursor >= 0 && cursor < opplist.GetCount())
-		opplist.SetCursor(cursor);
+	if (sym != -1)
+		for(int i = 0; i < opplist.GetCount(); i++)
+			if (opplist.Get(i, 0) == sym)
+				opplist.SetCursor(i);
 	opplist << THISBACK(SetView);
 	
-	
-	// Gather order profit data
-	
-	
-	// Check limits
-	
+	order.sym = sym;
+	order.Refresh();
 }
 
 void GameCtrl::SetView() {
+	Game& game = GetGame();
 	
 	int cursor = opplist.GetCursor();
 	if (cursor >= 0 && cursor < opplist.GetCount()) {
 		int sym = opplist.Get(cursor, 0);
 		int sys_sym = GetSystem().System::used_symbols_id[sym];
 		GetOverlook().LoadDefaultProfile(sys_sym);
+		
+		GameOpportunity& o = game.opps[sym];
+		view.profit.SetLabel(DblStr(o.profit));
 	}
 }
 
@@ -113,6 +159,11 @@ void GameCtrl::Start() {
 		case 0: signal = o.signal ? -1 : +1; break;
 		case 1: signal = +1; break;
 		case 2: signal = -1; break;
+	}
+	
+	if (game.sllimit > -0.5) {
+		game.sllimit = -0.5;
+		GetValues();
 	}
 	
 	game.free_margin_level = view.fmlevel.GetData();

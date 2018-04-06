@@ -4,25 +4,32 @@
 namespace Overlook {
 
 struct GameOpportunity {
-	Time created;
+	Vector<double> open_profits;
+	Time opened;
+	double profit = 0.0;
+	double prev_lots = 0.0;
 	int vol_idx = -1, spread_idx = -1, trend_idx = -1, opp_idx = -1, bcase_idx = -1;
 	int level = 0;
 	bool signal;
 	bool is_active = false;
 	
-	int GetElapsedMins() {return (GetUtcTime().Get() - created.Get()) / 60;}
 	double GetAverageIndex() {return (vol_idx + spread_idx + trend_idx + opp_idx + bcase_idx) / 5.0;}
 };
 
 class Game {
 	
 public:
-	Array<GameOpportunity> opps;
-	GameOpportunity used;
-	int prev_max_level = 0;
-	int free_margin_scale = 1;
-	int signal[USEDSYMBOL_COUNT];
 	double free_margin_level = 0.6;
+	double tplimit = 0.5, sllimit = -0.8;
+	int free_margin_scale = 3;
+	int timelimit = 30;
+	int max_symbols = 3;
+	int spread_limit = 5;
+	bool autostart = false;
+	
+	Array<GameOpportunity> opps;
+	int prev_max_level = 0;
+	int signal[USEDSYMBOL_COUNT];
 	
 public:
 	typedef Game CLASSNAME;

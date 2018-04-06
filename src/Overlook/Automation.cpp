@@ -181,9 +181,12 @@ void Automation::LoadSource() {
 				smallest_ids[smallest_id_count++] = i;
 			}
 			
-			time = slow[i].time_buf[slow[i].loadsource_cursor];
-			if (time > largest_time) {
-				largest_time = time;
+			int prev_cursor = slow[i].loadsource_cursor - 1;
+			if (prev_cursor >= 0) {
+				time = slow[i].time_buf[prev_cursor];
+				if (time > largest_time) {
+					largest_time = time;
+				}
 			}
 		}
 		if (smallest_time == INT_MAX)

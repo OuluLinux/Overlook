@@ -53,7 +53,7 @@ void Chart::RefreshImage() {
 	if (image.begin == 0) image.begin = new_begin;
 	else                  image.begin = min(image.begin, new_begin);
 	
-	image.end = image.begin + screen_count;
+	image.end = bars;
 	image.symbol = symbol;
 	image.tf = tf;
 	image.period = si.db.GetPeriod();

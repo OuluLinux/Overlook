@@ -24,6 +24,7 @@ class SlowAutomation {
 	
 protected:
 	friend class AutomationCtrl;
+	friend class GameMatchCtrl;
 	friend class Automation;
 	friend class BooleansDraw;
 	friend class System;
@@ -51,10 +52,11 @@ protected:
 	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
 	static const int processbits_outputrow_size = OUT_COUNT;
 	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
-	static const int processbits_reserved = processbits_row_size * maxcount;
+	static const int processbits_row_size_aliased = processbits_row_size - processbits_row_size % 64 + 64;
+	static const int processbits_reserved = processbits_row_size_aliased * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	static const int dqn_output_size = 2;
+	static const int dqn_output_size = 4;
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	
@@ -92,6 +94,7 @@ protected:
 	int			loadsource_cursor = 0;
 	int			dqn_cursor;
 	int			peak_cursor;
+	int			most_matching_pos;
 	bool		not_first;
 	bool		enabled_slot[wdayhours];
 	
@@ -114,6 +117,8 @@ public:
 	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
 	bool	GetSignal();
 	int		GetLevel();
+	int		GetBitDiff(int a, int b);
+	void    GetOutputValues(bool& signal, int& level, bool& slow_signal);
 	
 	void	LoadInput(Dqn::MatType& input, int pos);
 	void	LoadOutput(double output[dqn_output_size], int pos);
@@ -124,6 +129,7 @@ class Automation {
 	
 protected:
 	friend class AutomationCtrl;
+	friend class GameMatchCtrl;
 	friend class BooleansDraw;
 	friend class System;
 	friend class Game;
@@ -136,10 +142,10 @@ protected:
 	static const int jobgroup_count = GROUP_COUNT;
 	
 	SlowAutomation	slow[sym_count];
-	JobGroup	jobgroups[jobgroup_count];
-	double		output_fmlevel;
-	int			worker_cursor = 0;
-	bool		running = false, stopped = true;
+	JobGroup		jobgroups[jobgroup_count];
+	double			output_fmlevel;
+	int				worker_cursor = 0;
+	bool			running = false, stopped = true;
 	
 	
 	// Temp

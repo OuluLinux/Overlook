@@ -4,7 +4,11 @@ namespace Overlook {
 
 
 void SlowAutomation::ProcessBits() {
+	ASSERT(processbits_row_size < processbits_row_size_aliased);
+	ASSERT(processbits_row_size_aliased % 64 == 0);
+	
 	bool initial = processbits_cursor == 0;
+	bool new_data = processbits_cursor < loadsource_cursor;
 	
 	if (!initial) processbits_cursor--;
 	
@@ -19,10 +23,6 @@ void SlowAutomation::ProcessBits() {
 		int bit_pos = 0;
 		for(int j = 0; j < processbits_period_count; j++) {
 			ProcessBitsSingle(j, bit_pos);
-		}
-		if (!(bit_pos == processbits_inputrow_size)) {
-			DUMP(bit_pos);
-			DUMP(processbits_inputrow_size);
 		}
 		ASSERT(bit_pos == processbits_inputrow_size);
 		
@@ -53,11 +53,44 @@ void SlowAutomation::ProcessBits() {
 			enabled_slot[slots.GetKey(i)] = true;
 		}
 	}
+	
+	if (new_data) {
+		int min_diff = INT_MAX;
+		int min_pos = 0;
+		int last = processbits_cursor - 1;
+		
+		for(int i = 1; i < last; i++) {
+			#ifdef flagDEBUG
+			if (i == 10000)
+				break;
+			#endif
+			int diff = GetBitDiff(last, i);
+			if (diff < min_diff) {
+				min_diff = diff;
+				min_pos = i;
+			}
+			//LOG(i << "\t" << diff);
+		}
+		most_matching_pos = min_pos;
+	}
+}
+
+int SlowAutomation::GetBitDiff(int a, int b) {
+	static const int row_bytes = processbits_row_size_aliased / 64;
+	int hamming_distance = 0;
+	int a_pos = a * row_bytes;
+	int b_pos = b * row_bytes;
+	uint64* a_ptr = bits_buf + a_pos;
+	uint64* b_ptr = bits_buf + b_pos;
+	for(int i = 0; i < row_bytes; i++) {
+		hamming_distance += PopCount64(a_ptr[i] ^ b_ptr[i]);
+	}
+	return hamming_distance;
 }
 
 void SlowAutomation::SetBit(int pos, int bit, bool b) {
 	ASSERT(bit >= 0 && bit < processbits_row_size);
-	int64 i = pos* processbits_row_size + bit;
+	int64 i = pos* processbits_row_size_aliased + bit;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < processbits_reserved_bytes);
@@ -67,7 +100,7 @@ void SlowAutomation::SetBit(int pos, int bit, bool b) {
 }
 
 bool SlowAutomation::GetBit(int pos, int bit) const {
-	int64 i = pos * processbits_row_size + bit;
+	int64 i = pos * processbits_row_size_aliased + bit;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < processbits_reserved_bytes);
@@ -300,11 +333,20 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 }
 
 void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
-	double diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
+	double diff = open_buf[pos + 1] - open_buf[pos];
 	bool p = diff > +spread;
 	bool n = diff < -spread;
 	output[0] = p ? 0 : 1;
 	output[1] = n ? 0 : 1;
+	
+	diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
+	if (diff >= 0) {
+		output[2] = 0.0;
+		output[3] = 1.0;
+	} else {
+		output[2] = 1.0;
+		output[3] = 0.0;
+	}
 }
 
 void SlowAutomation::Evolve() {
@@ -334,12 +376,6 @@ void SlowAutomation::Evolve() {
 		
 		iters++;
 	}
-	
-	/*static bool once;
-	if (!once) {
-		dqn_cursor = 0;
-		once = true;
-	}*/
 	
 	if (iters >= max_iters) {
 		int& cursor = dqn_cursor;
@@ -405,6 +441,26 @@ int SlowAutomation::GetLevel() {
 		return (output[0] - 0.5) * -20;
 	else
 		return (output[1] - 0.5) * -20;
+}
+
+void SlowAutomation::GetOutputValues(bool& signal, int& level, bool& slow_signal) {
+	int cursor = dqn_cursor - 1;
+	if (cursor < 0) return;
+	
+	Dqn::MatType input;
+	double output[dqn_output_size];
+	
+	LoadInput(input, cursor);
+	
+	dqn.Evaluate(input, output, dqn_output_size);
+	
+	signal = output[0] > output[1];
+	if (!signal)
+		level = (output[0] - 0.5) * -20;
+	else
+		level = (output[1] - 0.5) * -20;
+	
+	slow_signal = output[3] < output[2];
 }
 
 }

@@ -8,10 +8,14 @@
 namespace Overlook {
 
 class GameMatchCtrl : public Ctrl {
+	Vector<double> tmp;
+	Vector<Point> polyline;
 	
 public:
 	virtual void Paint(Draw& w);
-
+	
+	int sym = 0;
+	
 };
 
 class GameOrderCtrl : public Ctrl {

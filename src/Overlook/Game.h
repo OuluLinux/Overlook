@@ -11,6 +11,7 @@ struct GameOpportunity {
 	int vol_idx = -1, spread_idx = -1, trend_idx = -1, opp_idx = -1, bcase_idx = -1;
 	int level = 0;
 	bool signal;
+	bool slow_signal;
 	bool is_active = false;
 	
 	double GetAverageIndex() {return (vol_idx + spread_idx + trend_idx + opp_idx + bcase_idx) / 5.0;}
@@ -25,11 +26,12 @@ public:
 	int timelimit = 30;
 	int max_symbols = 3;
 	int spread_limit = 5;
-	bool autostart = false;
+	bool autostart = true;
 	
 	Array<GameOpportunity> opps;
 	int prev_max_level = 0;
 	int signal[USEDSYMBOL_COUNT];
+	Mutex lock;
 	
 public:
 	typedef Game CLASSNAME;

@@ -9,6 +9,8 @@ Game::Game() {
 }
 
 void Game::Refresh() {
+	lock.Enter();
+	
 	Automation& a = GetAutomation();
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = GetSystem();
@@ -49,8 +51,10 @@ void Game::Refresh() {
 		spread_sum.Add(i, volat / spread);
 		trend_sum.Add(i, trend);
 		
-		go.signal     = sa.GetSignal();
-		go.level      = sa.GetLevel();
+		/*go.signal      = sa.GetSignal();
+		go.slow_signal = sa.GetSlowSignal();
+		go.level       = sa.GetLevel();*/
+		sa.GetOutputValues(go.signal, go.level, go.slow_signal);
 		opp_sum.Add(i, go.level);
 		
 		
@@ -154,6 +158,8 @@ void Game::Refresh() {
 	if (max_level != prev_max_level && max_level >= spread_limit)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);
 	prev_max_level = max_level;
+	
+	lock.Leave();
 }
 
 }

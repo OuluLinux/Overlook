@@ -447,8 +447,10 @@ void Overlook::DeepRefresh() {
 			common.DownloadAskBid();
 			common.RefreshAskBidData(true);
 			GetCalendar().Data();
-			if (enable_automation)
+			if (enable_automation) {
+				GetGame().Refresh();
 				sys.RefreshReal();
+			}
 			
 			mt_refresh.Reset();
 			

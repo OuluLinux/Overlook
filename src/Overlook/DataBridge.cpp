@@ -67,12 +67,11 @@ void DataBridge::Start() {
 		bool init_round = open.GetCount() == 0;
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym_id);
-			RefreshFromHistory(true);
+			//RefreshFromHistory(true);
 			RefreshFromHistory(false);
-			//RefreshViaConnection();
 		}
-		RefreshFromAskBid(init_round);
 		RefreshViaConnection();
+		RefreshFromAskBid(init_round);
 	}
 	
 	lock.Leave();

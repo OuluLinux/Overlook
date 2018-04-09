@@ -155,7 +155,7 @@ void Game::Refresh() {
 		sys.RefreshReal();
 	
 	
-	if (max_level != prev_max_level && max_level >= spread_limit)
+	if (max_level != prev_max_level && max_level >= 10)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);
 	prev_max_level = max_level;
 	

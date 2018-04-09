@@ -57,7 +57,7 @@ void SlowAutomation::ProcessBits() {
 	if (new_data) {
 		int min_diff = INT_MAX;
 		int min_pos = 0;
-		int last = processbits_cursor - 1;
+		int last = processbits_cursor - 120;
 		
 		for(int i = 1; i < last; i++) {
 			#ifdef flagDEBUG
@@ -334,10 +334,13 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 
 void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
 	double diff = open_buf[pos + 1] - open_buf[pos];
-	bool p = diff > +spread;
-	bool n = diff < -spread;
-	output[0] = p ? 0 : 1;
-	output[1] = n ? 0 : 1;
+	if (diff >= 0) {
+		output[0] = 0.0;
+		output[1] = 1.0;
+	} else {
+		output[0] = 1.0;
+		output[1] = 0.0;
+	}
 	
 	diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
 	if (diff >= 0) {
@@ -394,7 +397,7 @@ void SlowAutomation::Evolve() {
 			
 			dqn.Evaluate(input, output, dqn_output_size);
 			
-			bool signal = output[0] > output[1];
+			bool signal = output[1] < output[0];
 			bool enabled = output[0] < 0.5 || output[1] < 0.5;
 			
 			if (!enabled && cursor > 0) {
@@ -421,7 +424,7 @@ bool SlowAutomation::GetSignal() {
 	
 	dqn.Evaluate(input, output, dqn_output_size);
 	
-	bool signal = output[0] > output[1];
+	bool signal = output[1] < output[0];
 	return signal;
 }
 
@@ -436,7 +439,7 @@ int SlowAutomation::GetLevel() {
 	
 	dqn.Evaluate(input, output, dqn_output_size);
 	
-	bool signal = output[0] > output[1];
+	bool signal = output[1] < output[0];
 	if (!signal)
 		return (output[0] - 0.5) * -20;
 	else
@@ -454,7 +457,7 @@ void SlowAutomation::GetOutputValues(bool& signal, int& level, bool& slow_signal
 	
 	dqn.Evaluate(input, output, dqn_output_size);
 	
-	signal = output[0] > output[1];
+	signal = output[1] < output[0];
 	if (!signal)
 		level = (output[0] - 0.5) * -20;
 	else

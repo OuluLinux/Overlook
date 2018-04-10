@@ -144,7 +144,7 @@ void Game::Refresh() {
 			go.open_profits.Add(go.profit);
 		}
 		else {
-			if (autostart && go.spread_idx < spread_limit && go.level > 0) {
+			if (autostart && go.spread_idx < spread_limit && go.level >= 0) {
 				signal[i] = go.signal;
 				signal_changed = true;
 			}
@@ -155,7 +155,7 @@ void Game::Refresh() {
 		sys.RefreshReal();
 	
 	
-	if (max_level != prev_max_level && max_level >= 10)
+	if (max_level != prev_max_level && max_level >= 0)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);
 	prev_max_level = max_level;
 	

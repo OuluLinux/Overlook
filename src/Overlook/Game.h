@@ -20,13 +20,13 @@ struct GameOpportunity {
 class Game {
 	
 public:
-	double free_margin_level = 0.6;
-	double tplimit = 0.5, sllimit = -0.8;
+	double free_margin_level = 0.9;
+	double tplimit = 0.1, sllimit = -0.8;
 	int free_margin_scale = 3;
-	int timelimit = 30;
-	int max_symbols = 3;
+	int timelimit = 2;
+	int max_symbols = 4;
 	int spread_limit = 5;
-	bool autostart = false;
+	bool autostart = true;
 	
 	Array<GameOpportunity> opps;
 	int prev_max_level = 0;

@@ -108,55 +108,43 @@ double SourceImage::GetAppliedValue ( int applied_value, int i ) {
 
 
 System::System() {
-	allowed_symbols.Add("#AA");
-	allowed_symbols.Add("#AIG");
-	allowed_symbols.Add("#AXP");
-	allowed_symbols.Add("#BA");
-	allowed_symbols.Add("#BAC");
-	allowed_symbols.Add("#C");
-	allowed_symbols.Add("#CAT");
-	allowed_symbols.Add("#CSCO");
-	allowed_symbols.Add("#CVX");
-	allowed_symbols.Add("#DD");
-	allowed_symbols.Add("#DIS");
-	allowed_symbols.Add("#GE");
-	allowed_symbols.Add("#HD");
-	allowed_symbols.Add("#HON");
-	allowed_symbols.Add("#HPQ");
-	allowed_symbols.Add("#IBM");
-	allowed_symbols.Add("#INTC");
-	allowed_symbols.Add("#IP");
-	allowed_symbols.Add("#JNJ");
-	allowed_symbols.Add("#JPM");
-	allowed_symbols.Add("#KO");
-	allowed_symbols.Add("#MCD");
-	allowed_symbols.Add("#MMM");
-	allowed_symbols.Add("#MO");
-	allowed_symbols.Add("#MRK");
-	allowed_symbols.Add("#MSFT");
-	allowed_symbols.Add("#PFE");
-	allowed_symbols.Add("#PG");
-	allowed_symbols.Add("#T");
-	allowed_symbols.Add("#TRV");
-	allowed_symbols.Add("#UTX");
-	allowed_symbols.Add("#VZ");
-	allowed_symbols.Add("#WMT");
-	allowed_symbols.Add("#XOM");
+	allowed_symbols.Add("AUDCAD");
+	allowed_symbols.Add("AUDJPY");
+	allowed_symbols.Add("AUDNZD");
+	allowed_symbols.Add("AUDUSD");
+	allowed_symbols.Add("CADJPY");
+	allowed_symbols.Add("CHFJPY");
+	allowed_symbols.Add("EURCAD");
+	allowed_symbols.Add("EURCHF");
+	allowed_symbols.Add("EURGBP");
+	allowed_symbols.Add("EURJPY");
+	allowed_symbols.Add("EURUSD");
+	allowed_symbols.Add("EURAUD");
+	allowed_symbols.Add("GBPCHF");
+	allowed_symbols.Add("GBPUSD");
+	allowed_symbols.Add("GBPJPY");
+	allowed_symbols.Add("NZDUSD");
+	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("USDCHF");
+	allowed_symbols.Add("USDJPY");
+	allowed_symbols.Add("USDMXN");
+	allowed_symbols.Add("USDTRY");
 	
 	
-	used_symbols.Add("#BA");
-	used_symbols.Add("#C");
+	used_symbols.Add("USDJPY");
+	used_symbols.Add("EURJPY");
 	#ifndef flagDEBUG
-	used_symbols.Add("#CSCO");
-	used_symbols.Add("#DIS");
-	used_symbols.Add("#HON");
-	used_symbols.Add("#INTC");
-	used_symbols.Add("#JNJ");
-	used_symbols.Add("#JPM");
-	used_symbols.Add("#MMM");
-	used_symbols.Add("#MO");
-	used_symbols.Add("#MSFT");
-	used_symbols.Add("#TRV");
+	used_symbols.Add("EURUSD");
+	used_symbols.Add("USDCAD");
+	/*used_symbols.Add("CADJPY");
+	used_symbols.Add("EURGBP");
+	used_symbols.Add("GBPUSD");
+	used_symbols.Add("AUDJPY");
+	used_symbols.Add("AUDUSD");
+	used_symbols.Add("EURAUD");
+	used_symbols.Add("GBPJPY");
+	used_symbols.Add("USDCHF");*/
+
 	#endif
 	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
 }
@@ -203,9 +191,10 @@ void System::Init() {
 			Panic("Some important symbols for automation are missing");
 		
 		// Add periods
+		AddPeriod("1 second", 1);
 		ASSERT(mt.GetTimeframe(0) == 1);
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)
-			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i));
+			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i) * 60);
 		
 		
 		int sym_count = symbols.GetCount();
@@ -232,7 +221,7 @@ void System::Init() {
 					db.symbol = symbols[i];
 					db.sym_id = i;
 					db.tf_id = j;
-					db.period = mt.GetTimeframe(j);
+					db.period = periods[j];
 					db.point = mt.GetSymbol(i).point;
 				}
 			}
@@ -539,6 +528,22 @@ bool System::RefreshReal() {
 	catch (ConnectionError e) {
 		lock.Leave();
 		return false;
+	}
+}
+
+String System::GetTimeframeString(int i) const {
+	int period = periods[i];
+	switch (period) {
+		case 1: return "S1";
+		case 1*60: return "M1";
+		case 5*60: return "M5";
+		case 15*60: return "M15";
+		case 30*60: return "M30";
+		case 60*60: return "H1";
+		case 240*60: return "H4";
+		case 1440*60: return "D";
+		case 10080*60: return "W";
+		default: return "?";
 	}
 }
 

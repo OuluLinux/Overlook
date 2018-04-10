@@ -3512,7 +3512,7 @@ void PeriodicalChange::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	gi.SetCoreSeparateWindow();
 	gi.SetBufferColor(0, Red);
 	
-	tfmin = ci.GetPeriod();
+	tfmin = ci.GetPeriod() / 60;
 	int w1 = 7 * 24 * 60;
 	int count = 0;
 	
@@ -3800,7 +3800,7 @@ void VolatilitySlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
 	
-	int tf_mins = ci.GetPeriod();
+	int tf_mins = ci.GetPeriod() / 60;
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
@@ -3817,7 +3817,7 @@ void VolatilitySlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	begin++;
 	
-	int tf_mins = ci.GetPeriod();
+	int tf_mins = ci.GetPeriod() / 60;
 	
 	for(int i = begin; i < end; i++) {
 		double cur  = open_buf[i];
@@ -3873,7 +3873,7 @@ void VolumeSlots::Init(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	gi.SetCoreLevelsStyle(STYLE_DOT);
 	
 	
-	int tf_mins = ci.GetPeriod();
+	int tf_mins = ci.GetPeriod() / 60;
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
@@ -3890,7 +3890,7 @@ void VolumeSlots::Start(SourceImage& si, ChartImage& ci, GraphImage& gi) {
 	
 	begin++;
 	
-	int tf_mins = ci.GetPeriod();
+	int tf_mins = ci.GetPeriod() / 60;
 	
 	for(int i = begin; i < end; i++) {
 		double vol  = vol_buf[i];

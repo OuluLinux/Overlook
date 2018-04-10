@@ -84,11 +84,8 @@ public:
 	int GetPeriod() const {ASSERT(period != -1); return period;}
 	void ForceSetCounted(int i) {counted = i;}
 	
-	void RefreshFromHistory(bool use_internet_data);
-	void RefreshFromInternet();
-	void RefreshFromAskBid(bool init_round);
+	void RefreshFromAskBid();
 	void RefreshMedian();
-	void RefreshViaConnection();
 	
 public:
 	typedef DataBridge CLASSNAME;

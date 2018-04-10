@@ -32,11 +32,11 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24*12; // M5
-	static const int maxcount = 14*52*wdayhours; // 14 years
+	static const int wdayhours = 5*24*60*60; // M5
+	static const int maxcount = 1*25*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 10000;
-	static const int dqn_rightoffset = 3+1;
+	static const int dqn_rightoffset = 12+1;
 	#ifdef flagDEBUG
 	static const int max_iters = 10000;
 	#else

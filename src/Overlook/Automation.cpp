@@ -13,8 +13,8 @@ Automation::Automation() {
 	
 	for(int i = 0; i < sym_count; i++) {
 		slow[i].sym = i;
-		slow[i].tf = 1; // M5
-		slow[i].period = 5;
+		slow[i].tf = 0; // S1
+		slow[i].period = 1;
 		slow[i].running = &running;
 		for(int j = 0; j < sym_count; j++) {
 			slow[i].other_open_buf[j] = slow[j].open_buf;
@@ -226,7 +226,7 @@ void Automation::LoadSource() {
 		slow[i].spread = db.GetSpread();
 		if (slow[i].point <= 0) Panic("Invalid point");
 		if (slow[i].spread < slow[i].point * 2)
-			slow[i].spread = slow[i].point * 4;
+			slow[i].spread = slow[i].point * 2;
 		ReleaseLog("Automation::LoadSource sym " + IntStr(sym) + " point " + DblStr(slow[i].point) + " spread " + DblStr(slow[i].spread));
 	}
 }

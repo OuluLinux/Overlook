@@ -235,11 +235,11 @@ void Overlook::SubBar(Bar& bar) {
 	bar.Add(keep_at_end, Size(30, 30));
 	bar.Separator();
 	
-	MetaTrader& mt = GetMetaTrader();
+	System& sys = GetSystem();
 	if (tf_buttons.IsEmpty()) {
-		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
+		for(int i = 0; i < sys.GetPeriodCount(); i++) {
 			ButtonOption& bo = tf_buttons.Add();
-			bo.SetLabel(mt.GetTimeframeString(i));
+			bo.SetLabel(sys.GetTimeframeString(i));
 			bo <<= THISBACK1(SetTimeframe, i);
 		}
 		tf_buttons[0].Set(true);

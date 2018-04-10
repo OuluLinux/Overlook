@@ -333,23 +333,19 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 }
 
 void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
-	double diff = open_buf[pos + 1] - open_buf[pos];
-	if (diff >= 0) {
-		output[0] = 0.0;
-		output[1] = 1.0;
-	} else {
-		output[0] = 1.0;
-		output[1] = 0.0;
+	bool p = false, n = false;
+	for(int i = 0; i < dqn_rightoffset; i++) {
+		double diff = open_buf[pos + i + 1] - open_buf[pos];
+		p |= +diff >= +spread;
+		n |= -diff >= +spread;
 	}
+	output[0] = p ? 0.0 : 1.0;
+	output[1] = n ? 0.0 : 1.0;
 	
-	diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
-	if (diff >= 0) {
-		output[2] = 0.0;
-		output[3] = 1.0;
-	} else {
-		output[2] = 1.0;
-		output[3] = 0.0;
-	}
+	
+	double diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
+	output[2] = +diff >= 0 ? 0.0 : 1.0;
+	output[3] = -diff >= 0 ? 0.0 : 1.0;
 }
 
 void SlowAutomation::Evolve() {
@@ -363,14 +359,15 @@ void SlowAutomation::Evolve() {
 	
 	dqn.SetEpsilon(0);
 	dqn.SetGamma(0);
+	dqn.SetAlpha(max_alpha);
 	
 	while (*running && iters < max_iters) {
 		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
 		Dqn::MatType input;
 		double output[dqn_output_size];
 		
-		double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
-		dqn.SetAlpha(alpha);
+		//double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
+		//dqn.SetAlpha(alpha);
 		
 		LoadInput(input, pos);
 		LoadOutput(output, pos);

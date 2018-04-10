@@ -111,6 +111,7 @@ public:
 	
 	String	GetSymbol(int i) const					{return symbols[i];}
 	String	GetPeriodString(int i) const			{return period_strings[i];}
+	String  GetTimeframeString(int i) const;
 	int		GetSymbolCount() const					{return symbols.GetCount();}
 	int		GetPeriod(int i) const					{return periods[i];}
 	int		GetPeriodCount() const					{return periods.GetCount();}

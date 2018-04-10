@@ -21,9 +21,9 @@ class Game {
 	
 public:
 	double free_margin_level = 0.9;
-	double tplimit = 0.1, sllimit = -0.8;
+	double tplimit = 0.5, sllimit = -0.8;
 	int free_margin_scale = 3;
-	int timelimit = 2;
+	int timelimit = 10;
 	int max_symbols = 4;
 	int spread_limit = 5;
 	bool autostart = true;

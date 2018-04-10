@@ -145,7 +145,7 @@ void Game::Refresh() {
 		}
 		else {
 			if (autostart && go.spread_idx < spread_limit && go.level >= 0) {
-				signal[i] = go.signal;
+				signal[i] = go.signal ? -1 : +1;
 				signal_changed = true;
 			}
 		}

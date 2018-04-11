@@ -24,7 +24,7 @@ void Game::Refresh() {
 	for(int i = 0; i < a.sym_count; i++) {
 		SlowAutomation& sa = a.slow[i];
 		GameOpportunity& go = opps[i];
-		int end = sa.dqn_cursor - 1;
+		int end = sa.processbits_cursor - 1;
 		int begin = max(0, end - count);
 		
 		int sys_sym = sys.used_symbols_id[i];
@@ -54,8 +54,10 @@ void Game::Refresh() {
 		/*go.signal      = sa.GetSignal();
 		go.slow_signal = sa.GetSlowSignal();
 		go.level       = sa.GetLevel();*/
-		sa.GetOutputValues(go.signal, go.level, go.slow_signal);
+		sa.GetOutputValues(go.signal, go.level);
 		opp_sum.Add(i, go.level);
+		
+		go.slow_signal = go.signal;
 		
 		
 		{
@@ -144,8 +146,11 @@ void Game::Refresh() {
 			go.open_profits.Add(go.profit);
 		}
 		else {
-			if (autostart && go.spread_idx < spread_limit && go.level >= 0) {
-				signal[i] = go.signal ? -1 : +1;
+			if (autostart && go.spread_idx < spread_limit && go.level > 0) {
+				if (!inversesig)
+					signal[i] =  go.signal ? -1 : +1;
+				else
+					signal[i] = !go.signal ? -1 : +1;
 				signal_changed = true;
 			}
 		}
@@ -155,7 +160,7 @@ void Game::Refresh() {
 		sys.RefreshReal();
 	
 	
-	if (max_level != prev_max_level && max_level >= 0)
+	if (max_level != prev_max_level && max_level > 0)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);
 	prev_max_level = max_level;
 	

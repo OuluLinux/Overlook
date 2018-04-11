@@ -65,6 +65,7 @@ GameCtrl::GameCtrl() {
 	view.timelimit << THISBACK(SetValues);
 	view.spreadlimit << THISBACK(SetValues);
 	view.autostart << THISBACK(SetValues);
+	view.inversesig << THISBACK(SetValues);
 	
 	opplist.AddIndex();
 	opplist.AddColumn("Symbol");
@@ -94,6 +95,7 @@ void GameCtrl::SetValues() {
 	game.timelimit           = view.timelimit.GetData();
 	game.spread_limit        = view.spreadlimit.GetData();
 	game.autostart           = view.autostart.Get();
+	game.inversesig          = view.inversesig.Get();
 }
 
 void GameCtrl::GetValues() {
@@ -106,6 +108,7 @@ void GameCtrl::GetValues() {
 	view.timelimit			.SetData(game.timelimit);
 	view.spreadlimit		.SetData(game.spread_limit);
 	view.autostart			.Set(game.autostart);
+	view.inversesig			.Set(game.inversesig);
 }
 
 void GameCtrl::Data() {

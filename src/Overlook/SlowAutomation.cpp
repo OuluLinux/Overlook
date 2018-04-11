@@ -341,11 +341,6 @@ void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
 	}
 	output[0] = p ? 0.0 : 1.0;
 	output[1] = n ? 0.0 : 1.0;
-	
-	
-	double diff = open_buf[pos + dqn_rightoffset - 1] - open_buf[pos];
-	output[2] = +diff >= 0 ? 0.0 : 1.0;
-	output[3] = -diff >= 0 ? 0.0 : 1.0;
 }
 
 void SlowAutomation::Evolve() {
@@ -443,7 +438,7 @@ int SlowAutomation::GetLevel() {
 		return (output[1] - 0.5) * -20;
 }
 
-void SlowAutomation::GetOutputValues(bool& signal, int& level, bool& slow_signal) {
+void SlowAutomation::GetOutputValues(bool& signal, int& level) {
 	int cursor = dqn_cursor - 1;
 	if (cursor < 0) return;
 	
@@ -459,8 +454,6 @@ void SlowAutomation::GetOutputValues(bool& signal, int& level, bool& slow_signal
 		level = (output[0] - 0.5) * -20;
 	else
 		level = (output[1] - 0.5) * -20;
-	
-	slow_signal = output[3] < output[2];
 }
 
 }

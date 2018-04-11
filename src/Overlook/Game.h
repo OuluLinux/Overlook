@@ -26,7 +26,8 @@ public:
 	int timelimit = 10;
 	int max_symbols = 4;
 	int spread_limit = 5;
-	bool autostart = true;
+	bool autostart = false;
+	bool inversesig = false;
 	
 	Array<GameOpportunity> opps;
 	int prev_max_level = 0;

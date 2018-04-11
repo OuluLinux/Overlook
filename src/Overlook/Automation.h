@@ -40,7 +40,7 @@ protected:
 	#ifdef flagDEBUG
 	static const int max_iters = 10000;
 	#else
-	static const int max_iters = 5000000;
+	static const int max_iters = 10000000;
 	#endif
 	
 	static const int loadsource_reserved = maxcount;
@@ -56,7 +56,7 @@ protected:
 	static const int processbits_reserved = processbits_row_size_aliased * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	static const int dqn_output_size = 4;
+	static const int dqn_output_size = 2;
 	static const int dqn_input_size = processbits_inputrow_size;
 	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
 	
@@ -118,7 +118,7 @@ public:
 	bool	GetSignal();
 	int		GetLevel();
 	int		GetBitDiff(int a, int b);
-	void    GetOutputValues(bool& signal, int& level, bool& slow_signal);
+	void    GetOutputValues(bool& signal, int& level);
 	
 	void	LoadInput(Dqn::MatType& input, int pos);
 	void	LoadOutput(double output[dqn_output_size], int pos);

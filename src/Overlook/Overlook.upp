@@ -9,7 +9,8 @@ uses
 	SubWindowCtrl,
 	plugin/tidy,
 	Core/SSL,
-	plugin/cctz;
+	plugin/cctz,
+	ConvNet;
 
 file
 	Copying,
@@ -60,8 +61,7 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	Calendar.h,
-	Calendar.cpp,
-	DQN.h;
+	Calendar.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

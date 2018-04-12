@@ -11,7 +11,6 @@ struct GameOpportunity {
 	int vol_idx = -1, spread_idx = -1, trend_idx = -1, opp_idx = -1, bcase_idx = -1;
 	int level = 0;
 	bool signal;
-	bool slow_signal;
 	bool is_active = false;
 	
 	double GetAverageIndex() {return (vol_idx + spread_idx + trend_idx + opp_idx + bcase_idx) / 5.0;}
@@ -21,9 +20,9 @@ class Game {
 	
 public:
 	double free_margin_level = 0.9;
-	double tplimit = 0.5, sllimit = -0.8;
+	double tplimit = DEF_TP, sllimit = DEF_SL;
 	int free_margin_scale = 3;
-	int timelimit = 10;
+	int timelimit = DEF_TIMELIMIT;
 	int max_symbols = 4;
 	int spread_limit = 5;
 	bool autostart = false;

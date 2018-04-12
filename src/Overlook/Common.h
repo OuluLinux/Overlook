@@ -46,6 +46,10 @@ typedef const int ConstInt;
 
 #define SLOT_TF 1
 
+#define DEF_TIMELIMIT 10
+#define DEF_TP +0.5
+#define DEF_SL -0.8
+
 enum {
 	PHASE_TRAINING,
 	PHASE_REAL

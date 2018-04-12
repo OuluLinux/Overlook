@@ -3,47 +3,6 @@
 namespace Overlook {
 using namespace Upp;
 
-void BooleansDraw::Paint(Draw& w) {
-	System& sys = GetSystem();
-	Automation& a = GetAutomation();
-	
-	Size sz(GetSize());
-	ImageDraw id(sz);
-	id.DrawRect(sz, White());
-	
-	if (cursor >= 0 && cursor < a.slow[0].processbits_cursor) {
-		int ts = a.slow[0].time_buf[cursor];
-		Time t = Time(1970,1,1) + ts;
-		LOG("BooleansDraw::Paint cursor time " + Format("%", t));
-		
-		int w = a.slow[0].processbits_row_size;
-		int h = a.sym_count;
-		
-		double xstep = (double)sz.cx / w;
-		double ystep = (double)sz.cy / h;
-		
-		for(int i = 0; i < h; i++) {
-			
-			//auto& main_booleans = a.bits_buf[i][tf].main_booleans;
-			
-			int count = a.slow[i].processbits_cursor;
-			if (count == 0) continue;
-			
-			int y0 = i * ystep;
-			int y1 = (i + 1) * ystep;
-			for(int j = 0; j < w; j++) {
-				int x0 = j * xstep;
-				int x1 = (j + 1) * xstep;
-				
-				bool b = a.slow[i].GetBit(cursor, j);
-				if (b)
-					id.DrawRect(x0, y0, x1-x0, y1-y0, Black());
-			}
-		}
-	}
-	
-	w.DrawImage(0, 0, id);
-}
 
 AutomationCtrl::AutomationCtrl() {
 	
@@ -65,21 +24,9 @@ AutomationCtrl::AutomationCtrl() {
 	
 	symctrl_place.Add(tabs.SizePos());
 	
-	tabs.WhenSet << THISBACK(Data);
-	tabs.Add(boolctrl, "Bits");
-	tabs.Add(boolctrl);
 	tabs.Add(evolvectrl, "Evolve");
 	tabs.Add(evolvectrl);
-	
-	slider.MinMax(0,1);
-	slider << THISBACK(Data);
-	
-	boolctrl.Add(bools.HSizePos(0, 300).VSizePos(0,30));
-	boolctrl.Add(cursor_stats.RightPos(0, 300).VSizePos(0,30));
-	boolctrl.Add(slider.HSizePos().BottomPos(0,30));
-	
-	cursor_stats.AddColumn("Key");
-	cursor_stats.AddColumn("Value");
+	tabs.WhenSet << THISBACK(Data);
 	
 	evolvectrl.Add(evolvesplit.SizePos());
 	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
@@ -107,7 +54,6 @@ void AutomationCtrl::Data() {
 		String phase_str;
 		switch (job_id) {
 			case Automation::GROUP_SOURCE:		phase_str = "Source"; break;
-			case Automation::GROUP_BITS:		phase_str = "Bits"; break;
 			case Automation::GROUP_EVOLVE:		phase_str = "Evolve"; break;
 			case Automation::GROUP_COUNT:		phase_str = "Finished"; break;
 		}
@@ -130,7 +76,7 @@ void AutomationCtrl::Data() {
 	
 	
 	int tab = tabs.Get();
-	if (tab == 0) {
+	/*if (tab == 0) {
 		int last = a.slow[0].processbits_cursor - 1;
 		slider.MinMax(0, last);
 		if (last < 0) return;
@@ -158,9 +104,10 @@ void AutomationCtrl::Data() {
 			cursor_stats.Set(row++, 1, sig);
 		}
 	}
-	else if (tab == 1) {
+	else if (tab == 0) {*/
+	if (tab == 0) {
 		for(int i = 0; i < USEDSYMBOL_COUNT; i++) {
-			evolveprog[i].Set(a.slow[i].dqn_iters, a.slow[i].max_iters);
+			evolveprog[i].Set(a.slow[i].brain_iters, a.slow[i].max_iters);
 		}
 	}
 }

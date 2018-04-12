@@ -13,6 +13,10 @@ struct JobGroup : Moveable<JobGroup> {
 	Job jobs[USEDSYMBOL_COUNT];
 	bool is_finished = false;
 	
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) s.Get(this, sizeof(JobGroup));
+		else               s.Put(this, sizeof(JobGroup));
+	}
 };
 
 enum {
@@ -30,98 +34,48 @@ protected:
 	friend class System;
 	friend class Game;
 	
+	enum {ACTION_LONG, ACTION_SHORT, ACTION_IDLE};
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24*60*60; // M5
-	static const int maxcount = 1*25*wdayhours; // 14 years
 	
-	static const int dqn_leftoffset = 10000;
-	static const int dqn_rightoffset = 12+1;
+	static const int input_length = 25;
+	static const int input_count = input_length * 2;
+	static const int output_count = 3;
+	
+	static const int brain_leftoffset = 10000;
+	static const int brain_rightoffset = 12+1;
 	#ifdef flagDEBUG
-	static const int max_iters = 10000;
+	static const int max_iters = 1100;
 	#else
-	static const int max_iters = 10000000;
+	static const int max_iters = 1000000;
 	#endif
 	
-	static const int loadsource_reserved = maxcount;
 	
-	static const int processbits_period_count = 6;
-	static const int processbits_descriptor_count = processbits_period_count + (sym_count - 1) * 2;
-	static const int processbits_correlation_count = (sym_count - 1);
-	static const int processbits_generic_row = (14 + processbits_descriptor_count + processbits_correlation_count);
-	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
-	static const int processbits_outputrow_size = OUT_COUNT;
-	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
-	static const int processbits_row_size_aliased = processbits_row_size - processbits_row_size % 64 + 64;
-	static const int processbits_reserved = processbits_row_size_aliased * maxcount;
-	static const int processbits_reserved_bytes = processbits_reserved / 64;
+	Vector<double>	open_buf;
+	Vector<int>		time_buf;
+	ConvNet::Brain	brain;
+	double			point = 0;
+	double			spread = 0;
+	Time			prev_sig_time;
+	int				sym = -1, tf = 0, period = 0;
+	int				prev_sig = 0;
+	int				brain_iters = 0;
+	int				loadsource_pos = 0;
+	int				loadsource_cursor = 0;
+	bool			not_first = 0;
 	
-	static const int dqn_output_size = 2;
-	static const int dqn_input_size = processbits_inputrow_size;
-	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
-	
-	static const int dqn_items_count = 1000;
-	uint64 dqn_items_total = 0;
-	int dqn_item_cursor = 0;
-	Dqn::DQItemType train_cache[dqn_items_count];
-	
-	
-	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
-	FixedOnlineAverageWindow1<1 << 2>		av_wins1;
-	FixedOnlineAverageWindow1<1 << 3>		av_wins2;
-	FixedOnlineAverageWindow1<1 << 4>		av_wins3;
-	FixedOnlineAverageWindow1<1 << 5>		av_wins4;
-	FixedOnlineAverageWindow1<1 << 6>		av_wins5;
-	FixedExtremumCache<1 << 1>				ec0;
-	FixedExtremumCache<1 << 2>				ec1;
-	FixedExtremumCache<1 << 3>				ec2;
-	FixedExtremumCache<1 << 4>				ec3;
-	FixedExtremumCache<1 << 5>				ec4;
-	FixedExtremumCache<1 << 6>				ec5;
-	OnlineAverage1							slot_stats[wdayhours];
-	Dqn			dqn;
-	uint64		bits_buf[processbits_reserved_bytes];
-	double		point;
-	double		spread;
-	double		open_buf[loadsource_reserved];
-	Time		prev_sig_time;
-	int			sym, tf, period;
-	int			time_buf[loadsource_reserved];
-	int			prev_sig;
-	int			dqn_iters;
-	int			loadsource_pos;
-	int			processbits_cursor;
-	int			loadsource_cursor = 0;
-	int			dqn_cursor;
-	int			peak_cursor;
-	int			most_matching_pos;
-	bool		not_first;
-	bool		enabled_slot[wdayhours];
-	
-	double*		other_open_buf[sym_count];
-	bool*		running;
+	bool*			running = 0;
 	
 	
 public:
 	
+	void Serialize(Stream& s);
 	
-	
-	void	ProcessBits();
 	void	Evolve();
-	
-	void	ProcessBitsSingle(int period_id, int& bit_pos);
-	void	SetBit(int pos, int bit, bool value);
-	void	SetBitOutput(int pos, int bit, bool value) {SetBit(pos, processbits_inputrow_size + bit, value);}
-	void	SetBitCurrent(int bit, bool value) {SetBit(processbits_cursor, bit, value);}
-	bool	GetBit(int pos, int bit) const;
-	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
-	bool	GetSignal();
-	int		GetLevel();
-	int		GetBitDiff(int a, int b);
+	double	TestAction(int pos, int action);
 	void    GetOutputValues(bool& signal, int& level);
 	
-	void	LoadInput(Dqn::MatType& input, int pos);
-	void	LoadOutput(double output[dqn_output_size], int pos);
+	void	LoadInput(Vector<double>& input, int pos);
 };
 
 class Automation {
@@ -135,22 +89,21 @@ protected:
 	friend class Game;
 	
 	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_COUNT};
+	enum {GROUP_SOURCE, GROUP_EVOLVE, GROUP_COUNT};
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int jobgroup_count = GROUP_COUNT;
 	
-	SlowAutomation	slow[sym_count];
-	JobGroup		jobgroups[jobgroup_count];
-	double			output_fmlevel;
-	int				worker_cursor = 0;
-	bool			running = false, stopped = true;
+	Array<SlowAutomation>	slow;
+	Array<JobGroup>			jobgroups;
 	
 	
 	// Temp
-	Atomic		not_stopped;
-	SpinLock	workitem_lock;
+	int						worker_cursor = 0;
+	bool					running = false, stopped = true;
+	Atomic					not_stopped;
+	SpinLock				workitem_lock;
 	
 public:
 	typedef Automation CLASSNAME;
@@ -168,8 +121,6 @@ public:
 	void	LoadSource();
 	
 	bool	IsRunning() const {return running;}
-	double	GetFreeMarginLevel() {return output_fmlevel;}
-	int		GetFreeMarginScale() {return sym_count;}
 	int		GetSymGroupJobId(int symbol) const;
 	
 	

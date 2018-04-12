@@ -436,7 +436,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Game& a					= GetGame();
+		Game& game				= GetGame();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
@@ -462,7 +462,7 @@ bool System::RefreshReal() {
 		
 		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
-			int signal = a.signal[i];;
+			int signal = game.signal[i];
 			SetSignal(sym, signal);
 		}
 		
@@ -497,8 +497,8 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
-			mt.SetFreeMarginLevel(a.free_margin_level);
-			mt.SetFreeMarginScale(a.free_margin_scale);
+			mt.SetFreeMarginLevel(game.free_margin_level);
+			mt.SetFreeMarginScale(game.free_margin_scale);
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {

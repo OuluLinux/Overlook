@@ -24,7 +24,7 @@ void Game::Refresh() {
 	for(int i = 0; i < a.sym_count; i++) {
 		SlowAutomation& sa = a.slow[i];
 		GameOpportunity& go = opps[i];
-		int end = sa.processbits_cursor - 1;
+		int end = sa.open_buf.GetCount() - 1;
 		int begin = max(0, end - count);
 		
 		int sys_sym = sys.used_symbols_id[i];
@@ -51,15 +51,10 @@ void Game::Refresh() {
 		spread_sum.Add(i, volat / spread);
 		trend_sum.Add(i, trend);
 		
-		/*go.signal      = sa.GetSignal();
-		go.slow_signal = sa.GetSlowSignal();
-		go.level       = sa.GetLevel();*/
 		sa.GetOutputValues(go.signal, go.level);
 		opp_sum.Add(i, go.level);
 		
-		go.slow_signal = go.signal;
-		
-		
+		if (end < 0) return;
 		{
 			double open  = sa.open_buf[end-2];
 			double close = sa.open_buf[end];

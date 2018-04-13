@@ -2,6 +2,30 @@
 
 namespace Overlook {
 
+void GameMatchCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	
+	id.DrawRect(sz, White());
+	
+	Automation& a = GetAutomation();
+	
+	if (sym >= 0 && sym < a.sym_count) {
+		SlowAutomation& sa = a.slow[sym];
+		int count = 6;
+		int begin = sa.most_matching_pos;
+		int end = min(begin + count, sa.processbits_cursor);
+		
+		tmp.SetCount(end - begin);
+		for(int i = begin, j = 0; i < end; i++, j++) {
+			tmp[j] = sa.open_buf[i];
+		}
+		DrawVectorPolyline(id, sz, tmp, polyline);
+	}
+	
+	w.DrawImage(0, 0, id);
+}
+
 void GameOrderCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
@@ -24,7 +48,7 @@ GameCtrl::GameCtrl() {
 	split.SetPos(3400);
 	CtrlLayout(view);
 	
-	view.split << order;
+	view.split << match << order;
 	view.split.Horz();
 	
 	view.start << THISBACK(Start);
@@ -52,6 +76,7 @@ GameCtrl::GameCtrl() {
 	opplist.AddColumn("Average");
 	opplist.AddColumn("Level");
 	opplist.AddColumn("Signal");
+	opplist.AddColumn("Slow Signal");
 	opplist.AddColumn("Active");
 	opplist.AddColumn("Profit");
 	
@@ -110,8 +135,9 @@ void GameCtrl::Data() {
 		opplist.Set(i, 6, o.GetAverageIndex());
 		opplist.Set(i, 7, o.level);
 		opplist.Set(i, 8, o.signal ? "Short" : "Long");
-		opplist.Set(i, 9, o.is_active ? "Is active" : "");
-		opplist.Set(i, 10, o.profit);
+		opplist.Set(i, 9, o.slow_signal ? "Short" : "Long");
+		opplist.Set(i, 10, o.is_active ? "Is active" : "");
+		opplist.Set(i, 11, o.profit);
 	}
 	opplist.SetSortColumn(5, false);
 	
@@ -125,6 +151,9 @@ void GameCtrl::Data() {
 	
 	order.sym = sym;
 	order.Refresh();
+	
+	match.sym = sym;
+	match.Refresh();
 }
 
 void GameCtrl::SetView() {

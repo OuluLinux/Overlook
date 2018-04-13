@@ -64,7 +64,14 @@ void DataBridge::Start() {
 		RefreshFromFaster();
 	}
 	else if (sym_id < sym_count) {
-		RefreshFromAskBid();
+		bool init_round = open.GetCount() == 0;
+		if (init_round) {
+			const Symbol& mtsym = mt.GetSymbol(sym_id);
+			RefreshFromHistory(true);
+			RefreshFromHistory(false);
+		}
+		RefreshFromAskBid(init_round);
+		RefreshViaConnection(); // very slow to be before RefreshFromAskBid
 	}
 	
 	lock.Leave();
@@ -80,7 +87,7 @@ void DataBridge::AddSpread(double a) {
 	spread_count++;
 }
 
-void DataBridge::RefreshFromAskBid() {
+void DataBridge::RefreshFromAskBid(bool init_round) {
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = GetSystem();
 	Vector<double>& open_buf = open;
@@ -100,7 +107,7 @@ void DataBridge::RefreshFromAskBid() {
 	
 	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
 		
-	int64 step = GetPeriod();
+	int64 step = GetPeriod() * 60;
 	int64 epoch_begin = Time(1970,1,1).Get();
 	int shift = open_buf.GetCount() - 1;
 	
@@ -176,6 +183,65 @@ void DataBridge::RefreshFromAskBid() {
 	ForceSetCounted(open_buf.GetCount());
 }
 
+void DataBridge::RefreshViaConnection() {
+	Vector<double>& open_buf = open;
+	Vector<double>& low_buf = low;
+	Vector<double>& high_buf = high;
+	Vector<double>& volume_buf = volume;
+	Vector<int>& time_buf = time;
+	MetaTrader& mt = GetMetaTrader();
+	
+	Time max_time = GetUtcTime() + 5 * 60;
+	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
+	
+	
+	// find latest time
+	int latest_time = time_buf.Top();
+	
+	// ask all prices and times since latest time from mt
+	typedef Tuple<int, double> TimeOpen;
+	Vector<TimeOpen> data;
+	data.Reserve(1000);
+	for(int i = 0; i < 1000; i++) {
+		try {
+			double open = mt.iOpen(symbol, period, i);
+			int time = mt.iTime(symbol, period, i);
+			Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
+			time = utc_time.Get() - Time(1970,1,1).Get();
+			if (time <= latest_time)
+				break;
+			if (time < max_time_ts)
+				data.Add(TimeOpen(time, open));
+		}
+		catch (ConnectionError e) {
+			
+		}
+	}
+	
+	Reverse(data);
+	
+	int shift = open_buf.GetCount();
+	int count = data.GetCount();
+	open_buf	.SetCount(shift+count);
+	low_buf		.SetCount(shift+count);
+	high_buf	.SetCount(shift+count);
+	volume_buf	.SetCount(shift+count);
+	time_buf	.SetCount(shift+count);
+	
+	for(int i = 0; i < data.GetCount(); i++) {
+		TimeOpen& to = data[i];
+		open_buf[shift] = to.b;
+		low_buf[shift] = to.b;
+		high_buf[shift] = to.b;
+		volume_buf[shift] = 0;
+		time_buf[shift] = to.a;
+		shift++;
+	}
+	
+	RefreshMedian();
+	ForceSetCounted(open_buf.GetCount());
+}
+
 void DataBridge::RefreshMedian() {
 	// Get median values
 	{
@@ -208,6 +274,210 @@ void DataBridge::RefreshMedian() {
 			}
 		}
 	}
+}
+
+void DataBridge::RefreshFromHistory(bool use_internet_data) {
+	MetaTrader& mt = GetMetaTrader();
+	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	if (!use_internet_data) common.DownloadHistory(sym_id, tf_id, false);
+	System& sys = GetSystem();
+	
+	LOG(Format("sym=%d tf=%d pos=%d", sym_id, tf_id, counted));
+	
+	
+	// Open data-file
+	int id = sym_id;
+	int tf = tf_id;
+	int mt_period = GetPeriod();
+	String symbol = sys.GetSymbol(sym_id);
+	String history_dir = ConfigFile("history");
+	String filename = symbol + IntStr(mt_period) + ".hst";
+	String local_history_file = AppendFileName(history_dir, filename);
+	
+	
+	bool old_filetype = false;
+	
+	if (use_internet_data) {
+		System& sys = GetSystem();
+		String symbol = sys.GetSymbol(sym_id);
+		
+		String url = "http://tools.fxdd.com/tools/M1Data/" + symbol + ".zip";
+		
+		String data_dir = ConfigFile("m1data");
+		RealizeDirectory(data_dir);
+		
+		String local_zip = AppendFileName(data_dir, symbol + ".zip");
+		
+		if (!FileExists(local_zip)) {
+			LOG("Downloading " << url);
+			TimeStop ts;
+			
+			Downloader dl;
+			dl.url = url;
+			dl.path = local_zip;
+			dl.Perform();
+			
+			LOG("Downloading took " << ts.ToString());
+		}
+		
+		String local_hst = AppendFileName(data_dir, symbol + ".hst");
+		String exp_fname = symbol + ".hst";
+		
+		if (!FileExists(local_hst)) {
+			LOG("Opening zip " << local_zip);
+			FileUnZip unzip(local_zip);
+			bool found = false;
+			while(!(unzip.IsEof() || unzip.IsError())) {
+				String fname = GetFileName(unzip.GetPath());
+				LOG("Zip has file " << unzip.GetPath() << " (" << fname << ")");
+				if (fname == exp_fname) {
+					String dst = AppendFileName(data_dir, fname);
+					FileOut fout(dst);
+					fout << unzip.ReadFile();
+					local_history_file = dst;
+					old_filetype = true;
+					found = true;
+					LOG("Found file " << dst);
+					break;
+				}
+				else
+					unzip.SkipFile();
+			}
+			if (!found) {LOG("History file not found for " + symbol);}
+		} else {
+			local_history_file = local_hst;
+			old_filetype = true;
+		}
+	}
+	else if (!FileExists(local_history_file)) {
+		DUMP(local_history_file);
+		throw DataExc();
+	}
+	
+	FileIn src(local_history_file);
+	if (!src.IsOpen() || !src.GetSize())
+		return;
+	
+	// Read the history file
+	int digits;
+	src.Seek(4+64+12+4);
+	src.Get(&digits, 4);
+	if (digits > 20)
+		throw DataExc();
+	double point = 1.0 / pow(10.0, digits);
+	common.points[sym_id] = point;
+	int data_size = (int)src.GetSize();
+	int struct_size = 8 + 4*8 + 8 + 4 + 8;
+	if (old_filetype) struct_size = 4 + 4*8 + 8;
+	byte row[0x100];
+	
+	Vector<double>& open_buf = open;
+	Vector<double>& low_buf = low;
+	Vector<double>& high_buf = high;
+	Vector<double>& volume_buf = volume;
+	Vector<int>& time_buf = time;
+	
+	// Seek to begin of the data
+	int cursor = (4+64+12+4+4+4+4 +13*4);
+	int expected_count = open_buf.GetCount() + (int)((src.GetSize() - cursor) / struct_size);
+	src.Seek(cursor);
+	
+	open_buf.Reserve(expected_count);
+	low_buf.Reserve(expected_count);
+	high_buf.Reserve(expected_count);
+	volume_buf.Reserve(expected_count);
+	time_buf.Reserve(expected_count);
+	
+	bool overwrite = false;
+	double prev_open = 0.0;
+	
+	int64 step = GetPeriod() * 60;
+	int shift = open_buf.GetCount() - 1;
+	Time max_time = GetUtcTime() + 5 * 60;
+	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
+	
+	while ((cursor + struct_size) <= data_size) {
+		if ((open_buf.GetCount() % 10) == 0) {
+			GetSystem().WhenSubProgress(open_buf.GetCount(), expected_count);
+		}
+		
+		int64 time;
+		double open, high, low, close;
+		int64 tick_volume, real_volume;
+		int spread;
+		src.Get(row, struct_size);
+		byte* current = row;
+		
+		//TODO: endian swap in big endian machines
+		
+		if (!old_filetype) {
+			time  = *((uint64*)current);			current += 8;
+			open  = *((double*)current);			current += 8;
+			high  = *((double*)current);			current += 8;
+			low   = *((double*)current);			current += 8;
+			close = *((double*)current);			current += 8;
+			tick_volume  = *((int64*)current);		current += 8;
+			spread       = *((int32*)current);		current += 4;
+			real_volume  = *((int64*)current);		current += 8;
+		} else {
+			time  = *((int32*)current);				current += 4;
+			open  = *((double*)current);			current += 8;
+			high  = *((double*)current);			current += 8;
+			low   = *((double*)current);			current += 8;
+			close = *((double*)current);			current += 8;
+			tick_volume  = *((double*)current);		current += 8;
+			spread       = 0;
+			real_volume  = 0;
+		}
+		
+		
+		Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
+		time = utc_time.Get() - Time(1970,1,1).Get();
+		time += 4*24*60*60;
+		time = time - time % step;
+		time -= 4*24*60*60;
+		
+		cursor += struct_size;
+		if (time > max_time_ts)
+			continue;
+		
+		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
+		
+		if (shift >= open_buf.GetCount()) {
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
+		}
+		
+		
+		//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
+		open_buf[shift] = open;
+		low_buf[shift] = low;
+		high_buf[shift] = high;
+		volume_buf[shift] = tick_volume;
+		time_buf[shift] = time;
+		
+		
+		int count = open_buf.GetCount();
+		double diff = count >= 2 ? open_buf[count-1] - open_buf[count-2] : 0.0;
+		int step = (int)(diff / point);
+		if (step >= 0) median_max_map.GetAdd(step, 0)++;
+		else median_min_map.GetAdd(step, 0)++;
+		if (step > max_value) max_value = step;
+		if (step < min_value) min_value = step;
+		
+		//LOG(Format("%d: %d %f %f %f %f %d %d %d", cursor, (int)time, open, high, low, close, tick_volume, spread, real_volume));
+	}
+	
+	RefreshMedian();
+	
+	// Fill volume querytable
+	bool five_mins = GetPeriod() < 5;
+	int steps = five_mins ? 5 : 1;
+	
+	ForceSetCounted(open_buf.GetCount());
 }
 
 int DataBridge::GetChangeStep(int shift, int steps) {
@@ -249,7 +519,8 @@ void DataBridge::RefreshFromFaster() {
 	Vector<int>& src_time  = m1_db.time;
 	int faster_bars = src_open.GetCount();
 	
-	int period_secs = GetPeriod();
+	int period_mins = GetPeriod();
+	int period_secs = period_mins * 60;
 	Time epoch(1970,1,1);
 	int64 tdiff = 4*24*60*60; // seconds between thursday and monday
 	Time t0 = epoch + tdiff; // thursday -> next monday, for W1 data
@@ -257,7 +528,7 @@ void DataBridge::RefreshFromFaster() {
 	//   int64 t1int = epoch.Get();
 	//   tdiff == t0int - t1int
 	
-	int expected_count = faster_bars / period_secs * 1.2;
+	int expected_count = faster_bars / period_mins * 1.2;
 	open_buf.Reserve(expected_count);
 	low_buf.Reserve(expected_count);
 	high_buf.Reserve(expected_count);

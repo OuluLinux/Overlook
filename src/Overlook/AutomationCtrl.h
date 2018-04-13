@@ -5,6 +5,13 @@ namespace Overlook {
 using namespace Upp;
 
 
+struct BooleansDraw : public Ctrl {
+	virtual void Paint(Draw& w);
+	
+	int cursor = 0;
+	int tf = 0;
+};
+
 class AutomationCtrl : public ParentCtrl {
 	ArrayCtrl symbols;
 	ParentCtrl symctrl_place;
@@ -12,10 +19,15 @@ class AutomationCtrl : public ParentCtrl {
 	Button toggle;
 	
 	TabCtrl tabs;
-	
+	ParentCtrl boolctrl;
+	BooleansDraw bools;
+	ArrayCtrl cursor_stats;
 	ParentCtrl evolvectrl;
 	Array<ProgressIndicator> evolveprog;
 	Splitter evolvesplit;
+	SliderCtrl slider;
+	
+	ArrayCtrl strandlist;
 	
 public:
 	typedef AutomationCtrl CLASSNAME;

@@ -29,7 +29,6 @@ class Agent;
 
 typedef const int ConstInt;
 
-#define MAX_ITERS 4
 #ifdef flagDEBUG
 	#define MIN_REAL_TFID 4
 	#define MAX_REAL_TFID 5
@@ -45,10 +44,9 @@ typedef const int ConstInt;
 #endif
 
 #define SLOT_TF 1
-
-#define DEF_TIMELIMIT 10
-#define DEF_TP +0.5
-#define DEF_SL -0.8
+#define DEF_TIMELIMIT 240
+#define DEF_SL -5
+#define DEF_TP +5
 
 enum {
 	PHASE_TRAINING,

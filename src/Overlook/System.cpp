@@ -191,10 +191,9 @@ void System::Init() {
 			Panic("Some important symbols for automation are missing");
 		
 		// Add periods
-		AddPeriod("1 second", 1);
 		ASSERT(mt.GetTimeframe(0) == 1);
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)
-			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i) * 60);
+			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i));
 		
 		
 		int sym_count = symbols.GetCount();
@@ -436,7 +435,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Game& game				= GetGame();
+		Game& a					= GetGame();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
@@ -462,7 +461,7 @@ bool System::RefreshReal() {
 		
 		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
-			int signal = game.signal[i];
+			int signal = a.signal[i];;
 			SetSignal(sym, signal);
 		}
 		
@@ -497,8 +496,8 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
-			mt.SetFreeMarginLevel(game.free_margin_level);
-			mt.SetFreeMarginScale(game.free_margin_scale);
+			mt.SetFreeMarginLevel(a.free_margin_level);
+			mt.SetFreeMarginScale(a.free_margin_scale);
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {
@@ -534,15 +533,14 @@ bool System::RefreshReal() {
 String System::GetTimeframeString(int i) const {
 	int period = periods[i];
 	switch (period) {
-		case 1: return "S1";
-		case 1*60: return "M1";
-		case 5*60: return "M5";
-		case 15*60: return "M15";
-		case 30*60: return "M30";
-		case 60*60: return "H1";
-		case 240*60: return "H4";
-		case 1440*60: return "D";
-		case 10080*60: return "W";
+		case 1: return "M1";
+		case 5: return "M5";
+		case 15: return "M15";
+		case 30: return "M30";
+		case 60: return "H1";
+		case 240: return "H4";
+		case 1440: return "D";
+		case 10080: return "W";
 		default: return "?";
 	}
 }

@@ -9,8 +9,7 @@ uses
 	SubWindowCtrl,
 	plugin/tidy,
 	Core/SSL,
-	plugin/cctz,
-	ConvNet;
+	plugin/cctz;
 
 file
 	Copying,

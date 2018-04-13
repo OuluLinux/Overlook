@@ -15,7 +15,7 @@ void Game::Refresh() {
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = GetSystem();
 	
-	int count = 12;
+	int count = 100;
 	
 	VectorMap<int, double> volat_sum, spread_sum, trend_sum, opp_sum, best_cases;
 	int max_level = -10;
@@ -24,7 +24,7 @@ void Game::Refresh() {
 	for(int i = 0; i < a.sym_count; i++) {
 		SlowAutomation& sa = a.slow[i];
 		GameOpportunity& go = opps[i];
-		int end = sa.open_buf.GetCount() - 1;
+		int end = sa.processbits_cursor - 1;
 		int begin = max(0, end - count);
 		
 		int sys_sym = sys.used_symbols_id[i];
@@ -33,28 +33,35 @@ void Game::Refresh() {
 		double volat = 0;
 		int prev_sig = 0;
 		int trend = 0;
+		double max = -DBL_MAX, min = DBL_MAX;
 		for(int j = begin; j < end; j++) {
 			
 			double open  = sa.open_buf[j];
 			double close = sa.open_buf[j+1];
-			double diff = close - open;
-			double absdiff = fabs(diff);
 			
-			volat += absdiff;
+			if (open > max) max = open;
+			if (open < min) min = open;
+			
 			int sig = close > open ? +1 : -1;
 			if (sig == prev_sig)
 				trend++;
 			prev_sig = sig;
 		}
+		volat = max - min;
 		
 		volat_sum.Add(i, volat / sa.point);
 		spread_sum.Add(i, volat / spread);
 		trend_sum.Add(i, trend);
 		
+		/*go.signal      = sa.GetSignal();
+		go.slow_signal = sa.GetSlowSignal();
+		go.level       = sa.GetLevel();*/
 		sa.GetOutputValues(go.signal, go.level);
 		opp_sum.Add(i, go.level);
 		
-		if (end < 0) return;
+		go.slow_signal = go.signal;
+		
+		
 		{
 			double open  = sa.open_buf[end-2];
 			double close = sa.open_buf[end];

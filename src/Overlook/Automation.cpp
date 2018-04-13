@@ -3,21 +3,22 @@
 namespace Overlook {
 
 Automation::Automation() {
+	memset(this, 0, sizeof(Automation));
 	ASSERT(sym_count > 0);
-	slow.SetCount(sym_count);
-	jobgroups.SetCount(jobgroup_count);
 	
-	for(int i = 0; i < sym_count; i++) {
-		slow[i].sym = i;
-		slow[i].tf = 0; // S1
-		slow[i].period = 1;
-	}
+	output_fmlevel = 0.6;
 	
 	if (FileExists(ConfigFile("Automation.bin")))
 		LoadThis();
 	
 	for(int i = 0; i < sym_count; i++) {
+		slow[i].sym = i;
+		slow[i].tf = 4;
+		slow[i].period = 60;
 		slow[i].running = &running;
+		for(int j = 0; j < sym_count; j++) {
+			slow[i].other_open_buf[j] = slow[j].open_buf;
+		}
 	}
 	
 	not_stopped = 0;
@@ -58,7 +59,11 @@ void Automation::StopJobs() {
 }
 
 void Automation::Serialize(Stream& s) {
-	s % slow % jobgroups;
+	if (s.IsLoading()) {
+		s.Get(this, sizeof(Automation));
+	} else {
+		s.Put(this, sizeof(Automation));
+	}
 }
 
 void Automation::JobWorker(int i) {
@@ -131,6 +136,9 @@ void Automation::Process(int group_id, int job_id) {
 		else
 			Sleep(1000);
 	}
+	else if (group_id == GROUP_BITS) {
+		slow[job_id].ProcessBits();
+	}
 	else if (group_id == GROUP_EVOLVE) {
 		slow[job_id].Evolve();
 	}
@@ -193,29 +201,20 @@ void Automation::LoadSource() {
 		bool dec_cursor = smallest_time == largest_time;
 		
 		for(int i = 0; i < sym_count; i++) {
-			int& cursor = slow[i].loadsource_cursor;
-			auto& open_buf = slow[i].open_buf;
-			auto& time_buf = slow[i].time_buf;
-			
 			if (dec_cursor)
-				cursor--;
-			
-			int count = open_buf.GetCount();
-			int reserve = count - count % 10000 + 10000;
-			open_buf.Reserve(reserve);
-			time_buf.Reserve(reserve);
-			open_buf.SetCount(cursor+1);
-			time_buf.SetCount(cursor+1);
+				slow[i].loadsource_cursor--;
 			
 			int sym = used_symbols_id[i];
 			DataBridge& db = sys.data[sym][tf].db;
 			int pos = slow[i].loadsource_pos;
 			//LOG(loadsource_cursor << "\t" << i << "\t" << pos << "/" << db.open.GetCount());
 			double open = db.open[pos];
-			open_buf[cursor] = open;
-			time_buf[cursor] = smallest_time;
+			slow[i].open_buf[slow[i].loadsource_cursor] = open;
+			slow[i].time_buf[slow[i].loadsource_cursor] = smallest_time;
 			
-			cursor++;
+			slow[i].loadsource_cursor++;
+			if (slow[i].loadsource_cursor >= slow[i].maxcount)
+				Panic("Reserved memory exceeded");
 		}
 		
 	}

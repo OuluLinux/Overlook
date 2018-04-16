@@ -3,66 +3,6 @@
 
 namespace Overlook {
 
-#define MAX_STRANDS 300
-#define MAX_STRAND_BITS 20
-struct StrandItem {
-	int bits[MAX_STRAND_BITS];
-	int count = 0;
-
-	bool Evolve(int bit);
-	void Add(int i) {ASSERT(count < MAX_STRAND_BITS); bits[count++] = i;}
-	void Clear() {count = 0;}
-	unsigned GetHashValue() const {
-		CombineHash ch;
-		for(int i = 0; i < count; i++)
-			ch << bits[i] << 1;
-		return ch;
-	}
-};
-
-struct Strand {
-	StrandItem enabled, signal_true, signal_false;
-	double result = 0;
-	int sig_bit = 0;
-
-	String ToString() const;
-	String BitString() const;
-	void Clear() {
-		enabled.Clear(); signal_true.Clear(); signal_false.Clear();
-		result = -DBL_MAX;
-	}
-	unsigned GetHashValue() const {
-		CombineHash ch;
-		ch	<< enabled.GetHashValue() << 1
-			<< signal_true.GetHashValue() << 1
-			<< signal_false.GetHashValue() << 1;
-		ch << (int)sig_bit << 1;
-		return ch;
-	}
-};
-
-struct StrandList : Moveable<Strand> {
-	Strand strands[MAX_STRANDS * 3];
-	int strand_count = 0;
-	int cursor;
-	
-	StrandList() {Clear();}
-	void Clear() {memset(this, 0, sizeof(StrandList));}
-	int GetCount() const {return strand_count;}
-	bool IsEmpty() const {return strand_count == 0;}
-	void SetCount(int i) {ASSERT(i >= 0 && i <= MAX_STRANDS); strand_count = i;}
-	void Add() {if (strand_count < MAX_STRANDS * 3) strand_count++;}
-	void Add(Strand& s) {if (strand_count < MAX_STRANDS * 3) strands[strand_count++] = s;}
-	Strand& operator[] (int i) {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
-	const Strand& operator[] (int i) const {ASSERT(i >= 0 && i < MAX_STRANDS * 3); return strands[i];}
-	Strand& Top() {ASSERT(strand_count > 0); return strands[strand_count-1];}
-	bool Has(Strand& s);
-	void Serialize(Stream& s) {if (s.IsLoading()) s.Get(this, sizeof(StrandList)); else s.Put(this, sizeof(StrandList));}
-	void Sort();
-	void Dump();
-};
-
-
 
 struct Job : Moveable<Job> {
 	bool is_finished = false;
@@ -80,8 +20,6 @@ enum {
 	OUT_COUNT
 };
 
-#define PERIOD_SHIFT 1
-
 class SlowAutomation {
 	
 protected:
@@ -94,13 +32,15 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24; // H1
-	static const int maxcount = 14*52*wdayhours; // 14 years
+	static const int wdayhours = 5*24*60*60; // M5
+	static const int maxcount = 1*25*wdayhours; // 14 years
 	
+	static const int dqn_leftoffset = 10000;
+	static const int dqn_rightoffset = 12+1;
 	#ifdef flagDEBUG
-	static const int MAX_ITERS = 2;
+	static const int max_iters = 10000;
 	#else
-	static const int MAX_ITERS = 8;
+	static const int max_iters = 10000000;
 	#endif
 	
 	static const int loadsource_reserved = maxcount;
@@ -116,24 +56,30 @@ protected:
 	static const int processbits_reserved = processbits_row_size_aliased * maxcount;
 	static const int processbits_reserved_bytes = processbits_reserved / 64;
 	
-	enum {ACTION_LONG, ACTION_SHORT, ACTION_IDLE};
+	static const int dqn_output_size = 2;
+	static const int dqn_input_size = processbits_inputrow_size;
+	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
+	
+	static const int dqn_items_count = 1000;
+	uint64 dqn_items_total = 0;
+	int dqn_item_cursor = 0;
+	Dqn::DQItemType train_cache[dqn_items_count];
 	
 	
-	
-	FixedOnlineAverageWindow1<1 << (1 + PERIOD_SHIFT)>		av_wins0;
-	FixedOnlineAverageWindow1<1 << (2 + PERIOD_SHIFT)>		av_wins1;
-	FixedOnlineAverageWindow1<1 << (3 + PERIOD_SHIFT)>		av_wins2;
-	FixedOnlineAverageWindow1<1 << (4 + PERIOD_SHIFT)>		av_wins3;
-	FixedOnlineAverageWindow1<1 << (5 + PERIOD_SHIFT)>		av_wins4;
-	FixedOnlineAverageWindow1<1 << (6 + PERIOD_SHIFT)>		av_wins5;
-	FixedExtremumCache<1 << (1 + PERIOD_SHIFT)>				ec0;
-	FixedExtremumCache<1 << (2 + PERIOD_SHIFT)>				ec1;
-	FixedExtremumCache<1 << (3 + PERIOD_SHIFT)>				ec2;
-	FixedExtremumCache<1 << (4 + PERIOD_SHIFT)>				ec3;
-	FixedExtremumCache<1 << (5 + PERIOD_SHIFT)>				ec4;
-	FixedExtremumCache<1 << (6 + PERIOD_SHIFT)>				ec5;
+	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
+	FixedOnlineAverageWindow1<1 << 2>		av_wins1;
+	FixedOnlineAverageWindow1<1 << 3>		av_wins2;
+	FixedOnlineAverageWindow1<1 << 4>		av_wins3;
+	FixedOnlineAverageWindow1<1 << 5>		av_wins4;
+	FixedOnlineAverageWindow1<1 << 6>		av_wins5;
+	FixedExtremumCache<1 << 1>				ec0;
+	FixedExtremumCache<1 << 2>				ec1;
+	FixedExtremumCache<1 << 3>				ec2;
+	FixedExtremumCache<1 << 4>				ec3;
+	FixedExtremumCache<1 << 5>				ec4;
+	FixedExtremumCache<1 << 6>				ec5;
 	OnlineAverage1							slot_stats[wdayhours];
-	StrandList	strands, meta_added, single_added;
+	Dqn			dqn;
 	uint64		bits_buf[processbits_reserved_bytes];
 	double		point;
 	double		spread;
@@ -142,10 +88,11 @@ protected:
 	int			sym, tf, period;
 	int			time_buf[loadsource_reserved];
 	int			prev_sig;
+	int			dqn_iters;
 	int			loadsource_pos;
 	int			processbits_cursor;
 	int			loadsource_cursor = 0;
-	int			output_cursor;
+	int			dqn_cursor;
 	int			peak_cursor;
 	int			most_matching_pos;
 	bool		not_first;
@@ -170,10 +117,9 @@ public:
 	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
 	int		GetBitDiff(int a, int b);
 	void    GetOutputValues(bool& signal, int& level);
-	void	TestStrand(Strand& st);
+	
+	void	LoadInput(Dqn::MatType& input, int pos);
 	double	TestAction(int& pos, int action);
-	int		GetAction(Strand& st, int cursor);
-	int		GetAction(int cursor);
 };
 
 class Automation {

@@ -60,7 +60,8 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	Calendar.h,
-	Calendar.cpp;
+	Calendar.cpp,
+	DQN.h;
 
 mainconfig
 	"Working" = "GUI MT X11",

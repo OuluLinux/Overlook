@@ -468,7 +468,7 @@ void Overlook::DeepRefreshData() {
 }
 
 void Overlook::RefreshData() {
-	if (mt_refresh.Elapsed() >= 1*1000) {
+	if (mt_refresh.Elapsed() >= 10*1000) {
 		Thread::Start(THISBACK(DeepRefresh));
 	}
 	

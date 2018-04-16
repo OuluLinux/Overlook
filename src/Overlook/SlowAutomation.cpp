@@ -133,7 +133,7 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 	
 	// OnlineMinimalLabel
-	double cost	 = point * (1 + period_id + PERIOD_SHIFT);
+	double cost	 = point * (1 + period_id);
 	const int count = 1;
 	bool sigbuf[count];
 	int begin = Upp::max(0, cursor - 200);
@@ -145,7 +145,7 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 	// TrendIndex
 	bool bit_value;
-	int period = 1 << (1 + period_id + PERIOD_SHIFT);
+	int period = 1 << (1 + period_id);
 	double err, av_change, buf_value;
 	TrendIndex::Process(open_buf, cursor, period, 3, err, buf_value, av_change, bit_value);
 	SetBitCurrent(bit_pos++, buf_value > 0.0);
@@ -160,7 +160,7 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 	
 	// Open/Close trend
-	period = 1 << (period_id + PERIOD_SHIFT);
+	period = 1 << period_id;
 	int dir = 0;
 	int len = 0;
 	if (cursor >= period * 3) {
@@ -261,7 +261,7 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 	
 	// Descriptor bits
-	period = 1 << (period_id + PERIOD_SHIFT);
+	period = 1 << period_id;
 	for(int i = 0; i < processbits_period_count; i++) {
 		int pos = Upp::max(0, cursor - period * (i + 1));
 		double open2 = open_buf[pos];
@@ -285,7 +285,7 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 	// Correlation
 	const int corr_count = 4;
-	const int corr_step = 1 << (period_id + PERIOD_SHIFT);
+	const int corr_step = 1 << period_id;
 	
 	for(int j = 0; j < sym_count; j++) {
 		if (j == sym) continue;
@@ -325,107 +325,55 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 }
 
+void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
+	for(int i = 0; i < processbits_inputrow_size; i++) {
+		bool value = GetBit(pos, i);
+		input.Set(i, value ? 0.0 : 1.0);
+	}
+}
+
+void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
+	bool p = false, n = false;
+	for(int i = 0; i < dqn_rightoffset; i++) {
+		double diff = open_buf[pos + i + 1] - open_buf[pos];
+		p |= +diff >= +spread;
+		n |= -diff >= +spread;
+	}
+	output[0] = p ? 0.0 : 1.0;
+	output[1] = n ? 0.0 : 1.0;
+}
+
 void SlowAutomation::Evolve() {
-	if (strands.IsEmpty())
-		strands.Add();
+	int& iters = this->dqn_iters;
 	
-	strands.Sort();
-
-	Index<unsigned> visited_hashes;
-
-	for (; strands.cursor < MAX_ITERS && running; strands.cursor++) {
-		bool total_added = false;
-
-		meta_added.Clear();
-
-		int evolve_count = strands.GetCount();
-		for(int i = 0; i < evolve_count && running; i++) {
-			Strand& st = strands[i];
-
-			single_added.Clear();
-
-			for(int j = 0; j < processbits_inputrow_size && running; j++) {
-
-				for(int k = 0; k < 4; k++) {
-					
-					Strand test = st;
-
-					bool fail = false;
-					if      (k == 0)	fail = test.enabled				.Evolve(j);
-					else if (k == 1)	fail = test.signal_true			.Evolve(j);
-					else if (k == 2)	fail = test.signal_false		.Evolve(j);
-					else if (k == 3)	test.sig_bit = j;
-					if (fail) continue;
-
-					unsigned hash = test.GetHashValue();
-					if (visited_hashes.Find(hash) != -1)
-						continue;
-					visited_hashes.FindAdd(hash);
-
-					TestStrand(test);
-
-					if (test.result == 0.0)
-						continue;
-
-					//if (test.result < strands.Top().result && strands.GetCount() >= MAX_STRANDS)
-					//	continue;
-
-					single_added.Add(test);
-				}
-			}
-
-			if (!single_added.IsEmpty()) {
-				total_added = true;
-
-				single_added.Sort();
-				if (single_added.GetCount() > MAX_STRANDS)
-					single_added.SetCount(MAX_STRANDS);
-
-				for(int i = 0, added_count = 0; i < single_added.GetCount() && added_count < 2; i++) {
-					auto& s = single_added.strands[i];
-					if (!meta_added.Has(s)) {
-						meta_added.Add(s);
-						added_count++;
-					}
-				}
-				
-				meta_added.Sort();
-				if (meta_added.GetCount() > MAX_STRANDS)
-					meta_added.SetCount(MAX_STRANDS);
-			}
-		}
-
-		if (!running) break;
-
-		if (total_added == false)
-			break;
-
-
-		int count = min(MAX_STRANDS*2, meta_added.GetCount());
-		for(int i = 0; i < count; i++) {
-			auto& s = meta_added.strands[i];
-			if (!strands.Has(s))
-				strands.Add(s);
-		}
-
-		// Sort
-		strands.Sort();
-
-
-		DUMP(strands.cursor);
-		strands.Dump();
-
-
-		// Trim
-		if (strands.GetCount() > MAX_STRANDS)
-			strands.SetCount(MAX_STRANDS);
+	const double max_alpha = 0.01;
+	
+	if (!iters) {
+		dqn.Init();
 	}
 	
+	dqn.SetEpsilon(0);
+	dqn.SetGamma(0);
+	dqn.SetAlpha(max_alpha);
 	
+	while (*running && iters < max_iters) {
+		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
+		Dqn::MatType input;
+		double output[dqn_output_size];
+		
+		//double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
+		//dqn.SetAlpha(alpha);
+		
+		LoadInput(input, pos);
+		int action = dqn.Act(input);
+		double reward = TestAction(pos, action);
+		dqn.Learn(input, action, reward);
+		
+		iters++;
+	}
 	
-	
-	if (strands.cursor >= MAX_ITERS) {
-		int& cursor = output_cursor;
+	if (iters >= max_iters) {
+		int& cursor = dqn_cursor;
 		if (cursor > 0)
 			cursor -= 3;
 		for(; cursor < processbits_cursor; cursor++) {
@@ -434,7 +382,12 @@ void SlowAutomation::Evolve() {
 				cursor = processbits_cursor - 1;
 			#endif
 			
-			int action = GetAction(cursor);
+			Dqn::MatType input;
+			double output[dqn_output_size];
+			
+			LoadInput(input, cursor);
+			
+			int action = dqn.Act(input);
 			
 			bool signal = action == ACTION_SHORT;
 			bool enabled = action != ACTION_IDLE;
@@ -446,59 +399,20 @@ void SlowAutomation::Evolve() {
 }
 
 void SlowAutomation::GetOutputValues(bool& signal, int& level) {
-	int cursor = output_cursor - 1;
+	int cursor = dqn_cursor - 1;
 	if (cursor < 0) return;
 	
-	signal = GetBitOutput(cursor, OUT_EVOLVE_SIG);
-	level  = GetBitOutput(cursor, OUT_EVOLVE_ENA);
-}
-
-void SlowAutomation::TestStrand(Strand& st) {
-	st.result = 0.0;
-	for(int cursor = 100; cursor < processbits_cursor; cursor++) {
-		int action = GetAction(st, cursor);
-		if (action != ACTION_IDLE)
-			st.result += TestAction(cursor, action);
-	}
-}
-
-int SlowAutomation::GetAction(int cursor) {
-	int action = 0;
-	for(int i = 0; i < strands.GetCount(); i++) {
-		Strand& st = strands[i];
-		if (st.result <= 0.0)
-			break;
-		action = GetAction(st, cursor);
-		if (action != ACTION_IDLE)
-			break;
-	}
-	return action;
-}
-
-int SlowAutomation::GetAction(Strand& st, int cursor) {
-	bool signal = GetBit(cursor, st.sig_bit);
-	bool enabled = true;
+	Dqn::MatType input;
+	double output[dqn_output_size];
 	
-	if (signal) {
-		signal = true;
-	}
-		
-	for(int j = 0; j < st.enabled.count && enabled; j++) {
-		int bit = st.enabled.bits[j];
-		enabled &= GetBit(cursor, bit);
-	}
+	LoadInput(input, cursor);
 
-	if (enabled) {
-		for(int j = 0; j < st.signal_true.count && enabled; j++)
-			enabled &= GetBit(cursor, st.signal_true.bits[j]) == signal;
-		for(int j = 0; j < st.signal_false.count && enabled; j++)
-			enabled &= GetBit(cursor, st.signal_false.bits[j]) != signal;
-	}
+
+	int action = dqn.Act(input);
 	
-	if (enabled)
-		return signal ? ACTION_SHORT : ACTION_LONG;
-	
-	return ACTION_IDLE;
+	bool signal = action == ACTION_SHORT;
+	bool enabled = action != ACTION_IDLE;
+	level = enabled;
 }
 
 double SlowAutomation::TestAction(int& pos, int action) {
@@ -531,70 +445,5 @@ double SlowAutomation::TestAction(int& pos, int action) {
 	
 	return min(2.0, max(-2.0, reward));
 }
-
-
-
-
-
-bool StrandList::Has(Strand& s) {
-	for(int i = 0; i < strand_count; i++) {
-		if (s.result == strands[i].result)
-			return true;
-	}
-	return false;
-}
-
-void StrandList::Sort() {
-	for(int i = 0; i < strand_count; i++) {
-		int pos = i;
-		double max = strands[i].result;
-		for(int j = i+1; j < strand_count; j++) {
-			Strand& s = strands[j];
-			if (s.result > max) {
-				max = s.result;
-				pos = j;
-			}
-		}
-		Swap(strands[i], strands[pos]);
-	}
-}
-
-void StrandList::Dump() {
-	DUMP(strand_count);
-	DUMP(cursor);
-	for(int i = 0; i < strand_count; i++) {
-		LOG("   " << i << ": " << strands[i].ToString());
-	}
-}
-
-bool StrandItem::Evolve(int bit) {
-	bool fail = false;
-	for(int i = 0; i < count; i++) {
-		if (bits[i] == bit) {
-			fail = true;
-			break;
-		}
-	}
-	Add(bit);
-	return fail;
-}
-
-String Strand::ToString() const {
-	String out;
-	out << "result=" << (double)result << ", " << BitString();
-	return out;
-}
-
-String Strand::BitString() const {
-	String out;
-	for(int i = 0; i < enabled.count; i++)
-		out << "e" << i << "=" << enabled.bits[i] << ", ";
-	for(int i = 0; i < signal_true.count; i++)
-		out << "s+" << i << "=" << signal_true.bits[i] << ", ";
-	for(int i = 0; i < signal_false.count; i++)
-		out << "s-" << i << "=" << signal_false.bits[i] << ", ";
-	return out;
-}
-
 
 }

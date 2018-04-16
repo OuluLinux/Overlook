@@ -126,29 +126,37 @@ void Game::Refresh() {
 		}
 		go.prev_lots = lots;
 		
+		bool start = autostart && go.spread_idx < spread_limit && go.level > 0;
+		int startsig = 0;
+		if (!inversesig)
+			startsig =  go.signal ? -1 : +1;
+		else
+			startsig = !go.signal ? -1 : +1;
 		
 		if (lots > 0.0) {
-			// Check SL/TP limits
-			if (go.profit > tplimit || go.profit < sllimit) {
-				signal[i] = 0;
-				signal_changed = true;
-			}
 			
-			// Check time limits
-			int length = (GetUtcTime().Get() - go.opened.Get()) / 60;
-			if (length >= timelimit) {
-				signal[i] = 0;
-				signal_changed = true;
+			if (start && startsig == signal[i]) {
+				// Don't check limits
+			} else {
+				// Check SL/TP limits
+				if (go.profit > tplimit || go.profit < sllimit) {
+					signal[i] = 0;
+					signal_changed = true;
+				}
+				
+				// Check time limits
+				int length = (GetUtcTime().Get() - go.opened.Get()) / 60;
+				if (length >= timelimit) {
+					signal[i] = 0;
+					signal_changed = true;
+				}
 			}
 			
 			go.open_profits.Add(go.profit);
 		}
 		else {
-			if (autostart && go.spread_idx < spread_limit && go.level > 0) {
-				if (!inversesig)
-					signal[i] =  go.signal ? -1 : +1;
-				else
-					signal[i] = !go.signal ? -1 : +1;
+			if (start) {
+				signal[i] = startsig;
 				signal_changed = true;
 			}
 		}

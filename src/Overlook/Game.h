@@ -11,7 +11,6 @@ struct GameOpportunity {
 	int vol_idx = -1, spread_idx = -1, trend_idx = -1, opp_idx = -1, bcase_idx = -1;
 	int level = 0;
 	bool signal;
-	bool slow_signal;
 	bool is_active = false;
 	
 	double GetAverageIndex() {return (vol_idx + spread_idx + trend_idx + opp_idx + bcase_idx) / 5.0;}

@@ -332,17 +332,6 @@ void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
 	}
 }
 
-void SlowAutomation::LoadOutput(double output[dqn_output_size], int pos) {
-	bool p = false, n = false;
-	for(int i = 0; i < dqn_rightoffset; i++) {
-		double diff = open_buf[pos + i + 1] - open_buf[pos];
-		p |= +diff >= +spread;
-		n |= -diff >= +spread;
-	}
-	output[0] = p ? 0.0 : 1.0;
-	output[1] = n ? 0.0 : 1.0;
-}
-
 void SlowAutomation::Evolve() {
 	int& iters = this->dqn_iters;
 	
@@ -402,17 +391,8 @@ void SlowAutomation::GetOutputValues(bool& signal, int& level) {
 	int cursor = dqn_cursor - 1;
 	if (cursor < 0) return;
 	
-	Dqn::MatType input;
-	double output[dqn_output_size];
-	
-	LoadInput(input, cursor);
-
-
-	int action = dqn.Act(input);
-	
-	bool signal = action == ACTION_SHORT;
-	bool enabled = action != ACTION_IDLE;
-	level = enabled;
+	signal = GetBitOutput(cursor, OUT_EVOLVE_SIG);
+	level  = GetBitOutput(cursor, OUT_EVOLVE_ENA);
 }
 
 double SlowAutomation::TestAction(int& pos, int action) {

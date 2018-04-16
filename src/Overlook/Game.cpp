@@ -53,13 +53,9 @@ void Game::Refresh() {
 		spread_sum.Add(i, volat / spread);
 		trend_sum.Add(i, trend);
 		
-		/*go.signal      = sa.GetSignal();
-		go.slow_signal = sa.GetSlowSignal();
-		go.level       = sa.GetLevel();*/
 		sa.GetOutputValues(go.signal, go.level);
 		opp_sum.Add(i, go.level);
 		
-		go.slow_signal = go.signal;
 		
 		
 		{

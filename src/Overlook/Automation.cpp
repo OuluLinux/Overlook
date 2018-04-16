@@ -13,8 +13,8 @@ Automation::Automation() {
 	
 	for(int i = 0; i < sym_count; i++) {
 		slow[i].sym = i;
-		slow[i].tf = 0; // S1
-		slow[i].period = 1;
+		slow[i].tf = 2;
+		slow[i].period = 15;
 		slow[i].running = &running;
 		for(int j = 0; j < sym_count; j++) {
 			slow[i].other_open_buf[j] = slow[j].open_buf;

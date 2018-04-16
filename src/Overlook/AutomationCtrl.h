@@ -27,8 +27,6 @@ class AutomationCtrl : public ParentCtrl {
 	Splitter evolvesplit;
 	SliderCtrl slider;
 	
-	ArrayCtrl strandlist;
-	
 public:
 	typedef AutomationCtrl CLASSNAME;
 	AutomationCtrl();

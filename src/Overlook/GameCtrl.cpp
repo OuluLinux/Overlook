@@ -76,7 +76,6 @@ GameCtrl::GameCtrl() {
 	opplist.AddColumn("Average");
 	opplist.AddColumn("Level");
 	opplist.AddColumn("Signal");
-	opplist.AddColumn("Slow Signal");
 	opplist.AddColumn("Active");
 	opplist.AddColumn("Profit");
 	
@@ -135,9 +134,8 @@ void GameCtrl::Data() {
 		opplist.Set(i, 6, o.GetAverageIndex());
 		opplist.Set(i, 7, o.level);
 		opplist.Set(i, 8, o.signal ? "Short" : "Long");
-		opplist.Set(i, 9, o.slow_signal ? "Short" : "Long");
-		opplist.Set(i, 10, o.is_active ? "Is active" : "");
-		opplist.Set(i, 11, o.profit);
+		opplist.Set(i, 9, o.is_active ? "Is active" : "");
+		opplist.Set(i, 10, o.profit);
 	}
 	opplist.SetSortColumn(5, false);
 	

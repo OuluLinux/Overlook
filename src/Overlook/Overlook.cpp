@@ -448,7 +448,7 @@ void Overlook::DeepRefresh() {
 			common.RefreshAskBidData(true);
 			GetCalendar().Data();
 			if (enable_automation) {
-				GetGame().Refresh();
+				//GetGame().Refresh();
 				sys.RefreshReal();
 			}
 			

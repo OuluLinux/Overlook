@@ -70,9 +70,6 @@ AutomationCtrl::AutomationCtrl() {
 	tabs.Add(boolctrl);
 	tabs.Add(evolvectrl, "Evolve");
 	tabs.Add(evolvectrl);
-	tabs.Add(strandlist, "Strands");
-	tabs.Add(strandlist);
-	
 	
 	slider.MinMax(0,1);
 	slider << THISBACK(Data);
@@ -88,10 +85,6 @@ AutomationCtrl::AutomationCtrl() {
 	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
 		evolvesplit << evolveprog.Add();
 	evolvesplit.Vert();
-	
-	strandlist.AddColumn("Signal bit");
-	strandlist.AddColumn("Result");
-	strandlist.AddColumn("Bits");
 	
 	PostCallback(THISBACK(Start));
 }
@@ -167,17 +160,7 @@ void AutomationCtrl::Data() {
 	}
 	else if (tab == 1) {
 		for(int i = 0; i < USEDSYMBOL_COUNT; i++) {
-			evolveprog[i].Set(a.slow[i].strands.cursor, SlowAutomation::MAX_ITERS);
-		}
-	}
-	else if (tab == 2) {
-		SlowAutomation& slow = a.slow[0];
-		
-		for(int i = 0; i < slow.strands.GetCount(); i++) {
-			Strand& st = slow.strands[i];
-			strandlist.Set(i, 0, st.sig_bit);
-			strandlist.Set(i, 1, st.result);
-			strandlist.Set(i, 2, st.BitString());
+			evolveprog[i].Set(a.slow[i].dqn_iters, a.slow[i].max_iters);
 		}
 	}
 }

@@ -32,8 +32,8 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24*60*60; // M5
-	static const int maxcount = 1*25*wdayhours; // 14 years
+	static const int wdayhours = 5*24*4; // M15
+	static const int maxcount = 14*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 10000;
 	static const int dqn_rightoffset = 12+1;
@@ -65,6 +65,7 @@ protected:
 	int dqn_item_cursor = 0;
 	Dqn::DQItemType train_cache[dqn_items_count];
 	
+	enum {ACTION_LONG, ACTION_SHORT, ACTION_IDLE};
 	
 	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
 	FixedOnlineAverageWindow1<1 << 2>		av_wins1;

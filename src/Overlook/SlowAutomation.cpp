@@ -111,7 +111,7 @@ bool SlowAutomation::GetBit(int pos, int bit) const {
 void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	double open1 = open_buf[processbits_cursor];
 	double point = this->point;
-	ASSERT(point >= 0.000001 && point < 0.1);
+	ASSERT(point >= 0.000001 && point <= 1);
 	
 	int cursor = processbits_cursor;
 	double* open_buf = this->open_buf;
@@ -345,14 +345,17 @@ void SlowAutomation::Evolve() {
 	dqn.SetGamma(0);
 	dqn.SetAlpha(max_alpha);
 	
+	int rand_count = processbits_cursor - dqn_rightoffset - dqn_leftoffset;
+	ASSERT(rand_count > 0);
+	
 	while (*running && iters < max_iters) {
-		int pos = dqn_leftoffset + Random(processbits_cursor - dqn_rightoffset - dqn_leftoffset);
+		int pos = dqn_leftoffset + Random(rand_count);
 		Dqn::MatType input;
 		double output[dqn_output_size];
 		
 		//double alpha = max_alpha * (double)(max_iters-1-iters) / (double)max_iters;
 		//dqn.SetAlpha(alpha);
-		
+		LOG(pos);
 		LoadInput(input, pos);
 		int action = dqn.Act(input);
 		double reward = TestAction(pos, action);

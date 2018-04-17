@@ -1141,6 +1141,8 @@ void MetaTrader::GetMarginPercentages() {
             int dec = (margin_percentage + 0.0005) * 1000;
             margin_percentage = dec * 0.001;
             ASSERT(IsFin(margin_percentage));
+            if (margin_percentage < 0)
+                margin_percentage = 0.005;
             sym.margin_factor = margin_percentage;
         }
     }

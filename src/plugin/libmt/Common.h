@@ -246,7 +246,7 @@ struct Symbol : public Moveable<Symbol> {
 	
 	
 	// Old MT4Symbol
-	int proxy_id, proxy_factor;
+	int proxy_id = -1, proxy_factor = 0;
 	
 	bool IsForex() const {return calc_mode == CALCMODE_FOREX;}
 	bool IsCFD() const {return calc_mode == CALCMODE_CFD;}

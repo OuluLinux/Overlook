@@ -37,16 +37,12 @@ typedef const int ConstInt;
 	#define MAX_REAL_TFID 7
 #endif
 
-#ifdef flagDEBUG
-#define USEDSYMBOL_COUNT 2
-#else
 #define USEDSYMBOL_COUNT 4
-#endif
 
 #define SLOT_TF 1
-#define DEF_TIMELIMIT 240
-#define DEF_SL -5
-#define DEF_TP +5
+#define DEF_TIMELIMIT 60
+#define DEF_SL -0.5
+#define DEF_TP +0.5
 
 enum {
 	PHASE_TRAINING,

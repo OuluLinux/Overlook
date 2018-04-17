@@ -19,12 +19,12 @@ struct GameOpportunity {
 class Game {
 	
 public:
-	double free_margin_level = 0.9;
+	double free_margin_level = 0.6;
 	double tplimit = DEF_TP, sllimit = DEF_SL;
 	int free_margin_scale = 3;
 	int timelimit = DEF_TIMELIMIT;
-	int max_symbols = 4;
-	int spread_limit = 5;
+	int max_symbols = USEDSYMBOL_COUNT;
+	int spread_limit = USEDSYMBOL_COUNT;
 	bool autostart = false;
 	bool inversesig = false;
 	

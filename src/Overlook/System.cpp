@@ -108,45 +108,37 @@ double SourceImage::GetAppliedValue ( int applied_value, int i ) {
 
 
 System::System() {
-	allowed_symbols.Add("AUDCAD");
-	allowed_symbols.Add("AUDJPY");
-	allowed_symbols.Add("AUDNZD");
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("CADJPY");
-	allowed_symbols.Add("CHFJPY");
-	allowed_symbols.Add("EURCAD");
-	allowed_symbols.Add("EURCHF");
-	allowed_symbols.Add("EURGBP");
-	allowed_symbols.Add("EURJPY");
 	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("GBPCHF");
-	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("NZDUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("USDCHF");
 	allowed_symbols.Add("USDJPY");
-	allowed_symbols.Add("USDMXN");
-	allowed_symbols.Add("USDTRY");
+	allowed_symbols.Add("EURJPY");
+	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("GBPUSD");
+	allowed_symbols.Add("USDCHF");
+	/*allowed_symbols.Add("$CH20");
+	allowed_symbols.Add("$CN50");
+	allowed_symbols.Add("$DE30");
+	allowed_symbols.Add("$ES35");
+	allowed_symbols.Add("$EU50");
+	allowed_symbols.Add("$F40");
+	allowed_symbols.Add("$IN50");
+	allowed_symbols.Add("$IT40");
+	allowed_symbols.Add("$N25");
+	allowed_symbols.Add("$UK100");
+	allowed_symbols.Add("$US100");
+	allowed_symbols.Add("$US30");
+	allowed_symbols.Add("$US500");
+	allowed_symbols.Add("$USDX");*/
 	
 	
+	//used_symbols.Add("$US30");
+	//used_symbols.Add("$DE30");
+	used_symbols.Add("EURUSD");
 	used_symbols.Add("USDJPY");
 	used_symbols.Add("EURJPY");
-	#ifndef flagDEBUG
-	used_symbols.Add("EURUSD");
 	used_symbols.Add("USDCAD");
-	/*used_symbols.Add("CADJPY");
-	used_symbols.Add("EURGBP");
-	used_symbols.Add("GBPUSD");
-	used_symbols.Add("AUDJPY");
-	used_symbols.Add("AUDUSD");
-	used_symbols.Add("EURAUD");
-	used_symbols.Add("GBPJPY");
-	used_symbols.Add("USDCHF");*/
-
-	#endif
-	ASSERT(used_symbols.GetCount() == USEDSYMBOL_COUNT);
+	
+	if (used_symbols.GetCount() != USEDSYMBOL_COUNT)
+		Panic("Invalid USEDSYMBOL_COUNT");
 }
 
 System::~System() {

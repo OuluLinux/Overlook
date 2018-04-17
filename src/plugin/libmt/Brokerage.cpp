@@ -297,7 +297,7 @@ void Brokerage::SignalOrders(bool debug_print) {
 		if (buy_signals[i] == 0 && sell_signals[i] == 0) continue;
 		const Symbol& sym = symbols[i];
 		const Price& p = askbid[i];
-		double balance = sym.IsCFD() ? 0.1 : 1.0;
+		double balance = 1.0;//sym.IsCFD() ? 0.1 : 1.0;
 		double sym_buy_lots  = (double)buy_signals[i]  / (double)min_sig * sym.volume_min * lot_multiplier * balance;
 		double sym_sell_lots = (double)sell_signals[i] / (double)min_sig * sym.volume_min * lot_multiplier * balance;
 		buy_lots[i]  = ((int64)(sym_buy_lots  / sym.volume_min)) * sym.volume_min;

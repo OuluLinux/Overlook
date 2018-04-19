@@ -32,7 +32,7 @@ protected:
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24*60; // M1
+	static const int wdayhours = 5*24; // H4
 	static const int maxcount = 1*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 100;
@@ -142,7 +142,6 @@ protected:
 	
 	SlowAutomation	slow[sym_count];
 	JobGroup		jobgroups[jobgroup_count];
-	double			output_fmlevel;
 	int				worker_cursor = 0;
 	bool			running = false, stopped = true;
 	
@@ -167,8 +166,6 @@ public:
 	void	LoadSource();
 	
 	bool	IsRunning() const {return running;}
-	double	GetFreeMarginLevel() {return output_fmlevel;}
-	int		GetFreeMarginScale() {return sym_count;}
 	int		GetSymGroupJobId(int symbol) const;
 	
 	

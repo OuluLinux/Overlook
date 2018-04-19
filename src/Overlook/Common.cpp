@@ -268,7 +268,7 @@ void DrawVectorPoints(Draw& id, Size sz, const Vector<double>& data) {
 	}
 }
 
-void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline) {
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, Color clr) {
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;
@@ -302,7 +302,87 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 				if (v > peak) peak = v;
 			}
 			if (polyline.GetCount() >= 2)
-				id.DrawPolyline(polyline, 1, Color(81, 145, 137));
+				id.DrawPolyline(polyline, 1, clr);
+		}
+		
+		{
+			int y = 0;
+			String str = DblStr(peak);
+			Size str_sz = GetTextSize(str, fnt);
+			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+			id.DrawText(16, y, str, fnt, Black());
+		}
+		{
+			int y = 0;
+			String str = DblStr(last);
+			Size str_sz = GetTextSize(str, fnt);
+			id.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
+			id.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
+		}
+	}
+}
+
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data0, const Vector<double>& data1, const Vector<double>& data2, Vector<Point>& polyline) {
+	Color clr0 = Color(81, 145, 137);
+	Color clr1 = Red();
+	Color clr2 = Red();
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	double last = 0.0;
+	double peak = 0.0;
+	
+	int max_steps = 0;
+	int count = Upp::min(data0.GetCount(), Upp::min(data1.GetCount(), data2.GetCount()));
+	for(int j = 0; j < count; j++) {
+		double d = data0[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+		d = data1[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+		d = data2[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	if (count > max_steps)
+		max_steps = count;
+	
+	
+	if (max_steps > 1 && max > min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (max_steps - 1);
+		Font fnt = Monospace(10);
+		
+		if (count >= 2) {
+			polyline.SetCount(0);
+			for(int j = 0; j < count; j++) {
+				double v = data1[j];
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+			}
+			if (polyline.GetCount() >= 2)
+				id.DrawPolyline(polyline, 1, clr1);
+			polyline.SetCount(0);
+			for(int j = 0; j < count; j++) {
+				double v = data2[j];
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+			}
+			if (polyline.GetCount() >= 2)
+				id.DrawPolyline(polyline, 1, clr2);
+			polyline.SetCount(0);
+			for(int j = 0; j < count; j++) {
+				double v = data0[j];
+				last = v;
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+				if (v > peak) peak = v;
+			}
+			if (polyline.GetCount() >= 2)
+				id.DrawPolyline(polyline, 1, clr0);
 		}
 		
 		{

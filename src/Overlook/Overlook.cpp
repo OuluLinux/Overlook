@@ -132,6 +132,7 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
+	Tabify(last, Dockable(perfctrl, "Performance").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(gamectrl, "Game").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(autoctrl, "Automation").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(slotctrl, "Exchange slots").SizeHint(Size(300, 200)));
@@ -501,6 +502,7 @@ void Overlook::Data() {
 	
 	if (journal.IsVisible())		RefreshJournal();
 	if (gamectrl.IsVisible())		RefreshGame();
+	if (perfctrl.IsVisible())		RefreshPerformance();
 	if (autoctrl.IsVisible())		RefreshSystem();
 	if (slotctrl.IsVisible())		RefreshSlots();
 	if (calendar.IsVisible())		RefreshCalendar();
@@ -526,6 +528,10 @@ void Overlook::RefreshJournal() {
 
 void Overlook::RefreshGame() {
 	gamectrl.Data();
+}
+
+void Overlook::RefreshPerformance() {
+	perfctrl.Data();
 }
 
 void Overlook::RefreshSystem() {

@@ -37,12 +37,12 @@ typedef const int ConstInt;
 	#define MAX_REAL_TFID 7
 #endif
 
-#define USEDSYMBOL_COUNT 4
+#define USEDSYMBOL_COUNT 2
 
 #define SLOT_TF 1
 #define DEF_TIMELIMIT 60
-#define DEF_SL -0.5
-#define DEF_TP +0.5
+#define DEF_SL -5
+#define DEF_TP +5
 
 enum {
 	PHASE_TRAINING,
@@ -129,20 +129,23 @@ enum {STYLE_SOLID, STYLE_DASH, STYLE_DOT, STYLE_DASHDOT, STYLE_DASHDOTDOT};
 class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	Vector<double> win_a;
 	double sum_a = 0.0;
-	int period = 0, cursor = 0;
+	int period = 0, cursor = 0, buf_count = 0;
 	
 public:
 	OnlineAverageWindow1() {}
 	void Clear() {cursor = 0; sum_a = 0.0; for(int i = 0; i < win_a.GetCount(); i++) win_a[i] = 0.0;}
 	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
 	void Add(double a) {
+		if (cursor >= period) cursor = 0;
 		double& da = win_a[cursor];
 		sum_a -= da;
 		da = a;
 		sum_a += da;
 		cursor = (cursor + 1) % period;
+		if (buf_count < period) buf_count++;
 	}
 	double GetMean() const {return sum_a / period;}
+	int GetBufferCount() const {return buf_count;}
 	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor;}
 };
 
@@ -1052,7 +1055,8 @@ typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& a
 
 
 void DrawVectorPoints(Draw& d, Size sz, const Vector<double>& pts);
-void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache);
+void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache, Color clr=Color(81, 145, 137));
+void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts0, const Vector<double>& pts1, const Vector<double>& pts2, Vector<Point>& cache);
 
 
 

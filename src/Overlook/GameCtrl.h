@@ -47,6 +47,33 @@ public:
 	void SetValues();
 };
 
+
+
+
+class GameBrokerCtrl : public Ctrl {
+	Vector<Point> polyline;
+	
+public:
+	virtual void Paint(Draw& w);
+	
+};
+
+class PerformanceCtrl : public ParentCtrl {
+	GameBrokerCtrl broker;
+	WithPerformanceView<ParentCtrl> view;
+	Splitter split;
+	
+public:
+	typedef PerformanceCtrl CLASSNAME;
+	PerformanceCtrl();
+	
+	void Data();
+	void GetValues();
+	void SetValues();
+	void Optimize();
+	
+};
+
 }
 
 #endif

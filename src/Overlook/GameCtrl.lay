@@ -24,3 +24,12 @@ LAYOUT(GameView, 752, 200)
 	ITEM(Option, autostart, LeftPosZ(120, 96).TopPosZ(116, 20))
 END_LAYOUT
 
+LAYOUT(PerformanceView, 220, 116)
+	ITEM(Label, dv___0, SetLabel(t_("Period-optimization:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 112).TopPosZ(60, 24))
+	ITEM(Label, dv___1, SetLabel(t_("MA2 period:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 112).TopPosZ(32, 24))
+	ITEM(Label, dv___2, SetLabel(t_("MA1 period:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 112).TopPosZ(4, 24))
+	ITEM(Button, optimize, SetLabel(t_("Optimize")).LeftPosZ(120, 96).TopPosZ(60, 24))
+	ITEM(EditIntSpin, ma2, LeftPosZ(120, 96).TopPosZ(32, 24))
+	ITEM(EditIntSpin, ma1, LeftPosZ(120, 96).TopPosZ(4, 24))
+END_LAYOUT
+

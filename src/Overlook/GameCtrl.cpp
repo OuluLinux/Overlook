@@ -208,4 +208,60 @@ void GameCtrl::Stop() {
 	sys.RefreshReal();
 }
 
+
+
+
+void GameBrokerCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	
+	id.DrawRect(sz, White());
+	
+	Game& game = GetGame();
+	DrawVectorPolyline(id, sz, game.sb_equity, game.sb_ma1, game.sb_ma2, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
+
+PerformanceCtrl::PerformanceCtrl() {
+	Add(split.SizePos());
+	split.Horz();
+	
+	split << view << broker;
+	split.SetPos(2000);
+	CtrlLayout(view);
+	
+	GetValues();
+	view.ma1 << THISBACK(SetValues);
+	view.ma2 << THISBACK(SetValues);
+	view.optimize.Disable();
+	
+}
+
+void PerformanceCtrl::Data() {
+	Game& game = GetGame();
+	game.Refresh();
+	
+	
+	broker.Refresh();
+}
+
+void PerformanceCtrl::GetValues() {
+	Game& game = GetGame();
+	
+	view.ma1.SetData(game.ma1);
+	view.ma2.SetData(game.ma2);
+}
+
+void PerformanceCtrl::SetValues() {
+	Game& game = GetGame();
+	
+	game.ma1 = view.ma1.GetData();
+	game.ma2 = view.ma2.GetData();
+}
+
+void PerformanceCtrl::Optimize() {
+	
+}
+
 }

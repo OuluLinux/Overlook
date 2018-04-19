@@ -1,11 +1,15 @@
 #ifndef _plugin_libmt_Brokerage_h_
 #define _plugin_libmt_Brokerage_h_
 
+namespace Overlook {class SimBroker;}
+
 namespace libmt {
 
 class Brokerage {
 	
 protected:
+	friend class ::Overlook::SimBroker;
+	
 	Vector<Order> orders, history_orders;
 	Index<String> skipped_currencies;
 	Index<String> symbol_idx;

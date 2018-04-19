@@ -6,6 +6,7 @@ namespace Overlook {
 Game::Game() {
 	for(int i = 0; i < USEDSYMBOL_COUNT; i++)
 		signal[i] = 0;
+	sb.Init();
 }
 
 void Game::Refresh() {
@@ -95,7 +96,12 @@ void Game::Refresh() {
 		
 		int sys_sym = sys.used_symbols_id[i];
 		if (slot) {
-			String sym = sys.GetSymbol(sys_sym);
+			const Symbol& s = GetMetaTrader().GetSymbol(sys_sym);
+			
+			String sym;
+			if (s.IsForex()) sym = sys.GetSymbol(sys_sym);
+			else             sym = s.currency_margin;
+			
 			String a = sym.Left(3);
 			String b = sym.Right(3);
 			
@@ -126,7 +132,7 @@ void Game::Refresh() {
 		}
 		go.prev_lots = lots;
 		
-		bool start = autostart && go.spread_idx < spread_limit && go.level > 0;
+		bool start = autostart && go.spread_idx < spread_limit && go.level > 0 && go.is_active;
 		int startsig = 0;
 		if (!inversesig)
 			startsig =  go.signal ? -1 : +1;
@@ -160,11 +166,46 @@ void Game::Refresh() {
 				signal_changed = true;
 			}
 		}
+		
 	}
 	
-	if (signal_changed)
-		sys.RefreshReal();
+	mt._GetAskBid();
+	sb.SetFixedVolume();
+	sb.RefreshAskBid();
+	if (signal_changed) {
+		for (int i = 0; i < USEDSYMBOL_COUNT; i++) {
+			int sym_id = sys.used_symbols_id[i];
+			int sig = signal[i];
+			int prev_sig = sb.GetSignal(sym_id);
+			if (sig == prev_sig && sig != 0) {
+				sb.SetSignalFreeze(sym_id, true);
+			} else {
+				sb.SetSignal(sym_id, sig);
+				sb.SetSignalFreeze(sym_id, false);
+			}
+			LOG("Game symbol " << sym_id << " signal " << sig);
+		}
+		
+		sb.SetFreeMarginLevel(free_margin_level);
+		sb.SetFreeMarginScale(free_margin_scale);
+		sb.SignalOrders(true);
+	}
+	sb.RefreshOrders();
 	
+	double eq = sb.AccountEquity();
+	sb_equity.Add(eq);
+	
+	ma1_av.SetPeriod(ma1);
+	ma2_av.SetPeriod(ma2);
+	ma1_av.Add(eq);
+	ma2_av.Add(eq);
+	double mean1 = ma1_av.GetMean();
+	double mean2 = ma2_av.GetMean();
+	if (ma1_av.GetBufferCount() >= ma1) sb_ma1.Add(mean1);
+	else                                sb_ma1.Add(eq);
+	if (ma2_av.GetBufferCount() >= ma2) sb_ma2.Add(mean2);
+	else                                sb_ma2.Add(eq);
+	allow_real = ma2_av.GetBufferCount() >= ma2 && mean1 > mean2;
 	
 	if (max_level != prev_max_level && max_level > 0)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);

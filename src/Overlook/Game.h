@@ -19,18 +19,23 @@ struct GameOpportunity {
 class Game {
 	
 public:
-	double free_margin_level = 0.6;
+	SimBroker sb;
+	double free_margin_level = 0.8;
 	double tplimit = DEF_TP, sllimit = DEF_SL;
+	int ma1 = 240, ma2 = 480;
 	int free_margin_scale = 3;
 	int timelimit = DEF_TIMELIMIT;
-	int max_symbols = USEDSYMBOL_COUNT;
+	int max_symbols = USEDSYMBOL_COUNT*2;
 	int spread_limit = USEDSYMBOL_COUNT;
-	bool autostart = false;
+	bool autostart = true;
 	bool inversesig = false;
 	
+	OnlineAverageWindow1 ma1_av, ma2_av;
 	Array<GameOpportunity> opps;
+	Vector<double> sb_equity, sb_ma1, sb_ma2;
 	int prev_max_level = 0;
 	int signal[USEDSYMBOL_COUNT];
+	bool allow_real = false;
 	Mutex lock;
 	
 public:

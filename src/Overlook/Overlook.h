@@ -98,6 +98,7 @@ protected:
 	AutomationCtrl autoctrl;
 	ExchangeSlotsCtrl slotctrl;
 	GameCtrl gamectrl;
+	PerformanceCtrl perfctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool enable_automation = true;
@@ -158,6 +159,7 @@ public:
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshJournal();
+	void RefreshPerformance();
 	void RefreshGame();
 	void RefreshSystem();
 	void RefreshSlots();

@@ -114,7 +114,7 @@ System::System() {
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("GBPUSD");
 	allowed_symbols.Add("USDCHF");
-	/*allowed_symbols.Add("$CH20");
+	allowed_symbols.Add("$CH20");
 	allowed_symbols.Add("$CN50");
 	allowed_symbols.Add("$DE30");
 	allowed_symbols.Add("$ES35");
@@ -127,15 +127,15 @@ System::System() {
 	allowed_symbols.Add("$US100");
 	allowed_symbols.Add("$US30");
 	allowed_symbols.Add("$US500");
-	allowed_symbols.Add("$USDX");*/
+	allowed_symbols.Add("$USDX");
 	
 	
-	//used_symbols.Add("$US30");
-	//used_symbols.Add("$DE30");
-	used_symbols.Add("EURUSD");
-	used_symbols.Add("USDJPY");
-	used_symbols.Add("EURJPY");
-	used_symbols.Add("USDCAD");
+	used_symbols.Add("$US30");
+	used_symbols.Add("$DE30");
+	//used_symbols.Add("EURUSD");
+	//used_symbols.Add("USDJPY");
+	//used_symbols.Add("EURJPY");
+	//used_symbols.Add("USDCAD");
 	
 	if (used_symbols.GetCount() != USEDSYMBOL_COUNT)
 		Panic("Invalid USEDSYMBOL_COUNT");
@@ -427,7 +427,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Game& a					= GetGame();
+		Game& game				= GetGame();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
@@ -453,7 +453,9 @@ bool System::RefreshReal() {
 		
 		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
 			int sym = used_symbols_id[i];
-			int signal = a.signal[i];;
+			int signal = game.signal[i];
+			if (!game.allow_real)
+				signal = 0;
 			SetSignal(sym, signal);
 		}
 		
@@ -488,8 +490,8 @@ bool System::RefreshReal() {
 					sig_change = true;
 			}
 			
-			mt.SetFreeMarginLevel(a.free_margin_level);
-			mt.SetFreeMarginScale(a.free_margin_scale);
+			mt.SetFreeMarginLevel(game.free_margin_level);
+			mt.SetFreeMarginScale(game.free_margin_scale);
 			mt.SignalOrders(true);
 		}
 		catch (UserExc e) {

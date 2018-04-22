@@ -14,6 +14,7 @@ using namespace Upp;
 #include <CtrlCore/lay.h>
 
 #include "DQN.h"
+#include "Optimizer.h"
 #include "Common.h"
 #include "CommonFixed.h"
 #include "Calendar.h"

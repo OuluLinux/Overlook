@@ -49,7 +49,7 @@ file
 	ExpertSystem.cpp,
 	Automation.h,
 	Automation.cpp,
-	SlowAutomation.cpp,
+	SymAutomation.cpp,
 	Game.h,
 	Game.cpp,
 	SimBroker.h,
@@ -61,7 +61,8 @@ file
 	Indicators.cpp,
 	Calendar.h,
 	Calendar.cpp,
-	DQN.h;
+	DQN.h,
+	Optimizer.h;
 
 mainconfig
 	"Working" = "GUI MT X11",

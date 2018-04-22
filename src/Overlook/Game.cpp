@@ -23,7 +23,7 @@ void Game::Refresh() {
 	
 	opps.SetCount(a.sym_count);
 	for(int i = 0; i < a.sym_count; i++) {
-		SlowAutomation& sa = a.slow[i];
+		SymAutomation& sa = a.slow[i];
 		GameOpportunity& go = opps[i];
 		int end = sa.processbits_cursor - 1;
 		int begin = max(0, end - count);
@@ -83,7 +83,7 @@ void Game::Refresh() {
 	
 	for(int i = 0; i < a.sym_count; i++) {
 		GameOpportunity& go = opps[i];
-		SlowAutomation& sa  = a.slow[i];
+		SymAutomation& sa  = a.slow[i];
 		
 		go.vol_idx    = volat_sum.Find(i);
 		go.spread_idx = spread_sum.Find(i);
@@ -205,7 +205,7 @@ void Game::Refresh() {
 	else                                sb_ma1.Add(eq);
 	if (ma2_av.GetBufferCount() >= ma2) sb_ma2.Add(mean2);
 	else                                sb_ma2.Add(eq);
-	allow_real = ma2_av.GetBufferCount() >= ma2 && mean1 > mean2;
+	allow_real = ma2_av.GetBufferCount() >= ma2 && mean1 > mean2 && eq > mean1;
 	
 	if (max_level != prev_max_level && max_level > 0)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);

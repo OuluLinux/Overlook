@@ -20,9 +20,9 @@ class Game {
 	
 public:
 	SimBroker sb;
-	double free_margin_level = 0.8;
+	double free_margin_level = 0.9;
 	double tplimit = DEF_TP, sllimit = DEF_SL;
-	int ma1 = 240, ma2 = 480;
+	int ma1 = 480, ma2 = 960;
 	int free_margin_scale = 3;
 	int timelimit = DEF_TIMELIMIT;
 	int max_symbols = USEDSYMBOL_COUNT*2;

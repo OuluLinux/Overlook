@@ -130,12 +130,15 @@ System::System() {
 	allowed_symbols.Add("$USDX");
 	
 	
+	#if 1
 	used_symbols.Add("$US30");
 	used_symbols.Add("$DE30");
-	//used_symbols.Add("EURUSD");
-	//used_symbols.Add("USDJPY");
-	//used_symbols.Add("EURJPY");
-	//used_symbols.Add("USDCAD");
+	#else
+	used_symbols.Add("EURUSD");
+	used_symbols.Add("USDJPY");
+	used_symbols.Add("EURJPY");
+	used_symbols.Add("USDCAD");
+	#endif
 	
 	if (used_symbols.GetCount() != USEDSYMBOL_COUNT)
 		Panic("Invalid USEDSYMBOL_COUNT");

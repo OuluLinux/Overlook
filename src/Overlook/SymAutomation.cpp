@@ -3,7 +3,7 @@
 namespace Overlook {
 
 
-void SlowAutomation::ProcessBits() {
+void SymAutomation::ProcessBits() {
 	ASSERT(processbits_row_size < processbits_row_size_aliased);
 	ASSERT(processbits_row_size_aliased % 64 == 0);
 	
@@ -75,7 +75,7 @@ void SlowAutomation::ProcessBits() {
 	}
 }
 
-int SlowAutomation::GetBitDiff(int a, int b) {
+int SymAutomation::GetBitDiff(int a, int b) {
 	static const int row_bytes = processbits_row_size_aliased / 64;
 	int hamming_distance = 0;
 	int a_pos = a * row_bytes;
@@ -88,7 +88,7 @@ int SlowAutomation::GetBitDiff(int a, int b) {
 	return hamming_distance;
 }
 
-void SlowAutomation::SetBit(int pos, int bit, bool b) {
+void SymAutomation::SetBit(int pos, int bit, bool b) {
 	ASSERT(bit >= 0 && bit < processbits_row_size);
 	int64 i = pos* processbits_row_size_aliased + bit;
 	int64 j = i / 64;
@@ -99,7 +99,7 @@ void SlowAutomation::SetBit(int pos, int bit, bool b) {
 	else	*it &= ~(1ULL << k);
 }
 
-bool SlowAutomation::GetBit(int pos, int bit) const {
+bool SymAutomation::GetBit(int pos, int bit) const {
 	int64 i = pos * processbits_row_size_aliased + bit;
 	int64 j = i / 64;
 	int64 k = i % 64;
@@ -108,7 +108,7 @@ bool SlowAutomation::GetBit(int pos, int bit) const {
 	return *it & (1ULL << k);
 }
 
-void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
+void SymAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	double open1 = open_buf[processbits_cursor];
 	double point = this->point;
 	ASSERT(point >= 0.000001 && point <= 1);
@@ -325,14 +325,14 @@ void SlowAutomation::ProcessBitsSingle(int period_id, int& bit_pos) {
 	
 }
 
-void SlowAutomation::LoadInput(Dqn::MatType& input, int pos) {
+void SymAutomation::LoadInput(Dqn::MatType& input, int pos) {
 	for(int i = 0; i < processbits_inputrow_size; i++) {
 		bool value = GetBit(pos, i);
 		input.Set(i, value ? 0.0 : 1.0);
 	}
 }
 
-void SlowAutomation::Evolve() {
+void SymAutomation::Evolve() {
 	int& iters = this->dqn_iters;
 	
 	const double max_alpha = 0.01;
@@ -390,7 +390,7 @@ void SlowAutomation::Evolve() {
 	}
 }
 
-void SlowAutomation::GetOutputValues(bool& signal, int& level) {
+void SymAutomation::GetOutputValues(bool& signal, int& level) {
 	int cursor = dqn_cursor - 1;
 	if (cursor < 0) return;
 	
@@ -398,7 +398,7 @@ void SlowAutomation::GetOutputValues(bool& signal, int& level) {
 	level  = GetBitOutput(cursor, OUT_EVOLVE_ENA);
 }
 
-double SlowAutomation::TestAction(int& pos, int action) {
+double SymAutomation::TestAction(int& pos, int action) {
 	if (action == ACTION_IDLE)
 		return 0.0;
 	

@@ -75,7 +75,7 @@ protected:
 	friend class DataBridgeCommon;
 	friend class SlotSignalsCtrl;
 	friend class AutomationCtrl;
-	friend class SlowAutomation;
+	friend class SymAutomation;
 	friend class BooleansDraw;
 	friend class SyncedPrice;
 	friend class Automation;

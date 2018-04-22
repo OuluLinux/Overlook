@@ -20,7 +20,7 @@ enum {
 	OUT_COUNT
 };
 
-class SlowAutomation {
+class SymAutomation {
 	
 protected:
 	friend class AutomationCtrl;
@@ -140,7 +140,7 @@ protected:
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int jobgroup_count = GROUP_COUNT;
 	
-	SlowAutomation	slow[sym_count];
+	SymAutomation	slow[sym_count];
 	JobGroup		jobgroups[jobgroup_count];
 	int				worker_cursor = 0;
 	bool			running = false, stopped = true;

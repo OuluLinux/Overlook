@@ -921,6 +921,20 @@ const Vector<Price>& MetaTrader::_GetAskBid() {
 		p.bid = bid;
 		p.volume = volume;
 	}
+	
+	// Hackish way to add commission to spread
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		String& sym = symbols[i].name;
+		if (sym == "$DE30") {
+			Price& p = askbid[i];
+			p.bid = p.ask/(3.5/1000+1.0);
+		}
+		else if (sym == "$US30") {
+			Price& p = askbid[i];
+			p.bid = p.ask/(5.14/1000+1.0);
+		}
+	}
+	
 	return askbid;
 }
 

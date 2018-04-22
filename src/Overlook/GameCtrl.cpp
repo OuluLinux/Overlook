@@ -11,7 +11,7 @@ void GameMatchCtrl::Paint(Draw& w) {
 	Automation& a = GetAutomation();
 	
 	if (sym >= 0 && sym < a.sym_count) {
-		SlowAutomation& sa = a.slow[sym];
+		SymAutomation& sa = a.slow[sym];
 		int count = 6;
 		int begin = sa.most_matching_pos;
 		int end = min(begin + count, sa.processbits_cursor);

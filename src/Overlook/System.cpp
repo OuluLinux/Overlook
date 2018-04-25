@@ -114,6 +114,18 @@ System::System() {
 	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("GBPUSD");
 	allowed_symbols.Add("USDCHF");
+	allowed_symbols.Add("#BA");
+	allowed_symbols.Add("#C");
+	allowed_symbols.Add("#CAT");
+	allowed_symbols.Add("#CSCO");
+	allowed_symbols.Add("#CVX");
+	allowed_symbols.Add("#HD");
+	allowed_symbols.Add("#HON");
+	allowed_symbols.Add("#INTC");
+	allowed_symbols.Add("#JPM");
+	allowed_symbols.Add("#MCD");
+	allowed_symbols.Add("#MMM");
+	allowed_symbols.Add("#MSFT");
 	allowed_symbols.Add("$CH20");
 	allowed_symbols.Add("$CN50");
 	allowed_symbols.Add("$DE30");
@@ -131,6 +143,19 @@ System::System() {
 	
 	
 	#if 1
+	used_symbols.Add("#BA");
+	used_symbols.Add("#C");
+	used_symbols.Add("#CAT");
+	used_symbols.Add("#CSCO");
+	used_symbols.Add("#CVX");
+	used_symbols.Add("#HD");
+	used_symbols.Add("#HON");
+	used_symbols.Add("#INTC");
+	used_symbols.Add("#JPM");
+	used_symbols.Add("#MCD");
+	used_symbols.Add("#MMM");
+	used_symbols.Add("#MSFT");
+	#elif 0
 	used_symbols.Add("$US30");
 	used_symbols.Add("$DE30");
 	#else
@@ -430,7 +455,7 @@ bool System::RefreshReal() {
 		int wday_after_3hours	= DayOfWeek(after_3hours);
 		now.second				= 0;
 		MetaTrader& mt			= GetMetaTrader();
-		Game& game				= GetGame();
+		Realtime& game				= GetRealtime();
 		
 		// Skip weekends and first hours of monday
 		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {

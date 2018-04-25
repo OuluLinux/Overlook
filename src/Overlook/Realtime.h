@@ -1,9 +1,9 @@
-#ifndef _Overlook_Game_h_
-#define _Overlook_Game_h_
+#ifndef _Overlook_Realtime_h_
+#define _Overlook_Realtime_h_
 
 namespace Overlook {
 
-struct GameOpportunity {
+struct RealtimeOpportunity {
 	Vector<double> open_profits;
 	Time opened;
 	double profit = 0.0;
@@ -16,7 +16,7 @@ struct GameOpportunity {
 	double GetAverageIndex() {return (vol_idx + spread_idx + trend_idx + opp_idx + bcase_idx) / 5.0;}
 };
 
-class Game {
+class Realtime {
 	
 public:
 	SimBroker sb;
@@ -31,7 +31,7 @@ public:
 	bool inversesig = false;
 	
 	OnlineAverageWindow1 ma1_av, ma2_av;
-	Array<GameOpportunity> opps;
+	Array<RealtimeOpportunity> opps;
 	Vector<double> sb_equity, sb_ma1, sb_ma2;
 	int prev_max_level = 0;
 	int signal[USEDSYMBOL_COUNT];
@@ -39,14 +39,14 @@ public:
 	Mutex lock;
 	
 public:
-	typedef Game CLASSNAME;
-	Game();
+	typedef Realtime CLASSNAME;
+	Realtime();
 	
 	void Refresh();
 	
 };
 
-inline Game& GetGame() {return Single<Game>();}
+inline Realtime& GetRealtime() {return Single<Realtime>();}
 
 }
 

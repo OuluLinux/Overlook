@@ -37,7 +37,7 @@ typedef const int ConstInt;
 	#define MAX_REAL_TFID 7
 #endif
 
-#define USEDSYMBOL_COUNT 2
+#define USEDSYMBOL_COUNT 12
 
 #define SLOT_TF 1
 #define DEF_TIMELIMIT 60

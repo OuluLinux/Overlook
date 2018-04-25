@@ -1,13 +1,13 @@
-#ifndef _Overlook_GameCtrl_h_
-#define _Overlook_GameCtrl_h_
+#ifndef _Overlook_RealtimeCtrl_h_
+#define _Overlook_RealtimeCtrl_h_
 
-#define LAYOUTFILE <Overlook/GameCtrl.lay>
+#define LAYOUTFILE <Overlook/RealtimeCtrl.lay>
 #include <CtrlCore/lay.h>
 
 
 namespace Overlook {
 
-class GameMatchCtrl : public Ctrl {
+class RealtimeMatchCtrl : public Ctrl {
 	Vector<double> tmp;
 	Vector<Point> polyline;
 	
@@ -18,7 +18,7 @@ public:
 	
 };
 
-class GameOrderCtrl : public Ctrl {
+class RealtimeOrderCtrl : public Ctrl {
 	Vector<Point> polyline;
 	
 public:
@@ -28,16 +28,16 @@ public:
 	
 };
 
-class GameCtrl : public ParentCtrl {
+class RealtimeCtrl : public ParentCtrl {
 	Splitter split;
 	ArrayCtrl opplist;
-	WithGameView<ParentCtrl> view;
-	GameMatchCtrl match;
-	GameOrderCtrl order;
+	WithRealtimeView<ParentCtrl> view;
+	RealtimeMatchCtrl match;
+	RealtimeOrderCtrl order;
 	
 public:
-	typedef GameCtrl CLASSNAME;
-	GameCtrl();
+	typedef RealtimeCtrl CLASSNAME;
+	RealtimeCtrl();
 	
 	void Data();
 	void SetView();
@@ -50,7 +50,7 @@ public:
 
 
 
-class GameBrokerCtrl : public Ctrl {
+class RealtimeBrokerCtrl : public Ctrl {
 	Vector<Point> polyline;
 	
 public:
@@ -59,7 +59,7 @@ public:
 };
 
 class PerformanceCtrl : public ParentCtrl {
-	GameBrokerCtrl broker;
+	RealtimeBrokerCtrl broker;
 	WithPerformanceView<ParentCtrl> view;
 	Splitter split;
 	

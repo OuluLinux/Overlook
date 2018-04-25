@@ -23,7 +23,7 @@ using namespace Upp;
 #include "System.h"
 #include "Automation.h"
 #include "ExpertSystem.h"
-#include "Game.h"
+#include "Realtime.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
@@ -33,7 +33,7 @@ using namespace Upp;
 #include "ChartManager.h"
 #include "AutomationCtrl.h"
 #include "ExpertSystemCtrl.h"
-#include "GameCtrl.h"
+#include "RealtimeCtrl.h"
 
 
 namespace Overlook {
@@ -98,7 +98,7 @@ protected:
 	TimeStop mt_refresh;
 	AutomationCtrl autoctrl;
 	ExchangeSlotsCtrl slotctrl;
-	GameCtrl gamectrl;
+	RealtimeCtrl gamectrl;
 	PerformanceCtrl perfctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
@@ -161,7 +161,7 @@ public:
 	void SetTimeframe(int tf_id);
 	void RefreshJournal();
 	void RefreshPerformance();
-	void RefreshGame();
+	void RefreshRealtime();
 	void RefreshSystem();
 	void RefreshSlots();
 	void RefreshCalendar();

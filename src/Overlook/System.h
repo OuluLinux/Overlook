@@ -81,8 +81,8 @@ protected:
 	friend class Automation;
 	friend class DataBridge;
 	friend class SimBroker;
-	friend class GameCtrl;
-	friend class Game;
+	friend class RealtimeCtrl;
+	friend class Realtime;
 	
 	
 	// Persistent

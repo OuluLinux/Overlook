@@ -60,7 +60,7 @@ void DataBridge::Start() {
 	int sym_count = common.GetSymbolCount();
 	
 	// Regular symbols
-	if (tf_id > 0 && sym_id < sym_count) {
+	/*if (tf_id > 0 && sym_id < sym_count) {
 		RefreshFromFaster();
 	}
 	else if (sym_id < sym_count) {
@@ -72,7 +72,11 @@ void DataBridge::Start() {
 		}
 		RefreshFromAskBid(init_round);
 		RefreshViaConnection(); // very slow to be before RefreshFromAskBid
-	}
+	}*/
+	bool init_round = open.GetCount() == 0;
+	RefreshFromHistory(false);
+	RefreshFromAskBid(init_round);
+	RefreshViaConnection(); 
 	
 	lock.Leave();
 }

@@ -133,7 +133,7 @@ void Overlook::DockInit() {
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
 	Tabify(last, Dockable(perfctrl, "Performance").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(gamectrl, "Game").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(gamectrl, "Realtime").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(autoctrl, "Automation").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(slotctrl, "Exchange slots").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
@@ -449,7 +449,7 @@ void Overlook::DeepRefresh() {
 			common.RefreshAskBidData(true);
 			GetCalendar().Data();
 			if (enable_automation) {
-				//GetGame().Refresh();
+				//GetRealtime().Refresh();
 				sys.RefreshReal();
 			}
 			
@@ -501,7 +501,7 @@ void Overlook::Data() {
 	watch.Data();
 	
 	if (journal.IsVisible())		RefreshJournal();
-	if (gamectrl.IsVisible())		RefreshGame();
+	if (gamectrl.IsVisible())		RefreshRealtime();
 	if (perfctrl.IsVisible())		RefreshPerformance();
 	if (autoctrl.IsVisible())		RefreshSystem();
 	if (slotctrl.IsVisible())		RefreshSlots();
@@ -526,7 +526,7 @@ void Overlook::RefreshJournal() {
 	
 }
 
-void Overlook::RefreshGame() {
+void Overlook::RefreshRealtime() {
 	gamectrl.Data();
 }
 

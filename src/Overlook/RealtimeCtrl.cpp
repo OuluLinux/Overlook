@@ -2,7 +2,7 @@
 
 namespace Overlook {
 
-void GameMatchCtrl::Paint(Draw& w) {
+void RealtimeMatchCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
@@ -26,22 +26,22 @@ void GameMatchCtrl::Paint(Draw& w) {
 	w.DrawImage(0, 0, id);
 }
 
-void GameOrderCtrl::Paint(Draw& w) {
+void RealtimeOrderCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
 	id.DrawRect(sz, White());
 	
-	Game& game = GetGame();
+	Realtime& game = GetRealtime();
 	if (sym >= 0 && sym < game.opps.GetCount()) {
-		GameOpportunity& go = game.opps[sym];
+		RealtimeOpportunity& go = game.opps[sym];
 		DrawVectorPolyline(id, sz, go.open_profits, polyline);
 	}
 	
 	w.DrawImage(0, 0, id);
 }
 
-GameCtrl::GameCtrl() {
+RealtimeCtrl::RealtimeCtrl() {
 	Add(split.SizePos());
 	split << opplist << view;
 	split.Horz();
@@ -84,8 +84,8 @@ GameCtrl::GameCtrl() {
 	GetValues();
 }
 
-void GameCtrl::SetValues() {
-	Game& game = GetGame();
+void RealtimeCtrl::SetValues() {
+	Realtime& game = GetRealtime();
 	
 	game.free_margin_level   = view.fmlevel.GetData();
 	game.max_symbols         = view.maxsym.GetData();
@@ -97,8 +97,8 @@ void GameCtrl::SetValues() {
 	game.inversesig          = view.inversesig.Get();
 }
 
-void GameCtrl::GetValues() {
-	Game& game = GetGame();
+void RealtimeCtrl::GetValues() {
+	Realtime& game = GetRealtime();
 	
 	view.fmlevel			.SetData(game.free_margin_level);
 	view.maxsym				.SetData(game.max_symbols);
@@ -110,8 +110,8 @@ void GameCtrl::GetValues() {
 	view.inversesig			.Set(game.inversesig);
 }
 
-void GameCtrl::Data() {
-	Game& game = GetGame();
+void RealtimeCtrl::Data() {
+	Realtime& game = GetRealtime();
 	System& sys = GetSystem();
 	
 	game.Refresh();
@@ -122,7 +122,7 @@ void GameCtrl::Data() {
 		sym = opplist.Get(cursor, 0);
 	
 	for(int i = 0; i < game.opps.GetCount(); i++) {
-		GameOpportunity& o = game.opps[i];
+		RealtimeOpportunity& o = game.opps[i];
 		int sys_sym = GetSystem().System::used_symbols_id[i];
 		
 		opplist.Set(i, 0, i);
@@ -154,8 +154,8 @@ void GameCtrl::Data() {
 	match.Refresh();
 }
 
-void GameCtrl::SetView() {
-	Game& game = GetGame();
+void RealtimeCtrl::SetView() {
+	Realtime& game = GetRealtime();
 	
 	int cursor = opplist.GetCursor();
 	if (cursor >= 0 && cursor < opplist.GetCount()) {
@@ -163,18 +163,18 @@ void GameCtrl::SetView() {
 		int sys_sym = GetSystem().System::used_symbols_id[sym];
 		GetOverlook().LoadDefaultProfile(sys_sym);
 		
-		GameOpportunity& o = game.opps[sym];
+		RealtimeOpportunity& o = game.opps[sym];
 		view.profit.SetLabel(DblStr(o.profit));
 	}
 }
 
-void GameCtrl::Start() {
-	Game& game = GetGame();
+void RealtimeCtrl::Start() {
+	Realtime& game = GetRealtime();
 	System& sys = GetSystem();
 	int cursor = opplist.GetCursor();
 	if (cursor < 0) return;
 	int sym = opplist.Get(cursor, 0);
-	GameOpportunity& o = game.opps[sym];
+	RealtimeOpportunity& o = game.opps[sym];
 	
 	int signal = 0;
 	switch (view.signal.GetIndex()) {
@@ -195,13 +195,13 @@ void GameCtrl::Start() {
 	sys.RefreshReal();
 }
 
-void GameCtrl::Stop() {
-	Game& game = GetGame();
+void RealtimeCtrl::Stop() {
+	Realtime& game = GetRealtime();
 	System& sys = GetSystem();
 	int cursor = opplist.GetCursor();
 	if (cursor < 0) return;
 	int sym = opplist.Get(cursor, 0);
-	GameOpportunity& o = game.opps[sym];
+	RealtimeOpportunity& o = game.opps[sym];
 	
 	game.signal[sym] = 0;
 	
@@ -211,13 +211,13 @@ void GameCtrl::Stop() {
 
 
 
-void GameBrokerCtrl::Paint(Draw& w) {
+void RealtimeBrokerCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	
 	id.DrawRect(sz, White());
 	
-	Game& game = GetGame();
+	Realtime& game = GetRealtime();
 	DrawVectorPolyline(id, sz, game.sb_equity, game.sb_ma1, game.sb_ma2, polyline);
 	
 	w.DrawImage(0, 0, id);
@@ -239,7 +239,7 @@ PerformanceCtrl::PerformanceCtrl() {
 }
 
 void PerformanceCtrl::Data() {
-	Game& game = GetGame();
+	Realtime& game = GetRealtime();
 	game.Refresh();
 	
 	
@@ -247,14 +247,14 @@ void PerformanceCtrl::Data() {
 }
 
 void PerformanceCtrl::GetValues() {
-	Game& game = GetGame();
+	Realtime& game = GetRealtime();
 	
 	view.ma1.SetData(game.ma1);
 	view.ma2.SetData(game.ma2);
 }
 
 void PerformanceCtrl::SetValues() {
-	Game& game = GetGame();
+	Realtime& game = GetRealtime();
 	
 	game.ma1 = view.ma1.GetData();
 	game.ma2 = view.ma2.GetData();

@@ -24,15 +24,15 @@ class SymAutomation {
 	
 protected:
 	friend class AutomationCtrl;
-	friend class GameMatchCtrl;
+	friend class RealtimeMatchCtrl;
 	friend class Automation;
 	friend class BooleansDraw;
 	friend class System;
-	friend class Game;
+	friend class Realtime;
 	
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24; // H4
+	static const int wdayhours = 5*24*4; // M15
 	static const int maxcount = 1*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 100;
@@ -128,10 +128,10 @@ class Automation {
 	
 protected:
 	friend class AutomationCtrl;
-	friend class GameMatchCtrl;
+	friend class RealtimeMatchCtrl;
 	friend class BooleansDraw;
 	friend class System;
-	friend class Game;
+	friend class Realtime;
 	
 	
 	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_COUNT};

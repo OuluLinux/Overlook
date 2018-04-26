@@ -190,11 +190,13 @@ void Automation::LoadSource() {
 		if (smallest_time == INT_MAX)
 			break;
 		
-		
 		// Increase cursor with all which has the same next time
 		for(int i = 0; i < smallest_id_count; i++) {
 			slow[smallest_ids[i]].loadsource_pos++;
 		}
+		
+		if (smallest_time % (slow[0].period * 60) != 0)
+			continue;
 		
 		bool dec_cursor = smallest_time == largest_time;
 		

@@ -143,18 +143,18 @@ System::System() {
 	
 	
 	#if 1
-	used_symbols.Add("#BA");
-	used_symbols.Add("#C");
 	used_symbols.Add("#CAT");
+	used_symbols.Add("#BA");
+	used_symbols.Add("#MMM");
+	used_symbols.Add("#HD");
+	/*used_symbols.Add("#C");
 	used_symbols.Add("#CSCO");
 	used_symbols.Add("#CVX");
-	used_symbols.Add("#HD");
 	used_symbols.Add("#HON");
 	used_symbols.Add("#INTC");
 	used_symbols.Add("#JPM");
 	used_symbols.Add("#MCD");
-	used_symbols.Add("#MMM");
-	used_symbols.Add("#MSFT");
+	used_symbols.Add("#MSFT");*/
 	#elif 0
 	used_symbols.Add("$US30");
 	used_symbols.Add("$DE30");

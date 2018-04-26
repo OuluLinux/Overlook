@@ -25,8 +25,8 @@ public:
 	int ma1 = 480, ma2 = 960;
 	int free_margin_scale = 3;
 	int timelimit = DEF_TIMELIMIT;
-	int max_symbols = USEDSYMBOL_COUNT*2;
-	int spread_limit = USEDSYMBOL_COUNT;
+	int max_symbols = USEDSYMBOL_COUNT;
+	int spread_limit = 2;
 	bool autostart = true;
 	bool inversesig = false;
 	
@@ -36,7 +36,7 @@ public:
 	int prev_max_level = 0;
 	int signal[USEDSYMBOL_COUNT];
 	bool allow_real = false;
-	Mutex lock;
+	Mutex lock, ma_lock;
 	
 public:
 	typedef Realtime CLASSNAME;

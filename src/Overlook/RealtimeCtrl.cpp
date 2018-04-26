@@ -234,7 +234,9 @@ PerformanceCtrl::PerformanceCtrl() {
 	GetValues();
 	view.ma1 << THISBACK(SetValues);
 	view.ma2 << THISBACK(SetValues);
-	view.optimize.Disable();
+	view.ma1.Disable();
+	view.ma2.Disable();
+	view.optimize << THISBACK(Optimize);
 	
 }
 
@@ -261,7 +263,99 @@ void PerformanceCtrl::SetValues() {
 }
 
 void PerformanceCtrl::Optimize() {
+	Realtime& game = GetRealtime();
+	game.ma_lock.Enter();
 	
+	const Vector<double>& sb_equity = game.sb_equity;
+	Vector<double>& sb_ma1 = game.sb_ma1;
+	Vector<double>& sb_ma2 = game.sb_ma2;
+	int last = sb_equity.GetCount() - 1;
+	
+	double max_sum = -DBL_MAX;
+	int max_a, max_b;
+	
+	for(int i = 6; i <= 10; i++) {
+		int a = 1 << i;
+		for(int j = i+1; j <= 11; j++) {
+			int b = 1 << j;
+			
+			OnlineAverageWindow1 a_ma, b_ma;
+			a_ma.SetPeriod(a);
+			b_ma.SetPeriod(b);
+			
+			bool prev_allow_real = false;
+			double eq_open;
+			double sum = 0.0;
+			double prev_b_mean = 0.0;
+			for(int k = 0; k <= last; k++) {
+				double d = sb_equity[k];
+				
+				
+				a_ma.Add(d);
+				b_ma.Add(d);
+				
+				double a_mean = a_ma.GetMean();
+				double b_mean = b_ma.GetMean();
+				
+				bool allow_real = a_mean >= b_mean && b_mean >= prev_b_mean;
+				if (k == last) allow_real = false;
+				
+				if (allow_real) {
+					if (!prev_allow_real)
+						eq_open = d;
+				} else {
+					if (prev_allow_real)
+						sum += d - eq_open;
+				}
+				
+				prev_b_mean = b_mean;
+				prev_allow_real = allow_real;
+			}
+			
+			if (sum > max_sum) {
+				max_a = a;
+				max_b = b;
+				max_sum = sum;
+			}
+		}
+	}
+	
+	game.ma1 = max_a;
+	game.ma2 = max_b;
+	view.ma1.SetData(max_a);
+	view.ma2.SetData(max_b);
+	
+	{
+		game.ma1_av.Clear();
+		game.ma2_av.Clear();
+		
+		game.ma1_av.SetPeriod(max_a);
+		game.ma2_av.SetPeriod(max_b);
+		
+		double sum = 0.0;
+		for(int k = 0; k <= last; k++) {
+			double d = sb_equity[k];
+			
+			game.ma1_av.Add(d);
+			game.ma2_av.Add(d);
+			
+			double a_mean = game.ma1_av.GetMean();
+			double b_mean = game.ma2_av.GetMean();
+			
+			if (k >= max_a)
+				sb_ma1[k] = a_mean;
+			else
+				sb_ma1[k] = d;
+			
+			if (k >= max_b)
+				sb_ma2[k] = b_mean;
+			else
+				sb_ma2[k] = d;
+		}
+	}
+	
+	
+	game.ma_lock.Leave();
 }
 
 }

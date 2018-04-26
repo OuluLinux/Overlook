@@ -33,7 +33,7 @@ protected:
 	
 	static const int sym_count = USEDSYMBOL_COUNT;
 	static const int wdayhours = 5*24*4; // M15
-	static const int maxcount = 1*52*wdayhours; // 14 years
+	static const int maxcount = 5*52*wdayhours; // 14 years
 	
 	static const int dqn_leftoffset = 100;
 	static const int dqn_rightoffset = 12+1;

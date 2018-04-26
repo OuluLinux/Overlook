@@ -37,12 +37,12 @@ typedef const int ConstInt;
 	#define MAX_REAL_TFID 7
 #endif
 
-#define USEDSYMBOL_COUNT 12
+#define USEDSYMBOL_COUNT 4
 
 #define SLOT_TF 1
 #define DEF_TIMELIMIT 60
-#define DEF_SL -5
-#define DEF_TP +5
+#define DEF_SL -0.5
+#define DEF_TP +0.5
 
 enum {
 	PHASE_TRAINING,
@@ -133,7 +133,7 @@ class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	
 public:
 	OnlineAverageWindow1() {}
-	void Clear() {cursor = 0; sum_a = 0.0; for(int i = 0; i < win_a.GetCount(); i++) win_a[i] = 0.0;}
+	void Clear() {buf_count = 0; cursor = 0; sum_a = 0.0; for(int i = 0; i < win_a.GetCount(); i++) win_a[i] = 0.0;}
 	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
 	void Add(double a) {
 		if (cursor >= period) cursor = 0;

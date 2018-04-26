@@ -60,7 +60,8 @@ void DataBridge::Start() {
 	int sym_count = common.GetSymbolCount();
 	
 	// Regular symbols
-	/*if (tf_id > 0 && sym_id < sym_count) {
+	#if 0
+	if (tf_id > 0 && sym_id < sym_count) {
 		RefreshFromFaster();
 	}
 	else if (sym_id < sym_count) {
@@ -72,11 +73,15 @@ void DataBridge::Start() {
 		}
 		RefreshFromAskBid(init_round);
 		RefreshViaConnection(); // very slow to be before RefreshFromAskBid
-	}*/
+	}
+	#else
 	bool init_round = open.GetCount() == 0;
-	RefreshFromHistory(false);
+	if (init_round) {
+		RefreshFromHistory(false);
+	}
 	RefreshFromAskBid(init_round);
-	RefreshViaConnection(); 
+	RefreshViaConnection();
+	#endif
 	
 	lock.Leave();
 }
@@ -283,7 +288,10 @@ void DataBridge::RefreshMedian() {
 void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
-	if (!use_internet_data) common.DownloadHistory(sym_id, tf_id, false);
+	if (!use_internet_data) {
+		common.InspectInit();
+		common.DownloadHistory(sym_id, tf_id, false);
+	}
 	System& sys = GetSystem();
 	
 	LOG(Format("sym=%d tf=%d pos=%d", sym_id, tf_id, counted));

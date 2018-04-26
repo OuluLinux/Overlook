@@ -193,7 +193,6 @@ void Realtime::Refresh() {
 	sb.RefreshOrders();
 	
 	double eq = sb.AccountEquity();
-	sb_equity.Add(eq);
 	
 	ma1_av.SetPeriod(ma1);
 	ma2_av.SetPeriod(ma2);
@@ -201,11 +200,17 @@ void Realtime::Refresh() {
 	ma2_av.Add(eq);
 	double mean1 = ma1_av.GetMean();
 	double mean2 = ma2_av.GetMean();
-	if (ma1_av.GetBufferCount() >= ma1) sb_ma1.Add(mean1);
-	else                                sb_ma1.Add(eq);
-	if (ma2_av.GetBufferCount() >= ma2) sb_ma2.Add(mean2);
-	else                                sb_ma2.Add(eq);
-	allow_real = ma2_av.GetBufferCount() >= ma2 && mean1 > mean2;
+	double prev_mean2 = sb_ma2.IsEmpty() ? mean2 : sb_ma2.Top();
+	
+	if (ma_lock.TryEnter()) {
+		sb_equity.Add(eq);
+		if (ma1_av.GetBufferCount() >= ma1) sb_ma1.Add(mean1);
+		else                                sb_ma1.Add(eq);
+		if (ma2_av.GetBufferCount() >= ma2) sb_ma2.Add(mean2);
+		else                                sb_ma2.Add(eq);
+		ma_lock.Leave();
+	}
+	allow_real = ma2_av.GetBufferCount() >= ma2 && mean1 > mean2 && mean2 >= prev_mean2;
 	
 	if (max_level != prev_max_level && max_level > 0)
 		PlaySound(TEXT("alert.wav"), NULL, SND_ASYNC | SND_FILENAME);

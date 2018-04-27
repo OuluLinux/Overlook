@@ -4,8 +4,8 @@
 namespace Overlook {
 
 DataBridge::DataBridge() {
-	//SetSkipAllocate();
-	//SetSkipSetCount(true);
+	SetSkipAllocate();
+	SetSkipSetCount(true);
 	cursor = 0;
 	max_value = 0;
 	min_value = 0;
@@ -23,25 +23,14 @@ DataBridge::~DataBridge() {
 void DataBridge::Init() {
 	System& sys = GetSystem();
 	
-	point = GetMetaTrader().GetSymbol(sym_id).point;
+	slow_volume = GetMinutePeriod() >= 1440;
+	day_volume = GetMinutePeriod() == 1440;
 	
-}
-
-void DataBridge::Clear() {
-	median_max_map.Clear();
-	median_min_map.Clear();
-	spread_mean = 0;
-	spread_count = 0;
-	median_max = -DBL_MAX;
-	median_min = DBL_MAX;
-	cursor = 0;
-	cursor2 = 0;
-	counted = 0;
-	open.Clear();
-	low.Clear();
-	high.Clear();
-	volume.Clear();
-	time.Clear();
+	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
+		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
+		point = sym.point;
+	}
+	
 }
 
 void DataBridge::Start() {
@@ -49,41 +38,32 @@ void DataBridge::Start() {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
 	
-	lock.Enter();
-	
 	if (once) {
 		once = false;
 		
 		common.InspectInit();
+		
 	}
 	
 	int sym_count = common.GetSymbolCount();
+	int cur_count = mt.GetCurrencyCount();
+	int sym = GetSymbol();
+	int cur = sym - sym_count;
+	int mt_period = GetPeriod();
 	
 	// Regular symbols
-	#if 0
-	if (tf_id > 0 && sym_id < sym_count) {
+	if (mt_period > 1 && sym < sym_count) {
 		RefreshFromFaster();
 	}
-	else if (sym_id < sym_count) {
-		bool init_round = open.GetCount() == 0;
+	else if (sym < sym_count) {
+		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		if (init_round) {
-			const Symbol& mtsym = mt.GetSymbol(sym_id);
-			//RefreshFromHistory(true);
+			const Symbol& mtsym = mt.GetSymbol(sym);
+			RefreshFromHistory(true);
 			RefreshFromHistory(false);
 		}
 		RefreshFromAskBid(init_round);
-		RefreshViaConnection(); // very slow to be before RefreshFromAskBid
 	}
-	#else
-	bool init_round = open.GetCount() == 0;
-	if (init_round) {
-		RefreshFromHistory(false);
-	}
-	RefreshFromAskBid(init_round);
-	RefreshViaConnection();
-	#endif
-	
-	lock.Leave();
 }
 
 void DataBridge::AddSpread(double a) {
@@ -99,29 +79,26 @@ void DataBridge::AddSpread(double a) {
 void DataBridge::RefreshFromAskBid(bool init_round) {
 	MetaTrader& mt = GetMetaTrader();
 	System& sys = GetSystem();
-	Vector<double>& open_buf = open;
-	Vector<double>& low_buf = low;
-	Vector<double>& high_buf = high;
-	Vector<double>& volume_buf = volume;
-	Vector<int>& time_buf = time;
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
 	DataBridgeCommon& common = GetDataBridgeCommon();
 	
 	common.RefreshAskBidData();
 	
-	int id = sym_id;
-	int tf = tf_id;
+	int id = GetSymbol();
+	int tf = GetTimeframe();
 	int counted = GetCounted();
 	ASSERTEXC(id >= 0);
 	double half_point = point * 0.5;
 	
 	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
 		
-	int64 step = GetPeriod() * 60;
+	int64 step = GetMinutePeriod() * 60;
 	int64 epoch_begin = Time(1970,1,1).Get();
 	int shift = open_buf.GetCount() - 1;
-	
-	Time max_time = GetUtcTime() + 5 * 60;
-	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
 	
 	for(; cursor < data.GetCount(); cursor++) {
 		
@@ -138,8 +115,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		time = time - time % step;
 		time -= 4*24*60*60;
 		time -= epoch_begin;
-		if (time > max_time_ts)
-			continue;
+		
 		
 		// Find min/max
 		double diff = ask - bid;
@@ -152,6 +128,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
+		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
 			if (shift >= open_buf.GetCount()) {
 				int res = shift + 1000;
@@ -170,16 +147,16 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 				time_buf.SetCount(shift+1);
 			}
 			
-			open_buf[shift] = ask;
-			low_buf[shift] = ask;
-			high_buf[shift] = ask;
-			time_buf[shift] = time;
+			open_buf.Set(shift, ask);
+			low_buf.Set(shift, ask);
+			high_buf.Set(shift, ask);
+			time_buf.Set(shift, time);
 		}
-		else if (time_buf.Top() == time) {
-			double low  = low_buf[shift];
-			double high = high_buf[shift];
-			if (ask < low)  {low_buf[shift] = ask;}
-			if (ask > high) {high_buf[shift] = ask;}
+		else {
+			double low  = low_buf.Get(shift);
+			double high = high_buf.Get(shift);
+			if (ask < low)  {low_buf	.Set(shift, ask);}
+			if (ask > high) {high_buf	.Set(shift, ask);}
 		}
 	}
 	
@@ -187,65 +164,6 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	// Very weird bug of volume not being updated
 	volume_buf.SetCount(open_buf.GetCount());
 	
-	
-	RefreshMedian();
-	ForceSetCounted(open_buf.GetCount());
-}
-
-void DataBridge::RefreshViaConnection() {
-	Vector<double>& open_buf = open;
-	Vector<double>& low_buf = low;
-	Vector<double>& high_buf = high;
-	Vector<double>& volume_buf = volume;
-	Vector<int>& time_buf = time;
-	MetaTrader& mt = GetMetaTrader();
-	
-	Time max_time = GetUtcTime() + 5 * 60;
-	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
-	
-	
-	// find latest time
-	int latest_time = time_buf.Top();
-	
-	// ask all prices and times since latest time from mt
-	typedef Tuple<int, double> TimeOpen;
-	Vector<TimeOpen> data;
-	data.Reserve(1000);
-	for(int i = 0; i < 1000; i++) {
-		try {
-			double open = mt.iOpen(symbol, period, i);
-			int time = mt.iTime(symbol, period, i);
-			Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
-			time = utc_time.Get() - Time(1970,1,1).Get();
-			if (time <= latest_time)
-				break;
-			if (time < max_time_ts)
-				data.Add(TimeOpen(time, open));
-		}
-		catch (ConnectionError e) {
-			
-		}
-	}
-	
-	Reverse(data);
-	
-	int shift = open_buf.GetCount();
-	int count = data.GetCount();
-	open_buf	.SetCount(shift+count);
-	low_buf		.SetCount(shift+count);
-	high_buf	.SetCount(shift+count);
-	volume_buf	.SetCount(shift+count);
-	time_buf	.SetCount(shift+count);
-	
-	for(int i = 0; i < data.GetCount(); i++) {
-		TimeOpen& to = data[i];
-		open_buf[shift] = to.b;
-		low_buf[shift] = to.b;
-		high_buf[shift] = to.b;
-		volume_buf[shift] = 0;
-		time_buf[shift] = to.a;
-		shift++;
-	}
 	
 	RefreshMedian();
 	ForceSetCounted(open_buf.GetCount());
@@ -288,20 +206,17 @@ void DataBridge::RefreshMedian() {
 void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	MetaTrader& mt = GetMetaTrader();
 	DataBridgeCommon& common = Single<DataBridgeCommon>();
-	if (!use_internet_data) {
-		common.InspectInit();
-		common.DownloadHistory(sym_id, tf_id, false);
-	}
+	if (!use_internet_data) common.DownloadHistory(GetSymbol(), GetTf(), false);
 	System& sys = GetSystem();
 	
-	LOG(Format("sym=%d tf=%d pos=%d", sym_id, tf_id, counted));
+	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
 	
 	
 	// Open data-file
-	int id = sym_id;
-	int tf = tf_id;
+	int id = GetSymbol();
+	int tf = GetTf();
 	int mt_period = GetPeriod();
-	String symbol = sys.GetSymbol(sym_id);
+	String symbol = sys.GetSymbol(GetSymbol());
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
@@ -311,7 +226,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	
 	if (use_internet_data) {
 		System& sys = GetSystem();
-		String symbol = sys.GetSymbol(sym_id);
+		String symbol = sys.GetSymbol(GetSymbol());
 		
 		String url = "http://tools.fxdd.com/tools/M1Data/" + symbol + ".zip";
 		
@@ -377,17 +292,17 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	if (digits > 20)
 		throw DataExc();
 	double point = 1.0 / pow(10.0, digits);
-	common.points[sym_id] = point;
+	common.points[GetSymbol()] = point;
 	int data_size = (int)src.GetSize();
 	int struct_size = 8 + 4*8 + 8 + 4 + 8;
 	if (old_filetype) struct_size = 4 + 4*8 + 8;
 	byte row[0x100];
 	
-	Vector<double>& open_buf = open;
-	Vector<double>& low_buf = low;
-	Vector<double>& high_buf = high;
-	Vector<double>& volume_buf = volume;
-	Vector<int>& time_buf = time;
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
 	
 	// Seek to begin of the data
 	int cursor = (4+64+12+4+4+4+4 +13*4);
@@ -403,14 +318,12 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	bool overwrite = false;
 	double prev_open = 0.0;
 	
-	int64 step = GetPeriod() * 60;
+	int64 step = GetMinutePeriod() * 60;
 	int shift = open_buf.GetCount() - 1;
-	Time max_time = GetUtcTime() + 5 * 60;
-	int max_time_ts = max_time.Get() - Time(1970,1,1).Get();
 	
 	while ((cursor + struct_size) <= data_size) {
 		if ((open_buf.GetCount() % 10) == 0) {
-			GetSystem().WhenSubProgress(open_buf.GetCount(), expected_count);
+			GetSystem().WhenSubProgress(open_buf.GetCount(), bars*2);
 		}
 		
 		int64 time;
@@ -449,10 +362,8 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		time = time - time % step;
 		time -= 4*24*60*60;
 		
-		cursor += struct_size;
-		if (time > max_time_ts)
-			continue;
 		
+		cursor += struct_size;
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		if (shift >= open_buf.GetCount()) {
@@ -462,18 +373,19 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 			volume_buf.SetCount(shift+1);
 			time_buf.SetCount(shift+1);
 		}
+		SetSafetyLimit(shift+1);
 		
 		
 		//ASSERT(bs.GetTime(tf, count) == TimeFromTimestamp(time));
-		open_buf[shift] = open;
-		low_buf[shift] = low;
-		high_buf[shift] = high;
-		volume_buf[shift] = tick_volume;
-		time_buf[shift] = time;
+		open_buf.Set(shift, open);
+		low_buf.Set(shift, low);
+		high_buf.Set(shift, high);
+		volume_buf.Set(shift, tick_volume);
+		time_buf.Set(shift, time);
 		
 		
 		int count = open_buf.GetCount();
-		double diff = count >= 2 ? open_buf[count-1] - open_buf[count-2] : 0.0;
+		double diff = count >= 2 ? open_buf.Get(count-1) - open_buf.Get(count-2) : 0.0;
 		int step = (int)(diff / point);
 		if (step >= 0) median_max_map.GetAdd(step, 0)++;
 		else median_min_map.GetAdd(step, 0)++;
@@ -486,7 +398,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	RefreshMedian();
 	
 	// Fill volume querytable
-	bool five_mins = GetPeriod() < 5;
+	bool five_mins = GetMinutePeriod() < 5;
 	int steps = five_mins ? 5 : 1;
 	
 	ForceSetCounted(open_buf.GetCount());
@@ -495,7 +407,8 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 int DataBridge::GetChangeStep(int shift, int steps) {
 	int change = 0;
 	if (shift > 0) {
-		change = (int)((open[shift] - open[shift-1]) / point);
+		ConstBuffer& open_buf = GetBuffer(0);
+		change = (int)((open_buf.Get(shift) - open_buf.Get(shift-1)) / point);
 	}
 	int max_change = median_max * 2;
 	int min_change = median_min * 2;
@@ -509,29 +422,29 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 }
 
 void DataBridge::RefreshFromFaster() {
-	Vector<double>& open_buf = open;
-	Vector<double>& low_buf = low;
-	Vector<double>& high_buf = high;
-	Vector<double>& volume_buf = volume;
-	Vector<int>& time_buf = time;
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
 	
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	int shift = open_buf.GetCount() - 1;
 	
-	int sym = sym_id;
-	int tf = tf_id;
+	int sym = GetSymbol();
+	int tf = GetTf();
 	ASSERT(tf > 0);
 	
-	DataBridge& m1_db = sys.data[sym][0].db;
-	Vector<double>& src_open = m1_db.open;
-	Vector<double>& src_low  = m1_db.low;
-	Vector<double>& src_high = m1_db.high;
-	Vector<double>& src_vol  = m1_db.volume;
-	Vector<int>& src_time  = m1_db.time;
+	DataBridge& m1_db = dynamic_cast<DataBridge&>(*GetInputCore(0, sym, 0));
+	ConstBuffer& src_open = m1_db.GetBuffer(0);
+	ConstBuffer& src_low  = m1_db.GetBuffer(1);
+	ConstBuffer& src_high = m1_db.GetBuffer(2);
+	ConstBuffer& src_vol  = m1_db.GetBuffer(3);
+	ConstBuffer& src_time  = m1_db.GetBuffer(4);
 	int faster_bars = src_open.GetCount();
 	
-	int period_mins = GetPeriod();
+	int period_mins = GetMinutePeriod();
 	int period_secs = period_mins * 60;
 	Time epoch(1970,1,1);
 	int64 tdiff = 4*24*60*60; // seconds between thursday and monday
@@ -540,19 +453,16 @@ void DataBridge::RefreshFromFaster() {
 	//   int64 t1int = epoch.Get();
 	//   tdiff == t0int - t1int
 	
-	int expected_count = faster_bars / period_mins * 1.2;
-	open_buf.Reserve(expected_count);
-	low_buf.Reserve(expected_count);
-	high_buf.Reserve(expected_count);
-	volume_buf.Reserve(expected_count);
-	time_buf.Reserve(expected_count);
+	int exp_count = faster_bars / period_mins;
+	for(int i = 0; i < GetBufferCount(); i++)
+		GetBuffer(i).Reserve(exp_count);
 	
 	for(; cursor2 < faster_bars; cursor2++) {
-		double open_value = src_open[cursor2];
-		double low_value  = src_low[cursor2];
-		double high_value = src_high[cursor2];
-		double volume_sum = src_vol[cursor2];
-		int ts = src_time[cursor2];
+		double open_value = src_open.Get(cursor2);
+		double low_value  = src_low.Get(cursor2);
+		double high_value = src_high.Get(cursor2);
+		double volume_sum = src_vol.Get(cursor2);
+		int ts = src_time.Get(cursor2);
 		if (!ts) return;
 		Time t = epoch + ts;
 		int steps = (t.Get() - t0int) / period_secs; // steps from monday 5.1.1970
@@ -562,6 +472,7 @@ void DataBridge::RefreshFromFaster() {
 		
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
+		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
 			if (shift >= open_buf.GetCount()) {
 				open_buf.SetCount(shift+1);
@@ -571,20 +482,174 @@ void DataBridge::RefreshFromFaster() {
 				time_buf.SetCount(shift+1);
 			}
 			
-			open_buf[shift] = open_value;
-			low_buf[shift] = low_value;
-			high_buf[shift] = high_value;
-			volume_buf[shift] = volume_sum;
-			time_buf[shift] = time;
+			open_buf.Set(shift, open_value);
+			low_buf.Set(shift, low_value);
+			high_buf.Set(shift, high_value);
+			volume_buf.Set(shift, volume_sum);
+			time_buf.Set(shift, time);
 		}
 		else {
-			if (low_buf[shift]  > low_value)  {low_buf[shift] = low_value;}
-			if (high_buf[shift] < high_value) {high_buf[shift] = low_value;}
-			volume_buf[shift] = volume_sum + volume_buf[shift];
+			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
+			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, low_value);}
+			volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
 		}
 	}
 	
 	ForceSetCounted(open_buf.GetCount());
+}
+
+void DataBridge::Assist(int cursor, VectorBool& vec) {
+	if (cursor < 5 || cursor >= GetBars()) return;
+	
+	Buffer& open   = GetBuffer(0);
+	Buffer& low    = GetBuffer(1);
+	Buffer& high   = GetBuffer(2);
+	Buffer& volume = GetBuffer(3);
+	
+	// Open change
+	{
+		double cur = open.Get(cursor);
+		for(int i = 0; i < 5; i++) {
+			double prev = open.Get(cursor - i - 1);
+			if (prev < cur)
+				vec.Set(DB_UP1 + i, true);
+			else
+				vec.Set(DB_DOWN1 + i, true);
+		}
+	}
+	
+	
+	// Open/Close trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-1; i >= 0; i--) {
+			int idir = open.Get(i+1) > open.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_UPTREND, true);
+			else
+				vec.Set(DB_DOWNTREND, true);
+		}
+	}
+	
+	// High trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = high.Get(i+1) > high.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_HIGHUPTREND, true);
+			else
+				vec.Set(DB_HIGHDOWNTREND, true);
+		}
+	}
+	
+	// Low trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = low.Get(i+1) < low.Get(i) ? -1 : +1;
+			if (dir != 0 && idir != dir) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1) {
+			if (dir == +1)
+				vec.Set(DB_LOWUPTREND, true);
+			else
+				vec.Set(DB_LOWDOWNTREND, true);
+		}
+	}
+	
+	// Sideways trend
+	{
+		int dir = 0;
+		int len = 0;
+		for (int i = cursor-1; i >= 0; i--) {
+			double lowhigh_av = 0.0;
+			for(int j = i; j < cursor; j++)
+				lowhigh_av += high.Get(j) - low.Get(j);
+			lowhigh_av /= cursor - i;
+			
+			double change = fabs(open.Get(cursor) - open.Get(i));
+			bool is_less = change <= lowhigh_av;
+			if (dir != 0 && !is_less) break;
+			dir = 1;
+			len++;
+		}
+		if (len > 1)
+			vec.Set(DB_SIDEWAYSTREND, true);
+	}
+	
+	// High break
+	{
+		int dir = 0;
+		int len = 0;
+		double hi = high.Get(cursor-1);
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = hi > high.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != +1) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			vec.Set(DB_HIGHBREAK, true);
+		if (len > 32)
+			vec.Set(DB_LONGHIGHBREAK, true);
+	}
+	
+	// Low break
+	{
+		int dir = 0;
+		int len = 0;
+		double lo = low.Get(cursor-1);
+		for (int i = cursor-2; i >= 0; i--) {
+			int idir = lo < low.Get(i) ? +1 : -1;
+			if (dir != 0 && idir != +1) break;
+			dir = idir;
+			len++;
+		}
+		if (len > 1)
+			vec.Set(DB_LOWBREAK, true);
+		if (len > 32)
+			vec.Set(DB_LONGLOWBREAK, true);
+	}
+	
+	// Trend reversal
+	if (cursor >= 4) {
+		double t0_diff		= open.Get(cursor-0) - open.Get(cursor-1);
+		double t1_diff		= open.Get(cursor-1) - open.Get(cursor-2);
+		double t2_diff		= open.Get(cursor-2) - open.Get(cursor-3);
+		int t0 = t0_diff > 0 ? +1 : -1;
+		int t1 = t1_diff > 0 ? +1 : -1;
+		int t2 = t2_diff > 0 ? +1 : -1;
+		if (t0 * t1 == -1 && t1 * t2 == +1) {
+			double t0_hilodiff	= high.Get(cursor-1) - low.Get(cursor-1);
+			if (fabs(t0_hilodiff) >= fabs(t1_diff)) {
+				if (t0 == +1)
+					vec.Set(DB_REVERSALUP, true);
+				else
+					vec.Set(DB_REVERSALDOWN, true);
+			} else {
+				if (t0 == +1)
+					vec.Set(DB_STOPUP, true);
+				else
+					vec.Set(DB_STOPDOWN, true);
+			}
+		}
+	}
 }
 
 }

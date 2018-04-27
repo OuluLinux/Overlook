@@ -426,10 +426,6 @@ protected:
 public:
 
 	DQNTrainer() {
-		Init();
-	}
-	
-	void Init() {
 		gamma = 0.99;	// future reward discount factor
 		epsilon = 0.2;	// for epsilon-greedy policy
 		alpha = 0.005;	// value function learning rate
@@ -525,12 +521,12 @@ public:
 		return Learn(item.before_state, item.before_action, item.after_reward, item.after_state);
 	}
 	
-	double Learn(MatType& s0, int a0, double reward0, MatType* s1 = NULL) {
+	double Learn(MatType& s0, int a0, double reward0, MatType& s1) {
 		
 		// compute the target Q value
 		double qmax = reward0;
 		if (gamma > 0.0) {
-			FwdOut& tmat = Forward(*s1);
+			FwdOut& tmat = Forward(s1);
 			qmax += gamma * tmat.Get(tmat.GetMaxColumn());
 		}
 		
@@ -559,7 +555,7 @@ public:
 		return tderror;
 	}
 	
-	double Learn(MatType& s0, double correct[num_actions]) {
+	double Learn(MatType& s0, double correct[num_actions], MatType& s1) {
 		
 		// now predict
 		FwdOut& pred = Forward(s0);

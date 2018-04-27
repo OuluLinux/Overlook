@@ -24,15 +24,6 @@ VectorBool& VectorBool::SetCount(int i) {
 	return *this;
 }
 
-VectorBool& VectorBool::Reserve(int i) {
-	if (count == i) return *this;
-	int c64 = i / 64;
-	if (i % 64 != 0) c64++;
-	count = i;
-	data.Reserve(c64);
-	return *this;
-}
-
 VectorBool& VectorBool::Zero() {
 	uint64* it = data.Begin();
 	ConstU64* end = data.End();
@@ -102,7 +93,6 @@ double VectorBool::GetOverlapFactor(const VectorBool& b) const {
 }
 
 bool VectorBool::Get(int64 i) const {
-	i -= data_begin;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());
@@ -111,7 +101,6 @@ bool VectorBool::Get(int64 i) const {
 }
 
 void VectorBool::Set(int64 i, bool b) {
-	i -= data_begin;
 	int64 j = i / 64;
 	int64 k = i % 64;
 	ASSERT(j >= 0 && j < data.GetCount());
@@ -268,7 +257,7 @@ void DrawVectorPoints(Draw& id, Size sz, const Vector<double>& data) {
 	}
 }
 
-void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, Color clr) {
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline) {
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;
@@ -302,87 +291,7 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 				if (v > peak) peak = v;
 			}
 			if (polyline.GetCount() >= 2)
-				id.DrawPolyline(polyline, 1, clr);
-		}
-		
-		{
-			int y = 0;
-			String str = DblStr(peak);
-			Size str_sz = GetTextSize(str, fnt);
-			id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			id.DrawText(16, y, str, fnt, Black());
-		}
-		{
-			int y = 0;
-			String str = DblStr(last);
-			Size str_sz = GetTextSize(str, fnt);
-			id.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
-			id.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
-		}
-	}
-}
-
-void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data0, const Vector<double>& data1, const Vector<double>& data2, Vector<Point>& polyline) {
-	Color clr0 = Color(81, 145, 137);
-	Color clr1 = Red();
-	Color clr2 = Red();
-	double min = +DBL_MAX;
-	double max = -DBL_MAX;
-	double last = 0.0;
-	double peak = 0.0;
-	
-	int max_steps = 0;
-	int count = Upp::min(data0.GetCount(), Upp::min(data1.GetCount(), data2.GetCount()));
-	for(int j = 0; j < count; j++) {
-		double d = data0[j];
-		if (d > max) max = d;
-		if (d < min) min = d;
-		d = data1[j];
-		if (d > max) max = d;
-		if (d < min) min = d;
-		d = data2[j];
-		if (d > max) max = d;
-		if (d < min) min = d;
-	}
-	if (count > max_steps)
-		max_steps = count;
-	
-	
-	if (max_steps > 1 && max > min) {
-		double diff = max - min;
-		double xstep = (double)sz.cx / (max_steps - 1);
-		Font fnt = Monospace(10);
-		
-		if (count >= 2) {
-			polyline.SetCount(0);
-			for(int j = 0; j < count; j++) {
-				double v = data1[j];
-				int x = (int)(j * xstep);
-				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline.Add(Point(x, y));
-			}
-			if (polyline.GetCount() >= 2)
-				id.DrawPolyline(polyline, 1, clr1);
-			polyline.SetCount(0);
-			for(int j = 0; j < count; j++) {
-				double v = data2[j];
-				int x = (int)(j * xstep);
-				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline.Add(Point(x, y));
-			}
-			if (polyline.GetCount() >= 2)
-				id.DrawPolyline(polyline, 1, clr2);
-			polyline.SetCount(0);
-			for(int j = 0; j < count; j++) {
-				double v = data0[j];
-				last = v;
-				int x = (int)(j * xstep);
-				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline.Add(Point(x, y));
-				if (v > peak) peak = v;
-			}
-			if (polyline.GetCount() >= 2)
-				id.DrawPolyline(polyline, 1, clr0);
+				id.DrawPolyline(polyline, 1, Color(81, 145, 137));
 		}
 		
 		{
@@ -440,131 +349,6 @@ int log2_64 (uint64 value)
     value |= value >> 16;
     value |= value >> 32;
     return tab64[((uint64_t)((value - (value >> 1))*0x07EDD5E59A4E28C2)) >> 58];
-}
-
-
-
-
-
-
-
-
-
-
-ValueRegister::ValueRegister(ConstFactoryDeclaration& decl) {
-	is_loading = true;
-	arg_count = decl.arg_count;
-	for(int i = 0; i < arg_count; i++)
-		args[i].def = decl.args[i];
-}
-
-ValueRegister& ValueRegister::In(int factory) {
-	if (!is_loading) {
-		FactoryDeclaration& in = inputs[input_count++];
-		in.Set(factory);
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::In(int factory, int arg0) {
-	if (!is_loading) {
-		FactoryDeclaration& in = inputs[input_count++];
-		in.Set(factory);
-		in.AddArg(arg0);
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::In(int factory, int arg0, int arg1) {
-	if (!is_loading) {
-		FactoryDeclaration& in = inputs[input_count++];
-		in.Set(factory);
-		in.AddArg(arg0);
-		in.AddArg(arg1);
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::In(int factory, int arg0, int arg1, int arg2) {
-	if (!is_loading) {
-		FactoryDeclaration& in = inputs[input_count++];
-		in.Set(factory);
-		in.AddArg(arg0);
-		in.AddArg(arg1);
-		in.AddArg(arg2);
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::In(int factory, int arg0, int arg1, int arg2, int arg3) {
-	if (!is_loading) {
-		FactoryDeclaration& in = inputs[input_count++];
-		in.Set(factory);
-		in.AddArg(arg0);
-		in.AddArg(arg1);
-		in.AddArg(arg2);
-		in.AddArg(arg3);
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::Out(int bufcount, int bufvisible, int boolcount) {
-	if (!is_loading) {
-		output_count = bufcount;
-		output_visible = bufvisible;
-		output_boolean_count = boolcount;
-	}
-	return *this;
-}
-
-ValueRegister& ValueRegister::Arg(int& def_value, int min_value, int max_value) {
-	if (!is_loading) {
-		ArgDecl& arg = args[arg_count++];
-		ASSERT(arg_count <= 8);
-		arg.def = def_value;
-		arg.min = min_value;
-		arg.max = max_value;
-	} else {
-		ArgDecl& arg = args[arg_cursor++];
-		def_value = arg.def;
-	}
-	return *this;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-void GraphImage::RefreshLimits() {
-	bool find_max = !HasMaximum();
-	bool find_min = !HasMinimum();
-	if (find_max) maximum = -DBL_MAX;
-	if (find_min) minimum = +DBL_MAX;
-	
-	for(int i = 0; i < buffers.GetCount(); i++) {
-		BufferImage& buf = buffers[i];
-		
-		buf.max = -DBL_MAX;
-		buf.min = +DBL_MAX;
-		for(int j = 0; j < buf.value.GetCount(); j++) {
-			double d = buf.value[j];
-			if (d == 0.0) continue;
-			if (d > buf.max) buf.max = d;
-			if (d < buf.min) buf.min = d;
-		}
-		
-		if (i < reg.output_visible) {
-			if (find_max && buf.max > maximum) maximum = buf.max;
-			if (find_min && buf.min < minimum) minimum = buf.min;
-		}
-	}
 }
 
 }

@@ -1,127 +1,59 @@
 #ifndef _Overlook_Indicators_h_
 #define _Overlook_Indicators_h_
 
+/*
+	Inspect OsMA to see how SubCores and inputs with custom arguments compares.
+	It has custom argument implementation, with SubCore implementation as commented.
+*/
+
 namespace Overlook {
 using namespace Upp;
+
+double SimpleMA ( const int position, const int period, ConstBuffer& value );
+double ExponentialMA ( const int position, const int period, const double prev_value, ConstBuffer& value );
+double SmoothedMA ( const int position, const int period, const double prev_value, ConstBuffer& value );
+double LinearWeightedMA ( const int position, const int period, ConstBuffer& value );
+int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+int ExponentialMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+int LinearWeightedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer, int &weightsum );
+int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const int begin, const int period, ConstBuffer& value, Buffer& buffer );
+
 
 enum {MODE_SMA, MODE_EMA, MODE_SMMA, MODE_LWMA};
 enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
-
-template <class T>
-double SimpleMA ( const int position, const int period, const T& value ) {
-	double result = 0.0;
-	if ( position >= period && period > 0 ) {
-		for ( int i = 0; i < period; i++)
-			result += value[ position - i ];
-		result /= period;
-	}
-	return ( result );
-}
-
-template <class T>
-double ExponentialMA ( const int position, const int period, const double prev_value, const T& value ) {
-	double result = 0.0;
-	if ( period > 0 ) {
-		double pr = 2.0 / ( period + 1.0 );
-		result = value[ position ] * pr + prev_value * ( 1 - pr );
-	}
-	return ( result );
-}
-
-template <class T>
-double SmoothedMA ( const int position, const int period, const double prev_value, const T& value ) {
-	double result = 0.0;
-	if ( period > 0 ) {
-		if ( position == period - 1 ) {
-			for ( int i = 0;i < period;i++ )
-				result += value[ position - i ];
-
-			result /= period;
-		}
-		if ( position >= period )
-			result = ( prev_value * ( period - 1 ) + value[ position ] ) / period;
-	}
-	return ( result );
-}
-
-template <class T>
-double LinearWeightedMA ( const int position, const int period, const T& value ) {
-	double result = 0.0, sum = 0.0;
-	int    i, wsum = 0;
-	if ( position >= period - 1 && period > 0 ) {
-		for ( i = period;i > 0;i-- ) {
-			wsum += i;
-			sum += value[ position - i + 1 ] * ( period - i + 1 );
-		}
-		result = sum / wsum;
-	}
-	return ( result );
-}
-
-
-
-class DataSource {
-	
-public:
-	DataSource();
-	
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	
-	void Conf(ValueRegister& reg) {
-		reg .Out(5, 3, 1);
-	}
-};
-
-
-class ValueChange {
-	
-	OnlineAverage1 change_av;
-	
-public:
-	typedef ValueChange CLASSNAME;
-	ValueChange();
-	
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(3, 2, 1)
-			.Mem(change_av);
-	}
-	
-};
-
-class MovingAverage {
+class MovingAverage : public Core {
 	int ma_period;
 	int ma_shift;
 	int ma_method;
+	int ma_counted;
 	
 protected:
+	virtual void Start();
 	
-	void Simple(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Exponential(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Smoothed(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void LinearlyWeighted(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	void Simple();
+	void Exponential();
+	void Smoothed();
+	void LinearlyWeighted();
 	
 public:
 	MovingAverage();
 	
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 3)
-			.Arg(ma_period, 2)
-			.Arg(ma_shift, -10000)
-			.Arg(ma_method, 0, 3);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", ma_period, 2)
+			% Arg("offset", ma_shift, -10000)
+			% Arg("method", ma_method, 0, 3);
 	}
 };
 
 
-class MovingAverageConvergenceDivergence {
+class MovingAverageConvergenceDivergence : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
@@ -129,253 +61,269 @@ class MovingAverageConvergenceDivergence {
 public:
 	MovingAverageConvergenceDivergence();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 12)
-			.In(FACTORY_MovingAverage, 26)
-			.Out(2, 2, 4)
-			.Arg(fast_ema_period, 2, 127)
-			.Arg(slow_ema_period, 2, 127)
-			.Arg(signal_sma_period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Arg("fast_ema", fast_ema_period, 2, 127)
+			% Arg("slow_ema", slow_ema_period, 2, 127)
+			% Arg("signal_sma", signal_sma_period, 2, 127);
 	}
 };
 
 
-class AverageDirectionalMovement {
+class AverageDirectionalMovement : public Core {
 	int period_adx;
 	
 public:
 	AverageDirectionalMovement();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(6, 3, 2)
-			.Arg(period_adx, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(6, 3)
+			% Arg("period", period_adx, 2, 127);
 	}
 };
 
 
-class BollingerBands {
+class BollingerBands : public Core {
 	int           bands_period;
 	int           bands_shift;
 	double        bands_deviation;
 	int           plot_begin;
 	int           deviation;
 	
+	double StdDev_Func(int position, const Buffer& MAvalue, int period);
 	
 public:
 	BollingerBands();
 	
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(4, 3, 4)
-			.Arg(bands_period, 2, 127)
-			.Arg(bands_shift, 0, 0)
-			.Arg(deviation, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 3)
+			% Arg("period", bands_period, 2, 127)
+			% Arg("shift", bands_shift, 0, 0)
+			% Arg("deviation", deviation, 2, 127);
 	}
 };
 
 
-class Envelopes {
+class Envelopes : public Core {
+	int                ma_period;
+	int                ma_shift;
+	int                ma_method;
 	double             deviation;
 	int                dev;
 	
 public:
 	Envelopes();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 14, 0, MODE_SMA)
-			.Out(3, 2, 0)
-			.Arg(dev, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 2)
+			% Arg("period", ma_period, 2, 127)
+			% Arg("shift", ma_shift, 0, 0)
+			% Arg("deviation", dev, 2, 127)
+			% Arg("method", ma_method, 0, 3);
 	}
 };
 
 
-class ParabolicSAR {
+class ParabolicSAR : public Core {
 	double		sar_step;
 	double		sar_maximum;
 	int			last_rev_pos;
 	int			step, maximum;
 	bool		direction_long;
 	
-	double GetHigh( int pos, int start_period, SourceImage& si, ChartImage& ci, GraphImage& gi );
-	double GetLow( int pos, int start_period, SourceImage& si, ChartImage& ci, GraphImage& gi );
+	double GetHigh( int pos, int start_period );
+	double GetLow( int pos, int start_period );
 	
 public:
 	ParabolicSAR();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(3, 1, 1)
-			.Arg(step, 2, 127)
-			.Arg(maximum, 2, 127)
-			.Mem(last_rev_pos)
-			.Mem(direction_long);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 1)
+			% Arg("step", step, 2, 127)
+			% Arg("maximum", maximum, 2, 127)
+			% Mem(last_rev_pos)
+			% Mem(direction_long);
 	}
 };
 
 
-class StandardDeviation {
+class StandardDeviation : public Core {
 	int period;
 	int ma_method;
 	
 public:
 	StandardDeviation();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 20, 0, 0)
-			.Out(1, 1, 1)
-			.Arg(period, 2, 127)
-			.Arg(ma_method, 0, 3);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3);
 	}
 };
 
 
-class AverageTrueRange {
+class AverageTrueRange : public Core {
 	int period;
 	
 public:
 	AverageTrueRange();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(2, 1, 1)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class BearsPower {
+class BearsPower : public Core {
 	int period;
 	
 public:
 	BearsPower();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
-			.Out(1, 1, 2)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class BullsPower {
+class BullsPower : public Core {
 	int period;
 	
 public:
 	BullsPower();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
-			.Out(1, 1, 2)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class CommodityChannelIndex {
+class CommodityChannelIndex : public Core {
 	int period;
 	
 public:
 	CommodityChannelIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(3, 1, 4)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class DeMarker {
+class DeMarker : public Core {
 	int period;
 	
 public:
 	DeMarker();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(3, 1, 4)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class ForceIndex {
+class ForceIndex : public Core {
 	int period;
 	int ma_method;
 	
 public:
 	ForceIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 13, 0, 0)
-			.Out(1, 1, 2)
-			.Arg(period, 2, 127)
-			.Arg(ma_method, 0, 3);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3);
 	}
 };
 
 
-class Momentum {
+class Momentum : public Core {
 	int period, shift;
 	
 public:
 	Momentum();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(2, 2, 2)
-			.Arg(period, 2)
-			.Arg(shift, -10000);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2)
+			% Arg("shift", shift, -10000);
 	}
 };
 
 
-class OsMA {
+class OsMA : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
@@ -387,18 +335,36 @@ class OsMA {
 public:
 	OsMA();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 12) // fast
-			.In(FACTORY_MovingAverage, 26) // slow
-			.Out(4, 2, 0)
-			.Arg(fast_ema_period, 2)
-			.Arg(slow_ema_period, 2)
-			.Arg(signal_sma_period, 2)
-			.Mem(value_mean) .Mem(value_count)
-			.Mem(diff_mean) .Mem(diff_count);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<MovingAverage>(&Args) // fast
+			% In<MovingAverage>(&Args) // slow
+			% Out(4, 2)
+			% Arg("fast_ema_period", fast_ema_period, 2)
+			% Arg("slow_ema_period", slow_ema_period, 2)
+			% Arg("signal_sma", signal_sma_period, 2)
+			% Mem(value_mean) % Mem(value_count)
+			% Mem(diff_mean) % Mem(diff_count);
+	}
+	
+	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		// Note: in case you need to fill some values in between some custom values,
+		// default arguments can be read from here:
+		// const FactoryRegister& reg = System::GetRegs()[decl.factory];
+		// const ArgType& arg = reg.args[i];
+		// int default_value = arg.def;
+		
+		int fast_ema_period =	args[0];
+		int slow_ema_period =	args[1];
+		int signal_sma =		args[2];
+		if		(input == 1)	decl.AddArg(fast_ema_period);
+		else if	(input == 2)	decl.AddArg(slow_ema_period);
+		else Panic("Unexpected input");
+		decl.AddArg(0);
+		decl.AddArg(MODE_EMA);
 	}
 	
 	void AddValue(double a) {
@@ -422,41 +388,43 @@ public:
 };
 
 
-class RelativeStrengthIndex {
+class RelativeStrengthIndex : public Core {
 	int period;
 	
 public:
 	RelativeStrengthIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(4, 4, 2)
-			.Arg(period, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 4)
+			% Arg("period", period, 2);
 	}
 };
 
 
-class RelativeVigorIndex {
+class RelativeVigorIndex : public Core {
 	int period;
 	
 public:
 	RelativeVigorIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(2, 2, 2)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Arg("period", period, 2, 127);
 	}
 };
 
 
-class StochasticOscillator {
+class StochasticOscillator : public Core {
 	int k_period;
 	int d_period;
 	int slowing;
@@ -464,21 +432,22 @@ class StochasticOscillator {
 public:
 	StochasticOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(4, 2, 3)
-			.Arg(k_period, 2)
-			.Arg(d_period, 2)
-			.Arg(slowing, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 2)
+			% Arg("k_period", k_period, 2)
+			% Arg("d_period", d_period, 2)
+			% Arg("slowing", slowing, 2);
 	}
 };
 
 
 
-class WilliamsPercentRange {
+class WilliamsPercentRange : public Core {
 	int period;
 	
 	bool CompareDouble(double Number1, double Number2);
@@ -486,148 +455,182 @@ class WilliamsPercentRange {
 public:
 	WilliamsPercentRange();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(2, 2, 0)
-			.Arg(period, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2);
 	}
 };
 
 
-class AccumulationDistribution {
+class AccumulationDistribution : public Core {
 	
 public:
 	AccumulationDistribution();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
-class MoneyFlowIndex {
+class MoneyFlowIndex : public Core {
 	int period;
 	
 public:
 	MoneyFlowIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
-class ValueAndVolumeTrend {
+class ValueAndVolumeTrend : public Core {
 	int applied_value;
 	
 public:
 	ValueAndVolumeTrend();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0)
-			.Arg(applied_value, 0, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
 
-class OnBalanceVolume {
+class OnBalanceVolume : public Core {
 	int applied_value;
 	
 public:
 	OnBalanceVolume();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0)
-			.Arg(applied_value, 0, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("applied_value", applied_value, 0, 0);
 	}
 };
 
 
-class Volumes {
+class Volumes : public Core {
 	
 public:
 	Volumes();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
 
-class AcceleratorOscillator {
+class AcceleratorOscillator : public Core {
 	
 public:
 	AcceleratorOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
-			.In(FACTORY_MovingAverage, 34, 0, MODE_SMA)
-			.Out(5, 3, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(5, 3);
 	}
 };
 
 
+class GatorOscillator : public Core {
+	int jaws_period;
+	int jaws_shift;
+	int teeth_period;
+	int teeth_shift;
+	int lips_period;
+	int lips_shift;
+	int ma_method;
+	int applied_value;
+	
+public:
+	GatorOscillator();
+	
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(6, 6)
+			% Arg("jaws_period", jaws_period, 2, 127)
+			% Arg("teeth_period", teeth_period, 2, 127)
+			% Arg("lips_period", lips_period, 2, 127)
+			% Arg("jaws_shift", jaws_shift, 2, 127)
+			% Arg("teeth_shift", teeth_shift, 2, 127)
+			% Arg("lips_shift", lips_shift, 2, 127)
+			% Arg("ma_method", ma_method, 0, 3)
+			% Arg("applied_value", applied_value, 0, 0);
+	}
+};
 
 
-
-class AwesomeOscillator {
+class AwesomeOscillator : public Core {
 	
 public:
 	AwesomeOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, 5, 0, MODE_SMA)
-			.In(FACTORY_MovingAverage, 34, 0, MODE_SMA)
-			.Out(3, 3, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 3);
 	}
 };
 
 
-class Fractals {
+class Fractals : public Core {
 	int left_bars;
 	int right_bars;
 	
-	double IsFractalUp(int index, int left, int right, int maxind, SourceImage& si, ChartImage& ci, GraphImage& gi);
-	double IsFractalDown(int index, int left, int right, int maxind, SourceImage& si, ChartImage& ci, GraphImage& gi);
+	double IsFractalUp(int index, int left, int right, int maxind);
+	double IsFractalDown(int index, int left, int right, int maxind);
 	
 public:
 	Fractals();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(6, 6, 0)
-			.Arg(left_bars, 2, 20)
-			.Arg(right_bars, 0, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(6, 6)
+			% Arg("left_bars", left_bars, 2, 20)
+			% Arg("right_bars", right_bars, 0, 0);
 	}
 };
 
 
-class FractalOsc {
+class FractalOsc : public Core {
 	int left_bars;
 	int right_bars;
 	int smoothing_period;
@@ -635,53 +638,60 @@ class FractalOsc {
 public:
 	FractalOsc();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_Fractals, 3, 0)
-			.Out(2, 2, 0)
-			.Arg(smoothing_period, 2, 127);
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Arg("left_bars", left_bars, 2, 20)
+			% Arg("right_bars", right_bars, 0, 0)
+			% Arg("smoothing", smoothing_period, 2, 127);
 	}
 };
 
 
-class MarketFacilitationIndex {
+class MarketFacilitationIndex : public Core {
 	
 public:
 	MarketFacilitationIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(5, 4, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(5, 4);
 	}
 };
 
 
-class ZigZag {
+class ZigZag : public Core {
 	int input_depth;
 	int input_deviation;
 	int input_backstep;
 	int extremum_level;
 	
+protected:
+	virtual void Start();
+	
 public:
 	ZigZag();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(4, 2, 1)
-			.Arg(input_depth, 1)
-			.Arg(input_depth, 1)
-			.Arg(input_backstep, 1)
-			.Arg(extremum_level, 2);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 2)
+			% Arg("depth", input_depth, 1)
+			% Arg("deviation", input_depth, 1)
+			% Arg("backstep", input_backstep, 1)
+			% Arg("level", extremum_level, 2);
 	}
 };
 
-class ZigZagOsc {
+class ZigZagOsc : public Core {
 	int depth;
 	int deviation;
 	int backstep;
@@ -689,141 +699,151 @@ class ZigZagOsc {
 public:
 	ZigZagOsc();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0)
-			.In(FACTORY_ZigZag, 12, 5, 3)
-			.Arg(depth, 2, 16)
-			.Arg(deviation, 2, 16)
-			.Arg(backstep, 2, 16);
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("depth", depth, 2, 16)
+			% Arg("deviation", deviation, 2, 16)
+			% Arg("backstep", backstep, 2, 16);
 	}
 };
 
 
 
 
-class LinearTimeFrames {
+class LinearTimeFrames : public Core {
 	
 public:
 	LinearTimeFrames();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(4, 4, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 4);
 	}
 };
 
 
 
 
-class LinearWeekTime {
+class LinearWeekTime : public Core {
 	
 public:
 	LinearWeekTime();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1);
 	}
 };
 
 
 
 
-class SupportResistance {
+class SupportResistance : public Core {
 	int period, max_crosses, max_radius;
 	
 public:
 	SupportResistance();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(2, 2, 0)
-			.Arg(period, 300, 300)
-			.Arg(max_crosses, 100, 100)
-			.Arg(max_radius, 100, 100);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Arg("period", period, 300, 300)
+			% Arg("max_crosses", max_crosses, 100, 100)
+			% Arg("max_radius", max_radius, 100, 100);
 	}
 };
 
 
-class SupportResistanceOscillator {
+class SupportResistanceOscillator : public Core {
 	int period, max_crosses, max_radius, smoothing_period;
 	
 public:
 	SupportResistanceOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_SupportResistance) // Set("period", period).Set("max_crosses", max_crosses).Set("max_radius", max_radius);
-			.Out(2, 2, 0)
-			.Arg(period, 2, 127)
-			.Arg(max_crosses, 300, 300)
-			.Arg(max_radius, 100, 100)
-			.Arg(smoothing_period, 100, 100);
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2,2)
+			% Arg("period", period, 2, 127)
+			% Arg("max_crosses", max_crosses, 300, 300)
+			% Arg("max_radius", max_radius, 100, 100)
+			% Arg("smoothing", smoothing_period, 100, 100);
 	}
 };
 
 
-class ChannelOscillator {
+class ChannelOscillator : public Core {
 	int period;
 	ExtremumCache ec;
 	
 public:
 	ChannelOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 2)
-			.Arg(period, 2)
-			.Mem(ec);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2)
+			% Mem(ec);
 	}
 };
 
 
-class ScissorChannelOscillator {
+class ScissorChannelOscillator : public Core {
 	int period;
 	ExtremumCache ec;
 	
 public:
 	ScissorChannelOscillator();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 2)
-			.Arg(period, 2)
-			.Mem(ec);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2)
+			% Mem(ec);
 	}
 };
 
 
-class Psychological {
+class Psychological : public Core {
 	int period;
 	
 public:
 	Psychological();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 2)
-			.Arg(period, 2, 127);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 127);
 	}
 };
 
@@ -850,18 +870,23 @@ struct Average : Moveable<Average> {
 	This data can be statistically evaluated, and periodical time of change of direction can
 	be estimated.
 */
-class TrendChange {
-	static const int period = 13;
+class TrendChange : public Core {
+	int period;
+	int method;
+	
+protected:
+	virtual void Start();
 	
 public:
 	TrendChange();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, period, 0)
-			.Out(1, 1, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2, 16)
+			% Arg("method", method, 0, 3);
 	}
 };
 
@@ -870,30 +895,37 @@ public:
 	The edge filter for data is the same that for images.
 	Positive peak values are when trend is changing.
 */
-class TrendChangeEdge {
-	static const int period = 13;
+class TrendChangeEdge : public Core {
+	int period;
+	int method;
+	int slowing;
+	
+protected:
+	virtual void Start();
 	
 public:
 	TrendChangeEdge();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.In(FACTORY_MovingAverage, period, 0)
-			.In(FACTORY_MovingAverage, 54, 0, -27)
-			.Out(3, 1, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 1)
+			% Arg("period", period, 2, 16)
+			% Arg("method", method, 0, 3)
+			% Arg("slowing", slowing, 2, 127);
 	}
 };
 
 
 
-class PeriodicalChange {
+class PeriodicalChange : public Core {
 	Vector<double> means;
 	Vector<int> counts;
 	int split_type, tfmin;
 	
 protected:
+	virtual void Start();
 	
 	void Add(int i, double d) {
 		double& mean = means[i];
@@ -912,55 +944,63 @@ protected:
 public:
 	PeriodicalChange();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 2)
-			.Mem(means)
-			.Mem(counts);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(means)
+			% Mem(counts);
 	}
 };
 
 
 
-class VolatilityAverage {
+class VolatilityAverage : public Core {
 	int period;
 	VectorMap<int, int> stats;
 	Vector<double> stats_limit;
 	
+protected:
+	virtual void Start();
+	
 public:
 	VolatilityAverage();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 2)
-			.Arg(period, 2)
-			.Mem(stats);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 2)
+			% Mem(stats);
 	}
 };
 
 
-class MinimalLabel {
-	int cost_level = 10;
+class MinimalLabel : public Core {
+	int prev_counted = 0;
+	int cost_level = 0;
+	
+protected:
+	virtual void Start();
 	
 public:
 	MinimalLabel();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 1)
-			.Arg(cost_level, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(prev_counted)
+			% Arg("cost_level", cost_level, 0);
 	}
 };
 
-class VolatilitySlots {
+class VolatilitySlots : public Core {
 	
 protected:
 	friend class WeekSlotAdvisor;
@@ -973,20 +1013,22 @@ protected:
 public:
 	VolatilitySlots();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 4)
-			.Mem(stats)
-			.Mem(total);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(stats)
+			% Mem(total);
 	}
 	
 };
 
 
-class VolumeSlots {
+class VolumeSlots : public Core {
 	
 protected:
 	Vector<OnlineAverage1> stats;
@@ -998,79 +1040,98 @@ protected:
 public:
 	VolumeSlots();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
 	
-		
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 4)
-			.Mem(stats)
-			.Mem(total);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(stats)
+			% Mem(total);
 	}
 	
 };
 
 
 
-class TrendIndex {
+class TrendIndex : public Core {
 	int period = 6;
 	int err_div = 3;
 public:
 	TrendIndex();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(3, 3, 1)
-			.Arg(period, 2)
-			.Arg(err_div, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 3)
+			% Arg("period", period, 2)
+			% Arg("err_div", err_div, 0);
 	}
 	
-	static void Process(const double* open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value);
+	static void Process(ConstBuffer& open_buf, int i, int period, int err_div, double& err, double& buf_value, double& av_change, bool& bit_value);
 	
 };
 
-class OnlineMinimalLabel {
+class OnlineMinimalLabel : public Core {
 	int prev_counted = 0;
-	int cost_level = 10;
+	int cost_level = 0;
+	
+	
+protected:
+	virtual void Start();
 	
 public:
 	OnlineMinimalLabel();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 1)
-			.Mem(prev_counted)
-			.Arg(cost_level, 0);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(0, 0)
+			% Mem(prev_counted)
+			% Arg("cost_level", cost_level, 0);
 	}
 	
-	static void GetMinimalSignal(double cost, const double* open_buf, int begin, int end, bool* sigbuf, int sigbuf_size);
+	static void GetMinimalSignal(double cost, ConstBuffer& open_buf, int begin, int end, bool* sigbuf, int sigbuf_size);
 	
 };
 
-
-class ReactionContext {
-	int length = 3;
+class SelectiveMinimalLabel : public Core {
+	struct Order : Moveable<Order> {
+		bool label;
+		int start, stop, len;
+		double av_change, err;
+		double av_idx, err_idx, len_idx;
+		double idx, idx_norm;
+		void Serialize(Stream& s) {s % label % start % stop % len % av_change % err % av_idx % err_idx % len_idx % idx % idx_norm;}
+	};
+	
+	
+	int idx_limit = 75;
+	int cost_level = 0;
+	
+protected:
+	virtual void Start();
 	
 public:
-	ReactionContext();
+	SelectiveMinimalLabel();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg	.Out(1, 1, 0)
-			.Arg(length, 1);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Out(0, 0)
+			% Arg("idx_limit", idx_limit, 0, 100)
+			% Arg("cost_level", cost_level, 0);
 	}
-	
-	enum {UNKNOWN, UPTREND, DOWNTREND, HIGHBREAK, LOWBREAK, REVERSALUP, REVERSALDOWN, COUNT};
-	
 };
 
-class VolatilityContext {
+class VolatilityContext : public Core {
 	VectorMap<int,int> median_map;
 	Vector<double> volat_divs;
 	int div = DEFAULT_DIV;
@@ -1078,20 +1139,21 @@ class VolatilityContext {
 public:
 	VolatilityContext();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg .Out(1, 1, 0)
-			.Arg(div, 1)
-			.Mem(median_map);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("div", div, 1)
+			% Mem(median_map);
 	}
 	
 	static const int DEFAULT_DIV = 6;
 	
 };
 
-class ChannelContext {
+class ChannelContext : public Core {
 	VectorMap<int,int> median_map;
 	Vector<double> volat_divs;
 	ExtremumCache channel;
@@ -1102,28 +1164,58 @@ class ChannelContext {
 public:
 	ChannelContext();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
+	virtual void Start();
 	
-	void Conf(ValueRegister& reg) {
-		reg .Out(1, 1, 1)
-			.Arg(period, 1)
-			.Arg(div, 1)
-			.Arg(useable_div, 1)
-			.Mem(median_map)
-			.Mem(channel);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("period", period, 1)
+			% Arg("div", div, 1)
+			% Arg("useable_div", useable_div, 1)
+			% Mem(median_map)
+			% Mem(channel);
 	}
 	
 	static const int DEFAULT_DIV = 6;
 	
 };
 
-#if 0
-class ExampleAdvisor {
+
+
+class GridSignal : public Core {
+	int main_interval = 10;
+	int grid_interval = 8;
+	
+	int trend = 0;
+	double line_value = 0;
+	
+public:
+	GridSignal();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Arg("main_interval", main_interval, 1)
+			% Arg("grid_interval", grid_interval, 1)
+			% Mem(trend) % Mem(line_value);
+	}
+	
+	static const int DEFAULT_DIV = 6;
+	
+};
+
+
+
+
+class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {
 		Vector<Point> polyline;
-		void Paint(Draw& w);
+		virtual void Paint(Draw& w);
 	};
 	
 	bool TrainingBegin();
@@ -1142,20 +1234,76 @@ class ExampleAdvisor {
 	int max_rounds = 1000;
 	bool once = true;
 	
+protected:
+	virtual void Start();
+	
 public:
 	typedef ExampleAdvisor CLASSNAME;
 	ExampleAdvisor();
 	
-	void Init(SourceImage& si, ChartImage& ci, GraphImage& gi);
-	void Start(SourceImage& si, ChartImage& ci, GraphImage& gi);
+	virtual void Init();
 	
-	void Conf(ValueRegister& reg) {
-		reg .Out(1, 1)
-			.Mem(training_pts)
-			.Mem(prev_counted);
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(training_pts)
+			% Mem(prev_counted);
 	}
 };
-#endif
+
+
+
+class GridAdvisor : public Core {
+	
+	struct TrainingCtrl : public JobCtrl {
+		Vector<Point> polyline;
+		virtual void Paint(Draw& w);
+	};
+	
+	bool TrainingBegin();
+	bool TrainingIterator();
+	bool TrainingEnd();
+	bool TrainingInspect();
+	void RefreshAll();
+	
+	
+	// Persistent
+	Vector<double> training_pts;
+	int prev_counted = 0;
+	int main_interval = 36;
+	int grid_interval = 8;
+	
+	
+	// Temporary
+	Vector<Tuple<int, int> > tests;
+	int round = 0;
+	int max_rounds = 1000;
+	bool once = true;
+	int trend = 0;
+	double line_value = 0;
+	
+protected:
+	virtual void Start();
+	
+	void RefreshGrid(bool forced);
+	double TestGrid();
+	
+public:
+	typedef GridAdvisor CLASSNAME;
+	GridAdvisor();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(training_pts)
+			% Mem(prev_counted)
+			% Mem(main_interval)
+			% Mem(grid_interval);
+	}
+};
+
 
 }
 

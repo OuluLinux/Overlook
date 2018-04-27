@@ -13,27 +13,26 @@ using namespace Upp;
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
-#include "DQN.h"
-#include "Optimizer.h"
 #include "Common.h"
-#include "CommonFixed.h"
 #include "Calendar.h"
+#include "Optimizer.h"
+#include "BitOptimizer.h"
+#include "DQN.h"
 #include "SimBroker.h"
-#include "DataBridge.h"
 #include "System.h"
-#include "Automation.h"
-#include "ExpertSystem.h"
-#include "Realtime.h"
+#include "Core.h"
+#include "ExposureTester.h"
+#include "DataBridge.h"
+#include "Utils.h"
 #include "Indicators.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
+#include "ExportCtrl.h"
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "AutomationCtrl.h"
-#include "ExpertSystemCtrl.h"
-#include "RealtimeCtrl.h"
+#include "RuleAnalyzer.h"
 
 
 namespace Overlook {
@@ -82,7 +81,7 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl> journal, calendar, trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
@@ -96,13 +95,9 @@ protected:
 	Vector<int> symindi_args;
 	MenuBar menu;
 	TimeStop mt_refresh;
-	AutomationCtrl autoctrl;
-	ExchangeSlotsCtrl slotctrl;
-	RealtimeCtrl gamectrl;
-	PerformanceCtrl perfctrl;
 	Id thrd_id, thrd_job_id;
 	Id sym;
-	bool enable_automation = true;
+	bool default_running = false;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void ToggleRightOffset();
@@ -159,15 +154,13 @@ public:
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
-	void RefreshJournal();
-	void RefreshPerformance();
-	void RefreshRealtime();
-	void RefreshSystem();
-	void RefreshSlots();
+	void RefreshAssist();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();
 	void RefreshTradesHistory();
+	void RefreshJobs();
+	void RefreshDebug();
 	void MenuNewOrder();
 	void MenuCloseOrder();
 	void MenuModifyOrder();
@@ -175,9 +168,11 @@ public:
 	void LoadPreviousProfile();
 	void StorePreviousProfile();
 	void SaveProfile();
+	void LoadAdvisorProfile();
+	void LoadAdvisorProfileFinish();
+	void LoadAdvisorProfileThread();
+	void LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count);
 	void LoadOpenOrderCharts();
-	void LoadDefaultProfile(int sym);
-	void PostLoadOpenOrderCharts() {PostCallback(THISBACK(LoadOpenOrderCharts));}
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
 	void SetProfileFromFile(String path);
@@ -189,8 +184,6 @@ public:
 	Callback WhenExit;
 	
 };
-
-inline Overlook& GetOverlook() {static One<Overlook> o; if (o.IsEmpty()) o = new Overlook(); return *o;}
 
 }
 

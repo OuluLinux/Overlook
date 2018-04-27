@@ -484,17 +484,24 @@ void HistoryCenter::Init(int id, int tf_id) {
 }
 
 void HistoryCenter::Data() {
-	/*int sym = symbol_list.GetCursor();
+	int sym = symbol_list.GetCursor();
 	if (sym < 0) return;
 	
 	int tf_id = tf_list.GetCursor();
 	if (tf_id < 0) return;
 	
 	System& sys = GetSystem();
-	DataBridge* core = dynamic_cast<DataBridge*>(sys.CreateSingle(0, sym, tf_id));
+	Core* core = sys.CreateSingle(0, sym, tf_id);
 	if (!core) return;
 	
-	int count = core->open.GetCount();
+	Output& out = core->GetOutput(0);
+	const Buffer& open  = out.buffers[0];
+	const Buffer& low   = out.buffers[1];
+	const Buffer& high  = out.buffers[2];
+	const Buffer& vol   = out.buffers[3];
+	const Buffer& tbuf  = out.buffers[4];
+	
+	int count = open.GetCount();
 	data_list.Clear();
 	
 	int screen_count = data_list.GetSize().cy / data_list.GetLineCy(0) - 1;
@@ -502,17 +509,17 @@ void HistoryCenter::Data() {
 	for(int i = 0; i < screen_count; i++) {
 		int pos = shift + i;
 		if (pos < 0 || pos >= count) continue;
-		Time time = Time(1970,1,1) + core->time[pos];
+		Time time = Time(1970,1,1) + tbuf.Get(pos);
 		
 		data_list.Set(i, 0, time);
-		data_list.Set(i, 1, core->open[pos]);
-		data_list.Set(i, 2, core->high[pos]);
-		data_list.Set(i, 3, core->low[pos]);
-		data_list.Set(i, 4, core->volume[pos]);
+		data_list.Set(i, 1, open.Get(pos));
+		data_list.Set(i, 2, high.Get(pos));
+		data_list.Set(i, 3, low.Get(pos));
+		data_list.Set(i, 4, vol.Get(pos));
 	}
 	
 	sb.SetTotal(count);
-	sb.SetPage(screen_count);*/
+	sb.SetPage(screen_count);
 }
 
 }

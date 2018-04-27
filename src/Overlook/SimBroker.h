@@ -28,7 +28,6 @@ public:
 	void Cycle();
 	void CycleChanges();
 	void RefreshOrders();
-	void RefreshAskBid();
 	
 	int FindSymbol(const String& symbol) const;
 	int GetSignal(int symbol) const;

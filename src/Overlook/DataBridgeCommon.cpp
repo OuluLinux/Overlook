@@ -202,8 +202,6 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	ASSERTEXC(src.IsOpen() && src.GetSize());
 	int data_size = (int)src.GetSize(); // No >2Gt files expected
 	
-	if (cursor > src.GetSize())
-		cursor = src.GetSize();
 	src.Seek(cursor);
 	
 	int added = 0;

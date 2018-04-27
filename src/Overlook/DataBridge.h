@@ -58,69 +58,55 @@ struct AskBid : Moveable<AskBid> {
 	double ask, bid;
 };
 
-class DataBridge {
+class DataBridge : public Core {
 	
 protected:
-	friend class System;
+	friend class CommonForce;
 	
 	VectorMap<int,int> median_max_map, median_min_map;
-	String symbol;
+	VectorMap<int,int> symbols;
+	Vector<Vector<byte> > ext_data;
+	Vector<Vector<int> > sym_group_stats, sym_groups;
 	double point = 0.01;
 	double spread_mean;
 	int spread_count;
 	int median_max, median_min;
 	int max_value, min_value;
 	int cursor = 0, cursor2 = 0;
-	int sym_id = -1, tf_id = -1, period = -1;
-	int counted = 0;
+	bool slow_volume, day_volume;
 	bool once = true;
-	Mutex lock;
-	
-	
-public:
-	int GetSymbol() const {return sym_id;}
-	int GetTf() const {return tf_id;}
-	int GetCounted() const {return counted;}
-	int GetPeriod() const {ASSERT(period != -1); return period;}
-	void ForceSetCounted(int i) {counted = i;}
 	
 	void RefreshFromHistory(bool use_internet_data);
 	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshMedian();
-	void RefreshViaConnection();
 	
 public:
 	typedef DataBridge CLASSNAME;
 	DataBridge();
 	~DataBridge();
 	
-	
-	Vector<double> open, low, high, volume;
-	Vector<int> time;
-	void Serialize(Stream& s) {
-		s % symbol
-		  % median_max_map % median_min_map
-		  % point
-		  % spread_mean
-		  % spread_count
-		  % median_max % median_min
-		  % max_value % min_value
-		  % cursor % cursor2
-		  % sym_id % tf_id % period
-		  % counted % once
-		  % open % low % high % volume % time;
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(5, 5)
+			% Mem(point)
+			% Mem(spread_mean) % Mem(spread_count)
+			% Mem(cursor) % Mem(cursor2)
+			% Mem(median_max_map) % Mem(median_min_map)
+			% Mem(symbols)
+			% Mem(ext_data)
+			% Mem(sym_group_stats) % Mem(sym_groups)
+			% Mem(median_max) % Mem(median_min)
+			% Mem(max_value) % Mem(min_value);
 	}
 	
-	
-	void Clear();
-	void Init();
-	void Start();
-	void SetBoolean(int cursor, VectorBool& vec);
+	virtual void Init();
+	virtual void Start();
+	virtual void Assist(int cursor, VectorBool& vec);
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}
-	double GetSpread() const {return spread_mean * point;}
+	double GetSpread() const {return spread_mean;}
 	double GetMax() const {return max_value * point;}
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}

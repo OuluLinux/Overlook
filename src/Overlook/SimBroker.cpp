@@ -34,10 +34,6 @@ void SimBroker::Init() {
 	MetaTrader& mt = GetMetaTrader();
 	symbols <<= mt.GetSymbols();
 	currency = mt.AccountCurrency();
-	askbid <<= mt.askbid;
-	
-	signals.SetCount(symbols.GetCount(), 0);
-	signal_freezed.SetCount(symbols.GetCount(), 0);
 	
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
@@ -54,11 +50,6 @@ void SimBroker::InitLightweight() {
 			symbol_idx.Add(symbols[i].name);
 		cur_begin = GetMetaTrader().GetSymbolCount();
 	}
-}
-
-void SimBroker::RefreshAskBid() {
-	MetaTrader& mt = GetMetaTrader();
-	askbid <<= mt.askbid;
 }
 
 void SimBroker::Clear() {

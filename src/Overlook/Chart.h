@@ -7,16 +7,13 @@ namespace Overlook {
 
 class ChartManager;
 
-
 class Chart : public SubWindowCtrl {
 	
 protected:
 	friend class Overlook;
 	
-	static const int screen_count = 256;
-	
+	Vector<Ptr<CoreItem> > work_queue;
 	Array<GraphCtrl> graphs;
-	ChartImage image;
 	Splitter split;
 	FactoryDeclaration decl;
 	String title;
@@ -24,6 +21,8 @@ protected:
 	int shift = 0;
 	int symbol = 0, tf = 0;
 	bool right_offset = 0, keep_at_end = 0;
+	Core* core = NULL;
+	DataBridge* bardata = NULL;
 	
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);
@@ -37,11 +36,10 @@ public:
 	Chart();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
-	void RefreshImage();
-	void Clear();
-	GraphCtrl& AddGraph(GraphImage& gi);
-	void SetGraph();
-	void SetShift(int i);
+	void ClearCores();
+	GraphCtrl& AddGraph(Core* src);
+	void SetGraph(Core* src);
+	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
 	void Settings();
@@ -55,6 +53,7 @@ public:
 	virtual void Data();
 	virtual String GetTitle();
 	
+	Core& GetCore() {return *bardata;}
 	Color GetBackground() const {return White();}
 	Color GetGridColor() const {return GrayColor();}
 	int GetSymbol() const {return symbol;}

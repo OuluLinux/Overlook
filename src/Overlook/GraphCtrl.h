@@ -53,9 +53,7 @@ class GraphCtrl : public Ctrl {
 protected:
 	friend class Overlook;
 	
-	Chart* chart = NULL;
-	ChartImage* ci = NULL;
-	Vector<GraphImage*> src;
+	Vector<Core*> src;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;
@@ -75,28 +73,28 @@ protected:
 protected:
 	friend class Chart;
 	
+	Chart* chart = NULL;
 	
 	
 	void ShowTimeValueTool(bool b) {show_timevalue_tool = b;}
 	void GotMouseMove(Point p, GraphCtrl* g);
 	void DrawBorder(Draw& W);
 	void DrawGrid(Draw& W, bool draw_vert_grid);
-	void DrawLines(Draw& d, GraphImage& gi);
-	void PaintCoreLine(Draw& d, GraphImage& gi, int shift, int buffer);
-	void DrawBorders(Draw& d, GraphImage& gi);
+	void DrawLines(Draw& d, Core& cont);
+	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
+	void DrawBorders(Draw& d, Core& cont);
 	Rect GetGraphCtrlRect();
-	GraphImage* FindDataSource();
+	
 	
 public:
 	
     typedef GraphCtrl CLASSNAME;
     GraphCtrl();
     
-    void PaintCandlesticks(Draw& W, GraphImage& gi);
+    void PaintCandlesticks(Draw& W, Core& values);
 	void PostRefresh() {PostCallback(THISBACK(GraphCtrlRefresh));}
 	void GraphCtrlRefresh() {Refresh();}
-	void SetSource(ChartImage& ci, GraphImage& gi) {this->ci = &ci; src.Clear(); src.Add(&gi);}
-	void AddSource(GraphImage& gi) {src.Add(&gi);}
+	void AddSource(Core* src) {this->src.Add(src);}
 	void SetRightOffset(bool b=true) {right_offset = b;}
 	virtual void Paint(Draw& w);
 	virtual bool Key(dword key, int count);
@@ -107,7 +105,7 @@ public:
 	virtual void RightDown(Point, dword);
 	virtual void MiddleDown(Point p, dword keyflags);
 	
-	void GetDataRange(GraphImage& gi, int buffer);
+	void GetDataRange(Core& cont, int buffer);
 	int GetCount();
 	int GetPos();
 	bool IsTimeValueToolShown() const {return show_timevalue_tool;}

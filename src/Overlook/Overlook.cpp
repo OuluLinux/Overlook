@@ -36,9 +36,7 @@ Overlook::Overlook() : watch(this) {
 	
 	NewOrderWindow::WhenOrdersChanged = THISBACK(Data);
 	
-	journal.AddColumn("What");
-	journal.AddColumn("When");
-	journal.ColumnWidths("5 3");
+	assist.AddColumn("What");
 	
 	trade.AddColumn ( "Order" );
 	trade.AddColumn ( "Time" );
@@ -117,8 +115,7 @@ Overlook::Overlook() : watch(this) {
 	calendar.AddColumn("Previous");
 	calendar.AddColumn("Actual");
 	
-	//GetSystem().WhenJobOrders << THISBACK(PostLoadOpenOrderCharts);
-	
+	LoadPreviousProfile();
 	PostRefreshData();
 }
 
@@ -132,17 +129,14 @@ void Overlook::DockInit() {
 	
 	DockableCtrl& last = Dockable(debuglist, "Debug").SizeHint(Size(300, 200));
 	DockBottom(last);
-	Tabify(last, Dockable(perfctrl, "Performance").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(gamectrl, "Realtime").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(autoctrl, "Automation").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(slotctrl, "Exchange slots").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(journal, "Journal").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
 	
-	journal			.WhenVisible << THISBACK(Data);
+	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
@@ -175,10 +169,11 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
+		bar.Add(!default_running, "Load default advisor profile", THISBACK(LoadAdvisorProfile));
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
-		String profile_dir = ConfigFile("profiles");
+		String profile_dir = ConfigFile("Profiles");
 		RealizeDirectory(profile_dir);
 		FindFile ff;
 		ff.Search(AppendFileName(profile_dir, "*"));
@@ -236,11 +231,11 @@ void Overlook::SubBar(Bar& bar) {
 	bar.Add(keep_at_end, Size(30, 30));
 	bar.Separator();
 	
-	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
 	if (tf_buttons.IsEmpty()) {
-		for(int i = 0; i < sys.GetPeriodCount(); i++) {
+		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
 			ButtonOption& bo = tf_buttons.Add();
-			bo.SetLabel(sys.GetTimeframeString(i));
+			bo.SetLabel(mt.GetTimeframeString(i));
 			bo <<= THISBACK1(SetTimeframe, i);
 		}
 		tf_buttons[0].Set(true);
@@ -440,26 +435,19 @@ void Overlook::DeepRefresh() {
 	
 	if (m.TryEnter())
 	{
-		try {
-			ReleaseLog("DeepRefresh entered");
-			mt.Data();
-			DataBridgeCommon& common = GetDataBridgeCommon();
-			common.InspectInit();
-			common.DownloadAskBid();
-			common.RefreshAskBidData(true);
-			GetCalendar().Data();
-			if (enable_automation) {
-				//GetRealtime().Refresh();
-				sys.RefreshReal();
-			}
-			
-			mt_refresh.Reset();
-			
-			PostCallback(THISBACK(DeepRefreshData));
-		}
-		catch (ConnectionError e) {
-			
-		}
+		ReleaseLog("DeepRefresh entered");
+		mt.Data();
+		DataBridgeCommon& common = GetDataBridgeCommon();
+		common.InspectInit();
+		common.DownloadAskBid();
+		common.RefreshAskBidData(true);
+		GetCalendar().Data();
+		sys.RefreshReal();
+		
+		mt_refresh.Reset();
+		
+		PostCallback(THISBACK(DeepRefreshData));
+		
 		m.Leave();
 	}
 }
@@ -500,46 +488,44 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
-	if (journal.IsVisible())		RefreshJournal();
-	if (gamectrl.IsVisible())		RefreshRealtime();
-	if (perfctrl.IsVisible())		RefreshPerformance();
-	if (autoctrl.IsVisible())		RefreshSystem();
-	if (slotctrl.IsVisible())		RefreshSlots();
+	if (assist.IsVisible())			RefreshAssist();
 	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
+	if (jobs_hsplit.IsVisible())	RefreshJobs();
+	if (debuglist.IsVisible())		RefreshDebug();
 }
 
-void Overlook::RefreshJournal() {
-	System& sys = GetSystem();
-	
-	
-	int count = min(1000, sys.journal.GetCount());
-	
-	for(int i = 0; i < count; i++) {
-		int pos = sys.journal.GetCount() - 1 - i;
-		auto& t = sys.journal[pos];
-		journal.Set(i, 0, t.a);
-		journal.Set(i, 1, t.b);
+void Overlook::RefreshAssist() {
+	Chart* chart = cman.GetVisibleChart();
+	if (!chart || chart->graphs.IsEmpty()) {
+		assist.Clear();
+		return;
 	}
 	
-}
-
-void Overlook::RefreshRealtime() {
-	gamectrl.Data();
-}
-
-void Overlook::RefreshPerformance() {
-	perfctrl.Data();
-}
-
-void Overlook::RefreshSystem() {
-	autoctrl.Data();
-}
-
-void Overlook::RefreshSlots() {
-	slotctrl.Data();
+	GraphCtrl& graph = chart->graphs[0];
+	if (!graph.IsTimeValueToolShown())
+		return;
+	int cursor = graph.last_time_value_tool_pos;
+	
+	VectorBool vec;
+	vec.SetCount(ASSIST_COUNT);
+	for(int i = chart->work_queue.GetCount()-1; i >= 0; i--) {
+		CoreItem& ci = *chart->work_queue[i];
+		if (ci.core.IsEmpty()) continue;
+		
+		Core& core = *ci.core;
+		if (cursor >= core.GetBars()) break;
+		core.Assist(cursor, vec);
+	}
+	
+	int row = 0;
+	for(int i = 0; i < ASSIST_COUNT; i++) {
+		if (vec.Get(i))
+			assist.Set(row++, 0, System::Assistants().Get(i).b);
+	}
+	assist.SetCount(row);
 }
 
 void Overlook::RefreshCalendar() {
@@ -840,6 +826,62 @@ void Overlook::RefreshTradesHistory() {
 	}
 }
 
+void Overlook::RefreshJobs() {
+	System& sys = GetSystem();
+	
+	int row = 0;
+	for(int i = 0; i < sys.GetJobThreadCount(); i++) {
+		JobThread& thrd = sys.GetJobThread(i);
+		/*
+		// TODO: support thread overview
+		joblist.Set(row, 0, i);
+		joblist.Set(row, 1, -1);
+		joblist.Set(row, 2, sys.GetSymbol(thrd.symbol) + " job thread");
+		joblist.Set(row, 3, sys.GetPeriodString(thrd.tf));
+		joblist.Set(row, 4, "");
+		joblist.Set(row, 5, "");
+		joblist.Set(row, 6, "");
+		*/
+		
+		READLOCK(thrd.job_lock) {
+			for(int j = 0; j < thrd.jobs.GetCount(); j++) {
+				const Job& job = *thrd.jobs[j];
+				const Core& core = *job.core;
+				joblist.Set(row, 0, i);
+				joblist.Set(row, 1, j);
+				joblist.Set(row, 2, sys.GetSymbol(core.GetSymbol()));
+				joblist.Set(row, 3, sys.GetPeriodString(core.GetTf()));
+				joblist.Set(row, 4, job.title);
+				joblist.Set(row, 5, thrd.is_fail ? "FAIL" : job.GetStateString());
+				joblist.Set(row, 6, job.total > 0 ? job.actual * 100 / job.total : 0);
+				joblist.SetDisplay(row, 4, Single<JobProgressDislay>());
+				row++;
+			}
+		}
+	}
+	
+	int cursor = joblist.GetCursor();
+	if (cursor >= 0 && cursor < joblist.GetCount()) {
+		int thrd_id = joblist.Get(cursor, 0);
+		int thrd_job_id = joblist.Get(cursor, 1);
+		JobThread& thrd = sys.GetJobThread(thrd_id);
+		if (thrd_job_id == -1) {
+			// TODO: support thread overview
+		} else {
+			Job& job = *thrd.jobs[thrd_job_id];
+			Ctrl* ctrl = &*job.ctrl;
+			if (prev_job_ctrl != ctrl) {
+				if (prev_job_ctrl)
+					job_ctrl.RemoveChild(prev_job_ctrl);
+				if (ctrl)
+					job_ctrl.Add(ctrl->SizePos());
+				prev_job_ctrl = ctrl;
+			}
+			ctrl->Refresh();
+		}
+	}
+}
+
 struct DebugMessageLine : public Display {
 	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const {
 		String err = q;
@@ -863,6 +905,23 @@ struct DebugMessageLine : public Display {
 		w.DrawText(pt.x, pt.y+1, err, fnt, ink);
 	}
 };
+
+void Overlook::RefreshDebug() {
+	System& sys = GetSystem();
+	
+	LOCK(sys.inspection_lock) {
+		for(int i = 0; i < sys.inspection_results.GetCount(); i++) {
+			const InspectionResult& ir = sys.inspection_results[i];
+			
+			debuglist.Set(i, 0, GetFileName(ir.file));
+			debuglist.Set(i, 1, ir.line);
+			debuglist.Set(i, 2, sys.GetSymbol(ir.symbol));
+			debuglist.Set(i, 3, sys.GetPeriodString(ir.tf));
+			debuglist.Set(i, 4, ir.msg);
+			debuglist.SetDisplay(i, 4, Single<DebugMessageLine>());
+		}
+	}
+}
 
 void Overlook::ToggleRightOffset() {
 	bool b = right_offset.Get();
@@ -895,14 +954,14 @@ void Overlook::ActiveWindowChanged() {
 		keep_at_end.Set(b);
 	}
 }
-/*
-void Overlook::LoadAdvisorProfile() {
+
+void Overlook::LoadAdvisorProfileFinish() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
 	int tf = 0;
-	int id = FACTORY_SystemBooleanView;
+	int id = System::Find<ExampleAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		ProfileGroup& pgroup = profile.charts.Add();
@@ -915,33 +974,95 @@ void Overlook::LoadAdvisorProfile() {
 	
 	LoadProfile(profile);
 	TileWindow();
+	default_running = false;
 }
-*/
-void Overlook::LoadDefaultProfile(int sym) {
+
+#if 1
+
+void Overlook::LoadAdvisorProfile() {
+	LoadAdvisorProfileFinish();
+}
+
+#else
+void Overlook::LoadAdvisorProfile() {
+	default_running = true;
+	Thread::Start(THISBACK(LoadAdvisorProfileThread));
+}
+
+void Overlook::LoadAdvisorProfileThread() {
 	System& sys = GetSystem();
-	MetaTrader& mt = GetMetaTrader();
-	Profile profile;
 	
-	int tf = 0;
-	int id = FACTORY_ChannelOscillator;
 	
-	ProfileGroup& pgroup = profile.charts.Add();
-	pgroup.symbol = sym;
-	pgroup.tf = tf;
-	pgroup.keep_at_end = true;
-	pgroup.right_offset = true;
-	pgroup.decl.factory = id;
+	int sym_count = sys.GetSymbolCount();
 	
-	LoadProfile(profile);
-	TileWindow();
+	
+	// Process DataBridge in single thread
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > work_queue;
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	FactoryDeclaration decl;
+	decl.factory = 0;
+	indi_ids.Add(decl);
+	tf_ids.Add(0);
+	for(int i = 0; i < sym_count; i++) sym_ids.Add(i);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+	
+	
+	
+	One<Atomic> running_count = new Atomic(0), finished_count = new Atomic(0);
+	
+	for(int i = 0; i < sym_count; i++) {
+		Thread::Start(THISBACK3(LoadAdvisorProfileIterate, i, running_count.Get(), finished_count.Get()));
+	}
+	
+	while (!Thread::IsShutdownThreads() && finished_count < sym_count) Sleep(100);
+	
+	PostCallback(THISBACK(LoadAdvisorProfileFinish));
 }
+
+void Overlook::LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count) {
+	const int max_count = GetUsedCpuCores();
+	System& sys = GetSystem();
+	
+	while (true) {
+		int run_id = ++(*running_count);
+		if (run_id < max_count)
+			break;
+		(*running_count)--;
+		Sleep(500);
+	}
+	
+	
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > work_queue;
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	FactoryDeclaration decl;
+	decl.factory = System::Find<ObviousAdvisor>();
+	indi_ids.Add(decl);
+	tf_ids.Add(0);
+	sym_ids.Add(symbol);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+	
+	
+	(*running_count)--;
+	(*finished_count)++;
+}
+#endif
 
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();
 	Profile profile;
 	
 	int tf = 0;
-	int id = FACTORY_MovingAverage;
+	int id = System::Find<MinimalLabel>();
 	
 	MetaTrader& mt = GetMetaTrader();
 	mt.Enter();
@@ -987,7 +1108,7 @@ void Overlook::SaveProfile() {
 	tw.name.SetFocus();
 	tw.Run();
 	if (save) {
-		String profile_dir = ConfigFile("profiles");
+		String profile_dir = ConfigFile("Profiles");
 		RealizeDirectory(profile_dir);
 		String fname = tw.name.GetData();
 		if (GetFileExt(fname) != ".bin") fname += ".bin";

@@ -2,105 +2,6 @@
 
 namespace Overlook {
 
-int SourceImage::HighestHigh(int period, int shift) {
-	ASSERT(period > 0);
-	double highest = -DBL_MAX;
-	int highest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double high = High(shift);
-		if (high > highest) {
-			highest = high;
-			highest_pos = shift;
-		}
-	}
-	return highest_pos;
-}
-
-int SourceImage::LowestLow(int period, int shift) {
-	ASSERT(period > 0);
-	double lowest = DBL_MAX;
-	int lowest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double low = Low(shift);
-		if (low < lowest) {
-			lowest = low;
-			lowest_pos = shift;
-		}
-	}
-	return lowest_pos;
-}
-
-int SourceImage::HighestOpen(int period, int shift) {
-	ASSERT(period > 0);
-	double highest = -DBL_MAX;
-	int highest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double open = Open(shift);
-		if (open > highest) {
-			highest = open;
-			highest_pos = shift;
-		}
-	}
-	return highest_pos;
-}
-
-int SourceImage::LowestOpen(int period, int shift) {
-	ASSERT(period > 0);
-	double lowest = DBL_MAX;
-	int lowest_pos = -1;
-	for (int i = 0; i < period && shift >= 0; i++, shift--) {
-		double open = Open(shift);
-		if (open < lowest) {
-			lowest = open;
-			lowest_pos = shift;
-		}
-	}
-	return lowest_pos;
-}
-
-double SourceImage::GetAppliedValue ( int applied_value, int i ) {
-	double dValue;
-	
-	switch ( applied_value ) {
-		case 0:
-			dValue = Open(i);
-			break;
-		case 1:
-			dValue = High(i);
-			break;
-		case 2:
-			dValue = Low(i);
-			break;
-		case 3:
-			dValue =
-				( High(i) + Low(i) )
-				/ 2.0;
-			break;
-		case 4:
-			dValue =
-				( High(i) + Low(i) + Open(i) )
-				/ 3.0;
-			break;
-		case 5:
-			dValue =
-				( High(i) + Low(i) + 2 * Open(i) )
-				/ 4.0;
-			break;
-		default:
-			dValue = 0.0;
-	}
-	return dValue;
-}
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -108,75 +9,35 @@ double SourceImage::GetAppliedValue ( int applied_value, int i ) {
 
 
 System::System() {
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("USDJPY");
+	allowed_symbols.Add("AUDCAD");
+	allowed_symbols.Add("AUDJPY");
+	allowed_symbols.Add("AUDNZD");
+	allowed_symbols.Add("AUDUSD");
+	allowed_symbols.Add("CADJPY");
+	allowed_symbols.Add("CHFJPY");
+	allowed_symbols.Add("EURCAD");
+	allowed_symbols.Add("EURCHF");
+	allowed_symbols.Add("EURGBP");
 	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("USDCAD");
+	allowed_symbols.Add("EURUSD");
+	allowed_symbols.Add("EURAUD");
+	allowed_symbols.Add("GBPCHF");
 	allowed_symbols.Add("GBPUSD");
+	allowed_symbols.Add("GBPJPY");
+	allowed_symbols.Add("NZDUSD");
+	allowed_symbols.Add("USDCAD");
 	allowed_symbols.Add("USDCHF");
-	allowed_symbols.Add("#BA");
-	allowed_symbols.Add("#C");
-	allowed_symbols.Add("#CAT");
-	allowed_symbols.Add("#CSCO");
-	allowed_symbols.Add("#CVX");
-	allowed_symbols.Add("#HD");
-	allowed_symbols.Add("#HON");
-	allowed_symbols.Add("#INTC");
-	allowed_symbols.Add("#JPM");
-	allowed_symbols.Add("#MCD");
-	allowed_symbols.Add("#MMM");
-	allowed_symbols.Add("#MSFT");
-	allowed_symbols.Add("$CH20");
-	allowed_symbols.Add("$CN50");
-	allowed_symbols.Add("$DE30");
-	allowed_symbols.Add("$ES35");
-	allowed_symbols.Add("$EU50");
-	allowed_symbols.Add("$F40");
-	allowed_symbols.Add("$IN50");
-	allowed_symbols.Add("$IT40");
-	allowed_symbols.Add("$N25");
-	allowed_symbols.Add("$UK100");
-	allowed_symbols.Add("$US100");
-	allowed_symbols.Add("$US30");
-	allowed_symbols.Add("$US500");
-	allowed_symbols.Add("$USDX");
-	
-	
-	#if 1
-	used_symbols.Add("#CAT");
-	used_symbols.Add("#BA");
-	used_symbols.Add("#MMM");
-	used_symbols.Add("#HD");
-	/*used_symbols.Add("#C");
-	used_symbols.Add("#CSCO");
-	used_symbols.Add("#CVX");
-	used_symbols.Add("#HON");
-	used_symbols.Add("#INTC");
-	used_symbols.Add("#JPM");
-	used_symbols.Add("#MCD");
-	used_symbols.Add("#MSFT");*/
-	#elif 0
-	used_symbols.Add("$US30");
-	used_symbols.Add("$DE30");
-	#else
-	used_symbols.Add("EURUSD");
-	used_symbols.Add("USDJPY");
-	used_symbols.Add("EURJPY");
-	used_symbols.Add("USDCAD");
-	#endif
-	
-	if (used_symbols.GetCount() != USEDSYMBOL_COUNT)
-		Panic("Invalid USEDSYMBOL_COUNT");
+	allowed_symbols.Add("USDJPY");
+	allowed_symbols.Add("USDMXN");
+	allowed_symbols.Add("USDTRY");
 }
 
 System::~System() {
+	StopJobs();
 	data.Clear();
 }
 
 void System::Init() {
-	AddJournal("System initialization");
-	
-	LoadThis();
 	
 	MetaTrader& mt = GetMetaTrader();
 	try {
@@ -194,6 +55,33 @@ void System::Init() {
 	}
 	
 	
+	if (symbols.IsEmpty())
+		FirstStart();
+	else {
+		if (mt.GetSymbolCount() != symbols.GetCount())
+			throw UserExc("MT4 symbols changed. Remove cached data.");
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
+			const Symbol& s = mt.GetSymbol(i);
+			if (s.name != symbols[i])
+				throw UserExc("MT4 symbols changed. Remove cached data.");
+		}
+	}
+	InitRegistry();
+	
+	
+	#ifdef flagGUITASK
+	jobs_tc.Set(10, THISBACK(PostProcessJobs));
+	#else
+	jobs_running = true;
+	jobs_stopped = false;
+	Thread::Start(THISBACK(ProcessJobs));
+	#endif
+	
+}
+
+void System::FirstStart() {
+	MetaTrader& mt = GetMetaTrader();
+	
 	try {
 		time_offset = mt.GetTimeOffset();
 		
@@ -203,12 +91,8 @@ void System::Init() {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
 			ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
-			
-			int j = used_symbols.Find(s.name);
-			if (j != -1) used_symbols_id.Add(i);
 		}
-		if (used_symbols_id.GetCount() != USEDSYMBOL_COUNT)
-			Panic("Some important symbols for automation are missing");
+		
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
@@ -218,36 +102,6 @@ void System::Init() {
 		
 		int sym_count = symbols.GetCount();
 		int tf_count = periods.GetCount();
-		
-		bool same_symbols = true;
-		if (!data.IsEmpty()) {
-			same_symbols &= data.GetCount() == sym_count;
-			if (same_symbols) {
-				for(int i = 0; i < data.GetCount(); i++) {
-					for(int j = 0; j < data[i].GetCount(); j++) {
-						DataBridge& db = data[i][j].db;
-						same_symbols &= symbols[i] == db.symbol;
-					}
-				}
-			}
-		} else {
-			data.SetCount(sym_count);
-			for(int i = 0; i < data.GetCount(); i++) {
-				data[i].SetCount(tf_count);
-				for(int j = 0; j < data[i].GetCount(); j++) {
-					DataBridge& db = data[i][j].db;
-					
-					db.symbol = symbols[i];
-					db.sym_id = i;
-					db.tf_id = j;
-					db.period = periods[j];
-					db.point = mt.GetSymbol(i).point;
-				}
-			}
-		}
-		ASSERTUSER_(same_symbols, "MT4 symbols have been changed. Remove system.bin to continue.");
-		
-		
 	
 		if (sym_count == 0) throw DataExc();
 		if (tf_count == 0)  throw DataExc();
@@ -267,12 +121,11 @@ void System::Init() {
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		spread_points[i] = mt.GetSymbol(i).point * 4;
 	}
+	
 }
 
 void System::Deinit() {
-	AddJournal("System deinitialization");
-	GetAutomation().StopJobs();
-	StoreThis();
+	StopJobs();
 }
 
 void System::AddPeriod(String nice_str, int period) {
@@ -291,280 +144,8 @@ void System::AddSymbol(String sym) {
 	signals.Add(0);
 }
 
-void System::StoreThis() {
-	AddJournal("System saving to file");
-	StoreToFile(*this, ConfigFile("System.bin"));
-}
-
-void System::LoadThis() {
-	AddJournal("System loading from file");
-	LoadFromFile(*this, ConfigFile("System.bin"));
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ImageCompiler::ImageCompiler() {
-	
-}
-
-void ImageCompiler::SetMain(const FactoryDeclaration& decl) {
-	pipeline_size = 0;
-	pipeline[pipeline_size++] = decl;
-	pipeline[pipeline_size++].factory = FACTORY_DataSource;
-	LOG("0 " << decl.ToString());
-	
-	int pipeline_cursor = 0;
-	while (pipeline_cursor < pipeline_size) {
-		FactoryDeclaration& decl = pipeline[pipeline_cursor++];
-		
-		ValueRegister reg;
-		
-		ConfFactory(decl, reg);
-		
-		decl.input_count = reg.input_count;
-		for(int i = 0; i < reg.input_count; i++) {
-			int id = pipeline_size++;
-			decl.input_id[i] = id;
-			pipeline[id] = reg.inputs[i];
-			LOG(id << " " << pipeline[id].ToString());
-		}
-		
-		int initial_args = decl.arg_count;
-		decl.arg_count = reg.arg_count;
-		for(int i = initial_args; i < 8; i++) decl.args[i] = reg.args[i].def;
-		
-			
-		ASSERT(pipeline_size < MAX_PIPELINE);
-	}
-	
-	LOG("BEFORE");
-	for(int i = 0; i < pipeline_size; i++) {
-		LOG(i << " " << pipeline[i].ToString());
-	}
-	
-	// Remove duplicates and prefer later
-	for(int i = 0; i < pipeline_size; i++) {
-		FactoryDeclaration& a = pipeline[i];
-		bool remove = false;
-		int replace_id = -1;
-		for(int j = i+1; j < pipeline_size; j++) {
-			FactoryDeclaration& b = pipeline[j];
-			if (a == b) {
-				remove = true;
-				replace_id = j;
-				break;
-			}
-		}
-		if (remove) {
-			Remove(i, replace_id);
-			LOG("REMOVE " << i);
-			for(int i = 0; i < pipeline_size; i++) {
-				LOG(i << " " << pipeline[i].ToString());
-			}
-			i--;
-		}
-	}
-	
-	LOG("AFTER");
-	for(int i = 0; i < pipeline_size; i++) {
-		LOG(i << " " << pipeline[i].ToString());
-	}
-	LOG("");
-}
-
-void ImageCompiler::Remove(int rem_pos, int replace_id) {
-	ASSERT(rem_pos >= 0 && rem_pos < pipeline_size);
-	replace_id--;
-	pipeline_size--;
-	for(int i = 0; i < pipeline_size; i++) {
-		FactoryDeclaration& decl = pipeline[i];
-		
-		if (i >= rem_pos)
-			decl = pipeline[i+1];
-		
-		for(int j = 0; j < decl.input_count; j++) {
-			int& b = decl.input_id[j];
-			int a = b;
-			if (a == rem_pos)
-				b = replace_id;
-			else if (a > rem_pos)
-				b--;
-		}
-	}
-}
-
-void ImageCompiler::Compile(SourceImage& si, ChartImage& ci) {
-	int bars = ci.end - ci.begin;
-	
-	ci.graphs.SetCount(0);
-	ci.graphs.SetCount(pipeline_size);
-	
-	for(int i = pipeline_size-1; i >= 0; i--) {
-		ConstFactoryDeclaration& decl = pipeline[i];
-		
-		ci.cursor = i;
-		
-		GraphImage& gi = ci.graphs[i];
-		
-		gi.reg.Reset();
-		ConfFactory(decl, gi.reg);
-		
-		
-		gi.factory = decl.factory;
-		gi.buffers.SetCount(gi.reg.output_count);
-		gi.booleans.SetCount(gi.reg.output_boolean_count);
-		for(int j = 0; j < gi.buffers.GetCount(); j++) {
-			BufferImage& ib = gi.buffers[j];
-			ib.data_begin = ci.begin;
-			ib.value.SetCount(bars, 0.0);
-		}
-		for(int i = 0; i < gi.booleans.GetCount(); i++) {
-			gi.booleans[i].SetCount(bars);
-			gi.booleans[i].data_begin = ci.begin;
-			gi.booleans[i].One();
-		}
-		gi.input_count = decl.input_count;
-		for(int j = 0; j < 8; j++)
-			gi.input_id[j] = decl.input_id[j];
-		
-		RunFactory(decl, si, ci, gi);
-		gi.RefreshLimits();
-	}
-	
-}
-
-bool System::RefreshReal() {
-	static Mutex lock;
-	lock.Enter();
-	
-	try {
-		Time now				= GetUtcTime();
-		int wday				= DayOfWeek(now);
-		Time after_3hours		= now + 3 * 60 * 60;
-		int wday_after_3hours	= DayOfWeek(after_3hours);
-		now.second				= 0;
-		MetaTrader& mt			= GetMetaTrader();
-		Realtime& game				= GetRealtime();
-		
-		// Skip weekends and first hours of monday
-		if (wday == 0 || wday == 6 || (wday == 1 && now.hour < 0)) {
-			LOG("Skipping weekend...");
-			lock.Leave();
-			return true;
-		}
-		
-		
-		// Inspect for market closing (weekend and holidays)
-		else if (wday == 5 && wday_after_3hours == 6) {
-			WhenInfo("Closing all orders before market break");
-			
-			for (int i = 0; i < mt.GetSymbolCount(); i++) {
-				mt.SetSignal(i, 0);
-				mt.SetSignalFreeze(i, false);
-			}
-			
-			mt.SignalOrders(true);
-			lock.Leave();
-			return true;
-		}
-		
-		for(int i = 0; i < used_symbols_id.GetCount(); i++) {
-			int sym = used_symbols_id[i];
-			int signal = game.signal[i];
-			if (!game.allow_real)
-				signal = 0;
-			SetSignal(sym, signal);
-		}
-		
-		WhenInfo("Updating MetaTrader");
-		WhenPushTask("Putting latest signals");
-		
-		// Reset signals
-		if (realtime_count == 0) {
-			for (int i = 0; i < mt.GetSymbolCount(); i++)
-				mt.SetSignal(i, 0);
-		}
-		realtime_count++;
-		
-		bool sig_change = false;
-		String msg;
-		try {
-			mt.Data();
-			//mt.RefreshLimits();
-			
-			for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
-				int sig = signals[sym_id];
-				int prev_sig = mt.GetSignal(sym_id);
-				if (sig == prev_sig && sig != 0) {
-					mt.SetSignalFreeze(sym_id, true);
-				} else {
-					mt.SetSignal(sym_id, sig);
-					mt.SetSignalFreeze(sym_id, false);
-				}
-				LOG("Real symbol " << sym_id << " signal " << sig);
-				msg << symbols[sym_id] << "=" << sig << ", ";
-				if (prev_sig != sig)
-					sig_change = true;
-			}
-			
-			mt.SetFreeMarginLevel(game.free_margin_level);
-			mt.SetFreeMarginScale(game.free_margin_scale);
-			mt.SignalOrders(true);
-		}
-		catch (UserExc e) {
-			LOG(e);
-			AddJournal("Error in updating metatrader: " + e);
-			lock.Leave();
-			return false;
-		}
-		catch (...) {
-			AddJournal("Unknown error in updating metatrader");
-			lock.Leave();
-			return false;
-		}
-		
-		
-		AddJournal("Updating metatrader real signals: " + msg);
-		
-		WhenRealtimeUpdate();
-		WhenPopTask();
-		
-		if (sig_change)
-			WhenJobOrders();
-		
-		lock.Leave();
-		return true;
-	}
-	catch (ConnectionError e) {
-		lock.Leave();
-		return false;
-	}
-}
-
-String System::GetTimeframeString(int i) const {
-	int period = periods[i];
-	switch (period) {
-		case 1: return "M1";
-		case 5: return "M5";
-		case 15: return "M15";
-		case 30: return "M30";
-		case 60: return "H1";
-		case 240: return "H4";
-		case 1440: return "D";
-		case 10080: return "W";
-		default: return "?";
-	}
+void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {
+	CoreFactories().Add(CoreSystem(name, f, singlef));
 }
 
 }

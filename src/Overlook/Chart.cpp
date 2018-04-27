@@ -26,51 +26,35 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 void Chart::RefreshCore() {
 	System& sys = GetSystem();
 	
-	RefreshImage();
+	Index<int> tf_ids, sym_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	ASSERT(tf >= 0 && tf < sys.GetPeriodCount());
+	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+	indi_ids.Add(decl);
+	tf_ids.Add(tf);
+	sym_ids.Add(symbol);
+	work_queue.Clear();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	
+	RefreshCoreData(true);
+	
+	Core* src = &*work_queue.Top()->core;
+	if (!src) return;
+	
+	core = src;
+	bardata = 0;
 	
 	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
 	Title(title);
 	
-	SetGraph();
+	SetGraph(src);
 	Data();
 }
 
-void Chart::SetShift(int i) {
-	shift = i;
-	
-	int bars = GetSystem().GetSource(symbol, tf).db.open.GetCount();
-	if (bars - shift < image.begin + screen_count/* || bars - shift > image.end*/)
-		RefreshImage();
-}
-
-void Chart::RefreshImage() {
-	System& sys = GetSystem();
-	SourceImage& si = sys.GetSource(symbol, tf);
-	si.db.Start();
-	int bars = si.db.open.GetCount();
-	
-	int new_begin = max(0, bars - screen_count - shift);
-	if (image.begin == 0) image.begin = new_begin;
-	else                  image.begin = min(image.begin, new_begin);
-	
-	image.end = bars;
-	image.symbol = symbol;
-	image.tf = tf;
-	image.period = si.db.GetPeriod();
-	image.cursor = 0;
-	image.point = si.db.GetPoint();
-	
-	if (image.begin < 0)
-		return;
-	
-	
-	ImageCompiler comp;
-	comp.SetMain(decl);
-	comp.Compile(si, image);
-}
-
 void Chart::RefreshCoreData(bool store_cache) {
-	RefreshImage();
+	System& sys = GetSystem();
+	for (int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], store_cache);
 }
 
 void Chart::ContextMenu(Bar& bar) {
@@ -99,56 +83,45 @@ Chart& Chart::SetFactory(int f) {
 }
 
 void Chart::Start() {
-	if (keep_at_end) {
-		shift = 0;
-		image.begin = 0; // undo seeking to beginning
-		RefreshCoreData(false);
-	}
+	if (keep_at_end) shift = 0;
+	RefreshCoreData(false);
 	Refresh();
 }
 
-GraphCtrl& Chart::AddGraph(GraphImage& gi) {
+GraphCtrl& Chart::AddGraph(Core* src) {
 	GraphCtrl& g = graphs.Add();
 	g.WhenTimeValueTool = THISBACK(SetTimeValueTool);
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
 	g.SetRightOffset(right_offset);
 	g.chart = this;
-	g.SetSource(image, gi);
+	g.AddSource(src);
 	split << g;
 	return g;
 }
 
-void Chart::SetGraph() {
-	tf = image.GetTf();
-	Clear();
-	GraphImage& main = image.GetGraph(0);
-	ASSERT(main.factory >= 0);
-	if (main.factory == FACTORY_DataSource) {
-		AddGraph(main);
+void Chart::SetGraph(Core* src) {
+	ASSERT(src);
+	tf = src->GetTf();
+	ClearCores();
+	DataBridge* src_cast = dynamic_cast<DataBridge*>(src);
+	if (src_cast) {
+		bardata = src_cast;
+		GraphCtrl& main = AddGraph(bardata);
 	} else {
-		GraphImage* src = NULL;
-		for(int i = 0; i < image.GetCount(); i++) {
-			int factory = image.GetGraph(i).factory;
-			if (factory == FACTORY_DataSource) {
-				src = &image.GetGraph(i);
-				break;
-			}
-		}
-		if (!src)
-			return;
-		
-		GraphCtrl& mainctrl = AddGraph(*src);
-		bool separate_window = main.IsCoreSeparateWindow();
+		bardata = src->GetDataBridge();
+		ASSERT(bardata);
+		GraphCtrl& main = AddGraph(bardata);
+		bool separate_window = src->IsCoreSeparateWindow();
 		if (!separate_window) {
-			mainctrl.AddSource(main);
+			main.AddSource(src);
 		} else {
-			AddGraph(main);
+			AddGraph(src);
 			split.SetPos(8000);
 		}
 	}
 }
 
-void Chart::Clear() {
+void Chart::ClearCores() {
 	split.Clear();
 	graphs.Clear();
 }
@@ -187,6 +160,8 @@ void Chart::SetKeepAtEnd(bool enable) {
 }
 
 void Chart::Settings() {
+	if (!core) return;
+	
 	System& sys = GetSystem();
 	
 	One<TopWindow> tw;
@@ -205,7 +180,7 @@ void Chart::Settings() {
 		save = true;
 		tw->Close();
 	};
-	/*
+	
 	ArgChanger reg;
 	reg.SetLoading();
 	core->IO(reg);
@@ -235,7 +210,7 @@ void Chart::Settings() {
 		for(int i = 0; i < reg.args.GetCount(); i++)
 			decl.AddArg(edits[i].GetData());
 		Init(symbol, decl, tf);
-	}*/
+	}
 }
 
 }

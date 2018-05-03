@@ -5384,6 +5384,7 @@ GridAdvisor::GridAdvisor() {
 
 void GridAdvisor::Init() {
 	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
 	
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
 	
@@ -5401,7 +5402,7 @@ void GridAdvisor::Start() {
 	if (once) {
 		if (prev_counted > 0) prev_counted--;
 		once = false;
-		RefreshGrid(true);
+		//RefreshGrid(true);
 		RefreshSourcesOnlyDeep();
 	}
 	
@@ -5415,19 +5416,17 @@ void GridAdvisor::Start() {
 }
 
 bool GridAdvisor::TrainingBegin() {
+	RefreshBits();
 	
-	tests.Clear();
-	for(int i = 0; i < 10; i++) {
-		for(int j = 0; j < 10; j++) {
-			int a = 1 << i;
-			int b = 1 << j;
-			
-			tests.Add(Tuple<int, int>(a, b));
-			
+	int count = 0x100 * 0x100;
+	if (results.IsEmpty()) {
+		results.Reserve(count);
+		for(int i = 0; i < count; i++) {
+			results.Add(i);
 		}
 	}
 	
-	max_rounds = tests.GetCount();
+	max_rounds = count;
 	training_pts.SetCount(max_rounds, 0);
 	
 	// Allow iterating
@@ -5441,15 +5440,38 @@ bool GridAdvisor::TrainingIterator() {
 	
 	
 	// ---- Do your training work here ----
-	Tuple<int, int> test = tests[round];
-	main_interval = test.a;
-	grid_interval = test.b;
-	RefreshGrid(true);
-	double result = TestGrid();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	int key = results.GetKey(round);
+	GridResult& res = results[round];
+	
+	byte mask = (key >> 8) & 0xff;
+	byte grid = key & 0xff;
+	
+	for(int i = 100; i < data.GetCount() - 1; i++) {
+		byte val = data[i];
+		bool is_match = (val & mask) == (grid & mask);
+		
+		if (is_match) {
+			double change;
+			change = open_buf.Get(i+1) - open_buf.Get(i);
+			res.var.AddResult(change);
+		}
+	}
+	
+	double mean = res.var.GetMean();
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 4.0;
+	
+	if (mean >= 0) {
+		res.prob = res.var.GetCDF(+spread, true);
+	} else {
+		res.prob = res.var.GetCDF(-spread, false);
+	}
 	
 	
 	// Put some result data here for graph
-	training_pts[round] = result;
+	training_pts[round] = res.prob;
 	
 	
 	// Keep count of iterations
@@ -5467,18 +5489,9 @@ bool GridAdvisor::TrainingEnd() {
 	double max_d = -DBL_MAX;
 	int max_i = 0;
 	
-	DUMPC(training_pts);
-	for(int i = 0; i < training_pts.GetCount(); i++) {
-		double d = training_pts[i];
-		if (d > max_d) {
-			max_d = d;
-			max_i = i;
-		}
-	}
-	Tuple<int, int> test = tests[max_i];
-	main_interval = test.a;
-	grid_interval = test.b;
-	RefreshGrid(true);
+	
+	SortByValue(results, GridResult());
+	
 	
 	
 	RefreshAll();
@@ -5498,18 +5511,74 @@ bool GridAdvisor::TrainingInspect() {
 	return true;
 }
 
+void GridAdvisor::RefreshBits() {
+	int counted = max(0, prev_counted);
+	int bars = GetBars();
+	data.SetCount(bars, 0);
+	
+	GridSignal& g0 = dynamic_cast<GridSignal&>(*GetInputCore(1));
+	GridSignal& g1 = dynamic_cast<GridSignal&>(*GetInputCore(2));
+	GridSignal& g2 = dynamic_cast<GridSignal&>(*GetInputCore(3));
+	GridSignal& g3 = dynamic_cast<GridSignal&>(*GetInputCore(4));
+	VolatilityContext& vc = dynamic_cast<VolatilityContext&>(*GetInputCore(5));
+	
+	const VectorBool& l0 = g0.GetOutput(0).label;
+	const VectorBool& l1 = g1.GetOutput(0).label;
+	const VectorBool& l2 = g2.GetOutput(0).label;
+	const VectorBool& l3 = g3.GetOutput(0).label;
+	ConstBuffer& vcbuf = vc.GetBuffer(0);
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	
+	for(int i = counted; i < bars; i++) {
+		bool b0 = l0.Get(i);
+		bool b1 = l1.Get(i);
+		bool b2 = l2.Get(i);
+		bool b3 = l3.Get(i);
+		int vcval = vcbuf.Get(i) * 3.01;
+		int time = timebuf.Get(i);
+		int timeval = (time % (24*60*60)) / (6*60*60);
+		ASSERT(timeval >= 0 && timeval < 4);
+		ASSERT(vcval >= 0 && vcval < 4);
+		int code = (b0 << 7) | (b1 << 6) | (b2 << 5) | (b3 << 4) | (vcval << 2) | (timeval << 0);
+		data[i] = code;
+	}
+}
+
 void GridAdvisor::RefreshAll() {
 	RefreshSourcesOnlyDeep();
 	
 	
 	// ---- Do your final result work here ----
-	RefreshGrid(false);
+	RefreshBits();
+	
+	int sig = 0;
+	for(int i = 0; i < results.GetCount(); i++) {
+		byte val = data.Top();
+		
+		int key = results.GetKey(i);
+		GridResult& res = results[i];
+		if (res.prob < 0.55)
+			break;
+		byte mask = (key >> 8) & 0xff;
+		byte grid = key & 0xff;
+		
+		bool is_match = (val & mask) == (grid & mask);
+		
+		if (is_match) {
+			sig = res.var.GetMean() > 0 ? +1 : -1;
+			break;
+		}
+	}
+	
+	GetSystem().SetSignal(GetSymbol(), sig);
 	
 	
 	// Keep counted manually
 	prev_counted = GetBars();
 	
 	
+	//DUMP(main_interval);
+	//DUMP(grid_interval);
 }
 
 void GridAdvisor::TrainingCtrl::Paint(Draw& w) {
@@ -5524,14 +5593,16 @@ void GridAdvisor::TrainingCtrl::Paint(Draw& w) {
 	w.DrawImage(0, 0, id);
 }
 
-double GridAdvisor::TestGrid() {
+/*double GridAdvisor::TestGrid() {
 	
 	int bars = GetBars();
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	VectorBool& sigbuf = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
 	
 	bool prev_signal = sigbuf.Get(100);
+	bool prev_enabled = enabled.Get(100);
 	double prev_open = open.Get(100);
 	
 	double result = 1.0;
@@ -5540,103 +5611,46 @@ double GridAdvisor::TestGrid() {
 	
 	for(int i = 100; i < bars; i++) {
 		bool signal = sigbuf.Get(i);
-		if (signal != prev_signal) {
+		bool enable = enabled.Get(i);
+		
+		bool is_open = false, is_close = false;
+		
+		if (enable) {
+			if (prev_enabled) {
+				if (signal != prev_signal) {
+					is_open = true;
+					is_close = true;
+				}
+			} else {
+				is_open = true;
+			}
+		}
+		else {
+			if (prev_enabled) {
+				is_close = true;
+			}
+		}
+		
+		if (is_close) {
 			double change;
 			if (!prev_signal)
 				change = open.Get(i) / (prev_open + spread);
 			else
 				change = 1.0 - (open.Get(i) / (prev_open - spread) - 1.0);
 			result *= change;
-			
+		}
+		
+		if (is_open) {
 			prev_open = open.Get(i);
 		}
+		
+		prev_signal = signal;
+		prev_enabled = enable;
 	}
 	
 	return result;
-}
+}*/
 
-void GridAdvisor::RefreshGrid(bool forced) {
-	ConstBuffer& open		= GetInputBuffer(0, 0);
-	ConstBuffer& low		= GetInputBuffer(0, 1);
-	ConstBuffer& high		= GetInputBuffer(0, 2);
-	Buffer& out				= GetBuffer(0);
-	VectorBool& signal		= GetOutput(0).label;
-	
-	int counted = forced ? 0 : GetCounted();
-	int bars = GetBars();
-	signal.SetCount(bars);
-	
-	double grid_step = GetDataBridge()->GetPoint() * ((double)main_interval * 0.1);
-	
-	if (!counted) {
-		double first_price_value = open.Get(1);
-		double diffBegin = open.Get(1) - open.Get(0);
-		
-		//---- first value -----------------------------------------------
-		//---- high at begin
-		if (diffBegin >= 0)
-		{
-			trend =  1;
-			line_value = first_price_value - grid_interval*grid_step;
-			out.Set(1, line_value);
-		}
-		else
-		//---- low at begin
-		{
-			trend = -1;
-			line_value = first_price_value + grid_interval*grid_step;
-			out.Set(1, line_value);
-		}
-	}
-	
-	//---- main loop
-	//================================================================
-	for (int i = counted; i < bars; i++)
-	{
-		double price = open.Get(i);
-		
-		//---- up trend (blue line) -----------------------------------
-		if (trend == 1)
-		{
-			//---- translate up linie
-			if (price - grid_interval*grid_step > line_value + grid_step)
-				line_value = price - grid_interval*grid_step;
-			else
-				line_value = line_value + grid_step;
-			out.Set(i, line_value);
-			signal.Set(i, 0);
-			
-			//---- reverse from up-trend / down-trend
-			if (price < line_value)
-			{
-				trend = -1;
-				line_value = price + grid_interval*grid_step;
-				out.Set(i, line_value);
-				signal.Set(i, 1);
-			}
-		}
-		else
-		
-		//---- down trend (red line) ----------------------------------
-		if (trend == -1)
-		{
-			//---- translate down linie
-			if (price + grid_interval*grid_step < line_value - grid_step)
-			line_value = price + grid_interval*grid_step;
-			else line_value = line_value - grid_step;
-			out.Set(i, line_value);
-			signal.Set(i, 1);
-			//---- reverse from down-trend / up-trend
-			if (price > line_value)
-			{
-				trend = 1;
-				line_value = price - grid_interval*grid_step;
-				out.Set(i, line_value);
-				signal.Set(i, 0);
-			}
-		}
-	}
-}
 
 
 }

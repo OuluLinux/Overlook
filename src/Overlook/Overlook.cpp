@@ -960,10 +960,13 @@ void Overlook::LoadAdvisorProfileFinish() {
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
-	int tf = 0;
-	int id = System::Find<ExampleAdvisor>();
+	int tf = 4;
+	int id = System::Find<GridAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
+		String sym = mt.GetSymbol(i).name;
+		if (sym != "EURUSD" && sym != "USDJPY" && sym != "USDCAD" && sym != "USDCHF")
+			continue;
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;
 		pgroup.tf = tf;

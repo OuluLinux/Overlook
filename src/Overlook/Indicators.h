@@ -1134,7 +1134,7 @@ public:
 class VolatilityContext : public Core {
 	VectorMap<int,int> median_map;
 	Vector<double> volat_divs;
-	int div = DEFAULT_DIV;
+	int div = 4;
 	
 public:
 	VolatilityContext();
@@ -1148,8 +1148,6 @@ public:
 			% Arg("div", div, 1)
 			% Mem(median_map);
 	}
-	
-	static const int DEFAULT_DIV = 6;
 	
 };
 
@@ -1252,8 +1250,26 @@ public:
 };
 
 
-
+/*
+	Grid Advisor
+	 - 8 bits for input: 4 for grid, 2 for time, 2 for volatility
+	 - 8 bits for mask
+	 - 16 bits for unique result
+	 - result has average and variance of value difference of active area
+	 - only prob >=60-100% activates
+*/
 class GridAdvisor : public Core {
+	
+	struct GridResult : Moveable<GridResult> {
+		OnlineVariance var;
+		double prob;
+		
+		void Serialize(Stream& s) {s % var % prob;}
+		
+		bool operator() (const GridAdvisor::GridResult& a, const GridAdvisor::GridResult& b) const {
+			return a.prob > b.prob;
+		}
+	};
 	
 	struct TrainingCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -1268,14 +1284,14 @@ class GridAdvisor : public Core {
 	
 	
 	// Persistent
+	Vector<byte> data;
+	VectorMap<int, GridResult> results;
 	Vector<double> training_pts;
+	OnlineAverage1 mean;
 	int prev_counted = 0;
-	int main_interval = 36;
-	int grid_interval = 8;
 	
 	
 	// Temporary
-	Vector<Tuple<int, int> > tests;
 	int round = 0;
 	int max_rounds = 1000;
 	bool once = true;
@@ -1284,9 +1300,7 @@ class GridAdvisor : public Core {
 	
 protected:
 	virtual void Start();
-	
-	void RefreshGrid(bool forced);
-	double TestGrid();
+	void RefreshBits();
 	
 public:
 	typedef GridAdvisor CLASSNAME;
@@ -1296,11 +1310,27 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
+			% In<GridSignal>(&FuncArgs)
+			% In<GridSignal>(&FuncArgs)
+			% In<GridSignal>(&FuncArgs)
+			% In<GridSignal>(&FuncArgs)
+			% In<VolatilityContext>()
 			% Out(1, 1)
+			% Out(0, 0)
+			% Mem(data)
+			% Mem(results)
 			% Mem(training_pts)
-			% Mem(prev_counted)
-			% Mem(main_interval)
-			% Mem(grid_interval);
+			% Mem(mean)
+			% Mem(prev_counted);
+	}
+	 
+	static void FuncArgs(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		if (input < 4) {
+			decl.AddArg(4);
+			decl.AddArg(1 << (5 + input));
+		} else {
+			decl.AddArg(4);
+		}
 	}
 };
 

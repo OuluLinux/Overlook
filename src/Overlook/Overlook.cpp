@@ -960,7 +960,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
-	int tf = 4;
+	int tf = 5;
 	int id = System::Find<GridAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {

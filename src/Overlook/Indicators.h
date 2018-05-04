@@ -1288,6 +1288,7 @@ class GridAdvisor : public Core {
 	VectorMap<int, GridResult> results;
 	Vector<double> training_pts;
 	OnlineAverage1 mean;
+	double prob_limit = 0.5;
 	int prev_counted = 0;
 	
 	
@@ -1321,6 +1322,7 @@ public:
 			% Mem(results)
 			% Mem(training_pts)
 			% Mem(mean)
+			% Mem(prob_limit)
 			% Mem(prev_counted);
 	}
 	 

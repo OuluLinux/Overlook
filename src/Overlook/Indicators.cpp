@@ -5404,6 +5404,7 @@ void GridAdvisor::Start() {
 		once = false;
 		//RefreshGrid(true);
 		RefreshSourcesOnlyDeep();
+		SortByValue(results, GridResult());
 	}
 	
 	if (IsJobsFinished()) {
@@ -5493,6 +5494,54 @@ bool GridAdvisor::TrainingEnd() {
 	SortByValue(results, GridResult());
 	
 	
+	// Optimize limit
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 4.0;
+	double best_result = -DBL_MAX;
+	for (double d = 0.5; d < 0.8; d += 0.01) {
+		
+		double result = 0.0;
+		
+		for(int i = 100; i < data.GetCount() - 1; i++) {
+			int sig = 0;
+			
+			for(int j = 0; j < results.GetCount(); j++) {
+				byte val = data[i];
+				
+				int key = results.GetKey(j);
+				GridResult& res = results[j];
+				if (res.prob < d)
+					break;
+				byte mask = (key >> 8) & 0xff;
+				byte grid = key & 0xff;
+				
+				bool is_match = (val & mask) == (grid & mask);
+				
+				if (is_match) {
+					sig = res.var.GetMean() > 0 ? +1 : -1;
+					break;
+				}
+			}
+			if (!sig) continue;
+			
+			if (sig >= 0) {
+				result += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			} else {
+				result += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+		}
+		
+		if (result > best_result) {
+			prob_limit = d;
+			best_result = result;
+		}
+	}
+	ReleaseLog("best_result " + DblStr(best_result));
+	ReleaseLog("prob_limit " + DblStr(prob_limit));
+	if (best_result < 0) prob_limit = 1.0;
+	
 	
 	RefreshAll();
 	return true;
@@ -5550,6 +5599,7 @@ void GridAdvisor::RefreshAll() {
 	
 	// ---- Do your final result work here ----
 	RefreshBits();
+	SortByValue(results, GridResult());
 	
 	int sig = 0;
 	for(int i = 0; i < results.GetCount(); i++) {
@@ -5557,7 +5607,7 @@ void GridAdvisor::RefreshAll() {
 		
 		int key = results.GetKey(i);
 		GridResult& res = results[i];
-		if (res.prob < 0.55)
+		if (res.prob < 0.50)
 			break;
 		byte mask = (key >> 8) & 0xff;
 		byte grid = key & 0xff;

@@ -815,7 +815,8 @@ void Overlook::RefreshTradesHistory() {
 		trade_history.Set(i, 1, bo.begin);
 		trade_history.Set(i, 2, bo.GetTypeString());
 		trade_history.Set(i, 3, bo.volume);
-		trade_history.Set(i, 4, mt.GetSymbol(bo.symbol).name);
+		if (bo.symbol >= 0 && bo.symbol < mt.GetSymbolCount())
+			trade_history.Set(i, 4, mt.GetSymbol(bo.symbol).name);
 		trade_history.Set(i, 5, bo.open);
 		trade_history.Set(i, 6, bo.stoploss);
 		trade_history.Set(i, 7, bo.takeprofit);
@@ -965,8 +966,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;
-		if (sym != "EURUSD" && sym != "USDJPY" && sym != "USDCAD" && sym != "USDCHF")
-			continue;
+		if (sym != "EURUSD" && sym != "USDJPY" && sym != "USDCAD" && sym != "EURJPY" && sym != "GBPUSD" && sym != "EURGBP") continue;
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;
 		pgroup.tf = tf;

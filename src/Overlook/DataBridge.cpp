@@ -108,7 +108,8 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		const double& ask = askbid.b;
 		const double& bid = askbid.c;
 		Time utc_time = mt.GetTimeToUtc(t);
-		
+		if (ask == 0.0 || bid == 0.0)
+			continue;
 		
 		int64 time = utc_time.Get();
 		time += 4*24*60*60; // 1.1.1970 is thursday, move to monday

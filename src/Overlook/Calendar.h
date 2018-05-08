@@ -53,7 +53,7 @@ class Calendar {
 	Mutex lock;
 	Time prevtime;
 	Date prevdate;
-	int errorcode;
+	int errorcode = 0;
 	int thisyear, thismonth;
 	
 	
@@ -85,7 +85,7 @@ public:
 	const CalEvent& GetEvent(int i);
 	bool IsCalendarNeedingUpdate();
 	bool IsMajorSpeak();
-	bool HasError() {return errorcode != 0;}
+	bool IsError() {return errorcode != 0;}
 	
 	void SetEventActualDiff(int i, double diff);
 	void SetEvent(CalEvent& ce);

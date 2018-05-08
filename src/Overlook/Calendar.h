@@ -84,6 +84,7 @@ public:
 	int GetCount();
 	const CalEvent& GetEvent(int i);
 	bool IsCalendarNeedingUpdate();
+	bool IsMajorSpeak();
 	bool HasError() {return errorcode != 0;}
 	
 	void SetEventActualDiff(int i, double diff);

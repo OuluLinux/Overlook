@@ -666,7 +666,8 @@ bool System::RefreshReal() {
 	WhenPushTask("Putting latest signals");
 	
 	// Reset signals
-	if (realtime_count == 0) {
+	bool is_calendar_speak = GetCalendar().IsMajorSpeak();
+	if (realtime_count == 0 || is_calendar_speak) {
 		for (int i = 0; i < mt.GetSymbolCount(); i++)
 			mt.SetSignal(i, 0);
 	}

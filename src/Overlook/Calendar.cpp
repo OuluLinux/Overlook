@@ -525,8 +525,9 @@ int Calendar::Update(String postfix, bool force_update) {
 	
 	
 	XmlNode xn = ParseXML(xml);
+	//LOG(XmlTreeString(xn));
 	
-	const XmlNode& x = TryOpenLocation("0 1 3 0 3 1 10 0 0 0 1 0 1", xn, errorcode);
+	const XmlNode& x = TryOpenLocation("0 1 3 0 3 1 8 0 0 0 1 0 1", xn, errorcode);
 	if (errorcode) {
 		DLOG(XmlTreeString(xn));
 		LEAVE;
@@ -603,7 +604,7 @@ bool Calendar::IsCalendarNeedingUpdate() {
 	
 	bool r = false;
 	for(int i = events.GetCount()-1; i >=  0; i-- ) {
-		CalEvent& e = events[i];
+		const CalEvent& e = events[i];
 		if (e.timestamp <= now &&
 			e.actual.GetCount() == 0 &&
 			e.previous.GetCount()) {
@@ -613,6 +614,24 @@ bool Calendar::IsCalendarNeedingUpdate() {
 	}
 	
 	return r;
+}
+
+bool Calendar::IsMajorSpeak() {
+	Time now = GetUtcTime();
+	Time begin = now - 4*60*60;
+	Time end   = now + 4*60*60;
+	
+	for(int i = 0; i < events.GetCount(); i++) {
+		const CalEvent& e = events[i];
+		
+		if (e.timestamp >= begin && e.timestamp <= end) {
+			if (e.currency == "EUR" || e.currency == "GBP" || e.currency == "USD" || e.currency == "JPY") {
+				if (e.title.Find("Speak") != -1 || e.title.Find("speak") != -1 || e.title.Find("Bank Rate") != -1)
+					return true;
+			}
+		}
+	}
+	return false;
 }
 
 }

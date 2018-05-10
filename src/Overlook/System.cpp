@@ -30,6 +30,12 @@ System::System() {
 	allowed_symbols.Add("USDJPY");
 	allowed_symbols.Add("USDMXN");
 	allowed_symbols.Add("USDTRY");
+	
+	/*allowed_symbols.Add("#CAT");
+	allowed_symbols.Add("#BA");
+	allowed_symbols.Add("#MMM");
+	allowed_symbols.Add("#HD");*/
+
 }
 
 System::~System() {

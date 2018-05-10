@@ -187,7 +187,7 @@ public:
 	}
 	
 	// Main funcs
-	void AddResult(double value) {
+	void Add(double value) {
 		event_count++;
 		double delta = value - mean;
         mean += delta/event_count;
@@ -524,6 +524,7 @@ public:
 	VectorBool& Or(const VectorBool& b);
 	double GetOverlapFactor(const VectorBool& b) const;
 	
+	bool Top() const {return Get(GetCount()-1);}
 	bool Get(int64 i) const;
 	void Set(int64 i, bool b);
 	void LimitLeft(int i);

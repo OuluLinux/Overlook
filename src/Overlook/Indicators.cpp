@@ -5234,6 +5234,108 @@ void GridSignal::Start() {
 
 
 
+Anomaly::Anomaly() {
+	
+	
+	
+}
+
+void Anomaly::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	SetCoreMaximum(1.0);
+	SetCoreMinimum(0.0);
+	
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 0.25);
+	SetCoreLevel(1, 0.5);
+	SetCoreLevel(2, 0.75);
+	
+	tfmin = GetMinutePeriod();
+	int w1 = 7 * 24 * 60;
+	int count = 0;
+	
+	split_type = 0;
+	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
+	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
+	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
+	
+	var.SetCount(count);
+}
+
+void Anomaly::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0,4);
+	Buffer& dst = GetBuffer(0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	if (counted) counted--;
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1);
+		
+		double prev = src.Get(i);
+		if (prev == 0.0)
+			continue;
+		double change = src.Get(i+1) / prev - 1.0;
+		if (!IsFin(change))
+			continue;
+		
+		change = fabs(change);
+		
+		Time t = Time(1970,1,1) + src_time.Get(i);
+		
+		OnlineVariance* var;
+		if (split_type == 0) {
+			int wday = DayOfWeek(t);
+			int wdaymin = (wday * 24 + t.hour) * 60 + t.minute;
+			int avpos = wdaymin / tfmin;
+			var = &this->var[avpos];
+		}
+		else if (split_type == 1) {
+			int wday = DayOfWeek(t);
+			var = &this->var[wday];
+		}
+		else {
+			int pos = (DayOfYear(t) % (7 * 4)) / 7;
+			var = &this->var[pos];
+		}
+		var->Add(change);
+		
+		double mean = var->GetMean();
+		double value;
+		if (change >= mean) {
+			value = var->GetCDF(change, false);
+		} else {
+			value = var->GetCDF(change, true);
+		}
+		
+		value = (value - 0.5) * 2.0;
+		
+		dst.Set(i, value);
+	}
+}
+
+void Anomaly::Assist(int cursor, VectorBool& vec) {
+	double value0 = GetBuffer(0).Get(cursor);
+	if (value0 > 0.0)		vec.Set(PC_INC, true);
+	else					vec.Set(PC_DEC, true);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ExampleAdvisor::ExampleAdvisor() {
@@ -5455,7 +5557,7 @@ bool GridAdvisor::TrainingIterator() {
 		if (is_match) {
 			double change;
 			change = open_buf.Get(i+1) - open_buf.Get(i);
-			res.var.AddResult(change);
+			res.var.Add(change);
 		}
 	}
 	
@@ -5498,7 +5600,7 @@ bool GridAdvisor::TrainingEnd() {
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	double spread = GetDataBridge()->GetSpread();
 	if (spread == 0)
-		spread = GetDataBridge()->GetPoint() * 4.0;
+		spread = GetDataBridge()->GetPoint() * 2.0;
 	double best_result = -DBL_MAX;
 	for (double d = 0.5; d < 0.8; d += 0.01) {
 		
@@ -5595,36 +5697,52 @@ void GridAdvisor::RefreshBits() {
 
 void GridAdvisor::RefreshAll() {
 	RefreshSourcesOnlyDeep();
-	
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	VectorBool& signal  = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
 	
 	// ---- Do your final result work here ----
 	RefreshBits();
 	SortByValue(results, GridResult());
 	
-	int sig = 0;
-	for(int i = 0; i < results.GetCount(); i++) {
-		byte val = data.Top();
-		
-		int key = results.GetKey(i);
-		GridResult& res = results[i];
-		if (res.prob < 0.50)
-			break;
-		byte mask = (key >> 8) & 0xff;
-		byte grid = key & 0xff;
-		
-		bool is_match = (val & mask) == (grid & mask);
-		
-		if (is_match) {
-			sig = res.var.GetMean() > 0 ? +1 : -1;
-			break;
+	int bars = GetBars();
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	for(int i = prev_counted; i < bars; i++) {
+		int sig = 0;
+		for(int j = 0; j < results.GetCount(); j++) {
+			byte val = data[i];
+			
+			int key = results.GetKey(j);
+			GridResult& res = results[j];
+			if (res.prob < prob_limit)
+				break;
+			byte mask = (key >> 8) & 0xff;
+			byte grid = key & 0xff;
+			
+			bool is_match = (val & mask) == (grid & mask);
+			
+			if (is_match) {
+				sig = res.var.GetMean() > 0 ? +1 : -1;
+				break;
+			}
 		}
+		
+		#if 0
+		Time t = Time(1970,1,1) + timebuf.Get(i);
+		if (t.hour >= 20 || t.hour < 4)
+			sig = 0;
+		#endif
+		
+		signal. Set(i, sig == -1);
+		enabled.Set(i, sig !=  0);
 	}
 	
-	GetSystem().SetSignal(GetSymbol(), sig);
+	//GetSystem().SetSignal(GetSymbol(), sig);
 	
 	
 	// Keep counted manually
-	prev_counted = GetBars();
+	prev_counted = bars;
 	
 	
 	//DUMP(main_interval);
@@ -5701,6 +5819,141 @@ void GridAdvisor::TrainingCtrl::Paint(Draw& w) {
 	return result;
 }*/
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MultiGridAdvisor::MultiGridAdvisor() {
+	
+}
+
+void MultiGridAdvisor::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+}
+
+void MultiGridAdvisor::Start() {
+	
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return;
+			}
+		}
+	}
+	
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	
+	Input& in = inputs[1];
+	Vector<ConstBuffer*> opens, times;
+	Vector<VectorBool*> signals, enableds;
+	Vector<int> symbols;
+	for(int j = 0; j < in.GetCount(); j++) {
+		Source& src = in[j];
+		Core& core = *dynamic_cast<Core*>(src.core);
+		opens.Add(&core.GetInputBuffer(0, 0));
+		times.Add(&core.GetInputBuffer(0, 4));
+		signals.Add(&core.GetOutput(0).label);
+		enableds.Add(&core.GetOutput(1).label);
+		symbols.Add(core.GetSymbol());
+	}
+	cursors.SetCount(in.GetCount(), 0);
+	
+	int bars = GetBars();
+	Buffer& out = GetBuffer(0);
+	VectorBool& signal = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	if (prev_counted < 2) {prev_counted = 2; total = 0;}
+	for(int i = prev_counted; i < bars; i++) {
+		
+		// Sync times
+		int time = timebuf.Get(i);
+		for(int j = 0; j < cursors.GetCount(); j++) {
+			while (1) {
+				int& cursor = cursors[j];
+				if (cursor == times[j]->GetCount() - 1)
+					break;
+				int next_time = times[j]->Get(cursor+1);
+				if (next_time <= time)
+					cursor++;
+				else
+					break;
+			}
+		}
+		
+		bool prev2_sig = signal.Get(i-2);
+		bool prev_sig = signal.Get(i-1);
+		bool prev_ena = enabled.Get(i-1);
+
+		// Sum prev changes
+		double sum = 0.0;
+		for(int j = 0; j < opens.GetCount(); j++) {
+			int& cursor = cursors[j];
+			ConstBuffer& open = *opens[j];
+			bool signal = signals[j]->Get(cursor-1);
+			bool enabled = enableds[j]->Get(cursor-1);
+			int sig = enabled ? (signal ? -1 : +1) : 0;
+			double change = open.Get(cursor) / open.Get(cursor-1) - 1.0;
+			sum += change * sig;
+		}
+		
+		if (prev_ena && IsFin(sum))
+			total += sum * (prev_sig ? 0 : +1);
+		out.Set(i, total);
+		
+		bool sig;
+		if (prev_sig)
+			sig = sum < 0;
+		else
+			sig = sum <= 0;
+		signal.Set(i, sig);
+		
+		bool ena;
+		/*if (prev2_sig == sig && prev_sig != sig)
+			ena = false;
+		else*/
+			ena = true;
+		enabled.Set(i, ena);
+	}
+	ReleaseLog("MultiGridAdvisor total " + DblStr(total));
+	
+	// Set real signal
+	bool multi_signal = signal.Top();
+	bool multi_enabled = enabled.Top();
+	
+	for(int j = 0; j < opens.GetCount(); j++) {
+		bool signal = signals[j]->Top();
+		bool enabled = enableds[j]->Top();
+		int sig = enabled ? (signal ? -1 : +1) : 0;
+		if (multi_signal)
+			sig = 0;//sig *= -1;
+		if (!multi_enabled)
+			sig = 0;
+		int sym = symbols[j];
+		GetSystem().SetSignal(sym, sig);
+	}
+	
+	
+	prev_counted = bars;
+}
 
 
 }

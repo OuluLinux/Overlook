@@ -666,9 +666,14 @@ bool System::RefreshReal() {
 	WhenPushTask("Putting latest signals");
 	
 	// Reset signals
+	#if 0
 	bool is_calendar_speak = GetCalendar().IsMajorSpeak();
 	bool is_calendar_fail  = GetCalendar().IsError();
-	if (realtime_count == 0 || is_calendar_speak || is_calendar_fail) {
+	if (realtime_count == 0 || is_calendar_speak || is_calendar_fail)
+	#else
+	if (realtime_count)
+	#endif
+	{
 		for (int i = 0; i < mt.GetSymbolCount(); i++)
 			mt.SetSignal(i, 0);
 	}
@@ -677,9 +682,9 @@ bool System::RefreshReal() {
 	
 	try {
 		mt.Data();
-		mt.RefreshLimits();
+		//mt.RefreshLimits();
 		int open_count = 0;
-		const int MAX_SYMOPEN = 4;
+		const int MAX_SYMOPEN = 8;
 		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {

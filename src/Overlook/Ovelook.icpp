@@ -65,9 +65,11 @@ INITBLOCK {
 	System::Register<ChannelContext>("Channel Context");
 	System::Register<SelectiveMinimalLabel>("Selective Minimal Label");
 	System::Register<GridSignal>("Grid Signal");
+	System::Register<Anomaly>("Anomaly");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<GridAdvisor>("Grid Advisor", CORE_EXPERTADVISOR);
+	System::Register<MultiGridAdvisor>("Multi Grid Advisor", CORE_EXPERTADVISOR);
 	
 	
 	

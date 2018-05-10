@@ -1209,6 +1209,29 @@ public:
 
 
 
+class Anomaly : public Core {
+	Vector<OnlineVariance> var;
+	int split_type, tfmin;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	Anomaly();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Mem(var);
+	}
+};
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {
@@ -1336,6 +1359,43 @@ public:
 	}
 };
 
+
+class MultiGridAdvisor : public Core {
+	Vector<int> cursors;
+	double total = 0;
+	int prev_counted = 0;
+	
+protected:
+	virtual void Start();
+	
+public:
+	typedef MultiGridAdvisor CLASSNAME;
+	MultiGridAdvisor();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<GridAdvisor>(&Filter)
+			% In<VolatilityContext>()
+			% Out(1, 1)
+			% Out(0, 0)
+			% Mem(cursors)
+			% Mem(total)
+			% Mem(prev_counted);
+	}
+	
+	static bool Filter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		else {
+			String sym = GetSystem().GetSymbol(out_sym);
+			return
+				sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDCAD" ||
+				sym == "USDJPY" || sym == "USDCHF" || sym == "AUDUSD" || sym == "EURAUD";
+		}
+	}
+};
 
 }
 

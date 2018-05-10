@@ -1397,6 +1397,24 @@ public:
 	}
 };
 
+
+class Matcher : public Core {
+	
+protected:
+	virtual void Start();
+	
+public:
+	typedef Matcher CLASSNAME;
+	Matcher();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1);
+	}
+};
+
 }
 
 #endif

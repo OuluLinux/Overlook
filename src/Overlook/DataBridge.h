@@ -106,14 +106,15 @@ public:
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}
-	double GetSpread() const {return spread_mean;}
+	double GetSpread() const {return spread_mean * point;}
 	double GetMax() const {return max_value * point;}
 	double GetMin() const {return min_value * point;}
 	double GetMedianMax() const {return median_max * point;}
 	double GetMedianMin() const {return median_min * point;}
 	double GetAverageSpread() const {return spread_mean;}
 	void AddSpread(double a);
-	void RefreshFromFaster();
+	void RefreshFromFasterTime();
+	void RefreshFromFasterChange();
 	
 	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
 		if (in_sym == -1)

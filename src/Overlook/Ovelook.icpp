@@ -70,6 +70,7 @@ INITBLOCK {
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<GridAdvisor>("Grid Advisor", CORE_EXPERTADVISOR);
 	System::Register<MultiGridAdvisor>("Multi Grid Advisor", CORE_EXPERTADVISOR);
+	System::Register<Matcher>("Matcher", CORE_EXPERTADVISOR);
 	
 	
 	

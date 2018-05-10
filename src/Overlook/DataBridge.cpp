@@ -53,7 +53,7 @@ void DataBridge::Start() {
 	
 	// Regular symbols
 	if (mt_period > 1 && sym < sym_count) {
-		RefreshFromFaster();
+		RefreshFromFasterChange();
 	}
 	else if (sym < sym_count) {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
@@ -422,7 +422,7 @@ int DataBridge::GetChangeStep(int shift, int steps) {
 	return v;
 }
 
-void DataBridge::RefreshFromFaster() {
+void DataBridge::RefreshFromFasterTime() {
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
 	Buffer& high_buf = GetBuffer(2);
@@ -472,6 +472,85 @@ void DataBridge::RefreshFromFaster() {
 		int time = steps * period_secs + tdiff;
 		
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
+		
+		SetSafetyLimit(shift+1);
+		if (shift >= open_buf.GetCount()) {
+			if (shift >= open_buf.GetCount()) {
+				open_buf.SetCount(shift+1);
+				low_buf.SetCount(shift+1);
+				high_buf.SetCount(shift+1);
+				volume_buf.SetCount(shift+1);
+				time_buf.SetCount(shift+1);
+			}
+			
+			open_buf.Set(shift, open_value);
+			low_buf.Set(shift, low_value);
+			high_buf.Set(shift, high_value);
+			volume_buf.Set(shift, volume_sum);
+			time_buf.Set(shift, time);
+		}
+		else {
+			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
+			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, low_value);}
+			volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
+		}
+	}
+	
+	ForceSetCounted(open_buf.GetCount());
+}
+
+void DataBridge::RefreshFromFasterChange() {
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	int shift = open_buf.GetCount() - 1;
+	
+	int sym = GetSymbol();
+	int tf = GetTf();
+	ASSERT(tf > 0);
+	
+	DataBridge& m1_db = dynamic_cast<DataBridge&>(*GetInputCore(0, sym, 0));
+	ConstBuffer& src_open = m1_db.GetBuffer(0);
+	ConstBuffer& src_low  = m1_db.GetBuffer(1);
+	ConstBuffer& src_high = m1_db.GetBuffer(2);
+	ConstBuffer& src_vol  = m1_db.GetBuffer(3);
+	ConstBuffer& src_time  = m1_db.GetBuffer(4);
+	int faster_bars = src_open.GetCount();
+	
+	int period_mins = GetMinutePeriod();
+	int period_secs = period_mins * 60;
+	Time epoch(1970,1,1);
+	int64 tdiff = 4*24*60*60; // seconds between thursday and monday
+	Time t0 = epoch + tdiff; // thursday -> next monday, for W1 data
+	int64 t0int = t0.Get();
+	//   int64 t1int = epoch.Get();
+	//   tdiff == t0int - t1int
+	
+	int exp_count = faster_bars / period_mins;
+	for(int i = 0; i < GetBufferCount(); i++)
+		GetBuffer(i).Reserve(exp_count);
+	
+	double chk_change = period_mins * point;
+	
+	for(; cursor2 < faster_bars; cursor2++) {
+		double open_value = src_open.Get(cursor2);
+		double low_value  = src_low.Get(cursor2);
+		double high_value = src_high.Get(cursor2);
+		double volume_sum = src_vol.Get(cursor2);
+		int time = src_time.Get(cursor2);
+		if (!time) return;
+		
+		if (!time_buf.GetCount())
+			shift++;
+		else {
+			double diff = open_buf.Top() - open_value;
+			if (fabs(diff) >= chk_change) shift++;
+		}
 		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {

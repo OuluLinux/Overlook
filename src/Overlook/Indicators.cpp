@@ -5562,14 +5562,10 @@ bool GridAdvisor::TrainingIterator() {
 	}
 	
 	double mean = res.var.GetMean();
-	double spread = GetDataBridge()->GetSpread();
-	if (spread == 0)
-		spread = GetDataBridge()->GetPoint() * 4.0;
-	
 	if (mean >= 0) {
-		res.prob = res.var.GetCDF(+spread, true);
+		res.prob = res.var.GetCDF(0, true);
 	} else {
-		res.prob = res.var.GetCDF(-spread, false);
+		res.prob = res.var.GetCDF(0, false);
 	}
 	
 	
@@ -5920,7 +5916,7 @@ void MultiGridAdvisor::Start() {
 		out.Set(i, total);
 		
 		bool sig;
-		if (prev_sig)
+		if (!prev_sig)
 			sig = sum < 0;
 		else
 			sig = sum <= 0;
@@ -5955,5 +5951,94 @@ void MultiGridAdvisor::Start() {
 	prev_counted = bars;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+Matcher::Matcher() {
+	
+}
+
+void Matcher::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+}
+
+void Matcher::Start() {
+	int counted = GetCounted();
+	int bars = GetBars();
+	if (counted == bars)
+		return;
+	
+	const int corr_count = 16;
+	ConstBuffer& openbuf = GetInputBuffer(0, 0);
+	
+	double x[corr_count], y[corr_count], xy[corr_count], xsquare[corr_count], ysquare[corr_count];
+	double xsum, ysum, xysum, xsqr_sum, ysqr_sum;
+	double coeff, num, deno;
+	
+	xsum = 0;
+	for(int i = 0; i < corr_count; i++) {
+		x[i] = openbuf.Get(bars-1-i);
+		xsquare[i] = x[i] * x[i];
+		xsum = xsum + x[i];
+	}
+	
+	double max_fcoeff = 0;
+	double max_coeff = 0;
+	int max_cursor = 0;
+	for(int cursor = corr_count; cursor < bars - corr_count *2; cursor++) {
+		
+		ysum = xysum = xsqr_sum = ysqr_sum = 0;
+		
+		// find the needed data to manipulate correlation coeff
+		for (int i = 0; i < corr_count; i++) {
+			int pos = cursor - i;
+			
+			y[i] = openbuf.Get(pos);
+			
+			xy[i] = x[i] * y[i];
+			ysquare[i] = y[i] * y[i];
+			ysum = ysum + y[i];
+			xysum = xysum + xy[i];
+			xsqr_sum = xsqr_sum + xsquare[i];
+			ysqr_sum = ysqr_sum + ysquare[i];
+		}
+		
+		num = 1.0 * (((double)corr_count * xysum) - (xsum * ysum));
+		deno = 1.0 * (((double)corr_count * xsqr_sum - xsum * xsum)* ((double)corr_count * ysqr_sum - ysum * ysum));
+		
+		// calculate correlation coefficient
+		coeff = deno > 0.0 ? num / sqrt(deno) : 0.0;
+		double fcoeff = fabs(coeff);
+		
+		if (max_fcoeff < fcoeff) {
+			max_fcoeff = fcoeff;
+			max_coeff = coeff;
+			max_cursor = cursor;
+		}
+	}
+	DUMP(max_fcoeff);
+	DUMP(max_coeff);
+	DUMP(max_cursor);
+	
+	double change = openbuf.Get(max_cursor+1) - openbuf.Get(max_cursor);
+	if (max_coeff < 0)
+		change *= -1;
+	
+	int sig = change > 0 ? +1 : -1;
+	GetSystem().SetSignal(GetSymbol(), sig);
+	
+	VectorBool& signal = GetOutput(0).label;
+	signal.SetCount(bars);
+	signal.Set(bars-1, sig == -1);
+}
 
 }

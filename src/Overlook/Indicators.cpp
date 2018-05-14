@@ -5598,7 +5598,7 @@ bool GridAdvisor::TrainingEnd() {
 	if (spread == 0)
 		spread = GetDataBridge()->GetPoint() * 2.0;
 	double best_result = -DBL_MAX;
-	for (double d = 0.5; d < 0.8; d += 0.01) {
+	for (double d = 0.3; d < 0.8; d += 0.01) {
 		
 		double result = 0.0;
 		
@@ -5685,7 +5685,11 @@ void GridAdvisor::RefreshBits() {
 		int time = timebuf.Get(i);
 		int timeval = (time % (24*60*60)) / (6*60*60);
 		ASSERT(timeval >= 0 && timeval < 4);
-		ASSERT(vcval >= 0 && vcval < 4);
+		//ASSERT(vcval >= 0 && vcval < 4);
+		if (vcval >= 4) {
+			LOG(i << " " << vcval);
+			vcval = 3;
+		}
 		int code = (b0 << 7) | (b1 << 6) | (b2 << 5) | (b3 << 4) | (vcval << 2) | (timeval << 0);
 		data[i] = code;
 	}
@@ -5869,7 +5873,7 @@ void MultiGridAdvisor::Start() {
 		enableds.Add(&core.GetOutput(1).label);
 		symbols.Add(core.GetSymbol());
 	}
-	cursors.SetCount(in.GetCount(), 0);
+	cursors.SetCount(in.GetCount(), 1);
 	
 	int bars = GetBars();
 	Buffer& out = GetBuffer(0);

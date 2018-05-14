@@ -19,6 +19,7 @@ struct LoaderWindow : public TopWindow {
 	bool fail = false, finished = false;
 	
 	LoaderWindow() {
+		FrameLess();
 		Add(img.SizePos());
 		SetRect(0,0,640,400);
 		Title("Overlook Loader");

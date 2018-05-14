@@ -635,8 +635,8 @@ void System::StoreCores() {
 bool System::RefreshReal() {
 	Time now				= GetUtcTime();
 	int wday				= DayOfWeek(now);
-	Time after_3hours		= now + 3 * 60 * 60;
-	int wday_after_3hours	= DayOfWeek(after_3hours);
+	Time after_4hours		= now + 4 * 60 * 60;
+	int wday_after_4hours	= DayOfWeek(after_4hours);
 	now.second				= 0;
 	MetaTrader& mt			= GetMetaTrader();
 	
@@ -649,7 +649,7 @@ bool System::RefreshReal() {
 	
 	
 	// Inspect for market closing (weekend and holidays)
-	else if (wday == 5 && wday_after_3hours == 6) {
+	else if (wday == 5 && wday_after_4hours == 6) {
 		WhenInfo("Closing all orders before market break");
 		
 		for (int i = 0; i < mt.GetSymbolCount(); i++) {
@@ -671,7 +671,7 @@ bool System::RefreshReal() {
 	bool is_calendar_fail  = GetCalendar().IsError();
 	if (realtime_count == 0 || is_calendar_speak || is_calendar_fail)
 	#else
-	if (realtime_count)
+	if (realtime_count == 0)
 	#endif
 	{
 		for (int i = 0; i < mt.GetSymbolCount(); i++)

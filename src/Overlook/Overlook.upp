@@ -57,13 +57,23 @@ file
 	Utils.cpp,
 	Indicators.h,
 	Indicators.cpp,
+	Advisors.h,
+	Advisors.cpp,
 	Optimizer.h,
 	Optimizer.cpp,
 	BitOptimizer.h,
 	BitOptimizer.cpp,
-	DQN.h,
 	Calendar.h,
-	Calendar.cpp;
+	Calendar.cpp,
+	"Reinforced Learning" readonly separator,
+	DQN.h,
+	"Recurrent NN" readonly separator,
+	RecurrentSession.h,
+	RecurrentSession.cpp,
+	Recurrent.h,
+	Recurrent.cpp,
+	Mat.h,
+	Mat.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

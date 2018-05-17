@@ -1312,6 +1312,7 @@ class GridAdvisor : public Core {
 	Vector<double> training_pts;
 	OnlineAverage1 mean;
 	double prob_limit = 0.5;
+	double total = 0.0;
 	int prev_counted = 0;
 	
 	
@@ -1346,7 +1347,8 @@ public:
 			% Mem(training_pts)
 			% Mem(mean)
 			% Mem(prob_limit)
-			% Mem(prev_counted);
+			% Mem(prev_counted)
+			% Mem(total);
 	}
 	 
 	static void FuncArgs(int input, FactoryDeclaration& decl, const Vector<int>& args) {
@@ -1399,6 +1401,7 @@ public:
 
 
 class Matcher : public Core {
+	double total = 0.0;
 	
 protected:
 	virtual void Start();
@@ -1411,9 +1414,125 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(1, 1);
+			% Out(1, 1)
+			% Mem(total);
 	}
 };
+
+class PatternAdvisor : public Core {
+	
+	struct GridResult : Moveable<GridResult> {
+		OnlineVariance var;
+		double prob;
+		
+		void Serialize(Stream& s) {s % var % prob;}
+		
+		bool operator() (const PatternAdvisor::GridResult& a, const PatternAdvisor::GridResult& b) const {
+			return a.prob > b.prob;
+		}
+	};
+	
+	struct TrainingCtrl : public JobCtrl {
+		Vector<Point> polyline;
+		virtual void Paint(Draw& w);
+	};
+	
+	bool TrainingBegin();
+	bool TrainingIterator();
+	bool TrainingEnd();
+	bool TrainingInspect();
+	void RefreshAll();
+	
+	
+	// Persistent
+	Vector<byte> data;
+	VectorMap<int, GridResult> results;
+	Vector<double> training_pts;
+	OnlineAverage1 mean;
+	double prob_limit = 0.5;
+	double total = 0;
+	int prev_counted = 0;
+	
+	
+	// Temporary
+	int round = 0;
+	int max_rounds = 1000;
+	bool once = true;
+	int trend = 0;
+	double line_value = 0;
+	
+protected:
+	virtual void Start();
+	void RefreshBits();
+	
+public:
+	typedef PatternAdvisor CLASSNAME;
+	PatternAdvisor();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Out(0, 0)
+			% Mem(data)
+			% Mem(results)
+			% Mem(training_pts)
+			% Mem(mean)
+			% Mem(prob_limit)
+			% Mem(total)
+			% Mem(prev_counted);
+	}
+	 
+	static void FuncArgs(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		if (input < 4) {
+			decl.AddArg(4);
+			decl.AddArg(1 << (5 + input));
+		} else {
+			decl.AddArg(4);
+		}
+	}
+};
+
+
+class MultiAdvisor : public Core {
+	Vector<int> cursors;
+	double total = 0;
+	int prev_counted = 0;
+	
+protected:
+	virtual void Start();
+	
+public:
+	typedef MultiAdvisor CLASSNAME;
+	MultiAdvisor();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<PatternAdvisor>(&Filter)
+			% In<GridAdvisor>(&Filter)
+			% Out(1, 1)
+			% Out(0, 0)
+			% Mem(cursors)
+			% Mem(total)
+			% Mem(prev_counted);
+	}
+	
+	static bool Filter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		else {
+			String sym = GetSystem().GetSymbol(out_sym);
+			return
+				sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDCAD" ||
+				sym == "USDJPY" || sym == "USDCHF" || sym == "AUDUSD" || sym == "EURAUD";
+		}
+	}
+};
+
+
 
 }
 

@@ -5697,13 +5697,19 @@ void GridAdvisor::RefreshBits() {
 
 void GridAdvisor::RefreshAll() {
 	RefreshSourcesOnlyDeep();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& timebuf = GetInputBuffer(0, 4);
 	VectorBool& signal  = GetOutput(0).label;
 	VectorBool& enabled = GetOutput(1).label;
+	Buffer& out = GetBuffer(0);
 	
 	// ---- Do your final result work here ----
 	RefreshBits();
 	SortByValue(results, GridResult());
+	
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
 	
 	int bars = GetBars();
 	signal.SetCount(bars);
@@ -5736,6 +5742,16 @@ void GridAdvisor::RefreshAll() {
 		
 		signal. Set(i, sig == -1);
 		enabled.Set(i, sig !=  0);
+		
+		if (i < bars-1) {
+			if (sig > 0) {
+				total += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+			else if (sig < 0) {
+				total += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+		}
+		out.Set(i, total);
 	}
 	
 	//GetSystem().SetSignal(GetSymbol(), sig);
@@ -5983,66 +5999,546 @@ void Matcher::Start() {
 	
 	const int corr_count = 16;
 	ConstBuffer& openbuf = GetInputBuffer(0, 0);
-	
-	double x[corr_count], y[corr_count], xy[corr_count], xsquare[corr_count], ysquare[corr_count];
-	double xsum, ysum, xysum, xsqr_sum, ysqr_sum;
-	double coeff, num, deno;
-	
-	xsum = 0;
-	for(int i = 0; i < corr_count; i++) {
-		x[i] = openbuf.Get(bars-1-i);
-		xsquare[i] = x[i] * x[i];
-		xsum = xsum + x[i];
-	}
-	
-	double max_fcoeff = 0;
-	double max_coeff = 0;
-	int max_cursor = 0;
-	for(int cursor = corr_count; cursor < bars - corr_count *2; cursor++) {
-		
-		ysum = xysum = xsqr_sum = ysqr_sum = 0;
-		
-		// find the needed data to manipulate correlation coeff
-		for (int i = 0; i < corr_count; i++) {
-			int pos = cursor - i;
-			
-			y[i] = openbuf.Get(pos);
-			
-			xy[i] = x[i] * y[i];
-			ysquare[i] = y[i] * y[i];
-			ysum = ysum + y[i];
-			xysum = xysum + xy[i];
-			xsqr_sum = xsqr_sum + xsquare[i];
-			ysqr_sum = ysqr_sum + ysquare[i];
-		}
-		
-		num = 1.0 * (((double)corr_count * xysum) - (xsum * ysum));
-		deno = 1.0 * (((double)corr_count * xsqr_sum - xsum * xsum)* ((double)corr_count * ysqr_sum - ysum * ysum));
-		
-		// calculate correlation coefficient
-		coeff = deno > 0.0 ? num / sqrt(deno) : 0.0;
-		double fcoeff = fabs(coeff);
-		
-		if (max_fcoeff < fcoeff) {
-			max_fcoeff = fcoeff;
-			max_coeff = coeff;
-			max_cursor = cursor;
-		}
-	}
-	DUMP(max_fcoeff);
-	DUMP(max_coeff);
-	DUMP(max_cursor);
-	
-	double change = openbuf.Get(max_cursor+1) - openbuf.Get(max_cursor);
-	if (max_coeff < 0)
-		change *= -1;
-	
-	int sig = change > 0 ? +1 : -1;
-	GetSystem().SetSignal(GetSymbol(), sig);
-	
 	VectorBool& signal = GetOutput(0).label;
 	signal.SetCount(bars);
-	signal.Set(bars-1, sig == -1);
+	Buffer& out = GetBuffer(0);
+	
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
+	
+	for (int pos = counted; pos < bars; pos++) {
+		double x[corr_count], y[corr_count], xy[corr_count], xsquare[corr_count], ysquare[corr_count];
+		double xsum, ysum, xysum, xsqr_sum, ysqr_sum;
+		double coeff, num, deno;
+		
+		if (pos - corr_count - 1 < 0)
+			continue;
+		
+		xsum = 0;
+		for(int i = 0; i < corr_count; i++) {
+			x[i] = openbuf.Get(pos-1-i);
+			xsquare[i] = x[i] * x[i];
+			xsum = xsum + x[i];
+		}
+		
+		double max_fcoeff = 0;
+		double max_coeff = 0;
+		int max_cursor = 0;
+		for(int cursor = corr_count; cursor < pos - corr_count *2; cursor++) {
+			
+			ysum = xysum = xsqr_sum = ysqr_sum = 0;
+			
+			// find the needed data to manipulate correlation coeff
+			for (int i = 0; i < corr_count; i++) {
+				int pos = cursor - i;
+				
+				y[i] = openbuf.Get(pos);
+				
+				xy[i] = x[i] * y[i];
+				ysquare[i] = y[i] * y[i];
+				ysum = ysum + y[i];
+				xysum = xysum + xy[i];
+				xsqr_sum = xsqr_sum + xsquare[i];
+				ysqr_sum = ysqr_sum + ysquare[i];
+			}
+			
+			num = 1.0 * (((double)corr_count * xysum) - (xsum * ysum));
+			deno = 1.0 * (((double)corr_count * xsqr_sum - xsum * xsum)* ((double)corr_count * ysqr_sum - ysum * ysum));
+			
+			// calculate correlation coefficient
+			coeff = deno > 0.0 ? num / sqrt(deno) : 0.0;
+			double fcoeff = fabs(coeff);
+			
+			if (max_fcoeff < fcoeff) {
+				max_fcoeff = fcoeff;
+				max_coeff = coeff;
+				max_cursor = cursor;
+			}
+		}
+		/*DUMP(max_fcoeff);
+		DUMP(max_coeff);
+		DUMP(max_cursor);*/
+		
+		double change = openbuf.Get(max_cursor+1) - openbuf.Get(max_cursor);
+		if (max_coeff < 0)
+			change *= -1;
+		
+		int sig = change > 0 ? +1 : -1;
+		GetSystem().SetSignal(GetSymbol(), sig);
+		
+		signal.Set(pos-1, sig == -1);
+		
+		if (pos < bars-1) {
+			if (sig > 0) {
+				total += +(openbuf.Get(pos+1) - openbuf.Get(pos)) - spread;
+			}
+			else if (sig < 0) {
+				total += -(openbuf.Get(pos+1) - openbuf.Get(pos)) - spread;
+			}
+		}
+		out.Set(pos, total);
+	}
+	DUMP(total);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PatternAdvisor::PatternAdvisor() {
+	
+}
+
+void PatternAdvisor::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	SetJobCount(1);
+	
+	SetJob(0, tf_str + " Training")
+		.SetBegin		(THISBACK(TrainingBegin))
+		.SetIterator	(THISBACK(TrainingIterator))
+		.SetEnd			(THISBACK(TrainingEnd))
+		.SetInspect		(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
+}
+
+void PatternAdvisor::Start() {
+	if (once) {
+		if (prev_counted > 0) prev_counted--;
+		once = false;
+		//RefreshGrid(true);
+		RefreshSourcesOnlyDeep();
+		SortByValue(results, GridResult());
+	}
+	
+	if (IsJobsFinished()) {
+		int bars = GetBars();
+		if (prev_counted < bars) {
+			LOG("PatternAdvisor::Start Refresh");
+			RefreshAll();
+		}
+	}
+}
+
+bool PatternAdvisor::TrainingBegin() {
+	RefreshBits();
+	
+	int count = 0x100 * 0x100;
+	if (results.IsEmpty()) {
+		results.Reserve(count);
+		for(int i = 0; i < count; i++) {
+			results.Add(i);
+		}
+	}
+	
+	max_rounds = count;
+	training_pts.SetCount(max_rounds, 0);
+	
+	// Allow iterating
+	return true;
+}
+
+bool PatternAdvisor::TrainingIterator() {
+	
+	// Show progress
+	GetCurrentJob().SetProgress(round, max_rounds);
+	
+	
+	// ---- Do your training work here ----
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	int key = results.GetKey(round);
+	GridResult& res = results[round];
+	
+	byte mask = (key >> 8) & 0xff;
+	byte grid = key & 0xff;
+	
+	for(int i = 100; i < data.GetCount() - 1; i++) {
+		byte val = data[i];
+		bool is_match = (val & mask) == (grid & mask);
+		
+		if (is_match) {
+			double change;
+			change = open_buf.Get(i+1) - open_buf.Get(i);
+			res.var.Add(change);
+		}
+	}
+	
+	double mean = res.var.GetMean();
+	if (mean >= 0) {
+		res.prob = res.var.GetCDF(0, true);
+	} else {
+		res.prob = res.var.GetCDF(0, false);
+	}
+	
+	
+	// Put some result data here for graph
+	training_pts[round] = res.prob;
+	
+	
+	// Keep count of iterations
+	round++;
+	
+	// Stop eventually
+	if (round >= max_rounds) {
+		SetJobFinished();
+	}
+	
+	return true;
+}
+
+bool PatternAdvisor::TrainingEnd() {
+	double max_d = -DBL_MAX;
+	int max_i = 0;
+	
+	
+	SortByValue(results, GridResult());
+	
+	
+	// Optimize limit
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
+	double best_result = -DBL_MAX;
+	for (double d = 0.3; d < 0.8; d += 0.01) {
+		
+		double result = 0.0;
+		
+		for(int i = 100; i < data.GetCount() - 1; i++) {
+			int sig = 0;
+			
+			for(int j = 0; j < results.GetCount(); j++) {
+				byte val = data[i];
+				
+				int key = results.GetKey(j);
+				GridResult& res = results[j];
+				if (res.prob < d)
+					break;
+				byte mask = (key >> 8) & 0xff;
+				byte grid = key & 0xff;
+				
+				bool is_match = (val & mask) == (grid & mask);
+				
+				if (is_match) {
+					sig = res.var.GetMean() > 0 ? +1 : -1;
+					break;
+				}
+			}
+			if (!sig) continue;
+			
+			if (sig >= 0) {
+				result += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			} else {
+				result += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+		}
+		
+		if (result > best_result) {
+			prob_limit = d;
+			best_result = result;
+		}
+	}
+	ReleaseLog("best_result " + DblStr(best_result));
+	ReleaseLog("prob_limit " + DblStr(prob_limit));
+	if (best_result < 0) prob_limit = 1.0;
+	
+	
+	RefreshAll();
+	return true;
+}
+
+bool PatternAdvisor::TrainingInspect() {
+	bool success = false;
+	
+	INSPECT(success, "ok: this is an example");
+	INSPECT(success, "warning: this is an example");
+	INSPECT(success, "error: this is an example");
+	
+	// You can fail the inspection too
+	//if (!success) return false;
+	
+	return true;
+}
+
+void PatternAdvisor::RefreshBits() {
+	int counted = max(8, prev_counted);
+	int bars = GetBars();
+	data.SetCount(bars, 0);
+	
+	ConstBuffer& openbuf = GetInputBuffer(0, 0);
+	
+	for(int i = counted; i < bars; i++) {
+		byte code = 0;
+		
+		for(int j = 0; j < 8; j++) {
+			double change = openbuf.Get(i - j) - openbuf.Get(i - j - 1);
+			if (change < 0)
+				code |= 1 << j;
+		}
+		
+		data[i] = code;
+	}
+}
+
+void PatternAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	VectorBool& signal  = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	Buffer& out = GetBuffer(0);
+	
+	// ---- Do your final result work here ----
+	RefreshBits();
+	SortByValue(results, GridResult());
+	
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
+	
+	int bars = GetBars();
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	for(int i = prev_counted; i < bars; i++) {
+		int sig = 0;
+		for(int j = 0; j < results.GetCount(); j++) {
+			byte val = data[i];
+			
+			int key = results.GetKey(j);
+			GridResult& res = results[j];
+			if (res.prob < prob_limit)
+				break;
+			byte mask = (key >> 8) & 0xff;
+			byte grid = key & 0xff;
+			
+			bool is_match = (val & mask) == (grid & mask);
+			
+			if (is_match) {
+				sig = res.var.GetMean() > 0 ? +1 : -1;
+				break;
+			}
+		}
+		
+		#if 0
+		Time t = Time(1970,1,1) + timebuf.Get(i);
+		if (t.hour >= 20 || t.hour < 4)
+			sig = 0;
+		#endif
+		
+		signal. Set(i, sig == -1);
+		enabled.Set(i, sig !=  0);
+		
+		
+		if (i < bars-1) {
+			if (sig > 0) {
+				total += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+			else if (sig < 0) {
+				total += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+			}
+		}
+		out.Set(i, total);
+	}
+	
+	//GetSystem().SetSignal(GetSymbol(), sig);
+	
+	
+	// Keep counted manually
+	prev_counted = bars;
+	
+	
+	//DUMP(main_interval);
+	//DUMP(grid_interval);
+}
+
+void PatternAdvisor::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	PatternAdvisor* ea = dynamic_cast<PatternAdvisor*>(&*job->core);
+	ASSERT(ea);
+	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MultiAdvisor::MultiAdvisor() {
+	
+}
+
+void MultiAdvisor::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+}
+
+void MultiAdvisor::Start() {
+	
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return;
+			}
+		}
+	}
+	
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	
+	Vector<ConstBuffer*> opens, times;
+	Vector<VectorBool*> signals, enableds;
+	Vector<int> symbols;
+	for(int i = 1; i <= 2; i++) {
+		Input& in = inputs[1];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			Core& core = *dynamic_cast<Core*>(src.core);
+			opens.Add(&core.GetInputBuffer(0, 0));
+			times.Add(&core.GetInputBuffer(0, 4));
+			signals.Add(&core.GetOutput(0).label);
+			enableds.Add(&core.GetOutput(1).label);
+			symbols.Add(core.GetSymbol());
+		}
+	}
+	cursors.SetCount(opens.GetCount(), 1);
+	
+	Vector<bool> sym_signal;
+	sym_signal.SetCount(GetSystem().GetSymbolCount(), 0);
+	
+	
+	int bars = GetBars();
+	Buffer& out = GetBuffer(0);
+	VectorBool& signal = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	if (prev_counted < 2) {prev_counted = 2; total = 0;}
+	for(int i = prev_counted; i < bars; i++) {
+		
+		// Sync times
+		int time = timebuf.Get(i);
+		for(int j = 0; j < cursors.GetCount(); j++) {
+			while (1) {
+				int& cursor = cursors[j];
+				if (cursor == times[j]->GetCount() - 1)
+					break;
+				int next_time = times[j]->Get(cursor+1);
+				if (next_time <= time)
+					cursor++;
+				else
+					break;
+			}
+		}
+		
+		bool prev2_sig = signal.Get(i-2);
+		bool prev_sig = signal.Get(i-1);
+		bool prev_ena = enabled.Get(i-1);
+
+		for(int i = 0; i < sym_signal.GetCount(); i++) sym_signal[i] = 0;
+		
+		// Sum prev changes
+		double sum = 0.0;
+		for(int j = 0; j < opens.GetCount(); j++) {
+			bool& has_sig = sym_signal[symbols[j]];
+			if (has_sig)
+				continue;
+			has_sig = true;
+			int& cursor = cursors[j];
+			ConstBuffer& open = *opens[j];
+			bool signal = signals[j]->Get(cursor-1);
+			bool enabled = enableds[j]->Get(cursor-1);
+			int sig = enabled ? (signal ? -1 : +1) : 0;
+			double change = open.Get(cursor) / open.Get(cursor-1) - 1.0;
+			sum += change * sig;
+		}
+		
+		if (prev_ena && IsFin(sum))
+			total += sum * (prev_sig ? 0 : +1);
+		out.Set(i, total);
+		
+		bool sig;
+		if (!prev_sig)
+			sig = sum < 0;
+		else
+			sig = sum <= 0;
+		signal.Set(i, sig);
+		
+		bool ena;
+		/*if (prev2_sig == sig && prev_sig != sig)
+			ena = false;
+		else*/
+			ena = true;
+		enabled.Set(i, ena);
+	}
+	ReleaseLog("MultiAdvisor total " + DblStr(total));
+	
+	// Set real signal
+	bool multi_signal = signal.Top();
+	bool multi_enabled = enabled.Top();
+	
+	for(int i = 0; i < sym_signal.GetCount(); i++) sym_signal[i] = 0;
+	
+	for(int j = 0; j < opens.GetCount(); j++) {
+		bool& has_sig = sym_signal[symbols[j]];
+		if (has_sig)
+			continue;
+		has_sig = true;
+		bool signal = signals[j]->Top();
+		bool enabled = enableds[j]->Top();
+		int sig = enabled ? (signal ? -1 : +1) : 0;
+		if (multi_signal)
+			sig = 0;//sig *= -1;
+		if (!multi_enabled)
+			sig = 0;
+		int sym = symbols[j];
+		GetSystem().SetSignal(sym, sig);
+	}
+	
+	
+	prev_counted = bars;
 }
 
 }

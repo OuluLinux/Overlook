@@ -13,6 +13,7 @@ using namespace Upp;
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
+#include "RecurrentSession.h"
 #include "Common.h"
 #include "Calendar.h"
 #include "Optimizer.h"
@@ -25,6 +26,7 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "Utils.h"
 #include "Indicators.h"
+#include "Advisors.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
 #include "ExportCtrl.h"

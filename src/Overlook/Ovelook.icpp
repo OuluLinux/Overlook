@@ -71,6 +71,10 @@ INITBLOCK {
 	System::Register<GridAdvisor>("Grid Advisor", CORE_EXPERTADVISOR);
 	System::Register<MultiGridAdvisor>("Multi Grid Advisor", CORE_EXPERTADVISOR);
 	System::Register<Matcher>("Matcher", CORE_EXPERTADVISOR);
+	System::Register<PatternAdvisor>("PatternAdvisor", CORE_EXPERTADVISOR);
+	System::Register<MultiAdvisor>("MultiAdvisor", CORE_EXPERTADVISOR);
+	System::Register<RecurrentAdvisor>("LSTM Advisor", CORE_EXPERTADVISOR);
+	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
 	
 	
 	

@@ -53,7 +53,7 @@ void DataBridge::Start() {
 	
 	// Regular symbols
 	if (mt_period > 1 && sym < sym_count) {
-		RefreshFromFasterChange();
+		RefreshFromFasterTime();
 	}
 	else if (sym < sym_count) {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;

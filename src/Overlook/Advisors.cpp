@@ -430,9 +430,9 @@ void DqnAdvisor::RefreshAll() {
 		out.Set(i, total);
 	}
 	
-	int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
-	GetSystem().SetSignal(GetSymbol(), sig);
-	ReleaseLog("DqnAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
+	//int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
+	//GetSystem().SetSignal(GetSymbol(), sig);
+	//ReleaseLog("DqnAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
 	
 	
 	// Keep counted manually
@@ -465,6 +465,238 @@ void DqnAdvisor::TrainingCtrl::Paint(Draw& w) {
 
 
 
+
+DqnFastAdvisor::DqnFastAdvisor() {
+	
+
+}
+
+void DqnFastAdvisor::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+	
+	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	
+	SetJobCount(1);
+	
+	point = GetDataBridge()->GetPoint();
+	
+	SetJob(0, tf_str + " Training")
+		.SetBegin		(THISBACK(TrainingBegin))
+		.SetIterator	(THISBACK(TrainingIterator))
+		.SetEnd			(THISBACK(TrainingEnd))
+		.SetInspect		(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
+}
+
+void DqnFastAdvisor::Start() {
+	if (once) {
+		if (prev_counted > 0) prev_counted--;
+		once = false;
+		//RefreshGrid(true);
+		RefreshSourcesOnlyDeep();
+	}
+	
+	if (IsJobsFinished()) {
+		int bars = GetBars();
+		if (prev_counted < bars) {
+			LOG("DqnFastAdvisor::Start Refresh");
+			RefreshAll();
+		}
+	}
+}
+
+bool DqnFastAdvisor::TrainingBegin() {
+	#ifdef flagDEBUG
+	max_rounds = 10000;
+	#else
+	max_rounds = 20000000;
+	#endif
+	training_pts.SetCount(max_rounds, 0);
+	
+	
+	// Allow iterating
+	return true;
+}
+
+void DqnFastAdvisor::LoadInput(int pos) {
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	for(int i = 0; i < input_length; i++) {
+		int j = pos - input_length + i;
+		double change = open_buf.Get(j+1) - open_buf.Get(j);
+		if (change >= 0) {
+			tmp_mat.Set(i * 2 + 0, 1.0 - +change / point);
+			tmp_mat.Set(i * 2 + 1, 1.0);
+		} else {
+			tmp_mat.Set(i * 2 + 0, 1.0);
+			tmp_mat.Set(i * 2 + 1, 1.0 - -change / point);
+		}
+	}
+}
+
+bool DqnFastAdvisor::TrainingIterator() {
+	
+	// Show progress
+	GetCurrentJob().SetProgress(round, max_rounds);
+	
+	
+	// ---- Do your training work here ----
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	
+	int size = input_length;
+	int range = GetBars() - output_length;
+	if (do_test) range *= 0.66;
+	range -= size;
+	
+	int pos = size + Random(range);
+	
+	LoadInput(pos);
+	
+	double output[output_size];
+	double begin = open_buf.Get(pos);
+	int pos_count = 0, neg_count = 0;
+	for(int i = 0; i < output_length; i++) {
+		double change = open_buf.Get(pos + 1 + i) - begin;
+		if (change >= 0) {
+			pos_count++;
+		} else {
+			neg_count++;
+		}
+	}
+	
+	int deg = abs(pos_count - neg_count) - 1;
+	ASSERT(deg >= 0 && deg < output_length);
+	int shift = pos_count < neg_count;
+	
+	for(int i = 0; i < output_size; i++)
+		output[i] = 1.0;
+	output[deg * 2 + shift] = 0.0;
+	
+	
+	dqn.SetGamma(0);
+	double error = dqn.Learn(tmp_mat, output);
+	
+	
+	training_pts[round] = error;
+	
+	
+	
+	// Keep count of iterations
+	round++;
+	
+	// Stop eventually
+	if (round >= max_rounds) {
+		SetJobFinished();
+	}
+	
+	return true;
+}
+
+bool DqnFastAdvisor::TrainingEnd() {
+	double max_d = -DBL_MAX;
+	int max_i = 0;
+	
+	
+	RefreshAll();
+	return true;
+}
+
+bool DqnFastAdvisor::TrainingInspect() {
+	bool success = false;
+	
+	INSPECT(success, "ok: this is an example");
+	INSPECT(success, "warning: this is an example");
+	INSPECT(success, "error: this is an example");
+	
+	// You can fail the inspection too
+	//if (!success) return false;
+	
+	return true;
+}
+
+void DqnFastAdvisor::RefreshAll() {
+	RefreshSourcesOnlyDeep();
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	VectorBool& signal  = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	Buffer& out = GetBuffer(0);
+	
+	// ---- Do your final result work here ----
+	//RefreshBits();
+	//SortByValue(results, GridResult());
+	
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
+	
+	int bars = GetBars();
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	if (prev_counted < input_length) prev_counted = input_length;
+	for(int i = prev_counted; i < bars; i++) {
+		
+		LoadInput(i);
+		double output[output_size];
+		dqn.Evaluate(tmp_mat, output, output_size);
+		
+		int min_i = 0;
+		double min_d = output[0];
+		for(int i = 1; i < output_size; i++) {
+			if (output[i] < min_d) {
+				min_i = i;
+				min_d = output[i];
+			}
+		}
+		int deg = min_i / 2;
+		int shift = min_i % 2;
+		
+		int sig = 0;
+		if (deg >= output_length - 2)
+			sig = shift == 0 ? +1 : -1;
+		else
+			sig = signal.Get(i-1) ? -1 : +1;
+		
+		
+		signal. Set(i, sig == -1);
+		enabled.Set(i, sig !=  0);
+		
+		
+		if (i < bars-1) {
+			if (sig > 0) {
+				total += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread / 10;
+			}
+			else if (sig < 0) {
+				total += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread / 10;
+			}
+		}
+		out.Set(i, total);
+	}
+	
+	//int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
+	//GetSystem().SetSignal(GetSymbol(), sig);
+	//ReleaseLog("DqnFastAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
+	
+	
+	// Keep counted manually
+	prev_counted = bars;
+	
+	
+	//DUMP(main_interval);
+	//DUMP(grid_interval);
+}
+
+void DqnFastAdvisor::TrainingCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	DqnFastAdvisor* ea = dynamic_cast<DqnFastAdvisor*>(&*job->core);
+	ASSERT(ea);
+	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	w.DrawImage(0, 0, id);
+}
 
 
 
@@ -505,23 +737,27 @@ void MultiDqnAdvisor::Start() {
 	
 	bool signal, enabled = true;
 	int total = 0;
-	Input& in = inputs[1];
-	for(int j = 0; j < in.GetCount(); j++) {
-		Source& src = in[j];
-		if (src.core) {
-			Core* core = dynamic_cast<Core*>(src.core);
-			
-			bool src_signal = core->GetOutput(0).label.Top();
-			if (!total)
-				signal = src_signal;
-			else if (src_signal != signal)
-				enabled = false;
-			total++;
+	for(int i = 1; i < 3; i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				
+				bool src_signal = core->GetOutput(0).label.Top();
+				if (!total)
+					signal = src_signal;
+				else if (src_signal != signal)
+					enabled = false;
+				total++;
+			}
 		}
 	}
 	
 	int sig = enabled ? (signal ? -1 : +1) : 0;
 	GetSystem().SetSignal(GetSymbol(), sig);
 }
+
+
 
 }

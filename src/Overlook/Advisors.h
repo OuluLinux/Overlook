@@ -86,7 +86,7 @@ class DqnAdvisor : public Core {
 	DQN::MatType tmp_mat;
 	double point = 0.0001;
 	int max_rounds = 0;
-	bool once = false;
+	bool once = true;
 	bool do_test = false;
 	
 	void LoadInput(int pos);
@@ -118,6 +118,39 @@ public:
 	}
 	
 };
+
+
+
+
+class MultiDqnAdvisor : public Core {
+	
+protected:
+	virtual void Start();
+	
+public:
+	typedef MultiDqnAdvisor CLASSNAME;
+	MultiDqnAdvisor();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<DqnAdvisor>(&Filter)
+			% Out(1, 1)
+			% Out(0, 0);
+	}
+	
+	static bool Filter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1) {
+			int period = GetSystem().GetPeriod(out_tf);
+			return period == 60 || period == 240 || period == 1440;
+		}
+		else {
+			return in_sym == out_sym;
+		}
+	}
+};
+
 
 }
 

@@ -75,6 +75,7 @@ INITBLOCK {
 	System::Register<MultiAdvisor>("MultiAdvisor", CORE_EXPERTADVISOR);
 	System::Register<RecurrentAdvisor>("LSTM Advisor", CORE_EXPERTADVISOR);
 	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
+	System::Register<MultiDqnAdvisor>("Multi Dqn Advisor", CORE_EXPERTADVISOR);
 	
 	
 	

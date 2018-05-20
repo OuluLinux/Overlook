@@ -662,6 +662,28 @@ bool System::RefreshReal() {
 	}
 	
 	
+	// Simple take profit limit
+	#if 0
+	if (limit_wday != wday) {
+		limit_day_begin = mt.AccountEquity();
+		limit_day_best = limit_day_begin;
+		limit_day_worst = limit_day_begin;
+		limit_wday = wday;
+	} else {
+		double e = mt.AccountEquity();
+		if (e > limit_day_best)  limit_day_best  = e;
+		if (e < limit_day_worst) limit_day_worst = e;
+	}
+	bool day_enough =
+		(limit_day_best  / limit_day_begin) >= 1.05 ||
+		(limit_day_worst / limit_day_begin) <= 0.90;
+	#else
+	bool day_enough = false;
+	#endif
+	
+	
+	ReleaseLog("limit_day_best " + DblStr(limit_day_best) + " limit_day_begin " + DblStr(limit_day_begin) + " ratio " + DblStr(limit_day_best  / limit_day_begin) + " day_enough " + IntStr(day_enough));
+	
 	WhenInfo("Updating MetaTrader");
 	WhenPushTask("Putting latest signals");
 	
@@ -685,11 +707,13 @@ bool System::RefreshReal() {
 		//mt.RefreshLimits();
 		int open_count = 0;
 		const int MAX_SYMOPEN = 8;
-		const double FMLEVEL = 0.6;
+		const double FMLEVEL = 0.8;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
+			
+			if (day_enough) sig = 0;
 			
 			if (sig == prev_sig && sig != 0)
 				mt.SetSignalFreeze(sym_id, true);
@@ -704,7 +728,7 @@ bool System::RefreshReal() {
 				mt.SetSignal(sym_id, sig);
 				mt.SetSignalFreeze(sym_id, false);
 			}
-			LOG("Real symbol " << sym_id << " signal " << sig);
+			ReleaseLog("Real symbol " + IntStr(sym_id) + " signal " + IntStr(sig));
 		}
 		
 		mt.SetFreeMarginLevel(FMLEVEL);

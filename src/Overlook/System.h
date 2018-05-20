@@ -283,6 +283,8 @@ protected:
 	Vector<FactoryRegister>		regs;
 	Time						end;
 	Data						data;
+	double						limit_day_begin = 0, limit_day_best = 0, limit_day_worst = 0;
+	int							limit_wday = -1;
 	int							time_offset = 0;
 	int							realtime_count = 0;
 	

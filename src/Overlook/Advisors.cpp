@@ -428,11 +428,11 @@ void DqnAdvisor::RefreshAll() {
 			}
 		}
 		out.Set(i, total);
-		
-		if (i == bars-1)
-			GetSystem().SetSignal(GetSymbol(), sig);
 	}
 	
+	int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
+	GetSystem().SetSignal(GetSymbol(), sig);
+	ReleaseLog("DqnAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
 	
 	
 	// Keep counted manually
@@ -455,5 +455,73 @@ void DqnAdvisor::TrainingCtrl::Paint(Draw& w) {
 	w.DrawImage(0, 0, id);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MultiDqnAdvisor::MultiDqnAdvisor() {
+	
+}
+
+void MultiDqnAdvisor::Init() {
+	SetBufferColor(0, Red());
+	SetCoreSeparateWindow();
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+}
+
+void MultiDqnAdvisor::Start() {
+	
+	for(int i = 0; i < inputs.GetCount(); i++) {
+		Input& in = inputs[i];
+		for(int j = 0; j < in.GetCount(); j++) {
+			Source& src = in[j];
+			if (src.core) {
+				Core* core = dynamic_cast<Core*>(src.core);
+				if (core && !core->IsJobsFinished())
+					return;
+			}
+		}
+	}
+	
+	bool signal, enabled = true;
+	int total = 0;
+	Input& in = inputs[1];
+	for(int j = 0; j < in.GetCount(); j++) {
+		Source& src = in[j];
+		if (src.core) {
+			Core* core = dynamic_cast<Core*>(src.core);
+			
+			bool src_signal = core->GetOutput(0).label.Top();
+			if (!total)
+				signal = src_signal;
+			else if (src_signal != signal)
+				enabled = false;
+			total++;
+		}
+	}
+	
+	int sig = enabled ? (signal ? -1 : +1) : 0;
+	GetSystem().SetSignal(GetSymbol(), sig);
+}
 
 }

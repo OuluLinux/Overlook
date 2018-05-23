@@ -160,6 +160,152 @@ int SmoothedMAOnBuffer ( const int rates_total, const int prev_calculated, const
 
 
 
+Normalized::Normalized()
+{
+	
+}
+
+void Normalized::Init() {
+	SetCoreSeparateWindow();
+	
+	int draw_begin;
+	if (ma_period < 2)
+		ma_period = 13;
+	draw_begin = ma_period - 1;
+	
+	SetBufferColor(0, Blue());
+	SetBufferColor(1, Red());
+	SetBufferBegin(0, draw_begin );
+}
+
+void Normalized::Start() {
+	int bars = GetBars();
+	int prev_counted = GetCounted();
+	
+	ConstBuffer& openbuf = GetInputBuffer(0, 0);
+	Buffer& valuebuf = GetBuffer(0);
+	Buffer& avbuf = GetBuffer(1);
+	Buffer& lnbuf = GetBuffer(2);
+	
+	if (!prev_counted) {
+		avbuf.Set(0, Open(0));
+		prev_counted++;
+	}
+	
+	for(int i = prev_counted; i < bars; i++) {
+		double change = openbuf.Get(i) / openbuf.Get(i-1);
+		double value = log(change);
+		lnbuf.Set(i, value);
+		var.Add(value);
+	}
+	
+	double mean = var.GetMean();
+	double dev = var.GetDeviation();
+	double pr = 2.0 / ( ma_period + 1 );
+	
+	for(int i = prev_counted; i < bars; i++) {
+		double value = lnbuf.Get(i);
+		double x = 1 / (1 + exp(-((value - mean)/(dev))));
+		valuebuf.Set(i, x);
+		avbuf.Set(i, x * pr + avbuf.Get(i-1) * ( 1 - pr ));
+	}
+	
+}
+
+
+
+
+
+
+
+HurstWindow::HurstWindow()
+{
+	
+}
+
+void HurstWindow::Init() {
+	SetCoreSeparateWindow();
+	
+	int draw_begin;
+	if (period < 2)
+		period = 13;
+	draw_begin = period - 1;
+	
+	avwin.SetPeriod(period);
+	
+	SetBufferColor(0, Blue());
+	SetBufferColor(1, Red());
+	SetBufferBegin(0, draw_begin );
+}
+
+void HurstWindow::Start() {
+	int bars = GetBars();
+	int prev_counted = GetCounted();
+	
+	ConstBuffer& openbuf = GetInputBuffer(0, 0);
+	Buffer& valuebuf = GetBuffer(0);
+	Buffer& hurstbuf = GetBuffer(1);
+	const Vector<double>& win = avwin.GetWindow();
+	
+	Vector<double> x, y;
+	x.SetCount(period);
+	y.SetCount(period);
+	
+	if (!prev_counted) {
+		prev_counted = period;
+		for(int i = 0; i < period; i++) {
+			double open = openbuf.Get(i);
+			avwin.Add(open);
+		}
+	}
+	
+	for(int i = prev_counted; i < bars; i++) {
+		double open = openbuf.Get(i);
+		avwin.Add(open);
+		
+		double mean = avwin.GetMean();
+		double sums = 0;
+		for(int k = 0; k < period; k++)
+		{
+			double d = win[k] - mean;
+			x[k] = d;
+			sums += d * d;
+		}
+		double maxY = x[0];
+		double minY = x[0];
+		y[0] = x[0];
+		
+		for(int k = 1; k < period; k++)
+		{
+			y[k] = y[k-1] + x[k];
+			maxY = max(y[k], maxY);
+			minY = min(y[k], minY);
+		}
+		double iValue = 0;
+		double hurst  = 0;
+		
+		if(sums != 0)
+			iValue = (maxY - minY) / (koef * sqrt(sums/period));
+		if(iValue > 0)
+			hurst = log(iValue) / log(period);
+		
+		hurstbuf.Set(i, hurst);
+		var.Add(hurst);
+	}
+	
+	double mean = var.GetMean();
+	double dev = var.GetDeviation();
+	
+	for(int i = prev_counted; i < bars; i++) {
+		double value = hurstbuf.Get(i);
+		double x = 1 / (1 + exp(-((value - mean)/(dev))));
+		valuebuf.Set(i, x);
+	}
+	
+}
+
+
+
 
 
 
@@ -5598,7 +5744,7 @@ bool GridAdvisor::TrainingEnd() {
 	if (spread == 0)
 		spread = GetDataBridge()->GetPoint() * 2.0;
 	double best_result = -DBL_MAX;
-	for (double d = 0.3; d < 0.8; d += 0.01) {
+	for (double d = 0.5; d < 0.8; d += 0.01) {
 		
 		double result = 0.0;
 		

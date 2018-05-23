@@ -54,6 +54,8 @@ void DataBridge::Start() {
 	// Regular symbols
 	if (mt_period > 1 && sym < sym_count) {
 		RefreshFromFasterTime();
+		// NOTE: SyncData has broken other refresh functions for these periods. Disable sync to
+		// use them.
 	}
 	else if (sym < sym_count) {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
@@ -64,6 +66,8 @@ void DataBridge::Start() {
 		}
 		RefreshFromAskBid(init_round);
 	}
+	
+	
 }
 
 void DataBridge::AddSpread(double a) {
@@ -117,6 +121,10 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		time -= 4*24*60*60;
 		time -= epoch_begin;
 		
+		if (!SyncData(time, shift, ask))
+			continue;
+		
+		// or if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		// Find min/max
 		double diff = ask - bid;
@@ -127,13 +135,12 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		if (step > max_value) max_value = step;
 		if (step < min_value) min_value = step;
 		
-		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
-		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
 			if (shift >= open_buf.GetCount()) {
 				int res = shift + 1000;
 				res -= res % 1000;
+				res += 100;
 				
 				open_buf.Reserve(res);
 				low_buf.Reserve(res);
@@ -322,6 +329,8 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	int64 step = GetMinutePeriod() * 60;
 	int shift = open_buf.GetCount() - 1;
 	
+	Time limit = GetUtcTime() + 60*60;
+	
 	while ((cursor + struct_size) <= data_size) {
 		if ((open_buf.GetCount() % 10) == 0) {
 			GetSystem().WhenSubProgress(open_buf.GetCount(), bars*2);
@@ -356,6 +365,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 			real_volume  = 0;
 		}
 		
+		cursor += struct_size;
 		
 		Time utc_time = mt.GetTimeToUtc(Time(1970,1,1) + time);
 		time = utc_time.Get() - Time(1970,1,1).Get();
@@ -363,11 +373,25 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		time = time - time % step;
 		time -= 4*24*60*60;
 		
+		if (utc_time >= limit)
+			continue;
 		
-		cursor += struct_size;
-		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
+		if (!SyncData(time, shift, open))
+			continue;
+		
+		// or if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		if (shift >= open_buf.GetCount()) {
+			int res = shift + 10000;
+			res -= res % 10000;
+			res += 10000;
+			
+			open_buf.Reserve(res);
+			low_buf.Reserve(res);
+			high_buf.Reserve(res);
+			volume_buf.Reserve(res);
+			time_buf.Reserve(res);
+			
 			open_buf.SetCount(shift+1);
 			low_buf.SetCount(shift+1);
 			high_buf.SetCount(shift+1);
@@ -403,6 +427,72 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	int steps = five_mins ? 5 : 1;
 	
 	ForceSetCounted(open_buf.GetCount());
+}
+
+bool DataBridge::SyncData(int64 time, int& shift, double ask) {
+	Time utc_time = Time(1970,1,1) + time;
+	ASSERT(utc_time.second == 0);
+	int wday = DayOfWeek(utc_time);
+	if (wday == 0 || wday == 6)
+		return false;
+	
+	
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	
+	Time t;
+	if (shift < 0) {
+		shift = -1;
+		t = Time(2005,1,1) - 60;
+	} else {
+		shift = time_buf.GetCount() - 1;
+		t = Time(1970,1,1) + time_buf.Top();
+		ask = open_buf.Top();
+		ASSERT(t.second == 0);
+	}
+	if (utc_time < t)
+		return false;
+	
+	if (t < utc_time) {
+		shift++;
+		t += 60;
+		while (t < utc_time) {
+			int wday = DayOfWeek(t);
+			if (wday > 0 && wday < 6) {
+				int time = t.Get() - Time(1970,1,1).Get();
+				
+				int res = shift + 10000;
+				res -= res % 10000;
+				res += 10000;
+				
+				open_buf.Reserve(res);
+				low_buf.Reserve(res);
+				high_buf.Reserve(res);
+				volume_buf.Reserve(res);
+				time_buf.Reserve(res);
+				
+				open_buf.SetCount(shift+1);
+				low_buf.SetCount(shift+1);
+				high_buf.SetCount(shift+1);
+				volume_buf.SetCount(shift+1);
+				time_buf.SetCount(shift+1);
+				
+				open_buf.Set(shift, ask);
+				low_buf.Set(shift, ask);
+				high_buf.Set(shift, ask);
+				time_buf.Set(shift, time);
+				
+				shift++;
+			}
+			
+			t += 60;
+		}
+	}
+	
+	return true;
 }
 
 int DataBridge::GetChangeStep(int shift, int steps) {

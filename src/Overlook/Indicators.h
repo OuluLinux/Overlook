@@ -23,6 +23,52 @@ enum {MODE_SMA, MODE_EMA, MODE_SMMA, MODE_LWMA};
 enum {MODE_SIMPLE, MODE_EXPONENTIAL, MODE_SMOOTHED, MODE_LINWEIGHT};
 
 
+class Normalized : public Core {
+	int ma_period = 5;
+	OnlineVariance var;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	Normalized();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 2)
+			% Mem(var);
+	}
+};
+
+
+class HurstWindow : public Core {
+	int period = 5;
+	OnlineVariance var;
+	OnlineAverageWindow1 avwin;
+	
+	static constexpr double koef = 1.253314;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	HurstWindow();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 1)
+			% Mem(var)
+			% Arg("period", period, 2);
+	}
+};
+
+
 class MovingAverage : public Core {
 	int ma_period;
 	int ma_shift;
@@ -1182,8 +1228,8 @@ public:
 
 
 class GridSignal : public Core {
-	int main_interval = 10;
-	int grid_interval = 8;
+	int main_interval = 1;
+	int grid_interval = 60;
 	
 	int trend = 0;
 	double line_value = 0;

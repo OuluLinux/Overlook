@@ -5,6 +5,8 @@ NAMESPACE_UPP
 
 INITBLOCK {
 	System::Register<DataBridge>("DataBridge");
+	System::Register<Normalized>("Normalized data");
+	System::Register<HurstWindow>("Hurst window");
 	System::Register<ValueChange>("Change of data-values");
 	System::Register<MovingAverage>("Moving average");
 	System::Register<MovingAverageConvergenceDivergence>("Moving Average Convergence/Divergence");

@@ -80,6 +80,7 @@ protected:
 	void RefreshFromInternet();
 	void RefreshFromAskBid(bool init_round);
 	void RefreshMedian();
+	bool SyncData(int64 time, int& shift, double ask);
 	
 public:
 	typedef DataBridge CLASSNAME;

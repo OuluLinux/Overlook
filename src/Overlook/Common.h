@@ -73,6 +73,7 @@ public:
 	}
 	double GetMean() const {return sum_a / period;}
 	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor;}
+	const Vector<double>& GetWindow() const {return win_a;}
 };
 
 class OnlineAverageWindow2 : Moveable<OnlineAverageWindow2> {

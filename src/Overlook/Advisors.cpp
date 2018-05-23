@@ -303,18 +303,104 @@ bool DqnAdvisor::TrainingBegin() {
 }
 
 void DqnAdvisor::LoadInput(int pos) {
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	for(int i = 0; i < input_length; i++) {
-		int j = pos - input_length + i;
-		double change = open_buf.Get(j+1) - open_buf.Get(j);
-		if (change >= 0) {
-			tmp_mat.Set(i * 2 + 0, 1.0 - +change / point / 5);
-			tmp_mat.Set(i * 2 + 1, 1.0);
-		} else {
-			tmp_mat.Set(i * 2 + 0, 1.0);
-			tmp_mat.Set(i * 2 + 1, 1.0 - -change / point / 5);
+	int matpos = 0;
+	
+	if (!have_othersyms) {
+		if (have_normaldata) {
+			ConstBuffer& input_buf = GetInputBuffer(1, 0);
+			for(int i = 0; i < input_length; i++) {
+				int j = pos - i;
+				double d = input_buf.Get(j);
+				d -= 0.5;
+				d *= 2 * 50;
+				tmp_mat.Set(matpos++, d);
+			}
+		}
+		
+		if (have_normalma) {
+			ConstBuffer& input_buf = GetInputBuffer(1, 1);
+			for(int i = 0; i < input_length; i++) {
+				int j = pos - i;
+				double d = input_buf.Get(j);
+				d -= 0.5;
+				d *= 2 * 50;
+				tmp_mat.Set(matpos++, d);
+			}
+		}
+		
+		if (have_hurst) {
+			ConstBuffer& input_buf = GetInputBuffer(2, 0);
+			for(int i = 0; i < input_length; i++) {
+				int j = pos - i;
+				double d = input_buf.Get(j);
+				d -= 0.5;
+				d *= 2 * 50;
+				tmp_mat.Set(matpos++, d);
+			}
+		}
+		
+		if (have_anomaly) {
+			ConstBuffer& input_buf = GetInputBuffer(3, 0);
+			for(int i = 0; i < input_length; i++) {
+				int j = pos - i;
+				double d = input_buf.Get(j);
+				d -= 0.5;
+				d *= 2 * 50;
+				tmp_mat.Set(matpos++, d);
+			}
+		}
+	} else {
+		if (have_normaldata) {
+			for(int s = 0; s < other_syms; s++) {
+				ConstBuffer& input_buf = inputs[1][s].core->GetBuffer(0);
+				for(int i = 0; i < input_length; i++) {
+					int j = pos - i;
+					double d = input_buf.Get(j);
+					d -= 0.5;
+					d *= 2 * 50;
+					tmp_mat.Set(matpos++, d);
+				}
+			}
+		}
+		if (have_normalma) {
+			for(int s = 0; s < other_syms; s++) {
+				ConstBuffer& input_buf = inputs[1][s].core->GetBuffer(1);
+				for(int i = 0; i < input_length; i++) {
+					int j = pos - i;
+					double d = input_buf.Get(j);
+					d -= 0.5;
+					d *= 2 * 50;
+					tmp_mat.Set(matpos++, d);
+				}
+			}
+		}
+		if (have_hurst) {
+			for(int s = 0; s < other_syms; s++) {
+				ConstBuffer& input_buf = inputs[2][s].core->GetBuffer(0);
+				for(int i = 0; i < input_length; i++) {
+					int j = pos - i;
+					double d = input_buf.Get(j);
+					d -= 0.5;
+					d *= 2 * 50;
+					tmp_mat.Set(matpos++, d);
+				}
+			}
+		}
+		if (have_anomaly) {
+			for(int s = 0; s < other_syms; s++) {
+				ConstBuffer& input_buf = inputs[3][s].core->GetBuffer(0);
+				for(int i = 0; i < input_length; i++) {
+					int j = pos - i;
+					double d = input_buf.Get(j);
+					d -= 0.5;
+					d *= 2 * 50;
+					tmp_mat.Set(matpos++, d);
+				}
+			}
 		}
 	}
+	
+	ASSERT(matpos == tmp_mat.GetLength());
 }
 
 bool DqnAdvisor::TrainingIterator() {
@@ -335,20 +421,51 @@ bool DqnAdvisor::TrainingIterator() {
 	
 	LoadInput(pos);
 	
-	double output[2];
-	
-	double change = open_buf.Get(pos + 1) - open_buf.Get(pos);
-	if (change >= 0) {
-		output[0] = 0;
-		output[1] = 1;
-	} else {
-		output[0] = 1;
-		output[1] = 0;
-	}
-	
 	dqn.SetGamma(0);
-	double error = dqn.Learn(tmp_mat, output);
 	
+	double error;
+	if (have_actionmode == ACTIONMODE_SIGN) {
+		int action = dqn.Act(tmp_mat);
+		double change = open_buf.Get(pos + 1) - open_buf.Get(pos);
+		if (action) change *= -1;
+		double reward = change >= 0 ? +10 : -10;
+		error = dqn.Learn(tmp_mat, action, reward, NULL);
+	}
+	else if (have_actionmode == ACTIONMODE_TREND) {
+		int action = dqn.Act(tmp_mat);
+		double change1 = open_buf.Get(pos + 1) - open_buf.Get(pos);
+		double change2 = open_buf.Get(pos) - open_buf.Get(pos - 1);
+		bool trend_action = change2 < 0.0;
+		if (action) trend_action = !trend_action;
+		if (trend_action) change1 *= -1;
+		double reward = change1 >= 0 ? +10 : -10;
+		error = dqn.Learn(tmp_mat, action, reward, NULL);
+	}
+	else if (have_actionmode == ACTIONMODE_WEIGHTED) {
+		int action = dqn.Act(tmp_mat);
+		double change = open_buf.Get(pos + 1) - open_buf.Get(pos);
+		bool sign_action = action % 2;
+		int sign_mul = 1 + action / 2;
+		if (sign_action) change *= -1;
+		double reward = change >= 0 ? +10 : -10;
+		reward *= sign_mul;
+		error = dqn.Learn(tmp_mat, action, reward, NULL);
+	}
+	else if (have_actionmode == ACTIONMODE_HACK) {
+		double output[2];
+		
+		double change = open_buf.Get(pos + 1) - open_buf.Get(pos);
+		if (change >= 0) {
+			output[0] = 0;
+			output[1] = 1;
+		} else {
+			output[0] = 1;
+			output[1] = 0;
+		}
+		
+		error = dqn.Learn(tmp_mat, output);
+	}
+	else Panic("Action not implemented");
 	
 	training_pts[round] = error;
 	
@@ -407,24 +524,55 @@ void DqnAdvisor::RefreshAll() {
 	signal.SetCount(bars);
 	enabled.SetCount(bars);
 	if (prev_counted < input_length) prev_counted = input_length;
+	
+	if (have_othersyms) {
+		for(int i = 0; i < inputs[1].GetCount(); i++) {
+			bars = min(bars, inputs[1][i].core->GetBuffer(0).GetCount());
+		}
+	}
+	
 	for(int i = prev_counted; i < bars; i++) {
 		
 		LoadInput(i);
-		double output[2];
-		dqn.Evaluate(tmp_mat, output, 2);
 		
-		int sig = output[0] < 0.5 || output[1] < 0.5 ? (output[0] > output[1] ? -1 : +1) : 0;
+		int sig, mult = 1;
 		
-		signal. Set(i, sig == -1);
+		if (have_actionmode == ACTIONMODE_SIGN) {
+			int action = dqn.Act(tmp_mat);
+			sig = action ? -1 : +1;
+		}
+		else if (have_actionmode == ACTIONMODE_TREND) {
+			int action = dqn.Act(tmp_mat);
+			double change = open_buf.Get(i) - open_buf.Get(i - 1);
+			bool trend_action = change < 0.0;
+			if (action) trend_action = !trend_action;
+			sig = trend_action ? -1 : +1;
+		}
+		else if (have_actionmode == ACTIONMODE_WEIGHTED) {
+			int action = dqn.Act(tmp_mat);
+			bool sign_action = action % 2;
+			sig = sign_action ? -1 : +1;
+			mult  = 1 + action / 2;
+		}
+		else if (have_actionmode == ACTIONMODE_HACK) {
+			double output[2];
+			dqn.Evaluate(tmp_mat, output, 2);
+			
+			//sig = output[0] < 0.5 || output[1] < 0.5 ? (output[0] > output[1] ? -1 : +1) : 0;
+			sig = output[0] > output[1] ? -1 : +1;
+		}
+		else Panic("Action not implemented");
+		
+		signal. Set(i, sig <   0);
 		enabled.Set(i, sig !=  0);
 		
 		
 		if (i < bars-1) {
 			if (sig > 0) {
-				total += +(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+				total += (+(open_buf.Get(i+1) - open_buf.Get(i)) - spread) * mult;
 			}
 			else if (sig < 0) {
-				total += -(open_buf.Get(i+1) - open_buf.Get(i)) - spread;
+				total += (-(open_buf.Get(i+1) - open_buf.Get(i)) - spread) * mult;
 			}
 		}
 		out.Set(i, total);
@@ -520,17 +668,13 @@ bool DqnFastAdvisor::TrainingBegin() {
 }
 
 void DqnFastAdvisor::LoadInput(int pos) {
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& input_buf = GetInputBuffer(1, 0);
 	for(int i = 0; i < input_length; i++) {
-		int j = pos - input_length + i;
-		double change = open_buf.Get(j+1) - open_buf.Get(j);
-		if (change >= 0) {
-			tmp_mat.Set(i * 2 + 0, 1.0 - +change / point);
-			tmp_mat.Set(i * 2 + 1, 1.0);
-		} else {
-			tmp_mat.Set(i * 2 + 0, 1.0);
-			tmp_mat.Set(i * 2 + 1, 1.0 - -change / point);
-		}
+		int j = pos - i;
+		double d = input_buf.Get(j);
+		d -= 0.5;
+		d *= 2 * 50;
+		tmp_mat.Set(i, d);
 	}
 }
 
@@ -544,34 +688,27 @@ bool DqnFastAdvisor::TrainingIterator() {
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	
 	int size = input_length;
-	int range = GetBars() - output_length;
+	int range = GetBars() - output_length*MUL - size*MUL;
 	if (do_test) range *= 0.66;
 	range -= size;
 	
-	int pos = size + Random(range);
+	if (range < 1) {SetJobFinished(); return true;}	
+	int pos = size*MUL + Random(range);
 	
 	LoadInput(pos);
 	
 	double output[output_size];
 	double begin = open_buf.Get(pos);
-	int pos_count = 0, neg_count = 0;
 	for(int i = 0; i < output_length; i++) {
-		double change = open_buf.Get(pos + 1 + i) - begin;
+		double change = open_buf.Get(pos + (1 + i)*MUL) - begin;
 		if (change >= 0) {
-			pos_count++;
+			output[i * 2 + 0] = 0;
+			output[i * 2 + 1] = 1;
 		} else {
-			neg_count++;
+			output[i * 2 + 0] = 1;
+			output[i * 2 + 1] = 0;
 		}
 	}
-	
-	int deg = abs(pos_count - neg_count) - 1;
-	ASSERT(deg >= 0 && deg < output_length);
-	int shift = pos_count < neg_count;
-	
-	for(int i = 0; i < output_size; i++)
-		output[i] = 1.0;
-	output[deg * 2 + shift] = 0.0;
-	
 	
 	dqn.SetGamma(0);
 	double error = dqn.Learn(tmp_mat, output);
@@ -633,27 +770,26 @@ void DqnFastAdvisor::RefreshAll() {
 	int bars = GetBars();
 	signal.SetCount(bars);
 	enabled.SetCount(bars);
-	if (prev_counted < input_length) prev_counted = input_length;
+	if (prev_counted < (input_length+1)*MUL) prev_counted = (input_length+1)*MUL;
 	for(int i = prev_counted; i < bars; i++) {
 		
 		LoadInput(i);
 		double output[output_size];
 		dqn.Evaluate(tmp_mat, output, output_size);
 		
-		int min_i = 0;
-		double min_d = output[0];
-		for(int i = 1; i < output_size; i++) {
-			if (output[i] < min_d) {
-				min_i = i;
-				min_d = output[i];
-			}
+		int pos_count = 0, neg_count = 0;
+		for(int i = 0; i < output_length; i++) {
+			double pos = output[i * 2 + 0];
+			double neg = output[i * 2 + 1];
+			if (pos <= neg) pos_count++;
+			else neg_count++;
 		}
-		int deg = min_i / 2;
-		int shift = min_i % 2;
 		
-		int sig = 0;
-		if (deg >= output_length - 2)
-			sig = shift == 0 ? +1 : -1;
+		int sig;
+		if (pos_count == 0)
+			sig = -1;
+		else if (neg_count == 0)
+			sig = +1;
 		else
 			sig = signal.Get(i-1) ? -1 : +1;
 		

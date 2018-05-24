@@ -72,12 +72,12 @@ class DqnAdvisor : public Core {
 	enum {ACTIONMODE_SIGN, ACTIONMODE_TREND, ACTIONMODE_WEIGHTED, ACTIONMODE_HACK};
 	
 	static const int have_normaldata = 1;
-	static const int have_normalma = 0;
-	static const int have_hurst = 0;
-	static const int have_anomaly = 0;
-	static const int have_othersyms = 0;
-	static const int have_actionmode = ACTIONMODE_HACK;
-	static const int do_test = 0;
+	static const int have_normalma = 1;
+	static const int have_hurst = 1;
+	static const int have_anomaly = 1;
+	static const int have_othersyms = 1;
+	static const int have_actionmode = ACTIONMODE_SIGN;
+	static const int do_test = 1;
 	
 	
 	static const int input_length = 30;
@@ -110,6 +110,7 @@ protected:
 	bool TrainingEnd();
 	bool TrainingInspect();
 	void RefreshAll();
+	void DumpTest();
 	
 public:
 	typedef DqnAdvisor CLASSNAME;
@@ -137,76 +138,21 @@ public:
 		if (in_sym == -1)
 			return in_tf == out_tf;
 		else {
-			String sym = GetSystem().GetSymbol(out_sym);
-			return
-				sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDCAD" ||
-				sym == "USDJPY" || sym == "USDCHF" || sym == "AUDUSD" || sym == "EURAUD";
+			if (in_sym == out_sym)
+				return true;
+			
+			if (!have_othersyms)
+				return false;
+			else {
+				String sym = GetSystem().GetSymbol(out_sym);
+				return
+					sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDCAD" ||
+					sym == "USDJPY" || sym == "USDCHF" || sym == "AUDUSD" || sym == "EURAUD";
+			}
 		}
 	}
 };
 
-
-
-class DqnFastAdvisor : public Core {
-	
-	struct TrainingCtrl : public JobCtrl {
-		Vector<Point> polyline;
-		virtual void Paint(Draw& w);
-	};
-	
-	static const int MUL = 20;
-	static const int input_length = 30;
-	static const int input_size = input_length;
-	static const int output_length = 10;
-	static const int output_size = output_length*2;
-	typedef DQNTrainer<output_size, input_size> DQN;
-	
-	// Persistent
-	DQN dqn;
-	Vector<double> training_pts;
-	Vector<int> cursors;
-	double total = 0;
-	int round = 0;
-	int prev_counted = 0;
-	
-	
-	// Temporary
-	DQN::MatType tmp_mat;
-	double point = 0.0001;
-	int max_rounds = 0;
-	bool once = true;
-	bool do_test = false;
-	
-	void LoadInput(int pos);
-protected:
-	virtual void Start();
-	
-	bool TrainingBegin();
-	bool TrainingIterator();
-	bool TrainingEnd();
-	bool TrainingInspect();
-	void RefreshAll();
-	
-public:
-	typedef DqnFastAdvisor CLASSNAME;
-	DqnFastAdvisor();
-	
-	virtual void Init();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% In<Normalized>()
-			% Out(1, 1)
-			% Out(0, 0)
-			% Mem(dqn)
-			% Mem(training_pts)
-			% Mem(cursors)
-			% Mem(total)
-			% Mem(round)
-			% Mem(prev_counted);
-	}
-	
-};
 
 
 class MultiDqnAdvisor : public Core {

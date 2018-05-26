@@ -100,7 +100,9 @@ public:
 
 
 inline Calendar& GetCalendar() {return Single<Calendar>();}
-
+void BasicHeaders(HttpRequest& h);
+String XmlTreeString(const XmlNode& node, int indent=0, String prev_addr="");
+void XmlFix(String& c);
 
 }
 

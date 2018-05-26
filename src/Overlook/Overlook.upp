@@ -65,6 +65,8 @@ file
 	BitOptimizer.cpp,
 	Calendar.h,
 	Calendar.cpp,
+	Myfxbook.h,
+	Myfxbook.cpp,
 	"Reinforced Learning" readonly separator,
 	DQN.h,
 	"Recurrent NN" readonly separator,

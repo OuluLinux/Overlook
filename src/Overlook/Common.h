@@ -15,7 +15,7 @@
 #endif
 
 
-#define TEST_SIZE (4*5*24*60)
+#define TRAININGAREA_FACTOR 0.95
 
 
 namespace Overlook {

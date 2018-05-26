@@ -70,14 +70,8 @@ INITBLOCK {
 	System::Register<Anomaly>("Anomaly");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
-	System::Register<GridAdvisor>("Grid Advisor", CORE_EXPERTADVISOR);
-	System::Register<MultiGridAdvisor>("Multi Grid Advisor", CORE_EXPERTADVISOR);
-	System::Register<Matcher>("Matcher", CORE_EXPERTADVISOR);
-	System::Register<PatternAdvisor>("PatternAdvisor", CORE_EXPERTADVISOR);
-	System::Register<MultiAdvisor>("MultiAdvisor", CORE_EXPERTADVISOR);
 	System::Register<RecurrentAdvisor>("LSTM Advisor", CORE_EXPERTADVISOR);
 	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
-	System::Register<DqnFastAdvisor>("Dqn Fast Advisor", CORE_EXPERTADVISOR);
 	System::Register<MultiDqnAdvisor>("Multi Dqn Advisor", CORE_EXPERTADVISOR);
 	
 	

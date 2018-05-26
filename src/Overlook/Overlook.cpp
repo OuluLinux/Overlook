@@ -131,6 +131,7 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(myfxbook, "MyFxBook").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
@@ -139,6 +140,8 @@ void Overlook::DockInit() {
 	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
+	myfxbook		.WhenVisible << THISBACK(Data);
+	calendar		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
 	exposure		.WhenVisible << THISBACK(Data);
 	trade			.WhenVisible << THISBACK(Data);
@@ -495,6 +498,7 @@ void Overlook::Data() {
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
+	if (myfxbook.IsVisible())		RefreshMyfxbook();
 }
 
 void Overlook::RefreshAssist() {
@@ -924,6 +928,10 @@ void Overlook::RefreshDebug() {
 	}
 }
 
+void Overlook::RefreshMyfxbook() {
+	myfxbook.Data();
+}
+
 void Overlook::ToggleRightOffset() {
 	bool b = right_offset.Get();
 	Chart* c = cman.GetVisibleChart();
@@ -962,7 +970,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 	Profile profile;
 	
 	int tf = 5;
-	int id = System::Find<GridAdvisor>();
+	int id = System::Find<DqnAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;

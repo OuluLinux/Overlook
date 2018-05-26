@@ -43,7 +43,7 @@ bool FindNode(String value, const XmlNode& n, XmlNode*& subnode) {
 	return 0;
 }
 
-String XmlTreeString(const XmlNode& node, int indent=0, String prev_addr="") {
+String XmlTreeString(const XmlNode& node, int indent, String prev_addr) {
 	String out;
 	for(int i = 0; i < indent; i++) {
 		out.Cat(' ');
@@ -439,6 +439,17 @@ void Calendar::SetTimeNow() {
 	thismonth = now.month;
 }
 
+void XmlFix(String& c) {
+	c.Replace("/header", "/div");
+	c.Replace("header", "div");
+	c.Replace("/section", "/div");
+	c.Replace("section", "div");
+	c.Replace("/footer", "/div");
+	c.Replace("footer", "div");
+	c.Replace("&nbsp;","");
+	c.Replace("></span> </td>", ">_</span> </td>");
+}
+
 #define LEAVE {return downloaded;}
 int Calendar::Update(String postfix, bool force_update) {
 	int downloaded = 0;
@@ -471,7 +482,7 @@ int Calendar::Update(String postfix, bool force_update) {
 	}
 	else {
 		HttpRequest h;
-		h.Trace();
+		//h.Trace();
 		BasicHeaders(h);
 		
 		//String proxy_addr = GetGlobalConfigData("proxy_addr");
@@ -501,14 +512,7 @@ int Calendar::Update(String postfix, bool force_update) {
 		downloaded++;
 	}
 	
-	c.Replace("/header", "/div");
-	c.Replace("header", "div");
-	c.Replace("/section", "/div");
-	c.Replace("section", "div");
-	c.Replace("/footer", "/div");
-	c.Replace("footer", "div");
-	c.Replace("&nbsp;","");
-	c.Replace("></span> </td>", ">_</span> </td>");
+	XmlFix(c);
 	
 	String filehtm	= ConfigFile("cal_temp.htm");
 	String file		= ConfigFile("cal_temp.xml");

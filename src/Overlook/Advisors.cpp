@@ -103,7 +103,7 @@ bool RecurrentAdvisor::TrainingIterator() {
 	
 	int size = ses.GetGraphCount()-1;
 	int range = GetBars();
-	if (do_test) range *= 0.66;
+	if (do_test) range *= TRAININGAREA_FACTOR;
 	range -= size;
 	
 	int pos = size + Random(range);
@@ -415,7 +415,7 @@ bool DqnAdvisor::TrainingIterator() {
 	
 	int size = input_length;
 	int range = GetBars() - 1;
-	if (do_test) range *= 0.66;
+	if (do_test) range *= TRAININGAREA_FACTOR;
 	range -= size;
 	
 	int pos = size + Random(range);
@@ -614,7 +614,7 @@ void DqnAdvisor::TrainingCtrl::Paint(Draw& w) {
 
 void DqnAdvisor::DumpTest() {
 	int bars = GetBars() - 1;
-	int begin = bars * 0.66;
+	int begin = bars * TRAININGAREA_FACTOR;
 	
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	

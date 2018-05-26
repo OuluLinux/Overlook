@@ -706,8 +706,8 @@ bool System::RefreshReal() {
 		mt.Data();
 		//mt.RefreshLimits();
 		int open_count = 0;
-		const int MAX_SYMOPEN = 8;
-		const double FMLEVEL = 0.8;
+		const int MAX_SYMOPEN = 16;
+		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];

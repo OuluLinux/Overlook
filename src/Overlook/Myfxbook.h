@@ -7,12 +7,20 @@ namespace Overlook {
 class Myfxbook : public ParentCtrl {
 	
 	struct Order : Moveable<Order> {
-		String time, symbol, action, units, open, profit;
+		Time begin, end;
+		String symbol, open, profit;
+		bool action = 0;
 		double lots = 0.0;
+		
+		bool operator() (const Order& a, const Order& b) const {
+			if (a.begin == b.begin)
+				return a.end < b.end;
+			return a.begin < b.begin;
+		}
 	};
 	
 	struct Account : Moveable<Account> {
-		Vector<Order> history_orders, orders;
+		Array<Order> history_orders, orders;
 		String url, id;
 	};
 	
@@ -27,6 +35,7 @@ class Myfxbook : public ParentCtrl {
 	
 	void RefreshHistory();
 	void RefreshOpen();
+	void FixOrders();
 	
 	
 public:

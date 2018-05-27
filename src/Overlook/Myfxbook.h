@@ -17,26 +17,33 @@ class Myfxbook : public ParentCtrl {
 				return a.end < b.end;
 			return a.begin < b.begin;
 		}
+		
+		void Serialize(Stream& s) {s % begin % end % symbol % open % profit % action % lots;}
 	};
 	
 	struct Account : Moveable<Account> {
 		Array<Order> history_orders, orders;
 		String url, id;
+		
+		void Serialize(Stream& s) {s % history_orders % orders % url % id;}
 	};
 	
 	
+	VectorMap<int, Vector<int> > symbol_accounts;
 	Index<String> allowed_symbols;
 	Vector<Account> accounts;
 	Vector<String> urls;
-	bool running = false, stopped = true;
+	
 	
 	Splitter splitter;
 	ArrayCtrl accountlist, orderlist, historylist;
+	bool running = false, stopped = true;
+	
 	
 	void RefreshHistory();
 	void RefreshOpen();
 	void FixOrders();
-	
+	void SolveSources();
 	
 public:
 	typedef Myfxbook CLASSNAME;
@@ -49,6 +56,9 @@ public:
 	
 	void Updater();
 	
+	void StoreThis() {StoreToFile(*this, ConfigFile("myfxbook.bin"));}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("myfxbook.bin"));}
+	void Serialize(Stream& s) {s % symbol_accounts % allowed_symbols % accounts % urls;}
 };
 
 }

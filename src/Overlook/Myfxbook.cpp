@@ -14,24 +14,6 @@ void StrTime(Time& t, String time) {
 }
 
 Myfxbook::Myfxbook() {
-	allowed_symbols.Add("EURUSD");
-	allowed_symbols.Add("GBPUSD");
-	allowed_symbols.Add("GBPJPY");
-	allowed_symbols.Add("USDJPY");
-	allowed_symbols.Add("AUDUSD");
-	allowed_symbols.Add("USDCAD");
-	allowed_symbols.Add("EURJPY");
-	allowed_symbols.Add("USDCHF");
-	allowed_symbols.Add("EURGBP");
-	allowed_symbols.Add("NZDUSD");
-	allowed_symbols.Add("EURAUD");
-	allowed_symbols.Add("AUDNZD");
-	allowed_symbols.Add("AUDCAD");
-	allowed_symbols.Add("EURCAD");
-	allowed_symbols.Add("GBPCHF");
-	allowed_symbols.Add("CADJPY");
-	
-	
 	Ctrl::Add(splitter.SizePos());
 	
 	splitter.Horz();
@@ -56,56 +38,81 @@ Myfxbook::Myfxbook() {
 	historylist.AddColumn("Open");
 	historylist.AddColumn("Profit");
 	
-	/*
-		What to look at in accounts:
-			- is verified "Track Record Verified" & "Trading Privileges Verified"
-			- abs gain enough, profitability enough
-			- no significant drops in growth chart, or at least lately
-				- growth graph equity shouldn't diverge much from balance
-			- green week, month, year, history list overall
-			- pips
-			- Avg. Trade Length around 4-12 hours
-				- lengthy orders (M5 update interval should keep close enough)
-				- NO arbitrage systems
-			- no long open trades (postponing closing negative)
-			- long history (OR real account with high equity)
-			- no too expensive or weird symbols
-			- no weird short orders with some very long orders
-			
-	*/
-																					// profitability, abs gain
-	Add("https://www.myfxbook.com/members/katamike/bravepointgettereurusd/2529001",					100, 184);
-	Add("https://www.myfxbook.com/members/chainniji/c-project/2515913",								100, 160);
-	Add("https://www.myfxbook.com/members/strawbellytiger/gps-forex-robot/2315367",					100,  79);
-	Add("https://www.myfxbook.com/members/a40datsusara/%E4%B8%8A%E3%81%8C%E3%82%8A3%E3%83%8F%E3%83%AD%E3%83%B3/2437366", 100, 49);
-	Add("https://www.myfxbook.com/members/SPAROBOT/said-taihou/2402325",							98,  95);
-	Add("https://www.myfxbook.com/members/zevenday/mmc1-fixed-lot-everyday/2508275",				97,  15);
-	Add("https://www.myfxbook.com/members/ForexMark/gps-forex-robot-fxchoice/301639",				96, 178);
-	Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-1mio/1213851",				96,  39);
-	Add("https://www.myfxbook.com/members/frugalist/ea-cutter-eurusd/2514101",						95,  39);
-	Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-1mio-tr/1355807",			94, 176);
-	Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-100k/396026",				93, 443);
-	Add("https://www.myfxbook.com/members/EDROID/the-retirement-plan-2sangevt-/2494726",			93,  73);
-	Add("https://www.myfxbook.com/members/DenVP/den-hamst4/2452457",								93,  51);
-	Add("https://www.myfxbook.com/members/LuckForex/luckforex/2536294",								92,  18);
-	Add("https://www.myfxbook.com/members/C7strategies/c7trolls/2508637",							91,   7);
-	Add("https://www.myfxbook.com/members/Ludopatico/ciccio-eur/2421614",							90,  21);
-	Add("https://www.myfxbook.com/members/SmartForexTrader/profit-miner/2360409",					89, 251);
-	Add("https://www.myfxbook.com/members/skgchshnjmfb/khs-synpa-titan/2437409",					88,  41);
-	Add("https://www.myfxbook.com/members/volk3888/volk3888/2499590",								87, 152);
-	Add("https://www.myfxbook.com/members/SmartForexTrader/smart-pip/2266006",						85, 156);
-	Add("https://www.myfxbook.com/members/KenjiMiyazaki/ea-imitate006/2507325",						85,  39);
-	Add("https://www.myfxbook.com/members/ywhcg805/gaitame-1/2486823",								85,  25);
-	Add("https://www.myfxbook.com/members/katamike/katamike/2447680",								84,  91);
-	Add("https://www.myfxbook.com/members/chainniji/dt-reborn/2489118",								82,  52);
-	Add("https://www.myfxbook.com/members/goldenstrike/ninja-turtle/2186338",						82,  22);
-	Add("https://www.myfxbook.com/members/hayes/t1-chuinhooi-9909922/2338673",						81, 136);
-	Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-20-evolution-real/2498506",	81,  63);
-	Add("https://www.myfxbook.com/members/JackDaniil/safety-low-risk/2199095",						81,  41);
-	Add("https://www.myfxbook.com/members/GeorgeDow/gdow/1549874",									74, 488);
-	Add("https://www.myfxbook.com/members/Bosko/my-way/2406456",									71, 275);
-	//Add("",									);
-	// Continue from https://www.myfxbook.com/systems#?pt=6&p=6&ts=346&profitType=0&profitValue=0.0&drawType=1&drawValue=50.0&profitabilityType=0&profitabilityValue=80.0&ageType=0&ageValue=30&tradingType=0&systemType=0&symbols=&accountType=2&size=40&sb=19&st=2&lastTraded=90&tradesType=1&pipsType=1&pipsValue=30&equityType=1&equityValue=30&serverOid=0&regulationType=0
+	
+	LoadThis();
+	
+	if (allowed_symbols.IsEmpty()) {
+		allowed_symbols.Add("EURUSD");
+		allowed_symbols.Add("GBPUSD");
+		#ifndef flagDEBUG
+		allowed_symbols.Add("GBPJPY");
+		allowed_symbols.Add("USDJPY");
+		allowed_symbols.Add("AUDUSD");
+		allowed_symbols.Add("USDCAD");
+		allowed_symbols.Add("EURJPY");
+		allowed_symbols.Add("USDCHF");
+		allowed_symbols.Add("EURGBP");
+		allowed_symbols.Add("NZDUSD");
+		allowed_symbols.Add("EURAUD");
+		allowed_symbols.Add("AUDNZD");
+		allowed_symbols.Add("AUDCAD");
+		allowed_symbols.Add("EURCAD");
+		allowed_symbols.Add("GBPCHF");
+		allowed_symbols.Add("CADJPY");
+		#endif
+		
+		
+		/*
+			What to look at in accounts:
+				- is verified "Track Record Verified" & "Trading Privileges Verified"
+				- abs gain enough, profitability enough
+				- no significant drops in growth chart, or at least lately
+					- growth graph equity shouldn't diverge much from balance
+				- green week, month, year, history list overall
+				- pips
+				- Avg. Trade Length around 4-12 hours
+					- lengthy orders (M5 update interval should keep close enough)
+					- NO arbitrage systems
+				- no long open trades (postponing closing negative)
+				- long history (OR real account with high equity)
+				- no too expensive or weird symbols
+				- no weird short orders with some very long orders
+				
+		*/
+																						// profitability, abs gain
+		Add("https://www.myfxbook.com/members/katamike/bravepointgettereurusd/2529001",					100, 184);
+		Add("https://www.myfxbook.com/members/chainniji/c-project/2515913",								100, 160);
+		Add("https://www.myfxbook.com/members/strawbellytiger/gps-forex-robot/2315367",					100,  79);
+		Add("https://www.myfxbook.com/members/a40datsusara/%E4%B8%8A%E3%81%8C%E3%82%8A3%E3%83%8F%E3%83%AD%E3%83%B3/2437366", 100, 49);
+		Add("https://www.myfxbook.com/members/SPAROBOT/said-taihou/2402325",							98,  95);
+		Add("https://www.myfxbook.com/members/zevenday/mmc1-fixed-lot-everyday/2508275",				97,  15);
+		Add("https://www.myfxbook.com/members/ForexMark/gps-forex-robot-fxchoice/301639",				96, 178);
+		Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-1mio/1213851",				96,  39);
+		Add("https://www.myfxbook.com/members/frugalist/ea-cutter-eurusd/2514101",						95,  39);
+		Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-1mio-tr/1355807",			94, 176);
+		Add("https://www.myfxbook.com/members/ForexMark/gps-robot-fxchoice-100k/396026",				93, 443);
+		Add("https://www.myfxbook.com/members/EDROID/the-retirement-plan-2sangevt-/2494726",			93,  73);
+		Add("https://www.myfxbook.com/members/DenVP/den-hamst4/2452457",								93,  51);
+		Add("https://www.myfxbook.com/members/LuckForex/luckforex/2536294",								92,  18);
+		Add("https://www.myfxbook.com/members/C7strategies/c7trolls/2508637",							91,   7);
+		Add("https://www.myfxbook.com/members/Ludopatico/ciccio-eur/2421614",							90,  21);
+		Add("https://www.myfxbook.com/members/SmartForexTrader/profit-miner/2360409",					89, 251);
+		Add("https://www.myfxbook.com/members/skgchshnjmfb/khs-synpa-titan/2437409",					88,  41);
+		Add("https://www.myfxbook.com/members/volk3888/volk3888/2499590",								87, 152);
+		Add("https://www.myfxbook.com/members/SmartForexTrader/smart-pip/2266006",						85, 156);
+		Add("https://www.myfxbook.com/members/KenjiMiyazaki/ea-imitate006/2507325",						85,  39);
+		Add("https://www.myfxbook.com/members/ywhcg805/gaitame-1/2486823",								85,  25);
+		Add("https://www.myfxbook.com/members/katamike/katamike/2447680",								84,  91);
+		Add("https://www.myfxbook.com/members/chainniji/dt-reborn/2489118",								82,  52);
+		Add("https://www.myfxbook.com/members/goldenstrike/ninja-turtle/2186338",						82,  22);
+		Add("https://www.myfxbook.com/members/hayes/t1-chuinhooi-9909922/2338673",						81, 136);
+		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-20-evolution-real/2498506",	81,  63);
+		Add("https://www.myfxbook.com/members/JackDaniil/safety-low-risk/2199095",						81,  41);
+		Add("https://www.myfxbook.com/members/GeorgeDow/gdow/1549874",									74, 488);
+		Add("https://www.myfxbook.com/members/Bosko/my-way/2406456",									71, 275);
+		//Add("",									);
+		// Continue from https://www.myfxbook.com/systems#?pt=6&p=6&ts=346&profitType=0&profitValue=0.0&drawType=1&drawValue=50.0&profitabilityType=0&profitabilityValue=80.0&ageType=0&ageValue=30&tradingType=0&systemType=0&symbols=&accountType=2&size=40&sb=19&st=2&lastTraded=90&tradesType=1&pipsType=1&pipsValue=30&equityType=1&equityValue=30&serverOid=0&regulationType=0
+	}
 	
 	Thread::Start(THISBACK(Updater));
 }
@@ -119,16 +126,24 @@ void Myfxbook::Updater() {
 	running = true;
 	stopped = false;
 	
-	accounts.SetCount(urls.GetCount());
-	for(int i = 0; i < accounts.GetCount(); i++) {
-		Account& a = accounts[i];
-		a.url = urls[i];
-		a.id = a.url.Mid(a.url.ReverseFind("/") + 1);
+	
+	if (accounts.IsEmpty()) {
+		accounts.SetCount(urls.GetCount());
+		for(int i = 0; i < accounts.GetCount(); i++) {
+			Account& a = accounts[i];
+			a.url = urls[i];
+			a.id = a.url.Mid(a.url.ReverseFind("/") + 1);
+		}
+		
+		RefreshHistory();
+		FixOrders();
+		SolveSources();
+		
+		if (running)
+			StoreThis();
+		
+		ReleaseLog("Myfxbook::Updater init ready");
 	}
-	
-	RefreshHistory();
-	FixOrders();
-	
 	
 	while (running) {
 		TimeStop ts;
@@ -148,10 +163,124 @@ void Myfxbook::Updater() {
 	stopped = true;
 }
 
+void Myfxbook::SolveSources() {
+	System& sys = GetSystem();
+	
+	for(int i = 0; i < allowed_symbols.GetCount(); i++) {
+		if (sys.FindSymbol(allowed_symbols[i]) == -1)
+			Panic("Symbol " + allowed_symbols[i] + " wasn't found from system");
+	}
+	
+	symbol_accounts.Clear();
+	
+	// Refresh DataBridges for allowed symbols
+	for(int i = 0; i < allowed_symbols.GetCount() && running; i++) {
+		Index<int> tf_ids, sym_ids;
+		Vector<FactoryDeclaration> indi_ids;
+		Vector<Ptr<CoreItem> > work_queue;
+		
+		String symstr = allowed_symbols[i];
+		int symbol = sys.FindSymbol(symstr);
+		ReleaseLog("Myfxbook::SolveSources " + symstr + "\t" + IntStr(symbol) + " " + IntStr(i));
+		ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+		
+		FactoryDeclaration decl;
+		decl.factory = System::Find<DataBridge>();
+		indi_ids.Add(decl);
+		tf_ids.Add(0);
+		sym_ids.Add(symbol);
+		work_queue.Clear();
+		sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+		for (int j = 0; j < work_queue.GetCount(); j++)
+			sys.Process(*work_queue[j], true);
+		
+		
+		DataBridge& db = *dynamic_cast<DataBridge*>(&*work_queue[0]->core);
+		ConstBuffer& openbuf = db.GetBuffer(0);
+		ConstBuffer& timebuf = db.GetBuffer(4);
+		double point = db.GetPoint();
+		ASSERT(point > 0.0);
+		
+		VectorMap<int, double> account_results;
+		
+		for(int j = 0; j < accounts.GetCount() && running; j++) {
+			Account& a = accounts[j];
+			
+			int read_pos = 0;
+			
+			double total_pips = 0.0;
+			double total_gain = 1.0;
+			double pos_pips = 0.0, neg_pips = 0.0;
+			
+			for(int k = 0; k < a.history_orders.GetCount() && running; k++) {
+				Order& o = a.history_orders[k];
+				
+				if (o.symbol != symstr)
+					continue;
+				
+				while (read_pos < openbuf.GetCount()) {
+					Time t = Time(1970,1,1) + timebuf.Get(read_pos);
+					if (t >= o.begin)
+						break;
+					read_pos++;
+				}
+				double open_price = openbuf.Get(read_pos);
+				
+				while (read_pos < openbuf.GetCount()) {
+					Time t = Time(1970,1,1) + timebuf.Get(read_pos);
+					if (t >= o.end)
+						break;
+					read_pos++;
+				}
+				double close_price = openbuf.Get(read_pos);
+				
+				if (open_price == 0.0 || close_price == 0.0)
+					continue;
+				
+				double diff = close_price - open_price;
+				double pips = diff / point;
+				double gain = close_price / open_price - 1;
+				
+				
+				if (o.action) {
+					diff *= -1;
+					gain *= -1;
+				}
+				
+				total_pips += fabs(pips);
+				total_gain *= gain + 1;
+				
+				if (pips > 0) pos_pips += pips;
+				else          neg_pips -= pips;
+			}
+			
+			total_gain -= 1.0;
+			
+			double profitability = total_pips > 0.0 ? pos_pips / total_pips : 0.0;
+			DUMP(profitability);
+			DUMP(total_pips);
+			DUMP(total_gain);
+			
+			if (profitability > 0.55) {
+				account_results.Add(j, profitability);
+			}
+		}
+		
+		SortByValue(account_results, StdGreater<double>());
+		DUMPM(account_results);
+		
+		for(int j = 0; j < account_results.GetCount(); j++)
+			symbol_accounts.GetAdd(i).Add(account_results.GetKey(j));
+	}
+	
+	
+	
+}
+
 void Myfxbook::FixOrders() {
 	
 	
-	for(int i = 0; i < accounts.GetCount(); i++) {
+	for(int i = 0; i < accounts.GetCount() && running; i++) {
 		Account& a = accounts[i];
 		
 		Sort(a.history_orders, Order());
@@ -178,8 +307,6 @@ void Myfxbook::FixOrders() {
 			bool dec = false;
 			
 			for(int k = j+1; k < a.history_orders.GetCount(); k++) {
-				LOG(j << "\t" << k);
-				
 				Order& next = a.history_orders[k];
 				ASSERT(o.begin <= next.begin);
 				
@@ -295,9 +422,6 @@ void Myfxbook::FixOrders() {
 			
 		}
 	}
-	
-	
-	
 }
 
 void Myfxbook::RefreshHistory() {
@@ -384,16 +508,19 @@ void Myfxbook::RefreshHistory() {
 }
 
 void Myfxbook::RefreshOpen() {
+	ReleaseLog("Myfxbook::RefreshOpen");
+	
 	String cache_dir = ConfigFile("cache");
 	
 	VectorMap<String, int> sym_signals;
+	Vector<VectorMap<String, double> > all_account_symlots;
 	
 	for(int i = 0; i < accounts.GetCount() && running; i++) {
 		Account& a = accounts[i];
+		VectorMap<String, double>& account_symlots = all_account_symlots.Add();
 		
 		a.orders.Clear();
 		
-		VectorMap<String, double> account_symlots;
 		
 		for (int page = 1; page < 100 && running; page++) {
 			
@@ -462,23 +589,38 @@ void Myfxbook::RefreshOpen() {
 		}
 		
 		DUMPM(account_symlots);
-		for(int j = 0; j < account_symlots.GetCount(); j++) {
-			String sym = account_symlots.GetKey(j);
-			if (allowed_symbols.Find(sym) == -1)
-				continue;
-			
-			int& sig = sym_signals.GetAdd(sym, 0);
-			if (sig != 0)
-				continue;
-			
-			double lots = account_symlots[j];
-			if (lots == 0)
-				continue;
-			
-			sig = lots > 0 ? +1 : -1;
-		}
 	}
 	
+	if (!running) return;
+	
+	for (int i = 0; i < symbol_accounts.GetCount(); i++) {
+		int sym = symbol_accounts.GetKey(i);
+		String symstr = allowed_symbols[sym];
+		const Vector<int>& accountlist = symbol_accounts[i];
+		
+		for(int j = 0; j < accountlist.GetCount(); j++) {
+			int a_id = accountlist[j];
+			Account& a = accounts[a_id];
+			const VectorMap<String, double>& account_symlots = all_account_symlots[a_id];
+			
+			for(int k = 0; k < account_symlots.GetCount(); k++) {
+				String sym = account_symlots.GetKey(k);
+				if (sym != symstr)
+					continue;
+				
+				int& sig = sym_signals.GetAdd(sym, 0);
+				if (sig != 0)
+					continue;
+				
+				double lots = account_symlots[k];
+				if (lots == 0)
+					continue;
+				
+				sig = lots > 0 ? +1 : -1;
+			}
+		}
+	}
+		
 	DUMPM(sym_signals);
 	
 	System& sys = GetSystem();

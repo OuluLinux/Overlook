@@ -447,6 +447,7 @@ void XmlFix(String& c) {
 	c.Replace("/footer", "/div");
 	c.Replace("footer", "div");
 	c.Replace("&nbsp;","");
+	c.Replace("&euro;","");
 	c.Replace("></span> </td>", ">_</span> </td>");
 }
 

@@ -28,15 +28,34 @@ class Myfxbook : public ParentCtrl {
 		void Serialize(Stream& s) {s % history_orders % orders % url % id;}
 	};
 	
+	struct AccountResult : Moveable<AccountResult> {
+		int id = -1;
+		double profitability = 0, pips = 0, gain = 0;
+		
+		bool operator() (const AccountResult& a, const AccountResult& b) const {
+			return a.profitability > b.profitability;
+		}
+		
+		void Serialize(Stream& s) {s % id % profitability % pips % gain;}
+	};
 	
-	VectorMap<int, Vector<int> > symbol_accounts;
-	Index<String> allowed_symbols;
+	struct SymbolStats : Moveable<SymbolStats> {
+		Vector<AccountResult> accounts;
+		String symbol;
+		int id = -1;
+		int signal = 0;
+		
+		void Serialize(Stream& s) {s % accounts % symbol % id % signal;}
+	};
+	
+	VectorMap<String, SymbolStats > symbols;
 	Vector<Account> accounts;
 	Vector<String> urls;
+	Time latest_update;
 	
 	
 	Splitter splitter;
-	ArrayCtrl accountlist, orderlist, historylist;
+	ArrayCtrl valuelist, accountlist, orderlist, historylist;
 	bool running = false, stopped = true;
 	
 	
@@ -58,7 +77,7 @@ public:
 	
 	void StoreThis() {StoreToFile(*this, ConfigFile("myfxbook.bin"));}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("myfxbook.bin"));}
-	void Serialize(Stream& s) {s % symbol_accounts % allowed_symbols % accounts % urls;}
+	void Serialize(Stream& s) {s % symbols % accounts % urls % latest_update;}
 };
 
 }

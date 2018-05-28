@@ -594,11 +594,12 @@ void Myfxbook::RefreshOpen() {
 		}
 	}
 	
-	Vector<VectorMap<String, double> > all_account_symlots;
+	VectorMap<int, VectorMap<String, double> > all_account_symlots;
 	
 	for(int i = 0; i < used_accounts.GetCount() && running; i++) {
-		Account& a = accounts[used_accounts[i]];
-		VectorMap<String, double>& account_symlots = all_account_symlots.Add();
+		int a_id = used_accounts[i];
+		Account& a = accounts[a_id];
+		VectorMap<String, double>& account_symlots = all_account_symlots.Add(a_id);
 		
 		a.orders.Clear();
 		
@@ -689,7 +690,7 @@ void Myfxbook::RefreshOpen() {
 		for(int j = 0; j < s.accounts.GetCount(); j++) {
 			int a_id = s.accounts[j].id;
 			Account& a = accounts[a_id];
-			const VectorMap<String, double>& account_symlots = all_account_symlots[a_id];
+			const VectorMap<String, double>& account_symlots = all_account_symlots.Get(a_id);
 			
 			for(int k = 0; k < account_symlots.GetCount(); k++) {
 				String sym = account_symlots.GetKey(k);
@@ -707,7 +708,7 @@ void Myfxbook::RefreshOpen() {
 			}
 		}
 		
-		sys.SetSignal(s.id, s.signal);
+		sys.SetSignal(sys.FindSymbol(s.symbol), s.signal);
 	}
 	
 	

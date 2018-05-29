@@ -163,6 +163,79 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/GloryForex/fxtsignal/2090294", 0, 0);
 		Add("https://www.myfxbook.com/members/Savagea/%E4%B8%89%E6%B5%81%E7%90%86%E6%83%B3%E5%AE%B6/2508451", 0, 0);
 		Add("https://www.myfxbook.com/members/EtWan/ascension-high-risk/1875772", 0, 0);
+		Add("https://www.myfxbook.com/members/IceFXMarkets/polar4/1647987", 0, 0);
+		Add("https://www.myfxbook.com/members/KillerOnPips/aquamarine/2286922", 0, 0);
+		Add("https://www.myfxbook.com/members/jasma23/genstar-1/2039592", 0, 0);
+		Add("https://www.myfxbook.com/members/nornx/nornx-lean-trader/2505233", 0, 0);
+		Add("https://www.myfxbook.com/members/GloryForex/fxtsignal/2090294", 0, 0);
+		Add("https://www.myfxbook.com/members/Savagea/%E4%B8%89%E6%B5%81%E7%90%86%E6%83%B3%E5%AE%B6/2508451", 0, 0);
+		Add("https://www.myfxbook.com/members/csongor/uyscuti08/2534897", 0, 0);
+		Add("https://www.myfxbook.com/members/EnNubis/ma-cross/2172440", 0, 0);
+		Add("https://www.myfxbook.com/members/Mihail_Somov/fibo-nightscalper-ic-markets-real/1971418", 0, 0);
+		Add("https://www.myfxbook.com/members/ProfiMaster/adamant/2298177", 0, 0);
+		Add("https://www.myfxbook.com/members/Xaileng/protrader-micro/2487394", 0, 0);
+		Add("https://www.myfxbook.com/members/FxPlyr/6387729-fbs-40k-real-crea/2433750", 0, 0);
+		Add("https://www.myfxbook.com/members/xingtong825/%E7%BA%B5%E6%A8%AA%E5%A4%A9%E4%B8%8Bv168/1930174", 0, 0);
+		Add("https://www.myfxbook.com/members/SmartForexTrader/smart-profits/2240602", 0, 0);
+		Add("https://www.myfxbook.com/members/mollyred/molly-fsg-real/2499706", 0, 0);
+		Add("https://www.myfxbook.com/members/katajikenai/opus-09/2336691", 0, 0);
+		Add("https://www.myfxbook.com/members/autotrade/queen/1733312", 0, 0);
+		Add("https://www.myfxbook.com/members/Soulofalion470/ea-fuzz-manage/2534203", 0, 0);
+		Add("https://www.myfxbook.com/members/Paulgraham1/hedgehunter-ea-start-date-16/1762283", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t2-chuinhooi-9950300/2338680", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t2-chuinhooi-9950301/2338685", 0, 0);
+		Add("https://www.myfxbook.com/members/checksignal/master-2k/2473000", 0, 0);
+		Add("https://www.myfxbook.com/members/IceFXMarkets/polar3/1536005", 0, 0);
+		Add("https://www.myfxbook.com/members/OLGA68/3007200/2489205", 0, 0);
+		Add("https://www.myfxbook.com/members/coymahrens/mt4-930760/2092201", 0, 0);
+		Add("https://www.myfxbook.com/members/Gustavo4X/553566-real/2454721", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t2-hayes1987-9950327/2338695", 0, 0);
+		Add("https://www.myfxbook.com/members/smoki/sovenok/2297111", 0, 0);
+		Add("https://www.myfxbook.com/members/lulipot/gio-ic-profit/907947", 0, 0);
+		Add("https://www.myfxbook.com/members/Zamioculcas/cycle-ver/1794789", 0, 0);
+		Add("https://www.myfxbook.com/members/wazhanudin/ea-leo-00/2532126", 0, 0);
+		Add("https://www.myfxbook.com/members/autotrade/forexsmartprofit/1354782", 0, 0);
+		Add("https://www.myfxbook.com/members/jcdmp/tickmill/2237014", 0, 0);
+		Add("https://www.myfxbook.com/members/numanuel/ic-market-1000026402/2468499", 0, 0);
+		Add("https://www.myfxbook.com/members/Aleksei3122/forex-factory-news-ea/2541329", 0, 0);
+		Add("https://www.myfxbook.com/members/PeregrimEA/evonightea/2252381", 0, 0);
+		Add("https://www.myfxbook.com/members/globalFXteam/inclusivefx-4/2438903", 0, 0);
+		Add("https://www.myfxbook.com/members/strueli/momentum-eurusd-st1-h1-octafx/1559256", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t2-hayes727-9950778/2338697", 0, 0);
+		Add("https://www.myfxbook.com/members/master_ice/pamm-amarkets/1295229", 0, 0);
+		Add("https://www.myfxbook.com/members/vavatrade2/fx-43/1577993", 0, 0);
+		Add("https://www.myfxbook.com/members/DALT/mzansi-forex-stockvel-90/1738001", 0, 0);
+		Add("https://www.myfxbook.com/members/corni/night-scalper-portfolio/2175846", 0, 0);
+		Add("https://www.myfxbook.com/members/MonsterKing/project-f/2482235", 0, 0);
+		Add("https://www.myfxbook.com/members/myopportunity/ea-fusion-master-atr-316/2357869", 0, 0);
+		Add("https://www.myfxbook.com/members/Pikarnight/system-ea/1750888", 0, 0);
+		Add("https://www.myfxbook.com/members/Vasilii29RUS/pamm-mts/1716866", 0, 0);
+		Add("https://www.myfxbook.com/members/mt4easystemtrade/khs-3000-s10/1825325", 0, 0);
+		Add("https://www.myfxbook.com/members/Nomad2103/bfp-lrisk/2193307", 0, 0);
+		Add("https://www.myfxbook.com/members/xplorer/xplorer/2402884", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t1-hayes727b-9951823/2338702", 0, 0);
+		Add("https://www.myfxbook.com/members/HouseDr/%D1%82%D0%B5%D1%81%D1%82-%D0%B3%D1%80%D0%B0%D0%B0%D0%BB%D1%8F/2377377", 0, 0);
+		Add("https://www.myfxbook.com/members/FXmagickey/alpha/2134976", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t2-hayes727a-9951228/2338700", 0, 0);
+		Add("https://www.myfxbook.com/members/massdon/profitinvest/2327758", 0, 0);
+		Add("https://www.myfxbook.com/members/akki38/akki38ti10/2238685", 0, 0);
+		Add("https://www.myfxbook.com/members/hayes/t3-hayes727c-9952207/2338705", 0, 0);
+		Add("https://www.myfxbook.com/members/iouslh/immortal/2426167", 0, 0);
+		Add("https://www.myfxbook.com/members/LSegura/tna-fortfs/2515634", 0, 0);
+		Add("https://www.myfxbook.com/members/cellist/at2/1755241", 0, 0);
+		Add("https://www.myfxbook.com/members/Megabot/rapier-by-algoland/1657111", 0, 0);
+		Add("https://www.myfxbook.com/members/MNSZA89/meor-v2-xm/2372712", 0, 0);
+		Add("https://www.myfxbook.com/members/arnoldTT/ic-lnsc/2230705", 0, 0);
+		Add("https://www.myfxbook.com/members/mt4easystemtrade/khs-3000-s30/1917803", 0, 0);
+		Add("https://www.myfxbook.com/members/stratos/stratos1/1852228", 0, 0);
+		Add("https://www.myfxbook.com/members/consultfinance/myalgotradecom/2446818", 0, 0);
+		Add("https://www.myfxbook.com/members/ReVeR27/pricelessalpari/2349765", 0, 0);
+		Add("https://www.myfxbook.com/members/Megabot/dissident-aggressor-by-algoland/1270220", 0, 0);
+		Add("https://www.myfxbook.com/members/ATMBlueprint/servicepoint/2197952", 0, 0);
+		Add("https://www.myfxbook.com/members/mt4easystemtrade/khs-3000-s20/1914305", 0, 0);
+		Add("https://www.myfxbook.com/members/cheesybites1/hamilton/2446870", 0, 0);
+		Add("https://www.myfxbook.com/members/JacksonCapital/k452b/1325330", 0, 0);
+		Add("https://www.myfxbook.com/members/thewayofmoney/perfetto-ft/2128467", 0, 0);
 		
 		Add("https://www.myfxbook.com/members/manvarov/berndale-usd-1000000/2329847", 0, 0);
 		Add("https://www.myfxbook.com/members/hieutv/batman-ea/1668823", 0, 0);
@@ -334,7 +407,7 @@ void Myfxbook::SolveSources() {
 			DUMP(total_pips);
 			DUMP(total_gain);
 			
-			if (profitability > 0.55 && trade_count >= 10) {
+			if (profitability > 0.66 && trade_count >= 10) {
 				AccountResult& ar = s.accounts.Add();
 				ar.id = j;
 				ar.profitability = profitability;
@@ -681,11 +754,11 @@ void Myfxbook::RefreshOpen() {
 	
 	if (!running) return;
 	
-	for(int i = 0; i < symbols.GetCount(); i++)
-		symbols[i].signal = 0;
 	
 	for (int i = 0; i < symbols.GetCount(); i++) {
 		SymbolStats& s = symbols[i];
+		
+		symbols[i].signal = 0;
 		
 		for(int j = 0; j < s.accounts.GetCount(); j++) {
 			int a_id = s.accounts[j].id;
@@ -704,11 +777,21 @@ void Myfxbook::RefreshOpen() {
 				if (lots == 0)
 					continue;
 				
-				s.signal = lots > 0 ? +1 : -1;
+				s.signal += lots > 0 ? +1 : -1;
 			}
 		}
 		
-		sys.SetSignal(sys.FindSymbol(s.symbol), s.signal);
+		if (s.signal < -1) s.signal = -1;
+		if (s.signal > +1) s.signal = +1;
+		
+		if (s.signal == 0)
+			s.wait = false;
+		if (s.wait)
+			s.signal = 0;
+		
+		int id = sys.FindSymbol(s.symbol);
+		ReleaseLog("Set real signal " + IntStr(id) + " to " + IntStr(s.signal));
+		sys.SetSignal(id, s.signal);
 	}
 	
 	

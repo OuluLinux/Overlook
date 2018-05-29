@@ -45,6 +45,8 @@ class Myfxbook : public ParentCtrl {
 		int id = -1;
 		int signal = 0;
 		
+		bool wait = true;
+		
 		void Serialize(Stream& s) {s % accounts % symbol % id % signal;}
 	};
 	

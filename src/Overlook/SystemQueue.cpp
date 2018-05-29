@@ -663,7 +663,7 @@ bool System::RefreshReal() {
 	
 	
 	// Simple take profit limit
-	#if 1
+	#if 0
 	if (limit_wday != wday) {
 		limit_day_begin = mt.AccountEquity();
 		limit_day_best = limit_day_begin;

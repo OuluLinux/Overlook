@@ -577,7 +577,7 @@ bool MetaTrader::_IsResponding() {
 	return p.GetInt(0) == 123456;
 }
 
-String GetProxy(const String& currency) {
+String GetProxyUSD(const String& currency) {
 	if      (currency == "AUD")
 		return "AUDUSD";
 	else if (currency == "CAD")
@@ -594,6 +594,25 @@ String GetProxy(const String& currency) {
 		return "USDRUR";
 	else
 		return "USD" + currency;
+}
+
+String GetProxyEUR(const String& currency) {
+	if      (currency == "AUD")
+		return "EURAUD";
+	else if (currency == "CAD")
+		return "EURCAD";
+	else if (currency == "CHF")
+		return "EURCHF";
+	else if (currency == "USD")
+		return "EURUSD";
+	else if (currency == "GBP")
+		return "EURGBP";
+	else if (currency == "NZD")
+		return "EURNZD";
+	else if (currency == "RUR")
+		return "EURRUR";
+	else
+		return "EUR" + currency;
 }
 
 const Vector<Symbol>& MetaTrader::_GetSymbols() {
@@ -744,7 +763,10 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 				sym.base_mul = -1;
 			} else {
 				if (account_currency == "USD") {
-					sym.proxy_name = GetProxy(a);
+					sym.proxy_name = GetProxyUSD(a);
+				}
+				else if (account_currency == "EUR") {
+					sym.proxy_name = GetProxyEUR(a);
 				}
 				else Panic("TODO: add proxies for this currency");
 			}
@@ -757,7 +779,11 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			const String& a = sym.currency_margin;
 			if (account_currency == "USD") {
 				if (a != account_currency)
-					sym.proxy_name = GetProxy(a);
+					sym.proxy_name = GetProxyUSD(a);
+			}
+			else if (account_currency == "EUR") {
+				if (a != account_currency)
+					sym.proxy_name = GetProxyEUR(a);
 			}
 			else Panic("TODO: add proxies for this currency");
 			if (skipped_currencies.Find(a) != -1)
@@ -777,8 +803,13 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		else {
 			if (sym.currency_base == account_currency)
 				sym.is_base_currency = true;
-			else
-				sym.proxy_name = GetProxy(sym.currency_base);
+			else {
+				if (account_currency == "USD")
+					sym.proxy_name = GetProxyUSD(sym.currency_base);
+				else if (account_currency == "EUR")
+					sym.proxy_name = GetProxyEUR(sym.currency_base);
+				else Panic("TODO proxies for this account currency");
+			}
 		}
 		
 		if (!sym.IsForex() && sym.name.Left(1) != "#")

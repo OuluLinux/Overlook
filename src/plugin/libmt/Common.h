@@ -8,7 +8,8 @@
 namespace libmt {
 using namespace Upp;
 
-String GetProxy(const String& currency);
+String GetProxyEUR(const String& currency);
+String GetProxyUSD(const String& currency);
 
 inline void SyncToTimeframe(Time& t, int tf) {
 	t.second = 0;

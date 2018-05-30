@@ -236,7 +236,7 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/cheesybites1/hamilton/2446870", 0, 0);
 		Add("https://www.myfxbook.com/members/JacksonCapital/k452b/1325330", 0, 0);
 		Add("https://www.myfxbook.com/members/thewayofmoney/perfetto-ft/2128467", 0, 0);
-		
+		/*
 		Add("https://www.myfxbook.com/members/manvarov/berndale-usd-1000000/2329847", 0, 0);
 		Add("https://www.myfxbook.com/members/hieutv/batman-ea/1668823", 0, 0);
 		Add("https://www.myfxbook.com/members/EDROID/the-retirement-plansangevt--eladiob/2369715", 0, 0);
@@ -260,7 +260,7 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/FxChampion/testkonto-risiko-075/2027287", 0, 0);
 		Add("https://www.myfxbook.com/members/LuizSchiavi/vps-ger30--ger30jun18/2457720", 0, 0);
 		Add("https://www.myfxbook.com/members/IGTrading/b-trading-corporation/2403072", 0, 0);
-		
+		*/
 	}
 	
 	Thread::Start(THISBACK(Updater));
@@ -302,6 +302,9 @@ void Myfxbook::Updater() {
 		
 		if (wday >= 1 && wday <= 5)
 			RefreshOpen();
+		else
+			for(int i = 0; i < symbols.GetCount(); i++)
+				symbols[i].wait = false;
 		
 		int sec = ts.Elapsed() / 1000;
 		for(int i = sec; i < 60 && running; i++) {
@@ -407,7 +410,7 @@ void Myfxbook::SolveSources() {
 			DUMP(total_pips);
 			DUMP(total_gain);
 			
-			if (profitability > 0.66 && trade_count >= 10) {
+			if (profitability > 0.55 && trade_count >= 10 && total_gain > 0.0) {
 				AccountResult& ar = s.accounts.Add();
 				ar.id = j;
 				ar.profitability = profitability;
@@ -758,7 +761,7 @@ void Myfxbook::RefreshOpen() {
 	for (int i = 0; i < symbols.GetCount(); i++) {
 		SymbolStats& s = symbols[i];
 		
-		symbols[i].signal = 0;
+		s.signal = 0;
 		
 		for(int j = 0; j < s.accounts.GetCount(); j++) {
 			int a_id = s.accounts[j].id;

@@ -79,9 +79,5 @@ file
 
 mainconfig
 	"Working" = "GUI MT X11",
-	"Have extra instruments" = "GUI MT X11 HAVE_ALLSYM",
-	"Fast" = "GUI MT X11 FAST",
-	"Very Fast" = "GUI MT X11 VERY_FAST",
-	"Working, system malloc" = "GUI MT X11 USEMALLOC",
-	"Working, single thread" = "GUI X11 GUITASK";
+	"" = "GUI MT";
 

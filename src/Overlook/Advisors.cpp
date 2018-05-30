@@ -694,13 +694,13 @@ void DqnAdvisor::DumpTest() {
 	String filepath = AppendFileName(dir, filename);
 	FileOut fout(filepath);
 	
-	fout << "have_normaldata = " << have_normaldata << "\r\n";
-	fout << "have_normalma   = " << have_normalma << "\r\n";
-	fout << "have_hurst      = " << have_hurst << "\r\n";
-	fout << "have_anomaly    = " << have_anomaly << "\r\n";
-	fout << "have_othersyms  = " << have_othersyms << "\r\n";
-	fout << "have_actionmode = " << have_actionmode << "\r\n";
-	fout << "input_length    = " << input_length << "\r\n";
+	fout << "have_normaldata = " << (const int)have_normaldata << "\r\n";
+	fout << "have_normalma   = " << (const int)have_normalma << "\r\n";
+	fout << "have_hurst      = " << (const int)have_hurst << "\r\n";
+	fout << "have_anomaly    = " << (const int)have_anomaly << "\r\n";
+	fout << "have_othersyms  = " << (const int)have_othersyms << "\r\n";
+	fout << "have_actionmode = " << (const int)have_actionmode << "\r\n";
+	fout << "input_length    = " << (const int)input_length << "\r\n";
 	fout << "symbol          = " << symstr << "\r\n";
 	fout << "timeframe       = " << tfstr << "\r\n";
 	fout << "\r\n";

@@ -590,6 +590,7 @@ void Myfxbook::RefreshHistory() {
 	for(int i = 0; i < accounts.GetCount(); i++) {
 		Account& a = accounts[i];
 		LOG("Account " << i << ": " << a.id);
+		ReleaseLog("Myfxbook::RefreshHistory Account " + IntStr(i) + ": " + a.id);
 		
 		a.history_orders.Clear();
 		
@@ -603,23 +604,35 @@ void Myfxbook::RefreshHistory() {
 			String xmlname = IntStr(url.GetHashValue()) + ".xml";
 			String xmlpath = AppendFileName(cache_dir, xmlname);
 			
-			if (!FileExists(filepath)) {
-				LOG(url);
-				HttpRequest h;
-				BasicHeaders(h);
-				h.Url(url);
-				String content = h.Execute();
-				FileOut fout(filepath);
-				fout << content;
-				fout.Close();
+			String xml;
+			for (int i = 0; i < 2; i++) {
+				if (!FileExists(filepath)) {
+					LOG(url);
+					HttpRequest h;
+					BasicHeaders(h);
+					h.Url(url);
+					String content = h.Execute();
+					content.Replace("data='", "data=''>");
+					
+					FileOut fout(filepath);
+					fout << content;
+					fout.Close();
+					
+					Sleep(500);
+				}
 				
-				Tidy(xmlpath, filepath);
+				if (!FileExists(xmlpath)) {
+					Tidy(xmlpath, filepath);
+				}
 				
-				Sleep(500);
+				xml = LoadFile(xmlpath);
+				if (xml.IsEmpty()) {
+					ReleaseLog("Myfxbook::RefreshHistory retrying " + url);
+					DeleteFile(filepath);
+					DeleteFile(xmlpath);
+				}
+				else break;
 			}
-			
-			
-			String xml = LoadFile(xmlpath);
 			if (xml.Find("No data to") != -1)
 				break;
 			
@@ -689,8 +702,8 @@ void Myfxbook::RefreshOpen() {
 		
 		for (int page = 1; page < 100 && running; page++) {
 			
-			//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
-			String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+			String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+			//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
 			
 			LOG(url);
 			String filename = IntStr(url.GetHashValue()) + ".html";

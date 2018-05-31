@@ -425,7 +425,7 @@ void Myfxbook::SolveSources() {
 		DUMP(total_gain);
 		
 		a.profitability = profitability;
-		a.pips = total_pips;
+		a.pips = pos_pips - neg_pips;
 		a.gain = total_gain;
 		
 	}
@@ -665,6 +665,7 @@ void Myfxbook::RefreshHistory() {
 						o.lots   = StrDbl(row[7-s][0].GetText());
 						
 						symbol_list.GetAdd(o.symbol, 0)++;
+						break;
 					}
 				}
 			}
@@ -686,7 +687,7 @@ void Myfxbook::RefreshOpen() {
 	Index<int> used_accounts;
 	for(int i = 0; i < accounts.GetCount(); i++) {
 		Account& a = accounts[i];
-		if (a.profitability > 0.55 && a.gain > 0.0 && a.pips > 0.0)
+		if (a.profitability > 0.50 && a.gain > 0.0 && a.pips > 0.0)
 			used_accounts.Add(i);
 	}
 	
@@ -725,6 +726,8 @@ void Myfxbook::RefreshOpen() {
 			
 			
 			String xml = LoadFile(xmlpath);
+			
+			
 			if (xml.Find("No data to") != -1)
 				break;
 			
@@ -746,23 +749,27 @@ void Myfxbook::RefreshOpen() {
 			int items = rows.GetCount() - 2;
 			for(int j = 1; j < rows.GetCount(); j++) {
 				const XmlNode& row = rows[j];
-				String action = row[4][0].GetText();
 				
-				if (action == "Sell" || action == "Buy") {
-					Order& o = a.orders.Add();
+				for (int s = 0; s < 2; s++) {
+					String action = row[4-s][0].GetText();
 					
-					StrTime(o.begin, row[1][0].GetText());
-					o.symbol = row[3][0][0].GetText();
-					o.action = action == "Sell";
-					o.open   = row[6][0].GetText();
-					o.profit = row[9][0][0].GetText();
-					o.lots = StrDbl(row[5][0].GetText());
-					
-					double mult = action == "Sell" ? -1 : +1;
-					
-					account_symlots.GetAdd(o.symbol, 0.0) += mult * o.lots;
-					
-					//LOG(XmlTreeString(row));
+					if (action == "Sell" || action == "Buy") {
+						Order& o = a.orders.Add();
+						
+						StrTime(o.begin, row[1-s][0].GetText());
+						o.symbol = row[3-s][0][0].GetText();
+						o.action = action == "Sell";
+						o.open   = row[6-s][0].GetText();
+						o.profit = row[9-s][0][0].GetText();
+						o.lots = StrDbl(row[5-s][0].GetText());
+						
+						double mult = action == "Sell" ? -1 : +1;
+						
+						account_symlots.GetAdd(o.symbol, 0.0) += mult * o.lots;
+						
+						//LOG(XmlTreeString(row));
+						break;
+					}
 				}
 			}
 			
@@ -781,7 +788,6 @@ void Myfxbook::RefreshOpen() {
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbols[i].lots_mult = 0.0;
 	
-	int div = 0;
 	for(int i = 0; i < used_accounts.GetCount(); i++) {
 		int a_id = used_accounts[i];
 		Account& a = accounts[a_id];
@@ -795,23 +801,23 @@ void Myfxbook::RefreshOpen() {
 				max_lots = lots;
 		}
 		
-		bool had_signals = false;
 		for(int j = 0; j < account_symlots.GetCount(); j++) {
 			String symbol = account_symlots.GetKey(j);
 			double lots = account_symlots[j];
 			int l = symbols.Find(symbol);
 			if (l != -1) {
 				symbols[l].lots_mult += lots / max_lots;
-				had_signals = true;
 			}
 		}
-		
-		if (had_signals)
-			div++;
 	}
-	if (div)
+	
+	double max_lots = 0.0;
+	for(int i = 0; i < symbols.GetCount(); i++)
+		max_lots = max(max_lots, fabs(symbols[i].lots_mult));
+	if (max_lots > 0.0)
 		for(int i = 0; i < symbols.GetCount(); i++)
-			symbols[i].lots_mult /= div;
+			symbols[i].lots_mult /= max_lots;
+	
 	
 	SortByValue(symbols, SymbolStats());
 	DUMPM(symbols);
@@ -823,8 +829,8 @@ void Myfxbook::RefreshOpen() {
 		
 		if (s.signal == 0)
 			s.wait = false;
-		if (s.wait)
-			s.signal = 0;
+		//if (s.wait)
+		//	s.signal = 0;
 		
 		int id = sys.FindSymbol(s.symbol);
 		ReleaseLog("Set real signal " + IntStr(id) + " to " + IntStr(s.signal));

@@ -53,7 +53,6 @@ Myfxbook::Myfxbook() {
 	if (symbols.IsEmpty()) {
 		symbols.Add("EURUSD");
 		symbols.Add("GBPUSD");
-		#ifndef flagDEBUG
 		symbols.Add("EURJPY");
 		symbols.Add("USDJPY");
 		
@@ -71,7 +70,6 @@ Myfxbook::Myfxbook() {
 		symbols.Add("USDCHF");
 		symbols.Add("NZDUSD");
 		symbols.Add("AUDJPY");
-		#endif
 		
 		for(int i = 0; i < symbols.GetCount(); i++) {
 			SymbolStats& s = symbols[i];
@@ -112,6 +110,7 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/GeorgeDow/gdow/1549874",									74, 488);
 		Add("https://www.myfxbook.com/members/Bosko/my-way/2406456",									71, 275);
 		
+		#ifndef flagDEBUG
 		Add("https://www.myfxbook.com/members/globalFXteam/inclusivefx-1/2127487", 0, 0);
 		Add("https://www.myfxbook.com/members/globalFXteam/inclusivefx-2/2127462", 0, 0);
 		Add("https://www.myfxbook.com/members/Matt098/mattpamm/1739314", 0, 0);
@@ -260,7 +259,8 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/FxChampion/testkonto-risiko-075/2027287", 0, 0);
 		Add("https://www.myfxbook.com/members/LuizSchiavi/vps-ger30--ger30jun18/2457720", 0, 0);
 		Add("https://www.myfxbook.com/members/IGTrading/b-trading-corporation/2403072", 0, 0);
-		*/
+		*/	
+		#endif
 	}
 	
 	Thread::Start(THISBACK(Updater));
@@ -318,11 +318,12 @@ void Myfxbook::Updater() {
 void Myfxbook::SolveSources() {
 	System& sys = GetSystem();
 	
+	typedef Tuple<DataBridge*, ConstBuffer*, ConstBuffer*> Ptrs;
+	VectorMap<String, Ptrs> dbs;
 	
 	// Refresh DataBridges for allowed symbols
 	for(int i = 0; i < symbols.GetCount() && running; i++) {
 		SymbolStats& s = symbols[i];
-		s.accounts.Clear();
 		
 		Index<int> tf_ids, sym_ids;
 		Vector<FactoryDeclaration> indi_ids;
@@ -345,84 +346,91 @@ void Myfxbook::SolveSources() {
 		DataBridge& db = *dynamic_cast<DataBridge*>(&*work_queue[0]->core);
 		ConstBuffer& openbuf = db.GetBuffer(0);
 		ConstBuffer& timebuf = db.GetBuffer(4);
-		double point = db.GetPoint();
-		ASSERT(point > 0.0);
 		
-		VectorMap<int, double> account_results;
-		
-		for(int j = 0; j < accounts.GetCount() && running; j++) {
-			Account& a = accounts[j];
-			
-			int read_pos = 0;
-			
-			double total_pips = 0.0;
-			double total_gain = 1.0;
-			double pos_pips = 0.0, neg_pips = 0.0;
-			int trade_count = 0;
-			
-			for(int k = 0; k < a.history_orders.GetCount() && running; k++) {
-				Order& o = a.history_orders[k];
-				
-				if (o.symbol != s.symbol)
-					continue;
-				
-				while (read_pos < openbuf.GetCount()) {
-					Time t = Time(1970,1,1) + timebuf.Get(read_pos);
-					if (t >= o.begin)
-						break;
-					read_pos++;
-				}
-				double open_price = openbuf.Get(read_pos);
-				
-				while (read_pos < openbuf.GetCount()) {
-					Time t = Time(1970,1,1) + timebuf.Get(read_pos);
-					if (t >= o.end)
-						break;
-					read_pos++;
-				}
-				double close_price = openbuf.Get(read_pos);
-				
-				if (open_price == 0.0 || close_price == 0.0)
-					continue;
-				
-				double diff = close_price - open_price;
-				double pips = diff / point;
-				double gain = close_price / open_price - 1;
-				
-				
-				if (o.action) {
-					diff *= -1;
-					gain *= -1;
-				}
-				
-				total_pips += fabs(pips);
-				total_gain *= gain + 1;
-				
-				if (pips > 0) pos_pips += pips;
-				else          neg_pips -= pips;
-				trade_count++;
-			}
-			
-			total_gain -= 1.0;
-			
-			double profitability = total_pips > 0.0 ? pos_pips / total_pips : 0.0;
-			DUMP(profitability);
-			DUMP(total_pips);
-			DUMP(total_gain);
-			
-			if (profitability > 0.55 && trade_count >= 10 && total_gain > 0.0) {
-				AccountResult& ar = s.accounts.Add();
-				ar.id = j;
-				ar.profitability = profitability;
-				ar.pips = total_pips;
-				ar.gain = total_gain;
-			}
-		}
-		
-		Sort(s.accounts, AccountResult());
-		DUMPC(account_results);
+		Ptrs& ptrs = dbs.GetAdd(s.symbol);
+		ptrs.a = &db;
+		ptrs.b = &openbuf;
+		ptrs.c = &timebuf;
 	}
 	
+	
+	VectorMap<int, double> account_results;
+	
+	for(int j = 0; j < accounts.GetCount() && running; j++) {
+		Account& a = accounts[j];
+		
+		int read_pos = 0;
+		
+		double total_pips = 0.0;
+		double total_gain = 1.0;
+		double pos_pips = 0.0, neg_pips = 0.0;
+		int trade_count = 0;
+		
+		for(int k = 0; k < a.history_orders.GetCount() && running; k++) {
+			Order& o = a.history_orders[k];
+			
+			int l = dbs.Find(o.symbol);
+			if (l == -1)
+				continue;
+			
+			Ptrs& ptrs = dbs[l];
+			
+			double point = ptrs.a->GetPoint();
+			ASSERT(point > 0.0);
+			ConstBuffer& openbuf = *ptrs.b;
+			ConstBuffer& timebuf = *ptrs.c;
+			
+			while (read_pos < openbuf.GetCount()) {
+				Time t = Time(1970,1,1) + timebuf.Get(read_pos);
+				if (t >= o.begin)
+					break;
+				read_pos++;
+			}
+			double open_price = openbuf.Get(read_pos);
+			
+			while (read_pos < openbuf.GetCount()) {
+				Time t = Time(1970,1,1) + timebuf.Get(read_pos);
+				if (t >= o.end)
+					break;
+				read_pos++;
+			}
+			double close_price = openbuf.Get(read_pos);
+			
+			if (open_price == 0.0 || close_price == 0.0)
+				continue;
+			
+			double diff = close_price - open_price;
+			double pips = diff / point;
+			double gain = close_price / open_price - 1;
+			
+			
+			if (o.action) {
+				diff *= -1;
+				gain *= -1;
+			}
+			
+			total_pips += fabs(pips);
+			total_gain *= gain + 1;
+			
+			if (pips > 0) pos_pips += pips;
+			else          neg_pips -= pips;
+			trade_count++;
+		}
+		
+		total_gain -= 1.0;
+		
+		double profitability = total_pips > 0.0 ? pos_pips / total_pips : 0.0;
+		DUMP(profitability);
+		DUMP(total_pips);
+		DUMP(total_gain);
+		
+		a.profitability = profitability;
+		a.pips = total_pips;
+		a.gain = total_gain;
+		
+	}
+	
+	Sort(accounts, Account());
 	
 	
 }
@@ -587,8 +595,8 @@ void Myfxbook::RefreshHistory() {
 		
 		for (int page = 1; page < 100; page++) {
 			
-			//String url = "https://www.myfxbook.com/paging.html?pt=4&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
-			String url = "https://www.myfxbook.com/paging.html?pt=4&p=" + IntStr(page) + "&ts=105&&id=" + a.id + "&l=a&invitation=&start=2015-05-18%2000:00&end=&sb=28&st=2&magicNumbers=&symbols=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=&ts=105&z=0.6986965124862867";
+			String url = "https://www.myfxbook.com/paging.html?pt=4&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+			//String url = "https://www.myfxbook.com/paging.html?pt=4&p=" + IntStr(page) + "&ts=105&&id=" + a.id + "&l=a&invitation=&start=2015-05-18%2000:00&end=&sb=28&st=2&magicNumbers=&symbols=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=&ts=105&z=0.6986965124862867";
 			
 			String filename = IntStr(url.GetHashValue()) + ".html";
 			String filepath = AppendFileName(cache_dir, filename);
@@ -663,11 +671,10 @@ void Myfxbook::RefreshOpen() {
 	String cache_dir = ConfigFile("cache");
 	
 	Index<int> used_accounts;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		SymbolStats& s = symbols[i];
-		for(int j = 0; j < s.accounts.GetCount(); j++) {
-			used_accounts.FindAdd(s.accounts[j].id);
-		}
+	for(int i = 0; i < accounts.GetCount(); i++) {
+		Account& a = accounts[i];
+		if (a.profitability > 0.55 && a.gain > 0.0 && a.pips > 0.0)
+			used_accounts.Add(i);
 	}
 	
 	VectorMap<int, VectorMap<String, double> > all_account_symlots;
@@ -682,8 +689,8 @@ void Myfxbook::RefreshOpen() {
 		
 		for (int page = 1; page < 100 && running; page++) {
 			
-			String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
-			//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+			//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+			String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
 			
 			LOG(url);
 			String filename = IntStr(url.GetHashValue()) + ".html";
@@ -758,34 +765,48 @@ void Myfxbook::RefreshOpen() {
 	if (!running) return;
 	
 	
-	for (int i = 0; i < symbols.GetCount(); i++) {
-		SymbolStats& s = symbols[i];
+	for(int i = 0; i < symbols.GetCount(); i++)
+		symbols[i].lots_mult = 0.0;
+	
+	int div = 0;
+	for(int i = 0; i < used_accounts.GetCount(); i++) {
+		int a_id = used_accounts[i];
+		Account& a = accounts[a_id];
 		
-		s.signal = 0;
+		const VectorMap<String, double>& account_symlots = all_account_symlots.Get(a_id);
 		
-		for(int j = 0; j < s.accounts.GetCount(); j++) {
-			int a_id = s.accounts[j].id;
-			Account& a = accounts[a_id];
-			const VectorMap<String, double>& account_symlots = all_account_symlots.Get(a_id);
-			
-			for(int k = 0; k < account_symlots.GetCount(); k++) {
-				String sym = account_symlots.GetKey(k);
-				if (sym != s.symbol)
-					continue;
-				
-				if (s.signal != 0)
-					continue;
-				
-				double lots = account_symlots[k];
-				if (lots == 0)
-					continue;
-				
-				s.signal += lots > 0 ? +1 : -1;
+		double max_lots = 0.0;
+		for(int j = 0; j < account_symlots.GetCount(); j++) {
+			double lots = fabs(account_symlots[j]);
+			if (lots > max_lots)
+				max_lots = lots;
+		}
+		
+		bool had_signals = false;
+		for(int j = 0; j < account_symlots.GetCount(); j++) {
+			String symbol = account_symlots.GetKey(j);
+			double lots = account_symlots[j];
+			int l = symbols.Find(symbol);
+			if (l != -1) {
+				symbols[l].lots_mult += lots / max_lots;
+				had_signals = true;
 			}
 		}
 		
-		if (s.signal < -1) s.signal = -1;
-		if (s.signal > +1) s.signal = +1;
+		if (had_signals)
+			div++;
+	}
+	if (div)
+		for(int i = 0; i < symbols.GetCount(); i++)
+			symbols[i].lots_mult /= div;
+	
+	SortByValue(symbols, SymbolStats());
+	DUMPM(symbols);
+	
+	for (int i = 0; i < symbols.GetCount(); i++) {
+		SymbolStats& s = symbols[i];
+		
+		s.signal = s.lots_mult * SIGNALSCALE;
 		
 		if (s.signal == 0)
 			s.wait = false;
@@ -815,34 +836,17 @@ void Myfxbook::Data() {
 	}
 	
 	int a_id = -1;
-	if (valuecursor <= 0) {
-		
-		for(int i = 0; i < accounts.GetCount(); i++) {
-			Account& a = accounts[i];
-			accountlist.Set(i, 0, a.id);
-			for(int j = 1; j < 4; j++)
-				accountlist.Set(i, j, "");
-		}
-		
-		a_id = accountlist.GetCursor();
-	} else {
-		SymbolStats& s = symbols[valuecursor-1];
-		
-		for(int i = 0; i < s.accounts.GetCount(); i++) {
-			AccountResult& ar = s.accounts[i];
-			Account& a = accounts[ar.id];
-			
-			accountlist.Set(i, 0, a.id);
-			accountlist.Set(i, 1, ar.profitability);
-			accountlist.Set(i, 2, ar.pips);
-			accountlist.Set(i, 3, ar.gain);
-		}
-		accountlist.SetCount(s.accounts.GetCount());
-		
-		a_id = accountlist.GetCursor();
-		if (a_id >= 0 && a_id < s.accounts.GetCount())
-			a_id = s.accounts[a_id].id;
+	
+	for(int i = 0; i < accounts.GetCount(); i++) {
+		Account& a = accounts[i];
+		accountlist.Set(i, 0, a.id);
+		accountlist.Set(i, 1, a.profitability);
+		accountlist.Set(i, 2, a.pips);
+		accountlist.Set(i, 3, a.gain);
 	}
+	
+	a_id = accountlist.GetCursor();
+	
 	
 	if (a_id >= 0 && a_id < accounts.GetCount()) {
 		Account& a = accounts[a_id];

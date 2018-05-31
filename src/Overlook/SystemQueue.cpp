@@ -732,7 +732,7 @@ bool System::RefreshReal() {
 		}
 		
 		mt.SetFreeMarginLevel(FMLEVEL);
-		mt.SetFreeMarginScale(MAX_SYMOPEN);
+		mt.SetFreeMarginScale(MAX_SYMOPEN * SIGNALSCALE);
 		mt.SignalOrders(true);
 	}
 	catch (UserExc e) {

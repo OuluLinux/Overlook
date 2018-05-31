@@ -16,7 +16,7 @@
 
 
 #define TRAININGAREA_FACTOR 0.95
-
+#define SIGNALSCALE 10
 
 namespace Overlook {
 using namespace Upp;

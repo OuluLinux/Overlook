@@ -24,30 +24,29 @@ class Myfxbook : public ParentCtrl {
 	struct Account : Moveable<Account> {
 		Array<Order> history_orders, orders;
 		String url, id;
-		
-		void Serialize(Stream& s) {s % history_orders % orders % url % id;}
-	};
-	
-	struct AccountResult : Moveable<AccountResult> {
-		int id = -1;
 		double profitability = 0, pips = 0, gain = 0;
 		
-		bool operator() (const AccountResult& a, const AccountResult& b) const {
-			return a.profitability > b.profitability;
+		bool operator() (const Account& a, const Account& b) const {
+			return a.profitability < b.profitability;
 		}
 		
-		void Serialize(Stream& s) {s % id % profitability % pips % gain;}
+		void Serialize(Stream& s) {s % history_orders % orders % url % id % profitability % pips % gain;}
 	};
 	
 	struct SymbolStats : Moveable<SymbolStats> {
-		Vector<AccountResult> accounts;
 		String symbol;
+		double lots_mult = 0.0;
 		int id = -1;
 		int signal = 0;
 		
 		bool wait = true;
 		
-		void Serialize(Stream& s) {s % accounts % symbol % id % signal;}
+		bool operator() (const SymbolStats& a, const SymbolStats& b) const {
+			return a.lots_mult < b.lots_mult;
+		}
+		
+		String ToString() const {return symbol + ": " + DblStr(lots_mult);}
+		void Serialize(Stream& s) {s % symbol % lots_mult % id % signal;}
 	};
 	
 	VectorMap<String, SymbolStats > symbols;

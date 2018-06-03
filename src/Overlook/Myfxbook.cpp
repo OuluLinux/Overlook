@@ -289,6 +289,7 @@ void Myfxbook::Updater() {
 		
 		RefreshHistory();
 		FixOrders();
+		AddDelay(); // to simulate lagging updating
 		SolveSources();
 		
 		if (running)
@@ -443,6 +444,19 @@ void Myfxbook::SolveSources() {
 	Sort(accounts, Account());
 	
 	
+}
+
+void Myfxbook::AddDelay() {
+	for(int i = 0; i < accounts.GetCount() && running; i++) {
+		Account& a = accounts[i];
+		
+		for(int j = 0; j < a.history_orders.GetCount(); j++) {
+			Order& o = a.history_orders[j];
+			
+			o.begin += 5*60;
+			o.end += 5*60;
+		}
+	}
 }
 
 void Myfxbook::FixOrders() {
@@ -692,123 +706,23 @@ void Myfxbook::RefreshOpen() {
 	System& sys = GetSystem();
 	ReleaseLog("Myfxbook::RefreshOpen");
 	
-	String cache_dir = ConfigFile("cache");
-	
 	
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbols[i].lots_mult = 0.0;
 	
-	for(int i = 0; i < accounts.GetCount() && running; i++) {
-		Account& a = accounts[i];
-		VectorMap<String, double> account_symlots;
-		
-		if (!(a.profitability > 0.50 && a.gain > 0.0 && a.pips > 0.0))
-			continue;
-			
-		a.orders.Clear();
-		
-		
-		for (int page = 1; page < 100 && running; page++) {
-			
-			String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
-			//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
-			
-			LOG(url);
-			String filename = IntStr(url.GetHashValue()) + ".html";
-			String filepath = AppendFileName(cache_dir, filename);
-			String xmlname = IntStr(url.GetHashValue()) + ".xml";
-			String xmlpath = AppendFileName(cache_dir, xmlname);
-			
-			HttpRequest h;
-			BasicHeaders(h);
-			h.Url(url);
-			String content = h.Execute();
-			FileOut fout(filepath);
-			fout << content;
-			fout.Close();
-			
-			Tidy(xmlpath, filepath);
-			
-			Sleep(500);
-			
-			
-			String xml = LoadFile(xmlpath);
-			
-			
-			if (xml.Find("No data to") != -1)
-				break;
-			
-			XmlFix(xml);
-			//LOG(xml);
-			
-			XmlNode xn;
-			try {
-				xn = ParseXML(xml);
-			}
-			catch (XmlError e) {
-				ReleaseLog("Myfxbook::RefreshOpen XML PARSE ERROR");
-			}
-			//LOG(XmlTreeString(xn));
-			
-			int errorcode = 0;
-			const XmlNode& rows = TryOpenLocation("0 1 0 0", xn, errorcode);
-			
-			int items = rows.GetCount() - 2;
-			for(int j = 1; j < rows.GetCount(); j++) {
-				const XmlNode& row = rows[j];
-				
-				for (int s = 0; s < 2; s++) {
-					String action = row[4-s][0].GetText();
-					
-					if (action == "Sell" || action == "Buy") {
-						Order& o = a.orders.Add();
-						
-						StrTime(o.begin, row[1-s][0].GetText());
-						o.symbol = row[3-s][0][0].GetText();
-						o.action = action == "Sell";
-						o.open   = row[6-s][0].GetText();
-						o.profit = row[9-s][0][0].GetText();
-						o.lots = StrDbl(row[5-s][0].GetText());
-						
-						double mult = action == "Sell" ? -1 : +1;
-						
-						account_symlots.GetAdd(o.symbol, 0.0) += mult * o.lots;
-						
-						//LOG(XmlTreeString(row));
-						break;
-					}
-				}
-			}
-			
-			if (items < 20) {
-				LOG("page " << page << " items " << items);
+	if (active_account == -1) {
+		for(int i = 0; i < accounts.GetCount() && running; i++) {
+			if (RefreshAccountOpen(i)) {
+				active_account = i;
 				break;
 			}
 		}
-		
-		DUMPM(account_symlots);
-		
-		
-		double max_lots = 0.0;
-		for(int j = 0; j < account_symlots.GetCount(); j++) {
-			double lots = fabs(account_symlots[j]);
-			if (lots > max_lots)
-				max_lots = lots;
+	} else {
+		RefreshAccountOpen(active_account);
+		Account& a = accounts[active_account];
+		if (a.orders.IsEmpty()) {
+			active_account = -1;
 		}
-		
-		for(int j = 0; j < account_symlots.GetCount(); j++) {
-			String symbol = account_symlots.GetKey(j);
-			double lots = account_symlots[j];
-			int l = symbols.Find(symbol);
-			if (l != -1) {
-				symbols[l].lots_mult += lots / max_lots;
-			}
-		}
-		
-		
-		// To use only one account
-		if (max_lots > 0.0)
-			break;
 	}
 	
 	double max_lots = 0.0;
@@ -847,6 +761,123 @@ void Myfxbook::RefreshOpen() {
 	latest_update = GetSysTime();
 }
 
+bool Myfxbook::RefreshAccountOpen(int i) {
+	Account& a = accounts[i];
+	VectorMap<String, double> account_symlots;
+	
+	if (!(a.profitability > 0.50 && a.gain > 0.0 && a.pips > 0.0))
+		return false;
+	
+	bool new_orders = a.orders.IsEmpty();
+	bool is_active = i == active_account;
+	
+	a.orders.Clear();
+	
+	String cache_dir = ConfigFile("cache");
+	
+	for (int page = 1; page < 100 && running; page++) {
+		
+		String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=" + a.id + "&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+		//String url = "https://www.myfxbook.com/paging.html?pt=15&p=" + IntStr(page) + "&ts=29&&l=x&id=2419864&invitation=&start=2015-05-18%2000:00&end=&sb=27&st=1&symbols=&magicNumbers=&types=0,1,2,4,19,5&orderTagList=&daysList=&hoursList=&buySellList=&yieldStart=&yieldEnd=&netProfitStart=&netProfitEnd=&durationStart=&durationEnd=&takeProfitStart=&takeProfitEnd=&stopLoss=&stopLossEnd=&sizingStart=&sizingEnd=&selectedTime=&pipsStart=&pipsEnd=";
+		
+		LOG(url);
+		String filename = IntStr(url.GetHashValue()) + ".html";
+		String filepath = AppendFileName(cache_dir, filename);
+		String xmlname = IntStr(url.GetHashValue()) + ".xml";
+		String xmlpath = AppendFileName(cache_dir, xmlname);
+		
+		HttpRequest h;
+		BasicHeaders(h);
+		h.Url(url);
+		String content = h.Execute();
+		FileOut fout(filepath);
+		fout << content;
+		fout.Close();
+		
+		Tidy(xmlpath, filepath);
+		
+		Sleep(500);
+		
+		
+		String xml = LoadFile(xmlpath);
+		
+		
+		if (xml.Find("No data to") != -1)
+			break;
+		
+		XmlFix(xml);
+		//LOG(xml);
+		
+		XmlNode xn;
+		try {
+			xn = ParseXML(xml);
+		}
+		catch (XmlError e) {
+			ReleaseLog("Myfxbook::RefreshOpen XML PARSE ERROR");
+		}
+		//LOG(XmlTreeString(xn));
+		
+		int errorcode = 0;
+		const XmlNode& rows = TryOpenLocation("0 1 0 0", xn, errorcode);
+		
+		int items = rows.GetCount() - 2;
+		for(int j = 1; j < rows.GetCount(); j++) {
+			const XmlNode& row = rows[j];
+			
+			for (int s = 0; s < 2; s++) {
+				String action = row[4-s][0].GetText();
+				
+				if (action == "Sell" || action == "Buy") {
+					Order& o = a.orders.Add();
+					
+					StrTime(o.begin, row[1-s][0].GetText());
+					o.symbol = row[3-s][0][0].GetText();
+					o.action = action == "Sell";
+					o.open   = row[6-s][0].GetText();
+					o.profit = row[9-s][0][0].GetText();
+					o.lots = StrDbl(row[5-s][0].GetText());
+					
+					double mult = action == "Sell" ? -1 : +1;
+					
+					account_symlots.GetAdd(o.symbol, 0.0) += mult * o.lots;
+					
+					//LOG(XmlTreeString(row));
+					break;
+				}
+			}
+		}
+		
+		if (items < 20) {
+			LOG("page " << page << " items " << items);
+			break;
+		}
+	}
+	
+	DUMPM(account_symlots);
+	
+	if (is_active || new_orders) {
+		double max_lots = 0.0;
+		for(int j = 0; j < account_symlots.GetCount(); j++) {
+			double lots = fabs(account_symlots[j]);
+			if (lots > max_lots)
+				max_lots = lots;
+		}
+		
+		for(int j = 0; j < account_symlots.GetCount(); j++) {
+			String symbol = account_symlots.GetKey(j);
+			double lots = account_symlots[j];
+			int l = symbols.Find(symbol);
+			if (l != -1) {
+				symbols[l].lots_mult += lots / max_lots;
+			}
+		}
+		
+		
+		// To use only one account
+		return max_lots > 0.0;
+	}
+	else return false;
+}
 
 void Myfxbook::Data() {
 	

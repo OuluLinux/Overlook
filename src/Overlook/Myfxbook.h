@@ -58,11 +58,13 @@ class Myfxbook : public ParentCtrl {
 	Splitter splitter;
 	ArrayCtrl valuelist, accountlist, orderlist, historylist;
 	bool running = false, stopped = true;
+	int active_account = -1;
 	
-	
+	bool RefreshAccountOpen(int i);
 	void RefreshHistory();
 	void RefreshOpen();
 	void FixOrders();
+	void AddDelay();
 	void SolveSources();
 	
 public:

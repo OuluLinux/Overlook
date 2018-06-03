@@ -31,6 +31,7 @@ Myfxbook::Myfxbook() {
 	accountlist.AddColumn("Profitability");
 	accountlist.AddColumn("Pips");
 	accountlist.AddColumn("Gain");
+	accountlist.AddColumn("Av Gain");
 	
 	orderlist.AddColumn("Open");
 	orderlist.AddColumn("Symbol");
@@ -70,6 +71,8 @@ Myfxbook::Myfxbook() {
 		symbols.Add("USDCHF");
 		symbols.Add("NZDUSD");
 		symbols.Add("AUDJPY");
+		
+		symbols.Add("EURNZD");
 		
 		for(int i = 0; i < symbols.GetCount(); i++) {
 			SymbolStats& s = symbols[i];
@@ -317,6 +320,7 @@ void Myfxbook::Updater() {
 
 void Myfxbook::SolveSources() {
 	System& sys = GetSystem();
+	Time now = GetUtcTime();
 	
 	typedef Tuple<DataBridge*, ConstBuffer*, ConstBuffer*> Ptrs;
 	VectorMap<String, Ptrs> dbs;
@@ -365,6 +369,9 @@ void Myfxbook::SolveSources() {
 		double total_gain = 1.0;
 		double pos_pips = 0.0, neg_pips = 0.0;
 		int trade_count = 0;
+		
+		if (a.history_orders.IsEmpty())
+			continue;
 		
 		for(int k = 0; k < a.history_orders.GetCount() && running; k++) {
 			Order& o = a.history_orders[k];
@@ -428,6 +435,9 @@ void Myfxbook::SolveSources() {
 		a.pips = pos_pips - neg_pips;
 		a.gain = total_gain;
 		
+		Order& oldest_order = a.history_orders[0];
+		int64 diff = now.Get() - oldest_order.begin.Get();
+		a.av_gain = a.gain / diff * 60*60*24*5;
 	}
 	
 	Sort(accounts, Account());
@@ -684,20 +694,17 @@ void Myfxbook::RefreshOpen() {
 	
 	String cache_dir = ConfigFile("cache");
 	
-	Index<int> used_accounts;
-	for(int i = 0; i < accounts.GetCount(); i++) {
+	
+	for(int i = 0; i < symbols.GetCount(); i++)
+		symbols[i].lots_mult = 0.0;
+	
+	for(int i = 0; i < accounts.GetCount() && running; i++) {
 		Account& a = accounts[i];
-		if (a.profitability > 0.50 && a.gain > 0.0 && a.pips > 0.0)
-			used_accounts.Add(i);
-	}
-	
-	VectorMap<int, VectorMap<String, double> > all_account_symlots;
-	
-	for(int i = 0; i < used_accounts.GetCount() && running; i++) {
-		int a_id = used_accounts[i];
-		Account& a = accounts[a_id];
-		VectorMap<String, double>& account_symlots = all_account_symlots.Add(a_id);
+		VectorMap<String, double> account_symlots;
 		
+		if (!(a.profitability > 0.50 && a.gain > 0.0 && a.pips > 0.0))
+			continue;
+			
 		a.orders.Clear();
 		
 		
@@ -780,19 +787,7 @@ void Myfxbook::RefreshOpen() {
 		}
 		
 		DUMPM(account_symlots);
-	}
-	
-	if (!running) return;
-	
-	
-	for(int i = 0; i < symbols.GetCount(); i++)
-		symbols[i].lots_mult = 0.0;
-	
-	for(int i = 0; i < used_accounts.GetCount(); i++) {
-		int a_id = used_accounts[i];
-		Account& a = accounts[a_id];
 		
-		const VectorMap<String, double>& account_symlots = all_account_symlots.Get(a_id);
 		
 		double max_lots = 0.0;
 		for(int j = 0; j < account_symlots.GetCount(); j++) {
@@ -809,6 +804,11 @@ void Myfxbook::RefreshOpen() {
 				symbols[l].lots_mult += lots / max_lots;
 			}
 		}
+		
+		
+		// To use only one account
+		if (max_lots > 0.0)
+			break;
 	}
 	
 	double max_lots = 0.0;
@@ -825,12 +825,18 @@ void Myfxbook::RefreshOpen() {
 	for (int i = 0; i < symbols.GetCount(); i++) {
 		SymbolStats& s = symbols[i];
 		
-		s.signal = s.lots_mult * SIGNALSCALE;
+		int new_signal = s.lots_mult * SIGNALSCALE;
+		
+		// Don't switch to opposite signal without zeroing first
+		if (s.signal != 0 && s.signal != new_signal)
+			s.wait = true;
+		
+		s.signal = new_signal;
 		
 		if (s.signal == 0)
 			s.wait = false;
-		//if (s.wait)
-		//	s.signal = 0;
+		if (s.wait)
+			s.signal = 0;
 		
 		int id = sys.FindSymbol(s.symbol);
 		ReleaseLog("Set real signal " + IntStr(id) + " to " + IntStr(s.signal));
@@ -862,6 +868,7 @@ void Myfxbook::Data() {
 		accountlist.Set(i, 1, a.profitability);
 		accountlist.Set(i, 2, a.pips);
 		accountlist.Set(i, 3, a.gain);
+		accountlist.Set(i, 4, a.av_gain);
 	}
 	
 	a_id = accountlist.GetCursor();

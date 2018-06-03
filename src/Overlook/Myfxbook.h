@@ -24,13 +24,13 @@ class Myfxbook : public ParentCtrl {
 	struct Account : Moveable<Account> {
 		Array<Order> history_orders, orders;
 		String url, id;
-		double profitability = 0, pips = 0, gain = 0;
+		double profitability = 0, pips = 0, gain = 0, av_gain = 0;
 		
 		bool operator() (const Account& a, const Account& b) const {
-			return a.profitability < b.profitability;
+			return a.av_gain > b.av_gain;
 		}
 		
-		void Serialize(Stream& s) {s % history_orders % orders % url % id % profitability % pips % gain;}
+		void Serialize(Stream& s) {s % history_orders % orders % url % id % profitability % pips % gain % av_gain;}
 	};
 	
 	struct SymbolStats : Moveable<SymbolStats> {

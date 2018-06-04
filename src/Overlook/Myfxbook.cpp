@@ -710,6 +710,16 @@ void Myfxbook::RefreshOpen() {
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbols[i].lots_mult = 0.0;
 	
+	#if 1
+	for(int i = 0; i < accounts.GetCount() && running; i++) {
+		Account& a = accounts[i];
+		if (a.id == "1657111") {
+			RefreshAccountOpen(i);
+			active_account = i;
+			break;
+		}
+	}
+	#else
 	if (active_account == -1) {
 		for(int i = 0; i < accounts.GetCount() && running; i++) {
 			if (RefreshAccountOpen(i)) {
@@ -724,6 +734,7 @@ void Myfxbook::RefreshOpen() {
 			active_account = -1;
 		}
 	}
+	#endif
 	
 	double max_lots = 0.0;
 	for(int i = 0; i < symbols.GetCount(); i++)
@@ -732,6 +743,7 @@ void Myfxbook::RefreshOpen() {
 		for(int i = 0; i < symbols.GetCount(); i++)
 			symbols[i].lots_mult /= max_lots;
 	
+	double lots_max = 1.0 / MAX_SYMOPEN;
 	
 	SortByValue(symbols, SymbolStats());
 	DUMPM(symbols);
@@ -739,18 +751,21 @@ void Myfxbook::RefreshOpen() {
 	for (int i = 0; i < symbols.GetCount(); i++) {
 		SymbolStats& s = symbols[i];
 		
+		if (s.lots_mult > lots_max)
+			s.lots_mult = lots_max;
+		
 		int new_signal = s.lots_mult * SIGNALSCALE;
 		
 		// Don't switch to opposite signal without zeroing first
-		if (s.signal != 0 && s.signal != new_signal)
-			s.wait = true;
+		//if (s.signal != 0 && s.signal != new_signal)
+		//	s.wait = true;
 		
 		s.signal = new_signal;
 		
 		if (s.signal == 0)
 			s.wait = false;
-		if (s.wait)
-			s.signal = 0;
+		//if (s.wait)
+		//	s.signal = 0;
 		
 		int id = sys.FindSymbol(s.symbol);
 		ReleaseLog("Set real signal " + IntStr(id) + " to " + IntStr(s.signal));

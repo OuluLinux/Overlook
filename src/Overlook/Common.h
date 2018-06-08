@@ -16,7 +16,7 @@
 
 
 #define TRAININGAREA_FACTOR 0.95
-#define SIGNALSCALE 12
+#define SIGNALSCALE 100
 #define MAX_SYMOPEN 4
 
 namespace Overlook {

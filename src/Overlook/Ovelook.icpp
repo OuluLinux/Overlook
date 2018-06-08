@@ -70,9 +70,7 @@ INITBLOCK {
 	System::Register<Anomaly>("Anomaly");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
-	System::Register<RecurrentAdvisor>("LSTM Advisor", CORE_EXPERTADVISOR);
-	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
-	System::Register<MultiDqnAdvisor>("Multi Dqn Advisor", CORE_EXPERTADVISOR);
+	System::Register<RapierishAdvisor>("Rapierish Advisor", CORE_EXPERTADVISOR);
 	
 	
 	

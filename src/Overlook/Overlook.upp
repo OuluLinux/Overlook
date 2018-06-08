@@ -66,16 +66,7 @@ file
 	Calendar.h,
 	Calendar.cpp,
 	Myfxbook.h,
-	Myfxbook.cpp,
-	"Reinforced Learning" readonly separator,
-	DQN.h,
-	"Recurrent NN" readonly separator,
-	RecurrentSession.h,
-	RecurrentSession.cpp,
-	Recurrent.h,
-	Recurrent.cpp,
-	Mat.h,
-	Mat.cpp;
+	Myfxbook.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

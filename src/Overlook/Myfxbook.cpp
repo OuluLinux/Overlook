@@ -238,31 +238,187 @@ Myfxbook::Myfxbook() {
 		Add("https://www.myfxbook.com/members/cheesybites1/hamilton/2446870", 0, 0);
 		Add("https://www.myfxbook.com/members/JacksonCapital/k452b/1325330", 0, 0);
 		Add("https://www.myfxbook.com/members/thewayofmoney/perfetto-ft/2128467", 0, 0);
-		/*
-		Add("https://www.myfxbook.com/members/manvarov/berndale-usd-1000000/2329847", 0, 0);
-		Add("https://www.myfxbook.com/members/hieutv/batman-ea/1668823", 0, 0);
-		Add("https://www.myfxbook.com/members/EDROID/the-retirement-plansangevt--eladiob/2369715", 0, 0);
-		Add("https://www.myfxbook.com/members/HappyForex/happy-market-hours-v21/1407880", 0, 0);
+		
 		Add("https://www.myfxbook.com/members/ronnyarruda/tradermbrasil/2509193", 0, 0);
+		Add("https://www.myfxbook.com/members/HappyForex/happy-market-hours-v21/1407880", 0, 0);
+		Add("https://www.myfxbook.com/members/HappyForexBLU/happy-market-hours-v21-blu/2382866", 0, 0);
+		Add("https://www.myfxbook.com/members/FreeWorkForex/abamk-2-e-avuadores/2005079", 0, 0);
+		Add("https://www.myfxbook.com/members/Mbarak1179/mbarek-belouse/2489926", 0, 0);
+		Add("https://www.myfxbook.com/members/MoshiM/cot/2521550", 0, 0);
+		Add("https://www.myfxbook.com/members/MerlinBrasil/tradeview-march-2018/2451595", 0, 0);
 		Add("https://www.myfxbook.com/members/danntrader/top-aguilar-casanova/2432622", 0, 0);
+		Add("https://www.myfxbook.com/members/nmthiyane/khethy/1786887", 0, 0);
 		Add("https://www.myfxbook.com/members/AtnetFX/gt2/2267791", 0, 0);
 		Add("https://www.myfxbook.com/members/yatarfx/yatar5/1764499", 0, 0);
-		Add("https://www.myfxbook.com/members/nmthiyane/khethy/1786887", 0, 0);
+		Add("https://www.myfxbook.com/members/Mbarak1179/marcotrader/2501602", 0, 0);
+		Add("https://www.myfxbook.com/members/LuizSchiavi/vps-ger30--ger30jun18/2457720", 0, 0);
+		Add("https://www.myfxbook.com/members/Thandah/kwanda/2180958", 0, 0);
+		Add("https://www.myfxbook.com/members/dcansi/dsc-lucas-forex-turbo/2523854", 0, 0);
 		Add("https://www.myfxbook.com/members/yatarfx/yatar4/1765116", 0, 0);
 		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-asia-demo-all-pairs/1204194", 0, 0);
-		Add("https://www.myfxbook.com/members/Mbarak1179/marcotrader/2501602", 0, 0);
 		Add("https://www.myfxbook.com/members/FxChampion/testkonto-risiko-05/1831212", 0, 0);
-		Add("https://www.myfxbook.com/members/forexdiamond/forex-diamond-ea-usdjpy/1081183", 0, 0);
 		Add("https://www.myfxbook.com/members/sakura11/angel-heart/2443428", 0, 0);
-		Add("https://www.myfxbook.com/members/iqsoftware2015/gkfx-metatrader-4couk/2517135", 0, 0);
+		Add("https://www.myfxbook.com/members/forexdiamond/forex-diamond-ea-usdjpy/1081183", 0, 0);
 		Add("https://www.myfxbook.com/members/traderinput/alog12-setfile7-traderinputcom/2395027", 0, 0);
+		Add("https://www.myfxbook.com/members/iqsoftware2015/gkfx-metatrader-4couk/2517135", 0, 0);
 		Add("https://www.myfxbook.com/members/myforexinvest/momentumstrategy/775182", 0, 0);
+		Add("https://www.myfxbook.com/members/sakura11/zeus/2443430", 0, 0);
+		Add("https://www.myfxbook.com/members/Listapad/hejj/1674244", 0, 0);
 		Add("https://www.myfxbook.com/members/traderpusa/maxthecat/2530957", 0, 0);
+		Add("https://www.myfxbook.com/members/redliner/usdcad-set-2/1711732", 0, 0);
+		Add("https://www.myfxbook.com/members/forexTik/ccccc/2460783", 0, 0);
+		Add("https://www.myfxbook.com/members/4FM1PerezHazelyn/4fm1perezhazelyn/1750257", 0, 0);
+		Add("https://www.myfxbook.com/members/cvbuy/4fm5uycarol/1753327", 0, 0);
+		Add("https://www.myfxbook.com/members/yeray007/yeray-zurita/2538566", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-anna/2415218", 0, 0);
 		Add("https://www.myfxbook.com/members/ProForexCompany/forex-earth-robot-eurgbp/1927390", 0, 0);
 		Add("https://www.myfxbook.com/members/FxChampion/testkonto-risiko-075/2027287", 0, 0);
-		Add("https://www.myfxbook.com/members/LuizSchiavi/vps-ger30--ger30jun18/2457720", 0, 0);
-		Add("https://www.myfxbook.com/members/IGTrading/b-trading-corporation/2403072", 0, 0);
-		*/	
+		Add("https://www.myfxbook.com/members/bel3ouchi_/contest-bel3ouchi/2552500", 0, 0);
+		Add("https://www.myfxbook.com/members/hieutv/batman-ea/1668823", 0, 0);
+		Add("https://www.myfxbook.com/members/manvarov/berndale-usd-1000000/2329847", 0, 0);
+		Add("https://www.myfxbook.com/members/ImolaJu/finch-demo-eur/2343562", 0, 0);
+		Add("https://www.myfxbook.com/members/volatilityfactor/volatility-factor-v70-eurusdgbpusd/1510370", 0, 0);
+		Add("https://www.myfxbook.com/members/Romm/contest-romm/2529429", 0, 0);
+		Add("https://www.myfxbook.com/members/alphax28/16-pairs-sl3000-pepperstone/2452850", 0, 0);
+		Add("https://www.myfxbook.com/members/mccoyducatillon/20150502/1151204", 0, 0);
+		Add("https://www.myfxbook.com/members/mam_ea/icm-1/2353357", 0, 0);
+		Add("https://www.myfxbook.com/members/mphilipp/3--dayli/2540701", 0, 0);
+		Add("https://www.myfxbook.com/members/twhiediana/contest-twhiediana/2529400", 0, 0);
+		Add("https://www.myfxbook.com/members/Alison_Ian/demo2/2379680", 0, 0);
+		Add("https://www.myfxbook.com/members/Sartaz_/contest-sartaz/2552561", 0, 0);
+		Add("https://www.myfxbook.com/members/abusaad4123/abusaad/2477316", 0, 0);
+		Add("https://www.myfxbook.com/members/Nikolay56/no-sleep/2486755", 0, 0);
+		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-forex-robots-all/1742982", 0, 0);
+		Add("https://www.myfxbook.com/members/SergeiSergei/-14/2334416", 0, 0);
+		Add("https://www.myfxbook.com/members/ProForexCompany/forex-earth-robot-gbpusd/2405011", 0, 0);
+		Add("https://www.myfxbook.com/members/ProForexCompany/forex-earth-robot-eurgbp-new/2151232", 0, 0);
+		Add("https://www.myfxbook.com/members/vinhlp/contest-vinhlp/2529428", 0, 0);
+		Add("https://www.myfxbook.com/members/william90127447/william-heung-demo-20226216/2469414", 0, 0);
+		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-20-evolution-all-2/2250695", 0, 0);
+		Add("https://www.myfxbook.com/members/sakura11/hanabi/2461217", 0, 0);
+		Add("https://www.myfxbook.com/members/IntelFx/mt4-20254983-02/2528238", 0, 0);
+		Add("https://www.myfxbook.com/members/meynard_p/magic7-meynard/2423381", 0, 0);
+		Add("https://www.myfxbook.com/members/fxwatanabe3/sfe-price-action-tickmill-demo/1681694", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-ruth/2415223", 0, 0);
+		Add("https://www.myfxbook.com/members/abudz/de-ch/2510628", 0, 0);
+		Add("https://www.myfxbook.com/members/fxking_net/fxking03-test/2438509", 0, 0);
+		Add("https://www.myfxbook.com/members/gilsapir86/demo-all-3k/1930202", 0, 0);
+		Add("https://www.myfxbook.com/members/Dmitro75/basic/2503570", 0, 0);
+		Add("https://www.myfxbook.com/members/spt22/5674/2398662", 0, 0);
+		Add("https://www.myfxbook.com/members/ProSystems/professional-trading-portfolio/1550639", 0, 0);
+		Add("https://www.myfxbook.com/members/FxChampion/testkonto-risiko-025/1868008", 0, 0);
+		Add("https://www.myfxbook.com/members/Alison_Ian/demo1/2379389", 0, 0);
+		Add("https://www.myfxbook.com/members/bebert83/contest-bebert83/2529451", 0, 0);
+		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-recovery-pro-20-evolution/1934826", 0, 0);
+		Add("https://www.myfxbook.com/members/Jonsummer99/star/2481327", 0, 0);
+		Add("https://www.myfxbook.com/members/Yury48/century22-29686365/2505138", 0, 0);
+		Add("https://www.myfxbook.com/members/Stone79/flash-renko-v6/2509232", 0, 0);
+		Add("https://www.myfxbook.com/members/oshaban/oshaban-ea-v542/2487280", 0, 0);
+		Add("https://www.myfxbook.com/members/forexwallstreet/wallstreet-asia-demo-all-pairs/1204188", 0, 0);
+		Add("https://www.myfxbook.com/members/pdy2017/fission123/2488583", 0, 0);
+		Add("https://www.myfxbook.com/members/thunder55/modest-ea-hr/2538819", 0, 0);
+		Add("https://www.myfxbook.com/members/sakura11/easy-bowl/2205254", 0, 0);
+		Add("https://www.myfxbook.com/members/Bancha_B/thaiban-ctradergu/2499484", 0, 0);
+		Add("https://www.myfxbook.com/members/maida0922/wsfrfdvf-ref/1103514", 0, 0);
+		Add("https://www.myfxbook.com/members/IRTIRIRI/irtiriri/2497250", 0, 0);
+		Add("https://www.myfxbook.com/members/bosspinlac/markpinlac-hotforex-demo/2450214", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-kathleen/2415206", 0, 0);
+		Add("https://www.myfxbook.com/members/jnotaro/xm-maxwinner-demo/2519875", 0, 0);
+		Add("https://www.myfxbook.com/members/Walle_500_ea/1000-fxpro-19th-march/2488203", 0, 0);
+		Add("https://www.myfxbook.com/members/Topu007/contest-topu007/2529464", 0, 0);
+		Add("https://www.myfxbook.com/members/ypyea/ypy-serena-pro-darwinex/1891091", 0, 0);
+		Add("https://www.myfxbook.com/members/Merlin777/gena-crocodile-tradelikeaproru/2358860", 0, 0);
+		Add("https://www.myfxbook.com/members/Phil33/philipp-fragner/2422811", 0, 0);
+		Add("https://www.myfxbook.com/members/extreme_warrior/mt4-940561/2457834", 0, 0);
+		Add("https://www.myfxbook.com/members/meynard_p/fxpro-mt4/2449300", 0, 0);
+		Add("https://www.myfxbook.com/members/simtradepro/flash-forward-forex-standard/2518080", 0, 0);
+		Add("https://www.myfxbook.com/members/hongpanshou/hps-6/2467963", 0, 0);
+		Add("https://www.myfxbook.com/members/NEXTGEN/start-dec2017-for-nextgen/2325308", 0, 0);
+		Add("https://www.myfxbook.com/members/fokeer/contest-fokeer/2529435", 0, 0);
+		Add("https://www.myfxbook.com/members/mahmoud66/mahmoud/2524025", 0, 0);
+		Add("https://www.myfxbook.com/members/Gideon3310/learn-forex-account-mt4-2111866/2503469", 0, 0);
+		Add("https://www.myfxbook.com/members/SwingFish/mf-crowd-mfb/1660620", 0, 0);
+		Add("https://www.myfxbook.com/members/highlow159/projectx/2252334", 0, 0);
+		Add("https://www.myfxbook.com/members/Thriss/gbpjpy-ra/2502509", 0, 0);
+		Add("https://www.myfxbook.com/members/Merlin777/turtles-tradelikeaproru/2331949", 0, 0);
+		Add("https://www.myfxbook.com/members/majamivice/stdr-daily-ea/2533151", 0, 0);
+		Add("https://www.myfxbook.com/members/pasha_086/demo-1/2406935", 0, 0);
+		Add("https://www.myfxbook.com/members/iqsoftware2015/gkfx-metatrader-4couk-300/2517146", 0, 0);
+		Add("https://www.myfxbook.com/members/mollyred/chan-hoi-ling/2448112", 0, 0);
+		Add("https://www.myfxbook.com/members/ReadyToRoll/wavefighter-30-18-pairs-low/2434002", 0, 0);
+		Add("https://www.myfxbook.com/members/ReflexionAi/wsf-icmarkets/2282146", 0, 0);
+		Add("https://www.myfxbook.com/members/abudz/ts-50-gu-uj/2479239", 0, 0);
+		Add("https://www.myfxbook.com/members/Thanomc/tony-demofxprimusvlfx/2508366", 0, 0);
+		Add("https://www.myfxbook.com/members/philipchoi0205/philipchoi-demo/2034587", 0, 0);
+		Add("https://www.myfxbook.com/members/Mandal_/contest-mandal/2552632", 0, 0);
+		Add("https://www.myfxbook.com/members/philipchoi0205/philipchoi-demo/2034587", 0, 0);
+		Add("https://www.myfxbook.com/members/Zamile/zamile3/2199037", 0, 0);
+		Add("https://www.myfxbook.com/members/IntelFx/mt4-20254126-03/2509012", 0, 0);
+		Add("https://www.myfxbook.com/members/abudz/ts-50-gu-uj/2479239", 0, 0);
+		Add("https://www.myfxbook.com/members/Asalnikov/martin-setka/2402596", 0, 0);
+		Add("https://www.myfxbook.com/members/ypyea/ypy-ea-immortalis-elite-advancedmarkets/1920895", 0, 0);
+		Add("https://www.myfxbook.com/members/lhddlh/wave-106/2467760", 0, 0);
+		Add("https://www.myfxbook.com/members/Tianotrader/tianotrader/2557146", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-virginia/2415231", 0, 0);
+		Add("https://www.myfxbook.com/members/zbyszq/0nowe/2537640", 0, 0);
+		Add("https://www.myfxbook.com/members/kishisaki/kishisaki-commodities/2263169", 0, 0);
+		Add("https://www.myfxbook.com/members/jaecdeguzman/4fm2deguzmanjulieanne/1745142", 0, 0);
+		Add("https://www.myfxbook.com/members/romsesua/volnafx/2161488", 0, 0);
+		Add("https://www.myfxbook.com/members/tradingwithw/tp-v20-demo/2232332", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-angus/2260567", 0, 0);
+		Add("https://www.myfxbook.com/members/automatedfxtools/dynamic-pro-scalper-5000/1487626", 0, 0);
+		Add("https://www.myfxbook.com/members/PFXSltd/standard/2367912", 0, 0);
+		Add("https://www.myfxbook.com/members/halo031/oanda-demo-ea/2381857", 0, 0);
+		Add("https://www.myfxbook.com/members/dfoster/struggling-trader/2509337", 0, 0);
+		Add("https://www.myfxbook.com/members/dubips/dubips-quillon/2260531", 0, 0);
+		Add("https://www.myfxbook.com/members/caironews/pc-1/2371395", 0, 0);
+		Add("https://www.myfxbook.com/members/matrixxxlxxx/daily-profit/2504310", 0, 0);
+		Add("https://www.myfxbook.com/members/Endless_Invest/endless-3k-ei/2226791", 0, 0);
+		Add("https://www.myfxbook.com/members/Zabarkin/squared-financial/2409189", 0, 0);
+		Add("https://www.myfxbook.com/members/lhddlh/cts02/2320475", 0, 0);
+		Add("https://www.myfxbook.com/members/VivoMesa/progressive-flex-hybrid/2205038", 0, 0);
+		// Continue from https://www.myfxbook.com/systems?pt=6&p=4&ts=601&profitType=0&profitValue=0.0&drawType=1&drawValue=50.0&profitabilityType=0&profitabilityValue=0.0&ageType=0&ageValue=30&tradingType=0&systemType=0&symbols=&accountType=1&size=40&sb=19&st=2&lastTraded=7&tradesType=1&pipsType=1&pipsValue=30&equityType=1&equityValue=30&serverOid=0&regulationType=0#?pt=6&p=5&ts=602&profitType=0&profitValue=0.0&drawType=1&drawValue=50.0&profitabilityType=0&profitabilityValue=0.0&ageType=0&ageValue=30&tradingType=0&systemType=0&symbols=&accountType=1&size=10&sb=19&st=2&lastTraded=7&tradesType=1&pipsType=1&pipsValue=30&equityType=1&equityValue=30&serverOid=0&regulationType=0
+		
+		Add("https://www.myfxbook.com/members/galimoms/contest-galimoms/2539449", 0, 0);
+		Add("https://www.myfxbook.com/members/Redoy2000/contest-redoy2000/2547555", 0, 0);
+		Add("https://www.myfxbook.com/members/Balaji007/contest-balaji007/2529532", 0, 0);
+		Add("https://www.myfxbook.com/members/awvwdeyu/contest-awvwdeyu/2541535", 0, 0);
+		Add("https://www.myfxbook.com/members/brussolsis/contest-brussolsis/2541556", 0, 0);
+		Add("https://www.myfxbook.com/members/Forexsakeuk/contest-forexsakeuk/2545659", 0, 0);
+		Add("https://www.myfxbook.com/members/Mutiso/contest-mutiso/2536077", 0, 0);
+		Add("https://www.myfxbook.com/members/investi/contest-investi/2548033", 0, 0);
+		Add("https://www.myfxbook.com/members/bassistof/contest-bassistof/2540976", 0, 0);
+		Add("https://www.myfxbook.com/members/pandi_/contest-pandi/2552711", 0, 0);
+		Add("https://www.myfxbook.com/members/FX_Jewel/contest-fx-jewel/2529506", 0, 0);
+		Add("https://www.myfxbook.com/members/forexmyfx/contest-forexmyfx/2548176", 0, 0);
+		Add("https://www.myfxbook.com/members/AGFXTM/contest-agfxtm/2529489", 0, 0);
+		Add("https://www.myfxbook.com/members/himma_satria/contest-himma-satria/2529070", 0, 0);
+		Add("https://www.myfxbook.com/members/dinrazali/contest-dinrazali/2547372", 0, 0);
+		Add("https://www.myfxbook.com/members/Romm/contest-romm/2529429", 0, 0);
+		Add("https://www.myfxbook.com/members/ata16888/contest-ata16888/2545110", 0, 0);
+		Add("https://www.myfxbook.com/members/midokaka2/contest-midokaka2/2533626", 0, 0);
+		Add("https://www.myfxbook.com/members/jadegmyd_/contest-jadegmyd/2553128", 0, 0);
+		Add("https://www.myfxbook.com/members/fagonzo/contest-fagonzo/2545704", 0, 0);
+		Add("https://www.myfxbook.com/members/vinhlp/contest-vinhlp/2529428", 0, 0);
+		Add("https://www.myfxbook.com/members/Ahsan1234/contest-ahsan1234/2547925", 0, 0);
+		Add("https://www.myfxbook.com/members/bel3ouchi_/contest-bel3ouchi/2552500", 0, 0);
+		Add("https://www.myfxbook.com/members/Jogoboyo_/contest-jogoboyo/2552831", 0, 0);
+		Add("https://www.myfxbook.com/members/migxibit/contest-migxibit/2545740", 0, 0);
+		Add("https://www.myfxbook.com/members/HenryLeong/contest-henryleong/2546312", 0, 0);
+		Add("https://www.myfxbook.com/members/rogayah/contest-rogayah/2531461", 0, 0);
+		Add("https://www.myfxbook.com/members/mazensalama/contest-mazensalama/2537204", 0, 0);
+		Add("https://www.myfxbook.com/members/klpsd_/contest-klpsd/2552668", 0, 0);
+		Add("https://www.myfxbook.com/members/Cmnady/contest-cmnady/2545285", 0, 0);
+		Add("https://www.myfxbook.com/members/forexeztrading03/contest-forexeztrading03/2529197", 0, 0);
+		Add("https://www.myfxbook.com/members/cikgufx/contest-cikgufx/2546320", 0, 0);
+		Add("https://www.myfxbook.com/members/maxs/contest-maxs/2539455", 0, 0);
+		Add("https://www.myfxbook.com/members/Sartaz_/contest-sartaz/2552561", 0, 0);
+		Add("https://www.myfxbook.com/members/dyahfx/contest-dyahfx/2544072", 0, 0);
+		Add("https://www.myfxbook.com/members/chbou/contest-chbou/2529399", 0, 0);
+		Add("https://www.myfxbook.com/members/Atialb/contest-atialb/2530589", 0, 0);
+		Add("https://www.myfxbook.com/members/josephlon/contest-josephlon/2531284", 0, 0);
+		Add("https://www.myfxbook.com/members/flyl3/contest-flyl3/2545270", 0, 0);
+		Add("https://www.myfxbook.com/members/dream144/contest-dream144/2529895", 0, 0);
 		#endif
 	}
 	
@@ -280,6 +436,15 @@ void Myfxbook::Updater() {
 	
 	
 	if (accounts.IsEmpty()) {
+		for(int i = 0; i < urls.GetCount(); i++) {
+			for(int j = i+1; j < urls.GetCount(); j++) {
+				if (urls[i] == urls[j]) {
+					urls.Remove(j);
+					j--;
+				}
+			}
+		}
+		
 		accounts.SetCount(urls.GetCount());
 		for(int i = 0; i < accounts.GetCount(); i++) {
 			Account& a = accounts[i];
@@ -404,13 +569,14 @@ void Myfxbook::SolveSources() {
 			}
 			double close_price = openbuf.Get(read_pos);
 			
-			if (open_price == 0.0 || close_price == 0.0)
+			if (open_price <= 0.0 || close_price <= 0.0)
 				continue;
 			
 			double diff = close_price - open_price;
-			double pips = diff / point;
 			double gain = close_price / open_price - 1;
-			
+			double pips = gain;// point is unreliable diff / point;
+			if (gain < -0.05 || gain > 0.05)
+				continue;
 			
 			if (o.action) {
 				diff *= -1;

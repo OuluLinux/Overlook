@@ -13,12 +13,10 @@ using namespace Upp;
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
-#include "RecurrentSession.h"
 #include "Common.h"
 #include "Calendar.h"
 #include "Optimizer.h"
 #include "BitOptimizer.h"
-#include "DQN.h"
 #include "SimBroker.h"
 #include "System.h"
 #include "Core.h"

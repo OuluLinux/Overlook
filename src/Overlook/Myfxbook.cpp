@@ -422,7 +422,7 @@ Myfxbook::Myfxbook() {
 		#endif
 	}
 	
-	Thread::Start(THISBACK(Updater));
+	//Thread::Start(THISBACK(Updater));
 }
 
 Myfxbook::~Myfxbook() {

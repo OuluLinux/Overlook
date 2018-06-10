@@ -7,9 +7,20 @@ namespace Overlook {
 	MyFxBook module shows, that top performing account there is:
 		RAPIER by algo.land https://www.myfxbook.com/members/Megabot/rapier-by-algoland/1657111
 		(2h-2d orders, when only signal is used with minimum lots)
+	It works by expecting the price to return to the channel break price.
 	
+	This is scalper version from it. It expects price to return to the channel break price,
+	but only when it is very close to it already.
 */
+
 class RapierishAdvisor : public Core {
+	
+	struct Setting : Moveable<Setting> {
+		int a, b, c, d, e;
+		
+		void Serialize(Stream& s) {s % a % b % c % d % e;}
+	};
+	
 	
 	struct TrainingCtrl : public JobCtrl {
 		Vector<Point> polyline;
@@ -22,12 +33,14 @@ class RapierishAdvisor : public Core {
 	// Persistent
 	Vector<double> training_pts;
 	Vector<int> cursors;
+	Setting best_setting;
 	double total = 0;
 	int round = 0;
 	int prev_counted = 0;
 	
 	
 	// Temporary
+	Vector<Setting> test_settings;
 	double point = 0.0001;
 	int max_rounds = 0;
 	bool once = false;
@@ -42,6 +55,7 @@ protected:
 	bool TrainingEnd();
 	bool TrainingInspect();
 	void RefreshAll();
+	double TestSetting(Setting& setting, bool write_signal);
 	
 public:
 	typedef RapierishAdvisor CLASSNAME;
@@ -55,6 +69,7 @@ public:
 			% Out(0, 0)
 			% Mem(training_pts)
 			% Mem(cursors)
+			% Mem(best_setting)
 			% Mem(total)
 			% Mem(round)
 			% Mem(prev_counted);

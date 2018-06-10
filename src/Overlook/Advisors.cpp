@@ -128,11 +128,7 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	
 	double pips = 0;
 	
-	ExtremumCache ec;
-	ec.SetSize(200);
-	
 	int begin = max(0, bars - 100000);
-	ec.pos = begin-1;
 	
 	enum {IDLE, WAITING_REVERSE, WAITING_START, OPEN, CLOSED};
 	
@@ -140,14 +136,35 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	bool waiting_type;
 	double waiting_price;
 	for(int cursor = begin; cursor < bars; cursor++) {
+		int high_len = 0, low_len = 0;
 		
-		double lo = low_buf.Get(max(0, cursor-1));
-		double hi = high_buf.Get(max(0, cursor-1));
-		ec.Add(lo, hi);
-		if (cursor < 100) continue;
 		
-		int low_len = cursor - ec.GetLowest();
-		int high_len = cursor - ec.GetHighest();
+		// High break
+		{
+			int dir = 0;
+			double hi = high_buf.Get(cursor-1);
+			for (int i = cursor-2; i >= 0; i--) {
+				int idir = hi > high_buf.Get(i) ? +1 : -1;
+				if (dir != 0 && idir != +1) break;
+				dir = idir;
+				high_len++;
+				if (high_len >= break_period) break;
+			}
+		}
+		
+		// Low break
+		{
+			int dir = 0;
+			double lo = low_buf.Get(cursor-1);
+			for (int i = cursor-2; i >= 0; i--) {
+				int idir = lo < low_buf.Get(i) ? +1 : -1;
+				if (dir != 0 && idir != +1) break;
+				dir = idir;
+				low_len++;
+				if (low_len >= break_period) break;
+			}
+		}
+		
 		
 		bool break_type = low_len > high_len;
 		int break_len = break_type ? low_len : high_len;

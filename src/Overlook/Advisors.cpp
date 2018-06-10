@@ -45,11 +45,11 @@ void RapierishAdvisor::Start() {
 bool RapierishAdvisor::TrainingBegin() {
 	
 	test_settings.SetCount(0);
-	for(int break_period = 40; break_period <= 100; break_period += 5) {
-		for(int reverse_pips = 1; reverse_pips < 10; reverse_pips++) {
-			for(int open_steps = 1; open_steps < 10; open_steps++) {
-				for (int stop_loss_pips = 1; stop_loss_pips < 10; stop_loss_pips++) {
-					for (int take_profit_pips = 0; take_profit_pips < 13; take_profit_pips++) {
+	for(int break_period = 5; break_period <= 50; break_period += 5) {
+		for(int reverse_pips = 1; reverse_pips < 30; reverse_pips += 3) {
+			for(int open_steps = 1; open_steps < 4; open_steps += 1) {
+				for (int stop_loss_pips = 1; stop_loss_pips < 30; stop_loss_pips += 3) {
+					for (int take_profit_pips = 0; take_profit_pips < 30; take_profit_pips += 3) {
 						Setting& s = test_settings.Add();
 						s.a = break_period;
 						s.b = reverse_pips;
@@ -128,7 +128,14 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	
 	double pips = 0;
 	
+	ExtremumCache ec;
+	ec.SetSize(break_period);
+	
+	OnlineAverageWindow1 av;
+	av.SetPeriod(30);
+	
 	int begin = max(0, bars - 100000);
+	ec.pos = begin-1;
 	
 	enum {IDLE, WAITING_REVERSE, WAITING_START, OPEN, CLOSED};
 	
@@ -136,47 +143,31 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	bool waiting_type;
 	double waiting_price;
 	for(int cursor = begin; cursor < bars; cursor++) {
-		int high_len = 0, low_len = 0;
+		double price = open_buf.Get(cursor);
+		double lo = low_buf.Get(max(0, cursor-1));
+		double hi = high_buf.Get(max(0, cursor-1));
+		ec.Add(lo, hi);
 		
+		double prev_ma = av.GetMean();
+		av.Add(price);
+		double ma = av.GetMean();
+		bool ma_type = ma < prev_ma;
 		
-		// High break
-		{
-			int dir = 0;
-			double hi = high_buf.Get(cursor-1);
-			for (int i = cursor-2; i >= 0; i--) {
-				int idir = hi > high_buf.Get(i) ? +1 : -1;
-				if (dir != 0 && idir != +1) break;
-				dir = idir;
-				high_len++;
-				if (high_len >= break_period) break;
-			}
-		}
+		int low_len = cursor - ec.GetLowest();
+		int high_len = cursor - ec.GetHighest();
+		if (low_len < 0 || high_len < 0) Panic("Error");
 		
-		// Low break
-		{
-			int dir = 0;
-			double lo = low_buf.Get(cursor-1);
-			for (int i = cursor-2; i >= 0; i--) {
-				int idir = lo < low_buf.Get(i) ? +1 : -1;
-				if (dir != 0 && idir != +1) break;
-				dir = idir;
-				low_len++;
-				if (low_len >= break_period) break;
-			}
-		}
-		
-		
-		bool break_type = low_len > high_len;
+		bool break_type = low_len < high_len;
 		int break_len = break_type ? low_len : high_len;
 		
-		if (break_len >= break_period && waiting_break != OPEN) {
+		if (break_len == 0 && waiting_break != OPEN && break_type == ma_type) {
 			waiting_break = WAITING_REVERSE;
 			waiting_type = break_type;
 			waiting_price = open_buf.Get(cursor);
 		}
 		
 		if (waiting_break == WAITING_REVERSE) {
-			double price = open_buf.Get(cursor);
+			
 			double diff = price - waiting_price;
 			if (waiting_type) diff *= -1;
 			int diff_pt = diff / point;
@@ -188,7 +179,6 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 		}
 		
 		if (waiting_break == WAITING_START) {
-			double price = open_buf.Get(cursor);
 			double prev = open_buf.Get(cursor - 1);
 			double diff = price - prev;
 			if (!waiting_type) {
@@ -208,10 +198,11 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 				}
 			}
 			
+			if (waiting_break == OPEN && waiting_type != ma_type)
+				waiting_break = IDLE;
 		}
 		
 		if (waiting_break == OPEN) {
-			double price = open_buf.Get(cursor);
 			double diff = price - waiting_price;
 			int diff_pt = diff / point;
 			

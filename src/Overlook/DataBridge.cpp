@@ -535,6 +535,9 @@ void DataBridge::RefreshFromFasterTime() {
 	ConstBuffer& src_time  = m1_db.GetBuffer(4);
 	int faster_bars = src_open.GetCount();
 	
+	spread_mean = m1_db.spread_mean;
+	point = m1_db.point;
+	
 	int period_mins = GetMinutePeriod();
 	int period_secs = period_mins * 60;
 	Time epoch(1970,1,1);

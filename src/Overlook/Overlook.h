@@ -34,6 +34,7 @@ using namespace Upp;
 #include "ChartManager.h"
 #include "RuleAnalyzer.h"
 #include "Myfxbook.h"
+#include "Arbitrage.h"
 
 
 namespace Overlook {
@@ -85,6 +86,7 @@ protected:
 	CtrlCallbacks<Myfxbook> myfxbook;
 	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
+	ArbitrageCtrl arb;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -164,6 +166,7 @@ public:
 	void RefreshJobs();
 	void RefreshDebug();
 	void RefreshMyfxbook();
+	void RefreshArbitrage();
 	void MenuNewOrder();
 	void MenuCloseOrder();
 	void MenuModifyOrder();

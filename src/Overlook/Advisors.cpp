@@ -127,6 +127,7 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	enabled.SetCount(bars);
 	
 	double pips = 0;
+	double pos_pips = 0, neg_pips = 0;
 	
 	ExtremumCache ec;
 	ec.SetSize(break_period);
@@ -209,12 +210,18 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 			if (!waiting_type) {
 				if (diff_pt <= -stop_loss_pips || diff_pt >= take_profit_pips) {
 					waiting_break = CLOSED;
-					pips += diff - spread;
+					double change = diff - spread;
+					pips += change;
+					if (change > 0) pos_pips += change;
+					else neg_pips -= change;
 				}
 			} else {
 				if (-diff_pt <= -stop_loss_pips || -diff_pt >= take_profit_pips) {
 					waiting_break = CLOSED;
-					pips += -diff - spread;
+					double change = -diff - spread;
+					pips += change;
+					if (change > 0) pos_pips += change;
+					else neg_pips -= change;
 				}
 			}
 			
@@ -236,8 +243,12 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 		
 	}
 	
-	//ReleaseLog("pips " + DblStr(pips) + " break_period " + IntStr(break_period) + " reverse_pips " + IntStr(reverse_pips) + " open_steps " + IntStr(open_steps) + " stop_loss_pips " + IntStr(stop_loss_pips) + " take_profit_pips " + IntStr(take_profit_pips));
-	return pips;
+	double total_pips = pos_pips + neg_pips;
+	double profitability = total_pips > 0.0 ? pos_pips / total_pips : 0.0;
+	
+	if (write_signal)
+		ReleaseLog("RapierishAdvisor symbol " + IntStr(GetSymbol()) + " pips " + DblStr(pips) + " break_period " + IntStr(break_period) + " reverse_pips " + IntStr(reverse_pips) + " open_steps " + IntStr(open_steps) + " stop_loss_pips " + IntStr(stop_loss_pips) + " take_profit_pips " + IntStr(take_profit_pips));
+	return profitability;
 }
 
 bool RapierishAdvisor::TrainingEnd() {
@@ -284,7 +295,7 @@ void RapierishAdvisor::RefreshAll() {
 	int sig = enabled_ ? (signal_ ? -1 : +1) : 0;
 	
 	GetSystem().SetSignal(GetSymbol(), sig);
-	
+	ReleaseLog("RapierishAdvisor symbol " + IntStr(GetSymbol()) + " signal " + IntStr(sig));
 	
 	
 	// Keep counted manually

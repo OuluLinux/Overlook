@@ -132,6 +132,7 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(myfxbook, "MyFxBook").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
@@ -499,6 +500,7 @@ void Overlook::Data() {
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
 	if (myfxbook.IsVisible())		RefreshMyfxbook();
+	if (arb.IsVisible())			RefreshArbitrage();
 }
 
 void Overlook::RefreshAssist() {
@@ -930,6 +932,10 @@ void Overlook::RefreshDebug() {
 
 void Overlook::RefreshMyfxbook() {
 	myfxbook.Data();
+}
+
+void Overlook::RefreshArbitrage() {
+	arb.Data();
 }
 
 void Overlook::ToggleRightOffset() {

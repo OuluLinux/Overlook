@@ -61,7 +61,7 @@ void DataBridge::Start() {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym);
-			RefreshFromHistory(true);
+			//RefreshFromHistory(true);
 			RefreshFromHistory(false);
 		}
 		RefreshFromAskBid(init_round);
@@ -446,7 +446,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	Time t;
 	if (shift < 0) {
 		shift = -1;
-		t = Time(2005,1,1) - 60;
+		t = Time(2018,1,1) - 60;
 	} else {
 		shift = time_buf.GetCount() - 1;
 		t = Time(1970,1,1) + time_buf.Top();

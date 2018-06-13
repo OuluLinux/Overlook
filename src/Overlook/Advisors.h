@@ -43,7 +43,7 @@ class RapierishAdvisor : public Core {
 	Vector<Setting> test_settings;
 	double point = 0.0001;
 	int max_rounds = 0;
-	bool once = false;
+	bool once = true;
 	bool do_test = false;
 	
 	

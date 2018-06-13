@@ -65,8 +65,12 @@ file
 	BitOptimizer.cpp,
 	Calendar.h,
 	Calendar.cpp,
+	Arbitrage.h,
+	Arbitrage.cpp,
 	Myfxbook.h,
-	Myfxbook.cpp;
+	Myfxbook.cpp,
+	ReverseEngineering.h,
+	ReverseEngineering.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

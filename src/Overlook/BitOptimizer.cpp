@@ -3,6 +3,7 @@
 
 namespace Overlook {
 
+#undef CopyVector
 #define Element(a,b,c)  a[b][c]
 #define RowVector(a,b)  a[b]
 #define CopyVector(a,b) a <<= b

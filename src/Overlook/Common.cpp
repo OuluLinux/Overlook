@@ -15,12 +15,21 @@ int VectorBool::PopCount() const {
 	return count;
 }
 
-VectorBool& VectorBool::SetCount(int i) {
+VectorBool& VectorBool::SetCount(int i, bool b) {
 	if (count == i) return *this;
 	int c64 = i / 64;
 	if (i % 64 != 0) c64++;
 	count = i;
-	data.SetCount(c64, 0);
+	data.SetCount(c64, b * 0xFFFFFFFFFFFFFFFF);
+	return *this;
+}
+
+VectorBool& VectorBool::Reserve(int i) {
+	if (count == i) return *this;
+	int c64 = i / 64;
+	if (i % 64 != 0) c64++;
+	count = i;
+	data.Reserve(c64);
 	return *this;
 }
 

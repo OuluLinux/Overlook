@@ -82,7 +82,7 @@ protected:
 	void DrawGrid(Draw& W, bool draw_vert_grid);
 	void DrawLines(Draw& d, Core& cont);
 	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
-	void DrawBorders(Draw& d, Core& cont);
+	void DrawLabels(Draw& d, Core& cont);
 	Rect GetGraphCtrlRect();
 	
 	

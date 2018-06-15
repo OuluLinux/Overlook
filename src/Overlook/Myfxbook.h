@@ -6,6 +6,10 @@ namespace Overlook {
 
 class Myfxbook : public ParentCtrl {
 	
+protected:
+	friend class Analyzer;
+	
+	
 	struct Order : Moveable<Order> {
 		Time begin, end;
 		String symbol, open, profit;
@@ -82,6 +86,8 @@ public:
 	void LoadThis() {LoadFromFile(*this, ConfigFile("myfxbook.bin"));}
 	void Serialize(Stream& s) {s % symbols % accounts % urls % latest_update;}
 };
+
+inline Myfxbook& GetMyfxbook() {return Single<Myfxbook>();}
 
 }
 

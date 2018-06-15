@@ -35,7 +35,7 @@ public:
 class ExportCtrl : public ParentCtrl {
 	DataGraph graph;
 	SignalGraph siggraph;
-	Label data;
+	Upp::Label data;
 	SliderCtrl timeslider;
 	Splitter hsplit;
 	ArrayCtrl siglist, trade;

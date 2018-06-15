@@ -45,8 +45,7 @@ public:
 
 
 class HurstWindow : public Core {
-	int period = 5;
-	OnlineVariance var;
+	int period = 10;
 	OnlineAverageWindow1 avwin;
 	
 	static constexpr double koef = 1.253314;
@@ -62,8 +61,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(2, 1)
-			% Mem(var)
+			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2);
 	}
 };
@@ -92,6 +91,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", ma_period, 2)
 			% Arg("offset", ma_shift, -10000)
 			% Arg("method", ma_method, 0, 3);
@@ -114,6 +114,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(2, 2)
+			% Lbl(4)
 			% Arg("fast_ema", fast_ema_period, 2, 127)
 			% Arg("slow_ema", slow_ema_period, 2, 127)
 			% Arg("signal_sma", signal_sma_period, 2, 127);
@@ -158,6 +159,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 3)
+			% Lbl(1)
 			% Arg("period", bands_period, 2, 127)
 			% Arg("shift", bands_shift, 0, 0)
 			% Arg("deviation", deviation, 2, 127);
@@ -209,6 +211,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(3, 1)
+			% Lbl(1)
 			% Arg("step", step, 2, 127)
 			% Arg("maximum", maximum, 2, 127)
 			% Mem(last_rev_pos)
@@ -268,6 +271,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -287,6 +291,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -305,6 +310,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(3, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -324,6 +330,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(3, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -362,7 +369,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(2,2)
+			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2)
 			% Arg("shift", shift, -10000);
 	}
@@ -446,7 +454,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(4, 4)
+			% Out(3, 1)
+			% Lbl(1)
 			% Arg("period", period, 2);
 	}
 };
@@ -465,6 +474,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(2, 2)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -485,6 +495,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
+			% Lbl(1)
 			% Arg("k_period", k_period, 2)
 			% Arg("d_period", d_period, 2)
 			% Arg("slowing", slowing, 2);
@@ -506,7 +517,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(2,2)
+			% Out(1,1)
+			% Lbl(1)
 			% Arg("period", period, 2);
 	}
 };
@@ -538,6 +550,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -601,7 +614,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(5, 3);
+			% Out(5, 3)
+			% Lbl(1);
 	}
 };
 
@@ -649,7 +663,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(3, 3);
+			% Out(3, 3)
+			% Lbl(1);
 	}
 };
 
@@ -691,6 +706,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(2, 2)
+			% Lbl(1)
 			% Arg("left_bars", left_bars, 2, 20)
 			% Arg("right_bars", right_bars, 0, 0)
 			% Arg("smoothing", smoothing_period, 2, 127);
@@ -730,6 +746,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(4, 2)
+			% Lbl(1)
 			% Arg("depth", input_depth, 1)
 			% Arg("deviation", input_depth, 1)
 			% Arg("backstep", input_backstep, 1)
@@ -827,6 +844,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(2,2)
+			% Lbl(1)
 			% Arg("period", period, 2, 127)
 			% Arg("max_crosses", max_crosses, 300, 300)
 			% Arg("max_radius", max_radius, 100, 100)
@@ -850,6 +868,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2)
 			% Mem(ec);
 	}
@@ -871,6 +890,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2)
 			% Mem(ec);
 	}
@@ -889,6 +909,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2, 127);
 	}
 };
@@ -1020,6 +1041,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 2)
 			% Mem(stats);
 	}
@@ -1041,6 +1063,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Mem(prev_counted)
 			% Arg("cost_level", cost_level, 0);
 	}
@@ -1114,6 +1137,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(3, 3)
+			% Lbl(1)
 			% Arg("period", period, 2)
 			% Arg("err_div", err_div, 0);
 	}
@@ -1138,6 +1162,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(0, 0)
+			% Lbl(1)
 			% Mem(prev_counted)
 			% Arg("cost_level", cost_level, 0);
 	}
@@ -1171,7 +1196,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Out(0, 0)
+			% Lbl(1)
 			% Arg("idx_limit", idx_limit, 0, 100)
 			% Arg("cost_level", cost_level, 0);
 	}
@@ -1214,6 +1239,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("period", period, 1)
 			% Arg("div", div, 1)
 			% Arg("useable_div", useable_div, 1)
@@ -1243,6 +1269,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Arg("main_interval", main_interval, 1)
 			% Arg("grid_interval", grid_interval, 1)
 			% Mem(trend) % Mem(line_value);
@@ -1272,6 +1299,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Mem(var);
 	}
 };

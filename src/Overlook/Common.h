@@ -282,7 +282,7 @@ struct ValueBase {
 	void* data2 = NULL;
 	ValueBase() {}
 	virtual ~ValueBase() {}
-	enum {IN_, INOPT_, OUT_, BOOL_, INT_, PERS_};
+	enum {IN_, INOPT_, OUT_, LBL_, BOOL_, INT_, PERS_};
 	void operator = (const ValueBase& vb) {
 		count		= vb.count;
 		visible		= vb.visible;
@@ -517,7 +517,8 @@ public:
 	
 	int GetCount() const;
 	int PopCount() const;
-	VectorBool& SetCount(int i);
+	VectorBool& SetCount(int i, bool b=false);
+	VectorBool& Reserve(int i);
 	VectorBool& Zero();
 	VectorBool& One();
 	VectorBool& SetInverse(const VectorBool& b);
@@ -546,9 +547,22 @@ typedef const Buffer		ConstBuffer;
 struct Output : Moveable<Output> {
 	Output() {}
 	Vector<Buffer> buffers;
-	VectorBool label;
 	int phase = 0, type = 0, visible = 0;
 };
+
+struct LabelSignal : Moveable<LabelSignal> {
+	VectorBool signal, enabled;
+	void Serialize(Stream& s) {s % signal % enabled;}
+};
+
+struct Label : Moveable<Label> {
+	Label() {}
+	Vector<LabelSignal> buffers;
+	void Serialize(Stream& s) {s % buffers;}
+};
+
+typedef const LabelSignal ConstLabelSignal;
+typedef const Label ConstLabel;
 
 class Core;
 class System;

@@ -45,6 +45,10 @@ void CoreIO::IO(const ValueBase& base) {
 		for(int i = 0; i < out.buffers.GetCount(); i++)
 			buffers.Add(&out.buffers[i]);
 	}
+	else if (base.data_type == ValueBase::LBL_) {
+		Label& lbl = labels.Add();
+		lbl.buffers.SetCount(base.count);
+	}
 	else if (base.data_type == ValueBase::PERS_) {
 		persistents.Add(dynamic_cast<const Persistent&>(base));
 	}
@@ -72,8 +76,8 @@ ConstBuffer& CoreIO::GetInputBuffer(int input, int sym, int tf, int buffer) cons
 	return SafetyBuffer(out->buffers[buffer]);
 }
 
-ConstVectorBool& CoreIO::GetInputLabel(int input, int sym, int tf) const {
-	return inputs[input].Get(HashSymTf(sym, tf)).output->label;
+ConstLabelSignal& CoreIO::GetInputLabel(int input, int sym, int tf) const {
+	return inputs[input].Get(HashSymTf(sym, tf)).core->labels[0].buffers[input];
 }
 	
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
@@ -145,7 +149,7 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 	int persistent_count = persistents.GetCount();
 	int job_count = jobs.GetCount();
 	
-	out % output_count % persistent_count % counted % bars;
+	out % output_count % persistent_count % counted % bars % labels;
 	
 	out % job_count;
 	for(int i = 0; i < jobs.GetCount(); i++)
@@ -159,9 +163,6 @@ void CoreIO::Put(Stream& out, const String& dir, int subcore_id) {
 	for(int i = 0; i < outputs.GetCount(); i++) {
 		Output& output = outputs[i];
 		out % output.phase % output.type % output.visible;
-		
-		// VectorBool label is typically around 1-10K bytes and that's not too much.
-		out % output.label;
 		
 		for(int j = 0; j < output.buffers.GetCount(); j++) {
 			Buffer& buf = output.buffers[j];
@@ -218,7 +219,7 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	}
 	
 	int counted, bars;
-	in % counted % bars;
+	in % counted % bars % labels;
 	
 	int job_count;
 	in % job_count;
@@ -239,8 +240,6 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 		in % phase % type % visible;
 		
 		Output& output = outputs[i];
-		
-		in % output.label;
 		
 		if (output.phase != phase || output.type != type || output.visible != visible) {
 			LOG("CoreIO::LoadCache: error: output type mismatch");
@@ -270,10 +269,5 @@ void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {
 	this->bars = bars;
 }
 
-void CoreIO::ForceCount(int data_count) {
-	SetSafetyLimit(data_count);
-	for(int i = 0; i < outputs[0].buffers.GetCount(); i++)
-		outputs[0].buffers[i].SetCount(data_count);
-}
 
 }

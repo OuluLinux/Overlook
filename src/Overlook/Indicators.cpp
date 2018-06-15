@@ -226,6 +226,12 @@ HurstWindow::HurstWindow()
 void HurstWindow::Init() {
 	SetCoreSeparateWindow();
 	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.5);
+	
+	SetCoreMaximum(1);
+	SetCoreMinimum(0);
+	
 	int draw_begin;
 	if (period < 2)
 		period = 13;
@@ -233,8 +239,7 @@ void HurstWindow::Init() {
 	
 	avwin.SetPeriod(period);
 	
-	SetBufferColor(0, Blue());
-	SetBufferColor(1, Red());
+	SetBufferColor(0, Red());
 	SetBufferBegin(0, draw_begin );
 }
 
@@ -243,9 +248,9 @@ void HurstWindow::Start() {
 	int prev_counted = GetCounted();
 	
 	ConstBuffer& openbuf = GetInputBuffer(0, 0);
-	Buffer& valuebuf = GetBuffer(0);
-	Buffer& hurstbuf = GetBuffer(1);
+	Buffer& hurstbuf = GetBuffer(0);
 	const Vector<double>& win = avwin.GetWindow();
+	LabelSignal& ls = GetLabelBuffer(0, 0);
 	
 	Vector<double> x, y;
 	x.SetCount(period);
@@ -260,6 +265,7 @@ void HurstWindow::Start() {
 	}
 	
 	for(int i = prev_counted; i < bars; i++) {
+		double prev = openbuf.Get(i-1);
 		double open = openbuf.Get(i);
 		avwin.Add(open);
 		
@@ -290,17 +296,12 @@ void HurstWindow::Start() {
 			hurst = log(iValue) / log(period);
 		
 		hurstbuf.Set(i, hurst);
-		var.Add(hurst);
+		
+		bool sig = open < prev;
+		if (hurst < 0.5) sig = !sig;
+		ls.signal.Set(i, sig);
 	}
 	
-	double mean = var.GetMean();
-	double dev = var.GetDeviation();
-	
-	for(int i = prev_counted; i < bars; i++) {
-		double value = hurstbuf.Get(i);
-		double x = 1 / (1 + exp(-((value - mean)/(dev))));
-		valuebuf.Set(i, x);
-	}
 	
 }
 
@@ -368,15 +369,14 @@ void MovingAverage::Start() {
 	}
 	
 	Buffer& buffer = GetBuffer(0);
-	VectorBool& label = outputs[0].label;
-	label.SetCount(bars);
+	VectorBool& signal = GetLabelBuffer(0, 0).signal;
 	SetSafetyLimit(ma_counted-1);
 	double prev = ma_counted > 0 ? buffer.Get(ma_counted-1) : 0.0;
 	for(int i = ma_counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		double cur = buffer.Get(i);
 		bool label_value = cur < prev;
-		label.Set(i, label_value);
+		signal.Set(i, label_value);
 		prev = cur;
 	}
 }
@@ -526,6 +526,8 @@ void MovingAverageConvergenceDivergence::Start() {
 	int counted = GetCounted();
 	if ( counted > 0 )
 		counted--;
+	else
+		counted++;
 
 	const Core& a_ind = At(0);
 	const Core& b_ind = At(1);
@@ -541,6 +543,23 @@ void MovingAverageConvergenceDivergence::Start() {
 	}
 
 	SimpleMAOnBuffer( bars, GetCounted(), 0, signal_sma_period, buffer, signal_buffer );
+	
+	LabelSignal& early = GetLabelBuffer(0, 0);
+	LabelSignal& late = GetLabelBuffer(0, 1);
+	LabelSignal& side = GetLabelBuffer(0, 2);
+	LabelSignal& signal = GetLabelBuffer(0, 3);
+	for (int i = counted; i < bars; i++) {
+		double value = buffer.Get(i);
+		double prev = buffer.Get(i-1);
+		double ma = signal_buffer.Get(i);
+		bool value_sig = value < prev;
+		early.signal.Set(i, value_sig);
+		early.enabled.Set(i, (!value_sig && value < 0) || (value_sig && value > 0));
+		late.signal.Set(i, value_sig);
+		late.enabled.Set(i, (value_sig && value < 0) || (!value_sig && value > 0));
+		side.signal.Set(i, value < 0);
+		signal.signal.Set(i, value < ma);
+	}
 }
 
 void MovingAverageConvergenceDivergence::Assist(int cursor, VectorBool& vec) {
@@ -746,13 +765,21 @@ void BollingerBands::Start() {
 		pos = 0;
 	
 	ConstBuffer& open = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	for ( int i = pos; i < bars; i++) {
 		SetSafetyLimit(i);
-		ml_buffer.Set(i, SimpleMA( i, bands_period, open ));
+		double ma = SimpleMA( i, bands_period, open );
+		ml_buffer.Set(i, ma);
 		stddev_buffer.Set(i, StdDev_Func ( i, ml_buffer, bands_period ));
-		tl_buffer.Set(i, ml_buffer.Get(i) + bands_deviation * stddev_buffer.Get(i));
-		bl_buffer.Set(i, ml_buffer.Get(i) - bands_deviation * stddev_buffer.Get(i));
+		double tl = ml_buffer.Get(i) + bands_deviation * stddev_buffer.Get(i);
+		double bl = ml_buffer.Get(i) - bands_deviation * stddev_buffer.Get(i);
+		tl_buffer.Set(i, tl);
+		bl_buffer.Set(i, bl);
+		
+		double o = open.Get(i);
+		sig.signal.Set(i, o < ma);
+		sig.enabled.Set(i, o <= bl || o >= tl);
 	}
 }
 
@@ -911,6 +938,7 @@ void ParabolicSAR::Start () {
 	double prev_low  = Low( prev_pos );
 	
 	//bars--;
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	for (int i = pos; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -981,7 +1009,9 @@ void ParabolicSAR::Start () {
 			if ( value < high || value < prev_high )
 				sar_buffer.Set(i, Upp::max( high, prev_high ));
 		}
-
+		
+		sig.signal.Set(i, !direction_long);
+		
 		prev_high = high;
 		prev_low  = low;
 	}
@@ -1231,10 +1261,14 @@ void BearsPower::Start() {
 		counted++;
 	
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		buffer.Set(i, Low(i-1) - ma_buf.Get(i));
+		double value = Low(i-1) - ma_buf.Get(i);
+		buffer.Set(i, value);
+		sig.signal.Set(i, value < 0);
+		sig.enabled.Set(i, value < 0);
 	}
 }
 
@@ -1286,10 +1320,14 @@ void BullsPower::Start() {
 		counted++;
 	
 	ConstBuffer& ma_buf = At(0).GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	for ( int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		buffer.Set(i, High(i-1) - ma_buf.Get(i) );
+		double value = High(i-1) - ma_buf.Get(i);
+		buffer.Set(i, value);
+		sig.signal.Set(i, value < 0);
+		sig.enabled.Set(i, value > 0);
 	}
 }
 
@@ -1345,6 +1383,7 @@ void CommodityChannelIndex::Start() {
 	Buffer& cci_buffer = GetBuffer(0);
 	Buffer& value_buffer = GetBuffer(1);
 	Buffer& mov_buffer = GetBuffer(2);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	int i, k, pos;
 	double sum, mul;
@@ -1407,11 +1446,13 @@ void CommodityChannelIndex::Start() {
 
 		sum *= mul;
 
-		if ( sum == 0.0 )
-			cci_buffer.Set(i, 0.0);
-		else
-			cci_buffer.Set(i, ( value_buffer.Get(i) - mov_buffer.Get(i) ) / sum);
-
+		double value = 0;
+		if ( sum != 0.0 )
+			value = ( value_buffer.Get(i) - mov_buffer.Get(i) ) / sum;
+		
+		cci_buffer.Set(i, value);
+		sig.signal.Set(i, value < 0);
+		
 		i++;
 	}
 }
@@ -1459,6 +1500,7 @@ void DeMarker::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& max_buffer = GetBuffer(1);
 	Buffer& min_buffer = GetBuffer(2);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	double num;
 	
 	int bars = GetBars();
@@ -1513,11 +1555,13 @@ void DeMarker::Start() {
 		SetSafetyLimit(i);
 		double maxvalue = SimpleMA ( i, period, max_buffer );
 		num = maxvalue + SimpleMA ( i, period, min_buffer );
-
+		
+		double value = 0.0;
 		if ( num != 0.0 )
-			buffer.Set(i, maxvalue / num - 0.5);  // normalized
-		else
-			buffer.Set(i, 0.0);
+			value = maxvalue / num - 0.5;
+		buffer.Set(i, value);
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -1604,7 +1648,6 @@ void Momentum::Init() {
 	SetCoreSeparateWindow();
 	
 	SetBufferColor(0, DodgerBlue);
-	SetBufferColor(1, Color(28, 255, 200));
 	
 	if ( period <= 0 )
 		throw DataExc();
@@ -1629,7 +1672,7 @@ void Momentum::Assist(int cursor, VectorBool& vec) {
 
 void Momentum::Start() {
 	Buffer& buffer = GetBuffer(0);
-	Buffer& change_buf = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -1654,9 +1697,7 @@ void Momentum::Start() {
 		double value = close1 * 100 / close2 - 100;
 		buffer.Set(i, value);
 		
-		double prev = buffer.Get(i-1);
-		double change = (value - prev) * 10.0;
-		change_buf.Set(i, change);
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -1786,7 +1827,6 @@ void RelativeStrengthIndex::Init() {
 	SetBufferColor(0, DodgerBlue);
 	SetBufferColor(1, White());
 	SetBufferColor(2, White());
-	SetBufferColor(3, Color(28, 255, 200));
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, +0.4); // normalized
 	SetCoreLevel(1, -0.4); // normalized
@@ -1815,7 +1855,7 @@ void RelativeStrengthIndex::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& pos_buffer = GetBuffer(1);
 	Buffer& neg_buffer = GetBuffer(2);
-	Buffer& change_buf = GetBuffer(3);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	double diff;
 	int bars = GetBars();
@@ -1874,9 +1914,7 @@ void RelativeStrengthIndex::Start() {
 		buffer.Set(i, rsi);
 		prev_value = value;
 		
-		double prev = buffer.Get(i-1);
-		double change = (rsi - prev) * 10.0;
-		change_buf.Set(i, change);
+		sig.signal.Set(i, rsi < 0);
 	}
 }
 
@@ -1922,6 +1960,7 @@ void RelativeVigorIndex::Start()
 {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& signal_buffer = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	double value_up, value_down, num, denum;
 
 	int bars = GetBars();
@@ -1979,8 +2018,12 @@ void RelativeVigorIndex::Start()
 	if ( counted < 8 )
 		counted = 8;
 
-	for ( int i = counted; i < bars; i++)
-		signal_buffer.Set(i, ( buffer.Get(i) + 2 * buffer.Get(i-1) + 2 * buffer.Get(i-2) + buffer.Get(i-3) ) / 6);
+	for ( int i = counted; i < bars; i++) {
+		double bufvalue = buffer.Get(i);
+		double value = ( bufvalue + 2 * buffer.Get(i-1) + 2 * buffer.Get(i-2) + buffer.Get(i-3) ) / 6;
+		signal_buffer.Set(i, value);
+		sig.signal.Set(i, bufvalue < value);
+	}
 }
 
 
@@ -2036,6 +2079,7 @@ void StochasticOscillator::Start() {
 	Buffer& signal_buffer = GetBuffer(1);
 	Buffer& high_buffer = GetBuffer(2);
 	Buffer& low_buffer = GetBuffer(3);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int start;
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -2138,11 +2182,12 @@ void StochasticOscillator::Start() {
 		sumlow  += close - low;
 		sumhigh += high - low;
 		
-
-		if ( sumhigh == 0.0 )
-			buffer.Set(i, 1.0); // normalized
-		else
-			buffer.Set(i, sumlow / sumhigh * 2.0 - 1.0); // normalized
+		
+		double value = 1.0;
+		if ( sumhigh != 0.0 )
+			value = sumlow / sumhigh * 2.0 - 1.0;
+		buffer.Set(i, value);
+		sig.signal.Set(i, value < 0);
 	}
 
 	start = d_period - 1;
@@ -2179,7 +2224,6 @@ void WilliamsPercentRange::Init() {
 	SetCoreMinimum(-1); // normalized
 	SetCoreMaximum(+1);  // normalized
 	SetBufferColor(0, DodgerBlue);
-	SetBufferColor(1, Color(28, 255, 200));
 	SetCoreLevelCount(2);
 	SetCoreLevel(0, -20 + 50); // normalized
 	SetCoreLevel(1, -80 + 50); // normalized
@@ -2190,7 +2234,7 @@ void WilliamsPercentRange::Init() {
 
 void WilliamsPercentRange::Start() {
 	Buffer& buffer = GetBuffer(0);
-	Buffer& change_buf = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 
@@ -2211,11 +2255,9 @@ void WilliamsPercentRange::Start() {
 		double min_low = Low( lowest );
 		double close = Open( i );
 		double cur = -2 * ( max_high - close ) / ( max_high - min_low ) + 1;
-		buffer.Set(i, cur); // normalized
+		buffer.Set(i, cur);
 		
-		double prev = buffer.Get(i-1);
-		double change = (cur - prev) * 10.0;
-		change_buf.Set(i, change);
+		sig.signal.Set(i, cur < 0);
 	}
 }
 
@@ -2310,6 +2352,7 @@ void MoneyFlowIndex::Init() {
 
 void MoneyFlowIndex::Start() {
 	Buffer& buffer = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	double pos_mf, neg_mf, cur_tp, prev_tp;
 	
 	int bars = GetBars();
@@ -2346,10 +2389,14 @@ void MoneyFlowIndex::Start() {
 			cur_tp = prev_tp;
 		}
 		
+		double value;
 		if ( neg_mf != 0.0 )
-			buffer.Set(i, 100 - 100 / ( 1 + pos_mf / neg_mf ) - 50); // normalized
+			value = 100 - 100 / ( 1 + pos_mf / neg_mf ) - 50;
 		else
-			buffer.Set(i, 100 - 50); // normalized
+			value = 100 - 50;
+		buffer.Set(i, value);
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -2527,6 +2574,7 @@ void AcceleratorOscillator::Start() {
 	Buffer& down_buffer = GetBuffer(2);
 	Buffer& macd_buffer = GetBuffer(3);
 	Buffer& signal_buffer = GetBuffer(4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	double prev = 0.0, current;
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -2575,6 +2623,8 @@ void AcceleratorOscillator::Start() {
 		}
 
 		buffer.Set(i, current);
+		
+		sig.signal.Set(i, current < 0);
 
 		prev = current;
 	}
@@ -2790,6 +2840,7 @@ void AwesomeOscillator::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& up_buffer = GetBuffer(1);
 	Buffer& down_buffer = GetBuffer(2);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -2834,6 +2885,8 @@ void AwesomeOscillator::Start() {
 			up_buffer.Set(i, current);
 			down_buffer.Set(i, 0.0);
 		}
+		
+		sig.signal.Set(i, current < 0);
 
 		prev = current;
 	}
@@ -3000,6 +3053,7 @@ void FractalOsc::Init() {
 void FractalOsc::Start() {
 	Buffer& buf = GetBuffer(0);
 	Buffer& av  = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -3021,8 +3075,11 @@ void FractalOsc::Start() {
 		double v = (close - buf2) / (buf1 - buf2);
 		if ( v > 1) v = 1;
 		else if ( v < 0) v = 0;
-		buf.Set(i, v - 0.5); // normalized
+		double value = v - 0.5;
+		buf.Set(i, value); // normalized
 		av.Set(i, SimpleMA( i, smoothing_period, buf ));
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -3224,7 +3281,7 @@ void ZigZag::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	
-	VectorBool& label = outputs[0].label;
+	VectorBool& label = GetLabelBuffer(0,0).signal;
 	label.SetCount(bars);
 	
 	if ( bars < input_depth || input_backstep >= input_depth )
@@ -3770,6 +3827,7 @@ void SupportResistanceOscillator::Init() {
 void SupportResistanceOscillator::Start() {
 	Buffer& osc_av = GetBuffer(0);
 	Buffer& osc = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -3790,6 +3848,7 @@ void SupportResistanceOscillator::Start() {
 		if (value >  1) value = 1;
 		if (value < -1) value = -1;
 		osc.Set(i, value);
+		sig.signal.Set(i, value < 0);
 		value = ExponentialMA( i, smoothing_period, prev_value, osc );
 		osc_av.Set(i, value);
 		prev_pos = i;
@@ -3815,6 +3874,7 @@ void ChannelOscillator::Init() {
 
 void ChannelOscillator::Start() {
 	Buffer& osc = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -3837,6 +3897,8 @@ void ChannelOscillator::Start() {
 		
 		double value = (open - ch_low) / ch_diff * 2.0 - 1.0;
 		osc.Set(i, value);
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -3870,6 +3932,7 @@ void ScissorChannelOscillator::Init() {
 
 void ScissorChannelOscillator::Start() {
 	Buffer& osc = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -3930,6 +3993,8 @@ void ScissorChannelOscillator::Start() {
 		double value = (open - low_limit) / limit_diff * 2.0 - 1.0;
 		if (!IsFin(value)) value = 0.0;
 		osc.Set(i, value);
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -3958,6 +4023,7 @@ void Psychological::Init() {
 
 void Psychological::Start() {
 	Buffer& buf = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -3990,7 +4056,10 @@ void Psychological::Start() {
 		if (Open(i-period) > Open(i-period-1)) {
 			count--;
 		}
-		buf.Set(i, ((double)count / period) *100.0 - 50); // normalized
+		double value = ((double)count / period) *100.0 - 50;
+		buf.Set(i, value); // normalized
+		
+		sig.signal.Set(i, value < 0);
 	}
 }
 
@@ -4329,7 +4398,7 @@ void PeriodicalChange::Assist(int cursor, VectorBool& vec) {
 
 
 VolatilityAverage::VolatilityAverage() {
-	period = 60;
+	period = 10;
 }
 
 void VolatilityAverage::Init() {
@@ -4347,7 +4416,9 @@ void VolatilityAverage::Init() {
 
 void VolatilityAverage::Start() {
 	System& sys = GetSystem();
-	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& low = GetInputBuffer(0, 1);
+	ConstBuffer& high = GetInputBuffer(0, 2);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -4359,7 +4430,7 @@ void VolatilityAverage::Start() {
 	double sum = 0.0;
 	SetSafetyLimit(counted);
 	for(int i = Upp::max(1, counted - period); i < counted; i++) {
-		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		double change = fabs(high.Get(i) / low.Get(i-1) - 1.0);
 		sum += change;
 	}
 	
@@ -4367,13 +4438,13 @@ void VolatilityAverage::Start() {
 		SetSafetyLimit(i+1);
 		
 		// Add current
-		double change = fabs(src.Get(i) / src.Get(i-1) - 1.0);
+		double change = fabs(high.Get(i) / low.Get(i-1) - 1.0);
 		sum += change;
 		
 		// Subtract
 		int j = i - period;
 		if (j > 0) {
-			double prev_change = fabs(src.Get(j) / src.Get(j-1) - 1.0);
+			double prev_change = fabs(high.Get(j) / low.Get(j-1) - 1.0);
 			sum -= prev_change;
 		}
 		
@@ -4402,6 +4473,8 @@ void VolatilityAverage::Start() {
 		double j = stats_limit[stats.Find(av)];
 		double sens = j / total * 2.0 - 1.0;
 		dst.Set(i, sens);
+		
+		sig.enabled.Set(i, sens >= 0.5);
 	}
 }
 
@@ -4454,7 +4527,7 @@ void MinimalLabel::Start() {
 	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
+	VectorBool& labelvec = GetLabelBuffer(0,0).signal;
 	labelvec.SetCount(bars);
 	
 	Buffer& buf = GetBuffer(0);
@@ -4715,7 +4788,7 @@ void TrendIndex::Start() {
 	if ( bars <= period )
 		throw DataExc();
 	
-	VectorBool& label = GetOutput(0).label;
+	VectorBool& label = GetLabelBuffer(0,0).signal;
 	label.SetCount(bars);
 	
 	for (int i = counted; i < bars; i++) {
@@ -4782,12 +4855,12 @@ void OnlineMinimalLabel::Start() {
 	
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, symbol, tf));
 	ConstBuffer& open_buf	= GetInputBuffer(0, 0);
-	double spread_point		= db->GetPoint();
-	double cost				= spread_point * (1 + cost_level);
-	ASSERT(spread_point > 0.0);
+	double spread			= db->GetSpread();
+	double point			= db->GetPoint();
+	double cost				= spread + point * cost_level;
+	ASSERT(spread > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
-	labelvec.SetCount(bars);
+	VectorBool& labelvec = GetLabelBuffer(0,0).signal;
 	
 	for(int i = GetCounted(); i < bars; i++) {
 		SetSafetyLimit(i);
@@ -4809,37 +4882,17 @@ void OnlineMinimalLabel::GetMinimalSignal(double cost, ConstBuffer& open_buf, in
 	for(int i = begin; i < end; i++) {
 		double open = open_buf.GetUnsafe(i);
 		double close = open;
-		int j = i + 1;
-		bool can_break = false;
-		bool break_label;
-		double prev = open;
-		for(; j < end; j++) {
-			close = open_buf.GetUnsafe(j);
-			if (!can_break) {
-				double abs_diff = fabs(close - open);
-				if (abs_diff >= cost) {
-					break_label = close < open;
-					can_break = true;
-				}
-			} else {
-				bool change_label = close < prev;
-				if (change_label != break_label) {
-					j--;
-					break;
-				}
-			}
-			prev = close;
-		}
 		
+		for (int j = i-1; j >= begin; j--) {
+			open = open_buf.GetUnsafe(j);
+			double abs_diff = fabs(close - open);
+			if (abs_diff >= cost) {
+				break;
+			}
+		}
 		bool label = close < open;
 		
-		for(int k = i; k < j; k++) {
-			int buf_pos = k - write_begin;
-			if (buf_pos >= 0)
-				sigbuf[buf_pos] = label;
-		}
-		
-		i = j - 1;
+		sigbuf[i] = label;
 	}
 }
 
@@ -4885,8 +4938,8 @@ void SelectiveMinimalLabel::Start() {
 	double cost				= spread_point * (1 + cost_level);
 	ASSERT(spread_point > 0.0);
 	
-	VectorBool& labelvec = GetOutput(0).label;
-	VectorBool& enabledvec = GetOutput(1).label;
+	VectorBool& labelvec = GetLabelBuffer(0,0).signal;
+	VectorBool& enabledvec = GetLabelBuffer(0,0).enabled;
 	labelvec.SetCount(bars);
 	enabledvec.SetCount(bars);
 	
@@ -5175,7 +5228,7 @@ void ChannelContext::Start() {
 	ConstBuffer& high		= GetInputBuffer(0, 2);
 	
 	Buffer& buffer			= GetBuffer(0);
-	VectorBool& enabled_buf	= GetOutput(0).label;
+	VectorBool& enabled_buf	= GetLabelBuffer(0,0).signal;
 	
 	double diff;
 	int bars = GetBars();
@@ -5289,11 +5342,10 @@ void GridSignal::Start() {
 	ConstBuffer& low		= GetInputBuffer(0, 1);
 	ConstBuffer& high		= GetInputBuffer(0, 2);
 	Buffer& out				= GetBuffer(0);
-	VectorBool& signal		= GetOutput(0).label;
+	VectorBool& signal		= GetLabelBuffer(0,0).signal;
 	
 	int counted = GetCounted();
 	int bars = GetBars();
-	signal.SetCount(bars);
 	
 	double grid_step = GetDataBridge()->GetPoint() * ((double)main_interval * 0.1);
 	
@@ -5413,19 +5465,21 @@ void Anomaly::Start() {
 	System& sys = GetSystem();
 	ConstBuffer& src = GetInputBuffer(0, 0);
 	ConstBuffer& src_time = GetInputBuffer(0,4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	Buffer& dst = GetBuffer(0);
 	
 	int bars = GetBars() - 1;
 	int counted = GetCounted();
 	if (counted) counted--;
+	else counted++;
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i+1);
 		
-		double prev = src.Get(i);
+		double prev = src.Get(i-1);
 		if (prev == 0.0)
 			continue;
-		double change = src.Get(i+1) / prev - 1.0;
+		double change = src.Get(i) / prev - 1.0;
 		if (!IsFin(change))
 			continue;
 		
@@ -5461,6 +5515,8 @@ void Anomaly::Start() {
 		value = (value - 0.5) * 2.0;
 		
 		dst.Set(i, value);
+		
+		sig.enabled.Set(i, value >= 0.75);
 	}
 }
 

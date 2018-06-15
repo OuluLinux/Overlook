@@ -57,6 +57,10 @@ struct Out : public ValueBase {
 	Out(int count, int visible) {this->count = count; this->visible = visible; data_type = OUT_;}
 };
 
+struct Lbl : public ValueBase {
+	Lbl(int count) {this->count = count; data_type = LBL_;}
+};
+
 struct Arg : public ValueBase {
 	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
 	Arg(const char* key, int& value, int min, int max=10000) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
@@ -140,6 +144,7 @@ protected:
 	
 	Vector<Input> inputs;
 	Vector<Output> outputs;
+	Vector<Label> labels;
 	Vector<Buffer*> buffers;
 	Array<Job> jobs;
 	Array<Persistent> persistents;
@@ -206,11 +211,14 @@ public:
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const;
-	ConstVectorBool& GetInputLabel(int input, int sym, int tf) const;
+	ConstLabelSignal& GetInputLabel(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input) const;
 	Output& GetOutput(int output) {return outputs[output];}
 	ConstOutput& GetOutput(int output) const {return outputs[output];}
+	ConstLabel& GetLabel(int lbl) const {return labels[lbl];}
+	ConstLabelSignal& GetLabelBuffer(int lbl, int buf) const {return labels[lbl].buffers[buf];}
+	LabelSignal& GetLabelBuffer(int lbl, int buf) {return labels[lbl].buffers[buf];}
 	const CoreIO& GetInput(int input, int sym, int tf) const;
 	String GetCacheDirectory();
 	Color GetBufferColor(int i) {return buffers[i]->clr;}
@@ -222,6 +230,8 @@ public:
 	int GetBufferType(int i) {return buffers[i]->line_style;}
 	int GetBufferCount() {return buffers.GetCount();}
 	int GetOutputCount() const {return outputs.GetCount();}
+	int GetLabelCount() const {return labels.GetCount();}
+	int GetLabelBufferCount(int l) const {return labels[l].buffers.GetCount();}
 	int GetFactory() const {return factory;}
 	bool IsInitialized() const {return is_init;}
 	
@@ -237,7 +247,6 @@ public:
 	void SetTimeframe(int i) {tf_id = i;}
 	void SetFactory(int i) {factory = i;}
 	void SetHash(int i) {hash = i;}
-	void ForceCount(int data_count);
 	
 };
 
@@ -326,7 +335,7 @@ public:
 	int GetFutureBars() const {return future_bars;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
-	inline ConstVectorBool& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
+	inline ConstLabelSignal& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
 	DataBridge* GetDataBridge();
 	bool IsJobsFinished() const;
 	Job& GetCurrentJob() {return *current_job;}

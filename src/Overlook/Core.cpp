@@ -207,6 +207,14 @@ void Core::Refresh() {
 					b.value.SetCount(count, 0);
 				}
 			}
+			for (auto& l : labels) {
+				for (auto& b : l.buffers) {
+					b.signal.Reserve(reserve);
+					b.signal.SetCount(count, 0);
+					b.enabled.Reserve(reserve);
+					b.enabled.SetCount(count, 1);
+				}
+			}
 		}
 	}
 		

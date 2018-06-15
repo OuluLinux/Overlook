@@ -108,8 +108,8 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& low_buf  = GetInputBuffer(0, 1);
 	ConstBuffer& high_buf = GetInputBuffer(0, 2);
-	VectorBool& signal  = GetOutput(0).label;
-	VectorBool& enabled = GetOutput(1).label;
+	VectorBool& signal  = GetLabelBuffer(0,0).signal;
+	VectorBool& enabled = GetLabelBuffer(0,0).enabled;
 	Buffer& out = GetBuffer(0);
 	
 	DataBridge& db = *GetDataBridge();
@@ -121,10 +121,6 @@ double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
 	if (spread < point * 2) spread = point * 2;
 	
 	take_profit_pips += spread / point;
-	
-	int bars = GetBars();
-	signal.SetCount(bars);
-	enabled.SetCount(bars);
 	
 	double pips = 0;
 	double pos_pips = 0, neg_pips = 0;
@@ -285,8 +281,8 @@ void RapierishAdvisor::RefreshAll() {
 	TestSetting(best_setting, true);
 	
 	
-	VectorBool& signal  = GetOutput(0).label;
-	VectorBool& enabled = GetOutput(1).label;
+	VectorBool& signal  = GetLabelBuffer(0,0).signal;
+	VectorBool& enabled = GetLabelBuffer(0,0).enabled;
 	
 	
 	int bars = GetBars();
@@ -368,7 +364,7 @@ void MultiTfAdvisor::Start() {
 			if (src.core) {
 				Core* core = dynamic_cast<Core*>(src.core);
 				
-				bool src_signal = core->GetOutput(0).label.Top();
+				bool src_signal = core->GetLabelBuffer(0,0).signal.Top();
 				if (!total)
 					signal = src_signal;
 				else if (src_signal != signal)

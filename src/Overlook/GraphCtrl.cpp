@@ -126,7 +126,7 @@ void GraphCtrl::Paint(Draw& draw) {
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = src[0]->GetBufferCount() > 0 ? src[0]->GetBuffer(0).GetCount() : src[0]->GetOutput(0).label.GetCount();
+    int data_count = src[0]->GetBufferCount() > 0 ? src[0]->GetBuffer(0).GetCount() : src[0]->GetLabelBuffer(0, 0).signal.GetCount();
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -179,7 +179,7 @@ void GraphCtrl::Paint(Draw& draw) {
 		}
 	}
 	
-	DrawBorders(w, *src.Top());
+	DrawLabels(w, *src.Top());
 	DrawBorder(w);
 	DrawLines(w, *src.Top());
 	
@@ -497,39 +497,34 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 	}
 }
 
-void GraphCtrl::DrawBorders(Draw& d, Core& cont) {
+void GraphCtrl::DrawLabels(Draw& d, Core& cont) {
     x = border;
     r = GetGraphCtrlRect();
     y = r.top;
-	bool draw_label = cont.GetOutputCount() > 0;
-	bool draw_label_enabled = cont.GetOutputCount() > 1;
-	if (draw_label) {
-		int label_data_count = cont.GetOutput(0).label.GetCount();
-		int begin = 0;
-		int end = real_screen_count;
-		VectorBool* labelvec = &cont.GetOutput(0).label;
-		VectorBool* enabledvec = NULL;
-		if (draw_label_enabled) {
-			enabledvec = &cont.GetOutput(1).label;
-			label_data_count = Upp::min(label_data_count, cont.GetOutput(0).label.GetCount());
-		}
-		for(int i = begin; i < end; i++) {
-	        int pos = label_data_count - (count + shift - i);
-	        if (pos < 0 || pos >= label_data_count)
-				continue;
-	        
-	        int xi = (x+(i+0.5)*div);
-			
-			if (draw_label) {
-				bool label = labelvec->Get(pos);
-				bool enabled = true;
-				if (draw_label_enabled)
-					enabled = enabledvec->Get(pos);
+    int row = 0;
+	for (int l = 0; l < cont.GetLabelCount(); l++) {
+		for(int b = 0; b < cont.GetLabelBufferCount(l); b++) {
+			ConstLabelSignal& lb = cont.GetLabelBuffer(l, b);
+			ConstVectorBool& labelvec = lb.signal;
+			ConstVectorBool& enabledvec = lb.enabled;
+			int label_data_count = lb.signal.GetCount();
+			int begin = 0;
+			int end = real_screen_count;
+			for(int i = begin; i < end; i++) {
+		        int pos = label_data_count - (count + shift - i);
+		        if (pos < 0 || pos >= label_data_count)
+					continue;
+		        
+		        int xi = (x+(i+0.5)*div);
+				
+				bool label = labelvec.Get(pos);
+				bool enabled = enabledvec.Get(pos);
 				if (enabled) {
-					if (label)	d.DrawRect(xi - 2, y+border - 2, 4, 4, Color(255, 96, 96));
-					else		d.DrawRect(xi - 2, y+border - 2, 4, 4, Color(104, 99, 255));
+					if (label)	d.DrawRect(xi - 2, y+border - 2 + 4*row, 4, 4, Color(255, 96, 96));
+					else		d.DrawRect(xi - 2, y+border - 2 + 4*row, 4, 4, Color(104, 99, 255));
 				}
 			}
+			row++;
 		}
 	}
 }

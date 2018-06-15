@@ -171,7 +171,7 @@ void Chart::Settings() {
 	tw->Title("Configure arguments");
 	Button ok;
 	ParentCtrl ctrl;
-	Array<Label> labels;
+	Array<Upp::Label> labels;
 	Array<EditDoubleSpin> edits;
 	ok.SetLabel("OK");
 	tw->Add(ctrl.HSizePos().VSizePos(0,30));
@@ -190,7 +190,7 @@ void Chart::Settings() {
 	int xoff = (int)(sz.cx * 0.5);
 	
 	for(int i = 0; i < reg.args.GetCount(); i++) {
-		Label& lbl = labels.Add();
+		Upp::Label& lbl = labels.Add();
 		lbl.SetLabel(reg.keys[i]);
 		lbl.SetAlign(ALIGN_RIGHT);
 		EditDoubleSpin& edit = edits.Add();

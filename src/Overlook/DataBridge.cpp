@@ -61,13 +61,11 @@ void DataBridge::Start() {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym);
-			//RefreshFromHistory(true);
+			RefreshFromHistory(true);
 			RefreshFromHistory(false);
 		}
 		RefreshFromAskBid(init_round);
 	}
-	
-	
 }
 
 void DataBridge::AddSpread(double a) {

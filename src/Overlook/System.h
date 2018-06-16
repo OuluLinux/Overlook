@@ -189,6 +189,16 @@ struct InspectionResult : Moveable<InspectionResult> {
 	String msg;
 };
 
+struct VariantSymbol : Moveable<VariantSymbol> {
+	String pair1, pair2;
+	int math = 0, p1 = 0, p2 = 0;
+};
+
+struct VariantList : Moveable<VariantList> {
+	Vector<VariantSymbol> symbols;
+	Index<int> dependencies;
+};
+
 enum {TIMEBUF_WEEKTIME, TIMEBUF_COUNT};
 enum {CORE_INDICATOR, CORE_EXPERTADVISOR, CORE_HIDDEN};
 
@@ -275,12 +285,13 @@ protected:
 	
 	
 	// Temporary
-	Index<String>				symbols, allowed_symbols;
+	Index<String>				symbols, allowed_symbols, currencies;
 	Vector<int>					signals;
 	Index<int>					periods;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;
 	Vector<FactoryRegister>		regs;
+	Vector<VariantList>			variants;
 	Time						end;
 	Data						data;
 	double						limit_day_begin = 0, limit_day_best = 0, limit_day_worst = 0;
@@ -329,6 +340,7 @@ public:
 	void	StoreCores();
 	bool	RefreshReal();
 	void	SetSignal(int sym, int i)				{signals[sym] = i;}
+	const VariantList& GetVariants(int i) const		{return variants[i];}
 	
 public:
 	

@@ -87,17 +87,69 @@ void System::Init() {
 
 void System::FirstStart() {
 	MetaTrader& mt = GetMetaTrader();
+	String pair1[4], pair2[4];
 	
 	try {
 		time_offset = mt.GetTimeOffset();
 		
 		
-		// Add symbols
+		// Add symbols and currencies
 		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& s = mt.GetSymbol(i);
 			AddSymbol(s.name);
+			
+			if (s.IsForex()) {
+				String a = s.name.Left(3);
+				String b = s.name.Mid(3,3);
+				currencies.FindAdd(a);
+				currencies.FindAdd(b);
+			}
 			//ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
 		}
+		
+		
+		// Find variants
+		variants.SetCount(symbols.GetCount());
+		for(int i = 0; i < symbols.GetCount(); i++) {
+			const Symbol& s = mt.GetSymbol(i);
+			if (!s.IsForex()) continue;
+			
+			VariantList& vl = variants[i];
+			
+			String a = s.name.Left(3);
+			String b = s.name.Mid(3,3);
+			for(int j = 0; j < currencies.GetCount(); j++) {
+				const String& cur = currencies[j];
+				if (cur == a || cur == b) continue;
+				
+				pair1[0] = a + cur;
+				pair1[1] = a + cur;
+				pair1[2] = cur + a;
+				pair1[3] = cur + a;
+				
+				pair2[0] = b + cur;
+				pair2[1] = cur + b;
+				pair2[2] = b + cur;
+				pair2[3] = cur + b;
+				
+				for(int k = 0; k < 4; k++) {
+					int p1 = symbols.Find(pair1[k]);
+					int p2 = symbols.Find(pair2[k]);
+					if (p1 != -1 && p2 != -1) {
+						VariantSymbol& vs = vl.symbols.Add();
+						vs.math = k;
+						vs.pair1 = pair1[k];
+						vs.pair2 = pair2[k];
+						vs.p1 = p1;
+						vs.p2 = p2;
+						
+						vl.dependencies.FindAdd(p1);
+						vl.dependencies.FindAdd(p2);
+					}
+				}
+			}
+		}
+		
 		
 		
 		// Add periods

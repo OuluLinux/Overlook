@@ -53,7 +53,7 @@ class GraphCtrl : public Ctrl {
 protected:
 	friend class Overlook;
 	
-	Vector<Core*> src;
+	Vector<Ptr<CoreIO> > src;
 	Point latest_left_down_pt, latest_mouse_move_pt;
 	double hi, lo;
 	int shift;
@@ -94,7 +94,7 @@ public:
     void PaintCandlesticks(Draw& W, Core& values);
 	void PostRefresh() {PostCallback(THISBACK(GraphCtrlRefresh));}
 	void GraphCtrlRefresh() {Refresh();}
-	void AddSource(Core* src) {this->src.Add(src);}
+	void AddSource(Ptr<CoreIO> src) {this->src.Add(src);}
 	void SetRightOffset(bool b=true) {right_offset = b;}
 	virtual void Paint(Draw& w);
 	virtual bool Key(dword key, int count);

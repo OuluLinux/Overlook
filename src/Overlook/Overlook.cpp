@@ -447,7 +447,7 @@ void Overlook::DeepRefresh() {
 		common.DownloadAskBid();
 		common.RefreshAskBidData(true);
 		GetCalendar().Data();
-		sys.RefreshReal();
+		//sys.RefreshReal();
 		
 		mt_refresh.Reset();
 		

@@ -38,16 +38,15 @@ void Chart::RefreshCore() {
 	
 	RefreshCoreData(true);
 	
-	Core* src = &*work_queue.Top()->core;
-	if (!src) return;
+	if (!work_queue.Top()->core) return;
 	
-	core = src;
+	core = work_queue.Top();
 	bardata = 0;
 	
 	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
 	Title(title);
 	
-	SetGraph(src);
+	SetGraph(core);
 	Data();
 }
 
@@ -88,7 +87,7 @@ void Chart::Start() {
 	Refresh();
 }
 
-GraphCtrl& Chart::AddGraph(Core* src) {
+GraphCtrl& Chart::AddGraph(Ptr<CoreIO> src) {
 	GraphCtrl& g = graphs.Add();
 	g.WhenTimeValueTool = THISBACK(SetTimeValueTool);
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
@@ -99,23 +98,24 @@ GraphCtrl& Chart::AddGraph(Core* src) {
 	return g;
 }
 
-void Chart::SetGraph(Core* src) {
+void Chart::SetGraph(Ptr<CoreItem> src) {
 	ASSERT(src);
-	tf = src->GetTf();
+	Core& c = *src->core;
+	tf = c.GetTf();
 	ClearCores();
-	DataBridge* src_cast = dynamic_cast<DataBridge*>(src);
+	DataBridge* src_cast = dynamic_cast<DataBridge*>(&c);
 	if (src_cast) {
 		bardata = src_cast;
 		GraphCtrl& main = AddGraph(bardata);
 	} else {
-		bardata = src->GetDataBridge();
+		bardata = c.GetDataBridge();
 		ASSERT(bardata);
 		GraphCtrl& main = AddGraph(bardata);
-		bool separate_window = src->IsCoreSeparateWindow();
+		bool separate_window = c.IsCoreSeparateWindow();
 		if (!separate_window) {
-			main.AddSource(src);
+			main.AddSource(&c);
 		} else {
-			AddGraph(src);
+			AddGraph(&c);
 			split.SetPos(8000);
 		}
 	}
@@ -183,7 +183,7 @@ void Chart::Settings() {
 	
 	ArgChanger reg;
 	reg.SetLoading();
-	core->IO(reg);
+	core->core->IO(reg);
 	
 	Size sz(320, reg.args.GetCount()*30 + 50);
 	tw->SetRect(sz);

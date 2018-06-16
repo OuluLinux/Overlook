@@ -312,6 +312,75 @@ void HurstWindow::Start() {
 
 
 
+
+SimpleHurstWindow::SimpleHurstWindow()
+{
+	
+}
+
+void SimpleHurstWindow::Init() {
+	SetCoreSeparateWindow();
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.5);
+	
+	SetCoreMaximum(1);
+	SetCoreMinimum(0);
+	
+	int draw_begin;
+	if (period < 2)
+		period = 13;
+	draw_begin = period - 1;
+	
+	SetBufferColor(0, Red());
+	SetBufferBegin(0, draw_begin );
+}
+
+void SimpleHurstWindow::Start() {
+	int bars = GetBars();
+	int prev_counted = GetCounted();
+	
+	ConstBuffer& openbuf = GetInputBuffer(0, 0);
+	Buffer& hurstbuf = GetBuffer(0);
+	LabelSignal& ls = GetLabelBuffer(0, 0);
+	
+	if (prev_counted < period)
+		prev_counted = period + 1;
+	
+	for(int i = prev_counted; i < bars; i++) {
+		int pos = 0, neg = 0;
+		for(int j = 0; j < period; j++) {
+			double o2 = openbuf.Get(i-2-j);
+			double o1 = openbuf.Get(i-1-j);
+			double o0 = openbuf.Get(i-j);
+			
+			double d0 = o0-o1;
+			double d1 = o1-o2;
+			double d = d0 * d1;
+			if (d >= 0) pos++;
+			else neg++;
+		}
+		double hurst = (double)pos / (double) period;
+		
+		hurstbuf.Set(i, hurst);
+		
+		double o1 = openbuf.Get(i-1);
+		double o0 = openbuf.Get(i);
+		bool sig = o0 < o1;
+		if (hurst < 0.5) sig = !sig;
+		ls.signal.Set(i, sig);
+	}
+	
+	
+}
+
+
+
+
+
+
+
+
 MovingAverage::MovingAverage()
 {
 	ma_period = 13;
@@ -4892,7 +4961,9 @@ void OnlineMinimalLabel::GetMinimalSignal(double cost, ConstBuffer& open_buf, in
 		}
 		bool label = close < open;
 		
-		sigbuf[i] = label;
+		int buf_pos = i - write_begin;
+		if (buf_pos >= 0)
+			sigbuf[buf_pos] = label;
 	}
 }
 
@@ -5526,6 +5597,189 @@ void Anomaly::Assist(int cursor, VectorBool& vec) {
 	else					vec.Set(PC_DEC, true);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VariantDifference::VariantDifference() {
+	
+	
+	
+}
+
+void VariantDifference::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.0);
+	
+}
+
+void VariantDifference::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0,4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	Buffer& dst = GetBuffer(0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	if (counted) counted--;
+	else counted = period + 1;
+	
+	const VariantList& vl = sys.GetVariants(GetSymbol());
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i+1);
+		
+		double open = src.Get(i);
+		double mom = open - src.Get(i - period);
+		open += mom * multiplier;
+		
+		double av = 0;
+		
+		for(int j = 0; j < vl.symbols.GetCount(); j++) {
+			const VariantSymbol& vs = vl.symbols[j];
+			
+			ConstBuffer& p1 = GetInputBuffer(0, vs.p1, GetTf(), 0);
+			ConstBuffer& p2 = GetInputBuffer(0, vs.p2, GetTf(), 0);
+			
+			double o1 = p1.Get(i);
+			double o2 = p2.Get(i);
+			double mom1 = o1 - p1.Get(i - period);
+			double mom2 = o2 - p2.Get(i - period);
+			o1 += mom1 * multiplier;
+			o2 += mom2 * multiplier;
+			double o;
+			
+			switch (vs.math) {
+			case 0: // 0 - "S1 / S2"
+				o = o1 / o2;
+				break;
+				
+			case 1: // 1 - "S1 * S2"
+				o = o1 * o2;
+				break;
+				
+			case 2: // 2 - "1 / (S1 * S2)";
+				o = 1 / (o1 * o2);
+				break;
+				
+			case 3: // 3 - "S2 / S1"
+				o = o2 / o1;
+				break;
+			}
+			
+			av += o;
+		}
+		
+		av /= vl.symbols.GetCount();
+		
+		double diff = open - av;
+		
+		dst.Set(i, diff);
+		
+		sig.signal.Set(i, diff < 0);
+		sig.enabled.Set(i, diff != 0.0);
+	}
+}
+
+void VariantDifference::Assist(int cursor, VectorBool& vec) {
+	/*double value0 = GetBuffer(0).Get(cursor);
+	if (value0 > 0.0)		vec.Set(PC_INC, true);
+	else					vec.Set(PC_DEC, true);*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ScalperSignal::ScalperSignal() {
+	
+	
+	
+}
+
+void ScalperSignal::Init() {
+	
+}
+
+void ScalperSignal::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	if (counted) counted--;
+	else counted++;
+	
+	int cost_level			= 2;
+	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+	double point			= db->GetPoint();
+	double spread			= max(db->GetSpread(), 3 * point);
+	double cost				= spread + point * cost_level;
+	ASSERT(spread > 0.0);
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double o0 = open_buf.GetUnsafe(i);
+		double o1 = open_buf.GetUnsafe(i - 1);
+		bool label = o0 < o1;
+		
+		int start = i;
+		double start_price = o0;
+		for(int j = i-1; j >= 1; j--) {
+			double on0 = open_buf.GetUnsafe(j+1);
+			double on1 = open_buf.GetUnsafe(j);
+			bool nlabel = on0 < on1;
+			
+			if (nlabel != label) break;
+			
+			start_price = on1;
+			start = j;
+		}
+		double diff = o0 - start_price;
+		double absdiff = fabs(diff);
+		
+		if (absdiff >= cost) {
+			for(int j = start; j < i; j++) {
+				sig.signal.Set(j, label);
+				sig.enabled.Set(j, true);
+			}
+		}
+		sig.enabled.Set(i, false);
+	}
+}
+
+void ScalperSignal::Assist(int cursor, VectorBool& vec) {
+	/*double value0 = GetBuffer(0).Get(cursor);
+	if (value0 > 0.0)		vec.Set(PC_INC, true);
+	else					vec.Set(PC_DEC, true);*/
+}
 
 
 

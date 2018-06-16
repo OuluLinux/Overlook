@@ -220,6 +220,9 @@ public:
 	ConstLabelSignal& GetLabelBuffer(int lbl, int buf) const {return labels[lbl].buffers[buf];}
 	LabelSignal& GetLabelBuffer(int lbl, int buf) {return labels[lbl].buffers[buf];}
 	const CoreIO& GetInput(int input, int sym, int tf) const;
+	int GetTimeframe() const {return tf_id;}
+	int GetTf() const {return tf_id;}
+	int GetSymbol() const {return sym_id;}
 	String GetCacheDirectory();
 	Color GetBufferColor(int i) {return buffers[i]->clr;}
 	double GetBufferValue(int i, int shift) {return buffers[i]->value[shift];}
@@ -327,9 +330,6 @@ public:
 	bool HasMaximum() const {return has_maximum;}
 	bool HasMinimum() const {return has_minimum;}
 	int GetMinutePeriod();
-	int GetTimeframe() const {return tf_id;}
-	int GetTf() const {return tf_id;}
-	int GetSymbol() const {return sym_id;}
 	int GetPeriod() const;
 	int GetVisibleCount() const {return outputs[0].visible;}
 	int GetFutureBars() const {return future_bars;}

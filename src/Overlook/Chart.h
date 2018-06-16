@@ -21,7 +21,7 @@ protected:
 	int shift = 0;
 	int symbol = 0, tf = 0;
 	bool right_offset = 0, keep_at_end = 0;
-	Core* core = NULL;
+	Ptr<CoreItem> core;
 	DataBridge* bardata = NULL;
 	
 	
@@ -37,8 +37,8 @@ public:
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
 	void ClearCores();
-	GraphCtrl& AddGraph(Core* src);
-	void SetGraph(Core* src);
+	GraphCtrl& AddGraph(Ptr<CoreIO> src);
+	void SetGraph(Ptr<CoreItem> src);
 	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);

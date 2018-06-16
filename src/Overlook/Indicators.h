@@ -63,7 +63,31 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
-			% Arg("period", period, 2);
+			% Arg("period", period, 1);
+	}
+};
+
+
+
+class SimpleHurstWindow : public Core {
+	int period = 10;
+	
+	static constexpr double koef = 1.253314;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	SimpleHurstWindow();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Lbl(1)
+			% Arg("period", period, 1);
 	}
 };
 
@@ -707,7 +731,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(2, 2)
 			% Lbl(1)
-			% Arg("left_bars", left_bars, 2, 20)
+			% Arg("left_bars", left_bars, 2, 200)
 			% Arg("right_bars", right_bars, 0, 0)
 			% Arg("smoothing", smoothing_period, 2, 127);
 	}
@@ -824,7 +848,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(2, 2)
-			% Arg("period", period, 300, 300)
+			% Arg("period", period, 2, 3000)
 			% Arg("max_crosses", max_crosses, 100, 100)
 			% Arg("max_radius", max_radius, 100, 100);
 	}
@@ -845,7 +869,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(2,2)
 			% Lbl(1)
-			% Arg("period", period, 2, 127)
+			% Arg("period", period, 2, 1000)
 			% Arg("max_crosses", max_crosses, 300, 300)
 			% Arg("max_radius", max_radius, 100, 100)
 			% Arg("smoothing", smoothing_period, 100, 100);
@@ -1301,6 +1325,62 @@ public:
 			% Out(1, 1)
 			% Lbl(1)
 			% Mem(var);
+	}
+};
+
+
+
+class VariantDifference : public Core {
+	int period = 1, multiplier = 10;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	VariantDifference();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(1, 1)
+			% Arg("period", period, 1)
+			% Arg("multiplier", multiplier, 1)
+			% Lbl(1);
+	}
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		else if (in_sym == out_sym)
+			return true;
+		
+		System& sys = GetSystem();
+		const VariantList& vl = sys.GetVariants(in_sym);
+		
+		return vl.dependencies.Find(out_sym) != -1;
+	}
+};
+
+
+
+class ScalperSignal : public Core {
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	ScalperSignal();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Lbl(1);
 	}
 };
 

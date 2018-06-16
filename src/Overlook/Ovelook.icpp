@@ -7,17 +7,17 @@ INITBLOCK {
 	System::Register<DataBridge>("DataBridge");
 	System::Register<Normalized>("Normalized data");
 	System::Register<HurstWindow>("Hurst window");
+	System::Register<SimpleHurstWindow>("Simplified Hurst window");
 	System::Register<ValueChange>("Change of data-values");
 	System::Register<MovingAverage>("Moving average");
 	System::Register<MovingAverageConvergenceDivergence>("Moving Average Convergence/Divergence");
 	System::Register<AverageDirectionalMovement>("Average Directional Movement");
 	System::Register<BollingerBands>("Bollinger Bands");
 	System::Register<Envelopes>("Envelopes");
+	
 	System::Register<ParabolicSAR>("Parabolic SAR");
 	System::Register<StandardDeviation>("Standard Deviation");
 	System::Register<AverageTrueRange>("Average True Range");
-	
-	
 	System::Register<BearsPower>("Bears Power");
 	System::Register<BullsPower>("Bulls Power");
 	System::Register<CommodityChannelIndex>("Commodity Channel Index");
@@ -25,10 +25,10 @@ INITBLOCK {
 	System::Register<ForceIndex>("Force Index");
 	System::Register<Momentum>("Momentum");
 	System::Register<OsMA>("OsMA");
+	
 	System::Register<RelativeStrengthIndex>("Relative Strength Index");
 	System::Register<RelativeVigorIndex>("Relative Vigor Index");
 	System::Register<StochasticOscillator>("Stochastic Oscillator");
-	
 	System::Register<WilliamsPercentRange>("Williams Percent Range");
 	System::Register<AccumulationDistribution>("Accumulation Distribution");
 	System::Register<MoneyFlowIndex>("Money Flow Index");
@@ -68,6 +68,8 @@ INITBLOCK {
 	System::Register<SelectiveMinimalLabel>("Selective Minimal Label");
 	System::Register<GridSignal>("Grid Signal");
 	System::Register<Anomaly>("Anomaly");
+	System::Register<VariantDifference>("Variant Difference");
+	System::Register<ScalperSignal>("Scalper Signal");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<RapierishAdvisor>("Rapierish Advisor", CORE_EXPERTADVISOR);

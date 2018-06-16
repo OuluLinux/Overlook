@@ -100,8 +100,11 @@ void GraphCtrl::Paint(Draw& draw) {
 	
 	// Enable offset
 	int max_future_bars = 0;
-	for(int i = 0; i < src.GetCount(); i++)
-		max_future_bars = Upp::max(max_future_bars, src[i]->GetFutureBars());
+	for(int i = 0; i < src.GetCount(); i++) {
+		Core* c = dynamic_cast<Core*>(&*src[i]);
+		if (!c) return;
+		max_future_bars = Upp::max(max_future_bars, c->GetFutureBars());
+	}
 	
 	// Set shift with right offset
 	int max_right_offset = Upp::max(max_future_bars, 10);
@@ -138,12 +141,14 @@ void GraphCtrl::Paint(Draw& draw) {
 	hi = -DBL_MAX;
     lo = DBL_MAX;
     for(int i = 0; i < src.GetCount(); i++) {
-		
-		Core*& cont_ = src[i];
+		Core* cont_ = dynamic_cast<Core*>(&*src[i]);
 		if (!cont_) {draw.DrawImage(0,0,w); return;} // just bail out
 		
 		Core& cont = *cont_;
 		// cont.Refresh();
+		
+		if (cont.GetOutputCount() == 0)
+			continue;
 		
 		if (dynamic_cast<DataBridge*>(&cont)) {
 		    GetDataRange(cont, 1); // low
@@ -162,7 +167,9 @@ void GraphCtrl::Paint(Draw& draw) {
 	String graph_label;
 	DataBridge* bd_src = NULL;
 	for(int i = 0; i < src.GetCount(); i++) {
-		Core& cont = *src[i];
+		Core& cont = *dynamic_cast<Core*>(&*src[i]);
+		if (cont.GetOutputCount() == 0)
+			continue;
 		DataBridge* bardata = dynamic_cast<DataBridge*>(&cont);
 		if (bardata) {
 			bd_src = bardata;
@@ -179,9 +186,9 @@ void GraphCtrl::Paint(Draw& draw) {
 		}
 	}
 	
-	DrawLabels(w, *src.Top());
+	DrawLabels(w, *dynamic_cast<Core*>(&*src.Top()));
 	DrawBorder(w);
-	DrawLines(w, *src.Top());
+	DrawLines(w, *dynamic_cast<Core*>(&*src.Top()));
 	
 	w.DrawText(5,5, graph_label, StdFont(10), GrayColor());
 	
@@ -234,7 +241,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	for(int i = 1; i < gridw; i++)
         W.DrawLine(border + i*grid, y, border + i*grid, y+h, PEN_DOT, gridcolor);
 
-	DataBridge* bardata = dynamic_cast<DataBridge*>(src[0]);
+	DataBridge* bardata = dynamic_cast<DataBridge*>(&*src[0]);
 	if (!bardata) return;
 	ConstBuffer& time_buf = bardata->GetBuffer(4);
 	

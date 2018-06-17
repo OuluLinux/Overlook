@@ -8,7 +8,7 @@ namespace Overlook {
 #define Element(a,b,c)  a[b][c]
 #define RowVector(a,b)  a[b]
 #define CopyVector(a,b) {\
-	double *i1 = a, *i2 = b;\
+	double *i1 = a.Begin(); const double* i2 = b.Begin();\
 	for (int i = 0; i < dimension; i++, i1++, i2++) \
 		*i1 = *i2;}
 #define StrategyBest1Exp			0
@@ -23,27 +23,21 @@ namespace Overlook {
 #define StrategyRandom2Bin			9
 
 
-template <int popcount, int dimension>
 class Optimizer {
 	
-	static const int max_gens = 10;
-	static const int max_value = 100;
-	static const int min_value = -100;
-	
-	static const int max_rounds = max_gens * popcount;
-	
-	double trial_solution[dimension];
-	double best_solution[dimension];
-	double pop_energy[popcount];
-	double population[popcount][dimension];
-	int population_count;
+	Vector<double> trial_solution;
+	Vector<double> best_solution;
+	Vector<double> pop_energy;
+	Vector<Vector<double> > population;
+	int population_count = 0;
 	int round = 0;
 	int random_type = 0;
+	int dimension = 0;
+	int max_rounds;
 	bool use_limits = 0;
 	
-	int generations = 0;
 	int generation = 0;
-	int max_generations = 0;
+	int max_gens = 100;
 	int candidate = 0;
 	int strategy = StrategyBest1Exp;
 	double scale = 0.7;
@@ -60,8 +54,36 @@ class Optimizer {
 public:
 	typedef Optimizer CLASSNAME;
 	Optimizer() {}
-
-	enum {RAND_UNIFORM, RAND_NORMDIST};
+	
+	void Serialize(Stream& s) {
+		s % trial_solution
+		  % best_solution
+		  % pop_energy
+		  % population
+		  % population_count
+		  % round
+		  % random_type
+		  % dimension
+		  % max_rounds
+		  % use_limits
+		  % generation
+		  % max_gens
+		  % candidate
+		  % strategy
+		  % scale
+		  % probability
+		  % trial_energy
+		  % best_energy
+		  % idum
+		  % idum2
+		  % iy
+		  % iv;
+	}
+	
+	enum {RAND_UNIFORM, RAND_NORMDIST, RAND_MANUAL};
+	
+	int max_value = 100;
+	int min_value = -100;
 	
 	
 	int		Dimension() {return dimension;}
@@ -69,19 +91,17 @@ public:
 	double	Energy() {return(best_energy);}
 	void	ResetBestEnergy() {best_energy = 0;}
 	void	FactorBestEnergy(double f) {best_energy *= f;}
-	int		Generations() {return generations;}
+	int		Generations() {return generation;}
 	
-	void SolveStart(int max_generations) {
+	void SolveStart() {
 		best_energy = DBL_MAX;
 		generation = 0;
 		candidate = 0;
-		this->max_generations = max_generations;
 	}
 	
 	bool SolveCheck(){
-		if (generation < max_generations)
+		if (generation < max_gens)
 			return 1;
-		generations = generation;
 		return 0;
 	}
 	
@@ -100,7 +120,7 @@ public:
 			
 			// New low for this candidate
 			pop_energy[candidate] = trial_energy;
-			double* vec = population[ candidate ];
+			Vector<double>& vec = population[ candidate ];
 			CopyVector(vec, trial_solution);
 	
 			// Check if all-time low
@@ -112,6 +132,11 @@ public:
 	}
 	
 	
+	double RandomUniform(double min_value, double max_value) {
+		return min_value + Randomf() * (max_value - min_value);
+	}
+	
+	double RandomUniform() {return RandomUniform(min_value, max_value);}
 	
 protected:
 	void SelectSamples(int candidate,int *r1,int *r2=0,int *r3=0, int *r4=0,int *r5=0) {
@@ -150,13 +175,10 @@ protected:
 	}
 	
 
-	double RandomUniform(double min_value, double max_value) {
-		return min_value + Randomf() * (max_value - min_value);
-	}
-	
 
 	
 private:
+	
 	void Best1Exp(int candidate) {
 		int r1, r2;
 		int n;
@@ -218,7 +240,7 @@ private:
 		SelectSamples(candidate,&r1,&r2,&r3,&r4);
 		n = (int)RandomUniform(0.0,(double)dimension);
 	
-		CopyVector(trial_solution,RowVector(population,candidate));
+		CopyVector(trial_solution, RowVector(population,candidate));
 		for (int i=0; (RandomUniform(0.0,1.0) < probability) && (i < dimension); i++) {
 			trial_solution[n] = best_solution[n] +
 							   scale * (Element(population,r1,n)
@@ -355,21 +377,34 @@ private:
 
 public:
 	
-	void Init() {
+	void Init(int dimension, int population_count, int strategy=StrategyBest1Exp) {
+		this->population_count = population_count;
+		this->dimension = dimension;
+		this->strategy = strategy;
+		
+		max_rounds = max_gens * population_count;
+		
+		trial_solution.SetCount(dimension, 0);
+		best_solution.SetCount(dimension, 0);
+		pop_energy.SetCount(population_count, 0);
+		population.SetCount(population_count);
+		for(int i = 0; i < population.GetCount(); i++)
+			population[i].SetCount(dimension);
+		
 	
 		for(int i = 0; i < dimension; i++ ) {
 			trial_solution[i] = 0;
 			best_solution[i] = 0;
 		}
 		
-		for(int i = 0; i < popcount; i++ ) {
+		for(int i = 0; i < population_count; i++ ) {
 			pop_energy[i] = 0;
 			for(int j = 0; j < dimension; j++ )
 				population[i][j] = 0;
 		}
 		
 		if (random_type == RAND_UNIFORM) {
-			for (int i = 0; i < popcount; i++)
+			for (int i = 0; i < population_count; i++)
 				for (int j = 0; j < dimension; j++)
 					Element(population,i,j) = RandomUniform(min_value, max_value);
 		}
@@ -378,26 +413,35 @@ public:
 				std::random_device rd;
 			    std::mt19937 gen(rd());
 			    std::normal_distribution<> d(min_value, max_value); // mean, stddev
-				for (int i = 0; i < popcount; i++)
+				for (int i = 0; i < population_count; i++)
 					Element(population,i,j) = d(gen);
 			}
+		}
+		else if (random_type == RAND_MANUAL) {
+			
 		}
 		else Panic("Invalid random type");
 		
 		
-		for (int i=0; i < popcount; i++)
+		for (int i=0; i < population_count; i++)
 			pop_energy[i] = DBL_MAX;
 	
 		for (int i=0; i < dimension; i++)
 			best_solution[i] = 0.0;
 		
 		
-		SolveStart(max_gens);
+		SolveStart();
 		round = 0;
 	}
 	
 	void SetRandomTypeUniform() {random_type = RAND_UNIFORM;}
 	void SetRandomTypeNormDist() {random_type = RAND_NORMDIST;}
+	void SetRandomTypeManual() {random_type = RAND_MANUAL;}
+	
+	void SetPopulation(int i, const Vector<double>& solution, double result) {
+		pop_energy[i] = result;
+		population[i] <<= solution;
+	}
 	
 	void Start() {
 		GetTrialSolution();
@@ -409,7 +453,7 @@ public:
 		round++;
 	}
 	
-	double* GetTrialSolution() {
+	const Vector<double>& GetTrialSolution() {
 		switch (strategy) {
 			case StrategyBest1Exp:			Best1Exp(candidate); break;
 			case StrategyRandom1Exp:		Random1Exp(candidate); break;
@@ -426,13 +470,16 @@ public:
 		return trial_solution;
 	}
 	
-	double* GetBestSolution() {return best_solution;}
+	const Vector<double>& GetBestSolution() {return best_solution;}
 	
 	int GetMaxRounds() const {return max_rounds;}
 	int GetMaxGenerations() const {return max_gens;}
 	int GetSize() const {return dimension;}
-	int GetPopulation() const {return popcount;}
+	int GetPopulation() const {return population_count;}
 	int GetRound() const {return round;}
+	bool IsEnd() const {return round >= max_rounds;}
+	
+	void SetMaxGenerations(int i) {max_gens = i;}
 	
 };
 }

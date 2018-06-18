@@ -22,54 +22,11 @@ public:
 		return a.begin < b.begin;
 	}
 };
-/*
-struct Match : Moveable<Match> {
-	int cache = -1, event = -1, row = -1;
-	
-	void Serialize(Stream& s) {s % cache % event % row;}
-};
 
-class AnalyzerSolution : Moveable<AnalyzerSolution> {
-	
-public:
-	Vector<Match> required;
-	double result;
-	int symbol = -1;
-	
-public:
-	typedef AnalyzerSolution CLASSNAME;
-	AnalyzerSolution() {}
-	
-	void Serialize(Stream& s) {s % required % result % symbol;}
-	
-	bool operator() (const AnalyzerSolution& a, const AnalyzerSolution& b) const {
-		return a.result > b.result;
-	}
-};
-*/
-/*class AnalyzerMatcher : Moveable<AnalyzerMatcher> {
-	
-public:
-	//Array<Vector<AnalyzerSolution> > solutions;
-	int symbol = -1;
-	
-public:
-	typedef AnalyzerMatcher CLASSNAME;
-	AnalyzerMatcher() {}
-	
-	void Serialize(Stream& s) {s % stats % total % symbol;}
-	void Add() {total++;}
-	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
-	void Sort() {SortByValue(stats, StdGreater<int>());}
-	
-	//String GetRequiredString() const {return IntStr(solutions.GetCount());}
-	
-};
-*/
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
-	VectorBool average_descriptor;
+	VectorBool av_start_descriptor;
 	Vector<int> orders;
 	VectorMap<int, int> stats;
 	int total = 0;
@@ -82,7 +39,21 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % average_descriptor % orders % stats % total;}
+	void Serialize(Stream& s) {s % av_start_descriptor % orders % stats % total;}
+	
+};
+
+class RtData : Moveable<RtData> {
+	
+public:
+	int cluster_long = -1, cluster_short = -1;
+	
+public:
+	typedef RtData CLASSNAME;
+	RtData() {}
+	
+	void Serialize(Stream& s) {s % cluster_long % cluster_short;}
+	
 	
 };
 
@@ -96,7 +67,7 @@ protected:
 		LabelSignal data;
 		String title;
 		
-		void Serialize(Stream& s) {s % factory % label % buffer % data;}
+		void Serialize(Stream& s) {s % factory % label % buffer % data % title;}
 	};
 	
 	enum {
@@ -122,10 +93,13 @@ protected:
 	Vector<LabelSource> cache;
 	Vector<AnalyzerOrder> orders;
 	Vector<AnalyzerCluster> clusters;
+	Vector<RtData> rtdata;
 	VectorMap<int, LabelSignal> scalper_signal;
+	int rtcluster_counted = 0;
 	
 	// Temporary
 	Vector<FactoryDeclaration> indi_ids;
+	Vector<Ptr<CoreItem> > work_queue;
 	Index<int> sym_ids, tf_ids;
 	bool running = false, stopped = true;
 	
@@ -134,19 +108,25 @@ public:
 	Analyzer();
 	~Analyzer();
 	
-	void Serialize(Stream& s) {s % cache % orders % clusters % scalper_signal;}
+	void Serialize(Stream& s) {s % cache % orders % clusters % rtdata % scalper_signal % rtcluster_counted;}
 	void Process();
 	void FillOrdersScalper();
 	void FillOrdersMyfxbook();
 	void FillInputBooleans();
 	void InitOrderDescriptor();
 	void InitClusters();
+	void RefreshRealtimeClusters();
 	void Analyze(AnalyzerCluster& am);
 	//void Optimize(int cluster);
 	//void Test(AnalyzerSolution& am);
 	String GetEventString(int i);
+	void GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor);
 	//bool Match(const AnalyzerMatcher& am, const AnalyzerOrder& o);
 	int  GetEvent(const AnalyzerOrder& o, const LabelSource& ls);
+	int  GetEventBegin(bool label, int begin, const LabelSource& ls);
+	int  GetEventSustain(bool label, int begin, int end, const LabelSource& ls);
+	int  GetEventEnd(bool label, int end, const LabelSource& ls);
+	int  FindClosestCluster(int type, const VectorBool& descriptor);
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Analyzer.bin"));}
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
@@ -167,8 +147,8 @@ inline Analyzer& GetAnalyzer() {return Single<Analyzer>();}
 
 class AnalyzerCtrl : public ParentCtrl {
 	TabCtrl tabs;
-	Splitter cluster, order;
-	ArrayCtrl clusterlist, eventlist;
+	Splitter cluster, realtime;
+	ArrayCtrl clusterlist, eventlist, rtlist, rtdata;
 	
 public:
 	typedef AnalyzerCtrl CLASSNAME;

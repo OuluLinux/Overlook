@@ -36,8 +36,6 @@ Analyzer::Analyzer() {
 	for(int i = 1; i <= 7; i++)
 		for(int method = 0; method < 2; method++)
 			Add<MovingAverage>(2 << i, 0, method);
-	
-	#ifndef flagDEBUG
 	Add<MovingAverageConvergenceDivergence>(12, 26, 9);
 	Add<MovingAverageConvergenceDivergence>(24, 52, 9);
 	Add<MovingAverageConvergenceDivergence>(48, 104, 9);
@@ -77,7 +75,6 @@ Analyzer::Analyzer() {
 		int period = 1 << i;
 		Add<VariantDifference>(period);
 	}
-	#endif
 	
 	LoadThis();
 	
@@ -104,13 +101,20 @@ void Analyzer::Process() {
 		InitClusters();
 	for(int i = 0; i < clusters.GetCount(); i++)
 		Analyze(clusters[i]);
-	
+	RefreshRealtimeClusters();
 	
 	if (IsRunning())
 		StoreThis();
 	
 	
-	/*o
+	while (IsRunning()) {
+		FillInputBooleans();
+		RefreshRealtimeClusters();
+		
+		for(int i = 0; i < 10 && IsRunning(); i++)
+			Sleep(1000);
+	}
+	/*
 	CoWork co;
 	co.SetPoolSize(GetUsedCpuCores());
 	for(int i = 0; i < clusters.GetCount(); i++) {
@@ -187,11 +191,12 @@ void Analyzer::FillOrdersMyfxbook() {
 void Analyzer::FillInputBooleans() {
 	System& sys = GetSystem();
 	
-	Vector<Ptr<CoreItem> > work_queue;
+	if (work_queue.IsEmpty()) {
+		sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	}
 	
-	cache.Clear();
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	int row = 0;
+	
 	for(int i = 0; i < work_queue.GetCount() && IsRunning(); i++) {
 		CoreItem& ci = *work_queue[i];
 		sys.Process(ci, true);
@@ -204,24 +209,38 @@ void Analyzer::FillInputBooleans() {
 			for(int k = 0; k < l.buffers.GetCount(); k++) {
 				ConstLabelSignal& src = l.buffers[k];
 				
-				LabelSource& ls = cache.Add();
-				ls.factory = c.GetFactory();
-				ls.label = j;
-				ls.buffer = k;
-				ls.data = src;
-				ls.title = sys.GetSymbol(c.GetSymbol()) + " "
-					+ sys.GetCoreFactories()[ls.factory].a + " #" + IntStr(k) + " ";
+				if (row >= cache.GetCount())
+					cache.SetCount(row+1);
 				
-				for(int l = 0; l < ci.args.GetCount(); l++) {
-					if (l) ls.title += ",";
-					ls.title += " " + IntStr(ci.args[l]);
+				LabelSource& ls = cache[row++];
+				
+				if (ls.factory == -1) {
+					ls.factory = c.GetFactory();
+					ls.label = j;
+					ls.buffer = k;
+					ls.data = src;
+					ls.title = sys.GetSymbol(c.GetSymbol()) + " "
+						+ sys.GetCoreFactories()[ls.factory].a + " #" + IntStr(k) + " ";
+					for(int l = 0; l < ci.args.GetCount(); l++) {
+						if (l) ls.title += ",";
+						ls.title += " " + IntStr(ci.args[l]);
+					}
+				} else {
+					// Extend data
+					int l = ls.data.signal.GetCount();
+					ls.data.signal.SetCount(src.signal.GetCount());
+					ls.data.enabled.SetCount(src.enabled.GetCount());
+					for (; l < src.signal.GetCount(); l++) {
+						ls.data.signal.Set(l, src.signal.Get(l));
+						ls.data.enabled.Set(l, src.enabled.Get(l));
+					}
 				}
 			}
 		}
 		
 		
-		if (c.GetFactory() != 0)
-			ci.core.Clear();
+		//if (c.GetFactory() != 0)
+		//	ci.core.Clear();
 		
 		ReleaseLog("Analyzer::FillInputBooleans " + IntStr(i) + "/" + IntStr(work_queue.GetCount()) + "  " + IntStr(i * 100 / work_queue.GetCount()) + "%");
 	}
@@ -279,7 +298,7 @@ void Analyzer::Analyze(AnalyzerCluster& am) {
 
 void Analyzer::InitClusters() {
 	int descriptor_size = EVENT_COUNT * cache.GetCount();
-	Vector<VectorBool> prev_average_descriptors;
+	Vector<VectorBool> prev_av_start_descriptors;
 	Vector<int> descriptor_sum;
 	
 	clusters.Clear();
@@ -287,8 +306,8 @@ void Analyzer::InitClusters() {
 	clusters.SetCount(CLUSTER_COUNT);
 	for(int i = 0; i < clusters.GetCount(); i++) {
 		AnalyzerCluster& c = clusters[i];
-		c.average_descriptor = orders[Random(orders.GetCount())].start_descriptor;
-		prev_average_descriptors.Add() = c.average_descriptor;
+		c.av_start_descriptor = orders[Random(orders.GetCount())].start_descriptor;
+		prev_av_start_descriptors.Add() = c.av_start_descriptor;
 	}
 	
 	
@@ -308,7 +327,7 @@ void Analyzer::InitClusters() {
 			int lowest_distance = INT_MAX, lowest_j = -1;
 			for(int j = 0; j < clusters.GetCount(); j++) {
 				AnalyzerCluster& c = clusters[j];
-				int distance = c.average_descriptor.Hamming(o.start_descriptor);
+				int distance = c.av_start_descriptor.Hamming(o.start_descriptor);
 				if (distance < lowest_distance) {
 					lowest_distance = distance;
 					lowest_j = j;
@@ -350,7 +369,7 @@ void Analyzer::InitClusters() {
 				}
 			}
 			for(int k = 0; k < descriptor_size; k++) {
-				c.average_descriptor.Set(k, descriptor_sum[k] > 0);
+				c.av_start_descriptor.Set(k, descriptor_sum[k] > 0);
 			}
 		}
 		
@@ -369,9 +388,9 @@ void Analyzer::InitClusters() {
 		bool all_same = true;
 		for(int i = 0; i < clusters.GetCount() && all_same; i++) {
 			AnalyzerCluster& c = clusters[i];
-			if (!c.average_descriptor.IsEqual(prev_average_descriptors[i]))
+			if (!c.av_start_descriptor.IsEqual(prev_av_start_descriptors[i]))
 				all_same = false;
-			prev_average_descriptors[i] = c.average_descriptor;
+			prev_av_start_descriptors[i] = c.av_start_descriptor;
 		}
 		if (all_same) break;
 		
@@ -392,17 +411,24 @@ void Analyzer::InitClusters() {
 int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
 	int e = 0;
 	
+	bool label = o.action;
+	e |= GetEventBegin(o.action, o.begin, ls);
+	
 	if (o.end + 1 >= ls.data.signal.GetCount()) return e;
 	
-	bool label = o.action;
-	bool pre_sig = ls.data.signal.Get(o.begin - 1);
-	bool pre_ena = ls.data.enabled.Get(o.begin - 1);
-	bool first_sig = ls.data.signal.Get(o.begin);
-	bool first_ena = ls.data.enabled.Get(o.begin);
-	bool last_sig = ls.data.signal.Get(o.end - 1);
-	bool last_ena = ls.data.enabled.Get(o.end - 1);
-	bool post_sig = ls.data.signal.Get(o.end);
-	bool post_ena = ls.data.enabled.Get(o.end);
+	e |= GetEventSustain(o.action, o.begin, o.end, ls);
+	e |= GetEventEnd(o.action, o.end, ls);
+	
+	return e;
+}
+
+int Analyzer::GetEventBegin(bool label, int begin, const LabelSource& ls) {
+	int e = 0;
+	
+	bool pre_sig = ls.data.signal.Get(begin - 1);
+	bool pre_ena = ls.data.enabled.Get(begin - 1);
+	bool first_sig = ls.data.signal.Get(begin);
+	bool first_ena = ls.data.enabled.Get(begin);
 	
 	if (pre_sig != first_sig) {
 		if (first_sig == label)	e |= 1 << START_POS;
@@ -413,8 +439,23 @@ int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
 		else					e |= 1 << START_DISABLE;
 	}
 	
+	return e;
+}
+
+int Analyzer::GetEventSustain(bool label, int begin, int end, const LabelSource& ls) {
+	int e = 0;
+	
+	bool pre_sig = ls.data.signal.Get(begin - 1);
+	bool pre_ena = ls.data.enabled.Get(begin - 1);
+	bool first_sig = ls.data.signal.Get(begin);
+	bool first_ena = ls.data.enabled.Get(begin);
+	bool last_sig = ls.data.signal.Get(end - 1);
+	bool last_ena = ls.data.enabled.Get(end - 1);
+	bool post_sig = ls.data.signal.Get(end);
+	bool post_ena = ls.data.enabled.Get(end);
+	
 	bool sig_sustain = true, ena_sustain = true;
-	for (int i = o.begin + 1; i < o.end; i++) {
+	for (int i = begin + 1; i < end; i++) {
 		bool sig = ls.data.signal.Get(i);
 		bool ena = ls.data.enabled.Get(i);
 		if (sig != first_sig) sig_sustain = false;
@@ -429,6 +470,17 @@ int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
 		else					e |= 1 << SUSTAIN_DISABLE;
 	}
 	
+	return e;
+}
+
+int Analyzer::GetEventEnd(bool label, int end, const LabelSource& ls) {
+	int e = 0;
+	
+	bool last_sig = ls.data.signal.Get(end - 1);
+	bool last_ena = ls.data.enabled.Get(end - 1);
+	bool post_sig = ls.data.signal.Get(end);
+	bool post_ena = ls.data.enabled.Get(end);
+	
 	if (post_sig != last_sig) {
 		if (last_sig == label)	e |= 1 << STOP_POS;
 		else					e |= 1 << STOP_NEG;
@@ -440,6 +492,7 @@ int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
 	
 	return e;
 }
+
 
 String Analyzer::GetEventString(int i) {
 	switch (i) {
@@ -459,6 +512,69 @@ String Analyzer::GetEventString(int i) {
 	}
 }
 
+void Analyzer::RefreshRealtimeClusters() {
+	VectorBool rt_start_descriptor;
+	
+	int bars = cache[0].data.signal.GetCount();
+	for(int i = 1; i < cache.GetCount(); i++)
+		bars = min(bars, cache[i].data.signal.GetCount());
+	
+	rtdata.Reserve(bars);
+	
+	for(int i = rtcluster_counted; i < bars; i++) {
+		RtData& rt = rtdata.Add();
+		
+		GetRealtimeStartDescriptor(false, i, rt_start_descriptor);
+		rt.cluster_long = FindClosestCluster(0, rt_start_descriptor);
+		
+		
+		GetRealtimeStartDescriptor(true, i, rt_start_descriptor);
+		rt.cluster_short = FindClosestCluster(0, rt_start_descriptor);
+		
+		
+		
+	}
+	
+	rtcluster_counted = bars;
+}
+
+int Analyzer::FindClosestCluster(int type, const VectorBool& descriptor) {
+	int lowest_distance = INT_MAX, lowest_j = -1;
+	
+	for(int j = 0; j < clusters.GetCount(); j++) {
+		AnalyzerCluster& c = clusters[j];
+		int distance;
+		distance = c.av_start_descriptor.Hamming(descriptor);
+		if (distance < lowest_distance) {
+			lowest_distance = distance;
+			lowest_j = j;
+		}
+	}
+	
+	return lowest_j;
+}
+
+void Analyzer::GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor) {
+	int descriptor_size = EVENT_COUNT * cache.GetCount();
+	
+	int row = 0;
+	
+	descriptor.SetCount(descriptor_size);
+	descriptor.Zero();
+	
+	for(int j = 0; j < cache.GetCount(); j++) {
+		int e = GetEventBegin(label, i, cache[j]);
+		
+		for(int k = 0; k < EVENT_COUNT; k++) {
+			if (e & (1 << k)) {
+				if (k < SUSTAIN_ENABLE)		descriptor.Set(row, true);
+			}
+			row++;
+		}
+	}
+}
+
+
 
 
 
@@ -469,12 +585,15 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	Add(tabs.SizePos());
 	tabs.Add(cluster);
 	tabs.Add(cluster, "Clusters");
-	tabs.Add(order);
-	tabs.Add(order, "Orders");
+	tabs.Add(realtime);
+	tabs.Add(realtime, "Realtime");
 	cluster.Horz();
 	
 	cluster << clusterlist << eventlist;
 	cluster.SetPos(2500);
+	
+	realtime << rtlist << rtdata;
+	realtime.SetPos(2500);
 	
 	clusterlist.AddColumn("Cluster");
 	clusterlist.AddColumn("Orders");
@@ -484,6 +603,11 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	eventlist.AddColumn("Event");
 	eventlist.AddColumn("Probability");
 	
+	rtlist.AddColumn("Long cluster");
+	rtlist.AddColumn("Short cluster");
+	rtdata.AddColumn("");
+	rtdata.AddColumn("");
+	rtdata.AddColumn("");
 }
 
 void AnalyzerCtrl::Data() {
@@ -497,8 +621,6 @@ void AnalyzerCtrl::Data() {
 			
 			clusterlist.Set(i, 0, i);
 			clusterlist.Set(i, 1, am.orders.GetCount());
-			//clusterlist.Set(i, 0, sys.GetSymbol(am.symbol));
-			//clusterlist.Set(i, 1, am.GetRequiredString());
 		}
 		clusterlist.SetCount(a.clusters.GetCount());
 		
@@ -523,9 +645,18 @@ void AnalyzerCtrl::Data() {
 		}
 	}
 	else if (tab == 1) {
+		for(int i = rtlist.GetCount(); i < a.rtdata.GetCount(); i++) {
+			const RtData& rt = a.rtdata[i];
+			
+			rtlist.Set(i, 0, rt.cluster_long);
+			rtlist.Set(i, 1, rt.cluster_short);
+		}
 		
-		
-		
+		int cursor = rtlist.GetCursor();
+		if (cursor >= 0 && cursor < a.rtdata.GetCount()) {
+			const RtData& rt = a.rtdata[cursor];
+			
+		}
 	}
 }
 

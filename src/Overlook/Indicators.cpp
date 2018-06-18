@@ -5640,6 +5640,15 @@ void VariantDifference::Start() {
 	
 	const VariantList& vl = sys.GetVariants(GetSymbol());
 	
+	for(int j = 0; j < vl.symbols.GetCount(); j++) {
+		const VariantSymbol& vs = vl.symbols[j];
+		
+		ConstBuffer& p1 = GetInputBuffer(0, vs.p1, GetTf(), 0);
+		ConstBuffer& p2 = GetInputBuffer(0, vs.p2, GetTf(), 0);
+		bars = min(bars, p1.GetCount());
+		bars = min(bars, p2.GetCount());
+	}
+	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i+1);
 		

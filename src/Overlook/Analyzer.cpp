@@ -96,25 +96,28 @@ void Analyzer::Process() {
 	
 	if (orders.IsEmpty())
 		FillOrdersScalper(); //FillOrdersMyfxbook();
-	if (cache.IsEmpty())
+	if (cache.IsEmpty()) {
 		FillInputBooleans();
-	if (matchers.IsEmpty())
-		InitMatchers();
-	for(int i = 0; i < matchers.GetCount(); i++)
-		Analyze(matchers[i]);
+		InitOrderDescriptor();
+	}
+	if (clusters.IsEmpty())
+		InitClusters();
+	for(int i = 0; i < clusters.GetCount(); i++)
+		Analyze(clusters[i]);
 	
-	if (running)
+	
+	if (IsRunning())
 		StoreThis();
 	
 	
-	
+	/*o
 	CoWork co;
 	co.SetPoolSize(GetUsedCpuCores());
-	for(int i = 0; i < matchers.GetCount(); i++) {
+	for(int i = 0; i < clusters.GetCount(); i++) {
 		co & THISBACK1(Optimize, i);
 	}
 	co.Finish();
-	
+	*/
 	stopped = true;
 }
 
@@ -129,7 +132,7 @@ void Analyzer::FillOrdersScalper() {
 	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	
-	for(int i = 0; i < work_queue.GetCount() && running; i++) {
+	for(int i = 0; i < work_queue.GetCount() && IsRunning(); i++) {
 		CoreItem& ci = *work_queue[i];
 		sys.Process(ci, true);
 		
@@ -189,7 +192,7 @@ void Analyzer::FillInputBooleans() {
 	cache.Clear();
 	work_queue.Clear();
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	for(int i = 0; i < work_queue.GetCount() && running; i++) {
+	for(int i = 0; i < work_queue.GetCount() && IsRunning(); i++) {
 		CoreItem& ci = *work_queue[i];
 		sys.Process(ci, true);
 		
@@ -225,24 +228,37 @@ void Analyzer::FillInputBooleans() {
 	
 }
 
-void Analyzer::InitMatchers() {
-	matchers.Clear();
-	for(int i = 0; i < sym_ids.GetCount(); i++) {
-		AnalyzerMatcher& am = matchers.Add();
-		
-		am.symbol = sym_ids[i];
-	}
-	
-}
-
-void Analyzer::Analyze(AnalyzerMatcher& am) {
-	
-	
+void Analyzer::InitOrderDescriptor() {
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
 		AnalyzerOrder& o = orders[i];
 		
-		if (!Match(am, o)) continue;
+		o.descriptor		.SetCount(cache.GetCount() * EVENT_COUNT);
+		o.start_descriptor	.SetCount(cache.GetCount() * EVENT_COUNT);
+		o.sust_descriptor	.SetCount(cache.GetCount() * EVENT_COUNT);
+		o.stop_descriptor	.SetCount(cache.GetCount() * EVENT_COUNT);
+		int row = 0;
+		
+		for(int j = 0; j < cache.GetCount(); j++) {
+			int e = GetEvent(o, cache[j]);
+			
+			for(int k = 0; k < EVENT_COUNT; k++) {
+				if (e & (1 << k)) {
+					o.descriptor.Set(row, true);
+					if (k < SUSTAIN_ENABLE)		o.start_descriptor.Set(row, true);
+					else if (k < STOP_ENABLE)	o.sust_descriptor.Set(row, true);
+					else						o.stop_descriptor.Set(row, true);
+				}
+				row++;
+			}
+		}
+	}
+}
+
+void Analyzer::Analyze(AnalyzerCluster& am) {
+	
+	for(int i = 0; i < am.orders.GetCount(); i++) {
+		AnalyzerOrder& o = orders[am.orders[i]];
 		
 		am.Add();
 		
@@ -257,233 +273,120 @@ void Analyzer::Analyze(AnalyzerMatcher& am) {
 			}
 		}
 		
-		am.Sort();
+		//am.Sort();
+	}
+}
+
+void Analyzer::InitClusters() {
+	int descriptor_size = EVENT_COUNT * cache.GetCount();
+	Vector<VectorBool> prev_average_descriptors;
+	Vector<int> descriptor_sum;
+	
+	clusters.Clear();
+	
+	clusters.SetCount(CLUSTER_COUNT);
+	for(int i = 0; i < clusters.GetCount(); i++) {
+		AnalyzerCluster& c = clusters[i];
+		c.average_descriptor = orders[Random(orders.GetCount())].start_descriptor;
+		prev_average_descriptors.Add() = c.average_descriptor;
 	}
 	
 	
-	
-}
-
-void Analyzer::Optimize(int matcher) {
-	AnalyzerMatcher& am = matchers[matcher];
-	
-	int max_gens = 100;
-	for(int i = 0; i < max_gens; i++) {
-		am.solutions.SetCount(i+1);
-		am.solutions[i].SetCount(0);
+	for(int cluster_iter = 0; cluster_iter < 10 && IsRunning(); cluster_iter++) {
+		ReleaseLog("Analyzer::InitClusters clustering iteration " + IntStr(cluster_iter));
 		
-		if (i == 0) {
+		for(int i = 0; i < clusters.GetCount(); i++) {
+			AnalyzerCluster& c = clusters[i];
+			c.orders.SetCount(0);
+		}
+		
+		// Find closest cluster center
+		for(int i = 0; i < orders.GetCount(); i++) {
+			const AnalyzerOrder& o = orders[i];
+			ASSERT(o.start_descriptor.GetCount() == descriptor_size);
 			
-			// Generate minimal nodes
-			
-			Vector<int> starts, stops, sustains;
-			
-			
-			for(int i = 0; i < am.stats.GetCount(); i++) {
-				int key = am.stats.GetKey(i);
-				int value = am.stats[i];
-				int cache = key / Analyzer::EVENT_COUNT;
-				int event  = key % Analyzer::EVENT_COUNT;
-				
-				if (event < SUSTAIN_ENABLE)		starts.Add(key);
-				else if (event < STOP_ENABLE)	stops.Add(key);
-				else							sustains.Add(key);
-				
-				
-			}
-			
-			int count = min(starts.GetCount(), min(stops.GetCount(), sustains.GetCount()));
-			for(int mul = 0; mul < 1; mul++) {
-				
-				int sust_i = Random(count);
-				int start_i = Random(count);
-				int stop_i = Random(count);
-				
-				for(int j = 0; j < count; j++) {
-					int start   = starts[start_i];
-					int stop    = stops[stop_i];
-					int sustain = sustains[sust_i];
-					
-					AnalyzerSolution& as = am.solutions[0].Add();
-					as.symbol = am.symbol;
-					as.required.SetCount(3);
-					struct Match& startm = as.required[0];
-					struct Match& stopm  = as.required[1];
-					struct Match& sustm  = as.required[2];
-					startm.cache = start / Analyzer::EVENT_COUNT;
-					startm.event = start % Analyzer::EVENT_COUNT;
-					startm.row   = start;
-					stopm.cache = stop / Analyzer::EVENT_COUNT;
-					stopm.event = stop % Analyzer::EVENT_COUNT;
-					stopm.row   = stop;
-					sustm.cache = sustain / Analyzer::EVENT_COUNT;
-					sustm.event = sustain % Analyzer::EVENT_COUNT;
-					sustm.row   = sustain;
-					
-					Test(as);
-					ReleaseLog("Analyzer::Optimize first gen " + IntStr(matcher) + " " + IntStr(j) + "/" + IntStr(count) + " " + DblStr(as.result));
-					
-					sust_i	= (sust_i  + 1) % count;
-					start_i	= (start_i + 1) % count;
-					stop_i	= (stop_i  + 1) % count;
+			int lowest_distance = INT_MAX, lowest_j = -1;
+			for(int j = 0; j < clusters.GetCount(); j++) {
+				AnalyzerCluster& c = clusters[j];
+				int distance = c.average_descriptor.Hamming(o.start_descriptor);
+				if (distance < lowest_distance) {
+					lowest_distance = distance;
+					lowest_j = j;
 				}
 			}
 			
-			Sort(am.solutions[0], AnalyzerSolution());
-		} else {
-			
-			// Combine best nodes of previous generations
-			
-			Vector<AnalyzerSolution>& cur  = am.solutions[i];
-			Vector<AnalyzerSolution>& prev = am.solutions[i-1];
-			
-			double gen_max = -DBL_MAX;
-			
-			for(int j = 1; j < prev.GetCount(); j+=2) {
-				AnalyzerSolution& a = prev[j];
-				AnalyzerSolution& b = prev[j-1];
-				AnalyzerSolution& c = cur.Add();
-				c.required.Append(a.required);
-				c.required.Append(b.required);
-				c.symbol = a.symbol;
-			
-				Test(c);
-				
-				if (c.result > gen_max) gen_max = c.result;
-				
-				ReleaseLog("Analyzer::Optimize gen " + IntStr(i) + " " + IntStr(matcher) + " " + IntStr(j) + "/" + IntStr(prev.GetCount()) + " " + DblStr(c.result) + " (gen max " + DblStr(gen_max) + ")");
-				
-			}
-			
-			Sort(cur, AnalyzerSolution());
+			AnalyzerCluster& c = clusters[lowest_j];
+			c.orders.Add(i);
 		}
+		
+		
+		// If some cluster is empty, add at least one
+		for(int i = 0; i < clusters.GetCount(); i++) {
+			AnalyzerCluster& c = clusters[i];
+			if (c.orders.IsEmpty()) {
+				for(int j = 0; j < clusters.GetCount(); j++) {
+					if (clusters[j].orders.GetCount() > 1) {
+						int o = clusters[j].orders.Pop();
+						c.orders.Add(o);
+						break;
+					}
+				}
+			}
+		}
+		
+		
+		// Calculate new cluster centers
+		for(int i = 0; i < clusters.GetCount(); i++) {
+			AnalyzerCluster& c = clusters[i];
+			descriptor_sum.SetCount(0);
+			descriptor_sum.SetCount(descriptor_size, 0);
+			for(int j = 0; j < c.orders.GetCount(); j++) {
+				const AnalyzerOrder& o = orders[c.orders[j]];
+				for(int k = 0; k < descriptor_size; k++) {
+					if (o.start_descriptor.Get(k))
+						descriptor_sum[k]++;
+					else
+						descriptor_sum[k]--;
+				}
+			}
+			for(int k = 0; k < descriptor_size; k++) {
+				c.average_descriptor.Set(k, descriptor_sum[k] > 0);
+			}
+		}
+		
+		
+		// Dump debug info
+		if (0) {
+			String out;
+			for(int i = 0; i < clusters.GetCount(); i++) {
+				AnalyzerCluster& c = clusters[i];
+				ReleaseLog("Cluster " + IntStr(i) + ": " + IntStr(c.orders.GetCount()) + " orders");
+			}
+		}
+		
+		
+		// Break loop when no new centers have been found
+		bool all_same = true;
+		for(int i = 0; i < clusters.GetCount() && all_same; i++) {
+			AnalyzerCluster& c = clusters[i];
+			if (!c.average_descriptor.IsEqual(prev_average_descriptors[i]))
+				all_same = false;
+			prev_average_descriptors[i] = c.average_descriptor;
+		}
+		if (all_same) break;
+		
 		
 	}
-}
-
-
-void Analyzer::Test(AnalyzerSolution& am) {
-	ConstLabelSignal& ls = scalper_signal.Get(am.symbol);
-	int begin = 0;
-	int end = min(cache[0].data.signal.GetCount(), ls.signal.GetCount());
-	double score = 0;
 	
-	bool prev_sig = false, prev_ena = false;
-	for(int i = begin; i < end; i++) {
-		bool sig = ls.signal.Get(i);
-		bool ena = ls.enabled.Get(i);
-		
-		bool is_start = (ena && !prev_ena) || (ena && prev_ena && prev_sig != sig);
-		bool is_stop = !ena && prev_ena;
-		
-		bool matcher_start = true;
-		bool matcher_stop = true;
-		bool matcher_ena = true;
-		
-		bool has_label = false;
-		bool label = false;
-		
-		for(int j = 0; j < am.required.GetCount(); j++) {
-			const struct Match& m = am.required[j];
-			
-			const LabelSignal& ls = cache[m.cache].data;
-			bool prev_sig = ls.signal.Get(i-1);
-			bool prev_ena = ls.enabled.Get(i-1);
-			bool sig = ls.signal.Get(i);
-			bool ena = ls.enabled.Get(i);
-			
-			
-			switch (m.event) {
-				case START_ENABLE:
-					if (!(!prev_ena && ena))
-						matcher_start = false;
-					break;
-				case START_DISABLE:
-					if (!(prev_ena && !ena))
-						matcher_start = false;
-					break;
-				case START_POS:
-					if (!has_label) {label = sig; has_label = true;}
-					if (!(prev_sig != sig && sig == label))
-						matcher_start = false;
-					break;
-				case START_NEG:
-					if (!has_label) {label = !sig; has_label = true;}
-					if (!(prev_sig != sig && sig != label))
-						matcher_start = false;
-					break;
-				case SUSTAIN_ENABLE:
-					if (!(ena))
-						matcher_ena = false;
-					break;
-				case SUSTAIN_DISABLE:
-					if (!(!ena))
-						matcher_ena = false;
-					break;
-				case SUSTAIN_POS:
-					if (!has_label) {label = sig; has_label = true;}
-					if (!(sig == label))
-						matcher_ena = false;
-					break;
-				case SUSTAIN_NEG:
-					if (!has_label) {label = !sig; has_label = true;}
-					if (!(sig != label))
-						matcher_ena = false;
-					break;
-				case STOP_ENABLE:
-					if (!(prev_ena && !ena))
-						matcher_stop = false;
-					break;
-				case STOP_DISABLE:
-					if (!(!prev_ena && ena))
-						matcher_stop = false;
-					break;
-				case STOP_POS:
-					if (!has_label) {label = sig; has_label = true;}
-					if (!(prev_sig != sig && sig != label))
-						matcher_stop = false;
-					break;
-				case STOP_NEG:
-					if (!has_label) {label = !sig; has_label = true;}
-					if (!(prev_sig != sig && sig == label))
-						matcher_stop = false;
-					break;
-			}
-			
-			if (!matcher_start && !matcher_ena && !matcher_stop) break;
+	
+	for(int i = 0; i < clusters.GetCount(); i++) {
+		AnalyzerCluster& c = clusters[i];
+		if (c.orders.GetCount() <= 100) {
+			clusters.Remove(i);
+			i--;
 		}
-		
-		
-		if (matcher_start) {
-			if (is_start)		score += 5;
-			else				score -= 5;
-		}
-		if (matcher_stop) {
-			if (is_stop)		score += 5;
-			else				score -= 5;
-		}
-		if (matcher_ena) {
-			if (ena)			score += 1;
-			else				score -= 1;
-		}
-		
-		
-		prev_sig = sig;
-		prev_ena = ena;
 	}
 	
-	if (score == 0.0)
-		score = -1000000;
-	
-	am.result = score;
-}
-
-bool Analyzer::Match(const AnalyzerMatcher& am, const AnalyzerOrder& o) {
-	if (am.symbol != o.symbol)
-		return false;
-	
-	
-	return true;
 }
 
 int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
@@ -563,15 +466,19 @@ String Analyzer::GetEventString(int i) {
 
 
 AnalyzerCtrl::AnalyzerCtrl() {
-	Add(split.SizePos());
-	split.Horz();
+	Add(tabs.SizePos());
+	tabs.Add(cluster);
+	tabs.Add(cluster, "Clusters");
+	tabs.Add(order);
+	tabs.Add(order, "Orders");
+	cluster.Horz();
 	
-	split << matcherlist << eventlist;
-	split.SetPos(2500);
+	cluster << clusterlist << eventlist;
+	cluster.SetPos(2500);
 	
-	matcherlist.AddColumn("Symbol");
-	matcherlist.AddColumn("Required");
-	matcherlist << THISBACK(Data);
+	clusterlist.AddColumn("Cluster");
+	clusterlist.AddColumn("Orders");
+	clusterlist << THISBACK(Data);
 	
 	eventlist.AddColumn("Cache");
 	eventlist.AddColumn("Event");
@@ -583,30 +490,303 @@ void AnalyzerCtrl::Data() {
 	System& sys = GetSystem();
 	Analyzer& a = GetAnalyzer();
 	
-	for(int i = 0; i < a.matchers.GetCount(); i++) {
-		const AnalyzerMatcher& am = a.matchers[i];
+	int tab = tabs.Get();
+	if (tab == 0) {
+		for(int i = 0; i < a.clusters.GetCount(); i++) {
+			const AnalyzerCluster& am = a.clusters[i];
+			
+			clusterlist.Set(i, 0, i);
+			clusterlist.Set(i, 1, am.orders.GetCount());
+			//clusterlist.Set(i, 0, sys.GetSymbol(am.symbol));
+			//clusterlist.Set(i, 1, am.GetRequiredString());
+		}
+		clusterlist.SetCount(a.clusters.GetCount());
 		
-		matcherlist.Set(i, 0, sys.GetSymbol(am.symbol));
-		matcherlist.Set(i, 1, am.GetRequiredString());
+		int cursor = clusterlist.GetCursor();
+		if (cursor >= 0 && cursor < a.clusters.GetCount()) {
+			const AnalyzerCluster& am = a.clusters[cursor];
+			int row = 0;
+			for(int i = 0; i < am.stats.GetCount(); i++) {
+				int key = am.stats.GetKey(i);
+				int value = am.stats[i];
+				int cache = key / Analyzer::EVENT_COUNT;
+				int event  = key % Analyzer::EVENT_COUNT;
+				if (event >= Analyzer::SUSTAIN_ENABLE) continue;
+				eventlist.Set(row, 0, a.cache[cache].title);
+				eventlist.Set(row, 1, a.GetEventString(event));
+				eventlist.Set(row, 2, (double)value * 100 / am.total);
+				row++;
+			}
+	
+			eventlist.SetSortColumn(2, true);
+			eventlist.SetCount(row);
+		}
+	}
+	else if (tab == 1) {
+		
+		
+		
+	}
+}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0
+void Analyzer::Optimize(int cluster) {
+	AnalyzerCluster& am = clusters[cluster];
+	
+	int max_gens = 100;
+	for(int i = 0; i < max_gens; i++) {
+		am.solutions.SetCount(i+1);
+		am.solutions[i].SetCount(0);
+		
+		if (i == 0) {
+			
+			// Generate minimal nodes
+			
+			Vector<int> starts, stops, sustains;
+			
+			
+			for(int i = 0; i < am.stats.GetCount(); i++) {
+				int key = am.stats.GetKey(i);
+				int value = am.stats[i];
+				int cache = key / Analyzer::EVENT_COUNT;
+				int event  = key % Analyzer::EVENT_COUNT;
+				
+				if (event < SUSTAIN_ENABLE)		starts.Add(key);
+				else if (event < STOP_ENABLE)	stops.Add(key);
+				else							sustains.Add(key);
+				
+				
+			}
+			
+			int count = min(starts.GetCount(), min(stops.GetCount(), sustains.GetCount()));
+			for(int mul = 0; mul < 1; mul++) {
+				
+				int sust_i = Random(count);
+				int start_i = Random(count);
+				int stop_i = Random(count);
+				
+				for(int j = 0; j < count; j++) {
+					int start   = starts[start_i];
+					int stop    = stops[stop_i];
+					int sustain = sustains[sust_i];
+					
+					AnalyzerSolution& as = am.solutions[0].Add();
+					as.symbol = am.symbol;
+					as.required.SetCount(1);
+					struct Match& startm = as.required[0];
+					//struct Match& stopm  = as.required[1];
+					//struct Match& sustm  = as.required[2];
+					startm.cache = start / Analyzer::EVENT_COUNT;
+					startm.event = start % Analyzer::EVENT_COUNT;
+					startm.row   = start;
+					/*stopm.cache = stop / Analyzer::EVENT_COUNT;
+					stopm.event = stop % Analyzer::EVENT_COUNT;
+					stopm.row   = stop;
+					sustm.cache = sustain / Analyzer::EVENT_COUNT;
+					sustm.event = sustain % Analyzer::EVENT_COUNT;
+					sustm.row   = sustain;*/
+					
+					Test(as);
+					ReleaseLog("Analyzer::Optimize first gen " + IntStr(cluster) + " " + IntStr(j) + "/" + IntStr(count) + " " + DblStr(as.result));
+					
+					sust_i	= (sust_i  + 1) % count;
+					start_i	= (start_i + 1) % count;
+					stop_i	= (stop_i  + 1) % count;
+				}
+			}
+			
+			Sort(am.solutions[0], AnalyzerSolution());
+		} else {
+			
+			// Combine best nodes of previous generations
+			
+			Vector<AnalyzerSolution>& cur  = am.solutions[i];
+			Vector<AnalyzerSolution>& prev = am.solutions[i-1];
+			
+			double gen_max = -DBL_MAX;
+			
+			for(int j = 1; j < prev.GetCount(); j+=2) {
+				AnalyzerSolution& a = prev[j];
+				AnalyzerSolution& b = prev[j-1];
+				AnalyzerSolution& c = cur.Add();
+				c.required.Append(a.required);
+				c.required.Append(b.required);
+				c.symbol = a.symbol;
+			
+				Test(c);
+				
+				if (c.result > gen_max) gen_max = c.result;
+				
+				ReleaseLog("Analyzer::Optimize gen " + IntStr(i) + " " + IntStr(cluster) + " " + IntStr(j) + "/" + IntStr(prev.GetCount()) + " " + DblStr(c.result) + " (gen max " + DblStr(gen_max) + ")");
+				
+			}
+			
+			Sort(cur, AnalyzerSolution());
+		}
+		
+	}
+}
+
+
+void Analyzer::Test(AnalyzerSolution& am) {
+	ConstLabelSignal& ls = scalper_signal.Get(am.symbol);
+	int begin = 0;
+	int end = min(cache[0].data.signal.GetCount(), ls.signal.GetCount());
+	double score = 0;
+	
+	bool prev_sig = false, prev_ena = false;
+	for(int i = begin; i < end; i++) {
+		bool sig = ls.signal.Get(i);
+		bool ena = ls.enabled.Get(i);
+		
+		bool is_start = (ena && !prev_ena) || (ena && prev_ena && prev_sig != sig);
+		bool is_stop = !ena && prev_ena;
+		
+		bool cluster_start = true;
+		bool cluster_stop = true;
+		bool cluster_ena = true;
+		
+		bool has_label = false;
+		bool label = false;
+		
+		for(int j = 0; j < am.required.GetCount(); j++) {
+			const struct Match& m = am.required[j];
+			
+			const LabelSignal& ls = cache[m.cache].data;
+			bool prev_sig = ls.signal.Get(i-1);
+			bool prev_ena = ls.enabled.Get(i-1);
+			bool sig = ls.signal.Get(i);
+			bool ena = ls.enabled.Get(i);
+			
+			
+			switch (m.event) {
+				case START_ENABLE:
+					if (!(!prev_ena && ena))
+						cluster_start = false;
+					break;
+				case START_DISABLE:
+					if (!(prev_ena && !ena))
+						cluster_start = false;
+					break;
+				case START_POS:
+					if (!has_label) {label = sig; has_label = true;}
+					if (!(prev_sig != sig && sig == label))
+						cluster_start = false;
+					break;
+				case START_NEG:
+					if (!has_label) {label = !sig; has_label = true;}
+					if (!(prev_sig != sig && sig != label))
+						cluster_start = false;
+					break;
+				case SUSTAIN_ENABLE:
+					if (!(ena))
+						cluster_ena = false;
+					break;
+				case SUSTAIN_DISABLE:
+					if (!(!ena))
+						cluster_ena = false;
+					break;
+				case SUSTAIN_POS:
+					if (!has_label) {label = sig; has_label = true;}
+					if (!(sig == label))
+						cluster_ena = false;
+					break;
+				case SUSTAIN_NEG:
+					if (!has_label) {label = !sig; has_label = true;}
+					if (!(sig != label))
+						cluster_ena = false;
+					break;
+				case STOP_ENABLE:
+					if (!(prev_ena && !ena))
+						cluster_stop = false;
+					break;
+				case STOP_DISABLE:
+					if (!(!prev_ena && ena))
+						cluster_stop = false;
+					break;
+				case STOP_POS:
+					if (!has_label) {label = sig; has_label = true;}
+					if (!(prev_sig != sig && sig != label))
+						cluster_stop = false;
+					break;
+				case STOP_NEG:
+					if (!has_label) {label = !sig; has_label = true;}
+					if (!(prev_sig != sig && sig == label))
+						cluster_stop = false;
+					break;
+			}
+			
+			if (!cluster_start && !cluster_ena && !cluster_stop) break;
+		}
+		
+		
+		if (cluster_start) {
+			if (is_start)		score += 5;
+			else				score -= 5;
+		}
+		/*if (cluster_stop) {
+			if (is_stop)		score += 5;
+			else				score -= 5;
+		}
+		if (cluster_ena) {
+			if (ena)			score += 1;
+			else				score -= 1;
+		}*/
+		
+		
+		prev_sig = sig;
+		prev_ena = ena;
 	}
 	
-	int cursor = matcherlist.GetCursor();
-	if (cursor >= 0 && cursor < a.matchers.GetCount()) {
-		const AnalyzerMatcher& am = a.matchers[cursor];
-		
-		for(int i = 0; i < am.stats.GetCount(); i++) {
-			int key = am.stats.GetKey(i);
-			int value = am.stats[i];
-			int cache = key / Analyzer::EVENT_COUNT;
-			int event  = key % Analyzer::EVENT_COUNT;
-			eventlist.Set(i, 0, a.cache[cache].title);
-			eventlist.Set(i, 1, a.GetEventString(event));
-			eventlist.Set(i, 2, (double)value * 100 / am.total);
-		}
-
-		eventlist.SetSortColumn(2, true);
-		eventlist.SetCount(am.stats.GetCount());
-	}
+	if (score == 0.0)
+		score = -1000000;
+	
+	am.result = score;
 }
 
+bool Analyzer::Match(const AnalyzerMatcher& am, const AnalyzerOrder& o) {
+	if (am.symbol != o.symbol)
+		return false;
+	
+	
+	return true;
 }
+#endif

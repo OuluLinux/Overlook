@@ -90,8 +90,7 @@ VectorBool& VectorBool::Or(const VectorBool& b) {
 	return *this;
 }
 
-double VectorBool::GetOverlapFactor(const VectorBool& b) const {
-	ConstU64* it0 = data.Begin();
+double VectorBool::GetOverlapFactor(const VectorBool& b) const {ConstU64* it0 = data.Begin();
 	ConstU64* it1 = b.Begin();
 	ConstU64* end0 = data.End();
 	ConstU64* end1 = b.data.End();
@@ -99,6 +98,31 @@ double VectorBool::GetOverlapFactor(const VectorBool& b) const {
 	for (; it0 != end0 && it1 != end1; it0++, it1++)
 		pop_count += PopCount64(*it0 & *it1);
 	return Upp::min(1.0, (double)pop_count / count);
+}
+
+int VectorBool::Hamming(const VectorBool& b) const {
+	if (b.GetCount() != GetCount()) Panic("Hamming distance cannot be calculated");
+	ConstU64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	int pop_count = 0;
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		pop_count += PopCount64(*it0 ^ *it1);
+	return pop_count;
+}
+
+bool VectorBool::IsEqual(const VectorBool& b) const {
+	if (b.GetCount() != GetCount()) Panic("Equality cannot be calculated");
+	ConstU64* it0 = data.Begin();
+	ConstU64* it1 = b.Begin();
+	ConstU64* end0 = data.End();
+	ConstU64* end1 = b.data.End();
+	int pop_count = 0;
+	for (; it0 != end0 && it1 != end1; it0++, it1++)
+		if (*it0 != *it1)
+			return false;
+	return true;
 }
 
 bool VectorBool::Get(int64 i) const {

@@ -526,6 +526,8 @@ public:
 	VectorBool& And(const VectorBool& b);
 	VectorBool& Or(const VectorBool& b);
 	double GetOverlapFactor(const VectorBool& b) const;
+	int Hamming(const VectorBool& b) const;
+	bool IsEqual(const VectorBool& b) const;
 	
 	bool Top() const {return Get(GetCount()-1);}
 	bool Get(int64 i) const;

@@ -91,20 +91,20 @@ void Analyzer::Process() {
 	stopped = false;
 	
 	
-	if (orders.IsEmpty())
+	if (orders.IsEmpty()) {
 		FillOrdersScalper(); //FillOrdersMyfxbook();
-	if (cache.IsEmpty()) {
 		FillInputBooleans();
 		InitOrderDescriptor();
-	}
-	if (clusters.IsEmpty())
 		InitClusters();
-	for(int i = 0; i < clusters.GetCount(); i++)
-		Analyze(clusters[i]);
-	RefreshRealtimeClusters();
+		for(int i = 0; i < clusters.GetCount(); i++)
+			Analyze(clusters[i]);
+		//RefreshRealtimeClusters();
+		InitMatchers();
+		
+		if (IsRunning())
+			StoreThis();
+	}
 	
-	if (IsRunning())
-		StoreThis();
 	
 	
 	while (IsRunning()) {
@@ -311,7 +311,7 @@ void Analyzer::InitClusters() {
 	}
 	
 	
-	for(int cluster_iter = 0; cluster_iter < 10 && IsRunning(); cluster_iter++) {
+	for(int cluster_iter = 0; cluster_iter < 3 && IsRunning(); cluster_iter++) {
 		ReleaseLog("Analyzer::InitClusters clustering iteration " + IntStr(cluster_iter));
 		
 		for(int i = 0; i < clusters.GetCount(); i++) {
@@ -322,12 +322,12 @@ void Analyzer::InitClusters() {
 		// Find closest cluster center
 		for(int i = 0; i < orders.GetCount(); i++) {
 			const AnalyzerOrder& o = orders[i];
-			ASSERT(o.start_descriptor.GetCount() == descriptor_size);
+			ASSERT(o.descriptor.GetCount() == descriptor_size);
 			
 			int lowest_distance = INT_MAX, lowest_j = -1;
 			for(int j = 0; j < clusters.GetCount(); j++) {
 				AnalyzerCluster& c = clusters[j];
-				int distance = c.av_start_descriptor.Hamming(o.start_descriptor);
+				int distance = c.av_start_descriptor.Hamming(o.descriptor);
 				if (distance < lowest_distance) {
 					lowest_distance = distance;
 					lowest_j = j;
@@ -362,7 +362,7 @@ void Analyzer::InitClusters() {
 			for(int j = 0; j < c.orders.GetCount(); j++) {
 				const AnalyzerOrder& o = orders[c.orders[j]];
 				for(int k = 0; k < descriptor_size; k++) {
-					if (o.start_descriptor.Get(k))
+					if (o.descriptor.Get(k))
 						descriptor_sum[k]++;
 					else
 						descriptor_sum[k]--;
@@ -574,6 +574,178 @@ void Analyzer::GetRealtimeStartDescriptor(bool label, int i, VectorBool& descrip
 	}
 }
 
+void Analyzer::InitMatchers() {
+	Vector<MatcherItem> list;
+	list.SetCount(1);
+	
+	for(int i = 0; i < clusters.GetCount(); i++) {
+		AnalyzerCluster& c = clusters[i];
+		
+		c.test_results.Clear();
+		
+		for (int s0 = 0; s0 < c.stats.GetCount(); s0++) {
+			int key0 = c.stats.GetKey(s0);
+			list[0].cache = key0 / Analyzer::EVENT_COUNT;
+			list[0].event = key0 % Analyzer::EVENT_COUNT;
+			int type0 = GetEventType(list[0].event);
+			
+			/*for (int s1 = s0+1; s1 < c.stats.GetCount(); s1++) {
+				int key1 = c.stats.GetKey(s1);
+				list[1].cache = key1 / Analyzer::EVENT_COUNT;
+				list[1].event = key1 % Analyzer::EVENT_COUNT;
+				int type1 = GetEventType(list[1].event);
+				
+				if (type0 != type1) continue;
+				*/
+				
+			if (type0 != 0) continue;
+				
+			MatchTest test;
+			RunMatchTest(0, list, test);
+			
+			ReleaseLog("Analyzer::InitMatchers " + IntStr(i) + " " + IntStr(s0) /*+ " " + IntStr(s1)*/ +
+				" false_match " + IntStr(test.false_match) +
+				" false_total " + IntStr(test.false_total) +
+				" true_match " + IntStr(test.true_match) +
+				" true_total " + IntStr(test.true_total));
+			
+			c.test_results.Add(test);
+			//}
+		}
+		
+		Sort(c.test_results, MatchTest());
+	}
+}
+
+void Analyzer::RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t) {
+	
+	t.false_match = 0;
+	t.false_total = 0;
+	t.true_match = 0;
+	t.true_total = 0;
+	for(int i = 0; i < scalper_signal.GetCount(); i++) {
+		const LabelSignal& ls = scalper_signal[i];
+		
+		
+		for(int j = 1; j < ls.signal.GetCount(); j++) {
+			bool prev_sig = ls.signal.Get(j-1);
+			bool prev_ena = ls.enabled.Get(j-1);
+			bool sig = ls.signal.Get(j);
+			bool ena = ls.enabled.Get(j);
+			
+			bool is_start = (ena && !prev_ena) || (ena && prev_ena && prev_sig != sig);
+			bool is_stop = !ena && prev_ena;
+			
+			bool cluster_start	= type == 0;
+			bool cluster_ena	= type == 1;
+			bool cluster_stop	= type == 2;
+			
+			bool has_label = false;
+			bool label = sig;
+			
+			for(int k = 0; k < list.GetCount(); k++) {
+				const MatcherItem& mi = list[k];
+				const LabelSource& ls = cache[mi.cache];
+				bool prev_sig = ls.data.signal.Get(j-1);
+				bool prev_ena = ls.data.enabled.Get(j-1);
+				bool sig = ls.data.signal.Get(j);
+				bool ena = ls.data.enabled.Get(j);
+				
+				bool match = false;
+				switch (mi.event) {
+					case START_ENABLE:
+						if (!(!prev_ena && ena))
+							cluster_start = false;
+						break;
+					case START_DISABLE:
+						if (!(prev_ena && !ena))
+							cluster_start = false;
+						break;
+					case START_POS:
+						if (!(prev_sig != sig && sig == label))
+							cluster_start = false;
+						break;
+					case START_NEG:
+						if (!(prev_sig != sig && sig != label))
+							cluster_start = false;
+						break;
+					case SUSTAIN_ENABLE:
+						if (!(ena))
+							cluster_ena = false;
+						break;
+					case SUSTAIN_DISABLE:
+						if (!(!ena))
+							cluster_ena = false;
+						break;
+					case SUSTAIN_POS:
+						if (!(sig == label))
+							cluster_ena = false;
+						break;
+					case SUSTAIN_NEG:
+						if (!(sig != label))
+							cluster_ena = false;
+						break;
+					case STOP_ENABLE:
+						if (!(prev_ena && !ena))
+							cluster_stop = false;
+						break;
+					case STOP_DISABLE:
+						if (!(!prev_ena && ena))
+							cluster_stop = false;
+						break;
+					case STOP_POS:
+						if (!(prev_sig != sig && sig != label))
+							cluster_stop = false;
+						break;
+					case STOP_NEG:
+						if (!(prev_sig != sig && sig == label))
+							cluster_stop = false;
+						break;
+				}
+			}
+			
+			if(type == 0) {
+				if (is_start) {
+					if (cluster_start)
+						t.true_match++;
+					t.true_total++;
+				}
+				else {
+					if (cluster_start)
+						t.false_match++;
+					t.false_total++;
+				}
+			}
+			else if(type == 1) {
+				if (ena) {
+					if (cluster_start)
+						t.true_match++;
+					t.true_total++;
+				}
+				else {
+					if (cluster_start)
+						t.false_match++;
+					t.false_total++;
+				}
+			}
+			else {
+				if (is_stop) {
+					if (cluster_start)
+						t.true_match++;
+					t.true_total++;
+				}
+				else {
+					if (cluster_start)
+						t.false_match++;
+					t.false_total++;
+				}
+			}
+		}
+		
+	}
+	
+}
+
 
 
 
@@ -587,6 +759,8 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	tabs.Add(cluster, "Clusters");
 	tabs.Add(realtime);
 	tabs.Add(realtime, "Realtime");
+	tabs.Add(test);
+	tabs.Add(test, "Test");
 	cluster.Horz();
 	
 	cluster << clusterlist << eventlist;
@@ -594,6 +768,9 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	
 	realtime << rtlist << rtdata;
 	realtime.SetPos(2500);
+	
+	test << testclusterlist << testresultlist;
+	test.SetPos(2500);
 	
 	clusterlist.AddColumn("Cluster");
 	clusterlist.AddColumn("Orders");
@@ -608,6 +785,12 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	rtdata.AddColumn("");
 	rtdata.AddColumn("");
 	rtdata.AddColumn("");
+	
+	testclusterlist.AddColumn("Cluster");
+	testresultlist.AddColumn("False match");
+	testresultlist.AddColumn("False total");
+	testresultlist.AddColumn("True match");
+	testresultlist.AddColumn("True total");
 }
 
 void AnalyzerCtrl::Data() {
@@ -633,7 +816,7 @@ void AnalyzerCtrl::Data() {
 				int value = am.stats[i];
 				int cache = key / Analyzer::EVENT_COUNT;
 				int event  = key % Analyzer::EVENT_COUNT;
-				if (event >= Analyzer::SUSTAIN_ENABLE) continue;
+				//if (event >= Analyzer::SUSTAIN_ENABLE) continue;
 				eventlist.Set(row, 0, a.cache[cache].title);
 				eventlist.Set(row, 1, a.GetEventString(event));
 				eventlist.Set(row, 2, (double)value * 100 / am.total);
@@ -656,6 +839,33 @@ void AnalyzerCtrl::Data() {
 		if (cursor >= 0 && cursor < a.rtdata.GetCount()) {
 			const RtData& rt = a.rtdata[cursor];
 			
+		}
+	}
+	else if (tab == 2) {
+		for(int i = 0; i < a.clusters.GetCount(); i++) {
+			const AnalyzerCluster& am = a.clusters[i];
+			
+			testclusterlist.Set(i, 0, i);
+			testclusterlist.Set(i, 1, am.test_results.GetCount());
+		}
+		testclusterlist.SetCount(a.clusters.GetCount());
+		
+		int cursor = testclusterlist.GetCursor();
+		if (cursor >= 0 && cursor < a.clusters.GetCount()) {
+			const AnalyzerCluster& am = a.clusters[cursor];
+			int row = 0;
+			for(int i = 0; i < am.test_results.GetCount(); i++) {
+				const MatchTest& mt = am.test_results[i];
+				
+				testresultlist.Set(row, 0, mt.false_match);
+				testresultlist.Set(row, 1, mt.false_total);
+				testresultlist.Set(row, 2, mt.true_match);
+				testresultlist.Set(row, 3, mt.true_total);
+				
+				row++;
+			}
+			
+			testresultlist.SetCount(am.test_results.GetCount());
 		}
 	}
 }

@@ -23,12 +23,32 @@ public:
 	}
 };
 
+struct MatchTest : Moveable<MatchTest> {
+	int false_match = 0;
+	int false_total = 0;
+	int true_match = 0;
+	int true_total = 0;
+	
+	void Serialize(Stream& s) {s % false_match % false_total % true_match % true_total;}
+	
+	bool operator()(const MatchTest& a, const MatchTest& b) const {
+		if (a.false_match == 0 && b.false_match == 0) return a.true_match > b.true_match;
+		if (a.false_match == 0 && b.false_match > 0) return true;
+		return a.false_match < b.false_match;
+	}
+};
+
+struct MatcherItem : Moveable<MatcherItem> {
+	int cache = 0, event = 0;
+};
+
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
 	VectorBool av_start_descriptor;
 	Vector<int> orders;
 	VectorMap<int, int> stats;
+	Vector<MatchTest> test_results;
 	int total = 0;
 	
 public:
@@ -39,7 +59,7 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % av_start_descriptor % orders % stats % total;}
+	void Serialize(Stream& s) {s % av_start_descriptor % orders % stats % test_results % total;}
 	
 };
 
@@ -85,6 +105,7 @@ protected:
 		STOP_NEG,
 		EVENT_COUNT
 	};
+	int GetEventType(int i) {return i < SUSTAIN_ENABLE ? 0 : (i < STOP_ENABLE ? 1 : 2);}
 	
 	static const int CLUSTER_COUNT = 100;
 	
@@ -117,16 +138,15 @@ public:
 	void InitClusters();
 	void RefreshRealtimeClusters();
 	void Analyze(AnalyzerCluster& am);
-	//void Optimize(int cluster);
-	//void Test(AnalyzerSolution& am);
 	String GetEventString(int i);
 	void GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor);
-	//bool Match(const AnalyzerMatcher& am, const AnalyzerOrder& o);
 	int  GetEvent(const AnalyzerOrder& o, const LabelSource& ls);
 	int  GetEventBegin(bool label, int begin, const LabelSource& ls);
 	int  GetEventSustain(bool label, int begin, int end, const LabelSource& ls);
 	int  GetEventEnd(bool label, int end, const LabelSource& ls);
 	int  FindClosestCluster(int type, const VectorBool& descriptor);
+	void InitMatchers();
+	void RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t);
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Analyzer.bin"));}
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
@@ -147,8 +167,8 @@ inline Analyzer& GetAnalyzer() {return Single<Analyzer>();}
 
 class AnalyzerCtrl : public ParentCtrl {
 	TabCtrl tabs;
-	Splitter cluster, realtime;
-	ArrayCtrl clusterlist, eventlist, rtlist, rtdata;
+	Splitter cluster, realtime, test;
+	ArrayCtrl clusterlist, eventlist, rtlist, rtdata, testclusterlist, testresultlist;
 	
 public:
 	typedef AnalyzerCtrl CLASSNAME;

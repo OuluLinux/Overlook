@@ -60,6 +60,7 @@ file
 	Advisors.h,
 	Advisors.cpp,
 	Optimizer.h,
+	BeamSearchOptimization.h,
 	Calendar.h,
 	Calendar.cpp,
 	Arbitrage.h,

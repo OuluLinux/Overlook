@@ -527,7 +527,10 @@ public:
 	VectorBool& Or(const VectorBool& b);
 	double GetOverlapFactor(const VectorBool& b) const;
 	int Hamming(const VectorBool& b) const;
+	int PopCountAnd(const VectorBool& b) const;
+	int PopCountNotAnd(const VectorBool& b) const;
 	bool IsEqual(const VectorBool& b) const;
+	bool IsEmpty() const {return count == 0;}
 	
 	bool Top() const {return Get(GetCount()-1);}
 	bool Get(int64 i) const;
@@ -994,6 +997,38 @@ struct JobProgressDislay : public Display {
 
 
 inline void ReleaseLog(String s) {LOG(s); FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol(); LOG(s);}
+
+
+template <class K, class V, class Sort=StdGreater<V> >
+class SortedLimitedVectorMap {
+	VectorMap<K, V> map;
+	int max = 10;
+	Sort cmp;
+	
+public:
+	SortedLimitedVectorMap() {}
+	
+	void Clear() {map.Clear();}
+	void SetMax(int i) {max = i;}
+	
+	void Add(const K& key, const V& value) {
+		for(int i = 0; i < map.GetCount(); i++) {
+			if (cmp(value, map[i])) {
+				map.Insert(i, key, value);
+				while (map.GetCount() > max) map.Remove(max);
+				return;
+			}
+		}
+		if (map.GetCount() < max)
+			map.Add(key, value);
+	}
+	
+	int GetCount() const {return map.GetCount();}
+	K GetKey(int i) {return map.GetKey(i);}
+	V& operator[](int i) {return map[i];}
+	
+};
+
 
 }
 

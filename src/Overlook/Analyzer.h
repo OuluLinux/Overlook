@@ -2,6 +2,33 @@
 #define _Overlook_Analyzer_h_
 
 namespace Overlook {
+	
+enum {
+	START_ENABLE,
+	START_DISABLE,
+	START_POS_LONG,
+	START_NEG_LONG,
+	START_POS_SHORT,
+	START_NEG_SHORT,
+	SUSTAIN_ENABLE,
+	SUSTAIN_DISABLE,
+	SUSTAIN_POS_LONG,
+	SUSTAIN_NEG_LONG,
+	SUSTAIN_POS_SHORT,
+	SUSTAIN_NEG_SHORT,
+	STOP_ENABLE,
+	STOP_DISABLE,
+	STOP_POS_LONG,
+	STOP_NEG_LONG,
+	STOP_POS_SHORT,
+	STOP_NEG_SHORT,
+	EVENT_COUNT
+};
+
+enum {EVT_START, EVT_SUST, EVT_STOP};
+
+inline int GetEventType(int i) {return i < SUSTAIN_ENABLE ? EVT_START : (i < STOP_ENABLE ? EVT_SUST : EVT_STOP);}
+String GetEventString(int i);
 
 class AnalyzerOrder : Moveable<AnalyzerOrder> {
 	
@@ -10,13 +37,13 @@ public:
 	int begin, end;
 	bool action = 0;
 	double lots = 0.0;
-	VectorBool descriptor, start_descriptor, sust_descriptor, stop_descriptor;
+	VectorBool descriptor;
 	
 public:
 	typedef AnalyzerOrder CLASSNAME;
 	AnalyzerOrder();
 	
-	void Serialize(Stream& s) {s % symbol % begin % end % action % lots % descriptor % start_descriptor % sust_descriptor % stop_descriptor;}
+	void Serialize(Stream& s) {s % symbol % begin % end % action % lots % descriptor;}
 	
 	bool operator() (const AnalyzerOrder& a, const AnalyzerOrder& b) const {
 		return a.begin < b.begin;
@@ -42,10 +69,15 @@ struct MatcherItem : Moveable<MatcherItem> {
 	int cache = 0, event = 0;
 };
 
+struct MatcherCache {
+	VectorBool matcher_and, matcher_or;
+};
+
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
-	VectorBool av_start_descriptor;
+	BeamSearchOptimizer start_optimizer;
+	VectorBool av_descriptor;
 	Vector<int> orders;
 	VectorMap<int, int> stats;
 	Vector<MatchTest> test_results;
@@ -59,64 +91,67 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % av_start_descriptor % orders % stats % test_results % total;}
+	void Serialize(Stream& s) {s % start_optimizer % av_descriptor % orders % stats % test_results % total;}
 	
 };
 
-class RtData : Moveable<RtData> {
+struct LabelSource : Moveable<LabelSource> {
+	int factory = -1, label = -1, buffer = -1;
+	LabelSignal data;
+	VectorBool eventdata[EVENT_COUNT];
+	String title;
+	
+	void Serialize(Stream& s) {s % factory % label % buffer % data % title; for(int i = 0; i < EVENT_COUNT; i++) s % eventdata[i];}
+};
+
+void UpdateEventVectors(LabelSource& ls);
+
+class Analyzer;
+
+class AnalyzerSymbol : Moveable<AnalyzerSymbol> {
 	
 public:
-	int cluster_long = -1, cluster_short = -1;
+	
+	static const int CLUSTER_COUNT = 10;
+	
+	
+	// Persistent
+	Vector<AnalyzerOrder> orders;
+	Vector<AnalyzerCluster> clusters;
+	LabelSource scalper_signal;
+	bool type = false;
+	
 	
 public:
-	typedef RtData CLASSNAME;
-	RtData() {}
+	typedef AnalyzerSymbol CLASSNAME;
+	AnalyzerSymbol() {}
 	
-	void Serialize(Stream& s) {s % cluster_long % cluster_short;}
+	void Serialize(Stream& s) {s % orders % clusters % scalper_signal % type;}
+	void InitScalperSignal(ConstLabelSignal& scalper_sig, bool type, const Vector<AnalyzerOrder>& orders);
+	void Init();
+	void InitOrderDescriptor();
+	void InitClusters();
+	void InitStartMatchers();
+	void InitStartMatchers(int cluster);
+	void Analyze(AnalyzerCluster& am);
+	void RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
+	
+	Callback InitCb() {return THISBACK(Init);}
 	
 	
+	Analyzer* a = NULL;
 };
 
 class Analyzer {
 	
 protected:
 	friend class AnalyzerCtrl;
-	
-	struct LabelSource : Moveable<LabelSource> {
-		int factory = -1, label = -1, buffer = -1;
-		LabelSignal data;
-		String title;
-		
-		void Serialize(Stream& s) {s % factory % label % buffer % data % title;}
-	};
-	
-	enum {
-		START_ENABLE,
-		START_DISABLE,
-		START_POS,
-		START_NEG,
-		SUSTAIN_ENABLE,
-		SUSTAIN_DISABLE,
-		SUSTAIN_POS,
-		SUSTAIN_NEG,
-		STOP_ENABLE,
-		STOP_DISABLE,
-		STOP_POS,
-		STOP_NEG,
-		EVENT_COUNT
-	};
-	int GetEventType(int i) {return i < SUSTAIN_ENABLE ? 0 : (i < STOP_ENABLE ? 1 : 2);}
-	
-	static const int CLUSTER_COUNT = 100;
+	friend class AnalyzerSymbol;
 	
 	
 	// Persistent
 	Vector<LabelSource> cache;
-	Vector<AnalyzerOrder> orders;
-	Vector<AnalyzerCluster> clusters;
-	Vector<RtData> rtdata;
-	VectorMap<int, LabelSignal> scalper_signal;
-	int rtcluster_counted = 0;
+	VectorMap<int, AnalyzerSymbol> symbols;
 	
 	// Temporary
 	Vector<FactoryDeclaration> indi_ids;
@@ -129,25 +164,20 @@ public:
 	Analyzer();
 	~Analyzer();
 	
-	void Serialize(Stream& s) {s % cache % orders % clusters % rtdata % scalper_signal % rtcluster_counted;}
+	void Serialize(Stream& s) {s % cache % symbols;}
 	void Process();
 	void FillOrdersScalper();
 	void FillOrdersMyfxbook();
 	void FillInputBooleans();
-	void InitOrderDescriptor();
-	void InitClusters();
-	void RefreshRealtimeClusters();
-	void Analyze(AnalyzerCluster& am);
-	String GetEventString(int i);
+	//void RefreshRealtimeClusters();
 	void GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor);
 	int  GetEvent(const AnalyzerOrder& o, const LabelSource& ls);
 	int  GetEventBegin(bool label, int begin, const LabelSource& ls);
 	int  GetEventSustain(bool label, int begin, int end, const LabelSource& ls);
 	int  GetEventEnd(bool label, int end, const LabelSource& ls);
-	int  FindClosestCluster(int type, const VectorBool& descriptor);
-	void InitMatchers();
-	void RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t);
-	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin"));}
+	void RefreshSymbolPointer() {for(int i = 0; i < symbols.GetCount(); i++) symbols[i].a = this;}
+	//int  FindClosestCluster(int type, const VectorBool& descriptor);
+	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin")); RefreshSymbolPointer();}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Analyzer.bin"));}
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
 	
@@ -167,8 +197,8 @@ inline Analyzer& GetAnalyzer() {return Single<Analyzer>();}
 
 class AnalyzerCtrl : public ParentCtrl {
 	TabCtrl tabs;
-	Splitter cluster, realtime, test;
-	ArrayCtrl clusterlist, eventlist, rtlist, rtdata, testclusterlist, testresultlist;
+	Splitter cluster, minmatchers;
+	ArrayCtrl symbollist, clusterlist, eventlist;
 	
 public:
 	typedef AnalyzerCtrl CLASSNAME;

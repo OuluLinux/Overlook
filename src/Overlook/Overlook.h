@@ -16,6 +16,7 @@ using namespace Upp;
 #include "Common.h"
 #include "Calendar.h"
 #include "Optimizer.h"
+#include "BeamSearchOptimization.h"
 #include "SimBroker.h"
 #include "System.h"
 #include "Core.h"

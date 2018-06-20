@@ -67,6 +67,8 @@ struct MatchTest : Moveable<MatchTest> {
 
 struct MatcherItem : Moveable<MatcherItem> {
 	int cache = 0, event = 0;
+	
+	void Serialize(Stream& s) {s % cache % event;}
 };
 
 struct MatcherCache {
@@ -76,7 +78,8 @@ struct MatcherCache {
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
-	BeamSearchOptimizer start_optimizer;
+	BeamSearchOptimizer start_optimizer, sust_optimizer, stop_optimizer;
+	Vector<MatcherItem> best_start, best_sust, best_stop;
 	VectorBool av_descriptor;
 	Vector<int> orders;
 	VectorMap<int, int> stats;
@@ -91,7 +94,7 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % start_optimizer % av_descriptor % orders % stats % test_results % total;}
+	void Serialize(Stream& s) {s % start_optimizer % sust_optimizer % stop_optimizer % best_start % best_sust % best_stop % av_descriptor % orders % stats % test_results % total;}
 	
 };
 
@@ -131,10 +134,11 @@ public:
 	void Init();
 	void InitOrderDescriptor();
 	void InitClusters();
-	void InitStartMatchers();
-	void InitStartMatchers(int cluster);
+	void InitMatchers();
+	void InitMatchers(int cluster);
 	void Analyze(AnalyzerCluster& am);
 	void RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
+	void InitMatchersCluster(AnalyzerCluster& c, int evtype);
 	
 	Callback InitCb() {return THISBACK(Init);}
 	
@@ -197,8 +201,7 @@ inline Analyzer& GetAnalyzer() {return Single<Analyzer>();}
 
 class AnalyzerCtrl : public ParentCtrl {
 	TabCtrl tabs;
-	Splitter cluster, minmatchers;
-	ArrayCtrl symbollist, clusterlist, eventlist;
+	ArrayCtrl symbollist, clusterlist, eventlist, startlist, sustlist, stoplist;
 	
 public:
 	typedef AnalyzerCtrl CLASSNAME;

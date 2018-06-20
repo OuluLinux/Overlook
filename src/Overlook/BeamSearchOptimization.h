@@ -4,9 +4,10 @@
 namespace Overlook {
 
 class BeamSearchOptimizer {
-	Vector<int> trial_solution;
+	Vector<int> trial_solution, best_solution;
 	Index<int> fixed_solution;
 	Vector<double> layer_score;
+	double best_score = -DBL_MAX;
 	int layer_iter = 0;
 	int layer_size = 0;
 	int layer = 0;
@@ -46,6 +47,11 @@ public:
 	void Stop(double score) {
 		layer_score[layer_iter] = score;
 		
+		if (score > best_score) {
+			best_score = score;
+			best_solution <<= trial_solution;
+		}
+		
 		layer_iter++;
 		if (layer_iter >= layer_size) {
 			layer_iter = 0;
@@ -75,6 +81,7 @@ public:
 	int GetMaxRounds() {return max_round;}
 	bool IsEnd() const {return round >= max_round || fail;}
 	const Vector<int>& GetTrialSolution() {return trial_solution;}
+	const Vector<int>& GetBestSolution() {return best_solution;}
 	
 };
 

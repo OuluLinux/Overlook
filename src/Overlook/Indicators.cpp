@@ -5727,8 +5727,6 @@ void VariantDifference::Assist(int cursor, VectorBool& vec) {
 
 ScalperSignal::ScalperSignal() {
 	
-	
-	
 }
 
 void ScalperSignal::Init() {
@@ -5865,6 +5863,56 @@ void EasierScalperSignal::Assist(int cursor, VectorBool& vec) {
 	/*double value0 = GetBuffer(0).Get(cursor);
 	if (value0 > 0.0)		vec.Set(PC_INC, true);
 	else					vec.Set(PC_DEC, true);*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+AnalyzerViewer::AnalyzerViewer() {
+	
+}
+
+void AnalyzerViewer::Init() {
+	
+}
+
+void AnalyzerViewer::Start() {
+	System& sys = GetSystem();
+	Analyzer& a = GetAnalyzer();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	if (a.sel_sym >= 0 && a.sel_sym < a.symbols.GetCount()) {
+		const AnalyzerSymbol& as = a.symbols[a.sel_sym];
+		
+		if (a.sel_cluster >= 0 && a.sel_cluster < as.clusters.GetCount()) {
+			const AnalyzerCluster& ac = as.clusters[a.sel_cluster];
+			
+			int bars = GetBars();
+			
+			for(int i = 0; i < bars; i++) {
+				SetSafetyLimit(i);
+				
+				if (i < ac.match_mask.GetCount()) {
+					sig.signal.Set(i, as.type);
+					sig.enabled.Set(i, ac.match_mask.Get(i));
+				}
+			}
+		}
+	}
+}
+
+void AnalyzerViewer::Assist(int cursor, VectorBool& vec) {
+	
 }
 
 

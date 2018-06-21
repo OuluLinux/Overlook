@@ -1407,6 +1407,28 @@ public:
 
 
 
+
+
+class AnalyzerViewer : public Core {
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	AnalyzerViewer();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Lbl(1);
+	}
+};
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {

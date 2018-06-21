@@ -214,19 +214,24 @@ void AnalyzerSymbol::InitClusters() {
 		}
 	}
 	
-	
-	/*for(int i = 0; i < clusters.GetCount(); i++) {
+	int bars = scalper_signal.data.signal.GetCount();
+	for(int i = 0; i < clusters.GetCount(); i++) {
 		AnalyzerCluster& c = clusters[i];
 		
-		int order_type = 0;
+		c.scalper_signal.data.signal.SetCount(bars);
+		c.scalper_signal.data.enabled.SetCount(bars);
+		
 		for(int j = 0; j < c.orders.GetCount(); j++) {
 			const AnalyzerOrder& o = orders[c.orders[j]];
-			if (!o.action)	order_type--;
-			else			order_type++;
+			
+			for(int k = o.begin; k < o.end; k++) {
+				c.scalper_signal.data.signal.Set(k, this->type);
+				c.scalper_signal.data.enabled.Set(k, true);
+			}
 		}
 		
-		c.type = order_type > 0;
-	}*/
+		UpdateEventVectors(c.scalper_signal);
+	}
 }
 
 void AnalyzerSymbol::Analyze(AnalyzerCluster& am) {
@@ -343,7 +348,7 @@ void AnalyzerSymbol::InitMatchersCluster(AnalyzerCluster& c) {
 			}
 			
 			
-			#if 0
+			#if 1
 			while (!opt.IsEnd() && a->IsRunning()) {
 				opt.Start();
 				
@@ -452,7 +457,7 @@ void AnalyzerSymbol::RunMatchTest(const Vector<MatcherItem>& list, MatchTest& t,
 	t.true_match = 0;
 	
 	// Cluster order symbols
-	const LabelSource& ls = scalper_signal;
+	const LabelSource& ls = c.scalper_signal;
 	mcache.matcher_or.SetCount(ls.data.signal.GetCount());
 	ASSERT(ls.data.signal.GetCount() > 0);
 	
@@ -492,7 +497,7 @@ void AnalyzerSymbol::RunMatchTest(const Vector<Vector<MatcherItem> >& list, Matc
 	t.true_match = 0;
 	
 	// Cluster order symbols
-	const LabelSource& ls = scalper_signal;
+	const LabelSource& ls = c.scalper_signal;
 	mcache.matcher_and.SetCount(ls.data.signal.GetCount());
 	mcache.matcher_or.SetCount(ls.data.signal.GetCount());
 	ASSERT(ls.data.signal.GetCount() > 0);
@@ -518,6 +523,7 @@ void AnalyzerSymbol::RunMatchTest(const Vector<Vector<MatcherItem> >& list, Matc
 	
 	// reduces result: mcache.matcher_and.And(c.closest_mask);
 	
+	c.match_mask = mcache.matcher_and;
 
 	// Long/short
 	if (this->type == false) {
@@ -782,7 +788,7 @@ void Analyzer::FillOrdersScalper() {
 			AnalyzerSymbol& as_long = symbols.Add(sym);
 			as_long.InitScalperSignal(sig, false, orders);
 			
-			AnalyzerSymbol& as_short = symbols.Add(sym);
+			AnalyzerSymbol& as_short = symbols.Add(-sym-1);
 			as_short.InitScalperSignal(sig, true, orders);
 		}
 	}
@@ -988,7 +994,9 @@ void AnalyzerCtrl::Data() {
 		
 		for(int i = 0; i < a.symbols.GetCount(); i++) {
 			const AnalyzerSymbol& as = a.symbols[i];
-			symbollist.Set(i, 0, sys.GetSymbol(a.symbols.GetKey(i)));
+			int s = a.symbols.GetKey(i);
+			if (s < 0) s = -s-1;
+			symbollist.Set(i, 0, sys.GetSymbol(s));
 			symbollist.Set(i, 1, as.type ? "Short" : "Long");
 		}
 		
@@ -1007,6 +1015,9 @@ void AnalyzerCtrl::Data() {
 			
 			int cursor = clusterlist.GetCursor();
 			if (cursor >= 0 && cursor < as.clusters.GetCount()) {
+				a.sel_sym = symcursor;
+				a.sel_cluster = cursor;
+				
 				const AnalyzerCluster& am = as.clusters[cursor];
 				int row = 0;
 				

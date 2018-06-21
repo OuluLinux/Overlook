@@ -61,6 +61,15 @@ struct MatcherCache {
 	VectorBool matcher_and, matcher_or;
 };
 
+struct LabelSource : Moveable<LabelSource> {
+	int factory = -1, label = -1, buffer = -1;
+	LabelSignal data;
+	VectorBool eventdata[EVENT_COUNT];
+	String title;
+	
+	void Serialize(Stream& s) {s % factory % label % buffer % data % title; for(int i = 0; i < EVENT_COUNT; i++) s % eventdata[i];}
+};
+
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
@@ -69,7 +78,8 @@ public:
 	Vector<int> orders;
 	VectorMap<int, int> stats;
 	Vector<MatchTest> test_results;
-	VectorBool closest_mask;
+	VectorBool closest_mask, match_mask;
+	LabelSource scalper_signal;
 	int total = 0;
 	
 public:
@@ -80,17 +90,8 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % full_list % av_descriptor % orders % stats % test_results % closest_mask % total;}
+	void Serialize(Stream& s) {s % full_list % av_descriptor % orders % stats % test_results % closest_mask % match_mask % total % scalper_signal;}
 	
-};
-
-struct LabelSource : Moveable<LabelSource> {
-	int factory = -1, label = -1, buffer = -1;
-	LabelSignal data;
-	VectorBool eventdata[EVENT_COUNT];
-	String title;
-	
-	void Serialize(Stream& s) {s % factory % label % buffer % data % title; for(int i = 0; i < EVENT_COUNT; i++) s % eventdata[i];}
 };
 
 void UpdateEventVectors(LabelSource& ls);
@@ -143,6 +144,7 @@ class Analyzer {
 protected:
 	friend class AnalyzerCtrl;
 	friend class AnalyzerSymbol;
+	friend class AnalyzerViewer;
 	
 	
 	// Persistent
@@ -153,6 +155,7 @@ protected:
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
 	Index<int> sym_ids, tf_ids;
+	int sel_sym = -1, sel_cluster = -1;
 	bool running = false, stopped = true;
 	
 public:

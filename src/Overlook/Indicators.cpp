@@ -5802,6 +5802,83 @@ void ScalperSignal::Assist(int cursor, VectorBool& vec) {
 
 
 
+EasierScalperSignal::EasierScalperSignal() {
+	
+}
+
+void EasierScalperSignal::Init() {
+	
+}
+
+void EasierScalperSignal::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	if (counted) counted--;
+	else counted++;
+	
+	int cost_level			= 2;
+	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
+	double point			= db->GetPoint();
+	double spread			= max(db->GetSpread(), 3 * point);
+	double cost				= spread + point * cost_level;
+	ASSERT(spread > 0.0);
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double o0 = open_buf.GetUnsafe(i);
+		double o1 = open_buf.GetUnsafe(i - 1);
+		bool label = o0 < o1;
+		
+		label = !label; // Only after trend has gone we know usually
+		int start = i;
+		double start_price = o0;
+		for(int j = i-2; j >= 1; j--) {
+			double on0 = open_buf.GetUnsafe(j+1);
+			double on1 = open_buf.GetUnsafe(j);
+			bool nlabel = on0 < on1;
+			
+			if (nlabel != label) break;
+			
+			start_price = on1;
+			start = j;
+		}
+		start++; // The best start is usually missed
+		double diff = start < i ? o0 - open_buf.GetUnsafe(start) : 0;
+		double absdiff = fabs(diff);
+		
+		if (absdiff >= cost) {
+			for(int j = start; j < i; j++) {
+				sig.signal.Set(j, label);
+				sig.enabled.Set(j, true);
+			}
+		}
+		sig.enabled.Set(i, false);
+	}
+}
+
+void EasierScalperSignal::Assist(int cursor, VectorBool& vec) {
+	/*double value0 = GetBuffer(0).Get(cursor);
+	if (value0 > 0.0)		vec.Set(PC_INC, true);
+	else					vec.Set(PC_DEC, true);*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ExampleAdvisor::ExampleAdvisor() {
 	

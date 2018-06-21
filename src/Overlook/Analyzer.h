@@ -4,30 +4,15 @@
 namespace Overlook {
 	
 enum {
-	START_ENABLE,
-	START_DISABLE,
-	START_POS_LONG,
-	START_NEG_LONG,
-	START_POS_SHORT,
-	START_NEG_SHORT,
 	SUSTAIN_ENABLE,
 	SUSTAIN_DISABLE,
 	SUSTAIN_POS_LONG,
 	SUSTAIN_NEG_LONG,
 	SUSTAIN_POS_SHORT,
 	SUSTAIN_NEG_SHORT,
-	STOP_ENABLE,
-	STOP_DISABLE,
-	STOP_POS_LONG,
-	STOP_NEG_LONG,
-	STOP_POS_SHORT,
-	STOP_NEG_SHORT,
 	EVENT_COUNT
 };
 
-enum {EVT_START, EVT_SUST, EVT_STOP};
-
-inline int GetEventType(int i) {return i < SUSTAIN_ENABLE ? EVT_START : (i < STOP_ENABLE ? EVT_SUST : EVT_STOP);}
 String GetEventString(int i);
 
 class AnalyzerOrder : Moveable<AnalyzerOrder> {
@@ -66,9 +51,10 @@ struct MatchTest : Moveable<MatchTest> {
 };
 
 struct MatcherItem : Moveable<MatcherItem> {
-	int cache = 0, event = 0;
+	int cache = 0, event = 0, key = 0;
 	
-	void Serialize(Stream& s) {s % cache % event;}
+	String ToString() const {return Format("cache=%d, event=%d, key=%d", cache, event, key);}
+	void Serialize(Stream& s) {s % cache % event % key;}
 };
 
 struct MatcherCache {
@@ -78,12 +64,12 @@ struct MatcherCache {
 class AnalyzerCluster : Moveable<AnalyzerCluster> {
 	
 public:
-	BeamSearchOptimizer start_optimizer, sust_optimizer, stop_optimizer;
-	Vector<MatcherItem> best_start, best_sust, best_stop;
+	Vector<Vector<MatcherItem> > full_list;
 	VectorBool av_descriptor;
 	Vector<int> orders;
 	VectorMap<int, int> stats;
 	Vector<MatchTest> test_results;
+	VectorBool closest_mask;
 	int total = 0;
 	
 public:
@@ -94,7 +80,7 @@ public:
 	void AddEvent(int id) {stats.GetAdd(id, 0)++;}
 	void Sort() {SortByValue(stats, StdGreater<int>());}
 	
-	void Serialize(Stream& s) {s % start_optimizer % sust_optimizer % stop_optimizer % best_start % best_sust % best_stop % av_descriptor % orders % stats % test_results % total;}
+	void Serialize(Stream& s) {s % full_list % av_descriptor % orders % stats % test_results % closest_mask % total;}
 	
 };
 
@@ -119,9 +105,11 @@ public:
 	
 	
 	// Persistent
+	Vector<int> rtdata;
 	Vector<AnalyzerOrder> orders;
 	Vector<AnalyzerCluster> clusters;
 	LabelSource scalper_signal;
+	int rtcluster_counted = 0;
 	bool type = false;
 	
 	
@@ -129,7 +117,7 @@ public:
 	typedef AnalyzerSymbol CLASSNAME;
 	AnalyzerSymbol() {}
 	
-	void Serialize(Stream& s) {s % orders % clusters % scalper_signal % type;}
+	void Serialize(Stream& s) {s % rtdata % orders % clusters % scalper_signal % rtcluster_counted % type;}
 	void InitScalperSignal(ConstLabelSignal& scalper_sig, bool type, const Vector<AnalyzerOrder>& orders);
 	void Init();
 	void InitOrderDescriptor();
@@ -137,8 +125,12 @@ public:
 	void InitMatchers();
 	void InitMatchers(int cluster);
 	void Analyze(AnalyzerCluster& am);
-	void RunMatchTest(int type, const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
-	void InitMatchersCluster(AnalyzerCluster& c, int evtype);
+	void RunMatchTest(const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
+	void RunMatchTest(const Vector<Vector<MatcherItem> >& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
+	void InitMatchersCluster(AnalyzerCluster& c);
+	void RefreshRealtimeClusters();
+	void GetRealtimeDescriptor(bool label, int i, VectorBool& descriptor);
+	int  FindClosestCluster(int type, const VectorBool& descriptor);
 	
 	Callback InitCb() {return THISBACK(Init);}
 	
@@ -173,14 +165,11 @@ public:
 	void FillOrdersScalper();
 	void FillOrdersMyfxbook();
 	void FillInputBooleans();
-	//void RefreshRealtimeClusters();
-	void GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor);
 	int  GetEvent(const AnalyzerOrder& o, const LabelSource& ls);
-	int  GetEventBegin(bool label, int begin, const LabelSource& ls);
+	//int  GetEventBegin(bool label, int begin, const LabelSource& ls);
 	int  GetEventSustain(bool label, int begin, int end, const LabelSource& ls);
-	int  GetEventEnd(bool label, int end, const LabelSource& ls);
+	//int  GetEventEnd(bool label, int end, const LabelSource& ls);
 	void RefreshSymbolPointer() {for(int i = 0; i < symbols.GetCount(); i++) symbols[i].a = this;}
-	//int  FindClosestCluster(int type, const VectorBool& descriptor);
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin")); RefreshSymbolPointer();}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Analyzer.bin"));}
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
@@ -201,7 +190,8 @@ inline Analyzer& GetAnalyzer() {return Single<Analyzer>();}
 
 class AnalyzerCtrl : public ParentCtrl {
 	TabCtrl tabs;
-	ArrayCtrl symbollist, clusterlist, eventlist, startlist, sustlist, stoplist;
+	Splitter sustsplit;
+	ArrayCtrl symbollist, clusterlist, eventlist, sustandlist, sustlist;
 	
 public:
 	typedef AnalyzerCtrl CLASSNAME;

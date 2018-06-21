@@ -19,24 +19,12 @@ void UpdateEventVectors(LabelSource& ls) {
 			bool ena = ls.data.enabled.Get(j);
 			
 			switch (i) {
-				case START_ENABLE:      if (ena && !prev_ena) vb.Set(j, true); break;
-				case START_DISABLE:     if (!ena && prev_ena) vb.Set(j, true); break;
-				case START_POS_LONG:    if (!sig && prev_sig) vb.Set(j, true); break;
-				case START_NEG_LONG:    if (sig && !prev_sig) vb.Set(j, true); break;
-				case START_POS_SHORT:   if (sig && !prev_sig) vb.Set(j, true); break;
-				case START_NEG_SHORT:   if (!sig && prev_sig) vb.Set(j, true); break;
 				case SUSTAIN_ENABLE:    if (ena) vb.Set(j, true); break;
 				case SUSTAIN_DISABLE:   if (!ena) vb.Set(j, true); break;
-				case SUSTAIN_POS_LONG:  if (!sig) vb.Set(j, true); break;
-				case SUSTAIN_NEG_LONG:  if (sig) vb.Set(j, true); break;
-				case SUSTAIN_POS_SHORT: if (sig) vb.Set(j, true); break;
-				case SUSTAIN_NEG_SHORT: if (!sig) vb.Set(j, true); break;
-				case STOP_ENABLE:       if (!ena && prev_ena) vb.Set(j, true); break;
-				case STOP_DISABLE:      if (ena && !prev_ena) vb.Set(j, true); break;
-				case STOP_POS_LONG:     if (sig && !prev_sig) vb.Set(j, true); break;
-				case STOP_NEG_LONG:     if (!sig && prev_sig) vb.Set(j, true); break;
-				case STOP_POS_SHORT:    if (!sig && prev_sig) vb.Set(j, true); break;
-				case STOP_NEG_SHORT:    if (sig && !prev_sig) vb.Set(j, true); break;
+				case SUSTAIN_POS_LONG:  if (!sig && ena) vb.Set(j, true); break;
+				case SUSTAIN_NEG_LONG:  if (sig && ena) vb.Set(j, true); break;
+				case SUSTAIN_POS_SHORT: if (sig && ena) vb.Set(j, true); break;
+				case SUSTAIN_NEG_SHORT: if (!sig && ena) vb.Set(j, true); break;
 			}
 		}
 		
@@ -82,11 +70,11 @@ void AnalyzerSymbol::InitScalperSignal(ConstLabelSignal& full_scalper_signal, bo
 }
 
 void AnalyzerSymbol::Init() {
-	
 	InitOrderDescriptor();
 	InitClusters();
 	for(int i = 0; i < clusters.GetCount(); i++)
 		Analyze(clusters[i]);
+	//RefreshRealtimeClusters();
 	InitMatchers();
 }
 
@@ -289,83 +277,174 @@ void AnalyzerSymbol::InitMatchers(int cluster) {
 	
 	AnalyzerCluster& c = clusters[cluster];
 	
-	InitMatchersCluster(c, EVT_START);
-	InitMatchersCluster(c, EVT_SUST);
-	InitMatchersCluster(c, EVT_STOP);
+	InitMatchersCluster(c);
 	
 }
 
-void AnalyzerSymbol::InitMatchersCluster(AnalyzerCluster& c, int evtype) {
+void AnalyzerSymbol::InitMatchersCluster(AnalyzerCluster& c) {
 	Vector<MatcherItem> list, best_list;
 	MatcherCache mcache;
-	double best_score = -DBL_MAX;
 	
-	BeamSearchOptimizer& opt = evtype == EVT_START ? c.start_optimizer : (evtype == EVT_SUST ? c.sust_optimizer : c.stop_optimizer);
 	
+	c.full_list.Clear();
 	c.test_results.Clear();
 	
-	Vector<int> start_keys;
+	Index<int> round_keys;
+	Vector<Index<int> > keys;
+	keys.SetCount(EVENT_COUNT);
 	for(int i = 0; i < c.stats.GetCount(); i++) {
 		int key = c.stats.GetKey(i);
+		int cache = key / EVENT_COUNT;
 		int event = key % EVENT_COUNT;
-		int type = GetEventType(event);
-		if (type == evtype)
-			start_keys.Add(key);
-	}
-	
-	if (opt.GetRound() == 0) {
-		opt.Init(start_keys.GetCount(), 30);
+		keys[event].Add(key);
 	}
 	
 	
-	while (!opt.IsEnd() && a->IsRunning()) {
-		opt.Start();
-		
-		const Vector<int>& trial = opt.GetTrialSolution();
-		
-		list.SetCount(0);
-		for(int i = 0; i < trial.GetCount(); i++) {
-			int key = start_keys[trial[i]];
-			int event = key % EVENT_COUNT;
-			int type = GetEventType(event);
-			if (type != evtype) continue;
-			MatcherItem& mi = list.Add();
+	// Prcess all single key success
+	for(int i = 0; i < keys.GetCount(); i++) {
+		if (i != SUSTAIN_ENABLE && i != SUSTAIN_DISABLE) continue;
+		for (int j = 0; j < keys[i].GetCount(); j++) {
+			int key = keys[i][j];
+			list.SetCount(1);
+			MatcherItem& mi = list[0];
 			mi.cache = key / EVENT_COUNT;
-			mi.event = event;
+			mi.event = key % EVENT_COUNT;
+			mi.key = key;
+			MatchTest test;
+			RunMatchTest(list, test, mcache, c);
+			if (test.true_match == test.true_total) {
+				keys[i].Remove(j);
+				c.full_list.Add() <<= list;
+				j--;
+			}
 		}
-		
-		double score = 0;
-		MatchTest test;
-		if (!list.IsEmpty())
-			RunMatchTest(evtype, list, test, mcache, c);
-		score = test.true_match * 100 / (test.true_match + test.false_match);
-		if (test.true_match + test.false_match == 0) score = -100000000;
-		
-		if (opt.GetRound() % 1000 == 0)
-			ReleaseLog("Analyzer::InitMatchers " + IntStr(c.start_optimizer.GetRound()) + " " + IntStr(c.start_optimizer.GetRound() * 100 / c.start_optimizer.GetMaxRounds()) +
-				"% trial " + IntStr(list.GetCount()) + " false_match " + IntStr(test.false_match) +
-				" true_match " + IntStr(test.true_match) +
-				" score " + DblStr(score));
-		
-		opt.Stop(score);
-		
-		if (score > best_score) {
-			best_score = score;
-			best_list <<= list;
-		}
-		
-		if (test.true_match >= 95 * test.true_total / 100)
-			break;
 	}
 	
-	switch (evtype) {
-		case EVT_START:		c.best_start <<= best_list; break;
-		case EVT_SUST:		c.best_sust  <<= best_list; break;
-		case EVT_STOP:		c.best_stop  <<= best_list; break;
+	
+	int true_total = 0;
+	for (int evtype = 0; evtype < keys.GetCount(); evtype++) {
+		for (int iter = 0; keys[evtype].GetCount(); iter++) {
+			
+			round_keys.Clear();
+			for(int i = 0; i < keys[evtype].GetCount(); i++) {
+				int key = keys[evtype][i];
+				int event = key % EVENT_COUNT;
+				round_keys.Add(key);
+			}
+			if (round_keys.IsEmpty())
+				break;
+			
+				
+			BeamSearchOptimizer opt;
+			int best_score = INT_MIN;
+				
+			if (opt.GetRound() == 0) {
+				opt.Init(round_keys.GetCount(), 30);
+			}
+			
+			
+			#if 0
+			while (!opt.IsEnd() && a->IsRunning()) {
+				opt.Start();
+				
+				const Vector<int>& trial = opt.GetTrialSolution();
+				
+				list.SetCount(0);
+				for(int i = 0; i < trial.GetCount(); i++) {
+					int key = round_keys[trial[i]];
+					MatcherItem& mi = list.Add();
+					mi.cache = key / EVENT_COUNT;
+					mi.event = key % EVENT_COUNT;
+					mi.key = key;
+				}
+				
+				int score = 0;
+				MatchTest test;
+				if (!list.IsEmpty())
+					RunMatchTest(list, test, mcache, c);
+				score = test.true_match;
+				if (score == 0) score = -100000000;
+				
+				if (0 && opt.GetRound() % 1000 == 0)
+					ReleaseLog("Analyzer::InitMatchers " + IntStr(opt.GetRound()) + " " + IntStr(opt.GetRound() * 100 / opt.GetMaxRounds()) +
+						"% trial " + IntStr(list.GetCount()) + " false_match " + IntStr(test.false_match) +
+						" true_match " + IntStr(test.true_match) +
+						" score " + DblStr(score));
+				
+				opt.Stop(score);
+				
+				true_total = max(true_total, test.true_total);
+				
+				if (score > best_score) {
+					best_score = score;
+					best_list <<= list;
+					
+					if (test.true_match == test.true_total)
+						break;
+				}
+			}
+			#else
+			list.SetCount(0);
+			best_list.Clear();
+			while (!round_keys.IsEmpty()) {
+				int j = Random(round_keys.GetCount());
+				int key = round_keys[j];
+				round_keys.Remove(j);
+				
+				MatcherItem& mi = list.Add();
+				mi.cache = key / EVENT_COUNT;
+				mi.event = key % EVENT_COUNT;
+				mi.key = key;
+				
+				MatchTest test;
+				RunMatchTest(list, test, mcache, c);
+				
+				if (0) ReleaseLog("Analyzer::InitMatchers "
+					" false_match " + IntStr(test.false_match) +
+					" true_match " + IntStr(test.true_match) +
+					" true_total " + IntStr(test.true_total));
+				
+				true_total = max(true_total, test.true_total);
+				
+				if (test.true_match > best_score) {
+					best_score = test.true_match;
+					best_list <<= list;
+					
+					if (test.true_match == test.true_total)
+						break;
+				}
+			}
+			#endif
+			
+			
+			if (best_score == true_total && true_total > 0) {
+				// Remove
+				for(int i = 0; i < best_list.GetCount(); i++) {
+					int j = keys[evtype].Find(best_list[i].key);
+					keys[evtype].Remove(j);
+				}
+				
+				c.full_list.Add() <<= best_list;
+			}
+			else {
+				break;
+			}
+		}
 	}
+	
+	if (c.full_list.IsEmpty()) return;
+	
+	MatchTest test;
+	RunMatchTest(c.full_list, test, mcache, c);
+	ReleaseLog("Analyzer::InitMatchers "
+					" false_match " + IntStr(test.false_match) +
+					" true_match " + IntStr(test.true_match) +
+					" true_total " + IntStr(test.true_total));
+					
+	
 }
 
-void AnalyzerSymbol::RunMatchTest(int evtype, const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c) {
+void AnalyzerSymbol::RunMatchTest(const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c) {
 	ASSERT(!list.IsEmpty());
 	
 	t.false_match = 0;
@@ -374,7 +453,6 @@ void AnalyzerSymbol::RunMatchTest(int evtype, const Vector<MatcherItem>& list, M
 	
 	// Cluster order symbols
 	const LabelSource& ls = scalper_signal;
-	//mcache.matcher_and.SetCount(ls.data.signal.GetCount());
 	mcache.matcher_or.SetCount(ls.data.signal.GetCount());
 	ASSERT(ls.data.signal.GetCount() > 0);
 	
@@ -386,62 +464,148 @@ void AnalyzerSymbol::RunMatchTest(int evtype, const Vector<MatcherItem>& list, M
 		const VectorBool& vb = c.eventdata[mi.event];
 		ASSERT(!vb.IsEmpty());
 		
-		/*if (k % 3 == 0) {
-			if (k) {
-				mcache.matcher_or.Or(mcache.matcher_and);
-			}
-			mcache.matcher_and = vb;
-		}
-		else {
-			mcache.matcher_and.And(vb);
-		}*/
-		
 		mcache.matcher_or.Or(vb);
 	}
-	//mcache.matcher_or.Or(mcache.matcher_and);
 	
 
 	// Long/short
 	if (this->type == false) {
-		if (evtype == EVT_START) {
-			ASSERT(ls.eventdata[START_POS_LONG].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[START_POS_LONG]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[START_POS_LONG]);
-		}
-		else if (evtype == EVT_SUST) {
-			ASSERT(ls.eventdata[SUSTAIN_POS_LONG].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_LONG]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[SUSTAIN_POS_LONG]);
-		}
-		else if (evtype == EVT_STOP) {
-			ASSERT(ls.eventdata[STOP_POS_LONG].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[STOP_POS_LONG]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[STOP_POS_LONG]);
-		}
-		else Panic("Not implemented");
+		ASSERT(ls.eventdata[SUSTAIN_POS_LONG].GetCount() > 0);
+		t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_LONG]);
+		t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[SUSTAIN_POS_LONG]);
 		
-		t.true_total = ls.eventdata[START_POS_LONG].PopCount();
+		t.true_total = ls.eventdata[SUSTAIN_POS_LONG].PopCount();
 	} else {
-		if (evtype == EVT_START) {
-			ASSERT(ls.eventdata[START_POS_SHORT].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[START_POS_SHORT]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[START_POS_SHORT]);
-		}
-		else if (evtype == EVT_SUST) {
-			ASSERT(ls.eventdata[SUSTAIN_POS_SHORT].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
-		}
-		else if (evtype == EVT_STOP) {
-			ASSERT(ls.eventdata[STOP_POS_SHORT].GetCount() > 0);
-			t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[STOP_POS_SHORT]);
-			t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[STOP_POS_SHORT]);
-		}
-		else Panic("Not implemented");
+		ASSERT(ls.eventdata[SUSTAIN_POS_SHORT].GetCount() > 0);
+		t.false_match += mcache.matcher_or.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
+		t.true_match += mcache.matcher_or.PopCountAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
 		
-		t.true_total = ls.eventdata[START_POS_SHORT].PopCount();
+		t.true_total = ls.eventdata[SUSTAIN_POS_SHORT].PopCount();
 	}
 }
+
+void AnalyzerSymbol::RunMatchTest(const Vector<Vector<MatcherItem> >& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c) {
+	ASSERT(!list.IsEmpty());
+	
+	t.false_match = 0;
+	t.false_total = 0;
+	t.true_match = 0;
+	
+	// Cluster order symbols
+	const LabelSource& ls = scalper_signal;
+	mcache.matcher_and.SetCount(ls.data.signal.GetCount());
+	mcache.matcher_or.SetCount(ls.data.signal.GetCount());
+	ASSERT(ls.data.signal.GetCount() > 0);
+	
+	mcache.matcher_and.One();
+	
+	for(int k = 0; k < list.GetCount(); k++) {
+		const Vector<MatcherItem>& sublist = list[k];
+		
+		mcache.matcher_or.Zero();
+		
+		for(int k = 0; k < sublist.GetCount(); k++) {
+			const MatcherItem& mi = sublist[k];
+			const LabelSource& c = a->cache[mi.cache];
+			const VectorBool& vb = c.eventdata[mi.event];
+			ASSERT(!vb.IsEmpty());
+			
+			mcache.matcher_or.Or(vb);
+		}
+		
+		mcache.matcher_and.And(mcache.matcher_or);
+	}
+	
+	// reduces result: mcache.matcher_and.And(c.closest_mask);
+	
+
+	// Long/short
+	if (this->type == false) {
+		ASSERT(ls.eventdata[SUSTAIN_POS_LONG].GetCount() > 0);
+		t.false_match += mcache.matcher_and.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_LONG]);
+		t.true_match += mcache.matcher_and.PopCountAnd(ls.eventdata[SUSTAIN_POS_LONG]);
+		
+		t.true_total = ls.eventdata[SUSTAIN_POS_LONG].PopCount();
+	} else {
+		ASSERT(ls.eventdata[SUSTAIN_POS_SHORT].GetCount() > 0);
+		t.false_match += mcache.matcher_and.PopCountNotAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
+		t.true_match += mcache.matcher_and.PopCountAnd(ls.eventdata[SUSTAIN_POS_SHORT]);
+		
+		t.true_total = ls.eventdata[SUSTAIN_POS_SHORT].PopCount();
+	}
+}
+
+void AnalyzerSymbol::RefreshRealtimeClusters() {
+	VectorBool rt_start_descriptor;
+	
+	int bars = a->cache[0].data.signal.GetCount();
+	for(int i = 1; i < a->cache.GetCount(); i++)
+		bars = min(bars, a->cache[i].data.signal.GetCount());
+	
+	rtdata.SetCount(bars);
+	
+	for(int i = 0; i < clusters.GetCount(); i++) {
+		AnalyzerCluster& c = clusters[i];
+		c.closest_mask.SetCount(bars);
+	}
+	
+	for(int i = rtcluster_counted; i < bars; i++) {
+		GetRealtimeDescriptor(type, i, rt_start_descriptor);
+		int cluster = FindClosestCluster(0, rt_start_descriptor);
+		rtdata[i] = cluster;
+		clusters[cluster].closest_mask.Set(i, true);
+	}
+	
+	
+	rtcluster_counted = bars;
+}
+
+int AnalyzerSymbol::FindClosestCluster(int type, const VectorBool& descriptor) {
+	int lowest_distance = INT_MAX, lowest_j = -1;
+	
+	for(int j = 0; j < clusters.GetCount(); j++) {
+		AnalyzerCluster& c = clusters[j];
+		int distance;
+		distance = c.av_descriptor.Hamming(descriptor);
+		if (distance < lowest_distance) {
+			lowest_distance = distance;
+			lowest_j = j;
+		}
+	}
+	
+	return lowest_j;
+}
+
+void AnalyzerSymbol::GetRealtimeDescriptor(bool label, int i, VectorBool& descriptor) {
+	int descriptor_size = EVENT_COUNT * a->cache.GetCount();
+	
+	int row = 0;
+	
+	descriptor.SetCount(descriptor_size);
+	descriptor.Zero();
+	
+	for(int j = 0; j < a->cache.GetCount(); j++) {
+		int e = a->GetEventSustain(label, i, i, a->cache[j]);
+		
+		for(int k = 0; k < EVENT_COUNT; k++) {
+			if (e & (1 << k)) {
+				descriptor.Set(row, true);
+			}
+			row++;
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -579,7 +743,7 @@ void Analyzer::FillOrdersScalper() {
 	Vector<FactoryDeclaration> indi_ids;
 	
 	FactoryDeclaration decl;
-	decl.factory = sys.Find<ScalperSignal>();
+	decl.factory = sys.Find<EasierScalperSignal>();
 	indi_ids.Add(decl);
 	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
@@ -711,40 +875,17 @@ int Analyzer::GetEvent(const AnalyzerOrder& o, const LabelSource& ls) {
 	if (o.begin >= ls.data.signal.GetCount()) return e;
 	
 	bool label = o.action;
-	e |= GetEventBegin(o.action, o.begin, ls);
+	//e |= GetEventBegin(o.action, o.begin, ls);
 	
 	if (o.end + 1 >= ls.data.signal.GetCount()) return e;
 	
 	e |= GetEventSustain(o.action, o.begin, o.end, ls);
-	e |= GetEventEnd(o.action, o.end, ls);
+	//e |= GetEventEnd(o.action, o.end, ls);
 	
 	return e;
 }
 
-int Analyzer::GetEventBegin(bool label, int begin, const LabelSource& ls) {
-	int e = 0;
-	
-	bool pre_sig = ls.data.signal.Get(begin - 1);
-	bool pre_ena = ls.data.enabled.Get(begin - 1);
-	bool first_sig = ls.data.signal.Get(begin);
-	bool first_ena = ls.data.enabled.Get(begin);
-	
-	if (pre_sig != first_sig) {
-		if (label == false) {
-			if (first_sig == label)	e |= 1 << START_POS_LONG;
-			else					e |= 1 << START_NEG_LONG;
-		} else {
-			if (first_sig == label)	e |= 1 << START_POS_SHORT;
-			else					e |= 1 << START_NEG_SHORT;
-		}
-	}
-	if (pre_ena != first_ena) {
-		if (first_ena == true)	e |= 1 << START_ENABLE;
-		else					e |= 1 << START_DISABLE;
-	}
-	
-	return e;
-}
+
 
 int Analyzer::GetEventSustain(bool label, int begin, int end, const LabelSource& ls) {
 	int e = 0;
@@ -765,7 +906,7 @@ int Analyzer::GetEventSustain(bool label, int begin, int end, const LabelSource&
 		if (sig != first_sig) sig_sustain = false;
 		if (ena != first_ena) ena_sustain = false;
 	}
-	if (sig_sustain) {
+	if (sig_sustain && ena_sustain) {
 		if (label == false) {
 			if (first_sig == label)	e |= 1 << SUSTAIN_POS_LONG;
 			else					e |= 1 << SUSTAIN_NEG_LONG;
@@ -782,118 +923,19 @@ int Analyzer::GetEventSustain(bool label, int begin, int end, const LabelSource&
 	return e;
 }
 
-int Analyzer::GetEventEnd(bool label, int end, const LabelSource& ls) {
-	int e = 0;
-	
-	bool last_sig = ls.data.signal.Get(end - 1);
-	bool last_ena = ls.data.enabled.Get(end - 1);
-	bool post_sig = ls.data.signal.Get(end);
-	bool post_ena = ls.data.enabled.Get(end);
-	
-	if (post_sig != last_sig) {
-		if (label == false) {
-			if (last_sig == label)	e |= 1 << STOP_POS_LONG;
-			else					e |= 1 << STOP_NEG_LONG;
-		} else {
-			if (last_sig == label)	e |= 1 << STOP_POS_SHORT;
-			else					e |= 1 << STOP_NEG_SHORT;
-		}
-	}
-	if (post_ena != last_ena) {
-		if (last_ena == true)	e |= 1 << STOP_ENABLE;
-		else					e |= 1 << STOP_DISABLE;
-	}
-	
-	return e;
-}
 
 
 String GetEventString(int i) {
 	switch (i) {
-		case START_ENABLE:		return "Start enable";
-		case START_DISABLE:		return "Start disable";
-		case START_POS_LONG:	return "Start positive long";
-		case START_NEG_LONG:	return "Start negative long";
-		case START_POS_SHORT:	return "Start positive short";
-		case START_NEG_SHORT:	return "Start negative short";
 		case SUSTAIN_ENABLE:	return "Sustain enable";
 		case SUSTAIN_DISABLE:	return "Sustain disable";
 		case SUSTAIN_POS_LONG:	return "Sustain positive long";
 		case SUSTAIN_NEG_LONG:	return "Sustain negative long";
 		case SUSTAIN_POS_SHORT:	return "Sustain positive short";
 		case SUSTAIN_NEG_SHORT:	return "Sustain negative short";
-		case STOP_ENABLE:		return "Stop enable";
-		case STOP_DISABLE:		return "Stop disable";
-		case STOP_POS_LONG:		return "Stop positive long";
-		case STOP_NEG_LONG:		return "Stop negative long";
-		case STOP_POS_SHORT:	return "Stop positive short";
-		case STOP_NEG_SHORT:	return "Stop negative short";
 		default: return "";
 	}
 }
-/*
-void Analyzer::RefreshRealtimeClusters() {
-	VectorBool rt_start_descriptor;
-	
-	int bars = cache[0].data.signal.GetCount();
-	for(int i = 1; i < cache.GetCount(); i++)
-		bars = min(bars, cache[i].data.signal.GetCount());
-	
-	rtdata.Reserve(bars);
-	
-	for(int i = rtcluster_counted; i < bars; i++) {
-		RtData& rt = rtdata.Add();
-		
-		GetRealtimeStartDescriptor(false, i, rt_start_descriptor);
-		rt.cluster_long = FindClosestCluster(0, rt_start_descriptor);
-		
-		
-		GetRealtimeStartDescriptor(true, i, rt_start_descriptor);
-		rt.cluster_short = FindClosestCluster(0, rt_start_descriptor);
-		
-		
-		
-	}
-	
-	rtcluster_counted = bars;
-}
-*/
-/*int Analyzer::FindClosestCluster(int type, const VectorBool& descriptor) {
-	int lowest_distance = INT_MAX, lowest_j = -1;
-	
-	for(int j = 0; j < clusters.GetCount(); j++) {
-		AnalyzerCluster& c = clusters[j];
-		int distance;
-		distance = c.av_descriptor.Hamming(descriptor);
-		if (distance < lowest_distance) {
-			lowest_distance = distance;
-			lowest_j = j;
-		}
-	}
-	
-	return lowest_j;
-}*/
-
-void Analyzer::GetRealtimeStartDescriptor(bool label, int i, VectorBool& descriptor) {
-	int descriptor_size = EVENT_COUNT * cache.GetCount();
-	
-	int row = 0;
-	
-	descriptor.SetCount(descriptor_size);
-	descriptor.Zero();
-	
-	for(int j = 0; j < cache.GetCount(); j++) {
-		int e = GetEventBegin(label, i, cache[j]);
-		
-		for(int k = 0; k < EVENT_COUNT; k++) {
-			if (e & (1 << k)) {
-				if (k < SUSTAIN_ENABLE)		descriptor.Set(row, true);
-			}
-			row++;
-		}
-	}
-}
-
 
 
 
@@ -911,12 +953,8 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	
 	tabs.Add(eventlist);
 	tabs.Add(eventlist, "Clusters");
-	tabs.Add(startlist);
-	tabs.Add(startlist, "Start matchers");
-	tabs.Add(sustlist);
-	tabs.Add(sustlist, "Sustain matchers");
-	tabs.Add(stoplist);
-	tabs.Add(stoplist, "Stop matchers");
+	tabs.Add(sustsplit);
+	tabs.Add(sustsplit, "Sustain matchers");
 	tabs.WhenSet << THISBACK(Data);
 	
 	symbollist.AddColumn("Symbol");
@@ -931,14 +969,13 @@ AnalyzerCtrl::AnalyzerCtrl() {
 	eventlist.AddColumn("Event");
 	eventlist.AddColumn("Probability");
 	
-	startlist.AddColumn("Cache");
-	startlist.AddColumn("Event");
+	sustsplit << sustandlist << sustlist;
 	
+	sustandlist.AddColumn("#");
+	sustandlist << THISBACK(Data);
 	sustlist.AddColumn("Cache");
 	sustlist.AddColumn("Event");
 	
-	stoplist.AddColumn("Cache");
-	stoplist.AddColumn("Event");
 	
 }
 
@@ -990,31 +1027,22 @@ void AnalyzerCtrl::Data() {
 					eventlist.SetCount(row);
 				}
 				else if (tab == 1) {
-					for(int i = 0; i < am.best_start.GetCount(); i++) {
-						const MatcherItem& mi = am.best_start[i];
-						startlist.Set(row, 0, a.cache[mi.cache].title);
-						startlist.Set(row, 1, GetEventString(mi.event));
-						row++;
+					for(int i = 0; i < am.full_list.GetCount(); i++) {
+						sustandlist.Set(i, 0, i);
 					}
-					startlist.SetCount(row);
-				}
-				else if (tab == 2) {
-					for(int i = 0; i < am.best_sust.GetCount(); i++) {
-						const MatcherItem& mi = am.best_sust[i];
-						sustlist.Set(row, 0, a.cache[mi.cache].title);
-						sustlist.Set(row, 1, GetEventString(mi.event));
-						row++;
+					sustandlist.SetCount(am.full_list.GetCount());
+					
+					int sustandcursor = sustandlist.GetCursor();
+					if (sustandcursor >= 0 && sustandcursor < am.full_list.GetCount()) {
+						const Vector<MatcherItem>& sust = am.full_list[sustandcursor];
+						for(int i = 0; i < sust.GetCount(); i++) {
+							const MatcherItem& mi = sust[i];
+							sustlist.Set(row, 0, a.cache[mi.cache].title);
+							sustlist.Set(row, 1, GetEventString(mi.event));
+							row++;
+						}
+						sustlist.SetCount(sust.GetCount());
 					}
-					sustlist.SetSortColumn(2, true);
-				}
-				else if (tab == 3) {
-					for(int i = 0; i < am.best_stop.GetCount(); i++) {
-						const MatcherItem& mi = am.best_stop[i];
-						stoplist.Set(row, 0, a.cache[mi.cache].title);
-						stoplist.Set(row, 1, GetEventString(mi.event));
-						row++;
-					}
-					stoplist.SetCount(row);
 				}
 			}
 		}

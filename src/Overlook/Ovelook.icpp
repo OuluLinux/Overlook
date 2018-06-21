@@ -70,6 +70,7 @@ INITBLOCK {
 	System::Register<Anomaly>("Anomaly");
 	System::Register<VariantDifference>("Variant Difference");
 	System::Register<ScalperSignal>("Scalper Signal");
+	System::Register<EasierScalperSignal>("Easier Scalper Signal");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<RapierishAdvisor>("Rapierish Advisor", CORE_EXPERTADVISOR);

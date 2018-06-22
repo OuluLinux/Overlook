@@ -26,7 +26,7 @@ public:
 	
 public:
 	typedef AnalyzerOrder CLASSNAME;
-	AnalyzerOrder();
+	AnalyzerOrder() {}
 	
 	void Serialize(Stream& s) {s % symbol % begin % end % action % lots % descriptor;}
 	
@@ -106,11 +106,10 @@ public:
 	
 	
 	// Persistent
-	Vector<int> rtdata;
 	Vector<AnalyzerOrder> orders;
 	Vector<AnalyzerCluster> clusters;
 	LabelSource scalper_signal;
-	int rtcluster_counted = 0;
+	VectorBool match_mask_sum;
 	bool type = false;
 	
 	
@@ -118,20 +117,17 @@ public:
 	typedef AnalyzerSymbol CLASSNAME;
 	AnalyzerSymbol() {}
 	
-	void Serialize(Stream& s) {s % rtdata % orders % clusters % scalper_signal % rtcluster_counted % type;}
+	void Serialize(Stream& s) {s % orders % clusters % scalper_signal % match_mask_sum % type;}
 	void InitScalperSignal(ConstLabelSignal& scalper_sig, bool type, const Vector<AnalyzerOrder>& orders);
 	void Init();
 	void InitOrderDescriptor();
 	void InitClusters();
 	void InitMatchers();
-	void InitMatchers(int cluster);
+	void InitScalpers();
 	void Analyze(AnalyzerCluster& am);
 	void RunMatchTest(const Vector<MatcherItem>& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
 	void RunMatchTest(const Vector<Vector<MatcherItem> >& list, MatchTest& t, MatcherCache& mcache, AnalyzerCluster& c);
-	void InitMatchersCluster(AnalyzerCluster& c);
-	void RefreshRealtimeClusters();
-	void GetRealtimeDescriptor(bool label, int i, VectorBool& descriptor);
-	int  FindClosestCluster(int type, const VectorBool& descriptor);
+	void InitSustainMatchersCluster(AnalyzerCluster& c);
 	
 	Callback InitCb() {return THISBACK(Init);}
 	
@@ -169,9 +165,7 @@ public:
 	void FillOrdersMyfxbook();
 	void FillInputBooleans();
 	int  GetEvent(const AnalyzerOrder& o, const LabelSource& ls);
-	//int  GetEventBegin(bool label, int begin, const LabelSource& ls);
 	int  GetEventSustain(bool label, int begin, int end, const LabelSource& ls);
-	//int  GetEventEnd(bool label, int end, const LabelSource& ls);
 	void RefreshSymbolPointer() {for(int i = 0; i < symbols.GetCount(); i++) symbols[i].a = this;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Analyzer.bin")); RefreshSymbolPointer();}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Analyzer.bin"));}

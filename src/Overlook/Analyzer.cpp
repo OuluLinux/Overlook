@@ -34,9 +34,7 @@ void UpdateEventVectors(LabelSource& ls) {
 
 
 
-AnalyzerOrder::AnalyzerOrder() {
-	
-}
+
 
 
 
@@ -74,8 +72,8 @@ void AnalyzerSymbol::Init() {
 	InitClusters();
 	for(int i = 0; i < clusters.GetCount(); i++)
 		Analyze(clusters[i]);
-	//RefreshRealtimeClusters();
 	InitMatchers();
+	InitScalpers();
 }
 
 void AnalyzerSymbol::InitOrderDescriptor() {
@@ -265,28 +263,18 @@ void AnalyzerSymbol::Analyze(AnalyzerCluster& am) {
 }
 
 void AnalyzerSymbol::InitMatchers() {
-	#if 0
-	CoWork co;
-	co.SetPoolSize(GetUsedCpuCores());
 	for(int i = 0; i < clusters.GetCount(); i++) {
-		co & THISBACK1(InitMatchers, i);
+		AnalyzerCluster& c = clusters[i];
+		InitSustainMatchersCluster(c);
+		
+		if (i == 0)
+			match_mask_sum = c.match_mask;
+		else
+			match_mask_sum.Or(c.match_mask);
 	}
-	co.Finish();
-	#else
-	for(int i = 0; i < clusters.GetCount(); i++)
-		InitMatchers(i);
-	#endif
 }
 
-void AnalyzerSymbol::InitMatchers(int cluster) {
-	
-	AnalyzerCluster& c = clusters[cluster];
-	
-	InitMatchersCluster(c);
-	
-}
-
-void AnalyzerSymbol::InitMatchersCluster(AnalyzerCluster& c) {
+void AnalyzerSymbol::InitSustainMatchersCluster(AnalyzerCluster& c) {
 	Vector<MatcherItem> list, best_list;
 	MatcherCache mcache;
 	
@@ -333,7 +321,6 @@ void AnalyzerSymbol::InitMatchersCluster(AnalyzerCluster& c) {
 			round_keys.Clear();
 			for(int i = 0; i < keys[evtype].GetCount(); i++) {
 				int key = keys[evtype][i];
-				int event = key % EVENT_COUNT;
 				round_keys.Add(key);
 			}
 			if (round_keys.IsEmpty())
@@ -541,65 +528,13 @@ void AnalyzerSymbol::RunMatchTest(const Vector<Vector<MatcherItem> >& list, Matc
 	}
 }
 
-void AnalyzerSymbol::RefreshRealtimeClusters() {
-	VectorBool rt_start_descriptor;
-	
-	int bars = a->cache[0].data.signal.GetCount();
-	for(int i = 1; i < a->cache.GetCount(); i++)
-		bars = min(bars, a->cache[i].data.signal.GetCount());
-	
-	rtdata.SetCount(bars);
-	
-	for(int i = 0; i < clusters.GetCount(); i++) {
-		AnalyzerCluster& c = clusters[i];
-		c.closest_mask.SetCount(bars);
-	}
-	
-	for(int i = rtcluster_counted; i < bars; i++) {
-		GetRealtimeDescriptor(type, i, rt_start_descriptor);
-		int cluster = FindClosestCluster(0, rt_start_descriptor);
-		rtdata[i] = cluster;
-		clusters[cluster].closest_mask.Set(i, true);
-	}
+void AnalyzerSymbol::InitScalpers() {
 	
 	
-	rtcluster_counted = bars;
-}
-
-int AnalyzerSymbol::FindClosestCluster(int type, const VectorBool& descriptor) {
-	int lowest_distance = INT_MAX, lowest_j = -1;
 	
-	for(int j = 0; j < clusters.GetCount(); j++) {
-		AnalyzerCluster& c = clusters[j];
-		int distance;
-		distance = c.av_descriptor.Hamming(descriptor);
-		if (distance < lowest_distance) {
-			lowest_distance = distance;
-			lowest_j = j;
-		}
-	}
 	
-	return lowest_j;
-}
-
-void AnalyzerSymbol::GetRealtimeDescriptor(bool label, int i, VectorBool& descriptor) {
-	int descriptor_size = EVENT_COUNT * a->cache.GetCount();
 	
-	int row = 0;
 	
-	descriptor.SetCount(descriptor_size);
-	descriptor.Zero();
-	
-	for(int j = 0; j < a->cache.GetCount(); j++) {
-		int e = a->GetEventSustain(label, i, i, a->cache[j]);
-		
-		for(int k = 0; k < EVENT_COUNT; k++) {
-			if (e & (1 << k)) {
-				descriptor.Set(row, true);
-			}
-			row++;
-		}
-	}
 }
 
 
@@ -719,27 +654,21 @@ void Analyzer::Process() {
 		co.Finish();
 		
 		
+		
+		
 		if (IsRunning())
 			StoreThis();
 	}
 	
 	
-	
+	/*
 	while (IsRunning()) {
 		FillInputBooleans();
-		//RefreshRealtimeClusters();
 		
 		for(int i = 0; i < 10 && IsRunning(); i++)
 			Sleep(1000);
-	}
-	/*
-	CoWork co;
-	co.SetPoolSize(GetUsedCpuCores());
-	for(int i = 0; i < clusters.GetCount(); i++) {
-		co & THISBACK1(Optimize, i);
-	}
-	co.Finish();
-	*/
+	}*/
+	
 	stopped = true;
 }
 

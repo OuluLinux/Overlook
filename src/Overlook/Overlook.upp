@@ -68,7 +68,9 @@ file
 	Myfxbook.h,
 	Myfxbook.cpp,
 	Analyzer.h,
-	Analyzer.cpp;
+	Analyzer.cpp,
+	Scalper.h,
+	Scalper.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

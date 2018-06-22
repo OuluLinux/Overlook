@@ -5764,7 +5764,7 @@ void ScalperSignal::Start() {
 			double on1 = open_buf.GetUnsafe(j);
 			bool nlabel = on0 < on1;
 			
-			if (nlabel != label) break;
+			if (nlabel != label && on0 != on1) break;
 			
 			start_price = on1;
 			start = j;
@@ -5840,7 +5840,7 @@ void EasierScalperSignal::Start() {
 			double on1 = open_buf.GetUnsafe(j);
 			bool nlabel = on0 < on1;
 			
-			if (nlabel != label) break;
+			if (nlabel != label && on0 != on1) break;
 			
 			start_price = on1;
 			start = j;
@@ -5899,12 +5899,24 @@ void AnalyzerViewer::Start() {
 			
 			int bars = GetBars();
 			
-			for(int i = 0; i < bars; i++) {
-				SetSafetyLimit(i);
-				
-				if (i < ac.match_mask.GetCount()) {
-					sig.signal.Set(i, as.type);
-					sig.enabled.Set(i, ac.match_mask.Get(i));
+			if (as.match_mask_sum.GetCount()) {
+				for(int i = 0; i < bars; i++) {
+					SetSafetyLimit(i);
+					
+					if (i < as.match_mask_sum.GetCount()) {
+						sig.signal.Set(i, as.type);
+						sig.enabled.Set(i, as.match_mask_sum.Get(i));
+					}
+				}
+			}
+			else {
+				for(int i = 0; i < bars; i++) {
+					SetSafetyLimit(i);
+					
+					if (i < ac.match_mask.GetCount()) {
+						sig.signal.Set(i, as.type);
+						sig.enabled.Set(i, ac.match_mask.Get(i));
+					}
 				}
 			}
 		}

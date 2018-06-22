@@ -36,6 +36,7 @@ using namespace Upp;
 #include "Myfxbook.h"
 #include "Arbitrage.h"
 #include "Analyzer.h"
+#include "Scalper.h"
 
 
 namespace Overlook {

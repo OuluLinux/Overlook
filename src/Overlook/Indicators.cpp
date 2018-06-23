@@ -3806,6 +3806,7 @@ void SupportResistance::Start() {
 			inc_points *= 10;
 		}
 		
+		if (count == 0) continue;
 		if (crosses.GetCount() < count) crosses.SetCount(count);
 		
 		for(int j = 0; j < count; j++)

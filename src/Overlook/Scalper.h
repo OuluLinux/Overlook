@@ -10,13 +10,23 @@ class ScalperConf : Moveable<ScalperConf> {
 	
 public:
 	Vector<Vector<MatcherItem> > start_list, sust_list;
+	double profit = -DBL_MAX, test_profit = -DBL_MAX;
 	
 public:
 	typedef ScalperConf CLASSNAME;
 	ScalperConf() {}
+	ScalperConf(const ScalperConf& s) {*this = s;}
+	void operator=(const ScalperConf& s) {
+		start_list <<= s.start_list;
+		sust_list <<= s.sust_list;
+		profit = s.profit;
+	}
 	
 	void Serialize(Stream& s) {s % start_list % sust_list;}
 	
+	bool operator()(const ScalperConf& a, const ScalperConf& b) const {
+		return a.profit > b.profit;
+	}
 };
 
 void UpdateEventVectors(LabelSource& ls);
@@ -29,22 +39,34 @@ public:
 	
 	
 	// Persistent
-	Vector<ScalperConf> confs;
+	SortedLimitedVectorMap<int, ScalperConf, ScalperConf> confs;
 	VectorBool signal;
+	int conf_counter = 0;
+	int symbol = -1;
 	bool type = false;
+	
+	
+	// Temporary
+	MatcherCache start_cache, sust_cache;
 	
 	
 public:
 	typedef ScalperSymbol CLASSNAME;
 	ScalperSymbol() {}
 	
-	void Serialize(Stream& s) {s % confs % signal % type;}
+	void Serialize(Stream& s) {s % confs % signal % conf_counter % symbol % type;}
 	void Init();
+	void Start();
+	void Evolve();
+	void Randomize(ScalperConf& sc);
+	void Evolve(ScalperConf& sc);
+	void Evaluate(ScalperConf& sc);
 	
 	Callback InitCb() {return THISBACK(Init);}
+	Callback StartCb() {return THISBACK(Start);}
 	
 	
-	Scalper* a = NULL;
+	Scalper* s = NULL;
 };
 
 class Scalper {
@@ -60,6 +82,7 @@ protected:
 	VectorMap<int, ScalperSymbol> symbols;
 	
 	// Temporary
+	VectorMap<int, DataBridge*> dbs;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
 	Index<int> sym_ids, tf_ids;
@@ -74,7 +97,7 @@ public:
 	void Serialize(Stream& s) {s % cache % symbols;}
 	void Process();
 	void FillInputBooleans();
-	void RefreshSymbolPointer() {for(int i = 0; i < symbols.GetCount(); i++) symbols[i].a = this;}
+	void RefreshSymbolPointer() {for(int i = 0; i < symbols.GetCount(); i++) symbols[i].s = this;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Scalper.bin")); RefreshSymbolPointer();}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Scalper.bin"));}
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}

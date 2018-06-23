@@ -74,5 +74,5 @@ file
 
 mainconfig
 	"Working" = "GUI MT X11",
-	"" = "GUI MT";
+	"" = "GUI MT USEMALLOC";
 

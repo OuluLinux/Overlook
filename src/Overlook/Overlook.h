@@ -89,6 +89,7 @@ protected:
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	CtrlCallbacks<AnalyzerCtrl> alz;
+	CtrlCallbacks<ScalperCtrl> sclp;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;

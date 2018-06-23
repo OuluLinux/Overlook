@@ -258,7 +258,8 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		
 		if (!FileExists(local_hst)) {
 			LOG("Opening zip " << local_zip);
-			FileUnZip unzip(local_zip);
+			FileIn fin(local_zip);
+			UnZip unzip(fin);
 			bool found = false;
 			while(!(unzip.IsEof() || unzip.IsError())) {
 				String fname = GetFileName(unzip.GetPath());
@@ -266,7 +267,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 				if (fname == exp_fname) {
 					String dst = AppendFileName(data_dir, fname);
 					FileOut fout(dst);
-					fout << unzip.ReadFile();
+					unzip.ReadFile(fout);
 					local_history_file = dst;
 					old_filetype = true;
 					found = true;

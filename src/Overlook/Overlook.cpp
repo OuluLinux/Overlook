@@ -131,6 +131,7 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
@@ -147,6 +148,7 @@ void Overlook::DockInit() {
 	exposure		.WhenVisible << THISBACK(Data);
 	trade			.WhenVisible << THISBACK(Data);
 	alz				.WhenVisible << THISBACK(Data);
+	sclp			.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -502,6 +504,7 @@ void Overlook::Data() {
 	if (debuglist.IsVisible())		RefreshDebug();
 	if (GetMyfxbook().IsVisible())	RefreshMyfxbook();
 	if (alz.IsVisible())			RefreshAnalyzer();
+	if (sclp.IsVisible())			sclp.Data();
 	if (arb.IsVisible())			RefreshArbitrage();
 }
 

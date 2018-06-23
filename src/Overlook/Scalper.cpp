@@ -8,9 +8,260 @@ namespace Overlook {
 
 
 void ScalperSymbol::Init() {
+	confs.SetMax(1000);
+	confs.SetNoDuplicates();
+}
+
+void ScalperSymbol::Start() {
+	
+	TimeStop ts;
+	
+	while (ts.Elapsed() < 5000) {
+		Evolve();
+	}
+}
+
+void ScalperSymbol::Evolve() {
+	
+	double prob = Randomf();
+	
+	// Generate totally random
+	if (prob < 0.3) {
+		ScalperConf sc;
+		Randomize(sc);
+		Evaluate(sc);
+		confs.Add(conf_counter++, sc);
+	}
+	// Evolve locally
+	else if (prob < 0.9) {
+		ScalperConf sc;
+		Evolve(sc);
+		Evaluate(sc);
+		confs.Add(conf_counter++, sc);
+	}
+	// Evolve globally
+	else {
+		ScalperConf sc;
+		s->symbols[Random(s->symbols.GetCount())].Evolve(sc);
+		Evaluate(sc);
+		confs.Add(conf_counter++, sc);
+	}
 	
 }
 
+void ScalperSymbol::Randomize(ScalperConf& sc) {
+	int start_size = 1 + Random(9);
+	int sust_size = 1 + Random(9);
+	
+	sc.start_list.SetCount(start_size);
+	for(int i = 0; i < sc.start_list.GetCount(); i++) {
+		Vector<MatcherItem>& v = sc.start_list[i];
+		int or_size = 5 + Random(10);
+		v.SetCount(or_size);
+		for(int j = 0; j < v.GetCount(); j++) {
+			MatcherItem& mi = v[j];
+			mi.cache = Random(s->cache.GetCount());
+			mi.event = Random(EVENT_COUNT);
+			mi.key = mi.cache * EVENT_COUNT + mi.event;
+		}
+	}
+	
+	
+	sc.sust_list.SetCount(start_size);
+	for(int i = 0; i < sc.sust_list.GetCount(); i++) {
+		Vector<MatcherItem>& v = sc.sust_list[i];
+		int or_size = 5 + Random(10);
+		v.SetCount(or_size);
+		for(int j = 0; j < v.GetCount(); j++) {
+			MatcherItem& mi = v[j];
+			mi.cache = Random(s->cache.GetCount());
+			mi.event = Random(EVENT_COUNT);
+			mi.key = mi.cache * EVENT_COUNT + mi.event;
+		}
+	}
+	
+}
+
+void ScalperSymbol::Evolve(ScalperConf& sc) {
+	if (confs.GetCount() < 4) {Randomize(sc); return;}
+	
+	int start_size = 1 + Random(9);
+	int sust_size = 1 + Random(9);
+	
+	sc.start_list.SetCount(start_size);
+	sc.sust_list.SetCount(start_size);
+	
+	
+	// Best1Exp
+	int r0 = 1 + Random(confs.GetCount()-1);
+	int r1, r2;
+	do {r1 = 1 + Random(confs.GetCount()-1);} while (r1 == r0);
+	do {r2 = 1 + Random(confs.GetCount()-1);} while (r1 == r0 || r2 == r1);
+	const ScalperConf& best = confs[0];
+	const ScalperConf& s0 = confs[r0];
+	const ScalperConf& s1 = confs[r1];
+	const ScalperConf& s2 = confs[r2];
+	
+	sc = s0;
+	
+	int best_start_n = Random(best.start_list.GetCount());
+	int sc_start_n = Random(sc.start_list.GetCount());
+	int s1_start_n = Random(s1.start_list.GetCount());
+	int s2_start_n = Random(s2.start_list.GetCount());
+	for(int i = 0; i < sc.start_list.GetCount() && Randomf() < 0.9; i++) {
+		Vector<MatcherItem>& v = sc.start_list[sc_start_n];
+		switch (Random(4)) {
+			case 0:	v <<= best.start_list[best_start_n]; break;
+			case 1:	v <<= s1.start_list[s1_start_n]; break;
+			case 2:	v <<= s2.start_list[s2_start_n]; break;
+			case 3:
+				int or_size = 5 + Random(10);
+				v.SetCount(or_size);
+				for(int j = 0; j < v.GetCount(); j++) {
+					MatcherItem& mi = v[j];
+					mi.cache = Random(s->cache.GetCount());
+					mi.event = Random(EVENT_COUNT);
+					mi.key = mi.cache * EVENT_COUNT + mi.event;
+				}
+				break;
+		}
+		
+		best_start_n = (best_start_n + 1) % best.start_list.GetCount();
+		sc_start_n = (sc_start_n + 1) % sc.start_list.GetCount();
+		s1_start_n = (s1_start_n + 1) % s1.start_list.GetCount();
+		s2_start_n = (s2_start_n + 1) % s2.start_list.GetCount();
+	}
+	
+	int best_sust_n = Random(best.sust_list.GetCount());
+	int sc_sust_n = Random(sc.sust_list.GetCount());
+	int s1_sust_n = Random(s1.sust_list.GetCount());
+	int s2_sust_n = Random(s2.sust_list.GetCount());
+	for(int i = 0; i < sc.sust_list.GetCount() && Randomf() < 0.9; i++) {
+		#if 0
+		switch (Random(3)) {
+			case 0:	sc.sust_list[sc_sust_n] <<= best.sust_list[best_sust_n]; break;
+			case 1:	sc.sust_list[sc_sust_n] <<= s1.sust_list[s1_sust_n]; break;
+			case 2:	sc.sust_list[sc_sust_n] <<= s2.sust_list[s2_sust_n]; break;
+		}
+		#else
+		int r = Random(3);
+		auto& dst = sc.sust_list[sc_sust_n];
+		const auto& src = r == 0 ? best.sust_list[best_sust_n] : (r == 1 ? s1.sust_list[s1_sust_n] : s2.sust_list[s2_sust_n]);
+		int dst_n = Random(dst.GetCount());
+		int src_n = Random(src.GetCount());
+		for(int j = 0; j < dst.GetCount() && Randomf() < 0.9; j++) {
+			dst[dst_n] = src[src_n];
+			dst_n = (dst_n + 1) % dst.GetCount();
+			src_n = (src_n + 1) % src.GetCount();
+		}
+		#endif
+		
+		best_sust_n = (best_sust_n + 1) % best.sust_list.GetCount();
+		sc_sust_n = (sc_sust_n + 1) % sc.sust_list.GetCount();
+		s1_sust_n = (s1_sust_n + 1) % s1.sust_list.GetCount();
+		s2_sust_n = (s2_sust_n + 1) % s2.sust_list.GetCount();
+	}
+	
+}
+
+void ScalperSymbol::Evaluate(ScalperConf& sc) {
+	DataBridge& db = *s->dbs.Get(symbol);
+	ConstBuffer& open_buf = db.GetBuffer(0);
+	int bars = open_buf.GetCount();
+	double spread = db.GetPoint() * 3;
+	
+	
+	
+	// Start
+	start_cache.matcher_and.SetCount(bars);
+	start_cache.matcher_or.SetCount(bars);
+	ASSERT(bars > 0);
+	
+	start_cache.matcher_and.One();
+	
+	for(int k = 0; k < sc.start_list.GetCount(); k++) {
+		const Vector<MatcherItem>& sublist = sc.start_list[k];
+		
+		start_cache.matcher_or.Zero();
+		
+		for(int k = 0; k < sublist.GetCount(); k++) {
+			const MatcherItem& mi = sublist[k];
+			const LabelSource& c = s->cache[mi.cache];
+			const VectorBool& vb = c.eventdata[mi.event];
+			ASSERT(!vb.IsEmpty());
+			
+			start_cache.matcher_or.Or(vb);
+		}
+		
+		start_cache.matcher_and.And(start_cache.matcher_or);
+	}
+	
+	
+	// Sustain
+	sust_cache.matcher_and.SetCount(bars);
+	sust_cache.matcher_or.SetCount(bars);
+	ASSERT(bars > 0);
+	
+	sust_cache.matcher_and.One();
+	
+	for(int k = 0; k < sc.sust_list.GetCount(); k++) {
+		const Vector<MatcherItem>& sublist = sc.sust_list[k];
+		
+		sust_cache.matcher_or.Zero();
+		
+		for(int k = 0; k < sublist.GetCount(); k++) {
+			const MatcherItem& mi = sublist[k];
+			const LabelSource& c = s->cache[mi.cache];
+			const VectorBool& vb = c.eventdata[mi.event];
+			ASSERT(!vb.IsEmpty());
+			
+			sust_cache.matcher_or.Or(vb);
+		}
+		
+		sust_cache.matcher_and.And(sust_cache.matcher_or);
+	}
+	
+	
+	// Start requires sustain
+	start_cache.matcher_and.And(sust_cache.matcher_and);
+	
+	
+	
+	
+	bool enabled = false;
+	double open, profit = 0;
+	int count = 0;
+	for(int i = 100; i < open_buf.GetCount(); i++) {
+		if (!enabled && (i % 64) == 0 && *(start_cache.matcher_and.Begin() + (i / 64)) == 0) {
+			i += 63;
+			continue;
+		}
+		
+		if (!enabled) {
+			if (start_cache.matcher_and.Get(i)) {
+				enabled = true;
+				open = open_buf.Get(i);
+			}
+		} else {
+			bool prev_type = open_buf.Get(i) < open_buf.Get(i-1);
+			if (prev_type != this->type) {
+				double diff = open_buf.Get(i) - open;
+				if (this->type) diff *= -1;
+				diff -= spread;
+				profit += diff;
+				enabled = false;
+				count++;
+			}
+		}
+		
+	}
+	
+	
+	if (count > 0)	sc.profit = profit;
+	else			sc.profit = -100000000;
+	
+	sc.test_profit = 0;
+}
 
 
 
@@ -37,23 +288,17 @@ Scalper::Scalper() {
 	System& sys = GetSystem();
 	sym_ids.Add(sys.FindSymbol("EURUSD"));
 	sym_ids.Add(sys.FindSymbol("GBPUSD"));
-	sym_ids.Add(sys.FindSymbol("EURJPY"));
+	sym_ids.Add(sys.FindSymbol("USDCHF"));
 	sym_ids.Add(sys.FindSymbol("USDJPY"));
 	
-	sym_ids.Add(sys.FindSymbol("EURGBP"));
-	sym_ids.Add(sys.FindSymbol("GBPJPY"));
-	sym_ids.Add(sys.FindSymbol("AUDUSD"));
 	sym_ids.Add(sys.FindSymbol("USDCAD"));
-	
-	sym_ids.Add(sys.FindSymbol("EURAUD"));
-	sym_ids.Add(sys.FindSymbol("AUDCAD"));
-	sym_ids.Add(sys.FindSymbol("EURCHF"));
-	sym_ids.Add(sys.FindSymbol("CADJPY"));
-	
-	sym_ids.Add(sys.FindSymbol("GBPCHF"));
-	sym_ids.Add(sys.FindSymbol("USDCHF"));
+	sym_ids.Add(sys.FindSymbol("AUDUSD"));
 	sym_ids.Add(sys.FindSymbol("NZDUSD"));
-	sym_ids.Add(sys.FindSymbol("AUDJPY"));
+	sym_ids.Add(sys.FindSymbol("EURCHF"));
+	
+	sym_ids.Add(sys.FindSymbol("EURGBP"));
+	sym_ids.Add(sys.FindSymbol("EURJPY"));
+	
 	
 	tf_ids.Add(0);
 	
@@ -120,6 +365,20 @@ void Scalper::Process() {
 	if (symbols.IsEmpty()) {
 		FillInputBooleans();
 		
+		for(int i = 0; i < sym_ids.GetCount(); i++) {
+			int sym = sym_ids[i];
+			
+			ScalperSymbol& lng = symbols.Add(sym);
+			lng.type = false;
+			lng.symbol = sym;
+			
+			ScalperSymbol& shr = symbols.Add(-sym-1);
+			shr.type = true;
+			shr.symbol = sym;
+		}
+		
+		RefreshSymbolPointer();
+		
 		CoWork co;
 		co.SetPoolSize(GetUsedCpuCores());
 		for(int i = 0; i < symbols.GetCount(); i++) {
@@ -133,13 +392,31 @@ void Scalper::Process() {
 	}
 	
 	
-	
+	TimeStop save_ts;
 	while (IsRunning()) {
 		FillInputBooleans();
 		
-		for(int i = 0; i < 10 && IsRunning(); i++)
+		TimeStop ts;
+		
+		CoWork co;
+		co.SetPoolSize(GetUsedCpuCores());
+		for(int i = 0; i < symbols.GetCount(); i++) {
+			co & symbols[i].StartCb();
+		}
+		co.Finish();
+		
+		int sec = ts.Elapsed() / 1000;
+		for(int i = sec; i < 10 && IsRunning(); i++)
 			Sleep(1000);
+		
+		
+		if (save_ts.Elapsed() > 5*60*1000) {
+			save_ts.Reset();
+			StoreThis();
+		}
 	}
+	
+	StoreThis();
 	
 	stopped = true;
 }
@@ -158,6 +435,11 @@ void Scalper::FillInputBooleans() {
 		sys.Process(ci, true);
 		
 		Core& c = *ci.core;
+		
+		if (c.GetFactory() == 0) {
+			DataBridge& db = dynamic_cast<DataBridge&>(c);
+			dbs.GetAdd(db.GetSymbol()) = &db;
+		}
 		
 		for(int j = 0; j < c.GetLabelCount(); j++) {
 			ConstLabel& l = c.GetLabel(j);
@@ -228,14 +510,16 @@ ScalperCtrl::ScalperCtrl() {
 	symbollist.AddColumn("Type");
 	symbollist << THISBACK(Data);
 	
-	conflist.AddColumn("Cluster");
-	conflist.AddColumn("Orders");
+	conflist.AddColumn("Conf");
+	conflist.AddColumn("Profit");
 	conflist << THISBACK(Data);
 	
 	sustsplit << startlist << sustlist;
 	
+	startlist.AddColumn("Or-list");
 	startlist.AddColumn("Cache");
 	startlist.AddColumn("Event");
+	sustlist.AddColumn("Or-list");
 	sustlist.AddColumn("Cache");
 	sustlist.AddColumn("Event");
 	
@@ -266,7 +550,7 @@ void ScalperCtrl::Data() {
 				const ScalperConf& am = as.confs[i];
 				
 				conflist.Set(i, 0, i);
-				//conflist.Set(i, 1, am.orders.GetCount());
+				conflist.Set(i, 1, am.profit);
 			}
 			conflist.SetCount(as.confs.GetCount());
 			
@@ -278,40 +562,31 @@ void ScalperCtrl::Data() {
 				const ScalperConf& am = as.confs[cursor];
 				int row = 0;
 				
-				/*if (tab == 0) {
-					for(int i = 0; i < am.stats.GetCount(); i++) {
-						int key = am.stats.GetKey(i);
-						int value = am.stats[i];
-						int cache = key / EVENT_COUNT;
-						int event  = key % EVENT_COUNT;
-						//if (event >= Scalper::SUSTAIN_ENABLE) continue;
-						eventlist.Set(row, 0, a.cache[cache].title);
-						eventlist.Set(row, 1, GetEventString(event));
-						eventlist.Set(row, 2, (double)value * 100 / am.total);
+				for(int i = 0; i < am.start_list.GetCount(); i++) {
+					const Vector<MatcherItem>& v = am.start_list[i];
+					for(int j = 0; j < v.GetCount(); j++) {
+						const MatcherItem& mi = v[j];
+						startlist.Set(row, 0, i);
+						startlist.Set(row, 1, a.cache[mi.cache].title);
+						startlist.Set(row, 2, GetEventString(mi.event));
 						row++;
 					}
-			
-					eventlist.SetSortColumn(2, true);
-					eventlist.SetCount(row);
 				}
-				else if (tab == 1) {
-					for(int i = 0; i < am.full_list.GetCount(); i++) {
-						sustandlist.Set(i, 0, i);
+				startlist.SetCount(row);
+				
+				row = 0;
+				for(int i = 0; i < am.sust_list.GetCount(); i++) {
+					const Vector<MatcherItem>& v = am.sust_list[i];
+					for(int j = 0; j < v.GetCount(); j++) {
+						const MatcherItem& mi = v[j];
+						sustlist.Set(row, 0, i);
+						sustlist.Set(row, 1, a.cache[mi.cache].title);
+						sustlist.Set(row, 2, GetEventString(mi.event));
+						row++;
 					}
-					sustandlist.SetCount(am.full_list.GetCount());
-					
-					int sustandcursor = sustandlist.GetCursor();
-					if (sustandcursor >= 0 && sustandcursor < am.full_list.GetCount()) {
-						const Vector<MatcherItem>& sust = am.full_list[sustandcursor];
-						for(int i = 0; i < sust.GetCount(); i++) {
-							const MatcherItem& mi = sust[i];
-							sustlist.Set(row, 0, a.cache[mi.cache].title);
-							sustlist.Set(row, 1, GetEventString(mi.event));
-							row++;
-						}
-						sustlist.SetCount(sust.GetCount());
-					}
-				}*/
+				}
+				sustlist.SetCount(row);
+				
 			}
 		}
 	}

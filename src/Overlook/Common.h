@@ -1003,17 +1003,30 @@ template <class K, class V, class Sort=StdGreater<V> >
 class SortedLimitedVectorMap {
 	VectorMap<K, V> map;
 	int max = 10;
+	bool no_dup = false;
 	Sort cmp;
 	
 public:
 	SortedLimitedVectorMap() {}
+	SortedLimitedVectorMap(const SortedLimitedVectorMap& s) {*this = s;}
+	void operator=(const SortedLimitedVectorMap& s) {
+		map <<= s.map;
+		max = s.max;
+	}
 	
 	void Clear() {map.Clear();}
 	void SetMax(int i) {max = i;}
+	void SetNoDuplicates(bool b=true) {no_dup = b;}
 	
 	void Add(const K& key, const V& value) {
 		for(int i = 0; i < map.GetCount(); i++) {
 			if (cmp(value, map[i])) {
+				if (no_dup && i-1 >= 0) {
+					// Require, that previous value is different
+					if (!cmp(map[i-1], value)) {
+						return;
+					}
+				}
 				map.Insert(i, key, value);
 				while (map.GetCount() > max) map.Remove(max);
 				return;
@@ -1026,6 +1039,8 @@ public:
 	int GetCount() const {return map.GetCount();}
 	K GetKey(int i) {return map.GetKey(i);}
 	V& operator[](int i) {return map[i];}
+	const V& operator[](int i) const {return map[i];}
+	void Serialize(Stream& s) {s % map % max % no_dup;}
 	
 };
 

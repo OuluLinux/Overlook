@@ -149,9 +149,9 @@ LAYOUT(BacktestTestingLayout, 232, 136)
 END_LAYOUT
 
 LAYOUT(EnterProfileName, 400, 68)
-	ITEM(Label, dv___0, SetLabel(t_("Enter new profile name:")).HCenterPosZ(128, -132).VCenterPosZ(19, -16))
+	ITEM(Upp::Label, dv___0, SetLabel(t_("Enter new profile name:")).HCenterPosZ(128, -132).VCenterPosZ(19, -16))
 	ITEM(EditString, name, HCenterPosZ(260, 66).VCenterPosZ(19, -16))
-	ITEM(Label, dv___2, SetFrame(BottomSeparatorFrame()).LeftPosZ(-4, 416).BottomPosZ(27, 13))
+	ITEM(Upp::Label, dv___2, SetFrame(BottomSeparatorFrame()).LeftPosZ(-4, 416).BottomPosZ(27, 13))
 	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(108, 100).BottomPosZ(4, 20))
 	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 100).BottomPosZ(4, 20))
 END_LAYOUT

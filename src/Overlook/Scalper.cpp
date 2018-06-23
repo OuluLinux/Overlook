@@ -124,21 +124,26 @@ void ScalperSymbol::Evolve(ScalperConf& sc) {
 	int s1_start_n = Random(s1.start_list.GetCount());
 	int s2_start_n = Random(s2.start_list.GetCount());
 	for(int i = 0; i < sc.start_list.GetCount() && Randomf() < 0.9; i++) {
-		Vector<MatcherItem>& v = sc.start_list[sc_start_n];
-		switch (Random(4)) {
-			case 0:	v <<= best.start_list[best_start_n]; break;
-			case 1:	v <<= s1.start_list[s1_start_n]; break;
-			case 2:	v <<= s2.start_list[s2_start_n]; break;
-			case 3:
-				int or_size = 5 + Random(10);
-				v.SetCount(or_size);
-				for(int j = 0; j < v.GetCount(); j++) {
-					MatcherItem& mi = v[j];
-					mi.cache = Random(s->cache.GetCount());
-					mi.event = Random(EVENT_COUNT);
-					mi.key = mi.cache * EVENT_COUNT + mi.event;
-				}
-				break;
+		auto& dst = sc.start_list[sc_start_n];
+		int r = Random(4);
+		if (r < 3)  {
+			const auto& src = r == 0 ? best.start_list[best_start_n] : (r == 1 ? s1.start_list[s1_start_n] : s2.start_list[s2_start_n]);
+			int dst_n = Random(dst.GetCount());
+			int src_n = Random(src.GetCount());
+			for(int j = 0; j < dst.GetCount() && Randomf() < 0.9; j++) {
+				dst[dst_n] = src[src_n];
+				dst_n = (dst_n + 1) % dst.GetCount();
+				src_n = (src_n + 1) % src.GetCount();
+			}
+		} else {
+			int or_size = 5 + Random(10);
+			dst.SetCount(or_size);
+			for(int j = 0; j < dst.GetCount(); j++) {
+				MatcherItem& mi = dst[j];
+				mi.cache = Random(s->cache.GetCount());
+				mi.event = Random(EVENT_COUNT);
+				mi.key = mi.cache * EVENT_COUNT + mi.event;
+			}
 		}
 		
 		best_start_n = (best_start_n + 1) % best.start_list.GetCount();
@@ -152,24 +157,27 @@ void ScalperSymbol::Evolve(ScalperConf& sc) {
 	int s1_sust_n = Random(s1.sust_list.GetCount());
 	int s2_sust_n = Random(s2.sust_list.GetCount());
 	for(int i = 0; i < sc.sust_list.GetCount() && Randomf() < 0.9; i++) {
-		#if 0
-		switch (Random(3)) {
-			case 0:	sc.sust_list[sc_sust_n] <<= best.sust_list[best_sust_n]; break;
-			case 1:	sc.sust_list[sc_sust_n] <<= s1.sust_list[s1_sust_n]; break;
-			case 2:	sc.sust_list[sc_sust_n] <<= s2.sust_list[s2_sust_n]; break;
-		}
-		#else
-		int r = Random(3);
 		auto& dst = sc.sust_list[sc_sust_n];
-		const auto& src = r == 0 ? best.sust_list[best_sust_n] : (r == 1 ? s1.sust_list[s1_sust_n] : s2.sust_list[s2_sust_n]);
-		int dst_n = Random(dst.GetCount());
-		int src_n = Random(src.GetCount());
-		for(int j = 0; j < dst.GetCount() && Randomf() < 0.9; j++) {
-			dst[dst_n] = src[src_n];
-			dst_n = (dst_n + 1) % dst.GetCount();
-			src_n = (src_n + 1) % src.GetCount();
+		int r = Random(4);
+		if (r < 3)  {
+			const auto& src = r == 0 ? best.sust_list[best_sust_n] : (r == 1 ? s1.sust_list[s1_sust_n] : s2.sust_list[s2_sust_n]);
+			int dst_n = Random(dst.GetCount());
+			int src_n = Random(src.GetCount());
+			for(int j = 0; j < dst.GetCount() && Randomf() < 0.9; j++) {
+				dst[dst_n] = src[src_n];
+				dst_n = (dst_n + 1) % dst.GetCount();
+				src_n = (src_n + 1) % src.GetCount();
+			}
+		} else {
+			int or_size = 5 + Random(10);
+			dst.SetCount(or_size);
+			for(int j = 0; j < dst.GetCount(); j++) {
+				MatcherItem& mi = dst[j];
+				mi.cache = Random(s->cache.GetCount());
+				mi.event = Random(EVENT_COUNT);
+				mi.key = mi.cache * EVENT_COUNT + mi.event;
+			}
 		}
-		#endif
 		
 		best_sust_n = (best_sust_n + 1) % best.sust_list.GetCount();
 		sc_sust_n = (sc_sust_n + 1) % sc.sust_list.GetCount();
@@ -330,7 +338,7 @@ Scalper::Scalper() {
 	sym_ids.Add(sys.FindSymbol("EURJPY"));
 	
 	
-	tf_ids.Add(1);
+	tf_ids.Add(0);
 	
 	Add<SimpleHurstWindow>(3);
 	Add<SimpleHurstWindow>(6);

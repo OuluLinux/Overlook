@@ -71,7 +71,7 @@ INITBLOCK {
 	System::Register<VariantDifference>("Variant Difference");
 	System::Register<ScalperSignal>("Scalper Signal");
 	System::Register<EasierScalperSignal>("Easier Scalper Signal");
-	System::Register<AnalyzerViewer>("Analyzer Viewer");
+	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	System::Register<ScalperViewer>("Scalper Viewer");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);

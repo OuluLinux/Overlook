@@ -21,7 +21,7 @@ class ScalperConf : Moveable<ScalperConf> {
 	
 public:
 	Vector<Vector<MatcherItem> > start_list, sust_list;
-	double profit = -DBL_MAX, test_profit = -DBL_MAX;
+	int profit = INT_MIN, test_profit = INT_MIN;
 	
 public:
 	typedef ScalperConf CLASSNAME;

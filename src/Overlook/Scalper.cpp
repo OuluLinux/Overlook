@@ -286,8 +286,8 @@ void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 	}
 	
 	
-	if (count > 0)	sc.profit = profit;
-	else			sc.profit = -100000000;
+	if (count > 0)	sc.profit = profit * 10;
+	else			sc.profit = INT_MIN;
 	
 	sc.test_profit = 0;
 }

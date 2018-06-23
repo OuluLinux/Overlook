@@ -60,7 +60,7 @@ public:
 	void Evolve();
 	void Randomize(ScalperConf& sc);
 	void Evolve(ScalperConf& sc);
-	void Evaluate(ScalperConf& sc);
+	void Evaluate(ScalperConf& sc, bool write_signal);
 	
 	Callback InitCb() {return THISBACK(Init);}
 	Callback StartCb() {return THISBACK(Start);}
@@ -86,7 +86,7 @@ protected:
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
 	Index<int> sym_ids, tf_ids;
-	int sel_sym = -1, sel_cluster = -1;
+	int sel_sym = -1, sel_conf = -1;
 	bool running = false, stopped = true;
 	
 public:

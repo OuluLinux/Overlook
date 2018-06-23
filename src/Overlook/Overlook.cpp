@@ -132,9 +132,9 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
@@ -502,10 +502,10 @@ void Overlook::Data() {
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
-	if (GetMyfxbook().IsVisible())	RefreshMyfxbook();
-	if (alz.IsVisible())			RefreshAnalyzer();
+	//if (GetMyfxbook().IsVisible())	RefreshMyfxbook();
+	//if (alz.IsVisible())			RefreshAnalyzer();
 	if (sclp.IsVisible())			sclp.Data();
-	if (arb.IsVisible())			RefreshArbitrage();
+	//if (arb.IsVisible())			RefreshArbitrage();
 }
 
 void Overlook::RefreshAssist() {

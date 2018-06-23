@@ -5941,6 +5941,64 @@ void AnalyzerViewer::Assist(int cursor, VectorBool& vec) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+ScalperViewer::ScalperViewer() {
+	
+}
+
+void ScalperViewer::Init() {
+	
+}
+
+void ScalperViewer::Start() {
+	System& sys = GetSystem();
+	Scalper& s = GetScalper();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	if (s.sel_sym >= 0 && s.sel_sym < s.symbols.GetCount()) {
+		const ScalperSymbol& as = s.symbols[s.sel_sym];
+		
+		int bars = GetBars();
+		
+		for(int i = 0; i < bars; i++) {
+			SetSafetyLimit(i);
+			
+			if (i < as.signal.GetCount()) {
+				sig.signal.Set(i, as.type);
+				sig.enabled.Set(i, as.signal.Get(i));
+			}
+		}
+	}
+}
+
+void ScalperViewer::Assist(int cursor, VectorBool& vec) {
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ExampleAdvisor::ExampleAdvisor() {
 	
 }

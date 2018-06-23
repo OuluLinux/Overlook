@@ -19,6 +19,14 @@ void ScalperSymbol::Start() {
 	while (ts.Elapsed() < 5000) {
 		Evolve();
 	}
+	
+	if (confs.GetCount()) {
+		Evaluate(confs[0], true);
+		
+		int sig = signal.Top();
+		if (type) sig *= -1;
+		GetSystem().SetSignal(symbol, sig);
+	}
 }
 
 void ScalperSymbol::Evolve() {
@@ -29,21 +37,21 @@ void ScalperSymbol::Evolve() {
 	if (prob < 0.3) {
 		ScalperConf sc;
 		Randomize(sc);
-		Evaluate(sc);
+		Evaluate(sc, false);
 		confs.Add(conf_counter++, sc);
 	}
 	// Evolve locally
 	else if (prob < 0.9) {
 		ScalperConf sc;
 		Evolve(sc);
-		Evaluate(sc);
+		Evaluate(sc, false);
 		confs.Add(conf_counter++, sc);
 	}
 	// Evolve globally
 	else {
 		ScalperConf sc;
 		s->symbols[Random(s->symbols.GetCount())].Evolve(sc);
-		Evaluate(sc);
+		Evaluate(sc, false);
 		confs.Add(conf_counter++, sc);
 	}
 	
@@ -164,7 +172,7 @@ void ScalperSymbol::Evolve(ScalperConf& sc) {
 	
 }
 
-void ScalperSymbol::Evaluate(ScalperConf& sc) {
+void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 	DataBridge& db = *s->dbs.Get(symbol);
 	ConstBuffer& open_buf = db.GetBuffer(0);
 	int bars = open_buf.GetCount();
@@ -191,6 +199,7 @@ void ScalperSymbol::Evaluate(ScalperConf& sc) {
 			ASSERT(!vb.IsEmpty());
 			
 			start_cache.matcher_or.Or(vb);
+			bars = min(vb.GetCount(), bars);
 		}
 		
 		start_cache.matcher_and.And(start_cache.matcher_or);
@@ -216,6 +225,7 @@ void ScalperSymbol::Evaluate(ScalperConf& sc) {
 			ASSERT(!vb.IsEmpty());
 			
 			sust_cache.matcher_or.Or(vb);
+			bars = min(vb.GetCount(), bars);
 		}
 		
 		sust_cache.matcher_and.And(sust_cache.matcher_or);
@@ -226,12 +236,14 @@ void ScalperSymbol::Evaluate(ScalperConf& sc) {
 	start_cache.matcher_and.And(sust_cache.matcher_and);
 	
 	
-	
+	signal.SetCount(bars);
+	signal.Zero();
 	
 	bool enabled = false;
 	double open, profit = 0;
 	int count = 0;
-	for(int i = 100; i < open_buf.GetCount(); i++) {
+	ASSERT(bars > 0);
+	for(int i = 100; i < bars; i++) {
 		if (!enabled && (i % 64) == 0 && *(start_cache.matcher_and.Begin() + (i / 64)) == 0) {
 			i += 63;
 			continue;
@@ -254,6 +266,8 @@ void ScalperSymbol::Evaluate(ScalperConf& sc) {
 			}
 		}
 		
+		if (write_signal)
+			signal.Set(i, enabled);
 	}
 	
 	
@@ -358,6 +372,7 @@ Scalper::~Scalper() {
 }
 
 void Scalper::Process() {
+	System& sys = GetSystem();
 	running = true;
 	stopped = false;
 	
@@ -405,9 +420,11 @@ void Scalper::Process() {
 		}
 		co.Finish();
 		
-		int sec = ts.Elapsed() / 1000;
+		sys.RefreshReal();
+		
+		/*int sec = ts.Elapsed() / 1000;
 		for(int i = sec; i < 10 && IsRunning(); i++)
-			Sleep(1000);
+			Sleep(1000);*/
 		
 		
 		if (save_ts.Elapsed() > 5*60*1000) {
@@ -557,7 +574,7 @@ void ScalperCtrl::Data() {
 			int cursor = conflist.GetCursor();
 			if (cursor >= 0 && cursor < as.confs.GetCount()) {
 				a.sel_sym = symcursor;
-				a.sel_cluster = cursor;
+				a.sel_conf = cursor;
 				
 				const ScalperConf& am = as.confs[cursor];
 				int row = 0;

@@ -9,10 +9,11 @@ namespace Overlook {
 
 void ScalperSymbol::Init() {
 	confs.SetMax(10000);
-	confs.SetNoDuplicates();
+	
 }
 
 void ScalperSymbol::Start() {
+	confs.SetNoDuplicates(false);
 	
 	TimeStop ts;
 	
@@ -391,9 +392,9 @@ void Scalper::Process() {
 	running = true;
 	stopped = false;
 	
+	FillInputBooleans();
 	
 	if (symbols.IsEmpty()) {
-		FillInputBooleans();
 		
 		for(int i = 0; i < sym_ids.GetCount(); i++) {
 			int sym = sym_ids[i];
@@ -424,7 +425,11 @@ void Scalper::Process() {
 	
 	TimeStop save_ts;
 	while (IsRunning()) {
-		FillInputBooleans();
+		Time now = GetUtcTime();
+		int wday = DayOfWeek(now);
+		bool update = wday > 0 && wday < 6;
+		
+		if (update) FillInputBooleans();
 		
 		TimeStop ts;
 		
@@ -435,7 +440,7 @@ void Scalper::Process() {
 		}
 		co.Finish();
 		
-		sys.RefreshReal();
+		if (update) sys.RefreshReal();
 		
 		/*int sec = ts.Elapsed() / 1000;
 		for(int i = sec; i < 10 && IsRunning(); i++)

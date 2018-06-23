@@ -8,7 +8,7 @@ namespace Overlook {
 
 
 void ScalperSymbol::Init() {
-	confs.SetMax(1000);
+	confs.SetMax(10000);
 	confs.SetNoDuplicates();
 }
 
@@ -21,7 +21,13 @@ void ScalperSymbol::Start() {
 	}
 	
 	if (confs.GetCount()) {
-		Evaluate(confs[0], true);
+		signal.Zero();
+		
+		for(int i = 0; i < confs.GetCount(); i++) {
+			ScalperConf& s = confs[i];
+			if (s.profit > 0.0)
+				Evaluate(s, true);
+		}
 		
 		int sig = signal.Top();
 		if (type) sig *= -1;
@@ -41,19 +47,19 @@ void ScalperSymbol::Evolve() {
 		confs.Add(conf_counter++, sc);
 	}
 	// Evolve locally
-	else if (prob < 0.9) {
+	else /*if (prob < 0.9)*/ {
 		ScalperConf sc;
 		Evolve(sc);
 		Evaluate(sc, false);
 		confs.Add(conf_counter++, sc);
 	}
-	// Evolve globally
-	else {
+	// Evolve globally (not thread safe)
+	/*else {
 		ScalperConf sc;
 		s->symbols[Random(s->symbols.GetCount())].Evolve(sc);
 		Evaluate(sc, false);
 		confs.Add(conf_counter++, sc);
-	}
+	}*/
 	
 }
 
@@ -176,7 +182,8 @@ void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 	DataBridge& db = *s->dbs.Get(symbol);
 	ConstBuffer& open_buf = db.GetBuffer(0);
 	int bars = open_buf.GetCount();
-	double spread = db.GetPoint() * 3;
+	double point = db.GetPoint();
+	double spread = point * 3;
 	
 	
 	
@@ -237,11 +244,11 @@ void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 	
 	
 	signal.SetCount(bars);
-	signal.Zero();
 	
 	bool enabled = false;
 	double open, profit = 0;
 	int count = 0;
+	int max_neg = 1, neg_count = 0;
 	ASSERT(bars > 0);
 	for(int i = 100; i < bars; i++) {
 		if (!enabled && (i % 64) == 0 && *(start_cache.matcher_and.Begin() + (i / 64)) == 0) {
@@ -255,18 +262,26 @@ void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 				open = open_buf.Get(i);
 			}
 		} else {
-			bool prev_type = open_buf.Get(i) < open_buf.Get(i-1);
-			if (prev_type != this->type) {
-				double diff = open_buf.Get(i) - open;
-				if (this->type) diff *= -1;
-				diff -= spread;
-				profit += diff;
+			double o0 = open_buf.Get(i);
+			double o1 = open_buf.Get(i-1);
+
+			double diff = o0 - open;
+			if (this->type) diff *= -1;
+			diff -= spread;
+
+			bool prev_type = o0 < o1;
+			if (prev_type != this->type && o0 != o1) {
+				neg_count++;
+			}
+			if (neg_count >= max_neg || diff > 0.0) {
+				profit += diff / point;
 				enabled = false;
+				neg_count = 0;
 				count++;
 			}
 		}
 		
-		if (write_signal)
+		if (write_signal && enabled)
 			signal.Set(i, enabled);
 	}
 	
@@ -314,7 +329,7 @@ Scalper::Scalper() {
 	sym_ids.Add(sys.FindSymbol("EURJPY"));
 	
 	
-	tf_ids.Add(0);
+	tf_ids.Add(1);
 	
 	Add<SimpleHurstWindow>(3);
 	Add<SimpleHurstWindow>(6);

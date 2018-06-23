@@ -432,7 +432,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	Time utc_time = Time(1970,1,1) + time;
 	ASSERT(utc_time.second == 0);
 	int wday = DayOfWeek(utc_time);
-	if (wday == 0 || wday == 6)
+	if (wday == 0 || wday == 6 || (wday == 1 && utc_time.hour < 1))
 		return false;
 	
 	
@@ -460,7 +460,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		t += 60;
 		while (t < utc_time) {
 			int wday = DayOfWeek(t);
-			if (wday > 0 && wday < 6) {
+			if (wday > 0 && wday < 6 && (wday > 1 || t.hour >= 1)) {
 				int time = t.Get() - Time(1970,1,1).Get();
 				
 				int res = shift + 10000;

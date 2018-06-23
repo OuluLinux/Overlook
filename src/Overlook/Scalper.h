@@ -4,7 +4,18 @@
 namespace Overlook {
 
 
-
+template <class T>
+inline void CopyCC(T& dst, const T& src) {
+	dst.SetCount(src.GetCount());
+	for(int i = 0; i < dst.GetCount(); i++) {
+		const auto& src_c = src[i];
+		auto& dst_c = dst[i];
+		dst_c.SetCount(src_c.GetCount());
+		for(int j = 0; j < dst_c.GetCount(); j++) {
+			dst_c[j] = src_c[j];
+		}
+	}
+}
 
 class ScalperConf : Moveable<ScalperConf> {
 	
@@ -17,12 +28,13 @@ public:
 	ScalperConf() {}
 	ScalperConf(const ScalperConf& s) {*this = s;}
 	void operator=(const ScalperConf& s) {
-		start_list <<= s.start_list;
-		sust_list <<= s.sust_list;
+		CopyCC(start_list, s.start_list);
+		CopyCC(sust_list, s.sust_list);
 		profit = s.profit;
+		test_profit = s.test_profit;
 	}
 	
-	void Serialize(Stream& s) {s % start_list % sust_list;}
+	void Serialize(Stream& s) {s % start_list % sust_list % profit % test_profit;}
 	
 	bool operator()(const ScalperConf& a, const ScalperConf& b) const {
 		return a.profit > b.profit;

@@ -5999,6 +5999,67 @@ void ScalperViewer::Assist(int cursor, VectorBool& vec) {
 
 
 
+
+
+const char* PulseIndicator::symlist[10] = {"EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "NZDUSD", "EURCHF", "EURGBP", "EURJPY"};
+
+PulseIndicator::PulseIndicator() {
+	
+}
+
+void PulseIndicator::Init() {
+	
+}
+
+void PulseIndicator::Start() {
+	System& sys = GetSystem();
+	Scalper& s = GetScalper();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	Vector<ConstBuffer*> bufs;
+	bufs.SetCount(symcount);
+	for(int i = 0; i < symcount; i++)
+		bufs[i] = &GetInputBuffer(0, sys.FindSymbol(symlist[i]), GetTf(), 0);
+	
+	int bars = GetBars();
+	for(int i = 0; i < symcount; i++)
+		bars = min(bars, bufs[i]->GetCount());
+	
+	for(int i = max(1, GetCounted()-1); i < bars; i++) {
+		int triggers = 0;
+		int trigger_dir = 0;
+		for(int j = 0; j < symcount; j++) {
+			double o0 = bufs[j]->Get(i);
+			double o1 = bufs[j]->Get(i - 1);
+			if (o0 != o1) {
+				triggers++;
+				trigger_dir += o0 > o1 ? +1 : -1;
+			}
+		}
+		
+		sig.enabled.Set(i, triggers >= min_simultaneous);
+		sig.signal.Set(i, trigger_dir < 0);
+	}
+}
+
+void PulseIndicator::Assist(int cursor, VectorBool& vec) {
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ExampleAdvisor::ExampleAdvisor() {
 	
 }

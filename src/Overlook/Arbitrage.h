@@ -75,7 +75,7 @@ protected:
 	Vector<Symbol> symbols;
 	Vector<String> currencies, real_symbols;
 	String str_out;
-	double min_pips = 0.5;
+	double min_pips = -3;
 	//double pointf[MAX_ALLSYMBOLS];
 	//double min_pipsf[MAX_ALLSYMBOLS];
 	//double bids[MAX_ALLSYMBOLS][MAX_VARIANTSYMBOLS];
@@ -83,6 +83,7 @@ protected:
 	double bids_real[MAX_REALSYMBOLS];
 	double asks_real[MAX_REALSYMBOLS];
 	double position[MAX_REALSYMBOLS];
+	double prev_position[MAX_REALSYMBOLS];
 	//double xposition[MAX_ALLSYMBOLS][MAX_VARIANTPAIRS];
 	double lots = 1;
 	double ALPHA = 0.001;

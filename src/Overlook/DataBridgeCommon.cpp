@@ -189,14 +189,14 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	lock.Enter();
 	
 	// 3 second update interval is enough...
-	if (!forced && since_last_askbid_refresh.Elapsed() < 3000 && cursor > 0) {
+	if (!forced && since_last_askbid_refresh.Elapsed() < 500 && cursor > 0) {
 		lock.Leave();
 		return;
 	}
 		
 	// Open askbid-file
 	String local_askbid_file = ConfigFile("askbid.bin");
-	if (!FileExists(local_askbid_file))
+	if (!FileExists(local_askbid_file) || cursor == 0)
 		DownloadAskBid();
 	FileIn src(local_askbid_file);
 	ASSERTEXC(src.IsOpen() && src.GetSize());

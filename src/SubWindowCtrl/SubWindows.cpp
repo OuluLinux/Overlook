@@ -351,3 +351,20 @@ void SubWindows::OrderTileWindows() {
 		}
 	}
 }
+
+void SubWindows::OrderTileWindowsVert() {
+	int count = wins.GetCount();
+	if (maximize_all && count == 1) return;
+	
+	Size sz(sub_area.GetSize());
+	
+	double y_step = (double)sz.cy / wins.GetCount();
+	
+	maximize_all = false;
+	
+	for(int i = 0; i < wins.GetCount(); i++) {
+		SubWindow& sw = wins[i];
+		sw.SetRect(0, i * y_step, sz.cx, y_step);
+		sw.maximized = false;
+	}
+}

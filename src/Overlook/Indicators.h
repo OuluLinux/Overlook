@@ -1453,6 +1453,47 @@ public:
 
 
 
+
+class PulseIndicator : public Core {
+	int min_simultaneous = 3;
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	PulseIndicator();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Lbl(1)
+			% Arg("Min simultaneous", min_simultaneous, 1);
+	}
+	
+	static const int symcount = 10;
+	static const char* symlist[10];
+	
+	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
+		else if (in_sym == out_sym)
+			return true;
+		
+		System& sys = GetSystem();
+		String sym = sys.GetSymbol(out_sym);
+		for(int i = 0; i < symcount; i++) {
+			if (sym == symlist[i])
+				return true;
+		}
+		return false;
+	}
+};
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {

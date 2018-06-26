@@ -8,7 +8,7 @@ namespace Overlook {
 
 
 void ScalperSymbol::Init() {
-	confs.SetMax(10000);
+	confs.SetMax(100);
 	
 }
 
@@ -64,14 +64,19 @@ void ScalperSymbol::Evolve() {
 	
 }
 
+const int rand_start_size = 20;
+const int rand_sust_size = 20;
+const int rand_start_or_size = 10;
+const int rand_sust_or_size = 10;
+
 void ScalperSymbol::Randomize(ScalperConf& sc) {
-	int start_size = 1 + Random(9);
-	int sust_size = 1 + Random(9);
+	int start_size = 1 + Random(rand_start_size);
+	int sust_size = 1 + Random(rand_sust_size);
 	
 	sc.start_list.SetCount(start_size);
 	for(int i = 0; i < sc.start_list.GetCount(); i++) {
 		Vector<MatcherItem>& v = sc.start_list[i];
-		int or_size = 5 + Random(10);
+		int or_size = 5 + Random(rand_start_or_size);
 		v.SetCount(or_size);
 		for(int j = 0; j < v.GetCount(); j++) {
 			MatcherItem& mi = v[j];
@@ -85,7 +90,7 @@ void ScalperSymbol::Randomize(ScalperConf& sc) {
 	sc.sust_list.SetCount(start_size);
 	for(int i = 0; i < sc.sust_list.GetCount(); i++) {
 		Vector<MatcherItem>& v = sc.sust_list[i];
-		int or_size = 5 + Random(10);
+		int or_size = 5 + Random(rand_sust_or_size);
 		v.SetCount(or_size);
 		for(int j = 0; j < v.GetCount(); j++) {
 			MatcherItem& mi = v[j];
@@ -100,8 +105,8 @@ void ScalperSymbol::Randomize(ScalperConf& sc) {
 void ScalperSymbol::Evolve(ScalperConf& sc) {
 	if (confs.GetCount() < 4) {Randomize(sc); return;}
 	
-	int start_size = 1 + Random(9);
-	int sust_size = 1 + Random(9);
+	int start_size = 1 + Random(rand_start_size);
+	int sust_size = 1 + Random(rand_sust_size);
 	
 	sc.start_list.SetCount(start_size);
 	sc.sust_list.SetCount(start_size);
@@ -136,7 +141,7 @@ void ScalperSymbol::Evolve(ScalperConf& sc) {
 				src_n = (src_n + 1) % src.GetCount();
 			}
 		} else {
-			int or_size = 5 + Random(10);
+			int or_size = 5 + Random(rand_start_or_size);
 			dst.SetCount(or_size);
 			for(int j = 0; j < dst.GetCount(); j++) {
 				MatcherItem& mi = dst[j];
@@ -169,7 +174,7 @@ void ScalperSymbol::Evolve(ScalperConf& sc) {
 				src_n = (src_n + 1) % src.GetCount();
 			}
 		} else {
-			int or_size = 5 + Random(10);
+			int or_size = 5 + Random(rand_sust_or_size);
 			dst.SetCount(or_size);
 			for(int j = 0; j < dst.GetCount(); j++) {
 				MatcherItem& mi = dst[j];
@@ -257,7 +262,7 @@ void ScalperSymbol::Evaluate(ScalperConf& sc, bool write_signal) {
 	bool enabled = false;
 	double open, profit = 0;
 	int count = 0;
-	int max_neg = 1, neg_count = 0;
+	int max_neg = 3, neg_count = 0;
 	ASSERT(bars > 0);
 	for(int i = 100; i < bars; i++) {
 		if (!enabled && (i % 64) == 0 && *(start_cache.matcher_and.Begin() + (i / 64)) == 0) {
@@ -338,7 +343,7 @@ Scalper::Scalper() {
 	sym_ids.Add(sys.FindSymbol("EURJPY"));
 	
 	
-	tf_ids.Add(0);
+	tf_ids.Add(1);
 	
 	Add<SimpleHurstWindow>(3);
 	Add<SimpleHurstWindow>(6);

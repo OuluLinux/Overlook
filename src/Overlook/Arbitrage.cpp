@@ -41,7 +41,7 @@ void ArbitrageCtrl::Data() {
 				
 				double diff1 = v1.bid - v2.ask;
 				double diff2 = v2.bid - v1.ask;
-				if (diff1 > 0) {
+				if (diff1 - s.min_pips > 0) {
 					arblist.Set(row, 0, a.SymbolToStr(i, 0));
 					arblist.Set(row, 1, a.SymbolToStr(i, variant1_id));
 					arblist.Set(row, 2, v1.bid);
@@ -51,7 +51,7 @@ void ArbitrageCtrl::Data() {
 					arblist.Set(row, 6, pair.arbitrage_count);
 					row++;
 				}
-				if (diff2 > 0) {
+				if (diff2 - s.min_pips > 0) {
 					arblist.Set(row, 0, a.SymbolToStr(i, 0));
 					arblist.Set(row, 1, a.SymbolToStr(i, variant2_id));
 					arblist.Set(row, 2, v2.bid);
@@ -69,7 +69,7 @@ void ArbitrageCtrl::Data() {
 	
 	for(int i = 0; i < a.real_sym_count; i++) {
 		siglist.Set(i, 0, a.real_symbols[i]);
-		siglist.Set(i, 1, a.position[i]);
+		siglist.Set(i, 1, a.prev_position[i]);
 	}
 }
 	
@@ -144,7 +144,7 @@ void Arbitrage::Process() {
 		
 		TradeArbitrage();
 		
-		for(int i = 0; i < 10*60*60 && running; i++)
+		for(int i = 0; i < 10*1 && running; i++)
 			Sleep(100);
 	}
 	
@@ -167,14 +167,19 @@ void Arbitrage::GetRealBidAsk() {
 	const Vector<Price>& prices = mt.GetAskBid();
 	
 	for (int i = 0; i < prices.GetCount(); i++) {
+		const Price& p = prices[i];
 		
+		#if 1
+		bids_real[i] = p.bid;
+		asks_real[i] = p.ask;
+		#else
 		System& sys = GetSystem();
 		Vector<Ptr<CoreItem> > work_queue;
 		Vector<FactoryDeclaration> indi_ids;
 		Index<int> tf_ids, sym_ids;
 		FactoryDeclaration decl;
 		decl.factory = System::Find<MovingAverage>();
-		decl.AddArg(240);
+		decl.AddArg(15);
 		indi_ids.Add(decl);
 		tf_ids.Add(0);
 		sym_ids.Add(i);
@@ -190,9 +195,9 @@ void Arbitrage::GetRealBidAsk() {
 		double diff = ma0 - ma1;
 		double change = diff * 1440;
 		
-		const Price& p = prices[i];
 		bids_real[i] = p.bid + change;
 		asks_real[i] = p.ask + change;
+		#endif
 	}
 }
 
@@ -404,6 +409,9 @@ void Arbitrage::TradeArbitrage() {
 	}
 	
 	RefreshPositions();
+	
+	for(int i = 0; i < MAX_REALSYMBOLS; i++)
+		prev_position[i] = position[i];
 }
 
 void Arbitrage::OpenArbitragePosition(int sym_id, int variant1_id, int variant2_id, double vol) {
@@ -505,7 +513,7 @@ void Arbitrage::RefreshPositions() {
 		if (position[i] > ALPHA) {
 			//vol = position[i];
 			
-			GetSystem().SetSignal(i, position[i] / 0.01 / 10000 * SIGNALSCALE);
+			//GetSystem().SetSignal(i, position[i] / 0.01 / 10000 * SIGNALSCALE);
 			/*if (!MyOrderSend(REALSymbols[i], OP_BUY, Vol, SlipPage, MaxLot, Lock))
 				Print("Vol = ", Vol);
 				
@@ -517,7 +525,7 @@ void Arbitrage::RefreshPositions() {
 		else if (position[i] < -ALPHA) {
 			//vol = -position[i];
 			
-			GetSystem().SetSignal(i, position[i] / 0.01 / 10000 * SIGNALSCALE);
+			//GetSystem().SetSignal(i, position[i] / 0.01 / 10000 * SIGNALSCALE);
 			/*if (!MyOrderSend(REALSymbols[i], OP_SELL, Vol, SlipPage, MaxLot, Lock))
 				Print("Vol = ", Vol);
 				

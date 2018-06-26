@@ -70,7 +70,10 @@ file
 	Analyzer.h,
 	Analyzer.cpp,
 	Scalper.h,
-	Scalper.cpp;
+	Scalper.cpp,
+	Pulse.h,
+	Pulse.cpp,
+	Journal.qtf;
 
 mainconfig
 	"Working" = "GUI MT X11",

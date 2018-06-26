@@ -154,8 +154,16 @@ void System::FirstStart() {
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
+		#ifndef flagNOSECONDS
+		AddPeriod("S1", 1);
+		AddPeriod("S15", 15);
+		for(int i = 0; i < mt.GetTimeframeCount(); i++)
+			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i) * 60);
+		#else
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)
 			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i));
+		#endif
+		
 		
 		
 		int sym_count = symbols.GetCount();

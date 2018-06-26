@@ -119,6 +119,7 @@ void SubWindowDecoration::Paint(Draw& draw) {
 void SubWindowDecoration::LeftDown(Point p, dword keyflags) {
 	left_down = true;
 	left_down_pt = p;
+	SetCapture();
 	
 	WhenFocus();
 }
@@ -127,14 +128,9 @@ void SubWindowDecoration::LeftDouble(Point p, dword keyflags) {
 	WhenMaximize();
 }
 
-void SubWindowDecoration::LeftDrag(Point p, dword keyflags) {
-	if (left_down) {
-		WhenWindowMove(p - left_down_pt);
-	}
-}
-
 void SubWindowDecoration::LeftUp(Point p, dword keyflags) {
 	left_down = false;
+	ReleaseCapture();
 	
 }
 

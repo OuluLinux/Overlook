@@ -131,10 +131,11 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(pls, "Pulse").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
-	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
@@ -149,6 +150,7 @@ void Overlook::DockInit() {
 	trade			.WhenVisible << THISBACK(Data);
 	alz				.WhenVisible << THISBACK(Data);
 	sclp			.WhenVisible << THISBACK(Data);
+	pls				.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -219,6 +221,7 @@ void Overlook::ToolMenu(Bar& bar) {
 
 void Overlook::WindowMenu(Bar& bar) {
 	bar.Add("Tile Windows", THISBACK(TileWindow)).Key(K_ALT|K_R);
+	bar.Add("Tile Windows vertically", THISBACK(TileWindowVert)).Key(K_ALT|K_R);
 	bar.Separator();
 	bar.Add("Close Window", THISBACK(CloseWindow)).Key(K_CTRL|K_F4);
 }
@@ -238,11 +241,11 @@ void Overlook::SubBar(Bar& bar) {
 	bar.Add(keep_at_end, Size(30, 30));
 	bar.Separator();
 	
-	MetaTrader& mt = GetMetaTrader();
+	System& sys = GetSystem();
 	if (tf_buttons.IsEmpty()) {
-		for(int i = 0; i < mt.GetTimeframeCount(); i++) {
+		for(int i = 0; i < sys.GetPeriodCount(); i++) {
 			ButtonOption& bo = tf_buttons.Add();
-			bo.SetLabel(mt.GetTimeframeString(i));
+			bo.SetLabel(sys.GetPeriodString(i));
 			bo <<= THISBACK1(SetTimeframe, i);
 		}
 		tf_buttons[0].Set(true);
@@ -348,6 +351,10 @@ void Overlook::Options() {
 
 void Overlook::TileWindow() {
 	cman.OrderTileWindows();
+}
+
+void Overlook::TileWindowVert() {
+	cman.OrderTileWindowsVert();
 }
 
 void Overlook::CloseWindow() {
@@ -464,7 +471,12 @@ void Overlook::DeepRefreshData() {
 }
 
 void Overlook::RefreshData() {
-	if (mt_refresh.Elapsed() >= 10*1000) {
+	#ifndef flagNOSECOND
+	if (mt_refresh.Elapsed() >= 1000)
+	#else
+	if (mt_refresh.Elapsed() >= 10*1000)
+	#endif
+	{
 		Thread::Start(THISBACK(DeepRefresh));
 	}
 	
@@ -504,8 +516,9 @@ void Overlook::Data() {
 	if (debuglist.IsVisible())		RefreshDebug();
 	//if (GetMyfxbook().IsVisible())	RefreshMyfxbook();
 	//if (alz.IsVisible())			RefreshAnalyzer();
-	if (sclp.IsVisible())			sclp.Data();
-	//if (arb.IsVisible())			RefreshArbitrage();
+	//if (sclp.IsVisible())			sclp.Data();
+	if (pls.IsVisible())			pls.Data();
+	if (arb.IsVisible())			RefreshArbitrage();
 }
 
 void Overlook::RefreshAssist() {

@@ -27,7 +27,6 @@ public:
 	
 	virtual void LeftDown(Point p, dword keyflags);
 	virtual void LeftDouble(Point p, dword keyflags);
-	virtual void LeftDrag(Point p, dword keyflags);
 	virtual void LeftUp(Point p, dword keyflags);
 	virtual void MouseMove(Point p, dword keyflags);
 	virtual void RightDown(Point p, dword keyflags);
@@ -196,6 +195,7 @@ public:
 	
 	void FocusSubWindow(SubWindowCtrl* ctrl);
 	void OrderTileWindows();
+	void OrderTileWindowsVert();
 	void CloseAll();
 	
 	virtual bool Key(dword key, int count);

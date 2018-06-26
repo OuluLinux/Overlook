@@ -37,6 +37,7 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
+#include "Pulse.h"
 
 
 namespace Overlook {
@@ -90,6 +91,7 @@ protected:
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	CtrlCallbacks<AnalyzerCtrl> alz;
 	CtrlCallbacks<ScalperCtrl> sclp;
+	CtrlCallbacks<PulseCtrl> pls;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -145,6 +147,7 @@ public:
 	void HistoryCenter();
 	void Options();
 	void TileWindow();
+	void TileWindowVert();
 	void CloseWindow();
 	void HelpTopics();
 	void About();

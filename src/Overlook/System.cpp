@@ -103,14 +103,24 @@ void System::FirstStart() {
 				String b = s.name.Mid(3,3);
 				currencies.FindAdd(a);
 				currencies.FindAdd(b);
+				currency_syms.GetAdd(a).Add(i);
+				currency_syms.GetAdd(b).Add(i);
+				currency_sym_dirs.GetAdd(a).Add(i);
+				currency_sym_dirs.GetAdd(b).Add(-i-1);
 			}
 			//ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
+		}
+		
+		for(int i = 0; i < currencies.GetCount(); i++) {
+			int id = symbols.GetCount();
+			AddSymbol(currencies[i]);
+			
 		}
 		
 		
 		// Find variants
 		variants.SetCount(symbols.GetCount());
-		for(int i = 0; i < symbols.GetCount(); i++) {
+		for(int i = 0; i < mt.GetSymbolCount(); i++) {
 			const Symbol& s = mt.GetSymbol(i);
 			if (!s.IsForex()) continue;
 			
@@ -185,7 +195,10 @@ void System::FirstStart() {
 	spread_points.SetCount(symbols.GetCount(), 0);
 		
 	for(int i = 0; i < symbols.GetCount(); i++) {
-		spread_points[i] = mt.GetSymbol(i).point * 4;
+		if (i < mt.GetSymbolCount())
+			spread_points[i] = mt.GetSymbol(i).point * 3;
+		else
+			spread_points[i] = 0.0003;
 	}
 	
 }

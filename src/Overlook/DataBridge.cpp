@@ -45,14 +45,14 @@ void DataBridge::Start() {
 		
 	}
 	
-	int sym_count = common.GetSymbolCount();
+	int sym_count = mt.GetSymbolCount();
 	int cur_count = mt.GetCurrencyCount();
 	int sym = GetSymbol();
 	int cur = sym - sym_count;
 	int mt_period = GetPeriod();
 	
 	// Regular symbols
-	if (mt_period > 1 && sym < sym_count) {
+	if (mt_period > 1) {
 		RefreshFromFasterTime();
 		// NOTE: SyncData has broken other refresh functions for these periods. Disable sync to
 		// use them.
@@ -67,6 +67,9 @@ void DataBridge::Start() {
 		}
 		#endif
 		RefreshFromAskBid(init_round);
+	}
+	else {
+		RefreshCurrency();
 	}
 }
 
@@ -460,7 +463,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		#ifdef flagNOSECONDS
 		t = Time(2018,1,1) - 60;
 		#else
-		t = Time(2018,5,1) - 60;
+		t = Time(2018,6,11) - 60;
 		#endif
 	} else {
 		if (time_buf.IsEmpty())
@@ -707,6 +710,74 @@ void DataBridge::RefreshFromFasterChange() {
 	}
 	
 	ForceSetCounted(open_buf.GetCount());
+}
+
+void DataBridge::RefreshCurrency() {
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	int shift = open_buf.GetCount() - 1;
+	
+	typedef Tuple<int, bool, ConstBuffer*, double> Src;
+	Vector<Src> src_open;
+	const Index<int>& syms = sys.currency_sym_dirs.Get(sys.GetSymbol(GetSymbol()));
+	src_open.SetCount(syms.GetCount());
+	int bars = INT_MAX;
+	for(int i = 0; i < syms.GetCount(); i++) {
+		Src& src = src_open[i];
+		src.a = syms[i]; // symbol
+		if (src.a >= 0) {
+			src.b = false; // dir (0 pos, 1 neg)
+		} else {
+			src.b = true;
+			src.a = -src.a-1;
+		}
+		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
+		bars = min(bars, src.c->GetCount());
+		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
+	}
+	if (bars == INT_MAX) return;
+	
+	point = 0.0001;
+	
+	int counted = open_buf.GetCount();
+	open_buf	.SetCount(bars);
+	low_buf		.SetCount(bars);
+	high_buf	.SetCount(bars);
+	volume_buf	.SetCount(bars);
+	time_buf	.SetCount(bars);
+	ConstBuffer& src_time_buf = GetInputBuffer(0, src_open[0].a, GetTf(), 4);
+	for(int i = counted; i < bars; i++) {
+		
+		time_buf.Set(i, src_time_buf.Get(i));
+		
+		int pip_sum = 0;
+		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
+			Src& src = src_open[j];
+			ConstBuffer& open = *src.c;
+			double o0 = open.Get(i);
+			double o1 = open.Get(i-1);
+			int pips = (o0 - o1) / src.d;
+			if (src.b == false)
+				pip_sum += pips;
+			else
+				pip_sum -= pips;
+		}
+		
+		double d = i == 0 ? 1.0 : open_buf.Get(i-1);
+		d += pip_sum * point;
+		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
+		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
+		open_buf.Set(i, d);
+		low_buf.Set(i, d);
+		high_buf.Set(i, d);
+	}
+	
 }
 
 void DataBridge::Assist(int cursor, VectorBool& vec) {

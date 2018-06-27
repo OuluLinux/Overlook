@@ -392,7 +392,7 @@ Scalper::Scalper() {
 	
 	LoadThis();
 	
-	Thread::Start(THISBACK(Process));
+	//Thread::Start(THISBACK(Process));
 }
 
 Scalper::~Scalper() {

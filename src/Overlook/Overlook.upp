@@ -8,7 +8,8 @@ uses
 	Docking,
 	SubWindowCtrl,
 	plugin/tidy,
-	Core/SSL;
+	Core/SSL,
+	ConvNet;
 
 file
 	Copying,

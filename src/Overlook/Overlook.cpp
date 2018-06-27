@@ -131,7 +131,7 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(pls, "Pulse").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(pls, "Pulse").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
@@ -514,11 +514,11 @@ void Overlook::Data() {
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
-	//if (GetMyfxbook().IsVisible())	RefreshMyfxbook();
-	//if (alz.IsVisible())			RefreshAnalyzer();
+	//if (GetMyfxbook().IsVisible())	GetMyfxbook().Data();
+	//if (alz.IsVisible())			alz.Data();
 	//if (sclp.IsVisible())			sclp.Data();
-	if (pls.IsVisible())			pls.Data();
-	if (arb.IsVisible())			RefreshArbitrage();
+	//if (pls.IsVisible())			pls.Data();
+	if (arb.IsVisible())			arb.Data();
 }
 
 void Overlook::RefreshAssist() {
@@ -948,18 +948,6 @@ void Overlook::RefreshDebug() {
 	}
 }
 
-void Overlook::RefreshMyfxbook() {
-	GetMyfxbook().Data();
-}
-
-void Overlook::RefreshArbitrage() {
-	arb.Data();
-}
-
-void Overlook::RefreshAnalyzer() {
-	alz.Data();
-}
-
 void Overlook::ToggleRightOffset() {
 	bool b = right_offset.Get();
 	Chart* c = cman.GetVisibleChart();
@@ -998,7 +986,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 	Profile profile;
 	
 	int tf = 5;
-	int id = System::Find<RapierishAdvisor>();
+	int id = System::Find<ExampleAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;

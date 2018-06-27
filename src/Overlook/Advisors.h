@@ -3,50 +3,55 @@
 
 namespace Overlook {
 
-/*
-	MyFxBook module shows, that top performing account there is:
-		RAPIER by algo.land https://www.myfxbook.com/members/Megabot/rapier-by-algoland/1657111
-		(2h-2d orders, when only signal is used with minimum lots)
-	It works by expecting the price to return to the channel break price.
-	
-	This is scalper version from it. It expects price to return to the channel break price,
-	but only when it is very close to it already.
-*/
-
-class RapierishAdvisor : public Core {
-	
-	struct Setting : Moveable<Setting> {
-		int a, b, c, d, e;
-		
-		void Serialize(Stream& s) {s % a % b % c % d % e;}
-	};
-	
+class DqnAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {
+		TimeCallback tc;
+		typedef TrainingCtrl CLASSNAME;
+		TrainingCtrl() {tc.Set(1000/60, THISBACK(Refresh0));}
+		void Refresh0() {if (IsVisible()) Refresh(); tc.Set(1000/60, THISBACK(Refresh0));}
 		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
 	};
 	
-	static const int sign_max = 20;
-	static const int input_size = sign_max * 2;
+	static const int sym_count = 4;
+	
+	
+	static const int have_othersyms = 0;
+	static const int do_test = 1;
+	static const int acts_per_step = 4;
+	
+	static const int window_count = 2;
+	static const int level_side = 10;
+	static const int level_count = 1 + level_side*2;
+	static const int input_length = 3*level_count*window_count;
+	static const int input_size = 5 + (input_length * (1 + (have_othersyms*(sym_count-1))));
+	static const int output_size = 3;
+	
+	enum {ACTION_UP, ACTION_DOWN, ACTION_IDLE};
 	
 	// Persistent
+	ConvNet::DQNAgent dqn;
 	Vector<double> training_pts;
 	Vector<int> cursors;
-	Setting best_setting;
 	double total = 0;
+	double reward_sum = 0;
+	double state_speed = 0.0, state_est, state_orderopen;
 	int round = 0;
 	int prev_counted = 0;
+	bool state_orderisopen, state_ordertype;
 	
 	
 	// Temporary
-	Vector<Setting> test_settings;
+	TimeStop save_elapsed;
+	Vector<double> tmp_mat;
+	Vector<int> level_dist, level_len, level_dir;
 	double point = 0.0001;
 	int max_rounds = 0;
+	int pos = 0;
 	bool once = true;
-	bool do_test = false;
 	
-	
+	void LoadInput(int pos);
 protected:
 	virtual void Start();
 	
@@ -55,59 +60,53 @@ protected:
 	bool TrainingEnd();
 	bool TrainingInspect();
 	void RefreshAll();
-	double TestSetting(Setting& setting, bool write_signal);
+	void DumpTest();
+	void ResetState(int pos);
 	
 public:
-	typedef RapierishAdvisor CLASSNAME;
-	RapierishAdvisor();
+	typedef DqnAdvisor CLASSNAME;
+	DqnAdvisor();
+	~DqnAdvisor() {StoreCache();}
 	
 	virtual void Init();
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(1, 1)
-			% Out(0, 0)
+			% Lbl(1)
+			% Mem(dqn)
 			% Mem(training_pts)
 			% Mem(cursors)
-			% Mem(best_setting)
 			% Mem(total)
+			% Mem(reward_sum)
+			% Mem(state_speed)
+			% Mem(state_est)
+			% Mem(state_orderopen)
 			% Mem(round)
-			% Mem(prev_counted);
+			% Mem(prev_counted)
+			% Mem(state_orderisopen)
+			% Mem(state_ordertype)
+			;
 	}
 	
-};
-
-
-
-
-class MultiTfAdvisor : public Core {
 	
-protected:
-	virtual void Start();
-	
-public:
-	typedef MultiTfAdvisor CLASSNAME;
-	MultiTfAdvisor();
-	
-	virtual void Init();
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% In<RapierishAdvisor>(&Filter0)
-			% Out(1, 1)
-			% Out(0, 0);
-	}
-	
-	static bool Filter0(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1) {
-			int period = GetSystem().GetPeriod(out_tf);
-			return /*period == 60 || period == 240 ||*/ period == 1;
-		}
+	static bool Filter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (in_sym == -1)
+			return in_tf == out_tf;
 		else {
-			return in_sym == out_sym;
+			if (in_sym == out_sym)
+				return true;
+			
+			if (!have_othersyms)
+				return false;
+			else {
+				String sym = GetSystem().GetSymbol(out_sym);
+				return
+					sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDJPY";
+			}
 		}
 	}
 };
+
 
 
 

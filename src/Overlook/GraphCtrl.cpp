@@ -81,6 +81,12 @@ void GraphCtrl::GetDataRange(Core& cont, int buffer) {
 		if (get_lo && value  < lo)
 			lo = value;
     }
+    
+    DataBridge* db = dynamic_cast<DataBridge*>(&cont);
+    if (db) {
+        hi += db->GetPoint();
+        lo -= db->GetPoint();
+    }
 }
 
 void GraphCtrl::Paint(Draw& draw) {
@@ -147,6 +153,9 @@ void GraphCtrl::Paint(Draw& draw) {
 		Core& cont = *cont_;
 		// cont.Refresh();
 		
+		if (cont.IsHeatmap())
+			PaintHeatmap(w, cont);
+		
 		if (cont.GetOutputCount() == 0)
 			continue;
 		
@@ -160,6 +169,7 @@ void GraphCtrl::Paint(Draw& draw) {
 				GetDataRange(cont, j);
 			}
 		}
+		
 	}
 	
 	DrawGrid(w, false);
@@ -313,6 +323,44 @@ Rect GraphCtrl::GetGraphCtrlRect() {
     
     return r;
 }
+
+void GraphCtrl::PaintHeatmap(Draw& W, Core& values) {
+	
+    Rect r(GetGraphCtrlRect());
+    double diff = hi - lo;
+    int h = 10;
+    double ystep = diff * h / r.Height();
+    int hcount = diff / ystep;
+    
+	c = values.GetBars();
+    
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O, H, L, C;
+        pos = c - (count + shift - i);
+        if (pos >= c || pos < 0) continue;
+        
+        int x = r.left + i * div;
+        
+        for(int j = 0; j < hcount; j++) {
+            double in = lo + diff - j * ystep;
+            double d = values.GetHeatmapValue(pos, in);
+            
+			int y = r.top + j * h;
+			
+			//Color clr = (i + j) % 2 ? GrayColor(128) : GrayColor(128+64);
+			Color clr;
+			if (d > 0)
+				clr = Blend(White, Color(255, 199, 199), d * 255);
+			else
+				clr = Blend(White, Color(199, 199, 255), -d * 255);
+			W.DrawRect(x, y, div, h, clr);
+        }
+	}
+    
+}
+
+
 
 void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	DrawGrid(W, true);

@@ -83,6 +83,7 @@ protected:
 	void DrawLines(Draw& d, Core& cont);
 	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
 	void DrawLabels(Draw& d, Core& cont);
+	void PaintHeatmap(Draw& d, Core& cont);
 	Rect GetGraphCtrlRect();
 	
 	

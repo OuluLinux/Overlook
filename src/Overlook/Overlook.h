@@ -5,6 +5,7 @@
 #include <CtrlLib/CtrlLib.h>
 #include <Docking/Docking.h>
 #include <plugin/libmt/libmt.h>
+#include <ConvNet/ConvNet.h>
 
 using namespace Upp;
 
@@ -171,9 +172,6 @@ public:
 	void RefreshTradesHistory();
 	void RefreshJobs();
 	void RefreshDebug();
-	void RefreshMyfxbook();
-	void RefreshArbitrage();
-	void RefreshAnalyzer();
 	void MenuNewOrder();
 	void MenuCloseOrder();
 	void MenuModifyOrder();

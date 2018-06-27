@@ -285,6 +285,7 @@ protected:
 	
 	
 	// Temporary
+	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs;
 	Index<String>				symbols, allowed_symbols, currencies;
 	Vector<int>					signals;
 	Index<int>					periods;

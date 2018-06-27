@@ -907,7 +907,7 @@ typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& a
 
 
 void DrawVectorPoints(Draw& d, Size sz, const Vector<double>& pts);
-void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache);
+void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache, int max_count=0);
 
 
 

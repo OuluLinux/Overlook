@@ -5744,12 +5744,13 @@ void ScalperSignal::Start() {
 	if (counted) counted--;
 	else counted++;
 	
-	int cost_level			= 2;
+	int cost_level			= 1;
 	DataBridge* db			= dynamic_cast<DataBridge*>(GetInputCore(0, GetSymbol(), GetTf()));
 	double point			= db->GetPoint();
 	double spread			= max(db->GetSpread(), 3 * point);
 	double cost				= spread + point * cost_level;
 	ASSERT(spread > 0.0);
+	int max_opposite = 2;
 	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -5760,12 +5761,17 @@ void ScalperSignal::Start() {
 		
 		int start = i;
 		double start_price = o0;
+		int opposite_count = 0;
 		for(int j = i-1; j >= 1; j--) {
 			double on0 = open_buf.GetUnsafe(j+1);
 			double on1 = open_buf.GetUnsafe(j);
 			bool nlabel = on0 < on1;
 			
-			if (nlabel != label && on0 != on1) break;
+			if (nlabel != label && on0 != on1) {
+				opposite_count++;
+				if (opposite_count >= max_opposite)
+					break;
+			}
 			
 			start_price = on1;
 			start = j;
@@ -6050,6 +6056,60 @@ void PulseIndicator::Assist(int cursor, VectorBool& vec) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+LevelHeatmap::LevelHeatmap() {
+	
+}
+
+void LevelHeatmap::Init() {
+	SetHeatmap();
+}
+
+void LevelHeatmap::Start() {
+	/*System& sys = GetSystem();
+	Scalper& s = GetScalper();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	if (s.sel_sym >= 0 && s.sel_sym < s.symbols.GetCount()) {
+		const ScalperSymbol& as = s.symbols[s.sel_sym];
+		
+		int bars = GetBars();
+		
+		for(int i = 0; i < bars; i++) {
+			SetSafetyLimit(i);
+			
+			if (i < as.signal.GetCount()) {
+				sig.signal.Set(i, as.type);
+				sig.enabled.Set(i, as.signal.Get(i));
+			}
+		}
+	}*/
+}
+
+double LevelHeatmap::GetHeatmapValue(int i, double price) {
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double point = dynamic_cast<DataBridge&>(*GetInputCore(0)).GetPoint();
+	double o0 = open_buf.Get(i);
+	double diff = price - o0;
+	return min(1.0, max(-1.0, diff / point / 4));
+}
+
+void LevelHeatmap::Assist(int cursor, VectorBool& vec) {
+	
+}
 
 
 

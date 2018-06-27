@@ -312,7 +312,7 @@ void DrawVectorPoints(Draw& id, Size sz, const Vector<double>& data) {
 	}
 }
 
-void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline) {
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count) {
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;
@@ -320,6 +320,8 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 	
 	int max_steps = 0;
 	int count = data.GetCount();
+	if (max_count > 0)
+		count = Upp::min(count, max_count);
 	for(int j = 0; j < count; j++) {
 		double d = data[j];
 		if (d > max) max = d;
@@ -334,7 +336,6 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
-		int count = data.GetCount();
 		if (count >= 2) {
 			polyline.SetCount(0);
 			for(int j = 0; j < count; j++) {

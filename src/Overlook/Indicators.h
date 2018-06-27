@@ -1351,8 +1351,8 @@ public:
 			% Lbl(1);
 	}
 	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
 			return in_tf == out_tf;
 		else if (in_sym == out_sym)
 			return true;
@@ -1476,8 +1476,8 @@ public:
 	static const int symcount = 10;
 	static const char* symlist[10];
 	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
 			return in_tf == out_tf;
 		else if (in_sym == out_sym)
 			return true;
@@ -1491,6 +1491,54 @@ public:
 		return false;
 	}
 };
+
+
+
+
+class SimpleHeatmap : public Core {
+	
+protected:
+	virtual void Start() {}
+	
+public:
+	
+	virtual void Init() {SetHeatmap();}
+	virtual bool IsHeatmap() {return true;}
+	virtual double GetHeatmapValue(int i, double price) {
+		ConstBuffer& open_buf = GetInputBuffer(0, 0);
+		double point = dynamic_cast<DataBridge&>(*GetInputCore(0)).GetPoint();
+		double o0 = open_buf.Get(i);
+		double diff = price - o0;
+		return min(1.0, max(-1.0, diff / point / 4));
+	}
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>();
+	}
+};
+
+
+
+class LevelHeatmap : public Core {
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	LevelHeatmap();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	virtual bool IsHeatmap() {return true;}
+	virtual double GetHeatmapValue(int i, double price);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>();
+	}
+};
+
+
 
 
 
@@ -1533,6 +1581,8 @@ public:
 			% Mem(prev_counted);
 	}
 };
+
+
 
 
 }

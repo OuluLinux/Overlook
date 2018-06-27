@@ -25,17 +25,17 @@ struct DataLevel : public Moveable<DataLevel> {
 };
 
 // Class for registering input and output types of values of classes
-typedef bool (*FilterFunction)(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf);
+typedef bool (*FilterFunction)(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf);
 
-inline bool SymTfFilter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-	if (in_sym == -1)
+inline bool SymTfFilter(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+	if (match_tf)
 		return in_tf == out_tf;
 	else
 		return in_sym == out_sym;
 }
 
-inline bool AnyTf(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-	if (in_sym == -1)
+inline bool AnyTf(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+	if (match_tf)
 		return true;
 	else
 		return in_sym == out_sym;
@@ -289,6 +289,7 @@ protected:
 	bool has_maximum, has_minimum;
 	bool skip_setcount;
 	bool skip_allocate;
+	bool has_heatmap = false;
 	
 	Core();
 	
@@ -301,6 +302,7 @@ public:
 	virtual void Deinit() {}
 	virtual void Start() {}
 	virtual void IO(ValueRegister& reg) = 0;
+	virtual double GetHeatmapValue(int i, double price) {return 0;}
 	
 	void InitAll();
 	void AllowJobs();
@@ -333,6 +335,7 @@ public:
 	int GetPeriod() const;
 	int GetVisibleCount() const {return outputs[0].visible;}
 	int GetFutureBars() const {return future_bars;}
+	bool IsHeatmap() {return has_heatmap;}
 	inline ConstBuffer& GetInputBuffer(int input, int buffer) const {return CoreIO::GetInputBuffer(input, GetSymbol(), GetTimeframe(), buffer);}
 	inline ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const {return CoreIO::GetInputBuffer(input, sym, tf, buffer);}
 	inline ConstLabelSignal& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
@@ -368,6 +371,7 @@ public:
 	void SetJobCount(int i) {jobs.SetCount(i);}
 	void EnterJob(Job* job, JobThread* thrd) {current_job = job; current_thrd = thrd;}
 	void LeaveJob() {current_job = NULL; current_thrd = NULL;}
+	void SetHeatmap(bool b=true) {has_heatmap=b;}
 	
 	// Visible main functions
 	void Refresh();

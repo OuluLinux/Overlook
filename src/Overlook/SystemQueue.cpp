@@ -154,7 +154,7 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 		
 		// If equal timeframe is accepted as input
 		for(int i = 0; i < tf_count; i++) {
-			if (fn(this, -1, tf, -1, i)) {
+			if (fn(this, true, sym_ids[0], tf, -1, i)) {
 				sub_tf_ids.Add(i);
 			}
 		}
@@ -169,7 +169,7 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 					int in_sym = sym_ids[i];
 					
 					for(int j = 0; j < GetTotalSymbolCount(); j++) {
-						if (fn(this, in_sym, -1, j, -1))
+						if (fn(this, false, in_sym, tf, j, used_tf))
 							sub_sym_ids.FindAdd(j);
 					}
 				}
@@ -294,7 +294,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 		
 		// Filter timeframes
 		for(int i = 0; i < tf_count; i++) {
-			if (fn(this, -1, ci.tf, -1, i)) {
+			if (fn(this, true, ci.sym, ci.tf, -1, i)) {
 				tflist.Add(i);
 			}
 		}
@@ -302,7 +302,7 @@ void System::ConnectInput(int input_id, int output_id, CoreItem& ci, int factory
 		
 		// Filter symbols
 		for(int i = 0; i < sym_count; i++) {
-			if (fn(this, ci.sym, -1, i, -1)) {
+			if (fn(this, false, ci.sym, ci.tf, i, -1)) {
 				symlist.Add(i);
 			}
 		}

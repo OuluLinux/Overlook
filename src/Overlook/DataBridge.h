@@ -116,9 +116,23 @@ public:
 	void AddSpread(double a);
 	void RefreshFromFasterTime();
 	void RefreshFromFasterChange();
+	void RefreshCurrency();
 	
-	static bool FilterFunction(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		// Currency instrument
+		if (in_sym >= GetMetaTrader().GetSymbolCount()) {
+			if (match_tf)
+				return out_tf == 0;
+			if (in_tf == 0) {
+				System& sys = GetSystem();
+				String sym = sys.GetSymbol(in_sym);
+				const Index<int>& syms = sys.currency_syms.Get(sym);
+				return syms.Find(out_sym) != -1;
+			}
+			else
+				return in_sym == out_sym;
+		}
+		if (match_tf)
 			return in_tf > 0 && out_tf == 0;
 		return in_sym == out_sym;
 	}

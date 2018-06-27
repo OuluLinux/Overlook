@@ -2,20 +2,16 @@
 
 namespace Overlook {
 
-
-RapierishAdvisor::RapierishAdvisor() {
+DqnAdvisor::DqnAdvisor() {
 	
 }
 
-void RapierishAdvisor::Init() {
-	SetBufferColor(0, Red());
-	SetCoreSeparateWindow();
-	
+void DqnAdvisor::Init() {
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
 	
-	point = GetDataBridge()->GetPoint();
-	
 	SetJobCount(1);
+	
+	point = GetDataBridge()->GetPoint();
 	
 	SetJob(0, tf_str + " Training")
 		.SetBegin		(THISBACK(TrainingBegin))
@@ -25,7 +21,7 @@ void RapierishAdvisor::Init() {
 		.SetCtrl		<TrainingCtrl>();
 }
 
-void RapierishAdvisor::Start() {
+void DqnAdvisor::Start() {
 	if (once) {
 		if (prev_counted > 0) prev_counted--;
 		once = false;
@@ -36,41 +32,139 @@ void RapierishAdvisor::Start() {
 	if (IsJobsFinished()) {
 		int bars = GetBars();
 		if (prev_counted < bars) {
-			LOG("RapierishAdvisor::Start Refresh");
+			LOG("DqnAdvisor::Start Refresh");
 			RefreshAll();
 		}
 	}
 }
 
-bool RapierishAdvisor::TrainingBegin() {
-	
-	test_settings.SetCount(0);
-	for(int break_period = 5; break_period <= 50; break_period += 5) {
-		for(int reverse_pips = 1; reverse_pips < 30; reverse_pips += 3) {
-			for(int open_steps = 1; open_steps < 4; open_steps += 1) {
-				for (int stop_loss_pips = 1; stop_loss_pips < 30; stop_loss_pips += 3) {
-					for (int take_profit_pips = 0; take_profit_pips < 30; take_profit_pips += 3) {
-						Setting& s = test_settings.Add();
-						s.a = break_period;
-						s.b = reverse_pips;
-						s.c = open_steps;
-						s.d = stop_loss_pips;
-						s.e = take_profit_pips;
-					}
-				}
-			}
-		}
-	}
-	
-	max_rounds = test_settings.GetCount();
+bool DqnAdvisor::TrainingBegin() {
+	#ifdef flagDEBUG
+	max_rounds = 10000;
+	#else
+	max_rounds = 1000000;
+	#endif
 	training_pts.SetCount(max_rounds, 0);
 	
+	
+	if (round == 0) {
+		dqn.Init(1, input_size, output_size);
+		dqn.LoadInitJSON(
+			"{\n"
+			"\t\"update\":\"qlearn\",\n"
+			"\t\"gamma\":0.9,\n"
+			"\t\"epsilon\":0.2,\n"
+			"\t\"alpha\":0.005,\n"
+			"\t\"experience_add_every\":5,\n"
+			"\t\"experience_size\":10000,\n"
+			"\t\"learning_steps_per_iteration\":5,\n"
+			"\t\"tderror_clamp\":1.0,\n"
+			"\t\"num_hidden_units\":100,\n"
+			"}\n");
+		dqn.Reset();
+		reward_sum = 0.0;
+	}
 	
 	// Allow iterating
 	return true;
 }
 
-bool RapierishAdvisor::TrainingIterator() {
+void DqnAdvisor::LoadInput(int pos) {
+	int matpos = 0;
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double open = open_buf.Get(pos);
+	
+	tmp_mat.SetCount(input_size);
+	level_dist.SetCount(level_count);
+	level_len.SetCount(level_count);
+	level_dir.SetCount(level_count);
+	
+	int sym_count = have_othersyms ? this->sym_count : 1;
+	
+	for(int s = 0; s < sym_count; s++) {
+		ConstBuffer& input_buf = have_othersyms ? inputs[0][s].core->GetBuffer(0) : open_buf;
+		
+		for(int i = 0; i < window_count; i++) {
+			int window_size = 1 << (5 + i*2);
+			double begin = open - level_side * point;
+			
+			for(int j = 0; j < level_count; j++) {
+				level_dist[j] = window_size;
+				level_len[j] = 0;
+				level_dir[j] = 0;
+			}
+			
+			double prev;
+			for(int j = 0; j < window_size; j++) {
+				int dist = window_size - 1 - j;
+				if (dist > pos)
+					continue;
+				double o = input_buf.Get(pos - dist);
+				int k = (o - state_est) / point + level_side;
+				if (k < 0 || k >= level_count)
+					continue;
+				
+				level_dist[k] = dist;
+				level_len[k]++;
+				
+				if (j != 0) {
+					if (prev != o) {
+						level_dir[k] = o > prev ? +1 : -1;
+					}
+				}
+				prev = o;
+			}
+			
+			for(int i = 0; i < level_count; i++) {
+				double dist_sens = (double)level_dist[i] / (double)window_size;
+				double len_sens = 1.0 - (double)level_len[i] / (double)window_size;
+				double dir_sens = level_dir[i];
+				
+				tmp_mat.Set(matpos++, dist_sens);
+				tmp_mat.Set(matpos++, len_sens);
+				tmp_mat.Set(matpos++, dir_sens);
+			}
+		}
+	}
+	
+	double speed_sens = state_speed / (level_side*point);
+	double opendist_sens = (state_est - open) / (level_side*point);
+	tmp_mat.Set(matpos++, speed_sens);
+	tmp_mat.Set(matpos++, opendist_sens);
+	
+	if (state_orderisopen) {
+		double orderest_sens = (state_est - state_orderopen) / (level_side*point);
+		double orderprofit_sens = (open - state_orderopen) / (level_side*point);
+		
+		if (state_ordertype) {
+			orderest_sens *= -1.0;
+			orderprofit_sens *= -1.0;
+		}
+		
+		tmp_mat.Set(matpos++, orderest_sens);
+		tmp_mat.Set(matpos++, orderprofit_sens);
+		tmp_mat.Set(matpos++, 0.0);
+	} else {
+		tmp_mat.Set(matpos++, 0);
+		tmp_mat.Set(matpos++, 0);
+		tmp_mat.Set(matpos++, 1.0);
+	}
+	
+	ASSERT(matpos == input_size);
+}
+
+void DqnAdvisor::ResetState(int pos) {
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double open = open_buf.Get(pos);
+	state_speed = 0;
+	state_est = open;
+	state_orderopen = open;
+	state_orderisopen = false;
+	state_ordertype = false;
+}
+
+bool DqnAdvisor::TrainingIterator() {
 	
 	// Show progress
 	GetCurrentJob().SetProgress(round, max_rounds);
@@ -79,191 +173,122 @@ bool RapierishAdvisor::TrainingIterator() {
 	// ---- Do your training work here ----
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	
-	Setting& setting = test_settings[round];
+	int size = input_length;
+	int range = GetBars() - 1;
+	if (do_test) range *= TRAININGAREA_FACTOR;
+	range -= size;
 	
-	training_pts[round] = TestSetting(setting, false);
+	pos = size + (round / acts_per_step) % range;
+	if (round % (acts_per_step * range) == 0)
+		ResetState(pos);
+	
+	LoadInput(pos);
+	
+	double prog = (double)round / (double)max_rounds;
+	double epsilon = (1.0 - prog) * 0.2;
+	dqn.SetEpsilon(epsilon);
+	
+	int action = dqn.Act(tmp_mat);
+	
+	double open = open_buf.Get(pos);
+	if (action == ACTION_UP)
+		state_speed += point * 0.005;
+	else if (action == ACTION_DOWN)
+		state_speed -= point * 0.005;
+	if (state_est < open)
+		state_speed += point * 0.001;
+	else
+		state_speed -= point * 0.001;
+	state_est += state_speed;
+	
+	double max = open + level_side * point;
+	double min = open - level_side * point;
+	if (state_est > max) {
+		state_est = max;
+		state_speed = 0;
+	}
+	if (state_est < min) {
+		state_est = min;
+		state_speed = 0;
+	}
+	
+	double reward = 0.0;
+	double est = state_est - open;
+	int estpips = (est + point * 0.5) / point;
+	bool force_experience = false;
+	if (!state_orderisopen) {
+		if (estpips >= +4) {
+			state_orderisopen = true;
+			state_ordertype = false;
+			state_orderopen = open + point*3; // spread
+		}
+		else if (estpips <= -4) {
+			state_orderisopen = true;
+			state_ordertype = true;
+			state_orderopen = open - point*3;
+		}
+	} else {
+		// If buy
+		if (state_ordertype == false) {
+			// If price is estimated to go even lower
+			if (estpips < +4) {
+				state_orderisopen = false;
+				reward = +(open - state_orderopen) / point * 10;
+				if (reward >= 0) force_experience = true;
+				state_est = open;
+				state_speed = 0;
+			}
+			else {
+				reward = open >= state_orderopen ? 0.1 : -0.1;
+			}
+		} else {
+			if (estpips > -4) {
+				state_orderisopen = false;
+				reward = -(open - state_orderopen) / point * 10;
+				if (reward >= 0) force_experience = true;
+				state_est = open;
+				state_speed = 0;
+			}
+			/*else {
+				reward = open <= state_orderopen ? 0.1 : -0.1;
+			}*/
+		}
+	}
+	
+	dqn.Learn(reward, force_experience);
+	
+	
+	reward_sum += reward;
+	training_pts[round] = reward_sum;
 	
 	
 	
 	// Keep count of iterations
 	round++;
+	ReleaseLog(IntStr(round) + DblStr(reward_sum));
 	
 	// Stop eventually
 	if (round >= max_rounds) {
 		SetJobFinished();
 	}
 	
+	if (save_elapsed.Elapsed() > 60*1000) {
+		save_elapsed.Reset();
+		StoreCache();
+	}
 	return true;
 }
 
-double RapierishAdvisor::TestSetting(Setting& setting, bool write_signal) {
-	
-	int break_period = setting.a;
-	int reverse_pips = setting.b;
-	int open_steps = setting.c;
-	int stop_loss_pips = setting.d;
-	int take_profit_pips = setting.e;
-	
-	ConstBuffer& timebuf = GetInputBuffer(0, 4);
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	ConstBuffer& low_buf  = GetInputBuffer(0, 1);
-	ConstBuffer& high_buf = GetInputBuffer(0, 2);
-	VectorBool& signal  = GetLabelBuffer(0,0).signal;
-	VectorBool& enabled = GetLabelBuffer(0,0).enabled;
-	Buffer& out = GetBuffer(0);
-	
-	DataBridge& db = *GetDataBridge();
-	double point = db.GetPoint();
-	double spread = db.GetSpread();
-	if (spread == 0 || point == 0)
-		Panic("Spread == 0 for symbol " + GetSystem().GetSymbol(GetSymbol()));
-	
-	if (spread < point * 2) spread = point * 2;
-	
-	take_profit_pips += spread / point;
-	
-	double pips = 0;
-	double pos_pips = 0, neg_pips = 0;
-	
-	ExtremumCache ec;
-	ec.SetSize(break_period);
-	
-	OnlineAverageWindow1 av;
-	av.SetPeriod(30);
-	
-	int begin = max(0, bars - 100000);
-	ec.pos = begin-1;
-	
-	enum {IDLE, WAITING_REVERSE, WAITING_START, OPEN, CLOSED};
-	
-	int waiting_break = IDLE;
-	bool waiting_type;
-	double waiting_price;
-	for(int cursor = begin; cursor < bars; cursor++) {
-		double price = open_buf.Get(cursor);
-		double lo = low_buf.Get(max(0, cursor-1));
-		double hi = high_buf.Get(max(0, cursor-1));
-		ec.Add(lo, hi);
-		
-		double prev_ma = av.GetMean();
-		av.Add(price);
-		double ma = av.GetMean();
-		bool ma_type = ma < prev_ma;
-		
-		int low_len = cursor - ec.GetLowest();
-		int high_len = cursor - ec.GetHighest();
-		if (low_len < 0 || high_len < 0) Panic("Error");
-		
-		bool break_type = low_len < high_len;
-		int break_len = break_type ? low_len : high_len;
-		
-		if (break_len == 0 && waiting_break != OPEN && break_type == ma_type) {
-			waiting_break = WAITING_REVERSE;
-			waiting_type = break_type;
-			waiting_price = open_buf.Get(cursor);
-		}
-		
-		if (waiting_break == WAITING_REVERSE) {
-			
-			double diff = price - waiting_price;
-			if (waiting_type) diff *= -1;
-			int diff_pt = diff / point;
-			
-			if (diff_pt <= -reverse_pips) {
-				waiting_break = WAITING_START;
-			}
-			
-		}
-		
-		if (waiting_break == WAITING_START) {
-			double prev = open_buf.Get(cursor - 1);
-			double diff = price - prev;
-			if (!waiting_type) {
-				double change = open_steps * diff;
-				double tgt = price + change;
-				if (tgt >= waiting_price && change >= spread) {
-					waiting_break = OPEN;
-					waiting_price = price;
-				}
-			}
-			else {
-				double change = open_steps * diff;
-				double tgt = price + change;
-				if (tgt <= waiting_price && -change >= spread) {
-					waiting_break = OPEN;
-					waiting_price = price;
-				}
-			}
-			
-			if (waiting_break == OPEN && waiting_type != ma_type)
-				waiting_break = IDLE;
-		}
-		
-		if (waiting_break == OPEN) {
-			double diff = price - waiting_price;
-			int diff_pt = diff / point;
-			
-			if (!waiting_type) {
-				if (diff_pt <= -stop_loss_pips || diff_pt >= take_profit_pips) {
-					waiting_break = CLOSED;
-					double change = diff - spread;
-					pips += change;
-					if (change > 0) pos_pips += change;
-					else neg_pips -= change;
-				}
-			} else {
-				if (-diff_pt <= -stop_loss_pips || -diff_pt >= take_profit_pips) {
-					waiting_break = CLOSED;
-					double change = -diff - spread;
-					pips += change;
-					if (change > 0) pos_pips += change;
-					else neg_pips -= change;
-				}
-			}
-			
-			if (write_signal) {
-				if (waiting_break == OPEN) {
-					signal.Set(cursor, waiting_type);
-					enabled.Set(cursor, true);
-				} else {
-					signal.Set(cursor, false);
-					enabled.Set(cursor, false);
-				}
-			}
-		}
-		else if (write_signal) {
-			signal.Set(cursor, false);
-			enabled.Set(cursor, false);
-		}
-		
-		
-	}
-	
-	double total_pips = pos_pips + neg_pips;
-	double profitability = total_pips > 0.0 ? pos_pips / total_pips : 0.0;
-	
-	if (write_signal)
-		ReleaseLog("RapierishAdvisor symbol " + IntStr(GetSymbol()) + " pips " + DblStr(pips) + " break_period " + IntStr(break_period) + " reverse_pips " + IntStr(reverse_pips) + " open_steps " + IntStr(open_steps) + " stop_loss_pips " + IntStr(stop_loss_pips) + " take_profit_pips " + IntStr(take_profit_pips));
-	return profitability;
-}
-
-bool RapierishAdvisor::TrainingEnd() {
+bool DqnAdvisor::TrainingEnd() {
 	double max_d = -DBL_MAX;
+	int max_i = 0;
 	
-	for(int i = 0; i < training_pts.GetCount(); i++) {
-		Setting& s = test_settings[i];
-		double result = training_pts[i];
-		if (result > max_d) {
-			max_d = result;
-			best_setting = s;
-		}
-	}
 	
 	RefreshAll();
 	return true;
 }
 
-bool RapierishAdvisor::TrainingInspect() {
+bool DqnAdvisor::TrainingInspect() {
 	bool success = false;
 	
 	INSPECT(success, "ok: this is an example");
@@ -276,22 +301,70 @@ bool RapierishAdvisor::TrainingInspect() {
 	return true;
 }
 
-void RapierishAdvisor::RefreshAll() {
+void DqnAdvisor::RefreshAll() {
+	/*
+	RefreshSourcesOnlyDeep();
+	ConstBuffer& timebuf = GetInputBuffer(0, 4);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	VectorBool& signal  = GetOutput(0).label;
+	VectorBool& enabled = GetOutput(1).label;
+	Buffer& out = GetBuffer(0);
 	
-	TestSetting(best_setting, true);
+	// ---- Do your final result work here ----
+	//RefreshBits();
+	//SortByValue(results, GridResult());
 	
-	
-	VectorBool& signal  = GetLabelBuffer(0,0).signal;
-	VectorBool& enabled = GetLabelBuffer(0,0).enabled;
-	
+	double spread = GetDataBridge()->GetSpread();
+	if (spread == 0)
+		spread = GetDataBridge()->GetPoint() * 2.0;
 	
 	int bars = GetBars();
-	bool signal_ = signal.Get(bars-1);
-	bool enabled_ = enabled.Get(bars-1);
-	int sig = enabled_ ? (signal_ ? -1 : +1) : 0;
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
 	
-	GetSystem().SetSignal(GetSymbol(), sig);
-	ReleaseLog("RapierishAdvisor symbol " + IntStr(GetSymbol()) + " signal " + IntStr(sig));
+	bool initial = prev_counted == 0;
+	if (prev_counted < input_length) prev_counted = input_length;
+	
+	if (have_othersyms) {
+		for(int i = 0; i < inputs[1].GetCount(); i++) {
+			bars = min(bars, inputs[1][i].core->GetBuffer(0).GetCount());
+		}
+	}
+	
+	for(int i = prev_counted; i < bars; i++) {
+		
+		LoadInput(i);
+		
+		int sig, mult = 1;
+		
+		int action = dqn.Act(tmp_mat);
+		sig = action ? -1 : +1;
+		
+		
+		signal. Set(i, sig <  0);
+		enabled.Set(i, sig != 0);
+		
+		
+		if (i < bars-1) {
+			if (sig > 0) {
+				total += (+(open_buf.Get(i+1) - open_buf.Get(i)) - spread) * mult;
+			}
+			else if (sig < 0) {
+				total += (-(open_buf.Get(i+1) - open_buf.Get(i)) - spread) * mult;
+			}
+		}
+		out.Set(i, total);
+	}
+	
+	#ifndef flagDEBUG
+	if (do_test && initial) {
+		DumpTest();
+	}
+	#endif
+	
+	//int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
+	//GetSystem().SetSignal(GetSymbol(), sig);
+	//ReleaseLog("DqnAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
 	
 	
 	// Keep counted manually
@@ -300,84 +373,81 @@ void RapierishAdvisor::RefreshAll() {
 	
 	//DUMP(main_interval);
 	//DUMP(grid_interval);
+	*/
 }
 
-void RapierishAdvisor::TrainingCtrl::Paint(Draw& w) {
+void DqnAdvisor::TrainingCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	RapierishAdvisor* ea = dynamic_cast<RapierishAdvisor*>(&*job->core);
+	DqnAdvisor* ea = dynamic_cast<DqnAdvisor*>(&*job->core);
 	ASSERT(ea);
-	DrawVectorPolyline(id, sz, ea->training_pts, polyline);
+	
+	Size graphsz(400, sz.cy);
+	DrawVectorPolyline(id, graphsz, ea->training_pts, polyline, ea->round);
+	
+	
+	int sensor_width = 3;
+	int x = sz.cx - sensor_width;
+	for(int i = 0; i < ea->tmp_mat.GetCount(); i++) {
+		double sens = ea->tmp_mat[i];
+		int h = (sens + 1) / 2.0 * sz.cy;
+		int y = sz.cy - h;
+		id.DrawRect(x, y, sensor_width, h, Black);
+		x -= sensor_width;
+	}
+	
+	Rect picrect(graphsz.cx, 0, x + sensor_width, sz.cy);
+	
+	ConstBuffer& input_buf = ea->GetInputBuffer(0, 0);
+	int pos = ea->pos;
+	int window_size = 1 << 7;
+	
+	double min = ea->state_est;
+	double max = ea->state_est;
+	if (ea->state_orderisopen) {
+		min = Upp::min(ea->state_orderopen, min);
+		max = Upp::max(ea->state_orderopen, max);
+	}
+	for(int i = 0; i < window_size; i++) {
+		int dist = window_size - 1 - i;
+		if (dist > pos)
+			continue;
+		double o = input_buf.Get(pos - dist);
+		if (o < min) min = o;
+		if (o > max) max = o;
+	}
+	double diff = max - min;
+	
+	polyline.SetCount(window_size);
+	double x_step = (double)(picrect.Width() - 1) / window_size;
+	int h = picrect.Height();
+	for(int i = 0; i < window_size; i++) {
+		int dist = window_size - 1 - i;
+		if (dist > pos)
+			continue;
+		double o = input_buf.Get(pos - dist);
+		Point& pt = polyline[i];
+		pt.x = picrect.left + i * x_step;
+		pt.y = h - (o - min) / diff * h;
+	}
+	id.DrawPolyline(polyline, 2, Green);
+	
+	int box_h = 5;
+	int box_h2 = box_h / 2;
+	int box_w = 5;
+	int y;
+	if (ea->state_orderisopen) {
+		x = picrect.right - box_w;
+		y = h - (ea->state_orderopen - min) / diff * h - box_h2;
+		id.DrawRect(x, y, box_w, box_h, Color(255, 42, 0));
+	}
+	y = h - (ea->state_est - min) / diff * h - box_h2;
+	id.DrawRect(x, y, box_w, box_h, Color(28, 127, 255));
+	
 	
 	w.DrawImage(0, 0, id);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-MultiTfAdvisor::MultiTfAdvisor() {
-	
-}
-
-void MultiTfAdvisor::Init() {
-	SetBufferColor(0, Red());
-	SetCoreSeparateWindow();
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0);
-}
-
-void MultiTfAdvisor::Start() {
-	
-	for(int i = 0; i < inputs.GetCount(); i++) {
-		Input& in = inputs[i];
-		for(int j = 0; j < in.GetCount(); j++) {
-			Source& src = in[j];
-			if (src.core) {
-				Core* core = dynamic_cast<Core*>(src.core);
-				if (core && !core->IsJobsFinished())
-					return;
-			}
-		}
-	}
-	
-	bool signal, enabled = true;
-	int total = 0;
-	for(int i = 1; i < 3; i++) {
-		Input& in = inputs[i];
-		for(int j = 0; j < in.GetCount(); j++) {
-			Source& src = in[j];
-			if (src.core) {
-				Core* core = dynamic_cast<Core*>(src.core);
-				
-				bool src_signal = core->GetLabelBuffer(0,0).signal.Top();
-				if (!total)
-					signal = src_signal;
-				else if (src_signal != signal)
-					enabled = false;
-				total++;
-			}
-		}
-	}
-	
-	int sig = enabled ? (signal ? -1 : +1) : 0;
-	GetSystem().SetSignal(GetSymbol(), sig);
-}
-
-
 
 }

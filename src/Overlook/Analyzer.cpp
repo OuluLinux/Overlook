@@ -562,25 +562,17 @@ Analyzer::Analyzer() {
 	System& sys = GetSystem();
 	sym_ids.Add(sys.FindSymbol("EURUSD"));
 	sym_ids.Add(sys.FindSymbol("GBPUSD"));
-	sym_ids.Add(sys.FindSymbol("EURJPY"));
 	sym_ids.Add(sys.FindSymbol("USDJPY"));
+	sym_ids.Add(sys.FindSymbol("EURJPY"));
 	
-	sym_ids.Add(sys.FindSymbol("EURGBP"));
-	sym_ids.Add(sys.FindSymbol("GBPJPY"));
-	sym_ids.Add(sys.FindSymbol("AUDUSD"));
+	/*sym_ids.Add(sys.FindSymbol("USDCHF"));
 	sym_ids.Add(sys.FindSymbol("USDCAD"));
-	
-	sym_ids.Add(sys.FindSymbol("EURAUD"));
-	sym_ids.Add(sys.FindSymbol("AUDCAD"));
-	sym_ids.Add(sys.FindSymbol("EURCHF"));
-	sym_ids.Add(sys.FindSymbol("CADJPY"));
-	
-	sym_ids.Add(sys.FindSymbol("GBPCHF"));
-	sym_ids.Add(sys.FindSymbol("USDCHF"));
+	sym_ids.Add(sys.FindSymbol("AUDUSD"));
 	sym_ids.Add(sys.FindSymbol("NZDUSD"));
-	sym_ids.Add(sys.FindSymbol("AUDJPY"));
+	sym_ids.Add(sys.FindSymbol("EURCHF"));
+	sym_ids.Add(sys.FindSymbol("EURGBP"));*/
 	
-	tf_ids.Add(0);
+	tf_ids.Add(3);
 	
 	Add<SimpleHurstWindow>(3);
 	Add<SimpleHurstWindow>(6);
@@ -678,7 +670,7 @@ void Analyzer::FillOrdersScalper() {
 	Vector<FactoryDeclaration> indi_ids;
 	
 	FactoryDeclaration decl;
-	decl.factory = sys.Find<EasierScalperSignal>();
+	decl.factory = sys.Find<ScalperSignal>();
 	indi_ids.Add(decl);
 	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);

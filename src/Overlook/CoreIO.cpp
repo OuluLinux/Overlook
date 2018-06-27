@@ -123,9 +123,6 @@ void CoreIO::StoreCache() {
 	if (!serialized)
 		return;
 	
-	if (outputs.IsEmpty() || outputs.GetCount() == 1 && outputs[0].buffers.IsEmpty())
-		return;
-	
 	if (serialization_lock.TryEnter()) {
 		
 		String dir = GetCacheDirectory();

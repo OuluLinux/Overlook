@@ -82,6 +82,7 @@ void DqnAdvisor::LoadInput(int pos) {
 	
 	int sym_count = have_othersyms ? this->sym_count : 1;
 	
+	#if 0
 	for(int s = 0; s < sym_count; s++) {
 		ConstBuffer& input_buf = have_othersyms ? inputs[0][s].core->GetBuffer(0) : open_buf;
 		
@@ -127,6 +128,13 @@ void DqnAdvisor::LoadInput(int pos) {
 			}
 		}
 	}
+	#else
+	for(int s = 0; s < sym_count; s++) {
+		ConstLabel& input_buf = inputs[1][s].core->GetLabel(0);
+		double psar_sens = input_buf.buffers[0].signal.Get(pos) ? -1 : +1;
+		tmp_mat.Set(matpos++, psar_sens);
+	}
+	#endif
 	
 	double speed_sens = state_speed / (level_side*point);
 	double opendist_sens = (state_est - open) / (level_side*point);
@@ -190,15 +198,18 @@ bool DqnAdvisor::TrainingIterator() {
 	
 	int action = dqn.Act(tmp_mat);
 	
+	double reward = 0.0;
 	double open = open_buf.Get(pos);
 	if (action == ACTION_UP)
 		state_speed += point * 0.005;
 	else if (action == ACTION_DOWN)
 		state_speed -= point * 0.005;
-	if (state_est < open)
+	else
+		reward = 0.01; // reward idling
+	/*if (state_est < open)
 		state_speed += point * 0.001;
 	else
-		state_speed -= point * 0.001;
+		state_speed -= point * 0.001;*/
 	state_est += state_speed;
 	
 	double max = open + level_side * point;
@@ -212,7 +223,6 @@ bool DqnAdvisor::TrainingIterator() {
 		state_speed = 0;
 	}
 	
-	double reward = 0.0;
 	double est = state_est - open;
 	int estpips = (est + point * 0.5) / point;
 	bool force_experience = false;
@@ -238,9 +248,9 @@ bool DqnAdvisor::TrainingIterator() {
 				state_est = open;
 				state_speed = 0;
 			}
-			else {
+			/*else {
 				reward = open >= state_orderopen ? 0.1 : -0.1;
-			}
+			}*/
 		} else {
 			if (estpips > -4) {
 				state_orderisopen = false;
@@ -265,7 +275,6 @@ bool DqnAdvisor::TrainingIterator() {
 	
 	// Keep count of iterations
 	round++;
-	ReleaseLog(IntStr(round) + DblStr(reward_sum));
 	
 	// Stop eventually
 	if (round >= max_rounds) {

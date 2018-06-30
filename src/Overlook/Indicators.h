@@ -1455,7 +1455,7 @@ public:
 
 
 class PulseIndicator : public Core {
-	int min_simultaneous = 3;
+	int min_simultaneous = 9;
 	
 protected:
 	virtual void Start();

@@ -728,6 +728,12 @@ void DataBridge::RefreshCurrency() {
 	const Index<int>& syms = sys.currency_sym_dirs.Get(sys.GetSymbol(GetSymbol()));
 	src_open.SetCount(syms.GetCount());
 	int bars = INT_MAX;
+	/*DUMP(inputs[0].GetCount());
+	for(int i = 0; i < inputs[0].GetCount(); i++) {
+		LOG(i << " " << inputs[0][i].sym);
+	}
+	String symstr = sys.GetSymbol(GetSymbol());
+	LOG(symstr);*/
 	for(int i = 0; i < syms.GetCount(); i++) {
 		Src& src = src_open[i];
 		src.a = syms[i]; // symbol
@@ -737,6 +743,7 @@ void DataBridge::RefreshCurrency() {
 			src.b = true;
 			src.a = -src.a-1;
 		}
+		String sym = sys.GetSymbol(src.a);
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		bars = min(bars, src.c->GetCount());
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();

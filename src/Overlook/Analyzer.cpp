@@ -734,6 +734,7 @@ void Analyzer::FillOrdersMyfxbook() {
 	}
 }
 */
+
 void Analyzer::FillInputBooleans() {
 	System& sys = GetSystem();
 	

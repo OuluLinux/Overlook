@@ -6028,6 +6028,19 @@ void PulseIndicator::Start() {
 	for(int i = 0; i < symcount; i++)
 		bufs[i] = &GetInputBuffer(0, sys.FindSymbol(symlist[i]), GetTf(), 0);
 	
+	Vector<int> dirs;
+	String sym = sys.GetSymbol(GetSymbol());
+	String a = sym.Left(3);
+	String b = sym.Right(3);
+	dirs.SetCount(symcount, 0);
+	for(int i = 0; i < symcount; i++) {
+		String othersym = symlist[i];
+		String oa = othersym.Left(3);
+		String ob = othersym.Right(3);
+		if      (oa == a || ob == b) dirs[i] = +1;
+		else if (oa == b || ob == a) dirs[i] = -1;
+	}
+	
 	int bars = GetBars();
 	for(int i = 0; i < symcount; i++)
 		bars = min(bars, bufs[i]->GetCount());
@@ -6040,7 +6053,7 @@ void PulseIndicator::Start() {
 			double o1 = bufs[j]->Get(i - 1);
 			if (o0 != o1) {
 				triggers++;
-				trigger_dir += o0 > o1 ? +1 : -1;
+				trigger_dir += (o0 > o1 ? +1 : -1) * dirs[j];
 			}
 		}
 		

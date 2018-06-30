@@ -17,7 +17,7 @@ class DqnAdvisor : public Core {
 	static const int sym_count = 4;
 	
 	
-	static const int have_othersyms = 0;
+	static const int have_othersyms = 1;
 	static const int do_test = 1;
 	static const int acts_per_step = 4;
 	
@@ -25,7 +25,8 @@ class DqnAdvisor : public Core {
 	static const int level_side = 10;
 	static const int level_count = 1 + level_side*2;
 	static const int input_length = 3*level_count*window_count;
-	static const int input_size = 5 + (input_length * (1 + (have_othersyms*(sym_count-1))));
+	//static const int input_size = 5 + (input_length * (1 + (have_othersyms*(sym_count-1))));
+	static const int input_size = 5 + (1 + (have_othersyms*(sym_count-1)));
 	static const int output_size = 3;
 	
 	enum {ACTION_UP, ACTION_DOWN, ACTION_IDLE};
@@ -72,6 +73,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
+			% In<ParabolicSAR>(&Filter)
 			% Lbl(1)
 			% Mem(dqn)
 			% Mem(training_pts)
@@ -89,8 +91,8 @@ public:
 	}
 	
 	
-	static bool Filter(void* basesystem, int in_sym, int in_tf, int out_sym, int out_tf) {
-		if (in_sym == -1)
+	static bool Filter(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
 			return in_tf == out_tf;
 		else {
 			if (in_sym == out_sym)
@@ -101,7 +103,8 @@ public:
 			else {
 				String sym = GetSystem().GetSymbol(out_sym);
 				return
-					sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDJPY";
+					sym == "EURJPY" || sym == "EURUSD" || sym == "GBPUSD" || sym == "USDJPY"/* ||
+					sym == "EUR"    || sym == "USD"    || sym == "JPY"*/;
 			}
 		}
 	}

@@ -62,12 +62,12 @@ struct MatcherCache {
 };
 
 struct LabelSource : Moveable<LabelSource> {
-	int factory = -1, label = -1, buffer = -1;
+	int symbol = -1, factory = -1, label = -1, buffer = -1;
 	LabelSignal data;
 	VectorBool eventdata[EVENT_COUNT];
 	String title;
 	
-	void Serialize(Stream& s) {s % factory % label % buffer % data % title; for(int i = 0; i < EVENT_COUNT; i++) s % eventdata[i];}
+	void Serialize(Stream& s) {s % symbol % factory % label % buffer % data % title; for(int i = 0; i < EVENT_COUNT; i++) s % eventdata[i];}
 };
 
 class AnalyzerCluster : Moveable<AnalyzerCluster> {

@@ -89,6 +89,14 @@ void System::FirstStart() {
 	MetaTrader& mt = GetMetaTrader();
 	String pair1[4], pair2[4];
 	
+	Index<String> avoid_currencies;
+	avoid_currencies.Add("SEK");
+	avoid_currencies.Add("HKD");
+	avoid_currencies.Add("SGD");
+	avoid_currencies.Add("NOK");
+	avoid_currencies.Add("MXN");
+	avoid_currencies.Add("RUB");
+	
 	try {
 		time_offset = mt.GetTimeOffset();
 		
@@ -101,12 +109,14 @@ void System::FirstStart() {
 			if (s.IsForex()) {
 				String a = s.name.Left(3);
 				String b = s.name.Mid(3,3);
-				currencies.FindAdd(a);
-				currencies.FindAdd(b);
-				currency_syms.GetAdd(a).Add(i);
-				currency_syms.GetAdd(b).Add(i);
-				currency_sym_dirs.GetAdd(a).Add(i);
-				currency_sym_dirs.GetAdd(b).Add(-i-1);
+				if (avoid_currencies.Find(a) == -1 && avoid_currencies.Find(b) == -1) {
+					currencies.FindAdd(a);
+					currencies.FindAdd(b);
+					currency_syms.GetAdd(a).Add(i);
+					currency_syms.GetAdd(b).Add(i);
+					currency_sym_dirs.GetAdd(a).Add(i);
+					currency_sym_dirs.GetAdd(b).Add(-i-1);
+				}
 			}
 			//ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
 		}

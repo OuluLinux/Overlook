@@ -72,8 +72,8 @@ file
 	Analyzer.cpp,
 	Scalper.h,
 	Scalper.cpp,
-	Pulse.h,
-	Pulse.cpp,
+	CostAvoidance.h,
+	CostAvoidance.cpp,
 	Journal.qtf;
 
 mainconfig

@@ -131,10 +131,10 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
-	//Tabify(last, Dockable(pls, "Pulse").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(ca, "Cost Avoidance").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -150,7 +150,7 @@ void Overlook::DockInit() {
 	trade			.WhenVisible << THISBACK(Data);
 	alz				.WhenVisible << THISBACK(Data);
 	sclp			.WhenVisible << THISBACK(Data);
-	pls				.WhenVisible << THISBACK(Data);
+	ca				.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -517,8 +517,8 @@ void Overlook::Data() {
 	//if (GetMyfxbook().IsVisible())	GetMyfxbook().Data();
 	//if (alz.IsVisible())			alz.Data();
 	//if (sclp.IsVisible())			sclp.Data();
-	//if (pls.IsVisible())			pls.Data();
 	if (arb.IsVisible())			arb.Data();
+	if (ca.IsVisible())				ca.Data();
 }
 
 void Overlook::RefreshAssist() {

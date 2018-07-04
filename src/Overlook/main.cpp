@@ -115,6 +115,9 @@ GUI_APP_MAIN {
 	catch (Exc e) {
 		PromptOK(e);
 	}
+	catch (::Overlook::ConfExc e) {
+		PromptOK(e);
+	}
 	catch (...) {
 		PromptOK("Unknown error");
 	}

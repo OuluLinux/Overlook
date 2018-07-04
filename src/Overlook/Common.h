@@ -282,7 +282,7 @@ struct ValueBase {
 	void* data2 = NULL;
 	ValueBase() {}
 	virtual ~ValueBase() {}
-	enum {IN_, INOPT_, OUT_, LBL_, BOOL_, INT_, PERS_};
+	enum {IN_, INOPT_, OUT_, LBL_, INT_, PERS_};
 	void operator = (const ValueBase& vb) {
 		count		= vb.count;
 		visible		= vb.visible;
@@ -338,14 +338,20 @@ struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 	}
 };
 
-struct DataExc : public Exc {
+class ConfExc : public String {
+public:
+	ConfExc() {}
+	ConfExc(const String& desc) : String(desc) {}
+};
+
+struct DataExc : public String {
 	DataExc() {
 		#ifdef flagDEBUG
 		Panic("debug DataExc");
 		#endif
 	}
 	
-	DataExc(String msg) : Exc(msg) {
+	DataExc(String msg) : String(msg) {
 		#ifdef flagDEBUG
 		Panic(msg);
 		#endif

@@ -24,6 +24,7 @@ protected:
 	int account_currency_id;
 	int account_id;
 	int selected;
+	int selected_pool;
 	int fmscale;
 	bool demo, connected, simulation;
 	bool init_success;
@@ -38,7 +39,6 @@ protected:
 	Vector<int> indices;
 	Vector<int> signals;
 	Vector<bool> signal_freezed;
-	Mutex current_price_lock, order_lock;
 	
 	ArrayMap<int, String> periodstr;
 	int tf_h1_id;
@@ -49,11 +49,16 @@ protected:
 	Vector<int> buy_signals, sell_signals;
 	
 	
+	Mutex current_price_lock, order_lock;
+	
+	
 public:
 	enum {MODE_OPEN, MODE_LOW, MODE_HIGH, MODE_CLOSE, MODE_VOLUME, MODE_TIME};
 	
 	
 	Brokerage();
+	
+	void Serialize(Stream& s);
 	
 	void operator=(const Brokerage& b);
 	

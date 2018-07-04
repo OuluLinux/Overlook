@@ -174,7 +174,7 @@ void System::FirstStart() {
 		
 		// Add periods
 		ASSERT(mt.GetTimeframe(0) == 1);
-		#ifndef flagNOSECONDS
+		#ifdef flagSECONDS
 		AddPeriod("S1", 1);
 		AddPeriod("S15", 15);
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)

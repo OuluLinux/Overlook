@@ -1519,25 +1519,130 @@ public:
 
 
 
-class LevelHeatmap : public Core {
+class Avoidance : public Core {
 	
 protected:
+	friend class ExpertAdvisor;
+	
+	typedef Tuple<int, int, ConstLabelSignal*> SrcPtr;
+	
+	struct DataPt : Moveable<DataPt> {
+		char pips;
+		byte len;
+		bool action;
+		
+		void Serialize(Stream& s) {s % pips % len % action;}
+	};
+	
+	// Persistent
+	Vector<Vector<DataPt> > data;
+	
+	// Temporary
+	VectorMap<int, Vector<SrcPtr> > sources;
+	
 	virtual void Start();
 	
 	
 public:
-	LevelHeatmap();
+	Avoidance();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
-	virtual bool IsHeatmap() {return true;}
-	virtual double GetHeatmapValue(int i, double price);
 	
 	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>();
+		reg % In<DataBridge>()
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args)
+			% In<MovingAverage>(&FilterFunction, &Args) // 7
+			% In<MovingAverageConvergenceDivergence>(&FilterFunction, &Args)
+			% In<MovingAverageConvergenceDivergence>(&FilterFunction, &Args)
+			% In<MovingAverageConvergenceDivergence>(&FilterFunction, &Args)
+			% In<ParabolicSAR>(&FilterFunction, &Args)
+			% In<ParabolicSAR>(&FilterFunction, &Args)
+			% In<ParabolicSAR>(&FilterFunction, &Args)
+			% In<StochasticOscillator>(&FilterFunction, &Args)
+			% In<StochasticOscillator>(&FilterFunction, &Args)
+			% In<StochasticOscillator>(&FilterFunction, &Args)
+			% Mem(data)
+			% Out(2,2)
+			% Lbl(1)
+		;
+	}
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
+			return in_tf == out_tf;
+		System& sys = GetSystem();
+		String out_symstr = sys.GetSymbol(out_sym);
+		#if 0
+		String out_A = out_symstr.Left(3);
+		String out_B = out_symstr.Right(3);
+		String in_symstr = sys.GetSymbol(in_sym);
+		String in_A = in_symstr.Left(3);
+		String in_B = in_symstr.Right(3);
+		if (in_symstr.GetCount() != 6 || out_symstr.GetCount() != 6) return false;
+		if (out_A == in_A || out_B == in_A || out_A == in_B || out_B == in_B) return true;
+		return false;
+		#else
+		return out_symstr == "EURUSD" || out_symstr == "GBPUSD" || out_symstr == "USDJPY" || out_symstr == "EURGBP" || out_symstr == "EURJPY";
+		#endif
+	}
+	
+	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
+		switch (input) {
+			case 1:
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+			case 6:
+			case 7:		decl.AddArg(2 << (input - 1));		break;
+			case 8:		decl.AddArg(12); decl.AddArg( 26);	break;
+			case 9:		decl.AddArg(24); decl.AddArg( 52);	break;
+			case 10:	decl.AddArg(48); decl.AddArg(104);	break;
+			case 11:	decl.AddArg(5); decl.AddArg(5);	break;
+			case 12:	decl.AddArg(10); decl.AddArg(10);	break;
+			case 13:	decl.AddArg(20); decl.AddArg(20);	break;
+			case 14:
+			case 15:
+			case 16:	decl.AddArg(2 << (input - 14 + 3));	break;
+			default: Panic("Invalid usage");
+		}
 	}
 };
 
+
+
+
+
+
+
+
+class AvoidancePeaks : public Core {
+	
+protected:
+	virtual void Start();
+	
+	ExtremumCache ec;
+	int peak_period = 100;
+	
+	bool GetType(int pos, ConstBuffer& open_buf, ConstBuffer& avoid_buf);
+	
+public:
+	AvoidancePeaks();
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<Avoidance>()
+			% Lbl(4)
+			% Arg("Peak period", peak_period, 2, 1000)
+			;
+	}
+};
 
 
 

@@ -130,6 +130,23 @@ void SimBroker::RefreshOrders() {
 		o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 		equity += o.profit;
 		
+		if (o.type == OP_BUY) {
+			if (o.takeprofit != 0.0 && o.close >= o.takeprofit) {
+				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
+			}
+			else if (o.stoploss != 0.0 && o.close <= o.stoploss) {
+				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
+			}
+		}
+		else if (o.type == OP_SELL) {
+			if (o.takeprofit != 0.0 && o.close <= o.takeprofit) {
+				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
+			}
+			else if (o.stoploss != 0.0 && o.close >= o.stoploss) {
+				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
+			}
+		}
+		
 		double order_used_margin = GetMargin(o.symbol, o.volume);
 		used_margin += order_used_margin;
 	}
@@ -167,6 +184,12 @@ void SimBroker::SetPrice(int sym, double price) {
 	double spread = p.ask / p.bid;
 	p.bid = price;
 	p.ask = price * spread;
+}
+
+void SimBroker::SetPrice(int sym, double ask, double bid) {
+	Price& p = askbid[sym];
+	p.bid = bid;
+	p.ask = ask;
 }
 
 int		SimBroker::RefreshRates() {
@@ -335,11 +358,11 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 }
 
 double SimBroker::OrderClosePrice() {
-	return orders[selected].close;
+	return GetSelected().close;
 }
 
 int SimBroker::OrderCloseTime() {
-	return (int)(orders[selected].end.Get() - Time(1970,1,1).Get());
+	return (int)(GetSelected().end.Get() - Time(1970,1,1).Get());
 }
 
 String SimBroker::OrderComment() {
@@ -347,7 +370,7 @@ String SimBroker::OrderComment() {
 }
 
 double SimBroker::OrderCommission() {
-	return orders[selected].commission;
+	return GetSelected().commission;
 }
 
 int SimBroker::OrderDelete(int ticket) {
@@ -355,16 +378,15 @@ int SimBroker::OrderDelete(int ticket) {
 }
 
 int SimBroker::OrderExpiration() {
-	return (int)(orders[selected].expiration.Get() - Time(1970,1,1).Get());
+	return (int)(GetSelected().expiration.Get() - Time(1970,1,1).Get());
 }
 
 double SimBroker::OrderLots() {
-	return orders[selected].volume;
+	return GetSelected().volume;
 }
 
 int SimBroker::OrderMagicNumber() {
-	Panic("Magic numbers aren't allowed to use because they are used internally in databridge.");
-	return 0;
+	return GetSelected().magic;
 }
 
 int SimBroker::OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {
@@ -372,29 +394,32 @@ int SimBroker::OrderModify(int ticket, double price, double stoploss, double tak
 }
 
 double SimBroker::OrderOpenPrice() {
-	return orders[selected].open;
+	return GetSelected().open;
 }
 
 int SimBroker::OrderOpenTime() {
-	return (int)(orders[selected].begin.Get() - Time(1970,1,1).Get());
+	return (int)(GetSelected().begin.Get() - Time(1970,1,1).Get());
 }
 
 double SimBroker::OrderProfit() {
-	return orders[selected].profit;
+	return GetSelected().profit;
 }
 
 int SimBroker::OrderSelect(int index, int select, int pool) {
 	selected = -1;
+	selected_pool = -1;
 	if (select == SELECT_BY_POS) {
 		if (pool == MODE_TRADES) {
 			if (index >= 0 && index < orders.GetCount()) {
 				selected = index;
+				selected_pool = pool;
 				return true;
 			}
 		}
 		else if (pool == MODE_HISTORY) {
 			if (index >= 0 && index < history_orders.GetCount()) {
 				selected = index;
+				selected_pool = pool;
 				return true;
 			}
 		}
@@ -405,6 +430,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 			for(int i = 0; i < orders.GetCount(); i++) {
 				if (orders[i].ticket == index) {
 					selected = i;
+					selected_pool = pool;
 					return true;
 				}
 			}
@@ -413,6 +439,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 			for(int i = 0; i < history_orders.GetCount(); i++) {
 				if (history_orders[i].ticket == index) {
 					selected = i;
+					selected_pool = pool;
 					return true;
 				}
 			}
@@ -453,7 +480,15 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	o.ticket = order_counter++;
 	o.is_open = true;
 	o.profit = GetCloseProfit(o, volume);
+	o.magic = magic;
 	return o.ticket;
+}
+
+Order& SimBroker::GetSelected() {
+	if (selected_pool == MODE_TRADES)
+		return orders[selected];
+	else
+		return history_orders[selected];
 }
 
 int		SimBroker::OrdersHistoryTotal() {
@@ -461,7 +496,7 @@ int		SimBroker::OrdersHistoryTotal() {
 }
 
 double	SimBroker::OrderStopLoss() {
-	return orders[selected].stoploss;
+	return GetSelected().stoploss;
 }
 
 int		SimBroker::OrdersTotal() {
@@ -469,23 +504,24 @@ int		SimBroker::OrdersTotal() {
 }
 
 double	SimBroker::OrderSwap() {
-	return orders[selected].swap;
+	return GetSelected().swap;
 }
 
 String	SimBroker::OrderSymbol() {
-	return symbols[orders[selected].symbol].name;
+	int sym = GetSelected().symbol;
+	return symbols[sym].name;
 }
 
 double	SimBroker::OrderTakeProfit() {
-	return orders[selected].takeprofit;
+	return GetSelected().takeprofit;
 }
 
 int		SimBroker::OrderTicket() {
-	return orders[selected].ticket;
+	return GetSelected().ticket;
 }
 
 int		SimBroker::OrderType() {
-	return orders[selected].type;
+	return GetSelected().type;
 }
 
 bool    SimBroker::IsDemo() {

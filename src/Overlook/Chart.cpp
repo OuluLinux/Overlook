@@ -24,30 +24,38 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 }
 
 void Chart::RefreshCore() {
-	System& sys = GetSystem();
-	
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	ASSERT(tf >= 0 && tf < sys.GetPeriodCount());
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	indi_ids.Add(decl);
-	tf_ids.Add(tf);
-	sym_ids.Add(symbol);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	
-	RefreshCoreData(true);
-	
-	if (!work_queue.Top()->core) return;
-	
-	core = work_queue.Top();
-	bardata = 0;
-	
-	title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
-	Title(title);
-	
-	SetGraph(core);
-	Data();
+	try {
+		System& sys = GetSystem();
+		
+		Index<int> tf_ids, sym_ids;
+		Vector<FactoryDeclaration> indi_ids;
+		ASSERT(tf >= 0 && tf < sys.GetPeriodCount());
+		ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
+		indi_ids.Add(decl);
+		tf_ids.Add(tf);
+		sym_ids.Add(symbol);
+		work_queue.Clear();
+		sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+		
+		RefreshCoreData(true);
+		
+		if (!work_queue.Top()->core) return;
+		
+		core = work_queue.Top();
+		bardata = 0;
+		
+		title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
+		Title(title);
+		
+		SetGraph(core);
+		Data();
+	}
+	catch (ConfExc e) {
+		
+	}
+	catch (DataExc e) {
+		
+	}
 }
 
 void Chart::RefreshCoreData(bool store_cache) {

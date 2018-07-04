@@ -38,7 +38,6 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
-#include "CostAvoidance.h"
 
 
 namespace Overlook {
@@ -92,7 +91,6 @@ protected:
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	CtrlCallbacks<AnalyzerCtrl> alz;
 	CtrlCallbacks<ScalperCtrl> sclp;
-	CtrlCallbacks<CostAvoidanceCtrl> ca;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;

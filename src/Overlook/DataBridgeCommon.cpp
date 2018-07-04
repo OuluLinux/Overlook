@@ -177,6 +177,7 @@ int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) 
 		out.Put(buf, size);
 	}
 	
+	out.Flush();
 	out.Close();
 	
 	ReleaseLog("DataBridgeCommon::DownloadRemoteFile: " + IntStr(out.GetSize()) + " bytes for " + remote_path + " took " + ts.ToString());

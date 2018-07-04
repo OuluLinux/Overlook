@@ -73,12 +73,13 @@ INITBLOCK {
 	System::Register<EasierScalperSignal>("Easier Scalper Signal");
 	System::Register<PulseIndicator>("Pulse");
 	System::Register<SimpleHeatmap>("Simple Heatmap");
-	System::Register<LevelHeatmap>("Level Heatmap");
+	System::Register<Avoidance>("Avoidance");
+	System::Register<AvoidancePeaks>("Avoidance Peaks");
 	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
-	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
+	System::Register<HighPromises>("High Promises", CORE_EXPERTADVISOR);
 	
 	
 	
@@ -198,7 +199,7 @@ INITBLOCK {
     System::RegisterAssistant<ScissorChannelOscillator>("Low", SCIS_LOW);
     System::RegisterAssistant<ScissorChannelOscillator>("High", SCIS_HIGH);
     
-	//System::PrioritySlowTf().Add(System::Find<DqnAdvisor>());
+	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());
 	
 }
 

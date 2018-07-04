@@ -52,6 +52,12 @@ void CoreIO::IO(const ValueBase& base) {
 	else if (base.data_type == ValueBase::PERS_) {
 		persistents.Add(dynamic_cast<const Persistent&>(base));
 	}
+	else if (base.data_type == ValueBase::INT_) {
+		ArgPtr& aptr = args.Add();
+		aptr.ptr = (int*)base.data;
+		aptr.min = base.min;
+		aptr.max = base.max;
+	}
 }
 
 void CoreIO::RefreshBuffers() {
@@ -108,7 +114,7 @@ String CoreIO::GetCacheDirectory() {
 		}
 	}
 	
-	String coredir = Format("%d-%d-%d-%d-", sym_id, tf_id, factory, hash) + IntStr64(arghash);
+	String coredir = Format("%d-%d-%d-%d-", factory, sym_id, tf_id, hash) + IntStr64(arghash);
 	String dir = AppendFileName(ConfigFile("corecache"), coredir);
 	RealizeDirectory(dir);
 	return dir;

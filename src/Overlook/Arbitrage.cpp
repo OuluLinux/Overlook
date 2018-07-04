@@ -314,9 +314,9 @@ void Arbitrage::GetXTrade(String FileName) {
 						break;
 						
 				if (m == AmountStrings)
-					XTrade[i][Pos] = FALSE;
+					XTrade[i][Pos] = false;
 				else
-					XTrade[i][Pos] = TRUE;
+					XTrade[i][Pos] = true;
 					
 				xposition[i][Pos] = 0;
 				

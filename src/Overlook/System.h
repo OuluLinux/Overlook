@@ -77,9 +77,6 @@ struct FactoryRegister : public ValueRegister, Moveable<FactoryRegister> {
 		else if (base.data_type == ValueBase::OUT_) {
 			out.Add(OutputType(base.count, base.visible));
 		}
-		else if (base.data_type == ValueBase::BOOL_) {
-			args.Add(ArgType(base.s0, 0, 1, *(bool*)base.data));
-		}
 		else if (base.data_type == ValueBase::INT_) {
 			args.Add(ArgType(base.s0, base.min, base.max, *(int*)base.data));
 		}

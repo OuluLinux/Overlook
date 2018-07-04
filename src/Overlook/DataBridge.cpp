@@ -59,7 +59,7 @@ void DataBridge::Start() {
 	}
 	else if (sym < sym_count) {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
-		#ifdef flagNOSECONDS
+		#ifndef flagSECONDS
 		if (init_round) {
 			const Symbol& mtsym = mt.GetSymbol(sym);
 			RefreshFromHistory(true);
@@ -93,7 +93,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	Buffer& time_buf = GetBuffer(4);
 	DataBridgeCommon& common = GetDataBridgeCommon();
 	
-	common.RefreshAskBidData();
+	common.RefreshAskBidData(open_buf.IsEmpty());
 	
 	int id = GetSymbol();
 	int tf = GetTimeframe();
@@ -103,7 +103,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	
 	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
 	
-	#ifndef flagNOSECONDS
+	#ifdef flagSECONDS
 	int64 step = GetMinutePeriod();
 	#else
 	int64 step = GetMinutePeriod() * 60;
@@ -123,7 +123,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			continue;
 		
 		int64 time = utc_time.Get();
-		#ifdef flagNOSECONDS
+		#ifndef flagSECONDS
 		time += 4*24*60*60; // 1.1.1970 is thursday, move to monday
 		time = time - time % step;
 		time -= 4*24*60*60;
@@ -178,6 +178,9 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	}
 	
 	int64 time = GetUtcTime().Get() - epoch_begin;
+	#ifndef flagSECONDS
+	time -= time % 60;
+	#endif
 	SyncData(time, shift, open_buf.Top());
 	
 	// Very weird bug of volume not being updated
@@ -443,7 +446,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 
 bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	Time utc_time = Time(1970,1,1) + time;
-	#ifdef flagNOSECONDS
+	#ifndef flagSECONDS
 	ASSERT(utc_time.second == 0);
 	#endif
 	int wday = DayOfWeek(utc_time);
@@ -460,8 +463,8 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	Time t;
 	if (shift < 0) {
 		shift = -1;
-		#ifdef flagNOSECONDS
-		t = Time(2018,1,1) - 60;
+		#ifndef flagSECONDS
+		t = Time(2018,1,2) - 60;
 		#else
 		t = Time(2018,6,11) - 60;
 		#endif
@@ -471,7 +474,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		shift = time_buf.GetCount() - 1;
 		t = Time(1970,1,1) + time_buf.Top();
 		ask = open_buf.Top();
-		#ifdef flagNOSECONDS
+		#ifndef flagSECONDS
 		ASSERT(t.second == 0);
 		#endif
 	}
@@ -480,7 +483,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	
 	if (t < utc_time) {
 		shift++;
-		#ifndef flagNOSECONDS
+		#ifdef flagSECONDS
 		t += 1;
 		#else
 		t += 60;
@@ -513,7 +516,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 				
 				shift++;
 			}
-			#ifndef flagNOSECONDS
+			#ifdef flagSECONDS
 			t += 1;
 			#else
 			t += 60;
@@ -568,7 +571,7 @@ void DataBridge::RefreshFromFasterTime() {
 	point = m1_db.point;
 	
 	int period_mins = GetMinutePeriod();
-	#ifndef flagNOSECONDS
+	#ifdef flagSECONDS
 	int period_secs = period_mins;
 	#else
 	int period_secs = period_mins * 60;

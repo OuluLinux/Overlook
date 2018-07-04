@@ -2,11 +2,11 @@
 
 namespace Overlook {
 
-DqnAdvisor::DqnAdvisor() {
-	
+ExpertAdvisor::ExpertAdvisor() {
+
 }
 
-void DqnAdvisor::Init() {
+void ExpertAdvisor::Init() {
 	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
 	
 	SetJobCount(1);
@@ -14,262 +14,106 @@ void DqnAdvisor::Init() {
 	point = GetDataBridge()->GetPoint();
 	
 	SetJob(0, tf_str + " Training")
-		.SetBegin		(THISBACK(TrainingBegin))
-		.SetIterator	(THISBACK(TrainingIterator))
-		.SetEnd			(THISBACK(TrainingEnd))
-		.SetInspect		(THISBACK(TrainingInspect))
-		.SetCtrl		<TrainingCtrl>();
+	.SetBegin(THISBACK(TrainingBegin))
+	.SetIterator(THISBACK(TrainingIterator))
+	.SetEnd(THISBACK(TrainingEnd))
+	.SetInspect(THISBACK(TrainingInspect))
+	.SetCtrl		<TrainingCtrl>();
 }
 
-void DqnAdvisor::Start() {
+void ExpertAdvisor::Start() {
 	if (once) {
-		if (prev_counted > 0) prev_counted--;
+		if (prev_counted > 0)
+			prev_counted--;
+			
 		once = false;
+		
 		//RefreshGrid(true);
 		RefreshSourcesOnlyDeep();
 	}
 	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
+		
 		if (prev_counted < bars) {
-			LOG("DqnAdvisor::Start Refresh");
+			LOG("ExpertAdvisor::Start Refresh");
 			RefreshAll();
 		}
 	}
 }
 
-bool DqnAdvisor::TrainingBegin() {
-	#ifdef flagDEBUG
-	max_rounds = 10000;
-	#else
-	max_rounds = 1000000;
-	#endif
-	training_pts.SetCount(max_rounds, 0);
-	
+bool ExpertAdvisor::TrainingBegin() {
+	SetAvoidRefresh();
 	
 	if (round == 0) {
-		dqn.Init(1, input_size, output_size);
-		dqn.LoadInitJSON(
-			"{\n"
-			"\t\"update\":\"qlearn\",\n"
-			"\t\"gamma\":0.9,\n"
-			"\t\"epsilon\":0.2,\n"
-			"\t\"alpha\":0.005,\n"
-			"\t\"experience_add_every\":5,\n"
-			"\t\"experience_size\":10000,\n"
-			"\t\"learning_steps_per_iteration\":5,\n"
-			"\t\"tderror_clamp\":1.0,\n"
-			"\t\"num_hidden_units\":100,\n"
-			"}\n");
-		dqn.Reset();
-		reward_sum = 0.0;
+		sb.Brokerage::operator=(GetMetaTrader());
+		sb.Init();
+		
+		opt.Min().SetCount(args.GetCount());
+		opt.Max().SetCount(args.GetCount());
+		for(int i = 0; i < args.GetCount(); i++) {
+			opt.Min()[i] = args[i].min;
+			opt.Max()[i] = args[i].max;
+		}
+		
+		opt.SetMaxGenerations(10);
+		opt.Init(args.GetCount(), 100);
 	}
+	max_rounds = opt.GetMaxRounds();
+	
+	training_pts.SetCount(max_rounds, 0);
 	
 	// Allow iterating
 	return true;
 }
 
-void DqnAdvisor::LoadInput(int pos) {
-	int matpos = 0;
-	
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	double open = open_buf.Get(pos);
-	
-	tmp_mat.SetCount(input_size);
-	level_dist.SetCount(level_count);
-	level_len.SetCount(level_count);
-	level_dir.SetCount(level_count);
-	
-	int sym_count = have_othersyms ? this->sym_count : 1;
-	
-	#if 0
-	for(int s = 0; s < sym_count; s++) {
-		ConstBuffer& input_buf = have_othersyms ? inputs[0][s].core->GetBuffer(0) : open_buf;
-		
-		for(int i = 0; i < window_count; i++) {
-			int window_size = 1 << (5 + i*2);
-			double begin = open - level_side * point;
-			
-			for(int j = 0; j < level_count; j++) {
-				level_dist[j] = window_size;
-				level_len[j] = 0;
-				level_dir[j] = 0;
-			}
-			
-			double prev;
-			for(int j = 0; j < window_size; j++) {
-				int dist = window_size - 1 - j;
-				if (dist > pos)
-					continue;
-				double o = input_buf.Get(pos - dist);
-				int k = (o - state_est) / point + level_side;
-				if (k < 0 || k >= level_count)
-					continue;
-				
-				level_dist[k] = dist;
-				level_len[k]++;
-				
-				if (j != 0) {
-					if (prev != o) {
-						level_dir[k] = o > prev ? +1 : -1;
-					}
-				}
-				prev = o;
-			}
-			
-			for(int i = 0; i < level_count; i++) {
-				double dist_sens = (double)level_dist[i] / (double)window_size;
-				double len_sens = 1.0 - (double)level_len[i] / (double)window_size;
-				double dir_sens = level_dir[i];
-				
-				tmp_mat.Set(matpos++, dist_sens);
-				tmp_mat.Set(matpos++, len_sens);
-				tmp_mat.Set(matpos++, dir_sens);
-			}
-		}
-	}
-	#else
-	for(int s = 0; s < sym_count; s++) {
-		ConstLabel& input_buf = inputs[1][s].core->GetLabel(0);
-		double psar_sens = input_buf.buffers[0].signal.Get(pos) ? -1 : +1;
-		tmp_mat.Set(matpos++, psar_sens);
-	}
-	#endif
-	
-	double speed_sens = state_speed / (level_side*point);
-	double opendist_sens = (state_est - open) / (level_side*point);
-	tmp_mat.Set(matpos++, speed_sens);
-	tmp_mat.Set(matpos++, opendist_sens);
-	
-	if (state_orderisopen) {
-		double orderest_sens = (state_est - state_orderopen) / (level_side*point);
-		double orderprofit_sens = (open - state_orderopen) / (level_side*point);
-		
-		if (state_ordertype) {
-			orderest_sens *= -1.0;
-			orderprofit_sens *= -1.0;
-		}
-		
-		tmp_mat.Set(matpos++, orderest_sens);
-		tmp_mat.Set(matpos++, orderprofit_sens);
-		tmp_mat.Set(matpos++, 0.0);
-	} else {
-		tmp_mat.Set(matpos++, 0);
-		tmp_mat.Set(matpos++, 0);
-		tmp_mat.Set(matpos++, 1.0);
-	}
-	
-	ASSERT(matpos == input_size);
-}
+bool ExpertAdvisor::TrainingIterator() {
 
-void DqnAdvisor::ResetState(int pos) {
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	double open = open_buf.Get(pos);
-	state_speed = 0;
-	state_est = open;
-	state_orderopen = open;
-	state_orderisopen = false;
-	state_ordertype = false;
-}
-
-bool DqnAdvisor::TrainingIterator() {
-	
 	// Show progress
 	GetCurrentJob().SetProgress(round, max_rounds);
 	
 	
 	// ---- Do your training work here ----
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& time_buf = GetInputBuffer(0, 4);
 	
-	int size = input_length;
-	int range = GetBars() - 1;
-	if (do_test) range *= TRAININGAREA_FACTOR;
-	range -= size;
 	
-	pos = size + (round / acts_per_step) % range;
-	if (round % (acts_per_step * range) == 0)
-		ResetState(pos);
-	
-	LoadInput(pos);
-	
-	double prog = (double)round / (double)max_rounds;
-	double epsilon = (1.0 - prog) * 0.2;
-	dqn.SetEpsilon(epsilon);
-	
-	int action = dqn.Act(tmp_mat);
-	
-	double reward = 0.0;
-	double open = open_buf.Get(pos);
-	if (action == ACTION_UP)
-		state_speed += point * 0.005;
-	else if (action == ACTION_DOWN)
-		state_speed -= point * 0.005;
-	else
-		reward = 0.01; // reward idling
-	/*if (state_est < open)
-		state_speed += point * 0.001;
-	else
-		state_speed -= point * 0.001;*/
-	state_est += state_speed;
-	
-	double max = open + level_side * point;
-	double min = open - level_side * point;
-	if (state_est > max) {
-		state_est = max;
-		state_speed = 0;
-	}
-	if (state_est < min) {
-		state_est = min;
-		state_speed = 0;
+	opt.Start();
+	const Vector<double>& trial = opt.GetTrialSolution();
+	for(int i = 0; i < args.GetCount(); i++) {
+		ArgPtr& ap = args[i];
+		int value = min(ap.max, max(ap.min, (int)trial[i]));
+		*ap.ptr = value;
 	}
 	
-	double est = state_est - open;
-	int estpips = (est + point * 0.5) / point;
-	bool force_experience = false;
-	if (!state_orderisopen) {
-		if (estpips >= +4) {
-			state_orderisopen = true;
-			state_ordertype = false;
-			state_orderopen = open + point*3; // spread
+	try {
+		ResetSubCores();
+		sb.Clear();
+		InitEA();
+		InitSubCores();
+		int count = open_buf.GetCount(); // take count before updating dependencies to match their size
+		RefreshSubCores();
+		
+		Point = point;
+		for(int i = 0; i < count; i++) {
+			Ask = open_buf.Get(i);
+			Bid = Ask - 3 * point;
+			Now = Time(1970,1,1) + time_buf.Get(i);
+			sb.SetPrice(GetSymbol(), Ask, Bid);
+			sb.RefreshOrders();
+			//sb.CycleChanges();
+			StartEA(i);
+			//sb.Cycle();
 		}
-		else if (estpips <= -4) {
-			state_orderisopen = true;
-			state_ordertype = true;
-			state_orderopen = open - point*3;
-		}
-	} else {
-		// If buy
-		if (state_ordertype == false) {
-			// If price is estimated to go even lower
-			if (estpips < +4) {
-				state_orderisopen = false;
-				reward = +(open - state_orderopen) / point * 10;
-				if (reward >= 0) force_experience = true;
-				state_est = open;
-				state_speed = 0;
-			}
-			/*else {
-				reward = open >= state_orderopen ? 0.1 : -0.1;
-			}*/
-		} else {
-			if (estpips > -4) {
-				state_orderisopen = false;
-				reward = -(open - state_orderopen) / point * 10;
-				if (reward >= 0) force_experience = true;
-				state_est = open;
-				state_speed = 0;
-			}
-			/*else {
-				reward = open <= state_orderopen ? 0.1 : -0.1;
-			}*/
-		}
+		
+		double eq = sb.AccountEquity();
+		training_pts[round] = eq + Random(2);
+		opt.Stop(eq);
 	}
-	
-	dqn.Learn(reward, force_experience);
-	
-	
-	reward_sum += reward;
-	training_pts[round] = reward_sum;
+	catch (ConfExc e) {
+		LOG(e);
+		opt.Stop(-DBL_MAX);
+	}
 	
 	
 	
@@ -285,19 +129,23 @@ bool DqnAdvisor::TrainingIterator() {
 		save_elapsed.Reset();
 		StoreCache();
 	}
+	
 	return true;
 }
 
-bool DqnAdvisor::TrainingEnd() {
+bool ExpertAdvisor::TrainingEnd() {
 	double max_d = -DBL_MAX;
 	int max_i = 0;
 	
 	
 	RefreshAll();
+	
+	SetAvoidRefresh(false);
+	
 	return true;
 }
 
-bool DqnAdvisor::TrainingInspect() {
+bool ExpertAdvisor::TrainingInspect() {
 	bool success = false;
 	
 	INSPECT(success, "ok: this is an example");
@@ -310,7 +158,7 @@ bool DqnAdvisor::TrainingInspect() {
 	return true;
 }
 
-void DqnAdvisor::RefreshAll() {
+void ExpertAdvisor::RefreshAll() {
 	/*
 	RefreshSourcesOnlyDeep();
 	ConstBuffer& timebuf = GetInputBuffer(0, 4);
@@ -373,7 +221,7 @@ void DqnAdvisor::RefreshAll() {
 	
 	//int sig = enabled.Get(bars-1) ? (signal.Get(bars-1) ? -1 : +1) : 0;
 	//GetSystem().SetSignal(GetSymbol(), sig);
-	//ReleaseLog("DqnAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
+	//ReleaseLog("ExpertAdvisor::RefreshAll symbol " + IntStr(GetSymbol()) + " sig " + IntStr(sig));
 	
 	
 	// Keep counted manually
@@ -385,76 +233,16 @@ void DqnAdvisor::RefreshAll() {
 	*/
 }
 
-void DqnAdvisor::TrainingCtrl::Paint(Draw& w) {
+void ExpertAdvisor::TrainingCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	DqnAdvisor* ea = dynamic_cast<DqnAdvisor*>(&*job->core);
+	ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(&*job->core);
 	ASSERT(ea);
 	
-	Size graphsz(400, sz.cy);
+	Size graphsz(sz.cx, sz.cy);
 	DrawVectorPolyline(id, graphsz, ea->training_pts, polyline, ea->round);
-	
-	
-	int sensor_width = 3;
-	int x = sz.cx - sensor_width;
-	for(int i = 0; i < ea->tmp_mat.GetCount(); i++) {
-		double sens = ea->tmp_mat[i];
-		int h = (sens + 1) / 2.0 * sz.cy;
-		int y = sz.cy - h;
-		id.DrawRect(x, y, sensor_width, h, Black);
-		x -= sensor_width;
-	}
-	
-	Rect picrect(graphsz.cx, 0, x + sensor_width, sz.cy);
-	
-	ConstBuffer& input_buf = ea->GetInputBuffer(0, 0);
-	int pos = ea->pos;
-	int window_size = 1 << 7;
-	
-	double min = ea->state_est;
-	double max = ea->state_est;
-	if (ea->state_orderisopen) {
-		min = Upp::min(ea->state_orderopen, min);
-		max = Upp::max(ea->state_orderopen, max);
-	}
-	for(int i = 0; i < window_size; i++) {
-		int dist = window_size - 1 - i;
-		if (dist > pos)
-			continue;
-		double o = input_buf.Get(pos - dist);
-		if (o < min) min = o;
-		if (o > max) max = o;
-	}
-	double diff = max - min;
-	
-	polyline.SetCount(window_size);
-	double x_step = (double)(picrect.Width() - 1) / window_size;
-	int h = picrect.Height();
-	for(int i = 0; i < window_size; i++) {
-		int dist = window_size - 1 - i;
-		if (dist > pos)
-			continue;
-		double o = input_buf.Get(pos - dist);
-		Point& pt = polyline[i];
-		pt.x = picrect.left + i * x_step;
-		pt.y = h - (o - min) / diff * h;
-	}
-	id.DrawPolyline(polyline, 2, Green);
-	
-	int box_h = 5;
-	int box_h2 = box_h / 2;
-	int box_w = 5;
-	int y;
-	if (ea->state_orderisopen) {
-		x = picrect.right - box_w;
-		y = h - (ea->state_orderopen - min) / diff * h - box_h2;
-		id.DrawRect(x, y, box_w, box_h, Color(255, 42, 0));
-	}
-	y = h - (ea->state_est - min) / diff * h - box_h2;
-	id.DrawRect(x, y, box_w, box_h, Color(28, 127, 255));
-	
 	
 	w.DrawImage(0, 0, id);
 }

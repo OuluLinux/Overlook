@@ -134,7 +134,6 @@ void Overlook::DockInit() {
 	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(ca, "Cost Avoidance").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -150,7 +149,6 @@ void Overlook::DockInit() {
 	trade			.WhenVisible << THISBACK(Data);
 	alz				.WhenVisible << THISBACK(Data);
 	sclp			.WhenVisible << THISBACK(Data);
-	ca				.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -453,7 +451,9 @@ void Overlook::DeepRefresh() {
 		mt.Data();
 		DataBridgeCommon& common = GetDataBridgeCommon();
 		common.InspectInit();
+		common.lock.Enter();
 		common.DownloadAskBid();
+		common.lock.Leave();
 		common.RefreshAskBidData(true);
 		GetCalendar().Data();
 		//sys.RefreshReal();
@@ -518,7 +518,6 @@ void Overlook::Data() {
 	//if (alz.IsVisible())			alz.Data();
 	//if (sclp.IsVisible())			sclp.Data();
 	if (arb.IsVisible())			arb.Data();
-	if (ca.IsVisible())				ca.Data();
 }
 
 void Overlook::RefreshAssist() {

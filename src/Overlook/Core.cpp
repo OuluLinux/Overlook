@@ -42,6 +42,11 @@ Core::~Core() {
 	
 }
 
+void Core::ResetSubCores() {
+	subcore_factories.Clear();
+	subcores.Clear();
+}
+
 Core& Core::Set(String key, Value value) {
 	ArgChanger arg;
 	arg.SetLoading();
@@ -100,20 +105,31 @@ void Core::InitAll() {
 	
 	
 	// Register jobs
-	JobThread& thrd = sys.GetJobThread(sym_id, tf_id);
-	WRITELOCK(thrd.job_lock) {
-		for(int i = 0; i < jobs.GetCount(); i++) {
-			Job& job = jobs[i];
-			Core* core = job.core;
-			if (core == NULL)
-				Panic("You haven't called SetJob for all jobs or SetJobCount has invalid count.");
-			thrd.jobs.Add(&job);
+	if (!jobs.IsEmpty()) {
+		JobThread& thrd = sys.GetJobThread(sym_id, tf_id);
+		WRITELOCK(thrd.job_lock) {
+			for(int i = 0; i < jobs.GetCount(); i++) {
+				Job& job = jobs[i];
+				Core* core = job.core;
+				if (core == NULL)
+					Panic("You haven't called SetJob for all jobs or SetJobCount has invalid count.");
+				thrd.jobs.Add(&job);
+			}
 		}
 	}
 	
 	
 	// Initialize sub-cores
-	const FactoryRegister& src_reg = sys.regs[factory];
+	InitSubCores();
+	
+	
+	
+	is_init = true;
+}
+
+void Core::InitSubCores() {
+	System& sys = GetSystem();
+	FactoryRegister& src_reg = sys.regs[factory];
 	for(int i = 0; i < subcores.GetCount(); i++) {
 		Core& core = subcores[i];
 		core.factory = subcore_factories[i];
@@ -148,9 +164,6 @@ void Core::InitAll() {
 		
 		core.InitAll();
 	}
-	
-	
-	is_init = true;
 }
 
 void Core::RefreshSources() {
@@ -185,12 +198,19 @@ void Core::RefreshSourcesOnlyDeep() {
 	}
 }
 
-void Core::Refresh() {
-	refresh_lock.Enter();
-	
+void Core::RefreshSubCores() {
 	for(int i = 0; i < subcores.GetCount(); i++)
 		subcores[i].Refresh();
+}
+
+void Core::Refresh() {
+	if (avoid_refresh)
+		return;
 	
+	if (!refresh_lock.TryEnter())
+		return;
+	
+	RefreshSubCores();
 	
 	
 	// Some indicators might want to set the size by themselves

@@ -55,7 +55,7 @@ int SimpleMAOnBuffer ( const int rates_total, const int prev_calculated, const i
 	int i, limit;
 	if ( period <= 1 || rates_total - begin < period )
 		return ( 0 );
-	if ( prev_calculated == 0 ) {
+	if ( prev_calculated <= 1 ) {
 		limit = period + begin;
 		for ( i = 0;i < limit - 1;i++ )
 			buffer.Set( i, 0.0 );
@@ -613,10 +613,10 @@ void MovingAverageConvergenceDivergence::Start() {
 
 	SimpleMAOnBuffer( bars, GetCounted(), 0, signal_sma_period, buffer, signal_buffer );
 	
-	LabelSignal& early = GetLabelBuffer(0, 0);
-	LabelSignal& late = GetLabelBuffer(0, 1);
-	LabelSignal& side = GetLabelBuffer(0, 2);
-	LabelSignal& signal = GetLabelBuffer(0, 3);
+	LabelSignal& signal = GetLabelBuffer(0, 0);
+	LabelSignal& side = GetLabelBuffer(0, 1);
+	LabelSignal& late = GetLabelBuffer(0, 2);
+	LabelSignal& early = GetLabelBuffer(0, 3);
 	for (int i = counted; i < bars; i++) {
 		double value = buffer.Get(i);
 		double prev = buffer.Get(i-1);
@@ -648,6 +648,7 @@ void MovingAverageConvergenceDivergence::Assist(int cursor, VectorBool& vec) {
 
 
 
+
 AverageDirectionalMovement::AverageDirectionalMovement() {
 	period_adx = 14;
 }
@@ -663,9 +664,9 @@ void AverageDirectionalMovement::Init() {
 	SetBufferLabel(1,"+DI");
 	SetBufferLabel(2,"-DI");
 	
-	if ( period_adx >= 128 || period_adx <= 1 )
-		throw DataExc();
-	
+	if ( period_adx >= 10000 || period_adx <= 1 )
+		throw ConfExc();
+
 	SetBufferBegin ( 0, period_adx );
 	SetBufferBegin ( 1, period_adx );
 	SetBufferBegin ( 2, period_adx );
@@ -681,7 +682,7 @@ void AverageDirectionalMovement::Start() {
 	
 	int bars = GetBars();
 	if ( bars < period_adx )
-		throw DataExc();
+		throw ConfExc();
 
 	int counted = GetCounted();
 
@@ -800,10 +801,10 @@ void BollingerBands::Init() {
 	SetBufferLabel(2,"Bands Lower");
 	
 	if ( bands_period < 2 )
-		throw DataExc();
+		throw ConfExc();
 	
 	if ( bands_deviation == 0.0 )
-		throw DataExc();
+		throw ConfExc();
 	
 	plot_begin = bands_period - 1;
 	SetBufferBegin ( 0, bands_period );
@@ -958,10 +959,10 @@ void ParabolicSAR::Init() {
 	SetBufferColor(0, Lime);
 	
 	if (sar_step <= 0.0)
-		throw DataExc();
+		throw ConfExc();
 	
 	if (sar_maximum <= 0.0)
-		throw DataExc();
+		throw ConfExc();
 	
 	last_rev_pos = 0;
 	direction_long = false;
@@ -1216,7 +1217,7 @@ void AverageTrueRange::Init() {
 	SetBufferLabel(0, "ATR");
 	
 	if ( period <= 0 )
-		throw DataExc();
+		throw ConfExc();
 	
 	SetBufferBegin ( 0, period );
 }
@@ -1430,8 +1431,8 @@ void CommodityChannelIndex::Init() {
 	SetBufferLabel(0,"CCI");
 	
 	if ( period <= 1 )
-		throw DataExc();
-	
+		throw ConfExc();
+
 	SetBufferBegin ( 0, period );
 }
 
@@ -1460,7 +1461,7 @@ void CommodityChannelIndex::Start() {
 	int counted = GetCounted();
 	
 	if ( bars <= period || period <= 1 )
-		throw DataExc();
+		throw ConfExc();
 	
 	if ( counted < 1 ) {
 		for ( i = 1; i < period; i++) {
@@ -1538,13 +1539,13 @@ DeMarker::DeMarker() {
 
 void DeMarker::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-0.5);  // normalized
-	SetCoreMaximum(0.5);   // normalized
+	SetCoreMinimum(0);
+	SetCoreMaximum(1);
 	
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, -0.2); // normalized
-	SetCoreLevel(1, +0.2); // normalized
+	SetCoreLevel(0, 0.3);
+	SetCoreLevel(1, 0.7);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"DeMarker");
@@ -1627,7 +1628,7 @@ void DeMarker::Start() {
 		
 		double value = 0.0;
 		if ( num != 0.0 )
-			value = maxvalue / num - 0.5;
+			value = maxvalue / num;
 		buffer.Set(i, value);
 		
 		sig.signal.Set(i, value < 0);
@@ -1719,7 +1720,7 @@ void Momentum::Init() {
 	SetBufferColor(0, DodgerBlue);
 	
 	if ( period <= 0 )
-		throw DataExc();
+		throw ConfExc();
 
 	SetBufferBegin(0, period);
 	SetBufferShift(0, shift);
@@ -1890,20 +1891,20 @@ RelativeStrengthIndex::RelativeStrengthIndex()
 
 void RelativeStrengthIndex::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-1); // normalized
-	SetCoreMaximum(+1);  // normalized
+	SetCoreMinimum(0);
+	SetCoreMaximum(100);
 	
 	SetBufferColor(0, DodgerBlue);
 	SetBufferColor(1, White());
 	SetBufferColor(2, White());
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, +0.4); // normalized
-	SetCoreLevel(1, -0.4); // normalized
+	SetCoreLevel(0, 70);
+	SetCoreLevel(1, 30);
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
 	if ( period < 1 )
-		throw DataExc();
+		throw ConfExc();
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "RSI");
@@ -1966,7 +1967,7 @@ void RelativeStrengthIndex::Start() {
 
 		pos_buffer.Set(period, sum_p / period);
 		neg_buffer.Set(period, sum_n / period);
-		buffer.Set(period, (1.0 - ( 1.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) )) * 2.0 - 1.0);
+		buffer.Set(period, (1.0 - ( 1.0 / ( 1.0 + pos_buffer.Get(period) / neg_buffer.Get(period) ) )) * 100);
 		pos = period + 1;
 	}
 	
@@ -1983,7 +1984,7 @@ void RelativeStrengthIndex::Start() {
 		buffer.Set(i, rsi);
 		prev_value = value;
 		
-		sig.signal.Set(i, rsi < 0);
+		sig.signal.Set(i, rsi < 50);
 	}
 }
 
@@ -2109,13 +2110,13 @@ StochasticOscillator::StochasticOscillator() {
 
 void StochasticOscillator::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-1.0); // normalized
-	SetCoreMaximum(+1.0);  // normalized
+	SetCoreMinimum(0);
+	SetCoreMaximum(100);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1, Red);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, -0.60); // normalized
-	SetCoreLevel(1, +0.60); // normalized
+	SetCoreLevel(0, 20);
+	SetCoreLevel(1, 80);
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -2138,8 +2139,8 @@ void StochasticOscillator::Assist(int cursor, VectorBool& vec) {
 		else					vec.Set(STOCH_BELOWZERO, true);
 		if (value0 > value1)	vec.Set(STOCH_INC, true);
 		else					vec.Set(STOCH_DEC, true);
-		if (value0 > +0.60)		vec.Set(STOCH_OVERHIGH, true);
-		if (value0 < -0.60)		vec.Set(STOCH_BELOWLOW, true);
+		if (value0 > 80)		vec.Set(STOCH_OVERHIGH, true);
+		if (value0 < 20)		vec.Set(STOCH_BELOWLOW, true);
 	}
 }
 
@@ -2154,7 +2155,7 @@ void StochasticOscillator::Start() {
 	int counted = GetCounted();
 
 	if ( bars <= k_period + d_period + slowing )
-		throw DataExc();
+		throw ConfExc();
 
 	start = k_period;
 
@@ -2254,9 +2255,9 @@ void StochasticOscillator::Start() {
 		
 		double value = 1.0;
 		if ( sumhigh != 0.0 )
-			value = sumlow / sumhigh * 2.0 - 1.0;
+			value = sumlow / sumhigh * 100;
 		buffer.Set(i, value);
-		sig.signal.Set(i, value < 0);
+		sig.signal.Set(i, value < 50);
 	}
 
 	start = d_period - 1;
@@ -2290,12 +2291,12 @@ WilliamsPercentRange::WilliamsPercentRange()
 
 void WilliamsPercentRange::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-1); // normalized
-	SetCoreMaximum(+1);  // normalized
+	SetCoreMinimum(-100);
+	SetCoreMaximum(0);
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, -20 + 50); // normalized
-	SetCoreLevel(1, -80 + 50); // normalized
+	SetCoreLevel(0, -20);
+	SetCoreLevel(1, -80);
 	SetBufferBegin ( 0, period );
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"WPR");
@@ -2323,10 +2324,10 @@ void WilliamsPercentRange::Start() {
 		double max_high = High( highest );
 		double min_low = Low( lowest );
 		double close = Open( i );
-		double cur = -2 * ( max_high - close ) / ( max_high - min_low ) + 1;
+		double cur = -100 * ( max_high - close ) / ( max_high - min_low );
 		buffer.Set(i, cur);
 		
-		sig.signal.Set(i, cur < 0);
+		sig.signal.Set(i, cur < -50);
 	}
 }
 
@@ -2408,11 +2409,11 @@ MoneyFlowIndex::MoneyFlowIndex() {
 
 void MoneyFlowIndex::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(-50); // normalized
-	SetCoreMaximum(50);  // normalized
+	SetCoreMinimum(0);
+	SetCoreMaximum(100);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 20 - 50); // normalized
-	SetCoreLevel(1, 80 - 50); // normalized
+	SetCoreLevel(0, 20);
+	SetCoreLevel(1, 80);
 	SetBufferColor(0, Blue);
 	SetBufferBegin ( 0, period );
 	SetBufferStyle(0,DRAW_LINE);
@@ -2460,12 +2461,12 @@ void MoneyFlowIndex::Start() {
 		
 		double value;
 		if ( neg_mf != 0.0 )
-			value = 100 - 100 / ( 1 + pos_mf / neg_mf ) - 50;
+			value = 100 - 100 / ( 1 + pos_mf / neg_mf );
 		else
-			value = 100 - 50;
+			value = 100;
 		buffer.Set(i, value);
 		
-		sig.signal.Set(i, value < 0);
+		sig.signal.Set(i, value < 50);
 	}
 }
 
@@ -4126,10 +4127,10 @@ void Psychological::Start() {
 		if (Open(i-period) > Open(i-period-1)) {
 			count--;
 		}
-		double value = ((double)count / period) *100.0 - 50;
-		buf.Set(i, value); // normalized
+		double value = ((double)count / period) *100.0;
+		buf.Set(i, value);
 		
-		sig.signal.Set(i, value < 0);
+		sig.signal.Set(i, value < 50);
 	}
 }
 
@@ -4839,7 +4840,7 @@ void TrendIndex::Init() {
 	SetBufferColor(2, Red);
 	
 	if ( period < 1 )
-		throw DataExc();
+		throw ConfExc();
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "TrendIndex");
@@ -5197,7 +5198,7 @@ void VolatilityContext::Init() {
 	SetBufferColor(0, Blue);
 	
 	if ( period < 1 )
-		throw DataExc();
+		throw ConfExc();
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "VolatilityContext");
@@ -5288,7 +5289,7 @@ void ChannelContext::Init() {
 	SetBufferColor(0, Blue);
 	
 	if ( period < 1 )
-		throw DataExc();
+		throw ConfExc();
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0, "ChannelContext");
@@ -6082,46 +6083,264 @@ void PulseIndicator::Assist(int cursor, VectorBool& vec) {
 
 
 
-LevelHeatmap::LevelHeatmap() {
+Avoidance::Avoidance() {
 	
 }
 
-void LevelHeatmap::Init() {
-	SetHeatmap();
-}
-
-void LevelHeatmap::Start() {
-	/*System& sys = GetSystem();
-	Scalper& s = GetScalper();
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	LabelSignal& sig = GetLabelBuffer(0, 0);
+void Avoidance::Init() {
+	System& sys = GetSystem();
 	
-	if (s.sel_sym >= 0 && s.sel_sym < s.symbols.GetCount()) {
-		const ScalperSymbol& as = s.symbols[s.sel_sym];
-		
-		int bars = GetBars();
-		
-		for(int i = 0; i < bars; i++) {
-			SetSafetyLimit(i);
+	SetCoreSeparateWindow();
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.0);
+	SetBufferColor(1, Blue);
+	
+	// Get label source buffers
+	String symstr1 = sys.GetSymbol(GetSymbol());
+	String A1 = symstr1.Left(3);
+	String B1 = symstr1.Right(3);
+	for(int i = 1; i < inputs.GetCount(); i++) {
+		for(int i2 = 0; i2 < inputs[i].GetCount(); i2++) {
+			const Source& s = inputs[i][i2];
+			const Core& c = *dynamic_cast<Core*>(s.core);
 			
-			if (i < as.signal.GetCount()) {
-				sig.signal.Set(i, as.type);
-				sig.enabled.Set(i, as.signal.Get(i));
+			String symstr2 = sys.GetSymbol(c.GetSymbol());
+			String A2 = symstr2.Left(3);
+			String B2 = symstr2.Right(3);
+			
+			int mult = 0;
+			if      (A2 == A1)	mult = +1;
+			else if (B2 == A1)	mult = -1;
+			else if (A2 == B1)	mult = -1;
+			else if (B2 == B1)	mult = +1;
+			if (mult == 0)
+				continue;
+			
+			for(int j = 0; j < c.GetLabelCount() && j < 1; j++) {
+				ConstLabel& l = c.GetLabel(j);
+				
+				for(int k = 0; k < l.buffers.GetCount() && k < 1; k++) {
+					ConstLabelSignal& src = l.buffers[k];
+					
+					/*
+					int changes = 0;
+					bool prev = false;
+					for (int l = 0; l < src.signal.GetCount(); l++) {
+						bool b = src.signal.Get(l);
+						if (b != prev)
+							changes++;
+						prev = b;
+					}
+					
+					LOG(i << " " << i2 << " " << j << " " << k << " " << changes);
+					sources.GetAdd(i*2).Add(SrcPtr(c.GetSymbol(), mult, &src));
+					*/
+					
+					if (symstr1 == symstr2)
+						sources.GetAdd(i*2 + 1).Add(SrcPtr(c.GetSymbol(), +1, &src));
+				}
 			}
 		}
+	}
+	
+	
+}
+
+void Avoidance::Start() {
+	System& sys = GetSystem();
+	Scalper& s = GetScalper();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
+	Buffer& out = GetBuffer(0);
+	Buffer& ma = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	if (!counted) counted++;
+	else counted--;
+	
+	data.SetCount(sources.GetCount());
+	
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		
+		double pip_sum = 0;
+		
+		for(int j = 0; j < sources.GetCount(); j++) {
+			Vector<DataPt>& data = this->data[j];
+			const Vector<SrcPtr>& sources = this->sources[j];
+			
+			data.SetCount(bars);
+			DataPt& pt = data[i];
+			
+			if (i >= sources[0].c->signal.GetCount())
+				continue;
+			pt.action = sources[0].c->signal.Get(i);
+			if (sources[0].b < 0) pt.action = !pt.action;
+			
+			int pos = i;
+			for (; pos > 0; pos--) {
+				
+				bool same = true;
+				
+				for(int k = 0; k < sources.GetCount() && same; k++) {
+					if (pos >= sources[k].c->signal.GetCount())
+						continue;
+					bool signal = sources[k].c->signal.Get(pos);
+					bool enabled = sources[k].c->signal.Get(pos);
+					if (sources[k].b < 0) signal = !signal;
+					if (signal != pt.action || !enabled)
+						same = false;
+				}
+				
+				if (!same)
+					break;
+			}
+			pt.len = min(255, i - pos);
+			
+			double begin = open_buf.Get(pos);
+			double end = open_buf.Get(i);
+			pt.pips = min(127, max(-127, (int)((end - begin) / point)));
+			if (pt.action) pt.pips *= -1;
+			
+			pip_sum += pt.pips;
+		}
+		
+		
+		out.Set(i, pip_sum);
+		sig.signal.Set(i, pip_sum < 0);
+		sig.enabled.Set(i, pip_sum != 0);
+	}
+	
+	SimpleMAOnBuffer ( bars, counted, 0, 10, out, ma );
+	/*
+	for(int i = counted; i < bars; i++) {
+		double prev = ma.Get(i-1);
+		double cur = ma.Get(i);
+		double diff = cur - prev;
+		if (diff < 0)
+			sig.signal.Set(i, !sig.signal.Get(i));
 	}*/
 }
 
-double LevelHeatmap::GetHeatmapValue(int i, double price) {
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	double point = dynamic_cast<DataBridge&>(*GetInputCore(0)).GetPoint();
-	double o0 = open_buf.Get(i);
-	double diff = price - o0;
-	return min(1.0, max(-1.0, diff / point / 4));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AvoidancePeaks::AvoidancePeaks() {
+	
 }
 
-void LevelHeatmap::Assist(int cursor, VectorBool& vec) {
+void AvoidancePeaks::Init() {
 	
+	ec.SetSize(peak_period);
+	
+}
+
+void AvoidancePeaks::Start() {
+	System& sys = GetSystem();
+	Scalper& s = GetScalper();
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& avoid_buf = GetInputBuffer(1, 0);
+	//ConstLabelSignal& avoid_sig = GetInputLabel(1);
+	LabelSignal& peak = GetLabelBuffer(0, 0);
+	LabelSignal& before = GetLabelBuffer(0, 1);
+	LabelSignal& after  = GetLabelBuffer(0, 2);
+	LabelSignal& sig  = GetLabelBuffer(0, 3);
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	bool signal = 0, enabled = true;
+	double open = open_buf.Get(0), total_change = 1.0;
+	for(int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		peak  .enabled.Set(i, false);
+		before.enabled.Set(i, false);
+		after .enabled.Set(i, false);
+		
+		double avoid = avoid_buf.Get(i);
+		double prev_avoid = i > 0 ? avoid_buf.Get(i-1) : avoid;
+		double avoid_diff = avoid - prev_avoid;
+		ec.Add(avoid, avoid);
+		
+		int peak_pos = ec.GetHighest();
+		int peak_dist = i - peak_pos;
+		double peak_value = avoid_buf.Get(peak_pos);
+		
+		
+		if (peak_dist == 1) {
+			bool type = GetType(i, open_buf, avoid_buf);
+			peak.enabled.Set(i, true);
+			peak.signal.Set(i, !type);
+		}
+		
+		else if (avoid >= 0.25 * peak_value && avoid_diff > 0) {
+			bool type = GetType(i, open_buf, avoid_buf);
+			before.enabled.Set(i, true);
+			before.signal.Set(i, type);
+			
+			if (enabled) {
+				double close = open_buf.Get(i);
+				double change = close / open;
+				total_change *= change;
+				signal = true;
+				open = close;
+			}
+		}
+		else if (avoid <= 0.25 * peak_value && avoid_diff < 0) {
+			bool type = GetType(i, open_buf, avoid_buf);
+			before.enabled.Set(i, true);
+			before.signal.Set(i, type);
+			
+			if (enabled) {
+				double close = open_buf.Get(i);
+				double change = 1.0 - (close / open - 1.0);
+				total_change *= change;
+				signal = false;
+				open = close;
+			}
+		}
+		else if (avoid <= 0.0 * peak_value && avoid_diff > 0) {
+			bool type = GetType(i, open_buf, avoid_buf);
+			after.enabled.Set(i, true);
+			after.signal.Set(i, type);
+		}
+		sig.signal.Set(i, signal);
+		sig.enabled.Set(i, enabled);
+	}
+	
+	DUMP(total_change);
+}
+
+bool AvoidancePeaks::GetType(int pos, ConstBuffer& open_buf, ConstBuffer& avoid_buf) {
+	double diff_sum = 0;
+	for (int i = pos, j = 0; i >= 1 && j < 10; i--, j++) {
+		double o0 = open_buf.Get(i);
+		double o1 = open_buf.Get(i-1);
+		double a0 = avoid_buf.Get(i);
+		double a1 = avoid_buf.Get(i-1);
+		double o_diff = o0 - o1;
+		double a_diff = a0 - a1;
+		
+		diff_sum += o_diff * a_diff;
+	}
+	return diff_sum < 0.0;
 }
 
 

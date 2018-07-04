@@ -58,8 +58,6 @@ file
 	Utils.cpp,
 	Indicators.h,
 	Indicators.cpp,
-	Advisors.h,
-	Advisors.cpp,
 	Optimizer.h,
 	BeamSearchOptimization.h,
 	Calendar.h,
@@ -72,11 +70,14 @@ file
 	Analyzer.cpp,
 	Scalper.h,
 	Scalper.cpp,
-	CostAvoidance.h,
-	CostAvoidance.cpp,
-	Journal.qtf;
+	Journal.qtf,
+	Advisors readonly separator,
+	Advisors.h,
+	Advisors.cpp,
+	HighPromises.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",
-	"" = "GUI MT USEMALLOC";
+	"" = "GUI MT USEMALLOC",
+	"" = "GUI MT SECONDS";
 

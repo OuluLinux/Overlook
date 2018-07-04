@@ -19,6 +19,45 @@ Brokerage::Brokerage() {
 	fmscale = 0;
 }
 
+void Brokerage::Serialize(Stream& s) {
+	s % orders % history_orders
+	  % skipped_currencies
+	  % symbol_idx
+	
+	  % account_name % account_server % account_currency % account_company
+	  % last_error
+	  % free_margin_level % min_free_margin_level % max_free_margin_level
+	  % balance % equity % margin % margin_free % margin_call % margin_stop
+	  % leverage % initial_balance
+	  % limit_factor
+	  % cur_begin
+	  % account_currency_id
+	  % account_id
+	  % selected
+	  % selected_pool
+	  % fmscale
+	  % demo % connected % simulation
+	  % init_success
+	  % is_failed
+	  % fixed_volume
+	
+	  % basket_symbols
+	  % symbols
+	  % askbid
+	  % pricetf
+	  % currencies
+	  % indices
+	  % signals
+	  % signal_freezed
+	
+	  % periodstr
+	  % tf_h1_id
+	
+	  % cur_volumes % idx_volumes % cur_rates % cur_base_values % idx_rates % idx_base_values
+	  % buy_lots % sell_lots
+	  % buy_signals % sell_signals;
+}
+
 double Brokerage::GetMargin(int sym_id, double volume) {
 	ASSERT(leverage > 0);
 	const Symbol& sym = symbols[sym_id];

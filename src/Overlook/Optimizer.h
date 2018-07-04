@@ -25,6 +25,7 @@ namespace Overlook {
 
 class Optimizer {
 	
+	Vector<double> min_values, max_values;
 	Vector<double> trial_solution;
 	Vector<double> best_solution;
 	Vector<double> pop_energy;
@@ -37,7 +38,7 @@ class Optimizer {
 	bool use_limits = 0;
 	
 	int generation = 0;
-	int max_gens = 100;
+	int max_gens = 10;
 	int candidate = 0;
 	int strategy = StrategyBest1Exp;
 	double scale = 0.7;
@@ -56,7 +57,8 @@ public:
 	Optimizer() {}
 	
 	void Serialize(Stream& s) {
-		s % trial_solution
+		s % min_values % max_values
+		  % trial_solution
 		  % best_solution
 		  % pop_energy
 		  % population
@@ -92,6 +94,8 @@ public:
 	void	ResetBestEnergy() {best_energy = 0;}
 	void	FactorBestEnergy(double f) {best_energy *= f;}
 	int		Generations() {return generation;}
+	Vector<double>& Min() {return min_values;}
+	Vector<double>& Max() {return max_values;}
 	
 	void SolveStart() {
 		best_energy = DBL_MAX;
@@ -391,6 +395,8 @@ public:
 		for(int i = 0; i < population.GetCount(); i++)
 			population[i].SetCount(dimension);
 		
+		min_values.SetCount(dimension, min_value);
+		max_values.SetCount(dimension, max_value);
 	
 		for(int i = 0; i < dimension; i++ ) {
 			trial_solution[i] = 0;
@@ -406,13 +412,13 @@ public:
 		if (random_type == RAND_UNIFORM) {
 			for (int i = 0; i < population_count; i++)
 				for (int j = 0; j < dimension; j++)
-					Element(population,i,j) = RandomUniform(min_value, max_value);
+					Element(population,i,j) = RandomUniform(min_values[j], max_values[j]);
 		}
 		else if (random_type == RAND_NORMDIST) {
 			for (int j = 0; j < dimension; j++) {
 				std::random_device rd;
 			    std::mt19937 gen(rd());
-			    std::normal_distribution<> d(min_value, max_value); // mean, stddev
+			    std::normal_distribution<> d(min_values[j], max_values[j]); // mean, stddev
 				for (int i = 0; i < population_count; i++)
 					Element(population,i,j) = d(gen);
 			}

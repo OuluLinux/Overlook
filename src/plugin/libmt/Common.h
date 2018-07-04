@@ -335,6 +335,9 @@ struct Currency : Moveable<Currency> {
 		base_pair = c.base_pair;
 		name = c.name;
 	}
+	void Serialize(Stream& s) {
+		s % pairs0 % pairs1 % all_pairs % base_mul % base_pair % name;
+	}
 };
 
 struct DbgDouble {
@@ -380,6 +383,7 @@ struct Order : Moveable<Order> {
 		symbol = o.symbol;
 		ticket = o.ticket;
 		type = o.type;
+		magic = o.magic;
 		is_open = o.is_open;
 		return *this;
 	}
@@ -394,6 +398,7 @@ struct Order : Moveable<Order> {
 	int symbol;
 	int ticket;
 	int type;
+	int magic;
 	bool is_open;
 	
 	// Main funcs
@@ -410,6 +415,7 @@ struct Order : Moveable<Order> {
 			% symbol
 			% ticket
 			% type
+			% magic
 			% is_open;
 	}
 	String GetTypeString() const;

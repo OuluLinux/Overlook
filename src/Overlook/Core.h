@@ -62,7 +62,6 @@ struct Lbl : public ValueBase {
 };
 
 struct Arg : public ValueBase {
-	Arg(const char* key, bool& value)	{s0 = key; data = &value; data_type = BOOL_;}
 	Arg(const char* key, int& value, int min, int max=10000) {s0 = key; data = &value; data_type = INT_; this->min = min; this->max = max;}
 };
 
@@ -113,14 +112,10 @@ struct ArgChanger : public ValueRegister {
 			keys.SetCount(cursor+1);
 			keys[cursor] = base.s0;
 			args.SetCount(cursor+1);
-			if (base.data_type == ValueBase::BOOL_)
-				args[cursor++] = *(bool*)base.data;
-			else if (base.data_type == ValueBase::INT_)
+			if (base.data_type == ValueBase::INT_)
 				args[cursor++] = *(int*)base.data;
 		} else {
-			if (base.data_type == ValueBase::BOOL_)
-				*(bool*)base.data = args[cursor++];
-			else if (base.data_type == ValueBase::INT_)
+			if (base.data_type == ValueBase::INT_)
 				*(int*)base.data = args[cursor++];
 		}
 	}
@@ -131,6 +126,11 @@ struct ArgChanger : public ValueRegister {
 	Vector<String> keys;
 	int cursor;
 	bool storing;
+};
+
+struct ArgPtr : Moveable<ArgPtr> {
+	int* ptr = NULL;
+	int min = 0, max = 0;
 };
 
 class CoreIO : public ValueRegister, public Pte<CoreIO> {
@@ -145,6 +145,7 @@ protected:
 	Vector<Input> inputs;
 	Vector<Output> outputs;
 	Vector<Label> labels;
+	Vector<ArgPtr> args;
 	Vector<Buffer*> buffers;
 	Array<Job> jobs;
 	Array<Persistent> persistents;
@@ -290,6 +291,7 @@ protected:
 	bool skip_setcount;
 	bool skip_allocate;
 	bool has_heatmap = false;
+	bool avoid_refresh = false;
 	
 	Core();
 	
@@ -312,6 +314,7 @@ public:
 		subcore_factories.Add(i);
 		return subcores.Add(new T);
 	}
+	void ResetSubCores();
 	Core& At(int i) {return subcores[i];}
 	Core& Set(String key, Value value);
 	
@@ -372,13 +375,16 @@ public:
 	void EnterJob(Job* job, JobThread* thrd) {current_job = job; current_thrd = thrd;}
 	void LeaveJob() {current_job = NULL; current_thrd = NULL;}
 	void SetHeatmap(bool b=true) {has_heatmap=b;}
+	void SetAvoidRefresh(bool b=true) {avoid_refresh = b;}
 	
 	// Visible main functions
 	void Refresh();
+	void RefreshSubCores();
 	void RefreshSources();
 	void RefreshSourcesOnlyDeep();
 	void ClearContent();
 	void RefreshIO() {IO(*this);}
+	void InitSubCores();
 	
 protected:
 	

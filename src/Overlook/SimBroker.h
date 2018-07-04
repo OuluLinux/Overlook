@@ -21,6 +21,20 @@ class SimBroker : public Brokerage, Moveable<SimBroker> {
 public:
 	SimBroker();
 	
+	void Serialize(Stream& s) {
+		s % symbol_profits % prev_symbol_profits % symbol_profit_diffs
+		  % currency
+		  % cycle_time
+		  % close_sum
+		  % profit_sum % loss_sum
+		  % collect_limit % collected
+		  % prev_equity
+		  % order_counter
+		  % lightweight
+		  % do_collect;
+		Brokerage::Serialize(s);
+	}
+	
 	void Init();
 	void InitLightweight();
 	virtual void Clear();
@@ -41,8 +55,10 @@ public:
 	double GetCollected() const {return collected;}
 	
 	void SetPrice(int sym, double price);
+	void SetPrice(int sym, double ask, double bid);
 	void SetTime(const Time& t) {cycle_time = t;}
 	void SetCollecting(double d);
+	Order& GetSelected();
 	
 	// MT4-like functions
 	virtual int		iBars(String symbol, int timeframe);

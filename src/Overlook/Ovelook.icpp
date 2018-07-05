@@ -80,6 +80,8 @@ INITBLOCK {
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<HighPromises>("High Promises", CORE_EXPERTADVISOR);
+	System::Register<ShockTime>("ShockTime", CORE_EXPERTADVISOR);
+	System::Register<PipsBoss>("PipsBoss", CORE_EXPERTADVISOR);
 	
 	
 	

@@ -99,6 +99,8 @@ const CoreIO& CoreIO::GetInput(int input, int sym, int tf) const {
 }
 
 String CoreIO::GetCacheDirectory() {
+	if (!cache_dir.IsEmpty())
+		return cache_dir;
 	ASSERT(factory != -1);
 	int64 arghash = 0;
 	Core* core = dynamic_cast<Core*>(this);
@@ -115,9 +117,9 @@ String CoreIO::GetCacheDirectory() {
 	}
 	
 	String coredir = Format("%d-%d-%d-%d-", factory, sym_id, tf_id, hash) + IntStr64(arghash);
-	String dir = AppendFileName(ConfigFile("corecache"), coredir);
-	RealizeDirectory(dir);
-	return dir;
+	cache_dir = AppendFileName(ConfigFile("corecache"), coredir);
+	RealizeDirectory(cache_dir);
+	return cache_dir;
 }
 
 void CoreIO::StoreCache() {
@@ -131,16 +133,21 @@ void CoreIO::StoreCache() {
 	
 	if (serialization_lock.TryEnter()) {
 		
-		String dir = GetCacheDirectory();
-		String file = AppendFileName(dir, "core.bin");
-		FileOut out(file);
-		if (out.IsOpen()) {
-			Put(out, dir, 0);
-			Core* c = dynamic_cast<Core*>(this);
-			if (c) {
-				for(int i = 0; i < c->subcores.GetCount(); i++)
-					c->subcores[i].Put(out, dir, 1+i);
+		try {
+			String dir = GetCacheDirectory();
+			String file = AppendFileName(dir, "core.bin");
+			FileOut out(file);
+			if (out.IsOpen()) {
+				Put(out, dir, 0);
+				Core* c = dynamic_cast<Core*>(this);
+				if (c) {
+					for(int i = 0; i < c->subcores.GetCount(); i++)
+						c->subcores[i].Put(out, dir, 1+i);
+				}
 			}
+		}
+		catch(...) {
+			LOG("Serialization error");
 		}
 		
 		serialization_lock.Leave();

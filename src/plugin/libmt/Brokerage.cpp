@@ -563,32 +563,29 @@ int		Brokerage::AccountStopoutMode() {
 	return AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
 }
 
+int Brokerage::FindSymbol(const String& s) {
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		if (symbols[i].name == s)
+			return i;
+	}
+	return -1;
+}
+
 double	Brokerage::MarketInfo(String symbol, int type) {
-	/*
-	System& bs = GetSystem();
-	CoreProcessAttributes& attr = bs.GetCurrent();
-	
 	int sym = FindSymbol(symbol);
 	
 	switch (type) {
-		case MODE_LOW:			return *src->GetValue<double>(
-									1, // LOW
-									sym,
-									bs.FindPeriod(bs.GetTfFromSeconds(24*60*60)),
-									0, attr);
-		case MODE_HIGH:			return *src->GetValue<double>(
-									2, // HIGH
-									sym,
-									bs.FindPeriod(bs.GetTfFromSeconds(24*60*60)),
-									0, attr);
-		case MODE_TIME:			return bs.GetTime(1, GetBars()).Get() - Time(1970,1,1).Get();
+		case MODE_LOW:
+		case MODE_HIGH:
+		case MODE_TIME: Panic("Won't implement. Create workaround...");
+		
 		case MODE_BID:			return askbid[sym].bid;
 		case MODE_ASK:			return askbid[sym].ask;
 		case MODE_POINT:		return symbols[sym].point;
 		case MODE_DIGITS:		return symbols[sym]. digits;
 		case MODE_SPREAD:		return (askbid[sym].ask - askbid[sym].bid) / symbols[sym].point;
 		case MODE_STOPLEVEL:	return 0.0;
-		case MODE_LOTSIZE:		return lotsize;
+		case MODE_LOTSIZE:		return 100000;
 		case MODE_TICKVALUE:	return symbols[sym].tick_value;
 		case MODE_TICKSIZE:		return symbols[sym].tick_size;
 		case MODE_SWAPLONG:		return symbols[sym].swap_long;
@@ -608,9 +605,8 @@ double	Brokerage::MarketInfo(String symbol, int type) {
 		case MODE_MARGINREQUIRED:		return symbols[sym].margin_required;
 		case MODE_FREEZELEVEL:			return symbols[sym].freeze_level;
 		case MODE_CLOSEBY_ALLOWED:		return false;
-	}*/
-	
-	Panic("TODO"); return 0;
+	}
+	return 0;
 }
 
 int		Brokerage::SymbolsTotal(int selected) {

@@ -14,11 +14,11 @@ void ExpertAdvisor::Init() {
 	point = GetDataBridge()->GetPoint();
 	
 	SetJob(0, tf_str + " Training")
-	.SetBegin(THISBACK(TrainingBegin))
-	.SetIterator(THISBACK(TrainingIterator))
-	.SetEnd(THISBACK(TrainingEnd))
-	.SetInspect(THISBACK(TrainingInspect))
-	.SetCtrl		<TrainingCtrl>();
+		.SetBegin(THISBACK(TrainingBegin))
+		.SetIterator(THISBACK(TrainingIterator))
+		.SetEnd(THISBACK(TrainingEnd))
+		.SetInspect(THISBACK(TrainingInspect))
+		.SetCtrl		<TrainingCtrl>();
 }
 
 void ExpertAdvisor::Start() {
@@ -56,8 +56,8 @@ bool ExpertAdvisor::TrainingBegin() {
 			opt.Max()[i] = args[i].max;
 		}
 		
-		opt.SetMaxGenerations(10);
-		opt.Init(args.GetCount(), 100);
+		opt.SetMaxGenerations(100);
+		opt.Init(args.GetCount(), 33);
 	}
 	max_rounds = opt.GetMaxRounds();
 	
@@ -95,6 +95,10 @@ bool ExpertAdvisor::TrainingIterator() {
 		RefreshSubCores();
 		
 		Point = point;
+		for (Digits = 0; point * pow(10, Digits) >= 1.0; Digits++)
+			;
+		Bars = count;
+		
 		for(int i = 0; i < count; i++) {
 			Ask = open_buf.Get(i);
 			Bid = Ask - 3 * point;
@@ -126,8 +130,10 @@ bool ExpertAdvisor::TrainingIterator() {
 	}
 	
 	if (save_elapsed.Elapsed() > 60*1000) {
+		serialization_lock.Leave();
 		save_elapsed.Reset();
 		StoreCache();
+		serialization_lock.Enter();
 	}
 	
 	return true;
@@ -142,6 +148,10 @@ bool ExpertAdvisor::TrainingEnd() {
 	
 	SetAvoidRefresh(false);
 	
+	serialization_lock.Leave();
+	StoreCache();
+	serialization_lock.Enter();
+		
 	return true;
 }
 

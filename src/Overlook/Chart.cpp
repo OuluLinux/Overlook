@@ -53,9 +53,6 @@ void Chart::RefreshCore() {
 	catch (ConfExc e) {
 		
 	}
-	catch (DataExc e) {
-		
-	}
 }
 
 void Chart::RefreshCoreData(bool store_cache) {
@@ -91,7 +88,12 @@ Chart& Chart::SetFactory(int f) {
 
 void Chart::Start() {
 	if (keep_at_end) shift = 0;
-	RefreshCoreData(false);
+	try {
+		RefreshCoreData(false);
+	}
+	catch (ConfExc e) {
+		
+	}
 	Refresh();
 }
 

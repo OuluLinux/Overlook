@@ -102,7 +102,7 @@ int HighPromises::Sell(int pos) {
 void HighPromises::OpenBuyOrder() {
 	double sl = 0, tp = 0;
 	
-	if (!OpenPositions()) {
+	if (!OpenPositions1()) {
 		if (StopLoss > 0)
 			sl = Ask - StopLoss * Point;
 			
@@ -135,11 +135,11 @@ void HighPromises::OpenSellOrder() {
 	}
 }
 
-void HighPromises::PrintAlert(String as_0) {
-	Print(Symbol() + " - " + as_0);
+void HighPromises::PrintAlert(String str) {
+	Print(Symbol() + " - " + str);
 }
 
-bool HighPromises::OpenPositions() {
+bool HighPromises::OpenPositions1() {
 	int count = 0;
 	
 	for (int i = OrdersTotal() - 1; i >= 0; i--) {

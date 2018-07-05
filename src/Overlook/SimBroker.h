@@ -77,7 +77,7 @@ public:
 	virtual double	RealtimeBid(int sym);
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
 	virtual double	OrderClosePrice();
-	virtual int		OrderCloseTime();
+	virtual Time	OrderCloseTime();
 	virtual String	OrderComment();
 	virtual double	OrderCommission();
 	virtual int		OrderDelete(int ticket);

@@ -53,7 +53,7 @@ public:
 	virtual double	RealtimeBid(int sym) {return _MarketInfo(symbols[sym].name, MODE_BID);}
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage);
 	virtual double	OrderClosePrice();
-	virtual int		OrderCloseTime();
+	virtual Time	OrderCloseTime() {return Time(1970,1,1) + _OrderCloseTime();}
 	virtual String	OrderComment();
 	virtual double	OrderCommission();
 	virtual int		OrderDelete(int ticket);

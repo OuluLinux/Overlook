@@ -152,6 +152,7 @@ protected:
 	Job* current_job = NULL;
 	JobThread* current_thrd = NULL;
 	SpinLock serialization_lock, refresh_lock;
+	String cache_dir;
 	int sym_id, tf_id, factory, hash;
 	int counted, bars;
 	int db_src;

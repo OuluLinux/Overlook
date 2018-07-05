@@ -361,12 +361,12 @@ double SimBroker::OrderClosePrice() {
 	return GetSelected().close;
 }
 
-int SimBroker::OrderCloseTime() {
-	return (int)(GetSelected().end.Get() - Time(1970,1,1).Get());
+Time SimBroker::OrderCloseTime() {
+	return GetSelected().end;
 }
 
 String SimBroker::OrderComment() {
-	return ""; // Not included for performance reasons. Match ticket to string and store separately if needed.
+	return ""; // Not included for performance reasons. Match ticket to String and store separately if needed.
 }
 
 double SimBroker::OrderCommission() {
@@ -415,6 +415,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 				selected_pool = pool;
 				return true;
 			}
+			return false;
 		}
 		else if (pool == MODE_HISTORY) {
 			if (index >= 0 && index < history_orders.GetCount()) {
@@ -422,6 +423,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 				selected_pool = pool;
 				return true;
 			}
+			return false;
 		}
 		else return false;
 	}
@@ -434,6 +436,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 					return true;
 				}
 			}
+			return false;
 		}
 		else if (pool == MODE_HISTORY) {
 			for(int i = 0; i < history_orders.GetCount(); i++) {
@@ -443,6 +446,7 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 					return true;
 				}
 			}
+			return false;
 		}
 		else return false;
 	}
@@ -461,27 +465,33 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 	Symbol& s = symbols[symbol];
 	if (volume < s.volume_min) {last_error = "Invalid volume"; return -1;}
 	// TODO: check slippage, stoploss and takeprofit
-	Order& o = orders.Add();
-	o.begin = GetTime();
-	o.type = cmd;
-	o.volume = volume;
-	o.symbol = symbol;
-	o.open = cmd != OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
-	if (!s.is_base_currency) {
-		if (s.proxy_id == -1) {
-			last_error = "Invalid proxy";
-			return -1;
+	
+	if (cmd == OP_BUY || cmd == OP_SELL) {
+		Order& o = orders.Add();
+		o.begin = GetTime();
+		o.type = cmd;
+		o.volume = volume;
+		o.symbol = symbol;
+		o.open = cmd != OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+		if (!s.is_base_currency) {
+			if (s.proxy_id == -1) {
+				last_error = "Invalid proxy";
+				return -1;
+			}
+			Symbol& proxy = symbols[s.proxy_id];
+			o.proxy_open = proxy.base_mul == (cmd == OP_BUY ? -1 : +1) ? askbid[s.proxy_id].bid : askbid[s.proxy_id].ask;
 		}
-		Symbol& proxy = symbols[s.proxy_id];
-		o.proxy_open = proxy.base_mul == (cmd == OP_BUY ? -1 : +1) ? askbid[s.proxy_id].bid : askbid[s.proxy_id].ask;
+		o.stoploss = stoploss;
+		o.takeprofit = takeprofit;
+		o.ticket = order_counter++;
+		o.is_open = true;
+		o.profit = GetCloseProfit(o, volume);
+		o.magic = magic;
+		return o.ticket;
 	}
-	o.stoploss = stoploss;
-	o.takeprofit = takeprofit;
-	o.ticket = order_counter++;
-	o.is_open = true;
-	o.profit = GetCloseProfit(o, volume);
-	o.magic = magic;
-	return o.ticket;
+	else
+		Panic("Not implemented");
+	return -1;
 }
 
 Order& SimBroker::GetSelected() {

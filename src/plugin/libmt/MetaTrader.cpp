@@ -440,7 +440,7 @@ MTFUNC3(35,	int,		iTime,					String, SetStr,	int, SetInt, int, SetInt, GetInt);
 MTFUNC3(36,	int,		iVolume,				String, SetStr,	int, SetInt, int, SetInt, GetInt);
 MTFUNC4(37,	int,		OrderClose,				int, SetInt, double, SetDbl, double, SetDbl, int, SetInt, GetInt);
 MTFUNC0(38,	double,		OrderClosePrice,		GetDbl);
-MTFUNC0(39,	int,		OrderCloseTime,			GetInt);
+MTFUNC0(39,	int,		_OrderCloseTime,		GetInt);
 MTFUNC0(40,	String,		OrderComment,			GetStr);
 MTFUNC0(41,	double,		OrderCommission,		GetDbl);
 MTFUNC1(42,	int,		OrderDelete,			int, SetInt, GetInt);

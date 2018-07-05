@@ -74,7 +74,25 @@ file
 	Advisors readonly separator,
 	Advisors.h,
 	Advisors.cpp,
-	HighPromises.cpp;
+	HighPromises.cpp,
+	ShockTime.cpp,
+	PipsBoss.cpp,
+	AdvisorsTODO readonly separator,
+	AdvisorsTODO.h,
+	Snake.cpp,
+	ChannelScalper.cpp,
+	RedSunrise.cpp,
+	Eagle.cpp,
+	Salmon.cpp,
+	SoundOfForex.cpp,
+	Explorer.cpp,
+	DoubleDecker.cpp,
+	Mari.cpp,
+	Pyramid.cpp,
+	SuperMart.cpp,
+	Spiral.cpp,
+	MoneyTime.cpp,
+	Novice.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

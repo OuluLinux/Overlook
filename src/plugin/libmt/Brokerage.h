@@ -65,6 +65,7 @@ public:
 	virtual void Clear();
 	virtual void CollectOnce(double d) {}
 	
+	int FindSymbol(const String& s);
 	void ZeroEquity() {balance = 0.0; equity = 0.0;}
 	void SignalOrders(bool debug_print=false);
 	void SetFreeMarginLevel(double d);
@@ -126,7 +127,6 @@ public:
 	String	AccountServer();
 	int		AccountStopoutLevel();
 	int		AccountStopoutMode();
-	double	MarketInfo(String symbol, int type);
 	int		SymbolsTotal(int selected);
 	String	SymbolName(int pos, int selected=0);
 	int		SymbolSelect(String name, int select);
@@ -138,6 +138,7 @@ public:
 	String	GetLastError() const {return last_error;}
 	
 	// Original MQL-like functions
+	virtual double	MarketInfo(String symbol, int type);
 	virtual int		iBars(String symbol, int timeframe) = 0;
 	virtual int		iBarShift(String symbol, int timeframe, int datetime) = 0;
 	virtual double	iClose(String symbol, int timeframe, int shift) = 0;
@@ -154,7 +155,7 @@ public:
 	virtual double	RealtimeBid(int sym) = 0;
 	virtual int		OrderClose(int ticket, double lots, double price, int slippage) = 0;
 	virtual double	OrderClosePrice() = 0;
-	virtual int		OrderCloseTime() = 0;
+	virtual Time	OrderCloseTime() = 0;
 	virtual String	OrderComment() = 0;
 	virtual double	OrderCommission() = 0;
 	virtual int		OrderDelete(int ticket) = 0;

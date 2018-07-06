@@ -410,8 +410,8 @@ double SimBroker::OrderOpenPrice() {
 	return GetSelected().open;
 }
 
-int SimBroker::OrderOpenTime() {
-	return (int)(GetSelected().begin.Get() - Time(1970,1,1).Get());
+Time SimBroker::OrderOpenTime() {
+	return GetSelected().begin;
 }
 
 double SimBroker::OrderProfit() {

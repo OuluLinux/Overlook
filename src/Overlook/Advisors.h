@@ -79,6 +79,7 @@ public:
 	int TimeDay(const Time& t) {return t.day;}
 	int TimeMonth(const Time& t) {return t.month;}
 	int TimeYear(const Time& t) {return t.year;}
+	int TimeDayOfWeek(const Time& t) {return Upp::DayOfWeek(t);}
 	int Year() {return Now.year;}
 	int Month() {return Now.month;}
 	int Day() {return Now.day;}
@@ -100,7 +101,7 @@ public:
 	int		OrderMagicNumber() {return sb.OrderMagicNumber();}
 	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration=Time(3000,1,1)) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
 	double	OrderOpenPrice() {return sb.OrderOpenPrice();}
-	int		OrderOpenTime() {return sb.OrderOpenTime();}
+	Time	OrderOpenTime() {return sb.OrderOpenTime();}
 	double	OrderProfit() {return sb.OrderProfit();}
 	int		OrderSelect(int index, int select, int pool=libmt::MODE_TRADES) {return sb.OrderSelect(index, select, pool);}
 	int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry=0) {return sb.OrderSend(symbol, cmd, volume, price, slippage, stoploss, takeprofit, magic, expiry);}
@@ -147,6 +148,7 @@ public:
 	double	MathAbs(double d) {return fabs(d);}
 	double	MathPow(double d, double e) {return pow(d, e);}
 	double	MathRound(double d) {return floor(d);}
+	double	MathFloor(double d) {return floor(d);}
 	void	RefreshRates() {}
 	String	GetLastError() {return sb.GetLastError();}
 	bool	IsTradeContextBusy() {return false;}
@@ -768,6 +770,267 @@ public:
 			% Arg("stoch_lo_limit", stoch_lo_limit, 0, 100)
 			% Arg("mom_limit", mom_limit, -200, 200)
 			% Arg("use_trailing", use_trailing, 0, 1);
+	}
+	
+};
+
+
+
+
+class Salmon : public ExpertAdvisor {
+	
+	// Args
+	int SL2BUY = 200;
+	int SL2SELL = 200;
+	int tp_factor1 = 10;
+	int tp_factor2 = 10;
+	int sl_factor1 = 45;
+	int sl_factor2 = 55;
+	
+	double Lot1Size = 0.1;
+	int NewYorkShift = 0;
+	int Slippage = 2;
+	int Magic = 2024;
+	String gs_eurusd_116 = "EURUSD";
+	int point_mult = 1;
+	int point_mode = 4;
+	int ny_hour = 15;
+	int ny_hour2 = 18;
+	int ny_hour3 = 15;
+	int ny_hour4 = 18;
+	bool use_orders = true;
+	bool use_orders_lotlimit = false;
+	bool use_orders_lotlimit2 = false;
+	double lots0 = 5.0;
+	int order_tries = 10;
+	bool alert_fails = true;
+	int soundid;
+	bool some_fail = false;
+	Time g_datetime_232;
+	double g_bid_240 = 0.0;
+	double g_ask_248 = 0.0;
+	double g_point_256 = 0.0;
+	int gi_unused_264;
+	Time g_datetime_268;
+	Time g_datetime_272;
+	Time g_datetime_276;
+	bool time_bool0 = false;
+	bool time_bool1 = false;
+	bool gi_unused_288 = true;
+	bool gi_unused_292 = false;
+	bool gi_unused_296 = false;
+	bool gi_unused_324 = false;
+	bool use_order_limit0 = true;
+	bool gi_unused_332 = false;
+	bool open_orders_arg0 = false;
+	bool order_fail_value = false;
+	bool gi_unused_344 = false;
+	bool gi_unused_348 = false;
+	bool order_type1 = false;
+	bool order_type2 = false;
+
+
+public:
+	typedef Salmon CLASSNAME;
+	Salmon();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	void vSetOrderForReal(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44);
+	void vSetOrderForTest(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44);
+	int iOpenPosition(String a_symbol_0, int a_cmd_8, double a_lots_12, int ai_unused_20, int ai_24, int ai_28, int a_slippage_32, int ai_36, bool ai_40, double a_price_52 = 0.0, double a_price_60 = 0.0, int a_magic_68 = 0);
+	void vOpenPosition(String a_symbol_0, int a_cmd_8, double a_lots_12, int a_slippage_28, double a_price_32, double a_price_40, int a_magic_48 = 0);
+	bool bExistPositions(String as_0, int a_cmd_8, int a_magic_12, Time ai_16=Time(1970,1,1));
+	String sGetNameOP(int ai_0);
+	int clFuncC(bool ai_0, int ai_4, int ai_8);
+	int bIsCloseLastPosByStop(String a_symbol_0, int a_cmd_8, int a_magic_12);
+	void vDeleteOrders(String as_0, int a_cmd_8, int a_magic_12);
+	double dGetLotLastClosePos(String as_0, int a_cmd_8, int a_magic_12);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("SL2BUY", SL2BUY, 10, 400)
+			% Arg("SL2SELL", SL2SELL, 10, 400)
+			% Arg("tp_factor1", tp_factor1, 2, 100)
+			% Arg("tp_factor2", tp_factor2, 2, 100)
+			% Arg("sl_factor1", sl_factor1, 2, 100)
+			% Arg("sl_factor2", sl_factor2, 2, 100)
+			;
+	}
+	
+};
+
+
+
+
+class SoundOfForex : public ExpertAdvisor {
+	
+	// args
+	int risk = 4.0;
+	int frac_left_bars = 3;
+	int frac_right_bars = 0;
+	int macd_fast_ema = 5;
+	int macd_slow_ema = 13;
+	int macd_signal_sma_period = 1;
+	int use_manual_sl = false;
+	int use_manual_tp = false;
+	int use_martingale = true;
+	int use_orderclose0 = false;
+	int use_macdclose0 = false;
+	int slsl_factor1 = 100;
+	int sl_factor0 = 300;
+	int tp_factor0 = 500;
+	int sl_factor1 = 300;
+	int tp_factor1 = 500;
+	int tp_factor2 = 10;
+	int sl_factor2 = 10;
+	int sl_factor3 = 1;
+	int sl_factor4 = 0;
+	int tp_factor4 = 0;
+	
+	double lots = 0.01;
+	int lotdigits = 2;
+	int gmtshift = 2;
+	int magic = 2370;
+	double g_lots_112 = 0.01;
+	double max_lots = 10.0;
+	int max_countsum = 100;
+	int expiration_hours = 255;
+	int slippage_factor = 5;
+	int macd_shift = 0;
+	bool use_checktime = true;
+	int begin_hour = 0;
+	int end_hour = 19;
+	bool skip_sunday = true;
+	bool skip_friday = false;
+	int end_hour1 = 24;
+	Time gt_unused_248;
+	Time gt_unused_252;
+	Time g_datetime_256;
+	Time g_datetime_260;
+	double gd_unused_264 = 0.0;
+	double g_ord_open_price_272 = 0.0;
+	double g_ord_open_price_280 = 0.0;
+	double tp0;
+	double sl0;
+	double point0;
+	double gd_312;
+	double g_ord_profit_336;
+	int g_pos_344;
+	int g_pos_348;
+	int g_digits_352;
+	int g_bars_356 = -1;
+	int g_count_360 = 0;
+	int g_ord_total_364;
+	int g_ticket_368;
+	int buy_count = 0;
+	int sell_count = 0;
+	int total_count = 0;
+	int gi_unused_384 = 0;
+	int gi_unused_388 = 0;
+	double mart_lots0 = 1.0;
+	double mart_lots1;
+	double mart_lots2 = 1.0;
+	int begin_hour1;
+
+public:
+	typedef SoundOfForex CLASSNAME;
+	SoundOfForex();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int count(int cmd, int a_magic_4);
+	int martingalefactor();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("risk", risk, 1, 10)
+			% Arg("frac_left_bars", frac_left_bars, 0, 100)
+			% Arg("macd_fast_ema", macd_fast_ema, 0, 100)
+			% Arg("macd_slow_ema", macd_slow_ema, 0, 100)
+			% Arg("macd_signal_sma_period", macd_signal_sma_period, 0, 100)
+			% Arg("use_manual_sl", use_manual_sl, 0, 1)
+			% Arg("use_manual_tp", use_manual_tp, 0, 1)
+			% Arg("use_martingale", use_martingale, 0, 1)
+			% Arg("use_orderclose0", use_orderclose0, 0, 1)
+			% Arg("use_macdclose0", use_macdclose0, 0, 1)
+			% Arg("slsl_factor1", use_macdclose0, 0, 1000)
+			% Arg("sl_factor0", sl_factor0, 0, 1000)
+			% Arg("tp_factor0", tp_factor0, 0, 1000)
+			% Arg("sl_factor1", sl_factor1, 0, 1000)
+			% Arg("tp_factor1", tp_factor1, 0, 1000)
+			% Arg("sl_factor2", sl_factor2, 0, 1000)
+			% Arg("tp_factor2", tp_factor2, 0, 1000)
+			% Arg("sl_factor3", sl_factor3, 0, 1000)
+			% Arg("sl_factor4", sl_factor4, 0, 1000)
+			% Arg("tp_factor4", tp_factor4, 0, 1000)
+			;
+	}
+	
+};
+
+
+
+
+class Explorer : public ExpertAdvisor {
+	
+	// Args
+	int stepslow = 5;
+	int maximumslow = 5;
+	int stepfast = 20;
+	int maximumfast = 20;
+	int barsearch = 3;
+	double Lots = 0.1;
+	bool RiskManagement = false;
+	double RiskPercent = 10.0;
+	int timecontrol = 0;
+	int starttime = 7;
+	int stoptime = 17;
+	int BBUSize = 0;
+	int TrailingStop = 0;
+	int TrailingShag = 5;
+	int otstup = 100;
+	double Ur1 = 50.0;
+	double Ur2 = 161.0;
+	
+	int gi_unused_176;
+	int gi_unused_180;
+	int g_bars_184;
+	int ret0;
+	int pos;
+	bool ret1;
+	bool ret2;
+
+	
+public:
+	typedef Explorer CLASSNAME;
+	Explorer();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int ScalpParabolicPattern(int pos);
+	int deletelimitorder(int ai_0);
+	int ChLimitOrder(int ai_0);
+	double MaximumMinimum(int ai_0, int ai_4);
+	double GetFiboUr(double ad_0, double ad_8, double ad_16);
+	int GetTrailingStop();
+	int BBU();
+	int GetTimeControl(int ai_0, int ai_4);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("stepslow", stepslow, 1, 100)
+			% Arg("maximumslow", maximumslow, 1, 100)
+			% Arg("stepfast", stepfast, 1, 100)
+			% Arg("maximumfast", maximumfast, 1, 100)
+			% Arg("barsearch", barsearch, 1, 100)
+			;
 	}
 	
 };

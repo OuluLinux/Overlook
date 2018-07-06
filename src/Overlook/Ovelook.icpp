@@ -86,6 +86,9 @@ INITBLOCK {
 	System::Register<ChannelScalper>("Channel Scalper", CORE_EXPERTADVISOR);
 	System::Register<RedSunrise>("Red Sunrise", CORE_EXPERTADVISOR);
 	System::Register<Eagle>("Eagle", CORE_EXPERTADVISOR);
+	System::Register<Salmon>("Salmon", CORE_EXPERTADVISOR);
+	System::Register<SoundOfForex>("Sound Of Forex", CORE_EXPERTADVISOR);
+	System::Register<Explorer>("Explorer", CORE_EXPERTADVISOR);
 	
 	
 	

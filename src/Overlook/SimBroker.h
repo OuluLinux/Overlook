@@ -87,7 +87,7 @@ public:
 	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration);
 	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {Panic("Not implemented"); return 0;}
 	virtual double	OrderOpenPrice();
-	virtual int		OrderOpenTime();
+	virtual Time	OrderOpenTime();
 	virtual double	OrderProfit();
 	virtual int		OrderSelect(int index, int select, int pool=MODE_TRADES);
 	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);

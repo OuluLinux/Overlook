@@ -449,7 +449,7 @@ MTFUNC0(44,	double,		OrderLots,				GetDbl);
 MTFUNC0(45,	int,		OrderMagicNumber,		GetInt);
 MTFUNC5(46,	int,		OrderModify,			int, SetInt, double, SetDbl, double, SetDbl, double, SetDbl, int, SetInt, GetInt);
 MTFUNC0(47,	double,		OrderOpenPrice,			GetDbl);
-MTFUNC0(48,	int,		OrderOpenTime,			GetInt);
+MTFUNC0(48,	int,		_OrderOpenTime,			GetInt);
 MTFUNC0(49,	double,		OrderProfit,			GetDbl);
 MTFUNC3(50,	int,		OrderSelect,			int, SetInt, int, SetInt, int, SetInt, GetInt);
 MTFUNC0(52,	int,		OrdersHistoryTotal,		GetInt);

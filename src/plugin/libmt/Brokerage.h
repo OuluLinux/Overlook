@@ -164,7 +164,7 @@ public:
 	virtual int		OrderMagicNumber() = 0;
 	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) = 0;
 	virtual double	OrderOpenPrice() = 0;
-	virtual int		OrderOpenTime() = 0;
+	virtual Time	OrderOpenTime() = 0;
 	virtual double	OrderProfit() = 0;
 	virtual int		OrderSelect(int index, int select, int pool) = 0;
 	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0) = 0;

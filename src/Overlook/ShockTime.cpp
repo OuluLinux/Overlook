@@ -130,7 +130,7 @@ void ShockTime::StartEA(int pos) {
 					
 					if (ret < 0) {
 						Print("Error: " + GetLastError());
-						throw DataExc();
+						throw ConfExc();
 					}
 					
 					last_sell_price = FindLastSellPrice();
@@ -159,7 +159,7 @@ void ShockTime::StartEA(int pos) {
 						
 						if (ret < 0) {
 							Print("Error: " + GetLastError());
-							throw DataExc();
+							throw ConfExc();
 						}
 						
 						last_buy_price = FindLastBuyPrice();
@@ -190,7 +190,7 @@ void ShockTime::StartEA(int pos) {
 					
 					if (ret < 0) {
 						Print(DblStr(lots1) + " Error: " + GetLastError());
-						throw DataExc();
+						throw ConfExc();
 					}
 					
 					last_buy_price = FindLastBuyPrice();
@@ -207,7 +207,7 @@ void ShockTime::StartEA(int pos) {
 					
 					if (ret < 0) {
 						Print(DblStr(lots1) + " Error: " + GetLastError());
-						throw DataExc();
+						throw ConfExc();
 					}
 					
 					last_sell_price = FindLastSellPrice();
@@ -226,7 +226,8 @@ void ShockTime::StartEA(int pos) {
 	double ld_108 = 0;
 	
 	for (int i = OrdersTotal() - 1; i >= 0; i--) {
-		OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
+		if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+			continue;
 		
 		if (OrderSymbol() != Symbol() || OrderMagicNumber() != magic)
 			continue;
@@ -244,7 +245,8 @@ void ShockTime::StartEA(int pos) {
 		
 	if (orders_open) {
 		for (int i = OrdersTotal() - 1; i >= 0; i--) {
-			OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
+			if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+				continue;
 			
 			if (OrderSymbol() != Symbol() || OrderMagicNumber() != magic)
 				continue;
@@ -276,7 +278,7 @@ void ShockTime::StartEA(int pos) {
 					continue;
 					
 				if (OrderSymbol() == Symbol() && OrderMagicNumber() == magic)
-					OrderModify(OrderTicket(), price1, OrderStopLoss(), price0, 0);
+					OrderModify(OrderTicket(), price1, OrderStopLoss(), price0, Time(3000,1,1));
 					
 				orders_open = false;
 			}
@@ -365,8 +367,8 @@ double ShockTime::GetLots(int cmd) {
 int ShockTime::CountTrades() {
 	int l_count_0 = 0;
 	
-	for (int l_pos_4 = OrdersTotal() - 1; l_pos_4 >= 0; l_pos_4--) {
-		OrderSelect(l_pos_4, SELECT_BY_POS, MODE_TRADES);
+	for (int i = OrdersTotal() - 1; i >= 0; i--) {
+		OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() != Symbol() || OrderMagicNumber() != magic)
 			continue;
@@ -385,10 +387,12 @@ void ShockTime::CloseThisSymbolAll() {
 		
 		if (OrderSymbol() == Symbol()) {
 			if (OrderSymbol() == Symbol() && OrderMagicNumber() == magic) {
-				if (OrderType() == OP_BUY)
+				int type = OrderType();
+				
+				if (type == OP_BUY)
 					OrderClose(OrderTicket(), OrderLots(), Bid, slippage);
 					
-				if (OrderType() == OP_SELL)
+				if (type == OP_SELL)
 					OrderClose(OrderTicket(), OrderLots(), Ask, slippage);
 			}
 			
@@ -535,7 +539,7 @@ void ShockTime::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Bid - ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 > l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), Time(3000,1,1));
 					}
 					
 					if (OrderType() == OP_SELL) {
@@ -549,7 +553,7 @@ void ShockTime::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Ask + ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 < l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), Time(3000,1,1));
 					}
 				}
 				

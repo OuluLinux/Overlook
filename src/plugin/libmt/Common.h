@@ -370,6 +370,7 @@ struct Order : Moveable<Order> {
 		begin = o.begin;
 		end = o.end;
 		expiration = o.expiration;
+		comment = o.comment;
 		open = o.open;
 		close = o.close;
 		proxy_open = o.proxy_open;
@@ -391,6 +392,7 @@ struct Order : Moveable<Order> {
 	
 	Time begin, end;
 	Time expiration;
+	String comment;
 	double open, close;
 	double proxy_open, proxy_close;
 	double takeprofit, stoploss;
@@ -405,6 +407,7 @@ struct Order : Moveable<Order> {
 	void Serialize(Stream& s) {
 		s	% begin % end
 			% expiration
+			% comment
 			% open % close
 			% proxy_open % proxy_close
 			% stoploss % takeprofit

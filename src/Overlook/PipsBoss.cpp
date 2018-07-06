@@ -99,7 +99,7 @@ void PipsBoss::StartEA(int pos) {
 				if (trail_factor > 0.0) {
 					if (Bid - OrderOpenPrice() > Point * trail_factor) {
 						if (OrderStopLoss() < Bid - Point * trail_factor) {
-							OrderModify(OrderTicket(), OrderOpenPrice(), Bid - Point * trail_factor, OrderTakeProfit(), 0);
+							OrderModify(OrderTicket(), OrderOpenPrice(), Bid - Point * trail_factor, OrderTakeProfit(), Time(3000,1,1));
 							return;
 						}
 					}
@@ -110,7 +110,7 @@ void PipsBoss::StartEA(int pos) {
 				if (trail_factor > 0.0) {
 					if (OrderOpenPrice() - Ask > Point * trail_factor) {
 						if (OrderStopLoss() > Ask + Point * trail_factor) {
-							OrderModify(OrderTicket(), OrderOpenPrice(), Ask + Point * trail_factor, OrderTakeProfit(), 0);
+							OrderModify(OrderTicket(), OrderOpenPrice(), Ask + Point * trail_factor, OrderTakeProfit(), Time(3000,1,1));
 							return;
 						}
 					}

@@ -97,7 +97,7 @@ public:
 	int		OrderExpiration() {return sb.OrderExpiration();}
 	double	OrderLots() {return sb.OrderLots();}
 	int		OrderMagicNumber() {return sb.OrderMagicNumber();}
-	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
+	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
 	double	OrderOpenPrice() {return sb.OrderOpenPrice();}
 	int		OrderOpenTime() {return sb.OrderOpenTime();}
 	double	OrderProfit() {return sb.OrderProfit();}
@@ -152,6 +152,7 @@ public:
 	int		StringFind(const String& str, const String& match) {return str.Find(match);}
 	String	StringSubstr(const String& str, int mid, int len) {return str.Mid(mid, len);}
 	String	StringConcatenate(const String& a, const String& b) {return a + b;}
+	void	Sleep(int ms) {}
 	
 	double Ask, Bid, Point;
 	int Digits, Bars;
@@ -433,6 +434,44 @@ public:
 
 
 
+
+class Snake : public ExpertAdvisor {
+	
+	// Args
+	int Dynamic_lot = 20.0;
+	int lim_step = 110;
+	int lim_setup = 5;
+	int Op_step = 20;
+	int period = 36;
+	
+	int MagicNumber = 131254;
+	double minlots = 0.01;
+	int count = 0;
+
+public:
+	typedef Snake CLASSNAME;
+	Snake();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	void CloseBuy();
+	void CloseSell();
+	void CloseLimit();
+	
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("Dynamic_lot", Dynamic_lot, 1, 100)
+			% Arg("lim_step", lim_step, 1, 100)
+			% Arg("lim_setup", lim_setup, 1, 100)
+			% Arg("Op_step", Op_step, 1, 100)
+			% Arg("period", period, 1, 200);
+			
+	}
+	
+};
 
 
 }

@@ -61,16 +61,16 @@ public:
 	Order& GetSelected();
 	
 	// MT4-like functions
-	virtual int		iBars(String symbol, int timeframe);
-	virtual int		iBarShift(String symbol, int timeframe, int datetime);
-	virtual double	iClose(String symbol, int timeframe, int shift);
-	virtual double	iHigh(String symbol, int timeframe, int shift);
-	virtual double	iLow(String symbol, int timeframe, int shift);
-	virtual double	iOpen(String symbol, int timeframe, int shift);
-	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start);
-	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start);
-	virtual int		iTime(String symbol, int timeframe, int shift);
-	virtual int		iVolume(String symbol, int timeframe, int shift);
+	virtual int		iBars(String symbol, int timeframe) {Panic("Not implemented"); return 0;}
+	virtual int		iBarShift(String symbol, int timeframe, int datetime) {Panic("Not implemented"); return 0;}
+	virtual double	iClose(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
+	virtual double	iHigh(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
+	virtual double	iLow(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
+	virtual double	iOpen(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
+	virtual int		iHighest(String symbol, int timeframe, int type, int count, int start) {Panic("Not implemented"); return 0;}
+	virtual int		iLowest(String symbol, int timeframe, int type, int count, int start) {Panic("Not implemented"); return 0;}
+	virtual int		iTime(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
+	virtual int		iVolume(String symbol, int timeframe, int shift) {Panic("Not implemented"); return 0;}
 	virtual int		RefreshRates();
 	virtual Time	GetTime() const;
 	virtual double	RealtimeAsk(int sym);
@@ -84,7 +84,8 @@ public:
 	virtual int		OrderExpiration();
 	virtual double	OrderLots();
 	virtual int		OrderMagicNumber();
-	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration);
+	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration);
+	virtual int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {Panic("Not implemented"); return 0;}
 	virtual double	OrderOpenPrice();
 	virtual int		OrderOpenTime();
 	virtual double	OrderProfit();

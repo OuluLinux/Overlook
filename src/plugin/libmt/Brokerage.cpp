@@ -523,8 +523,7 @@ double	Brokerage::AccountFreeMargin() {
 }
 
 double	Brokerage::AccountFreeMarginCheck(String symbol, int cmd, double volume) {
-	
-	Panic("TODO"); return 0;
+	return margin_free - GetMargin(FindSymbol(symbol), volume);
 }
 
 double	Brokerage::AccountFreeMarginMode() {

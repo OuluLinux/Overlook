@@ -7,7 +7,8 @@ ExpertAdvisor::ExpertAdvisor() {
 }
 
 void ExpertAdvisor::Init() {
-	String tf_str = GetSystem().GetPeriodString(GetTf()) + " ";
+	String factory_str = GetSystem().CoreFactories()[GetFactory()].a;
+	String tf_str = factory_str + " " + GetSystem().GetPeriodString(GetTf()) + " ";
 	
 	SetJobCount(1);
 	
@@ -95,10 +96,15 @@ bool ExpertAdvisor::TrainingIterator() {
 		RefreshSubCores();
 		
 		Point = point;
-		for (Digits = 0; point * pow(10, Digits) >= 1.0; Digits++)
-			;
+		for (Digits = 1; ; Digits++) {
+			double d = point * pow(10, Digits);
+			if (d >= 1.0)
+				break;
+		}
+		ASSERT(Digits >= 0);
 		Bars = count;
 		
+		TimeStop ts;
 		for(int i = 0; i < count; i++) {
 			Ask = open_buf.Get(i);
 			Bid = Ask - 3 * point;
@@ -108,9 +114,11 @@ bool ExpertAdvisor::TrainingIterator() {
 			//sb.CycleChanges();
 			StartEA(i);
 			//sb.Cycle();
+			if (ts.Elapsed() > 1000)
+				throw ConfExc();
 		}
 		
-		double eq = sb.AccountEquity();
+		double eq = max(0.0, sb.AccountEquity());
 		training_pts[round] = eq + Random(2);
 		opt.Stop(eq);
 	}

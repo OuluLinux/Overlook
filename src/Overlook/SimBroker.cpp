@@ -127,10 +127,10 @@ void SimBroker::RefreshOrders() {
 	for(int i = 0; i < orders.GetCount(); i++) {
 		Order& o = orders[i];
 		o.profit = GetCloseProfit(o, o.volume);
-		o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
 		equity += o.profit;
 		
 		if (o.type == OP_BUY) {
+			o.close = askbid[o.symbol].bid;
 			if (o.takeprofit != 0.0 && o.close >= o.takeprofit) {
 				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
 			}
@@ -139,6 +139,7 @@ void SimBroker::RefreshOrders() {
 			}
 		}
 		else if (o.type == OP_SELL) {
+			o.close = askbid[o.symbol].ask;
 			if (o.takeprofit != 0.0 && o.close <= o.takeprofit) {
 				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
 			}
@@ -146,6 +147,23 @@ void SimBroker::RefreshOrders() {
 				if (OrderClose(o.ticket, o.volume, o.close, 10)) i--;
 			}
 		}
+		else if (o.type == OP_BUYLIMIT) {
+			if (o.open > askbid[o.symbol].ask)
+				o.type = OP_BUY;
+		}
+		else if (o.type == OP_BUYSTOP) {
+			if (o.open < askbid[o.symbol].ask)
+				o.type = OP_BUY;
+		}
+		else if (o.type == OP_SELLLIMIT) {
+			if (o.open < askbid[o.symbol].bid)
+				o.type = OP_SELL;
+		}
+		else if (o.type == OP_SELLSTOP) {
+			if (o.open > askbid[o.symbol].bid)
+				o.type = OP_SELL;
+		}
+		
 		
 		double order_used_margin = GetMargin(o.symbol, o.volume);
 		used_margin += order_used_margin;
@@ -196,46 +214,6 @@ int		SimBroker::RefreshRates() {
 	return false;
 }
 
-int		SimBroker::iBars(String symbol, int timeframe) {
-	Panic("no need to implement yet"); return 0;
-}
-
-int		SimBroker::iBarShift(String symbol, int timeframe, int datetime) {
-	Panic("no need to implement yet"); return 0;
-}
-
-double	SimBroker::iClose(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
-double	SimBroker::iHigh(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
-double	SimBroker::iLow(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
-double	SimBroker::iOpen(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
-int		SimBroker::iHighest(String symbol, int timeframe, int type, int count, int start) {
-	Panic("no need to implement yet"); return 0;
-}
-
-int		SimBroker::iLowest(String symbol, int timeframe, int type, int count, int start) {
-	Panic("no need to implement yet"); return 0;
-}
-
-int		SimBroker::iTime(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
-int		SimBroker::iVolume(String symbol, int timeframe, int shift) {
-	Panic("no need to implement yet"); return 0;
-}
-
 double	SimBroker::RealtimeAsk(int sym) {
 	return askbid[sym].ask;
 }
@@ -249,56 +227,60 @@ int		SimBroker::OrderClose(int ticket, double lots, double price, int slippage) 
 		Order& o = orders[i];
 		if (o.ticket != ticket) continue;
 		
-		ASSERT(o.type == OP_BUY || o.type == OP_SELL);
-		Symbol& sym = symbols[o.symbol];
-		
-		double close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
-		
-		// Inspect slippage
-		double slippage_points = sym.point * slippage;
-		double close_max = close + slippage_points * 0.5;
-		double close_min = close - slippage_points * 0.5;
-		if (!(close_min <= price && price <= close_max)) {
-			last_error = "Invalid close price";
-			return false;
-		}
-		
-		// Reduce or close?
-		if (lots > o.volume) {
-			last_error = "Invalid close volume";
-			return false;
-		}
-		
-		
-		// Close
-		if (lots == o.volume) {
-			o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
-			o.profit = GetCloseProfit(o, o.volume);
-			if (o.profit >= 0) profit_sum += o.profit;
-			else               loss_sum   -= o.profit;
-			balance += o.profit;
-			close_sum += o.profit;
+		if (o.type == OP_BUY || o.type == OP_SELL) {
+			Symbol& sym = symbols[o.symbol];
 			
-			if (!lightweight) {
-				Order& ho = history_orders.Add(o);
-				ho.end = GetTime();
+			double close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+			
+			// Inspect slippage
+			double slippage_points = sym.point * slippage;
+			double close_max = close + slippage_points * 0.5;
+			double close_min = close - slippage_points * 0.5;
+			if (!(close_min <= price && price <= close_max)) {
+				last_error = "Invalid close price";
+				return false;
 			}
-			orders.Remove(i);
-		}
+			
+			// Reduce or close?
+			if (lots > o.volume) {
+				last_error = "Invalid close volume";
+				return false;
+			}
+			
+			
+			// Close
+			if (lots == o.volume) {
+				o.close = o.type == OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+				o.profit = GetCloseProfit(o, o.volume);
+				if (o.profit >= 0) profit_sum += o.profit;
+				else               loss_sum   -= o.profit;
+				balance += o.profit;
+				close_sum += o.profit;
+				
+				if (!lightweight) {
+					Order& ho = history_orders.Add(o);
+					ho.end = GetTime();
+				}
+				orders.Remove(i);
+			}
+			
+			// Reduce
+			else {
+				double profit = GetCloseProfit(o, lots);
+				o.volume -= lots;
+				balance -= profit;
+				close_sum += profit;
+				if (profit >= 0) profit_sum += profit;
+				else             loss_sum   -= profit;
+			}
 		
-		// Reduce
+			RefreshOrders();
+			
+			return true;
+		}
 		else {
-			double profit = GetCloseProfit(o, lots);
-			o.volume -= lots;
-			balance -= profit;
-			close_sum += profit;
-			if (profit >= 0) profit_sum += profit;
-			else             loss_sum   -= profit;
+			return OrderDelete(ticket);
 		}
-		
-		RefreshOrders();
-		
-		return true;
 	}
 	last_error = "Order not found";
 	return false;
@@ -319,7 +301,7 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 			if (askbid[o.symbol].bid == o.open) return 0.0; // normal data changes, broken data not
 			return -1 * volume * (askbid[o.symbol].ask / o.open - 1.0);
 		}
-		else Panic("Type handling not implemented");
+		else return 0;
 	}
 	else {
 		// return mt4 profits as is, because proxy_open is not set.
@@ -352,7 +334,7 @@ double SimBroker::GetCloseProfit(const Order& o, double volume) const {
 			else Panic("Invalid proxy sym");
 			return change;
 		}
-		else Panic("Type handling not implemented");
+		else return 0;
 	}
 	Panic("NEVER"); return 0;
 }
@@ -366,7 +348,7 @@ Time SimBroker::OrderCloseTime() {
 }
 
 String SimBroker::OrderComment() {
-	return ""; // Not included for performance reasons. Match ticket to String and store separately if needed.
+	return GetSelected().comment;
 }
 
 double SimBroker::OrderCommission() {
@@ -374,7 +356,13 @@ double SimBroker::OrderCommission() {
 }
 
 int SimBroker::OrderDelete(int ticket) {
-	Panic("no need to implement yet"); return 0;
+	for(int i = 0; i < orders.GetCount(); i++) {
+		if (orders[i].ticket == ticket) {
+			orders.Remove(i);
+			return true;
+		}
+	}
+	return false;
 }
 
 int SimBroker::OrderExpiration() {
@@ -389,8 +377,33 @@ int SimBroker::OrderMagicNumber() {
 	return GetSelected().magic;
 }
 
-int SimBroker::OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration) {
-	Panic("no need to implement yet"); return 0;
+int SimBroker::OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration) {
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		if (o.ticket == ticket) {
+			if (o.type == OP_BUYLIMIT || o.type == OP_BUYSTOP || o.type == OP_SELLLIMIT || o.type == OP_SELLSTOP) {
+				if (price != 0) {
+					if (o.type == OP_BUYLIMIT && price > askbid[o.symbol].ask)
+						return -1;
+					if (o.type == OP_BUYSTOP && price < askbid[o.symbol].ask)
+						return -1;
+					if (o.type == OP_SELLLIMIT && price < askbid[o.symbol].ask)
+						return -1;
+					if (o.type == OP_SELLSTOP && price > askbid[o.symbol].ask)
+						return -1;
+					
+					o.open = price;
+				}
+			}
+			
+			o.stoploss = stoploss;
+			o.takeprofit = takeprofit;
+			o.expiration = expiration;
+			
+			return true;
+		}
+	}
+	return false;
 }
 
 double SimBroker::OrderOpenPrice() {
@@ -461,18 +474,47 @@ int SimBroker::OrderSend(String symbol, int cmd, double volume, double price, in
 
 int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
 	if (symbol == -1) return -1;
-	if (cmd != OP_BUY && cmd != OP_SELL) {last_error = "Invalid command"; return -1;}
 	Symbol& s = symbols[symbol];
 	if (volume < s.volume_min) {last_error = "Invalid volume"; return -1;}
 	// TODO: check slippage, stoploss and takeprofit
 	
-	if (cmd == OP_BUY || cmd == OP_SELL) {
+	if (cmd == OP_BUY || cmd == OP_SELL || cmd == OP_BUYLIMIT || cmd == OP_BUYSTOP || cmd == OP_SELLLIMIT || cmd == OP_SELLSTOP) {
+		if (cmd == OP_BUY && price < askbid[symbol].ask) // never better price (instant profit)
+			return -1;
+		if (cmd == OP_BUY && price - slippage * symbols[symbol].point > askbid[symbol].ask)
+			return -1;
+		if (cmd == OP_SELL && price > askbid[symbol].bid)
+			return -1;
+		if (cmd == OP_SELL && price + slippage * symbols[symbol].point < askbid[symbol].bid)
+			return -1;
+		if (cmd == OP_BUYLIMIT && price > askbid[symbol].ask)
+			return -1;
+		if (cmd == OP_BUYSTOP && price < askbid[symbol].ask)
+			return -1;
+		if (cmd == OP_SELLLIMIT && price < askbid[symbol].ask)
+			return -1;
+		if (cmd == OP_SELLSTOP && price > askbid[symbol].ask)
+			return -1;
 		Order& o = orders.Add();
 		o.begin = GetTime();
 		o.type = cmd;
 		o.volume = volume;
 		o.symbol = symbol;
-		o.open = cmd != OP_BUY ? askbid[o.symbol].bid : askbid[o.symbol].ask;
+		switch (cmd) {
+			case OP_BUY:
+				o.open = askbid[o.symbol].ask;
+				break;
+			case OP_SELL:
+				o.open = askbid[o.symbol].bid;
+				break;
+			case OP_BUYLIMIT:
+			case OP_BUYSTOP:
+			case OP_SELLLIMIT:
+			case OP_SELLSTOP:
+				o.open = price;
+				break;
+		}
+		
 		if (!s.is_base_currency) {
 			if (s.proxy_id == -1) {
 				last_error = "Invalid proxy";
@@ -489,8 +531,6 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 		o.magic = magic;
 		return o.ticket;
 	}
-	else
-		Panic("Not implemented");
 	return -1;
 }
 

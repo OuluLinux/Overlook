@@ -14,7 +14,7 @@ INITBLOCK {
 	System::Register<AverageDirectionalMovement>("Average Directional Movement");
 	System::Register<BollingerBands>("Bollinger Bands");
 	System::Register<Envelopes>("Envelopes");
-	
+	System::Register<Channel>("Channel");
 	System::Register<ParabolicSAR>("Parabolic SAR");
 	System::Register<StandardDeviation>("Standard Deviation");
 	System::Register<AverageTrueRange>("Average True Range");
@@ -83,6 +83,9 @@ INITBLOCK {
 	System::Register<ShockTime>("ShockTime", CORE_EXPERTADVISOR);
 	System::Register<PipsBoss>("PipsBoss", CORE_EXPERTADVISOR);
 	System::Register<Snake>("Snake", CORE_EXPERTADVISOR);
+	System::Register<ChannelScalper>("Channel Scalper", CORE_EXPERTADVISOR);
+	System::Register<RedSunrise>("Red Sunrise", CORE_EXPERTADVISOR);
+	System::Register<Eagle>("Eagle", CORE_EXPERTADVISOR);
 	
 	
 	

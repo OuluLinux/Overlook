@@ -184,7 +184,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(4, 3)
 			% Lbl(1)
-			% Arg("period", bands_period, 2, 127)
+			% Arg("period", bands_period, 2, 10000)
 			% Arg("shift", bands_shift, 0, 0)
 			% Arg("deviation", deviation, 2, 127);
 	}
@@ -211,6 +211,24 @@ public:
 			% Arg("shift", ma_shift, 0, 0)
 			% Arg("deviation", dev, 2, 127)
 			% Arg("method", ma_method, 0, 3);
+	}
+};
+
+
+class Channel : public Core {
+	int                period = 30;
+	ExtremumCache		ec;
+public:
+	Channel();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Arg("period", period, 2, 10000)
+			% Mem(ec);
 	}
 };
 

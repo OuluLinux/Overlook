@@ -22,6 +22,9 @@ void PipsBoss::InitEA() {
 	AddSubCore<CommodityChannelIndex>()
 		.Set("period", indicator1_period);
 	
+	AddSubCore<Channel>()
+		.Set("period", 30);
+	
 }
 
 void PipsBoss::StartEA(int pos) {
@@ -159,13 +162,11 @@ int PipsBoss::GetBoxSize() {
 	int l_lowest_4;
 	
 	if (TimeHour(TimeCurrent()) == _time_shift + 11 && TimeMinute(TimeCurrent()) > 1 && TimeMinute(TimeCurrent()) <= 14) {
-		ConstBuffer& open_buf = GetInputBuffer(0, 0);
-		hi = -DBL_MAX, lo = +DBL_MAX;
-		for(int i = 0; i < 30; i++) {
-			double d = open_buf.Get(max(0, pos - i));
-			if (d < lo) lo = d;
-			if (d > hi) hi = d;
-		}
+		Core& c = At(1);
+		ConstBuffer& lo_buf = c.GetBuffer(0);
+		ConstBuffer& hi_buf = c.GetBuffer(1);
+		hi = hi_buf.Get(pos);
+		lo = lo_buf.Get(pos);
 		tp_factor = (hi - lo) * _mid_range_factor * 0.01 / Point;
 		day_of_year_0 = DayOfYear();
 		day_of_year_1 = DayOfWeek();

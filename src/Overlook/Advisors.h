@@ -72,6 +72,7 @@ public:
 	
 public:
 	String Symbol() {return GetSystem().GetSymbol(GetSymbol());}
+	int Period() {return GetMinutePeriod();}
 	Time TimeCurrent() {return Now;}
 	int TimeMinute(const Time& t) {return t.minute;}
 	int TimeHour(const Time& t) {return t.hour;}
@@ -97,7 +98,7 @@ public:
 	int		OrderExpiration() {return sb.OrderExpiration();}
 	double	OrderLots() {return sb.OrderLots();}
 	int		OrderMagicNumber() {return sb.OrderMagicNumber();}
-	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
+	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration=Time(3000,1,1)) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
 	double	OrderOpenPrice() {return sb.OrderOpenPrice();}
 	int		OrderOpenTime() {return sb.OrderOpenTime();}
 	double	OrderProfit() {return sb.OrderProfit();}
@@ -469,6 +470,304 @@ public:
 			% Arg("Op_step", Op_step, 1, 100)
 			% Arg("period", period, 1, 200);
 			
+	}
+	
+};
+
+
+
+
+
+
+class ChannelScalper : public ExpertAdvisor {
+	
+	// Args
+	int timeframe1period = 3;
+	int bb_period = 20;
+	int bb_deviation = 2;
+	int basketpercent = false;
+	int reversesignals = false;
+	int hidestop = false;
+	int hidetarget = true;
+	int buystop = 0;
+	int buytarget = 11;
+	int sellstop = 0;
+	int selltarget = 11;
+	int trailingstart = 0;
+	int trailingstop = 0;
+	int trailingstep = 1;
+	int breakevengain = 0;
+	int breakeven = 0;
+	int profit = 10.0;
+	int loss = 30.0;
+	
+	double lots = 0.01;
+	double lotdigits = 2.0;
+	bool oppositeclose = true;
+	int maxtrades = 100;
+	int tradesperbar = 1;
+	int slippage = 5;
+	
+	bool lotsoptimized = true;
+	double risk = 1.0;
+	double minlot = 0.01;
+	double maxlot = 10.0;
+	
+	Time gt_unused_396;
+	Time gt_unused_400;
+	Time g_datetime_404;
+	Time g_datetime_408;
+	double equity_diff = 0.0;
+	double g_ord_open_price_420 = 0.0;
+	double g_ord_open_price_428 = 0.0;
+	double g_price_436;
+	double g_price_444;
+	double price_point;
+	double point_factor;
+	double max_equity_diff;
+	double min_equity_diff;
+	int magic = 1234;
+	int g_digits_500;
+	int g_bars_504 = -1;
+	int g_count_508 = 0;
+	int g_ord_total_512;
+	int g_ticket_516;
+	int buy_count = 0;
+	int sell_count = 0;
+	int order_count = 0;
+	int gi_unused_532 = 0;
+	int gi_unused_536 = 0;
+
+public:
+	typedef ChannelScalper CLASSNAME;
+	ChannelScalper();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int count(int cmd, int a_magic_4);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("timeframe1period", timeframe1period, 2, 100)
+			% Arg("bb_period", bb_period, 2, 100)
+			% Arg("bb_deviation", bb_deviation, 1, 3)
+			% Arg("basketpercent", basketpercent, 0, 1)
+			% Arg("reversesignals", reversesignals, 0, 1)
+			% Arg("hidestop", hidestop, 0, 1)
+			% Arg("hidetarget", hidetarget, 0, 1)
+			% Arg("buystop", buystop, 0, 30)
+			% Arg("buytarget", buytarget, 0, 30)
+			% Arg("sellstop", sellstop, 0, 30)
+			% Arg("selltarget", selltarget, 0, 30)
+			% Arg("trailingstart", trailingstart, 0, 30)
+			% Arg("trailingstop", trailingstop, 0, 30)
+			% Arg("trailingstep", trailingstep, 0, 30)
+			% Arg("breakevengain", breakevengain, 0, 30)
+			% Arg("breakeven", breakeven, 0, 30)
+			% Arg("profit", profit, 0, 30)
+			% Arg("loss", loss, 10, 60);
+	}
+	
+};
+
+
+
+
+
+
+
+
+
+
+
+
+class RedSunrise : public ExpertAdvisor {
+	
+	// Args
+	int     MMType = 1;
+	int     TakeProfit = 10;
+	int     Stoploss = 500;
+	int     TrailStart = 10;
+	int     TrailStop = 10;
+	int     PipStep = 30;
+	int     MaxTrades = 10;
+	bool    UseEquityStop = false;
+	int     TotalEquityRisk = 20; //loss as a percentage of equity
+	bool    UseTrailingStop = false;
+	int     MaxTradeOpenHours = 48;
+	
+	bool    UseClose = false;
+	bool    UseAdd = true;
+	double  LotExponent = 1.667;
+	double  slip = 3;
+	double  Lots = 0.1;
+	double  LotsDigits = 2;
+	
+	int MagicNumber = 12324;
+	double PriceTarget, StartEquity, BuyTarget, SellTarget;
+	double AveragePrice, SellLimit, BuyLimit;
+	double LastBuyPrice, LastSellPrice, ClosePrice, Spread;
+	int flag;
+	String EAName = "Ilan1/4";
+	int NumOfTrades = 0;
+	double iLots;
+	int cnt = 0, total;
+	double Stopper = 0;
+	bool TradeNow = false, LongTrade = false, ShortTrade = false;
+	int ticket;
+	bool NewOrdersPlaced = false;
+
+public:
+	typedef RedSunrise CLASSNAME;
+	RedSunrise();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double ND(double v);
+	int ForceOrderCloseMarket(bool aCloseBuy = true, bool aCloseSell = true);
+	double GetLots(int aTradeType);
+	int CountTrades();
+	void CloseThisSymbolAll();
+	int OpenPendingOrder(int pType, double pLots, double pLevel, int sp, double pr, int sl, int tp, String pComment, int pMagic);
+	double StopLong(double price, int stop);
+	double StopShort(double price, int stop);
+	double TakeLong(double price, int take);
+	double TakeShort(double price, int take);
+	double CalculateProfit();
+	void TrailingAlls(int start, int stop, double AvgPrice);
+	double AccountEquityHigh();
+	double FindLastBuyPrice();
+	double FindLastSellPrice();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("MMType", MMType, 0, 2)
+			% Arg("TakeProfit", TakeProfit, 0, 100)
+			% Arg("Stoploss", Stoploss, 0, 1000)
+			% Arg("TrailStart", TrailStart, 0, 100)
+			% Arg("TrailStop", TrailStop, 0, 100)
+			% Arg("PipStep", PipStep, 0, 100)
+			% Arg("MaxTrades", MaxTrades, 0, 100)
+			% Arg("TotalEquityRisk", TotalEquityRisk, 0, 100);
+	}
+	
+};
+
+
+
+
+
+
+
+class Eagle : public ExpertAdvisor {
+	
+	// Args
+	int macd_fast_ema = 24;
+	int macd_slow_ema = 52;
+	int macd_signal_sma = 18;
+	int stoch0_k_period = 3;
+	int stoch0_d_period = 3;
+	int stoch0_slowing = 2;
+	int stoch1_k_period = 8;
+	int stoch1_d_period = 3;
+	int stoch1_slowing = 2;
+	int sar_step = 20;
+	int sar_max = 30;
+	int mom_period = 14;
+	int sl_factor = 900;
+	int tp_factor = 3;
+	int tp_limit = 9;
+	int sl_limit = 1;
+	int use_macd = false;
+	int use_momentum = true;
+	int use_sar = true;
+	int use_stoch = true;
+	int use_stoch2 = false;
+	int stoch_hi_limit = 55.0;
+	int stoch_lo_limit = 24.0;
+	int mom_limit = 100.0;
+	int use_trailing = true;
+	
+	int MagicNumber = 853953;
+	double Lots = 0.1;
+	bool Moneymanagement = true;
+	double MaximumRisk = 0.2;
+	int Slippage = 10;
+	bool Fridaymode = false;
+	double MaxTradesize = 100.0;
+	
+	bool micro_lots = false;
+	double lot_divider = 1.0;
+	bool use_mm_lots = true;
+	int mm_lots_divider = 3;
+	bool use_orders = true;
+	int g_price_field_268 = 0;
+	int indi_shift = 0;
+	int g_timeframe_308 = 0;
+	double g_imacd_312;
+	double g_imacd_320;
+	double g_istochastic_336;
+	double g_istochastic_344;
+	double g_istochastic_352;
+	double g_istochastic_360;
+	double g_isar_368;
+	double g_isar_376;
+	double g_imomentum_384;
+	String gs_dummy_400;
+	int gi_408;
+
+public:
+	typedef Eagle CLASSNAME;
+	Eagle();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	bool CheckExitCondition(String as_unused_0);
+	bool CheckEntryConditionBUY(int pos);
+	bool CheckEntryConditionSELL(int pos);
+	void OpenBuyOrder();
+	void OpenSellOrder();
+	int openPositions();
+	void prtAlert(String as_0 = "");
+	void CloseOrder(int a_ticket_0, double a_lots_4, double a_price_12);
+	void TrailingPositions();
+	void ModifyStopLoss(double a_price_0);
+	int HandleOpenPositions1();
+	double GetMoneyManagement();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("macd_fast_ema", macd_fast_ema, 2, 100)
+			% Arg("macd_slow_ema", macd_slow_ema, 2, 100)
+			% Arg("macd_signal_sma", macd_signal_sma, 2, 100)
+			% Arg("stoch0_k_period", stoch0_k_period, 2, 100)
+			% Arg("stoch0_d_period", stoch0_d_period, 2, 100)
+			% Arg("stoch0_slowing", stoch0_slowing, 2, 100)
+			% Arg("stoch1_k_period", stoch1_k_period, 2, 100)
+			% Arg("stoch1_d_period", stoch1_d_period, 2, 100)
+			% Arg("stoch1_slowing", stoch1_slowing, 2, 100)
+			% Arg("sar_step", sar_step, 1, 100)
+			% Arg("sar_max", sar_max, 1, 100)
+			% Arg("mom_period", mom_period, 2, 100)
+			% Arg("sl_factor", sl_factor, 1, 1000)
+			% Arg("tp_factor", tp_factor, 1, 100)
+			% Arg("tp_limit", tp_limit, 1, 100)
+			% Arg("sl_limit", sl_limit, 1, 100)
+			% Arg("use_macd", use_macd, 0, 1)
+			% Arg("use_momentum", use_momentum, 0, 1)
+			% Arg("use_sar", use_sar, 0, 1)
+			% Arg("use_stoch", use_stoch, 0, 1)
+			% Arg("use_stoch2", use_stoch2, 0, 1)
+			% Arg("stoch_hi_limit", stoch_hi_limit, 0, 100)
+			% Arg("stoch_lo_limit", stoch_lo_limit, 0, 100)
+			% Arg("mom_limit", mom_limit, -200, 200)
+			% Arg("use_trailing", use_trailing, 0, 1);
 	}
 	
 };

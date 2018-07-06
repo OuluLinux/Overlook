@@ -840,6 +840,7 @@ void BollingerBands::Start() {
 	for ( int i = pos; i < bars; i++) {
 		SetSafetyLimit(i);
 		double ma = SimpleMA( i, bands_period, open );
+		if (ma == 0.0) ma = open.Get(i);
 		ml_buffer.Set(i, ma);
 		stddev_buffer.Set(i, StdDev_Func ( i, ml_buffer, bands_period ));
 		double tl = ml_buffer.Get(i) + bands_deviation * stddev_buffer.Get(i);
@@ -933,6 +934,64 @@ void Envelopes::Start() {
 		ma_buffer.Set(i, value);
 		up_buffer.Set(i, ( 1 + deviation / 100.0 ) * ma_buffer.Get(i));
 		down_buffer.Set(i, ( 1 - deviation / 100.0 ) * ma_buffer.Get(i));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+Channel::Channel() {
+	
+}
+
+void Channel::Init() {
+	SetCoreChartWindow();
+	
+	SetBufferColor(0, Red);
+	SetBufferColor(1, Blue);
+	
+	SetBufferStyle(0, DRAW_LINE);
+	SetBufferStyle(1, DRAW_LINE);
+	
+	ec.SetSize(period);
+}
+
+
+void Channel::Start() {
+	Buffer& lo_buffer = GetBuffer(0);
+	Buffer& hi_buffer = GetBuffer(1);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& low_buf = GetInputBuffer(0, 1);
+	ConstBuffer& high_buf = GetInputBuffer(0, 2);
+	int bars = GetBars();
+
+	if ( bars < period )
+		throw ConfExc();
+
+	int counted = GetCounted();
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double lo = i == 0 ? open_buf.Get(i) : low_buf.Get(i-1);
+		double hi = i == 0 ? open_buf.Get(i) : high_buf.Get(i-1);
+		ec.Add(lo, hi);
+		int highest = ec.GetHighest();
+		int lowest = ec.GetLowest();
+		if (i == 0) {
+			lo_buffer.Set(i, open_buf.Get(i));
+			hi_buffer.Set(i, open_buf.Get(i));
+		} else {
+			lo_buffer.Set(i, low_buf.Get(lowest-1));
+			hi_buffer.Set(i, high_buf.Get(highest-1));
+		}
 	}
 }
 

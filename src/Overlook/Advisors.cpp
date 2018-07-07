@@ -109,6 +109,7 @@ bool ExpertAdvisor::TrainingIterator() {
 			Ask = open_buf.Get(i);
 			Bid = Ask - 3 * point;
 			Now = Time(1970,1,1) + time_buf.Get(i);
+			Bars = i + 1;
 			sb.SetPrice(GetSymbol(), Ask, Bid);
 			sb.RefreshOrders();
 			//sb.CycleChanges();

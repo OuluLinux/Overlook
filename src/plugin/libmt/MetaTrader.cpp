@@ -473,7 +473,7 @@ MTFUNC0(72,	int,		_TimeCurrent,			GetInt);
 
 
 
-int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
+int MetaTrader::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry) {
 	lock.Enter();
 	if (!init_success) {lock.Leave(); throw ConnectionError();}
 	MTPacket p;

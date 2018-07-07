@@ -580,8 +580,8 @@ void MovingAverageConvergenceDivergence::Init() {
 	SetBufferLabel(0,"MACD");
 	SetBufferLabel(1,"Signal");
 	
-	AddSubCore<MovingAverage>().Set("period", fast_ema_period);
-	AddSubCore<MovingAverage>().Set("period", slow_ema_period);
+	AddSubCore<MovingAverage>().Set("period", fast_ema_period).Set("method", method);
+	AddSubCore<MovingAverage>().Set("period", slow_ema_period).Set("method", method);
 }
 
 void MovingAverageConvergenceDivergence::Start() {
@@ -1860,8 +1860,8 @@ void OsMA::Init() {
 	
 	SetBufferBegin ( 0, signal_sma_period );
 
-	//	AddSubCore<MovingAverage>().Set("period", fast_ema_period).Set("offset", 0).Set("method", MODE_EMA);
-	//	AddSubCore<MovingAverage>().Set("period", slow_ema_period).Set("offset", 0).Set("method", MODE_EMA);
+	AddSubCore<MovingAverage>().Set("period", fast_ema_period).Set("offset", 0).Set("method", MODE_EMA);
+	AddSubCore<MovingAverage>().Set("period", slow_ema_period).Set("offset", 0).Set("method", MODE_EMA);
 }
 
 
@@ -1881,10 +1881,8 @@ void OsMA::Start() {
 	if ( counted > 0 )
 		counted--;
 	
-	//	ConstBuffer& ma1_buf = At(0).GetBuffer(0);
-	//	ConstBuffer& ma2_buf = At(1).GetBuffer(0);
-	ConstBuffer& ma1_buf = GetInputBuffer(1, 0);
-	ConstBuffer& ma2_buf = GetInputBuffer(2, 0);
+	ConstBuffer& ma1_buf = At(0).GetBuffer(0);
+	ConstBuffer& ma2_buf = At(1).GetBuffer(0);
 	ASSERT(ma1_buf.GetCount() >= bars);
 	ASSERT(ma2_buf.GetCount() >= bars);
 	

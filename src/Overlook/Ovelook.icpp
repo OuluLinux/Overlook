@@ -89,6 +89,13 @@ INITBLOCK {
 	System::Register<Salmon>("Salmon", CORE_EXPERTADVISOR);
 	System::Register<SoundOfForex>("Sound Of Forex", CORE_EXPERTADVISOR);
 	System::Register<Explorer>("Explorer", CORE_EXPERTADVISOR);
+	System::Register<DoubleDecker>("Double Decker", CORE_EXPERTADVISOR);
+	System::Register<Mari>("Mari", CORE_EXPERTADVISOR);
+	System::Register<Pyramid>("Pyramid", CORE_EXPERTADVISOR);
+	System::Register<SuperMart>("SuperMart", CORE_EXPERTADVISOR);
+	System::Register<Spiral>("Spiral", CORE_EXPERTADVISOR);
+	System::Register<MoneyTime>("MoneyTime", CORE_EXPERTADVISOR);
+	System::Register<Novice>("Novice", CORE_EXPERTADVISOR);
 	
 	
 	

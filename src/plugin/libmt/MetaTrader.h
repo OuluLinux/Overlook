@@ -65,7 +65,7 @@ public:
 	virtual Time	OrderOpenTime() {return Time(1970,1,1) + _OrderOpenTime();}
 	virtual double	OrderProfit();
 	virtual int		OrderSelect(int index, int select, int pool);
-	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
+	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry=0);
 	virtual int		OrdersHistoryTotal();
 	virtual double	OrderStopLoss();
 	virtual int		OrdersTotal();

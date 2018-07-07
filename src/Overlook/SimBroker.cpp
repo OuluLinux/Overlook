@@ -468,11 +468,11 @@ int SimBroker::OrderSelect(int index, int select, int pool) {
 	Panic("NEVER"); return 0;
 }
 
-int SimBroker::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
-	return OrderSend(FindSymbol(symbol), cmd, volume, price, slippage, stoploss, takeprofit, magic, expiry);
+int SimBroker::OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry) {
+	return OrderSend(FindSymbol(symbol), cmd, volume, price, slippage, stoploss, takeprofit, comment, magic, expiry);
 }
 
-int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
+int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry) {
 	if (symbol == -1) return -1;
 	Symbol& s = symbols[symbol];
 	if (volume < s.volume_min) {last_error = "Invalid volume"; return -1;}
@@ -528,6 +528,7 @@ int SimBroker::OrderSend(int symbol, int cmd, double volume, double price, int s
 		o.ticket = order_counter++;
 		o.is_open = true;
 		o.profit = GetCloseProfit(o, volume);
+		o.comment = comment;
 		o.magic = magic;
 		return o.ticket;
 	}
@@ -541,6 +542,13 @@ Order& SimBroker::GetSelected() {
 		return history_orders[selected];
 }
 
+bool SimBroker::IsOrderSelected() {
+	if (selected_pool == MODE_TRADES)
+		return selected >= 0 && selected < orders.GetCount();
+	else
+		return selected >= 0 && selected < history_orders.GetCount();
+}
+
 int		SimBroker::OrdersHistoryTotal() {
 	return history_orders.GetCount();
 }
@@ -551,6 +559,10 @@ double	SimBroker::OrderStopLoss() {
 
 int		SimBroker::OrdersTotal() {
 	return orders.GetCount();
+}
+
+int		SimBroker::HistoryTotal() {
+	return history_orders.GetCount();
 }
 
 double	SimBroker::OrderSwap() {

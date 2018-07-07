@@ -733,7 +733,7 @@ String	Brokerage::SymbolInfoString(String name, int prop_id) {
 
 }
 
-int Brokerage::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry) {
+int Brokerage::OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry) {
 	return OrderSend(
 		symbols[symbol].name,
 		cmd,
@@ -742,6 +742,7 @@ int Brokerage::OrderSend(int symbol, int cmd, double volume, double price, int s
 		slippage,
 		stoploss,
 		takeprofit,
+		comment,
 		magic,
 		expiry);
 }

@@ -167,7 +167,7 @@ public:
 	virtual Time	OrderOpenTime() = 0;
 	virtual double	OrderProfit() = 0;
 	virtual int		OrderSelect(int index, int select, int pool) = 0;
-	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0) = 0;
+	virtual int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry=0) = 0;
 	virtual int		OrdersHistoryTotal() = 0;
 	virtual double	OrderStopLoss() = 0;
 	virtual int		OrdersTotal() = 0;
@@ -178,7 +178,7 @@ public:
 	virtual int		OrderType() = 0;
 	
 	// More efficient alternatives
-	virtual int		OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, int magic, int expiry=0);
+	virtual int		OrderSend(int symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry=0);
 	
 	Callback1<String> WhenInfo;
 	Callback1<String> WhenError;

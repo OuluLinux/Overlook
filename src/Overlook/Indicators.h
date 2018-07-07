@@ -127,6 +127,7 @@ class MovingAverageConvergenceDivergence : public Core {
 	int fast_ema_period;
 	int slow_ema_period;
 	int signal_sma_period;
+	int method = 0;
 	
 public:
 	MovingAverageConvergenceDivergence();
@@ -141,7 +142,8 @@ public:
 			% Lbl(4)
 			% Arg("fast_ema", fast_ema_period, 2, 127)
 			% Arg("slow_ema", slow_ema_period, 2, 127)
-			% Arg("signal_sma", signal_sma_period, 2, 127);
+			% Arg("signal_sma", signal_sma_period, 2, 127)
+			% Arg("method", method, 0, 3);
 	}
 };
 
@@ -436,31 +438,12 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% In<MovingAverage>(&Args) // fast
-			% In<MovingAverage>(&Args) // slow
 			% Out(4, 2)
 			% Arg("fast_ema_period", fast_ema_period, 2)
 			% Arg("slow_ema_period", slow_ema_period, 2)
 			% Arg("signal_sma", signal_sma_period, 2)
 			% Mem(value_mean) % Mem(value_count)
 			% Mem(diff_mean) % Mem(diff_count);
-	}
-	
-	static void Args(int input, FactoryDeclaration& decl, const Vector<int>& args) {
-		// Note: in case you need to fill some values in between some custom values,
-		// default arguments can be read from here:
-		// const FactoryRegister& reg = System::GetRegs()[decl.factory];
-		// const ArgType& arg = reg.args[i];
-		// int default_value = arg.def;
-		
-		int fast_ema_period =	args[0];
-		int slow_ema_period =	args[1];
-		int signal_sma =		args[2];
-		if		(input == 1)	decl.AddArg(fast_ema_period);
-		else if	(input == 2)	decl.AddArg(slow_ema_period);
-		else Panic("Unexpected input");
-		decl.AddArg(0);
-		decl.AddArg(MODE_EMA);
 	}
 	
 	void AddValue(double a) {

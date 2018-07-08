@@ -415,7 +415,7 @@ void MovingAverage::Assist(int cursor, VectorBool& vec) {
 void MovingAverage::Start() {
 	int bars = GetBars();
 	if ( bars <= ma_period )
-		throw DataExc();
+		throw ConfExc();
 	ma_counted = GetCounted();
 	if ( ma_counted < 0 )
 		throw DataExc();
@@ -469,7 +469,7 @@ void MovingAverage::Simple()
 	}
 	if (ma_counted < 1)
 		for (int i = 0; i < ma_period; i++)
-			buffer.Set(i, 0);
+			buffer.Set(i, Open(i));
 }
 
 void MovingAverage::Exponential()
@@ -544,7 +544,7 @@ void MovingAverage::LinearlyWeighted()
 	}
 	if ( ma_counted < 1 )
 		for (i = 0; i < ma_period; i++)
-			buffer.Set(i, 0);
+			buffer.Set(i, Open(i));
 }
 
 
@@ -4853,13 +4853,17 @@ void VolumeSlots::Start() {
 		total.Add(vol);
 	}
 	
+	double max = 0.0;
+	for(int i = 0; i < stats.GetCount(); i++) {
+		max = Upp::max(max, stats[i].mean);
+	}
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
 		int slot_id = i % slot_count;
 		const OnlineAverage1& av = stats[slot_id];
 		
-		buffer.Set(i, av.mean);
+		buffer.Set(i, av.mean * 100 / max);
 	}
 }
 

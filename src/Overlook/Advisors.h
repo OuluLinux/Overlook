@@ -3,172 +3,6 @@
 
 namespace Overlook {
 
-class ExpertAdvisor : public Core {
-	
-	struct TrainingCtrl : public JobCtrl {
-		Vector<Point> polyline;
-		virtual void Paint(Draw& w);
-	};
-	
-	struct Setting : Moveable<Setting> {
-		int start, stop, timeofday;
-	};
-	
-	
-	// Persistent
-	Optimizer opt;
-	Vector<double> training_pts;
-	Vector<int> cursors;
-	SimBroker sb;
-	double total = 0;
-	int round = 0;
-	int prev_counted = 0;
-	int input_size = 0;
-	
-	
-	// Temporary
-	TimeStop save_elapsed;
-	Vector<double> tmp_mat;
-	double point = 0.0001;
-	int max_rounds = 0;
-	int pos = 0;
-	bool once = true;
-	
-protected:
-	virtual void Start();
-	
-	bool TrainingBegin();
-	bool TrainingIterator();
-	bool TrainingEnd();
-	bool TrainingInspect();
-	void RefreshAll();
-	void DumpTest();
-	
-public:
-	typedef ExpertAdvisor CLASSNAME;
-	ExpertAdvisor();
-	virtual ~ExpertAdvisor() {StoreCache();}
-	
-	virtual void Init();
-	
-	virtual void InitEA() = 0;
-	virtual void StartEA(int pos) = 0;
-	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% In<Avoidance>()
-			% Lbl(1)
-			% Mem(opt)
-			% Mem(training_pts)
-			% Mem(cursors)
-			% Mem(sb)
-			% Mem(total)
-			% Mem(round)
-			% Mem(prev_counted)
-			% Mem(input_size)
-			;
-	}
-	
-	
-public:
-	String Symbol() {return GetSystem().GetSymbol(GetSymbol());}
-	int Period() {return GetMinutePeriod();}
-	Time TimeCurrent() {return Now;}
-	int TimeMinute(const Time& t) {return t.minute;}
-	int TimeHour(const Time& t) {return t.hour;}
-	int TimeDay(const Time& t) {return t.day;}
-	int TimeMonth(const Time& t) {return t.month;}
-	int TimeYear(const Time& t) {return t.year;}
-	int TimeDayOfWeek(const Time& t) {return Upp::DayOfWeek(t);}
-	int Year() {return Now.year;}
-	int Month() {return Now.month;}
-	int Day() {return Now.day;}
-	int Hour() {return Now.hour;}
-	int Minute() {return Now.minute;}
-	int DayOfYear() {return Upp::DayOfYear(Now);}
-	int DayOfWeek() {return Upp::DayOfWeek(Now);}
-	void Comment(String s) {if (!avoid_refresh) ReleaseLog("COMMENT: " + s);}
-	void Print(String s) {if (!avoid_refresh) ReleaseLog("PRINT: " + s);}
-	void Alert(String s) {if (!avoid_refresh) ReleaseLog("ALERT: " + s);}
-	int		OrderClose(int ticket, double lots, double price, int slippage) {return sb.OrderClose(ticket, lots, price, slippage);}
-	double	OrderClosePrice() {return sb.OrderClosePrice();}
-	Time	OrderCloseTime() {return sb.OrderCloseTime();}
-	String	OrderComment() {return sb.OrderComment();}
-	double	OrderCommission() {return sb.OrderCommission();}
-	int		OrderDelete(int ticket) {return sb.OrderDelete(ticket);}
-	int		OrderExpiration() {return sb.OrderExpiration();}
-	double	OrderLots() {return sb.OrderLots();}
-	int		OrderMagicNumber() {return sb.OrderMagicNumber();}
-	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration=Time(3000,1,1)) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
-	double	OrderOpenPrice() {return sb.OrderOpenPrice();}
-	Time	OrderOpenTime() {return sb.OrderOpenTime();}
-	double	OrderProfit() {return sb.OrderProfit();}
-	int		OrderSelect(int index, int select, int pool=libmt::MODE_TRADES) {return sb.OrderSelect(index, select, pool);}
-	int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry=0) {return sb.OrderSend(symbol, cmd, volume, price, slippage, stoploss, takeprofit, comment, magic, expiry);}
-	int		OrdersHistoryTotal() {return sb.OrdersHistoryTotal();}
-	double	OrderStopLoss() {return sb.OrderStopLoss();}
-	int		OrdersTotal() {return sb.OrdersTotal();}
-	int		HistoryTotal() {return sb.HistoryTotal();}
-	double	OrderSwap() {return sb.OrderSwap();}
-	String	OrderSymbol() {return sb.OrderSymbol();}
-	double	OrderTakeProfit() {return sb.OrderTakeProfit();}
-	int		OrderTicket() {return sb.OrderTicket();}
-	int		OrderType() {return sb.OrderType();}
-	bool	IsOrderSelected() {return sb.IsOrderSelected();}
-	String DoubleToStr(double d, int digits) {return Format("%" + IntStr(digits) + "!n", d);}
-	double NormalizeDouble(double d, int digits) {
-		int mul = 1; double div = 1.0;
-		for(int i = 0; i < digits; i++) {mul *= 10; div *= 0.1;}
-		int64 val = d * mul;
-		return (double)val * div;
-	}
-	double	AccountInfoDouble(int property_id) {return sb.AccountInfoDouble(property_id);}
-	int		AccountInfoInteger(int property_id) {return sb.AccountInfoInteger(property_id);}
-	String	AccountInfoString(int property_id) {return sb.AccountInfoString(property_id);}
-	double	AccountBalance() {return sb.AccountBalance();}
-	double	AccountCredit() {return sb.AccountCredit();}
-	String	AccountCompany() {return sb.AccountCompany();}
-	String	AccountCurrency() {return sb.AccountCurrency();}
-	double	AccountEquity() {return sb.AccountEquity();}
-	double	AccountFreeMargin() {return sb.AccountFreeMargin();}
-	double	AccountFreeMarginCheck(String symbol, int cmd, double volume) {return sb.AccountFreeMarginCheck(symbol, cmd, volume);}
-	double	AccountFreeMarginMode() {return sb.AccountFreeMarginMode();}
-	int		AccountLeverage() {return sb.AccountLeverage();}
-	double	AccountMargin() {return sb.AccountMargin();}
-	String	AccountName() {return sb.AccountName();}
-	int		AccountNumber() {return sb.AccountNumber();}
-	double	AccountProfit() {return sb.AccountProfit();}
-	String	AccountServer() {return sb.AccountServer();}
-	int		AccountStopoutLevel() {return sb.AccountStopoutLevel();}
-	int		AccountStopoutMode() {return sb.AccountStopoutMode();}
-	double	MarketInfo(String symbol, int type) {return sb.MarketInfo(symbol, type);}
-	bool	IsOptimization() {return avoid_refresh;}
-	bool	IsTesting() {return avoid_refresh;}
-	bool	IsVisualMode() {return avoid_refresh;}
-	double	MathMin(double a, double b) {return min(a, b);}
-	double	MathMax(double a, double b) {return max(a, b);}
-	double	MathAbs(double d) {return fabs(d);}
-	double	MathPow(double d, double e) {return pow(d, e);}
-	double	MathRound(double d) {return floor(d);}
-	double	MathFloor(double d) {return floor(d);}
-	void	RefreshRates() {}
-	String	GetLastError() {return sb.GetLastError();}
-	bool	IsTradeContextBusy() {return false;}
-	int		StringFind(const String& str, const String& match) {return str.Find(match);}
-	int		StringFind(const String& str, const String& match, int begin) {return str.Find(match, begin);}
-	String	StringSubstr(const String& str, int mid, int len) {return str.Mid(mid, len);}
-	String	StringConcatenate(const String& a, const String& b) {return a + b;}
-	int		StringLen(const String& a) {return a.GetCount();}
-	void	Sleep(int ms) {}
-	
-	double Ask, Bid, Point;
-	int Digits, Bars;
-	Time Now;
-	
-};
-
-
-
 
 
 class HighPromises : public ExpertAdvisor {
@@ -1725,6 +1559,1171 @@ public:
 	}
 	
 };
+
+
+
+
+
+
+
+
+
+class StochPower : public ExpertAdvisor {
+	
+	int    ma_period = 14;
+	int risk = 1;           // risk to calculate the lots size (only if mm is enabled)
+	int OrderstoProtect = 3; // Number of orders to enable the account protection
+	int    TakeProfit = 60;  // Profit Goal for the latest order opened
+	int Pips = 90;            // Distance in Pips from one order to another
+	int    StopLoss = 500;  // StopLoss
+	
+	bool ExitWithSTOCH = false;
+	int pos = 0;
+	double Lots = 0.01;       // We start with this lots number
+	bool MyMoneyProfitTarget = false;
+	double My_Money_Profit_Target = 50;
+	double multiply = 3.0;
+	int MaxTrades = 3;       // Maximum number of orders to open
+	int    TrailingStop = 0;// Pips to trail the StopLoss
+	int mm = 1;              // if one the lots size will increase based on account size
+	int AccountType = 1;  // 0 if Normal Lots, 1 for mini lots, 2 for micro lots
+	int MagicNumber = 312133;  // Magic number for the orders placed
+	bool SecureProfitProtection = false;
+	int SecureProfit = 2000000000;   // If profit made is bigger than SecureProfit we close the orders
+	bool AllSymbolsProtect = false; // if one will check profit from all symbols, if cero only this symbol
+	bool EquityProtection = false;  // if true, then the expert will protect the account equity to the percent specified
+	int AccountEquityPercentProtection = 90; // percent of the account to protect on a set of trades
+	bool AccountMoneyProtection = false;
+	double AccountMoneyProtectionValue = 3000.00;
+	bool UseHourTrade = false;
+	int FromHourTrade = 0;
+	int ToHourTrade = 23;
+	
+	String  TradingTime = "--trading time setting--";
+	bool    UseTradingHours = false;
+	bool    TradeAsianMarket = true;
+	int     StartHour1 = 0;       // Start trades after time
+	int     StopHour1 = 3;      // Stop trading after time
+	bool    TradeEuropeanMarket = true;
+	int     StartHour2 = 9;       // Start trades after time
+	int     StopHour2 = 11;      // Stop trading after time
+	bool    TradeNewYorkMarket = true;
+	int     StartHour3 = 15;       // Start trades after time
+	int     StopHour3 = 17;      // Stop trading after time
+	bool TradeOnFriday = true;
+	String  OtherSetting = "--Others Setting--";
+	int OrdersTimeAlive = 0;  // in seconds
+	String  reverse = "if one the desition to go long/short will be reversed";
+	bool ReverseCondition = false;  // if one the desition to go long/short will be reversed
+	String  limitorder = "if true, instead open market orders it will open limit orders ";
+	bool SetLimitOrders = false; // if true, instead open market orders it will open limit orders
+	int Manual = 0;          // If set to one then it will not open trades automatically
+	
+	
+	int OpenOrdersBasedOn = 16; // Method to decide if we start long or short
+	bool ContinueOpening = true;
+	
+	int  OpenOrders = 0, cnt = 0;
+	int MarketOpenOrders = 0, LimitOpenOrders = 0;
+	int  slippage = 5;
+	double sl = 0, tp = 0;
+	double BuyPrice = 0, SellPrice = 0;
+	double lotsi = 0, mylotsi = 0;
+	int mode = 0, myOrderType = 0, myOrderTypetmp = 0;
+	
+	double LastPrice = 0;
+	int  PreviousOpenOrders = 0;
+	double Profit = 0;
+	int LastTicket = 0, LastType = 0;
+	double LastClosePrice = 0, LastLots = 0;
+	double Pivot = 0;
+	double PipValue = 0;
+	bool Reversed = false;
+	double tmp = 0;
+	double iTmpH = 0;
+	double iTmpL = 0;
+	Time NonTradingTime[2];
+	bool FileReaded = false;
+	String dateLimit = "2030.01.12 23:00";
+	int CurTimeOpeningFlag = 0;
+	Time LastOrderOpenTime;
+	bool YesStop;
+
+
+public:
+	typedef StochPower CLASSNAME;
+	StochPower();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	void OpenMarketOrders();
+	void OpenLimitOrders();
+	void DeleteAllObjects();
+	int OpenOrdersBasedOnSTOCH();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("ma_period", ma_period, 2, 100)
+			% Arg("risk", risk, 1, 4)
+			% Arg("OrderstoProtect", OrderstoProtect, 2, 100)
+			% Arg("TakeProfit", TakeProfit, 2, 100)
+			% Arg("Pips", Pips, 2, 150)
+			% Arg("StopLoss", StopLoss, 10, 1000)
+			;
+	}
+	
+};
+
+
+
+
+class Lamer : public ExpertAdvisor {
+	
+	int stoch_k_period = 2;
+	int stoch_d_period = 2;
+	int stoch_slowing = 2;
+	int ma0_period = 2;
+	int ma1_period = 2;
+	int ma2_period = 2;
+	int env_period = 2;
+	int env_deviation = 2;
+	int TakeProfit = 12.0;
+	int Stoploss = 2000.0;
+	int Dist1 = 72.0;
+	int Dist2 = 24.0;
+	int Dist3 = 144.0;
+	int TrailSL = false;
+	int TrailPips = 11;
+	
+	String ActivationKey;
+	bool Hedging = true;
+	int MaxTrades = 6;
+	bool AutoLots = true;
+	double Lots = 0.01;
+	int risk = 1;
+	bool CheckFreeMargin = true;
+	double gd_160;
+	double gd_168;
+	double gd_176;
+	bool gi_184 = true;
+	bool gi_188 = false;
+	double gd_192;
+	double g_ima_200;
+	double g_ienvelopes_208;
+	double g_ienvelopes_216;
+	double g_ienvelopes_224;
+	double g_ienvelopes_232;
+	double g_ichimoku_240;
+	int gi_248 = 1;
+	bool gi_252 = false;
+	bool gi_256 = true;
+	double gd_260 = 1.667;
+	int g_magic_268;
+	double g_price_272;
+	double gd_280;
+	double gd_unused_288;
+	double gd_unused_296;
+	bool gi_unused_304 = false;
+	double gd_unused_308 = 20.0;
+	double g_price_316;
+	double g_bid_324;
+	double g_ask_332;
+	double gd_340;
+	double gd_348;
+	double gd_356;
+	double gd_364 = 3.0;
+	double gd_372;
+	int gi_380 = 0;
+	int gi_384 = 0;
+	bool gi_388;
+	String gs_eurusd_392 = "EURUSD";
+	int gi_400 = 0;
+	bool gi_404 = false;
+	bool gi_408 = false;
+	bool gi_412 = false;
+	int gi_unused_416;
+	int gi_420;
+	double gd_424;
+	int g_pos_432 = 0;
+	int gi_436;
+	double gd_440 = 0.0;
+	bool gi_448 = false;
+	Time g_datetime_452;
+	Time g_datetime_456;
+	int pos;
+	
+public:
+	typedef Lamer CLASSNAME;
+	Lamer();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double ND(double ad_0);
+	int fOrderCloseMarket(bool ai_0 = true, bool ai_4 = true);
+	double fGetLots(int a_cmd_0);
+	int CountTrades();
+	int CountTradesB();
+	int CountTradesS();
+	int OpenPendingOrder(int ai_0, double a_lots_4, double ad_unused_12, int a_slippage_20, double ad_unused_24, int ai_32, int ai_36, String a_comment_40, int a_magic_48);
+	double StopLong(double ad_0, int ai_8);
+	double StopShort(double ad_0, int ai_8);
+	double TakeLong(double ad_0, int ai_8);
+	double TakeShort(double ad_0, int ai_8);
+	double CalculateProfit();
+	double LastBuyPrice();
+	double LastSellPrice();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("stoch_k_period", stoch_k_period, 2, 100)
+			% Arg("stoch_d_period", stoch_d_period, 2, 100)
+			% Arg("stoch_slowing", stoch_slowing, 2, 100)
+			% Arg("ma0_period", ma0_period, 2, 200)
+			% Arg("ma1_period", ma1_period, 2, 200)
+			% Arg("ma2_period", ma2_period, 2, 200)
+			% Arg("env_period", env_period, 2, 200)
+			% Arg("env_deviation", env_deviation, 1, 3)
+			% Arg("TakeProfit", TakeProfit, 1, 100)
+			% Arg("Stoploss", Stoploss, 1, 1000)
+			% Arg("Dist1", Dist1, 1, 1000)
+			% Arg("Dist2", Dist2, 1, 1000)
+			% Arg("Dist3", Dist3, 1, 1000)
+			% Arg("TrailSL", TrailSL, 0, 1)
+			% Arg("TrailPips", TrailPips, 0, 100)
+			;
+	}
+	
+};
+
+
+
+class Dealer : public ExpertAdvisor {
+	
+	int TakeProfit_L = 39; // Óðîâåíü òåéêïðîôèò â ïóíêòàõ
+	int StopLoss_L = 147;  // óðîâåíü ñòîïëîññ â ïóíêòàõ
+	int TakeProfit_S = 32; // Óðîâåíü òåéêïðîôèò â ïóíêòàõ
+	int StopLoss_S = 267;  // óðîâåíü ñòîïëîññ â ïóíêòàõ
+	int TradeTime = 18;    // Âðåìÿ âõîäà â ðûíîê
+	int t1 = 6;
+	int t2 = 2;
+	int delta_L = 6;
+	int delta_S = 21;
+	int Orders = 1;        // ìàêñèìàëüíîå êîëè÷åñòâî îäíîâðåìåííî îòêðûòûõ ïîçèöèé
+	
+	double lot = 0.01;      // Ðàçìåð ëîòà
+	int MaxOpenTime = 504;
+	int BigLotSize = 6;    // Íà ñêîëüêî óìíîæàåòñÿ ðàçìåð ëîòà â Áèã ëîòå
+	bool AutoLot = true;
+	
+	int pos;
+	int ticket, total, cnt;
+	bool cantrade = true;
+	double closeprice;
+	double tmp;
+
+public:
+	typedef Dealer CLASSNAME;
+	Dealer();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double LotSize();
+	int OpenLong(double volume = 0.1);
+	int OpenShort(double volume = 0.1);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("TakeProfit_L", TakeProfit_L, 2, 100)
+			% Arg("StopLoss_L", StopLoss_L, 2, 300)
+			% Arg("TakeProfit_S", TakeProfit_S, 2, 300)
+			% Arg("StopLoss_S", StopLoss_S, 2, 300)
+			% Arg("TradeTime", TradeTime, 2, 100)
+			% Arg("t1", t1, 0, 6)
+			% Arg("t2", t2, 0, 6)
+			% Arg("delta_L", delta_L, 0, 100)
+			% Arg("delta_S", delta_S, 0, 100)
+			% Arg("Orders", Orders, 1, 100)
+			;
+	}
+	
+};
+
+
+
+
+
+class Gainer : public ExpertAdvisor {
+
+	//int gi_76 = 3027389;
+	String gs_80 = "FRX_";
+	String gsa_88[7];
+	int gi_unused_92 = true;
+	int gi_96 = false;
+	double gd_100 = 0.01;
+	int RiskPercent = 20.0;
+	int TorgSloy = 3;
+	int N_enable_Sloy = 7;
+	double g_maxlot_148 = 0.0;
+	double LotMultiplicator = 1.2;
+	int hSETKY = 30;
+	int gi_unused_184 = 30;
+	int Uvel_hSETKY = 1; // 1, 2
+	int ShagUvel_hSETKY = 2;
+	int gi_212 = 0;
+	int gi_216 = 0;
+	int ProtectionTP = 7;
+	int gi_232 = 7;
+	int gi_unused_236 = 1;
+	double gd_unused_240 = 40.0;
+	int Magic = 1230;
+	bool ShowTableOnTesting = true;
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("gi_96", gi_96, 0, 1)
+			% Arg("RiskPercent", RiskPercent, 0, 100)
+			% Arg("TorgSloy", TorgSloy, 0, 10)
+			% Arg("N_enable_Sloy", N_enable_Sloy, 0, 10)
+			% Arg("hSETKY", hSETKY, 0, 100)
+			% Arg("Uvel_hSETKY", hSETKY, 1, 2)
+			% Arg("ProtectionTP", ProtectionTP, 1, 100)
+			% Arg("gi_232", gi_232, 1, 100)
+			;
+	}
+	
+	String gs_unused_280 = "Îãð.òîðã.ïî ñâîá.ñð.ñ÷åòà";
+	String gs_unused_288 = "â % îò äåïîçèòà";
+	double gd_296 = 3.0;
+	int gi_304 = 3;
+	int g_slippage_316 = 2;
+	double gd_320;
+	double gd_328;
+	double g_ask_344;
+	double g_bid_352;
+	double gd_360;
+	double gd_368;
+	int gia_376[7];
+	int gia_unused_380[7];
+	double gd_384;
+	int gia_392[3][2] = {16711680, 255,
+	   15570276, 7504122,
+	   13959039, 17919};
+	String gsa_396[3][2] = {"NextBUY_0", "NextSELL_0",
+	   "NextBUY_1", "NextSELL_1",
+	   "NextBUY_2", "NextSELL_2"};
+	int g_index_400;
+	int gi_404 = 7;
+	int gia_408[7] = {1, 0, 0, 0, 0, 0, 0};
+	String gsa_412[7];
+	int gia_416[7] = {10, 1, 0, 1, 1, 1, 1};
+	int gia_420[7] = {5, 3, 3, 3, 3, 3, 3};
+	int gia_424[7] = {20, 20, 20, 20, 20, 20, 20};
+	int gia_428[7] = {7, 7, 7, 7, 7, 7, 7};
+	int gia_432[7] = {111, 222, 333, 444, 555, 777, 999};
+	double gda_unused_436[7];
+	double gda_unused_440[7];
+	double gda_unused_444[7];
+	double gda_unused_448[7];
+	double gda_unused_452[7];
+	double gda_unused_456[7];
+	double gda_unused_460[7];
+	int gia_464[10] = {1, 5, 15, 30, 60, 240, 1440, 10080, 43200, 0};
+	double gda_468[7][16][50];
+	double gda_472[7][16][50];
+	double gda_476[7][16][50];
+	int gia_480[7][16][50];
+	double gda_484[7][16][50];
+	double gda_488[7][16][50];
+	double gda_492[7];
+	double gda_496[7];
+	double gda_500[7][16];
+	double gda_504[7][16];
+	int gia_508[7];
+	int gia_512[7];
+	int gia_516[7];
+	int gia_520[7];
+	int gia_524[7];
+	int gia_528[7];
+	int g_pos_532;
+	int gi_536;
+	int g_ord_total_540;
+	int gi_552;
+	int gi_556;
+	int gia_568[7];
+	int gia_572[7];
+	int gia_576[7];
+	int gia_580[7];
+	int gia_584[7];
+	int gia_588[7];
+	int gia_592[7];
+	int gia_596[7];
+	int gia_600[7];
+	int gia_604[7];
+	int gia_608[7];
+	int gia_612[7];
+	int gia_616[7];
+	int gia_620[7];
+	int gia_unused_624[7];
+	int gia_unused_628[7];
+	int gia_632[7];
+	int gia_636[7];
+	int gia_unused_640[7];
+	int gi_644;
+	double gda_648[7];
+	double gda_652[7];
+	double gda_656[7];
+	double gda_660[7];
+	int gia_664[7];
+	int gia_668[7];
+	double gda_672[7];
+	double gda_676[7];
+	double gda_680[7];
+	double gda_684[7];
+	double gda_688[7];
+	double gda_692[7];
+	double gda_696[7];
+	double gda_700[7];
+	int gi_unused_704;
+	int gi_unused_708;
+	bool gi_712;
+	bool gi_716;
+	double g_price_736;
+	double g_price_744;
+	double g_price_752;
+	double g_price_760;
+	double gda_768[7];
+	double gda_772[7];
+	int gi_unused_776 = 10;
+	
+public:
+	typedef Gainer CLASSNAME;
+	Gainer();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int OpOrd(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44);
+	double UB(int ai_0, int ai_4);
+	double U0(int ai_0, int ai_4);
+	int MIN(int ai_0, int ai_4);
+	int MAX(int ai_0, int ai_4);
+	int NOV(int ai_0, int ai_4, double ad_8);
+	int NON(int ai_0, int ai_4, double ad_8);
+	void N();
+	double GetProfitForDay(int ai_0);
+	
+};
+
+
+
+
+
+
+
+
+class Cashier : public ExpertAdvisor {
+	
+	
+	int g_period_312 = 5.0;
+	int g_period_320 = 10.0;
+	int g_period_328 = 22.0;
+	int g_period_336 = 20.0;
+	int g_period_344 = 26.0;
+	int g_period_352 = 13.0;
+	int g_period_360 = 15.0;
+	int g_period_368 = 10.0;
+	int Percent_Over_Balance = 10.0;
+	int MaximumRisk = 5.0;
+	int TakeProfit = 25.0;
+	int StopLoss = 500.0;
+	int DecreaseFactor = 3.0;
+	int Hedge = false;
+	int HedgeProfit = 25.0;
+	int HedgeStopLoss = 100.0;
+	int PipDistance = 50;
+	int HighRisk = false;
+	int HR_StopLoss = 500.0;
+	
+	String Header = "Auto Cash Generator";
+	String Creator = "Oewee, Apr 2009";
+	int MagicNo = 4399;
+	String Style = "=== Trading Management ===";
+	int StartTime_Hr = 0;
+	int EndTime_Hr = 23;
+	bool TradeOnFriday = true;
+	bool ProtectBalance = false;
+	bool ProtectProfit = false;
+	bool UseAutoLot = false;
+	double MaxLots = 0.1;
+	double MinLots = 0.1;
+	int MaxOrder = 1;
+	double StopTime = 0.0;
+	double TrailingStop = 0.0;
+	bool TrailingProfit = false;
+	int TrailingPips = 1;
+	String Header1 = "=== Hedge setting ===";
+	int Hedge_Trigger = 100;
+	double HedgeLotSize = 2.0;
+	double LtSize = 2.0;
+	String Wish_U = "=== Good Luck ===";
+	
+	int g_period_284 = 10;
+	double gd_288 = 10.0;
+	double gd_296 = 3.0;
+	String gs_unused_304 = "=== Indicators setting ===";
+	int g_period_376 = 100;
+	int g_slippage_380 = 5;
+	double g_price_384;
+	double gd_392;
+	double g_point_400;
+	int pos;
+
+public:
+	typedef Cashier CLASSNAME;
+	Cashier();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double LotsOptimized();
+	double Predict();
+	double Predict2();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("g_period_312", g_period_312, 2, 100)
+			% Arg("g_period_320", g_period_320, 2, 100)
+			% Arg("g_period_328", g_period_328, 2, 100)
+			% Arg("g_period_336", g_period_336, 2, 100)
+			% Arg("g_period_344", g_period_344, 2, 100)
+			% Arg("g_period_352", g_period_352, 2, 100)
+			% Arg("g_period_360", g_period_360, 2, 100)
+			% Arg("g_period_368", g_period_368, 2, 100)
+			% Arg("Percent_Over_Balance", Percent_Over_Balance, 2, 100)
+			% Arg("MaximumRisk", MaximumRisk, 2, 10)
+			% Arg("TakeProfit", TakeProfit, 2, 100)
+			% Arg("StopLoss", StopLoss, 2, 1000)
+			% Arg("DecreaseFactor", DecreaseFactor, 1, 10)
+			% Arg("Hedge", Hedge, 0, 1)
+			% Arg("HedgeProfit", HedgeProfit, 0, 100)
+			% Arg("HedgeStopLoss", HedgeStopLoss, 0, 200)
+			% Arg("PipDistance", PipDistance, 0, 200)
+			% Arg("HighRisk", HighRisk, 0, 1)
+			% Arg("HR_StopLoss", HR_StopLoss, 0, 1000)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
+
+
+
+
+
+class Satellite : public ExpertAdvisor {
+
+	int OrdersCount = 10;
+	int gi_100 = 48;
+	int Lock = 7;
+	int Level = 100.0;
+	
+	int gi_104 = 100;
+	int Trend = 1; // 1-3
+	bool CanOpenNew = true;
+	int TimeFrame = 60;
+	bool Send_EMail = false;
+	bool Show_Alerts = true;
+	int Magic_N = 555;
+	String s1 = "=== Order 1 ===";
+	double Ord_1_Lots = 0.1;
+	int Slippage = 3;
+	String s2 = "=== Order 2 ===";
+	double Ord_2_Lots = 0.2;
+	String s3 = "=== Order 3 ===";
+	double Ord_3_Lots = 0.4;
+	String s4 = "=== Order 4 ===";
+	double Ord_4_Lots = 0.8;
+	String s5 = "=== Order 5 ===";
+	double Ord_5_Lots = 1.6;
+	String s6 = "=== Order 6 ===";
+	double Ord_6_Lots = 3.2;
+	String s7 = "=== Order 7 ===";
+	double Ord_7_Lots = 6.4;
+	String s8 = "=== Order 8 ===";
+	double Ord_8_Lots = 10.0;
+	String s9 = "=== Order 9 ===";
+	double Ord_9_Lots = 10.0;
+	String s10 = "=== Order 10 ===";
+	double Ord_10_Lots = 10.0;
+	bool InfoOn = true;
+	bool MW_Mode = false;
+	int gia_300[4] = {11111, 11111, 11111111, 11111111};
+	String gs_304 = "2018.04.05";
+	int gi_312 = 16711680;
+	String gs_316 = "Capital-5ru";
+	bool gi_324 = true;
+	int g_ticket_328;
+	int g_error_332;
+	double g_price_340;
+	double g_price_348;
+	double g_price_356;
+	String g_comment_364;
+	Time gi_372;
+	bool gba_376[10];
+	bool gba_380[10];
+	bool gba_384[10];
+	bool gba_388[10];
+	bool gba_392[10];
+	bool gba_396[10];
+	bool gba_400[10];
+	bool gba_404[10];
+	double gda_408[10];
+	double gda_412[10];
+	int gia_416[10];
+	double gda_420[10];
+	int gia_424[10];
+	int gia_428[10];
+	double gd_432;
+	double gd_440;
+	double gd_448;
+	double gd_456;
+	double gd_464;
+	String gs_472;
+	String gs_480 = "AccInfSymbInf_Lbl_";
+	Time g_datetime_488;
+	Time g_datetime_492;
+	Time g_datetime_496;
+	Time g_datetime_500;
+	Time g_datetime_504;
+	
+public:
+	typedef Satellite CLASSNAME;
+	Satellite();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	void WH_SLTP();
+	void Alarm(int ai_0, int ai_4, int ai_8, double ad_12, double ad_20);
+	void Alarm2(int ai_0, int ai_4, int ai_8, double ad_12, double ad_20);
+	double ND(double ad_0);
+	String TimeFrameName(int ai_0);
+	int OrderIndex(String as_0);
+	void AccountAndSymbolLbls();
+	String MarketType(String as_0);
+	double FuturesLotMargin(String as_0);
+	void fObjDeleteByPrefix(String as_0);
+	void fObjLabel(String a_name_0, int a_x_8, int a_y_12, String a_text_16, int a_corner_24 = 0, int a_fontsize_32 = 9, int a_window_36 = 0, String a_fontname_40 = "Arial", bool a_bool_48 = false);
+	int fOrderOpenBuy(double a_lots_0);
+	int fOrderOpenSell(double a_lots_0);
+	String fMyErDesc(int ai_0);
+	int fOrderDeleteLimitModSLTP(bool ai_0 = true, bool ai_4 = true);
+	int fModifyOrder(int a_ticket_0, double ad_4, double ad_12, double ad_20, int a_datetime_28 = 0, String as_32 = "");
+	int fLock();
+	double ND2(double ad_0);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("OrdersCount", OrdersCount, 1, 100)
+			% Arg("gi_100", gi_100, 1, 100)
+			% Arg("Lock", Lock, 1, 100)
+			% Arg("Level", Level, 10, 200)
+			;
+	}
+	
+};
+
+
+
+class ModestTry : public ExpertAdvisor {
+		
+	int StopLoss = 80;
+	int TakeProfit = 0;
+	int AddToLevel = 14;
+	int TryMinutes = 15;
+	int TrailingStop = 28;
+	int TrailingStep = 10;
+	int TrailingKeep = 13;
+	int MaxOrdersCount = 1;
+	
+	int TimeFrame = 0;
+	double Lots = 0.1;
+	int Magic = 123;
+	int gi_124;
+	int gi_128 = 1;
+	Time g_datetime_132;
+	Time g_datetime_136;
+	Time g_datetime_140;
+	Time g_datetime_144;
+	Time g_datetime_148;
+	Time g_datetime_152;
+	Time g_datetime_156;
+	Time g_datetime_160;
+	Time g_datetime_164;
+	
+public:
+	typedef ModestTry CLASSNAME;
+	ModestTry();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int fDeletePendig(int a_ticket_0);
+	double ND(double ad_0);
+	int fOrderSetBuyStop(double ad_0, int a_datetime_8 = 0);
+	int fOrderSetSellStop(double ad_0, int a_datetime_8 = 0);
+	double fGetLotsSimple(int a_cmd_0);
+	String fMyErDesc(int ai_0);
+	int fTrailingWithStart();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("StopLoss", StopLoss, 2, 150)
+			% Arg("TakeProfit", TakeProfit, 0, 100)
+			% Arg("AddToLevel", AddToLevel, 0, 100)
+			% Arg("TryMinutes", TryMinutes, 0, 200)
+			% Arg("TrailingStop", TrailingStop, 2, 100)
+			% Arg("TrailingStep", TrailingStep, 2, 100)
+			% Arg("TrailingKeep", TrailingKeep, 2, 100)
+			% Arg("MaxOrdersCount", MaxOrdersCount, 1, 100)
+			;
+	}
+	
+};
+
+
+
+
+
+class Gaia : public ExpertAdvisor {
+	
+	int g_period_200 = 25;
+	int g_period_184 = 57;
+	int gd_168 = 20.0;
+	
+	double gd_160 = 44.0;
+	bool Acc5Digits = true;
+	double Lots = 1.0;
+	int gi_96 = 141;
+	int gi_100 = 200;
+	int g_slippage_104 = 3;
+	int g_magic_108 = 20070729;
+	bool EnableMM = false;
+	double LotBalancePcnt = 10.0;
+	double MinLot = 0.1;
+	double MaxLot = 5.0;
+	int LotPrec = 1;
+	
+	int gi_188 = 79;
+	int g_ma_method_192 = MODE_EMA;
+	int g_applied_price_196 = PRICE_CLOSE;
+	int gi_204 = 80;
+	int g_ma_method_208 = MODE_EMA;
+	int g_applied_price_212 = PRICE_CLOSE;
+	int gi_216 = 1;
+	
+public:
+	typedef Gaia CLASSNAME;
+	Gaia();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double GetLots();
+	int CloseOrders(int a_cmd_0);
+	int OrdersCount0();
+	int Buy(String a_symbol_0, double a_lots_8, double a_price_16, double a_price_24, double a_price_32, int a_magic_40, String a_comment_44 = "");
+	int Sell(String a_symbol_0, double a_lots_8, double a_price_16, double a_price_24, double a_price_32, int a_magic_40, String a_comment_44 = "");
+	int CloseOrder(int a_ticket_0, double a_lots_4, double a_price_12);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % In<VolumeSlots>()
+			% Arg("g_period_200", g_period_200, 2, 100)
+			% Arg("g_period_184", g_period_184, 2, 100)
+			% Arg("gd_168", gd_168, 2, 100)
+			;
+		//reg % Arg("", , );
+	}
+	
+};
+
+
+
+class Squirter : public ExpertAdvisor {
+	
+	
+	int mm = false;
+	int risk = 1.0;
+	int maxtrades = 1;
+	int tradesperbar = 1;
+	int stoploss = 75.0;
+	int takeprofit = 10.0;
+	int gd_348 = 15.0;
+	int gd_356 = 15.0;
+	int gd_364 = 1.0;
+	int gd_372 = 0.0;
+	int gd_380 = 0.0;
+	int g_period_256 = 14;
+	int g_period_260 = 7;
+	int g_slowing_264 = 9;
+	int gi_268 = 30;
+	int gi_272 = 70;
+	int g_period_236 = 7;
+	int g_period_216 = 7;
+	int gi_240 = 27;
+	int gi_244 = 69;
+	
+	int magic = 7777;
+	bool ecn = false;
+	double minlot = 0.01;
+	double maxlot = 50000.0;
+	double lots = 0.1;
+	int gi_152 = 1;
+	double gd_156 = 5.0;
+	double gd_164 = 10.0;
+	double gd_172 = 10.0;
+	bool gi_180 = true;
+	bool gi_184 = false;
+	bool gi_188 = false;
+	bool gi_192 = false;
+	int gi_196 = 20;
+	bool gi_200 = false;
+	bool gi_204 = false;
+	bool gi_208 = false;
+	int g_timeframe_212;
+	int g_ma_method_220 = MODE_SMMA;
+	int gi_224 = 8;
+	bool gi_228 = true;
+	int g_timeframe_232 = 0;
+	bool gi_248 = true;
+	int g_timeframe_252 = 0;
+	int gi_276 = 0;
+	int gi_280 = 2;
+	int gi_284 = 1;
+	bool gi_288 = false;
+	int gi_292 = 12;
+	int gi_296 = 0;
+	bool gi_300 = false;
+	int gi_304 = 0;
+	int gi_308 = 1;
+	int gi_312 = 21;
+	int gi_316 = 0;
+	bool gi_320 = true;
+	bool gi_324 = true;
+	int gi_328 = 0;
+	int gi_332 = 0;
+	int gi_336 = 2;
+	bool gi_340 = false;
+	bool gi_344 = false;
+	bool i_unused_0;
+	int g_str2time_396;
+	int g_str2time_400;
+	int g_str2time_404;
+	int g_str2time_408;
+	Time g_datetime_412;
+	Time g_datetime_416;
+	int g_pos_424;
+	int g_bars_428 = -1;
+	int g_count_432;
+	int g_count_436;
+	int g_count_440;
+	int gi_444 = 100;
+	int gi_460;
+	int gi_464;
+	int gi_468;
+	int gi_472;
+	int gi_476;
+	int g_count_480;
+	int gi_484;
+	int gi_488;
+	String gs_496;
+	String gs_504;
+	String gs_512;
+	String gs_520;
+	String gs_528;
+	String gs_536;
+	String gs_544;
+	String gs_552;
+	double g_price_568;
+	double g_price_576;
+	double g_lots_584;
+	double g_ord_open_price_640;
+	String ts_unused_0;
+	double g_ord_open_price_648;
+	bool gi_unused_680 = false;
+	bool gi_684 = true;
+	bool gi_688 = true;
+	double gd_692;
+	double gd_700;
+	int g_digits_708;
+	int gi_712 = 1304208000;
+
+public:
+	typedef Squirter CLASSNAME;
+	Squirter();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int open(int a_cmd_0, double ad_4, double ad_12, double ad_20, double ad_28, Time a_datetime_36);
+	double lotsoptimized();
+	bool checktime();
+	int count(int a_cmd_0);
+	void closebuy();
+	void closesell();
+	void hideclosebuy();
+	void hideclosesell();
+	void movebreakeven(double ad_0, double ad_8);;
+	void movetrailingstop(double ad_0, double ad_8);
+	void createlstoploss(double ad_0);
+	void createsstoploss(double ad_0);
+	void createltakeprofit(double ad_0);
+	void createstakeprofit(double ad_0);
+	void Delete(int a_cmd_0);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("mm", mm, 0, 1)
+			% Arg("risk", risk, 1, 5)
+			% Arg("maxtrades", maxtrades, 1, 100)
+			% Arg("tradesperbar", tradesperbar, 1, 5)
+			% Arg("stoploss", stoploss, 1, 200)
+			% Arg("takeprofit", takeprofit, 1, 200)
+			% Arg("gd_348", gd_348, 1, 100)
+			% Arg("gd_356", gd_356, 1, 100)
+			% Arg("gd_364", gd_364, 1, 100)
+			% Arg("gd_372", gd_372, 1, 100)
+			% Arg("gd_380", gd_380, 1, 100)
+			% Arg("g_period_256", g_period_256, 2, 100)
+			% Arg("g_period_260", g_period_260, 2, 100)
+			% Arg("g_slowing_264", g_slowing_264, 2, 100)
+			% Arg("gi_268", gi_268, 0, 100)
+			% Arg("gi_272", gi_272, 0, 100)
+			% Arg("g_period_236", g_period_236, 2, 100)
+			% Arg("g_period_216", g_period_216, 2, 100)
+			% Arg("gi_240", gi_240, 0, 100)
+			% Arg("gi_244", gi_244, 0, 100)
+			;
+	}
+	
+};
+
+
+
+
+
+class Cowboy : public ExpertAdvisor {
+	
+	int ma_period0 = 10;
+	int ma_period1 = 10;
+	int ma_period2 = 10;
+	int PeriodMA = 100;
+	int frac_left_bars = 10;
+	int aaa = 13;
+	int bbb = 14;
+	int MaxOrders = 1;
+	int TakeProfit = 20.0;
+	int StopLoss = 300.0;
+	int TrailingStop = 0.0;
+	
+	int StopTime = 5;
+	double Lots = 0.1;
+	double LotsRiskReductor = 1.0;
+	int MaxLots = 100000;
+	int UseMAControl = 0;
+	int PriceMA_0_6 = 0;
+	int TypeMA_0_3 = 0;
+	double SpanGator = 0.5;
+	int SlipPage = 3;
+	int OrderMagic = 231313;
+	double SafetyGapDemarker = 0.2;
+	double SafetyGapWPR = 0.0;
+	int StartWorkTimeHour = 0;
+	int StartWorkTimeMin = 0;
+	int EndWorkTimeHour = 0;
+	int EndWorkTimeMin = 0;
+	int OneTrade = 0;
+	bool WriteDebugLog = false;
+	String KEY = "012345";
+	
+	double g_icustom_220;
+	double g_icustom_228;
+	double g_icustom_236;
+	double g_digits_244;
+	double g_ifractals_260;
+	double g_ifractals_268;
+	double g_ima_276;
+	double g_ima_284;
+	String g_dbl2str_292;
+	Vector<double> gda_300;
+	Vector<double> gda_304;
+	Time g_datetime_308;
+	int pos;
+	bool gi_316 = true;
+	
+public:
+	typedef Cowboy CLASSNAME;
+	Cowboy();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	int CalculateCurrentOrders();
+	int trueOpen();
+	bool CheckParams();
+	bool CheckAccount(int a_cmd_0, double ad_4);
+	double CalcLotsVolume();
+	bool PrepareIndicators();
+	int TradeSignalOpenOrder();
+	int TradeSignalCloseOrder();
+	double NormalizeLot(double ad_0, bool ai_8 = false, String a_symbol_12 = "");
+	int ModifyOrder();
+	int TradeSignalCloseOrderOnTime(int ai_unused_0);
+	bool IsDateTimeEnabled(int ai_0);
+	bool IsGatorActiveUp();
+	bool IsGatorActiveDown();
+	int IsFractalLower();
+	int IsFractalUpper();
+	bool IsOrderProfitable();
+	int WasDemarkerLow();
+	int WasDemarkerHigh();
+	int WasWPROverBuy();
+	int WasWPROverSell();
+	int OpenOrder(int ai_0, double a_lots_4, String a_comment_12 = "");
+	void CloseOrder();
+	bool GetOrderByPos(int a_pos_0);
+	void TrailOrderStop();
+	int OrderTypeDirection();
+	int DirectionOrderType(int ai_0);
+	int ColorOpen(int ai_0);
+	double PriceOpen(int ai_0);
+	double PriceClose(int ai_0);
+	double iif(bool ai_0, double ad_4, double ad_12);
+	bool IsError(String as_0 = "Raptor V1");
+	double ArrayMinValue(Vector<double>& ada_0);
+	double ArrayMaxValue(Vector<double>& ada_0);
+	bool IsTradeTime(int ai_0);
+	bool HaveTrade();
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("ma_period0", ma_period0, 2, 100)
+			% Arg("ma_period1", ma_period1, 2, 100)
+			% Arg("ma_period2", ma_period2, 2, 100)
+			% Arg("PeriodMA", PeriodMA, 2, 100)
+			% Arg("frac_left_bars", frac_left_bars, 2, 100)
+			% Arg("aaa", aaa, 2, 100)
+			% Arg("bbb", bbb, 2, 100)
+			% Arg("MaxOrders", MaxOrders, 1, 100)
+			% Arg("TakeProfit", TakeProfit, 1, 100)
+			% Arg("StopLoss", StopLoss, 1, 1000)
+			% Arg("TrailingStop", TrailingStop, 0, 100)
+			;
+	}
+	
+};
+
+
+
+
+
+class Julia : public ExpertAdvisor {
+	
+	int NLot = 3;
+	int Rate = 1.0;
+	int MMoney = false;
+	int Martin = false;
+	
+	double BLot = 0.1;
+	bool gi_104;
+	bool gi_108;
+	bool gi_112;
+	bool gi_116;
+	bool gi_120;
+	bool gi_124;
+	bool gi_128;
+	double g_price_132;
+	double g_price_140;
+	double g_price_148;
+	double g_price_156;
+	double g_price_164;
+	double g_price_172;
+	double g_price_180;
+	double g_price_188;
+	double g_price_196;
+	int g_ticket_204;
+	int g_ticket_208;
+	int g_ticket_212;
+	int g_ticket_216;
+	int g_ticket_220;
+	int g_ticket_224;
+	int g_ticket_228;
+	int g_ticket_232;
+	int g_count_236;
+	
+public:
+	typedef Julia CLASSNAME;
+	Julia();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("NLot", NLot, 0, 10)
+			% Arg("Rate", Rate, 1, 5)
+			% Arg("MMoney", MMoney, 0, 1)
+			% Arg("Martin", Martin, 0, 1)
+			;
+	}
+	
+};
+
+
+/*
+
+class  : public ExpertAdvisor {
+	
+	
+public:
+	typedef  CLASSNAME;
+	();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("", , );
+	}
+	
+};
+
+*/
 
 }
 

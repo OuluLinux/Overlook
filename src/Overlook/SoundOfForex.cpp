@@ -149,8 +149,8 @@ void SoundOfForex::StartEA(int pos) {
 		}
 	}
 	
-	ConstBuffer& up_buf = At(0).GetBuffer(0);
-	ConstBuffer& down_buf = At(0).GetBuffer(1);
+	ConstBuffer& up_buf = At(0).GetBuffer(2);
+	ConstBuffer& down_buf = At(0).GetBuffer(3);
 	
 	for (int i = 0; i < 50; i++) {
 		if (l_ifractals_16 == 0.0) {

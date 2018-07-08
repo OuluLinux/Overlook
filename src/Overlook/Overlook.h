@@ -25,6 +25,7 @@ using namespace Upp;
 #include "DataBridge.h"
 #include "Utils.h"
 #include "Indicators.h"
+#include "ExpertAdvisor.h"
 #include "Advisors.h"
 #include "GraphCtrl.h"
 #include "Chart.h"

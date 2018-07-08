@@ -17,7 +17,7 @@ INITBLOCK {
 	System::Register<Channel>("Channel");
 	System::Register<ParabolicSAR>("Parabolic SAR");
 	System::Register<StandardDeviation>("Standard Deviation");
-	System::Register<AverageTrueRange>("Average True Range");
+	System::Register<AverageTrueRange>("Average true Range");
 	System::Register<BearsPower>("Bears Power");
 	System::Register<BullsPower>("Bulls Power");
 	System::Register<CommodityChannelIndex>("Commodity Channel Index");
@@ -96,6 +96,17 @@ INITBLOCK {
 	System::Register<Spiral>("Spiral", CORE_EXPERTADVISOR);
 	System::Register<MoneyTime>("MoneyTime", CORE_EXPERTADVISOR);
 	System::Register<Novice>("Novice", CORE_EXPERTADVISOR);
+	System::Register<StochPower>("StochPower", CORE_EXPERTADVISOR);
+	System::Register<Lamer>("Lamer", CORE_EXPERTADVISOR);
+	System::Register<Dealer>("Dealer", CORE_EXPERTADVISOR);
+	System::Register<Gainer>("Gainer", CORE_EXPERTADVISOR);
+	System::Register<Cashier>("Cashier", CORE_EXPERTADVISOR);
+	System::Register<Satellite>("Satellite", CORE_EXPERTADVISOR);
+	System::Register<ModestTry>("ModestTry", CORE_EXPERTADVISOR);
+	System::Register<Gaia>("Gaia", CORE_EXPERTADVISOR);
+	System::Register<Squirter>("Squirter", CORE_EXPERTADVISOR);
+	System::Register<Cowboy>("Cowboy", CORE_EXPERTADVISOR);
+	System::Register<Julia>("Julia", CORE_EXPERTADVISOR);
 	
 	
 	

@@ -27,6 +27,7 @@ using namespace Upp;
 #include "Indicators.h"
 #include "ExpertAdvisor.h"
 #include "Advisors.h"
+#include "MultiExpertAdvisor.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
 #include "ExportCtrl.h"

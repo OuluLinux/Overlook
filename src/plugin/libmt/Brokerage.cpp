@@ -423,6 +423,91 @@ void Brokerage::SignalOrders(bool debug_print) {
 	Leave();
 }
 
+void Brokerage::RealizeVolume(int symbol, double d, bool type) {
+	Enter();
+	
+	bool debug_print = false;
+	double buy_lots = type == false ? d : 0;
+	double sell_lots = type == true ? d : 0;
+	
+	for(int i = 0; i < orders.GetCount(); i++) {
+		const Order& o = orders[i];
+		if (o.symbol != symbol)
+			continue;
+		
+		if (o.type == OP_BUY) {
+			double& lots = buy_lots;
+			if (o.volume <= lots) {
+				lots -= o.volume;
+			} else {
+				double reduce = o.volume - lots;
+				for(int j = 0; j < 3; j++) {
+					int success = OrderClose(o.ticket, reduce, RealtimeBid(o.symbol), 100);
+					if (success) {
+						const Symbol& sym = symbols[o.symbol];
+						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						break;
+					}
+				}
+				lots = 0;
+			}
+		}
+		else if (o.type == OP_SELL) {
+			double& lots = sell_lots;
+			if (o.volume <= lots) {
+				lots -= o.volume;
+			} else {
+				double reduce = o.volume - lots;
+				for(int j = 0; j < 3; j++) {
+					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
+					if (success) {
+						const Symbol& sym = symbols[o.symbol];
+						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						break;
+					}
+				}
+				lots = 0;
+			}
+		}
+	}
+	
+	double sym_buy_lots = buy_lots;
+	double sym_sell_lots = sell_lots;
+	const Symbol& sym = symbols[symbol];
+	if (sym_buy_lots > 0.0) {
+		double price = RealtimeAsk(symbol);
+		int r = OrderSend(symbol, OP_BUY, sym_buy_lots, price, 100, price * (1 - limit_factor), price * (1 + limit_factor), 0, 0);
+		if (debug_print) {
+			if (r == -1) {
+				WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+			} else {
+				WhenInfo("OrderSend succeeded with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+			}
+		}
+	}
+	if (sym_sell_lots > 0.0) {
+		double price = RealtimeBid(symbol);
+		int r = OrderSend(symbol, OP_SELL, sym_sell_lots, price, 100, price * (1 + limit_factor), price * (1 - limit_factor), 0, 0);
+		if (debug_print) {
+			if (r == -1) {
+				WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+			} else {
+				WhenInfo("OrderSend succeeded with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+			}
+		}
+	}
+	
+	Leave();
+}
+
+bool Brokerage::IsSymbolTrading(int sym) const {
+	for(int i = 0; i < orders.GetCount(); i++) {
+		if (orders[i].symbol == sym)
+			return true;
+	}
+	return false;
+}
+
 void Brokerage::SetOrderSignals() {
 	Vector<int> signals;
 	signals.SetCount(symbols.GetCount(), 0);

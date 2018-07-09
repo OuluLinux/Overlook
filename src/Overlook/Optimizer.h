@@ -135,6 +135,9 @@ public:
 		}
 	}
 	
+	double GetBestEnergy() {
+		return -best_energy;
+	}
 	
 	double RandomUniform(double min_value, double max_value) {
 		return min_value + Randomf() * (max_value - min_value);

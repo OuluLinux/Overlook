@@ -107,6 +107,10 @@ INITBLOCK {
 	System::Register<Squirter>("Squirter", CORE_EXPERTADVISOR);
 	System::Register<Cowboy>("Cowboy", CORE_EXPERTADVISOR);
 	System::Register<Julia>("Julia", CORE_EXPERTADVISOR);
+	System::Register<Outsider>("Outsider", CORE_EXPERTADVISOR);
+	System::Register<Foster>("Foster", CORE_EXPERTADVISOR);
+	System::Register<SpaceZ>("SpaceZ", CORE_EXPERTADVISOR);
+	System::Register<MultiExpertAdvisor>("MultiExpertAdvisor", CORE_EXPERTADVISOR);
 	
 	
 	

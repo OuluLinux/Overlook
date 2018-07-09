@@ -19,7 +19,7 @@ void Novice::InitEA() {
 		.Set("slow_ema", SlowEMA)
 		.Set("signal_sma_period", 1)
 		.Set("method", 2);
-			
+	
 	AddSubCore<MovingAverageConvergenceDivergence>()
 		.Set("fast_ema", FastEMA)
 		.Set("slow_ema", SlowEMA)

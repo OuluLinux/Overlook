@@ -6,9 +6,22 @@ namespace Overlook {
 
 class ExpertAdvisor : public Core {
 	
-	struct TrainingCtrl : public JobCtrl {
+protected:
+	friend class MultiExpertAdvisor;
+	
+	
+	struct OptimizationCtrl : public Ctrl {
 		Vector<Point> polyline;
 		virtual void Paint(Draw& w);
+		int type = 0;
+		JobCtrl* job;
+	};
+	
+	struct TrainingCtrl : public JobCtrl {
+		TabCtrl tabs;
+		OptimizationCtrl opt0, opt1, opt2, opt3;
+		
+		TrainingCtrl();
 	};
 	
 	struct Setting : Moveable<Setting> {
@@ -18,7 +31,7 @@ class ExpertAdvisor : public Core {
 	
 	// Persistent
 	Optimizer opt;
-	Vector<double> training_pts;
+	Vector<double> training_pts, besteq_pts, cureq_pts, lots_pts;
 	Vector<int> cursors;
 	SimBroker sb;
 	double total = 0;
@@ -61,6 +74,9 @@ public:
 			% Lbl(1)
 			% Mem(opt)
 			% Mem(training_pts)
+			% Mem(besteq_pts)
+			% Mem(cureq_pts)
+			% Mem(lots_pts)
 			% Mem(cursors)
 			% Mem(sb)
 			% Mem(total)
@@ -153,6 +169,7 @@ public:
 	double	MathRound(double d) {return floor(d);}
 	double	MathFloor(double d) {return floor(d);}
 	double	MathCeil(double d) {return ceil(d);}
+	double	MathRand() {return Random(32767);}
 	void	RefreshRates() {}
 	String	GetLastError() {return sb.GetLastError();}
 	bool	IsTradeContextBusy() {return false;}

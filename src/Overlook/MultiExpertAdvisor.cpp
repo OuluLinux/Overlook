@@ -3,11 +3,11 @@
 namespace Overlook {
 
 
-ExpertAdvisor::ExpertAdvisor() {
+MultiExpertAdvisor::MultiExpertAdvisor() {
 
 }
 
-void ExpertAdvisor::Init() {
+void MultiExpertAdvisor::Init() {
 	String factory_str = GetSystem().CoreFactories()[GetFactory()].a;
 	String tf_str = factory_str + " " + GetSystem().GetPeriodString(GetTf()) + " ";
 	
@@ -23,7 +23,7 @@ void ExpertAdvisor::Init() {
 		.SetCtrl		<TrainingCtrl>();
 }
 
-void ExpertAdvisor::Start() {
+void MultiExpertAdvisor::Start() {
 	if (once) {
 		if (prev_counted > 0)
 			prev_counted--;
@@ -34,33 +34,45 @@ void ExpertAdvisor::Start() {
 		RefreshSourcesOnlyDeep();
 	}
 	
+	
 	if (IsJobsFinished()) {
 		int bars = GetBars();
 		
 		if (prev_counted < bars) {
-			LOG("ExpertAdvisor::Start Refresh");
+			LOG("MultiExpertAdvisor::Start Refresh");
 			RefreshAll();
 		}
 	}
 }
 
-bool ExpertAdvisor::TrainingBegin() {
+bool MultiExpertAdvisor::TrainingBegin() {
 	SetAvoidRefresh();
+	
+	if (!IsDependencyJobsFinished())
+		return false;
 	
 	if (round == 0) {
 		sb.Brokerage::operator=(GetMetaTrader());
 		sb.Init();
-		sb.SetInitialBalance(1000);
+		sb.SetInitialBalance(1000.0);
 		
-		opt.Min().SetCount(args.GetCount());
-		opt.Max().SetCount(args.GetCount());
-		for(int i = 0; i < args.GetCount(); i++) {
-			opt.Min()[i] = args[i].min;
-			opt.Max()[i] = args[i].max;
+		int opt_size = (inputs.GetCount()-1) * args_per_ea + 1;
+		
+		opt.Min().SetCount(opt_size);
+		opt.Max().SetCount(opt_size);
+		
+		int row = 0;
+		for(int i = 0; i < (inputs.GetCount()-1); i++) {
+			opt.Min()[row] = 1.0;
+			opt.Max()[row++] = 2.0;
+			opt.Min()[row] = 1.0;
+			opt.Max()[row++] = 1000.0;
 		}
+		opt.Min()[row] = 1.0;
+		opt.Max()[row++] = 1000.;
 		
-		opt.SetMaxGenerations(100);
-		opt.Init(args.GetCount(), 33);
+		opt.SetMaxGenerations(300);
+		opt.Init(opt_size, 33);
 	}
 	max_rounds = opt.GetMaxRounds();
 	
@@ -70,7 +82,7 @@ bool ExpertAdvisor::TrainingBegin() {
 	return true;
 }
 
-bool ExpertAdvisor::TrainingIterator() {
+bool MultiExpertAdvisor::TrainingIterator() {
 
 	// Show progress
 	GetCurrentJob().SetProgress(round, max_rounds);
@@ -83,45 +95,58 @@ bool ExpertAdvisor::TrainingIterator() {
 	
 	opt.Start();
 	const Vector<double>& trial = opt.GetTrialSolution();
-	for(int i = 0; i < args.GetCount(); i++) {
-		ArgPtr& ap = args[i];
-		int value = min(ap.max, max(ap.min, (int)trial[i]));
-		*ap.ptr = value;
+	
+	// Get EA eq and lot vectors
+	Vector<ExpertAdvisor*> eas;
+	for(int i = 1; i < inputs.GetCount(); i++) {
+		const Input& input = inputs[i];
+		ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(input[0].core);
+		eas.Add(ea);
 	}
 	
+	
 	try {
-		ResetSubCores();
 		sb.Clear();
-		InitEA();
-		InitSubCores();
 		int count = open_buf.GetCount(); // take count before updating dependencies to match their size
-		RefreshSubCores();
 		
 		besteq_pts.SetCount(count, 0);
 		cureq_pts.SetCount(count, 0);
 		
-		Point = point;
-		for (Digits = 1; ; Digits++) {
-			double d = point * pow(10, Digits);
-			if (d >= 1.0)
-				break;
-		}
-		ASSERT(Digits >= 0);
-		Bars = count;
-		
-		TimeStop ts;
-		for(int i = 0; i < count; i++) {
-			Ask = open_buf.Get(i);
-			Bid = Ask - 3 * point;
-			Now = Time(1970,1,1) + time_buf.Get(i);
-			Bars = i + 1;
-			sb.SetPrice(GetSymbol(), Ask, Bid);
+		for(int i = 1; i < count; i++) {
+			double ask = open_buf.Get(i);
+			double bid = ask - 3 * point;
+			sb.SetPrice(GetSymbol(), ask, bid);
 			sb.RefreshOrders();
 			//sb.CycleChanges();
-			StartEA(i);
+			
+			double lot_sum = 0.0, div = 0.0;
+			bool lots_changed = false;
+			for(int j = 0; j < eas.GetCount(); j++) {
+				ExpertAdvisor& ea = *eas[j];
+				double mult1 = trial[j * args_per_ea + 0];
+				double offset = trial[j * args_per_ea + 1];
+				double lots = ea.lots_pts[i];
+				double prev_lots = ea.lots_pts[i-1];
+				double eq = ea.cureq_pts[i];
+				double initeq = ea.cureq_pts[0];
+				
+				double l = mult1 * lots * (initeq - offset) / (eq - offset);
+				lot_sum += l;
+				div += mult1;
+				
+				lots_changed |= lots != prev_lots;
+			}
+			double eq = sb.AccountEquity();
+			double mult2 = trial[eas.GetCount() * args_per_ea + 0];
+			
+			double sb_lots = lot_sum / div * eq / mult2;
+			sb_lots = ((int64)(sb_lots * 100)) * 0.01;
+			
+			if (lots_changed) {
+				sb.RealizeVolume(GetSymbol(), fabs(sb_lots), sb_lots < 0.0);
+			}
+			
 			//sb.Cycle();
-			if (ts.Elapsed() > 1000)
-				throw ConfExc();
 			if (sb.AccountEquity() < 0.0) {
 				sb.CloseAll();
 				break;
@@ -165,7 +190,7 @@ bool ExpertAdvisor::TrainingIterator() {
 	return true;
 }
 
-bool ExpertAdvisor::TrainingEnd() {
+bool MultiExpertAdvisor::TrainingEnd() {
 	double max_d = -DBL_MAX;
 	int max_i = 0;
 	
@@ -181,7 +206,7 @@ bool ExpertAdvisor::TrainingEnd() {
 	return true;
 }
 
-bool ExpertAdvisor::TrainingInspect() {
+bool MultiExpertAdvisor::TrainingInspect() {
 	bool success = false;
 	
 	INSPECT(success, "ok: this is an example");
@@ -194,60 +219,68 @@ bool ExpertAdvisor::TrainingInspect() {
 	return true;
 }
 
-void ExpertAdvisor::RefreshAll() {
+void MultiExpertAdvisor::RefreshAll() {
 	RefreshSourcesOnlyDeep();
 	ConstBuffer& time_buf = GetInputBuffer(0, 4);
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	LabelSignal& signal = GetLabelBuffer(0, 0);
 	
-	const Vector<double>& trial = opt.GetBestSolution();
-	for(int i = 0; i < args.GetCount(); i++) {
-		ArgPtr& ap = args[i];
-		int value = min(ap.max, max(ap.min, (int)trial[i]));
-		*ap.ptr = value;
+	Vector<ExpertAdvisor*> eas;
+	for(int i = 1; i < inputs.GetCount(); i++) {
+		const Input& input = inputs[i];
+		ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(input[0].core);
+		eas.Add(ea);
 	}
+	
+	const Vector<double>& trial = opt.GetBestSolution();
+	
 	
 	int bars = open_buf.GetCount(); // take count before updating dependencies to match their size
 		
 	if (prev_counted == 0) {
+		prev_counted++;
 		sb.Clear();
 	}
 	
-	if (subcores.IsEmpty() || prev_counted == 0) {
-		ResetSubCores();
-		InitEA();
-		InitSubCores();
-		RefreshSubCores();
-	}
-
 
 	// ---- Do your final result work here ----
-	//RefreshBits();
-	//SortByValue(results, GridResult());
-	
-	double spread = GetDataBridge()->GetSpread();
-	if (spread == 0)
-		spread = GetDataBridge()->GetPoint() * 2.0;
-	
-	
-	/*if (have_othersyms) {
-		for(int i = 0; i < inputs[1].GetCount(); i++) {
-			bars = min(bars, inputs[1][i].core->GetBuffer(0).GetCount());
-		}
-	}*/
 	
 	cureq_pts.SetCount(bars, 0);
-	lots_pts.SetCount(bars, 0);
 	
 	for(int i = prev_counted; i < bars; i++) {
-		Ask = open_buf.Get(i);
-		Bid = Ask - 3 * point;
-		Now = Time(1970,1,1) + time_buf.Get(i);
-		Bars = i + 1;
-		sb.SetPrice(GetSymbol(), Ask, Bid);
+		double ask = open_buf.Get(i);
+		double bid = ask - 3 * point;
+		sb.SetPrice(GetSymbol(), ask, bid);
 		sb.RefreshOrders();
 		//sb.CycleChanges();
-		StartEA(i);
+		
+		double lot_sum = 0.0, div = 0.0;
+		bool lots_changed = false;
+		for(int j = 0; j < eas.GetCount(); j++) {
+			ExpertAdvisor& ea = *eas[j];
+			double mult1 = trial[j * args_per_ea + 0];
+			double offset = trial[j * args_per_ea + 1];
+			double lots = ea.lots_pts[i];
+			double prev_lots = ea.lots_pts[i-1];
+			double eq = ea.cureq_pts[i];
+			double initeq = ea.cureq_pts[0];
+			
+			double l = mult1 * lots * (initeq - offset) / (eq - offset);
+			lot_sum += l;
+			div += mult1;
+			
+			lots_changed |= lots != prev_lots;
+		}
+		double eq = sb.AccountEquity();
+		double mult2 = trial[eas.GetCount() * args_per_ea + 0];
+		
+		double sb_lots = lot_sum / div * eq / mult2;
+		sb_lots = ((int64)(sb_lots * 100)) * 0.01;
+		
+		if (lots_changed) {
+			sb.RealizeVolume(GetSymbol(), fabs(sb_lots), sb_lots < 0.0);
+		}
+		
 		//sb.Cycle();
 		if (sb.AccountEquity() < 0.0) {
 			sb.CloseAll();
@@ -264,41 +297,45 @@ void ExpertAdvisor::RefreshAll() {
 			else if (type == OP_SELL)
 				vol -= sb.OrderLots();
 		}
-		lots_pts[i] = vol;
+		
 		signal.signal.Set(i, vol < 0.0);
 		signal.enabled.Set(i, vol != 0.0);
+		
+		if (i == bars-1 && (lots_changed || !GetMetaTrader().IsSymbolTrading(GetSymbol()))) {
+			MetaTrader& mt = GetMetaTrader();
+			double mt_vol = sb_lots * mt.AccountEquity() / sb.AccountEquity();
+			mt.RealizeVolume(GetSymbol(), fabs(mt_vol), mt_vol < 0.0);
+		}
 	}
 	
 	// Keep counted manually
 	prev_counted = bars;
 	
 	
+	
 	//DUMP(main_interval);
 	//DUMP(grid_interval);
 }
 
-ExpertAdvisor::TrainingCtrl::TrainingCtrl() {
+MultiExpertAdvisor::TrainingCtrl::TrainingCtrl() {
 	Add(tabs.SizePos());
 	tabs.Add(opt0.SizePos(), "Optimization");
 	tabs.Add(opt1.SizePos(), "Best combination");
 	tabs.Add(opt2.SizePos(), "Current combination");
-	tabs.Add(opt3.SizePos(), "Current lots");
 	opt0.type = 0;
 	opt1.type = 1;
 	opt2.type = 2;
-	opt3.type = 3;
 	opt0.job = this;
 	opt1.job = this;
 	opt2.job = this;
-	opt3.job = this;
 }
 
-void ExpertAdvisor::OptimizationCtrl::Paint(Draw& w) {
+void MultiExpertAdvisor::OptimizationCtrl::Paint(Draw& w) {
 	Size sz = GetSize();
 	ImageDraw id(sz);
 	id.DrawRect(sz, White());
 	
-	ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(&*job->job->core);
+	MultiExpertAdvisor* ea = dynamic_cast<MultiExpertAdvisor*>(&*job->job->core);
 	ASSERT(ea);
 	
 	Size graphsz(sz.cx, sz.cy);
@@ -306,7 +343,6 @@ void ExpertAdvisor::OptimizationCtrl::Paint(Draw& w) {
 	if (type == 0) DrawVectorPolyline(id, graphsz, ea->training_pts, polyline, ea->round);
 	if (type == 1) DrawVectorPolyline(id, graphsz, ea->besteq_pts, polyline);
 	if (type == 2) DrawVectorPolyline(id, graphsz, ea->cureq_pts, polyline);
-	if (type == 3) DrawVectorPolyline(id, graphsz, ea->lots_pts, polyline);
 	
 	w.DrawImage(0, 0, id);
 }

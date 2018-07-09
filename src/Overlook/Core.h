@@ -345,6 +345,7 @@ public:
 	inline ConstLabelSignal& GetInputLabel(int input) const {return CoreIO::GetInputLabel(input, GetSymbol(), GetTimeframe());}
 	DataBridge* GetDataBridge();
 	bool IsJobsFinished() const;
+	bool IsDependencyJobsFinished() const;
 	Job& GetCurrentJob() {return *current_job;}
 	JobThread& GetCurrentThread() {return *current_thrd;}
 	

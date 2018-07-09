@@ -359,7 +359,8 @@ void System::CreateCore(CoreItem& ci) {
 			ASSERT_(!src_ci.core.IsEmpty(), "Core object must be created before this point");
 			
 			src_obj.core = &*src_ci.core;
-			src_obj.output = &src_obj.core->outputs[src_def.output];
+			if (src_obj.core->outputs.GetCount())
+				src_obj.output = &src_obj.core->outputs[src_def.output];
 			src_obj.sym = src_def.sym;
 			src_obj.tf = src_def.tf;
 		}

@@ -3,7 +3,43 @@
 
 namespace Overlook {
 
-
+/*
+	Start:	1136
+							EURJPY
+							M5		H1
+	HighPromises					fail,1200
+	ShockTime						fail,6e17
+	PipsBoss						fail
+	Snake							55700
+	ChannelScalper					3102
+	RedSunrise						fail,7e11
+	Eagle							10164
+	Salmon							1403
+	SoundOfForex					fail
+	Explorer						1616
+	DoubleDecker					fail,45000
+	Mari							55085
+	Pyramid							2203
+	SuperMart		(Slow)			2514
+	Spiral							4004
+	MoneyTime						9075
+	Novice							fail
+	StochPower						34577
+	Lamer							fail
+	Dealer							fail,1282
+	Gainer							53907
+	Cashier							8708
+	Satellite						fail,22000
+	ModestTry		(Slow)			44000
+	Gaia							10376
+	Squirter						10124
+	Cowboy							fail
+	Julia							5547
+	Outsider						7e7
+	Foster							16436
+	SpaceZ							fail,5056
+	
+*/
 
 class HighPromises : public ExpertAdvisor {
 	
@@ -2653,6 +2689,7 @@ class Julia : public ExpertAdvisor {
 	int Rate = 1.0;
 	int MMoney = false;
 	int Martin = false;
+	int idle_bars_avoid = 10;
 	
 	double BLot = 0.1;
 	bool gi_104;
@@ -2680,6 +2717,7 @@ class Julia : public ExpertAdvisor {
 	int g_ticket_228;
 	int g_ticket_232;
 	int g_count_236;
+	int last_open_pos = 0;
 	
 public:
 	typedef Julia CLASSNAME;
@@ -2694,13 +2732,213 @@ public:
 		
 		reg % Arg("NLot", NLot, 0, 10)
 			% Arg("Rate", Rate, 1, 5)
-			% Arg("MMoney", MMoney, 0, 1)
+			//% Arg("MMoney", MMoney, 0, 1)
 			% Arg("Martin", Martin, 0, 1)
+			% Arg("idle_bars_avoid", idle_bars_avoid, 2, 100)
 			;
 	}
 	
 };
 
+
+
+
+class Outsider : public ExpertAdvisor {
+	
+	int ma_period = 10;
+	int gi_164 = 20;
+	int gi_200 = 4;
+	int Percent_Risk = 3;
+	int Trailing_Stop = 100;
+	
+	String gs_76 = "V2_6";
+	int gi_84 = 10;
+	double gd_88 = 4.0;
+	double gd_96 = 25.0;
+	String gs_104 = "OrderReliable fname unset";
+	int gi_unused_112 = 0/* NO_ERROR */;
+	String gs_unused_116 = "===USE THIS TO ADJUST FIP SETTING===";
+	int gi_124 = 15;
+	int gi_128 = 3;
+	int gi_unused_132 = 0;
+	String Trade_Setting = "===SET YOUR TRADE SETTING HERE===";
+	int TradeMagic1 = 978541;
+	int TradeMagic2 = 978542;
+	int TradeMagic3 = 978543;
+	int gi_156 = 4;
+	bool gi_160 = false;
+	int gi_168 = 0;
+	bool gi_172 = true;
+	String MM_Setting = "===SET YOUR MONEY MANAGEMENT SETTING HERE===";
+	double Lots = 0.0;
+	bool gi_196 = false;
+	int gi_204 = 200;
+	int Slippage = 3;
+	int Limit1 = 100;
+	int Limit2 = 200;
+	String Trailing = "===SET TRAILING FOR 3RD TRADE===";
+	bool Use_Trailing = true;
+	int g_bars_236;
+	int gi_240;
+	double gd_244;
+	double g_lotstep_252;
+	double g_minlot_260;
+	double g_maxlot_268;
+	double g_lotsize_276;
+	int pos;
+	
+public:
+	typedef Outsider CLASSNAME;
+	Outsider();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	double Line(int p);
+	int OrderSendReliable(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, int a_slippage_28, double a_price_32, double a_price_40, String a_comment_48, int a_magic_56);
+	int OrderModifyReliable(int a_ticket_0, double a_price_4, double a_price_12, double a_price_20);
+	void OrderModifyReliableSymbol(String a_symbol_0, int ai_8, double ad_12, double ad_20, double ad_28, int ai_36, int ai_40 = -1);
+	int OrderCloseReliable(int a_ticket_0, double a_lots_4, double a_price_12, int a_slippage_20);
+	String OrderReliableErrTxt(int ai_0);
+	void OrderReliablePrint(String as_0);
+	String OrderReliable_CommandString(int ai_0);
+	void OrderReliable_EnsureValidStop(String a_symbol_0, double ad_8, double &ad_16);
+	void OrderReliable_SleepRandomTime(double ad_0, double ad_8);
+	double LotsOptimized(int ai_0);
+	bool IsBarEnd();
+	int IsFIPUpCrossXCandle(int ai_0);
+	int IsFIPDownCrossXCandle(int ai_0);
+	int MyOrdersTotal();
+	int MyOrdersTotalMagic(int a_magic_0);
+	bool MyOrderBuy(int a_magic_0);
+	bool MyOrderSell(int a_magic_0);
+	double NormalizeTP(String as_0, int ai_8);
+	int GetSLPips(int ai_0);
+	double NormalizeSL(String as_0, int ai_8);
+	void TrailOrder(int a_magic_0, int ai_unused_4);
+	int CloseOrder(String as_0, int a_magic_8);
+	double LowestCandles(int ai_0);
+	double HighestCandles(int ai_0);
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("ma_period", ma_period, 2, 100)
+			% Arg("gi_164", gi_164, 2, 100)
+			% Arg("gi_200", gi_200, 2, 10)
+			% Arg("Percent_Risk", Percent_Risk, 2, 10)
+			% Arg("Trailing_Stop", Trailing_Stop, 10, 200)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
+class Foster : public ExpertAdvisor {
+	
+	
+	int g_period_104 = 14;
+	int TP = 90;
+	int SL = 110;
+	int gi_92 = 80;
+	
+	//int g_period_108 = 16;
+	int gi_120 = 70;
+	int gi_124 = 10;
+	double MaxLots = 1.0;
+	int gi_144 = 15;
+	int g_slippage_156 = 3;
+	int Magic = 753494;
+	bool gi_164 = false;
+	int g_bars_168;
+	double g_lots_172 = 1.0;
+	double g_point_180;
+
+public:
+	typedef Foster CLASSNAME;
+	Foster();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("g_period_104", g_period_104, 2, 100)
+			% Arg("TP", TP, 10, 150)
+			% Arg("SL", SL, 10, 200)
+			% Arg("gi_92", gi_92, 20, 200)
+		;
+	}
+	
+};
+
+
+
+
+
+
+
+class SpaceZ : public ExpertAdvisor {
+	
+	int TakeProfit = 25;
+	int StopLoss = 100;
+	int UseTrailingStop = false;
+	int TrailingStop = 0;
+	int mom_period = 10;
+	int macd_fast = 10;
+	int macd_slow = 10;
+	int macd_signal = 10;
+	int stepfast = 10;
+	int maximumfast = 10;
+	int rsi_period = 10;
+	int adx_period = 10;
+	
+	
+	bool gi_76 = false;
+	bool gi_80 = true;
+	double Lots = 1.0;
+	bool gi_96 = true;
+	bool gi_104 = true;
+	int Slippage = 3;
+	int MagicNumber = 1555667;
+	int g_bars_124;
+	int gi_unused_128;
+	bool gi_132 = false;
+	
+public:
+	typedef SpaceZ CLASSNAME;
+	SpaceZ();
+	
+	virtual void InitEA();
+	virtual void StartEA(int pos);
+	
+	
+	virtual void IO(ValueRegister& reg) {
+		ExpertAdvisor::IO(reg);
+		
+		reg % Arg("TakeProfit", TakeProfit, 2, 100)
+			% Arg("StopLoss", StopLoss, 2, 100)
+			% Arg("UseTrailingStop", UseTrailingStop, 0, 1)
+			% Arg("TrailingStop", TrailingStop, 0, 100)
+			% Arg("mom_period", mom_period, 2, 100)
+			% Arg("macd_fast", macd_fast, 2, 100)
+			% Arg("macd_slow", macd_slow, 2, 100)
+			% Arg("macd_signal", macd_signal, 2, 100)
+			% Arg("stepfast", stepfast, 2, 100)
+			% Arg("maximumfast", maximumfast, 2, 100)
+			% Arg("rsi_period", rsi_period, 2, 100)
+			% Arg("adx_period", adx_period, 2, 100)
+			;
+	}
+	
+};
 
 /*
 

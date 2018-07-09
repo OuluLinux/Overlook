@@ -107,6 +107,8 @@ public:
 	void SetFixedVolume(bool b=true) {fixed_volume = b;}
 	void SetLimitFactor(double d) {limit_factor = d;}
 	void SetLeverage(double d) {leverage = d;}
+	void RealizeVolume(int symbol, double d, bool type);
+	bool IsSymbolTrading(int sym) const;
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

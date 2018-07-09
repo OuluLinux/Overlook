@@ -391,14 +391,19 @@ double Core::GetAppliedValue ( int applied_value, int i ) {
 }
 
 bool Core::IsJobsFinished() const {
+	bool all_done = IsDependencyJobsFinished();
+	for(int i = 0; i < jobs.GetCount(); i++)
+		all_done &= jobs[i].IsFinished();
+	return all_done;
+}
+
+bool Core::IsDependencyJobsFinished() const {
 	bool all_done = true;
 	for(int i = 0; i < inputs.GetCount(); i++) {
 		const Input& input = inputs[i];
 		for(int j = 0; j < input.GetCount(); j++)
 			all_done &= dynamic_cast<Core*>(input[j].core)->IsJobsFinished();
 	}
-	for(int i = 0; i < jobs.GetCount(); i++)
-		all_done &= jobs[i].IsFinished();
 	return all_done;
 }
 

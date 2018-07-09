@@ -7,23 +7,44 @@ Julia::Julia() {
 }
 
 void Julia::InitEA() {
-	
+	last_open_pos = 0;
 }
 
 void Julia::StartEA(int pos) {
 	int li_8;
 	
-	if (MMoney)
+	if (MMoney) {
 		BLot = NormalizeDouble(AccountBalance() * AccountLeverage() / 2000000.0, 1);
+		if (BLot < 0.01) BLot = 0.01;
+	}
+	else
+		BLot = 0.01;
 		
+	if (pos >= Bars*0.5) {
+		pos = pos;
+	}
 	int l_ord_total_4 = OrdersTotal();
 	
 	g_count_236 = 0;
-	
+	int open_count = 0;
 	for (int l_pos_0 = 0; l_pos_0 < l_ord_total_4; l_pos_0++) {
-		if (OrderSelect(l_pos_0, SELECT_BY_POS))
+		if (OrderSelect(l_pos_0, SELECT_BY_POS)) {
 			if (OrderSymbol() == Symbol())
 				g_count_236++;
+			if (OrderType() <= OP_SELL)
+				open_count++;
+		}
+	}
+	
+	if (open_count > 0) {
+		last_open_pos = pos;
+	}
+	int not_open_bars = pos - last_open_pos;
+	if (not_open_bars >= idle_bars_avoid) {
+		for (int i = OrdersTotal() - 1; i >= 0; i--) {
+			OrderSelect(i, SELECT_BY_POS);
+			OrderDelete(OrderTicket());
+		}
 	}
 	
 	if (g_count_236 == 0) {

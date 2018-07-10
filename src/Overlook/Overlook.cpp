@@ -985,11 +985,23 @@ void Overlook::LoadAdvisorProfileFinish() {
 	Profile profile;
 	
 	int tf = 5;
-	int id = System::Find<ExampleAdvisor>();
+	int id = System::Find<MultiExpertAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;
-		if (sym != "EURUSD" && sym != "USDJPY" && sym != "USDCAD" && sym != "EURJPY" && sym != "GBPUSD" && sym != "EURGBP") continue;
+		if (
+			sym != "EURUSD" &&
+			sym != "GBPUSD" &&
+			sym != "USDCHF" &&
+			sym != "USDJPY" &&
+			sym != "USDCAD" &&
+			sym != "AUDUSD" &&
+			sym != "NZDUSD" &&
+			sym != "EURAUD" &&
+			sym != "EURCHF" &&
+			sym != "EURJPY" &&
+			sym != "EURGBP"
+			) continue;
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;
 		pgroup.tf = tf;

@@ -510,6 +510,21 @@ public:
 	
 };
 
+
+class CompatBuffer {
+	const Buffer* b;
+	int pos, shift;
+	
+public:
+	CompatBuffer(const Buffer& b, int pos, int shift=0) {
+		this->b = &b;
+		this->pos = pos;
+	}
+	
+	double operator[] (int i) const {int j = pos - i + shift; ASSERT(j <= pos); return b->Get(j);}
+};
+
+
 typedef const uint64 ConstU64;
 
 class VectorBool : Moveable<VectorBool> {

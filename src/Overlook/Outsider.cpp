@@ -685,7 +685,8 @@ int Outsider::CloseOrder(String as_0, int a_magic_8) {
 			l_cmd_20 = 9;
 	}
 	
-	while (MyOrdersTotalMagic(a_magic_8) > 0 && li_28) {
+	int tries = 0;
+	while (MyOrdersTotalMagic(a_magic_8) > 0 && li_28 && tries < 3) {
 		for (int l_pos_32 = 0; l_pos_32 < OrdersTotal(); l_pos_32++) {
 			OrderSelect(l_pos_32, SELECT_BY_POS, MODE_TRADES);
 			
@@ -713,6 +714,7 @@ int Outsider::CloseOrder(String as_0, int a_magic_8) {
 				l_pos_32++;
 			}
 		}
+		tries++;
 	}
 	
 	return (0);

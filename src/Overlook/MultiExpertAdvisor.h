@@ -73,7 +73,6 @@ public:
 			% In<Salmon>()
 			% In<Explorer>()
 			% In<Mari>()
-			% In<Pyramid>()
 			% In<SuperMart>()
 			% In<Spiral>()
 			% In<MoneyTime>()

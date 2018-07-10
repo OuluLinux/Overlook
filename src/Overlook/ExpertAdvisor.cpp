@@ -217,8 +217,8 @@ void ExpertAdvisor::RefreshAll() {
 		ResetSubCores();
 		InitEA();
 		InitSubCores();
-		RefreshSubCores();
 	}
+	RefreshSubCores();
 
 
 	// ---- Do your final result work here ----

@@ -117,11 +117,13 @@ public:
 	double	OrderLots() {return sb.OrderLots();}
 	int		OrderMagicNumber() {return sb.OrderMagicNumber();}
 	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, Time expiration=Time(3000,1,1)) {return sb.OrderModify(ticket, price, stoploss, takeprofit, expiration);}
+	int		OrderModify(int ticket, double price, double stoploss, double takeprofit, int expiration, Color clr) {return sb.OrderModify(ticket, price, stoploss, takeprofit, Time(3000,1,1));}
 	double	OrderOpenPrice() {return sb.OrderOpenPrice();}
 	Time	OrderOpenTime() {return sb.OrderOpenTime();}
 	double	OrderProfit() {return sb.OrderProfit();}
 	int		OrderSelect(int index, int select, int pool=libmt::MODE_TRADES) {return sb.OrderSelect(index, select, pool);}
 	int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment="", int magic=0, int expiry=0) {return sb.OrderSend(symbol, cmd, volume, price, slippage, stoploss, takeprofit, comment, magic, expiry);}
+	int		OrderSend(String symbol, int cmd, double volume, double price, int slippage, double stoploss, double takeprofit, String comment, int magic, int expiry, Color clr) {return sb.OrderSend(symbol, cmd, volume, price, slippage, stoploss, takeprofit, comment, magic, expiry);}
 	int		OrdersHistoryTotal() {return sb.OrdersHistoryTotal();}
 	double	OrderStopLoss() {return sb.OrderStopLoss();}
 	int		OrdersTotal() {return sb.OrdersTotal();}

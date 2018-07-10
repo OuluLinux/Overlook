@@ -5,7 +5,6 @@
 #include <CtrlLib/CtrlLib.h>
 #include <Docking/Docking.h>
 #include <plugin/libmt/libmt.h>
-#include <ConvNet/ConvNet.h>
 
 using namespace Upp;
 

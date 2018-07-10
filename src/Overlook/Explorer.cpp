@@ -91,7 +91,7 @@ int Explorer::ScalpParabolicPattern(int pos) {
 		if (Ask - ld_4 < 5.0 * Point || Ask - l_price_12 < 5.0 * Point || l_price_20 - Ask < 5.0 * Point)
 			return 0;
 			
-		l_ticket_0 = OrderSend(Symbol(), OP_BUYLIMIT, Lots, NormalizeDouble(ld_4, Digits), 3, l_price_12, l_price_20, "Forex Conqueror", 0);
+		l_ticket_0 = OrderSend(Symbol(), OP_BUYLIMIT, Lots, NormalizeDouble(ld_4, Digits), 3, l_price_12, l_price_20, "", 0);
 		
 		if (l_ticket_0 < 0) {
 			return (-1);
@@ -113,7 +113,7 @@ int Explorer::ScalpParabolicPattern(int pos) {
 		if (ld_4 - Ask < 5.0 * Point || l_price_12 - Ask < 5.0 * Point || Ask - l_price_20 < 5.0 * Point)
 			return 0;
 			
-		l_ticket_0 = OrderSend(Symbol(), OP_SELLLIMIT, Lots, NormalizeDouble(ld_4, Digits), 3, l_price_12, l_price_20, "Forex Conqueror", 0);
+		l_ticket_0 = OrderSend(Symbol(), OP_SELLLIMIT, Lots, NormalizeDouble(ld_4, Digits), 3, l_price_12, l_price_20, "", 0);
 		
 		if (l_ticket_0 < 0) {
 			return (-1);

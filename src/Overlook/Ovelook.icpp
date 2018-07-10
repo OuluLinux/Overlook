@@ -79,38 +79,29 @@ INITBLOCK {
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	
 	System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
-	System::Register<HighPromises>("High Promises", CORE_EXPERTADVISOR);
-	System::Register<ShockTime>("ShockTime", CORE_EXPERTADVISOR);
-	System::Register<PipsBoss>("PipsBoss", CORE_EXPERTADVISOR);
 	System::Register<Snake>("Snake", CORE_EXPERTADVISOR);
 	System::Register<ChannelScalper>("Channel Scalper", CORE_EXPERTADVISOR);
-	System::Register<RedSunrise>("Red Sunrise", CORE_EXPERTADVISOR);
 	System::Register<Eagle>("Eagle", CORE_EXPERTADVISOR);
 	System::Register<Salmon>("Salmon", CORE_EXPERTADVISOR);
-	System::Register<SoundOfForex>("Sound Of Forex", CORE_EXPERTADVISOR);
 	System::Register<Explorer>("Explorer", CORE_EXPERTADVISOR);
-	System::Register<DoubleDecker>("Double Decker", CORE_EXPERTADVISOR);
 	System::Register<Mari>("Mari", CORE_EXPERTADVISOR);
 	System::Register<Pyramid>("Pyramid", CORE_EXPERTADVISOR);
 	System::Register<SuperMart>("SuperMart", CORE_EXPERTADVISOR);
 	System::Register<Spiral>("Spiral", CORE_EXPERTADVISOR);
 	System::Register<MoneyTime>("MoneyTime", CORE_EXPERTADVISOR);
-	System::Register<Novice>("Novice", CORE_EXPERTADVISOR);
 	System::Register<StochPower>("StochPower", CORE_EXPERTADVISOR);
-	System::Register<Lamer>("Lamer", CORE_EXPERTADVISOR);
-	System::Register<Dealer>("Dealer", CORE_EXPERTADVISOR);
 	System::Register<Gainer>("Gainer", CORE_EXPERTADVISOR);
 	System::Register<Cashier>("Cashier", CORE_EXPERTADVISOR);
-	System::Register<Satellite>("Satellite", CORE_EXPERTADVISOR);
 	System::Register<ModestTry>("ModestTry", CORE_EXPERTADVISOR);
 	System::Register<Gaia>("Gaia", CORE_EXPERTADVISOR);
 	System::Register<Squirter>("Squirter", CORE_EXPERTADVISOR);
-	System::Register<Cowboy>("Cowboy", CORE_EXPERTADVISOR);
 	System::Register<Julia>("Julia", CORE_EXPERTADVISOR);
 	System::Register<Outsider>("Outsider", CORE_EXPERTADVISOR);
 	System::Register<Foster>("Foster", CORE_EXPERTADVISOR);
-	System::Register<SpaceZ>("SpaceZ", CORE_EXPERTADVISOR);
 	System::Register<MultiExpertAdvisor>("MultiExpertAdvisor", CORE_EXPERTADVISOR);
+	
+	System::Register<Licker>("Licker", CORE_EXPERTADVISOR);
+	System::Register<Spectrum>("Spectrum", CORE_EXPERTADVISOR);
 	
 	
 	

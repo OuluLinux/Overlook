@@ -461,7 +461,7 @@ void StochPower::OpenMarketOrders() {
 				mylotsi = 100;
 			}
 			
-			OrderSend(Symbol(), OP_SELL, mylotsi, SellPrice, slippage, sl, tp, "MyMEFx EA" + MagicNumber, MagicNumber, 0);
+			OrderSend(Symbol(), OP_SELL, mylotsi, SellPrice, slippage, sl, tp, "", MagicNumber, 0);
 			
 			return;
 		}
@@ -513,7 +513,7 @@ void StochPower::OpenMarketOrders() {
 				mylotsi = 100;
 			}
 			
-			OrderSend(Symbol(), OP_BUY, mylotsi, BuyPrice, slippage, sl, tp, "MyMEFx EA" + MagicNumber, MagicNumber, 0);
+			OrderSend(Symbol(), OP_BUY, mylotsi, BuyPrice, slippage, sl, tp, "", MagicNumber, 0);
 			
 			return;
 		}
@@ -568,7 +568,7 @@ void StochPower::OpenLimitOrders() {
 			mylotsi = 100;
 		}
 		
-		OrderSend(Symbol(), OP_SELLLIMIT, mylotsi, SellPrice, slippage, sl, tp, "MyMEFx EA" + MagicNumber, MagicNumber, 0);
+		OrderSend(Symbol(), OP_SELLLIMIT, mylotsi, SellPrice, slippage, sl, tp, "", MagicNumber, 0);
 		
 		return;
 		//}
@@ -619,7 +619,7 @@ void StochPower::OpenLimitOrders() {
 			mylotsi = 100;
 		}
 		
-		OrderSend(Symbol(), OP_BUYLIMIT, mylotsi, BuyPrice, slippage, sl, tp, "MyMEFx EA" + MagicNumber, MagicNumber, 0);
+		OrderSend(Symbol(), OP_BUYLIMIT, mylotsi, BuyPrice, slippage, sl, tp, "", MagicNumber, 0);
 		
 		return;
 		//}

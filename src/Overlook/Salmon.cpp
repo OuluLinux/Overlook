@@ -201,7 +201,7 @@ void Salmon::vSetOrderForReal(String a_symbol_0, int a_cmd_8, double a_lots_12, 
 		
 		l_datetime_64 = TimeCurrent();
 		
-		l_ticket_100 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, Slippage, a_price_28, a_price_36, "FishForexRobot", a_magic_44);
+		l_ticket_100 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, Slippage, a_price_28, a_price_36, "", a_magic_44);
 		
 		if (l_ticket_100 > 0) {
 			if (alert_fails != true)
@@ -232,7 +232,7 @@ void Salmon::vSetOrderForTest(String a_symbol_0, int a_cmd_8, double a_lots_12, 
 	if (a_symbol_0 == "" || a_symbol_0 == "0")
 		a_symbol_0 = Symbol();
 		
-	int ticket = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, Slippage, a_price_28, a_price_36, "FishForexRobot", a_magic_44);
+	int ticket = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, Slippage, a_price_28, a_price_36, "", a_magic_44);
 	
 	if (ticket < 0) {
 		Print("Error(" + GetLastError() + ")");
@@ -294,7 +294,7 @@ void Salmon::vOpenPosition(String a_symbol_0, int a_cmd_8, double a_lots_12, int
 		l_price_56 = MarketInfo(a_symbol_0, MODE_BID);
 	}
 	
-	int l_ticket_68 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, l_price_56, a_slippage_28, a_price_32, a_price_40, "FishForexRobot", a_magic_48);
+	int l_ticket_68 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, l_price_56, a_slippage_28, a_price_32, a_price_40, "", a_magic_48);
 	
 	if (l_ticket_68 < 0) {
 		Print("Error(" + GetLastError() + ")");

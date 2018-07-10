@@ -130,6 +130,8 @@ bool MultiExpertAdvisor::TrainingIterator() {
 				double eq = ea.cureq_pts[i];
 				double initeq = ea.cureq_pts[0];
 				
+				mult1 = max(1.0, min(2.0, mult1));
+				
 				double l = mult1 * lots * (initeq - offset) / (eq - offset);
 				lot_sum += l;
 				div += mult1;
@@ -225,29 +227,32 @@ void MultiExpertAdvisor::RefreshAll() {
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	LabelSignal& signal = GetLabelBuffer(0, 0);
 	
+	int bars = open_buf.GetCount(); // take count before updating dependencies to match their size
+		
 	Vector<ExpertAdvisor*> eas;
 	for(int i = 1; i < inputs.GetCount(); i++) {
 		const Input& input = inputs[i];
 		ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(input[0].core);
 		eas.Add(ea);
+		bars = min(bars, ea->GetLabelBuffer(0,0).signal.GetCount());
 	}
 	
 	const Vector<double>& trial = opt.GetBestSolution();
 	
 	
-	int bars = open_buf.GetCount(); // take count before updating dependencies to match their size
-		
 	if (prev_counted == 0) {
 		prev_counted++;
 		sb.Clear();
 	}
 	
+	String symstr = GetSystem().GetSymbol(GetSymbol());
 
 	// ---- Do your final result work here ----
 	
 	cureq_pts.SetCount(bars, 0);
 	
 	for(int i = prev_counted; i < bars; i++) {
+		Time t = Time(1970,1,1) + time_buf.Get(i);
 		double ask = open_buf.Get(i);
 		double bid = ask - 3 * point;
 		sb.SetPrice(GetSymbol(), ask, bid);
@@ -264,6 +269,8 @@ void MultiExpertAdvisor::RefreshAll() {
 			double prev_lots = ea.lots_pts[i-1];
 			double eq = ea.cureq_pts[i];
 			double initeq = ea.cureq_pts[0];
+			
+			mult1 = max(1.0, min(2.0, mult1));
 			
 			double l = mult1 * lots * (initeq - offset) / (eq - offset);
 			lot_sum += l;
@@ -301,10 +308,15 @@ void MultiExpertAdvisor::RefreshAll() {
 		signal.signal.Set(i, vol < 0.0);
 		signal.enabled.Set(i, vol != 0.0);
 		
-		if (i == bars-1 && (lots_changed || !GetMetaTrader().IsSymbolTrading(GetSymbol()))) {
+		lots_changed |= signal.signal.Get(i) != signal.signal.Get(i-1);
+		
+		//if (i == bars-1 && (lots_changed || !GetMetaTrader().IsSymbolTrading(GetSymbol()))) {
+		if (i == bars-1) {
 			MetaTrader& mt = GetMetaTrader();
-			double mt_vol = sb_lots * mt.AccountEquity() / sb.AccountEquity();
+			double mt_vol = vol * mt.AccountEquity() / sb.AccountEquity();
+			mt_vol += mt_vol > 0 ? 0.005 : -0.005;
 			mt.RealizeVolume(GetSymbol(), fabs(mt_vol), mt_vol < 0.0);
+			ReleaseLog("MultiExpertAdvisor " + GetSystem().GetSymbol(GetSymbol()) + " lots " + DblStr(mt_vol) + " " + IntStr(i) + "/" + IntStr(bars) + " " + Format("%", t));
 		}
 	}
 	

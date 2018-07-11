@@ -677,7 +677,7 @@ void Turtle::StartEA(int pos) {
 
 int Turtle::OpOrd(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44) {
 	int l_ticket_52;
-	l_ticket_52 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, 6, a_price_28, a_price_36, "" + g_index_400, a_magic_44);
+	l_ticket_52 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, 6, a_price_28, a_price_36, "", a_magic_44);
 	return (l_ticket_52);
 }
 

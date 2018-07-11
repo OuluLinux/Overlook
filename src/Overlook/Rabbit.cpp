@@ -295,7 +295,6 @@ int Rabbit::fOrderCloseMarket(bool ai_0, bool ai_4) {
 					
 					if (!IsTradeContextBusy()) {
 						if (!OrderClose(OrderTicket(), OrderLots(), ND(Bid), 5)) {
-							Print("Error close BUY " + OrderTicket());
 							li_ret_8 = -1;
 						}
 					}
@@ -314,7 +313,6 @@ int Rabbit::fOrderCloseMarket(bool ai_0, bool ai_4) {
 					
 					if (!IsTradeContextBusy()) {
 						if (!OrderClose(OrderTicket(), OrderLots(), ND(Ask), 5)) {
-							Print("Error close SELL " + OrderTicket());
 							li_ret_8 = -1;
 						}
 					}

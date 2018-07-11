@@ -71,8 +71,8 @@ bool MultiExpertAdvisor::TrainingBegin() {
 		opt.Min()[row] = 1.0;
 		opt.Max()[row++] = 1000.;
 		
-		opt.SetMaxGenerations(300);
-		opt.Init(opt_size, 33);
+		opt.SetMaxGenerations(1000);
+		opt.Init(opt_size, 50);
 	}
 	max_rounds = opt.GetMaxRounds();
 	

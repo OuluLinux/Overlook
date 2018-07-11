@@ -113,7 +113,7 @@ void ChannelScalper::StartEA(int pos) {
 				if (OrderSymbol() == Symbol() && OrderMagicNumber() == magic && OrderType() == OP_BUY)
 					OrderClose(OrderTicket(), OrderLots(), Bid, slippage * price_point);
 					
-				if (OrderSymbol() == Symbol() && OrderMagicNumber() == magic && OrderType() == OP_SELL)
+				else if (OrderSymbol() == Symbol() && OrderMagicNumber() == magic && OrderType() == OP_SELL)
 					OrderClose(OrderTicket(), OrderLots(), Ask, slippage * price_point);
 			}
 			

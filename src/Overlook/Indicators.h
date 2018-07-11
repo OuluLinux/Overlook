@@ -1648,6 +1648,89 @@ public:
 
 
 
+
+
+
+
+class Laguerre : public Core {
+	
+protected:
+	virtual void Start();
+	
+	int gamma = 60;
+	double gd_88 = 0.0;
+	double gd_96 = 0.0;
+	double gd_104 = 0.0;
+	double gd_112 = 0.0;
+	double gd_120 = 0.0;
+	double gd_128 = 0.0;
+	double gd_136 = 0.0;
+	double gd_144 = 0.0;
+	double gd_152 = 0.0;
+	double gd_160 = 0.0;
+	double gd_168 = 0.0;
+	
+public:
+	Laguerre();
+	
+	virtual void Init();
+	virtual void Assist(int cursor, VectorBool& vec);
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Lbl(1)
+			% Arg("gamma", gamma, 0, 100)
+			% Mem(gd_88)
+			% Mem(gd_96)
+			% Mem(gd_104)
+			% Mem(gd_112)
+			% Mem(gd_120)
+			% Mem(gd_128)
+			% Mem(gd_136)
+			% Mem(gd_144)
+			% Mem(gd_152)
+			% Mem(gd_160)
+			% Mem(gd_168)
+			;
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
+class QuantitativeQualitativeEstimation : public Core {
+	
+protected:
+	virtual void Start();
+	
+	int period = 10;
+	
+public:
+	QuantitativeQualitativeEstimation();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(4, 2)
+			% Lbl(1)
+			% Arg("period", period, 0, 1000)
+			;
+	}
+};
+
+
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {

@@ -1,6 +1,5 @@
 #include "Overlook.h"
 
-#if 0
 
 // fx maven
 
@@ -12,7 +11,16 @@ Maverick::Maverick() {
 
 void Maverick::InitEA() {
 	g_count_112 = Interval;
-	return (0);
+	
+	AddSubCore<CommodityChannelIndex>()
+		.Set("period", cci_period0);
+	
+	AddSubCore<CommodityChannelIndex>()
+		.Set("period", cci_period1);
+	
+	AddSubCore<CommodityChannelIndex>()
+		.Set("period", cci_period2);
+	
 }
 
 void Maverick::StartEA(int pos) {
@@ -27,19 +35,11 @@ void Maverick::StartEA(int pos) {
 	double l_point_48 = Point;
 	int l_ord_total_80 = 0;
 	
-	if (AccountFreeMargin() < 1000.0 * Lots) {
-		Print("-----NO MONEY");
-		return (0);
-	}
+	if (pos < 1)
+		return;
 	
-	if (Bars < 100) {
-		Print("-----NO BARS ");
-		return (0);
-	}
+	CompatBuffer Open(GetInputBuffer(0, 0), pos);
 	
-	if (g_open_96 == Open[0] && g_open_104 == Open[1])
-		return (0);
-		
 	g_open_96 = Open[0];
 	
 	g_open_104 = Open[1];
@@ -64,10 +64,9 @@ void Maverick::StartEA(int pos) {
 		l_price_24 = 0;
 	}
 	
-	double l_icci_56 = iCCI(Symbol(), 0, 125, PRICE_OPEN, 0);
-	
-	double l_icci_64 = iCCI(Symbol(), 0, 25, PRICE_OPEN, 0);
-	double l_icci_72 = iCCI(Symbol(), 0, 5, PRICE_OPEN, 0);
+	double l_icci_56 = At(0).GetBuffer(0).Get(pos);
+	double l_icci_64 = At(1).GetBuffer(0).Get(pos);
+	double l_icci_72 = At(2).GetBuffer(0).Get(pos);
 	
 	if (l_icci_64 <= 0.0 && l_icci_56 >= 0.0 && l_icci_72 > 0.0) {
 		li_4 = true;
@@ -82,14 +81,14 @@ void Maverick::StartEA(int pos) {
 	}
 	
 	if (li_12) {
-		for (l_ord_total_80 = OrdersTotal(); l_ord_total_80 > 0; l_ord_total_80--) {
+		for (l_ord_total_80 = OrdersTotal()-1; l_ord_total_80 >= 0; l_ord_total_80--) {
 			OrderSelect(l_ord_total_80, SELECT_BY_POS, MODE_TRADES);
 			
 			if (OrderSymbol() == Symbol()) {
 				if (OrderType() == OP_BUY)
 					OrderClose(OrderTicket(), Lots, Bid, 3, White);
 					
-				if (OrderType() == OP_SELL)
+				else if (OrderType() == OP_SELL)
 					OrderClose(OrderTicket(), Lots, Ask, 3, Red);
 					
 				g_count_112 = 0;
@@ -107,7 +106,7 @@ void Maverick::StartEA(int pos) {
 	
 	li_unused_0 = 0;
 	
-	for (l_ord_total_80 = OrdersTotal(); l_ord_total_80 > 0; l_ord_total_80--) {
+	for (l_ord_total_80 = OrdersTotal()-1; l_ord_total_80 >= 0; l_ord_total_80--) {
 		OrderSelect(l_ord_total_80, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() == Symbol()) {
@@ -118,7 +117,7 @@ void Maverick::StartEA(int pos) {
 				}
 			}
 			
-			if (OrderType() == OP_SELL) {
+			else if (OrderType() == OP_SELL) {
 				if (g_count_112 >= Interval) {
 					OrderSend(Symbol(), OP_SELL, Lots, Bid, 3, l_price_24, l_price_40, "ZZZ100", 11321, 0, Red);
 					g_count_112 = 0;
@@ -131,9 +130,7 @@ void Maverick::StartEA(int pos) {
 		}
 	}
 	
-	return (0);
 }
 
 }
 
-#endif

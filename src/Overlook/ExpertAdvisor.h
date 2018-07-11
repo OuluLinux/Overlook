@@ -108,6 +108,7 @@ public:
 	void Print(String s) {if (!avoid_refresh) ReleaseLog("PRINT: " + s);}
 	void Alert(String s) {if (!avoid_refresh) ReleaseLog("ALERT: " + s);}
 	int		OrderClose(int ticket, double lots, double price, int slippage) {return sb.OrderClose(ticket, lots, price, slippage);}
+	int		OrderClose(int ticket, double lots, double price, int slippage, Color clr) {return sb.OrderClose(ticket, lots, price, slippage);}
 	double	OrderClosePrice() {return sb.OrderClosePrice();}
 	Time	OrderCloseTime() {return sb.OrderCloseTime();}
 	String	OrderComment() {return sb.OrderComment();}
@@ -167,6 +168,7 @@ public:
 	double	MathMin(double a, double b) {return min(a, b);}
 	double	MathMax(double a, double b) {return max(a, b);}
 	double	MathAbs(double d) {return fabs(d);}
+	double	MathLog(double d) {return log(d);}
 	double	MathPow(double d, double e) {return pow(d, e);}
 	double	MathRound(double d) {return floor(d);}
 	double	MathFloor(double d) {return floor(d);}

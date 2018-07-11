@@ -1,19 +1,17 @@
 #include "Overlook.h"
 
-#if 0
-
 // lerosa
 
 namespace Overlook {
 
-Rose::Rose {
+Rose::Rose() {
 	
 }
 
 void Rose::InitEA() {
 	if (CONSERVATIVE > 0) {
 		gd_224 = 0.025;
-		g_close_596 = Close[2];
+		g_close_596 = GetInputBuffer(0,0).Get(0);
 	}
 	
 	if (MODERATE > 0)
@@ -27,8 +25,7 @@ void Rose::InitEA() {
 		
 	if (gi_116 > 0)
 		gd_224 = 1.5;
-		
-	return (0);
+	
 }
 
 void Rose::StartEA(int pos) {
@@ -43,6 +40,14 @@ void Rose::StartEA(int pos) {
 	int li_68;
 	double l_price_72;
 	double l_price_80;
+	
+	if (pos < 1)
+		return;
+	
+	CompatBuffer Close(GetInputBuffer(0, 0), pos, 1);
+	CompatBuffer Low(GetInputBuffer(0, 1), pos, 0);
+	CompatBuffer High(GetInputBuffer(0, 2), pos, 0);
+	
 	
 	while (gi_624 == 10) {
 		RefreshRates();
@@ -110,7 +115,7 @@ void Rose::StartEA(int pos) {
 	
 	if (Bars < 100) {
 		Print("bars less than 100");
-		return (0);
+		return;
 	}
 	
 	int li_8 = 1;
@@ -155,7 +160,7 @@ void Rose::StartEA(int pos) {
 	if (g_time_680 != Now) {
 		gd_668 = 0;
 		
-		for (li_12 = 1; li_12 <= gd_688; li_12++) {
+		for (int li_12 = 1; li_12 <= gd_688; li_12++) {
 			l_close_24 = Close[li_12 + 1];
 			gd_660 = MathMax(High[li_12], l_close_24) - MathMin(Low[li_12], l_close_24);
 			gd_668 += gd_660;
@@ -286,11 +291,6 @@ void Rose::StartEA(int pos) {
 		gi_808 = 10;
 		gi_812 = 10;
 		
-		if (AccountFreeMargin() < 1000.0 * gd_288) {
-			Print("We have no money. Free Margin = ", AccountFreeMargin());
-			return (0);
-		}
-		
 		if ((gd_704 == 13.0 && gi_420 != Now) || (gd_720 == 13.0 && gi_420 != Now && g_bars_764 != g_bars_752)) {
 			gd_436 = gd_424;
 			g_lots_652 = NormalizeDouble(gd_436 / gi_496, gi_644);
@@ -342,7 +342,7 @@ void Rose::StartEA(int pos) {
 			else
 				Print("Error opening BUY order : " + GetLastError());
 				
-			return (0);
+			return;
 		}
 		
 		if ((gd_712 == 13.0 && gi_420 != Now) || (gd_728 == 13.0 && gi_420 != Now && g_bars_768 != g_bars_756)) {
@@ -396,10 +396,10 @@ void Rose::StartEA(int pos) {
 			else
 				Print("Error opening SELL order : " + GetLastError());
 				
-			return (0);
+			return;
 		}
 		
-		return (0);
+		return;
 	}
 	
 	if (gi_452 == 13 && gi_176 == 1) {
@@ -420,7 +420,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening BUY order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_456 == 13 && gi_180 == 1) {
@@ -441,7 +441,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening BUY order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_460 == 13 && gi_184 == 1) {
@@ -462,7 +462,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening BUY order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_464 == 13 && gi_188 == 1) {
@@ -482,7 +482,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening BUY order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_472 == 13 && gi_192 == 1) {
@@ -525,7 +525,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening SELL order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_476 == 13 && gi_196 == 1) {
@@ -546,7 +546,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening SELL order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_480 == 13 && gi_200 == 1) {
@@ -567,7 +567,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening SELL order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_484 == 13 && gi_200 == 1) {
@@ -588,7 +588,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening SELL order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_488 == 13 && gi_204 == 1) {
@@ -608,7 +608,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening SELL order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	if (gi_448 == 13 && gi_172 == 1) {
@@ -651,7 +651,7 @@ void Rose::StartEA(int pos) {
 		else
 			Print("Error opening BUY order : " + GetLastError());
 			
-		return (0);
+		return;
 	}
 	
 	int l_ord_total_56 = OrdersTotal();
@@ -671,7 +671,7 @@ void Rose::StartEA(int pos) {
 					if (OrderModify(OrderTicket(), OrderOpenPrice(), l_price_72, l_price_80, 0, Green))
 						gi_808 = 10;
 						
-					return (0);
+					return;
 				}
 				
 				if (ECN && OrderMagicNumber() == g_magic_152 && gi_812 == 13) {
@@ -683,33 +683,33 @@ void Rose::StartEA(int pos) {
 					if (OrderModify(OrderTicket(), OrderOpenPrice(), l_price_72, l_price_80, 0, Green))
 						gi_812 = 10;
 						
-					return (0);
+					return;
 				}
 				
 				if (Close[1] < gd_612 && Close[2] >= g_close_596) {
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), 3);
-					return (0);
+					return;
 				}
 				
 				if (OrderMagicNumber() == g_magic_148 && Bid - g_ord_open_price_536 >= 1000 * gi_620 * Point && gi_648 > 0) {
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-					return (0);
+					return;
 				}
 				
 				if (OrderMagicNumber() == g_magic_152 && Bid - g_ord_open_price_544 >= 56 * gi_620 * Point && gi_648 > 0) {
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-					return (0);
+					return;
 				}
 				
 				if (OrderMagicNumber() == g_magic_148 && g_ord_open_price_536 - Bid >= 46 * gi_620 * Point && gi_648 > 0) {
 					gi_unused_580 = 13;
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-					return (0);
+					return;
 				}
 				
 				if (OrderMagicNumber() == g_magic_152 && g_ord_open_price_544 - Bid >= 46 * gi_620 * Point && gi_648 > 0) {
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-					return (0);
+					return;
 				}
 				
 				if (gi_284 > 0) {
@@ -718,7 +718,7 @@ void Rose::StartEA(int pos) {
 						
 					if (gi_404 == 13 && Bid - OrderOpenPrice() <= Point * gi_620 * gi_416) {
 						OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-						return (0);
+						return;
 					}
 				}
 				
@@ -733,7 +733,7 @@ void Rose::StartEA(int pos) {
 					
 				OrderModify(OrderTicket(), OrderOpenPrice(), ND(Bid - Point * gi_620 * gd_348), OrderTakeProfit(), 0, Green);
 				
-				return (0);
+				return;
 			}
 			
 			if (ECN && OrderMagicNumber() == g_magic_148 && gi_816 == 13) {
@@ -745,7 +745,7 @@ void Rose::StartEA(int pos) {
 				if (OrderModify(OrderTicket(), OrderOpenPrice(), l_price_72, l_price_80, 0, Green))
 					gi_816 = 10;
 					
-				return (0);
+				return;
 			}
 			
 			if (ECN && OrderMagicNumber() == g_magic_152 && gi_820 == 13) {
@@ -757,33 +757,33 @@ void Rose::StartEA(int pos) {
 				if (OrderModify(OrderTicket(), OrderOpenPrice(), l_price_72, l_price_80, 0, Green))
 					gi_820 = 10;
 					
-				return (0);
+				return;
 			}
 			
 			if (Close[1] > gd_612 && Close[2] <= g_close_596) {
 				OrderClose(OrderTicket(), OrderLots(), ND(Ask), g_slippage_344 * gi_620);
-				return (0);
+				return;
 			}
 			
 			if (OrderMagicNumber() == g_magic_148 && g_ord_open_price_552 - Ask >= 1000 * gi_620 * Point && gi_648 > 0) {
 				OrderClose(OrderTicket(), OrderLots(), ND(Ask), g_slippage_344 * gi_620);
-				return (0);
+				return;
 			}
 			
 			if (OrderMagicNumber() == g_magic_152 && g_ord_open_price_560 - Ask >= 56 * gi_620 * Point && gi_648 > 0) {
 				OrderClose(OrderTicket(), OrderLots(), ND(Ask), g_slippage_344 * gi_620);
-				return (0);
+				return;
 			}
 			
 			if (OrderMagicNumber() == g_magic_148 && Ask - g_ord_open_price_552 >= 46 * gi_620 * Point && gi_648 > 0) {
 				OrderClose(OrderTicket(), OrderLots(), ND(Ask), g_slippage_344 * gi_620);
 				gi_unused_584 = 13;
-				return (0);
+				return;
 			}
 			
 			if (OrderMagicNumber() == g_magic_152 && Ask - g_ord_open_price_560 >= 46 * gi_620 * Point && gi_648 > 0) {
 				OrderClose(OrderTicket(), OrderLots(), ND(Ask), g_slippage_344 * gi_620);
-				return (0);
+				return;
 			}
 			
 			if (gi_284 > 0) {
@@ -792,7 +792,7 @@ void Rose::StartEA(int pos) {
 					
 				if (gi_404 == 13 && OrderOpenPrice() - Ask <= Point * gi_620 * gi_416) {
 					OrderClose(OrderTicket(), OrderLots(), ND(Bid), g_slippage_344 * gi_620);
-					return (0);
+					return;
 				}
 			}
 			
@@ -800,14 +800,12 @@ void Rose::StartEA(int pos) {
 				if (OrderOpenPrice() - Ask > Point * gi_620 * gd_348) {
 					if (OrderStopLoss() > Ask + Point * gi_620 * gd_348 || OrderStopLoss() == 0.0) {
 						OrderModify(OrderTicket(), OrderOpenPrice(), ND(Ask + Point * gi_620 * gd_348), OrderTakeProfit(), 0, Red);
-						return (0);
+						return;
 					}
 				}
 			}
 		}
 	}
-	
-	return (0);
 }
 
 int Rose::CountOpenPositions() {
@@ -831,7 +829,7 @@ int Rose::Minus() {
 	int li_ret_0 = 0;
 	
 	if (g_ticket_396 > 0 && OrderSelect(g_ticket_396, SELECT_BY_TICKET, MODE_TRADES) == true)
-		if (OrderProfit() <= 0.0 && OrderCloseTime() > 0)
+		if (OrderProfit() <= 0.0)
 			li_ret_0 = 13;
 			
 	return (li_ret_0);
@@ -874,5 +872,3 @@ double Rose::ND(double price) {
 }
 
 }
-
-#endif

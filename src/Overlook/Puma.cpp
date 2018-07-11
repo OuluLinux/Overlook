@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // isea
 
 namespace Overlook {
@@ -19,6 +17,11 @@ void Puma::InitEA() {
 	//TakeProfit = TakeProfit * Point;
 	spread = Ask - Bid;
 	stoplossReal = StopLoss * Point;
+	
+	AddSubCore<MovingAverage>()
+		.Set("period", MA_Period).Set("method", 2);
+	
+	
 }
 
 void Puma::StartEA(int pos) {
@@ -47,7 +50,7 @@ void Puma::StartEA(int pos) {
 	}
 	
 	
-	MA_currentbar = iMA(NULL, 0, MA_Period, MA_Shift, MODE_LWMA, PRICE_TYPICAL, 0);
+	MA_currentbar = At(0).GetBuffer(0).Get(pos - 0);
 	
 	Modify_order();
 	
@@ -58,7 +61,7 @@ void Puma::StartEA(int pos) {
 				Close_B(OrderTicket(), OrderLots());
 			}
 			
-			if (OrderType() == OP_SELL) {
+			else if (OrderType() == OP_SELL) {
 				HasSellOrder = true;
 				Close_S(OrderTicket(), OrderLots());
 			}
@@ -69,16 +72,15 @@ void Puma::StartEA(int pos) {
 	if (UseDelay == true) {
 		StoppedOut = LastTradeStoppedOut();
 		
-		if (CurTime() < StopTime) {
-			Comment("Last trade stopped out, No Trades Until : " + TimeToStr(StopTime, TIME_DATE | TIME_MINUTES));
-			return(0);
+		if (Now < StopTime) {
+			return;
 		}
 	}
 	
 	if (UseHourTrade) {
 		if (!((Hour() + GMTOffSet) >= FromHourTrade && (Hour() + GMTOffSet) <= ToHourTrade)) {
 			Comment("This is not trading time.");
-			return (0);
+			return;
 		}
 	}
 	
@@ -94,17 +96,15 @@ int Puma::CloseOrder(int ticket, double numLots, double price) {
 	
 	while (CloseCnt < 3) { // try to close 3 Times
 		if (!OrderClose(ticket, numLots, price, 3, Yellow)) {
-			err = GetLastError();
-			Print(CloseCnt, " Error closing order : (", err , ") " + ErrorDescription(err));
-			
-			if (err > 0)
-				CloseCnt++;
+			CloseCnt++;
 		}
 		
 		else {
 			CloseCnt = 3;
 		}
 	}
+	
+	return CloseCnt;
 }
 
 void Puma::Close_B(int ticket, double lot) {
@@ -129,7 +129,7 @@ void Puma::Close_S(int ticket, double lot) {
 	}
 }
 
-void Modify_order() {
+void Puma::Modify_order() {
 	double AveragePrice = 0;
 	
 	if (HasBuyLimitOrder == true) {
@@ -200,7 +200,8 @@ void Puma::OpenLimitOrder() {
 	}
 }
 
-double Puma::Lots() {
+double Puma::GetLots() {
+	double Lots;
 	if (UseMoneyManagement == true) {
 		double SingleLot = MarketInfo(Symbol(), 15) / AccountLeverage();
 		double LotValue = AccountEquity() * Risk / 100;
@@ -233,9 +234,7 @@ void Puma::OpenBuyOrder() {
 	
 	// while (OrderSend(Symbol(),OP_BUY,Lots(),Ask,Slippage,Ask-stoploss,Ask+TakeProfitFaked,"",MagicNumber,0,Green)==false&&cnt<OrderAttemps)
 	
-	while (OrderSend(Symbol(), OP_BUY, Lots(), Ask, Slippage, 0, 0, AddComment, MagicNumber, 0, Green) <= 0 && cnt < OrderAttemps) {
-		err = GetLastError();
-		Print("Error Modify BUY order: (" + err + ") " + ErrorDescription(err));
+	while (OrderSend(Symbol(), OP_BUY, GetLots(), Ask, Slippage, 0, 0, AddComment, MagicNumber, 0, Green) <= 0 && cnt < OrderAttemps) {
 		cnt++;
 		Sleep(100);
 	}
@@ -248,9 +247,7 @@ void Puma::OpenSellOrder() {
 	
 	//while (OrderSend(Symbol(),OP_SELL,Lots(),Bid,Slippage,Bid+stoploss,Bid-TakeProfitFaked,"",MagicNumber,0,Red)<=0 && cnt<OrderAttemps)
 	
-	while (OrderSend(Symbol(), OP_SELL, Lots(), Bid, Slippage, 0, 0, AddComment, MagicNumber, 0, Red) <= 0 && cnt < OrderAttemps) {
-		err = GetLastError();
-		Print("Error Modify SELL order : (" + err + ") " + ErrorDescription(err));
+	while (OrderSend(Symbol(), OP_SELL, GetLots(), Bid, Slippage, 0, 0, AddComment, MagicNumber, 0, Red) <= 0 && cnt < OrderAttemps) {
 		cnt++;
 		Sleep(100);
 	}
@@ -274,12 +271,9 @@ void Puma::OpenMarketOrder() {
 	}
 }
 
-Time Puma::LastTradeStoppedOut() {
+bool Puma::LastTradeStoppedOut() {
 	int cnt, total;
-	Time NextTime;
 	bool Stopped = false;
-	
-	NextTime = 0;
 	
 	total = HistoryTotal();
 	
@@ -315,5 +309,3 @@ Time Puma::LastTradeStoppedOut() {
 }
 
 }
-
-#endif

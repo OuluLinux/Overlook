@@ -984,7 +984,7 @@ void Overlook::LoadAdvisorProfileFinish() {
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
-	int tf = 5;
+	int tf = 2;
 	int id = System::Find<MultiExpertAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
@@ -997,7 +997,6 @@ void Overlook::LoadAdvisorProfileFinish() {
 			sym != "USDCAD" &&
 			sym != "AUDUSD" &&
 			sym != "NZDUSD" &&
-			sym != "EURAUD" &&
 			sym != "EURCHF" &&
 			sym != "EURJPY" &&
 			sym != "EURGBP"

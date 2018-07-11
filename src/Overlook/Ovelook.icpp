@@ -102,6 +102,21 @@ INITBLOCK {
 	
 	System::Register<Licker>("Licker", CORE_EXPERTADVISOR);
 	System::Register<Spectrum>("Spectrum", CORE_EXPERTADVISOR);
+	System::Register<Maverick>("Maverick", CORE_EXPERTADVISOR);
+	System::Register<Sherlock>("Sherlock", CORE_EXPERTADVISOR);
+	System::Register<President>("President", CORE_EXPERTADVISOR);
+	System::Register<Laguerre>("Laguerre");
+	System::Register<Gatherer>("Gatherer", CORE_EXPERTADVISOR);
+	System::Register<Musk>("Musk", CORE_EXPERTADVISOR);
+	System::Register<Puma>("Puma", CORE_EXPERTADVISOR);
+	System::Register<Rose>("Rose", CORE_EXPERTADVISOR);
+	System::Register<Thief>("Thief", CORE_EXPERTADVISOR);
+	System::Register<Roulette>("Roulette", CORE_EXPERTADVISOR);
+	System::Register<Sculptor>("Sculptor", CORE_EXPERTADVISOR);
+	System::Register<Starter>("Starter", CORE_EXPERTADVISOR);
+	System::Register<Turtle>("Turtle", CORE_EXPERTADVISOR);
+	System::Register<Unreal>("Unreal", CORE_EXPERTADVISOR);
+	System::Register<QuantitativeQualitativeEstimation>("QuantitativeQualitativeEstimation");
 	
 	
 	

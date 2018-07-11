@@ -1,6 +1,5 @@
 #include "Overlook.h"
 
-#if 0
 
 // perevorot
 
@@ -37,7 +36,7 @@ void Thief::StartEA(int pos) {
 	double ld_104;
 	int li_112;
 	DoTrail();
-	DrawStats();
+	
 	int li_116 = TotalBuy();
 	int li_120 = TotalSell();
 	int li_124 = BuyStopsTotal();
@@ -164,8 +163,7 @@ void Thief::StartEA(int pos) {
 	gi_unused_156 = li_120;
 	gi_unused_160 = li_124;
 	gi_unused_164 = li_128;
-	Comment(g_count_168);
-	return (0);
+	
 }
 
 int Thief::TotalBuy() {
@@ -225,7 +223,6 @@ int Thief::SellStopsTotal() {
 }
 
 void Thief::SetSellStop(double a_price_0, int ai_8, int ai_12, double a_lots_16) {
-	int l_error_24;
 	double l_price_28 = 0;
 	
 	if (ai_12 != 0)
@@ -236,14 +233,11 @@ void Thief::SetSellStop(double a_price_0, int ai_8, int ai_12, double a_lots_16)
 	int l_ticket_44 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_16, a_price_0, g_slippage_140, l_price_28, l_price_36, "", Magic, 0, Red);
 	
 	if (l_ticket_44 < 1) {
-		l_error_24 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð SELLSTOP îáúåìîì " + a_lots_16 + ". Îøèáêà #" + l_error_24 + " " + ErrorDescription(l_error_24));
-		Print(Bid + " " + a_price_0 + " " + l_price_28 + " " + l_price_36);
+		
 	}
 }
 
 void Thief::SetBuyStop(double a_price_0, int ai_8, double a_pips_12, double a_lots_20) {
-	int l_error_28;
 	double l_price_32 = 0;
 	
 	if (a_pips_12 != 0.0)
@@ -254,9 +248,7 @@ void Thief::SetBuyStop(double a_price_0, int ai_8, double a_pips_12, double a_lo
 	int l_ticket_48 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_20, a_price_0, g_slippage_140, l_price_32, l_price_40, "", Magic, 0, Blue);
 	
 	if (l_ticket_48 < 1) {
-		l_error_28 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð BUYSTOP îáúåìîì " + a_lots_20 + ". Îøèáêà #" + l_error_28 + " " + ErrorDescription(l_error_28));
-		Print(Bid + " " + a_price_0 + " " + l_price_32 + " " + l_price_40);
+		
 	}
 }
 
@@ -280,7 +272,7 @@ void Thief::TrailSellStop() {
 	}
 	
 	if (l_ord_stoploss_16 != 0.0) {
-		for (l_pos_24 = 0; l_pos_24 < OrdersTotal(); l_pos_24++) {
+		for (int l_pos_24 = 0; l_pos_24 < OrdersTotal(); l_pos_24++) {
 			if (!(OrderSelect(l_pos_24, SELECT_BY_POS, MODE_TRADES)))
 				break;
 				
@@ -309,8 +301,6 @@ void Thief::TrailSellStop() {
 				if (!((!OrderModify(OrderTicket(), l_ord_stoploss_16, l_price_0, l_price_8, 0, Yellow))))
 					break;
 					
-				Print("[5] Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + " Îøèáêà: " + ErrorDescription(GetLastError()));
-				
 				return;
 			}
 		}
@@ -333,7 +323,7 @@ void Thief::TrailBuyStop() {
 	}
 	
 	if (l_ord_stoploss_16 != 0.0) {
-		for (l_pos_24 = 0; l_pos_24 < OrdersTotal(); l_pos_24++) {
+		for (int l_pos_24 = 0; l_pos_24 < OrdersTotal(); l_pos_24++) {
 			if (!(OrderSelect(l_pos_24, SELECT_BY_POS, MODE_TRADES)))
 				break;
 				
@@ -362,8 +352,6 @@ void Thief::TrailBuyStop() {
 				if (!((!OrderModify(OrderTicket(), l_ord_stoploss_16, l_price_0, l_price_8, 0, Yellow))))
 					break;
 					
-				Print("[6] Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + " Îøèáêà: " + ErrorDescription(GetLastError()));
-				
 				return;
 			}
 		}
@@ -383,16 +371,14 @@ void Thief::OpenSell() {
 	if (TakeProfit != 0)
 		l_price_4 = l_bid_20 - TakeProfit * Point;
 		
-	int l_datetime_28 = TimeCurrent();
+	Time l_datetime_28 = TimeCurrent();
 	
 	int l_ticket_32 = OrderSend(Symbol(), OP_SELL, g_lots_172, l_bid_20, g_slippage_140, l_price_12, l_price_4, "", Magic, 0, Red);
 	
 	if (l_ticket_32 == -1) {
 		while (l_ticket_32 == -1 && TimeCurrent() - l_datetime_28 <= 60 && !IsTesting()) {
 			Sleep(1000);
-			l_error_0 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà SELL. " + ErrorDescription(l_error_0));
-			Print("Ïîâòîð");
+
 			RefreshRates();
 			l_bid_20 = Bid;
 			
@@ -407,13 +393,9 @@ void Thief::OpenSell() {
 	}
 	
 	if (l_ticket_32 != -1) {
-		Print("Îòêðûòî SELL íà " + Symbol() + " " + Period() + " îáúåìîì " + g_lots_172 + "!");
 		return;
 	}
 	
-	l_error_0 = GetLastError();
-	
-	Print("Îøèáêà îòêðûòèÿ îðäåðà SELL. Îøèáêà#" + l_error_0 + ": " + ErrorDescription(l_error_0));
 }
 
 void Thief::OpenBuy() {
@@ -429,16 +411,14 @@ void Thief::OpenBuy() {
 	if (TakeProfit != 0)
 		l_price_4 = l_ask_20 + TakeProfit * Point;
 		
-	int l_datetime_28 = TimeCurrent();
+	Time l_datetime_28 = TimeCurrent();
 	
 	int l_ticket_32 = OrderSend(Symbol(), OP_BUY, g_lots_172, l_ask_20, g_slippage_140, l_price_12, l_price_4, "", Magic, 0, Blue);
 	
 	if (l_ticket_32 == -1) {
 		while (l_ticket_32 == -1 && TimeCurrent() - l_datetime_28 <= 60 && !IsTesting()) {
 			Sleep(1000);
-			l_error_0 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà BUY. " + ErrorDescription(l_error_0));
-			Print("Ïîâòîð");
+			
 			RefreshRates();
 			l_ask_20 = Ask;
 			
@@ -453,13 +433,11 @@ void Thief::OpenBuy() {
 	}
 	
 	if (l_ticket_32 != -1) {
-		Print("Îòêðûòî BUY íà " + Symbol() + " " + Period() + " îáúåìîì " + g_lots_172 + "!");
 		return;
 	}
 	
-	l_error_0 = GetLastError();
 	
-	Print("Îøèáêà îòêðûòèÿ îðäåðà BUY. Îøèáêà#" + l_error_0 + ": " + ErrorDescription(l_error_0));
+	
 }
 
 void Thief::GetBuyParameters(double &a_ord_open_price_0, double &a_ord_takeprofit_8, double &a_ord_stoploss_16, double &a_ord_lots_24) {
@@ -531,10 +509,9 @@ void Thief::DeleteAllSellStops() {
 			while (IsTradeContextBusy())
 				Sleep(500);
 				
-			Print("Óäàëÿåì îðäåð #" + OrderTicket() + ".");
 			
 			if (!OrderDelete(OrderTicket()))
-				Print("Íå óäàëîñü óäàëèòü îðäåð #" + OrderTicket() + ". Îøèáêà: " + ErrorDescription(GetLastError()));
+				;
 		}
 	}
 }
@@ -547,11 +524,10 @@ void Thief::DeleteAllBuyStops() {
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic && OrderType() == OP_BUYSTOP) {
 			while (IsTradeContextBusy())
 				Sleep(500);
-				
-			Print("Óäàëÿåì îðäåð #" + OrderTicket() + ".");
+			
 			
 			if (!OrderDelete(OrderTicket()))
-				Print("Íå óäàëîñü óäàëèòü îðäåð #" + OrderTicket() + ". Îøèáêà: " + ErrorDescription(GetLastError()));
+				;
 		}
 	}
 }
@@ -565,13 +541,13 @@ void Thief::DoTrail() {
 				if (OrderMagicNumber() == Magic) {
 					if (!UseTrail && Bid - MinProfit * Point > OrderOpenPrice() && OrderOpenPrice() > OrderStopLoss() || OrderStopLoss() == 0.0) {
 						if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice() + BEPoints * Point, OrderTakeProfit(), 0, Pink))
-							Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà¹" + GetLastError());
+							;
 					}
 					
 					else {
 						if (UseTrail && (Bid - OrderOpenPrice() > TrailingStop * Point && OrderStopLoss() < OrderOpenPrice()) || (Bid - OrderStopLoss() >= TrailingStop * Point && OrderStopLoss() > OrderOpenPrice()))
 							if (!OrderModify(OrderTicket(), OrderOpenPrice(), Bid - TrailingStop * Point, OrderTakeProfit(), 0, Pink))
-								Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà¹" + GetLastError());
+								;
 					}
 				}
 			}
@@ -581,13 +557,13 @@ void Thief::DoTrail() {
 					if (OrderMagicNumber() == Magic) {
 						if (!UseTrail && Ask + MinProfit * Point < OrderOpenPrice() && OrderStopLoss() > OrderOpenPrice() || OrderStopLoss() == 0.0) {
 							if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice() - BEPoints * Point, OrderTakeProfit(), 0, Pink))
-								Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà¹" + GetLastError());
+								;
 						}
 						
 						else {
 							if (UseTrail && (OrderOpenPrice() - Ask > TrailingStop * Point && OrderStopLoss() > OrderOpenPrice()) || (OrderStopLoss() - Ask >= TrailingStop * Point && OrderStopLoss() < OrderOpenPrice()))
 								if (!OrderModify(OrderTicket(), OrderOpenPrice(), Ask + TrailingStop * Point, OrderTakeProfit(), 0, Pink))
-									Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà¹" + GetLastError());
+									;
 						}
 					}
 				}
@@ -598,7 +574,7 @@ void Thief::DoTrail() {
 
 int Thief::GetLastClosedOrderType() {
 	int l_cmd_0 = -1;
-	int l_datetime_4 = 0;
+	Time l_datetime_4(1970,1,1);
 	
 	for (int l_pos_8 = 0; l_pos_8 < OrdersHistoryTotal(); l_pos_8++) {
 		if (OrderSelect(l_pos_8, SELECT_BY_POS, MODE_HISTORY)) {
@@ -635,12 +611,17 @@ double Thief::LotsOptimized() {
 double Thief::GetProfitForDay(int ai_0) {
 	double ld_ret_4 = 0;
 	
+	Time today = Now;
+	today.hour = 0;
+	today.minute = 0;
+	today.second = 0;
+	
 	for (int l_pos_12 = 0; l_pos_12 < OrdersHistoryTotal(); l_pos_12++) {
 		if (!(OrderSelect(l_pos_12, SELECT_BY_POS, MODE_HISTORY)))
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic)
-			if (OrderCloseTime() >= iTime(Symbol(), PERIOD_D1, ai_0) && OrderCloseTime() < iTime(Symbol(), PERIOD_D1, ai_0) + 86400)
+			if (OrderCloseTime() >= today && OrderCloseTime() < today + 86400)
 				ld_ret_4 += OrderProfit();
 	}
 	
@@ -649,4 +630,3 @@ double Thief::GetProfitForDay(int ai_0) {
 
 }
 
-#endif

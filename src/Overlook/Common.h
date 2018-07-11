@@ -519,6 +519,7 @@ public:
 	CompatBuffer(const Buffer& b, int pos, int shift=0) {
 		this->b = &b;
 		this->pos = pos;
+		this->shift = shift;
 	}
 	
 	double operator[] (int i) const {int j = pos - i + shift; ASSERT(j <= pos); return b->Get(j);}

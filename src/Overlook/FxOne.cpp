@@ -335,7 +335,7 @@ int FxOne::f0_1(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20,
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
 			RefreshRates();
-			ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, f0_2(Bid, ai_32), f0_4(Ask, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, f0_2(Bid, ai_32), f0_4(Ask, ai_36), a_comment_40, a_magic_48);
 			error_64 = GetLastError();
 			
 			if (error_64 == 0/* NO_ERROR */)
@@ -388,7 +388,7 @@ int FxOne::f0_1(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20,
 	case 1:
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
-			ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, f0_3(Ask, ai_32), f0_5(Bid, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, f0_3(Ask, ai_32), f0_5(Bid, ai_36), a_comment_40, a_magic_48);
 			error_64 = GetLastError();
 			
 			if (error_64 == 0/* NO_ERROR */)

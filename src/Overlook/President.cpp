@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 namespace Overlook {
 
 // fx ultimate
@@ -18,10 +16,22 @@ void President::InitEA() {
 		gi_160 = 10 * gi_160;
 	}
 	
-	return (0);
+	AddSubCore<MovingAverage>()
+		.Set("period", Period_Filtring);
+	
+	AddSubCore<MovingAverage>()
+		.Set("period", Aggr_level).Set("method", 2);
+	
+	AddSubCore<MovingAverage>()
+		.Set("period", Aggr_level).Set("method", 0);
+	
 }
 
 void President::StartEA(int pos) {
+	this->pos = pos;
+	if (pos <= Aggr_level)
+		return;
+	
 	/*
 	gs_164 = AccountNumber() + IsDemo() + 1000;
 	if (MD5(gs_164) != password) {
@@ -35,39 +45,11 @@ void President::StartEA(int pos) {
 	}
 	*/
 	
-	if (Aggr_level == 0)
-		Aggr_level = 24;
-	else {
-		if (Aggr_level == 1)
-			Aggr_level = 5;
-		else
-			Aggr_level = 24;
-	}
 	
 	LotHandle();
 	
-	if (StealthMode == true) {
-		if (TimeCurrent() <= gi_172)
-			return (0);
-			
-		gi_172 = TimeCurrent() + 3420;
-	}
-	
-	else {
-		if (Now == gi_172)
-			return (0);
-			
-		gi_172 = Now;
-		
-		if (!IsTradeAllowed()) {
-			gi_172 = Time[1];
-			MathSrand(TimeCurrent());
-			Sleep(MathRand() + 30000); //wait randomN + 30 seconds
-		}
-	}
-	
 	if (TradeOnFridays == false && TimeDayOfWeek(TimeCurrent()) == 5)
-		return (0);
+		return;
 		
 	if (In_BUY && MA_Signal() == 1)
 		Trade_BUY();
@@ -75,7 +57,7 @@ void President::StartEA(int pos) {
 	if (In_SELL && MA_Signal() == 2)
 		Trade_SELL();
 		
-	return (0);
+	return;
 }
 
 void President::LotHandle() {
@@ -104,8 +86,8 @@ void President::LotHandle() {
 }
 
 int President::MA_Signal() {
-	double l_ima_0 = iMA(Symbol(), 0, Period_Filtring, 0, MODE_EMA, PRICE_CLOSE, 1); //MAperiod 0.18
-	double l_ima_8 = iMA(Symbol(), 0, Period_Filtring, 0, MODE_EMA, PRICE_CLOSE, 2); //MAperiod 0.18
+	double l_ima_0 = At(0).GetBuffer(0).Get(pos - 0);
+	double l_ima_8 = At(0).GetBuffer(0).Get(pos - 1);
 	
 	if (l_ima_0 > l_ima_8)
 		return (1);
@@ -131,14 +113,9 @@ void President::Trade_BUY() {
 	
 	double l_price_8 = Out(Aggr_level, f1);
 	
-	if (l_price_8 > Bid + 15 * gi_156 * Point && IsTradeAllowed()) {
+	if (l_price_8 > Bid + 15 * gi_156 * Point) {
 		g_ticket_176 = OrderSend(Symbol(), OP_BUY, lot(gi_152), Ask, 5, Bid - gi_160 * SL_bs * Point, l_price_8, 0, g_magic_180, 0, Blue);
 		RefreshRates();
-		
-		if (g_ticket_176 < 0) {
-			Sleep(30000);
-			gi_172 = Time[1];
-		}
 	}
 }
 
@@ -156,24 +133,21 @@ void President::Trade_SELL() {
 	
 	double l_price_8 = Out(Aggr_level, f2);
 	
-	if (l_price_8 < Ask - 15 * gi_156 * Point && IsTradeAllowed()) {
+	if (l_price_8 < Ask - 15 * gi_156 * Point) {
 		g_ticket_176 = OrderSend(Symbol(), OP_SELL, lot(gi_152), Bid, 5, Ask + gi_160 * SL_bs * Point, l_price_8, 0, g_magic_184, 0, Red);
 		RefreshRates();
-		
-		if (g_ticket_176 < 0) {
-			Sleep(30000);
-			gi_172 = Time[1];
-		}
 	}
 }
 
 double President::Out(int a_period_0, double ad_4) {
 	double lda_12[1000];
 	double lda_16[1000];
-	double l_ima_20 = iMA(NULL, 0, a_period_0, 0, MODE_LWMA, PRICE_CLOSE, 1); //a_period_0 = Aggr_level = 5 or 24
-	double l_ima_28 = iMA(NULL, 0, a_period_0, 0, MODE_SMA, PRICE_CLOSE, 1);
+	double l_ima_20 = At(1).GetBuffer(0).Get(pos - 0); //a_period_0 = Aggr_level = 5 or 24
+	double l_ima_28 = At(2).GetBuffer(0).Get(pos - 0);
 	lda_12[a_period_0] = (6.0 * l_ima_20 - 6.0 * l_ima_28) / (a_period_0 - 1);
 	lda_16[a_period_0] = 4.0 * l_ima_28 - 3.0 * l_ima_20 - lda_12[a_period_0];
+	
+	CompatBuffer Close(GetInputBuffer(0, 0), pos, 1);
 	
 	for (int li_36 = a_period_0 - 1; li_36 > 0; li_36--) {
 		lda_16[li_36] = ad_4 * Close[li_36] + (1 - ad_4) * (lda_16[li_36 + 1] + (lda_12[li_36 + 1]));
@@ -214,7 +188,7 @@ double President::LastClosedProfit() {
 }
 
 int President::LastClosedTicket() {
-	int l_datetime_0 = 0;
+	Time l_datetime_0(1970,1,1);
 	int l_ticket_4 = -1;
 	
 	for (int l_pos_8 = 0; l_pos_8 < OrdersHistoryTotal(); l_pos_8++) {
@@ -232,5 +206,3 @@ int President::LastClosedTicket() {
 }
 
 }
-
-#endif

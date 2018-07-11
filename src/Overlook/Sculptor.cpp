@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // scalp investor
 
 namespace Overlook {
@@ -29,10 +27,15 @@ void Sculptor::InitEA() {
 	else
 		g_lots_200 = Lots;
 		
-	return (0);
 }
 
 void Sculptor::StartEA(int pos) {
+	if (pos < 1)
+		return;
+	
+	CompatBuffer Low(GetInputBuffer(0, 1), pos, 0);
+	CompatBuffer High(GetInputBuffer(0, 2), pos, 0);
+	
 	double l_price_0;
 	double l_price_8;
 	double l_price_16;
@@ -42,7 +45,7 @@ void Sculptor::StartEA(int pos) {
 	double l_pips_48;
 	double l_pips_56;
 	//if (!myCheckAllowWorking()) return (0);
-	double ld_64 = (iHigh(NULL, PERIOD_H1, 1) - iLow(NULL, PERIOD_H1, 1)) / Point;
+	double ld_64 = (High[1] - Low[1]) / Point;
 	int l_ticket_72 = 0;
 	int l_ticket_76 = 0;
 	int l_ticket_80 = 0;
@@ -278,20 +281,8 @@ void Sculptor::StartEA(int pos) {
 		if (gi_192 && l_lots_40 < MaxLots)
 			OrderSend(Symbol(), OP_SELLLIMIT, l_lots_40, l_price_0, 3, l_price_8, l_price_24, "", magic, 0, Red);
 	}
-	
-	Comment("Scalp-Investor v 2.1 by forex-investor.net",
-	
-			"\n",
-			"\n", "  ---------------- ÏÐÈÁÛËÜ ÏÎ ÈÍÑÒÐÓÌÅÍÒÓ  ", Symbol(), " -------------------",
-			"\n", "  Ïðèáûëü ñåãîäíÿ      = $ ", NormalizeDouble(getDayProfit(1, 0), 2),
-			"\n", "  Ïðèáûëü â÷åðà        = $ ", NormalizeDouble(getDayProfit(1, 1), 2),
-			"\n", "  Ïðèáûëü ïîçàâ÷åðà  = $ ", NormalizeDouble(getDayProfit(1, 2), 2),
-			"\n", "  -------------------- ÏÎ Ñ×ÅÒÓ -----------------------",
-			"\n", "  Ïðèáûëü ñåãîäíÿ     = $ ", NormalizeDouble(getDayProfitall(1, 0), 2),
-			"\n", "  Ïðèáûëü â÷åðà        = $ ", NormalizeDouble(getDayProfitall(1, 1), 2),
-			"\n", "  Ïðèáûëü ïîçàâ÷åðà = $ ", NormalizeDouble(getDayProfitall(1, 2), 2));
-	        
-	for (l_pos_196 = 0; l_pos_196 < OrdersTotal(); l_pos_196++) {
+	  
+	for (int l_pos_196 = 0; l_pos_196 < OrdersTotal(); l_pos_196++) {
 		OrderSelect(l_pos_196, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() == Symbol() && OrderType() == OP_BUY && l_ticket_72 != 0 && OrderMagicNumber() == magic) {
@@ -312,7 +303,7 @@ void Sculptor::StartEA(int pos) {
 				OrderModify(OrderTicket(), OrderOpenPrice(), l_price_16, l_price_32, 0, Blue);
 		}
 		
-		if (OrderSymbol() == Symbol() && OrderType() == OP_SELL && l_ticket_76 != 0 && OrderMagicNumber() == magic) {
+		else if (OrderSymbol() == Symbol() && OrderType() == OP_SELL && l_ticket_76 != 0 && OrderMagicNumber() == magic) {
 			if (gi_188 == false)
 				l_price_8 = l_ord_open_price_120 + Stop_Los * Point;
 			else
@@ -331,7 +322,6 @@ void Sculptor::StartEA(int pos) {
 		}
 	}
 	
-	return (0);
 }
 
 int Sculptor::sum_buy() {
@@ -366,7 +356,7 @@ double Sculptor::getDayProfit(int ai_0, int ai_4) {
 	int l_year_8;
 	int l_month_12;
 	int l_day_16;
-	int l_datetime_20;
+	Time l_datetime_20(1970,1,1);
 	int l_hist_total_24 = OrdersHistoryTotal();
 	double ld_ret_28 = 0;
 	
@@ -391,7 +381,7 @@ double Sculptor::getDayProfitall(int ai_0, int ai_4) {
 	int l_year_8;
 	int l_month_12;
 	int l_day_16;
-	int l_datetime_20;
+	Time l_datetime_20(1970,1,1);
 	int l_hist_total_24 = OrdersHistoryTotal();
 	double ld_ret_28 = 0;
 	
@@ -491,5 +481,3 @@ int Sculptor::ProfitMM(double ad_0) {
 }
 
 }
-
-#endif

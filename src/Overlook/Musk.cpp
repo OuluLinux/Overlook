@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // ilan
 
 namespace Overlook {
@@ -12,27 +10,17 @@ Musk::Musk() {
 
 void Musk::InitEA() {
 	gd_260 = MarketInfo(Symbol(), MODE_SPREAD) * Point;
-	return (0);
 }
 
 void Musk::StartEA(int pos) {
 	double l_iclose_8;
 	double l_iclose_16;
 	
+	if (pos < 1)
+		return;
+	
 	if (UseTrailingStop)
 		TrailingAlls(TrailStart, TrailStop, g_price_212);
-		
-	if (UseTimeOut) {
-		if (TimeCurrent() >= gi_284) {
-			CloseThisSymbolAll();
-			Print("Closed All due to TimeOut");
-		}
-	}
-	
-	if (gi_280 == Now)
-		return (0);
-		
-	gi_280 = Now;
 	
 	double ld_0 = CalculateProfit();
 	
@@ -99,11 +87,11 @@ void Musk::StartEA(int pos) {
 			gi_288 = gi_304;
 			gd_292 = NormalizeDouble(Lots * MathPow(LotExponent, gi_288), lotdecimal);
 			RefreshRates();
-			gi_328 = OpenPendingOrder(1, gd_292, Bid, slip, Ask, 0, 0, gs_ilan_272 + "-" + gi_288, g_magic_176, 0, HotPink);
+			gi_328 = OpenPendingOrder(1, gd_292, Bid, slip, Ask, 0, 0, "", g_magic_176);
 			
 			if (gi_328 < 0) {
 				Print("Error: " + GetLastError());
-				return (0);
+				return;
 			}
 			
 			gd_244 = FindLastSellPrice();
@@ -116,11 +104,11 @@ void Musk::StartEA(int pos) {
 			if (gi_320) {
 				gi_288 = gi_304;
 				gd_292 = NormalizeDouble(Lots * MathPow(LotExponent, gi_288), lotdecimal);
-				gi_328 = OpenPendingOrder(0, gd_292, Ask, slip, Bid, 0, 0, gs_ilan_272 + "-" + gi_288, g_magic_176, 0, Lime);
+				gi_328 = OpenPendingOrder(0, gd_292, Ask, slip, Bid, 0, 0, "", g_magic_176);
 				
 				if (gi_328 < 0) {
 					Print("Error: " + GetLastError());
-					return (0);
+					return;
 				}
 				
 				gd_236 = FindLastBuyPrice();
@@ -132,8 +120,9 @@ void Musk::StartEA(int pos) {
 	}
 	
 	if (gi_316 && gi_304 < 1) {
-		l_iclose_8 = iClose(Symbol(), 0, 2);
-		l_iclose_16 = iClose(Symbol(), 0, 1);
+		ConstBuffer& open_buf = GetInputBuffer(0, 0);
+		l_iclose_8 = open_buf.Get(pos-1);
+		l_iclose_16 = open_buf.Get(pos-0);
 		g_bid_220 = Bid;
 		g_ask_228 = Ask;
 		
@@ -142,11 +131,11 @@ void Musk::StartEA(int pos) {
 			gd_292 = NormalizeDouble(Lots * MathPow(LotExponent, gi_288), lotdecimal);
 			
 			if (l_iclose_8 > l_iclose_16) {
-				gi_328 = OpenPendingOrder(1, gd_292, g_bid_220, slip, g_bid_220, 0, 0, gs_ilan_272 + "-" + gi_288, g_magic_176, 0, HotPink);
+				gi_328 = OpenPendingOrder(1, gd_292, g_bid_220, slip, g_bid_220, 0, 0, "", g_magic_176);
 				
 				if (gi_328 < 0) {
 					Print("Error: " + GetLastError());
-					return (0);
+					return;
 				}
 				
 				gd_236 = FindLastBuyPrice();
@@ -155,11 +144,11 @@ void Musk::StartEA(int pos) {
 			}
 			
 			else {
-				gi_328 = OpenPendingOrder(0, gd_292, g_ask_228, slip, g_ask_228, 0, 0, gs_ilan_272 + "-" + gi_288, g_magic_176, 0, Lime);
+				gi_328 = OpenPendingOrder(0, gd_292, g_ask_228, slip, g_ask_228, 0, 0, "", g_magic_176);
 				
 				if (gi_328 < 0) {
 					Print("Error: " + GetLastError());
-					return (0);
+					return;
 				}
 				
 				gd_244 = FindLastSellPrice();
@@ -238,11 +227,9 @@ void Musk::StartEA(int pos) {
 			}
 		}
 	}
-	
-	return (0);
 }
 
-int CountTrades() {
+int Musk::CountTrades() {
 	int l_count_0 = 0;
 	
 	for (int l_pos_4 = OrdersTotal() - 1; l_pos_4 >= 0; l_pos_4--) {
@@ -259,7 +246,7 @@ int CountTrades() {
 	return (l_count_0);
 }
 
-void CloseThisSymbolAll() {
+void Musk::CloseThisSymbolAll() {
 	for (int l_pos_0 = OrdersTotal() - 1; l_pos_0 >= 0; l_pos_0--) {
 		OrderSelect(l_pos_0, SELECT_BY_POS, MODE_TRADES);
 		
@@ -277,7 +264,7 @@ void CloseThisSymbolAll() {
 	}
 }
 
-int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_32, int ai_36, String a_comment_40, int a_magic_48, int a_datetime_52, color a_color_56) {
+int Musk::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_32, int ai_36, String a_comment_40, int a_magic_48) {
 	int l_ticket_60 = 0;
 	int l_error_64 = 0;
 	int l_count_68 = 0;
@@ -288,16 +275,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	case 2:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(1000);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 		
 		break;
@@ -305,16 +284,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	case 4:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(5000);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 		
 		break;
@@ -323,16 +294,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			RefreshRates();
-			l_ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, StopLong(Bid, ai_32), TakeLong(Ask, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(5000);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, StopLong(Bid, ai_32), TakeLong(Ask, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 		
 		break;
@@ -340,16 +303,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	case 3:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(5000);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 		
 		break;
@@ -357,16 +312,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	case 5:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(5000);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 		
 		break;
@@ -374,16 +321,8 @@ int OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippag
 	case 1:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, StopShort(Ask, ai_32), TakeShort(Bid, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
-			l_error_64 = GetLastError();
-			
-			if (l_error_64 == 0/* NO_ERROR */)
-				break;
-				
-			if (!(l_error_64 == 4/* SERVER_BUSY */ || l_error_64 == 137/* BROKER_BUSY */ || l_error_64 == 146/* TRADE_CONTEXT_BUSY */ || l_error_64 == 136/* OFF_QUOTES */))
-				break;
-				
-			Sleep(5000);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, StopShort(Ask, ai_32), TakeShort(Bid, ai_36), a_comment_40, a_magic_48);
+			break;
 		}
 	}
 	
@@ -458,7 +397,7 @@ void Musk::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Bid - ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 > l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0, Aqua);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit());
 					}
 					
 					if (OrderType() == OP_SELL) {
@@ -472,7 +411,7 @@ void Musk::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Ask + ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 < l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0, Red);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit());
 					}
 				}
 				
@@ -547,4 +486,5 @@ double Musk::FindLastSellPrice() {
 	
 	return (l_ord_open_price_8);
 }
-#endif
+
+}

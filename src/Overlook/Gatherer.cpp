@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // harvester
 
 namespace Overlook {
@@ -12,6 +10,18 @@ Gatherer::Gatherer() {
 
 void Gatherer::InitEA() {
 	g_spread_144 = MarketInfo(Symbol(), MODE_SPREAD);
+	
+	
+	AddSubCore<Laguerre>()
+		.Set("gamma", lag_gamma);
+	
+	AddSubCore<CommodityChannelIndex>()
+		.Set("period", cci_period);
+	
+	AddSubCore<MovingAverage>()
+		.Set("period", ma_period).Set("method", 1);
+	
+	
 }
 
 void Gatherer::StartEA(int pos) {
@@ -25,11 +35,14 @@ void Gatherer::StartEA(int pos) {
 	bool li_48;
 	double l_price_52;
 	
+	if (pos < 1)
+		return;
+	
 	if ((RazVSutki == true && Hour() == Hours && Minute() == Ìinutes) || RazVSutki == false) {
-		l_icustom_0 = iCustom(NULL, 0, "Laguerre", 0, 0);
-		l_icci_8 = iCCI(NULL, 0, 14, PRICE_CLOSE, 0);
-		l_ima_16 = iMA(NULL, 0, g_period_128, 0, MODE_EMA, PRICE_MEDIAN, 0);
-		l_ima_24 = iMA(NULL, 0, g_period_128, 0, MODE_EMA, PRICE_MEDIAN, 1);
+		l_icustom_0 = At(0).GetBuffer(0).Get(pos - 0);
+		l_icci_8 = At(1).GetBuffer(0).Get(pos - 0);
+		l_ima_16 = At(2).GetBuffer(0).Get(pos - 0);
+		l_ima_24 = At(2).GetBuffer(0).Get(pos - 1);
 		l_ord_total_40 = OrdersTotal();
 		li_44 = true;
 		li_48 = true;
@@ -45,8 +58,7 @@ void Gatherer::StartEA(int pos) {
 		}
 		
 		if (AccountFreeMargin() < 1000.0 * gd_88) {
-			Print("We have no money. Free Margin = ", AccountFreeMargin());
-			return (0);
+			return;
 		}
 		
 		if (l_icustom_0 == 0.0 && l_icci_8 < -5.0 && li_48) {
@@ -59,14 +71,14 @@ void Gatherer::StartEA(int pos) {
 			l_ticket_36 = OrderSend(Symbol(), OP_SELL, LotsOptimized(), Bid, 3, l_price_52, Bid - g_pips_136 * Point, "starter", 16384, 0, Red);
 		}
 		
-		for (l_pos_32 = 0; l_pos_32 < l_ord_total_40; l_pos_32++) {
+		for (int l_pos_32 = 0; l_pos_32 < l_ord_total_40; l_pos_32++) {
 			OrderSelect(l_pos_32, SELECT_BY_POS, MODE_TRADES);
 			
 			if (OrderType() <= OP_SELL && OrderSymbol() == Symbol()) {
 				if (OrderType() == OP_BUY) {
 					if (l_icustom_0 > 0.9) {
 						OrderClose(OrderTicket(), OrderLots(), Bid, 3);
-						return (0);
+						return;
 					}
 					
 					if (g_pips_112 <= 0.0)
@@ -77,25 +89,23 @@ void Gatherer::StartEA(int pos) {
 						
 					OrderClose(OrderTicket(), OrderLots(), Bid, 3);
 					
-					return (0);
+					return;
 				}
 				
 				if (l_icustom_0 < 0.1) {
 					OrderClose(OrderTicket(), OrderLots(), Ask, 3);
-					return (0);
+					return;
 				}
 				
 				if (g_pips_112 > 0.0) {
 					if (OrderOpenPrice() - Ask > Point * g_pips_112) {
 						OrderClose(OrderTicket(), OrderLots(), Ask, 3);
-						return (0);
+						return;
 					}
 				}
 			}
 		}
 	}
-	
-	return (0);
 }
 
 double Gatherer::LotsOptimized() {
@@ -135,5 +145,3 @@ double Gatherer::LotsOptimized() {
 }
 
 }
-
-#endif

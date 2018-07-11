@@ -445,7 +445,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	case 2:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
@@ -462,7 +462,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	case 4:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
@@ -480,7 +480,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			RefreshRates();
-			l_ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, StopLong(Bid, ai_32), TakeLong(Ask, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, StopLong(Bid, ai_32), TakeLong(Ask, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
@@ -497,7 +497,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	case 3:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
@@ -514,7 +514,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	case 5:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
@@ -531,7 +531,7 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	case 1:
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
-			l_ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, StopShort(Ask, ai_32), TakeShort(Bid, ai_36), a_comment_40, a_magic_48, a_datetime_52, a_color_56);
+			l_ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, StopShort(Ask, ai_32), TakeShort(Bid, ai_36), a_comment_40, a_magic_48);
 			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)

@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // two face
 
 namespace Overlook {
@@ -14,11 +12,14 @@ void Unreal::InitEA() {
 	gi_244 = true;
 	gi_248 = true;
 	gi_332 = TP;
-	return (0);
+	
+	AddSubCore<QuantitativeQualitativeEstimation>()
+		.Set("period", SF);
+		
 }
 
 void Unreal::StartEA(int pos) {
-	int l_datetime_4;
+	Time l_datetime_4;
 	double l_minlot_20;
 	double l_minlot_32;
 	double ld_40;
@@ -31,28 +32,6 @@ void Unreal::StartEA(int pos) {
 	bool l_bool_92;
 	bool l_bool_96;
 	bool l_bool_100;
-	
-	if (info) {
-		Comment(""
-				+ "\n"
-				+ "   Îòêðûòî Buy îðäåðîâ: " + OpenBuy()
-				+ "\n"
-				+ "   Ïðèáûëü/Óáûòîê âñåõ Buy: " + DoubleToStr(Balance("buy", "Balance"), 2)
-				+ "\n"
-				+ "   Îáúåì Buy ëîòîâ: " + DoubleToStr(Balance("buy", "Lot"), 2)
-				+ "\n"
-				+ "   ------------------------------------------------"
-				+ "\n"
-				+ "   Îòêðûòî Sell îðäåðîâ: " + OpenSell()
-				+ "\n"
-				+ "   Ïðèáûëü/Óáûòîê âñåõ Sell: " + DoubleToStr(Balance("sell", "Balance"), 2)
-				+ "\n"
-				+ "   Îáúåì Sell ëîòîâ: " + DoubleToStr(Balance("sell", "Lot"), 2)
-				+ "\n"
-				+ "   ------------------------------------------------"
-				+ "\n"
-				+ "   Îáùàÿ òåêóùàÿ ïðèáûëü/óáûòîê: " + DoubleToStr(Balance("buy", "Balance") + Balance("sell", "Balance"), 2));
-	}
 	
 	if (Vremya != 0.0 && gi_160 == true) {
 		for (int l_pos_0 = OrdersTotal() - 1; l_pos_0 >= 0; l_pos_0--) {
@@ -90,7 +69,7 @@ void Unreal::StartEA(int pos) {
 	}
 	
 	if (Vremya != 0.0 && gi_168 == true || gi_172 == true && gi_176 == false) {
-		l_datetime_4 = 0;
+		l_datetime_4 = Time(1970,1,1);
 		
 		for (int l_pos_8 = OrdersTotal() - 1; l_pos_8 >= 0; l_pos_8--) {
 			OrderSelect(l_pos_8, SELECT_BY_POS, MODE_TRADES);
@@ -105,22 +84,18 @@ void Unreal::StartEA(int pos) {
 		
 		if (l_datetime_4 + 60.0 * Vremya < TimeCurrent()) {
 			gi_176 = true;
-			gi_268 = 10;
 		}
 	}
 	
-	if (gi_268 == Now)
-		return (0);
-		
-	gi_268 = Now;
-	
 	if (OpenALL() < 1)
 		gi_156 = true;
-		
-	if (iCustom(NULL, 0, "QQE", SF, 0, 1) > iCustom(NULL, 0, "QQE", SF, 1, 1))
+	
+	double qqe_val = At(0).GetBuffer(0).Get(pos);
+	double qqe_ma = At(0).GetBuffer(1).Get(pos);
+	if (qqe_val > qqe_ma)
 		gi_244 = true;
 		
-	if (iCustom(NULL, 0, "QQE", SF, 0, 1) < iCustom(NULL, 0, "QQE", SF, 1, 1))
+	if (qqe_val < qqe_ma)
 		gi_248 = true;
 		
 	if (gi_156) {
@@ -130,10 +105,9 @@ void Unreal::StartEA(int pos) {
 		while (g_ticket_256 < 1) {
 			g_count_260++;
 			RefreshRates();
-			g_ticket_256 = OrderSend(Symbol(), OP_SELL, Lot, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number, 0, HotPink);
+			g_ticket_256 = OrderSend(Symbol(), OP_SELL, Lot, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number);
 			
 			if (g_ticket_256 < 1) {
-				Print("Îøèáêà: " + GetLastError());
 				Sleep(1000);
 			}
 			
@@ -154,7 +128,7 @@ void Unreal::StartEA(int pos) {
 		while (g_ticket_256 < 1) {
 			g_count_260++;
 			RefreshRates();
-			g_ticket_256 = OrderSend(Symbol(), OP_BUY, Lot, NormalizeDouble(Ask, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number, 0, Lime);
+			g_ticket_256 = OrderSend(Symbol(), OP_BUY, Lot, NormalizeDouble(Ask, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number);
 			
 			if (g_ticket_256 < 1) {
 				Print("Îøèáêà: " + GetLastError());
@@ -169,7 +143,7 @@ void Unreal::StartEA(int pos) {
 		}
 	}
 	
-	if (OpenALL() == 2 && FindLastBuyPrice() - Ask >= MinStep * Point && QQE == false || (gi_248 == true && QQE == true && iCustom(NULL, 0, "QQE", SF, 0, 1) > iCustom(NULL, 0, "QQE", SF, 1, 1))) {
+	if (OpenALL() == 2 && FindLastBuyPrice() - Ask >= MinStep * Point && QQE == false || (gi_248 == true && QQE == true && qqe_val > qqe_ma)) {
 		gs_276 = "buy";
 		
 		if (OpenBuy() >= 1)
@@ -207,7 +181,7 @@ void Unreal::StartEA(int pos) {
 		}
 	}
 	
-	if (OpenALL() == 2 && Bid - FindLastSellPrice() >= MinStep * Point && QQE == false || (gi_244 == true && QQE == true && iCustom(NULL, 0, "QQE", SF, 0, 1) < iCustom(NULL, 0, "QQE", SF, 1, 1))) {
+	if (OpenALL() == 2 && Bid - FindLastSellPrice() >= MinStep * Point && QQE == false || (gi_244 == true && QQE == true && qqe_val < qqe_ma)) {
 		gs_276 = "sell";
 		
 		if (OpenSell() >= 1)
@@ -223,7 +197,7 @@ void Unreal::StartEA(int pos) {
 		while (g_ticket_256 < 1) {
 			g_count_260++;
 			RefreshRates();
-			g_ticket_256 = OrderSend(Symbol(), OP_SELL, g_lots_316, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number, 0, HotPink);
+			g_ticket_256 = OrderSend(Symbol(), OP_SELL, g_lots_316, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number);
 			
 			if (g_ticket_256 < 1) {
 				Print("Îøèáêà: " + GetLastError());
@@ -265,7 +239,7 @@ void Unreal::StartEA(int pos) {
 	}
 	
 	if (gd_204 > gd_196 && FindLastBuyPrice() - Ask >= MinStep * Point && (DoubleOne == true && OpenBuy() <= MaxTrades) || (DoubleOne == false && OpenBuy() < MaxTrades) &&
-		QQE == false || (gi_248 == true && QQE == true && iCustom(NULL, 0, "QQE", SF, 0, 1) > iCustom(NULL, 0, "QQE", SF, 1, 1))) {
+		QQE == false || (gi_248 == true && QQE == true && qqe_val > qqe_ma)) {
 		if (OpenBuy() >= 1)
 			g_lots_316 = NormalizeDouble(FindLastOrder("buy", "Lots") * Multiplier, DigitsAfterDot);
 			
@@ -299,7 +273,7 @@ void Unreal::StartEA(int pos) {
 	}
 	
 	if (gd_204 < gd_196 && Bid - FindLastSellPrice() >= MinStep * Point && (DoubleOne == true && OpenSell() <= MaxTrades) || (DoubleOne == false && OpenSell() < MaxTrades) &&
-		QQE == false || (gi_244 == true && QQE == true && iCustom(NULL, 0, "QQE", SF, 0, 1) < iCustom(NULL, 0, "QQE", SF, 1, 1))) {
+		QQE == false || (gi_244 == true && QQE == true && qqe_val < qqe_ma)) {
 		if (OpenSell() >= 1)
 			g_lots_316 = NormalizeDouble(FindLastOrder("sell", "Lots") * Multiplier, DigitsAfterDot);
 			
@@ -310,7 +284,7 @@ void Unreal::StartEA(int pos) {
 		while (g_ticket_256 < 1) {
 			g_count_260++;
 			RefreshRates();
-			g_ticket_256 = OrderSend(Symbol(), OP_SELL, g_lots_316, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number, 0, HotPink);
+			g_ticket_256 = OrderSend(Symbol(), OP_SELL, g_lots_316, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number);
 			
 			if (g_ticket_256 < 1) {
 				Print("Îøèáêà: " + GetLastError());
@@ -382,7 +356,7 @@ void Unreal::StartEA(int pos) {
 		while (g_ticket_256 < 1) {
 			g_count_260++;
 			RefreshRates();
-			g_ticket_256 = OrderSend(Symbol(), OP_SELL, l_minlot_20, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number, 0, HotPink);
+			g_ticket_256 = OrderSend(Symbol(), OP_SELL, l_minlot_20, NormalizeDouble(Bid, Digits), 3, 0, 0, "Two-Face v1.2", Magic_number);
 			
 			if (g_ticket_256 < 1) {
 				Print("Îøèáêà: " + GetLastError());
@@ -603,7 +577,6 @@ void Unreal::StartEA(int pos) {
 		gd_236 = 0;
 	}
 	
-	return (0);
 }
 
 double Unreal::FindLastBuyPrice() {
@@ -788,5 +761,3 @@ double Unreal::Balance(String as_0, String as_8) {
 }
 
 }
-
-#endif

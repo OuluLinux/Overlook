@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // stop trade
 
 namespace Overlook {
@@ -64,7 +62,6 @@ void Starter::StartEA(int pos) {
 			DeleteAllPending();
 	}
 	
-	return (0);
 }
 
 int Starter::TotalBuy() {
@@ -132,10 +129,8 @@ void Starter::DeleteAllPending() {
 			while (IsTradeContextBusy())
 				Sleep(500);
 				
-			Print("Óäàëÿåì îðäåð #" + OrderTicket() + ".");
-			
 			if (!OrderDelete(OrderTicket()))
-				Print("Íå óäàëîñü óäàëèòü îðäåð #" + OrderTicket() + ". Îøèáêà: " + ErrorDescription(GetLastError()));
+				;
 		}
 	}
 }
@@ -147,9 +142,7 @@ void Starter::SetSellStop(double a_price_0, double a_lots_8) {
 	int l_ticket_32 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_8, a_price_0, g_slippage_132, l_price_16, l_price_24, "", Magic, 0, Red);
 	
 	if (l_ticket_32 < 1) {
-		l_error_36 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð SELLSTOP îáúåìîì " + a_lots_8 + ". Îøèáêà #" + l_error_36 + " " + ErrorDescription(l_error_36));
-		Print(Bid + " " + a_price_0 + " " + l_price_16 + " " + l_price_24);
+		
 	}
 }
 
@@ -160,9 +153,7 @@ void Starter::SetBuyStop(double a_price_0, double a_lots_8) {
 	int l_ticket_32 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_8, a_price_0, g_slippage_132, l_price_16, l_price_24, "", Magic, 0, Blue);
 	
 	if (l_ticket_32 < 1) {
-		l_error_36 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð BUYSTOP îáúåìîì " + a_lots_8 + ". Îøèáêà #" + l_error_36 + " " + ErrorDescription(l_error_36));
-		Print(Bid + " " + a_price_0 + " " + l_price_16 + " " + l_price_24);
+		
 	}
 }
 
@@ -172,7 +163,7 @@ double Starter::ND(double ad_0) {
 
 void Starter::GetLastOrderParameters(double &a_ord_lots_0, double &a_ord_profit_8) {
 	a_ord_profit_8 = 0;
-	int l_datetime_16 = 0;
+	Time l_datetime_16(1970,1,1);
 	
 	for (int l_pos_20 = 0; l_pos_20 < OrdersHistoryTotal(); l_pos_20++) {
 		if (OrderSelect(l_pos_20, SELECT_BY_POS, MODE_HISTORY)) {
@@ -190,14 +181,14 @@ void Starter::GetLastOrderParameters(double &a_ord_lots_0, double &a_ord_profit_
 void Starter::DoTrail() {
 	for (int l_pos_0 = 0; l_pos_0 < OrdersTotal(); l_pos_0++) {
 		if (!OrderSelect(l_pos_0, SELECT_BY_POS, MODE_TRADES))
-			Print("Íå ïîëó÷èëîñü âûáðàòü îðäåð. Îøèáêà " + ErrorDescription(GetLastError()));
+			;
 		else {
 			if (OrderSymbol() == Symbol()) {
 				if (OrderType() == OP_BUY) {
 					if (OrderMagicNumber() == Magic) {
 						if (Bid - TrailingStop * Point > OrderOpenPrice() && Bid - TrailingStop * Point - OrderStopLoss() > TrailingStep * Point || OrderStopLoss() == 0.0)
 							if (!OrderModify(OrderTicket(), OrderOpenPrice(), Bid - TrailingStop * Point, OrderTakeProfit(), OrderExpiration(), Pink))
-								Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà " + ErrorDescription(GetLastError()));
+								;
 					}
 				}
 				
@@ -206,7 +197,7 @@ void Starter::DoTrail() {
 						if (OrderMagicNumber() == Magic) {
 							if (Ask + TrailingStop * Point < OrderOpenPrice() && OrderStopLoss() - (Ask + TrailingStop * Point) > TrailingStep * Point || OrderStopLoss() == 0.0)
 								if (!OrderModify(OrderTicket(), OrderOpenPrice(), Ask + TrailingStop * Point, OrderTakeProfit(), OrderExpiration(), Pink))
-									Print("Íå ïîëó÷èëîñü ìîäèôèöèðîâàòü îðäåð ¹" + OrderTicket() + ". Îøèáêà " + ErrorDescription(GetLastError()));
+									;
 						}
 					}
 				}
@@ -218,12 +209,17 @@ void Starter::DoTrail() {
 double Starter::GetProfitForDay(int ai_0) {
 	double ld_ret_4 = 0;
 	
+	Time today = Now;
+	today.hour = 0;
+	today.minute = 0;
+	today.second = 0;
+	
 	for (int l_pos_12 = 0; l_pos_12 < OrdersHistoryTotal(); l_pos_12++) {
 		if (!(OrderSelect(l_pos_12, SELECT_BY_POS, MODE_HISTORY)))
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic)
-			if (OrderCloseTime() >= iTime(Symbol(), PERIOD_D1, ai_0) && OrderCloseTime() < iTime(Symbol(), PERIOD_D1, ai_0) + 86400)
+			if (OrderCloseTime() >= today && OrderCloseTime() < today + 86400)
 				ld_ret_4 += OrderProfit();
 	}
 	
@@ -249,5 +245,3 @@ double Starter::LotsOptimized() {
 }
 
 }
-
-#endif

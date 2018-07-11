@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // turbo profit
 
 namespace Overlook {
@@ -25,11 +23,8 @@ void Turtle::InitEA() {
 		gia_596[gi_552] = 0;
 		gia_600[gi_552] = 0;
 		gia_604[gi_552] = 0;
-		Print(gia_568[gi_552], gia_572[gi_552], gia_584[gi_552], gia_588[gi_552], gia_592[gi_552], gia_596[gi_552], gia_600[gi_552], gia_604[gi_552]);
 	}
-	
-	return (0);
-}
+	}
 
 void Turtle::StartEA(int pos) {
 	int l_stoplevel_8;
@@ -56,11 +51,6 @@ void Turtle::StartEA(int pos) {
 	String ls_0 = Symbol();
 	
 	if (gd_296 < 100.0 && AccountFreeMargin() < AccountBalance() * gd_296 / 100.0) {
-		Print("Îïàñíàÿ ïðîñàäêà " + NormalizeDouble(AccountProfit(), 2) + "; íåäîñòàòî÷íî ñâîáîäíûõ ñðåäñòâ ñ÷åòà äëÿ ïðîäîëæåíèÿ òîðãîâëè " + NormalizeDouble(AccountFreeMargin(), 2) +
-			  ", ðåæèì îæèäàíèÿ âûõîäà èç ïðîñàäêè");
-		Comment("\n", "Îïàñíàÿ ïðîñàäêà " + NormalizeDouble(AccountProfit(), 2) + "; íåäîñòàòî÷íî ñâîáîäíûõ ñðåäñòâ ñ÷åòà äëÿ ïðîäîëæåíèÿ òîðãîâëè " + NormalizeDouble(AccountFreeMargin(), 2) +
-				", ðåæèì îæèäàíèÿ âûõîäà èç ïðîñàäêè");
-		Sleep(1000);
 		return;
 	}
 	
@@ -92,16 +82,6 @@ void Turtle::StartEA(int pos) {
 	if (gia_508[2] > 0 || gia_512[2] > 0)
 		gia_408[2] = 1;
 		
-	if (gia_508[1] == 0 && gia_512[1] == 0) {
-		ObjectDelete(gsa_396[1][0]);
-		ObjectDelete(gsa_396[1][1]);
-	}
-	
-	if (gia_508[2] == 0 && gia_512[2] == 0) {
-		ObjectDelete(gsa_396[2][0]);
-		ObjectDelete(gsa_396[2][1]);
-	}
-	
 	for (g_index_400 = 0; g_index_400 < gi_404; g_index_400++) {
 		Sleep(100);
 		
@@ -142,8 +122,7 @@ void Turtle::StartEA(int pos) {
 				li_72 = 0;
 				
 			if (((!IsOptimization()) && !IsTesting() && (!IsVisualMode())) || (ShowTableOnTesting && IsTesting() && (!IsOptimization()))) {
-				DrawStats();
-				DrawLogo();
+
 			}
 			
 			if (gi_232 * gi_644 < l_stoplevel_8)
@@ -336,41 +315,7 @@ void Turtle::StartEA(int pos) {
 					gia_636[g_index_400] = 1;
 			}
 			
-			if (gsa_412[g_index_400] == ls_0) {
-				if (gia_508[g_index_400] > gia_512[g_index_400]) {
-					ObjectCreate(gsa_396[g_index_400][0], OBJ_HLINE, 0, Now, gda_472[g_index_400][0][li_80] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_PRICE1, gda_472[g_index_400][0][li_80] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_COLOR, gia_392[g_index_400][0]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_STYLE, 7);
-					ObjectCreate(gsa_396[g_index_400][1], OBJ_HLINE, 0, Now, gda_472[g_index_400][0][li_76] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_PRICE1, gda_472[g_index_400][0][li_76] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_COLOR, gia_392[g_index_400][1]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_STYLE, 7);
-				}
-				
-				if (gia_508[g_index_400] < gia_512[g_index_400]) {
-					ObjectCreate(gsa_396[g_index_400][0], OBJ_HLINE, 0, Now, gda_472[g_index_400][1][li_88] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_PRICE1, gda_472[g_index_400][1][li_88] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_COLOR, gia_392[g_index_400][0]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_STYLE, 7);
-					ObjectCreate(gsa_396[g_index_400][1], OBJ_HLINE, 0, Now, gda_472[g_index_400][1][li_84] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_PRICE1, gda_472[g_index_400][1][li_84] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_COLOR, gia_392[g_index_400][1]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_STYLE, 7);
-				}
-				
-				if (gia_508[g_index_400] == gia_512[g_index_400]) {
-					ObjectCreate(gsa_396[g_index_400][0], OBJ_HLINE, 0, Now, gda_472[g_index_400][0][li_80] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_PRICE1, gda_472[g_index_400][0][li_80] - gda_672[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_COLOR, gia_392[g_index_400][0]);
-					ObjectSet(gsa_396[g_index_400][0], OBJPROP_STYLE, 7);
-					ObjectCreate(gsa_396[g_index_400][1], OBJ_HLINE, 0, Now, gda_472[g_index_400][1][li_84] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_PRICE1, gda_472[g_index_400][1][li_84] + gda_680[g_index_400]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_COLOR, gia_392[g_index_400][1]);
-					ObjectSet(gsa_396[g_index_400][1], OBJPROP_STYLE, 7);
-				}
-			}
-			
+
 			gi_unused_704 = 0;
 			
 			gi_unused_708 = 0;
@@ -420,7 +365,7 @@ void Turtle::StartEA(int pos) {
 				if (gda_648[g_index_400] == 0.0 || gia_508[g_index_400] > 0)
 					gd_360 = 0;
 					
-				gi_536 = OpOrd(gsa_412[g_index_400], gd_320, gda_492[g_index_400], g_ask_344, gd_368, gd_360, gia_432[g_index_400], gd_328);
+				gi_536 = OpOrd(gsa_412[g_index_400], gd_320, gda_492[g_index_400], g_ask_344, gd_368, gd_360, gia_432[g_index_400]);
 				
 				if (gi_536 > 0) {
 					gia_480[g_index_400][0][gia_508[g_index_400] + 1] = gi_536;
@@ -473,7 +418,7 @@ void Turtle::StartEA(int pos) {
 				if (gda_652[g_index_400] == 0.0 || gia_512[g_index_400] > 0)
 					gd_360 = 0;
 					
-				gi_536 = OpOrd(gsa_412[g_index_400], gd_320, gda_496[g_index_400], g_bid_352, gd_368, gd_360, gia_432[g_index_400], gd_328);
+				gi_536 = OpOrd(gsa_412[g_index_400], gd_320, gda_496[g_index_400], g_bid_352, gd_368, gd_360, gia_432[g_index_400]);
 				
 				if (gi_536 > 0)
 					gia_480[g_index_400][1][gia_512[g_index_400] + 1] = gi_536;
@@ -505,7 +450,7 @@ void Turtle::StartEA(int pos) {
 			if (gia_616[g_index_400] == 1 || gia_576[g_index_400] == 1) {
 				for (gi_556 = 1; gi_556 < gia_508[g_index_400]; gi_556++) {
 					OrderSelect(gia_480[g_index_400][0][gi_556], SELECT_BY_TICKET, MODE_TRADES);
-					gi_536 = OrderClose(OrderTicket(), OrderLots(), MarketInfo(gsa_412[g_index_400], MODE_BID), g_slippage_316, gia_392[g_index_400][0]);
+					gi_536 = OrderClose(OrderTicket(), OrderLots(), MarketInfo(gsa_412[g_index_400], MODE_BID), g_slippage_316);
 					
 					if (gi_536 == 1 && gia_576[g_index_400] != 1)
 						gia_576[g_index_400] = 0;
@@ -529,7 +474,7 @@ void Turtle::StartEA(int pos) {
 					
 					if (OrderType() == OP_BUY && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400]) {
 						if (gd_384 - gda_700[g_index_400] * l_point_16 != OrderStopLoss() || OrderStopLoss() == 0.0) {
-							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), gd_384 - gda_700[g_index_400] * l_point_16, g_price_736, 0, gia_392[g_index_400][0]);
+							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), gd_384 - gda_700[g_index_400] * l_point_16, g_price_736);
 							
 							if (gi_536 == false)
 								gia_584[g_index_400] = 1;
@@ -551,7 +496,7 @@ void Turtle::StartEA(int pos) {
 					
 					if (OrderType() == OP_SELL && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400]) {
 						if (gd_384 - (gda_700[g_index_400] - l_spread_12) * l_point_16 != OrderTakeProfit() || OrderTakeProfit() == 0.0) {
-							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), g_price_744, gd_384 - (gda_700[g_index_400] - l_spread_12) * l_point_16, 0, gia_392[g_index_400][1]);
+							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), g_price_744, gd_384 - (gda_700[g_index_400] - l_spread_12) * l_point_16);
 							
 							if (gi_536 == false)
 								gia_588[g_index_400] = 1;
@@ -570,7 +515,7 @@ void Turtle::StartEA(int pos) {
 			if (gia_620[g_index_400] == 1 || gia_580[g_index_400] == 1) {
 				for (gi_556 = 1; gi_556 < gia_512[g_index_400]; gi_556++) {
 					OrderSelect(gia_480[g_index_400][1][gi_556], SELECT_BY_TICKET, MODE_TRADES);
-					gi_536 = OrderClose(OrderTicket(), OrderLots(), MarketInfo(gsa_412[g_index_400], MODE_ASK), g_slippage_316, gia_392[g_index_400][1]);
+					gi_536 = OrderClose(OrderTicket(), OrderLots(), MarketInfo(gsa_412[g_index_400], MODE_ASK), g_slippage_316);
 					
 					if (gi_536 == 1 && gia_580[g_index_400] != 1)
 						gia_580[g_index_400] = 0;
@@ -594,7 +539,7 @@ void Turtle::StartEA(int pos) {
 					
 					if (OrderType() == OP_BUY && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400]) {
 						if (gd_384 + gda_696[g_index_400] * l_point_16 != OrderTakeProfit() || OrderTakeProfit() == 0.0) {
-							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), g_price_736, gd_384 + gda_696[g_index_400] * l_point_16, 0, gia_392[g_index_400][0]);
+							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), g_price_736, gd_384 + gda_696[g_index_400] * l_point_16);
 							
 							if (gi_536 == false)
 								gia_592[g_index_400] = 1;
@@ -616,7 +561,7 @@ void Turtle::StartEA(int pos) {
 					
 					if (OrderType() == OP_SELL && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400]) {
 						if (gd_384 + (gda_696[g_index_400] + l_spread_12) * l_point_16 != OrderStopLoss() || OrderStopLoss() == 0.0) {
-							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), gd_384 + (gda_696[g_index_400] + l_spread_12) * l_point_16, g_price_744, 0, gia_392[g_index_400][1]);
+							gi_536 = OrderModify(OrderTicket(), OrderOpenPrice(), gd_384 + (gda_696[g_index_400] + l_spread_12) * l_point_16, g_price_744);
 							
 							if (gi_536 == false)
 								gia_596[g_index_400] = 1;
@@ -654,32 +599,17 @@ void Turtle::StartEA(int pos) {
 				
 				gsa_88[g_index_400] = "Âñïîìîãàòåëüíàÿ. Òðàëë BUY";
 				
-				if (gsa_412[g_index_400] == ls_0) {
-					ObjectCreate("UBB", OBJ_HLINE, 0, Now, g_price_752);
-					ObjectSet("UBB", OBJPROP_PRICE1, g_price_752);
-					ObjectSet("UBB", OBJPROP_COLOR, gia_392[g_index_400][0]);
-					ObjectSet("UBB", OBJPROP_WIDTH, 2);
-					ObjectCreate("SLB", OBJ_HLINE, 0, Now, l_bid_24 - gia_664[g_index_400] * l_point_16);
-					ObjectSet("SLB", OBJPROP_PRICE1, l_bid_24 - gia_664[g_index_400] * l_point_16);
-					ObjectSet("SLB", OBJPROP_COLOR, gia_392[g_index_400][0]);
-					ObjectSet("SLB", OBJPROP_STYLE, STYLE_DASHDOT);
-				}
-				
 				if (gia_508[g_index_400] > 0 && g_price_752 < l_bid_24 - gia_664[g_index_400] * l_point_16) {
 					for (gi_552 = 1; gi_552 <= gia_508[g_index_400]; gi_552++) {
 						OrderSelect(gia_480[g_index_400][0][gi_552], SELECT_BY_TICKET, MODE_TRADES);
 						
 						if (OrderType() == OP_BUY && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400])
 							if (l_bid_24 - gia_664[g_index_400] * l_point_16 > OrderStopLoss() || OrderStopLoss() == 0.0)
-								gi_536 = OrderModify(gia_480[g_index_400][0][gi_552], OrderOpenPrice(), l_bid_24 - gia_664[g_index_400] * l_point_16, g_price_736, 0, gia_392[g_index_400][0]);
+								gi_536 = OrderModify(gia_480[g_index_400][0][gi_552], OrderOpenPrice(), l_bid_24 - gia_664[g_index_400] * l_point_16, g_price_736);
 					}
 				}
 			}
 			
-			else {
-				ObjectDelete("UBB");
-				ObjectDelete("SLB");
-			}
 			
 			if ((gia_508[g_index_400] == 0 && gia_512[g_index_400] > 0) || (gia_508[g_index_400] > 1 && gia_512[g_index_400] > 1 && Ask < ld_116)) {
 				g_price_760 = U0(gia_508[g_index_400], gia_512[g_index_400]) - gda_772[g_index_400] * l_point_16;
@@ -692,16 +622,6 @@ void Turtle::StartEA(int pos) {
 				
 				gsa_88[g_index_400] = "Âñïîìîãàòåëüíàÿ. Òðàëë SELL";
 				
-				if (gsa_412[g_index_400] == ls_0) {
-					ObjectCreate("UBS", OBJ_HLINE, 0, Now, g_price_760);
-					ObjectSet("UBS", OBJPROP_PRICE1, g_price_760);
-					ObjectSet("UBS", OBJPROP_COLOR, gia_392[g_index_400][1]);
-					ObjectSet("UBS", OBJPROP_WIDTH, 2);
-					ObjectCreate("SLS", OBJ_HLINE, 0, Now, l_ask_32 + gia_668[g_index_400] * l_point_16);
-					ObjectSet("SLS", OBJPROP_PRICE1, l_ask_32 + gia_668[g_index_400] * l_point_16);
-					ObjectSet("SLS", OBJPROP_COLOR, gia_392[g_index_400][1]);
-					ObjectSet("SLS", OBJPROP_STYLE, STYLE_DASHDOT);
-				}
 				
 				if (gia_512[g_index_400] > 0 && g_price_760 > l_ask_32 + gia_668[g_index_400] * l_point_16) {
 					for (gi_552 = 1; gi_552 <= gia_512[g_index_400]; gi_552++) {
@@ -709,15 +629,11 @@ void Turtle::StartEA(int pos) {
 						
 						if (OrderType() == OP_SELL && OrderMagicNumber() == gia_432[g_index_400] && OrderSymbol() == gsa_412[g_index_400])
 							if (l_ask_32 + gia_668[g_index_400] * l_point_16 < OrderStopLoss() || OrderStopLoss() == 0.0)
-								gi_536 = OrderModify(gia_480[g_index_400][1][gi_552], OrderOpenPrice(), l_ask_32 + gia_668[g_index_400] * l_point_16, g_price_744, 0, gia_392[g_index_400][1]);
+								gi_536 = OrderModify(gia_480[g_index_400][1][gi_552], OrderOpenPrice(), l_ask_32 + gia_668[g_index_400] * l_point_16, g_price_744);
 					}
 				}
 			}
 			
-			else {
-				ObjectDelete("UBS");
-				ObjectDelete("SLS");
-			}
 			
 			gia_576[g_index_400] = 0;
 			
@@ -757,13 +673,11 @@ void Turtle::StartEA(int pos) {
 		}
 	}
 	
-	
-	return (0);
 }
 
-int Turtle::OpOrd(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44, color a_color_48) {
+int Turtle::OpOrd(String a_symbol_0, int a_cmd_8, double a_lots_12, double a_price_20, double a_price_28, double a_price_36, int a_magic_44) {
 	int l_ticket_52;
-	l_ticket_52 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, 6, a_price_28, a_price_36, gsa_412[g_index_400] + " MGK-" + a_magic_44 + " òîðã.ñë.¹" + g_index_400, a_magic_44, 0, a_color_48);
+	l_ticket_52 = OrderSend(a_symbol_0, a_cmd_8, a_lots_12, a_price_20, 6, a_price_28, a_price_36, "" + g_index_400, a_magic_44);
 	return (l_ticket_52);
 }
 
@@ -945,12 +859,17 @@ void Turtle::N() {
 double Turtle::GetProfitForDay(int ai_0) {
 	double ld_ret_4 = 0;
 	
+	Time today = Now;
+	today.hour = 0;
+	today.minute = 0;
+	today.second = 0;
+	
 	for (int l_pos_12 = 0; l_pos_12 < OrdersHistoryTotal(); l_pos_12++) {
 		if (!(OrderSelect(l_pos_12, SELECT_BY_POS, MODE_HISTORY)))
 			break;
 			
 		if (OrderSymbol() == gsa_412[g_index_400] && OrderMagicNumber() == gia_432[0] || OrderMagicNumber() == gia_432[1] || OrderMagicNumber() == gia_432[2])
-			if (OrderCloseTime() >= iTime(gsa_412[g_index_400], PERIOD_D1, ai_0) && OrderCloseTime() < iTime(gsa_412[g_index_400], PERIOD_D1, ai_0) + 86400)
+			if (OrderCloseTime() >= today && OrderCloseTime() < today + 86400)
 				ld_ret_4 = ld_ret_4 + OrderProfit() + OrderCommission() + OrderSwap();
 	}
 	
@@ -958,5 +877,3 @@ double Turtle::GetProfitForDay(int ai_0) {
 }
 
 }
-
-#endif

@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // forex detector
 
 namespace Overlook {
@@ -21,9 +19,9 @@ void Sherlock::InitEA() {
 	gi_396 = gi_392;
 	
 	if (gi_408 == false && gi_444 == false) {
+		
 	}
 	
-	return (0);
 }
 
 void Sherlock::StartEA(int pos) {
@@ -33,12 +31,15 @@ void Sherlock::StartEA(int pos) {
 	int l_ticket_12;
 	int l_ticket_16;
 	int l_ticket_40;
-	int l_error_24 = GetLastError();
 	
-	if (l_error_24 == 140/* LONG_POSITIONS_ONLY_ALLOWED */) {
-		g_ord_total_628 = OrdersTotal();
-		nr_total_orders = g_ord_total_628 - 2;
-	}
+	if (pos < 10)
+		return;
+	
+	CompatBuffer Open(GetInputBuffer(0, 0), pos, 0);
+	CompatBuffer Close(GetInputBuffer(0, 0), pos, 1);
+	CompatBuffer Low(GetInputBuffer(0, 1), pos, 0);
+	CompatBuffer High(GetInputBuffer(0, 2), pos, 0);
+	CompatBuffer Time(GetInputBuffer(0, 4), pos, 0);
 	
 	for (gi_540 = Bars - 2; gi_540 >= 0; gi_540--) {
 		if (High[gi_540 + 1] > gd_552)
@@ -47,7 +48,7 @@ void Sherlock::StartEA(int pos) {
 		if (Low[gi_540 + 1] < gd_544)
 			gd_544 = Low[gi_540 + 1];
 			
-		if (TimeDay(Time[gi_540]) != TimeDay(Time[gi_540 + 1])) {
+		if (TimeDay(Upp::Time(1970,1,1) + Time[gi_540]) != TimeDay(Upp::Time(1970,1,1) + Time[gi_540 + 1])) {
 			gd_468 = gd_460;
 			gd_460 = gd_452;
 			gd_452 = (gd_552 + gd_544 + (Close[gi_540 + 1])) / 3.0;
@@ -63,8 +64,7 @@ void Sherlock::StartEA(int pos) {
 		}
 	}
 	
-	if (TimeDay(Now) != TimeDay(Time[1]) && gi_584 == false) {
-		ObjectsDeleteAll();
+	if (TimeDay(Now) != TimeDay(Upp::Time(1970,1,1) + Time[1]) && gi_584 == false) {
 		gi_168 = true;
 		gi_172 = true;
 		gi_176 = true;
@@ -78,7 +78,7 @@ void Sherlock::StartEA(int pos) {
 		gi_396 = gi_392;
 	}
 	
-	if (TimeDay(Now) == TimeDay(Time[1]) && gi_584 == true)
+	if (TimeDay(Now) == TimeDay(Upp::Time(1970,1,1) + Time[1]) && gi_584 == true)
 		gi_584 = false;
 		
 	gd_unused_532 = gd_452;
@@ -116,8 +116,6 @@ void Sherlock::StartEA(int pos) {
 			if (OrderSelect(l_pos_28, SELECT_BY_POS, MODE_TRADES) == true)
 				gi_588 = true;
 				
-		if (gi_588 == false)
-			ObjectsDeleteAll();
 	}
 	
 	if (Use_trail == true) {
@@ -135,17 +133,17 @@ void Sherlock::StartEA(int pos) {
 						if (Ask - OrderOpenPrice() > Point * (trail_in_pips + trail_space) && Ask > OrderOpenPrice() + Point * trail_in_pips)
 							OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(OrderOpenPrice() + Point * trail_in_pips, Digits), OrderTakeProfit(), 0, Blue);
 				}
-			}
-			
-			if (OrderSymbol() == Symbol() && OrderType() == OP_SELL) {
-				if (OrderStopLoss() < OrderOpenPrice()) {
-					if (OrderStopLoss() - Bid > Point * (trail_in_pips + trail_space) && Bid < OrderStopLoss() - Point * trail_in_pips)
-						OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(OrderStopLoss() - Point * trail_in_pips, Digits), OrderTakeProfit(), 0, Blue);
-				}
 				
-				else
-					if (OrderOpenPrice() - Bid > Point * (trail_in_pips + trail_space) && Bid < OrderOpenPrice() - Point * trail_in_pips)
-						OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(OrderOpenPrice() - Point * trail_in_pips, Digits), OrderTakeProfit(), 0, Blue);
+				else if (OrderSymbol() == Symbol() && OrderType() == OP_SELL) {
+					if (OrderStopLoss() < OrderOpenPrice()) {
+						if (OrderStopLoss() - Bid > Point * (trail_in_pips + trail_space) && Bid < OrderStopLoss() - Point * trail_in_pips)
+							OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(OrderStopLoss() - Point * trail_in_pips, Digits), OrderTakeProfit(), 0, Blue);
+					}
+					
+					else
+						if (OrderOpenPrice() - Bid > Point * (trail_in_pips + trail_space) && Bid < OrderOpenPrice() - Point * trail_in_pips)
+							OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(OrderOpenPrice() - Point * trail_in_pips, Digits), OrderTakeProfit(), 0, Blue);
+				}
 			}
 		}
 	}
@@ -158,7 +156,7 @@ void Sherlock::StartEA(int pos) {
 				if (OrderMagicNumber() < gi_392 && OrderSymbol() == Symbol() && OrderType() == OP_BUYLIMIT || OrderType() == OP_BUYSTOP)
 					OrderDelete(OrderTicket());
 					
-				if (OrderMagicNumber() < gi_392 && OrderSymbol() == Symbol() && OrderType() == OP_SELLLIMIT || OrderType() == OP_SELLSTOP)
+				else if (OrderMagicNumber() < gi_392 && OrderSymbol() == Symbol() && OrderType() == OP_SELLLIMIT || OrderType() == OP_SELLSTOP)
 					OrderDelete(OrderTicket());
 			}
 		}
@@ -740,9 +738,6 @@ void Sherlock::StartEA(int pos) {
 	gi_396 = gi_392;
 	
 	gi_unused_448 = true;
-	return (0);
 }
 
 }
-
-#endif

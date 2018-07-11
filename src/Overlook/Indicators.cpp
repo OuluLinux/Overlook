@@ -2037,7 +2037,7 @@ void RelativeStrengthIndex::Start() {
 		diff = value - prev_value;
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
 		neg_buffer.Set(i, ( neg_buffer.Get(i - 1) * ( period - 1 ) + ( diff < 0.0 ? -diff : 0.0 ) ) / period);
-		double rsi = (1.0 - 1.0 / ( 1.0 + pos_buffer.Get(i) / neg_buffer.Get(i) )) * 2.0 - 1.0;
+		double rsi = (1.0 - 1.0 / ( 1.0 + pos_buffer.Get(i) / neg_buffer.Get(i) )) * 100;
 		buffer.Set(i, rsi);
 		prev_value = value;
 		
@@ -6403,6 +6403,201 @@ bool AvoidancePeaks::GetType(int pos, ConstBuffer& open_buf, ConstBuffer& avoid_
 	}
 	return diff_sum < 0.0;
 }
+
+
+
+
+
+
+
+
+
+
+Laguerre::Laguerre() {
+	
+	
+	
+}
+
+void Laguerre::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Red);
+	SetCoreMaximum(1.0);
+	SetCoreMinimum(0.0);
+	
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 0.25);
+	SetCoreLevel(1, 0.5);
+	SetCoreLevel(2, 0.75);
+	
+	
+}
+
+void Laguerre::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0, 4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	Buffer& dst = GetBuffer(0);
+	
+	int bars = GetBars() - 1;
+	int counted = GetCounted();
+	
+	if (counted)
+		counted--;
+	else
+		counted++;
+		
+	double gammaf = gamma * 0.01;
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		gd_120 = gd_88;
+		gd_128 = gd_96;
+		gd_136 = gd_104;
+		gd_144 = gd_112;
+		gd_88 = (1 - gammaf) * src.Get(i) + gammaf * gd_120;
+		gd_96 = (-gammaf) * gd_88 + gd_120 + gammaf * gd_128;
+		gd_104 = (-gammaf) * gd_96 + gd_128 + gammaf * gd_136;
+		gd_112 = (-gammaf) * gd_104 + gd_136 + gammaf * gd_144;
+		gd_160 = 0;
+		gd_168 = 0;
+		
+		if (gd_88 >= gd_96)
+			gd_160 = gd_88 - gd_96;
+		else
+			gd_168 = gd_96 - gd_88;
+			
+		if (gd_96 >= gd_104)
+			gd_160 = gd_160 + gd_96 - gd_104;
+		else
+			gd_168 = gd_168 + gd_104 - gd_96;
+			
+		if (gd_104 >= gd_112)
+			gd_160 = gd_160 + gd_104 - gd_112;
+		else
+			gd_168 = gd_168 + gd_112 - gd_104;
+			
+		if (gd_160 + gd_168 != 0.0)
+			gd_152 = gd_160 / (gd_160 + gd_168);
+		
+		dst.Set(i, gd_152);
+		
+		sig.signal.Set(i, gd_152 >= 0.5);
+	}
+}
+
+
+void Laguerre::Assist(int cursor, VectorBool& vec) {
+	double value0 = GetBuffer(0).Get(cursor);
+	if (value0 > 0.5)		vec.Set(PC_INC, true);
+	else					vec.Set(PC_DEC, true);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+QuantitativeQualitativeEstimation::QuantitativeQualitativeEstimation() {
+	
+	
+	
+}
+
+void QuantitativeQualitativeEstimation::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Blue);
+	
+	SetCoreLevelCount(3);
+	SetCoreLevel(0, 25);
+	SetCoreLevel(1, 50);
+	SetCoreLevel(2, 75);
+	
+	SetBufferLineWidth(0, 2);
+	
+	AddSubCore<RelativeStrengthIndex>()
+		.Set("period", period);
+	
+	
+}
+
+void QuantitativeQualitativeEstimation::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0, 4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	Buffer& dst = GetBuffer(1);
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	if (counted)
+		counted--;
+	
+	Buffer& rsi_ma_buffer = GetBuffer(0);
+	ConstBuffer& rsi_buffer = At(0).GetBuffer(0);
+	ExponentialMAOnBuffer( bars, counted, 0, period, rsi_buffer, rsi_ma_buffer );
+	
+	Buffer& rsi_absdiff_buffer = GetBuffer(2);
+	for (int i = max(1, counted); i < bars; i++) {
+		double cur = rsi_ma_buffer.Get(i);
+		double prev = rsi_ma_buffer.Get(i-1);
+		double val = fabs(prev - cur);
+		rsi_absdiff_buffer.Set(i, val);
+	}
+	
+	Buffer& rsi_absdiff_ma_buffer = GetBuffer(3);
+	ExponentialMAOnBuffer( bars, counted, 0, period, rsi_absdiff_buffer, rsi_absdiff_ma_buffer );
+	
+	double d = counted > 0 ? dst.Get(counted - 1) : 0.0;
+	for (int i = max(1, counted); i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double cur_rsi_ma = rsi_ma_buffer.Get(i);
+		double cur_rsi_ma_prev = rsi_ma_buffer.Get(i-1);
+		double cur_absdiff_ma = rsi_absdiff_ma_buffer.Get(i);
+		double cur = 4.236 * cur_absdiff_ma;
+		
+		double d2 = d;
+		if (cur_rsi_ma < d)
+		{
+			d = cur_rsi_ma + cur_absdiff_ma;
+			
+			if (cur_rsi_ma_prev < d2)
+				if (d > d2)
+					d = d2;
+		}
+		
+		else if (cur_rsi_ma > d) {
+			d = cur_rsi_ma - cur_absdiff_ma;
+			
+			if (cur_rsi_ma_prev > d2)
+				if (d < d2)
+					d = d2;
+		}
+
+		dst.Set(i, d);
+		
+		sig.signal.Set(i, d >= 50);
+	}
+}
+
+
+
 
 
 

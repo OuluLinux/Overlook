@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // royale wave
 
 namespace Overlook {
@@ -11,7 +9,7 @@ Roulette::Roulette() {
 }
 
 void Roulette::InitEA() {
-	return (0);
+	
 }
 
 void Roulette::StartEA(int pos) {
@@ -45,16 +43,16 @@ void Roulette::StartEA(int pos) {
 	
 	if (g_count_240 < 1) {
 		if (TimeYear(TimeCurrent()) < gi_204)
-			return (0);
+			return;
 			
 		if (TimeMonth(TimeCurrent()) < gi_208)
-			return (0);
+			return;
 			
 		if (TimeYear(TimeCurrent()) > gi_212)
-			return (0);
+			return;
 			
 		if (TimeMonth(TimeCurrent()) > gi_216)
-			return (0);
+			return;
 	}
 	
 	if (Symbol() == "EURUSD")
@@ -85,7 +83,7 @@ void Roulette::StartEA(int pos) {
 		
 	int li_0 = 0;
 	
-	if (TimeMinute(gda_396[li_0][0]) == 0 && TimeHour(gda_396[li_0][0]) == 0)
+	if (TimeMinute(Time(1970,1,1) + gda_396[li_0][0]) == 0 && TimeHour(Time(1970,1,1) + gda_396[li_0][0]) == 0)
 		g_ord_open_price_316 = 0;
 		
 	if (g_ord_open_price_316 == 0.0) {
@@ -128,15 +126,6 @@ void Roulette::StartEA(int pos) {
 			gs_376 = "Waiting for next Signal";
 		else
 			gs_376 = " ";
-			
-		Comment("EARoyaleWave",
-				"\nwww.santaiforex.afcobiz.com",
-				"\nForex Account Server : ", AccountServer(),
-				"\nDate : ", Month(), "-", Day(), "-", Year(),
-				"\n", "Server Time: ", Hour(), ":", Minute(), ":", Seconds(),
-				"\nSerial Number : ", gs_rw0004_76,
-				"\nEmail Address : ", gs_84,
-				"\n", gs_376);
 	}
 	
 	if (gi_304 == 1 && gi_312 == true) {
@@ -173,7 +162,7 @@ void Roulette::StartEA(int pos) {
 				
 			OrderSend(Symbol(), OP_SELL, g_lots_292, g_bid_276, g_slippage_248, g_price_252, g_price_260, 0, 0, 0, Red);
 			
-			return (0);
+			return;
 		}
 	}
 	
@@ -211,13 +200,10 @@ void Roulette::StartEA(int pos) {
 				
 			OrderSend(Symbol(), OP_BUY, g_lots_292, g_ask_268, g_slippage_248, g_price_252, g_price_260, 0, 0, 0, Blue);
 			
-			return (0);
+			return;
 		}
 	}
 	
-	return (0);
 }
 
 }
-
-#endif

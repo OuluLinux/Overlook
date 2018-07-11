@@ -71,7 +71,7 @@ bool MultiExpertAdvisor::TrainingBegin() {
 		opt.Min()[row] = 1.0;
 		opt.Max()[row++] = 1000.;
 		
-		opt.SetMaxGenerations(1000);
+		opt.SetMaxGenerations(3000);
 		opt.Init(opt_size, 50);
 	}
 	max_rounds = opt.GetMaxRounds();
@@ -112,6 +112,9 @@ bool MultiExpertAdvisor::TrainingIterator() {
 		besteq_pts.SetCount(count, 0);
 		cureq_pts.SetCount(count, 0);
 		
+		VectorMap<int, int> change_map;
+		double prev_sbeq = sb.AccountEquity();
+		
 		for(int i = 1; i < count; i++) {
 			double ask = open_buf.Get(i);
 			double bid = ask - 3 * point;
@@ -151,13 +154,37 @@ bool MultiExpertAdvisor::TrainingIterator() {
 			//sb.Cycle();
 			if (sb.AccountEquity() < 0.0) {
 				sb.CloseAll();
+				change_map.GetAdd(0, 0) += count - i;
 				break;
 			}
 			cureq_pts[i] = sb.AccountEquity();
+			
+			
+			double eq_change = eq / prev_sbeq - 1.0;
+			int eq_change_i = eq_change * 10000;
+			change_map.GetAdd(eq_change_i, 0)++;
+			
+			prev_sbeq = eq;
+		}
+		
+		SortByKey(change_map, StdLess<int>());
+		int64 sum = 0;
+		for(int i = 0; i < change_map.GetCount(); i++)
+			sum += change_map[i];
+		int64 tgt = sum / 2;
+		sum = 0;
+		int result = 0;
+		for(int i = 0; i < change_map.GetCount(); i++) {
+			sum += change_map[i];
+			if (sum >= tgt) {
+				result = change_map.GetKey(i);
+				break;
+			}
 		}
 		
 		
-		double eq = max(0.0, sb.AccountEquity());
+		//double eq = max(0.0, sb.AccountEquity());
+		double eq = result;
 		training_pts[round] = eq + Random(2);
 		bool is_best = eq >= opt.GetBestEnergy();
 		opt.Stop(eq);
@@ -166,6 +193,7 @@ bool MultiExpertAdvisor::TrainingIterator() {
 			for(int i = 0; i < count; i++)
 				besteq_pts[i] = cureq_pts[i];
 		}
+		
 	}
 	catch (ConfExc e) {
 		LOG(e);

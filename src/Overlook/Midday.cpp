@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // dayscalp
 
 namespace Overlook {
@@ -11,9 +9,9 @@ Midday::Midday() {
 }
 
 void Midday::InitEA() {
-	string ls_0;
-	string ls_8;
-	string ls_16;
+	String ls_0;
+	String ls_8;
+	String ls_16;
 	/*if (!(IsDemo() || IsTesting() || IsOptimization()))
 	{
 	   if (7.0 * (5.0 * (3.0 * AccountNumber() + 4.0) + 7.0) != LicenseKey) {
@@ -36,7 +34,6 @@ void Midday::InitEA() {
 	else
 		g_lots_232 = Lots;
 		
-	return (0);
 }
 
 void Midday::StartEA(int pos) {
@@ -50,9 +47,14 @@ void Midday::StartEA(int pos) {
 	double l_pips_56;
 	
 	if (!myCheckAllowWorking())
-		return (0);
+		return;
+	
+	if (pos < 2)
+		return;
+	CompatBuffer Low(GetInputBuffer(0, 1), pos, 0);
+	CompatBuffer High(GetInputBuffer(0, 2), pos, 0);
 		
-	double ld_64 = (iHigh(NULL, PERIOD_H1, 1) - iLow(NULL, PERIOD_H1, 1)) / Point;
+	double ld_64 = (High[1] - Low[1]) / Point;
 	
 	int l_ticket_72 = 0;
 	
@@ -308,19 +310,8 @@ void Midday::StartEA(int pos) {
 			OrderSend(Symbol(), OP_SELLLIMIT, l_lots_40, l_price_0, 3, l_price_8, l_price_24, "", magic, 0, Red);
 	}
 	
-	Comment("DayScalp v1.0 by peregruzok.net",
-	
-			"\n",
-			"\n", "  ---------------- ÏÐÈÁÛËÜ ÏÎ ÈÍÑÒÐÓÌÅÍÒÓ  ", Symbol(), " -------------------",
-			"\n", "  Ïðèáûëü ñåãîäíÿ      = $ ", NormalizeDouble(getDayProfit(1, 0), 2),
-			"\n", "  Ïðèáûëü â÷åðà        = $ ", NormalizeDouble(getDayProfit(1, 1), 2),
-			"\n", "  Ïðèáûëü ïîçàâ÷åðà  = $ ", NormalizeDouble(getDayProfit(1, 2), 2),
-			"\n", "  -------------------- ÏÎ Ñ×ÅÒÓ -----------------------",
-			"\n", "  Ïðèáûëü ñåãîäíÿ     = $ ", NormalizeDouble(getDayProfitall(1, 0), 2),
-			"\n", "  Ïðèáûëü â÷åðà        = $ ", NormalizeDouble(getDayProfitall(1, 1), 2),
-			"\n", "  Ïðèáûëü ïîçàâ÷åðà = $ ", NormalizeDouble(getDayProfitall(1, 2), 2));
-	        
-	for (l_pos_196 = 0; l_pos_196 < OrdersTotal(); l_pos_196++) {
+
+	for (int l_pos_196 = 0; l_pos_196 < OrdersTotal(); l_pos_196++) {
 		OrderSelect(l_pos_196, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() == Symbol() && OrderType() == OP_BUY && l_ticket_72 != 0 && OrderMagicNumber() == magic) {
@@ -360,7 +351,6 @@ void Midday::StartEA(int pos) {
 		}
 	}
 	
-	return (0);
 }
 
 int Midday::sum_buy() {
@@ -395,7 +385,7 @@ double Midday::getDayProfit(int ai_0, int ai_4) {
 	int l_year_8;
 	int l_month_12;
 	int l_day_16;
-	int l_datetime_20;
+	Time l_datetime_20;
 	int l_hist_total_24 = OrdersHistoryTotal();
 	double ld_ret_28 = 0;
 	
@@ -420,7 +410,7 @@ double Midday::getDayProfitall(int ai_0, int ai_4) {
 	int l_year_8;
 	int l_month_12;
 	int l_day_16;
-	int l_datetime_20;
+	Time l_datetime_20;
 	int l_hist_total_24 = OrdersHistoryTotal();
 	double ld_ret_28 = 0;
 	
@@ -522,13 +512,8 @@ int Midday::ProfitMM(double ad_0) {
 bool Midday::myCheckAllowWorking() {
 	if (gi_400)
 		return (false);
-		
-	if (!IsTradeAllowed())
-		return (false);
-		
+			
 	return (true);
 }
 
 }
-
-#endif

@@ -1,8 +1,5 @@
 #include "Overlook.h"
 
-
-#if 0
-
 // proverka
 
 namespace Overlook {
@@ -13,17 +10,21 @@ Sunrise::Sunrise() {
 
 void Sunrise::InitEA() {
 	
-	LotDecimal = LotDecimal();
+	LotDecimal = GetLotDecimal();
 	
 }
 
 void Sunrise::StartEA(int pos) {
+	this->pos = pos;
+	
+	if (pos < 1)
+		return;
+	
 	int j;
 	
 	if (LotDecimal == 0)
-		LotDecimal = LotDecimal();
+		LotDecimal = GetLotDecimal();
 		
-	Information();
 	
 	LongTradeNew = true;
 	
@@ -38,8 +39,8 @@ void Sunrise::StartEA(int pos) {
 	}*/
 	//----
 	
-	if (timeprevMIN != iTime(NULL, OpenNewTF, 0)) {
-		CountTrades = CountTrades("buy");
+	if (timeprevMIN != Now) {
+		CountTrades = GetCountTrades("buy");
 		
 		if (CountTrades == 0 && LongTradeNew == true) {
 			CommentTrades = "Martini " + Symbol() + " - Buy " + (CountTrades + 1);
@@ -56,7 +57,7 @@ void Sunrise::StartEA(int pos) {
 			}
 			
 			if (ticket < 0) {
-				Print("ÎØÈÁÊÀ: ", GetLastError());
+
 			}
 			
 			else {
@@ -65,7 +66,7 @@ void Sunrise::StartEA(int pos) {
 			
 		}
 		
-		CountTrades = CountTrades("sell");
+		CountTrades = GetCountTrades("sell");
 		
 		if (CountTrades == 0 && ShortTradeNew == true) {
 			CommentTrades = "Martini " + Symbol() + " - Sell " + (CountTrades + 1);
@@ -82,7 +83,7 @@ void Sunrise::StartEA(int pos) {
 			}
 			
 			if (ticket < 0) {
-				Print("ÎØÈÁÊÀ=", GetLastError());
+
 			}
 			
 			else {
@@ -93,11 +94,11 @@ void Sunrise::StartEA(int pos) {
 		Norrect("buy");
 		
 		Norrect("sell");
-		timeprevMIN = iTime(NULL, OpenNewTF, 0);
+		timeprevMIN = Now;
 	}
 	
-	if (timeprevMAX != iTime(NULL, OpenNextTF, 0)) {
-		CountTrades = CountTrades("buy");
+	if (timeprevMAX != Now) {
+		CountTrades = GetCountTrades("buy");
 		
 		if (CountTrades > 0 && NextOrder("buy")) {
 			CommentTrades = "Martini " + Symbol() + " - Buy " + (CountTrades + 1);
@@ -113,7 +114,7 @@ void Sunrise::StartEA(int pos) {
 			}
 			
 			if (ticket < 0) {
-				Print("ÎØÈÁÊÀ: ", GetLastError());
+
 			}
 			
 			else {
@@ -123,7 +124,7 @@ void Sunrise::StartEA(int pos) {
 			}
 		}
 		
-		CountTrades = CountTrades("sell");
+		CountTrades = GetCountTrades("sell");
 		
 		if (CountTrades > 0 && NextOrder("sell")) {
 			CommentTrades = "Martini " + Symbol() + " - Sell " + (CountTrades + 1);
@@ -139,7 +140,7 @@ void Sunrise::StartEA(int pos) {
 			}
 			
 			if (ticket < 0) {
-				Print("ÎØÈÁÊÀ: ", GetLastError());
+
 			}
 			
 			else {
@@ -149,20 +150,18 @@ void Sunrise::StartEA(int pos) {
 			}
 		}
 		
-		timeprevMAX = iTime(NULL, OpenNextTF, 0);
+		timeprevMAX = Now;
 	}
 	
-	//---------------------
-	return(0);
 }
 
 //+------------------------------------------------------------------+
-void Sunrise::Norrect(string OrdType) {
+void Sunrise::Norrect(String OrdType) {
 	int trade;
 	double TP_all;
 	double AveragePrice;
 	
-	AveragePrice = AveragePrice(OrdType);
+	AveragePrice = GetAveragePrice(OrdType);
 	
 	for (trade = OrdersTotal() - 1;trade >= 0;trade--) {
 		OrderSelect(trade, SELECT_BY_POS, MODE_TRADES);
@@ -177,7 +176,7 @@ void Sunrise::Norrect(string OrdType) {
 					TP_all = AveragePrice + Buy_TP * Point;
 					
 					if (OrderTakeProfit() != TP_all) {
-						Print("Ìîäèôèöèðóåì ïîêóïêó. Áåçóáûòîê = " + AveragePrice + ", ÒÐ = " + Buy_TP + " Íîâûé óðîâåíü = " + TP_all);
+
 						OrderModify(OrderTicket(), AveragePrice, OrderStopLoss(), TP_all, 0, Yellow);
 					}
 				}
@@ -190,7 +189,6 @@ void Sunrise::Norrect(string OrdType) {
 					TP_all = AveragePrice - Sell_TP * Point;
 					
 					if (OrderTakeProfit() != TP_all) {
-						Print("Ìîäèôèöèðóåì ïðîäàæó. Áåçóáûòîê = " + AveragePrice + ", ÒÐ = " + Buy_TP + " Íîâûé óðîâåíü = " + TP_all);
 						OrderModify(OrderTicket(), AveragePrice, OrderStopLoss(), TP_all, 0, Yellow);
 					}
 					
@@ -202,7 +200,7 @@ void Sunrise::Norrect(string OrdType) {
 	}
 }
 
-double Sunrise::NewLot(string OrdType) {
+double Sunrise::NewLot(String OrdType) {
 	double tLots;
 	double minlot = MarketInfo(Symbol(), MODE_MINLOT);
 	
@@ -226,7 +224,7 @@ double Sunrise::NewLot(string OrdType) {
 	return(tLots);
 }
 
-double Sunrise::NextLot(string OrdType) {
+double Sunrise::NextLot(String OrdType) {
 
 	double tLots;
 	
@@ -238,21 +236,22 @@ double Sunrise::NextLot(string OrdType) {
 		tLots = NormalizeDouble(FindLastOrder(OrdType, "Lots") * Sell_LotExponent, LotDecimal);
 	}
 	
-	//tLots=NormalizeDouble(NewLot*MathPow(Sell_LotExponent,CountTrades(OrdType)),LotDecimal);
+	//tLots=NormalizeDouble(NewLot*MathPow(Sell_LotExponent,GetCountTrades(OrdType)),LotDecimal);
 	return(tLots);
 }
 
-bool Sunrise::NextOrder(string OrdType) {
+bool Sunrise::NextOrder(String OrdType) {
 	bool NextOrd = false;
 	int PipStepEX;
 	
-	double CurrCl = iClose(Symbol(), BackBarTF, 1);
-	double CurrOp = iOpen(Symbol(), BackBarTF, 1);
+	CompatBuffer Open(GetInputBuffer(0, 0), pos);
+	double CurrCl = Open[0];
+	double CurrOp = Open[1];
 	
 	if (OrdType == "buy") {
-		PipStepEX = NormalizeDouble(Buy_PipStep * MathPow(Buy_PipStepExponent, CountTrades(OrdType)), 0);
+		PipStepEX = NormalizeDouble(Buy_PipStep * MathPow(Buy_PipStepExponent, GetCountTrades(OrdType)), 0);
 		
-		if (FindLastOrder(OrdType, "Price") - Ask >= PipStepEX * Point && CountTrades(OrdType) < Buy_MaxTrades) {
+		if (FindLastOrder(OrdType, "Price") - Ask >= PipStepEX * Point && GetCountTrades(OrdType) < Buy_MaxTrades) {
 			if (BackBar) {
 				if (CurrOp <= CurrCl)
 					NextOrd = true;
@@ -267,9 +266,9 @@ bool Sunrise::NextOrder(string OrdType) {
 	}
 	
 	if (OrdType == "sell") {
-		PipStepEX = NormalizeDouble(Sell_PipStep * MathPow(Sell_PipStepExponent, CountTrades(OrdType)), 0);
+		PipStepEX = NormalizeDouble(Sell_PipStep * MathPow(Sell_PipStepExponent, GetCountTrades(OrdType)), 0);
 		
-		if (Bid - FindLastOrder(OrdType, "Price") >= PipStepEX * Point && CountTrades(OrdType) < Sell_MaxTrades) {
+		if (Bid - FindLastOrder(OrdType, "Price") >= PipStepEX * Point && GetCountTrades(OrdType) < Sell_MaxTrades) {
 			if (BackBar) {
 				if (CurrOp >= CurrCl)
 					NextOrd = true;
@@ -286,7 +285,7 @@ bool Sunrise::NextOrder(string OrdType) {
 	return(NextOrd);
 }
 
-double Sunrise::FindLastOrder(string OrdType, string inf) {
+double Sunrise::FindLastOrder(String OrdType, String inf) {
 	double OrderPrice;
 	double LastLot;
 	int trade, oldticketnumber = 0;
@@ -332,7 +331,7 @@ double Sunrise::FindLastOrder(string OrdType, string inf) {
 		return(LastLot);
 }
 
-int Sunrise::CountTrades(string OrdType) {
+int Sunrise::GetCountTrades(String OrdType) {
 	int count = 0;
 	int trade;
 	
@@ -363,7 +362,7 @@ int Sunrise::CountTrades(string OrdType) {
 	return(count);
 }
 
-double Sunrise::AveragePrice(string OrdType) {
+double Sunrise::GetAveragePrice(String OrdType) {
 	double AveragePrice = 0;
 	double Count = 0;
 	int trade;
@@ -401,7 +400,7 @@ double Sunrise::AveragePrice(string OrdType) {
 	return(AveragePrice);
 }
 
-double Sunrise::Balance(string OrdType, string inf) {
+double Sunrise::Balance(String OrdType, String inf) {
 	double result = 0;
 	int trade;
 	
@@ -442,7 +441,7 @@ double Sunrise::Balance(string OrdType, string inf) {
 	return(result);
 }
 
-double Sunrise::LotDecimal() {
+double Sunrise::GetLotDecimal() {
 	double steplot = MarketInfo(Symbol(), MODE_LOTSTEP);
 	int LotsDigits = MathCeil(MathAbs(MathLog(steplot) / MathLog(10)));
 	
@@ -450,5 +449,3 @@ double Sunrise::LotDecimal() {
 }
 
 }
-
-#endif

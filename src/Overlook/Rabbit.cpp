@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // bunny
 
 namespace Overlook {
@@ -32,7 +30,6 @@ void Rabbit::InitEA() {
 		gd_240 = 0;
 	}
 	
-	return (0);
 }
 
 void Rabbit::StartEA(int pos) {
@@ -41,20 +38,11 @@ void Rabbit::StartEA(int pos) {
 	double l_iclose_16;
 	double l_iclose_24;
 	
+	if (pos < 2)
+		return;
+	
 	if (UseTrailing)
 		TrailingAlls(TrailStart, TrailStop, g_price_292);
-		
-	if (gi_220) {
-		if (TimeCurrent() >= gi_356) {
-			CloseThisSymbolAll();
-			Print("Closed All due to TimeOut");
-		}
-	}
-	
-	if (g_time_352 == Time[0])
-		return (0);
-		
-	g_time_352 = Time[0];
 	
 	double ld_32 = CalculateProfit();
 	
@@ -133,11 +121,10 @@ void Rabbit::StartEA(int pos) {
 				
 				if (gd_364 > 0.0) {
 					RefreshRates();
-					gi_400 = OpenPendingOrder(1, gd_364, Bid, slippage, Ask, 0, 0, gs_344 + "-" + gi_360, MagicNumber, 0, HotPink);
+					gi_400 = OpenPendingOrder(1, gd_364, Bid, slippage, Ask, 0, 0, gs_344 + "-" + gi_360, MagicNumber);
 					
 					if (gi_400 < 0) {
-						Print("Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_324 = FindLastSellPrice();
@@ -162,11 +149,10 @@ void Rabbit::StartEA(int pos) {
 					gi_360 = gi_376;
 					
 					if (gd_364 > 0.0) {
-						gi_400 = OpenPendingOrder(0, gd_364, Ask, slippage, Bid, 0, 0, gs_344 + "-" + gi_360, MagicNumber, 0, Lime);
+						gi_400 = OpenPendingOrder(0, gd_364, Ask, slippage, Bid, 0, 0, gs_344 + "-" + gi_360, MagicNumber);
 						
 						if (gi_400 < 0) {
-							Print("Error: ", GetLastError());
-							return (0);
+							return;
 						}
 						
 						gd_316 = FindLastBuyPrice();
@@ -180,8 +166,9 @@ void Rabbit::StartEA(int pos) {
 	}
 	
 	if (gi_388 && gi_376 < 1) {
-		l_iclose_16 = iClose(Symbol(), 0, 2);
-		l_iclose_24 = iClose(Symbol(), 0, 1);
+		CompatBuffer Close(GetInputBuffer(0, 0), pos, 1);
+		l_iclose_16 = Close[2];
+		l_iclose_24 = Close[1];
 		g_bid_300 = Bid;
 		g_ask_308 = Ask;
 		
@@ -192,11 +179,10 @@ void Rabbit::StartEA(int pos) {
 				gd_364 = fGetLots(OP_SELL);
 				
 				if (gd_364 > 0.0) {
-					gi_400 = OpenPendingOrder(1, gd_364, g_bid_300, slippage, g_bid_300, 0, 0, "", MagicNumber, 0, HotPink);
+					gi_400 = OpenPendingOrder(1, gd_364, g_bid_300, slippage, g_bid_300, 0, 0, "", MagicNumber);
 					
 					if (gi_400 < 0) {
-						Print(gd_364, "Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_316 = FindLastBuyPrice();
@@ -209,11 +195,10 @@ void Rabbit::StartEA(int pos) {
 				gd_364 = fGetLots(OP_BUY);
 				
 				if (gd_364 > 0.0) {
-					gi_400 = OpenPendingOrder(0, gd_364, g_ask_308, slippage, g_ask_308, 0, 0, "", MagicNumber, 0, Lime);
+					gi_400 = OpenPendingOrder(0, gd_364, g_ask_308, slippage, g_ask_308, 0, 0, "", MagicNumber);
 					
 					if (gi_400 < 0) {
-						Print(gd_364, "Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_324 = FindLastSellPrice();
@@ -293,8 +278,6 @@ void Rabbit::StartEA(int pos) {
 			}
 		}
 	}
-	
-	return (0);
 }
 
 double Rabbit::ND(double ad_0) {
@@ -311,16 +294,15 @@ int Rabbit::fOrderCloseMarket(bool ai_0, bool ai_4) {
 					RefreshRates();
 					
 					if (!IsTradeContextBusy()) {
-						if (!OrderClose(OrderTicket(), OrderLots(), ND(Bid), 5, CLR_NONE)) {
+						if (!OrderClose(OrderTicket(), OrderLots(), ND(Bid), 5)) {
 							Print("Error close BUY " + OrderTicket());
 							li_ret_8 = -1;
 						}
 					}
 					
 					else {
-						if (g_datetime_408 != iTime(NULL, 0, 0)) {
-							g_datetime_408 = iTime(NULL, 0, 0);
-							Print("Need close BUY " + OrderTicket() + ". Trade Context Busy");
+						if (g_datetime_408 != Now) {
+							g_datetime_408 = Now;
 						}
 						
 						return (-2);
@@ -331,16 +313,15 @@ int Rabbit::fOrderCloseMarket(bool ai_0, bool ai_4) {
 					RefreshRates();
 					
 					if (!IsTradeContextBusy()) {
-						if (!OrderClose(OrderTicket(), OrderLots(), ND(Ask), 5, CLR_NONE)) {
+						if (!OrderClose(OrderTicket(), OrderLots(), ND(Ask), 5)) {
 							Print("Error close SELL " + OrderTicket());
 							li_ret_8 = -1;
 						}
 					}
 					
 					else {
-						if (g_datetime_412 != iTime(NULL, 0, 0)) {
-							g_datetime_412 = iTime(NULL, 0, 0);
-							Print("Need close SELL " + OrderTicket() + ". Trade Context Busy");
+						if (g_datetime_412 != Now) {
+							g_datetime_412 = Now;
 						}
 						
 						return (-2);
@@ -355,7 +336,7 @@ int Rabbit::fOrderCloseMarket(bool ai_0, bool ai_4) {
 
 double Rabbit::fGetLots(int a_cmd_0) {
 	double l_lots_4;
-	int l_datetime_12;
+	Time l_datetime_12(1970,1,1);
 	
 	switch (gi_256) {
 	
@@ -368,7 +349,7 @@ double Rabbit::fGetLots(int a_cmd_0) {
 		break;
 		
 	case 2:
-		l_datetime_12 = 0;
+		l_datetime_12 = Time(1970,1,1);
 		l_lots_4 = Lots;
 		
 		for (int l_pos_20 = OrdersHistoryTotal() - 1; l_pos_20 >= 0; l_pos_20--) {
@@ -392,9 +373,6 @@ double Rabbit::fGetLots(int a_cmd_0) {
 	
 	if (AccountFreeMarginCheck(Symbol(), a_cmd_0, l_lots_4) <= 0.0)
 		return (-1);
-		
-	if (GetLastError() == 134/* NOT_ENOUGH_MONEY */)
-		return (-2);
 		
 	return (l_lots_4);
 }
@@ -434,7 +412,7 @@ void Rabbit::CloseThisSymbolAll() {
 	}
 }
 
-int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_32, int ai_36, string a_comment_40, int a_magic_48, int a_datetime_52, color a_color_56) {
+int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_32, int ai_36, String a_comment_40, int a_magic_48) {
 	int l_ticket_60 = 0;
 	int l_error_64 = 0;
 	int l_count_68 = 0;
@@ -446,7 +424,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			l_ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -463,7 +440,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			l_ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, StopLong(ad_24, ai_32), TakeLong(a_price_12, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -481,7 +457,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			RefreshRates();
 			l_ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, StopLong(Bid, ai_32), TakeLong(Ask, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -498,7 +473,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			l_ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -515,7 +489,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			l_ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, StopShort(ad_24, ai_32), TakeShort(a_price_12, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -532,7 +505,6 @@ int Rabbit::OpenPendingOrder(int ai_0, double a_lots_4, double a_price_12, int a
 	
 		for (l_count_68 = 0; l_count_68 < li_72; l_count_68++) {
 			l_ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, StopShort(Ask, ai_32), TakeShort(Bid, ai_36), a_comment_40, a_magic_48);
-			l_error_64 = GetLastError();
 			
 			if (l_error_64 == 0/* NO_ERROR */)
 				break;
@@ -615,7 +587,7 @@ void Rabbit::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Bid - ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 > l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0, Aqua);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit());
 					}
 					
 					if (OrderType() == OP_SELL) {
@@ -629,7 +601,7 @@ void Rabbit::TrailingAlls(int ai_0, int ai_4, double a_price_8) {
 						l_price_28 = Ask + ai_4 * Point;
 						
 						if (l_ord_stoploss_20 == 0.0 || (l_ord_stoploss_20 != 0.0 && l_price_28 < l_ord_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit(), 0, Red);
+							OrderModify(OrderTicket(), a_price_8, l_price_28, OrderTakeProfit());
 					}
 				}
 				
@@ -706,5 +678,3 @@ double Rabbit::FindLastSellPrice() {
 }
 
 }
-
-#endif

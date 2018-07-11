@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // warlord
 
 namespace Overlook {
@@ -13,7 +11,24 @@ Hippie::Hippie() {
 void Hippie::InitEA() {
 	g_point_148 = MarketInfo(Symbol(), MODE_POINT);
 	gi_156 = true;
-	return (0);
+	
+	AddSubCore<Momentum>()
+		.Set("period", TrendLevel);
+	
+	AddSubCore<AverageDirectionalMovement>()
+		.Set("period", TrendPower);
+	
+	AddSubCore<OsMA>()
+		.Set("period", osma_period);
+	
+	AddSubCore<WilliamsPercentRange>()
+		.Set("period", Sensitivity);
+	
+	AddSubCore<MovingAverageConvergenceDivergence>()
+		.Set("fast_ema", macd_period)
+		.Set("slow_ema", macd_period*2)
+		;
+	
 }
 
 void Hippie::StartEA(int pos) {
@@ -23,13 +38,8 @@ void Hippie::StartEA(int pos) {
 	double l_iwpr_48;
 	double l_imacd_56;
 	
-	if (TimeMonth(TimeCurrent() && TimeYear(TimeCurrent())) >= 12.2009 && gi_156 == true) {
-		Alert("The EA has expired");
-		gi_156 = false;
-	}
-	
 	if (gi_156 == false)
-		return (0);
+		return;
 		
 	double l_lots_0 = 0;
 	
@@ -37,33 +47,30 @@ void Hippie::StartEA(int pos) {
 	
 	if (Bars < 10) {
 		Print("No Trade !!");
-		return (0);
 	}
 	
 	if (OrdersTotal() < 1) {
 		if (AccountFreeMargin() < 1.0 * Lots) {
 			Print("Money is Not Enough !!");
-			return (0);
+			return;
 		}
 		
 		l_lots_0 = MathCeil(AccountEquity() * Risk / 10000.0) / 10.0;
 		
-		HideTestIndicators(true);
-		l_imomentum_16 = iMomentum(NULL, 0, TrendLevel, PRICE_OPEN, 0);
-		l_iadx_24 = iADX(NULL, 0, TrendPower, PRICE_CLOSE, MODE_MAIN, 0);
-		l_iosma_40 = iOsMA(NULL, 0, 90, 99, 88, PRICE_OPEN, 1);
-		l_iwpr_48 = iWPR(NULL, 0, Sensitivity, 0);
-		l_imacd_56 = iMACD(NULL, 0, 90, 99, 88, PRICE_TYPICAL, MODE_SIGNAL, 0);
-		HideTestIndicators(false);
+		l_imomentum_16 = At(0).GetBuffer(0).Get(pos);
+		l_iadx_24 = At(1).GetBuffer(0).Get(pos);
+		l_iosma_40 = At(2).GetBuffer(0).Get(pos);
+		l_iwpr_48 = At(3).GetBuffer(0).Get(pos);
+		l_imacd_56 = At(4).GetBuffer(0).Get(pos);
 		
 		if (l_imacd_56 > 0.0 && l_iosma_40 > 0.0 && l_imomentum_16 > 100.0 && l_iadx_24 > 21.0 && l_iwpr_48 < -80.0) {
 			OrderSend(Symbol(), OP_BUY, l_lots_0, Bid, Slippage, Bid - Stoploss * g_point_148, Ask + TakeProfit * g_point_148, "", MagicNumber, 0, Blue);
-			return (0);
+			return;
 		}
 		
 		if (l_imacd_56 < 0.0 && l_iosma_40 < 0.0 && l_imomentum_16 < 100.0 && l_iadx_24 < 21.0 && l_iwpr_48 > -20.0) {
 			OrderSend(Symbol(), OP_SELL, l_lots_0, Ask, Slippage, Ask + Stoploss * g_point_148, Bid - TakeProfit * g_point_148, "", MagicNumber, 0, Red);
-			return (0);
+			return;
 		}
 	}
 	
@@ -74,10 +81,10 @@ void Hippie::StartEA(int pos) {
 		
 		if (OrderType() <= OP_SELL && OrderSymbol() == Symbol()) {
 			if (OrderType() == OP_BUY) {
-				if (OrderOpenTime() - (TimeCurrent() >= 300) || AccountProfit() > 2.0) {
-					if (TimeCurrent() - (OrderOpenTime() >= 300) || AccountProfit() > 2.0) {
+				if (OrderOpenTime().Get() - TimeCurrent().Get() >= 300 || AccountProfit() > 2.0) {
+					if (TimeCurrent().Get() - OrderOpenTime().Get() >= 300 || AccountProfit() > 2.0) {
 						OrderClose(OrderTicket(), OrderLots(), Ask, 0);
-						return (0);
+						return;
 					}
 				}
 			}
@@ -91,17 +98,14 @@ void Hippie::StartEA(int pos) {
 		
 		if (OrderType() <= OP_BUY && OrderSymbol() == Symbol()) {
 			if (OrderType() == OP_SELL) {
-				if (TimeCurrent() - (OrderOpenTime() >= 300) || AccountProfit() > 2.0) {
+				if (TimeCurrent().Get() - OrderOpenTime().Get() >= 300 || AccountProfit() > 2.0) {
 					OrderClose(OrderTicket(), OrderLots(), Bid, 0);
-					return (0);
+					return;
 				}
 			}
 		}
 	}
 	
-	return (0);
 }
 
 }
-
-#endif

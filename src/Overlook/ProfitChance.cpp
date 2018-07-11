@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // autoprofit
 
 namespace Overlook {
@@ -40,7 +38,7 @@ void ProfitChance::InitEA() {
 	Comment("");
 }
 
-void ProfitChance::Start(int pos) {
+void ProfitChance::StartEA(int pos) {
 	double ld_48;
 	double ld_56;
 	double l_ord_takeprofit_64;
@@ -54,8 +52,7 @@ void ProfitChance::Start(int pos) {
 	double l_ord_lots_128;
 	
 	if ((!IsOptimization() && !IsTesting() && !IsVisualMode()) || (ShowTableOnTesting && IsTesting() && !IsOptimization())) {
-		DrawStats();
-		DrawLogo();
+		
 	}
 	
 	gi_124 = AccountBalance() / 100.0 * gd_116 / (MarketInfo(Symbol(), MODE_TICKVALUE) * LotsOptimized());
@@ -324,7 +321,6 @@ void ProfitChance::Start(int pos) {
 	gi_172 = li_4;
 	gi_176 = li_24;
 	gi_180 = li_28;
-	return (0);
 }
 
 int ProfitChance::TotalBuy(int a_magic_0) {
@@ -420,10 +416,8 @@ void ProfitChance::DeleteAllPending(int a_magic_0) {
 			while (IsTradeContextBusy())
 				Sleep(500);
 				
-			Print("Óäàëÿåì îðäåð #" + OrderTicket() + ".");
-			
 			if (!OrderDelete(OrderTicket()))
-				Print("Íå óäàëîñü óäàëèòü îðäåð #" + OrderTicket() + ". Îøèáêà: ");
+				;
 		}
 	}
 }
@@ -442,9 +436,7 @@ void ProfitChance::SetSellStop(double a_price_0, double a_lots_8, int ai_16, int
 	int l_ticket_44 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24, 0, Red);
 	
 	if (l_ticket_44 < 1) {
-		l_error_48 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð SELLSTOP îáúåìîì ");
-		Print(Bid + " " + a_price_0 + " " + l_price_28 + " " + l_price_36);
+
 	}
 }
 
@@ -462,9 +454,7 @@ void ProfitChance::SetBuyStop(double a_price_0, double a_lots_8, int ai_16, int 
 	int l_ticket_44 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24, 0, Blue);
 	
 	if (l_ticket_44 < 1) {
-		l_error_48 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð BUYSTOP îáúåìîì " + a_lots_8 + ". Îøèáêà #");
-		Print(Bid + " " + a_price_0 + " " + l_price_28 + " " + l_price_36);
+
 	}
 }
 
@@ -479,12 +469,10 @@ void ProfitChance::SetSellLimit(double a_price_0, double a_lots_8, int ai_16, in
 	if (ai_16 != 0)
 		l_price_36 = a_price_0 - ai_16 * Point;
 		
-	int l_ticket_44 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24, 0, CLR_NONE);
+	int l_ticket_44 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24);
 	
 	if (l_ticket_44 < 1) {
-		l_error_48 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð SELLLIMIT îáúåìîì " + a_lots_8 + ". Îøèáêà #");
-		Print(Bid + " " + a_price_0 + " " + l_price_28 + " " + l_price_36);
+
 	}
 }
 
@@ -499,12 +487,10 @@ void ProfitChance::SetBuyLimit(double a_price_0, double a_lots_8, int ai_16, int
 	if (ai_16 != 0)
 		l_price_36 = a_price_0 + ai_16 * Point;
 		
-	int l_ticket_44 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24, 0, CLR_NONE);
+	int l_ticket_44 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_8, a_price_0, Slippage, l_price_28, l_price_36, "", a_magic_24);
 	
 	if (l_ticket_44 < 1) {
-		l_error_48 = GetLastError();
-		Print("Íå óäàëîñü óñòàíîâèòü îòëîæåííûé îðäåð BUYLIMIT îáúåìîì " + a_lots_8 + ". Îøèáêà #");
-		Print(Bid + " " + a_price_0 + " " + l_price_28 + " " + l_price_36);
+
 	}
 }
 
@@ -522,17 +508,12 @@ void ProfitChance::OpenBuy(double a_lots_0, int ai_8, int a_magic_12) {
 	if (gi_124 != 0)
 		l_price_40 = l_ask_24 - gi_124 * Point;
 		
-	int l_datetime_48 = TimeCurrent();
+	Time l_datetime_48 = TimeCurrent();
 	
-	int l_ticket_52 = OrderSend(Symbol(), OP_BUY, a_lots_0, l_ask_24, Slippage, l_price_40, l_price_32, "", a_magic_12, 0, Blue);
+	int l_ticket_52 = OrderSend(Symbol(), OP_BUY, a_lots_0, l_ask_24, Slippage, l_price_40, l_price_32, "", a_magic_12);
 	
 	if (l_ticket_52 == -1) {
 		while (l_ticket_52 == -1 && TimeCurrent() - l_datetime_48 < 40 && !IsTesting()) {
-			l_error_56 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà BUY. ");
-			Sleep(100);
-			Print("Ïîâòîð");
-			RefreshRates();
 			l_ask_24 = Ask;
 			
 			if (ai_8 != 0)
@@ -541,12 +522,11 @@ void ProfitChance::OpenBuy(double a_lots_0, int ai_8, int a_magic_12) {
 			if (gi_124 != 0)
 				l_price_40 = l_ask_24 - gi_124 * Point;
 				
-			l_ticket_52 = OrderSend(Symbol(), OP_BUY, a_lots_0, l_ask_24, Slippage, l_price_40, l_price_32, "", a_magic_12, 0, Blue);
+			l_ticket_52 = OrderSend(Symbol(), OP_BUY, a_lots_0, l_ask_24, Slippage, l_price_40, l_price_32, "", a_magic_12);
 		}
 		
 		if (l_ticket_52 == -1) {
-			l_error_56 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà BUY. ");
+
 		}
 	}
 	
@@ -568,16 +548,12 @@ void ProfitChance::OpenSell(double a_lots_0, int ai_8, int a_magic_12) {
 	if (gi_124 != 0)
 		l_price_40 = l_bid_24 + gi_124 * Point;
 		
-	int l_datetime_48 = TimeCurrent();
+	Time l_datetime_48 = TimeCurrent();
 	
-	int l_ticket_52 = OrderSend(Symbol(), OP_SELL, a_lots_0, l_bid_24, Slippage, l_price_40, l_price_32, "", a_magic_12, 0, Red);
+	int l_ticket_52 = OrderSend(Symbol(), OP_SELL, a_lots_0, l_bid_24, Slippage, l_price_40, l_price_32, "", a_magic_12);
 	
 	if (l_ticket_52 == -1) {
-		while (l_ticket_52 == -1 && TimeCurrent() - l_datetime_48 < 40 && !IsTesting()) {
-			l_error_56 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà SELL. ");
-			Sleep(100);
-			Print("Ïîâòîð");
+		while (l_ticket_52 == -1 && TimeCurrent().Get() - l_datetime_48.Get() < 40 && !IsTesting()) {
 			RefreshRates();
 			l_bid_24 = Bid;
 			
@@ -587,12 +563,11 @@ void ProfitChance::OpenSell(double a_lots_0, int ai_8, int a_magic_12) {
 			if (gi_124 != 0)
 				l_price_40 = l_bid_24 + gi_124 * Point;
 				
-			l_ticket_52 = OrderSend(Symbol(), OP_SELL, a_lots_0, l_bid_24, Slippage, l_price_40, l_price_32, "", a_magic_12, 0, Red);
+			l_ticket_52 = OrderSend(Symbol(), OP_SELL, a_lots_0, l_bid_24, Slippage, l_price_40, l_price_32, "", a_magic_12);
 		}
 		
 		if (l_ticket_52 == -1) {
-			l_error_56 = GetLastError();
-			Print("Îøèáêà îòêðûòèÿ îðäåðà SELL. ");
+
 		}
 	}
 	
@@ -606,9 +581,8 @@ void ProfitChance::TrailBuyTp(double a_price_0, int a_magic_8) {
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == a_magic_8 && OrderType() == OP_BUY) {
-			if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), a_price_0, OrderExpiration(), HotPink)) {
-				Print("Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð #" + OrderTicket() + ". Îøèáêà:");
-				Print("SL=" + OrderStopLoss() + " TP=" + a_price_0);
+			if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), a_price_0)) {
+
 			}
 		}
 	}
@@ -620,9 +594,8 @@ void ProfitChance::TrailBuySl(double a_price_0, int a_magic_8) {
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == a_magic_8 && OrderType() == OP_BUY) {
-			if (!OrderModify(OrderTicket(), OrderOpenPrice(), a_price_0, OrderTakeProfit(), OrderExpiration(), HotPink)) {
-				Print("Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð #" + OrderTicket() + ". Îøèáêà:");
-				Print("SL=" + a_price_0 + " TP=" + OrderTakeProfit());
+			if (!OrderModify(OrderTicket(), OrderOpenPrice(), a_price_0, OrderTakeProfit())) {
+
 			}
 		}
 	}
@@ -634,9 +607,8 @@ void ProfitChance::TrailSellTp(double a_price_0, int a_magic_8) {
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == a_magic_8 && OrderType() == OP_SELL) {
-			if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), a_price_0, OrderExpiration(), HotPink)) {
-				Print("Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð #" + OrderTicket() + ". Îøèáêà:");
-				Print("SL=" + OrderStopLoss() + " TP=" + a_price_0);
+			if (!OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), a_price_0)) {
+
 			}
 		}
 	}
@@ -648,9 +620,8 @@ void ProfitChance::TrailSellSl(double a_price_0, int a_magic_8) {
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == a_magic_8 && OrderType() == OP_SELL) {
-			if (!OrderModify(OrderTicket(), OrderOpenPrice(), a_price_0, OrderTakeProfit(), OrderExpiration(), HotPink)) {
-				Print("Íå óäàëîñü ìîäèôèöèðîâàòü îðäåð #" + OrderTicket() + ". Îøèáêà:");
-				Print("SL=" + a_price_0 + " TP=" + OrderTakeProfit());
+			if (!OrderModify(OrderTicket(), OrderOpenPrice(), a_price_0, OrderTakeProfit())) {
+
 			}
 		}
 	}
@@ -673,7 +644,7 @@ double ProfitChance::GetWeightedBELevel(int ai_0) {
 double ProfitChance::GetWeightedPrice(int a_magic_0) {
 	double ld_ret_8;
 	
-	for (int l_pos_4 = 0; l_pos_4 <= OrdersTotal(); l_pos_4++) {
+	for (int l_pos_4 = 0; l_pos_4 < OrdersTotal(); l_pos_4++) {
 		OrderSelect(l_pos_4, SELECT_BY_POS);
 		
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == a_magic_0 && OrderType() == OP_SELL)
@@ -749,12 +720,17 @@ void ProfitChance::GetLowestSellParameters(double &a_ord_takeprofit_0, double &a
 double ProfitChance::GetProfitForDay(int ai_0) {
 	double ld_ret_4 = 0;
 	
+	Time today = Now;
+	today.hour = 0;
+	today.minute = 0;
+	today.second = 0;
+	
 	for (int l_pos_12 = 0; l_pos_12 < OrdersHistoryTotal(); l_pos_12++) {
 		if (!(OrderSelect(l_pos_12, SELECT_BY_POS, MODE_HISTORY)))
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == gi_148 || OrderMagicNumber() == gi_152)
-			if (OrderCloseTime() >= iTime(Symbol(), PERIOD_D1, ai_0) && OrderCloseTime() < iTime(Symbol(), PERIOD_D1, ai_0) + 86400)
+			if (OrderCloseTime() >= today && OrderCloseTime() < today + 86400)
 				ld_ret_4 += OrderProfit();
 	}
 	
@@ -771,7 +747,7 @@ double ProfitChance::LotsOptimized() {
 }
 
 void ProfitChance::CloseAllSell() {
-	int l_datetime_12;
+	Time l_datetime_12;
 	int l_error_16;
 	int l_ord_total_4 = OrdersTotal();
 	
@@ -788,8 +764,7 @@ void ProfitChance::CloseAllSell() {
 					
 					for (int l_ord_close_8 = OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, Yellow); !l_ord_close_8 && TimeCurrent() - l_datetime_12 <= 120 && !IsTesting(); l_ord_close_8 = OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, Yellow)) {
 						if (!l_ord_close_8) {
-							l_error_16 = GetLastError();
-							Print("Îøèáêà çàêðûòèÿ îðäåðà SELL #" + OrderTicket() + " ");
+
 						}
 						
 						Sleep(1000);
@@ -798,11 +773,6 @@ void ProfitChance::CloseAllSell() {
 							Sleep(500);
 							
 						RefreshRates();
-					}
-					
-					if (!l_ord_close_8) {
-						l_error_16 = GetLastError();
-						Print("Îøèáêà çàêðûòèÿ îðäåðà SELL #" + OrderTicket() + " ");
 					}
 				}
 			}
@@ -814,7 +784,7 @@ void ProfitChance::CloseAllSell() {
 }
 
 void ProfitChance::CloseAllBuy() {
-	int l_datetime_12;
+	Time l_datetime_12;
 	int l_error_16;
 	int l_ord_total_4 = OrdersTotal();
 	
@@ -830,23 +800,9 @@ void ProfitChance::CloseAllBuy() {
 					RefreshRates();
 					
 					for (int l_ord_close_8 = OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, Yellow); !l_ord_close_8 && TimeCurrent() - l_datetime_12 <= 120 && !IsTesting(); l_ord_close_8 = OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, Yellow)) {
-						if (!l_ord_close_8) {
-							l_error_16 = GetLastError();
-							Print("Îøèáêà çàêðûòèÿ îðäåðà BUY #" + OrderTicket() + " ");
-						}
-						
-						Sleep(1000);
-						
-						while (IsTradeContextBusy())
-							Sleep(1000);
-							
-						RefreshRates();
+						break;
 					}
 					
-					if (!l_ord_close_8) {
-						l_error_16 = GetLastError();
-						Print("Îøèáêà çàêðûòèÿ îðäåðà BUY #" + OrderTicket() + " ");
-					}
 				}
 			}
 			
@@ -857,5 +813,3 @@ void ProfitChance::CloseAllBuy() {
 }
 
 }
-
-#endif

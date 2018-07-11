@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // urdalatrol
 
 namespace Overlook {
@@ -65,7 +63,7 @@ void Concorde::StartEA(int pos) {
 	if (OB == 0 && OS == 0) {
 		OpenOrder(Symbol(), 0, Lot, NormalizeDouble(Ask, Digits), 0, 0, "", Magic);
 		OpenOrder(Symbol(), 1, Lot, NormalizeDouble(Bid, Digits), 0, 0, "", Magic);
-		return(0);
+		return;
 	}
 	
 //--------------------------------------------------------------------
@@ -102,9 +100,6 @@ void Concorde::StartEA(int pos) {
 			OpenOrder(Symbol(), 0, LotBuy*Kef, NormalizeDouble(Ask, Digits), 0, 0, "", Magic);
 			
 	}
-	
-//--------------------------------------------------------------------
-	return(0);
 }
 
 //--------------------------------------------------------------------
@@ -125,15 +120,17 @@ int Concorde::ModBuy() {
 	Profit = NormalizeDouble(BU + TP * D * Point, Digits);
 	
 	
-	for (i = 0; i < OrdersTotal(); i++) {
+	for (int i = 0; i < OrdersTotal(); i++) {
 		OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() == Symbol() && OrderType() == 0) {
 			if (NormalizeDouble(OrderTakeProfit(), Digits) != Profit) {
-				OrderModify(OrderTicket(), OrderOpenPrice(), 0, Profit, 0, CLR_NONE);
+				OrderModify(OrderTicket(), OrderOpenPrice(), 0, Profit);
 			}
 		}
 	}
+	
+	return 0;
 }
 
 //----------------------------------------------------------------------
@@ -154,15 +151,17 @@ int Concorde::ModSell() {
 	Profit = NormalizeDouble(BU - TP * D * Point, Digits);
 	
 	
-	for (i = 0; i < OrdersTotal(); i++) {
+	for (int i = 0; i < OrdersTotal(); i++) {
 		OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
 		
 		if (OrderSymbol() == Symbol() && OrderType() == 1) {
 			if (NormalizeDouble(OrderTakeProfit(), Digits) != Profit) {
-				OrderModify(OrderTicket(), OrderOpenPrice(), 0, Profit, 0, CLR_NONE);
+				OrderModify(OrderTicket(), OrderOpenPrice(), 0, Profit);
 			}
 		}
 	}
+	
+	return 0;
 }
 
 //---------------------------------------------------------------
@@ -198,7 +197,7 @@ int Concorde::Tral(int Ticket) {
 }
 
 //----------------------------------------------------------------------------
-int Concorde::OpenOrder(string symbol, int cmd, double volume, double price, double stoploss, double takeprofit, string comment, int magic) {
+int Concorde::OpenOrder(String symbol, int cmd, double volume, double price, double stoploss, double takeprofit, String comment, int magic) {
 	RefreshRates();
 	int err, i, ticket;
 	
@@ -212,12 +211,10 @@ int Concorde::OpenOrder(string symbol, int cmd, double volume, double price, dou
 		if (cmd == 0)
 			ticket = OrderSend(symbol, cmd, NormalizeDouble(volume, 2), NormalizeDouble(Ask, Digits), Slippage, 0, 0, comment, magic);
 			
-		err = GetLastError();
 		
 		if (err == 0)
 			break;
 			
-		Alert(Symbol(), Error(err), "  ïðè îòêðûòèè îðäåðà");
 		
 		Sleep(1000);
 		
@@ -232,15 +229,11 @@ int Concorde::ModifyOrder(int ticket, double price, double stoploss, double take
 	RefreshRates();
 	
 	while (i < 10) {
-		OrderModify(ticket, NormalizeDouble(price, Digits), NormalizeDouble(stoploss, Digits), NormalizeDouble(takeprofit, Digits), 0, CLR_NONE);
-		err = GetLastError();
+		OrderModify(ticket, NormalizeDouble(price, Digits), NormalizeDouble(stoploss, Digits), NormalizeDouble(takeprofit, Digits));
 		
 		if (err == 0)
 			break;
 			
-		Alert(Symbol(), Error(err), "  ïðè ìîäèôèêàöèè îðäåðà");
-		
-		Sleep(1000);
 		
 		i++;
 	}
@@ -249,6 +242,3 @@ int Concorde::ModifyOrder(int ticket, double price, double stoploss, double take
 }
 
 }
-
-
-#endif

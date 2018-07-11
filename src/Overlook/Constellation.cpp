@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // turbomax
 
 namespace Overlook {
@@ -32,13 +30,16 @@ void Constellation::StartEA(int pos) {
 		f0_17();
 	}
 	
+	if (pos < 2)
+		return;
+	
 	gd_136 = LotMultiplikator;
 	
 	gd_184 = TakeProfit;
 	gd_232 = Step;
 	gi_316 = Magic;
-	string ls_32 = "false";
-	string ls_40 = "false";
+	String ls_32 = "false";
+	String ls_40 = "false";
 	
 	if (gi_292 == false || (gi_292 && (gi_300 > gi_296 && (Hour() >= gi_296 && Hour() <= gi_300)) || (gi_296 > gi_300 && (!(Hour() >= gi_300 && Hour() <= gi_296)))))
 		ls_32 = "true";
@@ -48,18 +49,6 @@ void Constellation::StartEA(int pos) {
 		
 	if (gi_276)
 		f0_11(gd_200, gd_208, g_price_372);
-		
-	if (gi_280) {
-		if (TimeCurrent() >= gi_428) {
-			f0_4();
-			Print("Closed All due to TimeOut");
-		}
-	}
-	
-	if (g_time_424 == Time[0])
-		return (0);
-		
-	g_time_424 = Time[0];
 	
 	double ld_48 = f0_10();
 	
@@ -138,11 +127,10 @@ void Constellation::StartEA(int pos) {
 				
 				if (gd_436 > 0.0) {
 					RefreshRates();
-					gi_472 = f0_5(1, gd_436, Bid, g_slippage_144, Ask, 0, 0, gs_80 + "-" + gi_432, gi_316, 0, HotPink);
+					gi_472 = f0_5(1, gd_436, Bid, g_slippage_144, Ask, 0, 0, gs_80 + "-" + gi_432, gi_316, 0);
 					
 					if (gi_472 < 0) {
-						Print("Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_404 = f0_14();
@@ -167,11 +155,10 @@ void Constellation::StartEA(int pos) {
 					gi_432 = gi_448;
 					
 					if (gd_436 > 0.0) {
-						gi_472 = f0_5(0, gd_436, Ask, g_slippage_144, Bid, 0, 0, gs_80 + "-" + gi_432, gi_316, 0, Lime);
+						gi_472 = f0_5(0, gd_436, Ask, g_slippage_144, Bid, 0, 0, gs_80 + "-" + gi_432, gi_316, 0);
 						
 						if (gi_472 < 0) {
-							Print("Error: ", GetLastError());
-							return (0);
+							return;
 						}
 						
 						gd_396 = f0_13();
@@ -185,8 +172,9 @@ void Constellation::StartEA(int pos) {
 	}
 	
 	if (gi_460 && gi_448 < 1) {
-		iclose_16 = iClose(Symbol(), 0, 2);
-		iclose_24 = iClose(Symbol(), 0, 1);
+		CompatBuffer Close(GetInputBuffer(0, 0), pos, 1);
+		iclose_16 = Close[2];
+		iclose_24 = Close[1];
 		g_bid_380 = Bid;
 		g_ask_388 = Ask;
 		
@@ -197,11 +185,10 @@ void Constellation::StartEA(int pos) {
 				gd_436 = f0_2(OP_SELL);
 				
 				if (gd_436 > 0.0) {
-					gi_472 = f0_5(1, gd_436, g_bid_380, g_slippage_144, g_bid_380, 0, 0, gs_80 + "-" + gi_432, gi_316, 0, HotPink);
+					gi_472 = f0_5(1, gd_436, g_bid_380, g_slippage_144, g_bid_380, 0, 0, gs_80 + "-" + gi_432, gi_316, 0);
 					
 					if (gi_472 < 0) {
-						Print(gd_436, "Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_396 = f0_13();
@@ -214,11 +201,10 @@ void Constellation::StartEA(int pos) {
 				gd_436 = f0_2(OP_BUY);
 				
 				if (gd_436 > 0.0) {
-					gi_472 = f0_5(0, gd_436, g_ask_388, g_slippage_144, g_ask_388, 0, 0, gs_80 + "-" + gi_432, gi_316, 0, Lime);
+					gi_472 = f0_5(0, gd_436, g_ask_388, g_slippage_144, g_ask_388, 0, 0, gs_80 + "-" + gi_432, gi_316, 0);
 					
 					if (gi_472 < 0) {
-						Print(gd_436, "Error: ", GetLastError());
-						return (0);
+						return;
 					}
 					
 					gd_404 = f0_14();
@@ -299,14 +285,13 @@ void Constellation::StartEA(int pos) {
 		}
 	}
 	
-	return (0);
 }
 
 double Constellation::f0_0(double ad_0) {
 	return (NormalizeDouble(ad_0, Digits));
 }
 
-int Constellation::f0_1(bool ai_0 = true, bool ai_4 = true) {
+int Constellation::f0_1(bool ai_0, bool ai_4) {
 	int li_ret_8 = 0;
 	
 	for (int pos_12 = OrdersTotal() - 1; pos_12 >= 0; pos_12--) {
@@ -316,16 +301,14 @@ int Constellation::f0_1(bool ai_0 = true, bool ai_4 = true) {
 					RefreshRates();
 					
 					if (!IsTradeContextBusy()) {
-						if (!OrderClose(OrderTicket(), OrderLots(), f0_0(Bid), 5, CLR_NONE)) {
-							Print("Error close BUY " + OrderTicket());
+						if (!OrderClose(OrderTicket(), OrderLots(), f0_0(Bid), 5)) {
 							li_ret_8 = -1;
 						}
 					}
 					
 					else {
-						if (g_datetime_480 != iTime(NULL, 0, 0)) {
-							g_datetime_480 = iTime(NULL, 0, 0);
-							Print("Need close BUY " + OrderTicket() + ". Trade Context Busy");
+						if (g_datetime_480 != Now) {
+							g_datetime_480 = Now;
 						}
 						
 						return (-2);
@@ -336,19 +319,17 @@ int Constellation::f0_1(bool ai_0 = true, bool ai_4 = true) {
 					RefreshRates();
 					
 					if (!IsTradeContextBusy()) {
-						if (!(!OrderClose(OrderTicket(), OrderLots(), f0_0(Ask), 5, CLR_NONE)))
+						if (!(!OrderClose(OrderTicket(), OrderLots(), f0_0(Ask), 5)))
 							continue;
 							
-						Print("Error close SELL " + OrderTicket());
 						
 						li_ret_8 = -1;
 						
 						continue;
 					}
 					
-					if (g_datetime_484 != iTime(NULL, 0, 0)) {
-						g_datetime_484 = iTime(NULL, 0, 0);
-						Print("Need close SELL " + OrderTicket() + ". Trade Context Busy");
+					if (g_datetime_484 != Now) {
+						g_datetime_484 = Now;
 					}
 					
 					return (-2);
@@ -362,7 +343,7 @@ int Constellation::f0_1(bool ai_0 = true, bool ai_4 = true) {
 
 double Constellation::f0_2(int a_cmd_0) {
 	double lots_4;
-	int datetime_12;
+	Time datetime_12(1970,1,1);
 	
 	switch (MMType) {
 	
@@ -375,7 +356,7 @@ double Constellation::f0_2(int a_cmd_0) {
 		break;
 		
 	case 2:
-		datetime_12 = 0;
+		datetime_12 = Time(1970,1,1);
 		lots_4 = Lots;
 		
 		for (int pos_20 = OrdersHistoryTotal() - 1; pos_20 >= 0; pos_20--) {
@@ -401,9 +382,6 @@ double Constellation::f0_2(int a_cmd_0) {
 	
 	if (AccountFreeMarginCheck(Symbol(), a_cmd_0, lots_4) <= 0.0)
 		return (-1);
-		
-	if (GetLastError() == 134/* NOT_ENOUGH_MONEY */)
-		return (-2);
 		
 	return (lots_4);
 }
@@ -443,7 +421,7 @@ void Constellation::f0_4() {
 	}
 }
 
-int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_unused_32, int ai_36, string a_comment_40, int a_magic_48, int a_datetime_52, color a_color_56) {
+int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slippage_20, double ad_24, int ai_unused_32, int ai_36, String a_comment_40, int a_magic_48, int a_datetime_52) {
 	int ticket_60 = 0;
 	int error_64 = 0;
 	int count_68 = 0;
@@ -454,9 +432,7 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 	case 2:
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
-			ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, f0_6(ad_24, g_pips_192), f0_8(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52,
-						a_color_56);
-			error_64 = GetLastError();
+			ticket_60 = OrderSend(Symbol(), OP_BUYLIMIT, a_lots_4, a_price_12, a_slippage_20, f0_6(ad_24, g_pips_192), f0_8(a_price_12, ai_36), a_comment_40, a_magic_48);
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -472,9 +448,7 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 	case 4:
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
-			ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, f0_6(ad_24, g_pips_192), f0_8(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52,
-						a_color_56);
-			error_64 = GetLastError();
+			ticket_60 = OrderSend(Symbol(), OP_BUYSTOP, a_lots_4, a_price_12, a_slippage_20, f0_6(ad_24, g_pips_192), f0_8(a_price_12, ai_36), a_comment_40, a_magic_48);
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -492,7 +466,6 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 		for (count_68 = 0; count_68 < li_72; count_68++) {
 			RefreshRates();
 			ticket_60 = OrderSend(Symbol(), OP_BUY, a_lots_4, Ask, a_slippage_20, f0_6(Bid, g_pips_192), f0_8(Ask, ai_36), a_comment_40, a_magic_48);
-			error_64 = GetLastError();
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -508,9 +481,7 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 	case 3:
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
-			ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, f0_7(ad_24, g_pips_192), f0_9(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52,
-						a_color_56);
-			error_64 = GetLastError();
+			ticket_60 = OrderSend(Symbol(), OP_SELLLIMIT, a_lots_4, a_price_12, a_slippage_20, f0_7(ad_24, g_pips_192), f0_9(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52);
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -526,9 +497,7 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 	case 5:
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
-			ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, f0_7(ad_24, g_pips_192), f0_9(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52,
-						a_color_56);
-			error_64 = GetLastError();
+			ticket_60 = OrderSend(Symbol(), OP_SELLSTOP, a_lots_4, a_price_12, a_slippage_20, f0_7(ad_24, g_pips_192), f0_9(a_price_12, ai_36), a_comment_40, a_magic_48, a_datetime_52);
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -545,7 +514,6 @@ int Constellation::f0_5(int ai_0, double a_lots_4, double a_price_12, int a_slip
 	
 		for (count_68 = 0; count_68 < li_72; count_68++) {
 			ticket_60 = OrderSend(Symbol(), OP_SELL, a_lots_4, Bid, a_slippage_20, f0_7(Ask, g_pips_192), f0_9(Bid, ai_36), a_comment_40, a_magic_48);
-			error_64 = GetLastError();
 			
 			if (error_64 == 0/* NO_ERROR */)
 				break;
@@ -628,7 +596,7 @@ void Constellation::f0_11(int ai_0, int ai_4, double a_price_8) {
 						price_28 = Bid - ai_4 * Point;
 						
 						if (order_stoploss_20 == 0.0 || (order_stoploss_20 != 0.0 && price_28 > order_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, price_28, OrderTakeProfit(), 0, Aqua);
+							OrderModify(OrderTicket(), a_price_8, price_28, OrderTakeProfit());
 					}
 					
 					if (OrderType() == OP_SELL) {
@@ -642,7 +610,7 @@ void Constellation::f0_11(int ai_0, int ai_4, double a_price_8) {
 						price_28 = Ask + ai_4 * Point;
 						
 						if (order_stoploss_20 == 0.0 || (order_stoploss_20 != 0.0 && price_28 < order_stoploss_20))
-							OrderModify(OrderTicket(), a_price_8, price_28, OrderTakeProfit(), 0, Red);
+							OrderModify(OrderTicket(), a_price_8, price_28, OrderTakeProfit());
 					}
 				}
 				
@@ -719,141 +687,31 @@ double Constellation::f0_14() {
 }
 
 void Constellation::f0_15() {
-	Comment("            Stark-Profit " + Symbol() + "  " + Period(),
-			"\n", "            Forex Account Server:", AccountServer(),
-			"\n", "            Lots:  ", Lots,
-			"\n", "            Symbol: ", Symbol(),
-			"\n", "            Price:  ", NormalizeDouble(Bid, 4),
-			"\n", "            Date: ", Month(), "-", Day(), "-", Year(), " Server Time: ", Hour(), ":", Minute(), ":", Seconds(),
-			"\n");
+	
 }
 
 void Constellation::f0_16() {
-	double ld_0 = f0_18(0);
-	string name_8 = gs_96 + "1";
 	
-	if (ObjectFind(name_8) == -1) {
-		ObjectCreate(name_8, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_8, OBJPROP_CORNER, 1);
-		ObjectSet(name_8, OBJPROP_XDISTANCE, 10);
-		ObjectSet(name_8, OBJPROP_YDISTANCE, 15);
-	}
-	
-	ObjectSetText(name_8, "Çàðàáîòîê ñåãîäíÿ: " + DoubleToStr(ld_0, 2), 10, "Courier New", Yellow);
-	
-	ld_0 = f0_18(1);
-	name_8 = gs_96 + "2";
-	
-	if (ObjectFind(name_8) == -1) {
-		ObjectCreate(name_8, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_8, OBJPROP_CORNER, 1);
-		ObjectSet(name_8, OBJPROP_XDISTANCE, 10);
-		ObjectSet(name_8, OBJPROP_YDISTANCE, 30);
-	}
-	
-	ObjectSetText(name_8, "Çàðàáîòîê â÷åðà: " + DoubleToStr(ld_0, 2), 10, "Courier New", Yellow);
-	
-	ld_0 = f0_18(2);
-	name_8 = gs_96 + "3";
-	
-	if (ObjectFind(name_8) == -1) {
-		ObjectCreate(name_8, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_8, OBJPROP_CORNER, 1);
-		ObjectSet(name_8, OBJPROP_XDISTANCE, 10);
-		ObjectSet(name_8, OBJPROP_YDISTANCE, 45);
-	}
-	
-	ObjectSetText(name_8, "Çàðàáîòîê ïîçàâ÷åðà: " + DoubleToStr(ld_0, 2), 10, "Courier New", Yellow);
-	
-	name_8 = gs_96 + "4";
-	
-	if (ObjectFind(name_8) == -1) {
-		ObjectCreate(name_8, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_8, OBJPROP_CORNER, 1);
-		ObjectSet(name_8, OBJPROP_XDISTANCE, 10);
-		ObjectSet(name_8, OBJPROP_YDISTANCE, 75);
-	}
-	
-	ObjectSetText(name_8, "Áàëàíñ: " + DoubleToStr(AccountBalance(), 2), 12, "Courier New", Yellow);
-	
-	name_8 = gs_96 + "5";
-	
-	if (ObjectFind(name_8) == -1) {
-		ObjectCreate(name_8, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_8, OBJPROP_CORNER, 1);
-		ObjectSet(name_8, OBJPROP_XDISTANCE, 10);
-		ObjectSet(name_8, OBJPROP_YDISTANCE, 100);
-	}
-	
-	ObjectSetText(name_8, "Ñâîá. ñð-âà ñ÷åòà: " + DoubleToStr(AccountFreeMargin(), 2), 10, "Courier New", Yellow);
 }
 
 void Constellation::f0_17() {
-	string name_0 = gs_96 + "L_1";
 	
-	if (ObjectFind(name_0) == -1) {
-		ObjectCreate(name_0, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_0, OBJPROP_CORNER, 0);
-		ObjectSet(name_0, OBJPROP_XDISTANCE, 390);
-		ObjectSet(name_0, OBJPROP_YDISTANCE, 10);
-	}
-	
-	ObjectSetText(name_0, " T U R B O ", 28, "Arial", DarkTurquoise);
-	
-	name_0 = gs_96 + "L_2";
-	
-	if (ObjectFind(name_0) == -1) {
-		ObjectCreate(name_0, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_0, OBJPROP_CORNER, 0);
-		ObjectSet(name_0, OBJPROP_XDISTANCE, 382);
-		ObjectSet(name_0, OBJPROP_YDISTANCE, 50);
-	}
-	
-	ObjectSetText(name_0, "           M A X", 16, "Arial", Gold);
-	
-	name_0 = gs_96 + "L_3";
-	
-	if (ObjectFind(name_0) == -1) {
-		ObjectCreate(name_0, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_0, OBJPROP_CORNER, 0);
-		ObjectSet(name_0, OBJPROP_XDISTANCE, 397);
-		ObjectSet(name_0, OBJPROP_YDISTANCE, 75);
-	}
-	
-	ObjectSetText(name_0, "  *** forex-sovetnic.ru ***", 12, "Arial", DarkTurquoise);
-	
-	name_0 = gs_96 + "L_4";
-	
-	if (ObjectFind(name_0) == -1) {
-		ObjectCreate(name_0, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_0, OBJPROP_CORNER, 0);
-		ObjectSet(name_0, OBJPROP_XDISTANCE, 382);
-		ObjectSet(name_0, OBJPROP_YDISTANCE, 57);
-	}
-	
-	ObjectSetText(name_0, "  _____________________", 12, "Arial", DarkGray);
-	
-	name_0 = gs_96 + "L_5";
-	
-	if (ObjectFind(name_0) == -1) {
-		ObjectCreate(name_0, OBJ_LABEL, 0, 0, 0);
-		ObjectSet(name_0, OBJPROP_CORNER, 0);
-		ObjectSet(name_0, OBJPROP_XDISTANCE, 382);
-		ObjectSet(name_0, OBJPROP_YDISTANCE, 76);
-	}
-	
-	ObjectSetText(name_0, "  _____________________", 12, "Arial", DarkGray);
 }
 
 double Constellation::f0_18(int ai_0) {
 	double ld_ret_4 = 0;
+	
+	Time today = Now;
+	today.hour = 0;
+	today.minute = 0;
+	today.second = 0;
 	
 	for (int pos_12 = 0; pos_12 < OrdersHistoryTotal(); pos_12++) {
 		if (!(OrderSelect(pos_12, SELECT_BY_POS, MODE_HISTORY)))
 			break;
 			
 		if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic)
-			if (OrderCloseTime() >= iTime(Symbol(), PERIOD_D1, ai_0) && OrderCloseTime() < iTime(Symbol(), PERIOD_D1, ai_0) + 86400)
+			if (OrderCloseTime() >= today && OrderCloseTime() < today + 86400)
 				ld_ret_4 = ld_ret_4 + OrderProfit() + OrderCommission() + OrderSwap();
 	}
 	
@@ -861,5 +719,3 @@ double Constellation::f0_18(int ai_0) {
 }
 
 }
-
-#endif

@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // topgun
 
 namespace Overlook {
@@ -16,25 +14,25 @@ void Hornet::InitEA() {
 	if (IsTesting() == true)
 		gi_unused_248 = 1;
 		
-	string ls_0 = "EA Name:" + Program
+	String ls_0 = "EA Name:" + Program
 				  + "\n";
 	              
-	string ls_8 = "Rev:" + Rev
+	String ls_8 = "Rev:" + Rev
 				  + "\n";
-	              
-	Comment("Local Time:" + TimeToStr(TimeLocal(), TIME_DATE) + " " + TimeToStr(TimeLocal(), TIME_SECONDS), " System Run",
-			"\n", "--Copyright----------------------------------------------------------------------\n", ls_0, ls_8, "--------------------------------------------------------------------------------------");
-	        
+	              	        
 	if (Aggressive) {
 		gi_252 = Nanpin1;
 		gi_256 = Nanpin2;
 	}
 	
-	return (0);
+	AddSubCore<BollingerBands>()
+		.Set("period", bb_period)
+		.Set("deviation", bb_deviation)
+		.Set("shift", 0);
+	
 }
 
 void Hornet::StartEA(int pos) {
-	HideTestIndicators(true);
 	
 	if (UseAutoLot)
 		Lots = LotsOptimized();
@@ -47,9 +45,9 @@ void Hornet::StartEA(int pos) {
 	
 	double maxlot_24 = MarketInfo(Symbol(), MODE_MAXLOT);
 	
-	double ibands_32 = iBands(NULL, 0, 16, 2, 0, PRICE_MEDIAN, MODE_UPPER, 3);
+	double ibands_32 = At(0).GetBuffer(1).Get(pos);
 	
-	double ibands_40 = iBands(NULL, 0, 16, 2, 0, PRICE_MEDIAN, MODE_LOWER, 3);
+	double ibands_40 = At(0).GetBuffer(2).Get(pos);
 	
 	double ld_48 = MathAbs(ibands_32 - ibands_40);
 	
@@ -175,8 +173,6 @@ void Hornet::StartEA(int pos) {
 			}
 		}
 	}
-	
-	return (0);
 }
 
 double Hornet::LotsOptimized() {
@@ -351,15 +347,13 @@ double Hornet::FTLCurrentOrders(int ai_0, int a_magic_4) {
 				
 			break;
 			
-		default:
-			Print("[CurrentOrdersError] : Illegal order type(" + ai_0 + ")");
 		}
 	}
 	
 	return (ld_ret_8);
 }
 
-int Hornet::FTLOrderSend(int a_cmd_0, double a_lots_4, double a_price_12, int a_slippage_20, double a_price_24, double a_price_32, string a_comment_40, int a_magic_48) {
+int Hornet::FTLOrderSend(int a_cmd_0, double a_lots_4, double a_price_12, int a_slippage_20, double a_price_24, double a_price_32, String a_comment_40, int a_magic_48) {
 	int error_52;
 	a_price_12 = NormalizeDouble(a_price_12, Digits);
 	a_price_24 = NormalizeDouble(a_price_24, Digits);
@@ -372,15 +366,12 @@ int Hornet::FTLOrderSend(int a_cmd_0, double a_lots_4, double a_price_12, int a_
 			return (0);
 		}
 		
-		if (IsTradeAllowed() == true) {
+		if (true) {
 			RefreshRates();
 			
-			if (OrderSend(Symbol(), a_cmd_0, a_lots_4, a_price_12, a_slippage_20, a_price_24, a_price_32, a_comment_40, a_magic_48, 0, gia_260[a_cmd_0]) != -1)
+			if (OrderSend(Symbol(), a_cmd_0, a_lots_4, a_price_12, a_slippage_20, a_price_24, a_price_32, a_comment_40, a_magic_48))
 				return (1);
 				
-			error_52 = GetLastError();
-			
-			Print("[OrderSendError] : ", error_52, " ", ErrorDescription(error_52));
 			
 			if (error_52 != 129/* INVALID_PRICE */) {
 				if (error_52 != 130/* INVALID_STOPS */) {
@@ -425,15 +416,12 @@ int Hornet::FTLOrderClose(int a_slippage_0, int a_magic_4) {
 			return (0);
 		}
 		
-		if (IsTradeAllowed() == true) {
+		if (true) {
 			RefreshRates();
 			
-			if (OrderClose(ticket_16, OrderLots(), NormalizeDouble(OrderClosePrice(), Digits), a_slippage_0, gia_260[cmd_8]) == 1)
+			if (OrderClose(ticket_16, OrderLots(), NormalizeDouble(OrderClosePrice(), Digits), a_slippage_0))
 				return (1);
 				
-			error_12 = GetLastError();
-			
-			Print("[OrderCloseError] : ", error_12, " ", ErrorDescription(error_12));
 			
 			if (error_12 != 129/* INVALID_PRICE */) {
 			}
@@ -445,7 +433,7 @@ int Hornet::FTLOrderClose(int a_slippage_0, int a_magic_4) {
 	return (0);
 }
 
-void Hornet::FTLOrderSendSL(int ai_0, double ad_4, double ad_12, int ai_20, int ai_24, int ai_28, string as_32, int ai_40) {
+void Hornet::FTLOrderSendSL(int ai_0, double ad_4, double ad_12, int ai_20, int ai_24, int ai_28, String as_32, int ai_40) {
 	int li_44 = 1;
 	
 	if (Digits == 3 || Digits == 5)
@@ -470,5 +458,3 @@ void Hornet::FTLOrderSendSL(int ai_0, double ad_4, double ad_12, int ai_20, int 
 }
 
 }
-
-#endif

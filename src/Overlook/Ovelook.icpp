@@ -75,6 +75,8 @@ INITBLOCK {
 	System::Register<SimpleHeatmap>("Simple Heatmap");
 	System::Register<Avoidance>("Avoidance");
 	System::Register<AvoidancePeaks>("Avoidance Peaks");
+	System::Register<QuantitativeQualitativeEstimation>("QuantitativeQualitativeEstimation");
+	System::Register<Laguerre>("Laguerre");
 	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	
@@ -98,14 +100,11 @@ INITBLOCK {
 	System::Register<Julia>("Julia", CORE_EXPERTADVISOR);
 	System::Register<Outsider>("Outsider", CORE_EXPERTADVISOR);
 	System::Register<Foster>("Foster", CORE_EXPERTADVISOR);
-	System::Register<MultiExpertAdvisor>("MultiExpertAdvisor", CORE_EXPERTADVISOR);
-	
 	System::Register<Licker>("Licker", CORE_EXPERTADVISOR);
 	System::Register<Spectrum>("Spectrum", CORE_EXPERTADVISOR);
 	System::Register<Maverick>("Maverick", CORE_EXPERTADVISOR);
 	System::Register<Sherlock>("Sherlock", CORE_EXPERTADVISOR);
 	System::Register<President>("President", CORE_EXPERTADVISOR);
-	System::Register<Laguerre>("Laguerre");
 	System::Register<Gatherer>("Gatherer", CORE_EXPERTADVISOR);
 	System::Register<Musk>("Musk", CORE_EXPERTADVISOR);
 	System::Register<Puma>("Puma", CORE_EXPERTADVISOR);
@@ -116,7 +115,17 @@ INITBLOCK {
 	System::Register<Starter>("Starter", CORE_EXPERTADVISOR);
 	System::Register<Turtle>("Turtle", CORE_EXPERTADVISOR);
 	System::Register<Unreal>("Unreal", CORE_EXPERTADVISOR);
-	System::Register<QuantitativeQualitativeEstimation>("QuantitativeQualitativeEstimation");
+	System::Register<Hippie>("Hippie", CORE_EXPERTADVISOR);
+	System::Register<ProfitChance>("ProfitChance", CORE_EXPERTADVISOR);
+	System::Register<Rabbit>("Rabbit", CORE_EXPERTADVISOR);
+	System::Register<Midday>("Midday", CORE_EXPERTADVISOR);
+	System::Register<FxOne>("FxOne", CORE_EXPERTADVISOR);
+	System::Register<Sunrise>("Sunrise", CORE_EXPERTADVISOR);
+	System::Register<YetAnother>("YetAnother", CORE_EXPERTADVISOR);
+	System::Register<Hornet>("Hornet", CORE_EXPERTADVISOR);
+	System::Register<Constellation>("Constellation", CORE_EXPERTADVISOR);
+	System::Register<Concorde>("Concorde", CORE_EXPERTADVISOR);
+	System::Register<MultiExpertAdvisor>("MultiExpertAdvisor", CORE_EXPERTADVISOR);
 	
 	
 	

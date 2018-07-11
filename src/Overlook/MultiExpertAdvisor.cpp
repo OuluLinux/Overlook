@@ -63,7 +63,7 @@ bool MultiExpertAdvisor::TrainingBegin() {
 		
 		int row = 0;
 		for(int i = 0; i < (inputs.GetCount()-1); i++) {
-			opt.Min()[row] = 1.0;
+			opt.Min()[row] = 0.0;
 			opt.Max()[row++] = 2.0;
 			opt.Min()[row] = 1.0;
 			opt.Max()[row++] = 1000.0;
@@ -130,7 +130,7 @@ bool MultiExpertAdvisor::TrainingIterator() {
 				double eq = ea.cureq_pts[i];
 				double initeq = ea.cureq_pts[0];
 				
-				mult1 = max(1.0, min(2.0, mult1));
+				mult1 = max(0.0, min(2.0, mult1));
 				
 				double l = mult1 * lots * (initeq - offset) / (eq - offset);
 				lot_sum += l;
@@ -270,7 +270,7 @@ void MultiExpertAdvisor::RefreshAll() {
 			double eq = ea.cureq_pts[i];
 			double initeq = ea.cureq_pts[0];
 			
-			mult1 = max(1.0, min(2.0, mult1));
+			mult1 = max(0.0, min(2.0, mult1));
 			
 			double l = mult1 * lots * (initeq - offset) / (eq - offset);
 			lot_sum += l;

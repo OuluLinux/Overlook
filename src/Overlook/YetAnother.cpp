@@ -1,7 +1,5 @@
 #include "Overlook.h"
 
-#if 0
-
 // robot
 
 namespace Overlook {
@@ -12,18 +10,33 @@ YetAnother::YetAnother() {
 
 void YetAnother::InitEA() {
 	
+	AddSubCore<RelativeStrengthIndex>()
+		.Set("period", g_period_104);
+	
+	AddSubCore<MovingAverageConvergenceDivergence>()
+		.Set("fast_ema", g_period_188)
+		.Set("slow_ema", g_period_192)
+		;
+	
+	AddSubCore<RelativeStrengthIndex>()
+		.Set("period", g_period_156);
+	
 }
 
 void YetAnother::StartEA(int pos) {
+	
+	if (pos < 10)
+		return;
+	
 	double l_irsi_8;
 	double l_irsi_16;
 	double l_irsi_24;
 	double l_imacd_32;
 	double l_irsi_40;
-	string ls_48;
-	string ls_56;
-	string ls_64;
-	string ls_72;
+	String ls_48;
+	String ls_56;
+	String ls_64;
+	String ls_72;
 	double l_price_80;
 	double l_price_88;
 	int l_ticket_120;
@@ -37,12 +50,15 @@ void YetAnother::StartEA(int pos) {
 		
 	int li_0 = 1;
 	
+	CompatBuffer Open(GetInputBuffer(0, 0), pos);
+	
 	for (int li_4 = 1; li_4 <= li_0; li_4++) {
-		l_irsi_8 = iRSI(NULL, g_timeframe_100, g_period_104, PRICE_CLOSE, li_4);
-		l_irsi_16 = iRSI(NULL, g_timeframe_100, g_period_104, PRICE_CLOSE, li_4);
-		l_irsi_24 = iRSI(NULL, g_timeframe_100, g_period_104, PRICE_CLOSE, li_4 + 1);
-		l_imacd_32 = iMACD(NULL, g_timeframe_100, g_period_188, g_period_192, g_period_196, PRICE_CLOSE, MODE_MAIN, 0);
-		l_irsi_40 = iRSI(NULL, g_timeframe_176, g_period_156, PRICE_CLOSE, li_4);
+		l_irsi_8 = At(0).GetBuffer(0).Get(pos - li_4);
+		l_irsi_16 = l_irsi_8;
+		l_irsi_24 = At(0).GetBuffer(0).Get(pos - li_4 - 1);
+		l_imacd_32 = At(1).GetBuffer(0).Get(pos - li_4);
+		l_irsi_40 = At(2).GetBuffer(0).Get(pos - li_4);
+		
 		ls_48 = "false";
 		ls_56 = "false";
 		
@@ -146,16 +162,6 @@ void YetAnother::StartEA(int pos) {
 	
 	int li_unused_136 = 0;
 	
-	if (l_ticket_120 < 0) {
-		if (GetLastError() == 134/* NOT_ENOUGH_MONEY */) {
-			li_unused_136 = 1;
-			Print("Not enough money!");
-		}
-		
-		return (-1);
-	}
-	
-	return (0);
 }
 
 int YetAnother::CloseBuyOrders(int a_magic_0) {
@@ -272,21 +278,11 @@ void YetAnother::MoveBreakEven() {
 }
 
 int YetAnother::NewBarBuy() {
-	if (g_time_300 < Time[0]) {
-		g_time_300 = Time[0];
-		return (1);
-	}
-	
-	return (0);
+	return (1);
 }
 
 int YetAnother::NewBarSell() {
-	if (g_time_304 < Time[0]) {
-		g_time_304 = Time[0];
-		return (1);
-	}
-	
-	return (0);
+	return (1);
 }
 
 void YetAnother::CalculateMM() {
@@ -312,5 +308,3 @@ void YetAnother::CalculateMM() {
 }
 
 }
-
-#endif

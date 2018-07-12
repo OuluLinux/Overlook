@@ -387,7 +387,7 @@ void Mari::StartEA(int pos) {
 					}
 				}
 				
-				if (OrderType() == OP_SELL || OrderType() == OP_SELLLIMIT) {
+				else if (OrderType() == OP_SELL || OrderType() == OP_SELLLIMIT) {
 					if (max_sl != 0.0 || max_tp != 0.0) {
 						g_price_480 = OrderStopLoss();
 						

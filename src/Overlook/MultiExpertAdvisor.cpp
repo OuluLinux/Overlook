@@ -71,7 +71,7 @@ bool MultiExpertAdvisor::TrainingBegin() {
 		opt.Min()[row] = 1.0;
 		opt.Max()[row++] = 1000.;
 		
-		opt.SetMaxGenerations(3000);
+		opt.SetMaxGenerations(10000);
 		opt.Init(opt_size, 50);
 	}
 	max_rounds = opt.GetMaxRounds();
@@ -89,12 +89,15 @@ bool MultiExpertAdvisor::TrainingIterator() {
 	
 	
 	// ---- Do your training work here ----
+	
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& time_buf = GetInputBuffer(0, 4);
+	int count = open_buf.GetCount();
 	
 	
 	opt.Start();
 	const Vector<double>& trial = opt.GetTrialSolution();
+	
 	
 	// Get EA eq and lot vectors
 	Vector<ExpertAdvisor*> eas;
@@ -102,12 +105,12 @@ bool MultiExpertAdvisor::TrainingIterator() {
 		const Input& input = inputs[i];
 		ExpertAdvisor* ea = dynamic_cast<ExpertAdvisor*>(input[0].core);
 		eas.Add(ea);
+		count = min(count, ea->lots_pts.GetCount());
 	}
 	
 	
 	try {
 		sb.Clear();
-		int count = open_buf.GetCount(); // take count before updating dependencies to match their size
 		
 		besteq_pts.SetCount(count, 0);
 		cureq_pts.SetCount(count, 0);

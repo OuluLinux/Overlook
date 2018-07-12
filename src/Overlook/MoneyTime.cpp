@@ -373,6 +373,7 @@ bool MoneyTime::IsBuyLock() {
 		
 		return (false);
 	}
+	return false;
 }
 
 bool MoneyTime::IsSellLock() {
@@ -390,6 +391,7 @@ bool MoneyTime::IsSellLock() {
 		
 		return (false);
 	}
+	return false;
 }
 
 

@@ -329,6 +329,8 @@ double Sunrise::FindLastOrder(String OrdType, String inf) {
 		
 	if (inf == "Lots")
 		return(LastLot);
+	
+	return 0;
 }
 
 int Sunrise::GetCountTrades(String OrdType) {

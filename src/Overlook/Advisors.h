@@ -721,7 +721,7 @@ class SuperMart : public ExpertAdvisor {
 	int gia_524[7];
 	int gia_528[7];
 	int g_pos_532;
-	bool gi_536;
+	int gi_536;
 	int g_ord_total_540;
 	int gi_552;
 	int gi_556;
@@ -3113,7 +3113,7 @@ class Turtle : public ExpertAdvisor {
 	int gia_524[7];
 	int gia_528[7];
 	int g_pos_532;
-	bool gi_536;
+	int gi_536;
 	int g_ord_total_540;
 	int gi_552;
 	int gi_556;

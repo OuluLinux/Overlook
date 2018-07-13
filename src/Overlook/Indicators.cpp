@@ -371,8 +371,13 @@ void SimpleHurstWindow::Start() {
 		ls.signal.Set(i, sig);
 	}
 	
-	
 }
+
+
+
+
+
+
 
 
 
@@ -602,6 +607,7 @@ void MovingAverageConvergenceDivergence::Start() {
 	const Core& b_ind = At(1);
 	ConstBuffer& a_buf = a_ind.GetBuffer(0);
 	ConstBuffer& b_buf = b_ind.GetBuffer(0);
+	RefreshSubCores();
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -985,7 +991,7 @@ void Channel::Start() {
 		ec.Add(lo, hi);
 		int highest = ec.GetHighest();
 		int lowest = ec.GetLowest();
-		if (i == 0) {
+		if (i == 0 || highest == 0 || lowest == 0) {
 			lo_buffer.Set(i, open_buf.Get(i));
 			hi_buffer.Set(i, open_buf.Get(i));
 		} else {
@@ -3864,7 +3870,7 @@ void SupportResistance::Start() {
 			inc_points *= 10;
 		}
 		
-		if (count == 0) continue;
+		if (count <= 0) continue;
 		if (crosses.GetCount() < count) crosses.SetCount(count);
 		
 		for(int j = 0; j < count; j++)

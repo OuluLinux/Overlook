@@ -46,6 +46,7 @@ public:
 	void Settings();
 	void RefreshCore();
 	void StartRefreshCore();
+	void StartThread();
 	void RefreshCoreData(bool store_cache);
 	void OpenContextMenu() {MenuBar::Execute(THISBACK(ContextMenu));}
 	void ContextMenu(Bar& bar);

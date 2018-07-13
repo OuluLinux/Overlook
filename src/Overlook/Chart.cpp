@@ -98,13 +98,17 @@ Chart& Chart::SetFactory(int f) {
 
 void Chart::Start() {
 	if (keep_at_end) shift = 0;
+	Thread::Start(THISBACK(StartThread));
+}
+
+void Chart::StartThread() {
 	try {
 		RefreshCoreData(false);
 	}
 	catch (ConfExc e) {
 		
 	}
-	Refresh();
+	PostRefresh();
 }
 
 GraphCtrl& Chart::AddGraph(Ptr<CoreIO> src) {

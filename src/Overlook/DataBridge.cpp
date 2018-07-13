@@ -61,6 +61,11 @@ void DataBridge::Start() {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		#ifndef flagSECONDS
 		if (init_round) {
+			String symstr = sys.GetSymbol(sym);
+			cursor = 0;
+			cursor2 = 0;
+			for(int i = 0; i < buffers.GetCount(); i++)
+				buffers[i]->SetCount(0);
 			const Symbol& mtsym = mt.GetSymbol(sym);
 			RefreshFromHistory(true);
 			RefreshFromHistory(false);
@@ -146,23 +151,21 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
-			if (shift >= open_buf.GetCount()) {
-				int res = shift + 1000;
-				res -= res % 1000;
-				res += 100;
-				
-				open_buf.Reserve(res);
-				low_buf.Reserve(res);
-				high_buf.Reserve(res);
-				volume_buf.Reserve(res);
-				time_buf.Reserve(res);
-				
-				open_buf.SetCount(shift+1);
-				low_buf.SetCount(shift+1);
-				high_buf.SetCount(shift+1);
-				volume_buf.SetCount(shift+1);
-				time_buf.SetCount(shift+1);
-			}
+			int res = shift + 1000;
+			res -= res % 1000;
+			res += 100;
+			
+			open_buf.Reserve(res);
+			low_buf.Reserve(res);
+			high_buf.Reserve(res);
+			volume_buf.Reserve(res);
+			time_buf.Reserve(res);
+			
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
 			
 			open_buf.Set(shift, ask);
 			low_buf.Set(shift, ask);
@@ -602,8 +605,9 @@ void DataBridge::RefreshFromFasterTime() {
 		
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
+		int count = min(min(min(min(open_buf.GetCount(), low_buf.GetCount()), high_buf.GetCount()), volume_buf.GetCount()), time_buf.GetCount());
 		SetSafetyLimit(shift+1);
-		if (shift >= time_buf.GetCount()) {
+		if (shift >= count) {
 			int res = shift - shift % 100000;
 			res += 100000;
 			open_buf.Reserve(res);
@@ -625,12 +629,6 @@ void DataBridge::RefreshFromFasterTime() {
 			time_buf.Set(shift, time);
 		}
 		else {
-			open_buf.SetCount(shift+1);
-			low_buf.SetCount(shift+1);
-			high_buf.SetCount(shift+1);
-			volume_buf.SetCount(shift+1);
-			time_buf.SetCount(shift+1);
-			
 			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
 			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, low_value);}
 			volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
@@ -695,13 +693,11 @@ void DataBridge::RefreshFromFasterChange() {
 		
 		SetSafetyLimit(shift+1);
 		if (shift >= open_buf.GetCount()) {
-			if (shift >= open_buf.GetCount()) {
-				open_buf.SetCount(shift+1);
-				low_buf.SetCount(shift+1);
-				high_buf.SetCount(shift+1);
-				volume_buf.SetCount(shift+1);
-				time_buf.SetCount(shift+1);
-			}
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
 			
 			open_buf.Set(shift, open_value);
 			low_buf.Set(shift, low_value);

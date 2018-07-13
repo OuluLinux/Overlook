@@ -131,26 +131,34 @@ void CoreIO::StoreCache() {
 	if (!serialized)
 		return;
 	
-	if (serialization_lock.TryEnter()) {
+	
+	{
+		refresh_lock.Enter();
 		
-		try {
-			String dir = GetCacheDirectory();
-			String file = AppendFileName(dir, "core.bin");
-			FileOut out(file);
-			if (out.IsOpen()) {
-				Put(out, dir, 0);
-				Core* c = dynamic_cast<Core*>(this);
-				if (c) {
-					for(int i = 0; i < c->subcores.GetCount(); i++)
-						c->subcores[i].Put(out, dir, 1+i);
+		{
+			serialization_lock.Enter();
+			
+			try {
+				String dir = GetCacheDirectory();
+				String file = AppendFileName(dir, "core.bin");
+				FileOut out(file);
+				if (out.IsOpen()) {
+					Put(out, dir, 0);
+					Core* c = dynamic_cast<Core*>(this);
+					if (c) {
+						for(int i = 0; i < c->subcores.GetCount(); i++)
+							c->subcores[i].Put(out, dir, 1+i);
+					}
 				}
 			}
-		}
-		catch(...) {
-			LOG("Serialization error");
+			catch(...) {
+				LOG("Serialization error");
+			}
+			
+			serialization_lock.Leave();
 		}
 		
-		serialization_lock.Leave();
+		refresh_lock.Leave();
 	}
 }
 
@@ -205,12 +213,26 @@ void CoreIO::LoadCache() {
 	if (!in.IsOpen())
 		return;
 	
-	Get(in, dir, 0);
-	Core* c = dynamic_cast<Core*>(this);
-	if (c) {
-		for(int i = 0; i < c->subcores.GetCount(); i++)
-			c->subcores[i].Get(in, dir, 1+i);
+	
+	{
+		refresh_lock.Enter();
+		
+		{
+			serialization_lock.Enter();
+			
+			Get(in, dir, 0);
+			Core* c = dynamic_cast<Core*>(this);
+			if (c) {
+				for(int i = 0; i < c->subcores.GetCount(); i++)
+					c->subcores[i].Get(in, dir, 1+i);
+			}
+			
+			serialization_lock.Leave();
+		}
+		
+		refresh_lock.Leave();
 	}
+	
 }
 
 void CoreIO::Get(Stream& in, const String& dir, int subcore_id) {

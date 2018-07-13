@@ -36,7 +36,6 @@ protected:
 	SimBroker sb;
 	double total = 0;
 	int round = 0;
-	int prev_counted = 0;
 	int input_size = 0;
 	
 	
@@ -46,6 +45,7 @@ protected:
 	double point = 0.0001;
 	int digits;
 	int max_rounds = 0;
+	int prev_counted = 0;
 	int pos = 0;
 	bool once = true;
 	
@@ -82,7 +82,6 @@ public:
 			% Mem(sb)
 			% Mem(total)
 			% Mem(round)
-			% Mem(prev_counted)
 			% Mem(input_size)
 			;
 	}

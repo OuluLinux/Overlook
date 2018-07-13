@@ -92,6 +92,7 @@ public:
 };
 
 
+
 class MovingAverage : public Core {
 	int ma_period;
 	int ma_shift;

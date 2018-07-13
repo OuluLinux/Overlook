@@ -2042,4 +2042,75 @@ double Thief::GetProfitForDay(int ai_0) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HurstAdvisor::HurstAdvisor() {
+	
+}
+
+void HurstAdvisor::InitEA() {
+	prev_pos = -1;
+	
+}
+
+void HurstAdvisor::StartEA(int pos) {
+	if (prev_pos == pos)
+		return;
+	prev_pos = pos;
+	
+	if (pos < 3)
+		return;
+	
+	#if 0
+	ConstBuffer& open = GetInputBuffer(0, 0);
+	double o0 = open.Get(pos - 0);
+	double o1 = open.Get(pos - 1);
+	double o2 = open.Get(pos - 2);
+	bool b0 = o0 < o1;
+	bool b1 = o1 < o2;
+	bool b = b0 == b1;
+	/*int pos = 0, neg = 0, pos3 = 0, neg3 = 0;
+	for(int i = 0; i < 4; i++) {
+		double o0 = open.Get(pos - i - 0);
+		double o1 = open.Get(pos - i - 1);
+		double o2 = open.Get(pos - i - 2);
+		bool b0 = o0 < o1;
+		bool b1 = o1 < o2;
+		bool b = b0 == b1;
+		dirs[4-1-i] = b0;
+		types[4-1-i] = b;
+		if (!b) pos++;
+		else neg++;
+		if (i < 3) {
+			if (!b) pos3++;
+			else neg3++;
+		}
+	}
+	*/
+	bool predicted;
+	// Hurst 1.0
+	if (pos == 4) {
+		predicted = !dirs[0]; // go against
+	}
+	#endif
+	
+}
+
 }

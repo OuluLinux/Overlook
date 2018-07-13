@@ -69,6 +69,8 @@ file
 	Analyzer.cpp,
 	Scalper.h,
 	Scalper.cpp,
+	AutoChartist.h,
+	AutoChartist.cpp,
 	Journal.qtf;
 
 mainconfig

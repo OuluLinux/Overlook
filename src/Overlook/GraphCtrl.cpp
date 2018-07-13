@@ -465,8 +465,6 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 		case DRAW_SECTION:
 			skip_zero = true;
 			break;
-		case DRAW_ZIGZAG:
-			break;
 		case DRAW_NONE:
 			draw_type = -1;
 			break;
@@ -493,12 +491,13 @@ void GraphCtrl::PaintCoreLine(Draw& W, Core& cont, int shift, int buffer) {
 				continue;
 	        
 	        double value = cont.GetBufferValue(buffer, pos);
+	        if (skip_zero && value == 0) continue;
+	        
 	        if (value < lo) value = lo;
 	        if (value > hi) value = hi;
 	        
 			int xi = (x+(i+0.5)*div);
 			
-	        if (skip_zero && value == 0) continue;
 	        
 	        V = (1 - (value  - lo) / diff) * h;
 			

@@ -492,7 +492,9 @@ void Overlook::Data() {
 	
 	String info;
 	
-	info << "Balance: " << mt.AccountBalance()
+	info
+		<< "Time: " << Format("%", GetUtcTime())
+		<< " Balance: " << mt.AccountBalance()
 		<< " Equity: " << mt.AccountEquity()
 		<< " Free margin: " << mt.AccountFreeMargin();
 	

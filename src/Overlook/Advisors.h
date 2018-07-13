@@ -6,31 +6,6 @@
 
 namespace Overlook {
 
-/*
-	Start:	1136
-							EURJPY
-							M5		H1
-	Snake							55700
-	ChannelScalper					3102
-	Eagle							10164
-	Salmon							1403
-	Explorer						1616
-	Mari							55085
-	Pyramid							2203
-	SuperMart		(Slow)			2514
-	Spiral							4004
-	MoneyTime						9075
-	StochPower						34577
-	Gainer							53907
-	Cashier							8708
-	ModestTry		(Slow)			44000
-	Gaia							10376
-	Squirter						10124
-	Julia							5547
-	Outsider						7e7
-	Foster							16436
-	
-*/
 
 class Snake : public ExpertAdvisor {
 	

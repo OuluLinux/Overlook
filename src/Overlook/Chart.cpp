@@ -20,10 +20,19 @@ void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 	this->symbol = symbol;
 	this->tf = tf;
 	
-	RefreshCore();
+	Title("Loading...");
+	PostCallback(THISBACK(Data));
+	
+	StartRefreshCore();
+}
+
+void Chart::StartRefreshCore() {
+	Thread::Start(THISBACK(RefreshCore));
 }
 
 void Chart::RefreshCore() {
+	refresh_lock.Enter();
+	
 	try {
 		System& sys = GetSystem();
 		
@@ -47,12 +56,13 @@ void Chart::RefreshCore() {
 		title = sys.GetSymbol(symbol) + ", " + sys.GetPeriodString(tf);
 		Title(title);
 		
-		SetGraph(core);
-		Data();
+		PostCallback(THISBACK(SetGraph));
+		PostCallback(THISBACK(Data));
 	}
 	catch (ConfExc e) {
 		
 	}
+	refresh_lock.Leave();
 }
 
 void Chart::RefreshCoreData(bool store_cache) {
@@ -72,7 +82,7 @@ String Chart::GetTitle() {
 Chart& Chart::SetTimeframe(int tf_id) {
 	this->tf = tf_id;
 	
-	RefreshCore();
+	StartRefreshCore();
 	
 	return *this;
 }
@@ -81,7 +91,7 @@ Chart& Chart::SetFactory(int f) {
 	this->decl.factory = f;
 	this->decl.arg_count = 0;
 	
-	RefreshCore();
+	StartRefreshCore();
 	
 	return *this;
 }
@@ -108,9 +118,9 @@ GraphCtrl& Chart::AddGraph(Ptr<CoreIO> src) {
 	return g;
 }
 
-void Chart::SetGraph(Ptr<CoreItem> src) {
-	ASSERT(src);
-	Core& c = *src->core;
+void Chart::SetGraph() {
+	ASSERT(core);
+	Core& c = *core->core;
 	tf = c.GetTf();
 	ClearCores();
 	DataBridge* src_cast = dynamic_cast<DataBridge*>(&c);

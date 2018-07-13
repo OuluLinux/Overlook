@@ -11,6 +11,7 @@ INI_BOOL(use_internet_m1_data, false, "Download M1 data from Internet")
 INI_BOOL(wait_mt4, false, "Wait for MT4 to respond")
 INI_STRING(arg_addr, "127.0.0.1", "Host address");
 INI_INT(arg_port, 42000, "Host port");
+INI_INT(start_time, 0, "Starting time");
 };
 
 struct LoaderWindow : public TopWindow {
@@ -72,6 +73,22 @@ GUI_APP_MAIN {
 	TestLockMacro();
 	
 	SetIniFile(ConfigFile("overlook.ini"));
+	
+	// Set persistent starting time
+	if (Config::start_time == 0) {
+		Time t = GetUtcTime();
+		#ifndef flagSECONDS
+		t.year -= 8;
+		while (DayOfWeek(t) == 0 || DayOfWeek(t) == 6) t -= 24*60*60;
+		#else
+		t -= 6*30*24*60*60;
+		#endif
+		Config::start_time = t.Get() - Time(1970,1,1).Get();
+		FileAppend fapp("overlook.ini");
+		fapp.PutEol();
+		fapp << "start_time=" << Config::start_time;
+		fapp.PutEol();
+	}
 	
 	const Vector<String>& args = CommandLine();
 	for(int i = 1; i < args.GetCount(); i+=2) {

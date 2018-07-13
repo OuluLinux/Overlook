@@ -4,6 +4,7 @@
 namespace Config {
 extern Upp::IniString arg_addr;
 extern Upp::IniInt arg_port;
+extern Upp::IniInt start_time;
 }
 
 namespace Overlook {
@@ -101,7 +102,7 @@ struct Job {
 	Job& SetIterator(Gate0 fn)			{iter    = fn; return *this;}
 	Job& SetEnd(Gate0 fn)				{end     = fn; return *this;}
 	Job& SetInspect(Gate0 fn)			{inspect = fn; return *this;}
-	template <class T> Job& SetCtrl()	{ctrl = new T(); ctrl->job = this; return *this;}
+	template <class T> Job& SetCtrl()	{GuiLock __; ctrl = new T(); ctrl->job = this; return *this;}
 	void SetProgress(int actual, int total) {this->actual = actual; this->total = total;}
 	String GetStateString() const;
 	

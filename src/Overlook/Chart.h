@@ -23,6 +23,7 @@ protected:
 	bool right_offset = 0, keep_at_end = 0;
 	Ptr<CoreItem> core;
 	DataBridge* bardata = NULL;
+	Mutex refresh_lock;
 	
 	
 	void AddSeparateCore(int id, const Vector<double>& settings);
@@ -38,12 +39,13 @@ public:
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
 	void ClearCores();
 	GraphCtrl& AddGraph(Ptr<CoreIO> src);
-	void SetGraph(Ptr<CoreItem> src);
+	void SetGraph();
 	void SetShift(int i) {shift = i;}
 	void SetRightOffset(bool enable=true);
 	void SetKeepAtEnd(bool enable=true);
 	void Settings();
 	void RefreshCore();
+	void StartRefreshCore();
 	void RefreshCoreData(bool store_cache);
 	void OpenContextMenu() {MenuBar::Execute(THISBACK(ContextMenu));}
 	void ContextMenu(Bar& bar);

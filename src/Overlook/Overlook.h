@@ -9,7 +9,6 @@
 using namespace Upp;
 
 
-
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
@@ -20,7 +19,6 @@ using namespace Upp;
 #include "SimBroker.h"
 #include "System.h"
 #include "Core.h"
-#include "ExposureTester.h"
 #include "DataBridge.h"
 #include "Utils.h"
 #include "Indicators.h"
@@ -29,12 +27,10 @@ using namespace Upp;
 #include "MultiExpertAdvisor.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
-#include "ExportCtrl.h"
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "RuleAnalyzer.h"
 #include "Myfxbook.h"
 #include "Arbitrage.h"
 #include "Analyzer.h"

@@ -464,9 +464,9 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	if (shift < 0) {
 		shift = -1;
 		#ifndef flagSECONDS
-		t = Time(2018,1,2) - 60;
+		t = Time(1970,1,1) + Config::start_time - 60;
 		#else
-		t = Time(2018,6,11) - 60;
+		t = Time(1970,1,1) + Config::start_time - 1;
 		#endif
 	} else {
 		if (time_buf.IsEmpty())
@@ -603,22 +603,20 @@ void DataBridge::RefreshFromFasterTime() {
 		if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
 		SetSafetyLimit(shift+1);
-		if (shift >= open_buf.GetCount()) {
-			if (shift >= open_buf.GetCount()) {
-				int res = shift - shift % 100000;
-				res += 100000;
-				open_buf.Reserve(res);
-				low_buf.Reserve(res);
-				high_buf.Reserve(res);
-				volume_buf.Reserve(res);
-				time_buf.Reserve(res);
-				
-				open_buf.SetCount(shift+1);
-				low_buf.SetCount(shift+1);
-				high_buf.SetCount(shift+1);
-				volume_buf.SetCount(shift+1);
-				time_buf.SetCount(shift+1);
-			}
+		if (shift >= time_buf.GetCount()) {
+			int res = shift - shift % 100000;
+			res += 100000;
+			open_buf.Reserve(res);
+			low_buf.Reserve(res);
+			high_buf.Reserve(res);
+			volume_buf.Reserve(res);
+			time_buf.Reserve(res);
+			
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
 			
 			open_buf.Set(shift, open_value);
 			low_buf.Set(shift, low_value);
@@ -627,6 +625,12 @@ void DataBridge::RefreshFromFasterTime() {
 			time_buf.Set(shift, time);
 		}
 		else {
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
+			
 			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
 			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, low_value);}
 			volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
@@ -942,6 +946,16 @@ void DataBridge::Assist(int cursor, VectorBool& vec) {
 			}
 		}
 	}
+}
+
+double DataBridge::GetDigits() const {
+	int Digits = 1;
+	for (;; Digits++) {
+		double d = point * pow(10, Digits);
+		if (d >= 1.0)
+			break;
+	}
+	return Digits;
 }
 
 }

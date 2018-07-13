@@ -67,6 +67,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
+		
+		#if 0
 			% In<Snake>()
 			% In<ChannelScalper>()
 			% In<Eagle>()
@@ -85,7 +87,6 @@ public:
 			% In<Julia>()
 			% In<Outsider>()
 			% In<Foster>()
-			
 			% In<Spectrum>()
 			% In<Maverick>()
 			% In<President>()
@@ -93,7 +94,6 @@ public:
 			% In<Musk>()
 			% In<Puma>()
 			% In<Rose>()
-			% In<Thief>()
 			% In<Thief>()
 			% In<Sculptor>()
 			% In<Starter>()
@@ -105,7 +105,34 @@ public:
 			% In<Sunrise>()
 			% In<YetAnother>()
 			% In<Hornet>()
-			
+		#elif 0
+		// M15
+			% In<Eagle>()
+			% In<Thief>()
+			% In<Starter>()
+		#elif 0
+		// Clearly martingale only
+			% In<Salmon>()
+			% In<SuperMart>()
+			% In<Gainer>()
+			% In<ModestTry>()
+			% In<Julia>()
+			% In<Musk>()
+			% In<Rose>()
+			% In<Thief>()
+			% In<Sculptor>()
+			% In<Starter>()
+			% In<Turtle>()
+			% In<ProfitChance>()
+			% In<Rabbit>()
+			% In<Sunrise>()
+		#else
+		// M1 list
+			% In<Eagle>()
+			% In<Explorer>()
+			% In<ModestTry>()
+			% In<Thief>()
+		#endif
 			% Lbl(1)
 			% Mem(opt)
 			% Mem(training_pts)

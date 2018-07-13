@@ -14,6 +14,7 @@ void ExpertAdvisor::Init() {
 	SetJobCount(1);
 	
 	point = GetDataBridge()->GetPoint();
+	digits = GetDataBridge()->GetDigits();
 	
 	SetJob(0, tf_str + " Training")
 		.SetBegin(THISBACK(TrainingBegin))
@@ -25,9 +26,6 @@ void ExpertAdvisor::Init() {
 
 void ExpertAdvisor::Start() {
 	if (once) {
-		if (prev_counted > 0)
-			prev_counted--;
-			
 		once = false;
 		
 		//RefreshGrid(true);
@@ -101,11 +99,7 @@ bool ExpertAdvisor::TrainingIterator() {
 		cureq_pts.SetCount(count, 0);
 		
 		Point = point;
-		for (Digits = 1; ; Digits++) {
-			double d = point * pow(10, Digits);
-			if (d >= 1.0)
-				break;
-		}
+		Digits = digits;
 		ASSERT(Digits >= 0);
 		Bars = count;
 		

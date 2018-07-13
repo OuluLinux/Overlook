@@ -27,19 +27,12 @@ file
 	Dialogs.cpp,
 	MarketWatch.h,
 	MarketWatch.cpp,
-	RuleAnalyzer.h,
-	RuleAnalyzer.cpp,
-	SymRuleAnalyzer.cpp,
 	Navigator.h,
 	Navigator.cpp,
 	Chart.h,
 	Chart.cpp,
 	GraphCtrl.h,
 	GraphCtrl.cpp,
-	ExposureTester.h,
-	ExposureTester.cpp,
-	ExportCtrl.h,
-	ExportCtrl.cpp,
 	Core readonly separator,
 	Common.h,
 	Common.cpp,
@@ -74,7 +67,6 @@ file
 	Analyzer.cpp,
 	Scalper.h,
 	Scalper.cpp,
-	Journal.qtf,
 	Advisors readonly separator,
 	Advisors.h,
 	Advisors.cpp,
@@ -121,7 +113,8 @@ file
 	YetAnother.cpp,
 	Hornet.cpp,
 	Constellation.cpp,
-	Concorde.cpp;
+	Concorde.cpp,
+	Journal.qtf;
 
 mainconfig
 	"Working" = "GUI MT X11",

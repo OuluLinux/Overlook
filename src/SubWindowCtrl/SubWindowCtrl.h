@@ -197,6 +197,7 @@ public:
 	void OrderTileWindows();
 	void OrderTileWindowsVert();
 	void CloseAll();
+	void Refresh0() {Refresh();}
 	
 	virtual bool Key(dword key, int count);
 	virtual void LeftDown(Point p, dword keyflags);

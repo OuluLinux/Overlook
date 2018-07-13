@@ -107,6 +107,7 @@ public:
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}
+	double GetDigits() const;
 	double GetSpread() const {return spread_mean * point;}
 	double GetMax() const {return max_value * point;}
 	double GetMin() const {return min_value * point;}

@@ -46,21 +46,11 @@ protected:
 	};
 	
 	struct Symbol : Moveable<Symbol> {
-		//VariantPair pair[MAX_VARIANTPAIRS];
-		//VariantSym sym[MAX_VARIANTSYMBOLS];
 		Vector<VariantPair> pair;
 		Vector<VariantSym> sym;
 		
-		//bool XTrade[MAX_VARIANTPAIRS];
-		//int math[MAX_VARIANTSYMBOLS];
-		//int all_sym[MAX_VARIANTSYMBOLS];
-		//int arbitrage_count[MAX_VARIANTPAIRS];
-		//int count = 0;
 		double point = 0.0;
 		double min_pips = 0.0;
-		//double bids[MAX_VARIANTSYMBOLS];
-		//double asks[MAX_VARIANTSYMBOLS];
-		//double xposition[MAX_VARIANTPAIRS];
 		
 		Symbol() {}
 		Symbol(const Symbol& s) {*this = s;}
@@ -76,24 +66,14 @@ protected:
 	Vector<String> currencies, real_symbols;
 	String str_out;
 	double min_pips = -3;
-	//double pointf[MAX_ALLSYMBOLS];
-	//double min_pipsf[MAX_ALLSYMBOLS];
-	//double bids[MAX_ALLSYMBOLS][MAX_VARIANTSYMBOLS];
-	//double asks[MAX_ALLSYMBOLS][MAX_VARIANTSYMBOLS];
 	double bids_real[MAX_REALSYMBOLS];
 	double asks_real[MAX_REALSYMBOLS];
 	double position[MAX_REALSYMBOLS];
 	double prev_position[MAX_REALSYMBOLS];
-	//double xposition[MAX_ALLSYMBOLS][MAX_VARIANTPAIRS];
 	double lots = 1;
 	double ALPHA = 0.001;
-	//int all_sym[MAX_ALLSYMBOLS][MAX_VARIANTSYMBOLS];
-	//int math[MAX_ALLSYMBOLS][MAX_VARIANTSYMBOLS];
-	//int count[MAX_ALLSYMBOLS];
-	//int arbitrage_count[MAX_ALLSYMBOLS][MAX_VARIANTPAIRS];
 	int max_arbitrage_count = 0;
 	int real_sym_count = 0;
-	//bool XTrade[MAX_ALLSYMBOLS][MAX_VARIANTPAIRS];
 	bool running = false, stopped = true;
 	
 	

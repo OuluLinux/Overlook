@@ -236,6 +236,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
     int sym = chart->GetSymbol();
     int tf = chart->GetTf();
     if (sym == -1 || tf == -1) return;
+    if (&pb == NULL || pb.GetBufferCount() == 0) return;
     
 	y = r.top;
     w = r.GetWidth();
@@ -254,6 +255,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
 	DataBridge* bardata = dynamic_cast<DataBridge*>(&*src[0]);
 	if (!bardata) return;
 	ConstBuffer& time_buf = bardata->GetBuffer(4);
+	int digits = bardata->GetDigits();
 	
 	int gridstep = 4;
     for(int i = gridw - 1; i >= gridstep; i-=gridstep ) {
@@ -268,7 +270,7 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
     }
     if (draw_vert_grid) {
 	    for(int i = 0; i < gridh; i++) {
-	        String text = FormatDoubleFix(hi - i*step, 5, FD_ZEROS); // TODO: digits according to symbol
+	        String text = FormatDoubleFix(hi - i*step, digits, FD_ZEROS); // TODO: digits according to symbol
 	        
 	        W.DrawLine(border, y+i*grid, w + border, y+i*grid, PEN_DOT, gridcolor);
 	        W.DrawText(3+w+2*border, y+i*grid-fonth/2, text, gridfont, gridcolor);
@@ -281,19 +283,19 @@ void GraphCtrl::DrawGrid(Draw& W, bool draw_vert_grid) {
         v = 0;
         vy = (int)(y + (diff - (v - lo)) / diff * h);
         W.DrawLine(r.left, vy, r.left + w, vy, PEN_DOT, gridcolor);
-        text = FormatDoubleFix(v, 5, FD_ZEROS);
+        text = FormatDoubleFix(v, digits, FD_ZEROS);
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
         
         v = hi;
         vy = (int)(y + (diff - (v - lo)) / diff * h);
         W.DrawLine(r.left, vy, r.left + w, vy, PEN_DOT, gridcolor);
-        text = FormatDoubleFix(v, 5, FD_ZEROS);
+        text = FormatDoubleFix(v, digits, FD_ZEROS);
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
         
         v = lo;
         vy =(int)(y + (diff - (v - lo)) / diff * h);
         W.DrawLine(r.left, vy, r.left + w, vy, PEN_DOT, gridcolor);
-        text = FormatDoubleFix(v, 5, FD_ZEROS);
+        text = FormatDoubleFix(v, digits, FD_ZEROS);
         W.DrawText(3+w+2*border, vy-fonth/2, text, gridfont, gridcolor);
     }
 }
@@ -377,7 +379,7 @@ void GraphCtrl::PaintCandlesticks(Draw& W, Core& values) {
 	y = r.top;
     h = r.GetHeight();
     w = r.GetWidth();
-	c = values.GetBuffer(0).GetCount();
+	c = values.GetBuffer(2).GetCount();
 	diff = hi - lo;
 	
 	for(int i = 0; i < count; i++) {

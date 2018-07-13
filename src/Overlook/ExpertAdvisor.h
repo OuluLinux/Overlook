@@ -44,6 +44,7 @@ protected:
 	TimeStop save_elapsed;
 	Vector<double> tmp_mat;
 	double point = 0.0001;
+	int digits;
 	int max_rounds = 0;
 	int pos = 0;
 	bool once = true;

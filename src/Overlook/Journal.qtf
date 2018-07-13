@@ -4554,4 +4554,19 @@ result is more average constantly. I`'ll [/ fair use] some MQL
 code that I found lying in the Internet for personal use. I hope 
 that the result is good.&]
 [s0; &]
+[s3; 13.7.2018&]
+[s0; I added big list of advisors from MQL code. Many of included 
+advisors are useless. They are using martingale strategy or have 
+similar flaws.&]
+[s0; M1 timeframe seems to not work in realtime, even though the 
+optimization gives positive results. It just loses to spreads. 
+That is a important problem, because it shouldn`'t and it is 
+valuable in working state. I will use only slow H4 timeframe 
+for now.&]
+[s0; I found [^https`:`/`/www`.fxstreet`.com`/education`/making`-money`-in`-forex`-is`-easy`-201312050000^ t
+his link] . It is very right in my opinion. These advisors and 
+indicators are not powerful at all and the uncluttered support/resistance 
+mode is probably much better.&]
+[s0; The problem is with the automatic support line system. Auto`-chartist 
+systems are difficult to create, but I think I should try.&]
 [s0; ]]

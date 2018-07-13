@@ -216,6 +216,7 @@ void SubWindows::SetTitle(int win_id, const String& title) {
 	if (win_pos == -1) return;
 	SubWindow& sw = wins[win_pos];
 	sw.Title(title);
+	PostCallback(THISBACK(Refresh0));
 }
 
 void SubWindows::CloseAll() {

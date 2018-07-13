@@ -3,6 +3,10 @@
 
 namespace Overlook {
 
+/*
+	Scalper.h uses genetic optimizer to create different working little scalpers.
+	They don't work well with testing data.
+*/
 
 template <class T>
 inline void CopyCC(T& dst, const T& src) {

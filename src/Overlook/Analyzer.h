@@ -2,7 +2,15 @@
 #define _Overlook_Analyzer_h_
 
 namespace Overlook {
-	
+
+/*
+	Analyzer takes best scalper signal known afterwards and tries to recreate it by using
+	OR-AND-OR lists of indicators.
+	The result is typically identical to the scalper signal, but it is not expected to work in
+	testing data. It haven't tested with testing data yet, though.
+
+*/
+
 enum {
 	SUSTAIN_ENABLE,
 	SUSTAIN_DISABLE,

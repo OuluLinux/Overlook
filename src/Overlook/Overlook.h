@@ -21,6 +21,7 @@ using namespace Upp;
 #include "Core.h"
 #include "DataBridge.h"
 #include "Utils.h"
+#include "AutoChartist.h"
 #include "Indicators.h"
 #include "ExpertAdvisor.h"
 #include "Advisors.h"
@@ -88,6 +89,7 @@ protected:
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	CtrlCallbacks<AnalyzerCtrl> alz;
 	CtrlCallbacks<ScalperCtrl> sclp;
+	CtrlCallbacks<AutoChartistCtrl> ac;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -157,6 +159,7 @@ public:
 	void Data();
 	Chart& OpenChart(int symbol, int indi=0, int tf=-1);
 	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
+	Chart* GetChart(int i);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
@@ -190,6 +193,8 @@ public:
 	Callback WhenExit;
 	
 };
+
+inline ::Overlook::Overlook& GetOverlook() {return Single<::Overlook::Overlook>();}
 
 }
 

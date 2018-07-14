@@ -61,6 +61,7 @@ protected:
 	int datapos;
 	int real_screen_count, latest_screen_count;
 	int last_time_value_tool_pos = 0;
+	int id = -1;
 	bool mouse_left_is_down, show_timevalue_tool;
 	bool right_offset;
 	
@@ -84,6 +85,7 @@ protected:
 	void PaintCoreLine(Draw& d, Core& cont, int shift, int buffer);
 	void DrawLabels(Draw& d, Core& cont);
 	void PaintHeatmap(Draw& d, Core& cont);
+	void DrawObject(Draw& d, Core& cont, const ChartObject& co);
 	Rect GetGraphCtrlRect();
 	
 	

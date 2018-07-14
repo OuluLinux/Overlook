@@ -131,6 +131,7 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(ac, "AutoChartist").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
@@ -149,6 +150,7 @@ void Overlook::DockInit() {
 	trade			.WhenVisible << THISBACK(Data);
 	alz				.WhenVisible << THISBACK(Data);
 	sclp			.WhenVisible << THISBACK(Data);
+	ac				.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -418,6 +420,13 @@ Chart& Overlook::OpenChart(int symbol, const FactoryDeclaration& decl, int tf) {
 	return view;
 }
 
+Chart* Overlook::GetChart(int i) {
+	if (i < 0 || i >= cman.GetCount())
+		return NULL;
+	SubWindow& win = cman.Get(i);
+	return dynamic_cast<Chart*>(win.GetSubWindowCtrl());
+}
+
 void Overlook::SetFactory(int f) {
 	Chart* c = cman.GetVisibleChart();
 	if (c)
@@ -520,6 +529,7 @@ void Overlook::Data() {
 	//if (alz.IsVisible())			alz.Data();
 	//if (sclp.IsVisible())			sclp.Data();
 	if (arb.IsVisible())			arb.Data();
+	if (ac.IsVisible())				ac.Data();
 }
 
 void Overlook::RefreshAssist() {
@@ -1270,5 +1280,6 @@ OptionWindow::OptionWindow() {
 	
 	ok << [=]{Close();};
 }
+
 
 }

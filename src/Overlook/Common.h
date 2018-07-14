@@ -1067,6 +1067,23 @@ public:
 };
 
 
+
+
+
+enum {
+	OBJ_VLINE,
+	OBJ_HLINE,
+	OBJ_TREND,
+	OBJ_ARROW_BUY,
+	OBJ_ARROW_SELL
+};
+
+struct ChartObject {
+	int type = 0, pos0 = 0, pos1 = 0;
+	double price0 = 0, price1 = 0;
+	Color clr;
+};
+
 }
 
 #endif

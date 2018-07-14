@@ -129,13 +129,13 @@ void GraphCtrl::Paint(Draw& draw) {
     
     int sym = src[0]->GetSymbol();
     int tf = src[0]->GetTf();
-    
     if (sym == -1 || tf == -1) {
         LOG("GraphCtrl::Paint invalid tf");
         draw.DrawImage(0,0,w);
         return;
     }
-    int data_count = src[0]->GetBufferCount() > 0 ? src[0]->GetBuffer(0).GetCount() : src[0]->GetLabelBuffer(0, 0).signal.GetCount();
+    
+    data_count = src[0]->GetBufferCount() > 0 ? src[0]->GetBuffer(0).GetCount() : src[0]->GetLabelBuffer(0, 0).signal.GetCount();
     int max_shift = data_count - count;
     
     if (max_shift < 0) max_shift = 0;
@@ -194,6 +194,12 @@ void GraphCtrl::Paint(Draw& draw) {
 				PaintCoreLine(w, cont, shift,j);
 			}
 		}
+		
+		if (id == 0 && i == 0) {
+		    for(int i = 0; i < chart->objects.GetCount(); i++) {
+				DrawObject(w, cont, chart->objects[i]);
+		    }
+	    }
 	}
 	
 	DrawLabels(w, *dynamic_cast<Core*>(&*src.Top()));
@@ -222,6 +228,8 @@ void GraphCtrl::Paint(Draw& draw) {
 	        }
         }
     }
+    
+    
     
     draw.DrawImage(0,0,w);
 }
@@ -616,6 +624,42 @@ void GraphCtrl::DrawLines(Draw& d, Core& cont) {
 	}
 }
 
+void GraphCtrl::DrawObject(Draw& d, Core& cont, const ChartObject& co) {
+	buf_count = data_count;
+	r = GetGraphCtrlRect();
+	diff = hi - lo;
+	h = r.GetHeight();
+	
+	if (co.type == OBJ_TREND) {
+		int x = border;
+		int x0i = co.pos0 + count + shift - buf_count;
+		int x0 = (x+(x0i+0.5)*div);
+		int y0 = (int)(r.top +  (1 - (co.price0  - lo) / diff) * h);
+		int x1i = co.pos1 + count + shift - buf_count;
+		int x1 = (x+(x1i+0.5)*div);
+		int y1 = (int)(r.top +  (1 - (co.price1  - lo) / diff) * h);
+		
+		int ydiff = y0 - y1;
+		int xdiff = x0 - x1;
+		while (r.Contains(Point(x1, y1))) {
+			x1 -= xdiff;
+			y1 -= ydiff;
+		}
+		while (r.Contains(Point(x0, y0))) {
+			x0 += xdiff;
+			y0 += ydiff;
+		}
+		
+		d.DrawLine(x0, y0, x1, y1, 2, co.clr);
+	}
+	else if (co.type == OBJ_VLINE) {
+		int x = border;
+		int x0i = co.pos0 + count + shift - buf_count;
+		int x0 = (x+(x0i+0.5)*div);
+		
+		d.DrawLine(x0, r.top, x0, r.bottom, 2, co.clr);
+	}
+}
 
 bool GraphCtrl::Key(dword key, int count) {
 	if (key == K_LEFT) {

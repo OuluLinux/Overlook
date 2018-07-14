@@ -11,7 +11,9 @@ class Chart : public SubWindowCtrl {
 	
 protected:
 	friend class Overlook;
+	friend class GraphCtrl;
 	
+	Array<ChartObject> objects;
 	Vector<Ptr<CoreItem> > work_queue;
 	Array<GraphCtrl> graphs;
 	Splitter split;
@@ -55,6 +57,11 @@ public:
 	virtual void Start();
 	virtual void Data();
 	virtual String GetTitle();
+	
+	ChartObject& AddObject() {return objects.Add();}
+	ChartObject& GetObject(int i) {return objects[i];}
+	int GetObjectCount() const {return objects.GetCount();}
+	void DeleteObject(int i) {objects.Remove(i);}
 	
 	Core& GetCore() {return *bardata;}
 	Color GetBackground() const {return White();}

@@ -113,6 +113,7 @@ void Chart::StartThread() {
 
 GraphCtrl& Chart::AddGraph(Ptr<CoreIO> src) {
 	GraphCtrl& g = graphs.Add();
+	g.id = graphs.GetCount() - 1;
 	g.WhenTimeValueTool = THISBACK(SetTimeValueTool);
 	g.WhenMouseMove = THISBACK(GraphMouseMove);
 	g.SetRightOffset(right_offset);

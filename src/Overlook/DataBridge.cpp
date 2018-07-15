@@ -113,6 +113,10 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	
 	const Vector<DataBridgeCommon::AskBid>& data = common.data[id];
 	
+	if (sys.GetSymbol(GetSymbol()) == "AUDSEK") {
+		LOG("");
+	}
+	
 	#ifdef flagSECONDS
 	int64 step = GetMinutePeriod();
 	#else
@@ -250,7 +254,6 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	String history_dir = ConfigFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
-	
 	
 	bool old_filetype = false;
 	
@@ -499,7 +502,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		#endif
 		while (t < utc_time) {
 			int wday = DayOfWeek(t);
-			if (wday > 0 && wday < 6 && (wday > 1 || t.hour >= 1)) {
+			if (wday > 0 && wday < 6 /*&& (wday > 1 || t.hour >= 1)*/) {
 				int time = t.Get() - Time(1970,1,1).Get();
 				
 				int res = shift + 100000;

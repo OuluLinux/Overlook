@@ -8,8 +8,9 @@ class NetPressureSolver {
 protected:
 	friend class NetCtrl;
 	
-	Vector<double> pressures, solved_pressures;
+	Vector<double> pressures, solved_pressures, ask, solved_ask, point;
 	double scale = 1;
+	bool use_mtask = false;
 	
 	
 	static const int MAX_ALLSYMBOLS = 380;
@@ -88,10 +89,15 @@ public:
 	double GetSolvedPressure(int i) const {return solved_pressures[i];}
 	int GetSolvedPressureCount() const {return solved_pressures.GetCount();}
 	int GetScale() const {return scale;}
+	double GetAsk(int i) const {return ask[i];}
+	double GetSolvedAsk(int i) const {return solved_ask[i];}
+	double GetPoint(int i) const {return point[i];}
+	void SetAsk(int i, double d) {ask[i] = d;}
 	
 	void Solve();
 	
 	void Init();
+	void UseMtAsk(bool b=true) {use_mtask = b;}
 	void RandomPressure();
 	void Process();
 	void GetRealSymbols();
@@ -117,12 +123,36 @@ public:
 
 class Net {
 	
+protected:
+	friend class NetOptCtrl;
+	friend class NetCtrl;
+	
+	
+	// Persistent
+	Optimizer opt;
+	NetPressureSolver solver;
+	Vector<double> training_pts;
+	
+	
+	// Temp
+	Vector<Ptr<CoreItem> > work_queue;
+	bool running = false, stopped = true;
+	
 	
 public:
 	typedef Net CLASSNAME;
 	Net();
+	~Net();
 	
+	void Data();
+	void Process();
+	void Optimize();
 	
+	void Serialize(Stream& s) {s % opt;}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("Net.bin"));}
+	void StoreThis() {StoreToFile(*this, ConfigFile("Net.bin"));}
+	
+	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
 };
 
 inline Net& GetNet() {return Single<Net>();}
@@ -143,6 +173,14 @@ public:
 	NetPressureSolver* solver = NULL;
 };
 
+class NetOptCtrl : public Ctrl {
+	Vector<Point> polyline;
+	
+public:
+	
+	virtual void Paint(Draw& w);
+};
+
 class NetCtrl : public SubWindowCtrl {
 	TabCtrl tabs;
 	
@@ -154,6 +192,11 @@ class NetCtrl : public SubWindowCtrl {
 	ArrayCtrl testarbitrage, testsiglist;
 	NetPressureSolver testsolver;
 	Option testrandompres;
+	
+	// Optimization mode
+	ParentCtrl optctrl;
+	NetOptCtrl optdraw;
+	NetCircle optcircle;
 	
 public:
 	typedef NetCtrl CLASSNAME;

@@ -133,9 +133,10 @@ public:
 			else
 				return in_sym == out_sym;
 		}
-		if (match_tf)
+		/*if (match_tf)
 			return in_tf > 0 && out_tf == 0;
-		return in_sym == out_sym;
+		return in_sym == out_sym;*/
+		return false;
 	}
 };
 

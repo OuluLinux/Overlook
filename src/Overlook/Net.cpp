@@ -88,6 +88,9 @@ void NetPressureSolver::Init() {
 	
 	pressures.SetCount(sys.GetSymbolCount(), 0);
 	solved_pressures.SetCount(sys.GetSymbolCount(), 0);
+	ask.SetCount(sys.GetSymbolCount(), 0);
+	solved_ask.SetCount(sys.GetSymbolCount(), 0);
+	point.SetCount(sys.GetSymbolCount(), 0);
 	ASSERT(!pressures.IsEmpty());
 	
 	
@@ -113,7 +116,11 @@ void NetPressureSolver::GetRealSymbols() {
 	MetaTrader& mt = GetMetaTrader();
 	const Vector<libmt::Symbol>& symbols = mt.GetSymbols();
 	for(int i = 0; i < symbols.GetCount(); i++) {
-		real_symbols.Add(symbols[i].name);
+		const libmt::Symbol& sym = symbols[i];
+		
+		point[i] = sym.point;
+		
+		real_symbols.Add(sym.name);
 		real_sym_count++;
 	}
 }
@@ -127,7 +134,12 @@ void NetPressureSolver::GetRealBidAsk() {
 		const Price& p = prices[i];
 		const libmt::Symbol& sym = symbols[i];
 		
-		double ask = p.ask;
+		
+		double ask;
+		if (use_mtask)
+			this->ask[i] = p.ask;
+		ask = this->ask[i];
+		
 		double pressure = (pressures[i] + solved_pressures[i]) * sym.point;
 		ask += pressure;
 		
@@ -692,7 +704,10 @@ void NetPressureSolver::Solve() {
 		solved_pressures[i] = 0;
 	}
 	
-	for (int iter = 0;; iter++) {
+	int i1 = -1, i0 = -1, a0, a1;
+	
+	int limit = 5000;
+	for (int iter = 0; iter < limit; iter++) {
 		TradeArbitrage();
 		
 		double max_arbitrage = -DBL_MAX;
@@ -720,6 +735,10 @@ void NetPressureSolver::Solve() {
 		for(int i = 0; i < solved_pressures.GetCount(); i++) {
 			double d = fabs(position[i]);
 			if (d > max_signal) {
+				if (i0 == i && i1 == i && a0 * a1 < 0) {
+					limit = min(limit, iter + 10);
+					continue;
+				}
 				max_i = i;
 				max_signal = d;
 			}
@@ -729,12 +748,31 @@ void NetPressureSolver::Solve() {
 			break;
 		
 		double d = position[max_i];
-		solved_pressures[max_i] += (d > 0 ? +1 : -1) * scale * 0.1;
+		int a = (d > 0 ? +1 : -1);
+		solved_pressures[max_i] += a /** scale * 0.1*/;
+		
+		a1 = a0;
+		i1 = i0;
+		a0 = a;
+		i0 = max_i;
 	}
 	
 	LOG("Solve took " + ts.ToString());
 	
+	
+	for(int i = 0; i < solved_pressures.GetCount(); i++) {
+		double pres = pressures[i] + solved_pressures[i];
+		double ask = this->ask[i];
+		double diff = pres * point[i];
+		double solved_ask = ask + diff;
+		this->solved_ask[i] = solved_ask;
+	}
 }
+
+
+
+
+
 
 
 
@@ -743,7 +781,169 @@ void NetPressureSolver::Solve() {
 
 Net::Net() {
 	
+	LoadThis();
 }
+
+Net::~Net() {
+	running = false;
+	while (!stopped) Sleep(100);
+}
+
+void Net::Data() {
+	
+	if (!running) {
+		running = true;
+		stopped = false;
+		Thread::Start(THISBACK(Process));
+	}
+}
+
+void Net::Process() {
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	
+	Index<int> sym_ids, tf_ids;
+	Vector<FactoryDeclaration> indi_ids;
+	for(int i = 0; i < mt.GetSymbolCount(); i++)
+		sym_ids.Add(i);
+	tf_ids.Add(4);
+	indi_ids.Add().factory = sys.Find<DataBridge>();
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	ASSERT(!work_queue.IsEmpty());
+	
+	
+	
+	while (IsRunning()) {
+		
+		
+		Optimize();
+		
+	}
+	
+	running = false;
+	stopped = true;
+}
+
+void Net::Optimize() {
+	System& sys = GetSystem();
+	
+	VectorMap<int, ConstBuffer*> open_bufs;
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = *work_queue[i];
+		sys.Process(ci, true);
+		
+		Core& c = *ci.core;
+		
+		open_bufs.Add(ci.sym, &c.GetBuffer(0));
+	}
+	SortByKey(open_bufs, StdLess<int>());
+	ASSERT(open_bufs.GetCount() == GetMetaTrader().GetSymbolCount());
+	int c = open_bufs[0]->GetCount();
+	for(int i = 0; i < open_bufs.GetCount(); i++) {
+		int c2 = open_bufs[i]->GetCount();
+		LOG(c << " == " << c2);
+		if (c != c2)
+			Panic("Symbol open count mismatch.");
+	}
+	int end = c - 1;
+	#ifdef flagDEBUG
+	int begin = max(0, end - 10);
+	#else
+	int begin = max(0, end - 10);
+	#endif
+	
+	Vector<int> mom_periods;
+	mom_periods.Add(1);
+	mom_periods.Add(2);
+	mom_periods.Add(3);
+	mom_periods.Add(5);
+	mom_periods.Add(10);
+	mom_periods.Add(30);
+	mom_periods.Add(100);
+	
+	int scale = 50;
+	solver.SetScale(scale);
+	
+	if (opt.GetRound() == 0) {
+		
+		int total = open_bufs.GetCount() * mom_periods.GetCount();
+		opt.Min().SetCount(total);
+		opt.Max().SetCount(total);
+		int row = 0;
+		for(int i = 0; i < open_bufs.GetCount(); i++) {
+			for(int j = 0; j < mom_periods.GetCount(); j++) {
+				opt.Min()[row] = -scale;
+				opt.Max()[row] = +scale;
+				row++;
+			}
+		}
+		
+		opt.SetMaxGenerations(500);
+		opt.Init(total, 33);
+		
+		solver.Init();
+		solver.UseMtAsk(false);
+		
+		training_pts.SetCount(opt.GetMaxRounds(), 0.0);
+	}
+	
+	
+	while (opt.GetRound() < opt.GetMaxRounds() && IsRunning()) {
+		
+		opt.Start();
+		
+		const Vector<double>& trial = opt.GetTrialSolution();
+		
+		
+		double diff_sum = 0.0;
+		for(int i = begin; i < end; i++) {
+			
+			int row = 0;
+			for(int j = 0; j < open_bufs.GetCount(); j++) {
+				ConstBuffer& buf = *open_bufs[j];
+				double point = solver.GetPoint(j);
+				
+				double o0 = buf.Get(i);
+				
+				double pres_sum = 0.0;
+				for(int k = 0; k < mom_periods.GetCount(); k++) {
+					double o1 = buf.Get(max(0, i - mom_periods[k]));
+					
+					double mul = trial[row++];
+					double diff = (o0 - o1) / point;
+					double pres = mul * diff;
+					pres_sum += pres;
+				}
+				pres_sum /= mom_periods.GetCount() * 100;
+				
+				if (pres_sum < -scale) pres_sum = -scale;
+				if (pres_sum > +scale) pres_sum = +scale;
+				
+				solver.SetAsk(j, o0);
+				solver.SetPressure(j, pres_sum);
+			}
+			
+			solver.Solve();
+			
+			for(int j = 0; j < open_bufs.GetCount(); j++) {
+				ConstBuffer& buf = *open_bufs[j];
+				double ask = buf.Get(i+1);
+				double forecast = solver.GetSolvedAsk(j);
+				double point = solver.GetPoint(j);
+				double diff = fabs(ask - forecast) / point;
+				diff_sum += diff;
+			}
+			
+		}
+		
+		
+		training_pts[opt.GetRound()] = -diff_sum;
+		
+		opt.Stop(-diff_sum);
+		
+	}
+}
+
 
 
 
@@ -858,12 +1058,17 @@ NetCtrl::NetCtrl() {
 	Add(tabs.SizePos());
 	
 	tabs.Add(testctrl.SizePos(), "Testing");
+	tabs.Add(optctrl.SizePos(), "Optimization");
+	
 	testctrl.Add(testsymbol.TopPos(0,30).LeftPos(0,200));
 	testctrl.Add(testslider.TopPos(0,30).HSizePos(200, 200));
 	testctrl.Add(testrandompres.TopPos(0,30).RightPos(0,190));
 	testctrl.Add(testcircle.HSizePos().VSizePos(30, 200));
 	testctrl.Add(testarbitrage.HSizePos(0, 200).BottomPos(0, 200));
 	testctrl.Add(testsiglist.RightPos(0, 200).BottomPos(0, 200));
+	
+	optctrl.Add(optcircle.HSizePos().VSizePos(0, 200));
+	optctrl.Add(optdraw.HSizePos().BottomPos(0, 200));
 	
 	testcircle.solver = &testsolver;
 	testslider.MinMax(-10, +10);
@@ -883,6 +1088,9 @@ NetCtrl::NetCtrl() {
 	testarbitrage.ColumnWidths("1 3 1 3 1 1 1");
 	testsiglist.AddColumn("Symbol");
 	testsiglist.AddColumn("Signal");
+	testsolver.UseMtAsk();
+	
+	optcircle.solver = &GetNet().solver;
 	
 }
 
@@ -900,9 +1108,12 @@ void NetCtrl::SetPressure() {
 
 	
 void NetCtrl::Data() {
+	Net& net = GetNet();
 	System& sys = GetSystem();
 	
 	if (GetTitle() == "") Title("NetCtrl");
+	
+	net.Data();
 	
 	int tab = tabs.Get();
 	
@@ -967,7 +1178,26 @@ void NetCtrl::Data() {
 			testsiglist.Set(i, 1, testsolver.prev_position[i]);
 		}
 	}
-	
+	else if (tab == 1) {
+		
+		
+		
+		
+	}
 }
+
+
+void NetOptCtrl::Paint(Draw& w) {
+	Size sz = GetSize();
+	ImageDraw id(sz);
+	id.DrawRect(sz, White());
+	
+	Net& net = GetNet();
+	
+	DrawVectorPolyline(id, sz, net.training_pts, polyline, net.opt.GetRound());
+	
+	w.DrawImage(0, 0, id);
+}
+
 
 }

@@ -316,7 +316,7 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;
-	double peak = 0.0;
+	double peak = -DBL_MAX;
 	
 	int max_steps = 0;
 	int count = data.GetCount();
@@ -331,7 +331,7 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 		max_steps = count;
 	
 	
-	if (max_steps > 1 && max > min) {
+	if (max_steps > 1 && max >= min) {
 		double diff = max - min;
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);

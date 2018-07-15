@@ -314,42 +314,7 @@ public:
 
 
 
-class HurstAdvisor : public ExpertAdvisor {
-	
-	struct Hurst {
-		bool types[4], dirs[4];
-		
-		void Add(bool type, bool dir) {
-			for(int i = 1; i < 4; i++) {
-				types[i] = types[i-1];
-				dirs[i] = dirs[i-1];
-			}
-			types[0] = type;
-			dirs[0] = dir;
-		}
-	};
-	
-	int prev_pos;
-	int take_profit, stop_loss;
-	
-public:
-	typedef HurstAdvisor CLASSNAME;
-	HurstAdvisor();
-	
-	
-	virtual void InitEA();
-	virtual void StartEA(int pos);
-	
-	virtual void IO(ValueRegister& reg) {
-		ExpertAdvisor::IO(reg);
-		
-		reg
-			% Arg("take_profit", take_profit, 0, 100)
-			% Arg("stop_loss", stop_loss, 0, 1000)
-			;
-	}
-	
-};
+
 
 }
 

@@ -78,11 +78,14 @@ GUI_APP_MAIN {
 	if (Config::start_time == 0) {
 		Time t = GetUtcTime();
 		#ifndef flagSECONDS
-		t.year -= 8;
-		while (DayOfWeek(t) == 0 || DayOfWeek(t) == 6) t -= 24*60*60;
-		#else
 		t -= 6*30*24*60*60;
+		#else
+		t -= 14*24*60*60;
 		#endif
+		t.hour = 0;
+		t.minute = 0;
+		t.second = 0;
+		while (DayOfWeek(t) == 0) t -= 24*60*60;
 		Config::start_time = t.Get() - Time(1970,1,1).Get();
 		FileAppend fapp("overlook.ini");
 		fapp.PutEol();

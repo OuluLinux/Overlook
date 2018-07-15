@@ -5,6 +5,7 @@
 #include <CtrlLib/CtrlLib.h>
 #include <Docking/Docking.h>
 #include <plugin/libmt/libmt.h>
+#include <SubWindowCtrl/SubWindowCtrl.h>
 
 using namespace Upp;
 
@@ -26,6 +27,7 @@ using namespace Upp;
 #include "ExpertAdvisor.h"
 #include "Advisors.h"
 #include "MultiExpertAdvisor.h"
+#include "Net.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
 #include "Dialogs.h"
@@ -60,10 +62,10 @@ public:
 struct ProfileGroup : Moveable<ProfileGroup> {
 	FactoryDeclaration decl;
 	Rect rect;
-	int shift = 0, symbol = 0, tf = 0;
+	int shift = 0, symbol = 0, tf = 0, type = 0;
 	bool right_offset = 0, keep_at_end = 0, is_maximized = 0;
 	
-	void Serialize(Stream& s) {s % decl % rect % shift % symbol % tf % right_offset % keep_at_end % is_maximized;}
+	void Serialize(Stream& s) {s % decl % rect % shift % symbol % tf % type % right_offset % keep_at_end % is_maximized;}
 };
 
 struct Profile : Moveable<Profile> {
@@ -90,6 +92,7 @@ protected:
 	CtrlCallbacks<AnalyzerCtrl> alz;
 	CtrlCallbacks<ScalperCtrl> sclp;
 	CtrlCallbacks<AutoChartistCtrl> ac;
+	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -161,6 +164,7 @@ public:
 	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
 	Chart* GetChart(int i);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
+	void OpenNet();
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshAssist();

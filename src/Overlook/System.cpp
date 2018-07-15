@@ -88,7 +88,7 @@ void System::Init() {
 void System::FirstStart() {
 	MetaTrader& mt = GetMetaTrader();
 	String pair1[4], pair2[4];
-	
+	/*
 	Index<String> avoid_currencies;
 	avoid_currencies.Add("SEK");
 	avoid_currencies.Add("HKD");
@@ -96,7 +96,7 @@ void System::FirstStart() {
 	avoid_currencies.Add("NOK");
 	avoid_currencies.Add("MXN");
 	avoid_currencies.Add("RUB");
-	
+	*/
 	try {
 		time_offset = mt.GetTimeOffset();
 		
@@ -109,9 +109,10 @@ void System::FirstStart() {
 			if (s.IsForex()) {
 				String a = s.name.Left(3);
 				String b = s.name.Mid(3,3);
-				if (avoid_currencies.Find(a) == -1 && avoid_currencies.Find(b) == -1) {
-					currencies.FindAdd(a);
-					currencies.FindAdd(b);
+				//if (avoid_currencies.Find(a) == -1 && avoid_currencies.Find(b) == -1)
+				{
+					sym_currencies[i].Add(currencies.FindAdd(a));
+					sym_currencies[i].Add(currencies.FindAdd(b));
 					currency_syms.GetAdd(a).Add(i);
 					currency_syms.GetAdd(b).Add(i);
 					currency_sym_dirs.GetAdd(a).Add(i);
@@ -231,6 +232,7 @@ void System::AddSymbol(String sym) {
 	ASSERT(symbols.Find(sym) == -1); // no duplicates
 	symbols.Add(sym);
 	signals.Add(0);
+	sym_currencies.Add();
 }
 
 void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {

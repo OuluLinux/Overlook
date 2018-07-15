@@ -108,6 +108,9 @@ void Chart::StartThread() {
 	catch (ConfExc e) {
 		
 	}
+	catch (DataExc e) {
+		
+	}
 	PostRefresh();
 }
 

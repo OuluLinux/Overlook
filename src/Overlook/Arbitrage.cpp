@@ -272,7 +272,7 @@ void Arbitrage::GetPipsD() {
 		
 		GetBidAsk(i, 0);
 		
-		if (s.sym[0].bid > 10) {
+		if (s.sym[0].bid > 70) {
 			s.point = 0.01;
 			s.min_pips = min_pips * 0.01;
 		}

@@ -71,6 +71,8 @@ file
 	Scalper.cpp,
 	AutoChartist.h,
 	AutoChartist.cpp,
+	Net.h,
+	Net.cpp,
 	Journal.qtf;
 
 mainconfig

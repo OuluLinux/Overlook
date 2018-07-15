@@ -117,6 +117,8 @@ Overlook::Overlook() : watch(this) {
 	
 	LoadPreviousProfile();
 	PostRefreshData();
+	
+	Maximize();
 }
 
 Overlook::~Overlook() {
@@ -200,6 +202,8 @@ void Overlook::FileMenu(Bar& bar) {
 void Overlook::ViewMenu(Bar& bar) {
 	
 	bar.Add("Full Screen", THISBACK(ToggleFullScreen)).Key(K_F11);
+	bar.Separator();
+	bar.Add("Network view", THISBACK(OpenNet)).Key(K_F2);
 }
 
 void Overlook::InsertMenu(Bar& bar) {
@@ -425,6 +429,12 @@ Chart* Overlook::GetChart(int i) {
 		return NULL;
 	SubWindow& win = cman.Get(i);
 	return dynamic_cast<Chart*>(win.GetSubWindowCtrl());
+}
+
+void Overlook::OpenNet() {
+	cman.AddNet();
+	cman.Get(cman.GetCount()-1).Maximize();
+	cman.Get(cman.GetCount()-1).Maximize();
 }
 
 void Overlook::SetFactory(int f) {
@@ -1173,22 +1183,27 @@ void Overlook::LoadProfile(Profile& profile) {
 	
 	for(int i = 0; i < profile.charts.GetCount(); i++) {
 		const ProfileGroup& pchart	= profile.charts[i];
-		if (pchart.symbol < 0 || pchart.tf < 0) continue;
-		if (pchart.symbol >= sys.GetSymbolCount() || pchart.tf >= sys.GetPeriodCount()) continue;
-		Chart& chart				= OpenChart(pchart.symbol, pchart.decl, pchart.tf);
-		chart.shift					= pchart.shift;
-		
-		SubWindow& swin = cman.GetWindow(chart);
-		if (pchart.is_maximized) {
-			swin.SetStoredRect(pchart.rect);
-			if (!swin.IsMaximized()) swin.Maximize();
-		} else {
-			if (swin.IsMaximized()) swin.Maximize();
-			swin.SetRect(pchart.rect);
+		if (pchart.type == 0) {
+			if (pchart.symbol < 0 || pchart.tf < 0) continue;
+			if (pchart.symbol >= sys.GetSymbolCount() || pchart.tf >= sys.GetPeriodCount()) continue;
+			Chart& chart				= OpenChart(pchart.symbol, pchart.decl, pchart.tf);
+			chart.shift					= pchart.shift;
+			
+			SubWindow& swin = cman.GetWindow(chart);
+			if (pchart.is_maximized) {
+				swin.SetStoredRect(pchart.rect);
+				if (!swin.IsMaximized()) swin.Maximize();
+			} else {
+				if (swin.IsMaximized()) swin.Maximize();
+				swin.SetRect(pchart.rect);
+			}
+			
+			chart.SetRightOffset(pchart.right_offset);
+			chart.SetKeepAtEnd(pchart.keep_at_end);
 		}
-		
-		chart.SetRightOffset(pchart.right_offset);
-		chart.SetKeepAtEnd(pchart.keep_at_end);
+		else if (pchart.type == 1) {
+			OpenNet();
+		}
 	}
 	
 	ActiveWindowChanged();
@@ -1199,24 +1214,31 @@ void Overlook::StoreProfile(Profile& profile) {
 	
 	for(int i = 0; i < cman.GetGroupCount(); i++) {
 		Chart* chart_ptr	= cman.GetGroup(i);
-		if (!chart_ptr) continue;
-		Chart& chart = *chart_ptr;
-		
-		ProfileGroup& pchart		= profile.charts.Add();
-		pchart.decl					= chart.decl;
-		pchart.symbol				= chart.symbol;
-		pchart.tf					= chart.tf;
-		pchart.shift				= chart.shift;
-		pchart.right_offset			= chart.right_offset;
-		pchart.keep_at_end			= chart.keep_at_end;
-		
-		SubWindow& swin = cman.GetWindow(chart);
-		if (swin.IsMaximized()) {
-			pchart.is_maximized = true;
-			pchart.rect = swin.GetStoredRect();
-		} else {
-			pchart.is_maximized = false;
-			pchart.rect = swin.GetRect();
+		NetCtrl* netctrl_ptr = cman.GetNet(i);
+		if (chart_ptr) {
+			Chart& chart = *chart_ptr;
+			
+			ProfileGroup& pchart		= profile.charts.Add();
+			pchart.type					= 0;
+			pchart.decl					= chart.decl;
+			pchart.symbol				= chart.symbol;
+			pchart.tf					= chart.tf;
+			pchart.shift				= chart.shift;
+			pchart.right_offset			= chart.right_offset;
+			pchart.keep_at_end			= chart.keep_at_end;
+			
+			SubWindow& swin = cman.GetWindow(chart);
+			if (swin.IsMaximized()) {
+				pchart.is_maximized = true;
+				pchart.rect = swin.GetStoredRect();
+			} else {
+				pchart.is_maximized = false;
+				pchart.rect = swin.GetRect();
+			}
+		}
+		else if (netctrl_ptr) {
+			ProfileGroup& pchart		= profile.charts.Add();
+			pchart.type					= 1;
 		}
 	}
 }

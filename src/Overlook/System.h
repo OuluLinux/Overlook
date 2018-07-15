@@ -283,6 +283,7 @@ protected:
 	
 	
 	// Temporary
+	Vector<Vector<int> >		sym_currencies;
 	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs;
 	Index<String>				symbols, allowed_symbols, currencies;
 	Vector<int>					signals;
@@ -298,7 +299,10 @@ protected:
 	int							time_offset = 0;
 	int							realtime_count = 0;
 	
-	
+public:
+	int		GetCurrencyCount() const {return currencies.GetCount();}
+	String	GetCurrency(int i) const {return currencies[i];}
+	int		GetSymbolCurrency(int i, int j) const {if (sym_currencies[i].IsEmpty()) return -1; return sym_currencies[i][j];}
 protected:
 	
 	

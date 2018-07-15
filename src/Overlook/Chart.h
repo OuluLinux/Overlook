@@ -1,8 +1,6 @@
 #ifndef _Overlook_Chart_h_
 #define _Overlook_Chart_h_
 
-#include <SubWindowCtrl/SubWindowCtrl.h>
-
 namespace Overlook {
 
 class ChartManager;

@@ -17,6 +17,12 @@ Chart& ChartManager::AddChart() {
 	return chr;
 }
 
+NetCtrl& ChartManager::AddNet() {
+	NetCtrl* net = new NetCtrl();
+	NetCtrl& netc = AddSubWindow<NetCtrl>(net);
+	return netc;
+}
+
 void ChartManager::RefreshWindows() {
 	for(int i = 0; i < GetCount(); i++) {
 		auto* sw = Get(i).GetSubWindowCtrl();

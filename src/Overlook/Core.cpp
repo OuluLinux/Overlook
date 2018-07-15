@@ -215,7 +215,12 @@ void Core::Refresh() {
 	
 	// Some indicators might want to set the size by themselves
 	if (!skip_setcount) {
-		int count = GetInputBuffer(0,0).GetCount() + end_offset;
+		int input_count = GetInputBuffer(0,0).GetCount();
+		if (input_count == 0) {
+			refresh_lock.Leave();
+			return;
+		}
+		int count = input_count + end_offset;
 		bars = count;
 		next_count = count;
 		if (!skip_allocate) {

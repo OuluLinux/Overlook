@@ -52,12 +52,15 @@ void DataBridge::Start() {
 	int mt_period = GetPeriod();
 	
 	// Regular symbols
+	#if 0
 	if (mt_period > 1) {
 		RefreshFromFasterTime();
 		// NOTE: SyncData has broken other refresh functions for these periods. Disable sync to
 		// use them.
 	}
-	else if (sym < sym_count) {
+	else
+	#endif
+	if (sym < sym_count) {
 		bool init_round = GetCounted() == 0 && GetBuffer(0).GetCount() == 0;
 		#ifndef flagSECONDS
 		if (init_round) {
@@ -66,8 +69,10 @@ void DataBridge::Start() {
 			cursor2 = 0;
 			for(int i = 0; i < buffers.GetCount(); i++)
 				buffers[i]->SetCount(0);
+			
 			const Symbol& mtsym = mt.GetSymbol(sym);
-			RefreshFromHistory(true);
+			if (mt_period == 1)
+				RefreshFromHistory(true);
 			RefreshFromHistory(false);
 		}
 		#endif
@@ -453,9 +458,10 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	ASSERT(utc_time.second == 0);
 	#endif
 	int wday = DayOfWeek(utc_time);
-	if (wday == 0 || wday == 6 || (wday == 1 && utc_time.hour < 1))
+	if (wday == 0 || wday == 6 /*|| (wday == 1 && utc_time.hour < 1)*/)
 		return false;
 	
+	int minperiod = GetMinutePeriod();
 	
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
@@ -467,9 +473,9 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	if (shift < 0) {
 		shift = -1;
 		#ifndef flagSECONDS
-		t = Time(1970,1,1) + Config::start_time - 60;
+		t = Time(1970,1,1) + Config::start_time - 60 * minperiod;
 		#else
-		t = Time(1970,1,1) + Config::start_time - 1;
+		t = Time(1970,1,1) + Config::start_time - 1 * minperiod;
 		#endif
 	} else {
 		if (time_buf.IsEmpty())
@@ -487,9 +493,9 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	if (t < utc_time) {
 		shift++;
 		#ifdef flagSECONDS
-		t += 1;
+		t += 1 * minperiod;
 		#else
-		t += 60;
+		t += 60 * minperiod;
 		#endif
 		while (t < utc_time) {
 			int wday = DayOfWeek(t);
@@ -520,13 +526,15 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 				shift++;
 			}
 			#ifdef flagSECONDS
-			t += 1;
+			t += 1 * minperiod;
 			#else
-			t += 60;
+			t += 60 * minperiod;
 			#endif
 		}
 	}
-	
+	else if (shift == -1) {
+		shift++;
+	}
 	return true;
 }
 

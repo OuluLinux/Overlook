@@ -475,7 +475,9 @@ void Overlook::DeepRefresh() {
 		common.lock.Leave();
 		common.RefreshAskBidData(true);
 		GetCalendar().Data();
-		sys.RefreshReal();
+		
+		if (runtime.Elapsed() > 60*1000)
+			sys.RefreshReal();
 		
 		mt_refresh.Reset();
 		

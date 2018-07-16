@@ -348,19 +348,7 @@ void SimpleHurstWindow::Start() {
 		prev_counted = period + 1;
 	
 	for(int i = prev_counted; i < bars; i++) {
-		int pos = 0, neg = 0;
-		for(int j = 0; j < period; j++) {
-			double o2 = openbuf.Get(i-2-j);
-			double o1 = openbuf.Get(i-1-j);
-			double o0 = openbuf.Get(i-j);
-			
-			double d0 = o0-o1;
-			double d1 = o1-o2;
-			double d = d0 * d1;
-			if (d >= 0) pos++;
-			else neg++;
-		}
-		double hurst = (double)pos / (double) period;
+		double hurst = GetSimpleHurst(openbuf, i, period);
 		
 		hurstbuf.Set(i, hurst);
 		
@@ -373,7 +361,22 @@ void SimpleHurstWindow::Start() {
 	
 }
 
-
+double GetSimpleHurst(ConstBuffer& openbuf, int i, int period) {
+	int pos = 0, neg = 0;
+	for(int j = 0; j < period; j++) {
+		double o2 = openbuf.Get(i-2-j);
+		double o1 = openbuf.Get(i-1-j);
+		double o0 = openbuf.Get(i-j);
+		
+		double d0 = o0-o1;
+		double d1 = o1-o2;
+		double d = d0 * d1;
+		if (d >= 0) pos++;
+		else neg++;
+	}
+	double hurst = (double)pos / (double) period;
+	return hurst;
+}
 
 
 

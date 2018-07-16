@@ -91,6 +91,7 @@ public:
 	}
 };
 
+double GetSimpleHurst(ConstBuffer& openbuf, int i, int period);
 
 
 class MovingAverage : public Core {

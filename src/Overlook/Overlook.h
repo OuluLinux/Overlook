@@ -104,7 +104,7 @@ protected:
 	Button add_symindi;
 	Vector<int> symindi_args;
 	MenuBar menu;
-	TimeStop mt_refresh;
+	TimeStop mt_refresh, runtime;
 	Id thrd_id, thrd_job_id;
 	Id sym;
 	bool default_running = false;

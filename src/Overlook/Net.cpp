@@ -819,7 +819,15 @@ void Net::Data() {
 	System& sys = GetSystem();
 	
 	if (best_comb.GetCount() && open_bufs.GetCount()) {
+		NetPressureSolver solver;
+		solver.Init();
+		solver.UseMtAsk(false);
+		solver.SetScale(10);
 		
+		for(int i = 0; i < 2; i++)
+			for(int i = 0; i < work_queue.GetCount(); i++)
+				sys.Process(*work_queue[i], true);
+			
 		int row = 0;
 		for(int j = 0; j < open_bufs.GetCount(); j++) {
 			ConstBuffer& buf = *open_bufs[j];
@@ -829,6 +837,7 @@ void Net::Data() {
 			double o0 = buf.Get(cursor);
 			
 			double pres_sum = 0.0;
+			#if HAVE_MOMENTUM
 			for(int k = 0; k < mom_periods.GetCount(); k++) {
 				double o1 = buf.Get(max(0, cursor - mom_periods[k]));
 				
@@ -838,6 +847,18 @@ void Net::Data() {
 				pres_sum += pres;
 			}
 			pres_sum /= mom_periods.GetCount() * 10000;
+			#else
+			for(int k = 0; k < mom_periods.GetCount(); k++) {
+				double o1 = buf.Get(cursor-1);
+				double diff = o0 - o1;
+				double hurst = GetSimpleHurst(buf, cursor, mom_periods[k]);
+				if (hurst < 0.5) diff *= -1;
+				double mul = best_comb[row++]; // scale range
+				double pres = mul * diff;
+				pres_sum += pres;
+			}
+			pres_sum /= mom_periods.GetCount();
+			#endif
 			
 			if (pres_sum < -scale) pres_sum = -scale;
 			if (pres_sum > +scale) pres_sum = +scale;
@@ -855,7 +876,7 @@ void Net::Data() {
 			double ask = buf.Get(cursor);
 			double forecast = solver.GetSolvedAsk(j);
 			double diff = forecast - ask;
-			int signal = diff <= 0.0;
+			int signal = diff != 0.0 ? (diff < 0.0 ? +1 : -1) : 0;
 			if (symstr == "EURUSD" ||
 				symstr == "GBPUSD" ||
 				symstr == "USDCHF" ||
@@ -864,6 +885,7 @@ void Net::Data() {
 				symstr == "AUDUSD" ||
 				symstr == "NZDUSD" ||
 				symstr == "EURCHF" ||
+				symstr == "EURJPY" ||
 				symstr == "EURGBP")
 					sys.SetSignal(j, signal);
 		}
@@ -886,7 +908,7 @@ void Net::Process() {
 	Vector<FactoryDeclaration> indi_ids;
 	for(int i = 0; i < mt.GetSymbolCount(); i++)
 		sym_ids.Add(i);
-	tf_ids.Add(4);
+	tf_ids.Add(5);
 	indi_ids.Add().factory = sys.Find<DataBridge>();
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	ASSERT(!work_queue.IsEmpty());
@@ -931,17 +953,14 @@ void Net::Optimize() {
 	
 	
 	int end = open_bufs[0]->GetCount() - 1;
-	#ifdef flagDEBUG
-	int begin = max(0, end - 10);
-	#else
-	int begin = max(0, end - 10);
-	#endif
+	int begin = max(0, end - (best_comb.IsEmpty() ? 10 : 100));
 	
-	solver.SetScale(scale);
+	
 	TimeStop ts;
 	
-	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds()) {
-		
+	bool once = false;
+	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds() || once) {
+		once = false;
 		int total = open_bufs.GetCount() * mom_periods.GetCount();
 		opt.Min().SetCount(total);
 		opt.Max().SetCount(total);
@@ -963,10 +982,10 @@ void Net::Optimize() {
 		
 		solver.Init();
 		solver.UseMtAsk(false);
+		solver.SetScale(10);
 		
 		training_pts.SetCount(opt.GetMaxRounds(), 0.0);
 	}
-	
 	
 	
 	while (opt.GetRound() < opt.GetMaxRounds() && IsRunning()) {
@@ -987,15 +1006,28 @@ void Net::Optimize() {
 				double o0 = buf.Get(i);
 				
 				double pres_sum = 0.0;
+				#if HAVE_MOMENTUM
 				for(int k = 0; k < mom_periods.GetCount(); k++) {
 					double o1 = buf.Get(max(0, i - mom_periods[k]));
 					
-					double mul = trial[row++];
-					double diff = (o0 - o1) / point;
+					double mul = trial[row++]; // scale range
+					double diff = (o0 - o1) / point; // integer
 					double pres = mul * diff;
 					pres_sum += pres;
 				}
 				pres_sum /= mom_periods.GetCount() * 10000;
+				#else
+				for(int k = 0; k < mom_periods.GetCount(); k++) {
+					double o1 = buf.Get(i-1);
+					double diff = o0 - o1;
+					double hurst = GetSimpleHurst(buf, i, mom_periods[k]);
+					if (hurst < 0.5) diff *= -1;
+					double mul = trial[row++]; // scale range
+					double pres = mul * diff;
+					pres_sum += pres;
+				}
+				pres_sum /= mom_periods.GetCount();
+				#endif
 				
 				if (pres_sum < -scale) pres_sum = -scale;
 				if (pres_sum > +scale) pres_sum = +scale;
@@ -1038,8 +1070,10 @@ void Net::Optimize() {
 		}
 	}
 	
-	best_comb <<= opt.GetBestSolution();
-	StoreThis();
+	if (IsRunning()) {
+		best_comb <<= opt.GetBestSolution();
+		StoreThis();
+	}
 }
 
 

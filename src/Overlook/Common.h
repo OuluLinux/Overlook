@@ -16,7 +16,7 @@
 
 
 #define TRAININGAREA_FACTOR 0.95
-#define SIGNALSCALE 100
+#define SIGNALSCALE 1
 #define MAX_SYMOPEN 4
 
 namespace Overlook {
@@ -929,7 +929,7 @@ typedef void (*ArgsFn)(int input, FactoryDeclaration& decl, const Vector<int>& a
 
 
 void DrawVectorPoints(Draw& d, Size sz, const Vector<double>& pts);
-void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache, int max_count=0);
+void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache, int max_count=0, double zero_line=0.0);
 
 
 

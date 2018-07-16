@@ -49,6 +49,8 @@ class Optimizer {
 	int64 idum2;
 	int64 iy;
 	Vector<int64> iv;
+	int max_value = 100;
+	int min_value = -100;
 	
 	
 	
@@ -79,13 +81,13 @@ public:
 		  % idum
 		  % idum2
 		  % iy
-		  % iv;
+		  % iv
+		  % max_value
+		  % min_value;
 	}
 	
 	enum {RAND_UNIFORM, RAND_NORMDIST, RAND_MANUAL};
 	
-	int max_value = 100;
-	int min_value = -100;
 	
 	
 	int		Dimension() {return dimension;}

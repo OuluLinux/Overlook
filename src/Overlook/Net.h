@@ -8,9 +8,6 @@ class NetPressureSolver {
 protected:
 	friend class NetCtrl;
 	
-	Vector<double> pressures, solved_pressures, ask, solved_ask, point;
-	double scale = 1;
-	bool use_mtask = false;
 	
 	
 	static const int MAX_ALLSYMBOLS = 380;
@@ -30,6 +27,8 @@ protected:
 			xtrade = s.xtrade;
 			xposition = s.xposition;
 		}
+		
+		void Serialize(Stream& s) {s % arbitrage_count % xtrade % xposition;}
 	};
 	
 	struct VariantSym : Moveable<VariantSym> {
@@ -44,6 +43,8 @@ protected:
 			math = s.math;
 			all_sym = s.all_sym;
 		}
+		
+		void Serialize(Stream& s) {s % bid % ask % math % all_sym;}
 	};
 	
 	struct Symbol : Moveable<Symbol> {
@@ -61,12 +62,18 @@ protected:
 			point = s.point;
 			min_pips = s.min_pips;
 		}
+		
+		void Serialize(Stream& s) {s % pair % sym % point % min_pips;}
 	};
+	
+	Vector<double> pressures, solved_pressures, ask, solved_ask, point;
+	double scale = 1;
+	bool use_mtask = false;
+	
 	
 	VectorMap<String, int> spreads;
 	Vector<Symbol> symbols;
 	Vector<String> currencies, real_symbols;
-	String str_out;
 	double min_pips = -3;
 	double bids_real[MAX_REALSYMBOLS];
 	double asks_real[MAX_REALSYMBOLS];
@@ -76,6 +83,8 @@ protected:
 	double ALPHA = 0.001;
 	int max_arbitrage_count = 0;
 	int real_sym_count = 0;
+	
+	// Temp
 	bool running = false, stopped = true;
 	
 	
@@ -83,6 +92,7 @@ public:
 	typedef NetPressureSolver CLASSNAME;
 	NetPressureSolver();
 	
+	void Serialize(Stream& s);
 	void SetPressure(int i, double d) {pressures[i] = d;}
 	void SetScale(double d) {scale = fabs(d);}
 	double GetPressure(int i) const {return pressures[i];}
@@ -132,10 +142,16 @@ protected:
 	Optimizer opt;
 	NetPressureSolver solver;
 	Vector<double> training_pts;
+	Vector<double> best_comb;
+	Vector<int> mom_periods;
+	double straight_diff = 0.0;
+	int scale = 50;
+	bool once_diff = true;
 	
 	
 	// Temp
 	Vector<Ptr<CoreItem> > work_queue;
+	VectorMap<int, ConstBuffer*> open_bufs;
 	bool running = false, stopped = true;
 	
 	
@@ -148,7 +164,7 @@ public:
 	void Process();
 	void Optimize();
 	
-	void Serialize(Stream& s) {s % opt;}
+	void Serialize(Stream& s) {s % opt % solver % training_pts % best_comb % mom_periods % straight_diff % scale % once_diff;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Net.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Net.bin"));}
 	

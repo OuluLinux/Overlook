@@ -284,10 +284,10 @@ protected:
 	
 	// Temporary
 	Vector<Vector<int> >		sym_currencies;
-	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs;
+	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs, major_currency_syms;
 	Index<String>				symbols, allowed_symbols, currencies;
 	Vector<int>					signals;
-	Index<int>					periods;
+	Index<int>					periods, major_currencies;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;
 	Vector<FactoryRegister>		regs;
@@ -303,6 +303,10 @@ public:
 	int		GetCurrencyCount() const {return currencies.GetCount();}
 	String	GetCurrency(int i) const {return currencies[i];}
 	int		GetSymbolCurrency(int i, int j) const {if (sym_currencies[i].IsEmpty()) return -1; return sym_currencies[i][j];}
+	int		GetMajorCurrencyCount() const {return major_currency_syms.GetCount();}
+	String	GetMajorCurrency(int i) const {return major_currency_syms.GetKey(i);}
+	int		FindMajorCurrency(int i) const {return major_currencies.Find(i);}
+	
 protected:
 	
 	

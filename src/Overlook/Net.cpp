@@ -687,7 +687,6 @@ void NetPressureSolver::OpenArbitragePosition(int sym_id, int variant1_id, int v
 			  "), Difference = " + DblStr((v1.bid - v2.ask) / s.point) + " pips");
 		LOG(str_out);*/
 		
-		str_out = "";
 	}
 }
 
@@ -730,7 +729,7 @@ void NetPressureSolver::Solve() {
 			}
 		}
 		
-		double max_signal = 0;
+		double max_signal = -DBL_MAX;
 		int max_i = -1;
 		for(int i = 0; i < solved_pressures.GetCount(); i++) {
 			double d = fabs(position[i]);
@@ -744,7 +743,7 @@ void NetPressureSolver::Solve() {
 			}
 		}
 		
-		if (max_arbitrage < 0.0 /*&& max_signal < 15.0*/)
+		if (max_arbitrage < 0.0 && max_signal < 15.0 || max_i == -1)
 			break;
 		
 		double d = position[max_i];
@@ -757,7 +756,7 @@ void NetPressureSolver::Solve() {
 		i0 = max_i;
 	}
 	
-	LOG("Solve took " + ts.ToString());
+	//LOG("Solve took " + ts.ToString());
 	
 	
 	for(int i = 0; i < solved_pressures.GetCount(); i++) {
@@ -767,6 +766,21 @@ void NetPressureSolver::Solve() {
 		double solved_ask = ask + diff;
 		this->solved_ask[i] = solved_ask;
 	}
+}
+
+void NetPressureSolver::Serialize(Stream& s) {
+	s % pressures % solved_pressures % ask % solved_ask % point
+	  % scale
+	  % use_mtask
+	  
+	  % spreads
+	  % symbols
+	  % currencies % real_symbols
+	  % min_pips;
+	for(int i = 0; i < MAX_REALSYMBOLS; i++) {
+		s % bids_real[i] % asks_real[i] % position[i] % prev_position[i];
+	}
+	s % lots % ALPHA % max_arbitrage_count % real_sym_count;
 }
 
 
@@ -782,6 +796,18 @@ void NetPressureSolver::Solve() {
 Net::Net() {
 	
 	LoadThis();
+	
+	if (mom_periods.IsEmpty()) {
+		mom_periods.Add(1);
+		mom_periods.Add(2);
+		mom_periods.Add(3);
+		mom_periods.Add(5);
+		mom_periods.Add(10);
+		mom_periods.Add(30);
+		mom_periods.Add(100);
+		
+		scale = 50;
+	}
 }
 
 Net::~Net() {
@@ -790,6 +816,59 @@ Net::~Net() {
 }
 
 void Net::Data() {
+	System& sys = GetSystem();
+	
+	if (best_comb.GetCount() && open_bufs.GetCount()) {
+		
+		int row = 0;
+		for(int j = 0; j < open_bufs.GetCount(); j++) {
+			ConstBuffer& buf = *open_bufs[j];
+			int cursor = buf.GetCount() - 1;
+			double point = solver.GetPoint(j);
+			
+			double o0 = buf.Get(cursor);
+			
+			double pres_sum = 0.0;
+			for(int k = 0; k < mom_periods.GetCount(); k++) {
+				double o1 = buf.Get(max(0, cursor - mom_periods[k]));
+				
+				double mul = best_comb[row++];
+				double diff = (o0 - o1) / point;
+				double pres = mul * diff;
+				pres_sum += pres;
+			}
+			pres_sum /= mom_periods.GetCount() * 10000;
+			
+			if (pres_sum < -scale) pres_sum = -scale;
+			if (pres_sum > +scale) pres_sum = +scale;
+			
+			solver.SetAsk(j, o0);
+			solver.SetPressure(j, pres_sum);
+		}
+		
+		solver.Solve();
+		
+		for(int j = 0; j < open_bufs.GetCount(); j++) {
+			String symstr = sys.GetSymbol(j);
+			ConstBuffer& buf = *open_bufs[j];
+			int cursor = buf.GetCount() - 1;
+			double ask = buf.Get(cursor);
+			double forecast = solver.GetSolvedAsk(j);
+			double diff = forecast - ask;
+			int signal = diff <= 0.0;
+			if (symstr == "EURUSD" ||
+				symstr == "GBPUSD" ||
+				symstr == "USDCHF" ||
+				symstr == "USDJPY" ||
+				symstr == "USDCAD" ||
+				symstr == "AUDUSD" ||
+				symstr == "NZDUSD" ||
+				symstr == "EURCHF" ||
+				symstr == "EURGBP")
+					sys.SetSignal(j, signal);
+		}
+		
+	}
 	
 	if (!running) {
 		running = true;
@@ -802,6 +881,7 @@ void Net::Process() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	
+	
 	Index<int> sym_ids, tf_ids;
 	Vector<FactoryDeclaration> indi_ids;
 	for(int i = 0; i < mt.GetSymbolCount(); i++)
@@ -811,6 +891,23 @@ void Net::Process() {
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	ASSERT(!work_queue.IsEmpty());
 	
+	
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = *work_queue[i];
+		sys.Process(ci, true);
+		
+		Core& c = *ci.core;
+		open_bufs.Add(ci.sym, &c.GetBuffer(0));
+	}
+	SortByKey(open_bufs, StdLess<int>());
+	ASSERT(open_bufs.GetCount() == GetMetaTrader().GetSymbolCount());
+	int c = open_bufs[0]->GetCount();
+	for(int i = 0; i < open_bufs.GetCount(); i++) {
+		int c2 = open_bufs[i]->GetCount();
+		LOG(c << " == " << c2);
+		if (c != c2)
+			Panic("Symbol open count mismatch.");
+	}
 	
 	
 	while (IsRunning()) {
@@ -827,44 +924,23 @@ void Net::Process() {
 void Net::Optimize() {
 	System& sys = GetSystem();
 	
-	VectorMap<int, ConstBuffer*> open_bufs;
-	for(int i = 0; i < work_queue.GetCount(); i++) {
-		CoreItem& ci = *work_queue[i];
-		sys.Process(ci, true);
-		
-		Core& c = *ci.core;
-		
-		open_bufs.Add(ci.sym, &c.GetBuffer(0));
-	}
-	SortByKey(open_bufs, StdLess<int>());
-	ASSERT(open_bufs.GetCount() == GetMetaTrader().GetSymbolCount());
-	int c = open_bufs[0]->GetCount();
-	for(int i = 0; i < open_bufs.GetCount(); i++) {
-		int c2 = open_bufs[i]->GetCount();
-		LOG(c << " == " << c2);
-		if (c != c2)
-			Panic("Symbol open count mismatch.");
-	}
-	int end = c - 1;
+	
+	for(int i = 0; i < 2; i++)
+		for(int i = 0; i < work_queue.GetCount(); i++)
+			sys.Process(*work_queue[i], true);
+	
+	
+	int end = open_bufs[0]->GetCount() - 1;
 	#ifdef flagDEBUG
 	int begin = max(0, end - 10);
 	#else
 	int begin = max(0, end - 10);
 	#endif
 	
-	Vector<int> mom_periods;
-	mom_periods.Add(1);
-	mom_periods.Add(2);
-	mom_periods.Add(3);
-	mom_periods.Add(5);
-	mom_periods.Add(10);
-	mom_periods.Add(30);
-	mom_periods.Add(100);
-	
-	int scale = 50;
 	solver.SetScale(scale);
+	TimeStop ts;
 	
-	if (opt.GetRound() == 0) {
+	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds()) {
 		
 		int total = open_bufs.GetCount() * mom_periods.GetCount();
 		opt.Min().SetCount(total);
@@ -878,7 +954,11 @@ void Net::Optimize() {
 			}
 		}
 		
-		opt.SetMaxGenerations(500);
+		#ifdef flagDEBUG
+		opt.SetMaxGenerations(5);
+		#else
+		opt.SetMaxGenerations(5000);
+		#endif
 		opt.Init(total, 33);
 		
 		solver.Init();
@@ -886,6 +966,7 @@ void Net::Optimize() {
 		
 		training_pts.SetCount(opt.GetMaxRounds(), 0.0);
 	}
+	
 	
 	
 	while (opt.GetRound() < opt.GetMaxRounds() && IsRunning()) {
@@ -914,7 +995,7 @@ void Net::Optimize() {
 					double pres = mul * diff;
 					pres_sum += pres;
 				}
-				pres_sum /= mom_periods.GetCount() * 100;
+				pres_sum /= mom_periods.GetCount() * 10000;
 				
 				if (pres_sum < -scale) pres_sum = -scale;
 				if (pres_sum > +scale) pres_sum = +scale;
@@ -932,16 +1013,33 @@ void Net::Optimize() {
 				double point = solver.GetPoint(j);
 				double diff = fabs(ask - forecast) / point;
 				diff_sum += diff;
+				
+				if (once_diff) {
+					double forecast = buf.Get(i);
+					straight_diff += fabs(ask - forecast) / point;
+				}
 			}
 			
 		}
 		
+		if (once_diff) {
+			
+			once_diff = false;
+		}
 		
 		training_pts[opt.GetRound()] = -diff_sum;
 		
 		opt.Stop(-diff_sum);
 		
+		
+		if (ts.Elapsed() >= 60 *1000) {
+			StoreThis();
+			ts.Reset();
+		}
 	}
+	
+	best_comb <<= opt.GetBestSolution();
+	StoreThis();
 }
 
 
@@ -969,7 +1067,7 @@ void NetCircle::Paint(Draw& w) {
 	id.DrawRect(sz, White());
 	
 	System& sys = GetSystem();
-	int curcount = sys.GetCurrencyCount();
+	int curcount = sys.GetMajorCurrencyCount();
 	int symcount = sys.GetSymbolCount();
 	
 	double angle = 2*M_PI / curcount;
@@ -988,7 +1086,7 @@ void NetCircle::Paint(Draw& w) {
 		x = center.x + cos(a) * sz.cx/2* 7/8;
 		y = center.y + sin(a) * sz.cy/2* 7/8;
 		
-		String cur = sys.GetCurrency(i);
+		String cur = sys.GetMajorCurrency(i);
 		Size sz = GetTextSize(cur, fnt);
 		x -= sz.cx / 2;
 		y -= sz.cy / 2;
@@ -1001,8 +1099,8 @@ void NetCircle::Paint(Draw& w) {
 		
 		if (solver->GetSolvedPressureCount() > 0)
 		for(int i = 0; i < symcount; i++) {
-			int cur0 = sys.GetSymbolCurrency(i, 0);
-			int cur1 = sys.GetSymbolCurrency(i, 1);
+			int cur0 = sys.FindMajorCurrency(sys.GetSymbolCurrency(i, 0));
+			int cur1 = sys.FindMajorCurrency(sys.GetSymbolCurrency(i, 1));
 			if (cur1 == -1) continue;
 			
 			double a0 = cur0 * angle;
@@ -1194,7 +1292,7 @@ void NetOptCtrl::Paint(Draw& w) {
 	
 	Net& net = GetNet();
 	
-	DrawVectorPolyline(id, sz, net.training_pts, polyline, net.opt.GetRound());
+	DrawVectorPolyline(id, sz, net.training_pts, polyline, net.opt.GetRound(), -net.straight_diff);
 	
 	w.DrawImage(0, 0, id);
 }

@@ -122,6 +122,13 @@ void System::FirstStart() {
 			//ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
 		}
 		
+		for(int i = 0; i < currency_syms.GetCount(); i++) {
+			const Index<int>& syms = currency_syms[i];
+			if (syms.GetCount() >= 4) {
+				major_currency_syms.Add(currency_syms.GetKey(i)) <<= syms;
+				major_currencies.Add(i);
+			}
+		}
 		/*for(int i = 0; i < currencies.GetCount(); i++) {
 			int id = symbols.GetCount();
 			AddSymbol(currencies[i]);

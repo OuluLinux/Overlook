@@ -312,7 +312,7 @@ void DrawVectorPoints(Draw& id, Size sz, const Vector<double>& data) {
 	}
 }
 
-void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count) {
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count, double zero_line) {
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;
@@ -363,6 +363,17 @@ void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Po
 			Size str_sz = GetTextSize(str, fnt);
 			id.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
 			id.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
+		}
+		{
+			int y = (int)(sz.cy - (zero_line - min) / diff * sz.cy);
+			id.DrawLine(0, y, sz.cx, y, 1, Black());
+			if (zero_line != 0.0) {
+				int y = sz.cy - 10;
+				String str = DblStr(zero_line);
+				Size str_sz = GetTextSize(str, fnt);
+				id.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+				id.DrawText(16, y, str, fnt, Black());
+			}
 		}
 	}
 }

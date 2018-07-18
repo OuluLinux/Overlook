@@ -149,27 +149,29 @@ int CalEvent::GetSignalDirection() {
 
 
 
-Calendar::Calendar() {
+CalendarCommon::CalendarCommon() {
 	
 	
 }
 
-void Calendar::Init() {
+void CalendarCommon::Init() {
 	LoadThis();
 	
-	//if (events.GetCount() == 0) UpdateHistory();
+	if (events.GetCount() == 0) UpdateHistory();
+	
+	VectorMap<String, int> event_titles;
+	for(int i = 0; i < events.GetCount(); i++) {
+		const CalEvent& e = events[i];
+		String s = e.currency + " " + e.title;
+		event_titles.GetAdd(s, 0)++;
+	}
+	SortByValue(event_titles, StdGreater<int>());
+	
+	DUMPM(event_titles);
+	
 }
 
-
-void Calendar::StoreThis() {
-	StoreToFile(*this, ConfigFile("events.bin"));
-}
-
-void Calendar::LoadThis() {
-	LoadFromFile(*this, ConfigFile("events.bin"));
-}
-
-void Calendar::Data() {
+void CalendarCommon::Start() {
 	lock.Enter();
 	Time now = GetUtcTime();
 	
@@ -182,20 +184,28 @@ void Calendar::Data() {
 	lock.Leave();
 }
 
-void Calendar::Refresh() {
+void CalendarCommon::StoreThis() {
+	StoreToFile(*this, ConfigFile("events.bin"));
+}
+
+void CalendarCommon::LoadThis() {
+	LoadFromFile(*this, ConfigFile("events.bin"));
+}
+
+void CalendarCommon::Refresh() {
 	SetTimeNow();
 	Update("", true);
 }
 
-int Calendar::GetCount() {
+int CalendarCommon::GetCount() {
 	return events.GetCount();
 }
 
-const CalEvent& Calendar::GetEvent(int i) {
+const CalEvent& CalendarCommon::GetEvent(int i) {
 	return events[i];
 }
 
-void Calendar::SetEventActualDiff(int i, double diff) {
+void CalendarCommon::SetEventActualDiff(int i, double diff) {
 	CalEvent& ce = events[i];
 	
 	String strdbl = DblStr(100+diff);
@@ -207,7 +217,7 @@ void Calendar::SetEventActualDiff(int i, double diff) {
 	StoreThis();
 }
 
-void Calendar::ParseEvent(const XmlNode& n, CalEvent& event) {
+void CalendarCommon::ParseEvent(const XmlNode& n, CalEvent& event) {
 	
 	event.id = StrInt(n.Attr("data-eventid"));
 	
@@ -327,7 +337,7 @@ void Calendar::ParseEvent(const XmlNode& n, CalEvent& event) {
 
 
 
-void Calendar::UpdateLastWeek() {
+void CalendarCommon::UpdateLastWeek() {
 	Date now = GetUtcTime();
 	now -= 1;
 	while (DayOfWeek(now) != 0) now -= 1;
@@ -352,7 +362,7 @@ void Calendar::UpdateLastWeek() {
 	Update(postfix, true);
 }
 
-void Calendar::UpdateNextWeek() {
+void CalendarCommon::UpdateNextWeek() {
 	Date now = GetUtcTime();
 	now += 1;
 	while (DayOfWeek(now) != 0) now += 1;
@@ -376,14 +386,14 @@ void Calendar::UpdateNextWeek() {
 	Update(postfix, true);
 }
 
-void Calendar::Dump() {
+void CalendarCommon::Dump() {
 	LOG("event-count: " << events.GetCount());
 	for(int i = 0; i < events.GetCount(); i++) {
 		LOG(i << ": " << events[i].ToInlineString());
 	}
 }
 
-void Calendar::UpdateHistory() {
+void CalendarCommon::UpdateHistory() {
 	Date now = GetSysDate();
 	Date begin(2007,1,1);
 	if (events.GetCount())
@@ -433,7 +443,7 @@ void Calendar::UpdateHistory() {
 	StoreThis();
 }
 
-void Calendar::SetTimeNow() {
+void CalendarCommon::SetTimeNow() {
 	Time now = GetUtcTime();
 	thisyear = now.year;
 	thismonth = now.month;
@@ -452,12 +462,12 @@ void XmlFix(String& c) {
 }
 
 #define LEAVE {return downloaded;}
-int Calendar::Update(String postfix, bool force_update) {
+int CalendarCommon::Update(String postfix, bool force_update) {
 	int downloaded = 0;
 	
 	prevtime = Null;
 	
-	LOG("Calendar::Update " << postfix);
+	LOG("CalendarCommon::Update " << postfix);
 	errorcode = 0;
 	
 	if (!postfix.GetCount()) {
@@ -577,7 +587,7 @@ int Calendar::Update(String postfix, bool force_update) {
 
 
 
-void Calendar::SetEvent(CalEvent& ce) {
+void CalendarCommon::SetEvent(CalEvent& ce) {
 	
 	if (IsNull(ce.timestamp) || ce.title.IsEmpty()) return;
 	
@@ -601,7 +611,7 @@ void Calendar::SetEvent(CalEvent& ce) {
 	events.Add(ce);
 }
 
-bool Calendar::IsCalendarNeedingUpdate() {
+bool CalendarCommon::IsCalendarNeedingUpdate() {
 	Time now = GetUtcTime();
 	
 	if (!events.GetCount())
@@ -621,7 +631,7 @@ bool Calendar::IsCalendarNeedingUpdate() {
 	return r;
 }
 
-bool Calendar::IsMajorSpeak() {
+bool CalendarCommon::IsMajorSpeak() {
 	Time now = GetUtcTime();
 	Time begin = now - 4*60*60;
 	Time end   = now + 4*60*60;
@@ -637,6 +647,59 @@ bool Calendar::IsMajorSpeak() {
 		}
 	}
 	return false;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CalendarCtrl::CalendarCtrl() {
+	calendar.AddColumn("Time");
+	calendar.AddColumn("Title");
+	calendar.AddColumn("Currency");
+	calendar.AddColumn("Impact");
+	calendar.AddColumn("Forecast");
+	calendar.AddColumn("Previous");
+	calendar.AddColumn("Actual");
+	
+}
+	
+void CalendarCtrl::Data() {
+	/*Time now = GetUtcTime();
+	Time end = now + 2*60*60;
+	Time begin = now - 24 * 60*60;
+	int row = 0;
+	for(int i = cal.GetCount()-1; i >= 0; i--) {
+		const CalEvent& e = cal.GetEvent(i);
+		if (e.timestamp > end) continue;
+		if (e.timestamp < begin) break;
+		
+		calendar.Set(row, 0, Format("%", e.timestamp));
+		calendar.Set(row, 1, e.title);
+		calendar.Set(row, 2, e.currency);
+		calendar.Set(row, 3, e.GetImpactString());
+		calendar.Set(row, 4, e.forecast + e.unit);
+		calendar.Set(row, 5, e.previous + e.unit);
+		calendar.Set(row, 6, e.actual + e.unit);
+		row++;
+	}
+	calendar.SetCount(row);
+	
+	if (!row)
+		calendar.Set(0, 1, "No events...");*/
 }
 
 }

@@ -1731,14 +1731,7 @@ void ForceIndex::Init() {
 }
 
 void ForceIndex::Assist(int cursor, VectorBool& vec) {
-	/*if (cursor > 0) {
-		double force0 = GetBuffer(0).Get(cursor);
-		double force1 = GetBuffer(0).Get(cursor-1);
-		if (force0 > 0.0)		vec.Set(FORCE_OVERZERO, true);
-		else					vec.Set(FORCE_BELOWZERO, true);
-		if (force0 > force1)	vec.Set(FORCE_INC, true);
-		else					vec.Set(FORCE_DEC, true);
-	}*/
+	
 }
 
 void ForceIndex::Start() {
@@ -5955,124 +5948,6 @@ void EasierScalperSignal::Assist(int cursor, VectorBool& vec) {
 
 
 
-AnalyzerViewer::AnalyzerViewer() {
-	
-}
-
-void AnalyzerViewer::Init() {
-	
-}
-
-void AnalyzerViewer::Start() {
-	System& sys = GetSystem();
-	Analyzer& a = GetAnalyzer();
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	LabelSignal& sig = GetLabelBuffer(0, 0);
-	
-	if (a.sel_sym >= 0 && a.sel_sym < a.symbols.GetCount()) {
-		const AnalyzerSymbol& as = a.symbols[a.sel_sym];
-		
-		if (a.sel_cluster >= 0 && a.sel_cluster < as.clusters.GetCount()) {
-			const AnalyzerCluster& ac = as.clusters[a.sel_cluster];
-			
-			int bars = GetBars();
-			
-			if (as.match_mask_sum.GetCount()) {
-				for(int i = 0; i < bars; i++) {
-					SetSafetyLimit(i);
-					
-					if (i < as.match_mask_sum.GetCount()) {
-						sig.signal.Set(i, as.type);
-						sig.enabled.Set(i, as.match_mask_sum.Get(i));
-					}
-				}
-			}
-			else {
-				for(int i = 0; i < bars; i++) {
-					SetSafetyLimit(i);
-					
-					if (i < ac.match_mask.GetCount()) {
-						sig.signal.Set(i, as.type);
-						sig.enabled.Set(i, ac.match_mask.Get(i));
-					}
-				}
-			}
-		}
-	}
-}
-
-void AnalyzerViewer::Assist(int cursor, VectorBool& vec) {
-	
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ScalperViewer::ScalperViewer() {
-	
-}
-
-void ScalperViewer::Init() {
-	
-}
-
-void ScalperViewer::Start() {
-	System& sys = GetSystem();
-	Scalper& s = GetScalper();
-	ConstBuffer& open_buf = GetInputBuffer(0, 0);
-	LabelSignal& sig = GetLabelBuffer(0, 0);
-	
-	if (s.sel_sym >= 0 && s.sel_sym < s.symbols.GetCount()) {
-		const ScalperSymbol& as = s.symbols[s.sel_sym];
-		
-		int bars = GetBars();
-		
-		for(int i = 0; i < bars; i++) {
-			SetSafetyLimit(i);
-			
-			if (i < as.signal.GetCount()) {
-				sig.signal.Set(i, as.type);
-				sig.enabled.Set(i, as.signal.Get(i));
-			}
-		}
-	}
-}
-
-void ScalperViewer::Assist(int cursor, VectorBool& vec) {
-	
-}
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -6090,7 +5965,6 @@ void PulseIndicator::Init() {
 
 void PulseIndicator::Start() {
 	System& sys = GetSystem();
-	Scalper& s = GetScalper();
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
@@ -6218,7 +6092,6 @@ void Avoidance::Init() {
 
 void Avoidance::Start() {
 	System& sys = GetSystem();
-	Scalper& s = GetScalper();
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	double point = dynamic_cast<DataBridge*>(GetInputCore(0))->GetPoint();
 	Buffer& out = GetBuffer(0);
@@ -6323,7 +6196,6 @@ void AvoidancePeaks::Init() {
 
 void AvoidancePeaks::Start() {
 	System& sys = GetSystem();
-	Scalper& s = GetScalper();
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& avoid_buf = GetInputBuffer(1, 0);
 	//ConstLabelSignal& avoid_sig = GetInputLabel(1);
@@ -6493,7 +6365,7 @@ void Laguerre::Start() {
 		
 		dst.Set(i, gd_152);
 		
-		sig.signal.Set(i, gd_152 >= 0.5);
+		sig.signal.Set(i, gd_152 <= 0.5);
 	}
 }
 
@@ -6601,7 +6473,7 @@ void QuantitativeQualitativeEstimation::Start() {
 
 		dst.Set(i, d);
 		
-		sig.signal.Set(i, d >= 50);
+		sig.signal.Set(i, d <= 50);
 	}
 }
 

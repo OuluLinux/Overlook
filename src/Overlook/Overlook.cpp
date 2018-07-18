@@ -107,13 +107,6 @@ Overlook::Overlook() : watch(this) {
 	debuglist.AddColumn("Source line");
 	debuglist.ColumnWidths("6 1 2 2 24");
 	
-	calendar.AddColumn("Time");
-	calendar.AddColumn("Title");
-	calendar.AddColumn("Currency");
-	calendar.AddColumn("Impact");
-	calendar.AddColumn("Forecast");
-	calendar.AddColumn("Previous");
-	calendar.AddColumn("Actual");
 	
 	LoadPreviousProfile();
 	PostRefreshData();
@@ -133,12 +126,8 @@ void Overlook::DockInit() {
 	DockBottom(last);
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(ac, "AutoChartist").SizeHint(Size(300, 200)));
-	//Tabify(last, Dockable(sclp, "Scalper").SizeHint(Size(300, 200)));
-	//Tabify(last, Dockable(alz, "Analyzer").SizeHint(Size(300, 200)));
-	//Tabify(last, Dockable(GetMyfxbook(), "MyFxBook").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
-	Tabify(last, Dockable(calendar, "Calendar").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(sentctrl, "Sentiment").SizeHint(Size(300, 200)));
+	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
@@ -146,13 +135,9 @@ void Overlook::DockInit() {
 	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
-	calendar		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
 	exposure		.WhenVisible << THISBACK(Data);
 	trade			.WhenVisible << THISBACK(Data);
-	alz				.WhenVisible << THISBACK(Data);
-	sclp			.WhenVisible << THISBACK(Data);
-	ac				.WhenVisible << THISBACK(Data);
 }
 
 int Overlook::GetTimeframeIndex() {
@@ -180,7 +165,7 @@ void Overlook::FileMenu(Bar& bar) {
 	bar.Sub("Profiles", [=](Bar& bar) {
 		bar.Add("Save As", THISBACK(SaveProfile));
 		bar.Separator();
-		bar.Add(!default_running, "Load default advisor profile", THISBACK(LoadAdvisorProfile));
+		bar.Add("Load default advisor profile", THISBACK(LoadAdvisorProfile));
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
@@ -204,6 +189,18 @@ void Overlook::ViewMenu(Bar& bar) {
 	bar.Add("Full Screen", THISBACK(ToggleFullScreen)).Key(K_F11);
 	bar.Separator();
 	bar.Add("Network view", THISBACK(OpenNet)).Key(K_F2);
+	bar.Separator();
+	bar.Add("Load major pairs M1", THISBACK1(LoadMajorPairProfile, 0));
+	bar.Add("Load major pairs M15", THISBACK1(LoadMajorPairProfile, 2));
+	bar.Add("Load major pairs H1", THISBACK1(LoadMajorPairProfile, 4));
+	bar.Add("Load major pairs H4", THISBACK1(LoadMajorPairProfile, 5));
+	bar.Add("Load major pairs D1", THISBACK1(LoadMajorPairProfile, 6));
+	bar.Add("Load major currencies M1", THISBACK1(LoadMajorCurrencyProfile, 0));
+	bar.Add("Load major currencies M15", THISBACK1(LoadMajorCurrencyProfile, 2));
+	bar.Add("Load major currencies H1", THISBACK1(LoadMajorCurrencyProfile, 4));
+	bar.Add("Load major currencies H4", THISBACK1(LoadMajorCurrencyProfile, 5));
+	bar.Add("Load major currencies D1", THISBACK1(LoadMajorCurrencyProfile, 6));
+	
 }
 
 void Overlook::InsertMenu(Bar& bar) {
@@ -468,15 +465,12 @@ void Overlook::DeepRefresh() {
 	{
 		ReleaseLog("DeepRefresh entered");
 		mt.Data();
-		DataBridgeCommon& common = GetDataBridgeCommon();
-		common.InspectInit();
-		common.lock.Enter();
-		common.DownloadAskBid();
-		common.lock.Leave();
-		common.RefreshAskBidData(true);
-		GetCalendar().Data();
 		
-		if (runtime.Elapsed() > 60*1000)
+		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
+			sys.CommonFactories()[i].b()->Start();
+		}
+		
+		if (Config::have_sys_signal && runtime.Elapsed() > 60*1000)
 			sys.RefreshReal();
 		
 		mt_refresh.Reset();
@@ -531,17 +525,13 @@ void Overlook::Data() {
 	watch.Data();
 	
 	if (assist.IsVisible())			RefreshAssist();
-	if (calendar.IsVisible())		RefreshCalendar();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
-	//if (GetMyfxbook().IsVisible())	GetMyfxbook().Data();
-	//if (alz.IsVisible())			alz.Data();
-	//if (sclp.IsVisible())			sclp.Data();
 	if (arb.IsVisible())			arb.Data();
-	if (ac.IsVisible())				ac.Data();
+	if (sentctrl.IsVisible())		sentctrl.Data();
 }
 
 void Overlook::RefreshAssist() {
@@ -573,33 +563,6 @@ void Overlook::RefreshAssist() {
 			assist.Set(row++, 0, System::Assistants().Get(i).b);
 	}
 	assist.SetCount(row);
-}
-
-void Overlook::RefreshCalendar() {
-	Calendar& cal = GetCalendar();
-	
-	Time now = GetUtcTime();
-	Time end = now + 2*60*60;
-	Time begin = now - 24 * 60*60;
-	int row = 0;
-	for(int i = cal.GetCount()-1; i >= 0; i--) {
-		const CalEvent& e = cal.GetEvent(i);
-		if (e.timestamp > end) continue;
-		if (e.timestamp < begin) break;
-		
-		calendar.Set(row, 0, Format("%", e.timestamp));
-		calendar.Set(row, 1, e.title);
-		calendar.Set(row, 2, e.currency);
-		calendar.Set(row, 3, e.GetImpactString());
-		calendar.Set(row, 4, e.forecast + e.unit);
-		calendar.Set(row, 5, e.previous + e.unit);
-		calendar.Set(row, 6, e.actual + e.unit);
-		row++;
-	}
-	calendar.SetCount(row);
-	
-	if (!row)
-		calendar.Set(0, 1, "No events...");
 }
 
 void Overlook::RefreshTrades() {
@@ -1003,13 +966,14 @@ void Overlook::ActiveWindowChanged() {
 	}
 }
 
-void Overlook::LoadAdvisorProfileFinish() {
+
+void Overlook::LoadAdvisorProfile() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
 	int tf = 5;
-	int id = System::Find<MultiExpertAdvisor>();
+	int id = System::Find<DqnAdvisor>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;
@@ -1035,88 +999,71 @@ void Overlook::LoadAdvisorProfileFinish() {
 	
 	LoadProfile(profile);
 	TileWindow();
-	default_running = false;
 }
 
-#if 1
-
-void Overlook::LoadAdvisorProfile() {
-	LoadAdvisorProfileFinish();
-}
-
-#else
-void Overlook::LoadAdvisorProfile() {
-	default_running = true;
-	Thread::Start(THISBACK(LoadAdvisorProfileThread));
-}
-
-void Overlook::LoadAdvisorProfileThread() {
+void Overlook::LoadMajorPairProfile(int tf) {
 	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
 	
-	
-	int sym_count = sys.GetSymbolCount();
-	
-	
-	// Process DataBridge in single thread
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	Vector<Ptr<CoreItem> > work_queue;
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	FactoryDeclaration decl;
-	decl.factory = 0;
-	indi_ids.Add(decl);
-	tf_ids.Add(0);
-	for(int i = 0; i < sym_count; i++) sym_ids.Add(i);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
-	
-	
-	
-	One<Atomic> running_count = new Atomic(0), finished_count = new Atomic(0);
-	
+	int id = System::Find<BollingerBands>();
+	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
-		Thread::Start(THISBACK3(LoadAdvisorProfileIterate, i, running_count.Get(), finished_count.Get()));
+		String sym = mt.GetSymbol(i).name;
+		if (
+			sym != "EURUSD" &&
+			sym != "GBPUSD" &&
+			sym != "USDCHF" &&
+			sym != "USDJPY" &&
+			sym != "USDCAD" &&
+			sym != "AUDUSD" &&
+			sym != "NZDUSD" &&
+			sym != "EURCHF" &&
+			sym != "EURJPY" &&
+			sym != "EURGBP"
+			) continue;
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = i;
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.right_offset = true;
+		pgroup.decl.factory = id;
 	}
 	
-	while (!Thread::IsShutdownThreads() && finished_count < sym_count) Sleep(100);
-	
-	PostCallback(THISBACK(LoadAdvisorProfileFinish));
+	LoadProfile(profile);
+	TileWindow();
 }
 
-void Overlook::LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count) {
-	const int max_count = GetUsedCpuCores();
+void Overlook::LoadMajorCurrencyProfile(int tf) {
 	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
 	
-	while (true) {
-		int run_id = ++(*running_count);
-		if (run_id < max_count)
-			break;
-		(*running_count)--;
-		Sleep(500);
+	int id = System::Find<BollingerBands>();
+	int sym_count = sys.GetSymbolCount();
+	for(int i = 0; i < sym_count; i++) {
+		String sym = sys.GetSymbol(i);
+		if (
+			sym != "AUD" &&
+			sym != "CAD" &&
+			sym != "CHF" &&
+			sym != "JPY" &&
+			sym != "NZD" &&
+			sym != "USD" &&
+			sym != "EUR" &&
+			sym != "GBP"
+			) continue;
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = i;
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.right_offset = true;
+		pgroup.decl.factory = id;
 	}
 	
-	
-	Index<int> tf_ids, sym_ids;
-	Vector<FactoryDeclaration> indi_ids;
-	Vector<Ptr<CoreItem> > work_queue;
-	ASSERT(symbol >= 0 && symbol < sys.GetSymbolCount());
-	FactoryDeclaration decl;
-	decl.factory = System::Find<ObviousAdvisor>();
-	indi_ids.Add(decl);
-	tf_ids.Add(0);
-	sym_ids.Add(symbol);
-	work_queue.Clear();
-	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
-	for (int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
-	
-	
-	(*running_count)--;
-	(*finished_count)++;
+	LoadProfile(profile);
+	TileWindow();
 }
-#endif
 
 void Overlook::LoadOpenOrderCharts() {
 	System& sys = GetSystem();

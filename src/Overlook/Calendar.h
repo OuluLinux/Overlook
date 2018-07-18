@@ -42,7 +42,7 @@ bool IsHighImpactSpeechCalendar(int begin_offset, int end_offset);
 const XmlNode& TryOpenLocation(String pos, const XmlNode& root, int& errorcode);
 
 
-class Calendar {
+class CalendarCommon : public Common {
 	
 	// Persistent
 	Vector<CalEvent> events;
@@ -70,13 +70,14 @@ public:
 	
 	enum {ID, TITLE, TIMESTAMP, UNIT, CURRENCY, FORECAST, PREVIOUS, ACTUAL, MARKET, IMPACT, DIRECTION};
 	
-	typedef Calendar CLASSNAME;
-	Calendar();
+	typedef CalendarCommon CLASSNAME;
+	CalendarCommon();
 	
-	void Init();
+	virtual void Init();
+	virtual void Start();
+	
 	void StoreThis();
 	void LoadThis();
-	void Data();
 	void Refresh();
 	void UpdateHistory();
 	void Dump();
@@ -99,10 +100,21 @@ public:
 };
 
 
-inline Calendar& GetCalendar() {return Single<Calendar>();}
 void BasicHeaders(HttpRequest& h);
 String XmlTreeString(const XmlNode& node, int indent=0, String prev_addr="");
 void XmlFix(String& c);
+
+
+class CalendarCtrl : public CommonCtrl {
+	ArrayCtrl calendar;
+	
+public:
+	typedef CalendarCtrl CLASSNAME;
+	CalendarCtrl();
+	
+	virtual void Data();
+	
+};
 
 }
 

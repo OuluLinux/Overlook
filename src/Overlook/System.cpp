@@ -75,6 +75,11 @@ void System::Init() {
 	InitRegistry();
 	
 	
+	for(int i = 0; i < CommonFactories().GetCount(); i++) {
+		CommonFactories()[i].b()->Init();
+	}
+	
+	
 	#ifdef flagGUITASK
 	jobs_tc.Set(10, THISBACK(PostProcessJobs));
 	#else
@@ -121,6 +126,7 @@ void System::FirstStart() {
 			}
 			//ASSERTUSER_(allowed_symbols.Find(s.name) != -1, "Symbol " + s.name + " does not have long M1 data. Please hide all short data symbols in MT4. Read Readme.txt for usable symbols.");
 		}
+		normal_symbol_count = symbols.GetCount();
 		
 		for(int i = 0; i < currency_syms.GetCount(); i++) {
 			const Index<int>& syms = currency_syms[i];
@@ -129,10 +135,10 @@ void System::FirstStart() {
 				major_currencies.Add(i);
 			}
 		}
-		/*for(int i = 0; i < currencies.GetCount(); i++) {
+		for(int i = 0; i < currencies.GetCount(); i++) {
 			int id = symbols.GetCount();
 			AddSymbol(currencies[i]);
-		}*/
+		}
 		
 		
 		// Find variants

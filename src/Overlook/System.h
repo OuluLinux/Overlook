@@ -1,11 +1,6 @@
 #ifndef _Overlook_System_h_
 #define _Overlook_System_h_
 
-namespace Config {
-extern Upp::IniString arg_addr;
-extern Upp::IniInt arg_port;
-extern Upp::IniInt start_time;
-}
 
 namespace Overlook {
 using namespace Upp;
@@ -205,14 +200,20 @@ class System {
 public:
 
 	typedef Core* (*CoreFactoryPtr)();
+	typedef Common* (*CommonFactoryPtr)();
+	typedef Ctrl* (*CtrlFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
+	typedef Tuple<String, CommonFactoryPtr, CtrlFactoryPtr> CommonSystem;
 	typedef VectorMap<int, VectorMap<int, String> > FactoryAssistList;
 	typedef VectorMap<int, Tuple<int, String> > AssistList;
 	
 	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static Core*			CoreSystemSingleFn() { return &Single<T>(); }
+	template <class T> static Common*		CommonSystemSingleFn() { return &Single<T>(); }
+	template <class T> static Ctrl*			CtrlSystemSingleFn() { return &Single<T>(); }
 	inline static Vector<CoreSystem>&		CoreFactories() {static Vector<CoreSystem> list; return list;}
+	inline static Vector<CommonSystem>&		CommonFactories() {static Vector<CommonSystem> list; return list;}
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
@@ -222,29 +223,26 @@ public:
 public:
 	
 	template <class CoreT> static void		Register(String name, int type=CORE_INDICATOR) {
-		int id = GetId<CoreT>();
+		int id = CoreFactories().GetCount();
 		if      (type == CORE_INDICATOR)		Indicators().Add(id);
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
 		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
 	}
 	
-	template <class CoreT> static void		RegisterAssistant(String name, int type) {
+	template <class CoreT> static void		RegisterEvent(String name, int type) {
 		int id = Find<CoreT>();
 		if (id == -1) Panic("Invalid assist: " + IntStr(type) + " " + name);
 		AssistantFactories().GetAdd(id).GetAdd(type, name);
 		Assistants().GetAdd(type) = Tuple<int, String>(id, CoreFactories()[id].a + " " + name);
 	}
 	
-	template <class CoreT> static CoreT&	GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
-	template <class CoreT> static int		GetId() {
-		static bool inited;
-		static int id;
-		if (!inited) {
-			id = CoreFactories().GetCount();
-			inited = true;
-		}
-		return id;
+	template <class CoreT, class CtrlT> static void		RegisterCommon(String name) {
+		CommonFactories().Add(CommonSystem(name, &System::CommonSystemSingleFn<CoreT>, &System::CtrlSystemSingleFn<CtrlT>));
 	}
+	
+	
+	
+	template <class CoreT> static CoreT&	GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
 	
 	inline static const Vector<CoreSystem>&	GetCoreFactories() {return CoreFactories();}
 	
@@ -298,6 +296,7 @@ protected:
 	int							limit_wday = -1;
 	int							time_offset = 0;
 	int							realtime_count = 0;
+	int							normal_symbol_count = 0;
 	
 public:
 	int		GetCurrencyCount() const {return currencies.GetCount();}
@@ -306,6 +305,7 @@ public:
 	int		GetMajorCurrencyCount() const {return major_currency_syms.GetCount();}
 	String	GetMajorCurrency(int i) const {return major_currency_syms.GetKey(i);}
 	int		FindMajorCurrency(int i) const {return major_currencies.Find(i);}
+	int		GetNormalSymbolCount() const {return normal_symbol_count;}
 	
 protected:
 	

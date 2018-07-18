@@ -3,16 +3,14 @@
 
 #include <plugin/libmt/libmt.h>
 
-namespace Config {
-extern Upp::IniBool use_internet_m1_data;
-}
+
 
 namespace Overlook {
 using namespace libmt;
 
 class DataBridge;
 
-class DataBridgeCommon {
+class DataBridgeCommon : public Common {
 	
 protected:
 	friend class DataBridge;
@@ -31,9 +29,13 @@ protected:
 	bool inited;
 	
 	
-	void Init();
+	
 public:
 	DataBridgeCommon();
+	
+	virtual void Init();
+	virtual void Start();
+	
 	void InspectInit();
 	
 	const Symbol& GetSymbol(int i) const {return GetMetaTrader().GetSymbol(i);}
@@ -122,6 +124,7 @@ public:
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
 		// Currency instrument
 		if (in_sym >= GetMetaTrader().GetSymbolCount()) {
+			#if REFRESH_FROM_FASTER
 			if (match_tf)
 				return out_tf == 0;
 			if (in_tf == 0) {
@@ -132,12 +135,33 @@ public:
 			}
 			else
 				return in_sym == out_sym;
+			#else
+			if (match_tf)
+				return out_tf == in_tf;
+			System& sys = GetSystem();
+			String sym = sys.GetSymbol(in_sym);
+			const Index<int>& syms = sys.currency_syms.Get(sym);
+			return syms.Find(out_sym) != -1;
+			#endif
 		}
-		/*if (match_tf)
+		#if REFRESH_FROM_FASTER
+		if (match_tf)
 			return in_tf > 0 && out_tf == 0;
-		return in_sym == out_sym;*/
+		return in_sym == out_sym;
+		#else
 		return false;
+		#endif
 	}
+};
+
+
+
+class DataBridgeCtrl : public CommonCtrl {
+	
+public:
+	DataBridgeCtrl() {}
+	virtual void Data() {}
+	
 };
 
 }

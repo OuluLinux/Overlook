@@ -52,11 +52,9 @@ void DataBridge::Start() {
 	int mt_period = GetPeriod();
 	
 	// Regular symbols
-	#if 0
+	#if REFRESH_FROM_FASTER
 	if (mt_period > 1) {
 		RefreshFromFasterTime();
-		// NOTE: SyncData has broken other refresh functions for these periods. Disable sync to
-		// use them.
 	}
 	else
 	#endif

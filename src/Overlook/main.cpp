@@ -7,8 +7,9 @@ using namespace Overlook;
 #include <Draw/iml_source.h>
 
 namespace Config {
-INI_BOOL(use_internet_m1_data, false, "Download M1 data from Internet")
-INI_BOOL(wait_mt4, false, "Wait for MT4 to respond")
+INI_BOOL(use_internet_m1_data, false, "Download M1 data from Internet");
+INI_BOOL(wait_mt4, false, "Wait for MT4 to respond");
+INI_BOOL(have_sys_signal, false, "Use system signal money management");
 INI_STRING(arg_addr, "127.0.0.1", "Host address");
 INI_INT(arg_port, 42000, "Host port");
 INI_INT(start_time, 0, "Starting time");
@@ -46,7 +47,6 @@ struct LoaderWindow : public TopWindow {
 			
 			try {
 				GetSystem().Init();
-				GetCalendar().Init();
 			}
 			catch (::Overlook::UserExc e) {
 				PromptOK(e);

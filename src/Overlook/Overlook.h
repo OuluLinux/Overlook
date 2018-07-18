@@ -13,6 +13,7 @@ using namespace Upp;
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
+#include "DQN.h"
 #include "Common.h"
 #include "Calendar.h"
 #include "Optimizer.h"
@@ -24,9 +25,7 @@ using namespace Upp;
 #include "Utils.h"
 #include "AutoChartist.h"
 #include "Indicators.h"
-#include "ExpertAdvisor.h"
 #include "Advisors.h"
-#include "MultiExpertAdvisor.h"
 #include "Net.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
@@ -38,6 +37,7 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
+#include "Sentiment.h"
 
 
 namespace Overlook {
@@ -86,12 +86,10 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl> assist, calendar, trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
-	CtrlCallbacks<AnalyzerCtrl> alz;
-	CtrlCallbacks<ScalperCtrl> sclp;
-	CtrlCallbacks<AutoChartistCtrl> ac;
+	SentimentCtrl sentctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
@@ -107,7 +105,6 @@ protected:
 	TimeStop mt_refresh, runtime;
 	Id thrd_id, thrd_job_id;
 	Id sym;
-	bool default_running = false;
 	
 	// Protected main functions to prevent direct (wrong) usage
 	void ToggleRightOffset();
@@ -182,9 +179,8 @@ public:
 	void StorePreviousProfile();
 	void SaveProfile();
 	void LoadAdvisorProfile();
-	void LoadAdvisorProfileFinish();
-	void LoadAdvisorProfileThread();
-	void LoadAdvisorProfileIterate(int symbol, Atomic* running_count, Atomic* finished_count);
+	void LoadMajorPairProfile(int tf);
+	void LoadMajorCurrencyProfile(int tf);
 	void LoadOpenOrderCharts();
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);

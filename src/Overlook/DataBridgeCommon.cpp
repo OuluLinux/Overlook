@@ -62,6 +62,14 @@ void DataBridgeCommon::Init() {
 	inited = true;
 }
 
+void DataBridgeCommon::Start() {
+	InspectInit();
+	lock.Enter();
+	DownloadAskBid();
+	lock.Leave();
+	RefreshAskBidData(true);
+}
+
 void DataBridgeCommon::DownloadRemoteData() {
 	const Vector<Symbol>& symbols = GetMetaTrader().GetSymbols();
 	int actual = 0;

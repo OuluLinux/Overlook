@@ -44,9 +44,9 @@ inline bool AnyTf(void* basesystem, bool match_tf, int in_sym, int in_tf, int ou
 // Classes for IO arguments
 template <class T>
 struct In : public ValueBase {
-	In(FilterFunction fn, ArgsFn args=NULL)	{data_type = IN_; data = (void*)fn;			 factory = System::GetId<T>(); data2 = (void*)args;}
-	In(ArgsFn args)							{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = (void*)args;}
-	In()									{data_type = IN_; data = (void*)SymTfFilter; factory = System::GetId<T>(); data2 = NULL;}
+	In(FilterFunction fn, ArgsFn args=NULL)	{data_type = IN_; data = (void*)fn;			 factory = System::Find<T>(); data2 = (void*)args;}
+	In(ArgsFn args)							{data_type = IN_; data = (void*)SymTfFilter; factory = System::Find<T>(); data2 = (void*)args;}
+	In()									{data_type = IN_; data = (void*)SymTfFilter; factory = System::Find<T>(); data2 = NULL;}
 };
 
 struct InOptional : public ValueBase {

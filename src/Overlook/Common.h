@@ -17,7 +17,7 @@
 
 #define TRAININGAREA_FACTOR 0.95
 #define SIGNALSCALE 1
-#define MAX_SYMOPEN 4
+#define MAX_SYMOPEN 10
 
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
@@ -1123,6 +1123,12 @@ public:
 	virtual void Data() = 0;
 	
 };
+
+
+typedef ::PushNotification::PushNotification Notification;
+
+Notification& GetNotification() {return Single<Notification>();}
+
 
 }
 

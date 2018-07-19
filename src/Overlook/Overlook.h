@@ -6,7 +6,7 @@
 #include <Docking/Docking.h>
 #include <plugin/libmt/libmt.h>
 #include <SubWindowCtrl/SubWindowCtrl.h>
-
+#include <PushNotification/PushNotification.h>
 using namespace Upp;
 
 
@@ -37,6 +37,7 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
+#include "EventSystem.h"
 #include "Sentiment.h"
 
 
@@ -182,6 +183,7 @@ public:
 	void LoadMajorPairProfile(int tf);
 	void LoadMajorCurrencyProfile(int tf);
 	void LoadOpenOrderCharts();
+	void LoadSymbolProfile(int sym, int tf);
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
 	void SetProfileFromFile(String path);

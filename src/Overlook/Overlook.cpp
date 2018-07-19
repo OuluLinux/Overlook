@@ -190,16 +190,16 @@ void Overlook::ViewMenu(Bar& bar) {
 	bar.Separator();
 	bar.Add("Network view", THISBACK(OpenNet)).Key(K_F2);
 	bar.Separator();
-	bar.Add("Load major pairs M1", THISBACK1(LoadMajorPairProfile, 0));
-	bar.Add("Load major pairs M15", THISBACK1(LoadMajorPairProfile, 2));
-	bar.Add("Load major pairs H1", THISBACK1(LoadMajorPairProfile, 4));
-	bar.Add("Load major pairs H4", THISBACK1(LoadMajorPairProfile, 5));
-	bar.Add("Load major pairs D1", THISBACK1(LoadMajorPairProfile, 6));
-	bar.Add("Load major currencies M1", THISBACK1(LoadMajorCurrencyProfile, 0));
-	bar.Add("Load major currencies M15", THISBACK1(LoadMajorCurrencyProfile, 2));
-	bar.Add("Load major currencies H1", THISBACK1(LoadMajorCurrencyProfile, 4));
-	bar.Add("Load major currencies H4", THISBACK1(LoadMajorCurrencyProfile, 5));
-	bar.Add("Load major currencies D1", THISBACK1(LoadMajorCurrencyProfile, 6));
+	bar.Add("Load major pairs M1", THISBACK1(LoadMajorPairProfile, 0)).Key(K_SHIFT_1);
+	bar.Add("Load major pairs M15", THISBACK1(LoadMajorPairProfile, 2)).Key(K_SHIFT_2);
+	bar.Add("Load major pairs H1", THISBACK1(LoadMajorPairProfile, 4)).Key(K_SHIFT_3);
+	bar.Add("Load major pairs H4", THISBACK1(LoadMajorPairProfile, 5)).Key(K_SHIFT_4);
+	bar.Add("Load major pairs D1", THISBACK1(LoadMajorPairProfile, 6)).Key(K_SHIFT_5);
+	bar.Add("Load major currencies M1", THISBACK1(LoadMajorCurrencyProfile, 0)).Key(K_CTRL_1);
+	bar.Add("Load major currencies M15", THISBACK1(LoadMajorCurrencyProfile, 2)).Key(K_CTRL_2);
+	bar.Add("Load major currencies H1", THISBACK1(LoadMajorCurrencyProfile, 4)).Key(K_CTRL_3);
+	bar.Add("Load major currencies H4", THISBACK1(LoadMajorCurrencyProfile, 5)).Key(K_CTRL_4);
+	bar.Add("Load major currencies D1", THISBACK1(LoadMajorCurrencyProfile, 6)).Key(K_CTRL_5);
 	
 }
 
@@ -464,11 +464,8 @@ void Overlook::DeepRefresh() {
 	if (m.TryEnter())
 	{
 		ReleaseLog("DeepRefresh entered");
-		mt.Data();
 		
-		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
-			sys.CommonFactories()[i].b()->Start();
-		}
+		GetEventSystem().Data();
 		
 		if (Config::have_sys_signal && runtime.Elapsed() > 60*1000)
 			sys.RefreshReal();
@@ -507,11 +504,15 @@ void Overlook::Data() {
 	
 	String info;
 	
+	double bal = mt.AccountBalance();
+	double eq = mt.AccountEquity();
+	double pro = eq - bal;
 	info
 		<< "Time: " << Format("%", GetUtcTime())
-		<< " Balance: " << mt.AccountBalance()
-		<< " Equity: " << mt.AccountEquity()
-		<< " Free margin: " << mt.AccountFreeMargin();
+		<< " Balance: " << floorr(bal, 2)
+		<< " Equity: " << floorr(eq, 2)
+		<< " Free margin: " << floorr(mt.AccountFreeMargin(), 2)
+		<< " Profit: " << floorr(pro, 2);
 	
 	status.Set(info);
 	
@@ -1060,6 +1061,22 @@ void Overlook::LoadMajorCurrencyProfile(int tf) {
 		pgroup.right_offset = true;
 		pgroup.decl.factory = id;
 	}
+	
+	LoadProfile(profile);
+	TileWindow();
+}
+
+void Overlook::LoadSymbolProfile(int sym, int tf) {
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
+	
+	ProfileGroup& pgroup = profile.charts.Add();
+	pgroup.symbol = sym;
+	pgroup.tf = tf;
+	pgroup.keep_at_end = true;
+	pgroup.right_offset = true;
+	pgroup.decl.factory = System::Find<BollingerBands>();
 	
 	LoadProfile(profile);
 	TileWindow();

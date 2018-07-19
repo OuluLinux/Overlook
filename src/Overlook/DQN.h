@@ -47,15 +47,15 @@ inline RandomGaussian& GetRandomGaussian(int length) {
 //speed up the memcpy process!
 template <class T>
 void copy_linear(T* write, const T* read, unsigned int size) {
-	int* w4 = (int*)write;
-	int* r4 = (int*)read;
+	int64* w4 = (int*)write;
+	int64* r4 = (int*)read;
 	unsigned int scan=0;
 	
-	ASSERT(size % sizeof(int) == 0);
+	ASSERT(size % sizeof(int64) == 0);
 	
-	while (size >= 4) {
+	while (size >= 8) {
 		w4[scan] = r4[scan];
-		size -= 4;
+		size -= 8;
 		scan++;
 	}
 }

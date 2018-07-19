@@ -3,7 +3,19 @@
 
 namespace Overlook {
 
+class EventSystem {
+	
+	
+public:
+	typedef EventSystem CLASSNAME;
+	EventSystem();
+	
+	void Data();
+	
+	
+};
 
+inline EventSystem& GetEventSystem() {return Single<EventSystem>();}
 
 }
 

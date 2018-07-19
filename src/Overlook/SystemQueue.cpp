@@ -709,7 +709,7 @@ bool System::RefreshReal() {
 		int open_count = 0;
 		const double FMLEVEL = 0.6;
 		
-		for (int sym_id = 0; sym_id < GetSymbolCount(); sym_id++) {
+		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
 			

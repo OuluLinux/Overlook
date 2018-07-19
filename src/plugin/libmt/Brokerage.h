@@ -71,7 +71,7 @@ public:
 	void SetFreeMarginLevel(double d);
 	void SetFreeMarginScale(int s) {fmscale = s;}
 	void SetOrderSignals();
-	int  GetSignal(int sym) const {if (signals.IsEmpty()) return 0; return signals[sym];}
+	int  GetSignal(int sym) const {if (signals.GetCount() <= sym) return 0; return signals[sym];}
 	void PutSignal(int sym, int signal);
 	void SetSignal(int sym, int signal);
 	void SetSignalFreeze(int sym, bool freeze_signal);

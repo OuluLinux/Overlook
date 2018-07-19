@@ -1,0 +1,18 @@
+uses
+	Core,
+	Draw,
+	plugin/png;
+
+file
+	Copying,
+	main.cpp,
+	PushNotification.h,
+	PushNotification.cpp,
+	Common.h,
+	Win32.h,
+	Win32.cpp,
+	Images.iml;
+
+mainconfig
+	"" = "";
+

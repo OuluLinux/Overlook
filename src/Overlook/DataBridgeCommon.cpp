@@ -63,6 +63,7 @@ void DataBridgeCommon::Init() {
 }
 
 void DataBridgeCommon::Start() {
+	GetMetaTrader().Data();
 	InspectInit();
 	lock.Enter();
 	DownloadAskBid();

@@ -121,6 +121,10 @@ GUI_APP_MAIN {
 		loader.Run();
 		while (!loader.finished) Sleep(100);
 		if (loader.fail) return;
+		
+		Notification& n = GetNotification();
+		n.SetImage(OverlookImg::icon());
+		n.SetApp("Overlook");
 	}
 	
 	

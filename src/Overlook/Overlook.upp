@@ -9,7 +9,8 @@ uses
 	SubWindowCtrl,
 	plugin/tidy,
 	Core/SSL,
-	ConvNet;
+	ConvNet,
+	PushNotification;
 
 file
 	Copying,

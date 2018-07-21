@@ -116,6 +116,10 @@ Overlook::Overlook() : watch(this) {
 }
 
 Overlook::~Overlook() {
+	
+}
+
+void Overlook::Deinit() {
 	StorePreviousProfile();
 }
 

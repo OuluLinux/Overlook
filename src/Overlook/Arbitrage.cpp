@@ -140,11 +140,11 @@ void Arbitrage::Process() {
 	running = true;
 	stopped = false;
 	
-	while (running) {
+	while (running && !Thread::IsShutdownThreads()) {
 		
 		TradeArbitrage();
 		
-		for(int i = 0; i < 10*1 && running; i++)
+		for(int i = 0; i < 10*1 && running && !Thread::IsShutdownThreads(); i++)
 			Sleep(100);
 	}
 	

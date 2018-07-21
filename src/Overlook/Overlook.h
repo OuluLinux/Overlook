@@ -124,7 +124,7 @@ public:
 	typedef Overlook CLASSNAME;
 	Overlook();
 	~Overlook();
-	
+	void Deinit();
 	
 	// Main funcs
 	void SetMenuBar(MenuBar& bar);

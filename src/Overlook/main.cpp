@@ -132,6 +132,7 @@ GUI_APP_MAIN {
 		::Overlook::Overlook& ol = GetOverlook();
 		ol.OpenMain();
 		Ctrl::EventLoop();
+		ol.Deinit();
 	}
 	catch (::Overlook::UserExc e) {
 		PromptOK(e);

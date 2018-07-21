@@ -6,11 +6,15 @@ namespace Overlook {
 class EventSystem {
 	
 	
+	enum {OPEN, HURST, MA, BB, VA, VS, PC, CAL, BUF_COUNT};
+	
 	// Temporary
 	Index<String> symbols;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
-	Index<int> sym_ids, tf_ids;
+	Vector<Vector<Vector<ConstBuffer*> > > bufs;
+	Vector<Calendar*> cals;
+	Index<int> sym_ids, tf_ids, fac_ids;
 	
 	bool running = false, stopped = true;
 	
@@ -20,6 +24,7 @@ public:
 	~EventSystem();
 	
 	void Data();
+	void PrintNetCode();
 	
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
 	

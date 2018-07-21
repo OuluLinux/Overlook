@@ -31,10 +31,12 @@ void Chart::StartRefreshCore() {
 }
 
 void Chart::RefreshCore() {
+	System& sys = GetSystem();
+	
 	refresh_lock.Enter();
 	
 	try {
-		System& sys = GetSystem();
+		
 		
 		Index<int> tf_ids, sym_ids;
 		Vector<FactoryDeclaration> indi_ids;
@@ -48,6 +50,7 @@ void Chart::RefreshCore() {
 		
 		RefreshCoreData(true);
 		
+		if (work_queue.IsEmpty()) {refresh_lock.Leave(); return;}
 		if (!work_queue.Top()->core) return;
 		
 		core = work_queue.Top();
@@ -62,6 +65,7 @@ void Chart::RefreshCore() {
 	catch (ConfExc e) {
 		
 	}
+	
 	refresh_lock.Leave();
 }
 

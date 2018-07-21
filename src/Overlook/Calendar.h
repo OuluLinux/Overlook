@@ -55,7 +55,7 @@ class CalendarCommon : public Common {
 	Date prevdate;
 	int errorcode = 0;
 	int thisyear, thismonth;
-	
+	bool ready = false;
 	
 	void ParseEvent(const XmlNode& n, CalEvent& event);
 	void RefreshProbabilities();
@@ -87,6 +87,7 @@ public:
 	bool IsCalendarNeedingUpdate();
 	bool IsMajorSpeak();
 	bool IsError() {return errorcode != 0;}
+	bool IsReady() {return ready;}
 	
 	void SetEventActualDiff(int i, double diff);
 	void SetEvent(CalEvent& ce);

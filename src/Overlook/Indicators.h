@@ -873,9 +873,9 @@ public:
 			% Out(2,2)
 			% Lbl(1)
 			% Arg("period", period, 2, 1000)
-			% Arg("max_crosses", max_crosses, 300, 300)
+			% Arg("max_crosses", max_crosses, 100, 100)
 			% Arg("max_radius", max_radius, 100, 100)
-			% Arg("smoothing", smoothing_period, 100, 100);
+			% Arg("smoothing", smoothing_period, 2, 1000);
 	}
 };
 
@@ -1684,6 +1684,51 @@ public:
 			;
 	}
 };
+
+
+
+
+
+
+
+
+
+
+
+struct CalendarStat : Moveable<CalendarStat> {
+	Index<int> pos, todo_stats;
+	OnlineAverage1 av_diff, pos_ac, eq_ac, neg_ac;
+	
+	void Serialize(Stream& s) {s % pos % todo_stats % av_diff % pos_ac % eq_ac % neg_ac;}
+};
+
+class Calendar : public Core {
+	VectorMap<String, CalendarStat> stats;
+	int pre_cal_cursor = 0;
+	int main_cal_cursor = 0;
+	
+	
+protected:
+	virtual void Start();
+	
+	
+public:
+	Calendar();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Lbl(4)
+			% Mem(stats)
+			% Mem(pre_cal_cursor)
+			% Mem(main_cal_cursor)
+			;
+	}
+};
+
+
+
 
 
 

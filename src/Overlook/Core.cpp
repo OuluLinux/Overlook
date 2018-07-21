@@ -163,6 +163,7 @@ void Core::InitSubCores() {
 		}
 		
 		core.InitAll();
+		core.Ready();
 	}
 }
 
@@ -206,6 +207,8 @@ void Core::RefreshSubCores() {
 void Core::Refresh() {
 	if (avoid_refresh)
 		return;
+	
+	while (!ready) {Sleep(100);}
 	
 	if (!refresh_lock.TryEnter())
 		return;

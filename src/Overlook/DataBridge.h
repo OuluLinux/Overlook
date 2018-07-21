@@ -120,15 +120,26 @@ public:
 	void RefreshFromFasterTime();
 	void RefreshFromFasterChange();
 	void RefreshCurrency();
+	void RefreshNet();
 	
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
-		// Currency instrument
-		if (in_sym >= GetMetaTrader().GetSymbolCount()) {
+		System& sys = GetSystem();
+		
+		if (sys.IsNormalSymbol(in_sym)) {
+			#if REFRESH_FROM_FASTER
+			if (match_tf)
+				return in_tf > 0 && out_tf == 0;
+			return in_sym == out_sym;
+			#else
+			return false;
+			#endif
+		}
+		
+		if (sys.IsCurrencySymbol(in_sym)) {
 			#if REFRESH_FROM_FASTER
 			if (match_tf)
 				return out_tf == 0;
 			if (in_tf == 0) {
-				System& sys = GetSystem();
 				String sym = sys.GetSymbol(in_sym);
 				const Index<int>& syms = sys.currency_syms.Get(sym);
 				return syms.Find(out_sym) != -1;
@@ -138,19 +149,31 @@ public:
 			#else
 			if (match_tf)
 				return out_tf == in_tf;
-			System& sys = GetSystem();
 			String sym = sys.GetSymbol(in_sym);
 			const Index<int>& syms = sys.currency_syms.Get(sym);
 			return syms.Find(out_sym) != -1;
 			#endif
 		}
-		#if REFRESH_FROM_FASTER
-		if (match_tf)
-			return in_tf > 0 && out_tf == 0;
-		return in_sym == out_sym;
-		#else
+		
+		if (sys.IsNetSymbol(in_sym)) {
+			#if REFRESH_FROM_FASTER
+			if (match_tf)
+				return out_tf == 0;
+			if (in_tf == 0) {
+				const System::NetSetting& net = sys.GetSymbolNet(in_sym);
+				return net.symbol_ids.Find(out_sym) != -1;
+			}
+			else
+				return in_sym == out_sym;
+			#else
+			if (match_tf)
+				return out_tf == in_tf;
+			const System::NetSetting& net = sys.GetSymbolNet(in_sym);
+			return net.symbol_ids.Find(out_sym) != -1;
+			#endif
+		}
+		
 		return false;
-		#endif
 	}
 };
 

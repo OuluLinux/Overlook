@@ -153,6 +153,7 @@ void SubWindows::CloseWindow(int win_id) {
 			ctrl->CloseWindow();
 	}
 	FocusPrevious();
+	WhenWindowClose();
 }
 
 void SubWindows::MaximizeWindow(int win_id) {

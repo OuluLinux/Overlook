@@ -3963,6 +3963,7 @@ void SupportResistanceOscillator::Start() {
 	
 	ConstBuffer& ind1 = At(0).GetBuffer(0);
 	ConstBuffer& ind2 = At(0).GetBuffer(1);
+	RefreshSubCores();
 	
 	int prev_pos = counted ? counted-1 : 0;
 	SetSafetyLimit(counted-1);
@@ -4430,6 +4431,9 @@ PeriodicalChange::PeriodicalChange() {
 void PeriodicalChange::Init() {
 	SetCoreSeparateWindow();
 	SetBufferColor(0, Red);
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.0);
 	
 	tfmin = GetMinutePeriod();
 	int w1 = 7 * 24 * 60;
@@ -4992,7 +4996,7 @@ void OnlineMinimalLabel::Start() {
 	double spread			= db->GetSpread();
 	double point			= db->GetPoint();
 	double cost				= spread + point * cost_level;
-	ASSERT(spread > 0.0);
+	if (cost <= 0.0) cost = point;
 	
 	VectorBool& labelvec = GetLabelBuffer(0,0).signal;
 	
@@ -6375,6 +6379,147 @@ void Laguerre::Assist(int cursor, VectorBool& vec) {
 	if (value0 > 0.5)		vec.Set(PC_INC, true);
 	else					vec.Set(PC_DEC, true);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Calendar::Calendar() {
+	
+	
+	
+}
+
+void Calendar::Init() {
+	
+	
+}
+
+void Calendar::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0, 4);
+	
+	CalendarCommon& cal = GetSystem().GetCommon<CalendarCommon>();
+	while (!cal.IsReady()) Sleep(100);
+	
+	int bars = GetBars() ;
+	int counted = GetCounted();
+	
+	
+	#ifdef flagSECONDS
+	int timestep = GetMinutePeriod(); // not "minutes" bug
+	#else
+	int timestep = GetMinutePeriod() * 60;
+	#endif
+	
+	int prepost_step = 3600;
+	int pre_step = max(1, prepost_step / timestep);
+	int post_step = max(1, prepost_step / timestep);
+	
+	
+	for (int i = counted; i < bars; i++) {
+		Time t = Time(1970,1,1) + src_time.Get(i);
+		Time next = t + timestep;
+		
+		double diff_sum[4] = {0.0, 0.0, 0.0, 0.0};
+		int diff_count[4] = {0, 0, 0, 0};
+		
+		for (int is_pre = 0; is_pre < 2; is_pre++) {
+			int& cal_cursor = is_pre ? pre_cal_cursor : main_cal_cursor;
+			
+			while (cal_cursor < cal.GetCount()) {
+				const CalEvent& e = cal.GetEvent(cal_cursor);
+				
+				
+				Time et = e.timestamp;
+				
+				if (is_pre)
+					et -= prepost_step;
+				
+				if (et >= t && et < next) {
+				
+					int pos = i;
+					String key = e.currency + " " + e.title;
+					
+					if (is_pre) {
+						key += " pre";
+						pos -= pre_step;
+					}
+					
+					CalendarStat& stat = stats.GetAdd(key);
+					
+					stat.pos.Add(pos);
+					
+					int post_pos = pos + post_step;
+					if (post_pos >= bars) {
+						stat.todo_stats.Add(pos);
+					} else {
+						double o0 = src.Get(pos);
+						double o1 = src.Get(post_pos);
+						double diff = o0 - o1;
+						stat.av_diff.Add(diff);
+						
+						if (e.forecast.GetCount() && e.actual.GetCount()) {
+							double fc = ScanInt(e.forecast);
+							double ac = ScanInt(e.actual);
+							if (IsFin(fc) && IsFin(ac)) {
+								if (fc == ac)
+									stat.eq_ac.Add(diff >= 0 ? +1 : -1);
+								else if (fc > ac)
+									stat.pos_ac.Add(diff >= 0 ? +1 : -1);
+								else
+									stat.neg_ac.Add(diff >= 0 ? +1 : -1);
+							}
+						}
+					}
+					
+					//if (!is_pre) {
+					diff_sum[e.impact] += stat.av_diff.mean;
+					diff_count[e.impact]++;
+					//}
+				}
+				else if (et >= next)
+					break;
+				
+				cal_cursor++;
+			}
+		}
+		
+		for(int j = 0; j < 4; j++) {
+			LabelSignal& lbl = GetLabelBuffer(0, j);
+			if (diff_count[j]) {
+				lbl.enabled.Set(i, true);
+				lbl.signal.Set(i, diff_sum[j] < 0);
+			} else {
+				lbl.enabled.Set(i, 0);
+			}
+		}
+	}
+}
+
 
 
 

@@ -293,6 +293,7 @@ protected:
 	bool skip_allocate;
 	bool has_heatmap = false;
 	bool avoid_refresh = false;
+	bool ready = false;
 	
 	Core();
 	
@@ -378,6 +379,7 @@ public:
 	void LeaveJob() {current_job = NULL; current_thrd = NULL;}
 	void SetHeatmap(bool b=true) {has_heatmap=b;}
 	void SetAvoidRefresh(bool b=true) {avoid_refresh = b;}
+	void Ready() {ready = true;}
 	
 	// Visible main functions
 	void Refresh();

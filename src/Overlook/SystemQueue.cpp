@@ -196,7 +196,9 @@ int System::GetCoreQueue(Vector<FactoryDeclaration>& path, Vector<Ptr<CoreItem> 
 		int sym = sym_ids[i];
 		
 		// Get CoreItem
+		core_queue_lock.Enter();
 		CoreItem& ci = data[sym][tf][factory].GetAdd(hash);
+		core_queue_lock.Leave();
 		
 		// Init object if it was just created
 		if (ci.sym == -1) {
@@ -382,6 +384,7 @@ void System::CreateCore(CoreItem& ci) {
 	c.InitAll();
 	c.LoadCache();
 	c.AllowJobs();
+	c.Ready();
 }
 
 Core* System::CreateSingle(int factory, int sym, int tf) {

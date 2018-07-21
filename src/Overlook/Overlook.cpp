@@ -107,9 +107,10 @@ Overlook::Overlook() : watch(this) {
 	debuglist.AddColumn("Source line");
 	debuglist.ColumnWidths("6 1 2 2 24");
 	
-	
 	LoadPreviousProfile();
 	PostRefreshData();
+	
+	cman.WhenWindowClose << THISBACK(StorePreviousProfile);
 	
 	Maximize();
 }
@@ -128,6 +129,7 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sentctrl, "Sentiment").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(cal, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
@@ -418,6 +420,8 @@ Chart& Overlook::OpenChart(int symbol, const FactoryDeclaration& decl, int tf) {
 	
 	Chart& view = cman.AddChart();
 	view.Init(symbol, decl, tf);
+	
+	StorePreviousProfile();
 	return view;
 }
 
@@ -432,6 +436,7 @@ void Overlook::OpenNet() {
 	cman.AddNet();
 	cman.Get(cman.GetCount()-1).Maximize();
 	cman.Get(cman.GetCount()-1).Maximize();
+	StorePreviousProfile();
 }
 
 void Overlook::SetFactory(int f) {
@@ -533,6 +538,7 @@ void Overlook::Data() {
 	if (debuglist.IsVisible())		RefreshDebug();
 	if (arb.IsVisible())			arb.Data();
 	if (sentctrl.IsVisible())		sentctrl.Data();
+	if (cal.IsVisible())			cal.Data();
 }
 
 void Overlook::RefreshAssist() {
@@ -1172,6 +1178,7 @@ void Overlook::LoadProfile(Profile& profile) {
 		}
 	}
 	
+	StorePreviousProfile();
 	ActiveWindowChanged();
 }
 

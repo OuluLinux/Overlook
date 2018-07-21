@@ -11,7 +11,7 @@ DataBridge::DataBridge() {
 	min_value = 0;
 	median_max = 0;
 	median_min = 0;
-	point = 0.00001;
+	point = 0.0001;
 	spread_mean = 0;
 	spread_count = 0;
 }
@@ -29,8 +29,8 @@ void DataBridge::Init() {
 	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
 		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
 		point = sym.point;
+		ASSERT(point == 0.01 || point == 0.0001);
 	}
-	
 }
 
 void DataBridge::Start() {
@@ -76,8 +76,11 @@ void DataBridge::Start() {
 		#endif
 		RefreshFromAskBid(init_round);
 	}
-	else {
+	else if (sym < sym_count + cur_count) {
 		RefreshCurrency();
+	}
+	else {
+		RefreshNet();
 	}
 }
 
@@ -182,8 +185,8 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 		else {
 			double low  = low_buf.Get(shift);
 			double high = high_buf.Get(shift);
-			if (ask < low)  {low_buf	.Set(shift, ask);}
-			if (ask > high) {high_buf	.Set(shift, ask);}
+			if (ask < low  && fabs((ask - low) / point) < 50)  {low_buf		.Set(shift, ask);}
+			if (ask > high && fabs((ask - high) / point) < 50) {high_buf	.Set(shift, ask);}
 		}
 	}
 	
@@ -740,12 +743,14 @@ void DataBridge::RefreshCurrency() {
 	const Index<int>& syms = sys.currency_sym_dirs.Get(sys.GetSymbol(GetSymbol()));
 	src_open.SetCount(syms.GetCount());
 	int bars = INT_MAX;
-	/*DUMP(inputs[0].GetCount());
+	
+	DUMP(inputs[0].GetCount());
 	for(int i = 0; i < inputs[0].GetCount(); i++) {
 		LOG(i << " " << inputs[0][i].sym);
 	}
 	String symstr = sys.GetSymbol(GetSymbol());
-	LOG(symstr);*/
+	LOG(symstr);
+	
 	for(int i = 0; i < syms.GetCount(); i++) {
 		Src& src = src_open[i];
 		src.a = syms[i]; // symbol
@@ -759,7 +764,10 @@ void DataBridge::RefreshCurrency() {
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		bars = min(bars, src.c->GetCount());
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
+		ASSERT(src.d == 0.0001 || src.d == 0.01);
 	}
+	for(int i = 0; i < src_open.GetCount(); i++) {ASSERT(src_open[i].d != 0);}
+	
 	if (bars == INT_MAX) return;
 	
 	point = 0.0001;
@@ -781,6 +789,7 @@ void DataBridge::RefreshCurrency() {
 			ConstBuffer& open = *src.c;
 			double o0 = open.Get(i);
 			double o1 = open.Get(i-1);
+			ASSERT(src.d > 0.0);
 			int pips = (o0 - o1) / src.d;
 			if (src.b == false)
 				pip_sum += pips;
@@ -797,6 +806,78 @@ void DataBridge::RefreshCurrency() {
 		high_buf.Set(i, d);
 	}
 	
+}
+
+void DataBridge::RefreshNet() {
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	int shift = open_buf.GetCount() - 1;
+	
+	typedef Tuple<int, bool, ConstBuffer*, double> Src;
+	Vector<Src> src_open;
+	const System::NetSetting& net = sys.GetSymbolNet(GetSymbol());
+	src_open.SetCount(net.symbol_ids.GetCount());
+	int bars = INT_MAX;
+	
+	for(int i = 0; i < net.symbol_ids.GetCount(); i++) {
+		Src& src = src_open[i];
+		src.a = net.symbol_ids.GetKey(i); // symbol
+		int dir = net.symbol_ids[i];
+		if (dir >= 0) {
+			src.b = false; // dir (0 pos, 1 neg)
+		} else {
+			src.b = true;
+		}
+		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
+		bars = min(bars, src.c->GetCount());
+		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
+		ASSERT(src.d == 0.0001 || src.d == 0.01);
+	}
+	for(int i = 0; i < src_open.GetCount(); i++) {ASSERT(src_open[i].d != 0);}
+	
+	if (bars == INT_MAX) return;
+	
+	point = 0.0001;
+	
+	int counted = open_buf.GetCount();
+	open_buf	.SetCount(bars);
+	low_buf		.SetCount(bars);
+	high_buf	.SetCount(bars);
+	volume_buf	.SetCount(bars);
+	time_buf	.SetCount(bars);
+	ConstBuffer& src_time_buf = GetInputBuffer(0, src_open[0].a, GetTf(), 4);
+	for(int i = counted; i < bars; i++) {
+		
+		time_buf.Set(i, src_time_buf.Get(i));
+		
+		int pip_sum = 0;
+		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
+			Src& src = src_open[j];
+			ConstBuffer& open = *src.c;
+			double o0 = open.Get(i);
+			double o1 = open.Get(i-1);
+			ASSERT(src.d > 0.0);
+			int pips = (o0 - o1) / src.d;
+			if (src.b == false)
+				pip_sum += pips;
+			else
+				pip_sum -= pips;
+		}
+		
+		double d = i == 0 ? 1.0 : open_buf.Get(i-1);
+		d += pip_sum * point;
+		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
+		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
+		open_buf.Set(i, d);
+		low_buf.Set(i, d);
+		high_buf.Set(i, d);
+	}
 }
 
 void DataBridge::Assist(int cursor, VectorBool& vec) {

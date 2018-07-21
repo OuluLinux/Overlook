@@ -169,6 +169,7 @@ void CalendarCommon::Init() {
 	
 	DUMPM(event_titles);
 	
+	ready = true;
 }
 
 void CalendarCommon::Start() {
@@ -667,6 +668,8 @@ bool CalendarCommon::IsMajorSpeak() {
 
 
 CalendarCtrl::CalendarCtrl() {
+	Add(calendar.SizePos());
+	
 	calendar.AddColumn("Time");
 	calendar.AddColumn("Title");
 	calendar.AddColumn("Currency");
@@ -678,7 +681,9 @@ CalendarCtrl::CalendarCtrl() {
 }
 	
 void CalendarCtrl::Data() {
-	/*Time now = GetUtcTime();
+	CalendarCommon& cal = GetSystem().GetCommon<CalendarCommon>();
+	
+	Time now = GetUtcTime();
 	Time end = now + 2*60*60;
 	Time begin = now - 24 * 60*60;
 	int row = 0;
@@ -699,7 +704,7 @@ void CalendarCtrl::Data() {
 	calendar.SetCount(row);
 	
 	if (!row)
-		calendar.Set(0, 1, "No events...");*/
+		calendar.Set(0, 1, "No events...");
 }
 
 }

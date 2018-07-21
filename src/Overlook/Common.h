@@ -19,6 +19,8 @@
 #define SIGNALSCALE 1
 #define MAX_SYMOPEN 10
 
+#define REFRESH_FROM_FASTER 1
+
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 extern Upp::IniBool have_sys_signal;
@@ -1127,7 +1129,7 @@ public:
 
 typedef ::PushNotification::PushNotification Notification;
 
-Notification& GetNotification() {return Single<Notification>();}
+inline Notification& GetNotification() {return Single<Notification>();}
 
 
 }

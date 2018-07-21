@@ -701,6 +701,8 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		GET_STR(sym.currency_margin);		//SymbolInfoString(symbols[i], SYMBOL_CURRENCY_MARGIN)
 		GET_STR(sym.path);					//SymbolInfoString(symbols[i], SYMBOL_PATH) + ";" ;
 		GET_STR(sym.description);			//SymbolInfoString(symbols[i], SYMBOL_DESCRIPTION)
+		if (sym.point == 0.0)
+			Panic("Invalid symbol " + sym.name + ". Restart MT4. If problem persists, hide symbol");
 		
 		sym.virtual_type = 0;
 		

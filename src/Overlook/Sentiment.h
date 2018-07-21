@@ -16,12 +16,18 @@ struct SentimentSnapshot {
 
 class Sentiment {
 	
+	// Persistent
 	Array<Array<SentimentSnapshot> > sents;
 	
+	
+	// Temporary
+	Index<String> symbols;
 	
 public:
 	Sentiment();
 	
+	int GetSymbolCount() const {return symbols.GetCount();}
+	String GetSymbol(int i) const {return symbols[i];}
 	
 	int GetSentimentCount(int tf_id) {return sents[tf_id].GetCount();}
 	SentimentSnapshot& GetSentiment(int tf_id, int sent) {return sents[tf_id][sent];}

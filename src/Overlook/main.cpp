@@ -78,7 +78,7 @@ GUI_APP_MAIN {
 	if (Config::start_time == 0) {
 		Time t = GetUtcTime();
 		#ifndef flagSECONDS
-		t -= 6*30*24*60*60;
+		t -= 4*12*30*24*60*60;
 		#else
 		t -= 14*24*60*60;
 		#endif
@@ -147,6 +147,5 @@ GUI_APP_MAIN {
 	}
 	
 	GetSystem().Deinit();
-	Thread::ShutdownThreads();
 }
 

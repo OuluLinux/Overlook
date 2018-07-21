@@ -211,7 +211,7 @@ public:
 	SubWindowCtrl& GetVisibleSubWindowCtrlRef() {return *GetVisibleSubWindowCtrl();}
 	
 	
-	Callback WhenActiveWindowChanges;
+	Callback WhenActiveWindowChanges, WhenWindowClose;
 };
 
 #endif

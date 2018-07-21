@@ -5,6 +5,20 @@ namespace Overlook {
 
 Sentiment::Sentiment() {
 	
+	
+	symbols.Add("EURUSD");
+	symbols.Add("GBPUSD");
+	symbols.Add("USDCHF");
+	symbols.Add("USDJPY");
+	symbols.Add("USDCAD");
+	symbols.Add("AUDUSD");
+	symbols.Add("NZDUSD");
+	symbols.Add("EURCHF");
+	symbols.Add("EURJPY");
+	symbols.Add("EURGBP");
+	
+	
+	
 	LoadThis();
 	
 	if (sents.IsEmpty()) {
@@ -94,6 +108,7 @@ SentimentCtrl::SentimentCtrl() {
 
 void SentimentCtrl::Data() {
 	System& sys = GetSystem();
+	Sentiment& sent = GetSentiment();
 	
 	if (tflist.GetCount() == 0) {
 		for(int i = 0; i < sys.GetPeriodCount(); i++) {
@@ -116,9 +131,9 @@ void SentimentCtrl::Data() {
 		
 		pairpreslist.SetLineCy(30);
 		paireventsym.Add("Any");
-		for(int i = 0; i < sys.GetNormalSymbolCount(); i++) {
-			paireventsym.Add(sys.GetSymbol(i));
-			pairpreslist.Set(i, 0, sys.GetSymbol(i));
+		for(int i = 0; i < sent.GetSymbolCount(); i++) {
+			paireventsym.Add(sent.GetSymbol(i));
+			pairpreslist.Set(i, 0, sent.GetSymbol(i));
 			pairpreslist.SetCtrl(i, 1, pair_pres_ctrl.Add());
 		}
 		paireventsym.SetIndex(0);
@@ -163,6 +178,7 @@ void SentimentCtrl::LoadHistory() {
 	
 	int tf = tflist.GetCursor();
 	int his = historylist.GetCursor();
+	if (his == -1) return;
 	
 	SentimentSnapshot& snap = sent.GetSentiment(tf, his);
 	
@@ -255,26 +271,15 @@ void SentimentCtrl::SetPairPressures() {
 }
 
 void SentimentCtrl::SetSignals() {
-	
-	Index<String> symbols;
-	symbols.Add("EURUSD");
-	symbols.Add("GBPUSD");
-	symbols.Add("USDCHF");
-	symbols.Add("USDJPY");
-	symbols.Add("USDCAD");
-	symbols.Add("AUDUSD");
-	symbols.Add("NZDUSD");
-	symbols.Add("EURCHF");
-	symbols.Add("EURJPY");
-	symbols.Add("EURGBP");
+	Sentiment& sent = GetSentiment();
 	
 	SentimentSnapshot* real = GetSentiment().FindReal();
 	if (real) {
 		System& sys = GetSystem();
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			int j = sys.FindSymbol(symbols[i]);
+		for(int i = 0; i < sent.GetSymbolCount(); i++) {
+			int j = sys.FindSymbol(sent.GetSymbol(i));
 			ASSERT(j != -1);
-			int pres = real->pair_pres[j];
+			int pres = real->pair_pres[i];
 			int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
 			sys.SetSignal(j, sig);
 		}

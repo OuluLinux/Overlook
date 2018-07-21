@@ -267,11 +267,20 @@ public:
 		return list;
 	}
 	
-	
+	template <class T>
+	T&										GetCommon() {
+		return *dynamic_cast<T*>(CommonSystemSingleFn<T>());
+	}
 	
 	
 protected:
 	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
+	
+	struct NetSetting : Moveable<NetSetting> {
+		VectorMap<String, int> symbols;
+		VectorMap<int, int> symbol_ids;
+		NetSetting& Set(String s, int i) {symbols.Add(s, i); return *this;}
+	};
 	
 	friend class DataBridgeCommon;
 	friend class DataBridge;
@@ -281,6 +290,7 @@ protected:
 	
 	
 	// Temporary
+	Vector<NetSetting>			nets;
 	Vector<Vector<int> >		sym_currencies;
 	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs, major_currency_syms;
 	Index<String>				symbols, allowed_symbols, currencies;
@@ -306,6 +316,12 @@ public:
 	String	GetMajorCurrency(int i) const {return major_currency_syms.GetKey(i);}
 	int		FindMajorCurrency(int i) const {return major_currencies.Find(i);}
 	int		GetNormalSymbolCount() const {return normal_symbol_count;}
+	NetSetting& AddNet(String s) {AddSymbol(s); return nets.Add();}
+	bool	IsNormalSymbol(int i) {return i < normal_symbol_count;}
+	bool	IsCurrencySymbol(int i) {return i >= normal_symbol_count && i < normal_symbol_count + currencies.GetCount();}
+	bool	IsNetSymbol(int i) {return i >= normal_symbol_count + currencies.GetCount();}
+	NetSetting& GetNet(int i) {return nets[i];}
+	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
 	
 protected:
 	
@@ -355,6 +371,7 @@ public:
 	Vector<InspectionResult>	inspection_results;
 	SpinLock					job_lock;
 	SpinLock					inspection_lock;
+	Mutex						core_queue_lock;
 	#ifdef flagGUITASK
 	TimeCallback				jobs_tc;
 	int							gui_job_thread = 0;

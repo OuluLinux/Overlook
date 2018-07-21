@@ -90,6 +90,7 @@ protected:
 	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
+	CalendarCtrl cal;
 	SentimentCtrl sentctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;

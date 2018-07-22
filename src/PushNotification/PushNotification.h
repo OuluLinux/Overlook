@@ -48,6 +48,38 @@ public:
 	
 };
 
+
+struct NotificationQueueItem {
+	Time added, pushed;
+	String msg;
+	Image image;
+};
+
+class NotificationQueue {
+	Array<NotificationQueueItem> queue, pushed;
+	PushNotification n;
+	String appname;
+	int expiration = 15*60;
+	int not_expiration = 3;
+	bool is_silent = false;
+	bool running = false;
+	
+	
+public:
+	typedef NotificationQueue CLASSNAME;
+	NotificationQueue();
+	
+	NotificationQueue& SetApp(String s) {appname = s; return *this;}
+	NotificationQueue& SetExpiration(int sec) {expiration = sec; return *this;}
+	NotificationQueue& SetNotificationExpiration(int sec) {not_expiration = sec; return *this;}
+	NotificationQueue& SetSilent(bool b=true) {is_silent = b; return *this;}
+	NotificationQueue& Add(Image img, String msg);
+	void Process();
+	
+};
+
+
+
 }
 
 #endif

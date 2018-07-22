@@ -1128,8 +1128,10 @@ public:
 
 
 typedef ::PushNotification::PushNotification Notification;
+typedef ::PushNotification::NotificationQueue NotificationQueue;
 
 inline Notification& GetNotification() {return Single<Notification>();}
+inline NotificationQueue& GetNotificationQueue() {return Single<NotificationQueue>();}
 
 
 

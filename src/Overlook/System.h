@@ -272,15 +272,16 @@ public:
 		return *dynamic_cast<T*>(CommonSystemSingleFn<T>());
 	}
 	
-	
-protected:
-	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
-	
 	struct NetSetting : Moveable<NetSetting> {
 		VectorMap<String, int> symbols;
 		VectorMap<int, int> symbol_ids;
 		NetSetting& Set(String s, int i) {symbols.Add(s, i); return *this;}
 	};
+	
+protected:
+	typedef Vector<Vector<Vector<ArrayMap<int, CoreItem> > > > Data;
+	
+	
 	
 	friend class DataBridgeCommon;
 	friend class DataBridge;
@@ -322,6 +323,8 @@ public:
 	bool	IsNetSymbol(int i) {return i >= normal_symbol_count + currencies.GetCount();}
 	NetSetting& GetNet(int i) {return nets[i];}
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
+	int		GetNetCount() const {return nets.GetCount();}
+	
 	
 protected:
 	

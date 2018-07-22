@@ -6417,6 +6417,20 @@ void Calendar::Init() {
 	
 }
 
+double Calendar::GetTopDiff() {
+	int bars = GetBars();
+	double diff = 0;
+	
+	for(int i = 0; i < stats.GetCount(); i++) {
+		const CalendarStat& c = stats[i];
+		if (c.pos.Top() == bars - 1 && fabs(c.av_diff.mean) > fabs(diff)) {
+			diff = c.av_diff.mean;
+		}
+	}
+	
+	return diff;
+}
+
 void Calendar::Start() {
 	System& sys = GetSystem();
 	ConstBuffer& src = GetInputBuffer(0, 0);
@@ -6425,7 +6439,7 @@ void Calendar::Start() {
 	CalendarCommon& cal = GetSystem().GetCommon<CalendarCommon>();
 	while (!cal.IsReady()) Sleep(100);
 	
-	int bars = GetBars() ;
+	int bars = GetBars();
 	int counted = GetCounted();
 	
 	

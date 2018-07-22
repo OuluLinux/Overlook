@@ -4,20 +4,19 @@
 namespace Overlook {
 
 struct SentimentSnapshot {
-	Index<int> cur_events, pair_events;
-	Vector<int> cur_pres, pair_pres;
+	Vector<int> net_pres, pair_pres;
 	String comment;
 	Time added;
 	double correctness = 0.0;
 	int realtf = -1;
 	
-	void Serialize(Stream& s) {s % cur_events % pair_events % cur_pres % pair_pres % comment % added % correctness % realtf;}
+	void Serialize(Stream& s) {s % net_pres % pair_pres % comment % added % correctness % realtf;}
 };
 
 class Sentiment {
 	
 	// Persistent
-	Array<Array<SentimentSnapshot> > sents;
+	Array<SentimentSnapshot> sents;
 	
 	
 	// Temporary
@@ -29,9 +28,9 @@ public:
 	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	
-	int GetSentimentCount(int tf_id) {return sents[tf_id].GetCount();}
-	SentimentSnapshot& GetSentiment(int tf_id, int sent) {return sents[tf_id][sent];}
-	SentimentSnapshot& AddSentiment(int tf_id) {return sents[tf_id].Add();}
+	int GetSentimentCount() {return sents.GetCount();}
+	SentimentSnapshot& GetSentiment(int sent) {return sents[sent];}
+	SentimentSnapshot& AddSentiment() {return sents.Add();}
 	SentimentSnapshot* FindReal();
 	
 	void Serialize(Stream& s) {s % sents;}
@@ -59,14 +58,12 @@ public:
 
 class SentimentCtrl : public ParentCtrl {
 	Splitter split;
-	ArrayCtrl tflist, historylist, cureventlist, paireventlist, curpreslist, pairpreslist;
-	ParentCtrl console, curevent, pairevent;
-	DropList cureventsym, paireventsym, realtf;
+	ArrayCtrl historylist, tflist, eventlist, netlist, pairpreslist;
+	ParentCtrl console;
 	::Upp::DocEdit comment;
 	Button save;
 	
-	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl;
-	Array<Option> pair_ena_ctrl, cur_ena_ctrl;
+	Array<SentPresCtrl> pair_pres_ctrl, net_pres_ctrl;
 	
 	
 public:
@@ -80,7 +77,8 @@ public:
 	void Save();
 	void SetPairPressures();
 	void SetSignals();
-	void SetCurrencyProfile();
+	void SetEventProfile();
+	void SetNetProfile();
 	void SetPairProfile();
 	
 };

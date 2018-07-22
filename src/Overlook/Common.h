@@ -1132,6 +1132,19 @@ typedef ::PushNotification::PushNotification Notification;
 inline Notification& GetNotification() {return Single<Notification>();}
 
 
+
+struct PercentDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		w.DrawRect(r, paper);
+		Size sz = r.GetSize();
+		int v = q;
+		int W = sz.cx * v / 100;
+		w.DrawRect(r.left, r.top, W, r.GetHeight(), Blue());
+	}
+};
+
 }
 
 #endif

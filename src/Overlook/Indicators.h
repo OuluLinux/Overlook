@@ -1717,6 +1717,8 @@ public:
 	
 	virtual void Init();
 	
+	double GetTopDiff();
+	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Lbl(4)

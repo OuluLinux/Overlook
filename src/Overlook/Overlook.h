@@ -184,7 +184,7 @@ public:
 	void LoadMajorPairProfile(int tf);
 	void LoadMajorCurrencyProfile(int tf);
 	void LoadOpenOrderCharts();
-	void LoadSymbolProfile(int sym, int tf);
+	void LoadSymbolProfile(int sym, int tf, int factory=-1);
 	void LoadProfile(Profile& profile);
 	void StoreProfile(Profile& profile);
 	void SetProfileFromFile(String path);

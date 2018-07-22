@@ -1076,7 +1076,7 @@ void Overlook::LoadMajorCurrencyProfile(int tf) {
 	TileWindow();
 }
 
-void Overlook::LoadSymbolProfile(int sym, int tf) {
+void Overlook::LoadSymbolProfile(int sym, int tf, int factory) {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
@@ -1086,7 +1086,10 @@ void Overlook::LoadSymbolProfile(int sym, int tf) {
 	pgroup.tf = tf;
 	pgroup.keep_at_end = true;
 	pgroup.right_offset = true;
-	pgroup.decl.factory = System::Find<BollingerBands>();
+	if (factory == -1)
+		pgroup.decl.factory = System::Find<BollingerBands>();
+	else
+		pgroup.decl.factory = factory;
 	
 	LoadProfile(profile);
 	TileWindow();

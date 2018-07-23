@@ -518,10 +518,10 @@ void Overlook::Data() {
 	double pro = eq - bal;
 	info
 		<< "Time: " << Format("%", GetUtcTime())
-		<< " Balance: " << floorr(bal, 2)
-		<< " Equity: " << floorr(eq, 2)
-		<< " Free margin: " << floorr(mt.AccountFreeMargin(), 2)
-		<< " Profit: " << floorr(pro, 2);
+		<< " Balance: " << NormalizeDouble(bal, 2)
+		<< " Equity: " << NormalizeDouble(eq, 2)
+		<< " Free margin: " << NormalizeDouble(mt.AccountFreeMargin(), 2)
+		<< " Profit: " << NormalizeDouble(pro, 2);
 	
 	status.Set(info);
 	

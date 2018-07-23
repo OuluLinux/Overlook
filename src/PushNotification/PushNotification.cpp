@@ -13,7 +13,7 @@ PushNotification::PushNotification() {
 	
 }
 
-int PushToast(std::wstring appname, std::wstring msg, std::vector<std::wstring> actions, std::wstring imgpath, bool silent, NotificationBase* base, int expiration_);
+int PushToast(std::wstring appname, std::wstring msg, std::vector<std::wstring> actions, std::wstring imgpath, bool silent, void* base, int expiration_);
 
 void PushNotification::Push() {
 	std::vector<std::wstring> actions;
@@ -30,15 +30,21 @@ void PushNotification::Push() {
     }
 	
 	PushToast(appname, msg, actions, WString(imgpath), is_silent, this, expiration);
-	
-	if (is_fail) {
-		WhenFailed();
-	}
-	else {
-		
-	}
 }
 
+
+void NotificationBase::HandleNotification(int type, int arg) const {
+	PushNotification* pn = (PushNotification*)base;
+	if (!pn) return;
+	if (type == 0)
+		pn->WhenActivated();
+	else if (type == 1)
+		pn->WhenActivatedIdx(arg);
+	else if (type == 2)
+		pn->WhenDismissed(arg);
+	else if (type == 3)
+		pn->WhenFailed();
+}
 
 
 
@@ -65,6 +71,9 @@ NotificationQueue& NotificationQueue::Add(Image img, String msg) {
 				return *this;
 		}
 	}
+	for(int i = 0; i < queue.GetCount(); i++)
+		if (queue[i].msg == msg)
+			return *this;
 	
 	NotificationQueueItem& it = queue.Add();
 	it.msg = msg;
@@ -78,7 +87,7 @@ NotificationQueue& NotificationQueue::Add(Image img, String msg) {
 }
 
 void NotificationQueue::Process() {
-	
+	lock.Enter();
 	while (queue.GetCount()) {
 		NotificationQueueItem& it = queue[0];
 		
@@ -94,7 +103,7 @@ void NotificationQueue::Process() {
 		
 		n.Push();
 	}
-	
+	lock.Leave();
 	running = false;
 }
 

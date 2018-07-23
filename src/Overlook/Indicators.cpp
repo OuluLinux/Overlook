@@ -6490,7 +6490,8 @@ void Calendar::Start() {
 					int post_pos = pos + post_step;
 					if (post_pos >= bars) {
 						stat.todo_stats.Add(pos);
-					} else {
+					}
+					else if (pos >= 0) {
 						double o0 = src.Get(pos);
 						double o1 = src.Get(post_pos);
 						double diff = o0 - o1;

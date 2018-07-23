@@ -15,7 +15,7 @@ namespace PushNotification {
 	
 
 
-class PushNotification : public NotificationBase {
+class PushNotification {
 	Image img;
 	WString msg;
 	WString appname = "UppApp";
@@ -23,11 +23,6 @@ class PushNotification : public NotificationBase {
 	int expiration = 15000;
 	bool is_silent = false;
 	
-protected:
-    virtual void NotificationActivated() const {WhenActivated();}
-    virtual void NotificationActivated(int i) const {WhenActivatedIdx(i);}
-	virtual void NotificationDismissed(WinToastDismissalReason state) const {WhenDismissed(state);}
-	virtual void NotificationFailed() const {WhenFailed();}
 
 public:
 	typedef PushNotification CLASSNAME;
@@ -59,6 +54,7 @@ class NotificationQueue {
 	Array<NotificationQueueItem> queue, pushed;
 	PushNotification n;
 	String appname;
+	Mutex lock;
 	int expiration = 15*60;
 	int not_expiration = 3;
 	bool is_silent = false;

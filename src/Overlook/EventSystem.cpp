@@ -107,6 +107,9 @@ void EventSystem::Data() {
 	}
 	
 	
+	for(int i = 0; i < work_queue.GetCount() /*&& IsRunning()*/; i++)
+		sys.Process(*work_queue[i], true);
+	
 	UpdateEvents();
 }
 
@@ -389,7 +392,7 @@ void EventSystem::SetEvent(int ev, int tf, int sym, int sig) {
 	e.sym = sym + sys.GetNormalSymbolCount() + sys.GetCurrencyCount();
 	e.sig = sig;
 	
-	
+	String symstr = "Net" + IntStr(sym);
 	String tfstr = sys.GetPeriodString(e.tf);
 	
 	NotificationQueue& n = GetNotificationQueue();
@@ -399,30 +402,30 @@ void EventSystem::SetEvent(int ev, int tf, int sym, int sig) {
 	
 	if (e.tf < 4) {
 		switch (ev) {
-			//case HIHURST:	n.Add(OverlookImg::hurst(), tfstr + " High Hurst value"); break;
-			//case HIMA:		n.Add(OverlookImg::ma(), tfstr + " High Moving Average value"); break;
-			case HIBB:		n.Add(OverlookImg::bb(), tfstr + " High Bollinger Bands value"); break;
-			case NEWSAR:	n.Add(OverlookImg::psar(), tfstr + " New Parabolic SAR trend"); break;
-			//case HIVOLAV:	n.Add(OverlookImg::volav(), tfstr + " High volatility average"); break;
-			case ANOMALY:	n.Add(OverlookImg::anom(), tfstr + " Anomaly: high volatility"); break;
-			case HICHANGE:	n.Add(OverlookImg::hich(), tfstr + " Highest spread exceeding change"); break;
-			//case HIPERCH:	n.Add(OverlookImg::pc(), tfstr + " High periodical change"); break;
-			case HIVOLSLOT:	n.Add(OverlookImg::vs(), tfstr + " High volatility slot value"); break;
-			case HINEWS:	if (e.tf == 2) n.Add(OverlookImg::news(), tfstr + " News impacts"); break;
+			//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
+			//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
+			case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
+			case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
+			//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
+			case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
+			case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
+			//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
+			case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
+			case HINEWS:	if (e.tf == 2) n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
 		}
 	}
 	else {
 		switch (ev) {
-			//case HIHURST:	n.Add(OverlookImg::hurst(), tfstr + " High Hurst value"); break;
-			//case HIMA:		n.Add(OverlookImg::ma(), tfstr + " High Moving Average value"); break;
-			case HIBB:		n.Add(OverlookImg::bb(), tfstr + " High Bollinger Bands value"); break;
-			case NEWSAR:	n.Add(OverlookImg::psar(), tfstr + " New Parabolic SAR trend"); break;
-			//case HIVOLAV:	n.Add(OverlookImg::volav(), tfstr + " High volatility average"); break;
-			case ANOMALY:	n.Add(OverlookImg::anom(), tfstr + " Anomaly: high volatility"); break;
-			case HICHANGE:	n.Add(OverlookImg::hich(), tfstr + " Highest spread exceeding change"); break;
-			//case HIPERCH:	n.Add(OverlookImg::pc(), tfstr + " High periodical change"); break;
-			case HIVOLSLOT:	n.Add(OverlookImg::vs(), tfstr + " High volatility slot value"); break;
-			//case HINEWS:	n.Add(OverlookImg::news(), tfstr + " News impacts"); break;
+			//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
+			//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
+			case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
+			case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
+			//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
+			case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
+			case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
+			//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
+			case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
+			//case HINEWS:	n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
 		}
 	}
 }

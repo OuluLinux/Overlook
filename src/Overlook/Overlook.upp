@@ -53,6 +53,8 @@ file
 	Utils.cpp,
 	Indicators.h,
 	Indicators.cpp,
+	ExpertAdvisor.h,
+	ExpertAdvisor.cpp,
 	Advisors.h,
 	Advisors.cpp,
 	Optimizer.h,

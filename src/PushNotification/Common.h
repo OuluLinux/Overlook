@@ -12,13 +12,14 @@ enum WinToastDismissalReason {
 class NotificationBase {
 
 public:
-	virtual void NotificationActivated() const = 0;
-	virtual void NotificationActivated(int actionIndex) const = 0;
-	virtual void NotificationDismissed(WinToastDismissalReason state) const = 0;
-	virtual void NotificationFailed() const = 0;
+	virtual void NotificationActivated() const {HandleNotification(0, 0);}
+	virtual void NotificationActivated(int actionIndex) const {HandleNotification(1, actionIndex);}
+	virtual void NotificationDismissed(WinToastDismissalReason state) const {HandleNotification(2, state);}
+	virtual void NotificationFailed() const {HandleNotification(3, 0);}
 	
-	bool is_fail = false;
+	void* base = NULL;
 	
+	void HandleNotification(int type, int arg) const;
 };
 
 enum Results {

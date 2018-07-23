@@ -176,7 +176,7 @@ void CalendarCommon::Start() {
 	lock.Enter();
 	Time now = GetUtcTime();
 	
-	if (last_week_update.hour != now.hour) {
+	if (last_week_update.minute != now.minute) {
 		last_week_update = now;
 		UpdateLastWeek();
 		UpdateNextWeek();

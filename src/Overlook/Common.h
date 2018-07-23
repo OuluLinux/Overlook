@@ -1147,6 +1147,15 @@ struct PercentDisplay : Display {
 	}
 };
 
+
+inline double NormalizeDouble(double d, int digits) {
+	int64 mul = 1;
+	for(int i = 0; i < digits; i++)
+		mul *= 10;
+	int64 i = d * mul;
+	return i / (double)mul;
+}
+
 }
 
 #endif

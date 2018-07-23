@@ -1038,11 +1038,9 @@ WinToastTemplate::Duration WinToastTemplate::duration() const {
 
 namespace PushNotification {
 
-int PushToast(std::wstring appname, std::wstring msg, std::vector<std::wstring> actions, std::wstring imgpath, bool silent, NotificationBase* base, int expiration_) {
-	base->is_fail = false;
+int PushToast(std::wstring appname, std::wstring msg, std::vector<std::wstring> actions, std::wstring imgpath, bool silent, void* base, int expiration_) {
 	
 	if (!WinToast::isCompatible()) {
-		base->is_fail = true;
 		return Results::ToastFailed;
     }
 	
@@ -1127,8 +1125,10 @@ int PushToast(std::wstring appname, std::wstring msg, std::vector<std::wstring> 
     if (withImage)
         templ.setImagePath(imagePath);
 
-
-    if (WinToast::instance()->showToast(templ, base) < 0) {
+	
+	NotificationBase* nb = new NotificationBase();
+	nb->base = base;
+    if (WinToast::instance()->showToast(templ, nb) < 0) {
         std::wcerr << L"Could not launch your toast notification!";
 		return Results::ToastFailed;
     }

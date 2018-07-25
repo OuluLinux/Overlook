@@ -56,6 +56,7 @@ class CalendarCommon : public Common {
 	int errorcode = 0;
 	int thisyear, thismonth;
 	bool ready = false;
+	bool initial_update = false;
 	
 	void ParseEvent(const XmlNode& n, CalEvent& event);
 	void RefreshProbabilities();
@@ -63,6 +64,7 @@ class CalendarCommon : public Common {
 	void UpdateLastWeek();
 	void UpdateNextWeek();
 	void SetTimeNow();
+	void TrimDuplicateEvents();
 	
 	
 	

@@ -19,6 +19,9 @@ void EventSystem::Data() {
 		sys.CommonFactories()[i].b()->Start();
 	}
 	
+	EventAutomation& ea = GetEventAutomation();
+	ea.Data();
+	
 	
 	if (work_queue.IsEmpty()) {
 		TimeStop ts;
@@ -52,8 +55,11 @@ void EventSystem::Data() {
 		fac_ids.Add(sys.Find<Calendar>());
 		for(int i = 0; i < fac_ids.GetCount(); i++)
 			indi_ids.Add().factory = fac_ids[i];
-		for(int i = 0; i < net_count; i++)
-			sym_ids.Add(sym_count + cur_count + i);
+		//for(int i = 0; i < net_count; i++)
+		//	sym_ids.Add(sym_count + cur_count + i);
+		for(int i = 0; i < cur_count; i++)
+			sym_ids.Add(sym_count + i);
+		
 		tf_ids.Add(0);
 		tf_ids.Add(1);
 		tf_ids.Add(2);
@@ -170,7 +176,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hi_hurst = -DBL_MAX;
 			int hi_hurst_i = -1, hi_hurst_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& hurst_buf = *bufs[HURST][i][j][0];
 				double h = hurst_buf.Top();
 				if (h > hi_hurst) {
@@ -188,7 +194,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hi_ma = -DBL_MAX;
 			int hi_ma_i = -1, hi_ma_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& ma_buf = *bufs[HURST][i][j][0];
 				int count = ma_buf.GetCount();
 				double ma0 = ma_buf.Get(count - 1);
@@ -208,7 +214,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hi_bb = -DBL_MAX;
 			int hi_bb_i = -1, hi_bb_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& lo_buf = *bufs[OPEN][i][j][1];
 				ConstBuffer& hi_buf = *bufs[OPEN][i][j][2];
 				ConstBuffer& ma_buf = *bufs[BB][i][j][0];
@@ -240,7 +246,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hi_sar = -DBL_MAX;
 			int hi_sar_i = -1, hi_sar_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& sar_buf = *bufs[PSAR][i][j][0];
 				ConstBuffer& o_buf = *bufs[OPEN][i][j][0];
 				int sar_count = sar_buf.GetCount();
@@ -272,7 +278,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hi_volav = -DBL_MAX;
 			int hi_volav_i = -1, hi_volav_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& volav_buf = *bufs[VA][i][j][0];
 				double volav = volav_buf.Top();
 				if (volav > hi_volav) {
@@ -289,7 +295,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double anom = -DBL_MAX;
 			int anom_i = -1, anom_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& anom_buf = *bufs[ANOM][i][j][0];
 				double a = anom_buf.Top();
 				if (a >= 0.75 && a > anom) {
@@ -306,7 +312,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double hich = -DBL_MAX;
 			int hich_i = -1, hich_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& o_buf = *bufs[OPEN][i][j][0];
 				ConstBuffer& lo_buf = *bufs[OPEN][i][j][1];
 				ConstBuffer& hi_buf = *bufs[OPEN][i][j][2];
@@ -328,7 +334,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double pc = -DBL_MAX;
 			int pc_i = -1, pc_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& pc_buf = *bufs[PC][i][j][0];
 				double p = pc_buf.Top();
 				double fp = fabs(pc);
@@ -346,7 +352,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double vols = -DBL_MAX;
 			int vols_i = -1, vols_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				ConstBuffer& vs_buf = *bufs[VS][i][j][0];
 				ConstBuffer& pc_buf = *bufs[PC][i][j][0];
 				double vs = vs_buf.Top();
@@ -365,7 +371,7 @@ void EventSystem::UpdateEvents() {
 		{
 			double cal = -DBL_MAX;
 			int cal_i = -1, cal_sig = 0;
-			for(int i = 0; i < sym_ids.GetCount(); i++) {
+			for(int i = 0; i < sym_ids.GetCount() - 1; i++) {
 				Calendar& c = *cals[i];
 				double cdiff = c.GetTopDiff();
 				if (cdiff > 0 && cdiff > cal) {
@@ -376,11 +382,11 @@ void EventSystem::UpdateEvents() {
 			}
 			SetEvent(HINEWS, j, cal_i, cal_sig);
 		}
+		
 	}
 	
 	
 	Swap(events, tmp_events);
-	
 }
 
 void EventSystem::SetEvent(int ev, int tf, int sym, int sig) {
@@ -389,43 +395,46 @@ void EventSystem::SetEvent(int ev, int tf, int sym, int sig) {
 	Event& e = tmp_events.Add();
 	e.ev = ev;
 	e.tf = tf_ids[tf];
-	e.sym = sym + sys.GetNormalSymbolCount() + sys.GetCurrencyCount();
+	e.sym = sym + sys.GetNormalSymbolCount();
 	e.sig = sig;
 	
-	String symstr = "Net" + IntStr(sym);
-	String tfstr = sys.GetPeriodString(e.tf);
 	
-	NotificationQueue& n = GetNotificationQueue();
-	n.SetApp("Overlook");
-	n.SetSilent();
-	n.SetNotificationExpiration(3);
-	
-	if (e.tf < 4) {
-		switch (ev) {
-			//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
-			//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
-			case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
-			case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
-			//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
-			case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
-			case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
-			//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
-			case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
-			case HINEWS:	if (e.tf == 2) n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
+	if (0) {
+		String symstr = sys.GetSymbol(e.sym);
+		String tfstr = sys.GetPeriodString(e.tf);
+		
+		NotificationQueue& n = GetNotificationQueue();
+		n.SetApp("Overlook");
+		n.SetSilent();
+		n.SetNotificationExpiration(3);
+		
+		if (e.tf < 4) {
+			switch (ev) {
+				//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
+				//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
+				case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
+				//case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
+				//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
+				case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
+				case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
+				//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
+				//case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
+				//case HINEWS:	if (e.tf == 2) n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
+			}
 		}
-	}
-	else {
-		switch (ev) {
-			//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
-			//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
-			case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
-			case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
-			//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
-			case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
-			case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
-			//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
-			case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
-			//case HINEWS:	n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
+		else {
+			switch (ev) {
+				//case HIHURST:	n.Add(OverlookImg::hurst(), symstr + " " + tfstr + " High Hurst value"); break;
+				//case HIMA:		n.Add(OverlookImg::ma(), symstr + " " + tfstr + " High Moving Average value"); break;
+				case HIBB:		n.Add(OverlookImg::bb(), symstr + " " + tfstr + " High Bollinger Bands value"); break;
+				case NEWSAR:	n.Add(OverlookImg::psar(), symstr + " " + tfstr + " New Parabolic SAR trend"); break;
+				//case HIVOLAV:	n.Add(OverlookImg::volav(), symstr + " " + tfstr + " High volatility average"); break;
+				case ANOMALY:	n.Add(OverlookImg::anom(), symstr + " " + tfstr + " Anomaly: high volatility"); break;
+				case HICHANGE:	n.Add(OverlookImg::hich(), symstr + " " + tfstr + " Highest spread exceeding change"); break;
+				//case HIPERCH:	n.Add(OverlookImg::pc(), symstr + " " + tfstr + " High periodical change"); break;
+				case HIVOLSLOT:	n.Add(OverlookImg::vs(), symstr + " " + tfstr + " High volatility slot value"); break;
+				//case HINEWS:	n.Add(OverlookImg::news(), symstr + " " + tfstr + " News impacts"); break;
+			}
 		}
 	}
 }

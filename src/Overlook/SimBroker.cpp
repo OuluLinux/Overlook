@@ -26,6 +26,8 @@ void SimBroker::SetCollecting(double d) {
 }
 
 void SimBroker::Init() {
+	System& sys = GetSystem();
+	
 	Clear();
 	
 	close_sum = 0;
@@ -35,8 +37,18 @@ void SimBroker::Init() {
 	symbols <<= mt.GetSymbols();
 	currency = mt.AccountCurrency();
 	
+	symbol_idx.Clear();
 	for(int i = 0; i < symbols.GetCount(); i++)
 		symbol_idx.Add(symbols[i].name);
+	
+	
+	for(int i = symbols.GetCount(); i < sys.GetSymbolCount(); i++) {
+		String str = sys.GetSymbol(i);
+		Symbol& s = symbols.Add();
+		s.name = str;
+		symbol_idx.Add(str);
+	}
+	
 	cur_begin = mt.GetSymbolCount();
 }
 
@@ -66,6 +78,7 @@ void SimBroker::Clear() {
 	collected = 0.0;
 	
 	
+	askbid.SetCount(symbols.GetCount());
 	signals.SetCount(symbols.GetCount(), 0);
 	signal_freezed.SetCount(symbols.GetCount(), 0);
 	symbol_profits.SetCount(symbols.GetCount(), 0);

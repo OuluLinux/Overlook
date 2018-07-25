@@ -1148,6 +1148,58 @@ struct PercentDisplay : Display {
 };
 
 
+struct CalendarTimeDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		Time t = q;
+		String str = Format("%", t);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		if (t >= GetUtcTime()) fnt.Bold();
+		w.DrawText(pt.x, pt.y+1, str, fnt, ink);
+	}
+};
+
+
+struct CalendarCurrencyDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		String cur = q;
+		if (cur == "GBP") paper = Color(240, 216, 255);
+		else if (cur == "EUR") paper = Color(200, 202, 255);
+		else if (cur == "USD") paper = Color(208, 255, 219);
+		else if (cur == "JPY") paper = Color(255, 208, 205);
+		else if (cur == "AUD") paper = Color(255, 255, 188);
+		else if (cur == "CAD") paper = Color(255, 212, 187);
+		else if (cur == "CHF") paper = Color(205, 188, 216);
+		else if (cur == "NZD") paper = Color(205, 255, 255);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		w.DrawText(pt.x, pt.y+1, cur, fnt, Black());
+	}
+};
+
+
+struct CalendarImpactDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		String imp = q;
+		if (imp == "Low") paper = Color(132, 255, 94);
+		else if (imp == "Medium") paper = Color(255, 255, 117);
+		else if (imp == "High") paper = Color(255, 115, 102);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		w.DrawText(pt.x, pt.y+1, imp, fnt, Black());
+	}
+};
+
+
 inline double NormalizeDouble(double d, int digits) {
 	int64 mul = 1;
 	for(int i = 0; i < digits; i++)

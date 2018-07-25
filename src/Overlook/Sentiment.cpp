@@ -46,7 +46,7 @@ SentimentSnapshot* Sentiment::FindReal() {
 
 SentimentCtrl::SentimentCtrl() {
 	Add(split.SizePos());
-	split << historylist << tflist << eventlist << netlist << pairpreslist << console;
+	split << historylist << tflist << eventlist << /*netlist <<*/ curpreslist << pairpreslist << console;
 	
 	console.Add(comment.HSizePos().VSizePos(0, 30));
 	console.Add(save.BottomPos(0, 30).HSizePos());
@@ -72,6 +72,10 @@ SentimentCtrl::SentimentCtrl() {
 	netlist.AddColumn("Pressure");
 	netlist.ColumnWidths("1 2");
 	netlist <<= THISBACK(SetNetProfile);
+	curpreslist.AddColumn("Symbol");
+	curpreslist.AddColumn("Pressure");
+	curpreslist.ColumnWidths("1 2");
+	curpreslist <<= THISBACK(SetCurProfile);
 	pairpreslist.AddColumn("Symbol");
 	pairpreslist.AddColumn("Pressure");
 	pairpreslist.ColumnWidths("1 2");
@@ -94,11 +98,21 @@ void SentimentCtrl::Data() {
 		
 		netlist.SetLineCy(30);
 		for(int i = 0; i < sys.GetNetCount(); i++) {
-			netlist.Set(i, 0, "Net" + IntStr(i));
+			netlist.Set(i, 0, sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
 			SentPresCtrl& ctrl = net_pres_ctrl.Add();
-			ctrl <<= THISBACK(SetPairPressures);
+			ctrl <<= THISBACK(SetNetPairPressures);
 			netlist.SetCtrl(i, 1, ctrl);
 		}
+		
+		
+		curpreslist.SetLineCy(30);
+		for(int i = 0; i < sys.GetCurrencyCount(); i++) {
+			curpreslist.Set(i, 0, sys.GetCurrency(i));
+			SentPresCtrl& ctrl = cur_pres_ctrl.Add();
+			ctrl <<= THISBACK(SetCurPairPressures);
+			curpreslist.SetCtrl(i, 1, ctrl);
+		}
+		
 		
 		pairpreslist.SetLineCy(30);
 		for(int i = 0; i < sent.GetSymbolCount(); i++) {
@@ -186,6 +200,10 @@ void SentimentCtrl::LoadHistory() {
 		netlist.Set(i, 1, snap.net_pres[i]);
 	}
 	
+	for(int i = 0; i < curpreslist.GetCount() && i < snap.cur_pres.GetCount(); i++) {
+		curpreslist.Set(i, 1, snap.cur_pres[i]);
+	}
+	
 	for(int i = 0; i < pairpreslist.GetCount() && i < snap.pair_pres.GetCount(); i++) {
 		pairpreslist.Set(i, 1, snap.pair_pres[i]);
 	}
@@ -207,6 +225,11 @@ void SentimentCtrl::Save() {
 		snap.net_pres[i] = netlist.Get(i, 1);
 	}
 	
+	snap.cur_pres.SetCount(curpreslist.GetCount());
+	for(int i = 0; i < curpreslist.GetCount(); i++) {
+		snap.cur_pres[i] = curpreslist.Get(i, 1);
+	}
+	
 	snap.pair_pres.SetCount(pairpreslist.GetCount());
 	for(int i = 0; i < pairpreslist.GetCount(); i++) {
 		snap.pair_pres[i] = pairpreslist.Get(i, 1);
@@ -220,9 +243,9 @@ void SentimentCtrl::Save() {
 	historylist.SetCursor(historylist.GetCount()-1);
 }
 
-void SentimentCtrl::SetPairPressures() {
+void SentimentCtrl::SetNetPairPressures() {
 	System& sys = GetSystem();
-	VectorMap<String, int> pres;
+	VectorMap<String, int> pres, cur_pres;
 	
 	for(int i = 0; i < netlist.GetCount(); i++) {
 		String a = netlist.Get(i, 0);
@@ -243,33 +266,88 @@ void SentimentCtrl::SetPairPressures() {
 			int sig = net.symbol_ids[j];
 			String str = sys.GetSymbol(sym);
 			pres.GetAdd(str, 0) += p * sig;
+			
+			String a = str.Left(3);
+			String b = str.Right(3);
+			cur_pres.GetAdd(a, 0) += p * sig;
+			cur_pres.GetAdd(b, 0) -= p * sig;
 		}
 	}
 	
+	for(int i = 0; i < curpreslist.GetCount(); i++) {
+		String a = curpreslist.Get(i, 0);
+		int p = cur_pres.GetAdd(a, 0);
+		curpreslist.Set(i, 1, p);
+	}
+
 	for(int i = 0; i < pairpreslist.GetCount(); i++) {
 		String s = pairpreslist.Get(i, 0);
 		int p = pres.GetAdd(s, 0);
 		pairpreslist.Set(i, 1, p);
 	}
 	
-	
 }
+
+void SentimentCtrl::SetCurPairPressures() {
+	VectorMap<String, int> pres;
+
+	for(int i = 0; i < curpreslist.GetCount(); i++) {
+		String a = curpreslist.Get(i, 0);
+		int p = curpreslist.Get(i, 1);
+		pres.Add(a, p);
+	}
+
+	for(int i = 0; i < pairpreslist.GetCount(); i++) {
+		String s = pairpreslist.Get(i, 0);
+		String a = s.Left(3);
+		String b = s.Right(3);
+		int p = pres.GetAdd(a, 0) - pres.GetAdd(b, 0);
+		pairpreslist.Set(i, 1, p);
+	}
+
+
+}
+
 
 void SentimentCtrl::SetSignals() {
 	Sentiment& sent = GetSentiment();
 	
-	SentimentSnapshot* real = GetSentiment().FindReal();
-	if (real) {
+	if (false) {
 		System& sys = GetSystem();
-		for(int i = 0; i < sent.GetSymbolCount() && i < real->pair_pres.GetCount(); i++) {
-			int j = sys.FindSymbol(sent.GetSymbol(i));
-			ASSERT(j != -1);
-			int pres = real->pair_pres[i];
+		EventSystem& ev = GetEventSystem();
+		EventAutomation& ea = GetEventAutomation();
+		for(int i = 0; i < curpreslist.GetCount(); i++) {
+			String sym = curpreslist.Get(i, 0);
+			int pres = ea.GetAutoSig(sym);
+			curpreslist.Set(i, 1, pres);
+		}
+		SetCurPairPressures();
+		for(int i = 0; i < pairpreslist.GetCount(); i++) {
+			String sym = pairpreslist.Get(i, 0);
+			int pres = pairpreslist.Get(i, 1);
+			int j = sys.FindSymbol(sym);
 			int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
 			sys.SetSignal(j, sig);
+			System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
+			actnet.Assign(sym, sig);
 		}
 	}
-	
+	else {
+		SentimentSnapshot* real = GetSentiment().FindReal();
+		if (real) {
+			System& sys = GetSystem();
+			System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
+			for(int i = 0; i < sent.GetSymbolCount() && i < real->pair_pres.GetCount(); i++) {
+				String sym = sent.GetSymbol(i);
+				int j = sys.FindSymbol(sym);
+				ASSERT(j != -1);
+				int pres = real->pair_pres[i];
+				int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
+				sys.SetSignal(j, sig);
+				actnet.Assign(sym, sig);
+			}
+		}
+	}
 }
 
 void SentimentCtrl::SetEventProfile() {
@@ -298,6 +376,13 @@ void SentimentCtrl::SetNetProfile() {
 	System& sys = GetSystem();
 	int cur = netlist.GetCursor();
 	String str = netlist.Get(cur, 0);
+	GetOverlook().LoadSymbolProfile(sys.FindSymbol(str), tflist.GetCursor());
+}
+
+void SentimentCtrl::SetCurProfile() {
+	System& sys = GetSystem();
+	int cur = curpreslist.GetCursor();
+	String str = curpreslist.Get(cur, 0);
 	GetOverlook().LoadSymbolProfile(sys.FindSymbol(str), tflist.GetCursor());
 }
 

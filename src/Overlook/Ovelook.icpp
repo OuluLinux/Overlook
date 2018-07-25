@@ -83,6 +83,7 @@ INITBLOCK {
 	
 	//System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
+	System::Register<Eagle>("Eagle", CORE_EXPERTADVISOR);
 	
 	
 	

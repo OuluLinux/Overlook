@@ -141,7 +141,7 @@ void System::FirstStart() {
 		}
 		
 		
-		AddNet("Net0").Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", +1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", +1);
+		/*AddNet("Net0").Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", +1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", +1);
 		AddNet("Net1").Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", +1);
 		AddNet("Net2").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", +1).Set("AUDUSD", -1).Set("NZDUSD", -1).Set("EURCHF", -1).Set("EURJPY", -1).Set("EURGBP", -1);
 		AddNet("Net3").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", +1).Set("AUDUSD", -1).Set("NZDUSD", -1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", +1);
@@ -170,8 +170,9 @@ void System::FirstStart() {
 		AddNet("Net26").Set("EURUSD", +1).Set("GBPUSD", -1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", -1).Set("EURJPY", -1).Set("EURGBP", +1);
 		AddNet("Net27").Set("EURUSD", -1).Set("GBPUSD", +1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", -1);
 		AddNet("Net28").Set("EURUSD", -1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", -1).Set("EURJPY", -1).Set("EURGBP", -1);
-		AddNet("Net29").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", +1).Set("AUDUSD", -1).Set("NZDUSD", -1).Set("EURCHF", -1).Set("EURJPY", -1).Set("EURGBP", +1);
-
+		AddNet("Net29").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", +1).Set("AUDUSD", -1).Set("NZDUSD", -1).Set("EURCHF", -1).Set("EURJPY", -1).Set("EURGBP", +1);*/
+		AddNet("ActiveNet").Set("EURUSD", 0).Set("GBPUSD", 0).Set("USDCHF", 0).Set("USDJPY", 0).Set("USDCAD", 0).Set("AUDUSD", 0).Set("NZDUSD", 0).Set("EURCHF", 0).Set("EURJPY", 0).Set("EURGBP", 0);
+		
 
 		for(int i = 0; i < nets.GetCount(); i++) {
 			NetSetting& net = nets[i];

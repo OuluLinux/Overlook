@@ -4,13 +4,13 @@
 namespace Overlook {
 
 struct SentimentSnapshot {
-	Vector<int> net_pres, pair_pres;
+	Vector<int> net_pres, cur_pres, pair_pres;
 	String comment;
 	Time added;
 	double correctness = 0.0;
 	int realtf = -1;
 	
-	void Serialize(Stream& s) {s % net_pres % pair_pres % comment % added % correctness % realtf;}
+	void Serialize(Stream& s) {s % net_pres % cur_pres % pair_pres % comment % added % correctness % realtf;}
 };
 
 class Sentiment {
@@ -58,12 +58,12 @@ public:
 
 class SentimentCtrl : public ParentCtrl {
 	Splitter split;
-	ArrayCtrl historylist, tflist, eventlist, netlist, pairpreslist;
+	ArrayCtrl historylist, tflist, eventlist, netlist, curpreslist, pairpreslist;
 	ParentCtrl console;
 	::Upp::DocEdit comment;
 	Button save;
 	
-	Array<SentPresCtrl> pair_pres_ctrl, net_pres_ctrl;
+	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl, net_pres_ctrl;
 	
 	
 public:
@@ -75,10 +75,12 @@ public:
 	void LoadTf();
 	void LoadHistory();
 	void Save();
-	void SetPairPressures();
+	void SetNetPairPressures();
+	void SetCurPairPressures();
 	void SetSignals();
 	void SetEventProfile();
 	void SetNetProfile();
+	void SetCurProfile();
 	void SetPairProfile();
 	
 };

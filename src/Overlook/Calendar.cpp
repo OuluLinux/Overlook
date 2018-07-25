@@ -157,9 +157,15 @@ CalendarCommon::CalendarCommon() {
 void CalendarCommon::Init() {
 	LoadThis();
 	
-	if (events.GetCount() == 0) UpdateHistory();
+	if (events.GetCount() == 0) {
+		initial_update = true;
+		UpdateHistory();
+		initial_update = false;
+	}
 	
-	VectorMap<String, int> event_titles;
+	TrimDuplicateEvents();
+	
+	/*VectorMap<String, int> event_titles;
 	for(int i = 0; i < events.GetCount(); i++) {
 		const CalEvent& e = events[i];
 		String s = e.currency + " " + e.title;
@@ -167,7 +173,7 @@ void CalendarCommon::Init() {
 	}
 	SortByValue(event_titles, StdGreater<int>());
 	
-	DUMPM(event_titles);
+	DUMPM(event_titles);*/
 	
 	ready = true;
 }
@@ -175,6 +181,7 @@ void CalendarCommon::Init() {
 void CalendarCommon::Start() {
 	lock.Enter();
 	Time now = GetUtcTime();
+	initial_update = false;
 	
 	if (last_week_update.minute != now.minute) {
 		last_week_update = now;
@@ -186,11 +193,24 @@ void CalendarCommon::Start() {
 }
 
 void CalendarCommon::StoreThis() {
-	StoreToFile(*this, ConfigFile("events.bin"));
+	StoreToFile(*this, ConfigFile("Calendar.bin"));
 }
 
 void CalendarCommon::LoadThis() {
-	LoadFromFile(*this, ConfigFile("events.bin"));
+	LoadFromFile(*this, ConfigFile("Calendar.bin"));
+}
+
+void CalendarCommon::TrimDuplicateEvents() {
+	for(int i = 0; i < events.GetCount(); i++) {
+		CalEvent& e0 = events[i];
+		for(int j = i+1, k = 0; j < events.GetCount() && k < 5; j++, k++) {
+			CalEvent& e1 = events[j];
+			if (e0.title == e1.title && e0.timestamp == e1.timestamp) {
+				events.Remove(j);
+				j--;
+			}
+		}
+	}
 }
 
 void CalendarCommon::Refresh() {
@@ -592,20 +612,37 @@ void CalendarCommon::SetEvent(CalEvent& ce) {
 	
 	if (IsNull(ce.timestamp) || ce.title.IsEmpty()) return;
 	
-	Cout() << "SetEvent " << ce.title << "\n";
-	
-	
-	for(int i = events.GetCount()-1; i >=  0; i-- ) {
-		CalEvent& e = events[i];
+	if (!initial_update) {
+		Cout() << "SetEvent " << ce.title << "\n";
 		
-		if (e.timestamp + 60*60*24 < ce.timestamp)
-			break;
-		
-		if (e.id == ce.id ) {
-			if (e.actual != ce.actual) {
-				e = ce;
+		for(int i = events.GetCount()-1; i >=  0; i-- ) {
+			CalEvent& e = events[i];
+			
+			if (e.timestamp + 60*60*24 < ce.timestamp)
+				break;
+			
+			if (e.title == ce.title && e.timestamp == ce.timestamp ) {
+				if (e.actual != ce.actual || e.forecast != ce.forecast) {
+					e = ce;
+					
+					if (e.timestamp > GetUtcTime() - 60*60) {
+						double act = ScanDouble(e.actual);
+						double fc = ScanDouble(e.forecast);
+						String s;
+						if (IsFin(act) && IsFin(fc)) {
+							if (act == fc) s = " is equal to forecast";
+							else if (act > fc) s = " is greater than forecast";
+							else s = " is lesser than forecast";
+						}
+						NotificationQueue& n = GetNotificationQueue();
+						n.SetApp("Overlook");
+						n.SetSilent(false);
+						n.SetNotificationExpiration(5);
+						n.Add(OverlookImg::news(), e.currency + "\n" + e.title + ":\nactual " + e.actual + s);
+					}
+				}
+				return;
 			}
-			return;
 		}
 	}
 
@@ -692,10 +729,13 @@ void CalendarCtrl::Data() {
 		if (e.timestamp > end) continue;
 		if (e.timestamp < begin) break;
 		
-		calendar.Set(row, 0, Format("%", e.timestamp));
+		calendar.Set(row, 0, e.timestamp);
+		calendar.SetDisplay(row, 0, Single<CalendarTimeDisplay>());
 		calendar.Set(row, 1, e.title);
 		calendar.Set(row, 2, e.currency);
+		calendar.SetDisplay(row, 2, Single<CalendarCurrencyDisplay>());
 		calendar.Set(row, 3, e.GetImpactString());
+		calendar.SetDisplay(row, 3, Single<CalendarImpactDisplay>());
 		calendar.Set(row, 4, e.forecast + e.unit);
 		calendar.Set(row, 5, e.previous + e.unit);
 		calendar.Set(row, 6, e.actual + e.unit);

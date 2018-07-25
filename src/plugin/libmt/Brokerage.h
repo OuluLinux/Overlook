@@ -109,6 +109,7 @@ public:
 	void SetLeverage(double d) {leverage = d;}
 	void RealizeVolume(int symbol, double d, bool type);
 	bool IsSymbolTrading(int sym) const;
+	void SetSymbolCount(int s) {symbols.SetCount(s);}
 	
 	double	AccountInfoDouble(int property_id);
 	int		AccountInfoInteger(int property_id);

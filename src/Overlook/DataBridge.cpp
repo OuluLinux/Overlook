@@ -751,6 +751,8 @@ void DataBridge::RefreshCurrency() {
 	String symstr = sys.GetSymbol(GetSymbol());
 	LOG(symstr);
 	
+	spread_mean = syms.GetCount() * 3;
+	
 	for(int i = 0; i < syms.GetCount(); i++) {
 		Src& src = src_open[i];
 		src.a = syms[i]; // symbol
@@ -819,21 +821,18 @@ void DataBridge::RefreshNet() {
 	MetaTrader& mt = GetMetaTrader();
 	int shift = open_buf.GetCount() - 1;
 	
-	typedef Tuple<int, bool, ConstBuffer*, double> Src;
+	typedef Tuple<int, int, ConstBuffer*, double> Src;
 	Vector<Src> src_open;
 	const System::NetSetting& net = sys.GetSymbolNet(GetSymbol());
 	src_open.SetCount(net.symbol_ids.GetCount());
 	int bars = INT_MAX;
 	
+	spread_mean = net.symbol_ids.GetCount() * 3;
+	
 	for(int i = 0; i < net.symbol_ids.GetCount(); i++) {
 		Src& src = src_open[i];
 		src.a = net.symbol_ids.GetKey(i); // symbol
-		int dir = net.symbol_ids[i];
-		if (dir >= 0) {
-			src.b = false; // dir (0 pos, 1 neg)
-		} else {
-			src.b = true;
-		}
+		src.b = net.symbol_ids[i];
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		bars = min(bars, src.c->GetCount());
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
@@ -864,9 +863,9 @@ void DataBridge::RefreshNet() {
 			double o1 = open.Get(i-1);
 			ASSERT(src.d > 0.0);
 			int pips = (o0 - o1) / src.d;
-			if (src.b == false)
+			if (src.b > 0)
 				pip_sum += pips;
-			else
+			else if (src.b < 0)
 				pip_sum -= pips;
 		}
 		

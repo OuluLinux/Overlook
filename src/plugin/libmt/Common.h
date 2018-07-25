@@ -176,21 +176,21 @@ struct Symbol : public Moveable<Symbol> {
 	int id;
 	String name, proxy_name;
 	
-	bool is_skipping;
-	bool tradeallowed;
-	bool is_base_currency;
+	bool is_skipping = false;
+	bool tradeallowed = true;
+	bool is_base_currency = true;
 	
-	double lotsize;
-	int profit_calc_mode;
-	int margin_calc_mode;
-	double margin_hedged;
-	double margin_required;
+	double lotsize = 100000;
+	int profit_calc_mode = CALCMODE_FOREX;
+	int margin_calc_mode = CALCMODE_FOREX;
+	double margin_hedged = 0;
+	double margin_required = 0;
 	
 	int selected;
 	int visible;
 	int digits;
 	int spread_floating;
-	int spread;
+	int spread = 0.0003;
 	int calc_mode;
 	int trade_mode;
 	int start_time;
@@ -203,13 +203,13 @@ struct Symbol : public Moveable<Symbol> {
 	int base_mul;
 	int base_cur0, base_cur1;
 	
-	double point;
+	double point = 0.0001;
 	double tick_value;
 	double tick_size;
 	double contract_size;
-	double volume_min;
-	double volume_max;
-	double volume_step;
+	double volume_min = 0.01;
+	double volume_max = 1000.0;
+	double volume_step = 0.01;
 	double swap_long;
 	double swap_short;
 	double margin_initial;

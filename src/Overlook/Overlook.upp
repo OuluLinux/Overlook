@@ -45,6 +45,8 @@ file
 	System.cpp,
 	EventSystem.h,
 	EventSystem.cpp,
+	EventAutomation.h,
+	EventAutomation.cpp,
 	Sentiment.h,
 	Sentiment.cpp,
 	SimBroker.h,

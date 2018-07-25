@@ -206,6 +206,11 @@ void Overlook::ViewMenu(Bar& bar) {
 	bar.Add("Load major currencies H1", THISBACK1(LoadMajorCurrencyProfile, 4)).Key(K_CTRL_3);
 	bar.Add("Load major currencies H4", THISBACK1(LoadMajorCurrencyProfile, 5)).Key(K_CTRL_4);
 	bar.Add("Load major currencies D1", THISBACK1(LoadMajorCurrencyProfile, 6)).Key(K_CTRL_5);
+	bar.Add("Load active network M1", THISBACK1(LoadMajorActiveNetProfile, 0)).Key(K_SHIFT_CTRL_1);
+	bar.Add("Load active network M15", THISBACK1(LoadMajorActiveNetProfile, 2)).Key(K_SHIFT_CTRL_2);
+	bar.Add("Load active network H1", THISBACK1(LoadMajorActiveNetProfile, 4)).Key(K_SHIFT_CTRL_3);
+	bar.Add("Load active network H4", THISBACK1(LoadMajorActiveNetProfile, 5)).Key(K_SHIFT_CTRL_4);
+	bar.Add("Load active network D1", THISBACK1(LoadMajorActiveNetProfile, 6)).Key(K_SHIFT_CTRL_5);
 	
 }
 
@@ -1064,6 +1069,28 @@ void Overlook::LoadMajorCurrencyProfile(int tf) {
 			sym != "EUR" &&
 			sym != "GBP"
 			) continue;
+		ProfileGroup& pgroup = profile.charts.Add();
+		pgroup.symbol = i;
+		pgroup.tf = tf;
+		pgroup.keep_at_end = true;
+		pgroup.right_offset = true;
+		pgroup.decl.factory = id;
+	}
+	
+	LoadProfile(profile);
+	TileWindow();
+}
+
+void Overlook::LoadMajorActiveNetProfile(int tf) {
+	System& sys = GetSystem();
+	MetaTrader& mt = GetMetaTrader();
+	Profile profile;
+	
+	int id = System::Find<BollingerBands>();
+	int sym_count = sys.GetSymbolCount();
+	for(int i = 0; i < sym_count; i++) {
+		String sym = sys.GetSymbol(i);
+		if (sym != "ActiveNet") continue;
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;
 		pgroup.tf = tf;

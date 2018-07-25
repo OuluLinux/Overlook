@@ -6465,6 +6465,7 @@ void Calendar::Start() {
 			int& cal_cursor = is_pre ? pre_cal_cursor : main_cal_cursor;
 			
 			while (cal_cursor < cal.GetCount()) {
+				if (cal_cursor == -1) cal_cursor = 0;
 				const CalEvent& e = cal.GetEvent(cal_cursor);
 				
 				

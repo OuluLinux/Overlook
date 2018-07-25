@@ -276,6 +276,11 @@ public:
 		VectorMap<String, int> symbols;
 		VectorMap<int, int> symbol_ids;
 		NetSetting& Set(String s, int i) {symbols.Add(s, i); return *this;}
+		void Assign(String s, int i) {
+			int j = symbols.Find(s);
+			symbols[j] = i;
+			symbol_ids[j] = i;
+		}
 	};
 	
 protected:

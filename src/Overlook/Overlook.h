@@ -25,6 +25,7 @@ using namespace Upp;
 #include "Utils.h"
 #include "AutoChartist.h"
 #include "Indicators.h"
+#include "ExpertAdvisor.h"
 #include "Advisors.h"
 #include "Net.h"
 #include "GraphCtrl.h"
@@ -38,6 +39,7 @@ using namespace Upp;
 #include "Analyzer.h"
 #include "Scalper.h"
 #include "EventSystem.h"
+#include "EventAutomation.h"
 #include "Sentiment.h"
 
 
@@ -183,6 +185,7 @@ public:
 	void LoadAdvisorProfile();
 	void LoadMajorPairProfile(int tf);
 	void LoadMajorCurrencyProfile(int tf);
+	void LoadMajorActiveNetProfile(int tf);
 	void LoadOpenOrderCharts();
 	void LoadSymbolProfile(int sym, int tf, int factory=-1);
 	void LoadProfile(Profile& profile);

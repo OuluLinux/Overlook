@@ -25,6 +25,10 @@ namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 extern Upp::IniBool have_sys_signal;
 extern Upp::IniString arg_addr;
+extern Upp::IniString email_user;
+extern Upp::IniString email_pass;
+extern Upp::IniString email_server;
+extern Upp::IniInt email_port;
 extern Upp::IniInt arg_port;
 extern Upp::IniInt start_time;
 }

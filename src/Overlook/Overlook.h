@@ -7,6 +7,8 @@
 #include <plugin/libmt/libmt.h>
 #include <SubWindowCtrl/SubWindowCtrl.h>
 #include <PushNotification/PushNotification.h>
+#include <MailClient/MAILClient.h>
+#include <MailClient/IMAPClient.h>
 using namespace Upp;
 
 

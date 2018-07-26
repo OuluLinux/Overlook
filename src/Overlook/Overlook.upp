@@ -10,7 +10,8 @@ uses
 	plugin/tidy,
 	Core/SSL,
 	ConvNet,
-	PushNotification;
+	PushNotification,
+	MailClient;
 
 file
 	Copying,

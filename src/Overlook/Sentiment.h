@@ -4,16 +4,24 @@
 namespace Overlook {
 
 struct SentimentSnapshot {
-	Vector<int> net_pres, cur_pres, pair_pres;
+	Vector<int> cur_pres, pair_pres;
 	String comment;
 	Time added;
 	double correctness = 0.0;
-	int realtf = -1;
 	
-	void Serialize(Stream& s) {s % net_pres % cur_pres % pair_pres % comment % added % correctness % realtf;}
+	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % correctness;}
+	
+	bool IsPairEqual(const SentimentSnapshot& s) {
+		if (s.pair_pres.GetCount() != pair_pres.GetCount())
+			return false;
+		for(int i = 0; i < pair_pres.GetCount(); i++)
+			if (pair_pres[i] != s.pair_pres[i])
+				return false;
+		return true;
+	}
 };
 
-class Sentiment {
+class Sentiment : public Common {
 	
 	// Persistent
 	Array<SentimentSnapshot> sents;
@@ -25,13 +33,16 @@ class Sentiment {
 public:
 	Sentiment();
 	
+	virtual void Init();
+	virtual void Start();
+	void SetSignals();
+	void GetLevelSentiment(SentimentSnapshot& snap);
 	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	
 	int GetSentimentCount() {return sents.GetCount();}
 	SentimentSnapshot& GetSentiment(int sent) {return sents[sent];}
 	SentimentSnapshot& AddSentiment() {return sents.Add();}
-	SentimentSnapshot* FindReal();
 	
 	void Serialize(Stream& s) {s % sents;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Sentiment.bin"));}
@@ -39,7 +50,7 @@ public:
 	
 };
 
-inline Sentiment& GetSentiment() {return Single<Sentiment>();}
+inline Sentiment& GetSentiment() {return GetSystem().GetCommon<Sentiment>();}
 
 
 class SentPresCtrl : public Ctrl {
@@ -58,7 +69,7 @@ public:
 
 class SentimentCtrl : public ParentCtrl {
 	Splitter split;
-	ArrayCtrl historylist, tflist, eventlist, netlist, curpreslist, pairpreslist;
+	ArrayCtrl historylist, curpreslist, pairpreslist;
 	ParentCtrl console;
 	::Upp::DocEdit comment;
 	Button save;
@@ -72,14 +83,10 @@ public:
 	
 	
 	void Data();
-	void LoadTf();
 	void LoadHistory();
 	void Save();
 	void SetNetPairPressures();
 	void SetCurPairPressures();
-	void SetSignals();
-	void SetEventProfile();
-	void SetNetProfile();
 	void SetCurProfile();
 	void SetPairProfile();
 	

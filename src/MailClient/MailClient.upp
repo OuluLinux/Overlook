@@ -1,0 +1,13 @@
+library
+	libcurl;
+
+file
+	IMAPClient.cpp,
+	IMAPClient.h,
+	MAILClient.cpp,
+	MAILClient.h,
+	POPClient.cpp,
+	POPClient.h,
+	SMTPClient.cpp,
+	SMTPClient.h;
+

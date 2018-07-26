@@ -13,6 +13,10 @@ INI_BOOL(have_sys_signal, false, "Use system signal money management");
 INI_STRING(arg_addr, "127.0.0.1", "Host address");
 INI_INT(arg_port, 42000, "Host port");
 INI_INT(start_time, 0, "Starting time");
+INI_STRING(email_user, "", "Email username");
+INI_STRING(email_pass, "", "Email password");
+INI_STRING(email_server, "", "Email server");
+INI_INT(email_port, 0, "Email port");
 };
 
 struct LoaderWindow : public TopWindow {

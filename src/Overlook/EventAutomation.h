@@ -17,7 +17,6 @@ protected:
 	
 	
 	// Temporary
-	Vector<Event> tmp_events;
 	Index<String> symbols;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;

@@ -40,7 +40,7 @@ void Sentiment::SetSignals() {
 	/*if (false) {
 		System& sys = GetSystem();
 		EventSystem& ev = GetEventSystem();
-		EventAutomation& ea = GetEventAutomation();
+		EventStatistics& ea = GetEventStatistics();
 		for(int i = 0; i < curpreslist.GetCount(); i++) {
 			String sym = curpreslist.Get(i, 0);
 			int pres = ea.GetAutoSig(sym);
@@ -61,15 +61,15 @@ void Sentiment::SetSignals() {
 	{
 		One<SentimentSnapshot> sent;
 		sent.Create();
-		GetLevelSentiment(*sent);
+		int changes = GetLevelSentiment(*sent);
 		
-		if (sents.IsEmpty()) {
+		if (changes && sents.IsEmpty()) {
 			sents.Add(sent.Detach());
 			StoreThis();
 		}
 		
 		if (sents.GetCount()) {
-			if (!sents.Top().IsPairEqual(*sent)) {
+			if (changes && !sents.Top().IsPairEqual(*sent)) {
 				sents.Add(sent.Detach());
 				StoreThis();
 			}
@@ -90,7 +90,7 @@ void Sentiment::SetSignals() {
 	}
 }
 
-void Sentiment::GetLevelSentiment(SentimentSnapshot& snap) {
+int Sentiment::GetLevelSentiment(SentimentSnapshot& snap) {
 	EventSystem& es = GetEventSystem();
 	System& sys = GetSystem();
 	
@@ -99,17 +99,25 @@ void Sentiment::GetLevelSentiment(SentimentSnapshot& snap) {
 	snap.comment = "AutoChartist";
 	snap.added = GetUtcTime();
 	
+	int changed = 0;
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		String s = symbols[i];
 		int j = sys.FindSymbol(s);
 		if (!es.HasLevel(s))
 			continue;
 		double level = es.GetLevel(s);
+		
+		double& prev_level = prev_levels.GetAdd(s, 0);
+		if (level == prev_level)
+			continue;
+		prev_level = level;
+		changed++;
+		
 		double ask = GetMetaTrader().GetAskBid()[j].ask;
 		int sig = level > ask ? +1 : -1;
 		snap.pair_pres[i] = sig;
 	}
-	
+	return changed;
 }
 
 

@@ -78,12 +78,12 @@ INITBLOCK {
 	System::Register<QuantitativeQualitativeEstimation>("QuantitativeQualitativeEstimation");
 	System::Register<Laguerre>("Laguerre");
 	System::Register<::Overlook::Calendar>("Calendar");
+	System::Register<TickBalanceOscillator>("Tick Balance Oscillator");
+	System::Register<PeekChange>("Peek Change");
 	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	
 	//System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
-	System::Register<DqnAdvisor>("Dqn Advisor", CORE_EXPERTADVISOR);
-	System::Register<Eagle>("Eagle", CORE_EXPERTADVISOR);
 	
 	
 	
@@ -201,11 +201,10 @@ INITBLOCK {
     System::RegisterEvent<ScissorChannelOscillator>("High", SCIS_HIGH);
     
     
-    System::RegisterEvent<DqnAdvisor>("Long", EA_DQN_LONG);
-    System::RegisterEvent<DqnAdvisor>("Short", EA_DQN_SHORT);
     
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
+    System::RegisterCommon<EventStatistics, EventStatisticsCtrl>("Event Statistics");
     
     
     

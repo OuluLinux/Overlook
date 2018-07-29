@@ -1,6 +1,8 @@
 #ifndef _Overlook_Overlook_h_
 #define _Overlook_Overlook_h_
 
+
+
 #include <Core/Core.h>
 #include <CtrlLib/CtrlLib.h>
 #include <Docking/Docking.h>
@@ -27,7 +29,6 @@ using namespace Upp;
 #include "Utils.h"
 #include "AutoChartist.h"
 #include "Indicators.h"
-#include "ExpertAdvisor.h"
 #include "Advisors.h"
 #include "Net.h"
 #include "GraphCtrl.h"
@@ -41,7 +42,7 @@ using namespace Upp;
 #include "Analyzer.h"
 #include "Scalper.h"
 #include "EventSystem.h"
-#include "EventAutomation.h"
+#include "EventStatistics.h"
 #include "Sentiment.h"
 
 
@@ -96,6 +97,7 @@ protected:
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	CalendarCtrl cal;
 	SentimentCtrl sentctrl;
+	EventStatisticsCtrl esctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;

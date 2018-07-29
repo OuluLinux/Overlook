@@ -121,9 +121,16 @@ public:
 	void RefreshFromFasterChange();
 	void RefreshCurrency();
 	void RefreshNet();
+	bool IsVtfTime(int wday, const Time& t);
 	
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
 		System& sys = GetSystem();
+		
+		if (in_tf == VTF) {
+			if (match_tf)
+				return out_tf == 0;
+			return in_sym == out_sym;
+		}
 		
 		if (sys.IsNormalSymbol(in_sym)) {
 			#if REFRESH_FROM_FASTER

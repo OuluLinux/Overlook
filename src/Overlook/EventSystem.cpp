@@ -17,26 +17,14 @@ EventSystem::~EventSystem() {
 void EventSystem::Data() {
 	System& sys = GetSystem();
 	
-	EventAutomation& ea = GetEventAutomation();
-	ea.Data();
-	
+	bool mail_enable = Config::email_enable;
 	String user = Config::email_user;
 	String pass = Config::email_pass;
 	String srv = Config::email_server;
 	int port = Config::email_port;
-	if (!email_init && !user.IsEmpty() && !pass.IsEmpty() && !srv.IsEmpty() && port) {
-		
-		
-		
-		
-		
-		/*std::string list;
-		client.List(list);
-		String s = list;
-		LOG(s);*/
+	if (mail_enable && !email_init && !user.IsEmpty() && !pass.IsEmpty() && !srv.IsEmpty() && port) {
 		
 		InitMail();
-		
 		
 		email_init = true;
 	}
@@ -55,7 +43,7 @@ void EventSystem::Data() {
 					continue;
 				}
 				cached_mail.Add(i, mail);
-				LOG(mail);
+				//LOG(mail);
 				
 				if (mail.Find("From: alerts@autochartist.com") != -1) {
 					ProcessAutoChartist(mail);
@@ -137,7 +125,7 @@ void EventSystem::ProcessAutoChartist(String s) {
 	symbols.Add("EURJPY");
 	symbols.Add("EURGBP");
 	
-	
+	int found = 0;
 	for(int i = 0; i < symbols.GetCount(); i++) {
 		String sym = symbols[i];
 		String findsym = sym.Left(3) + "/" + sym.Right(3);
@@ -152,6 +140,11 @@ void EventSystem::ProcessAutoChartist(String s) {
 		
 		String levstr = s.Mid(a, b-a);
 		double level = StrDbl(levstr);
+		
+		if (!found)
+			for(int i = 0; i < this->level.GetCount(); i++)
+				this->level[i] = 0;
+		found++;
 		
 		this->level.GetAdd(sym) = level;
 	}

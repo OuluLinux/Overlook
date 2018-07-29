@@ -1044,6 +1044,7 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
 			% Mem(means)
 			% Mem(counts);
 	}
@@ -1730,6 +1731,73 @@ public:
 };
 
 
+
+
+
+
+
+
+
+class TickBalanceOscillator : public Core {
+	
+protected:
+	virtual void Start();
+	
+	int period = 10;
+	
+public:
+	TickBalanceOscillator();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Lbl(1)
+			% Arg("period", period, 0, 1000)
+			;
+	}
+};
+
+
+
+
+
+
+
+
+
+
+class PeekChange : public Core {
+	
+	int fast_cursor = 0;
+	int period = 5;
+	
+protected:
+	virtual void Start();
+	
+public:
+	PeekChange();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Lbl(1)
+			% Mem(fast_cursor)
+			% Arg("period", period, 1, 1000)
+			;
+	}
+	
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
+			return in_tf == out_tf || out_tf == 0;
+		else if (in_sym == out_sym)
+			return true;
+		return false;
+	}
+};
 
 
 

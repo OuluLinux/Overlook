@@ -1,4 +1,8 @@
 #include "Overlook.h"
+#ifdef flagWIN32
+#include <Windows.h>
+#include <Mmsystem.h>
+#endif
 
 namespace Overlook {
 
@@ -416,6 +420,10 @@ int log2_64 (uint64 value)
     value |= value >> 16;
     value |= value >> 32;
     return tab64[((uint64_t)((value - (value >> 1))*0x07EDD5E59A4E28C2)) >> 58];
+}
+
+void PlayAlarm() {
+	PlaySound(GetExeDirFile("alarm.wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
 
 }

@@ -21,16 +21,20 @@
 
 #define REFRESH_FROM_FASTER 1
 
+#define VTF 8
+
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 extern Upp::IniBool have_sys_signal;
 extern Upp::IniString arg_addr;
+extern Upp::IniInt arg_port;
+extern Upp::IniInt start_time;
+
+extern Upp::IniBool email_enable;
 extern Upp::IniString email_user;
 extern Upp::IniString email_pass;
 extern Upp::IniString email_server;
 extern Upp::IniInt email_port;
-extern Upp::IniInt arg_port;
-extern Upp::IniInt start_time;
 }
 
 namespace Overlook {
@@ -1211,6 +1215,9 @@ inline double NormalizeDouble(double d, int digits) {
 	int64 i = d * mul;
 	return i / (double)mul;
 }
+
+
+void PlayAlarm();
 
 }
 

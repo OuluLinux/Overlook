@@ -29,6 +29,7 @@ class Sentiment : public Common {
 	
 	// Temporary
 	Index<String> symbols;
+	VectorMap<String, double> prev_levels;
 	
 public:
 	Sentiment();
@@ -36,7 +37,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	void SetSignals();
-	void GetLevelSentiment(SentimentSnapshot& snap);
+	int GetLevelSentiment(SentimentSnapshot& snap);
 	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	

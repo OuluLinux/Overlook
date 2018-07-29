@@ -132,6 +132,7 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sentctrl, "Sentiment").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(esctrl, "Event Statistics").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(cal, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -548,6 +549,7 @@ void Overlook::Data() {
 	if (arb.IsVisible())			arb.Data();
 	if (sentctrl.IsVisible())		sentctrl.Data();
 	if (cal.IsVisible())			cal.Data();
+	if (esctrl.IsVisible())			esctrl.Data();
 }
 
 void Overlook::RefreshAssist() {
@@ -989,7 +991,7 @@ void Overlook::LoadAdvisorProfile() {
 	Profile profile;
 	
 	int tf = 5;
-	int id = System::Find<DqnAdvisor>();
+	int id = System::Find<BollingerBands>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;

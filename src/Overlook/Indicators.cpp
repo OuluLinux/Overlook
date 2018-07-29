@@ -4440,7 +4440,8 @@ void PeriodicalChange::Init() {
 	int count = 0;
 	
 	split_type = 0;
-	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
+	if (GetTf() == VTF)			{count = GetSystem().GetVtfWeekbars(); split_type = 3;}
+	else if (tfmin >= w1)		{count = 4;	split_type = 2;}
 	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
 	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
 	
@@ -4453,6 +4454,7 @@ void PeriodicalChange::Start() {
 	ConstBuffer& src = GetInputBuffer(0, 0);
 	ConstBuffer& src_time = GetInputBuffer(0,4);
 	Buffer& dst = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	int bars = GetBars() - 1;
 	int counted = GetCounted();
@@ -4479,6 +4481,10 @@ void PeriodicalChange::Start() {
 			int wday = DayOfWeek(t);
 			Add(wday, change);
 		}
+		else if (split_type == 3) {
+			int pos = i % this->means.GetCount();
+			Add(pos, change);
+		}
 		else {
 			int pos = (DayOfYear(t) % (7 * 4)) / 7;
 			Add(pos, change);
@@ -4503,12 +4509,18 @@ void PeriodicalChange::Start() {
 			int wday = DayOfWeek(t);
 			av_change = means[wday];
 		}
+		else if (split_type == 3) {
+			int pos = i % this->means.GetCount();
+			av_change = means[pos];
+		}
 		else {
 			int pos = (DayOfYear(t) % (7 * 4)) / 7;
 			av_change = means[pos];
 		}
 		
 		dst.Set(i, av_change);
+		
+		sig.signal.Set(i, av_change < 0);
 	}
 }
 
@@ -4749,6 +4761,8 @@ void VolatilitySlots::Init() {
 	else
 		slot_count = 1;
 	
+	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
+	
 	stats.SetCount(slot_count);
 }
 
@@ -4832,6 +4846,9 @@ void VolumeSlots::Init() {
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
 		slot_count = 1;
+	
+	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
+	
 	
 	stats.SetCount(slot_count);
 }
@@ -5594,7 +5611,8 @@ void Anomaly::Init() {
 	int count = 0;
 	
 	split_type = 0;
-	if      (tfmin >= w1)		{count = 4;	split_type = 2;}
+	if (GetTf() == VTF)			{count = GetSystem().GetVtfWeekbars(); split_type = 3;}
+	else if (tfmin >= w1)		{count = 4;	split_type = 2;}
 	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
 	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
 	
@@ -5637,6 +5655,10 @@ void Anomaly::Start() {
 		else if (split_type == 1) {
 			int wday = DayOfWeek(t);
 			var = &this->var[wday];
+		}
+		else if (split_type == 3) {
+			int pos = i % this->var.GetCount();
+			var = &this->var[pos];
 		}
 		else {
 			int pos = (DayOfYear(t) % (7 * 4)) / 7;
@@ -6638,6 +6660,119 @@ void QuantitativeQualitativeEstimation::Start() {
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+TickBalanceOscillator::TickBalanceOscillator() {
+	
+}
+
+void TickBalanceOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Blue);
+	
+	SetCoreLevelCount(1);
+	SetBufferLineWidth(0, 2);
+	
+	
+}
+
+void TickBalanceOscillator::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	Buffer& dst = GetBuffer(0);
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	if (counted)
+		counted--;
+	for (int i = max(period+1, counted); i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double pos_sum = 0, neg_sum = 0;
+		int pos_count = 0, neg_count = 0;
+		for(int j = 0; j < period; j++) {
+			double o0 = src.Get(i-j);
+			double o1 = src.Get(i-j-1);
+			double diff = o0 - o1;
+			if (diff > 0)	{pos_sum += diff; pos_count++;}
+			else			{neg_sum -= diff; neg_count++;}
+		}
+		double pos_av = pos_count ? pos_sum / pos_count : 0;
+		double neg_av = neg_count ? neg_sum / neg_count : 0;
+		double d = pos_av - neg_av;
+
+		dst.Set(i, d);
+		
+		sig.signal.Set(i, d < 0);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PeekChange::PeekChange() {
+	
+}
+
+void PeekChange::Init() {
+	
+}
+
+void PeekChange::Start() {
+	System& sys = GetSystem();
+	ConstBuffer& src = GetInputBuffer(0, 0);
+	ConstBuffer& src_time = GetInputBuffer(0, 4);
+	ConstBuffer& fast_src = GetInputBuffer(0, GetSymbol(), 0, 0);
+	ConstBuffer& fast_src_time = GetInputBuffer(0, GetSymbol(), 0, 4);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		int time = src_time.Get(i);
+		
+		for (;fast_cursor < fast_src.GetCount(); fast_cursor++) {
+			int fast_time = fast_src_time.Get(fast_cursor);
+			if (time <= fast_time)
+				break;
+		}
+		
+		int next_pos = min(fast_src.GetCount() - 1, fast_cursor + period);
+		double o0 = fast_src.Get(next_pos);
+		double o1 = fast_src.Get(fast_cursor);
+		double diff = o0 - o1;
+		
+		sig.signal.Set(i, diff < 0);
+	}
+}
 
 
 

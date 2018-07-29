@@ -329,7 +329,7 @@ public:
 	NetSetting& GetNet(int i) {return nets[i];}
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
 	int		GetNetCount() const {return nets.GetCount();}
-	
+	int		GetVtfWeekbars() const {return 98;}
 	
 protected:
 	

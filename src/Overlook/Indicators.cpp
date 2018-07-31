@@ -6753,6 +6753,7 @@ void PeekChange::Start() {
 	
 	int bars = GetBars();
 	int counted = GetCounted();
+	if (counted) counted--;
 	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i + 1);
@@ -6772,6 +6773,72 @@ void PeekChange::Start() {
 		
 		sig.signal.Set(i, diff < 0);
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+NewsNow::NewsNow() {
+	
+}
+
+void NewsNow::Init() {
+	SetCoreSeparateWindow();
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+	
+	av.SetPeriod(period);
+	
+}
+
+void NewsNow::Start() {
+	System& sys = GetSystem();
+	
+	int newsnet = sys.FindSymbol("NewsNet");
+	int afternewsnet = sys.FindSymbol("AfterNewsNet");
+	
+	ConstBuffer& now = GetInputBuffer(0, newsnet, GetTf(), 0);
+	ConstBuffer& after = GetInputBuffer(0, afternewsnet, GetTf(), 0);
+	
+	Buffer& buf = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int bars = min(now.GetCount(), after.GetCount());
+	
+	
+	for (int i = prev_counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double nm_prev = av.GetMeanA();
+		double am_prev = av.GetMeanB();
+		
+		double n = now.Get(i);
+		double a = after.Get(i);
+		av.Add(n, a);
+		
+		double nm = av.GetMeanA();
+		double am = av.GetMeanB();
+		double nm_diff = nm - nm_prev;
+		double am_diff = am - am_prev;
+		double diff = fabs(nm_diff) - fabs(am_diff);
+		
+		buf.Set(i, diff);
+		
+		sig.enabled.Set(i, diff >= 0);
+		sig.signal.Set(i, nm_diff < 0);
+	}
+	
+	prev_counted = bars;
 }
 
 

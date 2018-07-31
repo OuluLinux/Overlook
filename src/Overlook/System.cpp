@@ -142,7 +142,9 @@ void System::FirstStart() {
 		
 		
 		
-		AddNet("NewsNet").Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", -1).Set("EURGBP", -1);
+		AddNet("NewsNet")		.Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDJPY", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", -1).Set("EURGBP", -1);
+		AddNet("AfterNewsNet")	.Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDJPY", +1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURGBP", +1);
+		AddNet("BaseNet")		.Set("EURUSD", +1).Set("GBPUSD", +1).Set("USDCHF", -1).Set("USDCAD", -1).Set("AUDUSD", +1).Set("NZDUSD", +1).Set("EURCHF", +1);
 		AddNet("ActiveNet").Set("EURUSD", 0).Set("GBPUSD", 0).Set("USDCHF", 0).Set("USDJPY", 0).Set("USDCAD", 0).Set("AUDUSD", 0).Set("NZDUSD", 0).Set("EURCHF", 0).Set("EURJPY", 0).Set("EURGBP", 0);
 		
 

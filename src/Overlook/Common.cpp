@@ -422,8 +422,8 @@ int log2_64 (uint64 value)
     return tab64[((uint64_t)((value - (value >> 1))*0x07EDD5E59A4E28C2)) >> 58];
 }
 
-void PlayAlarm() {
-	PlaySound(GetExeDirFile("alarm.wav"), NULL, SND_FILENAME | SND_ASYNC);
+void PlayAlarm(int i) {
+	PlaySound(GetExeDirFile("alarm" + IntStr(i) + ".wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
 
 }

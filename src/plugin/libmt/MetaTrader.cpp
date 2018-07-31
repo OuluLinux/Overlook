@@ -258,6 +258,7 @@ int MetaTrader::Init(String addr, int port) {
 			utc_now.minute = 0;
 			utc_now.hour = 0;
 			if (utc_wday == 0) utc_now -= 24 * 60 * 60;
+			utc_now -= 3*60*60;
 		}
 		time_offset = utc_now - broker_now;
 		time_offset = ((int)((time_offset + (time_offset >= 0 ? 30 : -30)) / 60)) * 60;

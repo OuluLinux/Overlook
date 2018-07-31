@@ -1217,7 +1217,7 @@ inline double NormalizeDouble(double d, int digits) {
 }
 
 
-void PlayAlarm();
+void PlayAlarm(int i=0);
 
 }
 

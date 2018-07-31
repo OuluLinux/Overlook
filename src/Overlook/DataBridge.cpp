@@ -467,7 +467,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 	ASSERT(utc_time.second == 0);
 	#endif
 	int wday = DayOfWeek(utc_time);
-	if (wday == 0 || wday == 6 /*|| (wday == 1 && utc_time.hour < 1)*/)
+	if (wday == 6 || (wday == 0 && utc_time.hour < 21) || (wday == 5 && utc_time.hour >= 22))
 		return false;
 	
 	int minperiod = GetMinutePeriod();
@@ -509,7 +509,7 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		#endif
 		while (t < utc_time) {
 			int wday = DayOfWeek(t);
-			if ((!is_vtf && wday > 0 && wday < 6) || (is_vtf && IsVtfTime(wday, t))) {
+			if ((!is_vtf && !(wday == 6 || (wday == 0 && t.hour < 22) || (wday == 5 && t.hour >= 21))) || (is_vtf && IsVtfTime(wday, t))) {
 				int time = t.Get() - Time(1970,1,1).Get();
 				
 				int res = shift + 100000;
@@ -557,8 +557,12 @@ bool DataBridge::IsVtfTime(int wday, const Time& t) {
 	
 	// NOTE: update GetVtfWeekbars if changed
 	
+	if (wday == 0) {
+		IS(22,00);
+		IS(22,59);
+	}
 	// Monday
-	if (wday == 1) {
+	else if (wday == 1) {
 		IS(2,00);
 		IS(4,10);
 		IS(4,16);
@@ -663,8 +667,6 @@ bool DataBridge::IsVtfTime(int wday, const Time& t) {
 		IS(18,00);
 		IS(18,57);
 		IS(19,59);
-		IS(21,30);
-		IS(22,59);
 	}
 	#undef IS
 	return false;
@@ -709,6 +711,8 @@ void DataBridge::RefreshFromFasterTime() {
 	ConstBuffer& src_vol  = m1_db.GetBuffer(3);
 	ConstBuffer& src_time  = m1_db.GetBuffer(4);
 	int faster_bars = src_open.GetCount();
+	
+	m1_db.refresh_lock.Enter();
 	
 	spread_mean = m1_db.spread_mean;
 	point = m1_db.point;
@@ -779,6 +783,8 @@ void DataBridge::RefreshFromFasterTime() {
 	}
 	
 	ForceSetCounted(open_buf.GetCount());
+	
+	m1_db.refresh_lock.Leave();
 }
 
 void DataBridge::RefreshFromFasterChange() {
@@ -952,7 +958,13 @@ void DataBridge::RefreshNet() {
 	MetaTrader& mt = GetMetaTrader();
 	int shift = open_buf.GetCount() - 1;
 	
-	typedef Tuple<int, int, ConstBuffer*, double> Src;
+	struct Src : Moveable<Src> {
+		int a;
+		int b;
+		ConstBuffer* c = NULL;
+		double d;
+		ConstBuffer* low = NULL, *high = NULL;
+	};
 	Vector<Src> src_open;
 	const System::NetSetting& net = sys.GetSymbolNet(GetSymbol());
 	src_open.SetCount(net.symbol_ids.GetCount());
@@ -965,6 +977,8 @@ void DataBridge::RefreshNet() {
 		src.a = net.symbol_ids.GetKey(i); // symbol
 		src.b = net.symbol_ids[i];
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
+		src.low = &GetInputBuffer(0, src.a, GetTf(), 1);
+		src.high = &GetInputBuffer(0, src.a, GetTf(), 2);
 		bars = min(bars, src.c->GetCount());
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
 		ASSERT(src.d == 0.0001 || src.d == 0.01);
@@ -976,6 +990,7 @@ void DataBridge::RefreshNet() {
 	point = 0.0001;
 	
 	int counted = open_buf.GetCount();
+	if (counted) counted--;
 	open_buf	.SetCount(bars);
 	low_buf		.SetCount(bars);
 	high_buf	.SetCount(bars);
@@ -986,27 +1001,37 @@ void DataBridge::RefreshNet() {
 		
 		time_buf.Set(i, src_time_buf.Get(i));
 		
-		int pip_sum = 0;
+		int pip_sum = 0, low_pip_sum = 0, high_pip_sum = 0;
 		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
 			Src& src = src_open[j];
 			ConstBuffer& open = *src.c;
+			ConstBuffer& low = *src.low;
+			ConstBuffer& high = *src.high;
 			double o0 = open.Get(i);
 			double o1 = open.Get(i-1);
+			double l = low.Get(i);
+			double h = high.Get(i);
 			ASSERT(src.d > 0.0);
 			int pips = (o0 - o1) / src.d;
-			if (src.b > 0)
-				pip_sum += pips;
-			else if (src.b < 0)
-				pip_sum -= pips;
+			if (src.b > 0)			pip_sum += pips;
+			else if (src.b < 0)		pip_sum -= pips;
+			int low_pips = (l - o0) / src.d;
+			if (src.b > 0)			low_pip_sum += low_pips;
+			else if (src.b < 0)		low_pip_sum -= low_pips;
+			int high_pips = (h - o0) / src.d;
+			if (src.b > 0)			high_pip_sum += high_pips;
+			else if (src.b < 0)		high_pip_sum -= high_pips;
 		}
 		
 		double d = i == 0 ? 1.0 : open_buf.Get(i-1);
 		d += pip_sum * point;
+		double l = d + low_pip_sum * point;
+		double h = d + high_pip_sum * point;
 		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
 		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
 		open_buf.Set(i, d);
-		low_buf.Set(i, d);
-		high_buf.Set(i, d);
+		low_buf.Set(i, min(l, d));
+		high_buf.Set(i, max(h, d));
 	}
 }
 

@@ -36,17 +36,16 @@ void EventStatistics::Init() {
 	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(8);
 	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(16);
 	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(5);
-	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(15);
-	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(30);
+	indi_ids.Add().Set(sys.Find<NewsNow>()).AddArg(1);
+	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(15);
+	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(30);
 	ASSERT(indi_ids.GetCount() == SRC_COUNT);
-	stats.SetCount(SRC_COUNT);
-	for(int i = 0; i < stats.GetCount(); i++)
-		stats[i].SetCount(width);
 
 	for(int i = 0; i < indi_ids.GetCount(); i++)
 		fac_ids.Add(indi_ids[i].factory);
 	
 	symbols.Add("NewsNet");
+	symbols.Add("AfterNewsNet");
 	for(int i = 0; i < symbols.GetCount(); i++)
 		sym_ids.Add(sys.FindSymbol(symbols[i]));
 	
@@ -54,11 +53,25 @@ void EventStatistics::Init() {
 	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	
+	stats.SetCount(sym_ids.GetCount());
+	for(int j = 0; j < stats.GetCount(); j++) {
+		stats[j].SetCount(SRC_COUNT);
+		for(int i = 0; i < stats[j].GetCount(); i++)
+			stats[j][i].SetCount(width);
+	}
 	
-	bufs.SetCount(fac_ids.GetCount());
-	lbls.SetCount(fac_ids.GetCount(), NULL);
+	bufs.SetCount(sym_ids.GetCount());
+	lbls.SetCount(sym_ids.GetCount());
+	db.SetCount(sym_ids.GetCount(), NULL);
+	db_m1.SetCount(sym_ids.GetCount(), NULL);
+	for(int i = 0; i < bufs.GetCount(); i++) {
+		bufs[i].SetCount(fac_ids.GetCount());
+		lbls[i].SetCount(fac_ids.GetCount(), NULL);
+	}
 	
-	int faci = 0;
+	Vector<int> facis;
+	facis.SetCount(sym_ids.GetCount(), 0);
+	
 	for(int i = 0; i < work_queue.GetCount() /*&& IsRunning()*/; i++) {
 		CoreItem& ci = *work_queue[i];
 		sys.Process(ci, true);
@@ -66,31 +79,37 @@ void EventStatistics::Init() {
 		Core& c = *ci.core;
 		
 		//int faci = fac_ids.Find(c.GetFactory());
+		int symi = sym_ids.Find(c.GetSymbol());
 		int tfi = tf_ids.Find(c.GetTf());
 		
+		if (symi == -1) continue;
+		if (c.GetTf() == 0 && c.GetFactory() == 0) 
+			db_m1[symi] = dynamic_cast<DataBridge*>(&c);
 		if (tfi == -1) continue;
 		
-		auto& v = bufs[faci];
+		int& faci = facis[symi];
+		auto& v = bufs[symi][faci];
 		v.SetCount(c.GetBufferCount());
 		for(int j = 0; j < c.GetBufferCount(); j++) {
 			v[j] = &c.GetBuffer(j);
 		}
 		
 		if (faci == 0) {
-			db = &dynamic_cast<DataBridge&>(c);
-		} else {
-			lbls[faci] = &c.GetLabelBuffer(0, 0);
+			db[symi] = &dynamic_cast<DataBridge&>(c);
+		}
+		else if (c.GetLabelCount() && c.GetLabelBufferCount(0)) {
+			lbls[symi][faci] = &c.GetLabelBuffer(0, 0);
 		}
 		
 		faci++;
 	}
-	ASSERT(faci == fac_ids.GetCount());
-	
+	ASSERT(facis[0] == fac_ids.GetCount());
+	ASSERT(db_m1[0]);
 	
 	ReleaseLog("EventStatistics work queue init took " + ts.ToString());
 	
 	
-	prev_bars = bufs[OPEN][0]->GetCount();
+	prev_bars = bufs[0][OPEN][0]->GetCount();
 }
 
 void EventStatistics::Start() {
@@ -99,27 +118,48 @@ void EventStatistics::Start() {
 	for(int i = 0; i < work_queue.GetCount() /*&& IsRunning()*/; i++)
 		sys.Process(*work_queue[i], true);
 	
-	UpdateEvents();
+	for(int i = 0; i < sym_ids.GetCount(); i++)
+		UpdateEvents(i);
 	
-	int bars = bufs[OPEN][0]->GetCount();
+	// Play alarm when vtf has new bars
+	int bars = bufs[0][OPEN][0]->GetCount();
 	if (bars != prev_bars) {
-		PlayAlarm();
+		PlayAlarm(0);
 		prev_bars = bars;
+	}
+	
+	// Play alarm when 1.5pip*net_size change happens fast
+	DataBridge& d = *db_m1[0];
+	bars = d.GetBuffer(0).GetCount();
+	if (bars - last_alarm1_bars >= 5) {
+		int count = 5;
+		int pips = 15;
+		int max_pips = 0;
+		double o0 = d.GetBuffer(0).Get(bars - 1);
+		for (int i = bars-2; i >= bars-count-1; i--) {
+			double o1 = d.GetBuffer(0).Get(i);
+			int pips = fabs((o0 - o1) / d.GetPoint());
+			max_pips = max(max_pips, pips);
+		}
+		if (max_pips >= pips) {
+			PlayAlarm(1);
+			last_alarm1_bars = bars;
+		}
 	}
 }
 
 
-void EventStatistics::UpdateEvents() {
+void EventStatistics::UpdateEvents(int sym) {
 	System& sys = GetSystem();
 	
 	int width = sys.GetVtfWeekbars();
 	int height = SRC_COUNT;
 	
-	ConstBuffer& open_buf = *bufs[OPEN][0];
+	ConstBuffer& open_buf = *bufs[sym][OPEN][0];
 	
 	for(int i = 0; i < SRC_COUNT; i++) {
-		ConstLabelSignal& lbl = *lbls[i];
-		Vector<StatSlot>& stats = this->stats[i];
+		ConstLabelSignal& lbl = *lbls[sym][i];
+		Vector<StatSlot>& stats = this->stats[sym][i];
 		
 		if (i == 0) {
 			for(int j = 1; j < open_buf.GetCount() - 1; j++) {
@@ -172,27 +212,33 @@ String EventStatistics::GetDescription(int i) {
 		case TB8:		return "Tick Balance 8";
 		case TB16:		return "Tick Balance 16";
 		case PEEKC5:	return "Peek change 5";
-		case PEEKC15:	return "Peek change 15";
-		case PEEKC30:	return "Peek change 30";
+		/*case PEEKC15:	return "Peek change 15";
+		case PEEKC30:	return "Peek change 30";*/
+		case NEWSNOW:	return "News Now";
 	}
 	return "Unknown";
 }
 
-int EventStatistics::GetSignal(int i, int src) {
+int EventStatistics::GetSignal(int sym, int i, int src) {
 	if (src == 0) {
-		ConstBuffer& open_buf = *bufs[OPEN][0];
+		ConstBuffer& open_buf = *bufs[sym][OPEN][0];
 		if (!i) return 0;
 		double o0 = open_buf.Get(i);
 		double o1 = open_buf.Get(i-1);
 		return o0 < o1 ? -1 : +1;
 	} else {
-		ConstLabelSignal& lbl = *lbls[src];
+		ConstLabelSignal& lbl = *lbls[sym][src];
 		bool signal = lbl.signal.Get(i);
 		bool enabled = lbl.enabled.Get(i);
 		return enabled ? (signal ? -1 : +1) : 0;
 	}
 }
 
+int EventStatistics::GetPreferredNet() {
+	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
+	double d = nn_buf.Top();
+	return d < 0;
+}
 
 
 
@@ -214,7 +260,14 @@ int EventStatistics::GetSignal(int i, int src) {
 
 
 EventStatisticsCtrl::EventStatisticsCtrl() {
-	Add(list.SizePos());
+	Add(symlist.TopPos(0,30).LeftPos(0,100));
+	Add(list.VSizePos().HSizePos(100));
+	Add(activelbl.TopPos(30,60).LeftPos(0,100));
+	
+	symlist.Add("NewsNet");
+	symlist.Add("AfterNewsNet");
+	symlist.SetIndex(0);
+	symlist <<= THISBACK(Data);
 	
 	list.AddColumn("Latest time");
 	
@@ -232,11 +285,15 @@ void EventStatisticsCtrl::Data() {
 	EventStatistics& es = GetEventStatistics();
 	int width = sys.GetVtfWeekbars();
 	int height = EventStatistics::SRC_COUNT;
+	int sym = symlist.GetIndex();
 	
 	if (es.stats.IsEmpty())
 		return;
 	
-	ConstBuffer& time_buf = es.db->GetBuffer(4);
+	String albl = es.GetPreferredNet() ? "AfterNewsNet\nis preferred" : "NewsNet\nis preferred";
+	activelbl.SetLabel(albl);
+	
+	ConstBuffer& time_buf = es.db[sym]->GetBuffer(4);
 	int limit = time_buf.GetCount() % width;
 	
 	VectorMap<int, double> stats;
@@ -246,7 +303,7 @@ void EventStatisticsCtrl::Data() {
 		
 		stats.Clear();
 		for(int j = 0; j < height; j++) {
-			double mean = es.stats[j][i].av.GetMean();
+			double mean = es.stats[sym][j][i].av.GetMean();
 			stats.Add(j, +mean);
 			stats.Add(-j-1, -mean);
 		}
@@ -259,7 +316,7 @@ void EventStatisticsCtrl::Data() {
 			int k = stats.GetKey(j);
 			int l = k >= 0 ? k : -k-1;
 			String desc = es.GetDescription(l);
-			int sig = es.GetSignal(time_pos, l);
+			int sig = es.GetSignal(sym, time_pos, l);
 			if (k < 0) {
 				desc += " inverse";
 				sig *= -1;

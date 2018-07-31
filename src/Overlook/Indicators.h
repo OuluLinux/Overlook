@@ -1804,6 +1804,51 @@ public:
 
 
 
+
+
+
+
+
+class NewsNow : public Core {
+	
+	int period = 7;
+	int prev_counted = 0;
+	OnlineAverageWindow2 av;
+	
+protected:
+	virtual void Start();
+	
+public:
+	NewsNow();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Lbl(1)
+			% Out(1,1)
+			% Arg("period", period, 1, 1000)
+			% Mem(av)
+			% Mem(prev_counted);
+			;
+	}
+	
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
+			return in_tf == out_tf;
+		String sym = GetSystem().GetSymbol(out_sym);
+		if (sym == "NewsNet" || sym == "AfterNewsNet" || in_sym == out_sym)
+			return true;
+		return false;
+	}
+};
+
+
+
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {

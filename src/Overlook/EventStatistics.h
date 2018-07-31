@@ -22,21 +22,22 @@ protected:
 	friend class EventStatisticsCtrl;
 	
 	
-	enum {OPEN, HU4, HU8, HU16, MA3, MA9, MA27, BB, PSAR, PC, TB4, TB8, TB16, PEEKC5, PEEKC15, PEEKC30, SRC_COUNT};
+	enum {OPEN, HU4, HU8, HU16, MA3, MA9, MA27, BB, PSAR, PC, TB4, TB8, TB16, PEEKC5, /*PEEKC15, PEEKC30,*/ NEWSNOW, SRC_COUNT};
 	
 	// Persistent
-	Vector<Vector<StatSlot> > stats;
+	Vector<Vector<Vector<StatSlot> > > stats;
 	
 	
 	// Temporary
 	Index<String> symbols;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
-	Vector<Vector<ConstBuffer*> > bufs;
-	Vector<ConstLabelSignal*> lbls;
-	DataBridge* db = NULL;
+	Vector<Vector<Vector<ConstBuffer*> > > bufs;
+	Vector<Vector<ConstLabelSignal*> > lbls;
+	Vector<DataBridge*> db, db_m1;
 	Index<int> sym_ids, tf_ids, fac_ids;
 	int prev_bars = 0;
+	int last_alarm1_bars = 0;
 	bool running = false, stopped = true;
 	
 	
@@ -47,10 +48,11 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	void UpdateEvents();
+	void UpdateEvents(int sym);
 	
 	String GetDescription(int i);
-	int GetSignal(int i, int src);
+	int GetSignal(int sym, int i, int src);
+	int GetPreferredNet();
 	
 	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
 	
@@ -61,9 +63,11 @@ inline EventStatistics& GetEventStatistics() {return GetSystem().GetCommon<Event
 
 class EventStatisticsCtrl : public CommonCtrl {
 	ArrayCtrl list;
-	
+	DropList symlist;
+	Upp::Label activelbl;
 	
 public:
+	typedef EventStatisticsCtrl CLASSNAME;
 	EventStatisticsCtrl();
 	
 	virtual void Data();

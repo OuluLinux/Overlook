@@ -1001,6 +1001,7 @@ void DataBridge::RefreshNet() {
 		
 		time_buf.Set(i, src_time_buf.Get(i));
 		
+		#if 0
 		int pip_sum = 0, low_pip_sum = 0, high_pip_sum = 0;
 		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
 			Src& src = src_open[j];
@@ -1029,6 +1030,37 @@ void DataBridge::RefreshNet() {
 		double h = d + high_pip_sum * point;
 		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
 		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
+		#else
+		double change_sum = 1, low_change_sum = 1, high_change_sum = 1;
+		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
+			Src& src = src_open[j];
+			ConstBuffer& open = *src.c;
+			ConstBuffer& low = *src.low;
+			ConstBuffer& high = *src.high;
+			double o0 = open.Get(i);
+			double o1 = open.Get(i-1);
+			double l = low.Get(i);
+			double h = high.Get(i);
+			ASSERT(src.d > 0.0);
+			double change = o0 / o1 - 1.0;
+			if (src.b > 0)			change_sum += change;
+			else if (src.b < 0)		change_sum -= change;
+			double low_change = l / o0 - 1.0;
+			if (src.b > 0)			low_change_sum += low_change;
+			else if (src.b < 0)		low_change_sum -= low_change;
+			double high_change = h / o0 - 1.0;
+			if (src.b > 0)			high_change_sum += high_change;
+			else if (src.b < 0)		high_change_sum -= high_change;
+		}
+		
+		double d = i == 0 ? 1.0 : open_buf.Get(i-1);
+		d *= change_sum;
+		double l = d * low_change_sum;
+		double h = d * high_change_sum;
+		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
+		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
+		#endif
+		
 		open_buf.Set(i, d);
 		low_buf.Set(i, min(l, d));
 		high_buf.Set(i, max(h, d));

@@ -36,56 +36,51 @@ void Sentiment::Start() {
 }
 
 void Sentiment::SetSignals() {
+	MetaTrader& mt = GetMetaTrader();
+	System& sys = GetSystem();
 	
-	/*if (false) {
-		System& sys = GetSystem();
-		EventSystem& ev = GetEventSystem();
-		EventStatistics& ea = GetEventStatistics();
-		for(int i = 0; i < curpreslist.GetCount(); i++) {
-			String sym = curpreslist.Get(i, 0);
-			int pres = ea.GetAutoSig(sym);
-			curpreslist.Set(i, 1, pres);
-		}
-		SetCurPairPressures();
-		for(int i = 0; i < pairpreslist.GetCount(); i++) {
-			String sym = pairpreslist.Get(i, 0);
-			int pres = pairpreslist.Get(i, 1);
-			int j = sys.FindSymbol(sym);
-			int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
-			sys.SetSignal(j, sig);
-			System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
-			actnet.Assign(sym, sig);
-		}
+	One<SentimentSnapshot> sent;
+	sent.Create();
+	int changes = 0;
+	
+	
+	// Simple trailing stop
+	double balance = mt.AccountBalance();
+	double equity = mt.AccountEquity();
+	double profit = equity - balance;
+	if (profit >= balance * 0.1) {
+		sent->pair_pres.SetCount(symbols.GetCount(), 0);
+		sent->cur_pres.SetCount(sys.GetCurrencyCount(), 0);
+		sent->comment = "Auto take-profit";
+		sent->added = GetUtcTime();
+		changes++;
 	}
-	else */
-	{
-		One<SentimentSnapshot> sent;
-		sent.Create();
-		int changes = GetLevelSentiment(*sent);
-		
-		if (changes && sents.IsEmpty()) {
+	else {
+		changes = GetLevelSentiment(*sent);
+	}
+	
+	if (changes && sents.IsEmpty()) {
+		sents.Add(sent.Detach());
+		StoreThis();
+	}
+	
+	if (sents.GetCount()) {
+		if (changes && !sents.Top().IsPairEqual(*sent)) {
 			sents.Add(sent.Detach());
 			StoreThis();
 		}
 		
-		if (sents.GetCount()) {
-			if (changes && !sents.Top().IsPairEqual(*sent)) {
-				sents.Add(sent.Detach());
-				StoreThis();
-			}
-			
-			SentimentSnapshot& real = sents.Top();
-			System& sys = GetSystem();
-			System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
-			for(int i = 0; i < GetSymbolCount() && i < real.pair_pres.GetCount(); i++) {
-				String sym = GetSymbol(i);
-				int j = sys.FindSymbol(sym);
-				ASSERT(j != -1);
-				int pres = real.pair_pres[i];
-				int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
-				sys.SetSignal(j, sig);
-				actnet.Assign(sym, sig);
-			}
+		SentimentSnapshot& real = sents.Top();
+		System& sys = GetSystem();
+		System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
+		for(int i = 0; i < GetSymbolCount() && i < real.pair_pres.GetCount(); i++) {
+			String sym = GetSymbol(i);
+			int j = sys.FindSymbol(sym);
+			ASSERT(j != -1);
+			int pres = real.pair_pres[i];
+			int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
+			sys.SetSignal(j, sig);
+			actnet.Assign(sym, sig);
 		}
 	}
 }
@@ -93,6 +88,9 @@ void Sentiment::SetSignals() {
 int Sentiment::GetLevelSentiment(SentimentSnapshot& snap) {
 	EventSystem& es = GetEventSystem();
 	System& sys = GetSystem();
+	
+	if (!Config::email_enable)
+		return 0;
 	
 	snap.pair_pres.SetCount(symbols.GetCount(), 0);
 	snap.cur_pres.SetCount(sys.GetCurrencyCount(), 0);

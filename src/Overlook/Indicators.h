@@ -1099,8 +1099,16 @@ public:
 
 class VolatilitySlots : public Core {
 	
+	struct PeakVolat : Moveable<PeakVolat> {
+		double value = -DBL_MAX;
+		int slot = -1;
+		int time = -1;
+		void Serialize(Stream& s) {s % value % slot % time;}
+	};
+	
 protected:
 	friend class WeekSlotAdvisor;
+	Vector<PeakVolat> peaks;
 	Vector<OnlineAverage1> stats;
 	OnlineAverage1 total;
 	
@@ -1118,6 +1126,8 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
+			% Lbl(1)
+			% Mem(peaks)
 			% Mem(stats)
 			% Mem(total);
 	}
@@ -1842,6 +1852,48 @@ public:
 			return true;
 		return false;
 	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+class VolatilityEarlyLate : public Core {
+	
+	int period = 4;
+	int ma_period = 8;
+	int prev_counted = 0;
+	OnlineAverageWindow2 av;
+	OnlineAverageWindow1 ma;
+	
+protected:
+	virtual void Start();
+	
+public:
+	VolatilityEarlyLate();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<VolatilitySlots>()
+			% Lbl(1)
+			% Out(2, 2)
+			% Arg("period", period, 1, 1000)
+			% Arg("ma_period", ma_period, 1, 1000)
+			% Mem(av)
+			% Mem(prev_counted)
+			% Mem(ma)
+			;
+	}
+	
 };
 
 

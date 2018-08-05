@@ -4764,11 +4764,15 @@ void VolatilitySlots::Init() {
 	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
 	
 	stats.SetCount(slot_count);
+	
+	peaks.SetCount(7*4);
 }
 
 void VolatilitySlots::Start() {
 	Buffer& buffer = GetBuffer(0);
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& time_buf = GetInputBuffer(0, 4);
+	LabelSignal& lbl = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -4790,6 +4794,23 @@ void VolatilitySlots::Start() {
 		total.Add(change);
 	}
 	
+	if (counted <= 1) {
+		
+		for(int i = 0; i < stats.GetCount(); i++) {
+			const OnlineAverage1& av = stats[i];
+			Time t = Time(1970,1,1) + time_buf.Get(i);
+			int wday = DayOfWeek(t);
+			int type = t.hour / 6;
+			int slot_id = wday * 4 + type;
+			PeakVolat& pv = peaks[slot_id];
+			if (av.mean > pv.value) {
+				pv.value = av.mean;
+				pv.slot = i;
+				pv.time = t.hour * 100 + t.minute;
+			}
+		}
+	}
+	
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
@@ -4797,7 +4818,16 @@ void VolatilitySlots::Start() {
 		const OnlineAverage1& av = stats[slot_id];
 		
 		buffer.Set(i, av.mean);
+		
+		
+		Time t = Time(1970,1,1) + time_buf.Get(i);
+		int wday = DayOfWeek(t);
+		int type = t.hour / 6;
+		int peak_slot_id = wday * 4 + type;
+		PeakVolat& pv = peaks[peak_slot_id];
+		lbl.enabled.Set(i, pv.slot == slot_id);
 	}
+	
 }
 
 void VolatilitySlots::Assist(int cursor, VectorBool& vec) {
@@ -6483,7 +6513,7 @@ void Calendar::Start() {
 		double diff_sum[4] = {0.0, 0.0, 0.0, 0.0};
 		int diff_count[4] = {0, 0, 0, 0};
 		
-		for (int is_pre = 0; is_pre < 2; is_pre++) {
+		for (int is_pre = 0; is_pre < 1; is_pre++) {
 			int& cal_cursor = is_pre ? pre_cal_cursor : main_cal_cursor;
 			
 			while (cal_cursor < cal.GetCount()) {
@@ -6836,6 +6866,86 @@ void NewsNow::Start() {
 		
 		sig.enabled.Set(i, diff >= 0);
 		sig.signal.Set(i, nm_diff < 0);
+	}
+	
+	prev_counted = bars;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VolatilityEarlyLate::VolatilityEarlyLate() {
+	
+}
+
+void VolatilityEarlyLate::Init() {
+	SetCoreSeparateWindow();
+	
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+	
+	SetBufferStyle(1, STYLE_DASH);
+	SetBufferColor(1, Blue());
+	
+	av.SetPeriod(period);
+	ma.SetPeriod(ma_period);
+	
+}
+
+void VolatilityEarlyLate::Start() {
+	System& sys = GetSystem();
+	
+	Buffer& buf = GetBuffer(0);
+	Buffer& ma_buf = GetBuffer(1);
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	ConstBuffer& volat_buf = GetInputBuffer(1, 0);
+	
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int bars = GetBars();
+	
+	
+	for (int i = prev_counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double o0 = open_buf.Get(i);
+		double o1 = open_buf.Get(i > 0 ? i - 1 : i);
+		double diff = o0 - o1;
+		double volat = fabs(diff);
+		
+		double av_volat = i > 0 ? volat_buf.Get(i-1) : volat;
+		
+		av.Add(volat, av_volat);
+		
+		double vm = av.GetMeanA();
+		double am = av.GetMeanB();
+		double mdiff = fabs(vm) - fabs(am);
+		
+		buf.Set(i, mdiff);
+		
+		double prev_ma = ma.GetMean();
+		ma.Add(mdiff);
+		double cur_ma = ma.GetMean();
+		
+		sig.enabled.Set(i, mdiff >= 0.0 && mdiff >= cur_ma && cur_ma > prev_ma);
+		sig.signal.Set(i, diff <= 0);
+		
+		ma_buf.Set(i, cur_ma);
 	}
 	
 	prev_counted = bars;

@@ -81,6 +81,7 @@ INITBLOCK {
 	System::Register<TickBalanceOscillator>("Tick Balance Oscillator");
 	System::Register<PeekChange>("Peek Change");
 	System::Register<NewsNow>("NewsNow");
+	System::Register<VolatilityEarlyLate>("VolatilityEarlyLate");
 	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	

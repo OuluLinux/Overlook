@@ -64,7 +64,6 @@ file
 	Arbitrage.cpp,
 	Net.h,
 	Net.cpp,
-	Journal.qtf,
 	DQN.h,
 	Common readonly separator,
 	DataBridge.h,

@@ -625,7 +625,7 @@ void CalendarCommon::SetEvent(CalEvent& ce) {
 				if (e.actual != ce.actual || e.forecast != ce.forecast) {
 					e = ce;
 					
-					if (e.timestamp > GetUtcTime() - 60*60) {
+					if (e.actual != "" && e.timestamp > GetUtcTime() - 60*60) {
 						double act = ScanDouble(e.actual);
 						double fc = ScanDouble(e.forecast);
 						String s;

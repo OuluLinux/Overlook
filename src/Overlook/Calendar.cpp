@@ -226,6 +226,15 @@ const CalEvent& CalendarCommon::GetEvent(int i) {
 	return events[i];
 }
 
+void CalendarCommon::GetEvents(Vector<CalEvent>& ev, Time begin, Time end, int min_impact_level) const {
+	ev.Clear();
+	for(int i = 0; i < events.GetCount(); i++) {
+		const CalEvent& e = events[i];
+		if (e.impact >= min_impact_level && e.timestamp >= begin && e.timestamp < end)
+			ev.Add(e);
+	}
+}
+
 void CalendarCommon::SetEventActualDiff(int i, double diff) {
 	CalEvent& ce = events[i];
 	

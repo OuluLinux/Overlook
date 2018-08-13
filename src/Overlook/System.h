@@ -326,6 +326,7 @@ public:
 	bool	IsNormalSymbol(int i) {return i < normal_symbol_count;}
 	bool	IsCurrencySymbol(int i) {return i >= normal_symbol_count && i < normal_symbol_count + currencies.GetCount();}
 	bool	IsNetSymbol(int i) {return i >= normal_symbol_count + currencies.GetCount();}
+	int		GetNetSymbol(int i) {return i + normal_symbol_count + currencies.GetCount();}
 	NetSetting& GetNet(int i) {return nets[i];}
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
 	int		GetNetCount() const {return nets.GetCount();}

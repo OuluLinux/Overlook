@@ -82,10 +82,10 @@ ConstBuffer& CoreIO::GetInputBuffer(int input, int sym, int tf, int buffer) cons
 	return SafetyBuffer(out->buffers[buffer]);
 }
 
-ConstLabelSignal& CoreIO::GetInputLabel(int input, int sym, int tf) const {
-	return inputs[input].Get(HashSymTf(sym, tf)).core->labels[0].buffers[input];
+ConstLabelSignal& CoreIO::GetInputLabel(int input, int sym, int tf, int buf) const {
+	return inputs[input].Get(HashSymTf(sym, tf)).core->labels[0].buffers[buf];
 }
-	
+
 CoreIO* CoreIO::GetInputCore(int input, int sym, int tf) const {
 	return inputs[input].Get(HashSymTf(sym, tf)).core;
 }

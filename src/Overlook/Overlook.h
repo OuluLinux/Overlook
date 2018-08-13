@@ -19,11 +19,11 @@ using namespace Upp;
 
 #include "DQN.h"
 #include "Common.h"
-#include "Calendar.h"
 #include "Optimizer.h"
 #include "BeamSearchOptimization.h"
 #include "SimBroker.h"
 #include "System.h"
+#include "Calendar.h"
 #include "Core.h"
 #include "DataBridge.h"
 #include "Utils.h"
@@ -43,6 +43,7 @@ using namespace Upp;
 #include "Scalper.h"
 #include "EventSystem.h"
 #include "EventStatistics.h"
+#include "EventConsole.h"
 #include "Sentiment.h"
 
 
@@ -98,6 +99,7 @@ protected:
 	CalendarCtrl cal;
 	SentimentCtrl sentctrl;
 	EventStatisticsCtrl esctrl;
+	EventConsoleCtrl conctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;

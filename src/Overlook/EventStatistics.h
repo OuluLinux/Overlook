@@ -20,9 +20,10 @@ class EventStatistics : public Common {
 	
 protected:
 	friend class EventStatisticsCtrl;
+	friend class EventConsole;
 	
 	
-	enum {OPEN, HU4, HU8, HU16, MA3, MA9, MA27, BB, PSAR, PC, TB4, TB8, TB16, PEEKC5, /*PEEKC15, PEEKC30,*/ NEWSNOW, SRC_COUNT};
+	enum {OPEN, /*HU4, HU8, HU16, MA3, MA9, MA27,*/ BB5, BB10, BB20, BB40, /*PSAR, PC, TB4, TB8, TB16, PEEKC5,*/ /*PEEKC15, PEEKC30,*/ NEWSNOW, SRC_COUNT};
 	
 	// Persistent
 	Vector<Vector<Vector<StatSlot> > > stats;
@@ -53,8 +54,8 @@ public:
 	String GetDescription(int i);
 	int GetSignal(int sym, int i, int src);
 	int GetPreferredNet();
-	
-	bool IsRunning() const {return running && !Thread::IsShutdownThreads();}
+	int GetLatestSlotId();
+	const StatSlot& GetLatestSlot(int net, int i);
 	
 };
 

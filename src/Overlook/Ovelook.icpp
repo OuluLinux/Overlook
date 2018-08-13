@@ -82,6 +82,7 @@ INITBLOCK {
 	System::Register<PeekChange>("Peek Change");
 	System::Register<NewsNow>("NewsNow");
 	System::Register<VolatilityEarlyLate>("VolatilityEarlyLate");
+	System::Register<SweetSpot>("SweetSpot");
 	//System::Register<AnalyzerViewer>("Analyzer Viewer");
 	//System::Register<ScalperViewer>("Scalper Viewer");
 	
@@ -207,6 +208,7 @@ INITBLOCK {
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     System::RegisterCommon<EventStatistics, EventStatisticsCtrl>("Event Statistics");
+    System::RegisterCommon<EventConsole, EventConsoleCtrl>("Event Console");
     
     
     

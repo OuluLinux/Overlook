@@ -23,19 +23,22 @@ void EventStatistics::Init() {
 	int width = sys.GetVtfWeekbars();
 	
 	indi_ids.Add().Set(sys.Find<DataBridge>());
-	indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(4);
+	/*indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(4);
 	indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(8);
 	indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(16);
 	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(3).AddArg(0).AddArg(1);
 	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(9).AddArg(0).AddArg(1);
-	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(27).AddArg(0).AddArg(1);
-	indi_ids.Add().Set(sys.Find<BollingerBands>());
-	indi_ids.Add().Set(sys.Find<ParabolicSAR>());
+	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(27).AddArg(0).AddArg(1);*/
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(5).AddArg(0).AddArg(5);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(10).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(20);
+	/*indi_ids.Add().Set(sys.Find<ParabolicSAR>());
 	indi_ids.Add().Set(sys.Find<PeriodicalChange>());
 	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(4);
 	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(8);
 	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(16);
-	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(5);
+	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(5);*/
 	indi_ids.Add().Set(sys.Find<NewsNow>()).AddArg(1);
 	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(15);
 	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(30);
@@ -44,8 +47,10 @@ void EventStatistics::Init() {
 	for(int i = 0; i < indi_ids.GetCount(); i++)
 		fac_ids.Add(indi_ids[i].factory);
 	
-	symbols.Add("NewsNet");
-	symbols.Add("AfterNewsNet");
+	for(int i = 0; i < sys.GetNetCount(); i++)
+		symbols.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
+	//symbols.Add("NewsNet");
+	//symbols.Add("AfterNewsNet");
 	for(int i = 0; i < symbols.GetCount(); i++)
 		sym_ids.Add(sys.FindSymbol(symbols[i]));
 	
@@ -72,7 +77,7 @@ void EventStatistics::Init() {
 	Vector<int> facis;
 	facis.SetCount(sym_ids.GetCount(), 0);
 	
-	for(int i = 0; i < work_queue.GetCount() /*&& IsRunning()*/; i++) {
+	for(int i = 0; i < work_queue.GetCount(); i++) {
 		CoreItem& ci = *work_queue[i];
 		sys.Process(ci, true);
 		
@@ -83,7 +88,7 @@ void EventStatistics::Init() {
 		int tfi = tf_ids.Find(c.GetTf());
 		
 		if (symi == -1) continue;
-		if (c.GetTf() == 0 && c.GetFactory() == 0) 
+		if (c.GetTf() == 0 && c.GetFactory() == 0)
 			db_m1[symi] = dynamic_cast<DataBridge*>(&c);
 		if (tfi == -1) continue;
 		
@@ -106,6 +111,12 @@ void EventStatistics::Init() {
 	ASSERT(facis[0] == fac_ids.GetCount());
 	ASSERT(db_m1[0]);
 	
+	for(int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+	
+	for(int i = 0; i < sym_ids.GetCount(); i++)
+		UpdateEvents(i);
+	
 	ReleaseLog("EventStatistics work queue init took " + ts.ToString());
 	
 	
@@ -115,11 +126,8 @@ void EventStatistics::Init() {
 void EventStatistics::Start() {
 	System& sys = GetSystem();
 	
-	for(int i = 0; i < work_queue.GetCount() /*&& IsRunning()*/; i++)
+	for(int i = 0; i < work_queue.GetCount(); i++)
 		sys.Process(*work_queue[i], true);
-	
-	for(int i = 0; i < sym_ids.GetCount(); i++)
-		UpdateEvents(i);
 	
 	// Play alarm when vtf has new bars
 	int bars = bufs[0][OPEN][0]->GetCount();
@@ -199,19 +207,22 @@ void EventStatistics::UpdateEvents(int sym) {
 String EventStatistics::GetDescription(int i) {
 	switch (i) {
 		case OPEN:		return "Prev change dir";
-		case HU4:		return "Hurst 4";
+		/*case HU4:		return "Hurst 4";
 		case HU8:		return "Hurst 8";
 		case HU16:		return "Hurst 16";
 		case MA3:		return "Moving average 3";
 		case MA9:		return "Moving average 9";
-		case MA27:		return "Moving average27";
-		case BB:		return "Bollinger bands";
-		case PSAR:		return "Parabolic SAR";
+		case MA27:		return "Moving average27";*/
+		case BB5:		return "Bollinger bands 5";
+		case BB10:		return "Bollinger bands 10";
+		case BB20:		return "Bollinger bands 20";
+		case BB40:		return "Bollinger bands 40";
+		/*case PSAR:		return "Parabolic SAR";
 		case PC:		return "Periodical Change";
 		case TB4:		return "Tick Balance 4";
 		case TB8:		return "Tick Balance 8";
 		case TB16:		return "Tick Balance 16";
-		case PEEKC5:	return "Peek change 5";
+		case PEEKC5:	return "Peek change 5";*/
 		/*case PEEKC15:	return "Peek change 15";
 		case PEEKC30:	return "Peek change 30";*/
 		case NEWSNOW:	return "News Now";
@@ -240,6 +251,18 @@ int EventStatistics::GetPreferredNet() {
 	return d < 0;
 }
 
+int EventStatistics::GetLatestSlotId() {
+	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
+	int slot_id = nn_buf.GetCount() % stats.GetCount();
+	return slot_id;
+}
+	
+const StatSlot& EventStatistics::GetLatestSlot(int net, int i) {
+	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
+	int slot_id = nn_buf.GetCount() % stats.GetCount();
+	return this->stats[net][i][slot_id];
+}
+
 
 
 
@@ -264,18 +287,28 @@ EventStatisticsCtrl::EventStatisticsCtrl() {
 	Add(list.VSizePos().HSizePos(100));
 	Add(activelbl.TopPos(30,60).LeftPos(0,100));
 	
-	symlist.Add("NewsNet");
-	symlist.Add("AfterNewsNet");
+	
+	System& sys = GetSystem();
+	for(int i = 0; i < sys.GetNetCount(); i++)
+		symlist.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
+	//symlist.Add("NewsNet");
+	//symlist.Add("AfterNewsNet");
 	symlist.SetIndex(0);
 	symlist <<= THISBACK(Data);
 	
-	list.AddColumn("Latest time");
 	
+	String colw;
+	
+	list.AddColumn("Latest time");
+	colw += "3 ";
 	for(int i = 0; i < 3; i++) {
 		list.AddColumn(IntStr(i + 1) + ". description");
 		list.AddColumn(IntStr(i + 1) + ". average");
+		list.AddColumn(IntStr(i + 1) + ". class");
 		list.AddColumn(IntStr(i + 1) + ". signal");
+		colw += "3 2 1 1 ";
 	}
+	list.ColumnWidths(colw);
 	
 	
 }
@@ -322,8 +355,13 @@ void EventStatisticsCtrl::Data() {
 				sig *= -1;
 			}
 			double v = stats[j];
+			double cdf = es.stats[sym][l][i].av.GetCDF(0, k >= 0);
+			int grade = 'A' + (1.0 - cdf) / 0.05;
+			String grade_str;
+			grade_str.Cat(grade);
 			list.Set(i, col++, desc);
 			list.Set(i, col++, v);
+			list.Set(i, col++, grade_str);
 			list.Set(i, col++, sig == 0 ? "" : (sig > 0 ? "Long" : "Short"));
 		}
 		

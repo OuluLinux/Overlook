@@ -213,7 +213,7 @@ public:
 	Buffer& GetBuffer(int buffer) {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetBuffer(int buffer) const {return SafetyBuffer(*buffers[buffer]);}
 	ConstBuffer& GetInputBuffer(int input, int sym, int tf, int buffer) const;
-	ConstLabelSignal& GetInputLabel(int input, int sym, int tf) const;
+	ConstLabelSignal& GetInputLabel(int input, int sym, int tf, int buf=0) const;
 	CoreIO* GetInputCore(int input, int sym, int tf) const;
 	CoreIO* GetInputCore(int input) const;
 	Output& GetOutput(int output) {return outputs[output];}

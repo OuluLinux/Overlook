@@ -1901,6 +1901,48 @@ public:
 
 
 
+
+
+
+
+
+
+
+
+
+class SweetSpot : public Core {
+	
+	int news_delay = 60;
+	int volat_delay = 60;
+	int news_counter = 0, volat_counter = 0;
+	
+protected:
+	virtual void Start();
+	
+public:
+	SweetSpot();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<Calendar>()
+			% In<VolatilityEarlyLate>()
+			% Lbl(1)
+			% Arg("news_delay", news_delay, 1, 1000)
+			% Arg("volat_delay", volat_delay, 1, 1000)
+			% Mem(news_counter) % Mem(volat_counter)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
 class ExampleAdvisor : public Core {
 	
 	struct TrainingCtrl : public JobCtrl {

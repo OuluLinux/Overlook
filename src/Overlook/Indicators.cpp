@@ -6508,7 +6508,7 @@ void Calendar::Start() {
 	
 	for (int i = counted; i < bars; i++) {
 		Time t = Time(1970,1,1) + src_time.Get(i);
-		Time next = t + timestep;
+		Time next = i < bars-1 ? Time(1970,1,1) + src_time.Get(i+1) : t + timestep;
 		
 		double diff_sum[4] = {0.0, 0.0, 0.0, 0.0};
 		int diff_count[4] = {0, 0, 0, 0};
@@ -6949,6 +6949,66 @@ void VolatilityEarlyLate::Start() {
 	}
 	
 	prev_counted = bars;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SweetSpot::SweetSpot() {
+	
+}
+
+void SweetSpot::Init() {
+	
+}
+
+void SweetSpot::Start() {
+	System& sys = GetSystem();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	
+	ConstLabelSignal& news_lbl = CoreIO::GetInputLabel(1, GetSymbol(), GetTf(), 3);
+	ConstLabelSignal& volat_lbl = GetInputLabel(2);
+	
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	int min_period = GetMinutePeriod();
+	int news_steps = max(1, news_delay / min_period);
+	int volat_steps = max(1, volat_delay / min_period);
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		bool news_enabled = news_lbl.enabled.Get(i);
+		bool volat_enabled = volat_lbl.enabled.Get(i);
+		
+		if (news_enabled) news_counter = news_steps;
+		if (volat_enabled) volat_counter = volat_steps;
+		
+		bool enabled = news_counter == 0 && volat_counter == 0;
+		
+		sig.enabled.Set(i, enabled);
+		
+		if (news_counter) news_counter--;
+		if (volat_counter) volat_counter--;
+	}
+	
 }
 
 

@@ -86,10 +86,12 @@ public:
 	
 	int GetCount();
 	const CalEvent& GetEvent(int i);
+	void GetEvents(Vector<CalEvent>& ev, Time begin, Time end, int min_impact_level=0) const;
 	bool IsCalendarNeedingUpdate();
 	bool IsMajorSpeak();
 	bool IsError() {return errorcode != 0;}
 	bool IsReady() {return ready;}
+	
 	
 	void SetEventActualDiff(int i, double diff);
 	void SetEvent(CalEvent& ce);
@@ -102,6 +104,8 @@ public:
 	
 };
 
+
+inline CalendarCommon& GetCalendar() {return GetSystem().GetCommon<CalendarCommon>();}
 
 void BasicHeaders(HttpRequest& h);
 String XmlTreeString(const XmlNode& node, int indent=0, String prev_addr="");

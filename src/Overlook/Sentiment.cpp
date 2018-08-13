@@ -137,7 +137,7 @@ SentimentCtrl::SentimentCtrl() {
 	
 	historylist.AddColumn("Time");
 	historylist.AddColumn("Comment");
-	historylist.ColumnWidths("1 1 3");
+	historylist.ColumnWidths("1 3");
 	historylist <<= THISBACK(LoadHistory);
 	curpreslist.AddColumn("Symbol");
 	curpreslist.AddColumn("Pressure");

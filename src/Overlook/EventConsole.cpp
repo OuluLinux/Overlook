@@ -43,6 +43,7 @@ void EventConsole::Start() {
 				bool inverse = mean < 0.0;
 				if (inverse) mean = -mean;
 				double cdf = ss.av.GetCDF(0.0, !inverse);
+				int count = ss.av.GetEventCount();
 				if (cdf > 0.9) {
 					EventSnap::Stat& s = snap.stats.Add();
 					s.net = i;
@@ -51,6 +52,8 @@ void EventConsole::Start() {
 					s.cdf = cdf;
 					s.inverse = inverse;
 					s.signal = es.GetSignal(i, last_pos, j);
+					s.count = count;
+					if (inverse) s.signal *= -1;
 				}
 			}
 		}
@@ -111,6 +114,7 @@ EventConsoleCtrl::EventConsoleCtrl() {
 	events.AddColumn("Description");
 	events.AddColumn("Average");
 	events.AddColumn("Cdf");
+	events.AddColumn("Count");
 	events.AddColumn("Signal");
 	
 	
@@ -171,7 +175,8 @@ void EventConsoleCtrl::LoadHistory() {
 		events.Set(i, 1, es.GetDescription(s.src) + (s.inverse ? " inverse" : ""));
 		events.Set(i, 2, s.mean);
 		events.Set(i, 3, s.cdf);
-		events.Set(i, 4, s.signal == 0 ? "" : (s.signal > 0 ? "Long" : "Short"));
+		events.Set(i, 4, s.count);
+		events.Set(i, 5, s.signal == 0 ? "" : (s.signal > 0 ? "Long" : "Short"));
 	}
 	events.SetCount(snap.stats.GetCount());
 	

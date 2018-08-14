@@ -48,7 +48,7 @@ void Sentiment::SetSignals() {
 	double balance = mt.AccountBalance();
 	double equity = mt.AccountEquity();
 	double profit = equity - balance;
-	if (profit >= balance * 0.1) {
+	if (enable_takeprofit && profit >= balance * 0.1) {
 		sent->pair_pres.SetCount(symbols.GetCount(), 0);
 		sent->cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		sent->comment = "Auto take-profit";

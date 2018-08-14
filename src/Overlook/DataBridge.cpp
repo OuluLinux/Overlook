@@ -546,17 +546,18 @@ bool DataBridge::SyncData(int64 time, int& shift, double ask) {
 		shift++;
 	}
 	
-	if (is_vtf && !IsVtfTime(wday, t))
+	if (is_vtf && !IsVtfTime(wday, t)) {
+		if (shift == 0) shift = -1;
 		return false;
+	}
 	
 	return true;
 }
 
 bool DataBridge::IsVtfTime(int wday, const Time& t) {
-	#define IS(h, m) {if (t.hour == h && t.minute == m) return true;}
+	#define IS(h, m) {if (t.hour == h && t.minute == m) {return true;}}
 	
 	// NOTE: update GetVtfWeekbars if changed
-	
 	if (wday == 0) {
 		IS(22,00);
 		IS(22,59);

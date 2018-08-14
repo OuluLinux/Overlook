@@ -30,6 +30,7 @@ class Sentiment : public Common {
 	// Temporary
 	Index<String> symbols;
 	VectorMap<String, double> prev_levels;
+	bool enable_takeprofit = false;
 	
 public:
 	Sentiment();

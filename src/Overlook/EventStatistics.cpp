@@ -252,14 +252,16 @@ int EventStatistics::GetPreferredNet() {
 }
 
 int EventStatistics::GetLatestSlotId() {
+	System& sys = GetSystem();
 	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
-	int slot_id = nn_buf.GetCount() % stats.GetCount();
+	int slot_id = (nn_buf.GetCount() - 1) % sys.GetVtfWeekbars();
 	return slot_id;
 }
 	
 const StatSlot& EventStatistics::GetLatestSlot(int net, int i) {
+	System& sys = GetSystem();
 	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
-	int slot_id = nn_buf.GetCount() % stats.GetCount();
+	int slot_id = (nn_buf.GetCount() - 1) % sys.GetVtfWeekbars();
 	return this->stats[net][i][slot_id];
 }
 

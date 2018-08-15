@@ -44,6 +44,7 @@ void EventConsole::Start() {
 				if (inverse) mean = -mean;
 				double cdf = ss.av.GetCDF(0.0, !inverse);
 				int count = ss.av.GetEventCount();
+				//LOG(i << " " << j << " " << cdf << " " << mean);
 				if (cdf > 0.9) {
 					EventSnap::Stat& s = snap.stats.Add();
 					s.net = i;

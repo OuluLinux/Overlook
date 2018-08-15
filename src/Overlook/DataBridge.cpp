@@ -980,7 +980,9 @@ void DataBridge::RefreshNet() {
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		src.low = &GetInputBuffer(0, src.a, GetTf(), 1);
 		src.high = &GetInputBuffer(0, src.a, GetTf(), 2);
-		bars = min(bars, src.c->GetCount());
+		//bars = min(bars, src.c->GetCount());
+		if (bars == INT_MAX) bars = src.c->GetCount();
+		else {ASSERT(bars == src.c->GetCount());}
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
 		ASSERT(src.d == 0.0001 || src.d == 0.01);
 	}

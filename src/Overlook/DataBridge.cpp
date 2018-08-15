@@ -36,7 +36,7 @@ void DataBridge::Init() {
 void DataBridge::Start() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
-	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	DataBridgeCommon& common = GetDataBridgeCommon();
 	
 	if (once) {
 		once = false;
@@ -110,6 +110,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 	DataBridgeCommon& common = GetDataBridgeCommon();
 	
 	common.RefreshAskBidData(open_buf.IsEmpty());
+	ConstBuffer& common_time_buf = common.GetTimeBuffer(GetTf());
 	
 	int id = GetSymbol();
 	int tf = GetTimeframe();
@@ -186,6 +187,7 @@ void DataBridge::RefreshFromAskBid(bool init_round) {
 			low_buf.Set(shift, ask);
 			high_buf.Set(shift, ask);
 			time_buf.Set(shift, time);
+			ASSERT(time == common_time_buf.Get(shift));
 		}
 		else {
 			double low  = low_buf.Get(shift);
@@ -245,7 +247,9 @@ void DataBridge::RefreshMedian() {
 
 void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	MetaTrader& mt = GetMetaTrader();
-	DataBridgeCommon& common = Single<DataBridgeCommon>();
+	DataBridgeCommon& common = GetDataBridgeCommon();
+	ConstBuffer& common_time_buf = common.GetTimeBuffer(GetTf());
+	
 	if (!use_internet_data) common.DownloadHistory(GetSymbol(), GetTf(), false);
 	System& sys = GetSystem();
 	
@@ -408,6 +412,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		if (utc_time >= limit)
 			continue;
 		
+		
 		if (!SyncData(time, shift, open))
 			continue;
 		
@@ -440,6 +445,9 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		volume_buf.Set(shift, tick_volume);
 		time_buf.Set(shift, time);
 		
+		int64 real_time = common_time_buf.Get(shift);
+		ASSERT(time == real_time);
+		
 		
 		int count = open_buf.GetCount();
 		double diff = count >= 2 ? open_buf.Get(count-1) - open_buf.Get(count-2) : 0.0;
@@ -462,216 +470,82 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 }
 
 bool DataBridge::SyncData(int64 time, int& shift, double ask) {
-	Time utc_time = Time(1970,1,1) + time;
-	#ifndef flagSECONDS
-	ASSERT(utc_time.second == 0);
-	#endif
-	int wday = DayOfWeek(utc_time);
-	if (wday == 6 || (wday == 0 && utc_time.hour < 21) || (wday == 5 && utc_time.hour >= 22))
-		return false;
-	
-	int minperiod = GetMinutePeriod();
-	bool is_vtf = GetTf() == VTF;
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	if (dbc.GetTimeBufferCount() == 0) dbc.RefreshTimeBuffers();
+	ConstBuffer& common_time_buf = dbc.GetTimeBuffer(GetTf());
 	
 	Buffer& open_buf = GetBuffer(0);
 	Buffer& low_buf = GetBuffer(1);
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
 	Buffer& time_buf = GetBuffer(4);
-	
-	Time t;
+
+	int64 t;
 	if (shift < 0) {
 		shift = -1;
-		#ifndef flagSECONDS
-		t = Time(1970,1,1) + Config::start_time - 60 * minperiod;
-		#else
-		t = Time(1970,1,1) + Config::start_time - 1 * minperiod;
-		#endif
+		t = common_time_buf.Get(0);
 	} else {
-		if (time_buf.IsEmpty())
-			return false;
 		shift = time_buf.GetCount() - 1;
-		t = Time(1970,1,1) + time_buf.Top();
-		ask = open_buf.Top();
-		#ifndef flagSECONDS
-		ASSERT(t.second == 0);
-		#endif
+		t = time_buf.Top();
 	}
-	if (utc_time < t)
+	
+	if (time < t)
 		return false;
 	
-	if (t < utc_time) {
+	if (t < time) {
 		shift++;
-		#ifdef flagSECONDS
-		t += 1 * minperiod;
-		#else
-		t += 60 * minperiod;
-		#endif
-		while (t < utc_time) {
-			int wday = DayOfWeek(t);
-			if ((!is_vtf && !(wday == 6 || (wday == 0 && t.hour < 22) || (wday == 5 && t.hour >= 21))) || (is_vtf && IsVtfTime(wday, t))) {
-				int time = t.Get() - Time(1970,1,1).Get();
-				
-				int res = shift + 100000;
-				res -= res % 100000;
-				res += 100000;
-				
-				open_buf.Reserve(res);
-				low_buf.Reserve(res);
-				high_buf.Reserve(res);
-				volume_buf.Reserve(res);
-				time_buf.Reserve(res);
-				
-				open_buf.SetCount(shift+1);
-				low_buf.SetCount(shift+1);
-				high_buf.SetCount(shift+1);
-				volume_buf.SetCount(shift+1);
-				time_buf.SetCount(shift+1);
-				
-				open_buf.Set(shift, ask);
-				low_buf.Set(shift, ask);
-				high_buf.Set(shift, ask);
-				time_buf.Set(shift, time);
-				
-				shift++;
+		if (shift >= common_time_buf.GetCount()) {
+			shift--;
+			return false;
+		}
+		t = common_time_buf.Get(shift);
+		if (t > time) {
+			shift--;
+			return false;
+		}
+			
+		while (t < time) {
+			int res = shift + 100000;
+			res -= res % 100000;
+			res += 100000;
+
+			open_buf.Reserve(res);
+			low_buf.Reserve(res);
+			high_buf.Reserve(res);
+			volume_buf.Reserve(res);
+			time_buf.Reserve(res);
+
+			open_buf.SetCount(shift+1);
+			low_buf.SetCount(shift+1);
+			high_buf.SetCount(shift+1);
+			volume_buf.SetCount(shift+1);
+			time_buf.SetCount(shift+1);
+
+			open_buf.Set(shift, ask);
+			low_buf.Set(shift, ask);
+			high_buf.Set(shift, ask);
+			time_buf.Set(shift, t);
+			ASSERT(t == common_time_buf.Get(shift));
+
+			shift++;
+			if (shift >= common_time_buf.GetCount()) {
+				shift--;
+				return false;
 			}
-			#ifdef flagSECONDS
-			t += 1 * minperiod;
-			#else
-			t += 60 * minperiod;
-			#endif
+			t = common_time_buf.Get(shift);
+			if (t > time) {
+				shift--;
+				return false;
+			}
 		}
 	}
 	else if (shift == -1) {
 		shift++;
 	}
 	
-	if (is_vtf && !IsVtfTime(wday, t)) {
-		if (shift == 0) shift = -1;
-		return false;
-	}
-	
 	return true;
 }
 
-bool DataBridge::IsVtfTime(int wday, const Time& t) {
-	#define IS(h, m) {if (t.hour == h && t.minute == m) {return true;}}
-	
-	// NOTE: update GetVtfWeekbars if changed
-	if (wday == 0) {
-		IS(22,00);
-		IS(22,59);
-	}
-	// Monday
-	else if (wday == 1) {
-		IS(2,00);
-		IS(4,10);
-		IS(4,16);
-		IS(4,54);
-		IS(7,00); // EU ses
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00); // US ses
-		IS(12,30); // first US M30 has gone
-		IS(14,00);
-		IS(15,00);
-		IS(17,59);
-		IS(18,57);
-		IS(21,40);
-		IS(23,37);
-	}
-	if (wday == 2) {
-		IS(1,00);
-		IS(2,00);
-		IS(4,00);
-		IS(5,30);
-		IS(7,00); // EU ses
-		IS(8,30);
-		IS(10,00); // Strong
-		IS(12,00); // US ses
-		IS(12,30);
-		IS(14,00);
-		IS(14,57);
-		IS(16,30);
-		IS(18,00);
-		IS(19,30);
-		IS(20,42);
-		IS(22,30);
-		IS(22,59);
-		IS(23,59);
-	}
-	else if (wday == 3) {
-		IS(0,59);
-		IS(1,30);
-		IS(2,00);
-		IS(2,46);
-		IS(3,30);
-		IS(4,00);
-		IS(4,30);
-		IS(5,30);
-		IS(7,00); //EU ses
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(11,29);
-		IS(12,00); //US ses
-		IS(12,30);
-		IS(13,30);
-		IS(15,00);
-		IS(16,30);
-		IS(17,00);
-		IS(18,00);
-		IS(20,45);
-		IS(22,00);
-	}
-	else if (wday == 4) {
-		IS(0,59);
-		IS(2,00);
-		IS(3,05);
-		IS(4,00);
-		IS(5,30);
-		IS(7,00);
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00);
-		IS(12,30);
-		IS(15,00);
-		IS(16,30);
-		IS(17,15);
-		IS(18,00);
-		IS(19,00);
-		IS(20,00);
-		IS(20,49);
-		IS(21,35);
-		IS(22,49);
-		IS(23,59);
-	}
-	else if (wday == 5) {
-		IS(0,59);
-		IS(2,00);
-		IS(3,00);
-		IS(4,10);
-		IS(4,54);
-		IS(6,35);
-		IS(7,00);
-		IS(8,12);
-		IS(9,00);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00);
-		IS(12,30);
-		IS(14,05);
-		IS(15,29);
-		IS(16,30);
-		IS(18,00);
-		IS(18,57);
-		IS(19,59);
-	}
-	#undef IS
-	return false;
-}
 
 int DataBridge::GetChangeStep(int shift, int steps) {
 	int change = 0;
@@ -696,6 +570,7 @@ void DataBridge::RefreshFromFasterTime() {
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
 	Buffer& time_buf = GetBuffer(4);
+	ConstBuffer& common_time_buf = GetDataBridgeCommon().GetTimeBuffer(GetTf());
 	
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
@@ -775,6 +650,7 @@ void DataBridge::RefreshFromFasterTime() {
 			high_buf.Set(shift, high_value);
 			volume_buf.Set(shift, volume_sum);
 			time_buf.Set(shift, time);
+			ASSERT(time == common_time_buf.Get(shift));
 		}
 		else {
 			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
@@ -794,6 +670,7 @@ void DataBridge::RefreshFromFasterChange() {
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
 	Buffer& time_buf = GetBuffer(4);
+	ConstBuffer& common_time_buf = GetDataBridgeCommon().GetTimeBuffer(GetTf());
 	
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
@@ -854,6 +731,7 @@ void DataBridge::RefreshFromFasterChange() {
 			high_buf.Set(shift, high_value);
 			volume_buf.Set(shift, volume_sum);
 			time_buf.Set(shift, time);
+			ASSERT(time == common_time_buf.Get(shift));
 		}
 		else {
 			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
@@ -954,6 +832,7 @@ void DataBridge::RefreshNet() {
 	Buffer& high_buf = GetBuffer(2);
 	Buffer& volume_buf = GetBuffer(3);
 	Buffer& time_buf = GetBuffer(4);
+	ConstBuffer& common_time_buf = GetDataBridgeCommon().GetTimeBuffer(GetTf());
 	
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
@@ -975,14 +854,15 @@ void DataBridge::RefreshNet() {
 	
 	for(int i = 0; i < net.symbol_ids.GetCount(); i++) {
 		Src& src = src_open[i];
+		String sym = net.symbols.GetKey(i);
 		src.a = net.symbol_ids.GetKey(i); // symbol
 		src.b = net.symbol_ids[i];
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		src.low = &GetInputBuffer(0, src.a, GetTf(), 1);
 		src.high = &GetInputBuffer(0, src.a, GetTf(), 2);
-		//bars = min(bars, src.c->GetCount());
-		if (bars == INT_MAX) bars = src.c->GetCount();
-		else {ASSERT(bars == src.c->GetCount());}
+		bars = min(bars, src.c->GetCount());
+		//if (bars == INT_MAX) bars = src.c->GetCount();
+		//else {int newbars = src.c->GetCount(); DUMP(newbars); DUMP(bars); ASSERT(bars == newbars);}
 		src.d = dynamic_cast<DataBridge&>(*GetInputCore(0, src.a, GetTf())).GetPoint();
 		ASSERT(src.d == 0.0001 || src.d == 0.01);
 	}
@@ -1002,7 +882,9 @@ void DataBridge::RefreshNet() {
 	ConstBuffer& src_time_buf = GetInputBuffer(0, src_open[0].a, GetTf(), 4);
 	for(int i = counted; i < bars; i++) {
 		
-		time_buf.Set(i, src_time_buf.Get(i));
+		int64 time = src_time_buf.Get(i);
+		time_buf.Set(i, time);
+		//ASSERT(time == common_time_buf.Get(i));
 		
 		#if 0
 		int pip_sum = 0, low_pip_sum = 0, high_pip_sum = 0;

@@ -21,10 +21,12 @@ void EventConsole::Start() {
 	
 	int slot_id = es.GetLatestSlotId();
 	if (snaps.IsEmpty() || snaps.Top().slot_id != slot_id) {
+		ConstBuffer& time_buf = es.db[0]->GetBuffer(4);
+		if (time_buf.IsEmpty()) return;
+		
 		EventSnap& snap = snaps.Add();
 		snap.slot_id = slot_id;
 		
-		ConstBuffer& time_buf = es.db[0]->GetBuffer(4);
 		snap.time = Time(1970,1,1) + time_buf.Top();
 		int last_pos = time_buf.GetCount() - 1;
 		

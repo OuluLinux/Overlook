@@ -247,6 +247,7 @@ int EventStatistics::GetSignal(int sym, int i, int src) {
 
 int EventStatistics::GetPreferredNet() {
 	ConstBuffer& nn_buf = *bufs[0][NEWSNOW][0];
+	if (nn_buf.IsEmpty()) return 0;
 	double d = nn_buf.Top();
 	return d < 0;
 }

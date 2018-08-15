@@ -15,6 +15,10 @@ class DataBridgeCommon : public Common {
 protected:
 	friend class DataBridge;
 	
+	// Persistent
+	Vector<Buffer> time_bufs;
+	
+	// Temp
 	typedef Tuple3<Time, double, double> AskBid;
 	Vector<Vector<AskBid> > data;
 	Vector<int> tfs;
@@ -49,11 +53,19 @@ public:
 	int  DownloadRemoteFile(String remote_path, String local_path);
 	bool IsInited() const {return inited;}
 	void RefreshAskBidData(bool forced=false);
+	void RefreshTimeBuffers();
+	bool SyncData(int tf, int64 time, int& shift);
+	bool IsVtfTime(int wday, const Time& t);
+	ConstBuffer& GetTimeBuffer(int tf) const {return time_bufs[tf];}
+	int GetTimeBufferCount() const {return time_bufs.GetCount();}
+	void Serialize(Stream& s) {s % time_bufs;}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("DataBridgeCommon.bin"));}
+	void StoreThis() {StoreToFile(*this, ConfigFile("DataBridgeCommon.bin"));}
 	
 	Mutex lock;
 };
 
-inline DataBridgeCommon& GetDataBridgeCommon() {return Single<DataBridgeCommon>();}
+inline DataBridgeCommon& GetDataBridgeCommon() {return GetSystem().GetCommon<DataBridgeCommon>();}
 
 struct AskBid : Moveable<AskBid> {
 	int time;
@@ -121,7 +133,6 @@ public:
 	void RefreshFromFasterChange();
 	void RefreshCurrency();
 	void RefreshNet();
-	bool IsVtfTime(int wday, const Time& t);
 	
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
 		System& sys = GetSystem();

@@ -29,8 +29,6 @@ class EventConsole : public Common {
 protected:
 	friend class EventConsoleCtrl;
 	
-	enum {OPEN, SWEETSPOT, SRC_COUNT};
-	
 	// Persistent
 	Array<EventSnap> snaps;
 	

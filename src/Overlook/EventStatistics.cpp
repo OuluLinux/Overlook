@@ -265,6 +265,10 @@ const StatSlot& EventStatistics::GetLatestSlot(int net, int i) {
 	int slot_id = (nn_buf.GetCount() - 1) % sys.GetVtfWeekbars();
 	return this->stats[net][i][slot_id];
 }
+	
+const StatSlot& EventStatistics::GetSlot(int net, int i, int wb) {
+	return this->stats[net][i][wb];
+}
 
 
 

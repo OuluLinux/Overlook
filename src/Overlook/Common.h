@@ -1219,6 +1219,37 @@ inline double NormalizeDouble(double d, int digits) {
 
 void PlayAlarm(int i=0);
 
+
+
+class ThreadSignal {
+	bool running = false, stopped = true;
+	
+public:
+	
+	// Thread starter calls this before starting the thread
+	void Start() {
+		running = true;
+		stopped = false;
+	}
+	
+	// Thread starter calls this when thread must be stopped
+	void Stop() {
+		running = false;
+		while (!stopped) Sleep(100);
+	}
+	
+	// Thread calls this between iterations
+	bool IsRunning() const {return running;}
+	
+	// Thread calls this at the end of the main function
+	void SetStopped() {
+		running = false;
+		stopped = true;
+	}
+	
+	
+};
+
 }
 
 #endif

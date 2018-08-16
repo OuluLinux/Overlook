@@ -209,6 +209,7 @@ INITBLOCK {
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     System::RegisterCommon<EventStatistics, EventStatisticsCtrl>("Event Statistics");
     System::RegisterCommon<EventConsole, EventConsoleCtrl>("Event Console");
+    System::RegisterCommon<EventOptimization, EventOptimizationCtrl>("Event Optimization");
     
     
     

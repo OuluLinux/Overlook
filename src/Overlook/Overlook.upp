@@ -50,6 +50,8 @@ file
 	EventStatistics.cpp,
 	EventConsole.h,
 	EventConsole.cpp,
+	EventOptimization.h,
+	EventOptimization.cpp,
 	Sentiment.h,
 	Sentiment.cpp,
 	SimBroker.h,

@@ -21,6 +21,7 @@ class EventStatistics : public Common {
 protected:
 	friend class EventStatisticsCtrl;
 	friend class EventConsole;
+	friend class EventOptimization;
 	
 	
 	enum {OPEN, /*HU4, HU8, HU16, MA3, MA9, MA27,*/ BB5, BB10, BB20, BB40, /*PSAR, PC, TB4, TB8, TB16, PEEKC5,*/ /*PEEKC15, PEEKC30,*/ NEWSNOW, SRC_COUNT};
@@ -56,6 +57,9 @@ public:
 	int GetPreferredNet();
 	int GetLatestSlotId();
 	const StatSlot& GetLatestSlot(int net, int i);
+	const StatSlot& GetSlot(int net, int i, int wb);
+	
+	ConstBuffer& GetBuffer(int sym, int src, int buf) {return *bufs[sym][src][buf];}
 	
 };
 

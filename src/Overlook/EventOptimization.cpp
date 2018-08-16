@@ -1,0 +1,262 @@
+#include "Overlook.h"
+
+namespace Overlook {
+
+EventOptimization::EventOptimization() {
+	LoadThis();
+}
+
+EventOptimization::~EventOptimization() {
+	sig.Stop();
+}
+
+void EventOptimization::Init() {
+	
+	System& sys = GetSystem();
+	
+	int sym_count = sys.GetNormalSymbolCount();
+	int cur_count = sys.GetCurrencyCount();
+	int net_count = sys.GetNetCount();
+	int width = sys.GetVtfWeekbars();
+	
+	indi_ids.Add().Set(sys.Find<DataBridge>());
+
+	for(int i = 0; i < indi_ids.GetCount(); i++)
+		fac_ids.Add(indi_ids[i].factory);
+	
+	const System::NetSetting& ns = sys.GetNet(0);
+	for(int i = 0; i < ns.symbol_ids.GetCount(); i++)
+		sym_ids.Add(ns.symbol_ids.GetKey(i));
+	
+	tf_ids.Add(VTF);
+	
+	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+	db.SetCount(sym_ids.GetCount(), NULL);
+	
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = *work_queue[i];
+		sys.Process(ci, true);
+		
+		Core& c = *ci.core;
+		
+		int symi = sym_ids.Find(c.GetSymbol());
+		int tfi = tf_ids.Find(c.GetTf());
+		
+		if (symi == -1) continue;
+		if (tfi == -1) continue;
+		
+		
+		if (c.GetFactory() == 0) {
+			db[symi] = &dynamic_cast<DataBridge&>(c);
+		}
+		
+		
+		sys.Process(*work_queue[i], true);
+	}
+	
+	
+	if (opt.GetRound() < opt.GetMaxRounds()) {
+		sig.Start();
+		Thread::Start(THISBACK(Process));
+	}
+}
+
+void EventOptimization::Start() {
+	
+	
+	if (opt.GetRound() >= opt.GetMaxRounds()) {
+		
+	}
+}
+
+void EventOptimization::Process() {
+	System& sys = GetSystem();
+	EventStatistics& es = GetEventStatistics();
+	
+	int weekbars = sys.GetVtfWeekbars();
+	const int grade_count = 8;
+	
+	
+	bool once = false;
+	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds() || once) {
+		once = false;
+		
+		int total = sys.GetVtfWeekbars() * grade_count;
+		opt.Min().SetCount(total);
+		opt.Max().SetCount(total);
+		int row = 0;
+		for(int i = 0; i < sys.GetVtfWeekbars(); i++) {
+			for(int j = 0; j < grade_count; j++) {
+				opt.Min()[row] = Upp::min(0.999, 0.6 + j * 0.05);
+				opt.Max()[row] = 1.0;
+				row++;
+			}
+		}
+		
+		#ifdef flagDEBUG
+		opt.SetMaxGenerations(5);
+		#else
+		opt.SetMaxGenerations(5000);
+		#endif
+		opt.Init(total, 33);
+		
+		
+		training_pts.SetCount(opt.GetMaxRounds(), 0.0);
+	}
+	
+	
+	(Brokerage&)sb = (Brokerage&)GetMetaTrader();
+	sb.Init();
+	sb.SetInitialBalance(1000);
+	
+	
+	VectorMap<int, ConstBuffer*> open_bufs;
+	int begin = 100, end = INT_MAX;
+	for(int i = 0; i < sys.GetNetCount(); i++) {
+		ConstBuffer& buf = es.GetBuffer(i, 0, 0);
+		int sym = sys.GetNetSymbol(i);
+		open_bufs.Add(sym, &buf);
+		end = min(end, buf.GetCount());
+	}
+	
+	
+	struct Temp : Moveable<Temp> {
+		int net, src, sig, grade;
+		double cdf;
+		
+		bool operator() (const Temp& a, const Temp& b) const {return a.grade < b.grade;}
+	};
+	Vector<Temp> temp;
+	
+	
+	TimeStop ts;
+	
+	
+	while (opt.GetRound() < opt.GetMaxRounds() && IsRunning()) {
+		
+		opt.Start();
+		
+		const Vector<double>& trial = opt.GetTrialSolution();
+		
+		sb.Clear();
+		
+		for (int cursor = begin; cursor < end; cursor++) {
+			int wb = cursor % weekbars;
+			
+			
+			// For all EventStatistics nets and sources
+			// get all active signals to a temporary list
+			// and pick random item, which gives net and source ids
+			temp.SetCount(1);
+			temp[0].cdf = 0;
+			for(int i = 0; i < sys.GetNetCount(); i++) {
+				for(int j = 0; j < EventStatistics::SRC_COUNT; j++) {
+					int sig = es.GetSignal(i, cursor, j);
+					if (!sig) continue;
+					
+					const StatSlot& ss = es.GetSlot(i, j, wb);
+					double mean = ss.av.GetMean();
+					bool inverse = mean < 0.0;
+					if (inverse) {
+						mean = -mean;
+						sig *= -1;
+					}
+					double cdf = ss.av.GetCDF(0.0, !inverse);
+					int grade = (1.0 - cdf) / 0.05;
+					
+					if (grade < grade_count) {
+						Temp& tmp = temp[0];//.Add();
+						if (cdf > tmp.cdf) {
+							tmp.net = i;
+							tmp.src = j;
+							tmp.sig = sig;
+							tmp.grade = grade;
+							tmp.cdf = cdf;
+						}
+					}
+				}
+			}
+			if (temp[0].cdf == 0) temp.SetCount(0);
+			
+			
+			if (!temp.IsEmpty()) {
+				Temp& tmp = temp[Random(temp.GetCount())];
+				const System::NetSetting& ns = sys.GetNet(tmp.net);
+				
+				
+				// Get class from item and use it to set fm-level
+				int solution_i = wb * grade_count + tmp.grade;
+				double fmlevel = min(1.0, max(0.6, trial[solution_i]));
+				sb.SetFreeMarginLevel(fmlevel);
+				sb.SetFreeMarginScale(ns.symbols.GetCount());
+				
+				
+				// Set signal using net and source ids. Don't freeze signal.
+				
+				for(int i = 0; i < ns.symbols.GetCount(); i++) {
+					int sym = ns.symbol_ids.GetKey(i);
+					int sig = ns.symbol_ids[i] * tmp.sig;
+					sb.SetSignal(sym, sig);
+				}
+				
+			} else {
+				const System::NetSetting& ns = sys.GetNet(0);
+				
+				for(int i = 0; i < ns.symbols.GetCount(); i++) {
+					int sym = ns.symbol_ids.GetKey(i);
+					sb.SetSignal(sym, 0);
+				}
+			}
+			
+			
+			// Set prices
+			for(int i = 0; i < db.GetCount(); i++) {
+				int sym = sym_ids[i];
+				ConstBuffer& open_buf = db[i]->GetBuffer(0);
+				double price = open_buf.Get(cursor);
+				sb.SetPrice(sym, price);
+			}
+			
+			sb.RefreshOrders();
+			
+			sb.Cycle();
+		}
+		
+		sb.CloseAll();
+		
+		
+		double result = sb.AccountEquity();
+		training_pts[opt.GetRound()] = result;
+		LOG(result);
+		
+		
+		opt.Stop(result);
+		
+		
+		if (ts.Elapsed() >= 60 *1000) {
+			StoreThis();
+			ts.Reset();
+		}
+	}
+	
+	/*if (IsRunning()) {
+		best_solution <<= opt.GetBestSolution();
+		StoreThis();
+	}*/
+	
+	sig.SetStopped();
+}
+
+
+
+
+EventOptimizationCtrl::EventOptimizationCtrl() {
+	
+}
+
+void EventOptimizationCtrl::Data() {
+	
+}
+
+
+}

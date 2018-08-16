@@ -34,7 +34,7 @@ class Optimizer {
 	int round = 0;
 	int random_type = 0;
 	int dimension = 0;
-	int max_rounds;
+	int max_rounds = 100;
 	bool use_limits = 0;
 	
 	int generation = 0;

@@ -44,6 +44,7 @@ using namespace Upp;
 #include "EventSystem.h"
 #include "EventStatistics.h"
 #include "EventConsole.h"
+#include "EventOptimization.h"
 #include "Sentiment.h"
 
 

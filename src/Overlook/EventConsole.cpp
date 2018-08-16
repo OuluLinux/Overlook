@@ -18,6 +18,10 @@ void EventConsole::Start() {
 	System& sys = GetSystem();
 	
 	EventStatistics& es = GetEventStatistics();
+	EventOptimization& eo = GetEventOptimization();
+	
+	if (!eo.opt.IsEnd())
+		return;
 	
 	int slot_id = es.GetLatestSlotId();
 	if (snaps.IsEmpty() || snaps.Top().slot_id != slot_id) {
@@ -46,8 +50,9 @@ void EventConsole::Start() {
 				if (inverse) mean = -mean;
 				double cdf = ss.av.GetCDF(0.0, !inverse);
 				int count = ss.av.GetEventCount();
+				int grade = (1.0 - cdf) / 0.05;
 				//LOG(i << " " << j << " " << cdf << " " << mean);
-				if (cdf > 0.9) {
+				if (grade < EventOptimization::grade_count) {
 					EventSnap::Stat& s = snap.stats.Add();
 					s.net = i;
 					s.src = j;
@@ -56,6 +61,7 @@ void EventConsole::Start() {
 					s.inverse = inverse;
 					s.signal = es.GetSignal(i, last_pos, j);
 					s.count = count;
+					s.grade = grade;
 					if (inverse) s.signal *= -1;
 				}
 			}
@@ -70,11 +76,13 @@ void EventConsole::Start() {
 		ss.comment = "Clear";
 		ss.cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		ss.pair_pres.SetCount(sys.GetSymbolCount(), 0);
+		ss.fmlevel = 1.0;
 		for(int i = 0; i < snap.stats.GetCount(); i++) {
 			EventSnap::Stat& s = snap.stats[i];
 			if (s.signal) {
 				snap.comment = Format("Active %d %d %d", s.net, s.src, (int)s.inverse);
 				ss.comment = snap.comment;
+				ss.fmlevel = eo.opt.GetBestSolution()[s.grade];
 				
 				System::NetSetting& net = sys.GetNet(s.net);
 				

@@ -10,10 +10,12 @@ class EventOptimization : public Common {
 	
 protected:
 	friend class EventOptimizationCtrl;
+	friend class EventConsole;
+	friend class EventOptimizationDrawer;
 	
 	// Persistent
 	Optimizer opt;
-	Vector<double> training_pts;
+	Vector<double> training_pts, last_round;
 	
 	
 	// Temporary
@@ -30,12 +32,14 @@ public:
 	EventOptimization();
 	~EventOptimization();
 	
+	static const int grade_count = 4;
+	
 	virtual void Init();
 	virtual void Start();
 	
 	void Process();
 	
-	void Serialize(Stream& s) {s % opt % training_pts;}
+	void Serialize(Stream& s) {s % opt % training_pts % last_round;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("EventOptimization.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("EventOptimization.bin"));}
 	
@@ -45,9 +49,17 @@ public:
 
 inline EventOptimization& GetEventOptimization() {return GetSystem().GetCommon<EventOptimization>();}
 
+class EventOptimizationDrawer : public Ctrl {
+	Vector<Point> cache;
+	
+public:
+	virtual void Paint(Draw& d);
+	
+};
 
 class EventOptimizationCtrl : public CommonCtrl {
-	Splitter hsplit;
+	EventOptimizationDrawer draw;
+	ProgressIndicator prog;
 	
 public:
 	typedef EventOptimizationCtrl CLASSNAME;

@@ -72,6 +72,7 @@ void Sentiment::SetSignals() {
 		
 		SentimentSnapshot& real = sents.Top();
 		System& sys = GetSystem();
+		sys.SetFreemarginLevel(real.fmlevel);
 		System::NetSetting& actnet = sys.GetNet(sys.GetNetCount() - 1);
 		for(int i = 0; i < GetSymbolCount() && i < real.pair_pres.GetCount(); i++) {
 			String sym = GetSymbol(i);
@@ -137,7 +138,8 @@ SentimentCtrl::SentimentCtrl() {
 	
 	historylist.AddColumn("Time");
 	historylist.AddColumn("Comment");
-	historylist.ColumnWidths("1 3");
+	historylist.AddColumn("Free-margin level");
+	historylist.ColumnWidths("1 3 1");
 	historylist <<= THISBACK(LoadHistory);
 	curpreslist.AddColumn("Symbol");
 	curpreslist.AddColumn("Pressure");
@@ -183,6 +185,7 @@ void SentimentCtrl::Data() {
 		
 		historylist.Set(i, 0, snap.added);
 		historylist.Set(i, 1, snap.comment);
+		historylist.Set(i, 2, snap.fmlevel);
 	}
 	historylist.SetCount(count);
 	

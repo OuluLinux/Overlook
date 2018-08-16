@@ -133,6 +133,7 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sentctrl, "Sentiment").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(conctrl, "Event Console").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(optctrl, "Event Optimization").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(esctrl, "Event Statistics").SizeHint(Size(300, 200)));
 	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(cal, "Calendar").SizeHint(Size(300, 200)));
@@ -552,6 +553,7 @@ void Overlook::Data() {
 	if (cal.IsVisible())			cal.Data();
 	if (esctrl.IsVisible())			esctrl.Data();
 	if (conctrl.IsVisible())		conctrl.Data();
+	if (optctrl.IsVisible())		optctrl.Data();
 }
 
 void Overlook::RefreshAssist() {

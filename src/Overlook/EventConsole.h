@@ -7,12 +7,12 @@ namespace Overlook {
 
 struct EventSnap {
 	struct Stat : Moveable<Stat> {
-		int net, src, signal, count;
+		int net, src, signal, count, grade;
 		double mean, cdf;
 		bool inverse;
 		
 		bool operator() (const Stat& a, const Stat& b) const {return a.mean > b.mean;}
-		void Serialize(Stream& s) {s % net % src % signal % count % mean % cdf % inverse;}
+		void Serialize(Stream& s) {s % net % src % signal % count % grade % mean % cdf % inverse;}
 	};
 	Time time;
 	String comment;

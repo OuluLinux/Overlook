@@ -710,7 +710,6 @@ bool System::RefreshReal() {
 		mt.Data();
 		//mt.RefreshLimits();
 		int open_count = 0;
-		const double FMLEVEL = 0.6;
 		
 		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
@@ -734,7 +733,7 @@ bool System::RefreshReal() {
 			ReleaseLog("Real symbol " + IntStr(sym_id) + " signal " + IntStr(sig));
 		}
 		
-		mt.SetFreeMarginLevel(FMLEVEL);
+		mt.SetFreeMarginLevel(fmlevel);
 		mt.SetFreeMarginScale(MAX_SYMOPEN * SIGNALSCALE);
 		mt.SignalOrders(true);
 	}

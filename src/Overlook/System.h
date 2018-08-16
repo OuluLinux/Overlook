@@ -309,6 +309,7 @@ protected:
 	Time						end;
 	Data						data;
 	double						limit_day_begin = 0, limit_day_best = 0, limit_day_worst = 0;
+	double						fmlevel = 0.6;
 	int							limit_wday = -1;
 	int							time_offset = 0;
 	int							realtime_count = 0;
@@ -331,6 +332,7 @@ public:
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
 	int		GetNetCount() const {return nets.GetCount();}
 	int		GetVtfWeekbars() const {return 98;}
+	void	SetFreemarginLevel(double d) {fmlevel = d;}
 	
 protected:
 	

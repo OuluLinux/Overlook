@@ -43,8 +43,8 @@ using namespace Upp;
 #include "Scalper.h"
 #include "EventSystem.h"
 #include "EventStatistics.h"
-#include "EventConsole.h"
 #include "EventOptimization.h"
+#include "EventConsole.h"
 #include "Sentiment.h"
 
 
@@ -101,6 +101,7 @@ protected:
 	SentimentCtrl sentctrl;
 	EventStatisticsCtrl esctrl;
 	EventConsoleCtrl conctrl;
+	EventOptimizationCtrl optctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;

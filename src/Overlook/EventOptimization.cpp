@@ -63,10 +63,6 @@ void EventOptimization::Init() {
 
 void EventOptimization::Start() {
 	
-	
-	if (opt.GetRound() >= opt.GetMaxRounds()) {
-		
-	}
 }
 
 void EventOptimization::Process() {
@@ -74,35 +70,36 @@ void EventOptimization::Process() {
 	EventStatistics& es = GetEventStatistics();
 	
 	int weekbars = sys.GetVtfWeekbars();
-	const int grade_count = 8;
+	
 	
 	
 	bool once = false;
 	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds() || once) {
 		once = false;
 		
-		int total = sys.GetVtfWeekbars() * grade_count;
+		int total = /*sys.GetVtfWeekbars() * */grade_count;
 		opt.Min().SetCount(total);
 		opt.Max().SetCount(total);
 		int row = 0;
-		for(int i = 0; i < sys.GetVtfWeekbars(); i++) {
+		//for(int i = 0; i < sys.GetVtfWeekbars(); i++) {
 			for(int j = 0; j < grade_count; j++) {
-				opt.Min()[row] = Upp::min(0.999, 0.6 + j * 0.05);
-				opt.Max()[row] = 1.0;
+				opt.Min()[row] = 0.6;
+				opt.Max()[row] = 1.1;
 				row++;
 			}
-		}
+		//}
 		
 		#ifdef flagDEBUG
 		opt.SetMaxGenerations(5);
 		#else
-		opt.SetMaxGenerations(5000);
+		opt.SetMaxGenerations(50);
 		#endif
 		opt.Init(total, 33);
 		
 		
 		training_pts.SetCount(opt.GetMaxRounds(), 0.0);
 	}
+	
 	
 	
 	(Brokerage&)sb = (Brokerage&)GetMetaTrader();
@@ -119,14 +116,16 @@ void EventOptimization::Process() {
 		end = min(end, buf.GetCount());
 	}
 	
+	last_round.SetCount(end - begin, 0);
+	
 	
 	struct Temp : Moveable<Temp> {
 		int net, src, sig, grade;
-		double cdf;
+		double cdf, mean;
 		
 		bool operator() (const Temp& a, const Temp& b) const {return a.grade < b.grade;}
 	};
-	Vector<Temp> temp;
+	Temp temp;
 	
 	
 	TimeStop ts;
@@ -147,8 +146,7 @@ void EventOptimization::Process() {
 			// For all EventStatistics nets and sources
 			// get all active signals to a temporary list
 			// and pick random item, which gives net and source ids
-			temp.SetCount(1);
-			temp[0].cdf = 0;
+			temp.mean = 0;
 			for(int i = 0; i < sys.GetNetCount(); i++) {
 				for(int j = 0; j < EventStatistics::SRC_COUNT; j++) {
 					int sig = es.GetSignal(i, cursor, j);
@@ -164,38 +162,34 @@ void EventOptimization::Process() {
 					double cdf = ss.av.GetCDF(0.0, !inverse);
 					int grade = (1.0 - cdf) / 0.05;
 					
-					if (grade < grade_count) {
-						Temp& tmp = temp[0];//.Add();
-						if (cdf > tmp.cdf) {
-							tmp.net = i;
-							tmp.src = j;
-							tmp.sig = sig;
-							tmp.grade = grade;
-							tmp.cdf = cdf;
-						}
+					if (grade < grade_count && mean > temp.mean) {
+						temp.net = i;
+						temp.src = j;
+						temp.sig = sig;
+						temp.grade = grade;
+						temp.cdf = cdf;
+						temp.mean = mean;
 					}
 				}
 			}
-			if (temp[0].cdf == 0) temp.SetCount(0);
 			
 			
-			if (!temp.IsEmpty()) {
-				Temp& tmp = temp[Random(temp.GetCount())];
-				const System::NetSetting& ns = sys.GetNet(tmp.net);
+			if (temp.mean > 0) {
+				const System::NetSetting& ns = sys.GetNet(temp.net);
 				
 				
 				// Get class from item and use it to set fm-level
-				int solution_i = wb * grade_count + tmp.grade;
-				double fmlevel = min(1.0, max(0.6, trial[solution_i]));
+				int solution_i = /*wb * grade_count +*/ temp.grade;
+				double fmlevel = trial[solution_i];
 				sb.SetFreeMarginLevel(fmlevel);
 				sb.SetFreeMarginScale(ns.symbols.GetCount());
-				
+				bool main_switch = fmlevel < 1.0;
 				
 				// Set signal using net and source ids. Don't freeze signal.
 				
 				for(int i = 0; i < ns.symbols.GetCount(); i++) {
 					int sym = ns.symbol_ids.GetKey(i);
-					int sig = ns.symbol_ids[i] * tmp.sig;
+					int sig = ns.symbol_ids[i] * temp.sig * main_switch;
 					sb.SetSignal(sym, sig);
 				}
 				
@@ -219,6 +213,8 @@ void EventOptimization::Process() {
 			
 			sb.RefreshOrders();
 			
+			last_round[cursor - begin] = sb.AccountEquity();
+			
 			sb.Cycle();
 		}
 		
@@ -239,10 +235,7 @@ void EventOptimization::Process() {
 		}
 	}
 	
-	/*if (IsRunning()) {
-		best_solution <<= opt.GetBestSolution();
-		StoreThis();
-	}*/
+	StoreThis();
 	
 	sig.SetStopped();
 }
@@ -251,12 +244,39 @@ void EventOptimization::Process() {
 
 
 EventOptimizationCtrl::EventOptimizationCtrl() {
+	Add(draw.HSizePos().VSizePos(0, 10));
+	Add(prog.BottomPos(0, 10).HSizePos());
+	
+	prog.Set(0, 1);
+	
 	
 }
 
 void EventOptimizationCtrl::Data() {
+	EventOptimization& eo = GetEventOptimization();
 	
+	prog.Set(eo.opt.GetRound(), eo.opt.GetMaxRounds());
+	
+	draw.Refresh();
 }
 
+
+void EventOptimizationDrawer::Paint(Draw& d) {
+	EventOptimization& eo = GetEventOptimization();
+	Size sz(GetSize());
+	sz.cx /= 2;
+	
+	ImageDraw id_a(sz);
+	ImageDraw id_b(sz);
+	
+	id_a.DrawRect(sz, White());
+	id_b.DrawRect(sz, White());
+	
+	DrawVectorPolyline(id_a, sz, eo.training_pts, cache, eo.opt.GetRound());
+	DrawVectorPolyline(id_b, sz, eo.last_round, cache);
+	
+	d.DrawImage(0, 0, id_a);
+	d.DrawImage(sz.cx, 0, id_b);
+}
 
 }

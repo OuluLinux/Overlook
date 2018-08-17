@@ -92,7 +92,7 @@ void EventOptimization::Process() {
 		#ifdef flagDEBUG
 		opt.SetMaxGenerations(5);
 		#else
-		opt.SetMaxGenerations(50);
+		opt.SetMaxGenerations(10);
 		#endif
 		opt.Init(total, 33);
 		

@@ -24,7 +24,7 @@ protected:
 	friend class EventOptimization;
 	
 	
-	enum {OPEN, /*HU4, HU8, HU16, MA3, MA9, MA27,*/ BB5, BB10, BB20, BB40, /*PSAR, PC, TB4, TB8, TB16, PEEKC5,*/ /*PEEKC15, PEEKC30,*/ NEWSNOW, SRC_COUNT};
+	enum {OPEN, BB5, BB10, BB15, BB20, BB30, BB40, BB50, BB60, NEWSNOW, SRC_COUNT};
 	
 	// Persistent
 	Vector<Vector<Vector<StatSlot> > > stats;
@@ -37,7 +37,7 @@ protected:
 	Vector<Vector<Vector<ConstBuffer*> > > bufs;
 	Vector<Vector<ConstLabelSignal*> > lbls;
 	Vector<DataBridge*> db, db_m1;
-	Index<int> sym_ids, tf_ids, fac_ids;
+	Index<int> sym_ids, tf_ids;
 	int prev_bars = 0;
 	int last_alarm1_bars = 0;
 	bool running = false, stopped = true;
@@ -51,6 +51,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	void UpdateEvents(int sym);
+	void RefreshData();
 	
 	String GetDescription(int i);
 	int GetSignal(int sym, int i, int src);

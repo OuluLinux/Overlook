@@ -23,30 +23,17 @@ void EventStatistics::Init() {
 	int width = sys.GetVtfWeekbars();
 	
 	indi_ids.Add().Set(sys.Find<DataBridge>());
-	/*indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(4);
-	indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(8);
-	indi_ids.Add().Set(sys.Find<SimpleHurstWindow>()).AddArg(16);
-	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(3).AddArg(0).AddArg(1);
-	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(9).AddArg(0).AddArg(1);
-	indi_ids.Add().Set(sys.Find<MovingAverage>()).AddArg(27).AddArg(0).AddArg(1);*/
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(5).AddArg(0).AddArg(5);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(10).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(15).AddArg(0).AddArg(15);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(20);
-	/*indi_ids.Add().Set(sys.Find<ParabolicSAR>());
-	indi_ids.Add().Set(sys.Find<PeriodicalChange>());
-	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(4);
-	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(8);
-	indi_ids.Add().Set(sys.Find<TickBalanceOscillator>()).AddArg(16);
-	indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(5);*/
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(10);
 	indi_ids.Add().Set(sys.Find<NewsNow>()).AddArg(1);
-	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(15);
-	//indi_ids.Add().Set(sys.Find<PeekChange>()).AddArg(30);
 	ASSERT(indi_ids.GetCount() == SRC_COUNT);
 
-	for(int i = 0; i < indi_ids.GetCount(); i++)
-		fac_ids.Add(indi_ids[i].factory);
-	
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		symbols.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
 	//symbols.Add("NewsNet");
@@ -70,12 +57,9 @@ void EventStatistics::Init() {
 	db.SetCount(sym_ids.GetCount(), NULL);
 	db_m1.SetCount(sym_ids.GetCount(), NULL);
 	for(int i = 0; i < bufs.GetCount(); i++) {
-		bufs[i].SetCount(fac_ids.GetCount());
-		lbls[i].SetCount(fac_ids.GetCount(), NULL);
+		bufs[i].SetCount(indi_ids.GetCount());
+		lbls[i].SetCount(indi_ids.GetCount(), NULL);
 	}
-	
-	Vector<int> facis;
-	facis.SetCount(sym_ids.GetCount(), 0);
 	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
 		CoreItem& ci = *work_queue[i];
@@ -83,7 +67,20 @@ void EventStatistics::Init() {
 		
 		Core& c = *ci.core;
 		
-		//int faci = fac_ids.Find(c.GetFactory());
+		int faci = -1;
+		for(int i = 0; i < indi_ids.GetCount(); i++) {
+			const FactoryDeclaration& fd = indi_ids[i];
+			if (fd.factory == c.GetFactory()) {
+				bool match = true;
+				for(int j = 0; j < fd.arg_count && match; j++)
+					if (fd.args[j] != ci.args[j])
+						match = false;
+				if (match) {
+					faci = i;
+					break;
+				}
+			}
+		}
 		int symi = sym_ids.Find(c.GetSymbol());
 		int tfi = tf_ids.Find(c.GetTf());
 		
@@ -92,7 +89,6 @@ void EventStatistics::Init() {
 			db_m1[symi] = dynamic_cast<DataBridge*>(&c);
 		if (tfi == -1) continue;
 		
-		int& faci = facis[symi];
 		auto& v = bufs[symi][faci];
 		v.SetCount(c.GetBufferCount());
 		for(int j = 0; j < c.GetBufferCount(); j++) {
@@ -105,14 +101,10 @@ void EventStatistics::Init() {
 		else if (c.GetLabelCount() && c.GetLabelBufferCount(0)) {
 			lbls[symi][faci] = &c.GetLabelBuffer(0, 0);
 		}
-		
-		faci++;
 	}
-	ASSERT(facis[0] == fac_ids.GetCount());
 	ASSERT(db_m1[0]);
 	
-	for(int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
+	RefreshData();
 	
 	for(int i = 0; i < sym_ids.GetCount(); i++)
 		UpdateEvents(i);
@@ -123,11 +115,16 @@ void EventStatistics::Init() {
 	prev_bars = bufs[0][OPEN][0]->GetCount();
 }
 
+void EventStatistics::RefreshData() {
+	System& sys = GetSystem();
+	for(int i = 0; i < work_queue.GetCount(); i++)
+		sys.Process(*work_queue[i], true);
+}
+
 void EventStatistics::Start() {
 	System& sys = GetSystem();
 	
-	for(int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
+	RefreshData();
 	
 	// Play alarm when vtf has new bars
 	int bars = bufs[0][OPEN][0]->GetCount();
@@ -207,24 +204,14 @@ void EventStatistics::UpdateEvents(int sym) {
 String EventStatistics::GetDescription(int i) {
 	switch (i) {
 		case OPEN:		return "Prev change dir";
-		/*case HU4:		return "Hurst 4";
-		case HU8:		return "Hurst 8";
-		case HU16:		return "Hurst 16";
-		case MA3:		return "Moving average 3";
-		case MA9:		return "Moving average 9";
-		case MA27:		return "Moving average27";*/
 		case BB5:		return "Bollinger bands 5";
 		case BB10:		return "Bollinger bands 10";
+		case BB15:		return "Bollinger bands 15";
 		case BB20:		return "Bollinger bands 20";
+		case BB30:		return "Bollinger bands 30";
 		case BB40:		return "Bollinger bands 40";
-		/*case PSAR:		return "Parabolic SAR";
-		case PC:		return "Periodical Change";
-		case TB4:		return "Tick Balance 4";
-		case TB8:		return "Tick Balance 8";
-		case TB16:		return "Tick Balance 16";
-		case PEEKC5:	return "Peek change 5";*/
-		/*case PEEKC15:	return "Peek change 15";
-		case PEEKC30:	return "Peek change 30";*/
+		case BB50:		return "Bollinger bands 50";
+		case BB60:		return "Bollinger bands 60";
 		case NEWSNOW:	return "News Now";
 	}
 	return "Unknown";
@@ -241,6 +228,7 @@ int EventStatistics::GetSignal(int sym, int i, int src) {
 		ConstLabelSignal& lbl = *lbls[sym][src];
 		bool signal = lbl.signal.Get(i);
 		bool enabled = lbl.enabled.Get(i);
+		LOG("GetSignal " << i << " sig " << (int)signal << " enabled " << (int)enabled << " " << (int)&lbl);
 		return enabled ? (signal ? -1 : +1) : 0;
 	}
 }
@@ -298,8 +286,6 @@ EventStatisticsCtrl::EventStatisticsCtrl() {
 	System& sys = GetSystem();
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		symlist.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
-	//symlist.Add("NewsNet");
-	//symlist.Add("AfterNewsNet");
 	symlist.SetIndex(0);
 	symlist <<= THISBACK(Data);
 	
@@ -343,16 +329,22 @@ void EventStatisticsCtrl::Data() {
 		
 		stats.Clear();
 		for(int j = 0; j < height; j++) {
-			double mean = es.stats[sym][j][i].av.GetMean();
-			stats.Add(j, +mean);
-			stats.Add(-j-1, -mean);
+			OnlineVariance& av = es.stats[sym][j][i].av;
+			double mean = av.GetMean();
+			double cdf = av.GetCDF(0, 0);
+			if (cdf < 0.5) cdf = 1.0 - cdf;
+			int grade = (1.0 - cdf) / 0.05;
+			if (grade < EventOptimization::grade_count) {
+				stats.Add(j, +mean);
+				stats.Add(-j-1, -mean);
+			}
 		}
 		SortByValue(stats, StdGreater<double>());
 		
 		int col = 0;
 		list.Set(i, col++, t);
 		
-		for(int j = 0; j < 3; j++) {
+		for(int j = 0; j < 3 && j < stats.GetCount(); j++) {
 			int k = stats.GetKey(j);
 			int l = k >= 0 ? k : -k-1;
 			String desc = es.GetDescription(l);

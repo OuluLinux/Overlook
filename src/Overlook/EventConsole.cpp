@@ -25,6 +25,7 @@ void EventConsole::Start() {
 	
 	int slot_id = es.GetLatestSlotId();
 	if (snaps.IsEmpty() || snaps.Top().slot_id != slot_id) {
+		es.RefreshData();
 		ConstBuffer& time_buf = es.db[0]->GetBuffer(4);
 		if (time_buf.IsEmpty()) return;
 		
@@ -59,6 +60,8 @@ void EventConsole::Start() {
 					s.mean = mean;
 					s.cdf = cdf;
 					s.inverse = inverse;
+					String desc = es.GetDescription(j);
+					LOG(desc);
 					s.signal = es.GetSignal(i, last_pos, j);
 					s.count = count;
 					s.grade = grade;

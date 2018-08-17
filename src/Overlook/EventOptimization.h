@@ -32,7 +32,7 @@ public:
 	EventOptimization();
 	~EventOptimization();
 	
-	static const int grade_count = 4;
+	static const int grade_count = 6;
 	
 	virtual void Init();
 	virtual void Start();

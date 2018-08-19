@@ -846,7 +846,6 @@ void BollingerBands::Start() {
 	ConstBuffer& open = GetInputBuffer(0, 0);
 	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
-	LOG("BB " << GetSymbol() << " " << GetTf() << " " << (int)&sig << " " << bands_period << " " << bands_deviation);
 	
 	for ( int i = pos; i < bars; i++) {
 		SetSafetyLimit(i);
@@ -864,7 +863,6 @@ void BollingerBands::Start() {
 		bool enabled = o <= bl || o >= tl;
 		sig.signal.Set(i, signal);
 		sig.enabled.Set(i, enabled);
-		LOG("BB " << i << " sig " << (int)signal << " enabled " << (int)enabled << " " << (int)&sig);
 	}
 }
 

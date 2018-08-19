@@ -29,8 +29,8 @@ void EventStatistics::Init() {
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<NewsNow>()).AddArg(1);
 	ASSERT(indi_ids.GetCount() == SRC_COUNT);
 
@@ -178,7 +178,7 @@ void EventStatistics::UpdateEvents(int sym) {
 				o0 = open_buf.Get(j+ 1);
 				diff = o0 - o1;
 				if (signal) diff *= -1;
-				stat.AddResult(diff);
+				stat.AddResult(diff, o0 / o1 - 1.0);
 			}
 		} else {
 			for(int j = 0; j < lbl.signal.GetCount() - 1; j++) {
@@ -192,7 +192,7 @@ void EventStatistics::UpdateEvents(int sym) {
 					double o1 = open_buf.Get(j);
 					double diff = o0 - o1;
 					if (signal) diff *= -1;
-					stat.AddResult(diff);
+					stat.AddResult(diff, o0 / o1 - 1.0);
 				}
 			}
 		}
@@ -228,7 +228,6 @@ int EventStatistics::GetSignal(int sym, int i, int src) {
 		ConstLabelSignal& lbl = *lbls[sym][src];
 		bool signal = lbl.signal.Get(i);
 		bool enabled = lbl.enabled.Get(i);
-		LOG("GetSignal " << i << " sig " << (int)signal << " enabled " << (int)enabled << " " << (int)&lbl);
 		return enabled ? (signal ? -1 : +1) : 0;
 	}
 }
@@ -335,8 +334,10 @@ void EventStatisticsCtrl::Data() {
 			if (cdf < 0.5) cdf = 1.0 - cdf;
 			int grade = (1.0 - cdf) / 0.05;
 			if (grade < EventOptimization::grade_count) {
-				stats.Add(j, +mean);
-				stats.Add(-j-1, -mean);
+				if (mean > 0)
+					stats.Add(j, +mean);
+				else
+					stats.Add(-j-1, -mean);
 			}
 		}
 		SortByValue(stats, StdGreater<double>());

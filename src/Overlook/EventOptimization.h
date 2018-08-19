@@ -23,6 +23,7 @@ protected:
 	Vector<Ptr<CoreItem> > work_queue;
 	Vector<DataBridge*> db;
 	Index<int> sym_ids, tf_ids, fac_ids;
+	Vector<double> point;
 	ThreadSignal sig;
 	SimBroker sb;
 	
@@ -32,7 +33,7 @@ public:
 	EventOptimization();
 	~EventOptimization();
 	
-	static const int grade_count = 6;
+	static const int grade_count = 5;
 	
 	virtual void Init();
 	virtual void Start();

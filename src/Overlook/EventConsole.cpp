@@ -25,7 +25,6 @@ void EventConsole::Start() {
 	
 	int slot_id = es.GetLatestSlotId();
 	if (snaps.IsEmpty() || snaps.Top().slot_id != slot_id) {
-		es.RefreshData();
 		ConstBuffer& time_buf = es.db[0]->GetBuffer(4);
 		if (time_buf.IsEmpty()) return;
 		
@@ -49,11 +48,13 @@ void EventConsole::Start() {
 				double mean = ss.av.GetMean();
 				bool inverse = mean < 0.0;
 				if (inverse) mean = -mean;
-				double cdf = ss.av.GetCDF(0.0, !inverse);
 				int count = ss.av.GetEventCount();
+				double cdf = ss.av.GetCDF(0.0, !inverse);
 				int grade = (1.0 - cdf) / 0.05;
+				double abs_cdf = ss.abs_av.GetCDF(0.0003, true);
+				int abs_grade = (1.0 - abs_cdf) / 0.05;
 				//LOG(i << " " << j << " " << cdf << " " << mean);
-				if (grade < EventOptimization::grade_count) {
+				if (grade < EventOptimization::grade_count && abs_grade < EventOptimization::grade_count) {
 					EventSnap::Stat& s = snap.stats.Add();
 					s.net = i;
 					s.src = j;

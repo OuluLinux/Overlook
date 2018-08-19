@@ -30,6 +30,8 @@ void EventOptimization::Init() {
 	
 	tf_ids.Add(VTF);
 	
+	point.SetCount(sym_ids.GetCount(), 0.0001);
+	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	db.SetCount(sym_ids.GetCount(), NULL);
 	
@@ -48,6 +50,7 @@ void EventOptimization::Init() {
 		
 		if (c.GetFactory() == 0) {
 			db[symi] = &dynamic_cast<DataBridge&>(c);
+			point[symi] = db[symi]->GetPoint();
 		}
 		
 		
@@ -120,7 +123,7 @@ void EventOptimization::Process() {
 	
 	
 	struct Temp : Moveable<Temp> {
-		int net, src, sig, grade;
+		int net, src, sig, grade, abs_grade;
 		double cdf, mean;
 		
 		bool operator() (const Temp& a, const Temp& b) const {return a.grade < b.grade;}
@@ -147,6 +150,7 @@ void EventOptimization::Process() {
 			// get all active signals to a temporary list
 			// and pick random item, which gives net and source ids
 			temp.mean = 0;
+			temp.cdf = 0;
 			for(int i = 0; i < sys.GetNetCount(); i++) {
 				for(int j = 0; j < EventStatistics::SRC_COUNT; j++) {
 					int sig = es.GetSignal(i, cursor, j);
@@ -161,12 +165,16 @@ void EventOptimization::Process() {
 					}
 					double cdf = ss.av.GetCDF(0.0, !inverse);
 					int grade = (1.0 - cdf) / 0.05;
+					double abs_cdf = ss.abs_av.GetCDF(0.0003, true);
+					int abs_grade = (1.0 - abs_cdf) / 0.05;
 					
-					if (grade < grade_count && mean > temp.mean) {
+					if (grade < grade_count && abs_grade < grade_count && mean > temp.mean) {
+					//if (grade < grade_count && (cdf > temp.cdf || (cdf == temp.cdf && mean > temp.mean))) {
 						temp.net = i;
 						temp.src = j;
 						temp.sig = sig;
 						temp.grade = grade;
+						temp.abs_grade = abs_grade;
 						temp.cdf = cdf;
 						temp.mean = mean;
 					}
@@ -189,7 +197,7 @@ void EventOptimization::Process() {
 				
 				for(int i = 0; i < ns.symbols.GetCount(); i++) {
 					int sym = ns.symbol_ids.GetKey(i);
-					int sig = ns.symbol_ids[i] * temp.sig * main_switch;
+					int sig = ns.symbol_ids[i] * temp.sig * (int)main_switch;
 					sb.SetSignal(sym, sig);
 				}
 				
@@ -206,9 +214,10 @@ void EventOptimization::Process() {
 			// Set prices
 			for(int i = 0; i < db.GetCount(); i++) {
 				int sym = sym_ids[i];
+				double point = this->point[i];
 				ConstBuffer& open_buf = db[i]->GetBuffer(0);
 				double price = open_buf.Get(cursor);
-				sb.SetPrice(sym, price);
+				sb.SetPrice(sym, price, price - point * 3);
 			}
 			
 			sb.RefreshOrders();

@@ -9,10 +9,10 @@ class StatSlot : Moveable<StatSlot> {
 	
 public:
 	
-	void AddResult(double d) {av.Add(d);}
+	void AddResult(double d, double d2) {av.Add(d); abs_av.Add(fabs(d2));}
 	
 	
-	OnlineVariance av;
+	OnlineVariance av, abs_av;
 };
 
 class EventStatistics : public Common {

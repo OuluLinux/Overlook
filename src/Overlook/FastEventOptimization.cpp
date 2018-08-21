@@ -2,22 +2,22 @@
 
 namespace Overlook {
 
-EventOptimization::EventOptimization() {
+FastEventOptimization::FastEventOptimization() {
 	LoadThis();
 }
 
-EventOptimization::~EventOptimization() {
+FastEventOptimization::~FastEventOptimization() {
 	sig.Stop();
 }
 
-void EventOptimization::Init() {
+void FastEventOptimization::Init() {
 	
 	System& sys = GetSystem();
 	
 	int sym_count = sys.GetNormalSymbolCount();
 	int cur_count = sys.GetCurrencyCount();
 	int net_count = sys.GetNetCount();
-	int width = sys.GetVtfWeekbars();
+	int width = FAST_WIDTH;
 	
 	indi_ids.Add().Set(sys.Find<DataBridge>());
 
@@ -28,7 +28,7 @@ void EventOptimization::Init() {
 	for(int i = 0; i < ns.symbol_ids.GetCount(); i++)
 		sym_ids.Add(ns.symbol_ids.GetKey(i));
 	
-	tf_ids.Add(VTF);
+	tf_ids.Add(FAST_TF);
 	
 	point.SetCount(sym_ids.GetCount(), 0.0001);
 	
@@ -64,15 +64,15 @@ void EventOptimization::Init() {
 	}
 }
 
-void EventOptimization::Start() {
+void FastEventOptimization::Start() {
 	
 }
 
-void EventOptimization::Process() {
+void FastEventOptimization::Process() {
 	System& sys = GetSystem();
-	EventStatistics& es = GetEventStatistics();
+	FastEventStatistics& es = GetFastEventStatistics();
 	
-	int weekbars = sys.GetVtfWeekbars();
+	int weekbars = FAST_WIDTH;
 	
 	
 	
@@ -80,13 +80,13 @@ void EventOptimization::Process() {
 	if (opt.GetRound() == 0 || opt.GetRound() >= opt.GetMaxRounds() || once) {
 		once = false;
 		
-		int total = /*sys.GetVtfWeekbars() * */grade_count;
+		int total = /*FAST_WIDTH * */grade_count;
 		opt.Min().SetCount(total);
 		opt.Max().SetCount(total);
 		int row = 0;
-		//for(int i = 0; i < sys.GetVtfWeekbars(); i++) {
+		//for(int i = 0; i < FAST_WIDTH; i++) {
 			for(int j = 0; j < grade_count; j++) {
-				opt.Min()[row] = 0.6;
+				opt.Min()[row] = 0.9;
 				opt.Max()[row] = 1.1;
 				row++;
 			}
@@ -111,6 +111,7 @@ void EventOptimization::Process() {
 	
 	
 	VectorMap<int, ConstBuffer*> open_bufs;
+	ConstBuffer& time_buf = es.GetBuffer(0, 0, 4);
 	int begin = 100, end = INT_MAX;
 	for(int i = 0; i < sys.GetNetCount(); i++) {
 		ConstBuffer& buf = es.GetBuffer(i, 0, 0);
@@ -123,8 +124,9 @@ void EventOptimization::Process() {
 	
 	
 	struct Temp : Moveable<Temp> {
-		int net, src, sig, grade, abs_grade;
+		int net, src, sig, grade, abs_grade, len, neg_count;
 		double cdf, mean;
+		bool inv;
 		
 		bool operator() (const Temp& a, const Temp& b) const {return a.grade < b.grade;}
 	};
@@ -141,46 +143,98 @@ void EventOptimization::Process() {
 		const Vector<double>& trial = opt.GetTrialSolution();
 		
 		sb.Clear();
+		temp.mean = 0;
 		
 		for (int cursor = begin; cursor < end; cursor++) {
-			int wb = cursor % weekbars;
+			Time t = Time(1970,1,1) + time_buf.Get(cursor);
+			int wday = DayOfWeek(t);
+			int wb = wday * 24 + t.hour;
 			
 			
-			// For all EventStatistics nets and sources
+			// For all FastEventStatistics nets and sources
 			// get all active signals to a temporary list
 			// and pick random item, which gives net and source ids
-			temp.mean = 0;
-			temp.cdf = 0;
-			for(int i = 0; i < sys.GetNetCount(); i++) {
-				for(int j = 0; j < EventStatistics::SRC_COUNT; j++) {
-					int sig = es.GetSignal(i, cursor, j);
-					if (!sig) continue;
-					
-					const StatSlot& ss = es.GetSlot(i, j, wb);
-					double mean = ss.av.GetMean();
-					bool inverse = mean < 0.0;
-					if (inverse) {
-						mean = -mean;
-						sig *= -1;
+			bool new_signal = temp.mean == 0;
+			if (new_signal) {
+				temp.cdf = 0;
+				for(int i = 0; i < sys.GetNetCount(); i++) {
+					for(int j = 0; j < FastEventStatistics::SRC_COUNT; j++) {
+						int sig = es.GetOpenSignal(i, cursor, j);
+						if (!sig) continue;
+						
+						const FastStatSlot& ss = es.GetSlot(i, j, wb);
+						
+						{
+							double mean = ss.av[0].GetMean();
+							double cdf = ss.av[0].GetCDF(0.0, true);
+							int grade = (1.0 - cdf) / 0.05;
+							double abs_cdf = ss.abs_av[0].GetCDF(0.0003, true);
+							int abs_grade = (1.0 - abs_cdf) / 0.05;
+							
+							int solution_i = /*wb * grade_count +*/ grade;
+							double fmlevel = grade < grade_count ? trial[solution_i] : 1.0;
+							
+							if (grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
+								temp.net = i;
+								temp.src = j;
+								temp.sig = sig;
+								temp.grade = grade;
+								temp.abs_grade = abs_grade;
+								temp.cdf = cdf;
+								temp.mean = mean;
+								temp.len = 0;
+								temp.neg_count = 0;
+								temp.inv = 0;
+							}
+						}
+						
+						{
+							double mean = ss.inv_av[0].GetMean();
+							double cdf = ss.inv_av[0].GetCDF(0.0, true);
+							int grade = (1.0 - cdf) / 0.05;
+							double abs_cdf = ss.inv_abs_av[0].GetCDF(0.0003, true);
+							int abs_grade = (1.0 - abs_cdf) / 0.05;
+							
+							int solution_i = /*wb * grade_count +*/ grade;
+							double fmlevel = grade < grade_count ? trial[solution_i] : 1.0;
+							
+							if (grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
+								temp.net = i;
+								temp.src = j;
+								temp.sig = sig * -1;
+								temp.grade = grade;
+								temp.abs_grade = abs_grade;
+								temp.cdf = cdf;
+								temp.mean = mean;
+								temp.len = 0;
+								temp.neg_count = 0;
+								temp.inv = 1;
+							}
+						}
 					}
-					double cdf = ss.av.GetCDF(0.0, !inverse);
-					int grade = (1.0 - cdf) / 0.05;
-					double abs_cdf = ss.abs_av.GetCDF(0.0003, true);
-					int abs_grade = (1.0 - abs_cdf) / 0.05;
-					
-					int solution_i = /*wb * grade_count +*/ grade;
-					double fmlevel = grade < grade_count ? trial[solution_i] : 1.0;
-					
-					if (grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
-					//if (grade < grade_count && (cdf > temp.cdf || (cdf == temp.cdf && mean > temp.mean))) {
-						temp.net = i;
-						temp.src = j;
-						temp.sig = sig;
-						temp.grade = grade;
-						temp.abs_grade = abs_grade;
-						temp.cdf = cdf;
-						temp.mean = mean;
+				}
+			}
+			else if (temp.len >= MAX_FAST_LEN) {
+				temp.mean = 0;
+			}
+			else {
+				ConstBuffer& open_buf = *open_bufs[temp.net];
+				const FastStatSlot& ss = es.GetSlot(temp.net, temp.src, wb);
+				
+				double o0 = open_buf.Get(cursor);
+				double o1 = open_buf.Get(cursor-1);
+				double diff = o0 - o1;
+				if (temp.sig < 0) diff *= -1;
+				if (diff < 0) {
+					double mean;
+					if (!temp.inv)
+						mean = ss.av[temp.neg_count+1].GetMean();
+					else
+						mean = ss.inv_av[temp.neg_count+1].GetMean();
+					if (mean < temp.mean) {
+						temp.mean = 0; // reset
 					}
+					temp.neg_count++;
 				}
 			}
 			
@@ -196,20 +250,23 @@ void EventOptimization::Process() {
 				sb.SetFreeMarginScale(ns.symbols.GetCount());
 				bool main_switch = fmlevel < 1.0;
 				
-				// Set signal using net and source ids. Don't freeze signal.
-				
+				// Set signal using net and source ids.
 				for(int i = 0; i < ns.symbols.GetCount(); i++) {
 					int sym = ns.symbol_ids.GetKey(i);
 					int sig = ns.symbol_ids[i] * temp.sig * (int)main_switch;
 					sb.SetSignal(sym, sig);
+					sb.SetSignalFreeze(sym, !new_signal);
 				}
 				
+				
+				temp.len++;
 			} else {
 				const System::NetSetting& ns = sys.GetNet(0);
 				
 				for(int i = 0; i < ns.symbols.GetCount(); i++) {
 					int sym = ns.symbol_ids.GetKey(i);
 					sb.SetSignal(sym, 0);
+					sb.SetSignalFreeze(sym, false);
 				}
 			}
 			
@@ -255,7 +312,7 @@ void EventOptimization::Process() {
 
 
 
-EventOptimizationCtrl::EventOptimizationCtrl() {
+FastEventOptimizationCtrl::FastEventOptimizationCtrl() {
 	Add(draw.HSizePos().VSizePos(0, 10));
 	Add(prog.BottomPos(0, 10).HSizePos());
 	
@@ -264,8 +321,8 @@ EventOptimizationCtrl::EventOptimizationCtrl() {
 	
 }
 
-void EventOptimizationCtrl::Data() {
-	EventOptimization& eo = GetEventOptimization();
+void FastEventOptimizationCtrl::Data() {
+	FastEventOptimization& eo = GetFastEventOptimization();
 	
 	prog.Set(eo.opt.GetRound(), eo.opt.GetMaxRounds());
 	
@@ -273,8 +330,8 @@ void EventOptimizationCtrl::Data() {
 }
 
 
-void EventOptimizationDrawer::Paint(Draw& d) {
-	EventOptimization& eo = GetEventOptimization();
+void FastEventOptimizationDrawer::Paint(Draw& d) {
+	FastEventOptimization& eo = GetFastEventOptimization();
 	Size sz(GetSize());
 	sz.cx /= 2;
 	

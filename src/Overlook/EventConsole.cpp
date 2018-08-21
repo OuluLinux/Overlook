@@ -55,18 +55,19 @@ void EventConsole::Start() {
 				int abs_grade = (1.0 - abs_cdf) / 0.05;
 				//LOG(i << " " << j << " " << cdf << " " << mean);
 				if (grade < EventOptimization::grade_count && abs_grade < EventOptimization::grade_count) {
-					EventSnap::Stat& s = snap.stats.Add();
-					s.net = i;
-					s.src = j;
-					s.mean = mean;
-					s.cdf = cdf;
-					s.inverse = inverse;
-					String desc = es.GetDescription(j);
-					LOG(desc);
-					s.signal = es.GetSignal(i, last_pos, j);
-					s.count = count;
-					s.grade = grade;
-					if (inverse) s.signal *= -1;
+					double fmlevel = eo.opt.GetBestSolution()[grade];
+					if (fmlevel < 1.0) {
+						EventSnap::Stat& s = snap.stats.Add();
+						s.net = i;
+						s.src = j;
+						s.mean = mean;
+						s.cdf = cdf;
+						s.inverse = inverse;
+						s.signal = es.GetSignal(i, last_pos, j);
+						s.count = count;
+						s.grade = grade;
+						if (inverse) s.signal *= -1;
+					}
 				}
 			}
 		}

@@ -132,9 +132,15 @@ void Overlook::DockInit() {
 	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(sentctrl, "Sentiment").SizeHint(Size(300, 200)));
+	#if FAST_ENABLED
+	Tabify(last, Dockable(fconctrl, "Fast Event Console").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(foptctrl, "Fast Event Optimization").SizeHint(Size(300, 200)));
+	Tabify(last, Dockable(fesctrl, "Fast Event Statistics").SizeHint(Size(300, 200)));
+	#else
 	Tabify(last, Dockable(conctrl, "Event Console").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(optctrl, "Event Optimization").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(esctrl, "Event Statistics").SizeHint(Size(300, 200)));
+	#endif
 	//Tabify(last, Dockable(arb, "Arbitrage").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(cal, "Calendar").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
@@ -552,8 +558,11 @@ void Overlook::Data() {
 	if (sentctrl.IsVisible())		sentctrl.Data();
 	if (cal.IsVisible())			cal.Data();
 	if (esctrl.IsVisible())			esctrl.Data();
+	if (fesctrl.IsVisible())		fesctrl.Data();
 	if (conctrl.IsVisible())		conctrl.Data();
+	if (fconctrl.IsVisible())		fconctrl.Data();
 	if (optctrl.IsVisible())		optctrl.Data();
+	if (foptctrl.IsVisible())		foptctrl.Data();
 }
 
 void Overlook::RefreshAssist() {

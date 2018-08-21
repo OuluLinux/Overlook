@@ -45,6 +45,9 @@ using namespace Upp;
 #include "EventStatistics.h"
 #include "EventOptimization.h"
 #include "EventConsole.h"
+#include "FastEventStatistics.h"
+#include "FastEventOptimization.h"
+#include "FastEventConsole.h"
 #include "Sentiment.h"
 
 
@@ -100,8 +103,11 @@ protected:
 	CalendarCtrl cal;
 	SentimentCtrl sentctrl;
 	EventStatisticsCtrl esctrl;
+	FastEventStatisticsCtrl fesctrl;
 	EventConsoleCtrl conctrl;
+	FastEventConsoleCtrl fconctrl;
 	EventOptimizationCtrl optctrl;
+	FastEventOptimizationCtrl foptctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;

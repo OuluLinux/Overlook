@@ -124,7 +124,7 @@ void FastEventOptimization::Process() {
 	
 	
 	struct Temp : Moveable<Temp> {
-		int net, src, sig, grade, abs_grade, len, neg_count;
+		int net, src, sig, grade, abs_grade, len, neg_count, neg_count_max;
 		double cdf, mean;
 		bool inv;
 		
@@ -164,11 +164,13 @@ void FastEventOptimization::Process() {
 						
 						const FastStatSlot& ss = es.GetSlot(i, j, wb);
 						
-						{
-							double mean = ss.av[0].GetMean();
-							double cdf = ss.av[0].GetCDF(0.0, true);
+						for (int neg_count = 0; neg_count < NEGCOUNT_MAX; neg_count++) {
+							if (ss.av[neg_count].GetEventCount() == 0)
+								break;
+							double mean = ss.av[neg_count].GetMean();
+							double cdf = ss.av[neg_count].GetCDF(0.0, true);
 							int grade = (1.0 - cdf) / 0.05;
-							double abs_cdf = ss.abs_av[0].GetCDF(0.0003, true);
+							double abs_cdf = ss.abs_av[neg_count].GetCDF(0.0003, true);
 							int abs_grade = (1.0 - abs_cdf) / 0.05;
 							
 							int solution_i = /*wb * grade_count +*/ grade;
@@ -184,15 +186,19 @@ void FastEventOptimization::Process() {
 								temp.mean = mean;
 								temp.len = 0;
 								temp.neg_count = 0;
+								temp.neg_count_max = neg_count;
 								temp.inv = 0;
+								break;
 							}
 						}
 						
-						{
-							double mean = ss.inv_av[0].GetMean();
-							double cdf = ss.inv_av[0].GetCDF(0.0, true);
+						for (int neg_count = 0; neg_count < NEGCOUNT_MAX; neg_count++) {
+							if (ss.inv_av[neg_count].GetEventCount() == 0)
+								break;
+							double mean = ss.inv_av[neg_count].GetMean();
+							double cdf = ss.inv_av[neg_count].GetCDF(0.0, true);
 							int grade = (1.0 - cdf) / 0.05;
-							double abs_cdf = ss.inv_abs_av[0].GetCDF(0.0003, true);
+							double abs_cdf = ss.inv_abs_av[neg_count].GetCDF(0.0003, true);
 							int abs_grade = (1.0 - abs_cdf) / 0.05;
 							
 							int solution_i = /*wb * grade_count +*/ grade;
@@ -208,7 +214,9 @@ void FastEventOptimization::Process() {
 								temp.mean = mean;
 								temp.len = 0;
 								temp.neg_count = 0;
+								temp.neg_count_max = neg_count;
 								temp.inv = 1;
+									break;
 							}
 						}
 					}
@@ -221,6 +229,7 @@ void FastEventOptimization::Process() {
 				ConstBuffer& open_buf = *open_bufs[temp.net];
 				const FastStatSlot& ss = es.GetSlot(temp.net, temp.src, wb);
 				
+				#if NEGCOUNT_ENABLED
 				double o0 = open_buf.Get(cursor);
 				double o1 = open_buf.Get(cursor-1);
 				double diff = o0 - o1;
@@ -235,7 +244,13 @@ void FastEventOptimization::Process() {
 						temp.mean = 0; // reset
 					}
 					temp.neg_count++;
+					/*if (temp.neg_count >= temp.neg_count_max)
+						temp.mean = 0; // reset*/
 				}
+				#else
+				if (temp.len >= temp.neg_count_max)
+					temp.mean = 0; // reset
+				#endif
 			}
 			
 			

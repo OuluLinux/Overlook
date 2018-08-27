@@ -49,7 +49,7 @@ protected:
 	Vector<int> buy_signals, sell_signals;
 	
 	
-	Mutex current_price_lock, order_lock;
+	SpinLock current_price_lock, order_lock;
 	
 	
 public:

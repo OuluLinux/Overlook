@@ -159,6 +159,7 @@ void FastEventStatistics::UpdateEvents(int sym) {
 					double o1 = open_buf.Get(pos1);
 					double diff = o0 - o1;
 					double diff_from_begin = o0 - o;
+					#if NEGCOUNT_ENABLED
 					if (signal) {
 						diff *= -1;
 						diff_from_begin *= -1;
@@ -171,6 +172,10 @@ void FastEventStatistics::UpdateEvents(int sym) {
 						stat.AddInvResult(inv_neg_count, -diff_from_begin, o0 / o - 1.0);
 						inv_neg_count++;
 					}
+					#else
+					stat.AddResult(k, diff_from_begin, o0 / o - 1.0);
+					stat.AddInvResult(k, -diff_from_begin, o0 / o - 1.0);
+					#endif
 				}
 			}
 		}

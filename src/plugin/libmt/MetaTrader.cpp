@@ -284,7 +284,7 @@ int MetaTrader::Init(String addr, int port) {
 		int stop_out_mode = _AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
 		double margin_mode_div = stop_out_mode == ACCOUNT_STOPOUT_MODE_MONEY ? equity : 100.0;
 		free_margin_level = (margin_free + margin) / equity;
-		max_free_margin_level = 0.95;
+		max_free_margin_level = 1.0;
 		min_free_margin_level = margin_call / margin_mode_div;
 		if (free_margin_level > 1.0) free_margin_level = 1.0;
 		

@@ -5,8 +5,8 @@ namespace libmt {
 Brokerage::Brokerage() {
 	cur_begin = -1;
 	is_failed = false;
-	min_free_margin_level = 0.55;
-	max_free_margin_level = 0.95;
+	min_free_margin_level = 0.6;
+	max_free_margin_level = 1.0;
 	free_margin_level = 0.98;
 	margin_call = 0.5;
 	margin_stop = 0.2;
@@ -221,9 +221,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 	ASSERT(leverage > 0);
 	
 	// Get maximum margin sum
-	ASSERT(free_margin_level >= 0.20 && free_margin_level <= 1.0);
-	if (free_margin_level == 1.0)
-		free_margin_level = 0.8;
+	if (free_margin_level > max_free_margin_level) free_margin_level = max_free_margin_level;
+	if (free_margin_level < min_free_margin_level) free_margin_level = min_free_margin_level;
 	
 	
 	// Get long/short signals
@@ -358,11 +357,11 @@ void Brokerage::SignalOrders(bool debug_print) {
 				lots -= o.volume;
 			} else {
 				double reduce = o.volume - lots;
-				for(int j = 0; j < 3; j++) {
+				for(int j = 0; j < 10; j++) {
 					int success = OrderClose(o.ticket, reduce, RealtimeBid(o.symbol), 100);
 					if (success) {
 						const Symbol& sym = symbols[o.symbol];
-						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
 						break;
 					}
 				}
@@ -375,11 +374,11 @@ void Brokerage::SignalOrders(bool debug_print) {
 				lots -= o.volume;
 			} else {
 				double reduce = o.volume - lots;
-				for(int j = 0; j < 3; j++) {
+				for(int j = 0; j < 10; j++) {
 					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
 					if (success) {
 						const Symbol& sym = symbols[o.symbol];
-						WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
 						break;
 					}
 				}
@@ -397,25 +396,31 @@ void Brokerage::SignalOrders(bool debug_print) {
 		double sym_sell_lots = sell_lots[i];
 		const Symbol& sym = symbols[i];
 		if (sym_buy_lots > 0.0) {
-			double price = RealtimeAsk(i);
-			int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * (1 - limit_factor), price * (1 + limit_factor), 0, 0);
-			if (debug_print) {
-				if (r == -1) {
-					WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
-				} else {
-					WhenInfo("OrderSend succeeded with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+			for(int tries = 0; tries < 10; tries++) {
+				double price = RealtimeAsk(i);
+				int r = OrderSend(i, OP_BUY, sym_buy_lots, price, 100, price * (1 - limit_factor), price * (1 + limit_factor), 0, 0);
+				if (debug_print) {
+					if (r == -1) {
+						if (debug_print) WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+					} else {
+						if (debug_print) WhenInfo("OrderSend succeeded with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+					}
 				}
+				if (r >= 0) break;
 			}
 		}
 		if (sym_sell_lots > 0.0) {
-			double price = RealtimeBid(i);
-			int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * (1 + limit_factor), price * (1 - limit_factor), 0, 0);
-			if (debug_print) {
-				if (r == -1) {
-					WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
-				} else {
-					WhenInfo("OrderSend succeeded with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+			for(int tries = 0; tries < 10; tries++) {
+				double price = RealtimeBid(i);
+				int r = OrderSend(i, OP_SELL, sym_sell_lots, price, 100, price * (1 + limit_factor), price * (1 - limit_factor), 0, 0);
+				if (debug_print) {
+					if (r == -1) {
+						if (debug_print) WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+					} else {
+						if (debug_print) WhenInfo("OrderSend succeeded with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+					}
 				}
+				if (r >= 0) break;
 			}
 		}
 	}

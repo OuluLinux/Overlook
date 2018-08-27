@@ -23,7 +23,7 @@ struct FastEventSnap {
 	int prev_check_slot_id = -1, neg_count = 0;
 	bool is_finished = false;
 	
-	void Serialize(Stream& s) {s % time % comment % slot_id % cal % stats;}
+	void Serialize(Stream& s) {s % time % comment % slot_id % cal % stats % prev_check_slot_id % neg_count % is_finished;}
 };
 
 class FastEventConsole : public Common {

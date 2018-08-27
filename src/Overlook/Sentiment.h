@@ -45,6 +45,7 @@ public:
 	int GetSentimentCount() {return sents.GetCount();}
 	SentimentSnapshot& GetSentiment(int sent) {return sents[sent];}
 	SentimentSnapshot& AddSentiment() {return sents.Add();}
+	bool IsTakeProfit() {if (sents.IsEmpty()) return false; return sents.Top().comment == "Auto take-profit";}
 	
 	void Serialize(Stream& s) {s % sents;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("Sentiment.bin"));}
@@ -72,6 +73,7 @@ public:
 class SentimentCtrl : public ParentCtrl {
 	Splitter split;
 	ArrayCtrl historylist, curpreslist, pairpreslist;
+	EditDouble fmlevel;
 	ParentCtrl console;
 	::Upp::DocEdit comment;
 	Button save;

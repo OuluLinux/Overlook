@@ -19,14 +19,18 @@ void FastEventConsole::Start() {
 	
 	FastEventStatistics& es = GetFastEventStatistics();
 	FastEventOptimization& eo = GetFastEventOptimization();
+	Sentiment& sent = GetSentiment();
 	
 	if (!eo.opt.IsEnd())
 		return;
 	
 	int slot_id = es.GetLatestSlotId();
 	
-	if (!snaps.IsEmpty() && snaps.Top().is_finished == false) {
+	if (!snaps.IsEmpty() && snaps.Top().is_finished == false && snaps.Top().comment != "") {
 		FastEventSnap& snap = snaps.Top();
+		
+		if (sent.IsTakeProfit())
+			snap.is_finished = true;
 		
 		int len = slot_id - snap.slot_id;
 		if (len < 0) len += FAST_WIDTH;

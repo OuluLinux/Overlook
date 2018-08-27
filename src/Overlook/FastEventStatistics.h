@@ -4,9 +4,11 @@
 namespace Overlook {
 
 #define FAST_TF 4
-#define MAX_FAST_LEN 12
+#define MAX_FAST_LEN 4
 #define FAST_WIDTH (24*7)
 #define FAST_ENABLED 1
+#define NEGCOUNT_ENABLED 1
+#define NEGCOUNT_MAX 1
 
 class FastStatSlot : Moveable<FastStatSlot> {
 	

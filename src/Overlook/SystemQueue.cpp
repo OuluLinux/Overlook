@@ -711,13 +711,18 @@ bool System::RefreshReal() {
 		//mt.RefreshLimits();
 		int open_count = 0;
 		
+		double prev_fmlevel = mt.GetFreeMarginLevel();
+		mt.SetFreeMarginLevel(fmlevel);
+		double cur_fmlevel = mt.GetFreeMarginLevel();
+		bool keep_fmlevel = prev_fmlevel == cur_fmlevel;
+		
 		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
 			
 			if (day_enough) sig = 0;
 			
-			if (sig == prev_sig && sig != 0)
+			if (sig == prev_sig && sig != 0 && keep_fmlevel)
 				mt.SetSignalFreeze(sym_id, true);
 			else {
 				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
@@ -733,7 +738,6 @@ bool System::RefreshReal() {
 			ReleaseLog("Real symbol " + IntStr(sym_id) + " signal " + IntStr(sig));
 		}
 		
-		mt.SetFreeMarginLevel(fmlevel);
 		mt.SetFreeMarginScale(MAX_SYMOPEN * SIGNALSCALE);
 		mt.SignalOrders(true);
 	}

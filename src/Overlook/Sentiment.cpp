@@ -48,7 +48,7 @@ void Sentiment::SetSignals() {
 	double balance = mt.AccountBalance();
 	double equity = mt.AccountEquity();
 	double profit = equity - balance;
-	if (enable_takeprofit && profit >= balance * 0.1) {
+	if (enable_takeprofit && profit >= balance * 0.3) {
 		sent->pair_pres.SetCount(symbols.GetCount(), 0);
 		sent->cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		sent->comment = "Auto take-profit";
@@ -133,7 +133,8 @@ SentimentCtrl::SentimentCtrl() {
 	Add(split.SizePos());
 	split << historylist << curpreslist << pairpreslist << console;
 	
-	console.Add(comment.HSizePos().VSizePos(0, 30));
+	console.Add(comment.HSizePos().VSizePos(0, 60));
+	console.Add(fmlevel.BottomPos(30, 30).HSizePos());
 	console.Add(save.BottomPos(0, 30).HSizePos());
 	
 	historylist.AddColumn("Time");
@@ -149,6 +150,8 @@ SentimentCtrl::SentimentCtrl() {
 	pairpreslist.AddColumn("Pressure");
 	pairpreslist.ColumnWidths("1 2");
 	pairpreslist <<= THISBACK(SetPairProfile);
+	
+	fmlevel.SetData(0);
 	
 	save.SetLabel("Save");
 	save <<= THISBACK(Save);
@@ -192,7 +195,6 @@ void SentimentCtrl::Data() {
 	int his = historylist.GetCursor();
 	if (count && (his < 0 || his >= count))
 		historylist.SetCursor(historylist.GetCount()-1);
-	
 }
 
 
@@ -215,6 +217,8 @@ void SentimentCtrl::LoadHistory() {
 	}
 	
 	comment.SetData(snap.comment);
+	
+	fmlevel.SetData(snap.fmlevel);
 }
 
 void SentimentCtrl::Save() {
@@ -235,6 +239,7 @@ void SentimentCtrl::Save() {
 	}
 	
 	snap.comment = comment.GetData();
+	snap.fmlevel = fmlevel.GetData();
 	
 	sent.StoreThis();
 	Data();

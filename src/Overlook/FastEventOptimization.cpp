@@ -92,11 +92,7 @@ void FastEventOptimization::Process() {
 			}
 		//}
 		
-		#ifdef flagDEBUG
 		opt.SetMaxGenerations(5);
-		#else
-		opt.SetMaxGenerations(10);
-		#endif
 		opt.Init(total, 33);
 		
 		
@@ -167,6 +163,7 @@ void FastEventOptimization::Process() {
 						for (int neg_count = 0; neg_count < NEGCOUNT_MAX; neg_count++) {
 							if (ss.av[neg_count].GetEventCount() == 0)
 								break;
+							int event_count = ss.av[neg_count].GetEventCount();
 							double mean = ss.av[neg_count].GetMean();
 							double cdf = ss.av[neg_count].GetCDF(0.0, true);
 							int grade = (1.0 - cdf) / 0.05;
@@ -176,7 +173,7 @@ void FastEventOptimization::Process() {
 							int solution_i = /*wb * grade_count +*/ grade;
 							double fmlevel = grade < grade_count ? trial[solution_i] : 1.0;
 							
-							if (grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
+							if (event_count >= 3 && grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
 								temp.net = i;
 								temp.src = j;
 								temp.sig = sig;
@@ -195,6 +192,7 @@ void FastEventOptimization::Process() {
 						for (int neg_count = 0; neg_count < NEGCOUNT_MAX; neg_count++) {
 							if (ss.inv_av[neg_count].GetEventCount() == 0)
 								break;
+							int event_count = ss.inv_av[neg_count].GetEventCount();
 							double mean = ss.inv_av[neg_count].GetMean();
 							double cdf = ss.inv_av[neg_count].GetCDF(0.0, true);
 							int grade = (1.0 - cdf) / 0.05;
@@ -204,7 +202,7 @@ void FastEventOptimization::Process() {
 							int solution_i = /*wb * grade_count +*/ grade;
 							double fmlevel = grade < grade_count ? trial[solution_i] : 1.0;
 							
-							if (grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
+							if (event_count >= 3 && grade < grade_count && abs_grade < grade_count && mean > temp.mean && fmlevel < 1.0) {
 								temp.net = i;
 								temp.src = j;
 								temp.sig = sig * -1;

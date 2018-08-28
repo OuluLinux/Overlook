@@ -92,13 +92,14 @@ void FastEventConsole::Start() {
 				const FastStatSlot& ss = es.GetLatestSlot(i, j);
 				
 				{
+					int event_count = ss.av[0].GetEventCount();
 					double mean = ss.av[0].GetMean();
 					int count = ss.av[0].GetEventCount();
 					double cdf = ss.av[0].GetCDF(0.0, true);
 					int grade = (1.0 - cdf) / 0.05;
 					double abs_cdf = ss.abs_av[0].GetCDF(0.0003, true);
 					int abs_grade = (1.0 - abs_cdf) / 0.05;
-					if (grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
+					if (event_count >= 3 && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						double fmlevel = eo.opt.GetBestSolution()[grade];
 						int sig = es.GetOpenSignal(i, last_pos, j);
 						if (fmlevel < 1.0 && sig) {
@@ -116,13 +117,14 @@ void FastEventConsole::Start() {
 				}
 				
 				{
+					int event_count = ss.inv_av[0].GetEventCount();
 					double mean = ss.inv_av[0].GetMean();
 					int count = ss.inv_av[0].GetEventCount();
 					double cdf = ss.inv_av[0].GetCDF(0.0, true);
 					int grade = (1.0 - cdf) / 0.05;
 					double abs_cdf = ss.inv_abs_av[0].GetCDF(0.0003, true);
 					int abs_grade = (1.0 - abs_cdf) / 0.05;
-					if (grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
+					if (event_count >= 3 && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						double fmlevel = eo.opt.GetBestSolution()[grade];
 						int sig = es.GetOpenSignal(i, last_pos, j);
 						if (fmlevel < 1.0 && sig) {

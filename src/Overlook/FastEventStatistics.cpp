@@ -26,11 +26,30 @@ void FastEventStatistics::Init() {
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(5).AddArg(0).AddArg(5);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(10).AddArg(0).AddArg(10);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(15).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(10);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(15);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(15);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(20);
 	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(20);
+	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(20);
 	ASSERT(indi_ids.GetCount() == SRC_COUNT);
 
 	for(int i = 0; i < sys.GetNetCount(); i++)
@@ -190,11 +209,30 @@ String FastEventStatistics::GetDescription(int i) {
 		case BB5:		return "Bollinger bands 5";
 		case BB10:		return "Bollinger bands 10";
 		case BB15:		return "Bollinger bands 15";
-		case BB20:		return "Bollinger bands 20";
-		case BB30:		return "Bollinger bands 30";
-		case BB40:		return "Bollinger bands 40";
-		case BB50:		return "Bollinger bands 50";
-		case BB60:		return "Bollinger bands 60";
+		case BB2010:		return "Bollinger bands 20/10";
+		case BB3010:		return "Bollinger bands 30/10";
+		case BB4010:		return "Bollinger bands 40/10";
+		case BB5010:		return "Bollinger bands 50/10";
+		case BB6010:		return "Bollinger bands 60/10";
+		case BB7010:		return "Bollinger bands 70/10";
+		case BB8010:		return "Bollinger bands 80/10";
+		case BB9010:		return "Bollinger bands 90/10";
+		case BB2015:		return "Bollinger bands 20/15";
+		case BB3015:		return "Bollinger bands 30/15";
+		case BB4015:		return "Bollinger bands 40/15";
+		case BB5015:		return "Bollinger bands 50/15";
+		case BB6015:		return "Bollinger bands 60/15";
+		case BB7015:		return "Bollinger bands 70/15";
+		case BB8015:		return "Bollinger bands 80/15";
+		case BB9015:		return "Bollinger bands 90/15";
+		case BB2020:		return "Bollinger bands 20/20";
+		case BB3020:		return "Bollinger bands 30/20";
+		case BB4020:		return "Bollinger bands 40/20";
+		case BB5020:		return "Bollinger bands 50/20";
+		case BB6020:		return "Bollinger bands 60/20";
+		case BB7020:		return "Bollinger bands 70/20";
+		case BB8020:		return "Bollinger bands 80/20";
+		case BB9020:		return "Bollinger bands 90/20";
 	}
 	return "Unknown";
 }

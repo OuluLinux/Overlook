@@ -160,7 +160,9 @@ void FastEventConsole::Start() {
 				snap.comment = Format("Active %d %d %d", s.net, s.src, (int)s.inverse);
 				ss.comment = snap.comment;
 				ss.fmlevel = eo.opt.GetBestSolution()[s.grade];
-				if (ss.fmlevel < FMLIMIT) ss.fmlevel = FMLIMIT;
+				
+				if (ss.fmlevel < FMLIMIT)	ss.fmlevel = FMLIMIT;
+				if (Config::fixed_fmlimit)	ss.fmlevel = FMLIMIT;
 				
 				System::NetSetting& net = sys.GetNet(s.net);
 				

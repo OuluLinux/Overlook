@@ -27,6 +27,7 @@
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 extern Upp::IniBool have_sys_signal;
+extern Upp::IniBool fixed_fmlimit;
 extern Upp::IniString arg_addr;
 extern Upp::IniInt arg_port;
 extern Upp::IniInt start_time;

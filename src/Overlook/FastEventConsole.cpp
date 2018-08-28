@@ -50,12 +50,13 @@ void FastEventConsole::Start() {
 			double diff = o0 - o1;
 			if (s.signal < 0) diff *= -1;
 			if (diff < 0) {
-				double mean;
+				double cdf;
 				if (!s.inverse)
-					mean = ss.av[snap.neg_count+1].GetMean();
+					cdf = ss.av[snap.neg_count+1].GetCDF(0.0, true);
 				else
-					mean = ss.inv_av[snap.neg_count+1].GetMean();
-				if (mean < s.mean) {
+					cdf = ss.inv_av[snap.neg_count+1].GetCDF(0.0, true);
+				int grade = (1.0 - cdf) / 0.05;
+				if (grade >= FastEventOptimization::grade_count) {
 					snap.is_finished = true;
 				}
 				else {

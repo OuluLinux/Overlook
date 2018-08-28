@@ -23,34 +23,14 @@ void FastEventStatistics::Init() {
 	int width = FAST_WIDTH;
 	
 	indi_ids.Add().Set(sys.Find<DataBridge>());
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(5).AddArg(0).AddArg(5);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(10).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(15).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(10);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(15);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(20).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(30).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(40).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(50).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(60).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(70).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(80).AddArg(0).AddArg(20);
-	indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(90).AddArg(0).AddArg(20);
-	ASSERT(indi_ids.GetCount() == SRC_COUNT);
+	indi_lbls.Add("Lbl");
+	for (int period = 10; period <= 100; period += 10) {
+		for (int dev = 5; dev <= 20; dev++) {
+			indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(period).AddArg(0).AddArg(dev);
+			indi_lbls.Add("Bollinger Bands " + IntStr(period) + "/" + IntStr(dev));
+		}
+	}
+	
 
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		symbols.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
@@ -63,13 +43,6 @@ void FastEventStatistics::Init() {
 	
 	sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 	
-	stats.SetCount(sym_ids.GetCount());
-	for(int j = 0; j < stats.GetCount(); j++) {
-		stats[j].SetCount(SRC_COUNT);
-		for(int i = 0; i < stats[j].GetCount(); i++)
-			stats[j][i].SetCount(width);
-	}
-	
 	bufs.SetCount(sym_ids.GetCount());
 	lbls.SetCount(sym_ids.GetCount());
 	db.SetCount(sym_ids.GetCount(), NULL);
@@ -81,7 +54,7 @@ void FastEventStatistics::Init() {
 	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
 		CoreItem& ci = *work_queue[i];
-		sys.Process(ci, true);
+		sys.Process(ci, false, true);
 		
 		Core& c = *ci.core;
 		
@@ -122,21 +95,34 @@ void FastEventStatistics::Init() {
 	}
 	ASSERT(db_m1[0]);
 	
-	RefreshData();
 	
-	for(int i = 0; i < sym_ids.GetCount(); i++)
-		UpdateEvents(i);
+	
+	
+	LoadThis();
+	if (stats.IsEmpty()) {
+		stats.SetCount(sym_ids.GetCount());
+		for(int j = 0; j < stats.GetCount(); j++) {
+			stats[j].SetCount(SRC_COUNT);
+			for(int i = 0; i < stats[j].GetCount(); i++)
+				stats[j][i].SetCount(width);
+		}
+		
+		for(int i = 0; i < sym_ids.GetCount(); i++)
+			UpdateEvents(i);
+		
+		StoreThis();
+	}
 	
 	ReleaseLog("FastEventStatistics work queue init took " + ts.ToString());
 	
 	
-	prev_bars = bufs[0][OPEN][0]->GetCount();
+	prev_bars = bufs[0][0][0]->GetCount();
 }
 
 void FastEventStatistics::RefreshData() {
 	System& sys = GetSystem();
 	for(int i = 0; i < work_queue.GetCount(); i++)
-		sys.Process(*work_queue[i], true);
+		sys.Process(*work_queue[i], false);
 }
 
 void FastEventStatistics::Start() {
@@ -150,8 +136,8 @@ void FastEventStatistics::UpdateEvents(int sym) {
 	int width = FAST_WIDTH;
 	int height = SRC_COUNT;
 	
-	ConstBuffer& open_buf = *bufs[sym][OPEN][0];
-	ConstBuffer& time_buf = *bufs[sym][OPEN][4];
+	ConstBuffer& open_buf = *bufs[sym][0][0];
+	ConstBuffer& time_buf = *bufs[sym][0][4];
 	
 	for(int i = 1; i < SRC_COUNT; i++) {
 		ConstLabelSignal& lbl = *lbls[sym][i];
@@ -204,37 +190,9 @@ void FastEventStatistics::UpdateEvents(int sym) {
 }
 
 String FastEventStatistics::GetDescription(int i) {
-	switch (i) {
-		case OPEN:		return "Prev change dir";
-		case BB5:		return "Bollinger bands 5";
-		case BB10:		return "Bollinger bands 10";
-		case BB15:		return "Bollinger bands 15";
-		case BB2010:		return "Bollinger bands 20/10";
-		case BB3010:		return "Bollinger bands 30/10";
-		case BB4010:		return "Bollinger bands 40/10";
-		case BB5010:		return "Bollinger bands 50/10";
-		case BB6010:		return "Bollinger bands 60/10";
-		case BB7010:		return "Bollinger bands 70/10";
-		case BB8010:		return "Bollinger bands 80/10";
-		case BB9010:		return "Bollinger bands 90/10";
-		case BB2015:		return "Bollinger bands 20/15";
-		case BB3015:		return "Bollinger bands 30/15";
-		case BB4015:		return "Bollinger bands 40/15";
-		case BB5015:		return "Bollinger bands 50/15";
-		case BB6015:		return "Bollinger bands 60/15";
-		case BB7015:		return "Bollinger bands 70/15";
-		case BB8015:		return "Bollinger bands 80/15";
-		case BB9015:		return "Bollinger bands 90/15";
-		case BB2020:		return "Bollinger bands 20/20";
-		case BB3020:		return "Bollinger bands 30/20";
-		case BB4020:		return "Bollinger bands 40/20";
-		case BB5020:		return "Bollinger bands 50/20";
-		case BB6020:		return "Bollinger bands 60/20";
-		case BB7020:		return "Bollinger bands 70/20";
-		case BB8020:		return "Bollinger bands 80/20";
-		case BB9020:		return "Bollinger bands 90/20";
-	}
-	return "Unknown";
+	if (i < 0 || i >= indi_lbls.GetCount())
+		return "Unknown";
+	return indi_lbls[i];
 }
 
 int FastEventStatistics::GetSignal(int sym, int i, int src) {
@@ -264,7 +222,7 @@ int FastEventStatistics::GetOpenSignal(int sym, int i, int src) {
 
 int FastEventStatistics::GetLatestSlotId() {
 	System& sys = GetSystem();
-	ConstBuffer& time_buf = *bufs[0][OPEN][4];
+	ConstBuffer& time_buf = *bufs[0][0][4];
 	Time t = Time(1970,1,1) + time_buf.Top();
 	int wday = DayOfWeek(t);
 	int slot_id = wday * 24 + t.hour;
@@ -273,7 +231,7 @@ int FastEventStatistics::GetLatestSlotId() {
 	
 const FastStatSlot& FastEventStatistics::GetLatestSlot(int net, int i) {
 	System& sys = GetSystem();
-	ConstBuffer& time_buf = *bufs[0][OPEN][4];
+	ConstBuffer& time_buf = *bufs[0][0][4];
 	Time t = Time(1970,1,1) + time_buf.Top();
 	int wday = DayOfWeek(t);
 	int slot_id = wday * 24 + t.hour;

@@ -414,11 +414,18 @@ Core* System::CreateSingle(int factory, int sym, int tf) {
 	return &*ci_queue.Top()->core;
 }
 
-void System::Process(CoreItem& ci, bool store_cache) {
+void System::Process(CoreItem& ci, bool store_cache, bool store_cache_if_init) {
 	
 	// Load dependencies to the scope
 	if (ci.core.IsEmpty())
 		CreateCore(ci);
+	
+	if (store_cache_if_init) {
+		if (ci.core->GetBufferCount())
+			store_cache = ci.core->GetBuffer(0).GetCount() == 0;
+		else if (ci.core->GetLabelCount())
+			store_cache = ci.core->GetLabelBuffer(0, 0).signal.GetCount() == 0;
+	}
 	
 	// Process core-object
 	ci.core->Refresh();
@@ -712,6 +719,8 @@ bool System::RefreshReal() {
 		int open_count = 0;
 		
 		double prev_fmlevel = mt.GetFreeMarginLevel();
+		if (fmlevel < FMLIMIT) fmlevel = FMLIMIT;
+		ReleaseLog("Prev fmlevel " + DblStr(prev_fmlevel) + " next fmlevel " + DblStr(fmlevel));
 		mt.SetFreeMarginLevel(fmlevel);
 		double cur_fmlevel = mt.GetFreeMarginLevel();
 		bool keep_fmlevel = prev_fmlevel == cur_fmlevel;

@@ -259,6 +259,7 @@ void FastEventOptimization::Process() {
 				// Get class from item and use it to set fm-level
 				int solution_i = /*wb * grade_count +*/ temp.grade;
 				double fmlevel = trial[solution_i];
+				if (fmlevel < FMLIMIT) fmlevel = FMLIMIT;
 				sb.SetFreeMarginLevel(fmlevel);
 				sb.SetFreeMarginScale(ns.symbols.GetCount());
 				bool main_switch = fmlevel < 1.0;

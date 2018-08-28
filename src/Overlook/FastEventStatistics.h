@@ -21,6 +21,12 @@ public:
 	
 	OnlineVariance av[MAX_FAST_LEN], abs_av[MAX_FAST_LEN];
 	OnlineVariance inv_av[MAX_FAST_LEN], inv_abs_av[MAX_FAST_LEN];
+	
+	void Serialize(Stream& s) {
+		for(int i = 0; i < MAX_FAST_LEN; i++) {
+			s % av[i] % abs_av[i] % inv_av[i] % inv_abs_av[i];
+		}
+	}
 };
 
 class FastEventStatistics : public Common {
@@ -32,13 +38,14 @@ protected:
 	friend class FastEventOptimization;
 	
 	
-	enum {
+	/*enum {
 		OPEN, BB5, BB10, BB15,
 		BB2010, BB3010, BB4010, BB5010, BB6010, BB7010, BB8010, BB9010,
 		BB2015, BB3015, BB4015, BB5015, BB6015, BB7015, BB8015, BB9015,
 		BB2020, BB3020, BB4020, BB5020, BB6020, BB7020, BB8020, BB9020,
 		SRC_COUNT
-	};
+	};*/
+	static const int SRC_COUNT = 161;
 	
 	
 	
@@ -48,6 +55,7 @@ protected:
 	
 	// Temporary
 	Index<String> symbols;
+	Vector<String> indi_lbls;
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > bufs;
@@ -77,6 +85,10 @@ public:
 	const FastStatSlot& GetSlot(int net, int i, int wb);
 	
 	ConstBuffer& GetBuffer(int sym, int src, int buf) {return *bufs[sym][src][buf];}
+	
+	void Serialize(Stream& s) {s % stats;}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("FastEventStatistics.bin"));}
+	void StoreThis() {StoreToFile(*this, ConfigFile("FastEventStatistics.bin"));}
 	
 };
 

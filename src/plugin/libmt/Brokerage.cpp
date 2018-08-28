@@ -5,7 +5,7 @@ namespace libmt {
 Brokerage::Brokerage() {
 	cur_begin = -1;
 	is_failed = false;
-	min_free_margin_level = 0.6;
+	min_free_margin_level = 0.65;
 	max_free_margin_level = 1.0;
 	free_margin_level = 0.98;
 	margin_call = 0.5;
@@ -485,6 +485,7 @@ void Brokerage::RealizeVolume(int symbol, double d, bool type) {
 		if (debug_print) {
 			if (r == -1) {
 				WhenError("OrderSend failed with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
+				sym_buy_lots *= 0.98;
 			} else {
 				WhenInfo("OrderSend succeeded with buy " + sym.name + " lots=" + DblStr(sym_buy_lots));
 			}
@@ -496,6 +497,7 @@ void Brokerage::RealizeVolume(int symbol, double d, bool type) {
 		if (debug_print) {
 			if (r == -1) {
 				WhenError("OrderSend failed with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
+				sym_sell_lots *= 0.98;
 			} else {
 				WhenInfo("OrderSend succeeded with sell " + sym.name + " lots=" + DblStr(sym_sell_lots));
 			}

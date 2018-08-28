@@ -349,7 +349,7 @@ protected:
 	
 public:
 	
-	void	Process(CoreItem& ci, bool store_cache);
+	void	Process(CoreItem& ci, bool store_cache, bool store_cache_if_init=true);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	Time	GetEnd() const							{return end;}

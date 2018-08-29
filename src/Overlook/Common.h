@@ -17,8 +17,9 @@
 
 #define TRAININGAREA_FACTOR 0.95
 #define SIGNALSCALE 1
-#define MAX_SYMOPEN 10
+#define MAX_SYMOPEN 5
 #define FMLIMIT 0.6
+#define TPLIMIT 0.1
 
 #define REFRESH_FROM_FASTER 1
 
@@ -27,7 +28,7 @@
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;
 extern Upp::IniBool have_sys_signal;
-extern Upp::IniBool fixed_fmlimit;
+extern Upp::IniBool fixed_tplimit;
 extern Upp::IniString arg_addr;
 extern Upp::IniInt arg_port;
 extern Upp::IniInt start_time;

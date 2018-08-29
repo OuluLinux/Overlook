@@ -24,18 +24,26 @@ void FastEventStatistics::Init() {
 	
 	indi_ids.Add().Set(sys.Find<DataBridge>());
 	indi_lbls.Add("Lbl");
+	#ifndef flagDEBUG
 	for (int period = 10; period <= 100; period += 10) {
 		for (int dev = 5; dev <= 20; dev++) {
 			indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(period).AddArg(0).AddArg(dev);
 			indi_lbls.Add("Bollinger Bands " + IntStr(period) + "/" + IntStr(dev));
 		}
 	}
+	#else
+	for (int period = 20; period <= 90; period += 10) {
+		for (int dev = 10; dev <= 20; dev+=10) {
+			indi_ids.Add().Set(sys.Find<BollingerBands>()).AddArg(period).AddArg(0).AddArg(dev);
+			indi_lbls.Add("Bollinger Bands " + IntStr(period) + "/" + IntStr(dev));
+		}
+	}
+	#endif
+	SRC_COUNT = indi_ids.GetCount();
 	
-
+	
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		symbols.Add(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
-	//symbols.Add("NewsNet");
-	//symbols.Add("AfterNewsNet");
 	for(int i = 0; i < symbols.GetCount(); i++)
 		sym_ids.Add(sys.FindSymbol(symbols[i]));
 	
@@ -143,7 +151,9 @@ void FastEventStatistics::UpdateEvents(int sym) {
 		ConstLabelSignal& lbl = *lbls[sym][i];
 		Vector<FastStatSlot>& stats = this->stats[sym][i];
 		
-		for(int j = 1; j < lbl.signal.GetCount() - 1; j++) {
+		int end = lbl.signal.GetCount() - 1 - FASTOPT_LEN;
+		
+		for(int j = 1; j < end; j++) {
 			bool enabled = lbl.enabled.Get(j);
 			bool prev_enabled = lbl.enabled.Get(j-1);
 			bool signal = lbl.signal.Get(j);
@@ -164,7 +174,6 @@ void FastEventStatistics::UpdateEvents(int sym) {
 					double o1 = open_buf.Get(pos1);
 					double diff = o0 - o1;
 					double diff_from_begin = o0 - o;
-					#if NEGCOUNT_ENABLED
 					if (signal) {
 						diff *= -1;
 						diff_from_begin *= -1;
@@ -177,10 +186,6 @@ void FastEventStatistics::UpdateEvents(int sym) {
 						stat.AddInvResult(inv_neg_count, -diff_from_begin, o0 / o - 1.0);
 						inv_neg_count++;
 					}
-					#else
-					stat.AddResult(k, diff_from_begin, o0 / o - 1.0);
-					stat.AddInvResult(k, -diff_from_begin, o0 / o - 1.0);
-					#endif
 				}
 			}
 		}
@@ -297,7 +302,7 @@ void FastEventStatisticsCtrl::Data() {
 	System& sys = GetSystem();
 	FastEventStatistics& es = GetFastEventStatistics();
 	int width = FAST_WIDTH;
-	int height = FastEventStatistics::SRC_COUNT;
+	int height = es.SRC_COUNT;
 	int sym = symlist.GetIndex();
 	int step = steplist.GetIndex();
 	
@@ -318,7 +323,7 @@ void FastEventStatisticsCtrl::Data() {
 				double mean = av.GetMean();
 				double cdf = av.GetCDF(0, 0);
 				if (cdf < 0.5) cdf = 1.0 - cdf;
-				int grade = (1.0 - cdf) / 0.05;
+				int grade = (1.0 - cdf) / GRADE_DIV;
 				if (grade < FastEventOptimization::grade_count && mean > 0)
 					stats.Add(j, mean);
 			}
@@ -327,7 +332,7 @@ void FastEventStatisticsCtrl::Data() {
 				double mean = av.GetMean();
 				double cdf = av.GetCDF(0, 0);
 				if (cdf < 0.5) cdf = 1.0 - cdf;
-				int grade = (1.0 - cdf) / 0.05;
+				int grade = (1.0 - cdf) / GRADE_DIV;
 				if (grade < FastEventOptimization::grade_count && mean > 0)
 					stats.Add(-j-1, mean);
 			}
@@ -349,7 +354,7 @@ void FastEventStatisticsCtrl::Data() {
 				cdf = es.stats[sym][l][i].inv_av[step].GetCDF(0, true);
 				desc += " inverse";
 			}
-			int grade = 'A' + (1.0 - cdf) / 0.05;
+			int grade = 'A' + (1.0 - cdf) / GRADE_DIV;
 			String grade_str;
 			grade_str.Cat(grade);
 			list.Set(i, col++, desc);

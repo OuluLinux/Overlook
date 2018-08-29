@@ -7,9 +7,9 @@ struct SentimentSnapshot {
 	Vector<int> cur_pres, pair_pres;
 	String comment;
 	Time added;
-	double fmlevel = 0.0;
+	double fmlevel = 0.0, tplimit = 0.1;
 	
-	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel;}
+	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel % tplimit;}
 	
 	bool IsPairEqual(const SentimentSnapshot& s) {
 		if (s.pair_pres.GetCount() != pair_pres.GetCount())

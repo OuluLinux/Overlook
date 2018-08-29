@@ -12,12 +12,12 @@ Sentiment::Sentiment() {
 	symbols.Add("GBPUSD");
 	symbols.Add("USDCHF");
 	symbols.Add("USDJPY");
-	symbols.Add("USDCAD");
-	symbols.Add("AUDUSD");
-	symbols.Add("NZDUSD");
-	symbols.Add("EURCHF");
+	//symbols.Add("USDCAD");
+	//symbols.Add("AUDUSD");
+	//symbols.Add("NZDUSD");
+	//symbols.Add("EURCHF");
 	symbols.Add("EURJPY");
-	symbols.Add("EURGBP");
+	//symbols.Add("EURGBP");
 	
 	
 	
@@ -45,10 +45,13 @@ void Sentiment::SetSignals() {
 	
 	
 	// Simple trailing stop
+	double tplimit = 0.3;
+	if (sents.GetCount())
+		tplimit = sents.Top().tplimit;
 	double balance = mt.AccountBalance();
 	double equity = mt.AccountEquity();
 	double profit = equity - balance;
-	if (enable_takeprofit && profit >= balance * 0.3) {
+	if (enable_takeprofit && profit >= balance * tplimit) {
 		sent->pair_pres.SetCount(symbols.GetCount(), 0);
 		sent->cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		sent->comment = "Auto take-profit";
@@ -140,7 +143,8 @@ SentimentCtrl::SentimentCtrl() {
 	historylist.AddColumn("Time");
 	historylist.AddColumn("Comment");
 	historylist.AddColumn("Free-margin level");
-	historylist.ColumnWidths("1 3 1");
+	historylist.AddColumn("Take-profit limit");
+	historylist.ColumnWidths("1 3 1 1");
 	historylist <<= THISBACK(LoadHistory);
 	curpreslist.AddColumn("Symbol");
 	curpreslist.AddColumn("Pressure");
@@ -189,6 +193,7 @@ void SentimentCtrl::Data() {
 		historylist.Set(i, 0, snap.added);
 		historylist.Set(i, 1, snap.comment);
 		historylist.Set(i, 2, snap.fmlevel);
+		historylist.Set(i, 3, snap.tplimit);
 	}
 	historylist.SetCount(count);
 	

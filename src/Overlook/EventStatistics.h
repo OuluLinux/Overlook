@@ -70,7 +70,6 @@ inline EventStatistics& GetEventStatistics() {return GetSystem().GetCommon<Event
 class EventStatisticsCtrl : public CommonCtrl {
 	ArrayCtrl list;
 	DropList symlist;
-	Upp::Label activelbl;
 	
 public:
 	typedef EventStatisticsCtrl CLASSNAME;

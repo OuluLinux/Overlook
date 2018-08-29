@@ -5,10 +5,13 @@ namespace Overlook {
 
 #define FAST_TF 4
 #define MAX_FAST_LEN 4
+#define MAX_FAST_OPEN_LEN 4
 #define FAST_WIDTH (24*7)
 #define FAST_ENABLED 1
-#define NEGCOUNT_ENABLED 1
+#define FASTOPT_LEN (24)
 #define NEGCOUNT_MAX 1
+#define GRADE_DIV 0.03
+#define MIN_EVENTCOUNT 5
 
 class FastStatSlot : Moveable<FastStatSlot> {
 	
@@ -45,7 +48,7 @@ protected:
 		BB2020, BB3020, BB4020, BB5020, BB6020, BB7020, BB8020, BB9020,
 		SRC_COUNT
 	};*/
-	static const int SRC_COUNT = 161;
+	int SRC_COUNT = 0;
 	
 	
 	

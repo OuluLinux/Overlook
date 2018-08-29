@@ -34,7 +34,7 @@ void FastEventConsole::Start() {
 		
 		int len = slot_id - snap.slot_id;
 		if (len < 0) len += FAST_WIDTH;
-		if (len >= MAX_FAST_LEN) {
+		if (len >= MAX_FAST_OPEN_LEN) {
 			snap.is_finished = true;
 		}
 		else if (snap.prev_check_slot_id != slot_id) {
@@ -50,13 +50,17 @@ void FastEventConsole::Start() {
 			double diff = o0 - o1;
 			if (s.signal < 0) diff *= -1;
 			if (diff < 0) {
-				double cdf;
-				if (!s.inverse)
+				double mean, cdf;
+				if (!s.inverse) {
+					mean = ss.av[snap.neg_count+1].GetMean();
 					cdf = ss.av[snap.neg_count+1].GetCDF(0.0, true);
-				else
+				}
+				else {
+					mean = ss.inv_av[snap.neg_count+1].GetMean();
 					cdf = ss.inv_av[snap.neg_count+1].GetCDF(0.0, true);
-				int grade = (1.0 - cdf) / 0.05;
-				if (grade >= FastEventOptimization::grade_count) {
+				}
+				int grade = (1.0 - cdf) / GRADE_DIV;
+				if (grade >= FastEventOptimization::grade_count || mean < s.mean) {
 					snap.is_finished = true;
 				}
 				else {
@@ -89,7 +93,7 @@ void FastEventConsole::Start() {
 		
 		// FastEvent statistics
 		for(int i = 0; i < sys.GetNetCount(); i++) {
-			for(int j = 0; j < FastEventStatistics::SRC_COUNT; j++) {
+			for(int j = 0; j < es.SRC_COUNT; j++) {
 				const FastStatSlot& ss = es.GetLatestSlot(i, j);
 				
 				{
@@ -97,13 +101,12 @@ void FastEventConsole::Start() {
 					double mean = ss.av[0].GetMean();
 					int count = ss.av[0].GetEventCount();
 					double cdf = ss.av[0].GetCDF(0.0, true);
-					int grade = (1.0 - cdf) / 0.05;
+					int grade = (1.0 - cdf) / GRADE_DIV;
 					double abs_cdf = ss.abs_av[0].GetCDF(0.0003, true);
-					int abs_grade = (1.0 - abs_cdf) / 0.05;
-					if (event_count >= 3 && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
-						double fmlevel = eo.opt.GetBestSolution()[grade];
+					int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
+					if (event_count >= MIN_EVENTCOUNT && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						int sig = es.GetOpenSignal(i, last_pos, j);
-						if (fmlevel < 1.0 && sig) {
+						if (sig) {
 							FastEventSnap::Stat& s = snap.stats.Add();
 							s.net = i;
 							s.src = j;
@@ -122,13 +125,12 @@ void FastEventConsole::Start() {
 					double mean = ss.inv_av[0].GetMean();
 					int count = ss.inv_av[0].GetEventCount();
 					double cdf = ss.inv_av[0].GetCDF(0.0, true);
-					int grade = (1.0 - cdf) / 0.05;
+					int grade = (1.0 - cdf) / GRADE_DIV;
 					double abs_cdf = ss.inv_abs_av[0].GetCDF(0.0003, true);
-					int abs_grade = (1.0 - abs_cdf) / 0.05;
-					if (event_count >= 3 && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
-						double fmlevel = eo.opt.GetBestSolution()[grade];
+					int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
+					if (event_count >= MIN_EVENTCOUNT && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						int sig = es.GetOpenSignal(i, last_pos, j);
-						if (fmlevel < 1.0 && sig) {
+						if (sig) {
 							FastEventSnap::Stat& s = snap.stats.Add();
 							s.net = i;
 							s.src = j;
@@ -160,10 +162,10 @@ void FastEventConsole::Start() {
 			if (s.signal) {
 				snap.comment = Format("Active %d %d %d", s.net, s.src, (int)s.inverse);
 				ss.comment = snap.comment;
-				ss.fmlevel = eo.opt.GetBestSolution()[s.grade];
+				ss.fmlevel = FMLIMIT;
+				ss.tplimit = Upp::max(0.01, eo.opt.GetBestSolution()[snap.time.hour]);
 				
-				if (ss.fmlevel < FMLIMIT)	ss.fmlevel = FMLIMIT;
-				if (Config::fixed_fmlimit)	ss.fmlevel = FMLIMIT;
+				if (Config::fixed_tplimit)	ss.tplimit = TPLIMIT;
 				
 				System::NetSetting& net = sys.GetNet(s.net);
 				

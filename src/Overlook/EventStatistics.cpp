@@ -279,7 +279,6 @@ const StatSlot& EventStatistics::GetSlot(int net, int i, int wb) {
 EventStatisticsCtrl::EventStatisticsCtrl() {
 	Add(symlist.TopPos(0,30).LeftPos(0,100));
 	Add(list.VSizePos().HSizePos(100));
-	Add(activelbl.TopPos(30,60).LeftPos(0,100));
 	
 	
 	System& sys = GetSystem();
@@ -314,9 +313,6 @@ void EventStatisticsCtrl::Data() {
 	
 	if (es.stats.IsEmpty())
 		return;
-	
-	String albl = es.GetPreferredNet() ? "AfterNewsNet\nis preferred" : "NewsNet\nis preferred";
-	activelbl.SetLabel(albl);
 	
 	ConstBuffer& time_buf = es.db[sym]->GetBuffer(4);
 	int limit = time_buf.GetCount() % width;

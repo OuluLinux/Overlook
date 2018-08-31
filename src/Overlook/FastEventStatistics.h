@@ -10,8 +10,9 @@ namespace Overlook {
 #define FAST_ENABLED 1
 #define FASTOPT_LEN (24)
 #define NEGCOUNT_MAX 1
-#define GRADE_DIV 0.03
+#define GRADE_DIV 0.05
 #define MIN_EVENTCOUNT 5
+#define SPREAD_FACTOR 0.0003
 
 class FastStatSlot : Moveable<FastStatSlot> {
 	

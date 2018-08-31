@@ -60,7 +60,7 @@ void FastEventConsole::Start() {
 					cdf = ss.inv_av[snap.neg_count+1].GetCDF(0.0, true);
 				}
 				int grade = (1.0 - cdf) / GRADE_DIV;
-				if (grade >= FastEventOptimization::grade_count || mean < s.mean) {
+				if (grade >= FastEventOptimization::grade_count /*|| mean < s.mean*/ || mean <= 0) {
 					snap.is_finished = true;
 				}
 				else {
@@ -102,7 +102,7 @@ void FastEventConsole::Start() {
 					int count = ss.av[0].GetEventCount();
 					double cdf = ss.av[0].GetCDF(0.0, true);
 					int grade = (1.0 - cdf) / GRADE_DIV;
-					double abs_cdf = ss.abs_av[0].GetCDF(0.0003, true);
+					double abs_cdf = ss.abs_av[0].GetCDF(SPREAD_FACTOR, true);
 					int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
 					if (event_count >= MIN_EVENTCOUNT && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						int sig = es.GetOpenSignal(i, last_pos, j);
@@ -126,7 +126,7 @@ void FastEventConsole::Start() {
 					int count = ss.inv_av[0].GetEventCount();
 					double cdf = ss.inv_av[0].GetCDF(0.0, true);
 					int grade = (1.0 - cdf) / GRADE_DIV;
-					double abs_cdf = ss.inv_abs_av[0].GetCDF(0.0003, true);
+					double abs_cdf = ss.inv_abs_av[0].GetCDF(SPREAD_FACTOR, true);
 					int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
 					if (event_count >= MIN_EVENTCOUNT && grade < FastEventOptimization::grade_count && abs_grade < FastEventOptimization::grade_count) {
 						int sig = es.GetOpenSignal(i, last_pos, j);

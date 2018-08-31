@@ -165,7 +165,7 @@ void EventOptimization::Process() {
 					}
 					double cdf = ss.av.GetCDF(0.0, !inverse);
 					int grade = (1.0 - cdf) / 0.05;
-					double abs_cdf = ss.abs_av.GetCDF(0.0003, true);
+					double abs_cdf = ss.abs_av.GetCDF(SPREAD_FACTOR, true);
 					int abs_grade = (1.0 - abs_cdf) / 0.05;
 					
 					int solution_i = /*wb * grade_count +*/ grade;

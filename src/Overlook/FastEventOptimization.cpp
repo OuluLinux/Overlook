@@ -181,7 +181,7 @@ void FastEventOptimization::Process() {
 								double mean = ss.av[neg_count].GetMean();
 								double cdf = ss.av[neg_count].GetCDF(0.0, true);
 								int grade = (1.0 - cdf) / GRADE_DIV;
-								double abs_cdf = ss.abs_av[neg_count].GetCDF(0.0003, true);
+								double abs_cdf = ss.abs_av[neg_count].GetCDF(SPREAD_FACTOR, true);
 								int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
 								
 								if (event_count >= MIN_EVENTCOUNT && grade < grade_count && abs_grade < grade_count && mean > temp.mean) {
@@ -209,7 +209,7 @@ void FastEventOptimization::Process() {
 								double mean = ss.inv_av[neg_count].GetMean();
 								double cdf = ss.inv_av[neg_count].GetCDF(0.0, true);
 								int grade = (1.0 - cdf) / GRADE_DIV;
-								double abs_cdf = ss.inv_abs_av[neg_count].GetCDF(0.0003, true);
+								double abs_cdf = ss.inv_abs_av[neg_count].GetCDF(SPREAD_FACTOR, true);
 								int abs_grade = (1.0 - abs_cdf) / GRADE_DIV;
 								
 								if (event_count >= MIN_EVENTCOUNT && grade < grade_count && abs_grade < grade_count && mean > temp.mean) {
@@ -254,7 +254,7 @@ void FastEventOptimization::Process() {
 							cdf = ss.inv_av[temp.neg_count+1].GetCDF(0.0, true);
 						}
 						int grade = (1.0 - cdf) / GRADE_DIV;
-						if (grade >= grade_count || mean < temp.mean) {
+						if (grade >= grade_count /*|| mean < temp.mean*/ || mean <= 0) {
 							temp.is_finished = true;
 						}
 						temp.neg_count++;

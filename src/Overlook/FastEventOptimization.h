@@ -34,7 +34,7 @@ public:
 	FastEventOptimization();
 	~FastEventOptimization();
 	
-	static const int grade_count = 3;
+	static const int grade_count = 2;
 	
 	virtual void Init();
 	virtual void Start();

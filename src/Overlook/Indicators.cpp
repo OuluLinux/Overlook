@@ -5674,7 +5674,7 @@ void Anomaly::Start() {
 		if (!IsFin(change))
 			continue;
 		
-		change = fabs(change);
+		double fchange = fabs(change);
 		
 		Time t = Time(1970,1,1) + src_time.Get(i);
 		
@@ -5697,20 +5697,24 @@ void Anomaly::Start() {
 			int pos = (DayOfYear(t) % (7 * 4)) / 7;
 			var = &this->var[pos];
 		}
-		var->Add(change);
+		var->Add(fchange);
 		
 		double mean = var->GetMean();
 		double value;
-		if (change >= mean) {
-			value = var->GetCDF(change, false);
+		if (fchange >= mean) {
+			value = var->GetCDF(fchange, false);
 		} else {
-			value = var->GetCDF(change, true);
+			value = var->GetCDF(fchange, true);
 		}
 		
 		value = (value - 0.5) * 2.0;
 		
 		dst.Set(i, value);
 		
+		if (!inverse)
+			sig.signal.Set(i, change <= 0);
+		else
+			sig.signal.Set(i, change >= 0);
 		sig.enabled.Set(i, value >= 0.75);
 	}
 }

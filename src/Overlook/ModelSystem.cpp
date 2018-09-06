@@ -285,20 +285,24 @@ void ModelSystem::Init() {
 	// Model: Bollinger Bands
 	Model& bb = models.Add();
 	bb.cores.AddIndi(sys.Find<DataBridge>());
-	#ifdef flagDEBUG
-	for (int period = 20; period <= 90; period += 10)
-		for (int dev = 10; dev <= 20; dev+=10)
+	for (int period = 20; period <= 100; period += 10)
+		for (int dev = 10; dev <= 20; dev+=5)
 			bb.cores.AddIndi(sys.Find<BollingerBands>()).AddArg(period).AddArg(0).AddArg(dev);
-	#else
-	for (int period = 10; period <= 100; period += 10)
-		for (int dev = 5; dev <= 20; dev++)
-			bb.cores.AddIndi(sys.Find<BollingerBands>()).AddArg(period).AddArg(0).AddArg(dev);
-	#endif
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		bb.cores.AddSymbol(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
 	bb.cores.AddTf(4); // H1
 	bb.Init();
 	
+	
+	// Model: Anomaly
+	Model& anomaly = models.Add();
+	anomaly.cores.AddIndi(sys.Find<DataBridge>());
+	anomaly.cores.AddIndi(sys.Find<Anomaly>()).AddArg(0);
+	anomaly.cores.AddIndi(sys.Find<Anomaly>()).AddArg(1);
+	for(int i = 0; i < sys.GetNetCount(); i++)
+		anomaly.cores.AddSymbol(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
+	anomaly.cores.AddTf(4); // H1
+	anomaly.Init();
 	
 }
 

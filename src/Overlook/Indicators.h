@@ -1322,7 +1322,7 @@ public:
 
 class Anomaly : public Core {
 	Vector<OnlineVariance> var;
-	int split_type, tfmin;
+	int split_type, tfmin, inverse;
 	
 protected:
 	virtual void Start();
@@ -1338,6 +1338,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
+			% Arg("inverse", inverse, 0, 2)
 			% Mem(var);
 	}
 };

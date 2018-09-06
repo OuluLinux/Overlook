@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_EventConsole_h_
 #define _Overlook_EventConsole_h_
 
@@ -79,4 +81,5 @@ public:
 
 }
 
+#endif
 #endif

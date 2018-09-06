@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_EventSystem_h_
 #define _Overlook_EventSystem_h_
 
@@ -34,4 +36,5 @@ inline EventSystem& GetEventSystem() {return Single<EventSystem>();}
 
 }
 
+#endif
 #endif

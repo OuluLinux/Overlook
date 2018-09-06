@@ -206,15 +206,7 @@ INITBLOCK {
     
     
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
-    #if FAST_ENABLED
-    System::RegisterCommon<FastEventStatistics, FastEventStatisticsCtrl>("Fast Event Statistics");
-    System::RegisterCommon<FastEventOptimization, FastEventOptimizationCtrl>("Fast Event Optimization");
-    System::RegisterCommon<FastEventConsole, FastEventConsoleCtrl>("Fast Event Console");
-    #else
-    System::RegisterCommon<EventStatistics, EventStatisticsCtrl>("Event Statistics");
-    System::RegisterCommon<EventOptimization, EventOptimizationCtrl>("Event Optimization");
-    System::RegisterCommon<EventConsole, EventConsoleCtrl>("Event Console");
-    #endif
+    System::RegisterCommon<ModelSystem, ModelSystemCtrl>("ModelSystem");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     
     

@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_FastEventStatistics_h_
 #define _Overlook_FastEventStatistics_h_
 
@@ -113,4 +115,5 @@ public:
 
 }
 
+#endif
 #endif

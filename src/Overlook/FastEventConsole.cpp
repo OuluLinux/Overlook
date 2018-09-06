@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 namespace Overlook {
@@ -277,3 +279,4 @@ void FastEventConsoleCtrl::LoadHistory() {
 }
 
 }
+#endif

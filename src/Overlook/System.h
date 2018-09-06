@@ -272,6 +272,11 @@ public:
 		return *dynamic_cast<T*>(CommonSystemSingleFn<T>());
 	}
 	
+	template <class T>
+	T&										GetCommonCtrl() {
+		return *dynamic_cast<T*>(CtrlSystemSingleFn<T>());
+	}
+	
 	struct NetSetting : Moveable<NetSetting> {
 		VectorMap<String, int> symbols;
 		VectorMap<int, int> symbol_ids;

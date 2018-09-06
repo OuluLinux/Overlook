@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_EventOptimization_h_
 #define _Overlook_EventOptimization_h_
 
@@ -74,4 +76,5 @@ public:
 
 }
 
+#endif
 #endif

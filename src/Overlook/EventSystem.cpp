@@ -1,3 +1,5 @@
+#if 0
+
 #include "Overlook.h"
 
 
@@ -56,9 +58,7 @@ void EventSystem::Data() {
 	
 	
 	
-	for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
-		sys.CommonFactories()[i].b()->Start();
-	}
+	
 }
 
 void EventSystem::InitMail() {
@@ -152,3 +152,4 @@ void EventSystem::ProcessAutoChartist(String s) {
 }
 
 }
+#endif

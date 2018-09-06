@@ -23,6 +23,7 @@ using namespace Upp;
 #include "BeamSearchOptimization.h"
 #include "SimBroker.h"
 #include "System.h"
+#include "CoreList.h"
 #include "Calendar.h"
 #include "Core.h"
 #include "DataBridge.h"
@@ -41,13 +42,7 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
-#include "EventSystem.h"
-#include "EventStatistics.h"
-#include "EventOptimization.h"
-#include "EventConsole.h"
-#include "FastEventStatistics.h"
-#include "FastEventOptimization.h"
-#include "FastEventConsole.h"
+#include "ModelSystem.h"
 #include "Sentiment.h"
 
 
@@ -92,6 +87,7 @@ class Overlook : public DockWindow {
 protected:
 	
 	// Vars
+	Array<CommonCtrl> commons;
 	Profile current_profile;
 	VectorMap<String, Vector<int> > symbol_menu_items;
 	ChartManager cman;
@@ -100,14 +96,6 @@ protected:
 	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
-	CalendarCtrl cal;
-	SentimentCtrl sentctrl;
-	EventStatisticsCtrl esctrl;
-	FastEventStatisticsCtrl fesctrl;
-	EventConsoleCtrl conctrl;
-	FastEventConsoleCtrl fconctrl;
-	EventOptimizationCtrl optctrl;
-	FastEventOptimizationCtrl foptctrl;
 	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;

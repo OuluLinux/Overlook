@@ -58,9 +58,6 @@ void Sentiment::SetSignals() {
 		sent->added = GetUtcTime();
 		changes++;
 	}
-	else {
-		changes = GetLevelSentiment(*sent);
-	}
 	
 	if (changes && sents.IsEmpty()) {
 		sents.Add(sent.Detach());
@@ -89,38 +86,6 @@ void Sentiment::SetSignals() {
 	}
 }
 
-int Sentiment::GetLevelSentiment(SentimentSnapshot& snap) {
-	EventSystem& es = GetEventSystem();
-	System& sys = GetSystem();
-	
-	if (!Config::email_enable)
-		return 0;
-	
-	snap.pair_pres.SetCount(symbols.GetCount(), 0);
-	snap.cur_pres.SetCount(sys.GetCurrencyCount(), 0);
-	snap.comment = "AutoChartist";
-	snap.added = GetUtcTime();
-	
-	int changed = 0;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		String s = symbols[i];
-		int j = sys.FindSymbol(s);
-		if (!es.HasLevel(s))
-			continue;
-		double level = es.GetLevel(s);
-		
-		double& prev_level = prev_levels.GetAdd(s, 0);
-		if (level == prev_level)
-			continue;
-		prev_level = level;
-		changed++;
-		
-		double ask = GetMetaTrader().GetAskBid()[j].ask;
-		int sig = level > ask ? +1 : -1;
-		snap.pair_pres[i] = sig;
-	}
-	return changed;
-}
 
 
 
@@ -164,7 +129,6 @@ SentimentCtrl::SentimentCtrl() {
 void SentimentCtrl::Data() {
 	System& sys = GetSystem();
 	Sentiment& sent = GetSentiment();
-	EventSystem& es = GetEventSystem();
 	
 	if (curpreslist.GetCount() == 0) {
 		curpreslist.SetLineCy(30);

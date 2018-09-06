@@ -38,7 +38,6 @@ public:
 	virtual void Init();
 	virtual void Start();
 	void SetSignals();
-	int GetLevelSentiment(SentimentSnapshot& snap);
 	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
 	

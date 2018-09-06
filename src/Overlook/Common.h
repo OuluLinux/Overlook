@@ -245,6 +245,26 @@ public:
 	
 };
 
+class OnlineVarianceWindow {
+	Vector<OnlineVariance> var;
+	int cursor = 0;
+	
+public:
+	OnlineVarianceWindow() {}
+	
+	void SetPeriod(int i) {var.SetCount(i);}
+	
+	void Add(double d) {
+		var[cursor].Clear();
+		for(int i = 0; i < var.GetCount(); i++)
+			var[i].Add(d);
+		cursor = (cursor + 1) % var.GetCount();
+	}
+	
+	OnlineVariance& Get() {return var[cursor];}
+	
+};
+
 struct DerivZeroTrigger {
 	int count;
 	int16 I = 0;

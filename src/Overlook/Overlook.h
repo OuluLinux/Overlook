@@ -196,6 +196,7 @@ public:
 	void LoadProfileFromFile(Profile& profile, String path);
 	void StoreProfileToFile(Profile& profile, String path);
 	void OpenChartBars(int symbol) {OpenChart(symbol);}
+	void RefreshCommon();
 	
 	// Public vars
 	Callback WhenExit;

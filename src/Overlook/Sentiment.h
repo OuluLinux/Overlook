@@ -69,7 +69,7 @@ public:
 	virtual void SetData(const Value& v) {i = v;}
 };
 
-class SentimentCtrl : public ParentCtrl {
+class SentimentCtrl : public CommonCtrl {
 	Splitter split;
 	ArrayCtrl historylist, curpreslist, pairpreslist;
 	EditDouble fmlevel;

@@ -262,6 +262,7 @@ public:
 	}
 	
 	OnlineVariance& Get() {return var[cursor];}
+	const OnlineVariance& Get() const {return var[cursor];}
 	
 };
 

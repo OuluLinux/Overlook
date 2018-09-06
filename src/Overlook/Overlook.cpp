@@ -476,15 +476,13 @@ void Overlook::DeepRefresh() {
 	
 	ReleaseLog("DeepRefresh");
 	
+	Thread::Start(THISBACK(RefreshCommon));
+	
 	static Mutex m;
 	
 	if (m.TryEnter())
 	{
 		ReleaseLog("DeepRefresh entered");
-		
-		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
-			sys.CommonFactories()[i].b()->Start();
-		}
 		
 		if (Config::have_sys_signal && runtime.Elapsed() > 60*1000)
 			sys.RefreshReal();
@@ -493,6 +491,19 @@ void Overlook::DeepRefresh() {
 		
 		PostCallback(THISBACK(DeepRefreshData));
 		
+		m.Leave();
+	}
+}
+
+void Overlook::RefreshCommon() {
+	System& sys = GetSystem();
+	
+	static Mutex m;
+	
+	if (m.TryEnter()) {
+		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
+			sys.CommonFactories()[i].b()->Start();
+		}
 		m.Leave();
 	}
 }

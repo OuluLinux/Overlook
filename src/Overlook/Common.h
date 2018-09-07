@@ -264,6 +264,7 @@ public:
 	OnlineVariance& Get() {return var[cursor];}
 	const OnlineVariance& Get() const {return var[cursor];}
 	
+	void Serialize(Stream& s) {s % var % cursor;}
 };
 
 struct DerivZeroTrigger {

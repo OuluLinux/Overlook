@@ -7,6 +7,8 @@ ModelSetting::ModelSetting() {
 }
 
 void ModelSetting::Init(Model& m) {
+	LoadThis();
+	
 	int width = 24*7;
 	
 	stats.SetCount(m.cores.GetSymbolCount());
@@ -197,6 +199,10 @@ bool ModelSetting::Tick(ModelSystem& msys, Model& m) {
 	history.Add(account_gain);
 	
 	cursor++;
+	
+	if (cursor == m.cores.GetBuffer(0, 0, 0).GetCount())
+		StoreThis();
+	
 	return true;
 }
 
@@ -229,6 +235,7 @@ void Model::Init() {
 						set.secondary_pattern_id = j;
 						set.is_inverse = is_inverse;
 						set.is_signal = is_signal;
+						set.model_id = this->id;
 						set.id = id++;
 						set.Init(*this);
 					}
@@ -283,6 +290,7 @@ void ModelSystem::Init() {
 	
 	// Model: Bollinger Bands
 	Model& bb = models.Add();
+	bb.id = 0;
 	bb.cores.AddIndi(sys.Find<DataBridge>());
 	for (int period = 20; period <= 100; period += 10)
 		for (int dev = 10; dev <= 20; dev+=5)
@@ -295,6 +303,7 @@ void ModelSystem::Init() {
 	
 	// Model: Anomaly
 	Model& anomaly = models.Add();
+	anomaly.id = 1;
 	anomaly.cores.AddIndi(sys.Find<DataBridge>());
 	anomaly.cores.AddIndi(sys.Find<Anomaly>()).AddArg(0);
 	anomaly.cores.AddIndi(sys.Find<Anomaly>()).AddArg(1);

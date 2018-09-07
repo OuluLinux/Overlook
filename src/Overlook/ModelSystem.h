@@ -10,6 +10,7 @@ struct StatSlot : Moveable<StatSlot> {
 	
 	OnlineVarianceWindow av, abs_av;
 	
+	void Serialize(Stream& s) {s % av % abs_av;}
 	void SetPeriod(int i) {av.SetPeriod(i); abs_av.SetPeriod(i);}
 };
 
@@ -20,6 +21,7 @@ class ModelSetting {
 		double cdf, mean;
 		bool is_secondary_inverse;
 		
+		void Serialize(Stream& s) {s % net % src % grade % abs_grade % len % cdf % mean % is_secondary_inverse;}
 		bool operator() (const Temp& a, const Temp& b) const {return a.grade < b.grade;}
 	};
 	Temp temp;
@@ -41,7 +43,7 @@ protected:
 	int primary_pattern_id = -1;
 	int secondary_pattern_id = -1;
 	int grade_count = 2;
-	int id = -1;
+	int model_id = -1, id = -1;
 	bool is_inverse = false, is_signal = false;
 	
 	static const int primary_pattern_count = 4;
@@ -58,6 +60,15 @@ public:
 	int GetSignal() const {return (is_inverse ? -1 : +1) * (is_signal ? -1 : +1) * (temp.is_secondary_inverse ? -1 : +1);}
 	double GetAccountGain() const {return account_gain;}
 	
+	
+	void Serialize(Stream& s) {
+		s % temp % stats % history % secondary_pattern % spread_factor % grade_div
+		  % account_gain % cursor % event_count % primary_pattern_id % secondary_pattern_id % grade_count
+		  % model_id % id % is_inverse % is_signal;
+	}
+	String File(String s) {return AppendFileName(ConfigFile("models"), s);}
+	void LoadThis() {RealizeDirectory(File("")); LoadFromFile(*this, File(Format("%d-%d.bin", model_id, id)));}
+	void StoreThis() {RealizeDirectory(File("")); StoreToFile(*this, File(Format("%d-%d.bin", model_id, id)));}
 };
 
 class Model {
@@ -71,6 +82,7 @@ protected:
 	CoreList cores;
 	double cur_gain = 0;
 	int cur_sig = 0, cur_sig_net = -1;
+	int id = -1;
 	
 public:
 	Model();
@@ -101,10 +113,6 @@ public:
 	int GetModelCount() {return models.GetCount();}
 	const Model& GetModel(int i) const {return models[i];}
 	
-	/*
-	void Serialize(Stream& s) {}
-	void LoadThis() {LoadFromFile(*this, ConfigFile("ModelSystem.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("ModelSystem.bin"));}*/
 	
 };
 

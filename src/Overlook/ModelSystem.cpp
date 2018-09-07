@@ -50,7 +50,7 @@ bool ModelSetting::Tick(ModelSystem& msys, Model& m) {
 		ConstBuffer& open_buf = m.cores.GetBuffer(temp.net, 0, 0);
 		ConstBuffer& time_buf = m.cores.GetBuffer(temp.net, 0, 4);
 		
-		int mult = (is_signal ? -1 : +1) * (is_inverse ? -1 : +1);
+		int mult = (is_signal ? -1 : +1) * (is_inverse ? -1 : +1) * (temp.is_secondary_inverse ? -1 : +1);
 		
 		double o0 = open_buf.Get(cursor);
 		double o1 = open_buf.Get(cursor-1);
@@ -283,7 +283,7 @@ void ModelSystem::Init() {
 	
 	
 	// Model: Bollinger Bands
-	Model& bb = models.Add();
+	/*Model& bb = models.Add();
 	bb.cores.AddIndi(sys.Find<DataBridge>());
 	for (int period = 20; period <= 100; period += 10)
 		for (int dev = 10; dev <= 20; dev+=5)
@@ -291,7 +291,7 @@ void ModelSystem::Init() {
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		bb.cores.AddSymbol(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
 	bb.cores.AddTf(4); // H1
-	bb.Init();
+	bb.Init();*/
 	
 	
 	// Model: Anomaly
@@ -443,6 +443,12 @@ void ModelSystemCtrl::Data() {
 	valuelist.Set(7, 1, ms.GetSignalNet());
 	valuelist.Set(8, 0, "cursor");
 	valuelist.Set(8, 1, ms.cursor);
+	valuelist.Set(9, 0, "cur_gain");
+	valuelist.Set(9, 1, m.cur_gain);
+	valuelist.Set(10, 0, "cur_sig");
+	valuelist.Set(10, 1, m.cur_sig);
+	valuelist.Set(11, 0, "cur_sig_net");
+	valuelist.Set(11, 1, m.cur_sig_net);
 	
 	
 	VectorMap<int, double> stats;

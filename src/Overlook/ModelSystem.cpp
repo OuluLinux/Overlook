@@ -249,15 +249,14 @@ bool Model::Tick(ModelSystem& msys) {
 		ModelSetting& ms = settings[i];
 		bool used = ms.Tick(msys, *this);
 		tick_used |= used;
-		if (used) {
-			int net = ms.GetSignalNet();
-			if (net >= 0) {
-				double gain = ms.GetAccountGain();
-				if (gain > sig_gain) {
-					sig_net = net;
-					sig = ms.GetSignal();
-					sig_gain = gain;
-				}
+		
+		int net = ms.GetSignalNet();
+		if (net >= 0) {
+			double gain = ms.GetAccountGain();
+			if (gain > sig_gain) {
+				sig_net = net;
+				sig = ms.GetSignal();
+				sig_gain = gain;
 			}
 		}
 	}
@@ -283,7 +282,7 @@ void ModelSystem::Init() {
 	
 	
 	// Model: Bollinger Bands
-	/*Model& bb = models.Add();
+	Model& bb = models.Add();
 	bb.cores.AddIndi(sys.Find<DataBridge>());
 	for (int period = 20; period <= 100; period += 10)
 		for (int dev = 10; dev <= 20; dev+=5)
@@ -291,7 +290,7 @@ void ModelSystem::Init() {
 	for(int i = 0; i < sys.GetNetCount(); i++)
 		bb.cores.AddSymbol(sys.GetSymbol(sys.GetNormalSymbolCount() + sys.GetCurrencyCount() + i));
 	bb.cores.AddTf(4); // H1
-	bb.Init();*/
+	bb.Init();
 	
 	
 	// Model: Anomaly
@@ -359,6 +358,7 @@ void ModelSystem::Start() {
 				ss.pair_pres[j] = max_gain_sig * net.symbols[k];
 			}
 		}
+		sent.StoreThis();
 	}
 }
 

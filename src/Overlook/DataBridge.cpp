@@ -952,6 +952,7 @@ void DataBridge::RefreshNet() {
 	}
 }
 
+/*
 void DataBridge::Assist(int cursor, VectorBool& vec) {
 	if (cursor < 5 || cursor >= GetBars()) return;
 	
@@ -1105,6 +1106,7 @@ void DataBridge::Assist(int cursor, VectorBool& vec) {
 		}
 	}
 }
+*/
 
 double DataBridge::GetDigits() const {
 	int Digits = 1;

@@ -42,7 +42,7 @@ using namespace Upp;
 #include "Arbitrage.h"
 #include "Analyzer.h"
 #include "Scalper.h"
-#include "ModelSystem.h"
+#include "AdvisorSystem.h"
 #include "Sentiment.h"
 
 
@@ -93,7 +93,7 @@ protected:
 	ChartManager cman;
 	Navigator nav;
 	MarketWatch watch;
-	CtrlCallbacks<ArrayCtrl> assist, trade, trade_history, exposure, joblist, debuglist;
+	CtrlCallbacks<ArrayCtrl> trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
 	NetCtrl net;
@@ -170,7 +170,6 @@ public:
 	void OpenNet();
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
-	void RefreshAssist();
 	void RefreshCalendar();
 	void RefreshTrades();
 	void RefreshExposure();

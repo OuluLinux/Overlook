@@ -408,18 +408,6 @@ void MovingAverage::Init() {
 	SetBufferBegin(0, draw_begin );
 }
 
-void MovingAverage::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double ma = GetBuffer(0).Get(cursor);
-	if (open > ma)	vec.Set(MA_OVERAV, true);
-	else			vec.Set(MA_BELOWAV, true);
-	if (cursor > 0) {
-		double prev = GetBuffer(0).Get(cursor - 1);
-		if (ma > prev)	vec.Set(MA_TRENDUP, true);
-		else			vec.Set(MA_TRENDDOWN, true);
-	}
-}
-
 void MovingAverage::Start() {
 	int bars = GetBars();
 	if ( bars <= ma_period )
@@ -640,18 +628,6 @@ void MovingAverageConvergenceDivergence::Start() {
 	}
 }
 
-void MovingAverageConvergenceDivergence::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double macd = GetBuffer(0).Get(cursor);
-	if (macd > 0.0)		vec.Set(MACD_OVERZERO, true);
-	else				vec.Set(MACD_BELOWZERO, true);
-	if (cursor > 0) {
-		double prev = GetBuffer(0).Get(cursor - 1);
-		if (macd > prev)	vec.Set(MACD_TRENDUP, true);
-		else				vec.Set(MACD_TRENDDOWN, true);
-	}
-}
-
 
 
 
@@ -863,17 +839,6 @@ void BollingerBands::Start() {
 		bool enabled = o <= bl || o >= tl;
 		sig.signal.Set(i, signal);
 		sig.enabled.Set(i, enabled);
-	}
-}
-
-void BollingerBands::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double high = High(cursor - 1);
-		double low  = Low(cursor - 1);
-		double top = GetBuffer(1).Get(cursor);
-		double bot = GetBuffer(2).Get(cursor);
-		if (high >= top)		vec.Set(BB_HIGHBAND, true);
-		if (low  <= bot)		vec.Set(BB_LOWBAND, true);
 	}
 }
 
@@ -1194,12 +1159,6 @@ double ParabolicSAR::GetLow( int pos, int start_pos )
 	return ( result );
 }
 
-void ParabolicSAR::Assist(int cursor, VectorBool& vec) {
-	double open = Open(cursor);
-	double sar = GetBuffer(0).Get(cursor);
-	if (open > sar)		vec.Set(PSAR_TRENDUP, true);
-	else				vec.Set(PSAR_TRENDDOWN, true);
-}
 
 
 
@@ -1227,14 +1186,6 @@ void StandardDeviation::Init() {
 	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", ma_method);
 }
 
-void StandardDeviation::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > std1)	vec.Set(STDDEV_INC, true);
-		else				vec.Set(STDDEV_DEC, true);
-	}
-}
 
 void StandardDeviation::Start() {
 	Buffer& stddev_buffer = GetBuffer(0);
@@ -1291,15 +1242,6 @@ void AverageTrueRange::Init() {
 		throw ConfExc();
 	
 	SetBufferBegin ( 0, period );
-}
-
-void AverageTrueRange::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > std1)	vec.Set(ATR_INC, true);
-		else				vec.Set(ATR_DEC, true);
-	}
 }
 
 void AverageTrueRange::Start() {
@@ -1377,17 +1319,6 @@ void BearsPower::Init() {
 	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", MODE_EMA);
 }
 
-void BearsPower::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > 0.0)		vec.Set(BEAR_OVERZERO, true);
-		else				vec.Set(BEAR_BELOWZERO, true);
-		if (std0 > std1)	vec.Set(BEAR_INC, true);
-		else				vec.Set(BEAR_DEC, true);
-	}
-}
-
 void BearsPower::Start() {
 	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
@@ -1434,17 +1365,6 @@ void BullsPower::Init() {
 	SetBufferLabel(0,"Bulls");
 	
 	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", MODE_EMA);
-}
-
-void BullsPower::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > 0.0)		vec.Set(BULL_OVERZERO, true);
-		else				vec.Set(BULL_BELOWZERO, true);
-		if (std0 > std1)	vec.Set(BULL_INC, true);
-		else				vec.Set(BULL_DEC, true);
-	}
 }
 
 void BullsPower::Start() {
@@ -1505,19 +1425,6 @@ void CommodityChannelIndex::Init() {
 		throw ConfExc();
 
 	SetBufferBegin ( 0, period );
-}
-
-void CommodityChannelIndex::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > 0.0)		vec.Set(CCI_OVERZERO, true);
-		else				vec.Set(CCI_BELOWZERO, true);
-		if (std0 > +100.0)	vec.Set(CCI_OVERHIGH, true);
-		if (std0 < -100.0)	vec.Set(CCI_BELOWLOW, true);
-		if (std0 > std1)	vec.Set(CCI_INC, true);
-		else				vec.Set(CCI_DEC, true);
-	}
 }
 
 void CommodityChannelIndex::Start() {
@@ -1624,19 +1531,6 @@ void DeMarker::Init() {
 	SetBufferBegin ( 0, period );
 }
 
-void DeMarker::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double std0 = GetBuffer(0).Get(cursor);
-		double std1 = GetBuffer(0).Get(cursor-1);
-		if (std0 > 0.0)		vec.Set(DEM_OVERZERO, true);
-		else				vec.Set(DEM_BELOWZERO, true);
-		if (std0 > +0.2)	vec.Set(DEM_OVERHIGH, true);
-		if (std0 < -0.2)	vec.Set(DEM_BELOWLOW, true);
-		if (std0 > std1)	vec.Set(DEM_INC, true);
-		else				vec.Set(DEM_DEC, true);
-	}
-}
-
 void DeMarker::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& max_buffer = GetBuffer(1);
@@ -1733,10 +1627,6 @@ void ForceIndex::Init() {
 	AddSubCore<MovingAverage>().Set("period", period).Set("offset", 0).Set("method", ma_method);
 }
 
-void ForceIndex::Assist(int cursor, VectorBool& vec) {
-	
-}
-
 void ForceIndex::Start() {
 	Buffer& buffer = GetBuffer(0);
 	int bars = GetBars();
@@ -1791,17 +1681,6 @@ void Momentum::Init() {
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"Momentum");
-}
-
-void Momentum::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		if (value0 > 0.0)		vec.Set(MOM_OVERZERO, true);
-		else					vec.Set(MOM_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(MOM_INC, true);
-		else					vec.Set(MOM_DEC, true);
-	}
 }
 
 void Momentum::Start() {
@@ -1972,17 +1851,6 @@ void RelativeStrengthIndex::Init() {
 	SetBufferLabel(0, "RSI");
 }
 
-void RelativeStrengthIndex::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		if (value0 > 0.0)		vec.Set(RSI_OVERZERO, true);
-		else					vec.Set(RSI_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(RSI_INC, true);
-		else					vec.Set(RSI_DEC, true);
-	}
-}
-
 void RelativeStrengthIndex::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& pos_buffer = GetBuffer(1);
@@ -2072,20 +1940,6 @@ void RelativeVigorIndex::Init() {
 	SetBufferStyle(1,DRAW_LINE);
 	SetBufferLabel(0,"RVI");
 	SetBufferLabel(1,"RVIS");
-}
-
-void RelativeVigorIndex::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		double value2 = GetBuffer(1).Get(cursor);
-		if (value0 > 0.0)		vec.Set(RVI_OVERZERO, true);
-		else					vec.Set(RVI_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(RVI_INC, true);
-		else					vec.Set(RVI_DEC, true);
-		if (value0 > value2)	vec.Set(RVI_INCDIFF, true);
-		else					vec.Set(RVI_DECDIFF, true);
-	}
 }
 
 void RelativeVigorIndex::Start()
@@ -2191,19 +2045,6 @@ void StochasticOscillator::Init() {
 	SetBufferStyle(1, DRAW_LINE);
 	SetBufferType(1, STYLE_DOT);
 	
-}
-
-void StochasticOscillator::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		if (value0 > 0.0)		vec.Set(STOCH_OVERZERO, true);
-		else					vec.Set(STOCH_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(STOCH_INC, true);
-		else					vec.Set(STOCH_DEC, true);
-		if (value0 > 80)		vec.Set(STOCH_OVERHIGH, true);
-		if (value0 < 20)		vec.Set(STOCH_BELOWLOW, true);
-	}
 }
 
 void StochasticOscillator::Start() {
@@ -2689,17 +2530,6 @@ void AcceleratorOscillator::Init() {
 	AddSubCore<MovingAverage>().Set("period", PERIOD_SLOW).Set("offset", 0).Set("method", MODE_SMA);
 }
 
-void AcceleratorOscillator::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		if (value0 > 0.0)		vec.Set(ACC_OVERZERO, true);
-		else					vec.Set(ACC_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(ACC_INC, true);
-		else					vec.Set(ACC_DEC, true);
-	}
-}
-
 void AcceleratorOscillator::Start() {
 	Buffer& buffer = GetBuffer(0);
 	Buffer& up_buffer = GetBuffer(1);
@@ -2955,17 +2785,6 @@ void AwesomeOscillator::Init() {
 	
 	AddSubCore<MovingAverage>().Set("period", PERIOD_FAST).Set("offset", 0).Set("method", MODE_SMA);
 	AddSubCore<MovingAverage>().Set("period", PERIOD_SLOW).Set("offset", 0).Set("method", MODE_SMA);
-}
-
-void AwesomeOscillator::Assist(int cursor, VectorBool& vec) {
-	if (cursor > 0) {
-		double value0 = GetBuffer(0).Get(cursor);
-		double value1 = GetBuffer(0).Get(cursor-1);
-		if (value0 > 0.0)		vec.Set(AWE_OVERZERO, true);
-		else					vec.Set(AWE_BELOWZERO, true);
-		if (value0 > value1)	vec.Set(AWE_INC, true);
-		else					vec.Set(AWE_DEC, true);
-	}
 }
 
 void AwesomeOscillator::Start() {
@@ -4036,13 +3855,6 @@ void ChannelOscillator::Start() {
 	}
 }
 
-void ChannelOscillator::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if      (value0 > +0.5)		vec.Set(CHOSC_HIGHEST, true);
-	else if (value0 > +0.0)		vec.Set(CHOSC_HIGH, true);
-	else if (value0 > -0.5)		vec.Set(CHOSC_LOW, true);
-	else						vec.Set(CHOSC_LOWEST, true);
-}
 
 
 
@@ -4132,11 +3944,6 @@ void ScissorChannelOscillator::Start() {
 	}
 }
 
-void ScissorChannelOscillator::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)			vec.Set(SCIS_HIGH, true);
-	else						vec.Set(SCIS_LOW,  true);
-}
 
 
 
@@ -4527,11 +4334,6 @@ void PeriodicalChange::Start() {
 	}
 }
 
-void PeriodicalChange::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);
-}
 
 
 
@@ -4627,13 +4429,6 @@ void VolatilityAverage::Start() {
 	}
 }
 
-void VolatilityAverage::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if      (value0 > +0.5)		vec.Set(VOL_HIGHEST, true);
-	else if (value0 > +0.0)		vec.Set(VOL_HIGH, true);
-	else if (value0 > -0.5)		vec.Set(VOL_LOW, true);
-	else						vec.Set(VOL_LOWEST, true);
-}
 
 
 
@@ -4833,18 +4628,6 @@ void VolatilitySlots::Start() {
 	
 }
 
-void VolatilitySlots::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if      (value0 > total.mean * 2.000)		vec.Set(VOLSL_VERYHIGH, true);
-	else if (value0 > total.mean * 1.333)		vec.Set(VOLSL_HIGH, true);
-	else if (value0 > total.mean * 0.666)		vec.Set(VOLSL_MED, true);
-	else										vec.Set(VOLSL_LOW, true);
-	if (cursor > 0) {
-		double value1 = GetBuffer(0).Get(cursor - 1);
-		if (value0 > value1)		vec.Set(VOLSL_INC, true);
-		else						vec.Set(VOLSL_DEC, true);
-	}
-}
 
 
 
@@ -4923,19 +4706,6 @@ void VolumeSlots::Start() {
 	}
 }
 
-void VolumeSlots::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	ASSERT(IsFin(value0));
-	if      (value0 > total.mean * 2.000)		vec.Set(VOLUME_VERYHIGH, true);
-	else if (value0 > total.mean * 1.333)		vec.Set(VOLUME_HIGH, true);
-	else if (value0 > total.mean * 0.666)		vec.Set(VOLUME_MED, true);
-	else										vec.Set(VOLUME_LOW, true);
-	if (cursor > 0) {
-		double value1 = GetBuffer(0).Get(cursor - 1);
-		if (value0 > value1)		vec.Set(VOLUME_INC, true);
-		else						vec.Set(VOLUME_DEC, true);
-	}
-}
 
 
 
@@ -5719,11 +5489,6 @@ void Anomaly::Start() {
 	}
 }
 
-void Anomaly::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);
-}
 
 
 
@@ -5832,11 +5597,6 @@ void VariantDifference::Start() {
 	}
 }
 
-void VariantDifference::Assist(int cursor, VectorBool& vec) {
-	/*double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);*/
-}
 
 
 
@@ -5916,11 +5676,6 @@ void ScalperSignal::Start() {
 	}
 }
 
-void ScalperSignal::Assist(int cursor, VectorBool& vec) {
-	/*double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);*/
-}
 
 
 
@@ -5993,11 +5748,6 @@ void EasierScalperSignal::Start() {
 	}
 }
 
-void EasierScalperSignal::Assist(int cursor, VectorBool& vec) {
-	/*double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.0)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);*/
-}
 
 
 
@@ -6070,9 +5820,6 @@ void PulseIndicator::Start() {
 	}
 }
 
-void PulseIndicator::Assist(int cursor, VectorBool& vec) {
-	
-}
 
 
 
@@ -6433,11 +6180,6 @@ void Laguerre::Start() {
 }
 
 
-void Laguerre::Assist(int cursor, VectorBool& vec) {
-	double value0 = GetBuffer(0).Get(cursor);
-	if (value0 > 0.5)		vec.Set(PC_INC, true);
-	else					vec.Set(PC_DEC, true);
-}
 
 
 

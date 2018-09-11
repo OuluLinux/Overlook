@@ -204,8 +204,6 @@ public:
 	typedef Ctrl* (*CtrlFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
 	typedef Tuple<String, CommonFactoryPtr, CtrlFactoryPtr> CommonSystem;
-	typedef VectorMap<int, VectorMap<int, String> > FactoryAssistList;
-	typedef VectorMap<int, Tuple<int, String> > AssistList;
 	
 	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
@@ -217,8 +215,6 @@ public:
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
-	inline static FactoryAssistList&		AssistantFactories() {static FactoryAssistList list; return list;}
-	inline static AssistList&				Assistants() {static AssistList list; return list;}
 	
 public:
 	
@@ -227,13 +223,6 @@ public:
 		if      (type == CORE_INDICATOR)		Indicators().Add(id);
 		else if (type == CORE_EXPERTADVISOR)	ExpertAdvisorFactories().Add(id);
 		AddCustomCore(name, &System::CoreSystemFn<CoreT>, &System::CoreSystemSingleFn<CoreT>);
-	}
-	
-	template <class CoreT> static void		RegisterEvent(String name, int type) {
-		int id = Find<CoreT>();
-		if (id == -1) Panic("Invalid assist: " + IntStr(type) + " " + name);
-		AssistantFactories().GetAdd(id).GetAdd(type, name);
-		Assistants().GetAdd(type) = Tuple<int, String>(id, CoreFactories()[id].a + " " + name);
 	}
 	
 	template <class CoreT, class CtrlT> static void		RegisterCommon(String name) {

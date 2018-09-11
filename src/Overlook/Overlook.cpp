@@ -36,7 +36,6 @@ Overlook::Overlook() : watch(this) {
 	
 	NewOrderWindow::WhenOrdersChanged = THISBACK(Data);
 	
-	assist.AddColumn("What");
 	
 	trade.AddColumn ( "Order" );
 	trade.AddColumn ( "Time" );
@@ -134,14 +133,12 @@ void Overlook::DockInit() {
 		Ctrl& c = *sys.CommonFactories()[i].c();
 		Tabify(last, Dockable(c, sys.CommonFactories()[i].a).SizeHint(Size(300, 200)));
 	}
-	Tabify(last, Dockable(assist, "Assist").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(jobs_hsplit, "Jobs").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade_history, "History").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(exposure, "Exposure").SizeHint(Size(300, 200)));
 	Tabify(last, Dockable(trade, "Terminal").SizeHint(Size(300, 200)));
 	
 	
-	assist			.WhenVisible << THISBACK(Data);
 	debuglist		.WhenVisible << THISBACK(Data);
 	jobs_hsplit		.WhenVisible << THISBACK(Data);
 	trade_history	.WhenVisible << THISBACK(Data);
@@ -555,7 +552,6 @@ void Overlook::Data() {
 	
 	watch.Data();
 	
-	if (assist.IsVisible())			RefreshAssist();
 	if (trade.IsVisible())			RefreshTrades();
 	if (exposure.IsVisible())		RefreshExposure();
 	if (trade_history.IsVisible())	RefreshTradesHistory();
@@ -567,37 +563,6 @@ void Overlook::Data() {
 		if (c && c->IsVisible())
 			c->Data();
 	}
-}
-
-void Overlook::RefreshAssist() {
-	Chart* chart = cman.GetVisibleChart();
-	if (!chart || chart->graphs.IsEmpty()) {
-		assist.Clear();
-		return;
-	}
-	
-	GraphCtrl& graph = chart->graphs[0];
-	if (!graph.IsTimeValueToolShown())
-		return;
-	int cursor = graph.last_time_value_tool_pos;
-	
-	VectorBool vec;
-	vec.SetCount(ASSIST_COUNT);
-	for(int i = chart->work_queue.GetCount()-1; i >= 0; i--) {
-		CoreItem& ci = *chart->work_queue[i];
-		if (ci.core.IsEmpty()) continue;
-		
-		Core& core = *ci.core;
-		if (cursor >= core.GetBars()) break;
-		core.Assist(cursor, vec);
-	}
-	
-	int row = 0;
-	for(int i = 0; i < ASSIST_COUNT; i++) {
-		if (vec.Get(i))
-			assist.Set(row++, 0, System::Assistants().Get(i).b);
-	}
-	assist.SetCount(row);
 }
 
 void Overlook::RefreshTrades() {

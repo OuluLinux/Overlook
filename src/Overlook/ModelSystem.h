@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef _Overlook_ModelSystem_h_
 #define _Overlook_ModelSystem_h_
 
@@ -148,4 +150,5 @@ public:
 
 }
 
+#endif
 #endif

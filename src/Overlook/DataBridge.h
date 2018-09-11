@@ -117,7 +117,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	int GetChangeStep(int shift, int steps);
 	double GetPoint() const {return point;}

@@ -112,7 +112,6 @@ public:
 	MovingAverage();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -136,7 +135,6 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -182,7 +180,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -252,7 +250,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -275,7 +273,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -294,7 +292,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -312,7 +310,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -332,7 +330,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -351,7 +349,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -371,7 +369,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -392,7 +390,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -411,7 +409,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -477,7 +475,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -496,7 +494,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -517,7 +515,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -637,7 +635,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -686,7 +684,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -890,7 +888,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -912,7 +910,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1039,7 +1037,7 @@ public:
 	PeriodicalChange();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1064,7 +1062,7 @@ public:
 	VolatilityAverage();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1121,7 +1119,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1150,7 +1148,7 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1332,7 +1330,7 @@ public:
 	Anomaly();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1356,7 +1354,7 @@ public:
 	VariantDifference();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
@@ -1391,7 +1389,7 @@ public:
 	ScalperSignal();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1412,7 +1410,7 @@ public:
 	EasierScalperSignal();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
@@ -1436,7 +1434,7 @@ public:
 	PulseIndicator();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>(&FilterFunction)
@@ -1644,7 +1642,7 @@ public:
 	Laguerre();
 	
 	virtual void Init();
-	virtual void Assist(int cursor, VectorBool& vec);
+	
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()

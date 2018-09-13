@@ -223,7 +223,7 @@ public:
 	
 };
 
-class OnlineVarianceWindow {
+class OnlineVarianceWindow : Moveable<OnlineVarianceWindow> {
 	Vector<OnlineVariance> var;
 	int cursor = 0;
 	
@@ -244,6 +244,31 @@ public:
 	
 	void Serialize(Stream& s) {s % var % cursor;}
 };
+
+class OnlineStdDevWindow : Moveable<OnlineStdDevWindow> {
+	OnlineAverageWindow1 av;
+	Vector<double> win_a;
+	double sum_a = 0.0;
+	int period = 0, cursor = 0;
+	
+public:
+	OnlineStdDevWindow() {}
+	void SetPeriod(int i) {period = i; win_a.SetCount(i,0); av.SetPeriod(i);}
+	void Add(double a) {
+		av.Add(a);
+		a = a - av.GetMean();
+		a = a * a;
+		double& da = win_a[cursor];
+		sum_a -= da;
+		da = a;
+		sum_a += da;
+		cursor = (cursor + 1) % period;
+	}
+	double Get() const {return sqrt(sum_a / period);}
+	double GetMean() const {return av.GetMean();}
+	void Serialize(Stream& s) {s % av % win_a % sum_a % period % cursor;}
+};
+
 
 struct DerivZeroTrigger {
 	int count;

@@ -30,7 +30,6 @@ using namespace Upp;
 #include "Utils.h"
 #include "AutoChartist.h"
 #include "Indicators.h"
-#include "Advisors.h"
 #include "Net.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
@@ -43,6 +42,7 @@ using namespace Upp;
 #include "Analyzer.h"
 #include "Scalper.h"
 #include "AdvisorSystem.h"
+#include "Advisors.h"
 #include "Sentiment.h"
 
 

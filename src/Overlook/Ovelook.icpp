@@ -94,6 +94,8 @@ INITBLOCK {
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     
     
+    AdvisorSystem::Register<SimpleBB>("SimpleBB");
+    
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

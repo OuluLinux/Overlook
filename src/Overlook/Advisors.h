@@ -5,27 +5,18 @@
 namespace Overlook {
 
 
-/*class TickBalanceOscillator : public Core {
-	
-protected:
-	virtual void Start();
-	
-	int period = 10;
+class SimpleBB : public Advisor {
+	int wait_cursor = 0;
+	double init_balance = 0;
 	
 public:
-	TickBalanceOscillator();
+	SimpleBB();
+	virtual void Tick();
 	
-	virtual void Init();
 	
-	virtual void IO(ValueRegister& reg) {
-		reg % In<DataBridge>()
-			% Out(1, 1)
-			% Lbl(1)
-			% Arg("period", period, 0, 1000)
-			;
-	}
 };
-*/
+
+
 }
 
 #endif

@@ -9,7 +9,7 @@ SimpleBB::SimpleBB() {
 void SimpleBB::Tick() {
 	AdvisorSystem& as = GetAdvisorSystem();
 	
-	bool finish = broker.AccountBalance() >= init_balance * 1.003;
+	bool finish = broker.AccountBalance() >= init_balance * 1.03;
 	
 	if (as.GetCursor() < wait_cursor && !finish)
 		return;

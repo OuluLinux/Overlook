@@ -79,6 +79,8 @@ file
 	Scalper.cpp,
 	Analyzer.h,
 	Analyzer.cpp,
+	DecisionTree.h,
+	DecisionTree.cpp,
 	Trash readonly separator,
 	ModelSystem.h,
 	ModelSystem.cpp;

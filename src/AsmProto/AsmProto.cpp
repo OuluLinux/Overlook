@@ -18,9 +18,14 @@ Test1::Test1() {
 void Test1::Train() {
 	TimeStop ts;
 	
+	int step = 5;
+	regen.begin = 0;
+	regen.end = step;
+	
 	while (!Thread::IsShutdownThreads() && running) {
 		
 		regen.Iterate();
+		
 		/*Sleep(3000);
 		
 		if (regen.trains_total % 3000 == 0) {
@@ -28,11 +33,19 @@ void Test1::Train() {
 			gen.a.src.Clear();
 		}*/
 		
+		regen.begin += step;
+		regen.end += step;
+		
+		if (regen.end > regen.generated.GetCount())
+			break;
+		
 		if (ts.Elapsed() > 60) {
 			PostCallback(THISBACK(Refresh0));
 			ts.Reset();
 		}
 	}
+	
+	PostCallback(THISBACK(Refresh0));
 	running = false;
 	stopped = true;
 }

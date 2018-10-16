@@ -22,7 +22,7 @@ struct Regenerator {
 	// Temp
 	Vector<double> generated;
 	Vector<double>* real_data;
-	
+	int begin = 0, end = 0;
 	
 	Regenerator();
 	void Iterate();

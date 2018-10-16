@@ -21,7 +21,7 @@ void Generator::Randomize(PricePressure& p, double price, int iter) {
 	p.iter = iter;
 }
 
-void Generator::GenerateData(Vector<double>& data, bool add_random) {
+void Generator::GenerateData(Vector<double>& data, bool add_random, int count) {
 	
 	price = 1.0;
 	active_pressures.Clear();
@@ -29,20 +29,25 @@ void Generator::GenerateData(Vector<double>& data, bool add_random) {
 	a.iter = 0;
 	a.Sort();
 	
+	iter = 0;
 	if (add_random) {
 		for(int i = 0; i < 100; i++)
 			AddRandomPressure();
 	}
 	
 	
+	if (count <= 0)
+		count = data_count;
 	
 	data.SetCount(data_count, price);
 	
-	for(iter = 0; iter < data_count; iter++) {
+	for(iter = 0; iter < count; iter++) {
 		
 		while (a.iter < a.src.GetCount()) {
 			PricePressure& p = a.src[a.iter];
-			if (p.iter > iter) break;
+			ASSERT(p.iter != -1);
+			if (p.iter > iter)
+				break;
 			active_pressures.Add(p);
 			a.iter++;
 		}
@@ -73,7 +78,11 @@ void Generator::GenerateData(Vector<double>& data, bool add_random) {
 				pres = min(dec_buy_pres, dec_sell_pres);
 			}
 			else {
-				price = Random(2) ? inc_price : dec_price;
+				//price = inc_price;// 
+				if (add_random)
+					price = Random(2) ? inc_price : dec_price;
+				else
+					price = inc_price;
 				break;
 			}
 			
@@ -83,7 +92,7 @@ void Generator::GenerateData(Vector<double>& data, bool add_random) {
 		}
 		
 		
-		SimpleReducePressure(1500);
+		SimpleReducePressure(100);
 		if (add_random)
 			while (active_pressures.GetCount() < 100)
 				AddRandomPressure();

@@ -10,7 +10,7 @@ enum {
 	PP_MAX,
 	PP_SIZE,
 	PP_ACTION,
-	PP_ITER,
+	//PP_ITER,
 	PP_COUNT,
 };
 
@@ -19,7 +19,7 @@ struct PricePressure : Moveable<PricePressure> {
 	double min, max;
 	double size;
 	bool action;
-	int iter;
+	int iter = -1;
 	
 	bool operator()(const PricePressure& a, const PricePressure& b) const {
 		if (a.iter < b.iter) return true;
@@ -37,7 +37,7 @@ struct Asm {
 };
 
 struct Generator {
-	static const int data_count = 10000;
+	static const int data_count = 1000;
 	
 	Vector<PricePressure> active_pressures;
 	Asm a;
@@ -48,7 +48,7 @@ struct Generator {
 	Generator();
 	void AddRandomPressure();
 	void Randomize(PricePressure& pp, double price, int iter);
-	void GenerateData(Vector<double>& data, bool add_random);
+	void GenerateData(Vector<double>& data, bool add_random, int count=0);
 	void GetPricePressure(double price, double& buy_pres, double& sell_pres);
 	void ReducePressure(double amount);
 	void SimpleReducePressure(double amount);

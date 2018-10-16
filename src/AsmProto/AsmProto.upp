@@ -8,8 +8,8 @@ file
 	Generator.h,
 	Generator.cpp,
 	Regenerator.h,
-	Optimizer.h,
-	Regenerator.cpp;
+	Regenerator.cpp,
+	Optimizer.h;
 
 mainconfig
 	"" = "GUI";

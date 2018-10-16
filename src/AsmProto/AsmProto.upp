@@ -1,19 +1,16 @@
 uses
 	Core,
-	ConvNet;
+	ConvNet,
+	CtrlLib;
 
 file
 	AsmProto.h,
 	AsmProto.cpp,
-	Conf.h,
-	Conf.cpp,
-	Session.h,
-	Session.cpp,
-	Net.h,
-	Net.cpp,
-	LayerBase.h,
-	LayerBase.cpp;
+	Generator.h,
+	Generator.cpp,
+	Regenerator.h,
+	Regenerator.cpp;
 
 mainconfig
-	"" = "";
+	"" = "GUI";
 

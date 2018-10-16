@@ -1,129 +1,137 @@
 #include "AsmProto.h"
 
-int period = 24;
+Test1::Test1() {
+	Title("Test 1");
+	Sizeable().MaximizeBox().MinimizeBox();
+	
+	draw0.t = this;
+	Add(draw0.SizePos());
+	
+	gen.GenerateData(data0, true);
+	regen.generated.SetCount(data0.GetCount(), data0[0]);
+	
+	regen.real_data = &data0;
+	data1 = &regen.generated;
+	
+}
 
-struct Generator {
+void Test1::Train() {
+	TimeStop ts;
 	
-	struct SymbolGenerator {
-		double prev_value = 1.0;
-		double prev_diff = 0.0;
-		int iter = 0;
-		int hurst0, hurst1;
-		int correlation;
+	while (!Thread::IsShutdownThreads() && running) {
 		
-		SymbolGenerator() {
-			hurst0 = 1 + Random(4);
-			hurst1 = 5 + Random(10);
-			correlation = Random(2) * 2 - 1;
+		regen.Train();
+		
+		if (regen.trains_total % 3000 == 0) {
+			gen.GenerateData(data0, true);
+			gen.a.src.Clear();
 		}
 		
-		
-		double Tick() {
-			double volat = (sin(2*M_PI / period * iter) + 1.5) * 0.0001;
-			
-			double hurst = (sin(2*M_PI / period * hurst0 * iter) + sin(2*M_PI / period * hurst1 * iter)) / 2.0;
-			
-			double diff;
-			if (prev_diff > 0) {
-				if (hurst >= 0)
-					diff = +volat;
-				else
-					diff = -volat;
-			} else {
-				if (hurst >= 0)
-					diff = -volat;
-				else
-					diff = +volat;
-			}
-			
-			iter++;
-			prev_diff = diff;
-			return diff;
-		}
-	};
-	
-	Array<SymbolGenerator> sym;
-	int size = 1000;
-	int symbols = 8;
-	
-	
-	Generator() {
-		sym.SetCount(symbols);
-	}
-	
-	void GenerateData(Vector<Vector<double> >& data) {
-		Vector<double> tmp;
-		
-		tmp.SetCount(symbols);
-		
-		data.SetCount(symbols);
-		for(int i = 0; i < symbols; i++) {
-			data[i].SetCount(size);
-			data[i][0] = 1.0;
-		}
-		
-		for(int i = 1; i < size; i++) {
-			
-			double sum = 0.0;
-			for(int j = 0; j < symbols; j++) {
-				double d = sym[j].Tick();
-				tmp[j] = d;
-				sum += d;
-			}
-			sum /= symbols;
-			
-			for(int j = 0; j < symbols; j++) {
-				double prev = data[j][i-1];
-				double diff = 0.8 * sum * sym[j].correlation + 0.2 * tmp[j];
-				data[j][i] = prev + diff;
-			}
+		if (ts.Elapsed() > 60) {
+			PostCallback(THISBACK(Refresh0));
+			ts.Reset();
 		}
 	}
-};
+	running = false;
+	stopped = true;
+}
+
+void Test1::DrawLines::Paint(Draw& d) {
+	Size sz(GetSize());
+	d.DrawRect(sz, White());
+	
+	double zero_line = 1.0;
+	
+	double min = +DBL_MAX;
+	double max = -DBL_MAX;
+	double last = 0.0;
+	double peak = -DBL_MAX;
+	
+	int max_steps = 0;
+	int count0 = t->data0.GetCount();
+	int count1 = t->data1->GetCount();
+	for(int j = 0; j < count0; j++) {
+		double d = t->data0[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	for(int j = 0; j < count1; j++) {
+		double d = (*t->data1)[j];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	max_steps = Upp::min(count0, count1);
+	
+	
+	if (max_steps > 1 && max >= min) {
+		double diff = max - min;
+		double xstep = (double)sz.cx / (max_steps - 1);
+		Font fnt = Monospace(10);
+		
+		if (max_steps >= 2) {
+			polyline.SetCount(0);
+			for(int j = 0; j < max_steps; j++) {
+				double v = t->data0[j];
+				last = v;
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+				if (v > peak) peak = v;
+			}
+			if (polyline.GetCount() >= 2)
+				d.DrawPolyline(polyline, 1, Color(81, 145, 137));
+			
+			polyline.SetCount(0);
+			for(int j = 0; j < max_steps; j++) {
+				double v = (*t->data1)[j];
+				last = v;
+				int x = (int)(j * xstep);
+				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
+				polyline.Add(Point(x, y));
+				if (v > peak) peak = v;
+			}
+			if (polyline.GetCount() >= 2)
+				d.DrawPolyline(polyline, 1, Color(56, 42, 150));
+		}
+		
+		{
+			int y = 0;
+			String str = DblStr(peak);
+			Size str_sz = GetTextSize(str, fnt);
+			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+			d.DrawText(16, y, str, fnt, Black());
+		}
+		{
+			int y = 0;
+			String str = DblStr(last);
+			Size str_sz = GetTextSize(str, fnt);
+			d.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
+			d.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
+		}
+		{
+			int y = (int)(sz.cy - (zero_line - min) / diff * sz.cy);
+			d.DrawLine(0, y, sz.cx, y, 1, Black());
+			if (zero_line != 0.0) {
+				int y = sz.cy - 10;
+				String str = DblStr(zero_line);
+				Size str_sz = GetTextSize(str, fnt);
+				d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
+				d.DrawText(16, y, str, fnt, Black());
+			}
+		}
+	}
+	
+	int x = t->regen.seeker_state.iter * sz.cx / t->regen.generated.GetCount();
+	d.DrawRect(x, 0, 5, 5, Red());
+	x = t->regen.gen.a.src.GetCount() > 0 ? t->regen.seeker_state.obj_iter * sz.cx / t->regen.gen.a.src.GetCount() : 0;
+	d.DrawRect(x, 5, 5, 5, Blue());
+	
+}
 
 
-CONSOLE_APP_MAIN
+GUI_APP_MAIN
 {
-	try {
-		Generator gen;
-		Vector<Vector<double> > data;
-		
-		gen.GenerateData(data);
-		DUMPCC(data);
-		
-		
-		int win_size = 8;
-		int sym_count = data.GetCount();
-		Session ses;
-		ses.Load(Line(Group(8, Line(Item("volat"), Item("polar"), Item("mux").Arg("depth", win_size))), Item("correlation").Arg("depth", win_size).Arg("ratio", 0.8)));
-		LOG(ses.GetNet().ToString());
-		
-		IOData window;
-		window.SetCount(win_size * sym_count, sym_count);
-		bool running = true;
-		while (running) {
-			for(int i = win_size + 1; i < data[0].GetCount(); i++) {
-				int in = 0, out = 0;
-				for(int j = 0; j < sym_count; j++) {
-					for(int k = 0; k < win_size; k++) {
-						double d = data[j][i - k - 1];
-						window.in[in++] = d;
-					}
-					window.out[out++] = data[j][i];
-				}
-				
-				
-				ses.GetNet().Backward(window);
-				int r = ses.GetNet().Forward(true);
-				
-				if (r == RAN)
-					running = false;
-			}
-		}
-		
-		
-	}
-	catch (Exc e) {
-		LOG("Error: " + e);
-	}
+	Test1 t;
+	t.Start();
+	t.Run();
 }

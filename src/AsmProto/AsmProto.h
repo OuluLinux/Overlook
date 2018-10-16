@@ -6,6 +6,7 @@
 using namespace Upp;
 
 
+#include "Optimizer.h"
 #include "Generator.h"
 #include "Regenerator.h"
 

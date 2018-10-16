@@ -20,12 +20,13 @@ void Test1::Train() {
 	
 	while (!Thread::IsShutdownThreads() && running) {
 		
-		regen.Train();
+		regen.Iterate();
+		/*Sleep(3000);
 		
 		if (regen.trains_total % 3000 == 0) {
 			gen.GenerateData(data0, true);
 			gen.a.src.Clear();
-		}
+		}*/
 		
 		if (ts.Elapsed() > 60) {
 			PostCallback(THISBACK(Refresh0));
@@ -120,11 +121,6 @@ void Test1::DrawLines::Paint(Draw& d) {
 			}
 		}
 	}
-	
-	int x = t->regen.seeker_state.iter * sz.cx / t->regen.generated.GetCount();
-	d.DrawRect(x, 0, 5, 5, Red());
-	x = t->regen.gen.a.src.GetCount() > 0 ? t->regen.seeker_state.obj_iter * sz.cx / t->regen.gen.a.src.GetCount() : 0;
-	d.DrawRect(x, 5, 5, 5, Blue());
 	
 }
 

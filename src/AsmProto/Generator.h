@@ -3,6 +3,16 @@
 
 
 
+enum {
+	PP_LOW,
+	PP_HIGH,
+	PP_MIN,
+	PP_MAX,
+	PP_SIZE,
+	PP_ACTION,
+	PP_ITER,
+	PP_COUNT,
+};
 
 struct PricePressure : Moveable<PricePressure> {
 	double low, high;
@@ -27,7 +37,7 @@ struct Asm {
 };
 
 struct Generator {
-	static const int data_count = 100;
+	static const int data_count = 10000;
 	
 	Vector<PricePressure> active_pressures;
 	Asm a;

@@ -1,6 +1,5 @@
 uses
 	Core,
-	ConvNet,
 	CtrlLib;
 
 file
@@ -9,6 +8,7 @@ file
 	Generator.h,
 	Generator.cpp,
 	Regenerator.h,
+	Optimizer.h,
 	Regenerator.cpp;
 
 mainconfig

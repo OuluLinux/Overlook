@@ -69,11 +69,11 @@ void Test1::DrawLines::Paint(Draw& d) {
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
-	for(int j = 0; j < count1; j++) {
+	/*for(int j = 0; j < count1; j++) {
 		double d = (*t->data1)[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
-	}
+	}*/
 	max_steps = Upp::min(count0, count1);
 	
 	

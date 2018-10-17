@@ -20,6 +20,10 @@ struct PricePressure : Moveable<PricePressure> {
 	double size;
 	bool action;
 	int iter = -1;
+	int id = -1;
+	
+	
+	PricePressure& SetId(int i) {id = i; return *this;}
 	
 	bool operator()(const PricePressure& a, const PricePressure& b) const {
 		if (a.iter < b.iter) return true;
@@ -30,9 +34,11 @@ struct PricePressure : Moveable<PricePressure> {
 };
 
 struct Asm {
-	Vector<PricePressure> src;
+	VectorMap<int, PricePressure> src;
+	int id_counter = 0;
 	int iter = 0;
 	
+	PricePressure& Add() {int id = id_counter++; return src.Add(id).SetId(id);}
 	void Sort() {Upp::Sort(src, PricePressure());}
 };
 

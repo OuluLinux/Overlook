@@ -15,7 +15,7 @@ struct Regenerator {
 	// Persistent
 	Generator gen;
 	int trains_total = 0;
-	Optimizer opt;
+	Optimizer opt, sizeopt;
 	
 	
 	
@@ -26,7 +26,9 @@ struct Regenerator {
 	
 	Regenerator();
 	void Iterate();
-	double GetDataError();
+	double GetDataError(int end);
+	void ReadTrial(const Vector<double>& trial, int a_begin);
+	void ReadTrialSize(const Vector<double>& trial, const Vector<int>& ids);
 	
 };
 

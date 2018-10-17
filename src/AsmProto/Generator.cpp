@@ -60,20 +60,20 @@ void Generator::GenerateData(Vector<double>& data, bool add_random, int count) {
 			double inc_price = price + step;
 			double inc_buy_pres, inc_sell_pres;
 			GetPricePressure(inc_price, inc_buy_pres, inc_sell_pres);
-			double inc_diff = fabs(inc_buy_pres - inc_sell_pres);
+			double inc_min = min(inc_buy_pres, inc_sell_pres);
 			
 			
 			double dec_price = price - step;
 			double dec_buy_pres, dec_sell_pres;
 			GetPricePressure(dec_price, dec_buy_pres, dec_sell_pres);
-			double dec_diff = fabs(dec_buy_pres - dec_sell_pres);
+			double dec_min = min(dec_buy_pres, dec_sell_pres);
 			
 			
-			if (inc_diff < dec_diff) {
+			if (inc_min > dec_min) {
 				price = inc_price;
 				pres = min(inc_buy_pres, inc_sell_pres);
 			}
-			else if (inc_diff > dec_diff) {
+			else if (inc_min < dec_min) {
 				price = dec_price;
 				pres = min(dec_buy_pres, dec_sell_pres);
 			}

@@ -5,30 +5,25 @@
 
 
 
+static const int CUDA_CORES = 6;
+
 
 
 struct Regenerator {
 	
-	static const int pp_count = 1;
-	static const int dim = 1;//pp_count * PP_COUNT;
 	
 	// Persistent
-	Generator gen;
+	Generator gen[CUDA_CORES];
 	int trains_total = 0;
-	Optimizer opt, sizeopt;
-	
+	Optimizer<ARG_COUNT, CUDA_CORES> opt;
+	double last_energy = 0;
 	
 	
 	// Temp
-	Vector<double> generated;
-	Vector<double>* real_data;
-	int begin = 0, end = 0;
+	double* real_data;
 	
 	Regenerator();
 	void Iterate();
-	double GetDataError(int end);
-	void ReadTrial(const Vector<double>& trial, int a_begin);
-	void ReadTrialSize(const Vector<double>& trial, const Vector<int>& ids);
 	
 };
 

@@ -3,7 +3,7 @@
 
 
 #if defined flagMSC && defined flagWIN32 && !defined flagFORCE_COMPAT_AMP
-	#define PARALLEL restrict(amp)
+	#define PARALLEL restrict(cpu,amp)
 	#define HAVE_SYSTEM_AMP
 	#include <amp.h>
 	#include <amp_math.h>
@@ -69,9 +69,9 @@ inline String GetAmpDevices() {
 	return out;
 }
 
-inline int AmpAtomicSet(int& i, int value) PARALLEL {return concurrency::atomic_exchange(&i, value);}
+/*inline int AmpAtomicSet(int& i, int value) PARALLEL {return concurrency::atomic_exchange(&i, value);}
 inline int AmpAtomicInc(int& i) PARALLEL {return concurrency::atomic_fetch_inc(&i);}
-inline int AmpAtomicDec(int& i) PARALLEL {return concurrency::atomic_fetch_dec(&i);}
+inline int AmpAtomicDec(int& i) PARALLEL {return concurrency::atomic_fetch_dec(&i);}*/
 
 #else
 	#define PARALLEL
@@ -130,7 +130,40 @@ template <class T, int I> struct array_view {
 	int size() const {return count;}
 	
 	void synchronize() {}
-	void discard_data() {}
+	void discard_data() const {}
+	
+	extent<I> extent;
+};
+
+template <class T, int I> struct array {
+	typedef array<T,I> thiscls;
+	T* data;
+	int count;
+
+	array(int count, T* data) : data(data), count(count), extent(count) {
+		
+	}
+	
+	array(const thiscls& src) : extent(src.extent) {
+		data = src.data;
+		count = src.count;
+	}
+	
+	T& operator[] (index<1> idx) const {
+		int i = idx.i;
+		ASSERT(i >= 0 && i < count);
+		return data[i];
+	}
+	
+	T& operator[] (int i) const {
+		ASSERT(i >= 0 && i < count);
+		return data[i];
+	}
+	
+	int size() const {return count;}
+	
+	void synchronize() {}
+	void discard_data() const {}
 	
 	extent<I> extent;
 };

@@ -7,7 +7,7 @@
 #define Element(a,b,c)  a[b][c]
 #define RowVector(a,b)  a[b]
 #define CopyVector(a,b) {\
-	double *i1 = a.Begin(); const double* i2 = b.Begin();\
+	double* i1 = a; double* i2 = b;\
 	for (int i = 0; i < dimension; i++, i1++, i2++) \
 		*i1 = *i2;}
 #define StrategyBest1Exp			0
@@ -22,24 +22,23 @@
 #define StrategyRandom2Bin			9
 
 
+template <int dimension, int popcount>
 class Optimizer {
 	
 public:
-	Vector<double> min_values, max_values;
-	Vector<double> trial_solution;
-	Vector<double> best_solution;
-	Vector<double> pop_energy;
-	Vector<Vector<double> > population;
-	int population_count = 0;
+	double min_values[dimension], max_values[dimension];
+	double trial_solutions[popcount][dimension];
+	double best_solution[dimension];
+	double pop_energy[popcount];
+	double population[popcount][dimension];
 	int round = 0;
 	int random_type = 0;
-	int dimension = 0;
 	int max_rounds = 100;
 	bool use_limits = 0;
 	
 	int generation = 0;
 	int max_gens = 10;
-	int candidate = 0;
+	//int candidate = 0;
 	int strategy = StrategyBest1Exp;
 	double scale = 0.7;
 	double probability = 0.9;
@@ -64,10 +63,8 @@ public:
 		  % best_solution
 		  % pop_energy
 		  % population
-		  % population_count
 		  % round
 		  % random_type
-		  % dimension
 		  % max_rounds
 		  % use_limits
 		  % generation
@@ -91,7 +88,7 @@ public:
 	
 	
 	int		Dimension() {return dimension;}
-	int		Population() {return population_count;}
+	int		Population() {return popcount;}
 	double	Energy() {return(best_energy);}
 	void	ResetBestEnergy() {best_energy = 0;}
 	void	FactorBestEnergy(double f) {best_energy *= f;}
@@ -100,9 +97,8 @@ public:
 	Vector<double>& Max() {return max_values;}
 	
 	void SolveStart() {
-		best_energy = DBL_MAX;
+		best_energy = -DBL_MAX;
 		generation = 0;
-		candidate = 0;
 	}
 	
 	bool SolveCheck(){
@@ -111,26 +107,19 @@ public:
 		return 0;
 	}
 	
-	void SolveNext() {
-		candidate++;
-		if (candidate >= population_count) {
-			candidate=0;
-			generation++;
-		}
-	}
-	
-	void SetTrialEnergy(double energy) {
+	void SetTrialEnergy(int candidate, double energy) {
 		trial_energy = energy;
 		
-		if (trial_energy < pop_energy[candidate]) {
+		if (trial_energy > pop_energy[candidate]) {
 			
-			// New low for this candidate
+			// New high for this candidate
 			pop_energy[candidate] = trial_energy;
-			Vector<double>& vec = population[ candidate ];
+			double* vec = population[ candidate ];
+			double* trial_solution = trial_solutions[candidate];
 			CopyVector(vec, trial_solution);
 	
-			// Check if all-time low
-			if (trial_energy <= best_energy) {
+			// Check if all-time high
+			if (trial_energy >= best_energy) {
 				best_energy = trial_energy;
 				CopyVector(best_solution, trial_solution);
 			}
@@ -138,7 +127,7 @@ public:
 	}
 	
 	double GetBestEnergy() {
-		return -best_energy;
+		return best_energy;
 	}
 	
 	double RandomUniform(double min_value, double max_value) {
@@ -151,31 +140,31 @@ protected:
 	void SelectSamples(int candidate,int *r1,int *r2=0,int *r3=0, int *r4=0,int *r5=0) {
 		if (r1) {
 			do {
-				*r1 = (int)RandomUniform(0.0,(double)population_count);
+				*r1 = (int)RandomUniform(0.0,(double)popcount);
 			} while (*r1 == candidate);
 		}
 	
 		if (r2) {
 			do {
-				*r2 = (int)RandomUniform(0.0,(double)population_count);
+				*r2 = (int)RandomUniform(0.0,(double)popcount);
 			} while ((*r2 == candidate) || (*r2 == *r1));
 		}
 	
 		if (r3) {
 			do {
-				*r3 = (int)RandomUniform(0.0,(double)population_count);
+				*r3 = (int)RandomUniform(0.0,(double)popcount);
 			} while ((*r3 == candidate) || (*r3 == *r2) || (*r3 == *r1));
 		}
 	
 		if (r4) {
 			do {
-				*r4 = (int)RandomUniform(0.0,(double)population_count);
+				*r4 = (int)RandomUniform(0.0,(double)popcount);
 			} while ((*r4 == candidate) || (*r4 == *r3) || (*r4 == *r2) || (*r4 == *r1));
 		}
 	
 		if (r5) {
 			do {
-				*r5 = (int)RandomUniform(0.0,(double)population_count);
+				*r5 = (int)RandomUniform(0.0,(double)popcount);
 			} while ((*r5 == candidate) || (*r5 == *r4) || (*r5 == *r3)
 					 || (*r5 == *r2) || (*r5 == *r1));
 		}
@@ -188,7 +177,7 @@ protected:
 	
 private:
 	
-	void Best1Exp(int candidate) {
+	void Best1Exp(int candidate, double* trial_solution) {
 		int r1, r2;
 		int n;
 	
@@ -206,7 +195,7 @@ private:
 		return;
 	}
 	
-	void Random1Exp(int candidate) {
+	void Random1Exp(int candidate, double* trial_solution) {
 		int r1, r2, r3;
 		int n;
 	
@@ -224,7 +213,7 @@ private:
 		return;
 	}
 	
-	void RandToBest1Exp(int candidate) {
+	void RandToBest1Exp(int candidate, double* trial_solution) {
 		int r1, r2;
 		int n;
 	
@@ -242,7 +231,7 @@ private:
 		return;
 	}
 	
-	void Best2Exp(int candidate) {
+	void Best2Exp(int candidate, double* trial_solution) {
 		int r1, r2, r3, r4;
 		int n;
 	
@@ -262,7 +251,7 @@ private:
 		return;
 	}
 	
-	void Random2Exp(int candidate) {
+	void Random2Exp(int candidate, double* trial_solution) {
 		int r1, r2, r3, r4, r5;
 		int n;
 	
@@ -282,7 +271,7 @@ private:
 		return;
 	}
 	
-	void Best1Bin(int candidate) {
+	void Best1Bin(int candidate, double* trial_solution) {
 		int r1, r2;
 		int n;
 	
@@ -301,7 +290,7 @@ private:
 		return;
 	}
 	
-	void Random1Bin(int candidate) {
+	void Random1Bin(int candidate, double* trial_solution) {
 		int r1, r2, r3;
 		int n;
 	
@@ -320,7 +309,7 @@ private:
 		return;
 	}
 	
-	void RandToBest1Bin(int candidate) {
+	void RandToBest1Bin(int candidate, double* trial_solution) {
 		int r1, r2;
 		int n;
 	
@@ -339,7 +328,7 @@ private:
 		return;
 	}
 	
-	void Best2Bin(int candidate) {
+	void Best2Bin(int candidate, double* trial_solution) {
 		int r1, r2, r3, r4;
 		int n;
 	
@@ -360,7 +349,7 @@ private:
 		return;
 	}
 	
-	void Random2Bin(int candidate) {
+	void Random2Bin(int candidate, double* trial_solution) {
 		int r1, r2, r3, r4, r5;
 		int n;
 	
@@ -386,36 +375,32 @@ private:
 
 public:
 	
-	void Init(int dimension, int population_count, int strategy=StrategyBest1Exp) {
-		this->population_count = population_count;
-		this->dimension = dimension;
+	void Init(int strategy=StrategyBest1Exp) {
 		this->strategy = strategy;
 		
-		max_rounds = max_gens * population_count;
+		max_rounds = max_gens * popcount;
 		
-		trial_solution.SetCount(dimension, 0);
-		best_solution.SetCount(dimension, 0);
-		pop_energy.SetCount(population_count, 0);
-		population.SetCount(population_count);
-		for(int i = 0; i < population.GetCount(); i++)
-			population[i].SetCount(dimension);
+		for(int i = 0; i < popcount; i++)
+			for(int j = 0; j < dimension; j++)
+				trial_solutions[i][j] = 0;
 		
-		min_values.SetCount(dimension, min_value);
-		max_values.SetCount(dimension, max_value);
+		for(int i = 0; i < dimension; i++) {
+			min_values[i] = min_value;
+			max_values[i] = max_value;
+		}
 	
 		for(int i = 0; i < dimension; i++ ) {
-			trial_solution[i] = 0;
 			best_solution[i] = 0;
 		}
 		
-		for(int i = 0; i < population_count; i++ ) {
+		for(int i = 0; i < popcount; i++ ) {
 			pop_energy[i] = 0;
 			for(int j = 0; j < dimension; j++ )
 				population[i][j] = 0;
 		}
 		
 		if (random_type == RAND_UNIFORM) {
-			for (int i = 0; i < population_count; i++)
+			for (int i = 0; i < popcount; i++)
 				for (int j = 0; j < dimension; j++)
 					Element(population,i,j) = RandomUniform(min_values[j], max_values[j]);
 		}
@@ -424,7 +409,7 @@ public:
 				std::random_device rd;
 			    std::mt19937 gen(rd());
 			    std::normal_distribution<> d(min_values[j], max_values[j]); // mean, stddev
-				for (int i = 0; i < population_count; i++)
+				for (int i = 0; i < popcount; i++)
 					Element(population,i,j) = d(gen);
 			}
 		}
@@ -434,8 +419,8 @@ public:
 		else Panic("Invalid random type");
 		
 		
-		for (int i=0; i < population_count; i++)
-			pop_energy[i] = DBL_MAX;
+		for (int i=0; i < popcount; i++)
+			pop_energy[i] = -DBL_MAX;
 	
 		for (int i=0; i < dimension; i++)
 			best_solution[i] = 0.0;
@@ -455,38 +440,44 @@ public:
 	}
 	
 	void Start() {
-		GetTrialSolution();
+		for(int i = 0; i < popcount; i++) {
+			GenerateTrialSolution(i, trial_solutions[i]);
+		}
 	}
 	
-	void Stop(double energy) {
-		SetTrialEnergy(-1 * energy);
-		SolveNext();
-		round++;
+	void Stop(double* energy) {
+		for(int i = 0; i < popcount; i++)
+			SetTrialEnergy(i, energy[i]);
+		round += popcount;
+		generation++;
 	}
 	
-	const Vector<double>& GetTrialSolution() {
+	void GenerateTrialSolution(int candidate, double* trial_solution) {
 		switch (strategy) {
-			case StrategyBest1Exp:			Best1Exp(candidate); break;
-			case StrategyRandom1Exp:		Random1Exp(candidate); break;
-			case StrategyRandToBest1Exp:	RandToBest1Exp(candidate); break;
-			case StrategyBest2Exp:			Best2Exp(candidate); break;
-			case StrategyRandom2Exp:		Random2Exp(candidate); break;
-			case StrategyBest1Bin:			Best1Bin(candidate); break;
-			case StrategyRandom1Bin:		Random1Bin(candidate); break;
-			case StrategyRandToBest1Bin:	RandToBest1Bin(candidate); break;
-			case StrategyBest2Bin:			Best2Bin(candidate); break;
-			case StrategyRandom2Bin:		Random2Bin(candidate); break;
+			case StrategyBest1Exp:			Best1Exp(candidate, trial_solution); break;
+			case StrategyRandom1Exp:		Random1Exp(candidate, trial_solution); break;
+			case StrategyRandToBest1Exp:	RandToBest1Exp(candidate, trial_solution); break;
+			case StrategyBest2Exp:			Best2Exp(candidate, trial_solution); break;
+			case StrategyRandom2Exp:		Random2Exp(candidate, trial_solution); break;
+			case StrategyBest1Bin:			Best1Bin(candidate, trial_solution); break;
+			case StrategyRandom1Bin:		Random1Bin(candidate, trial_solution); break;
+			case StrategyRandToBest1Bin:	RandToBest1Bin(candidate, trial_solution); break;
+			case StrategyBest2Bin:			Best2Bin(candidate, trial_solution); break;
+			case StrategyRandom2Bin:		Random2Bin(candidate, trial_solution); break;
 			default: Panic("no strategy in DiffSolver");
 		}
-		return trial_solution;
 	}
 	
-	const Vector<double>& GetBestSolution() {return best_solution;}
+	double* GetTrialSolution(int i) {
+		return trial_solutions[i];
+	}
+	
+	double* GetBestSolution() {return best_solution;}
 	
 	int GetMaxRounds() const {return max_rounds;}
 	int GetMaxGenerations() const {return max_gens;}
 	int GetSize() const {return dimension;}
-	int GetPopulation() const {return population_count;}
+	int GetPopulation() const {return popcount;}
 	int GetRound() const {return round;}
 	bool IsEnd() const {return round >= max_rounds;}
 	

@@ -7,7 +7,6 @@ file
 	AsmProto.cpp,
 	Common.h,
 	Generator.h,
-	Generator.cpp,
 	Regenerator.h,
 	Regenerator.cpp,
 	Optimizer.h,

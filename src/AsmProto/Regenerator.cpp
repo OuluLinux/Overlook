@@ -1,159 +1,90 @@
 #include "AsmProto.h"
 
 Regenerator::Regenerator() {
-	/*opt.min_values.SetCount(dim);
-	opt.max_values.SetCount(dim);
-	int row = 0;
-	for(int i = 0; i < pp_count; i++) {
-		int j = i * PP_COUNT;
-		opt.min_values[j + PP_LOW] = -gen.step*100;		opt.max_values[j + PP_LOW] = 0;
-		opt.min_values[j + PP_HIGH] = 0;				opt.max_values[j + PP_HIGH] = +gen.step*100;
-		opt.min_values[j + PP_MIN] = 0;					opt.max_values[j + PP_MIN] = 100;
-		opt.min_values[j + PP_MAX] = 0;					opt.max_values[j + PP_MAX] = 200;
-		opt.min_values[j + PP_SIZE] = 10;				opt.max_values[j + PP_SIZE] = 1000;
-		opt.min_values[j + PP_ACTION] = 0;				opt.max_values[j + PP_ACTION] = 2;
-		//opt.min_values[j + PP_ITER] = 0;				opt.max_values[j + PP_ITER] = Generator::data_count;
-	}
-	*/
 	
 }
 
 void Regenerator::Iterate() {
-	/*trains_total++;
+	trains_total++;
 	
-	bool is_fail = false;
-	double pre_err = GetDataError(begin);
+	opt.min_value = -1;
+	opt.max_value = +1;
+	opt.Init();
 	
-	gen.GenerateData(generated, false, begin);
-	Vector<int> active_ids, sizes;
-	for(int i = 0; i < gen.active_pressures.GetCount(); i++) {
-		const PricePressure& pp = gen.active_pressures[i];
-		active_ids.Add(pp.id);
-		sizes.Add(pp.size);
-	}
-	
-	int a_begin = gen.a.src.GetCount();
-	for(int i = 0; i < pp_count; i++)
-		gen.a.Add();
-	
-	
-	opt.Init(dim, 100);
-	
-	while (!opt.IsEnd()) {
+	while (!opt.IsEnd() && !Thread::IsShutdownThreads()) {
 		opt.Start();
 		
-		ReadTrial(opt.GetTrialSolution(), a_begin);
-		gen.a.Sort();
+		int iter[CUDA_CORES];
+		double err[CUDA_CORES];
 		
-		double err = GetDataError(end);
-		double value = pre_err - err;
-		opt.Stop(value);
-	}
-	
-	
-	
-	if (!gen.a.src.IsEmpty()) {
 		
-		for(int i = 0; i < pp_count; i++)
-			gen.a.src.Pop();
-		
-		int size_dim = active_ids.GetCount();
-		sizeopt.min_values.SetCount(size_dim);
-		sizeopt.max_values.SetCount(size_dim);
-		for(int i = 0; i < active_ids.GetCount(); i++) {
-			sizeopt.min_values[i] = 10;
-			sizeopt.max_values[i] = 1000;
-		}
-		sizeopt.Init(size_dim, 100);
-		
-		while (!sizeopt.IsEnd()) {
-			sizeopt.Start();
-			
-			ReadTrialSize(sizeopt.GetTrialSolution(), active_ids);
-			gen.a.Sort();
-			
-			double err = GetDataError(end);
-			double value = pre_err - err;
-			sizeopt.Stop(value);
-		}
-		
-		if (sizeopt.GetBestEnergy() >= opt.GetBestEnergy()) {
-			ReadTrialSize(sizeopt.GetBestSolution(), active_ids);
-			if (sizeopt.GetBestEnergy() < 0) {
-				
-				// Restore sizes
-				for(int i = 0; i < active_ids.GetCount(); i++)
-					gen.a.src.Get(active_ids[i]).size = sizes[i];
-				
-				//is_fail = true;
+		try {
+			array_view<Generator, 1> gen_view(CUDA_CORES, gen);
+			//concurrency::array<double, 1> err_view(CUDA_CORES, err);
+			for(int i = 0; i < CUDA_CORES; i++) {
+				err[i] = i;
+				gen[i].ResetGenerate();
 			}
+			array_view<double, 1> err_view(CUDA_CORES, err);
+			array_view<int, 1> iter_view(CUDA_CORES, iter);
+			array_view<double, 1> trial_view(CUDA_CORES * ARG_COUNT, opt.GetTrialSolution(0));
+			array_view<double, 1> real_data_view(Generator::data_count, real_data);
+			//concurrency::array<Generator, 1> gen_view(CUDA_CORES, gen);
+			
+			
+			while (true) {
+				parallel_for_each(gen_view.extent, [=](index<1> idx) PARALLEL {
+					int id = idx[0];
+					int arg_begin = id * ARG_COUNT;
+					double* trial = &trial_view[arg_begin];
+					
+					Generator& gen = gen_view[idx];
+					gen.mom_inc = trial[MOM_INC];
+					gen.mom_dec = trial[MOM_DEC];
+					gen.ma_inc = trial[MA_INC];
+					gen.ma_dec = trial[MA_DEC];
+					gen.ap_inc = trial[AP_INC];
+					gen.ap_dec = trial[AP_DEC];
+					
+					gen_view[idx].GenerateData(&real_data_view[0], Generator::data_count * 0.8);
+					err_view[idx] = -gen_view[idx].err;
+					iter_view[idx] = gen_view[idx].iter;
+				});
+				
+				iter_view.synchronize();
+				
+				bool finished = true;
+				for(int i = 0; i < CUDA_CORES && finished; i++) {
+					if (iter[i] < Generator::data_count)
+						finished = false;
+				}
+				if (finished)
+					break;
+			}
+			
+			//gen_view.synchronize();
+			err_view.synchronize();
+			//completion_future w = err_view.synchronize_async();
+			//w.wait();
 		}
-		else {
-			for(int i = 0; i < pp_count; i++)
-				gen.a.Add();
-			// Restore sizes
-			for(int i = 0; i < active_ids.GetCount(); i++)
-				gen.a.src.Get(active_ids[i]).size = sizes[i];
-			ReadTrial(opt.GetBestSolution(), a_begin);
-			if (opt.GetBestEnergy() < 0) is_fail = true;
+		/*catch(accelerator_view_removed& ex)
+		{
+		    LOG(ex.what());
+			LOG(ex.get_view_removed_reason());
+		}*/
+		catch (runtime_exception& e) {
+			LOG(e.what());
 		}
+		catch (...) {
+			LOG("unknown error");
+		}
+		opt.Stop(err);
+		
+		last_energy = err[CUDA_CORES-1];
+		for(int i = 0; i < CUDA_CORES; i++)
+			LOG(err[i]);
 	}
-	else {
-		ReadTrial(opt.GetBestSolution(), a_begin);
-		if (opt.GetBestEnergy() < 0) is_fail = true;
-	}
-	if (is_fail)
-		for(int i = 0; i < pp_count; i++)
-			gen.a.src.Pop();
-	gen.a.Sort();
-	double err = GetDataError(end);*/
-}
-
-void Regenerator::ReadTrial(const Vector<double>& trial, int a_begin) {
-	/*for(int i = 0; i < pp_count; i++) {
-		int j = i * PP_COUNT;
-		PricePressure& pp = gen.a.src[a_begin + i];
-		//int iter = trial[j + PP_ITER];
-		//if (iter < 0) iter = 0;
-		//if (iter >= generated.GetCount()) iter = generated.GetCount() - 1;
-		int iter = begin;
-		double price = (*real_data)[iter];
-		pp.low  = price + trial[j + PP_LOW];
-		pp.high = price + trial[j + PP_HIGH];
-		pp.min = trial[j + PP_MIN];
-		pp.max = trial[j + PP_MAX];
-		pp.size = trial[j + PP_SIZE];
-		pp.action = trial[j + PP_ACTION];
-		pp.iter = iter;
-	}*/
-}
-
-void Regenerator::ReadTrialSize(const Vector<double>& trial, const Vector<int>& ids) {
-	/*for(int i = 0; i < trial.GetCount(); i++) {
-		PricePressure& pp1 = gen.a.src.Get(ids[i]);
-		pp1.size = trial[i];
-	}*/
-}
-
-double Regenerator::GetDataError(int end) {
-	/*int begin = 0; 
 	
-	gen.GenerateData(generated, false, end);
-	Vector<double>& real = *real_data;
-
-	ASSERT(generated.GetCount() == real.GetCount());
-
-	double mse = 0;
-	//for(int i = 0; i < generated.GetCount(); i++) {
-	for(int i = begin; i < end; i++) {
-		double g = generated[i];
-		double r = real[i];
-		double diff = g - r;
-		//mse += diff * diff;
-		mse += fabs(diff);
-	}
-	//mse /= generated.GetCount();
-	mse /= end - begin;
-	return mse;*/
-	return 0;
 }
+
+

@@ -31,9 +31,11 @@ class Test1 : public TopWindow {
 	
 	Generator gen;
 	Regenerator regen;
-	Vector<double> data0;
-	Vector<double>* data1;
+	double* data0;
+	double* data1;
 	bool stopped = true, running = false;
+	
+	TimeCallback tc;
 	
 public:
 	typedef Test1 CLASSNAME;
@@ -43,7 +45,7 @@ public:
 	void Start() {stopped = false; running = true; Thread::Start(THISBACK(Train));}
 	void Train();
 	void Refresh0() {draw0.Refresh();}
-	
+	void PeriodicalRefresh() {tc.Set(60, THISBACK(PeriodicalRefresh)); Refresh0();}
 };
 
 #endif

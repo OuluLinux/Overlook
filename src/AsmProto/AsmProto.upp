@@ -5,12 +5,15 @@ uses
 file
 	AsmProto.h,
 	AsmProto.cpp,
+	Common.h,
 	Generator.h,
 	Generator.cpp,
 	Regenerator.h,
 	Regenerator.cpp,
-	Optimizer.h;
+	Optimizer.h,
+	CompatAMP.h;
 
 mainconfig
-	"" = "GUI";
+	"" = "GUI",
+	"" = "GUI FORCE_COMPAT_AMP";
 

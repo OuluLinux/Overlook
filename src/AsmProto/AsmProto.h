@@ -6,6 +6,10 @@
 using namespace Upp;
 
 
+#include "CompatAMP.h"
+using namespace concurrency;
+
+#include "Common.h"
 #include "Optimizer.h"
 #include "Generator.h"
 #include "Regenerator.h"

@@ -7,7 +7,8 @@ Test1::Test1() {
 	draw0.t = this;
 	Add(draw0.SizePos());
 	
-	gen.GenerateData(data0, true);
+	gen.GenerateData(true);
+	data0 <<= gen.data;
 	regen.generated.SetCount(data0.GetCount(), data0[0]);
 	
 	regen.real_data = &data0;
@@ -24,7 +25,7 @@ void Test1::Train() {
 	
 	while (!Thread::IsShutdownThreads() && running) {
 		
-		regen.Iterate();
+		//regen.Iterate();
 		
 		/*Sleep(3000);
 		
@@ -76,11 +77,25 @@ void Test1::DrawLines::Paint(Draw& d) {
 	}*/
 	max_steps = Upp::min(count0, count1);
 	
-	
 	if (max_steps > 1 && max >= min) {
 		double diff = max - min;
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
+		
+		int mult = 5;
+		double ystep = (max - min) / ((double)sz.cy / mult);
+		for(int i = 0; i < sz.cx; i += mult) {
+			int k = i * max_steps / sz.cx;
+			int y = 0;
+			for(double j = min; j < max; j += ystep) {
+				double pres = t->gen.a.Get(k, j).pres;
+				pres = 255 - pres / 2550 * 255;
+				if (pres < 0) pres = 0;
+				if (pres > 255) pres = 255;
+				d.DrawRect(i, sz.cy - y, mult, mult, GrayColor(pres));
+				y += mult;
+			}
+		}
 		
 		if (max_steps >= 2) {
 			polyline.SetCount(0);
@@ -140,6 +155,8 @@ void Test1::DrawLines::Paint(Draw& d) {
 
 GUI_APP_MAIN
 {
+	LOG(GetAmpDevices());
+	
 	Test1 t;
 	t.Start();
 	t.Run();

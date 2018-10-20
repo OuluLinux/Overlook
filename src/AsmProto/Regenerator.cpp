@@ -1,7 +1,7 @@
 #include "AsmProto.h"
 
 Regenerator::Regenerator() {
-	opt.min_values.SetCount(dim);
+	/*opt.min_values.SetCount(dim);
 	opt.max_values.SetCount(dim);
 	int row = 0;
 	for(int i = 0; i < pp_count; i++) {
@@ -14,12 +14,12 @@ Regenerator::Regenerator() {
 		opt.min_values[j + PP_ACTION] = 0;				opt.max_values[j + PP_ACTION] = 2;
 		//opt.min_values[j + PP_ITER] = 0;				opt.max_values[j + PP_ITER] = Generator::data_count;
 	}
-	
+	*/
 	
 }
 
 void Regenerator::Iterate() {
-	trains_total++;
+	/*trains_total++;
 	
 	bool is_fail = false;
 	double pre_err = GetDataError(begin);
@@ -106,11 +106,11 @@ void Regenerator::Iterate() {
 		for(int i = 0; i < pp_count; i++)
 			gen.a.src.Pop();
 	gen.a.Sort();
-	double err = GetDataError(end);
+	double err = GetDataError(end);*/
 }
 
 void Regenerator::ReadTrial(const Vector<double>& trial, int a_begin) {
-	for(int i = 0; i < pp_count; i++) {
+	/*for(int i = 0; i < pp_count; i++) {
 		int j = i * PP_COUNT;
 		PricePressure& pp = gen.a.src[a_begin + i];
 		//int iter = trial[j + PP_ITER];
@@ -125,18 +125,18 @@ void Regenerator::ReadTrial(const Vector<double>& trial, int a_begin) {
 		pp.size = trial[j + PP_SIZE];
 		pp.action = trial[j + PP_ACTION];
 		pp.iter = iter;
-	}
+	}*/
 }
 
 void Regenerator::ReadTrialSize(const Vector<double>& trial, const Vector<int>& ids) {
-	for(int i = 0; i < trial.GetCount(); i++) {
+	/*for(int i = 0; i < trial.GetCount(); i++) {
 		PricePressure& pp1 = gen.a.src.Get(ids[i]);
 		pp1.size = trial[i];
-	}
+	}*/
 }
 
 double Regenerator::GetDataError(int end) {
-	int begin = 0;
+	/*int begin = 0; 
 	
 	gen.GenerateData(generated, false, end);
 	Vector<double>& real = *real_data;
@@ -154,5 +154,6 @@ double Regenerator::GetDataError(int end) {
 	}
 	//mse /= generated.GetCount();
 	mse /= end - begin;
-	return mse;
+	return mse;*/
+	return 0;
 }

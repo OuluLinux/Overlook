@@ -10,7 +10,7 @@
 struct Regenerator {
 	
 	static const int pp_count = 1;
-	static const int dim = pp_count * PP_COUNT;
+	static const int dim = 1;//pp_count * PP_COUNT;
 	
 	// Persistent
 	Generator gen;

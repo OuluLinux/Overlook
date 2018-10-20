@@ -3,61 +3,62 @@
 
 
 
-enum {
-	PP_LOW,
-	PP_HIGH,
-	PP_MIN,
-	PP_MAX,
-	PP_SIZE,
-	PP_ACTION,
-	//PP_ITER,
-	PP_COUNT,
-};
 
-struct PricePressure : Moveable<PricePressure> {
-	double low, high;
-	double min, max;
-	double size;
-	bool action;
-	int iter = -1;
-	int id = -1;
-	
-	
-	PricePressure& SetId(int i) {id = i; return *this;}
-	
-	bool operator()(const PricePressure& a, const PricePressure& b) const {
-		if (a.iter < b.iter) return true;
-		if (a.iter > b.iter) return false;
-		if (a.size < b.size) return true;
-		else return false;
-	}
+struct AsmData : Moveable<AsmData> {
+	double pres = 0;
 };
 
 struct Asm {
-	VectorMap<int, PricePressure> src;
-	int id_counter = 0;
-	int iter = 0;
+	//VectorMap<int, PricePressure> src;
+	Vector<Vector<AsmData> > data;
+	double low = 0, high = 0, step = 1;
 	
-	PricePressure& Add() {int id = id_counter++; return src.Add(id).SetId(id);}
-	void Sort() {Upp::Sort(src, PricePressure());}
+	AsmData& Get(int iter, double d) {return data[iter][(d - low) / step];}
+	
+	void Init(int xsize, double l, double h, double s) {
+		low = l;
+		high = h;
+		step = s;
+		int count = (high - low) / step;
+		data.SetCount(xsize);
+		for(int i = 0; i < data.GetCount(); i++)
+			data[i].SetCount(count);
+	}
+	
 };
 
 struct Generator {
-	static const int data_count = 1000;
+	static const int data_count = 14400;
+	static const int test_count = 500;
+	static const int pattern_count = 6;
 	
-	Vector<PricePressure> active_pressures;
+	//Vector<PricePressure> active_pressures;
 	Asm a;
 	double price = 1.0;
 	double step = 0.0001;
 	int iter = 0;
+	double prev_price;
+	Vector<double> data;
+	Vector<Vector<int> > descriptors;
+	Vector<Vector<Point> > pattern;
+	
+	
+	// Indicators
+	Vector<OnlineAverageWindow1> ma;
+	Vector<double> prev_ma_mean;
 	
 	Generator();
+	void InitMA();
+	void RandomizePatterns();
 	void AddRandomPressure();
-	void Randomize(PricePressure& pp, double price, int iter);
-	void GenerateData(Vector<double>& data, bool add_random, int count=0);
-	void GetPricePressure(double price, double& buy_pres, double& sell_pres);
+	void AddMomentumPressure();
+	void AddAntiPatternPressure();
+	void AddMaPressure();
+	void GenerateData(bool add_random, int count=0);
 	void ReducePressure(double amount);
-	void SimpleReducePressure(double amount);
+	void ApplyPressureChanges();
+	int32 GetDescriptor(int pos, int pattern_id);
+	
 	
 };
 

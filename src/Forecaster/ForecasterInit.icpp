@@ -1,0 +1,17 @@
+#include "Forecaster.h"
+
+using namespace Forecast;
+
+NAMESPACE_UPP
+
+INITBLOCK {
+	System::Register<SimpleHurstWindow>("SimpleHurstWindow");
+	System::Register<Momentum>("Momentum");
+	System::Register<MovingAverage>("Moving average");
+	System::Register<ParabolicSAR>("Parabolic SAR");
+	System::Register<Pattern>("Pattern");
+	
+	
+}
+
+END_UPP_NAMESPACE

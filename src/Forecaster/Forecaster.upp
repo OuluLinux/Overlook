@@ -1,0 +1,27 @@
+uses
+	Core,
+	CtrlLib;
+
+file
+	Forecaster.h,
+	Forecaster.cpp,
+	ForecasterInit.icpp,
+	System.h,
+	System.cpp,
+	Common.h,
+	Common.cpp,
+	Core.h,
+	Core.cpp,
+	Generator.h,
+	Generator.cpp,
+	Regenerator.h,
+	Regenerator.cpp,
+	Indicators.h,
+	Indicators.cpp,
+	Optimizer.h,
+	CompatAMP.h;
+
+mainconfig
+	"" = "GUI",
+	"" = "GUI FORCE_COMPAT_AMP";
+

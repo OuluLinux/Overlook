@@ -63,6 +63,7 @@ class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	Vector<double> win_a;
 	double sum_a = 0.0;
 	int period = 0, cursor = 0;
+	int count = 0;
 	
 public:
 	OnlineAverageWindow1() {}
@@ -72,10 +73,12 @@ public:
 		sum_a -= da;
 		da = a;
 		sum_a += da;
+		count++;
 		cursor = (cursor + 1) % period;
 	}
-	double GetMean() const {return sum_a / period;}
-	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor;}
+	double GetMean() const {return sum_a / min(count, period);}
+	int GetPeriod() const {return period;}
+	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor % count;}
 	const Vector<double>& GetWindow() const {return win_a;}
 };
 

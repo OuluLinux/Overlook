@@ -8,29 +8,28 @@ typedef Exc DataExc;
 
 
 
-template <int max_win_size>
-class OnlineAverageWindow1 {
-	double win_a[max_win_size];
+
+class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
+	Vector<double> win_a;
 	double sum_a = 0.0;
 	int period = 0, cursor = 0;
 	int count = 0;
 	
 public:
 	OnlineAverageWindow1() {}
-	void SetPeriod(int i) PARALLEL {cursor = 0; period = i; for(int i = 0; i < max_win_size; i++) win_a[i] = 0;}
-	void Add(double a) PARALLEL {
+	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
+	void Add(double a) {
 		double& da = win_a[cursor];
 		sum_a -= da;
 		da = a;
 		sum_a += da;
 		count++;
 		cursor = (cursor + 1) % period;
-		AMPASSERT(cursor >= 0 && cursor < period);
 	}
-	double Top() const PARALLEL {return win_a[cursor];}
-	double GetMean() const PARALLEL { if (!count) return 0; return sum_a / (count < period ? count : period);}
-	int GetPeriod() const PARALLEL {return period;}
+	double GetMean() const {return sum_a / min(count, period);}
+	int GetPeriod() const {return period;}
 	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor % count;}
+	const Vector<double>& GetWindow() const {return win_a;}
 };
 
 
@@ -297,6 +296,89 @@ public:
 	void Write(bool b) {data.Set(bit, b); bit++;}
 	
 };
+
+
+
+
+
+
+
+
+
+
+
+
+struct ExtremumCache {
+	Vector<double> max, min;
+	double max_value = -DBL_MAX, min_value = DBL_MAX;
+	int pos = -1, size = 0, max_left = 0, min_left = 0;
+	
+	ExtremumCache(int size=0) {
+		SetSize(size);
+	}
+	
+	void SetSize(int size) {
+		this->size = size;
+		max.SetCount(size, -DBL_MAX);
+		min.SetCount(size, DBL_MAX);
+	}
+	
+	void Serialize(Stream& s) {
+		s % max % min % max_value % min_value % pos % size % max_left % min_left;
+	}
+	
+	void Add(double low, double high) {
+		pos++;
+		int write_pos = pos % size;
+		
+		max_left--;
+		max[write_pos] = high;
+		if (max_left <= 0) {
+			max_value = -DBL_MAX;
+			for(int i = 0; i < size; i++) {
+				double d = max[i];
+				if (d > max_value) {
+					if (i <= write_pos)	max_left = size - (write_pos - i);
+					else				max_left = i - write_pos;
+					max_value = d;
+				}
+			}
+		}
+		else if (high >= max_value) {
+			max_left = size;
+			max_value = high;
+		}
+		
+		min_left--;
+		min[write_pos] = low;
+		if (min_left <= 0) {
+			min_value = DBL_MAX;
+			for(int i = 0; i < size; i++) {
+				double d = min[i];
+				if (d < min_value) {
+					if (i <= write_pos)	min_left = size - (write_pos - i);
+					else				min_left = i - write_pos;
+					min_value = d;
+				}
+			}
+		}
+		else if (low <= min_value) {
+			min_left = size;
+			min_value = low;
+		}
+	}
+	
+	int GetHighest() {
+		return pos - (size - max_left);
+	}
+	
+	int GetLowest() {
+		return pos - (size - min_left);
+	}
+};
+
+
+
 
 
 }

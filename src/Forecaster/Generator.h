@@ -34,7 +34,7 @@ struct AmpPoint {
 };
 
 struct Generator {
-	static const int data_count = 1440*5;
+	static const int data_count = 1440*4.5;
 	static const int test_count = 500;
 	
 	Asm a;

@@ -103,15 +103,15 @@ void Generator::RefreshPrice() {
 void Generator::ApplyPressureChanges() {
 	if (prev_price <= price) {
 		for (double d = prev_price; d <= price; d += step) {
-			a.Get(d).pres += -0.4;
-			a.Get(d + step).pres += -0.2;
-			a.Get(d - step).pres += -0.2;
+			a.Get(d).pres += -40;
+			a.Get(d + step).pres += -20;
+			a.Get(d - step).pres += -20;
 		}
 	} else {
 		for (double d = prev_price; d >= price; d -= step) {
-			a.Get(d).pres += -0.4;
-			a.Get(d + step).pres += -0.2;
-			a.Get(d - step).pres += -0.2;
+			a.Get(d).pres += -40;
+			a.Get(d + step).pres += -20;
+			a.Get(d - step).pres += -20;
 		}
 	}
 }

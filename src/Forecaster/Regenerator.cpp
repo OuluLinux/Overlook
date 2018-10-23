@@ -13,13 +13,7 @@ void Regenerator::Iterate() {
 	// Get and refresh indicators
 	Vector<CoreItem> work_queue;
 	Vector<FactoryDeclaration> decl;
-	decl.Add().Set(System::Find<SimpleHurstWindow>());
-	decl.Add().Set(System::Find<ParabolicSAR>());
-	for(int i = 0; i < 12; i++) {
-		decl.Add().Set(System::Find<Momentum>()).AddArg(2 << i);
-		decl.Add().Set(System::Find<MovingAverage>()).AddArg(2 << i);
-		decl.Add().Set(System::Find<Pattern>()).AddArg(2 << i);
-	}
+	AddDefaultDeclarations(decl);
 	System::GetCoreQueue(*real_data, work_queue, decl);
 	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
@@ -36,7 +30,7 @@ void Regenerator::Iterate() {
 	
 	opt.min_value = -1;
 	opt.max_value = +1;
-	opt.SetMaxGenerations(1);
+	opt.SetMaxGenerations(10);
 	opt.Init(stream.GetColumnCount() * 3, POPCOUNT);
 	
 	

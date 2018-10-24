@@ -743,7 +743,7 @@ void BearsPower::Start() {
 	int counted = GetCounted();
 	
 	if ( bars <= period )
-		throw DataExc();
+		return;
 
 	if ( counted > 0 )
 		counted--;
@@ -799,7 +799,7 @@ void CommodityChannelIndex::Start() {
 	int counted = GetCounted();
 	
 	if ( bars <= period || period <= 1 )
-		throw ConfExc();
+		return;
 	
 	if ( counted < 1 ) {
 		for ( i = 1; i < period; i++) {
@@ -885,7 +885,7 @@ void DeMarker::Start() {
 	int counted = GetCounted();
 
 	if ( bars <= period )
-		throw DataExc();
+		return;
 	
 	max_buffer.Set(0, 0.0);
 	min_buffer.Set(0, 0.0);
@@ -985,7 +985,7 @@ void RelativeStrengthIndex::Start() {
 	int counted = GetCounted();
 
 	if ( bars <= period )
-		throw DataExc();
+		return;
 
 	int pos = counted - 1;
 
@@ -1062,7 +1062,7 @@ void RelativeVigorIndex::Start()
 	int counted = GetCounted();
 
 	if ( bars <= period + 8 )
-		throw DataExc();
+		return;
 
 	if ( counted < 0 )
 		throw DataExc();
@@ -1147,7 +1147,7 @@ void StochasticOscillator::Start() {
 	int counted = GetCounted();
 
 	if ( bars <= k_period + d_period + slowing )
-		throw ConfExc();
+		return;
 
 	start = k_period;
 
@@ -1286,7 +1286,7 @@ void StochasticOscillator::Start() {
 #define PERIOD_FAST  5
 #define PERIOD_SLOW 34
 #undef DATA_LIMIT
-#define DATA_LIMIT  3
+#define DATA_LIMIT  8
 
 
 AcceleratorOscillator::AcceleratorOscillator() {
@@ -1310,7 +1310,7 @@ void AcceleratorOscillator::Start() {
 	int counted = GetCounted();
 	
 	if ( bars <= DATA_LIMIT )
-		throw DataExc();
+		return;
 	
 	if ( counted > 0 ) {
 		counted--;
@@ -1400,7 +1400,7 @@ void AwesomeOscillator::Start() {
 	double prev = 0.0, current;
 	
 	if ( bars <= DATA_LIMIT )
-		throw DataExc();
+		return;
 
 	if (counted > 0) {
 		counted--;
@@ -1487,11 +1487,11 @@ void Psychological::Start() {
 	if(counted > 0)
 		counted--;
 	
-	if (bars < period)
-		throw DataExc();
+	if (bars < period + 3)
+		return;
 	
 	if (counted == 0)
-		counted = (1 + period + 1);
+		counted = (1 + period + 2);
 	
 	//bars--;
 	

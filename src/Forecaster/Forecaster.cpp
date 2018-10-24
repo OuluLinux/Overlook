@@ -3,18 +3,18 @@
 namespace Forecast {
 
 Test1::Test1() {
-	data0 = &real_forecast;
-	data1 = &forecast;
-	/*data0 = &real_data;
-	data1 = &real_data;*/
 	draw0.t = this;
+	draw0.type = 0;
+	hisctrl.draw.t = this;
+	hisctrl.draw.type = 1;
 	
 	Title("Test 1");
 	Sizeable().MaximizeBox().MinimizeBox();
 	
-	Add(draw0.SizePos());
+	Add(tabs.SizePos());
+	tabs.Add(draw0.SizePos(), "Forecast");
+	tabs.Add(hisctrl.SizePos(), "History");
 	
-	//GenerateData();
 	LoadData();
 	
 	regen.real_data = &real_data;
@@ -22,72 +22,29 @@ Test1::Test1() {
 	PeriodicalRefresh();
 }
 
+void Test1::PeriodicalRefresh() {
+	tc.Set(60, THISBACK(PeriodicalRefresh));
+	switch (tabs.Get()) {
+		case 0: draw0.Refresh(); break;
+		case 1: hisctrl.Refresh(); break;
+	}
+}
+
 void Test1::LoadData() {
-	FileIn fin(ConfigFile("test.bin"));
+	FileIn fin(ConfigFile("EURUSD0.bin"));
 	
 	while (!fin.IsEof()) {
 		double d;
 		fin.Get(&d, sizeof(double));
 		real_data.Add(d);
 	}
-	
-	for(int i = Generator::data_count; i < real_data.GetCount(); i++) {
-		real_forecast.Add(real_data[i]);
-	}
-	real_data.SetCount(Generator::data_count);
-	forecast.SetCount(real_forecast.GetCount());
-}
-
-void Test1::GenerateData() {
-	
-	real_data.SetCount(Generator::data_count);
-	
-	
-	// Get and refresh indicators
-	Vector<CoreItem> work_queue;
-	Vector<FactoryDeclaration> decl;
-	AddDefaultDeclarations(decl);
-	System::GetCoreQueue(real_data, work_queue, decl);
-	
-	
-	
-	gen.ResetGenerate();
-	for(int i = 0; i < 3; i++)
-		gen.AddRandomPressure();
-	
-	
-	
-	Vector<ConstLabelSignal*> lbls;
-	System::GetLabels(work_queue, lbls);
-	
-	BitStream stream;
-	stream.SetColumnCount(lbls.GetCount());
-	stream.SetCount(10);
-	
-	Vector<double> params;
-	for(int i = 0; i < lbls.GetCount(); i++)
-		for(int j = 0; j < 3; j++)
-			params.Add(Randomf() * 2.0 - 1.0);
-	
-	for(int i = 0; i < Generator::data_count; i++) {
-		
-		gen.Iteration(stream, i, params);
-		real_data[i] = gen.price;
-		
-		for(int j = 0; j < work_queue.GetCount(); j++) {
-			CoreItem& ci = work_queue[j];
-			ci.core->SetBars(i+1);
-			ci.core->Refresh(true);
-		}
-		
-		stream.SetBit(0);
-		for(int j = 0; j < lbls.GetCount(); j++) {
-			bool value = lbls[j]->signal.Get(i);
-			stream.Write(value);
-		}
-		stream.SetBit(0);
-	}
-	
+	//#ifdef flagDEBUG
+	int size = 1440*7*4;
+	//int begin = real_data.GetCount() * 0.3;
+	int begin = real_data.GetCount() - size;
+	real_data.Remove(0, begin);
+	real_data.SetCount(size);
+	//#endif
 }
 
 void Test1::Train() {
@@ -119,9 +76,24 @@ void Test1::Train() {
 	stopped = true;
 }
 
-void Test1::DrawLines::Paint(Draw& d) {
+void DrawLines::Paint(Draw& d) {
 	Size sz(GetSize());
 	d.DrawRect(sz, White());
+	
+	Vector<double>* data0;
+	Vector<double>* data1;
+	Generator* gen = NULL;
+	if (type == 0) {
+		data0 = &t->regen.gen[0].real_data;
+		data1 = &t->regen.gen[0].real_data;
+		gen = &t->regen.gen[0];
+	} else {
+		data0 = &t->regen.gen[0].real_data;
+		data1 = &t->regen.gen[0].real_data;
+		gen = &t->regen.gen[0];
+	}
+	
+	gen->view_lock.Enter();
 	
 	double zero_line = 1.0;
 	
@@ -131,18 +103,20 @@ void Test1::DrawLines::Paint(Draw& d) {
 	double peak = -DBL_MAX;
 	
 	int max_steps = 0;
-	int count0 = t->data0->GetCount();
-	int count1 = t->data1->GetCount();
+	int count0 = data0->GetCount();
+	int count1 = data1->GetCount();
 	for(int j = 0; j < count0; j++) {
-		double d = (*t->data0)[j];
+		double d = (*data0)[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
-	/*for(int j = 0; j < count1; j++) {
-		double d = (*t->data1)[j];
+	for(int j = 0; j < count1; j++) {
+		double d = (*data1)[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
-	}*/
+	}
+	max += (max - min) * 0.125;
+	min -= (max - min) * 0.125;
 	max_steps = Upp::min(count0, count1);
 	
 	if (max_steps > 1 && max >= min) {
@@ -150,25 +124,38 @@ void Test1::DrawLines::Paint(Draw& d) {
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
-		/*int mult = 5;
-		double ystep = (max - min) / ((double)sz.cy / mult);
-		for(int i = 0; i < sz.cx; i += mult) {
-			int k = i * max_steps / sz.cx;
-			int y = 0;
-			for(double j = min; j < max; j += ystep) {
-				double pres = t->gen.a.Get(j).pres;
-				pres = 255 - pres / 2550 * 255;
+		if (gen) {
+			int mult = 5;
+			double ystep = (max - min) / ((double)sz.cy / mult);
+			typedef Tuple<int, int, double> XYP;
+			Vector<XYP> data;
+			double max_pres = 0;
+			for(int i = 0; i < sz.cx; i += mult) {
+				int k = i * max_steps / sz.cx;
+				int y = 0;
+				for(double j = min; j < max; j += ystep) {
+					double pres = gen->image.Get(k, j);
+					data.Add(XYP(i, sz.cy - y, pres));
+					if (pres > max_pres)
+						max_pres = pres;
+					y += mult;
+				}
+			}
+			
+			for(int i = 0; i < data.GetCount(); i++) {
+				const XYP& xyp = data[i];
+				double pres = xyp.c;
+				pres = 255 - pres / max_pres * 255;
 				if (pres < 0) pres = 0;
 				if (pres > 255) pres = 255;
-				d.DrawRect(i, sz.cy - y, mult, mult, GrayColor(pres));
-				y += mult;
+				d.DrawRect(xyp.a, xyp.b, mult, mult, GrayColor(pres));
 			}
-		}*/
+		}
 		
 		if (max_steps >= 2) {
 			polyline.SetCount(0);
 			for(int j = 0; j < max_steps; j++) {
-				double v = (*t->data0)[j];
+				double v = (*data0)[j];
 				last = v;
 				int x = (int)(j * xstep);
 				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
@@ -180,7 +167,7 @@ void Test1::DrawLines::Paint(Draw& d) {
 			
 			polyline.SetCount(0);
 			for(int j = 0; j < max_steps; j++) {
-				double v = (*t->data1)[j];
+				double v = (*data1)[j];
 				last = v;
 				int x = (int)(j * xstep);
 				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
@@ -232,6 +219,14 @@ void Test1::DrawLines::Paint(Draw& d) {
 		}
 	}
 	
+	gen->view_lock.Leave();
+}
+
+
+
+HistoryCtrl::HistoryCtrl() {
+	Add(indi.TopPos(0, 30).LeftPos(0, 400));
+	Add(draw.HSizePos(0).VSizePos(30));
 }
 
 }

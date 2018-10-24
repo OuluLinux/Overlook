@@ -42,8 +42,6 @@ public:
 public:
 	
 	static void GetCoreQueue(const Vector<double>& real_data, Vector<CoreItem>& queue, const Vector<FactoryDeclaration>& decl);
-	static void GetBitStream(Vector<CoreItem>& work_queue, BitStream& stream);
-	static void GetLabels(Vector<CoreItem>& work_queue, Vector<ConstLabelSignal*>& lbls);
 	
 };
 

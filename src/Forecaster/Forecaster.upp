@@ -12,6 +12,8 @@ file
 	Common.cpp,
 	Core.h,
 	Core.cpp,
+	Heatmap.h,
+	Heatmap.cpp,
 	Generator.h,
 	Generator.cpp,
 	Regenerator.h,

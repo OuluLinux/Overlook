@@ -295,6 +295,7 @@ public:
 	bool Read() {return data.Get(bit++);}
 	void Write(bool b) {data.Set(bit, b); bit++;}
 	
+	void Serialize(Stream& s) {s % data % bit % cols;}
 };
 
 
@@ -379,6 +380,13 @@ struct ExtremumCache {
 
 
 
+
+inline int GetUsedCpuCores() {
+	static int cores;
+	if (!cores) cores = CPU_Cores();
+	
+	return Upp::max(1, cores - 2); // Leave a little for the system
+}
 
 
 }

@@ -2,6 +2,13 @@
 
 namespace Forecast {
 
+void Core::Serialize(Stream& s) {
+	s % bars % counted % buffers % labels;
+	CoreSerializer cs;
+	cs.stream = &s;
+	IO(cs);
+}
+
 void Core::Refresh(bool run_start) {
 	for(int i = 0; i < buffers.GetCount(); i++) {
 		buffers[i].SetCount(bars);

@@ -95,7 +95,15 @@ struct OutputCounter : public ValueRegister {
 	int lbl_sum = 0, out_sum = 0;
 };
 
-
+struct CoreSerializer : public ValueRegister {
+	Stream* stream = NULL;
+	virtual void IO(const ValueBase& base) {
+		if (base.data_type == ValueBase::PERS_) {
+			const Persistent& pers = dynamic_cast<const Persistent&>(base);
+			pers.serialize(*stream);
+		}
+	}
+};
 
 class Core {
 	
@@ -136,6 +144,8 @@ public:
 		if (i == 0) return (*input)[i];
 		return max((*input)[i], (*input)[i-1]);
 	}
+	
+	void Serialize(Stream& s);
 };
 
 

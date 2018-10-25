@@ -1,11 +1,14 @@
 uses
 	Core,
-	CtrlLib;
+	CtrlLib,
+	plugin/bz2;
 
 file
 	Forecaster.h,
 	Forecaster.cpp,
 	ForecasterInit.icpp,
+	Manager.h,
+	Manager.cpp,
 	System.h,
 	System.cpp,
 	Common.h,

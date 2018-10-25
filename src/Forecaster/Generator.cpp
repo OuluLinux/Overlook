@@ -24,6 +24,7 @@ void Generator::Serialize(Stream& s) {
 
 void Generator::Init(double point, const Vector<double>& real_data, const Vector<double>& params) {
 	state = START;
+	
 	this->real_data <<= real_data;
 	this->params <<= params;
 	
@@ -31,13 +32,12 @@ void Generator::Init(double point, const Vector<double>& real_data, const Vector
 	err = 0;
 	iter = 0;
 	
-	ResetPattern();
 	descriptors.SetCount(real_data.GetCount());
 	
 	double low = price * 0.5;
 	double high = price * 1.5;
 	a.Init(real_data.GetCount(), low, high, point);
-	image.Init(a.low, a.high, a.step, a.step*10, real_data.GetCount() + 1440*2, 10);
+	image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount() + 1440*2, 10);
 	
 	decl.SetCount(0);
 	AddDefaultDeclarations(decl);
@@ -66,6 +66,7 @@ bool Generator::DoNext() {
 			break;
 			
 		case BITSTREAMED:
+			ResetPattern();
 			CalculateError();
 			state++;
 			break;
@@ -145,7 +146,7 @@ void Generator::RefreshIndicators() {
 }
 
 void Generator::CalculateError() {
-	ASSERT(err == 0.0);
+	err = 0.0;
 	for(iter = 0; iter < real_data.GetCount(); iter++) {
 		RefreshForecast();
 		RealPrice();
@@ -211,9 +212,11 @@ void Generator::AddRandomPressure() {
 }
 
 void Generator::ResetPattern() {
-	double begin = real_data[0] * (1.0 - 0.01);
-	double end = real_data[0] * (1.0 + 0.01);
+	double scale = min(0.01, pow(10, -3 + params[0]));
+	double begin = real_data[0] * (1.0 - scale);
+	double end = real_data[0] * (1.0 + scale);
 	int steps = (end - begin) / a.step;
+	if (steps < 3) steps = 3;
 	int total = PressureDescriptor::size * 64;
 	pattern.SetCount(total);
 	for(int i = 0; i < total; i++) {
@@ -223,8 +226,9 @@ void Generator::ResetPattern() {
 }
 
 void Generator::RefreshDescriptor() {
-	double begin = price * (1.0 - 0.01);
-	double end = price * (1.0 + 0.01);
+	double scale = min(0.01, pow(10, -3 + params[0]));
+	double begin = price * (1.0 - scale);
+	double end = price * (1.0 + scale);
 	int steps = (end - begin) / a.step;
 	PressureDescriptor& desc = descriptors[iter];
 	for(int i = 0; i < PressureDescriptor::size; i++) {
@@ -240,42 +244,74 @@ void Generator::RefreshDescriptor() {
 			if (value)
 				i64 |= 1 << j;
 		}
-		LOG(iter << "\t" << i64);
+		//LOG(iter << "\t" << i64);
 	}
 	
 }
 
 void Generator::RefreshForecast() {
-	if (iter < 2)
-		return;
-	
-	int min_dist = INT_MAX;
-	int min_pos = -1;
-	
-	// Use binary descriptor, which is known from ORB image descriptor
-	
-	PressureDescriptor& prev = descriptors[iter - 1];
-	for(int i = 0; i < iter - 1; i++) {
-		PressureDescriptor& desc = descriptors[i];
-		
-		int dist = 0;
-		for(int j = 0; j < PressureDescriptor::size; j++) {
-			int64& a = prev.descriptor[j];
-			int64& b = desc.descriptor[j];
-			dist += PopCount64(a ^ b);
-		}
-		
-		if (dist < min_dist) {
-			min_dist = dist;
-			min_pos = i;
+	#if 0
+	double max_pres = -DBL_MAX;
+	prev_forecast = price;
+	for (int i = -5; i <= 5; i++) {
+		double price2 = prev_price + i * a.step;
+		double pres = a.Get(price2).pres;
+		if (pres > max_pres) {
+			forecast = price2;
+			max_pres = pres;
 		}
 	}
 	
-	double d0 = real_data[min_pos + 1];
-	double d1 = real_data[min_pos];
+	#else
 	
-	prev_forecast = price;
-	forecast = prev_forecast * (d0 / d1);
+	if (iter < 2)
+		return;
+	
+	Index<int> skip_pos;
+	
+	while (true) {
+		int min_dist = INT_MAX;
+		int min_pos = -1;
+		
+		// Use binary descriptor, which is known from ORB image descriptor
+		
+		PressureDescriptor& prev = descriptors[iter - 1];
+		for(int i = 0; i < iter - 1; i++) {
+			PressureDescriptor& desc = descriptors[i];
+			
+			int dist = 0;
+			for(int j = 0; j < PressureDescriptor::size; j++) {
+				int64& a = prev.descriptor[j];
+				int64& b = desc.descriptor[j];
+				dist += PopCount64(a ^ b);
+			}
+			
+			if (dist < min_dist) {
+				if (skip_pos.Find(i) != -1)
+					continue;
+				min_dist = dist;
+				min_pos = i;
+			}
+		}
+		
+		if (min_pos == -1)
+			break;
+		
+		double d0 = real_data[min_pos + 1];
+		double d1 = real_data[min_pos];
+		
+		
+		prev_forecast = price;
+		forecast = prev_forecast * (d0 / d1);
+		
+		if (d0 == d1 && iter > 1 && real_data[iter - 1] != real_data[iter - 2]) {
+			skip_pos.Add(min_pos);
+			continue;
+		}
+		else
+			break;
+	}
+	#endif
 }
 
 void Generator::RealPrice() {
@@ -285,6 +321,7 @@ void Generator::RealPrice() {
 		double real_diff = cur - prev;
 		double forecast_diff = forecast - prev_forecast;
 		double abs_err = fabs(real_diff - forecast_diff);
+		ASSERT(IsFin(abs_err) && IsFin(err) && abs_err != -DBL_MAX);
 		err += abs_err;
 	}
 	
@@ -298,7 +335,8 @@ void Generator::ApplyIndicatorPressures() {
 	int j = APPLYPRESSURE_PARAMS;
 	for(int i = 0; i < stream.GetColumnCount(); i++) {
 		bool value = stream.Read();
-		double len = fabs(params[j++] * 100) * a.step;
+		double scale = pow(10, 2 + params[j++]);
+		double len = fabs(params[j++] * scale) * a.step;
 		double inc = params[j++];
 		double dec = params[j++];
 		if (value) Swap(inc, dec);
@@ -320,10 +358,11 @@ void Generator::ApplyIndicatorPressures() {
 }
 
 void Generator::ApplyPressureChanges() {
-	double dec = 1.0 - fabs(params[0] * 0.0001);
-	double main_inc = fabs(params[1] * 10);
-	double inc0 = fabs(params[2] * 10);
-	double inc1 = fabs(params[3] * 10);
+	double scale = min(0.1, pow(10, -2 + params[1]));
+	double dec = 1.0 - fabs(params[2] * scale);
+	double main_inc = fabs(params[3] * 10);
+	double inc0 = fabs(params[4] * 10);
+	double inc1 = fabs(params[5] * 10);
 	if (iter > 0) {
 		Vector<AsmData>& cur = a.data;
 		for(int i = 0; i < cur.GetCount(); i++) {

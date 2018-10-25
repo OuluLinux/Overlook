@@ -3,7 +3,8 @@
 
 namespace Forecast {
 
-static const int APPLYPRESSURE_PARAMS = 4;
+static const int APPLYPRESSURE_PARAMS = 1+5;
+static const int INDIPRESSURE_PARAMS = 4;
 
 struct AsmData : Moveable<AsmData> {
 	double pres = 0;

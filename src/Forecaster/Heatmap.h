@@ -19,6 +19,19 @@ public:
 	void Init(double low, double high, double min_ystep, double ystep, int length, int xstep);
 	void Add(int x, double y, double value);
 	double Get(int x, double y) const {int i = Pos(x, y); if (i < 0 || i >= data.GetCount()) return 0; return data[i] / div;}
+	int GetWidth() const {return xsize;}
+	
+	void operator=(const Heatmap& s) {
+		data <<= s.data;
+		low = s.low;
+		high = s.high;
+		height = s.height;
+		ystep = s.ystep;
+		ysize = s.ysize;
+		xsize = s.xsize;
+		xstep = s.xstep;
+		div = s.div;
+	}
 	
 	void Serialize(Stream& s) {s % data % low % high % height % ystep % ysize % xsize % xstep % div;}
 };

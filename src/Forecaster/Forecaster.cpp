@@ -1,99 +1,70 @@
 #include "Forecaster.h"
+#include <plugin/bz2/bz2.h>
 
 namespace Forecast {
 
-Test1::Test1() {
-	draw0.t = this;
-	draw0.type = 0;
-	hisctrl.draw.t = this;
-	hisctrl.draw.type = 1;
+ManagerCtrl::ManagerCtrl() {
 	
-	Title("Test 1");
+	Title("ManagerCtrl");
 	Sizeable().MaximizeBox().MinimizeBox();
 	
 	Add(tabs.SizePos());
-	tabs.Add(draw0.SizePos(), "Forecast");
-	tabs.Add(hisctrl.SizePos(), "History");
+	tabs.Add(mgr.SizePos(), "Session");
+	tabs.Add(fcast.SizePos(), "Forecast");
+	tabs.Add(regenctrl.SizePos(), "Regenerator");
 	
-	LoadData();
 	
-	regen.real_data = &real_data;
+	Manager& mgr = GetManager();
+	Session& ses = mgr.GetAdd("EURUSD0");
+	ses.LoadData();
+	mgr.SetActiveSession("EURUSD0");
 	
 	PeriodicalRefresh();
 }
 
-void Test1::PeriodicalRefresh() {
+void ManagerCtrl::PeriodicalRefresh() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
 	switch (tabs.Get()) {
-		case 0: draw0.Refresh(); break;
-		case 1: hisctrl.Refresh(); break;
+		case 0: mgr.Refresh(); break;
+		case 1: fcast.Refresh(); break;
+		case 2: regenctrl.Data(); regenctrl.Refresh(); break;
 	}
 }
 
-void Test1::LoadData() {
-	FileIn fin(ConfigFile("EURUSD0.bin"));
-	
-	while (!fin.IsEof()) {
-		double d;
-		fin.Get(&d, sizeof(double));
-		real_data.Add(d);
-	}
-	//#ifdef flagDEBUG
-	int size = 1440*7*4;
-	//int begin = real_data.GetCount() * 0.3;
-	int begin = real_data.GetCount() - size;
-	real_data.Remove(0, begin);
-	real_data.SetCount(size);
-	//#endif
-}
 
-void Test1::Train() {
-	//TimeStop ts;
-	
-	int step = 5;
-	
-	while (!Thread::IsShutdownThreads() && running) {
-		
-		regen.Iterate();
-		
-		forecast <<= regen.data;
-		break;
-		//Sleep(3000);
-		
-		/*if (regen.trains_total % 3000 == 0) {
-			gen.GenerateData(NULL);
-		}*/
-		
-				
-		/*if (ts.Elapsed() > 60) {
-			PostCallback(THISBACK(Refresh0));
-			ts.Reset();
-		}*/
-	}
-	
-	PostCallback(THISBACK(Refresh0));
-	running = false;
-	stopped = true;
-}
+
+
 
 void DrawLines::Paint(Draw& d) {
 	Size sz(GetSize());
 	d.DrawRect(sz, White());
 	
+	Manager& mgr = GetManager();
 	Vector<double>* data0;
-	Vector<double>* data1;
 	Generator* gen = NULL;
-	if (type == 0) {
-		data0 = &t->regen.gen[0].real_data;
-		data1 = &t->regen.gen[0].real_data;
-		gen = &t->regen.gen[0];
-	} else {
-		data0 = &t->regen.gen[0].real_data;
-		data1 = &t->regen.gen[0].real_data;
-		gen = &t->regen.gen[0];
-	}
+	Regenerator* regen = NULL;
+	Session* ses = mgr.GetActiveSession();
+	Heatmap* heatmap = NULL;
+	if (!ses) return;
 	
-	gen->view_lock.Enter();
+	if (type == GENVIEW) {
+		gen = &ses->regen.GetGenerator(gen_id);
+		if (!gen) return;
+		data0 = &gen->real_data;
+		heatmap = &gen->image;
+	}
+	else if (type == HISVIEW) {
+		gen = &ses->regen.GetGenerator(0);
+		if (!gen) return;
+		data0 = &gen->real_data;
+		heatmap = &this->image;
+	}
+	else if (type == OPTSTATS) {
+		data0 = &ses->regen.result_errors;
+	}
+	else return;
+	
+	if (gen) gen->view_lock.Enter();
 	
 	double zero_line = 1.0;
 	
@@ -104,27 +75,21 @@ void DrawLines::Paint(Draw& d) {
 	
 	int max_steps = 0;
 	int count0 = data0->GetCount();
-	int count1 = data1->GetCount();
 	for(int j = 0; j < count0; j++) {
 		double d = (*data0)[j];
 		if (d > max) max = d;
 		if (d < min) min = d;
 	}
-	for(int j = 0; j < count1; j++) {
-		double d = (*data1)[j];
-		if (d > max) max = d;
-		if (d < min) min = d;
-	}
 	max += (max - min) * 0.125;
 	min -= (max - min) * 0.125;
-	max_steps = Upp::min(count0, count1);
+	max_steps = count0;
 	
 	if (max_steps > 1 && max >= min) {
 		double diff = max - min;
 		double xstep = (double)sz.cx / (max_steps - 1);
 		Font fnt = Monospace(10);
 		
-		if (gen) {
+		if (heatmap) {
 			int mult = 5;
 			double ystep = (max - min) / ((double)sz.cy / mult);
 			typedef Tuple<int, int, double> XYP;
@@ -134,7 +99,7 @@ void DrawLines::Paint(Draw& d) {
 				int k = i * max_steps / sz.cx;
 				int y = 0;
 				for(double j = min; j < max; j += ystep) {
-					double pres = gen->image.Get(k, j);
+					double pres = heatmap->Get(k, j);
 					data.Add(XYP(i, sz.cy - y, pres));
 					if (pres > max_pres)
 						max_pres = pres;
@@ -164,18 +129,6 @@ void DrawLines::Paint(Draw& d) {
 			}
 			if (polyline.GetCount() >= 2)
 				d.DrawPolyline(polyline, 1, Color(81, 145, 137));
-			
-			polyline.SetCount(0);
-			for(int j = 0; j < max_steps; j++) {
-				double v = (*data1)[j];
-				last = v;
-				int x = (int)(j * xstep);
-				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline.Add(Point(x, y));
-				if (v > peak) peak = v;
-			}
-			if (polyline.GetCount() >= 2)
-				d.DrawPolyline(polyline, 1, Color(56, 42, 150));
 		}
 		
 		{
@@ -192,16 +145,16 @@ void DrawLines::Paint(Draw& d) {
 			d.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
 			d.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
 		}
-		{
+		if (regen) {
 			int y = 20;
-			String str = DblStr(t->regen.opt.GetBestEnergy());
+			String str = DblStr(regen->GetBestEnergy());
 			Size str_sz = GetTextSize(str, fnt);
 			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
 			d.DrawText(16, y, str, fnt, Black());
 		}
-		{
+		if (regen) {
 			int y = 40;
-			String str = DblStr(t->regen.last_energy);
+			String str = DblStr(regen->GetLastEnergy());
 			Size str_sz = GetTextSize(str, fnt);
 			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
 			d.DrawText(16, y, str, fnt, Black());
@@ -219,14 +172,97 @@ void DrawLines::Paint(Draw& d) {
 		}
 	}
 	
-	gen->view_lock.Leave();
+	if (gen) gen->view_lock.Leave();
 }
 
 
 
-HistoryCtrl::HistoryCtrl() {
-	Add(indi.TopPos(0, 30).LeftPos(0, 400));
-	Add(draw.HSizePos(0).VSizePos(30));
+
+
+
+RegeneratorCtrl::RegeneratorCtrl() {
+	Add(status.SizePos(), "Status");
+	
+	for(int i = 0; i < GetUsedCpuCores(); i++) {
+		GeneratorCtrl& gc = gens.Add();
+		gc.SetId(i);
+		Add(gc.SizePos(), "Gen " + IntStr(i));
+	}
+	
+	
+	status.Add(main_vsplit.HSizePos().VSizePos(0, 30));
+	status.Add(optprog.BottomPos(0, 30).HSizePos());
+	main_vsplit << main_hsplit << opt_draw;
+	main_vsplit.Vert();
+	main_vsplit.SetPos(8000);
+	main_hsplit << his_list << his_draw;
+	main_hsplit.Horz();
+	main_hsplit.SetPos(2000);
+	
+	opt_draw.type = opt_draw.OPTSTATS;
+	his_draw.type = opt_draw.HISVIEW;
+	
+	his_list.AddColumn("#");
+	his_list.AddColumn("Gen#");
+	his_list.AddColumn("Score");
+	his_list <<= THISBACK(SelectHistoryItem);
+}
+
+void RegeneratorCtrl::SelectHistoryItem() {
+	Manager& mgr = GetManager();
+	Session* ses = mgr.GetActiveSession();
+	if (!ses) return;
+	
+	int cursor = his_list.GetCursor();
+	if (cursor < 0 ) return;
+	
+	int id = his_list.Get(cursor, 0);
+	if (id == prev_id)
+		return;
+	prev_id = id;
+	
+	ses->regen.result_lock.Enter();
+	const RegenResult& rr = ses->regen.results[id];
+	StringStream ss;
+	ss << BZ2Decompress(rr.heatmap);
+	ses->regen.result_lock.Leave();
+	
+	ss.Seek(0);
+	ss.SetLoading();
+	ss % his_draw.image;
+	
+	his_draw.Refresh();
+}
+
+void RegeneratorCtrl::Data() {
+	Manager& mgr = GetManager();
+	Session* ses = mgr.GetActiveSession();
+	if (!ses) return;
+	
+	ses->regen.result_lock.Enter();
+	for(int i = 0; i < ses->regen.results.GetCount(); i++) {
+		const RegenResult& rr = ses->regen.results[i];
+		his_list.Set(i, 0, rr.id);
+		his_list.Set(i, 1, rr.gen_id);
+		his_list.Set(i, 2, rr.err);
+	}
+	ses->regen.result_lock.Leave();
+	
+	his_list.SetSortColumn(2, false);
+	
+	optprog.Set(ses->regen.opt.GetRound(), ses->regen.opt.GetMaxRounds());
+	
+}
+
+
+
+
+
+
+
+
+GeneratorCtrl::GeneratorCtrl() {
+	Add(draw.SizePos());
 }
 
 }
@@ -234,9 +270,8 @@ HistoryCtrl::HistoryCtrl() {
 GUI_APP_MAIN
 {
 	LOG(GetAmpDevices());
+	Forecast::GetManager();
+	Forecast::ManagerCtrl().Run();
 	
-	One<Forecast::Test1> t;
-	t.Create();
-	t->Start();
-	t->Run();
+	Thread::ShutdownThreads();
 }

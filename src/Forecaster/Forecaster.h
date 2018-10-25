@@ -17,57 +17,76 @@ using namespace concurrency;
 #include "Generator.h"
 #include "Regenerator.h"
 #include "Indicators.h"
+#include "Manager.h"
 
 namespace Forecast {
 
 void DrawVectorPolyline(Draw& d, Size sz, const Vector<double>& pts, Vector<Point>& cache, int max_count=0, double zero_line=0.0);
 
-class Test1;
+class ManagerCtrl;
 
 
 struct DrawLines : public Ctrl {
-	Test1* t;
+	ManagerCtrl* t;
+	Heatmap image;
 	int type;
+	int gen_id = 0;
+	
+	enum {GENVIEW, HISVIEW, OPTSTATS};
 	
 	Vector<Point> polyline;
 	virtual void Paint(Draw& d);
 };
 
-
-struct HistoryCtrl : public ParentCtrl {
-	DropList indi;
+struct GeneratorCtrl : public ParentCtrl {
 	DrawLines draw;
 	
-	HistoryCtrl();
+	
+	GeneratorCtrl();
+	void SetId(int i) {draw.type = DrawLines::GENVIEW; draw.gen_id = i;}
 	
 };
 
-class Test1 : public TopWindow {
+struct RegeneratorCtrl : public TabCtrl {
+	
+	ParentCtrl status;
+	ProgressIndicator optprog;
+	Splitter main_vsplit, main_hsplit;
+	DrawLines opt_draw;
+	DrawLines his_draw;
+	ArrayCtrl his_list;
+	Array<GeneratorCtrl> gens;
+	int prev_id = -1;
+	
+	typedef RegeneratorCtrl CLASSNAME;
+	RegeneratorCtrl();
+	
+	void Data();
+	void SelectHistoryItem();
+};
+
+struct ForecastCtrl : public ParentCtrl {
+	
+};
+
+class ManagerCtrl : public TopWindow {
 	
 protected:
 	friend class DrawLines;
 	
 	
-	TabCtrl tabs;
-	DrawLines draw0;
-	HistoryCtrl hisctrl;
 	
-	Vector<double> real_data, real_forecast, forecast;
-	Generator gen;
-	Regenerator regen;
-	bool stopped = true, running = false;
+	TabCtrl tabs;
+	ParentCtrl mgr;
+	ForecastCtrl fcast;
+	RegeneratorCtrl regenctrl;
 	
 	TimeCallback tc;
 	
 public:
-	typedef Test1 CLASSNAME;
-	Test1();
-	~Test1() {running = false; while (!stopped) Sleep(100);}
+	typedef ManagerCtrl CLASSNAME;
+	ManagerCtrl();
 	
-	void LoadData();
-	void Start() {stopped = false; running = true; Thread::Start(THISBACK(Train));}
-	void Train();
-	void Refresh0() {draw0.Refresh();}
 	void PeriodicalRefresh();
 };
 

@@ -86,7 +86,9 @@ bool Generator::DoNext() {
 
 void Generator::GetBitStream() {
 	stream.SetBit(0);
+	total = real_data.GetCount();
 	for(int i = 0; i < real_data.GetCount(); i++) {
+		actual = i;
 		for(int j = 0; j < lbls.GetCount(); j++) {
 			bool value = lbls[j]->signal.Get(i);
 			stream.Write(value);
@@ -138,7 +140,9 @@ void Generator::PopWarmup(const Vector<double>& params) {
 }
 
 void Generator::RefreshIndicators() {
+	total = work_queue.GetCount();
 	for(int i = 0; i < work_queue.GetCount(); i++) {
+		actual = i;
 		CoreItem& ci = work_queue[i];
 		ci.core->SetBars(real_data.GetCount());
 		ci.core->Refresh();

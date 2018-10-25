@@ -27,12 +27,12 @@ class ManagerCtrl;
 
 
 struct DrawLines : public Ctrl {
-	ManagerCtrl* t;
+	Vector<double> data;
 	Heatmap image;
 	int type;
 	int gen_id = 0;
 	
-	enum {GENVIEW, HISVIEW, OPTSTATS};
+	enum {GENVIEW, HISVIEW, FCASTVIEW, OPTSTATS};
 	
 	Vector<Point> polyline;
 	virtual void Paint(Draw& d);
@@ -67,6 +67,15 @@ struct RegeneratorCtrl : public TabCtrl {
 
 struct ForecastCtrl : public ParentCtrl {
 	
+	ArrayCtrl fcast_list;
+	DrawLines draw;
+	int prev_id = -1;
+	
+	typedef ForecastCtrl CLASSNAME;
+	ForecastCtrl();
+	
+	void Data();
+	void SelectForecastItem();
 };
 
 class ManagerCtrl : public TopWindow {

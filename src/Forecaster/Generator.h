@@ -79,6 +79,7 @@ struct Generator {
 	Vector<ConstLabelSignal*> lbls;
 	String bitstreamed;
 	Mutex lock, view_lock;
+	int actual = 0, total = 1;
 	bool debug = false;
 	
 	

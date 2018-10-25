@@ -20,6 +20,7 @@ public:
 	void Add(int x, double y, double value);
 	double Get(int x, double y) const {int i = Pos(x, y); if (i < 0 || i >= data.GetCount()) return 0; return data[i] / div;}
 	int GetWidth() const {return xsize;}
+	void CopyRight(Heatmap& dst, int size);
 	
 	void operator=(const Heatmap& s) {
 		data <<= s.data;

@@ -26,7 +26,7 @@ void ManagerCtrl::PeriodicalRefresh() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
 	switch (tabs.Get()) {
 		case 0: mgr.Refresh(); break;
-		case 1: fcast.Refresh(); break;
+		case 1: fcast.Data(); fcast.Refresh(); break;
 		case 2: regenctrl.Data(); regenctrl.Refresh(); break;
 	}
 }
@@ -61,6 +61,10 @@ void DrawLines::Paint(Draw& d) {
 	}
 	else if (type == OPTSTATS) {
 		data0 = &ses->regen.result_errors;
+	}
+	else if (type == FCASTVIEW) {
+		data0 = &data;
+		heatmap = &this->image;
 	}
 	else return;
 	
@@ -250,9 +254,80 @@ void RegeneratorCtrl::Data() {
 	
 	his_list.SetSortColumn(2, false);
 	
-	optprog.Set(ses->regen.opt.GetRound(), ses->regen.opt.GetMaxRounds());
+	if (!ses->regen.IsInit())
+		optprog.Set(ses->regen.GetGenerator(0).actual, ses->regen.GetGenerator(0).total);
+	else
+		optprog.Set(ses->regen.opt.GetRound(), ses->regen.opt.GetMaxRounds());
 	
 }
+
+
+
+
+
+
+
+
+
+
+ForecastCtrl::ForecastCtrl() {
+	Add(fcast_list.LeftPos(0, 200).VSizePos());
+	Add(draw.HSizePos(200).VSizePos());
+	
+	draw.type = draw.FCASTVIEW;
+	
+	fcast_list.AddColumn("#");
+	fcast_list << THISBACK(SelectForecastItem);
+}
+
+void ForecastCtrl::Data() {
+	
+	Manager& mgr = GetManager();
+	Session* ses = mgr.GetActiveSession();
+	if (!ses) return;
+	
+	ses->regen.result_lock.Enter();
+	for(int i = 0; i < ses->regen.forecasts.GetCount(); i++) {
+		const ForecastResult& fr = ses->regen.forecasts[i];
+		fcast_list.Set(i, 0, i);
+	}
+	ses->regen.result_lock.Leave();
+	
+}
+
+void ForecastCtrl::SelectForecastItem() {
+	Manager& mgr = GetManager();
+	Session* ses = mgr.GetActiveSession();
+	if (!ses) return;
+	
+	int cursor = fcast_list.GetCursor();
+	if (cursor < 0 ) return;
+	
+	int id = fcast_list.Get(cursor, 0);
+	if (id == prev_id)
+		return;
+	prev_id = id;
+	
+	ses->regen.result_lock.Enter();
+	if (id < 0 ||id >= ses->regen.forecasts.GetCount()) {
+		ses->regen.result_lock.Leave();
+		return;
+	}
+	const ForecastResult& fr = ses->regen.forecasts[id];
+	StringStream ss;
+	ss << BZ2Decompress(fr.heatmap);
+	draw.data <<= fr.data;
+	ses->regen.result_lock.Leave();
+	
+	ss.Seek(0);
+	ss.SetLoading();
+	ss % draw.image;
+	
+	draw.Refresh();
+}
+
+
+
 
 
 

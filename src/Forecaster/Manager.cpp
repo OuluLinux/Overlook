@@ -32,14 +32,29 @@ void Manager::RefreshSessions() {
 }
 
 void Manager::Process() {
-	
+	int mode = 0;
 	while (running && !Thread::IsShutdownThreads()) {
 		
 		int i = sessions.Find(active_session);
 		if (i != -1) {
 			Session& ses = sessions[i];
 			
-			ses.regen.Iterate();
+			switch (mode) {
+				case 0:
+					if (!ses.regen.IsInit())
+						ses.regen.Init();
+					ses.regen.Iterate(10*1000);
+					mode++;
+					break;
+				
+				case 1:
+					ses.regen.Forecast();
+					mode++;
+					break;
+					
+				default:
+					mode = 0;
+			}
 		}
 		
 		Sleep(100);
@@ -73,13 +88,11 @@ void Session::LoadData() {
 		fin.Get(&d, sizeof(double));
 		regen.real_data.Add(d);
 	}
-	//#ifdef flagDEBUG
-	int size = 1440*6*1;
-	//int begin = real_data.GetCount() * 0.3;
+	
+	int size = 1440*5*4;
 	int begin = regen.real_data.GetCount() - size;
 	regen.real_data.Remove(0, begin);
 	regen.real_data.SetCount(size);
-	//#endif
 }
 
 void Session::LoadThis() {

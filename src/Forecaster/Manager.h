@@ -24,6 +24,8 @@ struct Session : Moveable<Session> {
 class Manager {
 	ArrayMap<String, Session> sessions;
 	String active_session;
+	TimeCallback tc;
+	TimeStop ts;
 	bool stopped = true, running = false;
 	
 	void Process();

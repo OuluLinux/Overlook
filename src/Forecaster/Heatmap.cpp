@@ -36,7 +36,24 @@ void Heatmap::Add(int x, double y, double value) {
 		data[pos] += value;
 }
 
-
+void Heatmap::CopyRight(Heatmap& dst, int size) {
+	dst.low = low;
+	dst.high = high;
+	dst.height = height;
+	dst.ystep = ystep;
+	dst.ysize = ysize;
+	dst.xstep = xstep;
+	dst.div = div;
+	
+	dst.xsize = size / xstep;
+	
+	int copysize = dst.ysize * dst.xsize;
+	dst.data.SetCount(copysize);
+	int pos = (xsize - dst.xsize) * ysize;
+	for(int i = 0; i < copysize; i++) {
+		dst.data[i] = data[pos++];
+	}
+}
 
 
 }

@@ -5,6 +5,7 @@ namespace Forecast {
 
 static const int APPLYPRESSURE_PARAMS = 1+5;
 static const int INDIPRESSURE_PARAMS = 4;
+static const int FORECAST_SIZE = 240;
 
 struct AsmData : Moveable<AsmData> {
 	double pres = 0;
@@ -23,7 +24,8 @@ struct Asm {
 	
 	AsmData& Get(double d) {return data[GetPos(d)];}
 	int GetPos(double d) {int i = (d - low) / step; return i;}
-
+	int Find(double d) {int i = GetPos(d); if (i < 0 || i >= data.GetCount()) return -1; return i;}
+	
 	Asm() {
 		
 	}
@@ -77,9 +79,11 @@ struct Generator {
 	// Temporary
 	Vector<CoreItem> work_queue;
 	Vector<ConstLabelSignal*> lbls;
+	Vector<double> forecast_tmp;
 	String bitstreamed;
 	Mutex lock, view_lock;
 	int actual = 0, total = 1;
+	int forecast_read_pos = 0;
 	bool debug = false;
 	
 	

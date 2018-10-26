@@ -3,14 +3,13 @@
 
 namespace Forecast {
 
-struct ForecastSession : Moveable<ForecastSession> {
-	
-};
 
 struct Session : Moveable<Session> {
 	
-	Array<ForecastSession> forecasts;
+	// Persistent
 	Regenerator regen;
+	
+	// Temporary
 	String name;
 	
 	
@@ -18,12 +17,17 @@ struct Session : Moveable<Session> {
 	void LoadData();
 	void LoadThis();
 	void StoreThis();
-	void Serialize(Stream& s) {}
+	bool HasData() {return !regen.real_data.IsEmpty();}
+	void Serialize(Stream& s) {s % regen;}
 };
 
 class Manager {
+	
+protected:
+	friend class ManagerCtrl;
+	
 	ArrayMap<String, Session> sessions;
-	String active_session;
+	int active_session = -1, selected_session = 0;
 	TimeCallback tc;
 	TimeStop ts;
 	bool stopped = true, running = false;
@@ -38,11 +42,13 @@ public:
 	void Start() {Stop(); stopped = false; running = true; Thread::Start(THISBACK(Process));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	
-	void SetActiveSession(String s) {active_session = s;}
 	void RefreshSessions();
 	Session& GetAdd(String session_name);
+	void Select(int i) {selected_session = i;}
 	
-	Session* GetActiveSession() {int i = sessions.Find(active_session); if (i == -1) return NULL; return &sessions[i];}
+	int GetSessionCount() const {return sessions.GetCount();}
+	Session* GetActiveSession() {if (active_session < 0 || active_session >= sessions.GetCount()) return NULL; return &sessions[active_session];}
+	Session* GetSelectedSession() {if (selected_session < 0 || selected_session >= sessions.GetCount()) return NULL; return &sessions[selected_session];}
 };
 
 inline Manager& GetManager() {return Single<Manager>();}

@@ -86,7 +86,7 @@ protected:
 	
 	
 	TabCtrl tabs;
-	ParentCtrl mgr;
+	ArrayCtrl seslist;
 	ForecastCtrl fcast;
 	RegeneratorCtrl regenctrl;
 	
@@ -96,7 +96,9 @@ public:
 	typedef ManagerCtrl CLASSNAME;
 	ManagerCtrl();
 	
+	void Data();
 	void PeriodicalRefresh();
+	void SelectSession();
 };
 
 }

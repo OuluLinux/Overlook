@@ -8,26 +8,50 @@ ManagerCtrl::ManagerCtrl() {
 	Title("ManagerCtrl");
 	Sizeable().MaximizeBox().MinimizeBox();
 	
-	Add(tabs.SizePos());
-	tabs.Add(mgr.SizePos(), "Session");
+	Add(seslist.LeftPos(0, 250).VSizePos());
+	Add(tabs.HSizePos(250).VSizePos());
+	
+	seslist.AddColumn("Name");
+	seslist.AddColumn("Status");
+	seslist.AddColumn("Progress");
+	seslist <<= THISBACK(SelectSession);
 	tabs.Add(fcast.SizePos(), "Forecast");
 	tabs.Add(regenctrl.SizePos(), "Regenerator");
 	
 	
-	Manager& mgr = GetManager();
-	Session& ses = mgr.GetAdd("EURUSD0");
-	ses.LoadData();
-	mgr.SetActiveSession("EURUSD0");
+	Manager& m = GetManager();
+	
 	
 	PeriodicalRefresh();
 }
 
 void ManagerCtrl::PeriodicalRefresh() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
+	Data();
 	switch (tabs.Get()) {
-		case 0: mgr.Refresh(); break;
-		case 1: fcast.Data(); fcast.Refresh(); break;
-		case 2: regenctrl.Data(); regenctrl.Refresh(); break;
+		case 0: fcast.Data(); fcast.Refresh(); break;
+		case 1: regenctrl.Data(); regenctrl.Refresh(); break;
+	}
+}
+
+void ManagerCtrl::SelectSession() {
+	int cursor = seslist.GetCursor();
+	GetManager().Select(cursor);
+	PeriodicalRefresh();
+}
+
+void ManagerCtrl::Data() {
+	Manager& m = GetManager();
+	for(int i = 0; i < m.sessions.GetCount(); i++) {
+		Session& ses = m.sessions[i];
+		seslist.Set(i, 0, ses.name);
+		
+		seslist.Set(i, 1, m.GetActiveSession() == &ses ? "Active" : "");
+		
+		int round = ses.regen.opt.GetRound();
+		int max_rounds = ses.regen.opt.GetMaxRounds();
+		seslist.Set(i, 2, round * 1000 / max_rounds);
+		seslist.SetDisplay(i, 2, ProgressDisplay());
 	}
 }
 
@@ -43,7 +67,7 @@ void DrawLines::Paint(Draw& d) {
 	Vector<double>* data0;
 	Generator* gen = NULL;
 	Regenerator* regen = NULL;
-	Session* ses = mgr.GetActiveSession();
+	Session* ses = mgr.GetSelectedSession();
 	Heatmap* heatmap = NULL;
 	if (!ses) return;
 	
@@ -54,9 +78,10 @@ void DrawLines::Paint(Draw& d) {
 		heatmap = &gen->image;
 	}
 	else if (type == HISVIEW) {
+		if (!ses->regen.HasGenerators()) return;
 		gen = &ses->regen.GetGenerator(0);
 		if (!gen) return;
-		data0 = &gen->real_data;
+		data0 = &ses->regen.real_data;
 		heatmap = &this->image;
 	}
 	else if (type == OPTSTATS) {
@@ -214,7 +239,7 @@ RegeneratorCtrl::RegeneratorCtrl() {
 
 void RegeneratorCtrl::SelectHistoryItem() {
 	Manager& mgr = GetManager();
-	Session* ses = mgr.GetActiveSession();
+	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
 	int cursor = his_list.GetCursor();
@@ -226,6 +251,10 @@ void RegeneratorCtrl::SelectHistoryItem() {
 	prev_id = id;
 	
 	ses->regen.result_lock.Enter();
+	if (id < 0 || id >= ses->regen.results.GetCount()) {
+		ses->regen.result_lock.Leave();
+		return;
+	}
 	const RegenResult& rr = ses->regen.results[id];
 	StringStream ss;
 	ss << BZ2Decompress(rr.heatmap);
@@ -240,7 +269,7 @@ void RegeneratorCtrl::SelectHistoryItem() {
 
 void RegeneratorCtrl::Data() {
 	Manager& mgr = GetManager();
-	Session* ses = mgr.GetActiveSession();
+	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
 	ses->regen.result_lock.Enter();
@@ -250,11 +279,12 @@ void RegeneratorCtrl::Data() {
 		his_list.Set(i, 1, rr.gen_id);
 		his_list.Set(i, 2, rr.err);
 	}
+	his_list.SetCount(ses->regen.results.GetCount());
 	ses->regen.result_lock.Leave();
 	
 	his_list.SetSortColumn(2, false);
 	
-	if (!ses->regen.IsInit())
+	if (!ses->regen.IsInit() && ses->regen.HasGenerators())
 		optprog.Set(ses->regen.GetGenerator(0).actual, ses->regen.GetGenerator(0).total);
 	else
 		optprog.Set(ses->regen.opt.GetRound(), ses->regen.opt.GetMaxRounds());
@@ -283,21 +313,22 @@ ForecastCtrl::ForecastCtrl() {
 void ForecastCtrl::Data() {
 	
 	Manager& mgr = GetManager();
-	Session* ses = mgr.GetActiveSession();
+	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
 	ses->regen.result_lock.Enter();
 	for(int i = 0; i < ses->regen.forecasts.GetCount(); i++) {
 		const ForecastResult& fr = ses->regen.forecasts[i];
-		fcast_list.Set(i, 0, i);
+		fcast_list.Set(i, 0, fr.id);
 	}
+	fcast_list.SetCount(ses->regen.forecasts.GetCount());
 	ses->regen.result_lock.Leave();
 	
 }
 
 void ForecastCtrl::SelectForecastItem() {
 	Manager& mgr = GetManager();
-	Session* ses = mgr.GetActiveSession();
+	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
 	int cursor = fcast_list.GetCursor();

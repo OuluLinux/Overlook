@@ -1679,7 +1679,8 @@ void OnlineMinimalLabel::Init() {
 void OnlineMinimalLabel::Start() {
 	int bars = GetBars();
 	
-	double point			= 0.0001;
+	
+	double point = Open(0) > 65 ? 0.01 : 0.0001;
 	double cost				= 2 * point + point * cost_level;
 	if (cost <= 0.0) cost = point;
 	

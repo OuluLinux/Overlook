@@ -37,7 +37,7 @@ void Generator::Init(double point, const Vector<double>& real_data, const Vector
 	double low = price * 0.5;
 	double high = price * 1.5;
 	a.Init(real_data.GetCount(), low, high, point);
-	image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount() + 1440*2, 10);
+	image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount() + FORECAST_SIZE, 10);
 	
 	decl.SetCount(0);
 	AddDefaultDeclarations(decl);
@@ -46,7 +46,7 @@ void Generator::Init(double point, const Vector<double>& real_data, const Vector
 	
 	stream.Clear();
 	stream.SetColumnCount(lbls.GetCount());
-	stream.SetCount(real_data.GetCount() + 1440*2);
+	stream.SetCount(real_data.GetCount() + FORECAST_SIZE);
 	
 	state = INITIALIZED;
 }
@@ -151,6 +151,7 @@ void Generator::RefreshIndicators() {
 
 void Generator::CalculateError() {
 	err = 0.0;
+	forecast_read_pos = 0;
 	for(iter = 0; iter < real_data.GetCount(); iter++) {
 		RefreshForecast();
 		RealPrice();
@@ -161,10 +162,11 @@ void Generator::CalculateError() {
 }
 
 void Generator::Forecast() {
-	int forecast_count = 1440 * 2;
+	int forecast_count = FORECAST_SIZE;
 	ASSERT(iter == real_data.GetCount());
 	real_data.SetCount(iter + forecast_count, real_data.Top());
 	descriptors.SetCount(iter + forecast_count);
+	forecast_read_pos = 0;
 	for(; iter < real_data.GetCount(); iter++) {
 		RefreshForecast();
 		prev_price = price;
@@ -242,11 +244,15 @@ void Generator::RefreshDescriptor() {
 			const Point& pt = pattern[i * 64 + j];
 			double k0 = begin + pt.x * a.step;
 			double k1 = begin + pt.y * a.step;
-			double pres0 = a.Get(k0).pres;
-			double pres1 = a.Get(k1).pres;
-			bool value = pres0 < pres1;
-			if (value)
-				i64 |= 1 << j;
+			int l0 = a.Find(k0);
+			int l1 = a.Find(k1);
+			if (l0 >= 0 && l1 >= 0) {
+				double pres0 = a.data[l0].pres;
+				double pres1 = a.data[l1].pres;
+				bool value = pres0 < pres1;
+				if (value)
+					i64 |= 1 << j;
+			}
 		}
 		//LOG(iter << "\t" << i64);
 	}
@@ -254,19 +260,39 @@ void Generator::RefreshDescriptor() {
 }
 
 void Generator::RefreshForecast() {
+	
 	#if 0
 	double max_pres = -DBL_MAX;
 	prev_forecast = price;
 	for (int i = -5; i <= 5; i++) {
 		double price2 = prev_price + i * a.step;
-		double pres = a.Get(price2).pres;
-		if (pres > max_pres) {
-			forecast = price2;
-			max_pres = pres;
+		int j = a.Find(price2);
+		if (j >= 0) {
+			double pres = a.data[j].pres;
+			if (pres > max_pres) {
+				forecast = price2;
+				max_pres = pres;
+			}
 		}
 	}
 	
 	#else
+	
+	if (forecast_read_pos > 0 && forecast_read_pos < forecast_tmp.GetCount() - 1) {
+		double d0 = forecast_tmp[forecast_read_pos + 1];
+		double d1 = forecast_tmp[forecast_read_pos];
+		if (d0 == d1) {
+			forecast_read_pos++;
+			RefreshForecast();
+			return;
+		}
+		prev_forecast = price;
+		forecast = prev_forecast * (d0 / d1);
+		forecast_read_pos++;
+		return;
+	}
+	forecast_read_pos = 0;
+	forecast_tmp.SetCount(0);
 	
 	if (iter < 2)
 		return;
@@ -312,8 +338,21 @@ void Generator::RefreshForecast() {
 			skip_pos.Add(min_pos);
 			continue;
 		}
-		else
+		else {
+			int size = 10+1;
+			int pos = min_pos;
+			forecast_tmp.SetCount(size);
+			for(int i = 0; i < size; i++) {
+				if (pos >= iter) {
+					forecast_tmp.SetCount(i);
+					break;
+				}
+				forecast_tmp[i] = real_data[pos];
+				pos++;
+			}
+			forecast_read_pos = 1;
 			break;
+		}
 	}
 	#endif
 }
@@ -364,9 +403,9 @@ void Generator::ApplyIndicatorPressures() {
 void Generator::ApplyPressureChanges() {
 	double scale = min(0.1, pow(10, -2 + params[1]));
 	double dec = 1.0 - fabs(params[2] * scale);
-	double main_inc = fabs(params[3] * 10);
-	double inc0 = fabs(params[4] * 10);
-	double inc1 = fabs(params[5] * 10);
+	double main_inc = fabs(params[3] * 0.1);
+	double inc0 = fabs(params[4] * 0.1);
+	double inc1 = fabs(params[5] * 0.1);
 	if (iter > 0) {
 		Vector<AsmData>& cur = a.data;
 		for(int i = 0; i < cur.GetCount(); i++) {
@@ -380,6 +419,7 @@ void Generator::ApplyPressureChanges() {
 	if (prev_price <= price) {
 		for (double d = prev_price; d <= price; d += a.step) {
 			int pos = a.GetPos(d);
+			if (pos <= 0 || pos >= a.data.GetCount()-1)return;
 			a.data[pos].pres += -main_inc;
 			a.data[pos + 1].pres += -inc0;
 			a.data[pos - 1].pres += -inc1;
@@ -387,6 +427,7 @@ void Generator::ApplyPressureChanges() {
 	} else {
 		for (double d = prev_price; d >= price; d -= a.step) {
 			int pos = a.GetPos(d);
+			if (pos <= 0 || pos >= a.data.GetCount()-1)return;
 			a.data[pos].pres += -main_inc;
 			a.data[pos + 1].pres += -inc1;
 			a.data[pos - 1].pres += -inc0;

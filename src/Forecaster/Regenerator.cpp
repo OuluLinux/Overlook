@@ -29,8 +29,16 @@ void Regenerator::Init() {
 	if (opt.GetRound() == 0) {
 		opt.min_value = -1;
 		opt.max_value = +1;
+		#ifdef flagDEBUG
+		opt.SetMaxGenerations(10);
+		#else
 		opt.SetMaxGenerations(100);
+		#endif
 		opt.Init(gen[0].stream.GetColumnCount() * INDIPRESSURE_PARAMS + APPLYPRESSURE_PARAMS, popcount);
+		
+		
+		dqn.Init(1, NNSample::single_count * NNSample::single_size, NNSample::fwd_count);
+		dqn.Reset();
 	}
 	
 	is_init = true;
@@ -69,12 +77,8 @@ void Regenerator::RunOnce(int i) {
 			if (g.lock.TryEnter()) {
 				g.PopWarmup(opt.GetTrialSolution(i));
 				g.DoNext();
-				//if (j == 0)
-				//	g.DoNext();
 				ASSERT(g.err != -DBL_MAX);
 				err[i] = -g.err;
-				//if (j == 0)
-				//	last_energy = -g.err;
 				
 				StringStream ss;
 				ss.SetStoring();
@@ -100,58 +104,82 @@ void Regenerator::RunOnce(int i) {
 	}
 }
 
-void Regenerator::Forecast() {
-	result_lock.Enter();
-	Sort(results, RegenResult());
-	forecasts.Clear();
-	result_lock.Leave();
+void Regenerator::RefreshNNSamples() {
+	gen[0].nnsamples = &nnsamples;
 	
-	CoWork co;
-	co.SetPoolSize(GetUsedCpuCores());
-	for(int i = 0; i < results.GetCount() && i < 30; i++) {
-		co & THISBACK1(ForecastOnce, i);
+	for(int i = 0; i < NNSample::single_count; i++) {
+		const Vector<double>& trial = results[i].params;
+		Generator& g = gen[0];
+		g.result_id = i;
+		g.PopWarmup(trial);
+		g.DoNext();
+		g.DoNext();
+		ASSERT(g.state == Generator::ERROR_CALCULATED_FULLY);
+		
 	}
-	co.Finish();
+}
+
+void Regenerator::GetProgress(int& actual, int& total, String& state) {
+	if (dqn_iters == max_dqniters) {
+		actual = 1;
+		total = 1;
+		state = "Forecast";
+	}
+	else if (dqn_iters > 0 && dqn_iters < max_dqniters) {
+		actual = dqn_iters;
+		total = max_dqniters;
+		state = "DQN";
+	}
+	else if ((!IsInit() || opt.IsEnd()) && HasGenerators()) {
+		actual = GetGenerator(0).actual;
+		total = GetGenerator(0).total;
+		if (!IsInit()) state = "Init";
+		else state = "NNSamples";
+	}
+	else {
+		actual = opt.GetRound();
+		total = opt.GetMaxRounds();
+		state = "Optimizing";
+	}
+	
+}
+
+void Regenerator::IterateNN(int ms) {
+	TimeStop ts;
+	while (ts.Elapsed() < ms && dqn_iters < max_dqniters && !Thread::IsShutdownThreads()) {
+		NNSample& s = nnsamples[Random(nnsamples.GetCount())];
+		dqn.Learn(&s.input[0][0], &s.output[0]);
+		dqn_iters++;
+	}
+}
+
+void Regenerator::Forecast() {
+	NNSample s;
+	
+	for(int i = 0; i < NNSample::single_count; i++) {
+		const Vector<double>& trial = results[i].params;
+		Generator& g = gen[0];
+		g.result_id = -1; // no need, skips sample refresh
+		g.PopWarmup(trial);
+		g.DoNext();
+		g.DoNext();
+		ASSERT(g.state == Generator::ERROR_CALCULATED_FULLY);
+		g.result_id = i;
+		g.GetSampleInput(s);
+		ASSERT(g.iter == g.real_data->GetCount());
+	}
+	
+	
+	dqn.Evaluate(&s.input[0][0], &s.output[0]);
 	
 	result_lock.Enter();
-	Sort(forecasts, ForecastResult());
+	ForecastResult& fr = forecasts.Add();
+	fr.id = forecasts.GetCount() - 1;
+	fr.data.SetCount(NNSample::fwd_count);
+	for(int i = 0; i < NNSample::fwd_count; i++)
+		fr.data[i] = s.output[i];
 	result_lock.Leave();
 }
 
-void Regenerator::ForecastOnce(int i) {
-	while (true) {
-		for(int j = 0; j < gen.GetCount(); j++) {
-			Generator& g = gen[j];
-			if (g.lock.TryEnter()) {
-				RegenResult& rr = results[i];
-				
-				g.PopWarmup(rr.params);
-				while (g.state < Generator::FORECASTED)
-					g.DoNext();
-				
-				int begin = this->real_data.GetCount();
-				int size = g.real_data.GetCount() - begin;
-				Heatmap fcast_hmap;
-				g.image.CopyRight(fcast_hmap, size);
-				StringStream ss;
-				ss.SetStoring();
-				ss % fcast_hmap;
-				ss.Seek(0);
-				String heatmap = BZ2Compress(ss.Get(ss.GetSize()));
-				
-				result_lock.Enter();
-				ForecastResult& fr = forecasts.Add();
-				fr.heatmap = heatmap;
-				fr.data.SetCount(size);
-				fr.id = i;
-				for(int i = 0; i < size; i++)
-					fr.data[i] = g.real_data[begin + i];
-				result_lock.Leave();
-				g.lock.Leave();
-				return;
-			}
-		}
-	}
-}
 
 }

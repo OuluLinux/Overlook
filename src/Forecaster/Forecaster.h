@@ -4,6 +4,7 @@
 #include <CtrlLib/CtrlLib.h>
 #include <ConvNet/ConvNet.h>
 using namespace Upp;
+using namespace ConvNet;
 
 
 #include "CompatAMP.h"

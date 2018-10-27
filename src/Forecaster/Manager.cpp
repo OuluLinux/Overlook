@@ -7,9 +7,9 @@ Manager::Manager() {
 	
 	#ifdef flagMAIN
 	if (sessions.GetCount() == 0) {
-		GetAdd("EURUSD0").LoadData();
-		GetAdd("EURJPY0").LoadData();
-		GetAdd("GBPUSD0").LoadData();
+		GetAdd("EURUSD");
+		//GetAdd("EURJPY0");
+		//GetAdd("GBPUSD0");
 	}
 	#endif
 	
@@ -54,8 +54,10 @@ void Manager::Process() {
 			
 			switch (mode) {
 				case 0:
-					if (!ses.regen.IsInit())
+					if (!ses.regen.IsInit()) {
+						ses.LoadData();
 						ses.regen.Init();
+					}
 					#ifdef flagDEBUG
 					ses.regen.Iterate(3*1000);
 					#else
@@ -65,15 +67,53 @@ void Manager::Process() {
 					break;
 				
 				case 1:
-					ses.regen.Forecast();
-					mode++;
-					break;
-				
-				case 2:
 					ses.StoreThis();
 					mode++;
 					break;
 					
+				case 2:
+					if (ses.regen.opt.IsEnd())
+						mode++;
+					else
+						mode = 0;
+					break;
+					
+				case 3:
+					if (ses.regen.nnsamples.IsEmpty())
+						ses.regen.RefreshNNSamples(); // 1-shot, no fail allowed
+					mode++;
+					break;
+					
+				case 4:
+					ses.StoreThis();
+					mode++;
+					break;
+				
+				case 5:
+					#ifdef flagDEBUG
+					ses.regen.IterateNN(3*1000);
+					#else
+					ses.regen.IterateNN(5*60*1000);
+					#endif
+					mode++;
+					break;
+					
+				case 6:
+					ses.StoreThis();
+					mode++;
+					break;
+					
+				case 7:
+					if (ses.regen.dqn_iters < Regenerator::max_dqniters)
+						mode = 5;
+					else
+						mode++;
+					break;
+				
+				case 8:
+					ses.regen.Forecast();
+					break;
+				
 				default:
 					ses_id++;
 					if (ses_id >= sessions.GetCount())
@@ -107,24 +147,63 @@ Session::Session() {
 }
 
 void Session::LoadData() {
-	FileIn fin(ConfigFile(name + ".bin"));
+	String dir = ConfigFile("m1data");
+	String file = AppendFileName(dir, name + ".hst");
 	
-	regen.real_data.Clear();
-	while (!fin.IsEof()) {
-		double d;
-		fin.Get(&d, sizeof(double));
-		regen.real_data.Add(d);
+	FileIn src(file);
+	if (!src.IsOpen() || !src.GetSize())
+		Panic("Couldn't open history file for " + name);
+	
+	// Read the history file
+	int digits;
+	src.Seek(4+64+12+4);
+	src.Get(&digits, 4);
+	if (digits > 20)
+		throw DataExc();
+	double point = 1.0 / pow(10.0, digits);
+	int data_size = (int)src.GetSize();
+	int struct_size = 4 + 4*8 + 8;
+	byte row[0x100];
+	
+	// Seek to begin of the data
+	int cursor = (4+64+12+4+4+4+4 +13*4);
+	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
+	src.Seek(cursor);
+	
+	regen.real_data.Reserve(expected_count);
+	
+	
+	while ((cursor + struct_size) <= data_size) {
+		int64 time;
+		double open, high, low, close;
+		int64 tick_volume, real_volume;
+		int spread;
+		src.Get(row, struct_size);
+		byte* current = row;
+		
+		time  = *((int32*)current);				current += 4;
+		open  = *((double*)current);			current += 8;
+		high  = *((double*)current);			current += 8;
+		low   = *((double*)current);			current += 8;
+		close = *((double*)current);			current += 8;
+		tick_volume  = *((double*)current);		current += 8;
+		spread       = 0;
+		real_volume  = 0;
+		
+		cursor += struct_size;
+		
+		regen.real_data.Add(open);
 	}
-	if (regen.real_data.IsEmpty())
-		Panic("No data for " + name);
+	
 	#ifdef flagDEBUG
-	int size = 1440*1*1;
+	int max_size = 1440;
 	#else
-	int size = 1440*5*4;
+	//int max_size = 2*365*5/7*1440;
+	int max_size = 4*5*1440;
 	#endif
-	int begin = regen.real_data.GetCount() - size;
+	
+	int begin = regen.real_data.GetCount() - max_size;
 	regen.real_data.Remove(0, begin);
-	regen.real_data.SetCount(size);
 }
 
 void Session::LoadThis() {

@@ -46,11 +46,12 @@ void ManagerCtrl::Data() {
 		Session& ses = m.sessions[i];
 		seslist.Set(i, 0, ses.name);
 		
-		seslist.Set(i, 1, m.GetActiveSession() == &ses ? "Active" : "");
+		String state;
+		int actual, total;
+		ses.regen.GetProgress(actual, total, state);
 		
-		int round = ses.regen.opt.GetRound();
-		int max_rounds = ses.regen.opt.GetMaxRounds();
-		seslist.Set(i, 2, round * 1000 / max_rounds);
+		seslist.Set(i, 1, m.GetActiveSession() == &ses ? state : "");
+		seslist.Set(i, 2, actual * 1000 / total);
 		seslist.SetDisplay(i, 2, ProgressDisplay());
 	}
 }
@@ -64,18 +65,20 @@ void DrawLines::Paint(Draw& d) {
 	d.DrawRect(sz, White());
 	
 	Manager& mgr = GetManager();
-	Vector<double>* data0;
+	const Vector<double>* data0;
 	Generator* gen = NULL;
 	Regenerator* regen = NULL;
 	Session* ses = mgr.GetSelectedSession();
 	Heatmap* heatmap = NULL;
+	int max_count = 0;
 	if (!ses) return;
 	
 	if (type == GENVIEW) {
 		gen = &ses->regen.GetGenerator(gen_id);
 		if (!gen) return;
-		data0 = &gen->real_data;
+		data0 = gen->real_data;
 		heatmap = &gen->image;
+		max_count = Generator::errtest_size;
 	}
 	else if (type == HISVIEW) {
 		if (!ses->regen.HasGenerators()) return;
@@ -83,6 +86,7 @@ void DrawLines::Paint(Draw& d) {
 		if (!gen) return;
 		data0 = &ses->regen.real_data;
 		heatmap = &this->image;
+		max_count = Generator::errtest_size;
 	}
 	else if (type == OPTSTATS) {
 		data0 = &ses->regen.result_errors;
@@ -112,6 +116,7 @@ void DrawLines::Paint(Draw& d) {
 	max += (max - min) * 0.125;
 	min -= (max - min) * 0.125;
 	max_steps = count0;
+	if (max_count && max_steps > max_count) max_steps = max_count;
 	
 	if (max_steps > 1 && max >= min) {
 		double diff = max - min;
@@ -284,10 +289,9 @@ void RegeneratorCtrl::Data() {
 	
 	his_list.SetSortColumn(2, false);
 	
-	if (!ses->regen.IsInit() && ses->regen.HasGenerators())
-		optprog.Set(ses->regen.GetGenerator(0).actual, ses->regen.GetGenerator(0).total);
-	else
-		optprog.Set(ses->regen.opt.GetRound(), ses->regen.opt.GetMaxRounds());
+	int actual, total;
+	ses->regen.GetProgress(actual, total, String());
+	optprog.Set(actual, total);
 	
 }
 

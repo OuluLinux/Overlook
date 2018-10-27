@@ -5,7 +5,7 @@ namespace Forecast {
 
 static const int APPLYPRESSURE_PARAMS = 1+5;
 static const int INDIPRESSURE_PARAMS = 4;
-static const int FORECAST_SIZE = 240;
+
 
 struct AsmData : Moveable<AsmData> {
 	double pres = 0;
@@ -29,7 +29,7 @@ struct Asm {
 	Asm() {
 		
 	}
-	void Init(int data_count, double low, double high, double step) {
+	void Init(double low, double high, double step) {
 		this->low = low;
 		this->high = high;
 		this->step = step;
@@ -49,15 +49,36 @@ struct PressureDescriptor : Moveable<PressureDescriptor> {
 	void Serialize(Stream& s) {for(int i = 0; i < size; i++) s % descriptor[i];}
 };
 
+struct NNSample : Moveable<NNSample> {
+	static const int single_size = 50;
+	static const int single_count = 10;
+	static const int fwd_count = 240/10;
+	
+	double input[single_count][single_size];
+	double output[fwd_count];
+	
+	NNSample() {output[0] = 0.0;}
+	void Serialize(Stream& s) {
+		if (s.IsLoading()) {
+			s.Get(&input, sizeof(input));
+			s.Get(&output, sizeof(output));
+		} else {
+			s.Put(&input, sizeof(input));
+			s.Put(&output, sizeof(output));
+		}
+	}
+};
+
 struct Generator {
 	
+	static const int errtest_size = 1440*5*4;
 	enum {
 		START,
 		INITIALIZED,
 		INDICATORS_REFRESHED,
 		BITSTREAMED,
 		ERROR_CALCULATED,
-		FORECASTED
+		ERROR_CALCULATED_FULLY,
 	};
 	
 	// Persistent
@@ -67,7 +88,7 @@ struct Generator {
 	BitStream stream;
 	Heatmap image;
 	Asm a;
-	Vector<double> real_data;
+	const Vector<double>* real_data = NULL;
 	Vector<double> params;
 	double price = 1.0, prev_price = 1.0;
 	double forecast = 1.0, prev_forecast = 1.0;
@@ -77,11 +98,13 @@ struct Generator {
 	
 	
 	// Temporary
+	VectorMap<int, NNSample>* nnsamples = NULL;
 	Vector<CoreItem> work_queue;
 	Vector<ConstLabelSignal*> lbls;
 	Vector<double> forecast_tmp;
 	String bitstreamed;
 	Mutex lock, view_lock;
+	int result_id = -1;
 	int actual = 0, total = 1;
 	int forecast_read_pos = 0;
 	bool debug = false;
@@ -98,15 +121,15 @@ struct Generator {
 	void RefreshIndicators();
 	void ResetPattern();
 	void RefreshDescriptor();
-	void CalculateError();
-	void Forecast();
+	void CalculateError(bool limited);
 	void AddRandomPressure();
-	void RandomizePatterns();
 	void RefreshForecast();
+	void RefreshNNSample();
 	void Iteration(BitStream& stream, int i, const Vector<double>& params);
 	void ApplyPressureChanges();
 	void ApplyIndicatorPressures();
 	void Serialize(Stream& s);
+	void GetSampleInput(NNSample& s);
 	
 };
 

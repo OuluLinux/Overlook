@@ -456,7 +456,7 @@ inline void AddDefaultDeclarations(Vector<FactoryDeclaration>& decl) {
 	for(int i = 0; i < 12; i++) {
 		decl.Add().Set(System::Find<Momentum>()).AddArg(2 << i);
 		decl.Add().Set(System::Find<MovingAverage>()).AddArg(2 << i);
-		decl.Add().Set(System::Find<Pattern>()).AddArg(2 << i);
+		//decl.Add().Set(System::Find<Pattern>()).AddArg(2 << i);
 	}
 	decl.Add().Set(System::Find<BearsPower>());
 	decl.Add().Set(System::Find<CommodityChannelIndex>());

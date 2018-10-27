@@ -44,19 +44,24 @@ public:
 	
 	#ifdef flagDEBUG
 	static const int popcount = 10;
+	static const int max_dqniters = 1000;
 	#else
 	static const int popcount = 100;
+	static const int max_dqniters = 10000000;
 	#endif
 	
 	// Persistent
+	DQNAgent dqn;
+	VectorMap<int, NNSample> nnsamples;
 	Vector<ForecastResult> forecasts;
 	Vector<RegenResult> results;
 	Vector<double> result_errors;
-	Vector<double> real_data;
 	Optimizer opt;
 	double last_energy = 0;
+	int dqn_iters = 0;
 	
 	// Temp
+	Vector<double> real_data;
 	Array<Generator> gen;
 	Vector<double> err;
 	Mutex result_lock;
@@ -64,7 +69,6 @@ public:
 	
 	
 	void RunOnce(int i);
-	void ForecastOnce(int i);
 	
 public:
 	
@@ -72,6 +76,9 @@ public:
 	Regenerator();
 	void Init();
 	void Iterate(int ms);
+	void IterateNN(int ms);
+	void RefreshNNSamples();
+	void GetProgress(int& actual, int& total, String& state);
 	void Forecast();
 	
 	double GetBestEnergy() {return opt.GetBestEnergy();}
@@ -79,7 +86,7 @@ public:
 	Generator& GetGenerator(int i) {return gen[i];}
 	bool IsInit() {return is_init;}
 	bool HasGenerators() const {return gen.GetCount();}
-	void Serialize(Stream& s) {s % forecasts % results % result_errors % real_data % opt % last_energy;}
+	void Serialize(Stream& s) {s % dqn % nnsamples % forecasts % results % result_errors % real_data % opt % last_energy % dqn_iters;}
 	
 };
 

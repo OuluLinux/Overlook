@@ -102,7 +102,7 @@ struct ValueRegister {
 };
 
 struct FactoryDeclaration : Moveable<FactoryDeclaration> {
-	int args[8];
+	int args[8] {0,0,0,0,0,0,0,0};
 	int factory = -1;
 	int arg_count = 0;
 	
@@ -156,13 +156,14 @@ public:
 	Color clr;
 	int style, line_style, line_width, chr, begin, shift, earliest_write;
 	bool visible;
+	SpinLock lock;
 	
 public:
 	Buffer() : clr(Black()), style(0), line_width(1), chr('^'), begin(0), shift(0), line_style(0), visible(true), earliest_write(INT_MAX) {}
 	void Serialize(Stream& s) {s % value % label % clr % style % line_style % line_width % chr % begin % shift % visible;}
-	void SetCount(int i) {value.SetCount(i, 0.0);}
+	void SetCount(int i) {lock.Enter(); value.SetCount(i, 0.0); lock.Leave();}
 	void Add(double d) {value.Add(d);}
-	void Reserve(int n) {value.Reserve(n);}
+	void Reserve(int n) {lock.Enter(); value.Reserve(n); lock.Leave();}
 	
 	int GetResetEarliestWrite() {int i = earliest_write; earliest_write = INT_MAX; return i;}
 	int GetCount() const {return value.GetCount();}
@@ -389,6 +390,14 @@ inline int GetUsedCpuCores() {
 	return Upp::max(1, cores - 2); // Leave a little for the system
 }
 
+
+
+
+
+struct DataCtrl : public ParentCtrl {
+	
+	virtual void Data() = 0;
+};
 
 }
 

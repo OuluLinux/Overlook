@@ -4,13 +4,10 @@
 namespace Forecast {
 
 Manager::Manager() {
-	//RefreshSessions();
 	
 	#ifdef flagMAIN
 	if (sessions.GetCount() == 0) {
-		GetAdd("EURUSD").Init();
-		//GetAdd("EURJPY0");
-		//GetAdd("GBPUSD0");
+		GetAdd("EURUSD");
 	}
 	#endif
 	
@@ -23,23 +20,14 @@ Manager::~Manager() {
 }
 
 Session& Manager::GetAdd(String symbol) {
-	Session& ses = sessions.GetAdd(symbol);
-	ses.symbol = symbol;
-	return ses;
-}
-
-void Manager::RefreshSessions() {
-	String dir = ConfigFile("ForecastSessions");
-	RealizeDirectory(dir);
-	FindFile ff(AppendFileName(dir, "*.bin"));
-	do {
-		String fname = ff.GetName();
-		if (fname == "") continue;
-		Session& ses = sessions.GetAdd(fname);
-		ses.symbol = GetFileTitle(fname);
+	int i = sessions.Find(symbol);
+	if (i == -1) {
+		Session& ses = sessions.GetAdd(symbol);
+		ses.symbol = symbol;
 		ses.Init();
+		return ses;
 	}
-	while (ff.Next());
+	else return sessions[i];
 }
 
 void Manager::Process() {
@@ -79,26 +67,10 @@ Session::Session() {
 }
 
 void Session::Init() {
-	AddIndiTask(System::Find<SimpleHurstWindow>());
-	AddIndiTask(System::Find<ParabolicSAR>());
-	for(int i = 0; i < 7; i++) {
-		AddIndiTask(System::Find<Momentum>(), 2 << i);
-		AddIndiTask(System::Find<MovingAverage>(), 2 << i);
-		//AddIndiTask(System::Find<Pattern>(), 2 << i);
-	}
-	AddIndiTask(System::Find<BearsPower>());
-	AddIndiTask(System::Find<CommodityChannelIndex>());
-	AddIndiTask(System::Find<RelativeStrengthIndex>());
-	AddIndiTask(System::Find<RelativeVigorIndex>());
-	AddIndiTask(System::Find<StochasticOscillator>());
-	AddIndiTask(System::Find<AcceleratorOscillator>());
-	AddIndiTask(System::Find<AwesomeOscillator>());
-	AddIndiTask(System::Find<Psychological>());
-	AddIndiTask(System::Find<ChannelOscillator>());
-	AddIndiTask(System::Find<ScissorChannelOscillator>());
-	AddIndiTask(System::Find<OnlineMinimalLabel>());
-	AddIndiTask(System::Find<Laguerre>());
-	AddIndiTask(System::Find<TickBalanceOscillator>());
+	Vector<FactoryDeclaration> decl;
+	AddDefaultDeclarations(decl);
+	for(int i = 0; i < decl.GetCount(); i++)
+		AddIndiTask(i, decl[i]);
 	
 	AddTask("Bitstream join");
 	AddTask("Optimization");
@@ -107,15 +79,11 @@ void Session::Init() {
 	AddForecastTask(Vector<double>());
 }
 
-void Session::AddIndiTask(int factory, int arg) {
+void Session::AddIndiTask(int id, FactoryDeclaration& decl) {
 	Task& t = tasks.Add();
-	t.task = "Indicator " + IntStr(factory) + " " + IntStr(arg);
-	t.decl.factory = factory;
+	t.task = "Indicator " + Format("%03d", id);
+	t.decl = decl;
 	t.symbol = symbol;
-	if (arg) {
-		t.decl.args[0] = arg;
-		t.decl.arg_count = 1;
-	}
 }
 
 void Session::AddTask(String s) {
@@ -152,19 +120,6 @@ bool Session::RunTask() {
 	return false;
 }
 
-/*void Session::LoadThis() {
-	String dir = ConfigFile("ForecastSessions");
-	String file = AppendFileName(dir, name + ".bin");
-	RealizeDirectory(dir);
-	LoadFromFile(*this, file);
-}
-
-void Session::StoreThis() {
-	String dir = ConfigFile("ForecastSessions");
-	String file = AppendFileName(dir, name + ".bin");
-	RealizeDirectory(dir);
-	StoreToFile(*this, file);
-}*/
 
 
 
@@ -215,7 +170,6 @@ void Task::RunIndicator() {
 	LoadData();
 	
 	Vector<FactoryDeclaration> decl;
-	Vector<CoreItem> work_queue;
 	decl.Add(this->decl);
 	System::GetCoreQueue(real_data, work_queue, decl);
 	
@@ -265,6 +219,7 @@ void Task::RunIndicator() {
 	FileOut fout(file);
 	fout % stream;
 	
+	work_queue.Clear();
 	real_data.Clear();
 }
 
@@ -278,20 +233,27 @@ void Task::RunBitstreamJoin() {
 	FindFile ff;
 	int cols_total = 0;
 	int size = 0;
+	Vector<String> files;
 	if (ff.Search(AppendFileName(dir, symbol + " Indicator*"))) {
 		do {
-			BitStream& stream = streams.Add();
-			FileIn fin(ff.GetPath());
-			fin % stream;
-			cols_total += stream.GetColumnCount();
-			stream.SetBit(0);
-			if (streams.GetCount() == 1)
-				size = stream.GetCount();
-			else
-				if (size != stream.GetCount())
-					Panic("Indicator file size differs from first " + ff.GetName());
+			files.Add(ff.GetPath());
 		}
 		while (ff.Next());
+	}
+	Sort(files, StdLess<String>());
+	
+	
+	for(int i = 0; i < files.GetCount(); i++) {
+		BitStream& stream = streams.Add();
+		FileIn fin(files[i]);
+		fin % stream;
+		cols_total += stream.GetColumnCount();
+		stream.SetBit(0);
+		if (streams.GetCount() == 1)
+			size = stream.GetCount();
+		else
+			if (size != stream.GetCount())
+				Panic("Indicator file size differs from first " + ff.GetName());
 	}
 	
 	BitStream stream;
@@ -346,11 +308,10 @@ void Task::RunOptimization() {
 	if (opt.GetRound() == 0) {
 		opt.min_value = -1;
 		opt.max_value = +1;
-		#ifdef flagDEBUG
 		opt.SetMaxGenerations(10);
+		#ifdef flagDEBUG
 		int popcount = 10;
 		#else
-		opt.SetMaxGenerations(100);
 		int popcount = 100;
 		#endif
 		opt.Init(stream.GetColumnCount() * INDIPRESSURE_PARAMS + APPLYPRESSURE_PARAMS, popcount);
@@ -475,7 +436,7 @@ void Task::RunDQNSampling() {
 		params.Add() <<= results[i].params;
 	
 	
-	l.Init(point, real_data, params);
+	l.Init(point, real_data, params, stream);
 	
 	l.Run(true);
 	
@@ -511,7 +472,7 @@ void Task::RunDQNTraining() {
 	#ifdef flagDEBUG
 	const int max_iters = 1000;
 	#else
-	const int max_iters = 10000000;
+	const int max_iters = 1000000;
 	#endif
 	
 	total = max_iters;
@@ -554,6 +515,49 @@ void Task::RunForecast() {
 		real_data.Remove(0, begin);
 	}
 	
+	
+	Vector<FactoryDeclaration> decl;
+	Vector<CoreItem> work_queue;
+	AddDefaultDeclarations(decl);
+	System::GetCoreQueue(real_data, work_queue, decl);
+	
+	total = work_queue.GetCount();
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		Core& c = *work_queue[i].core;
+		actual = i;
+		c.SetBars(real_data.GetCount());
+		c.Refresh();
+	}
+	
+	Vector<ConstLabelSignal*> lbls;
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = work_queue[i];
+		
+		OutputCounter lc;
+		ci.core->IO(lc);
+		
+		for(int j = 0; j < lc.lbl_counts.GetCount(); j++) {
+			int count = lc.lbl_counts[j];
+			for(int k = 0; k < count; k++) {
+				ConstLabelSignal& buf = ci.core->GetLabelBuffer(j, k);
+				lbls.Add(&buf);
+			}
+		}
+	}
+	
+	BitStream stream;
+	stream.SetColumnCount(lbls.GetCount());
+	stream.SetCount(real_data.GetCount());
+	stream.SetBit(0);
+	for(int i = 0; i < real_data.GetCount(); i++) {
+		for(int j = 0; j < lbls.GetCount(); j++) {
+			bool value = lbls[j]->signal.Get(i);
+			stream.Write(value);
+		}
+	}
+	
+	
+	
 	String dir = ConfigFile("ForecastSessions");
 	String opt_file = AppendFileName(dir, symbol + " Optimization.bin");
 	FileIn opt_fin(opt_file);
@@ -567,7 +571,7 @@ void Task::RunForecast() {
 	dqn_fin % dqn;
 	
 	double point = real_data[0] > 65 ? 0.01 : 0.0001;
-	l.Init(point, real_data, params);
+	l.Init(point, real_data, params, stream);
 	
 	l.Run(false);
 	
@@ -644,6 +648,7 @@ void Task::LoadData() {
 	//int max_size = 2*365*5/7*1440;
 	int max_size = 4*5*1440;
 	//int max_size = real_data.GetCount();
+	max_size = real_data.GetCount();
 	#endif
 	
 	int begin = real_data.GetCount() - max_size;

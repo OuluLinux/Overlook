@@ -25,7 +25,7 @@ void HeatmapLooper::Init(double point, const Vector<double>& real_data) {
 	high *= 1.01;
 	low *= 0.99;
 	a.Init(low, high, point);
-	image.Init(a.low, a.high, a.step, a.step*3, min(errtest_size, real_data.GetCount()), 5);
+	image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount(), 5);
 }
 
 void HeatmapLooper::CalculateError() {
@@ -38,6 +38,7 @@ void HeatmapLooper::CalculateError() {
 	
 	for(int i = 0; i < a.data.GetCount(); i++)
 		a.data[i].pres = 0.0;
+	image.Init(a.low, a.high, a.step, a.step*3, real_data->GetCount(), 5);
 	
 	for(iter = 0; iter < size; iter++) {
 		actual = iter;
@@ -256,6 +257,8 @@ void HeatmapLooper::RealPrice() {
 void HeatmapLooper::ApplyIndicatorPressures() {
 	int readbit = iter * stream.GetColumnCount();
 	stream.SetBit(readbit);
+	ASSERT(iter >= 0 && iter < stream.GetCount());
+	ASSERT(stream.GetColumnCount() > 0);
 	int j = APPLYPRESSURE_PARAMS;
 	for(int i = 0; i < stream.GetColumnCount(); i++) {
 		bool value = stream.Read();
@@ -339,7 +342,7 @@ MultiHeatmapLooper::MultiHeatmapLooper() {
 	
 }
 
-void MultiHeatmapLooper::Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params) {
+void MultiHeatmapLooper::Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params, BitStream& stream) {
 	int cores = GetUsedCpuCores();
 	
 	this->real_data = &real_data;
@@ -351,6 +354,7 @@ void MultiHeatmapLooper::Init(double point, const Vector<double>& real_data, con
 	for(int i = 0; i < NNSample::single_count; i++) {
 		HeatmapLooper& l = loopers[i];
 		l.Init(point, real_data);
+		l.stream = stream;
 		l.params <<= params[i];
 		l.ResetPattern();
 	}

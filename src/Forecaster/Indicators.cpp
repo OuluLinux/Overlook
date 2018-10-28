@@ -266,13 +266,13 @@ void Momentum::Start() {
 	if ( bars <= period || period <= 0 )
 		return;
 
-	if ( counted <= 0 ) {
+	if ( counted <= period ) {
 		for (int i = 0; i < period; i++) {
 			buffer.Set(i, 0.0);
 		}
 		counted = period;
 	}
-	else if (counted > period)
+	else
 		counted--;
 	
 	for (int i = counted; i < bars; i++) {

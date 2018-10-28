@@ -8,35 +8,41 @@ void DrawLines::Paint(Draw& d) {
 	
 	Manager& mgr = GetManager();
 	const Vector<double>* data0 = NULL;
-	Session& ses = mgr.GetSession(ses_id);
 	Heatmap* heatmap = NULL;
-	int max_count = 0;
+	HeatmapLooper* gen = NULL;
+	Vector<double> tmp;
 	
-	/*if (type == GENVIEW) {
-		gen = &ses->regen.GetHeatmapLooper(gen_id);
+	if (type == GENVIEW) {
+		if (!t) return;
+		if (gen_id >= t->gen.GetCount()) return;
+		gen = &t->gen[gen_id];
 		if (!gen) return;
-		data0 = gen->real_data;
+		data0 = &t->real_data;
 		heatmap = &gen->image;
-		max_count = HeatmapLooper::errtest_size;
 	}
 	else if (type == HISVIEW) {
-		if (!ses->regen.HasHeatmapLoopers()) return;
-		gen = &ses->regen.GetHeatmapLooper(0);
-		if (!gen) return;
-		data0 = &ses->regen.real_data;
+		if (!t) return;
+		data0 = &t->real_data;
 		heatmap = &this->image;
-		max_count = HeatmapLooper::errtest_size;
 	}
 	else if (type == OPTSTATS) {
-		data0 = &ses->regen.result_errors;
+		if (!t) return;
+		data0 = &t->result_errors;
 	}
 	else if (type == FCASTVIEW) {
-		data0 = &data;
-		heatmap = &this->image;
+		data0 = &t->forecast;
+	}
+	else if (type == INDIVIEW) {
+		if (t->work_queue.IsEmpty()) return;
+		Buffer& buf = t->work_queue[0].core->GetBuffer(0);
+		buf.lock.Enter();
+		tmp <<= buf.value;
+		buf.lock.Leave();
+		data0 = &tmp;
 	}
 	else return;
 	
-	if (gen) gen->view_lock.Enter();*/
+	if (gen) gen->view_lock.Enter();
 	if (!data0) return;
 	
 	double zero_line = 1.0;
@@ -56,7 +62,6 @@ void DrawLines::Paint(Draw& d) {
 	max += (max - min) * 0.125;
 	min -= (max - min) * 0.125;
 	max_steps = count0;
-	if (max_count && max_steps > max_count) max_steps = max_count;
 	
 	if (max_steps > 1 && max >= min) {
 		double diff = max - min;
@@ -94,6 +99,7 @@ void DrawLines::Paint(Draw& d) {
 		if (max_steps >= 2) {
 			polyline.SetCount(0);
 			for(int j = 0; j < max_steps; j++) {
+				if (j >= data0->GetCount()) break;
 				double v = (*data0)[j];
 				last = v;
 				int x = (int)(j * xstep);
@@ -119,20 +125,6 @@ void DrawLines::Paint(Draw& d) {
 			d.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
 			d.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
 		}
-		/*if (regen) {
-			int y = 20;
-			String str = DblStr(regen->GetBestEnergy());
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(16, y, str, fnt, Black());
-		}
-		if (regen) {
-			int y = 40;
-			String str = DblStr(regen->GetLastEnergy());
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(16, y, str, fnt, Black());
-		}*/
 		{
 			int y = (int)(sz.cy - (zero_line - min) / diff * sz.cy);
 			d.DrawLine(0, y, sz.cx, y, 1, Black());
@@ -146,7 +138,7 @@ void DrawLines::Paint(Draw& d) {
 		}
 	}
 	
-	//if (gen) gen->view_lock.Leave();
+	if (gen) gen->view_lock.Leave();
 }
 
 }

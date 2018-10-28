@@ -27,56 +27,79 @@ class ManagerCtrl;
 
 
 struct DrawLines : public Ctrl {
-	Vector<double> data;
 	Heatmap image;
+	Task* t = NULL;
 	int type;
-	int ses_id = 0;
 	int gen_id = 0;
 	
-	enum {GENVIEW, HISVIEW, FCASTVIEW, OPTSTATS};
+	enum {GENVIEW, HISVIEW, FCASTVIEW, OPTSTATS, INDIVIEW};
 	
 	Vector<Point> polyline;
+	
 	virtual void Paint(Draw& d);
+	void SetTask(Task& t) {this->t = &t;}
 };
 
-struct HeatmapLooperCtrl : public ParentCtrl {
-	DrawLines draw;
+struct OptimizationCtrl : public DataCtrl {
 	
-	
-	HeatmapLooperCtrl();
-	void SetId(int i) {draw.type = DrawLines::GENVIEW; draw.gen_id = i;}
-	
-};
-
-struct OptimizationCtrl : public TabCtrl {
-	
+	TabCtrl tabs;
 	ParentCtrl status;
-	ProgressIndicator optprog;
 	Splitter main_vsplit, main_hsplit;
 	DrawLines opt_draw;
 	DrawLines his_draw;
 	ArrayCtrl his_list;
-	Array<HeatmapLooperCtrl> gens;
+	Array<DrawLines> gens;
+	Task* task = NULL;
 	int prev_id = -1;
 	
 	typedef OptimizationCtrl CLASSNAME;
 	OptimizationCtrl();
 	
-	void Data();
+	virtual void Data();
 	void SelectHistoryItem();
+	void SetTask(Task& t);
 };
 
-struct ForecastCtrl : public ParentCtrl {
+struct ForecastCtrl : public DataCtrl {
 	
-	ArrayCtrl fcast_list;
 	DrawLines draw;
-	int prev_id = -1;
 	
 	typedef ForecastCtrl CLASSNAME;
 	ForecastCtrl();
 	
-	void Data();
-	void SelectForecastItem();
+	virtual void Data();
+	void SetTask(Task& t) {draw.SetTask(t);}
+};
+
+struct IndicatorCtrl : public DataCtrl {
+	
+	DrawLines draw;
+	
+	typedef IndicatorCtrl CLASSNAME;
+	IndicatorCtrl();
+	
+	virtual void Data();
+	void SetTask(Task& t) {draw.SetTask(t);}
+};
+
+struct NNSampleDraw : public Ctrl {
+	NNSample* sample = NULL;
+	Vector<Point> polyline;
+	virtual void Paint(Draw& d);
+};
+
+struct DqnTrainingCtrl : public DataCtrl {
+	Splitter split;
+	ArrayCtrl list;
+	NNSampleDraw draw;
+	Task* t = NULL;
+	
+	typedef DqnTrainingCtrl CLASSNAME;
+	DqnTrainingCtrl();
+	
+	virtual void Data();
+	void SelectSample();
+	void SetTask(Task& t) {this->t = &t;}
 };
 
 class ManagerCtrl : public TopWindow {
@@ -85,22 +108,25 @@ protected:
 	friend class DrawLines;
 	
 	
-	
 	ParentCtrl main_task;
 	Splitter vsplit, hsplit;
 	ArrayCtrl seslist, tasklist;
 	ForecastCtrl fcast;
 	OptimizationCtrl regenctrl;
+	DataCtrl* prev_ctrl = NULL;
 	
 	TimeCallback tc;
 	
 public:
 	typedef ManagerCtrl CLASSNAME;
 	ManagerCtrl();
+	~ManagerCtrl();
 	
 	void Data();
 	void PeriodicalRefresh();
 	void SelectTask();
+	void SwitchCtrl(DataCtrl* c);
+	
 };
 
 }

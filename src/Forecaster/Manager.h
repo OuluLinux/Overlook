@@ -17,6 +17,7 @@ struct Task : Moveable<Task> {
 	int actual = 0, total = 1;
 	
 	// Task temporary - to be freed
+	Vector<CoreItem> work_queue;
 	Vector<OptResult> results;
 	Vector<double> result_errors;
 	Vector<double> real_data;
@@ -45,7 +46,7 @@ struct Task : Moveable<Task> {
 struct Session : Moveable<Session> {
 	
 	// Temporary
-	Vector<Task> tasks;
+	Array<Task> tasks;
 	String symbol;
 	int active_task = 0;
 	
@@ -53,7 +54,7 @@ struct Session : Moveable<Session> {
 	Session();
 	void Init();
 	
-	void AddIndiTask(int factory, int arg=0);
+	void AddIndiTask(int id, FactoryDeclaration& decl);
 	void AddTask(String s);
 	void AddForecastTask(const Vector<double>& real_data);
 	bool RunTask();
@@ -81,7 +82,6 @@ public:
 	void Start() {Stop(); stopped = false; running = true; Thread::Start(THISBACK(Process));}
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	
-	void RefreshSessions();
 	Session& GetAdd(String symbol);
 	
 	Session& GetSession(int i) {return sessions[i];}

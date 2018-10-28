@@ -30,10 +30,21 @@ ManagerCtrl::ManagerCtrl() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
 }
 
+ManagerCtrl::~ManagerCtrl() {
+	if (prev_ctrl) {
+		main_task.RemoveChild(prev_ctrl);
+		delete prev_ctrl;
+	}
+}
+
 void ManagerCtrl::PeriodicalRefresh() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
 	Data();
 	
+	if (prev_ctrl) {
+		prev_ctrl->Data();
+		prev_ctrl->Refresh();
+	}
 	
 }
 
@@ -42,7 +53,52 @@ void ManagerCtrl::SelectTask() {
 	int cursor = seslist.GetCursor();
 	Session& ses = m.sessions[cursor];
 	
+	int task = tasklist.GetCursor();
+	Task& t = ses.tasks[task];
+	
+	if (t.task.Left(9) == "Indicator") {
+		One<IndicatorCtrl> c;
+		c.Create();
+		c->SetTask(t);
+		SwitchCtrl(c.Detach());
+	}
+	else if (t.task == "Bitstream join") {
+		SwitchCtrl(NULL);
+	}
+	else if (t.task == "Optimization") {
+		One<OptimizationCtrl> c;
+		c.Create();
+		c->SetTask(t);
+		SwitchCtrl(c.Detach());
+	}
+	else if (t.task == "DQN Sampling") {
+		SwitchCtrl(NULL);
+	}
+	else if (t.task == "DQN Training") {
+		One<DqnTrainingCtrl> c;
+		c.Create();
+		c->SetTask(t);
+		SwitchCtrl(c.Detach());
+	}
+	else if (t.task == "Forecast") {
+		One<ForecastCtrl> c;
+		c.Create();
+		c->SetTask(t);
+		SwitchCtrl(c.Detach());
+	}
+	
 	PeriodicalRefresh();
+}
+
+void ManagerCtrl::SwitchCtrl(DataCtrl* c) {
+	if (prev_ctrl) {
+		main_task.RemoveChild(prev_ctrl);
+		delete prev_ctrl;
+	}
+	
+	if (c)
+		main_task.Add(c->SizePos());
+	prev_ctrl = c;
 }
 
 void ManagerCtrl::Data() {
@@ -86,17 +142,10 @@ void ManagerCtrl::Data() {
 
 
 OptimizationCtrl::OptimizationCtrl() {
-	Add(status.SizePos(), "Status");
+	Add(tabs.SizePos());
+	tabs.Add(status.SizePos(), "Status");
 	
-	for(int i = 0; i < GetUsedCpuCores(); i++) {
-		HeatmapLooperCtrl& gc = gens.Add();
-		gc.SetId(i);
-		Add(gc.SizePos(), "Gen " + IntStr(i));
-	}
-	
-	
-	status.Add(main_vsplit.HSizePos().VSizePos(0, 30));
-	status.Add(optprog.BottomPos(0, 30).HSizePos());
+	status.Add(main_vsplit.HSizePos().VSizePos());
 	main_vsplit << main_hsplit << opt_draw;
 	main_vsplit.Vert();
 	main_vsplit.SetPos(8000);
@@ -113,10 +162,21 @@ OptimizationCtrl::OptimizationCtrl() {
 	his_list <<= THISBACK(SelectHistoryItem);
 }
 
+void OptimizationCtrl::SetTask(Task& t) {
+	this->task = &t;
+	opt_draw.t = &t;
+	his_draw.t = &t;
+	for(int i = 0; i < GetUsedCpuCores(); i++) {
+		DrawLines& dl = gens.Add();
+		dl.SetTask(t);
+		dl.gen_id = i;
+		dl.type = DrawLines::GENVIEW;
+		tabs.Add(dl.SizePos(), "Gen " + IntStr(i));
+	}
+}
+
 void OptimizationCtrl::SelectHistoryItem() {
-	/*Manager& mgr = GetManager();
-	Session* ses = mgr.GetSelectedSession();
-	if (!ses) return;
+	Manager& mgr = GetManager();
 	
 	int cursor = his_list.GetCursor();
 	if (cursor < 0 ) return;
@@ -126,44 +186,38 @@ void OptimizationCtrl::SelectHistoryItem() {
 		return;
 	prev_id = id;
 	
-	ses->regen.result_lock.Enter();
-	if (id < 0 || id >= ses->regen.results.GetCount()) {
-		ses->regen.result_lock.Leave();
+	task->result_lock.Enter();
+	if (id < 0 || id >= task->results.GetCount()) {
+		task->result_lock.Leave();
 		return;
 	}
-	const OptResult& rr = ses->regen.results[id];
+	const OptResult& rr = task->results[id];
 	StringStream ss;
 	ss << BZ2Decompress(rr.heatmap);
-	ses->regen.result_lock.Leave();
+	task->result_lock.Leave();
 	
 	ss.Seek(0);
 	ss.SetLoading();
 	ss % his_draw.image;
 	
-	his_draw.Refresh();*/
+	his_draw.Refresh();
 }
 
 void OptimizationCtrl::Data() {
-	/*Manager& mgr = GetManager();
-	Session* ses = mgr.GetSelectedSession();
-	if (!ses) return;
-	
-	ses->regen.result_lock.Enter();
-	for(int i = 0; i < ses->regen.results.GetCount(); i++) {
-		const OptResult& rr = ses->regen.results[i];
+	Manager& mgr = GetManager();
+		
+	task->result_lock.Enter();
+	for(int i = 0; i < task->results.GetCount(); i++) {
+		const OptResult& rr = task->results[i];
 		his_list.Set(i, 0, rr.id);
 		his_list.Set(i, 1, rr.gen_id);
 		his_list.Set(i, 2, rr.err);
 	}
-	his_list.SetCount(ses->regen.results.GetCount());
-	ses->regen.result_lock.Leave();
+	his_list.SetCount(task->results.GetCount());
+	task->result_lock.Leave();
 	
 	his_list.SetSortColumn(2, false);
 	
-	int actual, total;
-	ses->regen.GetProgress(actual, total, String());
-	optprog.Set(actual, total);
-	*/
 }
 
 
@@ -176,77 +230,136 @@ void OptimizationCtrl::Data() {
 
 
 ForecastCtrl::ForecastCtrl() {
-	Add(fcast_list.LeftPos(0, 200).VSizePos());
-	Add(draw.HSizePos(200).VSizePos());
+	Add(draw.HSizePos().VSizePos());
 	
 	draw.type = draw.FCASTVIEW;
-	
-	fcast_list.AddColumn("#");
-	fcast_list << THISBACK(SelectForecastItem);
 }
 
 void ForecastCtrl::Data() {
-	/*
-	Manager& mgr = GetManager();
-	Session* ses = mgr.GetSelectedSession();
-	if (!ses) return;
+	draw.Refresh();
+}
+
+
+
+
+
+
+
+
+
+IndicatorCtrl::IndicatorCtrl() {
+	Add(draw.HSizePos().VSizePos());
 	
-	ses->regen.result_lock.Enter();
-	for(int i = 0; i < ses->regen.forecasts.GetCount(); i++) {
-		const ForecastResult& fr = ses->regen.forecasts[i];
-		fcast_list.Set(i, 0, fr.id);
+	draw.type = draw.INDIVIEW;
+}
+
+void IndicatorCtrl::Data() {
+	draw.Refresh();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DqnTrainingCtrl::DqnTrainingCtrl() {
+	Add(split.HSizePos().VSizePos());
+	
+	split.Horz();
+	split << list << draw;
+	split.SetPos(2000);
+	
+	list.AddColumn("#");
+	list <<= THISBACK(SelectSample);
+}
+
+void DqnTrainingCtrl::Data() {
+	if (!t) return;
+	Task& t = *this->t;
+	
+	for(int i = 0; i < t.l.nnsamples.GetCount(); i++) {
+		list.Set(i, 0, i);
 	}
-	fcast_list.SetCount(ses->regen.forecasts.GetCount());
-	ses->regen.result_lock.Leave();
-	*/
+	list.SetCount(t.l.nnsamples.GetCount());
+	
+	draw.Refresh();
 }
 
-void ForecastCtrl::SelectForecastItem() {
-	/*Manager& mgr = GetManager();
-	Session* ses = mgr.GetSelectedSession();
-	if (!ses) return;
+void DqnTrainingCtrl::SelectSample() {
+	int cursor = list.GetCursor();
 	
-	int cursor = fcast_list.GetCursor();
-	if (cursor < 0 ) return;
+	NNSample& sample = t->l.nnsamples[cursor];
+	draw.sample = &sample;
+	draw.Refresh();
+}
+
+void NNSampleDraw::Paint(Draw& d) {
+	Size sz(GetSize());
+	d.DrawRect(sz, White());
 	
-	int id = fcast_list.Get(cursor, 0);
-	if (id == prev_id)
-		return;
-	prev_id = id;
+	if (!sample) return;
 	
-	ses->regen.result_lock.Enter();
-	if (id < 0 ||id >= ses->regen.forecasts.GetCount()) {
-		ses->regen.result_lock.Leave();
-		return;
+	double xstep = (double)sz.cx / NNSample::single_count;
+	double ystep = (double)sz.cy / NNSample::single_size;
+	
+	for(int i = 0; i < NNSample::single_count; i++) {
+		int x = i * xstep;
+		
+		double absmax = 0;
+		for(int j = 0; j < NNSample::single_size; j++) {
+			double d = sample->input[i][j];
+			if (fabs(d) > absmax) absmax = fabs(d);
+		}
+		
+		for(int j = 0; j < NNSample::single_size; j++) {
+			int y = j * ystep;
+			double v = sample->input[i][j] / absmax;
+			Color clr;
+			if (v > 0)
+				clr = Color(0, 255 - v * 255, 0);
+			else
+				clr = Color(255 - v * 255, 0, 0);
+			d.DrawRect(x, y, xstep+1, ystep+1, clr);
+		}
 	}
-	const ForecastResult& fr = ses->regen.forecasts[id];
-	StringStream ss;
-	ss << BZ2Decompress(fr.heatmap);
-	draw.data <<= fr.data;
-	ses->regen.result_lock.Leave();
 	
-	ss.Seek(0);
-	ss.SetLoading();
-	ss % draw.image;
+	double max = -DBL_MAX;
+	double min = +DBL_MAX;
+	for(int i = 0; i < NNSample::fwd_count; i++) {
+		double d = sample->output[i];
+		if (d > max) max = d;
+		if (d < min) min = d;
+	}
+	polyline.SetCount(NNSample::fwd_count);
 	
-	draw.Refresh();*/
-}
-
-
-
-
-
-
-
-
-
-
-
-HeatmapLooperCtrl::HeatmapLooperCtrl() {
-	Add(draw.SizePos());
+	xstep = (double)sz.cx / (NNSample::fwd_count-1);
+	for(int i = 0; i < NNSample::fwd_count; i++) {
+		double v = sample->output[i];
+		polyline[i].x = xstep * i;
+		polyline[i].y = sz.cy - (v - min) / (max - min) * sz.cy;
+	}
+	d.DrawPolyline(polyline, 5, Color(0,0,255));
 }
 
 }
+
+
+
+
+
+
+
+
+
+
 
 GUI_APP_MAIN
 {

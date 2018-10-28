@@ -71,8 +71,6 @@ struct NNSample : Moveable<NNSample> {
 
 struct HeatmapLooper {
 	
-	static const int errtest_size = 1440*5*4;
-	
 	
 	// Persistent
 	Vector<PressureDescriptor> descriptors;
@@ -145,7 +143,7 @@ struct MultiHeatmapLooper {
 	
 	
 	MultiHeatmapLooper();
-	void Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params);
+	void Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params, BitStream& stream);
 	void Run(bool get_samples);
 	void GetSampleInput(NNSample& s);
 	void Clear();

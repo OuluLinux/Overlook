@@ -453,7 +453,7 @@ public:
 inline void AddDefaultDeclarations(Vector<FactoryDeclaration>& decl) {
 	decl.Add().Set(System::Find<SimpleHurstWindow>());
 	decl.Add().Set(System::Find<ParabolicSAR>());
-	for(int i = 0; i < 12; i++) {
+	for(int i = 0; i < 7; i++) {
 		decl.Add().Set(System::Find<Momentum>()).AddArg(2 << i);
 		decl.Add().Set(System::Find<MovingAverage>()).AddArg(2 << i);
 		//decl.Add().Set(System::Find<Pattern>()).AddArg(2 << i);

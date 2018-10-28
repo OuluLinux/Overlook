@@ -55,10 +55,16 @@ void HeatmapLooper::CalculateError() {
 
 void HeatmapLooper::GetSampleInput(NNSample& s, int result_id) {
 	ASSERT(result_id >= 0 && result_id < NNSample::single_count);
+	double price = (*real_data)[iter];
 	double scale = min(0.01, pow(10, -3 + params[0]));
-	double begin = (*real_data)[0] * (1.0 - scale);
-	double end = (*real_data)[0] * (1.0 + scale);
+	double begin = price * (1.0 - scale);
+	double end = price * (1.0 + scale);
 	double step = (end - begin) / NNSample::single_size;
+	if (step < a.step) {
+		step = a.step;
+		begin = price - NNSample::single_size / 2 * step;
+		end   = price + NNSample::single_size / 2 * step;
+	}
 	double it = begin;
 	double absmax = 0.0;
 	for(int i = 0; i < NNSample::single_size; i++) {

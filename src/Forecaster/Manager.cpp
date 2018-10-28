@@ -76,7 +76,9 @@ void Session::Init() {
 	AddTask("Optimization");
 	AddTask("DQN Sampling");
 	AddTask("DQN Training");
+	#ifdef flagMAIN
 	AddForecastTask(Vector<double>());
+	#endif
 }
 
 void Session::AddIndiTask(int id, FactoryDeclaration& decl) {

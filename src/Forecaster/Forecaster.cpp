@@ -319,10 +319,7 @@ void NNSampleDraw::Paint(Draw& d) {
 			int y = j * ystep;
 			double v = sample->input[i][j] / absmax;
 			Color clr;
-			if (v > 0)
-				clr = Color(0, 255 - v * 255, 0);
-			else
-				clr = Color(255 + v * 255, 0, 0);
+			clr = GrayColor(255 - v * 255);
 			d.DrawRect(x, y, xstep+1, ystep+1, clr);
 		}
 	}

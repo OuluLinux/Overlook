@@ -89,12 +89,15 @@ void DrawLines::Paint(Draw& d) {
 				const XYP& xyp = data[i];
 				double pres = xyp.c;
 				pres = 255 - pres / max_pres * 255;
+				if (pres < 0) pres = 0;
+				if (pres > 255) pres = 255;
+				/*
 				if (pres < -255) pres = -255;
 				if (pres > 255) pres = 255;
 				Color clr;
 				if (pres > 0)	clr = Color(255, 255-pres, 255);
-				else			clr = Color(255-pres, 255, 255);
-				d.DrawRect(xyp.a, xyp.b, mult, mult, clr);
+				else			clr = Color(255-pres, 255, 255);*/
+				d.DrawRect(xyp.a, xyp.b, mult, mult, GrayColor(pres));
 			}
 		}
 		

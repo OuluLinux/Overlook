@@ -90,11 +90,8 @@ INITBLOCK {
 	
     
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
-    System::RegisterCommon<AdvisorSystem, AdvisorSystemCtrl>("AdvisorSystem");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
-    
-    
-    AdvisorSystem::Register<SimpleBB>("SimpleBB");
+    System::RegisterCommon<Automation, AutomationCtrl>("Automation");
     
     
     

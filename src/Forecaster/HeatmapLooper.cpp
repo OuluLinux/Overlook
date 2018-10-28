@@ -25,7 +25,9 @@ void HeatmapLooper::Init(double point, const Vector<double>& real_data) {
 	high *= 1.01;
 	low *= 0.99;
 	a.Init(low, high, point);
-	image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount(), 5);
+	
+	if (real_data.GetCount() <= 8*5*1440)
+		image.Init(a.low, a.high, a.step, a.step*3, real_data.GetCount(), 5);
 }
 
 void HeatmapLooper::CalculateError() {
@@ -372,6 +374,7 @@ void MultiHeatmapLooper::Run(bool get_samples) {
 	int end = get_samples ? real_data->GetCount() - 241 : real_data->GetCount();
 	
 	for(int i = 0; i < end; i ++) {
+		if (i % 10 == 0) WhenProgress(i, end);
 		
 		for(int j = 0; j < loopers.GetCount(); j++) {
 			HeatmapLooper& l = loopers[j];

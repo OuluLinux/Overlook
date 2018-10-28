@@ -11,7 +11,7 @@ uses
 	Core/SSL,
 	ConvNet,
 	PushNotification,
-	MailClient;
+	Forecaster;
 
 file
 	Copying,
@@ -53,37 +53,18 @@ file
 	Indicators.h,
 	Indicators.cpp,
 	Optimizer.h,
-	BeamSearchOptimization.h,
 	Arbitrage.h,
 	Arbitrage.cpp,
-	Net.h,
-	Net.cpp,
-	DQN.h,
 	CoreList.h,
 	CoreList.cpp,
-	AdvisorSystem.h,
-	AdvisorSystem.cpp,
-	Advisors.h,
-	Advisors.cpp,
 	Common readonly separator,
 	DataBridge.h,
 	DataBridgeCommon.cpp,
 	DataBridge.cpp,
 	Calendar.h,
 	Calendar.cpp,
-	AutoChartist.h,
-	AutoChartist.cpp,
-	Myfxbook.h,
-	Myfxbook.cpp,
-	Scalper.h,
-	Scalper.cpp,
-	Analyzer.h,
-	Analyzer.cpp,
-	QueryTable.h,
-	QueryTable.cpp,
-	Trash readonly separator,
-	ModelSystem.h,
-	ModelSystem.cpp;
+	Automation.h,
+	Automation.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

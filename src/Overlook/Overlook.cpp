@@ -194,7 +194,7 @@ void Overlook::ViewMenu(Bar& bar) {
 	
 	bar.Add("Full Screen", THISBACK(ToggleFullScreen)).Key(K_F11);
 	bar.Separator();
-	bar.Add("Network view", THISBACK(OpenNet)).Key(K_F2);
+	bar.Add("Forecaster view", THISBACK(OpenForecast)).Key(K_F2);
 	bar.Separator();
 	bar.Add("Load major pairs M1", THISBACK1(LoadMajorPairProfile, 0)).Key(K_SHIFT_1);
 	bar.Add("Load major pairs M15", THISBACK1(LoadMajorPairProfile, 2)).Key(K_SHIFT_2);
@@ -441,8 +441,8 @@ Chart* Overlook::GetChart(int i) {
 	return dynamic_cast<Chart*>(win.GetSubWindowCtrl());
 }
 
-void Overlook::OpenNet() {
-	cman.AddNet();
+void Overlook::OpenForecast() {
+	cman.AddForecast();
 	cman.Get(cman.GetCount()-1).Maximize();
 	cman.Get(cman.GetCount()-1).Maximize();
 	StorePreviousProfile();
@@ -1192,7 +1192,7 @@ void Overlook::LoadProfile(Profile& profile) {
 			chart.SetKeepAtEnd(pchart.keep_at_end);
 		}
 		else if (pchart.type == 1) {
-			OpenNet();
+			OpenForecast();
 		}
 	}
 	
@@ -1205,7 +1205,7 @@ void Overlook::StoreProfile(Profile& profile) {
 	
 	for(int i = 0; i < cman.GetGroupCount(); i++) {
 		Chart* chart_ptr	= cman.GetGroup(i);
-		NetCtrl* netctrl_ptr = cman.GetNet(i);
+		ForecastCtrl* fcast_ptr = cman.GetForecast(i);
 		if (chart_ptr) {
 			Chart& chart = *chart_ptr;
 			
@@ -1227,7 +1227,7 @@ void Overlook::StoreProfile(Profile& profile) {
 				pchart.rect = swin.GetRect();
 			}
 		}
-		else if (netctrl_ptr) {
+		else if (fcast_ptr) {
 			ProfileGroup& pchart		= profile.charts.Add();
 			pchart.type					= 1;
 		}

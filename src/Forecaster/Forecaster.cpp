@@ -178,12 +178,8 @@ void OptimizationCtrl::SetTask(Task& t) {
 void OptimizationCtrl::SelectHistoryItem() {
 	Manager& mgr = GetManager();
 	
-	int cursor = his_list.GetCursor();
-	if (cursor < 0 ) return;
-	
-	int id = his_list.Get(cursor, 0);
-	if (id == prev_id)
-		return;
+	int id = his_list.GetCursor();
+	if (id < 0 || id == prev_id) return;
 	prev_id = id;
 	
 	task->result_lock.Enter();
@@ -326,7 +322,7 @@ void NNSampleDraw::Paint(Draw& d) {
 			if (v > 0)
 				clr = Color(0, 255 - v * 255, 0);
 			else
-				clr = Color(255 - v * 255, 0, 0);
+				clr = Color(255 + v * 255, 0, 0);
 			d.DrawRect(x, y, xstep+1, ystep+1, clr);
 		}
 	}
@@ -360,7 +356,7 @@ void NNSampleDraw::Paint(Draw& d) {
 
 
 
-
+#ifdef flagMAIN
 GUI_APP_MAIN
 {
 	RLOG(GetAmpDevices());
@@ -375,3 +371,4 @@ GUI_APP_MAIN
 	RLOG("Shutting down");
 	Thread::ShutdownThreads();
 }
+#endif

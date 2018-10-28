@@ -12,8 +12,9 @@ void DrawLines::Paint(Draw& d) {
 	HeatmapLooper* gen = NULL;
 	Vector<double> tmp;
 	
+	if (!t) return;
+	
 	if (type == GENVIEW) {
-		if (!t) return;
 		if (gen_id >= t->gen.GetCount()) return;
 		gen = &t->gen[gen_id];
 		if (!gen) return;
@@ -21,12 +22,10 @@ void DrawLines::Paint(Draw& d) {
 		heatmap = &gen->image;
 	}
 	else if (type == HISVIEW) {
-		if (!t) return;
 		data0 = &t->real_data;
 		heatmap = &this->image;
 	}
 	else if (type == OPTSTATS) {
-		if (!t) return;
 		data0 = &t->result_errors;
 	}
 	else if (type == FCASTVIEW) {
@@ -80,8 +79,8 @@ void DrawLines::Paint(Draw& d) {
 				for(double j = min; j < max; j += ystep) {
 					double pres = heatmap->Get(k, j);
 					data.Add(XYP(i, sz.cy - y, pres));
-					if (pres > max_pres)
-						max_pres = pres;
+					if (fabs(pres) > max_pres)
+						max_pres = fabs(pres);
 					y += mult;
 				}
 			}
@@ -90,9 +89,12 @@ void DrawLines::Paint(Draw& d) {
 				const XYP& xyp = data[i];
 				double pres = xyp.c;
 				pres = 255 - pres / max_pres * 255;
-				if (pres < 0) pres = 0;
+				if (pres < -255) pres = -255;
 				if (pres > 255) pres = 255;
-				d.DrawRect(xyp.a, xyp.b, mult, mult, GrayColor(pres));
+				Color clr;
+				if (pres > 0)	clr = Color(255, 255-pres, 255);
+				else			clr = Color(255-pres, 255, 255);
+				d.DrawRect(xyp.a, xyp.b, mult, mult, clr);
 			}
 		}
 		

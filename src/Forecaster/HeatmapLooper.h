@@ -147,6 +147,8 @@ struct MultiHeatmapLooper {
 	void Run(bool get_samples);
 	void GetSampleInput(NNSample& s);
 	void Clear();
+	
+	Callback2<int, int> WhenProgress;
 };
 
 }

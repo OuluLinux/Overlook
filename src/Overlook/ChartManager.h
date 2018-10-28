@@ -22,14 +22,14 @@ public:
 	// Main funcs
 	void Init();
 	Chart& AddChart();
-	NetCtrl& AddNet();
+	ForecastCtrl& AddForecast();
 	void CloseBacktestWindows(bool exclude_indicators=true);
 	void RefreshWindows();
 	
 	// Get funcs
 	Chart* GetVisibleChart() {return dynamic_cast<Chart*>(GetVisibleSubWindowCtrl());}
 	Chart* GetGroup(int i) {return dynamic_cast<Chart*>(SubWindows::Get(i).GetSubWindowCtrl());}
-	NetCtrl* GetNet(int i) {return dynamic_cast<NetCtrl*>(SubWindows::Get(i).GetSubWindowCtrl());}
+	ForecastCtrl* GetForecast(int i) {return dynamic_cast<ForecastCtrl*>(SubWindows::Get(i).GetSubWindowCtrl());}
 	int GetGroupCount() const {return SubWindows::GetCount();}
 	
 	

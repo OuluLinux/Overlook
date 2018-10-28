@@ -1,178 +1,37 @@
 #ifndef _Overlook_Automation_h_
 #define _Overlook_Automation_h_
 
+
 namespace Overlook {
+using namespace libmt;
 
 
-struct Job : Moveable<Job> {
-	bool is_finished = false;
-	bool is_processing = false;
-};
-
-struct JobGroup : Moveable<JobGroup> {
-	Job jobs[USEDSYMBOL_COUNT];
-	bool is_finished = false;
+class Automation : public Common {
+	Index<String> symbols;
+	Time last_update;
+	int mode = 0;
 	
-};
-
-enum {
-	OUT_EVOLVE_SIG,	OUT_EVOLVE_ENA,
-	OUT_COUNT
-};
-
-class SymAutomation {
-	
-protected:
-	friend class AutomationCtrl;
-	friend class RealtimeMatchCtrl;
-	friend class Automation;
-	friend class BooleansDraw;
-	friend class System;
-	friend class Realtime;
-	
-	
-	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int wdayhours = 5*24*4; // M15
-	static const int maxcount = 5*52*wdayhours; // 14 years
-	
-	static const int dqn_leftoffset = 100;
-	static const int dqn_rightoffset = 12+1;
-	#ifdef flagDEBUG
-	static const int max_iters = 10000;
-	#else
-	static const int max_iters = 10000000;
-	#endif
-	
-	static const int loadsource_reserved = maxcount;
-	
-	static const int processbits_period_count = 6;
-	static const int processbits_descriptor_count = processbits_period_count + (sym_count - 1) * 2;
-	static const int processbits_correlation_count = (sym_count - 1);
-	static const int processbits_generic_row = (14 + processbits_descriptor_count + processbits_correlation_count);
-	static const int processbits_inputrow_size = processbits_period_count * processbits_generic_row;
-	static const int processbits_outputrow_size = OUT_COUNT;
-	static const int processbits_row_size = processbits_inputrow_size + processbits_outputrow_size;
-	static const int processbits_row_size_aliased = processbits_row_size - processbits_row_size % 64 + 64;
-	static const int processbits_reserved = processbits_row_size_aliased * maxcount;
-	static const int processbits_reserved_bytes = processbits_reserved / 64;
-	
-	static const int dqn_output_size = 2;
-	static const int dqn_input_size = processbits_inputrow_size;
-	typedef DQNTrainer<dqn_output_size, dqn_input_size, 100> Dqn;
-	
-	static const int dqn_items_count = 1000;
-	uint64 dqn_items_total = 0;
-	int dqn_item_cursor = 0;
-	Dqn::DQItemType train_cache[dqn_items_count];
-	
-	enum {ACTION_LONG, ACTION_SHORT, ACTION_IDLE};
-	
-	FixedOnlineAverageWindow1<1 << 1>		av_wins0;
-	FixedOnlineAverageWindow1<1 << 2>		av_wins1;
-	FixedOnlineAverageWindow1<1 << 3>		av_wins2;
-	FixedOnlineAverageWindow1<1 << 4>		av_wins3;
-	FixedOnlineAverageWindow1<1 << 5>		av_wins4;
-	FixedOnlineAverageWindow1<1 << 6>		av_wins5;
-	FixedExtremumCache<1 << 1>				ec0;
-	FixedExtremumCache<1 << 2>				ec1;
-	FixedExtremumCache<1 << 3>				ec2;
-	FixedExtremumCache<1 << 4>				ec3;
-	FixedExtremumCache<1 << 5>				ec4;
-	FixedExtremumCache<1 << 6>				ec5;
-	OnlineAverage1							slot_stats[wdayhours];
-	Dqn			dqn;
-	uint64		bits_buf[processbits_reserved_bytes];
-	double		point;
-	double		spread;
-	double		open_buf[loadsource_reserved];
-	Time		prev_sig_time;
-	int			sym, tf, period;
-	int			time_buf[loadsource_reserved];
-	int			prev_sig;
-	int			dqn_iters;
-	int			loadsource_pos;
-	int			processbits_cursor;
-	int			loadsource_cursor = 0;
-	int			dqn_cursor;
-	int			peak_cursor;
-	int			most_matching_pos;
-	bool		not_first;
-	bool		enabled_slot[wdayhours];
-	
-	double*		other_open_buf[sym_count];
-	bool*		running;
-	
-	
-public:
-	
-	
-	
-	void	ProcessBits();
-	void	Evolve();
-	
-	void	ProcessBitsSingle(int period_id, int& bit_pos);
-	void	SetBit(int pos, int bit, bool value);
-	void	SetBitOutput(int pos, int bit, bool value) {SetBit(pos, processbits_inputrow_size + bit, value);}
-	void	SetBitCurrent(int bit, bool value) {SetBit(processbits_cursor, bit, value);}
-	bool	GetBit(int pos, int bit) const;
-	bool	GetBitOutput(int pos, int bit) const {return GetBit(pos, processbits_inputrow_size + bit);}
-	int		GetBitDiff(int a, int b);
-	void    GetOutputValues(bool& signal, int& level);
-	
-	void	LoadInput(Dqn::MatType& input, int pos);
-	double	TestAction(int& pos, int action);
-};
-
-class Automation {
-	
-	
-protected:
-	friend class AutomationCtrl;
-	friend class RealtimeMatchCtrl;
-	friend class BooleansDraw;
-	friend class System;
-	friend class Realtime;
-	
-	
-	enum {GROUP_SOURCE, GROUP_BITS, GROUP_EVOLVE, GROUP_COUNT};
-	
-	
-	static const int sym_count = USEDSYMBOL_COUNT;
-	static const int jobgroup_count = GROUP_COUNT;
-	
-	SymAutomation	slow[sym_count];
-	JobGroup		jobgroups[jobgroup_count];
-	int				worker_cursor = 0;
-	bool			running = false, stopped = true;
-	
-	
-	// Temp
-	Atomic		not_stopped;
-	SpinLock	workitem_lock;
+	enum {NO_PENDING, PENDING, WAITING};
 	
 public:
 	typedef Automation CLASSNAME;
-	
 	Automation();
-	~Automation();
-	void	StartJobs();
-	void	StopJobs();
-	void	JobWorker(int i);
-	void	LoadThis() {LoadFromFile(*this, ConfigFile("Automation.bin"));}
-	void	StoreThis() {StoreToFile(*this, ConfigFile("Automation.bin"));}
-	void	Serialize(Stream& s);
-	void	Process(int group_id, int job_id);
 	
-	void	LoadSource();
-	
-	bool	IsRunning() const {return running;}
-	int		GetSymGroupJobId(int symbol) const;
-	
-	
+	virtual void Init();
+	virtual void Start();
 };
 
 
-inline Automation& GetAutomation() {return Single<Automation>();}
+class AutomationCtrl : public CommonCtrl {
+	
+	
+public:
+	typedef AutomationCtrl CLASSNAME;
+	AutomationCtrl();
+	
+	virtual void Data();
+};
+
 
 
 }

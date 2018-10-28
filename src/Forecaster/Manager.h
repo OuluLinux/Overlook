@@ -41,6 +41,8 @@ struct Task : Moveable<Task> {
 	void RunForecast();
 	void RunOptimizationOnce(int i);
 	void LoadData();
+	void Progress(int actual, int total) {this->actual = actual; this->total = total;}
+	
 };
 
 struct Session : Moveable<Session> {
@@ -58,7 +60,7 @@ struct Session : Moveable<Session> {
 	void AddTask(String s);
 	void AddForecastTask(const Vector<double>& real_data);
 	bool RunTask();
-	
+	bool IsFinished();
 	void GetProgress(int& actual, int& total, String& state);
 };
 

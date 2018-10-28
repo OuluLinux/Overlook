@@ -17,9 +17,9 @@ Chart& ChartManager::AddChart() {
 	return chr;
 }
 
-NetCtrl& ChartManager::AddNet() {
-	NetCtrl* net = new NetCtrl();
-	NetCtrl& netc = AddSubWindow<NetCtrl>(net);
+ForecastCtrl& ChartManager::AddForecast() {
+	ForecastCtrl* net = new ForecastCtrl();
+	ForecastCtrl& netc = AddSubWindow<ForecastCtrl>(net);
 	return netc;
 }
 

@@ -12,12 +12,12 @@ Sentiment::Sentiment() {
 	symbols.Add("GBPUSD");
 	symbols.Add("USDCHF");
 	symbols.Add("USDJPY");
-	//symbols.Add("USDCAD");
+	symbols.Add("USDCAD");
 	//symbols.Add("AUDUSD");
 	//symbols.Add("NZDUSD");
 	//symbols.Add("EURCHF");
 	symbols.Add("EURJPY");
-	//symbols.Add("EURGBP");
+	symbols.Add("EURGBP");
 	
 	
 	

@@ -120,6 +120,16 @@ bool Session::RunTask() {
 	return false;
 }
 
+bool Session::IsFinished() {
+	for(int i = 0; i < tasks.GetCount(); i++) {
+		Task& t = tasks[i];
+		if (t.actual < t.total) {
+			return false;
+		}
+	}
+	return true;
+}
+
 
 
 
@@ -285,11 +295,7 @@ void Task::RunOptimization() {
 	
 	LoadData();
 	
-	#ifdef flagDEBUG
-	int max_size = 1440;
-	#else
 	int max_size = 4*5*1440;
-	#endif
 	real_data.SetCount(max_size);
 	double point = real_data[0] > 65 ? 0.01 : 0.0001;
 	
@@ -309,11 +315,7 @@ void Task::RunOptimization() {
 		opt.min_value = -1;
 		opt.max_value = +1;
 		opt.SetMaxGenerations(10);
-		#ifdef flagDEBUG
-		int popcount = 10;
-		#else
 		int popcount = 100;
-		#endif
 		opt.Init(stream.GetColumnCount() * INDIPRESSURE_PARAMS + APPLYPRESSURE_PARAMS, popcount);
 	}
 	
@@ -438,6 +440,7 @@ void Task::RunDQNSampling() {
 	
 	l.Init(point, real_data, params, stream);
 	
+	l.WhenProgress << THISBACK(Progress);
 	l.Run(true);
 	
 	FileOut fout(file);
@@ -469,11 +472,7 @@ void Task::RunDQNTraining() {
 		dqn.Reset();
 	}
 	
-	#ifdef flagDEBUG
-	const int max_iters = 1000;
-	#else
 	const int max_iters = 1000000;
-	#endif
 	
 	total = max_iters;
 	
@@ -506,11 +505,7 @@ void Task::RunForecast() {
 	if (real_data.IsEmpty()) {
 		LoadData();
 		
-		#ifdef flagDEBUG
-		int max_size = 1440;
-		#else
 		int max_size = 4*5*1440;
-		#endif
 		int begin = real_data.GetCount() - max_size;
 		real_data.Remove(0, begin);
 	}
@@ -642,14 +637,7 @@ void Task::LoadData() {
 		real_data.Add(open);
 	}
 	
-	#ifdef flagDEBUG
-	int max_size = 1440;
-	#else
-	//int max_size = 2*365*5/7*1440;
-	int max_size = 4*5*1440;
-	//int max_size = real_data.GetCount();
-	max_size = real_data.GetCount();
-	#endif
+	int max_size = 2*365*5/7*1440;
 	
 	int begin = real_data.GetCount() - max_size;
 	real_data.Remove(0, begin);

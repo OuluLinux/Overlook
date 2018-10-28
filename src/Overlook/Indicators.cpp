@@ -1596,7 +1596,7 @@ void DeMarker::Start() {
 			value = maxvalue / num;
 		buffer.Set(i, value);
 		
-		sig.signal.Set(i, value < 0);
+		sig.signal.Set(i, value < 0.5);
 	}
 }
 

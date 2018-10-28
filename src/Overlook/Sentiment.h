@@ -23,6 +23,9 @@ struct SentimentSnapshot {
 
 class Sentiment : public Common {
 	
+protected:
+	friend class Automation;
+	
 	// Persistent
 	Array<SentimentSnapshot> sents;
 	

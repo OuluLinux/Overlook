@@ -9,18 +9,22 @@
 #include <plugin/libmt/libmt.h>
 #include <SubWindowCtrl/SubWindowCtrl.h>
 #include <PushNotification/PushNotification.h>
-#include <MailClient/MAILClient.h>
-#include <MailClient/IMAPClient.h>
+#include <Forecaster/Forecaster.h>
 using namespace Upp;
 
+struct ForecastCtrl : public SubWindowCtrl {
+	Forecast::ManagerCtrl c;
+	
+	ForecastCtrl() {Add(c.SizePos());}
+	virtual String GetTitle() {return "Forecaster";}
+	virtual void Data() {c.Data();}
+};
 
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
-#include "DQN.h"
 #include "Common.h"
 #include "Optimizer.h"
-#include "BeamSearchOptimization.h"
 #include "SimBroker.h"
 #include "System.h"
 #include "CoreList.h"
@@ -28,26 +32,21 @@ using namespace Upp;
 #include "Core.h"
 #include "DataBridge.h"
 #include "Utils.h"
-#include "AutoChartist.h"
 #include "Indicators.h"
-#include "Net.h"
 #include "GraphCtrl.h"
 #include "Chart.h"
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
 #include "ChartManager.h"
-#include "Myfxbook.h"
 #include "Arbitrage.h"
-#include "Analyzer.h"
-#include "Scalper.h"
-#include "AdvisorSystem.h"
-#include "Advisors.h"
 #include "Sentiment.h"
+#include "Automation.h"
 
 
 namespace Overlook {
 using namespace libmt;
+
 
 
 struct AssetGraphDislay : public Display {
@@ -96,7 +95,6 @@ protected:
 	CtrlCallbacks<ArrayCtrl> trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
 	CtrlCallbacks<ArbitrageCtrl> arb;
-	NetCtrl net;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;
@@ -167,7 +165,7 @@ public:
 	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
 	Chart* GetChart(int i);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
-	void OpenNet();
+	void OpenForecast();
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshCalendar();

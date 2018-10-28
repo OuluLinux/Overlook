@@ -15,9 +15,8 @@ using namespace concurrency;
 #include "Core.h"
 #include "System.h"
 #include "Optimizer.h"
-#include "Generator.h"
-#include "Regenerator.h"
 #include "Indicators.h"
+#include "HeatmapLooper.h"
 #include "Manager.h"
 
 namespace Forecast {
@@ -31,6 +30,7 @@ struct DrawLines : public Ctrl {
 	Vector<double> data;
 	Heatmap image;
 	int type;
+	int ses_id = 0;
 	int gen_id = 0;
 	
 	enum {GENVIEW, HISVIEW, FCASTVIEW, OPTSTATS};
@@ -39,16 +39,16 @@ struct DrawLines : public Ctrl {
 	virtual void Paint(Draw& d);
 };
 
-struct GeneratorCtrl : public ParentCtrl {
+struct HeatmapLooperCtrl : public ParentCtrl {
 	DrawLines draw;
 	
 	
-	GeneratorCtrl();
+	HeatmapLooperCtrl();
 	void SetId(int i) {draw.type = DrawLines::GENVIEW; draw.gen_id = i;}
 	
 };
 
-struct RegeneratorCtrl : public TabCtrl {
+struct OptimizationCtrl : public TabCtrl {
 	
 	ParentCtrl status;
 	ProgressIndicator optprog;
@@ -56,11 +56,11 @@ struct RegeneratorCtrl : public TabCtrl {
 	DrawLines opt_draw;
 	DrawLines his_draw;
 	ArrayCtrl his_list;
-	Array<GeneratorCtrl> gens;
+	Array<HeatmapLooperCtrl> gens;
 	int prev_id = -1;
 	
-	typedef RegeneratorCtrl CLASSNAME;
-	RegeneratorCtrl();
+	typedef OptimizationCtrl CLASSNAME;
+	OptimizationCtrl();
 	
 	void Data();
 	void SelectHistoryItem();
@@ -86,10 +86,11 @@ protected:
 	
 	
 	
-	TabCtrl tabs;
-	ArrayCtrl seslist;
+	ParentCtrl main_task;
+	Splitter vsplit, hsplit;
+	ArrayCtrl seslist, tasklist;
 	ForecastCtrl fcast;
-	RegeneratorCtrl regenctrl;
+	OptimizationCtrl regenctrl;
 	
 	TimeCallback tc;
 	
@@ -99,7 +100,7 @@ public:
 	
 	void Data();
 	void PeriodicalRefresh();
-	void SelectSession();
+	void SelectTask();
 };
 
 }

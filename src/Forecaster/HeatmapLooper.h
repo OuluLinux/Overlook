@@ -1,5 +1,5 @@
-#ifndef _Forecaster_Generator_h_
-#define _Forecaster_Generator_h_
+#ifndef _Forecaster_HeatmapLooper_h_
+#define _Forecaster_HeatmapLooper_h_
 
 namespace Forecast {
 
@@ -69,20 +69,12 @@ struct NNSample : Moveable<NNSample> {
 	}
 };
 
-struct Generator {
+struct HeatmapLooper {
 	
 	static const int errtest_size = 1440*5*4;
-	enum {
-		START,
-		INITIALIZED,
-		INDICATORS_REFRESHED,
-		BITSTREAMED,
-		ERROR_CALCULATED,
-		ERROR_CALCULATED_FULLY,
-	};
+	
 	
 	// Persistent
-	Vector<FactoryDeclaration> decl;
 	Vector<PressureDescriptor> descriptors;
 	Vector<Point> pattern;
 	BitStream stream;
@@ -98,42 +90,66 @@ struct Generator {
 	
 	
 	// Temporary
-	VectorMap<int, NNSample>* nnsamples = NULL;
-	Vector<CoreItem> work_queue;
-	Vector<ConstLabelSignal*> lbls;
 	Vector<double> forecast_tmp;
-	String bitstreamed;
 	Mutex lock, view_lock;
-	int result_id = -1;
 	int actual = 0, total = 1;
 	int forecast_read_pos = 0;
 	bool debug = false;
 	
 	
-	Generator();
-	void Init(double point, const Vector<double>& real_data, const Vector<double>& params);
-	void GetBitStream();
-	void GetLabels(Vector<CoreItem>& work_queue, Vector<ConstLabelSignal*>& lbls);
-	void PushWarmup();
-	void PopWarmup(const Vector<double>& params);
-	bool DoNext();
+	HeatmapLooper();
+	void Init(double point, const Vector<double>& real_data);
+	
 	void RealPrice();
-	void RefreshIndicators();
 	void ResetPattern();
 	void RefreshDescriptor();
-	void CalculateError(bool limited);
+	void CalculateError();
 	void AddRandomPressure();
 	void RefreshForecast();
-	void RefreshNNSample();
-	void Iteration(BitStream& stream, int i, const Vector<double>& params);
 	void ApplyPressureChanges();
 	void ApplyIndicatorPressures();
-	void Serialize(Stream& s);
-	void GetSampleInput(NNSample& s);
+	void GetSampleInput(NNSample& s, int result_id);
 	
 };
 
 
+
+struct OptResult : Moveable<OptResult> {
+	Vector<double> params;
+	String heatmap;
+	double err;
+	int id, gen_id;
+	
+	OptResult() {}
+	OptResult(const OptResult& s) {*this = s;}
+	
+	void operator=(const OptResult& s) {
+		id = s.id;
+		gen_id = s.gen_id;
+		err = s.err;
+		heatmap = s.heatmap;
+		params <<= s.params;
+	}
+	
+	void Serialize(Stream& s) {s % params % heatmap % err % id % gen_id;}
+	bool operator()(const OptResult& a, const OptResult& b) const {return a.err < b.err;}
+	
+};
+
+
+
+struct MultiHeatmapLooper {
+	VectorMap<int, NNSample> nnsamples;
+	Array<HeatmapLooper> loopers;
+	const Vector<double>* real_data = NULL;
+	
+	
+	MultiHeatmapLooper();
+	void Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params);
+	void Run(bool get_samples);
+	void GetSampleInput(NNSample& s);
+	void Clear();
+};
 
 }
 

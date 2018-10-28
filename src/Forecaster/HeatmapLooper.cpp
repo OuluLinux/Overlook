@@ -2,30 +2,12 @@
 
 namespace Forecast {
 
-Generator::Generator() {
+HeatmapLooper::HeatmapLooper() {
 	
 }
 
-void Generator::Serialize(Stream& s) {
-	s % decl
-	  % descriptors
-	  % pattern
-	  % stream
-	  % image
-	  % a
-	  % params
-	  % price % prev_price
-	  % forecast % prev_forecast
-	  % err
-	  % state
-	  % iter;
-}
-
-void Generator::Init(double point, const Vector<double>& real_data, const Vector<double>& params) {
-	state = START;
-	
+void HeatmapLooper::Init(double point, const Vector<double>& real_data) {
 	this->real_data = &real_data;
-	this->params <<= params;
 	
 	price = real_data[0];
 	err = 0;
@@ -44,123 +26,14 @@ void Generator::Init(double point, const Vector<double>& real_data, const Vector
 	low *= 0.99;
 	a.Init(low, high, point);
 	image.Init(a.low, a.high, a.step, a.step*3, min(errtest_size, real_data.GetCount()), 5);
-	
-	decl.SetCount(0);
-	AddDefaultDeclarations(decl);
-	System::GetCoreQueue(real_data, work_queue, decl);
-	GetLabels(work_queue, lbls);
-	
-	stream.Clear();
-	stream.SetColumnCount(lbls.GetCount());
-	stream.SetCount(real_data.GetCount());
-	
-	state = INITIALIZED;
 }
 
-bool Generator::DoNext() {
-	ASSERT(state >= INITIALIZED);
-	switch (state) {
-		case INITIALIZED:
-			RefreshIndicators();
-			state++;
-			break;
-		
-		case INDICATORS_REFRESHED:
-			GetBitStream();
-			state++;
-			PushWarmup();
-			break;
-			
-		case BITSTREAMED:
-			ResetPattern();
-			CalculateError(true);
-			state++;
-			break;
-		
-		case ERROR_CALCULATED:
-			CalculateError(false);
-			state++;
-			
-		default:
-			return false;
-	}
-	
-	
-	return true;
-}
-
-void Generator::GetBitStream() {
-	stream.SetBit(0);
-	total = real_data->GetCount();
-	for(int i = 0; i < real_data->GetCount(); i++) {
-		actual = i;
-		for(int j = 0; j < lbls.GetCount(); j++) {
-			bool value = lbls[j]->signal.Get(i);
-			stream.Write(value);
-		}
-	}
-}
-
-void Generator::GetLabels(Vector<CoreItem>& work_queue, Vector<ConstLabelSignal*>& lbls) {
-	lbls.SetCount(0);
-	for(int i = 0; i < work_queue.GetCount(); i++) {
-		CoreItem& ci = work_queue[i];
-		
-		OutputCounter lc;
-		ci.core->IO(lc);
-		
-		for(int j = 0; j < lc.lbl_counts.GetCount(); j++) {
-			int count = lc.lbl_counts[j];
-			for(int k = 0; k < count; k++) {
-				ConstLabelSignal& buf = ci.core->GetLabelBuffer(j, k);
-				lbls.Add(&buf);
-			}
-		}
-	}
-}
-
-void Generator::PushWarmup() {
-	StringStream ss;
-	ss.SetStoring();
-	ss % *this;
-	for(int i = 0; i < work_queue.GetCount(); i++)
-		ss % *work_queue[i].core;
-	ss.Seek(0);
-	bitstreamed = ss.Get(ss.GetSize());
-}
-
-void Generator::PopWarmup(const Vector<double>& params) {
-	if (bitstreamed.IsEmpty())
-		Panic("BitStream is empty");
-	MemStream ms((void*)bitstreamed.Begin(), bitstreamed.GetCount());
-	ms.SetLoading();
-	view_lock.Enter();
-	ms % *this;
-	for(int i = 0; i < work_queue.GetCount(); i++)
-		ms % *work_queue[i].core;
-	view_lock.Leave();
-	this->params <<= params;
-	
-	GetLabels(work_queue, lbls);
-}
-
-void Generator::RefreshIndicators() {
-	total = work_queue.GetCount();
-	for(int i = 0; i < work_queue.GetCount(); i++) {
-		actual = i;
-		CoreItem& ci = work_queue[i];
-		ci.core->SetBars(real_data->GetCount());
-		ci.core->Refresh();
-	}
-}
-
-void Generator::CalculateError(bool limited) {
+void HeatmapLooper::CalculateError() {
 	err = 0.0;
 	forecast_read_pos = 0;
 	
 	int size;
-	if (limited)	size = min(errtest_size, real_data->GetCount());
-	else			size = real_data->GetCount();
+	size = real_data->GetCount();
 	total = size;
 	
 	for(int i = 0; i < a.data.GetCount(); i++)
@@ -174,33 +47,11 @@ void Generator::CalculateError(bool limited) {
 		ApplyIndicatorPressures();
 		ApplyPressureChanges();
 		RefreshDescriptor();
-		
-		if (!limited && result_id >= 0) {
-			if (iter % 10 == 0)
-				RefreshNNSample();
-		}
 	}
 }
 
-void Generator::RefreshNNSample() {
-	if (iter + 240 >= real_data->GetCount()) return;
-	
-	NNSample& s = nnsamples->GetAdd(iter);
-	
-	GetSampleInput(s);
-	
-	if (s.output[0] == 0.0) {
-		double begin = (*real_data)[iter];
-		for(int i = 10, j = 0; i <= 240; i+=10, j++) {
-			int pos = iter + i;
-			double d = ((*real_data)[pos] / begin - 1.0) * 1000.0;
-			s.output[j] = d;
-		}
-	}
-}
-
-void Generator::GetSampleInput(NNSample& s) {
-	ASSERT(result_id != -1);
+void HeatmapLooper::GetSampleInput(NNSample& s, int result_id) {
+	ASSERT(result_id >= 0 && result_id < NNSample::single_count);
 	double scale = min(0.01, pow(10, -3 + params[0]));
 	double begin = (*real_data)[0] * (1.0 - scale);
 	double end = (*real_data)[0] * (1.0 + scale);
@@ -214,14 +65,16 @@ void Generator::GetSampleInput(NNSample& s) {
 		s.input[result_id][i] = d;
 		it += step;
 	}
-	if (absmax > 0.0) {
+	
+	// Probably bad idea...
+	/*if (absmax > 0.0) {
 		for(int i = 0; i < NNSample::single_size; i++) {
 			s.input[result_id][i] = s.input[result_id][i] / absmax * 10.0;
 		}
-	}
+	}*/
 }
 
-void Generator::AddRandomPressure() {
+void HeatmapLooper::AddRandomPressure() {
 	double low  = price - (1 + Random(10)) * a.step;
 	double high = price + (1 + Random(10)) * a.step;
 	double min = -1 - (int)Random(10);
@@ -247,7 +100,7 @@ void Generator::AddRandomPressure() {
 	
 }
 
-void Generator::ResetPattern() {
+void HeatmapLooper::ResetPattern() {
 	double scale = min(0.01, pow(10, -3 + params[0]));
 	double begin = (*real_data)[0] * (1.0 - scale);
 	double end = (*real_data)[0] * (1.0 + scale);
@@ -261,7 +114,7 @@ void Generator::ResetPattern() {
 	}
 }
 
-void Generator::RefreshDescriptor() {
+void HeatmapLooper::RefreshDescriptor() {
 	double scale = min(0.01, pow(10, -3 + params[0]));
 	double begin = price * (1.0 - scale);
 	PressureDescriptor& desc = descriptors[iter];
@@ -287,7 +140,7 @@ void Generator::RefreshDescriptor() {
 	
 }
 
-void Generator::RefreshForecast() {
+void HeatmapLooper::RefreshForecast() {
 	
 	#if 0
 	double max_pres = -DBL_MAX;
@@ -385,7 +238,7 @@ void Generator::RefreshForecast() {
 	#endif
 }
 
-void Generator::RealPrice() {
+void HeatmapLooper::RealPrice() {
 	if (iter > 0) {
 		double prev = (*real_data)[iter - 1];
 		double cur = (*real_data)[iter];
@@ -400,7 +253,7 @@ void Generator::RealPrice() {
 	price = (*real_data)[iter];
 }
 
-void Generator::ApplyIndicatorPressures() {
+void HeatmapLooper::ApplyIndicatorPressures() {
 	int readbit = iter * stream.GetColumnCount();
 	stream.SetBit(readbit);
 	int j = APPLYPRESSURE_PARAMS;
@@ -428,7 +281,7 @@ void Generator::ApplyIndicatorPressures() {
 	}
 }
 
-void Generator::ApplyPressureChanges() {
+void HeatmapLooper::ApplyPressureChanges() {
 	double scale = min(0.1, pow(10, -2 + params[1]));
 	double dec = 1.0 - fabs(params[2] * scale);
 	double main_inc = fabs(params[3] * 0.1);
@@ -461,6 +314,94 @@ void Generator::ApplyPressureChanges() {
 			a.data[pos - 1].pres += -inc0;
 		}
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MultiHeatmapLooper::MultiHeatmapLooper() {
+	
+}
+
+void MultiHeatmapLooper::Init(double point, const Vector<double>& real_data, const Vector<Vector<double> >& params) {
+	int cores = GetUsedCpuCores();
+	
+	this->real_data = &real_data;
+	
+	if (params.GetCount() < NNSample::single_count)
+		Panic("MultiHeatmapLooper::Init Not enough params");
+	
+	loopers.SetCount(NNSample::single_count);
+	for(int i = 0; i < NNSample::single_count; i++) {
+		HeatmapLooper& l = loopers[i];
+		l.Init(point, real_data);
+		l.params <<= params[i];
+		l.ResetPattern();
+	}
+}
+
+void MultiHeatmapLooper::Run(bool get_samples) {
+	for(int i = 0; i < loopers.GetCount(); i++) {
+		HeatmapLooper& l = loopers[i];
+		l.forecast_read_pos = 0;
+		l.price = (*real_data)[0];
+		for(int i = 0; i < l.a.data.GetCount(); i++)
+			l.a.data[i].pres = 0.0;
+	}
+	
+	int end = get_samples ? real_data->GetCount() - 241 : real_data->GetCount();
+	
+	for(int i = 0; i < end; i ++) {
+		
+		for(int j = 0; j < loopers.GetCount(); j++) {
+			HeatmapLooper& l = loopers[j];
+			l.iter = i;
+			l.prev_price = l.price;
+			l.price = (*real_data)[i];
+			l.ApplyIndicatorPressures();
+			l.ApplyPressureChanges();
+		}
+		
+		if (get_samples && i % 10 == 0) {
+			NNSample& s = nnsamples.GetAdd(i);
+			
+			for(int j = 0; j < loopers.GetCount(); j++)
+				loopers[j].GetSampleInput(s, j);
+			
+			double begin = (*real_data)[i];
+			for(int j = 10, k = 0; j <= 240; j += 10, k++) {
+				int pos = i + j;
+				double d = ((*real_data)[pos] / begin - 1.0) * 1000.0;
+				s.output[k] = d;
+			}
+		}
+	}
+}
+
+void MultiHeatmapLooper::GetSampleInput(NNSample& s) {
+	for(int j = 0; j < loopers.GetCount(); j++)
+		loopers[j].GetSampleInput(s, j);
+}
+
+void MultiHeatmapLooper::Clear() {
+	nnsamples.Clear();
+	loopers.Clear();
 }
 
 }

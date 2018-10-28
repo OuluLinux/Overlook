@@ -1,13 +1,14 @@
 #include "Forecaster.h"
+#include <plugin/bz2/bz2.h>
 
 namespace Forecast {
 
 Manager::Manager() {
-	RefreshSessions();
+	//RefreshSessions();
 	
 	#ifdef flagMAIN
 	if (sessions.GetCount() == 0) {
-		GetAdd("EURUSD");
+		GetAdd("EURUSD").Init();
 		//GetAdd("EURJPY0");
 		//GetAdd("GBPUSD0");
 	}
@@ -21,9 +22,9 @@ Manager::~Manager() {
 	Stop();
 }
 
-Session& Manager::GetAdd(String session_name) {
-	Session& ses = sessions.GetAdd(session_name);
-	ses.name = session_name;
+Session& Manager::GetAdd(String symbol) {
+	Session& ses = sessions.GetAdd(symbol);
+	ses.symbol = symbol;
 	return ses;
 }
 
@@ -35,10 +36,8 @@ void Manager::RefreshSessions() {
 		String fname = ff.GetName();
 		if (fname == "") continue;
 		Session& ses = sessions.GetAdd(fname);
-		ses.name = GetFileTitle(fname);
-		ses.LoadThis();
-		if (ses.regen.real_data.IsEmpty())
-			sessions.RemoveKey(fname);
+		ses.symbol = GetFileTitle(fname);
+		ses.Init();
 	}
 	while (ff.Next());
 }
@@ -50,76 +49,9 @@ void Manager::Process() {
 		
 		if (ses_id < sessions.GetCount()) {
 			Session& ses = sessions[ses_id];
-			active_session = ses_id;
 			
-			switch (mode) {
-				case 0:
-					if (!ses.regen.IsInit()) {
-						ses.LoadData();
-						ses.regen.Init();
-					}
-					#ifdef flagDEBUG
-					ses.regen.Iterate(3*1000);
-					#else
-					ses.regen.Iterate(5*60*1000);
-					#endif
-					mode++;
-					break;
-				
-				case 1:
-					ses.StoreThis();
-					mode++;
-					break;
-					
-				case 2:
-					if (ses.regen.opt.IsEnd())
-						mode++;
-					else
-						mode = 0;
-					break;
-					
-				case 3:
-					if (ses.regen.nnsamples.IsEmpty())
-						ses.regen.RefreshNNSamples(); // 1-shot, no fail allowed
-					mode++;
-					break;
-					
-				case 4:
-					ses.StoreThis();
-					mode++;
-					break;
-				
-				case 5:
-					#ifdef flagDEBUG
-					ses.regen.IterateNN(3*1000);
-					#else
-					ses.regen.IterateNN(5*60*1000);
-					#endif
-					mode++;
-					break;
-					
-				case 6:
-					ses.StoreThis();
-					mode++;
-					break;
-					
-				case 7:
-					if (ses.regen.dqn_iters < Regenerator::max_dqniters)
-						mode = 5;
-					else
-						mode++;
-					break;
-				
-				case 8:
-					ses.regen.Forecast();
-					break;
-				
-				default:
-					ses_id++;
-					if (ses_id >= sessions.GetCount())
-						ses_id = 0;
-					mode = 0;
-			}
+			if (!ses.RunTask())
+				ses_id++;
 		} else {
 			ses_id = 0;
 		}
@@ -146,13 +78,524 @@ Session::Session() {
 	
 }
 
-void Session::LoadData() {
+void Session::Init() {
+	AddIndiTask(System::Find<SimpleHurstWindow>());
+	AddIndiTask(System::Find<ParabolicSAR>());
+	for(int i = 0; i < 7; i++) {
+		AddIndiTask(System::Find<Momentum>(), 2 << i);
+		AddIndiTask(System::Find<MovingAverage>(), 2 << i);
+		//AddIndiTask(System::Find<Pattern>(), 2 << i);
+	}
+	AddIndiTask(System::Find<BearsPower>());
+	AddIndiTask(System::Find<CommodityChannelIndex>());
+	AddIndiTask(System::Find<RelativeStrengthIndex>());
+	AddIndiTask(System::Find<RelativeVigorIndex>());
+	AddIndiTask(System::Find<StochasticOscillator>());
+	AddIndiTask(System::Find<AcceleratorOscillator>());
+	AddIndiTask(System::Find<AwesomeOscillator>());
+	AddIndiTask(System::Find<Psychological>());
+	AddIndiTask(System::Find<ChannelOscillator>());
+	AddIndiTask(System::Find<ScissorChannelOscillator>());
+	AddIndiTask(System::Find<OnlineMinimalLabel>());
+	AddIndiTask(System::Find<Laguerre>());
+	AddIndiTask(System::Find<TickBalanceOscillator>());
+	
+	AddTask("Bitstream join");
+	AddTask("Optimization");
+	AddTask("DQN Sampling");
+	AddTask("DQN Training");
+	AddForecastTask(Vector<double>());
+}
+
+void Session::AddIndiTask(int factory, int arg) {
+	Task& t = tasks.Add();
+	t.task = "Indicator " + IntStr(factory) + " " + IntStr(arg);
+	t.decl.factory = factory;
+	t.symbol = symbol;
+	if (arg) {
+		t.decl.args[0] = arg;
+		t.decl.arg_count = 1;
+	}
+}
+
+void Session::AddTask(String s) {
+	Task& t = tasks.Add();
+	t.task = s;
+	t.symbol = symbol;
+}
+
+void Session::AddForecastTask(const Vector<double>& real_data) {
+	Task& t = tasks.Add();
+	t.task = "Forecast";
+	t.symbol = symbol;
+	t.real_data <<= real_data;
+}
+
+void Session::GetProgress(int& actual, int& total, String& state) {
+	for(actual = 0; actual < tasks.GetCount(); actual++) {
+		if (tasks[actual].actual < tasks[actual].total) {
+			state = tasks[actual].task;
+			break;
+		}
+	}
+	total = tasks.GetCount();
+}
+
+bool Session::RunTask() {
+	for(int i = 0; i < tasks.GetCount(); i++) {
+		Task& t = tasks[i];
+		if (t.actual < t.total) {
+			t.Run();
+			return true;
+		}
+	}
+	return false;
+}
+
+/*void Session::LoadThis() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, name + ".bin");
+	RealizeDirectory(dir);
+	LoadFromFile(*this, file);
+}
+
+void Session::StoreThis() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, name + ".bin");
+	RealizeDirectory(dir);
+	StoreToFile(*this, file);
+}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+Task::Task() {
+	
+}
+
+void Task::Run() {
+	RLOG("Task::Run " + task);
+	if (task.Left(9) == "Indicator") {
+		RunIndicator();
+	}
+	else if (task == "Bitstream join") {
+		RunBitstreamJoin();
+	}
+	else if (task == "Optimization") {
+		RunOptimization();
+	}
+	else if (task == "DQN Sampling") {
+		RunDQNSampling();
+	}
+	else if (task == "DQN Training") {
+		RunDQNTraining();
+	}
+	else if (task == "Forecast") {
+		RunForecast();
+	}
+	else Panic("Unknown task: " + task);
+	
+}
+
+void Task::RunIndicator() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	LoadData();
+	
+	Vector<FactoryDeclaration> decl;
+	Vector<CoreItem> work_queue;
+	decl.Add(this->decl);
+	System::GetCoreQueue(real_data, work_queue, decl);
+	
+	total = real_data.GetCount();
+	
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		Core& c = *work_queue[i].core;
+		
+		for(int j = 1000; j < real_data.GetCount(); j+=1000) {
+			actual = j;
+			c.SetBars(j);
+			c.Refresh();
+		}
+		
+		actual = real_data.GetCount();
+		c.SetBars(real_data.GetCount());
+		c.Refresh();
+	}
+	
+	Vector<ConstLabelSignal*> lbls;
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = work_queue[i];
+		
+		OutputCounter lc;
+		ci.core->IO(lc);
+		
+		for(int j = 0; j < lc.lbl_counts.GetCount(); j++) {
+			int count = lc.lbl_counts[j];
+			for(int k = 0; k < count; k++) {
+				ConstLabelSignal& buf = ci.core->GetLabelBuffer(j, k);
+				lbls.Add(&buf);
+			}
+		}
+	}
+	
+	BitStream stream;
+	stream.SetColumnCount(lbls.GetCount());
+	stream.SetCount(real_data.GetCount());
+	stream.SetBit(0);
+	for(int i = 0, actual = 0; i < real_data.GetCount(); i++, actual++) {
+		for(int j = 0; j < lbls.GetCount(); j++) {
+			bool value = lbls[j]->signal.Get(i);
+			stream.Write(value);
+		}
+	}
+	
+	FileOut fout(file);
+	fout % stream;
+	
+	real_data.Clear();
+}
+
+void Task::RunBitstreamJoin() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	Array<BitStream> streams;
+	FindFile ff;
+	int cols_total = 0;
+	int size = 0;
+	if (ff.Search(AppendFileName(dir, symbol + " Indicator*"))) {
+		do {
+			BitStream& stream = streams.Add();
+			FileIn fin(ff.GetPath());
+			fin % stream;
+			cols_total += stream.GetColumnCount();
+			stream.SetBit(0);
+			if (streams.GetCount() == 1)
+				size = stream.GetCount();
+			else
+				if (size != stream.GetCount())
+					Panic("Indicator file size differs from first " + ff.GetName());
+		}
+		while (ff.Next());
+	}
+	
+	BitStream stream;
+	stream.SetColumnCount(cols_total);
+	stream.SetCount(size);
+	stream.SetBit(0);
+	
+	total = size;
+	for(int i = 0, actual = 0; i < size; i++, actual++) {
+		for(int j = 0; j < streams.GetCount(); j++) {
+			BitStream& src = streams[j];
+			for(int k = 0; k < src.GetColumnCount(); k++) {
+				bool value = src.Read();
+				stream.Write(value);
+			}
+		}
+	}
+	
+	FileOut fout(file);
+	fout % stream;
+}
+
+void Task::RunOptimization() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	String mid_file = AppendFileName(dir, symbol + " " + task + " unfinished.bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	LoadData();
+	
+	#ifdef flagDEBUG
+	int max_size = 1440;
+	#else
+	int max_size = 4*5*1440;
+	#endif
+	real_data.SetCount(max_size);
+	double point = real_data[0] > 65 ? 0.01 : 0.0001;
+	
+	BitStream stream;
+	String stream_file = AppendFileName(dir, symbol + " Bitstream join.bin");
+	FileIn stream_fin(stream_file);
+	stream_fin % stream;
+	if (stream.GetColumnCount() == 0 || stream.GetCount() == 0)
+		Panic("Bitsream not joined yet");
+	
+	
+	FileIn fin(mid_file);
+	fin % opt % results % result_errors;
+	
+	
+	if (opt.GetRound() == 0) {
+		opt.min_value = -1;
+		opt.max_value = +1;
+		#ifdef flagDEBUG
+		opt.SetMaxGenerations(10);
+		int popcount = 10;
+		#else
+		opt.SetMaxGenerations(100);
+		int popcount = 100;
+		#endif
+		opt.Init(stream.GetColumnCount() * INDIPRESSURE_PARAMS + APPLYPRESSURE_PARAMS, popcount);
+	}
+	
+	
+	TimeStop ts;
+	int cores = GetUsedCpuCores();
+	int popcount = opt.GetPopulation();
+	
+	gen.SetCount(cores);
+	for(int i = 0; i < gen.GetCount(); i++) {
+		HeatmapLooper& g = gen[i];
+		g.stream = stream;
+		g.stream.SetBit(0);
+		g.Init(point, real_data);
+	}
+	
+	
+	total = opt.GetMaxRounds();
+	
+	while (!opt.IsEnd() && !Thread::IsShutdownThreads()) {
+		actual = opt.GetRound();
+		
+		opt.Start();
+		
+		
+		err.SetCount(popcount, -DBL_MAX);
+	
+		CoWork co;
+		co.SetPoolSize(cores);
+		for(int i = 0; i < popcount; i++) {
+			co & THISBACK1(RunOptimizationOnce, i);
+		}
+		co.Finish();
+		
+		opt.Stop(err.Begin());
+		
+		Sort(results, OptResult());
+		if (results.GetCount() > 100) results.SetCount(100);
+		
+		if (ts.Elapsed() > 5*60*1000) {
+			FileOut fout(mid_file);
+			fout % opt % results % result_errors;
+			ts.Reset();
+		}
+	}
+	
+	if (opt.IsEnd()) {
+		FileOut fout(file);
+		fout % results;
+	}
+	
+	
+	actual = 1;
+	total = 1;
+	err.Clear();
+	gen.Clear();
+	results.Clear();
+	result_errors.Clear();
+	real_data.Clear();
+	//opt.Clear();
+}
+
+void Task::RunOptimizationOnce(int i) {
+	while (true) {
+		for(int j = 0; j < gen.GetCount(); j++) {
+			HeatmapLooper& g = gen[j];
+			if (g.lock.TryEnter()) {
+				g.params <<= opt.GetTrialSolution(i);
+				g.ResetPattern();
+				g.CalculateError();
+				
+				ASSERT(g.err != -DBL_MAX);
+				err[i] = -g.err;
+				
+				StringStream ss;
+				ss.SetStoring();
+				ss % g.image;
+				ss.Seek(0);
+				String heatmap = BZ2Compress(ss.Get(ss.GetSize()));
+				
+				
+				result_lock.Enter();
+				OptResult& rr = results.Add();
+				rr.id = results.GetCount() - 1;
+				rr.gen_id = j;
+				rr.err = g.err;
+				rr.heatmap = heatmap;
+				rr.params <<= g.params;
+				result_errors.Add(-g.err);
+				result_lock.Leave();
+				
+				g.lock.Leave();
+				return;
+			}
+		}
+	}
+}
+
+void Task::RunDQNSampling() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	LoadData();
+	double point = real_data[0] > 65 ? 0.01 : 0.0001;
+	
+	BitStream stream;
+	String stream_file = AppendFileName(dir, symbol + " Bitstream join.bin");
+	FileIn stream_fin(stream_file);
+	stream_fin % stream;
+	if (stream.GetColumnCount() == 0 || stream.GetCount() == 0)
+		Panic("Bitsream not joined yet");
+	
+	String opt_file = AppendFileName(dir, symbol + " Optimization.bin");
+	FileIn opt_fin(opt_file);
+	opt_fin % results;
+	Vector<Vector<double> > params;
+	for(int i = 0; i < results.GetCount(); i++)
+		params.Add() <<= results[i].params;
+	
+	
+	l.Init(point, real_data, params);
+	
+	l.Run(true);
+	
+	FileOut fout(file);
+	fout % l.nnsamples;
+	
+	l.nnsamples.Clear();
+	real_data.Clear();
+}
+
+void Task::RunDQNTraining() {
+	String dir = ConfigFile("ForecastSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	String file_mid = AppendFileName(dir, symbol + " " + task + " unfinished.bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	String samp_file = AppendFileName(dir, symbol + " DQN Sampling.bin");
+	FileIn samp_in(samp_file);
+	samp_in % l.nnsamples;
+	if (l.nnsamples.IsEmpty())
+		Panic("No training samples");
+	
+	int iter = 0;
+	FileIn mid_in(file_mid);
+	mid_in % dqn % iter;
+	
+	if (iter == 0) {
+		dqn.Init(1, NNSample::single_count * NNSample::single_size, NNSample::fwd_count);
+		dqn.Reset();
+	}
+	
+	#ifdef flagDEBUG
+	const int max_iters = 1000;
+	#else
+	const int max_iters = 10000000;
+	#endif
+	
+	total = max_iters;
+	
+	TimeStop ts;
+	while (iter < max_iters && !Thread::IsShutdownThreads()) {
+		actual = iter;
+		
+		NNSample& s = l.nnsamples[Random(l.nnsamples.GetCount())];
+		dqn.Learn(&s.input[0][0], &s.output[0]);
+		
+		iter++;
+		
+		if (ts.Elapsed() >= 5*60*1000) {
+			FileOut fout(file_mid);
+			fout % dqn % iter;
+			ts.Reset();
+		}
+	}
+	
+	if (iter >= max_iters) {
+		FileOut fout(file);
+		fout % dqn;
+	}
+	
+	l.Clear();
+}
+
+void Task::RunForecast() {
+	
+	if (real_data.IsEmpty()) {
+		LoadData();
+		
+		#ifdef flagDEBUG
+		int max_size = 1440;
+		#else
+		int max_size = 4*5*1440;
+		#endif
+		int begin = real_data.GetCount() - max_size;
+		real_data.Remove(0, begin);
+	}
+	
+	String dir = ConfigFile("ForecastSessions");
+	String opt_file = AppendFileName(dir, symbol + " Optimization.bin");
+	FileIn opt_fin(opt_file);
+	opt_fin % results;
+	Vector<Vector<double> > params;
+	for(int i = 0; i < results.GetCount(); i++)
+		params.Add() <<= results[i].params;
+	
+	String dqn_file = AppendFileName(dir, symbol + " DQN Training.bin");
+	FileIn dqn_fin(dqn_file);
+	dqn_fin % dqn;
+	
+	double point = real_data[0] > 65 ? 0.01 : 0.0001;
+	l.Init(point, real_data, params);
+	
+	l.Run(false);
+	
+	NNSample s;
+	l.GetSampleInput(s);
+	
+	dqn.Evaluate(&s.input[0][0], &s.output[0]);
+	
+	forecast.SetCount(NNSample::fwd_count, 0);
+	for(int i = 0; i < NNSample::fwd_count; i++)
+		forecast[i] = s.output[i];
+	DUMPC(forecast);
+	
+	actual = 1;
+	total = 1;
+	
+	real_data.Clear();
+	l.Clear();
+}
+
+
+void Task::LoadData() {
 	String dir = ConfigFile("m1data");
-	String file = AppendFileName(dir, name + ".hst");
+	String file = AppendFileName(dir, symbol + ".hst");
 	
 	FileIn src(file);
 	if (!src.IsOpen() || !src.GetSize())
-		Panic("Couldn't open history file for " + name);
+		Panic("Couldn't open history file for " + symbol);
 	
 	// Read the history file
 	int digits;
@@ -170,7 +613,7 @@ void Session::LoadData() {
 	int expected_count = (int)((src.GetSize() - cursor) / struct_size);
 	src.Seek(cursor);
 	
-	regen.real_data.Reserve(expected_count);
+	real_data.Reserve(expected_count);
 	
 	
 	while ((cursor + struct_size) <= data_size) {
@@ -192,7 +635,7 @@ void Session::LoadData() {
 		
 		cursor += struct_size;
 		
-		regen.real_data.Add(open);
+		real_data.Add(open);
 	}
 	
 	#ifdef flagDEBUG
@@ -200,24 +643,13 @@ void Session::LoadData() {
 	#else
 	//int max_size = 2*365*5/7*1440;
 	int max_size = 4*5*1440;
+	//int max_size = real_data.GetCount();
 	#endif
 	
-	int begin = regen.real_data.GetCount() - max_size;
-	regen.real_data.Remove(0, begin);
+	int begin = real_data.GetCount() - max_size;
+	real_data.Remove(0, begin);
+	
+	if (real_data.IsEmpty())
+		Panic("No real data");
 }
-
-void Session::LoadThis() {
-	String dir = ConfigFile("ForecastSessions");
-	String file = AppendFileName(dir, name + ".bin");
-	RealizeDirectory(dir);
-	LoadFromFile(*this, file);
-}
-
-void Session::StoreThis() {
-	String dir = ConfigFile("ForecastSessions");
-	String file = AppendFileName(dir, name + ".bin");
-	RealizeDirectory(dir);
-	StoreToFile(*this, file);
-}
-
 }

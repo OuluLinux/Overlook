@@ -290,6 +290,7 @@ public:
 	void SetColumnCount(int i) {cols = i;}
 	void SetBit(int i) {bit = i;}
 	int GetColumnCount() const {return cols;}
+	int GetCount() const {return data.GetCount() / cols;}
 	int GetBit() const {return bit;}
 	
 	bool Read() {return data.Get(bit++);}

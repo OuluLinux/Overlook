@@ -8,6 +8,7 @@ file
 	Forecaster.h,
 	Forecaster.cpp,
 	ForecasterInit.icpp,
+	Draws.cpp,
 	Manager.h,
 	Manager.cpp,
 	System.h,
@@ -18,14 +19,12 @@ file
 	Core.cpp,
 	Heatmap.h,
 	Heatmap.cpp,
-	Generator.h,
-	Generator.cpp,
-	Regenerator.h,
-	Regenerator.cpp,
 	Indicators.h,
 	Indicators.cpp,
 	Optimizer.h,
-	CompatAMP.h;
+	CompatAMP.h,
+	HeatmapLooper.h,
+	HeatmapLooper.cpp;
 
 mainconfig
 	"" = "GUI",

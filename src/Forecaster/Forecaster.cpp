@@ -8,35 +8,40 @@ ManagerCtrl::ManagerCtrl() {
 	Title("ManagerCtrl");
 	Sizeable().MaximizeBox().MinimizeBox();
 	
-	Add(seslist.LeftPos(0, 250).VSizePos());
-	Add(tabs.HSizePos(250).VSizePos());
+	hsplit.Horz();
+	vsplit.Vert();
+	Add(hsplit.SizePos());
+	hsplit << vsplit << main_task;
+	hsplit.SetPos(2000);
+	
+	vsplit << seslist << tasklist;
 	
 	seslist.AddColumn("Name");
 	seslist.AddColumn("Status");
 	seslist.AddColumn("Progress");
-	seslist <<= THISBACK(SelectSession);
-	tabs.Add(fcast.SizePos(), "Forecast");
-	tabs.Add(regenctrl.SizePos(), "Regenerator");
+	seslist <<= THISBACK(Data);
+	tasklist.AddColumn("Task");
+	tasklist.AddColumn("Progress");
+	tasklist <<= THISBACK(SelectTask);
 	
 	
 	Manager& m = GetManager();
 	
-	
-	PeriodicalRefresh();
+	tc.Set(60, THISBACK(PeriodicalRefresh));
 }
 
 void ManagerCtrl::PeriodicalRefresh() {
 	tc.Set(60, THISBACK(PeriodicalRefresh));
 	Data();
-	switch (tabs.Get()) {
-		case 0: fcast.Data(); fcast.Refresh(); break;
-		case 1: regenctrl.Data(); regenctrl.Refresh(); break;
-	}
+	
+	
 }
 
-void ManagerCtrl::SelectSession() {
+void ManagerCtrl::SelectTask() {
+	Manager& m = GetManager();
 	int cursor = seslist.GetCursor();
-	GetManager().Select(cursor);
+	Session& ses = m.sessions[cursor];
+	
 	PeriodicalRefresh();
 }
 
@@ -44,169 +49,29 @@ void ManagerCtrl::Data() {
 	Manager& m = GetManager();
 	for(int i = 0; i < m.sessions.GetCount(); i++) {
 		Session& ses = m.sessions[i];
-		seslist.Set(i, 0, ses.name);
+		seslist.Set(i, 0, ses.symbol);
 		
 		String state;
 		int actual, total;
-		ses.regen.GetProgress(actual, total, state);
+		ses.GetProgress(actual, total, state);
 		
-		seslist.Set(i, 1, m.GetActiveSession() == &ses ? state : "");
-		seslist.Set(i, 2, actual * 1000 / total);
+		seslist.Set(i, 1, state);
+		seslist.Set(i, 2, (int64)actual * 1000L / (int64)total);
 		seslist.SetDisplay(i, 2, ProgressDisplay());
 	}
-}
-
-
-
-
-
-void DrawLines::Paint(Draw& d) {
-	Size sz(GetSize());
-	d.DrawRect(sz, White());
 	
-	Manager& mgr = GetManager();
-	const Vector<double>* data0;
-	Generator* gen = NULL;
-	Regenerator* regen = NULL;
-	Session* ses = mgr.GetSelectedSession();
-	Heatmap* heatmap = NULL;
-	int max_count = 0;
-	if (!ses) return;
-	
-	if (type == GENVIEW) {
-		gen = &ses->regen.GetGenerator(gen_id);
-		if (!gen) return;
-		data0 = gen->real_data;
-		heatmap = &gen->image;
-		max_count = Generator::errtest_size;
-	}
-	else if (type == HISVIEW) {
-		if (!ses->regen.HasGenerators()) return;
-		gen = &ses->regen.GetGenerator(0);
-		if (!gen) return;
-		data0 = &ses->regen.real_data;
-		heatmap = &this->image;
-		max_count = Generator::errtest_size;
-	}
-	else if (type == OPTSTATS) {
-		data0 = &ses->regen.result_errors;
-	}
-	else if (type == FCASTVIEW) {
-		data0 = &data;
-		heatmap = &this->image;
-	}
-	else return;
-	
-	if (gen) gen->view_lock.Enter();
-	
-	double zero_line = 1.0;
-	
-	double min = +DBL_MAX;
-	double max = -DBL_MAX;
-	double last = 0.0;
-	double peak = -DBL_MAX;
-	
-	int max_steps = 0;
-	int count0 = data0->GetCount();
-	for(int j = 0; j < count0; j++) {
-		double d = (*data0)[j];
-		if (d > max) max = d;
-		if (d < min) min = d;
-	}
-	max += (max - min) * 0.125;
-	min -= (max - min) * 0.125;
-	max_steps = count0;
-	if (max_count && max_steps > max_count) max_steps = max_count;
-	
-	if (max_steps > 1 && max >= min) {
-		double diff = max - min;
-		double xstep = (double)sz.cx / (max_steps - 1);
-		Font fnt = Monospace(10);
+	int ses_cursor = seslist.GetCursor();
+	if (ses_cursor >= 0 && ses_cursor < seslist.GetCount()) {
+		Session& ses = m.sessions[ses_cursor];
 		
-		if (heatmap) {
-			int mult = 5;
-			double ystep = (max - min) / ((double)sz.cy / mult);
-			typedef Tuple<int, int, double> XYP;
-			Vector<XYP> data;
-			double max_pres = 0;
-			for(int i = 0; i < sz.cx; i += mult) {
-				int k = i * max_steps / sz.cx;
-				int y = 0;
-				for(double j = min; j < max; j += ystep) {
-					double pres = heatmap->Get(k, j);
-					data.Add(XYP(i, sz.cy - y, pres));
-					if (pres > max_pres)
-						max_pres = pres;
-					y += mult;
-				}
-			}
-			
-			for(int i = 0; i < data.GetCount(); i++) {
-				const XYP& xyp = data[i];
-				double pres = xyp.c;
-				pres = 255 - pres / max_pres * 255;
-				if (pres < 0) pres = 0;
-				if (pres > 255) pres = 255;
-				d.DrawRect(xyp.a, xyp.b, mult, mult, GrayColor(pres));
-			}
+		for(int i = 0; i < ses.tasks.GetCount(); i++) {
+			Task& t = ses.tasks[i];
+			tasklist.Set(i, 0, t.task);
+			tasklist.Set(i, 1, (int64)t.actual * 1000L / (int64)t.total);
+			tasklist.SetDisplay(i, 1, ProgressDisplay());
 		}
-		
-		if (max_steps >= 2) {
-			polyline.SetCount(0);
-			for(int j = 0; j < max_steps; j++) {
-				double v = (*data0)[j];
-				last = v;
-				int x = (int)(j * xstep);
-				int y = (int)(sz.cy - (v - min) / diff * sz.cy);
-				polyline.Add(Point(x, y));
-				if (v > peak) peak = v;
-			}
-			if (polyline.GetCount() >= 2)
-				d.DrawPolyline(polyline, 1, Color(81, 145, 137));
-		}
-		
-		{
-			int y = 0;
-			String str = DblStr(peak);
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(16, y, str, fnt, Black());
-		}
-		{
-			int y = 0;
-			String str = DblStr(last);
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(sz.cx - 16 - str_sz.cx, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(sz.cx - 16 - str_sz.cx, y, str, fnt, Black());
-		}
-		if (regen) {
-			int y = 20;
-			String str = DblStr(regen->GetBestEnergy());
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(16, y, str, fnt, Black());
-		}
-		if (regen) {
-			int y = 40;
-			String str = DblStr(regen->GetLastEnergy());
-			Size str_sz = GetTextSize(str, fnt);
-			d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-			d.DrawText(16, y, str, fnt, Black());
-		}
-		{
-			int y = (int)(sz.cy - (zero_line - min) / diff * sz.cy);
-			d.DrawLine(0, y, sz.cx, y, 1, Black());
-			if (zero_line != 0.0) {
-				int y = sz.cy - 10;
-				String str = DblStr(zero_line);
-				Size str_sz = GetTextSize(str, fnt);
-				d.DrawRect(16, y, str_sz.cx, str_sz.cy, White());
-				d.DrawText(16, y, str, fnt, Black());
-			}
-		}
+		tasklist.SetCount(ses.tasks.GetCount());
 	}
-	
-	if (gen) gen->view_lock.Leave();
 }
 
 
@@ -214,11 +79,17 @@ void DrawLines::Paint(Draw& d) {
 
 
 
-RegeneratorCtrl::RegeneratorCtrl() {
+
+
+
+
+
+
+OptimizationCtrl::OptimizationCtrl() {
 	Add(status.SizePos(), "Status");
 	
 	for(int i = 0; i < GetUsedCpuCores(); i++) {
-		GeneratorCtrl& gc = gens.Add();
+		HeatmapLooperCtrl& gc = gens.Add();
 		gc.SetId(i);
 		Add(gc.SizePos(), "Gen " + IntStr(i));
 	}
@@ -242,8 +113,8 @@ RegeneratorCtrl::RegeneratorCtrl() {
 	his_list <<= THISBACK(SelectHistoryItem);
 }
 
-void RegeneratorCtrl::SelectHistoryItem() {
-	Manager& mgr = GetManager();
+void OptimizationCtrl::SelectHistoryItem() {
+	/*Manager& mgr = GetManager();
 	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
@@ -260,7 +131,7 @@ void RegeneratorCtrl::SelectHistoryItem() {
 		ses->regen.result_lock.Leave();
 		return;
 	}
-	const RegenResult& rr = ses->regen.results[id];
+	const OptResult& rr = ses->regen.results[id];
 	StringStream ss;
 	ss << BZ2Decompress(rr.heatmap);
 	ses->regen.result_lock.Leave();
@@ -269,17 +140,17 @@ void RegeneratorCtrl::SelectHistoryItem() {
 	ss.SetLoading();
 	ss % his_draw.image;
 	
-	his_draw.Refresh();
+	his_draw.Refresh();*/
 }
 
-void RegeneratorCtrl::Data() {
-	Manager& mgr = GetManager();
+void OptimizationCtrl::Data() {
+	/*Manager& mgr = GetManager();
 	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
 	ses->regen.result_lock.Enter();
 	for(int i = 0; i < ses->regen.results.GetCount(); i++) {
-		const RegenResult& rr = ses->regen.results[i];
+		const OptResult& rr = ses->regen.results[i];
 		his_list.Set(i, 0, rr.id);
 		his_list.Set(i, 1, rr.gen_id);
 		his_list.Set(i, 2, rr.err);
@@ -292,7 +163,7 @@ void RegeneratorCtrl::Data() {
 	int actual, total;
 	ses->regen.GetProgress(actual, total, String());
 	optprog.Set(actual, total);
-	
+	*/
 }
 
 
@@ -315,7 +186,7 @@ ForecastCtrl::ForecastCtrl() {
 }
 
 void ForecastCtrl::Data() {
-	
+	/*
 	Manager& mgr = GetManager();
 	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
@@ -327,11 +198,11 @@ void ForecastCtrl::Data() {
 	}
 	fcast_list.SetCount(ses->regen.forecasts.GetCount());
 	ses->regen.result_lock.Leave();
-	
+	*/
 }
 
 void ForecastCtrl::SelectForecastItem() {
-	Manager& mgr = GetManager();
+	/*Manager& mgr = GetManager();
 	Session* ses = mgr.GetSelectedSession();
 	if (!ses) return;
 	
@@ -358,7 +229,7 @@ void ForecastCtrl::SelectForecastItem() {
 	ss.SetLoading();
 	ss % draw.image;
 	
-	draw.Refresh();
+	draw.Refresh();*/
 }
 
 
@@ -371,7 +242,7 @@ void ForecastCtrl::SelectForecastItem() {
 
 
 
-GeneratorCtrl::GeneratorCtrl() {
+HeatmapLooperCtrl::HeatmapLooperCtrl() {
 	Add(draw.SizePos());
 }
 
@@ -379,9 +250,15 @@ GeneratorCtrl::GeneratorCtrl() {
 
 GUI_APP_MAIN
 {
-	LOG(GetAmpDevices());
-	Forecast::GetManager();
-	Forecast::ManagerCtrl().Run();
-	
+	RLOG(GetAmpDevices());
+	try {
+		Forecast::GetManager();
+		Forecast::ManagerCtrl().Run();
+		
+	}
+	catch (...) {
+		RLOG("Unexpected exception");
+	}
+	RLOG("Shutting down");
 	Thread::ShutdownThreads();
 }

@@ -4,21 +4,61 @@
 namespace Forecast {
 
 
-struct Session : Moveable<Session> {
+struct DataRange {
 	
-	// Persistent
-	Regenerator regen;
+};
+
+struct Task : Moveable<Task> {
 	
 	// Temporary
-	String name;
+	FactoryDeclaration decl;
+	String task;
+	String symbol;
+	int actual = 0, total = 1;
+	
+	// Task temporary - to be freed
+	Vector<OptResult> results;
+	Vector<double> result_errors;
+	Vector<double> real_data;
+	Vector<double> err;
+	Vector<double> forecast;
+	Array<HeatmapLooper> gen;
+	DQNAgent dqn;
+	MultiHeatmapLooper l;
+	Optimizer opt;
+	Mutex result_lock;
+	
+	
+	typedef Task CLASSNAME;
+	Task();
+	void Run();
+	void RunIndicator();
+	void RunBitstreamJoin();
+	void RunOptimization();
+	void RunDQNSampling();
+	void RunDQNTraining();
+	void RunForecast();
+	void RunOptimizationOnce(int i);
+	void LoadData();
+};
+
+struct Session : Moveable<Session> {
+	
+	// Temporary
+	Vector<Task> tasks;
+	String symbol;
+	int active_task = 0;
 	
 	
 	Session();
-	void LoadData();
-	void LoadThis();
-	void StoreThis();
-	bool HasData() {return !regen.real_data.IsEmpty();}
-	void Serialize(Stream& s) {s % regen;}
+	void Init();
+	
+	void AddIndiTask(int factory, int arg=0);
+	void AddTask(String s);
+	void AddForecastTask(const Vector<double>& real_data);
+	bool RunTask();
+	
+	void GetProgress(int& actual, int& total, String& state);
 };
 
 class Manager {
@@ -27,7 +67,6 @@ protected:
 	friend class ManagerCtrl;
 	
 	ArrayMap<String, Session> sessions;
-	int active_session = -1, selected_session = 0;
 	TimeCallback tc;
 	TimeStop ts;
 	bool stopped = true, running = false;
@@ -43,12 +82,10 @@ public:
 	void Stop() {running = false; while (!stopped) Sleep(100);}
 	
 	void RefreshSessions();
-	Session& GetAdd(String session_name);
-	void Select(int i) {selected_session = i;}
+	Session& GetAdd(String symbol);
 	
+	Session& GetSession(int i) {return sessions[i];}
 	int GetSessionCount() const {return sessions.GetCount();}
-	Session* GetActiveSession() {if (active_session < 0 || active_session >= sessions.GetCount()) return NULL; return &sessions[active_session];}
-	Session* GetSelectedSession() {if (selected_session < 0 || selected_session >= sessions.GetCount()) return NULL; return &sessions[selected_session];}
 };
 
 inline Manager& GetManager() {return Single<Manager>();}

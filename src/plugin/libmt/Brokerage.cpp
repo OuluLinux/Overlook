@@ -662,6 +662,19 @@ int Brokerage::FindSymbol(const String& s) {
 	return -1;
 }
 
+double Brokerage::GetOpenProfit(const String& symbol) {
+	int sym = FindSymbol(symbol);
+	double sum = 0.0;
+	order_lock.Enter();
+	for(int i = 0; i < orders.GetCount(); i++) {
+		Order& o = orders[i];
+		if (o.symbol == sym)
+			sum += o.profit;
+	}
+	order_lock.Leave();
+	return sum;
+}
+
 double	Brokerage::MarketInfo(String symbol, int type) {
 	int sym = FindSymbol(symbol);
 	

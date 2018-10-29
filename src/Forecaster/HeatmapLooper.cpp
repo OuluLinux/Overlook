@@ -114,7 +114,9 @@ void HeatmapLooper::ResetPattern() {
 	double begin = (*real_data)[0] * (1.0 - scale);
 	double end = (*real_data)[0] * (1.0 + scale);
 	int steps = (end - begin) / a.step;
-	if (steps < 3) steps = 3;
+	if (steps < 15) {
+		steps = 15;
+	}
 	int total = PressureDescriptor::size * 64;
 	pattern.SetCount(total);
 	for(int i = 0; i < total; i++) {

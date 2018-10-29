@@ -80,7 +80,7 @@ void Sentiment::SetSignals() {
 			ASSERT(j != -1);
 			int pres = real.pair_pres[i];
 			int sig = pres == 0 ? 0 : (pres > 0 ? +1 : -1);
-			sys.SetSignal(j, sig);
+			sys.SetSignal(j, pres);
 			actnet.Assign(sym, sig);
 		}
 	}

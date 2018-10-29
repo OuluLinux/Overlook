@@ -38,13 +38,16 @@ void Manager::Process() {
 		if (ses_id < sessions.GetCount()) {
 			Session& ses = sessions[ses_id];
 			
-			if (!ses.RunTask())
+			if (!ses.RunTask()) {
 				ses_id++;
+				Sleep(100);
+			}
 		} else {
 			ses_id = 0;
 		}
 		
-		Sleep(100);
+		if (sessions.IsEmpty()) Sleep(100);
+		
 	}
 	
 	stopped = true;
@@ -83,22 +86,22 @@ void Session::Init() {
 
 void Session::AddIndiTask(int id, FactoryDeclaration& decl) {
 	Task& t = tasks.Add();
-	t.task = "Indicator " + Format("%03d", id);
 	t.decl = decl;
 	t.symbol = symbol;
+	t.task = "Indicator " + Format("%03d", id);
 }
 
 void Session::AddTask(String s) {
 	Task& t = tasks.Add();
-	t.task = s;
 	t.symbol = symbol;
+	t.task = s;
 }
 
 void Session::AddForecastTask(const Vector<double>& real_data) {
 	Task& t = tasks.Add();
-	t.task = "Forecast";
 	t.symbol = symbol;
 	t.real_data <<= real_data;
+	t.task = "Forecast";
 }
 
 void Session::GetProgress(int& actual, int& total, String& state) {
@@ -169,8 +172,6 @@ void Task::Run() {
 	else if (task == "Forecast") {
 		RunForecast();
 	}
-	else Panic("Unknown task: " + task);
-	
 }
 
 void Task::RunIndicator() {
@@ -647,4 +648,5 @@ void Task::LoadData() {
 	if (real_data.IsEmpty())
 		Panic("No real data");
 }
+
 }

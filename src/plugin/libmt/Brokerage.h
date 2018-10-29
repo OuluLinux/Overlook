@@ -82,6 +82,7 @@ public:
 	void Leave() {order_lock.Leave();}
 	void RefreshLimits();
 	void SetInitialBalance(double d) {initial_balance = d;}
+	double GetOpenProfit(const String& symbol);
 	
 	const Vector<Order>&	GetOpenOrders() const {return orders;}
 	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}

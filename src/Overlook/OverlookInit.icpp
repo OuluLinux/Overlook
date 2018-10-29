@@ -89,6 +89,7 @@ INITBLOCK {
 	//System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	
     
+    System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     System::RegisterCommon<Automation, AutomationCtrl>("Automation");

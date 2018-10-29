@@ -33,7 +33,7 @@ protected:
 	// Temporary
 	Index<String> symbols;
 	VectorMap<String, double> prev_levels;
-	bool enable_takeprofit = true;
+	bool enable_takeprofit = false;
 	
 public:
 	Sentiment();

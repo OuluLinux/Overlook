@@ -44,8 +44,6 @@ void DrawLines::Paint(Draw& d) {
 	if (gen) gen->view_lock.Enter();
 	if (!data0) return;
 	
-	double zero_line = 1.0;
-	
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
 	double last = 0.0;

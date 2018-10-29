@@ -229,6 +229,7 @@ ForecastCtrl::ForecastCtrl() {
 	Add(draw.HSizePos().VSizePos());
 	
 	draw.type = draw.FCASTVIEW;
+	draw.zero_line = 0;
 }
 
 void ForecastCtrl::Data() {

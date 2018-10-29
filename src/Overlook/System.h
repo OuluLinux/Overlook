@@ -272,6 +272,7 @@ public:
 		NetSetting& Set(String s, int i) {symbols.Add(s, i); return *this;}
 		void Assign(String s, int i) {
 			int j = symbols.Find(s);
+			if (j == -1) return;
 			symbols[j] = i;
 			symbol_ids[j] = i;
 		}

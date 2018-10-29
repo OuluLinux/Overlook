@@ -497,8 +497,11 @@ void Overlook::RefreshCommon() {
 	
 	static Mutex m;
 	
+	RLOG("Overlook::RefreshCommon locking");
 	if (m.TryEnter()) {
+		RLOG("Overlook::RefreshCommon locked " << sys.CommonFactories().GetCount());
 		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
+			RLOG("Overlook::RefreshCommon start " << i);
 			sys.CommonFactories()[i].b()->Start();
 		}
 		m.Leave();

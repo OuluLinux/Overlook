@@ -29,6 +29,7 @@ class ManagerCtrl;
 struct DrawLines : public Ctrl {
 	Heatmap image;
 	Task* t = NULL;
+	double zero_line = 1.0;
 	int type;
 	int gen_id = 0;
 	
@@ -111,8 +112,6 @@ protected:
 	ParentCtrl main_task;
 	Splitter vsplit, hsplit;
 	ArrayCtrl seslist, tasklist;
-	ForecastCtrl fcast;
-	OptimizationCtrl regenctrl;
 	DataCtrl* prev_ctrl = NULL;
 	
 	TimeCallback tc;

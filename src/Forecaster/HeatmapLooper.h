@@ -51,7 +51,7 @@ struct PressureDescriptor : Moveable<PressureDescriptor> {
 
 struct NNSample : Moveable<NNSample> {
 	static const int single_size = 50;
-	static const int single_count = 10;
+	static const int single_count = 20;
 	static const int fwd_count = 240/10;
 	
 	double input[single_count][single_size];

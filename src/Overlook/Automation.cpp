@@ -30,6 +30,7 @@ void Automation::Init() {
 }
 
 void Automation::Start() {
+	RLOG("Automation::Start");
 	Manager& mgr = GetManager();
 	
 	bool all_finished = true;
@@ -49,7 +50,7 @@ void Automation::Start() {
 			cl.Init();
 			cl.Refresh();
 			ConstBuffer& src = cl.GetBuffer(0, 0, 0);
-			int size = 4*5*1440;
+			int size = 5*1440;
 			Vector<double> data;
 			int begin = src.GetCount() - size;
 			data.SetCount(size);
@@ -59,9 +60,11 @@ void Automation::Start() {
 		}
 		mode++;
 	}
-	if (mode == PENDING && all_finished) {
+	else if (mode == PENDING && all_finished) {
 		System& sys = GetSystem();
 		Sentiment& sent = GetSentiment();
+		
+		last_update = GetUtcTime();
 		
 		SentimentSnapshot* prev = NULL;
 		if (sent.GetSentimentCount())
@@ -99,8 +102,8 @@ void Automation::Start() {
 				if ((prev_pres > 0 && first_change > 0) || (prev_pres < 0 && first_change < 0))
 					pres = prev_pres;
 				// Continue while seeing positive
-				else if ((prev_pres > 0 && peak_up > 0) || (prev_pres < 0 && peak_down < 0))
-					pres = prev_pres;
+				/*else if ((prev_pres > 0 && peak_up > 0) || (prev_pres < 0 && peak_down < 0))
+					pres = prev_pres;*/
 				// Change signal
 				else
 					pres = peak_up_stronger ? +1 : -1;
@@ -114,15 +117,23 @@ void Automation::Start() {
 					pres = peak_up_stronger ? +1 : -1;
 			}
 			
+			if (prev_pres != 0 && pres * prev_pres < 0) {
+				double open_profit = GetMetaTrader().GetOpenProfit(symbols[i]);
+				if (open_profit < 0) {
+					pres = -prev_pres * 2;
+				}
+			}
+			
 			snap.pair_pres[j] = pres;
 		}
+		
+		sent.StoreThis();
 		mode++;
 	}
-	if (mode == WAITING) {
+	else if (mode == WAITING) {
 		Time now = GetUtcTime();
 		if (now.Get() - last_update.Get() > 10*60) {
 			mode = NO_PENDING;
-			last_update = now;
 		}
 	}
 }

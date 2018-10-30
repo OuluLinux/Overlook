@@ -1,0 +1,23 @@
+uses
+	CtrlLib,
+	ConvNet;
+
+file
+	Agent.h,
+	Agent.cpp,
+	AgentInit.icpp,
+	Draws.cpp,
+	Manager.h,
+	Manager.cpp,
+	Common.h,
+	Common.cpp,
+	Core.h,
+	Core.cpp,
+	System.h,
+	System.cpp,
+	Indicators.h,
+	Indicators.cpp;
+
+mainconfig
+	"" = "GUI";
+

@@ -1,0 +1,12 @@
+#include "Agent.h"
+
+using namespace Agent;
+
+NAMESPACE_UPP
+
+INITBLOCK {
+	//System::Register<>("");
+
+}
+
+END_UPP_NAMESPACE

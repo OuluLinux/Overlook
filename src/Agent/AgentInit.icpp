@@ -5,8 +5,25 @@ using namespace Agent;
 NAMESPACE_UPP
 
 INITBLOCK {
-	//System::Register<>("");
-
+	System::Register<SimpleHurstWindow>("SimpleHurstWindow");
+	System::Register<Momentum>("Momentum");
+	System::Register<MovingAverage>("Moving average");
+	System::Register<ParabolicSAR>("Parabolic SAR");
+	System::Register<Pattern>("Pattern");
+	System::Register<BearsPower>("Bears Power");
+	System::Register<CommodityChannelIndex>("Commodity Channel Index");
+	System::Register<RelativeStrengthIndex>("Relative Strength Index");
+	System::Register<RelativeVigorIndex>("Relative Vigor Index");
+	System::Register<StochasticOscillator>("Stochastic Oscillator");
+	System::Register<AcceleratorOscillator>("Accelerator Oscillator");
+	System::Register<AwesomeOscillator>("Awesome Oscillator");
+	System::Register<Psychological>("Psychological");
+	System::Register<ChannelOscillator>("Channel Oscillator");
+	System::Register<ScissorChannelOscillator>("Scissor Channel Oscillator");
+	System::Register<OnlineMinimalLabel>("Online Minimal Label");
+	System::Register<Laguerre>("Laguerre");
+	System::Register<TickBalanceOscillator>("Tick Balance Oscillator");
+	
 }
 
 END_UPP_NAMESPACE

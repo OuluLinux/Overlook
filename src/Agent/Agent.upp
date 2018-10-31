@@ -16,7 +16,10 @@ file
 	System.h,
 	System.cpp,
 	Indicators.h,
-	Indicators.cpp;
+	Indicators.cpp,
+	Optimizer.h,
+	Looper.h,
+	Looper.cpp;
 
 mainconfig
 	"" = "GUI";

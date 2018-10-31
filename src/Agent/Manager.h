@@ -18,14 +18,21 @@ struct Task : Moveable<Task> {
 	
 	// Task temporary - to be freed
 	Vector<CoreItem> work_queue;
-	Vector<double> real_data, results;
+	Vector<double> real_data, results, result_values, opt_result;
+	Array<Looper> gen;
 	DQNAgent dqn;
+	Optimizer opt;
 	
 	
 	typedef Task CLASSNAME;
 	Task();
 	void Run();
-	void RunDqnAgent();
+	void RunIndicator();
+	void RunBitstreamJoin();
+	void RunHistoryMatch();
+	void RunOptimization();
+	void RunOptimizationOnce(int i);
+	bool IsCorner(int pos, double point);
 	void LoadData();
 	void Progress(int actual, int total) {this->actual = actual; this->total = total;}
 	

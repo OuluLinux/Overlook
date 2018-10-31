@@ -6,10 +6,12 @@
 using namespace Upp;
 using namespace ConvNet;
 
+#include "Optimizer.h"
 #include "Common.h"
 #include "Core.h"
 #include "System.h"
 #include "Indicators.h"
+#include "Looper.h"
 #include "Manager.h"
 
 namespace Agent {

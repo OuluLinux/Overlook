@@ -74,7 +74,9 @@ void Session::Init() {
 	for(int i = 0; i < decl.GetCount(); i++)
 		AddIndiTask(i, decl[i]);
 	
-	AddTask("DQN Training");
+	AddTask("Bitstream join");
+	AddTask("History match");
+	AddTask("Optimization");
 }
 
 void Session::AddIndiTask(int id, FactoryDeclaration& decl) {
@@ -148,8 +150,17 @@ Task::Task() {
 void Task::Run() {
 	RLOG("Task::Run " + task);
 	
-	if (task == "DQN Training") {
-		RunDqnAgent();
+	if (task.Left(9) == "Indicator") {
+		RunIndicator();
+	}
+	else if (task == "Bitstream join") {
+		RunBitstreamJoin();
+	}
+	else if (task == "History match") {
+		RunHistoryMatch();
+	}
+	else if (task == "Optimization") {
+		RunOptimization();
 	}
 }
 
@@ -211,116 +222,355 @@ void Task::LoadData() {
 		Panic("No real data");
 }
 
-void Task::RunDqnAgent() {
+
+void Task::RunIndicator() {
+	String dir = ConfigFile("AgentSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
 	
 	LoadData();
 	
-	int dqn_iters = 0;
+	Vector<FactoryDeclaration> decl;
+	decl.Add(this->decl);
+	System::GetCoreQueue(real_data, work_queue, decl);
 	
+	total = real_data.GetCount();
 	
-	int input_size = 128;
-	int act_count = 4;
-	enum {LONG, SHORT, IDLE, STOP};
-	
-	if (dqn_iters == 0) {
-		dqn.Init(1, input_size, act_count);
-		dqn.Reset();
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		Core& c = *work_queue[i].core;
+		
+		for(int j = 1000; j < real_data.GetCount(); j+=1000) {
+			actual = j;
+			c.SetBars(j);
+			c.Refresh();
+		}
+		
+		actual = real_data.GetCount();
+		c.SetBars(real_data.GetCount());
+		c.Refresh();
 	}
 	
-	double reward_sum = 0.0;
-	
-	bool is_open = false, signal;
-	double volume = 0.0;
-	double accum_reward = 0.0;
-	double open;
-	
-	int iter = input_size+1;
-	Vector<double> input;
-	input.SetCount(input_size);
-	while (!Thread::IsShutdownThreads()) {
+	Vector<ConstLabelSignal*> lbls;
+	for(int i = 0; i < work_queue.GetCount(); i++) {
+		CoreItem& ci = work_queue[i];
 		
+		OutputCounter lc;
+		ci.core->IO(lc);
 		
-		double d0 = real_data[iter];
-		for(int i = 0; i < input_size; i++) {
-			double d1 = real_data[iter+1+i];
-			double ch = (d0 / d1 - 1) * 1000;
-			input[i] = ch;
-		}
-		
-		int a = dqn.Act(input);
-		double act_reward = 0.0;
-		
-		double prev_reward_sum = reward_sum;
-		
-		if (is_open) {
-			if (signal == LONG) {
-				if (a == LONG) {
-					accum_reward += volume * (d0 / open - 1.0),
-					open = d0;
-					volume *= 2.0;
-					if (volume > 10.0) volume = 10.0;
-				}
-				else if (a == SHORT) {
-					accum_reward += volume * (d0 / (open * 1.0003) - 1.0),
-					open = d0;
-					reward_sum += accum_reward;
-					act_reward = accum_reward;
-					accum_reward = 0;
-					volume = 0.01;
-					signal = SHORT; is_open = true;
-				}
-				else if (a == STOP) {
-					accum_reward += volume * (d0 / (open * 1.0003) - 1.0),
-					reward_sum += accum_reward;
-					act_reward = accum_reward;
-					accum_reward = 0;
-					is_open = false;
-				}
-			} else {
-				if (a == SHORT) {
-					accum_reward -= volume * (d0 / open - 1.0),
-					open = d0;
-					volume *= 2.0;
-					if (volume > 10.0) volume = 10.0;
-				}
-				else if (a == LONG) {
-					accum_reward -= volume * (d0 / (open * 0.9997) - 1.0),
-					open = d0;
-					reward_sum += accum_reward;
-					act_reward = accum_reward;
-					accum_reward = 0;
-					volume = 0.01;
-					signal = LONG; is_open = true;
-				}
-				else if (a == STOP) {
-					accum_reward -= volume * (d0 / (open * 0.9997) - 1.0),
-					reward_sum += accum_reward;
-					act_reward = accum_reward;
-					accum_reward = 0;
-					is_open = false;
-				}
-			}
-		} else {
-			if (a == LONG || a == SHORT) {
-				open = d0;
-				volume = 0.01;
-				signal = a;
-				is_open = true;
+		for(int j = 0; j < lc.lbl_counts.GetCount(); j++) {
+			int count = lc.lbl_counts[j];
+			for(int k = 0; k < count; k++) {
+				ConstLabelSignal& buf = ci.core->GetLabelBuffer(j, k);
+				lbls.Add(&buf);
 			}
 		}
-		
-		dqn.Learn(act_reward, act_reward != 0.0);
-		
-		if (prev_reward_sum != reward_sum) {
-			//LOG(iter << "\t\t" << reward_sum);
-			results.Add(reward_sum);
-		}
-		
-		iter++;
-		if (iter >= real_data.GetCount() - input_size-1)
-			iter = input_size+1;
-		dqn_iters++;
 	}
+	
+	BitStream stream;
+	stream.SetColumnCount(lbls.GetCount());
+	stream.SetCount(real_data.GetCount());
+	stream.SetBit(0);
+	for(int i = 0, actual = 0; i < real_data.GetCount(); i++, actual++) {
+		for(int j = 0; j < lbls.GetCount(); j++) {
+			bool value = lbls[j]->signal.Get(i);
+			stream.Write(value);
+		}
+	}
+	
+	FileOut fout(file);
+	fout % stream;
+	
+	work_queue.Clear();
+	real_data.Clear();
+}
+
+void Task::RunBitstreamJoin() {
+	String dir = ConfigFile("AgentSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	Array<BitStream> streams;
+	FindFile ff;
+	int cols_total = 0;
+	int size = 0;
+	Vector<String> files;
+	if (ff.Search(AppendFileName(dir, symbol + " Indicator*"))) {
+		do {
+			files.Add(ff.GetPath());
+		}
+		while (ff.Next());
+	}
+	Sort(files, StdLess<String>());
+	
+	
+	for(int i = 0; i < files.GetCount(); i++) {
+		BitStream& stream = streams.Add();
+		FileIn fin(files[i]);
+		fin % stream;
+		cols_total += stream.GetColumnCount();
+		stream.SetBit(0);
+		if (streams.GetCount() == 1)
+			size = stream.GetCount();
+		else
+			if (size != stream.GetCount())
+				Panic("Indicator file size differs from first " + ff.GetName());
+	}
+	
+	BitStream stream;
+	stream.SetColumnCount(cols_total);
+	stream.SetCount(size);
+	stream.SetBit(0);
+	
+	total = size;
+	for(int i = 0, actual = 0; i < size; i++, actual++) {
+		for(int j = 0; j < streams.GetCount(); j++) {
+			BitStream& src = streams[j];
+			for(int k = 0; k < src.GetColumnCount(); k++) {
+				bool value = src.Read();
+				stream.Write(value);
+			}
+		}
+	}
+	
+	FileOut fout(file);
+	fout % stream;
+}
+
+void Task::RunHistoryMatch() {
+	String dir = ConfigFile("AgentSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	LoadData();
+	
+	BitStream stream;
+	String stream_file = AppendFileName(dir, symbol + " Bitstream join.bin");
+	FileIn stream_fin(stream_file);
+	stream_fin % stream;
+	if (stream.GetColumnCount() == 0 || stream.GetCount() == 0)
+		Panic("Bitsream not joined yet");
+	stream.SetBit(0);
+	
+	Vector<int> matches;
+	matches.SetCount(real_data.GetCount());
+	
+	Vector<int64> desc;
+	int desc_ints = stream.GetColumnCount() / 64;
+	if (stream.GetColumnCount() % 64 != 0) desc_ints++;
+	desc.SetCount(desc_ints * real_data.GetCount());
+	
+	int desc_id = 0;
+	for(int i = 0; i < real_data.GetCount(); i++) {
+		int pos = 0;
+		for(int j = 0; j < desc_ints; j++) {
+			int64 i64 = 0;
+			for (int b = 0; b < 64 && pos < stream.GetColumnCount(); b++, pos++) {
+				if (stream.Read())
+					i64 |= 1 << b;
+			}
+			desc[desc_id++] = i64;
+		}
+	}
+	ASSERT(desc_id == desc.GetCount());
+	
+	
+	total = real_data.GetCount();
+	for(int i = 0; i < real_data.GetCount(); i++) {
+		actual = i;
+		int min_dist = INT_MAX;
+		int min_dist_pos = 0;
+		
+		for(int j = 0; j < i - 240; j++) {
+			int k0 = i * desc_ints;
+			int k1 = j * desc_ints;
+			int dist = 0;
+			for(int k = 0; k < desc_ints; k++) {
+				int64 d0 = desc[k0];
+				int64 d1 = desc[k1];
+				dist += PopCount64(d0 ^ d1);
+			}
+			if (dist < min_dist) {
+				min_dist = dist;
+				min_dist_pos = j;
+			}
+		}
+		matches[i] = min_dist_pos;
+	}
+	actual = 1; total = 1;
+	
+	
+	FileOut fout(file);
+	fout % matches;
+	
+	real_data.Clear();
+	desc.Clear();
+	matches.Clear();
+}
+
+void Task::RunOptimization() {
+	String dir = ConfigFile("AgentSessions");
+	String file = AppendFileName(dir, symbol + " " + task + ".bin");
+	String mid_file = AppendFileName(dir, symbol + " " + task + " unfinished.bin");
+	RealizeDirectory(dir);
+	if (FileExists(file)) {actual = 1; total = 1; return;}
+	
+	LoadData();
+	
+	Vector<int> matches;
+	String matches_file = AppendFileName(dir, symbol + " History match.bin");
+	FileIn matches_fin(matches_file);
+	matches_fin % matches;
+	
+	double point = real_data[0] > 65 ? 0.01 : 0.0001;
+	
+	Vector<bool> is_corner;
+	is_corner.SetCount(real_data.GetCount());
+	for(int i = 0; i < real_data.GetCount(); i++)
+		is_corner[i] = IsCorner(i, point);
+	
+	FileIn mid_fin(mid_file);
+	mid_fin % opt % results % result_values;
+	
+	
+	if (opt.GetRound() == 0) {
+		opt.min_value = -1;
+		opt.max_value = +1;
+		opt.SetMaxGenerations(10);
+		int popcount = 100;
+		opt.Init(1, popcount);
+	}
+	
+	
+	TimeStop ts;
+	int cores = GetUsedCpuCores();
+	int popcount = opt.GetPopulation();
+	
+	gen.SetCount(cores);
+	result_values.SetCount(popcount);
+	for(int i = 0; i < gen.GetCount(); i++) {
+		Looper& g = gen[i];
+		g.matches = &matches;
+		g.real_data = &real_data;
+		g.is_corner = &is_corner;
+		g.Init(point, real_data);
+	}
+	
+	
+	total = opt.GetMaxRounds();
+	
+	while (!opt.IsEnd() && !Thread::IsShutdownThreads()) {
+		actual = opt.GetRound();
+		
+		opt.Start();
+		
+		
+		opt_result.SetCount(popcount, -DBL_MAX);
+	
+		CoWork co;
+		co.SetPoolSize(cores);
+		for(int i = 0; i < popcount; i++) {
+			co & THISBACK1(RunOptimizationOnce, i);
+		}
+		co.Finish();
+		
+		opt.Stop(opt_result.Begin());
+		/*
+		Sort(results, OptResult());
+		if (results.GetCount() > 100) results.SetCount(100);
+		*/
+		if (ts.Elapsed() > 5*60*1000) {
+			FileOut fout(mid_file);
+			fout % opt % results % result_values;
+			ts.Reset();
+		}
+	}
+	
+	if (opt.IsEnd()) {
+		FileOut fout(file);
+		fout % results;
+	}
+	
+	
+	actual = 1;
+	total = 1;
+	opt_result.Clear();
+	gen.Clear();
+	results.Clear();
+	result_values.Clear();
+	real_data.Clear();
+	//opt.Clear();
+}
+
+void Task::RunOptimizationOnce(int i) {
+	
+	while (true) {
+		for(int j = 0; j < gen.GetCount(); j++) {
+			Looper& g = gen[j];
+			if (g.lock.TryEnter()) {
+				g.params <<= opt.GetTrialSolution(i);
+				if (i == 0) g.Run();
+				result_values[i] = g.equity;
+				
+				g.lock.Leave();
+				return;
+			}
+		}
+	}
+}
+
+bool Task::IsCorner(int pos, double point) {
+	int max_len = 15;
+	int corner_steps = 4;
+	
+	double maxv = -DBL_MAX, minv = DBL_MAX;
+	int max_pos, min_pos;
+	
+	for(int i = max(0, pos - max_len); i < pos; i++) {
+		double d1 = real_data[i];
+		if (d1 > maxv) {maxv = d1; max_pos = i;}
+		if (d1 < minv) {minv = d1; min_pos = i;}
+	}
+	
+	bool is_max_corner_right = false;
+	for(int i = max_pos + 1; i <= pos; i++) {
+		double d1 = real_data[i];
+		if (d1 == maxv - corner_steps * point) {
+			is_max_corner_right = i == pos;
+			break;
+		}
+	}
+	
+	if (is_max_corner_right) {
+		for(int i = max_pos - 1; i >= pos - max_len && i >= 0; i++) {
+			double d1 = real_data[i];
+			if (d1 == maxv - corner_steps * point) {
+				return true;
+			}
+		}
+	}
+	
+	bool is_min_corner_right = false;
+	for(int i = min_pos + 1; i <= pos; i++) {
+		double d1 = real_data[i];
+		if (d1 == minv + corner_steps * point) {
+			is_min_corner_right = i == pos;
+			break;
+		}
+	}
+	
+	if (is_min_corner_right) {
+		for(int i = min_pos - 1; i >= pos - max_len && i >= 0; i++) {
+			double d1 = real_data[i];
+			if (d1 == minv + corner_steps * point) {
+				return true;
+			}
+		}
+	}
+	
+	return false;
 }
 
 }

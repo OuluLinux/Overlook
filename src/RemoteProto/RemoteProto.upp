@@ -1,0 +1,19 @@
+uses
+	CtrlLib,
+	plugin/gif,
+	plugin/jpg;
+
+library(WIN32) "ssleay32MT libeay32MT";
+
+library(POSIX) "ssl crypto";
+
+file
+	main.cpp,
+	Client.h,
+	Client.cpp,
+	Client.lay,
+	Client.iml;
+
+mainconfig
+	"" = "GUI";
+

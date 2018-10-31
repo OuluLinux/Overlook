@@ -42,6 +42,7 @@ struct ForecastCtrl : public SubWindowCtrl {
 #include "Arbitrage.h"
 #include "Sentiment.h"
 #include "Automation.h"
+#include "Server.h"
 
 
 namespace Overlook {

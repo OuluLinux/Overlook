@@ -265,10 +265,10 @@ void SentPresCtrl::Paint(Draw& w) {
 	int value = GetData();
 	
 	if (value < 0.0) {
-		int W = -value * (sz.cx / 2) / 10;
+		int W = -value * (sz.cx / 2) / SIGNALSCALE;
 		w.DrawRect(sz.cx / 2 - W, 0, W, sz.cy, Blue());
 	} else {
-		int W = value * (sz.cx / 2) / 10;
+		int W = value * (sz.cx / 2) / SIGNALSCALE;
 		w.DrawRect(sz.cx / 2, 0, W, sz.cy, Green());
 	}
 	
@@ -277,7 +277,7 @@ void SentPresCtrl::Paint(Draw& w) {
 
 void SentPresCtrl::LeftDown(Point p, dword keyflags) {
 	Size sz(GetSize());
-	int value = (p.x - sz.cx / 2) * 10 / (sz.cx / 2);
+	int value = (p.x - sz.cx / 2) * SIGNALSCALE / (sz.cx / 2);
 	SetData(value);
 	Refresh();
 	WhenAction();
@@ -291,7 +291,7 @@ void SentPresCtrl::LeftUp(Point p, dword keyflags) {
 void SentPresCtrl::MouseMove(Point p, dword keyflags) {
 	if (HasCapture()) {
 		Size sz(GetSize());
-		int value = (p.x - sz.cx / 2) * 10 / (sz.cx / 2);
+		int value = (p.x - sz.cx / 2) * SIGNALSCALE / (sz.cx / 2);
 		SetData(value);
 		Refresh();
 		WhenAction();

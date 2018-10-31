@@ -83,8 +83,6 @@ INITBLOCK {
 	System::Register<NewsNow>("NewsNow");
 	System::Register<VolatilityEarlyLate>("VolatilityEarlyLate");
 	System::Register<SweetSpot>("SweetSpot");
-	//System::Register<AnalyzerViewer>("Analyzer Viewer");
-	//System::Register<ScalperViewer>("Scalper Viewer");
 	
 	//System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	
@@ -92,7 +90,8 @@ INITBLOCK {
     System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
-    System::RegisterCommon<Automation, AutomationCtrl>("Automation");
+    //System::RegisterCommon<Automation, AutomationCtrl>("Automation");
+    System::RegisterCommon<Server, ServerCtrl>("Automation");
     
     
     

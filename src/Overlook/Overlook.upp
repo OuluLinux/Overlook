@@ -64,7 +64,11 @@ file
 	Calendar.h,
 	Calendar.cpp,
 	Automation.h,
-	Automation.cpp;
+	Automation.cpp,
+	Server.h,
+	Server.cpp,
+	ActiveSession.cpp,
+	Database.cpp;
 
 mainconfig
 	"Working" = "GUI MT X11",

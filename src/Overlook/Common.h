@@ -32,6 +32,9 @@ extern Upp::IniBool fixed_tplimit;
 extern Upp::IniString arg_addr;
 extern Upp::IniInt arg_port;
 extern Upp::IniInt start_time;
+extern Upp::IniInt server_port;
+extern Upp::IniInt server_max_sessions;
+extern Upp::IniString server_title;
 
 extern Upp::IniBool email_enable;
 extern Upp::IniString email_user;
@@ -1135,6 +1138,7 @@ public:
 	
 	virtual void Init() = 0;
 	virtual void Start() = 0;
+	virtual void Deinit() {};
 	
 };
 

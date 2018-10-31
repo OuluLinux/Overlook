@@ -258,6 +258,11 @@ void System::FirstStart() {
 
 void System::Deinit() {
 	StopJobs();
+	
+	for(int i = 0; i < CommonFactories().GetCount(); i++) {
+		RLOG("Overlook::RefreshCommon start " << i);
+		CommonFactories()[i].b()->Deinit();
+	}
 }
 
 void System::AddPeriod(String nice_str, int period) {

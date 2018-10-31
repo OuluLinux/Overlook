@@ -14,6 +14,9 @@ INI_BOOL(fixed_tplimit, false, "Use fixed take-profit level");
 INI_STRING(arg_addr, "127.0.0.1", "Host address");
 INI_INT(arg_port, 42000, "Host port");
 INI_INT(start_time, 0, "Starting time");
+INI_INT(server_port, 17001, "Server listening port");
+INI_INT(server_max_sessions, 100, "Server max simultaneous client sessions");
+INI_STRING(server_title, "Unnamed server", "Server title");
 
 INI_BOOL(email_enable, false, "Enable email autochartist events");
 INI_STRING(email_user, "", "Email username");
@@ -154,5 +157,7 @@ GUI_APP_MAIN {
 	}
 	
 	GetSystem().Deinit();
+	
+	Thread::ShutdownThreads();
 }
 

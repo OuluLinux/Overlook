@@ -51,7 +51,7 @@ void Chart::RefreshCore() {
 		RefreshCoreData(true);
 		
 		if (work_queue.IsEmpty()) {refresh_lock.Leave(); return;}
-		if (!work_queue.Top()->core) return;
+		if (work_queue.IsEmpty() || !work_queue.Top()->core) return;
 		
 		core = work_queue.Top();
 		bardata = 0;

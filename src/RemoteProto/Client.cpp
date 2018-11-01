@@ -176,6 +176,9 @@ Client::Client() {
 	calendar.AddColumn("Previous");
 	calendar.AddColumn("Actual");
 	
+	events_parent.Add(events_list.SizePos());
+	events_list.AddColumn("Message");
+	
 	PostCallback(THISBACK(DataInit));
 	tc.Set(1000, THISBACK(TimedRefresh));
 }
@@ -195,6 +198,7 @@ void Client::TimedRefresh() {
 		case 2: DataOrders(); break;
 		case 3: DataHistory(); break;
 		case 4: DataCalendar(); break;
+		case 5: DataEvents(); break;
 		
 	}
 	tc.Set(1000, THISBACK(TimedRefresh));
@@ -486,6 +490,25 @@ void Client::DataCalendar() {
 	calendar_lock.Leave();
 }
 
+void Client::DataEvents() {
+	if (!pending_poll) {
+		pending_poll = true;
+		
+		Thread::Start([=] {
+			Poll();
+			pending_poll = false;
+		});
+	}
+	
+	event_lock.Enter();
+	for(int i = 0; i < events.GetCount(); i++) {
+		String e = events[i];
+		events_list.Set(i, 0, e);
+		//events_list.SetDisplay(i, 0, Single<CalendarTimeDisplay>());
+	}
+	event_lock.Leave();
+}
+
 void Client::MainMenu(Bar& bar) {
 	bar.Sub("File", [=](Bar& bar) {
 		
@@ -719,31 +742,27 @@ void Client::Poll() {
 	lock.Enter();
 	
 	int count = in.Get32();
-	if (count < 0 || count >= 10000) {lock.Leave(); throw Exc("Polling failed");}
+	if (count < 0 || count >= 10000) {
+		lock.Leave(); throw Exc("Polling failed");}
 	for(int i = 0; i < count; i++) {
-		int sender_id = in.Get32();
 		int msg_len = in.Get32();
 		String message;
 		if (msg_len > 0)
 			message = in.Get(msg_len);
 		if (message.GetCount() != msg_len) {lock.Leave(); throw Exc("Polling failed");}
-		Print("Client " + IntStr(user_id) + " received from " + IntStr(sender_id) + ": " + IntStr(message.GetCount()));
+		Print("Client " + IntStr(user_id) + " received: " + IntStr(message.GetCount()));
 		
 		int j = message.Find(" ");
 		if (j == -1) continue;
 		String key = message.Left(j);
 		message = message.Mid(j + 1);
 		
-		/*if (key == "msg") {
-			String ch_name = "user" + IntStr(sender_id);
-			ASSERT(sender_id != this->user_id);
-			User& u = users.GetAdd(sender_id);
-			my_channels.FindAdd(ch_name);
-			Channel& ch = channels.GetAdd(ch_name);
-			ch.userlist.FindAdd(sender_id);
-			ch.Post(sender_id, u.name, message);
+		if (key == "info" || key == "warning" || key == "error") {
+			event_lock.Enter();
+			events.Add(key + " " + message);
+			event_lock.Leave();
 			PostCallback(THISBACK(RefreshGui));
-		}*/
+		}
 	}
 	
 	

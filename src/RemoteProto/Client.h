@@ -164,6 +164,11 @@ class Client : public TopWindow {
 	Mutex calendar_lock;
 	
 	ParentCtrl events_parent;
+	ArrayCtrl events_list;
+	Vector<String> events;
+	Mutex event_lock;
+	bool pending_poll = false;
+	
 	ParentCtrl tips_parent;
 	
 public:
@@ -178,6 +183,7 @@ public:
 	void DataOrders();
 	void DataHistory();
 	void DataCalendar();
+	void DataEvents();
 	
 	int GetUserId() const {return user_id;}
 	String GetPassword() const {return pass;}

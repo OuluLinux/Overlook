@@ -5,9 +5,6 @@
 namespace Overlook {
 
 EventSystem::EventSystem() {
-	ses_counted = Date(1970,1,1);
-	
-	
 	/*
 	
 	Approximation in UTC
@@ -64,7 +61,7 @@ EventSystem::EventSystem() {
 	currencies.Add("CAD").Set("CAD").SetTZ("America/Toronto").AddOpenLocal( 930, 1600);
 	
 	
-	
+	LoadThis();
 }
 
 EventSystem::~EventSystem() {
@@ -73,58 +70,127 @@ EventSystem::~EventSystem() {
 
 void EventSystem::Init() {
 	
+	pairs <<= GetSentiment().symbols;
 	
 }
 
 void EventSystem::Start() {
 	DataBridgeCommon& db = GetDataBridgeCommon();
-	CalendarCommon& cal = GetCalendar();
 	const Index<Time>& time = db.GetTimeIndex();
 	ASSERT(!time.IsEmpty());
 	
-	pairs <<= GetSentiment().symbols;
-	
-	int resp_counted = responses.GetCount() / (RESP_COUNT * pairs.GetCount());
-	responses.SetCount(time.GetCount() * RESP_COUNT * pairs.GetCount());
-	
-	TimeStop ts;
-	
-	
-	if (ses_counted < time[0]) {
-		ses_counted = time[0];
+	Sentiment& sent = GetSentiment();
+	if (sent.GetSentimentCount()) {
+		int sent_id = sent.GetSentimentCount() - 1;
+		SentimentSnapshot& snap = sent.GetSentiment(sent_id);
+		Index<EventError> errors;
+		GetErrorList(snap, errors);
+		
+		bool changes = false;
+		for(int i = 0; i < errors.GetCount(); i++) {
+			const EventError& e = errors[i];
+			if (prev_errors.Find(e) == -1) {
+				//if (prev_sent_id == sent_id)
+					WhenError(e);
+				history_errors.Add(e);
+				changes = true;
+			}
+		}
+		prev_sent_id = sent_id;
+		
+		prev_errors <<= errors;
+		if (changes)
+			StoreThis();
 	}
+}
+
+void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>& errors) {
+	CalendarCommon& cal = GetCalendar();
 	
-	for(int i = cal_counted; i < cal.GetCount(); i++) {
+	Time now = GetUtcTime();
+	Time begin = now - 24*60*60;
+	Time pre_news_begin = now;
+	Time pre_news_end = now + 60*60;
+	Time post_news_begin = now - 3*60*60;
+	Time post_news_end = now;
+	
+	for(int i = cal.GetCount() - 1; i >= 0; i--) {
 		const CalEvent& e = cal.GetEvent(i);
-		int j = time.Find(e.timestamp);
-		if (j < 0) continue;
+		if (e.timestamp < begin)
+			break;
 		int cur = currencies.Find(e.currency);
 		if (cur < 0) continue;
-		/*Vector<Event>& ev = events[j];
-		Event& ese = ev.Add();
-		ese.type = Event::TYPE_CALENDAR;
-		ese.currency = cur;
-		double act = ScanDouble(e.actual);
-		double fc = ScanDouble(e.forecast);
-		double prev = ScanDouble(e.previous);
-		if (e.previous != "" && e.forecast != "" && prev != fc)
-			ese.pre_effect = fc > prev ? +1 : -1;
-		if (e.actual != "" && e.forecast != "" && act != fc)
-			ese.post_effect = act > fc ? +1 : -1;
-		else if (e.actual != "" && e.previous != "" && prev != act)
-			ese.post_effect = act > prev ? +1 : -1;*/
+		
+		if (e.timestamp >= pre_news_begin && e.timestamp <= pre_news_end) {
+			AddInfo(errors, "Pre-news: " + e.currency + " " + e.title);
+			PreNewsErrors(e, snap, errors);
+		}
+		if (e.timestamp >= post_news_begin && e.timestamp <= post_news_end) {
+			AddInfo(errors, "Post-news: " + e.currency + " " + e.title);
+			PostNewsErrors(e, snap, errors);
+		}
 	}
-	cal_counted = cal.GetCount();
 	
-	Date now = GetUtcTime();
-	for (Date d = ses_counted; d < now; d++) {
-		int wday = DayOfWeek(d);
-		if (wday == 0 || wday == 6) continue;
-		DaySlots ds;
-		GetDaySlots(d, ds);
-		for(int i = 0; i < ds.time_points.GetCount(); i++) {
+	GetSessionErrors(snap, errors);
+}
+
+void EventSystem::PreNewsErrors(const CalEvent& e, const SentimentSnapshot& snap, Index<EventError>& errors) {
+	double fc = ScanDouble(e.forecast);
+	double prev = ScanDouble(e.previous);
+	
+	// Same with forecast vs previous change
+	int pre_effect = 0;
+	if (e.previous != "" && e.forecast != "" && prev != fc)
+		pre_effect = fc > prev ? +1 : -1;
+	for(int i = 0; i < pairs.GetCount(); i++) {
+		int pres = snap.pair_pres[i];
+		if (pres == 0) continue;
+		const String& pair = pairs[i];
+		String a = pair.Left(3);
+		String b = pair.Right(3);
+		if (e.currency == a) {
+			if (pres * pre_effect < 0)
+				AddWarning(errors, pair + " against pre news " + e.title);
+		}
+		if (e.currency == b) {
+			if (pres * pre_effect > 0)
+				AddWarning(errors, pair + " against pre news " + e.title);
+		}
+	}
+	
+	
+	// Against 12 hour change
+	
+}
+
+void EventSystem::PostNewsErrors(const CalEvent& e, const SentimentSnapshot& snap, Index<EventError>& errors) {
+	double act = ScanDouble(e.actual);
+	double fc = ScanDouble(e.forecast);
+	double prev = ScanDouble(e.previous);
+	
+	int post_effect = 0;
+	if (e.actual != "" && e.forecast != "" && act != fc)
+		post_effect = act > fc ? +1 : -1;
+	else if (e.actual != "" && e.previous != "" && prev != act)
+		post_effect = act > prev ? +1 : -1;
+}
+
+void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventError>& errors) {
+	Time now = GetUtcTime();
+	DaySlots ds;
+	GetDaySlots(now, ds);
+	for(int i = 0; i < ds.time_points.GetCount(); i++) {
+		Time begin = ds.time_points.GetKey(i);
+		Time end;
+		if (i < ds.time_points.GetCount() - 1) {
+			end = ds.time_points.GetKey(i + 1);
+		} else {
+			end = ds.time_points.GetKey(0);
+			end += 24 * 60 * 60;
+		}
+		if (now >= begin && now <= end) {
 			TimeSlot& ts = ds.time_points[i];
-			Vector<int> pair_list;
+			Index<int> pair_list;
 			for(int j0 = 0; j0 < ts.is_open_cur.GetCount(); j0++) {
 				String a = ts.is_open_cur[j0];
 				for(int j1 = 0; j1 < ts.is_open_cur.GetCount(); j1++) {
@@ -136,167 +202,40 @@ void EventSystem::Start() {
 					if (k >= 0) pair_list.Add(k);
 				}
 			}
-			Time begin = ds.time_points.GetKey(i);
-			Time end;
-			if (i < ds.time_points.GetCount() - 1) {
-				end = ds.time_points.GetKey(i + 1);
-			} else {
-				end = ds.time_points.GetKey(0);
-				end += 24 * 60 * 60;
-			}
-			ASSERT(begin.second == 0 && end.second == 0);
-			for (Time t = begin; t < end; t += 60) {
-				int j = time.Find(t);
-				if (j < 0) continue;
-				for(int k = 0; k < pair_list.GetCount(); k++) {
-					int pair = pair_list[k];
-					SentimentResponseProto& proto = responses[(j * pairs.GetCount() + pair) * RESP_COUNT + RESP_ISOPEN];
-					proto.int_value0 = 1;
+			
+			for(int i = 0; i < pairs.GetCount(); i++) {
+				int pres = snap.pair_pres[i];
+				if (pres != 0 && pair_list.Find(i) == -1) {
+					String p = pairs[i];
+					AddWarning(errors, "Pair " + p + " doesn't have open sessions");
 				}
 			}
 		}
 	}
-	ses_counted = now;
-	
-	
-	for(int i = resp_counted; i < time.GetCount(); i++) {
-		for (int j = 0; j < pairs.GetCount(); j++) {
-			for(int k = 0; k < RESP_COUNT; k++) {
-				switch (k) {
-					case RESP_ISOPEN: break;
-					case RESP_IDXUPDOWN: WriteIndexUpDown(i, j); break;
-				}
-			}
-		}
-	}
-	
-	LOG(ts.ToString());
-	
-	/*if (opt.GetRound() == 0) {
-		opt.Init(RESP_COUNT *2, 100);
-	}
-	
-	if (!running && !opt.IsEnd()) {
-		running = true; stopped = false;
-		Thread::Start(THISBACK(RunOptimizer));
-	}*/
 }
 
-void EventSystem::WriteIndexUpDown(int i, int pair) {
-	SentimentResponseProto& proto = responses[(i * pairs.GetCount() + pair) * RESP_COUNT + RESP_IDXUPDOWN];
-	
-	int cl_id = pair * RESP_COUNT + RESP_IDXUPDOWN;
-	int cl_pos = corelists.Find(cl_id);
-	if (cl_pos < 0) {
-		cl_pos = corelists.GetCount();
-		CoreList& cl = corelists.Add(cl_id);
-		const String& pair_str = pairs[pair];
-		String cur0 = pair_str.Left(3);
-		String cur1 = pair_str.Right(3);
-		cl.AddSymbol(cur0);
-		cl.AddSymbol(cur1);
-		cl.AddTf(0);
-		cl.AddIndi(System::Find<MovingAverage>());
-		cl.Init();
-		cl.Refresh();
-	}
-	
-	CoreList& cl = corelists[cl_pos];
-	ConstBuffer& cur0 = cl.GetBuffer(0, 0, 0);
-	ConstBuffer& cur1 = cl.GetBuffer(1, 0, 0);
-	if (i >= cur0.GetCount()) cl.Refresh();
-	
-	double d0 = cur0.Get(i);
-	double d1 = cur1.Get(i);
-	proto.int_value0 = d0 * d1 < 0;
-	proto.int_value1 = d0 > 0 ? +1 : -1;
+void EventSystem::AddError(Index<EventError>& errors, String err) {
+	EventError e;
+	e.msg = err;
+	e.level = 2;
+	e.time = GetUtcTime();
+	errors.Add(e);
 }
 
-void EventSystem::GetSentimentResponses(int i, int pair, Vector<SentimentResponse>& response, int signal) {
-	response.SetCount(RESP_COUNT);
-	
-	for(int j = 0; j < RESP_COUNT; j++) {
-		const SentimentResponseProto& proto = responses[(i * pairs.GetCount() + pair) * RESP_COUNT + j];
-		SentimentResponse& resp = response[j];
-		
-		switch (j) {
-		
-		case RESP_IDXUPDOWN:
-			// If other currency's MA up and other's down
-			if (proto.int_value0) {
-				if (signal == 0 || signal != proto.int_value1)
-					resp.type = -1;
-				else
-					resp.type = +1;
-			} else {
-				resp.type = -1;
-			}
-			resp.is_goal = false;
-			break;
-			
-		default:
-			Panic("Unexpected proto");
-		}
-		
-	}
+void EventSystem::AddWarning(Index<EventError>& errors, String err) {
+	EventError e;
+	e.msg = err;
+	e.level = 1;
+	e.time = GetUtcTime();
+	errors.Add(e);
 }
 
-void EventSystem::RunOptimizer() {
-	const Index<Time>& time = GetDataBridgeCommon().GetTimeIndex();
-	
-	Vector<SentimentResponse> response;
-	
-	SimBroker sb;
-	
-	while (!opt.IsEnd()) {
-		
-		opt.Start();
-		
-		const Vector<double>& trial = opt.GetTrialSolution();
-		
-		
-		for(int i = 0; i < time.GetCount(); i++) {
-			
-			SentimentSnapshot snap;
-			
-			for (int pair = 0; pair < pairs.GetCount(); pair++) {
-				
-				
-				double max_score = -DBL_MAX;
-				int max_signal;
-				for (int signal = -1; signal <= +1; signal++) {
-					GetSentimentResponses(i, pair, response, signal);
-					
-					double score = 0;
-					for(int i = 0; i < response.GetCount(); i++) {
-						SentimentResponse& r = response[i];
-						
-						if (!r.is_goal) {
-							double factor = 0;
-							if (r.type == 1)		factor = trial[i * 2 + 0];
-							else if (r.type == 1)	factor = trial[i * 2 + 1];
-							score += factor;
-						} else {
-							
-						}
-					}
-					
-					if (score > max_score) {
-						max_score = score;
-						max_signal = signal;
-					}
-				}
-				
-				snap.pair_pres[pair] = max_signal;
-			}
-			
-			
-		}
-		
-		double result = sb.AccountEquity();
-		opt.Stop(result);
-	}
-	
+void EventSystem::AddInfo(Index<EventError>& errors, String err) {
+	EventError e;
+	e.msg = err;
+	e.level = 0;
+	e.time = GetUtcTime();
+	errors.Add(e);
 }
 
 void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
@@ -309,8 +248,8 @@ void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
 	for(int i = 0; i < currencies.GetCount(); i++) {
 		Currency& cur = currencies[i];
 		String tzpath = cur.GetTZ();
-		LOG(cur.GetName());
-		LOG(tzpath);
+		//LOG(cur.GetName());
+		//LOG(tzpath);
 		
 		cctz::time_zone tz;
 		if(!cctz::load_time_zone(tzpath.Begin(), &tz))
@@ -324,7 +263,7 @@ void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
 				const auto utc_open = cctz::convert(cctz::civil_second(t.year, t.month, t.day, t.hour, t.minute, 0), tz);
 				const cctz::time_zone::absolute_lookup al = utc.lookup(utc_open);
 				Time open(al.cs.year(), al.cs.month(), al.cs.day(), al.cs.hour(), al.cs.minute());
-				DUMP(open);
+				//DUMP(open);
 				slot.time_points.GetAdd(open).AddOpen(cur.GetName() + IntStr(j));
 			}
 			
@@ -333,7 +272,7 @@ void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
 				const auto utc_close = cctz::convert(cctz::civil_second(t.year, t.month, t.day, t.hour, t.minute, 0), tz);
 				const cctz::time_zone::absolute_lookup al = utc.lookup(utc_close);
 				Time close(al.cs.year(), al.cs.month(), al.cs.day(), al.cs.hour(), al.cs.minute());
-				DUMP(close);
+				//DUMP(close);
 				slot.time_points.GetAdd(close).AddClose(cur.GetName() + IntStr(j));
 			}
 			
@@ -342,7 +281,7 @@ void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
 	
 	
 	SortByKey(slot.time_points, StdLess<Time>());
-	DUMPM(slot.time_points);
+	//DUMPM(slot.time_points);
 	
 	Index<String> is_open;
 	for(int i = 0; i < slot.time_points.GetCount(); i++) {
@@ -373,7 +312,7 @@ void EventSystem::GetDaySlots(Date date, DaySlots& slot) {
 	}
 	
 	
-	DUMPM(slot.time_points);
+	//DUMPM(slot.time_points);
 }
 
 
@@ -404,10 +343,25 @@ void TestEventSystem() {
 
 
 EventSystemCtrl::EventSystemCtrl() {
+	Add(arr.SizePos());
 	
+	arr.AddColumn("Time");
+	arr.AddColumn("msg");
+	arr.ColumnWidths("1 3");
 }
 	
 void EventSystemCtrl::Data() {
+	EventSystem& es = GetEventSystem();
+	
+	int prev_count = es.history_errors.GetCount();
+	for(int i = 0; i < es.history_errors.GetCount(); i++) {
+		const EventError& e = es.history_errors[i];
+		arr.Set(i, 0, e.time);
+		arr.Set(i, 1, e.msg);
+	}
+	
+	if (prev_count < arr.GetCount())
+		arr.ScrollEnd();
 	
 }
 

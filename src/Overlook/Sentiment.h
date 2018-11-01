@@ -75,7 +75,7 @@ public:
 
 class SentimentCtrl : public CommonCtrl {
 	Splitter split;
-	ArrayCtrl historylist, curpreslist, pairpreslist;
+	ArrayCtrl historylist, curpreslist, pairpreslist, errlist;
 	EditDouble fmlevel;
 	ParentCtrl console;
 	::Upp::DocEdit comment;

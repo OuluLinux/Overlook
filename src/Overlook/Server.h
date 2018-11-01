@@ -159,6 +159,7 @@ public:
 	virtual void Start();
 	virtual void Deinit();
 	
+	void NewEvent(EventError e);
 	void Process();
 	int64 GetNewLoginId();
 };

@@ -99,7 +99,7 @@ void Sentiment::SetSignals() {
 
 SentimentCtrl::SentimentCtrl() {
 	Add(split.SizePos());
-	split << historylist << curpreslist << pairpreslist << console;
+	split << historylist << curpreslist << pairpreslist << errlist << console;
 	
 	console.Add(comment.HSizePos().VSizePos(0, 60));
 	console.Add(fmlevel.BottomPos(30, 30).HSizePos());
@@ -119,6 +119,7 @@ SentimentCtrl::SentimentCtrl() {
 	pairpreslist.AddColumn("Pressure");
 	pairpreslist.ColumnWidths("1 2");
 	pairpreslist <<= THISBACK(SetPairProfile);
+	errlist.AddColumn("Message");
 	
 	fmlevel.SetData(0);
 	
@@ -164,6 +165,26 @@ void SentimentCtrl::Data() {
 	int his = historylist.GetCursor();
 	if (count && (his < 0 || his >= count))
 		historylist.SetCursor(historylist.GetCount()-1);
+	
+	
+	SentimentSnapshot snap;
+	snap.pair_pres.SetCount(pairpreslist.GetCount());
+	for(int i = 0; i < pairpreslist.GetCount(); i++)
+		snap.pair_pres[i] = pairpreslist.Get(i, 1);
+	Index<EventError> errors;
+	GetEventSystem().GetErrorList(snap, errors);
+	for(int i = 0; i < errors.GetCount(); i++) {
+		const EventError& e = errors[i];
+		String msg;
+		switch (e.level) {
+			case 0: msg += "info: "; break;
+			case 1: msg += "warning: "; break;
+			case 2: msg += "error: "; break;
+		}
+		msg += e.msg;
+		errlist.Set(i, 0, msg);
+	}
+	errlist.SetCount(errors.GetCount());
 }
 
 

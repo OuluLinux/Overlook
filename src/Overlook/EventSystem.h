@@ -57,33 +57,33 @@ public:
 	void Clear() {time_points.Clear();}
 };
 
-struct SentimentResponseProto : Moveable<SentimentResponseProto> {
-	int int_value0 = 0, int_value1 = 0;
+struct EventError : Moveable<EventError> {
+	String msg;
+	byte level = 0;
+	Time time;
 	
-};
-
-struct SentimentResponse : Moveable<SentimentResponse> {
-	char type;
-	bool is_goal;
-	
-};
-
-enum {
-	RESP_ISOPEN, RESP_CALPRE, RESP_IDXUPDOWN, RESP_COUNT
+	EventError() {}
+	EventError(const EventError& e) {*this = e;}
+	void operator=(const EventError& e) {msg = e.msg; level = e.level; time = e.time;}
+	unsigned GetHashValue() const {return msg.GetHashValue();}
+	void Serialize(Stream& s) {s % msg % level % time;}
+	bool operator==(const EventError& e) const {return msg == e.msg;}
 };
 
 class EventSystem : public Common {
 	
+protected:
+	friend class EventSystemCtrl;
+	
+	
 	// Persistent
-	Vector<SentimentResponseProto> responses;
-	VectorMap<int, CoreList> corelists;
-	Index<String> pairs;
-	Optimizer opt;
-	int cal_counted = 0;
-	Date ses_counted;
+	Index<EventError> prev_errors;
+	Vector<EventError> history_errors;
+	int prev_sent_id = -1;
 	
 	// Temporary
 	VectorMap<String, Currency> currencies;
+	Index<String> pairs;
 	bool running = false, stopped = true;
 	
 	
@@ -94,19 +94,30 @@ public:
 	
 	virtual void Init();
 	virtual void Start();
-	
-	void RunOptimizer();
+	void Serialize(Stream& s) {s % prev_errors % history_errors % prev_sent_id;}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("EventSystem.bin"));}
+	void StoreThis() {StoreToFile(*this, ConfigFile("EventSystem.bin"));}
 	void GetDaySlots(Date date, DaySlots& slot);
+	void GetErrorList(const SentimentSnapshot& snap, Index<EventError>& errors);
+	void PreNewsErrors(const CalEvent& ev, const SentimentSnapshot& snap, Index<EventError>& errors);
+	void PostNewsErrors(const CalEvent& ev, const SentimentSnapshot& snap, Index<EventError>& errors);
+	void GetSessionErrors(const SentimentSnapshot& snap, Index<EventError>& errors);
+	void AddError(Index<EventError>& errors, String e);
+	void AddWarning(Index<EventError>& errors, String e);
+	void AddInfo(Index<EventError>& errors, String e);
 	
-	void WriteIndexUpDown(int i, int pair);
-	void GetSentimentResponses(int i, int pair, Vector<SentimentResponse>& response, int signal);
+	//void RunOptimizer();
+	//void WriteIndexUpDown(int i, int pair);
+	//void GetSentimentResponses(int i, int pair, Vector<SentimentResponse>& response, int signal);
 	
+	Callback1<EventError> WhenError;
 	
 };
 
 inline EventSystem& GetEventSystem() {return GetSystem().GetCommon<EventSystem>();}
 
 class EventSystemCtrl : public CommonCtrl {
+	ArrayCtrl arr;
 	
 public:
 	typedef EventSystemCtrl CLASSNAME;

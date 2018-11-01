@@ -23,8 +23,8 @@ struct ForecastCtrl : public SubWindowCtrl {
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
 
-#include "Common.h"
 #include "Optimizer.h"
+#include "Common.h"
 #include "SimBroker.h"
 #include "System.h"
 #include "CoreList.h"
@@ -43,6 +43,7 @@ struct ForecastCtrl : public SubWindowCtrl {
 #include "Sentiment.h"
 #include "Automation.h"
 #include "Server.h"
+#include "EventSystem.h"
 
 
 namespace Overlook {

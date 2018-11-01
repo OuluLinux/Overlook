@@ -3,7 +3,7 @@
 
 namespace Overlook {
 
-class CoreList {
+class CoreList : Moveable<CoreList> {
 	
 	
 	// Temporary

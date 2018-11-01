@@ -1,5 +1,5 @@
-#ifndef _Overlook_Optimizer_h_
-#define _Overlook_Optimizer_h_
+#ifndef _Forecaster_Optimizer_h_
+#define _Forecaster_Optimizer_h_
 
 #include <random>
 

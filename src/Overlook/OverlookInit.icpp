@@ -91,6 +91,7 @@ INITBLOCK {
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
     //System::RegisterCommon<Automation, AutomationCtrl>("Automation");
+    System::RegisterCommon<EventSystem, EventSystemCtrl>("Automation");
     System::RegisterCommon<Server, ServerCtrl>("Automation");
     
     

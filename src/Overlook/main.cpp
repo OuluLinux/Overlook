@@ -80,6 +80,8 @@ struct LoaderWindow : public TopWindow {
 };
 
 GUI_APP_MAIN {
+	TestEventSystem();
+	
 	TestLockMacro();
 	SetIniFile(ConfigFile("overlook.ini"));
 	

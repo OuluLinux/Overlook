@@ -23,6 +23,7 @@ namespace Overlook {
 #define StrategyRandom2Bin			9
 
 
+
 class Optimizer {
 	
 	Vector<double> min_values, max_values;

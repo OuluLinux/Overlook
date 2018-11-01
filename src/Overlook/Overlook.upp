@@ -11,7 +11,8 @@ uses
 	Core/SSL,
 	ConvNet,
 	PushNotification,
-	Forecaster;
+	Forecaster,
+	plugin/cctz;
 
 file
 	Copying,
@@ -44,8 +45,6 @@ file
 	System.h,
 	SystemQueue.cpp,
 	System.cpp,
-	Sentiment.h,
-	Sentiment.cpp,
 	SimBroker.h,
 	SimBroker.cpp,
 	Utils.h,
@@ -63,12 +62,16 @@ file
 	DataBridge.cpp,
 	Calendar.h,
 	Calendar.cpp,
+	Sentiment.h,
+	Sentiment.cpp,
 	Automation.h,
 	Automation.cpp,
 	Server.h,
 	Server.cpp,
 	ActiveSession.cpp,
-	Database.cpp;
+	Database.cpp,
+	EventSystem.h,
+	EventSystem.cpp;
 
 mainconfig
 	"" = "GUI MT",

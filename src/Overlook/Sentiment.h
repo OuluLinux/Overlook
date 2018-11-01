@@ -25,6 +25,7 @@ class Sentiment : public Common {
 	
 protected:
 	friend class Automation;
+	friend class EventSystem;
 	
 	// Persistent
 	Array<SentimentSnapshot> sents;

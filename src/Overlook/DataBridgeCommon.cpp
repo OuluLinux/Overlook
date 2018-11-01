@@ -292,6 +292,10 @@ void DataBridgeCommon::RefreshTimeBuffers() {
 			}
 		
 			time_buf.Set(shift, time);
+			if (i == 0) {
+				ASSERT(m1_idx.GetCount() == shift);
+				m1_idx.Add(Time(1970,1,1) + time);
+			}
 		}
 	}
 	

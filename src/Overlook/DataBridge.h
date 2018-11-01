@@ -17,6 +17,7 @@ protected:
 	
 	// Persistent
 	Vector<Buffer> time_bufs;
+	Index<Time> m1_idx;
 	
 	// Temp
 	typedef Tuple3<Time, double, double> AskBid;
@@ -57,8 +58,9 @@ public:
 	bool SyncData(int tf, int64 time, int& shift);
 	bool IsVtfTime(int wday, const Time& t);
 	ConstBuffer& GetTimeBuffer(int tf) const {return time_bufs[tf];}
+	const Index<Time>& GetTimeIndex() const {return m1_idx;}
 	int GetTimeBufferCount() const {return time_bufs.GetCount();}
-	void Serialize(Stream& s) {s % time_bufs;}
+	void Serialize(Stream& s) {s % time_bufs % m1_idx;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("DataBridgeCommon.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("DataBridgeCommon.bin"));}
 	

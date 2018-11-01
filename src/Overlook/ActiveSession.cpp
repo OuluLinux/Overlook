@@ -308,19 +308,181 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	int64 size_pos = out.GetPos();
 	out.SeekCur(sizeof(int));
 	
-	int i = key.Find(" ");
+	int i = key.Find(",");
 	Vector<String> args;
 	if (i != -1) {
-		args = Split(key.Mid(i+1), " ");
+		args = Split(key.Mid(i+1), ",");
 		key = key.Left(i);
 	}
 	
-	/*if (key == "who") {
-		int user_id = StrInt(args[0]);
-		server->lock.EnterRead();
-		Who(user_id, out);
-		server->lock.LeaveRead();
-	}*/
+	if (key == "symtf") {
+		System& sys = GetSystem();
+		
+		int sym_count = sys.GetSymbolCount();
+		out.Put32(sym_count);
+		for(int i = 0; i < sym_count; i++) {
+			String sym = sys.GetSymbol(i);
+			out.Put32(sym.GetCount());
+			out.Put(sym);
+		}
+		
+		int tf_count = sys.GetPeriodCount();
+		out.Put32(tf_count);
+		for(int i = 0; i < tf_count; i++) {
+			int tf = sys.GetPeriod(i);
+			String tf_str = sys.GetPeriodString(i);
+			out.Put32(tf);
+			out.Put32(tf_str.GetCount());
+			out.Put(tf_str);
+		}
+		
+	}
+	else if (key == "quotes") {
+		MetaTrader& mt = GetMetaTrader();
+		const Vector<Symbol>& symbols = mt.GetSymbols();
+		const Vector<Price>& prices = mt.GetAskBid();
+		
+		out.Put32(symbols.GetCount());
+		for(int i = 0; i < symbols.GetCount(); i++) {
+			const Symbol& sym = symbols[i];
+			const Price& p = prices[i];
+			out.Put32(sym.name.GetCount());
+			out.Put(sym.name);
+			out.Put(&p.ask, sizeof(double));
+			out.Put(&p.bid, sizeof(double));
+			out.Put(&sym.point, sizeof(double));
+		}
+	}
+	else if (key == "graph") {
+		MetaTrader& mt = GetMetaTrader();
+		System& sys = GetSystem();
+		
+		if (args.GetCount() == 3) {
+			int sym = ScanInt(args[0]);
+			int tf = ScanInt(args[1]);
+			int req_count = ScanInt(args[2]);
+			if (sym >= 0 && sym < sys.GetSymbolCount() && tf >= 0 && tf < sys.GetPeriodCount()) {
+				CoreList c;
+				c.AddSymbol(sys.GetSymbol(sym));
+				c.AddTf(tf);
+				c.AddIndi(0);
+				c.Init();
+				c.Refresh();
+				if (!c.IsEmpty()) {
+					ConstBuffer& open = c.GetBuffer(0, 0, 0);
+					ConstBuffer& low = c.GetBuffer(0, 0, 1);
+					ConstBuffer& high = c.GetBuffer(0, 0, 2);
+					
+					int size = open.GetCount();
+					int count = min(max(0, req_count), size);
+					out.Put32(count);
+					for(int i = 0; i < count; i++) {
+						double o, l, h;
+						o = open.Get(size - count + i);
+						l = low .Get(size - count + i);
+						h = high.Get(size - count + i);
+						out.Put(&o, sizeof(double));
+						out.Put(&l, sizeof(double));
+						out.Put(&h, sizeof(double));
+					}
+				}
+				else out.Put32(0);
+			}
+			else out.Put32(0);
+		}
+		else out.Put32(0);
+	}
+	else if (key == "openorders") {
+		MetaTrader& mt = GetMetaTrader();
+		const Vector<Order>& orders = mt.GetOpenOrders();
+		
+		double balance = mt.AccountBalance();
+		double equity = mt.AccountEquity();
+		double freemargin = mt.AccountFreeMargin();
+		out.Put(&balance, sizeof(double));
+		out.Put(&equity, sizeof(double));
+		out.Put(&freemargin, sizeof(double));
+		
+		out.Put32(orders.GetCount());
+		for(int i = 0; i < orders.GetCount(); i++) {
+			const Order& o = orders[i];
+			const Symbol& sym = mt.GetSymbols()[o.symbol];
+			out.Put32(o.ticket);
+			out.Put32(o.begin.Get() - Time(1970,1,1).Get());
+			out.Put32(o.end.Get() - Time(1970,1,1).Get());
+			out.Put32(o.type);
+			out.Put(&o.volume, sizeof(double));
+			out.Put32(sym.name.GetCount());
+			out.Put(sym.name);
+			out.Put(&o.open, sizeof(double));
+			out.Put(&o.stoploss, sizeof(double));
+			out.Put(&o.takeprofit, sizeof(double));
+			out.Put(&o.close, sizeof(double));
+			out.Put(&o.commission, sizeof(double));
+			out.Put(&o.swap, sizeof(double));
+			out.Put(&o.profit, sizeof(double));
+		}
+	}
+	else if (key == "historyorders") {
+		MetaTrader& mt = GetMetaTrader();
+		const Vector<Order>& orders = mt.GetHistoryOrders();
+		
+		double balance = mt.AccountBalance();
+		double equity = mt.AccountEquity();
+		double freemargin = mt.AccountFreeMargin();
+		out.Put(&balance, sizeof(double));
+		out.Put(&equity, sizeof(double));
+		out.Put(&freemargin, sizeof(double));
+		
+		out.Put32(orders.GetCount());
+		for(int i = 0; i < orders.GetCount(); i++) {
+			const Order& o = orders[i];
+			const Symbol& sym = mt.GetSymbols()[o.symbol];
+			out.Put32(o.ticket);
+			out.Put32(o.begin.Get() - Time(1970,1,1).Get());
+			out.Put32(o.end.Get() - Time(1970,1,1).Get());
+			out.Put32(o.type);
+			out.Put(&o.volume, sizeof(double));
+			out.Put32(sym.name.GetCount());
+			out.Put(sym.name);
+			out.Put(&o.open, sizeof(double));
+			out.Put(&o.stoploss, sizeof(double));
+			out.Put(&o.takeprofit, sizeof(double));
+			out.Put(&o.close, sizeof(double));
+			out.Put(&o.commission, sizeof(double));
+			out.Put(&o.swap, sizeof(double));
+			out.Put(&o.profit, sizeof(double));
+		}
+	}
+	else if (key == "calendar") {
+		CalendarCommon& cal = GetCalendar();
+		
+		Time now = GetUtcTime();
+		Time begin = now - 24*60*60;
+		Time end = now + 6*60*60;
+		Vector<CalEvent> evs;
+		for(int i = cal.GetCount()-1; i >= 0; i--) {
+			const CalEvent& ev = cal.GetEvent(i);
+			if (ev.timestamp > end) continue;
+			if (ev.timestamp < begin) break;
+			evs.Add(ev);
+		}
+		
+		out.Put32(evs.GetCount());
+		for(int i = 0; i < evs.GetCount(); i++) {
+			const CalEvent& ev = evs[i];
+			out.Put32(ev.id);
+			out.Put32(ev.timestamp.Get() - Time(1970,1,1).Get());
+			out.Put32(ev.impact);
+			out.Put32(ev.direction);
+			out.Put32(ev.title.GetCount());		out.Put(ev.title);
+			out.Put32(ev.unit.GetCount());		out.Put(ev.unit);
+			out.Put32(ev.currency.GetCount());	out.Put(ev.currency);
+			out.Put32(ev.forecast.GetCount());	out.Put(ev.forecast);
+			out.Put32(ev.previous.GetCount());	out.Put(ev.previous);
+			out.Put32(ev.actual.GetCount());	out.Put(ev.actual);
+		}
+	}
 	
 	out.Seek(size_pos);
 	out.Put32(out.GetSize() - size_pos - 4);

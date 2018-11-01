@@ -162,7 +162,11 @@ void System::FirstStart() {
 				}
 			}
 		}
-
+		AddNet("USD1").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", +1);
+		AddNet("USD2").Set("EURUSD", -1).Set("GBPUSD", -1).Set("USDCHF", +1).Set("USDJPY", +1).Set("USDCAD", +1).Set("AUDUSD", -1).Set("NZDUSD", -1);
+		AddNet("EUR1").Set("EURUSD", +1).Set("EURGBP", +1).Set("EURCHF", +1);
+		AddNet("EUR2").Set("EURUSD", +1).Set("EURGBP", +1).Set("EURCHF", +1).Set("EURJPY", +1).Set("EURCAD", +1).Set("EURAUD", +1).Set("EURNZD", +1);
+		
 		for(int i = 0; i < nets.GetCount(); i++) {
 			NetSetting& net = nets[i];
 			for(int j = 0; j < net.symbols.GetCount(); j++)

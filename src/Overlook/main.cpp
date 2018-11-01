@@ -131,9 +131,11 @@ GUI_APP_MAIN {
 		while (!loader.finished) Sleep(100);
 		if (loader.fail) return;
 		
+		#ifdef flagHAVE_NOTIFICATIONS
 		Notification& n = GetNotification();
 		n.SetImage(OverlookImg::icon());
 		n.SetApp("Overlook");
+		#endif
 	}
 	
 	

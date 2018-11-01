@@ -107,7 +107,9 @@ void Chart::Start() {
 
 void Chart::StartThread() {
 	try {
+		refresh_lock.Enter();
 		RefreshCoreData(false);
+		refresh_lock.Leave();
 	}
 	catch (ConfExc e) {
 		

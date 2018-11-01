@@ -33,6 +33,7 @@ public:
 	int GetTf(int i) const {return tf_ids[i];}
 	ConstBuffer& GetBuffer(int sym, int src, int buf) const {return *bufs[sym][src][buf];}
 	ConstLabelSignal& GetLabelSignal(int sym, int src) const {return *lbls[sym][src];}
+	bool IsEmpty() {return bufs.IsEmpty();}
 	
 	void Init();
 	void Refresh();

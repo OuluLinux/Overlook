@@ -71,7 +71,8 @@ file
 	Database.cpp;
 
 mainconfig
-	"Working" = "GUI MT X11",
+	"" = "GUI MT",
 	"" = "GUI MT USEMALLOC",
-	"" = "GUI MT SECONDS";
+	"" = "GUI MT SECONDS",
+	"" = "GUI MT X11";
 

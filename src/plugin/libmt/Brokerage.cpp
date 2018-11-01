@@ -348,6 +348,8 @@ void Brokerage::SignalOrders(bool debug_print) {
 	
 	for(int i = 0; i < orders.GetCount(); i++) {
 		const Order& o = orders[i];
+		if (o.symbol < 0 || o.symbol >= symbols.GetCount())
+			continue;
 		
 		if (signal_freezed[o.symbol])
 			continue;
@@ -358,10 +360,13 @@ void Brokerage::SignalOrders(bool debug_print) {
 			} else {
 				double reduce = o.volume - lots;
 				for(int j = 0; j < 10; j++) {
+					if (o.symbol < 0 || o.symbol >= symbols.GetCount()) break;
 					int success = OrderClose(o.ticket, reduce, RealtimeBid(o.symbol), 100);
 					if (success) {
-						const Symbol& sym = symbols[o.symbol];
-						if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						if (o.symbol >= 0 && o.symbol < symbols.GetCount()) {
+							const Symbol& sym = symbols[o.symbol];
+							if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						}
 						break;
 					}
 				}
@@ -375,10 +380,13 @@ void Brokerage::SignalOrders(bool debug_print) {
 			} else {
 				double reduce = o.volume - lots;
 				for(int j = 0; j < 10; j++) {
+					if (o.symbol < 0 || o.symbol >= symbols.GetCount()) break;
 					int success = OrderClose(o.ticket, reduce, RealtimeAsk(o.symbol), 100);
 					if (success) {
-						const Symbol& sym = symbols[o.symbol];
-						if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						if (o.symbol >= 0 && o.symbol < symbols.GetCount()) {
+							const Symbol& sym = symbols[o.symbol];
+							if (debug_print) WhenInfo("OrderClose succeeded, " + sym.name + " " + IntStr(o.ticket) + ", lots " + DblStr(reduce));
+						}
 						break;
 					}
 				}

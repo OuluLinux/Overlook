@@ -37,24 +37,453 @@ double CoordinateDistanceKM(Pointf a, Pointf b) {
 }
 
 
+#define DATAUP Color(56, 212, 150)
+#define DATADOWN Color(28, 85, 150)
+#define DATAUP_DARK Color(0, 138, 78)
+#define DATADOWN_DARK Color(23, 58, 99)
+
+void CandlestickCtrl::Paint(Draw& d) {
+	int f, pos, x, y, h, c, w;
+	double diff;
+    Rect r(GetSize());
+	d.DrawRect(r, White());
+	
+	double hi = -DBL_MAX, lo = +DBL_MAX;
+	for(double d : lows)
+		if (d < lo) lo = d;
+	for(double d : highs)
+		if (d > hi) hi = d;
+	
+	int div = 8;
+	count = r.GetWidth() / div;
+	
+    f = 2;
+    x = border;
+	y = r.top;
+    h = r.GetHeight();
+    w = r.GetWidth();
+	c = opens.GetCount();
+	diff = hi - lo;
+	
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O, H, L, C;
+        pos = c - (count + shift - i);
+        if (pos >= c || pos < 0) continue;
+        
+        double open  = opens[pos];
+        double low   = lows[pos];
+        double high  = highs[pos];
+		double close =
+			pos+1 < c ?
+				opens[pos+1] :
+				open;
+        
+        O = (1 - (open  - lo) / diff) * h;
+        H = (1 - (high  - lo) / diff) * h;
+        L = (1 - (low   - lo) / diff) * h;
+        C = (1 - (close - lo) / diff) * h;
+		
+		P <<
+			Point((int)(x+i*div+f),		(int)(y+O)) <<
+			Point((int)(x+(i+1)*div-f),	(int)(y+O)) <<
+			Point((int)(x+(i+1)*div-f),	(int)(y+C)) <<
+			Point((int)(x+i*div+f),		(int)(y+C)) <<
+			Point((int)(x+i*div+f),		(int)(y+O));
+        
+        {
+	        Color c, c2;
+	        if (C < O) {c = DATAUP; c2 = DATAUP_DARK;}
+	        else {c = DATADOWN; c2 = DATADOWN_DARK;}
+	        
+	        d.DrawLine(
+				(int)(x+(i+0.5)*div), (int)(y+H),
+				(int)(x+(i+0.5)*div), (int)(y+L),
+				2, c2);
+	        d.DrawPolygon(P, c, 1, c2);
+        }
+    }
+}
+
+
+
+
 Client::Client() {
 	Icon(Images::icon());
-	Title("F2F Client program");
+	Title("Overlook remote client prototype");
 	Sizeable().MaximizeBox().MinimizeBox();
 	
 	AddFrame(menu);
 	menu.Set(THISBACK(MainMenu));
 	
-	Add(split.SizePos());
-	split.Horz();
+	Add(tabs.SizePos());
+	tabs.Add(quotes.SizePos(), "Quotes");
+	tabs.Add(graph_parent.SizePos(), "Graph");
+	tabs.Add(orders_parent.SizePos(), "Orders");
+	tabs.Add(hisorders_parent.SizePos(), "History");
+	tabs.Add(calendar.SizePos(), "Calendar");
+	tabs.Add(events_parent.SizePos(), "Events");
+	tabs.Add(tips_parent.SizePos(), "Tips");
 	
+	quotes.AddColumn("Symbol");
+	quotes.AddColumn("Ask");
+	quotes.AddColumn("Bid");
+	quotes.AddColumn("Spread");
 	
+	graph_parent.Add(symlist.TopPos(0,30).LeftPos(0, 200));
+	graph_parent.Add(tflist.TopPos(0,30).LeftPos(200, 200));
+	graph_parent.Add(graph.VSizePos(30).HSizePos());
+	symlist <<= THISBACK(DataGraph);
+	tflist <<= THISBACK(DataGraph);
+	
+	orders_parent.Add(orders_header.TopPos(0,30).HSizePos());
+	orders_parent.Add(orders.VSizePos(30).HSizePos());
+	orders.AddColumn ( "Order" );
+	orders.AddColumn ( "Time" );
+	orders.AddColumn ( "Type" );
+	orders.AddColumn ( "Size" );
+	orders.AddColumn ( "Symbol" );
+	orders.AddColumn ( "Price" );
+	orders.AddColumn ( "S / L" );
+	orders.AddColumn ( "T / P" );
+	orders.AddColumn ( "Price" );
+	orders.AddColumn ( "Commission" );
+	orders.AddColumn ( "Swap" );
+	orders.AddColumn ( "Profit" );
+	orders.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5" );
+	
+	hisorders_parent.Add(hisorders_header.TopPos(0,30).HSizePos());
+	hisorders_parent.Add(hisorders.VSizePos(30).HSizePos());
+	hisorders.AddColumn ( "Order" );
+	hisorders.AddColumn ( "Time" );
+	hisorders.AddColumn ( "Type" );
+	hisorders.AddColumn ( "Size" );
+	hisorders.AddColumn ( "Symbol" );
+	hisorders.AddColumn ( "Price" );
+	hisorders.AddColumn ( "S / L" );
+	hisorders.AddColumn ( "T / P" );
+	hisorders.AddColumn ( "Price" );
+	hisorders.AddColumn ( "Commission" );
+	hisorders.AddColumn ( "Swap" );
+	hisorders.AddColumn ( "Profit" );
+	hisorders.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5" );
+	
+	calendar.AddColumn("Time");
+	calendar.AddColumn("Title");
+	calendar.AddColumn("Currency");
+	calendar.AddColumn("Impact");
+	calendar.AddColumn("Forecast");
+	calendar.AddColumn("Previous");
+	calendar.AddColumn("Actual");
+	
+	PostCallback(THISBACK(DataInit));
+	tc.Set(1000, THISBACK(TimedRefresh));
 }
 
 Client::~Client() {
 	running = false;
 	if (!s.IsEmpty()) s->Close();
 	while (!stopped) Sleep(100);
+}
+
+void Client::TimedRefresh() {
+	
+	
+	switch (tabs.Get()) {
+		case 0:	DataQuotes(); break;
+		case 1: DataGraph(); break;
+		case 2: DataOrders(); break;
+		case 3: DataHistory(); break;
+		case 4: DataCalendar(); break;
+		
+	}
+	tc.Set(1000, THISBACK(TimedRefresh));
+}
+
+void Client::DataInit() {
+	String data;
+	Get("symtf", data);
+	MemStream mem((void*)data.Begin(), data.GetCount());
+	
+	symbols.Clear();
+	tfs.Clear();
+	
+	int sym_count = mem.Get32();
+	for(int i = 0; i < sym_count; i++) {
+		int sym_len = mem.Get32();
+		String sym = mem.Get(sym_len);
+		symbols.Add(sym);
+	}
+	
+	int tf_count = mem.Get32();
+	for(int i = 0; i < tf_count; i++) {
+		int tf = mem.Get32();
+		int tf_len = mem.Get32();
+		String tf_str = mem.Get(tf_len);
+		tfs.Add(tf, tf_str);
+	}
+	
+	
+}
+
+void Client::DataQuotes() {
+	if (!pending_quotes) {
+		pending_quotes = true;
+		
+		Thread::Start([=] {
+			String data;
+			Get("quotes", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			Vector<QuotesData> tmp;
+			int count = mem.Get32();
+			tmp.SetCount(count);
+			for(int i = 0; i < count; i++) {
+				QuotesData& q = tmp[i];
+				
+				int sym_len;
+				mem.Get(&sym_len, sizeof(int));
+				q.symbol = mem.Get(sym_len);
+				
+				mem.Get(&q.ask, sizeof(double));
+				mem.Get(&q.bid, sizeof(double));
+				mem.Get(&q.point, sizeof(double));
+			}
+			Swap(tmp, quote_values);
+			
+			pending_quotes = false;
+		});
+	
+	}
+	
+	for(int i = 0; i < quote_values.GetCount(); i++) {
+		const QuotesData& q = quote_values[i];
+		quotes.Set(i, 0, q.symbol);
+		quotes.Set(i, 1, q.ask);
+		quotes.Set(i, 2, q.bid);
+		quotes.Set(i, 3, (q.ask - q.bid) / q.point);
+	}
+}
+
+void Client::DataGraph() {
+	if (symlist.GetCount() == 0) {
+		for(int i = 0; i < symbols.GetCount(); i++)
+			symlist.Add(symbols[i]);
+		symlist.SetIndex(0);
+		for(int i = 0; i < tfs.GetCount(); i++)
+			tflist.Add(tfs[i]);
+		tflist.SetIndex(0);
+	}
+	if (!pending_graph) {
+		pending_graph = true;
+		
+		Thread::Start([=] {
+			int sym = symlist.GetIndex();
+			int tf = tflist.GetIndex();
+			if (sym < 0) sym = 0;
+			if (tf < 0) tf = 0;
+			String data;
+			Get("graph," + IntStr(sym) + "," + IntStr(tf) + "," + IntStr(graph.count), data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			int count = mem.Get32();
+			Vector<double> opens, lows, highs;
+			opens.SetCount(count);
+			lows.SetCount(count);
+			highs.SetCount(count);
+			for(int i = 0; i < count; i++) {
+				double open, low, high;
+				mem.Get(&open, sizeof(double));
+				mem.Get(&low,  sizeof(double));
+				mem.Get(&high, sizeof(double));
+				opens[i] = open;
+				lows[i] = low;
+				highs[i] = high;
+			}
+			Swap(graph.highs, highs);
+			Swap(graph.lows, lows);
+			Swap(graph.opens, opens);
+			
+			pending_graph = false;
+		});
+	}
+	
+	graph.Refresh();
+}
+
+void Client::DataOrders() {
+	if (!pending_open_orders) {
+		pending_open_orders = true;
+		
+		Thread::Start([=] {
+			String data;
+			Get("openorders", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			mem.Get(&balance, sizeof(double));
+			mem.Get(&equity, sizeof(double));
+			mem.Get(&freemargin, sizeof(double));
+			
+			int order_count = mem.Get32();
+			Vector<Order> tmp;
+			tmp.SetCount(order_count);
+			for(int i = 0; i < order_count; i++) {
+				Order& o = tmp[i];
+				o.ticket = mem.Get32();
+				o.begin = Time(1970,1,1) + mem.Get32();
+				o.end = Time(1970,1,1) + mem.Get32();
+				o.type = mem.Get32();
+				mem.Get(&o.size, sizeof(double));
+				int sym_len = mem.Get32();
+				o.symbol = mem.Get(sym_len);
+				mem.Get(&o.open, sizeof(double));
+				mem.Get(&o.stoploss, sizeof(double));
+				mem.Get(&o.takeprofit, sizeof(double));
+				mem.Get(&o.close, sizeof(double));
+				mem.Get(&o.commission, sizeof(double));
+				mem.Get(&o.swap, sizeof(double));
+				mem.Get(&o.profit, sizeof(double));
+			}
+			
+			Swap(tmp, this->open_orders);
+			pending_open_orders = false;
+		});
+	}
+	
+	orders_header.SetLabel(Format("Balance: %f Equity: %f Free-margin: %f Profit: %f", balance, equity, freemargin, equity - balance));
+	
+	for(int i = 0; i < open_orders.GetCount(); i++) {
+		const Order& o = open_orders[i];
+		orders.Set(i, 0, o.ticket);
+		orders.Set(i, 1, o.begin);
+		orders.Set(i, 2, o.type);
+		orders.Set(i, 3, o.size);
+		orders.Set(i, 4, o.symbol);
+		orders.Set(i, 5, o.open);
+		orders.Set(i, 6, o.stoploss);
+		orders.Set(i, 7, o.takeprofit);
+		orders.Set(i, 8, o.close);
+		orders.Set(i, 9, o.commission);
+		orders.Set(i, 10, o.swap);
+		orders.Set(i, 11, o.profit);
+	}
+}
+
+void Client::DataHistory() {
+	if (!pending_history_orders) {
+		pending_history_orders = true;
+		
+		Thread::Start([=] {
+			String data;
+			Get("historyorders", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			mem.Get(&balance, sizeof(double));
+			mem.Get(&equity, sizeof(double));
+			mem.Get(&freemargin, sizeof(double));
+			
+			int order_count = mem.Get32();
+			Vector<Order> tmp;
+			tmp.SetCount(order_count);
+			for(int i = 0; i < order_count; i++) {
+				Order& o = tmp[i];
+				o.ticket = mem.Get32();
+				o.begin = Time(1970,1,1) + mem.Get32();
+				o.end = Time(1970,1,1) + mem.Get32();
+				o.type = mem.Get32();
+				mem.Get(&o.size, sizeof(double));
+				int sym_len = mem.Get32();
+				o.symbol = mem.Get(sym_len);
+				mem.Get(&o.open, sizeof(double));
+				mem.Get(&o.stoploss, sizeof(double));
+				mem.Get(&o.takeprofit, sizeof(double));
+				mem.Get(&o.close, sizeof(double));
+				mem.Get(&o.commission, sizeof(double));
+				mem.Get(&o.swap, sizeof(double));
+				mem.Get(&o.profit, sizeof(double));
+			}
+			
+			hisorders_lock.Enter();
+			Swap(tmp, this->history_orders);
+			hisorders_lock.Leave();
+			pending_history_orders = false;
+		});
+	}
+	
+	hisorders_header.SetLabel(Format("Balance: %f Equity: %f Free-margin: %f Profit: %f", balance, equity, freemargin, equity - balance));
+	
+	hisorders_lock.Enter();
+	for(int i = 0; i < history_orders.GetCount(); i++) {
+		const Order& o = history_orders[i];
+		hisorders.Set(i, 0, o.ticket);
+		hisorders.Set(i, 1, o.begin);
+		hisorders.Set(i, 2, o.type);
+		hisorders.Set(i, 3, o.size);
+		hisorders.Set(i, 4, o.symbol);
+		hisorders.Set(i, 5, o.open);
+		hisorders.Set(i, 6, o.stoploss);
+		hisorders.Set(i, 7, o.takeprofit);
+		hisorders.Set(i, 8, o.close);
+		hisorders.Set(i, 9, o.commission);
+		hisorders.Set(i, 10, o.swap);
+		hisorders.Set(i, 11, o.profit);
+	}
+	hisorders_lock.Leave();
+}
+
+void Client::DataCalendar() {
+	if (!pending_history_orders) {
+		pending_calendar = true;
+		
+		Thread::Start([=] {
+			String data;
+			Get("calendar", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			
+			int ev_count = mem.Get32();
+			Vector<CalEvent> tmp;
+			tmp.SetCount(ev_count);
+			for(int i = 0; i < ev_count; i++) {
+				CalEvent& ev = tmp[i];
+				ev.id = mem.Get32();
+				ev.timestamp = Time(1970,1,1) + mem.Get32();
+				ev.impact = mem.Get32();
+				ev.direction = mem.Get32();
+				int l;
+				l = mem.Get32();	ev.title = mem.Get(l);
+				l = mem.Get32();	ev.unit = mem.Get(l);
+				l = mem.Get32();	ev.currency = mem.Get(l);
+				l = mem.Get32();	ev.forecast = mem.Get(l);
+				l = mem.Get32();	ev.previous = mem.Get(l);
+				l = mem.Get32();	ev.actual = mem.Get(l);
+			}
+			
+			calendar_lock.Enter();
+			Swap(tmp, this->cal_events);
+			calendar_lock.Leave();
+			pending_calendar = false;
+		});
+	}
+		
+	
+	int utc_diff = GetSysTime().Get() - GetUtcTime().Get();
+	
+	calendar_lock.Enter();
+	for(int i = 0; i < cal_events.GetCount(); i++) {
+		const CalEvent& e = cal_events[i];
+		calendar.Set(i, 0, e.timestamp + utc_diff);
+		calendar.SetDisplay(i, 0, Single<CalendarTimeDisplay>());
+		calendar.Set(i, 1, e.title);
+		calendar.Set(i, 2, e.currency);
+		calendar.SetDisplay(i, 2, Single<CalendarCurrencyDisplay>());
+		calendar.Set(i, 3, e.GetImpactString());
+		calendar.SetDisplay(i, 3, Single<CalendarImpactDisplay>());
+		calendar.Set(i, 4, e.forecast + e.unit);
+		calendar.Set(i, 5, e.previous + e.unit);
+		calendar.Set(i, 6, e.actual + e.unit);
+	}
+	calendar_lock.Leave();
 }
 
 void Client::MainMenu(Bar& bar) {
@@ -281,7 +710,7 @@ void Client::Get(const String& key, String& value) {
 void Client::Poll() {
 	StringStream out, in;
 	
-	out.Put32(80);
+	out.Put32(50);
 	
 	out.Put64(login_id);
 	
@@ -495,5 +924,17 @@ void RegisterDialog::TryRegister() {
 
 
 
+
+
+
+
+String CalEvent::GetImpactString() const {
+	switch (impact) {
+		case 1:  return "Low";
+		case 2:  return "Medium";
+		case 3:  return "High";
+		default: return "";
+	}
+}
 
 

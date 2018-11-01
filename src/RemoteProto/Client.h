@@ -14,6 +14,97 @@ using namespace Upp;
 
 void Print(const String& s);
 
+struct QuotesData : Moveable<QuotesData> {
+	String symbol;
+	double ask, bid, point;
+};
+
+struct CandlestickCtrl : public Ctrl {
+	Vector<double> opens, lows, highs;
+	int shift = 0;
+	int border = 5;
+	int count = 100;
+	
+	virtual void Paint(Draw& d);
+};
+
+struct Order : Moveable<Order> {
+	int ticket;
+	Time begin, end;
+	int type;
+	double size;
+	String symbol;
+	double open, stoploss, takeprofit;
+	double close, commission, swap, profit;
+};
+
+struct CalEvent : public Moveable<CalEvent> {
+	int id = -1;
+	Time timestamp = Null;
+	char impact = 0, direction = 0;
+	String title, unit, currency, forecast, previous, actual;
+	
+	CalEvent() {}
+	CalEvent(const CalEvent& e) {*this = e;}
+	CalEvent& operator=(const CalEvent& e);
+	String ToInlineString() const;
+	String GetImpactString() const;
+	int GetSignalDirection();
+	
+	bool operator () (const CalEvent& a, const CalEvent& b) const {return a.timestamp < b.timestamp;}
+	
+};
+
+struct CalendarTimeDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		Time t = q;
+		String str = Format("%", t);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		if (t >= GetSysTime()) fnt.Bold();
+		w.DrawText(pt.x, pt.y+1, str, fnt, ink);
+	}
+};
+
+
+struct CalendarCurrencyDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		String cur = q;
+		if (cur == "GBP") paper = Color(240, 216, 255);
+		else if (cur == "EUR") paper = Color(200, 202, 255);
+		else if (cur == "USD") paper = Color(208, 255, 219);
+		else if (cur == "JPY") paper = Color(255, 208, 205);
+		else if (cur == "AUD") paper = Color(255, 255, 188);
+		else if (cur == "CAD") paper = Color(255, 212, 187);
+		else if (cur == "CHF") paper = Color(205, 188, 216);
+		else if (cur == "NZD") paper = Color(205, 255, 255);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		w.DrawText(pt.x, pt.y+1, cur, fnt, Black());
+	}
+};
+
+
+struct CalendarImpactDisplay : Display {
+	virtual void Paint(Draw& w, const Rect& r, const Value& q,
+		               Color ink, Color paper, dword style) const
+	{
+		String imp = q;
+		if (imp == "Low") paper = Color(132, 255, 94);
+		else if (imp == "Medium") paper = Color(255, 255, 117);
+		else if (imp == "High") paper = Color(255, 115, 102);
+		w.DrawRect(r, paper);
+		Point pt = r.TopLeft();
+		Font fnt = StdFont();
+		w.DrawText(pt.x, pt.y+1, imp, fnt, Black());
+	}
+};
 
 class Client : public TopWindow {
 	
@@ -25,26 +116,68 @@ class Client : public TopWindow {
 	bool is_registered = false;
 	
 	// Session
+	Index<String> symbols;
+	VectorMap<int, String> tfs;
 	String user_name;
 	String addr = "127.0.0.1";
 	One<TcpSocket> s;
+	double balance, equity, freemargin;
 	int64 login_id = 0;
 	int port = 17000;
 	int age = 0;
 	bool gender = 0;
 	bool is_logged_in = false;
 	bool running = false, stopped = true;
+	TimeCallback tc;
 	Mutex call_lock, lock;
 	
-	
+	// Gui
 	MenuBar menu;
-	Splitter split;
+	TabCtrl tabs;
 	ArrayCtrl nearestlist;
+	
+	ArrayCtrl quotes;
+	bool pending_quotes = false;
+	Vector<QuotesData> quote_values;
+	
+	ParentCtrl graph_parent;
+	DropList symlist, tflist;
+	CandlestickCtrl graph;
+	bool pending_graph = false;
+	
+	ParentCtrl orders_parent;
+	Label orders_header;
+	ArrayCtrl orders;
+	Vector<Order> open_orders;
+	bool pending_open_orders = false;
+	
+	ParentCtrl hisorders_parent;
+	Label hisorders_header;
+	ArrayCtrl hisorders;
+	Vector<Order> history_orders;
+	bool pending_history_orders = false;
+	Mutex hisorders_lock;
+	
+	ArrayCtrl calendar;
+	bool pending_calendar = false;
+	Vector<CalEvent> cal_events;
+	Mutex calendar_lock;
+	
+	ParentCtrl events_parent;
+	ParentCtrl tips_parent;
 	
 public:
 	typedef Client CLASSNAME;
 	Client();
 	~Client();
+	
+	void TimedRefresh();
+	void DataInit();
+	void DataQuotes();
+	void DataGraph();
+	void DataOrders();
+	void DataHistory();
+	void DataCalendar();
 	
 	int GetUserId() const {return user_id;}
 	String GetPassword() const {return pass;}

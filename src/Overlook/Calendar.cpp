@@ -643,11 +643,13 @@ void CalendarCommon::SetEvent(CalEvent& ce) {
 							else if (act > fc) s = " is greater than forecast";
 							else s = " is lesser than forecast";
 						}
+						#ifdef flagHAVE_NOTIFICATIONS
 						NotificationQueue& n = GetNotificationQueue();
 						n.SetApp("Overlook");
 						n.SetSilent(false);
 						n.SetNotificationExpiration(5);
 						n.Add(OverlookImg::news(), e.currency + "\n" + e.title + ":\nactual " + e.actual + s);
+						#endif
 					}
 				}
 				return;

@@ -310,8 +310,10 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	
 	int i = key.Find(",");
 	Vector<String> args;
+	String data;
 	if (i != -1) {
-		args = Split(key.Mid(i+1), ",");
+		data = key.Mid(i+1);
+		args = Split(data, ",");
 		key = key.Left(i);
 	}
 	
@@ -336,6 +338,30 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(tf_str);
 		}
 		
+		int cur_count = sys.GetCurrencyCount();
+		out.Put32(cur_count);
+		for(int i = 0; i < cur_count; i++) {
+			String cur = sys.GetCurrency(i);
+			out.Put32(cur.GetCount());
+			out.Put(cur);
+		}
+		
+		Sentiment& sent = GetSentiment();
+		int sentsym_count = sent.symbols.GetCount();
+		out.Put32(sentsym_count);
+		for(int i = 0; i < sentsym_count; i++) {
+			String sym = sent.symbols[i];
+			out.Put32(sym.GetCount());
+			out.Put(sym);
+		}
+		
+		int sentcur_count = sent.currencies.GetCount();
+		out.Put32(sentcur_count);
+		for(int i = 0; i < sentcur_count; i++) {
+			String cur = sent.currencies[i];
+			out.Put32(cur.GetCount());
+			out.Put(cur);
+		}
 	}
 	else if (key == "quotes") {
 		MetaTrader& mt = GetMetaTrader();
@@ -483,11 +509,74 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put32(ev.actual.GetCount());	out.Put(ev.actual);
 		}
 	}
+	else if (key == "senthist") {
+		Sentiment& sent = GetSentiment();
+		
+		out.Put32(sent.sents.GetCount());
+		for(int i = 0; i < sent.sents.GetCount(); i++) {
+			SentimentSnapshot& snap = sent.sents[i];
+			
+			out.Put32(snap.cur_pres.GetCount());
+			for(int j = 0; j < snap.cur_pres.GetCount(); j++)
+				out.Put32(snap.cur_pres[j]);
+			
+			out.Put32(snap.pair_pres.GetCount());
+			for(int j = 0; j < snap.pair_pres.GetCount(); j++)
+				out.Put32(snap.pair_pres[j]);
+			
+			out.Put32(snap.comment.GetCount());
+			out.Put(snap.comment);
+			out.Put32(snap.added.Get() - Time(1970,1,1).Get());
+			out.Put(&snap.fmlevel, sizeof(double));
+			out.Put(&snap.tplimit, sizeof(double));
+		}
+	}
+	else if (key == "errorlist") {
+		MemStream mem((void*)data.Begin(), data.GetCount());
+		
+		SentimentSnapshot snap;
+		GetSentSnap(snap, mem);
+		
+		Index<EventError> errors;
+		GetEventSystem().GetErrorList(snap, errors);
+		
+		out.Put32(errors.GetCount());
+		for(int i = 0; i < errors.GetCount(); i++) {
+			const EventError& e = errors[i];
+			out.Put32(e.msg.GetCount());
+			out.Put(e.msg);
+			out.Put32(e.level);
+			out.Put32(e.time.Get() - Time(1970,1,1).Get());
+		}
+	}
+	else if (key == "sendsent") {
+		MemStream mem((void*)data.Begin(), data.GetCount());
+		Sentiment& sent = GetSentiment();
+		GetSentSnap(sent.AddSentiment(), mem);
+		sent.StoreThis();
+	}
 	
 	out.Seek(size_pos);
 	out.Put32(out.GetSize() - size_pos - 4);
 	out.SeekEnd();
 	out.Put32(0);
+}
+
+void ActiveSession::GetSentSnap(SentimentSnapshot& snap, Stream& mem) {
+	int cur_count = mem.Get32();
+	snap.cur_pres.SetCount(cur_count);
+	for(int j = 0; j < cur_count; j++)
+		snap.cur_pres[j] = mem.Get32();
+	int pair_count = mem.Get32();
+	snap.pair_pres.SetCount(pair_count);
+	for(int j = 0; j < pair_count; j++)
+		snap.pair_pres[j] = mem.Get32();
+	int comment_len = mem.Get32();
+	snap.comment = mem.Get(comment_len);
+	snap.added = Time(1970,1,1) + mem.Get32();
+	mem.Get(&snap.fmlevel, sizeof(double));
+	mem.Get(&snap.tplimit, sizeof(double));
+
 }
 
 void ActiveSession::Poll(Stream& in, Stream& out) {

@@ -123,7 +123,7 @@ Client::Client() {
 	tabs.Add(hisorders_parent.SizePos(), "History");
 	tabs.Add(calendar.SizePos(), "Calendar");
 	tabs.Add(events_parent.SizePos(), "Events");
-	tabs.Add(tips_parent.SizePos(), "Tips");
+	tabs.Add(sent_parent.SizePos(), "Sentiment");
 	
 	quotes.AddColumn("Symbol");
 	quotes.AddColumn("Ask");
@@ -179,7 +179,31 @@ Client::Client() {
 	events_parent.Add(events_list.SizePos());
 	events_list.AddColumn("Message");
 	
-	PostCallback(THISBACK(DataInit));
+	sent_parent.Add(split.SizePos());
+	split << historylist << curpreslist << pairpreslist << errlist << sent_console;
+	sent_console.Add(comment.HSizePos().VSizePos(0, 60));
+	sent_console.Add(fmlevel.BottomPos(30, 30).HSizePos());
+	sent_console.Add(save.BottomPos(0, 30).HSizePos());
+	historylist.AddColumn("Time");
+	historylist.AddColumn("Comment");
+	historylist.AddColumn("Free-margin level");
+	historylist.AddColumn("Take-profit limit");
+	historylist.ColumnWidths("1 3 1 1");
+	historylist <<= THISBACK(LoadHistory);
+	curpreslist.AddColumn("Symbol");
+	curpreslist.AddColumn("Pressure");
+	curpreslist.ColumnWidths("1 2");
+	//curpreslist <<= THISBACK(SetCurProfile);
+	pairpreslist.AddColumn("Symbol");
+	pairpreslist.AddColumn("Pressure");
+	pairpreslist.ColumnWidths("1 2");
+	//pairpreslist <<= THISBACK(SetPairProfile);
+	errlist.AddColumn("Message");
+	fmlevel.SetData(0);
+	save.SetLabel("Save");
+	save <<= THISBACK(SaveSentiment);
+	
+	
 	tc.Set(1000, THISBACK(TimedRefresh));
 }
 
@@ -199,6 +223,7 @@ void Client::TimedRefresh() {
 		case 3: DataHistory(); break;
 		case 4: DataCalendar(); break;
 		case 5: DataEvents(); break;
+		case 6: DataSentiment(); break;
 		
 	}
 	tc.Set(1000, THISBACK(TimedRefresh));
@@ -211,6 +236,8 @@ void Client::DataInit() {
 	
 	symbols.Clear();
 	tfs.Clear();
+	sent_pairs.Clear();
+	currencies.Clear();
 	
 	int sym_count = mem.Get32();
 	for(int i = 0; i < sym_count; i++) {
@@ -227,6 +254,26 @@ void Client::DataInit() {
 		tfs.Add(tf, tf_str);
 	}
 	
+	int cur_count = mem.Get32();
+	for(int i = 0; i < cur_count; i++) {
+		int cur_len = mem.Get32();
+		String cur = mem.Get(cur_len);
+		currencies.Add(cur);
+	}
+	
+	int pair_count = mem.Get32();
+	for(int i = 0; i < pair_count; i++) {
+		int pair_len = mem.Get32();
+		String pair = mem.Get(pair_len);
+		sent_pairs.Add(pair);
+	}
+	
+	int sentcur_count = mem.Get32();
+	for(int i = 0; i < sentcur_count; i++) {
+		int cur_len = mem.Get32();
+		String cur = mem.Get(cur_len);
+		sent_currencies.Add(cur);
+	}
 	
 }
 
@@ -507,6 +554,215 @@ void Client::DataEvents() {
 		//events_list.SetDisplay(i, 0, Single<CalendarTimeDisplay>());
 	}
 	event_lock.Leave();
+}
+
+void Client::RefreshSentimentList() {
+	String data;
+	Get("senthist", data);
+	MemStream mem((void*)data.Begin(), data.GetCount());
+	
+	int count = mem.Get32();
+	senthist_list.SetCount(count);
+	for(int i = 0; i < count; i++) {
+		SentimentSnapshot& snap = senthist_list[i];
+		int cur_count = mem.Get32();
+		snap.cur_pres.SetCount(cur_count);
+		for(int j = 0; j < cur_count; j++)
+			snap.cur_pres[j] = mem.Get32();
+		int pair_count = mem.Get32();
+		snap.pair_pres.SetCount(pair_count);
+		for(int j = 0; j < pair_count; j++)
+			snap.pair_pres[j] = mem.Get32();
+		int comment_len = mem.Get32();
+		snap.comment = mem.Get(comment_len);
+		snap.added = Time(1970,1,1) + mem.Get32();
+		mem.Get(&snap.fmlevel, sizeof(double));
+		mem.Get(&snap.tplimit, sizeof(double));
+	}
+	
+	pending_senthist = false;
+}
+
+void Client::DataSentiment() {
+	
+	if (senthist_list.IsEmpty() && !pending_senthist) {
+		pending_senthist = true;
+		
+		Thread::Start([=] {
+			RefreshSentimentList();
+		});
+	}
+	
+	
+	ASSERT(!currencies.IsEmpty());
+	ASSERT(!sent_pairs.IsEmpty());
+	
+	if (curpreslist.GetCount() == 0) {
+		curpreslist.SetLineCy(30);
+		for(int i = 0; i < sent_currencies.GetCount(); i++) {
+			curpreslist.Set(i, 0, sent_currencies[i]);
+			SentPresCtrl& ctrl = cur_pres_ctrl.Add();
+			ctrl <<= THISBACK(SetCurPairPressures);
+			curpreslist.SetCtrl(i, 1, ctrl);
+		}
+		
+		
+		pairpreslist.SetLineCy(30);
+		for(int i = 0; i < sent_pairs.GetCount(); i++) {
+			pairpreslist.Set(i, 0, sent_pairs[i]);
+			pairpreslist.SetCtrl(i, 1, pair_pres_ctrl.Add());
+		}
+		
+		LoadHistory();
+	}
+	
+	
+	int count = senthist_list.GetCount();
+	for(int i = 0; i < count; i++) {
+		SentimentSnapshot& snap = senthist_list[i];
+		
+		historylist.Set(i, 0, snap.added);
+		historylist.Set(i, 1, snap.comment);
+		historylist.Set(i, 2, snap.fmlevel);
+		historylist.Set(i, 3, snap.tplimit);
+	}
+	historylist.SetCount(count);
+	
+	int his = historylist.GetCursor();
+	if (count && (his < 0 || his >= count))
+		historylist.SetCursor(historylist.GetCount()-1);
+	
+	
+	Thread::Start([=] {
+		SentimentSnapshot snap;
+		snap.pair_pres.SetCount(pairpreslist.GetCount());
+		for(int i = 0; i < pairpreslist.GetCount(); i++)
+			snap.pair_pres[i] = pairpreslist.Get(i, 1);
+		Index<EventError> errors;
+		GetErrorList(snap, errors);
+		
+		GuiLock __;
+		for(int i = 0; i < errors.GetCount(); i++) {
+			const EventError& e = errors[i];
+			String msg;
+			switch (e.level) {
+				case 0: msg += "info: "; break;
+				case 1: msg += "warning: "; break;
+				case 2: msg += "error: "; break;
+			}
+			msg += e.msg;
+			errlist.Set(i, 0, msg);
+		}
+		errlist.SetCount(errors.GetCount());
+	});
+}
+
+void Client::GetErrorList(SentimentSnapshot& snap, Index<EventError>& errors) {
+	StringStream out;
+	out << "errorlist,";
+	PutSent(snap, out);
+	out.Seek(0);
+	String data;
+	Get(out.Get(out.GetSize()), data);
+	MemStream mem((void*)data.Begin(), data.GetCount());
+	
+	int error_count = mem.Get32();
+	for(int i = 0; i < error_count; i++) {
+		EventError e;
+		int msg_len = mem.Get32();
+		e.msg = mem.Get(msg_len);
+		e.level = mem.Get32();
+		e.time = Time(1970,1,1) + mem.Get32();
+		errors.Add(e);
+	}
+}
+
+void Client::SendSentiment(SentimentSnapshot& snap) {
+	StringStream out;
+	out << "sendsent,";
+	PutSent(snap, out);
+	out.Seek(0);
+	String data;
+	Get(out.Get(out.GetSize()), data);
+}
+
+void Client::PutSent(SentimentSnapshot& snap, Stream& out) {
+	out.Put32(snap.cur_pres.GetCount());
+	for(int j = 0; j < snap.cur_pres.GetCount(); j++)
+		out.Put32(snap.cur_pres[j]);
+	out.Put32(snap.pair_pres.GetCount());
+	for(int j = 0; j < snap.pair_pres.GetCount(); j++)
+		out.Put32(snap.pair_pres[j]);
+	out.Put32(snap.comment.GetCount());
+	out.Put(snap.comment);
+	out.Put32(snap.added.Get() - Time(1970,1,1).Get());
+	out.Put(&snap.fmlevel, sizeof(double));
+	out.Put(&snap.tplimit, sizeof(double));
+}
+
+void Client::LoadHistory() {
+	int his = historylist.GetCursor();
+	if (his == -1) return;
+	
+	SentimentSnapshot& snap = senthist_list[his];
+	
+	
+	for(int i = 0; i < curpreslist.GetCount() && i < snap.cur_pres.GetCount(); i++) {
+		curpreslist.Set(i, 1, snap.cur_pres[i]);
+	}
+	
+	for(int i = 0; i < pairpreslist.GetCount() && i < snap.pair_pres.GetCount(); i++) {
+		pairpreslist.Set(i, 1, snap.pair_pres[i]);
+	}
+	
+	comment.SetData(snap.comment);
+	
+	fmlevel.SetData(snap.fmlevel);
+}
+
+void Client::SaveSentiment() {
+	SentimentSnapshot snap;
+	
+	snap.added = GetUtcTime();
+	
+	snap.cur_pres.SetCount(curpreslist.GetCount());
+	for(int i = 0; i < curpreslist.GetCount(); i++) {
+		snap.cur_pres[i] = curpreslist.Get(i, 1);
+	}
+	
+	snap.pair_pres.SetCount(pairpreslist.GetCount());
+	for(int i = 0; i < pairpreslist.GetCount(); i++) {
+		snap.pair_pres[i] = pairpreslist.Get(i, 1);
+	}
+	
+	snap.comment = comment.GetData();
+	snap.fmlevel = fmlevel.GetData();
+	
+	SendSentiment(snap);
+	
+	RefreshSentimentList();
+	DataSentiment();
+	historylist.SetCursor(historylist.GetCount()-1);
+}
+
+void Client::SetCurPairPressures() {
+	VectorMap<String, int> pres;
+
+	for(int i = 0; i < curpreslist.GetCount(); i++) {
+		String a = curpreslist.Get(i, 0);
+		int p = curpreslist.Get(i, 1);
+		pres.Add(a, p);
+	}
+
+	for(int i = 0; i < pairpreslist.GetCount(); i++) {
+		String s = pairpreslist.Get(i, 0);
+		String a = s.Left(3);
+		String b = s.Right(3);
+		int p = pres.GetAdd(a, 0) - pres.GetAdd(b, 0);
+		pairpreslist.Set(i, 1, p);
+	}
+
+
 }
 
 void Client::MainMenu(Bar& bar) {
@@ -953,6 +1209,59 @@ String CalEvent::GetImpactString() const {
 		case 2:  return "Medium";
 		case 3:  return "High";
 		default: return "";
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+void SentPresCtrl::Paint(Draw& w) {
+	Size sz(GetSize());
+	
+	w.DrawRect(sz, White());
+	
+	int value = GetData();
+	
+	if (value < 0.0) {
+		int W = -value * (sz.cx / 2) / SIGNALSCALE;
+		w.DrawRect(sz.cx / 2 - W, 0, W, sz.cy, Blue());
+	} else {
+		int W = value * (sz.cx / 2) / SIGNALSCALE;
+		w.DrawRect(sz.cx / 2, 0, W, sz.cy, Green());
+	}
+	
+	w.DrawRect(sz.cx/2, 0, 1, sz.cy, GrayColor());
+}
+
+void SentPresCtrl::LeftDown(Point p, dword keyflags) {
+	Size sz(GetSize());
+	int value = (p.x - sz.cx / 2) * SIGNALSCALE / (sz.cx / 2);
+	SetData(value);
+	Refresh();
+	WhenAction();
+	SetCapture();
+}
+
+void SentPresCtrl::LeftUp(Point p, dword keyflags) {
+	ReleaseCapture();
+}
+
+void SentPresCtrl::MouseMove(Point p, dword keyflags) {
+	if (HasCapture()) {
+		Size sz(GetSize());
+		int value = (p.x - sz.cx / 2) * SIGNALSCALE / (sz.cx / 2);
+		SetData(value);
+		Refresh();
+		WhenAction();
 	}
 }
 

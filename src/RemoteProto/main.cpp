@@ -20,6 +20,7 @@ GUI_APP_MAIN {
 	server.Close();
 	
 	if (c.IsConnected()) {
+		c.PostInit();
 		c.Start();
 		c.Run();
 	}

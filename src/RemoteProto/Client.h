@@ -106,6 +106,53 @@ struct CalendarImpactDisplay : Display {
 	}
 };
 
+class SentPresCtrl : public Ctrl {
+	int i = 0;
+	
+public:
+	virtual void Paint(Draw& w);
+	virtual void LeftDown(Point p, dword keyflags);
+	virtual void LeftUp(Point p, dword keyflags);
+	virtual void MouseMove(Point p, dword keyflags);
+
+	
+	virtual Value GetData() const {return i;}
+	virtual void SetData(const Value& v) {i = v;}
+};
+
+struct SentimentSnapshot : Moveable<SentimentSnapshot> {
+	Vector<int> cur_pres, pair_pres;
+	String comment;
+	Time added;
+	double fmlevel = 0.0, tplimit = 0.1;
+	
+	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel % tplimit;}
+	
+	bool IsPairEqual(const SentimentSnapshot& s) {
+		if (s.pair_pres.GetCount() != pair_pres.GetCount())
+			return false;
+		for(int i = 0; i < pair_pres.GetCount(); i++)
+			if (pair_pres[i] != s.pair_pres[i])
+				return false;
+		return true;
+	}
+};
+
+struct EventError : Moveable<EventError> {
+	String msg;
+	byte level = 0;
+	Time time;
+	
+	EventError() {}
+	EventError(const EventError& e) {*this = e;}
+	void operator=(const EventError& e) {msg = e.msg; level = e.level; time = e.time;}
+	unsigned GetHashValue() const {return msg.GetHashValue();}
+	void Serialize(Stream& s) {s % msg % level % time;}
+	bool operator==(const EventError& e) const {return msg == e.msg;}
+};
+
+static const int SIGNALSCALE = 4;
+
 class Client : public TopWindow {
 	
 	static const bool continuous = false;
@@ -117,6 +164,9 @@ class Client : public TopWindow {
 	
 	// Session
 	Index<String> symbols;
+	Index<String> sent_pairs;
+	Index<String> currencies;
+	Index<String> sent_currencies;
 	VectorMap<int, String> tfs;
 	String user_name;
 	String addr = "127.0.0.1";
@@ -169,13 +219,30 @@ class Client : public TopWindow {
 	Mutex event_lock;
 	bool pending_poll = false;
 	
-	ParentCtrl tips_parent;
+	ParentCtrl sent_parent;
+	Splitter split;
+	ArrayCtrl historylist, curpreslist, pairpreslist, errlist;
+	EditDouble fmlevel;
+	ParentCtrl sent_console;
+	::Upp::DocEdit comment;
+	Button save;
+	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl;
+	Vector<SentimentSnapshot> senthist_list;
+	bool pending_senthist = false;
+	void LoadHistory();
+	void SetCurPairPressures();
+	void SaveSentiment();
+	void GetErrorList(SentimentSnapshot& snap, Index<EventError>& errors);
+	void SendSentiment(SentimentSnapshot& snap);
+	void PutSent(SentimentSnapshot& snap, Stream& out);
+	void RefreshSentimentList();
 	
 public:
 	typedef Client CLASSNAME;
 	Client();
 	~Client();
 	
+	void PostInit() {PostCallback(THISBACK(DataInit));}
 	void TimedRefresh();
 	void DataInit();
 	void DataQuotes();
@@ -184,6 +251,7 @@ public:
 	void DataHistory();
 	void DataCalendar();
 	void DataEvents();
+	void DataSentiment();
 	
 	int GetUserId() const {return user_id;}
 	String GetPassword() const {return pass;}

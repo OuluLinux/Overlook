@@ -19,7 +19,11 @@ Sentiment::Sentiment() {
 	symbols.Add("EURJPY");
 	symbols.Add("EURGBP");
 	
-	
+	currencies.Add("USD");
+	currencies.Add("EUR");
+	currencies.Add("GBP");
+	currencies.Add("JPY");
+	currencies.Add("CAD");
 	
 	LoadThis();
 	
@@ -128,13 +132,12 @@ SentimentCtrl::SentimentCtrl() {
 }
 
 void SentimentCtrl::Data() {
-	System& sys = GetSystem();
 	Sentiment& sent = GetSentiment();
 	
 	if (curpreslist.GetCount() == 0) {
 		curpreslist.SetLineCy(30);
-		for(int i = 0; i < sys.GetCurrencyCount(); i++) {
-			curpreslist.Set(i, 0, sys.GetCurrency(i));
+		for(int i = 0; i < sent.GetCurrencyCount(); i++) {
+			curpreslist.Set(i, 0, sent.GetCurrency(i));
 			SentPresCtrl& ctrl = cur_pres_ctrl.Add();
 			ctrl <<= THISBACK(SetCurPairPressures);
 			curpreslist.SetCtrl(i, 1, ctrl);

@@ -128,6 +128,7 @@ public:
 	void Poll(Stream& in, Stream& out);
 	void Get(Stream& in, Stream& out);
 	void Set(Stream& in, Stream& out);
+	void GetSentSnap(SentimentSnapshot& snap, Stream& stream);
 };
 
 class Server : public Common {

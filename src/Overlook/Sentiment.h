@@ -26,13 +26,14 @@ class Sentiment : public Common {
 protected:
 	friend class Automation;
 	friend class EventSystem;
+	friend class ActiveSession;
 	
 	// Persistent
 	Array<SentimentSnapshot> sents;
 	
 	
 	// Temporary
-	Index<String> symbols;
+	Index<String> symbols, currencies;
 	VectorMap<String, double> prev_levels;
 	bool enable_takeprofit = false;
 	
@@ -44,6 +45,8 @@ public:
 	void SetSignals();
 	int GetSymbolCount() const {return symbols.GetCount();}
 	String GetSymbol(int i) const {return symbols[i];}
+	int GetCurrencyCount() const {return currencies.GetCount();}
+	String GetCurrency(int i) const {return currencies[i];}
 	
 	int GetSentimentCount() {return sents.GetCount();}
 	SentimentSnapshot& GetSentiment(int sent) {return sents[sent];}
@@ -81,7 +84,7 @@ class SentimentCtrl : public CommonCtrl {
 	::Upp::DocEdit comment;
 	Button save;
 	
-	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl, net_pres_ctrl;
+	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl;
 	
 	
 public:

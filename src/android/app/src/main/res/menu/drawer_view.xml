@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <group
+        android:id="@+id/menu_top"
+        android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/nav_quotes"
+            android:icon="@drawable/ic_import_export_black_24dp"
+            android:title="@string/quotes" />
+        <item
+            android:id="@+id/nav_charts"
+            android:icon="@drawable/ic_show_chart_black_24dp"
+            android:title="@string/charts" />
+        <item
+            android:id="@+id/nav_orders"
+            android:icon="@drawable/ic_sync_black_24dp"
+            android:title="@string/orders" />
+        <item
+            android:id="@+id/nav_history"
+            android:icon="@drawable/ic_history_black_24dp"
+            android:title="@string/history" />
+        <item
+            android:id="@+id/nav_calendar"
+            android:icon="@drawable/ic_event_black_24dp"
+            android:title="@string/calendar" />
+        <item
+            android:id="@+id/nav_sentiment"
+            android:icon="@drawable/ic_sentiment_neutral_black_24dp"
+            android:title="@string/sentiment" />
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/settings" />
+    </group>
+</menu>

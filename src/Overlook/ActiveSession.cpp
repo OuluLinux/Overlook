@@ -131,16 +131,12 @@ void ActiveSession::Register(Stream& in, Stream& out) {
 	server->db.AddUser(user_id, name);
 	server->db.Flush();
 	
-	db.name = name;
 	db.passhash = passhash;
 	db.joined = now;
 	db.lastlogin = Time(1970,1,1);
 	db.logins = 0;
 	db.onlinetotal = 0;
 	db.visibletotal = 0;
-	db.longitude = 0;
-	db.latitude = 0;
-	db.elevation = 0;
 	db.lastupdate = Time(1970,1,1);
 	db.Flush();
 	
@@ -183,11 +179,6 @@ void ActiveSession::Login(Stream& in, Stream& out) {
 		out.Put32(0);
 		
 		out.Put64(login_id);
-		
-		out.Put32(db.name.GetCount());
-		out.Put(db.name.Begin(), db.name.GetCount());
-		out.Put32(db.age);
-		out.Put32(db.gender);
 		
 		Print("Logged in");
 	}
@@ -420,6 +411,8 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	}
 	else if (key == "openorders") {
 		MetaTrader& mt = GetMetaTrader();
+		mt.DataEnter();
+		
 		const Vector<Order>& orders = mt.GetOpenOrders();
 		
 		double balance = mt.AccountBalance();
@@ -448,9 +441,13 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(&o.swap, sizeof(double));
 			out.Put(&o.profit, sizeof(double));
 		}
+		
+		mt.DataLeave();
 	}
 	else if (key == "historyorders") {
 		MetaTrader& mt = GetMetaTrader();
+		mt.DataEnter();
+		
 		const Vector<Order>& orders = mt.GetHistoryOrders();
 		
 		double balance = mt.AccountBalance();
@@ -479,6 +476,8 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(&o.swap, sizeof(double));
 			out.Put(&o.profit, sizeof(double));
 		}
+		
+		mt.DataLeave();
 	}
 	else if (key == "calendar") {
 		CalendarCommon& cal = GetCalendar();

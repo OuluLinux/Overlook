@@ -1,12 +1,6 @@
 #include "Client.h"
 #include <plugin/jpg/jpg.h>
 
-namespace Config {
-
-INI_STRING(master_addr, "overlook.zzz.fi", "Master server's address");
-INI_INT(master_port, 17123, "Master server's port");
-
-};
 
 void Print(const String& s) {
 	static Mutex lock;
@@ -204,7 +198,7 @@ Client::Client() {
 	save <<= THISBACK(SaveSentiment);
 	
 	
-	tc.Set(1000, THISBACK(TimedRefresh));
+	
 }
 
 Client::~Client() {
@@ -238,6 +232,7 @@ void Client::DataInit() {
 	tfs.Clear();
 	sent_pairs.Clear();
 	currencies.Clear();
+	sent_currencies.Clear();
 	
 	int sym_count = mem.Get32();
 	for(int i = 0; i < sym_count; i++) {
@@ -929,14 +924,7 @@ void Client::Login() {
 	
 	login_id = in.Get64();
 	
-	int name_len = in.Get32();
-	if (name_len <= 0) throw Exc("Login failed");
-	user_name = in.Get(name_len);
-	
-	age = in.Get32();
-	gender = in.Get32();
-	
-	Print("Client " + IntStr(user_id) + " logged in (" + IntStr(user_id) + ", " + pass + ") nick: " + user_name);
+	Print("Client " + IntStr(user_id) + " logged in (" + IntStr(user_id) + ", " + pass + ")");
 }
 
 bool Client::Set(const String& key, const String& value) {

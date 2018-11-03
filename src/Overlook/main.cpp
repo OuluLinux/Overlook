@@ -25,6 +25,8 @@ INI_STRING(email_server, "", "Email server");
 INI_INT(email_port, 0, "Email port");
 };
 
+
+
 struct LoaderWindow : public TopWindow {
 	typedef LoaderWindow CLASSNAME;
 	ImageCtrl img;
@@ -80,7 +82,7 @@ struct LoaderWindow : public TopWindow {
 };
 
 GUI_APP_MAIN {
-	TestEventSystem();
+	WriteKeepalive();
 	
 	TestLockMacro();
 	SetIniFile(ConfigFile("overlook.ini"));

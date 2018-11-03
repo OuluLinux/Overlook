@@ -59,28 +59,7 @@ void UserDatabase::Flush() {
 	lock.Leave();
 }
 
-void UserDatabase::SetLocation(double longitude, double latitude, double elevation) {
-	Time now = GetUtcTime();
-	
-	this->longitude = longitude;
-	this->latitude = latitude;
-	this->elevation = elevation;
-	lastupdate = now;
-	
-	Flush();
-	
-	lock.Enter();
-	
-	if (location.IsOpen()) {
-		location.Put(&longitude, sizeof(double));
-		location.Put(&latitude, sizeof(double));
-		location.Put(&elevation, sizeof(double));
-		location.Put(&now, sizeof(Time));
-		location.Flush();
-	}
-	
-	lock.Leave();
-}
+
 
 
 

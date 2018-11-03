@@ -1,0 +1,11 @@
+uses
+	CtrlLib;
+
+file
+	main.cpp,
+	Upkeeper.h,
+	Upkeeper.lay;
+
+mainconfig
+	"" = "GUI";
+

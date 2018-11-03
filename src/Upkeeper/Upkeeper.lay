@@ -1,0 +1,8 @@
+LAYOUT(UpkeeperLayout, 444, 212)
+	ITEM(Label, dv___0, SetLabel(t_("Dyndns path:")).LeftPosZ(4, 80).TopPosZ(28, 19))
+	ITEM(EditString, dnspath, LeftPosZ(88, 352).TopPosZ(28, 19))
+	ITEM(ArrayCtrl, list, LeftPosZ(4, 436).TopPosZ(52, 156))
+	ITEM(EditString, exepath, LeftPosZ(88, 352).TopPosZ(4, 19))
+	ITEM(Label, dv___4, SetLabel(t_("Exe path:")).LeftPosZ(4, 80).TopPosZ(4, 19))
+END_LAYOUT
+

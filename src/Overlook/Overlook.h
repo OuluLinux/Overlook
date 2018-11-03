@@ -49,7 +49,7 @@ struct ForecastCtrl : public SubWindowCtrl {
 namespace Overlook {
 using namespace libmt;
 
-
+void WriteKeepalive();
 
 struct AssetGraphDislay : public Display {
 	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword style) const;

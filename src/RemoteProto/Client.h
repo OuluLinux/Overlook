@@ -168,14 +168,11 @@ class Client : public TopWindow {
 	Index<String> currencies;
 	Index<String> sent_currencies;
 	VectorMap<int, String> tfs;
-	String user_name;
 	String addr = "127.0.0.1";
 	One<TcpSocket> s;
 	double balance, equity, freemargin;
 	int64 login_id = 0;
 	int port = 17000;
-	int age = 0;
-	bool gender = 0;
 	bool is_logged_in = false;
 	bool running = false, stopped = true;
 	TimeCallback tc;
@@ -242,7 +239,7 @@ public:
 	Client();
 	~Client();
 	
-	void PostInit() {PostCallback(THISBACK(DataInit));}
+	void PostInit() {PostCallback(THISBACK(DataInit)); tc.Set(1000, THISBACK(TimedRefresh));}
 	void TimedRefresh();
 	void DataInit();
 	void DataQuotes();

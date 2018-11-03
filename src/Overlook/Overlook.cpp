@@ -2,6 +2,10 @@
 
 namespace Overlook {
 
+void WriteKeepalive() {
+	FileOut fout(ConfigFile("keepalive.bin"));
+	fout % GetSysTime();
+}
 
 #define TOPICFILE <Overlook/app.tpp/all.i>
 #include <Core/topic_group.h>
@@ -522,6 +526,7 @@ void Overlook::RefreshData() {
 		Thread::Start(THISBACK(DeepRefresh));
 	}
 	
+	WriteKeepalive();
 	Data();
 	
 	if (!Thread::IsShutdownThreads())

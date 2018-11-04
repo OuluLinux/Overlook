@@ -26,7 +26,15 @@
     <string name="orders">Orders</string>
     <string name="history">History</string>
     <string name="calendar">Calendar</string>
+    <string name="events">Events</string>
+    <string name="sentimenthistory">Sentiment history</string>
     <string name="sentiment">Sentiment</string>
+    <string name="currencies">currencies</string>
+    <string name="pairs">pairs</string>
+    <string name="errors">Errors</string>
+    <string name="check">Check</string>
+    <string name="send">Send</string>
+    <string name="comment">Comment</string>
 
 
 

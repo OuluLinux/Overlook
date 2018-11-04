@@ -95,13 +95,16 @@ public class AppService extends Service {
     public List<String> symbols;
     public List<String> tflist;
     public Map<Integer, String> tfs;
-    public Set<String> sent_pairs;
+    public List<String> sent_pairs;
     public Set<String> currencies;
-    public Set<String> sent_currencies;
+    public List<String> sent_currencies;
     public double equity, balance, freemargin;
     public List<Order> open_orders;
     public List<Order> history_orders;
     public List<CalEvent> cal_events;
+    public List<Event> events = new Vector<>();
+    public List<SentimentSnapshot> senthist_list = new Vector<>();
+    public List<EventError> errors = new Vector<>();
 
 
     public void setupFinish(String server, int port) {
@@ -236,7 +239,7 @@ public class AppService extends Service {
     }
 
 
-    void NotifyNewMessage(String message) {
+    void NotifyNewMessage(int level, String message) {
 
 
         NotificationCompat.Builder builder =
@@ -248,6 +251,11 @@ public class AppService extends Service {
 
 
         Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        if (level == 1)
+            alarmSound = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.warning);
+        else if (level == 2)
+            alarmSound = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.error);
+
         builder.setSound(alarmSound);
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
@@ -686,6 +694,10 @@ public class AppService extends Service {
     }
 
     byte[] get(String key) throws Exc {
+        return get(key.getBytes());
+    }
+
+    byte[] get(byte[] key) throws Exc {
         try {
             ByteArrayOutputStream dout = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(dout);
@@ -694,8 +706,8 @@ public class AppService extends Service {
 
             out.writeLong(swapLong(login_id));
 
-            out.writeInt(swap(key.length()));
-            out.write(key.getBytes());
+            out.writeInt(swap(key.length));
+            out.write(key);
 
             DataInputStream in = call(dout.toByteArray());
 
@@ -748,10 +760,12 @@ public class AppService extends Service {
 
             DataInputStream in = call(dout.toByteArray());
 
+            int max_polled_level = -1;
+            String max_polled_msg = "";
+
             int count = swap(in.readInt());
             if (count < 0 || count >= 10000) {lock.unlock(); throw new Exc("Polling failed");}
             for(int i = 0; i < count; i++) {
-                int sender_id = swap(in.readInt());
                 int message_len = swap(in.readInt());
                 if (message_len < 0 ||message_len > 1000000) {
                     Log.e(TAG, "Invalid message");
@@ -768,11 +782,37 @@ public class AppService extends Service {
 
                 Log.i(TAG, "Poll " + Integer.toString(i) + ": " + key);
 
-                if (key.equals("info") || key.equals("warning") || key.equals("error")) {
-
-
+                if (key.equals("info")) {
+                    Event e = new Event();
+                    e.msg = new String(message_bytes);
+                    e.level = 0;
+                    e.received = Calendar.getInstance().getTime();
+                    if (max_polled_level < 0) {max_polled_level = 0; max_polled_msg = e.msg;}
+                    events.add(e);
                     sendPostRefreshGui();
                 }
+                if (key.equals("warning")) {
+                    Event e = new Event();
+                    e.msg = new String(message_bytes);
+                    e.level = 1;
+                    e.received = Calendar.getInstance().getTime();
+                    if (max_polled_level < 1) {max_polled_level = 1; max_polled_msg = e.msg;}
+                    events.add(e);
+                    sendPostRefreshGui();
+                }
+                if (key.equals("error")) {
+                    Event e = new Event();
+                    e.msg = new String(message_bytes);
+                    e.level = 2;
+                    e.received = Calendar.getInstance().getTime();
+                    if (max_polled_level < 2) {max_polled_level = 2; max_polled_msg = e.msg;}
+                    events.add(e);
+                    sendPostRefreshGui();
+                }
+            }
+
+            if (max_polled_level >= 0) {
+                NotifyNewMessage(max_polled_level, max_polled_msg);
             }
         }
         catch (IOException e) {
@@ -808,9 +848,9 @@ public class AppService extends Service {
             symbols = new Vector<String>();
             tflist = new Vector<String>();
             tfs = new HashMap<Integer, String>();
-            sent_pairs = new HashSet<String>();
+            sent_pairs = new Vector<String>();
             currencies = new HashSet<String>();
-            sent_currencies = new HashSet<String>();
+            sent_currencies = new Vector<String>();
 
             {
                 int sym_count = swap(in.readInt());
@@ -840,7 +880,7 @@ public class AppService extends Service {
                     int sym_len = swap(in.readInt());
                     byte[] sym = new byte[sym_len];
                     in.read(sym);
-                    sent_pairs.add(new String(sym));
+                    currencies.add(new String(sym));
                 }
             }
 
@@ -850,7 +890,8 @@ public class AppService extends Service {
                     int sym_len = swap(in.readInt());
                     byte[] sym = new byte[sym_len];
                     in.read(sym);
-                    currencies.add(new String(sym));
+                    String s = new String(sym);
+                    sent_pairs.add(s);
                 }
             }
 
@@ -864,6 +905,7 @@ public class AppService extends Service {
                 }
             }
 
+            MainActivity.last.initSentiment();
         }
         catch (Exc e) {}
         catch (IOException e) {}
@@ -1107,6 +1149,156 @@ public class AppService extends Service {
         };
         thread.start();
     }
+
+    void startRefreshSentimentHistory() {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                List<SentimentSnapshot> tmp = new Vector<>();
+
+                try {
+                    byte[] data = get("senthist");
+                    DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
+
+                    int sent_count = swap(in.readInt());
+                    for(int i = 0; i < sent_count ; i++) {
+                        SentimentSnapshot snap = new SentimentSnapshot();
+                        snap.cur_pres = new Vector<Integer>();
+                        snap.pair_pres = new Vector<Integer>();
+
+                        int cur_count = swap(in.readInt());
+                        for(int j = 0; j < cur_count; j++)
+                            snap.cur_pres.add(swap(in.readInt()));
+
+                        int pair_count = swap(in.readInt());
+                        for(int j = 0; j < pair_count ; j++)
+                            snap.pair_pres.add(swap(in.readInt()));
+
+                        snap.comment = readStringSwap(in);
+                        snap.added = new Date(swap(in.readInt()) * 1000L);
+
+                        snap.fmlevel = swapDouble(in.readDouble());
+                        snap.tplimit = swapDouble(in.readDouble());
+                        snap.equity = swapDouble(in.readDouble());
+
+                        tmp.add(snap);
+                    }
+
+                }
+                catch (Exc e) {}
+                catch (IOException e) {}
+
+                senthist_list = tmp;
+
+                MainActivity.last.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.last.dataSentimentHistory();
+                    }
+                });
+            }
+        };
+        thread.start();
+    }
+
+    public void putSent(DataOutputStream out, SentimentSnapshot snap) throws IOException {
+        out.writeInt(swap(snap.cur_pres.size()));
+        for (Integer i : snap.cur_pres)
+            out.writeInt(swap(i));
+        out.writeInt(swap(snap.pair_pres.size()));
+        for (Integer i : snap.pair_pres)
+            out.writeInt(swap(i));
+        out.writeInt(swap(snap.comment.length()));
+        out.writeBytes(snap.comment);
+        out.writeDouble(swapDouble(snap.fmlevel));
+        out.writeDouble(swapDouble(snap.tplimit));
+    }
+
+    public void startRefreshCheck() {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                SentimentSnapshot snap = new SentimentSnapshot();
+                snap.cur_pres = new Vector<>();
+                snap.pair_pres = new Vector<>();
+                snap.comment = "";
+                for (Integer i : MainActivity.last.sent_pair_values)
+                    snap.pair_pres.add(i);
+
+                List<EventError> tmp = new Vector<>();
+
+                try {
+                    ByteArrayOutputStream dout = new ByteArrayOutputStream();
+                    DataOutputStream out = new DataOutputStream(dout);
+
+                    out.writeBytes("errorlist,");
+                    putSent(out, snap);
+
+                    byte[] data = get(dout.toByteArray());
+                    DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
+
+                    int err_count = swap(in.readInt());
+                    for(int i = 0; i < err_count ; i++) {
+                        EventError e = new EventError();
+
+                        e.msg = readStringSwap(in);
+                        e.level = swap(in.readInt());
+                        e.time = new Date(swap(in.readInt()) * 1000L);
+
+                        tmp.add(e);
+                    }
+
+                }
+                catch (Exc e) {}
+                catch (IOException e) {}
+
+                errors = tmp;
+
+                MainActivity.last.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        CheckActivity.last.data();
+                    }
+                });
+            }
+        };
+        thread.start();
+    }
+
+    public void startSendSnapshot(final SentimentSnapshot snap) {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                List<EventError> tmp = new Vector<>();
+
+                try {
+                    ByteArrayOutputStream dout = new ByteArrayOutputStream();
+                    DataOutputStream out = new DataOutputStream(dout);
+
+                    out.writeBytes("sendsent,");
+                    putSent(out, snap);
+
+                    byte[] data = get(dout.toByteArray());
+                }
+                catch (Exc e) {}
+                catch (IOException e) {}
+
+                errors = tmp;
+
+                MainActivity.last.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.last.setView(MainActivity.MainView.SENTIMENTHISTORY);
+                    }
+                });
+            }
+        };
+        thread.start();
+    }
+
+
+
+
 }
 
 
@@ -1145,4 +1337,24 @@ class CalEvent {
         }
     }
 
+}
+
+class Event {
+    String msg;
+    int level;
+    Date received;
+}
+
+class SentimentSnapshot {
+    List<Integer> cur_pres, pair_pres;
+    String comment;
+    Date added;
+    double fmlevel=0.0, tplimit=0.1;
+    double equity=0.0;
+}
+
+class EventError {
+    String msg;
+    int level=0;
+    Date time;
 }

@@ -728,6 +728,8 @@ bool System::RefreshReal() {
 		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
+			if (sig > +SIGNALSCALE) sig = 0;
+			if (sig < -SIGNALSCALE) sig = 0;
 			
 			if (day_enough) sig = 0;
 			

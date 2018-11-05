@@ -125,8 +125,9 @@ struct SentimentSnapshot : Moveable<SentimentSnapshot> {
 	String comment;
 	Time added;
 	double fmlevel = 0.0, tplimit = 0.1;
+	double equity = 0.0;
 	
-	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel % tplimit;}
+	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel % tplimit % equity;}
 	
 	bool IsPairEqual(const SentimentSnapshot& s) {
 		if (s.pair_pres.GetCount() != pair_pres.GetCount())

@@ -707,13 +707,14 @@ class SentimentAdapter extends ArrayAdapter<String> {
         TextView time = (TextView) rowView.findViewById(R.id.time);
         TextView profit = (TextView) rowView.findViewById(R.id.profit);
 
-        SentimentSnapshot snap = values.get(values.size() - 1 - position);
+        int pos = values.size() - 1 - position;
+        SentimentSnapshot snap = values.get(pos);
 
         comment.setText(snap.comment);
         time.setText(snap.added.toString());
-        if (position > 0) {
-            SentimentSnapshot prev = values.get(values.size() - position);
-            profit.setText(Double.toString(snap.equity - prev.equity));
+        if (pos < values.size() - 1) {
+            SentimentSnapshot next = values.get(pos + 1);
+            profit.setText(Double.toString(next.equity - snap.equity));
         }
 
         return rowView;

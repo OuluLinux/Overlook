@@ -105,6 +105,8 @@ public:
 	void AddError(Index<EventError>& errors, String e);
 	void AddWarning(Index<EventError>& errors, String e);
 	void AddInfo(Index<EventError>& errors, String e);
+	bool IsSessionOpen(String currency);
+	bool IsSessionOpen(String currency, Date d);
 	
 	//void RunOptimizer();
 	//void WriteIndexUpDown(int i, int pair);

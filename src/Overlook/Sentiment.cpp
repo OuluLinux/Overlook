@@ -13,7 +13,8 @@ Sentiment::Sentiment() {
 	symbols.Add("USDCHF");
 	symbols.Add("USDJPY");
 	symbols.Add("USDCAD");
-	//symbols.Add("AUDUSD");
+	symbols.Add("AUDUSD");
+	symbols.Add("AUDJPY");
 	//symbols.Add("NZDUSD");
 	//symbols.Add("EURCHF");
 	symbols.Add("EURJPY");
@@ -24,6 +25,7 @@ Sentiment::Sentiment() {
 	currencies.Add("GBP");
 	currencies.Add("JPY");
 	currencies.Add("CAD");
+	currencies.Add("AUD");
 	
 	LoadThis();
 	
@@ -60,6 +62,7 @@ void Sentiment::SetSignals() {
 		sent->cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		sent->comment = "Auto take-profit";
 		sent->added = GetUtcTime();
+		sent->equity = GetMetaTrader().AccountEquity();
 		changes++;
 	}
 	
@@ -111,9 +114,8 @@ SentimentCtrl::SentimentCtrl() {
 	
 	historylist.AddColumn("Time");
 	historylist.AddColumn("Comment");
-	historylist.AddColumn("Free-margin level");
-	historylist.AddColumn("Take-profit limit");
-	historylist.ColumnWidths("1 3 1 1");
+	historylist.AddColumn("Profit");
+	historylist.ColumnWidths("2 3 1");
 	historylist <<= THISBACK(LoadHistory);
 	curpreslist.AddColumn("Symbol");
 	curpreslist.AddColumn("Pressure");
@@ -155,13 +157,14 @@ void SentimentCtrl::Data() {
 	
 	
 	int count = sent.GetSentimentCount();
+	double prev_equity = 0;
 	for(int i = 0; i < count; i++) {
 		SentimentSnapshot& snap = sent.GetSentiment(i);
 		
 		historylist.Set(i, 0, snap.added);
 		historylist.Set(i, 1, snap.comment);
-		historylist.Set(i, 2, snap.fmlevel);
-		historylist.Set(i, 3, snap.tplimit);
+		if (i) historylist.Set(i - 1, 2, snap.equity - prev_equity);
+		prev_equity = snap.equity;
 	}
 	historylist.SetCount(count);
 	
@@ -233,6 +236,7 @@ void SentimentCtrl::Save() {
 	
 	snap.comment = comment.GetData();
 	snap.fmlevel = fmlevel.GetData();
+	snap.equity = GetMetaTrader().AccountEquity();
 	
 	sent.StoreThis();
 	Data();

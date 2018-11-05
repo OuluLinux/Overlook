@@ -74,6 +74,7 @@ void Automation::Start() {
 		snap.cur_pres.SetCount(sys.GetCurrencyCount(), 0);
 		snap.pair_pres.SetCount(sent.symbols.GetCount(), 0);
 		snap.comment = "Automation";
+		snap.equity = GetMetaTrader().AccountEquity();
 		
 		for(int i = 0; i < symbols.GetCount(); i++) {
 			int j = sent.symbols.Find(symbols[i]);

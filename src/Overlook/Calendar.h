@@ -21,6 +21,7 @@ struct CalEvent : public Moveable<CalEvent> {
 	
 	bool operator () (const CalEvent& a, const CalEvent& b) const {return a.timestamp < b.timestamp;}
 	
+	bool IsNegative() const {return title.Find("Unemploy") != -1;}
 };
 
 

@@ -528,6 +528,7 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put32(snap.added.Get() - Time(1970,1,1).Get());
 			out.Put(&snap.fmlevel, sizeof(double));
 			out.Put(&snap.tplimit, sizeof(double));
+			out.Put(&snap.equity, sizeof(double));
 		}
 	}
 	else if (key == "errorlist") {
@@ -572,10 +573,11 @@ void ActiveSession::GetSentSnap(SentimentSnapshot& snap, Stream& mem) {
 		snap.pair_pres[j] = mem.Get32();
 	int comment_len = mem.Get32();
 	snap.comment = mem.Get(comment_len);
-	snap.added = Time(1970,1,1) + mem.Get32();
 	mem.Get(&snap.fmlevel, sizeof(double));
 	mem.Get(&snap.tplimit, sizeof(double));
-
+	
+	snap.added = GetUtcTime();
+	snap.equity = GetMetaTrader().AccountEquity();
 }
 
 void ActiveSession::Poll(Stream& in, Stream& out) {

@@ -573,6 +573,7 @@ void Client::RefreshSentimentList() {
 		snap.added = Time(1970,1,1) + mem.Get32();
 		mem.Get(&snap.fmlevel, sizeof(double));
 		mem.Get(&snap.tplimit, sizeof(double));
+		mem.Get(&snap.equity, sizeof(double));
 	}
 	
 	pending_senthist = false;
@@ -690,7 +691,6 @@ void Client::PutSent(SentimentSnapshot& snap, Stream& out) {
 		out.Put32(snap.pair_pres[j]);
 	out.Put32(snap.comment.GetCount());
 	out.Put(snap.comment);
-	out.Put32(snap.added.Get() - Time(1970,1,1).Get());
 	out.Put(&snap.fmlevel, sizeof(double));
 	out.Put(&snap.tplimit, sizeof(double));
 }

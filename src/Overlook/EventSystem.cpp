@@ -90,7 +90,7 @@ void EventSystem::Start() {
 		for(int i = 0; i < errors.GetCount(); i++) {
 			const EventError& e = errors[i];
 			if (prev_errors.Find(e) == -1) {
-				//if (prev_sent_id == sent_id)
+				if (prev_sent_id == sent_id)
 					WhenError(e);
 				history_errors.Add(e);
 				changes = true;
@@ -113,6 +113,10 @@ void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>&
 	Time pre_news_end = now + 60*60;
 	Time post_news_begin = now - 3*60*60;
 	Time post_news_end = now;
+	Time h24_begin = now;
+	Time h24_end = now + 24*60*60;
+	
+	bool high_usd_news_upcoming = false;
 	
 	for(int i = cal.GetCount() - 1; i >= 0; i--) {
 		const CalEvent& e = cal.GetEvent(i);
@@ -122,12 +126,32 @@ void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>&
 		if (cur < 0) continue;
 		
 		if (e.timestamp >= pre_news_begin && e.timestamp <= pre_news_end) {
-			AddInfo(errors, "Pre-news: " + e.currency + " " + e.title);
+			AddInfo(errors, e.currency + " pre-news: " + e.title);
 			PreNewsErrors(e, snap, errors);
 		}
 		if (e.timestamp >= post_news_begin && e.timestamp <= post_news_end) {
-			AddInfo(errors, "Post-news: " + e.currency + " " + e.title);
+			AddInfo(errors, e.currency + " post-news: " + e.title);
 			PostNewsErrors(e, snap, errors);
+		}
+		
+		if (e.timestamp >= h24_begin && e.timestamp <= h24_end) {
+			if (e.currency == "USD" && e.impact == 3) {
+				high_usd_news_upcoming = true;
+			}
+		}
+	}
+	
+	
+	if (high_usd_news_upcoming) {
+		if (IsSessionOpen("AUD")) {
+			AddInfo(errors, "AUD Expecting high volatility");
+			if (snap.cur_pres[GetSentiment().currencies.Find("AUD")] == 0)
+				AddError(errors, "AUD not traded");
+		}
+		if (IsSessionOpen("JPY")) {
+			AddInfo(errors, "JPY Expecting high volatility");
+			if (snap.cur_pres[GetSentiment().currencies.Find("JPY")] == 0)
+				AddError(errors, "JPY not traded");
 		}
 	}
 	
@@ -135,6 +159,10 @@ void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>&
 }
 
 void EventSystem::PreNewsErrors(const CalEvent& e, const SentimentSnapshot& snap, Index<EventError>& errors) {
+	
+	if (e.impact < 2)
+		return;
+	
 	double fc = ScanDouble(e.forecast);
 	double prev = ScanDouble(e.previous);
 	
@@ -142,19 +170,24 @@ void EventSystem::PreNewsErrors(const CalEvent& e, const SentimentSnapshot& snap
 	int pre_effect = 0;
 	if (e.previous != "" && e.forecast != "" && prev != fc)
 		pre_effect = fc > prev ? +1 : -1;
+	if (e.IsNegative())
+		pre_effect *= -1;
 	for(int i = 0; i < pairs.GetCount(); i++) {
 		int pres = snap.pair_pres[i];
-		if (pres == 0) continue;
 		const String& pair = pairs[i];
 		String a = pair.Left(3);
 		String b = pair.Right(3);
 		if (e.currency == a) {
 			if (pres * pre_effect < 0)
 				AddWarning(errors, pair + " against pre news " + e.title);
+			if (!pres)
+				AddError(errors, pair + " inactive");
 		}
 		if (e.currency == b) {
 			if (pres * pre_effect > 0)
 				AddWarning(errors, pair + " against pre news " + e.title);
+			if (!pres)
+				AddError(errors, pair + " inactive");
 		}
 	}
 	
@@ -164,15 +197,79 @@ void EventSystem::PreNewsErrors(const CalEvent& e, const SentimentSnapshot& snap
 }
 
 void EventSystem::PostNewsErrors(const CalEvent& e, const SentimentSnapshot& snap, Index<EventError>& errors) {
+	
+	if (e.impact < 2)
+		return;
+	
+	bool post_effect1_affects = e.currency == "AUD" || e.currency == "JPY";
+	
 	double act = ScanDouble(e.actual);
 	double fc = ScanDouble(e.forecast);
 	double prev = ScanDouble(e.previous);
 	
-	int post_effect = 0;
+	int post_effect0 = 0;
 	if (e.actual != "" && e.forecast != "" && act != fc)
-		post_effect = act > fc ? +1 : -1;
-	else if (e.actual != "" && e.previous != "" && prev != act)
-		post_effect = act > prev ? +1 : -1;
+		post_effect0 = act > fc ? +1 : -1;
+	
+	int post_effect1 = 0;
+	if (e.actual != "" && e.previous != "" && prev != act)
+		post_effect1 = act > prev ? +1 : -1;
+	
+	if (e.IsNegative()) {
+		post_effect0 *= -1;
+		post_effect1 *= -1;
+	}
+	
+	for(int i = 0; i < pairs.GetCount(); i++) {
+		int pres = snap.pair_pres[i];
+		const String& pair = pairs[i];
+		String a = pair.Left(3);
+		String b = pair.Right(3);
+		if (e.currency == a) {
+			if (pres * post_effect0 < 0)
+				AddWarning(errors, pair + " against pre news " + e.title);
+			if (pres * post_effect1 < 0 && post_effect1_affects)
+				AddWarning(errors, pair + " against pre news " + e.title);
+			if (!pres)
+				AddError(errors, pair + " inactive");
+		}
+		if (e.currency == b) {
+			if (pres * post_effect0 > 0)
+				AddWarning(errors, pair + " against pre news " + e.title);
+			if (pres * post_effect1 > 0 && post_effect1_affects)
+				AddWarning(errors, pair + " against pre news " + e.title);
+			if (!pres)
+				AddError(errors, pair + " inactive");
+		}
+	}
+}
+
+bool EventSystem::IsSessionOpen(String currency) {
+	Date today = GetUtcTime();
+	return IsSessionOpen(currency, today-1) || IsSessionOpen(currency, today) || IsSessionOpen(currency, today+1);
+}
+
+bool EventSystem::IsSessionOpen(String currency, Date d) {
+	Time now = GetUtcTime();
+	DaySlots ds;
+	GetDaySlots(d, ds);
+	for(int i = 0; i < ds.time_points.GetCount(); i++) {
+		TimeSlot& ts = ds.time_points[i];
+		if (ts.is_open_cur.Find(currency) == -1)
+			continue;
+		Time begin = ds.time_points.GetKey(i);
+		Time end;
+		if (i < ds.time_points.GetCount() - 1) {
+			end = ds.time_points.GetKey(i + 1);
+		} else {
+			end = ds.time_points.GetKey(0);
+			end += 24 * 60 * 60;
+		}
+		if (now >= begin && now <= end) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventError>& errors) {
@@ -207,7 +304,8 @@ void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventErr
 				int pres = snap.pair_pres[i];
 				if (pres != 0 && pair_list.Find(i) == -1) {
 					String p = pairs[i];
-					AddWarning(errors, "Pair " + p + " doesn't have open sessions");
+					if (p.Find("USD") == -1)
+						AddWarning(errors, "Pair " + p + " doesn't have open sessions");
 				}
 			}
 		}

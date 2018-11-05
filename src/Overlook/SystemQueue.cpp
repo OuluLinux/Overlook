@@ -735,10 +735,10 @@ bool System::RefreshReal() {
 				mt.SetSignalFreeze(sym_id, true);
 			else {
 				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
-					if (open_count >= MAX_SYMOPEN)
+					/*if (open_count >= MAX_SYMOPEN)
 						sig = 0;
-					else
-						open_count++;
+					else*/
+					open_count++;
 				}
 				
 				mt.SetSignal(sym_id, sig);
@@ -747,7 +747,7 @@ bool System::RefreshReal() {
 			ReleaseLog("Real symbol " + IntStr(sym_id) + " signal " + IntStr(sig));
 		}
 		
-		mt.SetFreeMarginScale(MAX_SYMOPEN * SIGNALSCALE);
+		mt.SetFreeMarginScale(max(1, open_count) * SIGNALSCALE);
 		mt.SignalOrders(true);
 	}
 	catch (UserExc e) {

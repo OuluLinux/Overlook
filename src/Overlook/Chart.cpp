@@ -15,6 +15,11 @@ Chart::Chart() {
 	shift = 0;
 }
 
+Chart::~Chart() {
+	refresh_lock.Enter();
+	refresh_lock.Leave();
+}
+
 void Chart::Init(int symbol, const FactoryDeclaration& decl, int tf) {
 	this->decl = decl;
 	this->symbol = symbol;
@@ -45,13 +50,15 @@ void Chart::RefreshCore() {
 		indi_ids.Add(decl);
 		tf_ids.Add(tf);
 		sym_ids.Add(symbol);
-		work_queue.Clear();
-		sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
 		
+		{
+			Vector<Ptr<CoreItem> > work_queue;
+			sys.GetCoreQueue(work_queue, sym_ids, tf_ids, indi_ids);
+			Swap(work_queue, this->work_queue);
+		}
 		RefreshCoreData(true);
 		
-		if (work_queue.IsEmpty()) {refresh_lock.Leave(); return;}
-		if (work_queue.IsEmpty() || !work_queue.Top()->core) return;
+		if (work_queue.IsEmpty() || !work_queue.Top()->core) {work_queue.Clear(); refresh_lock.Leave(); return;}
 		
 		core = work_queue.Top();
 		bardata = 0;

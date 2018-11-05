@@ -14,11 +14,28 @@ Sentiment::Sentiment() {
 	symbols.Add("USDJPY");
 	symbols.Add("USDCAD");
 	symbols.Add("AUDUSD");
+	symbols.Add("NZDUSD");
 	symbols.Add("AUDJPY");
-	//symbols.Add("NZDUSD");
-	//symbols.Add("EURCHF");
+	symbols.Add("EURCHF");
 	symbols.Add("EURJPY");
 	symbols.Add("EURGBP");
+	symbols.Add("EURCAD");
+	symbols.Add("EURAUD");
+	symbols.Add("EURNZD");
+	symbols.Add("GBPCHF");
+	symbols.Add("GBPJPY");
+	symbols.Add("CHFJPY");
+	symbols.Add("NZDJPY");
+	symbols.Add("CADJPY");
+	symbols.Add("GBPCAD");
+	symbols.Add("CADCHF");
+	symbols.Add("NZDCAD");
+	symbols.Add("AUDCAD");
+	symbols.Add("GBPAUD");
+	symbols.Add("AUDCHF");
+	symbols.Add("AUDCHF");
+	symbols.Add("AUDNZD");
+	symbols.Add("GBPNZD");
 	
 	currencies.Add("USD");
 	currencies.Add("EUR");
@@ -26,6 +43,8 @@ Sentiment::Sentiment() {
 	currencies.Add("JPY");
 	currencies.Add("CAD");
 	currencies.Add("AUD");
+	currencies.Add("NZD");
+	currencies.Add("CHF");
 	
 	LoadThis();
 	

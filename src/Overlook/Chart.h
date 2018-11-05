@@ -35,6 +35,7 @@ protected:
 public:
 	typedef Chart CLASSNAME;
 	Chart();
+	~Chart();
 	
 	void PostRefresh() {PostCallback(THISBACK(Refresh0));}
 	void ClearCores();

@@ -720,10 +720,12 @@ bool System::RefreshReal() {
 		int is_open_count = 0;
 		bool changes = false;
 		double prev_fmlevel = mt.GetFreeMarginLevel();
+		if (prev_fmlevel < FMLIMIT) prev_fmlevel = FMLIMIT;
 		if (fmlevel < FMLIMIT) fmlevel = FMLIMIT;
 		ReleaseLog("Prev fmlevel " + DblStr(prev_fmlevel) + " next fmlevel " + DblStr(fmlevel));
 		mt.SetFreeMarginLevel(fmlevel);
 		double cur_fmlevel = mt.GetFreeMarginLevel();
+		if (cur_fmlevel < FMLIMIT) cur_fmlevel = FMLIMIT;
 		bool keep_fmlevel = prev_fmlevel == cur_fmlevel;
 		
 		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
@@ -752,8 +754,8 @@ bool System::RefreshReal() {
 		}
 		
 		mt.SetFreeMarginScale(max(1, is_open_count) * SIGNALSCALE);
-		if (changes)
-			mt.SignalOrders(true);
+		//if (changes) // faulty closes will stay haunt
+		mt.SignalOrders(true);
 		
 		prev_signals <<= signals;
 	}

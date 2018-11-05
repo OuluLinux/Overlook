@@ -155,6 +155,7 @@ public:
 			#endif
 		}
 		
+		#ifdef flagHAVE_CURRENCIES
 		if (sys.IsCurrencySymbol(in_sym)) {
 			#if REFRESH_FROM_FASTER
 			if (match_tf)
@@ -174,6 +175,7 @@ public:
 			return syms.Find(out_sym) != -1;
 			#endif
 		}
+		#endif
 		
 		if (sys.IsNetSymbol(in_sym)) {
 			#if REFRESH_FROM_FASTER

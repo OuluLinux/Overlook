@@ -295,7 +295,7 @@ protected:
 	Vector<Vector<int> >		sym_currencies;
 	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs, major_currency_syms;
 	Index<String>				symbols, allowed_symbols, currencies;
-	Vector<int>					signals;
+	Vector<int>					signals, prev_signals;
 	Index<int>					periods, major_currencies;
 	Vector<String>				period_strings;
 	Vector<double>				spread_points;
@@ -320,11 +320,17 @@ public:
 	int		GetNormalSymbolCount() const {return normal_symbol_count;}
 	NetSetting& AddNet(String s) {AddSymbol(s); return nets.Add();}
 	bool	IsNormalSymbol(int i) {return i < normal_symbol_count;}
+	#ifdef flagHAVE_CURRENCIES
 	bool	IsCurrencySymbol(int i) {return i >= normal_symbol_count && i < normal_symbol_count + currencies.GetCount();}
 	bool	IsNetSymbol(int i) {return i >= normal_symbol_count + currencies.GetCount();}
 	int		GetNetSymbol(int i) {return i + normal_symbol_count + currencies.GetCount();}
-	NetSetting& GetNet(int i) {return nets[i];}
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
+	#else
+	bool	IsNetSymbol(int i) {return i >= normal_symbol_count;}
+	int		GetNetSymbol(int i) {return i + normal_symbol_count;}
+	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count];}
+	#endif
+	NetSetting& GetNet(int i) {return nets[i];}
 	int		GetNetCount() const {return nets.GetCount();}
 	int		GetVtfWeekbars() const {return 98;}
 	void	SetFreemarginLevel(double d) {fmlevel = d;}

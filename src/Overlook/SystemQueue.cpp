@@ -716,8 +716,9 @@ bool System::RefreshReal() {
 	try {
 		mt.Data();
 		//mt.RefreshLimits();
-		int open_count = 0;
 		
+		int is_open_count = 0;
+		bool changes = false;
 		double prev_fmlevel = mt.GetFreeMarginLevel();
 		if (fmlevel < FMLIMIT) fmlevel = FMLIMIT;
 		ReleaseLog("Prev fmlevel " + DblStr(prev_fmlevel) + " next fmlevel " + DblStr(fmlevel));
@@ -727,30 +728,34 @@ bool System::RefreshReal() {
 		
 		for (int sym_id = 0; sym_id < GetNormalSymbolCount(); sym_id++) {
 			int sig = signals[sym_id];
+			int prev_sig_in = prev_signals.IsEmpty() ? 0 : prev_signals[sym_id];
 			int prev_sig = mt.GetSignal(sym_id);
-			if (sig > +SIGNALSCALE) sig = 0;
-			if (sig < -SIGNALSCALE) sig = 0;
+			
+			if (sig > +SIGNALSCALE) sig = +SIGNALSCALE;
+			if (sig < -SIGNALSCALE) sig = -SIGNALSCALE;
+			
+			if (prev_sig != sig)
+				changes = true;
 			
 			if (day_enough) sig = 0;
+			
+			if (sig)
+				is_open_count++;
 			
 			if (sig == prev_sig && sig != 0 && keep_fmlevel)
 				mt.SetSignalFreeze(sym_id, true);
 			else {
-				if ((!prev_sig && sig) || (prev_sig && sig != prev_sig)) {
-					/*if (open_count >= MAX_SYMOPEN)
-						sig = 0;
-					else*/
-					open_count++;
-				}
-				
 				mt.SetSignal(sym_id, sig);
 				mt.SetSignalFreeze(sym_id, false);
 			}
 			ReleaseLog("Real symbol " + IntStr(sym_id) + " signal " + IntStr(sig));
 		}
 		
-		mt.SetFreeMarginScale(max(1, open_count) * SIGNALSCALE);
-		mt.SignalOrders(true);
+		mt.SetFreeMarginScale(max(1, is_open_count) * SIGNALSCALE);
+		if (changes)
+			mt.SignalOrders(true);
+		
+		prev_signals <<= signals;
 	}
 	catch (UserExc e) {
 		LOG(e);

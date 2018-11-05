@@ -81,9 +81,11 @@ void DataBridge::Start() {
 		#endif
 		RefreshFromAskBid(init_round);
 	}
+	#ifdef flagHAVE_CURRENCIES
 	else if (sym < sym_count + cur_count) {
 		RefreshCurrency();
 	}
+	#endif
 	else {
 		RefreshNet();
 	}

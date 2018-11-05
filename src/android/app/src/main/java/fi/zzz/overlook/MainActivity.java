@@ -640,7 +640,7 @@ class CalendarAdapter extends ArrayAdapter<String> {
         CalEvent e = values.get(position);
 
         title.setText(e.title);
-        currency.setText(e.currency);
+        currency.setText(e.currency + " " + e.GetImpactString());
         time.setText((e.timestamp.compareTo(currentTime) > 0 ? "UPCOMING " : "") + e.timestamp.toString());
         actual.setText(e.actual);
         forecast.setText(e.forecast);

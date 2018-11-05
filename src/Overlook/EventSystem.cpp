@@ -163,29 +163,43 @@ void EventSystem::PreNewsErrors(const CalEvent& e, const SentimentSnapshot& snap
 	if (e.impact < 2)
 		return;
 	
+	bool is_pmi = e.title.Find("PMI") >= 0;
+	
 	double fc = ScanDouble(e.forecast);
 	double prev = ScanDouble(e.previous);
 	
 	// Same with forecast vs previous change
-	int pre_effect = 0;
+	int pre_effect0 = 0;
 	if (e.previous != "" && e.forecast != "" && prev != fc)
-		pre_effect = fc > prev ? +1 : -1;
-	if (e.IsNegative())
-		pre_effect *= -1;
+		pre_effect0 = fc > prev ? +1 : -1;
+	
+	int pre_effect1 = 0;
+	if (is_pmi)
+		pre_effect1 = fc >= 50 ? +1 : -1;
+	
+	if (e.IsNegative()) {
+		pre_effect0 *= -1;
+		pre_effect1 *= -1;
+	}
+	
 	for(int i = 0; i < pairs.GetCount(); i++) {
 		int pres = snap.pair_pres[i];
 		const String& pair = pairs[i];
 		String a = pair.Left(3);
 		String b = pair.Right(3);
 		if (e.currency == a) {
-			if (pres * pre_effect < 0)
-				AddWarning(errors, pair + " against pre news " + e.title);
+			if (pres * pre_effect0 < 0)
+				AddWarning(errors, pair + " against pre news FCAST/PREV " + e.title);
+			if (pres * pre_effect1 < 0)
+				AddWarning(errors, pair + " against pre news VALUE " + e.title);
 			if (!pres)
 				AddError(errors, pair + " inactive");
 		}
 		if (e.currency == b) {
-			if (pres * pre_effect > 0)
-				AddWarning(errors, pair + " against pre news " + e.title);
+			if (pres * pre_effect0 > 0)
+				AddWarning(errors, pair + " against pre news FCAST/PREV " + e.title);
+			if (pres * pre_effect1 > 1)
+				AddWarning(errors, pair + " against pre news VALUE " + e.title);
 			if (!pres)
 				AddError(errors, pair + " inactive");
 		}
@@ -201,7 +215,10 @@ void EventSystem::PostNewsErrors(const CalEvent& e, const SentimentSnapshot& sna
 	if (e.impact < 2)
 		return;
 	
+	bool is_pmi = e.title.Find("PMI") >= 0;
+	
 	bool post_effect1_affects = e.currency == "AUD" || e.currency == "JPY";
+	bool post_effect2_affects = is_pmi;
 	
 	double act = ScanDouble(e.actual);
 	double fc = ScanDouble(e.forecast);
@@ -215,6 +232,10 @@ void EventSystem::PostNewsErrors(const CalEvent& e, const SentimentSnapshot& sna
 	if (e.actual != "" && e.previous != "" && prev != act)
 		post_effect1 = act > prev ? +1 : -1;
 	
+	int post_effect2 = 0;
+	if (is_pmi)
+		post_effect2 = act >= 50 ? +1 : -1;
+	
 	if (e.IsNegative()) {
 		post_effect0 *= -1;
 		post_effect1 *= -1;
@@ -227,17 +248,21 @@ void EventSystem::PostNewsErrors(const CalEvent& e, const SentimentSnapshot& sna
 		String b = pair.Right(3);
 		if (e.currency == a) {
 			if (pres * post_effect0 < 0)
-				AddWarning(errors, pair + " against pre news " + e.title);
+				AddWarning(errors, pair + " against post news ACT/FCAST " + e.title);
 			if (pres * post_effect1 < 0 && post_effect1_affects)
-				AddWarning(errors, pair + " against pre news " + e.title);
+				AddWarning(errors, pair + " against post news ACT/PREV " + e.title);
+			if (pres * post_effect2 < 0 && post_effect2_affects)
+				AddWarning(errors, pair + " against post news VALUE " + e.title);
 			if (!pres)
 				AddError(errors, pair + " inactive");
 		}
 		if (e.currency == b) {
 			if (pres * post_effect0 > 0)
-				AddWarning(errors, pair + " against pre news " + e.title);
+				AddWarning(errors, pair + " against post news ACT/FCAST " + e.title);
 			if (pres * post_effect1 > 0 && post_effect1_affects)
-				AddWarning(errors, pair + " against pre news " + e.title);
+				AddWarning(errors, pair + " against post news ACT/PREV " + e.title);
+			if (pres * post_effect2 > 0 && post_effect2_affects)
+				AddWarning(errors, pair + " against post news VALUE " + e.title);
 			if (!pres)
 				AddError(errors, pair + " inactive");
 		}

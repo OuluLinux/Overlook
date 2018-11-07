@@ -193,6 +193,7 @@ void SentimentCtrl::Data() {
 	
 	
 	SentimentSnapshot snap;
+	snap.cur_pres.SetCount(curpreslist.GetCount(), 0);
 	snap.pair_pres.SetCount(pairpreslist.GetCount());
 	for(int i = 0; i < pairpreslist.GetCount(); i++)
 		snap.pair_pres[i] = pairpreslist.Get(i, 1);

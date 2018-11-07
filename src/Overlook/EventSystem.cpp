@@ -335,6 +335,37 @@ void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventErr
 			}
 		}
 	}
+	
+	for(int i = 0; i < GetSentiment().currencies.GetCount(); i++) {
+		String cur = GetSentiment().currencies[i];
+		
+		int pres = snap.cur_pres[GetSentiment().currencies.Find("USD")];
+		
+		CoreList cl;
+		cl.AddSymbol(cur + "2");
+		cl.AddTf(0);
+		cl.AddIndi(System::Find<MovingAverage>()).AddArg(30).AddArg(0).AddArg(1);
+		cl.AddIndi(System::Find<MovingAverage>()).AddArg(300).AddArg(0).AddArg(1);
+		cl.Init();
+		cl.Refresh();
+		
+		ConstLabelSignal& fastma = cl.GetLabelSignal(0, 0);
+		ConstLabelSignal& slowma = cl.GetLabelSignal(0, 1);
+		bool fastma_latest = fastma.signal.Top();
+		bool slowma_latest = slowma.signal.Top();
+		
+		if (pres == 0) {
+			if (fastma_latest == slowma_latest)
+				AddWarning(errors, cur + " moving average opportunity");
+		} else {
+			int pres_sig = pres > 0 ? 0 : 1;
+			if (fastma_latest == slowma_latest && pres_sig != fastma_latest)
+				AddError(errors, cur + " open against MAs");
+			else if (pres_sig != fastma_latest)
+				AddWarning(errors, cur + " open agains fast MA");
+		}
+
+	}
 }
 
 void EventSystem::AddError(Index<EventError>& errors, String err) {

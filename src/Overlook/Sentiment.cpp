@@ -33,7 +33,6 @@ Sentiment::Sentiment() {
 	symbols.Add("AUDCAD");
 	symbols.Add("GBPAUD");
 	symbols.Add("AUDCHF");
-	symbols.Add("AUDCHF");
 	symbols.Add("AUDNZD");
 	symbols.Add("GBPNZD");
 	

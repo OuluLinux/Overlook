@@ -142,7 +142,7 @@ void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>&
 	}
 	
 	
-	if (high_usd_news_upcoming) {
+	/*if (high_usd_news_upcoming) {
 		if (IsSessionOpen("AUD")) {
 			AddInfo(errors, "AUD Expecting high volatility");
 			if (snap.cur_pres[GetSentiment().currencies.Find("AUD")] == 0)
@@ -153,7 +153,7 @@ void EventSystem::GetErrorList(const SentimentSnapshot& snap, Index<EventError>&
 			if (snap.cur_pres[GetSentiment().currencies.Find("JPY")] == 0)
 				AddError(errors, "JPY not traded");
 		}
-	}
+	}*/
 	
 	GetSessionErrors(snap, errors);
 }
@@ -339,7 +339,7 @@ void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventErr
 	for(int i = 0; i < GetSentiment().currencies.GetCount(); i++) {
 		String cur = GetSentiment().currencies[i];
 		
-		int pres = snap.cur_pres[GetSentiment().currencies.Find("USD")];
+		int pres = snap.cur_pres[GetSentiment().currencies.Find(cur)];
 		
 		CoreList cl;
 		cl.AddSymbol(cur + "2");
@@ -354,10 +354,11 @@ void EventSystem::GetSessionErrors(const SentimentSnapshot& snap, Index<EventErr
 		bool fastma_latest = fastma.signal.Top();
 		bool slowma_latest = slowma.signal.Top();
 		
-		if (pres == 0) {
+		/*if (pres == 0) {
 			if (fastma_latest == slowma_latest)
-				AddWarning(errors, cur + " moving average opportunity");
-		} else {
+				AddInfo(errors, cur + " moving average opportunity " + (fastma_latest ? "down" : "up"));
+		} else*/
+		if (pres != 0) {
 			int pres_sig = pres > 0 ? 0 : 1;
 			if (fastma_latest == slowma_latest && pres_sig != fastma_latest)
 				AddError(errors, cur + " open against MAs");

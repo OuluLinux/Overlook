@@ -44,6 +44,7 @@ struct ForecastCtrl : public SubWindowCtrl {
 #include "Automation.h"
 #include "EventSystem.h"
 #include "Server.h"
+#include "Myfxbook.h"
 
 
 namespace Overlook {

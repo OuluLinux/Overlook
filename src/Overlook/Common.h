@@ -16,7 +16,7 @@
 
 
 #define TRAININGAREA_FACTOR 0.95
-#define SIGNALSCALE 4
+#define SIGNALSCALE 100
 #define MAX_SYMOPEN 5
 #define FMLIMIT 0.6
 #define TPLIMIT 0.1

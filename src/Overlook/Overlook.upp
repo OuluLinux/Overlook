@@ -71,7 +71,9 @@ file
 	ActiveSession.cpp,
 	Database.cpp,
 	EventSystem.h,
-	EventSystem.cpp;
+	EventSystem.cpp,
+	Myfxbook.h,
+	Myfxbook.cpp;
 
 mainconfig
 	"" = "GUI MT",

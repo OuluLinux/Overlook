@@ -73,38 +73,38 @@ CONSOLE_APP_MAIN {
 	}
 
 	CiParser* parser = new CiParser();
-	parser->pre_symbols = pre_symbols;
+	parser->pre_symbols <<= pre_symbols;
 	for (String inputFile : inputFiles) {
 		try {
 			parser->Parse(inputFile, new StringReader(LoadFile(inputFile)));
 		} catch (Exc ex) {
-			Cerr() << (inputFile + ":" + IntStr(parser->InputLineNo) + ": ERROR: " + ex);
+			Cerr() << (inputFile + ":" + IntStr(parser->input_line_no) + ": ERROR: " + ex);
 			parser->PrintMacroStack();
 			if (parser->current_method != NULL)
-				Cerr() << "   in method " << parser.current_method.Name;
+				Cerr() << "   in method " << parser->current_method->name;
 			SetExitCode(1);
 			return;
 		}
 	}
-	CiProgram* program = parser.program;
+	CiProgram* program = parser->Program();
 
 	CiResolver* resolver = new CiResolver();
-	resolver.SearchDirs = searchDirs;
+	resolver->search_dirs <<= searchDirs;
 	try {
-		resolver.Resolve(program);
-	} catch (Exception ex) {
-		if (resolver.current_class != NULL) {
-			Console.Error.Write(resolver.current_class.SourceFilename);
-			Console.Error.Write(": ");
+		resolver->Resolve(program);
+	} catch (Exc ex) {
+		if (resolver->current_class != NULL) {
+			Cerr() << resolver->current_class->source_filename;
+			Cerr() << ": ";
 		}
-		Console.Error.WriteLine("ERROR: {0}", ex.Message);
-		if (resolver.current_method != NULL)
-			Console.Error.WriteLine("   in method {0}", resolver.current_method.Name);
+		Cerr() << "ERROR: " << ex;
+		if (resolver->current_method != NULL)
+			Cerr() << "   in method " << resolver->current_method->name;
 		SetExitCode(1);
 		return;
 	}
 
-	SourceGenerator gen;
+	SourceGenerator* gen;
 	if      (lang == "c")		gen = new GenC89();
 	else if (lang == "c99")		gen = new GenC();
 	else if (lang == "java")	gen = new GenJava(namespace_);

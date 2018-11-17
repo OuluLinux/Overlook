@@ -43,7 +43,7 @@ class GenJs : SourceGenerator
 		CiClassStorageType classType = type as CiClassStorageType;
 		if (classType != NULL) {
 			Write("new ");
-			Write(classType.Class.Name);
+			Write(classType->class_.Name);
 			Write("()");
 		}
 		else {
@@ -72,8 +72,8 @@ class GenJs : SourceGenerator
 		Write(field.Documentation);
 		Write("this->");
 		WriteCamelCase(field.Name);
-		CiType type = field.Type;
-		if (type == CiBoolType.Value)
+		CiType type = field->type;
+		if (type == CiBoolType::Value())
 			Write(" = false");
 		else if (type == CiByteType::Value() || type == CiIntType::Value())
 			Write(" = 0");
@@ -90,7 +90,7 @@ class GenJs : SourceGenerator
 	{
 		if (value is CiEnumValue) {
 			CiEnumValue ev = (CiEnumValue) value;
-			Write(ev.Type.Name);
+			Write(ev->type.Name);
 			Write('.');
 			WriteUppercaseWithUnderscores(ev.Name);
 		}
@@ -120,7 +120,7 @@ class GenJs : SourceGenerator
 				return CiPriority.And;
 		}
 		else if (expr is CiBinaryExpr) {
-			if (((CiBinaryExpr) expr).Op == Slash)
+			if (((CiBinaryExpr) expr)->op == Slash)
 				return CiPriority.Postfix;
 		}
 		return base.GetPriority(expr);
@@ -128,7 +128,7 @@ class GenJs : SourceGenerator
 
 	protected override void Write(CiFieldAccess expr)
 	{
-		WriteChild(expr, expr.Obj);
+		WriteChild(expr, expr->obj);
 		Write('.');
 		WriteCamelCase(expr.Field.Name);
 	}
@@ -137,15 +137,15 @@ class GenJs : SourceGenerator
 	{
 		if (expr->property == CiLibrary::SByteProperty) {
 			Write('(');
-			WriteChild(CiPriority.Xor, expr.Obj);
+			WriteChild(CiPriority.Xor, expr->obj);
 			Write(" ^ 128) - 128");
 		}
 		else if (expr->property == CiLibrary::LowByteProperty) {
-			WriteChild(expr, expr.Obj);
+			WriteChild(expr, expr->obj);
 			Write(" & 0xff");
 		}
 		else if (expr->property == CiLibrary::StringLengthProperty) {
-			WriteChild(expr, expr.Obj);
+			WriteChild(expr, expr->obj);
 			Write(".length");
 		}
 		else
@@ -167,63 +167,63 @@ class GenJs : SourceGenerator
 
 	protected override void Write(CiMethodCall expr)
 	{
-		if (expr.Method == CiLibrary::MulDivMethod) {
+		if (expr->method == CiLibrary::MulDivMethod) {
 			Write("Math.floor(");
 			WriteMulDiv(CiPriority.Multiplicative, expr);
 		}
-		else if (expr.Method == CiLibrary::CharAtMethod) {
-			Write(expr.Obj);
+		else if (expr->method == CiLibrary::CharAtMethod) {
+			Write(expr->obj);
 			Write(".charCodeAt(");
-			Write(expr.Arguments[0]);
+			Write(expr->arguments[0]);
 			Write(')');
 		}
-		else if (expr.Method == CiLibrary::SubstringMethod) {
-			if (expr.Arguments[0].HasSideEffect) {
+		else if (expr->method == CiLibrary::SubstringMethod) {
+			if (expr->arguments[0].HasSideEffect) {
 				Write("Ci.substring(");
-				Write(expr.Obj);
+				Write(expr->obj);
 				Write(", ");
-				Write(expr.Arguments[0]);
+				Write(expr->arguments[0]);
 				Write(", ");
-				Write(expr.Arguments[1]);
+				Write(expr->arguments[1]);
 				Write(')');
 				this->UsesSubstringMethod = true;
 			}
 			else {
-				Write(expr.Obj);
+				Write(expr->obj);
 				Write(".substring(");
-				Write(expr.Arguments[0]);
+				Write(expr->arguments[0]);
 				Write(", ");
-				Write(new CiBinaryExpr(expr.Arguments[0], Plus, expr.Arguments[1] });
+				Write(new CiBinaryExpr(expr->arguments[0], Plus, expr->arguments[1] });
 				Write(')');
 			}
 		}
-		else if (expr.Method == CiLibrary::Arraycopy_toMethod) {
+		else if (expr->method == CiLibrary::Arraycopy_toMethod) {
 			Write("Ci.copyArray(");
-			Write(expr.Obj);
+			Write(expr->obj);
 			Write(", ");
-			Write(expr.Arguments[0]);
+			Write(expr->arguments[0]);
 			Write(", ");
-			Write(expr.Arguments[1]);
+			Write(expr->arguments[1]);
 			Write(", ");
-			Write(expr.Arguments[2]);
+			Write(expr->arguments[2]);
 			Write(", ");
-			Write(expr.Arguments[3]);
+			Write(expr->arguments[3]);
 			Write(')');
 			this->UsesCopyArrayMethod = true;
 		}
-		else if (expr.Method == CiLibrary::ArrayToStringMethod) {
+		else if (expr->method == CiLibrary::ArrayToStringMethod) {
 			Write("Ci.bytesToString(");
-			Write(expr.Obj);
+			Write(expr->obj);
 			Write(", ");
-			Write(expr.Arguments[0]);
+			Write(expr->arguments[0]);
 			Write(", ");
-			Write(expr.Arguments[1]);
+			Write(expr->arguments[1]);
 			Write(')');
 			this->UsesBytesToStringMethod = true;
 		}
-		else if (expr.Method == CiLibrary::ArrayStorageClearMethod) {
+		else if (expr->method == CiLibrary::ArrayStorageClearMethod) {
 			Write("Ci.clearArray(");
-			Write(expr.Obj);
+			Write(expr->obj);
 			Write(", 0)");
 			this->UsesClearArrayMethod = true;
 		}
@@ -233,11 +233,11 @@ class GenJs : SourceGenerator
 
 	protected override void Write(CiBinaryExpr expr)
 	{
-		if (expr.Op == Slash) {
+		if (expr->op == Slash) {
 			Write("Math.floor(");
 			WriteChild(CiPriority.Multiplicative, expr.Left);
 			Write(" / ");
-			WriteNonAssocChild(CiPriority.Multiplicative, expr.Right);
+			WriteNonAssocChild(CiPriority.Multiplicative, expr->right);
 			Write(')');
 		}
 		else
@@ -259,9 +259,9 @@ class GenJs : SourceGenerator
 	{
 		Write("var ");
 		Write(stmt.Name);
-		WriteInit(stmt.Type);
+		WriteInit(stmt->type);
 		if (stmt.InitialValue != NULL) {
-			if (stmt.Type is CiArrayStorageType)
+			if (stmt->type is CiArrayStorageType)
 				WriteInitArrayStorageVar(stmt);
 			else {
 				Write(" = ");
@@ -279,17 +279,17 @@ class GenJs : SourceGenerator
 
 	void Write(CiMethod method)
 	{
-		if (method.CallType == CiCallType.Abstract)
+		if (method->call_type == CiCallType.Abstract)
 			return;
 		WriteLine();
-		Write(method.Class.Name);
+		Write(method->class_.Name);
 		Write('.');
-		if (method.CallType != CiCallType.Static)
+		if (method->call_type != StaticCallType)
 			Write("prototype.");
 		WriteCamelCase(method.Name);
 		Write(" = function(");
 		bool first = true;
-		foreach (CiParam param in method.Signature.Params) {
+		foreach (CiParam param in method.Signature()->Params) {
 			if (first)
 				first = false;
 			else
@@ -297,11 +297,11 @@ class GenJs : SourceGenerator
 			Write(param.Name);
 		}
 		Write(") ");
-		if (method.Body is CiBlock)
-			Write(method.Body);
+		if (method->body is CiBlock)
+			Write(method->body);
 		else {
 			OpenBlock();
-			Write(method.Body);
+			Write(method->body);
 			CloseBlock();
 		}
 	}
@@ -333,12 +333,12 @@ class GenJs : SourceGenerator
 		Write(klass.Name);
 		WriteLine("()");
 		OpenBlock();
-		foreach (CiSymbol member in klass.Members) {
+		foreach (CiSymbol member in klass->members) {
 			if (member is CiField)
 				Write((CiField) member);
 		}
 		if (klass.Constructor != NULL)
-			Write(((CiBlock) klass.Constructor.Body).Statements);
+			Write(((CiBlock) klass.Constructor->body).Statements);
 		CloseBlock();
 		if (klass.BaseClass != NULL) {
 			Write(klass.Name);
@@ -346,7 +346,7 @@ class GenJs : SourceGenerator
 			Write(klass.BaseClass.Name);
 			WriteLine("();");
 		}
-		foreach (CiSymbol member in klass.Members) {
+		foreach (CiSymbol member in klass->members) {
 			if (member is CiMethod)
 				Write((CiMethod) member);
 			else if (member is CiConst && member.Visibility == CiVisibility.Public)
@@ -419,7 +419,7 @@ class GenJs : SourceGenerator
 
 	virtual void Write(CiProgram prog)
 	{
-		CreateFile(this->OutputFile);
+		CreateFile(this->output_file);
 		this->UsesSubstringMethod = false;
 		this->UsesCopyArrayMethod = false;
 		this->UsesBytesToStringMethod = false;

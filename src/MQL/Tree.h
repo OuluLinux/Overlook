@@ -113,6 +113,10 @@ struct SymbolTable {
 		if (i < 0) return NULL;
 		return symbols[i];
 	}
+	
+	int GetCount() {return symbols.GetCount();}
+	CiSymbol* Get(int i) {return symbols[i];}
+	
 };
 
 struct ICiTypeVisitor;
@@ -464,7 +468,7 @@ struct ICiExprVisitor
 
 struct CiExpr : public CiMaybeAssign
 {
-	virtual bool IsConst(Object& value) { return false; }
+	virtual bool IsConst(Object* value) { return false; }
 	virtual bool HasSideEffect() = 0;
 	virtual CiExpr* Accept(ICiExprVisitor* v) { return this; }
 	virtual String ToString() {return "";}
@@ -501,7 +505,7 @@ struct CiConstExpr : public CiExpr
 		if (value->type == O_CLASS) Panic("UNKNOWN");
 		throw NotImplementedException();
 	}
-	virtual bool IsConst(Object& value) { return value.Equals(*this->value); }
+	virtual bool IsConst(Object* value) { return value->Equals(this->value); }
 	virtual bool HasSideEffect() {return false;}
 	virtual String ToString() { return this->value->ToString(); }
 };
@@ -699,11 +703,11 @@ struct CiCondExpr : public CiExpr
 struct CiBinaryResourceExpr : public CiExpr
 {
 	CiExpr* name_expr = NULL;
-	CiBinaryResource resource;
+	CiBinaryResource* resource = NULL;
 	
 	CiBinaryResourceExpr() {}
 	CiBinaryResourceExpr(CiExpr* name) {name_expr = name;}
-	virtual CiType* Type() { return this->resource.type; }
+	virtual CiType* Type() { return this->resource->type; }
 	virtual bool HasSideEffect() { return false; }
 	virtual CiExpr* Accept(ICiExprVisitor* v) { return v->VisitExpr(this); }
 };
@@ -900,9 +904,9 @@ struct CiMethod : public CiSymbol
 	CiParam* this_ = NULL;
 	ICiStatement* body = NULL;
 	bool throws = false;
-	Object error_return_value;
-	PtrIndex<CiMethod> called_by;
-	PtrIndex<CiMethod> calls;
+	Object* error_return_value = NULL;
+	PtrIndex<CiMethod*> called_by;
+	PtrIndex<CiMethod*> calls;
 	bool is_mutator = false;
 	
 	CiMethod(CiType* return_type, String name, CiParam* param0 = NULL, CiParam* param1 = NULL, CiParam* param2 = NULL, CiParam* param3 = NULL)

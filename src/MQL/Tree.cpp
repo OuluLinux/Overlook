@@ -70,7 +70,7 @@ CiSymbol* CiArrayStorageType::LookupMember(String name) {
 		throw ParseException("Clear available only for byte and int arrays");
 	}
 	if (name == "Length")
-		return new CiConst(CiIntType::Value(), this->length);
+		return new CiConst(CiIntType::Value(), new Object(this->length));
 	
 	//return base->LookupMember(name);
 	return NULL;

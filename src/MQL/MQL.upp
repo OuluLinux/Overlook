@@ -12,10 +12,12 @@ file
 	Parser.h,
 	Tree.h,
 	Tree.cpp,
+	GenC.h,
 	GenJs.h,
 	Lexer.h,
 	DocLexer.h,
-	DocParser.h;
+	DocParser.h,
+	SourceGenerator.h;
 
 mainconfig
 	"" = "";

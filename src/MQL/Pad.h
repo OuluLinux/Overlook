@@ -194,13 +194,13 @@ class CiPad : Form
 			CiResolver resolver = new CiResolver();
 			resolver.SearchDirs = this->SearchDirs;
 			resolver.Resolve(program);
-			this->CGroup.Load(program, new GenC89 { OutputFile = ProjectName + ".c" }, new GenC { OutputFile = ProjectName + "99.c" });
-			this->DGroup.Load(program, new GenD { OutputFile = ProjectName + ".d" });
-			this->JavaGroup.Load(program, new GenJava(NULL) { OutputFile = "." });
-			this->CsGroup.Load(program, new GenCs(NULL) { OutputFile = ProjectName + ".cs" });
-			this->PerlGroup.Load(program, new GenPerl58(NULL) { OutputFile = ProjectName + ".pm" }, new GenPerl510(NULL) { OutputFile = ProjectName + "-5.10.pm" });
-			this->JsGroup.Load(program, new GenJs { OutputFile = ProjectName + ".js" }, new GenJsWithTypedArrays { OutputFile = ProjectName + "-Typed-Arrays.js" });
-			this->AsGroup.Load(program, new GenAs(NULL) { OutputFile = "." });
+			this->CGroup.Load(program, new GenC89 { output_file = ProjectName + ".c" }, new GenC { output_file = ProjectName + "99.c" });
+			this->DGroup.Load(program, new GenD { output_file = ProjectName + ".d" });
+			this->JavaGroup.Load(program, new GenJava(NULL) { output_file = "." });
+			this->CsGroup.Load(program, new GenCs(NULL) { output_file = ProjectName + ".cs" });
+			this->PerlGroup.Load(program, new GenPerl58(NULL) { output_file = ProjectName + ".pm" }, new GenPerl510(NULL) { output_file = ProjectName + "-5.10.pm" });
+			this->JsGroup.Load(program, new GenJs { output_file = ProjectName + ".js" }, new GenJsWithTypedArrays { output_file = ProjectName + "-Typed-Arrays.js" });
+			this->AsGroup.Load(program, new GenAs(NULL) { output_file = "." });
 			this->Messages.BackColor = SystemColors.Window;
 			this->Messages.Text = "OK";
 		}

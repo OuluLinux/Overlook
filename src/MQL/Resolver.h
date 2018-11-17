@@ -19,8 +19,8 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	CiMethod* current_method = NULL;
 	CiLoop* current_loop = NULL;
 	CiCondCompletionStatement* current_loop_or_switch = NULL;
-	Vector<CiMethod*> current_pure_methods;
-	ArrayMap<CiVar, CiExpr*> current_pure_arguments;
+	PtrIndex<CiMethod*> current_pure_methods;
+	PtrMap<CiVar*, CiExpr*> current_pure_arguments;
 
 	CiResolver()
 	{
@@ -53,7 +53,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	CiType* VisitType(CiStringStorageType* type)
 	{
-		type->length = (int) ResolveConstExpr(type->length_expr, CiIntType::Value());
+		type->length = ResolveConstExpr(type->length_expr, CiIntType::Value())->GetInt();
 		return type;
 	}
 
@@ -85,7 +85,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		type->element_type = Resolve(type->element_type);
 		if (type->length_expr != NULL) {
-			type->length = (int) ResolveConstExpr(type->length_expr, CiIntType::Value());
+			type->length = ResolveConstExpr(type->length_expr, CiIntType::Value())->GetInt();
 			type->length_expr = NULL;
 		}
 		return type;
@@ -359,7 +359,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 		
 		CiVar* v = dynamic_cast<CiVar*>(symbol);
 		if (v) {
-			int i = current_pure_arguments.Find(*v);
+			int i = current_pure_arguments.Find(v);
 			if (i >= 0)
 				return current_pure_arguments[i];
 			return new CiVarAccess(v);
@@ -383,7 +383,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	CiExpr* VisitExpr(CiVarAccess* expr)
 	{
 		CiExpr* arg;
-		int i = current_pure_arguments.Find(*expr->var);
+		int i = current_pure_arguments.Find(expr->var);
 		if (i >= 0)
 			return current_pure_arguments[i];
 		return expr;
@@ -484,74 +484,76 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 		if (expr->method != NULL)
 			return; // already resolved
 		CiSymbolAccess* sa = dynamic_cast<CiSymbolAccess*>(expr->obj);
+		CiUnknownMemberAccess* uma = dynamic_cast<CiUnknownMemberAccess*>(expr->obj);
 		if (sa) {
 			// Foo(...)
-			CiMethod method = Lookup((CiSymbolAccess) expr.Obj) as CiMethod;
-			if (method != NULL) {
-				expr.Method = method;
-				if (method.CallType == CiCallType.Static)
-					expr.Obj = NULL;
+			CiSymbolAccess* sa = dynamic_cast<CiSymbolAccess*>(expr->obj);
+			CiMethod* method = dynamic_cast<CiMethod*>(Lookup(sa));
+			if (method) {
+				expr->method = method;
+				if (method->call_type == StaticCallType)
+					expr->obj = NULL;
 				else {
-					if (this->current_method.CallType == CiCallType.Static)
+					if (this->current_method->call_type == StaticCallType)
 						throw ResolveException("Cannot call instance method from a static method");
-					expr.Obj = Coerce(new CiVarAccess { Var = this->current_method.This }, new CiClassPtrType { Class = method.Class });
-					CheckCopyPtr(method.This.Type, expr.Obj);
+					expr->obj = Coerce(new CiVarAccess(this->current_method->this_), new CiClassPtrType(method->class_));
+					CheckCopyPtr(method->this_->type, expr->obj);
 				}
 				return;
 			}
 		}
-		else if (expr.Obj is CiUnknownMemberAccess) {
+		else if (uma) {
 			// ???.Foo(...)
-			CiUnknownMemberAccess uma = (CiUnknownMemberAccess) expr.Obj;
-			if (uma.Parent is CiSymbolAccess) {
-				CiClass klass = Lookup((CiSymbolAccess) uma.Parent) as CiClass;
-				if (klass != NULL) {
+			CiSymbolAccess* sa = dynamic_cast<CiSymbolAccess*>(uma->parent);
+			if (sa) {
+				CiClass* klass = dynamic_cast<CiClass*>(Lookup(sa));
+				if (klass) {
 					// Class.Foo(...)
-					CiMethod method = klass.Members.Lookup(uma.Name) as CiMethod;
-					if (method != NULL) {
-						if (method.CallType != CiCallType.Static)
-							throw ResolveException("{0} is a non-static method", method.Name);
-						expr.Method = method;
-						expr.Obj = NULL;
+					CiMethod* method = dynamic_cast<CiMethod*>(klass->members->Lookup(uma->name));
+					if (method) {
+						if (method->call_type != StaticCallType)
+							throw ResolveException(method->name + " is a non-static method");
+						expr->method = method;
+						expr->obj = NULL;
 						return;
 					}
 				}
 			}
-			CiExpr obj = Resolve(uma.Parent);
+			CiExpr* obj = Resolve(uma->parent);
 			{
-				CiMethod method = obj.Type.LookupMember(uma.Name) as CiMethod;
-				if (method != NULL) {
+				CiMethod* method = dynamic_cast<CiMethod*>(obj->type->LookupMember(uma->name));
+				if (method) {
 					// obj.Foo(...)
-					if (method.CallType == CiCallType.Static)
-						throw ResolveException("{0} is a static method", method.Name);
-					if (method.This != NULL) {
+					if (method->call_type == StaticCallType)
+						throw ResolveException(method->name + " is a static method");
+					if (method->this_ != NULL) {
 						// user-defined method
-						CheckCopyPtr(method.This.Type, obj);
-						obj = Coerce(obj, new CiClassPtrType { Class = method.Class });
+						CheckCopyPtr(method->this_->type, obj);
+						obj = Coerce(obj, new CiClassPtrType(method->class_ ));
 					}
-					expr.Method = method;
-					expr.Obj = obj;
+					expr->method = method;
+					expr->obj = obj;
 					return;
 				}
 			}
 		}
-		expr.Obj = Resolve(expr.Obj);
-		if (!(expr.Obj.Type is CiDelegate))
+		expr->obj = Resolve(expr->obj);
+		if (!dynamic_cast<CiDelegate*>(expr->obj->type))
 			throw ResolveException("Invalid call");
-		if (expr.Obj.HasSideEffect)
+		if (expr->obj->HasSideEffect())
 			throw ResolveException("Side effects not allowed in delegate call");
 	}
 
 	void CoerceArguments(CiMethodCall* expr)
 	{
-		expr.Signature.Accept(this);
-		CiParam[] paramz = expr.Signature.Params;
-		if (expr.Arguments.Length != paramz.Length)
-			throw ResolveException("Invalid number of arguments for {0}, expected {1}, got {2}", expr.Signature.Name, paramz.Length, expr.Arguments.Length);
-		for (int i = 0; i < paramz.Length; i++) {
-			CiExpr arg = Resolve(expr.Arguments[i]);
-			CheckCopyPtr(paramz[i].Type, arg);
-			expr.Arguments[i] = Coerce(arg, paramz[i].Type);
+		expr->Signature()->Accept(this);
+		auto& paramz = expr->Signature()->params;
+		if (expr->arguments.GetCount() != paramz.GetCount())
+			throw ResolveException("Invalid number of arguments for " + expr->Signature()->name + ", expected " + IntStr(paramz.GetCount()) + ", got " + IntStr(expr->arguments.GetCount()));
+		for (int i = 0; i < paramz.GetCount(); i++) {
+			CiExpr* arg = Resolve(expr->arguments[i]);
+			CheckCopyPtr(paramz[i]->type, arg);
+			expr->arguments[i] = Coerce(arg, paramz[i]->type);
 		}
 	}
 
@@ -559,248 +561,260 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		ResolveObj(expr);
 		CoerceArguments(expr);
-		if (expr.Method != NULL && expr.Method != this->current_method) {
-			CiReturn ret = expr.Method.Body as CiReturn;
+		if (expr->method != NULL && expr->method != this->current_method) {
+			CiReturn* ret = dynamic_cast<CiReturn*>(expr->method->body);
+			
+			bool all_const_expr = true;
+			for(int i = 0; i < expr->arguments.GetCount(); i++)
+				if (dynamic_cast<CiConstExpr*>(expr->arguments[i]) == NULL)
+					all_const_expr = false;
+				
 			if (ret != NULL
-			 && expr.Method.CallType == CiCallType.Static
-			 && expr.Arguments.All(arg => arg is CiConstExpr)
-			 && current_pure_methods.Add(expr.Method)) {
-				CiParam[] paramz = expr.Signature.Params;
-				for (int i = 0; i < paramz.Length; i++)
-					current_pure_arguments.Add(paramz[i], expr.Arguments[i]);
-				CiConstExpr constFold = Resolve(ret.Value) as CiConstExpr;
-				foreach (CiParam param in paramz)
-					current_pure_arguments.Remove(param);
-				current_pure_methods.Remove(expr.Method);
+			 && expr->method->call_type == StaticCallType
+			 && all_const_expr
+			 && current_pure_methods.HasPtr(expr->method) == false) {
+			    current_pure_methods.Add(expr->method);
+				auto& paramz = expr->Signature()->params;
+				for (int i = 0; i < paramz.GetCount(); i++)
+					current_pure_arguments.Add(paramz[i], expr->arguments[i]);
+				CiConstExpr* constFold = dynamic_cast<CiConstExpr*>(Resolve(ret->value));
+				for(int i = 0; i < paramz.GetCount(); i++) {
+					current_pure_arguments.Remove(paramz[i]);
+				}
+				current_pure_methods.Remove(expr->method);
 				if (constFold != NULL)
 					return constFold;
 			}
-			if (expr.Method == CiLibrary::CharAtMethod
-			 && expr.Arguments[0] is CiConstExpr) {
-				CiConstExpr stringExpr = Resolve(expr.Obj) as CiConstExpr;
+			if (expr->method == CiLibrary::CharAtMethod
+			 && dynamic_cast<CiConstExpr*>(expr->arguments[0])) {
+				CiConstExpr* stringExpr = dynamic_cast<CiConstExpr*>(Resolve(expr->obj));
 				if (stringExpr != NULL) {
-					string s = (string) stringExpr.Value;
-					int i = GetConstInt(expr.Arguments[0]);
-					if (i < s.Length)
+					String s = stringExpr->value->ToString();
+					int i = GetConstInt(expr->arguments[0]);
+					if (i >= 0 && i < s.GetCount())
 						return new CiConstExpr((int) s[i]);
 				}
 			}
-			if (expr.Method.IsMutator)
-				MarkWritable(expr.Obj);
-			expr.Method.CalledBy.Add(this->current_method);
-			this->current_method.Calls.Add(expr.Method);
+			if (expr->method->is_mutator)
+				MarkWritable(expr->obj);
+			expr->method->called_by.Add(this->current_method);
+			this->current_method->calls.Add(expr->method);
 		}
 		return expr;
 	}
 
 	CiExpr* VisitExpr(CiUnaryExpr* expr)
 	{
-		CiExpr resolved;
-		if (expr.Op == Increment || expr.Op == Decrement)
-			resolved = ResolveLValue(expr.Inner);
+		CiExpr* resolved;
+		if (expr->op == Increment || expr->op == Decrement)
+			resolved = ResolveLValue(expr->inner);
 		else
-			resolved = Resolve(expr.Inner);
-		CiExpr inner = Coerce(resolved, CiIntType::Value());
-		if (expr.Op == Minus && inner is CiConstExpr)
+			resolved = Resolve(expr->inner);
+		CiExpr* inner = Coerce(resolved, CiIntType::Value());
+		if (expr->op == Minus && dynamic_cast<CiConstExpr*>(inner))
 			return new CiConstExpr(-GetConstInt(inner));
-		expr.Inner = inner;
+		expr->inner = inner;
 		return expr;
 	}
 
 	CiExpr* VisitExpr(CiCondNotExpr* expr)
 	{
-		expr.Inner = Coerce(Resolve(expr.Inner), CiBoolType.Value);
+		expr->inner = Coerce(Resolve(expr->inner), CiBoolType::Value());
 		return expr;
 	}
 
 	CiExpr* VisitExpr(CiPostfixExpr* expr)
 	{
-		expr.Inner = Coerce(ResolveLValue(expr.Inner), CiIntType::Value());
+		expr->inner = Coerce(ResolveLValue(expr->inner), CiIntType::Value());
 		return expr;
 	}
 
 	CiExpr* VisitExpr(CiBinaryExpr* expr)
 	{
-		CiExpr left = Resolve(expr.Left);
-		CiExpr right = Resolve(expr.Right);
-		if (expr.Op == Plus && (left.Type is CiStringType || right.Type is CiStringType)) {
-			if (!(left is CiConstExpr && right is CiConstExpr))
+		CiExpr* left = Resolve(expr->left);
+		CiExpr* right = Resolve(expr->right);
+		if (expr->op == Plus && (dynamic_cast<CiStringType*>(left->type) || dynamic_cast<CiStringType*>(right->type))) {
+			if (!(dynamic_cast<CiConstExpr*>(left) && dynamic_cast<CiConstExpr*>(right)))
 				throw ResolveException("String concatenation allowed only for constants. Consider using +=");
-			string a = GetConstString(left);
-			string b = GetConstString(right);
+			String a = GetConstString(left);
+			String b = GetConstString(right);
 			return new CiConstExpr(a + b);
 		}
 		left = Coerce(left, CiIntType::Value());
 		right = Coerce(right, CiIntType::Value());
-		if (right is CiConstExpr) {
+		if (dynamic_cast<CiConstExpr*>(right)) {
 			int b = GetConstInt(right);
-			if (left is CiConstExpr) {
+			if (dynamic_cast<CiConstExpr*>(left)) {
 				int a = GetConstInt(left);
-				switch (expr.Op) {
-				case Asterisk: a *= b; break;
-				case Slash: a /= b; break;
-				case Mod: a %= b; break;
-				case And: a &= b; break;
-				case ShiftLeft: a <<= b; break;
-				case ShiftRight: a >>= b; break;
-				case Plus: a += b; break;
-				case Minus: a -= b; break;
-				case Or: a |= b; break;
-				case Xor: a ^= b; break;
+				switch (expr->op) {
+					case Asterisk: a *= b; break;
+					case Slash: a /= b; break;
+					case Mod: a %= b; break;
+					case AndToken: a &= b; break;
+					case ShiftLeft: a <<= b; break;
+					case ShiftRight: a >>= b; break;
+					case Plus: a += b; break;
+					case Minus: a -= b; break;
+					case OrToken: a |= b; break;
+					case XorToken: a ^= b; break;
 				}
 				return new CiConstExpr(a);
 			}
-			if (expr.Op == And && (b & ~0xff) == 0) {
-				CiCoercion c = left as CiCoercion;
-				if (c != NULL && c.Inner.Type == CiByteType::Value())
-					left = (CiExpr) c.Inner;
+			if (expr->op == AndToken && (b & ~0xff) == 0) {
+				CiCoercion* c = dynamic_cast<CiCoercion*>(left);
+				if (c != NULL && c->inner->type == CiByteType::Value())
+					left = dynamic_cast<CiExpr*>(c->inner);
 			}
 		}
 		// expr.Left = left;
-		// expr.Right = right;
+		// expr->right = right;
 		// return expr;
 		return new CiBinaryExpr(left, expr->op, right);
 	}
 
 	static CiType* FindCommonType(CiExpr* expr1, CiExpr* expr2)
 	{
-		CiType type1 = expr1.Type;
-		CiType type2 = expr2.Type;
-		if (type1.Equals(type2))
+		CiType* type1 = expr1->type;
+		CiType* type2 = expr2->type;
+		if (type1->Equals(type2))
 			return type1;
 		if ((type1 == CiIntType::Value() && type2 == CiByteType::Value())
 			|| (type1 == CiByteType::Value() && type2 == CiIntType::Value()))
 			return CiIntType::Value();
-		CiType type = type1.Ptr;
+		CiType* type = type1->Ptr();
 		if (type != NULL)
 			return type; // stg, ptr || stg, NULL
-		type = type2.Ptr;
+		type = type2->Ptr();
 		if (type != NULL)
 			return type; // ptr, stg || NULL, stg
-		if (type1 != CiType.Null)
+		if (type1 != CiType::Null)
 			return type1; // ptr, NULL
-		if (type2 != CiType.Null)
+		if (type2 != CiType::Null)
 			return type2; // NULL, ptr
 		throw ResolveException("Incompatible types");
 	}
 
 	CiExpr* VisitExpr(CiBoolBinaryExpr* expr)
 	{
-		CiExpr left = Resolve(expr.Left);
-		CiExpr right = Resolve(expr.Right);
-		CiType type;
-		switch (expr.Op) {
-		case CondAnd:
-		case CondOr:
-			type = CiBoolType.Value;
-			break;
-		case Equal:
-		case NotEqual:
-			type = FindCommonType(left, right);
-			break;
-		default:
-			type = CiIntType::Value();
-			break;
+		CiExpr* left = Resolve(expr->left);
+		CiExpr* right = Resolve(expr->right);
+		CiType* type = NULL;
+		switch (expr->op) {
+			case CondAndToken:
+			case CondOrToken:
+				type = CiBoolType::Value();
+				break;
+			case Equal:
+			case NotEqual:
+				type = FindCommonType(left, right);
+				break;
+			default:
+				type = CiIntType::Value();
+				break;
 		}
 		left = Coerce(left, type);
 		right = Coerce(right, type);
-		CiConstExpr cleft = left as CiConstExpr;
+		CiConstExpr* cleft = dynamic_cast<CiConstExpr*>(left);
 		if (cleft != NULL) {
-			switch (expr.Op) {
-			case CondAnd:
-				return (bool) cleft.Value ? right : new CiConstExpr(false);
-			case CondOr:
-				return (bool) cleft.Value ? new CiConstExpr(true) : right;
+			CiConstExpr* cright = NULL;
+			switch (expr->op) {
+			case CondAndToken:
+				return cleft->value->GetInt() ? right : new CiConstExpr(false);
+			case CondOrToken:
+				return cleft->value->GetInt() ? new CiConstExpr(true) : right;
 			case Equal:
 			case NotEqual:
-				CiConstExpr cright = right as CiConstExpr;
-				if (cright != NULL) {
-					bool eq = object.Equals(cleft.Value, cright.Value);
-					return new CiConstExpr(expr.Op == Equal ? eq : !eq);
+				cright = dynamic_cast<CiConstExpr*>(right);
+				if (cright) {
+					bool eq = cleft->value->Equals(*cright->value);
+					return new CiConstExpr(expr->op == Equal ? eq : !eq);
 				}
 				break;
 			default:
-				if (right is CiConstExpr) {
+				if (dynamic_cast<CiConstExpr*>(right)) {
 					int a = GetConstInt(cleft);
 					int b = GetConstInt(right);
-					bool result;
-					switch (expr.Op) {
-					case Less: result = a < b; break;
-					case LessOrEqual: result = a <= b; break;
-					case Greater: result = a > b; break;
-					case GreaterOrEqual: result = a >= b; break;
-					default:
-						expr.Left = left;
-						expr.Right = right;
-						return expr;
+					bool result = false;
+					switch (expr->op) {
+						case Less: result = a < b; break;
+						case LessOrEqual: result = a <= b; break;
+						case Greater: result = a > b; break;
+						case GreaterOrEqual: result = a >= b; break;
+						default:
+							expr->left = left;
+							expr->right = right;
+							return expr;
 					}
 					return new CiConstExpr(result);
 				}
 				break;
 			}
 		}
-		expr.Left = left;
-		expr.Right = right;
+		expr->left = left;
+		expr->right = right;
 		return expr;
 	}
 
 	CiExpr* VisitExpr(CiCondExpr* expr)
 	{
-		CiExpr cond = Coerce(Resolve(expr.Cond), CiBoolType.Value);
-		CiExpr expr1 = Resolve(expr.OnTrue);
-		CiExpr expr2 = Resolve(expr.OnFalse);
-		CiType type = FindCommonType(expr1, expr2);
+		CiExpr* cond = Coerce(Resolve(expr->cond), CiBoolType::Value());
+		CiExpr* expr1 = Resolve(expr->on_true);
+		CiExpr* expr2 = Resolve(expr->on_false);
+		CiType* type = FindCommonType(expr1, expr2);
 		expr1 = Coerce(expr1, type);
 		expr2 = Coerce(expr2, type);
-		CiConstExpr konst = cond as CiConstExpr;
+		CiConstExpr* konst = dynamic_cast<CiConstExpr*>(cond);
 		if (konst != NULL)
-			return (bool) konst.Value ? expr1 : expr2;
+			return konst->value->GetInt() ? expr1 : expr2;
 		// expr.Cond = cond;
 		// expr.OnTrue = expr1;
 		// expr.OnFalse = expr2;
 		// return expr;
-		return new CiCondExpr {
-			Cond = cond,
-			ResultType = type,
-			OnTrue = expr1,
-			OnFalse = expr2
-		};
+		return new CiCondExpr(
+			cond,
+			type,
+			expr1,
+			expr2);
 	}
 
 	CiExpr* VisitExpr(CiBinaryResourceExpr* expr)
 	{
-		string name = (string) ResolveConstExpr(expr->nameExpr, CiStringPtrType.Value);
-		CiBinaryResource resource;
-		if (!this->binary_resources.TryGetValue(name, out resource)) {
-			resource = new CiBinaryResource();
-			resource.Name = name;
-			resource.Content = File.ReadAllBytes(FindFile(name));
-			resource.Type = new CiArrayStorageType { element_type = CiByteType::Value(), Length = resource.Content.Length };
+		String name = ResolveConstExpr(expr->name_expr, CiStringPtrType::Value())->ToString();
+		int i = this->binary_resources.Find(name);
+		if (i < 0) {
+			CiBinaryResource* resource = new CiBinaryResource();
+			resource->name = name;
+			
+			String c = LoadFile(FindFile(name));
+			resource->content.SetCount(c.GetCount());
+			memcpy(resource->content.Begin(), c.Begin(), c.GetCount());
+			
+			resource->type = new CiArrayStorageType(CiByteType::Value(), resource->content.GetCount());
 			this->binary_resources.Add(name, resource);
 		}
-		expr.Resource = resource;
+		expr->resource = this->binary_resources.Get(name);
 		return expr;
 	}
 
 	void CheckCreatable(CiType* type)
 	{
-		CiClass storageClass = type.StorageClass;
-		if (storageClass != NULL && storageClass.IsAbstract)
-			throw ResolveException("Cannot create instances of an abstract class {0}", storageClass.Name);
+		CiClass* storageClass = type->StorageClass();
+		if (storageClass != NULL && storageClass->is_abstract)
+			throw ResolveException("Cannot create instances of an abstract class " + storageClass->name);
 	}
 
 	CiExpr* VisitExpr(CiNewExpr* expr)
 	{
-		CiType type = expr.NewType;
-		CiClassStorageType classStorageType = type as CiClassStorageType;
+		CiType* type = expr->new_type;
+		CiClassStorageType* classStorageType = dynamic_cast<CiClassStorageType*>(type);
 		if (classStorageType != NULL) {
-			classStorageType.Class = ResolveClass(classStorageType.Class);
-			classStorageType.Class.IsAllocated = true;
+			classStorageType->class_ = ResolveClass(classStorageType->class_);
+			classStorageType->class_->is_allocated = true;
 		}
 		else {
-			CiArrayStorageType arrayStorageType = (CiArrayStorageType) type;
-			arrayStorageType.element_type = Resolve(arrayStorageType.element_type);
-			arrayStorageType.LengthExpr = Coerce(Resolve(arrayStorageType.LengthExpr), CiIntType::Value());
+			CiArrayStorageType* arrayStorageType = dynamic_cast<CiArrayStorageType*>(type);
+			arrayStorageType->element_type = Resolve(arrayStorageType->element_type);
+			arrayStorageType->length_expr = Coerce(Resolve(arrayStorageType->length_expr), CiIntType::Value());
 		}
 		CheckCreatable(type);
 		return expr;
@@ -808,29 +822,30 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	CiExpr* Resolve(CiExpr* expr)
 	{
-		return expr.Accept(this);
+		return expr->Accept(this);
 	}
 
 	void VisitSymbol(CiField* field)
 	{
-		field.Type = Resolve(field.Type);
-		CheckCreatable(field.Type);
+		field->type = Resolve(field->type);
+		CheckCreatable(field->type);
 	}
 
 	bool Resolve(Vector<ICiStatement*>& statements)
 	{
 		bool reachable = true;
-		foreach (ICiStatement child in statements) {
+		for(int i = 0; i < statements.GetCount(); i++) {
+			ICiStatement* child = statements[i];
 			if (!reachable)
 				throw ResolveException("Unreachable statement");
-			child.Accept(this);
-			reachable = child.CompletesNormally;
+			child->Accept(*this);
+			reachable = child->CompletesNormally();
 		}
 		return reachable;
 	}
 
 	void VisitStmt(CiBlock* statement) {
-		statement.CompletesNormally = Resolve(statement.Statements);
+		statement->completes_normally = Resolve(statement->statements);
 	}
 
 	void VisitStmt(CiConst* statement) {
@@ -839,58 +854,61 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void VisitStmt(CiVar* statement)
 	{
-		CiType type = Resolve(statement.Type);
-		statement.Type = type;
+		CiType* type = Resolve(statement->type);
+		statement->type = type;
 		CheckCreatable(type);
-		if (statement.InitialValue != NULL) {
-			CiExpr initialValue = Resolve(statement.InitialValue);
+		if (statement->initial_value != NULL) {
+			CiExpr* initialValue = Resolve(statement->initial_value);
 			CheckCopyPtr(type, initialValue);
-			if (type is CiArrayStorageType) {
-				type = ((CiArrayStorageType) type).element_type;
-				CiConstExpr ce = Coerce(initialValue, type) as CiConstExpr;
+			CiArrayStorageType* ast = dynamic_cast<CiArrayStorageType*>(type);
+			if (ast) {
+				type = ast->element_type;
+				CiConstExpr* ce = dynamic_cast<CiConstExpr*>(Coerce(initialValue, type));
 				if (ce == NULL)
 					throw ResolveException("Array initializer is not constant");
-				statement.InitialValue = ce;
-				if (type == CiBoolType.Value) {
-					if (!false.Equals(ce.Value))
+				statement->initial_value = ce;
+				if (type == CiBoolType::Value()) {
+					if (ce->value->GetInt() != 0)
 						throw ResolveException("Bool arrays can only be initialized with false");
 				}
 				else if (type == CiByteType::Value()) {
-					if (!((byte) 0).Equals(ce.Value))
+					if (ce->value->GetInt() != 0)
 						throw ResolveException("Byte arrays can only be initialized with zero");
 				}
 				else if (type == CiIntType::Value()) {
-					if (!0.Equals(ce.Value))
+					if (ce->value->GetInt() != 0)
 						throw ResolveException("Int arrays can only be initialized with zero");
 				}
 				else
 					throw ResolveException("Invalid array initializer");
 			}
 			else
-				statement.InitialValue = Coerce(initialValue, type);
+				statement->initial_value = Coerce(initialValue, type);
 		}
 	}
 
 	void VisitStmt(CiExpr* statement)
 	{
-		Resolve((CiExpr) statement);
+		Resolve(statement);
 	}
 
 	void VisitStmt(CiAssign* statement)
 	{
-		statement.Target = ResolveLValue(statement.Target);
-		if (statement.Target is CiVarAccess && ((CiVarAccess) statement.Target).Var == this->current_method.This)
+		statement->target = ResolveLValue(statement->target);
+		CiVarAccess* va = dynamic_cast<CiVarAccess*>(statement->target);
+		if (va  && (va->var == this->current_method->this_))
 			throw ResolveException("Cannot assign to this");
-		CiMaybeAssign source = statement.Source;
-		if (source is CiAssign)
-			Resolve((ICiStatement) source);
+		CiMaybeAssign* source = statement->source;
+		CiAssign* a = dynamic_cast<CiAssign*>(source);
+		if (a)
+			Resolve(a);
 		else
-			source = Resolve((CiExpr) source);
-		CiType type = statement.Target.Type;
+			source = Resolve(dynamic_cast<CiExpr*>(source));
+		CiType* type = statement->target->type;
 		CheckCopyPtr(type, source);
-		statement.Source = Coerce(source, type);
-		if (statement.Op != Assign && type != CiIntType::Value() && type != CiByteType::Value()) {
-			if (statement.Op == AddAssign && type is CiStringStorageType && statement.Source.Type is CiStringType)
+		statement->source = Coerce(source, type);
+		if (statement->op != Assign && type != CiIntType::Value() && type != CiByteType::Value()) {
+			if (statement->op == AddAssign && dynamic_cast<CiStringStorageType*>(type) && dynamic_cast<CiStringType*>(statement->source->type))
 				{} // OK
 			else
 				throw ResolveException("Invalid compound assignment");
@@ -899,11 +917,11 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void VisitStmt(CiDelete* statement)
 	{
-		statement.Expr = Resolve(statement.Expr);
-		ICiPtrType type = statement.Expr.Type as ICiPtrType;
-		if (type == NULL)
+		statement->expr = Resolve(statement->expr);
+		ICiPtrType* type = dynamic_cast<ICiPtrType*>(statement->expr->type);
+		if (type)
 			throw ResolveException("'delete' takes a class or array pointer");
-		if (statement.Expr.HasSideEffect)
+		if (statement->expr->HasSideEffect())
 			throw ResolveException("Side effects not allowed in 'delete'");
 		this->writable_ptr_types.Add(type);
 	}
@@ -912,7 +930,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		if (this->current_loop_or_switch == NULL)
 			throw ResolveException("break outside loop and switch");
-		this->current_loop_or_switch.CompletesNormally = true;
+		this->current_loop_or_switch->completes_normally = true;
 	}
 
 	void VisitStmt(CiContinue* statement)
@@ -923,15 +941,15 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void ResolveLoop(CiLoop* statement)
 	{
-		statement.CompletesNormally = false;
-		if (statement.Cond != NULL) {
-			statement.Cond = Coerce(Resolve(statement.Cond), CiBoolType.Value);
-			statement.CompletesNormally = !statement.Cond.IsConst(false);
+		statement->completes_normally = false;
+		if (statement->cond != NULL) {
+			statement->cond = Coerce(Resolve(statement->cond), CiBoolType::Value());
+			statement->completes_normally = !statement->cond->IsConst(new Object(false));
 		}
-		CiLoop oldLoop = this->current_loop;
-		CiCondCompletionStatement oldLoopOrSwitch = this->current_loop_or_switch;
+		CiLoop* oldLoop = this->current_loop;
+		CiCondCompletionStatement* oldLoopOrSwitch = this->current_loop_or_switch;
 		this->current_loop_or_switch = this->current_loop = statement;
-		Resolve(statement.Body);
+		Resolve(statement->body);
 		this->current_loop = oldLoop;
 		this->current_loop_or_switch = oldLoopOrSwitch;
 	}
@@ -943,23 +961,23 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void VisitStmt(CiFor* statement)
 	{
-		if (statement.Init != NULL)
-			Resolve(statement.Init);
-		if (statement.Advance != NULL)
-			Resolve(statement.Advance);
+		if (statement->init != NULL)
+			Resolve(statement->init);
+		if (statement->advance != NULL)
+			Resolve(statement->advance);
 		ResolveLoop(statement);
 	}
 
 	void VisitStmt(CiIf* statement)
 	{
-		statement.Cond = Coerce(Resolve(statement.Cond), CiBoolType.Value);
-		Resolve(statement.OnTrue);
-		if (statement.OnFalse != NULL) {
-			Resolve(statement.OnFalse);
-			statement.CompletesNormally = statement.OnTrue.CompletesNormally || statement.OnFalse.CompletesNormally;
+		statement->cond = Coerce(Resolve(statement->cond), CiBoolType::Value());
+		Resolve(statement->on_true);
+		if (statement->on_false != NULL) {
+			Resolve(statement->on_false);
+			statement->completes_normally = statement->on_true->CompletesNormally() || statement->on_false->CompletesNormally();
 		}
 		else
-			statement.CompletesNormally = true;
+			statement->completes_normally = true;
 	}
 
 	void VisitStmt(CiNativeBlock* statement) {
@@ -968,34 +986,35 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void VisitStmt(CiReturn* statement)
 	{
-		CiType type = this->current_method.Signature.ReturnType;
-		if (type != CiType.Void)
-			statement.Value = Coerce(Resolve(statement.Value), type);
+		CiType* type = this->current_method->signature->return_type;
+		if (type != CiType::Void)
+			statement->value = Coerce(Resolve(statement->value), type);
 	}
 
 	void VisitStmt(CiSwitch* statement)
 	{
-		statement.Value = Resolve(statement.Value);
-		CiType type = statement.Value.Type;
-		CiCondCompletionStatement oldLoopOrSwitch = this->current_loop_or_switch;
+		statement->value = Resolve(statement->value);
+		CiType* type = statement->value->type;
+		CiCondCompletionStatement* oldLoopOrSwitch = this->current_loop_or_switch;
 		this->current_loop_or_switch = statement;
 
-		HashSet<object> values = new HashSet<object>();
-		CiCase fallthroughFrom = NULL;
-		foreach (CiCase kase in statement.Cases) {
-			for (int i = 0; i < kase.Values.Length; i++) {
-				kase.Values[i] = ResolveConstExpr((CiExpr) kase.Values[i], type);
-				if (!values.Add(kase.Values[i]))
+		PtrIndex<Object*> values;
+		CiCase* fallthroughFrom = NULL;
+		for(int i = 0; i < statement->cases.GetCount(); i++) {
+			CiCase* kase = statement->cases[i];
+			for (int i = 0; i < kase->values.GetCount(); i++) {
+				kase->values[i] = ResolveConstExpr(dynamic_cast<CiExpr*>(kase->values[i]), type);
+				if (!values.Add(kase->values[i]))
 					throw ResolveException("Duplicate case value");
 			}
 			if (fallthroughFrom != NULL) {
-				if (fallthroughFrom.FallthroughTo == NULL)
+				if (fallthroughFrom->fallthrough_to == NULL)
 					throw ResolveException("goto default followed by case");
-				if (!ResolveConstExpr(fallthroughFrom.FallthroughTo, type).Equals(kase.Values[0]))
+				if (!ResolveConstExpr(fallthroughFrom->fallthrough_to, type)->Equals(*kase->values[0]))
 					throw ResolveException("goto case doesn't match the next case");
 			}
-			bool reachable = Resolve(kase.Body);
-			if (kase.Fallthrough) {
+			bool reachable = Resolve(kase->body);
+			if (kase->fallthrough) {
 				if (!reachable)
 					throw ResolveException("goto is not reachable");
 				fallthroughFrom = kase;
@@ -1007,10 +1026,10 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			}
 		}
 
-		if (statement.DefaultBody != NULL) {
-			if (fallthroughFrom != NULL && fallthroughFrom.FallthroughTo != NULL)
+		if (statement->default_body.GetCount()) {
+			if (fallthroughFrom != NULL && fallthroughFrom->fallthrough_to != NULL)
 				throw ResolveException("goto case followed by default");
-			bool reachable = Resolve(statement.DefaultBody);
+			bool reachable = Resolve(statement->default_body);
 			if (reachable)
 				throw ResolveException("default must end with break, return, throw or goto");
 		}
@@ -1024,7 +1043,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void VisitStmt(CiThrow* statement)
 	{
-		statement.Message = Coerce(Resolve(statement.Message), CiStringPtrType.Value);
+		statement->message = Coerce(Resolve(statement->message), CiStringPtrType::Value());
 		this->throwing_methods.Add(this->current_method);
 	}
 
@@ -1035,16 +1054,16 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void Resolve(ICiStatement* statement)
 	{
-		statement.Accept(this);
+		statement->Accept(*this);
 	}
 
 	void VisitSymbol(CiMethod* method)
 	{
 		this->current_method = method;
-		Resolve(method.Signature);
-		if (method.CallType != CiCallType.Abstract) {
-			Resolve(method.Body);
-			if (method.Signature.ReturnType != CiType.Void && method.Body.CompletesNormally)
+		Resolve(method->signature);
+		if (method->call_type != AbstractCallType) {
+			Resolve(method->body);
+			if (method->signature->return_type != CiType::Void && method->body->CompletesNormally())
 				throw ResolveException("Method can complete without a return value");
 		}
 		this->current_method = NULL;
@@ -1052,64 +1071,68 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void ResolveBase(CiClass* klass)
 	{
-		if (klass.BaseClass != NULL) {
-			klass.BaseClass = ResolveClass(klass.BaseClass);
-			klass.Members.Parent = klass.BaseClass.Members;
+		if (klass->base_class != NULL) {
+			klass->base_class = ResolveClass(klass->base_class);
+			klass->members->parent = klass->base_class->members;
 		}
 	}
 
 	void VisitSymbol(CiClass* klass)
 	{
 		this->current_class = klass;
-		this->Symbols = klass.Members;
-		if (klass.Constructor != NULL)
-			klass.Constructor.Accept(this);
-		foreach (CiSymbol member in klass.Members)
-			member.Accept(this);
-		klass.binary_resources = this->binary_resources.Values.ToArray();
+		this->symbols = klass->members;
+		if (klass->constructor != NULL)
+			klass->constructor->Accept(this);
+		for(int i = 0; i < klass->members->GetCount(); i++) {
+			klass->members->Get(i)->Accept(this);
+		}
+		klass->binary_resources.Clear();
+		for(int i = 0; i < this->binary_resources.GetCount(); i++)
+			klass->binary_resources.Add(this->binary_resources[i]);
 		this->binary_resources.Clear();
-		this->Symbols = this->Symbols.Parent;
+		this->symbols = this->symbols->parent;
 		this->current_class = NULL;
 	}
 
 	static void MarkWritable(ICiPtrType* type)
 	{
-		if (type.Writability == PtrWritability.ReadWrite)
+		if (type->writability == ReadWrite)
 			return;
-		if (type.Writability == PtrWritability.ReadOnly)
+		if (type->writability == ReadOnly)
 			throw ResolveException("Attempt to write a read-only array");
-		type.Writability = PtrWritability.ReadWrite;
-		foreach (ICiPtrType source in type.Sources)
-			MarkWritable(source);
+		type->writability = ReadWrite;
+		for(int i = 0; i < type->sources.GetCount(); i++)
+			MarkWritable(type->sources[i]);
 	}
 
 	static Object* GetErrorValue(CiType* type)
 	{
-		if (type == CiType.Void)
-			return false;
+		if (type == CiType::Void)
+			return new Object(false);
 		if (type == CiIntType::Value())
-			return -1;
-		if (type == CiStringPtrType.Value || type is CiClassPtrType || type is CiArrayPtrType)
-			return NULL;
+			return new Object(-1);
+		if (type == CiStringPtrType::Value() || dynamic_cast<CiClassPtrType*>(type) || dynamic_cast<CiArrayPtrType*>(type))
+			return new Object();
 		throw ResolveException("throw in a method of unsupported return type");
 	}
 
 	static void MarkThrows(CiMethod* method)
 	{
-		if (method.Throws)
+		if (method->throws)
 			return;
-		method.Throws = true;
-		method.ErrorReturnValue = GetErrorValue(method.Signature.ReturnType);
-		foreach (CiMethod calledBy in method.CalledBy)
-			MarkThrows(calledBy);
+		method->throws = true;
+		method->error_return_value = GetErrorValue(method->signature->return_type);
+		for(int i = 0; i < method->called_by.GetCount(); i++)
+			MarkThrows(method->called_by[i]);
 	}
 
 	static void MarkDead(CiMethod* method)
 	{
-		if (method.Visibility == CiVisibility.Private && method.CallType != CiCallType.Override && method.CalledBy.Count == 0) {
-			method.Visibility = CiVisibility.Dead;
-			foreach (CiMethod called in method.Calls) {
-				called.CalledBy.Remove(method);
+		if (method->visibility == Private && method->call_type != OverrideCallType && method->called_by.GetCount() == 0) {
+			method->visibility = Dead;
+			for(int i = 0; i < method->calls.GetCount(); i++) {
+				CiMethod* called = method->calls[i];
+				called->called_by.Remove(method);
 				MarkDead(called);
 			}
 		}
@@ -1117,46 +1140,70 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	static void MarkDead(CiClass* klass)
 	{
-		foreach (CiSymbol member in klass.Members) {
-			if (member is CiMethod)
-				MarkDead((CiMethod) member);
+		for(int i = 0; i < klass->members->GetCount(); i++) {
+			CiSymbol* member = klass->members->Get(i);
+			CiMethod* m = dynamic_cast<CiMethod*>(member);
+			if (m)
+				MarkDead(m);
 		}
 	}
 
 	static void MarkInternal(CiMethod* method)
 	{
-		if (method.Visibility == CiVisibility.Private && method.CalledBy.Any(caller => caller.Class != method.Class))
-			method.Visibility = CiVisibility.Internal;
+		bool any_caller_class_diff = false;
+		for(int i = 0; i < method->called_by.GetCount(); i++) {
+			CiMethod* caller = method->called_by[i];
+			if (caller->class_ != method->class_)
+				any_caller_class_diff = true;
+		}
+		
+		if (method->visibility == Private && any_caller_class_diff)
+			method->visibility = InternalVisib;
 	}
 
 	static void MarkInternal(CiClass* klass)
 	{
-		foreach (CiSymbol member in klass.Members) {
-			if (member is CiMethod)
-				MarkInternal((CiMethod) member);
+		for(int i = 0; i < klass->members->GetCount(); i++) {
+			CiSymbol* member = klass->members->Get(i);
+			CiMethod* m = dynamic_cast<CiMethod*>(member);
+			if (m)
+				MarkInternal(m);
 		}
 	}
 
 	void Resolve(CiProgram* program)
 	{
-		this->Symbols = program.Globals;
-		foreach (CiSymbol symbol in program.Globals) {
-			if (symbol is CiClass)
-				ResolveBase((CiClass) symbol);
+		this->symbols = program->globals;
+		for(int i = 0; i < program->globals->GetCount(); i++) {
+			CiSymbol* symbol = program->globals->Get(i);
+			CiClass* c = dynamic_cast<CiClass*>(symbol);
+			if (c)
+				ResolveBase(c);
 		}
-		foreach (CiSymbol symbol in program.Globals)
-			symbol.Accept(this);
-		foreach (ICiPtrType type in this->writable_ptr_types)
-			MarkWritable(type);
-		foreach (CiMethod method in this->throwing_methods)
-			MarkThrows(method);
-		foreach (CiSymbol symbol in program.Globals) {
-			if (symbol is CiClass)
-				MarkDead((CiClass) symbol);
+		
+		for(int i = 0; i < program->globals->GetCount(); i++) {
+			CiSymbol* symbol = program->globals->Get(i);
+			symbol->Accept(this);
 		}
-		foreach (CiSymbol symbol in program.Globals) {
-			if (symbol is CiClass)
-				MarkInternal((CiClass) symbol);
+		
+		for(int i = 0; i < this->writable_ptr_types.GetCount(); i++)
+			MarkWritable(this->writable_ptr_types[i]);
+		
+		for(int i = 0; i < this->throwing_methods.GetCount(); i++)
+			MarkThrows(this->throwing_methods[i]);
+		
+		for(int i = 0; i < program->globals->GetCount(); i++) {
+			CiSymbol* symbol = program->globals->Get(i);
+			CiClass* c = dynamic_cast<CiClass*>(symbol);
+			if (c)
+				MarkDead(c);
+		}
+		
+		for(int i = 0; i < program->globals->GetCount(); i++) {
+			CiSymbol* symbol = program->globals->Get(i);
+			CiClass* c = dynamic_cast<CiClass*>(symbol);
+			if (c)
+				MarkInternal(c);
 		}
 	}
 };

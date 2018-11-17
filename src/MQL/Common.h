@@ -8,7 +8,7 @@ class StringReader {
 	
 public:
 	StringReader() {}
-	StringReader(String& s);
+	StringReader(const String& s);
 	int Peek();
 	int Read();
 	bool IsEmpty() const;
@@ -17,6 +17,14 @@ public:
 	
 	void operator=(const StringReader& sr);
 	
+};
+
+class TextWriter {
+	
+public:
+	
+	
+	void OpenFile(String fname);
 };
 
 // TODO ref
@@ -256,8 +264,33 @@ class PtrIndex {
 public:
 	
 	T& Add(const T& s);
+	void Remove(T ptr);
+	
+	bool HasPtr(T ptr);
+	int GetCount() const;
+	T& operator[](int i);
+};
+template <class K, class V>
+class PtrMap {
+	
+public:
+	
+	K& Add(const K& k, const V& v);
+	void Remove(K k);
+	int Find(K k);
+	V& operator[](int i);
+	
+	bool HasPtr(K k);
 	
 };
+
+template <class T>
+bool HasPtr(const Vector<T*>& ptrs, T* ptr) {
+	for(int i = 0; i < ptrs.GetCount(); i++)
+		if (ptrs[i] == ptr)
+			return true;
+	return false;
+}
 
 }
 

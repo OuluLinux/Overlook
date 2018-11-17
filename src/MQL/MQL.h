@@ -14,5 +14,6 @@ using namespace Upp;
 #include "MacroProcessor.h"
 #include "Parser.h"
 #include "Resolver.h"
+#include "SourceGenerator.h"
 
 #endif

@@ -1,0 +1,22 @@
+uses
+	Core;
+
+file
+	Copying,
+	main.cpp,
+	MQL.h,
+	Common.h,
+	MacroProcessor.h,
+	Pad.h,
+	Resolver.h,
+	Parser.h,
+	Tree.h,
+	Tree.cpp,
+	GenJs.h,
+	Lexer.h,
+	DocLexer.h,
+	DocParser.h;
+
+mainconfig
+	"" = "";
+

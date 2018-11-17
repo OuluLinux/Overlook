@@ -44,7 +44,7 @@
                     <ListView
                         android:id="@+id/cur_list"
                         android:layout_width="match_parent"
-                        android:layout_height="240dp" />
+                        android:layout_height="300dp" />
 
                     <TextView
                         android:id="@+id/pairs_lbl"
@@ -56,7 +56,7 @@
                     <ListView
                         android:id="@+id/pair_list"
                         android:layout_width="match_parent"
-                        android:layout_height="340dp" />
+                        android:layout_height="1100dp" />
 
                     <TextView
                         android:id="@+id/comment_lbl"

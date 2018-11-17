@@ -671,7 +671,7 @@ class EventAdapter extends ArrayAdapter<String> {
         TextView event = (TextView) rowView.findViewById(R.id.event);
         TextView received = (TextView) rowView.findViewById(R.id.received);
 
-        Event e = values.get(position);
+        Event e = values.get(values.size() - 1 - position);
 
         event.setText(e.msg);
         received.setText(e.received.toString());

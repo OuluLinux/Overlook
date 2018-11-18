@@ -18,7 +18,7 @@ struct CiParser : public CiLexer
 		globals->Add(CiStringPtrType::Value());
 		globals->Add(new CiConst("true", CiBoolType::Value(), new Object(true)));
 		globals->Add(new CiConst("false", CiBoolType::Value(), new Object(false)));
-		globals->Add(new CiConst("NULL", CiType::Null, NULL));
+		globals->Add(new CiConst("null", CiType::Null, NULL));
 		this->symbols = new SymbolTable(globals);// { parent = globals };
 	}
 

@@ -18,7 +18,7 @@ typedef enum
 struct CiDocLexer
 {
 	CiLexer* ci_lexer = NULL;
-	bool check_period;
+	bool check_period = false;
 	CiDocToken current_token;
 	int current_char = '\n';
 

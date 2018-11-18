@@ -311,9 +311,9 @@ struct SourceGenerator : public ICiStatementVisitor
 		if (value->type == O_BOOL)
 			Write(value->b ? "true" : "false");
 		else if (value->type == O_BYTE)
-			Write(value->byt);
+			Write(IntStr(value->byt));
 		else if (value->type == O_INT)
-			Write(value->i);
+			Write(IntStr(value->i));
 		else if (value->type == O_STRING) {
 			Write('"');
 			for(int i = 0; i < value->s.GetCount(); i++) {
@@ -340,8 +340,8 @@ struct SourceGenerator : public ICiStatementVisitor
 			WriteContent(value->objs);
 			Write(" }");
 		}
-		else if (value == NULL)
-			Write("NULL");
+		else if (value == NULL || value->type == O_NULL)
+			Write("null");
 		else
 			throw new ArgumentException(value->ToString());
 	}
@@ -399,15 +399,15 @@ struct SourceGenerator : public ICiStatementVisitor
 			case Equal:
 			case NotEqual:
 				return Equality;
-			case AndPrior:
+			case AndToken:
 				return AndPrior;
-			case XorPrior:
+			case XorToken:
 				return XorPrior;
-			case OrPrior:
+			case OrToken:
 				return OrPrior;
-			case CondAndPrior:
+			case CondAndToken:
 				return CondAndPrior;
-			case CondOrPrior:
+			case CondOrToken:
 				return CondOrPrior;
 			default:
 				throw new ArgumentException("Priority " + IntStr(be->op));
@@ -631,7 +631,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		if (e)
 			Write(e);
 		else
-			Visit(dynamic_cast<CiAssign*>(expr));
+			VisitStmt(dynamic_cast<CiAssign*>(expr));
 	}
 
 	virtual void Write(CiCoercion* expr)
@@ -701,7 +701,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		Write(statements, statements.GetCount());
 	}
 
-	virtual void Visit(CiBlock* block)
+	virtual void VisitStmt(CiBlock* block)
 	{
 		OpenBlock();
 		Write(block->statements);
@@ -723,14 +723,14 @@ struct SourceGenerator : public ICiStatementVisitor
 		}
 	}
 
-	virtual void Visit(CiExpr* expr)
+	virtual void VisitStmt(CiExpr* expr)
 	{
 		Write(expr);
 	}
 
-	virtual void Visit(CiVar* stmt) = 0;
+	virtual void VisitStmt(CiVar* stmt) = 0;
 
-	virtual void Visit(CiAssign* assign)
+	virtual void VisitStmt(CiAssign* assign)
 	{
 		Write(assign->target);
 		switch (assign->op) {
@@ -750,26 +750,26 @@ struct SourceGenerator : public ICiStatementVisitor
 		WriteInline(assign->source);
 	}
 
-	virtual void Visit(CiDelete* stmt)
+	virtual void VisitStmt(CiDelete* stmt)
 	{
 		// do nothing - assume automatic garbage collector
 	}
 
-	virtual void Visit(CiBreak* stmt)
+	virtual void VisitStmt(CiBreak* stmt)
 	{
 		WriteLine("break;");
 	}
 
-	virtual void Visit(CiConst* stmt)
+	virtual void VisitStmt(CiConst* stmt)
 	{
 	}
 
-	virtual void Visit(CiContinue* stmt)
+	virtual void VisitStmt(CiContinue* stmt)
 	{
 		WriteLine("continue;");
 	}
 
-	virtual void Visit(CiDoWhile* stmt)
+	virtual void VisitStmt(CiDoWhile* stmt)
 	{
 		Write("do");
 		WriteChild(stmt->body);
@@ -778,7 +778,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		WriteLine(");");
 	}
 
-	virtual void Visit(CiFor* stmt)
+	virtual void VisitStmt(CiFor* stmt)
 	{
 		Write("for (");
 		if (stmt->init != NULL)
@@ -802,7 +802,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		WriteChild(stmt->on_true);
 	}
 
-	virtual void Visit(CiIf* stmt)
+	virtual void VisitStmt(CiIf* stmt)
 	{
 		Write("if (");
 		Write(stmt->cond);
@@ -825,7 +825,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		Write(statement->content);
 	}
 
-	virtual void Visit(CiReturn* stmt)
+	virtual void VisitStmt(CiReturn* stmt)
 	{
 		if (stmt->value == NULL)
 			WriteLine("return;");
@@ -852,7 +852,7 @@ struct SourceGenerator : public ICiStatementVisitor
 	{
 	}
 
-	virtual void Visit(CiSwitch* stmt)
+	virtual void VisitStmt(CiSwitch* stmt)
 	{
 		Write("switch (");
 		Write(stmt->value);
@@ -884,9 +884,9 @@ struct SourceGenerator : public ICiStatementVisitor
 		WriteLine("}");
 	}
 
-	virtual void Visit(CiThrow* stmt) = 0;
+	virtual void VisitStmt(CiThrow* stmt) = 0;
 
-	virtual void Visit(CiWhile* stmt)
+	virtual void VisitStmt(CiWhile* stmt)
 	{
 		Write("while (");
 		Write(stmt->cond);

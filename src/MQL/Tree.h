@@ -112,7 +112,11 @@ struct SymbolTable {
 	
 	CiSymbol* Lookup(const String& name) {
 		int i = symbols.Find(name);
-		if (i < 0) return NULL;
+		if (i < 0) {
+			if (parent)
+				return parent->Lookup(name);
+			return NULL;
+		}
 		return symbols[i];
 	}
 	
@@ -171,7 +175,7 @@ struct CiUnknownType : public CiType
 struct CiBoolType : public CiType
 {
 	CiBoolType() {}
-	static CiBoolType* Value() {CiBoolType* c = new CiBoolType(); c->name = "bool"; return c;}
+	static CiBoolType* Value() { static CiBoolType* c; if (!c) {c = new CiBoolType(); c->name = "bool";} return c;}
 	
 	virtual CiSymbol* LookupMember(String name);
 };
@@ -179,7 +183,7 @@ struct CiBoolType : public CiType
 struct CiByteType : public CiType
 {
 	CiByteType() {}
-	static CiByteType* Value() {CiByteType* c = new CiByteType(); c->name = "byte"; return c;}
+	static CiByteType* Value() {static CiByteType* c; if (!c) {c  = new CiByteType(); c->name = "byte";} return c;}
 	
 	virtual CiSymbol* LookupMember(String name);
 };
@@ -187,7 +191,7 @@ struct CiByteType : public CiType
 struct CiIntType : public CiType
 {
 	CiIntType() {}
-	static CiIntType* Value() {CiIntType* c = new CiIntType(); c->name = "int"; return c;}
+	static CiIntType* Value() {static CiIntType* c; if (!c) {c  = new CiIntType(); c->name = "int";} return c;}
 	
 	virtual CiSymbol* LookupMember(String name);
 };
@@ -200,7 +204,7 @@ struct CiStringType : public CiType
 struct CiStringPtrType : public CiStringType
 {
 	CiStringPtrType() {}
-	static CiStringPtrType* Value() {CiStringPtrType* c = new CiStringPtrType(); c->name = "string"; return c;}
+	static CiStringPtrType* Value() {static CiStringPtrType* c; if (!c) {c  = new CiStringPtrType(); c->name = "string";} return c;}
 };
 
 struct CiExpr;
@@ -392,8 +396,8 @@ struct CiConst : public CiSymbol, ICiStatement
 	CiType* type = NULL;
 	Object* value = NULL;
 	String global_name;
-	bool is_7bit;
-	bool currently_resolving;
+	bool is_7bit = false;
+	bool currently_resolving = false;
 	
 	CiConst() {}
 	CiConst(CiType* type, Object* v) {this->type = type; value = v;}
@@ -407,7 +411,7 @@ struct CiVar : public CiSymbol, ICiStatement
 {
 	CiType* type = NULL;
 	CiExpr* initial_value = NULL;
-	bool write_initial_value; // C89 only
+	bool write_initial_value = false; // C89 only
 	
 	virtual bool CompletesNormally() { return true; }
 	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
@@ -433,6 +437,7 @@ struct CiMaybeAssign : public ICiStatement
 {
 	CiType* type = NULL;
 	
+	virtual CiType* Type() {return type;}
 	virtual bool CompletesNormally() {Panic("Undefined"); return false;}
 	virtual void Accept(ICiStatementVisitor* v) {Panic("Undefined");}
 };
@@ -484,7 +489,10 @@ struct CiConstExpr : public CiExpr
 	
 	
 	CiConstExpr(Object* value) {
-		this->value = value;
+		if (value == NULL)
+			this->value = new Object();
+		else
+			this->value = value;
 	}
 	CiConstExpr(int value) {
 		this->value = new Object();
@@ -543,7 +551,7 @@ struct CiVarAccess : public CiLValue
 {
 	CiVar* var;
 	
-	CiVarAccess(CiVar* var) {this->var = var;}
+	CiVarAccess(CiVar* var) {this->var = var; type = var->type;}
 	virtual CiType* Type() {return this->var->type;}
 	virtual bool HasSideEffect() {return false;}
 	virtual CiExpr* Accept(ICiExprVisitor* v) { return v->VisitExpr(this); }

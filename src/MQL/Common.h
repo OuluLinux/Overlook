@@ -89,7 +89,7 @@ struct Object {
 	
 	virtual String ToString() {
 		switch (type) {
-			case O_NULL: return "NULL";
+			case O_NULL: return "null";
 			case O_BOOL: return b ? "true" : "false";
 			case O_BYTE: return IntStr(byt);
 			case O_INT: return IntStr(i);

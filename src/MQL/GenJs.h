@@ -15,7 +15,7 @@ class GenJs : public SourceGenerator
 	void Write(String s) {SourceGenerator::Write(s);}
 	void Write(int i) {SourceGenerator::Write(i);}
 
-	virtual void VisitStmt(CiWhile* statement) {}
+	/*virtual void VisitStmt(CiWhile* statement) {}
 	virtual void VisitStmt(CiThrow* statement) {}
 	virtual void VisitStmt(CiSwitch* statement) {}
 	virtual void VisitStmt(CiReturn* statement) {}
@@ -29,7 +29,7 @@ class GenJs : public SourceGenerator
 	virtual void VisitStmt(CiExpr* statement) {}
 	virtual void VisitStmt(CiVar* statement) {}
 	virtual void VisitStmt(CiConst* statement) {}
-	virtual void VisitStmt(CiBlock* statement) {}
+	virtual void VisitStmt(CiBlock* statement) {}*/
 	
 	void Write(CiCodeDoc* doc)
 	{
@@ -283,7 +283,7 @@ class GenJs : public SourceGenerator
 		this->UsesClearArrayMethod = true;
 	}
 
-	virtual void Visit(CiVar* stmt)
+	virtual void VisitStmt(CiVar* stmt)
 	{
 		Write("var ");
 		Write(stmt->name);
@@ -298,7 +298,7 @@ class GenJs : public SourceGenerator
 		}
 	}
 
-	virtual void Visit(CiThrow* stmt)
+	virtual void VisitStmt(CiThrow* stmt)
 	{
 		Write("throw ");
 		Write(stmt->message);

@@ -123,7 +123,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	CiMaybeAssign* Coerce(CiMaybeAssign* expr, CiType* expected)
 	{
-		CiType* got = expr->type;
+		CiType* got = expr->Type();
 		if (expected->Equals(got))
 			return expr;
 		if (expected == CiIntType::Value() && got == CiByteType::Value()) {
@@ -174,12 +174,12 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			if (got != NULL && (apt->element_type->Equals(gotArray->element_type)))
 				return new CiCoercion(expected, expr);
 		}
-		throw ResolveException("Expected " + expected->name + ", got " + got->name);
+		throw ResolveException("Expected " + expected->name + ", got " + (got ? got->name : "null"));
 	}
 
 	CiExpr* Coerce(CiExpr* expr, CiType* expected)
 	{
-		return Coerce(expr, expected);
+		return dynamic_cast<CiExpr*>(Coerce((CiMaybeAssign*)expr, expected));
 	}
 
 	Object* ResolveConstExpr(CiExpr* expr, CiType* type)
@@ -240,7 +240,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 		konst->currently_resolving = true;
 		konst->type = Resolve(konst->type);
 		konst->value = ResolveConstInitializer(konst->type, konst->value);
-		if (konst->value->bytes.GetCount())
+		if (konst->value && konst->value->bytes.GetCount())
 			konst->is_7bit = Is7Bit(konst->value->bytes);
 		konst->currently_resolving = false;
 	}
@@ -674,8 +674,8 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	static CiType* FindCommonType(CiExpr* expr1, CiExpr* expr2)
 	{
-		CiType* type1 = expr1->type;
-		CiType* type2 = expr2->type;
+		CiType* type1 = expr1->Type();
+		CiType* type2 = expr2->Type();
 		if (type1->Equals(type2))
 			return type1;
 		if ((type1 == CiIntType::Value() && type2 == CiByteType::Value())

@@ -177,7 +177,7 @@ public class GenC : SourceGenerator
 			WriteUppercaseWithUnderscores(ev->name);
 		}
 		else if (value == NULL)
-			Write("NULL");
+			Write("null");
 		else
 			base.WriteConst(value);
 	}

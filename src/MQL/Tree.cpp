@@ -2,7 +2,7 @@
 
 namespace Ci {
 
-CiType* CiType::Null = new CiType("NULL");
+CiType* CiType::Null = new CiType("null");
 CiType* CiType::Void = new CiType("void");
 
 CiArrayPtrType* CiArrayPtrType::WritableByteArray = new CiArrayPtrType(CiByteType::Value());

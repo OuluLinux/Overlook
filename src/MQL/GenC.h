@@ -36,23 +36,23 @@ public class GenC : SourceGenerator
 	void Write(CiEnum enu)
 	{
 		WriteLine();
-		Write(enu.Documentation);
+		Write(enu->documentation);
 		Write("typedef enum ");
 		OpenBlock();
 		bool first = true;
-		foreach (CiEnumValue value in enu.Values) {
+		foreach (CiEnumValue value in enu->values) {
 			if (first)
 				first = false;
 			else
 				WriteLine(",");
-			Write(value.Documentation);
-			Write(enu.Name);
+			Write(value->documentation);
+			Write(enu->name);
 			Write('_');
-			WriteUppercaseWithUnderscores(value.Name);
+			WriteUppercaseWithUnderscores(value->name);
 		}
 		WriteLine();
 		CloseBlock();
-		Write(enu.Name);
+		Write(enu->name);
 		WriteLine(";");
 	}
 
@@ -63,9 +63,9 @@ public class GenC : SourceGenerator
 			sb.Insert(0, "const ");
 	}
 
-	protected virtual string ToString(CiType type)
+	virtual string ToString(CiType type)
 	{
-		return type.Name;
+		return type->name;
 	}
 
 	string ToString(CiType type, string s)
@@ -74,7 +74,7 @@ public class GenC : SourceGenerator
 		bool needParens = false;
 		while (type is CiArrayType) {
 			CiArrayStorageType stg = type as CiArrayStorageType;
-			if (stg != null) {
+			if (stg != NULL) {
 				if (needParens) {
 					sb.Insert(0, '(');
 					sb.Append(')');
@@ -121,32 +121,32 @@ public class GenC : SourceGenerator
 
 	void Write(CiField field)
 	{
-		Write(field.Documentation);
-		Write(field.Type, ToCamelCase(field.Name));
+		Write(field->documentation);
+		Write(field.Type, ToCamelCase(field->name));
 		WriteLine(";");
 	}
 
 	void Write(CiClass klass, CiConst konst)
 	{
 		WriteLine();
-		Write(konst.Documentation);
+		Write(konst->documentation);
 		if (konst.Type is CiArrayStorageType) {
 			CiArrayStorageType stg = (CiArrayStorageType) konst.Type;
 			Write("extern const ");
-			Write(konst.Type, klass.Name + "_" + konst.Name);
+			Write(konst.Type, klass->name + "_" + konst->name);
 			WriteLine(";");
 			Write("#define ");
-			Write(klass.Name);
+			Write(klass->name);
 			Write('_');
-			Write(konst.Name);
+			Write(konst->name);
 			Write("_LENGTH  ");
 			Write(stg.Length);
 		}
 		else {
 			Write("#define ");
-			Write(klass.Name);
+			Write(klass->name);
 			Write('_');
-			WriteUppercaseWithUnderscores(konst.Name);
+			WriteUppercaseWithUnderscores(konst->name);
 			Write("  ");
 			WriteConst(konst.Value);
 		}
@@ -168,34 +168,34 @@ public class GenC : SourceGenerator
 		return base.GetPriority(expr);
 	}
 
-	protected override void WriteConst(object value)
+	void WriteConst(object value)
 	{
 		if (value is CiEnumValue) {
 			CiEnumValue ev = (CiEnumValue) value;
-			Write(ev.Type.Name);
+			Write(ev.Type->name);
 			Write('_');
-			WriteUppercaseWithUnderscores(ev.Name);
+			WriteUppercaseWithUnderscores(ev->name);
 		}
-		else if (value == null)
+		else if (value == NULL)
 			Write("NULL");
 		else
 			base.WriteConst(value);
 	}
 
-	protected override void WriteName(CiConst konst)
+	void WriteName(CiConst konst)
 	{
-		if (konst.Class != null) {
-			Write(konst.Class.Name);
+		if (konst->class_ != NULL) {
+			Write(konst->class_->name);
 			Write('_');
-			Write(konst.Name);
+			Write(konst->name);
 		}
 		else
-			Write(konst.Name);
+			Write(konst->name);
 	}
 
-	protected override void Write(CiVarAccess expr)
+	void Write(CiVarAccess expr)
 	{
-		if (expr.Var == this.CurrentMethod.This)
+		if (expr.Var == this->CurrentMethod.This)
 			Write("self");
 		else
 			base.Write(expr);
@@ -210,29 +210,29 @@ public class GenC : SourceGenerator
 			Write('.');
 	}
 
-	protected override void Write(CiFieldAccess expr)
+	void Write(CiFieldAccess expr)
 	{
-		StartFieldAccess(expr.Obj);
-		WriteCamelCase(expr.Field.Name);
+		StartFieldAccess(expr->obj);
+		WriteCamelCase(expr->field->name);
 	}
 
-	protected override void Write(CiPropertyAccess expr)
+	void Write(CiPropertyAccess expr)
 	{
 		if (expr.Property == CiLibrary.SByteProperty) {
 			Write("(signed char) ");
-			WriteChild(expr, expr.Obj);
+			WriteChild(expr, expr->obj);
 		}
 		else if (expr.Property == CiLibrary.LowByteProperty) {
 			Write("(unsigned char) ");
-			WriteChild(expr, expr.Obj);
+			WriteChild(expr, expr->obj);
 		}
 		else if (expr.Property == CiLibrary.StringLengthProperty) {
 			Write("(int) strlen(");
-			WriteChild(expr, expr.Obj);
+			WriteChild(expr, expr->obj);
 			Write(')');
 		}
 		else
-			throw new ArgumentException(expr.Property.Name);
+			throw new ArgumentException(expr.Property->name);
 	}
 
 	void WriteClearArray(CiExpr expr)
@@ -244,83 +244,83 @@ public class GenC : SourceGenerator
 		Write("))");
 	}
 
-	protected override void Write(CiMethodCall expr)
+	void Write(CiMethodCall expr)
 	{
-		if (expr.Method == CiLibrary.MulDivMethod) {
+		if (expr->method == CiLibrary.MulDivMethod) {
 			Write("(int) ((long long int) ");
 			WriteMulDiv(CiPriority.Prefix, expr);
 		}
-		else if (expr.Method == CiLibrary.CharAtMethod) {
-			Write(expr.Obj);
+		else if (expr->method == CiLibrary.CharAtMethod) {
+			Write(expr->obj);
 			Write('[');
 			Write(expr.Arguments[0]);
 			Write(']');
 		}
-		else if (expr.Method == CiLibrary.SubstringMethod) {
+		else if (expr->method == CiLibrary.SubstringMethod) {
 			// TODO
 			throw new ArgumentException("Substring");
 		}
-		else if (expr.Method == CiLibrary.ArrayCopyToMethod) {
+		else if (expr->method == CiLibrary.ArrayCopyToMethod) {
 			Write("memcpy(");
 			WriteSum(expr.Arguments[1], expr.Arguments[2]);
 			Write(", ");
-			WriteSum(expr.Obj, expr.Arguments[0]);
+			WriteSum(expr->obj, expr.Arguments[0]);
 			Write(", ");
 			Write(expr.Arguments[3]);
 			Write(')');
 		}
-		else if (expr.Method == CiLibrary.ArrayToStringMethod) {
+		else if (expr->method == CiLibrary.ArrayToStringMethod) {
 			// TODO
 			throw new ArgumentException("Array.ToString");
 		}
-		else if (expr.Method == CiLibrary.ArrayStorageClearMethod) {
-			WriteClearArray(expr.Obj);
+		else if (expr->method == CiLibrary.ArrayStorageClearMethod) {
+			WriteClearArray(expr->obj);
 		}
 		else {
 			bool first = true;
-			if (expr.Method != null) {
-				switch (expr.Method.CallType) {
+			if (expr->method != NULL) {
+				switch (expr->method.CallType) {
 				case CiCallType.Static:
-					Write(expr.Method.Class.Name);
+					Write(expr->method->class_->name);
 					Write('_');
-					Write(expr.Method.Name);
+					Write(expr->method->name);
 					Write('(');
 					break;
 				case CiCallType.Normal:
-					Write(expr.Method.Class.Name);
+					Write(expr->method->class_->name);
 					Write('_');
-					Write(expr.Method.Name);
+					Write(expr->method->name);
 					Write('(');
-					Write(expr.Obj);
+					Write(expr->obj);
 					first = false;
 					break;
 				case CiCallType.Abstract:
 				case CiCallType.Virtual:
 				case CiCallType.Override:
-					CiClass objClass = ((CiClassType) expr.Obj.Type).Class;
-					CiClass ptrClass = GetVtblPtrClass(expr.Method.Class);
+					CiClass objClass = ((CiClassType) expr->obj.Type)->class_;
+					CiClass ptrClass = GetVtblPtrClass(expr->method->class_);
 					CiClass defClass;
-					for (defClass = expr.Method.Class; !AddsVirtualMethod(defClass, expr.Method.Name); defClass = defClass.BaseClass)
+					for (defClass = expr->method->class_; !AddsVirtualMethod(defClass, expr->method->name); defClass = defClass.BaseClass)
 						;
 					if (defClass != ptrClass) {
 						Write("((const ");
-						Write(defClass.Name);
+						Write(defClass->name);
 						Write("Vtbl *) ");
 					}
-					StartFieldAccess(expr.Obj);
+					StartFieldAccess(expr->obj);
 					for (CiClass baseClass = objClass; baseClass != ptrClass; baseClass = baseClass.BaseClass)
 						Write("base.");
 					Write("vtbl");
 					if (defClass != ptrClass)
 						Write(')');
 					Write("->");
-					WriteCamelCase(expr.Method.Name);
+					WriteCamelCase(expr->method->name);
 					Write('(');
 					if (objClass == defClass)
-						Write(expr.Obj);
+						Write(expr->obj);
 					else {
 						Write('&');
-						StartFieldAccess(expr.Obj);
+						StartFieldAccess(expr->obj);
 						Write("base");
 						for (CiClass baseClass = objClass.BaseClass; baseClass != defClass; baseClass = baseClass.BaseClass)
 							Write(".base");
@@ -331,9 +331,9 @@ public class GenC : SourceGenerator
 			}
 			else {
 				// delegate
-				Write(expr.Obj);
+				Write(expr->obj);
 				Write(".func(");
-				Write(expr.Obj);
+				Write(expr->obj);
 				Write(".obj");
 				first = false;
 			}
@@ -346,7 +346,7 @@ public class GenC : SourceGenerator
 				Write(arg);
 			}
 			Write(')');
-			// if (expr.Method.Throws) Write(" /* throws */");
+			// if (expr->method.Throws) Write(" /* throws */");
 		}
 	}
 
@@ -358,13 +358,13 @@ public class GenC : SourceGenerator
 			WriteChild(suggestedParentPriority, child);
 	}
 
-	protected override void Write(CiBinaryExpr expr)
+	void Write(CiBinaryExpr expr)
 	{
-		switch (expr.Op) {
+		switch (expr->op) {
 		case CiToken.Equal:
 		case CiToken.NotEqual:
 		case CiToken.Greater:
-			if (expr.Left.Type is CiStringType && !expr.Left.IsConst(null) && !expr.Right.IsConst(null)) {
+			if (expr.Left.Type is CiStringType && !expr.Left.IsConst(NULL) && !expr.Right.IsConst(NULL)) {
 				Write("strcmp(");
 				Write(expr.Left);
 				Write(", ");
@@ -376,11 +376,11 @@ public class GenC : SourceGenerator
 			}
 			// optimize str.Length == 0, str.Length != 0, str.Length > 0
 			CiPropertyAccess pa = expr.Left as CiPropertyAccess;
-			if (pa != null && pa.Property == CiLibrary.StringLengthProperty) {
+			if (pa != NULL && pa.Property == CiLibrary.StringLengthProperty) {
 				CiConstExpr ce = expr.Right as CiConstExpr;
-				if (ce != null && 0.Equals(ce.Value)) {
-					WriteChild(CiPriority.Postfix, pa.Obj);
-					Write(expr.Op == CiToken.Equal ? "[0] == '\\0'" : "[0] != '\\0'");
+				if (ce != NULL && 0.Equals(ce.Value)) {
+					WriteChild(CiPriority.Postfix, pa->obj);
+					Write(expr->op == CiToken.Equal ? "[0] == '\\0'" : "[0] != '\\0'");
 					break;
 				}
 			}
@@ -410,11 +410,11 @@ public class GenC : SourceGenerator
 		}
 	}
 
-	protected override void WriteNew(CiType type)
+	void WriteNew(CiType type)
 	{
 		CiClassStorageType classType = type as CiClassStorageType;
-		if (classType != null) {
-			Write(classType.Class.Name);
+		if (classType != NULL) {
+			Write(classType->class_->name);
 			Write("_New()");
 		}
 		else {
@@ -429,18 +429,18 @@ public class GenC : SourceGenerator
 		}
 	}
 
-	protected override void Write(CiCoercion expr)
+	void Write(CiCoercion expr)
 	{
 		if (expr.ResultType is CiClassType) {
 			if (expr.ResultType is CiClassPtrType)
 				Write('&');
 			WriteChild(expr, (CiExpr) expr.Inner); // TODO: Assign
-			CiClass klass = ((CiClassType) expr.Inner.Type).Class;
+			CiClass klass = ((CiClassType) expr.Inner.Type)->class_;
 			if (expr.Inner.Type is CiClassPtrType) {
 				Write("->base");
 				klass = klass.BaseClass;
 			}
-			CiClass resultClass = ((CiClassType) expr.ResultType).Class;
+			CiClass resultClass = ((CiClassType) expr.ResultType)->class_;
 			for (; klass != resultClass; klass = klass.BaseClass)
 				Write(".base");
 		}
@@ -451,38 +451,38 @@ public class GenC : SourceGenerator
 	bool TryWriteCallAndReturn(ICiStatement[] statements, int lastCallIndex, CiExpr returnValue)
 	{
 		CiMethodCall call = statements[lastCallIndex] as CiMethodCall;
-		if (call == null || !call.Method.Throws)
+		if (call == NULL || !call->method.Throws)
 			return false;
 		Write(statements, lastCallIndex);
 		Write("return ");
 		Write(call);
-		object errorReturnValue = call.Method.ErrorReturnValue;
+		object errorReturnValue = call->method.ErrorReturnValue;
 		if (!false.Equals(errorReturnValue)) {
 			Write(" != ");
 			WriteConst(errorReturnValue);
 		}
-		if (returnValue != null) {
+		if (returnValue != NULL) {
 			Write(" ? ");
 			Write(returnValue);
 			Write(" : ");
-			WriteConst(this.CurrentMethod.ErrorReturnValue);
+			WriteConst(this->CurrentMethod.ErrorReturnValue);
 		}
 		WriteLine(";");
 		return true;
 	}
 
-	protected override void Write(ICiStatement[] statements)
+	void Write(ICiStatement[] statements)
 	{
 		int i = statements.Length - 2;
 		if (i >= 0) {
 			CiReturn ret = statements[i + 1] as CiReturn;
-			if (ret != null && TryWriteCallAndReturn(statements, i, ret.Value))
+			if (ret != NULL && TryWriteCallAndReturn(statements, i, ret.Value))
 				return;
 		}
 		base.Write(statements);
 	}
 
-	protected virtual void StartBlock(ICiStatement[] statements)
+	virtual void StartBlock(ICiStatement[] statements)
 	{
 	}
 
@@ -510,23 +510,23 @@ public class GenC : SourceGenerator
 			WriteConst(errorReturnValue);
 		}
 		WriteLine(")");
-		this.Indent++;
+		this->indent++;
 		Write("return ");
-		WriteConst(this.CurrentMethod.ErrorReturnValue);
-		this.Indent--;
+		WriteConst(this->CurrentMethod.ErrorReturnValue);
+		this->indent--;
 	}
 
 	static bool Throws(CiExpr expr)
 	{
 		CiMethodCall call = expr as CiMethodCall;
-		return call != null && call.Method != null && call.Method.Throws;
+		return call != NULL && call->method != NULL && call->method.Throws;
 	}
 
 	public override void Visit(CiExpr expr)
 	{
 		CiMethodCall call = expr as CiMethodCall;
-		if (call != null && call.Method != null && call.Method.Throws)
-			CheckAndThrow(call, call.Method.ErrorReturnValue);
+		if (call != NULL && call->method != NULL && call->method.Throws)
+			CheckAndThrow(call, call->method.ErrorReturnValue);
 		else
 			base.Visit(expr);
 	}
@@ -534,10 +534,10 @@ public class GenC : SourceGenerator
 	protected static bool IsInlineVar(CiVar def)
 	{
 		if (def.Type is CiClassStorageType) {
-			CiClass klass = ((CiClassStorageType) def.Type).Class;
+			CiClass klass = ((CiClassStorageType) def.Type)->class_;
 			return !klass.Constructs;
 		}
-		if (def.InitialValue == null)
+		if (def.InitialValue == NULL)
 			return true;
 		if (def.Type is CiArrayStorageType)
 			return false;
@@ -550,9 +550,9 @@ public class GenC : SourceGenerator
 
 	void WriteConstruct(CiClass klass, CiVar stmt)
 	{
-		Write(klass.Name);
+		Write(klass->name);
 		Write("_Construct(&");
-		WriteCamelCase(stmt.Name);
+		WriteCamelCase(stmt->name);
 		if (HasVirtualMethods(klass))
 			Write(", NULL");
 		Write(')');
@@ -560,15 +560,15 @@ public class GenC : SourceGenerator
 
 	public override void Visit(CiVar stmt)
 	{
-		Write(stmt.Type, stmt.Name);
+		Write(stmt.Type, stmt->name);
 		if (stmt.Type is CiClassStorageType) {
-			CiClass klass = ((CiClassStorageType) stmt.Type).Class;
+			CiClass klass = ((CiClassStorageType) stmt.Type)->class_;
 			if (klass.Constructs) {
 				WriteLine(";");
 				WriteConstruct(klass, stmt);
 			}
 		}
-		else if (stmt.InitialValue != null) {
+		else if (stmt.InitialValue != NULL) {
 			if (stmt.Type is CiArrayStorageType) {
 				WriteLine(";");
 				WriteClearArray(new CiVarAccess { Var = stmt });
@@ -591,16 +591,16 @@ public class GenC : SourceGenerator
 	public override void Visit(CiAssign assign)
 	{
 		if (assign.Target.Type is CiStringStorageType) {
-			if (assign.Op == CiToken.Assign) {
+			if (assign->op == CiToken.Assign) {
 				if (assign.Source is CiMethodCall) {
 					CiMethodCall mc = (CiMethodCall) assign.Source;
-					if (mc.Method == CiLibrary.SubstringMethod
-					 || mc.Method == CiLibrary.ArrayToStringMethod) {
+					if (mc->method == CiLibrary.SubstringMethod
+					 || mc->method == CiLibrary.ArrayToStringMethod) {
 						// TODO: make sure no side effects in mc.Arguments[1]
 						Write("((char *) memcpy(");
 						Write(assign.Target);
 						Write(", ");
-						WriteSum(mc.Obj, mc.Arguments[0]);
+						WriteSum(mc->obj, mc.Arguments[0]);
 						Write(", ");
 						Write(mc.Arguments[1]);
 						Write("))[");
@@ -611,7 +611,7 @@ public class GenC : SourceGenerator
 				}
 				if (assign.Source is CiConstExpr) {
 					string s = ((CiConstExpr) assign.Source).Value as string;
-					if (s != null && s.Length == 0) {
+					if (s != NULL && s.Length == 0) {
 						Write(assign.Target);
 						Write("[0] = '\\0'");
 						return;
@@ -625,7 +625,7 @@ public class GenC : SourceGenerator
 				Write(')');
 				return;
 			}
-			if (assign.Op == CiToken.AddAssign) {
+			if (assign->op == CiToken.AddAssign) {
 				Write("strcat(");
 				Write(assign.Target);
 				Write(", ");
@@ -636,8 +636,8 @@ public class GenC : SourceGenerator
 			}
 		}
 		CiMethodCall call = assign.Source as CiMethodCall;
-		if (call != null && call.Method != null && call.Method.Throws)
-			CheckAndThrow(assign, call.Method.ErrorReturnValue);
+		if (call != NULL && call->method != NULL && call->method.Throws)
+			CheckAndThrow(assign, call->method.ErrorReturnValue);
 		else
 			base.Visit(assign);
 	}
@@ -653,16 +653,16 @@ public class GenC : SourceGenerator
 	{
 		if (stmt.Type is CiArrayType) {
 			Write("static const ");
-			Write(stmt.Type, stmt.Name);
+			Write(stmt.Type, stmt->name);
 			Write(" = ");
-			WriteConst(stmt.Value);
+			WriteConst(stmt->value);
 			WriteLine(";");
 		}
 	}
 
-	protected override void WriteIfOnTrue(CiIf stmt)
+	void WriteIfOnTrue(CiIf stmt)
 	{
-		if (stmt.OnFalse != null) {
+		if (stmt->on_false != NULL) {
 			// avoid:
 			// if (c)
 			//    stmtThatThrows; // -> if (method() == ERROR_VALUE) return ERROR_VALUE;
@@ -670,11 +670,11 @@ public class GenC : SourceGenerator
 			//    stmt;
 			CiMethodCall call;
 			CiAssign assign = stmt.OnTrue as CiAssign;
-			if (assign != null)
+			if (assign != NULL)
 				call = assign.Source as CiMethodCall;
 			else
 				call = stmt.OnTrue as CiMethodCall;
-			if (call != null && call.Method != null && call.Method.Throws) {
+			if (call != NULL && call->method != NULL && call->method.Throws) {
 				Write(' ');
 				OpenBlock();
 				base.WriteIfOnTrue(stmt);
@@ -694,13 +694,13 @@ public class GenC : SourceGenerator
 
 	public override void Visit(CiReturn stmt)
 	{
-		if (false.Equals(this.CurrentMethod.ErrorReturnValue))
+		if (false.Equals(this->CurrentMethod.ErrorReturnValue))
 			WriteReturnTrue();
 		else
 			base.Visit(stmt);
 	}
 
-	protected override void StartCase(ICiStatement stmt)
+	void StartCase(ICiStatement stmt)
 	{
 		// prevent "error: a label can only be part of a statement and a declaration is not a statement"
 		if (stmt is CiVar)
@@ -710,7 +710,7 @@ public class GenC : SourceGenerator
 	public override void Visit(CiThrow stmt)
 	{
 		Write("return ");
-		WriteConst(this.CurrentMethod.ErrorReturnValue);
+		WriteConst(this->CurrentMethod.ErrorReturnValue);
 		WriteLine(";");
 	}
 
@@ -718,11 +718,11 @@ public class GenC : SourceGenerator
 	{
 		if (method.Visibility != CiVisibility.Public)
 			Write("static ");
-		var paramz = method.Signature.Params.Select(param => ToString(param.Type, param.Name));
+		var paramz = method.Signature.Params.Select(param => ToString(param.Type, param->name));
 		if (method.CallType != CiCallType.Static)
 			paramz = new string[1] { ToString(method.This.Type, "self") }.Concat(paramz);
 		string s = paramz.Any() ? string.Join(", ", paramz.ToArray()) : "void";
-		s = method.Class.Name + "_" + method.Name + "(" + s + ")";
+		s = method->class_->name + "_" + method->name + "(" + s + ")";
 		CiType type = method.Signature.ReturnType;
 		if (method.Throws && type == CiType.Void)
 			type = CiBoolType.Value;
@@ -734,16 +734,16 @@ public class GenC : SourceGenerator
 		if (method.Visibility == CiVisibility.Dead || method.CallType == CiCallType.Abstract)
 			return;
 		WriteLine();
-		this.CurrentMethod = method;
+		this->CurrentMethod = method;
 		WriteSignature(method);
 		WriteLine();
 		OpenBlock();
 		CiBlock block = method.Body as CiBlock;
-		if (block != null) {
+		if (block != NULL) {
 			ICiStatement[] statements = block.Statements;
 			StartBlock(statements);
 			if (method.Throws && method.Signature.ReturnType == CiType.Void && method.Body.CompletesNormally) {
-				if (!TryWriteCallAndReturn(statements, statements.Length - 1, null)) {
+				if (!TryWriteCallAndReturn(statements, statements.Length - 1, NULL)) {
 					Write(statements);
 					WriteReturnTrue();
 				}
@@ -754,19 +754,19 @@ public class GenC : SourceGenerator
 		else
 			Write(method.Body);
 		CloseBlock();
-		this.CurrentMethod = null;
+		this->CurrentMethod = NULL;
 	}
 
 	void WriteConstructorSignature(CiClass klass)
 	{
 		Write("static void ");
-		Write(klass.Name);
+		Write(klass->name);
 		Write("_Construct(");
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" *self");
 		if (HasVirtualMethods(klass)) {
 			Write(", const ");
-			Write(GetVtblPtrClass(klass).Name);
+			Write(GetVtblPtrClass(klass)->name);
 			Write("Vtbl *vtbl");
 		}
 		Write(')');
@@ -774,18 +774,18 @@ public class GenC : SourceGenerator
 
 	void WriteNewSignature(CiClass klass)
 	{
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" *");
-		Write(klass.Name);
+		Write(klass->name);
 		Write("_New(void)");
 	}
 
 	void WriteDeleteSignature(CiClass klass)
 	{
 		Write("void ");
-		Write(klass.Name);
+		Write(klass->name);
 		Write("_Delete(");
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" *self)");
 	}
 
@@ -793,9 +793,9 @@ public class GenC : SourceGenerator
 	{
 		foreach (CiSymbol member in klass.Members) {
 			CiField field = member as CiField;
-			if (field != null) {
+			if (field != NULL) {
 				CiClass storageClass = field.Type.StorageClass;
-				if (storageClass != null)
+				if (storageClass != NULL)
 					action(field, storageClass);
 			}
 		}
@@ -803,7 +803,7 @@ public class GenC : SourceGenerator
 
 	static bool HasCStruct(CiClass klass)
 	{
-		return klass.BaseClass != null || klass.HasFields || AddsVirtualMethods(klass);
+		return klass.BaseClass != NULL || klass.HasFields || AddsVirtualMethods(klass);
 	}
 
 	void WriteNew(CiClass klass)
@@ -811,21 +811,21 @@ public class GenC : SourceGenerator
 		WriteNewSignature(klass);
 		WriteLine();
 		OpenBlock();
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" *self = (");
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" *) malloc(sizeof(");
-		Write(klass.Name);
+		Write(klass->name);
 		WriteLine("));");
 		if (klass.Constructs) {
 			WriteLine("if (self != NULL)");
-			this.Indent++;
-			Write(klass.Name);
+			this->indent++;
+			Write(klass->name);
 			Write("_Construct(self");
 			if (HasVirtualMethods(klass))
 				Write(", NULL");
 			WriteLine(");");
-			this.Indent--;
+			this->indent--;
 		}
 		WriteLine("return self;");
 		CloseBlock();
@@ -835,32 +835,32 @@ public class GenC : SourceGenerator
 	{
 		if (klass.Constructs) {
 			WriteLine();
-			this.CurrentMethod = klass.Constructor;
+			this->CurrentMethod = klass.Constructor;
 			WriteConstructorSignature(klass);
 			WriteLine();
 			OpenBlock();
-			if (klass.Constructor != null)
+			if (klass.Constructor != NULL)
 				StartBlock(((CiBlock) klass.Constructor.Body).Statements);
 			CiClass ptrClass = GetVtblPtrClass(klass);
 			if (HasVtblValue(klass)) {
 				WriteLine("if (vtbl == NULL)");
-				this.Indent++;
+				this->indent++;
 				Write("vtbl = ");
 				CiClass structClass = GetVtblStructClass(klass);
 				if (structClass != ptrClass) {
 					Write("(const ");
-					Write(ptrClass.Name);
+					Write(ptrClass->name);
 					Write("Vtbl *) ");
 				}
 				Write("&CiVtbl_");
-				Write(klass.Name);
+				Write(klass->name);
 				WriteLine(";");
-				this.Indent--;
+				this->indent--;
 			}
 			if (ptrClass == klass)
 				WriteLine("self->vtbl = vtbl;");
-			if (klass.BaseClass != null && klass.BaseClass.Constructs) {
-				Write(klass.BaseClass.Name);
+			if (klass.BaseClass != NULL && klass.BaseClass.Constructs) {
+				Write(klass.BaseClass->name);
 				Write("_Construct(&self->base");
 				if (HasVirtualMethods(klass.BaseClass))
 					Write(", vtbl");
@@ -868,18 +868,18 @@ public class GenC : SourceGenerator
 			}
 			ForEachStorageField(klass, (field, fieldClass) => {
 				if (fieldClass.Constructs) {
-					Write(fieldClass.Name);
+					Write(fieldClass->name);
 					Write("_Construct(&self->");
-					WriteCamelCase(field.Name);
+					WriteCamelCase(field->name);
 					if (HasVirtualMethods(fieldClass))
 						Write(", NULL");
 					WriteLine(");");
 				}
 			});
-			if (klass.Constructor != null)
+			if (klass.Constructor != NULL)
 				Write(((CiBlock) klass.Constructor.Body).Statements);
 			CloseBlock();
-			this.CurrentMethod = null;
+			this->CurrentMethod = NULL;
 		}
 		if (!klass.IsAbstract && HasCStruct(klass)) {
 			if (klass.Visibility == CiVisibility.Public) {
@@ -906,11 +906,11 @@ public class GenC : SourceGenerator
 		klass.WriteStatus = CiWriteStatus.NotYet;
 		klass.HasFields = klass.Members.Any(member => member is CiField);
 		bool klassHasInstanceMethods = klass.Members.Any(member => member is CiMethod && ((CiMethod) member).CallType != CiCallType.Static);
-		if (klass.BaseClass != null || klass.HasFields || klassHasInstanceMethods) {
+		if (klass.BaseClass != NULL || klass.HasFields || klassHasInstanceMethods) {
 			Write("typedef struct ");
-			Write(klass.Name);
+			Write(klass->name);
 			Write(' ');
-			Write(klass.Name);
+			Write(klass->name);
 			WriteLine(";");
 		}
 	}
@@ -920,26 +920,26 @@ public class GenC : SourceGenerator
 		if (del.WriteStatus == CiWriteStatus.Done)
 			return;
 		if (del.WriteStatus == CiWriteStatus.InProgress)
-			throw new ResolveException("Circular dependency for delegate {0}", del.Name);
+			throw new ResolveException("Circular dependency for delegate {0}", del->name);
 		del.WriteStatus = CiWriteStatus.InProgress;
 		foreach (CiParam param in del.Params) {
 			CiDelegate paramDel = param.Type as CiDelegate;
-			if (paramDel != null)
+			if (paramDel != NULL)
 				Write(paramDel);
 		}
 		del.WriteStatus = CiWriteStatus.Done;
 
 		WriteLine();
-		Write(del.Documentation);
+		Write(del->documentation);
 		WriteLine("typedef struct ");
 		OpenBlock();
 		WriteLine("void *obj;");
-		string[] paramz = del.Params.Select(param => ", " + ToString(param.Type, param.Name)).ToArray();
+		string[] paramz = del.Params.Select(param => ", " + ToString(param.Type, param->name)).ToArray();
 		string s = "(*func)(void *obj" + string.Concat(paramz) + ")";
 		Write(del.ReturnType, s);
 		WriteLine(";");
 		CloseBlock();
-		Write(del.Name);
+		Write(del->name);
 		WriteLine(";");
 	}
 
@@ -975,12 +975,12 @@ public class GenC : SourceGenerator
 
 	static CiClass GetVtblPtrClass(CiClass klass)
 	{
-		CiClass result = null;
+		CiClass result = NULL;
 		do {
 			if (AddsVirtualMethods(klass))
 				result = klass;
 			klass = klass.BaseClass;
-		} while (klass != null);
+		} while (klass != NULL);
 		return result;
 	}
 
@@ -989,7 +989,7 @@ public class GenC : SourceGenerator
 		// == return EnumVirtualMethods(klass).Any();
 		while (!AddsVirtualMethods(klass)) {
 			klass = klass.BaseClass;
-			if (klass == null)
+			if (klass == NULL)
 				return false;
 		}
 		return true;
@@ -999,7 +999,7 @@ public class GenC : SourceGenerator
 	{
 		IEnumerable<CiMethod> myMethods = klass.Members.OfType<CiMethod>().Where(
 			method => method.CallType == CiCallType.Abstract || method.CallType == CiCallType.Virtual);
-		if (klass.BaseClass != null)
+		if (klass.BaseClass != NULL)
 			return EnumVirtualMethods(klass.BaseClass).Concat(myMethods);
 		else
 			return myMethods;
@@ -1008,7 +1008,7 @@ public class GenC : SourceGenerator
 	static bool AddsVirtualMethod(CiClass klass, string methodName)
 	{
 		return klass.Members.OfType<CiMethod>().Any(method =>
-			method.Name == methodName && (method.CallType == CiCallType.Abstract || method.CallType == CiCallType.Virtual));
+			method->name == methodName && (method.CallType == CiCallType.Abstract || method.CallType == CiCallType.Virtual));
 	}
 
 	void WritePtr(CiMethod method, string name)
@@ -1017,11 +1017,11 @@ public class GenC : SourceGenerator
 		sb.Append("(*");
 		sb.Append(name);
 		sb.Append(")(");
-		sb.Append(method.Class.Name);
+		sb.Append(method->class_->name);
 		sb.Append(" *self");
 		foreach (CiParam param in method.Signature.Params) {
 			sb.Append(", ");
-			sb.Append(ToString(param.Type, param.Name));
+			sb.Append(ToString(param.Type, param->name));
 		}
 		sb.Append(')');
 		CiType type = method.Signature.ReturnType;
@@ -1037,11 +1037,11 @@ public class GenC : SourceGenerator
 		Write("typedef struct ");
 		OpenBlock();
 		foreach (CiMethod method in EnumVirtualMethods(klass)) {
-			WritePtr(method, ToCamelCase(method.Name));
+			WritePtr(method, ToCamelCase(method->name));
 			WriteLine(";");
 		}
 		CloseBlock();
-		Write(klass.Name);
+		Write(klass->name);
 		WriteLine("Vtbl;");
 	}
 
@@ -1064,7 +1064,7 @@ public class GenC : SourceGenerator
 					Write(klass, (CiConst) member);
 				else if (member.Visibility != CiVisibility.Dead) {
 					CiMethod method = member as CiMethod;
-					if (method != null && method.CallType != CiCallType.Abstract) {
+					if (method != NULL && method.CallType != CiCallType.Abstract) {
 						if (pub) {
 							WriteLine();
 							WriteDoc(method);
@@ -1082,7 +1082,7 @@ public class GenC : SourceGenerator
 		bool result = false;
 		foreach (CiSymbol member in klass.Members) {
 			CiMethod method = member as CiMethod;
-			if (method != null) {
+			if (method != NULL) {
 				switch (method.CallType) {
 				case CiCallType.Abstract:
 					return false;
@@ -1102,14 +1102,14 @@ public class GenC : SourceGenerator
 			return;
 		CiClass structClass = GetVtblStructClass(klass);
 		Write("static const ");
-		Write(structClass.Name);
+		Write(structClass->name);
 		Write("Vtbl CiVtbl_");
-		Write(klass.Name);
+		Write(klass->name);
 		Write(" = ");
 		OpenBlock();
 		bool first = true;
 		foreach (CiMethod method in EnumVirtualMethods(structClass)) {
-			CiMethod impl = (CiMethod) klass.Members.Lookup(method.Name);
+			CiMethod impl = (CiMethod) klass.Members.Lookup(method->name);
 			if (first)
 				first = false;
 			else
@@ -1119,12 +1119,12 @@ public class GenC : SourceGenerator
 				WritePtr(method, string.Empty);
 				Write(") ");
 			}
-			Write(impl.Class.Name);
+			Write(impl->class_->name);
 			Write('_');
-			Write(impl.Name);
+			Write(impl->name);
 		}
 		WriteLine();
-		this.Indent--;
+		this->indent--;
 		WriteLine("};");
 	}
 
@@ -1136,7 +1136,7 @@ public class GenC : SourceGenerator
 	static int SizeOf(CiClass klass)
 	{
 		int result = klass.Members.OfType<CiField>().Sum(field => SizeOf(field.Type));
-		if (klass.BaseClass != null)
+		if (klass.BaseClass != NULL)
 			result += SizeOf(klass.BaseClass);
 		if (GetVtblPtrClass(klass) == klass)
 			result += SizeOfPointer;
@@ -1154,9 +1154,9 @@ public class GenC : SourceGenerator
 		if (type is CiStringStorageType)
 			return ((CiStringStorageType) type).Length + 1;
 		if (type is CiClassStorageType)
-			return SizeOf(((CiClassStorageType) type).Class);
+			return SizeOf(((CiClassStorageType) type)->class_);
 		CiArrayStorageType arrayType = type as CiArrayStorageType;
-		if (arrayType != null)
+		if (arrayType != NULL)
 			return arrayType.Length * SizeOf(arrayType.ElementType);
 		return SizeOfPointer;
 	}
@@ -1167,10 +1167,10 @@ public class GenC : SourceGenerator
 		if (klass.WriteStatus == CiWriteStatus.Done)
 			return;
 		if (klass.WriteStatus == CiWriteStatus.InProgress)
-			throw new ResolveException("Circular dependency for class {0}", klass.Name);
+			throw new ResolveException("Circular dependency for class {0}", klass->name);
 		klass.WriteStatus = CiWriteStatus.InProgress;
-		klass.Constructs = klass.Constructor != null || HasVirtualMethods(klass);
-		if (klass.BaseClass != null) {
+		klass.Constructs = klass.Constructor != NULL || HasVirtualMethods(klass);
+		if (klass.BaseClass != NULL) {
 			WriteStruct(klass.BaseClass);
 			klass.Constructs |= klass.BaseClass.Constructs;
 		}
@@ -1184,32 +1184,32 @@ public class GenC : SourceGenerator
 		WriteVtblStruct(klass);
 		if (HasCStruct(klass)) {
 			Write("struct ");
-			Write(klass.Name);
+			Write(klass->name);
 			Write(' ');
 			OpenBlock();
-			if (klass.BaseClass != null) {
-				Write(klass.BaseClass.Name);
+			if (klass.BaseClass != NULL) {
+				Write(klass.BaseClass->name);
 				WriteLine(" base;");
 			}
 			if (GetVtblPtrClass(klass) == klass) {
 				Write("const ");
-				Write(klass.Name);
+				Write(klass->name);
 				WriteLine("Vtbl *vtbl;");
 			}
 			IEnumerable<CiField> fields = klass.Members.OfType<CiField>().OrderBy(field => SizeOf(field.Type));
 			foreach (CiField field in fields)
 				Write(field);
-			this.Indent--;
+			this->indent--;
 			WriteLine("};");
 		}
 		WriteSignatures(klass, false);
 		WriteVtblValue(klass);
 		foreach (CiConst konst in klass.ConstArrays) {
-			if (konst.Class != null) {
+			if (konst->class_ != NULL) {
 				if (konst.Visibility != CiVisibility.Public)
 					Write("static ");
 				Write("const ");
-				Write(konst.Type, konst.Class.Name + "_" + konst.Name);
+				Write(konst.Type, konst->class_->name + "_" + konst->name);
 				Write(" = ");
 				WriteConst(konst.Value);
 				WriteLine(";");
@@ -1239,19 +1239,19 @@ public class GenC : SourceGenerator
 	{
 		Write(directive);
 		Write(" _");
-		foreach (char c in Path.GetFileNameWithoutExtension(this.output_file))
+		foreach (char c in Path.GetFileNameWithoutExtension(this->output_file))
 			Write(CiLexer.IsLetter(c) ? char.ToUpperInvariant(c) : '_');
 		WriteLine("_H_");
 	}
 
-	protected virtual void WriteBoolType()
+	virtual void WriteBoolType()
 	{
 		WriteLine("#include <stdbool.h>");
 	}
 
 	public override void Write(CiProgram prog)
 	{
-		string headerFile = Path.ChangeExtension(this.output_file, "h");
+		string headerFile = Path.ChangeExtension(this->output_file, "h");
 		CreateFile(headerFile);
 		WriteGuard("#ifndef");
 		WriteGuard("#define");
@@ -1271,7 +1271,7 @@ public class GenC : SourceGenerator
 		WriteLine("#endif");
 		CloseFile();
 
-		CreateFile(this.output_file);
+		CreateFile(this->output_file);
 		WriteLine("#include <stdlib.h>");
 		WriteLine("#include <string.h>");
 		Write("#include \"");

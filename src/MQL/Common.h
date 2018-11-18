@@ -5,26 +5,31 @@ namespace Ci {
 
 // TODO ref
 class StringReader {
-	
+	String s;
+	int i = 0;
 public:
 	StringReader() {}
-	StringReader(const String& s);
-	int Peek();
-	int Read();
-	bool IsEmpty() const;
-	void Clear();
-	void Set(const String& s);
-	
-	void operator=(const StringReader& sr);
+	StringReader(const String& s) {this->s = s;}
+	int Peek() {if (i >= s.GetCount()) return -1; return s[i];}
+	int Read() {return s[i++];}
+	bool IsEmpty() const {return s.IsEmpty();}
+	void Clear() {s = ""; i = 0;}
+	void Set(const String& s) {this->s = s; i = 0;}
 	
 };
 
 class TextWriter {
-	
+	Stream* s = NULL;
+	FileOut fout;
 public:
 	
+	void Write(char c) {s->Put(c);}
+	void Write(String str) {s->Put(str);}
+	void WriteLine() {s->Put('\n');}
+	void WriteLine(String str) {s->Put(str); s->Put('\n');}
 	
-	void OpenFile(String fname);
+	void OpenFile(String fname) {fout.Open(fname); s = &fout;}
+	void Close() {fout.Close();}
 };
 
 // TODO ref
@@ -34,17 +39,18 @@ class SharedString : public String {
 
 template <class T>
 class Stack {
+	Vector<T> v;
 	
 public:
 	
-	T Pop();
-	void Push(const T& o);
-	int GetCount() const;
+	T Pop() {return v.Pop();}
+	void Push(const T& o) {v.Add(o);}
+	int GetCount() const {return v.GetCount();}
 	
-	T& operator[](int i);
-	int GetCount();
+	T& operator[](int i) {return v[i];}
+	int GetCount() {return v.GetCount();}
 	
-	T& Peek();
+	T& Peek() {return v.Top();}
 };
 
 typedef Exc ParseException;
@@ -61,7 +67,6 @@ struct Object {
 	byte byt = 0;
 	int i = 0;
 	String s;
-	void* data = NULL;
 	Vector<Object*> objs;
 	Vector<byte> bytes;
 	
@@ -78,18 +83,18 @@ struct Object {
 			case O_BYTE: return byt == o.byt;
 			case O_INT: return i == o.i;
 			case O_STRING: return s == o.s;
-			default: return data == o.data;
+			default: return this == &o;
 		}
 	}
 	
-	String ToString() const {
+	virtual String ToString() {
 		switch (type) {
 			case O_NULL: return "NULL";
 			case O_BOOL: return b ? "true" : "false";
 			case O_BYTE: return IntStr(byt);
 			case O_INT: return IntStr(i);
 			case O_STRING: return s;
-			default: return Format("%X", (int64)data);
+			default: return Format("%X", (int64)this);
 		}
 	}
 	
@@ -260,27 +265,59 @@ typedef enum
 
 template <class T>
 class PtrIndex {
+	Vector<T> v;
 	
 public:
 	
-	T& Add(const T& s);
-	void Remove(T ptr);
+	bool Add(const T& s) {
+		for(int i = 0; i < v.GetCount(); i++)
+			if (v[i] == s) return false;
+		v.Add(s);
+		return true;
+	}
+	void Remove(T ptr) {
+		for(int i = 0; i < v.GetCount(); i++)
+			if (v[i] == ptr)
+				v.Remove(i);
+	}
 	
-	bool HasPtr(T ptr);
-	int GetCount() const;
-	T& operator[](int i);
+	bool HasPtr(T ptr) {
+		for(int i = 0; i < v.GetCount(); i++)
+			if (v[i] == ptr) return true;
+		return false;
+	}
+	int GetCount() const {return v.GetCount();}
+	T& operator[](int i) {return v[i];}
 };
+
+
 template <class K, class V>
 class PtrMap {
-	
+	Vector<K> k;
+	Vector<V> v;
 public:
 	
-	K& Add(const K& k, const V& v);
-	void Remove(K k);
-	int Find(K k);
-	V& operator[](int i);
+	bool Add(const K& k, const V& v) {
+		for(int i = 0; i < this->k.GetCount(); i++)
+			if (this->k[i] == k) return false;
+		this->k.Add(k);
+		this->v.Add(v);
+	}
+	void Remove(K k) {
+		for(int i = 0; i < this->k.GetCount(); i++)
+			if (this->k[i] == k)
+				{this->k.Remove(i); this->v.Remove(i);}
+	}
+	int Find(K k) {
+		for(int i = 0; i < this->k.GetCount(); i++)
+			if (this->k[i] == k) return i;
+		return -1;
+	}
+	V& operator[](int i) {return v[i];}
 	
-	bool HasPtr(K k);
+	bool HasPtr(K k) {
+		return Find(k) != -1;
+	}
 	
 };
 

@@ -15,5 +15,6 @@ using namespace Upp;
 #include "Parser.h"
 #include "Resolver.h"
 #include "SourceGenerator.h"
+#include "GenJs.h"
 
 #endif

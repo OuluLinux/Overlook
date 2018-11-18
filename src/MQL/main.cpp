@@ -54,8 +54,8 @@ CONSOLE_APP_MAIN {
 			else if (arg == "-I") {
 				searchDirs.Add(args[++i]);
 			}
-			
-			throw ArgumentException("Unknown option: " + arg);
+			else
+				throw ArgumentException("Unknown option: " + arg);
 		}
 		else {
 			inputFiles.Add(arg);
@@ -85,6 +85,11 @@ CONSOLE_APP_MAIN {
 			SetExitCode(1);
 			return;
 		}
+		catch (...) {
+			Cerr() << "Unknown error";
+			SetExitCode(1);
+			return;
+		}
 	}
 	CiProgram* program = parser->Program();
 
@@ -105,16 +110,16 @@ CONSOLE_APP_MAIN {
 	}
 
 	SourceGenerator* gen;
-	if      (lang == "c")		gen = new GenC89();
+	/*if      (lang == "c")		gen = new GenC89();
 	else if (lang == "c99")		gen = new GenC();
 	else if (lang == "java")	gen = new GenJava(namespace_);
 	else if (lang == "cs")		gen = new GenCs(namespace_);
-	else if (lang == "js")		gen = new GenJs();
-	else if (lang == "js-ta")	gen = new GenJsWithTypedArrays();
+	else */if (lang == "js")		gen = new GenJs();
+	/*else if (lang == "js-ta")	gen = new GenJsWithTypedArrays();
 	else if (lang == "as")		gen = new GenAs(namespace_);
 	else if (lang == "d")		gen = new GenD();
 	else if (lang == "pm")		gen = new GenPerl58(namespace_);
-	else if (lang == "pm510")	gen = new GenPerl510(namespace_);
+	else if (lang == "pm510")	gen = new GenPerl510(namespace_);*/
 	else throw ArgumentException("Unknown language: " + lang);
 	
 	gen->output_file = outputFile;
@@ -124,6 +129,5 @@ CONSOLE_APP_MAIN {
 	delete resolver;
 	delete parser;
 	
-	return 0;
 }
 

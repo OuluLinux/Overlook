@@ -19,60 +19,64 @@ struct SourceGenerator : public ICiStatementVisitor
 
 	void StartLine()
 	{
-		if (this.at_line_start) {
-			for (int i = 0; i < this.Indent; i++)
-				this.Writer.Write('\t');
-			this.at_line_start = false;
+		if (this->at_line_start) {
+			for (int i = 0; i < this->indent; i++)
+				writer.Write('\t');
+			this->at_line_start = false;
 		}
 	}
 
 	void Write(char c)
 	{
 		StartLine();
-		this.Writer.Write(c);
+		writer.Write(c);
 	}
 
 	void Write(String s)
 	{
 		StartLine();
-		this.Writer.Write(s);
+		writer.Write(s);
 	}
 
 	void Write(int i)
 	{
 		StartLine();
-		this.Writer.Write(i);
+		writer.Write(i);
 	}
 
 	void WriteLowercase(String s)
 	{
-		foreach (char c in s)
-			this.Writer.Write(char.ToLowerInvariant(c));
+		writer.Write(ToLower(s.ToWString()).ToString());
 	}
 
 	static String ToCamelCase(String s)
 	{
-		return char.ToLowerInvariant(s[0]) + s.Substring(1);
+		String s2;
+		s2.Cat(ToLower(s[0]));
+		s2.Cat(s.Mid(1));
+		return s2;
 	}
 
 	void WriteCamelCase(String s)
 	{
 		StartLine();
-		this.Writer.Write(char.ToLowerInvariant(s[0]));
-		this.Writer.Write(s.Substring(1));
+		writer.Write(ToLower(s[0]));
+		writer.Write(s.Mid(1));
 	}
 
 	void WriteUppercaseWithUnderscores(String s)
 	{
 		StartLine();
 		bool first = true;
-		foreach (char c in s) {
-			if (char.IsUpper(c) && !first) {
-				this.Writer.Write('_');
-				this.Writer.Write(c);
+		for(int i = 0; i < s.GetCount(); i++) {
+			char c = s[i];
+			
+			if (IsUpper(c) && !first) {
+				writer.Write('_');
+				writer.Write(c);
 			}
 			else
-				this.Writer.Write(char.ToUpperInvariant(c));
+				writer.Write(ToUpper(c));
 			first = false;
 		}
 	}
@@ -81,42 +85,46 @@ struct SourceGenerator : public ICiStatementVisitor
 	{
 		StartLine();
 		bool first = true;
-		foreach (char c in s) {
-			if (char.IsUpper(c)) {
+		for(int i = 0; i < s.GetCount(); i++) {
+			char c = s[i];
+			
+			if (IsUpper(c)) {
 				if (!first)
-					this.Writer.Write('_');
-				this.Writer.Write(char.ToLowerInvariant(c));
+					writer.Write('_');
+				writer.Write(ToLower(c));
 			}
 			else
-				this.Writer.Write(c);
+				writer.Write(c);
 			first = false;
 		}
 	}
 
 	void WriteLine()
 	{
-		this.Writer.WriteLine();
-		this.at_line_start = true;
+		writer.WriteLine();
+		this->at_line_start = true;
 	}
 
 	void WriteLine(String s)
 	{
 		StartLine();
-		this.Writer.WriteLine(s);
-		this.at_line_start = true;
+		writer.WriteLine(s);
+		this->at_line_start = true;
 	}
 
-	void WriteLine(String format, params object[] args)
+	/*void WriteLine(String& format, const Vector<Object*>& args)
 	{
 		StartLine();
-		this.Writer.WriteLine(format, args);
-		this.at_line_start = true;
-	}
+		writer.WriteLine(format, args);
+		this->at_line_start = true;
+	}*/
 
 	
-	void WriteDoc(string text)
+	void WriteDoc(String text)
 	{
-		foreach (char c in text) {
+		for(int i = 0; i < text.GetCount(); i++) {
+			char c = text[i];
+			
 			switch (c) {
 			case '&': Write("&amp;"); break;
 			case '<': Write("&lt;"); break;
@@ -127,32 +135,34 @@ struct SourceGenerator : public ICiStatementVisitor
 		}
 	}
 
-	void Write(CiDocPara para)
+	void Write(CiDocPara* para)
 	{
-		foreach (CiDocInline inline in para.Children) {
-			CiDocText text = inline as CiDocText;
-			if (text != null) {
-				WriteDoc(text.Text);
+		for(int i = 0; i < para->children.GetCount(); i++) {
+			CiDocInline* di = para->children[i];
+			CiDocText* text = dynamic_cast<CiDocText*>(di);
+			if (text != NULL) {
+				WriteDoc(text->text);
 				continue;
 			}
-			CiDocCode code = inline as CiDocCode;
-			if (code != null) {
+			CiDocCode* code = dynamic_cast<CiDocCode*>(di);
+			if (code != NULL) {
 				Write("<code>");
-				WriteDoc(code.Text);
+				WriteDoc(code->text);
 				Write("</code>");
 				continue;
 			}
-			throw new ArgumentException(inline.GetType().Name);
+			throw new ArgumentException("Invalid CiDocInline");
 		}
 	}
 
-	void Write(CiDocBlock block)
+	void Write(CiDocBlock* block)
 	{
-		CiDocList list = block as CiDocList;
-		if (list != null) {
+		CiDocList* list = dynamic_cast<CiDocList*>(block);
+		if (list != NULL) {
 			WriteLine();
 			WriteLine(" * <ul>");
-			foreach (CiDocPara item in list.Items) {
+			for(int i = 0; i < list->items.GetCount(); i++) {
+				CiDocPara* item = list->items[i];
 				Write(" * <li>");
 				Write(item);
 				WriteLine("</li>");
@@ -161,41 +171,43 @@ struct SourceGenerator : public ICiStatementVisitor
 			Write(" * ");
 			return;
 		}
-		Write((CiDocPara) block);
+		Write(dynamic_cast<CiDocPara*>(block));
 	}
 
-	void WriteDontClose(CiCodeDoc doc)
+	void WriteDontClose(CiCodeDoc* doc)
 	{
 		WriteLine("/**");
 		Write(" * ");
-		Write(doc.Summary);
-		if (doc.Details.Length > 0) {
+		Write(doc->summary);
+		if (doc->details.GetCount() > 0) {
 			WriteLine();
 			Write(" * ");
-			foreach (CiDocBlock block in doc.Details)
-				Write(block);
+			for(int i = 0; i < doc->details.GetCount(); i++) {
+				Write(doc->details[i]);
+			}
 		}
 		WriteLine();
 	}
 
-	protected virtual void Write(CiCodeDoc doc)
+	virtual void Write(CiCodeDoc* doc)
 	{
-		if (doc != null) {
+		if (doc != NULL) {
 			WriteDontClose(doc);
 			WriteLine(" */");
 		}
 	}
 
-	void WriteDoc(CiMethod method)
+	void WriteDoc(CiMethod* method)
 	{
-		if (method.Documentation != null) {
-			WriteDontClose(method.Documentation);
-			foreach (CiParam param in method.Signature.Params) {
-				if (param.Documentation != null) {
+		if (method->documentation != NULL) {
+			WriteDontClose(method->documentation);
+			for(int i = 0; i < method->signature->params.GetCount(); i++) {
+				CiParam* param = method->signature->params[i];
+				if (param->documentation != NULL) {
 					Write(" * @param ");
-					Write(param.Name);
+					Write(param->name);
 					Write(' ');
-					Write(param.Documentation.Summary);
+					Write(param->documentation->summary);
 					WriteLine();
 				}
 			}
@@ -204,68 +216,69 @@ struct SourceGenerator : public ICiStatementVisitor
 	}
 
 
-	protected virtual void WriteBanner()
+	virtual void WriteBanner()
 	{
 		WriteLine("// Generated automatically with \"cito\". Do not edit.");
 	}
 
-	void CreateFile(string filename)
+	void CreateFile(String filename)
 	{
-		this.Writer = CreateFileWriter(filename);
+		CreateFileWriter(filename);
 		WriteBanner();
 	}
 
 	void CloseFile()
 	{
-		this.Writer.Close();
+		writer.Close();
 	}
 
 	void OpenBlock()
 	{
 		WriteLine("{");
-		this.Indent++;
+		this->indent++;
 	}
 
 	void CloseBlock()
 	{
-		this.Indent--;
+		this->indent--;
 		WriteLine("}");
 	}
 
-	void WriteInitializer(CiArrayType type)
+	void WriteInitializer(CiArrayType* type)
 	{
-		if (type.ElementType is CiClassStorageType) {
-			CiArrayStorageType storageType = type as CiArrayStorageType;
-			if (storageType != null) {
-				int len = storageType.Length;
+		CiClassStorageType* cst = dynamic_cast<CiClassStorageType*>(type->element_type);
+		if (cst) {
+			CiArrayStorageType* storageType = dynamic_cast<CiArrayStorageType*>(type);
+			if (storageType != NULL) {
+				int len = storageType->length;
 				if (len > 0) {
 					Write("[] { ");
 					for (int i = 0; i < len; i++) {
 						if (i > 0)
 							Write(", ");
-						WriteNew(type.ElementType);
+						WriteNew(type->element_type);
 					}
 					Write(" }");
 					return;
 				}
 			}
 		}
-		for (; type != null; type = type.ElementType as CiArrayType) {
+		for (; type != NULL; type = dynamic_cast<CiArrayType*>(type->element_type)) {
 			Write('[');
-			CiArrayStorageType storageType = type as CiArrayStorageType;
-			if (storageType != null) {
-				if (storageType.LengthExpr != null)
-					Write(storageType.LengthExpr);
+			CiArrayStorageType* storageType = dynamic_cast<CiArrayStorageType*>(type);
+			if (storageType != NULL) {
+				if (storageType->length_expr != NULL)
+					Write(storageType->length_expr);
 				else
-					Write(storageType.Length);
+					Write(storageType->length);
 			}
 			Write(']');
 		}
 	}
 
-	void WriteContent(Array array)
+	void WriteContent(const Vector<Object*>& array)
 	{
-		for (int i = 0; i < array.Length; i++) {
+		for (int i = 0; i < array.GetCount(); i++) {
 			if (i > 0) {
 				if (i % 16 == 0) {
 					WriteLine(",");
@@ -274,107 +287,138 @@ struct SourceGenerator : public ICiStatementVisitor
 				else
 					Write(", ");
 			}
-			WriteConst(array.GetValue(i));
+			WriteConst(array[i]);
 		}
 	}
 
-	protected virtual void WriteConst(object value)
+	void WriteContent(const Vector<byte>& array)
 	{
-		if (value is bool)
-			Write((bool) value ? "true" : "false");
-		else if (value is byte)
-			Write((byte) value);
-		else if (value is int)
-			Write((int) value);
-		else if (value is string) {
+		for (int i = 0; i < array.GetCount(); i++) {
+			if (i > 0) {
+				if (i % 16 == 0) {
+					WriteLine(",");
+					Write('\t');
+				}
+				else
+					Write(", ");
+			}
+			IntStr(array[i]);
+		}
+	}
+
+	virtual void WriteConst(Object* value)
+	{
+		if (value->type == O_BOOL)
+			Write(value->b ? "true" : "false");
+		else if (value->type == O_BYTE)
+			Write(value->byt);
+		else if (value->type == O_INT)
+			Write(value->i);
+		else if (value->type == O_STRING) {
 			Write('"');
-			foreach (char c in (string) value) {
+			for(int i = 0; i < value->s.GetCount(); i++) {
+				char c = value->s[i];
 				switch (c) {
-				case '\t': Write("\\t"); break;
-				case '\r': Write("\\r"); break;
-				case '\n': Write("\\n"); break;
-				case '\\': Write("\\\\"); break;
-				case '\"': Write("\\\""); break;
-				default: Write(c); break;
+					case '\t': Write("\\t"); break;
+					case '\r': Write("\\r"); break;
+					case '\n': Write("\\n"); break;
+					case '\\': Write("\\\\"); break;
+					case '\"': Write("\\\""); break;
+					default: Write(c); break;
 				}
 			}
 			Write('"');
 		}
-		else if (value is CiEnumValue) {
-			CiEnumValue ev = (CiEnumValue) value;
-			Write(ev.Type.Name);
+		else if (value->type == O_ENUM) {
+			CiEnumValue* ev = dynamic_cast<CiEnumValue*>(value);
+			Write(ev->type->name);
 			Write('.');
-			Write(ev.Name);
+			Write(ev->name);
 		}
-		else if (value is Array) {
+		else if (value->objs.GetCount()) {
 			Write("{ ");
-			WriteContent((Array) value);
+			WriteContent(value->objs);
 			Write(" }");
 		}
-		else if (value == null)
-			Write("null");
+		else if (value == NULL)
+			Write("NULL");
 		else
-			throw new ArgumentException(value.ToString());
+			throw new ArgumentException(value->ToString());
 	}
 
-	protected virtual CiPriority GetPriority(CiExpr expr)
+	virtual CiPriority GetPriority(CiExpr* expr)
 	{
-		if (expr is CiConstExpr
-		 || expr is CiConstAccess
-		 || expr is CiVarAccess
-		 || expr is CiFieldAccess
-		 || expr is CiPropertyAccess
-		 || expr is CiArrayAccess
-		 || expr is CiMethodCall
-		 || expr is CiBinaryResourceExpr
-		 || expr is CiNewExpr) // ?
-			return CiPriority.Postfix;
-		if (expr is CiUnaryExpr
-		 || expr is CiCondNotExpr
-		 || expr is CiPostfixExpr) // ?
-			return CiPriority.Prefix;
-		if (expr is CiCoercion)
-			return GetPriority((CiExpr) ((CiCoercion) expr).Inner);
-		if (expr is CiBinaryExpr) {
-			switch (((CiBinaryExpr) expr).Op) {
-			case CiToken.Asterisk:
-			case CiToken.Slash:
-			case CiToken.Mod:
-				return CiPriority.Multiplicative;
-			case CiToken.Plus:
-			case CiToken.Minus:
-				return CiPriority.Additive;
-			case CiToken.ShiftLeft:
-			case CiToken.ShiftRight:
-				return CiPriority.Shift;
-			case CiToken.Less:
-			case CiToken.LessOrEqual:
-			case CiToken.Greater:
-			case CiToken.GreaterOrEqual:
-				return CiPriority.Ordering;
-			case CiToken.Equal:
-			case CiToken.NotEqual:
-				return CiPriority.Equality;
-			case CiToken.And:
-				return CiPriority.And;
-			case CiToken.Xor:
-				return CiPriority.Xor;
-			case CiToken.Or:
-				return CiPriority.Or;
-			case CiToken.CondAnd:
-				return CiPriority.CondAnd;
-			case CiToken.CondOr:
-				return CiPriority.CondOr;
+		CiConstExpr* ce = dynamic_cast<CiConstExpr*>(expr);
+		CiConstAccess* ca = dynamic_cast<CiConstAccess*>(expr);
+		CiVarAccess* va = dynamic_cast<CiVarAccess*>(expr);
+		CiFieldAccess* fa = dynamic_cast<CiFieldAccess*>(expr);
+		CiPropertyAccess* pa = dynamic_cast<CiPropertyAccess*>(expr);
+		CiArrayAccess* aa = dynamic_cast<CiArrayAccess*>(expr);
+		CiMethodCall* mc = dynamic_cast<CiMethodCall*>(expr);
+		CiBinaryResourceExpr* bre = dynamic_cast<CiBinaryResourceExpr*>(expr);
+		CiNewExpr* ne = dynamic_cast<CiNewExpr*>(expr);
+		CiUnaryExpr* ue = dynamic_cast<CiUnaryExpr*>(expr);
+		CiCondNotExpr* cne = dynamic_cast<CiCondNotExpr*>(expr);
+		CiPostfixExpr* pfe = dynamic_cast<CiPostfixExpr*>(expr);
+		CiCoercion* c = dynamic_cast<CiCoercion*>(expr);
+		CiBinaryExpr* be = dynamic_cast<CiBinaryExpr*>(expr);
+		
+		if (ce
+		 || ca
+		 || va
+		 || fa
+		 || pa
+		 || aa
+		 || mc
+		 || bre
+		 || ne) // ?
+			return Postfix;
+		if (ue
+		 || cne
+		 || pfe) // ?
+			return Prefix;
+		if (c)
+			return GetPriority(dynamic_cast<CiExpr*>(c->inner));
+		if (be) {
+			switch (be->op) {
+			case Asterisk:
+			case Slash:
+			case Mod:
+				return Multiplicative;
+			case Plus:
+			case Minus:
+				return Additive;
+			case ShiftLeft:
+			case ShiftRight:
+				return Shift;
+			case Less:
+			case LessOrEqual:
+			case Greater:
+			case GreaterOrEqual:
+				return Ordering;
+			case Equal:
+			case NotEqual:
+				return Equality;
+			case AndPrior:
+				return AndPrior;
+			case XorPrior:
+				return XorPrior;
+			case OrPrior:
+				return OrPrior;
+			case CondAndPrior:
+				return CondAndPrior;
+			case CondOrPrior:
+				return CondOrPrior;
 			default:
-				throw new ArgumentException(((CiBinaryExpr) expr).Op.ToString());
+				throw new ArgumentException("Priority " + IntStr(be->op));
 			}
 		}
-		if (expr is CiCondExpr)
-			return CiPriority.CondExpr;
-		throw new ArgumentException(expr.GetType().Name);
+		if (dynamic_cast<CiCondExpr*>(expr))
+			return CondExpr;
+		throw new ArgumentException(expr->type->name);
 	}
 
-	void WriteChild(CiPriority parentPriority, CiExpr child)
+	void WriteChild(CiPriority parentPriority, CiExpr* child)
 	{
 		if (GetPriority(child) < parentPriority) {
 			Write('(');
@@ -385,12 +429,12 @@ struct SourceGenerator : public ICiStatementVisitor
 			Write(child);
 	}
 
-	void WriteChild(CiExpr parent, CiExpr child)
+	void WriteChild(CiExpr* parent, CiExpr* child)
 	{
 		WriteChild(GetPriority(parent), child);
 	}
 
-	void WriteNonAssocChild(CiPriority parentPriority, CiExpr child)
+	void WriteNonAssocChild(CiPriority parentPriority, CiExpr* child)
 	{
 		if (GetPriority(child) <= parentPriority) {
 			Write('(');
@@ -401,69 +445,69 @@ struct SourceGenerator : public ICiStatementVisitor
 			Write(child);
 	}
 
-	void WriteNonAssocChild(CiExpr parent, CiExpr child)
+	void WriteNonAssocChild(CiExpr* parent, CiExpr* child)
 	{
 		WriteNonAssocChild(GetPriority(parent), child);
 	}
 
-	void WriteSum(CiExpr left, CiExpr right)
+	void WriteSum(CiExpr* left, CiExpr* right)
 	{
-		Write(new CiBinaryExpr { Left = left, Op = CiToken.Plus, Right = right });
+		Write(new CiBinaryExpr(left, Plus, right));
 	}
 
-	protected virtual void WriteName(CiConst konst)
+	virtual void WriteName(CiConst* konst)
 	{
-		Write(konst.GlobalName ?? konst.Name);
+		Write(!konst->global_name.IsEmpty() ? konst->global_name : konst->name);
 	}
 
-	protected virtual void Write(CiVarAccess expr)
+	virtual void Write(CiVarAccess* expr)
 	{
-		Write(expr.Var.Name);
+		Write(expr->var->name);
 	}
 
-	protected virtual void Write(CiFieldAccess expr)
+	virtual void Write(CiFieldAccess* expr)
 	{
-		WriteChild(expr, expr.Obj);
+		WriteChild(expr, expr->obj);
 		Write('.');
-		Write(expr.Field.Name);
+		Write(expr->field->name);
 	}
 
-	protected abstract void Write(CiPropertyAccess expr);
+	virtual void Write(CiPropertyAccess* expr) = 0;
 
-	protected virtual void Write(CiArrayAccess expr)
+	virtual void Write(CiArrayAccess* expr)
 	{
-		WriteChild(expr, expr.Array);
+		WriteChild(expr, expr->array);
 		Write('[');
-		Write(expr.Index);
+		Write(expr->index);
 		Write(']');
 	}
 
-	protected virtual void WriteName(CiMethod method)
+	virtual void WriteName(CiMethod* method)
 	{
-		Write(method.Name);
+		Write(method->name);
 	}
 
-	protected virtual void WriteDelegateCall(CiExpr expr)
+	virtual void WriteDelegateCall(CiExpr* expr)
 	{
 		Write(expr);
 	}
 
-	void WriteMulDiv(CiPriority firstPriority, CiMethodCall expr)
+	void WriteMulDiv(CiPriority firstPriority, CiMethodCall* expr)
 	{
-		WriteChild(firstPriority, expr.Obj);
+		WriteChild(firstPriority, expr->obj);
 		Write(" * ");
-		WriteChild(CiPriority.Multiplicative, expr.Arguments[0]);
+		WriteChild(Multiplicative, expr->arguments[0]);
 		Write(" / ");
-		WriteNonAssocChild(CiPriority.Multiplicative, expr.Arguments[1]);
+		WriteNonAssocChild(Multiplicative, expr->arguments[1]);
 		Write(')');
 	}
 
-	void WriteArguments(CiMethodCall expr)
+	void WriteArguments(CiMethodCall* expr)
 	{
 		Write('(');
 		bool first = true;
-		foreach (CiExpr arg in expr.Arguments)
-		{
+		for(int i = 0; i < expr->arguments.GetCount(); i++) {
+			CiExpr* arg = expr->arguments[i];
 			if (first)
 				first = false;
 			else
@@ -473,400 +517,425 @@ struct SourceGenerator : public ICiStatementVisitor
 		Write(')');
 	}
 
-	protected virtual void Write(CiMethodCall expr)
+	virtual void Write(CiMethodCall* expr)
 	{
-		if (expr.Method != null) {
-			if (expr.Obj != null)
-				Write(expr.Obj);
+		if (expr->method != NULL) {
+			if (expr->obj != NULL)
+				Write(expr->obj);
 			else
-				Write(expr.Method.Class.Name);
+				Write(expr->method->class_->name);
 			Write('.');
-			WriteName(expr.Method);
+			WriteName(expr->method);
 		}
 		else
-			WriteDelegateCall(expr.Obj);
+			WriteDelegateCall(expr->obj);
 		WriteArguments(expr);
 	}
 
-	void Write(CiUnaryExpr expr)
+	void Write(CiUnaryExpr* expr)
 	{
-		switch (expr.Op) {
-		case CiToken.Increment: Write("++"); break;
-		case CiToken.Decrement: Write("--"); break;
-		case CiToken.Minus: Write('-'); break;
-		case CiToken.Not: Write('~'); break;
-		default: throw new ArgumentException(expr.Op.ToString());
+		switch (expr->op) {
+			case Increment: Write("++"); break;
+			case Decrement: Write("--"); break;
+			case Minus: Write('-'); break;
+			case Not: Write('~'); break;
+			default: throw new ArgumentException("Op " + IntStr(expr->op));
 		}
-		WriteChild(expr, expr.Inner);
+		WriteChild(expr, expr->inner);
 	}
 
-	void Write(CiCondNotExpr expr)
+	void Write(CiCondNotExpr* expr)
 	{
 		Write('!');
-		WriteChild(expr, expr.Inner);
+		WriteChild(expr, expr->inner);
 	}
 
-	void Write(CiPostfixExpr expr)
+	void Write(CiPostfixExpr* expr)
 	{
-		WriteChild(expr, expr.Inner);
-		switch (expr.Op) {
-		case CiToken.Increment: Write("++"); break;
-		case CiToken.Decrement: Write("--"); break;
-		default: throw new ArgumentException(expr.Op.ToString());
+		WriteChild(expr, expr->inner);
+		switch (expr->op) {
+			case Increment: Write("++"); break;
+			case Decrement: Write("--"); break;
+			default: throw new ArgumentException("op " + IntStr(expr->op));
 		}
 	}
 
-	void WriteOp(CiBinaryExpr expr)
+	void WriteOp(CiBinaryExpr* expr)
 	{
 		Write(' ');
-		Write(expr.OpString);
+		Write(expr->OpString());
 		Write(' ');
 	}
 
-	protected virtual void Write(CiBinaryExpr expr)
+	virtual void Write(CiBinaryExpr* expr)
 	{
-		WriteChild(expr, expr.Left);
-		switch (expr.Op) {
-		case CiToken.Plus:
-		case CiToken.Asterisk:
-		case CiToken.Less:
-		case CiToken.LessOrEqual:
-		case CiToken.Greater:
-		case CiToken.GreaterOrEqual:
-		case CiToken.Equal:
-		case CiToken.NotEqual:
-		case CiToken.And:
-		case CiToken.Or:
-		case CiToken.Xor:
-		case CiToken.CondAnd:
-		case CiToken.CondOr:
-			WriteOp(expr);
-			WriteChild(expr, expr.Right);
-			break;
-		case CiToken.Minus:
-		case CiToken.Slash:
-		case CiToken.Mod:
-		case CiToken.ShiftLeft:
-		case CiToken.ShiftRight:
-			WriteOp(expr);
-			WriteNonAssocChild(expr, expr.Right);
-			break;
-		default:
-			throw new ArgumentException(expr.Op.ToString());
+		WriteChild(expr, expr->left);
+		switch (expr->op) {
+			case Plus:
+			case Asterisk:
+			case Less:
+			case LessOrEqual:
+			case Greater:
+			case GreaterOrEqual:
+			case Equal:
+			case NotEqual:
+			case AndToken:
+			case OrToken:
+			case XorToken:
+			case CondAndToken:
+			case CondOrToken:
+				WriteOp(expr);
+				WriteChild(expr, expr->right);
+				break;
+			case Minus:
+			case Slash:
+			case Mod:
+			case ShiftLeft:
+			case ShiftRight:
+				WriteOp(expr);
+				WriteNonAssocChild(expr, expr->right);
+				break;
+			default:
+				throw new ArgumentException("op " + IntStr(expr->op));
 		}
 	}
 
-	protected virtual void Write(CiCondExpr expr)
+	virtual void Write(CiCondExpr* expr)
 	{
-		WriteNonAssocChild(expr, expr.Cond);
+		WriteNonAssocChild(expr, expr->cond);
 		Write(" ? ");
-		WriteChild(expr, expr.OnTrue);
+		WriteChild(expr, expr->on_true);
 		Write(" : ");
-		WriteChild(expr, expr.OnFalse);
+		WriteChild(expr, expr->on_false);
 	}
 
-	protected virtual void WriteName(CiBinaryResource resource)
+	virtual void WriteName(CiBinaryResource* resource)
 	{
 		Write("CiBinaryResource_");
-		foreach (char c in resource.Name)
-			Write(CiLexer.IsLetter(c) ? c : '_');
+		for(int i = 0; i < resource->name.GetCount(); i++) {
+			char c = resource->name[i];
+			Write(IsLetter(c) ? c : '_');
+		}
 	}
 
-	protected virtual void Write(CiBinaryResourceExpr expr)
+	virtual void Write(CiBinaryResourceExpr* expr)
 	{
-		WriteName(expr.Resource);
+		WriteName(expr->resource);
 	}
 
-	protected abstract void WriteNew(CiType type);
+	virtual void WriteNew(CiType* type) = 0;
 
-	void WriteInline(CiMaybeAssign expr)
+	void WriteInline(CiMaybeAssign* expr)
 	{
-		if (expr is CiExpr)
-			Write((CiExpr) expr);
+		CiExpr* e = dynamic_cast<CiExpr*>(expr);
+		if (e)
+			Write(e);
 		else
-			Visit((CiAssign) expr);
+			Visit(dynamic_cast<CiAssign*>(expr));
 	}
 
-	protected virtual void Write(CiCoercion expr)
+	virtual void Write(CiCoercion* expr)
 	{
-		WriteInline(expr.Inner);
+		WriteInline(expr->inner);
 	}
 
-	void Write(CiExpr expr)
+	void Write(CiExpr* expr)
 	{
-		if (expr is CiConstExpr)
-			WriteConst(((CiConstExpr) expr).Value);
-		else if (expr is CiConstAccess)
-			WriteName(((CiConstAccess) expr).Const);
-		else if (expr is CiVarAccess)
-			Write((CiVarAccess) expr);
-		else if (expr is CiFieldAccess)
-			Write((CiFieldAccess) expr);
-		else if (expr is CiPropertyAccess)
-			Write((CiPropertyAccess) expr);
-		else if (expr is CiArrayAccess)
-			Write((CiArrayAccess) expr);
-		else if (expr is CiMethodCall)
-			Write((CiMethodCall) expr);
-		else if (expr is CiUnaryExpr)
-			Write((CiUnaryExpr) expr);
-		else if (expr is CiCondNotExpr)
-			Write((CiCondNotExpr) expr);
-		else if (expr is CiPostfixExpr)
-			Write((CiPostfixExpr) expr);
-		else if (expr is CiBinaryExpr)
-			Write((CiBinaryExpr) expr);
-		else if (expr is CiCondExpr)
-			Write((CiCondExpr) expr);
-		else if (expr is CiBinaryResourceExpr)
-			Write((CiBinaryResourceExpr) expr);
-		else if (expr is CiNewExpr)
-			WriteNew(((CiNewExpr) expr).NewType);
-		else if (expr is CiCoercion)
-			Write((CiCoercion) expr);
+		CiConstExpr* ce = dynamic_cast<CiConstExpr*>(expr);
+		CiConstAccess* ca = dynamic_cast<CiConstAccess*>(expr);
+		CiVarAccess* va = dynamic_cast<CiVarAccess*>(expr);
+		CiFieldAccess* fa = dynamic_cast<CiFieldAccess*>(expr);
+		CiPropertyAccess* pa = dynamic_cast<CiPropertyAccess*>(expr);
+		CiArrayAccess* aa = dynamic_cast<CiArrayAccess*>(expr);
+		CiMethodCall* mc = dynamic_cast<CiMethodCall*>(expr);
+		CiUnaryExpr* ue = dynamic_cast<CiUnaryExpr*>(expr);
+		CiCondNotExpr* cne = dynamic_cast<CiCondNotExpr*>(expr);
+		CiPostfixExpr* pfe = dynamic_cast<CiPostfixExpr*>(expr);
+		CiBinaryExpr* be = dynamic_cast<CiBinaryExpr*>(expr);
+		CiCondExpr* cde = dynamic_cast<CiCondExpr*>(expr);
+		CiBinaryResourceExpr* bre = dynamic_cast<CiBinaryResourceExpr*>(expr);
+		CiNewExpr* ne = dynamic_cast<CiNewExpr*>(expr);
+		CiCoercion* c = dynamic_cast<CiCoercion*>(expr);
+		if (ce)
+			WriteConst(ce->value);
+		else if (ca)
+			WriteName(ca->const_);
+		else if (va)
+			Write(va);
+		else if (fa)
+			Write(fa);
+		else if (pa)
+			Write(pa);
+		else if (aa)
+			Write(aa);
+		else if (mc)
+			Write(mc);
+		else if (ue)
+			Write(ue);
+		else if (cne)
+			Write(cne);
+		else if (pfe)
+			Write(pfe);
+		else if (be)
+			Write(be);
+		else if (cde)
+			Write(cde);
+		else if (bre)
+			Write(bre);
+		else if (ne)
+			WriteNew(ne->new_type);
+		else if (c)
+			Write(c);
 		else
-			throw new ArgumentException(expr.ToString());
+			throw new ArgumentException(expr->ToString());
 	}
 
-	void Write(ICiStatement[] statements, int length)
+	void Write(const Vector<ICiStatement*>& statements, int length)
 	{
 		for (int i = 0; i < length; i++)
 			Write(statements[i]);
 	}
 
-	protected virtual void Write(ICiStatement[] statements)
+	virtual void Write(const Vector<ICiStatement*>& statements)
 	{
-		Write(statements, statements.Length);
+		Write(statements, statements.GetCount());
 	}
 
-	public virtual void Visit(CiBlock block)
+	virtual void Visit(CiBlock* block)
 	{
 		OpenBlock();
-		Write(block.Statements);
+		Write(block->statements);
 		CloseBlock();
 	}
 
-	protected virtual void WriteChild(ICiStatement stmt)
+	virtual void WriteChild(ICiStatement* stmt)
 	{
-		if (stmt is CiBlock) {
+		CiBlock* b = dynamic_cast<CiBlock*>(stmt);
+		if (b) {
 			Write(' ');
-			Write((CiBlock) stmt);
+			Write(b);
 		}
 		else {
 			WriteLine();
-			this.Indent++;
+			this->indent++;
 			Write(stmt);
-			this.Indent--;
+			this->indent--;
 		}
 	}
 
-	public virtual void Visit(CiExpr expr)
+	virtual void Visit(CiExpr* expr)
 	{
 		Write(expr);
 	}
 
-	public abstract void Visit(CiVar stmt);
+	virtual void Visit(CiVar* stmt) = 0;
 
-	public virtual void Visit(CiAssign assign)
+	virtual void Visit(CiAssign* assign)
 	{
-		Write(assign.Target);
-		switch (assign.Op) {
-		case CiToken.Assign: Write(" = "); break;
-		case CiToken.AddAssign: Write(" += "); break;
-		case CiToken.SubAssign: Write(" -= "); break;
-		case CiToken.MulAssign: Write(" *= "); break;
-		case CiToken.DivAssign: Write(" /= "); break;
-		case CiToken.ModAssign: Write(" %= "); break;
-		case CiToken.ShiftLeftAssign: Write(" <<= "); break;
-		case CiToken.ShiftRightAssign: Write(" >>= "); break;
-		case CiToken.AndAssign: Write(" &= "); break;
-		case CiToken.OrAssign: Write(" |= "); break;
-		case CiToken.XorAssign: Write(" ^= "); break;
-		default: throw new ArgumentException(assign.Op.ToString());
+		Write(assign->target);
+		switch (assign->op) {
+			case Assign: Write(" = "); break;
+			case AddAssign: Write(" += "); break;
+			case SubAssign: Write(" -= "); break;
+			case MulAssign: Write(" *= "); break;
+			case DivAssign: Write(" /= "); break;
+			case ModAssign: Write(" %= "); break;
+			case ShiftLeftAssign: Write(" <<= "); break;
+			case ShiftRightAssign: Write(" >>= "); break;
+			case AndAssign: Write(" &= "); break;
+			case OrAssign: Write(" |= "); break;
+			case XorAssign: Write(" ^= "); break;
+			default: throw new ArgumentException("op " + IntStr(assign->op));
 		}
-		WriteInline(assign.Source);
+		WriteInline(assign->source);
 	}
 
-	public virtual void Visit(CiDelete stmt)
+	virtual void Visit(CiDelete* stmt)
 	{
 		// do nothing - assume automatic garbage collector
 	}
 
-	public virtual void Visit(CiBreak stmt)
+	virtual void Visit(CiBreak* stmt)
 	{
 		WriteLine("break;");
 	}
 
-	public virtual void Visit(CiConst stmt)
+	virtual void Visit(CiConst* stmt)
 	{
 	}
 
-	public virtual void Visit(CiContinue stmt)
+	virtual void Visit(CiContinue* stmt)
 	{
 		WriteLine("continue;");
 	}
 
-	public virtual void Visit(CiDoWhile stmt)
+	virtual void Visit(CiDoWhile* stmt)
 	{
 		Write("do");
-		WriteChild(stmt.Body);
+		WriteChild(stmt->body);
 		Write("while (");
-		Write(stmt.Cond);
+		Write(stmt->cond);
 		WriteLine(");");
 	}
 
-	public virtual void Visit(CiFor stmt)
+	virtual void Visit(CiFor* stmt)
 	{
 		Write("for (");
-		if (stmt.Init != null)
-			stmt.Init.Accept(this);
+		if (stmt->init != NULL)
+			stmt->init->Accept(this);
 		Write(';');
-		if (stmt.Cond != null) {
+		if (stmt->cond != NULL) {
 			Write(' ');
-			Write(stmt.Cond);
+			Write(stmt->cond);
 		}
 		Write(';');
-		if (stmt.Advance != null) {
+		if (stmt->advance != NULL) {
 			Write(' ');
-			stmt.Advance.Accept(this);
+			stmt->advance->Accept(this);
 		}
 		Write(')');
-		WriteChild(stmt.Body);
+		WriteChild(stmt->body);
 	}
 
-	protected virtual void WriteIfOnTrue(CiIf stmt)
+	virtual void WriteIfOnTrue(CiIf* stmt)
 	{
-		WriteChild(stmt.OnTrue);
+		WriteChild(stmt->on_true);
 	}
 
-	public virtual void Visit(CiIf stmt)
+	virtual void Visit(CiIf* stmt)
 	{
 		Write("if (");
-		Write(stmt.Cond);
+		Write(stmt->cond);
 		Write(')');
 		WriteIfOnTrue(stmt);
-		if (stmt.OnFalse != null) {
+		if (stmt->on_false != NULL) {
 			Write("else");
-			if (stmt.OnFalse is CiIf) {
+			CiIf* i = dynamic_cast<CiIf*>(stmt->on_false);
+			if (i) {
 				Write(' ');
-				Write(stmt.OnFalse);
+				Write(i);
 			}
 			else
-				WriteChild(stmt.OnFalse);
+				WriteChild(stmt->on_false);
 		}
 	}
 
-	void ICiStatementVisitor.Visit(CiNativeBlock statement)
+	virtual void VisitStmt(CiNativeBlock* statement)
 	{
-		Write(statement.Content);
+		Write(statement->content);
 	}
 
-	public virtual void Visit(CiReturn stmt)
+	virtual void Visit(CiReturn* stmt)
 	{
-		if (stmt.Value == null)
+		if (stmt->value == NULL)
 			WriteLine("return;");
 		else {
 			Write("return ");
-			Write(stmt.Value);
+			Write(stmt->value);
 			WriteLine(";");
 		}
 	}
 
-	protected virtual void StartSwitch(CiSwitch stmt)
+	virtual void StartSwitch(CiSwitch* stmt)
 	{
 	}
 
-	protected virtual void StartCase(ICiStatement stmt)
+	virtual void StartCase(ICiStatement* stmt)
 	{
 	}
 
-	protected virtual void WriteFallthrough(CiExpr expr)
+	virtual void WriteFallthrough(CiExpr* expr)
 	{
 	}
 
-	protected virtual void EndSwitch(CiSwitch stmt)
+	virtual void EndSwitch(CiSwitch* stmt)
 	{
 	}
 
-	public virtual void Visit(CiSwitch stmt)
+	virtual void Visit(CiSwitch* stmt)
 	{
 		Write("switch (");
-		Write(stmt.Value);
+		Write(stmt->value);
 		WriteLine(") {");
 		StartSwitch(stmt);
-		foreach (CiCase kase in stmt.Cases) {
-			foreach (object value in kase.Values) {
+		for(int i = 0; i < stmt->cases.GetCount(); i++) {
+			CiCase* kase = stmt->cases[i];
+			for(int j = 0; j < kase->values.GetCount(); j++) {
+				Object* value = kase->values[j];
 				Write("case ");
 				WriteConst(value);
 				WriteLine(":");
 			}
-			this.Indent++;
-			StartCase(kase.Body[0]);
-			Write(kase.Body);
-			if (kase.Fallthrough)
-				WriteFallthrough(kase.FallthroughTo);
-			this.Indent--;
+			this->indent++;
+			StartCase(kase->body[0]);
+			Write(kase->body);
+			if (kase->fallthrough_to)
+				WriteFallthrough(kase->fallthrough_to);
+			this->indent--;
 		}
-		if (stmt.DefaultBody != null) {
+		if (stmt->default_body.GetCount()) {
 			WriteLine("default:");
-			this.Indent++;
-			StartCase(stmt.DefaultBody[0]);
-			Write(stmt.DefaultBody);
-			this.Indent--;
+			this->indent++;
+			StartCase(stmt->default_body[0]);
+			Write(stmt->default_body);
+			this->indent--;
 		}
 		EndSwitch(stmt);
 		WriteLine("}");
 	}
 
-	public abstract void Visit(CiThrow stmt);
+	virtual void Visit(CiThrow* stmt) = 0;
 
-	public virtual void Visit(CiWhile stmt)
+	virtual void Visit(CiWhile* stmt)
 	{
 		Write("while (");
-		Write(stmt.Cond);
+		Write(stmt->cond);
 		Write(')');
-		WriteChild(stmt.Body);
+		WriteChild(stmt->body);
 	}
 
-	void Write(ICiStatement stmt)
+	void Write(ICiStatement* stmt)
 	{
-		stmt.Accept(this);
-		if ((stmt is CiMaybeAssign || stmt is CiVar) && !this.at_line_start)
+		stmt->Accept(this);
+		CiMaybeAssign* ma = dynamic_cast<CiMaybeAssign*>(stmt);
+		CiVar* v = dynamic_cast<CiVar*>(stmt);
+		if ((ma || v) && !this->at_line_start)
 			WriteLine(";");
 	}
 
-	void WriteBody(CiMethod method)
+	void WriteBody(CiMethod* method)
 	{
-		if (method.CallType == CiCallType.Abstract)
+		if (method->call_type == AbstractCallType)
 			WriteLine(";");
 		else {
 			WriteLine();
-			if (method.Body is CiBlock)
-				Write(method.Body);
+			CiBlock* b = dynamic_cast<CiBlock*>(method->body);
+			if (b)
+				Write(method->body);
 			else {
 				OpenBlock();
-				Write(method.Body);
+				Write(method->body);
 				CloseBlock();
 			}
 		}
 	}
 
-	void OpenClass(bool isAbstract, CiClass klass, string extendsClause)
+	void OpenClass(bool isAbstract, CiClass* klass, String extendsClause)
 	{
 		if (isAbstract)
 			Write("abstract ");
 		Write("class ");
-		Write(klass.Name);
-		if (klass.BaseClass != null) {
+		Write(klass->name);
+		if (klass->base_class != NULL) {
 			Write(extendsClause);
-			Write(klass.BaseClass.Name);
+			Write(klass->base_class->name);
 		}
 		WriteLine();
 		OpenBlock();
 	}
 
-	public abstract void Write(CiProgram prog);
-}
+	virtual void Write(CiProgram* prog) = 0;
+};
 
 }
 

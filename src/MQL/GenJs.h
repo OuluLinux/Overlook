@@ -2,35 +2,56 @@
 namespace Ci
 {
 
-class GenJs : SourceGenerator
+class GenJs : public SourceGenerator
 {
-	CiClass current_class;
-	bool UsesSubstringMethod;
-	bool UsesCopyArrayMethod;
-	bool UsesBytesToStringMethod;
-	bool UsesClearArrayMethod;
+	CiClass* current_class = NULL;
+	bool UsesSubstringMethod = false;
+	bool UsesCopyArrayMethod = false;
+	bool UsesBytesToStringMethod = false;
+	bool UsesClearArrayMethod = false;
+	
+	void Write(ICiStatement* s) {SourceGenerator::Write(s);}
+	void Write(CiExpr* e) {SourceGenerator::Write(e);}
+	void Write(String s) {SourceGenerator::Write(s);}
+	void Write(int i) {SourceGenerator::Write(i);}
 
-	protected override void Write(CiCodeDoc doc)
+	virtual void VisitStmt(CiWhile* statement) {}
+	virtual void VisitStmt(CiThrow* statement) {}
+	virtual void VisitStmt(CiSwitch* statement) {}
+	virtual void VisitStmt(CiReturn* statement) {}
+	virtual void VisitStmt(CiIf* statement) {}
+	virtual void VisitStmt(CiFor* statement) {}
+	virtual void VisitStmt(CiDoWhile* statement) {}
+	virtual void VisitStmt(CiContinue* statement) {}
+	virtual void VisitStmt(CiBreak* statement) {}
+	virtual void VisitStmt(CiDelete* statement) {}
+	virtual void VisitStmt(CiAssign* statement) {}
+	virtual void VisitStmt(CiExpr* statement) {}
+	virtual void VisitStmt(CiVar* statement) {}
+	virtual void VisitStmt(CiConst* statement) {}
+	virtual void VisitStmt(CiBlock* statement) {}
+	
+	void Write(CiCodeDoc* doc)
 	{
 		if (doc == NULL)
 			return;
 		// TODO
 	}
 
-	void Write(CiEnum enu)
+	void Write(CiEnum* enu)
 	{
 		WriteLine();
-		Write(enu.Documentation);
+		Write(enu->documentation);
 		Write("var ");
-		Write(enu.Name);
+		Write(enu->name);
 		Write(" = ");
 		OpenBlock();
-		for (int i = 0; i < enu.Values.Length; i++) {
+		for (int i = 0; i < enu->values.GetCount(); i++) {
 			if (i > 0)
 				WriteLine(",");
-			CiEnumValue value = enu.Values[i];
-			Write(value.Documentation);
-			WriteUppercaseWithUnderscores(value.Name);
+			CiEnumValue* value = enu->values[i];
+			Write(value->documentation);
+			WriteUppercaseWithUnderscores(value->name);
 			Write(" : ");
 			Write(i);
 		}
@@ -38,28 +59,30 @@ class GenJs : SourceGenerator
 		CloseBlock();
 	}
 
-	protected override void WriteNew(CiType type)
+	void WriteNew(CiType* type)
 	{
-		CiClassStorageType classType = type as CiClassStorageType;
+		CiClassStorageType* classType = dynamic_cast<CiClassStorageType*>(type);
 		if (classType != NULL) {
 			Write("new ");
-			Write(classType->class_.Name);
+			Write(classType->class_->name);
 			Write("()");
 		}
 		else {
-			CiArrayStorageType arrayType = (CiArrayStorageType) type;
+			CiArrayStorageType* arrayType = dynamic_cast<CiArrayStorageType*>(type);
 			Write("new Array(");
-			if (arrayType.LengthExpr != NULL)
-				Write(arrayType.LengthExpr);
+			if (arrayType->length_expr != NULL)
+				SourceGenerator::Write(arrayType->length_expr);
 			else
-				Write(arrayType.Length);
+				Write(arrayType->length);
 			Write(')');
 		}
 	}
 
-	bool WriteInit(CiType type)
+	bool WriteInit(CiType* type)
 	{
-		if (type is CiClassStorageType || type is CiArrayStorageType) {
+		CiClassStorageType* cst = dynamic_cast<CiClassStorageType*>(type);
+		CiArrayStorageType* ast = dynamic_cast<CiArrayStorageType*>(type);
+		if (cst || ast) {
 			Write(" = ");
 			WriteNew(type);
 			return true;
@@ -67,77 +90,80 @@ class GenJs : SourceGenerator
 		return false;
 	}
 
-	void Write(CiField field)
+	void Write(CiField* field)
 	{
-		Write(field.Documentation);
+		Write(field->documentation);
 		Write("this->");
-		WriteCamelCase(field.Name);
-		CiType type = field->type;
+		WriteCamelCase(field->name);
+		CiType* type = field->type;
+		CiEnum* e = dynamic_cast<CiEnum*>(type);
 		if (type == CiBoolType::Value())
 			Write(" = false");
 		else if (type == CiByteType::Value() || type == CiIntType::Value())
 			Write(" = 0");
-		else if (type is CiEnum) {
+		else if (e) {
 			Write(" = ");
-			WriteConst(((CiEnum) type).Values[0]);
+			WriteConst(e->values[0]);
 		}
 		else if (!WriteInit(type))
 			Write(" = NULL");
 		WriteLine(";");
 	}
 
-	protected override void WriteConst(object value)
+	void WriteConst(Object* value)
 	{
-		if (value is CiEnumValue) {
-			CiEnumValue ev = (CiEnumValue) value;
-			Write(ev->type.Name);
+		CiEnumValue* ev = dynamic_cast<CiEnumValue*>(value);
+		if (ev) {
+			Write(ev->type->name);
 			Write('.');
-			WriteUppercaseWithUnderscores(ev.Name);
+			WriteUppercaseWithUnderscores(ev->name);
 		}
-		else if (value is Array) {
+		else if (value->objs.GetCount()) {
 			Write("[ ");
-			WriteContent((Array) value);
+			WriteContent(value->objs);
 			Write(" ]");
 		}
 		else
-			base.WriteConst(value);
+			SourceGenerator::WriteConst(value);
 	}
 
-	protected override void WriteName(CiConst konst)
+	void WriteName(CiConst* konst)
 	{
-		Write(this->current_class.Name);
+		Write(this->current_class->name);
 		Write('.');
-		WriteUppercaseWithUnderscores(konst.GlobalName ?? konst.Name);
+		WriteUppercaseWithUnderscores(konst->global_name.GetCount() ? konst->global_name : konst->name);
 	}
 
-	protected override CiPriority GetPriority(CiExpr expr)
+	CiPriority GetPriority(CiExpr* expr)
 	{
-		if (expr is CiPropertyAccess) {
-			CiProperty prop = ((CiPropertyAccess) expr).Property;
+		CiPropertyAccess* pa = dynamic_cast<CiPropertyAccess*>(expr);
+		CiBinaryExpr* be = dynamic_cast<CiBinaryExpr*>(expr);
+		if (pa) {
+			CiProperty* prop = pa->property;
 			if (prop == CiLibrary::SByteProperty)
-				return CiPriority.Additive;
+				return Additive;
 			if (prop == CiLibrary::LowByteProperty)
-				return CiPriority.And;
+				return AndPrior;
 		}
-		else if (expr is CiBinaryExpr) {
-			if (((CiBinaryExpr) expr)->op == Slash)
-				return CiPriority.Postfix;
+		else if (be) {
+			if (be->op == Slash)
+				return Postfix;
 		}
-		return base.GetPriority(expr);
+		return SourceGenerator::GetPriority(expr);
 	}
 
-	protected override void Write(CiFieldAccess expr)
+	void Write(CiFieldAccess* expr)
 	{
 		WriteChild(expr, expr->obj);
 		Write('.');
-		WriteCamelCase(expr.Field.Name);
+		WriteCamelCase(expr->field->name);
 	}
 
-	protected override void Write(CiPropertyAccess expr)
+	void Write(CiPropertyAccess* expr)
 	{
 		if (expr->property == CiLibrary::SByteProperty) {
 			Write('(');
-			WriteChild(CiPriority.Xor, expr->obj);
+			WriteChild(XorPrior, expr->obj);
 			Write(" ^ 128) - 128");
 		}
 		else if (expr->property == CiLibrary::LowByteProperty) {
@@ -149,27 +175,29 @@ class GenJs : SourceGenerator
 			Write(".length");
 		}
 		else
-			throw ArgumentException(expr->property.Name);
+			throw ArgumentException(expr->property->name);
 	}
 
-	protected override void WriteName(CiBinaryResource resource)
+	void WriteName(CiBinaryResource* resource)
 	{
-		Write(this->current_class.Name);
+		Write(this->current_class->name);
 		Write(".CI_BINARY_RESOURCE_");
-		foreach (char c in resource.Name)
-			Write(CiLexer.IsLetter(c) ? char.ToUpperInvariant(c) : '_');
+		for(int i = 0; i < resource->name.GetCount(); i++) {
+			char c = resource->name[i];
+			Write(IsLetter(c) ? ToUpper(c) : '_');
+		}
 	}
 
-	protected override void WriteName(CiMethod method)
+	void WriteName(CiMethod* method)
 	{
-		WriteCamelCase(method.Name);
+		WriteCamelCase(method->name);
 	}
 
-	protected override void Write(CiMethodCall expr)
+	void Write(CiMethodCall* expr)
 	{
 		if (expr->method == CiLibrary::MulDivMethod) {
 			Write("Math.floor(");
-			WriteMulDiv(CiPriority.Multiplicative, expr);
+			WriteMulDiv(Multiplicative, expr);
 		}
 		else if (expr->method == CiLibrary::CharAtMethod) {
 			Write(expr->obj);
@@ -178,7 +206,7 @@ class GenJs : SourceGenerator
 			Write(')');
 		}
 		else if (expr->method == CiLibrary::SubstringMethod) {
-			if (expr->arguments[0].HasSideEffect) {
+			if (expr->arguments[0]->HasSideEffect()) {
 				Write("Ci.substring(");
 				Write(expr->obj);
 				Write(", ");
@@ -193,7 +221,7 @@ class GenJs : SourceGenerator
 				Write(".substring(");
 				Write(expr->arguments[0]);
 				Write(", ");
-				Write(new CiBinaryExpr(expr->arguments[0], Plus, expr->arguments[1] });
+				Write(new CiBinaryExpr(expr->arguments[0], Plus, expr->arguments[1]));
 				Write(')');
 			}
 		}
@@ -228,76 +256,77 @@ class GenJs : SourceGenerator
 			this->UsesClearArrayMethod = true;
 		}
 		else
-			base.Write(expr);
+			SourceGenerator::Write(expr);
 	}
 
-	protected override void Write(CiBinaryExpr expr)
+	void Write(CiBinaryExpr* expr)
 	{
 		if (expr->op == Slash) {
 			Write("Math.floor(");
-			WriteChild(CiPriority.Multiplicative, expr.Left);
+			WriteChild(Multiplicative, expr->left);
 			Write(" / ");
-			WriteNonAssocChild(CiPriority.Multiplicative, expr->right);
+			WriteNonAssocChild(Multiplicative, expr->right);
 			Write(')');
 		}
 		else
-			base.Write(expr);
+			SourceGenerator::Write(expr);
 	}
 
-	protected virtual void WriteInitArrayStorageVar(CiVar stmt)
+	virtual void WriteInitArrayStorageVar(CiVar* stmt)
 	{
 		WriteLine(";");
 		Write("Ci.clearArray(");
-		Write(stmt.Name);
+		Write(stmt->name);
 		Write(", ");
-		Write(stmt.InitialValue);
+		Write(stmt->initial_value);
 		Write(')');
 		this->UsesClearArrayMethod = true;
 	}
 
-	virtual void Visit(CiVar stmt)
+	virtual void Visit(CiVar* stmt)
 	{
 		Write("var ");
-		Write(stmt.Name);
+		Write(stmt->name);
 		WriteInit(stmt->type);
-		if (stmt.InitialValue != NULL) {
-			if (stmt->type is CiArrayStorageType)
+		if (stmt->initial_value != NULL) {
+			if (dynamic_cast<CiArrayStorageType*>(stmt->type))
 				WriteInitArrayStorageVar(stmt);
 			else {
 				Write(" = ");
-				Write(stmt.InitialValue);
+				Write(stmt->initial_value);
 			}
 		}
 	}
 
-	virtual void Visit(CiThrow stmt)
+	virtual void Visit(CiThrow* stmt)
 	{
 		Write("throw ");
-		Write(stmt.Message);
+		Write(stmt->message);
 		WriteLine(";");
 	}
 
-	void Write(CiMethod method)
+	void Write(CiMethod* method)
 	{
-		if (method->call_type == CiCallType.Abstract)
+		if (method->call_type == AbstractCallType)
 			return;
 		WriteLine();
-		Write(method->class_.Name);
+		Write(method->class_->name);
 		Write('.');
 		if (method->call_type != StaticCallType)
 			Write("prototype.");
-		WriteCamelCase(method.Name);
+		WriteCamelCase(method->name);
 		Write(" = function(");
 		bool first = true;
-		foreach (CiParam param in method.Signature()->Params) {
+		for(int i = 0; i < method->signature->params.GetCount(); i++) {
+			CiParam* param = method->signature->params[i];
 			if (first)
 				first = false;
 			else
 				Write(", ");
-			Write(param.Name);
+			Write(param->name);
 		}
 		Write(") ");
-		if (method->body is CiBlock)
+		if (dynamic_cast<CiBlock*>(method->body))
 			Write(method->body);
 		else {
 			OpenBlock();
@@ -306,58 +335,69 @@ class GenJs : SourceGenerator
 		}
 	}
 
-	void Write(CiConst konst)
+	void Write(CiConst* konst)
 	{
 		WriteName(konst);
 		Write(" = ");
-		WriteConst(konst.Value);
+		WriteConst(konst->value);
 		WriteLine(";");
 	}
 
-	void Write(CiClass klass)
+	void Write(CiClass* klass)
 	{
 		// topological sorting of class hierarchy
-		if (klass.WriteStatus == CiWriteStatus.Done)
+		if (klass->write_status == Done)
 			return;
-		if (klass.WriteStatus == CiWriteStatus.InProgress)
-			throw ResolveException("Circular dependency for class {0}", klass.Name);
-		klass.WriteStatus = CiWriteStatus.InProgress;
-		if (klass.BaseClass != NULL)
-			Write(klass.BaseClass);
-		klass.WriteStatus = CiWriteStatus.Done;
+		if (klass->write_status == InProgress)
+			throw ResolveException("Circular dependency for class " + klass->name);
+		klass->write_status = InProgress;
+		if (klass->base_class != NULL)
+			Write(klass->base_class);
+		klass->write_status = Done;
 
 		this->current_class = klass;
 		WriteLine();
-		Write(klass.Documentation);
+		Write(klass->documentation);
 		Write("function ");
-		Write(klass.Name);
+		Write(klass->name);
 		WriteLine("()");
 		OpenBlock();
-		foreach (CiSymbol member in klass->members) {
-			if (member is CiField)
-				Write((CiField) member);
+		for(int i = 0; i < klass->members->GetCount(); i++) {
+			CiSymbol* member = klass->members->Get(i);
+			CiField* f = dynamic_cast<CiField*>(member);
+			if (f)
+				Write(f);
 		}
-		if (klass.Constructor != NULL)
-			Write(((CiBlock) klass.Constructor->body).Statements);
+		if (klass->constructor != NULL)
+			SourceGenerator::Write(dynamic_cast<CiBlock*>(klass->constructor->body)->statements);
 		CloseBlock();
-		if (klass.BaseClass != NULL) {
-			Write(klass.Name);
+		if (klass->base_class != NULL) {
+			Write(klass->name);
 			Write(".prototype = new ");
-			Write(klass.BaseClass.Name);
+			Write(klass->base_class->name);
 			WriteLine("();");
 		}
-		foreach (CiSymbol member in klass->members) {
-			if (member is CiMethod)
-				Write((CiMethod) member);
-			else if (member is CiConst && member.Visibility == CiVisibility.Public)
-				Write((CiConst) member);
+		for(int i = 0; i < klass->members->GetCount(); i++) {
+			CiSymbol* member = klass->members->Get(i);
+			CiMethod* m = dynamic_cast<CiMethod*>(member);
+			CiConst* c = dynamic_cast<CiConst*>(member);
+			if (m)
+				Write(m);
+			else if (c && member->visibility == PublicVisib)
+				Write(c);
 		}
-		foreach (CiConst konst in klass.ConstArrays)
-			Write(konst);
-		foreach (CiBinaryResource resource in klass.binary_resources) {
+		
+		for(int i = 0; i < klass->const_arrays.GetCount(); i++)
+			Write(klass->const_arrays[i]);
+		
+		for(int i = 0; i < klass->binary_resources.GetCount(); i++) {
+			CiBinaryResource* resource = klass->binary_resources[i];
+			
 			WriteName(resource);
 			Write(" = ");
-			WriteConst(resource.Content);
+			Write("{");
+			SourceGenerator::WriteContent(resource->content);
+			Write("}");
 			WriteLine(";");
 		}
 		this->current_class = NULL;
@@ -365,77 +405,79 @@ class GenJs : SourceGenerator
 
 	void WriteBuiltins()
 	{
-		List<string[]> code = new List<string[]>();
+		Vector<Vector<String> > code;
 		if (this->UsesSubstringMethod) {
-			code.Add(new string[] {
-				"substring : function(s, offset, length)",
-				"return s.substring(offset, offset + length);"
-			});
+			auto& c = code.Add();
+			c.Add("substring : function(s, offset, length)");
+			c.Add("return s.substring(offset, offset + length);");
 		}
 		if (this->UsesCopyArrayMethod) {
-			code.Add(new string[] {
-				"copyArray : function(sa, soffset, da, doffset, length)",
-				"for (var i = 0; i < length; i++)",
-				"\tda[doffset + i] = sa[soffset + i];"
-			});
+			auto& c = code.Add();
+			c.Add("copyArray : function(sa, soffset, da, doffset, length)");
+			c.Add("for (var i = 0; i < length; i++)");
+			c.Add("\tda[doffset + i] = sa[soffset + i];");
 		}
 		if (this->UsesBytesToStringMethod) {
-			code.Add(new string[] {
-				"bytesToString : function(a, offset, length)",
-				"var s = \"\";",
-				"for (var i = 0; i < length; i++)",
-				"\ts += String.fromCharCode(a[offset + i]);",
-				"return s;"
-			});
+			auto& c = code.Add();
+			c.Add("bytesToString : function(a, offset, length)");
+			c.Add("var s = \"\";");
+			c.Add("for (var i = 0; i < length; i++)");
+			c.Add("\ts += String.fromCharCode(a[offset + i]);");
+			c.Add("return s;");
 		}
 		if (this->UsesClearArrayMethod) {
-			code.Add(new string[] {
-				"clearArray : function(a, value)",
-				"for (var i = 0; i < a.length; i++)",
-				"\ta[i] = value;"
-			});
+			auto& c = code.Add();
+			c.Add("clearArray : function(a, value)");
+			c.Add("for (var i = 0; i < a.length; i++)");
+			c.Add("\ta[i] = value;");
 		}
-		if (code.Count > 0) {
+		if (code.GetCount() > 0) {
 			WriteLine("var Ci = {");
-			this->Indent++;
+			this->indent++;
 			for (int i = 0; ; ) {
-				string[] lines = code[i];
+				Vector<String>& lines = code[i];
 				Write(lines[0]);
 				WriteLine(" {");
-				this->Indent++;
-				for (int j = 1; j < lines.Length; j++)
+				this->indent++;
+				for (int j = 1; j < lines.GetCount(); j++)
 					WriteLine(lines[j]);
-				this->Indent--;
+				this->indent--;
 				Write('}');
-				if (++i >= code.Count)
+				if (++i >= code.GetCount())
 					break;
 				WriteLine(",");
 			}
 			WriteLine();
-			this->Indent--;
+			this->indent--;
 			WriteLine("};");
 		}
 	}
 
-	virtual void Write(CiProgram prog)
+	virtual void Write(CiProgram* prog)
 	{
 		CreateFile(this->output_file);
 		this->UsesSubstringMethod = false;
 		this->UsesCopyArrayMethod = false;
 		this->UsesBytesToStringMethod = false;
 		this->UsesClearArrayMethod = false;
-		foreach (CiSymbol symbol in prog.Globals)
-			if (symbol is CiClass)
-				((CiClass) symbol).WriteStatus = CiWriteStatus.NotYet;
-		foreach (CiSymbol symbol in prog.Globals) {
-			if (symbol is CiEnum)
-				Write((CiEnum) symbol);
-			else if (symbol is CiClass)
-				Write((CiClass) symbol);
+		for(int i = 0; i < prog->globals->GetCount(); i++) {
+			CiSymbol* s = prog->globals->Get(i);
+			CiClass* c = dynamic_cast<CiClass*>(s);
+			if (c)
+				c->write_status = NotYet;
+		}
+		for(int i = 0; i < prog->globals->GetCount(); i++) {
+			CiSymbol* s = prog->globals->Get(i);
+			CiEnum* e = dynamic_cast<CiEnum*>(s);
+			CiClass* c = dynamic_cast<CiClass*>(s);
+			if (e)
+				Write(e);
+			else if (c)
+				Write(c);
 		}
 		WriteBuiltins();
 		CloseFile();
 	}
-}
+};
 
 }

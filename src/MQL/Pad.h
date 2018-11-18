@@ -169,7 +169,7 @@ class CiPad : Form
 		this->ResumeLayout();
 	}
 
-	protected override void OnLayout(LayoutEventArgs e)
+	void OnLayout(LayoutEventArgs e)
 	{
 		int cx = ClientRectangle.Width;
 		int cy = ClientRectangle.Height;
@@ -287,7 +287,7 @@ class CiPadGroup
 		TabPage page = this->TabControl.TabPages[name];
 		if (page == NULL) {
 			page = new TabPage();
-			page.Name = name;
+			page->name = name;
 			page.Text = name;
 			TextBox text = new TextBox();
 			if (!readOnly) {

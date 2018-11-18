@@ -9,6 +9,7 @@ struct CiDocInline {
 	
 	CiDocInline() {}
 	CiDocInline(String s) {text = s;}
+	virtual ~CiDocInline() {}
 };
 
 struct CiDocText : public CiDocInline
@@ -29,6 +30,7 @@ struct CiDocCode : public CiDocInline
 
 struct CiDocBlock {
 	
+	virtual ~CiDocBlock() {}
 };
 
 struct CiDocPara : public CiDocBlock
@@ -247,7 +249,7 @@ struct CiArrayPtrType : public CiArrayType, ICiPtrType
 	static CiArrayPtrType* WritableByteArray;
 	
 	PtrWritability writability = Unknown;
-	PtrIndex<ICiPtrType> sources;
+	PtrIndex<ICiPtrType*> sources;
 	
 	CiArrayPtrType() {}
 	CiArrayPtrType(CiType* type) {element_type = type;}
@@ -299,6 +301,8 @@ struct CiEnum;
 
 struct CiEnumValue : public CiSymbol {
 	CiEnum* type = NULL;
+	
+	CiEnumValue() {Object::type = O_ENUM;}
 };
 
 struct CiEnum : public CiType
@@ -379,7 +383,7 @@ struct ICiStatement : public Object
 {
 	ICiStatement() {Object::type = O_CLASS;}
 	virtual bool CompletesNormally() = 0;
-	virtual void Accept(ICiStatementVisitor& v) = 0;
+	virtual void Accept(ICiStatementVisitor* v) = 0;
 };
 
 struct CiConst : public CiSymbol, ICiStatement
@@ -396,7 +400,7 @@ struct CiConst : public CiSymbol, ICiStatement
 	CiConst(String name, CiType* type, Object* v) {this->name = name; this->type = type; value = v;}
 	virtual bool CompletesNormally() { return true; }
 	virtual void Accept(ICiSymbolVisitor* v) { v->VisitSymbol(this); }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiVar : public CiSymbol, ICiStatement
@@ -406,7 +410,7 @@ struct CiVar : public CiSymbol, ICiStatement
 	bool write_initial_value; // C89 only
 	
 	virtual bool CompletesNormally() { return true; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiBinaryResource : public CiSymbol
@@ -430,7 +434,7 @@ struct CiMaybeAssign : public ICiStatement
 	CiType* type = NULL;
 	
 	virtual bool CompletesNormally() {Panic("Undefined"); return false;}
-	virtual void Accept(ICiStatementVisitor& v) {Panic("Undefined");}
+	virtual void Accept(ICiStatementVisitor* v) {Panic("Undefined");}
 };
 
 struct CiSymbolAccess;
@@ -500,8 +504,8 @@ struct CiConstExpr : public CiExpr
 		if (value->type == O_BYTE) return CiByteType::Value();
 		if (value->type == O_INT) return CiIntType::Value();
 		if (value->type == O_STRING) return CiStringPtrType::Value();
-		if (value->type == O_ENUM) return ((CiEnumValue*)this->value->data)->type;
 		if (value->type == O_NULL) return CiType::Null;
+		if (value->type == O_ENUM) return (dynamic_cast<CiEnumValue*>(this->value))->type;
 		if (value->type == O_CLASS) Panic("UNKNOWN");
 		throw NotImplementedException();
 	}
@@ -636,7 +640,7 @@ struct CiPostfixExpr : public CiExpr
 	virtual bool HasSideEffect() { return true; }
 	virtual bool CompletesNormally() { return true; }
 	virtual CiExpr* Accept(ICiExprVisitor* v) { return v->VisitExpr(this); }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiBinaryExpr : public CiExpr
@@ -741,7 +745,7 @@ struct CiAssign : public CiMaybeAssign
 	
 	virtual CiType* Type() { return this->target->type; }
 	virtual bool CompletesNormally() { return true; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiDelete : public ICiStatement
@@ -750,7 +754,7 @@ struct CiDelete : public ICiStatement
 	
 	CiDelete(CiExpr* expr) {this->expr = expr;}
 	virtual bool CompletesNormally() { return true; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiCondCompletionStatement : public ICiStatement
@@ -758,7 +762,7 @@ struct CiCondCompletionStatement : public ICiStatement
 	bool completes_normally = false;
 	
 	virtual bool CompletesNormally() {return completes_normally;}
-	virtual void Accept(ICiStatementVisitor& v) = 0;
+	virtual void Accept(ICiStatementVisitor* v) = 0;
 };
 
 struct CiLoop : public CiCondCompletionStatement
@@ -772,24 +776,24 @@ struct CiBlock : public CiCondCompletionStatement
 	Vector<ICiStatement*> statements;
 	
 	CiBlock(const Vector<ICiStatement*>& statements) {this->statements <<= statements;}
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiBreak : public ICiStatement
 {
 	bool CompletesNormally() { return false; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiContinue : public ICiStatement
 {
 	bool CompletesNormally() { return false; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiDoWhile : public CiLoop
 {
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiFor : public CiLoop
@@ -798,7 +802,7 @@ struct CiFor : public CiLoop
 	ICiStatement* init = NULL;
 	ICiStatement* advance = NULL;
 	
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiIf : public CiCondCompletionStatement
@@ -807,7 +811,7 @@ struct CiIf : public CiCondCompletionStatement
 	ICiStatement* on_true = NULL;
 	ICiStatement* on_false = NULL;
 	
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiNativeBlock : public ICiStatement
@@ -816,7 +820,7 @@ struct CiNativeBlock : public ICiStatement
 	
 	CiNativeBlock(String content) {this->content = content;}
 	virtual bool CompletesNormally() { return true; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiReturn : public ICiStatement
@@ -824,7 +828,7 @@ struct CiReturn : public ICiStatement
 	CiExpr* value = NULL;
 	
 	virtual bool CompletesNormally() { return false; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiCase
@@ -843,7 +847,7 @@ struct CiSwitch : public CiCondCompletionStatement
 	Vector<CiCase*> cases;
 	Vector<ICiStatement*> default_body;
 	
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiThrow : public ICiStatement
@@ -851,12 +855,12 @@ struct CiThrow : public ICiStatement
 	CiExpr* message = NULL;
 	
 	virtual bool CompletesNormally() { return false; }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiWhile : public CiLoop
 {
-	virtual void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	virtual void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiDelegate : public CiType
@@ -893,7 +897,7 @@ struct CiMethodCall : public CiExpr
 	virtual bool HasSideEffect() { return true; }
 	virtual bool CompletesNormally() { return true; }
 	virtual CiExpr* Accept(ICiExprVisitor* v) { return v->VisitExpr(this); }
-	void Accept(ICiStatementVisitor& v) { v.VisitStmt(this); }
+	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };
 
 struct CiMethod : public CiSymbol
@@ -939,18 +943,18 @@ struct CiMethod : public CiSymbol
 
 struct CiClass : public CiSymbol
 {
-	bool is_abstract;
-	CiClass* base_class;
+	bool is_abstract = false;
+	CiClass* base_class = NULL;
 	SymbolTable* members = NULL;
-	CiMethod* constructor;
+	CiMethod* constructor = NULL;
 	Vector<CiConst*> const_arrays;
 	Vector<CiBinaryResource*> binary_resources;
-	bool is_resolved;
+	bool is_resolved = false;
 	String source_filename;
 	CiWriteStatus write_status; // C, JS only
-	bool has_fields; // C only
-	bool constructs; // C only
-	bool is_allocated; // C only
+	bool has_fields = false; // C only
+	bool constructs = false; // C only
+	bool is_allocated = false; // C only
 	
 	CiClass() {}
 	virtual void Accept(ICiSymbolVisitor* v) { v->VisitSymbol(this); }
@@ -985,7 +989,7 @@ struct CiClassType : public CiType
 struct CiClassPtrType : public CiClassType, ICiPtrType
 {
 	PtrWritability writability = Unknown;
-	PtrIndex<ICiPtrType> sources;
+	PtrIndex<ICiPtrType*> sources;
 	
 	CiClassPtrType() {}
 	CiClassPtrType(CiClass* cls) {this->class_ = cls;}

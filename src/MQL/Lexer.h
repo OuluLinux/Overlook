@@ -229,7 +229,8 @@ public:
 			
 			switch (c) {
 			
-			case - 1:
+			case -1:
+			case  0:
 				return EndOfFile;
 				
 			case '\t':
@@ -789,11 +790,11 @@ public:
 		Else_
 	} PreDirectiveClass;
 	
-	Stack<PreDirectiveClass> pre_stack;
+	Stack<int> pre_stack;
 	
 	void PopPreStack(String directive) {
 		try {
-			PreDirectiveClass pdc = this->pre_stack.Pop();
+			PreDirectiveClass pdc = (PreDirectiveClass)this->pre_stack.Pop();
 			
 			if (directive != "#endif" && pdc == Else_)
 				throw ParseException(directive + " after #else");

@@ -768,7 +768,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			return konst->value->GetInt() ? expr1 : expr2;
 		// expr.Cond = cond;
 		// expr.OnTrue = expr1;
-		// expr.OnFalse = expr2;
+		// expr->on_false = expr2;
 		// return expr;
 		return new CiCondExpr(
 			cond,
@@ -838,7 +838,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			ICiStatement* child = statements[i];
 			if (!reachable)
 				throw ResolveException("Unreachable statement");
-			child->Accept(*this);
+			child->Accept(this);
 			reachable = child->CompletesNormally();
 		}
 		return reachable;
@@ -1054,7 +1054,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 
 	void Resolve(ICiStatement* statement)
 	{
-		statement->Accept(*this);
+		statement->Accept(this);
 	}
 
 	void VisitSymbol(CiMethod* method)

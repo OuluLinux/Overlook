@@ -415,7 +415,7 @@ struct SourceGenerator : public ICiStatementVisitor
 		}
 		if (dynamic_cast<CiCondExpr*>(expr))
 			return CondExpr;
-		throw new ArgumentException(expr->type->name);
+		throw new ArgumentException(expr->Type()->name);
 	}
 
 	void WriteChild(CiPriority parentPriority, CiExpr* child)

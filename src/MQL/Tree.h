@@ -435,8 +435,10 @@ struct CiParam : public CiVar
 
 struct CiMaybeAssign : public ICiStatement
 {
+protected:
 	CiType* type = NULL;
 	
+public:
 	virtual CiType* Type() {return type;}
 	virtual bool CompletesNormally() {Panic("Undefined"); return false;}
 	virtual void Accept(ICiStatementVisitor* v) {Panic("Undefined");}
@@ -610,7 +612,7 @@ struct CiArrayAccess : public CiLValue
 	CiExpr* index = NULL;
 	
 	CiArrayAccess(CiExpr* parent, CiExpr* i) {array = parent; index = i;}
-	virtual CiType* Type() { return ((CiArrayType*) this->array->type)->element_type; }
+	virtual CiType* Type() { return (dynamic_cast<CiArrayType*>(this->array->Type()))->element_type; }
 	virtual bool HasSideEffect() {return this->array->HasSideEffect() || this->index->HasSideEffect(); }
 };
 
@@ -751,7 +753,7 @@ struct CiAssign : public CiMaybeAssign
 	CiToken op;
 	CiMaybeAssign* source = NULL;
 	
-	virtual CiType* Type() { return this->target->type; }
+	virtual CiType* Type() { return this->target->Type(); }
 	virtual bool CompletesNormally() { return true; }
 	void Accept(ICiStatementVisitor* v) { v->VisitStmt(this); }
 };

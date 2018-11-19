@@ -105,7 +105,7 @@ CiMethod*	CiLibrary::ArrayStorageClearMethod = new CiMethod(
             
             
 CiDelegate* CiMethodCall::Signature() {
-	return method != NULL ? this->method->signature : (CiDelegate*) this->obj->type;
+	return method != NULL ? this->method->signature : (CiDelegate*) this->obj->Type();
 }
 
 

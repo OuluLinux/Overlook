@@ -250,7 +250,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 		Object* o = dynamic_cast<CiConstExpr*>(expr)->value;
 		if (o->type == O_STRING || o->type == O_INT || o->type == O_BYTE)
 			return o->ToString();
-		throw ResolveException("Cannot convert " + expr->type->name + " to string");
+		throw ResolveException("Cannot convert " + expr->Type()->name + " to string");
 	}
 
 	static int GetConstInt(CiExpr* expr)
@@ -274,7 +274,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 				target = dynamic_cast<CiExpr*>(c->inner);
 				c = dynamic_cast<CiCoercion*>(target);
 			}
-			ICiPtrType* pt = dynamic_cast<ICiPtrType*>(target->type);
+			ICiPtrType* pt = dynamic_cast<ICiPtrType*>(target->Type());
 			if (pt != NULL) {
 				this->writable_ptr_types.Add(pt);
 				break;
@@ -299,7 +299,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 				source = c->inner;
 				c = dynamic_cast<CiCoercion*>(source);
 			}
-			ICiPtrType* sp = dynamic_cast<ICiPtrType*>(source->type);
+			ICiPtrType* sp = dynamic_cast<ICiPtrType*>(source->Type());
 			if (sp != NULL) {
 				tp->sources.Add(sp);
 				break;
@@ -347,7 +347,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		if (field->class_ != this->current_class && field->visibility == Private)
 			field->visibility = InternalVisib;
-		CiClassPtrType* cpt = dynamic_cast<CiClassPtrType*>(obj->type);
+		CiClassPtrType* cpt = dynamic_cast<CiClassPtrType*>(obj->Type());
 		if (!cpt || (cpt->class_ != field->class_))
 			obj = Coerce(obj, new CiClassStorageType("", field->class_));
 		return new CiFieldAccess(obj, field);
@@ -425,7 +425,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			}
 		}
 		CiExpr* parent = Resolve(expr->parent);
-		CiSymbol* member = parent->type->LookupMember(expr->name);
+		CiSymbol* member = parent->Type()->LookupMember(expr->name);
 		member->Accept(this);
 		
 		CiField* f = dynamic_cast<CiField*>(member);
@@ -446,10 +446,10 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		CiExpr* parent = Resolve(expr->parent);
 		CiExpr* index = Coerce(Resolve(expr->index), CiIntType::Value());
-		CiArrayType* at = dynamic_cast<CiArrayType*>(parent->type);
+		CiArrayType* at = dynamic_cast<CiArrayType*>(parent->Type());
 		if (at)
 			return new CiArrayAccess(parent, index);
-		CiStringType* st = dynamic_cast<CiStringType*>(parent->type);
+		CiStringType* st = dynamic_cast<CiStringType*>(parent->Type());
 		if (st) {
 			CiConstExpr* pce = dynamic_cast<CiConstExpr*>(parent);
 			CiConstExpr* ice = dynamic_cast<CiConstExpr*>(index);
@@ -521,7 +521,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			}
 			CiExpr* obj = Resolve(uma->parent);
 			{
-				CiMethod* method = dynamic_cast<CiMethod*>(obj->type->LookupMember(uma->name));
+				CiMethod* method = dynamic_cast<CiMethod*>(obj->Type()->LookupMember(uma->name));
 				if (method) {
 					// obj.Foo(...)
 					if (method->call_type == StaticCallType)
@@ -538,7 +538,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			}
 		}
 		expr->obj = Resolve(expr->obj);
-		if (!dynamic_cast<CiDelegate*>(expr->obj->type))
+		if (!dynamic_cast<CiDelegate*>(expr->obj->Type()))
 			throw ResolveException("Invalid call");
 		if (expr->obj->HasSideEffect())
 			throw ResolveException("Side effects not allowed in delegate call");
@@ -633,7 +633,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	{
 		CiExpr* left = Resolve(expr->left);
 		CiExpr* right = Resolve(expr->right);
-		if (expr->op == Plus && (dynamic_cast<CiStringType*>(left->type) || dynamic_cast<CiStringType*>(right->type))) {
+		if (expr->op == Plus && (dynamic_cast<CiStringType*>(left->Type()) || dynamic_cast<CiStringType*>(right->Type()))) {
 			if (!(dynamic_cast<CiConstExpr*>(left) && dynamic_cast<CiConstExpr*>(right)))
 				throw ResolveException("String concatenation allowed only for constants. Consider using +=");
 			String a = GetConstString(left);
@@ -662,7 +662,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			}
 			if (expr->op == AndToken && (b & ~0xff) == 0) {
 				CiCoercion* c = dynamic_cast<CiCoercion*>(left);
-				if (c != NULL && c->inner->type == CiByteType::Value())
+				if (c != NULL && c->inner->Type() == CiByteType::Value())
 					left = dynamic_cast<CiExpr*>(c->inner);
 			}
 		}
@@ -904,11 +904,11 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 			Resolve(a);
 		else
 			source = Resolve(dynamic_cast<CiExpr*>(source));
-		CiType* type = statement->target->type;
+		CiType* type = statement->target->Type();
 		CheckCopyPtr(type, source);
 		statement->source = Coerce(source, type);
 		if (statement->op != Assign && type != CiIntType::Value() && type != CiByteType::Value()) {
-			if (statement->op == AddAssign && dynamic_cast<CiStringStorageType*>(type) && dynamic_cast<CiStringType*>(statement->source->type))
+			if (statement->op == AddAssign && dynamic_cast<CiStringStorageType*>(type) && dynamic_cast<CiStringType*>(statement->source->Type()))
 				{} // OK
 			else
 				throw ResolveException("Invalid compound assignment");
@@ -918,7 +918,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	void VisitStmt(CiDelete* statement)
 	{
 		statement->expr = Resolve(statement->expr);
-		ICiPtrType* type = dynamic_cast<ICiPtrType*>(statement->expr->type);
+		ICiPtrType* type = dynamic_cast<ICiPtrType*>(statement->expr->Type());
 		if (type)
 			throw ResolveException("'delete' takes a class or array pointer");
 		if (statement->expr->HasSideEffect())
@@ -994,7 +994,7 @@ struct CiResolver : public ICiSymbolVisitor, ICiTypeVisitor, ICiExprVisitor, ICi
 	void VisitStmt(CiSwitch* statement)
 	{
 		statement->value = Resolve(statement->value);
-		CiType* type = statement->value->type;
+		CiType* type = statement->value->Type();
 		CiCondCompletionStatement* oldLoopOrSwitch = this->current_loop_or_switch;
 		this->current_loop_or_switch = statement;
 

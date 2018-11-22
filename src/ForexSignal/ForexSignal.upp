@@ -1,0 +1,11 @@
+uses
+	Core,
+	plugin/webdriverxx;
+
+file
+	Readme.txt,
+	ForexSignal.cpp;
+
+mainconfig
+	"" = "";
+

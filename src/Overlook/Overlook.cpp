@@ -446,10 +446,10 @@ Chart* Overlook::GetChart(int i) {
 }
 
 void Overlook::OpenForecast() {
-	cman.AddForecast();
+	/*cman.AddForecast();
 	cman.Get(cman.GetCount()-1).Maximize();
 	cman.Get(cman.GetCount()-1).Maximize();
-	StorePreviousProfile();
+	StorePreviousProfile();*/
 }
 
 void Overlook::SetFactory(int f) {
@@ -1213,7 +1213,6 @@ void Overlook::StoreProfile(Profile& profile) {
 	
 	for(int i = 0; i < cman.GetGroupCount(); i++) {
 		Chart* chart_ptr	= cman.GetGroup(i);
-		ForecastCtrl* fcast_ptr = cman.GetForecast(i);
 		if (chart_ptr) {
 			Chart& chart = *chart_ptr;
 			
@@ -1235,10 +1234,10 @@ void Overlook::StoreProfile(Profile& profile) {
 				pchart.rect = swin.GetRect();
 			}
 		}
-		else if (fcast_ptr) {
+		/*else if (fcast_ptr) {
 			ProfileGroup& pchart		= profile.charts.Add();
 			pchart.type					= 1;
-		}
+		}*/
 	}
 }
 

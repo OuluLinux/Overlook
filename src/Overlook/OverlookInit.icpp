@@ -90,10 +90,9 @@ INITBLOCK {
     System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
     //System::RegisterCommon<Sentiment, SentimentCtrl>("Sentiment");
-    //System::RegisterCommon<Automation, AutomationCtrl>("Automation");
+    System::RegisterCommon<Automation, AutomationCtrl>("Automation");
     //System::RegisterCommon<EventSystem, EventSystemCtrl>("EventSystem");
     //System::RegisterCommon<Server, ServerCtrl>("Automation");
-    System::RegisterCommon<MyfxbookCommon, MyfxbookCtrl>("Myfxbook");
     
     
     

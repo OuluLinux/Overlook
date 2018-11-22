@@ -9,16 +9,8 @@
 #include <plugin/libmt/libmt.h>
 #include <SubWindowCtrl/SubWindowCtrl.h>
 #include <PushNotification/PushNotification.h>
-#include <Forecaster/Forecaster.h>
 using namespace Upp;
 
-struct ForecastCtrl : public SubWindowCtrl {
-	Forecast::ManagerCtrl c;
-	
-	ForecastCtrl() {Add(c.SizePos());}
-	virtual String GetTitle() {return "Forecaster";}
-	virtual void Data() {c.Data();}
-};
 
 #define LAYOUTFILE <Overlook/Overlook.lay>
 #include <CtrlCore/lay.h>
@@ -44,7 +36,6 @@ struct ForecastCtrl : public SubWindowCtrl {
 #include "Automation.h"
 #include "EventSystem.h"
 #include "Server.h"
-#include "Myfxbook.h"
 
 
 namespace Overlook {

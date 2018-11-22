@@ -488,6 +488,20 @@ void XmlFix(String& c) {
 	c.Replace("footer", "div");
 	c.Replace("&nbsp;","");
 	c.Replace("&euro;","");
+	c.Replace("&mdash;","");
+	c.Replace("&Atilde;","");
+	c.Replace("&plusmn;","");
+	c.Replace("&ordf;","");
+	c.Replace("&ordm;","");
+	c.Replace("&sect;","");
+	c.Replace("&ETH;","");
+	c.Replace("&fnof;","");
+	c.Replace("&cedil;","");
+	c.Replace("&sup1;","");
+	c.Replace("&Ntilde;","");
+	c.Replace("&sup3;","");
+	c.Replace("&middot;","");
+	c.Replace("&Auml;","");
 	c.Replace("></span> </td>", ">_</span> </td>");
 }
 

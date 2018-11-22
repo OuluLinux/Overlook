@@ -4,7 +4,6 @@
 
 namespace Overlook {
 
-
 struct CalEvent : public Moveable<CalEvent> {
 	int id = -1;
 	Time timestamp = Null;

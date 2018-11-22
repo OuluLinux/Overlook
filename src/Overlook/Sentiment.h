@@ -10,6 +10,16 @@ struct SentimentSnapshot {
 	double fmlevel = 0.0, tplimit = 0.1;
 	double equity = 0.0;
 	
+	void operator=(const SentimentSnapshot& snap) {
+		cur_pres <<= snap.cur_pres;
+		pair_pres <<= snap.pair_pres;
+		comment = snap.comment;
+		added = snap.added;
+		fmlevel = snap.fmlevel;
+		tplimit = snap.tplimit;
+		equity = snap.equity;
+	}
+	
 	void Serialize(Stream& s) {s % cur_pres % pair_pres % comment % added % fmlevel % tplimit % equity;}
 	
 	bool IsPairEqual(const SentimentSnapshot& s) {

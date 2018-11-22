@@ -1,140 +1,148 @@
 #include "Overlook.h"
+#include <plugin/tidy/tidy.h>
 
 namespace Overlook {
-using namespace Forecast;
 
 Automation::Automation() {
 	last_update = Time(1970,1,1);
 	
-	symbols.Add("EURUSD");
-	symbols.Add("GBPUSD");
-	symbols.Add("USDCHF");
-	symbols.Add("USDJPY");
-	symbols.Add("USDCAD");
-	//symbols.Add("AUDUSD");
-	//symbols.Add("NZDUSD");
-	//symbols.Add("EURCHF");
-	symbols.Add("EURJPY");
+	symbols.Add("AUDUSD");
+	symbols.Add("EURCHF");
 	symbols.Add("EURGBP");
-	
-	
-	Manager& mgr = GetManager();
-	
-	for(int i = 0; i < symbols.GetCount(); i++)
-		mgr.GetAdd(symbols[i]);
-	
+	symbols.Add("EURJPY");
+	symbols.Add("GBPJPY");
+	symbols.Add("EURUSD");
+	symbols.Add("GBPJPY");
+	symbols.Add("GBPUSD");
+	symbols.Add("NZDUSD");
+	symbols.Add("USDCAD");
+	symbols.Add("USDJPY");
 }
 
 void Automation::Init() {
 	
 }
 
+Time TimeFromStr(const String& s) {
+	Vector<String> v = Split(s, ",");
+	return Time(StrInt(v[0]), StrInt(v[1]), StrInt(v[2]), StrInt(v[3]), StrInt(v[4]));
+}
+
 void Automation::Start() {
 	RLOG("Automation::Start");
-	Manager& mgr = GetManager();
+
+	Time now = GetUtcTime();
 	
-	bool all_finished = true;
-	for(int i = 0; i < symbols.GetCount(); i++) {
-		if (mgr.GetAdd(symbols[i]).IsFinished() == false) {
-			all_finished = false;
-			break;
-		}
-	}
+	MetaTrader& mt = GetMetaTrader();
 	
-	if (mode == NO_PENDING && all_finished) {
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			CoreList cl;
-			cl.AddSymbol(symbols[i]);
-			cl.AddTf(0);
-			cl.AddIndi(0);
-			cl.Init();
-			cl.Refresh();
-			ConstBuffer& src = cl.GetBuffer(0, 0, 0);
-			int size = 5*1440;
-			Vector<double> data;
-			int begin = src.GetCount() - size;
-			data.SetCount(size);
-			for(int j = 0; j < size; j++)
-				data[j] = src.Get(begin + j);
-			mgr.GetAdd(symbols[i]).AddForecastTask(data);
+	if (last_update <= now - 30) {
+		TcpSocket s;
+		
+		if (!s.Connect("127.0.0.1", 17777)) return;
+		s.Blocking();
+		Vector<String> lines;
+		for(int i = 0; i < 9 * 7; i++) {
+			lines.Add(s.GetLine());
 		}
-		mode++;
-	}
-	else if (mode == PENDING && all_finished) {
-		System& sys = GetSystem();
-		Sentiment& sent = GetSentiment();
+		if (lines.IsEmpty())
+			return;
 		
-		last_update = GetUtcTime();
-		
-		SentimentSnapshot* prev = NULL;
-		if (sent.GetSentimentCount())
-			prev = &sent.GetSentiment(sent.GetSentimentCount()-1);
-		SentimentSnapshot& snap = sent.AddSentiment();
-		snap.added = GetUtcTime();
-		snap.cur_pres.SetCount(sys.GetCurrencyCount(), 0);
-		snap.pair_pres.SetCount(sent.symbols.GetCount(), 0);
-		snap.comment = "Automation";
-		snap.equity = GetMetaTrader().AccountEquity();
-		
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			int j = sent.symbols.Find(symbols[i]);
-			if (j == -1)
-				continue;
-			Forecast::Session& ses = mgr.GetAdd(symbols[i]);
-			Forecast::Task& t = ses.tasks.Top();
-			if (t.forecast.IsEmpty())
+		for(int i = 0; i < lines.GetCount();) {
+			
+			String sym = lines[i++];
+			String from = lines[i++];
+			String till = lines[i++];
+			String sig = lines[i++];
+			String sig_at = lines[i++];
+			String tp = lines[i++];
+			String sl = lines[i++];
+			if (sym == "")
 				continue;
 			
-			double first_change = t.forecast[0];
-			double peak_up = 0, peak_down = 0;
-			int peak_up_pos = 0, peak_down_pos = 0;
-			for(int k = 0; k < t.forecast.GetCount(); k++) {
-				double d = t.forecast[k];
-				if (d > peak_up) {peak_up = d; peak_up_pos = k;}
-				if (d < peak_down) {peak_down = d; peak_down_pos = k;}
-			}
-			bool down_before_up = peak_down_pos < peak_up_pos;
-			bool peak_up_stronger = peak_up > -peak_down;
+			Time f = TimeFromStr(from);
+			Time t = TimeFromStr(till);
 			
-			int prev_pres = prev ? prev->pair_pres[j] : 0;
-			int pres = 0;
-			if (prev_pres) {
-				// Simple keep on going
-				if ((prev_pres > 0 && first_change > 0) || (prev_pres < 0 && first_change < 0))
-					pres = prev_pres;
-				// Continue while seeing positive
-				/*else if ((prev_pres > 0 && peak_up > 0) || (prev_pres < 0 && peak_down < 0))
-					pres = prev_pres;*/
-				// Change signal
-				else
-					pres = peak_up_stronger ? +1 : -1;
+			int sym_id = GetSystem().FindSymbol(sym);
+			
+			mt.DataEnter();
+			const Vector<Order>& open_orders = mt.GetOpenOrders();
+			
+			if (now >= f && now < t) {
+				
+				bool have_open = false;
+				for(int j = 0; j < open_orders.GetCount(); j++) {
+					const Order& o = open_orders[j];
+					String osym = mt.GetSymbols()[o.symbol];
+					if (osym == sym)
+						have_open = true;
+				}
+				
+				if (!have_open) {
+					double open = StrDbl(sig_at);
+					double takeprofit = StrDbl(tp);
+					double stoploss = StrDbl(sl);
+					double ask = mt.RealtimeAsk(sym_id);
+					double bid = mt.RealtimeBid(sym_id);
+					double lots = mt.AccountBalance() * 0.001;
+					int cmd;
+					if (sig == "Buy") {
+						if (open >= ask)
+							cmd = OP_BUYSTOP;
+						else
+							cmd = OP_BUYLIMIT;
+					} else {
+						if (open <= bid)
+							cmd = OP_SELLSTOP;
+						else
+							cmd = OP_SELLLIMIT;
+					}
+					
+					if (mt.OrderSend(sym, cmd, lots, open, 0, stoploss, takeprofit, "Automation", 0) < 0) {
+						String err = mt._GetLastError();
+						ReleaseLog("Pending order open failed " + sym + ": " + err);
+						if (err == "no error") {
+							double point = mt.GetSymbols()[sym_id].point;
+							double imopen;
+							if (sig == "Buy") {
+								imopen = mt.RealtimeAsk(sym_id);
+								cmd = OP_BUY;
+							}
+							else {
+								imopen = mt.RealtimeBid(sym_id);
+								cmd = OP_SELL;
+							}
+							int slippage = fabs((imopen - open) / point);
+							if (slippage < 3)
+								mt.OrderSend(sym, cmd, lots, imopen, 3, stoploss, takeprofit, "Automation", 0);
+						}
+					}
+				}
 			}
 			else {
-				// Wait better opportunity
-				if ((peak_up_stronger && down_before_up) || (!peak_up_stronger && !down_before_up))
-					pres = 0;
-				// Opportunity ongoing
-				else
-					pres = peak_up_stronger ? +1 : -1;
-			}
-			
-			if (prev_pres != 0 && pres * prev_pres < 0) {
-				double open_profit = GetMetaTrader().GetOpenProfit(symbols[i]);
-				if (open_profit < 0) {
-					pres = -prev_pres * 2;
+				
+				for(int j = 0; j < open_orders.GetCount(); j++) {
+					const Order& o = open_orders[j];
+					String osym = mt.GetSymbols()[o.symbol];
+					if (osym == sym) {
+						if (o.type >= OP_BUYLIMIT) {
+							mt.OrderDelete(o.ticket);
+						}
+						else {
+							for(int j = 0; j < 10; j++) {
+								double close;
+								if (o.type == OP_BUY)
+									close = mt.RealtimeBid(sym_id);
+								else
+									close = mt.RealtimeAsk(sym_id);
+								if (mt.OrderClose(o.ticket, o.volume, close, 3))
+									break;
+							}
+						}
+					}
 				}
 			}
 			
-			snap.pair_pres[j] = pres;
-		}
-		
-		sent.StoreThis();
-		mode++;
-	}
-	else if (mode == WAITING) {
-		Time now = GetUtcTime();
-		if (now.Get() - last_update.Get() > 10*60) {
-			mode = NO_PENDING;
+			mt.DataLeave();
 		}
 	}
 }

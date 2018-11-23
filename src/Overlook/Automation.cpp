@@ -63,11 +63,13 @@ void Automation::Start() {
 			Time t = TimeFromStr(till);
 			
 			int sym_id = GetSystem().FindSymbol(sym);
+			double stop_points = mt._MarketInfo(sym, MODE_STOPLEVEL);
+			double point = mt.GetSymbols()[sym_id].point;
 			
 			mt.DataEnter();
 			const Vector<Order>& open_orders = mt.GetOpenOrders();
 			
-			if (now >= f && now < t) {
+			if (now >= f && now < t && tp.GetCount() && sl.GetCount()) {
 				
 				bool have_open = false;
 				for(int j = 0; j < open_orders.GetCount(); j++) {
@@ -90,18 +92,35 @@ void Automation::Start() {
 							cmd = OP_BUYSTOP;
 						else
 							cmd = OP_BUYLIMIT;
+						
+						double min_tp = open + stop_points * point;
+						if (takeprofit < min_tp)
+							takeprofit = min_tp;
+						double min_sl = open - stop_points * point;
+						if (stoploss > min_sl)
+							stoploss = min_sl;
 					} else {
 						if (open <= bid)
 							cmd = OP_SELLSTOP;
 						else
 							cmd = OP_SELLLIMIT;
+						
+						double min_tp = open - stop_points * point;
+						if (takeprofit > min_tp)
+							takeprofit = min_tp;
+						double min_sl = open + stop_points * point;
+						if (stoploss < min_sl)
+							stoploss = min_sl;
 					}
+					
+					open = ((int64)(open / point)) * point;
+					stoploss = ((int64)(stoploss / point)) * point;
+					takeprofit = ((int64)(takeprofit / point)) * point;
 					
 					if (mt.OrderSend(sym, cmd, lots, open, 0, stoploss, takeprofit, "Automation", 0) < 0) {
 						String err = mt._GetLastError();
 						ReleaseLog("Pending order open failed " + sym + ": " + err);
 						if (err == "no error") {
-							double point = mt.GetSymbols()[sym_id].point;
 							double imopen;
 							if (sig == "Buy") {
 								imopen = mt.RealtimeAsk(sym_id);
@@ -114,6 +133,12 @@ void Automation::Start() {
 							int slippage = fabs((imopen - open) / point);
 							if (slippage < 3)
 								mt.OrderSend(sym, cmd, lots, imopen, 3, stoploss, takeprofit, "Automation", 0);
+						}
+						if (err == "invalid stops") {
+							int ticket = mt.OrderSend(sym, cmd, lots, open, 1, 0, 0, "", 0);
+							if (ticket >= 0) {
+								mt.OrderModify(ticket, open, stoploss, takeprofit, 0);
+							}
 						}
 					}
 				}
@@ -143,7 +168,11 @@ void Automation::Start() {
 			}
 			
 			mt.DataLeave();
+			
+			
 		}
+		
+		mt.Data();
 	}
 }
 

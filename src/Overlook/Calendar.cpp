@@ -183,7 +183,7 @@ void CalendarCommon::Start() {
 	Time now = GetUtcTime();
 	initial_update = false;
 	
-	if (last_week_update.minute != now.minute) {
+	if (last_week_update <= now - 5*60) {
 		last_week_update = now;
 		UpdateLastWeek();
 		UpdateNextWeek();

@@ -1,6 +1,7 @@
 uses
 	Core,
-	plugin/webdriverxx;
+	plugin/webdriverxx,
+	MailClient;
 
 file
 	Readme.txt,

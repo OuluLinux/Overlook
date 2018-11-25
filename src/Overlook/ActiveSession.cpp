@@ -55,7 +55,6 @@ void ActiveSession::Run() {
 				case 0:			Greeting(in, out); break;
 				case 10:		Register(in, out); break;
 				case 20:		Login(in, out); break;
-				case 30:		Set(in, out); break;
 				case 40:		Get(in, out); break;
 				case 50:		Poll(in, out); break;
 				
@@ -222,67 +221,6 @@ int ActiveSession::LoginId(Stream& in) {
 	return user_id;
 }
 
-void ActiveSession::Set(Stream& in, Stream& out) {
-	int user_id = LoginId(in);
-	
-	UserDatabase& db = GetDatabase(user_id);
-	int r;
-	int key_len;
-	String key;
-	r = in.Get(&key_len, sizeof(key_len));
-	if (r != sizeof(key_len) || key_len < 0 || key_len > 200) throw Exc("Invalid key argument");
-	key = in.Get(key_len);
-	if (key.GetCount() != key_len) throw Exc("Invalid key received");
-	
-	int value_len;
-	String value;
-	r = in.Get(&value_len, sizeof(value_len));
-	if (r != sizeof(value_len) || value_len < 0 || value_len > max_set_string_len) throw Exc("Invalid value argument");
-	value = in.Get(value_len);
-	if (value.GetCount() != value_len) throw Exc("Invalid value received");
-	
-	int ret = 0;
-	/*if (key == "name") {
-		Print("Set name " + value);
-		server->lock.EnterWrite();
-		server->db.SetUser(user_id, value);
-		server->db.Flush();
-		server->lock.LeaveWrite();
-		db.name = value;
-		db.Flush();
-		
-		server->lock.EnterRead();
-		Index<int> userlist;
-		server->GetUserlist(userlist, user_id);
-		userlist.RemoveKey(user_id);
-		server->SendMessage(user_id, "name " + IntStr(user_id) + " " + value, userlist);
-		server->lock.LeaveRead();
-	}
-	else if (key == "age") {
-		Print("Set age " + value);
-		db.age = ScanInt(value);
-		db.Flush();
-	}
-	else if (key == "gender") {
-		Print("Set gender " + value);
-		db.gender = ScanInt(value);
-		db.Flush();
-	}
-	else if (key == "profile_image") {
-		Print("Set profile image");
-		
-		if (value.GetCount() > Config::max_image_size) throw Exc("Invalid image received");
-		db.profile_img = value;
-		db.profile_img_hash = ImageHash(db.profile_img);
-		db.Flush();
-		
-		StoreImageCache(db.profile_img_hash, db.profile_img);
-		
-		server->SendToAll(user_id, "profile " + IntStr(user_id) + " " + value);
-	}*/
-	out.Put32(ret);
-}
-
 void ActiveSession::Get(Stream& in, Stream& out) {
 	int user_id = LoginId(in);
 	
@@ -337,22 +275,6 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(cur);
 		}
 		
-		Sentiment& sent = GetSentiment();
-		int sentsym_count = sent.symbols.GetCount();
-		out.Put32(sentsym_count);
-		for(int i = 0; i < sentsym_count; i++) {
-			String sym = sent.symbols[i];
-			out.Put32(sym.GetCount());
-			out.Put(sym);
-		}
-		
-		int sentcur_count = sent.currencies.GetCount();
-		out.Put32(sentcur_count);
-		for(int i = 0; i < sentcur_count; i++) {
-			String cur = sent.currencies[i];
-			out.Put32(cur.GetCount());
-			out.Put(cur);
-		}
 	}
 	else if (key == "quotes") {
 		MetaTrader& mt = GetMetaTrader();
@@ -508,53 +430,6 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put32(ev.actual.GetCount());	out.Put(ev.actual);
 		}
 	}
-	else if (key == "senthist") {
-		Sentiment& sent = GetSentiment();
-		
-		out.Put32(sent.sents.GetCount());
-		for(int i = 0; i < sent.sents.GetCount(); i++) {
-			SentimentSnapshot& snap = sent.sents[i];
-			
-			out.Put32(snap.cur_pres.GetCount());
-			for(int j = 0; j < snap.cur_pres.GetCount(); j++)
-				out.Put32(snap.cur_pres[j]);
-			
-			out.Put32(snap.pair_pres.GetCount());
-			for(int j = 0; j < snap.pair_pres.GetCount(); j++)
-				out.Put32(snap.pair_pres[j]);
-			
-			out.Put32(snap.comment.GetCount());
-			out.Put(snap.comment);
-			out.Put32(snap.added.Get() - Time(1970,1,1).Get());
-			out.Put(&snap.fmlevel, sizeof(double));
-			out.Put(&snap.tplimit, sizeof(double));
-			out.Put(&snap.equity, sizeof(double));
-		}
-	}
-	else if (key == "errorlist") {
-		MemStream mem((void*)data.Begin(), data.GetCount());
-		
-		SentimentSnapshot snap;
-		GetSentSnap(snap, mem);
-		
-		Index<EventError> errors;
-		GetEventSystem().GetErrorList(snap, errors);
-		
-		out.Put32(errors.GetCount());
-		for(int i = 0; i < errors.GetCount(); i++) {
-			const EventError& e = errors[i];
-			out.Put32(e.msg.GetCount());
-			out.Put(e.msg);
-			out.Put32(e.level);
-			out.Put32(e.time.Get() - Time(1970,1,1).Get());
-		}
-	}
-	else if (key == "sendsent") {
-		MemStream mem((void*)data.Begin(), data.GetCount());
-		Sentiment& sent = GetSentiment();
-		GetSentSnap(sent.AddSentiment(), mem);
-		sent.StoreThis();
-	}
 	
 	out.Seek(size_pos);
 	out.Put32(out.GetSize() - size_pos - 4);
@@ -562,23 +437,6 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	out.Put32(0);
 }
 
-void ActiveSession::GetSentSnap(SentimentSnapshot& snap, Stream& mem) {
-	int cur_count = mem.Get32();
-	snap.cur_pres.SetCount(cur_count);
-	for(int j = 0; j < cur_count; j++)
-		snap.cur_pres[j] = mem.Get32();
-	int pair_count = mem.Get32();
-	snap.pair_pres.SetCount(pair_count);
-	for(int j = 0; j < pair_count; j++)
-		snap.pair_pres[j] = mem.Get32();
-	int comment_len = mem.Get32();
-	snap.comment = mem.Get(comment_len);
-	mem.Get(&snap.fmlevel, sizeof(double));
-	mem.Get(&snap.tplimit, sizeof(double));
-	
-	snap.added = GetUtcTime();
-	snap.equity = GetMetaTrader().AccountEquity();
-}
 
 void ActiveSession::Poll(Stream& in, Stream& out) {
 	int user_id = LoginId(in);

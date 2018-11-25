@@ -11,7 +11,8 @@ uses
 	Core/SSL,
 	ConvNet,
 	PushNotification,
-	plugin/cctz;
+	plugin/cctz,
+	MailClient;
 
 file
 	Copying,
@@ -61,16 +62,16 @@ file
 	DataBridge.cpp,
 	Calendar.h,
 	Calendar.cpp,
-	Sentiment.h,
-	Sentiment.cpp,
 	Automation.h,
 	Automation.cpp,
 	Server.h,
 	Server.cpp,
 	ActiveSession.cpp,
 	Database.cpp,
-	EventSystem.h,
-	EventSystem.cpp;
+	Signal.h,
+	Signal.cpp,
+	ForeSignal.h,
+	ForeSignal.cpp;
 
 mainconfig
 	"" = "GUI MT",

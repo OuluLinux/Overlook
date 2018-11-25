@@ -121,8 +121,6 @@ public:
 	int  LoginId(Stream& in);
 	void Poll(Stream& in, Stream& out);
 	void Get(Stream& in, Stream& out);
-	void Set(Stream& in, Stream& out);
-	void GetSentSnap(SentimentSnapshot& snap, Stream& stream);
 };
 
 class Server : public Common {
@@ -154,7 +152,7 @@ public:
 	virtual void Start();
 	virtual void Deinit();
 	
-	void NewEvent(EventError e);
+	void NewEvent(int level, String e);
 	void Process();
 	int64 GetNewLoginId();
 };

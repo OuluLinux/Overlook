@@ -34,6 +34,7 @@ public:
 	ConstBuffer& GetBuffer(int sym, int src, int buf) const {return *bufs[sym][src][buf];}
 	ConstLabelSignal& GetLabelSignal(int sym, int src) const {return *lbls[sym][src];}
 	bool IsEmpty() {return bufs.IsEmpty();}
+	DataBridge* GetDataBridge(int i) {return db[i];}
 	
 	void Init();
 	void Refresh();

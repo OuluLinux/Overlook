@@ -19,7 +19,7 @@ Server::Server() {
 }
 
 void Server::Init() {
-	GetEventSystem().WhenError << THISBACK(NewEvent);
+	GetForeSignal().WhenEvent << THISBACK(NewEvent);
 	
 	db.Init();
 	
@@ -36,14 +36,14 @@ void Server::Deinit() {
 	listener.Close();
 }
 
-void Server::NewEvent(EventError e) {
+void Server::NewEvent(int level, String e) {
 	String msg;
-	switch (e.level) {
+	switch (level) {
 		case 0: msg += "info "; break;
 		case 1: msg += "warning "; break;
 		case 2: msg += "error "; break;
 	}
-	msg += e.msg;
+	msg += e;
 	for(int i = 0; i < db.GetUserCount(); i++) {
 		UserDatabase& db = GetDatabase(i);
 		db.lock.Enter();

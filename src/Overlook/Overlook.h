@@ -9,6 +9,7 @@
 #include <plugin/libmt/libmt.h>
 #include <SubWindowCtrl/SubWindowCtrl.h>
 #include <PushNotification/PushNotification.h>
+#include <MailClient/IMAPClient.h>
 using namespace Upp;
 
 
@@ -32,10 +33,10 @@ using namespace Upp;
 #include "Navigator.h"
 #include "ChartManager.h"
 #include "Arbitrage.h"
-#include "Sentiment.h"
 #include "Automation.h"
-#include "EventSystem.h"
 #include "Server.h"
+#include "Signal.h"
+#include "ForeSignal.h"
 
 
 namespace Overlook {

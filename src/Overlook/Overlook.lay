@@ -164,3 +164,19 @@ LAYOUT(RuleAnalyzer, 832, 432)
 	ITEM(ParentCtrl, agent_tab, HSizePosZ(0, 0).VSizePosZ(104, 32))
 END_LAYOUT
 
+LAYOUT(AutomationCtrl, 252, 176)
+	ITEM(Label, dv___0, SetLabel(t_("Stop-loss:")).HCenterPosZ(100, -72).VCenterPosZ(19, 46))
+	ITEM(Label, dv___1, SetLabel(t_("Take-profit:")).HCenterPosZ(100, -72).VCenterPosZ(19, 22))
+	ITEM(Label, dv___2, SetLabel(t_("Open:")).HCenterPosZ(100, -72).VCenterPosZ(19, -2))
+	ITEM(EditDouble, sl, HCenterPosZ(140, 52).VCenterPosZ(19, 46))
+	ITEM(Button, save, SetLabel(t_("Save")).HCenterPosZ(244, 0).VCenterPosZ(23, 72))
+	ITEM(EditDouble, tp, HCenterPosZ(140, 52).VCenterPosZ(19, 22))
+	ITEM(EditDouble, open, HCenterPosZ(140, 52).VCenterPosZ(19, -2))
+	ITEM(Label, dv___7, SetLabel(t_("Signal:")).HCenterPosZ(100, -72).VCenterPosZ(19, -26))
+	ITEM(Label, dv___8, SetLabel(t_("Length (hours):")).HCenterPosZ(100, -72).VCenterPosZ(19, -50))
+	ITEM(EditDouble, length, HCenterPosZ(140, 52).VCenterPosZ(19, -50))
+	ITEM(Label, dv___10, SetLabel(t_("Symbol:")).HCenterPosZ(100, -72).VCenterPosZ(19, -74))
+	ITEM(DropList, symbol, HCenterPosZ(140, 52).VCenterPosZ(19, -74))
+	ITEM(DropList, signal, HCenterPosZ(140, 52).VCenterPosZ(19, -26))
+END_LAYOUT
+

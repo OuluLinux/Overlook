@@ -29,14 +29,6 @@
             android:icon="@drawable/ic_event_note_black_24dp"
             android:title="@string/events" />
         <item
-            android:id="@+id/nav_sentimenthistory"
-            android:icon="@drawable/ic_sentiment_satisfied_black_24dp"
-            android:title="@string/sentimenthistory" />
-        <item
-            android:id="@+id/nav_sentiment"
-            android:icon="@drawable/ic_sentiment_neutral_black_24dp"
-            android:title="@string/sentiment" />
-        <item
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_settings_black_24dp"
             android:title="@string/settings" />

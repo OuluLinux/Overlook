@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Overlook";
     private static final int REQUEST_PERMISSION_LOCATION = 255; // int should be between 0 and 255
 
-    enum MainView {QUOTES, CANDLESTICKS, ORDERS, HISTORY, CALENDAR, EVENTS, SENTIMENTHISTORY, SENTIMENT};
+    enum MainView {QUOTES, CANDLESTICKS, ORDERS, HISTORY, CALENDAR, EVENTS};
     private MainView last_view;
 
 
@@ -205,14 +205,6 @@ public class MainActivity extends AppCompatActivity {
             setContentView(R.layout.events);
             title = getApplicationContext().getResources().getString(R.string.events);
         }
-        else if (last_view == MainView.SENTIMENTHISTORY) {
-            setContentView(R.layout.senthistory);
-            title = getApplicationContext().getResources().getString(R.string.sentimenthistory);
-        }
-        else if (last_view == MainView.SENTIMENT) {
-            setContentView(R.layout.sent);
-            title = getApplicationContext().getResources().getString(R.string.sentiment);
-        }
 
 
 
@@ -244,10 +236,6 @@ public class MainActivity extends AppCompatActivity {
                             setView(MainView.CALENDAR);
                         if (id == R.id.nav_events)
                             setView(MainView.EVENTS);
-                        if (id == R.id.nav_sentimenthistory)
-                            setView(MainView.SENTIMENTHISTORY);
-                        if (id == R.id.nav_sentiment)
-                            setView(MainView.SENTIMENT);
 
                         // Add code here to update the UI based on the item selected
                         // For example, swap UI fragments here
@@ -292,12 +280,6 @@ public class MainActivity extends AppCompatActivity {
         else if (last_view == MainView.EVENTS) {
             dataEvents();
         }
-        else if (last_view == MainView.SENTIMENTHISTORY) {
-            refreshSentimentHistory();
-        }
-        else if (last_view == MainView.SENTIMENT) {
-            dataSentiment();
-        }
 
         AppService.last.lock.unlock();
     }
@@ -321,8 +303,6 @@ public class MainActivity extends AppCompatActivity {
     void refreshCalendar() {
         AppService.last.startRefreshCalendar();
     }
-
-    void refreshSentimentHistory() { AppService.last.startRefreshSentimentHistory(); }
 
     void dataQuotes() {
         List<String> itemname = new Vector<>();
@@ -437,97 +417,6 @@ public class MainActivity extends AppCompatActivity {
         list.setAdapter(adapter);
     }
 
-    public void dataSentimentHistory() {
-        List<String> itemname = new Vector<>();
-        for (SentimentSnapshot snap : AppService.last.senthist_list)
-            itemname.add(snap.comment);
-
-        SentimentAdapter adapter = new SentimentAdapter(this, itemname, AppService.last.senthist_list);
-        ListView list = (ListView)findViewById(R.id.sentimenthistory_list);
-        list.setAdapter(adapter);
-
-    }
-
-    public void initSentiment() {
-        sent_cur_values = new Vector<>();
-
-        List<String> currencies = new Vector<>();
-        for (String s: AppService.last.sent_currencies)
-            sent_cur_values.add(0);
-
-        sent_pair_values = new Vector<>();
-
-        List<String> pairs = new Vector<>();
-        for (String s: AppService.last.sent_pairs)
-            sent_pair_values.add(0);
-    }
-
-    public void dataSentiment() {
-        List<String> currencies = new Vector<>();
-        for (String s: AppService.last.sent_currencies)
-            currencies.add(s);
-
-        SentimentCurrencyAdapter currency_adapter = new SentimentCurrencyAdapter (this, currencies, AppService.last.sent_currencies);
-        ListView curlist = (ListView)findViewById(R.id.cur_list);
-        curlist.setAdapter(currency_adapter );
-
-        List<String> pairs = new Vector<>();
-        for (String s: AppService.last.sent_pairs)
-            pairs.add(s);
-
-        SentimentPairAdapter pair_adapter = new SentimentPairAdapter(this, pairs, AppService.last.sent_pairs);
-        ListView pairlist = (ListView)findViewById(R.id.pair_list);
-        pairlist.setAdapter(pair_adapter );
-
-        Button check = findViewById(R.id.check);
-        check.setOnClickListener(new Button.OnClickListener() {
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.last, CheckActivity.class));
-            }
-        });
-
-        final EditText comment = findViewById(R.id.comment);
-
-        Button send = findViewById(R.id.send);
-        send.setOnClickListener(new Button.OnClickListener() {
-            public void onClick(View v) {
-                SentimentSnapshot snap = new SentimentSnapshot();
-                snap.cur_pres = new Vector<>();
-                snap.pair_pres = new Vector<>();
-                snap.comment = comment.getText().toString();
-                for (Integer i : MainActivity.last.sent_cur_values)
-                    snap.cur_pres.add(i);
-                for (Integer i : MainActivity.last.sent_pair_values)
-                    snap.pair_pres.add(i);
-
-                AppService.last.startSendSnapshot(snap);
-            }
-        });
-    }
-
-    public void setCurPairPressures() {
-        Map<String, Integer> pres = new HashMap<>();
-
-        for (int i = 0; i < sent_cur_values.size(); i++) {
-            String cur = AppService.last.sent_currencies.get(i);
-            int value = sent_cur_values.get(i);
-            pres.put(cur, value);
-        }
-
-        for (int i = 0; i < sent_pair_values.size(); i++) {
-            String pair = AppService.last.sent_pairs.get(i);
-            String a = pair.substring(0, 3);
-            String b = pair.substring(3, 6);
-            int ap = 0;
-            if (pres.containsKey(a)) ap = pres.get(a);
-            int bp = 0;
-            if (pres.containsKey(b)) bp = pres.get(b);
-            int p = ap - bp;
-            sent_pair_values.set(i, p);
-        }
-
-        dataSentiment();
-    }
 }
 
 
@@ -680,114 +569,6 @@ class EventAdapter extends ArrayAdapter<String> {
             event.setTextColor(Color.rgb(111,0,0));
         else if (e.level == 1)
             event.setTextColor(Color.rgb(111,111,0));
-
-        return rowView;
-
-    };
-}
-
-
-class SentimentAdapter extends ArrayAdapter<String> {
-
-    private final Activity context;
-    private final List<SentimentSnapshot> values;
-
-    public SentimentAdapter(Activity context, List<String> items, List<SentimentSnapshot> values) {
-        super(context, R.layout.quoteslist, items);
-
-        this.context=context;
-        this.values=values;
-    }
-
-    public View getView(int position, View view, ViewGroup parent) {
-        LayoutInflater inflater = context.getLayoutInflater();
-        View rowView = inflater.inflate(R.layout.senthistorylist, null,true);
-
-        TextView comment = (TextView) rowView.findViewById(R.id.comment);
-        TextView time = (TextView) rowView.findViewById(R.id.time);
-        TextView profit = (TextView) rowView.findViewById(R.id.profit);
-
-        int pos = values.size() - 1 - position;
-        SentimentSnapshot snap = values.get(pos);
-
-        comment.setText(snap.comment);
-        time.setText(snap.added.toString());
-        if (pos < values.size() - 1) {
-            SentimentSnapshot next = values.get(pos + 1);
-            profit.setText(Double.toString(next.equity - snap.equity));
-        }
-
-        return rowView;
-
-    };
-}
-
-
-class SentimentCurrencyAdapter extends ArrayAdapter<String> {
-
-    private final Activity context;
-    private final List<String> values;
-
-    public SentimentCurrencyAdapter(Activity context, List<String> items, List<String> values) {
-        super(context, R.layout.sentlist, items);
-
-        this.context=context;
-        this.values=values;
-    }
-
-    public View getView(final int position, View view, ViewGroup parent) {
-        LayoutInflater inflater = context.getLayoutInflater();
-        View rowView = inflater.inflate(R.layout.sentlist, null,true);
-
-        TextView symbol = (TextView) rowView.findViewById(R.id.symbol);
-        symbol.setText(values.get(position));
-
-        StartPointSeekBar bar = rowView.findViewById(R.id.slider);
-        bar.setProgress(MainActivity.last.sent_cur_values.get(position));
-        bar.setOnSeekBarChangeListener(new StartPointSeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onOnSeekBarValueChange(StartPointSeekBar bar, double value) {
-                int cur = (int)value;
-                int prev = MainActivity.last.sent_cur_values.get(position);
-                if (cur != prev) {
-                    MainActivity.last.sent_cur_values.set(position, (int) value);
-                    MainActivity.last.setCurPairPressures();
-                }
-            }
-        });
-
-        return rowView;
-
-    };
-}
-
-class SentimentPairAdapter extends ArrayAdapter<String> {
-
-    private final Activity context;
-    private final List<String> values;
-
-    public SentimentPairAdapter (Activity context, List<String> items, List<String> values) {
-        super(context, R.layout.sentlist, items);
-
-        this.context=context;
-        this.values=values;
-    }
-
-    public View getView(final int position, View view, ViewGroup parent) {
-        LayoutInflater inflater = context.getLayoutInflater();
-        View rowView = inflater.inflate(R.layout.sentlist, null,true);
-
-        TextView symbol = (TextView) rowView.findViewById(R.id.symbol);
-        symbol.setText(values.get(position));
-
-        StartPointSeekBar bar = rowView.findViewById(R.id.slider);
-        bar.setProgress(MainActivity.last.sent_pair_values.get(position));
-        bar.setOnSeekBarChangeListener(new StartPointSeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onOnSeekBarValueChange(StartPointSeekBar bar, double value) {
-                MainActivity.last.sent_pair_values.set(position, (int) value);
-            }
-        });
 
         return rowView;
 

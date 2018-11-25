@@ -95,9 +95,7 @@ public class AppService extends Service {
     public List<String> symbols;
     public List<String> tflist;
     public Map<Integer, String> tfs;
-    public List<String> sent_pairs;
     public Set<String> currencies;
-    public List<String> sent_currencies;
     public double equity, balance, freemargin;
     public List<Order> open_orders;
     public List<Order> history_orders;
@@ -664,34 +662,7 @@ public class AppService extends Service {
             throw new Exc("Register: IOException");
         }
     }
-    boolean set(String key, byte[] value) throws Exc {
-        try {
-            ByteArrayOutputStream dout = new ByteArrayOutputStream();
-            DataOutputStream out = new DataOutputStream(dout);
 
-            out.writeInt(swap(30));
-
-            out.writeLong(swapLong(login_id));
-
-            out.writeInt(swap(key.length()));
-            out.write(key.getBytes());
-            out.writeInt(swap(value.length));
-            out.write(value);
-
-            DataInputStream in = call(dout.toByteArray());
-
-            int ret = swap(in.readInt());
-            if (ret == 1) {
-                Log.e(TAG, "Client set " + key + " failed");
-                return false;
-            }
-            Log.i(TAG, "Client set " + key);
-            return true;
-        }
-        catch (IOException e) {
-            throw new Exc("Register: IOException");
-        }
-    }
 
     byte[] get(String key) throws Exc {
         return get(key.getBytes());
@@ -848,9 +819,7 @@ public class AppService extends Service {
             symbols = new Vector<String>();
             tflist = new Vector<String>();
             tfs = new HashMap<Integer, String>();
-            sent_pairs = new Vector<String>();
             currencies = new HashSet<String>();
-            sent_currencies = new Vector<String>();
 
             {
                 int sym_count = swap(in.readInt());
@@ -883,29 +852,6 @@ public class AppService extends Service {
                     currencies.add(new String(sym));
                 }
             }
-
-            {
-                int sym_count = swap(in.readInt());
-                for (int i = 0; i < sym_count; i++) {
-                    int sym_len = swap(in.readInt());
-                    byte[] sym = new byte[sym_len];
-                    in.read(sym);
-                    String s = new String(sym);
-                    sent_pairs.add(s);
-                }
-            }
-
-            {
-                int sym_count = swap(in.readInt());
-                for (int i = 0; i < sym_count; i++) {
-                    int sym_len = swap(in.readInt());
-                    byte[] sym = new byte[sym_len];
-                    in.read(sym);
-                    sent_currencies.add(new String(sym));
-                }
-            }
-
-            MainActivity.last.initSentiment();
         }
         catch (Exc e) {}
         catch (IOException e) {}
@@ -1150,151 +1096,8 @@ public class AppService extends Service {
         thread.start();
     }
 
-    void startRefreshSentimentHistory() {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                List<SentimentSnapshot> tmp = new Vector<>();
 
-                try {
-                    byte[] data = get("senthist");
-                    DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
 
-                    int sent_count = swap(in.readInt());
-                    for(int i = 0; i < sent_count ; i++) {
-                        SentimentSnapshot snap = new SentimentSnapshot();
-                        snap.cur_pres = new Vector<Integer>();
-                        snap.pair_pres = new Vector<Integer>();
-
-                        int cur_count = swap(in.readInt());
-                        for(int j = 0; j < cur_count; j++)
-                            snap.cur_pres.add(swap(in.readInt()));
-
-                        int pair_count = swap(in.readInt());
-                        for(int j = 0; j < pair_count ; j++)
-                            snap.pair_pres.add(swap(in.readInt()));
-
-                        snap.comment = readStringSwap(in);
-                        snap.added = new Date(swap(in.readInt()) * 1000L);
-
-                        snap.fmlevel = swapDouble(in.readDouble());
-                        snap.tplimit = swapDouble(in.readDouble());
-                        snap.equity = swapDouble(in.readDouble());
-
-                        tmp.add(snap);
-                    }
-
-                }
-                catch (Exc e) {}
-                catch (IOException e) {}
-
-                senthist_list = tmp;
-
-                MainActivity.last.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.last.dataSentimentHistory();
-                    }
-                });
-            }
-        };
-        thread.start();
-    }
-
-    public void putSent(DataOutputStream out, SentimentSnapshot snap) throws IOException {
-        out.writeInt(swap(snap.cur_pres.size()));
-        for (Integer i : snap.cur_pres)
-            out.writeInt(swap(i));
-        out.writeInt(swap(snap.pair_pres.size()));
-        for (Integer i : snap.pair_pres)
-            out.writeInt(swap(i));
-        out.writeInt(swap(snap.comment.length()));
-        out.writeBytes(snap.comment);
-        out.writeDouble(swapDouble(snap.fmlevel));
-        out.writeDouble(swapDouble(snap.tplimit));
-    }
-
-    public void startRefreshCheck() {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                SentimentSnapshot snap = new SentimentSnapshot();
-                snap.cur_pres = new Vector<>();
-                snap.pair_pres = new Vector<>();
-                snap.comment = "";
-                for (Integer i : MainActivity.last.sent_pair_values)
-                    snap.pair_pres.add(i);
-
-                List<EventError> tmp = new Vector<>();
-
-                try {
-                    ByteArrayOutputStream dout = new ByteArrayOutputStream();
-                    DataOutputStream out = new DataOutputStream(dout);
-
-                    out.writeBytes("errorlist,");
-                    putSent(out, snap);
-
-                    byte[] data = get(dout.toByteArray());
-                    DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
-
-                    int err_count = swap(in.readInt());
-                    for(int i = 0; i < err_count ; i++) {
-                        EventError e = new EventError();
-
-                        e.msg = readStringSwap(in);
-                        e.level = swap(in.readInt());
-                        e.time = new Date(swap(in.readInt()) * 1000L);
-
-                        tmp.add(e);
-                    }
-
-                }
-                catch (Exc e) {}
-                catch (IOException e) {}
-
-                errors = tmp;
-
-                MainActivity.last.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        CheckActivity.last.data();
-                    }
-                });
-            }
-        };
-        thread.start();
-    }
-
-    public void startSendSnapshot(final SentimentSnapshot snap) {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                List<EventError> tmp = new Vector<>();
-
-                try {
-                    ByteArrayOutputStream dout = new ByteArrayOutputStream();
-                    DataOutputStream out = new DataOutputStream(dout);
-
-                    out.writeBytes("sendsent,");
-                    putSent(out, snap);
-
-                    byte[] data = get(dout.toByteArray());
-                }
-                catch (Exc e) {}
-                catch (IOException e) {}
-
-                errors = tmp;
-
-                MainActivity.last.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.last.setView(MainActivity.MainView.SENTIMENTHISTORY);
-                    }
-                });
-            }
-        };
-        thread.start();
-    }
 
 
 

@@ -70,6 +70,8 @@ file
 	Database.cpp,
 	Signal.h,
 	Signal.cpp,
+	Advisors.h,
+	Advisors.cpp,
 	ForeSignal.h,
 	ForeSignal.cpp;
 

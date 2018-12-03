@@ -10,6 +10,7 @@
 #include <SubWindowCtrl/SubWindowCtrl.h>
 #include <PushNotification/PushNotification.h>
 #include <MailClient/IMAPClient.h>
+#include <ConvNet/ConvNet.h>
 using namespace Upp;
 
 
@@ -37,6 +38,10 @@ using namespace Upp;
 #include "Server.h"
 #include "Signal.h"
 #include "ForeSignal.h"
+#include "Advisors.h"
+#include "NetCluster.h"
+#include "DqnAutomation.h"
+#include "Martingale.h"
 
 
 namespace Overlook {

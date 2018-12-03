@@ -12,7 +12,8 @@ uses
 	ConvNet,
 	PushNotification,
 	plugin/cctz,
-	MailClient;
+	MailClient,
+	ConvNet;
 
 file
 	Copying,
@@ -72,6 +73,12 @@ file
 	Signal.cpp,
 	Advisors.h,
 	Advisors.cpp,
+	NetCluster.h,
+	NetCluster.cpp,
+	DqnAutomation.h,
+	DqnAutomation.cpp,
+	Martingale.h,
+	Martingale.cpp,
 	ForeSignal.h,
 	ForeSignal.cpp;
 

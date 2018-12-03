@@ -89,10 +89,12 @@ INITBLOCK {
     
     System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
-    System::RegisterCommon<Automation, AutomationCtrl>("Automation");
-    System::RegisterCommon<Server, ServerCtrl>("Server");
+    //System::RegisterCommon<Automation, AutomationCtrl>("Automation");
+    //System::RegisterCommon<Server, ServerCtrl>("Server");
     //System::RegisterCommon<Signal, SignalCtrl>("Signal");
-    System::RegisterCommon<ForeSignal, ForeSignalCtrl>("ForeSignal");
+    //System::RegisterCommon<NetCluster, NetClusterCtrl>("NetCluster");
+    //System::RegisterCommon<DqnAutomation, DqnAutomationCtrl>("DqnAutomation");
+    System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
     
     
     

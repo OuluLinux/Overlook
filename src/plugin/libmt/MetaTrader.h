@@ -29,6 +29,9 @@ public:
 	void DataLeave() {data_lock.Leave();}
 	int GetTimeOffset() const {return time_offset;}
 	
+	void CloseOrder(const Order& o, double lots);
+	void OpenOrder(int sym, int op, double lots);
+	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and
 	//    some calls would intersect with Brokerage class methods, if the "_" prefix wouldn't

@@ -1,0 +1,50 @@
+description "\3770,128,128";
+
+library(WIN32) libcurl;
+
+library(POSIX) curl;
+
+file
+	webdriverxx.h,
+	webdriverxx readonly separator,
+	by.h,
+	capabilities.h,
+	client.h,
+	conversions.h,
+	element.h,
+	errors.h,
+	js_args.h,
+	keys.h,
+	picojson.h,
+	response_status_code.h,
+	session.h,
+	types2.h,
+	wait.h,
+	wait_match.h,
+	webdriver.h,
+	window.h,
+	browsers readonly separator,
+	chrome.h,
+	firefox.h,
+	ie.h,
+	phantom.h,
+	detail readonly separator,
+	error_handling.h,
+	factories.h,
+	factories_impl.h,
+	finder.h,
+	finder.inl,
+	client.inl,
+	element.inl,
+	session.inl,
+	http_client.h,
+	http_connection.h,
+	http_request.h,
+	keyboard.h,
+	meta_tools.h,
+	resource.h,
+	shared.h,
+	time.h,
+	to_string.h,
+	types.h;
+

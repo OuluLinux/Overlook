@@ -61,9 +61,9 @@ void Martingale::Init() {
 	}
 	
 	if (!opt.GetRound()) {
-		int arg_count = ARG_COUNT * nets.GetCount();
+		int arg_count = ARG_COUNT * nets.GetCount() + 1;
 		
-		opt.Max().SetCount(arg_count, 0);
+		opt.Max().SetCount(arg_count, 1);
 		opt.Min().SetCount(arg_count, 0);
 		for(int i = 0; i < nets.GetCount(); i++) {
 			int j = i * ARG_COUNT;
@@ -140,6 +140,7 @@ void Martingale::Start() {
 		if (n.lots < 0.01) n.lots = 0.01;
 		if (n.lots > 1000) n.lots = 1000;
 	}
+	double lot_multiplier = trial[trial.GetCount() - 1];
 	
 	balance = 10000;
 	
@@ -193,6 +194,8 @@ void Martingale::Start() {
 			}
 			
 			if (lots != 0.0) {
+				lots = lots / n.balance * balance;
+				lots *= lot_multiplier;
 				for(int k = 0; k < net.symbols.GetCount(); k++) {
 					int sig = net.symbols[k];
 					sym_lots[k] += sig * lots;
@@ -205,7 +208,7 @@ void Martingale::Start() {
 				SetSymbolLots(j, sym_lots[j]);
 		} else {
 			for(int j = 0; j < sym_lots.GetCount(); j++)
-				SetRealSymbolLots(j, sym_lots[j] * 0.0001);
+				SetRealSymbolLots(j, sym_lots[j]);
 		}
 	}
 	
@@ -252,6 +255,7 @@ void Martingale::Process() {
 			if (n.lots < 0.01) n.lots = 0.01;
 			if (n.lots > 1000) n.lots = 1000;
 		}
+		double lot_multiplier = trial[trial.GetCount() - 1];
 		
 		balance = 10000;
 		
@@ -266,8 +270,6 @@ void Martingale::Process() {
 		
 		for(int i = 0; i < data_count; i++) {
 			pos = i;
-			
-			double max_lots = balance * 0.0006 / net.symbols.GetCount();
 			
 			for(int j = 0; j < sym_lots.GetCount(); j++)
 				sym_lots[j] = 0;
@@ -299,6 +301,8 @@ void Martingale::Process() {
 				}
 				
 				if (lots != 0.0) {
+					lots = lots / n.balance * balance;
+					lots *= lot_multiplier;
 					for(int k = 0; k < net.symbols.GetCount(); k++) {
 						int sig = net.symbols[k];
 						sym_lots[k] += sig * lots;
@@ -306,6 +310,17 @@ void Martingale::Process() {
 				}
 			}
 			
+			if (balance <= 0)
+				break;
+			/*
+			double max_lots = balance * 0.001;
+			double lot_sum = 0;
+			for(int j = 0; j < sym_lots.GetCount(); j++)
+				lot_sum += sym_lots[j];
+			double factor = max_lots / lot_sum;
+			if (factor > 1) factor = 1;
+			if (factor < 0) factor = 0;
+			*/
 			for(int j = 0; j < sym_lots.GetCount(); j++)
 				SetSymbolLots(j, sym_lots[j]);
 		}

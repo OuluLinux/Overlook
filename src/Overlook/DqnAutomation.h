@@ -30,8 +30,8 @@ protected:
 	double equity = 0, balance = 0;
 	
 	
-	static const int sym_count = 1;
-	static const int input_length = 50;
+	static const int sym_count = 10;
+	static const int input_length = 1;
 	static const int input_count = sym_count * input_length;
 	static const int output_count = sym_count*2+1;
 	

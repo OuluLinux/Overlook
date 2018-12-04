@@ -11,6 +11,7 @@
 #include <PushNotification/PushNotification.h>
 #include <MailClient/IMAPClient.h>
 #include <ConvNet/ConvNet.h>
+#include <ConvNetCtrl/ConvNetCtrl.h>
 using namespace Upp;
 
 
@@ -41,6 +42,7 @@ using namespace Upp;
 #include "Advisors.h"
 #include "NetCluster.h"
 #include "DqnAutomation.h"
+#include "NNAutomation.h"
 #include "Martingale.h"
 
 

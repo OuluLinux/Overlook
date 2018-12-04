@@ -94,7 +94,8 @@ INITBLOCK {
     //System::RegisterCommon<Signal, SignalCtrl>("Signal");
     //System::RegisterCommon<NetCluster, NetClusterCtrl>("NetCluster");
     //System::RegisterCommon<DqnAutomation, DqnAutomationCtrl>("DqnAutomation");
-    System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
+    //System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
+    System::RegisterCommon<NNAutomation, NNAutomationCtrl>("NNAutomation");
     
     
     

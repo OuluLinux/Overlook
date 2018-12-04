@@ -13,7 +13,8 @@ uses
 	PushNotification,
 	plugin/cctz,
 	MailClient,
-	ConvNet;
+	ConvNet,
+	ConvNetCtrl;
 
 file
 	Copying,
@@ -77,6 +78,8 @@ file
 	NetCluster.cpp,
 	DqnAutomation.h,
 	DqnAutomation.cpp,
+	NNAutomation.h,
+	NNAutomation.cpp,
 	Martingale.h,
 	Martingale.cpp,
 	ForeSignal.h,

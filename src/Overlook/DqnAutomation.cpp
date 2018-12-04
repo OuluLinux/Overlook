@@ -13,7 +13,7 @@ void DqnAutomation::Init() {
 	
 	LoadThis();
 	
-	int tf = 5;
+	int tf = 6;
 	
 	for(int i = 0; i < sym_count; i++) {
 		cl_net.AddSymbol("Net" + IntStr(i));
@@ -103,11 +103,11 @@ void DqnAutomation::Process() {
 		
 		int a = dqn.Act(slist);
 		
-		if (a < 10) {
+		if (a < sym_count) {
 			Signal(pos, +1, a);
 		}
-		else if (a < 20) {
-			Signal(pos, -1, a-10);
+		else if (a < sym_count*2) {
+			Signal(pos, -1, a-sym_count);
 		}
 		else {
 			// idle
@@ -195,20 +195,22 @@ void DqnAutomation::Signal(int pos, int op, int net) {
 		
 		SymStat& ss = symstats[i];
 		
-		if (ss.type != 0) {
-			double close = cl_sym.GetBuffer(i, 0, 0).Get(pos);
-			double profit = ((close / ss.open) - 1.0) * 100000 * ss.lots;
-			if (ss.type < 0) profit *= -1;
-			balance += profit;
-		}
-
-		ss.open = cl_sym.GetBuffer(i, 0, 0).Get(pos);
 		if (ss.type != type) {
-			if (type < 0)	ss.open -= 3 * points[i];
-			else			ss.open += 3 * points[i];
+			if (ss.type != 0) {
+				double close = cl_sym.GetBuffer(i, 0, 0).Get(pos);
+				double profit = ((close / ss.open) - 1.0) * 100000 * ss.lots;
+				if (ss.type < 0) profit *= -1;
+				balance += profit;
+			}
+	
+			ss.open = cl_sym.GetBuffer(i, 0, 0).Get(pos);
+			if (ss.type != type) {
+				if (type < 0)	ss.open -= 3 * points[i];
+				else			ss.open += 3 * points[i];
+			}
+			
+			ss.type = type;
 		}
-		
-		ss.type = type;
 	}
 }
 

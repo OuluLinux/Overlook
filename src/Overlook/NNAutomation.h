@@ -11,26 +11,22 @@ class NNAutomation : public Common {
 protected:
 	friend class NNAutomationCtrl;
 	
-	struct SymStat : Moveable<SymStat> {
-		double open = 0;
-		double lots = 0;
-		int type = 0;
-	};
-	
-	// Persistent
-	ConvNet::Session ses;
-	
-	// Temporary
-	Vector<SymStat> symstats;
-	Vector<double> points;
-	Vector<double> slist;
-	CoreList cl_net, cl_sym;
-	
-	
+	static const int tf_count = 3;
+	static const int tf_begin = 4;
 	static const int sym_count = 10;
 	static const int input_length = 10;
 	static const int input_count = sym_count * input_length;
 	static const int output_count = sym_count*2+1;
+	
+	
+	// Persistent
+	ConvNet::Session ses[tf_count];
+	
+	// Temporary
+	Vector<double> points;
+	CoreList cl_net[tf_count], cl_sym[tf_count];
+	
+	
 	
 	
 	void SetRealSymbolLots(int sym_, double lots);
@@ -45,7 +41,7 @@ public:
 	virtual void Start();
 	void Process();
 	
-	void Serialize(Stream& s) {s % ses;}
+	void Serialize(Stream& s) {for(int i = 0; i < tf_count; i++) s % ses[i];}
 };
 
 inline NNAutomation& GetNNAutomation() {return GetSystem().GetCommon<NNAutomation>();}
@@ -53,9 +49,9 @@ inline NNAutomation& GetNNAutomation() {return GetSystem().GetCommon<NNAutomatio
 class NNAutomationCtrl : public CommonCtrl {
 	
 	TabCtrl tabs;
-	ConvNet::SessionConvLayers ses_view;
-	ConvNet::TrainingGraph train_view;
-	Upp::Label status;
+	Array<ConvNet::SessionConvLayers> ses_view;
+	Array<ConvNet::TrainingGraph> train_view;
+	Array<Upp::Label> status;
 	bool init = true;
 	
 public:

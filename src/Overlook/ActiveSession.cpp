@@ -267,14 +267,6 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(tf_str);
 		}
 		
-		int cur_count = sys.GetCurrencyCount();
-		out.Put32(cur_count);
-		for(int i = 0; i < cur_count; i++) {
-			String cur = sys.GetCurrency(i);
-			out.Put32(cur.GetCount());
-			out.Put(cur);
-		}
-		
 	}
 	else if (key == "quotes") {
 		MetaTrader& mt = GetMetaTrader();

@@ -774,4 +774,122 @@ bool System::RefreshReal() {
 	return true;
 }
 
+void System::ProcessNN(NNCoreItem& ci, bool store_cache) {
+	NNCore& c = *ci.core;
+	
+	if (!c.is_sampled) {
+		c.Sample(c.test_ses, false);
+		c.Sample(c.rt_ses, true);
+		c.is_sampled = true;
+	}
+	
+	if (c.test_ses.Data().GetDataCount() && c.rt_ses.Data().GetDataCount()) {
+		#if 0
+		if (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+			
+			if (!c.test_ses.IsTraining())
+				c.test_ses.StartTraining();
+			
+			while (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+				Sleep(100);
+			}
+			
+			c.test_ses.StopTraining();
+		}
+		
+		if (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+			
+			if (!c.rt_ses.IsTraining())
+				c.rt_ses.StartTraining();
+			
+			while (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+				Sleep(100);
+			}
+			
+			c.rt_ses.StopTraining();
+		}
+		
+		#else
+		
+		if (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.test_ses.IsTraining())
+			c.test_ses.StartTraining();
+		if (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.rt_ses.IsTraining())
+			c.rt_ses.StartTraining();
+			
+		while (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+			Sleep(100);
+		}
+		while (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+			Sleep(100);
+		}
+		
+		c.test_ses.StopTraining();
+		c.rt_ses.StopTraining();
+		
+		#endif
+		
+	}
+	
+	int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount();
+	
+	c.test_buf.SetCount(count, 0);
+	c.rt_buf.SetCount(count, 0);
+	c.FillVector(c.test_ses, false, c.test_buf, c.test_counted);
+	c.FillVector(c.rt_ses, false, c.rt_buf, c.rt_counted);
+	c.test_counted = count;
+	c.rt_counted = count;
+	
+	if (store_cache)
+		c.Store();
+	
+}
+
+int System::GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int factory_id) {
+	
+	int id = factory_id * 100 + tf_id;
+	
+	bool init = nndata.Find(id) == -1;
+	
+	if (init) {
+		NNCoreItem& ci = nndata.Add(id);
+		ci.tf = tf_id;
+		ci.factory = factory_id;
+		ci.core = System::NNCoreFactories()[factory_id].b();
+		
+		NNCore& c = *ci.core;
+		c.factory = factory_id;
+		c.tf = tf_id;
+		c.Load();
+		c.Init();
+		c.InitNN(c.test_ses);
+		c.InitNN(c.rt_ses);
+	}
+	
+	NNCoreItem& ci = nndata.Get(id);
+	
+	ci_queue.Insert(0, &ci);
+	
+	InNN in;
+	ci.core->Input(in);
+	for(int i = 0; i < in.factories.GetCount(); i++) {
+		GetNNCoreQueue(ci_queue, in.tfs[i], in.factories[i]);
+	}
+	
+	if (init) {
+		for(int i = 0; i < in.factories.GetCount(); i++) {
+			int tf = in.tfs[i];
+			int factory = in.factories[i];
+			
+			for(int j = 0; j < ci_queue.GetCount(); j++) {
+				if (ci_queue[j]->factory == factory && ci_queue[j]->tf == tf) {
+					ci.core->SetInputCore(i, *ci_queue[j]->core);
+					break;
+				}
+			}
+		}
+	}
+	
+	return 0;
+}
+
 }

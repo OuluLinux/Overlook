@@ -17,7 +17,7 @@ protected:
 	
 	// Persistent
 	Vector<Buffer> time_bufs;
-	Index<Time> m1_idx;
+	Vector<Index<Time> > idx;
 	
 	// Temp
 	typedef Tuple3<Time, double, double> AskBid;
@@ -58,9 +58,9 @@ public:
 	bool SyncData(int tf, int64 time, int& shift);
 	bool IsVtfTime(int wday, const Time& t);
 	ConstBuffer& GetTimeBuffer(int tf) const {return time_bufs[tf];}
-	const Index<Time>& GetTimeIndex() const {return m1_idx;}
+	const Index<Time>& GetTimeIndex(int i) const {return idx[i];}
 	int GetTimeBufferCount() const {return time_bufs.GetCount();}
-	void Serialize(Stream& s) {s % time_bufs % m1_idx;}
+	void Serialize(Stream& s) {s % time_bufs % idx;}
 	void LoadThis() {LoadFromFile(*this, ConfigFile("DataBridgeCommon.bin"));}
 	void StoreThis() {StoreToFile(*this, ConfigFile("DataBridgeCommon.bin"));}
 	
@@ -154,28 +154,6 @@ public:
 			return false;
 			#endif
 		}
-		
-		#ifdef flagHAVE_CURRENCIES
-		if (sys.IsCurrencySymbol(in_sym)) {
-			#if REFRESH_FROM_FASTER
-			if (match_tf)
-				return out_tf == 0;
-			if (in_tf == 0) {
-				String sym = sys.GetSymbol(in_sym);
-				const Index<int>& syms = sys.currency_syms.Get(sym);
-				return syms.Find(out_sym) != -1;
-			}
-			else
-				return in_sym == out_sym;
-			#else
-			if (match_tf)
-				return out_tf == in_tf;
-			String sym = sys.GetSymbol(in_sym);
-			const Index<int>& syms = sys.currency_syms.Get(sym);
-			return syms.Find(out_sym) != -1;
-			#endif
-		}
-		#endif
 		
 		if (sys.IsNetSymbol(in_sym)) {
 			#if REFRESH_FROM_FASTER

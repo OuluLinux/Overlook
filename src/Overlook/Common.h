@@ -275,6 +275,25 @@ public:
 	void Serialize(Stream& s) {s % av % win_a % sum_a % period % cursor;}
 };
 
+struct SimpleDistribution {
+	VectorMap<double, int> values;
+	int total = 0;
+	
+	void Add(double d) {values.GetAdd(d, 0)++; total++;}
+	void Finish() {SortByKey(values, StdLess<double>());}
+	double Limit(double factor) {
+		int value_limit = factor * total;
+		int sum = 0;
+		for(int i = 0; i < values.GetCount(); i++) {
+			int j = values[i];
+			if (sum + j > value_limit) {
+				return values.GetKey(i);
+			}
+			sum += j;
+		}
+		return values.TopKey();
+	}
+};
 
 struct DerivZeroTrigger {
 	int count;
@@ -439,6 +458,7 @@ struct UserExc : public Exc {
 typedef Vector<byte> CoreData;
 
 class Core;
+class NNCore;
 
 struct BatchPartStatus : Moveable<BatchPartStatus> {
 	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
@@ -704,6 +724,19 @@ public:
 	~CoreItem() {}
 	void operator=(const CoreItem& ci) {Panic("TODO");}
 	void SetInput(int input_id, int sym_id, int tf_id, CoreItem& src, int output_id);
+	
+};
+
+class NNCoreItem : Moveable<NNCoreItem>, public Pte<NNCoreItem> {
+	
+public:
+	One<NNCore> core;
+	int tf, factory;
+	
+public:
+	typedef CoreItem CLASSNAME;
+	NNCoreItem() {tf = -1; factory = -1;}
+	~NNCoreItem() {}
 	
 };
 

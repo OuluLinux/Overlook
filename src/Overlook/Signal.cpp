@@ -24,7 +24,7 @@ void Signal::Start() {
 void Signal::RefreshDays() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	
-	const Index<Time>& ti = dbc.GetTimeIndex();
+	const Index<Time>& ti = dbc.GetTimeIndex(0);
 	
 	Date cur = ti[0];
 	Date end = GetUtcTime();
@@ -70,7 +70,7 @@ void Signal::RefreshCalendarSignals() {
 	CalendarCommon& cal = GetCalendar();
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	
-	const Index<Time>& ti = dbc.GetTimeIndex();
+	const Index<Time>& ti = dbc.GetTimeIndex(0);
 	
 	if (calsig_counter > 0) calsig_counter--;
 	
@@ -229,7 +229,7 @@ void Signal::RefreshSignals() {
 	System& sys = GetSystem();
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	
-	const Index<Time>& ti = dbc.GetTimeIndex();
+	const Index<Time>& ti = dbc.GetTimeIndex(0);
 	
 	CoreList cl;
 	cl.AddTf(0);

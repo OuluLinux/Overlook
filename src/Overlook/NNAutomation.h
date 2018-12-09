@@ -23,6 +23,7 @@ protected:
 	ConvNet::Session ses[tf_count];
 	
 	// Temporary
+	Vector<Ptr<NNCoreItem> > ci_queue;
 	Vector<double> points;
 	CoreList cl_net[tf_count], cl_sym[tf_count];
 	

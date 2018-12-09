@@ -268,6 +268,8 @@ void DataBridgeCommon::RefreshTimeBuffers() {
 	time_bufs.SetCount(tf_count);
 	int64 now = GetUtcTime().Get() - Time(1970,1,1).Get();
 	
+	idx.SetCount(tf_count);
+	
 	for(int i = 0; i < tf_count; i++) {
 		Buffer& time_buf = time_bufs[i];
 		
@@ -292,10 +294,9 @@ void DataBridgeCommon::RefreshTimeBuffers() {
 			}
 		
 			time_buf.Set(shift, time);
-			if (i == 0) {
-				ASSERT(m1_idx.GetCount() == shift);
-				m1_idx.Add(Time(1970,1,1) + time);
-			}
+			
+			ASSERT(idx[i].GetCount() == shift);
+			idx[i].Add(Time(1970,1,1) + time);
 		}
 	}
 	

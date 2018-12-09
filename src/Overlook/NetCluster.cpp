@@ -35,7 +35,7 @@ void NetCluster::Init() {
 void NetCluster::Start() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	
-	const Index<Time>& ti = dbc.GetTimeIndex();
+	const Index<Time>& ti = dbc.GetTimeIndex(0);
 	
 	int data_count = ti.GetCount();
 	

@@ -95,7 +95,6 @@ public class AppService extends Service {
     public List<String> symbols;
     public List<String> tflist;
     public Map<Integer, String> tfs;
-    public Set<String> currencies;
     public double equity, balance, freemargin;
     public List<Order> open_orders;
     public List<Order> history_orders;
@@ -819,7 +818,6 @@ public class AppService extends Service {
             symbols = new Vector<String>();
             tflist = new Vector<String>();
             tfs = new HashMap<Integer, String>();
-            currencies = new HashSet<String>();
 
             {
                 int sym_count = swap(in.readInt());
@@ -840,16 +838,6 @@ public class AppService extends Service {
                     in.read(sym);
                     tfs.put(tf, new String(sym));
                     tflist.add(new String(sym));
-                }
-            }
-
-            {
-                int sym_count = swap(in.readInt());
-                for (int i = 0; i < sym_count; i++) {
-                    int sym_len = swap(in.readInt());
-                    byte[] sym = new byte[sym_len];
-                    in.read(sym);
-                    currencies.add(new String(sym));
                 }
             }
         }

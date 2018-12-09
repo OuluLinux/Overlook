@@ -202,19 +202,26 @@ public:
 	typedef Core* (*CoreFactoryPtr)();
 	typedef Common* (*CommonFactoryPtr)();
 	typedef Ctrl* (*CtrlFactoryPtr)();
+	typedef NNCore* (*NNCoreFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
 	typedef Tuple<String, CommonFactoryPtr, CtrlFactoryPtr> CommonSystem;
+	typedef Tuple<String, NNCoreFactoryPtr, NNCoreFactoryPtr> NNCoreSystem;
 	
 	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
+	static void								AddCustomNNCore(const String& name, NNCoreFactoryPtr f, NNCoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static Core*			CoreSystemSingleFn() { return &Single<T>(); }
 	template <class T> static Common*		CommonSystemSingleFn() { return &Single<T>(); }
 	template <class T> static Ctrl*			CtrlSystemSingleFn() { return &Single<T>(); }
+	template <class T> static NNCore*		NNCoreSystemFn() { return new T; }
+	template <class T> static NNCore*		NNCoreSystemSingleFn() { return &Single<T>(); }
 	inline static Vector<CoreSystem>&		CoreFactories() {static Vector<CoreSystem> list; return list;}
 	inline static Vector<CommonSystem>&		CommonFactories() {static Vector<CommonSystem> list; return list;}
+	inline static Vector<NNCoreSystem>&		NNCoreFactories() {static Vector<NNCoreSystem> list; return list;}
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
+	inline static Vector<int>&				NNs() {static Vector<int> list; return list;}
 	
 public:
 	
@@ -229,6 +236,12 @@ public:
 		CommonFactories().Add(CommonSystem(name, &System::CommonSystemSingleFn<CoreT>, &System::CtrlSystemSingleFn<CtrlT>));
 	}
 	
+	template <class CoreT> static void		RegisterNN(String name) {
+		int id = NNCoreFactories().GetCount();
+		NNs().Add(id);
+		AddCustomNNCore(name, &System::NNCoreSystemFn<CoreT>, &System::NNCoreSystemSingleFn<CoreT>);
+	}
+	
 	
 	
 	template <class CoreT> static CoreT&	GetCore() {return *dynamic_cast<CoreT*>(CoreSystemFn<CoreT>());}
@@ -238,6 +251,16 @@ public:
 	template <class CoreT> static int		Find() {
 		CoreFactoryPtr System_fn = &System::CoreSystemFn<CoreT>;
 		const Vector<CoreSystem>& facs = CoreFactories();
+		for(int i = 0; i < facs.GetCount(); i++) {
+			if (facs[i].b == System_fn)
+				return i;
+		}
+		return -1;
+	}
+	
+	template <class CoreT> static int		FindNN() {
+		NNCoreFactoryPtr System_fn = &System::NNCoreSystemFn<CoreT>;
+		const Vector<NNCoreSystem>& facs = NNCoreFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
 			if (facs[i].b == System_fn)
 				return i;
@@ -291,6 +314,7 @@ protected:
 	
 	
 	// Temporary
+	ArrayMap<int, NNCoreItem>	nndata;
 	Vector<NetSetting>			nets;
 	Vector<Vector<int> >		sym_currencies;
 	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs, major_currency_syms;
@@ -320,16 +344,9 @@ public:
 	int		GetNormalSymbolCount() const {return normal_symbol_count;}
 	NetSetting& AddNet(String s) {AddSymbol(s); return nets.Add();}
 	bool	IsNormalSymbol(int i) {return i < normal_symbol_count;}
-	#ifdef flagHAVE_CURRENCIES
-	bool	IsCurrencySymbol(int i) {return i >= normal_symbol_count && i < normal_symbol_count + currencies.GetCount();}
-	bool	IsNetSymbol(int i) {return i >= normal_symbol_count + currencies.GetCount();}
-	int		GetNetSymbol(int i) {return i + normal_symbol_count + currencies.GetCount();}
-	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count - currencies.GetCount()];}
-	#else
 	bool	IsNetSymbol(int i) {return i >= normal_symbol_count;}
 	int		GetNetSymbol(int i) {return i + normal_symbol_count;}
 	NetSetting& GetSymbolNet(int i) {return nets[i - normal_symbol_count];}
-	#endif
 	NetSetting& GetNet(int i) {return nets[i];}
 	int		GetNetCount() const {return nets.GetCount();}
 	int		GetVtfWeekbars() const {return 98;}
@@ -351,7 +368,9 @@ protected:
 public:
 	
 	void	Process(CoreItem& ci, bool store_cache, bool store_cache_if_init=true);
+	void	ProcessNN(NNCoreItem& ci, bool store_cache);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
+	int		GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int factory_id);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	Time	GetEnd() const							{return end;}
 	const Vector<FactoryRegister>& GetRegs() const	{return regs;}

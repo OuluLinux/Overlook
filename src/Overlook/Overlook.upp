@@ -78,6 +78,8 @@ file
 	NetCluster.cpp,
 	DqnAutomation.h,
 	DqnAutomation.cpp,
+	NN.h,
+	NN.cpp,
 	NNAutomation.h,
 	NNAutomation.cpp,
 	Martingale.h,

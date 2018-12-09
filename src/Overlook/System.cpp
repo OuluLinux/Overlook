@@ -41,6 +41,7 @@ System::System() {
 System::~System() {
 	StopJobs();
 	data.Clear();
+	nndata.Clear();
 }
 
 void System::Init() {
@@ -135,13 +136,6 @@ void System::FirstStart() {
 				major_currencies.Add(i);
 			}
 		}
-		
-		#ifdef flagHAVE_CURRENCIES
-		for(int i = 0; i < currencies.GetCount(); i++) {
-			int id = symbols.GetCount();
-			AddSymbol(currencies[i]);
-		}
-		#endif
 		
 		AddNet("Net0").Set("AUDCAD", +1).Set("AUDJPY", +1).Set("AUDUSD", +1).Set("CADJPY", -1).Set("CHFJPY", +1).Set("EURAUD", +1).Set("EURCAD", +1).Set("EURCHF", -1).Set("EURGBP", -1).Set("EURJPY", +1).Set("EURUSD", -1).Set("GBPCHF", +1).Set("GBPJPY", -1).Set("GBPUSD", +1).Set("NZDUSD", -1).Set("USDCAD", -1).Set("USDCHF", +1).Set("USDJPY", -1);
 		AddNet("Net1").Set("AUDCAD", -1).Set("AUDJPY", +1).Set("AUDUSD", -1).Set("CADJPY", -1).Set("CHFJPY", +1).Set("EURAUD", +1).Set("EURCAD", +1).Set("EURCHF", -1).Set("EURGBP", -1).Set("EURJPY", +1).Set("EURUSD", +1).Set("GBPCHF", -1).Set("GBPJPY", -1).Set("GBPUSD", +1).Set("NZDUSD", -1).Set("USDCAD", -1).Set("USDCHF", -1).Set("USDJPY", -1);
@@ -275,6 +269,10 @@ void System::AddSymbol(String sym) {
 
 void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef) {
 	CoreFactories().Add(CoreSystem(name, f, singlef));
+}
+
+void System::AddCustomNNCore(const String& name, NNCoreFactoryPtr f, NNCoreFactoryPtr singlef) {
+	NNCoreFactories().Add(NNCoreSystem(name, f, singlef));
 }
 
 }

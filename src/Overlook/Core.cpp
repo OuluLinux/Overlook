@@ -434,4 +434,28 @@ void Core::SetJobFinished(bool b) {
 	current_job->total		= 1;
 }
 
+
+
+
+
+
+
+
+
+
+
+void NNCore::Load() {
+	String dir = ConfigFile("nncores");
+	RealizeDirectory(dir);
+	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	LoadFromFile(*this, file);
+}
+
+void NNCore::Store() {
+	String dir = ConfigFile("nncores");
+	RealizeDirectory(dir);
+	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	StoreToFile(*this, file);
+}
+
 }

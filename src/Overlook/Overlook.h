@@ -42,6 +42,7 @@ using namespace Upp;
 #include "Advisors.h"
 #include "NetCluster.h"
 #include "DqnAutomation.h"
+#include "NN.h"
 #include "NNAutomation.h"
 #include "Martingale.h"
 

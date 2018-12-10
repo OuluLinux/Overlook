@@ -417,8 +417,9 @@ class NNCore {
 	
 protected:
 	friend class System;
+	friend class NNAutomationCtrl;
 	
-	static const int MAX_TRAIN_STEPS = 200;
+	static const int MAX_TRAIN_STEPS = 200000;
 	
 	// Persistent
 	Vector<double> test_buf, rt_buf;

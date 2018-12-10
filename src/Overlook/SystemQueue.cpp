@@ -835,7 +835,7 @@ void System::ProcessNN(NNCoreItem& ci, bool store_cache) {
 	c.test_buf.SetCount(count, 0);
 	c.rt_buf.SetCount(count, 0);
 	c.FillVector(c.test_ses, false, c.test_buf, c.test_counted);
-	c.FillVector(c.rt_ses, false, c.rt_buf, c.rt_counted);
+	c.FillVector(c.rt_ses, true, c.rt_buf, c.rt_counted);
 	c.test_counted = count;
 	c.rt_counted = count;
 	
@@ -861,8 +861,10 @@ int System::GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int fa
 		c.tf = tf_id;
 		c.Load();
 		c.Init();
-		c.InitNN(c.test_ses);
-		c.InitNN(c.rt_ses);
+		if (c.test_ses.GetStepCount() == 0)
+			c.InitNN(c.test_ses);
+		if (c.rt_ses.GetStepCount() == 0)
+			c.InitNN(c.rt_ses);
 	}
 	
 	NNCoreItem& ci = nndata.Get(id);

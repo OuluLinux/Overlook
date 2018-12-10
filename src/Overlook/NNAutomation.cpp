@@ -11,8 +11,27 @@ NNAutomation::NNAutomation() {
 void NNAutomation::Init() {
 	System& sys = GetSystem();
 	
-	sys.GetNNCoreQueue(ci_queue, 4, sys.FindNN<IntPerfNN>());
+	int tf = 5;
 	
+	sys.GetNNCoreQueue(ci_queue, tf, sys.FindNN<IntPerfNN>());
+	
+	for(int i = 0; i < sym_count; i++) {
+		cl_net.AddSymbol("Net" + IntStr(i));
+	}
+	cl_net.AddTf(tf);
+	cl_net.AddIndi(0);
+	cl_net.Init();
+	cl_net.Refresh();
+	
+	
+	System::NetSetting& net = sys.GetNet(0);
+	for(int i = 0; i < net.symbols.GetCount(); i++) {
+		cl_sym.AddSymbol(net.symbols.GetKey(i));
+	}
+	cl_sym.AddTf(tf);
+	cl_sym.AddIndi(0);
+	cl_sym.Init();
+	cl_sym.Refresh();
 }
 
 void NNAutomation::Start() {
@@ -22,10 +41,26 @@ void NNAutomation::Start() {
 		sys.ProcessNN(*ci_queue[i], true);
 	}
 	
-	//for(int i = 0; i < used_sym_lots.GetCount(); i++)
-	//	SetRealSymbolLots(i, used_sym_lots[i] * factor);
-
 	
+	NNCore& c = *ci_queue.Top()->core;
+	
+	cl_net.Refresh();
+	cl_sym.Refresh();
+	int pos = cl_sym.GetBuffer(0, 0, 4).GetCount() - 1;
+	
+	Vector<double> output;
+	c.Start(true, pos, output);
+	
+	double balance = GetMetaTrader().AccountBalance();
+	double max_lots_sum = balance * 0.001;
+	double lot_sum = 0;
+	for(int j = 0; j < output.GetCount(); j++)
+		lot_sum += fabs(output[j]);
+	double factor = max_lots_sum / lot_sum;
+
+	for(int i = 0; i < output.GetCount(); i++)
+		SetRealSymbolLots(i, output[i] * factor);
+
 }
 
 void NNAutomation::SetRealSymbolLots(int sym_, double lots) {
@@ -120,41 +155,99 @@ void NNAutomation::SetRealSymbolLots(int sym_, double lots) {
 
 
 NNAutomationCtrl::NNAutomationCtrl() {
-	NNAutomation& a = GetNNAutomation();
-	
-	ses_view.SetCount(NNAutomation::tf_count);
-	train_view.SetCount(NNAutomation::tf_count);
-	status.SetCount(NNAutomation::tf_count);
-	
-	Add(tabs.SizePos());
-	for(int i = 0; i < NNAutomation::tf_count; i++) {
-		tabs.Add(ses_view[i].SizePos(), "Session " + IntStr(i));
-		tabs.Add(train_view[i].SizePos(), "Training " + IntStr(i));
-		tabs.Add(status[i].SizePos(), "Status " + IntStr(i));
-		
-		ses_view[i].SetSession(a.ses[i]);
-		train_view[i].SetSession(a.ses[i]);
-		train_view[i].SetModeLoss();
-	}
-	
+	Add(hsplit.SizePos());
+	hsplit.Horz();
+	hsplit << queuelist << itemctrl;
+	hsplit.SetPos(2000);
+	queuelist.AddColumn("Name");
+	queuelist.AddColumn("Progress");
+	queuelist.ColumnWidths("2 1");
+	queuelist <<= THISBACK(SetItem);
+}
+
+void NNAutomationCtrl::SetItem() {
+	Data();
 }
 
 void NNAutomationCtrl::Data() {
+	NNAutomation& a = GetNNAutomation();
+	
+	if (is_initing) return;
+	
 	if (init) {
-		for(int i = 0; i < NNAutomation::tf_count; i++)
+		if (a.ci_queue.IsEmpty()) return;
+		
+		is_initing = true;
+		
+		for(int i = 0; i < a.ci_queue.GetCount(); i++) {
+			NNCore& c = *a.ci_queue[i]->core;
+			String fac = System::NNCoreFactories()[a.ci_queue[i]->factory].a;
+			String tf = GetSystem().GetPeriodString(a.ci_queue[i]->tf);
+			queuelist.Set(i * 2 + 0, 0, tf + " " + fac + " test");
+			queuelist.Set(i * 2 + 1, 0, tf + " " + fac + " rt");
+		}
+		queuelist.SetCursor(0);
+		
+		int count = a.ci_queue.GetCount() * 2;
+		
+		tabslist.SetCount(count);
+		ses_view.SetCount(count);
+		train_view.SetCount(count);
+		status.SetCount(count);
+		draws.SetCount(count);
+		
+		for(int i = 0; i < count; i++) {
+			TabCtrl& tabs = tabslist[i];
+			
+			int ci_id = i / 2;
+			int is_rt = i % 2;
+			NNCore& c = *a.ci_queue[ci_id]->core;
+			ConvNet::Session& ses = is_rt ? c.rt_ses : c.test_ses;
+			ses_list.Add(&ses);
+			
+			draws[i].buf = is_rt ? &c.rt_buf : &c.test_buf;
+			
+			tabs.Add(draws[i].SizePos(), "Buffer drawer");
+			tabs.Add(ses_view[i].SizePos(), "Session");
+			tabs.Add(train_view[i].SizePos(), "Training");
+			tabs.Add(status[i].SizePos(), "Status");
+			
+			ses_view[i].SetSession(ses);
+			train_view[i].SetSession(ses);
+			train_view[i].SetModeLoss();
+			
 			ses_view[i].RefreshLayers();
+		}
+		
 		init = false;
+		is_initing = false;
 	}
 	
-	int tab = tabs.Get();
-	int tab_mode = tab % 3;
-	int tfi = tab / 3;
+	for(int i = 0; i < a.ci_queue.GetCount(); i++) {
+		NNCore& c = *a.ci_queue[i]->core;
+		
+		queuelist.Set(i * 2 + 0, 1, c.test_ses.GetStepCount() * 1000 / NNCore::MAX_TRAIN_STEPS);
+		queuelist.Set(i * 2 + 1, 1, c.rt_ses.GetStepCount()   * 1000 / NNCore::MAX_TRAIN_STEPS);
+		queuelist.SetDisplay(i * 2 + 0, 1, ProgressDisplay());
+		queuelist.SetDisplay(i * 2 + 1, 1, ProgressDisplay());
+	}
 	
-	if (tab_mode == 0) ses_view[tfi].Refresh();
-	if (tab_mode == 1) train_view[tfi].RefreshData();
-	if (tab_mode == 2) {
-		NNAutomation& a = GetNNAutomation();
-		ConvNet::Session& ses = a.ses[tfi];
+	int id = queuelist.GetCursor();
+	TabCtrl& tabs = tabslist[id];
+	if (&tabs != prev_tabs) {
+		if (prev_tabs)
+			itemctrl.RemoveChild(prev_tabs);
+		prev_tabs = &tabs;
+		itemctrl.Add(tabs.SizePos());
+	}
+	
+	int tab_mode = tabs.Get();
+	
+	if (tab_mode == 0) draws[id].Refresh();
+	if (tab_mode == 1) ses_view[id].Refresh();
+	if (tab_mode == 2) train_view[id].RefreshData();
+	if (tab_mode == 3) {
+		ConvNet::Session& ses = *ses_list[id];
 		String s;
 		s << "   Forward time per example: " << ses.GetForwardTime() << "\n";
 		s << "   Backprop time per example: " << ses.GetBackwardTime() << "\n";
@@ -162,7 +255,7 @@ void NNAutomationCtrl::Data() {
 		s << "   L2 Weight decay loss: " << ses.GetL2DecayLossAverage() << "\n";
 		s << "   L1 Weight decay loss: " << ses.GetL1DecayLossAverage() << "\n";
 		s << "   Examples seen: " << ses.GetStepCount();
-		status[tfi].SetLabel(s);
+		status[id].SetLabel(s);
 	}
 }
 

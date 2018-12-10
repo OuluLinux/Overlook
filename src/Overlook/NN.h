@@ -37,9 +37,9 @@ public:
 	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
 	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
 	virtual void Input(InNN& in) {
-		in.Add<NetNN>(4);
 		in.Add<NetNN>(5);
 		in.Add<NetNN>(6);
+		in.Add<NetNN>(7);
 	}
 };
 
@@ -66,7 +66,7 @@ public:
 	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
 	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
 	virtual void Input(InNN& in) {
-		in.Add<MultiTfNetNN>(4);
+		in.Add<MultiTfNetNN>(5);
 	}
 	virtual void SerializeNN(Stream& s) {s % op_hist;}
 	

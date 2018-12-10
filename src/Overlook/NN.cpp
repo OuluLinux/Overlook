@@ -179,7 +179,6 @@ void MultiTfNetNN::Init() {
 	System& sys = GetSystem();
 	
 	int tf = GetTf();
-	ASSERT(tf == 4);
 	
 	System::NetSetting& net = sys.GetNet(0);
 	for(int i = 0; i < net.symbols.GetCount(); i++) {
@@ -200,6 +199,12 @@ void MultiTfNetNN::Sample(ConvNet::Session& ses, bool is_realtime) {
 	
 }
 
+int WeekBegin(int wday) {
+	wday -= 1;
+	if (wday == -1) wday += 7;
+	return wday;
+}
+
 void MultiTfNetNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output) {
 	System& sys = GetSystem();
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
@@ -214,7 +219,7 @@ void MultiTfNetNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vecto
 	Time t = Time(1970,1,1) + cl_sym.GetBuffer(0, 0, 4).Get(pos);
 	
 	for(int i = 0; i < 3; i++) {
-		int tf = 4 + i;
+		int tf = 5 + i;
 		const Index<Time>& idx = dbc.GetTimeIndex(tf);
 		
 		Time tf_time = t;
@@ -222,11 +227,19 @@ void MultiTfNetNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vecto
 			case 4: break;
 			case 5: tf_time.hour -= tf_time.hour % 4; break;
 			case 6: tf_time.hour = 0; break;
+			case 7: tf_time.hour = 0;
+				for(int j = 0; j < 7; j++) {
+					if (idx.Find(tf_time) != -1)
+						break;
+					tf_time -= 24*60*60;
+				}
+				break;
 			default: Panic("Invalid tf");
 		}
 		
 		int tf_pos = idx.Find(tf_time);
-		if (tf_pos == -1) continue;
+		if (tf_pos == -1)
+			continue;
 		
 		NNCore& c = GetInputCore(i);
 		
@@ -378,7 +391,7 @@ void IntPerfNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<d
 	for(int i = 0; i < input_length; i++) {
 		double cur = buf[max(0, pos-i-1)];
 		double ch = next / cur - 1.0;
-		ch *= 100;
+		ch *= 100000;
 		if (!IsFin(ch)) ch = 0;
 		vol.Set(i, ch);
 		next = cur;

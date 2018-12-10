@@ -304,7 +304,7 @@ int MetaTrader::Init(String addr, int port) {
 void MetaTrader::CloseOrder(const Order& o, double lots) {
 	if (lots < 0.01)
 		return;
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 3; i++) {
 		double price;
 		if (o.type == OP_BUY)
 			price = RealtimeBid(o.symbol);
@@ -317,7 +317,7 @@ void MetaTrader::CloseOrder(const Order& o, double lots) {
 }
 
 void MetaTrader::OpenOrder(int sym, int op, double lots) {
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < 3; i++) {
 		double price;
 		if (op == OP_BUY)
 			price = RealtimeAsk(sym);

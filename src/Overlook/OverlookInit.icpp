@@ -99,8 +99,7 @@ INITBLOCK {
     
     
     System::RegisterNN<NetNN>("Net");
-    System::RegisterNN<MultiTfNetNN>("Multi Tf Net NN");
-    System::RegisterNN<IntPerfNN>("Internal performance");
+    System::RegisterNN<CombineNN>("Combine Net NN");
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());
 	

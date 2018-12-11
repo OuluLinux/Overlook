@@ -731,11 +731,11 @@ class NNCoreItem : Moveable<NNCoreItem>, public Pte<NNCoreItem> {
 	
 public:
 	One<NNCore> core;
-	int tf, factory;
+	int sym, tf, factory;
 	
 public:
 	typedef CoreItem CLASSNAME;
-	NNCoreItem() {tf = -1; factory = -1;}
+	NNCoreItem() {sym = -1; tf = -1; factory = -1;}
 	~NNCoreItem() {}
 	
 };

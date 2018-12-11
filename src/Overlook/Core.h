@@ -406,10 +406,10 @@ protected:
 
 
 struct InNN {
-	Vector<int> factories, tfs;
+	Vector<int> factories, syms, tfs;
 	
 	template <class T>
-	void Add(int tf) {factories.Add(System::FindNN<T>()); tfs.Add(tf);}
+	void Add(int sym, int tf) {factories.Add(System::FindNN<T>()); syms.Add(sym); tfs.Add(tf);}
 	
 };
 
@@ -419,42 +419,51 @@ protected:
 	friend class System;
 	friend class NNAutomationCtrl;
 	
-	static const int MAX_TRAIN_STEPS = 200000;
 	
 	// Persistent
 	Vector<double> test_buf, rt_buf;
-	ConvNet::Session test_ses, rt_ses;
+	ConvNet::Brain test_bra, rt_bra;
 	int test_counted = 0, rt_counted = 0;
 	
 	
 	// Temporary
 	Vector<NNCore*> input_cores;
-	int factory = -1, tf = -1;
-	bool is_sampled = false;
+	int factory = -1, sym = -1, tf = -1;
+	bool is_trainable = true;
+	bool running[2], stopped[2];
 	
 	
 	int GetTf() {return tf;}
+	int GetSymbol() {return sym;}
 	NNCore& GetInputCore(int i) {return *input_cores[i];}
 	
 public:
+	typedef NNCore CLASSNAME;
+	NNCore();
+	
+	bool IsTraining(bool is_rt) {return running[is_rt];}
+	void StartTraining(bool is_rt) {Thread::Start(THISBACK1(Train, is_rt));}
+	void StopTraining(bool is_rt);
+	void Train(bool is_rt);
 	
 	virtual void Init() = 0;
-	virtual void InitNN(ConvNet::Session& ses) = 0;
-	virtual void Sample(ConvNet::Session& ses, bool is_realtime) = 0;
-	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output) = 0;
-	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted) = 0;
+	virtual void InitNN(ConvNet::Brain& brain) = 0;
+	virtual void Iterate(ConvNet::Brain& brain, bool is_realtime, Vector<double>& buf) = 0;
+	virtual void Start(ConvNet::Brain& brain, bool is_realtime, int pos, Vector<double>& output) = 0;
+	virtual void FillVector(ConvNet::Brain& brain, bool is_realtime, Vector<double>& buf, int counted) = 0;
 	virtual void Input(InNN& in) = 0;
 	virtual void SerializeNN(Stream& s) {}
 	
-	void Start(bool is_realtime, int pos, Vector<double>& output) {Start(is_realtime ? rt_ses : test_ses, is_realtime, pos, output);}
+	void Start(bool is_realtime, int pos, Vector<double>& output) {Start(is_realtime ? rt_bra : test_bra, is_realtime, pos, output);}
 	
 	void Load();
 	void Store();
-	void Serialize(Stream& s) {s % test_buf % rt_buf % test_ses % rt_ses % test_counted % rt_counted; SerializeNN(s);}
+	void Serialize(Stream& s) {s % test_buf % rt_buf % test_bra % rt_bra % test_counted % rt_counted; SerializeNN(s);}
 	Vector<double>& GetBuffer(bool is_realtime) {return is_realtime ? rt_buf : test_buf;}
 	
 	void SetInputCore(int i, NNCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	
+	Callback WhenValueAdd;
 };
 
 }

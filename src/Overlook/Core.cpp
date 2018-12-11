@@ -442,19 +442,37 @@ void Core::SetJobFinished(bool b) {
 
 
 
+NNCore::NNCore() {
+	for(int i = 0; i < 2; i++) {
+		running[i] = 0;
+		stopped[i] = 1;
+	}
+}
 
+void NNCore::StopTraining(bool is_rt) {
+	running[is_rt] = 0;
+	while (!stopped[is_rt]) Sleep(100);
+}
+
+void NNCore::Train(bool is_rt) {
+	running[is_rt] = true;
+	while (running[is_rt]) {
+		Iterate(is_rt ? rt_bra : test_bra, is_rt, is_rt ? rt_buf : test_buf);
+	}
+	stopped[is_rt] = true;
+}
 
 void NNCore::Load() {
 	String dir = ConfigFile("nncores");
 	RealizeDirectory(dir);
-	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(sym) + "-" + IntStr(tf) + ".bin");
 	LoadFromFile(*this, file);
 }
 
 void NNCore::Store() {
 	String dir = ConfigFile("nncores");
 	RealizeDirectory(dir);
-	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(sym) + "-" + IntStr(tf) + ".bin");
 	StoreToFile(*this, file);
 }
 

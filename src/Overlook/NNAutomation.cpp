@@ -13,7 +13,7 @@ void NNAutomation::Init() {
 	
 	int tf = 5;
 	
-	sys.GetNNCoreQueue(ci_queue, tf, sys.FindNN<IntPerfNN>());
+	sys.GetNNCoreQueue(ci_queue, 0, tf, sys.FindNN<CombineNN>());
 	
 	for(int i = 0; i < sym_count; i++) {
 		cl_net.AddSymbol("Net" + IntStr(i));
@@ -42,7 +42,7 @@ void NNAutomation::Start() {
 	}
 	
 	
-	NNCore& c = *ci_queue.Top()->core;
+	/*NNCore& c = *ci_queue.Top()->core;
 	
 	cl_net.Refresh();
 	cl_sym.Refresh();
@@ -60,7 +60,7 @@ void NNAutomation::Start() {
 
 	for(int i = 0; i < output.GetCount(); i++)
 		SetRealSymbolLots(i, output[i] * factor);
-
+*/
 }
 
 void NNAutomation::SetRealSymbolLots(int sym_, double lots) {
@@ -169,6 +169,11 @@ void NNAutomationCtrl::SetItem() {
 	Data();
 }
 
+void NNAutomationCtrl::AddValue(int i) {
+	train_view[i * 2 + 0].AddValue();
+	train_view[i * 2 + 1].AddValue();
+}
+
 void NNAutomationCtrl::Data() {
 	NNAutomation& a = GetNNAutomation();
 	
@@ -185,6 +190,8 @@ void NNAutomationCtrl::Data() {
 			String tf = GetSystem().GetPeriodString(a.ci_queue[i]->tf);
 			queuelist.Set(i * 2 + 0, 0, tf + " " + fac + " test");
 			queuelist.Set(i * 2 + 1, 0, tf + " " + fac + " rt");
+			
+			c.WhenValueAdd << THISBACK1(AddValue, i);
 		}
 		queuelist.SetCursor(0);
 		
@@ -202,8 +209,8 @@ void NNAutomationCtrl::Data() {
 			int ci_id = i / 2;
 			int is_rt = i % 2;
 			NNCore& c = *a.ci_queue[ci_id]->core;
-			ConvNet::Session& ses = is_rt ? c.rt_ses : c.test_ses;
-			ses_list.Add(&ses);
+			ConvNet::Brain& bra = is_rt ? c.rt_bra : c.test_bra;
+			bra_list.Add(&bra);
 			
 			draws[i].buf = is_rt ? &c.rt_buf : &c.test_buf;
 			
@@ -212,11 +219,11 @@ void NNAutomationCtrl::Data() {
 			tabs.Add(train_view[i].SizePos(), "Training");
 			tabs.Add(status[i].SizePos(), "Status");
 			
-			ses_view[i].SetSession(ses);
-			train_view[i].SetSession(ses);
-			train_view[i].SetModeLoss();
+			ses_view[i].SetSession(bra);
+			train_view[i].SetSession(bra);
+			//train_view[i].SetModeLoss();
 			
-			ses_view[i].RefreshLayers();
+			//ses_view[i].RefreshLayers();
 		}
 		
 		init = false;
@@ -226,8 +233,8 @@ void NNAutomationCtrl::Data() {
 	for(int i = 0; i < a.ci_queue.GetCount(); i++) {
 		NNCore& c = *a.ci_queue[i]->core;
 		
-		queuelist.Set(i * 2 + 0, 1, c.test_ses.GetStepCount() * 1000 / NNCore::MAX_TRAIN_STEPS);
-		queuelist.Set(i * 2 + 1, 1, c.rt_ses.GetStepCount()   * 1000 / NNCore::MAX_TRAIN_STEPS);
+		queuelist.Set(i * 2 + 0, 1, c.test_bra.GetAge() * 1000 / c.test_bra.learning_steps_total);
+		queuelist.Set(i * 2 + 1, 1, c.rt_bra.GetAge()   * 1000 / c.rt_bra.learning_steps_total);
 		queuelist.SetDisplay(i * 2 + 0, 1, ProgressDisplay());
 		queuelist.SetDisplay(i * 2 + 1, 1, ProgressDisplay());
 	}
@@ -247,14 +254,13 @@ void NNAutomationCtrl::Data() {
 	if (tab_mode == 1) ses_view[id].Refresh();
 	if (tab_mode == 2) train_view[id].RefreshData();
 	if (tab_mode == 3) {
-		ConvNet::Session& ses = *ses_list[id];
+		ConvNet::Brain& b = *bra_list[id];
 		String s;
-		s << "   Forward time per example: " << ses.GetForwardTime() << "\n";
-		s << "   Backprop time per example: " << ses.GetBackwardTime() << "\n";
-		s << "   Regression loss: " << ses.GetLossAverage() << "\n";
-		s << "   L2 Weight decay loss: " << ses.GetL2DecayLossAverage() << "\n";
-		s << "   L1 Weight decay loss: " << ses.GetL1DecayLossAverage() << "\n";
-		s << "   Examples seen: " << ses.GetStepCount();
+		s << "   experience replay size: " << b.GetExperienceCount() << "\n";
+		s << "   exploration epsilon: " << b.GetEpsilon() << "\n";
+		s << "   age: " << b.GetAge() << "\n";
+		s << "   average Q-learning loss: " << b.GetAverageLoss() << "\n";
+		s << "   smooth-ish reward: " << b.GetAverageReward();
 		status[id].SetLabel(s);
 	}
 }

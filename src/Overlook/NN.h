@@ -3,40 +3,104 @@
 
 namespace Overlook {
 
-class MainNN : public NNCore {
+class NetNN : public NNCore {
 	
-	static const int sym_count = 18;
 	static const int input_length = 10;
-	static const int pip_step = 30;
-	static const int open_pip_step = 30;
-	static const int spread_pips = 3;
 	
-	
-	enum {ACT_BUY, ACT_SELL};
 	
 	// Temporary
-	struct Data {
-		ConvNet::Volume vol;
-		double equity = 0;
-		int iter_pos = 0;
-	};
-	CoreList cl_sym;
-	Data d[2];
-	
+	CoreList cl_net, cl_sym;
+	int sym_count;
 	
 	
 public:
 	virtual void Init();
-	virtual void InitNN(ConvNet::Brain& brain);
-	virtual void Iterate(ConvNet::Brain& brain, bool is_realtime, Vector<double>& buf);
-	virtual void Start(ConvNet::Brain& brain, bool is_realtime, int pos, Vector<double>& output);
-	virtual void FillVector(ConvNet::Brain& brain, bool is_realtime, Vector<double>& buf, int counted);
+	virtual void InitNN(ConvNet::Session& ses);
+	virtual void Sample(ConvNet::Session& ses, bool is_realtime);
+	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
+	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
 	virtual void Input(InNN& in) {
 		
 	}
+};
+
+class MultiTfNetNN : public NNCore {
+	
+	// Temporary
+	Vector<double> tmp;
+	CoreList cl_sym;
+	
+public:
+	virtual void Init();
+	virtual void InitNN(ConvNet::Session& ses);
+	virtual void Sample(ConvNet::Session& ses, bool is_realtime);
+	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
+	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
+	virtual void Input(InNN& in) {
+		in.Add<NetNN>(GetTf()+0);
+		in.Add<NetNN>(GetTf()+1);
+		in.Add<NetNN>(GetTf()+2);
+	}
+};
+
+
+class IntPerfNN : public NNCore {
+	
+	enum {LBL_NEG, LBL_MID, LBL_POS};
+	
+	static const int input_length = 10;
+	
+	
+	// Persistent
+	VectorBool op_hist;
+	
+	
+	// Temporary
+	CoreList cl_sym;
+	
+	
+public:
+	virtual void Init();
+	virtual void InitNN(ConvNet::Session& ses);
+	virtual void Sample(ConvNet::Session& ses, bool is_realtime);
+	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
+	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
+	virtual void Input(InNN& in) {
+		in.Add<MultiTfNetNN>(GetTf());
+	}
+	virtual void SerializeNN(Stream& s) {s % op_hist;}
 	
 };
 
+
+class MartNN : public NNCore {
+	
+	enum {ACT_COLLECT, ACT_DBL};
+	
+	static const int input_length = 10;
+	static const int max_martingale = 8;
+	
+	
+	// Persistent
+	VectorBool op_hist;
+	
+	
+	// Temporary
+	CoreList cl_sym;
+	
+	
+public:
+	virtual void Init();
+	virtual void InitNN(ConvNet::Session& ses);
+	virtual void Sample(ConvNet::Session& ses, bool is_realtime);
+	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output);
+	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted);
+	virtual void Input(InNN& in) {
+		in.Add<MultiTfNetNN>(GetTf());
+	}
+	virtual void SerializeNN(Stream& s) {s % op_hist;}
+	
+};
 
 }
 

@@ -370,7 +370,7 @@ public:
 	void	Process(CoreItem& ci, bool store_cache, bool store_cache_if_init=true);
 	void	ProcessNN(NNCoreItem& ci, bool store_cache);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
-	int		GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int sym_id, int tf_id, int factory_id);
+	int		GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int factory_id);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	Time	GetEnd() const							{return end;}
 	const Vector<FactoryRegister>& GetRegs() const	{return regs;}

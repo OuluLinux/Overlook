@@ -54,11 +54,11 @@ class NNAutomationCtrl : public CommonCtrl {
 	ArrayCtrl queuelist;
 	ParentCtrl itemctrl;
 	Array<TabCtrl> tabslist;
-	Array<ConvNet::HeatmapView> ses_view;
+	Array<ConvNet::SessionConvLayers> ses_view;
 	Array<ConvNet::TrainingGraph> train_view;
 	Array<Upp::Label> status;
 	Array<NNBufCtrl> draws;
-	Vector<ConvNet::Brain*> bra_list;
+	Vector<ConvNet::Session*> ses_list;
 	TabCtrl* prev_tabs = NULL;
 	bool init = true;
 	bool is_initing = false;
@@ -70,7 +70,6 @@ public:
 	virtual void Data();
 	
 	void SetItem();
-	void AddValue(int i);
 };
 
 

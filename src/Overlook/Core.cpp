@@ -456,8 +456,13 @@ void NNCore::StopTraining(bool is_rt) {
 
 void NNCore::Train(bool is_rt) {
 	running[is_rt] = true;
+	TimeStop ts;
 	while (running[is_rt]) {
 		Iterate(is_rt ? rt_bra : test_bra, is_rt, is_rt ? rt_buf : test_buf);
+		if (ts.Elapsed() > 5*60*1000) {
+			Store();
+			ts.Reset();
+		}
 	}
 	stopped[is_rt] = true;
 }

@@ -98,8 +98,7 @@ INITBLOCK {
     System::RegisterCommon<NNAutomation, NNAutomationCtrl>("NNAutomation");
     
     
-    System::RegisterNN<NetNN>("Net");
-    System::RegisterNN<CombineNN>("Combine Net NN");
+    System::RegisterNN<MainNN>("Main");
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());
 	

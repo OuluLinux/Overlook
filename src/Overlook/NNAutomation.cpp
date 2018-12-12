@@ -11,9 +11,9 @@ NNAutomation::NNAutomation() {
 void NNAutomation::Init() {
 	System& sys = GetSystem();
 	
-	int tf = 5;
+	int tf = 0;
 	
-	sys.GetNNCoreQueue(ci_queue, 0, tf, sys.FindNN<CombineNN>());
+	sys.GetNNCoreQueue(ci_queue, 0, tf, sys.FindNN<MainNN>());
 	
 	for(int i = 0; i < sym_count; i++) {
 		cl_net.AddSymbol("Net" + IntStr(i));

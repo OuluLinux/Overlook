@@ -830,7 +830,7 @@ void System::ProcessNN(NNCoreItem& ci, bool store_cache) {
 		
 	}
 	
-	int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount();
+	int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount() - c.buf_begin;
 	
 	c.test_buf.SetCount(count, 0);
 	c.rt_buf.SetCount(count, 0);

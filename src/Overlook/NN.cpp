@@ -82,9 +82,17 @@ void NetNN::Sample(ConvNet::Session& ses, bool is_realtime) {
 
 void NetNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output) {
 	System& sys = GetSystem();
+	System::NetSetting& n = sys.GetNet(0);
+	
+	output.SetCount(n.symbols.GetCount());
+	for(int i = 0; i < output.GetCount(); i++)
+		output[i] = 0;
+	
 	
 	if (pos >= cl_net.GetBuffer(0, 0, 0).GetCount())
 		cl_net.Refresh();
+	if (pos >= cl_net.GetBuffer(0, 0, 0).GetCount())
+		return;
 	
 	ConvNet::Volume vol;
 	vol.Init(sym_count, input_length, 1, 0);
@@ -105,12 +113,6 @@ void NetNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<doubl
 	
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume& result = net.Forward(vol);
-	
-	System::NetSetting& n = sys.GetNet(0);
-	
-	output.SetCount(n.symbols.GetCount());
-	for(int i = 0; i < output.GetCount(); i++)
-		output[i] = 0;
 	
 	for(int i = 0; i < sym_count; i++) {
 		System::NetSetting& n = sys.GetNet(i);
@@ -337,6 +339,8 @@ void IntPerfNN::Sample(ConvNet::Session& ses, bool is_realtime) {
 	int data_end = is_realtime ? buf.GetCount() - 1 : buf.GetCount() * 0.75;
 	int data_count = data_end - data_begin;
 	
+	if (!is_realtime) buf_begin = data_end;
+	
 	ConvNet::SessionData& d = ses.Data();
 	d.BeginData(3, data_count, input_length);
 	
@@ -432,11 +436,13 @@ void IntPerfNN::FillVector(ConvNet::Session& ses, bool is_realtime, Vector<doubl
 	for(int i = counted; i < buf.GetCount(); i++) {
 		double value;
 		
+		int pos = buf_begin + i;
+		
 		if (i == 0)
 			value = 1.0;
 		else {
 			double prev_value = buf[i-1];
-			Start(ses, is_realtime, i-1, output);
+			Start(ses, is_realtime, pos-1, output);
 			
 			double max_lot_sum = 1.0;
 			double lot_sum = 0;
@@ -450,10 +456,10 @@ void IntPerfNN::FillVector(ConvNet::Session& ses, bool is_realtime, Vector<doubl
 			
 			for(int j = 0; j < output.GetCount(); j++) {
 				ConstBuffer& sym_buf = cl_sym.GetBuffer(j, 0, 0);
-				if (i >= sym_buf.GetCount())
+				if (pos >= sym_buf.GetCount())
 					continue;
-				double cur = sym_buf.Get(i);
-				double prev = sym_buf.Get(i-1);
+				double cur = sym_buf.Get(pos);
+				double prev = sym_buf.Get(pos-1);
 				double mult = cur / prev - 1.0;
 				mult *= output[j] * 0.1;
 				ASSERT(IsFin(mult));
@@ -464,6 +470,7 @@ void IntPerfNN::FillVector(ConvNet::Session& ses, bool is_realtime, Vector<doubl
 		ASSERT(value >= 0);
 		buf[i] = value;
 	}
+	
 }
 
 
@@ -502,19 +509,7 @@ void MartNN::Init() {
 }
 
 void MartNN::InitNN(ConvNet::Session& ses) {
-	ses.MakeLayers(
-		"[\n"
-		"\t{\"type\":\"input\", \"input_width\":" + IntStr(input_length) + ", \"input_height\":1, \"input_depth\":1},\n"
-		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
-		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
-		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
-		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
-		"\t{\"type\":\"fc\", \"neuron_count\":50, \"activation\": \"tanh\"},\n"
-		"\t{\"type\":\"softmax\", \"class_count\":2},\n"
-		"\t{\"type\":\"adadelta\", \"batch_size\":20, \"l2_decay\":0.001}\n"
-		"]\n"
-	);
-	ses.Reset();
+	
 }
 
 void MartNN::Sample(ConvNet::Session& ses, bool is_realtime) {
@@ -525,54 +520,38 @@ void MartNN::Sample(ConvNet::Session& ses, bool is_realtime) {
 	int data_end = is_realtime ? buf.GetCount() - 1 : buf.GetCount() * 0.75;
 	int data_count = data_end - data_begin;
 	
-	ConvNet::SessionData& d = ses.Data();
-	d.BeginData(2, data_count, input_length);
+	if (!is_realtime) buf_begin = data_end;
 	
-	Vector<int> cls;
-	cls.SetCount(data_count, 0);
-	for(int i = data_begin; i < data_end;) {
+	OnlineVariance cons_dist;
+	int prev_sig = 0;
+	int len = 0;
+	for(int i = data_begin; i < data_end; i++) {
+		double prev = buf[i-1];
+		double cur = buf[i];
+		int sig = cur > prev ? +1 : -1;
 		
-		int mult = 1;
-		int max_j = 0;
-		double max_value = -DBL_MAX;;
-		for(int j = 0; j < max_martingale; j++) {
-			int pos = i + j;
-			int next_pos = pos+1;
-			if (next_pos >= data_end) break;
-			
-			double cur = buf[pos];
-			double next = buf[next_pos];
-			double diff = next - cur;
-			double value = diff * mult;
-			if (value > max_value) {
-				max_j = j;
-				max_value = value;
-			}
-			if (j < max_martingale)
-				mult *= 2;
+		if (sig != prev_sig) {
+			if (len)
+				cons_dist.Add(len);
+			len = 0;
+			prev_sig = sig;
 		}
 		
-		for(int j = 0; j <= max_j && i < data_end; j++, i++) {
-			cls[i - data_begin] = j == 0 ? ACT_COLLECT : ACT_DBL;
-		}
+		len++;
 	}
 	
-	for(int i = data_begin, row = 0; i < data_end; i++, row++) {
-		double next = buf[i];
-		double next2 = buf[i+1];
-		for(int k = 0; k < input_length; k++) {
-			double cur = buf[i-k-1];
-			double ch = next / cur - 1.0;
-			ch *= 100000;
-			if (!IsFin(ch)) ch = 0;
-			d.SetData(row, k, ch);
-			next = cur;
+	
+	for(int i = 0; i < 30; i++) {
+		double pred = cons_dist.GetCDF(i, false);
+		LOG(i << "\t" << pred);
+		if (pred >= 0.99) {
+			max_martingale = i;
+			break;
 		}
-		double ch = next2 / next - 1.0;
-		int lbl = cls[row];
-		d.SetLabel(row, lbl);
 	}
-	d.EndData();
+	max_martingale+=3;
+	DUMP(max_martingale);
+	
 }
 
 void MartNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output) {
@@ -581,40 +560,12 @@ void MartNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<doub
 	
 	const Vector<double>& buf = c.GetBuffer(is_realtime);
 	
-	
-	ConvNet::Volume vol;
-	vol.Init(input_length, 1, 1, 0);
-	
-	double next = buf[pos];
-	for(int i = 0; i < input_length; i++) {
-		double cur = buf[max(0, pos-i-1)];
-		double ch = next / cur - 1.0;
-		ch *= 100000;
-		if (!IsFin(ch)) ch = 0;
-		vol.Set(i, ch);
-		next = cur;
-	}
-	
-	ConvNet::Net& net = ses.GetNetwork();
-	ConvNet::Volume& fwd = net.Forward(vol);
-	int lbl = fwd.GetMaxColumn();
-	
-	if (pos >= op_hist.GetCount())
-		op_hist.SetCount(pos+1);
-	
-	bool prev_op = pos > 0 ? op_hist.Get(pos-1) : false;
-	
-	op_hist.Set(pos, lbl);
-	
-	int mult = 1;
-	for(int i = 0; i < max_martingale; i++) {
-		int j = pos - i;
-		if (j < 0) break;
-		bool op = op_hist.Get(j);
-		if (op == ACT_COLLECT) break;
+	double cur = buf[pos];
+	double prev = buf[max(0, pos-1)];
+	if (cur <= prev)
 		mult *= 2;
-	}
-	
+	else
+		mult = 1;
 	
 	double max_lot_sum = 1.0;
 	double lot_sum = 0;
@@ -627,6 +578,8 @@ void MartNN::Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<doub
 
 	double max_factor = pow(2, max_martingale);
 	factor = (double)mult / max_factor;
+	if (factor > 1)
+		factor = 1;
 	
 	for(int i = 0; i < output.GetCount(); i++)
 		output[i] *= factor;
@@ -639,24 +592,27 @@ void MartNN::FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>&
 	cl_sym.Refresh();
 	
 	Vector<double> output;
+	counted = 0;
 	
 	for(int i = counted; i < buf.GetCount(); i++) {
 		double value;
+		
+		int pos = buf_begin + i;
 		
 		if (i == 0)
 			value = 1.0;
 		else {
 			double prev_value = buf[i-1];
-			Start(ses, is_realtime, i-1, output);
+			Start(ses, is_realtime, pos-1, output);
 			
 			value = prev_value;
 			
 			for(int j = 0; j < output.GetCount(); j++) {
 				ConstBuffer& sym_buf = cl_sym.GetBuffer(j, 0, 0);
-				if (i >= sym_buf.GetCount())
+				if (pos >= sym_buf.GetCount())
 					continue;
-				double cur = sym_buf.Get(i);
-				double prev = sym_buf.Get(i-1);
+				double cur = sym_buf.Get(pos);
+				double prev = sym_buf.Get(pos-1);
 				double mult = cur / prev - 1.0;
 				mult *= output[j] * 0.1;
 				ASSERT(IsFin(mult));

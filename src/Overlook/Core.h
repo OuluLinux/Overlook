@@ -430,6 +430,7 @@ protected:
 	// Temporary
 	Vector<NNCore*> input_cores;
 	int factory = -1, tf = -1;
+	int buf_begin = 0;
 	bool is_sampled = false;
 	
 	

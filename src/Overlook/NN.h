@@ -78,7 +78,6 @@ class MartNN : public NNCore {
 	enum {ACT_COLLECT, ACT_DBL};
 	
 	static const int input_length = 10;
-	static const int max_martingale = 8;
 	
 	
 	// Persistent
@@ -87,6 +86,8 @@ class MartNN : public NNCore {
 	
 	// Temporary
 	CoreList cl_sym;
+	int max_martingale = 5;
+	int mult = 1;
 	
 	
 public:

@@ -42,6 +42,7 @@ using namespace Upp;
 #include "Advisors.h"
 #include "NetCluster.h"
 #include "DqnAutomation.h"
+#include "PatternMatch.h"
 #include "NN.h"
 #include "NNAutomation.h"
 #include "Martingale.h"
@@ -97,7 +98,7 @@ protected:
 	MarketWatch watch;
 	CtrlCallbacks<ArrayCtrl> trade, trade_history, exposure, joblist, debuglist;
 	CtrlCallbacks<Splitter> jobs_hsplit;
-	CtrlCallbacks<ArbitrageCtrl> arb;
+	//CtrlCallbacks<ArbitrageCtrl> arb;
 	ParentCtrl job_ctrl;
 	Ctrl* prev_job_ctrl = NULL;
 	StatusBar status;

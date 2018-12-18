@@ -117,7 +117,7 @@ String CoreIO::GetCacheDirectory() {
 	}
 	
 	String coredir = Format("%d-%d-%d-%d-", factory, sym_id, tf_id, hash) + IntStr64(arghash);
-	cache_dir = AppendFileName(ConfigFile("corecache"), coredir);
+	cache_dir = AppendFileName(GetOverlookFile("corecache"), coredir);
 	RealizeDirectory(cache_dir);
 	return cache_dir;
 }

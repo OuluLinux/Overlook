@@ -40,8 +40,8 @@ protected:
 	void RefreshEquity(int pos);
 	void RefreshInput(int pos);
 	void Signal(int pos, int op, int net);
-	void LoadThis() {LoadFromFile(*this, ConfigFile("DqnAutomation.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("DqnAutomation.bin"));}
+	void LoadThis() {LoadFromFile(*this, GetOverlookFile("DqnAutomation.bin"));}
+	void StoreThis() {StoreToFile(*this, GetOverlookFile("DqnAutomation.bin"));}
 	
 public:
 	typedef DqnAutomation CLASSNAME;

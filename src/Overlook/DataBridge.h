@@ -61,8 +61,8 @@ public:
 	const Index<Time>& GetTimeIndex(int i) const {return idx[i];}
 	int GetTimeBufferCount() const {return time_bufs.GetCount();}
 	void Serialize(Stream& s) {s % time_bufs % idx;}
-	void LoadThis() {LoadFromFile(*this, ConfigFile("DataBridgeCommon.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("DataBridgeCommon.bin"));}
+	void LoadThis() {LoadFromFile(*this, GetOverlookFile("DataBridgeCommon.bin"));}
+	void StoreThis() {StoreToFile(*this, GetOverlookFile("DataBridgeCommon.bin"));}
 	
 	Mutex lock;
 };

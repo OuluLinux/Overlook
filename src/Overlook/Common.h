@@ -48,6 +48,12 @@ using namespace Upp;
 
 
 
+inline String GetOverlookFile(String file) {
+	String dir = AppendFileName(GetDocumentsFolder(), "Overlook");
+	RealizeDirectory(dir);
+	return AppendFileName(dir, file);
+}
+
 
 
 class AgentGroup;
@@ -70,7 +76,7 @@ class OnlineAverageWindow1 : Moveable<OnlineAverageWindow1> {
 	
 public:
 	OnlineAverageWindow1() {}
-	void SetPeriod(int i) {period = i; win_a.SetCount(i,0);}
+	void SetPeriod(int i) {period = i; win_a.SetCount(i,0); cursor = 0;}
 	void Add(double a) {
 		double& da = win_a[cursor];
 		sum_a -= da;
@@ -80,6 +86,7 @@ public:
 		cursor = (cursor + 1) % period;
 	}
 	double GetMean() const {return sum_a / min(count, period);}
+	double GetSum() const {return sum_a;}
 	int GetPeriod() const {return period;}
 	void Serialize(Stream& s) {s % win_a % sum_a % period % cursor % count;}
 	const Vector<double>& GetWindow() const {return win_a;}
@@ -1092,7 +1099,7 @@ struct JobProgressDislay : public Display {
 };
 
 
-inline void ReleaseLog(String s) {LOG(s); FileAppend fout(ConfigFile("release.log")); fout << s; fout.PutEol(); LOG(s);}
+inline void ReleaseLog(String s) {LOG(s); FileAppend fout(GetOverlookFile("release.log")); fout << s; fout.PutEol(); LOG(s);}
 
 
 template <class K, class V, class Sort=StdGreater<V> >
@@ -1303,6 +1310,30 @@ public:
 	
 	
 };
+
+
+inline const VectorMap<String, int>& CommonSpreads() {
+	static VectorMap<String, int> v;
+	if (v.IsEmpty()) {
+		v.Add("EURUSD", 2);
+		v.Add("GBPUSD", 3);
+		v.Add("EURGBP", 3);
+		v.Add("USDJPY", 3);
+		v.Add("AUDUSD", 4);
+		v.Add("EURCHF", 4);
+		v.Add("EURJPY", 4);
+		v.Add("USDCAD", 4);
+		v.Add("USDCHF", 4);
+		v.Add("NZDUSD", 5);
+		v.Add("AUDJPY", 6);
+		v.Add("CADJPY", 6);
+		v.Add("AUDCAD", 8);
+		v.Add("CHFJPY", 8);
+		v.Add("EURCAD", 8);
+		v.Add("GBPJPY", 8);
+	}
+	return v;
+}
 
 }
 

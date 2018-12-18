@@ -777,67 +777,43 @@ bool System::RefreshReal() {
 void System::ProcessNN(NNCoreItem& ci, bool store_cache) {
 	NNCore& c = *ci.core;
 	
-	if (!c.is_sampled) {
-		c.Sample(c.test_ses, false);
-		c.Sample(c.rt_ses, true);
-		c.is_sampled = true;
+	if (c.is_optimized) {
+		c.Optimize(c.data[0]);
+		c.Optimize(c.data[1]);
 	}
-	
-	if (c.test_ses.Data().GetDataCount() && c.rt_ses.Data().GetDataCount()) {
-		#if 0
-		if (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-			
-			if (!c.test_ses.IsTraining())
-				c.test_ses.StartTraining();
-			
-			while (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+	else {
+		if (!c.is_sampled) {
+			c.Sample(c.data[0]);
+			c.Sample(c.data[1]);
+			c.is_sampled = true;
+		}
+		
+		if (c.data[0].ses.Data().GetDataCount() && c.data[1].ses.Data().GetDataCount()) {
+			if (c.data[0].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.data[0].ses.IsTraining())
+				c.data[0].ses.StartTraining();
+			if (c.data[1].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.data[1].ses.IsTraining())
+				c.data[1].ses.StartTraining();
+				
+			while (c.data[0].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
+				Sleep(100);
+			}
+			while (c.data[1].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
 				Sleep(100);
 			}
 			
-			c.test_ses.StopTraining();
+			c.data[0].ses.StopTraining();
+			c.data[1].ses.StopTraining();
 		}
 		
-		if (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-			
-			if (!c.rt_ses.IsTraining())
-				c.rt_ses.StartTraining();
-			
-			while (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-				Sleep(100);
-			}
-			
-			c.rt_ses.StopTraining();
+		int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount() - c.buf_begin;
+		
+		for(int i = 0; i < 2; i++) {
+			c.data[i].buf.SetCount(count, 0);
+			c.FillVector(c.data[i]);
+			c.data[i].counted = count;
 		}
-		
-		#else
-		
-		if (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.test_ses.IsTraining())
-			c.test_ses.StartTraining();
-		if (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.rt_ses.IsTraining())
-			c.rt_ses.StartTraining();
-			
-		while (c.test_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-			Sleep(100);
-		}
-		while (c.rt_ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-			Sleep(100);
-		}
-		
-		c.test_ses.StopTraining();
-		c.rt_ses.StopTraining();
-		
-		#endif
-		
 	}
 	
-	int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount() - c.buf_begin;
-	
-	c.test_buf.SetCount(count, 0);
-	c.rt_buf.SetCount(count, 0);
-	c.FillVector(c.test_ses, false, c.test_buf, c.test_counted);
-	c.FillVector(c.rt_ses, true, c.rt_buf, c.rt_counted);
-	c.test_counted = count;
-	c.rt_counted = count;
 	
 	if (store_cache)
 		c.Store();
@@ -861,10 +837,14 @@ int System::GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int fa
 		c.tf = tf_id;
 		c.Load();
 		c.Init();
-		if (c.test_ses.GetStepCount() == 0)
-			c.InitNN(c.test_ses);
-		if (c.rt_ses.GetStepCount() == 0)
-			c.InitNN(c.rt_ses);
+		
+		if (!c.data[0].is_init)
+			c.InitNN(c.data[0]);
+		c.data[0].is_init = true;
+		
+		if (!c.data[1].is_init)
+			c.InitNN(c.data[1]);
+		c.data[1].is_init = true;
 	}
 	
 	NNCoreItem& ci = nndata.Get(id);

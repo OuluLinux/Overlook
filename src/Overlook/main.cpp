@@ -81,11 +81,26 @@ struct LoaderWindow : public TopWindow {
 	void Close0() {Close();}
 };
 
+void GenerateNets() {
+	for(int i = 0; i < 10; i++) {
+		String s;
+		s << "AddNet(\"Net" << IntStr(i) << "\")";
+		for(int j = 0; j < CommonSpreads().GetCount(); j++) {
+			bool b = Random(2);
+			s << ".Set(\"" << CommonSpreads().GetKey(j) << "\", " << (b ? "-1" : "+1") << ")";
+		}
+		s << ";";
+		
+		LOG(s);
+	}
+}
+
 GUI_APP_MAIN {
+	GenerateNets();
 	WriteKeepalive();
 	
 	TestLockMacro();
-	SetIniFile(ConfigFile("overlook.ini"));
+	SetIniFile(GetOverlookFile("overlook.ini"));
 	
 	// Set persistent starting time
 	if (Config::start_time == 0) {

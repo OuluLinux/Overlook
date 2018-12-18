@@ -193,11 +193,11 @@ void CalendarCommon::Start() {
 }
 
 void CalendarCommon::StoreThis() {
-	StoreToFile(*this, ConfigFile("Calendar.bin"));
+	StoreToFile(*this, GetOverlookFile("Calendar.bin"));
 }
 
 void CalendarCommon::LoadThis() {
-	LoadFromFile(*this, ConfigFile("Calendar.bin"));
+	LoadFromFile(*this, GetOverlookFile("Calendar.bin"));
 }
 
 void CalendarCommon::TrimDuplicateEvents() {
@@ -522,7 +522,7 @@ int CalendarCommon::Update(String postfix, bool force_update) {
 	}
 	
 	// Realize cache directory
-	String cache_dir = ConfigFile("cache");
+	String cache_dir = GetOverlookFile("cache");
 	RealizeDirectory(cache_dir);
 	String file_name = postfix;
 	if (file_name.IsEmpty()) file_name = "default";
@@ -569,8 +569,8 @@ int CalendarCommon::Update(String postfix, bool force_update) {
 	
 	XmlFix(c);
 	
-	String filehtm	= ConfigFile("cal_temp.htm");
-	String file		= ConfigFile("cal_temp.xml");
+	String filehtm	= GetOverlookFile("cal_temp.htm");
+	String file		= GetOverlookFile("cal_temp.xml");
 	FileOut out(filehtm);
 	out << c;
 	out.Close();

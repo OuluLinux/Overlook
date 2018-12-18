@@ -70,7 +70,7 @@ String ForeSignal::GetMail(int i) {
 }
 
 void ForeSignal::MailData() {
-	String mail_dir = ConfigFile("mail");
+	String mail_dir = GetOverlookFile("mail");
 	RealizeDirectory(mail_dir);
 	
 	String user = Config::email_user;

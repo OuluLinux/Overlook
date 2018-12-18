@@ -26,7 +26,7 @@ int UserDatabase::Init(int user_id) {
 	lock.Enter();
 	this->user_id = user_id;
 	
-	String user_dir = ConfigFile("users");
+	String user_dir = GetOverlookFile("users");
 	RealizeDirectory(user_dir);
 	
 	user_file = AppendFileName(user_dir, IntStr(user_id) + ".bin");
@@ -71,7 +71,7 @@ ServerDatabase::ServerDatabase() {
 }
 
 void ServerDatabase::Init() {
-	srv_file = ConfigFile("server_db.bin");
+	srv_file = GetOverlookFile("server_db.bin");
 	
 	LoadFromFile(*this, srv_file);
 }

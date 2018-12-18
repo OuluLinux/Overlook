@@ -421,38 +421,51 @@ protected:
 	
 	static const int MAX_TRAIN_STEPS = 200000;
 	
-	// Persistent
-	Vector<double> test_buf, rt_buf;
-	ConvNet::Session test_ses, rt_ses;
-	int test_counted = 0, rt_counted = 0;
+	struct Data {
+		// Persistent
+		Vector<double> buf;
+		ConvNet::Session ses;
+		Optimizer opt;
+		int counted = 0;
+		bool is_init = false;
+		
+		// Temporary
+		bool is_realtime = false;
+		
+		void Serialize(Stream& s) {s % buf % ses % opt % counted % is_init;}
+	};
 	
+	// Persistent
+	Data data[2];
 	
 	// Temporary
 	Vector<NNCore*> input_cores;
 	int factory = -1, tf = -1;
 	int buf_begin = 0;
 	bool is_sampled = false;
+	bool is_optimized = false;
 	
 	
 	int GetTf() {return tf;}
 	NNCore& GetInputCore(int i) {return *input_cores[i];}
 	
 public:
-	
+	NNCore();
 	virtual void Init() = 0;
-	virtual void InitNN(ConvNet::Session& ses) = 0;
-	virtual void Sample(ConvNet::Session& ses, bool is_realtime) = 0;
-	virtual void Start(ConvNet::Session& ses, bool is_realtime, int pos, Vector<double>& output) = 0;
-	virtual void FillVector(ConvNet::Session& ses, bool is_realtime, Vector<double>& buf, int counted) = 0;
+	virtual void InitNN(Data& data) = 0;
+	virtual void Sample(Data& data) = 0;
+	virtual void Optimize(Data& data) {};
+	virtual void Start(Data& data, int pos, Vector<double>& output) = 0;
+	virtual void FillVector(Data& data) = 0;
 	virtual void Input(InNN& in) = 0;
 	virtual void SerializeNN(Stream& s) {}
 	
-	void Start(bool is_realtime, int pos, Vector<double>& output) {Start(is_realtime ? rt_ses : test_ses, is_realtime, pos, output);}
+	void Start(bool is_realtime, int pos, Vector<double>& output) {Start(data[is_realtime], pos, output);}
 	
 	void Load();
 	void Store();
-	void Serialize(Stream& s) {s % test_buf % rt_buf % test_ses % rt_ses % test_counted % rt_counted; SerializeNN(s);}
-	Vector<double>& GetBuffer(bool is_realtime) {return is_realtime ? rt_buf : test_buf;}
+	void Serialize(Stream& s) {s % data[0] % data[1]; SerializeNN(s);}
+	Vector<double>& GetBuffer(bool is_realtime) {return data[is_realtime].buf;}
 	
 	void SetInputCore(int i, NNCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	

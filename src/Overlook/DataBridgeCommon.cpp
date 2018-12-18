@@ -99,7 +99,7 @@ int DataBridgeCommon::DownloadHistory(int sym, int tf, bool force) {
 }
 
 int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
-	String history_dir = ConfigFile("history");
+	String history_dir = GetOverlookFile("history");
 	RealizeDirectory(history_dir);
 	
 	String filename = sym.name + IntStr(tf) + ".hst";
@@ -115,7 +115,7 @@ int DataBridgeCommon::DownloadHistory(const Symbol& sym, int tf, bool force) {
 int DataBridgeCommon::DownloadAskBid() {
 	ReleaseLog("DownloadAskBid");
 	
-	String local_path = ConfigFile("askbid.bin");
+	String local_path = GetOverlookFile("askbid.bin");
 	String remote_path = "MQL4\\Files\\askbid.bin";
 	
 	return DownloadRemoteFile(remote_path, local_path);
@@ -211,7 +211,7 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 	}
 		
 	// Open askbid-file
-	String local_askbid_file = ConfigFile("askbid.bin");
+	String local_askbid_file = GetOverlookFile("askbid.bin");
 	if (!FileExists(local_askbid_file) || cursor == 0)
 		DownloadAskBid();
 	FileIn src(local_askbid_file);

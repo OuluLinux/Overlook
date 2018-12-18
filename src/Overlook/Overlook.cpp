@@ -3,7 +3,7 @@
 namespace Overlook {
 
 void WriteKeepalive() {
-	FileOut fout(ConfigFile("keepalive.bin"));
+	FileOut fout(GetOverlookFile("keepalive.bin"));
 	fout % GetSysTime();
 }
 
@@ -179,7 +179,7 @@ void Overlook::FileMenu(Bar& bar) {
 		bar.Add("Load open order charts", THISBACK(LoadOpenOrderCharts));
 		bar.Separator();
 		
-		String profile_dir = ConfigFile("Profiles");
+		String profile_dir = GetOverlookFile("Profiles");
 		RealizeDirectory(profile_dir);
 		FindFile ff;
 		ff.Search(AppendFileName(profile_dir, "*"));
@@ -565,7 +565,7 @@ void Overlook::Data() {
 	if (trade_history.IsVisible())	RefreshTradesHistory();
 	if (jobs_hsplit.IsVisible())	RefreshJobs();
 	if (debuglist.IsVisible())		RefreshDebug();
-	if (arb.IsVisible())			arb.Data();
+	//if (arb.IsVisible())			arb.Data();
 	for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
 		CommonCtrl* c = dynamic_cast<CommonCtrl*>(sys.CommonFactories()[i].c());
 		if (c && c->IsVisible())
@@ -1146,13 +1146,13 @@ void Overlook::LoadOpenOrderCharts() {
 }
 
 void Overlook::LoadPreviousProfile() {
-	LoadProfileFromFile(current_profile, ConfigFile("current_profile.bin"));
+	LoadProfileFromFile(current_profile, GetOverlookFile("current_profile.bin"));
 	LoadProfile(current_profile);
 }
 
 void Overlook::StorePreviousProfile() {
 	StoreProfile(current_profile);
-	StoreProfileToFile(current_profile, ConfigFile("current_profile.bin"));
+	StoreProfileToFile(current_profile, GetOverlookFile("current_profile.bin"));
 }
 
 void Overlook::SaveProfile() {
@@ -1165,7 +1165,7 @@ void Overlook::SaveProfile() {
 	tw.name.SetFocus();
 	tw.Run();
 	if (save) {
-		String profile_dir = ConfigFile("Profiles");
+		String profile_dir = GetOverlookFile("Profiles");
 		RealizeDirectory(profile_dir);
 		String fname = tw.name.GetData();
 		if (GetFileExt(fname) != ".bin") fname += ".bin";

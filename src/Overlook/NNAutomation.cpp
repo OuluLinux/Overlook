@@ -11,7 +11,7 @@ NNAutomation::NNAutomation() {
 void NNAutomation::Init() {
 	System& sys = GetSystem();
 	
-	int tf = 5;
+	int tf = 1;
 	
 	sys.GetNNCoreQueue(ci_queue, tf, sys.FindNN<MartNN>());
 	
@@ -202,10 +202,10 @@ void NNAutomationCtrl::Data() {
 			int ci_id = i / 2;
 			int is_rt = i % 2;
 			NNCore& c = *a.ci_queue[ci_id]->core;
-			ConvNet::Session& ses = is_rt ? c.rt_ses : c.test_ses;
+			ConvNet::Session& ses = c.data[is_rt].ses;
 			ses_list.Add(&ses);
 			
-			draws[i].buf = is_rt ? &c.rt_buf : &c.test_buf;
+			draws[i].buf = &c.data[is_rt].buf;
 			
 			tabs.Add(draws[i].SizePos(), "Buffer drawer");
 			tabs.Add(ses_view[i].SizePos(), "Session");
@@ -226,8 +226,8 @@ void NNAutomationCtrl::Data() {
 	for(int i = 0; i < a.ci_queue.GetCount(); i++) {
 		NNCore& c = *a.ci_queue[i]->core;
 		
-		queuelist.Set(i * 2 + 0, 1, c.test_ses.GetStepCount() * 1000 / NNCore::MAX_TRAIN_STEPS);
-		queuelist.Set(i * 2 + 1, 1, c.rt_ses.GetStepCount()   * 1000 / NNCore::MAX_TRAIN_STEPS);
+		queuelist.Set(i * 2 + 0, 1, c.data[0].ses.GetStepCount() * 1000 / NNCore::MAX_TRAIN_STEPS);
+		queuelist.Set(i * 2 + 1, 1, c.data[1].ses.GetStepCount()   * 1000 / NNCore::MAX_TRAIN_STEPS);
 		queuelist.SetDisplay(i * 2 + 0, 1, ProgressDisplay());
 		queuelist.SetDisplay(i * 2 + 1, 1, ProgressDisplay());
 	}

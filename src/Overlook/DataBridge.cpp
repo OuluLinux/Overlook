@@ -257,7 +257,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	int tf = GetTf();
 	int mt_period = GetPeriod();
 	String symbol = sys.GetSymbol(GetSymbol());
-	String history_dir = ConfigFile("history");
+	String history_dir = GetOverlookFile("history");
 	String filename = symbol + IntStr(mt_period) + ".hst";
 	String local_history_file = AppendFileName(history_dir, filename);
 	
@@ -269,7 +269,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 		
 		String url = "http://tools.fxdd.com/tools/M1Data/" + symbol + ".zip";
 		
-		String data_dir = ConfigFile("m1data");
+		String data_dir = GetOverlookFile("m1data");
 		RealizeDirectory(data_dir);
 		
 		String local_zip = AppendFileName(data_dir, symbol + ".zip");

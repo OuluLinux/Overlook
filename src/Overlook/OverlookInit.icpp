@@ -96,6 +96,7 @@ INITBLOCK {
     //System::RegisterCommon<DqnAutomation, DqnAutomationCtrl>("DqnAutomation");
     //System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
     System::RegisterCommon<NNAutomation, NNAutomationCtrl>("NNAutomation");
+    System::RegisterCommon<PatternMatcher, PatternMatcherCtrl>("PatternMatch");
     
     
     System::RegisterNN<NetNN>("Net");

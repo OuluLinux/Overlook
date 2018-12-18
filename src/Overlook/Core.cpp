@@ -442,17 +442,20 @@ void Core::SetJobFinished(bool b) {
 
 
 
-
+NNCore::NNCore() {
+	data[1].is_realtime = true;
+	
+}
 
 void NNCore::Load() {
-	String dir = ConfigFile("nncores");
+	String dir = GetOverlookFile("nncores");
 	RealizeDirectory(dir);
 	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
 	LoadFromFile(*this, file);
 }
 
 void NNCore::Store() {
-	String dir = ConfigFile("nncores");
+	String dir = GetOverlookFile("nncores");
 	RealizeDirectory(dir);
 	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
 	StoreToFile(*this, file);

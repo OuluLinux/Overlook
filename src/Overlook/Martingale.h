@@ -87,8 +87,8 @@ protected:
 	void SetRealSymbolLots(int sym, double lots);
 	void CloseOrder(int i, double lots);
 	void OpenOrder(int sym, int type, double lots);
-	void LoadThis() {LoadFromFile(*this, ConfigFile("Martingale.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("Martingale.bin"));}
+	void LoadThis() {LoadFromFile(*this, GetOverlookFile("Martingale.bin"));}
+	void StoreThis() {StoreToFile(*this, GetOverlookFile("Martingale.bin"));}
 	
 public:
 	typedef Martingale CLASSNAME;

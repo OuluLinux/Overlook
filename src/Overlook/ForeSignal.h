@@ -31,8 +31,8 @@ protected:
 	String GetMail(int i);
 	void MailData();
 	
-	void LoadThis() {LoadFromFile(*this, ConfigFile("ForeSignal.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("ForeSignal.bin"));}
+	void LoadThis() {LoadFromFile(*this, GetOverlookFile("ForeSignal.bin"));}
+	void StoreThis() {StoreToFile(*this, GetOverlookFile("ForeSignal.bin"));}
 	
 public:
 	typedef Signal CLASSNAME;

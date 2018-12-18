@@ -287,7 +287,7 @@ void DqnAdvisor::DumpTest() {
 	String symstr = GetSystem().GetSymbol(GetSymbol());
 	String tfstr = GetSystem().GetPeriodString(GetTf());
 	
-	String dir = ConfigFile("test_results");
+	String dir = GetOverlookFile("test_results");
 	RealizeDirectory(dir);
 	String filename = Format("%d-%d-%d-%d-%d-%d-%d-%s-%s.txt",
 		have_normaldata,

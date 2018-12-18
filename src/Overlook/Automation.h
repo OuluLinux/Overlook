@@ -30,8 +30,8 @@ protected:
 	
 	enum {NO_PENDING, PENDING, WAITING};
 	
-	void LoadThis() {LoadFromFile(*this, ConfigFile("Automation.bin"));}
-	void StoreThis() {StoreToFile(*this, ConfigFile("Automation.bin"));}
+	void LoadThis() {LoadFromFile(*this, GetOverlookFile("Automation.bin"));}
+	void StoreThis() {StoreToFile(*this, GetOverlookFile("Automation.bin"));}
 	
 	void RemoveOrder(const Order& o);
 public:

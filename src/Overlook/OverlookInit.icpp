@@ -95,14 +95,28 @@ INITBLOCK {
     //System::RegisterCommon<NetCluster, NetClusterCtrl>("NetCluster");
     //System::RegisterCommon<DqnAutomation, DqnAutomationCtrl>("DqnAutomation");
     //System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
-    System::RegisterCommon<NNAutomation, NNAutomationCtrl>("NNAutomation");
+    //System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
     System::RegisterCommon<PatternMatcher, PatternMatcherCtrl>("PatternMatch");
+    System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
     
     
-    System::RegisterNN<NetNN>("Net");
-    System::RegisterNN<MultiTfNetNN>("Multi Tf Net NN");
-    System::RegisterNN<IntPerfNN>("Internal performance");
-    System::RegisterNN<MartNN>("Martingale");
+    System::RegisterEvent<MovingAverageEvent>("Moving Average Event");
+    System::RegisterEvent<MACDEvent>("MACD Event");
+    System::RegisterEvent<BBEvent>("BB Event");
+    System::RegisterEvent<PSAREvent>("PSAR Event");
+    System::RegisterEvent<CCIEvent>("CCI Event");
+    System::RegisterEvent<MomentumEvent>("Momentum Event");
+    System::RegisterEvent<RSIEvent>("RSI Event");
+    System::RegisterEvent<RVIEvent>("RVI Event");
+    System::RegisterEvent<StochasticEvent>("Stochastic Event");
+    System::RegisterEvent<AcceleratorEvent>("Accelerator Event");
+    System::RegisterEvent<ChannelEvent>("Channel Event");
+    System::RegisterEvent<ScissorsChannelEvent>("ScissorsChannel Event");
+    System::RegisterEvent<OnlineMinimalLabelEvent>("OnlineMinimalLabel Event");
+    System::RegisterEvent<LaguerreEvent>("Laguerre Event");
+    System::RegisterEvent<QQEEvent>("QQE Event");
+    System::RegisterEvent<TickBalanceEvent>("QQE Event");
+    
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());
 	

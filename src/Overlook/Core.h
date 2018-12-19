@@ -405,70 +405,49 @@ protected:
 };
 
 
-struct InNN {
-	Vector<int> factories, tfs;
-	
-	template <class T>
-	void Add(int tf) {factories.Add(System::FindNN<T>()); tfs.Add(tf);}
-	
+
+struct ArgEvent {
+	Vector<int> mins, maxs, steps;
+	Vector<int*> args;
+	void Add(int min, int max, int step, int& arg) {mins.Add(min); maxs.Add(max); steps.Add(step); args.Add(&arg);}
 };
 
-class NNCore {
+class EventCore {
 	
 protected:
 	friend class System;
-	friend class NNAutomationCtrl;
+	friend class EventAutomationCtrl;
 	
-	static const int MAX_TRAIN_STEPS = 200000;
 	
-	struct Data {
-		// Persistent
-		Vector<double> buf;
-		ConvNet::Session ses;
-		Optimizer opt;
-		int counted = 0;
-		bool is_init = false;
-		
-		// Temporary
-		bool is_realtime = false;
-		
-		void Serialize(Stream& s) {s % buf % ses % opt % counted % is_init;}
-	};
-	
-	// Persistent
-	Data data[2];
 	
 	// Temporary
-	Vector<NNCore*> input_cores;
-	int factory = -1, tf = -1;
-	int buf_begin = 0;
-	bool is_sampled = false;
-	bool is_optimized = false;
+	Vector<EventCore*> input_cores;
+	Vector<int> args;
+	CoreList cl_sym;
+	int factory = -1, symbol = -1;
 	
 	
-	int GetTf() {return tf;}
-	NNCore& GetInputCore(int i) {return *input_cores[i];}
+	EventCore& GetInputCore(int i) {return *input_cores[i];}
 	
 public:
-	NNCore();
-	virtual void Init() = 0;
-	virtual void InitNN(Data& data) = 0;
-	virtual void Sample(Data& data) = 0;
-	virtual void Optimize(Data& data) {};
-	virtual void Start(Data& data, int pos, Vector<double>& output) = 0;
-	virtual void FillVector(Data& data) = 0;
-	virtual void Input(InNN& in) = 0;
-	virtual void SerializeNN(Stream& s) {}
 	
-	void Start(bool is_realtime, int pos, Vector<double>& output) {Start(data[is_realtime], pos, output);}
+	static const int fast_tf = 1;
+	
+	EventCore();
+	virtual void Init() = 0;
+	virtual void Start(int pos, int& output) = 0;
+	virtual void Arg(ArgEvent& arg) = 0;
+	virtual void SerializeEvent(Stream& s) {}
+	virtual String GetTitle() = 0;
 	
 	void Load();
 	void Store();
-	void Serialize(Stream& s) {s % data[0] % data[1]; SerializeNN(s);}
-	Vector<double>& GetBuffer(bool is_realtime) {return data[is_realtime].buf;}
+	void Serialize(Stream& s) {SerializeEvent(s);}
 	
-	void SetInputCore(int i, NNCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
+	void SetInputCore(int i, EventCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	
+	int GetSymbol() const {return symbol;}
+	CoreList& GetCoreList() {return cl_sym;}
 };
 
 }

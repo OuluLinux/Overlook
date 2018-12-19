@@ -1,6 +1,7 @@
 #ifndef _Overlook_Signal_h_
 #define _Overlook_Signal_h_
 
+#if 0
 namespace Overlook {
 using namespace libmt;
 
@@ -72,4 +73,5 @@ public:
 }
 
 
+#endif
 #endif

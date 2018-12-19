@@ -1,8 +1,9 @@
 #include "Overlook.h"
 
+#if 0
 namespace Overlook {
 
-void NetNN::Init() {
+void NetEvent::Init() {
 	System& sys = GetSystem();
 	sym_count = sys.GetNetCount();
 
@@ -27,7 +28,7 @@ void NetNN::Init() {
 	cl_sym.Refresh();
 }
 
-void NetNN::InitNN(Data& d) {
+void NetEvent::InitEvent(Data& d) {
 	d.ses.MakeLayers(
 		"[\n"
 		"\t{\"type\":\"input\", \"input_width\":" + IntStr(sym_count) + ", \"input_height\":" + IntStr(input_length) + ", \"input_depth\":1},\n"
@@ -43,7 +44,7 @@ void NetNN::InitNN(Data& d) {
 	d.ses.Reset();
 }
 
-void NetNN::Sample(Data& d) {
+void NetEvent::Sample(Data& d) {
 	int data_count = cl_net.GetBuffer(0, 0, 0).GetCount();
 	for(int i = 0; i < cl_net.GetSymbolCount(); i++)
 		data_count = min(cl_net.GetBuffer(i, 0, 0).GetCount(), data_count);
@@ -55,7 +56,7 @@ void NetNN::Sample(Data& d) {
 
 	cl_net.Refresh();
 
-	if (d.ses.GetStepCount() >= NNCore::MAX_TRAIN_STEPS) {
+	if (d.ses.GetStepCount() >= EventCore::MAX_TRAIN_STEPS) {
 		d.ses.Data().ClearData();
 		return;
 	}
@@ -88,7 +89,7 @@ void NetNN::Sample(Data& d) {
 
 }
 
-void NetNN::Start(Data& d, int pos, Vector<double>& output) {
+void NetEvent::Start(Data& d, int pos, Vector<double>& output) {
 	System& sys = GetSystem();
 	System::NetSetting& n = sys.GetNet(0);
 
@@ -128,7 +129,7 @@ void NetNN::Start(Data& d, int pos, Vector<double>& output) {
 }
 
 
-void NetNN::FillVector(Data& d) {
+void NetEvent::FillVector(Data& d) {
 	System& sys = GetSystem();
 	
 	d.ses.Data().ClearData();
@@ -271,7 +272,7 @@ void NetNN::FillVector(Data& d) {
 
 
 
-void IntPerfNN::Init() {
+void IntPerfEvent::Init() {
 	System& sys = GetSystem();
 	sym_count = sys.GetNetCount();
 
@@ -296,7 +297,7 @@ void IntPerfNN::Init() {
 	cl_sym.Refresh();
 }
 
-void IntPerfNN::InitNN(Data& d) {
+void IntPerfEvent::InitEvent(Data& d) {
 	d.ses.MakeLayers(
 		"[\n"
 		"\t{\"type\":\"input\", \"input_width\":" + IntStr(sym_count) + ", \"input_height\":" + IntStr(input_length) + ", \"input_depth\":1},\n"
@@ -312,8 +313,8 @@ void IntPerfNN::InitNN(Data& d) {
 	d.ses.Reset();
 }
 
-void IntPerfNN::Sample(Data& d) {
-	NNCore& c = GetInputCore(0);
+void IntPerfEvent::Sample(Data& d) {
+	EventCore& c = GetInputCore(0);
 	const Vector<double>& buf = c.GetBuffer(false); // not realtime
 	
 	int data_begin = buf.GetCount() * 0.333;
@@ -356,11 +357,11 @@ void IntPerfNN::Sample(Data& d) {
 	data.EndData();
 }
 
-void IntPerfNN::Start(Data& d, int pos, Vector<double>& output) {
+void IntPerfEvent::Start(Data& d, int pos, Vector<double>& output) {
 	System& sys = GetSystem();
 	Vector<double> net_sigs;
 	
-	NNCore& c = GetInputCore(0);
+	EventCore& c = GetInputCore(0);
 	c.Start(d.is_realtime, pos, net_sigs);
 	
 	
@@ -410,7 +411,7 @@ void IntPerfNN::Start(Data& d, int pos, Vector<double>& output) {
 	
 }
 
-void IntPerfNN::FillVector(Data& d) {
+void IntPerfEvent::FillVector(Data& d) {
 	System& sys = GetSystem();
 	
 	cl_sym.Refresh();
@@ -476,7 +477,7 @@ void IntPerfNN::FillVector(Data& d) {
 
 
 
-void MultiTfNetNN::Init() {
+void MultiTfNetEvent::Init() {
 	System& sys = GetSystem();
 	
 	int tf = GetTf();
@@ -492,7 +493,7 @@ void MultiTfNetNN::Init() {
 	
 }
 
-void MultiTfNetNN::InitNN(Data& d) {
+void MultiTfNetEvent::InitEvent(Data& d) {
 	int data_count = cl_sym.GetBuffer(0, 0, 0).GetCount();
 
 	if (!d.is_realtime) {
@@ -501,7 +502,7 @@ void MultiTfNetNN::InitNN(Data& d) {
 	}
 }
 
-void MultiTfNetNN::Sample(Data& d) {
+void MultiTfNetEvent::Sample(Data& d) {
 	
 }
 
@@ -511,7 +512,7 @@ int WeekBegin(int wday) {
 	return wday;
 }
 
-void MultiTfNetNN::Start(Data& d, int pos, Vector<double>& output) {
+void MultiTfNetEvent::Start(Data& d, int pos, Vector<double>& output) {
 	System& sys = GetSystem();
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	
@@ -549,7 +550,7 @@ void MultiTfNetNN::Start(Data& d, int pos, Vector<double>& output) {
 		if (tf_pos == -1)
 			continue;
 		
-		NNCore& c = GetInputCore(i);
+		EventCore& c = GetInputCore(i);
 		
 		c.Start(d.is_realtime, tf_pos, tmp);
 		
@@ -558,7 +559,7 @@ void MultiTfNetNN::Start(Data& d, int pos, Vector<double>& output) {
 	}
 }
 
-void MultiTfNetNN::FillVector(Data& d) {
+void MultiTfNetEvent::FillVector(Data& d) {
 	System& sys = GetSystem();
 	
 	cl_sym.Refresh();
@@ -629,7 +630,7 @@ void MultiTfNetNN::FillVector(Data& d) {
 
 
 
-void MartNN::Init() {
+void MartEvent::Init() {
 	is_optimized = true;
 	
 	System& sys = GetSystem();
@@ -643,15 +644,15 @@ void MartNN::Init() {
 	cl_sym.Refresh();
 }
 
-void MartNN::InitNN(Data& d) {
+void MartEvent::InitEvent(Data& d) {
 	
 	d.opt.Min().SetCount(OPT_COUNT, 0.0);
 	d.opt.Max().SetCount(OPT_COUNT, 1.0);
 	d.opt.Init(OPT_COUNT, 100);
 }
 
-void MartNN::Optimize(Data& d) {
-	NNCore& c = GetInputCore(0);
+void MartEvent::Optimize(Data& d) {
+	EventCore& c = GetInputCore(0);
 	const Vector<double>& buf = c.GetBuffer(false); // not realtime
 	
 	int total = cl_sym.GetBuffer(0, 0, 0).GetCount();
@@ -719,7 +720,7 @@ void MartNN::Optimize(Data& d) {
 		//IterateOnce(d, m, data_begin, data_end);
 		IterateOnce(d, m, best_begin, best_end);
 		write_equity = false;
-		ReleaseLog("MartNN " + IntStr(d.is_realtime) + " equity " + DblStr(m.balance));
+		ReleaseLog("MartEvent " + IntStr(d.is_realtime) + " equity " + DblStr(m.balance));
 		
 		#define DUMPM(x) ReleaseLog(#x " " + IntStr(x));
 		DUMPM(m.group_period);
@@ -739,7 +740,7 @@ void MartNN::Optimize(Data& d) {
 	}
 }
 
-void MartNN::LoadTrial(const Vector<double>& trial, MartData& m) {
+void MartEvent::LoadTrial(const Vector<double>& trial, MartData& m) {
 	#define LIMIT(mi, ma, z) max(mi, min(ma, (int)(trial[z] * ma)))
 	m.group_period = LIMIT(2, 240, OPT_GROUPPERIOD);
 	m.group_step = LIMIT(0, 100, OPT_GROUPSTEP);
@@ -759,7 +760,7 @@ void MartNN::LoadTrial(const Vector<double>& trial, MartData& m) {
 	m.trailtakeprofit = LIMIT(5, 100, OPT_TRAILTP);
 }
 
-void MartNN::ResetPattern(MartData& m) {
+void MartEvent::ResetPattern(MartData& m) {
 	m.pattern.SetCount(0);
 	for(int i = 0; i < 64; i++) {
 		int a = Random(m.group_period);
@@ -772,7 +773,7 @@ void MartNN::ResetPattern(MartData& m) {
 	}
 }
 
-void MartNN::ResetDistanceAverages(MartData& m) {
+void MartEvent::ResetDistanceAverages(MartData& m) {
 	int sym_count = cl_sym.GetSymbolCount();
 	int count = 0;
 	for(int j0 = 0; j0 < sym_count; j0++)
@@ -783,7 +784,7 @@ void MartNN::ResetDistanceAverages(MartData& m) {
 		m.distance_averages[i].SetPeriod(m.group_av);
 }
 
-void MartNN::ResetSignalAverages(MartData& m) {
+void MartEvent::ResetSignalAverages(MartData& m) {
 	int sym_count = cl_sym.GetSymbolCount();
 	m.signal_pos_averages.SetCount(sym_count);
 	m.signal_neg_averages.SetCount(sym_count);
@@ -807,7 +808,7 @@ void MartNN::ResetSignalAverages(MartData& m) {
 	}
 }
 
-void MartNN::IterateOnce(Data& d, MartData& m, int begin, int end) {
+void MartEvent::IterateOnce(Data& d, MartData& m, int begin, int end) {
 	m.orders.SetCount(0);
 	m.pattern.SetCount(0);
 	m.distances.SetCount(0);
@@ -861,7 +862,7 @@ void MartNN::IterateOnce(Data& d, MartData& m, int begin, int end) {
 		CloseOrder(m, 0, m.orders[0].lots);
 }
 
-void MartNN::IterateGroups(MartData& m, int i) {
+void MartEvent::IterateGroups(MartData& m, int i) {
 	int sym_count = cl_sym.GetSymbolCount();
 	m.descriptors.SetCount(sym_count);
 	m.symbol_added.SetCount(sym_count);
@@ -969,19 +970,19 @@ void MartNN::IterateGroups(MartData& m, int i) {
 	}
 }
 
-void MartNN::IterateSignals(MartData& m, int i) {
-	NNCore& c = GetInputCore(0);
-	NetNN& nn = dynamic_cast<NetNN&>(c);
+void MartEvent::IterateSignals(MartData& m, int i) {
+	EventCore& c = GetInputCore(0);
+	NetEvent& nn = dynamic_cast<NetEvent&>(c);
 	int sym_count = cl_sym.GetSymbolCount();
 	
 	
-	int nn_readpos = NetNN::output_sym_count * i;
+	int nn_readpos = NetEvent::output_sym_count * i;
 	
 	m.symbol_added.SetCount(sym_count);
 	for(bool& b : m.symbol_added) b = false;
 	
 	
-	for(int k = 0; k < NetNN::output_sym_count; k++) {
+	for(int k = 0; k < NetEvent::output_sym_count; k++) {
 		int sym = nn.sym_signals[nn_readpos + k];
 		if (sym < 0) {
 			sym = -sym - 1;
@@ -1103,7 +1104,7 @@ void MartNN::IterateSignals(MartData& m, int i) {
 	}
 }
 
-void MartNN::IterateLimits(MartData& m, int i) {
+void MartEvent::IterateLimits(MartData& m, int i) {
 	int sym_count = cl_sym.GetSymbolCount();
 	
 	m.prev_signals.SetCount(sym_count, 0);
@@ -1186,7 +1187,7 @@ void MartNN::IterateLimits(MartData& m, int i) {
 	
 }
 
-void MartNN::SetSymbolLots(MartData& m, int sym, double lots) {
+void MartEvent::SetSymbolLots(MartData& m, int sym, double lots) {
 	double buy_lots, sell_lots;
 	if (lots > 0) {
 		buy_lots = lots;
@@ -1263,7 +1264,7 @@ void MartNN::SetSymbolLots(MartData& m, int sym, double lots) {
 	
 }
 
-void MartNN::CloseOrder(MartData& m, int i, double lots) {
+void MartEvent::CloseOrder(MartData& m, int i, double lots) {
 	Order& o = m.orders[i];
 	if (o.type == OP_BUY || o.type == OP_SELL) {
 		double close = cl_sym.GetBuffer(o.symbol, 0, 0).Get(m.pos);
@@ -1286,7 +1287,7 @@ void MartNN::CloseOrder(MartData& m, int i, double lots) {
 		m.orders.Remove(i);
 }
 
-void MartNN::OpenOrder(MartData& m, int sym, int type, double lots) {
+void MartEvent::OpenOrder(MartData& m, int sym, int type, double lots) {
 	Order& o = m.orders.Add();
 	o.symbol = sym;
 	o.type = type;
@@ -1304,8 +1305,8 @@ void MartNN::OpenOrder(MartData& m, int sym, int type, double lots) {
 	m.history_orders_total++;
 }
 
-void MartNN::Start(Data& d, int pos, Vector<double>& output) {
-	/*NNCore& c = GetInputCore(0);
+void MartEvent::Start(Data& d, int pos, Vector<double>& output) {
+	/*EventCore& c = GetInputCore(0);
 	c.Start(d.is_realtime, pos, output);
 	
 	const Vector<double>& buf = c.GetBuffer(d.is_realtime);
@@ -1336,7 +1337,7 @@ void MartNN::Start(Data& d, int pos, Vector<double>& output) {
 	*/
 }
 
-void MartNN::FillVector(Data& d) {
+void MartEvent::FillVector(Data& d) {
 	/*System& sys = GetSystem();
 	
 	cl_sym.Refresh();
@@ -1401,7 +1402,7 @@ void MartNN::FillVector(Data& d) {
 
 
 
-void StatsNN::Init() {
+void StatsEvent::Init() {
 	is_optimized = true;
 	
 	System& sys = GetSystem();
@@ -1415,22 +1416,22 @@ void StatsNN::Init() {
 	cl_sym.Refresh();
 }
 
-void StatsNN::InitNN(Data& data) {
+void StatsEvent::InitEvent(Data& data) {
 	
 }
 
-void StatsNN::Optimize(Data& data) {
-	/*NNCore& c = GetInputCore(0);
-	NetNN& nn = dynamic_cast<NetNN&>(c);
+void StatsEvent::Optimize(Data& data) {
+	/*EventCore& c = GetInputCore(0);
+	NetEvent& nn = dynamic_cast<NetEvent&>(c);
 	int sym_count = cl_sym.GetSymbolCount();
 	
-	int count = nn.sym_signals.GetCount() / NetNN::output_sym_count;
+	int count = nn.sym_signals.GetCount() / NetEvent::output_sym_count;
 	
 	for(int i = 0; i < count; i++) {
-		int nn_readpos = NetNN::output_sym_count * i;
+		int nn_readpos = NetEvent::output_sym_count * i;
 		
 		
-		for(int k = 0; k < NetNN::output_sym_count; k++) {
+		for(int k = 0; k < NetEvent::output_sym_count; k++) {
 			int sym = nn.sym_signals[nn_readpos + k];
 			if (sym < 0) {
 				sym = -sym - 1;
@@ -1442,14 +1443,15 @@ void StatsNN::Optimize(Data& data) {
 	}*/
 }
 
-void StatsNN::Start(Data& data, int pos, Vector<double>& output) {
+void StatsEvent::Start(Data& data, int pos, Vector<double>& output) {
 	
 }
 
-void StatsNN::FillVector(Data& data) {
+void StatsEvent::FillVector(Data& data) {
 	
 }
 
 
 
 }
+#endif

@@ -531,7 +531,7 @@ bool JobThread::ProcessJob() {
 			}
 			
 			// Resist useless fast loop here
-			if (job.state != Job::RUNNING) Sleep(100);
+			if (job.state != Job::RUEventING) Sleep(100);
 		}
 		else r = false;
 	}
@@ -578,7 +578,7 @@ bool Job::Process() {
 	switch (state) {
 		case INIT:			core->RefreshSources();
 							if ((r=begin())						|| !begin)		state++; break;
-		case RUNNING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
+		case RUEventING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
 		case STOPPING:		if ((r=end())						|| !end)		state++; break;
 		case INSPECTING:	if ((r=inspect())					|| !inspect)	state++; break;
 	}
@@ -595,7 +595,7 @@ bool Job::Process() {
 String Job::GetStateString() const {
 	switch (state) {
 		case INIT: return "Init";
-		case RUNNING: return "Running";
+		case RUEventING: return "Running";
 		case STOPPING: return "Stopping";
 		case INSPECTING: return "Inspecting";
 		case STOPPED: return "Finished";
@@ -774,102 +774,43 @@ bool System::RefreshReal() {
 	return true;
 }
 
-void System::ProcessNN(NNCoreItem& ci, bool store_cache) {
-	NNCore& c = *ci.core;
+int System::GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl) {
 	
-	if (c.is_optimized) {
-		c.Optimize(c.data[0]);
-		c.Optimize(c.data[1]);
-	}
-	else {
-		if (!c.is_sampled) {
-			c.Sample(c.data[0]);
-			c.Sample(c.data[1]);
-			c.is_sampled = true;
-		}
-		
-		if (c.data[0].ses.Data().GetDataCount() && c.data[1].ses.Data().GetDataCount()) {
-			if (c.data[0].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.data[0].ses.IsTraining())
-				c.data[0].ses.StartTraining();
-			if (c.data[1].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS && !c.data[1].ses.IsTraining())
-				c.data[1].ses.StartTraining();
-				
-			while (c.data[0].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-				Sleep(100);
-			}
-			while (c.data[1].ses.GetStepCount() < NNCore::MAX_TRAIN_STEPS) {
-				Sleep(100);
-			}
-			
-			c.data[0].ses.StopTraining();
-			c.data[1].ses.StopTraining();
-		}
-		
-		int count = GetDataBridgeCommon().GetTimeIndex(c.tf).GetCount() - c.buf_begin;
-		
-		for(int i = 0; i < 2; i++) {
-			c.data[i].buf.SetCount(count, 0);
-			c.FillVector(c.data[i]);
-			c.data[i].counted = count;
-		}
-	}
+	int id = decl.factory * 1000 + symbol_id;
 	
+	CombineHash ch;
+	for(int i = 0; i < decl.arg_count; i++)
+		ch << decl.args[i] << 1;
+	int arg_hash = ch;
 	
-	if (store_cache)
-		c.Store();
-	
-}
-
-int System::GetNNCoreQueue(Vector<Ptr<NNCoreItem> >& ci_queue, int tf_id, int factory_id) {
-	
-	int id = factory_id * 100 + tf_id;
-	
-	bool init = nndata.Find(id) == -1;
+	bool init = nndata.GetAdd(id).Find(arg_hash) == -1;
 	
 	if (init) {
-		NNCoreItem& ci = nndata.Add(id);
-		ci.tf = tf_id;
-		ci.factory = factory_id;
-		ci.core = System::NNCoreFactories()[factory_id].b();
+		EventCoreItem& ci = nndata.GetAdd(id).Add(arg_hash);
+		ci.symbol = symbol_id;
+		ci.factory = decl.factory;
+		ci.core = System::EventCoreFactories()[decl.factory].b();
 		
-		NNCore& c = *ci.core;
-		c.factory = factory_id;
-		c.tf = tf_id;
+		EventCore& c = *ci.core;
+		c.factory = decl.factory;
+		c.symbol = symbol_id;
+		for(int i = 0; i < decl.arg_count; i++)
+			c.args.Add(decl.args[i]);
+		
 		c.Load();
+		
+		ArgEvent args;
+		c.Arg(args);
+		for(int i = 0; i < decl.arg_count; i++)
+			*args.args[i] = decl.args[i];
+		
 		c.Init();
-		
-		if (!c.data[0].is_init)
-			c.InitNN(c.data[0]);
-		c.data[0].is_init = true;
-		
-		if (!c.data[1].is_init)
-			c.InitNN(c.data[1]);
-		c.data[1].is_init = true;
 	}
 	
-	NNCoreItem& ci = nndata.Get(id);
+	EventCoreItem& ci = nndata.Get(id).Get(arg_hash);
 	
-	ci_queue.Insert(0, &ci);
+	ci_queue.Add(&ci);
 	
-	InNN in;
-	ci.core->Input(in);
-	for(int i = 0; i < in.factories.GetCount(); i++) {
-		GetNNCoreQueue(ci_queue, in.tfs[i], in.factories[i]);
-	}
-	
-	if (init) {
-		for(int i = 0; i < in.factories.GetCount(); i++) {
-			int tf = in.tfs[i];
-			int factory = in.factories[i];
-			
-			for(int j = 0; j < ci_queue.GetCount(); j++) {
-				if (ci_queue[j]->factory == factory && ci_queue[j]->tf == tf) {
-					ci.core->SetInputCore(i, *ci_queue[j]->core);
-					break;
-				}
-			}
-		}
-	}
 	
 	return 0;
 }

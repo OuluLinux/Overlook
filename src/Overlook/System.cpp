@@ -271,8 +271,8 @@ void System::AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr 
 	CoreFactories().Add(CoreSystem(name, f, singlef));
 }
 
-void System::AddCustomNNCore(const String& name, NNCoreFactoryPtr f, NNCoreFactoryPtr singlef) {
-	NNCoreFactories().Add(NNCoreSystem(name, f, singlef));
+void System::AddCustomEventCore(const String& name, EventCoreFactoryPtr f, EventCoreFactoryPtr singlef) {
+	EventCoreFactories().Add(EventCoreSystem(name, f, singlef));
 }
 
 }

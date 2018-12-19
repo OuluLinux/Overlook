@@ -19,7 +19,6 @@ Server::Server() {
 }
 
 void Server::Init() {
-	GetForeSignal().WhenEvent << THISBACK(NewEvent);
 	
 	db.Init();
 	

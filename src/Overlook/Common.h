@@ -147,6 +147,7 @@ struct OnlineAverage1 : Moveable<OnlineAverage1> {
 		}
 		count++;
 	}
+	double GetMean() const {return mean;}
 	void Serialize(Stream& s) {s % mean % count;}
 };
 
@@ -465,7 +466,7 @@ struct UserExc : public Exc {
 typedef Vector<byte> CoreData;
 
 class Core;
-class NNCore;
+class EventCore;
 
 struct BatchPartStatus : Moveable<BatchPartStatus> {
 	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
@@ -734,16 +735,16 @@ public:
 	
 };
 
-class NNCoreItem : Moveable<NNCoreItem>, public Pte<NNCoreItem> {
+class EventCoreItem : Moveable<EventCoreItem>, public Pte<EventCoreItem> {
 	
 public:
-	One<NNCore> core;
-	int tf, factory;
+	One<EventCore> core;
+	int symbol, factory;
 	
 public:
 	typedef CoreItem CLASSNAME;
-	NNCoreItem() {tf = -1; factory = -1;}
-	~NNCoreItem() {}
+	EventCoreItem() {symbol = -1; factory = -1;}
+	~EventCoreItem() {}
 	
 };
 

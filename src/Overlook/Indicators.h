@@ -140,8 +140,8 @@ public:
 		reg % In<DataBridge>()
 			% Out(2, 2)
 			% Lbl(4)
-			% Arg("fast_ema", fast_ema_period, 2, 127)
-			% Arg("slow_ema", slow_ema_period, 2, 127)
+			% Arg("fast_ema", fast_ema_period, 2, 1000)
+			% Arg("slow_ema", slow_ema_period, 2, 1000)
 			% Arg("signal_sma", signal_sma_period, 2, 127)
 			% Arg("method", method, 0, 3);
 	}

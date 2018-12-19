@@ -442,22 +442,27 @@ void Core::SetJobFinished(bool b) {
 
 
 
-NNCore::NNCore() {
-	data[1].is_realtime = true;
+EventCore::EventCore() {
 	
 }
 
-void NNCore::Load() {
+void EventCore::Load() {
 	String dir = GetOverlookFile("nncores");
 	RealizeDirectory(dir);
-	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	String filename = IntStr(factory) + "-" + IntStr(symbol);
+	for(int i = 0; i < args.GetCount(); i++)
+		filename += "-" + IntStr(args[i]);
+	String file = AppendFileName(dir, filename + ".bin");
 	LoadFromFile(*this, file);
 }
 
-void NNCore::Store() {
+void EventCore::Store() {
 	String dir = GetOverlookFile("nncores");
 	RealizeDirectory(dir);
-	String file = AppendFileName(dir, IntStr(factory) + "-" + IntStr(tf) + ".bin");
+	String filename = IntStr(factory) + "-" + IntStr(symbol);
+	for(int i = 0; i < args.GetCount(); i++)
+		filename += "-" + IntStr(args[i]);
+	String file = AppendFileName(dir, filename + ".bin");
 	StoreToFile(*this, file);
 }
 

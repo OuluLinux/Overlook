@@ -12,7 +12,7 @@ class CoreList : Moveable<CoreList> {
 	Vector<FactoryDeclaration> indi_ids;
 	Vector<Ptr<CoreItem> > work_queue;
 	Vector<Vector<Vector<ConstBuffer*> > > bufs;
-	Vector<Vector<ConstLabelSignal*> > lbls;
+	Vector<Vector<Vector<ConstLabelSignal*> > > lbls;
 	Vector<DataBridge*> db, db_m1;
 	Index<int> sym_ids, tf_ids;
 	
@@ -32,7 +32,8 @@ public:
 	String GetIndiDescription(int i) const;
 	int GetTf(int i) const {return tf_ids[i];}
 	ConstBuffer& GetBuffer(int sym, int src, int buf) const {return *bufs[sym][src][buf];}
-	ConstLabelSignal& GetLabelSignal(int sym, int src) const {return *lbls[sym][src];}
+	ConstLabelSignal& GetLabelSignal(int sym, int src, int buf) const {return *lbls[sym][src][buf];}
+	int GetLabelSignalCount(int sym, int src) const {return lbls[sym][src].GetCount();}
 	bool IsEmpty() {return bufs.IsEmpty();}
 	DataBridge* GetDataBridge(int i) {return db[i];}
 	

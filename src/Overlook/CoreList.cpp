@@ -36,7 +36,7 @@ void CoreList::Init() {
 	db_m1.SetCount(sym_ids.GetCount(), NULL);
 	for(int i = 0; i < bufs.GetCount(); i++) {
 		bufs[i].SetCount(indi_ids.GetCount());
-		lbls[i].SetCount(indi_ids.GetCount(), NULL);
+		lbls[i].SetCount(indi_ids.GetCount());
 	}
 	
 	for(int i = 0; i < work_queue.GetCount(); i++) {
@@ -77,7 +77,12 @@ void CoreList::Init() {
 		}
 		
 		if (c.GetLabelCount() && c.GetLabelBufferCount(0)) {
-			lbls[symi][faci] = &c.GetLabelBuffer(0, 0);
+			int bufcount = c.GetLabelBufferCount(0);
+			auto& v = lbls[symi][faci];
+			v.SetCount(bufcount, NULL);
+			for(int i = 0; i < bufcount; i++) {
+				v[i] = &c.GetLabelBuffer(0, i);
+			}
 		}
 	}
 	ASSERT(db_m1[0]);

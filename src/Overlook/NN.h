@@ -1,12 +1,13 @@
-#ifndef _Overlook_NN_h_
-#define _Overlook_NN_h_
+#ifndef _Overlook_Event_h_
+#define _Overlook_Event_h_
 
+#if 0
 namespace Overlook {
 
-class NetNN : public NNCore {
+class NetEvent : public EventCore {
 	
 protected:
-	friend class MartNN;
+	friend class MartEvent;
 	
 	static const int input_length = 10;
 	static const int output_sym_count = 2;
@@ -23,17 +24,17 @@ protected:
 	
 public:
 	virtual void Init();
-	virtual void InitNN(Data& data);
+	virtual void InitEvent(Data& data);
 	virtual void Sample(Data& data);
 	virtual void Start(Data& data, int pos, Vector<double>& output);
 	virtual void FillVector(Data& data);
-	virtual void Input(InNN& in) {
+	virtual void Input(InEvent& in) {
 		
 	}
-	virtual void SerializeNN(Stream& s) {s % sym_signals;}
+	virtual void SerializeEvent(Stream& s) {s % sym_signals;}
 };
 
-class IntPerfNN : public NNCore {
+class IntPerfEvent : public EventCore {
 	
 	
 	static const int input_length = 10;
@@ -49,18 +50,18 @@ class IntPerfNN : public NNCore {
 	
 public:
 	virtual void Init();
-	virtual void InitNN(Data& data);
+	virtual void InitEvent(Data& data);
 	virtual void Sample(Data& data);
 	virtual void Start(Data& data, int pos, Vector<double>& output);
 	virtual void FillVector(Data& data);
-	virtual void Input(InNN& in) {
-		in.Add<NetNN>(GetTf());
+	virtual void Input(InEvent& in) {
+		in.Add<NetEvent>(GetTf());
 	}
-	virtual void SerializeNN(Stream& s) {}
+	virtual void SerializeEvent(Stream& s) {}
 	
 };
 
-class MultiTfNetNN : public NNCore {
+class MultiTfNetEvent : public EventCore {
 	
 	// Temporary
 	Vector<double> tmp;
@@ -68,18 +69,18 @@ class MultiTfNetNN : public NNCore {
 	
 public:
 	virtual void Init();
-	virtual void InitNN(Data& data);
+	virtual void InitEvent(Data& data);
 	virtual void Sample(Data& data);
 	virtual void Start(Data& data, int pos, Vector<double>& output);
 	virtual void FillVector(Data& data);
-	virtual void Input(InNN& in) {
-		in.Add<IntPerfNN>(GetTf()+0);
-		in.Add<IntPerfNN>(GetTf()+1);
-		in.Add<IntPerfNN>(GetTf()+2);
+	virtual void Input(InEvent& in) {
+		in.Add<IntPerfEvent>(GetTf()+0);
+		in.Add<IntPerfEvent>(GetTf()+1);
+		in.Add<IntPerfEvent>(GetTf()+2);
 	}
 };
 
-class MartNN : public NNCore {
+class MartEvent : public EventCore {
 	
 	enum {OPT_GROUPPERIOD, OPT_GROUPSTEP, OPT_GROUPAV,
 		OPT_SIGLEN, OPT_MINSUM, OPT_MINLEN, OPT_MINFACT, OPT_MINGROUP, OPT_FINMINLEN,
@@ -150,20 +151,20 @@ class MartNN : public NNCore {
 	
 public:
 	virtual void Init();
-	virtual void InitNN(Data& data);
+	virtual void InitEvent(Data& data);
 	virtual void Sample(Data& data) {}
 	virtual void Optimize(Data& data);
 	virtual void Start(Data& data, int pos, Vector<double>& output);
 	virtual void FillVector(Data& data);
-	virtual void Input(InNN& in) {
-		in.Add<NetNN>(GetTf());
+	virtual void Input(InEvent& in) {
+		in.Add<NetEvent>(GetTf());
 	}
-	virtual void SerializeNN(Stream& s) {s % op_hist % best_trial[0] % best_trial[1];}
+	virtual void SerializeEvent(Stream& s) {s % op_hist % best_trial[0] % best_trial[1];}
 	
 };
 
 
-class StatsNN : public NNCore {
+class StatsEvent : public EventCore {
 	
 	// Temporary
 	Vector<double> tmp;
@@ -171,16 +172,17 @@ class StatsNN : public NNCore {
 	
 public:
 	virtual void Init();
-	virtual void InitNN(Data& data);
+	virtual void InitEvent(Data& data);
 	virtual void Sample(Data& data) {}
 	virtual void Start(Data& data, int pos, Vector<double>& output);
 	virtual void Optimize(Data& data);
 	virtual void FillVector(Data& data);
-	virtual void Input(InNN& in) {
-		in.Add<NetNN>(GetTf());
+	virtual void Input(InEvent& in) {
+		in.Add<NetEvent>(GetTf());
 	}
 };
 
 }
 
+#endif
 #endif

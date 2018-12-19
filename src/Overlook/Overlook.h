@@ -43,9 +43,10 @@ using namespace Upp;
 #include "NetCluster.h"
 #include "DqnAutomation.h"
 #include "PatternMatch.h"
-#include "NN.h"
-#include "NNAutomation.h"
+#include "StatsAutomation.h"
+#include "EventAutomation.h"
 #include "Martingale.h"
+#include "Events.h"
 
 
 namespace Overlook {

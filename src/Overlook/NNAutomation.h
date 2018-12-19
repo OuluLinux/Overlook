@@ -1,15 +1,16 @@
-#ifndef _Overlook_NNAutomation_h_
-#define _Overlook_NNAutomation_h_
+#ifndef _Overlook_EventAutomation_h_
+#define _Overlook_EventAutomation_h_
 
 
+#if 0
 namespace Overlook {
 using namespace libmt;
 
 
-class NNAutomation : public Common {
+class EventAutomation : public Common {
 	
 protected:
-	friend class NNAutomationCtrl;
+	friend class EventAutomationCtrl;
 	
 	static const int sym_count = 10;
 	static const int input_length = 10;
@@ -18,7 +19,7 @@ protected:
 	
 	
 	// Temporary
-	Vector<Ptr<NNCoreItem> > ci_queue;
+	Vector<Ptr<EventCoreItem> > ci_queue;
 	Vector<double> points;
 	CoreList cl_net, cl_sym;
 	
@@ -28,8 +29,8 @@ protected:
 	void SetRealSymbolLots(int sym_, double lots);
 	
 public:
-	typedef NNAutomation CLASSNAME;
-	NNAutomation();
+	typedef EventAutomation CLASSNAME;
+	EventAutomation();
 	
 	virtual void Init();
 	virtual void Start();
@@ -37,11 +38,11 @@ public:
 	
 };
 
-inline NNAutomation& GetNNAutomation() {return GetSystem().GetCommon<NNAutomation>();}
+inline EventAutomation& GetEventAutomation() {return GetSystem().GetCommon<EventAutomation>();}
 
-class NNAutomationCtrl : public CommonCtrl {
+class EventAutomationCtrl : public CommonCtrl {
 	
-	struct NNBufCtrl : public Ctrl {
+	struct EventBufCtrl : public Ctrl {
 		Vector<double>* buf;
 		Vector<Point> cache;
 		virtual void Paint(Draw& d) {
@@ -57,15 +58,15 @@ class NNAutomationCtrl : public CommonCtrl {
 	Array<ConvNet::SessionConvLayers> ses_view;
 	Array<ConvNet::TrainingGraph> train_view;
 	Array<Upp::Label> status;
-	Array<NNBufCtrl> draws;
+	Array<EventBufCtrl> draws;
 	Vector<ConvNet::Session*> ses_list;
 	TabCtrl* prev_tabs = NULL;
 	bool init = true;
 	bool is_initing = false;
 	
 public:
-	typedef NNAutomationCtrl CLASSNAME;
-	NNAutomationCtrl();
+	typedef EventAutomationCtrl CLASSNAME;
+	EventAutomationCtrl();
 	
 	virtual void Data();
 	
@@ -75,4 +76,5 @@ public:
 
 }
 
+#endif
 #endif

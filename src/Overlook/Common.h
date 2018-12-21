@@ -49,9 +49,13 @@ using namespace Upp;
 
 
 inline String GetOverlookFile(String file) {
+	#ifdef flagPOSIX
+	return ConfigFile(file);
+	#else
 	String dir = AppendFileName(GetDocumentsFolder(), "Overlook");
 	RealizeDirectory(dir);
 	return AppendFileName(dir, file);
+	#endif
 }
 
 

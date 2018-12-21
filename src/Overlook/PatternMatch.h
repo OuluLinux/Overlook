@@ -4,13 +4,11 @@
 namespace Overlook {
 using namespace libmt;
 
-struct PatternGroup : Moveable<PatternGroup> {
-	Vector<int> symbols;
-	
-};
+
 
 struct PatternMatcherData {
-	Vector<Vector<PatternGroup> > data;
+	Vector<OnlineAverageWindow1> distance_averages;
+	Vector<byte> data;
 	Vector<Point> pattern;
 	int counted = 0;
 	
@@ -46,13 +44,15 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	PatternMatcherData& RefreshData(int group_step, int period);
+	int GetSymbolCount() const {return cl_sym.GetSymbolCount();}
+	PatternMatcherData& RefreshData(int group_step, int period, int average_period);
 };
 
 inline PatternMatcher& GetPatternMatcher() {return GetSystem().GetCommon<PatternMatcher>();}
 
 class PatternMatcherCtrl : public CommonCtrl {
-	EditIntSpin period, group_step;
+	Upp::Label period_lbl, group_step_lbl, average_period_lbl;
+	EditIntSpin period, group_step, average_period;
 	SliderCtrl slider;
 	Upp::Label date;
 	ArrayCtrl list;

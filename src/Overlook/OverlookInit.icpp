@@ -116,6 +116,8 @@ INITBLOCK {
     System::RegisterEvent<LaguerreEvent>("Laguerre Event");
     System::RegisterEvent<QQEEvent>("QQE Event");
     System::RegisterEvent<TickBalanceEvent>("QQE Event");
+    System::RegisterEvent<BreakEvent>("Break Event");
+    System::RegisterEvent<DayEvent>("Day Event");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

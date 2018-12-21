@@ -431,7 +431,7 @@ protected:
 	
 public:
 	
-	static const int fast_tf = 1;
+	static const int fast_tf = 4;
 	
 	EventCore();
 	virtual void Init() = 0;

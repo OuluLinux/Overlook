@@ -263,7 +263,7 @@ public:
 class OnlineMinimalLabelEvent : public EventCore {
 	
 	// Temporary
-	int period = 13;
+	int costlevel = 13;
 	int tf = -1;
 	
 public:
@@ -271,10 +271,10 @@ public:
 	virtual void Start(int pos, int& output);
 	virtual void Arg(ArgEvent& args) {
 		args.Add(fast_tf, 4, 1, tf);
-		args.Add(0, 10, 5, period);
+		args.Add(0, 10, 5, costlevel);
 	}
 	virtual void SerializeEvent(Stream& s) {}
-	virtual String GetTitle() {return Format("OnlineMinimalLabel tf=%d period=%d", tf, period);}
+	virtual String GetTitle() {return Format("OnlineMinimalLabel tf=%d costlevel=%d", tf, costlevel);}
 	
 };
 
@@ -339,6 +339,40 @@ public:
 	}
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() {return Format("QQE tf=%d period=%d", tf, period);}
+	
+};
+
+
+
+class BreakEvent : public EventCore {
+	
+	// Temporary
+	int period = 13;
+	
+public:
+	virtual void Init();
+	virtual void Start(int pos, int& output);
+	virtual void Arg(ArgEvent& args) {
+		args.Add(5, 50, 5, period);
+	}
+	virtual void SerializeEvent(Stream& s) {}
+	virtual String GetTitle() {return Format("Break period=%d", period);}
+	
+};
+
+
+
+class DayEvent : public EventCore {
+	
+	// Temporary
+	
+public:
+	virtual void Init();
+	virtual void Start(int pos, int& output);
+	virtual void Arg(ArgEvent& args) {
+	}
+	virtual void SerializeEvent(Stream& s) {}
+	virtual String GetTitle() {return "Day";}
 	
 };
 

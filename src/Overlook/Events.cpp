@@ -332,7 +332,7 @@ void OnlineMinimalLabelEvent::Init() {
 	System& sys = GetSystem();
 	cl_sym.AddSymbol(sys.GetSymbol(GetSymbol()));
 	cl_sym.AddTf(tf);
-	cl_sym.AddIndi(sys.Find<OnlineMinimalLabel>()).AddArg(period);
+	cl_sym.AddIndi(sys.Find<OnlineMinimalLabel>()).AddArg(costlevel);
 	cl_sym.Init();
 	cl_sym.Refresh();
 }
@@ -427,6 +427,77 @@ void TickBalanceEvent::Start(int pos, int& output) {
 	else {
 		ConstLabelSignal& lbl = cl_sym.GetLabelSignal(0, 0, 0);
 		output = 1 + lbl.signal.Get(tf_pos);
+	}
+}
+
+
+
+
+
+void BreakEvent::Init() {
+	System& sys = GetSystem();
+	cl_sym.AddSymbol(sys.GetSymbol(GetSymbol()));
+	cl_sym.AddTf(fast_tf);
+	cl_sym.AddIndi(0);
+	cl_sym.Init();
+	cl_sym.Refresh();
+}
+
+void BreakEvent::Start(int pos, int& output) {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	ConstBuffer& buf = cl_sym.GetBuffer(0, 0, 0);
+	if (pos >= buf.GetCount())
+		output = 0;
+	else {
+		double cur = buf.Get(pos);
+		bool is_high_break = true;
+		bool is_low_break = true;
+		for(int i = 1; i <= period && is_high_break && is_low_break; i++) {
+			double value = buf.Get(max(0, pos - i));
+			if (value >= cur)
+				is_high_break = false;
+			if (value <= cur)
+				is_low_break = false;
+		}
+		
+		if (!is_high_break && !is_low_break)
+			output = 0;
+		else
+			output = 1 + (is_high_break ? 0 : 1);
+	}
+}
+
+
+
+
+
+void DayEvent::Init() {
+	System& sys = GetSystem();
+	cl_sym.AddSymbol(sys.GetSymbol(GetSymbol()));
+	cl_sym.AddTf(fast_tf);
+	cl_sym.AddIndi(0);
+	cl_sym.Init();
+	cl_sym.Refresh();
+}
+
+void DayEvent::Start(int pos, int& output) {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& fast_idx = dbc.GetTimeIndex(fast_tf);
+	Time t = fast_idx[pos];
+	t.hour = 0;
+	t.minute = 0;
+	int begin_pos = fast_idx.Find(t);
+	if (begin_pos == -1)
+		output = 0;
+	else {
+		ConstBuffer& buf = cl_sym.GetBuffer(0, 0, 0);
+		if (pos >= buf.GetCount())
+			output = 0;
+		else {
+			double begin = buf.Get(begin_pos);
+			double cur = buf.Get(pos);
+			output = 1 + (cur >= begin ? 0 : 1);
+		}
 	}
 }
 

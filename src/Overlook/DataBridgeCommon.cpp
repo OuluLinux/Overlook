@@ -281,6 +281,9 @@ void DataBridgeCommon::RefreshTimeBuffers() {
 			
 			time += minperiod * 60;
 			
+			if (time > now)
+				break;
+			
 			if (!SyncData(i, time, shift))
 				continue;
 			

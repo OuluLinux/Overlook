@@ -24,7 +24,15 @@ struct UniqueGroup : Moveable<UniqueGroup> {
 struct EventOptResult : Moveable<EventOptResult> {
 	Vector<int> cis, signals;
 	double neg_first_prob, neg_first_confidence;
+	int popcount = 0;
 	int sym = 0;
+};
+
+struct BestEventOptSettings {
+	int min_popcount = 100, whichfirst_pips = -1;
+	double min_confidence = 0.0;
+	
+	void Serialize(Stream& s) {s % min_popcount % whichfirst_pips % min_confidence;}
 };
 
 class EventAutomation : public Common {
@@ -32,27 +40,27 @@ class EventAutomation : public Common {
 protected:
 	friend class EventAutomationCtrl;
 	
-	static const int pips_first = 10;
 	
 	
 	// Persistency
 	VectorMap<GroupSettings, VectorMap<unsigned, VectorBool> > group_data;
-	VectorMap<GroupSettings, Vector<unsigned> > current_groups;
 	Vector<VectorMap<int, OnlineAverage1> > data;
 	Vector<VectorMap<int, VectorBool> > simple_data;
 	VectorMap<unsigned, UniqueGroup> unique_groups;
 	VectorMap<GroupSettings, int> group_counted;
 	Vector<VectorBool> sig_whichfirst;
-	Vector<byte> current_signals;
+	BestEventOptSettings opt_settings;
 	int counted = 100;
+	bool is_optimized = false;
 	
 	
 	// Temporary
 	Vector<Vector<int> > symbol_simple_datas;
 	Vector<Ptr<EventCoreItem> > ci_queue;
-	Vector<EventOptResult> opt_results;
 	CoreList cl_sym;
 	Time prev_update;
+	double best_opt_result;
+	int opt_total = 0, opt_actual = 0;
 	bool do_store = false;
 	
 	
@@ -63,18 +71,22 @@ public:
 	virtual void Init();
 	virtual void Start();
 	void Process();
-	void RefreshCachedSignals();
+	void ClearCachedSignals();
+	void RefreshCachedSignals(int pips);
 	void RefreshGroups();
 	void RefreshSimpleEvents();
-	void RefreshCurrentComplexEvents();
+	void GetCurrentComplexEvents(int pos, int min_samplecount, Vector<EventOptResult>& results);
 	
+	void GetCurrentGroups(int pos, VectorMap<GroupSettings, Vector<unsigned> >& current_groups);
+	void GetCurrentSignals(int pos, Vector<byte>& current_signals);
 	int GetSignalWhichFirst(int sym, int pos, int pips);
+	double GetTestResult(int min_popcount, double min_confidence, int whichfirst_pips);
 	
 	void LoadThis() {LoadFromFile(*this, GetOverlookFile("EventAutomation.bin"));}
 	void StoreThis() {StoreToFile(*this, GetOverlookFile("EventAutomation.bin"));}
 	void Serialize(Stream& s) {
-		s % group_data % current_groups % data % simple_data % unique_groups % group_counted
-		  % sig_whichfirst % current_signals % counted;
+		s % group_data % data % simple_data % unique_groups % group_counted
+		  % sig_whichfirst % opt_settings % counted % is_optimized;
 	}
 	
 };
@@ -93,6 +105,10 @@ class EventAutomationCtrl : public CommonCtrl {
 	
 	Splitter uniquesplit;
 	ArrayCtrl uniquegroups, uniquesettings;
+	
+	ParentCtrl optctrl;
+	ProgressIndicator optprog;
+	ArrayCtrl optlist;
 	
 public:
 	typedef EventAutomationCtrl CLASSNAME;

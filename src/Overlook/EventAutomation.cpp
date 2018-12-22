@@ -77,11 +77,10 @@ void EventAutomation::Init() {
 	}
 	
 	
-	LoadThis();
+	//LoadThis();
 	
 	if (data.GetCount() && data.GetCount() != ci_queue.GetCount()) {
 		group_data.Clear();
-		current_groups.Clear();
 		unique_groups.Clear();
 		data.Clear();
 		simple_data.Clear();
@@ -93,13 +92,16 @@ void EventAutomation::Init() {
 	simple_data.SetCount(ci_queue.GetCount());
 	
 	
+	
 	RefreshGroups();
 	StoreThis();
+	
+	if (!is_optimized)
+		Thread::Start(THISBACK(Process));
 }
 
 void EventAutomation::RefreshGroups() {
 	PatternMatcher& pm = GetPatternMatcher();
-	Vector<int> periods;
 	Array<CombineHash> ch;
 	int sym_count = pm.GetSymbolCount();
 	ch.SetCount(sym_count);
@@ -119,10 +121,6 @@ void EventAutomation::RefreshGroups() {
 			int& counted = group_counted.GetAdd(gs, 0);
 			
 			for(int j = counted; j < data_size; j++) {
-				bool current_groups = j == data_size-1;
-				if (current_groups)
-					this->current_groups.Clear();
-				
 				int group_count = 0;
 				for(int k = 0; k < sym_count; k++)
 					ch[k].hash = CombineHash::INIT;
@@ -156,9 +154,6 @@ void EventAutomation::RefreshGroups() {
 					}
 					VectorBool& vb = group_data[l];
 					vb.Set(j, true);
-					
-					if (current_groups)
-						this->current_groups.GetAdd(gs).Add(hash);
 				}
 			}
 			
@@ -169,13 +164,43 @@ void EventAutomation::RefreshGroups() {
 	SortByValue(unique_groups, UniqueGroup());
 }
 
+void EventAutomation::GetCurrentGroups(int pos, VectorMap<GroupSettings, Vector<unsigned> >& current_groups) {
+	current_groups.Clear();
+	
+	PatternMatcher& pm = GetPatternMatcher();
+	Array<CombineHash> ch;
+	int sym_count = pm.GetSymbolCount();
+	ch.SetCount(sym_count);
+	for(int i = 3; i < 13; i++) {
+		int period = 1 << i;
+		for(int group_step = 20; group_step <= 60; group_step+=20) {
+			GroupSettings gs;
+			gs.period = period;
+			gs.group_step = group_step;
+			gs.average_period = period;
+			
+			PatternMatcherData& pmd = pm.RefreshData(group_step, period, period);
+			
+			int group_count = 0;
+			for(int k = 0; k < sym_count; k++)
+				ch[k].hash = CombineHash::INIT;
+			for(int k = 0; k < sym_count; k++) {
+				int group = pmd.data[pos * sym_count + k];
+				ch[group].Put(k).Put(1);
+				group_count = max(group_count, group+1);
+			}
+			
+			for(int k = 0; k < group_count; k++) {
+				unsigned hash = ch[k];
+				current_groups.GetAdd(gs).Add(hash);
+			}
+		}
+	}
+}
+
 void EventAutomation::RefreshSimpleEvents() {
 	System& sys = GetSystem();
 	System::NetSetting& net = sys.GetNet(0);
-	
-	cl_sym.Refresh();
-	
-	current_signals.SetCount(ci_queue.GetCount(), 0);
 	
 	for(int i = 0; i < ci_queue.GetCount(); i++) {
 		EventCore& c = *ci_queue[i]->core;
@@ -211,9 +236,6 @@ void EventAutomation::RefreshSimpleEvents() {
 				if (vb.GetCount() < data_end) vb.SetCount(data_end);
 				vb.Set(j, true);
 			}
-			
-			if (j == data_end-1)
-				current_signals[i] = output;
 		}
 		
 		for(int j = 0; j < data_vectors.GetCount(); j++)
@@ -228,10 +250,29 @@ void EventAutomation::RefreshSimpleEvents() {
 	}
 }
 
-void EventAutomation::RefreshCurrentComplexEvents() {
+void EventAutomation::GetCurrentSignals(int pos, Vector<byte>& current_signals) {
+	System& sys = GetSystem();
+	System::NetSetting& net = sys.GetNet(0);
+	
+	current_signals.SetCount(ci_queue.GetCount(), 0);
+	
+	for(int i = 0; i < ci_queue.GetCount(); i++) {
+		EventCore& c = *ci_queue[i]->core;
+		int output = 0;
+		c.Start(pos, output);
+		current_signals[i] = output;
+	}
+}
+
+void EventAutomation::GetCurrentComplexEvents(int pos, int min_samplecount, Vector<EventOptResult>& results) {
+	VectorMap<GroupSettings, Vector<unsigned> > current_groups;
+	Vector<byte> current_signals;
+	
+	GetCurrentGroups(pos, current_groups);
+	GetCurrentSignals(pos, current_signals);
+	
 	VectorBool enabled, signal;
 	
-	Vector<EventOptResult> results;
 	
 	ASSERT(!current_groups.IsEmpty());
 	for(int i = 0; i < current_groups.GetCount(); i++) {
@@ -260,6 +301,7 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 				enabled.SetCount(count);
 				
 				double best_confidence = -DBL_MAX, best_prob;
+				int best_popcount = 0;
 				
 				while (!opt.IsEnd()) {
 					
@@ -268,6 +310,7 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 					const Vector<double>& trial = opt.GetTrialSolution();
 					
 					enabled.One();
+					enabled.LimitLeft(pos);
 					
 					bool fail = false;
 					
@@ -295,7 +338,7 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 					
 					int enabled_popcount = enabled.PopCount();
 					
-					if (enabled_popcount < 10 || fail)
+					if (enabled_popcount < min_samplecount || fail)
 						opt.Stop(-100000);
 					
 					else {
@@ -311,6 +354,7 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 						if (confidence > best_confidence) {
 							best_confidence = confidence;
 							best_prob = prob;
+							best_popcount = enabled_popcount;
 						}
 					}
 				}
@@ -323,6 +367,7 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 				r.sym = k;
 				r.neg_first_confidence = best_confidence;
 				r.neg_first_prob = best_prob;
+				r.popcount = best_popcount;
 				
 				for(int k = 0; k < ug.symbols.GetCount(); k++) {
 					int sym_ci_count = symbol_simple_datas[k].GetCount();
@@ -343,30 +388,120 @@ void EventAutomation::RefreshCurrentComplexEvents() {
 		}
 	}
 	
-	Swap(results, opt_results);
+}
+
+void EventAutomation::Process() {
+	
+	best_opt_result = -DBL_MAX;
+	
+	for(int whichfirst_pips = 5; whichfirst_pips <= 15; whichfirst_pips += 5)
+		for (int min_popcount = 10; min_popcount <= 100; min_popcount += 20)
+			for(double min_confidence = 0.1; min_confidence <= 1.0; min_confidence += 0.2)
+				opt_total++;
+		
+	for(int whichfirst_pips = 5; whichfirst_pips <= 15; whichfirst_pips += 5) {
+		ClearCachedSignals();
+		RefreshCachedSignals(whichfirst_pips);
+		RefreshSimpleEvents();
+		
+		for (int min_popcount = 10; min_popcount <= 100; min_popcount += 20) {
+			
+			for(double min_confidence = 0.1; min_confidence <= 1.0; min_confidence += 0.2) {
+				
+				double result = GetTestResult(min_popcount, min_confidence, whichfirst_pips);
+				
+				if (result > best_opt_result) {
+					best_opt_result = result;
+					opt_settings.min_popcount = min_popcount;
+					opt_settings.min_confidence = min_confidence;
+					opt_settings.whichfirst_pips = whichfirst_pips;
+				}
+				
+				opt_actual++;
+			}
+		}
+	}
+	DUMP(opt_settings.min_popcount);
+	DUMP(opt_settings.min_confidence);
+	DUMP(opt_settings.whichfirst_pips);
+	
+	ClearCachedSignals();
+	RefreshCachedSignals(opt_settings.whichfirst_pips);
+	RefreshSimpleEvents();
+	
+	is_optimized = true;
+}
+
+double EventAutomation::GetTestResult(int min_popcount, double min_confidence, int whichfirst_pips) {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
+	
+	int data_begin = idx.GetCount() - 6-1 - 3;
+	int data_end = idx.GetCount() - 6;
+	
+	Vector<EventOptResult> results;
+	double result = 0;
+	
+	for(int i = data_begin; i < data_end; i++) {
+		
+		GetCurrentComplexEvents(i, min_popcount, results);
+		
+		
+		for(int j = 0; j < results.GetCount(); j++) {
+			EventOptResult& r = results[j];
+			
+			if (r.neg_first_confidence >= min_confidence) {
+				ConstBuffer& buf = cl_sym.GetBuffer(r.sym, 0, 0);
+				double cur = buf.Get(i);
+				double next = buf.Get(i+1);
+				double ch = next / cur - 1.0;
+				
+				if (r.neg_first_prob >= 0.5)
+					ch *= -1;
+				
+				result += ch;
+			}
+		}
+		
+	}
+	
+	return result;
 }
 
 void EventAutomation::Start() {
-	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
-	Time last_time = idx.Top();
 	
-	if (last_time > prev_update) {
-		prev_update = last_time;
+	if (is_optimized) {
+		DataBridgeCommon& dbc = GetDataBridgeCommon();
+		const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
+		Time last_time = idx.Top();
 		
-		RefreshCachedSignals();
-		RefreshSimpleEvents();
-		RefreshGroups();
-		RefreshCurrentComplexEvents();
-		
-		if (do_store) {
-			StoreThis();
-			do_store = false;
+		if (last_time > prev_update) {
+			prev_update = last_time;
+			
+			cl_sym.Refresh();
+			
+			RefreshCachedSignals(opt_settings.whichfirst_pips);
+			RefreshSimpleEvents();
+			RefreshGroups();
+			
+			if (do_store) {
+				StoreThis();
+				do_store = false;
+			}
 		}
 	}
 }
 
-void EventAutomation::RefreshCachedSignals() {
+void EventAutomation::ClearCachedSignals() {
+	for(int i = 0; i < sig_whichfirst.GetCount(); i++)
+		sig_whichfirst[i].SetCount(0);
+	
+	counted = 0;
+	for(int i = 0; i < simple_data.GetCount(); i++)
+		simple_data[i].Clear();
+}
+
+void EventAutomation::RefreshCachedSignals(int pips) {
 	int sym_count = cl_sym.GetSymbolCount();
 	
 	sig_whichfirst.SetCount(sym_count);
@@ -379,7 +514,7 @@ void EventAutomation::RefreshCachedSignals() {
 		sym_whichfirst.SetCount(buf.GetCount());
 		
 		for(int j = counted; j < buf.GetCount(); j++) {
-			int sig = GetSignalWhichFirst(i, j, 30);
+			int sig = GetSignalWhichFirst(i, j, pips);
 			if (sig == -1) {
 				sym_whichfirst.SetCount(j);
 				break;
@@ -396,8 +531,8 @@ int EventAutomation::GetSignalWhichFirst(int sym, int pos, int pips) {
 	double point = cl_sym.GetDataBridge(sym)->GetPoint();
 	
 	double open = buf.Get(pos);
-	double low_target  = open - pips_first * point;
-	double high_target = open + pips_first * point;
+	double low_target  = open - pips * point;
+	double high_target = open + pips * point;
 	
 	for(int i = pos + 1; i < buf.GetCount(); i++) {
 		double cur = buf.Get(i);
@@ -412,10 +547,6 @@ int EventAutomation::GetSignalWhichFirst(int sym, int pos, int pips) {
 	return -1;
 }
 
-void EventAutomation::Process() {
-	
-}
-
 
 
 EventAutomationCtrl::EventAutomationCtrl() {
@@ -424,12 +555,14 @@ EventAutomationCtrl::EventAutomationCtrl() {
 	tabs.Add(curopt.SizePos(), "Current optimization");
 	tabs.Add(curdata.SizePos(), "Current data");
 	tabs.Add(uniquesplit.SizePos(), "Unique groups");
+	tabs.Add(optctrl.SizePos(), "Optimization");
 	
 	curopt.AddColumn("Symbol");
 	curopt.AddColumn("What");
 	curopt.AddColumn("First low probability");
 	curopt.AddColumn("First low confidence");
-	curopt.ColumnWidths("1 5 1 1 ");
+	curopt.AddColumn("Popcount");
+	curopt.ColumnWidths("1 5 1 1 1 ");
 	
 	curdata.Add(slider.TopPos(0, 30).HSizePos(0, 200));
 	curdata.Add(date.TopPos(0, 30).RightPos(0, 200));
@@ -451,18 +584,31 @@ EventAutomationCtrl::EventAutomationCtrl() {
 	uniquesettings.AddColumn("Group step");
 	uniquesettings.AddColumn("Average period");
 	uniquegroups <<= THISBACK(Data);
+	
+	optctrl.Add(optprog.TopPos(0, 30).HSizePos());
+	optctrl.Add(optlist.VSizePos(30).HSizePos());
+	optlist.AddColumn("Key");
+	optlist.AddColumn("Value");
 }
 
 void EventAutomationCtrl::Data() {
 	EventAutomation& ea = GetEventAutomation();
 	System& sys = GetSystem();
-	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
+
 	int tab = tabs.Get();
 	
 	if (tab == 0) {
+		if (!ea.is_optimized)
+			return;
 		System::NetSetting& net = sys.GetNet(0);
-		for(int i = 0; i < ea.opt_results.GetCount(); i++) {
-			EventOptResult& r = ea.opt_results[i];
+		
+		Vector<EventOptResult> results;
+		ea.GetCurrentComplexEvents(idx.GetCount()-1, ea.opt_settings.min_popcount, results);
+		
+		for(int i = 0; i < results.GetCount(); i++) {
+			EventOptResult& r = results[i];
 			
 			String what;
 			for(int j = 0; j < r.cis.GetCount(); j++) {
@@ -475,14 +621,13 @@ void EventAutomationCtrl::Data() {
 			curopt.Set(i, 1, what);
 			curopt.Set(i, 2, r.neg_first_prob);
 			curopt.Set(i, 3, r.neg_first_confidence);
+			curopt.Set(i, 4, r.popcount);
 		}
-		curopt.SetCount(ea.opt_results.GetCount());
+		curopt.SetCount(results.GetCount());
 		curopt.SetSortColumn(3, true);
 	}
 	
 	if (tab == 1) {
-		DataBridgeCommon& dbc = GetDataBridgeCommon();
-		const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
 		
 		if (slider.GetMax() != ea.counted && ea.counted > 0)
 			slider.MinMax(0, ea.counted);
@@ -540,6 +685,21 @@ void EventAutomationCtrl::Data() {
 			}
 			uniquesettings.SetCount(ug.settings.GetCount());
 		}
+	}
+	
+	else if (tab == 3) {
+		
+		optprog.Set(ea.opt_actual, ea.opt_total);
+		
+		optlist.Set(0, 0, "Best minimum popcount");
+		optlist.Set(0, 1, ea.opt_settings.min_popcount);
+		optlist.Set(1, 0, "Best which-first pips");
+		optlist.Set(1, 1, ea.opt_settings.whichfirst_pips);
+		optlist.Set(2, 0, "Best minimum confidence");
+		optlist.Set(2, 1, ea.opt_settings.min_confidence);
+		optlist.Set(3, 0, "Best optimization result");
+		optlist.Set(3, 1, ea.best_opt_result);
+		
 	}
 }
 

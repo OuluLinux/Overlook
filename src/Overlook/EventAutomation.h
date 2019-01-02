@@ -1,6 +1,7 @@
 #ifndef _Overlook_EventAutomation_h_
 #define _Overlook_EventAutomation_h_
 
+#if 0
 
 namespace Overlook {
 using namespace libmt;
@@ -14,7 +15,7 @@ struct GroupSettings : Moveable<GroupSettings> {
 };
 
 struct UniqueGroup : Moveable<UniqueGroup> {
-	Index<byte> symbols;
+	Index<char> symbols;
 	Index<GroupSettings> settings;
 	
 	void Serialize(Stream& s) {s % symbols % settings;}
@@ -26,6 +27,8 @@ struct EventOptResult : Moveable<EventOptResult> {
 	double neg_first_prob, neg_first_confidence;
 	int popcount = 0;
 	int sym = 0;
+	
+	bool operator()(const EventOptResult& a, const EventOptResult& b) const {return a.neg_first_confidence > b.neg_first_confidence;}
 };
 
 struct BestEventOptSettings {
@@ -56,10 +59,13 @@ protected:
 	
 	// Temporary
 	Vector<Vector<int> > symbol_simple_datas;
-	Vector<Ptr<EventCoreItem> > ci_queue;
+	Vector<Ptr<ScriptCoreItem> > ci_queue;
+	Vector<EventOptResult> results;
+	Vector<double> test_vector;
 	CoreList cl_sym;
 	Time prev_update;
 	double best_opt_result;
+	double opt_test_result = 0;
 	int opt_total = 0, opt_actual = 0;
 	bool do_store = false;
 	
@@ -80,7 +86,7 @@ public:
 	void GetCurrentGroups(int pos, VectorMap<GroupSettings, Vector<unsigned> >& current_groups);
 	void GetCurrentSignals(int pos, Vector<byte>& current_signals);
 	int GetSignalWhichFirst(int sym, int pos, int pips);
-	double GetTestResult(int min_popcount, double min_confidence, int whichfirst_pips);
+	double GetTestResult(int test_size, int min_popcount, double min_confidence, int whichfirst_pips);
 	
 	void LoadThis() {LoadFromFile(*this, GetOverlookFile("EventAutomation.bin"));}
 	void StoreThis() {StoreToFile(*this, GetOverlookFile("EventAutomation.bin"));}
@@ -94,6 +100,15 @@ public:
 inline EventAutomation& GetEventAutomation() {return GetSystem().GetCommon<EventAutomation>();}
 
 class EventAutomationCtrl : public CommonCtrl {
+	
+	struct TestCtrl : public Ctrl {
+		Vector<Point> cache;
+		virtual void Paint(Draw& d) {
+			d.DrawRect(GetSize(), White());
+			DrawVectorPolyline(d, GetSize(), GetEventAutomation().test_vector, cache);
+		}
+	};
+	
 	TabCtrl tabs;
 	
 	ArrayCtrl curopt;
@@ -110,6 +125,8 @@ class EventAutomationCtrl : public CommonCtrl {
 	ProgressIndicator optprog;
 	ArrayCtrl optlist;
 	
+	TestCtrl test;
+	
 public:
 	typedef EventAutomationCtrl CLASSNAME;
 	EventAutomationCtrl();
@@ -121,4 +138,5 @@ public:
 
 }
 
+#endif
 #endif

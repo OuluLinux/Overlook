@@ -1548,10 +1548,10 @@ public:
 		String out_symstr = sys.GetSymbol(out_sym);
 		#if 0
 		String out_A = out_symstr.Left(3);
-		String out_B = out_symstr.Right(3);
+		String out_B = out_symstr.Mid(3,3);
 		String in_symstr = sys.GetSymbol(in_sym);
 		String in_A = in_symstr.Left(3);
-		String in_B = in_symstr.Right(3);
+		String in_B = in_symstr.Mid(3,3);
 		if (in_symstr.GetCount() != 6 || out_symstr.GetCount() != 6) return false;
 		if (out_A == in_A || out_B == in_A || out_A == in_B || out_B == in_B) return true;
 		return false;
@@ -1931,6 +1931,156 @@ public:
 			% Arg("news_delay", news_delay, 1, 1000)
 			% Arg("volat_delay", volat_delay, 1, 1000)
 			% Mem(news_counter) % Mem(volat_counter)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
+
+
+
+class UnsustainableMovement : public Core {
+	Vector<double> var_window;
+	Vector<double> abc_window;
+	int period = 30;
+	int varperiod = 10;
+	
+	
+protected:
+	virtual void Start();
+	
+	void GetParabola(const Vector<double>& x, const Vector<double>& y, double& a, double& b, double& c);
+public:
+	UnsustainableMovement();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(3, 3)
+			% Lbl(1)
+			% Arg("period", period, 1, 10000)
+			% Arg("varperiod", varperiod, 1, 10000)
+			% Mem(var_window) % Mem(abc_window)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
+
+
+class PipChange : public Core {
+	int pips = 3, ticks = 3;
+	OnlineAverageWindow1 av_win;
+	
+	
+protected:
+	virtual void Start();
+	
+public:
+	PipChange();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(0, 0)
+			% Lbl(1)
+			% Arg("pips", pips, 1, 1000)
+			% Arg("ticks", ticks, 1, 1000)
+			% Mem(av_win);
+	}
+	
+};
+
+
+
+
+
+
+
+
+class SupplyDemand : public Core {
+	int cost_level = 10;
+	int trail_period = 6;
+	int level_div = 1;
+	int level_len = 1000;
+	VectorBool minisig;
+	VectorMap<int, Vector<int> > levels;
+	
+	
+protected:
+	virtual void Start();
+	
+public:
+	SupplyDemand();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Lbl(1)
+			% Arg("cost_level", cost_level, 0)
+			% Arg("trail_period", trail_period, 0)
+			% Arg("level_div", level_div, 0)
+			% Arg("level_len", level_len, 0)
+			% Mem(minisig)
+			% Mem(levels)
+			;
+	}
+	
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+class SupplyDemandOscillator : public Core {
+	int cost_level = 10;
+	int trail_period = 6;
+	int level_div = 1;
+	int level_len = 1000;
+	int smoothing_period = 10;
+	
+	
+protected:
+	virtual void Start();
+	
+public:
+	SupplyDemandOscillator();
+	
+	virtual void Init();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(2, 2)
+			% Lbl(1)
+			% Arg("cost_level", cost_level, 0)
+			% Arg("trail_period", trail_period, 0)
+			% Arg("level_div", level_div, 0)
+			% Arg("level_len", level_len, 0)
+			% Arg("smoothing_period", smoothing_period, 0)
 			;
 	}
 	

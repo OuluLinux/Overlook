@@ -1,5 +1,5 @@
 #include "Overlook.h"
-
+#if 0
 
 namespace Overlook {
 
@@ -503,3 +503,4 @@ void DayEvent::Start(int pos, int& output) {
 
 
 }
+#endif

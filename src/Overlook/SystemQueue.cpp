@@ -531,7 +531,7 @@ bool JobThread::ProcessJob() {
 			}
 			
 			// Resist useless fast loop here
-			if (job.state != Job::RUEventING) Sleep(100);
+			if (job.state != Job::RUNNING) Sleep(100);
 		}
 		else r = false;
 	}
@@ -578,7 +578,7 @@ bool Job::Process() {
 	switch (state) {
 		case INIT:			core->RefreshSources();
 							if ((r=begin())						|| !begin)		state++; break;
-		case RUEventING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
+		case RUNNING:		if ((r=iter()) && actual >= total	|| !iter)		state++; break;
 		case STOPPING:		if ((r=end())						|| !end)		state++; break;
 		case INSPECTING:	if ((r=inspect())					|| !inspect)	state++; break;
 	}
@@ -595,7 +595,7 @@ bool Job::Process() {
 String Job::GetStateString() const {
 	switch (state) {
 		case INIT: return "Init";
-		case RUEventING: return "Running";
+		case RUNNING: return "Running";
 		case STOPPING: return "Stopping";
 		case INSPECTING: return "Inspecting";
 		case STOPPED: return "Finished";
@@ -774,7 +774,7 @@ bool System::RefreshReal() {
 	return true;
 }
 
-int System::GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl) {
+int System::GetScriptCoreQueue(Vector<Ptr<ScriptCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl) {
 	
 	int id = decl.factory * 1000 + symbol_id;
 	
@@ -786,12 +786,12 @@ int System::GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_
 	bool init = nndata.GetAdd(id).Find(arg_hash) == -1;
 	
 	if (init) {
-		EventCoreItem& ci = nndata.GetAdd(id).Add(arg_hash);
+		ScriptCoreItem& ci = nndata.GetAdd(id).Add(arg_hash);
 		ci.symbol = symbol_id;
 		ci.factory = decl.factory;
-		ci.core = System::EventCoreFactories()[decl.factory].b();
+		ci.core = System::ScriptCoreFactories()[decl.factory].b();
 		
-		EventCore& c = *ci.core;
+		ScriptCore& c = *ci.core;
 		c.factory = decl.factory;
 		c.symbol = symbol_id;
 		for(int i = 0; i < decl.arg_count; i++)
@@ -799,7 +799,7 @@ int System::GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_
 		
 		c.Load();
 		
-		ArgEvent args;
+		ArgScript args;
 		c.Arg(args);
 		for(int i = 0; i < decl.arg_count; i++)
 			*args.args[i] = decl.args[i];
@@ -807,7 +807,7 @@ int System::GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_
 		c.Init();
 	}
 	
-	EventCoreItem& ci = nndata.Get(id).Get(arg_hash);
+	ScriptCoreItem& ci = nndata.Get(id).Get(arg_hash);
 	
 	ci_queue.Add(&ci);
 	

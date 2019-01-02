@@ -12,7 +12,7 @@ void PatternMatcher::Init() {
 	for(int i = 0; i < net.symbols.GetCount(); i++) {
 		cl_sym.AddSymbol(net.symbols.GetKey(i));
 	}
-	cl_sym.AddTf(EventCore::fast_tf);
+	cl_sym.AddTf(ScriptCore::fast_tf);
 	cl_sym.AddIndi(0);
 	cl_sym.Init();
 	cl_sym.Refresh();
@@ -21,12 +21,13 @@ void PatternMatcher::Init() {
 }
 
 void PatternMatcher::Start() {
-	
+	cl_sym.Refresh();
 }
 
 PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int average_period) {
 	group_step = max(0, min(100, group_step));
-	period = max(5, min(1440, period));
+	period = max(4, min(1440, period));
+	average_period = max(1, min(1440, average_period));
 	
 	int sym_count = cl_sym.GetSymbolCount();
 	
@@ -50,9 +51,12 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 		for(int j0 = 0; j0 < sym_count; j0++)
 			for(int j1 = j0+1; j1 < sym_count; j1++)
 				count++;
-		d.distance_averages.SetCount(count);
-		for(int i = 0; i < count; i++)
-			d.distance_averages[i].SetPeriod(average_period);
+		d.dist_averages.SetCount(count);
+		d.absdist_averages.SetCount(count);
+		for(int i = 0; i < count; i++) {
+			d.dist_averages[i].SetPeriod(average_period);
+			d.absdist_averages[i].SetPeriod(average_period);
+		}
 	}
 	
 	int count = INT_MAX;
@@ -65,10 +69,18 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 	
 	d.data.SetCount(count * sym_count, 0);
 	
+	struct GroupSorter : Moveable<GroupSorter> {
+		int orig_id, min_sym;
+		
+		bool operator()(const GroupSorter& a, const GroupSorter& b) const {return a.min_sym < b.min_sym;}
+	};
+	
 	Vector<PatternDistance> distances;
 	Vector<uint64> descriptors;
 	Vector<bool> symbol_added;
 	Vector<int> symbol_group;
+	Vector<int> change_group;
+	Vector<GroupSorter> group_sorter;
 	
 	descriptors.SetCount(sym_count);
 	symbol_added.SetCount(sym_count);
@@ -103,16 +115,19 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 			}
 		}
 		for(int i = 0; i < distances.GetCount(); i++) {
-			OnlineAverageWindow1& av = d.distance_averages[i];
+			OnlineAverageWindow1& dist_av = d.dist_averages[i];
+			OnlineAverageWindow1& absdist_av = d.absdist_averages[i];
 			PatternDistance& d = distances[i];
-			av.Add(d.absdist);
-			d.absdist = av.GetMean();
+			dist_av.Add(d.dist);
+			absdist_av.Add(d.absdist);
+			d.dist = dist_av.GetMean();
+			d.absdist = absdist_av.GetMean();
 		}
 		Sort(distances, PatternDistance());
 		
 		for(int i = 0; i < sym_count; i++) {
 			symbol_added[i] = false;
-			symbol_group[i] = -1;
+			symbol_group[i] = 0;
 		}
 		int group_count = 0;
 		
@@ -127,17 +142,21 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 			bool added = false;
 			for(int k = 0; k < group_count; k++) {
 				for(int sym = 0; sym < sym_count; sym++) {
-					if (symbol_group[sym] != k)
+					if (!symbol_added[sym] || (symbol_group[sym] != k && symbol_group[sym] != -k-1))
 						continue;
 					
 					if (d.j0 == sym && symbol_added[d.j1] == false) {
-						symbol_group[d.j1] = k;
+						int group = d.dist < 50 ? k : -k-1;
+						if (symbol_group[d.j0] < 0) group = -group-1;
+						symbol_group[d.j1] = group;
 						symbol_added[d.j1] = true;
 						added = true;
 						break;
 					}
 					else if (d.j1 == sym && symbol_added[d.j0] == false) {
-						symbol_group[d.j0] = k;
+						int group = d.dist < 50 ? k : -k-1;
+						if (symbol_group[d.j1] < 0) group = -group-1;
+						symbol_group[d.j0] = group;
 						symbol_added[d.j0] = true;
 						added = true;
 						break;
@@ -148,7 +167,7 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 			if (!added) {
 				int group_id = group_count++;
 				symbol_group[d.j0] = group_id;
-				symbol_group[d.j1] = group_id;
+				symbol_group[d.j1] = d.dist < 50 ? group_id : -group_id-1;
 				symbol_added[d.j0] = true;
 				symbol_added[d.j1] = true;
 			}
@@ -162,6 +181,42 @@ PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int 
 			}
 			d.data[i * sym_count + j] = symbol_group[j];
 		}
+		
+		
+		// Sort groups
+		group_sorter.SetCount(group_count);
+		change_group.SetCount(group_count);
+		for(int j = 0; j < group_count; j++) {
+			GroupSorter& gs = group_sorter[j];
+			gs.min_sym = INT_MAX;
+			gs.orig_id = j;
+		}
+		
+		for(int j = 0; j < sym_count; j++) {
+			int group = symbol_group[j];
+			if (group < 0) group = -group-1;
+			GroupSorter& gs = group_sorter[group];
+			if (j < gs.min_sym) gs.min_sym = j;
+		}
+		
+		Sort(group_sorter, GroupSorter());
+		
+		for(int j = 0; j < group_count; j++) {
+			GroupSorter& gs = group_sorter[j];
+			change_group[gs.orig_id] = j;
+		}
+		
+		for(int j = 0; j < sym_count; j++) {
+			int group = symbol_group[j];
+			if (group < 0) {
+				group = -group-1;
+				group = -change_group[group]-1;
+			} else {
+				group = change_group[group];
+			}
+			symbol_group[j] = group;
+		}
+		
 	}
 	
 	
@@ -210,7 +265,7 @@ void PatternMatcherCtrl::Data() {
 	System::NetSetting& net = sys.GetNet(0);
 	int sym_count = pm.cl_sym.GetSymbolCount();
 	
-	const Index<Time>& idx = dbc.GetTimeIndex(EventCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
 	
 	if (slider.GetMax() != pm.count && pm.count > 0)
 		slider.MinMax(0, pm.count);
@@ -227,7 +282,11 @@ void PatternMatcherCtrl::Data() {
 	
 	VectorMap<int, Vector<int> > groups;
 	for(int i = 0; i < sym_count; i++) {
-		groups.GetAdd(data.data[data_begin + i]).Add(i);
+		int group = data.data[data_begin + i];
+		if (group < 0)
+			groups.GetAdd(-group-1).Add(-i-1);
+		else
+			groups.GetAdd(group).Add(i);
 	}
 	SortByKey(groups, StdLess<int>());
 	
@@ -236,8 +295,13 @@ void PatternMatcherCtrl::Data() {
 		list.Set(i, 0, i);
 		String s;
 		for(int j = 0; j < vec.GetCount(); j++) {
-			String sym = net.symbols.GetKey(vec[j]);
 			if (j) s += ", ";
+			int id = vec[j];
+			if (id < 0) {
+				s << "~";
+				id = -id-1;
+			}
+			String sym = net.symbols.GetKey(id);
 			s += sym;
 		}
 		list.Set(i, 1, s);

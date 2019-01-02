@@ -83,24 +83,23 @@ INITBLOCK {
 	System::Register<NewsNow>("NewsNow");
 	System::Register<VolatilityEarlyLate>("VolatilityEarlyLate");
 	System::Register<SweetSpot>("SweetSpot");
+	System::Register<UnsustainableMovement>("UnsustainableMovement");
+	System::Register<PipChange>("PipChange");
+	System::Register<SupplyDemand>("SupplyDemand");
+	System::Register<SupplyDemandOscillator>("SupplyDemandOscillator");
 	
 	//System::Register<ExampleAdvisor>("Example Advisor", CORE_EXPERTADVISOR);
 	
     
     System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
-    //System::RegisterCommon<Automation, AutomationCtrl>("Automation");
     //System::RegisterCommon<Server, ServerCtrl>("Server");
-    //System::RegisterCommon<Signal, SignalCtrl>("Signal");
-    //System::RegisterCommon<NetCluster, NetClusterCtrl>("NetCluster");
-    //System::RegisterCommon<DqnAutomation, DqnAutomationCtrl>("DqnAutomation");
-    //System::RegisterCommon<Martingale, MartingaleCtrl>("Martingale");
-    //System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
     System::RegisterCommon<PatternMatcher, PatternMatcherCtrl>("PatternMatch");
-    System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
+    //System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
+    //System::RegisterCommon<GroupAutomation, GroupAutomationCtrl>("GroupAutomation");
     
     
-    System::RegisterEvent<MovingAverageEvent>("Moving Average Event");
+    /*System::RegisterEvent<MovingAverageEvent>("Moving Average Event");
     System::RegisterEvent<MACDEvent>("MACD Event");
     System::RegisterEvent<BBEvent>("BB Event");
     System::RegisterEvent<PSAREvent>("PSAR Event");
@@ -117,7 +116,15 @@ INITBLOCK {
     System::RegisterEvent<QQEEvent>("QQE Event");
     System::RegisterEvent<TickBalanceEvent>("QQE Event");
     System::RegisterEvent<BreakEvent>("Break Event");
-    System::RegisterEvent<DayEvent>("Day Event");
+    System::RegisterEvent<DayEvent>("Day Event");*/
+    
+    
+    System::RegisterScript<SingleChangeInterpolation>("SingleChangeInterpolation");
+    System::RegisterScript<MultiChangeInterpolation>("MultiChangeInterpolation");
+    System::RegisterScript<MultinetChangeInterpolation>("MultinetChangeInterpolation");
+    System::RegisterScript<SingleVolatInterpolation>("SingleVolatInterpolation");
+    System::RegisterScript<MultiVolatInterpolation>("MultiVolatInterpolation");
+    System::RegisterScript<MultinetVolatInterpolation>("MultinetVolatInterpolation");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

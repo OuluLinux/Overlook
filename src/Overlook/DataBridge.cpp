@@ -29,6 +29,9 @@ void DataBridge::Init() {
 	if (GetSymbol() < GetMetaTrader().GetSymbolCount()) {
 		const Symbol& sym = GetMetaTrader().GetSymbol(GetSymbol());
 		point = sym.point;
+		if (sym.IsForex())
+			if (point == 0.001 || point == 0.00001)
+				point *= 10.0;
 		ASSERT(point == 0.01 || point == 0.0001);
 	}
 }
@@ -249,7 +252,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	if (!use_internet_data) common.DownloadHistory(GetSymbol(), GetTf(), false);
 	System& sys = GetSystem();
 	
-	LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
+	//LOG(Format("sym=%d tf=%d pos=%d", Core::GetSymbol(), GetTimeframe(), GetBars()));
 	
 	
 	// Open data-file
@@ -265,14 +268,14 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	
 	if (use_internet_data) {
 		System& sys = GetSystem();
-		String symbol = sys.GetSymbol(GetSymbol());
+		String symbol = sys.GetSymbol(GetSymbol()).Left(6);
 		
 		String url = "http://tools.fxdd.com/tools/M1Data/" + symbol + ".zip";
 		
 		String data_dir = GetOverlookFile("m1data");
 		RealizeDirectory(data_dir);
 		
-		String local_zip = AppendFileName(data_dir, symbol + ".zip");
+		String local_zip = AppendFileName(data_dir, symbol.Left(6) + ".zip");
 		
 		if (!FileExists(local_zip)) {
 			LOG("Downloading " << url);
@@ -286,7 +289,7 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 			LOG("Downloading took " << ts.ToString());
 		}
 		
-		String local_hst = AppendFileName(data_dir, symbol + ".hst");
+		String local_hst = AppendFileName(data_dir, symbol.Left(6) + ".hst");
 		String exp_fname = symbol + ".hst";
 		
 		if (!FileExists(local_hst)) {
@@ -332,6 +335,9 @@ void DataBridge::RefreshFromHistory(bool use_internet_data) {
 	if (digits > 20)
 		throw DataExc();
 	double point = 1.0 / pow(10.0, digits);
+	if (id < mt.GetSymbolCount() && mt.GetSymbol(id).IsForex())
+		if (point == 0.001 || point == 0.00001)
+			point *= 10.0;
 	common.points[GetSymbol()] = point;
 	int data_size = (int)src.GetSize();
 	int struct_size = 8 + 4*8 + 8 + 4 + 8;
@@ -588,7 +594,9 @@ void DataBridge::RefreshFromFasterTime() {
 	
 	spread_mean = m1_db.spread_mean;
 	point = m1_db.point;
-	
+	if (sym < mt.GetSymbolCount() && mt.GetSymbol(sym).IsForex())
+		if (point == 0.001 || point == 0.00001)
+			point *= 10.0;
 	int period_mins = GetMinutePeriod();
 	#ifdef flagSECONDS
 	int period_secs = period_mins;

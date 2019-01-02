@@ -7,8 +7,9 @@ using namespace libmt;
 
 
 struct PatternMatcherData {
-	Vector<OnlineAverageWindow1> distance_averages;
-	Vector<byte> data;
+	Vector<OnlineAverageWindow1> dist_averages;
+	Vector<OnlineAverageWindow1> absdist_averages;
+	Vector<char> data;
 	Vector<Point> pattern;
 	int counted = 0;
 	

@@ -87,7 +87,7 @@ void GenerateNets() {
 		s << "AddNet(\"Net" << IntStr(i) << "\")";
 		for(int j = 0; j < CommonSpreads().GetCount(); j++) {
 			bool b = Random(2);
-			s << ".Set(\"" << CommonSpreads().GetKey(j) << "\", " << (b ? "-1" : "+1") << ")";
+			s << ".Set(\"" << CommonSpreads().GetKey(j) << "\" + postfix, " << (b ? "-1" : "+1") << ")";
 		}
 		s << ";";
 		
@@ -96,7 +96,7 @@ void GenerateNets() {
 }
 
 GUI_APP_MAIN {
-	GenerateNets();
+	//GenerateNets();
 	WriteKeepalive();
 	
 	TestLockMacro();
@@ -106,7 +106,7 @@ GUI_APP_MAIN {
 	if (Config::start_time == 0) {
 		Time t = GetUtcTime();
 		#ifndef flagSECONDS
-		t -= 0.5*365*24*60*60;
+		t -= 2*365*24*60*60;
 		#else
 		t -= 14*24*60*60;
 		#endif
@@ -115,7 +115,7 @@ GUI_APP_MAIN {
 		t.second = 0;
 		while (DayOfWeek(t) == 0) t -= 24*60*60;
 		Config::start_time = t.Get() - Time(1970,1,1).Get();
-		FileAppend fapp("overlook.ini");
+		FileAppend fapp(GetOverlookFile("overlook.ini"));
 		fapp.PutEol();
 		fapp << "start_time=" << Config::start_time;
 		fapp.PutEol();

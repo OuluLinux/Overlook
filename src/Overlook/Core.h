@@ -406,49 +406,58 @@ protected:
 
 
 
-struct ArgEvent {
+struct ArgScript {
 	Vector<int> mins, maxs, steps;
 	Vector<int*> args;
 	void Add(int min, int max, int step, int& arg) {mins.Add(min); maxs.Add(max); steps.Add(step); args.Add(&arg);}
 };
 
-class EventCore {
+class ScriptCore {
 	
 protected:
 	friend class System;
-	friend class EventAutomationCtrl;
+	friend class ScriptAutomationCtrl;
 	
+	
+	// Persistent
+	String qtf_test_result;
 	
 	
 	// Temporary
-	Vector<EventCore*> input_cores;
+	Vector<ScriptCore*> input_cores;
 	Vector<int> args;
 	CoreList cl_sym;
 	int factory = -1, symbol = -1;
 	
 	
-	EventCore& GetInputCore(int i) {return *input_cores[i];}
+	ScriptCore& GetInputCore(int i) {return *input_cores[i];}
 	
 public:
 	
-	static const int fast_tf = 4;
+	static const int fast_tf = 0;
 	
-	EventCore();
-	virtual void Init() = 0;
-	virtual void Start(int pos, int& output) = 0;
-	virtual void Arg(ArgEvent& arg) = 0;
+	ScriptCore();
+	virtual void Init() {};
+	virtual void Arg(ArgScript& arg) = 0;
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() = 0;
 	
 	void Load();
 	void Store();
-	void Serialize(Stream& s) {SerializeEvent(s);}
+	void Serialize(Stream& s) {s % qtf_test_result; SerializeEvent(s);}
 	
-	void SetInputCore(int i, EventCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
+	void SetInputCore(int i, ScriptCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	
 	int GetSymbol() const {return symbol;}
 	CoreList& GetCoreList() {return cl_sym;}
 };
+
+
+
+
+
+
+
 
 }
 

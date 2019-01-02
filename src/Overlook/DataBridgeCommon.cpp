@@ -254,7 +254,7 @@ void DataBridgeCommon::RefreshAskBidData(bool forced) {
 		cursor += struct_size;
 	}
 	
-	ReleaseLog("RefreshAskBidData added " + IntStr(added));
+	//ReleaseLog("RefreshAskBidData added " + IntStr(added));
 	
 	since_last_askbid_refresh.Reset();
 	

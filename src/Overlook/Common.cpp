@@ -426,4 +426,28 @@ void PlayAlarm(int i) {
 	PlaySound(GetExeDirFile("alarm" + IntStr(i) + ".wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
 
+const VectorMap<String, int>& CommonSpreads() {
+	static VectorMap<String, int> v;
+	if (v.IsEmpty()) {
+		String pf = GetSystem().GetPostFix();
+		v.Add("EURUSD" + pf, 2);
+		v.Add("GBPUSD" + pf, 3);
+		v.Add("EURGBP" + pf, 3);
+		v.Add("USDJPY" + pf, 3);
+		v.Add("AUDUSD" + pf, 4);
+		v.Add("EURCHF" + pf, 4);
+		v.Add("EURJPY" + pf, 4);
+		v.Add("USDCAD" + pf, 4);
+		v.Add("USDCHF" + pf, 4);
+		v.Add("NZDUSD" + pf, 5);
+		v.Add("AUDJPY" + pf, 6);
+		v.Add("CADJPY" + pf, 6);
+		v.Add("AUDCAD" + pf, 8);
+		v.Add("CHFJPY" + pf, 8);
+		v.Add("EURCAD" + pf, 8);
+		v.Add("GBPJPY" + pf, 8);
+	}
+	return v;
+}
+
 }

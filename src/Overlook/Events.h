@@ -1,6 +1,7 @@
 #ifndef _Overlook_Events_h_
 #define _Overlook_Events_h_
 
+#if 0
 namespace Overlook {
 
 
@@ -14,7 +15,7 @@ class MovingAverageEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -34,7 +35,7 @@ class MACDEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -55,7 +56,7 @@ class BBEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 40, 10, period);
 	}
@@ -75,7 +76,7 @@ class PSAREvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 	}
 	virtual void SerializeEvent(Stream& s) {}
@@ -94,7 +95,7 @@ class CCIEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -114,7 +115,7 @@ class DeMarkerEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -134,7 +135,7 @@ class MomentumEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -153,7 +154,7 @@ class RSIEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 50, 10, period);
 	}
@@ -172,7 +173,7 @@ class RVIEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 50, 10, period);
 	}
@@ -191,7 +192,7 @@ class StochasticEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -210,7 +211,7 @@ class AcceleratorEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 	}
 	virtual void SerializeEvent(Stream& s) {}
@@ -228,7 +229,7 @@ class ChannelEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -248,7 +249,7 @@ class ScissorsChannelEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -269,7 +270,7 @@ class OnlineMinimalLabelEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(0, 10, 5, costlevel);
 	}
@@ -290,7 +291,7 @@ class LaguerreEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 80, 10, period);
 	}
@@ -312,7 +313,7 @@ class QQEEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -333,7 +334,7 @@ class TickBalanceEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(fast_tf, 4, 1, tf);
 		args.Add(10, 100, 10, period);
 	}
@@ -352,7 +353,7 @@ class BreakEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 		args.Add(5, 50, 5, period);
 	}
 	virtual void SerializeEvent(Stream& s) {}
@@ -369,7 +370,7 @@ class DayEvent : public EventCore {
 public:
 	virtual void Init();
 	virtual void Start(int pos, int& output);
-	virtual void Arg(ArgEvent& args) {
+	virtual void Arg(ArgScript& args) {
 	}
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() {return "Day";}
@@ -379,4 +380,5 @@ public:
 
 }
 
+#endif
 #endif

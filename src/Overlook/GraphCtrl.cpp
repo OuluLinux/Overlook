@@ -730,7 +730,7 @@ void GraphCtrl::MiddleDown(Point p, dword keyflags) {
 }
 
 int GraphCtrl::GetCount() {
-	if (!chart) return 0;
+	if (!chart || !chart->GetCore().GetBufferCount()) return 0;
 	int c = chart->GetCore().GetBuffer(0).GetCount();
     return c;
 }

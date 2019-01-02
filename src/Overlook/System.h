@@ -89,7 +89,7 @@ struct Job {
 	typedef Job CLASSNAME;
 	Job() {}
 	
-	enum {INIT, RUEventING, STOPPING, INSPECTING, STOPPED};
+	enum {INIT, RUNNING, STOPPING, INSPECTING, STOPPED};
 	
 	bool Process();
 	bool IsFinished() const				{return state == STOPPED;}
@@ -146,7 +146,7 @@ public:
 		// The begin function is called always after loading, so switch state back to init.
 		bool all_ready = true;
 		for(auto& job : jobs) {
-			if (job->state == Job::RUEventING)
+			if (job->state == Job::RUNNING)
 				job->state = Job::INIT;
 			all_ready &= job->state == Job::STOPPED;
 		}
@@ -202,26 +202,26 @@ public:
 	typedef Core* (*CoreFactoryPtr)();
 	typedef Common* (*CommonFactoryPtr)();
 	typedef Ctrl* (*CtrlFactoryPtr)();
-	typedef EventCore* (*EventCoreFactoryPtr)();
+	typedef ScriptCore* (*ScriptCoreFactoryPtr)();
 	typedef Tuple<String, CoreFactoryPtr, CoreFactoryPtr> CoreSystem;
 	typedef Tuple<String, CommonFactoryPtr, CtrlFactoryPtr> CommonSystem;
-	typedef Tuple<String, EventCoreFactoryPtr, EventCoreFactoryPtr> EventCoreSystem;
+	typedef Tuple<String, ScriptCoreFactoryPtr, ScriptCoreFactoryPtr> ScriptCoreSystem;
 	
 	static void								AddCustomCore(const String& name, CoreFactoryPtr f, CoreFactoryPtr singlef);
-	static void								AddCustomEventCore(const String& name, EventCoreFactoryPtr f, EventCoreFactoryPtr singlef);
+	static void								AddCustomScriptCore(const String& name, ScriptCoreFactoryPtr f, ScriptCoreFactoryPtr singlef);
 	template <class T> static Core*			CoreSystemFn() { return new T; }
 	template <class T> static Core*			CoreSystemSingleFn() { return &Single<T>(); }
 	template <class T> static Common*		CommonSystemSingleFn() { return &Single<T>(); }
 	template <class T> static Ctrl*			CtrlSystemSingleFn() { return &Single<T>(); }
-	template <class T> static EventCore*	EventCoreSystemFn() { return new T; }
-	template <class T> static EventCore*	EventCoreSystemSingleFn() { return &Single<T>(); }
+	template <class T> static ScriptCore*	ScriptCoreSystemFn() { return new T; }
+	template <class T> static ScriptCore*	ScriptCoreSystemSingleFn() { return &Single<T>(); }
 	inline static Vector<CoreSystem>&		CoreFactories() {static Vector<CoreSystem> list; return list;}
 	inline static Vector<CommonSystem>&		CommonFactories() {static Vector<CommonSystem> list; return list;}
-	inline static Vector<EventCoreSystem>&	EventCoreFactories() {static Vector<EventCoreSystem> list; return list;}
+	inline static Vector<ScriptCoreSystem>&	ScriptCoreFactories() {static Vector<ScriptCoreSystem> list; return list;}
 	inline static Vector<int>&				Indicators() {static Vector<int> list; return list;}
 	inline static Vector<int>&				ExpertAdvisorFactories() {static Vector<int> list; return list;}
 	inline static Index<int>&				PrioritySlowTf() {static Index<int> list; return list;}
-	inline static Vector<int>&				Events() {static Vector<int> list; return list;}
+	inline static Vector<int>&				Scripts() {static Vector<int> list; return list;}
 	
 public:
 	
@@ -236,10 +236,10 @@ public:
 		CommonFactories().Add(CommonSystem(name, &System::CommonSystemSingleFn<CoreT>, &System::CtrlSystemSingleFn<CtrlT>));
 	}
 	
-	template <class CoreT> static void		RegisterEvent(String name) {
-		int id = EventCoreFactories().GetCount();
-		Events().Add(id);
-		AddCustomEventCore(name, &System::EventCoreSystemFn<CoreT>, &System::EventCoreSystemSingleFn<CoreT>);
+	template <class CoreT> static void		RegisterScript(String name) {
+		int id = ScriptCoreFactories().GetCount();
+		Scripts().Add(id);
+		AddCustomScriptCore(name, &System::ScriptCoreSystemFn<CoreT>, &System::ScriptCoreSystemSingleFn<CoreT>);
 	}
 	
 	
@@ -258,9 +258,9 @@ public:
 		return -1;
 	}
 	
-	template <class CoreT> static int		FindEvent() {
-		EventCoreFactoryPtr System_fn = &System::EventCoreSystemFn<CoreT>;
-		const Vector<EventCoreSystem>& facs = EventCoreFactories();
+	template <class CoreT> static int		FindScript() {
+		ScriptCoreFactoryPtr System_fn = &System::ScriptCoreSystemFn<CoreT>;
+		const Vector<ScriptCoreSystem>& facs = ScriptCoreFactories();
 		for(int i = 0; i < facs.GetCount(); i++) {
 			if (facs[i].b == System_fn)
 				return i;
@@ -314,7 +314,7 @@ protected:
 	
 	
 	// Temporary
-	ArrayMap<int, ArrayMap<int, EventCoreItem> >	nndata;
+	ArrayMap<int, ArrayMap<int, ScriptCoreItem> >	nndata;
 	Vector<NetSetting>			nets;
 	Vector<Vector<int> >		sym_currencies;
 	VectorMap<String, Index<int> > currency_syms, currency_sym_dirs, major_currency_syms;
@@ -325,6 +325,7 @@ protected:
 	Vector<double>				spread_points;
 	Vector<FactoryRegister>		regs;
 	Vector<VariantList>			variants;
+	String						postfix;
 	Time						end;
 	Data						data;
 	double						limit_day_begin = 0, limit_day_best = 0, limit_day_worst = 0;
@@ -351,6 +352,7 @@ public:
 	int		GetNetCount() const {return nets.GetCount();}
 	int		GetVtfWeekbars() const {return 98;}
 	void	SetFreemarginLevel(double d) {fmlevel = d;}
+	String	GetPostFix() const {return postfix;}
 	
 protected:
 	
@@ -369,7 +371,7 @@ public:
 	
 	void	Process(CoreItem& ci, bool store_cache, bool store_cache_if_init=true);
 	int		GetCoreQueue(Vector<Ptr<CoreItem> >& ci_queue, const Index<int>& sym_ids, const Index<int>& tf_ids, const Vector<FactoryDeclaration>& indi_ids);
-	int		GetEventCoreQueue(Vector<Ptr<EventCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl);
+	int		GetScriptCoreQueue(Vector<Ptr<ScriptCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl);
 	Core*	CreateSingle(int factory, int sym, int tf);
 	Time	GetEnd() const							{return end;}
 	const Vector<FactoryRegister>& GetRegs() const	{return regs;}

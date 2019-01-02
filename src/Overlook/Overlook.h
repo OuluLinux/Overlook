@@ -35,18 +35,12 @@ using namespace Upp;
 #include "Navigator.h"
 #include "ChartManager.h"
 #include "Arbitrage.h"
-#include "Automation.h"
 #include "Server.h"
-#include "Signal.h"
-#include "ForeSignal.h"
 #include "Advisors.h"
-#include "NetCluster.h"
-#include "DqnAutomation.h"
 #include "PatternMatch.h"
-#include "StatsAutomation.h"
-#include "EventAutomation.h"
-#include "Martingale.h"
-#include "Events.h"
+#include "Scripts.h"
+#include "Interpolation.h"
+#include "Extrapolation.h"
 
 
 namespace Overlook {

@@ -442,12 +442,12 @@ void Core::SetJobFinished(bool b) {
 
 
 
-EventCore::EventCore() {
+ScriptCore::ScriptCore() {
 	
 }
 
-void EventCore::Load() {
-	String dir = GetOverlookFile("nncores");
+void ScriptCore::Load() {
+	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
 	String filename = IntStr(factory) + "-" + IntStr(symbol);
 	for(int i = 0; i < args.GetCount(); i++)
@@ -456,8 +456,8 @@ void EventCore::Load() {
 	LoadFromFile(*this, file);
 }
 
-void EventCore::Store() {
-	String dir = GetOverlookFile("nncores");
+void ScriptCore::Store() {
+	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
 	String filename = IntStr(factory) + "-" + IntStr(symbol);
 	for(int i = 0; i < args.GetCount(); i++)

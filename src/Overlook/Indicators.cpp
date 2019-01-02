@@ -5789,12 +5789,12 @@ void PulseIndicator::Start() {
 	Vector<int> dirs;
 	String sym = sys.GetSymbol(GetSymbol());
 	String a = sym.Left(3);
-	String b = sym.Right(3);
+	String b = sym.Mid(3,3);
 	dirs.SetCount(symcount, 0);
 	for(int i = 0; i < symcount; i++) {
 		String othersym = symlist[i];
 		String oa = othersym.Left(3);
-		String ob = othersym.Right(3);
+		String ob = othersym.Mid(3,3);
 		if      (oa == a || ob == b) dirs[i] = +1;
 		else if (oa == b || ob == a) dirs[i] = -1;
 	}
@@ -5852,7 +5852,7 @@ void Avoidance::Init() {
 	// Get label source buffers
 	String symstr1 = sys.GetSymbol(GetSymbol());
 	String A1 = symstr1.Left(3);
-	String B1 = symstr1.Right(3);
+	String B1 = symstr1.Mid(3,3);
 	for(int i = 1; i < inputs.GetCount(); i++) {
 		for(int i2 = 0; i2 < inputs[i].GetCount(); i2++) {
 			const Source& s = inputs[i][i2];
@@ -5860,7 +5860,7 @@ void Avoidance::Init() {
 			
 			String symstr2 = sys.GetSymbol(c.GetSymbol());
 			String A2 = symstr2.Left(3);
-			String B2 = symstr2.Right(3);
+			String B2 = symstr2.Mid(3,3);
 			
 			int mult = 0;
 			if      (A2 == A1)	mult = +1;
@@ -6765,6 +6765,389 @@ void SweetSpot::Start() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+UnsustainableMovement::UnsustainableMovement() {
+	
+}
+
+void UnsustainableMovement::Init() {
+	SetCoreChartWindow();
+	
+}
+
+void UnsustainableMovement::Start() {
+	System& sys = GetSystem();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	Buffer& main = GetBuffer(0);
+	Buffer& lo = GetBuffer(1);
+	Buffer& hi = GetBuffer(2);
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	Vector<double> x, y;
+	
+	x.SetCount(period);
+	y.SetCount(period);
+	for(int i = 0; i < period; i++) {
+		x[i] = i;
+		y[i] = open_buf.Get(max(0, counted - i - 1));
+	}
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double cur = open_buf.Get(i);
+		y.Insert(0, cur);
+		y.Remove(period);
+		
+		double a, b, c;
+		GetParabola(x, y, a, b, c);
+		
+		OnlineVariance var;
+		for(int j = 0; j < period; j++) {
+			double yv = a*j*j + b*j + c;
+			double diff = yv - y[j];
+			var.Add(diff);
+		}
+		var_window.Add(var.GetVariance());
+		abc_window.Add(a);
+		abc_window.Add(b);
+		abc_window.Add(c);
+		if (var_window.GetCount() > varperiod) {
+			var_window.Remove(0);
+			abc_window.Remove(0, 3);
+		}
+		
+		double min_var = DBL_MAX;
+		int min_pos = -1;
+		for(int j = 0; j < var_window.GetCount(); j++) {
+			double var = var_window[j];
+			if (var < min_var) {
+				min_var = var;
+				min_pos = j;
+			}
+		}
+		
+		double x = -(var_window.GetCount() - 1 - min_pos);
+		a = abc_window[min_pos * 3 + 0];
+		b = abc_window[min_pos * 3 + 1];
+		c = abc_window[min_pos * 3 + 2];
+		double y = a*x*x + b*x + c;
+		
+		main.Set(i, y);
+		double min_dev = sqrt(min_var);
+		hi.Set(i, y + min_dev);
+		lo.Set(i, y - min_dev);
+		
+		sig.signal.Set(i, cur < y);
+	}
+	
+}
+
+void UnsustainableMovement::GetParabola(const Vector<double>& x, const Vector<double>& y, double& a_out, double& b_out, double& c_out) {
+	float matrix[3][4], ratio, a;
+	float sum_x = 0, sum_y = 0, sum_x2 = 0, sum_x3 = 0, sum_x4 = 0, sum_xy = 0, sum_x2y = 0;
+	int i, j , k;
+	
+	for (i = 0; i < x.GetCount(); i++) {
+		Pointf p(x[i], y[i]);
+		sum_x += p.x;
+		sum_y += p.y;
+		sum_x2 += pow(p.x, 2);
+		sum_x3 += pow(p.x, 3);
+		sum_x4 += pow(p.x, 4);
+		sum_xy += p.x * p.y;
+		sum_x2y += pow(p.x, 2) * p.y;
+	}
+	
+	matrix[0][0] = x.GetCount();
+	matrix[0][1] = sum_x;
+	matrix[0][2] = sum_x2;
+	matrix[0][3] = sum_y;
+	matrix[1][0] = sum_x;
+	matrix[1][1] = sum_x2;
+	matrix[1][2] = sum_x3;
+	matrix[1][3] = sum_xy;
+	matrix[2][0] = sum_x2;
+	matrix[2][1] = sum_x3;
+	matrix[2][2] = sum_x4;
+	matrix[2][3] = sum_x2y;
+	
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			if (i != j) {
+				ratio = matrix[j][i] / matrix[i][i];
+				for (k = 0; k < 4; k++) {
+					matrix[j][k] -= ratio * matrix[i][k];
+				}
+			}
+		}
+	}
+	
+	for (i = 0; i < 3; i++) {
+		a = matrix[i][i];
+		for (j = 0; j < 4; j++) {
+			matrix[i][j] /= a;
+		}
+	}
+	
+	a_out = matrix[2][3];
+	b_out = matrix[1][3];
+	c_out = matrix[0][3];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+PipChange::PipChange() {
+	
+}
+
+void PipChange::Init() {
+	SetCoreChartWindow();
+	
+	av_win.SetPeriod(ticks);
+}
+
+void PipChange::Start() {
+	System& sys = GetSystem();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	double point = GetDataBridge()->GetPoint();
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i + 1);
+		
+		double cur = open_buf.Get(i);
+		double prev = open_buf.Get(max(0, i-1));
+		
+		int pips = (cur - prev) / point;
+		
+		av_win.Add(pips);
+		
+		double sum = av_win.GetSum();
+		if (fabs(sum) >= this->pips) {
+			sig.signal.Set(i, sum < 0);
+			sig.enabled.Set(i, true);
+		} else {
+			sig.enabled.Set(i, false);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+SupplyDemand::SupplyDemand() {
+	
+}
+
+void SupplyDemand::Init() {
+	SetCoreChartWindow();
+}
+
+void SupplyDemand::Start() {
+	System& sys = GetSystem();
+	
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	
+	double point = GetDataBridge()->GetPoint();
+	double cost = point * cost_level;
+	if (cost <= 0.0) cost = point;
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	
+	minisig.SetCount(bars);
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		const int count = 1;
+		bool sigbuf[count];
+		int begin = Upp::max(0, i - 100);
+		int end = i + 1;
+		OnlineMinimalLabel::GetMinimalSignal(cost, open_buf, begin, end, sigbuf, count);
+		
+		bool label = sigbuf[count - 1];
+		bool prev_label = i > 0 ? minisig.Get(i - 1) : false;
+		minisig.Set(i, label);
+		
+		if (label != prev_label) {
+			int peak_pos = i;
+			double peak_value = open_buf.Get(i);
+			for(int j = 0; j < trail_period; j++) {
+				int pos = i - 1 - j;
+				if (pos < 0) break;
+				double cur = open_buf.Get(pos);
+				if ((!label && cur < peak_value) || (label && cur > peak_value)) {
+					peak_value = cur;
+					peak_pos = pos;
+				}
+			}
+			sig.signal.Set(peak_pos, label);
+			sig.enabled.Set(peak_pos, true);
+			
+			int level = peak_value / point / level_div;
+			bool level_exists = levels.Find(level) >= 0;
+			levels.GetAdd(level).Add(peak_pos);
+			if (!level_exists)
+				SortByKey(levels, StdLess<int>());
+		} else {
+			sig.enabled.Set(i, false);
+		}
+		
+		int limit = i - level_len;
+		for(int j = 0; j < levels.GetCount(); j++) {
+			Vector<int>& pos = levels[j];
+			for(int k = 0; k < pos.GetCount(); k++) {
+				if (pos[k] <= limit) {
+					pos.Remove(k);
+					k--;
+				}
+			}
+			if (pos.IsEmpty()) {
+				levels.Remove(j);
+				j--;
+			}
+		}
+		
+		double cur_value = open_buf.Get(i);
+		int cur_level = cur_value / point / level_div;
+		
+		if (levels.IsEmpty()) {
+			for(int j = 0; j < 2; j++) {
+				GetBuffer(j).Set(i, cur_value);
+			}
+		}
+		else {
+			
+			int div = 0;
+			for(int j = 0; j < levels.GetCount(); j++) {
+				if (levels.GetKey(j) > cur_level)
+					break;
+				else
+					div = j;
+			}
+			for(int j = 0; j < 1; j++) {
+				int lo = max(0, div - j - 2);
+				int hi = min(levels.GetCount()-1, div + 1 + j + 2);
+				int lo_level = levels.GetKey(lo);
+				int hi_level = levels.GetKey(hi);
+				double lo_value = lo_level * level_div * point;
+				double hi_value = hi_level * level_div * point;
+				GetBuffer(1-1-j).Set(i, lo_value);
+				GetBuffer(1+j).Set(i, hi_value);
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SupplyDemandOscillator::SupplyDemandOscillator()
+{
+	
+}
+
+void SupplyDemandOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetBufferColor(1, Red);
+	SetCoreMinimum(-1);
+	SetCoreMaximum(1);
+	AddSubCore<SupplyDemand>().Set("cost_level", cost_level).Set("trail_period", trail_period).Set("level_div", level_div).Set("level_len", level_len);
+}
+
+void SupplyDemandOscillator::Start() {
+	Buffer& osc_av = GetBuffer(0);
+	Buffer& osc = GetBuffer(1);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	
+	ConstBuffer& ind1 = At(0).GetBuffer(0);
+	ConstBuffer& ind2 = At(0).GetBuffer(1);
+	RefreshSubCores();
+	
+	int prev_pos = counted ? counted-1 : 0;
+	SetSafetyLimit(counted-1);
+	double prev_value = counted ? osc_av.Get(counted-1) : 0;
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double applied_value = Open(i);
+		double s = ind1.Get(i);
+		double r = ind2.Get(i);
+		double range = r - s;
+		double value = (applied_value - s) / range * 2 - 1;
+		if (value >  1) value = 1;
+		if (value < -1) value = -1;
+		osc.Set(i, value);
+		sig.signal.Set(i, value < 0);
+		value = ExponentialMA( i, smoothing_period, prev_value, osc );
+		osc_av.Set(i, value);
+		prev_pos = i;
+		prev_value = value;
+	}
+}
 
 
 

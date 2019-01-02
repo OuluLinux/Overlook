@@ -470,7 +470,7 @@ struct UserExc : public Exc {
 typedef Vector<byte> CoreData;
 
 class Core;
-class EventCore;
+class ScriptCore;
 
 struct BatchPartStatus : Moveable<BatchPartStatus> {
 	BatchPartStatus() {slot = NULL; begin = Time(1970,1,1); end = begin; sym_id = -1; tf_id = -1; actual = 0; total = 1; complete = false; batch_slot = 0;}
@@ -739,16 +739,16 @@ public:
 	
 };
 
-class EventCoreItem : Moveable<EventCoreItem>, public Pte<EventCoreItem> {
+class ScriptCoreItem : Moveable<ScriptCoreItem>, public Pte<ScriptCoreItem> {
 	
 public:
-	One<EventCore> core;
+	One<ScriptCore> core;
 	int symbol, factory;
 	
 public:
 	typedef CoreItem CLASSNAME;
-	EventCoreItem() {symbol = -1; factory = -1;}
-	~EventCoreItem() {}
+	ScriptCoreItem() {symbol = -1; factory = -1;}
+	~ScriptCoreItem() {}
 	
 };
 
@@ -1317,28 +1317,7 @@ public:
 };
 
 
-inline const VectorMap<String, int>& CommonSpreads() {
-	static VectorMap<String, int> v;
-	if (v.IsEmpty()) {
-		v.Add("EURUSD", 2);
-		v.Add("GBPUSD", 3);
-		v.Add("EURGBP", 3);
-		v.Add("USDJPY", 3);
-		v.Add("AUDUSD", 4);
-		v.Add("EURCHF", 4);
-		v.Add("EURJPY", 4);
-		v.Add("USDCAD", 4);
-		v.Add("USDCHF", 4);
-		v.Add("NZDUSD", 5);
-		v.Add("AUDJPY", 6);
-		v.Add("CADJPY", 6);
-		v.Add("AUDCAD", 8);
-		v.Add("CHFJPY", 8);
-		v.Add("EURCAD", 8);
-		v.Add("GBPJPY", 8);
-	}
-	return v;
-}
+const VectorMap<String, int>& CommonSpreads();
 
 }
 

@@ -39,8 +39,8 @@ using namespace Upp;
 #include "Advisors.h"
 #include "PatternMatch.h"
 #include "Scripts.h"
-#include "Interpolation.h"
-#include "Extrapolation.h"
+#include "Neural.h"
+#include "Unknown.h"
 
 
 namespace Overlook {
@@ -62,6 +62,25 @@ public:
 	
 };
 
+
+class NewScriptDialog : public TopWindow {
+	Upp::Label scriptlbl;
+	DropList script;
+	Array<Upp::Label> arglabels;
+	Array<EditIntSpin> argctrls;
+	Button ok, cancel;
+	
+public:
+	typedef NewScriptDialog CLASSNAME;
+	NewScriptDialog();
+	
+	void RefreshArgs();
+	int GetFactory() const {return script.GetIndex();}
+	int GetArgCount() const {return arglabels.GetCount();}
+	int GetArg(int i) const {return argctrls[i].GetData();}
+	
+	bool is_ok = false;
+};
 
 struct ProfileGroup : Moveable<ProfileGroup> {
 	FactoryDeclaration decl;
@@ -145,6 +164,7 @@ public:
 	void FullScreen();
 	void ChartProperties();
 	void NewOrder();
+	void RunScript();
 	void HistoryCenter();
 	void Options();
 	void TileWindow();

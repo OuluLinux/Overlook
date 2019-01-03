@@ -774,26 +774,22 @@ bool System::RefreshReal() {
 	return true;
 }
 
-int System::GetScriptCoreQueue(Vector<Ptr<ScriptCoreItem> >& ci_queue, int symbol_id, FactoryDeclaration& decl) {
-	
-	int id = decl.factory * 1000 + symbol_id;
+int System::GetScriptCoreQueue(Vector<Ptr<ScriptCoreItem> >& ci_queue, FactoryDeclaration& decl) {
 	
 	CombineHash ch;
 	for(int i = 0; i < decl.arg_count; i++)
-		ch << decl.args[i] << 1;
+		ch.Put(decl.args[i]).Put(1);
 	int arg_hash = ch;
 	
-	bool init = nndata.GetAdd(id).Find(arg_hash) == -1;
+	bool init = nndata.GetAdd(decl.factory).Find(arg_hash) == -1;
 	
 	if (init) {
-		ScriptCoreItem& ci = nndata.GetAdd(id).Add(arg_hash);
-		ci.symbol = symbol_id;
+		ScriptCoreItem& ci = nndata.GetAdd(decl.factory).Add(arg_hash);
 		ci.factory = decl.factory;
 		ci.core = System::ScriptCoreFactories()[decl.factory].b();
 		
 		ScriptCore& c = *ci.core;
 		c.factory = decl.factory;
-		c.symbol = symbol_id;
 		for(int i = 0; i < decl.arg_count; i++)
 			c.args.Add(decl.args[i]);
 		
@@ -807,7 +803,7 @@ int System::GetScriptCoreQueue(Vector<Ptr<ScriptCoreItem> >& ci_queue, int symbo
 		c.Init();
 	}
 	
-	ScriptCoreItem& ci = nndata.Get(id).Get(arg_hash);
+	ScriptCoreItem& ci = nndata.Get(decl.factory).Get(arg_hash);
 	
 	ci_queue.Add(&ci);
 	

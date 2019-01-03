@@ -450,4 +450,26 @@ const VectorMap<String, int>& CommonSpreads() {
 	return v;
 }
 
+
+
+void LabelSignal::And(const LabelSignal& src) {
+	int count = min(signal.GetCount(), src.signal.GetCount());
+	
+	enabled.And(src.enabled);
+	
+	for(int i = 0; i < count; i++) {
+		if (!src.enabled.Get(i)) {
+			enabled.Set(i, false);
+			continue;
+		}
+		if (!enabled.Get(i)) continue;
+		
+		bool sig_a = signal.Get(i);
+		bool sig_b = src.signal.Get(i);
+		if (sig_a != sig_b)
+			enabled.Set(i, false);
+	}
+	
+}
+
 }

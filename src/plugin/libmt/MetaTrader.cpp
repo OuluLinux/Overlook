@@ -679,7 +679,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		account_currency = "USD";
 	
 	VectorMap<String, int> currencies;
-	VectorMap<int,int> postfix_counts;
+	VectorMap<String,int> postfix_counts;
 	
 	// Parse symbol lines
 	int c1 = lines.GetCount();
@@ -775,8 +775,11 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			const String& name = sym.name;
 			int id = symbols.GetCount();
 			
+			if (sym.point == 0.001 || sym.point == 0.00001)
+				sym.point *= 10.0;
+			
 			// TODO: handle symbols like EURUSDm, EUR/USD, etc.
-			if (!(	name.GetCount() == 6 || (name.GetCount() == 7 && name.Right(1) == "."))) {
+			if (name.Mid(3,1) == "/") {
 				// Only 'EURUSD', 'AUDJPYm', 'EURCHF.' format is allowed, not 'EUR/USD'. Hack this or change broker.
 				sym.is_skipping = true;
 				continue;
@@ -784,9 +787,9 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 			
 			// Count postfixes
 			if (name.GetCount() == 6)
-				postfix_counts.GetAdd(0, 0)++;
-			else if (name.GetCount() == 7)
-				postfix_counts.GetAdd(name.Right(1)[0], 0)++;
+				postfix_counts.GetAdd("", 0)++;
+			else
+				postfix_counts.GetAdd(name.Mid(6), 0)++;
 			
 			
 			String a = name.Left(3);
@@ -860,7 +863,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 	
 	// Sort postfix stats
 	SortByValue(postfix_counts, StdGreater<int>());
-	int postfix = postfix_counts.IsEmpty() ? 0 : postfix_counts.GetKey(0);
+	String postfix = postfix_counts.IsEmpty() ? 0 : postfix_counts.GetKey(0);
 	
 	// Find proxy ids
 	for(int i = 0; i < symbols.GetCount(); i++) {
@@ -873,8 +876,7 @@ const Vector<Symbol>& MetaTrader::_GetSymbols() {
 		
 		
 		// Add postfix to the proxy symbol
-		if (postfix)
-			sym.proxy_name.Cat(postfix);
+		sym.proxy_name.Cat(postfix);
 		
 		
 		for(int j = 0; j < symbols.GetCount(); j++) {

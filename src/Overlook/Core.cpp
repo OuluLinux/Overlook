@@ -449,7 +449,7 @@ ScriptCore::ScriptCore() {
 void ScriptCore::Load() {
 	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
-	String filename = IntStr(factory) + "-" + IntStr(symbol);
+	String filename = IntStr(factory);
 	for(int i = 0; i < args.GetCount(); i++)
 		filename += "-" + IntStr(args[i]);
 	String file = AppendFileName(dir, filename + ".bin");
@@ -459,7 +459,7 @@ void ScriptCore::Load() {
 void ScriptCore::Store() {
 	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
-	String filename = IntStr(factory) + "-" + IntStr(symbol);
+	String filename = IntStr(factory);
 	for(int i = 0; i < args.GetCount(); i++)
 		filename += "-" + IntStr(args[i]);
 	String file = AppendFileName(dir, filename + ".bin");

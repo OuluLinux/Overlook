@@ -390,18 +390,19 @@ struct ValueRegister {
 };
 
 struct FactoryDeclaration : Moveable<FactoryDeclaration> {
-	int args[8];
+	static const int max_args = 16;
+	int args[max_args];
 	int factory = -1;
 	int arg_count = 0;
 	
 	FactoryDeclaration() {}
 	FactoryDeclaration(const FactoryDeclaration& src) {*this = src;}
 	FactoryDeclaration& Set(int i) {factory = i; return *this;}
-	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < 8); args[arg_count++] = i; return *this;}
+	FactoryDeclaration& AddArg(int i) {ASSERT(arg_count >= 0 && arg_count < max_args); args[arg_count++] = i; return *this;}
 	FactoryDeclaration& operator=(const FactoryDeclaration& src) {
 		factory = src.factory;
 		arg_count = src.arg_count;
-		for(int i = 0; i < 8; i++) args[i] = src.args[i];
+		for(int i = 0; i < max_args; i++) args[i] = src.args[i];
 		return *this;
 	}
 	
@@ -415,10 +416,10 @@ struct FactoryDeclaration : Moveable<FactoryDeclaration> {
 	
 	void Serialize(Stream& s) {
 		if (s.IsLoading()) {
-			s.Get(args, sizeof(int) * 8);
+			s.Get(args, sizeof(int) * max_args);
 		}
 		else if (s.IsStoring()) {
-			s.Put(args, sizeof(int) * 8);
+			s.Put(args, sizeof(int) * max_args);
 		}
 		s % factory % arg_count;
 	}
@@ -667,6 +668,8 @@ struct Output : Moveable<Output> {
 struct LabelSignal : Moveable<LabelSignal> {
 	VectorBool signal, enabled;
 	void Serialize(Stream& s) {s % signal % enabled;}
+	
+	void And(const LabelSignal& src);
 };
 
 struct Label : Moveable<Label> {
@@ -743,11 +746,11 @@ class ScriptCoreItem : Moveable<ScriptCoreItem>, public Pte<ScriptCoreItem> {
 	
 public:
 	One<ScriptCore> core;
-	int symbol, factory;
+	int factory;
 	
 public:
 	typedef CoreItem CLASSNAME;
-	ScriptCoreItem() {symbol = -1; factory = -1;}
+	ScriptCoreItem() { factory = -1;}
 	~ScriptCoreItem() {}
 	
 };

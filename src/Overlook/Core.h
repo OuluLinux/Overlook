@@ -407,9 +407,11 @@ protected:
 
 
 struct ArgScript {
+	Vector<String> titles;
 	Vector<int> mins, maxs, steps;
 	Vector<int*> args;
-	void Add(int min, int max, int step, int& arg) {mins.Add(min); maxs.Add(max); steps.Add(step); args.Add(&arg);}
+	
+	void Add(String title, int min, int max, int step, int& arg) {titles.Add(title); mins.Add(min); maxs.Add(max); steps.Add(step); args.Add(&arg);}
 };
 
 class ScriptCore {
@@ -420,36 +422,41 @@ protected:
 	
 	
 	// Persistent
-	String qtf_test_result;
 	
 	
 	// Temporary
 	Vector<ScriptCore*> input_cores;
 	Vector<int> args;
+	String qtf_test_result;
 	CoreList cl_sym;
-	int factory = -1, symbol = -1;
+	int factory = -1;
+	int actual = 0, total = 1;
 	
 	
 	ScriptCore& GetInputCore(int i) {return *input_cores[i];}
 	
 public:
 	
-	static const int fast_tf = 0;
+	static const int fast_tf = 2;
 	
 	ScriptCore();
 	virtual void Init() {};
+	virtual void Run() {};
 	virtual void Arg(ArgScript& arg) = 0;
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() = 0;
+	virtual void GetSignal(int symbol, LabelSignal& signal) {Panic("Not implemented");}
 	
 	void Load();
 	void Store();
-	void Serialize(Stream& s) {s % qtf_test_result; SerializeEvent(s);}
+	void Serialize(Stream& s) {SerializeEvent(s);}
 	
 	void SetInputCore(int i, ScriptCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	
-	int GetSymbol() const {return symbol;}
 	CoreList& GetCoreList() {return cl_sym;}
+	int GetActual() const {return actual;}
+	int GetTotal() const {return total;}
+	String GetTestResultQTF() const {return qtf_test_result;}
 };
 
 

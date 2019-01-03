@@ -97,6 +97,7 @@ INITBLOCK {
     System::RegisterCommon<PatternMatcher, PatternMatcherCtrl>("PatternMatch");
     //System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
     //System::RegisterCommon<GroupAutomation, GroupAutomationCtrl>("GroupAutomation");
+    System::RegisterCommon<ScriptCommon, ScriptCtrl>("Scripts");
     
     
     /*System::RegisterEvent<MovingAverageEvent>("Moving Average Event");
@@ -119,12 +120,15 @@ INITBLOCK {
     System::RegisterEvent<DayEvent>("Day Event");*/
     
     
-    System::RegisterScript<SingleChangeInterpolation>("SingleChangeInterpolation");
-    System::RegisterScript<MultiChangeInterpolation>("MultiChangeInterpolation");
-    System::RegisterScript<MultinetChangeInterpolation>("MultinetChangeInterpolation");
-    System::RegisterScript<SingleVolatInterpolation>("SingleVolatInterpolation");
-    System::RegisterScript<MultiVolatInterpolation>("MultiVolatInterpolation");
-    System::RegisterScript<MultinetVolatInterpolation>("MultinetVolatInterpolation");
+    System::RegisterScript<SingleChangeNeural>("SingleChangeNeural");
+    System::RegisterScript<MultiChangeNeural>("MultiChangeNeural");
+    System::RegisterScript<MultinetChangeNeural>("MultinetChangeNeural");
+    System::RegisterScript<SingleVolatNeural>("SingleVolatNeural");
+    System::RegisterScript<MultiVolatNeural>("MultiVolatNeural");
+    System::RegisterScript<MultinetVolatNeural>("MultinetVolatNeural");
+    System::RegisterScript<MultinetSimple>("MultinetSimple");
+    System::RegisterScript<AllSame>("AllSame");
+    System::RegisterScript<AllSameMulti>("AllSameMulti");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

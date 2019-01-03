@@ -229,6 +229,7 @@ void Overlook::ChartMenu(Bar& bar) {
 
 void Overlook::ToolMenu(Bar& bar) {
 	bar.Add("New Order", THISBACK(NewOrder)).Key(K_F9);
+	bar.Add("Run Script", THISBACK(RunScript)).Key(K_F5);
 	bar.Separator();
 	bar.Add("History Center", THISBACK(HistoryCenter)).Key(K_F2);
 	bar.Separator();
@@ -343,6 +344,21 @@ void Overlook::NewOrder() {
 	NewOrderWindow win;
 	win.Init(sym);
 	win.Run();
+}
+
+void Overlook::RunScript() {
+	NewScriptDialog dlg;
+	dlg.Run();
+	
+	if (dlg.is_ok) {
+		ScriptList sl;
+		FactoryDeclaration& decl = sl.AddFactory(dlg.GetFactory());
+		for(int i = 0; i < dlg.GetArgCount(); i++) {
+			decl.AddArg(dlg.GetArg(i));
+		}
+		sl.Init();
+		
+	}
 }
 
 void Overlook::HistoryCenter() {
@@ -1301,5 +1317,74 @@ OptionWindow::OptionWindow() {
 	ok << [=]{Close();};
 }
 
+
+
+
+
+
+
+
+
+NewScriptDialog::NewScriptDialog() {
+	System& sys = GetSystem();
+	
+	Title("Run Script");
+	
+	Add(scriptlbl.TopPos(0, 30).LeftPos(0, 200-3));
+	scriptlbl.AlignRight();
+	scriptlbl.SetLabel("Script:");
+	Add(script.TopPos(0, 30).LeftPos(200, 300));
+	
+	for(int i = 0; i < sys.ScriptCoreFactories().GetCount(); i++) {
+		script.Add(sys.ScriptCoreFactories()[i].a);
+	}
+	script.SetIndex(0);
+	RefreshArgs();
+	script <<= THISBACK(RefreshArgs);
+	
+	Add(ok);
+	Add(cancel);
+	ok.SetLabel("OK");
+	cancel.SetLabel("Cancel");
+	ok << [=]{is_ok = true; Close();};
+	cancel << [=]{Close();};
+}
+
+void NewScriptDialog::RefreshArgs() {
+	int script_id = script.GetIndex();
+	
+	
+	for(int i = 0; i < arglabels.GetCount(); i++) {
+		RemoveChild(&arglabels[i]);
+		RemoveChild(&argctrls[i]);
+	}
+	arglabels.Clear();
+	argctrls.Clear();
+	
+	
+	ScriptCore& sc = *System::ScriptCoreFactories()[script_id].c();
+	
+	ArgScript args;
+	sc.Arg(args);
+	for(int i = 0; i < args.titles.GetCount(); i++) {
+		int y = 30 + i * 30;
+		Upp::Label& arglabel = arglabels.Add();
+		EditIntSpin& argctrl = argctrls.Add();
+		Add(arglabel.TopPos(y, 30).LeftPos(0, 200-3));
+		arglabel.SetLabel(args.titles[i]);
+		arglabel.AlignRight();
+		Add(argctrl.TopPos(y, 30).LeftPos(200, 300));
+		argctrl.MinMax(args.mins[i], args.maxs[i]);
+		argctrl.SetData(*args.args[i]);
+	}
+	
+	int y = 30 + args.titles.GetCount() * 30;
+	ok.TopPos(y, 30).RightPos(0, 100);
+	cancel.TopPos(y, 30).RightPos(100, 100);
+	
+	int h = 30 + args.titles.GetCount() * 30 + 30;
+	Rect r = GetRect();
+	SetRect(r.left, r.top, 500, h);
+}
 
 }

@@ -35,6 +35,9 @@ INITBLOCK {
 	System::Register<ValueAndVolumeTrend>("Value And Volume Trend");
 	System::Register<OnBalanceVolume>("On Balance Volume");
 	System::Register<Volumes>("Volumes");
+	System::Register<VolumeOscillator>("VolumeOscillator");
+	System::Register<SpeculationOscillator>("SpeculationOscillator");
+	System::Register<BuySellVolume>("BuySellVolume");
 	System::Register<AcceleratorOscillator>("Accelerator Oscillator");
 	System::Register<GatorOscillator>("Gator Oscillator");
 	System::Register<AwesomeOscillator>("Awesome Oscillator");
@@ -128,7 +131,8 @@ INITBLOCK {
     System::RegisterScript<MultinetVolatNeural>("MultinetVolatNeural");
     System::RegisterScript<MultinetSimple>("MultinetSimple");
     System::RegisterScript<AllSame>("AllSame");
-    System::RegisterScript<AllSameMulti>("AllSameMulti");
+    System::RegisterScript<AllSameMultiPips>("AllSameMultiPips");
+    System::RegisterScript<AllSameMultiType>("AllSameMultiType");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

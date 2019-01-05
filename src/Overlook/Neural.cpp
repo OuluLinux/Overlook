@@ -11,8 +11,17 @@ void SingleChangeNeural::Init() {
 	LoadSymbol(cl_sym, symbol, ScriptCore::fast_tf);
 	InitSessionDefault(ses, windowsize, 1);
 	
-	ses.GetData().BeginDataResult(1, count, windowsize);
-	LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
+	if (input_enum == PRICE) {
+		ses.GetData().BeginDataResult(1, count, windowsize);
+		LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
+	}
+	else if (input_enum == INDI) {
+		LoadSymbolIndicators(cl_indi, symbol, ScriptCore::fast_tf);
+		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
+		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
+	}
+	else Panic("TODO");
+	
 	LoadDataPipOutput(ses, cl_sym, begin, count, postpips_count);
 	ses.GetData().EndData();
 }
@@ -40,10 +49,19 @@ void SingleChangeNeural::Run() {
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	
 	qtf_test_result = "";
-	qtf_test_result << DeQtf("Known price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_sym, inter_begin, inter_count, windowsize, postpips_count);
-	qtf_test_result << DeQtf("Unknown price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_sym, extra_begin, extra_count, windowsize, postpips_count);
+	if (input_enum == PRICE) {
+		qtf_test_result << DeQtf("Known price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_sym, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_sym, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else if (input_enum == INDI) {
+		qtf_test_result << DeQtf("Known indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else Panic("TODO");
 }
 
 void SingleChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
@@ -62,20 +80,30 @@ void SingleChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 	
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume in;
-	in.Init(1, 1, cl_sym.GetSymbolCount() * windowsize);
-	
-	VectorMap<int, double> map;
+	if (input_enum == PRICE) {
+		in.Init(1, 1, cl_sym.GetSymbolCount() * windowsize);
+	}
+	else if (input_enum == INDI) {
+		in.Init(1, 1, cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize);
+	}
+	else Panic("TODO");
 	
 	for(int i = 0; i < extra_count; i++) {
 		int pos = extra_begin + i;
 		
-		LoadVolumePriceInput(cl_sym, pos, in, windowsize);
+		if (input_enum == PRICE) {
+			LoadVolumePriceInput(cl_sym, pos, in, windowsize);
+		}
+		else if (input_enum == INDI) {
+			LoadVolumeIndicatorsInput(cl_indi, pos, in, windowsize);
+		}
+		else Panic("TODO");
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
 		double pred = out.Get(0);
 		
-		signal.enabled.Set(pos, pred != 0.0);
+		signal.enabled.Set(pos, fabs(pred) > 0.0);
 		signal.signal.Set(pos, pred < 0.0);
 	}
 }
@@ -93,8 +121,17 @@ void MultiChangeNeural::Init() {
 	LoadNetSymbols(cl_sym, ScriptCore::fast_tf);
 	InitSessionDefault(ses, cl_sym.GetSymbolCount() * windowsize, cl_sym.GetSymbolCount());
 	
-	ses.GetData().BeginDataResult(cl_sym.GetSymbolCount(), count, cl_sym.GetSymbolCount() * windowsize);
-	LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
+	if (input_enum == PRICE) {
+		ses.GetData().BeginDataResult(cl_sym.GetSymbolCount(), count, cl_sym.GetSymbolCount() * windowsize);
+		LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
+	}
+	else if (input_enum == INDI) {
+		LoadNetIndicators(cl_indi, ScriptCore::fast_tf);
+		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
+		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
+	}
+	else Panic("TODO");
+	
 	LoadDataPipOutput(ses, cl_sym, begin, count, postpips_count);
 	ses.GetData().EndData();
 }
@@ -122,10 +159,19 @@ void MultiChangeNeural::Run() {
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	
 	qtf_test_result = "";
-	qtf_test_result << DeQtf("Known price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_sym, inter_begin, inter_count, windowsize, postpips_count);
-	qtf_test_result << DeQtf("Unknown price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_sym, extra_begin, extra_count, windowsize, postpips_count);
+	if (input_enum == PRICE) {
+		qtf_test_result << DeQtf("Known price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_sym, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_sym, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else if (input_enum == INDI) {
+		qtf_test_result << DeQtf("Known indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else Panic("TODO");
 }
 
 void MultiChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
@@ -144,20 +190,30 @@ void MultiChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 	
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume in;
-	in.Init(1, 1, cl_sym.GetSymbolCount() * windowsize);
-	
-	VectorMap<int, double> map;
+	if (input_enum == PRICE) {
+		in.Init(1, 1, cl_sym.GetSymbolCount() * windowsize);
+	}
+	else if (input_enum == INDI) {
+		in.Init(1, 1, cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize);
+	}
+	else Panic("TODO");
 	
 	for(int i = 0; i < extra_count; i++) {
 		int pos = extra_begin + i;
 		
-		LoadVolumePriceInput(cl_sym, pos, in, windowsize);
+		if (input_enum == PRICE) {
+			LoadVolumePriceInput(cl_sym, pos, in, windowsize);
+		}
+		else if (input_enum == INDI) {
+			LoadVolumeIndicatorsInput(cl_indi, pos, in, windowsize);
+		}
+		else Panic("TODO");
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
 		double pred = out.Get(sym_pos);
 		
-		signal.enabled.Set(pos, pred != 0.0);
+		signal.enabled.Set(pos, fabs(pred) > 0.0);
 		signal.signal.Set(pos, pred < 0.0);
 	}
 }
@@ -175,14 +231,24 @@ void MultinetChangeNeural::Init() {
 	
 	LoadNets(cl_net, ScriptCore::fast_tf);
 	
-	if (ses.GetStepCount() == 0) {
-		InitSessionDefault(ses, cl_net.GetSymbolCount() * windowsize, cl_net.GetSymbolCount());
-		
+	if (ses.GetStepCount() != 0)
+		return;
+	
+	InitSessionDefault(ses, cl_net.GetSymbolCount() * windowsize, cl_net.GetSymbolCount());
+	
+	if (input_enum == PRICE) {
 		ses.GetData().BeginDataResult(cl_net.GetSymbolCount(), count, cl_net.GetSymbolCount() * windowsize);
 		LoadDataPriceInput(ses, cl_net, begin, count, windowsize);
-		LoadDataPipOutput(ses, cl_net, begin, count, postpips_count);
-		ses.GetData().EndData();
 	}
+	else if (input_enum == INDI) {
+		LoadNetsIndicators(cl_indi, ScriptCore::fast_tf);
+		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
+		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
+	}
+	else Panic("TODO");
+	
+	LoadDataPipOutput(ses, cl_net, begin, count, postpips_count);
+	ses.GetData().EndData();
 }
 
 void MultinetChangeNeural::Run() {
@@ -207,12 +273,19 @@ void MultinetChangeNeural::Run() {
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	
 	qtf_test_result = "";
-	#ifndef flagDEBUG
-	qtf_test_result << DeQtf("Known price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_net, inter_begin, inter_count, windowsize, postpips_count);
-	qtf_test_result << DeQtf("Unknown price in / pip out\n");
-	qtf_test_result << TestPriceInPipOut(ses, cl_net, extra_begin, extra_count, windowsize, postpips_count);
-	#endif
+	if (input_enum == PRICE) {
+		qtf_test_result << DeQtf("Known price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_net, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown price in / pip out\n");
+		qtf_test_result << TestPriceInPipOut(ses, cl_net, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else if (input_enum == INDI) {
+		qtf_test_result << DeQtf("Known indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_net, cl_indi, inter_begin, inter_count, windowsize, postpips_count);
+		qtf_test_result << DeQtf("Unknown indicators in / pip out\n");
+		qtf_test_result << TestIndicatorsInPipOut(ses, cl_net, cl_indi, extra_begin, extra_count, windowsize, postpips_count);
+	}
+	else Panic("TODO");
 }
 
 void MultinetChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
@@ -231,18 +304,27 @@ void MultinetChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 	
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume in;
-	in.Init(1, 1, cl_net.GetSymbolCount() * windowsize);
-	
-	VectorMap<int, double> map;
+	if (input_enum == PRICE) {
+		in.Init(1, 1, cl_net.GetSymbolCount() * windowsize);
+	}
+	else if (input_enum == INDI) {
+		in.Init(1, 1, cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize);
+	}
+	else Panic("TODO");
 	
 	for(int i = 0; i < extra_count; i++) {
 		int pos = extra_begin + i;
 		
-		LoadVolumePriceInput(cl_net, pos, in, windowsize);
+		if (input_enum == PRICE) {
+			LoadVolumePriceInput(cl_net, pos, in, windowsize);
+		}
+		else if (input_enum == INDI) {
+			LoadVolumeIndicatorsInput(cl_indi, pos, in, windowsize);
+		}
+		else Panic("TODO");
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
-		#if 1
 		double sum = 0.0;
 		for(int j = 0; j < sys.GetNetCount(); j++) {
 			System::NetSetting& net = sys.GetNet(j);
@@ -251,26 +333,8 @@ void MultinetChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 			sum += sym_sig * pred;
 		}
 		
-		signal.enabled.Set(pos, sum != 0.0);
+		signal.enabled.Set(pos, fabs(sum) > 0.0);
 		signal.signal.Set(pos, sum < 0.0);
-		#else
-		for(int j = 0; j < map.GetCount(); j++)
-			map[j] = 0;
-		for(int j = 0; j < sys.GetNetCount(); j++) {
-			System::NetSetting& net = sys.GetNet(j);
-			double pred = out.Get(j);
-			for(int k = 0; k < net.symbols.GetCount(); k++) {
-				int sym_sig = net.symbol_ids[k];
-				map.GetAdd(k, 0) += sym_sig * pred;
-			}
-		}
-		struct Sorter {bool operator()(double a, double b) const {return fabs(a) > fabs(b);}};
-		SortByValue(map, Sorter());
-		int j = map.Find(sym_pos);
-		double pred = map[j];
-		signal.enabled.Set(pos, j < 2);
-		signal.signal.Set(pos, pred < 0);
-		#endif
 	}
 }
 
@@ -442,9 +506,9 @@ void MultinetVolatNeural::Run() {
 	
 	qtf_test_result = "";
 	qtf_test_result << DeQtf("Known price in / volat out\n");
-	qtf_test_result << TestPriceInVolatOut(ses, cl_sym, inter_begin, inter_count, windowsize, ticks);
+	qtf_test_result << TestPriceInVolatOut(ses, cl_net, inter_begin, inter_count, windowsize, ticks);
 	qtf_test_result << DeQtf("Unknown price in / volat out\n");
-	qtf_test_result << TestPriceInVolatOut(ses, cl_sym, extra_begin, extra_count, windowsize, ticks);
+	qtf_test_result << TestPriceInVolatOut(ses, cl_net, extra_begin, extra_count, windowsize, ticks);
 }
 
 void MultinetVolatNeural::GetSignal(int symbol, LabelSignal& signal) {

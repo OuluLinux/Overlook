@@ -1322,6 +1322,51 @@ public:
 
 const VectorMap<String, int>& CommonSpreads();
 
+
+
+inline Time SyncTime(int tf, Time t) {
+	switch (tf) {
+		case 0:
+			t.second = 0;
+			break;
+		case 1:
+			t.second = 0;
+			t.minute -= t.minute % 5;
+			break;
+		case 2:
+			t.second = 0;
+			t.minute -= t.minute % 15;
+			break;
+		case 3:
+			t.second = 0;
+			t.minute -= t.minute % 30;
+			break;
+		case 4:
+			t.second = 0;
+			t.minute = 0;
+			break;
+		case 5:
+			t.second = 0;
+			t.minute = 0;
+			t.hour -= t.hour % 4;
+			break;
+		case 6:
+			t.second = 0;
+			t.minute = 0;
+			t.hour = 0;
+			break;
+		case 7:
+			t.second = 0;
+			t.minute = 0;
+			t.hour = 0;
+			while (DayOfWeek(t) != 0)
+				t -= 24*60*60;
+			break;
+		case 8:
+			break;
+	}
+	return t;
+}
 }
 
 #endif

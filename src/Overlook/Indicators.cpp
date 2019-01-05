@@ -321,11 +321,11 @@ SimpleHurstWindow::SimpleHurstWindow()
 void SimpleHurstWindow::Init() {
 	SetCoreSeparateWindow();
 	
-	SetCoreLevelCount(1);
-	SetCoreLevel(0, 0.5);
+	//SetCoreLevelCount(1); // normalized
+	//SetCoreLevel(0, 0.5);
 	
 	SetCoreMaximum(1);
-	SetCoreMinimum(0);
+	SetCoreMinimum(-1); // normalized
 	
 	int draw_begin;
 	if (period < 2)
@@ -350,12 +350,14 @@ void SimpleHurstWindow::Start() {
 	for(int i = prev_counted; i < bars; i++) {
 		double hurst = GetSimpleHurst(openbuf, i, period);
 		
+		hurst = (hurst - 0.5) * 2.0; // normalized
+		
 		hurstbuf.Set(i, hurst);
 		
 		double o1 = openbuf.Get(i-1);
 		double o0 = openbuf.Get(i);
 		bool sig = o0 < o1;
-		if (hurst < 0.5) sig = !sig;
+		if (hurst < 0.0) sig = !sig; // normalized
 		ls.signal.Set(i, sig);
 	}
 	
@@ -1413,8 +1415,8 @@ void CommodityChannelIndex::Init() {
 	
 	SetBufferColor(0, LightSeaGreen);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, -100.0);
-	SetCoreLevel(1,  100.0);
+	SetCoreLevel(0, -1.0);
+	SetCoreLevel(1,  1.0);
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -1498,6 +1500,8 @@ void CommodityChannelIndex::Start() {
 		if ( sum != 0.0 )
 			value = ( value_buffer.Get(i) - mov_buffer.Get(i) ) / sum;
 		
+		value *= 0.01; // normalized
+		
 		cci_buffer.Set(i, value);
 		sig.signal.Set(i, value < 0);
 		
@@ -1517,13 +1521,13 @@ DeMarker::DeMarker() {
 
 void DeMarker::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(0);
+	SetCoreMinimum(-1); // normalized
 	SetCoreMaximum(1);
 	
 	SetBufferColor(0, DodgerBlue);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 0.3);
-	SetCoreLevel(1, 0.7);
+	SetCoreLevel(0, -0.4); // normalized
+	SetCoreLevel(1, 0.4);
 	
 	SetBufferStyle(0,DRAW_LINE);
 	SetBufferLabel(0,"DeMarker");
@@ -1594,9 +1598,10 @@ void DeMarker::Start() {
 		double value = 0.0;
 		if ( num != 0.0 )
 			value = maxvalue / num;
+		value = (value - 0.5) * 2.0; // normalized
 		buffer.Set(i, value);
 		
-		sig.signal.Set(i, value < 0.5);
+		sig.signal.Set(i, value < 0.0); // normalized
 	}
 }
 
@@ -1832,15 +1837,15 @@ RelativeStrengthIndex::RelativeStrengthIndex()
 
 void RelativeStrengthIndex::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(0);
-	SetCoreMaximum(100);
+	SetCoreMinimum(-1); // normalized
+	SetCoreMaximum(1);
 	
 	SetBufferColor(0, DodgerBlue);
 	SetBufferColor(1, White());
 	SetBufferColor(2, White());
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 70);
-	SetCoreLevel(1, 30);
+	SetCoreLevel(0, -0.4); // normalized
+	SetCoreLevel(1, 0.4);
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -1911,10 +1916,11 @@ void RelativeStrengthIndex::Start() {
 		pos_buffer.Set(i, ( pos_buffer.Get(i - 1) * ( period - 1 ) + ( diff > 0.0 ? diff : 0.0 ) ) / period);
 		neg_buffer.Set(i, ( neg_buffer.Get(i - 1) * ( period - 1 ) + ( diff < 0.0 ? -diff : 0.0 ) ) / period);
 		double rsi = (1.0 - 1.0 / ( 1.0 + pos_buffer.Get(i) / neg_buffer.Get(i) )) * 100;
+		rsi = (rsi * 0.01 - 0.5) * 2.0; // normalized
 		buffer.Set(i, rsi);
 		prev_value = value;
 		
-		sig.signal.Set(i, rsi < 50);
+		sig.signal.Set(i, rsi < 0);  // normalized
 	}
 }
 
@@ -2026,13 +2032,13 @@ StochasticOscillator::StochasticOscillator() {
 
 void StochasticOscillator::Init() {
 	SetCoreSeparateWindow();
-	SetCoreMinimum(0);
-	SetCoreMaximum(100);
+	SetCoreMinimum(-1);  // normalized
+	SetCoreMaximum(1);
 	SetBufferColor(0, LightSeaGreen);
 	SetBufferColor(1, Red);
 	SetCoreLevelCount(2);
-	SetCoreLevel(0, 20);
-	SetCoreLevel(1, 80);
+	SetCoreLevel(0, -0.6);  // normalized
+	SetCoreLevel(1, 0.6);
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
@@ -2159,8 +2165,9 @@ void StochasticOscillator::Start() {
 		double value = 1.0;
 		if ( sumhigh != 0.0 )
 			value = sumlow / sumhigh * 100;
+		value = (value * 0.01 - 0.5) * 2.0; // normalized
 		buffer.Set(i, value);
-		sig.signal.Set(i, value < 50);
+		sig.signal.Set(i, value < 0); // normalized
 	}
 
 	start = d_period - 1;
@@ -2494,6 +2501,177 @@ void Volumes::Start() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VolumeOscillator::VolumeOscillator() {
+	
+}
+
+void VolumeOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetBufferLabel(0,"Volume");
+	SetCoreMinimum(0.0);
+	SetCoreMaximum(1.0);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, 0.5);
+	SetCoreLevel(1, 0.9);
+	ec.SetSize(1440);
+}
+
+void VolumeOscillator::Start() {
+	Buffer& buffer = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (counted) counted--;
+	bars--;
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		double vol = Volume(i);
+		if (vol != 0 || !i)
+			ec.Add(vol, vol);
+		else {
+			double vol = Volume(ec.GetLowest());
+			ec.Add(vol, vol);
+		}
+		int highest = ec.GetHighest();
+		int lowest = ec.GetLowest();
+		double high = Volume(highest);
+		double low = Volume(lowest);
+		vol = (vol - low) / (high - low);
+		buffer.Set(i, vol);
+		sig.enabled.Set(i, vol >= 0.9);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+SpeculationOscillator::SpeculationOscillator() {
+	
+}
+
+void SpeculationOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetBufferLabel(0,"Volume");
+	//SetCoreMinimum(0.0);
+	//SetCoreMaximum(1.0);
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+}
+
+void SpeculationOscillator::Start() {
+	Buffer& buffer = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	double point = GetDataBridge()->GetPoint();
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (counted) counted--;
+	else counted++;
+	bars--;
+	bool signal = false;
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double vol = Volume(i-1);
+		if (vol != 0.0) {
+			double open = Open(i-1);
+			double close = Open(i);
+			double absch = fabs(open / close - 1);
+			double volch = absch / vol;
+			av.Add(volch);
+			double mean = av.GetMean();
+			double relch = mean != 0.0 ? volch / mean - 1.0: 0;
+			buffer.Set(i, relch);
+			if (relch > 0) {
+				signal = close < open;
+			}
+			sig.signal.Set(i, signal);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+BuySellVolume::BuySellVolume() {
+	
+}
+
+void BuySellVolume::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(2, Green);
+	SetBufferStyle(2, DRAW_HISTOGRAM);
+	SetBufferColor(1, Red);
+	SetBufferStyle(1, DRAW_HISTOGRAM);
+	SetBufferColor(0, Yellow);
+	SetBufferStyle(0, DRAW_HISTOGRAM);
+}
+
+void BuySellVolume::Start() {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& fast_idx = dbc.GetTimeIndex(0);
+	const Index<Time>& idx = dbc.GetTimeIndex(GetTf());
+	
+	Buffer& buy = GetBuffer(2);
+	Buffer& sell = GetBuffer(1);
+	Buffer& diff = GetBuffer(0);
+	ConstBuffer& fast_open = GetInputBuffer(0, GetSymbol(), 0, 0);
+	ConstBuffer& fast_vol = GetInputBuffer(0, GetSymbol(), 0, 3);
+	
+	Time prev_t(1970,1,1);
+	int prev_j = -1;
+	for (int i = fast_counted; i < fast_idx.GetCount() - 1; i++) {
+		Time fast_t = fast_idx[i];
+		Time t = SyncTime(GetTf(), fast_t);
+		int j;
+		if (prev_t == t)	j = prev_j;
+		else				j = idx.Find(t);
+		prev_j = j;
+		prev_t = t;
+		if (j == -1) continue;
+		double open = fast_open.Get(i);
+		double close = fast_open.Get(i+1);
+		double vol = fast_vol.Get(i);
+		if (open <= close) {
+			buy.Inc(j, vol);
+		}
+		else {
+			sell.Inc(j, -vol);
+		}
+		diff.Set(j, buy.Get(j) + sell.Get(j));
+	}
+	fast_counted = fast_idx.GetCount() - 1;
+}
 
 
 
@@ -3026,7 +3204,7 @@ void FractalOsc::Start() {
 		double v = (close - buf2) / (buf1 - buf2);
 		if ( v > 1) v = 1;
 		else if ( v < 0) v = 0;
-		double value = v - 0.5;
+		double value = (v - 0.5) * 2.0;
 		buf.Set(i, value); // normalized
 		av.Set(i, SimpleMA( i, smoothing_period, buf ));
 		
@@ -4646,6 +4824,9 @@ VolumeSlots::VolumeSlots() {
 void VolumeSlots::Init() {
 	SetCoreSeparateWindow();
 	
+	SetCoreMinimum(0);
+	SetCoreMaximum(1);
+	
 	SetBufferColor(0, Color(113, 42, 150));
 	SetBufferStyle(0, DRAW_LINE);
 	
@@ -4656,6 +4837,8 @@ void VolumeSlots::Init() {
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
+	SetBufferType(1, STYLE_DOT);
+	
 	
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < 10080)
@@ -4665,13 +4848,16 @@ void VolumeSlots::Init() {
 	
 	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
 	
-	
 	stats.SetCount(slot_count);
+	
+	smooth.SetPeriod(period * 2 + 1);
 }
 
 void VolumeSlots::Start() {
 	Buffer& buffer = GetBuffer(0);
+	Buffer& avbuffer = GetBuffer(1);
 	ConstBuffer& vol_buf = GetInputBuffer(0, 3);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
 	
@@ -4683,26 +4869,93 @@ void VolumeSlots::Start() {
 	
 	int tf_mins = GetMinutePeriod();
 	
-	for(int i = counted; i < bars; i++) {
-		double vol  = vol_buf.Get(i);
-		if (vol == 0.0) continue;
-		int slot_id = (i-1) % slot_count;
-		OnlineAverage1& av = stats[slot_id];
-		av.Add(vol);
-		total.Add(vol);
-	}
-	
-	double max = 0.0;
+	double min = DBL_MAX, max = 0.0001;
 	for(int i = 0; i < stats.GetCount(); i++) {
 		max = Upp::max(max, stats[i].mean);
+		min = Upp::min(min, stats[i].mean);
+	}
+	for(int i = counted; i < bars; i++) {
+		sig.enabled.Set(i, false);
 	}
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		int slot_id = i % slot_count;
-		const OnlineAverage1& av = stats[slot_id];
+		if (i % stats.GetCount() == 0) {
+			min = DBL_MAX;
+			max = 0.0001;
+			for(int i = 0; i < stats.GetCount(); i++) {
+				max = Upp::max(max, stats[i].mean);
+				min = Upp::min(min, stats[i].mean);
+			}
+		}
+		{
+			double vol  = vol_buf.Get(i-1);
+			if (vol != 0.0) {
+				int slot_id = (i-1) % slot_count;
+				OnlineAverage1& av = stats[slot_id];
+				av.Add(vol);
+				total.Add(vol);
+				if (av.mean > max) max = av.mean;
+			}
+		}
 		
-		buffer.Set(i, av.mean * 100 / max);
+		{
+			int slot_id = i % slot_count;
+			const OnlineAverage1& av = stats[slot_id];
+			double value = (av.mean - min) / (max - min);
+			buffer.Set(i, value);
+			
+			if (value > trigger_limit * 0.01 && sig.enabled.Get(i) == false) {
+				double prev_value = value;
+				for(int j = 0; j < 20; j++) {
+					int slot_id = (i - 1 - j) % slot_count;
+					const OnlineAverage1& av = stats[slot_id];
+					double value = (av.mean - min) / (max - min);
+					if (value > prev_value)
+						break;
+					int pos = Upp::max(i - 1 - j, 0);
+					sig.enabled.Set(pos, true);
+					sig.signal.Set(pos, false);
+					prev_value = value;
+				}
+				
+				prev_value = value;
+				int pos = i;
+				sig.enabled.Set(pos, true);
+				sig.signal.Set(pos, false);
+				for(int j = 0; j < 20; j++) {
+					int slot_id = (i + 1 + j) % slot_count;
+					const OnlineAverage1& av = stats[slot_id];
+					double value = (av.mean - min) / (max - min);
+					if (value < prev_value)
+						break;
+					pos = Upp::max(i + 1 + j, 0);
+					sig.enabled.Set(pos, true);
+					sig.signal.Set(pos, false);
+					prev_value = value;
+				}
+				pos++;
+				for(int j = 0; j < 20; j++) {
+					int slot_id = pos % slot_count;
+					const OnlineAverage1& av = stats[slot_id];
+					double value = (av.mean - min) / (max - min);
+					if (value > prev_value)
+						break;
+					sig.enabled.Set(pos, true);
+					sig.signal.Set(pos, true);
+					pos++;
+					prev_value = value;
+				}
+			}
+		}
+		
+		{
+			int slot_id = (i + period) % slot_count;
+			const OnlineAverage1& add_av = stats[slot_id];
+			smooth.Add(add_av.GetMean());
+			double value = (smooth.GetMean() - min) / (max - min);
+			avbuffer.Set(i, value);
+		}
 	}
 }
 
@@ -6114,12 +6367,11 @@ void Laguerre::Init() {
 	SetCoreSeparateWindow();
 	SetBufferColor(0, Red);
 	SetCoreMaximum(1.0);
-	SetCoreMinimum(0.0);
+	SetCoreMinimum(-1.0);
 	
-	SetCoreLevelCount(3);
-	SetCoreLevel(0, 0.25);
-	SetCoreLevel(1, 0.5);
-	SetCoreLevel(2, 0.75);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, -0.5);
+	SetCoreLevel(1, +0.5); // normalized
 	
 	
 }
@@ -6173,9 +6425,10 @@ void Laguerre::Start() {
 		if (gd_160 + gd_168 != 0.0)
 			gd_152 = gd_160 / (gd_160 + gd_168);
 		
+		gd_152 = (gd_152 - 0.5) * 2.0; // normalized
 		dst.Set(i, gd_152);
 		
-		sig.signal.Set(i, gd_152 <= 0.5);
+		sig.signal.Set(i, gd_152 <= 0); // normalized
 	}
 }
 
@@ -6365,10 +6618,9 @@ void QuantitativeQualitativeEstimation::Init() {
 	SetCoreSeparateWindow();
 	SetBufferColor(0, Blue);
 	
-	SetCoreLevelCount(3);
-	SetCoreLevel(0, 25);
-	SetCoreLevel(1, 50);
-	SetCoreLevel(2, 75);
+	SetCoreLevelCount(2);
+	SetCoreLevel(0, -0.5);
+	SetCoreLevel(1, +0.5);
 	
 	SetBufferLineWidth(0, 2);
 	
@@ -6383,7 +6635,7 @@ void QuantitativeQualitativeEstimation::Start() {
 	ConstBuffer& src = GetInputBuffer(0, 0);
 	ConstBuffer& src_time = GetInputBuffer(0, 4);
 	LabelSignal& sig = GetLabelBuffer(0, 0);
-	Buffer& dst = GetBuffer(1);
+	Buffer& dst = GetBuffer(0);
 	
 	int bars = GetBars();
 	int counted = GetCounted();
@@ -6391,7 +6643,7 @@ void QuantitativeQualitativeEstimation::Start() {
 	if (counted)
 		counted--;
 	
-	Buffer& rsi_ma_buffer = GetBuffer(0);
+	Buffer& rsi_ma_buffer = GetBuffer(1);
 	ConstBuffer& rsi_buffer = At(0).GetBuffer(0);
 	ExponentialMAOnBuffer( bars, counted, 0, period, rsi_buffer, rsi_ma_buffer );
 	
@@ -6432,10 +6684,12 @@ void QuantitativeQualitativeEstimation::Start() {
 				if (d < d2)
 					d = d2;
 		}
-
+		
+		d = (d * 0.01 - 0.5) * 4.0; // normalized
+		
 		dst.Set(i, d);
 		
-		sig.signal.Set(i, d <= 50);
+		sig.signal.Set(i, d <= 0); // normalized
 	}
 }
 
@@ -6948,6 +7202,9 @@ void PipChange::Start() {
 	int counted = GetCounted();
 	int bars = GetBars();
 	
+	signal.SetCount(bars);
+	enabled.SetCount(bars);
+	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i + 1);
 		
@@ -6960,10 +7217,23 @@ void PipChange::Start() {
 		
 		double sum = av_win.GetSum();
 		if (fabs(sum) >= this->pips) {
-			sig.signal.Set(i, sum < 0);
-			sig.enabled.Set(i, true);
+			signal.Set(i, sum < 0);
+			enabled.Set(i, true);
 		} else {
-			sig.enabled.Set(i, false);
+			enabled.Set(i, false);
+		}
+		
+		if (i > 0) {
+			if (enabled.Get(i)) {
+				bool now = signal.Get(i);
+				if (now == signal.Get(i-1))
+					sig.enabled.Set(i, false);
+				else {
+					sig.signal.Set(i, now);
+					sig.enabled.Set(i, true);
+				}
+			}
+			else sig.enabled.Set(i, false);
 		}
 	}
 }

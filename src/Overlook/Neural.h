@@ -14,6 +14,9 @@ enum {
 
 class SingleChangeNeural : public ScriptCore {
 	ConvNet::Session ses;
+	CoreList cl_sym;
+	CoreList cl_indi;
+	
 	int train_percent = 50;
 	int input_enum = PRICE;
 	int postpips_count = 5;
@@ -27,7 +30,7 @@ public:
 		arg.Add("Train data percent", 0, 100, 1, train_percent);
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post pips count", 2, 60, 1, postpips_count);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
 	virtual String GetTitle() {return "SingleChangeNeural";};
@@ -38,12 +41,14 @@ public:
 
 class MultiChangeNeural : public ScriptCore {
 	ConvNet::Session ses;
+	CoreList cl_sym;
+	CoreList cl_indi;
+	
 	int train_percent = 50;
 	int input_enum = PRICE;
 	int postpips_count = 5;
 	int extrapolation_mode = 0;
 	int windowsize = 50;
-	
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
@@ -51,7 +56,7 @@ public:
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post pips count", 2, 60, 1, postpips_count);
 		arg.Add("Unknown mode", 0, 4, 1, extrapolation_mode);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
 	virtual String GetTitle() {return "MultiChangeNeural";};
@@ -63,6 +68,7 @@ public:
 class MultinetChangeNeural : public ScriptCore {
 	ConvNet::Session ses;
 	CoreList cl_net;
+	CoreList cl_indi;
 	
 	int train_percent = 50;
 	int input_enum = PRICE;
@@ -77,7 +83,7 @@ public:
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post pips count", 2, 60, 1, postpips_count);
 		arg.Add("Unknown mode", 0, 4, 1, extrapolation_mode);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
 	virtual String GetTitle() {return "MultinetChangeNeural";};
@@ -88,6 +94,7 @@ public:
 
 class SingleVolatNeural : public ScriptCore {
 	ConvNet::Session ses;
+	CoreList cl_sym;
 	int train_percent = 50;
 	int input_enum = PRICE;
 	int ticks = 3;
@@ -101,7 +108,7 @@ public:
 		arg.Add("Train data percent", 0, 100, 1, train_percent);
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post tick count", 2, 10, 1, ticks);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
 	virtual String GetTitle() {return "SingleVolatNeural";};
@@ -111,6 +118,7 @@ public:
 
 class MultiVolatNeural : public ScriptCore {
 	ConvNet::Session ses;
+	CoreList cl_sym;
 	int train_percent = 50;
 	int input_enum = PRICE;
 	int ticks = 3;
@@ -125,7 +133,7 @@ public:
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post tick count", 2, 10, 1, ticks);
 		arg.Add("Unknown mode", 0, 4, 1, extrapolation_mode);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 		arg.Add("Signal post pip count", 2, 10, 1, postpips);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
@@ -151,7 +159,7 @@ public:
 		arg.Add("Input type", PRICE, MAS, 1, input_enum);
 		arg.Add("Post tick count", 2, 10, 1, ticks);
 		arg.Add("Unknown mode", 0, 4, 1, extrapolation_mode);
-		arg.Add("Window size", 10, 100, 10, windowsize);
+		arg.Add("Window size", 1, 100, 10, windowsize);
 	}
 	virtual void SerializeEvent(Stream& s) {s % ses;}
 	virtual String GetTitle() {return "MultinetVolatNeural";};

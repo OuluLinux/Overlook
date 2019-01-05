@@ -628,6 +628,70 @@ public:
 };
 
 
+
+class VolumeOscillator : public Core {
+	ExtremumCache ec;
+	
+public:
+	VolumeOscillator();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Lbl(1)
+			% Mem(ec);
+	}
+};
+
+
+
+
+class SpeculationOscillator : public Core {
+	OnlineAverage1 av;
+	
+public:
+	SpeculationOscillator();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% Out(1, 1)
+			% Lbl(1);
+	}
+};
+
+
+
+
+
+class BuySellVolume : public Core {
+	int fast_counted = 0;
+	
+public:
+	BuySellVolume();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>(&FilterFunction)
+			% Out(3, 3)
+			% Mem(fast_counted)
+			;
+	}
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)	return in_tf == out_tf || out_tf == 0;
+		else			return in_sym == out_sym;
+	}
+};
+
+
 class AcceleratorOscillator : public Core {
 	
 public:
@@ -1138,8 +1202,11 @@ class VolumeSlots : public Core {
 protected:
 	Vector<OnlineAverage1> stats;
 	OnlineAverage1 total;
+	OnlineAverageWindow1 smooth;
 	
 	int slot_count = 0;
+	int period = 3;
+	int trigger_limit = 50;
 	
 	
 public:
@@ -1152,7 +1219,10 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(1, 1)
+			% Out(2, 2)
+			% Lbl(1)
+			% Arg("period", period, 2)
+			% Arg("trigger_limit", trigger_limit, 2, 100)
 			% Mem(stats)
 			% Mem(total);
 	}
@@ -1688,7 +1758,7 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(4, 2)
+			% Out(4, 1)
 			% Lbl(1)
 			% Arg("period", period, 0, 1000)
 			;
@@ -1984,7 +2054,7 @@ public:
 class PipChange : public Core {
 	int pips = 3, ticks = 3;
 	OnlineAverageWindow1 av_win;
-	
+	VectorBool signal, enabled;
 	
 protected:
 	virtual void Start();
@@ -2000,7 +2070,9 @@ public:
 			% Lbl(1)
 			% Arg("pips", pips, 1, 1000)
 			% Arg("ticks", ticks, 1, 1000)
-			% Mem(av_win);
+			% Mem(av_win)
+			% Mem(signal)
+			% Mem(enabled);
 	}
 	
 };

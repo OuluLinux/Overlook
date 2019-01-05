@@ -428,7 +428,6 @@ protected:
 	Vector<ScriptCore*> input_cores;
 	Vector<int> args;
 	String qtf_test_result;
-	CoreList cl_sym;
 	int factory = -1;
 	int actual = 0, total = 1;
 	
@@ -437,7 +436,11 @@ protected:
 	
 public:
 	
+	#ifdef flagDEBUG
+	static const int fast_tf = 4;
+	#else
 	static const int fast_tf = 2;
+	#endif
 	
 	ScriptCore();
 	virtual void Init() {};
@@ -453,7 +456,6 @@ public:
 	
 	void SetInputCore(int i, ScriptCore& c) {if (i >= input_cores.GetCount()) input_cores.SetCount(i+1, NULL); input_cores[i] = &c;}
 	
-	CoreList& GetCoreList() {return cl_sym;}
 	int GetActual() const {return actual;}
 	int GetTotal() const {return total;}
 	String GetTestResultQTF() const {return qtf_test_result;}

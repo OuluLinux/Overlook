@@ -21,12 +21,47 @@ void InitSessionDefault(ConvNet::Session& ses, int input_depth, int output_count
 void LoadSymbol(CoreList& cl_sym, int symbol, int tf) {
 	System& sys = GetSystem();
 	
-	System::NetSetting& net = sys.GetNet(0);
 	cl_sym.AddSymbol(sys.GetSymbol(symbol));
 	cl_sym.AddTf(tf);
 	cl_sym.AddIndi(0);
 	cl_sym.Init();
 	cl_sym.Refresh();
+}
+
+void AddIndicators(CoreList& cl_indi) {
+	System& sys = GetSystem();
+	
+	cl_indi.AddIndi(sys.Find<Normalized>());
+	cl_indi.AddIndi(sys.Find<SimpleHurstWindow>());
+	cl_indi.AddIndi(sys.Find<MovingAverageConvergenceDivergence>());
+	cl_indi.AddIndi(sys.Find<BearsPower>());
+	cl_indi.AddIndi(sys.Find<BullsPower>());
+	cl_indi.AddIndi(sys.Find<CommodityChannelIndex>());
+	cl_indi.AddIndi(sys.Find<DeMarker>());
+	cl_indi.AddIndi(sys.Find<Momentum>());
+	cl_indi.AddIndi(sys.Find<RelativeStrengthIndex>());
+	cl_indi.AddIndi(sys.Find<RelativeVigorIndex>());
+	cl_indi.AddIndi(sys.Find<StochasticOscillator>());
+	cl_indi.AddIndi(sys.Find<AcceleratorOscillator>());
+	cl_indi.AddIndi(sys.Find<AwesomeOscillator>());
+	cl_indi.AddIndi(sys.Find<FractalOsc>());
+	cl_indi.AddIndi(sys.Find<LinearWeekTime>());
+	cl_indi.AddIndi(sys.Find<SupportResistanceOscillator>());
+	cl_indi.AddIndi(sys.Find<ChannelOscillator>());
+	cl_indi.AddIndi(sys.Find<ScissorChannelOscillator>());
+	cl_indi.AddIndi(sys.Find<VolatilitySlots>());
+	cl_indi.AddIndi(sys.Find<Laguerre>());
+	cl_indi.AddIndi(sys.Find<QuantitativeQualitativeEstimation>());
+}
+
+void LoadSymbolIndicators(CoreList& cl_indi, int symbol, int tf) {
+	System& sys = GetSystem();
+	
+	cl_indi.AddSymbol(sys.GetSymbol(symbol));
+	cl_indi.AddTf(tf);
+	AddIndicators(cl_indi);
+	cl_indi.Init();
+	cl_indi.Refresh();
 }
 
 void LoadNetSymbols(CoreList& cl_sym, int tf) {
@@ -42,6 +77,18 @@ void LoadNetSymbols(CoreList& cl_sym, int tf) {
 	cl_sym.Refresh();
 }
 
+void LoadNetIndicators(CoreList& cl_indi, int tf) {
+	System& sys = GetSystem();
+	
+	System::NetSetting& net = sys.GetNet(0);
+	for(int i = 0; i < net.symbols.GetCount(); i++) {
+		cl_indi.AddSymbol(net.symbols.GetKey(i));
+	}
+	cl_indi.AddTf(tf);
+	AddIndicators(cl_indi);
+	cl_indi.Init();
+	cl_indi.Refresh();
+}
 
 void LoadNets(CoreList& cl_net, int tf) {
 	System& sys = GetSystem();
@@ -53,6 +100,18 @@ void LoadNets(CoreList& cl_net, int tf) {
 	cl_net.AddIndi(0);
 	cl_net.Init();
 	cl_net.Refresh();
+}
+
+void LoadNetsIndicators(CoreList& cl_indi, int tf) {
+	System& sys = GetSystem();
+	
+	for(int i = 0; i < sys.GetNetCount(); i++) {
+		cl_indi.AddSymbol("Net" + IntStr(i));
+	}
+	cl_indi.AddTf(tf);
+	AddIndicators(cl_indi);
+	cl_indi.Init();
+	cl_indi.Refresh();
 }
 
 void LoadDataPriceInput(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize) {
@@ -87,6 +146,40 @@ void LoadVolumePriceInput(CoreList& cl_net, int pos, ConvNet::Volume& in, int wi
 			double ch = ((next / cur) - 1.0) * 1000;
 			in.Set(col++, ch);
 			next = cur;
+		}
+	}
+}
+
+void LoadDataIndiInput(ConvNet::Session& ses, CoreList& cl_indi, int begin, int count, int windowsize) {
+	ConvNet::SessionData& d = ses.GetData();
+	
+	for(int i = 0; i < count; i++) {
+		int pos = begin + i;
+		
+		int col = 0;
+		for(int j = 0; j < cl_indi.GetSymbolCount(); j++) {
+			for(int k = 0; k < cl_indi.GetIndiCount(); k++) {
+				ConstBuffer& buf = cl_indi.GetBuffer(j, k, 0);
+				for(int l = 0; l < windowsize; l++) {
+					int pos2 = max(0, pos - l - 1);
+					double cur = buf.Get(pos2);
+					d.SetData(i, col++, cur);
+				}
+			}
+		}
+	}
+}
+
+void LoadVolumeIndicatorsInput(CoreList& cl_indi, int pos, ConvNet::Volume& in, int windowsize) {
+	int col = 0;
+	for(int j = 0; j < cl_indi.GetSymbolCount(); j++) {
+		for(int k = 0; k < cl_indi.GetIndiCount(); k++) {
+			ConstBuffer& buf = cl_indi.GetBuffer(j, k, 0);
+			for(int l = 0; l < windowsize; l++) {
+				int pos2 = max(0, pos - l - 1);
+				double cur = buf.Get(pos2);
+				in.Set(col++, cur);
+			}
 		}
 	}
 }
@@ -171,6 +264,73 @@ String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int
 		int pos = begin + i;
 		
 		LoadVolumePriceInput(cl_net, pos, in, windowsize);
+		
+		ConvNet::Volume& out = net.Forward(in);
+		
+		for(int j = 0; j < cl_net.GetSymbolCount(); j++) {
+			ConstBuffer& buf = cl_net.GetBuffer(j, 0, 0);
+			ConstBuffer& lowbuf = cl_net.GetBuffer(j, 0, 1);
+			ConstBuffer& highbuf = cl_net.GetBuffer(j, 0, 2);
+			double point = cl_net.GetDataBridge(j)->GetPoint();
+			double open = buf.Get(pos);
+			double lo = open - postpips_count * point;
+			double hi = open + postpips_count * point;
+			
+			bool result = false;
+			
+			for(int k = pos+1; k < buf.GetCount(); k++) {
+				double low  = lowbuf.Get(k-1);
+				double high = highbuf.Get(k-1);
+				if (low <= lo) {
+					result = true;
+					break;
+				}
+				else if (high >= hi) {
+					result = false;
+					break;
+				}
+			}
+			
+			double pred = out.Get(j);
+			bool pred_result = pred <= 0.0;
+			double ch = (result == pred_result ? +1 : -1);
+			sum += ch;
+		}
+		
+		if (i % 100 == 0)
+			sums.Add(sum);
+	}
+	
+	
+	Size sz(800, 100);
+	sz *= 4;
+	DrawingDraw dw(sz);
+	
+	Vector<Point> cache;
+	DrawVectorPolyline(dw, sz, sums, cache);
+	
+	static Array<QtfRichObject> objcache;
+	QtfRichObject* pict = new QtfRichObject(CreateDrawingObject(dw.GetResult(), sz, sz));
+	objcache.Add(pict);
+	String qtf;
+	qtf << *pict << DeQtf("\n");
+	
+	return qtf;
+}
+
+String TestIndicatorsInPipOut(ConvNet::Session& ses, CoreList& cl_net, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count) {
+	ConvNet::Net& net = ses.GetNetwork();
+	ConvNet::Volume in;
+	in.Init(1, 1, cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize);
+	
+	double sum = 0.0;
+	Vector<double> sums;
+	sums.Reserve(count);
+	
+	for(int i = 0; i < count; i++) {
+		int pos = begin + i;
+		
+		LoadVolumeIndicatorsInput(cl_indi, pos, in, windowsize);
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
@@ -313,6 +473,7 @@ String TestTrade(int symbol, int postpips_count, LabelSignal& signal) {
 	double sum = 0.0;
 	
 	OnlineAverage1 withoutspread, withspread, consecutivewins, consecutivelosses;
+	int max_consecutivelosses = 0;
 	int consecutivenow = 0;
 	bool prev_succ = false;
 	
@@ -348,8 +509,10 @@ String TestTrade(int symbol, int postpips_count, LabelSignal& signal) {
 			} else {
 				if (prev_succ)
 					consecutivewins.Add(consecutivenow);
-				else
+				else {
+					max_consecutivelosses = max(consecutivenow, max_consecutivelosses);
 					consecutivelosses.Add(consecutivenow);
+				}
 				consecutivenow = 0;
 			}
 			prev_succ = succ;
@@ -381,6 +544,7 @@ String TestTrade(int symbol, int postpips_count, LabelSignal& signal) {
 	qtf << DeQtf("average with spread=" + DblStr(withspread.GetMean()) + "\n");
 	qtf << DeQtf("average consecutive wins=" + DblStr(consecutivewins.GetMean()) + "\n");
 	qtf << DeQtf("average consecutive losses=" + DblStr(consecutivelosses.GetMean()) + "\n");
+	qtf << DeQtf("max consecutive losses=" + IntStr(max_consecutivelosses) + "\n");
 	qtf << *pict << DeQtf("\n");
 	
 	return qtf;

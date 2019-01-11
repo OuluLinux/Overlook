@@ -516,5 +516,199 @@ void MultinetVolatNeural::GetSignal(int symbol, LabelSignal& signal) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void DqnAgent::Init() {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	begin = 100;
+	count = idx.GetCount() * (train_percent * 0.01) - begin;
+	
+	LoadSymbol(cl_sym, symbol, ScriptCore::fast_tf);
+	LoadSymbolIndicators(cl_indi, symbol, ScriptCore::fast_tf);
+	
+	int input_count = windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount() + SENSOR_COUNT;
+	InitDqnDefault(dqn, input_count, ACTION_COUNT);
+	
+	cl_wait.AddSymbol(GetSystem().GetSymbol(symbol));
+	cl_wait.AddTf(ScriptCore::fast_tf);
+	cl_wait.AddIndi(System::Find<SpeculationOscillator>());
+	cl_wait.AddIndi(System::Find<VolumeOscillator>());
+	cl_wait.AddIndi(System::Find<PipChange>());
+	cl_wait.AddIndi(System::Find<UnsustainableMovement>());
+	cl_wait.Init();
+	cl_wait.Refresh();
+}
+
+void DqnAgent::Run() {
+	if (dqn.GetExperienceCount() != 0)
+		return;
+	
+	qtf_test_result= DeQtf("Training...");
+	
+	#ifdef flagDEBUG
+	total = 200000;
+	#else
+	total = 20000000;
+	#endif
+	
+	//TrainDqn(dqn, total, actual);
+	
+	double point = cl_sym.GetDataBridge(0)->GetPoint();
+	ConstBuffer& open_buf = cl_sym.GetBuffer(0, 0, 0);
+	ConstBuffer& low_buf = cl_sym.GetBuffer(0, 0, 1);
+	ConstBuffer& high_buf = cl_sym.GetBuffer(0, 0, 2);
+	
+	ConstBuffer& specosc = cl_wait.GetBuffer(0, 0, 0);
+	ConstBuffer& volosc = cl_wait.GetBuffer(0, 1, 0);
+	ConstLabelSignal& pipch = cl_wait.GetLabelSignal(0, 2, 0);
+	ConstLabelSignal& unsust = cl_wait.GetLabelSignal(0, 3, 0);
+	
+	OnlineAverage1 reward_av;
+	int reward_period = 1000;
+	
+	
+	Vector<double> input;
+	int pos = begin;
+	for(; actual < total; actual++) {
+		double max_epsilon = 0.2;
+		double epsilon = (1.0 - actual / total) * max_epsilon;
+		dqn.SetEpsilon(epsilon);
+		
+		LoadInput(pos, input);
+		int action = dqn.Act(input);
+		prev_action = action;
+		double reward = 0;
+		
+		if (action < BET_ACTIONS) {
+			bool sig = action % 2;
+			int level = action / 2;
+			int factor = 1 << level;
+			
+			double open = open_buf.Get(pos);
+			double lo = open - postpips_count * point;
+			double hi = open + postpips_count * point;
+			
+			bool result = false;
+			
+			for(int k = pos+1; k < open_buf.GetCount(); k++) {
+				double low  = low_buf.Get(k-1);
+				double high = high_buf.Get(k-1);
+				if (low <= lo) {
+					result = true;
+					pos = k;
+					break;
+				}
+				else if (high >= hi) {
+					result = false;
+					pos = k;
+					break;
+				}
+			}
+			
+			bool succ = result == sig;
+			
+			reward = (succ ? +1 : -1) * factor * postpips_count;
+			
+			reward_av.Add(reward);
+			if (reward_av.count >= reward_period) {
+				qtf_test_result = DeQtf("average_reward_without_spread = " + DblStr(reward_av.GetMean()));
+				reward_av.Clear();
+			}
+		}
+		else {
+			action -= BET_ACTIONS;
+			
+			// Wait until speculation oscillator > 0
+			if (action == 0) {
+				while (true) {
+					if (pos >= begin + count)
+						pos = begin;
+					if (specosc.Get(pos) > 0)
+						break;
+					pos++;
+				}
+			}
+			// Wait until volume oscillator >= 0.5
+			else if (action == 1) {
+				while (true) {
+					if (pos >= begin + count)
+						pos = begin;
+					if (volosc.Get(pos) >= 0.5)
+						break;
+					pos++;
+				}
+			}
+			// Wait until volume oscillator >= 0.9
+			else if (action == 2) {
+				while (true) {
+					if (pos >= begin + count)
+						pos = begin;
+					if (volosc.Get(pos) >= 0.9)
+						break;
+					pos++;
+				}
+			}
+			// Wait until pip change signal
+			else if (action == 3) {
+				while (true) {
+					if (pos >= begin + count)
+						pos = begin;
+					if (pipch.enabled.Get(pos))
+						break;
+					pos++;
+				}
+			}
+			// Wait until unsustainable movement signal changes
+			else if (action == 4) {
+				while (true) {
+					if (pos >= begin + count)
+						pos = begin;
+					if (unsust.signal.Get(pos) != unsust.signal.Get(pos-1))
+						break;
+					pos++;
+				}
+			}
+			else Panic("Invalid action");
+		}
+	}
+}
+
+void DqnAgent::LoadInput(int pos, Vector<double>& input) {
+	input.SetCount(cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize + SENSOR_COUNT);
+	
+	int col = 0;
+	for(int j = 0; j < cl_indi.GetSymbolCount(); j++) {
+		for(int k = 0; k < cl_indi.GetIndiCount(); k++) {
+			ConstBuffer& buf = cl_indi.GetBuffer(j, k, 0);
+			for(int l = 0; l < windowsize; l++) {
+				int pos2 = max(0, pos - l - 1);
+				double cur = buf.Get(pos2);
+				input[col++] = cur;
+			}
+		}
+	}
+	
+	for(int j = 0; j < ACTION_COUNT; j++) {
+		input[col++] = (prev_action == j ? +1 : 0);
+	}
+}
+
+void DqnAgent::GetSignal(int symbol, LabelSignal& signal) {
+	
+}
+
 }
 

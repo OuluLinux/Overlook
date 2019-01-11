@@ -168,6 +168,43 @@ public:
 };
 
 
+class DqnAgent : public ScriptCore {
+	ConvNet::DQNAgent dqn;
+	CoreList cl_sym;
+	CoreList cl_indi;
+	CoreList cl_wait;
+	
+	int symbol = 0;
+	int train_percent = 50;
+	int postpips_count = 5;
+	int windowsize = 2;
+	
+	int begin = 0, count = 1;
+	int prev_action = 0;
+	
+	static const int BET_LEVELS = 1;
+	static const int BET_ACTIONS = BET_LEVELS * 2;
+	static const int WAIT_ACTIONS = 5;
+	static const int ACTION_COUNT = BET_ACTIONS + WAIT_ACTIONS;
+	static const int SENSOR_COUNT = ACTION_COUNT;
+	
+	
+	void LoadInput(int pos, Vector<double>& input);
+	
+public:
+	virtual void Init();
+	virtual void Arg(ArgScript& arg) {
+		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
+		arg.Add("Train data percent", 0, 100, 1, train_percent);
+		arg.Add("Post pips count", 2, 60, 1, postpips_count);
+		arg.Add("Window size", 1, 100, 10, windowsize);
+	}
+	virtual void SerializeEvent(Stream& s) {s % dqn;}
+	virtual String GetTitle() {return "DqnAgent";};
+	virtual void Run();
+	virtual void GetSignal(int symbol, LabelSignal& signal);
+};
+
 }
 
 

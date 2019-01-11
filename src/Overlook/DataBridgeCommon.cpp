@@ -121,6 +121,17 @@ int DataBridgeCommon::DownloadAskBid() {
 	return DownloadRemoteFile(remote_path, local_path);
 }
 
+int DataBridgeCommon::DownloadVolumes() {
+	ReleaseLog("DownloadVolumes");
+	
+	String local_path = GetOverlookFile("volumes.bin");
+	String remote_path = "MQL4\\Files\\volumes.bin";
+	
+	if (FileExists(local_path)) DeleteFile(local_path);
+	
+	return DownloadRemoteFile(remote_path, local_path);
+}
+
 int DataBridgeCommon::DownloadRemoteFile(String remote_path, String local_path) {
 	ReleaseLog("DownloadRemoteFile " << remote_path << " ----> " << local_path);
 	

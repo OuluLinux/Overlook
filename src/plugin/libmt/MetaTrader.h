@@ -165,6 +165,7 @@ public:
 	String	_GetLastError();
 	int		_FindPriceTime(int sym, int tf, dword ts);
 	int		_TimeCurrent();
+	int		_WriteVolumes(int datetime, String symbol, int timeframe);
 };
 
 inline MetaTrader& GetMetaTrader() {return Single<MetaTrader>();}

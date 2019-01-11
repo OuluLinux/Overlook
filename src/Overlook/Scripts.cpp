@@ -18,6 +18,27 @@ void InitSessionDefault(ConvNet::Session& ses, int input_depth, int output_count
 	
 }
 
+void InitDqnDefault(ConvNet::DQNAgent& agent, int input_count, int output_count) {
+	String t =
+			"{\n"
+			"\t\"update\":\"qlearn\",\n"
+			"\t\"gamma\":0.9,\n"
+			"\t\"epsilon\":0.2,\n"
+			"\t\"alpha\":0.005,\n"
+			"\t\"experience_add_every\":5,\n"
+			"\t\"experience_size\":10000,\n"
+			"\t\"learning_steps_per_iteration\":5,\n"
+			"\t\"tderror_clamp\":1.0,\n"
+			"\t\"num_hidden_units\":100,\n"
+			"}\n";
+	
+	if (agent.GetExperienceCount() == 0) {
+		agent.Init(1, input_count, output_count);
+		agent.LoadInitJSON(t);
+		agent.Reset();
+	}
+}
+
 void LoadSymbol(CoreList& cl_sym, int symbol, int tf) {
 	System& sys = GetSystem();
 	
@@ -31,6 +52,8 @@ void LoadSymbol(CoreList& cl_sym, int symbol, int tf) {
 void AddIndicators(CoreList& cl_indi) {
 	System& sys = GetSystem();
 	
+	cl_indi.AddIndi(sys.Find<VolumeOscillator>());
+	cl_indi.AddIndi(sys.Find<SpeculationOscillator>());
 	cl_indi.AddIndi(sys.Find<Normalized>());
 	cl_indi.AddIndi(sys.Find<SimpleHurstWindow>());
 	cl_indi.AddIndi(sys.Find<MovingAverageConvergenceDivergence>());
@@ -661,7 +684,7 @@ void ScriptCtrl::Data() {
 		}
 		scriptlist.Set(i, 1, s);
 		
-		int prog = core.GetActual() * 1000 / core.GetTotal();
+		int prog = (int64)core.GetActual() * (int64)1000 / (int64)core.GetTotal();
 		scriptlist.Set(i, 2, prog);
 		scriptlist.SetDisplay(i, 2, ProgressDisplay());
 	}

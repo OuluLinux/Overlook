@@ -112,8 +112,8 @@ void AllSame::Run() {
 	cl.Init();
 	cl.Refresh();
 	const LabelSignal& lb = cl.GetLabelSignal(0, 0, 0);
-	change_single.And(lb);*/
-	int pipchange_popcount = lb.enabled.PopCount();
+	change_single.And(lb);
+	int pipchange_popcount = lb.enabled.PopCount();*/
 	
 	int popcount = change_single.enabled.PopCount();
 	
@@ -121,7 +121,7 @@ void AllSame::Run() {
 	qtf_test_result << DeQtf("change_single_popcount=" + IntStr(change_single_popcount) + "\n");
 	qtf_test_result << DeQtf("change_multi_popcount=" + IntStr(change_multi_popcount) + "\n");
 	qtf_test_result << DeQtf("change_net_popcount=" + IntStr(change_net_popcount) + "\n");
-	qtf_test_result << DeQtf("pipchange_popcount=" + IntStr(pipchange_popcount) + "\n");
+	//qtf_test_result << DeQtf("pipchange_popcount=" + IntStr(pipchange_popcount) + "\n");
 	qtf_test_result << DeQtf("popcount=" + IntStr(popcount) + "\n");
 	qtf_test_result << DeQtf("Unknown all same single, multi & net\n");
 	qtf_test_result << TestTrade(symbol, change_postpips, change_single);

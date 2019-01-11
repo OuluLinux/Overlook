@@ -2541,10 +2541,11 @@ void VolumeOscillator::Start() {
 	int bars = GetBars();
 	int counted = GetCounted();
 	if (counted) counted--;
+	else counted++;
 	bars--;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		double vol = Volume(i);
+		double vol = Volume(i - 1);
 		if (vol != 0 || !i)
 			ec.Add(vol, vol);
 		else {
@@ -2594,12 +2595,14 @@ void SpeculationOscillator::Start() {
 	if (counted) counted--;
 	else counted++;
 	bars--;
-	bool signal = false;
+	
+	double limit = 10.0 / 60.0 * GetMinutePeriod();
+	
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
 		double vol = Volume(i-1);
-		if (vol != 0.0) {
+		if (vol >= limit) {
 			double open = Open(i-1);
 			double close = Open(i);
 			double absch = fabs(open / close - 1);
@@ -2612,6 +2615,86 @@ void SpeculationOscillator::Start() {
 				signal = close < open;
 			}
 			sig.signal.Set(i, signal);
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+GlobalSpeculationOscillator::GlobalSpeculationOscillator() {
+	
+}
+
+void GlobalSpeculationOscillator::Init() {
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0);
+}
+
+void GlobalSpeculationOscillator::Start() {
+	Buffer& buffer = GetBuffer(0);
+	LabelSignal& sig0 = GetLabelBuffer(0, 0);
+	LabelSignal& sig1 = GetLabelBuffer(0, 1);
+	LabelSignal& sig2 = GetLabelBuffer(0, 2);
+	double point = GetDataBridge()->GetPoint();
+	int bars = GetBars();
+	int counted = GetCounted();
+	if (counted) counted--;
+	else counted++;
+	bars--;
+	
+	Index<int> syms;
+	for(int i = 0; i < CommonSpreads().GetCount(); i++)
+		syms.Add(GetSystem().FindSymbol(CommonSpreads().GetKey(i)));
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		double sum = 0;
+		
+		for(int j = 0; j < syms.GetCount(); j++) {
+			ConstBuffer& buf = GetInputBuffer(1, syms[j], GetTf(), 0);
+			sum += buf.Get(i);
+		}
+		
+		buffer.Set(i, sum);
+		var.Add(sum);
+		
+		double cdf = var.GetCDF(sum, false);
+		bool is_enabled = cdf >= 0.975;
+		sig0.enabled.Set(i, is_enabled);
+		
+		if (is_enabled && i > 0) {
+			double close = Open(i);
+			double open = Open(i-1);
+			sig0.signal.Set(i, close < open);
+		}
+		
+		is_enabled = cdf >= 0.875;
+		sig1.enabled.Set(i, is_enabled);
+		
+		if (is_enabled && i > 0) {
+			double close = Open(i);
+			double open = Open(i-1);
+			sig1.signal.Set(i, close < open);
+		}
+		
+		is_enabled = cdf >= 0.775;
+		sig2.enabled.Set(i, is_enabled);
+		
+		if (is_enabled && i > 0) {
+			double close = Open(i);
+			double open = Open(i-1);
+			sig2.signal.Set(i, close < open);
 		}
 	}
 }

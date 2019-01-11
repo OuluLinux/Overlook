@@ -4,6 +4,7 @@
 namespace Overlook {
 
 void InitSessionDefault(ConvNet::Session& ses, int input_depth, int output_count);
+void InitDqnDefault(ConvNet::DQNAgent& ses, int input_count, int output_count);
 void LoadSymbol(CoreList& cl_sym, int symbol, int tf);
 void LoadSymbolIndicators(CoreList& cl_indi, int symbol, int tf);
 void LoadNetSymbols(CoreList& cl_sym, int tf);

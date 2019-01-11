@@ -505,6 +505,7 @@ MTFUNC0(68,	bool,		_IsDemo,				GetInt);
 MTFUNC0(69,	bool,		_IsConnected,			GetInt);
 MTFUNC3(70,	int,		_FindPriceTime,			int, SetInt, int, SetInt, dword, SetInt, GetInt);
 MTFUNC0(72,	int,		_TimeCurrent,			GetInt);
+MTFUNC3(73,	int,		_WriteVolumes,			int, SetInt, String, SetStr, int, SetInt, GetInt);
 
 
 

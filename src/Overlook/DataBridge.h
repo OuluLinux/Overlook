@@ -51,6 +51,7 @@ public:
 	int  DownloadHistory(const Symbol& sym, int tf, bool force=false);
 	int  DownloadHistory(int sym, int tf, bool force=false);
 	int  DownloadAskBid();
+	int  DownloadVolumes();
 	int  DownloadRemoteFile(String remote_path, String local_path);
 	bool IsInited() const {return inited;}
 	void RefreshAskBidData(bool forced=false);
@@ -135,6 +136,7 @@ public:
 	void RefreshFromFasterChange();
 	void RefreshCurrency();
 	void RefreshNet();
+	void RefreshVolume();
 	
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
 		System& sys = GetSystem();

@@ -37,6 +37,7 @@ INITBLOCK {
 	System::Register<Volumes>("Volumes");
 	System::Register<VolumeOscillator>("VolumeOscillator");
 	System::Register<SpeculationOscillator>("SpeculationOscillator");
+	System::Register<GlobalSpeculationOscillator>("GlobalSpeculationOscillator");
 	System::Register<BuySellVolume>("BuySellVolume");
 	System::Register<AcceleratorOscillator>("Accelerator Oscillator");
 	System::Register<GatorOscillator>("Gator Oscillator");
@@ -133,6 +134,7 @@ INITBLOCK {
     System::RegisterScript<AllSame>("AllSame");
     System::RegisterScript<AllSameMultiPips>("AllSameMultiPips");
     System::RegisterScript<AllSameMultiType>("AllSameMultiType");
+    System::RegisterScript<DqnAgent>("DqnAgent");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

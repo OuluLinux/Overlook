@@ -651,6 +651,7 @@ public:
 
 class SpeculationOscillator : public Core {
 	OnlineAverage1 av;
+	bool signal = false;
 	
 public:
 	SpeculationOscillator();
@@ -661,10 +662,36 @@ public:
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
 			% Out(1, 1)
-			% Lbl(1);
+			% Lbl(1)
+			% Mem(signal);
 	}
 };
 
+
+
+class GlobalSpeculationOscillator : public Core {
+	OnlineVariance var;
+	
+public:
+	GlobalSpeculationOscillator();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<SpeculationOscillator>(&FilterFunction)
+			% Out(1, 1)
+			% Lbl(3)
+			% Mem(var);
+			;
+	}
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)	return in_tf == out_tf;
+		else return CommonSpreads().Find(GetSystem().GetSymbol(out_sym)) >= 0;
+	}
+};
 
 
 

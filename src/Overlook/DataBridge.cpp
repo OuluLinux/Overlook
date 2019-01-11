@@ -82,6 +82,7 @@ void DataBridge::Start() {
 		}
 		#endif
 		RefreshFromAskBid(init_round);
+		RefreshVolume();
 	}
 	else {
 		RefreshNet();
@@ -954,6 +955,63 @@ void DataBridge::RefreshNet() {
 		low_buf.Set(i, min(l, d));
 		high_buf.Set(i, max(h, d));
 	}
+}
+
+void DataBridge::RefreshVolume() {
+	System& sys = GetSystem();
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	MetaTrader& mt = GetMetaTrader();
+	
+	int time = 0;
+	int count = 0;
+	for(int i = volume_buf.GetCount()-2; i >= 0; i--) {
+		time = time_buf.Get(i);
+		
+		double d = volume_buf.Get(i);
+		if (d != 0.0) break;
+		
+		count++;
+	}
+	
+	if (!time) return;
+	
+	
+	if (count < 5) {
+		for(int i = volume_buf.GetCount()-2, shift=1; i >= 0; i--, shift++) {
+			
+			double d = volume_buf.Get(i);
+			if (d != 0.0) break;
+			
+			double vol = mt.iVolume(sys.GetSymbol(GetSymbol()), GetTf(), shift);
+			volume_buf.Set(i, vol);
+		}
+	} else {
+		count = mt._WriteVolumes(time, sys.GetSymbol(GetSymbol()), GetTf());
+		
+		DataBridgeCommon& dbc = GetDataBridgeCommon();
+		dbc.DownloadVolumes();
+		
+		String localvolfile = GetOverlookFile("volumes.bin");
+		FileIn fin(localvolfile);
+		
+		const Index<Time>& idx = dbc.GetTimeIndex(GetTf());
+		while (!fin.IsEof()) {
+			double vol;
+			fin.Get(&time, sizeof(int));
+			fin.Get(&vol, sizeof(double));
+			
+			Time t = Time(1970,1,1) + time;
+			int i = idx.Find(t);
+			if (i != -1) {
+				volume_buf.Set(i, vol);
+			}
+		}
+	}
+	
 }
 
 /*

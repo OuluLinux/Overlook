@@ -4,32 +4,29 @@
 namespace Overlook {
 
 
-class MultinetSimple : public ScriptCore {
+class MultiSimple : public ScriptCore {
+	int tf = 0;
 	int symbol = 0;
-	
 	int src_trainpercent = 50;
 	int src_windowsize = 50;
 	int change_enum = PRICE;
 	int change_postpips = 5;
-	int change_extrapolationmode = 0;
 	int volat_enum = PRICE;
 	int volat_ticks = 3;
-	int volat_extrapolationmode = 0;
 	
 	ScriptList sl_change, sl_volat;
 	
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
+		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
 		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
 		arg.Add("Train data percent", 0, 100, 1, src_trainpercent);
 		arg.Add("Window size", 1, 100, 10, src_windowsize);
 		arg.Add("Change Input type", PRICE, MAS, 1, change_enum);
 		arg.Add("Change Post pips count", 2, 60, 1, change_postpips);
-		arg.Add("Change Unknown mode", 0, 4, 1, change_extrapolationmode);
 		arg.Add("Volat Input type", PRICE, MAS, 1, volat_enum);
 		arg.Add("Volat Post tick count", 2, 60, 1, volat_ticks);
-		arg.Add("Volat Unknown mode", 0, 4, 1, volat_extrapolationmode);
 	}
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() {return "MultinetSimple";};
@@ -39,25 +36,24 @@ public:
 
 
 class AllSame : public ScriptCore {
+	int tf = 0;
 	int symbol = 0;
-	
 	int src_trainpercent = 50;
 	int src_windowsize = 50;
 	int change_enum = PRICE;
 	int change_postpips = 5;
-	int change_extrapolationmode = 0;
 	
 	ScriptList sl_change_single, sl_change_multi, sl_change_net;
 	
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
+		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
 		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
 		arg.Add("Train data percent", 0, 100, 1, src_trainpercent);
 		arg.Add("Window size", 1, 100, 10, src_windowsize);
 		arg.Add("Change Input type", PRICE, MAS, 1, change_enum);
 		arg.Add("Change Post pips count", 2, 60, 1, change_postpips);
-		arg.Add("Change Unknown mode", 0, 4, 1, change_extrapolationmode);
 	}
 	virtual void SerializeEvent(Stream& s) {}
 	virtual String GetTitle() {return "AllSame";};
@@ -68,12 +64,11 @@ public:
 
 
 class AllSameMultiPips : public ScriptCore {
+	int tf = 0;
 	int symbol = 0;
-	
 	int src_trainpercent = 50;
 	int src_windowsize = 50;
 	int change_enum = PRICE;
-	int change_extrapolationmode = 0;
 	int change_postpips0 = 5;
 	int change_postpips1 = 10;
 	int change_postpips2 = 20;
@@ -85,11 +80,11 @@ class AllSameMultiPips : public ScriptCore {
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
+		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
 		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
 		arg.Add("Train data percent", 0, 100, 1, src_trainpercent);
 		arg.Add("Window size", 1, 100, 10, src_windowsize);
 		arg.Add("Change Input type", PRICE, MAS, 1, change_enum);
-		arg.Add("Change Unknown mode", 0, 4, 1, change_extrapolationmode);
 		arg.Add("Change Post pips count 1.", 2, 60, 1, change_postpips0);
 		arg.Add("Change Post pips count 2.", 2, 60, 1, change_postpips1);
 		arg.Add("Change Post pips count 3.", 2, 60, 1, change_postpips2);
@@ -104,10 +99,9 @@ public:
 
 
 class AllSameMultiType : public ScriptCore {
+	int tf = 0;
 	int symbol = 0;
-	
 	int src_trainpercent = 50;
-	int change_extrapolationmode = 0;
 	int change_postpips = 5;
 	int change_enum0 = PRICE;
 	int change_enum1 = INDI;
@@ -123,9 +117,9 @@ class AllSameMultiType : public ScriptCore {
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
+		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
 		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
 		arg.Add("Train data percent", 0, 100, 1, src_trainpercent);
-		arg.Add("Change Unknown mode", 0, 4, 1, change_extrapolationmode);
 		arg.Add("Change Post pips count", 2, 60, 1, change_postpips);
 		arg.Add("Change Input type 1.", PRICE, MAS, 1, change_enum0);
 		arg.Add("Change Input type 2.", PRICE, MAS, 1, change_enum1);

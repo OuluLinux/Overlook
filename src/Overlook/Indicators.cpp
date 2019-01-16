@@ -2540,12 +2540,9 @@ void VolumeOscillator::Start() {
 	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
-	if (counted) counted--;
-	else counted++;
-	bars--;
 	for (int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
-		double vol = Volume(i - 1);
+		double vol = Volume(max(0, i - 1));
 		if (vol != 0 || !i)
 			ec.Add(vol, vol);
 		else {
@@ -2592,9 +2589,8 @@ void SpeculationOscillator::Start() {
 	double point = GetDataBridge()->GetPoint();
 	int bars = GetBars();
 	int counted = GetCounted();
-	if (counted) counted--;
-	else counted++;
-	bars--;
+	if (!counted)
+		counted++;
 	
 	double limit = 10.0 / 60.0 * GetMinutePeriod();
 	
@@ -2648,9 +2644,8 @@ void GlobalSpeculationOscillator::Start() {
 	double point = GetDataBridge()->GetPoint();
 	int bars = GetBars();
 	int counted = GetCounted();
-	if (counted) counted--;
-	else counted++;
-	bars--;
+	if (!counted)
+		counted++;
 	
 	Index<int> syms;
 	for(int i = 0; i < CommonSpreads().GetCount(); i++)
@@ -2663,7 +2658,8 @@ void GlobalSpeculationOscillator::Start() {
 		
 		for(int j = 0; j < syms.GetCount(); j++) {
 			ConstBuffer& buf = GetInputBuffer(1, syms[j], GetTf(), 0);
-			sum += buf.Get(i);
+			if (i < buf.GetCount())
+				sum += buf.Get(i);
 		}
 		
 		buffer.Set(i, sum);
@@ -2733,7 +2729,7 @@ void BuySellVolume::Start() {
 	
 	Time prev_t(1970,1,1);
 	int prev_j = -1;
-	for (int i = fast_counted; i < fast_idx.GetCount() - 1; i++) {
+	for (int i = fast_counted; i < fast_open.GetCount() - 1; i++) {
 		Time fast_t = fast_idx[i];
 		Time t = SyncTime(GetTf(), fast_t);
 		int j;

@@ -4,11 +4,11 @@ namespace Overlook {
 
 void SingleChangeNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * (train_percent * 0.01) - begin;
 	
-	LoadSymbol(cl_sym, symbol, ScriptCore::fast_tf);
+	LoadSymbol(cl_sym, symbol, tf);
 	InitSessionDefault(ses, windowsize, 1);
 	
 	if (input_enum == PRICE) {
@@ -16,7 +16,7 @@ void SingleChangeNeural::Init() {
 		LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
 	}
 	else if (input_enum == INDI) {
-		LoadSymbolIndicators(cl_indi, symbol, ScriptCore::fast_tf);
+		LoadSymbolIndicators(cl_indi, symbol, tf);
 		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
 		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
 	}
@@ -42,7 +42,7 @@ void SingleChangeNeural::Run() {
 	
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -62,11 +62,19 @@ void SingleChangeNeural::Run() {
 		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, extra_begin, extra_count, windowsize, postpips_count);
 	}
 	else Panic("TODO");
+	
+	LabelSignal change_single;
+	GetSignal(symbol, change_single);
+	qtf_test_result << DeQtf("Unknown test trade\n");
+	qtf_test_result << TestTrade(symbol, tf, postpips_count, change_single);
 }
 
 void SingleChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
+	if (symbol != this->symbol)
+		return;
+	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	signal.signal.SetCount(idx.GetCount());
@@ -114,11 +122,11 @@ void SingleChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 
 void MultiChangeNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * 0.5 - begin;
 	
-	LoadNetSymbols(cl_sym, ScriptCore::fast_tf);
+	LoadNetSymbols(cl_sym, tf);
 	InitSessionDefault(ses, cl_sym.GetSymbolCount() * windowsize, cl_sym.GetSymbolCount());
 	
 	if (input_enum == PRICE) {
@@ -126,7 +134,7 @@ void MultiChangeNeural::Init() {
 		LoadDataPriceInput(ses, cl_sym, begin, count, windowsize);
 	}
 	else if (input_enum == INDI) {
-		LoadNetIndicators(cl_indi, ScriptCore::fast_tf);
+		LoadNetIndicators(cl_indi, tf);
 		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
 		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
 	}
@@ -152,7 +160,7 @@ void MultiChangeNeural::Run() {
 	
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -172,11 +180,18 @@ void MultiChangeNeural::Run() {
 		qtf_test_result << TestIndicatorsInPipOut(ses, cl_sym, cl_indi, extra_begin, extra_count, windowsize, postpips_count);
 	}
 	else Panic("TODO");
+	
+	
+	int symbol = GetSystem().FindSymbol(CommonSpreads().GetKey(0));
+	LabelSignal change_single;
+	GetSignal(symbol, change_single);
+	qtf_test_result << DeQtf("Unknown test trade\n");
+	qtf_test_result << TestTrade(symbol, tf, postpips_count, change_single);
 }
 
 void MultiChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	signal.signal.SetCount(idx.GetCount());
@@ -225,11 +240,11 @@ void MultiChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 
 void MultinetChangeNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * 0.5 - begin;
 	
-	LoadNets(cl_net, ScriptCore::fast_tf);
+	LoadNets(cl_net, tf);
 	
 	if (ses.GetStepCount() != 0)
 		return;
@@ -241,7 +256,7 @@ void MultinetChangeNeural::Init() {
 		LoadDataPriceInput(ses, cl_net, begin, count, windowsize);
 	}
 	else if (input_enum == INDI) {
-		LoadNetsIndicators(cl_indi, ScriptCore::fast_tf);
+		LoadNetsIndicators(cl_indi, tf);
 		ses.GetData().BeginDataResult(1, count, windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount());
 		LoadDataIndiInput(ses, cl_indi, begin, count, windowsize);
 	}
@@ -266,7 +281,7 @@ void MultinetChangeNeural::Run() {
 	ses.ClearData();
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -290,7 +305,7 @@ void MultinetChangeNeural::Run() {
 
 void MultinetChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	signal.signal.SetCount(idx.GetCount());
@@ -343,11 +358,11 @@ void MultinetChangeNeural::GetSignal(int symbol, LabelSignal& signal) {
 
 void SingleVolatNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * 0.5 - begin;
 	
-	LoadSymbol(cl_sym, symbol, ScriptCore::fast_tf);
+	LoadSymbol(cl_sym, symbol, tf);
 	InitSessionDefault(ses, windowsize, 1);
 	
 	ses.GetData().BeginDataResult(1, count, windowsize);
@@ -369,7 +384,7 @@ void SingleVolatNeural::Run() {
 	
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -386,11 +401,11 @@ void SingleVolatNeural::Run() {
 
 void MultiVolatNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * 0.5 - begin;
 	
-	LoadNetSymbols(cl_sym, ScriptCore::fast_tf);
+	LoadNetSymbols(cl_sym, tf);
 	
 	if (ses.GetStepCount() == 0) {
 		InitSessionDefault(ses, cl_sym.GetSymbolCount() * windowsize, cl_sym.GetSymbolCount());
@@ -418,7 +433,7 @@ void MultiVolatNeural::Run() {
 
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -435,7 +450,7 @@ void MultiVolatNeural::Run() {
 
 void MultiVolatNeural::GetSignal(int symbol, LabelSignal& signal) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
 	int extra_count = idx.GetCount() - 10 - extra_begin;
 	signal.signal.SetCount(idx.GetCount());
@@ -472,11 +487,11 @@ void MultiVolatNeural::GetSignal(int symbol, LabelSignal& signal) {
 
 void MultinetVolatNeural::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int begin = 100;
 	int count = idx.GetCount() * 0.5 - begin;
 	
-	LoadNets(cl_net, ScriptCore::fast_tf);
+	LoadNets(cl_net, tf);
 	InitSessionDefault(ses, cl_net.GetSymbolCount() * windowsize, cl_net.GetSymbolCount());
 	
 	ses.GetData().BeginDataResult(cl_net.GetSymbolCount(), count, cl_net.GetSymbolCount() * windowsize);
@@ -498,7 +513,7 @@ void MultinetVolatNeural::Run() {
 	
 	
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	int inter_begin = 100;
 	int inter_count = idx.GetCount() * (train_percent * 0.01) - inter_begin;
 	int extra_begin = idx.GetCount() * (train_percent * 0.01);
@@ -532,18 +547,18 @@ void MultinetVolatNeural::GetSignal(int symbol, LabelSignal& signal) {
 
 void DqnAgent::Init() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	begin = 100;
 	count = idx.GetCount() * (train_percent * 0.01) - begin;
 	
-	LoadSymbol(cl_sym, symbol, ScriptCore::fast_tf);
-	LoadSymbolIndicators(cl_indi, symbol, ScriptCore::fast_tf);
+	LoadSymbol(cl_sym, symbol, tf);
+	LoadSymbolIndicators(cl_indi, symbol, tf);
 	
 	int input_count = windowsize * cl_indi.GetIndiCount() * cl_indi.GetSymbolCount() + SENSOR_COUNT;
 	InitDqnDefault(dqn, input_count, ACTION_COUNT);
 	
 	cl_wait.AddSymbol(GetSystem().GetSymbol(symbol));
-	cl_wait.AddTf(ScriptCore::fast_tf);
+	cl_wait.AddTf(tf);
 	cl_wait.AddIndi(System::Find<SpeculationOscillator>());
 	cl_wait.AddIndi(System::Find<VolumeOscillator>());
 	cl_wait.AddIndi(System::Find<PipChange>());

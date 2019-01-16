@@ -21,6 +21,7 @@ protected:
 	int shift = 0;
 	int symbol = 0, tf = 0;
 	bool right_offset = 0, keep_at_end = 0;
+	bool is_refreshing = false;
 	Ptr<CoreItem> core;
 	DataBridge* bardata = NULL;
 	Mutex refresh_lock;

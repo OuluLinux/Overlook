@@ -109,10 +109,12 @@ Chart& Chart::SetFactory(int f) {
 
 void Chart::Start() {
 	if (keep_at_end) shift = 0;
-	Thread::Start(THISBACK(StartThread));
+	if (!is_refreshing)
+		Thread::Start(THISBACK(StartThread));
 }
 
 void Chart::StartThread() {
+	is_refreshing = true;
 	try {
 		refresh_lock.Enter();
 		RefreshCoreData(false);
@@ -124,6 +126,8 @@ void Chart::StartThread() {
 	catch (DataExc e) {
 		
 	}
+	is_refreshing = false;
+	
 	PostRefresh();
 }
 

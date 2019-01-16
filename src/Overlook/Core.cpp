@@ -447,7 +447,7 @@ ScriptCore::ScriptCore() {
 }
 
 void ScriptCore::Load() {
-	String dir = AppendFileName(GetOverlookFile("scriptcores"), IntStr(ScriptCore::fast_tf));
+	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
 	String filename = IntStr(factory);
 	for(int i = 0; i < args.GetCount(); i++)
@@ -457,7 +457,7 @@ void ScriptCore::Load() {
 }
 
 void ScriptCore::Store() {
-	String dir = AppendFileName(GetOverlookFile("scriptcores"), IntStr(ScriptCore::fast_tf));
+	String dir = GetOverlookFile("scriptcores");
 	RealizeDirectory(dir);
 	String filename = IntStr(factory);
 	for(int i = 0; i < args.GetCount(); i++)

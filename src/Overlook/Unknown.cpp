@@ -2,28 +2,28 @@
 
 namespace Overlook {
 
-void MultinetSimple::Init() {
-	sl_change.AddFactory(System::FindScript<MultinetChangeNeural>())
+void MultiSimple::Init() {
+	sl_change.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change.Init();
 	
 	
 	sl_volat.AddFactory(System::FindScript<MultiVolatNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(volat_enum)
 		.AddArg(volat_ticks)
-		.AddArg(volat_extrapolationmode)
 		.AddArg(src_windowsize)
 		.AddArg(change_postpips);
 	sl_volat.Init();
 	
 }
 
-void MultinetSimple::Run() {
+void MultiSimple::Run() {
 	LabelSignal change;
 	sl_change.GetScript(0).GetSignal(symbol, change);
 	
@@ -43,7 +43,7 @@ void MultinetSimple::Run() {
 	qtf_test_result << DeQtf("volat_popcount=" + IntStr(volat_popcount) + "\n");
 	qtf_test_result << DeQtf("popcount=" + IntStr(popcount) + "\n");
 	qtf_test_result << DeQtf("Unknown multinet change & multi volat\n");
-	qtf_test_result << TestTrade(symbol, change_postpips, change);
+	qtf_test_result << TestTrade(symbol, tf, change_postpips, change);
 }
 
 
@@ -65,6 +65,7 @@ void MultinetSimple::Run() {
 
 void AllSame::Init() {
 	sl_change_single.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
@@ -73,18 +74,18 @@ void AllSame::Init() {
 	sl_change_single.Init();
 	
 	sl_change_multi.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_multi.Init();
 	
 	sl_change_net.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_net.Init();
 	
@@ -108,7 +109,7 @@ void AllSame::Run() {
 	/*CoreList cl;
 	cl.AddSymbol(sys.GetSymbol(symbol));
 	cl.AddIndi(sys.Find<VolumeOscillator>());
-	cl.AddTf(ScriptCore::fast_tf);
+	cl.AddTf(tf);
 	cl.Init();
 	cl.Refresh();
 	const LabelSignal& lb = cl.GetLabelSignal(0, 0, 0);
@@ -124,7 +125,7 @@ void AllSame::Run() {
 	//qtf_test_result << DeQtf("pipchange_popcount=" + IntStr(pipchange_popcount) + "\n");
 	qtf_test_result << DeQtf("popcount=" + IntStr(popcount) + "\n");
 	qtf_test_result << DeQtf("Unknown all same single, multi & net\n");
-	qtf_test_result << TestTrade(symbol, change_postpips, change_single);
+	qtf_test_result << TestTrade(symbol, tf, change_postpips, change_single);
 }
 
 
@@ -145,6 +146,7 @@ void AllSame::Run() {
 
 void AllSameMultiPips::Init() {
 	sl_change_single0.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
@@ -153,23 +155,24 @@ void AllSameMultiPips::Init() {
 	sl_change_single0.Init();
 	
 	sl_change_multi0.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips0)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_multi0.Init();
 	
 	sl_change_net0.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips0)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_net0.Init();
 	
 	
 	sl_change_single1.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
@@ -178,23 +181,24 @@ void AllSameMultiPips::Init() {
 	sl_change_single1.Init();
 	
 	sl_change_multi1.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips1)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_multi1.Init();
 	
 	sl_change_net1.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips1)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_net1.Init();
 	
 	
 	sl_change_single2.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
@@ -203,18 +207,18 @@ void AllSameMultiPips::Init() {
 	sl_change_single2.Init();
 	
 	sl_change_multi2.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips2)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_multi2.Init();
 	
 	sl_change_net2.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum)
 		.AddArg(change_postpips2)
-		.AddArg(change_extrapolationmode)
 		.AddArg(src_windowsize);
 	sl_change_net2.Init();
 	
@@ -255,7 +259,7 @@ void AllSameMultiPips::Run() {
 	qtf_test_result << DeQtf("change_net_popcount=" + IntStr(change_net_popcount) + "\n");
 	qtf_test_result << DeQtf("popcount=" + IntStr(popcount) + "\n");
 	qtf_test_result << DeQtf("Unknown all same single, multi & net\n");
-	qtf_test_result << TestTrade(symbol, change_postpips1, change_single0);
+	qtf_test_result << TestTrade(symbol, tf, change_postpips1, change_single0);
 }
 
 
@@ -275,6 +279,7 @@ void AllSameMultiPips::Run() {
 
 void AllSameMultiType::Init() {
 	sl_change_single0.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum0)
@@ -283,23 +288,24 @@ void AllSameMultiType::Init() {
 	sl_change_single0.Init();
 	
 	sl_change_multi0.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum0)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize0);
 	sl_change_multi0.Init();
 	
 	sl_change_net0.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum0)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize0);
 	sl_change_net0.Init();
 	
 	
 	sl_change_single1.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum1)
@@ -308,23 +314,24 @@ void AllSameMultiType::Init() {
 	sl_change_single1.Init();
 	
 	sl_change_multi1.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum1)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize1);
 	sl_change_multi1.Init();
 	
 	sl_change_net1.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum1)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize1);
 	sl_change_net1.Init();
 	
 	
 	sl_change_single2.AddFactory(System::FindScript<SingleChangeNeural>())
+		.AddArg(tf)
 		.AddArg(symbol)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum2)
@@ -333,18 +340,18 @@ void AllSameMultiType::Init() {
 	sl_change_single2.Init();
 	
 	sl_change_multi2.AddFactory(System::FindScript<MultiChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum2)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize2);
 	sl_change_multi2.Init();
 	
 	sl_change_net2.AddFactory(System::FindScript<MultinetChangeNeural>())
+		.AddArg(tf)
 		.AddArg(src_trainpercent)
 		.AddArg(change_enum2)
 		.AddArg(change_postpips)
-		.AddArg(change_extrapolationmode)
 		.AddArg(change_windowsize2);
 	sl_change_net2.Init();
 	
@@ -385,7 +392,7 @@ void AllSameMultiType::Run() {
 	qtf_test_result << DeQtf("change_net_popcount=" + IntStr(change_net_popcount) + "\n");
 	qtf_test_result << DeQtf("popcount=" + IntStr(popcount) + "\n");
 	qtf_test_result << DeQtf("Unknown all same single, multi & net\n");
-	qtf_test_result << TestTrade(symbol, change_postpips, change_single0);
+	qtf_test_result << TestTrade(symbol, tf, change_postpips, change_single0);
 }
 
 }

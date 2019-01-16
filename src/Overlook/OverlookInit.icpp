@@ -130,7 +130,7 @@ INITBLOCK {
     System::RegisterScript<SingleVolatNeural>("SingleVolatNeural");
     System::RegisterScript<MultiVolatNeural>("MultiVolatNeural");
     System::RegisterScript<MultinetVolatNeural>("MultinetVolatNeural");
-    System::RegisterScript<MultinetSimple>("MultinetSimple");
+    System::RegisterScript<MultiSimple>("MultiSimple");
     System::RegisterScript<AllSame>("AllSame");
     System::RegisterScript<AllSameMultiPips>("AllSameMultiPips");
     System::RegisterScript<AllSameMultiType>("AllSameMultiType");

@@ -212,6 +212,7 @@ void System::FirstStart() {
 		#else
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)
 			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i));
+		AddPeriod("H12", 12*60);
 		AddPeriod("V", 1);
 		#endif
 		

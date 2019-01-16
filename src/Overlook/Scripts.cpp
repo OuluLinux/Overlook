@@ -476,11 +476,11 @@ String TestPriceInVolatOut(ConvNet::Session& ses, CoreList& cl_net, int begin, i
 	return qtf;
 }
 
-String TestTrade(int symbol, int postpips_count, LabelSignal& signal) {
+String TestTrade(int symbol, int tf, int postpips_count, LabelSignal& signal) {
 	System& sys = GetSystem();
 	CoreList cl;
 	cl.AddSymbol(sys.GetSymbol(symbol));
-	cl.AddTf(ScriptCore::fast_tf);
+	cl.AddTf(tf);
 	cl.AddIndi(0);
 	cl.Init();
 	cl.Refresh();
@@ -640,7 +640,7 @@ void ScriptCommon::Deinit() {
 void ScriptCommon::Process() {
 	sig.Start();
 	
-	while (sig.IsRunning()) {
+	while (sig.IsRunning() && !Thread::IsShutdownThreads()) {
 		
 		if (queue_cursor < process_queue.GetCount()) {
 			ScriptCore& core = *process_queue[queue_cursor]->core;

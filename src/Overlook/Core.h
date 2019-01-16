@@ -436,11 +436,6 @@ protected:
 	
 public:
 	
-	#ifdef flagDEBUG
-	static const int fast_tf = 4;
-	#else
-	static const int fast_tf = 2;
-	#endif
 	
 	ScriptCore();
 	virtual void Init() {};

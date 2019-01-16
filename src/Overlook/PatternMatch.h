@@ -34,7 +34,6 @@ protected:
 	
 	
 	// Temporary
-	CoreList cl_sym;
 	int count = 0;
 	
 	
@@ -45,8 +44,7 @@ public:
 	virtual void Init();
 	virtual void Start();
 	
-	int GetSymbolCount() const {return cl_sym.GetSymbolCount();}
-	PatternMatcherData& RefreshData(int group_step, int period, int average_period);
+	PatternMatcherData& RefreshData(int tf, int group_step, int period, int average_period);
 };
 
 inline PatternMatcher& GetPatternMatcher() {return GetSystem().GetCommon<PatternMatcher>();}

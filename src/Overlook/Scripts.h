@@ -21,7 +21,7 @@ void TrainSession(ConvNet::Session& ses, int iterations, int& actual);
 String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize, int postpips_count);
 String TestIndicatorsInPipOut(ConvNet::Session& ses, CoreList& cl_net, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count);
 String TestPriceInVolatOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize, int ticks);
-String TestTrade(int symbol, int postpips, LabelSignal& signal);
+String TestTrade(int symbol, int tf, int postpips, LabelSignal& signal);
 
 
 

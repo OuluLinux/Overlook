@@ -62,6 +62,7 @@ void DataBridge::Start() {
 	#if REFRESH_FROM_FASTER
 	else if (mt_period > 1) {
 		RefreshFromFasterTime();
+		RefreshVolume();
 	}
 	else
 	#endif
@@ -1006,7 +1007,7 @@ void DataBridge::RefreshVolume() {
 			
 			Time t = Time(1970,1,1) + time;
 			int i = idx.Find(t);
-			if (i != -1) {
+			if (i != -1 && i < volume_buf.GetCount()) {
 				volume_buf.Set(i, vol);
 			}
 		}

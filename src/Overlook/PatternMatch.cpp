@@ -7,27 +7,29 @@ PatternMatcher::PatternMatcher() {
 }
 
 void PatternMatcher::Init() {
-	System& sys = GetSystem();
-	System::NetSetting& net = sys.GetNet(0);
-	for(int i = 0; i < net.symbols.GetCount(); i++) {
-		cl_sym.AddSymbol(net.symbols.GetKey(i));
-	}
-	cl_sym.AddTf(ScriptCore::fast_tf);
-	cl_sym.AddIndi(0);
-	cl_sym.Init();
-	cl_sym.Refresh();
 	
 	
 }
 
 void PatternMatcher::Start() {
-	cl_sym.Refresh();
+	
 }
 
-PatternMatcherData& PatternMatcher::RefreshData(int group_step, int period, int average_period) {
+PatternMatcherData& PatternMatcher::RefreshData(int tf, int group_step, int period, int average_period) {
 	group_step = max(0, min(100, group_step));
 	period = max(4, min(1440, period));
 	average_period = max(1, min(1440, average_period));
+	
+	CoreList cl_sym;
+	System& sys = GetSystem();
+	System::NetSetting& net = sys.GetNet(0);
+	for(int i = 0; i < net.symbols.GetCount(); i++) {
+		cl_sym.AddSymbol(net.symbols.GetKey(i));
+	}
+	cl_sym.AddTf(tf);
+	cl_sym.AddIndi(0);
+	cl_sym.Init();
+	cl_sym.Refresh();
 	
 	int sym_count = cl_sym.GetSymbolCount();
 	
@@ -263,18 +265,19 @@ void PatternMatcherCtrl::Data() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	System& sys = GetSystem();
 	System::NetSetting& net = sys.GetNet(0);
-	int sym_count = pm.cl_sym.GetSymbolCount();
+	int sym_count = net.symbols.GetCount();
 	
-	const Index<Time>& idx = dbc.GetTimeIndex(ScriptCore::fast_tf);
+	int tf = 2;
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	
-	if (slider.GetMax() != pm.count && pm.count > 0)
-		slider.MinMax(0, pm.count);
+	if (slider.GetMax() != pm.count-1 && pm.count > 0)
+		slider.MinMax(0, pm.count-1);
 	
 	int pos = slider.GetData();
 	
 	date.SetLabel(Format("%", idx[pos]));
 	
-	PatternMatcherData& data = pm.RefreshData(group_step.GetData(), period.GetData(), average_period.GetData());
+	PatternMatcherData& data = pm.RefreshData(tf, group_step.GetData(), period.GetData(), average_period.GetData());
 	
 	int data_begin = pos * sym_count;
 	if (data_begin >= data.data.GetCount())

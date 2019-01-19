@@ -267,11 +267,13 @@ void PatternMatcherCtrl::Data() {
 	System::NetSetting& net = sys.GetNet(0);
 	int sym_count = net.symbols.GetCount();
 	
-	int tf = 2;
+	int tf = 0;
 	const Index<Time>& idx = dbc.GetTimeIndex(tf);
 	
+	bool is_max = slider.GetMax() == slider.GetData();
 	if (slider.GetMax() != pm.count-1 && pm.count > 0)
 		slider.MinMax(0, pm.count-1);
+	if (is_max) slider.SetData(slider.GetMax());
 	
 	int pos = slider.GetData();
 	

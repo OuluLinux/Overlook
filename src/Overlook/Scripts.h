@@ -15,11 +15,11 @@ void LoadDataPriceInput(ConvNet::Session& ses, CoreList& cl_net, int begin, int 
 void LoadVolumePriceInput(CoreList& cl_net, int pos, ConvNet::Volume& in, int windowsize);
 void LoadDataIndiInput(ConvNet::Session& ses, CoreList& cl_indi, int begin, int count, int windowsize);
 void LoadVolumeIndicatorsInput(CoreList& cl_indi, int pos, ConvNet::Volume& in, int windowsize);
-void LoadDataPipOutput(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int postpips_count);
+void LoadDataPipOutput(ConvNet::Session& ses, int tf, CoreList& cl_net0, int begin, int count, int postpips_count);
 void LoadDataVolatOutput(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int postpips_count);
 void TrainSession(ConvNet::Session& ses, int iterations, int& actual);
-String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize, int postpips_count);
-String TestIndicatorsInPipOut(ConvNet::Session& ses, CoreList& cl_net, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count);
+String TestPriceInPipOut(ConvNet::Session& ses, int tf, CoreList& cl_net, CoreList& cl_net0, int begin, int count, int windowsize, int postpips_count);
+String TestIndicatorsInPipOut(ConvNet::Session& ses, int tf, CoreList& cl_net, CoreList& cl_net0, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count);
 String TestPriceInVolatOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize, int ticks);
 String TestTrade(int symbol, int tf, int postpips, LabelSignal& signal);
 

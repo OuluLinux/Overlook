@@ -20,12 +20,22 @@ struct QuotesData : Moveable<QuotesData> {
 };
 
 struct CandlestickCtrl : public Ctrl {
-	Vector<double> opens, lows, highs;
+	int sym = 0, tf = 0;
+	bool pending_graph = false;
+	
+	Vector<double> opens, lows, highs, specs;
+	Vector<bool> bools;
 	int shift = 0;
 	int border = 5;
 	int count = 100;
 	
+	Vector<Point> cache;
+	
+	typedef CandlestickCtrl CLASSNAME;
 	virtual void Paint(Draw& d);
+	
+	void Refresh0() {Refresh();}
+	void Data();
 };
 
 struct Order : Moveable<Order> {
@@ -154,7 +164,12 @@ struct EventError : Moveable<EventError> {
 
 static const int SIGNALSCALE = 4;
 
-class Client : public TopWindow {
+class Session {
+	
+protected:
+	friend class SingleCandlestick;
+	friend class Events;
+	friend class MultiCandlestick;
 	
 	static const bool continuous = false;
 	
@@ -163,103 +178,24 @@ class Client : public TopWindow {
 	String pass;
 	bool is_registered = false;
 	
-	// Session
+	
 	Index<String> symbols;
-	Index<String> sent_pairs;
-	Index<String> currencies;
-	Index<String> sent_currencies;
 	VectorMap<int, String> tfs;
 	String addr = "127.0.0.1";
 	One<TcpSocket> s;
-	double balance, equity, freemargin;
 	int64 login_id = 0;
 	int port = 17000;
 	bool is_logged_in = false;
 	bool running = false, stopped = true;
-	TimeCallback tc;
 	Mutex call_lock, lock;
 	
-	// Gui
-	MenuBar menu;
-	TabCtrl tabs;
-	ArrayCtrl nearestlist;
-	
-	ArrayCtrl quotes;
-	bool pending_quotes = false;
-	Vector<QuotesData> quote_values;
-	
-	ParentCtrl graph_parent;
-	DropList symlist, tflist;
-	CandlestickCtrl graph;
-	bool pending_graph = false;
-	
-	ParentCtrl orders_parent;
-	Label orders_header;
-	ArrayCtrl orders;
-	Vector<Order> open_orders;
-	bool pending_open_orders = false;
-	
-	ParentCtrl hisorders_parent;
-	Label hisorders_header;
-	ArrayCtrl hisorders;
-	Vector<Order> history_orders;
-	bool pending_history_orders = false;
-	Mutex hisorders_lock;
-	
-	ArrayCtrl calendar;
-	bool pending_calendar = false;
-	Vector<CalEvent> cal_events;
-	Mutex calendar_lock;
-	
-	ParentCtrl events_parent;
-	ArrayCtrl events_list;
 	Vector<String> events;
 	Mutex event_lock;
-	bool pending_poll = false;
-	
-	ParentCtrl sent_parent;
-	Splitter split;
-	ArrayCtrl historylist, curpreslist, pairpreslist, errlist;
-	EditDouble fmlevel;
-	ParentCtrl sent_console;
-	::Upp::DocEdit comment;
-	Button save;
-	Array<SentPresCtrl> pair_pres_ctrl, cur_pres_ctrl;
-	Vector<SentimentSnapshot> senthist_list;
-	bool pending_senthist = false;
-	void LoadHistory();
-	void SetCurPairPressures();
-	void SaveSentiment();
-	void GetErrorList(SentimentSnapshot& snap, Index<EventError>& errors);
-	void SendSentiment(SentimentSnapshot& snap);
-	void PutSent(SentimentSnapshot& snap, Stream& out);
-	void RefreshSentimentList();
 	
 public:
-	typedef Client CLASSNAME;
-	Client();
-	~Client();
+	typedef Session CLASSNAME;
+	~Session();
 	
-	void PostInit() {PostCallback(THISBACK(DataInit)); tc.Set(1000, THISBACK(TimedRefresh));}
-	void TimedRefresh();
-	void DataInit();
-	void DataQuotes();
-	void DataGraph();
-	void DataOrders();
-	void DataHistory();
-	void DataCalendar();
-	void DataEvents();
-	void DataSentiment();
-	
-	int GetUserId() const {return user_id;}
-	String GetPassword() const {return pass;}
-	
-	void Serialize(Stream& s) {s % user_id % pass % is_registered;}
-	void StoreThis() {StoreToFile(*this, ConfigFile("Client" + IntStr64(GetServerHash()) + ".bin"));}
-	void LoadThis() {LoadFromFile(*this, ConfigFile("Client" + IntStr64(GetServerHash()) + ".bin"));}
-	unsigned GetServerHash() {CombineHash h; h << addr << port; return h;}
-	
-	void MainMenu(Bar& bar);
 	bool Connect();
 	void Disconnect();
 	void CloseConnection() {if (!s.IsEmpty()) s->Close(); is_logged_in = false;}
@@ -269,6 +205,7 @@ public:
 	void Start() {if (!stopped) return; stopped = false; running = true; Thread::Start(THISBACK(HandleConnection));}
 	void Call(Stream& out, Stream& in);
 	void SetAddress(String a, int p) {addr = a; port = p;}
+	void DataInit();
 	
 	void Register();
 	void Login();
@@ -276,12 +213,188 @@ public:
 	void Get(const String& key, String& value);
 	void Poll();
 	
+	bool IsConnected() {return is_logged_in;}
+	
+	int GetUserId() const {return user_id;}
+	int64 GetLoginId() const {return login_id;}
+	String GetPassword() const {return pass;}
+	String GetSymbol(int i) const {return symbols[i];}
+	
+	void Serialize(Stream& s) {s % user_id % pass % is_registered;}
+	void StoreThis() {StoreToFile(*this, ConfigFile("Client" + IntStr64(GetServerHash()) + ".bin"));}
+	void LoadThis() {LoadFromFile(*this, ConfigFile("Client" + IntStr64(GetServerHash()) + ".bin"));}
+	unsigned GetServerHash() {CombineHash h; h << addr << port; return h;}
+	
+};
+
+inline Session& GetSession() {return Single<Session>();}
+
+
+class Quotes : public ParentCtrl {
+	ArrayCtrl quotes;
+	bool pending_quotes = false;
+	Vector<QuotesData> quote_values;
+	
+public:
+	Quotes();
+	void Data();
+};
+
+class SingleCandlestick : public ParentCtrl {
+	DropList symlist, tflist;
+	CandlestickCtrl graph;
+	
+public:
+	typedef SingleCandlestick CLASSNAME;
+	SingleCandlestick();
+	
+	void Data();
+};
+
+class MultiCandlestick : public ParentCtrl {
+	DropList tflist;
+	Splitter vsplit, hsplit0, hsplit1;
+	Array<CandlestickCtrl> candles;
+	
+public:
+	typedef MultiCandlestick CLASSNAME;
+	MultiCandlestick();
+	
+	void Data();
+};
+
+class SpeculationMatrix : public Ctrl {
+	
+	struct SpeculationMatrixCtrl : public Ctrl {
+		SpeculationMatrix* m = NULL;
+		virtual void Paint(Draw& d);
+	};
+	
+	Splitter hsplit;
+	SpeculationMatrixCtrl ctrl;
+	ArrayCtrl list;
+	Index<String> sym;
+	Vector<int> tfs;
+	Vector<bool> values;
+	bool pending_data = false;
+	
+public:
+	SpeculationMatrix();
+	
+	void Data();
+	
+};
+
+class MultiActivity : public ParentCtrl {
+	
+public:
+	MultiActivity();
+	
+	void Data();
+};
+
+class ActivityMatrix : public ParentCtrl {
+	
+public:
+	ActivityMatrix();
+	
+	void Data();
+};
+
+class Orders : public ParentCtrl {
+	ArrayCtrl orders;
+	Vector<Order> open_orders;
+	bool pending_open_orders = false;
+	
+public:
+	Orders();
+	
+	void Data();
+};
+
+class HistoryOrders : public ParentCtrl {
+	ArrayCtrl hisorders;
+	Vector<Order> history_orders;
+	bool pending_history_orders = false;
+	Mutex hisorders_lock;
+	
+public:
+	HistoryOrders();
+	
+	void Data();
+};
+
+class CalendarCtrl : public ParentCtrl {
+	ArrayCtrl calendar;
+	bool pending_calendar = false;
+	Vector<CalEvent> cal_events;
+	Mutex calendar_lock;
+	
+public:
+	CalendarCtrl();
+	
+	void Data();
+};
+
+class Events : public ParentCtrl {
+	ArrayCtrl events_list;
+	bool pending_poll = false;
+	
+public:
+	typedef Events CLASSNAME;
+	Events();
+	
+	void Data();
+};
+
+class Client : public TopWindow {
+	
+	
+	
+	// Gui
+	MenuBar menu;
+	TabCtrl tabs;
+	ArrayCtrl nearestlist;
+	TimeCallback tc;
+	
+	Label status;
+	double balance, equity, freemargin;
+	bool pending_status = false;
+	
+	Quotes quotes;
+	SingleCandlestick single_candlestick;
+	MultiCandlestick multi_candlestick;
+	SpeculationMatrix specmat;
+	MultiActivity multact;
+	ActivityMatrix actmat;
+	Orders orders;
+	HistoryOrders hisorders;
+	CalendarCtrl calendar;
+	Events events;
+	
+public:
+	typedef Client CLASSNAME;
+	Client();
+	~Client();
+	
+	void Refresher();
+	void ToggleFullScreen() {TopWindow::FullScreen(!IsFullScreen());}
+	void PostInit() {tc.Set(1000, THISBACK(TimedRefresh));}
+	void TimedRefresh();
+	void DataStatus();
+	void DataGraph();
+	void DataOrders();
+	void DataHistory();
+	void DataCalendar();
+	void DataEvents();
+	
+	void MainMenu(Bar& bar);
+	
+	
 	void RefreshGui();
 	void RefreshGuiChannel();
 	void RefreshNearest();
-	void Command(String cmd);
 	
-	bool IsConnected() {return is_logged_in;}
 	
 };
 
@@ -321,13 +434,12 @@ protected:
 	bool autoconnect = false;
 	
 	// Temporary
-	Client& cl;
 	bool connecting = false;
 	RegisterDialog rd;
 	
 public:
 	typedef ServerDialog CLASSNAME;
-	ServerDialog(Client& c);
+	ServerDialog();
 	
 	void StartTryConnect() {Enable(false); Thread::Start(THISBACK(TryConnect));}
 	void StartStopConnect() {Thread::Start(THISBACK(StopConnect));}

@@ -54,7 +54,7 @@ void DataBridge::Start() {
 	int mt_period = GetPeriod();
 	int tf = GetTf();
 	
-	if (tf == VTF) {
+	if (tf >= PHASETF) {
 		RefreshFromFasterTime();
 	}
 	
@@ -62,7 +62,7 @@ void DataBridge::Start() {
 	#if REFRESH_FROM_FASTER
 	else if (mt_period > 1) {
 		RefreshFromFasterTime();
-		RefreshVolume();
+		RefreshVolumeFromFaster();
 	}
 	else
 	#endif
@@ -629,8 +629,14 @@ void DataBridge::RefreshFromFasterTime() {
 		//    t0int - t1int == tdiff
 		int time = steps * period_secs + tdiff;
 		
-		if (!SyncData(time, shift, open_value))
+		if (!SyncData(time, shift, open_value)) {
+			if (shift >= 0) {
+				if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
+				if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, high_value);}
+				volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
+			}
 			continue;
+		}
 		
 		//if (!time_buf.GetCount() || time_buf.Top() < time) shift++;
 		
@@ -660,7 +666,7 @@ void DataBridge::RefreshFromFasterTime() {
 		}
 		else {
 			if (low_buf.Get(shift)  > low_value)  {low_buf	.Set(shift, low_value);}
-			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, low_value);}
+			if (high_buf.Get(shift) < high_value) {high_buf	.Set(shift, high_value);}
 			volume_buf.Set(shift, volume_sum + volume_buf.Get(shift));
 		}
 	}
@@ -849,7 +855,7 @@ void DataBridge::RefreshNet() {
 		int b;
 		ConstBuffer* c = NULL;
 		double d;
-		ConstBuffer* low = NULL, *high = NULL;
+		ConstBuffer* low = NULL, *high = NULL, *vol = NULL;
 	};
 	Vector<Src> src_open;
 	const System::NetSetting& net = sys.GetSymbolNet(GetSymbol());
@@ -866,6 +872,7 @@ void DataBridge::RefreshNet() {
 		src.c = &GetInputBuffer(0, src.a, GetTf(), 0);
 		src.low = &GetInputBuffer(0, src.a, GetTf(), 1);
 		src.high = &GetInputBuffer(0, src.a, GetTf(), 2);
+		src.vol = &GetInputBuffer(0, src.a, GetTf(), 3);
 		bars = min(bars, src.c->GetCount());
 		//if (bars == INT_MAX) bars = src.c->GetCount();
 		//else {int newbars = src.c->GetCount(); DUMP(newbars); DUMP(bars); ASSERT(bars == newbars);}
@@ -922,16 +929,18 @@ void DataBridge::RefreshNet() {
 		if (i > 0 && d < low_buf.Get(i-1))	low_buf.Set(i-1, d);
 		if (i > 0 && d > high_buf.Get(i-1))	high_buf.Set(i-1, d);
 		#else
-		double change_sum = 1, low_change_sum = 1, high_change_sum = 1;
+		double change_sum = 1, low_change_sum = 1, high_change_sum = 1, vol_sum = 0;
 		if (i > 0) for(int j = 0; j < src_open.GetCount(); j++) {
 			Src& src = src_open[j];
 			ConstBuffer& open = *src.c;
 			ConstBuffer& low = *src.low;
 			ConstBuffer& high = *src.high;
+			ConstBuffer& vol = *src.vol;
 			double o0 = open.Get(i);
 			double o1 = open.Get(i-1);
 			double l = low.Get(i);
 			double h = high.Get(i);
+			double v = vol.Get(i);
 			ASSERT(src.d > 0.0);
 			double change = o0 / o1 - 1.0;
 			if (src.b > 0)			change_sum += change;
@@ -942,6 +951,7 @@ void DataBridge::RefreshNet() {
 			double high_change = h / o0 - 1.0;
 			if (src.b > 0)			high_change_sum += high_change;
 			else if (src.b < 0)		high_change_sum -= high_change;
+			vol_sum += v;
 		}
 		
 		double d = i == 0 ? 1.0 : open_buf.Get(i-1);
@@ -955,6 +965,7 @@ void DataBridge::RefreshNet() {
 		open_buf.Set(i, d);
 		low_buf.Set(i, min(l, d));
 		high_buf.Set(i, max(h, d));
+		volume_buf.Set(i, vol_sum);
 	}
 }
 
@@ -1013,6 +1024,57 @@ void DataBridge::RefreshVolume() {
 		}
 	}
 	
+}
+
+void DataBridge::RefreshVolumeFromFaster() {
+	System& sys = GetSystem();
+	Buffer& open_buf = GetBuffer(0);
+	Buffer& low_buf = GetBuffer(1);
+	Buffer& high_buf = GetBuffer(2);
+	Buffer& volume_buf = GetBuffer(3);
+	Buffer& time_buf = GetBuffer(4);
+	MetaTrader& mt = GetMetaTrader();
+	
+	DataBridge& m1_db = dynamic_cast<DataBridge&>(*GetInputCore(0, GetSymbol(), 0));
+	ConstBuffer& src_open = m1_db.GetBuffer(0);
+	ConstBuffer& src_low  = m1_db.GetBuffer(1);
+	ConstBuffer& src_high = m1_db.GetBuffer(2);
+	ConstBuffer& src_vol  = m1_db.GetBuffer(3);
+	ConstBuffer& src_time  = m1_db.GetBuffer(4);
+	int faster_bars = src_open.GetCount();
+	
+	int time = 0;
+	int count = 0;
+	for(int i = volume_buf.GetCount()-2; i >= 0; i--) {
+		time = time_buf.Get(i);
+		
+		double d = volume_buf.Get(i);
+		if (d != 0.0) break;
+		
+		count++;
+	}
+	
+	if (!time) return;
+	Time t = Time(1970,1,1) + time;
+	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
+	const Index<Time>& idx = dbc.GetTimeIndex(GetTf());
+	int begin = idx0.Find(t);
+	if (begin == -1)
+		return;
+	
+	for(int i = begin; i < faster_bars; i++) {
+		Time t = idx0[i];
+		t = SyncTime(GetTf(), t);
+		int j = idx.Find(t);
+		ASSERT(j != -1);
+		if (j == volume_buf.GetCount()-1)
+			break;
+		
+		double vol = src_vol.Get(i);
+		volume_buf.Inc(j, vol);
+	}
 }
 
 /*

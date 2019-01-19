@@ -8,8 +8,8 @@
 GUI_APP_MAIN {
 	SetIniFile(ConfigFile("Client.ini"));
 	
-	Client c;
-	ServerDialog server(c);
+	Session& ses = GetSession();
+	ServerDialog server;
 	
 	if (!server.IsAutoConnect()) {
 		server.Run();
@@ -19,9 +19,12 @@ GUI_APP_MAIN {
 	}
 	server.Close();
 	
-	if (c.IsConnected()) {
+	if (ses.IsConnected()) {
+		ses.Start();
+		ses.DataInit();
+		
+		Client c;
 		c.PostInit();
-		c.Start();
 		c.Run();
 	}
 }

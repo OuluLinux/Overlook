@@ -53,6 +53,7 @@ Overlook::Overlook() : watch(this) {
 	trade.AddColumn ( "Commission" );
 	trade.AddColumn ( "Swap" );
 	trade.AddColumn ( "Profit" );
+	trade.AddColumn ( "Profit / 0.01 lot" );
 	trade.AddIndex(sym);
 	trade.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5" );
 	trade.WhenLeftDouble << THISBACK(OpenChartFromList);
@@ -491,7 +492,7 @@ void Overlook::DeepRefresh() {
 	System& sys = GetSystem();
 	MetaTrader& mt = GetMetaTrader();
 	
-	ReleaseLog("DeepRefresh");
+	DLOG("DeepRefresh");
 	
 	Thread::Start(THISBACK(RefreshCommon));
 	
@@ -499,7 +500,7 @@ void Overlook::DeepRefresh() {
 	
 	if (m.TryEnter())
 	{
-		ReleaseLog("DeepRefresh entered");
+		DLOG("DeepRefresh entered");
 		
 		if (Config::have_sys_signal && runtime.Elapsed() > 60*1000)
 			sys.RefreshReal();
@@ -517,11 +518,11 @@ void Overlook::RefreshCommon() {
 	
 	static Mutex m;
 	
-	RLOG("Overlook::RefreshCommon locking");
+	DLOG("Overlook::RefreshCommon locking");
 	if (m.TryEnter()) {
-		RLOG("Overlook::RefreshCommon locked " << sys.CommonFactories().GetCount());
+		DLOG("Overlook::RefreshCommon locked " << sys.CommonFactories().GetCount());
 		for(int i = 0; i < sys.CommonFactories().GetCount(); i++) {
-			RLOG("Overlook::RefreshCommon start " << i);
+			DLOG("Overlook::RefreshCommon start " << i);
 			sys.CommonFactories()[i].b()->Start();
 		}
 		m.Leave();
@@ -610,6 +611,7 @@ void Overlook::RefreshTrades() {
 		trade.Set(i, 9, o.commission);
 		trade.Set(i, 10, o.swap);
 		trade.Set(i, 11, o.profit);
+		trade.Set(i, 12, o.profit / (o.volume / 0.01));
 	}
 	trade.SetCount(count);
 	
@@ -1030,7 +1032,7 @@ void Overlook::LoadMajorPairProfile(int tf) {
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
-	int id = System::Find<BollingerBands>();
+	int id = System::Find<SpeculationOscillator>();
 	int sym_count = mt.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = mt.GetSymbol(i).name;
@@ -1063,19 +1065,19 @@ void Overlook::LoadMajorCurrencyProfile(int tf) {
 	MetaTrader& mt = GetMetaTrader();
 	Profile profile;
 	
-	int id = System::Find<BollingerBands>();
+	int id = System::Find<SpeculationOscillator>();
 	int sym_count = sys.GetSymbolCount();
 	for(int i = 0; i < sym_count; i++) {
 		String sym = sys.GetSymbol(i);
 		if (
-			sym != "AUD" &&
-			sym != "CAD" &&
-			sym != "CHF" &&
-			sym != "JPY" &&
-			sym != "NZD" &&
-			sym != "USD" &&
-			sym != "EUR" &&
-			sym != "GBP"
+			sym != "CAD1" &&
+			sym != "CHF1" &&
+			sym != "JPY1" &&
+			sym != "USD1" &&
+			sym != "EUR1" &&
+			sym != "GBP1" /*&&
+			sym != "AUD1" &&
+			sym != "NZD1"*/
 			) continue;
 		ProfileGroup& pgroup = profile.charts.Add();
 		pgroup.symbol = i;

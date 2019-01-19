@@ -14,7 +14,7 @@ enum {
 
 class SingleChangeNeural : public ScriptCore {
 	ConvNet::Session ses;
-	CoreList cl_sym;
+	CoreList cl_sym, cl_sym0;
 	CoreList cl_indi;
 	
 	int tf = 6;
@@ -43,7 +43,7 @@ public:
 
 class MultiChangeNeural : public ScriptCore {
 	ConvNet::Session ses;
-	CoreList cl_sym;
+	CoreList cl_sym, cl_sym0;
 	CoreList cl_indi;
 	
 	int tf = 6;
@@ -67,17 +67,50 @@ public:
 };
 
 
-class MultinetChangeNeural : public ScriptCore {
-	ConvNet::Session ses;
-	CoreList cl_net;
+
+
+class Change2Tf : public ScriptCore {
+	ScriptList sl0, sl1;
+	CoreList cl_sym;
 	CoreList cl_indi;
 	
+	int tf0 = 6;
+	int tf1 = 8;
+	int symbol = 0;
+	int train_percent = 50;
+	int input_enum = PRICE;
+	int postpips_count = 5;
+	int windowsize = 50;
+public:
+	virtual void Init();
+	virtual void Arg(ArgScript& arg) {
+		arg.Add("Tf0", 0, GetSystem().GetPeriodCount()-1, 1, tf0);
+		arg.Add("Tf1", 0, GetSystem().GetPeriodCount()-1, 1, tf1);
+		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
+		arg.Add("Train data percent", 0, 100, 1, train_percent);
+		arg.Add("Input type", PRICE, MAS, 1, input_enum);
+		arg.Add("Post pips count", 2, 60, 1, postpips_count);
+		arg.Add("Window size", 1, 100, 10, windowsize);
+	}
+	virtual void SerializeEvent(Stream& s) {}
+	virtual String GetTitle() {return "Change2Tf";};
+	virtual void Run();
+	virtual void GetSignal(int symbol, LabelSignal& signal);
+};
+
+
+
+class MultinetChangeNeural : public ScriptCore {
+	ConvNet::Session ses;
+	CoreList cl_net, cl_net0;
+	CoreList cl_indi;
+
 	int tf = 6;
 	int train_percent = 50;
 	int input_enum = PRICE;
 	int postpips_count = 5;
 	int windowsize = 50;
-	
+
 public:
 	virtual void Init();
 	virtual void Arg(ArgScript& arg) {
@@ -94,125 +127,7 @@ public:
 };
 
 
-class SingleVolatNeural : public ScriptCore {
-	ConvNet::Session ses;
-	CoreList cl_sym;
-	
-	int tf = 6;
-	int train_percent = 50;
-	int input_enum = PRICE;
-	int ticks = 3;
-	int symbol = 0;
-	int windowsize = 50;
-	
-public:
-	virtual void Init();
-	virtual void Arg(ArgScript& arg) {
-		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
-		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
-		arg.Add("Train data percent", 0, 100, 1, train_percent);
-		arg.Add("Input type", PRICE, MAS, 1, input_enum);
-		arg.Add("Post tick count", 2, 10, 1, ticks);
-		arg.Add("Window size", 1, 100, 10, windowsize);
-	}
-	virtual void SerializeEvent(Stream& s) {s % ses;}
-	virtual String GetTitle() {return "SingleVolatNeural";};
-	virtual void Run();
-};
 
-
-class MultiVolatNeural : public ScriptCore {
-	ConvNet::Session ses;
-	CoreList cl_sym;
-	
-	int tf = 6;
-	int train_percent = 50;
-	int input_enum = PRICE;
-	int ticks = 3;
-	int windowsize = 50;
-	int postpips = 5;
-	
-public:
-	virtual void Init();
-	virtual void Arg(ArgScript& arg) {
-		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
-		arg.Add("Train data percent", 0, 100, 1, train_percent);
-		arg.Add("Input type", PRICE, MAS, 1, input_enum);
-		arg.Add("Post tick count", 2, 10, 1, ticks);
-		arg.Add("Window size", 1, 100, 10, windowsize);
-		arg.Add("Signal post pip count", 2, 10, 1, postpips);
-	}
-	virtual void SerializeEvent(Stream& s) {s % ses;}
-	virtual String GetTitle() {return "MultiVolatNeural";};
-	virtual void Run();
-	virtual void GetSignal(int symbol, LabelSignal& signal);
-};
-
-
-class MultinetVolatNeural : public ScriptCore {
-	ConvNet::Session ses;
-	CoreList cl_net;
-	
-	int tf = 6;
-	int train_percent = 50;
-	int input_enum = PRICE;
-	int ticks = 3;
-	int windowsize = 50;
-	
-public:
-	virtual void Init();
-	virtual void Arg(ArgScript& arg) {
-		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
-		arg.Add("Train data percent", 0, 100, 1, train_percent);
-		arg.Add("Input type", PRICE, MAS, 1, input_enum);
-		arg.Add("Post tick count", 2, 10, 1, ticks);
-		arg.Add("Window size", 1, 100, 10, windowsize);
-	}
-	virtual void SerializeEvent(Stream& s) {s % ses;}
-	virtual String GetTitle() {return "MultinetVolatNeural";};
-	virtual void Run();
-	virtual void GetSignal(int symbol, LabelSignal& signal);
-};
-
-
-class DqnAgent : public ScriptCore {
-	ConvNet::DQNAgent dqn;
-	CoreList cl_sym;
-	CoreList cl_indi;
-	CoreList cl_wait;
-	
-	int tf = 6;
-	int symbol = 0;
-	int train_percent = 50;
-	int postpips_count = 5;
-	int windowsize = 2;
-	
-	int begin = 0, count = 1;
-	int prev_action = 0;
-	
-	static const int BET_LEVELS = 1;
-	static const int BET_ACTIONS = BET_LEVELS * 2;
-	static const int WAIT_ACTIONS = 5;
-	static const int ACTION_COUNT = BET_ACTIONS + WAIT_ACTIONS;
-	static const int SENSOR_COUNT = ACTION_COUNT;
-	
-	
-	void LoadInput(int pos, Vector<double>& input);
-	
-public:
-	virtual void Init();
-	virtual void Arg(ArgScript& arg) {
-		arg.Add("Tf", 0, GetSystem().GetPeriodCount()-1, 1, tf);
-		arg.Add("Symbol", 0, GetSystem().GetNormalSymbolCount()-1, 1, symbol);
-		arg.Add("Train data percent", 0, 100, 1, train_percent);
-		arg.Add("Post pips count", 2, 60, 1, postpips_count);
-		arg.Add("Window size", 1, 100, 10, windowsize);
-	}
-	virtual void SerializeEvent(Stream& s) {s % dqn;}
-	virtual String GetTitle() {return "DqnAgent";};
-	virtual void Run();
-	virtual void GetSignal(int symbol, LabelSignal& signal);
-};
 
 }
 

@@ -10,8 +10,8 @@ library(POSIX) "ssl crypto";
 file
 	main.cpp,
 	Client.h,
-	Client.cpp,
 	Client.lay,
+	Client.cpp,
 	Client.iml;
 
 mainconfig

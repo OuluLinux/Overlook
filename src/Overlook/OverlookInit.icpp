@@ -97,44 +97,18 @@ INITBLOCK {
     
     System::RegisterCommon<DataBridgeCommon, DataBridgeCtrl>("DataBridge");
     System::RegisterCommon<CalendarCommon, CalendarCtrl>("Calendar");
-    //System::RegisterCommon<Server, ServerCtrl>("Server");
+    System::RegisterCommon<Server, ServerCtrl>("Server");
     System::RegisterCommon<PatternMatcher, PatternMatcherCtrl>("PatternMatch");
     //System::RegisterCommon<EventAutomation, EventAutomationCtrl>("EventAutomation");
     //System::RegisterCommon<GroupAutomation, GroupAutomationCtrl>("GroupAutomation");
     System::RegisterCommon<ScriptCommon, ScriptCtrl>("Scripts");
     
     
-    /*System::RegisterEvent<MovingAverageEvent>("Moving Average Event");
-    System::RegisterEvent<MACDEvent>("MACD Event");
-    System::RegisterEvent<BBEvent>("BB Event");
-    System::RegisterEvent<PSAREvent>("PSAR Event");
-    System::RegisterEvent<CCIEvent>("CCI Event");
-    System::RegisterEvent<MomentumEvent>("Momentum Event");
-    System::RegisterEvent<RSIEvent>("RSI Event");
-    System::RegisterEvent<RVIEvent>("RVI Event");
-    System::RegisterEvent<StochasticEvent>("Stochastic Event");
-    System::RegisterEvent<AcceleratorEvent>("Accelerator Event");
-    System::RegisterEvent<ChannelEvent>("Channel Event");
-    System::RegisterEvent<ScissorsChannelEvent>("ScissorsChannel Event");
-    System::RegisterEvent<OnlineMinimalLabelEvent>("OnlineMinimalLabel Event");
-    System::RegisterEvent<LaguerreEvent>("Laguerre Event");
-    System::RegisterEvent<QQEEvent>("QQE Event");
-    System::RegisterEvent<TickBalanceEvent>("QQE Event");
-    System::RegisterEvent<BreakEvent>("Break Event");
-    System::RegisterEvent<DayEvent>("Day Event");*/
-    
     
     System::RegisterScript<SingleChangeNeural>("SingleChangeNeural");
     System::RegisterScript<MultiChangeNeural>("MultiChangeNeural");
+    System::RegisterScript<Change2Tf>("Change2Tf");
     System::RegisterScript<MultinetChangeNeural>("MultinetChangeNeural");
-    System::RegisterScript<SingleVolatNeural>("SingleVolatNeural");
-    System::RegisterScript<MultiVolatNeural>("MultiVolatNeural");
-    System::RegisterScript<MultinetVolatNeural>("MultinetVolatNeural");
-    System::RegisterScript<MultiSimple>("MultiSimple");
-    System::RegisterScript<AllSame>("AllSame");
-    System::RegisterScript<AllSameMultiPips>("AllSameMultiPips");
-    System::RegisterScript<AllSameMultiType>("AllSameMultiType");
-    System::RegisterScript<DqnAgent>("DqnAgent");
     
     
 	//System::PrioritySlowTf().Add(System::Find<ExpertAdvisor>());

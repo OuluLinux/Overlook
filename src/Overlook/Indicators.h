@@ -709,6 +709,7 @@ public:
 		reg % In<DataBridge>(&FilterFunction)
 			% Out(3, 3)
 			% Mem(fast_counted)
+			% Lbl(1)
 			;
 	}
 	
@@ -1188,18 +1189,10 @@ public:
 
 class VolatilitySlots : public Core {
 	
-	struct PeakVolat : Moveable<PeakVolat> {
-		double value = -DBL_MAX;
-		int slot = -1;
-		int time = -1;
-		void Serialize(Stream& s) {s % value % slot % time;}
-	};
-	
 protected:
 	friend class WeekSlotAdvisor;
-	Vector<PeakVolat> peaks;
-	Vector<OnlineAverage1> stats;
-	OnlineAverage1 total;
+	Vector<OnlineVariance> stats;
+	OnlineVariance total;
 	
 	int slot_count = 0;
 	
@@ -1216,7 +1209,6 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
-			% Mem(peaks)
 			% Mem(stats)
 			% Mem(total);
 	}
@@ -1227,13 +1219,10 @@ public:
 class VolumeSlots : public Core {
 	
 protected:
-	Vector<OnlineAverage1> stats;
-	OnlineAverage1 total;
-	OnlineAverageWindow1 smooth;
+	Vector<OnlineVariance> stats;
+	OnlineVariance total;
 	
 	int slot_count = 0;
-	int period = 3;
-	int trigger_limit = 50;
 	
 	
 public:
@@ -1246,10 +1235,8 @@ public:
 	
 	virtual void IO(ValueRegister& reg) {
 		reg % In<DataBridge>()
-			% Out(2, 2)
+			% Out(1, 1)
 			% Lbl(1)
-			% Arg("period", period, 2)
-			% Arg("trigger_limit", trigger_limit, 2, 100)
 			% Mem(stats)
 			% Mem(total);
 	}

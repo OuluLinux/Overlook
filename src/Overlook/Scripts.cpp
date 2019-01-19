@@ -207,24 +207,32 @@ void LoadVolumeIndicatorsInput(CoreList& cl_indi, int pos, ConvNet::Volume& in, 
 	}
 }
 
-void LoadDataPipOutput(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int postpips_count) {
+void LoadDataPipOutput(ConvNet::Session& ses, int tf, CoreList& cl_net0, int begin, int count, int postpips_count) {
 	ConvNet::SessionData& d = ses.GetData();
+	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
 	
 	for(int i = 0; i < count; i++) {
 		int pos = begin + i;
 		
-		for(int j = 0; j < cl_net.GetSymbolCount(); j++) {
-			ConstBuffer& buf = cl_net.GetBuffer(j, 0, 0);
-			ConstBuffer& lowbuf = cl_net.GetBuffer(j, 0, 1);
-			ConstBuffer& highbuf = cl_net.GetBuffer(j, 0, 2);
-			double point = cl_net.GetDataBridge(j)->GetPoint();
-			double open = buf.Get(pos);
+		Time t = idx[pos];
+		int pos0 = idx0.Find(t);
+		ASSERT(pos0 != -1);
+		
+		for(int j = 0; j < cl_net0.GetSymbolCount(); j++) {
+			ConstBuffer& buf = cl_net0.GetBuffer(j, 0, 0);
+			ConstBuffer& lowbuf = cl_net0.GetBuffer(j, 0, 1);
+			ConstBuffer& highbuf = cl_net0.GetBuffer(j, 0, 2);
+			double point = cl_net0.GetDataBridge(j)->GetPoint();
+			double open = buf.Get(pos0);
 			double lo = open - postpips_count * point;
 			double hi = open + postpips_count * point;
 			
 			bool result = false;
 			
-			for(int k = pos+1; k < buf.GetCount(); k++) {
+			for(int k = pos0+1; k < buf.GetCount(); k++) {
 				double low  = lowbuf.Get(k-1);
 				double high = highbuf.Get(k-1);
 				if (low <= lo) {
@@ -274,7 +282,7 @@ void TrainSession(ConvNet::Session& ses, int iterations, int& actual) {
 	}
 }
 
-String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int count, int windowsize, int postpips_count) {
+String TestPriceInPipOut(ConvNet::Session& ses, int tf, CoreList& cl_net, CoreList& cl_net0, int begin, int count, int windowsize, int postpips_count) {
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume in;
 	in.Init(1, 1, cl_net.GetSymbolCount() * windowsize);
@@ -283,25 +291,33 @@ String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int
 	Vector<double> sums;
 	sums.Reserve(count);
 	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
+	
 	for(int i = 0; i < count; i++) {
 		int pos = begin + i;
+		
+		Time t = idx[pos];
+		int pos0 = idx0.Find(t);
+		ASSERT(pos0 != -1);
 		
 		LoadVolumePriceInput(cl_net, pos, in, windowsize);
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
-		for(int j = 0; j < cl_net.GetSymbolCount(); j++) {
-			ConstBuffer& buf = cl_net.GetBuffer(j, 0, 0);
-			ConstBuffer& lowbuf = cl_net.GetBuffer(j, 0, 1);
-			ConstBuffer& highbuf = cl_net.GetBuffer(j, 0, 2);
-			double point = cl_net.GetDataBridge(j)->GetPoint();
-			double open = buf.Get(pos);
+		for(int j = 0; j < cl_net0.GetSymbolCount(); j++) {
+			ConstBuffer& buf = cl_net0.GetBuffer(j, 0, 0);
+			ConstBuffer& lowbuf = cl_net0.GetBuffer(j, 0, 1);
+			ConstBuffer& highbuf = cl_net0.GetBuffer(j, 0, 2);
+			double point = cl_net0.GetDataBridge(j)->GetPoint();
+			double open = buf.Get(pos0);
 			double lo = open - postpips_count * point;
 			double hi = open + postpips_count * point;
 			
 			bool result = false;
 			
-			for(int k = pos+1; k < buf.GetCount(); k++) {
+			for(int k = pos0+1; k < buf.GetCount(); k++) {
 				double low  = lowbuf.Get(k-1);
 				double high = highbuf.Get(k-1);
 				if (low <= lo) {
@@ -341,7 +357,7 @@ String TestPriceInPipOut(ConvNet::Session& ses, CoreList& cl_net, int begin, int
 	return qtf;
 }
 
-String TestIndicatorsInPipOut(ConvNet::Session& ses, CoreList& cl_net, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count) {
+String TestIndicatorsInPipOut(ConvNet::Session& ses, int tf, CoreList& cl_net, CoreList& cl_net0, CoreList& cl_indi, int begin, int count, int windowsize, int postpips_count) {
 	ConvNet::Net& net = ses.GetNetwork();
 	ConvNet::Volume in;
 	in.Init(1, 1, cl_indi.GetSymbolCount() * cl_indi.GetIndiCount() * windowsize);
@@ -350,25 +366,33 @@ String TestIndicatorsInPipOut(ConvNet::Session& ses, CoreList& cl_net, CoreList&
 	Vector<double> sums;
 	sums.Reserve(count);
 	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
+	
 	for(int i = 0; i < count; i++) {
 		int pos = begin + i;
+		
+		Time t = idx[pos];
+		int pos0 = idx0.Find(t);
+		ASSERT(pos0 != -1);
 		
 		LoadVolumeIndicatorsInput(cl_indi, pos, in, windowsize);
 		
 		ConvNet::Volume& out = net.Forward(in);
 		
-		for(int j = 0; j < cl_net.GetSymbolCount(); j++) {
-			ConstBuffer& buf = cl_net.GetBuffer(j, 0, 0);
-			ConstBuffer& lowbuf = cl_net.GetBuffer(j, 0, 1);
-			ConstBuffer& highbuf = cl_net.GetBuffer(j, 0, 2);
-			double point = cl_net.GetDataBridge(j)->GetPoint();
-			double open = buf.Get(pos);
+		for(int j = 0; j < cl_net0.GetSymbolCount(); j++) {
+			ConstBuffer& buf = cl_net0.GetBuffer(j, 0, 0);
+			ConstBuffer& lowbuf = cl_net0.GetBuffer(j, 0, 1);
+			ConstBuffer& highbuf = cl_net0.GetBuffer(j, 0, 2);
+			double point = cl_net0.GetDataBridge(j)->GetPoint();
+			double open = buf.Get(pos0);
 			double lo = open - postpips_count * point;
 			double hi = open + postpips_count * point;
 			
 			bool result = false;
 			
-			for(int k = pos+1; k < buf.GetCount(); k++) {
+			for(int k = pos0+1; k < buf.GetCount(); k++) {
 				double low  = lowbuf.Get(k-1);
 				double high = highbuf.Get(k-1);
 				if (low <= lo) {
@@ -485,9 +509,23 @@ String TestTrade(int symbol, int tf, int postpips_count, LabelSignal& signal) {
 	cl.Init();
 	cl.Refresh();
 	
+	CoreList cl0;
+	cl0.AddSymbol(sys.GetSymbol(symbol));
+	cl0.AddTf(0);
+	cl0.AddIndi(0);
+	cl0.Init();
+	cl0.Refresh();
+	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(tf);
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
+	
 	ConstBuffer& open_buf = cl.GetBuffer(0, 0, 0);
 	ConstBuffer& low_buf = cl.GetBuffer(0, 0, 1);
 	ConstBuffer& high_buf = cl.GetBuffer(0, 0, 2);
+	ConstBuffer& open_buf0 = cl0.GetBuffer(0, 0, 0);
+	ConstBuffer& low_buf0 = cl0.GetBuffer(0, 0, 1);
+	ConstBuffer& high_buf0 = cl0.GetBuffer(0, 0, 2);
 	double point = cl.GetDataBridge(0)->GetPoint();
 	int spread_i = CommonSpreads().Find(sys.GetSymbol(symbol));
 	int spread = spread_i != -1 ? CommonSpreads()[spread_i] : 6;
@@ -506,15 +544,19 @@ String TestTrade(int symbol, int tf, int postpips_count, LabelSignal& signal) {
 		if (signal.enabled.Get(pos)) {
 			bool sig = signal.signal.Get(pos);
 			
-			double open = open_buf.Get(pos);
+			Time t = idx[pos];
+			int pos0 = idx0.Find(t);
+			ASSERT(pos0 != -1);
+			
+			double open = open_buf0.Get(pos0);
 			double lo = open - postpips_count * point;
 			double hi = open + postpips_count * point;
 			
 			bool result = false;
 			
-			for(int k = pos+1; k < open_buf.GetCount(); k++) {
-				double low  = low_buf.Get(k-1);
-				double high = high_buf.Get(k-1);
+			for(int k = pos0+1; k < open_buf0.GetCount(); k++) {
+				double low  = low_buf0.Get(k-1);
+				double high = high_buf0.Get(k-1);
 				if (low <= lo) {
 					result = true;
 					break;

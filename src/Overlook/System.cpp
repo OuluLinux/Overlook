@@ -140,16 +140,22 @@ void System::FirstStart() {
 			}
 		}
 		
-		AddNet("Net0").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("EURGBP" + postfix, +1).Set("USDJPY" + postfix, -1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, -1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, -1).Set("USDCHF" + postfix, -1).Set("NZDUSD" + postfix, +1).Set("AUDJPY" + postfix, -1).Set("CADJPY" + postfix, -1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, -1).Set("GBPJPY" + postfix, +1);
-		AddNet("Net1").Set("EURUSD" + postfix, +1).Set("GBPUSD" + postfix, -1).Set("EURGBP" + postfix, +1).Set("USDJPY" + postfix, +1).Set("AUDUSD" + postfix, +1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, -1).Set("USDCAD" + postfix, -1).Set("USDCHF" + postfix, -1).Set("NZDUSD" + postfix, -1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, +1).Set("CHFJPY" + postfix, -1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net2").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("EURGBP" + postfix, -1).Set("USDJPY" + postfix, +1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, -1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, -1).Set("NZDUSD" + postfix, -1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, -1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net3").Set("EURUSD" + postfix, +1).Set("GBPUSD" + postfix, -1).Set("EURGBP" + postfix, +1).Set("USDJPY" + postfix, -1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, -1).Set("AUDJPY" + postfix, -1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, -1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, +1);
-		AddNet("Net4").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, -1).Set("EURGBP" + postfix, -1).Set("USDJPY" + postfix, -1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, +1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net5").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("EURGBP" + postfix, -1).Set("USDJPY" + postfix, +1).Set("AUDUSD" + postfix, +1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, -1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, +1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, -1).Set("EURCAD" + postfix, -1).Set("GBPJPY" + postfix, +1);
-		AddNet("Net6").Set("EURUSD" + postfix, +1).Set("GBPUSD" + postfix, -1).Set("EURGBP" + postfix, +1).Set("USDJPY" + postfix, +1).Set("AUDUSD" + postfix, +1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, -1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, -1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, +1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net7").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("EURGBP" + postfix, -1).Set("USDJPY" + postfix, -1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, -1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, +1).Set("AUDJPY" + postfix, -1).Set("CADJPY" + postfix, -1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, -1).Set("EURCAD" + postfix, +1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net8").Set("EURUSD" + postfix, +1).Set("GBPUSD" + postfix, +1).Set("EURGBP" + postfix, +1).Set("USDJPY" + postfix, -1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, -1).Set("USDCAD" + postfix, +1).Set("USDCHF" + postfix, -1).Set("NZDUSD" + postfix, -1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, +1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, -1).Set("GBPJPY" + postfix, -1);
-		AddNet("Net9").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, -1).Set("EURGBP" + postfix, -1).Set("USDJPY" + postfix, +1).Set("AUDUSD" + postfix, -1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, +1).Set("USDCAD" + postfix, -1).Set("USDCHF" + postfix, +1).Set("NZDUSD" + postfix, +1).Set("AUDJPY" + postfix, +1).Set("CADJPY" + postfix, -1).Set("AUDCAD" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("EURCAD" + postfix, -1).Set("GBPJPY" + postfix, +1);
+		AddNet("USD1").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, -1).Set("USDCHF" + postfix, +1);
+		AddNet("USD2").Set("EURUSD" + postfix, -1).Set("GBPUSD" + postfix, -1).Set("USDCHF" + postfix, +1).Set("USDJPY" + postfix, +1).Set("USDCAD" + postfix, +1).Set("AUDUSD" + postfix, -1).Set("NZDUSD" + postfix, -1);
+		AddNet("EUR1").Set("EURUSD" + postfix, +1).Set("EURGBP" + postfix, +1).Set("EURCHF" + postfix, +1);
+		AddNet("EUR2").Set("EURUSD" + postfix, +1).Set("EURGBP" + postfix, +1).Set("EURCHF" + postfix, +1).Set("EURJPY" + postfix, +1).Set("EURCAD" + postfix, +1).Set("EURAUD" + postfix, +1).Set("EURNZD" + postfix, +1);
+		AddNet("GBP1").Set("EURGBP" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("GBPCHF" + postfix, +1);
+		AddNet("GBP2").Set("EURGBP" + postfix, -1).Set("GBPUSD" + postfix, +1).Set("GBPCHF" + postfix, +1).Set("GBPJPY" + postfix, +1).Set("GBPCAD" + postfix, +1).Set("GBPAUD" + postfix, +1).Set("GBPNZD" + postfix, +1);
+		AddNet("JPY1").Set("EURJPY" + postfix, -1).Set("USDJPY" + postfix, -1).Set("GBPJPY" + postfix, -1);
+		AddNet("JPY2").Set("EURJPY" + postfix, -1).Set("USDJPY" + postfix, -1).Set("GBPJPY" + postfix, -1).Set("CHFJPY" + postfix, -1).Set("AUDJPY" + postfix, -1).Set("NZDJPY" + postfix, -1).Set("CADJPY" + postfix, -1);
+		AddNet("CAD1").Set("USDCAD" + postfix, -1).Set("EURCAD" + postfix, -1).Set("GBPCAD" + postfix, -1);
+		AddNet("CAD2").Set("USDCAD" + postfix, -1).Set("EURCAD" + postfix, -1).Set("GBPCAD" + postfix, -1).Set("CADCHF" + postfix, +1).Set("CADJPY" + postfix, +1).Set("NZDCAD" + postfix, -1).Set("AUDCAD" + postfix, -1);
+		AddNet("AUD1").Set("EURAUD" + postfix, -1).Set("AUDUSD" + postfix, +1).Set("GBPAUD" + postfix, -1);
+		AddNet("AUD2").Set("EURAUD" + postfix, -1).Set("AUDUSD" + postfix, +1).Set("GBPAUD" + postfix, -1).Set("AUDCHF" + postfix, +1).Set("AUDJPY" + postfix, +1).Set("AUDNZD" + postfix, +1).Set("AUDCAD" + postfix, +1);
+		AddNet("NZD1").Set("NZDUSD" + postfix, +1).Set("EURNZD" + postfix, -1).Set("GBPNZD" + postfix, -1);
+		AddNet("NZD2").Set("NZDUSD" + postfix, +1).Set("EURNZD" + postfix, -1).Set("GBPNZD" + postfix, -1).Set("NZDJPY" + postfix, +1).Set("NZDCAD" + postfix, +1).Set("AUDNZD" + postfix, -1);
+		AddNet("CHF1").Set("USDCHF" + postfix, -1).Set("EURCHF" + postfix, -1).Set("GBPCHF" + postfix, -1);
+		AddNet("CHF2").Set("USDCHF" + postfix, -1).Set("EURCHF" + postfix, -1).Set("GBPCHF" + postfix, -1).Set("CHFJPY" + postfix, +1).Set("CADCHF" + postfix, -1).Set("AUDCHF" + postfix, -1);
 
 		for(int i = 0; i < nets.GetCount(); i++) {
 			NetSetting& net = nets[i];
@@ -213,7 +219,8 @@ void System::FirstStart() {
 		for(int i = 0; i < mt.GetTimeframeCount(); i++)
 			AddPeriod(mt.GetTimeframeString(i), mt.GetTimeframe(i));
 		AddPeriod("H12", 12*60);
-		AddPeriod("V", 1);
+		for(int i = 0; i < 5; i++)
+			AddPeriod("D1." + IntStr(i+2), 1);
 		#endif
 		
 		

@@ -57,7 +57,7 @@ public:
 	void RefreshAskBidData(bool forced=false);
 	void RefreshTimeBuffers();
 	bool SyncData(int tf, int64 time, int& shift);
-	bool IsVtfTime(int wday, const Time& t);
+	bool IsPhaseTime(int phase, int wday, const Time& t);
 	ConstBuffer& GetTimeBuffer(int tf) const {return time_bufs[tf];}
 	const Index<Time>& GetTimeIndex(int i) const {return idx[i];}
 	int GetTimeBufferCount() const {return time_bufs.GetCount();}
@@ -137,11 +137,12 @@ public:
 	void RefreshCurrency();
 	void RefreshNet();
 	void RefreshVolume();
+	void RefreshVolumeFromFaster();
 	
 	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
 		System& sys = GetSystem();
 		
-		if (in_tf == VTF) {
+		if (in_tf >= PHASETF) {
 			if (match_tf)
 				return out_tf == 0;
 			return in_sym == out_sym;

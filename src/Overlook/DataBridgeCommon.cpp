@@ -309,8 +309,8 @@ void DataBridgeCommon::RefreshTimeBuffers() {
 		
 			time_buf.Set(shift, time);
 			
-			ASSERT(idx[i].GetCount() == shift);
-			idx[i].Add(Time(1970,1,1) + time);
+			while (idx[i].GetCount() < time_buf.GetCount())
+				idx[i].Add(Time(1970,1,1) + time_buf.Get(idx[i].GetCount()));
 		}
 	}
 	
@@ -328,7 +328,8 @@ bool DataBridgeCommon::SyncData(int tf, int64 time, int& shift) {
 		return false;
 	
 	int minperiod = sys.GetPeriod(tf);
-	bool is_vtf = tf == VTF;
+	bool is_phase = tf >= PHASETF;
+	int phase = tf - PHASETF;
 	
 	Buffer& time_buf = time_bufs[tf];
 	
@@ -361,7 +362,7 @@ bool DataBridgeCommon::SyncData(int tf, int64 time, int& shift) {
 		#endif
 		while (t < utc_time) {
 			int wday = DayOfWeek(t);
-			if ((!is_vtf && !(wday == 6 || (wday == 0 && t.hour < 22) || (wday == 5 && t.hour >= 21))) || (is_vtf && IsVtfTime(wday, t))) {
+			if ((!is_phase && !(wday == 6 || (wday == 0 && t.hour < 22) || (wday == 5 && t.hour >= 21))) || (is_phase && IsPhaseTime(phase, wday, t))) {
 				int time = t.Get() - Time(1970,1,1).Get();
 				
 				int res = shift + 100000;
@@ -385,7 +386,7 @@ bool DataBridgeCommon::SyncData(int tf, int64 time, int& shift) {
 		shift++;
 	}
 	
-	if (is_vtf && !IsVtfTime(wday, t)) {
+	if (is_phase && !IsPhaseTime(phase, wday, t)) {
 		if (shift == 0) shift = -1;
 		return false;
 	}
@@ -393,123 +394,13 @@ bool DataBridgeCommon::SyncData(int tf, int64 time, int& shift) {
 	return true;
 }
 
-bool DataBridgeCommon::IsVtfTime(int wday, const Time& t) {
-	#define IS(h, m) {if (t.hour == h && t.minute == m) {return true;}}
-	
-	// NOTE: update GetVtfWeekbars if changed
-	if (wday == 0) {
-		IS(22,00);
-		IS(22,59);
-	}
-	// Monday
-	else if (wday == 1) {
-		IS(2,00);
-		IS(4,10);
-		IS(4,16);
-		IS(4,54);
-		IS(7,00); // EU ses
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00); // US ses
-		IS(12,30); // first US M30 has gone
-		IS(14,00);
-		IS(15,00);
-		IS(17,59);
-		IS(18,57);
-		IS(21,40);
-		IS(23,37);
-	}
-	if (wday == 2) {
-		IS(1,00);
-		IS(2,00);
-		IS(4,00);
-		IS(5,30);
-		IS(7,00); // EU ses
-		IS(8,30);
-		IS(10,00); // Strong
-		IS(12,00); // US ses
-		IS(12,30);
-		IS(14,00);
-		IS(14,57);
-		IS(16,30);
-		IS(18,00);
-		IS(19,30);
-		IS(20,42);
-		IS(22,30);
-		IS(22,59);
-		IS(23,59);
-	}
-	else if (wday == 3) {
-		IS(0,59);
-		IS(1,30);
-		IS(2,00);
-		IS(2,46);
-		IS(3,30);
-		IS(4,00);
-		IS(4,30);
-		IS(5,30);
-		IS(7,00); //EU ses
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(11,29);
-		IS(12,00); //US ses
-		IS(12,30);
-		IS(13,30);
-		IS(15,00);
-		IS(16,30);
-		IS(17,00);
-		IS(18,00);
-		IS(20,45);
-		IS(22,00);
-	}
-	else if (wday == 4) {
-		IS(0,59);
-		IS(2,00);
-		IS(3,05);
-		IS(4,00);
-		IS(5,30);
-		IS(7,00);
-		IS(8,30);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00);
-		IS(12,30);
-		IS(15,00);
-		IS(16,30);
-		IS(17,15);
-		IS(18,00);
-		IS(19,00);
-		IS(20,00);
-		IS(20,49);
-		IS(21,35);
-		IS(22,49);
-		IS(23,59);
-	}
-	else if (wday == 5) {
-		IS(0,59);
-		IS(2,00);
-		IS(3,00);
-		IS(4,10);
-		IS(4,54);
-		IS(6,35);
-		IS(7,00);
-		IS(8,12);
-		IS(9,00);
-		IS(10,00);
-		IS(11,00);
-		IS(12,00);
-		IS(12,30);
-		IS(14,05);
-		IS(15,29);
-		IS(16,30);
-		IS(18,00);
-		IS(18,57);
-		IS(19,59);
-	}
-	#undef IS
-	return false;
+bool DataBridgeCommon::IsPhaseTime(int phase, int wday, const Time& t) {
+	if (wday == 6)
+		return 0;
+	if (t.minute != 0)
+		return false;
+	int exp_hour = 4 * (1 + phase);
+	return t.hour == exp_hour;
 }
 
 }

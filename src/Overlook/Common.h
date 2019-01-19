@@ -23,7 +23,7 @@
 
 #define REFRESH_FROM_FASTER 1
 
-#define VTF 9
+#define PHASETF 9
 
 namespace Config {
 extern Upp::IniBool use_internet_m1_data;

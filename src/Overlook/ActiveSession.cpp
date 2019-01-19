@@ -222,6 +222,7 @@ int ActiveSession::LoginId(Stream& in) {
 }
 
 void ActiveSession::Get(Stream& in, Stream& out) {
+	System& sys = GetSystem();
 	int user_id = LoginId(in);
 	
 	int r;
@@ -297,24 +298,33 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				c.AddSymbol(sys.GetSymbol(sym));
 				c.AddTf(tf);
 				c.AddIndi(0);
+				c.AddIndi(System::Find<SpeculationOscillator>());
 				c.Init();
 				c.Refresh();
 				if (!c.IsEmpty()) {
 					ConstBuffer& open = c.GetBuffer(0, 0, 0);
 					ConstBuffer& low = c.GetBuffer(0, 0, 1);
 					ConstBuffer& high = c.GetBuffer(0, 0, 2);
+					ConstBuffer& spec = c.GetBuffer(0, 1, 0);
+					ConstLabelSignal& specsig = c.GetLabelSignal(0, 1, 0);
 					
 					int size = open.GetCount();
 					int count = min(max(0, req_count), size);
 					out.Put32(count);
 					for(int i = 0; i < count; i++) {
-						double o, l, h;
-						o = open.Get(size - count + i);
-						l = low .Get(size - count + i);
-						h = high.Get(size - count + i);
+						int pos = size - count + i;
+						double o, l, h, s;
+						bool b;
+						o = open.Get(pos);
+						l = low .Get(pos);
+						h = high.Get(pos);
+						s = spec.Get(pos);
+						b = specsig.signal.Get(pos);
 						out.Put(&o, sizeof(double));
 						out.Put(&l, sizeof(double));
 						out.Put(&h, sizeof(double));
+						out.Put(&s, sizeof(double));
+						out.Put(&b, sizeof(bool));
 					}
 				}
 				else out.Put32(0);
@@ -323,18 +333,20 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 		}
 		else out.Put32(0);
 	}
-	else if (key == "openorders") {
+	else if (key == "status") {
 		MetaTrader& mt = GetMetaTrader();
-		mt.DataEnter();
-		
-		const Vector<Order>& orders = mt.GetOpenOrders();
-		
 		double balance = mt.AccountBalance();
 		double equity = mt.AccountEquity();
 		double freemargin = mt.AccountFreeMargin();
 		out.Put(&balance, sizeof(double));
 		out.Put(&equity, sizeof(double));
 		out.Put(&freemargin, sizeof(double));
+	}
+	else if (key == "openorders") {
+		MetaTrader& mt = GetMetaTrader();
+		mt.DataEnter();
+		
+		const Vector<Order>& orders = mt.GetOpenOrders();
 		
 		out.Put32(orders.GetCount());
 		for(int i = 0; i < orders.GetCount(); i++) {
@@ -363,13 +375,6 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 		mt.DataEnter();
 		
 		const Vector<Order>& orders = mt.GetHistoryOrders();
-		
-		double balance = mt.AccountBalance();
-		double equity = mt.AccountEquity();
-		double freemargin = mt.AccountFreeMargin();
-		out.Put(&balance, sizeof(double));
-		out.Put(&equity, sizeof(double));
-		out.Put(&freemargin, sizeof(double));
 		
 		out.Put32(orders.GetCount());
 		for(int i = 0; i < orders.GetCount(); i++) {
@@ -420,6 +425,49 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put32(ev.forecast.GetCount());	out.Put(ev.forecast);
 			out.Put32(ev.previous.GetCount());	out.Put(ev.previous);
 			out.Put32(ev.actual.GetCount());	out.Put(ev.actual);
+		}
+	}
+	else if (key == "speculation") {
+		Vector<String> sym;
+		sym.Add("EUR1");
+		sym.Add("USD1");
+		sym.Add("GBP1");
+		sym.Add("JPY1");
+		sym.Add("CHF1");
+		sym.Add("CAD1");
+		sym.Add("EURUSD" + sys.GetPostFix());
+		sym.Add("EURGBP" + sys.GetPostFix());
+		sym.Add("EURJPY" + sys.GetPostFix());
+		sym.Add("EURCHF" + sys.GetPostFix());
+		sym.Add("EURCAD" + sys.GetPostFix());
+		sym.Add("GBPUSD" + sys.GetPostFix());
+		sym.Add("USDJPY" + sys.GetPostFix());
+		sym.Add("USDCHF" + sys.GetPostFix());
+		sym.Add("USDCAD" + sys.GetPostFix());
+		sym.Add("GBPJPY" + sys.GetPostFix());
+		sym.Add("GBPCHF" + sys.GetPostFix());
+		sym.Add("GBPCAD" + sys.GetPostFix());
+		sym.Add("CHFJPY" + sys.GetPostFix());
+		sym.Add("CADJPY" + sys.GetPostFix());
+		sym.Add("CADCHF" + sys.GetPostFix());
+		Vector<int> tfs;
+		tfs.Add(0);
+		tfs.Add(2);
+		tfs.Add(4);
+		tfs.Add(5);
+		tfs.Add(6);
+		for(int i = 0; i < sym.GetCount(); i++) {
+			for(int j = 0; j < tfs.GetCount(); j++) {
+				CoreList c;
+				c.AddSymbol(sym[i]);
+				c.AddTf(tfs[j]);
+				c.AddIndi(System::Find<SpeculationOscillator>());
+				c.Init();
+				c.Refresh();
+				ConstLabelSignal& sig = c.GetLabelSignal(0, 0, 0);
+				bool b = sig.signal.Top();
+				out.Put(&b, sizeof(bool));
+			}
 		}
 	}
 	

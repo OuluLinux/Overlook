@@ -2584,6 +2584,8 @@ void SpeculationOscillator::Init() {
 }
 
 void SpeculationOscillator::Start() {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(GetTf());
 	Buffer& buffer = GetBuffer(0);
 	LabelSignal& sig = GetLabelBuffer(0, 0);
 	double point = GetDataBridge()->GetPoint();
@@ -2598,7 +2600,10 @@ void SpeculationOscillator::Start() {
 		SetSafetyLimit(i);
 		
 		double vol = Volume(i-1);
-		if (vol >= limit) {
+		Time t = idx[i];
+		int wday = DayOfWeek(t);
+		
+		if (vol >= limit && wday != 0) {
 			double open = Open(i-1);
 			double close = Open(i);
 			double absch = fabs(open / close - 1);
@@ -2726,6 +2731,9 @@ void BuySellVolume::Start() {
 	Buffer& diff = GetBuffer(0);
 	ConstBuffer& fast_open = GetInputBuffer(0, GetSymbol(), 0, 0);
 	ConstBuffer& fast_vol = GetInputBuffer(0, GetSymbol(), 0, 3);
+	ConstBuffer& open_buf = GetInputBuffer(0, 0);
+	
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	
 	Time prev_t(1970,1,1);
 	int prev_j = -1;
@@ -2747,9 +2755,23 @@ void BuySellVolume::Start() {
 		else {
 			sell.Inc(j, -vol);
 		}
-		diff.Set(j, buy.Get(j) + sell.Get(j));
+		double d = buy.Get(j) + sell.Get(j);
+		diff.Set(j, d);
 	}
 	fast_counted = fast_idx.GetCount() - 1;
+	
+	int counted = GetCounted();
+	int bars = GetBars();
+	if (!counted) counted++;
+	for(int i = counted; i < bars; i++) {
+		double prev_diff = diff.Get(i-1);
+		bool prev_diff_sig = prev_diff < 0;
+		double close = open_buf.Get(i);
+		double open = open_buf.Get(i-1);
+		bool prev_price_sig = close < open;
+		sig.signal.Set(i, prev_price_sig);
+		sig.enabled.Set(i, prev_price_sig != prev_diff_sig);
+	}
 }
 
 
@@ -4507,7 +4529,7 @@ void PeriodicalChange::Init() {
 	int count = 0;
 	
 	split_type = 0;
-	if (GetTf() == VTF)			{count = GetSystem().GetVtfWeekbars(); split_type = 3;}
+	if (GetTf() >= PHASETF)		{count = 7; split_type = 1;}
 	else if (tfmin >= w1)		{count = 4;	split_type = 2;}
 	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
 	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}
@@ -4802,37 +4824,24 @@ void VolatilitySlots::Init() {
 	SetBufferColor(0, Color(113, 42, 150));
 	SetBufferStyle(0, DRAW_LINE);
 	
-	SetCoreLevelCount(3);
-	SetCoreLevel(0, 0.0002);
-	SetCoreLevel(1,  0.001);
-	SetCoreLevel(2,  0.010);
-	SetCoreLevelsColor(Silver);
-	SetCoreLevelsStyle(STYLE_DOT);
-	
-	
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
 		slot_count = 1;
 	
-	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
+	if (GetTf() >= PHASETF) {slot_count = 7;}
 	
 	stats.SetCount(slot_count);
-	
-	peaks.SetCount(7*4);
 }
 
 void VolatilitySlots::Start() {
 	Buffer& buffer = GetBuffer(0);
 	ConstBuffer& open_buf = GetInputBuffer(0, 0);
 	ConstBuffer& time_buf = GetInputBuffer(0, 4);
-	LabelSignal& lbl = GetLabelBuffer(0, 0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
-	
-	if (counted > 0)
-		counted--;
 	
 	if (counted == 0)
 		counted++;
@@ -4840,49 +4849,40 @@ void VolatilitySlots::Start() {
 	int tf_mins = GetMinutePeriod();
 	
 	for(int i = counted; i < bars; i++) {
-		double cur  = open_buf.Get(i);
-		double prev = open_buf.Get(i-1);
-		double change = fabs(cur / prev - 1.0);
-		int slot_id = (i-1) % slot_count;
-		OnlineAverage1& av = stats[slot_id];
-		av.Add(change);
-		total.Add(change);
-	}
-	
-	if (counted <= 1) {
 		
-		for(int i = 0; i < stats.GetCount(); i++) {
-			const OnlineAverage1& av = stats[i];
-			Time t = Time(1970,1,1) + time_buf.Get(i);
+		{
+			Time t = Time(1970,1,1) + time_buf.Get(i-1);
 			int wday = DayOfWeek(t);
-			int type = t.hour / 6;
-			int slot_id = wday * 4 + type;
-			PeakVolat& pv = peaks[slot_id];
-			if (av.mean > pv.value) {
-				pv.value = av.mean;
-				pv.slot = i;
-				pv.time = t.hour * 100 + t.minute;
+			int slot_id;
+			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
+			else slot_id = wday - 1;
+			
+			double cur  = open_buf.Get(i);
+			double prev = open_buf.Get(i-1);
+			double change = fabs(cur / prev - 1.0);
+			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				OnlineVariance& av = stats[slot_id];
+				av.Add(change);
+				total.Add(change);
 			}
 		}
+		
+		bool enabled = false;
+		{
+			Time t = Time(1970,1,1) + time_buf.Get(i);
+			int wday = DayOfWeek(t);
+			int slot_id;
+			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
+			else slot_id = wday - 1;
+			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				OnlineVariance& av = stats[slot_id];
+				double mean = av.GetMean();
+				buffer.Set(i, mean);
+				enabled = total.GetCDF(mean, false) >= 0.75;
+			}
+		}
+		sig.enabled.Set(i, enabled);
 	}
-	
-	for(int i = counted; i < bars; i++) {
-		SetSafetyLimit(i);
-		
-		int slot_id = i % slot_count;
-		const OnlineAverage1& av = stats[slot_id];
-		
-		buffer.Set(i, av.mean);
-		
-		
-		Time t = Time(1970,1,1) + time_buf.Get(i);
-		int wday = DayOfWeek(t);
-		int type = t.hour / 6;
-		int peak_slot_id = wday * 4 + type;
-		PeakVolat& pv = peaks[peak_slot_id];
-		lbl.enabled.Set(i, pv.slot == slot_id);
-	}
-	
 }
 
 
@@ -4903,9 +4903,6 @@ VolumeSlots::VolumeSlots() {
 void VolumeSlots::Init() {
 	SetCoreSeparateWindow();
 	
-	SetCoreMinimum(0);
-	SetCoreMaximum(1);
-	
 	SetBufferColor(0, Color(113, 42, 150));
 	SetBufferStyle(0, DRAW_LINE);
 	
@@ -4916,125 +4913,64 @@ void VolumeSlots::Init() {
 	SetCoreLevelsColor(Silver);
 	SetCoreLevelsStyle(STYLE_DOT);
 	
-	SetBufferType(1, STYLE_DOT);
-	
-	
 	int tf_mins = GetMinutePeriod();
 	if (tf_mins < 10080)
 		slot_count = (5 * 24 * 60) / tf_mins;
 	else
 		slot_count = 1;
 	
-	if (GetTf() == VTF) {slot_count = GetSystem().GetVtfWeekbars();}
+	if (GetTf() >= PHASETF) {slot_count = 7;}
 	
 	stats.SetCount(slot_count);
-	
-	smooth.SetPeriod(period * 2 + 1);
 }
 
 void VolumeSlots::Start() {
 	Buffer& buffer = GetBuffer(0);
-	Buffer& avbuffer = GetBuffer(1);
 	ConstBuffer& vol_buf = GetInputBuffer(0, 3);
+	ConstBuffer& time_buf = GetInputBuffer(0, 4);
 	LabelSignal& sig = GetLabelBuffer(0, 0);
 	int bars = GetBars();
 	int counted = GetCounted();
-	
-	if (counted > 0)
-		counted--;
+	int tf_mins = GetMinutePeriod();
 	
 	if (counted == 0)
 		counted++;
 	
-	int tf_mins = GetMinutePeriod();
-	
-	double min = DBL_MAX, max = 0.0001;
-	for(int i = 0; i < stats.GetCount(); i++) {
-		max = Upp::max(max, stats[i].mean);
-		min = Upp::min(min, stats[i].mean);
-	}
-	for(int i = counted; i < bars; i++) {
-		sig.enabled.Set(i, false);
-	}
 	for(int i = counted; i < bars; i++) {
 		SetSafetyLimit(i);
 		
-		if (i % stats.GetCount() == 0) {
-			min = DBL_MAX;
-			max = 0.0001;
-			for(int i = 0; i < stats.GetCount(); i++) {
-				max = Upp::max(max, stats[i].mean);
-				min = Upp::min(min, stats[i].mean);
-			}
-		}
 		{
-			double vol  = vol_buf.Get(i-1);
-			if (vol != 0.0) {
-				int slot_id = (i-1) % slot_count;
-				OnlineAverage1& av = stats[slot_id];
-				av.Add(vol);
-				total.Add(vol);
-				if (av.mean > max) max = av.mean;
-			}
-		}
-		
-		{
-			int slot_id = i % slot_count;
-			const OnlineAverage1& av = stats[slot_id];
-			double value = (av.mean - min) / (max - min);
-			buffer.Set(i, value);
+			Time t = Time(1970,1,1) + time_buf.Get(i-1);
+			int wday = DayOfWeek(t);
+			int slot_id;
+			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
+			else slot_id = wday - 1;
 			
-			if (value > trigger_limit * 0.01 && sig.enabled.Get(i) == false) {
-				double prev_value = value;
-				for(int j = 0; j < 20; j++) {
-					int slot_id = (i - 1 - j) % slot_count;
-					const OnlineAverage1& av = stats[slot_id];
-					double value = (av.mean - min) / (max - min);
-					if (value > prev_value)
-						break;
-					int pos = Upp::max(i - 1 - j, 0);
-					sig.enabled.Set(pos, true);
-					sig.signal.Set(pos, false);
-					prev_value = value;
-				}
-				
-				prev_value = value;
-				int pos = i;
-				sig.enabled.Set(pos, true);
-				sig.signal.Set(pos, false);
-				for(int j = 0; j < 20; j++) {
-					int slot_id = (i + 1 + j) % slot_count;
-					const OnlineAverage1& av = stats[slot_id];
-					double value = (av.mean - min) / (max - min);
-					if (value < prev_value)
-						break;
-					pos = Upp::max(i + 1 + j, 0);
-					sig.enabled.Set(pos, true);
-					sig.signal.Set(pos, false);
-					prev_value = value;
-				}
-				pos++;
-				for(int j = 0; j < 20; j++) {
-					int slot_id = pos % slot_count;
-					const OnlineAverage1& av = stats[slot_id];
-					double value = (av.mean - min) / (max - min);
-					if (value > prev_value)
-						break;
-					sig.enabled.Set(pos, true);
-					sig.signal.Set(pos, true);
-					pos++;
-					prev_value = value;
+			double vol  = vol_buf.Get(i-1);
+			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				OnlineVariance& av = stats[slot_id];
+				if (vol != 0.0) {
+					av.Add(vol);
+					total.Add(vol);
 				}
 			}
 		}
 		
+		bool enabled = false;
 		{
-			int slot_id = (i + period) % slot_count;
-			const OnlineAverage1& add_av = stats[slot_id];
-			smooth.Add(add_av.GetMean());
-			double value = (smooth.GetMean() - min) / (max - min);
-			avbuffer.Set(i, value);
+			Time t = Time(1970,1,1) + time_buf.Get(i);
+			int wday = DayOfWeek(t);
+			int slot_id;
+			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
+			else slot_id = wday - 1;
+			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				OnlineVariance& av = stats[slot_id];
+				double mean = av.GetMean();
+				buffer.Set(i, mean);
+				enabled = total.GetCDF(mean, false) >= 0.75;
+			}
 		}
+		sig.enabled.Set(i, enabled);
 	}
 }
 
@@ -5746,7 +5682,7 @@ void Anomaly::Init() {
 	int count = 0;
 	
 	split_type = 0;
-	if (GetTf() == VTF)			{count = GetSystem().GetVtfWeekbars(); split_type = 3;}
+	if (GetTf() >= PHASETF)		{count = 7; split_type = 1;}
 	else if (tfmin >= w1)		{count = 4;	split_type = 2;}
 	else if (tfmin >= 24 * 60)	{count = 7; split_type = 1;}
 	else						{count = 7 * 24 * 60 / tfmin; split_type = 0;}

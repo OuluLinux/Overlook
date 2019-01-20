@@ -1,3 +1,27 @@
+LAYOUT(OpenOrder, 400, 156)
+	ITEM(Label, dv___0, SetLabel(t_("Signal:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -40))
+	ITEM(Label, dv___1, SetLabel(t_("Stop-loss pips:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, 32))
+	ITEM(Label, dv___2, SetLabel(t_("Take-profit pips:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, 8))
+	ITEM(Label, dv___3, SetLabel(t_("Volume:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -16))
+	ITEM(Label, dv___4, SetLabel(t_("Symbol:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -64))
+	ITEM(Label, symbol, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -64))
+	ITEM(Label, signal, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -40))
+	ITEM(Label, sl, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, 32))
+	ITEM(Label, tp, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, 8))
+	ITEM(Label, volume, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -16))
+	ITEM(Button, open, SetLabel(t_("Open Order")).HCenterPosZ(392, 0).VCenterPosZ(31, 62))
+END_LAYOUT
+
+LAYOUT(CloseOrder, 400, 112)
+	ITEM(Label, dv___0, SetLabel(t_("Volume:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -18))
+	ITEM(Label, dv___1, SetLabel(t_("Profit:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, 6))
+	ITEM(Label, dv___2, SetLabel(t_("Symbol:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -42))
+	ITEM(Label, symbol, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -42))
+	ITEM(Label, volume, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -18))
+	ITEM(Label, profit, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, 6))
+	ITEM(Button, close, SetLabel(t_("Close Order")).HCenterPosZ(392, 0).VCenterPosZ(32, 36))
+END_LAYOUT
+
 LAYOUT(StartupDialog, 428, 284)
 	ITEM(Label, dv___0, SetLabel(t_("Connect automatically:")).SetAlign(ALIGN_RIGHT).HSizePosZ(4, 300).TopPosZ(224, 24))
 	ITEM(Option, auto_connect, HSizePosZ(136, 128).TopPosZ(224, 24))

@@ -333,6 +333,50 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 		}
 		else out.Put32(0);
 	}
+	else if (key == "vol") {
+		MetaTrader& mt = GetMetaTrader();
+		System& sys = GetSystem();
+		
+		if (args.GetCount() == 3) {
+			int sym = ScanInt(args[0]);
+			int tf = ScanInt(args[1]);
+			int req_count = ScanInt(args[2]);
+			if (sym >= 0 && sym < sys.GetSymbolCount() && tf >= 0 && tf < sys.GetPeriodCount()) {
+				CoreList c;
+				c.AddSymbol(sys.GetSymbol(sym));
+				c.AddTf(tf);
+				c.AddIndi(System::Find<VolumeSlots>()).AddArg(req_count / 2);
+				c.AddIndi(System::Find<VolatilitySlots>()).AddArg(req_count / 2);
+				c.Init();
+				c.Refresh();
+				if (!c.IsEmpty()) {
+					
+					ConstBuffer& vol = c.GetBuffer(0, 0, 0);
+					ConstBuffer& volat = c.GetBuffer(0, 1, 0);
+					ConstLabelSignal& vol_bool = c.GetLabelSignal(0, 0, 0);
+					ConstLabelSignal& volat_bool = c.GetLabelSignal(0, 1, 0);
+					
+					int size = vol.GetCount();
+					int count = min(max(0, req_count), size);
+					out.Put32(count);
+					for(int i = 0; i < count; i++) {
+						int pos = size - count + i;
+						double v = vol.Get(pos);
+						double va = volat.Get(pos);
+						bool vb = vol_bool.enabled.Get(pos);
+						bool vab = volat_bool.enabled.Get(pos);
+						out.Put(&v, sizeof(double));
+						out.Put(&va, sizeof(double));
+						out.Put(&vb, sizeof(bool));
+						out.Put(&vab, sizeof(bool));
+					}
+				}
+				else out.Put32(0);
+			}
+			else out.Put32(0);
+		}
+		else out.Put32(0);
+	}
 	else if (key == "status") {
 		MetaTrader& mt = GetMetaTrader();
 		double balance = mt.AccountBalance();
@@ -468,6 +512,106 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				bool b = sig.signal.Top();
 				out.Put(&b, sizeof(bool));
 			}
+		}
+	}
+	else if (key == "activity") {
+		Vector<String> sym;
+		sym.Add("EUR1");
+		sym.Add("USD1");
+		sym.Add("GBP1");
+		sym.Add("JPY1");
+		sym.Add("CHF1");
+		sym.Add("CAD1");
+		sym.Add("EURUSD" + sys.GetPostFix());
+		sym.Add("EURGBP" + sys.GetPostFix());
+		sym.Add("EURJPY" + sys.GetPostFix());
+		sym.Add("EURCHF" + sys.GetPostFix());
+		sym.Add("EURCAD" + sys.GetPostFix());
+		sym.Add("GBPUSD" + sys.GetPostFix());
+		sym.Add("USDJPY" + sys.GetPostFix());
+		sym.Add("USDCHF" + sys.GetPostFix());
+		sym.Add("USDCAD" + sys.GetPostFix());
+		sym.Add("GBPJPY" + sys.GetPostFix());
+		sym.Add("GBPCHF" + sys.GetPostFix());
+		sym.Add("GBPCAD" + sys.GetPostFix());
+		sym.Add("CHFJPY" + sys.GetPostFix());
+		sym.Add("CADJPY" + sys.GetPostFix());
+		sym.Add("CADCHF" + sys.GetPostFix());
+		Vector<int> tfs;
+		tfs.Add(0);
+		tfs.Add(2);
+		tfs.Add(4);
+		tfs.Add(5);
+		TimeStop ts;
+		for(int i = 0; i < sym.GetCount(); i++) {
+			for(int j = 0; j < tfs.GetCount(); j++) {
+				CoreList c;
+				c.AddSymbol(sym[i]);
+				c.AddTf(tfs[j]);
+				c.AddIndi(System::Find<VolumeSlots>());
+				c.AddIndi(System::Find<VolatilitySlots>());
+				c.Init();
+				c.Refresh();
+				ConstLabelSignal& vol_sig = c.GetLabelSignal(0, 0, 0);
+				ConstLabelSignal& volat_sig = c.GetLabelSignal(0, 1, 0);
+				bool vol_b = vol_sig.signal.Top();
+				//vol_b = Random(2);
+				out.Put(&vol_b, sizeof(bool));
+				bool volat_b = volat_sig.signal.Top();
+				//volat_b = Random(2);
+				out.Put(&volat_b, sizeof(bool));
+			}
+		}
+	}
+	else if (key == "openorder") {
+		MetaTrader& mt = GetMetaTrader();
+		System& sys = GetSystem();
+		
+		if (args.GetCount() == 5) {
+			int sym = ScanInt(args[0]);
+			int sig = ScanInt(args[1]);
+			double volume = ScanDouble(args[2]);
+			int tp_count = ScanInt(args[3]);
+			int sl_count = ScanInt(args[4]);
+			
+			const Symbol& symbol = mt.GetSymbol(sym);
+			String s = symbol.name;
+			double price, sl, tp;
+			if (!sig) {
+				price = mt.RealtimeAsk(sym);
+				sl = price - sl_count * symbol.point;
+				tp = price + tp_count * symbol.point;
+			}
+			else {
+				price = mt.RealtimeBid(sym);
+				sl = price + sl_count * symbol.point;
+				tp = price - tp_count * symbol.point;
+			}
+				
+			int r = mt.OrderSend(s, sig, volume, price, 5, sl, tp, "", 0);
+			out.Put32(r);
+		}
+	}
+	else if (key == "closeorders") {
+		MetaTrader& mt = GetMetaTrader();
+		System& sys = GetSystem();
+		
+		if (args.GetCount() == 1) {
+			int sym = ScanInt(args[0]);
+			
+			const Symbol& symbol = mt.GetSymbol(sym);
+			String s = symbol.name;
+			const Vector<Order>& orders = mt.GetOpenOrders();
+			
+			mt.DataEnter();
+			for(int i = 0; i < orders.GetCount(); i++) {
+				const Order& o = orders[i];
+				if (o.symbol == sym)
+					mt.CloseOrder(o, o.volume);
+			}
+			mt.DataLeave();
+			
+			out.Put32(0);
 		}
 	}
 	

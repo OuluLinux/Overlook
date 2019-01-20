@@ -4875,6 +4875,7 @@ void VolatilitySlots::Start() {
 			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
 			else slot_id = wday - 1;
 			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				slot_id = (slot_id + shift) % stats.GetCount();
 				OnlineVariance& av = stats[slot_id];
 				double mean = av.GetMean();
 				buffer.Set(i, mean);
@@ -4964,6 +4965,7 @@ void VolumeSlots::Start() {
 			if (GetTf() < PHASETF)	slot_id = ((wday - 1) * 24 * 60 + t.hour * 60 + t.minute) / tf_mins;
 			else slot_id = wday - 1;
 			if (slot_id >= 0 && slot_id < stats.GetCount()) {
+				slot_id = (slot_id + shift) % stats.GetCount();
 				OnlineVariance& av = stats[slot_id];
 				double mean = av.GetMean();
 				buffer.Set(i, mean);

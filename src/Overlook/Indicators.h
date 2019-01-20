@@ -1195,6 +1195,7 @@ protected:
 	OnlineVariance total;
 	
 	int slot_count = 0;
+	int shift = 0;
 	
 	
 public:
@@ -1209,6 +1210,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
+			% Arg("shift", shift, 0)
 			% Mem(stats)
 			% Mem(total);
 	}
@@ -1223,7 +1225,7 @@ protected:
 	OnlineVariance total;
 	
 	int slot_count = 0;
-	
+	int shift = 0;
 	
 public:
 	VolumeSlots();
@@ -1237,6 +1239,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
+			% Arg("shift", shift, 0)
 			% Mem(stats)
 			% Mem(total);
 	}

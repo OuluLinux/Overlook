@@ -7,6 +7,53 @@ Session::~Session() {
 	while (!stopped) Sleep(100);
 }
 
+int Session::FindSymbolLeft(const String& s) const {
+	for(int i = 0; i < symbols.GetCount(); i++) {
+		const String& sym = symbols[i];
+		if (sym.Left(s.GetCount()) == s)
+			return i;
+	}
+	return -1;
+}
+
+bool Session::HasOrders(const String& sym) {
+	for(int i = 0; i < open_orders.GetCount(); i++) {
+		const Order& o = open_orders[i];
+		if (o.symbol == sym)
+			return true;
+	}
+	return false;
+}
+
+int Session::GetOrderSig(const String& sym) {
+	for(int i = 0; i < open_orders.GetCount(); i++) {
+		const Order& o = open_orders[i];
+		if (o.symbol == sym)
+			return o.type % 2;
+	}
+	return -1;
+}
+
+double Session::GetOrderVolume(const String& sym) {
+	double vol = 0.0;
+	for(int i = 0; i < open_orders.GetCount(); i++) {
+		const Order& o = open_orders[i];
+		if (o.symbol == sym)
+			vol += o.size;
+	}
+	return vol;
+}
+
+double Session::GetOrderProfit(const String& sym) {
+	double profit = 0.0;
+	for(int i = 0; i < open_orders.GetCount(); i++) {
+		const Order& o = open_orders[i];
+		if (o.symbol == sym)
+			profit += o.profit;
+	}
+	return profit;
+}
+
 void Session::DataInit() {
 	String data;
 	Get("symtf", data);
@@ -28,6 +75,58 @@ void Session::DataInit() {
 		int tf_len = mem.Get32();
 		String tf_str = mem.Get(tf_len);
 		tfs.Add(tf, tf_str);
+	}
+}
+
+void Session::DataOrders() {
+	if (!pending_open_orders) {
+		pending_open_orders = true;
+		
+		Thread::Start([=] {
+			String data;
+			GetSession().Get("openorders", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			int order_count = mem.Get32();
+			Vector<Order> tmp;
+			tmp.SetCount(order_count);
+			for(int i = 0; i < order_count; i++) {
+				Order& o = tmp[i];
+				o.ticket = mem.Get32();
+				o.begin = Time(1970,1,1) + mem.Get32();
+				o.end = Time(1970,1,1) + mem.Get32();
+				o.type = mem.Get32();
+				mem.Get(&o.size, sizeof(double));
+				int sym_len = mem.Get32();
+				o.symbol = mem.Get(sym_len);
+				mem.Get(&o.open, sizeof(double));
+				mem.Get(&o.stoploss, sizeof(double));
+				mem.Get(&o.takeprofit, sizeof(double));
+				mem.Get(&o.close, sizeof(double));
+				mem.Get(&o.commission, sizeof(double));
+				mem.Get(&o.swap, sizeof(double));
+				mem.Get(&o.profit, sizeof(double));
+			}
+			
+			Swap(tmp, this->open_orders);
+			pending_open_orders = false;
+		});
+	}
+}
+
+void Session::DataStatus() {
+	if (!pending_status) {
+		pending_status = true;
+		
+		Thread::Start([=] {
+			String data;
+			GetSession().Get("status", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			mem.Get(&balance, sizeof(double));
+			mem.Get(&equity, sizeof(double));
+			mem.Get(&freemargin, sizeof(double));
+		});
 	}
 }
 
@@ -138,7 +237,7 @@ void Session::Call(Stream& out, Stream& in) {
 	r = s->Put(out_str.Begin(), out_str.GetCount());
 	if (r != out_str.GetCount()) {if (!continuous) Disconnect(); call_lock.Leave(); call_lock.Leave(); throw Exc("Data sending failed");}
 	
-	s->Timeout(3000);
+	s->Timeout(30000);
 	int in_size;
 	r = s->Get(&in_size, sizeof(in_size));
 	if (r != sizeof(in_size) || in_size < 0 || in_size >= 10000000) {if (!continuous) Disconnect(); call_lock.Leave(); call_lock.Leave(); throw Exc("Received invalid size");}
@@ -339,7 +438,7 @@ void CandlestickCtrl::Paint(Draw& d) {
         Vector<Point> P;
         double O, H, L, C;
         pos = c - (count + shift - i);
-        if (pos >= c || pos < 0) continue;
+        if (pos >= opens.GetCount() || pos < 0) continue;
         
         double open  = opens[pos];
         double low   = lows[pos];
@@ -522,7 +621,7 @@ SingleCandlestick::SingleCandlestick() {
 	tflist <<= THISBACK(Data);
 }
 
-void SingleCandlestick::Data() {
+void SingleCandlestick::DataList() {
 	Session& ses = GetSession();
 	
 	if (symlist.GetCount() == 0) {
@@ -534,6 +633,9 @@ void SingleCandlestick::Data() {
 		tflist.SetIndex(0);
 	}
 	
+}
+void SingleCandlestick::Data() {
+	DataList();
 	graph.sym = symlist.GetIndex();
 	graph.tf = tflist.GetIndex();
 	graph.Data();
@@ -629,6 +731,7 @@ SpeculationMatrix::SpeculationMatrix() {
 	tfs.Add(6);
 	
 	values.SetCount(sym.GetCount() * tfs.GetCount(), false);
+	signals.SetCount(sym.GetCount(), false);
 	
 	list.AddColumn("Symbol");
 	list.AddColumn("Sum");
@@ -679,18 +782,20 @@ void SpeculationMatrix::Data() {
 			bool v = values[i * tfs.GetCount() + j];
 			sum += v ? -1 : +1;
 			int ab = (av ? -1 : +1) + (bv ? +1 : -1);
-			if (ab)
-				sum += ab < 0 ? -1 : +1;
+			if (ab) sum += ab < 0 ? -1 : +1;
 		}
 		list.Set(i-6, 0, s);
 		list.Set(i-6, 1, abs(sum));
 		list.Set(i-6, 2, sum > 0 ? "Buy" : "Sell");
+		signals[i] = sum < 0;
 	}
 	list.SetSortColumn(1, true);
 	list.SetCursor(cursor);
 }
 
 void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
+	Session& ses = GetSession();
+	
 	Rect r(GetSize());
 	d.DrawRect(GetSize(), White());
 	
@@ -739,6 +844,15 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 			else
 				s = ba;
 			int sympos = m->sym.Find(s);
+			
+			int mtsym_id = ses.FindSymbolLeft(s);
+			ASSERT(mtsym_id != 0);
+			String mtsym = ses.GetSymbol(mtsym_id);
+			bool has_orders = ses.HasOrders(mtsym);
+			if (has_orders) {
+				bool sig = ses.GetOrderSig(mtsym);
+				d.DrawRect(x, y, col + 1, row + 1, sig ? Color(170, 255, 255) : Color(216, 255, 164));
+			}
 			
 			x = (1 + i) * col + 2;
 			y = (1 + j) * row + 2;
@@ -799,27 +913,466 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	}
 }
 
+void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags) {
+	Rect rect(GetSize());
+	
+	int grid_count = 7;
+	double row = rect.GetHeight() / (double)grid_count;
+	double col = rect.GetWidth() / (double)grid_count;
+	double subrow = row / 2;
+	double subcol = col / m->tfs.GetCount();
+	
+	int c = p.x / col;
+	int r = p.y / row;
+	
+	if (c == 0 && r == 0) {
+		
+	}
+	else if (c == 0 && r > 0) {
+		int sym = r - 1;
+		String s = m->sym[sym] + "1";
+		sym = GetSession().FindSymbol(s);
+		int tf = Tf((p.x - c * col) / subcol);
+		bool is_subtf = (p.y - r * row) / subrow >= 1.0;
+		if (is_subtf)
+			m->WhenGraph(sym, tf);
+	}
+	else if (r == 0 && c > 0) {
+		int sym = c - 1;
+		String s = m->sym[sym] + "1";
+		sym = GetSession().FindSymbol(s);
+		int tf = Tf((p.x - c * col) / subcol);
+		bool is_subtf = (p.y - r * row) / subrow >= 1.0;
+		if (is_subtf)
+			m->WhenGraph(sym, tf);
+	}
+	else {
+		int ai = r - 1;
+		int bi = c - 1;
+		if (ai != bi) {
+			String a = m->sym[ai];
+			String b = m->sym[bi];
+			int sym = GetSession().FindSymbolLeft(a + b);
+			if (sym == -1) sym = GetSession().FindSymbolLeft(b + a);
+			String mtsym = GetSession().GetSymbol(sym);
+			bool has_orders = GetSession().HasOrders(mtsym);
+			
+			bool sig = m->signals[m->sym.Find(mtsym.Left(6))];
+			
+			int tf = Tf((p.x - c * col) / subcol);
+			bool is_subtf = (p.y - r * row) / subrow >= 1.0;
+			if (is_subtf)
+				m->WhenGraph(sym, tf);
+			else {
+				if (!has_orders)
+					m->WhenOpenOrder(sym, sig);
+				else
+					m->WhenCloseOrder(sym);
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+void ActivityCtrl::Paint(Draw& d) {
+	int f, pos, x, y, h, c, w, shift;
+	double diff;
+    Rect r(GetSize());
+	d.DrawRect(r, White());
+	
+	double hi = -DBL_MAX, lo = +DBL_MAX;
+	for(double d : vol) {
+		if (d < lo) lo = d;
+		if (d > hi) hi = d;
+	}
+	
+	int div = 8;
+	count = r.GetWidth() / div;
+	shift = count / 2;
+	
+    f = 2;
+    x = border - (div - r.GetWidth() % div);
+	y = r.top;
+    h = r.GetHeight();
+    w = r.GetWidth();
+	c = vol.GetCount();
+	diff = hi - lo;
+	
+	d.DrawText(0, 0, GetSession().GetSymbol(sym), Arial(28));
+	
+	
+	int vol_h = h * 0.5;
+	cache.SetCount(0);
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O, H, L, C;
+        pos = c - (count + this->shift - i);
+        if (pos >= vol.GetCount() || pos < 0) continue;
+        
+        double v  = vol[pos];
+        bool b = vol_bools[pos];
+        
+		double V = (1 - (v  - lo) / diff) * vol_h;
+		
+		cache << Point((int)(x+(i+0.5)*div), (int)(y+V));
+		
+		int rx = x + i * div + 1;
+		if (b)
+			d.DrawRect(rx, y, div-2, div-2, Color(226, 42, 0));
+    }
+    if (!cache.IsEmpty())
+		d.DrawPolyline(cache, 2, Green());
+    
+    y += vol_h;
+    hi = -DBL_MAX;
+    lo = +DBL_MAX;
+	for(double d : volat) {
+		if (d < lo) lo = d;
+		if (d > hi) hi = d;
+	}
+	diff = hi - lo;
+	
+	cache.SetCount(0);
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O, H, L, C;
+        pos = c - (count + this->shift - i);
+        if (pos >= vol.GetCount() || pos < 0) continue;
+        
+        double v  = volat[pos];
+        bool b = volat_bools[pos];
+        
+		double V = (1 - (v  - lo) / diff) * vol_h;
+		
+		cache << Point((int)(x+(i+0.5)*div), (int)(y+V));
+		
+		int rx = x + i * div + 1;
+		if (b)
+			d.DrawRect(rx, y, div-2, div-2, Color(226, 42, 0));
+    }
+    if (!cache.IsEmpty())
+		d.DrawPolyline(cache, 2, Green());
+    
+    x += (count - shift + 0.5) * div;
+    d.DrawLine(x, 0, x, r.GetHeight(), 2, Black());
+}
+
+void ActivityCtrl::Data() {
+	if (!pending_graph) {
+		pending_graph = true;
+		
+		Thread::Start([=] {
+			if (sym < 0) sym = 0;
+			if (tf < 0) tf = 0;
+			String data;
+			GetSession().Get("vol," + IntStr(sym) + "," + IntStr(tf) + "," + IntStr(count), data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			int count = mem.Get32();
+			Vector<double> vol, volat;
+			Vector<bool> vol_bools, volat_bools;
+			vol.SetCount(count);
+			volat.SetCount(count);
+			vol_bools.SetCount(count);
+			volat_bools.SetCount(count);
+			for(int i = 0; i < count; i++) {
+				double v, va;
+				bool vb, vab;
+				mem.Get(&v, sizeof(double));
+				mem.Get(&va,  sizeof(double));
+				mem.Get(&vb, sizeof(bool));
+				mem.Get(&vab, sizeof(bool));
+				vol[i] = v;
+				volat[i] = va;
+				vol_bools[i] = vb;
+				volat_bools[i] = vab;
+			}
+			Swap(this->vol, vol);
+			Swap(this->volat, volat);
+			Swap(this->vol_bools, vol_bools);
+			Swap(this->volat_bools, volat_bools);
+			
+			pending_graph = false;
+		});
+	}
+	
+	PostCallback(THISBACK(Refresh0));
+}
+
 
 
 
 MultiActivity::MultiActivity() {
+	Add(tflist.TopPos(0,30).LeftPos(0, 200));
+	Add(vsplit.VSizePos(30).HSizePos());
+	vsplit.Vert();
+	vsplit << hsplit0 << hsplit1;
 	
+	tflist <<= THISBACK(Data);
+	
+	ActivityCtrl& eur = activities.Add();
+	eur.sym = GetSession().symbols.Find("EUR1");
+	
+	ActivityCtrl& usd = activities.Add();
+	usd.sym = GetSession().symbols.Find("USD1");
+	
+	ActivityCtrl& gbp = activities.Add();
+	gbp.sym = GetSession().symbols.Find("GBP1");
+	
+	ActivityCtrl& jpy = activities.Add();
+	jpy.sym = GetSession().symbols.Find("JPY1");
+	
+	ActivityCtrl& chf = activities.Add();
+	chf.sym = GetSession().symbols.Find("CHF1");
+	
+	ActivityCtrl& cad = activities.Add();
+	cad.sym = GetSession().symbols.Find("CAD1");
+	
+	hsplit0 << eur << usd << gbp;
+	hsplit1 << jpy << chf << cad;
 }
 
 void MultiActivity::Data() {
+	Session& ses = GetSession();
 	
+	if (tflist.GetCount() == 0) {
+		for(int i = 0; i < ses.tfs.GetCount(); i++)
+			tflist.Add(ses.tfs[i]);
+		tflist.SetIndex(2);
+	}
+	
+	for(int i = 0; i < activities.GetCount(); i++) {
+		activities[i].tf = tflist.GetIndex();
+		activities[i].Data();
+	}
 }
 
+
+Color ActivityColor(int i) {
+	switch (i) {
+		case 0: return White();
+		case 1: return Color(255, 139, 139);
+		case 2: return Color(255, 42, 0);
+		case 3: return Color(255, 127, 0);
+		case 4: return Color(255, 254, 0);
+		default: return GrayColor();
+	}
+}
+
+void ActivityMatrix::ActivityMatrixCtrl::Paint(Draw& d) {
+	Rect r(GetSize());
+	d.DrawRect(GetSize(), White());
+	
+	int grid_count = 7;
+	double row = r.GetHeight() / (double)grid_count;
+	double col = r.GetWidth() / (double)grid_count;
+	double subrow = row / 2;
+	double subsubrow = row / 4;
+	double subcol = col / m->tfs.GetCount();
+	Font fnt = Arial(row / 3);
+	
+	for(int i = 0; i < 6; i++) {
+		String a = m->sym[i];
+		
+		int x = 0 + 2;
+		int y = (1 + i) * row;
+		d.DrawText(x, y, a, fnt);
+		
+		y += subrow;
+		for(int j = 0; j < m->tfs.GetCount(); j++) {
+			bool vb = m->vol[i * m->tfs.GetCount() + j];
+			bool vab = m->volat[i * m->tfs.GetCount() + j];
+			x = j * subcol;
+			d.DrawRect(x, y, subcol + 1, subrow + 1, ActivityColor(vb + vab));
+		}
+		
+		x = (1 + i) * col;
+		y = 0 + 2;
+		d.DrawText(x, y, a, fnt);
+		y = subrow;
+		for(int j = 0; j < m->tfs.GetCount(); j++) {
+			bool vb = m->vol[i * m->tfs.GetCount() + j];
+			bool vab = m->volat[i * m->tfs.GetCount() + j];
+			x = (1 + i) * col + j * subcol;
+			d.DrawRect(x, y, subcol + 1, subrow + 1, ActivityColor(vb + vab));
+		}
+		
+		
+		for(int j = 0; j < 6; j++) {
+			if (i == j) continue;
+			String b = m->sym[j];
+			String ab = a + b;
+			String ba = b + a;
+			String s;
+			bool is_ab = m->sym.Find(ab) != -1;
+			if (is_ab)
+				s = ab;
+			else
+				s = ba;
+			int sympos = m->sym.Find(s);
+			
+			x = (1 + i) * col + 2;
+			y = (1 + j) * row + 2;
+			d.DrawText(x, y, s, fnt);
+			for(int k = 0; k < m->tfs.GetCount(); k++) {
+				x = (1 + i) * col + k * subcol;
+				y = (1 + j) * row + subrow;
+				
+				bool vb = m->vol[sympos * m->tfs.GetCount() + k];
+				bool vab = m->volat[sympos * m->tfs.GetCount() + k];
+				d.DrawRect(x, y, subcol + 1, subsubrow + 1, ActivityColor(vb + vab));
+				
+				y = (1 + j) * row + subrow + subsubrow;
+				bool av = m->vol[i * m->tfs.GetCount() + k];
+				bool bv = m->vol[j * m->tfs.GetCount() + k];
+				bool ava = m->volat[i * m->tfs.GetCount() + k];
+				bool bva = m->volat[j * m->tfs.GetCount() + k];
+				d.DrawRect(x, y, subcol + 1, subsubrow + 1, ActivityColor(av + bv + ava + bva));
+			}
+		}
+	}
+	
+	for(int i = 0; i < 6; i++) {
+		int y = (1 + i) * row;
+		int x = (1 + i) * col;
+		int y2 = (1 + i) * row + subrow;
+		int y3 = (1 + i) * row + subrow + subsubrow;
+		int y4 = (1 + i + 1) * row;
+		
+		for(int j = 0; j < 6; j++) {
+			if (j == i) continue;
+			for(int k = 1; k < m->tfs.GetCount(); k++) {
+				int x = (1 + j) * col + k * subcol;
+				d.DrawLine(x, y2, x, y4, 1, GrayColor());
+			}
+		}
+		
+		for(int j = 1; j < m->tfs.GetCount(); j++) {
+			int x = j * subcol;
+			d.DrawLine(x, y2, x, y4, 1, GrayColor());
+			x = (1 + i) * col + j * subcol;
+			d.DrawLine(x, subrow, x, row, 1, GrayColor());
+		}
+		
+		d.DrawLine(0, y2, r.GetWidth(), y2, 1, GrayColor());
+		d.DrawLine(col, y3, r.GetWidth(), y3, 1, GrayColor());
+		d.DrawLine(0, y, r.GetWidth(), y, 1, Black());
+		d.DrawLine(x, 0, x, r.GetHeight(), 1, Black());
+	}
+}
 
 
 
 
 ActivityMatrix::ActivityMatrix() {
+	Add(hsplit.SizePos());
+	hsplit.Horz();
+	hsplit << ctrl << list;
+	hsplit.SetPos(8000);
+	ctrl.m = this;
 	
+	sym.Add("EUR");
+	sym.Add("USD");
+	sym.Add("GBP");
+	sym.Add("JPY");
+	sym.Add("CHF");
+	sym.Add("CAD");
+	sym.Add("EURUSD");
+	sym.Add("EURGBP");
+	sym.Add("EURJPY");
+	sym.Add("EURCHF");
+	sym.Add("EURCAD");
+	sym.Add("GBPUSD");
+	sym.Add("USDJPY");
+	sym.Add("USDCHF");
+	sym.Add("USDCAD");
+	sym.Add("GBPJPY");
+	sym.Add("GBPCHF");
+	sym.Add("GBPCAD");
+	sym.Add("CHFJPY");
+	sym.Add("CADJPY");
+	sym.Add("CADCHF");
+	
+	tfs.Add(0);
+	tfs.Add(2);
+	tfs.Add(4);
+	tfs.Add(5);
+	
+	vol.SetCount(sym.GetCount() * tfs.GetCount(), false);
+	volat.SetCount(sym.GetCount() * tfs.GetCount(), false);
+	
+	list.AddColumn("Symbol");
+	list.AddColumn("Sum");
 }
 
 void ActivityMatrix::Data() {
+	if (!pending_data) {
+		pending_data = true;
+		
+		Thread::Start([=] {
+			String data;
+			GetSession().Get("activity", data);
+			MemStream mem((void*)data.Begin(), data.GetCount());
+			
+			Vector<bool> vol_tmp, volat_tmp;
+			vol_tmp.SetCount(sym.GetCount() * tfs.GetCount());
+			volat_tmp.SetCount(sym.GetCount() * tfs.GetCount());
+			int row = 0;
+			for(int i = 0; i < sym.GetCount(); i++) {
+				for(int j = 0; j < tfs.GetCount(); j++) {
+					bool vol_b;
+					mem.Get(&vol_b, sizeof(bool));
+					vol_tmp[row] = vol_b;
+					bool volat_b;
+					mem.Get(&volat_b, sizeof(bool));
+					volat_tmp[row++] = volat_b;
+				}
+			}
+			
+			Swap(vol_tmp, vol);
+			Swap(volat_tmp, volat);
+			
+			pending_data = false;
+		});
 	
+	}
+	
+	Refresh();
+	
+	int cursor = 0;
+	if (list.IsCursor()) cursor = list.GetCursor();
+	for(int i = 6; i < sym.GetCount(); i++) {
+		String s = sym[i];
+		String a = s.Left(3);
+		String b = s.Mid(3,3);
+		int ai = sym.Find(a);
+		int bi = sym.Find(b);
+		int sum = 0;
+		for(int j = 0; j < tfs.GetCount(); j++) {
+			{
+				bool av = vol[ai * tfs.GetCount() + j];
+				bool bv = vol[bi * tfs.GetCount() + j];
+				bool v = vol[i * tfs.GetCount() + j];
+				sum += v ? 1 : 0;
+				sum += (av ? 1 : 0) + (bv ? 1 : 0);
+			} {
+				bool av = volat[ai * tfs.GetCount() + j];
+				bool bv = volat[bi * tfs.GetCount() + j];
+				bool v = volat[i * tfs.GetCount() + j];
+				sum += v ? 1 : 0;
+				sum += (av ? 1 : 0) + (bv ? 1 : 0);
+			}
+		}
+		list.Set(i-6, 0, s);
+		list.Set(i-6, 1, abs(sum));
+	}
+	list.SetSortColumn(1, true);
+	list.SetCursor(cursor);
 }
 
 
@@ -840,48 +1393,18 @@ Orders::Orders() {
 	orders.AddColumn ( "Commission" );
 	orders.AddColumn ( "Swap" );
 	orders.AddColumn ( "Profit" );
-	orders.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5" );
+	orders.AddColumn ( "Profit / 0.01lot" );
+	orders.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5 3" );
 	
 }
 
 void Orders::Data() {
+	Session& ses = GetSession();
 	
-	if (!pending_open_orders) {
-		pending_open_orders = true;
-		
-		Thread::Start([=] {
-			String data;
-			GetSession().Get("openorders", data);
-			MemStream mem((void*)data.Begin(), data.GetCount());
-			
-			int order_count = mem.Get32();
-			Vector<Order> tmp;
-			tmp.SetCount(order_count);
-			for(int i = 0; i < order_count; i++) {
-				Order& o = tmp[i];
-				o.ticket = mem.Get32();
-				o.begin = Time(1970,1,1) + mem.Get32();
-				o.end = Time(1970,1,1) + mem.Get32();
-				o.type = mem.Get32();
-				mem.Get(&o.size, sizeof(double));
-				int sym_len = mem.Get32();
-				o.symbol = mem.Get(sym_len);
-				mem.Get(&o.open, sizeof(double));
-				mem.Get(&o.stoploss, sizeof(double));
-				mem.Get(&o.takeprofit, sizeof(double));
-				mem.Get(&o.close, sizeof(double));
-				mem.Get(&o.commission, sizeof(double));
-				mem.Get(&o.swap, sizeof(double));
-				mem.Get(&o.profit, sizeof(double));
-			}
-			
-			Swap(tmp, this->open_orders);
-			pending_open_orders = false;
-		});
-	}
+	//ses.DataOrders();
 	
-	for(int i = 0; i < open_orders.GetCount(); i++) {
-		const Order& o = open_orders[i];
+	for(int i = 0; i < ses.open_orders.GetCount(); i++) {
+		const Order& o = ses.open_orders[i];
 		orders.Set(i, 0, o.ticket);
 		orders.Set(i, 1, o.begin);
 		orders.Set(i, 2, o.type);
@@ -894,6 +1417,7 @@ void Orders::Data() {
 		orders.Set(i, 9, o.commission);
 		orders.Set(i, 10, o.swap);
 		orders.Set(i, 11, o.profit);
+		orders.Set(i, 12, o.profit / (o.size / 0.01));
 	}
 }
 
@@ -1089,6 +1613,104 @@ void Events::Data() {
 
 
 
+OpenOrderCtrl::OpenOrderCtrl() {
+	CtrlLayout(*this);
+	open << THISBACK(OpenOrder);
+}
+
+void OpenOrderCtrl::Set(int sym, bool sig) {
+	this->sym = sym;
+	this->sig = sig;
+	open.Enable(true);
+}
+
+void OpenOrderCtrl::Data() {
+	Session& ses = GetSession();
+	
+	String s = ses.GetSymbol(sym);
+	
+	this->symbol.SetLabel(s);
+	this->signal.SetLabel(sig ? "Sell" : "Buy");
+	vol = ses.balance / 10000.0;
+	if (vol < 0.01) vol = 0.01;
+	this->volume.SetLabel(Format("%2n", vol));
+	this->tp.SetLabel(IntStr(tp_count));
+	this->sl.SetLabel(IntStr(sl_count));
+}
+
+void OpenOrderCtrl::OpenOrder() {
+	
+	open.Enable(false);
+	
+	Thread::Start([=] {
+		String data;
+		GetSession().Get(
+			"openorder," +
+			IntStr(sym) + "," +
+			IntStr(sig) + "," +
+			Format("%2n", vol) + "," +
+			IntStr(tp_count) + "," +
+			IntStr(sl_count)
+			,
+			data);
+		MemStream mem((void*)data.Begin(), data.GetCount());
+		
+	});
+	
+	WhenOrderSent();
+}
+
+
+
+
+
+
+
+CloseOrderCtrl::CloseOrderCtrl() {
+	CtrlLayout(*this);
+	
+	close << THISBACK(CloseOrders);
+}
+
+void CloseOrderCtrl::Set(int sym) {
+	this->sym = sym;
+	close.Enable(true);
+}
+
+void CloseOrderCtrl::Data() {
+	Session& ses = GetSession();
+	
+	String s = ses.GetSymbol(sym);
+	
+	this->symbol.SetLabel(s);
+	
+	double vol = ses.GetOrderVolume(s);
+	this->volume.SetLabel(Format("%2n", vol));
+	
+	double profit = ses.GetOrderProfit(s);
+	this->profit.SetLabel(Format("%2n", profit));
+}
+
+void CloseOrderCtrl::CloseOrders() {
+	
+	close.Enable(false);
+	
+	Thread::Start([=] {
+		String data;
+		GetSession().Get(
+			"closeorders," +
+			IntStr(sym)
+			,
+			data);
+		MemStream mem((void*)data.Begin(), data.GetCount());
+		
+	});
+	
+	WhenOrderSent();
+}
+
+
+
 
 
 
@@ -1114,16 +1736,43 @@ Client::Client() {
 	tabs.Add(hisorders.SizePos(), "History");
 	tabs.Add(calendar.SizePos(), "Calendar");
 	tabs.Add(events.SizePos(), "Events");
+	tabs.Add(open_order.SizePos(), "Open");
+	tabs.Add(close_order.SizePos(), "Close");
 	
+	specmat.WhenGraph << THISBACK(SetGraph);
+	specmat.WhenOpenOrder << THISBACK(OpenOrder);
+	specmat.WhenCloseOrder << THISBACK(CloseOrder);
+	open_order.WhenOrderSent << THISBACK1(SetTab, 6);
+	close_order.WhenOrderSent << THISBACK1(SetTab, 6);
 }
 
 Client::~Client() {
 	
 }
 
+void Client::SetGraph(int sym, int tf) {
+	tabs.Set(1);
+	single_candlestick.DataList();
+	single_candlestick.Set(sym, tf);
+	single_candlestick.Data();
+}
+
+void Client::OpenOrder(int sym, bool sig) {
+	tabs.Set(10);
+	open_order.Set(sym, sig);
+	open_order.Data();
+}
+
+void Client::CloseOrder(int sym) {
+	tabs.Set(11);
+	close_order.Set(sym);
+	close_order.Data();
+}
+
 void Client::TimedRefresh() {
 	
 	DataStatus();
+	GetSession().DataOrders();
 	
 	switch (tabs.Get()) {
 		case 0:	quotes.Data(); break;
@@ -1136,33 +1785,24 @@ void Client::TimedRefresh() {
 		case 7: hisorders.Data(); break;
 		case 8: calendar.Data(); break;
 		case 9: events.Data(); break;
+		case 10: open_order.Data(); break;
+		case 11: close_order.Data(); break;
 		
 	}
 	tc.Set(1000, THISBACK(TimedRefresh));
 }
 
 void Client::DataStatus() {
-	if (!pending_status) {
-		pending_status = true;
-		
-		Thread::Start([=] {
-			String data;
-			GetSession().Get("status", data);
-			MemStream mem((void*)data.Begin(), data.GetCount());
-			
-			mem.Get(&balance, sizeof(double));
-			mem.Get(&equity, sizeof(double));
-			mem.Get(&freemargin, sizeof(double));
-		});
-	}
+	Session& ses = GetSession();
+	ses.DataStatus();
 	
 	String s;
 	Time now = GetUtcTime();
 	s << "Time: " << Format("%", now);
-	s << " Bal: " << Format("%2n", balance);
-	s << " Eq: " << Format("%2n", equity);
-	s << " Fm: " << Format("%2n", freemargin);
-	s << " Pr: " << Format("%2n", equity - balance);
+	s << " Bal: " << Format("%2n", ses.balance);
+	s << " Eq: " << Format("%2n", ses.equity);
+	s << " Fm: " << Format("%2n", ses.freemargin);
+	s << " Pr: " << Format("%2n", ses.equity - ses.balance);
 	status.SetLabel(s);
 }
 

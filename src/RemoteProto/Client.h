@@ -170,6 +170,10 @@ protected:
 	friend class SingleCandlestick;
 	friend class Events;
 	friend class MultiCandlestick;
+	friend class MultiActivity;
+	friend class Orders;
+	friend class OpenOrderCtrl;
+	friend class Client;
 	
 	static const bool continuous = false;
 	
@@ -192,6 +196,12 @@ protected:
 	Vector<String> events;
 	Mutex event_lock;
 	
+	Vector<Order> open_orders;
+	bool pending_open_orders = false;
+	
+	bool pending_status = false;
+	double balance, equity, freemargin;
+	
 public:
 	typedef Session CLASSNAME;
 	~Session();
@@ -206,6 +216,8 @@ public:
 	void Call(Stream& out, Stream& in);
 	void SetAddress(String a, int p) {addr = a; port = p;}
 	void DataInit();
+	void DataOrders();
+	void DataStatus();
 	
 	void Register();
 	void Login();
@@ -219,6 +231,12 @@ public:
 	int64 GetLoginId() const {return login_id;}
 	String GetPassword() const {return pass;}
 	String GetSymbol(int i) const {return symbols[i];}
+	int FindSymbol(const String& s) const {return symbols.Find(s);}
+	int FindSymbolLeft(const String& s) const;
+	bool HasOrders(const String& sym);
+	int GetOrderSig(const String& sym);
+	double GetOrderVolume(const String& sym);
+	double GetOrderProfit(const String& sym);
 	
 	void Serialize(Stream& s) {s % user_id % pass % is_registered;}
 	void StoreThis() {StoreToFile(*this, ConfigFile("Client" + IntStr64(GetServerHash()) + ".bin"));}
@@ -248,7 +266,9 @@ public:
 	typedef SingleCandlestick CLASSNAME;
 	SingleCandlestick();
 	
+	void Set(int sym, int tf) {symlist.SetIndex(sym); tflist.SetIndex(tf);}
 	void Data();
+	void DataList();
 };
 
 class MultiCandlestick : public ParentCtrl {
@@ -263,11 +283,22 @@ public:
 	void Data();
 };
 
-class SpeculationMatrix : public Ctrl {
+class SpeculationMatrix : public ParentCtrl {
 	
 	struct SpeculationMatrixCtrl : public Ctrl {
 		SpeculationMatrix* m = NULL;
 		virtual void Paint(Draw& d);
+		virtual void LeftDown(Point p, dword keyflags);
+		int Tf(int i) {
+			switch (i) {
+				case 0: return 0;
+				case 1: return 2;
+				case 2: return 4;
+				case 3: return 5;
+				case 4: return 6;
+				default: return -1;
+			}
+		}
 	};
 	
 	Splitter hsplit;
@@ -276,6 +307,7 @@ class SpeculationMatrix : public Ctrl {
 	Index<String> sym;
 	Vector<int> tfs;
 	Vector<bool> values;
+	Vector<bool> signals;
 	bool pending_data = false;
 	
 public:
@@ -283,11 +315,38 @@ public:
 	
 	void Data();
 	
+	
+	Callback2<int, int> WhenGraph;
+	Callback2<int, bool> WhenOpenOrder;
+	Callback1<int> WhenCloseOrder;
+};
+
+struct ActivityCtrl : public Ctrl {
+	int sym = 0, tf = 0;
+	bool pending_graph = false;
+	
+	Vector<double> vol, volat;
+	Vector<bool> vol_bools, volat_bools;
+	int shift = 0;
+	int border = 5;
+	int count = 100;
+	
+	Vector<Point> cache;
+	
+	typedef ActivityCtrl CLASSNAME;
+	virtual void Paint(Draw& d);
+	
+	void Refresh0() {Refresh();}
+	void Data();
 };
 
 class MultiActivity : public ParentCtrl {
+	DropList tflist;
+	Splitter vsplit, hsplit0, hsplit1;
+	Array<ActivityCtrl> activities;
 	
 public:
+	typedef MultiActivity CLASSNAME;
 	MultiActivity();
 	
 	void Data();
@@ -295,6 +354,18 @@ public:
 
 class ActivityMatrix : public ParentCtrl {
 	
+	struct ActivityMatrixCtrl : public Ctrl {
+		ActivityMatrix* m = NULL;
+		virtual void Paint(Draw& d);
+	};
+	
+	Splitter hsplit;
+	ActivityMatrixCtrl ctrl;
+	ArrayCtrl list;
+	Index<String> sym;
+	Vector<int> tfs;
+	Vector<bool> vol, volat;
+	bool pending_data = false;
 public:
 	ActivityMatrix();
 	
@@ -303,8 +374,6 @@ public:
 
 class Orders : public ParentCtrl {
 	ArrayCtrl orders;
-	Vector<Order> open_orders;
-	bool pending_open_orders = false;
 	
 public:
 	Orders();
@@ -347,6 +416,38 @@ public:
 	void Data();
 };
 
+class OpenOrderCtrl : public WithOpenOrder<ParentCtrl> {
+	int sym = 0;
+	bool sig = 0;
+	double vol = 0.01;
+	int tp_count = 30;
+	int sl_count = 30;
+	
+public:
+	typedef OpenOrderCtrl CLASSNAME;
+	OpenOrderCtrl();
+	
+	void Set(int sym, bool sig);
+	void Data();
+	void OpenOrder();
+	
+	Callback WhenOrderSent;
+};
+
+class CloseOrderCtrl : public WithCloseOrder<ParentCtrl> {
+	int sym = 0;
+	
+public:
+	typedef CloseOrderCtrl CLASSNAME;
+	CloseOrderCtrl();
+	
+	void Set(int sym);
+	void Data();
+	void CloseOrders();
+	
+	Callback WhenOrderSent;
+};
+
 class Client : public TopWindow {
 	
 	
@@ -358,8 +459,6 @@ class Client : public TopWindow {
 	TimeCallback tc;
 	
 	Label status;
-	double balance, equity, freemargin;
-	bool pending_status = false;
 	
 	Quotes quotes;
 	SingleCandlestick single_candlestick;
@@ -371,22 +470,24 @@ class Client : public TopWindow {
 	HistoryOrders hisorders;
 	CalendarCtrl calendar;
 	Events events;
+	OpenOrderCtrl open_order;
+	CloseOrderCtrl close_order;
 	
 public:
 	typedef Client CLASSNAME;
 	Client();
 	~Client();
 	
+	void SetGraph(int sym, int tf);
+	void OpenOrder(int sym, bool sig);
+	void CloseOrder(int sym);
+	void SetTab(int i) {tabs.Set(i);}
+	
 	void Refresher();
 	void ToggleFullScreen() {TopWindow::FullScreen(!IsFullScreen());}
 	void PostInit() {tc.Set(1000, THISBACK(TimedRefresh));}
 	void TimedRefresh();
 	void DataStatus();
-	void DataGraph();
-	void DataOrders();
-	void DataHistory();
-	void DataCalendar();
-	void DataEvents();
 	
 	void MainMenu(Bar& bar);
 	

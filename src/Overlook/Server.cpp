@@ -27,7 +27,10 @@ void Server::Init() {
 }
 
 void Server::Start() {
-	
+	MetaTrader& mt = GetMetaTrader();
+	equity_history.Add(mt.AccountEquity());
+	if (equity_history.GetCount() > 10000)
+		equity_history.Remove(10000, equity_history.GetCount() - 10000);
 }
 
 void Server::Deinit() {

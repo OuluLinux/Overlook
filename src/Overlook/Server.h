@@ -131,6 +131,7 @@ protected:
 	// Persistent
 	int session_counter = 0;
 	Vector<LogItem> log;
+	Vector<double> equity_history;
 	
 	
 	// Temporary

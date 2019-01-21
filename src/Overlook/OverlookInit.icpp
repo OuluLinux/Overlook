@@ -38,6 +38,7 @@ INITBLOCK {
 	System::Register<VolumeOscillator>("VolumeOscillator");
 	System::Register<SpeculationOscillator>("SpeculationOscillator");
 	System::Register<GlobalSpeculationOscillator>("GlobalSpeculationOscillator");
+	System::Register<SpeculationQuality>("SpeculationQuality");
 	System::Register<BuySellVolume>("BuySellVolume");
 	System::Register<AcceleratorOscillator>("Accelerator Oscillator");
 	System::Register<GatorOscillator>("Gator Oscillator");

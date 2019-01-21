@@ -1046,12 +1046,11 @@ void DataBridge::RefreshVolumeFromFaster() {
 	int time = 0;
 	int count = 0;
 	for(int i = volume_buf.GetCount()-2; i >= 0; i--) {
-		time = time_buf.Get(i);
-		
 		double d = volume_buf.Get(i);
 		if (d != 0.0) break;
 		
 		count++;
+		time = time_buf.Get(i);
 	}
 	
 	if (!time) return;
@@ -1068,7 +1067,8 @@ void DataBridge::RefreshVolumeFromFaster() {
 		Time t = idx0[i];
 		t = SyncTime(GetTf(), t);
 		int j = idx.Find(t);
-		ASSERT(j != -1);
+		if (j == -1)
+			continue;
 		if (j == volume_buf.GetCount()-1)
 			break;
 		

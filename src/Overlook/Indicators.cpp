@@ -2593,6 +2593,8 @@ void SpeculationOscillator::Start() {
 	int counted = GetCounted();
 	if (!counted)
 		counted++;
+	else
+		counted--;
 	
 	double limit = 10.0 / 60.0 * GetMinutePeriod();
 	
@@ -2603,20 +2605,21 @@ void SpeculationOscillator::Start() {
 		Time t = idx[i];
 		int wday = DayOfWeek(t);
 		
-		if (vol >= limit && wday != 0) {
-			double open = Open(i-1);
-			double close = Open(i);
-			double absch = fabs(open / close - 1);
-			double volch = absch / vol;
+		double open = Open(i-1);
+		double close = Open(i);
+		double absch = fabs(open / close - 1);
+		double volch = vol != 0.0 ? absch / vol : 0.0;
+		
+		if (vol >= limit && wday != 0 && i > counted && IsFin(volch)) {
 			av.Add(volch);
-			double mean = av.GetMean();
-			double relch = mean != 0.0 ? volch / mean - 1.0: 0;
-			buffer.Set(i, relch);
-			if (relch > 0) {
-				signal = close < open;
-			}
-			sig.signal.Set(i, signal);
 		}
+		double mean = av.GetMean();
+		double relch = mean != 0.0 ? volch / mean - 1.0: 0;
+		buffer.Set(i, relch);
+		if (relch > 0) {
+			signal = close < open;
+		}
+		sig.signal.Set(i, signal);
 	}
 }
 
@@ -2701,6 +2704,175 @@ void GlobalSpeculationOscillator::Start() {
 }
 
 
+
+
+
+
+
+
+SpeculationQuality::SpeculationQuality() {
+	tfs.Add(0);
+	tfs.Add(2);
+	tfs.Add(4);
+	tfs.Add(5);
+	tfs.Add(6);
+	
+}
+
+void SpeculationQuality::Init() {
+	System& sys = GetSystem();
+	String sym = sys.GetSymbol(GetSymbol());
+	
+	SetCoreSeparateWindow();
+	SetBufferColor(0, Green);
+	SetCoreLevelCount(1);
+	SetCoreLevel(0, 0.5);
+	SetCoreMaximum(1.0);
+	SetCoreMinimum(0.0);
+	
+	if (GetSymbol() < sys.GetNormalSymbolCount()) {
+		String a = sym.Left(3);
+		String b = sym.Mid(3,3);
+		
+		for(int i = 0; i < tfs.GetCount(); i++) {
+			CoreList& cl = this->cl.Add();
+			cl.AddSymbol(a + "1");
+			cl.AddSymbol(b + "1");
+			cl.AddTf(tfs[i]);
+			cl.AddIndi(System::Find<SpeculationOscillator>());
+			cl.Init();
+		}
+	}
+}
+
+void SpeculationQuality::Start() {
+	System& sys = GetSystem();
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(GetTf());
+	Buffer& buffer = GetBuffer(0);
+	LabelSignal& sig = GetLabelBuffer(0, 0);
+	double point = GetDataBridge()->GetPoint();
+	int bars = GetBars();
+	int counted = GetCounted();
+	String sym = sys.GetSymbol(GetSymbol());
+	
+	for(int i = 0; i < cl.GetCount(); i++)
+		cl[i].Refresh();
+	
+	double max_sum = 0.0;
+	Vector<ConstLabelSignal*> sym_lbls, a_lbls, b_lbls;
+	Vector<const Index<Time>* > tf_idxs;
+	for(int i = 0; i < tfs.GetCount(); i++) {
+		sym_lbls.Add(&CoreIO::GetInputLabel(1, GetSymbol(), tfs[i], 0));
+		double mult = 1.0 + 1.0 - (double)i / (double)tfs.GetCount();
+		max_sum += mult;
+		tf_idxs.Add(&dbc.GetTimeIndex(tfs[i]));
+	}
+	if (GetSymbol() < sys.GetNormalSymbolCount()) {
+		String a = sym.Left(3);
+		String b = sym.Mid(3,3);
+		int ai = sys.FindSymbol(a+"1");
+		int bi = sys.FindSymbol(b+"1");
+		if (ai >= 0 && bi >= 0) {
+			for(int i = 0; i < tfs.GetCount(); i++) {
+				//a_lbls.Add(&CoreIO::GetInputLabel(1, ai, tfs[i], 0));
+				//b_lbls.Add(&CoreIO::GetInputLabel(1, bi, tfs[i], 0));
+				a_lbls.Add(&cl[i].GetLabelSignal(0, 0, 0));
+				b_lbls.Add(&cl[i].GetLabelSignal(1, 0, 0));
+				double mult = 1.0 + 1.0 - (double)i / (double)tfs.GetCount();
+				max_sum += mult * 2;
+			}
+		}
+	}
+	
+	int stat_min = bars * 0.9;
+	
+	for (int i = counted; i < bars; i++) {
+		SetSafetyLimit(i);
+		
+		Time t = idx[i];
+		
+		double sum = 0.0;
+		for(int j = 0; j < tfs.GetCount(); j++) {
+			double mult = 1.0 + 1.0 - (double)j / (double)tfs.GetCount();
+			Time t2 = SyncTime(tfs[j], t);
+			int pos = tf_idxs[j]->Find(t2);
+			bool b = sym_lbls[j]->signal.Get(pos);
+			sum += (b ? -1 : +1) * mult;
+			if (!a_lbls.IsEmpty()) {
+				bool av = a_lbls[j]->signal.Get(pos);
+				bool bv = b_lbls[j]->signal.Get(pos);
+				int ab = (av ? -1 : +1) + (bv ? +1 : -1);
+				if (ab) sum += (ab < 0 ? -2 : +2) * mult;
+			}
+		}
+		
+		PosSigSum& pss = queue.Add();
+		pss.pos = i;
+		pss.sig = sum < 0;
+		pss.sum = fabs(sum) / max_sum * 100;
+		
+		ProcessQueue();
+		
+		
+		#if 0
+		double value = stats.GetAdd(pss.sum).GetMean();
+		buffer.Set(i, value);
+		if (i >= stat_min) {
+			var.Add(value);
+			
+			if (value >= 0.5) {
+				sig.enabled.Set(i, var.GetCDF(value, false) >= 0.90);
+				sig.signal.Set(i, pss.sig);
+			} else {
+				sig.enabled.Set(i, var.GetCDF(value, true) >= 0.90);
+				sig.signal.Set(i, !pss.sig);
+			}
+		}
+		else
+			sig.enabled.Set(i, false);
+		#else
+		buffer.Set(i, pss.sum * 0.01);
+		sig.signal.Set(i, pss.sig);
+		#endif
+	}
+}
+
+void SpeculationQuality::ProcessQueue() {
+	ConstBuffer& open = GetInputBuffer(0, 0);
+	double point = GetDataBridge()->GetPoint();
+	
+	for(int i = 0; i < queue.GetCount(); i++) {
+		const PosSigSum& pss = queue[i];
+		
+		double o = open.Get(pss.pos);
+		double hi = o + pips * point;
+		double lo = o - pips * point;
+		
+		bool end_found = false;
+		for(int j = pss.pos+1; j < open.GetCount(); j++) {
+			double cur = open.Get(j);
+			if (cur >= hi) {
+				bool success = pss.sig == false;
+				stats.GetAdd(pss.sum).Add(success);
+				end_found = true;
+				break;
+			}
+			else if (cur >= lo) {
+				bool success = pss.sig == true;
+				stats.GetAdd(pss.sum).Add(success);
+				end_found = true;
+				break;
+			}
+		}
+		
+		if (end_found) {
+			queue.Remove(i);
+			i--;
+		}
+	}
+	
+}
 
 
 

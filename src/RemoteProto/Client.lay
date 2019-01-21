@@ -5,11 +5,11 @@ LAYOUT(OpenOrder, 400, 156)
 	ITEM(Label, dv___3, SetLabel(t_("Volume:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -16))
 	ITEM(Label, dv___4, SetLabel(t_("Symbol:")).SetAlign(ALIGN_RIGHT).HCenterPosZ(132, -130).VCenterPosZ(20, -64))
 	ITEM(Label, symbol, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -64))
-	ITEM(Label, signal, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -40))
 	ITEM(Label, sl, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, 32))
 	ITEM(Label, tp, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, 8))
 	ITEM(Label, volume, SetFrame(FieldFrame()).HCenterPosZ(256, 68).VCenterPosZ(20, -16))
 	ITEM(Button, open, SetLabel(t_("Open Order")).HCenterPosZ(392, 0).VCenterPosZ(31, 62))
+	ITEM(DropList, signal, HCenterPosZ(256, 68).VCenterPosZ(20, -40))
 END_LAYOUT
 
 LAYOUT(CloseOrder, 400, 112)

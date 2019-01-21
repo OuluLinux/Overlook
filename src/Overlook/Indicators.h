@@ -663,6 +663,7 @@ public:
 		reg % In<DataBridge>()
 			% Out(1, 1)
 			% Lbl(1)
+			% Mem(av)
 			% Mem(signal);
 	}
 };
@@ -693,6 +694,65 @@ public:
 	}
 };
 
+
+
+class SpeculationQuality : public Core {
+	struct PosSigSum : Moveable<PosSigSum> {
+		int pos, sig, sum;
+		void Serialize(Stream& s) {s % pos % sig % sum;}
+	};
+	VectorMap<int, OnlineVariance> stats;
+	Vector<PosSigSum> queue;
+	OnlineVariance var;
+	int pips = 10;
+	
+	Vector<int> tfs;
+	Vector<CoreList> cl;
+	
+	void ProcessQueue();
+	
+public:
+	SpeculationQuality();
+	
+	virtual void Init();
+	virtual void Start();
+	
+	virtual void IO(ValueRegister& reg) {
+		reg % In<DataBridge>()
+			% In<SpeculationOscillator>(&FilterFunction)
+			% Out(1, 1)
+			% Lbl(1)
+			% Arg("pips", pips, 0, 0)
+			% Mem(stats)
+			% Mem(queue)
+			% Mem(var)
+			;
+	}
+	
+	static bool FilterFunction(void* basesystem, bool match_tf, int in_sym, int in_tf, int out_sym, int out_tf) {
+		if (match_tf)
+			return out_tf == 0 || out_tf == 2 || out_tf == 4 || out_tf == 5 || out_tf == 6;
+		else {
+			#if 0
+			if (in_sym == out_sym)
+				return true;
+			System& sys = GetSystem();
+			if (out_sym >= sys.GetNormalSymbolCount() && in_sym < sys.GetNormalSymbolCount()) {
+				String is = sys.GetSymbol(in_sym);
+				String os = sys.GetSymbol(out_sym);
+				String a = is.Left(3);
+				String b = is.Mid(3,3);
+				if (os == a+"1" || os == b+"1")
+					return true;
+				return false;
+			}
+			return false;
+			#else
+			return in_sym == out_sym;
+			#endif
+		}
+	}
+};
 
 
 

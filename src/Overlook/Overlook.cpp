@@ -55,7 +55,7 @@ Overlook::Overlook() : watch(this) {
 	trade.AddColumn ( "Profit" );
 	trade.AddColumn ( "Profit / 0.01 lot" );
 	trade.AddIndex(sym);
-	trade.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5" );
+	trade.ColumnWidths ( "5 5 3 3 3 3 3 3 3 3 3 5 3" );
 	trade.WhenLeftDouble << THISBACK(OpenChartFromList);
 	trade.WhenRightDown = THISBACK(TradeRightDown);
 	
@@ -611,7 +611,7 @@ void Overlook::RefreshTrades() {
 		trade.Set(i, 9, o.commission);
 		trade.Set(i, 10, o.swap);
 		trade.Set(i, 11, o.profit);
-		trade.Set(i, 12, o.profit / (o.volume / 0.01));
+		trade.Set(i, 12, Format("%2n", o.profit / (o.volume / 0.01)));
 	}
 	trade.SetCount(count);
 	

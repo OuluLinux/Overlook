@@ -554,10 +554,10 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				c.Refresh();
 				ConstLabelSignal& vol_sig = c.GetLabelSignal(0, 0, 0);
 				ConstLabelSignal& volat_sig = c.GetLabelSignal(0, 1, 0);
-				bool vol_b = vol_sig.signal.Top();
+				bool vol_b = vol_sig.enabled.Top();
 				//vol_b = Random(2);
 				out.Put(&vol_b, sizeof(bool));
-				bool volat_b = volat_sig.signal.Top();
+				bool volat_b = volat_sig.enabled.Top();
 				//volat_b = Random(2);
 				out.Put(&volat_b, sizeof(bool));
 			}
@@ -613,6 +613,14 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			
 			out.Put32(0);
 		}
+	}
+	else if (key == "equityhistory") {
+		
+		int count = server->equity_history.GetCount();
+		out.Put32(count);
+		for(int i = 0; i < count; i++)
+			out.Put(&server->equity_history[i], sizeof(double));
+		
 	}
 	
 	out.Seek(size_pos);

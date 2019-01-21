@@ -13,6 +13,7 @@ using namespace Upp;
 
 
 void Print(const String& s);
+void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count, double zero_line);
 
 struct QuotesData : Moveable<QuotesData> {
 	String symbol;
@@ -191,7 +192,7 @@ protected:
 	int port = 17000;
 	bool is_logged_in = false;
 	bool running = false, stopped = true;
-	Mutex call_lock, lock;
+	Mutex call_lock, lock, order_lock;
 	
 	Vector<String> events;
 	Mutex event_lock;
@@ -261,6 +262,7 @@ public:
 class SingleCandlestick : public ParentCtrl {
 	DropList symlist, tflist;
 	CandlestickCtrl graph;
+	Button inc_tf, sub_tf;
 	
 public:
 	typedef SingleCandlestick CLASSNAME;
@@ -269,10 +271,12 @@ public:
 	void Set(int sym, int tf) {symlist.SetIndex(sym); tflist.SetIndex(tf);}
 	void Data();
 	void DataList();
+	void IncTf(int i);
 };
 
 class MultiCandlestick : public ParentCtrl {
 	DropList tflist;
+	Button inc_tf, sub_tf;
 	Splitter vsplit, hsplit0, hsplit1;
 	Array<CandlestickCtrl> candles;
 	
@@ -281,6 +285,7 @@ public:
 	MultiCandlestick();
 	
 	void Data();
+	void IncTf(int i);
 };
 
 class SpeculationMatrix : public ParentCtrl {
@@ -373,7 +378,17 @@ public:
 };
 
 class Orders : public ParentCtrl {
+	struct EquityHistory : public Ctrl {
+		Vector<Point> cache;
+		Vector<double> equity_history;
+		virtual void Paint(Draw& d) {
+			if (!equity_history.IsEmpty())
+				DrawVectorPolyline(d, GetSize(), equity_history, cache, equity_history.GetCount(), equity_history[0]);
+		}
+	};
 	ArrayCtrl orders;
+	EquityHistory his;
+	bool pending_data = false;
 	
 public:
 	Orders();
@@ -382,6 +397,15 @@ public:
 };
 
 class HistoryOrders : public ParentCtrl {
+	struct OrderHistory : public Ctrl {
+		Vector<Point> cache;
+		Vector<double> order_history;
+		virtual void Paint(Draw& d) {
+			if (!order_history.IsEmpty())
+				DrawVectorPolyline(d, GetSize(), order_history, cache, order_history.GetCount(), order_history[0]);
+		}
+	};
+	OrderHistory his;
 	ArrayCtrl hisorders;
 	Vector<Order> history_orders;
 	bool pending_history_orders = false;
@@ -394,6 +418,12 @@ public:
 };
 
 class CalendarCtrl : public ParentCtrl {
+	struct Headline : public Ctrl {
+		int level = -1, minutes = 0;
+		String headline;
+		virtual void Paint(Draw& d);
+	};
+	Headline hl;
 	ArrayCtrl calendar;
 	bool pending_calendar = false;
 	Vector<CalEvent> cal_events;
@@ -418,7 +448,6 @@ public:
 
 class OpenOrderCtrl : public WithOpenOrder<ParentCtrl> {
 	int sym = 0;
-	bool sig = 0;
 	double vol = 0.01;
 	int tp_count = 30;
 	int sl_count = 30;
@@ -459,6 +488,7 @@ class Client : public TopWindow {
 	TimeCallback tc;
 	
 	Label status;
+	ButtonOption rotator_button, fullscreen_button;
 	
 	Quotes quotes;
 	SingleCandlestick single_candlestick;
@@ -473,6 +503,10 @@ class Client : public TopWindow {
 	OpenOrderCtrl open_order;
 	CloseOrderCtrl close_order;
 	
+	bool rotator_enabled = false;
+	int rotator_tab = 0;
+	TimeStop rotator_timer;
+	
 public:
 	typedef Client CLASSNAME;
 	Client();
@@ -482,19 +516,20 @@ public:
 	void OpenOrder(int sym, bool sig);
 	void CloseOrder(int sym);
 	void SetTab(int i) {tabs.Set(i);}
+	void SetRotator(bool b) {rotator_enabled = b; rotator_button.Set(b);}
 	
 	void Refresher();
-	void ToggleFullScreen() {TopWindow::FullScreen(!IsFullScreen());}
+	void ToggleFullScreen() {bool b = !IsFullScreen(); TopWindow::FullScreen(b); fullscreen_button.Set(b);}
+	void ToggleRotator() {SetRotator(!rotator_enabled);}
 	void PostInit() {tc.Set(1000, THISBACK(TimedRefresh));}
 	void TimedRefresh();
 	void DataStatus();
 	
 	void MainMenu(Bar& bar);
 	
-	
-	void RefreshGui();
-	void RefreshGuiChannel();
-	void RefreshNearest();
+	void RotatePushed();
+	void FullscreenPushed();
+	void Rotate();
 	
 	
 };

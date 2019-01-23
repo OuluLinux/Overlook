@@ -511,6 +511,15 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				ConstLabelSignal& sig = c.GetLabelSignal(0, 0, 0);
 				bool b = sig.signal.Top();
 				out.Put(&b, sizeof(bool));
+				
+				double sum = 0;
+				for(int k = 0; k < 20; k++) {
+					bool b = sig.signal.Get(sig.signal.GetCount() - 1 - k);
+					if (b) sum += 1.0;
+				}
+				sum /= 20;
+				b = sum > 0.5;
+				out.Put(&b, sizeof(bool));
 			}
 		}
 	}

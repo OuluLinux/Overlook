@@ -1,6 +1,10 @@
 #include "Client.h"
 #include <plugin/jpg/jpg.h>
 
+void PlayAlarm(int i) {
+	PlaySound(GetExeDirFile("alarm" + IntStr(i) + ".wav"), NULL, SND_FILENAME | SND_ASYNC);
+}
+
 void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count, double zero_line) {
 	double min = +DBL_MAX;
 	double max = -DBL_MAX;
@@ -825,7 +829,9 @@ SpeculationMatrix::SpeculationMatrix() {
 	tfs.Add(6);
 	
 	values.SetCount(sym.GetCount() * tfs.GetCount(), false);
+	avvalues.SetCount(sym.GetCount() * tfs.GetCount(), false);
 	signals.SetCount(sym.GetCount(), false);
+	prev_values.SetCount(sym.GetCount(), 0);
 	
 	list.AddColumn("Symbol");
 	list.AddColumn("Sum");
@@ -841,18 +847,22 @@ void SpeculationMatrix::Data() {
 			GetSession().Get("speculation", data);
 			MemStream mem((void*)data.Begin(), data.GetCount());
 			
-			Vector<bool> tmp;
+			Vector<bool> tmp, avtmp;
 			tmp.SetCount(sym.GetCount() * tfs.GetCount());
+			avtmp.SetCount(sym.GetCount() * tfs.GetCount());
 			int row = 0;
 			for(int i = 0; i < sym.GetCount(); i++) {
 				for(int j = 0; j < tfs.GetCount(); j++) {
 					bool b;
 					mem.Get(&b, sizeof(bool));
-					tmp[row++] = b;
+					tmp[row] = b;
+					mem.Get(&b, sizeof(bool));
+					avtmp[row++] = b;
 				}
 			}
 			
 			Swap(tmp, values);
+			Swap(avtmp, avvalues);
 			
 			pending_data = false;
 		});
@@ -863,12 +873,13 @@ void SpeculationMatrix::Data() {
 	
 	double max_sum = 0;
 	for(int j = 0; j < tfs.GetCount(); j++) {
-		double mult = 1.0 + 1.0 - (double)j / (double)tfs.GetCount();
-		max_sum += mult + mult * 2;
+		double mult = 1.0 + (double)j / (double)tfs.GetCount();
+		max_sum += mult + mult * 2 + mult + mult * 2;
 	}
 	
 	int cursor = 0;
 	if (list.IsCursor()) cursor = list.GetCursor();
+	bool has_increases = false, has_decreases = false;
 	for(int i = 6; i < sym.GetCount(); i++) {
 		String s = sym[i];
 		String a = s.Left(3);
@@ -879,20 +890,37 @@ void SpeculationMatrix::Data() {
 		for(int j = 0; j < tfs.GetCount(); j++) {
 			bool av = values[ai * tfs.GetCount() + j];
 			bool bv = values[bi * tfs.GetCount() + j];
+			bool aav = avvalues[ai * tfs.GetCount() + j];
+			bool abv = avvalues[bi * tfs.GetCount() + j];
 			bool v = values[i * tfs.GetCount() + j];
-			double mult = 1.0 + 1.0 - (double)j / (double)tfs.GetCount();
+			bool avv = avvalues[i * tfs.GetCount() + j];
+			double mult = 1.0 + (double)j / (double)tfs.GetCount();
 			sum += (v ? -1 : +1) * mult;
+			sum += (avv ? -1 : +1) * mult;
 			int ab = (av ? -1 : +1) + (bv ? +1 : -1);
+			int aab = (aav ? -1 : +1) + (abv ? +1 : -1);
 			if (ab) sum += (ab < 0 ? -2 : +2) * mult;
+			if (aab) sum += (aab < 0 ? -2 : +2) * mult;
 		}
+		int new_value = fabs(sum) / max_sum * 1000;
+		int old_value = prev_values[i];
+		if (new_value > 500 && old_value <= 500) has_increases = true;
+		if (new_value <= 500 && old_value > 500) has_decreases = true;
+		prev_values[i] = new_value;
 		list.Set(i-6, 0, s);
-		list.Set(i-6, 1, (int)(fabs(sum) / max_sum * 1000));
+		list.Set(i-6, 1, new_value);
 		list.SetDisplay(i-6, 1, ProgressDisplay());
 		list.Set(i-6, 2, sum > 0 ? "Buy" : "Sell");
 		signals[i] = sum < 0;
 	}
 	list.SetSortColumn(1, true);
 	list.SetCursor(cursor);
+	
+	if (has_increases)
+		PlayAlarm(1);
+	if (has_decreases)
+		PlayAlarm(2);
+	
 }
 
 void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
@@ -906,6 +934,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	double col = r.GetWidth() / (double)grid_count;
 	double subrow = row / 2;
 	double subsubrow = row / 4;
+	double subsubsubrow = row / 8;
 	double subcol = col / m->tfs.GetCount();
 	Font fnt = Arial(row / 3);
 	
@@ -916,21 +945,27 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		int y = (1 + i) * row;
 		d.DrawText(x + 2, y + 2, a, fnt);
 		
-		y += subrow;
 		for(int j = 0; j < m->tfs.GetCount(); j++) {
 			bool b = m->values[i * m->tfs.GetCount() + j];
+			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
 			x = j * subcol;
-			d.DrawRect(x, y, subcol + 1, subrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			y = (1 + i) * row + subrow;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			y = (1 + i) * row + subrow + subsubrow;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
 		}
 		
 		x = (1 + i) * col;
 		y = 0;
 		d.DrawText(x + 2, y + 2, a, fnt);
-		y = subrow;
 		for(int j = 0; j < m->tfs.GetCount(); j++) {
 			bool b = m->values[i * m->tfs.GetCount() + j];
+			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
 			x = (1 + i) * col + j * subcol;
-			d.DrawRect(x, y, subcol + 1, subrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			y = subrow;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			y = subrow + subsubrow;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
 		}
 		
 		
@@ -965,7 +1000,10 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 				y = (1 + j) * row + subrow;
 				
 				bool b = m->values[sympos * m->tfs.GetCount() + k];
-				d.DrawRect(x, y, subcol + 1, subsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+				bool ab = m->avvalues[sympos * m->tfs.GetCount() + k];
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+				y = (1 + j) * row + subrow + subsubsubrow;
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
 				
 				y = (1 + j) * row + subrow + subsubrow;
 				bool av = m->values[i * m->tfs.GetCount() + k];
@@ -982,7 +1020,23 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 				if (sum > 0)		c = Color(28, 212, 0);
 				else if (sum < 0)	c = Color(56, 127, 255);
 				else				c = GrayColor();
-				d.DrawRect(x, y, subcol + 1, subsubrow + 1, c);
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
+				
+				y = (1 + j) * row + subrow + subsubrow + subsubsubrow;
+				bool aav = m->avvalues[i * m->tfs.GetCount() + k];
+				bool abv = m->avvalues[j * m->tfs.GetCount() + k];
+				sum = 0;
+				if (is_ab) {
+					sum += aav ? -1 : +1;
+					sum += abv ? +1 : -1;
+				} else {
+					sum += aav ? +1 : -1;
+					sum += abv ? -1 : +1;
+				}
+				if (sum > 0)		c = Color(28, 212, 0);
+				else if (sum < 0)	c = Color(56, 127, 255);
+				else				c = GrayColor();
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 			}
 		}
 	}
@@ -993,6 +1047,8 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		int y2 = (1 + i) * row + subrow;
 		int y3 = (1 + i) * row + subrow + subsubrow;
 		int y4 = (1 + i + 1) * row;
+		int y5 = (1 + i) * row + subrow + subsubsubrow;
+		int y6 = (1 + i) * row + subrow + subsubrow + subsubsubrow;
 		
 		for(int j = 0; j < 6; j++) {
 			if (j == i) continue;
@@ -1010,10 +1066,14 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		}
 		
 		d.DrawLine(0, y2, r.GetWidth(), y2, 1, GrayColor());
-		d.DrawLine(col, y3, r.GetWidth(), y3, 1, GrayColor());
+		d.DrawLine(0, y3, r.GetWidth(), y3, 1, GrayColor());
+		d.DrawLine(col, y5, r.GetWidth(), y5, 1, GrayColor());
+		d.DrawLine(col, y6, r.GetWidth(), y6, 1, GrayColor());
 		d.DrawLine(0, y, r.GetWidth(), y, 1, Black());
 		d.DrawLine(x, 0, x, r.GetHeight(), 1, Black());
 	}
+	d.DrawLine(col, subrow, r.GetWidth(), subrow, 1, GrayColor());
+	d.DrawLine(col, subrow + subsubrow, r.GetWidth(), subrow + subsubrow, 1, GrayColor());
 }
 
 void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags) {
@@ -1637,6 +1697,7 @@ void HistoryOrders::Data() {
 		hisorders.Set(i, 10, o.swap);
 		hisorders.Set(i, 11, o.profit);
 	}
+	hisorders.SetCount(history_orders.GetCount());
 	hisorders_lock.Leave();
 	
 	his.Refresh();
@@ -1657,10 +1718,10 @@ void CalendarCtrl::Headline::Paint(Draw& d) {
 		String lvl;
 		Color c;
 		switch (level) {
-			case 0: lvl = "Info"; c = Black(); break;
-			case 1: lvl = "Low"; c = Color(28, 85, 0); break;
-			case 2: lvl = "Med"; c = Color(137, 136, 0); break;
-			case 3: lvl = "High"; c = Color(152, 25, 0); break;
+			case 0: lvl = "Info "; c = Black(); break;
+			case 1: lvl = "Low "; c = Color(28, 85, 0); break;
+			case 2: lvl = "Med "; c = Color(137, 136, 0); break;
+			case 3: lvl = "High "; c = Color(152, 25, 0); break;
 		}
 		Size lvlsz = GetTextSize(lvl, fnt);
 		int x = 2 + lvlsz.cx;
@@ -1710,6 +1771,7 @@ void CalendarCtrl::Data() {
 			int ev_count = mem.Get32();
 			Vector<CalEvent> tmp;
 			tmp.SetCount(ev_count);
+			bool is_bank_holiday = false;
 			for(int i = 0; i < ev_count; i++) {
 				CalEvent& ev = tmp[i];
 				ev.id = mem.Get32();
@@ -1732,11 +1794,22 @@ void CalendarCtrl::Data() {
 						headline = ev.currency + ": " + ev.title;
 					}
 				}
+				
+				if (ev.title.Find("Bank Holiday") != -1 && (ev.currency == "USD" || ev.currency == "EUR" || ev.currency == "GBP" || ev.currency == "JPY"))
+					is_bank_holiday = true;
 			}
 			
-			hl.level = level;
-			hl.minutes = minutes;
-			hl.headline = headline;
+			if (is_bank_holiday) {
+				hl.level = 3;
+				hl.minutes = 0;
+				hl.headline = "Bank Holiday";
+			} else {
+				hl.level = level;
+				hl.minutes = minutes;
+				hl.headline = headline;
+			}
+			
+			if ((minutes == 0 || minutes == 60) && level >= 2) PlayAlarm(3);
 			
 			calendar_lock.Enter();
 			Swap(tmp, this->cal_events);

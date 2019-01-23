@@ -310,8 +310,9 @@ class SpeculationMatrix : public ParentCtrl {
 	SpeculationMatrixCtrl ctrl;
 	ArrayCtrl list;
 	Index<String> sym;
+	Vector<int> prev_values;
 	Vector<int> tfs;
-	Vector<bool> values;
+	Vector<bool> values, avvalues;
 	Vector<bool> signals;
 	bool pending_data = false;
 	
@@ -449,7 +450,7 @@ public:
 class OpenOrderCtrl : public WithOpenOrder<ParentCtrl> {
 	int sym = 0;
 	double vol = 0.01;
-	int tp_count = 30;
+	int tp_count = 60;
 	int sl_count = 30;
 	
 public:

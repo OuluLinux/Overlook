@@ -106,7 +106,7 @@ GUI_APP_MAIN {
 	if (Config::start_time == 0) {
 		Time t = GetUtcTime();
 		#ifndef flagSECONDS
-		t -= 2*365*24*60*60;
+		t -= 2*30*24*60*60;
 		#else
 		t -= 14*24*60*60;
 		#endif

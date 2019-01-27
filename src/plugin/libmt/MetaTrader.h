@@ -6,7 +6,6 @@ namespace libmt {
 class MetaTrader : public Brokerage {
 	Mutex lock;
 	Mutex current_price_lock;
-	Mutex data_lock;
 	String mainaddr;
 	int input, output;
 	int port;
@@ -25,12 +24,8 @@ public:
 	int GetPort() const {return port;}
 	void GetMarginPercentages();
 	void Data();
-	void DataEnter() {data_lock.Enter();}
-	void DataLeave() {data_lock.Leave();}
 	int GetTimeOffset() const {return time_offset;}
 	
-	void CloseOrder(const Order& o, double lots);
-	void OpenOrder(int sym, int op, double lots);
 	
 	// Brokerage functions without caching
 	//  - function wrapper is needed, because remote calls are implemented with macros and

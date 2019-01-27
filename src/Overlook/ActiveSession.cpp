@@ -272,17 +272,30 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	else if (key == "quotes") {
 		MetaTrader& mt = GetMetaTrader();
 		const Vector<Symbol>& symbols = mt.GetSymbols();
-		const Vector<Price>& prices = mt.GetAskBid();
-		
-		out.Put32(symbols.GetCount());
-		for(int i = 0; i < symbols.GetCount(); i++) {
-			const Symbol& sym = symbols[i];
-			const Price& p = prices[i];
-			out.Put32(sym.name.GetCount());
-			out.Put(sym.name);
-			out.Put(&p.ask, sizeof(double));
-			out.Put(&p.bid, sizeof(double));
-			out.Put(&sym.point, sizeof(double));
+		if (IsNull(server->shift)) {
+			const Vector<Price>& prices = mt.GetAskBid();
+			out.Put32(symbols.GetCount());
+			for(int i = 0; i < symbols.GetCount(); i++) {
+				const Symbol& sym = symbols[i];
+				const Price& p = prices[i];
+				out.Put32(sym.name.GetCount());
+				out.Put(sym.name);
+				out.Put(&p.ask, sizeof(double));
+				out.Put(&p.bid, sizeof(double));
+				out.Put(&sym.point, sizeof(double));
+			}
+		} else {
+			out.Put32(sys.GetNormalSymbolCount());
+			for(int i = 0; i < sys.GetNormalSymbolCount(); i++) {
+				const Symbol& sym = symbols[i];
+				out.Put32(sym.name.GetCount());
+				out.Put(sym.name);
+				double ask, bid;
+				GetDataBridgeCommon().GetAskBid(server->shift, i, ask, bid);
+				out.Put(&ask, sizeof(double));
+				out.Put(&bid, sizeof(double));
+				out.Put(&sym.point, sizeof(double));
+			}
 		}
 	}
 	else if (key == "graph") {
@@ -294,6 +307,10 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			int tf = ScanInt(args[1]);
 			int req_count = ScanInt(args[2]);
 			if (sym >= 0 && sym < sys.GetSymbolCount() && tf >= 0 && tf < sys.GetPeriodCount()) {
+				const Index<Time>& idx = GetDataBridgeCommon().GetTimeIndex(tf);
+				int shift_pos = IsNull(server->shift) ? 0 : idx.Find(SyncTime(tf, server->shift));
+				if (shift_pos < 0) shift_pos = 0;
+				
 				CoreList c;
 				c.AddSymbol(sys.GetSymbol(sym));
 				c.AddTf(tf);
@@ -308,7 +325,7 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 					ConstBuffer& spec = c.GetBuffer(0, 1, 0);
 					ConstLabelSignal& specsig = c.GetLabelSignal(0, 1, 0);
 					
-					int size = open.GetCount();
+					int size = shift_pos == 0 ? open.GetCount() : shift_pos + 1;
 					int count = min(max(0, req_count), size);
 					out.Put32(count);
 					for(int i = 0; i < count; i++) {
@@ -342,6 +359,10 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			int tf = ScanInt(args[1]);
 			int req_count = ScanInt(args[2]);
 			if (sym >= 0 && sym < sys.GetSymbolCount() && tf >= 0 && tf < sys.GetPeriodCount()) {
+				const Index<Time>& idx = GetDataBridgeCommon().GetTimeIndex(tf);
+				int shift_pos = IsNull(server->shift) ? 0 : idx.Find(SyncTime(tf, server->shift));
+				if (shift_pos < 0) shift_pos = 0;
+				
 				CoreList c;
 				c.AddSymbol(sys.GetSymbol(sym));
 				c.AddTf(tf);
@@ -356,7 +377,7 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 					ConstLabelSignal& vol_bool = c.GetLabelSignal(0, 0, 0);
 					ConstLabelSignal& volat_bool = c.GetLabelSignal(0, 1, 0);
 					
-					int size = vol.GetCount();
+					int size = shift_pos == 0 ? vol.GetCount() : shift_pos + 1;
 					int count = min(max(0, req_count), size);
 					out.Put32(count);
 					for(int i = 0; i < count; i++) {
@@ -378,24 +399,33 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 		else out.Put32(0);
 	}
 	else if (key == "status") {
-		MetaTrader& mt = GetMetaTrader();
-		double balance = mt.AccountBalance();
-		double equity = mt.AccountEquity();
-		double freemargin = mt.AccountFreeMargin();
-		out.Put(&balance, sizeof(double));
-		out.Put(&equity, sizeof(double));
-		out.Put(&freemargin, sizeof(double));
+		if (IsNull(server->shift)) {
+			MetaTrader& mt = GetMetaTrader();
+			double balance = mt.AccountBalance();
+			double equity = mt.AccountEquity();
+			double freemargin = mt.AccountFreeMargin();
+			out.Put(&balance, sizeof(double));
+			out.Put(&equity, sizeof(double));
+			out.Put(&freemargin, sizeof(double));
+		} else {
+			double balance = server->sb.AccountBalance();
+			double equity = server->sb.AccountEquity();
+			double freemargin = server->sb.AccountFreeMargin();
+			out.Put(&balance, sizeof(double));
+			out.Put(&equity, sizeof(double));
+			out.Put(&freemargin, sizeof(double));
+		}
 	}
 	else if (key == "openorders") {
-		MetaTrader& mt = GetMetaTrader();
-		mt.DataEnter();
+		Brokerage& b = IsNull(server->shift) ? (Brokerage&)GetMetaTrader() : (Brokerage&)server->sb;
+		b.DataEnter();
 		
-		const Vector<Order>& orders = mt.GetOpenOrders();
+		const Vector<Order>& orders = b.GetOpenOrders();
 		
 		out.Put32(orders.GetCount());
 		for(int i = 0; i < orders.GetCount(); i++) {
 			const Order& o = orders[i];
-			const Symbol& sym = mt.GetSymbols()[o.symbol];
+			const Symbol& sym = b.GetSymbols()[o.symbol];
 			out.Put32(o.ticket);
 			out.Put32(o.begin.Get() - Time(1970,1,1).Get());
 			out.Put32(o.end.Get() - Time(1970,1,1).Get());
@@ -412,18 +442,18 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(&o.profit, sizeof(double));
 		}
 		
-		mt.DataLeave();
+		b.DataLeave();
 	}
 	else if (key == "historyorders") {
-		MetaTrader& mt = GetMetaTrader();
-		mt.DataEnter();
+		Brokerage& b = IsNull(server->shift) ? (Brokerage&)GetMetaTrader() : (Brokerage&)server->sb;
+		b.DataEnter();
 		
-		const Vector<Order>& orders = mt.GetHistoryOrders();
+		const Vector<Order>& orders = b.GetHistoryOrders();
 		
 		out.Put32(orders.GetCount());
 		for(int i = 0; i < orders.GetCount(); i++) {
 			const Order& o = orders[i];
-			const Symbol& sym = mt.GetSymbols()[o.symbol];
+			const Symbol& sym = b.GetSymbols()[o.symbol];
 			out.Put32(o.ticket);
 			out.Put32(o.begin.Get() - Time(1970,1,1).Get());
 			out.Put32(o.end.Get() - Time(1970,1,1).Get());
@@ -440,12 +470,12 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			out.Put(&o.profit, sizeof(double));
 		}
 		
-		mt.DataLeave();
+		b.DataLeave();
 	}
 	else if (key == "calendar") {
 		CalendarCommon& cal = GetCalendar();
 		
-		Time now = GetUtcTime();
+		Time now = IsNull(server->shift) ? GetUtcTime() : server->shift;
 		Time begin = now - 24*60*60;
 		Time end = now + 6*60*60;
 		Vector<CalEvent> evs;
@@ -473,87 +503,166 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 	}
 	else if (key == "speculation") {
 		Vector<String> sym;
-		sym.Add("EUR1");
-		sym.Add("USD1");
-		sym.Add("GBP1");
-		sym.Add("JPY1");
-		sym.Add("CHF1");
-		sym.Add("CAD1");
+		sym.Add("EUR2");
+		sym.Add("USD2");
+		sym.Add("GBP2");
+		sym.Add("JPY2");
+		sym.Add("CHF2");
+		sym.Add("CAD2");
+		sym.Add("AUD2");
+		sym.Add("NZD2");
 		sym.Add("EURUSD" + sys.GetPostFix());
 		sym.Add("EURGBP" + sys.GetPostFix());
 		sym.Add("EURJPY" + sys.GetPostFix());
 		sym.Add("EURCHF" + sys.GetPostFix());
 		sym.Add("EURCAD" + sys.GetPostFix());
+		sym.Add("EURAUD" + sys.GetPostFix());
+		sym.Add("EURNZD" + sys.GetPostFix());
 		sym.Add("GBPUSD" + sys.GetPostFix());
 		sym.Add("USDJPY" + sys.GetPostFix());
 		sym.Add("USDCHF" + sys.GetPostFix());
 		sym.Add("USDCAD" + sys.GetPostFix());
+		sym.Add("AUDUSD" + sys.GetPostFix());
+		sym.Add("NZDUSD" + sys.GetPostFix());
 		sym.Add("GBPJPY" + sys.GetPostFix());
 		sym.Add("GBPCHF" + sys.GetPostFix());
 		sym.Add("GBPCAD" + sys.GetPostFix());
+		sym.Add("GBPAUD" + sys.GetPostFix());
+		sym.Add("GBPNZD" + sys.GetPostFix());
 		sym.Add("CHFJPY" + sys.GetPostFix());
 		sym.Add("CADJPY" + sys.GetPostFix());
+		sym.Add("AUDJPY" + sys.GetPostFix());
+		sym.Add("NZDJPY" + sys.GetPostFix());
 		sym.Add("CADCHF" + sys.GetPostFix());
+		sym.Add("AUDCHF" + sys.GetPostFix());
+		sym.Add("NZDCHF" + sys.GetPostFix());
+		sym.Add("AUDCAD" + sys.GetPostFix());
+		sym.Add("NZDCAD" + sys.GetPostFix());
+		sym.Add("AUDNZD" + sys.GetPostFix());
 		Vector<int> tfs;
 		tfs.Add(0);
 		tfs.Add(2);
 		tfs.Add(4);
 		tfs.Add(5);
 		tfs.Add(6);
+		Vector<int> shift_posv;
+		for(int i = 0; i < tfs.GetCount(); i++)
+			shift_posv.Add(IsNull(server->shift) ? 0 : max(0, GetDataBridgeCommon().GetTimeIndex(tfs[i]).Find(SyncTime(tfs[i], server->shift))));
 		for(int i = 0; i < sym.GetCount(); i++) {
+			
 			for(int j = 0; j < tfs.GetCount(); j++) {
+				int tf = tfs[j];
+				int shift_pos = shift_posv[j];
+				
 				CoreList c;
 				c.AddSymbol(sym[i]);
-				c.AddTf(tfs[j]);
+				c.AddTf(tf);
 				c.AddIndi(System::Find<SpeculationOscillator>());
 				c.Init();
 				c.Refresh();
 				ConstLabelSignal& sig = c.GetLabelSignal(0, 0, 0);
-				bool b = sig.signal.Top();
+				bool b = shift_pos == 0 ? sig.signal.Top() : sig.signal.Get(shift_pos);
 				out.Put(&b, sizeof(bool));
 				
+				int size = shift_pos == 0 ? sig.signal.GetCount() : shift_pos + 1;
 				double sum = 0;
-				for(int k = 0; k < 20; k++) {
-					bool b = sig.signal.Get(sig.signal.GetCount() - 1 - k);
+				for(int k = 0; k < 21; k++) {
+					bool b = sig.signal.Get(size - 1 - k);
 					if (b) sum += 1.0;
 				}
 				sum /= 20;
 				b = sum > 0.5;
 				out.Put(&b, sizeof(bool));
+				
+				DataBridge& db = *c.GetDataBridge(0);
+				DataBridge& dbm1 = *c.GetDataBridgeM1(0);
+				double spread = db.GetPoint();
+				int spread_id = CommonSpreads().Find(sym[i]);
+				if (spread_id != -1)
+					spread *= CommonSpreads()[spread_id];
+				else
+					spread *= CommonSpreads().Top();
+				ConstBuffer& open_m1 = dbm1.GetBuffer(0);
+				ConstBuffer& open = db.GetBuffer(0);
+				double close = shift_pos == 0 ? open_m1.Top() : open_m1.Get(shift_posv[0]);
+				int steps = 0;
+				switch (tfs[j]) {
+					case 0: steps = 21; break;
+					case 2: steps = 4; break;
+					case 4: steps = 2; break;
+					case 5: steps = 2; break;
+					case 6: steps = 1; break;
+				}
+				int count = shift_pos == 0 ? min(sig.signal.GetCount(), open.GetCount()) : shift_pos + 1;
+				bool prev_sig;
+				bool succ = false;
+				for(int k = 0; k < steps; k++) {
+					int pos = count - 1 - k;
+					bool cur_sig = sig.signal.Get(pos);
+					if (k && cur_sig != prev_sig) break;
+					prev_sig = cur_sig;
+					double cur_open = open.Get(pos);
+					double diff = close - cur_open;
+					if (cur_sig) diff *= -1;
+					if (diff >= spread) {
+						succ = true;
+						break;
+					}
+				}
+				out.Put(&succ, sizeof(bool));
 			}
 		}
 	}
 	else if (key == "activity") {
 		Vector<String> sym;
-		sym.Add("EUR1");
-		sym.Add("USD1");
-		sym.Add("GBP1");
-		sym.Add("JPY1");
-		sym.Add("CHF1");
-		sym.Add("CAD1");
+		sym.Add("EUR2");
+		sym.Add("USD2");
+		sym.Add("GBP2");
+		sym.Add("JPY2");
+		sym.Add("CHF2");
+		sym.Add("CAD2");
+		sym.Add("AUD2");
+		sym.Add("NZD2");
 		sym.Add("EURUSD" + sys.GetPostFix());
 		sym.Add("EURGBP" + sys.GetPostFix());
 		sym.Add("EURJPY" + sys.GetPostFix());
 		sym.Add("EURCHF" + sys.GetPostFix());
 		sym.Add("EURCAD" + sys.GetPostFix());
+		sym.Add("EURAUD" + sys.GetPostFix());
+		sym.Add("EURNZD" + sys.GetPostFix());
 		sym.Add("GBPUSD" + sys.GetPostFix());
 		sym.Add("USDJPY" + sys.GetPostFix());
 		sym.Add("USDCHF" + sys.GetPostFix());
 		sym.Add("USDCAD" + sys.GetPostFix());
+		sym.Add("AUDUSD" + sys.GetPostFix());
+		sym.Add("NZDUSD" + sys.GetPostFix());
 		sym.Add("GBPJPY" + sys.GetPostFix());
 		sym.Add("GBPCHF" + sys.GetPostFix());
 		sym.Add("GBPCAD" + sys.GetPostFix());
+		sym.Add("GBPAUD" + sys.GetPostFix());
+		sym.Add("GBPNZD" + sys.GetPostFix());
 		sym.Add("CHFJPY" + sys.GetPostFix());
 		sym.Add("CADJPY" + sys.GetPostFix());
+		sym.Add("AUDJPY" + sys.GetPostFix());
+		sym.Add("NZDJPY" + sys.GetPostFix());
 		sym.Add("CADCHF" + sys.GetPostFix());
+		sym.Add("AUDCHF" + sys.GetPostFix());
+		sym.Add("NZDCHF" + sys.GetPostFix());
+		sym.Add("AUDCAD" + sys.GetPostFix());
+		sym.Add("NZDCAD" + sys.GetPostFix());
+		sym.Add("AUDNZD" + sys.GetPostFix());
 		Vector<int> tfs;
 		tfs.Add(0);
 		tfs.Add(2);
 		tfs.Add(4);
 		tfs.Add(5);
 		TimeStop ts;
+		Vector<int> shift_posv;
+		for(int i = 0; i < tfs.GetCount(); i++)
+			shift_posv.Add(IsNull(server->shift) ? 0 : max(0, GetDataBridgeCommon().GetTimeIndex(tfs[i]).Find(SyncTime(tfs[i], server->shift))));
 		for(int i = 0; i < sym.GetCount(); i++) {
 			for(int j = 0; j < tfs.GetCount(); j++) {
+				int shift_pos = shift_posv[j];
 				CoreList c;
 				c.AddSymbol(sym[i]);
 				c.AddTf(tfs[j]);
@@ -563,17 +672,18 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				c.Refresh();
 				ConstLabelSignal& vol_sig = c.GetLabelSignal(0, 0, 0);
 				ConstLabelSignal& volat_sig = c.GetLabelSignal(0, 1, 0);
-				bool vol_b = vol_sig.enabled.Top();
+				int size = shift_pos == 0 ? vol_sig.enabled.GetCount() : shift_pos + 1;
+				bool vol_b = vol_sig.enabled.Get(size-1);
 				//vol_b = Random(2);
 				out.Put(&vol_b, sizeof(bool));
-				bool volat_b = volat_sig.enabled.Top();
+				bool volat_b = volat_sig.enabled.Get(size-1);
 				//volat_b = Random(2);
 				out.Put(&volat_b, sizeof(bool));
 			}
 		}
 	}
 	else if (key == "openorder") {
-		MetaTrader& mt = GetMetaTrader();
+		Brokerage& b = IsNull(server->shift) ? (Brokerage&)GetMetaTrader() : (Brokerage&)server->sb;
 		System& sys = GetSystem();
 		
 		if (args.GetCount() == 5) {
@@ -583,42 +693,42 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 			int tp_count = ScanInt(args[3]);
 			int sl_count = ScanInt(args[4]);
 			
-			const Symbol& symbol = mt.GetSymbol(sym);
+			const Symbol& symbol = b.GetSymbol(sym);
 			String s = symbol.name;
 			double price, sl, tp;
 			if (!sig) {
-				price = mt.RealtimeAsk(sym);
+				price = b.RealtimeAsk(sym);
 				sl = price - sl_count * symbol.point;
 				tp = price + tp_count * symbol.point;
 			}
 			else {
-				price = mt.RealtimeBid(sym);
+				price = b.RealtimeBid(sym);
 				sl = price + sl_count * symbol.point;
 				tp = price - tp_count * symbol.point;
 			}
 				
-			int r = mt.OrderSend(s, sig, volume, price, 5, sl, tp, "", 0);
+			int r = b.OrderSend(s, sig, volume, price, 5, sl, tp, "", 0);
 			out.Put32(r);
 		}
 	}
 	else if (key == "closeorders") {
-		MetaTrader& mt = GetMetaTrader();
+		Brokerage& b = IsNull(server->shift) ? (Brokerage&)GetMetaTrader() : (Brokerage&)server->sb;
 		System& sys = GetSystem();
 		
 		if (args.GetCount() == 1) {
 			int sym = ScanInt(args[0]);
 			
-			const Symbol& symbol = mt.GetSymbol(sym);
+			const Symbol& symbol = b.GetSymbol(sym);
 			String s = symbol.name;
-			const Vector<Order>& orders = mt.GetOpenOrders();
+			const Vector<Order>& orders = b.GetOpenOrders();
 			
-			mt.DataEnter();
+			b.DataEnter();
 			for(int i = 0; i < orders.GetCount(); i++) {
 				const Order& o = orders[i];
 				if (o.symbol == sym)
-					mt.CloseOrder(o, o.volume);
+					b.CloseOrder(o, o.volume);
 			}
-			mt.DataLeave();
+			b.DataLeave();
 			
 			out.Put32(0);
 		}

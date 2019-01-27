@@ -77,8 +77,10 @@ void DataBridge::Start() {
 				buffers[i]->SetCount(0);
 			
 			const Symbol& mtsym = mt.GetSymbol(sym);
+			#if 0
 			if (mt_period == 1)
 				RefreshFromHistory(true);
+			#endif
 			RefreshFromHistory(false);
 		}
 		#endif

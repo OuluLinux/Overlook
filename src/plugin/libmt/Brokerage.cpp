@@ -860,4 +860,37 @@ int Brokerage::OrderSend(int symbol, int cmd, double volume, double price, int s
 		expiry);
 }
 
+void Brokerage::CloseOrder(const Order& o, double lots) {
+	if (lots < 0.01)
+		return;
+	for(int i = 0; i < 3; i++) {
+		double price;
+		if (o.type == OP_BUY)
+			price = RealtimeBid(o.symbol);
+		else
+			price = RealtimeAsk(o.symbol);
+		bool b = OrderClose(o.ticket, lots, price, 3);
+		if (b)
+			break;
+	}
+}
+
+void Brokerage::OpenOrder(int sym, int op, double lots) {
+	for(int i = 0; i < 3; i++) {
+		double price;
+		if (op == OP_BUY)
+			price = RealtimeAsk(sym);
+		else
+			price = RealtimeBid(sym);
+		int ticket = OrderSend(
+			symbols[sym].name, op, lots, price, 3,
+			0, 0, "", 0);
+		if (ticket < 0) {
+			LOG(GetLastError());
+		}
+		if (ticket >= 0)
+			break;
+	}
+}
+
 }

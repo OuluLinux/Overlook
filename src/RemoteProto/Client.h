@@ -11,9 +11,25 @@ using namespace Upp;
 #define IMAGEFILE <RemoteProto/Client.iml>
 #include <Draw/iml_header.h>
 
+#define cur_count 8
 
 void Print(const String& s);
 void DrawVectorPolyline(Draw& id, Size sz, const Vector<double>& data, Vector<Point>& polyline, int max_count, double zero_line);
+
+class ProgressDisplayCls2 : public Display {
+public:
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword s) const;
+};
+
+Display& ProgressDisplay2();
+
+class SuccessDisplayCls : public Display {
+public:
+	virtual void Paint(Draw& w, const Rect& r, const Value& q, Color ink, Color paper, dword s) const;
+};
+
+Display& SuccessDisplay();
+
 
 struct QuotesData : Moveable<QuotesData> {
 	String symbol;
@@ -75,7 +91,10 @@ struct CalendarTimeDisplay : Display {
 		w.DrawRect(r, paper);
 		Point pt = r.TopLeft();
 		Font fnt = StdFont();
-		if (t >= GetSysTime()) fnt.Bold();
+		Time time = GetSysTime();
+		int wday = DayOfWeek(time);
+		if (wday == 0 || wday == 6) time -= 2 * 24 * 60 * 60;
+		if (t >= time) fnt.Bold();
 		w.DrawText(pt.x, pt.y+1, str, fnt, ink);
 	}
 };
@@ -304,18 +323,33 @@ class SpeculationMatrix : public ParentCtrl {
 				default: return -1;
 			}
 		}
+		
 	};
-	
+	struct GlobalSuccessCtrl : public Ctrl {
+		SpeculationMatrix* m = NULL;
+		virtual void Paint(Draw& d);
+	};
 	Splitter hsplit;
 	SpeculationMatrixCtrl ctrl;
+	ParentCtrl listparent;
+	GlobalSuccessCtrl succ_ctrl;
 	ArrayCtrl list;
 	Index<String> sym;
+	Vector<Vector<double> > slow_sum;
+	Vector<double> succ_sum, succ_tf;
 	Vector<int> prev_values;
 	Vector<int> tfs;
-	Vector<bool> values, avvalues;
+	Vector<bool> values, avvalues, succ;
 	Vector<bool> signals;
+	Color buy_paper, sell_paper, buy_color0, sell_color0, buy_color1, sell_color1;
+	int tf_begin = 0, tf_end = 0;
 	bool pending_data = false;
+	bool is_size = false;
 	
+	inline Color GetColor(int tf, bool b) {if (tf >= tf_begin && tf < tf_end) return b ? sell_color0 : buy_color0; else return b ? sell_color1 : buy_color1;}
+	inline Color GetSuccessColor(int tf, bool b) {return b ? LtYellow : GrayColor(64);}
+	inline Color GetPaper(bool b) {return b ? sell_paper : buy_paper;}
+	inline Color GetGrayColor(int tf) {return (tf >= tf_begin && tf < tf_end) ? GrayColor(128) : GrayColor(128+64);}
 public:
 	SpeculationMatrix();
 	
@@ -323,7 +357,7 @@ public:
 	
 	
 	Callback2<int, int> WhenGraph;
-	Callback2<int, bool> WhenOpenOrder;
+	Callback3<int, bool, bool> WhenOpenOrder;
 	Callback1<int> WhenCloseOrder;
 };
 
@@ -452,12 +486,13 @@ class OpenOrderCtrl : public WithOpenOrder<ParentCtrl> {
 	double vol = 0.01;
 	int tp_count = 60;
 	int sl_count = 30;
+	bool is_size = false;
 	
 public:
 	typedef OpenOrderCtrl CLASSNAME;
 	OpenOrderCtrl();
 	
-	void Set(int sym, bool sig);
+	void Set(int sym, bool sig, bool is_size);
 	void Data();
 	void OpenOrder();
 	
@@ -514,7 +549,7 @@ public:
 	~Client();
 	
 	void SetGraph(int sym, int tf);
-	void OpenOrder(int sym, bool sig);
+	void OpenOrder(int sym, bool sig, bool is_size);
 	void CloseOrder(int sym);
 	void SetTab(int i) {tabs.Set(i);}
 	void SetRotator(bool b) {rotator_enabled = b; rotator_button.Set(b);}

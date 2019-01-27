@@ -25,6 +25,7 @@ protected:
 	Vector<int> tfs;
 	Vector<bool> loaded;
 	Vector<double> points;
+	Vector<int> data_seek_cursor;
 	Index<String> short_ids;
 	String account_server;
 	TimeStop since_last_askbid_refresh;
@@ -64,6 +65,7 @@ public:
 	void Serialize(Stream& s) {s % time_bufs % idx;}
 	void LoadThis() {LoadFromFile(*this, GetOverlookFile("DataBridgeCommon.bin"));}
 	void StoreThis() {StoreToFile(*this, GetOverlookFile("DataBridgeCommon.bin"));}
+	void GetAskBid(const Time& shift, int sym, double& ask, double& bid);
 	
 	Mutex lock;
 };

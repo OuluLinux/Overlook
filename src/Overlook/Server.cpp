@@ -22,15 +22,33 @@ void Server::Init() {
 	
 	db.Init();
 	
+	(Brokerage&)sb = (Brokerage&)GetMetaTrader();
+	sb.Clear();
+	
 	running = true;
 	Thread::Start(THISBACK(Process));
 }
 
 void Server::Start() {
-	MetaTrader& mt = GetMetaTrader();
-	equity_history.Add(mt.AccountEquity());
+	Brokerage& b = IsNull(shift) ? (Brokerage&)GetMetaTrader() : (Brokerage&)sb;
+	equity_history.Add(b.AccountEquity());
 	if (equity_history.GetCount() > 10000)
-		equity_history.Remove(10000, equity_history.GetCount() - 10000);
+		equity_history.Remove(0, equity_history.GetCount() - 10000);
+	
+	Time now = GetUtcTime();
+	int wday = DayOfWeek(now);
+	if (wday == 0 || wday == 6) {
+		shift = now - 2 * 24 * 60 * 60;
+		sb.SetTime(shift);
+		for(int i = 0; i < sb.GetSymbols().GetCount(); i++) {
+			double ask, bid;
+			GetDataBridgeCommon().GetAskBid(shift, i, ask, bid);
+			sb.SetPrice(i, ask, bid);
+		}
+		sb.RefreshOrders();
+	} else {
+		shift = Null;
+	}
 }
 
 void Server::Deinit() {

@@ -50,6 +50,7 @@ protected:
 	
 	
 	SpinLock current_price_lock, order_lock;
+	Mutex data_lock;
 	
 	
 public:
@@ -64,6 +65,9 @@ public:
 	
 	virtual void Clear();
 	virtual void CollectOnce(double d) {}
+	
+	void DataEnter() {data_lock.Enter();}
+	void DataLeave() {data_lock.Leave();}
 	
 	int FindSymbol(const String& s);
 	void ZeroEquity() {balance = 0.0; equity = 0.0;}
@@ -83,6 +87,8 @@ public:
 	void RefreshLimits();
 	void SetInitialBalance(double d) {initial_balance = d;}
 	double GetOpenProfit(const String& symbol);
+	void CloseOrder(const Order& o, double lots);
+	void OpenOrder(int sym, int op, double lots);
 	
 	const Vector<Order>&	GetOpenOrders() const {return orders;}
 	const Vector<Order>&	GetHistoryOrders() const {return history_orders;}

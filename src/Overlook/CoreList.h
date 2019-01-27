@@ -36,6 +36,7 @@ public:
 	int GetLabelSignalCount(int sym, int src) const {return lbls[sym][src].GetCount();}
 	bool IsEmpty() {return bufs.IsEmpty();}
 	DataBridge* GetDataBridge(int i) {return db[i];}
+	DataBridge* GetDataBridgeM1(int i) {return db_m1[i];}
 	
 	void Init();
 	void Refresh();

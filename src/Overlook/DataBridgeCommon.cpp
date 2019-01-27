@@ -20,6 +20,58 @@ void DataBridgeCommon::InspectInit() {
 	}
 }
 
+void DataBridgeCommon::GetAskBid(const Time& shift, int sym, double& ask, double& bid) {
+	const Vector<AskBid>& data = this->data[sym];
+	MetaTrader& mt = GetMetaTrader();
+	
+	ask = 0;
+	bid = 0;
+	if (data.IsEmpty()) {
+		return;
+	}
+	
+	if (data_seek_cursor.IsEmpty())
+		data_seek_cursor.SetCount(GetSystem().GetNormalSymbolCount(), 0);
+	
+	int& cursor = data_seek_cursor[sym];
+	
+	if (cursor < 0) cursor = 0;
+	else if (cursor >= data.GetCount()) cursor = data.GetCount() - 1;
+	
+	const AskBid& ab = data[cursor];
+	Time ab_time = mt.GetTimeToUtc(ab.a);
+	
+	if (ab_time < shift) {
+		if (cursor < data.GetCount() - 1)
+			cursor++;
+		while (cursor < data.GetCount()-1) {
+			const AskBid& ab = data[cursor];
+			Time ab_time = mt.GetTimeToUtc(ab.a);
+			if (ab_time >= shift) {
+				ask = ab.b;
+				bid = ab.c;
+				break;
+			}
+			cursor++;
+		}
+	} else {
+		if (cursor > 0)
+			cursor--;
+		while (cursor > 0) {
+			const AskBid& ab = data[cursor];
+			Time ab_time = mt.GetTimeToUtc(ab.a);
+			if (ab_time < shift) {
+				cursor++;
+				const Time& ab_time = ab.a;
+				ask = ab.b;
+				bid = ab.c;
+				break;
+			}
+			cursor--;
+		}
+	}
+}
+
 void DataBridgeCommon::Init() {
 	System& sys = GetSystem();
 	

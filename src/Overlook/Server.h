@@ -142,7 +142,10 @@ protected:
 	Index<String> blacklist;
 	ServerDatabase db;
 	RWMutex lock, msglock;
+	SimBroker sb;
+	Time shift = Null;
 	bool running = false, stopped = true;
+	
 	
 	
 public:

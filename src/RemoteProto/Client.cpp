@@ -1,6 +1,57 @@
 #include "Client.h"
 #include <plugin/jpg/jpg.h>
 
+void ProgressDisplayCls2::Paint(Draw& w, const Rect& _r, const Value& q,
+                               Color ink, Color paper, dword s) const
+{
+	Rect r = _r;
+	r.top += 1;
+	r.bottom -= 1;
+	DrawBorder(w, r, InsetBorder);
+	r.Deflate(2);
+	int pos = minmax(int((double)q * r.Width() / 1000), 0, r.Width());
+	Color c = (double)q >= 500.0 ? Green : LtBlue;
+	if(pos) {
+		w.DrawRect(r.left, r.top, 1, r.Height(), SColorLight);
+		w.DrawRect(r.left + 1, r.top, pos - 1, 1, SColorLight);
+		w.DrawRect(r.left + 1, r.top + 1, pos - 1, r.Height() - 2, c);
+		w.DrawRect(r.left + 1, r.top + r.Height() - 1, pos - 1, 1, SColorLight);
+		w.DrawRect(r.left + pos - 1, r.top + 1, 1, r.Height() - 1, SColorLight);
+	}
+	w.DrawRect(r.left + pos, r.top, r.Width() - pos, r.Height(), SColorPaper);
+};
+
+Display& ProgressDisplay2()
+{
+	return Single<ProgressDisplayCls2>();
+}
+
+void SuccessDisplayCls::Paint(Draw& w, const Rect& _r, const Value& q,
+                               Color ink, Color paper, dword s) const
+{
+	Rect r = _r;
+	r.top += 1;
+	r.bottom -= 1;
+	DrawBorder(w, r, InsetBorder);
+	r.Deflate(2);
+	int pos = minmax(int((double)q * r.Width() / 1000), 0, r.Width());
+	Color c = (double)q >= 500.0 ? Color(160, 26, 0) : Color(163, 162, 0);
+	if(pos) {
+		w.DrawRect(r.left, r.top, 1, r.Height(), SColorLight);
+		w.DrawRect(r.left + 1, r.top, pos - 1, 1, SColorLight);
+		w.DrawRect(r.left + 1, r.top + 1, pos - 1, r.Height() - 2, c);
+		w.DrawRect(r.left + 1, r.top + r.Height() - 1, pos - 1, 1, SColorLight);
+		w.DrawRect(r.left + pos - 1, r.top + 1, 1, r.Height() - 1, SColorLight);
+	}
+	w.DrawRect(r.left + pos, r.top, r.Width() - pos, r.Height(), SColorPaper);
+};
+
+Display& SuccessDisplay()
+{
+	return Single<SuccessDisplayCls>();
+}
+
+
 void PlayAlarm(int i) {
 	PlaySound(GetExeDirFile("alarm" + IntStr(i) + ".wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
@@ -747,22 +798,22 @@ MultiCandlestick::MultiCandlestick() {
 	sub_tf <<= THISBACK1(IncTf, -1);
 	
 	CandlestickCtrl& eur = candles.Add();
-	eur.sym = GetSession().symbols.Find("EUR1");
+	eur.sym = GetSession().symbols.Find("EUR2");
 	
 	CandlestickCtrl& usd = candles.Add();
-	usd.sym = GetSession().symbols.Find("USD1");
+	usd.sym = GetSession().symbols.Find("USD2");
 	
 	CandlestickCtrl& gbp = candles.Add();
-	gbp.sym = GetSession().symbols.Find("GBP1");
+	gbp.sym = GetSession().symbols.Find("GBP2");
 	
 	CandlestickCtrl& jpy = candles.Add();
-	jpy.sym = GetSession().symbols.Find("JPY1");
+	jpy.sym = GetSession().symbols.Find("JPY2");
 	
 	CandlestickCtrl& chf = candles.Add();
-	chf.sym = GetSession().symbols.Find("CHF1");
+	chf.sym = GetSession().symbols.Find("CHF2");
 	
 	CandlestickCtrl& cad = candles.Add();
-	cad.sym = GetSession().symbols.Find("CAD1");
+	cad.sym = GetSession().symbols.Find("CAD2");
 	
 	hsplit0 << eur << usd << gbp;
 	hsplit1 << jpy << chf << cad;
@@ -789,16 +840,13 @@ void MultiCandlestick::Data() {
 	}
 }
 
-
-
-
-
 SpeculationMatrix::SpeculationMatrix() {
 	Add(hsplit.SizePos());
 	hsplit.Horz();
-	hsplit << ctrl << list;
+	hsplit << ctrl << listparent;
 	hsplit.SetPos(8000);
 	ctrl.m = this;
+	succ_ctrl.m = this;
 	
 	sym.Add("EUR");
 	sym.Add("USD");
@@ -806,21 +854,36 @@ SpeculationMatrix::SpeculationMatrix() {
 	sym.Add("JPY");
 	sym.Add("CHF");
 	sym.Add("CAD");
+	sym.Add("AUD");
+	sym.Add("NZD");
 	sym.Add("EURUSD");
 	sym.Add("EURGBP");
 	sym.Add("EURJPY");
 	sym.Add("EURCHF");
 	sym.Add("EURCAD");
+	sym.Add("EURAUD");
+	sym.Add("EURNZD");
 	sym.Add("GBPUSD");
 	sym.Add("USDJPY");
 	sym.Add("USDCHF");
 	sym.Add("USDCAD");
+	sym.Add("AUDUSD");
+	sym.Add("NZDUSD");
 	sym.Add("GBPJPY");
 	sym.Add("GBPCHF");
 	sym.Add("GBPCAD");
+	sym.Add("GBPAUD");
+	sym.Add("GBPNZD");
 	sym.Add("CHFJPY");
 	sym.Add("CADJPY");
+	sym.Add("AUDJPY");
+	sym.Add("NZDJPY");
 	sym.Add("CADCHF");
+	sym.Add("AUDCHF");
+	sym.Add("NZDCHF");
+	sym.Add("AUDCAD");
+	sym.Add("NZDCAD");
+	sym.Add("AUDNZD");
 	
 	tfs.Add(0);
 	tfs.Add(2);
@@ -830,15 +893,36 @@ SpeculationMatrix::SpeculationMatrix() {
 	
 	values.SetCount(sym.GetCount() * tfs.GetCount(), false);
 	avvalues.SetCount(sym.GetCount() * tfs.GetCount(), false);
+	succ.SetCount(sym.GetCount() * tfs.GetCount(), false);
 	signals.SetCount(sym.GetCount(), false);
 	prev_values.SetCount(sym.GetCount(), 0);
+	slow_sum.SetCount(sym.GetCount());
+	for(int i = 0; i < slow_sum.GetCount(); i++)
+		slow_sum[i].SetCount(tfs.GetCount(), 0);
+	succ_sum.SetCount(sym.GetCount(), 0);
+	succ_tf.SetCount(tfs.GetCount());
 	
+	listparent.Add(succ_ctrl.TopPos(0, 15).HSizePos());
+	listparent.Add(list.VSizePos(15).HSizePos());
 	list.AddColumn("Symbol");
 	list.AddColumn("Sum");
+	list.AddColumn("Success");
 	list.AddColumn("Sig");
+	list.AddColumn("Value");
+	list.ColumnWidths("6 5 5 3 1");
+	
+	buy_paper = Color(170, 255, 150);
+	sell_paper = Color(113, 212, 255);
+	buy_color0 = Color(28, 212, 0);
+	sell_color0 = Color(56, 127, 255);
+	buy_color1 = Color(28, 255, 0);
+	sell_color1 = Color(28, 212, 255);
+
 }
 
 void SpeculationMatrix::Data() {
+	Session& ses = GetSession();
+	
 	if (!pending_data) {
 		pending_data = true;
 		
@@ -847,9 +931,10 @@ void SpeculationMatrix::Data() {
 			GetSession().Get("speculation", data);
 			MemStream mem((void*)data.Begin(), data.GetCount());
 			
-			Vector<bool> tmp, avtmp;
+			Vector<bool> tmp, avtmp, succtmp;
 			tmp.SetCount(sym.GetCount() * tfs.GetCount());
 			avtmp.SetCount(sym.GetCount() * tfs.GetCount());
+			succtmp.SetCoun1t(sym.GetCount() * tfs.GetCount());
 			int row = 0;
 			for(int i = 0; i < sym.GetCount(); i++) {
 				for(int j = 0; j < tfs.GetCount(); j++) {
@@ -857,69 +942,166 @@ void SpeculationMatrix::Data() {
 					mem.Get(&b, sizeof(bool));
 					tmp[row] = b;
 					mem.Get(&b, sizeof(bool));
-					avtmp[row++] = b;
+					avtmp[row] = b;
+					mem.Get(&b, sizeof(bool));
+					succtmp[row++] = b;
 				}
 			}
 			
 			Swap(tmp, values);
 			Swap(avtmp, avvalues);
+			Swap(succtmp, succ);
 			
 			pending_data = false;
 		});
 	
 	}
 	
-	Refresh();
 	
-	double max_sum = 0;
-	for(int j = 0; j < tfs.GetCount(); j++) {
-		double mult = 1.0 + (double)j / (double)tfs.GetCount();
-		max_sum += mult + mult * 2 + mult + mult * 2;
-	}
+	struct Data : Moveable<Data> {
+		int start, size;
+		double slow_sum = 0, succ_sum = 0, max_sum = 0, max_succ_sum = 0;
+		
+		bool operator()(const Data& a, const Data& b) const {return fabs(a.slow_sum) / a.max_sum > fabs(b.slow_sum) / b.max_sum;}
+	};
+	Vector<Vector<Data> > data;
+	Vector<double> succ_tf;
+	data.SetCount(sym.GetCount());
+	succ_tf.SetCount(tfs.GetCount(), 0);
 	
-	int cursor = 0;
-	if (list.IsCursor()) cursor = list.GetCursor();
-	bool has_increases = false, has_decreases = false;
-	for(int i = 6; i < sym.GetCount(); i++) {
+	for(int i = cur_count; i < sym.GetCount(); i++) {
 		String s = sym[i];
+		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
 		String a = s.Left(3);
 		String b = s.Mid(3,3);
 		int ai = sym.Find(a);
 		int bi = sym.Find(b);
-		double sum = 0;
-		for(int j = 0; j < tfs.GetCount(); j++) {
+		Vector<Data>& symdata = data[i];
+		
+		for(int j = 0; j < 3; j++) {
+			int size = 3 + j;
+			int start_count = tfs.GetCount() - size + 1;
+			for(int k = 0; k < start_count; k++) {
+				Data& d = symdata.Add();
+				d.start = k;
+				d.size = size;
+				
+				for (int l = 0; l < size; l++) {
+					int tfi = k + l;
+					double mult = 1.0 + (double)tfi / (double)tfs.GetCount();
+					d.max_sum += mult + mult * 2 + mult + mult * 2;
+					d.max_succ_sum += mult + mult * 2;
+				}
+			}
+		}
+		
+		double succ_sum = 0;
+		for(int j = tfs.GetCount()-1; j >= 0; j--) {
 			bool av = values[ai * tfs.GetCount() + j];
 			bool bv = values[bi * tfs.GetCount() + j];
 			bool aav = avvalues[ai * tfs.GetCount() + j];
 			bool abv = avvalues[bi * tfs.GetCount() + j];
 			bool v = values[i * tfs.GetCount() + j];
 			bool avv = avvalues[i * tfs.GetCount() + j];
-			double mult = 1.0 + (double)j / (double)tfs.GetCount();
-			sum += (v ? -1 : +1) * mult;
-			sum += (avv ? -1 : +1) * mult;
+			bool sav = succ[ai * tfs.GetCount() + j];
+			bool sbv = succ[bi * tfs.GetCount() + j];
+			bool sv = succ[i * tfs.GetCount() + j];
+			double slow_mult = 1.0 + (double)j / (double)tfs.GetCount();
+			double symtf_sum = 0;
+			symtf_sum += (v ? -1 : +1) * slow_mult;
+			symtf_sum += (avv ? -1 : +1) * slow_mult;
 			int ab = (av ? -1 : +1) + (bv ? +1 : -1);
 			int aab = (aav ? -1 : +1) + (abv ? +1 : -1);
-			if (ab) sum += (ab < 0 ? -2 : +2) * mult;
-			if (aab) sum += (aab < 0 ? -2 : +2) * mult;
+			if (ab) symtf_sum += (ab < 0 ? -2 : +2) * slow_mult;
+			if (aab) symtf_sum += (aab < 0 ? -2 : +2) * slow_mult;
+			
+			for(int k = 0; k < symdata.GetCount(); k++) {
+				Data& d = symdata[k];
+				if (j >= d.start && j < d.start + d.size) {
+					d.slow_sum += symtf_sum;
+					d.succ_sum += (sv + sav + sbv) * slow_mult;
+				}
+			}
+			
+			succ_tf[j] += (sv + sav + sbv) / (sym.GetCount() * 3.0);
 		}
-		int new_value = fabs(sum) / max_sum * 1000;
+		this->succ_sum[i] = succ_sum;
+		
+		Sort(symdata, Data());
+	}
+	Swap(this->succ_tf, succ_tf);
+	
+	
+	int tf_begin = -1, tf_end = -1, data_i = -1;
+	double max_tf_fac = -DBL_MAX;
+	for(int i = 0; i < data[cur_count].GetCount(); i++) {
+		double fac_sum = 0;
+		for(int j = cur_count; j < sym.GetCount(); j++) {
+			double fac = fabs(data[j][i].slow_sum) / data[j][i].max_sum;
+			fac_sum += fac;
+		}
+		if (fac_sum > max_tf_fac) {
+			tf_begin = data[cur_count][i].start;
+			tf_end = tf_begin + data[cur_count][i].size;
+			data_i = i;
+			max_tf_fac = fac_sum;
+		}
+	}
+	this->tf_begin = tf_begin;
+	this->tf_end = tf_end;
+	
+	
+	int cursor = 0;
+	if (list.IsCursor()) cursor = list.GetCursor();
+	bool has_increases = false, has_decreases = false;
+	int size_count = 0;
+	for(int i = cur_count; i < sym.GetCount(); i++) {
+		String s = sym[i];
+		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
+		
+		double sum = data[i][data_i].slow_sum;
+		int new_value = fabs(sum) / data[i][data_i].max_sum * 1000;
 		int old_value = prev_values[i];
 		if (new_value > 500 && old_value <= 500) has_increases = true;
 		if (new_value <= 500 && old_value > 500) has_decreases = true;
 		prev_values[i] = new_value;
-		list.Set(i-6, 0, s);
-		list.Set(i-6, 1, new_value);
-		list.SetDisplay(i-6, 1, ProgressDisplay());
-		list.Set(i-6, 2, sum > 0 ? "Buy" : "Sell");
+		if (new_value >= 500)
+			size_count++;
+		
+		double succ = data[i][data_i].succ_sum;
+		int new_succ_value = succ / data[i][data_i].max_succ_sum * 1000;
+		
+		int row = i-cur_count;
+		if (ses.HasOrders(full)) {
+			bool sig = sum < 0;
+			bool real_sig = ses.GetOrderSig(full);
+			list.Set(row, 0, AttrText(s).Paper(real_sig ? sell_paper : buy_paper));
+			list.Set(row, 3, AttrText(!sig ? "Buy" : "Sell").Paper(sig == real_sig ? White() : LtRed()));
+		}
+		else {
+			list.Set(row, 0, s);
+			list.Set(row, 3, sum > 0 ? "Buy" : "Sell");
+		}
+		list.Set(row, 1, new_value);
+		list.SetDisplay(row, 1, ProgressDisplay2());
+		list.Set(row, 2, new_succ_value);
+		list.SetDisplay(row, 2, SuccessDisplay());
+		list.Set(row, 4, (new_value + new_succ_value) / 20);
 		signals[i] = sum < 0;
 	}
-	list.SetSortColumn(1, true);
+	list.SetSortColumn(4, true);
 	list.SetCursor(cursor);
 	
 	if (has_increases)
 		PlayAlarm(1);
 	if (has_decreases)
 		PlayAlarm(2);
+	bool new_is_size = size_count >= 3;
+	if (new_is_size && !is_size)
+		PlayAlarm(4);
+	is_size = new_is_size;
+	
+	Refresh();
 	
 }
 
@@ -929,47 +1111,54 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	Rect r(GetSize());
 	d.DrawRect(GetSize(), White());
 	
-	int grid_count = 7;
+	int grid_count = cur_count+1;
 	double row = r.GetHeight() / (double)grid_count;
 	double col = r.GetWidth() / (double)grid_count;
 	double subrow = row / 2;
-	double subsubrow = row / 4;
-	double subsubsubrow = row / 8;
+	double subsubrow = subrow / 3;
+	double subsubsubrow = subsubrow / 2;
 	double subcol = col / m->tfs.GetCount();
-	Font fnt = Arial(row / 3);
+	Font fnt = Arial(subrow * 0.6);
 	
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < cur_count; i++) {
 		String a = m->sym[i];
 		
 		int x = 0;
 		int y = (1 + i) * row;
-		d.DrawText(x + 2, y + 2, a, fnt);
+		Size a_size = GetTextSize(a, fnt);
+		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
 		
 		for(int j = 0; j < m->tfs.GetCount(); j++) {
 			bool b = m->values[i * m->tfs.GetCount() + j];
 			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
+			bool s = m->succ[i * m->tfs.GetCount() + j];
 			x = j * subcol;
 			y = (1 + i) * row + subrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, b));
 			y = (1 + i) * row + subrow + subsubrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, ab));
+			y = (1 + i) * row + subrow + subsubrow * 2;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(j, s));
 		}
 		
 		x = (1 + i) * col;
 		y = 0;
-		d.DrawText(x + 2, y + 2, a, fnt);
+		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
 		for(int j = 0; j < m->tfs.GetCount(); j++) {
 			bool b = m->values[i * m->tfs.GetCount() + j];
 			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
+			bool s = m->succ[i * m->tfs.GetCount() + j];
 			x = (1 + i) * col + j * subcol;
 			y = subrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, b));
 			y = subrow + subsubrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, ab));
+			y = subrow + subsubrow * 2;
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(j, s));
 		}
 		
 		
-		for(int j = 0; j < 6; j++) {
+		for(int j = 0; j < cur_count; j++) {
 			if (i == j) continue;
 			String b = m->sym[j];
 			String ab = a + b;
@@ -986,24 +1175,25 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 			y = (1 + j) * row;
 			
 			int mtsym_id = ses.FindSymbolLeft(s);
-			ASSERT(mtsym_id != 0);
+			ASSERT(mtsym_id != -1);
 			String mtsym = ses.GetSymbol(mtsym_id);
 			bool has_orders = ses.HasOrders(mtsym);
 			if (has_orders) {
 				bool sig = ses.GetOrderSig(mtsym);
-				d.DrawRect(x, y, col + 1, row + 1, sig ? Color(170, 255, 255) : Color(216, 255, 164));
+				d.DrawRect(x, y, col + 1, row + 1, m->GetPaper(sig));
 			}
 			
-			d.DrawText(x + 2, y + 2, s, fnt);
+			Size s_size = GetTextSize(s, fnt);
+			d.DrawText(x + (col - s_size.cx) / 2, y + (subrow - s_size.cy) / 2, s, fnt);
 			for(int k = 0; k < m->tfs.GetCount(); k++) {
 				x = (1 + i) * col + k * subcol;
 				y = (1 + j) * row + subrow;
 				
 				bool b = m->values[sympos * m->tfs.GetCount() + k];
 				bool ab = m->avvalues[sympos * m->tfs.GetCount() + k];
-				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, b ? Color(56, 127, 255) : Color(28, 212, 0));
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(k, b));
 				y = (1 + j) * row + subrow + subsubsubrow;
-				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, ab ? Color(56, 127, 255) : Color(28, 212, 0));
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(k, ab));
 				
 				y = (1 + j) * row + subrow + subsubrow;
 				bool av = m->values[i * m->tfs.GetCount() + k];
@@ -1017,9 +1207,9 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 					sum += bv ? -1 : +1;
 				}
 				Color c;
-				if (sum > 0)		c = Color(28, 212, 0);
-				else if (sum < 0)	c = Color(56, 127, 255);
-				else				c = GrayColor();
+				if (sum > 0)		c = m->GetColor(k, 0);
+				else if (sum < 0)	c = m->GetColor(k, 1);
+				else				c = m->GetGrayColor(k);
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 				
 				y = (1 + j) * row + subrow + subsubrow + subsubsubrow;
@@ -1033,15 +1223,26 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 					sum += aav ? +1 : -1;
 					sum += abv ? -1 : +1;
 				}
-				if (sum > 0)		c = Color(28, 212, 0);
-				else if (sum < 0)	c = Color(56, 127, 255);
-				else				c = GrayColor();
+				if (sum > 0)		c = m->GetColor(k, 0);
+				else if (sum < 0)	c = m->GetColor(k, 1);
+				else				c = m->GetGrayColor(k);
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
+				
+				y = (1 + j) * row + subrow + subsubrow * 2;
+				bool s = m->succ[sympos * m->tfs.GetCount() + k];
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetSuccessColor(k, s));
+				
+				y = (1 + j) * row + subrow + subsubrow * 2 + subsubsubrow;
+				bool as = m->succ[i * m->tfs.GetCount() + k];
+				bool bs = m->succ[j * m->tfs.GetCount() + k];
+				sum = as * 1 + bs * 1;
+				c = Blend(m->GetSuccessColor(k, 0), m->GetSuccessColor(k, 1), sum * 255 / 2);
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 			}
 		}
 	}
 	
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < cur_count; i++) {
 		int y = (1 + i) * row;
 		int x = (1 + i) * col;
 		int y2 = (1 + i) * row + subrow;
@@ -1049,8 +1250,10 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		int y4 = (1 + i + 1) * row;
 		int y5 = (1 + i) * row + subrow + subsubsubrow;
 		int y6 = (1 + i) * row + subrow + subsubrow + subsubsubrow;
+		int y7 = (1 + i) * row + subrow + subsubrow * 2;
+		int y8 = (1 + i) * row + subrow + subsubrow * 2 + subsubsubrow;
 		
-		for(int j = 0; j < 6; j++) {
+		for(int j = 0; j < cur_count; j++) {
 			if (j == i) continue;
 			for(int k = 1; k < m->tfs.GetCount(); k++) {
 				int x = (1 + j) * col + k * subcol;
@@ -1069,6 +1272,8 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		d.DrawLine(0, y3, r.GetWidth(), y3, 1, GrayColor());
 		d.DrawLine(col, y5, r.GetWidth(), y5, 1, GrayColor());
 		d.DrawLine(col, y6, r.GetWidth(), y6, 1, GrayColor());
+		d.DrawLine(col, y7, r.GetWidth(), y7, 1, GrayColor());
+		d.DrawLine(col, y8, r.GetWidth(), y8, 1, GrayColor());
 		d.DrawLine(0, y, r.GetWidth(), y, 1, Black());
 		d.DrawLine(x, 0, x, r.GetHeight(), 1, Black());
 	}
@@ -1076,10 +1281,26 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	d.DrawLine(col, subrow + subsubrow, r.GetWidth(), subrow + subsubrow, 1, GrayColor());
 }
 
+void SpeculationMatrix::GlobalSuccessCtrl::Paint(Draw& d) {
+	Rect r(GetSize());
+	
+	double col = r.GetWidth() / m->tfs.GetCount();
+	
+	for(int i = 0; i < m->tfs.GetCount(); i++) {
+		int blend = m->succ_tf[i] * 255;
+		Color c = Blend(Black, LtYellow, blend);
+		d.DrawRect(i * col, 0, col + 1, r.Height(), c);
+	}
+	for(int i = 1; i < m->tfs.GetCount(); i++) {
+		d.DrawLine(i * col, 0, i * col, r.Height(), 1, GrayColor());
+	}
+}
+
+
 void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags) {
 	Rect rect(GetSize());
 	
-	int grid_count = 7;
+	int grid_count = cur_count+1;
 	double row = rect.GetHeight() / (double)grid_count;
 	double col = rect.GetWidth() / (double)grid_count;
 	double subrow = row / 2;
@@ -1093,7 +1314,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 	}
 	else if (c == 0 && r > 0) {
 		int sym = r - 1;
-		String s = m->sym[sym] + "1";
+		String s = m->sym[sym] + "2";
 		sym = GetSession().FindSymbol(s);
 		int tf = Tf((p.x - c * col) / subcol);
 		bool is_subtf = (p.y - r * row) / subrow >= 1.0;
@@ -1102,7 +1323,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 	}
 	else if (r == 0 && c > 0) {
 		int sym = c - 1;
-		String s = m->sym[sym] + "1";
+		String s = m->sym[sym] + "2";
 		sym = GetSession().FindSymbol(s);
 		int tf = Tf((p.x - c * col) / subcol);
 		bool is_subtf = (p.y - r * row) / subrow >= 1.0;
@@ -1128,7 +1349,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 				m->WhenGraph(sym, tf);
 			else {
 				if (!has_orders)
-					m->WhenOpenOrder(sym, sig);
+					m->WhenOpenOrder(sym, sig, m->is_size);
 				else
 					m->WhenCloseOrder(sym);
 			}
@@ -1279,22 +1500,22 @@ MultiActivity::MultiActivity() {
 	tflist <<= THISBACK(Data);
 	
 	ActivityCtrl& eur = activities.Add();
-	eur.sym = GetSession().symbols.Find("EUR1");
+	eur.sym = GetSession().symbols.Find("EUR2");
 	
 	ActivityCtrl& usd = activities.Add();
-	usd.sym = GetSession().symbols.Find("USD1");
+	usd.sym = GetSession().symbols.Find("USD2");
 	
 	ActivityCtrl& gbp = activities.Add();
-	gbp.sym = GetSession().symbols.Find("GBP1");
+	gbp.sym = GetSession().symbols.Find("GBP2");
 	
 	ActivityCtrl& jpy = activities.Add();
-	jpy.sym = GetSession().symbols.Find("JPY1");
+	jpy.sym = GetSession().symbols.Find("JPY2");
 	
 	ActivityCtrl& chf = activities.Add();
-	chf.sym = GetSession().symbols.Find("CHF1");
+	chf.sym = GetSession().symbols.Find("CHF2");
 	
 	ActivityCtrl& cad = activities.Add();
-	cad.sym = GetSession().symbols.Find("CAD1");
+	cad.sym = GetSession().symbols.Find("CAD2");
 	
 	hsplit0 << eur << usd << gbp;
 	hsplit1 << jpy << chf << cad;
@@ -1331,7 +1552,7 @@ void ActivityMatrix::ActivityMatrixCtrl::Paint(Draw& d) {
 	Rect r(GetSize());
 	d.DrawRect(GetSize(), White());
 	
-	int grid_count = 7;
+	int grid_count = cur_count+1;
 	double row = r.GetHeight() / (double)grid_count;
 	double col = r.GetWidth() / (double)grid_count;
 	double subrow = row / 2;
@@ -1339,7 +1560,7 @@ void ActivityMatrix::ActivityMatrixCtrl::Paint(Draw& d) {
 	double subcol = col / m->tfs.GetCount();
 	Font fnt = Arial(row / 3);
 	
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < cur_count; i++) {
 		String a = m->sym[i];
 		
 		int x = 0 + 2;
@@ -1366,7 +1587,7 @@ void ActivityMatrix::ActivityMatrixCtrl::Paint(Draw& d) {
 		}
 		
 		
-		for(int j = 0; j < 6; j++) {
+		for(int j = 0; j < cur_count; j++) {
 			if (i == j) continue;
 			String b = m->sym[j];
 			String ab = a + b;
@@ -1400,14 +1621,14 @@ void ActivityMatrix::ActivityMatrixCtrl::Paint(Draw& d) {
 		}
 	}
 	
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < cur_count; i++) {
 		int y = (1 + i) * row;
 		int x = (1 + i) * col;
 		int y2 = (1 + i) * row + subrow;
 		int y3 = (1 + i) * row + subrow + subsubrow;
 		int y4 = (1 + i + 1) * row;
 		
-		for(int j = 0; j < 6; j++) {
+		for(int j = 0; j < cur_count; j++) {
 			if (j == i) continue;
 			for(int k = 1; k < m->tfs.GetCount(); k++) {
 				int x = (1 + j) * col + k * subcol;
@@ -1445,21 +1666,36 @@ ActivityMatrix::ActivityMatrix() {
 	sym.Add("JPY");
 	sym.Add("CHF");
 	sym.Add("CAD");
+	sym.Add("AUD");
+	sym.Add("NZD");
 	sym.Add("EURUSD");
 	sym.Add("EURGBP");
 	sym.Add("EURJPY");
 	sym.Add("EURCHF");
 	sym.Add("EURCAD");
+	sym.Add("EURAUD");
+	sym.Add("EURNZD");
 	sym.Add("GBPUSD");
 	sym.Add("USDJPY");
 	sym.Add("USDCHF");
 	sym.Add("USDCAD");
+	sym.Add("AUDUSD");
+	sym.Add("NZDUSD");
 	sym.Add("GBPJPY");
 	sym.Add("GBPCHF");
 	sym.Add("GBPCAD");
+	sym.Add("GBPAUD");
+	sym.Add("GBPNZD");
 	sym.Add("CHFJPY");
 	sym.Add("CADJPY");
+	sym.Add("AUDJPY");
+	sym.Add("NZDJPY");
 	sym.Add("CADCHF");
+	sym.Add("AUDCHF");
+	sym.Add("NZDCHF");
+	sym.Add("AUDCAD");
+	sym.Add("NZDCAD");
+	sym.Add("AUDNZD");
 	
 	tfs.Add(0);
 	tfs.Add(2);
@@ -1509,7 +1745,7 @@ void ActivityMatrix::Data() {
 	
 	int cursor = 0;
 	if (list.IsCursor()) cursor = list.GetCursor();
-	for(int i = 6; i < sym.GetCount(); i++) {
+	for(int i = cur_count; i < sym.GetCount(); i++) {
 		String s = sym[i];
 		String a = s.Left(3);
 		String b = s.Mid(3,3);
@@ -1531,8 +1767,8 @@ void ActivityMatrix::Data() {
 				sum += (av ? 1 : 0) + (bv ? 1 : 0);
 			}
 		}
-		list.Set(i-6, 0, s);
-		list.Set(i-6, 1, abs(sum));
+		list.Set(i-cur_count, 0, s);
+		list.Set(i-cur_count, 1, abs(sum));
 	}
 	list.SetSortColumn(1, true);
 	list.SetCursor(cursor);
@@ -1604,7 +1840,7 @@ void Orders::Data() {
 		orders.Set(i, 8, o.close);
 		orders.Set(i, 9, o.commission);
 		orders.Set(i, 10, o.swap);
-		orders.Set(i, 11, o.profit);
+		orders.Set(i, 11, Format("%2n", o.profit));
 		orders.Set(i, 12, Format("%2n", o.profit / (o.size / 0.01)));
 	}
 	orders.SetCount(ses.open_orders.GetCount());
@@ -1686,7 +1922,7 @@ void HistoryOrders::Data() {
 		const Order& o = history_orders[i];
 		hisorders.Set(i, 0, o.ticket);
 		hisorders.Set(i, 1, o.begin);
-		hisorders.Set(i, 2, o.type);
+		hisorders.Set(i, 2, o.type ? "Sell" : "Buy");
 		hisorders.Set(i, 3, o.size);
 		hisorders.Set(i, 4, o.symbol);
 		hisorders.Set(i, 5, o.open);
@@ -1695,7 +1931,7 @@ void HistoryOrders::Data() {
 		hisorders.Set(i, 8, o.close);
 		hisorders.Set(i, 9, o.commission);
 		hisorders.Set(i, 10, o.swap);
-		hisorders.Set(i, 11, o.profit);
+		hisorders.Set(i, 11, Format("%2n", o.profit));
 	}
 	hisorders.SetCount(history_orders.GetCount());
 	hisorders_lock.Leave();
@@ -1765,6 +2001,8 @@ void CalendarCtrl::Data() {
 			MemStream mem((void*)data.Begin(), data.GetCount());
 			
 			Time utcnow = GetUtcTime();
+			int wday = DayOfWeek(utcnow);
+			if (wday == 0 || wday == 6) utcnow -= 2 * 24 * 60 * 60;
 			int level = -1, minutes = INT_MAX;
 			String headline;
 			
@@ -1890,8 +2128,9 @@ OpenOrderCtrl::OpenOrderCtrl() {
 	open << THISBACK(OpenOrder);
 }
 
-void OpenOrderCtrl::Set(int sym, bool sig) {
+void OpenOrderCtrl::Set(int sym, bool sig, bool is_size) {
 	this->sym = sym;
+	this->is_size = is_size;
 	open.Enable(true);
 	signal.SetIndex(sig);
 }
@@ -1902,7 +2141,7 @@ void OpenOrderCtrl::Data() {
 	String s = ses.GetSymbol(sym);
 	
 	this->symbol.SetLabel(s);
-	vol = ses.balance / 10000.0;
+	vol = is_size ? ses.balance / 10000.0 : 0.01;
 	if (vol < 0.01) vol = 0.01;
 	this->volume.SetLabel(Format("%2n", vol));
 	this->tp.SetLabel(IntStr(tp_count));
@@ -2076,9 +2315,9 @@ void Client::SetGraph(int sym, int tf) {
 	SetRotator(false);
 }
 
-void Client::OpenOrder(int sym, bool sig) {
+void Client::OpenOrder(int sym, bool sig, bool is_size) {
 	tabs.Set(10);
-	open_order.Set(sym, sig);
+	open_order.Set(sym, sig, is_size);
 	open_order.Data();
 }
 

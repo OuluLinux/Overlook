@@ -570,7 +570,7 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 					bool b = sig.signal.Get(size - 1 - k);
 					if (b) sum += 1.0;
 				}
-				sum /= 20;
+				sum /= 21;
 				b = sum > 0.5;
 				out.Put(&b, sizeof(bool));
 				

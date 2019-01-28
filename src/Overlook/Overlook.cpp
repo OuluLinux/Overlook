@@ -199,7 +199,7 @@ void Overlook::ViewMenu(Bar& bar) {
 	
 	bar.Add("Full Screen", THISBACK(ToggleFullScreen)).Key(K_F11);
 	bar.Separator();
-	bar.Add("Forecaster view", THISBACK(OpenForecast)).Key(K_F2);
+	bar.Add("Speculation view", THISBACK(OpenSpeculation)).Key(K_F2);
 	bar.Separator();
 	bar.Add("Load major pairs M1", THISBACK1(LoadMajorPairProfile, 0)).Key(K_SHIFT_1);
 	bar.Add("Load major pairs M15", THISBACK1(LoadMajorPairProfile, 2)).Key(K_SHIFT_2);
@@ -232,7 +232,7 @@ void Overlook::ToolMenu(Bar& bar) {
 	bar.Add("New Order", THISBACK(NewOrder)).Key(K_F9);
 	bar.Add("Run Script", THISBACK(RunScript)).Key(K_F5);
 	bar.Separator();
-	bar.Add("History Center", THISBACK(HistoryCenter)).Key(K_F2);
+	bar.Add("History Center", THISBACK(HistoryCenter));
 	bar.Separator();
 	bar.Add("Options", THISBACK(Options)).Key(K_CTRL|K_O);
 }
@@ -462,11 +462,11 @@ Chart* Overlook::GetChart(int i) {
 	return dynamic_cast<Chart*>(win.GetSubWindowCtrl());
 }
 
-void Overlook::OpenForecast() {
-	/*cman.AddForecast();
+void Overlook::OpenSpeculation() {
+	cman.AddSpeculation();
 	cman.Get(cman.GetCount()-1).Maximize();
 	cman.Get(cman.GetCount()-1).Maximize();
-	StorePreviousProfile();*/
+	StorePreviousProfile();
 }
 
 void Overlook::SetFactory(int f) {
@@ -1218,7 +1218,7 @@ void Overlook::LoadProfile(Profile& profile) {
 			chart.SetKeepAtEnd(pchart.keep_at_end);
 		}
 		else if (pchart.type == 1) {
-			OpenForecast();
+			OpenSpeculation();
 		}
 	}
 	

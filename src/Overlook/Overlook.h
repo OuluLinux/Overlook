@@ -33,6 +33,7 @@ using namespace Upp;
 #include "Dialogs.h"
 #include "MarketWatch.h"
 #include "Navigator.h"
+#include "Speculation.h"
 #include "ChartManager.h"
 #include "Arbitrage.h"
 #include "Server.h"
@@ -183,7 +184,7 @@ public:
 	Chart& OpenChart(int symbol, const FactoryDeclaration& decl, int tf=-1);
 	Chart* GetChart(int i);
 	void OpenChartFromList() {OpenChart(trade.GetCursor());}
-	void OpenForecast();
+	void OpenSpeculation();
 	void SetFactory(int f);
 	void SetTimeframe(int tf_id);
 	void RefreshCalendar();

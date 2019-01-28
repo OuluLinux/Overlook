@@ -17,6 +17,12 @@ Chart& ChartManager::AddChart() {
 	return chr;
 }
 
+SpeculationCtrl& ChartManager::AddSpeculation() {
+	SpeculationCtrl* net = new SpeculationCtrl();
+	SpeculationCtrl& netc = AddSubWindow<SpeculationCtrl>(net);
+	return netc;
+}
+
 void ChartManager::RefreshWindows() {
 	for(int i = 0; i < GetCount(); i++) {
 		auto* sw = Get(i).GetSubWindowCtrl();

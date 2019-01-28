@@ -74,6 +74,8 @@ file
 	PatternMatch.cpp,
 	Sentiment.h,
 	Sentiment.cpp,
+	Speculation.h,
+	Speculation.cpp,
 	Scripting readonly separator,
 	Neural.h,
 	Neural.cpp,

@@ -896,10 +896,6 @@ SpeculationMatrix::SpeculationMatrix() {
 	succ.SetCount(sym.GetCount() * tfs.GetCount(), false);
 	signals.SetCount(sym.GetCount(), false);
 	prev_values.SetCount(sym.GetCount(), 0);
-	slow_sum.SetCount(sym.GetCount());
-	for(int i = 0; i < slow_sum.GetCount(); i++)
-		slow_sum[i].SetCount(tfs.GetCount(), 0);
-	succ_sum.SetCount(sym.GetCount(), 0);
 	succ_tf.SetCount(tfs.GetCount());
 	
 	listparent.Add(succ_ctrl.TopPos(0, 15).HSizePos());
@@ -934,7 +930,7 @@ void SpeculationMatrix::Data() {
 			Vector<bool> tmp, avtmp, succtmp;
 			tmp.SetCount(sym.GetCount() * tfs.GetCount());
 			avtmp.SetCount(sym.GetCount() * tfs.GetCount());
-			succtmp.SetCoun1t(sym.GetCount() * tfs.GetCount());
+			succtmp.SetCount(sym.GetCount() * tfs.GetCount());
 			int row = 0;
 			for(int i = 0; i < sym.GetCount(); i++) {
 				for(int j = 0; j < tfs.GetCount(); j++) {
@@ -962,7 +958,7 @@ void SpeculationMatrix::Data() {
 		int start, size;
 		double slow_sum = 0, succ_sum = 0, max_sum = 0, max_succ_sum = 0;
 		
-		bool operator()(const Data& a, const Data& b) const {return fabs(a.slow_sum) / a.max_sum > fabs(b.slow_sum) / b.max_sum;}
+		//bool operator()(const Data& a, const Data& b) const {return fabs(a.slow_sum) / a.max_sum > fabs(b.slow_sum) / b.max_sum;}
 	};
 	Vector<Vector<Data> > data;
 	Vector<double> succ_tf;
@@ -978,8 +974,8 @@ void SpeculationMatrix::Data() {
 		int bi = sym.Find(b);
 		Vector<Data>& symdata = data[i];
 		
-		for(int j = 0; j < 3; j++) {
-			int size = 3 + j;
+		for(int j = 0; j < 5; j++) {
+			int size = 1 + j;
 			int start_count = tfs.GetCount() - size + 1;
 			for(int k = 0; k < start_count; k++) {
 				Data& d = symdata.Add();
@@ -995,7 +991,6 @@ void SpeculationMatrix::Data() {
 			}
 		}
 		
-		double succ_sum = 0;
 		for(int j = tfs.GetCount()-1; j >= 0; j--) {
 			bool av = values[ai * tfs.GetCount() + j];
 			bool bv = values[bi * tfs.GetCount() + j];
@@ -1025,9 +1020,8 @@ void SpeculationMatrix::Data() {
 			
 			succ_tf[j] += (sv + sav + sbv) / (sym.GetCount() * 3.0);
 		}
-		this->succ_sum[i] = succ_sum;
 		
-		Sort(symdata, Data());
+		//Sort(symdata, Data());
 	}
 	Swap(this->succ_tf, succ_tf);
 	
@@ -1037,8 +1031,9 @@ void SpeculationMatrix::Data() {
 	for(int i = 0; i < data[cur_count].GetCount(); i++) {
 		double fac_sum = 0;
 		for(int j = cur_count; j < sym.GetCount(); j++) {
-			double fac = fabs(data[j][i].slow_sum) / data[j][i].max_sum;
-			fac_sum += fac;
+			double fac0 = fabs(data[j][i].slow_sum) / data[j][i].max_sum;
+			double fac1 = data[j][i].succ_sum / data[j][i].max_succ_sum;
+			fac_sum += fac0 + fac1;
 		}
 		if (fac_sum > max_tf_fac) {
 			tf_begin = data[cur_count][i].start;
@@ -1059,8 +1054,9 @@ void SpeculationMatrix::Data() {
 		String s = sym[i];
 		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
 		
-		double sum = data[i][data_i].slow_sum;
-		int new_value = fabs(sum) / data[i][data_i].max_sum * 1000;
+		Data& d = data[i][data_i];
+		double sum = d.slow_sum;
+		int new_value = fabs(sum) / d.max_sum * 1000;
 		int old_value = prev_values[i];
 		if (new_value > 500 && old_value <= 500) has_increases = true;
 		if (new_value <= 500 && old_value > 500) has_decreases = true;
@@ -1068,8 +1064,8 @@ void SpeculationMatrix::Data() {
 		if (new_value >= 500)
 			size_count++;
 		
-		double succ = data[i][data_i].succ_sum;
-		int new_succ_value = succ / data[i][data_i].max_succ_sum * 1000;
+		double succ = d.succ_sum;
+		int new_succ_value = succ / d.max_succ_sum * 1000;
 		
 		int row = i-cur_count;
 		if (ses.HasOrders(full)) {

@@ -647,6 +647,7 @@ public:
 	void Set(int64 i, bool b);
 	void LimitLeft(int i);
 	void LimitRight(int i);
+	bool operator[](int i) const {return Get(i);}
 	
 	ConstU64* Begin() const;
 	ConstU64* End() const;

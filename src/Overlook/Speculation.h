@@ -10,12 +10,14 @@ struct SpecItemData : Moveable<SpecItemData> {
 };
 
 struct SpecItem : Moveable<SpecItem> {
+	VectorMap<int, double> cur_score;
+	Vector<int> prio_syms;
 	Vector<SpecItemData> data;
 	Vector<double> succ_tf;
 	VectorBool values, avvalues, succ;
 	int tf_begin = 0, tf_end = 1, data_i = 0;
 	
-	void Serialize(Stream& s) {s % data % succ_tf % values % avvalues % succ % tf_begin % tf_end % data_i;}
+	void Serialize(Stream& s) {s % cur_score % prio_syms % data % succ_tf % values % avvalues % succ % tf_begin % tf_end % data_i;}
 	
 	inline Color GetColor(int tf, bool b) {if (tf < tf_begin || tf >= tf_end) return b ? Color(56, 127, 255) : Color(28, 212, 0); else return b ? Color(28, 212, 255) : Color(28, 255, 0);}
 	inline Color GetGrayColor(int tf) {return (tf < tf_begin || tf >= tf_end) ? GrayColor(128) : GrayColor(128+64);}
@@ -41,16 +43,27 @@ struct SpecBarData : Moveable<SpecBarData> {
 };
 
 struct SpecBarDataSpecData : Moveable<SpecBarDataSpecData> {
-	double slow_sum = 0, succ_sum = 0;
-	bool values[5], avvalues[5], succ[5];
+	static const int tf_count = 6;
 	
-	void Serialize(Stream& s) {s % slow_sum % succ_sum; for(int i = 0; i < 5; i++) {s % values[i] % avvalues[i] % succ[i];}}
+	double slow_sum = 0, succ_sum = 0;
+	bool values[tf_count], avvalues[tf_count], succ[tf_count];
+	
+	void Serialize(Stream& s) {s % slow_sum % succ_sum; for(int i = 0; i < tf_count; i++) {s % values[i] % avvalues[i] % succ[i];}}
 };
 
 struct SpecBarDataSpec : Moveable<SpecBarDataSpec> {
 	Vector<SpecBarDataSpecData> data;
 	
 	void Serialize(Stream& s) {s % data;}
+};
+
+struct BarDataOscillator : Moveable<BarDataOscillator> {
+	Vector<double> scores, invs;
+	VectorMap<int, int> score_stats;
+	Vector<int> score_levels;
+	int fast_counted = 0;
+	
+	void Serialize(Stream& s) {s % scores % invs % score_stats % score_levels;}
 };
 
 struct TraderItemData : Moveable<TraderItemData> {
@@ -84,8 +97,8 @@ protected:
 	
 	
 	// Persistent
-	VectorMap<int, int> bardataspecscore_stats;
-	Vector<double> bardataspecscore;
+	ConvNet::Session ses;
+	Vector<BarDataOscillator> bardataspecosc;
 	Vector<TraderItem> traders;
 	Vector<SpecBarDataSpec> bardataspec;
 	Vector<SpecBarData> bardata;
@@ -100,20 +113,26 @@ protected:
 	Vector<int> aiv, biv;
 	Vector<int> sizev, startv;
 	Vector<int> tfs;
-	Vector<int> bardataspecscore_levels;
 	double bd_max_sum = 0, bd_max_succ_sum = 0;
+	double cur_slow_max = 0, cur_succ_max = 0;
+	double invosc_max = 0;
 	ThreadSignal sig;
+	TimeStop ts;
 	
 	inline static Color GetSuccessColor(bool b) {return b ? LtYellow : GrayColor(64);}
 	inline static Color GetPaper(bool b) {return b ? Color(113, 212, 255) : Color(170, 255, 150);}
-	void RefreshBarDataItemTf0(int comb, int length, SpecBarData& sbd);
-	void RefreshBarDataItemTf(int tfi, int comb, int length, SpecBarData& sbd, SpecBarData& sbd0);
+	void RefreshBarDataItemTf0(int comb, int length, int prio_id, bool inv, SpecBarData& sbd);
+	void RefreshBarDataItemTf(int tfi, SpecBarData& sbd, SpecBarData& sbd0);
 	void RefreshBarDataSpeculation(int tfi, SpecBarData& sbd);
-	SpecBarData& GetSpecBarData(int tfi, int comb, int lengthi) {return bardata[(tfi * startv.GetCount() + comb) * lengths.GetCount() + lengthi];}
-	void RefreshBarDataSpeculation2(int comb, int lengthi, SpecBarDataSpec& sbds);
-	SpecBarDataSpec& GetSpecBarDataSpec(int comb, int lengthi) {return bardataspec[comb * lengths.GetCount() + lengthi];}
+	SpecBarData& GetSpecBarData(int tfi, int comb, int lengthi, int prio_id, bool inv) {return bardata[(((tfi * startv.GetCount() + comb) * lengths.GetCount() + lengthi) * 3 + prio_id) * 2 + inv];}
+	void RefreshBarDataSpeculation2(int comb, int lengthi, int prio_id, int inv, SpecBarDataSpec& sbds);
+	SpecBarDataSpec& GetSpecBarDataSpec(int comb, int lengthi, int prio_id, bool inv) {return bardataspec[((comb * lengths.GetCount() + lengthi) * 3 + prio_id) * 2 + inv];}
 	void RefreshTrader(TraderItem& ti);
 	void RefreshTrader(int tfi, TraderItem& ti);
+	void GetSpecBarDataSpecArgs(int bdspeci, int& comb, int& lengthi, int& prio_id, int& inv);
+	void RefreshBarDataOscillatorTf0();
+	void RefreshBarDataOscillator(int tfi);
+	inline double GetMult(int tfi) {return 1.0 + (double)(tfs.GetCount()-1-tfi) / (double)tfs.GetCount() * 3;}
 	
 public:
 	typedef Speculation CLASSNAME;
@@ -124,11 +143,13 @@ public:
 	void Data();
 	void ProcessItem(int pos, SpecItem& si);
 	void RefreshCores();
+	void RefreshItems();
 	void RefreshBarData();
 	void RefreshBarDataSpec();
+	void RefreshBarDataOscillators();
 	void RefreshTraders();
 	
-	void Serialize(Stream& s) {s % bardataspecscore_stats % bardataspecscore % traders % bardataspec % bardata % data;}
+	void Serialize(Stream& s) {s % bardataspecosc % traders % bardataspec % bardata % data;}
 	void LoadThis() {LoadFromFile(*this, GetOverlookFile("Speculation.bin"));}
 	void StoreThis() {StoreToFile(*this, GetOverlookFile("Speculation.bin"));}
 	
@@ -172,11 +193,12 @@ struct GlobalSuccessCtrl : public Ctrl {
 };
 
 struct CandlestickCtrl : public Ctrl {
-	Vector<double> opens, lows, highs, specs;
+	Vector<double> opens, lows, highs, specs, scores, invs;
 	Vector<bool> bools;
-	int shift = 0, comb = 0, lengthi = 0, tfi = 0;
+	int shift = 0, comb = 0, lengthi = 0, tfi = 0, prio_id = 0, inv = 0;
 	int border = 5;
 	int count = 100;
+	int scoremin = 50;
 	
 	Vector<Point> cache;
 	

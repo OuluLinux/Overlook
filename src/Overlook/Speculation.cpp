@@ -56,10 +56,12 @@ void Speculation::Process() {
 	sym.Add("AUDNZD" + sys.GetPostFix());
 	
 	tfs.Add(0);
+	tfs.Add(1);
 	tfs.Add(2);
 	tfs.Add(4);
 	tfs.Add(5);
 	tfs.Add(6);
+	if (SpecBarDataSpecData::tf_count != tfs.GetCount()) Panic("Fatal error");
 	
 	cl.SetCount(sym.GetCount());
 	for(int i = 0; i < cl.GetCount(); i++) {
@@ -85,7 +87,7 @@ void Speculation::Process() {
 		aiv[i] = ai;
 		biv[i] = bi;
 	}
-	
+	/*
 	for(int size = 1; size <= tfs.GetCount(); size++) {
 		int start_count = tfs.GetCount() - size + 1;
 		for(int k = 0; k < start_count; k++) {
@@ -102,20 +104,40 @@ void Speculation::Process() {
 			this->max_succ_sum.Add(max_succ_sum);
 		}
 	}
-	
-	for(int i = 0; i < tfs.GetCount(); i++) {
-		double mult = 1.0 + (double)i / (double)tfs.GetCount();
-		bd_max_sum += mult * 2;
-		bd_max_succ_sum += mult;
+	*/
+	for(int k = 0; k < tfs.GetCount(); k++) {
+		int start = 0;
+		int size = k+1;
+		startv.Add(start);
+		sizev.Add(size);
+		double max_sum = 0, max_succ_sum = 0;
+		for (int l = 0; l < size; l++) {
+			int tfi = start + l;
+			double mult = GetMult(tfi);
+			max_sum += mult + mult * 2 + mult + mult * 2;
+			max_succ_sum += mult + mult * 2;
+		}
+		this->max_sum.Add(max_sum);
+		this->max_succ_sum.Add(max_succ_sum);
 	}
 	
-	lengths.Add(0);
+	
+	for(int i = 0; i < tfs.GetCount(); i++) {
+		double mult = GetMult(i);
+		bd_max_sum += mult * 2;
+		bd_max_succ_sum += mult;
+		cur_slow_max += mult * 2;
+		cur_succ_max += mult;
+	}
+	
 	lengths.Add(1);
 	lengths.Add(2);
 	lengths.Add(4);
+	lengths.Add(8);
 	
-	bardata.SetCount(tfs.GetCount() * startv.GetCount() * lengths.GetCount());
-	bardataspec.SetCount(startv.GetCount() * lengths.GetCount());
+	bardata.SetCount(tfs.GetCount() * startv.GetCount() * lengths.GetCount() * 3 * 2);
+	bardataspec.SetCount(startv.GetCount() * lengths.GetCount() * 3 * 2);
+	bardataspecosc.SetCount(tfs.GetCount());
 	
 	LoadThis();
 	
@@ -132,6 +154,28 @@ void Speculation::Process() {
 void Speculation::Data() {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	const Index<Time>& idx = dbc.GetTimeIndex(0);
+	int counted = data.GetCount();
+	int bars = idx.GetCount();
+	
+	RefreshItems();
+	
+	RefreshBarData();
+	
+	RefreshBarDataSpec();
+	
+	RefreshBarDataOscillators();
+	
+	//RefreshTraders();
+	
+	if (counted < bars && ts.Elapsed() > 5*60*1000) {
+		StoreThis();
+		ts.Reset();
+	}
+}
+
+void Speculation::RefreshItems() {
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx = dbc.GetTimeIndex(0);
 	
 	int counted = data.GetCount();
 	int bars = idx.GetCount();
@@ -145,17 +189,7 @@ void Speculation::Data() {
 		SpecItem& si = data[i];
 		ProcessItem(i, si);
 	}
-	
-	RefreshBarData();
-	
-	RefreshBarDataSpec();
-	
-	RefreshTraders();
-	
-	if (counted < bars)
-		StoreThis();
 }
-
 
 void Speculation::ProcessItem(int pos, SpecItem& si) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
@@ -213,9 +247,8 @@ void Speculation::ProcessItem(int pos, SpecItem& si) {
 			switch (tfs[j]) {
 				case 0: steps = 21; break;
 				case 2: steps = 4; break;
-				case 4: steps = 2; break;
-				case 5: steps = 2; break;
-				case 6: steps = 1; break;
+				default:
+						steps = 2; break;
 			}
 			bool prev_sig;
 			bool succ = false;
@@ -239,11 +272,65 @@ void Speculation::ProcessItem(int pos, SpecItem& si) {
 		
 	}
 	
+	VectorMap<int, double> pos_scores, neg_scores;
+	si.cur_score.Clear();
+	bool expect_1 = false;
+	for(int i = 0; i < cur_count; i++) {
+		double slow_sum = 0, succ_sum = 0;
+		bool expect_plus1 = true, expect_minus1 = true;
+		for(int j = 0; j < tfs.GetCount(); j++) {
+			int ij = i * tfs.GetCount() + j;
+			bool v = si.values[ij];
+			bool avv = si.avvalues[ij];
+			bool sv = si.succ[ij];
+			double slow_mult = GetMult(j);
+			
+			slow_sum += (v ? -1 : +1) * slow_mult;
+			slow_sum += (avv ? -1 : +1) * slow_mult;
+			succ_sum += (v ? -1 : +1) * sv * slow_mult;
+			
+			if (!v || !avv || !sv) expect_plus1 = false;
+			if (v || avv || !sv) expect_minus1 = false;
+		}
+		double pos_score = (+2 * slow_sum / cur_slow_max + succ_sum / cur_succ_max) / 3.0;
+		double neg_score = (-2 * slow_sum / cur_slow_max - succ_sum / cur_succ_max) / 3.0;
+		pos_scores.Add(i, pos_score);
+		neg_scores.Add(i, neg_score);
+	}
+	SortByValue(pos_scores, StdGreater<double>());
+	SortByValue(neg_scores, StdGreater<double>());
+	for(int i = 0; i < cur_count / 2; i++) {
+		int pos = pos_scores.GetKey(0);
+		int neg = neg_scores.GetKey(0);
+		double pos_score = pos_scores[0];
+		double neg_score = neg_scores[0];
+		pos_scores.Remove(0);
+		if (pos == neg) {
+			neg = neg_scores.GetKey(1);
+			neg_score = neg_scores[1];
+			neg_scores.Remove(1);
+		} else {
+			neg_scores.Remove(0);
+		}
+		pos_scores.RemoveKey(neg);
+		neg_scores.RemoveKey(pos);
+		si.cur_score.Add(pos, pos_score);
+		si.cur_score.Add(neg, neg_score);
+	}
+	/*if (expect_1) {
+		DUMPM(si.cur_score);
+	}*/
 	
-	
+	VectorMap<int, int> prio_syms;
 	for(int i = cur_count; i < sym.GetCount(); i++) {
 		int ai = aiv[i];
 		int bi = biv[i];
+		int ai_scorepos = si.cur_score.Find(ai);
+		int bi_scorepos = si.cur_score.Find(bi);
+		bool a_is_neg = ai_scorepos % 2;
+		bool b_is_neg = bi_scorepos % 2;
+		if (ai_scorepos < cur_count/2 && bi_scorepos < cur_count/2 && a_is_neg != b_is_neg)
+			prio_syms.Add(i, ai_scorepos + bi_scorepos);
 				
 		for(int j = 0; j < tfs.GetCount(); j++) {
 			int ij = i * tfs.GetCount() + j;
@@ -258,7 +345,7 @@ void Speculation::ProcessItem(int pos, SpecItem& si) {
 			bool abv = si.avvalues[bij];
 			bool sav = si.succ[aij];
 			bool sbv = si.succ[bij];
-			double slow_mult = 1.0 + (double)j / (double)tfs.GetCount();
+			double slow_mult = GetMult(j);
 			double symtf_sum = 0;
 			symtf_sum += (v ? -1 : +1) * slow_mult;
 			symtf_sum += (avv ? -1 : +1) * slow_mult;
@@ -273,13 +360,17 @@ void Speculation::ProcessItem(int pos, SpecItem& si) {
 				int stop = start + sizev[k];
 				if (j >= start && j < stop) {
 					d.slow_sum += symtf_sum;
-					d.succ_sum += (sv + sav + sbv) * slow_mult;
+					d.succ_sum += ((v ? -1 : +1) * sv + (av ? -1 : +1) * sav + (bv ? +1 : -1) * sbv) * slow_mult;
 				}
 			}
 			
 			si.succ_tf[j] += (sv + sav + sbv) / ((sym.GetCount() - cur_count) * 3.0);
 		}
 	}
+	SortByValue(prio_syms, StdGreater<int>());
+	si.prio_syms.Clear();
+	for(int i = 0; i < prio_syms.GetCount(); i++)
+		si.prio_syms.Add(prio_syms.GetKey(i));
 	
 	int tf_begin = -1, tf_end = -1, data_i = 0;
 	double max_tf_fac = -DBL_MAX;
@@ -288,7 +379,7 @@ void Speculation::ProcessItem(int pos, SpecItem& si) {
 		for(int j = cur_count; j < sym.GetCount(); j++) {
 			int k = j * startv.GetCount() + i;
 			double fac0 = fabs(si.data[k].slow_sum) / max_sum[i];
-			double fac1 = si.data[k].succ_sum / max_succ_sum[i];
+			double fac1 = fabs(si.data[k].succ_sum) / max_succ_sum[i];
 			fac_sum += fac0 + fac1;
 		}
 		if (fac_sum > max_tf_fac) {
@@ -310,24 +401,28 @@ void Speculation::RefreshBarData() {
 	for(int j = 0; j < tfs.GetCount(); j++) {
 		for(int k = 0; k < startv.GetCount(); k++) {
 			for (int l = 0; l < lengths.GetCount(); l++) {
-				SpecBarData& sbd = GetSpecBarData(j, k, l);
-				if (j == 0)
-					RefreshBarDataItemTf0(k, l, sbd);
-				else
-					RefreshBarDataItemTf(j, k, l, sbd, GetSpecBarData(0, k, l));
-				
-				RefreshBarDataSpeculation(j, sbd);
-				
-				if (do_print) {
-					ReleaseLog(Format("RefreshBarData %d / %d = %n", row, bardata.GetCount(), (double)row / bardata.GetCount() * 100));
-					row++;
+				for (int prio_id = 0; prio_id < 3; prio_id++) {
+					for (int inv = 0; inv < 2; inv++) {
+						SpecBarData& sbd = GetSpecBarData(j, k, l, prio_id, inv);
+						if (j == 0)
+							RefreshBarDataItemTf0(k, l, prio_id, inv, sbd);
+						else
+							RefreshBarDataItemTf(j, sbd, GetSpecBarData(0, k, l, prio_id, inv));
+						
+						RefreshBarDataSpeculation(j, sbd);
+						
+						if (do_print) {
+							ReleaseLog(Format("RefreshBarData %d / %d = %n", row, bardata.GetCount(), (double)row / bardata.GetCount() * 100));
+							row++;
+						}
+					}
 				}
 			}
 		}
 	}
 }
 
-void Speculation::RefreshBarDataItemTf0(int comb, int lengthi, SpecBarData& sbd) {
+void Speculation::RefreshBarDataItemTf0(int comb, int lengthi, int prio_id, bool inv, SpecBarData& sbd) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	const Index<Time>& idx = dbc.GetTimeIndex(0);
 	
@@ -337,20 +432,21 @@ void Speculation::RefreshBarDataItemTf0(int comb, int lengthi, SpecBarData& sbd)
 		bars = min(bars, cl[i][0].GetBuffer(0,0,0).GetCount());
 	
 	sbd.data.SetCount(bars);
-	
-	
+	sbd.counted = bars;
+	int prio_count = 1 << prio_id;
+	int length_mins = lengths[lengthi] * 60;
 	
 	for(int i = counted; i < bars; i++) {
 		const SpecItem& si = data[i];
 		SpecBarDataItem& sbdi = sbd.data[i];
 		
-		if (lengthi) {
+		if (length_mins) {
 			for(int j = 0; j < sbd.length_sigs.GetCount(); j++) {
 				int sym = sbd.length_sigs.GetKey(j);
 				Tuple2<bool, int>& t = sbd.length_sigs[j];
 				int begin = t.b;
 				int length = i - begin;
-				if (length >= lengths[lengthi] * 60) {
+				if (length >= length_mins) {
 					sbd.length_sigs.Remove(j);
 					j--;
 				} else {
@@ -359,17 +455,39 @@ void Speculation::RefreshBarDataItemTf0(int comb, int lengthi, SpecBarData& sbd)
 			}
 		}
 		
-		for(int j = cur_count; j < this->sym.GetCount(); j++) {
-			const SpecItemData& sid = si.data[j * startv.GetCount() + comb];
+		for(int j = 0; j < si.prio_syms.GetCount() && j < prio_count; j++) {
+			int sym_id = si.prio_syms[j];
+			
+			const SpecItemData& sid = si.data[sym_id * startv.GetCount() + comb];
 			double slow_sum_fac = fabs(sid.slow_sum) / max_sum[comb];
-			double succ_sum_fac = sid.succ_sum / max_succ_sum[comb];
-			if (slow_sum_fac >= 0.5 && succ_sum_fac >= 0.5) {
-				bool sig = sid.slow_sum < 0;
-				sbdi.syms.GetAdd(j) = sig;
-				if (lengthi) {
-					Tuple2<bool, int>& t = sbd.length_sigs.GetAdd(j);
-					t.a = sig;
-					t.b = i;
+			double succ_sum_fac = fabs(sid.succ_sum) / max_succ_sum[comb];
+			if (!inv) {
+				if (slow_sum_fac >= 0.5 && succ_sum_fac >= 0.99) {
+					bool sig = sid.slow_sum < 0;
+					sbdi.syms.GetAdd(sym_id) = sig;
+					if (length_mins) {
+						Tuple2<bool, int>& t = sbd.length_sigs.GetAdd(sym_id);
+						t.a = sig;
+						t.b = i;
+					}
+				}
+				else if (slow_sum_fac >= 0.5 && succ_sum_fac < 0.01) {
+					sbdi.syms.RemoveKey(sym_id);
+					sbd.length_sigs.RemoveKey(sym_id);
+				}
+			} else {
+				if (slow_sum_fac >= 0.5 && succ_sum_fac < 0.01) {
+					bool sig = sid.slow_sum > 0;
+					sbdi.syms.GetAdd(sym_id) = sig;
+					if (length_mins) {
+						Tuple2<bool, int>& t = sbd.length_sigs.GetAdd(sym_id);
+						t.a = sig;
+						t.b = i;
+					}
+				}
+				else if (slow_sum_fac >= 0.5 && succ_sum_fac >= 0.99) {
+					sbdi.syms.RemoveKey(sym_id);
+					sbd.length_sigs.RemoveKey(sym_id);
 				}
 			}
 		}
@@ -464,11 +582,9 @@ void Speculation::RefreshBarDataItemTf0(int comb, int lengthi, SpecBarData& sbd)
 			sbdi.high = d;
 		}
 	}
-	
-	sbd.counted = bars;
 }
 
-void Speculation::RefreshBarDataItemTf(int tfi, int comb, int length, SpecBarData& sbd, SpecBarData& sbd0) {
+void Speculation::RefreshBarDataItemTf(int tfi, SpecBarData& sbd, SpecBarData& sbd0) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
 	const Index<Time>& idx = dbc.GetTimeIndex(tfs[tfi]);
@@ -549,61 +665,164 @@ void Speculation::RefreshBarDataSpeculation(int tfi, SpecBarData& sbd) {
 void Speculation::RefreshBarDataSpec() {
 	for(int i = 0; i < startv.GetCount(); i++) {
 		for(int j = 0; j < lengths.GetCount(); j++) {
-			SpecBarDataSpec& sbds = GetSpecBarDataSpec(i, j);
-			RefreshBarDataSpeculation2(i, j, sbds);
+			for (int prio_id = 0; prio_id < 3; prio_id++) {
+				for (int inv = 0; inv < 2; inv++) {
+					SpecBarDataSpec& sbds = GetSpecBarDataSpec(i, j, prio_id, inv);
+					RefreshBarDataSpeculation2(i, j, prio_id, inv, sbds);
+				}
+			}
+		}
+	}
+}
+
+void Speculation::RefreshBarDataOscillators() {
+	if (invosc_max == 0.0) {
+		for(int i = 0; i < bardataspec.GetCount(); i++) {
+			double mult = ((double)i / (bardataspec.GetCount() - 1)) * 2.0 - 1.0;
+			invosc_max += fabs(mult);
 		}
 	}
 	
-	const SpecBarData& spd0 = GetSpecBarData(0, 0, 0);
-	int counted = bardataspecscore.GetCount();
+	RefreshBarDataOscillatorTf0();
+	
+	for(int i = 1; i < tfs.GetCount(); i++) {
+		RefreshBarDataOscillator(i);
+	}
+	
+}
+
+void Speculation::RefreshBarDataOscillatorTf0() {
+	BarDataOscillator& bdo = bardataspecosc[0];
+	
+	const SpecBarData& spd0 = GetSpecBarData(0, 0, 0, 0, 0);
+	int counted = bdo.scores.GetCount();
 	int bars = spd0.data.GetCount();
-	bardataspecscore.SetCount(bars);
+	bdo.scores.SetCount(bars, 0);
+	bdo.invs.SetCount(bars, 0);
+	
+	VectorMap<int, double> score_list;
 	
 	for(int i = counted; i < bars; i++) {
 		
+		score_list.Clear();
 		double sum = 0;
 		for(int j = 0; j < bardataspec.GetCount(); j++) {
 			const SpecBarDataSpec& sbds = bardataspec[j];
 			const SpecBarDataSpecData& spdsd = sbds.data[i];
 			
-			double score = (max(0.0, spdsd.slow_sum) / bd_max_sum * 2 + spdsd.succ_sum / bd_max_succ_sum) / 3.0;
+			double score = (max(0.0, spdsd.slow_sum) / bd_max_sum * 2 + max(0.0, spdsd.succ_sum) / bd_max_succ_sum) / 3.0;
 			sum += score;
+			
+			score_list.Add(j, score);
 		}
 		
 		sum /= bardataspec.GetCount();
 		sum *= 100;
-		bardataspecscore[i] = sum;
+		bdo.scores[i] = sum;
 		
-		bardataspecscore_stats.GetAdd((int)sum, 0)++;
+		bdo.score_stats.GetAdd((int)sum, 0)++;
+		
+		
+		double inv_sum = 0;
+		SortByValue(score_list, StdGreater<double>());
+		for(int j = 0; j < score_list.GetCount(); j++) {
+			double mult = ((double)j / (bardataspec.GetCount() - 1)) * -2.0 + 1.0;
+			int k = score_list.GetKey(j);
+			bool inv = k % 2; //GetSpecBarDataSpecArgs(k, NULL, NULL, inv)
+			double d = mult * (inv ? -1 : +1);
+			inv_sum += d;
+		}
+		inv_sum /= invosc_max;
+		
+		
+		bdo.invs[i] = inv_sum;
 	}
-	SortByKey(bardataspecscore_stats, StdLess<int>());
-	DUMPM(bardataspecscore_stats);
+	SortByKey(bdo.score_stats, StdLess<int>());
+	DUMPM(bdo.score_stats);
 	
 	
-	bardataspecscore_levels.SetCount(lvl_count);
+	bdo.score_levels.SetCount(lvl_count);
 	for(int i = 0; i < lvl_count; i++) {
 		int limit = bars * i / lvl_count;
 		
 		int sum = 0;
 		int level = 100;
-		for(int j = 0; j < bardataspecscore_stats.GetCount(); j++) {
-			sum += bardataspecscore_stats[j];
+		for(int j = 0; j < bdo.score_stats.GetCount(); j++) {
+			sum += bdo.score_stats[j];
 			if (sum >= limit) {
-				level = bardataspecscore_stats.GetKey(j);
+				level = bdo.score_stats.GetKey(j);
 				break;
 			}
 		}
-		bardataspecscore_levels[i] = level;
+		bdo.score_levels[i] = level;
 	}
-	DUMPC(bardataspecscore_levels);
+	DUMPC(bdo.score_levels);
+	
+	
 	
 }
 
-void Speculation::RefreshBarDataSpeculation2(int comb, int lengthi, SpecBarDataSpec& sbds) {
+void Speculation::RefreshBarDataOscillator(int tfi) {
+	BarDataOscillator& bdo = bardataspecosc[tfi];
+	BarDataOscillator& bdo0 = bardataspecosc[0];
+	
+	DataBridgeCommon& dbc = GetDataBridgeCommon();
+	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
+	const Index<Time>& idx = dbc.GetTimeIndex(tfs[tfi]);
+	
+	int bars = idx.GetCount();
+	int fast_counted = bdo.fast_counted;
+	int fast_bars = min(bdo0.scores.GetCount(), idx0.GetCount());
+	
+	bdo.scores.SetCount(bars, 0);
+	bdo.invs.SetCount(bars, 0);
+	
+	for(int i = fast_counted; i < fast_bars; i++) {
+		Time t0 = idx0[i];
+		Time t = SyncTime(tfs[tfi], t0);
+		int pos = idx.Find(t);
+		if (pos == -1) continue;
+		
+		double score0 = bdo0.scores[i];
+		double inv0 = bdo0.invs[i];
+		double& score = bdo.scores[pos];
+		double& inv = bdo.invs[pos];
+		
+		if (score == 0) {
+			score = score0;
+			inv = inv0;
+			
+			bdo.score_stats.GetAdd((int)score0, 0)++;
+		}
+	}
+	
+	bdo.fast_counted = fast_bars;
+	
+	
+	SortByKey(bdo.score_stats, StdLess<int>());
+	bdo.score_levels.SetCount(lvl_count);
+	for(int i = 0; i < lvl_count; i++) {
+		int limit = bars * i / lvl_count;
+		
+		int sum = 0;
+		int level = 100;
+		for(int j = 0; j < bdo.score_stats.GetCount(); j++) {
+			sum += bdo.score_stats[j];
+			if (sum >= limit) {
+				level = bdo.score_stats.GetKey(j);
+				break;
+			}
+		}
+		bdo.score_levels[i] = level;
+	}
+	DUMPC(bdo.score_levels);
+}
+
+void Speculation::RefreshBarDataSpeculation2(int comb, int lengthi, int prio_id, int inv, SpecBarDataSpec& sbds) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
 	
-	const SpecBarData& spd0 = GetSpecBarData(0, comb, lengthi);
+	const SpecBarData& spd0 = GetSpecBarData(0, comb, lengthi, prio_id, inv);
 	
 	int counted = sbds.data.GetCount();
 	int bars = spd0.data.GetCount();
@@ -619,7 +838,8 @@ void Speculation::RefreshBarDataSpeculation2(int comb, int lengthi, SpecBarDataS
 		
 		for(int j = 0; j < tfs.GetCount(); j++) {
 			int shift_pos = j == 0 ? i : dbc.GetTimeIndex(tfs[j]).Find(SyncTime(tfs[j], t));
-			SpecBarData& spd = GetSpecBarData(j, comb, lengthi);
+			if (shift_pos == -1) continue;
+			SpecBarData& spd = GetSpecBarData(j, comb, lengthi, prio_id, inv);
 			SpecBarDataItem& spdi = spd.data[shift_pos];
 			
 			bool b = spdi.signal;
@@ -638,9 +858,7 @@ void Speculation::RefreshBarDataSpeculation2(int comb, int lengthi, SpecBarDataS
 			switch (tfs[j]) {
 				case 0: steps = 21; break;
 				case 2: steps = 4; break;
-				case 4: steps = 2; break;
-				case 5: steps = 2; break;
-				case 6: steps = 1; break;
+				default: steps = 2; break;
 			}
 			bool prev_sig = false;
 			bool succ = false;
@@ -659,10 +877,10 @@ void Speculation::RefreshBarDataSpeculation2(int comb, int lengthi, SpecBarDataS
 			}
 			spdsd.succ[j] = succ;
 			
-			double slow_mult = 1.0 + (double)j / (double)tfs.GetCount();
+			double slow_mult = GetMult(j);
 			spdsd.slow_sum += (!spdsd.values[j]) * slow_mult;
 			spdsd.slow_sum += (!spdsd.avvalues[j]) * slow_mult;
-			spdsd.succ_sum += spdsd.succ[j] * slow_mult;
+			spdsd.succ_sum += (!spdsd.values[j]) * spdsd.succ[j] * slow_mult;
 		}
 	}
 }
@@ -712,11 +930,22 @@ void Speculation::RefreshTraders() {
 	
 }
 
+void Speculation::GetSpecBarDataSpecArgs(int bdspeci, int& comb, int& lengthi, int& prio_id, int& inv) {
+	inv = bdspeci % 2;
+	bdspeci /= 2;
+	prio_id = bdspeci % 3;
+	bdspeci /= 3;
+	lengthi = bdspeci % lengths.GetCount();
+	bdspeci /= lengths.GetCount();
+	comb = bdspeci;
+}
+
 void Speculation::RefreshTrader(TraderItem& ti) {
 	DataBridgeCommon& dbc = GetDataBridgeCommon();
 	const Index<Time>& idx0 = dbc.GetTimeIndex(0);
 	
 	SpecBarDataSpec& sbds0 = bardataspec[0];
+	BarDataOscillator& bdo0 = bardataspecosc[0];
 	
 	int counted = ti.data.GetCount();
 	int bars = sbds0.data.GetCount();
@@ -727,7 +956,7 @@ void Speculation::RefreshTrader(TraderItem& ti) {
 	
 	int start = startv[ti.comb];
 	int stop = start + sizev[ti.comb];
-	int scoremin = bardataspecscore_levels[ti.scorelvl];
+	int scoremin = bdo0.score_levels[ti.scorelvl];
 	int continue_length = GetSystem().GetPeriod(tfs[ti.tfi]);
 	
 	for(int i = counted; i < bars; i++) {
@@ -747,7 +976,7 @@ void Speculation::RefreshTrader(TraderItem& ti) {
 		int start_spec = -1;
 		bool do_start = true;
 		
-		int score = bardataspecscore[i];
+		int score = bdo0.scores[i];
 		if (score < scoremin)
 			do_start = false;
 		
@@ -806,17 +1035,17 @@ void Speculation::RefreshTrader(TraderItem& ti) {
 			
 			double change_sum = 0, low_change_sum = 0, high_change_sum = 0;
 			if (tid1.bdspeci >= 0) {
-				int comb1 = tid1.bdspeci / lengths.GetCount();
-				int lengthi1 = tid1.bdspeci % lengths.GetCount();
-				const SpecBarData& sbd1 = GetSpecBarData(0, comb1, lengthi1);
+				int comb1, lengthi1, prio_id1, inv1;
+				GetSpecBarDataSpecArgs(tid1.bdspeci, comb1, lengthi1, prio_id1, inv1);
+				const SpecBarData& sbd1 = GetSpecBarData(0, comb1, lengthi1, prio_id1, inv1);
 				const SpecBarDataItem& sbdi1 = sbd1.data[i-1];
 				const SpecBarDataItem* sbdi2 = NULL;
 				if (i >= 2) {
 					TraderItemData& tid2 = ti.data[0][i-2];
 					if (tid2.bdspeci >= 0) {
-						int comb2 = tid2.bdspeci / lengths.GetCount();
-						int lengthi2 = tid2.bdspeci % lengths.GetCount();
-						const SpecBarData& sbd2 = GetSpecBarData(0, comb2, lengthi2);
+						int comb2, lengthi2, prio_id2, inv2;
+						GetSpecBarDataSpecArgs(tid2.bdspeci, comb2, lengthi2, prio_id2, inv2);
+						const SpecBarData& sbd2 = GetSpecBarData(0, comb2, lengthi2, prio_id2, inv2);
 						sbdi2 = &sbd2.data[i-2];
 					}
 				}
@@ -976,15 +1205,18 @@ SpeculationCtrl::SpeculationCtrl() {
 	perf_tab.SetPos(4000);
 	
 	perf_list.AddColumn("Start");
-	perf_list.AddColumn("Size");
 	perf_list.AddColumn("Length");
+	perf_list.AddColumn("Priority-count");
+	perf_list.AddColumn("Inv");
 	perf_list.AddColumn("Signals");
 	perf_list.AddColumn("Sum");
 	perf_list.AddColumn("Success");
 	perf_list.AddColumn("Score");
 	perf_list.AddIndex();
 	perf_list.AddIndex();
-	perf_list.ColumnWidths("2 2 2 8 3 3 1");
+	perf_list.AddIndex();
+	perf_list.AddIndex();
+	perf_list.ColumnWidths("2 2 2 2 8 3 3 1");
 	perf_list.SetLineCy(30);
 	perf_list.WhenAction << THISBACK(Data);
 	
@@ -1031,7 +1263,7 @@ void SpeculationCtrl::Data() {
 		trader_tf <<= THISBACK(Data);
 	}
 	
-	if (s.data.IsEmpty()) return;
+	if (s.data.GetCount() < 2) return;
 	
 	bool is_last = slider.GetData() == slider.GetMax();
 	slider.MinMax(0, s.data.GetCount()-1);
@@ -1062,11 +1294,9 @@ void SpeculationCtrl::Data() {
 			if (pos < 0 || pos >= si.data.GetCount())
 				continue;
 			SpecItemData& d = si.data[pos];
-			double sum = d.slow_sum;
-			int new_value = fabs(sum) / s.max_sum[si.data_i] * 1000;
 			
-			double succ = d.succ_sum;
-			int new_succ_value = succ / s.max_succ_sum[si.data_i] * 1000;
+			int new_value = fabs(d.slow_sum) / s.max_sum[si.data_i] * 1000;
+			int new_succ_value = fabs(d.succ_sum) / s.max_succ_sum[si.data_i] * 1000;
 			
 			int row = i-s.cur_count;
 			/*if (ses.HasOrders(full)) {
@@ -1077,7 +1307,7 @@ void SpeculationCtrl::Data() {
 			}
 			else {*/
 				list.Set(row, 0, sym);
-				list.Set(row, 3, sum > 0 ? "Buy" : "Sell");
+				list.Set(row, 3, d.slow_sum > 0 ? "Buy" : "Sell");
 			//}
 			list.Set(row, 1, new_value);
 			list.SetDisplay(row, 1, ProgressDisplay2());
@@ -1097,17 +1327,21 @@ void SpeculationCtrl::Data() {
 		if (perf_list.IsCursor()) cursor = perf_list.GetCursor();
 		int scroll = perf_list.GetScroll();
 		
-		int comb = 0, lengthi = 0;
+		int comb = 0, lengthi = 0, prio_id = 0, inv = 0;
 		if (perf_list.GetCount()) {
-			comb = max(0, min(s.startv.GetCount()-1, (int)perf_list.Get(cursor, 7)));
-			lengthi = max(0, min(s.lengths.GetCount()-1, (int)perf_list.Get(cursor, 8)));
+			comb = max(0, min(s.startv.GetCount()-1, (int)perf_list.Get(cursor, 8)));
+			lengthi = max(0, min(s.lengths.GetCount()-1, (int)perf_list.Get(cursor, 9)));
+			prio_id = max(0, min(2, (int)perf_list.Get(cursor, 10)));
+			inv = max(0, min(1, (int)perf_list.Get(cursor, 11)));
 			int tfi = perf_tf.GetIndex();
 			int shift = matrix.shift;
 			if (tfi)
 				shift = dbc.GetTimeIndex(s.tfs[tfi]).Find(SyncTime(s.tfs[tfi], idx0[shift]));
-			if (comb != candles.comb || lengthi != candles.lengthi || shift != candles.shift || tfi != candles.tfi) {
+			if (comb != candles.comb || lengthi != candles.lengthi || shift != candles.shift || tfi != candles.tfi || prio_id != candles.prio_id || inv != candles.inv) {
 				candles.comb = comb;
 				candles.lengthi = lengthi;
+				candles.prio_id = prio_id;
+				candles.inv = inv;
 				candles.shift = shift;
 				candles.tfi = tfi;
 				candles.Data();
@@ -1118,50 +1352,59 @@ void SpeculationCtrl::Data() {
 		int row = 0;
 		for(int i = 0; i < s.startv.GetCount(); i++) {
 			for(int j = 0; j < s.lengths.GetCount(); j++) {
-				const SpecBarDataSpec& sbds = s.GetSpecBarDataSpec(i, j);
-				if (matrix.shift < 0 || matrix.shift >= sbds.data.GetCount())
-					 continue;
-				
-				perf_list.Set(row, 0, s.startv[i]);
-				perf_list.Set(row, 1, s.sizev[i]);
-				perf_list.Set(row, 2, s.lengths[j]);
-				
-				const SpecBarDataSpecData& sbdsd = sbds.data[matrix.shift];
-				int code = 0;
-				int bit = 0;
-				for(int k = 0; k < 5; k++) {
-					if (sbdsd.values[k]) code |= 1 << bit;
-					bit++;
-					if (sbdsd.avvalues[k]) code |= 1 << bit;
-					bit++;
-					if (sbdsd.succ[k]) code |= 1 << bit;
-					bit++;
+				for (int prio_id = 0; prio_id < 3; prio_id++) {
+					for (int inv = 0; inv < 2; inv++) {
+						const SpecBarDataSpec& sbds = s.GetSpecBarDataSpec(i, j, prio_id, inv);
+						if (matrix.shift < 0 || matrix.shift >= sbds.data.GetCount())
+							 continue;
+						
+						perf_list.Set(row, 0, s.startv[i]);
+						perf_list.Set(row, 1, s.lengths[j]);
+						perf_list.Set(row, 2, 1 << prio_id);
+						perf_list.Set(row, 3, inv);
+						
+						const SpecBarDataSpecData& sbdsd = sbds.data[matrix.shift];
+						int code = 0;
+						int bit = 0;
+						for(int k = 0; k < SpecBarDataSpecData::tf_count; k++) {
+							if (sbdsd.values[k]) code |= 1 << bit;
+							bit++;
+							if (sbdsd.avvalues[k]) code |= 1 << bit;
+							bit++;
+							if (sbdsd.succ[k]) code |= 1 << bit;
+							bit++;
+						}
+						perf_list.Set(row, 4, code);
+						perf_list.SetDisplay(row, 4, CodeDisplay());
+						
+						ASSERT(s.bd_max_sum != 0 && s.bd_max_succ_sum != 0);
+						int new_value = max(0.0, sbdsd.slow_sum) * 1000 / s.bd_max_sum;
+						int new_succ_value = max(0.0, sbdsd.succ_sum) * 1000 / s.bd_max_succ_sum;
+						perf_list.Set(row, 5, new_value);
+						perf_list.SetDisplay(row, 5, ProgressDisplay2());
+						perf_list.Set(row, 6, new_succ_value);
+						perf_list.SetDisplay(row, 6, SuccessDisplay());
+						perf_list.Set(row, 7, (new_value * 2 + new_succ_value) / 30);
+						perf_list.Set(row, 8, i);
+						perf_list.Set(row, 9, j);
+						perf_list.Set(row, 10, prio_id);
+						perf_list.Set(row, 11, inv);
+						
+						row++;
+					}
 				}
-				perf_list.Set(row, 3, code);
-				perf_list.SetDisplay(row, 3, CodeDisplay());
-				
-				ASSERT(s.bd_max_sum != 0 && s.bd_max_succ_sum != 0);
-				int new_value = max(0.0, sbdsd.slow_sum) * 1000 / s.bd_max_sum;
-				int new_succ_value = sbdsd.succ_sum * 1000 / s.bd_max_succ_sum;
-				perf_list.Set(row, 4, new_value);
-				perf_list.SetDisplay(row, 4, ProgressDisplay2());
-				perf_list.Set(row, 5, new_succ_value);
-				perf_list.SetDisplay(row, 5, SuccessDisplay());
-				perf_list.Set(row, 6, (new_value * 2 + new_succ_value) / 30);
-				perf_list.Set(row, 7, i);
-				perf_list.Set(row, 8, j);
-				
-				row++;
 			}
 		}
 		
-		perf_list.SetSortColumn(6, true);
+		perf_list.SetSortColumn(7, true);
 		
 		perf_list.WhenAction.Clear();
 		for(int i = 0; i < perf_list.GetCount(); i++) {
-			int comb2 = perf_list.Get(i, 7);
-			int lengthi2 = perf_list.Get(i, 8);
-			if (comb2 == comb && lengthi2 == lengthi) {
+			int comb2 = perf_list.Get(i, 8);
+			int lengthi2 = perf_list.Get(i, 9);
+			int prio_id2 = perf_list.Get(i, 10);
+			int inv2 = perf_list.Get(i, 11);
+			if (comb2 == comb && lengthi2 == lengthi && prio_id2 == prio_id && inv2 == inv) {
 				perf_list.SetCursor(i);
 				break;
 			}
@@ -1267,7 +1510,9 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 	Font fnt = Arial(subrow * 0.6);
 	
 	for(int i = 0; i < cur_count; i++) {
-		String a = s.sym[i].Left(3);
+		int sym_id_a = si.cur_score.GetKey(i);
+		
+		String a = s.sym[sym_id_a].Left(3);
 		
 		int x = 0;
 		int y = (1 + i) * row;
@@ -1275,9 +1520,9 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
 		
 		for(int j = 0; j < tf_count; j++) {
-			bool b = si.values[i * tf_count + j];
-			bool ab = si.avvalues[i * tf_count + j];
-			bool su = si.succ[i * tf_count + j];
+			bool b = si.values[sym_id_a * tf_count + j];
+			bool ab = si.avvalues[sym_id_a * tf_count + j];
+			bool su = si.succ[sym_id_a * tf_count + j];
 			x = j * subcol;
 			y = (1 + i) * row + subrow;
 			d.DrawRect(x, y, subcol + 1, subsubrow + 1, si.GetColor(j, b));
@@ -1291,9 +1536,9 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 		y = 0;
 		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
 		for(int j = 0; j < tf_count; j++) {
-			bool b = si.values[i * tf_count + j];
-			bool ab = si.avvalues[i * tf_count + j];
-			bool su = si.succ[i * tf_count + j];
+			bool b = si.values[sym_id_a * tf_count + j];
+			bool ab = si.avvalues[sym_id_a * tf_count + j];
+			bool su = si.succ[sym_id_a * tf_count + j];
 			x = (1 + i) * col + j * subcol;
 			y = subrow;
 			d.DrawRect(x, y, subcol + 1, subsubrow + 1, si.GetColor(j, b));
@@ -1306,7 +1551,9 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 		
 		for(int j = 0; j < cur_count; j++) {
 			if (i == j) continue;
-			String b = s.sym[j].Left(3);
+			int sym_id_b = si.cur_score.GetKey(j);
+			
+			String b = s.sym[sym_id_b].Left(3);
 			String ab = a + b + sys.GetPostFix();
 			String ba = b + a + sys.GetPostFix();
 			String sym;
@@ -1342,8 +1589,8 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, si.GetColor(k, ab));
 				
 				y = (1 + j) * row + subrow + subsubrow;
-				bool av = si.values[i * tf_count + k];
-				bool bv = si.values[j * tf_count + k];
+				bool av = si.values[sym_id_a * tf_count + k];
+				bool bv = si.values[sym_id_b * tf_count + k];
 				int sum = 0;
 				if (is_ab) {
 					sum += av ? -1 : +1;
@@ -1359,8 +1606,8 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 				
 				y = (1 + j) * row + subrow + subsubrow + subsubsubrow;
-				bool aav = si.avvalues[i * tf_count + k];
-				bool abv = si.avvalues[j * tf_count + k];
+				bool aav = si.avvalues[sym_id_a * tf_count + k];
+				bool abv = si.avvalues[sym_id_b * tf_count + k];
 				sum = 0;
 				if (is_ab) {
 					sum += aav ? -1 : +1;
@@ -1379,8 +1626,8 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, s.GetSuccessColor(su));
 				
 				y = (1 + j) * row + subrow + subsubrow * 2 + subsubsubrow;
-				bool as = si.succ[i * tf_count + k];
-				bool bs = si.succ[j * tf_count + k];
+				bool as = si.succ[sym_id_a * tf_count + k];
+				bool bs = si.succ[sym_id_b * tf_count + k];
 				sum = as * 1 + bs * 1;
 				c = Blend(s.GetSuccessColor(0), s.GetSuccessColor(1), sum * 255 / 2);
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
@@ -1484,12 +1731,12 @@ Display& SuccessDisplay()
 void CodeDisplayCls::Paint(Draw& w, const Rect& r, const Value& q,
                                Color ink, Color paper, dword s) const
 {
-	double col = r.Width() / 5.0;
+	double col = r.Width() / (double)SpecBarDataSpecData::tf_count;
 	double row = r.Height() / 3.0;
 	
 	int code = q;
 	int bit = 0;
-	for(int i = 0; i < 5; i++) {
+	for(int i = 0; i < SpecBarDataSpecData::tf_count; i++) {
 		int x = r.left + i * col, y;
 		
 		bool value = code & (1 << bit);
@@ -1507,7 +1754,7 @@ void CodeDisplayCls::Paint(Draw& w, const Rect& r, const Value& q,
 		w.DrawRect(x, y, col+1, row+1, succ ? LtYellow : Black);
 	}
 	
-	for(int i = 1; i < 5; i++) {
+	for(int i = 1; i < SpecBarDataSpecData::tf_count; i++) {
 		int x = r.left + i * col, y;
 		w.DrawLine(x, r.top, x, r.bottom, 1, GrayColor());
 	}
@@ -1554,7 +1801,9 @@ void CandlestickCtrl::Paint(Draw& d) {
 	
 	//d.DrawText(0, 0, GetSystem().GetSymbol(sym), Arial(28));
 	
-	int cs_h = h * 0.7;
+	int cs_h = h * 0.5;
+	int indi_h = h / 6.0;
+	
 	for(int i = 0; i < count; i++) {
         Vector<Point> P;
         double O, H, L, C;
@@ -1594,7 +1843,7 @@ void CandlestickCtrl::Paint(Draw& d) {
         }
     }
     
-    int indi_h = h - cs_h;
+    
     y += cs_h;
     hi = -DBL_MAX;
     lo = +DBL_MAX;
@@ -1627,25 +1876,102 @@ void CandlestickCtrl::Paint(Draw& d) {
 		d.DrawPolyline(cache, 1, Green());
     
     double O = (1 - (0  - lo) / diff) * indi_h;
-    if (IsFin(O)) {
-	    y += O;
-	    d.DrawLine(0, y, w, y, 1, Black());
+    if (IsFin(O) && O >= 0 && O <= indi_h) {
+	    d.DrawLine(0, y + O, w, y + O, 1, Black());
+    }
+    
+    
+    y += indi_h;
+    hi = -DBL_MAX;
+    lo = +DBL_MAX;
+	for(double d : scores) {
+		if (d < lo) lo = d;
+		if (d > hi) hi = d;
+	}
+	diff = hi - lo;
+	
+	cache.SetCount(0);
+	
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O;
+        pos = c - (count - i);
+        if (pos >= scores.GetCount() || pos < 0) continue;
+        
+        double score  = scores[pos];
+        bool b = score < scoremin;
+        
+        O = (1 - (score  - lo) / diff) * indi_h;
+		
+		cache <<
+			Point((int)(x+(i+0.5)*div),		(int)(y+O));
+		
+		int rx = x + i * div + 1;
+		d.DrawRect(rx, y, div-2, div-2, b ? Color(28, 127, 255) : Color(28, 212, 0));
+    }
+    if (!cache.IsEmpty())
+		d.DrawPolyline(cache, 1, Green());
+    
+    O = (1 - (scoremin - lo) / diff) * indi_h;
+    if (IsFin(O) && O >= 0 && O <= indi_h) {
+	    d.DrawLine(0, y + O, w, y + O, 1, Black());
+    }
+    
+    
+    y += indi_h;
+    hi = 1;
+    lo = -1;
+	diff = hi - lo;
+	
+	cache.SetCount(0);
+	
+	for(int i = 0; i < count; i++) {
+        Vector<Point> P;
+        double O;
+        pos = c - (count - i);
+        if (pos >= invs.GetCount() || pos < 0) continue;
+        
+        double inv  = invs[pos];
+        bool b = inv < 0;
+        
+        O = (1 - (inv  - lo) / diff) * indi_h;
+		
+		cache <<
+			Point((int)(x+(i+0.5)*div),		(int)(y+O));
+		
+		int rx = x + i * div + 1;
+		d.DrawRect(rx, y, div-2, div-2, b ? Color(28, 127, 255) : Color(28, 212, 0));
+    }
+    if (!cache.IsEmpty())
+		d.DrawPolyline(cache, 1, Green());
+    
+    O = (1 - (0 - lo) / diff) * indi_h;
+    if (IsFin(O) && O >= 0 && O <= indi_h) {
+	    d.DrawLine(0, y + O, w, y + O, 1, Black());
     }
 }
 
 void CandlestickCtrl::Data() {
 	Speculation& s = GetSpeculation();
-	const SpecBarData& sbd = s.GetSpecBarData(tfi, comb, lengthi);
+	const SpecBarData& sbd = s.GetSpecBarData(tfi, comb, lengthi, prio_id, inv);
+	const BarDataOscillator& bdo = s.bardataspecosc[tfi];
 	if (shift < 0 || shift >= sbd.data.GetCount()) return;
+	if (shift < 0 || shift >= bdo.scores.GetCount()) return;
+	if (shift < 0 || shift >= bdo.invs.GetCount()) return;
+	if (bdo.score_levels.IsEmpty()) return;
+	
+	scoremin = bdo.score_levels.Top();
 	
 	int count = min(shift+1, this->count);
-	Vector<double> opens, lows, highs;
+	Vector<double> opens, lows, highs, scores, invs;
 	Vector<bool> bools;
 	opens.SetCount(count);
 	lows.SetCount(count);
 	highs.SetCount(count);
 	specs.SetCount(count);
 	bools.SetCount(count);
+	scores.SetCount(count);
+	invs.SetCount(count);
 	for(int i = 0; i < count; i++) {
 		int pos = shift+1 - count + i;
 		const SpecBarDataItem& sbdi = sbd.data[pos];
@@ -1655,12 +1981,17 @@ void CandlestickCtrl::Data() {
 		highs[i] = sbdi.high;
 		specs[i] = sbdi.spec;
 		bools[i] = sbdi.signal;
+		
+		scores[i] = bdo.scores[pos];
+		invs[i] = bdo.invs[pos];
 	}
 	Swap(this->highs, highs);
 	Swap(this->lows, lows);
 	Swap(this->opens, opens);
 	Swap(this->specs, specs);
 	Swap(this->bools, bools);
+	Swap(this->scores, scores);
+	Swap(this->invs, invs);
 	
 	
 }

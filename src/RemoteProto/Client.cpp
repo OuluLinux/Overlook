@@ -886,6 +886,7 @@ SpeculationMatrix::SpeculationMatrix() {
 	sym.Add("AUDNZD");
 	
 	tfs.Add(0);
+	tfs.Add(1);
 	tfs.Add(2);
 	tfs.Add(4);
 	tfs.Add(5);
@@ -909,10 +910,8 @@ SpeculationMatrix::SpeculationMatrix() {
 	
 	buy_paper = Color(170, 255, 150);
 	sell_paper = Color(113, 212, 255);
-	buy_color0 = Color(28, 212, 0);
-	sell_color0 = Color(56, 127, 255);
-	buy_color1 = Color(28, 255, 0);
-	sell_color1 = Color(28, 212, 255);
+	buy_color = Color(28, 212, 0);
+	sell_color = Color(56, 127, 255);
 
 }
 
@@ -927,145 +926,100 @@ void SpeculationMatrix::Data() {
 			GetSession().Get("speculation", data);
 			MemStream mem((void*)data.Begin(), data.GetCount());
 			
-			Vector<bool> tmp, avtmp, succtmp;
-			tmp.SetCount(sym.GetCount() * tfs.GetCount());
-			avtmp.SetCount(sym.GetCount() * tfs.GetCount());
-			succtmp.SetCount(sym.GetCount() * tfs.GetCount());
-			int row = 0;
-			for(int i = 0; i < sym.GetCount(); i++) {
-				for(int j = 0; j < tfs.GetCount(); j++) {
-					bool b;
-					mem.Get(&b, sizeof(bool));
-					tmp[row] = b;
-					mem.Get(&b, sizeof(bool));
-					avtmp[row] = b;
-					mem.Get(&b, sizeof(bool));
-					succtmp[row++] = b;
-				}
+			int count;
+			bool has_data = true;
+			
+			count = mem.Get32();
+			if (count == -1) {
+				pending_data = false;
+				return;
+			}
+			has_data = has_data && count > 0;
+			for(int i = 0; i < count; i++) {
+				int key = mem.Get32();
+				double score;
+				mem.Get(&score, sizeof(double));
+				cur_score.GetAdd(key) = score;
+			}
+			SortByKey(cur_score, StdLess<int>());
+			SortByValue(cur_score, StdGreater<double>());
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			slow_sum.SetCount(count, 0);
+			succ_sum.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&slow_sum[i], sizeof(double));
+				mem.Get(&succ_sum[i], sizeof(double));
 			}
 			
-			Swap(tmp, values);
-			Swap(avtmp, avvalues);
-			Swap(succtmp, succ);
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			succ_tf.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&succ_tf[i], sizeof(double));
+			}
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			nn.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&nn[i], sizeof(double));
+			}
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			bdnn.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&bdnn[i], sizeof(double));
+			}
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			values.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&values[i], sizeof(bool));
+			}
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			avvalues.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&avvalues[i], sizeof(bool));
+			}
+			
+			count = mem.Get32();
+			has_data = has_data && count > 0;
+			succ.SetCount(count, 0);
+			for(int i = 0; i < count; i++) {
+				mem.Get(&succ[i], sizeof(bool));
+			}
+			
+			this->has_data = has_data;
 			
 			pending_data = false;
 		});
 	
 	}
 	
-	
-	struct Data : Moveable<Data> {
-		int start, size;
-		double slow_sum = 0, succ_sum = 0, max_sum = 0, max_succ_sum = 0;
-		
-		//bool operator()(const Data& a, const Data& b) const {return fabs(a.slow_sum) / a.max_sum > fabs(b.slow_sum) / b.max_sum;}
-	};
-	Vector<Vector<Data> > data;
-	Vector<double> succ_tf;
-	data.SetCount(sym.GetCount());
-	succ_tf.SetCount(tfs.GetCount(), 0);
-	
-	for(int i = cur_count; i < sym.GetCount(); i++) {
-		String s = sym[i];
-		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
-		String a = s.Left(3);
-		String b = s.Mid(3,3);
-		int ai = sym.Find(a);
-		int bi = sym.Find(b);
-		Vector<Data>& symdata = data[i];
-		
-		for(int j = 0; j < 5; j++) {
-			int size = 1 + j;
-			int start_count = tfs.GetCount() - size + 1;
-			for(int k = 0; k < start_count; k++) {
-				Data& d = symdata.Add();
-				d.start = k;
-				d.size = size;
-				
-				for (int l = 0; l < size; l++) {
-					int tfi = k + l;
-					double mult = 1.0 + (double)tfi / (double)tfs.GetCount();
-					d.max_sum += mult + mult * 2 + mult + mult * 2;
-					d.max_succ_sum += mult + mult * 2;
-				}
-			}
-		}
-		
-		for(int j = tfs.GetCount()-1; j >= 0; j--) {
-			bool av = values[ai * tfs.GetCount() + j];
-			bool bv = values[bi * tfs.GetCount() + j];
-			bool aav = avvalues[ai * tfs.GetCount() + j];
-			bool abv = avvalues[bi * tfs.GetCount() + j];
-			bool v = values[i * tfs.GetCount() + j];
-			bool avv = avvalues[i * tfs.GetCount() + j];
-			bool sav = succ[ai * tfs.GetCount() + j];
-			bool sbv = succ[bi * tfs.GetCount() + j];
-			bool sv = succ[i * tfs.GetCount() + j];
-			double slow_mult = 1.0 + (double)j / (double)tfs.GetCount();
-			double symtf_sum = 0;
-			symtf_sum += (v ? -1 : +1) * slow_mult;
-			symtf_sum += (avv ? -1 : +1) * slow_mult;
-			int ab = (av ? -1 : +1) + (bv ? +1 : -1);
-			int aab = (aav ? -1 : +1) + (abv ? +1 : -1);
-			if (ab) symtf_sum += (ab < 0 ? -2 : +2) * slow_mult;
-			if (aab) symtf_sum += (aab < 0 ? -2 : +2) * slow_mult;
-			
-			for(int k = 0; k < symdata.GetCount(); k++) {
-				Data& d = symdata[k];
-				if (j >= d.start && j < d.start + d.size) {
-					d.slow_sum += symtf_sum;
-					d.succ_sum += (sv + sav + sbv) * slow_mult;
-				}
-			}
-			
-			succ_tf[j] += (sv + sav + sbv) / (sym.GetCount() * 3.0);
-		}
-		
-		//Sort(symdata, Data());
-	}
-	Swap(this->succ_tf, succ_tf);
-	
-	
-	int tf_begin = -1, tf_end = -1, data_i = -1;
-	double max_tf_fac = -DBL_MAX;
-	for(int i = 0; i < data[cur_count].GetCount(); i++) {
-		double fac_sum = 0;
-		for(int j = cur_count; j < sym.GetCount(); j++) {
-			double fac0 = fabs(data[j][i].slow_sum) / data[j][i].max_sum;
-			double fac1 = data[j][i].succ_sum / data[j][i].max_succ_sum;
-			fac_sum += fac0 + fac1;
-		}
-		if (fac_sum > max_tf_fac) {
-			tf_begin = data[cur_count][i].start;
-			tf_end = tf_begin + data[cur_count][i].size;
-			data_i = i;
-			max_tf_fac = fac_sum;
-		}
-	}
-	this->tf_begin = tf_begin;
-	this->tf_end = tf_end;
-	
+	if (!has_data) return;
 	
 	int cursor = 0;
 	if (list.IsCursor()) cursor = list.GetCursor();
-	bool has_increases = false, has_decreases = false;
 	int size_count = 0;
 	for(int i = cur_count; i < sym.GetCount(); i++) {
 		String s = sym[i];
 		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
 		
-		Data& d = data[i][data_i];
-		double sum = d.slow_sum;
-		int new_value = fabs(sum) / d.max_sum * 1000;
+		double sum = slow_sum[i];
+		int new_value = fabs(sum) * 1000;
 		int old_value = prev_values[i];
-		if (new_value > 500 && old_value <= 500) has_increases = true;
-		if (new_value <= 500 && old_value > 500) has_decreases = true;
 		prev_values[i] = new_value;
 		if (new_value >= 500)
 			size_count++;
 		
-		double succ = d.succ_sum;
-		int new_succ_value = succ / d.max_succ_sum * 1000;
+		double succ = succ_sum[i];
+		int new_succ_value = fabs(succ) * 1000;
 		
 		int row = i-cur_count;
 		if (ses.HasOrders(full)) {
@@ -1082,20 +1036,12 @@ void SpeculationMatrix::Data() {
 		list.SetDisplay(row, 1, ProgressDisplay2());
 		list.Set(row, 2, new_succ_value);
 		list.SetDisplay(row, 2, SuccessDisplay());
-		list.Set(row, 4, (new_value + new_succ_value) / 20);
+		list.Set(row, 4, (new_value + new_succ_value) * 100 / 2);
 		signals[i] = sum < 0;
 	}
 	list.SetSortColumn(4, true);
 	list.SetCursor(cursor);
 	
-	if (has_increases)
-		PlayAlarm(1);
-	if (has_decreases)
-		PlayAlarm(2);
-	bool new_is_size = size_count >= 3;
-	if (new_is_size && !is_size)
-		PlayAlarm(4);
-	is_size = new_is_size;
 	
 	Refresh();
 	
@@ -1104,71 +1050,131 @@ void SpeculationMatrix::Data() {
 void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	Session& ses = GetSession();
 	
+	int tf_count = m->tfs.GetCount();
+	
 	Rect r(GetSize());
 	d.DrawRect(GetSize(), White());
+	if (!m->has_data) return;
 	
 	int grid_count = cur_count+1;
 	double row = r.GetHeight() / (double)grid_count;
 	double col = r.GetWidth() / (double)grid_count;
-	double subrow = row / 2;
-	double subsubrow = subrow / 3;
+	double subrow = row / 3;
+	double subsubrow = subrow * 2 / 4;
 	double subsubsubrow = subsubrow / 2;
-	double subcol = col / m->tfs.GetCount();
+	double subcol = col / tf_count;
 	Font fnt = Arial(subrow * 0.6);
+	const double nn_max = 0.025;
+	const double bdnn_max = 0.1;
+	
+	Color opportunity = Color(255, 255, 189);
+	
+	prev_opportunities.SetCount(cur_count * cur_count, false);
+	bool new_opportunities = false;
 	
 	for(int i = 0; i < cur_count; i++) {
-		String a = m->sym[i];
+		int sym_id_a = m->cur_score.GetKey(i);
+		
+		String a = m->sym[sym_id_a];
 		
 		int x = 0;
 		int y = (1 + i) * row;
 		Size a_size = GetTextSize(a, fnt);
 		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
 		
-		for(int j = 0; j < m->tfs.GetCount(); j++) {
-			bool b = m->values[i * m->tfs.GetCount() + j];
-			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
-			bool s = m->succ[i * m->tfs.GetCount() + j];
+		for(int j = 0; j < tf_count; j++) {
+			bool b = m->values[sym_id_a * tf_count + j];
+			bool ab = m->avvalues[sym_id_a * tf_count + j];
+			bool s = m->succ[sym_id_a * tf_count + j];
+			
 			x = j * subcol;
 			y = (1 + i) * row + subrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, b));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(b));
 			y = (1 + i) * row + subrow + subsubrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, ab));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(ab));
 			y = (1 + i) * row + subrow + subsubrow * 2;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(j, s));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(s));
+		}
+		if (!m->nn.IsEmpty()) {
+			double nn = m->nn[sym_id_a];
+			x = 0;
+			y = (1 + i) * row + subrow + subsubrow * 3;
+			if (nn >= 0) {
+				int w = min(col / 2.0, nn / nn_max * col / 2.0);
+				d.DrawRect(x + col / 2.0 + 1, y, w, subsubrow + 1, m->GetColor(0));
+			} else {
+				int w = min(col / 2.0, -nn / nn_max * col / 2.0);
+				d.DrawRect(x + col / 2.0 - w + 1, y, w, subsubrow + 1, m->GetColor(1));
+			}
 		}
 		
-		x = (1 + i) * col;
+		
+		x = (1 + cur_count - 1 - i) * col;
 		y = 0;
 		d.DrawText(x + (col - a_size.cx) / 2, y + (subrow - a_size.cy) / 2, a, fnt);
-		for(int j = 0; j < m->tfs.GetCount(); j++) {
-			bool b = m->values[i * m->tfs.GetCount() + j];
-			bool ab = m->avvalues[i * m->tfs.GetCount() + j];
-			bool s = m->succ[i * m->tfs.GetCount() + j];
-			x = (1 + i) * col + j * subcol;
+		for(int j = 0; j < tf_count; j++) {
+			bool b = m->values[sym_id_a * tf_count + j];
+			bool ab = m->avvalues[sym_id_a * tf_count + j];
+			bool s = m->succ[sym_id_a * tf_count + j];
+			
+			x = (1 + cur_count - 1 - i) * col + j * subcol;
 			y = subrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, b));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(b));
 			y = subrow + subsubrow;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(j, ab));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetColor(ab));
 			y = subrow + subsubrow * 2;
-			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(j, s));
+			d.DrawRect(x, y, subcol + 1, subsubrow + 1, m->GetSuccessColor(s));
+		}
+		if (!m->nn.IsEmpty()) {
+			double nn = m->nn[sym_id_a];
+			x = (1 + cur_count - 1 - i) * col;
+			y = subrow + subsubrow * 3;
+			if (nn >= 0) {
+				int w = min(col / 2.0, nn / nn_max * col / 2.0);
+				d.DrawRect(x + col / 2.0 + 1, y, w, subsubrow + 1, m->GetColor(0));
+			} else {
+				int w = min(col / 2.0, -nn / nn_max * col / 2.0);
+				d.DrawRect(x + col / 2.0 - w + 1, y, w, subsubrow + 1, m->GetColor(1));
+			}
 		}
 		
 		
 		for(int j = 0; j < cur_count; j++) {
 			if (i == j) continue;
-			String b = m->sym[j];
+			int sym_id_b = m->cur_score.GetKey(j);
+			
+			String b = m->sym[sym_id_b];
 			String ab = a + b;
 			String ba = b + a;
 			String s;
 			bool is_ab = m->sym.Find(ab) != -1;
+			bool invert = !is_ab;
 			if (is_ab)
 				s = ab;
 			else
 				s = ba;
 			int sympos = m->sym.Find(s);
 			
-			x = (1 + i) * col;
-			y = (1 + j) * row;
+			x = (1 + cur_count - 1 - j) * col;
+			y = (1 + i) * row;
+			
+			bool a_sig = m->nn[sym_id_a] < 0;
+			bool b_sig = m->nn[sym_id_b] < 0;
+			double nn = m->nn[sympos];
+			double bdnn = m->bdnn[sympos];
+			bool ab_nn_sig = nn < 0;
+			bool ab_bdnn_sig = bdnn < 0;
+			if (invert) {
+				ab_nn_sig = !ab_nn_sig;
+				ab_bdnn_sig = !ab_bdnn_sig;
+			}
+			bool& prev_opportunity = prev_opportunities[i * cur_count + j];
+			bool is_opportunity = !a_sig && b_sig && !ab_nn_sig && !ab_bdnn_sig && nn != 0.0 && bdnn != 0.0;
+			if (is_opportunity != prev_opportunity)
+				new_opportunities = true;
+			if (is_opportunity)
+				d.DrawRect(x, y, col + 1, row + 1, opportunity);
+			prev_opportunity = is_opportunity;
 			
 			int mtsym_id = ses.FindSymbolLeft(s);
 			ASSERT(mtsym_id != -1);
@@ -1176,64 +1182,92 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 			bool has_orders = ses.HasOrders(mtsym);
 			if (has_orders) {
 				bool sig = ses.GetOrderSig(mtsym);
+				if (invert)
+					sig = !sig;
 				d.DrawRect(x, y, col + 1, row + 1, m->GetPaper(sig));
 			}
 			
-			Size s_size = GetTextSize(s, fnt);
-			d.DrawText(x + (col - s_size.cx) / 2, y + (subrow - s_size.cy) / 2, s, fnt);
-			for(int k = 0; k < m->tfs.GetCount(); k++) {
-				x = (1 + i) * col + k * subcol;
-				y = (1 + j) * row + subrow;
+			Size s_size = GetTextSize(ab, fnt);
+			d.DrawText(x + (col - s_size.cx) / 2, y + (subrow - s_size.cy) / 2, ab, fnt);
+			for(int k = 0; k < tf_count; k++) {
+				x = (1 + cur_count - 1 - j) * col + k * subcol;
+				y = (1 + i) * row + subrow;
 				
-				bool b = m->values[sympos * m->tfs.GetCount() + k];
-				bool ab = m->avvalues[sympos * m->tfs.GetCount() + k];
-				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(k, b));
-				y = (1 + j) * row + subrow + subsubsubrow;
-				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(k, ab));
+				bool b = m->values[sympos * tf_count + k];
+				bool ab = m->avvalues[sympos * tf_count + k];
+				if (invert) {
+					b = !b;
+					ab = !ab;
+				}
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(b));
+				y = (1 + i) * row + subrow + subsubsubrow;
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetColor(ab));
 				
-				y = (1 + j) * row + subrow + subsubrow;
-				bool av = m->values[i * m->tfs.GetCount() + k];
-				bool bv = m->values[j * m->tfs.GetCount() + k];
+				y = (1 + i) * row + subrow + subsubrow;
+				bool av = m->values[sym_id_a * tf_count + k];
+				bool bv = m->values[sym_id_b * tf_count + k];
+				
 				int sum = 0;
-				if (is_ab) {
-					sum += av ? -1 : +1;
-					sum += bv ? +1 : -1;
-				} else {
-					sum += av ? +1 : -1;
-					sum += bv ? -1 : +1;
-				}
+				sum += av ? -1 : +1;
+				sum += bv ? +1 : -1;
+				
 				Color c;
-				if (sum > 0)		c = m->GetColor(k, 0);
-				else if (sum < 0)	c = m->GetColor(k, 1);
-				else				c = m->GetGrayColor(k);
+				if (sum > 0)		c = m->GetColor(0);
+				else if (sum < 0)	c = m->GetColor(1);
+				else				c = m->GetGrayColor();
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 				
-				y = (1 + j) * row + subrow + subsubrow + subsubsubrow;
-				bool aav = m->avvalues[i * m->tfs.GetCount() + k];
-				bool abv = m->avvalues[j * m->tfs.GetCount() + k];
+				y = (1 + i) * row + subrow + subsubrow + subsubsubrow;
+				bool aav = m->avvalues[sym_id_a * tf_count + k];
+				bool abv = m->avvalues[sym_id_b * tf_count + k];
+				
 				sum = 0;
-				if (is_ab) {
-					sum += aav ? -1 : +1;
-					sum += abv ? +1 : -1;
-				} else {
-					sum += aav ? +1 : -1;
-					sum += abv ? -1 : +1;
-				}
-				if (sum > 0)		c = m->GetColor(k, 0);
-				else if (sum < 0)	c = m->GetColor(k, 1);
-				else				c = m->GetGrayColor(k);
+				sum += aav ? -1 : +1;
+				sum += abv ? +1 : -1;
+				
+				if (sum > 0)		c = m->GetColor(0);
+				else if (sum < 0)	c = m->GetColor(1);
+				else				c = m->GetGrayColor();
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
 				
-				y = (1 + j) * row + subrow + subsubrow * 2;
-				bool s = m->succ[sympos * m->tfs.GetCount() + k];
-				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetSuccessColor(k, s));
+				y = (1 + i) * row + subrow + subsubrow * 2;
+				bool s = m->succ[sympos * tf_count + k];
+				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, m->GetSuccessColor(s));
 				
-				y = (1 + j) * row + subrow + subsubrow * 2 + subsubsubrow;
-				bool as = m->succ[i * m->tfs.GetCount() + k];
-				bool bs = m->succ[j * m->tfs.GetCount() + k];
+				y = (1 + i) * row + subrow + subsubrow * 2 + subsubsubrow;
+				bool as = m->succ[sym_id_a * tf_count + k];
+				bool bs = m->succ[sym_id_b * tf_count + k];
 				sum = as * 1 + bs * 1;
-				c = Blend(m->GetSuccessColor(k, 0), m->GetSuccessColor(k, 1), sum * 255 / 2);
+				c = Blend(m->GetSuccessColor(0), m->GetSuccessColor(1), sum * 255 / 2);
 				d.DrawRect(x, y, subcol + 1, subsubsubrow + 1, c);
+			}
+			
+			if (!m->nn.IsEmpty()) {
+				x = (1 + cur_count - 1 - j) * col;
+				y = (1 + i) * row + subrow + subsubrow * 3;
+				double nn = m->nn[sympos];
+				if (invert) nn *= -1.0;
+				if (nn >= 0) {
+					int w = min(col / 2.0, nn / nn_max * col / 2.0);
+					d.DrawRect(x + col / 2.0 + 1, y, w, subsubsubrow + 1, m->GetColor(0));
+				} else {
+					int w = min(col / 2.0, -nn / nn_max * col / 2.0);
+					d.DrawRect(x + col / 2.0 - w + 1, y, w, subsubsubrow + 1, m->GetColor(1));
+				}
+			}
+			
+			if (!m->bdnn.IsEmpty()) {
+				x = (1 + cur_count - 1 - j) * col;
+				y = (1 + i) * row + subrow + subsubrow * 3 + subsubsubrow;
+				double bdnn = m->bdnn[sympos];
+				if (invert) bdnn *= -1.0;
+				if (bdnn >= 0) {
+					int w = min(col / 2.0, bdnn / bdnn_max * col / 2.0);
+					d.DrawRect(x + col / 2.0 + 1, y, w, subsubsubrow + 1, m->GetColor(0));
+				} else {
+					int w = min(col / 2.0, -bdnn / bdnn_max * col / 2.0);
+					d.DrawRect(x + col / 2.0 - w + 1, y, w, subsubsubrow + 1, m->GetColor(1));
+				}
 			}
 		}
 	}
@@ -1243,25 +1277,25 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		int x = (1 + i) * col;
 		int y2 = (1 + i) * row + subrow;
 		int y3 = (1 + i) * row + subrow + subsubrow;
-		int y4 = (1 + i + 1) * row;
+		int y4 = (1 + i + 1) * row - subsubrow;
 		int y5 = (1 + i) * row + subrow + subsubsubrow;
 		int y6 = (1 + i) * row + subrow + subsubrow + subsubsubrow;
 		int y7 = (1 + i) * row + subrow + subsubrow * 2;
 		int y8 = (1 + i) * row + subrow + subsubrow * 2 + subsubsubrow;
 		
 		for(int j = 0; j < cur_count; j++) {
-			if (j == i) continue;
-			for(int k = 1; k < m->tfs.GetCount(); k++) {
+			if (cur_count - 1 - j == i) continue;
+			for(int k = 1; k < tf_count; k++) {
 				int x = (1 + j) * col + k * subcol;
 				d.DrawLine(x, y2, x, y4, 1, GrayColor());
 			}
 		}
 		
-		for(int j = 1; j < m->tfs.GetCount(); j++) {
+		for(int j = 1; j < tf_count; j++) {
 			int x = j * subcol;
 			d.DrawLine(x, y2, x, y4, 1, GrayColor());
 			x = (1 + i) * col + j * subcol;
-			d.DrawLine(x, subrow, x, row, 1, GrayColor());
+			d.DrawLine(x, subrow, x, row - subsubrow, 1, GrayColor());
 		}
 		
 		d.DrawLine(0, y2, r.GetWidth(), y2, 1, GrayColor());
@@ -1275,6 +1309,10 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	}
 	d.DrawLine(col, subrow, r.GetWidth(), subrow, 1, GrayColor());
 	d.DrawLine(col, subrow + subsubrow, r.GetWidth(), subrow + subsubrow, 1, GrayColor());
+	
+	if (new_opportunities) {
+		PlayAlarm(1);
+	}
 }
 
 void SpeculationMatrix::GlobalSuccessCtrl::Paint(Draw& d) {
@@ -1299,7 +1337,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 	int grid_count = cur_count+1;
 	double row = rect.GetHeight() / (double)grid_count;
 	double col = rect.GetWidth() / (double)grid_count;
-	double subrow = row / 2;
+	double subrow = row / 3;
 	double subcol = col / m->tfs.GetCount();
 	
 	int c = p.x / col;
@@ -1309,7 +1347,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 		
 	}
 	else if (c == 0 && r > 0) {
-		int sym = r - 1;
+		int sym = m->cur_score.GetKey(r - 1);
 		String s = m->sym[sym] + "2";
 		sym = GetSession().FindSymbol(s);
 		int tf = Tf((p.x - c * col) / subcol);
@@ -1318,7 +1356,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 			m->WhenGraph(sym, tf);
 	}
 	else if (r == 0 && c > 0) {
-		int sym = c - 1;
+		int sym = m->cur_score.GetKey(cur_count - 1 - (c - 1));
 		String s = m->sym[sym] + "2";
 		sym = GetSession().FindSymbol(s);
 		int tf = Tf((p.x - c * col) / subcol);
@@ -1328,27 +1366,35 @@ void SpeculationMatrix::SpeculationMatrixCtrl::LeftDown(Point p, dword keyflags)
 	}
 	else {
 		int ai = r - 1;
-		int bi = c - 1;
-		if (ai != bi) {
-			String a = m->sym[ai];
-			String b = m->sym[bi];
-			int sym = GetSession().FindSymbolLeft(a + b);
-			if (sym == -1) sym = GetSession().FindSymbolLeft(b + a);
-			String mtsym = GetSession().GetSymbol(sym);
-			bool has_orders = GetSession().HasOrders(mtsym);
-			
-			bool sig = m->signals[m->sym.Find(mtsym.Left(6))];
-			
-			int tf = Tf((p.x - c * col) / subcol);
-			bool is_subtf = (p.y - r * row) / subrow >= 1.0;
-			if (is_subtf)
-				m->WhenGraph(sym, tf);
-			else {
-				if (!has_orders)
-					m->WhenOpenOrder(sym, sig, m->is_size);
-				else
-					m->WhenCloseOrder(sym);
+		int bi = cur_count - 1 - (c - 1);
+		int a_cur = m->cur_score.GetKey(ai);
+		int b_cur = m->cur_score.GetKey(bi);
+		String a = m->sym[a_cur];
+		String b = m->sym[b_cur];
+		int sym = GetSession().FindSymbolLeft(a + b);
+		bool invert = false;
+		if (sym == -1) {
+			sym = GetSession().FindSymbolLeft(b + a);
+			invert = true;
+			if (sym == -1) {
+				return;
 			}
+		}
+		String mtsym = GetSession().GetSymbol(sym);
+		bool has_orders = GetSession().HasOrders(mtsym);
+		
+		bool sig = ai > bi;
+		if (invert) sig = !sig;
+		
+		int tf = Tf((p.x - c * col) / subcol);
+		bool is_subtf = (p.y - r * row) / subrow >= 1.0;
+		if (is_subtf)
+			m->WhenGraph(sym, tf);
+		else {
+			if (!has_orders)
+				m->WhenOpenOrder(sym, sig, m->is_size);
+			else
+				m->WhenCloseOrder(sym);
 		}
 	}
 }

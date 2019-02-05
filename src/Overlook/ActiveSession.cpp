@@ -3,7 +3,50 @@
 namespace Overlook {
 
 ActiveSession::ActiveSession() {
+	System& sys = GetSystem();
+	sym.Add("EUR2");
+	sym.Add("USD2");
+	sym.Add("GBP2");
+	sym.Add("JPY2");
+	sym.Add("CHF2");
+	sym.Add("CAD2");
+	sym.Add("AUD2");
+	sym.Add("NZD2");
+	sym.Add("EURUSD" + sys.GetPostFix());
+	sym.Add("EURGBP" + sys.GetPostFix());
+	sym.Add("EURJPY" + sys.GetPostFix());
+	sym.Add("EURCHF" + sys.GetPostFix());
+	sym.Add("EURCAD" + sys.GetPostFix());
+	sym.Add("EURAUD" + sys.GetPostFix());
+	sym.Add("EURNZD" + sys.GetPostFix());
+	sym.Add("GBPUSD" + sys.GetPostFix());
+	sym.Add("USDJPY" + sys.GetPostFix());
+	sym.Add("USDCHF" + sys.GetPostFix());
+	sym.Add("USDCAD" + sys.GetPostFix());
+	sym.Add("AUDUSD" + sys.GetPostFix());
+	sym.Add("NZDUSD" + sys.GetPostFix());
+	sym.Add("GBPJPY" + sys.GetPostFix());
+	sym.Add("GBPCHF" + sys.GetPostFix());
+	sym.Add("GBPCAD" + sys.GetPostFix());
+	sym.Add("GBPAUD" + sys.GetPostFix());
+	sym.Add("GBPNZD" + sys.GetPostFix());
+	sym.Add("CHFJPY" + sys.GetPostFix());
+	sym.Add("CADJPY" + sys.GetPostFix());
+	sym.Add("AUDJPY" + sys.GetPostFix());
+	sym.Add("NZDJPY" + sys.GetPostFix());
+	sym.Add("CADCHF" + sys.GetPostFix());
+	sym.Add("AUDCHF" + sys.GetPostFix());
+	sym.Add("NZDCHF" + sys.GetPostFix());
+	sym.Add("AUDCAD" + sys.GetPostFix());
+	sym.Add("NZDCAD" + sys.GetPostFix());
+	sym.Add("AUDNZD" + sys.GetPostFix());
 	
+	tfs.Add(0);
+	tfs.Add(1);
+	tfs.Add(2);
+	tfs.Add(4);
+	tfs.Add(5);
+	tfs.Add(6);
 }
 
 void ActiveSession::Print(const String& s) {
@@ -502,160 +545,71 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 		}
 	}
 	else if (key == "speculation") {
-		Vector<String> sym;
-		sym.Add("EUR2");
-		sym.Add("USD2");
-		sym.Add("GBP2");
-		sym.Add("JPY2");
-		sym.Add("CHF2");
-		sym.Add("CAD2");
-		sym.Add("AUD2");
-		sym.Add("NZD2");
-		sym.Add("EURUSD" + sys.GetPostFix());
-		sym.Add("EURGBP" + sys.GetPostFix());
-		sym.Add("EURJPY" + sys.GetPostFix());
-		sym.Add("EURCHF" + sys.GetPostFix());
-		sym.Add("EURCAD" + sys.GetPostFix());
-		sym.Add("EURAUD" + sys.GetPostFix());
-		sym.Add("EURNZD" + sys.GetPostFix());
-		sym.Add("GBPUSD" + sys.GetPostFix());
-		sym.Add("USDJPY" + sys.GetPostFix());
-		sym.Add("USDCHF" + sys.GetPostFix());
-		sym.Add("USDCAD" + sys.GetPostFix());
-		sym.Add("AUDUSD" + sys.GetPostFix());
-		sym.Add("NZDUSD" + sys.GetPostFix());
-		sym.Add("GBPJPY" + sys.GetPostFix());
-		sym.Add("GBPCHF" + sys.GetPostFix());
-		sym.Add("GBPCAD" + sys.GetPostFix());
-		sym.Add("GBPAUD" + sys.GetPostFix());
-		sym.Add("GBPNZD" + sys.GetPostFix());
-		sym.Add("CHFJPY" + sys.GetPostFix());
-		sym.Add("CADJPY" + sys.GetPostFix());
-		sym.Add("AUDJPY" + sys.GetPostFix());
-		sym.Add("NZDJPY" + sys.GetPostFix());
-		sym.Add("CADCHF" + sys.GetPostFix());
-		sym.Add("AUDCHF" + sys.GetPostFix());
-		sym.Add("NZDCHF" + sys.GetPostFix());
-		sym.Add("AUDCAD" + sys.GetPostFix());
-		sym.Add("NZDCAD" + sys.GetPostFix());
-		sym.Add("AUDNZD" + sys.GetPostFix());
-		Vector<int> tfs;
-		tfs.Add(0);
-		tfs.Add(2);
-		tfs.Add(4);
-		tfs.Add(5);
-		tfs.Add(6);
-		Vector<int> shift_posv;
-		for(int i = 0; i < tfs.GetCount(); i++)
-			shift_posv.Add(IsNull(server->shift) ? 0 : max(0, GetDataBridgeCommon().GetTimeIndex(tfs[i]).Find(SyncTime(tfs[i], server->shift))));
-		for(int i = 0; i < sym.GetCount(); i++) {
+		Speculation& spec = GetSpeculation();
+		
+		if (!spec.data.IsEmpty()) {
+			const SpecItem& si = spec.data.Top();
+			int count;
 			
-			for(int j = 0; j < tfs.GetCount(); j++) {
-				int tf = tfs[j];
-				int shift_pos = shift_posv[j];
-				
-				CoreList c;
-				c.AddSymbol(sym[i]);
-				c.AddTf(tf);
-				c.AddIndi(System::Find<SpeculationOscillator>());
-				c.Init();
-				c.Refresh();
-				ConstLabelSignal& sig = c.GetLabelSignal(0, 0, 0);
-				bool b = shift_pos == 0 ? sig.signal.Top() : sig.signal.Get(shift_pos);
-				out.Put(&b, sizeof(bool));
-				
-				int size = shift_pos == 0 ? sig.signal.GetCount() : shift_pos + 1;
-				double sum = 0;
-				for(int k = 0; k < 21; k++) {
-					bool b = sig.signal.Get(size - 1 - k);
-					if (b) sum += 1.0;
-				}
-				sum /= 21;
-				b = sum > 0.5;
-				out.Put(&b, sizeof(bool));
-				
-				DataBridge& db = *c.GetDataBridge(0);
-				DataBridge& dbm1 = *c.GetDataBridgeM1(0);
-				double spread = db.GetPoint();
-				int spread_id = CommonSpreads().Find(sym[i]);
-				if (spread_id != -1)
-					spread *= CommonSpreads()[spread_id];
-				else
-					spread *= CommonSpreads().Top();
-				ConstBuffer& open_m1 = dbm1.GetBuffer(0);
-				ConstBuffer& open = db.GetBuffer(0);
-				double close = shift_pos == 0 ? open_m1.Top() : open_m1.Get(shift_posv[0]);
-				int steps = 0;
-				switch (tfs[j]) {
-					case 0: steps = 21; break;
-					case 2: steps = 4; break;
-					case 4: steps = 2; break;
-					case 5: steps = 2; break;
-					case 6: steps = 1; break;
-				}
-				int count = shift_pos == 0 ? min(sig.signal.GetCount(), open.GetCount()) : shift_pos + 1;
-				bool prev_sig;
-				bool succ = false;
-				for(int k = 0; k < steps; k++) {
-					int pos = count - 1 - k;
-					bool cur_sig = sig.signal.Get(pos);
-					if (k && cur_sig != prev_sig) break;
-					prev_sig = cur_sig;
-					double cur_open = open.Get(pos);
-					double diff = close - cur_open;
-					if (cur_sig) diff *= -1;
-					if (diff >= spread) {
-						succ = true;
-						break;
-					}
-				}
-				out.Put(&succ, sizeof(bool));
+			count = si.cur_score.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				out.Put32(si.cur_score.GetKey(i));
+				out.Put(&si.cur_score[i], sizeof(double));
 			}
+			
+			count = si.data.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				double d = si.data[i].slow_sum / spec.max_sum;
+				out.Put(&d, sizeof(double));
+				d = si.data[i].succ_sum / spec.max_succ_sum;
+				out.Put(&d, sizeof(double));
+			}
+			
+			count = si.succ_tf.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				out.Put(&si.succ_tf[i], sizeof(double));
+			}
+			
+			count = si.nn.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				out.Put(&si.nn[i], sizeof(double));
+			}
+			
+			count = si.bdnn.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				out.Put(&si.bdnn[i], sizeof(double));
+			}
+			
+			count = si.values.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				bool b = si.values.Get(i);
+				out.Put(&b, sizeof(bool));
+			}
+			
+			count = si.avvalues.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				bool b = si.avvalues.Get(i);
+				out.Put(&b, sizeof(bool));
+			}
+			
+			count = si.succ.GetCount();
+			out.Put32(count);
+			for(int i = 0; i < count; i++) {
+				bool b = si.succ.Get(i);
+				out.Put(&b, sizeof(bool));
+			}
+		} else {
+			out.Put32(-1);
 		}
 	}
 	else if (key == "activity") {
-		Vector<String> sym;
-		sym.Add("EUR2");
-		sym.Add("USD2");
-		sym.Add("GBP2");
-		sym.Add("JPY2");
-		sym.Add("CHF2");
-		sym.Add("CAD2");
-		sym.Add("AUD2");
-		sym.Add("NZD2");
-		sym.Add("EURUSD" + sys.GetPostFix());
-		sym.Add("EURGBP" + sys.GetPostFix());
-		sym.Add("EURJPY" + sys.GetPostFix());
-		sym.Add("EURCHF" + sys.GetPostFix());
-		sym.Add("EURCAD" + sys.GetPostFix());
-		sym.Add("EURAUD" + sys.GetPostFix());
-		sym.Add("EURNZD" + sys.GetPostFix());
-		sym.Add("GBPUSD" + sys.GetPostFix());
-		sym.Add("USDJPY" + sys.GetPostFix());
-		sym.Add("USDCHF" + sys.GetPostFix());
-		sym.Add("USDCAD" + sys.GetPostFix());
-		sym.Add("AUDUSD" + sys.GetPostFix());
-		sym.Add("NZDUSD" + sys.GetPostFix());
-		sym.Add("GBPJPY" + sys.GetPostFix());
-		sym.Add("GBPCHF" + sys.GetPostFix());
-		sym.Add("GBPCAD" + sys.GetPostFix());
-		sym.Add("GBPAUD" + sys.GetPostFix());
-		sym.Add("GBPNZD" + sys.GetPostFix());
-		sym.Add("CHFJPY" + sys.GetPostFix());
-		sym.Add("CADJPY" + sys.GetPostFix());
-		sym.Add("AUDJPY" + sys.GetPostFix());
-		sym.Add("NZDJPY" + sys.GetPostFix());
-		sym.Add("CADCHF" + sys.GetPostFix());
-		sym.Add("AUDCHF" + sys.GetPostFix());
-		sym.Add("NZDCHF" + sys.GetPostFix());
-		sym.Add("AUDCAD" + sys.GetPostFix());
-		sym.Add("NZDCAD" + sys.GetPostFix());
-		sym.Add("AUDNZD" + sys.GetPostFix());
-		Vector<int> tfs;
-		tfs.Add(0);
-		tfs.Add(2);
-		tfs.Add(4);
-		tfs.Add(5);
 		TimeStop ts;
 		Vector<int> shift_posv;
 		for(int i = 0; i < tfs.GetCount(); i++)

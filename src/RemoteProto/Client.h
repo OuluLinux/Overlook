@@ -310,6 +310,7 @@ public:
 class SpeculationMatrix : public ParentCtrl {
 	
 	struct SpeculationMatrixCtrl : public Ctrl {
+		Vector<bool> prev_opportunities;
 		SpeculationMatrix* m = NULL;
 		virtual void Paint(Draw& d);
 		virtual void LeftDown(Point p, dword keyflags);
@@ -335,20 +336,21 @@ class SpeculationMatrix : public ParentCtrl {
 	GlobalSuccessCtrl succ_ctrl;
 	ArrayCtrl list;
 	Index<String> sym;
-	Vector<double> succ_tf;
 	Vector<int> prev_values;
 	Vector<int> tfs;
+	VectorMap<int, double> cur_score;
+	Vector<double> slow_sum, succ_sum, succ_tf, nn, bdnn;
 	Vector<bool> values, avvalues, succ;
 	Vector<bool> signals;
-	Color buy_paper, sell_paper, buy_color0, sell_color0, buy_color1, sell_color1;
-	int tf_begin = 0, tf_end = 0;
+	Color buy_paper, sell_paper, buy_color, sell_color;
+	bool has_data = false;
 	bool pending_data = false;
 	bool is_size = false;
 	
-	inline Color GetColor(int tf, bool b) {if (tf < tf_begin || tf >= tf_end) return b ? sell_color0 : buy_color0; else return b ? sell_color1 : buy_color1;}
-	inline Color GetSuccessColor(int tf, bool b) {return b ? LtYellow : GrayColor(64);}
+	inline Color GetColor(bool b) {return b ? sell_color : buy_color;}
+	inline Color GetSuccessColor(bool b) {return b ? LtYellow : GrayColor(64);}
 	inline Color GetPaper(bool b) {return b ? sell_paper : buy_paper;}
-	inline Color GetGrayColor(int tf) {return (tf < tf_begin || tf >= tf_end) ? GrayColor(128) : GrayColor(128+64);}
+	inline Color GetGrayColor() {return GrayColor(128);}
 public:
 	SpeculationMatrix();
 	

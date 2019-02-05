@@ -18,6 +18,22 @@ void InitSessionDefault(ConvNet::Session& ses, int input_depth, int output_count
 	
 }
 
+void InitSessionDefault(ConvNet::Session& ses, int input_width, int input_height, int input_depth, int output_count) {
+	String t = "[\n"
+		"\t{\"type\":\"input\", \"input_width\":" + IntStr(input_width) + ", \"input_height\":" + IntStr(input_height) + ", \"input_depth\":" + IntStr(input_depth) + "},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\": 50, \"activation\":\"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\": 50, \"activation\":\"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\": 50, \"activation\":\"relu\"},\n"
+		"\t{\"type\":\"fc\", \"neuron_count\": 50, \"activation\":\"relu\"},\n"
+		"\t{\"type\":\"regression\", \"neuron_count\":" + IntStr(output_count) + "},\n"
+		"\t{\"type\":\"sgd\", \"learning_rate\":0.001, \"momentum\":0.0, \"batch_size\":64, \"l2_decay\":0.01}\n"
+		"]\n";
+		
+	if (ses.GetStepCount() == 0)
+		ses.MakeLayers(t);
+	
+}
+
 void InitDqnDefault(ConvNet::DQNAgent& agent, int input_count, int output_count) {
 	String t =
 			"{\n"

@@ -105,6 +105,8 @@ protected:
 	int last_user_id = -1;
 	int64 last_login_id = 0;
 	
+	Vector<String> sym;
+	Vector<int> tfs;
 	
 public:
 	typedef ActiveSession CLASSNAME;

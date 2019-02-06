@@ -1150,7 +1150,7 @@ void Speculation::RefreshBarDataNeuralItems() {
 	
 	
 	ConvNet::Volume vol;
-	for (int i = data.GetCount()-1; i >= 0; i--) {
+	for (int i = data.GetCount()-1; i >= bd_count * 5; i--) {
 		SpecItem& si = data[i];
 		
 		if (si.bdnn.GetCount()) break;
@@ -1195,6 +1195,7 @@ void Speculation::LoadBarDataVolume(int pos, ConvNet::Volume& vol) {
 	int depth = 1;
 	
 	vol.Init(width, height, depth, 0);
+	if (pos < begin) return;
 	
 	for(int i = 0; i < bd_count; i++) {
 		const SpecBarData& sbd = bardata[0][i];

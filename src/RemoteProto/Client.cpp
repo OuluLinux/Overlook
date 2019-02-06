@@ -942,6 +942,7 @@ void SpeculationMatrix::Data() {
 				return;
 			}
 			has_data = has_data && count > 0;
+			VectorMap<int, double> cur_score;
 			for(int i = 0; i < count; i++) {
 				int key = mem.Get32();
 				double score;
@@ -950,6 +951,7 @@ void SpeculationMatrix::Data() {
 			}
 			SortByKey(cur_score, StdLess<int>());
 			SortByValue(cur_score, StdGreater<double>());
+			Swap(this->cur_score, cur_score);
 			
 			count = mem.Get32();
 			has_data = has_data && count > 0;
@@ -1113,6 +1115,7 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 	bool new_opportunities = false;
 	
 	for(int i = 0; i < cur_count; i++) {
+		if (i >= m->cur_score.GetCount()) continue;
 		int sym_id_a = m->cur_score.GetKey(i);
 		
 		String a = m->sym[sym_id_a];
@@ -1181,6 +1184,8 @@ void SpeculationMatrix::SpeculationMatrixCtrl::Paint(Draw& d) {
 		
 		for(int j = 0; j < cur_count; j++) {
 			if (i == j) continue;
+			if (j >= m->cur_score.GetCount()) continue;
+			
 			int sym_id_b = m->cur_score.GetKey(j);
 			
 			String b = m->sym[sym_id_b];

@@ -605,6 +605,60 @@ void ActiveSession::Get(Stream& in, Stream& out) {
 				bool b = si.succ.Get(i);
 				out.Put(&b, sizeof(bool));
 			}
+			
+			struct Data : Moveable<Data> {
+				int sym;
+				int len;
+				double value;
+				bool sig;
+			};
+			Vector<Data> vec;
+			for(int i = 0; i < 60; i++) {
+				const SpecItem& si = spec.data[spec.data.GetCount() - 1 - i];
+				
+				if (si.nn.IsEmpty() || si.bdnn.IsEmpty()) continue;
+				
+				for(int j = 0; j < si.cur_score.GetCount(); j++) {
+					int sym_id_a = si.cur_score.GetKey(j);
+					
+					for(int k = j+1; k < si.cur_score.GetCount(); k++) {
+						int sym_id_b = si.cur_score.GetKey(k);
+						
+						bool is_ab = spec.is_abv[sym_id_a * spec.cur_count + sym_id_b];
+						bool invert = !is_ab;
+						int sympos = spec.symposv[sym_id_a * spec.cur_count + sym_id_b];
+						
+						double a_nn = si.nn[sym_id_a];
+						double b_nn = si.nn[sym_id_b];
+						bool a_sig = a_nn < 0;
+						bool b_sig = b_nn < 0;
+						double nn = si.nn[sympos];
+						double bdnn = si.bdnn[sympos];
+						if (invert) {
+							nn *= -1;
+							bdnn *= -1;
+						}
+						bool ab_nn_sig = nn < 0;
+						bool ab_bdnn_sig = bdnn < 0;
+						bool is_opportunity = !a_sig && b_sig && !ab_nn_sig && !ab_bdnn_sig && nn != 0.0 && bdnn != 0.0;
+						if (is_opportunity) {
+							Data& d = vec.Add();
+							d.sym = sympos;
+							d.len = i;
+							d.value = (a_nn - b_nn + nn + bdnn) / (4 * 0.025);
+							d.sig = invert;
+						}
+					}
+				}
+			}
+			out.Put32(vec.GetCount());
+			for(int i = 0; i < vec.GetCount(); i++) {
+				const Data& d = vec[i];
+				out.Put(&d.sym, sizeof(int));
+				out.Put(&d.len, sizeof(int));
+				out.Put(&d.value, sizeof(double));
+				out.Put(&d.sig, sizeof(bool));
+			}
 		} else {
 			out.Put32(-1);
 		}

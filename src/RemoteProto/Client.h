@@ -330,12 +330,20 @@ class SpeculationMatrix : public ParentCtrl {
 		SpeculationMatrix* m = NULL;
 		virtual void Paint(Draw& d);
 	};
-	Splitter hsplit;
+	struct OpportunityHistory : Moveable<OpportunityHistory> {
+		int sym = 0;
+		int len = 9999;
+		double value = 0;
+		bool sig = 0;
+	};
+	
+	Splitter hsplit, listsplit;
 	SpeculationMatrixCtrl ctrl;
 	ParentCtrl listparent;
 	GlobalSuccessCtrl succ_ctrl;
-	ArrayCtrl list;
+	ArrayCtrl list, oplist;
 	Index<String> sym;
+	Vector<OpportunityHistory> opphis;
 	Vector<int> prev_values;
 	Vector<int> tfs;
 	VectorMap<int, double> cur_score;

@@ -1161,7 +1161,7 @@ void Speculation::RefreshBarDataNeuralItems() {
 		
 		ConvNet::Net& net = bdses.GetNetwork();
 		ConvNet::Volume& out = net.Forward(vol);
-		si.bdnn.SetCount(sym.GetCount(), 0);
+		
 		for(int j = 0; j < bd_count; j++) {
 			const SpecBarData& sbd = bardata[0][j];
 			const SpecBarDataItem& sbdi = sbd.data[i];
@@ -1601,6 +1601,22 @@ void SpeculationMatrixCtrl::Paint(Draw& d) {
 			
 			x = (1 + cur_count - 1 - j) * col;
 			y = (1 + i) * row;
+			
+			if (!si.nn.IsEmpty() && !si.bdnn.IsEmpty()) {
+				bool a_sig = si.nn[sym_id_a] < 0;
+				bool b_sig = si.nn[sym_id_b] < 0;
+				double nn = si.nn[sympos];
+				double bdnn = si.bdnn[sympos];
+				bool ab_nn_sig = nn < 0;
+				bool ab_bdnn_sig = bdnn < 0;
+				if (invert) {
+					ab_nn_sig = !ab_nn_sig;
+					ab_bdnn_sig = !ab_bdnn_sig;
+				}
+				bool is_opportunity = !a_sig && b_sig && !ab_nn_sig && !ab_bdnn_sig && nn != 0.0 && bdnn != 0.0;
+				if (is_opportunity)
+					d.DrawRect(x, y, col + 1, row + 1, Color(255, 255, 189));
+			}
 			
 			/*int mtsym_id = ses.FindSymbolLeft(sym);
 			ASSERT(mtsym_id != -1);

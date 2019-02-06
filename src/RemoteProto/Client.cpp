@@ -900,13 +900,20 @@ SpeculationMatrix::SpeculationMatrix() {
 	succ_tf.SetCount(tfs.GetCount());
 	
 	listparent.Add(succ_ctrl.TopPos(0, 15).HSizePos());
-	listparent.Add(list.VSizePos(15).HSizePos());
+	listparent.Add(listsplit.VSizePos(15).HSizePos());
+	listsplit.Vert();
+	listsplit << list << oplist;
+	listsplit.SetPos(7000);
 	list.AddColumn("Symbol");
 	list.AddColumn("Sum");
 	list.AddColumn("Success");
 	list.AddColumn("Sig");
 	list.AddColumn("Value");
 	list.ColumnWidths("6 5 5 3 1");
+	oplist.AddColumn("Symbol");
+	oplist.AddColumn("Length");
+	oplist.AddColumn("Score");
+	oplist.AddColumn("Signal");
 	
 	buy_paper = Color(170, 255, 150);
 	sell_paper = Color(113, 212, 255);
@@ -995,6 +1002,16 @@ void SpeculationMatrix::Data() {
 				mem.Get(&succ[i], sizeof(bool));
 			}
 			
+			count = mem.Get32();
+			opphis.SetCount(count);
+			for(int i = 0; i < count; i++) {
+				OpportunityHistory& oh = opphis[i];
+				mem.Get(&oh.sym, sizeof(int));
+				mem.Get(&oh.len, sizeof(int));
+				mem.Get(&oh.value, sizeof(double));
+				mem.Get(&oh.sig, sizeof(bool));
+			}
+			
 			this->has_data = has_data;
 			
 			pending_data = false;
@@ -1042,6 +1059,29 @@ void SpeculationMatrix::Data() {
 	list.SetSortColumn(4, true);
 	list.SetCursor(cursor);
 	
+	
+	for(int i = 0; i < opphis.GetCount(); i++) {
+		const OpportunityHistory& oh = opphis[i];
+		
+		String s = sym[oh.sym];
+		String full = ses.GetSymbol(ses.FindSymbolLeft(s));
+		
+		oplist.Set(i, 1, oh.len);
+		oplist.Set(i, 2, oh.value * 1000);
+		oplist.SetDisplay(i, 2, ProgressDisplay());
+		
+		if (ses.HasOrders(full)) {
+			bool real_sig = ses.GetOrderSig(full);
+			oplist.Set(i, 0, AttrText(s).Paper(real_sig ? sell_paper : buy_paper));
+			oplist.Set(i, 3, AttrText(!oh.sig ? "Buy" : "Sell").Paper(oh.sig == real_sig ? White() : LtRed()));
+		}
+		else {
+			oplist.Set(i, 0, s);
+			oplist.Set(i, 3, oh.sig ? "Sell" : "Buy");
+		}
+	}
+	oplist.SetCount(opphis.GetCount());
+	oplist.SetSortColumn(2, true);
 	
 	Refresh();
 	

@@ -8,4 +8,4 @@ To compile Overlook, you need to download and install Ultimate++ and learn to ho
 To run Overlook, you need to run MQL4 script Mt4Connection, which is in the src/plugin/MQL4 folder. The MT4Connection.mq4 goes to the Scripts folder of MT4 and MT4ConnectionDll.dll goes to Libraries folder.
 Run "Load Server History" in MT4 to have all data. Restart MT4 before starting Overlook to save history data to disk.
 
-![Classic view](https://github.com/sppp/Overlook/raw/master/docs/classic.jpg)
+![Classic view](https://github.com/OuluLinux/Overlook/raw/master/docs/classic.jpg)

@@ -1,9 +1,7 @@
 # Overlook
-A project for searching profitable forex trading algorithm outside the limitations of MT4.
+A silly project related to forex trading. It allows someone to tinker algos outside the limitations of MT4.
 
-I programmed a lot of MQL code in the limits of MT4 framework. I frustrated to the lack of scalability. I couldn't run algorithm over multiple instruments easily.
-Now, I try to support useful parts and improve the automation, which would profit me as well as you. There is no point to clone an open source ecosystem of losing algorithms.
-
+Don't do forex.
 
 #### How to run
 To compile Overlook, you need to download and install Ultimate++ and learn to how to compile programs with it. Then, you clone this repository, add it to a new assembly or copy files to MyApps directory.
